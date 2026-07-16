@@ -136,6 +136,64 @@ func parseStaticOpponentEnteringTriggerSuppressionDeclaration(tokens []shared.To
 	}, true
 }
 
+// parseStaticControlOpponentSearchesDeclaration recognizes the search-control
+// static "You control your opponents while they're searching their libraries."
+// (Opposition Agent). While any opponent of the controller is searching their own
+// library, the controller makes that search's choices in the opponent's place.
+// The declaration carries fixed semantics; any deviation from the exact wording
+// leaves the clause unconsumed and fails closed.
+func parseStaticControlOpponentSearchesDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 10 || tokens[9].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0,
+		"you", "control", "your", "opponents", "while", "they're",
+		"searching", "their", "libraries") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationControlOpponentSearches,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+	}, true
+}
+
+// parseStaticExileOpponentSearchFindsDeclaration recognizes the exile-finds static
+// "While an opponent is searching their library, they exile each card they find.
+// You may play those cards for as long as they remain exiled, and you may spend
+// mana as though it were mana of any color to cast them." (Opposition Agent). Each
+// card an opponent finds while searching their library is exiled instead of
+// reaching its normal destination, and the controller may afterward play those
+// exiled cards, spending mana of any color, for as long as they stay exiled. Both
+// sentences form one indivisible effect; any deviation from the exact wording
+// leaves the clause unconsumed and fails closed.
+func parseStaticExileOpponentSearchFindsDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 45 ||
+		tokens[7].Kind != shared.Comma ||
+		tokens[14].Kind != shared.Period ||
+		tokens[27].Kind != shared.Comma ||
+		tokens[44].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	if !staticWordsAt(tokens, 0,
+		"while", "an", "opponent", "is", "searching", "their", "library") ||
+		!staticWordsAt(tokens, 8,
+			"they", "exile", "each", "card", "they", "find") ||
+		!staticWordsAt(tokens, 15,
+			"you", "may", "play", "those", "cards", "for", "as", "long", "as",
+			"they", "remain", "exiled") ||
+		!staticWordsAt(tokens, 28,
+			"and", "you", "may", "spend", "mana", "as", "though", "it", "were",
+			"mana", "of", "any", "color", "to", "cast", "them") {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:          StaticDeclarationExileOpponentSearchFinds,
+		Span:          shared.SpanOf(tokens),
+		OperationSpan: shared.SpanOf(tokens),
+	}, true
+}
+
 // parseStaticManaProductionMultiplierDeclaration recognizes the mana-production
 // replacement "If you tap a permanent for mana, it produces twice as much of
 // that mana instead." (Mana Reflection, factor 2) and "If you tap a permanent

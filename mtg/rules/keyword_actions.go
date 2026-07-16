@@ -313,6 +313,10 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	if !ok {
 		return false, nil
 	}
+	// An opponent's static ability may control this search and exile what it
+	// finds (Opposition Agent); resolve once so the deciding player and any
+	// exile redirect stay consistent across every card placed by this search.
+	control := resolveSearchControl(g, playerID)
 	// A player searches their library when this runs regardless of whether a
 	// matching card is found (CR 701.19a), so the search event fires once here
 	// for "whenever a player searches their library" triggers.
@@ -341,7 +345,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		spec.MaxManaValueFromSacrificedCost = opt.V[int]{}
 	}
 	if len(spec.SlotFilters) != 0 {
-		return e.searchLibrarySlots(g, obj, agents, log, playerID, controllerID, player, spec), nil
+		return e.searchLibrarySlots(g, obj, agents, log, playerID, controllerID, player, spec, control), nil
 	}
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
@@ -358,18 +362,18 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	var found []id.ID
 	switch {
 	case spec.SharedSubtype:
-		found = e.chooseCorrelatedSearchMatches(g, agents, log, playerID, candidates, amount)
+		found = e.chooseCorrelatedSearchMatches(g, agents, log, control.decisionMaker, candidates, amount)
 	case spec.DifferentNames:
-		found = e.chooseDifferentNameSearchMatches(g, agents, log, playerID, candidates, amount)
+		found = e.chooseDifferentNameSearchMatches(g, agents, log, control.decisionMaker, candidates, amount)
 	default:
 		minChoices := 0
 		if searchMustFindIfAvailable(spec, amount) {
 			minChoices = 1
 		}
-		found = e.chooseSearchMatches(g, agents, log, playerID, candidates, amount, minChoices)
+		found = e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, amount, minChoices)
 	}
 	if spec.SplitDestination.Exists {
-		return e.placeSplitSearch(g, obj, agents, log, playerID, controllerID, player, spec, found), nil
+		return e.placeSplitSearch(g, obj, agents, log, playerID, controllerID, player, spec, found, control), nil
 	}
 	primary := game.SearchDestination{
 		Zone:         spec.Destination,
@@ -392,7 +396,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
 		player.Library.Shuffle(e.rng)
-		_, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library)
+		_, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library, control)
 		return placed, nil
 	}
 	var foundPermanent *game.Permanent
@@ -403,7 +407,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		permanent, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library)
+		permanent, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library, control)
 		if !placed {
 			return len(found) > 0, foundPermanent
 		}
@@ -427,6 +431,7 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 	if !ok {
 		return false
 	}
+	control := resolveSearchControl(g, playerID)
 	// Searching the library fires the search event once (CR 701.19a) and forces
 	// the closing shuffle, both of which always apply because the library is
 	// among the searched zones.
@@ -461,7 +466,7 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 	}
 	// The tutor is optional ("you may search"), so the player may always decline
 	// to find a card (minimum of zero chosen).
-	found := e.chooseSearchMatches(g, agents, log, playerID, candidateIDs, 1, 0)
+	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidateIDs, 1, 0)
 	if len(found) == 0 {
 		return false
 	}
@@ -484,6 +489,10 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 		}
 	}
 	emitCardRevealEvent(g, obj, playerID, cardID, fromZone)
+	if control.exileFinds {
+		exileFoundCard(g, obj, control, player, playerID, cardID, fromZone)
+		return true
+	}
 	player.Hand.Add(cardID)
 	emitZoneChangeEvent(g, game.Event{
 		SourceID:      stackObjectSourceID(obj),
@@ -514,7 +523,11 @@ func searchMustFindIfAvailable(spec game.SearchSpec, amount int) bool {
 // RevealOnly search whose found card a following ConditionalDestinationPlace will
 // route and whose closing shuffle is a separate instruction, so it neither moves
 // the card nor shuffles. The searching player may decline to find a card unless
-// the spec requires finding one.
+// the spec requires finding one. When an opponent's Opposition Agent controls the
+// search, its controller makes the choice, the found card is removed and exiled
+// face up to its owner with lasting play permission for the controller, and no
+// card is returned so the following placement finds nothing to route (a safe
+// no-op): the card is already gone from the library it would have moved from.
 func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) (id.ID, bool) {
 	if amount <= 0 {
 		amount = 1
@@ -523,6 +536,7 @@ func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, ag
 	if !ok {
 		return 0, false
 	}
+	control := resolveSearchControl(g, playerID)
 	emitEvent(g, game.Event{
 		Kind:       game.EventLibrarySearched,
 		Controller: playerID,
@@ -538,11 +552,18 @@ func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, ag
 	if searchMustFindIfAvailable(spec, amount) {
 		minChoices = 1
 	}
-	found := e.chooseSearchMatches(g, agents, log, playerID, candidates, 1, minChoices)
+	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, 1, minChoices)
 	if len(found) == 0 {
 		return 0, false
 	}
 	cardID := found[0]
+	if control.exileFinds {
+		if !player.Library.Remove(cardID) {
+			return 0, false
+		}
+		exileFoundCard(g, obj, control, player, playerID, cardID, zone.Library)
+		return 0, false
+	}
 	if spec.Reveal {
 		emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 	}
@@ -557,7 +578,7 @@ func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, ag
 // card enters the single shared destination (spec.Destination, spec.EntersTapped)
 // under controllerID's control, and the library is shuffled once afterward. The
 // player may decline any slot (CR 701.19e). It returns whether any card was found.
-func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID, controllerID game.PlayerID, player *game.Player, spec game.SearchSpec) bool {
+func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID, controllerID game.PlayerID, player *game.Player, spec game.SearchSpec, control searchControl) bool {
 	dest := game.SearchDestination{
 		Zone:         spec.Destination,
 		Position:     spec.DestinationPosition,
@@ -575,7 +596,7 @@ func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents 
 				candidates = append(candidates, cardID)
 			}
 		}
-		picked := e.chooseSearchMatches(g, agents, log, playerID, candidates, 1, 0)
+		picked := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, 1, 0)
 		if len(picked) == 1 {
 			taken[picked[0]] = true
 			found = append(found, picked[0])
@@ -588,7 +609,7 @@ func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents 
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library)
+		_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library, control)
 	}
 	player.Library.Shuffle(e.rng)
 	return len(found) > 0
@@ -612,9 +633,16 @@ func searchSlotMatches(g *game.Game, obj *game.StackObject, cardID id.ID, filter
 // destinations always go to the searching player. fromZone is the zone the found
 // card is leaving (the library for a plain library tutor, the graveyard for the
 // graveyard half of a multi-zone search), reported on the emitted zone-change
-// event and as the source zone a battlefield entry comes from. It returns the
-// created permanent for a battlefield destination and false if placement fails.
-func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, controllerID game.PlayerID, player *game.Player, cardID id.ID, dest game.SearchDestination, fromZone zone.Type) (*game.Permanent, bool) {
+// event and as the source zone a battlefield entry comes from. When control
+// redirects finds to exile (Opposition Agent), the requested destination is
+// ignored and the card is exiled to its owner with lasting play permission for
+// the controlling beneficiary. It returns the created permanent for a battlefield
+// destination and false if placement fails.
+func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, controllerID game.PlayerID, player *game.Player, cardID id.ID, dest game.SearchDestination, fromZone zone.Type, control searchControl) (*game.Permanent, bool) {
+	if control.exileFinds {
+		exileFoundCard(g, obj, control, player, playerID, cardID, fromZone)
+		return nil, true
+	}
 	switch dest.Zone {
 	case zone.Hand:
 		player.Hand.Add(cardID)
@@ -666,7 +694,7 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, c
 // cards found the searching player assigns one card to each slot; with one card
 // found the searching player chooses which slot it fills (CR 701.19). It always
 // shuffles afterward and returns whether any card was found.
-func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID, controllerID game.PlayerID, player *game.Player, spec game.SearchSpec, found []id.ID) bool {
+func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID, controllerID game.PlayerID, player *game.Player, spec game.SearchSpec, found []id.ID, control searchControl) bool {
 	primary := game.SearchDestination{Zone: spec.Destination, EntersTapped: spec.EntersTapped}
 	secondary := spec.SplitDestination.Val
 	if spec.Reveal {
@@ -680,21 +708,21 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 		return false
 	case 1:
 		dest := primary
-		if e.chooseSplitSearchSlot(g, agents, log, playerID, primary, secondary) == 1 {
+		if e.chooseSplitSearchSlot(g, agents, log, control.decisionMaker, primary, secondary) == 1 {
 			dest = secondary
 		}
 		if player.Library.Remove(found[0]) {
-			_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, found[0], dest, zone.Library)
+			_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, found[0], dest, zone.Library, control)
 		}
 	default:
-		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, playerID, primary, found)]
+		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, control.decisionMaker, primary, found)]
 		for _, cardID := range found {
 			dest := secondary
 			if cardID == primaryCard {
 				dest = primary
 			}
 			if player.Library.Remove(cardID) {
-				_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library)
+				_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library, control)
 			}
 		}
 	}
@@ -702,14 +730,15 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 	return len(found) > 0
 }
 
-// chooseSplitSearchSlot asks the searching player which slot the lone found card
-// fills when a split-destination search finds only one card. It returns 0 for
-// the primary slot and 1 for the secondary slot, defaulting to the primary slot
-// for agents that do not answer.
-func (e *Engine) chooseSplitSearchSlot(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, primary, secondary game.SearchDestination) int {
+// chooseSplitSearchSlot asks the deciding player which slot the lone found card
+// fills when a split-destination search finds only one card. The decider is the
+// searcher normally, or the opponent controlling the search. It returns 0 for the
+// primary slot and 1 for the secondary slot, defaulting to the primary slot for
+// agents that do not answer.
+func (e *Engine) chooseSplitSearchSlot(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID, primary, secondary game.SearchDestination) int {
 	request := libraryChoiceRequest(
 		game.ChoiceSearch,
-		playerID,
+		decider,
 		"Split search: choose where to put the found card.",
 		[]string{searchDestinationLabel(primary), searchDestinationLabel(secondary)},
 	)
@@ -720,12 +749,13 @@ func (e *Engine) chooseSplitSearchSlot(g *game.Game, agents [game.NumPlayers]Pla
 	return 0
 }
 
-// chooseSplitSearchPrimaryCard asks the searching player which of the two found
+// chooseSplitSearchPrimaryCard asks the deciding player which of the two found
 // cards enters the primary slot; the other card fills the secondary slot. The
+// decider is the searcher normally, or the opponent controlling the search. The
 // prompt names the primary destination so it stays accurate for hand-first
 // wordings as well as the usual battlefield-first ones. It returns the index
 // into found, defaulting to the first card for agents that do not answer.
-func (e *Engine) chooseSplitSearchPrimaryCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, primary game.SearchDestination, found []id.ID) int {
+func (e *Engine) chooseSplitSearchPrimaryCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID, primary game.SearchDestination, found []id.ID) int {
 	options := make([]game.ChoiceOption, 0, len(found))
 	for i, cardID := range found {
 		label := "unknown card"
@@ -736,7 +766,7 @@ func (e *Engine) chooseSplitSearchPrimaryCard(g *game.Game, agents [game.NumPlay
 	}
 	request := game.ChoiceRequest{
 		Kind:             game.ChoiceSearch,
-		Player:           playerID,
+		Player:           decider,
 		Prompt:           "Split search: choose which card goes to " + searchDestinationLabel(primary) + ".",
 		Options:          options,
 		MinChoices:       1,

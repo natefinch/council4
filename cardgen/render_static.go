@@ -1111,6 +1111,10 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectAdditionalTriggerForRoomAbility", nil
 	case game.RuleEffectSuppressOpponentEnteringTriggers:
 		return "game.RuleEffectSuppressOpponentEnteringTriggers", nil
+	case game.RuleEffectControlOpponentSearches:
+		return "game.RuleEffectControlOpponentSearches", nil
+	case game.RuleEffectExileOpponentSearchFinds:
+		return "game.RuleEffectExileOpponentSearchFinds", nil
 	case game.RuleEffectAttackTaxPerCreature:
 		return "game.RuleEffectAttackTaxPerCreature", nil
 	case game.RuleEffectManaProductionMultiplier:

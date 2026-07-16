@@ -640,6 +640,32 @@ const (
 	// or a Delver-granted creature alongside Hama Pashar) each add one trigger and
 	// so stack. Added last so existing kinds keep their wire values.
 	RuleEffectAdditionalTriggerForRoomAbility
+	// RuleEffectControlOpponentSearches makes the effect's Controller decide every
+	// choice of a library search performed by one of the controller's opponents
+	// ("You control your opponents while they're searching their libraries.",
+	// Opposition Agent). While it applies, whenever an opponent of the controller
+	// searches their library the controller — not the searching player — chooses
+	// which matching cards are found (and any other search choice), seeing the
+	// opponent's otherwise-hidden library cards among the offered candidates. It
+	// does not change which player is searching, so failed-to-find permission and
+	// the closing shuffle stay with the searching player (CR 701.19). It is a
+	// marker rule effect carrying no payload beyond its Controller. Added last so
+	// existing kinds keep their wire values.
+	RuleEffectControlOpponentSearches
+	// RuleEffectExileOpponentSearchFinds redirects every card an opponent of the
+	// effect's Controller finds while searching their library to that card's
+	// owner's exile instead of the search's normal destination, and grants the
+	// Controller a lasting permission to play each such card for as long as it
+	// remains exiled, spending mana as though it were mana of any color ("While an
+	// opponent is searching their library, they exile each card they find. You may
+	// play those cards for as long as they remain exiled, and you may spend mana as
+	// though it were mana of any color to cast them.", Opposition Agent). The
+	// destination replacement covers the hand, battlefield, and library-top finds
+	// of the ordinary, split, slot, and library-and-graveyard searches; the runtime
+	// registers a persistent per-card RuleEffectPlayFromZone for the found card.
+	// It is a marker rule effect carrying no payload beyond its Controller. Added
+	// last so existing kinds keep their wire values.
+	RuleEffectExileOpponentSearchFinds
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -709,7 +735,9 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAscend,
 		RuleEffectCantBeTargetedByControllerOpponents,
 		RuleEffectSkipExtraTurns,
-		RuleEffectAdditionalTriggerForRoomAbility:
+		RuleEffectAdditionalTriggerForRoomAbility,
+		RuleEffectControlOpponentSearches,
+		RuleEffectExileOpponentSearchFinds:
 		return true
 	default:
 		return false

@@ -156,6 +156,10 @@ func lowerStaticDeclarations(
 				ok = appendStaticCreatureAttackTaxDeclaration(&body, declaration)
 			case compiler.StaticDeclarationManaProductionMultiplier:
 				ok = appendStaticManaProductionMultiplierDeclaration(&body, declaration)
+			case compiler.StaticDeclarationControlOpponentSearches:
+				ok = appendStaticControlOpponentSearchesDeclaration(&body, declaration)
+			case compiler.StaticDeclarationExileOpponentSearchFinds:
+				ok = appendStaticExileOpponentSearchFindsDeclaration(&body, declaration)
 			default:
 				ok = false
 			}
@@ -490,6 +494,12 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.DevotionNotCreature != nil {
 		payloads++
 	}
+	if declaration.ControlOpponentSearches != nil {
+		payloads++
+	}
+	if declaration.ExileOpponentSearchFinds != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -542,6 +552,10 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.CombatDamagePrevention != nil
 	case compiler.StaticDeclarationDevotionNotCreature:
 		return declaration.DevotionNotCreature != nil
+	case compiler.StaticDeclarationControlOpponentSearches:
+		return declaration.ControlOpponentSearches != nil
+	case compiler.StaticDeclarationExileOpponentSearchFinds:
+		return declaration.ExileOpponentSearchFinds != nil
 	default:
 		return false
 	}
@@ -1679,6 +1693,41 @@ func appendStaticOpponentEnteringTriggerSuppressionDeclaration(body *game.Static
 	}
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind: game.RuleEffectSuppressOpponentEnteringTriggers,
+	})
+	return true
+}
+
+// appendStaticControlOpponentSearchesDeclaration lowers "You control your
+// opponents while they're searching their libraries." (Opposition Agent) into a
+// controller-scoped search-control rule effect. The runtime collects it as an
+// active rule effect; while an opponent of the effect's controller searches
+// their library, that controller makes the search's choices with visibility of
+// the otherwise-hidden searched library.
+func appendStaticControlOpponentSearchesDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.ControlOpponentSearches == nil {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind: game.RuleEffectControlOpponentSearches,
+	})
+	return true
+}
+
+// appendStaticExileOpponentSearchFindsDeclaration lowers "While an opponent is
+// searching their library, they exile each card they find. You may play those
+// cards for as long as they remain exiled, and you may spend mana as though it
+// were mana of any color to cast them." (Opposition Agent) into a
+// controller-scoped exile-finds rule effect. The runtime collects it as an active
+// rule effect; while an opponent of the effect's controller searches their
+// library, each found card is exiled instead of reaching its normal destination
+// and the controller gains lasting permission to play it, spending mana of any
+// color, for as long as it stays exiled.
+func appendStaticExileOpponentSearchFindsDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.ExileOpponentSearchFinds == nil {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind: game.RuleEffectExileOpponentSearchFinds,
 	})
 	return true
 }
