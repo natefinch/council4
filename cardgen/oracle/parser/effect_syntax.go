@@ -46,6 +46,9 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeDrawPutLandSubtypeLifeSequence(&abilities[i]) {
 			continue
 		}
+		if recognizeLandfallPayCopyTokenSequence(&abilities[i]) {
+			continue
+		}
 		if recognizeDevotionLookWinSequence(&abilities[i]) {
 			continue
 		}

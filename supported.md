@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,966 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,967 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -14522,6 +14522,7 @@ Council4 currently supports **17,966 of 32,501 cards eligible for paper support 
 - Spring Splasher
 - Spring-Leaf Avenger
 - Springbloom Druid
+- Springheart Nantuko
 - Springing Tiger
 - Springjaw Trap
 - Springleaf Drum
