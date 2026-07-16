@@ -786,6 +786,30 @@ func appendEachPlayerChooseDestroyEffect(effects []CompiledEffect, clause *parse
 	})
 }
 
+// appendOptionalCounterForEachPlayerEffect carries the parser-recognized
+// per-player optional counter placement and linked goad through the compiler
+// boundary without consulting source text or byte positions.
+func appendOptionalCounterForEachPlayerEffect(
+	effects []CompiledEffect,
+	clause *parser.OptionalCounterForEachPlayerClause,
+) []CompiledEffect {
+	if clause == nil {
+		return effects
+	}
+	return append(effects, CompiledEffect{
+		Kind:                         EffectPut,
+		Exact:                        true,
+		Context:                      clause.PlayerContext,
+		Selector:                     compileTypedSelection(clause.Pool),
+		Amount:                       compileTypedAmount(clause.Amount),
+		CounterKind:                  clause.CounterKind,
+		CounterKindKnown:             true,
+		OptionalCounterForEachPlayer: true,
+		Span:                         clause.ConstructSpan,
+		VerbSpan:                     clause.ConstructSpan,
+	})
+}
+
 func compileStaticRuleEffect(sentence parser.Sentence) (CompiledEffect, bool) {
 	rule, _, ok := semanticStaticRuleForSyntax(*sentence.StaticRule)
 	if !ok {

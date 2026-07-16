@@ -416,6 +416,9 @@ func lowerContentDispatch(
 		if content, ok := lowerNextCastEntersWithCountersReplacement(ctx); ok {
 			return content, nil
 		}
+		if content, ok := lowerOptionalCounterForEachPlayerContent(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerEachPlayerChooseDestroyContent(ctx); ok {
 			return content, nil
 		}

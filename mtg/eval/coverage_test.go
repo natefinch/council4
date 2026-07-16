@@ -47,6 +47,10 @@ import (
 // +1/+1 counters on the controller's least-toughness creature (CR 701.37), a
 // board-boosting counter placement.
 //
+// OptionalCounterForEachPlayer carries a dynamic EffectCounterAdded atom: the
+// amount per permanent is fixed, but the number of participating players is a
+// runtime choice.
+//
 // ChooseDrawnPayLifeOrTop is value-neutral (no atom), matching
 // PlayerMayPayGenericOrRule: for each chosen card its outcome is either a life
 // payment or returning a just-drawn card to the library, a wash the
@@ -108,7 +112,7 @@ import (
 // The extra-phase/step primitives (AddExtraPhases, AddExtraUpkeepStep) are also
 // value-neutral: they insert additional turn structure whose value depends
 // entirely on what the controller does during it, so they have no stable atom.
-const knownPrimitiveCount = 145
+const knownPrimitiveCount = 146
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

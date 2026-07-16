@@ -276,6 +276,11 @@ type Ability struct {
 	// the consumed sentences' effects so the construct lowers to a single
 	// EachPlayerChooseDestroy interaction over the shared candidate pool.
 	EachPlayerChooseDestroy *EachPlayerChooseDestroyClause `json:",omitempty"`
+	// OptionalCounterForEachPlayer is the recognized two-sentence construct
+	// "<player group> may put <counters> on a permanent they control. Goad each
+	// creature that had counters put on it this way." It carries typed player,
+	// selection, amount, and counter data and sheds the consumed generic effects.
+	OptionalCounterForEachPlayer *OptionalCounterForEachPlayerClause `json:",omitempty"`
 	// KeywordShareGrant is the recognized team keyword-sharing construct
 	// (Odric, Lunarch Marshal): a phase/step trigger whose body is "creatures you
 	// control gain <KW> until end of turn if a creature you control has <KW>",
@@ -1963,6 +1968,17 @@ type EachPlayerChooseDestroyClause struct {
 	Optional      bool            `json:",omitempty"`
 	Spans         []shared.Span   `json:"-"`
 	ConstructSpan shared.Span     `json:"-"`
+}
+
+// OptionalCounterForEachPlayerClause records a per-player optional counter
+// placement followed by a goad of exactly the permanents that received counters.
+type OptionalCounterForEachPlayerClause struct {
+	PlayerContext EffectContextKind  `json:",omitempty"`
+	Pool          SelectionSyntax    `json:",omitzero"`
+	Amount        EffectAmountSyntax `json:",omitzero"`
+	CounterKind   counter.Kind       `json:",omitempty"`
+	Spans         []shared.Span      `json:"-"`
+	ConstructSpan shared.Span        `json:"-"`
 }
 
 // ModalChoiceKind identifies exact modal header vocabulary whose range alone

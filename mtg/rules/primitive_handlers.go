@@ -1464,6 +1464,10 @@ func handleExplore(r *effectResolver, prim game.Explore) effectResolved {
 
 func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.ConsumeLinked {
+		key, _ := prim.Group.LinkedKey()
+		defer clearLinkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(key)))
+	}
 	targets := r.resolveObjectGroup(prim.Object, prim.Group)
 	if !targets.single {
 		for _, permanent := range targets.permanents {
