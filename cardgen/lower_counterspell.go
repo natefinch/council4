@@ -776,9 +776,19 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		effect.Optional ||
 		ctx.optional ||
 		effect.Context != parser.EffectContextController ||
-		effect.Amount.Known ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone {
+		return unsupported()
+	}
+	count := 1
+	if effect.Amount.Known {
+		if effect.Amount.Value < 1 {
+			return unsupported()
+		}
+		count = effect.Amount.Value
+	} else if effect.Amount.VariableX ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountFormNone {
 		return unsupported()
 	}
 	object, targets, ok := copyStackObjectReference(ctx)
@@ -790,6 +800,7 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		Sequence: []game.Instruction{{
 			Primitive: game.CopyStackObject{
 				Object:              object,
+				Count:               count,
 				MayChooseNewTargets: effect.CopyMayChooseNewTargets,
 			},
 		}},

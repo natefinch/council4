@@ -1957,7 +1957,11 @@ type ChooseNewTargets struct {
 // so its own iterative copy offer chains off the copy's new target. The zero
 // value leaves the resolving controller as the copier, preserving prior behavior.
 type CopyStackObject struct {
-	Object              ObjectReference
+	Object ObjectReference
+	// Count is the number of copies created as one copy event. Zero preserves the
+	// historical single-copy behavior; values greater than one let replacement
+	// effects add to the batch once rather than once per copy.
+	Count               int
 	MayChooseNewTargets bool
 	Chooser             opt.V[PlayerReference]
 }

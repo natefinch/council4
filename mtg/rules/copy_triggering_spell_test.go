@@ -72,6 +72,7 @@ func TestCopyStackObjectEffectCopiesTriggeringSpell(t *testing.T) {
 	if got := g.Stack.Size(); got != depthBefore {
 		t.Fatalf("stack size after copy = %d, want %d (copy replaces resolved trigger)", got, depthBefore)
 	}
+
 	top, ok := g.Stack.Peek()
 	if !ok {
 		t.Fatal("stack empty after copy effect")
@@ -84,6 +85,39 @@ func TestCopyStackObjectEffectCopiesTriggeringSpell(t *testing.T) {
 	}
 	if top.Kind != game.StackSpell || top.SourceID != castSpell.SourceID {
 		t.Fatalf("copy = %+v, want a copy of the cast spell", top)
+	}
+}
+
+func TestCopyStackObjectEffectCopiesTriggeringSpellTwice(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+
+	castSpell := castSpellTrigger(g, true)
+	trigger, ok := g.Stack.Peek()
+	if !ok || trigger.InlineTrigger == nil {
+		t.Fatal("copy trigger missing from stack")
+	}
+	trigger.InlineTrigger.Content.Modes[0].Sequence[0].Primitive = game.CopyStackObject{
+		Object: game.EventStackObjectReference(),
+		Count:  2,
+	}
+
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	if got := g.Stack.Size(); got != 3 {
+		t.Fatalf("stack size after two-copy batch = %d, want 3", got)
+	}
+	copies := 0
+	for _, obj := range g.Stack.Objects() {
+		if obj.Copy {
+			copies++
+			if obj.SourceID != castSpell.SourceID {
+				t.Fatalf("copy source = %v, want %v", obj.SourceID, castSpell.SourceID)
+			}
+		}
+	}
+	if copies != 2 {
+		t.Fatalf("copies on stack = %d, want 2", copies)
 	}
 }
 

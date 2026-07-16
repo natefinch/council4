@@ -2076,6 +2076,9 @@ func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (st
 		return "", err
 	}
 	fields := []string{fmt.Sprintf("Object: %s,", rendered)}
+	if value.Count > 1 {
+		fields = append(fields, fmt.Sprintf("Count: %d,", value.Count))
+	}
 	if value.MayChooseNewTargets {
 		fields = append(fields, "MayChooseNewTargets: true,")
 	}

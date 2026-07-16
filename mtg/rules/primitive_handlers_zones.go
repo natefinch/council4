@@ -2286,14 +2286,20 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		}
 		chooser = resolved
 	}
-	copyObj := game.NewStackObjectCopy(original, r.game.IDGen.Next())
-	// The copier controls the copy (CR 707.10a): the "may copy this spell" player
-	// becomes the copy's controller so the copy's own iterative offer chains off
-	// the copier's new target rather than the original controller.
-	copyObj.Controller = chooser
-	r.game.Stack.Push(copyObj)
-	if prim.MayChooseNewTargets {
-		r.engine.retargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
+	count := prim.Count
+	if count == 0 {
+		count = 1
+	}
+	for range count {
+		copyObj := game.NewStackObjectCopy(original, r.game.IDGen.Next())
+		// The copier controls the copy (CR 707.10a): the "may copy this spell"
+		// player becomes the copy's controller so the copy's own iterative offer
+		// chains off the copier's new target rather than the original controller.
+		copyObj.Controller = chooser
+		r.game.Stack.Push(copyObj)
+		if prim.MayChooseNewTargets {
+			r.engine.retargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
+		}
 	}
 	if original.Kind == game.StackSpell {
 		addend, mayChooseNewTargets := additionalSpellCopies(r.game, chooser)
@@ -2306,7 +2312,7 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 			}
 		}
 	}
-	return effectResolved{accepted: true, succeeded: true}
+	return effectResolved{accepted: true, succeeded: count > 0}
 }
 
 // copyStackObjectSource resolves the stack object a CopyStackObject effect
