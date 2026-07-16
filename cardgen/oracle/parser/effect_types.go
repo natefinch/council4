@@ -2601,6 +2601,14 @@ type EffectSyntax struct {
 	// "Remove two +1/+1 counters ..."), whose count is carried in Amount and kind
 	// in CounterKind / CounterKnown.
 	RemoveCountersAll bool `json:",omitempty"`
+	// RemoveThoseCounters reports the back-referencing form of an
+	// EffectRemoveCounter effect, "remove those counters", where "those counters"
+	// names the counters a preceding same-sequence clause placed on the source
+	// permanent ("Then if there are three or more ribbon counters on this
+	// creature, remove those counters and untap it.", Prize Pig). The clause names
+	// no explicit kind; lowering resolves the kind from the preceding placement
+	// clause and removes every counter of that kind from the source.
+	RemoveThoseCounters bool `json:",omitempty"`
 	// MoveCountersDistribute reports the "move any number of <kind> counters from
 	// <source> onto other creatures" form of an EffectMoveCounters effect, where
 	// the controller distributes the source's counters among a group of other

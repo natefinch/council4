@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -251,6 +252,10 @@ func lowerOrderedEffectSequence(
 	// gate source. Sequences that do not open with this causative shape are
 	// returned unchanged.
 	ctx.content.Effects = collapseCausativeHavePairs(ctx.content.Effects, ctx.content.Keywords)
+	// Resolve the counter kind for any "remove those counters" clause from the
+	// preceding same-source placement clause before per-effect lowering, so the
+	// removal names the kind the sequence just placed on the source.
+	resolveThoseCountersKind(ctx.content.Effects)
 	// Resolving optionality ("you may X. If you do, Y") is realized by marking
 	// the optional effect's instruction Optional + PublishResult and gating the
 	// "if you do" effect on that result. planOptionalFlow fails closed unless the
@@ -579,6 +584,7 @@ func lowerOrderedEffectSequence(
 		// modeled (linked object).
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — payoff amount references a non-target permanent")
 	}
+	captureSelfInvalidatingCounterThresholdGate(sequence)
 	// A later "another target" clause requires a target distinct from the
 	// spell's earlier targets (CR 601.2c); mark it before gating so both passes
 	// see the corrected spec list.
@@ -3034,6 +3040,91 @@ func lowerDrawHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}.Ability(), true
 }
 
+// captureSelfInvalidatingCounterThresholdGate rewrites a shared group gate that
+// a grouped instruction's own effect invalidates. When a gated RemoveCounter
+// clears (or reduces) the very counters its threshold gate tests on the same
+// object, the per-instruction gate re-evaluation would see the post-removal
+// count and wrongly skip the instructions that shared the gate (Prize Pig:
+// "Then if there are three or more ribbon counters on this creature, remove
+// those counters and untap it." must untap whenever it removed). Because the
+// printed condition is a single check at resolution, the removal publishes its
+// result and the following instructions that shared the identical gate chain on
+// that success instead of re-testing the now-false condition.
+func captureSelfInvalidatingCounterThresholdGate(sequence []game.Instruction) {
+	for i := range sequence {
+		instr := &sequence[i]
+		if instr.PublishResult != "" || !gatedRemoveInvalidatesOwnCounterThreshold(*instr) {
+			continue
+		}
+		followers := make([]int, 0, len(sequence))
+		for j := i + 1; j < len(sequence); j++ {
+			if sequence[j].ResultGate.Exists ||
+				!sameSourceCounterThresholdGate(sequence[j].Condition, instr.Condition) {
+				break
+			}
+			followers = append(followers, j)
+		}
+		if len(followers) == 0 {
+			continue
+		}
+		key := game.ResultKey("counter-threshold-cleared")
+		instr.PublishResult = key
+		for _, j := range followers {
+			sequence[j].Condition = opt.V[game.EffectCondition]{}
+			sequence[j].ResultGate = opt.Val(game.InstructionResultGate{
+				Key:       key,
+				Succeeded: game.TriTrue,
+			})
+		}
+	}
+}
+
+// gatedRemoveInvalidatesOwnCounterThreshold reports whether an instruction's gate
+// tests a counter threshold on an object that the instruction's own RemoveCounter
+// primitive then clears or reduces on that same object, making the gate false for
+// any following instruction that re-evaluates it.
+func gatedRemoveInvalidatesOwnCounterThreshold(instr game.Instruction) bool {
+	kind, object, ok := sourceCounterThresholdGate(instr.Condition)
+	if !ok {
+		return false
+	}
+	remove, ok := instr.Primitive.(game.RemoveCounter)
+	if !ok || remove.Object != object {
+		return false
+	}
+	return remove.AllKinds || remove.CounterKind == kind
+}
+
+// sourceCounterThresholdGate reports the tested counter kind and object when the
+// effect condition is a counter-count threshold on a single referenced object
+// ("if there are N or more <kind> counters on <object>").
+func sourceCounterThresholdGate(gate opt.V[game.EffectCondition]) (counter.Kind, game.ObjectReference, bool) {
+	if !gate.Exists || !gate.Val.Condition.Exists {
+		return 0, game.ObjectReference{}, false
+	}
+	condition := gate.Val.Condition.Val
+	if !condition.Object.Exists || !condition.ObjectMatches.Exists {
+		return 0, game.ObjectReference{}, false
+	}
+	selection := condition.ObjectMatches.Val
+	if !selection.RequiredCounterCount.Exists {
+		return 0, game.ObjectReference{}, false
+	}
+	return selection.RequiredCounter, condition.Object.Val, true
+}
+
+// sameSourceCounterThresholdGate reports whether two effect conditions are the
+// same source counter-threshold gate (same object, kind, and count comparison).
+func sameSourceCounterThresholdGate(a, b opt.V[game.EffectCondition]) bool {
+	kindA, objectA, okA := sourceCounterThresholdGate(a)
+	kindB, objectB, okB := sourceCounterThresholdGate(b)
+	if !okA || !okB || kindA != kindB || objectA != objectB {
+		return false
+	}
+	return a.Val.Condition.Val.ObjectMatches.Val.RequiredCounterCount ==
+		b.Val.Condition.Val.ObjectMatches.Val.RequiredCounterCount
+}
+
 // applyEffectConditionGate attaches an effect-gate condition to every
 // instruction a gated effect produced. It returns false (fail closed) if the
 // effect produced no instructions, or if any instruction already carries a
@@ -3209,10 +3300,44 @@ func effectGateRejectCategory(condition compiler.CompiledCondition) string {
 	return effectGateCategoryLowering
 }
 
+// resolveThoseCountersKind resolves the counter kind for each "remove those
+// counters" effect (RemoveThoseCounters) in an ordered sequence from the nearest
+// preceding counter-placement effect that names a kind. "Those counters"
+// back-refers to the counters an earlier clause put on the source ("... put that
+// many ribbon counters on this creature. Then ... remove those counters ...",
+// Prize Pig), so the removal acts on that same kind. The resolved kind is copied
+// onto the remove effect (leaving its RemoveThoseCounters marker set) so the
+// per-effect lowerer removes every counter of that kind from the source. A remove
+// clause with no kind-naming antecedent is left unresolved and fails closed in
+// per-effect lowering.
+func resolveThoseCountersKind(effects []compiler.CompiledEffect) {
+	for i := range effects {
+		if !effects[i].RemoveThoseCounters || effects[i].CounterKindKnown {
+			continue
+		}
+		for j := i - 1; j >= 0; j-- {
+			if effects[j].Kind == compiler.EffectPut && effects[j].CounterKindKnown {
+				effects[i].CounterKind = effects[j].CounterKind
+				effects[i].CounterKindKnown = true
+				break
+			}
+		}
+	}
+}
+
 // leadingGroupCondition reports whether the matched effects form a shared-
 // sentence "then" group (every matched effect has the same sentence span) whose
 // leading clause begins at or after the condition. A leading condition on such a
 // group gates the entire group rather than a single clause.
+//
+// The condition qualifies as leading when it starts at or before the earliest
+// matched clause, or — when a leading connective such as "Then" precedes the
+// condition and is absorbed into the first effect's clause span ("Then if there
+// are three or more ribbon counters on this creature, remove those counters and
+// untap it.", Prize Pig) — when the condition ends at or before every matched
+// effect's verb. Both forms place the condition ahead of all effect content; a
+// mid-sentence condition that trails an effect's verb satisfies neither and fails
+// closed.
 func leadingGroupCondition(
 	condition compiler.CompiledCondition,
 	effects []compiler.CompiledEffect,
@@ -3220,6 +3345,7 @@ func leadingGroupCondition(
 ) bool {
 	groupSpan := effects[matched[0]].Span
 	minClauseStart := effects[matched[0]].ClauseSpan.Start.Offset
+	minVerbStart := effects[matched[0]].VerbSpan.Start.Offset
 	for _, ei := range matched {
 		if effects[ei].Span != groupSpan {
 			return false
@@ -3227,8 +3353,14 @@ func leadingGroupCondition(
 		if effects[ei].ClauseSpan.Start.Offset < minClauseStart {
 			minClauseStart = effects[ei].ClauseSpan.Start.Offset
 		}
+		if effects[ei].VerbSpan.Start.Offset < minVerbStart {
+			minVerbStart = effects[ei].VerbSpan.Start.Offset
+		}
 	}
-	return condition.Span.Start.Offset <= minClauseStart
+	if condition.Span.Start.Offset <= minClauseStart {
+		return true
+	}
+	return minVerbStart > 0 && condition.Span.End.Offset <= minVerbStart
 }
 
 // sequenceInsteadGates builds, for each effect carrying an "instead"

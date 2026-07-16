@@ -2113,6 +2113,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			MoveCountersAll:               kind == EffectMoveCounters && moveAllCountersClause(clause),
 			MoveCountersAllOfKind:         kind == EffectMoveCounters && counterKnown && moveAllOfKindCountersClause(clause),
 			RemoveCountersAll:             kind == EffectRemoveCounter && removeAllCountersClause(clause),
+			RemoveThoseCounters:           kind == EffectRemoveCounter && removeThoseCountersClause(clause),
 			MoveCountersDistribute:        kind == EffectMoveCounters && moveCountersDistributeClause(clause),
 			MoveThoseCounters:             kind == EffectPut && moveThoseCountersClause(clause),
 			FromZone:                      effectFromZone(kind, clause, atoms, span, toZone),
@@ -8655,6 +8656,15 @@ func moveCountersDistributeClause(clause []shared.Token) bool {
 // false and lower through their fixed-count paths.
 func removeAllCountersClause(clause []shared.Token) bool {
 	return effectHasTokenWords(clause, "all", "counters")
+}
+
+// removeThoseCountersClause reports the back-referencing removal form "remove
+// those counters" ("... remove those counters and untap it.", Prize Pig), where
+// "those counters" names the counters a preceding same-sequence clause placed on
+// the source. It anchors on the literal "those counters" run so a named-source or
+// mass "all counters" removal keeps RemoveThoseCounters false.
+func removeThoseCountersClause(clause []shared.Token) bool {
+	return effectHasTokenWords(clause, "those", "counters")
 }
 
 // moveThoseCountersClause reports the counter-salvage form "put those counters

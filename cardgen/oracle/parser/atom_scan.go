@@ -256,6 +256,7 @@ var counterKindNames = []counter.Kind{
 	counter.Intel,
 	counter.Collection,
 	counter.Hour,
+	counter.Ribbon,
 }
 
 // scanCounters emits a counter atom for each "<kind> counter(s)" phrase, spanning

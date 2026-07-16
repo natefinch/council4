@@ -2766,6 +2766,13 @@ type CompiledEffect struct {
 	// every counter on the object regardless of kind. It is false for a fixed or
 	// kind-specific removal, whose count is in Amount and kind in CounterKind.
 	RemoveCountersAll bool
+	// RemoveThoseCounters carries the parser's back-referencing "remove those
+	// counters" form of an EffectRemoveCounter effect through to lowering. "Those
+	// counters" names the counters a preceding same-sequence clause placed on the
+	// source; lowering resolves the kind from that clause and removes every counter
+	// of that kind from the source. It is false for a fixed, named, or
+	// kind-agnostic removal.
+	RemoveThoseCounters bool
 	// MoveCountersDistribute carries the parser's "move any number of <kind>
 	// counters from <source> onto other creatures" form through to lowering,
 	// which distributes the source's counters among a group of other creatures

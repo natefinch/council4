@@ -1844,6 +1844,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectRemoveFromCombat
 	case removeCounterVerbAt(tokens, index):
 		return EffectRemoveCounter
+	case removeThoseCountersVerbAt(tokens, index):
+		return EffectRemoveCounter
 	case ellipticalOrRemoveCounterAt(tokens, index):
 		return EffectRemoveCounter
 	default:
@@ -1883,6 +1885,23 @@ func removeCounterVerbAt(tokens []shared.Token, index int) bool {
 		}
 	}
 	return false
+}
+
+// removeThoseCountersVerbAt reports whether the "remove" verb at index begins the
+// back-referencing counter removal "remove those counters" ("Then if there are
+// three or more ribbon counters on this creature, remove those counters and untap
+// it.", Prize Pig). Unlike removeCounterVerbAt it requires no "from" clause: the
+// counters are those a preceding same-sequence clause placed on the source, so
+// the removal is implicitly from the source. It anchors on the literal "those
+// counters" run immediately after the verb so an ordinary named-source removal
+// keeps flowing through removeCounterVerbAt.
+func removeThoseCountersVerbAt(tokens []shared.Token, index int) bool {
+	if !equalWord(tokens[index], "remove") && !equalWord(tokens[index], "removes") {
+		return false
+	}
+	return index+2 < len(tokens) &&
+		equalWord(tokens[index+1], "those") &&
+		equalWord(tokens[index+2], "counters")
 }
 
 // ellipticalOrRemoveCounterAt reports whether the "remove" verb at index begins

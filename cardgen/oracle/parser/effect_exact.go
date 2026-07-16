@@ -182,7 +182,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectDiscover:
 		return exactDiscoverEffectSyntax(effect)
 	case EffectRemoveCounter:
-		return exactRemoveCounterEffectSyntax(effect) || exactRemoveAllCountersEffectSyntax(effect)
+		return exactRemoveCounterEffectSyntax(effect) || exactRemoveAllCountersEffectSyntax(effect) ||
+			exactRemoveThoseCountersEffectSyntax(effect)
 	case EffectRegenerate:
 		return exactDirectTargetEffectSyntax(effect, "Regenerate") ||
 			exactRegenerateSelfEffectSyntax(effect) ||
@@ -5242,6 +5243,20 @@ func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
 		fmt.Sprintf("Remove %s %s from %s.",
 			effectAmountSourceText(effect), noun, object),
 	)
+}
+
+// exactRemoveThoseCountersEffectSyntax recognizes the back-referencing removal
+// "remove those counters" ("Then if there are three or more ribbon counters on
+// this creature, remove those counters and untap it.", Prize Pig). "Those
+// counters" names no explicit kind or source; the ordered-sequence lowerer
+// resolves the kind from the preceding placement clause and removes every counter
+// of that kind from the source. The clause is matched byte-exact so no other
+// removal wording reaches this path.
+func exactRemoveThoseCountersEffectSyntax(effect *EffectSyntax) bool {
+	if !effect.RemoveThoseCounters {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Remove those counters.")
 }
 
 // exactRemoveAllCountersEffectSyntax recognizes the kind-agnostic mass removal

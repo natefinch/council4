@@ -1702,6 +1702,45 @@ func lowerMoveCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	}.Ability(), nil
 }
 
+// lowerRemoveThoseCountersSpell lowers the back-referencing removal "remove those
+// counters" ("Then if there are three or more ribbon counters on this creature,
+// remove those counters and untap it.", Prize Pig). "Those counters" names the
+// counters an earlier same-sequence clause placed on the source; the sequence
+// lowerer resolves the kind onto the effect (resolveThoseCountersKind). Every
+// counter of that kind is removed from the source, encoded as a RemoveCounter
+// whose amount is the source's own current count of that kind
+// (DynamicAmountObjectCounters) so the runtime removes min(have, have) = all of
+// them. It fails closed for any non-controller, negated, targeted, modal, or
+// conditional shape, or an unresolved or non-placeable kind.
+func lowerRemoveThoseCountersSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if !effect.Exact ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		!effect.CounterKindKnown ||
+		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
+		effect.CounterKind.PlayerOnly() {
+		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
+	}
+	remove := game.RemoveCounter{
+		Object:      game.SourcePermanentReference(),
+		CounterKind: effect.CounterKind,
+		Amount: game.Dynamic(game.DynamicAmount{
+			Kind:        game.DynamicAmountObjectCounters,
+			CounterKind: effect.CounterKind,
+			Object:      game.SourcePermanentReference(),
+		}),
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{{
+			Primitive: remove,
+		}},
+	}.Ability(), nil
+}
+
 // lowerRemoveCounterSpell lowers the "remove a counter from target permanent"
 // family (Ferropede, Cemetery Desecrator, Mutated Cultist, Thrull Parasite,
 // Medicine Runner) into a single RemoveCounter instruction acting on one target
@@ -1715,6 +1754,9 @@ func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	effect := ctx.content.Effects[0]
 	if effect.RemoveCountersAll {
 		return lowerRemoveAllCountersSpell(ctx)
+	}
+	if effect.RemoveThoseCounters {
+		return lowerRemoveThoseCountersSpell(ctx)
 	}
 	if !effect.Exact ||
 		effect.Negated ||
