@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,054 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,056 of 32,501 cards eligible for paper support (55.6%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -10168,6 +10168,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - N'Yami-Class Mother Ship
 - Nacatl Outlander
 - Nacatl Savage
+- Nacatl War-Pride
 - Nacre Talisman
 - Nadier's Nightblade
 - Nadier, Agent of the Duskenel
@@ -15553,6 +15554,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Terminal Moraine
 - Terminate
 - Teroh's Faithful
+- Terra Ravager
 - Terra Stomper
 - Terra, Herald of Hope
 - Terrain Elemental
