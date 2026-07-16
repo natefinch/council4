@@ -51,6 +51,8 @@ var Cards = []cardset.Entry{
 	{Name: "Hecatomb", New: Hecatomb},
 	{Name: "Heckling Fiends", New: HecklingFiends},
 	{Name: "Heirloom Auntie", New: HeirloomAuntie},
+	{Name: "Heliod, God of the Sun", New: HeliodGodOfTheSun},
+	{Name: "Heliod, Sun-Crowned", New: HeliodSunCrowned},
 	{Name: "Helium Squirter", New: HeliumSquirter},
 	{Name: "Hellfire Mongrel", New: HellfireMongrel},
 	{Name: "Hellion Crucible", New: HellionCrucible},

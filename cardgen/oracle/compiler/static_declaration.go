@@ -41,6 +41,7 @@ const (
 	StaticDeclarationCreatureAttackTax
 	StaticDeclarationManaProductionMultiplier
 	StaticDeclarationCombatDamagePrevention
+	StaticDeclarationDevotionNotCreature
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -941,6 +942,7 @@ type StaticDeclaration struct {
 	CreatureAttackTax           *StaticCreatureAttackTaxDeclaration
 	ManaProductionMultiplier    *StaticManaProductionMultiplierDeclaration
 	CombatDamagePrevention      *StaticCombatDamagePreventionDeclaration
+	DevotionNotCreature         *StaticDevotionNotCreatureDeclaration
 }
 
 // StaticCreatureAttackTaxAmountKind identifies how a per-creature attack-tax
@@ -997,6 +999,20 @@ type StaticOpponentEnteringTriggerSuppressionDeclaration struct{}
 // the multiplier applied whenever the controller taps a permanent for mana.
 type StaticManaProductionMultiplierDeclaration struct {
 	Factor int
+}
+
+// StaticDevotionNotCreatureDeclaration marks the Theros Gods' devotion-gated
+// type-changing static "As long as your devotion to <color(s)> is less than N,
+// <source> isn't a creature." (Purphoros, God of the Forge; the full God
+// family). Colors lists the one or two colors whose mana symbols the devotion
+// counts (CR 700.5); Threshold is N. The source stops being a creature — losing
+// the creature card type — while its controller's devotion to those colors is
+// below the threshold. Per the Gods' rulings this functions only on the
+// battlefield, so it lowers to a battlefield continuous type-removal effect
+// gated by the devotion condition.
+type StaticDevotionNotCreatureDeclaration struct {
+	Colors    []color.Color
+	Threshold int
 }
 
 // StaticCharacteristicPowerToughnessDeclaration carries the rules-derived count
@@ -1227,6 +1243,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCombatDamagePreventionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticDevotionNotCreatureDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}

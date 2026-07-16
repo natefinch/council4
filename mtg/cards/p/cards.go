@@ -109,6 +109,7 @@ var Cards = []cardset.Entry{
 	{Name: "Pulverize", New: Pulverize},
 	{Name: "Puncturing Blow", New: PuncturingBlow},
 	{Name: "Purging Stormbrood", New: PurgingStormbrood},
+	{Name: "Purphoros, God of the Forge", New: PurphorosGodOfTheForge},
 	{Name: "Purphoros's Emissary", New: PurphorosSEmissary},
 	{Name: "Purple Dragon Punks", New: PurpleDragonPunks},
 	{Name: "Putrid Imp", New: PutridImp},

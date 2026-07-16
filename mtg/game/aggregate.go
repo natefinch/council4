@@ -1,6 +1,7 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/opt"
 )
@@ -137,6 +138,17 @@ const (
 	// intervening-if context, where the triggering event records the creature
 	// mana spent; it fails closed elsewhere.
 	AggregateEventSpellManaFromCreaturesSpentToCast
+
+	// AggregateControllerDevotion is the context controller's devotion to the
+	// colors listed in the comparison's Colors field: the number of mana symbols
+	// of those colors among the mana costs of the permanents that player controls
+	// (CR 700.5). A hybrid or Phyrexian symbol counts once when it matches any
+	// listed color, so multicolor devotion counts each qualifying symbol a single
+	// time. It backs the Theros Gods' "as long as your devotion to <color(s)> is
+	// less than N" type-changing static, compared as "less than N". The evaluated
+	// colors travel as typed data on Colors rather than being derived from any
+	// card text.
+	AggregateControllerDevotion
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a
@@ -162,4 +174,10 @@ type AggregateComparison struct {
 	// evaluated (for example, a stackless condition context) fails the comparison
 	// closed. When absent, the fixed Value is used.
 	ValueAmount opt.V[DynamicAmount]
+
+	// Colors lists the colors evaluated by color-parameterized aggregates. It is
+	// consulted only by AggregateControllerDevotion, where it names the colors
+	// whose mana symbols are counted; other aggregates ignore it. The colors
+	// travel as typed data so devotion comparisons carry no card text.
+	Colors []color.Color
 }

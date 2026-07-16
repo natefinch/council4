@@ -1009,6 +1009,15 @@ func (r Renderer) renderAggregateComparisons(ctx *renderCtx, aggregates []game.A
 		if err != nil {
 			return "", err
 		}
+		colorsField := ""
+		if len(aggregates[i].Colors) > 0 {
+			ctx.need(importColor)
+			colorLits, err := colorValueLiterals(aggregates[i].Colors)
+			if err != nil {
+				return "", err
+			}
+			colorsField = fmt.Sprintf(", Colors: []color.Color{%s}", colorLits)
+		}
 		if aggregates[i].ValueAmount.Exists {
 			amount := aggregates[i].ValueAmount.Val
 			rendered, err := r.renderDynamicAmount(ctx, &amount)
@@ -1017,12 +1026,12 @@ func (r Renderer) renderAggregateComparisons(ctx *renderCtx, aggregates []game.A
 			}
 			ctx.need(importOpt)
 			parts = append(parts, fmt.Sprintf(
-				"{Aggregate: %s, Op: %s, Value: %d, ValueAmount: opt.Val(%s)}",
-				kind, op, aggregates[i].Value, rendered,
+				"{Aggregate: %s, Op: %s, Value: %d%s, ValueAmount: opt.Val(%s)}",
+				kind, op, aggregates[i].Value, colorsField, rendered,
 			))
 			continue
 		}
-		parts = append(parts, fmt.Sprintf("{Aggregate: %s, Op: %s, Value: %d}", kind, op, aggregates[i].Value))
+		parts = append(parts, fmt.Sprintf("{Aggregate: %s, Op: %s, Value: %d%s}", kind, op, aggregates[i].Value, colorsField))
 	}
 	return fmt.Sprintf("[]game.AggregateComparison{%s}", strings.Join(parts, ", ")), nil
 }
@@ -1073,6 +1082,8 @@ func renderAggregateKind(kind game.AggregateKind) (string, error) {
 		return "game.AggregateAnyOpponentLifeLostThisTurn", nil
 	case game.AggregateMinPlayerLibrarySize:
 		return "game.AggregateMinPlayerLibrarySize", nil
+	case game.AggregateControllerDevotion:
+		return "game.AggregateControllerDevotion", nil
 	default:
 		return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
 	}

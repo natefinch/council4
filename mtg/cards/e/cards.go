@@ -72,6 +72,7 @@ var Cards = []cardset.Entry{
 	{Name: "Epic Fight", New: EpicFight},
 	{Name: "Equestrian Skill", New: EquestrianSkill},
 	{Name: "Equilibrium", New: Equilibrium},
+	{Name: "Erebos, Bleak-Hearted", New: ErebosBleakHearted},
 	{Name: "Esper Battlemage", New: EsperBattlemage},
 	{Name: "Essence Flare", New: EssenceFlare},
 	{Name: "Etali, Primal Storm", New: EtaliPrimalStorm},

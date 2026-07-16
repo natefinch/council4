@@ -63,6 +63,7 @@ var Cards = []cardset.Entry{
 	{Name: "Nulldrifter", New: Nulldrifter},
 	{Name: "Numot, the Devastator", New: NumotTheDevastator},
 	{Name: "Nykthos Paragon", New: NykthosParagon},
+	{Name: "Nylea, God of the Hunt", New: NyleaGodOfTheHunt},
 	{Name: "Nylea's Colossus", New: NyleaSColossus},
 	{Name: "Nylea's Emissary", New: NyleaSEmissary},
 	{Name: "Nyx-Fleece Ram", New: NyxFleeceRAM},

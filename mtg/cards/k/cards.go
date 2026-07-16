@@ -18,6 +18,7 @@ var Cards = []cardset.Entry{
 	{Name: "Kami of the Honored Dead", New: KamiOfTheHonoredDead},
 	{Name: "Kapow!", New: Kapow},
 	{Name: "Kappa Cannoneer", New: KappaCannoneer},
+	{Name: "Karametra, God of Harvests", New: KarametraGodOfHarvests},
 	{Name: "Kardur's Vicious Return", New: KardurSViciousReturn},
 	{Name: "Kargan Dragonlord", New: KarganDragonlord},
 	{Name: "Karmic Guide", New: KarmicGuide},

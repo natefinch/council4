@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,956 of 32,501 cards eligible for paper support (55.2%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,964 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4764,6 +4764,7 @@ Council4 currently supports **17,956 of 32,501 cards eligible for paper support 
 - Erdwal Ripper
 - Erebor Flamesmith
 - Erebos's Titan
+- Erebos, Bleak-Hearted
 - Eriette's Lullaby
 - Eriette's Tempting Apple
 - Erinis, Gloom Stalker
@@ -7034,6 +7035,8 @@ Council4 currently supports **17,956 of 32,501 cards eligible for paper support 
 - Heirs of Stromkirk
 - Hekma Sentinels
 - Heliod's Pilgrim
+- Heliod, God of the Sun
+- Heliod, Sun-Crowned
 - Helionaut
 - Helium Squirter
 - Hell Mongrel
@@ -8151,6 +8154,7 @@ Council4 currently supports **17,956 of 32,501 cards eligible for paper support 
 - Karakas
 - Karametra's Acolyte
 - Karametra's Favor
+- Karametra, God of Harvests
 - Kardur's Vicious Return
 - Karfell Kennel-Master
 - Kargan Dragonlord
@@ -10470,6 +10474,7 @@ Council4 currently supports **17,956 of 32,501 cards eligible for paper support 
 - Nylea's Forerunner
 - Nylea's Huntmaster
 - Nylea's Presence
+- Nylea, God of the Hunt
 - Nymris, Oona's Trickster
 - Nyx Lotus
 - Nyx Weaver
@@ -11570,6 +11575,7 @@ Council4 currently supports **17,956 of 32,501 cards eligible for paper support 
 - Purify
 - Purify the Grave
 - Purphoros's Emissary
+- Purphoros, God of the Forge
 - Purple Dragon Punks
 - Purple Pentapus
 - Purple-Crystal Crab
@@ -15531,6 +15537,8 @@ Council4 currently supports **17,956 of 32,501 cards eligible for paper support 
 - Thassa's Emissary
 - Thassa's Ire
 - Thassa's Oracle
+- Thassa, Deep-Dwelling
+- Thassa, God of the Sea
 - That's Rough Buddy
 - Thaumatog
 - Thaumaturge's Familiar
