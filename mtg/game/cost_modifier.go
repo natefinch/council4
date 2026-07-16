@@ -235,6 +235,11 @@ const (
 	// allowed. Unlike RuleEffectCantBeBlockedByCreaturesWith, which stops only
 	// matching blockers, this stops all non-matching ones.
 	RuleEffectCantBeBlockedExceptBy
+	// RuleEffectCombatDamageCantBePrevented prohibits prevention effects from
+	// applying to combat damage dealt by matching permanent sources. The affected
+	// source group is evaluated live through the rule effect's controller relation
+	// and permanent selection.
+	RuleEffectCombatDamageCantBePrevented
 	// RuleEffectPlayerProtection grants the affected player protection from
 	// sources matching Protection.
 	RuleEffectPlayerProtection
@@ -687,6 +692,7 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectNoMaximumHandSize,
 		RuleEffectCantBeBlockedByCreaturesWith,
 		RuleEffectCantBeBlockedExceptBy,
+		RuleEffectCombatDamageCantBePrevented,
 		RuleEffectPlayerProtection,
 		RuleEffectAttackTax,
 		RuleEffectLifeTotalCantChange,

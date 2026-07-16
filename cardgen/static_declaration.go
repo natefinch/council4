@@ -156,6 +156,8 @@ func lowerStaticDeclarations(
 				ok = appendStaticCreatureAttackTaxDeclaration(&body, declaration)
 			case compiler.StaticDeclarationManaProductionMultiplier:
 				ok = appendStaticManaProductionMultiplierDeclaration(&body, declaration)
+			case compiler.StaticDeclarationCombatDamagePreventionProhibition:
+				ok = appendStaticCombatDamagePreventionProhibitionDeclaration(&body, declaration)
 			case compiler.StaticDeclarationControlOpponentSearches:
 				ok = appendStaticControlOpponentSearchesDeclaration(&body, declaration)
 			case compiler.StaticDeclarationExileOpponentSearchFinds:
@@ -491,6 +493,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.CombatDamagePrevention != nil {
 		payloads++
 	}
+	if declaration.CombatDamagePreventionProhibition != nil {
+		payloads++
+	}
 	if declaration.DevotionNotCreature != nil {
 		payloads++
 	}
@@ -550,6 +555,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.ManaProductionMultiplier != nil
 	case compiler.StaticDeclarationCombatDamagePrevention:
 		return declaration.CombatDamagePrevention != nil
+	case compiler.StaticDeclarationCombatDamagePreventionProhibition:
+		return declaration.CombatDamagePreventionProhibition != nil
 	case compiler.StaticDeclarationDevotionNotCreature:
 		return declaration.DevotionNotCreature != nil
 	case compiler.StaticDeclarationControlOpponentSearches:
@@ -1757,9 +1764,25 @@ func appendStaticManaProductionMultiplierDeclaration(body *game.StaticAbility, d
 	if multiplier == nil || multiplier.Factor < 2 {
 		return false
 	}
+
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind:                     game.RuleEffectManaProductionMultiplier,
 		ManaProductionMultiplier: multiplier.Factor,
+	})
+	return true
+}
+
+func appendStaticCombatDamagePreventionProhibitionDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
+	if declaration.CombatDamagePreventionProhibition == nil {
+		return false
+	}
+	source, ok := SelectionForSelector(declaration.CombatDamagePreventionProhibition.Source)
+	if !ok || source.Empty() || source.Controller == game.ControllerAny {
+		return false
+	}
+	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+		Kind:              game.RuleEffectCombatDamageCantBePrevented,
+		AffectedSelection: source,
 	})
 	return true
 }

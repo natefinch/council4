@@ -494,6 +494,7 @@ func lowerFixedDamageSpell(
 	// single damage-source reference for a count amount, exactly as the
 	// controller-scoped "the number of X you control" count already does.
 	sourceReferences = dropControlledCountThatPlayerReferences(sourceReferences, effect.Amount)
+	sourceReferences = dropTargetControllerEventPlayerReferences(sourceReferences, ctx.content.Targets[0])
 	if _, ok := parser.TargetControllerDamageRider(effect.DamageRiders); ok {
 		if len(sourceReferences) != 2 ||
 			sourceReferences[1].Binding != compiler.ReferenceBindingTarget {
@@ -503,6 +504,7 @@ func lowerFixedDamageSpell(
 				"the executable source backend supports only exact supported damage amounts to one target",
 			)
 		}
+
 		sourceReferences = sourceReferences[:1]
 	}
 	if !ok ||
@@ -566,6 +568,30 @@ func lowerFixedDamageSpell(
 		Targets:  []game.TargetSpec{target},
 		Sequence: instructions,
 	}.Ability(), nil
+}
+
+// dropTargetControllerEventPlayerReferences removes the explicit "that player"
+// reference already represented by a target selector's ControllerThatPlayer
+// relation. Source-order containment ties the reference to the target phrase
+// without inspecting source positions or text; any event-player reference outside
+// that target remains available to the effect.
+func dropTargetControllerEventPlayerReferences(
+	references []compiler.CompiledReference,
+	target compiler.CompiledTarget,
+) []compiler.CompiledReference {
+	if target.Selector.Controller != compiler.ControllerThatPlayer {
+		return references
+	}
+	filtered := make([]compiler.CompiledReference, 0, len(references))
+	for _, reference := range references {
+		if reference.Kind == compiler.ReferenceThatPlayer &&
+			reference.Binding == compiler.ReferenceBindingEventPlayer &&
+			target.Order.Contains(reference.Order) {
+			continue
+		}
+		filtered = append(filtered, reference)
+	}
+	return filtered
 }
 
 // lowerTwoTargetDamageSpell lowers a "<source> deals A damage to <target0> and B

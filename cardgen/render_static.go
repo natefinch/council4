@@ -1172,6 +1172,8 @@ func renderRuleEffectKind(kind game.RuleEffectKind) (string, error) {
 		return "game.RuleEffectCantBeSacrificed", nil
 	case game.RuleEffectCastLinkedExileForFree:
 		return "game.RuleEffectCastLinkedExileForFree", nil
+	case game.RuleEffectCombatDamageCantBePrevented:
+		return "game.RuleEffectCombatDamageCantBePrevented", nil
 	default:
 		return "", fmt.Errorf("render: unsupported rule effect kind %d", kind)
 	}

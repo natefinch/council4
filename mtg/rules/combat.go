@@ -276,13 +276,6 @@ func dealPlayerDamageMaybeRedirect(g *game.Game, sourceID, sourceObjectID id.ID,
 	if damage <= 0 || !isPlayerAlive(g, playerID) {
 		return 0, false
 	}
-	if redirect, ok := playerDamageRedirectPermanent(g, playerID); ok {
-		dealt := dealPermanentDamage(g, sourceID, sourceObjectID, controller, redirect, damage, combatDamage)
-		if dealt > 0 && damageSourceHasDeathtouch(g, sourceObjectID) {
-			redirect.MarkedDeathtouchDamage = true
-		}
-		return dealt, true
-	}
 	event := damageEvent{
 		sourceID:       sourceID,
 		sourceObjectID: sourceObjectID,
@@ -291,9 +284,32 @@ func dealPlayerDamageMaybeRedirect(g *game.Game, sourceID, sourceObjectID id.ID,
 		amount:         damage,
 		combatDamage:   combatDamage,
 	}
-	dealt := applyDamageModifications(g, event)
+	result := applyDamageEventModifications(g, event)
+	dealt := result.amount
 	if dealt <= 0 {
-		return 0, false
+		return 0, result.redirected
+	}
+	if result.event.permanent != nil {
+		redirect := result.event.permanent
+		markPermanentDamage(g, controller, redirect, dealt, damageSourceUsesMinusOneCounters(g, sourceObjectID))
+		if damageSourceHasDeathtouch(g, sourceObjectID) {
+			redirect.MarkedDeathtouchDamage = true
+		}
+		emitEvent(g, game.Event{
+			Kind:            game.EventDamageDealt,
+			SourceID:        sourceID,
+			SourceObjectID:  sourceObjectID,
+			Controller:      controller,
+			Player:          effectiveController(g, redirect),
+			PermanentID:     redirect.ObjectID,
+			CardID:          redirect.CardInstanceID,
+			TokenName:       permanentTokenName(redirect),
+			TokenDef:        redirect.TokenDef,
+			Amount:          dealt,
+			DamageRecipient: game.DamageRecipientPermanent,
+			CombatDamage:    combatDamage,
+		})
+		return dealt, true
 	}
 	if !playerRuleEffectActive(g, playerID, game.RuleEffectDamageDoesntCauseLifeLoss) {
 		loseLife(g, playerID, dealt)

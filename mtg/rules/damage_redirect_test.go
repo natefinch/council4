@@ -75,3 +75,47 @@ func TestRedirectDamageToSourceDealsToCreature(t *testing.T) {
 		t.Fatalf("unredirected player life lost = %d, want 3", lost)
 	}
 }
+
+func TestPlayerChoosesProtectionOrDamageRedirectionFirst(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		prefer     string
+		wantDamage int
+	}{
+		{name: "protection first", prefer: "protection", wantDamage: 0},
+		{name: "redirection first", prefer: "redirection", wantDamage: 4},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			redirect := addCreaturePermanent(g, game.Player1)
+			g.RuleEffects = append(g.RuleEffects,
+				game.RuleEffect{
+					Kind:           game.RuleEffectPlayerProtection,
+					Controller:     game.Player1,
+					AffectedPlayer: game.PlayerYou,
+					Protection:     game.ProtectionKeyword{Everything: true},
+				},
+				game.RuleEffect{
+					Kind:           game.RuleEffectRedirectDamageToSource,
+					Controller:     game.Player1,
+					AffectedPlayer: game.PlayerYou,
+					SourceObjectID: redirect.ObjectID,
+					Duration:       game.DurationPermanent,
+				},
+			)
+			source := addCreaturePermanent(g, game.Player2)
+			engine := NewEngine(nil)
+			engine.setReplacementChoiceContext(g, [game.NumPlayers]PlayerAgent{
+				game.Player1: replacementChoosingAgent{prefer: test.prefer},
+			}, &TurnLog{})
+			defer g.ClearChoiceContext()
+
+			if dealt := dealPlayerDamage(g, source.CardInstanceID, source.ObjectID, game.Player2, game.Player1, 4, true); dealt != test.wantDamage {
+				t.Fatalf("damage dealt = %d, want %d", dealt, test.wantDamage)
+			}
+			if redirect.MarkedDamage != test.wantDamage {
+				t.Fatalf("redirect permanent marked damage = %d, want %d", redirect.MarkedDamage, test.wantDamage)
+			}
+		})
+	}
+}

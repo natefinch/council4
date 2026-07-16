@@ -2214,7 +2214,7 @@ func selectionGrammarWord(token shared.Token) bool {
 	for _, word := range []string{
 		"a", "an", "all", "any", "number", "of", "up", "to", "or", "and",
 		"with", "without", "from", "in", "your", "you", "control", "controls", "don't",
-		"opponent", "opponent's", "opponents", "activated", "triggered", "source",
+		"that", "player", "opponent", "opponent's", "opponents", "activated", "triggered", "source",
 		"mana", "value", "power", "toughness", "equal", "less", "greater", "lesser",
 		"battlefield", "graveyard", "graveyards", "hand", "library", "exile", "command",
 		"historic", "single",

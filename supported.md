@@ -11690,6 +11690,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Quest for the Gemblades
 - Quest for the Goblin Lord
 - Quest for the Gravelord
+- Questing Beast
 - Queza, Augur of Agonies
 - Quick Study
 - Quick-Draw Dagger

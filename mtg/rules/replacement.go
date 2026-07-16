@@ -43,6 +43,12 @@ type damageEvent struct {
 	combatDamage   bool
 }
 
+type damageModificationResult struct {
+	event      damageEvent
+	amount     int
+	redirected bool
+}
+
 // applyDamageModifications applies the replacement and prevention effects that
 // modify a damage event and returns the amount of damage actually dealt. It
 // interleaves damage replacement effects (CR 614) with prevention shields and
@@ -51,37 +57,54 @@ type damageEvent struct {
 // player chooses which to apply next, the chosen effect is applied (consuming a
 // finite shield's amount or a shield counter), and the applicable set is then
 // recomputed (CR 616.1f). Each replacement effect affects the event at most once
-// (CR 614.5). Protection from the source prevents all of the damage (CR 702.16e)
-// and is applied first, since it costs nothing and zeroes the event regardless of
-// order. Each prevention reports the amount it prevented via a damage-prevented
-// event.
+// (CR 614.5). Protection from the source participates as a prevention candidate
+// (CR 702.16e), since applying a redirection replacement first can change whether
+// protection still applies. Each prevention reports the amount it prevented via
+// a damage-prevented event.
 func applyDamageModifications(g *game.Game, event damageEvent) int {
+	return applyDamageEventModifications(g, event).amount
+}
+
+func applyDamageEventModifications(g *game.Game, event damageEvent) damageModificationResult {
 	if event.amount <= 0 {
-		return 0
+		return damageModificationResult{event: event}
 	}
-	if damageEventProtected(g, event) {
-		emitDamagePreventedEvent(g, event, event.amount)
-		return 0
-	}
-	chooser := replacementDecisionPlayer(g, event)
 	appliedReplacements := make(map[id.ID]bool)
 	amount := event.amount
 	var redirects []preventionRedirect
+	redirected := false
 	for amount > 0 {
 		event.amount = amount
-		shieldIndices := applicablePreventionShieldIndices(g, event)
-		hasShieldCounter := event.permanent != nil && event.permanent.Counters.Get(counter.Shield) > 0
-		replacements := matchingDamageReplacementEffects(g, event, appliedReplacements)
+		preventionAllowed := !damageEventCantBePrevented(g, event)
+		protected := preventionAllowed && damageEventProtected(g, event)
+		var shieldIndices []int
+		hasShieldCounter := false
+		if preventionAllowed {
+			shieldIndices = applicablePreventionShieldIndices(g, event)
+			hasShieldCounter = event.permanent != nil && event.permanent.Counters.Get(counter.Shield) > 0
+		}
+		replacements := matchingDamageReplacementEffects(g, event, appliedReplacements, preventionAllowed)
+		var redirectPermanent *game.Permanent
+		canRedirect := false
+		if event.permanent == nil {
+			redirectPermanent, canRedirect = playerDamageRedirectPermanent(g, event.player)
+		}
 
 		// Candidates are listed prevention-first so the deterministic fallback
 		// (no agent) prevents before replacing, but an agent may choose any
 		// applicable effect, including a replacement before a prevention.
-		labels := make([]string, 0, len(shieldIndices)+1+len(replacements))
+		labels := make([]string, 0, len(shieldIndices)+3+len(replacements))
+		if protected {
+			labels = append(labels, "protection")
+		}
 		for range shieldIndices {
 			labels = append(labels, "prevention shield")
 		}
 		if hasShieldCounter {
 			labels = append(labels, "shield counter")
+		}
+		if canRedirect {
+			labels = append(labels, "damage redirection")
 		}
 		labels = append(labels, replacementEffectLabels(replacements)...)
 		if len(labels) == 0 {
@@ -90,18 +113,29 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 
 		chosen := 0
 		if len(labels) > 1 {
-			decision := chooseReplacementDecision(g, chooser, labels)
+			decision := chooseReplacementDecision(g, replacementDecisionPlayer(g, event), labels)
 			chosen = decision.Selected[0]
 		}
 
-		shieldCounterIndex := len(shieldIndices)
+		shieldsStart := 0
+		if protected {
+			shieldsStart = 1
+		}
+		shieldCounterIndex := shieldsStart + len(shieldIndices)
 		replacementsStart := shieldCounterIndex
 		if hasShieldCounter {
 			replacementsStart++
 		}
+		redirectIndex := replacementsStart
+		if canRedirect {
+			replacementsStart++
+		}
 		switch {
-		case chosen < len(shieldIndices):
-			shield := &g.PreventionShields[shieldIndices[chosen]]
+		case protected && chosen == 0:
+			emitDamagePreventedEvent(g, event, amount)
+			amount = 0
+		case chosen >= shieldsStart && chosen < shieldCounterIndex:
+			shield := &g.PreventionShields[shieldIndices[chosen-shieldsStart]]
 			prevented := amount
 			if !shield.All {
 				prevented = min(amount, shield.Amount)
@@ -140,6 +174,10 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 			event.permanent.Counters.Remove(counter.Shield, 1)
 			emitDamagePreventedEvent(g, event, amount)
 			amount = 0
+		case canRedirect && chosen == redirectIndex:
+			event.player = 0
+			event.permanent = redirectPermanent
+			redirected = true
 		default:
 			replacement := replacements[chosen-replacementsStart]
 			appliedReplacements[replacement.ID] = true
@@ -181,7 +219,11 @@ func applyDamageModifications(g *game.Game, event damageEvent) int {
 	for _, redirect := range redirects {
 		dealPlayerDamage(g, redirect.sourceID, 0, redirect.controller, redirect.player, redirect.amount, false)
 	}
-	return amount
+	return damageModificationResult{
+		event:      event,
+		amount:     amount,
+		redirected: redirected,
+	}
 }
 
 // preventionRedirect records a pending Deflecting Palm redirect: after a
@@ -1597,7 +1639,12 @@ func matchingCounterPlacementReplacementEffects(g *game.Game, event game.Event, 
 	return matches
 }
 
-func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied map[id.ID]bool) []game.ReplacementEffect {
+func matchingDamageReplacementEffects(
+	g *game.Game,
+	event damageEvent,
+	applied map[id.ID]bool,
+	preventionAllowed bool,
+) []game.ReplacementEffect {
 	matchEvent := damageReplacementEvent(g, event)
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
@@ -1605,9 +1652,13 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 		if replacement.DamageMultiplier <= 1 && replacement.DamageAddend == 0 && replacement.DamagePreventAmount == 0 && !replacement.DamagePreventAll {
 			continue
 		}
+		if !preventionAllowed && (replacement.DamagePreventAmount > 0 || replacement.DamagePreventAll) {
+			continue
+		}
 		if len(replacement.DamageSourceColors) > 0 && !damageSourceHasAnyColor(g, event, replacement.DamageSourceColors) {
 			continue
 		}
+
 		if len(replacement.DamageSourceTypes) > 0 && !damageSourceHasAllTypes(g, event, replacement.DamageSourceTypes) {
 			continue
 		}
@@ -1641,6 +1692,30 @@ func matchingDamageReplacementEffects(g *game.Game, event damageEvent, applied m
 		matches = append(matches, *replacement)
 	}
 	return matches
+}
+
+// damageEventCantBePrevented reports whether an active static rule makes this
+// combat-damage event unpreventable. Both the rule's controller and the damage
+// source's characteristics are evaluated live at the event, so control changes
+// and continuous type changes are honored before replacement/prevention ordering
+// begins.
+func damageEventCantBePrevented(g *game.Game, event damageEvent) bool {
+	if !event.combatDamage || event.sourceObjectID == 0 {
+		return false
+	}
+	source, ok := permanentByObjectID(g, event.sourceObjectID)
+	if !ok {
+		return false
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCombatDamageCantBePrevented &&
+			ruleEffectMatchesPermanent(g, effect, source) {
+			return true
+		}
+	}
+	return false
 }
 
 // damageRecipientIsSourceAttached reports whether the damage event's recipient is
