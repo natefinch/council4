@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,972 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,974 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -11650,6 +11650,7 @@ Council4 currently supports **17,972 of 32,501 cards eligible for paper support 
 - Quantum Misalignment
 - Quarrel's End
 - Quarry Beetle
+- Quartzwood Crasher
 - Quasiduplicate
 - Queen Allenal of Ruadach
 - Queen Brahne
@@ -14776,6 +14777,7 @@ Council4 currently supports **17,972 of 32,501 cards eligible for paper support 
 - Stone Spirit
 - Stone-Seeder Hierophant
 - Stonebound Mentor
+- Stonebrow, Krosan Hero
 - Stonecloaker
 - Stonecoil Serpent
 - Stonefare Crocodile

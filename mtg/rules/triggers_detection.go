@@ -835,6 +835,9 @@ func coalescePendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredA
 			if ability.Trigger.Pattern.OneOrMorePerAttackTarget {
 				key.attackTarget = trigger.event.AttackTarget
 			}
+			if ability.Trigger.Pattern.OneOrMorePerDamagedPlayer {
+				key.damagedPlayer = trigger.event.Player
+			}
 			if seenOneOrMore[key] {
 				continue
 			}
@@ -869,12 +872,13 @@ func limitPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbil
 }
 
 type triggerBatchKey struct {
-	sourceID     id.ID
-	abilityIndex int
-	event        game.EventKind
-	controller   game.PlayerID
-	simultaneous id.ID
-	attackTarget game.AttackTarget
+	sourceID      id.ID
+	abilityIndex  int
+	event         game.EventKind
+	controller    game.PlayerID
+	simultaneous  id.ID
+	attackTarget  game.AttackTarget
+	damagedPlayer game.PlayerID
 }
 
 func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {

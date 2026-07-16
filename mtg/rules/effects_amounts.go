@@ -149,6 +149,10 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		if obj.Exists && obj.Val.HasTriggerEvent {
 			amount = triggeringEventTotalPower(g, obj.Val)
 		}
+	case game.DynamicAmountTriggeringEventTotalCombatDamage:
+		if obj.Exists && obj.Val.HasTriggerEvent {
+			amount = triggeringEventTotalCombatDamage(g, obj.Val)
+		}
 	case game.DynamicAmountSpellTargetCount:
 		if obj.Exists && obj.Val.HasTriggerEvent && dynamic.Selection != nil {
 			amount = countSpellTargetsMatching(g, controller, game.TargetAllowPermanent, *dynamic.Selection, obj.Val.TriggerEvent)
@@ -939,6 +943,51 @@ func triggeringEventTotalPower(g *game.Game, obj *game.StackObject) int {
 	}
 	if !matched && matches(trigger) {
 		return power(trigger)
+	}
+	return total
+}
+
+// triggeringEventTotalCombatDamage sums the combat damage the resolving
+// combat-damage trigger's coalesced batch dealt to the triggering event's
+// damaged player (Quartzwood Crasher's "the amount of damage those creatures
+// dealt to that player"). It restricts the simultaneous batch to the events that
+// match the trigger pattern (matching controlled sources with the required
+// keyword dealing combat damage) and that damaged the same player as the
+// retained trigger event, then adds up the damage each such event actually dealt
+// (post prevention/replacement, since fully-prevented damage emits no event).
+// Restricting to the retained event's player is what keeps separate damaged
+// players in their own triggers; the batch coalescing already split them.
+func triggeringEventTotalCombatDamage(g *game.Game, obj *game.StackObject) int {
+	pattern, ok := resolvingTriggerPattern(g, obj)
+	if !ok {
+		return 0
+	}
+	var source *game.Permanent
+	if permanent, live := permanentByObjectID(g, obj.SourceID); live {
+		source = permanent
+	}
+	trigger := obj.TriggerEvent
+	matches := func(event game.Event) bool {
+		return event.Player == trigger.Player &&
+			event.DamageRecipient&game.DamageRecipientPlayer != 0 &&
+			triggerMatchesEventForController(g, source, obj.Controller, pattern, event)
+	}
+	if trigger.SimultaneousID == 0 {
+		if matches(trigger) {
+			return trigger.Amount
+		}
+		return 0
+	}
+	total := 0
+	matched := false
+	for _, event := range g.Events {
+		if event.SimultaneousID == trigger.SimultaneousID && matches(event) {
+			total += event.Amount
+			matched = true
+		}
+	}
+	if !matched && matches(trigger) {
+		return trigger.Amount
 	}
 	return total
 }

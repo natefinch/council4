@@ -1011,6 +1011,12 @@ const (
 	// permanents in the simultaneous event batch that matched the enclosing
 	// trigger ("the total power of those creatures").
 	EffectDynamicAmountTriggeringEventTotalPower EffectDynamicAmountKind = "EffectDynamicAmountTriggeringEventTotalPower"
+	// EffectDynamicAmountTriggeringEventTotalCombatDamage is the total combat
+	// damage dealt to the triggering event's damaged player by the creatures in
+	// the simultaneous combat-damage batch that matched the enclosing trigger
+	// ("the amount of damage those creatures dealt to that player" —
+	// Quartzwood Crasher).
+	EffectDynamicAmountTriggeringEventTotalCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringEventTotalCombatDamage"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.

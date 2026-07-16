@@ -211,6 +211,8 @@ func compileTriggerSelectionKeyword(value parser.KeywordKind) (parser.KeywordKin
 		return parser.KeywordHaste, true
 	case parser.KeywordShadow:
 		return parser.KeywordShadow, true
+	case parser.KeywordTrample:
+		return parser.KeywordTrample, true
 	default:
 		return parser.KeywordUnknown, false
 	}

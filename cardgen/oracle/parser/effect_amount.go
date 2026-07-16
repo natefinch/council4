@@ -1128,6 +1128,17 @@ func parseDynamicAmountSubject(tokens []shared.Token, start int, atoms Atoms) (d
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountDamageDealtThisWay},
 			end:    start + 5,
 		}, true
+	case effectWordsAt(tokens, start, "the", "amount", "of", "damage", "those", "creatures", "dealt", "to", "that", "player") &&
+		dynamicAmountBoundary(tokens, start+10):
+		// "the amount of damage those creatures dealt to that player" names the
+		// total combat damage the triggering event's matched creatures dealt to
+		// the damaged player (Quartzwood Crasher). The runtime sums the combat
+		// damage the enclosing trigger's simultaneous batch dealt to that
+		// player, so the amount carries no in-text referent.
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountTriggeringEventTotalCombatDamage},
+			end:    start + 10,
+		}, true
 	case effectWordsAt(tokens, start, "the", "result") &&
 		dynamicAmountBoundary(tokens, start+2):
 		return dynamicAmountSubject{

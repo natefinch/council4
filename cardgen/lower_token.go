@@ -165,6 +165,17 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 				ctx.content.References[0].Pronoun != compiler.ReferencePronounThose {
 				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 			}
+		case effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringEventTotalCombatDamage:
+			// "where X is the amount of damage those creatures dealt to that
+			// player" (Quartzwood Crasher): the "those creatures" pronoun names
+			// the trigger's coalesced combat-damage batch and "that player" names
+			// its damaged player. The runtime dynamic amount reads both directly
+			// from the resolving trigger event, so no lowered object binding is
+			// needed; admit exactly those two references and fail closed on any
+			// other reference shape.
+			if !triggeringEventTotalCombatDamageReferencesOK(ctx.content.References) {
+				return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+			}
 		case len(ctx.content.References) != 0:
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		default:
@@ -1598,6 +1609,30 @@ func tokenContentKeywords(content compiler.AbilityContent) ([]parser.KeywordKind
 		kinds = append(kinds, keyword.Kind)
 	}
 	return kinds, true
+}
+
+// triggeringEventTotalCombatDamageReferencesOK reports whether a create-token
+// clause bound to the total-combat-damage dynamic amount carries exactly the two
+// references that amount's Oracle text names: the "those creatures" pronoun
+// (the coalesced combat-damage batch) and the "that player" reference (the
+// damaged player). Both are resolved by the runtime dynamic amount from the
+// resolving trigger event, so no lowered object binding is produced for them.
+func triggeringEventTotalCombatDamageReferencesOK(references []compiler.CompiledReference) bool {
+	if len(references) != 2 {
+		return false
+	}
+	sawThose, sawThatPlayer := false, false
+	for _, reference := range references {
+		switch {
+		case reference.Kind == compiler.ReferencePronoun && reference.Pronoun == compiler.ReferencePronounThose:
+			sawThose = true
+		case reference.Kind == compiler.ReferenceThatPlayer:
+			sawThatPlayer = true
+		default:
+			return false
+		}
+	}
+	return sawThose && sawThatPlayer
 }
 
 func unsupportedTokenCreationDiagnostic(ctx contentCtx) *shared.Diagnostic {

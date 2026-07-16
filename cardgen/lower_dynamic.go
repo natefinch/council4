@@ -248,6 +248,8 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Kind = game.DynamicAmountCardsNamedSourceInControllerGraveyard
 	case compiler.DynamicAmountCommanderCastCount:
 		dynamic.Kind = game.DynamicAmountCommanderCastCount
+	case compiler.DynamicAmountTriggeringEventTotalCombatDamage:
+		dynamic.Kind = game.DynamicAmountTriggeringEventTotalCombatDamage
 	default:
 		return game.DynamicAmount{}, false
 	}

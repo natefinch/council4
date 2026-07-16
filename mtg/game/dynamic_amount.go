@@ -302,6 +302,12 @@ const (
 	// permanents in the simultaneous event batch that matched the resolving
 	// ability's trigger pattern.
 	DynamicAmountTriggeringEventTotalPower
+	// DynamicAmountTriggeringEventTotalCombatDamage is the total combat damage
+	// the resolving ability's trigger pattern coalesced batch dealt to the
+	// triggering event's damaged player. It sums, over the simultaneous
+	// combat-damage batch that matched the trigger, the combat damage each
+	// matched source dealt to that one player (Quartzwood Crasher).
+	DynamicAmountTriggeringEventTotalCombatDamage
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
