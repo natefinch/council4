@@ -14,6 +14,7 @@ var Cards = []cardset.Entry{
 	{Name: "Queen of Ice", New: QueenOfIce},
 	{Name: "Quest for the Gemblades", New: QuestForTheGemblades},
 	{Name: "Quest for the Gravelord", New: QuestForTheGravelord},
+	{Name: "Questing Beast", New: QuestingBeast},
 	{Name: "Quick-Draw Dagger", New: QuickDrawDagger},
 	{Name: "Quickling", New: Quickling},
 	{Name: "Quicksilver Behemoth", New: QuicksilverBehemoth},

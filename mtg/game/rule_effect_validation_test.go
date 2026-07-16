@@ -26,6 +26,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectCantBeBlockedByMoreThanOne,
 		RuleEffectNoMaximumHandSize,
 		RuleEffectCantBeBlockedByCreaturesWith,
+		RuleEffectCombatDamageCantBePrevented,
 		RuleEffectPlayerProtection,
 		RuleEffectAttackTax,
 		RuleEffectLifeTotalCantChange,

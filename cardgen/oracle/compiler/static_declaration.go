@@ -41,6 +41,7 @@ const (
 	StaticDeclarationCreatureAttackTax
 	StaticDeclarationManaProductionMultiplier
 	StaticDeclarationCombatDamagePrevention
+	StaticDeclarationCombatDamagePreventionProhibition
 	StaticDeclarationDevotionNotCreature
 	StaticDeclarationControlOpponentSearches
 	StaticDeclarationExileOpponentSearchFinds
@@ -890,6 +891,13 @@ type StaticCombatDamagePreventionDeclaration struct {
 	Recipient CompiledSelector
 }
 
+// StaticCombatDamagePreventionProhibitionDeclaration makes combat damage dealt
+// by a controller-scoped group of permanents unpreventable. Source is evaluated
+// against the live damage source and the static ability's current controller.
+type StaticCombatDamagePreventionProhibitionDeclaration struct {
+	Source CompiledSelector
+}
+
 // StaticPerTurnLimitOperation identifies which per-turn player action a
 // StaticPerTurnLimitDeclaration caps.
 type StaticPerTurnLimitOperation uint8
@@ -929,30 +937,31 @@ type StaticDeclaration struct {
 	// Exactly one variant payload matching Kind is non-nil. PerTurnLimit serves
 	// both the StaticDeclarationDrawLimit and StaticDeclarationCastLimit kinds,
 	// discriminated by its Operation.
-	Continuous                  *StaticContinuousDeclaration
-	Rule                        *StaticRuleDeclaration
-	Cost                        *StaticCostModifierDeclaration
-	CardGrant                   *StaticCardAbilityGrantDeclaration
-	Player                      *StaticPlayerRuleDeclaration
-	OpponentRestriction         *StaticOpponentActionRestrictionDeclaration
-	EnterRestriction            *StaticEnterBattlefieldRestrictionDeclaration
-	SpellUncounterable          *StaticSpellUncounterableDeclaration
-	EnteringMultiplier          *StaticEnteringTriggerMultiplierDeclaration
-	ControlledMultiplier        *StaticControlledTriggerMultiplierDeclaration
-	Untap                       *StaticUntapStepDeclaration
-	CharacteristicPT            *StaticCharacteristicPowerToughnessDeclaration
-	CastAsThoughFlash           *StaticCastAsThoughFlashDeclaration
-	GraveyardGrant              *StaticGraveyardKeywordGrantDeclaration
-	SpellGrant                  *StaticSpellKeywordGrantDeclaration
-	PerTurnLimit                *StaticPerTurnLimitDeclaration
-	OpeningHandPlay             *StaticOpeningHandPlayDeclaration
-	OpponentEnteringSuppression *StaticOpponentEnteringTriggerSuppressionDeclaration
-	CreatureAttackTax           *StaticCreatureAttackTaxDeclaration
-	ManaProductionMultiplier    *StaticManaProductionMultiplierDeclaration
-	CombatDamagePrevention      *StaticCombatDamagePreventionDeclaration
-	DevotionNotCreature         *StaticDevotionNotCreatureDeclaration
-	ControlOpponentSearches     *StaticControlOpponentSearchesDeclaration
-	ExileOpponentSearchFinds    *StaticExileOpponentSearchFindsDeclaration
+	Continuous                        *StaticContinuousDeclaration
+	Rule                              *StaticRuleDeclaration
+	Cost                              *StaticCostModifierDeclaration
+	CardGrant                         *StaticCardAbilityGrantDeclaration
+	Player                            *StaticPlayerRuleDeclaration
+	OpponentRestriction               *StaticOpponentActionRestrictionDeclaration
+	EnterRestriction                  *StaticEnterBattlefieldRestrictionDeclaration
+	SpellUncounterable                *StaticSpellUncounterableDeclaration
+	EnteringMultiplier                *StaticEnteringTriggerMultiplierDeclaration
+	ControlledMultiplier              *StaticControlledTriggerMultiplierDeclaration
+	Untap                             *StaticUntapStepDeclaration
+	CharacteristicPT                  *StaticCharacteristicPowerToughnessDeclaration
+	CastAsThoughFlash                 *StaticCastAsThoughFlashDeclaration
+	GraveyardGrant                    *StaticGraveyardKeywordGrantDeclaration
+	SpellGrant                        *StaticSpellKeywordGrantDeclaration
+	PerTurnLimit                      *StaticPerTurnLimitDeclaration
+	OpeningHandPlay                   *StaticOpeningHandPlayDeclaration
+	OpponentEnteringSuppression       *StaticOpponentEnteringTriggerSuppressionDeclaration
+	CreatureAttackTax                 *StaticCreatureAttackTaxDeclaration
+	ManaProductionMultiplier          *StaticManaProductionMultiplierDeclaration
+	CombatDamagePrevention            *StaticCombatDamagePreventionDeclaration
+	CombatDamagePreventionProhibition *StaticCombatDamagePreventionProhibitionDeclaration
+	DevotionNotCreature               *StaticDevotionNotCreatureDeclaration
+	ControlOpponentSearches           *StaticControlOpponentSearchesDeclaration
+	ExileOpponentSearchFinds          *StaticExileOpponentSearchFindsDeclaration
 }
 
 // StaticCreatureAttackTaxAmountKind identifies how a per-creature attack-tax
@@ -1278,6 +1287,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticCombatDamagePreventionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticCombatDamagePreventionProhibitionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}
@@ -5402,6 +5415,7 @@ func recognizeStaticCombatDamagePreventionDeclaration(ability CompiledAbility, s
 	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCombatDamagePrevention) {
 		return StaticDeclaration{}, false
 	}
+
 	if ability.Cost != nil ||
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
@@ -5417,6 +5431,32 @@ func recognizeStaticCombatDamagePreventionDeclaration(ability CompiledAbility, s
 		OperationSpan: node.OperationSpan,
 		CombatDamagePrevention: &StaticCombatDamagePreventionDeclaration{
 			Recipient: compileTypedSelection(node.PreventionRecipient),
+		},
+	}, true
+}
+
+// recognizeStaticCombatDamagePreventionProhibitionDeclaration maps the
+// parser-owned controller-relative combat-damage prevention prohibition onto a
+// typed source selector. Downstream lowering consumes only this semantic payload.
+func recognizeStaticCombatDamagePreventionProhibitionDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCombatDamagePreventionProhibition) {
+		return StaticDeclaration{}, false
+	}
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		ability.AbilityWord != "" {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCombatDamagePreventionProhibition,
+		Span:          node.Span,
+		OperationSpan: node.OperationSpan,
+		CombatDamagePreventionProhibition: &StaticCombatDamagePreventionProhibitionDeclaration{
+			Source: compileTypedSelection(node.PreventionSource),
 		},
 	}, true
 }

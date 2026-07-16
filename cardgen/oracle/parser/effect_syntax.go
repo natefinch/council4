@@ -560,6 +560,7 @@ func emitSentenceResolvingSyntax(
 		recognizeGainControlThatPlayerMonarchSentence(&sentences[i])
 		recognizeDestroyTappedNonlandThatPlayerControlsSentence(&sentences[i])
 		recognizeGoadThatPlayerControlsSentence(&sentences[i])
+		recognizeDamageTargetThatPlayerControlsSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
@@ -3744,6 +3745,7 @@ func recognizeGoadThatPlayerControlsSentence(sentence *Sentence) {
 	if len(sentence.Effects) != 1 || len(sentence.Targets) != 1 {
 		return
 	}
+
 	effect := &sentence.Effects[0]
 	if effect.Kind != EffectGoad || len(effect.Targets) != 1 {
 		return
@@ -3767,6 +3769,39 @@ func recognizeGoadThatPlayerControlsSentence(sentence *Sentence) {
 		Kind:       SelectionCreature,
 		Controller: SelectionControllerThatPlayer,
 	}
+	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
+	if !target.Exact {
+		return
+	}
+	sentence.Targets[0] = target
+	effect.Targets[0] = target
+	effect.Exact = exactEffectSyntax(effect)
+}
+
+// recognizeDamageTargetThatPlayerControlsSentence binds a single permanent
+// damage target's trailing "that player controls" clause to the triggering
+// event's player. The permanent noun and any ordinary target qualifiers remain
+// parser-owned typed selection data; this recognizer adds only the event-player
+// controller relation and then re-runs exact reconstruction.
+func recognizeDamageTargetThatPlayerControlsSentence(sentence *Sentence) {
+	if len(sentence.Effects) != 1 || len(sentence.Targets) != 1 {
+		return
+	}
+	effect := &sentence.Effects[0]
+	if effect.Kind != EffectDealDamage || len(effect.Targets) != 1 {
+		return
+	}
+	target := effect.Targets[0]
+	if !strings.HasSuffix(strings.ToLower(target.Text), " that player controls") {
+		return
+	}
+	switch target.Selection.Kind {
+	case SelectionArtifact, SelectionCreature, SelectionEnchantment, SelectionLand,
+		SelectionPermanent, SelectionPlaneswalker, SelectionBattle:
+	default:
+		return
+	}
+	target.Selection.Controller = SelectionControllerThatPlayer
 	target.Exact = exactSinglePermanentTargetSyntax(target.Text, target.Selection)
 	if !target.Exact {
 		return

@@ -54,6 +54,7 @@ const (
 	StaticDeclarationCreatureAttackTax                    StaticDeclarationKind = "StaticDeclarationCreatureAttackTax"
 	StaticDeclarationManaProductionMultiplier             StaticDeclarationKind = "StaticDeclarationManaProductionMultiplier"
 	StaticDeclarationCombatDamagePrevention               StaticDeclarationKind = "StaticDeclarationCombatDamagePrevention"
+	StaticDeclarationCombatDamagePreventionProhibition    StaticDeclarationKind = "StaticDeclarationCombatDamagePreventionProhibition"
 	StaticDeclarationRoomAbilityTriggerMultiplier         StaticDeclarationKind = "StaticDeclarationRoomAbilityTriggerMultiplier"
 	StaticDeclarationDevotionNotCreature                  StaticDeclarationKind = "StaticDeclarationDevotionNotCreature"
 	StaticDeclarationControlOpponentSearches              StaticDeclarationKind = "StaticDeclarationControlOpponentSearches"
@@ -799,6 +800,12 @@ type StaticDeclarationSyntax struct {
 	// damage that would be dealt to attacking Humans you control."). It is the
 	// parsed selection describing which permanents the prevention protects.
 	PreventionRecipient SelectionSyntax `json:"-"`
+	// PreventionSource carries the source group of a
+	// StaticDeclarationCombatDamagePreventionProhibition declaration ("Combat
+	// damage that would be dealt by creatures you control can't be prevented.").
+	// It is the parsed selection describing which permanent sources deal
+	// unpreventable combat damage.
+	PreventionSource SelectionSyntax `json:"-"`
 	// Enchanted-type-change payload: a removal Aura whose continuous effect sets
 	// the enchanted permanent's card types and creature subtypes (CardTypes,
 	// Subtypes, SET), optionally makes it colorless (BecomeColorless), optionally
@@ -1357,6 +1364,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCombatDamagePreventionDeclaration(tokens, atoms); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticCombatDamagePreventionProhibitionDeclaration(tokens, atoms); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticDevotionNotCreatureDeclaration(tokens, atoms); ok {
@@ -4210,6 +4220,7 @@ func parseStaticCombatDamagePreventionDeclaration(tokens []shared.Token, atoms A
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
 		return StaticDeclarationSyntax{}, false
 	}
+
 	body := tokens[:len(tokens)-1]
 	prefix := []string{"prevent", "all", "combat", "damage", "that", "would", "be", "dealt", "to"}
 	if len(body) <= len(prefix) {
@@ -4243,6 +4254,55 @@ func parseStaticCombatDamagePreventionDeclaration(tokens []shared.Token, atoms A
 		Span:                shared.SpanOf(tokens),
 		OperationSpan:       shared.SpanOf(body[0:4]),
 		PreventionRecipient: recipient,
+	}, true
+}
+
+// parseStaticCombatDamagePreventionProhibitionDeclaration recognizes the
+// controller-relative static prohibition "Combat damage that would be dealt by
+// <group> can't be prevented." The source group is parsed with the shared
+// selection vocabulary and must name controller-scoped battlefield permanents;
+// spell, player, duration, recipient, and noncombat variants fail closed.
+func parseStaticCombatDamagePreventionProhibitionDeclaration(tokens []shared.Token, atoms Atoms) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	body := tokens[:len(tokens)-1]
+	prefix := []string{"combat", "damage", "that", "would", "be", "dealt", "by"}
+	if len(body) <= len(prefix)+3 {
+		return StaticDeclarationSyntax{}, false
+	}
+	for i, want := range prefix {
+		if !equalWord(body[i], want) {
+			return StaticDeclarationSyntax{}, false
+		}
+	}
+	prohibition := len(body) - 3
+	if (!equalWord(body[prohibition], "can't") && !equalWord(body[prohibition], "cannot")) ||
+		!staticWordsAt(body, prohibition+1, "be", "prevented") {
+		return StaticDeclarationSyntax{}, false
+	}
+	sourceTokens := body[len(prefix):prohibition]
+	source := parseSelection(sourceTokens, atoms)
+	if !exactMassPluralGroupPhrase(&source, strings.ToLower(joinedEffectText(sourceTokens))) {
+		return StaticDeclarationSyntax{}, false
+	}
+	if source.Controller == SelectionControllerAny {
+		return StaticDeclarationSyntax{}, false
+	}
+	switch source.Kind {
+	case SelectionArtifact, SelectionCreature, SelectionEnchantment, SelectionLand,
+		SelectionPermanent, SelectionPlaneswalker, SelectionBattle:
+	default:
+		return StaticDeclarationSyntax{}, false
+	}
+	if conjunctiveTypeTarget(source) {
+		source.ConjunctiveTypes = true
+	}
+	return StaticDeclarationSyntax{
+		Kind:             StaticDeclarationCombatDamagePreventionProhibition,
+		Span:             shared.SpanOf(tokens),
+		OperationSpan:    shared.SpanOf(body[prohibition:]),
+		PreventionSource: source,
 	}, true
 }
 
