@@ -45,8 +45,6 @@ var Cards = []cardset.Entry{
 	{Name: "Inner Demon", New: InnerDemon},
 	{Name: "Innkeeper's Talent", New: InnkeeperSTalent},
 	{Name: "Inquisitor Exarch", New: InquisitorExarch},
-	{Name: "Inscription of Abundance", New: InscriptionOfAbundance},
-	{Name: "Inscription of Ruin", New: InscriptionOfRuin},
 	{Name: "Insectoid Exterminator", New: InsectoidExterminator},
 	{Name: "Insidious Will", New: InsidiousWill},
 	{Name: "Insolence", New: Insolence},
