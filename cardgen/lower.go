@@ -538,8 +538,7 @@ func isBareMandatoryControllerDrawOne(content game.AbilityContent) bool {
 		len(content.Modes) != 1 ||
 		content.MinModes != 1 ||
 		content.MaxModes != 1 ||
-		content.ModeChoiceBonus.Condition != game.ModeChoiceConditionNone ||
-		content.ModeChoiceBonus.AdditionalMaxModes != 0 ||
+		content.ModeChoiceBonus != (game.ModeChoiceBonus{}) ||
 		content.AllowDuplicateModes {
 		return false
 	}

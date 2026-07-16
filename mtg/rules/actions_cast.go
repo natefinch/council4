@@ -845,7 +845,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
-	if !modesValidForSpellAt(g, playerID, announcementDef, chosenModes) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets, branch) {
+	if !modesValidForSpellAtBranch(g, playerID, announcementDef, chosenModes, branch) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets, branch) {
 		return false
 	}
 	if !spellTargetCountsMatchX(g, playerID, announcementDef, chosenModes, targets, xValue, branch) {

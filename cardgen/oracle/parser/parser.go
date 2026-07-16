@@ -699,7 +699,7 @@ func stripConditionalModalHeaderSemantics(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
 		if ability.Modal == nil ||
-			ability.Modal.ChoiceBonus.Condition != ModalChoiceBonusConditionControlsCommander {
+			ability.Modal.ChoiceBonus.Condition == ModalChoiceBonusConditionNone {
 			continue
 		}
 		ability.Sentences = nil
@@ -784,6 +784,10 @@ func emitAtoms(abilities []Ability, cardName string, legendary bool) {
 			}
 			abilities[i].Modal.ChoiceKind = choice.kind
 			abilities[i].Modal.ChoiceBonus = choice.bonus
+			if abilities[i].Modal.ChoiceBonus.ReplaceRange &&
+				abilities[i].Modal.ChoiceBonus.MaxModes < 0 {
+				abilities[i].Modal.ChoiceBonus.MaxModes = len(abilities[i].Modal.Options)
+			}
 			abilities[i].Modal.ModesUniquePerTurn = choice.modesUniquePerTurn
 			abilities[i].Modal.ChoiceKnown = choice.ok
 		}
@@ -1696,6 +1700,19 @@ type modalChoiceRecognition struct {
 
 func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 	tokens := header.Tokens
+	if kickedAnyNumberModalHeader(tokens) {
+		return modalChoiceRecognition{
+			minModes: 1,
+			maxModes: 1,
+			bonus: ModalChoiceBonusSyntax{
+				Condition:    ModalChoiceBonusConditionSpellKicked,
+				ReplaceRange: true,
+				MinModes:     0,
+				MaxModes:     -1,
+			},
+			ok: true,
+		}
+	}
 	if strings.EqualFold(
 		strings.TrimSpace(header.Text),
 		"Choose one that hasn't been chosen this turn —",
@@ -1773,6 +1790,9 @@ func recognizeModalChoice(header Phrase, atoms Atoms) modalChoiceRecognition {
 }
 
 func isModalHeader(tokens []shared.Token) bool {
+	if kickedAnyNumberModalHeader(tokens) {
+		return true
+	}
 	if strings.EqualFold(
 		strings.TrimSpace(joinedTokenText(tokens)),
 		"Choose one. If you control a commander as you cast this spell, you may choose both instead.",
@@ -1789,6 +1809,34 @@ func isModalHeader(tokens []shared.Token) bool {
 	}
 	period := shared.TopLevelIndex(tokens, shared.Period)
 	return period < 0 || dash < period
+}
+
+func kickedAnyNumberModalHeader(tokens []shared.Token) bool {
+	if len(tokens) != 14 {
+		return false
+	}
+	kinds := []shared.Kind{
+		shared.Word, shared.Word, shared.Period,
+		shared.Word, shared.Word, shared.Word, shared.Word, shared.Word,
+		shared.Comma, shared.Word, shared.Word, shared.Word, shared.Word,
+		shared.Period,
+	}
+	for i, kind := range kinds {
+		if tokens[i].Kind != kind {
+			return false
+		}
+	}
+	words := map[int]string{
+		0: "choose", 1: "one", 3: "if", 4: "this", 5: "spell",
+		6: "was", 7: "kicked", 9: "choose", 10: "any", 11: "number",
+		12: "instead",
+	}
+	for i, word := range words {
+		if !strings.EqualFold(tokens[i].Text, word) {
+			return false
+		}
+	}
+	return true
 }
 
 func joinedTokenText(tokens []shared.Token) string {

@@ -1559,8 +1559,12 @@ func parseDynamicGreatestCharacteristicSubject(tokens []shared.Token, start int,
 		return dynamicAmountSubject{}, false
 	}
 	return dynamicAmountSubject{
-		amount: EffectAmountSyntax{DynamicKind: kind, Selection: inner.amount.Selection},
-		end:    inner.end,
+		amount: EffectAmountSyntax{
+			DynamicKind:   kind,
+			Selection:     inner.amount.Selection,
+			ReferenceSpan: inner.amount.ReferenceSpan,
+		},
+		end: inner.end,
 	}, true
 }
 
@@ -2537,6 +2541,23 @@ func parseDynamicSelectionCountSubject(tokens []shared.Token, start int, atoms A
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
 			end:    end + 3, count: true, plural: plural,
+		}, true
+	}
+	// "they control" is the pronoun sibling of "that player controls". The
+	// surrounding effect binds "they" to a target or referenced player.
+	if effectWordsAt(tokens, end, "they", "control") && dynamicAmountBoundary(tokens, end+2) {
+		selection := buildDynamicCountSelection(tokens, start, end, atoms)
+		if selection.Zone != zone.None || !dynamicCountSelectionTypesFaithful(selection) {
+			return dynamicAmountSubject{}, false
+		}
+		selection.Controller = SelectionControllerThatPlayer
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{
+				DynamicKind:   EffectDynamicAmountCount,
+				Selection:     &selection,
+				ReferenceSpan: tokens[end].Span,
+			},
+			end: end + 2, count: true, plural: plural,
 		}, true
 	}
 	for _, zoneSuffix := range []struct {

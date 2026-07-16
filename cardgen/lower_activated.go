@@ -478,16 +478,34 @@ func lowerModalContent(
 	var bonus game.ModeChoiceBonus
 	switch modal.Bonus.Condition {
 	case compiler.ModeChoiceBonusConditionNone:
-		if modal.Bonus.AdditionalMaxModes != 0 {
+		if modal.Bonus.AdditionalMaxModes != 0 || modal.Bonus.ReplaceRange ||
+			modal.Bonus.MinModes != 0 || modal.Bonus.MaxModes != 0 {
 			return unsupported("the modal choice bonus has no supported condition")
 		}
 	case compiler.ModeChoiceBonusConditionControlsCommander:
-		if modal.Bonus.AdditionalMaxModes < 1 {
+		if modal.Bonus.AdditionalMaxModes < 1 || modal.Bonus.ReplaceRange {
 			return unsupported("the commander modal choice bonus must add at least one mode")
 		}
 		bonus = game.ModeChoiceBonus{
 			Condition:          game.ModeChoiceConditionControlsCommander,
 			AdditionalMaxModes: modal.Bonus.AdditionalMaxModes,
+		}
+	case compiler.ModeChoiceBonusConditionSpellKicked:
+		if ctx.enclosingKind != compiler.AbilitySpell {
+			return unsupported("the kicked modal choice replacement is valid only on a spell")
+		}
+		if !modal.Bonus.ReplaceRange ||
+			modal.Bonus.MinModes < 0 ||
+			modal.Bonus.MaxModes < modal.Bonus.MinModes ||
+			modal.Bonus.MaxModes > len(ctx.content.Modes) ||
+			modal.Bonus.AdditionalMaxModes != 0 {
+			return unsupported("the kicked modal choice replacement has an invalid mode range")
+		}
+		bonus = game.ModeChoiceBonus{
+			Condition:    game.ModeChoiceConditionSpellKicked,
+			ReplaceRange: true,
+			MinModes:     modal.Bonus.MinModes,
+			MaxModes:     modal.Bonus.MaxModes,
 		}
 	default:
 		return unsupported("the modal choice bonus condition is unsupported")

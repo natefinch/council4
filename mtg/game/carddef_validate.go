@@ -657,15 +657,30 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 	if content.ModesUniquePerTurn && (content.RandomModes || minModes != 1 || maxModes != 1 || len(content.Modes) > 64) {
 		v.add(faceName, appendPath(path, "ModesUniquePerTurn"), CardDefIssueInvalidAbilityBody, "per-turn unique modes must choose one nonrandom mode from at most 64 modes")
 	}
-	if bonus := content.ModeChoiceBonus; bonus.Condition != ModeChoiceConditionNone || bonus.AdditionalMaxModes != 0 {
-		if bonus.Condition != ModeChoiceConditionControlsCommander {
+	if bonus := content.ModeChoiceBonus; bonus != (ModeChoiceBonus{}) {
+		switch bonus.Condition {
+		case ModeChoiceConditionControlsCommander:
+			if bonus.ReplaceRange || bonus.MinModes != 0 || bonus.MaxModes != 0 {
+				v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "commander mode choice bonus must be additive")
+			}
+			if bonus.AdditionalMaxModes < 1 {
+				v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus must add at least one maximum mode")
+			}
+			if !content.AllowDuplicateModes && maxModes+bonus.AdditionalMaxModes > len(content.Modes) {
+				v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus exceeds available modes")
+			}
+		case ModeChoiceConditionSpellKicked:
+			if !bonus.ReplaceRange || bonus.AdditionalMaxModes != 0 {
+				v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "kicked mode choice bonus must replace the mode range")
+			}
+			if bonus.MinModes < 0 || bonus.MaxModes < bonus.MinModes {
+				v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "replacement mode range is invalid")
+			}
+			if !content.AllowDuplicateModes && bonus.MaxModes > len(content.Modes) {
+				v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "replacement mode range exceeds available modes")
+			}
+		default:
 			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus has unsupported condition")
-		}
-		if bonus.AdditionalMaxModes < 1 {
-			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus must add at least one maximum mode")
-		}
-		if !content.AllowDuplicateModes && maxModes+bonus.AdditionalMaxModes > len(content.Modes) {
-			v.add(faceName, appendPath(path, "ModeChoiceBonus"), CardDefIssueInvalidAbilityBody, "mode choice bonus exceeds available modes")
 		}
 	}
 	for i := range content.SharedTargets {

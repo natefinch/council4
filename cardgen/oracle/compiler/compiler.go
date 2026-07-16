@@ -318,9 +318,18 @@ func compileModalChoiceKind(kind parser.ModalChoiceKind) CompiledModalChoiceKind
 }
 
 func compileModeChoiceBonus(bonus parser.ModalChoiceBonusSyntax) CompiledModeChoiceBonus {
-	compiled := CompiledModeChoiceBonus{AdditionalMaxModes: bonus.AdditionalMaxModes}
-	if bonus.Condition == parser.ModalChoiceBonusConditionControlsCommander {
+	compiled := CompiledModeChoiceBonus{
+		AdditionalMaxModes: bonus.AdditionalMaxModes,
+		ReplaceRange:       bonus.ReplaceRange,
+		MinModes:           bonus.MinModes,
+		MaxModes:           bonus.MaxModes,
+	}
+	switch bonus.Condition {
+	case parser.ModalChoiceBonusConditionControlsCommander:
 		compiled.Condition = ModeChoiceBonusConditionControlsCommander
+	case parser.ModalChoiceBonusConditionSpellKicked:
+		compiled.Condition = ModeChoiceBonusConditionSpellKicked
+	default:
 	}
 	return compiled
 }

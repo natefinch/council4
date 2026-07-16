@@ -406,7 +406,7 @@ type AbilityContent struct {
 	References []CompiledReference
 }
 
-// ModeChoiceBonusCondition identifies a cast-time modal bonus condition.
+// ModeChoiceBonusCondition identifies a cast-time modal range condition.
 type ModeChoiceBonusCondition uint8
 
 const (
@@ -414,12 +414,18 @@ const (
 	ModeChoiceBonusConditionNone ModeChoiceBonusCondition = iota
 	// ModeChoiceBonusConditionControlsCommander requires controlling a commander.
 	ModeChoiceBonusConditionControlsCommander
+	// ModeChoiceBonusConditionSpellKicked requires the spell's kicker cost to have
+	// been paid.
+	ModeChoiceBonusConditionSpellKicked
 )
 
-// CompiledModeChoiceBonus is a text-independent modal range expansion.
+// CompiledModeChoiceBonus is a text-independent conditional modal range change.
 type CompiledModeChoiceBonus struct {
 	Condition          ModeChoiceBonusCondition
 	AdditionalMaxModes int
+	ReplaceRange       bool
+	MinModes           int
+	MaxModes           int
 }
 
 // CompiledModalSemantics holds a modal choice range and conditional bonus.

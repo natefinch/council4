@@ -2006,7 +2006,7 @@ const (
 	ModalChoiceKindOneAtRandom ModalChoiceKind = "ModalChoiceKindOneAtRandom"
 )
 
-// ModalChoiceBonusCondition identifies a cast-time condition that expands a
+// ModalChoiceBonusCondition identifies a cast-time condition that changes a
 // modal choice range.
 type ModalChoiceBonusCondition string
 
@@ -2015,12 +2015,21 @@ const (
 	ModalChoiceBonusConditionNone ModalChoiceBonusCondition = ""
 	// ModalChoiceBonusConditionControlsCommander requires controlling a commander.
 	ModalChoiceBonusConditionControlsCommander ModalChoiceBonusCondition = "ModalChoiceBonusConditionControlsCommander"
+	// ModalChoiceBonusConditionSpellKicked requires the spell's kicker cost to
+	// have been paid.
+	ModalChoiceBonusConditionSpellKicked ModalChoiceBonusCondition = "ModalChoiceBonusConditionSpellKicked"
 )
 
-// ModalChoiceBonusSyntax is a typed conditional expansion of a modal choice.
+// ModalChoiceBonusSyntax is a typed conditional change to a modal choice.
 type ModalChoiceBonusSyntax struct {
 	Condition          ModalChoiceBonusCondition `json:",omitempty"`
 	AdditionalMaxModes int                       `json:",omitempty"`
+	// ReplaceRange makes MinModes/MaxModes replace the modal's ordinary range
+	// when Condition is true. It models "choose any number instead" without
+	// conflating that replacement with additive bonuses such as "choose both".
+	ReplaceRange bool `json:",omitempty"`
+	MinModes     int  `json:",omitempty"`
+	MaxModes     int  `json:",omitempty"`
 }
 
 // ModeLabelKind identifies an exact supported label printed before a modal

@@ -289,18 +289,6 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 								}
 							}
 						}
-						if spellHasMultikicker(spellDef) {
-							actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, spellDef, xValue, modes)
-						} else if spellHasKicker(spellDef) {
-							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
-							if kickedResult.kind != targetInvalidSpec {
-								for _, targets := range kickedResult.choices {
-									if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
-										actions = append(actions, actionBuild.castKickedSpell(cardID, sourceZone, face, targets, xValue, modes))
-									}
-								}
-							}
-						}
 						if spellHasBestow(spellDef) {
 							bestowResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bestowed: true})
 							if bestowResult.kind != targetInvalidSpec {
@@ -312,18 +300,37 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 					}
+					if spellHasMultikicker(spellDef) {
+						for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
+							actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, cardID, sourceZone, face, spellDef, xValue, modes)
+						}
+					} else if spellHasKicker(spellDef) {
+						for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
+							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
+							if kickedResult.kind != targetInvalidSpec {
+								for _, targets := range kickedResult.choices {
+									if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
+										actions = append(actions, actionBuild.castKickedSpell(cardID, sourceZone, face, targets, xValue, modes))
+									}
+								}
+							}
+						}
+					}
 				}
 				if spellDef.Overload.Exists {
 					overloadedDef := overloadSpellDef(spellDef)
 					overloadCost := spellDef.Overload.Val.Cost
 					for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, &overloadCost, spellDef.AdditionalCosts) {
-						for _, modes := range modeChoicesForSpell(overloadedDef) {
+						for _, modes := range modeChoicesForSpellAt(g, playerID, overloadedDef) {
 							if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, xValue, modes, false) {
 								actions = append(actions, actionBuild.castOverloadedSpell(cardID, sourceZone, face, xValue, modes, false))
 							}
-							if sourceZone == zone.Hand && spellHasKicker(spellDef) &&
-								e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, xValue, modes, true) {
-								actions = append(actions, actionBuild.castOverloadedSpell(cardID, sourceZone, face, xValue, modes, true))
+						}
+						if sourceZone == zone.Hand && spellHasKicker(spellDef) {
+							for _, modes := range modeChoicesForSpellAtBranch(g, playerID, overloadedDef, game.CastBranch{Kicked: true}) {
+								if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, xValue, modes, true) {
+									actions = append(actions, actionBuild.castOverloadedSpell(cardID, sourceZone, face, xValue, modes, true))
+								}
 							}
 						}
 					}
@@ -400,9 +407,13 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 						}
 					}
 				}
-				if spellHasMultikicker(spellDef) {
+			}
+			if spellHasMultikicker(spellDef) {
+				for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
 					actions = e.appendMultikickedCastActions(g, playerID, actions, actionBuild, card.ID, zone.Command, face, spellDef, xValue, modes)
-				} else if spellHasKicker(spellDef) {
+				}
+			} else if spellHasKicker(spellDef) {
+				for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
 					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
 					if kickedResult.kind != targetInvalidSpec {
 						for _, targets := range kickedResult.choices {
@@ -418,13 +429,16 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 			overloadedDef := overloadSpellDef(spellDef)
 			overloadCost := spellDef.Overload.Val.Cost
 			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, &overloadCost, spellDef.AdditionalCosts) {
-				for _, modes := range modeChoicesForSpell(overloadedDef) {
+				for _, modes := range modeChoicesForSpellAt(g, playerID, overloadedDef) {
 					if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, card.ID, zone.Command, face, xValue, modes, false) {
 						actions = append(actions, actionBuild.castOverloadedSpell(card.ID, zone.Command, face, xValue, modes, false))
 					}
-					if spellHasKicker(spellDef) &&
-						e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, card.ID, zone.Command, face, xValue, modes, true) {
-						actions = append(actions, actionBuild.castOverloadedSpell(card.ID, zone.Command, face, xValue, modes, true))
+				}
+				if spellHasKicker(spellDef) {
+					for _, modes := range modeChoicesForSpellAtBranch(g, playerID, overloadedDef, game.CastBranch{Kicked: true}) {
+						if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, card.ID, zone.Command, face, xValue, modes, true) {
+							actions = append(actions, actionBuild.castOverloadedSpell(card.ID, zone.Command, face, xValue, modes, true))
+						}
 					}
 				}
 			}

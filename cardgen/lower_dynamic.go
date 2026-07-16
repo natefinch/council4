@@ -128,12 +128,21 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		dynamic.Object = object
 		dynamic.CounterKind = amount.CounterKind
 	case compiler.DynamicAmountGreatestPower, compiler.DynamicAmountGreatestToughness, compiler.DynamicAmountGreatestManaValue:
-		selection, ok := dynamicAmountSelection(amount.Selector())
+		selector := amount.Selector()
+		referencedPlayer := selector.Controller == compiler.ControllerThatPlayer
+		if referencedPlayer {
+			selector.Controller = compiler.ControllerAny
+		}
+		selection, ok := dynamicAmountSelection(selector)
 		if !ok {
 			return game.DynamicAmount{}, false
 		}
 		dynamic.Kind = greatestInGroupKind(amount.DynamicKind)
-		dynamic.Group = game.BattlefieldGroup(selection)
+		if referencedPlayer {
+			dynamic.Group = game.PlayerControlledGroup(game.EventPlayerReference(), selection)
+		} else {
+			dynamic.Group = game.BattlefieldGroup(selection)
+		}
 	case compiler.DynamicAmountTotalPower, compiler.DynamicAmountTotalToughness, compiler.DynamicAmountTotalManaValue:
 		selection, ok := dynamicAmountSelection(amount.Selector())
 		if !ok {
@@ -822,9 +831,9 @@ func rebindRecipientHandSizeAmount(amount game.Quantity, recipient game.PlayerRe
 // count group anchored to recipient. Every other amount — including a
 // controller-scoped "the number of lands you control" count on the battlefield
 // domain, which carries no player anchor — is returned unchanged.
-func rebindRecipientControlledCountAmount(amount game.Quantity, recipient game.PlayerReference) game.Quantity {
+func rebindRecipientControlledGroupAmount(amount game.Quantity, recipient game.PlayerReference) game.Quantity {
 	dyn := amount.DynamicAmount()
-	if !dyn.Exists || dyn.Val.Kind != game.DynamicAmountCountSelector {
+	if !dyn.Exists {
 		return amount
 	}
 	anchor, ok := dyn.Val.Group.PlayerAnchor()
@@ -834,6 +843,14 @@ func rebindRecipientControlledCountAmount(amount game.Quantity, recipient game.P
 	updated := dyn.Val
 	updated.Group = game.PlayerControlledGroup(recipient, dyn.Val.Group.Selection())
 	return game.Dynamic(updated)
+}
+
+func rebindRecipientControlledCountAmount(amount game.Quantity, recipient game.PlayerReference) game.Quantity {
+	dyn := amount.DynamicAmount()
+	if !dyn.Exists || dyn.Val.Kind != game.DynamicAmountCountSelector {
+		return amount
+	}
+	return rebindRecipientControlledGroupAmount(amount, recipient)
 }
 
 // scopeControlledCountToTarget rebinds a "the number of <permanents> that player

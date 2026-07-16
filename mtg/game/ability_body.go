@@ -49,13 +49,22 @@ const (
 	ModeChoiceConditionNone ModeChoiceCondition = iota
 	// ModeChoiceConditionControlsCommander requires controlling a commander.
 	ModeChoiceConditionControlsCommander
+	// ModeChoiceConditionSpellKicked requires the spell's kicker cost to have been
+	// paid.
+	ModeChoiceConditionSpellKicked
 )
 
-// ModeChoiceBonus adds optional mode choices when its cast-time condition is
-// true. Chosen modes remain locked into the stack object after announcement.
+// ModeChoiceBonus changes the mode range when its cast-time condition is true,
+// either additively or by replacement. Chosen modes remain locked into the stack
+// object after announcement.
 type ModeChoiceBonus struct {
 	Condition          ModeChoiceCondition
 	AdditionalMaxModes int
+	// ReplaceRange makes MinModes/MaxModes replace the ordinary range when the
+	// condition is true.
+	ReplaceRange bool
+	MinModes     int
+	MaxModes     int
 }
 
 // IsModal reports whether the content requires a mode choice. Exactly one mode

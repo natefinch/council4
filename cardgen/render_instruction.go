@@ -64,13 +64,25 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 		switch content.ModeChoiceBonus.Condition {
 		case game.ModeChoiceConditionControlsCommander:
 			condition = "game.ModeChoiceConditionControlsCommander"
+		case game.ModeChoiceConditionSpellKicked:
+			condition = "game.ModeChoiceConditionSpellKicked"
 		default:
 			return "", fmt.Errorf("render: unsupported modal choice bonus condition %d", content.ModeChoiceBonus.Condition)
 		}
+		bonusFields := []string{fmt.Sprintf("Condition: %s", condition)}
+		if content.ModeChoiceBonus.AdditionalMaxModes != 0 {
+			bonusFields = append(bonusFields, fmt.Sprintf("AdditionalMaxModes: %d", content.ModeChoiceBonus.AdditionalMaxModes))
+		}
+		if content.ModeChoiceBonus.ReplaceRange {
+			bonusFields = append(bonusFields,
+				"ReplaceRange: true",
+				fmt.Sprintf("MinModes: %d", content.ModeChoiceBonus.MinModes),
+				fmt.Sprintf("MaxModes: %d", content.ModeChoiceBonus.MaxModes),
+			)
+		}
 		fields = append(fields, fmt.Sprintf(
-			"ModeChoiceBonus: game.ModeChoiceBonus{Condition: %s, AdditionalMaxModes: %d},",
-			condition,
-			content.ModeChoiceBonus.AdditionalMaxModes,
+			"ModeChoiceBonus: game.ModeChoiceBonus{%s},",
+			strings.Join(bonusFields, ", "),
 		))
 	}
 	if content.EscalateCost.Exists {
