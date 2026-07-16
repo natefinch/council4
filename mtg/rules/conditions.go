@@ -226,6 +226,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.Object.Exists || cond.ObjectMatches.Exists || len(cond.Types) > 0 {
 		matches = matches && conditionObjectMatches(g, ctx, &cond)
 	}
+	if cond.ObjectAttackedThisTurn {
+		matches = matches && conditionObjectAttackedThisTurn(g, ctx, &cond)
+	}
 	if cond.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
 		matches = matches && eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g, ctx)
 	}
@@ -388,6 +391,23 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		return !matches
 	}
 	return matches
+}
+
+func conditionObjectAttackedThisTurn(g *game.Game, ctx conditionContext, cond *game.Condition) bool {
+	if cond == nil || !cond.Object.Exists || ctx.obj == nil {
+		return false
+	}
+	resolved, ok := resolveObjectReference(g, ctx.obj, cond.Object.Val)
+	if !ok || resolved.permanent == nil {
+		return false
+	}
+	objectID := resolved.permanent.ObjectID
+	for _, event := range eventsThisTurnWindow(g) {
+		if event.Kind == game.EventAttackerDeclared && event.PermanentID == objectID {
+			return true
+		}
+	}
+	return false
 }
 
 func sourceAttachedCombatCounterpartMatches(g *game.Game, source *game.Permanent, subtypes [2]types.Sub) bool {

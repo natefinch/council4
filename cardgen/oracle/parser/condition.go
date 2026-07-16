@@ -98,6 +98,7 @@ const (
 	ConditionPredicateSourceNotSaddled                                 ConditionPredicateKind = "ConditionPredicateSourceNotSaddled"
 	ConditionPredicateAttackersAttackingControllerAtLeast              ConditionPredicateKind = "ConditionPredicateAttackersAttackingControllerAtLeast"
 	ConditionPredicateNoAttackerAttackedController                     ConditionPredicateKind = "ConditionPredicateNoAttackerAttackedController"
+	ConditionPredicateObjectAttackedThisTurn                           ConditionPredicateKind = "ConditionPredicateObjectAttackedThisTurn"
 	ConditionPredicateControllerLibrarySizeAtLeast                     ConditionPredicateKind = "ConditionPredicateControllerLibrarySizeAtLeast"
 	ConditionPredicateControllerLifeExactly                            ConditionPredicateKind = "ConditionPredicateControllerLifeExactly"
 	ConditionPredicateControllerGainedLifeThisTurnAtLeast              ConditionPredicateKind = "ConditionPredicateControllerGainedLifeThisTurnAtLeast"
@@ -855,6 +856,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,
+		recognizeObjectAttackedThisTurnCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceSaddledCondition,
 		recognizeSourceStateCondition,
@@ -906,6 +908,16 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		if clause, ok := recognize(body, atoms); ok {
 			return clause, true
 		}
+	}
+	return ConditionClause{}, false
+}
+
+func recognizeObjectAttackedThisTurnCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "it", "attacked", "this", "turn") {
+		return ConditionClause{
+			Predicate:     ConditionPredicateObjectAttackedThisTurn,
+			ObjectBinding: ConditionObjectBindingTarget,
+		}, true
 	}
 	return ConditionClause{}, false
 }

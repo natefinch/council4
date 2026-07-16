@@ -202,6 +202,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Threshold = clause.Threshold
 	case parser.ConditionPredicateNoAttackerAttackedController:
 		condition.Predicate = ConditionPredicateNoAttackerAttackedController
+	case parser.ConditionPredicateObjectAttackedThisTurn:
+		condition.Predicate = ConditionPredicateObjectAttackedThisTurn
+		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
 	case parser.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
 		condition.Predicate = ConditionPredicateControllerGainedLifeThisTurnAtLeast
 		condition.Threshold = clause.Threshold
@@ -707,7 +710,8 @@ func bindConditionReferences(conditions []CompiledCondition, references []Compil
 			}
 		case ConditionPredicateObjectMatches,
 			ConditionPredicateObjectExists,
-			ConditionPredicateEventSubjectHadCounters:
+			ConditionPredicateEventSubjectHadCounters,
+			ConditionPredicateObjectAttackedThisTurn:
 			binding, ok := conditionObjectBinding(conditions[i], references)
 			if !ok ||
 				binding == ReferenceBindingEventPermanent &&
@@ -735,7 +739,8 @@ func conditionObjectBinding(condition CompiledCondition, references []CompiledRe
 			continue
 		}
 		if reference.Binding != ReferenceBindingSource &&
-			reference.Binding != ReferenceBindingEventPermanent {
+			reference.Binding != ReferenceBindingEventPermanent &&
+			reference.Binding != ReferenceBindingTarget {
 			return ReferenceBindingUnsupported, false
 		}
 		if found && reference.Binding != binding {

@@ -96,6 +96,7 @@ type CompiledAbility struct {
 	Kind                                        AbilityKind
 	Optional                                    bool
 	CastOnlyDuringDeclareAttackersAfterAttacked bool
+	CastOnlyBeforeCombatDamageStep              bool
 	GoadedOpponentCreaturesCantBlock            bool
 	QuestForRenewalUntap                        bool
 	SemblanceAnvilImprint                       bool
@@ -914,6 +915,9 @@ const (
 	// controller satisfies it. It gates the trigger's intervening-if condition
 	// against the declared attack batch.
 	ConditionPredicateNoAttackerAttackedController
+	// ConditionPredicateObjectAttackedThisTurn tests whether one exact permanent
+	// object was declared as an attacker during the current turn.
+	ConditionPredicateObjectAttackedThisTurn
 	// ConditionPredicateControllerLibrarySizeAtLeast is satisfied when the
 	// controller's library holds at least Threshold cards ("if you have 200 or
 	// more cards in your library", Battle of Wits).

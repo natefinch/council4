@@ -72,8 +72,11 @@ type Condition struct {
 	// a triggering event permanent. It may use last-known information.
 	// ObjectMatches, when present, applies the shared Selection semantics to that
 	// object. An empty ObjectMatches Selection is a wildcard existence check.
-	Object                                                       opt.V[ObjectReference]
-	ObjectMatches                                                opt.V[Selection]
+	Object        opt.V[ObjectReference]
+	ObjectMatches opt.V[Selection]
+	// ObjectAttackedThisTurn requires the exact object identity named by Object
+	// to appear in an attacker-declared event during the current turn.
+	ObjectAttackedThisTurn                                       bool
 	Types                                                        []types.Card
 	EventPermanentNameUniqueAmongControlledAndGraveyardCreatures bool
 	SourceClassLevelAtLeast                                      int
@@ -411,6 +414,7 @@ func (c *Condition) Empty() bool {
 		!c.ControlComparison.Exists &&
 		!c.Object.Exists &&
 		!c.ObjectMatches.Exists &&
+		!c.ObjectAttackedThisTurn &&
 		len(c.Types) == 0 &&
 		!c.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures &&
 		c.SourceClassLevelAtLeast == 0 &&

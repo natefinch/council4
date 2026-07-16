@@ -153,6 +153,13 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateNoAttackerAttackedController:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAttackersInBatchAttackedController, Op: compare.LessOrEqual, Value: 0})
+	case compiler.ConditionPredicateObjectAttackedThisTurn:
+		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
+		if !ok {
+			return game.Condition{}, false
+		}
+		result.Object = opt.Val(object)
+		result.ObjectAttackedThisTurn = true
 	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateObjectMatches:
@@ -432,6 +439,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
 			return ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateNoAttackerAttackedController,
+			compiler.ConditionPredicateObjectAttackedThisTurn,
 			compiler.ConditionPredicateFirstCombatPhaseOfTurn,
 			compiler.ConditionPredicateControllerCompletedADungeon:
 			// "they draw a card if none of those creatures attacked you"
@@ -450,8 +458,10 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			// trigger. The runtime condition evaluator resolves it from the
 			// controller's live dungeon-completion count, including under
 			// negation, so both forms are safe.
-			return ctx == conditionContextEffectGate ||
-				ctx == conditionContextInterveningTrigger
+			if predicate == compiler.ConditionPredicateObjectAttackedThisTurn {
+				return ctx == conditionContextEffectGate
+			}
+			return ctx == conditionContextEffectGate || ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerTurn:
 			// The "During your turn," self-static gate and the "If it's your
 			// turn," per-effect sequence gate (the Fated cycle) both read the

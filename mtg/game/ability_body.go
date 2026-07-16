@@ -161,6 +161,10 @@ type StaticAbility struct {
 	// CastOnlyAfterAttackedThisStep restricts the source spell to the declare
 	// attackers step after its caster was attacked during that step.
 	CastOnlyAfterAttackedThisStep bool
+	// CastOnlyBeforeCombatDamageStep restricts the source spell to a point before
+	// the first combat damage step of the current combat, or before a later combat
+	// phase already present in the current turn structure.
+	CastOnlyBeforeCombatDamageStep bool
 	// BeginsGameOnBattlefield marks the pregame static permission "If this card
 	// is in your opening hand, you may begin the game with it on the
 	// battlefield." (CR 103.6a, the Leyline cycle). It is honored only during the

@@ -461,14 +461,24 @@ func lowerOrderedEffectSequence(
 		publisherGated := i > 0 && sequenceClauseInstructionGated(i-1, effectConditions, insteadGates, otherwiseGates)
 		if effect.PlayHideawayExiledCard {
 			content, diagnostic = lowerHideawayPlayEffect(effectAbility)
-		} else if delayedContent, handled, failed := lowerDelayedSequenceClause(ctx.content.Effects, i, effectAbility, sequence, publisherGated); handled {
-			if failed {
+		} else if delayed := lowerDelayedSequenceClause(
+			ctx.content.Effects,
+			i,
+			effectAbility,
+			sequence,
+			publisherGated,
+			effectConditions[i],
+		); delayed.handled {
+			if delayed.failed {
 				if len(clauseReasons) > 0 {
 					continue
 				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")
 			}
-			content = delayedContent
+			if delayed.consumedGate {
+				delete(effectConditions, i)
+			}
+			content = delayed.content
 		} else if allSharedTargets {
 			content, diagnostic = lowerSequenceClauseContent(cardName, ctx, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 			if diagnostic != nil {
@@ -3590,71 +3600,92 @@ func isDelayedTargetSacrificeEffect(effect *compiler.CompiledEffect) bool {
 // with handled set. failed reports a matched-but-unlinkable sacrifice clause so
 // the caller can fail closed. handled is false when no linked shape applies and
 // the caller should lower the clause normally.
+type delayedSequenceClauseResult struct {
+	content      game.AbilityContent
+	handled      bool
+	failed       bool
+	consumedGate bool
+}
+
 func lowerDelayedSequenceClause(
 	effects []compiler.CompiledEffect,
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
 	publisherGated bool,
-) (content game.AbilityContent, handled, failed bool) {
+	effectCondition game.EffectCondition,
+) delayedSequenceClauseResult {
+	if publisher, delayed, ok := lowerDelayedTargetDestroy(
+		effectIndex,
+		ctx,
+		sequence,
+		effectCondition,
+	); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return delayedSequenceClauseResult{
+			content:      delayed,
+			handled:      true,
+			consumedGate: effectCondition.Condition.Exists,
+		}
+	}
 	if isDelayedTargetSacrificeEffect(&effects[effectIndex]) {
 		publisher, delayed, ok := lowerDelayedTargetSacrifice(effectIndex, ctx, sequence)
 		if !ok {
-			return game.AbilityContent{}, true, true
+			return delayedSequenceClauseResult{handled: true, failed: true}
 		}
 		sequence[len(sequence)-1].Primitive = publisher
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if modify, delayed, ok := lowerDelayedTargetReturn(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = modify
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if modify, delayed, ok := lowerDelayedCombatDamageDrawTrigger(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = modify
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if add, delayed, ok := lowerDelayedAttacksMonarchGrant(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = add
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if delayed, ok := lowerDelayedCommanderMonarchDiesTrigger(effectIndex, ctx, sequence); ok {
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if publisher, delayed, ok := lowerDelayedTopCardReturn(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if publisher, grant, ok := lowerSequentialReferencedKeywordGrant(effectIndex, ctx, sequence, publisherGated); ok {
 		sequence[len(sequence)-1].Primitive = publisher
-		return grant, true, false
+		return delayedSequenceClauseResult{content: grant, handled: true}
 	}
 	if publisher, replacement, ok := lowerSequentialLeaveBattlefieldExileReplacement(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
-		return replacement, true, false
+		return delayedSequenceClauseResult{content: replacement, handled: true}
 	}
 	if publisher, placement, ok := lowerSequentialReanimationCounterPlacement(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
-		return placement, true, false
+		return delayedSequenceClauseResult{content: placement, handled: true}
 	}
 	if publisher, grant, ok := lowerSequentialReanimationTypeColorGrant(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
-		return grant, true, false
+		return delayedSequenceClauseResult{content: grant, handled: true}
 	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
-		return delayed, true, false
+		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if exile, returnContent, ok := lowerImmediateBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
-		return returnContent, true, false
+		return delayedSequenceClauseResult{content: returnContent, handled: true}
 	}
 	if exile, returnContent, ok := lowerImmediateSelfBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
-		return returnContent, true, false
+		return delayedSequenceClauseResult{content: returnContent, handled: true}
 	}
 	if lowered, ok := lowerCharacteristicLifeRider(effects, effectIndex, ctx, sequence); ok {
 		if lowered.priorPrimitive != nil {
@@ -3663,7 +3694,7 @@ func lowerDelayedSequenceClause(
 		if lowered.priorResult != "" {
 			sequence[len(sequence)-1].PublishResult = lowered.priorResult
 		}
-		return lowered.content, true, false
+		return delayedSequenceClauseResult{content: lowered.content, handled: true}
 	}
 	if lowered, ok := lowerCharacteristicIncubateRider(effects, effectIndex, ctx, sequence); ok {
 		if lowered.priorPrimitive != nil {
@@ -3672,15 +3703,73 @@ func lowerDelayedSequenceClause(
 		if lowered.priorResult != "" {
 			sequence[len(sequence)-1].PublishResult = lowered.priorResult
 		}
-		return lowered.content, true, false
+		return delayedSequenceClauseResult{content: lowered.content, handled: true}
 	}
 	if content, ok := lowerThatMuchLifeBackref(ctx, effectIndex, sequence); ok {
-		return content, true, false
+		return delayedSequenceClauseResult{content: content, handled: true}
 	}
 	if content, ok := lowerDelayedSelfTimingClause(ctx); ok {
-		return content, true, false
+		return delayedSequenceClauseResult{content: content, handled: true}
 	}
-	return game.AbilityContent{}, false, false
+	return delayedSequenceClauseResult{}
+}
+
+// lowerDelayedTargetDestroy captures the exact permanent targeted by an earlier
+// clause and schedules its destruction for the next end step. An optional
+// attacked-this-turn test stays inside the delayed trigger so it observes attacks
+// both before and after the spell resolves. Both forms use object identity, so a
+// card that leaves and returns is not the captured permanent.
+func lowerDelayedTargetDestroy(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+	effectCondition game.EffectCondition,
+) (game.Primitive, game.AbilityContent, bool) {
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		len(ctx.content.Effects) != 1 ||
+		ctx.content.Effects[0].Kind != compiler.EffectDestroy ||
+		ctx.content.Effects[0].DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		ctx.content.Effects[0].Negated ||
+		ctx.optional ||
+		ctx.content.Effects[0].Context != parser.EffectContextController ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return nil, game.AbilityContent{}, false
+	}
+	var condition opt.V[game.EffectCondition]
+	if effectCondition.Condition.Exists {
+		inner := effectCondition.Condition.Val
+		if !inner.ObjectAttackedThisTurn ||
+			!inner.Object.Exists ||
+			inner.Object.Val.Kind() != game.ObjectReferenceTargetPermanent {
+			return nil, game.AbilityContent{}, false
+		}
+		inner.Object = opt.Val(game.CapturedObjectReference())
+		condition = opt.Val(game.EffectCondition{Condition: opt.Val(inner)})
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	consumed.content.Conditions = nil
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-destroy-target-%d", effectIndex))
+	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	if !ok {
+		return nil, game.AbilityContent{}, false
+	}
+	captured := game.CapturedObjectReference()
+	body := game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.Destroy{Object: captured},
+		Condition: condition,
+	}}}.Ability()
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing:         game.DelayedAtBeginningOfNextEndStep,
+		CapturedObject: opt.Val(game.LinkedObjectReference(string(key))),
+		Content:        body,
+	}}
+	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
 // lowerDelayedSelfTimingClause lowers a fixed-phase, timing-based delayed clause

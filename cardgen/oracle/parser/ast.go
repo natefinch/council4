@@ -148,6 +148,9 @@ type Ability struct {
 	// CastOnlyDuringDeclareAttackersAfterAttacked marks the exact defensive
 	// declare-attackers cast restriction.
 	CastOnlyDuringDeclareAttackersAfterAttacked bool `json:",omitempty"`
+	// CastOnlyBeforeCombatDamageStep marks the temporal spell restriction "Cast
+	// this spell only before the combat damage step."
+	CastOnlyBeforeCombatDamageStep bool `json:",omitempty"`
 	// GoadedOpponentCreaturesCantBlock marks the exact static restriction.
 	GoadedOpponentCreaturesCantBlock bool `json:",omitempty"`
 	// QuestForRenewalUntap marks the exact conditional extra-untap rule.

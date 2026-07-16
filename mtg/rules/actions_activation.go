@@ -193,13 +193,8 @@ func playerCanPlayLand(g *game.Game, playerID game.PlayerID) bool {
 // noninstant spell only during their main phase while they have priority and the
 // stack is empty (isSorcerySpeed).
 func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
-	for i := range card.StaticAbilities {
-		if !card.StaticAbilities[i].CastOnlyAfterAttackedThisStep {
-			continue
-		}
-		return g.Turn.Step == game.StepDeclareAttackers &&
-			g.Combat != nil &&
-			g.Combat.PlayersAttacked[playerID]
+	if !cardCastRestrictionsSatisfied(g, playerID, card) {
+		return false
 	}
 	if card.HasType(types.Instant) || card.HasKeyword(game.Flash) {
 		return true
@@ -208,6 +203,61 @@ func canCastAtCurrentTiming(g *game.Game, playerID game.PlayerID, card *game.Car
 		return true
 	}
 	return isSorcerySpeed(g, playerID)
+}
+
+// cardCastRestrictionsSatisfied applies restrictions printed on the card rather
+// than the ordinary instant/sorcery timing permission. Effects that instruct a
+// player to cast a spell may ignore normal timing permissions, but they still
+// must obey these restrictions.
+func cardCastRestrictionsSatisfied(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
+	if card == nil {
+		return false
+	}
+	for i := range card.StaticAbilities {
+		restriction := card.StaticAbilities[i]
+		if restriction.CastOnlyAfterAttackedThisStep &&
+			(g.Turn.Step != game.StepDeclareAttackers ||
+				g.Combat == nil ||
+				!g.Combat.PlayersAttacked[playerID]) {
+			return false
+		}
+		if restriction.CastOnlyBeforeCombatDamageStep && !turnIsBeforeCombatDamageStep(g) {
+			return false
+		}
+	}
+	return true
+}
+
+// turnIsBeforeCombatDamageStep applies the Oracle timing phrase to the concrete
+// turn structure. Within a combat, the cutoff is the first combat damage step:
+// first-strike damage closes the window even though a normal damage step follows.
+// Outside combat, a normal combat that has not begun or a queued extra combat
+// reopens the window; a completed combat does not.
+func turnIsBeforeCombatDamageStep(g *game.Game) bool {
+	if g == nil || g.Turn.Phase == game.PhaseEnding {
+		return false
+	}
+	if g.Turn.Phase == game.PhaseCombat {
+		switch g.Turn.Step {
+		case game.StepBeginningOfCombat, game.StepDeclareAttackers, game.StepDeclareBlockers:
+			return true
+		case game.StepEndOfCombat:
+			return turnHasQueuedCombatPhase(g)
+		default:
+			return false
+		}
+	}
+	if g.Turn.Phase == game.PhaseBeginning && g.Turn.CombatPhasesThisTurn == 0 {
+		return true
+	}
+	if g.Turn.Phase == game.PhasePrecombatMain {
+		return true
+	}
+	return turnHasQueuedCombatPhase(g)
+}
+
+func turnHasQueuedCombatPhase(g *game.Game) bool {
+	return slices.Contains(g.Turn.ExtraPhases, game.PhaseCombat)
 }
 
 func legalXValuesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana) []int {
