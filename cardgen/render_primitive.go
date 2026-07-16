@@ -567,6 +567,9 @@ func impulseExileFields(player, amount, duration string, value game.ImpulseExile
 	if value.Cast {
 		fields = append(fields, "Cast: true,")
 	}
+	if value.WithoutPayingManaCost {
+		fields = append(fields, "WithoutPayingManaCost: true,")
+	}
 	if value.PublishLinked != "" {
 		fields = append(fields, fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)))
 	}

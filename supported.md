@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,994 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,995 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2386,6 +2386,7 @@ Council4 currently supports **17,994 of 32,501 cards eligible for paper support 
 - Cavern of Souls
 - Cavern Thoctar
 - Cavern Whisperer
+- Caves of Chaos Adventurer
 - Caves of Koilos
 - Cazur, Ruthless Stalker
 - Cease // Desist

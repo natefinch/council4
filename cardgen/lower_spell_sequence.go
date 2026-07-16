@@ -67,6 +67,9 @@ func lowerOrderedSequenceSpecialCase(
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — sequence carries modal options"),
 			true
 	}
+	if content, ok := lowerConditionalImpulseExileSequence(ctx); ok {
+		return content, nil, true
+	}
 	if isSacrificeConditionedChosenCardsCategory(ctx.content) {
 		if content, ok := lowerSacrificeConditionedReanimationSequence(ctx); ok {
 			return content, nil, true

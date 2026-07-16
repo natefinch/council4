@@ -497,6 +497,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				CastLinkedExiledCopy:           syntax.CastLinkedExiledCopy,
 				ImpulseCast:                    syntax.ImpulseCast,
 				ImpulseSpendAnyColor:           syntax.ImpulseSpendAnyColor,
+				ImpulseWithoutPayingManaCost:   syntax.ImpulseWithoutPayingManaCost,
 				Negated:                        syntax.Negated,
 				FallbackOnInability:            syntax.FallbackOnInability,
 				Optional:                       syntax.Optional,
