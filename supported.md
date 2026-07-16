@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,007 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,019 of 32,501 cards eligible for paper support (55.4%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -24,6 +24,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Abbey Matron
 - Abbot of Keral Keep
 - Abduction
+- Aberrant
 - Abhorrent Oculus
 - Abhorrent Overlord
 - Abjure
@@ -3992,6 +3993,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Dogged Pursuit
 - Dogpile
 - Dokuchi Shadow-Walker
+- Dokuchi Silencer
 - Dolmen Gate
 - Dominate
 - Dominus of Fealty
@@ -4907,6 +4909,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Exhilarating Elocution
 - Exiled Boggart
 - Exit Specialist
+- Exocrine
 - Exorcise
 - Exorcist
 - Exosuit Savior
@@ -7294,6 +7297,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Horizon Seed
 - Horizon Seeker
 - Horizon Spellbomb
+- Hormagaunt Horde
 - Horn of Gondor
 - Horn of Ramos
 - Horn of Valhalla // Ysgard's Call
@@ -7960,6 +7964,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Jackal Familiar
 - Jackdaw
 - Jackdaw Savior
+- Jacked Rabbit
 - Jackhammer
 - Jacques le Vert
 - Jaddi Offshoot
@@ -8166,6 +8171,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Kami of Whispered Hopes
 - Kapow!
 - Kappa Cannoneer
+- Kappa Tech-Wrecker
 - Kapsho Kitefins
 - Karakas
 - Karametra's Acolyte
@@ -12975,6 +12981,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - School Daze
 - School of Piranha
 - School of the Unseen
+- Scion of Calamity
 - Scion of Glaciers
 - Scion of Oona
 - Scion of Opulence
@@ -15054,6 +15061,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Sunbond
 - Sunder
 - Sunder from Within
+- Sunder Shaman
 - Sunderflock
 - Sundering Growth
 - Sundering Vitae
@@ -15509,6 +15517,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Teremko Griffin
 - Tergrid's Shadow
 - Terisian Mindbreaker
+- Termagant Swarm
 - Terminal Agony
 - Terminal Moraine
 - Terminate
@@ -15537,6 +15546,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Terror of the Peaks
 - Terror of Towashi
 - Terrus Wurm
+- Tervigon
 - Tesak, Judith's Hellhound
 - Teshar, Ancestor's Apostle
 - Test of Endurance
@@ -16274,6 +16284,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Trusty Machete
 - Trusty Packbeast
 - Trusty Retriever
+- Trygon Predator
 - Trynn, Champion of Freedom
 - Tsunami
 - Tuinvale Treefolk // Oaken Boon
@@ -17949,6 +17960,7 @@ Council4 currently supports **18,007 of 32,501 cards eligible for paper support 
 - Ziatora's Proving Ground
 - Ziatora, the Incinerator
 - Zo-Zu the Punisher
+- Zoanthrope
 - Zodiac Dog
 - Zodiac Goat
 - Zodiac Horse
