@@ -266,6 +266,7 @@ var Cards = []cardset.Entry{
 	{Name: "Sporeback Troll", New: SporebackTroll},
 	{Name: "Sporesower Thallid", New: SporesowerThallid},
 	{Name: "Sporoloth Ancient", New: SporolothAncient},
+	{Name: "Springheart Nantuko", New: SpringheartNantuko},
 	{Name: "Springmantle Cleric", New: SpringmantleCleric},
 	{Name: "Sprinting Warbrute", New: SprintingWarbrute},
 	{Name: "Squad Rallier", New: SquadRallier},

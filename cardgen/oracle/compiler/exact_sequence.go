@@ -97,6 +97,17 @@ const (
 	// ExactSequenceDrawPutLandSubtypeLife is the triggered draw, optional
 	// land-from-hand, and subtype-gated life sequence.
 	ExactSequenceDrawPutLandSubtypeLife
+	// ExactSequenceLandfallPayCopyToken is Springheart Nantuko's triggered
+	// landfall "you may pay {1}{G} if this permanent is attached to a creature
+	// you control. If you do, create a token that's a copy of that creature. If
+	// you didn't create a token this way, create a 1/1 green Insect creature
+	// token." sequence: the controller may pay {1}{G} only while the source Aura
+	// is attached to a creature they control, and paying creates a reflexive
+	// trigger that copies the still-attached creature or, when no copy is made,
+	// creates a fixed 1/1 green Insect. The whole body is fixed, so it carries no
+	// extra data; lowering composes the payment, reflexive token-copy, and
+	// fixed-Insect fallback primitives from the kind alone.
+	ExactSequenceLandfallPayCopyToken
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -125,6 +136,8 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceSharedTypeSacrificePunisher
 	case parser.ExactSequenceDrawPutLandSubtypeLife:
 		return ExactSequenceDrawPutLandSubtypeLife
+	case parser.ExactSequenceLandfallPayCopyToken:
+		return ExactSequenceLandfallPayCopyToken
 	default:
 		return ExactSequenceUnknown
 	}

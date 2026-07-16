@@ -407,6 +407,17 @@ const (
 	// then you may put a land card from your hand onto the battlefield. If you
 	// put a <subtype> onto the battlefield this way, you gain N life."
 	ExactSequenceDrawPutLandSubtypeLife
+	// ExactSequenceLandfallPayCopyToken is Springheart Nantuko's triggered
+	// landfall body "you may pay {1}{G} if this permanent is attached to a
+	// creature you control. If you do, create a token that's a copy of that
+	// creature. If you didn't create a token this way, create a 1/1 green Insect
+	// creature token." The controller may pay {1}{G} only while the source Aura
+	// is attached to a creature they control; paying creates a reflexive trigger
+	// whose resolution copies the still-attached creature, or a fixed 1/1 green
+	// Insect when no copy is made. The whole body is fixed, so it carries no
+	// extra data; lowering composes the payment, reflexive token-copy, and
+	// fixed-Insect fallback primitives from the kind alone.
+	ExactSequenceLandfallPayCopyToken
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an

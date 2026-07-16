@@ -111,21 +111,3 @@ func TestBestowNonManaCostFailsClosed(t *testing.T) {
 			"You may cast this card from your graveyard using its bestow ability.",
 	})
 }
-
-// TestBestowComplexBodyFailsClosed proves that a fixed-mana Bestow card whose
-// other rules text is unsupported (Springheart Nantuko's landfall copy trigger)
-// fails closed as a whole, rather than generating a partially supported card.
-func TestBestowComplexBodyFailsClosed(t *testing.T) {
-	t.Parallel()
-	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
-		Name:      "Springheart Nantuko",
-		Layout:    "normal",
-		TypeLine:  "Enchantment Creature — Insect Monk",
-		ManaCost:  "{1}{G}",
-		Power:     new("1"),
-		Toughness: new("1"),
-		OracleText: "Bestow {1}{G}\n" +
-			"Enchanted creature gets +1/+1.\n" +
-			"Landfall — Whenever a land you control enters, you may pay {1}{G} if this permanent is attached to a creature you control. If you do, create a token that's a copy of that creature. If you didn't create a token this way, create a 1/1 green Insect creature token.",
-	})
-}

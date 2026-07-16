@@ -210,6 +210,9 @@ func lowerTriggeredAbility(
 	if ability.ExactSequence == compiler.ExactSequenceDrawPutLandSubtypeLife {
 		return lowerDrawPutLandSubtypeLifeTrigger(ability)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceLandfallPayCopyToken {
+		return lowerLandfallPayCopyTokenTrigger(ability)
+	}
 	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}
