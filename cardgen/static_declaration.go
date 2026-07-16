@@ -1592,10 +1592,11 @@ func appendStaticCastAsThoughFlashDeclaration(body *game.StaticAbility, declarat
 	}
 	spellTypes := slices.Clone(declaration.CastAsThoughFlash.SpellTypes)
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-		Kind:           game.RuleEffectCastSpellsAsThoughFlash,
-		AffectedPlayer: game.PlayerYou,
-		SpellTypes:     spellTypes,
-		SpellSubtypes:  declaration.CastAsThoughFlash.SpellSubtypes,
+		Kind:               game.RuleEffectCastSpellsAsThoughFlash,
+		AffectedPlayer:     game.PlayerYou,
+		SpellTypes:         spellTypes,
+		SpellSubtypes:      declaration.CastAsThoughFlash.SpellSubtypes,
+		ExcludedSpellTypes: slices.Clone(declaration.CastAsThoughFlash.ExcludedSpellTypes),
 	})
 	return true
 }

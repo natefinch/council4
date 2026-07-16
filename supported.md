@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,054 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,064 of 32,501 cards eligible for paper support (55.6%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2243,6 +2243,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Captain America's Shield
 - Captain America, Liberator
 - Captain America, Steve Rogers
+- Captain America, Unbowed
 - Captain Howler, Sea Scourge
 - Captain Lannery Storm
 - Captain of the Mists
@@ -6213,6 +6214,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Glasswing Grace // Age-Graced Chapel
 - Glaze Fiend
 - Gleam of Battle
+- Gleam of Resistance
 - Gleaming Barrier
 - Gleaming Bastion
 - Gleaming Geardrake
@@ -8039,6 +8041,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Jerrard of the Closed Fist
 - Jeska's Will
 - Jeska, Warrior Adept
+- Jeskai Ascendancy
 - Jeskai Banner
 - Jeskai Barricade
 - Jeskai Brushmaster
@@ -8159,6 +8162,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Kabira Vindicator
 - Kabuto Moth
 - Kagemaro, First to Suffer
+- Kaito's Pursuit
 - Kaito, Cunning Infiltrator
 - Kalakscion, Hunger Tyrant
 - Kalastria Healer
@@ -10168,6 +10172,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - N'Yami-Class Mother Ship
 - Nacatl Outlander
 - Nacatl Savage
+- Nacatl War-Pride
 - Nacre Talisman
 - Nadier's Nightblade
 - Nadier, Agent of the Duskenel
@@ -11884,6 +11889,8 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Rally the Peasants
 - Rally the Ranks
 - Rally the Troops
+- Rally to Battle
+- Rallying Roar
 - Ram Through
 - Rambunctious Mutt
 - Ramirez DePietro
@@ -15553,6 +15560,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Terminal Moraine
 - Terminate
 - Teroh's Faithful
+- Terra Ravager
 - Terra Stomper
 - Terra, Herald of Hope
 - Terrain Elemental
@@ -16697,6 +16705,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - Valkyrie Harbinger
 - Valkyrior Skyrider
 - Valley Dasher
+- Valley Floodcaller
 - Valley Rally
 - Valor
 - Valor in Akros
@@ -17291,6 +17300,7 @@ Council4 currently supports **18,054 of 32,501 cards eligible for paper support 
 - War Chariot
 - War Dance
 - War Elephant
+- War Flare
 - War Horn
 - War Machine, James Rhodes
 - War Machine, Legacy of Iron

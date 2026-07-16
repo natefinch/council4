@@ -1170,6 +1170,9 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 	if content, ok := lowerGroupPumpThenGroupCounterSequence(ctx); ok {
 		return content, true
 	}
+	if content, ok := lowerGroupPumpThenGroupUntapSequence(ctx); ok {
+		return content, true
+	}
 	if content, ok := lowerCreateTokenThenGrantKeywordSequence(ctx); ok {
 		return content, true
 	}
@@ -1414,6 +1417,66 @@ func lowerGroupPumpThenGroupCounterSequence(ctx contentCtx) (game.AbilityContent
 				Group:       group,
 				CounterKind: counterEffect.CounterKind,
 			}},
+		},
+	}.Ability(), true
+}
+
+// lowerGroupPumpThenGroupUntapSequence lowers the ordered pair "<group> get
+// +N/+N until end of turn. Untap them." (Valley Floodcaller's cast trigger).
+// The first clause pumps a controlled creature group until end of turn; the
+// second untaps every member of that same group, named by the plural
+// back-reference "them". Because nothing between the two clauses changes the
+// board, the runtime's group continuous effect and the group untap both resolve
+// the same members, so the untap clause's "them" reconstructs to the just-pumped
+// group. It reuses the pump clause's resolved group for the untap and fails
+// closed for any other shape, a non-group pump subject, a bounded or historical
+// untap, or a non-back-reference recipient.
+func lowerGroupPumpThenGroupUntapSequence(ctx contentCtx) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 2 ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		ctx.optional {
+		return game.AbilityContent{}, false
+	}
+	pumpEffect := ctx.content.Effects[0]
+	untapEffect := ctx.content.Effects[1]
+	if pumpEffect.Kind != compiler.EffectModifyPT ||
+		untapEffect.Kind != compiler.EffectUntap ||
+		!pumpEffect.Exact ||
+		pumpEffect.Negated ||
+		pumpEffect.Optional ||
+		pumpEffect.Duration != compiler.DurationUntilEndOfTurn ||
+		pumpEffect.StaticSubject == compiler.StaticSubjectNone {
+		return game.AbilityContent{}, false
+	}
+	if untapEffect.Negated ||
+		untapEffect.Optional ||
+		untapEffect.Context != parser.EffectContextController ||
+		untapEffect.Duration != compiler.DurationNone ||
+		untapEffect.UntapAttackedThisTurn ||
+		untapEffect.Selector.All ||
+		untapEffect.Amount.Known ||
+		untapEffect.Amount.RangeKnown ||
+		!groupCounterBackReferencePronoun(untapEffect.References) {
+		return game.AbilityContent{}, false
+	}
+	group, ok := resolvingStaticSubjectGroup(&pumpEffect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	continuous, ok := groupModifyPTContinuousEffect(&pumpEffect, group)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Sequence: []game.Instruction{
+			{Primitive: game.ApplyContinuous{
+				ContinuousEffects: []game.ContinuousEffect{continuous},
+				Duration:          game.DurationUntilEndOfTurn,
+			}},
+			{Primitive: game.Untap{Group: group}},
 		},
 	}.Ability(), true
 }

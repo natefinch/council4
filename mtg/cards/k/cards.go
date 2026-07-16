@@ -11,6 +11,7 @@ var Cards = []cardset.Entry{
 	{Name: "Kaalia of the Vast", New: KaaliaOfTheVast},
 	{Name: "Kaalia, Zenith Seeker", New: KaaliaZenithSeeker},
 	{Name: "Kaito, Cunning Infiltrator", New: KaitoCunningInfiltrator},
+	{Name: "Kaito's Pursuit", New: KaitoSPursuit},
 	{Name: "Kalastria Highborn", New: KalastriaHighborn},
 	{Name: "Kamahl, Fist of Krosa", New: KamahlFistOfKrosa},
 	{Name: "Kamahl, Heart of Krosa", New: KamahlHeartOfKrosa},

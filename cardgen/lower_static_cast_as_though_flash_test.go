@@ -15,11 +15,12 @@ import (
 func TestLowerStaticCastAsThoughFlash(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name       string
-		typeLine   string
-		oracle     string
-		spellTypes []types.Card
-		subtypes   []types.Sub
+		name          string
+		typeLine      string
+		oracle        string
+		spellTypes    []types.Card
+		subtypes      []types.Sub
+		excludedTypes []types.Card
 	}{
 		{
 			name:     "all spells",
@@ -37,6 +38,12 @@ func TestLowerStaticCastAsThoughFlash(t *testing.T) {
 			typeLine: "Artifact — Equipment",
 			oracle:   "You may cast Aura and Equipment spells as though they had flash.",
 			subtypes: []types.Sub{types.Sub("Aura"), types.Sub("Equipment")},
+		},
+		{
+			name:          "noncreature spells",
+			typeLine:      "Legendary Creature — Otter Wizard",
+			oracle:        "You may cast noncreature spells as though they had flash.",
+			excludedTypes: []types.Card{types.Creature},
 		},
 	}
 	for _, tc := range cases {
@@ -75,6 +82,13 @@ func TestLowerStaticCastAsThoughFlash(t *testing.T) {
 				}
 			} else if !reflect.DeepEqual(effect.SpellSubtypes, tc.subtypes) {
 				t.Fatalf("subtypes = %#v, want %#v", effect.SpellSubtypes, tc.subtypes)
+			}
+			if len(tc.excludedTypes) == 0 {
+				if len(effect.ExcludedSpellTypes) != 0 {
+					t.Fatalf("excluded types = %#v, want none", effect.ExcludedSpellTypes)
+				}
+			} else if !reflect.DeepEqual(effect.ExcludedSpellTypes, tc.excludedTypes) {
+				t.Fatalf("excluded types = %#v, want %#v", effect.ExcludedSpellTypes, tc.excludedTypes)
 			}
 		})
 	}
