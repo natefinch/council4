@@ -2390,6 +2390,10 @@ type EffectSyntax struct {
 	// control."). The copy source is the effect's lone target, captured in
 	// Targets; the token has no printed power/toughness of its own.
 	TokenCopyOfTarget bool `json:",omitempty"`
+	// TokenCopyOfSource reports that created tokens copy the ability's source
+	// permanent directly ("tokens that are copies of it" in a source attack
+	// trigger), without introducing a target or a separate reference binding.
+	TokenCopyOfSource bool `json:",omitempty"`
 	// TokenCopyOfReference reports that the created token is a copy of the
 	// effect's single explicit reference rather than a grammatical target
 	// ("Create a token that's a copy of this creature[ instead]."). The copy
@@ -2437,6 +2441,9 @@ type EffectSyntax struct {
 	// a tapped token that's a copy of ...", "Create two tapped tokens that are
 	// copies of ..."): every created copy enters the battlefield tapped.
 	TokenCopyEntersTapped bool `json:",omitempty"`
+	// TokenCopyAttacksDefender reports that the copied tokens enter
+	// attacking the defending player captured by the triggering attack.
+	TokenCopyAttacksDefender bool `json:",omitempty"`
 	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
 	// folded "[That token/It] gains <keyword>." rider sentence following the
 	// create effect, in source order. It is empty when no such rider is folded.
@@ -3511,6 +3518,9 @@ type EffectSyntax struct {
 	// the control of its own owner rather than the resolving player. It is false
 	// for the bare and "under your control" forms.
 	UnderOwnersControl bool `json:",omitempty"`
+	// CreatedTokensReference marks "the tokens" as a back-reference to the exact
+	// batch created by an earlier effect in the same resolving sequence.
+	CreatedTokensReference bool `json:",omitempty"`
 	// TokenCopyOfForEach reports a per-each copy-token create whose copy source
 	// is each member of a controlled battlefield group (Second Harvest). The
 	// iterated group is carried in TokenCopyForEachGroup.

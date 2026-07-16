@@ -390,6 +390,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPredefinedName:                syntax.TokenPredefinedName,
 				AmassSubtype:                       syntax.AmassSubtype,
 				TokenCopyOfTarget:                  syntax.TokenCopyOfTarget,
+				TokenCopyOfSource:                  syntax.TokenCopyOfSource,
 				TokenCopyOfReference:               syntax.TokenCopyOfReference,
 				TokenCopyOfReferenceHalvedPT:       syntax.TokenCopyOfReferenceHalvedPT,
 				TokenCopyHalvePTRoundUp:            syntax.TokenCopyHalvePTRoundUp,
@@ -398,6 +399,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenCopyOfTriggeringSet:           syntax.TokenCopyOfTriggeringSet,
 				TokenCopyDropLegendary:             syntax.TokenCopyDropLegendary,
 				TokenCopyEntersTapped:              syntax.TokenCopyEntersTapped,
+				TokenCopyAttacksDefender:           syntax.TokenCopyAttacksDefender,
 				TokenCopyGrantKeywords:             append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
 				TokenCopyGrantRiderSpan:            syntax.TokenCopyGrantRiderSpan,
 				EachOpponentAttackingSameRiderSpan: syntax.EachOpponentAttackingSameRiderSpan,
@@ -518,6 +520,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EntersWithCountersKeywordRider: syntax.EntersWithCountersKeywordRider,
 				UnderYourControl:               syntax.UnderYourControl,
 				UnderOwnersControl:             syntax.UnderOwnersControl,
+				CreatedTokensReference:         syntax.CreatedTokensReference,
 				TokenCopyOfForEach:             syntax.TokenCopyOfForEach,
 				TokenCopyForEachGroup:          compileTokenCopyForEachGroup(syntax.TokenCopyForEachGroup),
 				CastAsAdventure:                syntax.CastAsAdventure,
@@ -884,6 +887,8 @@ func effectKindForStaticRule(rule StaticRuleKind) EffectKind {
 		return EffectMustAttack
 	case StaticRuleMustBeBlocked:
 		return EffectMustBeBlocked
+	case StaticRuleMustBeBlockedByExactlyOne:
+		return EffectMustBeBlockedByExactlyOne
 	case StaticRuleMustBeBlockedByAllAble:
 		return EffectMustBeBlockedByAllAble
 	case StaticRuleAssignDamageAsUnblocked:

@@ -503,6 +503,30 @@ func parseRequiredAttackRule(tokens []shared.Token, start int) (requiredAttackRu
 }
 
 func parseRequiredBlockRule(tokens []shared.Token, start int) (requiredAttackRuleSyntax, bool) {
+	if staticRuleWordsAt(tokens, start, "must", "be", "blocked", "by", "exactly", "one", "creature", "if", "able") &&
+		start+9 == len(tokens)-1 {
+		return requiredAttackRuleSyntax{
+			Constraint: StaticRuleConstraint{
+				Kind: StaticRuleConstraintRequirement,
+				Span: tokens[start].Span,
+			},
+			Operation: StaticRuleOperation{
+				Kind:  StaticRuleOperationBlock,
+				Voice: StaticRuleVoicePassive,
+				Span:  shared.SpanOf(tokens[start+1 : start+3]),
+			},
+			Qualifiers: []StaticRuleQualifier{
+				{
+					Kind: StaticRuleQualifierExactlyOneCreature,
+					Span: shared.SpanOf(tokens[start+3 : start+7]),
+				},
+				{
+					Kind: StaticRuleQualifierIfAble,
+					Span: shared.SpanOf(tokens[start+7 : start+9]),
+				},
+			},
+		}, true
+	}
 	if !staticRuleWordsAt(tokens, start, "must", "be", "blocked", "if", "able") ||
 		start+5 != len(tokens)-1 {
 		return requiredAttackRuleSyntax{}, false
@@ -894,6 +918,11 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerColor) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact) ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerControlledByMonarch))) ||
+		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
+			rule.Operation.Kind == StaticRuleOperationBlock &&
+			rule.Operation.Voice == StaticRuleVoicePassive &&
+			(staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierIfAble) ||
+				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierExactlyOneCreature, StaticRuleQualifierIfAble))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 			rule.Operation.Kind == StaticRuleOperationBlockedExcept &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&

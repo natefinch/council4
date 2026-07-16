@@ -318,7 +318,8 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 
 	attackers := attacksAgainstPlayer(g, playerID)
 	blockers := eligibleBlockers(g, playerID)
-	required := satisfiableMustBlockAttackers(g, playerID, attackers, blockers)
+	required := mustBlockRequirements(g, attackers)
+	maxRequired, preferredRequired := maximumSatisfiedMustBlockRequirements(g, required, blockers)
 	lures := trueLureAttackers(g, attackers, blockers)
 	lureForcesBlock := lureForcesAnyBlocker(g, lures, blockers)
 	actions := make([]action.Action, 0, len(attackers)*len(blockers)+1)
@@ -339,7 +340,7 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 			allBlockers = append(allBlockers, block)
 			if !attackerRequiresMultipleBlockers(g, attackingPermanent) {
 				declaration := []game.BlockDeclaration{block}
-				if blockDeclarationsSatisfyMustBlockRequirements(required, declaration) &&
+				if blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, declaration) &&
 					blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
 					blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
 					actions = append(actions, actionBuild.declareBlockers(declaration))
@@ -347,15 +348,26 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 			}
 		}
 		if len(allBlockers) > 1 && !ruleEffectLimitsBlockersToOne(g, attackingPermanent) {
-			if blockDeclarationsSatisfyMustBlockRequirements(required, allBlockers) &&
+			if blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, allBlockers) &&
 				blockDeclarationsSatisfyLures(g, lures, blockers, allBlockers) &&
 				blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, allBlockers)) {
 				actions = append(actions, actionBuild.declareBlockers(allBlockers))
 			}
 		}
 	}
-	actions = append(actions, multiAttackerBlockActions(g, attackers, blockers, required, lures)...)
-	if len(required) == 0 && !lureForcesBlock {
+	actions = append(actions, multiAttackerBlockActions(g, attackers, blockers, required, maxRequired, lures)...)
+	requiredDeclarations := [][]game.BlockDeclaration{preferredRequired}
+	if unitMustBlockRequirements(required) {
+		requiredDeclarations = maximumUnitMustBlockDeclarations(g, required, blockers, maxRequired)
+	}
+	for _, declaration := range requiredDeclarations {
+		if len(declaration) > 1 &&
+			blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
+			blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
+			actions = append(actions, actionBuild.declareBlockers(declaration))
+		}
+	}
+	if maxRequired == 0 && !lureForcesBlock {
 		actions = append(actions, actionBuild.declareBlockers(nil))
 	}
 	return actions
@@ -370,7 +382,7 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 // least two blockers) are excluded because a lone blocker can't satisfy them, and
 // every declaration is validated against the same must-block, lure, and alone
 // restrictions as the single-attacker declarations.
-func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent, required map[id.ID]bool, lures map[id.ID]bool) []action.Action {
+func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent, required map[id.ID]int, maxRequired int, lures map[id.ID]bool) []action.Action {
 	var actions []action.Action
 	for _, blocker := range blockers {
 		limit := blockerBlockLimit(g, blocker)
@@ -398,7 +410,7 @@ func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration,
 					Blocking: attacker.Attacker,
 				})
 			}
-			if blockDeclarationsSatisfyMustBlockRequirements(required, declaration) &&
+			if blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, declaration) &&
 				blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
 				blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
 				actions = append(actions, actionBuild.declareBlockers(declaration))
@@ -531,43 +543,47 @@ func blockDeclarationsSatisfyLures(g *game.Game, lures map[id.ID]bool, blockers 
 	return true
 }
 
-func satisfiableMustBlockAttackers(g *game.Game, playerID game.PlayerID, attackers []game.AttackDeclaration, blockers []*game.Permanent) map[id.ID]bool {
-	required := make(map[id.ID]bool)
+// mustBlockRequirements returns each attacker's minimum legal blocker count for
+// satisfying its "must be blocked if able" requirement. An internally
+// contradictory requirement (menace plus at-most-one) is omitted because no
+// legal declaration can satisfy it.
+func mustBlockRequirements(g *game.Game, attackers []game.AttackDeclaration) map[id.ID]int {
+	required := make(map[id.ID]int)
 	for _, attack := range attackers {
 		attacker, ok := permanentByObjectID(g, attack.Attacker)
 		if !ok || !ruleEffectRequiresBeingBlocked(g, attacker) {
 			continue
 		}
-		legalBlockerCount := 0
-		for _, blocker := range blockers {
-			if canBlockAttacker(g, blocker, attacker) {
-				legalBlockerCount++
-			}
+		minimum := 1
+		if attackerRequiresMultipleBlockers(g, attacker) {
+			minimum = 2
 		}
-		if legalBlockerCount == 0 {
+		if minimum > 1 && ruleEffectLimitsBlockersToOne(g, attacker) {
 			continue
 		}
-		if attackerRequiresMultipleBlockers(g, attacker) && legalBlockerCount < 2 {
-			continue
-		}
-		required[attack.Attacker] = true
+		required[attack.Attacker] = minimum
 	}
 	return required
 }
 
-func blockDeclarationsSatisfyMustBlockRequirements(required map[id.ID]bool, declarations []game.BlockDeclaration) bool {
+// blockDeclarationsSatisfyMustBlockRequirements enforces CR 509.1c by requiring
+// a declaration to satisfy the maximum number of simultaneously satisfiable
+// must-block requirements.
+func blockDeclarationsSatisfyMustBlockRequirements(required map[id.ID]int, maximum int, declarations []game.BlockDeclaration) bool {
 	if len(required) == 0 {
 		return true
 	}
-	// The current blocker enumerator models one attacker at a time. Satisfying at
-	// least one satisfiable requirement is exact for single-requirement effects
-	// like Neyith; multiple simultaneous requirements need broader enumeration.
+	counts := make(map[id.ID]int)
 	for _, declaration := range declarations {
-		if required[declaration.Blocking] {
-			return true
+		counts[declaration.Blocking]++
+	}
+	satisfied := 0
+	for attackerID, minimum := range required {
+		if counts[attackerID] >= minimum {
+			satisfied++
 		}
 	}
-	return false
+	return satisfied == maximum
 }
 
 // applyAttackers validates and applies the declare-attackers action for
@@ -715,7 +731,9 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	if !blockDeclarationsSatisfyAloneRestriction(g, allBlockers) {
 		return false
 	}
-	if !blockDeclarationsSatisfyMustBlockRequirements(satisfiableMustBlockAttackers(g, playerID, attackers, eligible), allBlockers) {
+	required := mustBlockRequirements(g, attackers)
+	maxRequired, _ := maximumSatisfiedMustBlockRequirements(g, required, eligible)
+	if !blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, allBlockers) {
 		return false
 	}
 	if !blockDeclarationsSatisfyLures(g, trueLureAttackers(g, attackers, eligible), eligible, allBlockers) {

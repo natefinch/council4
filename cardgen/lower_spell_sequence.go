@@ -3592,6 +3592,53 @@ func isDelayedTargetSacrificeEffect(effect *compiler.CompiledEffect) bool {
 		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
 }
 
+// lowerDelayedCreatedTokensExile links a delayed "Exile the tokens at the
+// beginning of the next end step." clause to the exact batch produced by the
+// preceding CreateToken instruction. The delayed trigger snapshots object IDs at
+// schedule time, isolating simultaneous resolutions and preserving token LKI.
+func lowerDelayedCreatedTokensExile(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerDelayedCreatedTokensExile: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	effect := ctx.content.Effects[0]
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		effect.Kind != compiler.EffectExile ||
+		!effect.Exact ||
+		!effect.CreatedTokensReference ||
+		effect.DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		ctx.optional ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.References) != 0 {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.Effects[0].CreatedTokensReference = false
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	create, ok := sequence[effectIndex-1].Primitive.(game.CreateToken)
+	if !ok || create.PublishLinked != "" {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-created-token-exile-%d", effectIndex))
+	create.PublishLinked = key
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing:              game.DelayedAtBeginningOfNextEndStep,
+		CapturedObjectGroup: opt.Val(game.LinkedObjectReference(string(key))),
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Exile{
+			Group: game.CapturedObjectsGroup(),
+		}}}}.Ability(),
+	}}
+	return create, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
 // lowerDelayedSequenceClause attempts the linked clause shapes (delayed
 // sacrifice, delayed return-to-hand, delayed blink-return, and immediate
 // blink-return) that capture an earlier target and resolve it at a later step or
@@ -3651,10 +3698,15 @@ func lowerDelayedSequenceClause(
 	if delayed, ok := lowerDelayedCommanderMonarchDiesTrigger(effectIndex, ctx, sequence); ok {
 		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
+	if publisher, delayed, ok := lowerDelayedCreatedTokensExile(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		return delayedSequenceClauseResult{content: delayed, handled: true}
+	}
 	if publisher, delayed, ok := lowerDelayedTargetExile(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
 		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
+
 	if publisher, delayed, ok := lowerDelayedTopCardReturn(effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = publisher
 		return delayedSequenceClauseResult{content: delayed, handled: true}

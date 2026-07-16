@@ -2259,6 +2259,10 @@ const (
 	// recipient reference and the dynamic amount. Added last so existing kinds
 	// keep their wire values.
 	EffectIncubate
+	// EffectMustBeBlockedByExactlyOne is the typed static requirement that the
+	// affected attacker be blocked by one creature, and no more than one, if able.
+	// Added last so existing kinds keep their wire values.
+	EffectMustBeBlockedByExactlyOne
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -2626,6 +2630,8 @@ type CompiledEffect struct {
 	// definition. It is empty for tokens identified by their subtypes.
 	TokenPredefinedName string
 	TokenCopyOfTarget   bool
+	// TokenCopyOfSource copies the resolving ability's source permanent.
+	TokenCopyOfSource bool
 	// AmassSubtype is the creature subtype named by an EffectAmass keyword action
 	// ("Amass Orcs N" -> Orc, "Amass Zombies N" -> Zombie). The untyped "Amass N"
 	// form defaults to Zombie. Lowering carries it onto game.Amass so the runtime
@@ -2668,6 +2674,9 @@ type CompiledEffect struct {
 	// TokenCopyEntersTapped reports a copy-token "tapped" entry modifier: every
 	// created copy enters the battlefield tapped.
 	TokenCopyEntersTapped bool
+	// TokenCopyAttacksDefender puts the copies into combat
+	// attacking the defending player captured by the attack trigger.
+	TokenCopyAttacksDefender bool
 	// TokenCopyGrantKeywords lists keyword abilities the created copy token gains
 	// from a folded "[That token/It] gains <keyword>." rider, in source order.
 	TokenCopyGrantKeywords []parser.KeywordKind
@@ -3566,6 +3575,9 @@ type CompiledEffect struct {
 	// Planar Birth), where each moved card enters under its owner's control. It
 	// is false for the bare and "under your control" forms.
 	UnderOwnersControl bool
+	// CreatedTokensReference binds this effect to the exact token batch published
+	// by an earlier create instruction in the same resolution.
+	CreatedTokensReference bool
 	// TokenCopyOfForEach mirrors the parser flag for a per-each copy-token create
 	// whose copy source is each member of a controlled battlefield group (Second
 	// Harvest). The iterated group is carried in TokenCopyForEachGroup.

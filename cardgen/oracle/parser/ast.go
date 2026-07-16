@@ -1723,6 +1723,9 @@ const (
 	// StaticRuleQualifierByMoreThanOne bounds a "can't be blocked" prohibition
 	// to the exceptional case "by more than one creature".
 	StaticRuleQualifierByMoreThanOne StaticRuleQualifierKind = "StaticRuleQualifierByMoreThanOne"
+	// StaticRuleQualifierExactlyOneCreature bounds a passive block requirement to
+	// exactly one blocker ("must be blocked by exactly one creature if able").
+	StaticRuleQualifierExactlyOneCreature StaticRuleQualifierKind = "StaticRuleQualifierExactlyOneCreature"
 	// StaticRuleQualifierBlockerFlying restricts a "can't be blocked" prohibition
 	// to blockers with flying ("can't be blocked by creatures with flying").
 	StaticRuleQualifierBlockerFlying StaticRuleQualifierKind = "StaticRuleQualifierBlockerFlying"

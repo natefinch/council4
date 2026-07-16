@@ -87,6 +87,17 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 			dynamic.Group = game.PlayerControlledGroup(game.EventPlayerReference(), selection)
 			return dynamic, true
 		}
+		if selector := amount.Selector(); selector.Controller == compiler.ControllerDefendingPlayer {
+			stripped := selector
+			stripped.Controller = compiler.ControllerAny
+			selection, ok := dynamicAmountSelection(stripped)
+			if !ok {
+				return game.DynamicAmount{}, false
+			}
+			dynamic.Kind = game.DynamicAmountCountSelector
+			dynamic.Group = game.PlayerControlledGroup(game.DefendingPlayerReference(), selection)
+			return dynamic, true
+		}
 		selection, ok := dynamicAmountSelection(amount.Selector())
 		if !ok {
 			return game.DynamicAmount{}, false

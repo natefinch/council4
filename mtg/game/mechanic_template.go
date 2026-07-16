@@ -78,6 +78,22 @@ var MustBeBlockedStaticBody = StaticAbility{
 	}},
 }
 
+// MustBeBlockedByExactlyOneStaticBody is the complete static ability for a
+// creature that must be blocked by exactly one creature if able.
+var MustBeBlockedByExactlyOneStaticBody = StaticAbility{
+	Text: "This creature must be blocked by exactly one creature if able.",
+	RuleEffects: []RuleEffect{
+		{
+			Kind:           RuleEffectMustBeBlocked,
+			AffectedSource: true,
+		},
+		{
+			Kind:           RuleEffectCantBeBlockedByMoreThanOne,
+			AffectedSource: true,
+		},
+	},
+}
+
 // CantBeBlockedStaticBody is the complete static ability for an unblockable creature.
 var CantBeBlockedStaticBody = StaticAbility{
 	Text: "This creature can't be blocked.",
