@@ -871,6 +871,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Vigilance", nil
 	case game.Riot:
 		return "game.Riot", nil
+	case game.Ravenous:
+		return "game.Ravenous", nil
 	case game.Unleash:
 		return "game.Unleash", nil
 	case game.Ward:
@@ -1090,6 +1092,8 @@ func renderAggregateKind(kind game.AggregateKind) (string, error) {
 		return "game.AggregateMinPlayerLibrarySize", nil
 	case game.AggregateControllerDevotion:
 		return "game.AggregateControllerDevotion", nil
+	case game.AggregateEventPermanentCastX:
+		return "game.AggregateEventPermanentCastX", nil
 	default:
 		return "", fmt.Errorf("render: unsupported aggregate kind %d", kind)
 	}

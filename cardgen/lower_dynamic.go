@@ -607,6 +607,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Persist, true
 	case parser.KeywordRiot:
 		return game.Riot, true
+	case parser.KeywordRavenous:
+		return game.Ravenous, true
 	case parser.KeywordUnleash:
 		return game.Unleash, true
 	case parser.KeywordFear:

@@ -3,6 +3,7 @@ package cardgen
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -33,6 +34,9 @@ func classLevelReplacementGate(condition opt.V[game.Condition]) (int, bool) {
 }
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if reflect.DeepEqual(*ability, game.RavenousEntersWithCountersReplacement()) {
+		return "game.RavenousEntersWithCountersReplacement()", nil
+	}
 	if level, ok := classLevelReplacementGate(ability.Replacement.Condition); ok {
 		inner := *ability
 		inner.Replacement.Condition = opt.V[game.Condition]{}

@@ -288,6 +288,11 @@ type Event struct {
 	// condition (CR 603.4).
 	EnterCastFromZone zone.Type
 
+	// EnterXValue is the value of X chosen for the cast spell that became the
+	// entering permanent. It is zero for a cast with X=0 and for non-cast
+	// entries; EnterWasCast distinguishes those cases.
+	EnterXValue int
+
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).

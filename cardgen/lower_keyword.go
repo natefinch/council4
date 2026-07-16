@@ -377,6 +377,12 @@ func lowerKeywordDispatch(
 		}
 		return keywordReplacementLowering(&bloodthirstAbility, ability, syntax), true, nil
 	}
+	if ravenousLowering, ok, diag := lowerRavenousAbility(ability, syntax); ok {
+		if diag != nil {
+			return abilityLowering{}, true, diag
+		}
+		return ravenousLowering, true, nil
+	}
 	if rampageAbility, ok, diag := lowerRampageAbility(ability, syntax); ok {
 		if diag != nil {
 			return abilityLowering{}, true, diag
@@ -880,6 +886,40 @@ func lowerBloodthirstAbility(
 		)
 	}
 	return game.BloodthirstReplacement(keyword.Name+" "+keyword.Parameter, keyword.Integer), true, nil
+}
+
+// lowerRavenousAbility lowers the exact Ravenous keyword (CR 702.156) to its
+// enters-with-X-counters replacement and its intervening-if draw trigger.
+func lowerRavenousAbility(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Keywords) != 1 || ability.Content.Keywords[0].Kind != parser.KeywordRavenous {
+		return abilityLowering{}, false, nil
+	}
+	keyword := ability.Content.Keywords[0]
+	if keyword.ParameterKind != parser.KeywordParameterNone ||
+		ability.Kind != compiler.AbilityStatic ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Effects) != 0 ||
+		len(ability.Content.References) != 0 ||
+		ability.AbilityWord != "" ||
+		!keywordOnlyCovered(syntax, keyword) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported Ravenous ability",
+			"the executable source backend supports only the exact Ravenous keyword",
+		)
+	}
+	return abilityLowering{
+		replacementAbility: opt.Val(game.RavenousEntersWithCountersReplacement()),
+		triggeredAbility:   opt.Val(game.RavenousDrawTriggeredAbility()),
+		consumed:           semanticConsumption{keywords: 1},
+		sourceSpans:        keywordSpans(ability, syntax),
+	}, true, nil
 }
 
 // lowerRampageAbility lowers the Rampage N keyword (CR 702.23) to its canonical

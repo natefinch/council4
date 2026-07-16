@@ -618,6 +618,9 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
 		return "game.LivingWeaponTriggeredAbility()", nil
 	}
+	if reflect.DeepEqual(*ability, game.RavenousDrawTriggeredAbility()) {
+		return "game.RavenousDrawTriggeredAbility()", nil
+	}
 	if reflect.DeepEqual(*ability, game.OffspringEnterTriggeredAbility()) {
 		return "game.OffspringEnterTriggeredAbility()", nil
 	}
