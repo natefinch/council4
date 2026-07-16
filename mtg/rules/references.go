@@ -731,9 +731,47 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.linkedObjectsGroupMembers(ref)
 	case game.GroupDomainAttackedThisTurn:
 		return r.attackedThisTurnGroupMembers(ref)
+	case game.GroupDomainSaddleContributors:
+		return r.saddleContributorGroupMembers(ref)
 	default:
 		return []id.ID{}
 	}
+}
+
+// saddleContributorGroupMembers resolves the anchor Mount and revalidates each
+// exact object identity recorded by its Saddle resolutions. A contributor that
+// left and returned is a new object and is therefore excluded; control changes do
+// not alter identity or membership.
+func (r referenceResolver) saddleContributorGroupMembers(ref game.GroupReference) []id.ID {
+	anchor, ok := ref.Anchor()
+	if !ok {
+		return []id.ID{}
+	}
+	resolved, ok := r.object(anchor)
+	if !ok {
+		return []id.ID{}
+	}
+	var contributorIDs []id.ID
+	switch {
+	case resolved.permanent != nil:
+		contributorIDs = resolved.permanent.SaddleContributorIDs
+	case resolved.snapshot.ObjectID != 0:
+		contributorIDs = resolved.snapshot.SaddleContributorIDs
+	default:
+		return []id.ID{}
+	}
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	members := make([]id.ID, 0, len(contributorIDs))
+	for _, contributorID := range contributorIDs {
+		permanent, ok := permanentByObjectID(r.g, contributorID)
+		if !ok || !activeBattlefieldPermanent(permanent) ||
+			!r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, contributorID)
+	}
+	return members
 }
 
 func (r referenceResolver) attackedThisTurnGroupMembers(ref game.GroupReference) []id.ID {

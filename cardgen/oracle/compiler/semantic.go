@@ -2671,6 +2671,9 @@ type CompiledEffect struct {
 	// ... enter" trigger). The copy source resolves at runtime to a
 	// controller-chosen member of the triggering event batch.
 	TokenCopyOfTriggeringSet bool
+	// TokenCopyOfChosenSaddleContributor chooses one live nonlegendary creature
+	// whose exact object identity saddled the source this turn and copies it.
+	TokenCopyOfChosenSaddleContributor bool
 	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
 	// legendary" modifier: the created token drops the Legendary supertype.
 	TokenCopyDropLegendary bool
@@ -2680,6 +2683,9 @@ type CompiledEffect struct {
 	// TokenCopyAttacksDefender puts the copies into combat
 	// attacking the defending player captured by the attack trigger.
 	TokenCopyAttacksDefender bool
+	// TokenCopyAttacksWithSource puts the copies into combat attacking the same
+	// player, planeswalker, or battle as the source attacker.
+	TokenCopyAttacksWithSource bool
 	// TokenCopyGrantKeywords lists keyword abilities the created copy token gains
 	// from a folded "[That token/It] gains <keyword>." rider, in source order.
 	TokenCopyGrantKeywords []parser.KeywordKind

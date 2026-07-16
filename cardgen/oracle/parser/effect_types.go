@@ -2436,6 +2436,10 @@ type EffectSyntax struct {
 	// no printed power/toughness of its own. The "them" pronoun is the effect's
 	// lone non-modifier reference.
 	TokenCopyOfTriggeringSet bool `json:",omitempty"`
+	// TokenCopyOfChosenSaddleContributor reports that the controller chooses a
+	// currently valid nonlegendary creature whose exact object identity saddled
+	// the source this turn, then creates a copy of that chosen permanent.
+	TokenCopyOfChosenSaddleContributor bool `json:",omitempty"`
 	// TokenCopyDropLegendary reports a copy-token "except <it/the token> isn't
 	// legendary" modifier: the created token copies the source but drops the
 	// Legendary supertype so it does not force the legend rule on the original.
@@ -2447,6 +2451,9 @@ type EffectSyntax struct {
 	// TokenCopyAttacksDefender reports that the copied tokens enter
 	// attacking the defending player captured by the triggering attack.
 	TokenCopyAttacksDefender bool `json:",omitempty"`
+	// TokenCopyAttacksWithSource reports that the copied tokens enter attacking
+	// the same player, planeswalker, or battle as the source attacker.
+	TokenCopyAttacksWithSource bool `json:",omitempty"`
 	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
 	// folded "[That token/It] gains <keyword>." rider sentence following the
 	// create effect, in source order. It is empty when no such rider is folded.

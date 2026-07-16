@@ -279,6 +279,11 @@ type StackObject struct {
 	// power"). Empty when no permanent was sacrificed as a cost.
 	SacrificedAsCostIDs []id.ID
 
+	// TappedAsCostIDs are the object IDs of permanents tapped to pay this
+	// ability's additional activation costs. Saddle uses them to preserve the
+	// exact creatures that saddled its source when the ability resolves.
+	TappedAsCostIDs []id.ID
+
 	// ExiledAsCostIDs are the card-instance IDs of cards exiled from a zone to
 	// pay this ability's activation cost (e.g. "Exile two creature cards from
 	// your graveyard"). They let a resolution effect act on the cost-exiled

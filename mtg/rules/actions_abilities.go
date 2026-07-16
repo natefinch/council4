@@ -171,6 +171,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		ChosenModes:         append([]int(nil), activate.ChosenModes...),
 		XValue:              activate.XValue,
 		SacrificedAsCostIDs: costPaid.sacrificedIDs,
+		TappedAsCostIDs:     costPaid.tappedIDs,
 		ExiledAsCostIDs:     costPaid.exiledIDs,
 	}
 	if activatedOK {
@@ -213,7 +214,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	selfEntry := bodyPutsSourceCardOntoBattlefield(&ability)
 	discardSelf := !selfEntry && len(ability.AdditionalCosts) == 1 && abilityHasDiscardThisCardCost(ability.AdditionalCosts)
 	var additionalCostsPaid []string
-	var sacrificedAsCostIDs, exiledAsCostIDs []id.ID
+	var sacrificedAsCostIDs, tappedAsCostIDs, exiledAsCostIDs []id.ID
 	if selfEntry {
 		prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Hand, agents, log)
 		costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
@@ -230,6 +231,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 			return false
 		}
 		sacrificedAsCostIDs = costPaid.sacrificedIDs
+		tappedAsCostIDs = costPaid.tappedIDs
 		exiledAsCostIDs = costPaid.exiledIDs
 	} else {
 		manaCost := effectiveHandAbilityCost(g, playerID, card, &ability)
@@ -264,6 +266,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		XValue:              activate.XValue,
 		AdditionalCostsPaid: additionalCostsPaid,
 		SacrificedAsCostIDs: sacrificedAsCostIDs,
+		TappedAsCostIDs:     tappedAsCostIDs,
 		ExiledAsCostIDs:     exiledAsCostIDs,
 		InlineActivated:     &ability,
 	}
@@ -351,6 +354,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		ChosenModes:         append([]int(nil), activate.ChosenModes...),
 		XValue:              activate.XValue,
 		SacrificedAsCostIDs: costPaid.sacrificedIDs,
+		TappedAsCostIDs:     costPaid.tappedIDs,
 		ExiledAsCostIDs:     costPaid.exiledIDs,
 	}
 	pushAbilityToStack(g, obj)

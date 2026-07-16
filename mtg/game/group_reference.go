@@ -84,6 +84,11 @@ const (
 	// controlled by all still-legal targeted opponents. Appended last so existing
 	// domain ordinals remain unchanged.
 	GroupDomainPlayerGroupControlled
+
+	// GroupDomainSaddleContributors draws from the exact permanent object IDs
+	// recorded on the anchor Mount by Saddle abilities that resolved this turn.
+	// Only contributors still on the battlefield and matching Selection remain.
+	GroupDomainSaddleContributors
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -218,6 +223,17 @@ func LinkedObjectsGroup(key LinkedKey) GroupReference {
 // object identity was declared as an attacker earlier this turn.
 func AttackedThisTurnGroup(selection Selection) GroupReference {
 	return GroupReference{domain: GroupDomainAttackedThisTurn, selection: selection}
+}
+
+// SaddleContributorsGroup matches surviving battlefield permanents whose exact
+// object identities contributed to Saddle activations resolved on anchor this
+// turn, narrowed by selection.
+func SaddleContributorsGroup(anchor ObjectReference, selection Selection) GroupReference {
+	return GroupReference{
+		domain:    GroupDomainSaddleContributors,
+		anchor:    opt.Val(anchor),
+		selection: selection,
+	}
 }
 
 // Domain reports the candidate domain the group draws from.
@@ -360,6 +376,13 @@ func (r GroupReference) Validate() []string {
 		}
 		if r.exclude.Exists {
 			problems = append(problems, "attacked-this-turn group must not set an exclusion")
+		}
+	case GroupDomainSaddleContributors:
+		if !r.anchor.Exists {
+			problems = append(problems, "saddle-contributors group requires an anchor object")
+		}
+		if r.exclude.Exists {
+			problems = append(problems, "saddle-contributors group must not set an exclusion")
 		}
 	case groupDomainNone:
 		problems = append(problems, "group reference has no domain")

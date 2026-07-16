@@ -3702,6 +3702,60 @@ func lowerDelayedCreatedTokensExile(
 	return create, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
+// lowerDelayedCreatedTokensSacrifice links a delayed "Sacrifice that token at
+// the beginning of the next end step." clause to the exact token batch produced
+// by the preceding CreateToken instruction. Capturing the whole replacement-
+// modified batch handles token doublers and isolates repeated iterations.
+func lowerDelayedCreatedTokensSacrifice(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.Primitive, game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerDelayedCreatedTokensSacrifice: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	effect := ctx.content.Effects[0]
+	if effectIndex == 0 ||
+		len(sequence) != effectIndex ||
+		effect.Kind != compiler.EffectSacrifice ||
+		!effect.Exact ||
+		!effect.CreatedTokensReference ||
+		effect.DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		effect.Negated ||
+		effect.Context != parser.EffectContextController ||
+		ctx.optional ||
+		len(ctx.content.Targets) != 0 {
+		return nil, game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Effects[0].CreatedTokensReference = false
+	if consumed.content.Unconsumed() {
+		return nil, game.AbilityContent{}, false
+	}
+	create, ok := sequence[effectIndex-1].Primitive.(game.CreateToken)
+	if !ok || create.PublishLinked != "" {
+		return nil, game.AbilityContent{}, false
+	}
+	key := game.LinkedKey(fmt.Sprintf("delayed-created-token-sacrifice-%d", effectIndex))
+	resultKey := game.ResultKey(fmt.Sprintf("created-token-%d", effectIndex))
+	create.PublishLinked = key
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing:              game.DelayedAtBeginningOfNextEndStep,
+		CapturedObjectGroup: opt.Val(game.LinkedObjectReference(string(key))),
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
+			Group: game.CapturedObjectsGroup(),
+		}}}}.Ability(),
+	}}
+	return create, game.Mode{Sequence: []game.Instruction{{
+		Primitive: delayed,
+		ResultGate: opt.Val(game.InstructionResultGate{
+			Key:       resultKey,
+			Succeeded: game.TriTrue,
+		}),
+	}}}.Ability(), true
+}
+
 // lowerDelayedSequenceClause attempts the linked clause shapes (delayed
 // sacrifice, delayed return-to-hand, delayed blink-return, and immediate
 // blink-return) that capture an earlier target and resolve it at a later step or
@@ -3759,6 +3813,11 @@ func lowerDelayedSequenceClause(
 		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if delayed, ok := lowerDelayedCommanderMonarchDiesTrigger(effectIndex, ctx, sequence); ok {
+		return delayedSequenceClauseResult{content: delayed, handled: true}
+	}
+	if publisher, delayed, ok := lowerDelayedCreatedTokensSacrifice(effectIndex, ctx, sequence); ok {
+		sequence[len(sequence)-1].Primitive = publisher
+		sequence[len(sequence)-1].PublishResult = game.ResultKey(fmt.Sprintf("created-token-%d", effectIndex))
 		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if publisher, delayed, ok := lowerDelayedCreatedTokensExile(effectIndex, ctx, sequence); ok {

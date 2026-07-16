@@ -111,6 +111,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	if effect.TokenCopyOfTriggeringSet {
 		return lowerCreateCopyTokenTriggeringSetSpell(ctx)
 	}
+	if effect.TokenCopyOfChosenSaddleContributor {
+		return lowerCreateChosenSaddleContributorCopyToken(ctx, publishLinked)
+	}
 	if effect.TokenCopyOfForEach {
 		return lowerCreateCopyTokenForEachSpell(ctx)
 	}
@@ -355,6 +358,52 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		Targets:  targets,
 		Sequence: sequence,
 	}.Ability(), nil
+}
+
+// lowerCreateChosenSaddleContributorCopyToken lowers the typed
+// Saddle-contributor choice into a generic chosen-group token copy. The group
+// revalidates exact contributor object identities at resolution; the token joins
+// the source's attack without a defender prompt.
+func lowerCreateChosenSaddleContributorCopyToken(
+	ctx contentCtx,
+	publishLinked game.LinkedKey,
+) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if effect.Context != parser.EffectContextController ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.DelayedTiming != 0 ||
+		effect.Duration != compiler.DurationNone ||
+		!effect.TokenCopyEntersTapped ||
+		!effect.TokenCopyAttacksWithSource ||
+		len(ctx.content.Targets) != 0 ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	consumed := ctx.content
+	consumed.References = nil
+	if consumed.Unconsumed() {
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+	}
+	group := game.SaddleContributorsGroup(
+		game.SourcePermanentReference(),
+		game.Selection{
+			RequiredTypes:     []types.Card{types.Creature},
+			ExcludedSupertype: types.Legendary,
+		},
+	)
+	return game.Mode{Sequence: []game.Instruction{{Primitive: game.CreateToken{
+		Amount: game.Fixed(1),
+		Source: game.TokenCopyOf(game.TokenCopySpec{
+			Source: game.TokenCopySourceChosenFromGroup,
+			Group:  game.GroupRef(group),
+		}),
+		EntryTapped:        true,
+		AttackSameAsSource: true,
+		PublishLinked:      publishLinked,
+	}}}}.Ability(), nil
 }
 
 // controlledCountThatPlayerTokenAmount reports whether a create-token effect's

@@ -11,38 +11,42 @@ import (
 
 // ObjectSnapshot is last-known information for an object that changed zones.
 type ObjectSnapshot struct {
-	ObjectID         id.ID
-	CardID           id.ID
-	TokenName        string
-	TokenDef         *CardDef
-	Face             FaceIndex
-	FaceDown         bool
-	FaceDownFace     FaceIndex
-	FaceDownKind     FaceDownKind
-	MergedCards      []MergedCard
-	Name             string
-	Owner            PlayerID
-	Controller       PlayerID
-	FromZone         zone.Type
-	Tapped           bool
-	Attacking        bool
-	Blocking         bool
-	Colors           []color.Color
-	Supertypes       []types.Super
-	Types            []types.Card
-	Subtypes         []types.Sub
-	Power            opt.V[int]
-	BasePower        opt.V[int]
-	Toughness        opt.V[int]
-	Keywords         []Keyword
-	Counters         counter.Set
-	EntryChoices     map[ChoiceKey]ResolutionChoiceResult
-	RuleEffectKinds  []RuleEffectKind
-	MarkedDamage     int
-	Attachments      []id.ID
-	AttachedTo       opt.V[id.ID]
-	AttachedToPlayer opt.V[PlayerID]
-	ZoneOrderIndex   int
+	ObjectID        id.ID
+	CardID          id.ID
+	TokenName       string
+	TokenDef        *CardDef
+	Face            FaceIndex
+	FaceDown        bool
+	FaceDownFace    FaceIndex
+	FaceDownKind    FaceDownKind
+	MergedCards     []MergedCard
+	Name            string
+	Owner           PlayerID
+	Controller      PlayerID
+	FromZone        zone.Type
+	Tapped          bool
+	Attacking       bool
+	Blocking        bool
+	Colors          []color.Color
+	Supertypes      []types.Super
+	Types           []types.Card
+	Subtypes        []types.Sub
+	Power           opt.V[int]
+	BasePower       opt.V[int]
+	Toughness       opt.V[int]
+	Keywords        []Keyword
+	Counters        counter.Set
+	EntryChoices    map[ChoiceKey]ResolutionChoiceResult
+	RuleEffectKinds []RuleEffectKind
+	MarkedDamage    int
+	Attachments     []id.ID
+	// SaddleContributorIDs preserves the exact creature objects that saddled this
+	// permanent this turn so a triggered ability can resolve after its source
+	// leaves the battlefield.
+	SaddleContributorIDs []id.ID
+	AttachedTo           opt.V[id.ID]
+	AttachedToPlayer     opt.V[PlayerID]
+	ZoneOrderIndex       int
 }
 
 // LinkedObjectKey identifies objects exiled or otherwise tracked by one linked
