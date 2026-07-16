@@ -20,18 +20,19 @@ type CardDefIssueCode string
 // Structural validation issue codes identify problems found purely from game
 // data without any tooling or runtime policy.
 const (
-	CardDefIssueNilCard                CardDefIssueCode = "nil-card"
-	CardDefIssueMissingName            CardDefIssueCode = "missing-name"
-	CardDefIssueOracleWithoutAbilities CardDefIssueCode = "oracle-without-abilities"
-	CardDefIssueTargetIndexOutOfRange  CardDefIssueCode = "target-index-out-of-range"
-	CardDefIssueInvalidReference       CardDefIssueCode = "invalid-reference"
-	CardDefIssueInvalidTargetSpec      CardDefIssueCode = "invalid-target-spec"
-	CardDefIssueInvalidKeywordAbility  CardDefIssueCode = "invalid-keyword-ability"
-	CardDefIssueInvalidAbilityBody     CardDefIssueCode = "invalid-ability-body"
-	CardDefIssueInvalidSelection       CardDefIssueCode = "invalid-selection"
-	CardDefIssueInvalidCondition       CardDefIssueCode = "invalid-condition"
-	CardDefIssueInvalidRuleEffect      CardDefIssueCode = "invalid-rule-effect"
-	CardDefIssueInvalidAlternativeCost CardDefIssueCode = "invalid-alternative-cost"
+	CardDefIssueNilCard                     CardDefIssueCode = "nil-card"
+	CardDefIssueMissingName                 CardDefIssueCode = "missing-name"
+	CardDefIssueOracleWithoutAbilities      CardDefIssueCode = "oracle-without-abilities"
+	CardDefIssueTargetIndexOutOfRange       CardDefIssueCode = "target-index-out-of-range"
+	CardDefIssueInvalidReference            CardDefIssueCode = "invalid-reference"
+	CardDefIssueInvalidTargetSpec           CardDefIssueCode = "invalid-target-spec"
+	CardDefIssueInvalidKeywordAbility       CardDefIssueCode = "invalid-keyword-ability"
+	CardDefIssueInvalidAbilityBody          CardDefIssueCode = "invalid-ability-body"
+	CardDefIssueInvalidSelection            CardDefIssueCode = "invalid-selection"
+	CardDefIssueInvalidCondition            CardDefIssueCode = "invalid-condition"
+	CardDefIssueInvalidRuleEffect           CardDefIssueCode = "invalid-rule-effect"
+	CardDefIssueInvalidAlternativeCost      CardDefIssueCode = "invalid-alternative-cost"
+	CardDefIssueInvalidAdditionalCostChoice CardDefIssueCode = "invalid-additional-cost-choice"
 )
 
 // CardDefIssue describes one structural problem found in a CardDef.
@@ -108,6 +109,7 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		len(face.StaticAbilities) > 0 ||
 		len(face.AdditionalCosts) > 0 ||
 		len(face.AlternativeCosts) > 0 ||
+		len(face.AdditionalCostChoices) > 0 ||
 		face.DynamicPower.Exists ||
 		face.DynamicToughness.Exists
 	if strings.TrimSpace(face.OracleText) != "" && !hasAbilities && face.ImplementationID == "" {
@@ -224,6 +226,58 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 				CardDefIssueInvalidAlternativeCost,
 				"controls-subtype alternative cost has no subtype",
 			)
+		}
+	}
+	v.validateAdditionalCostChoices(faceName, path, face)
+}
+
+// validateAdditionalCostChoices checks each printed "pay A or pay B" additional-
+// cost choice: it must offer at least two branches, and every branch must pay
+// something (additive mana and/or non-mana costs).
+func (v *cardDefValidator) validateAdditionalCostChoices(faceName, path string, face *CardFace) {
+	if len(face.AdditionalCostChoices) > 0 && len(face.AlternativeCosts) > 0 {
+		// The payment planner selects an additional-cost-choice branch by an
+		// expanded cost-option index, while alternative costs (evoke, dash,
+		// flashback, escape, ...) are looked up by that same option index. A
+		// face carrying both would let the two index schemes collide, so this
+		// combination is unsupported and must fail closed rather than mis-pay.
+		v.add(
+			faceName,
+			appendPath(path, "AdditionalCostChoices"),
+			CardDefIssueInvalidAdditionalCostChoice,
+			"a face cannot combine additional-cost choices with alternative costs",
+		)
+	}
+	for i := range face.AdditionalCostChoices {
+		choice := face.AdditionalCostChoices[i]
+		if len(choice.Options) < 2 {
+			v.add(
+				faceName,
+				appendPath(path, fmt.Sprintf("AdditionalCostChoices[%d].Options", i)),
+				CardDefIssueInvalidAdditionalCostChoice,
+				"additional-cost choice must offer at least two branches",
+			)
+		}
+		for j := range choice.Options {
+			option := choice.Options[j]
+			if len(option.Mana) == 0 && len(option.Costs) == 0 {
+				v.add(
+					faceName,
+					appendPath(path, fmt.Sprintf("AdditionalCostChoices[%d].Options[%d]", i, j)),
+					CardDefIssueInvalidAdditionalCostChoice,
+					"additional-cost choice branch pays neither mana nor a non-mana cost",
+				)
+			}
+			for k := range option.Costs {
+				if option.Costs[k].ChoiceGroup != 0 {
+					v.add(
+						faceName,
+						appendPath(path, fmt.Sprintf("AdditionalCostChoices[%d].Options[%d].Costs[%d]", i, j, k)),
+						CardDefIssueInvalidAdditionalCostChoice,
+						"additional-cost choice branch cost must not carry a ChoiceGroup",
+					)
+				}
+			}
 		}
 	}
 }

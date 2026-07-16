@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
 	{Name: "Earthshaker Dreadmaw", New: EarthshakerDreadmaw},
+	{Name: "Eaten Alive", New: EatenAlive},
 	{Name: "Ebony Charm", New: EbonyCharm},
 	{Name: "Ebony Owl Netsuke", New: EbonyOwlNetsuke},
 	{Name: "Echo Circlet", New: EchoCirclet},

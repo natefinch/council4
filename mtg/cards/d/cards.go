@@ -82,6 +82,7 @@ var Cards = []cardset.Entry{
 	{Name: "Dirty Wererat", New: DirtyWererat},
 	{Name: "Disa the Restless", New: DisaTheRestless},
 	{Name: "Disempower", New: Disempower},
+	{Name: "Disruption Protocol", New: DisruptionProtocol},
 	{Name: "Disruptive Pitmage", New: DisruptivePitmage},
 	{Name: "Disruptive Student", New: DisruptiveStudent},
 	{Name: "Dissension in the Ranks", New: DissensionInTheRanks},

@@ -146,6 +146,7 @@ var Cards = []cardset.Entry{
 	{Name: "Moonveil Dragon", New: MoonveilDragon},
 	{Name: "Morbid Opportunist", New: MorbidOpportunist},
 	{Name: "Moriok Scavenger", New: MoriokScavenger},
+	{Name: "Morkrut Behemoth", New: MorkrutBehemoth},
 	{Name: "Mortal Obstinacy", New: MortalObstinacy},
 	{Name: "Mossfire Valley", New: MossfireValley},
 	{Name: "Mosswort Bridge", New: MosswortBridge},

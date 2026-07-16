@@ -783,6 +783,14 @@ func (r Renderer) renderFaceAbilityFields(ctx *renderCtx, face *game.CardFace, h
 		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
 	}
 
+	if len(face.AdditionalCostChoices) > 0 {
+		rendered, err := r.renderAdditionalCostChoices(ctx, face.AdditionalCostChoices)
+		if err != nil {
+			return nil, err
+		}
+		fields = append(fields, fmt.Sprintf("AdditionalCostChoices: %s,", rendered))
+	}
+
 	if len(face.AlternativeCosts) > 0 {
 		rendered, err := r.renderAlternativeCosts(ctx, face.AlternativeCosts)
 		if err != nil {

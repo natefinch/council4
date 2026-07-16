@@ -3,6 +3,8 @@ package cardgen
 import (
 	"fmt"
 	"slices"
+	"strings"
+	"unicode"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -29,20 +31,21 @@ type loweredStaticAbility struct {
 // loweredFaceAbilities holds the categorized typed game ability values
 // produced by strict executable lowering for one card face, in Oracle order.
 type loweredFaceAbilities struct {
-	StaticAbilities      []loweredStaticAbility
-	ActivatedAbilities   []game.ActivatedAbility
-	ManaAbilities        []game.ManaAbility
-	LoyaltyAbilities     []game.LoyaltyAbility
-	TriggeredAbilities   []game.TriggeredAbility
-	ChapterAbilities     []game.ChapterAbility
-	ReplacementAbilities []game.ReplacementAbility
-	SpellAbility         opt.V[game.AbilityContent]
-	Overload             opt.V[game.OverloadAbility]
-	AdditionalCosts      []cost.Additional
-	AlternativeCosts     []cost.Alternative
-	EntersPrepared       bool
-	DynamicPower         opt.V[game.DynamicValue]
-	DynamicToughness     opt.V[game.DynamicValue]
+	StaticAbilities       []loweredStaticAbility
+	ActivatedAbilities    []game.ActivatedAbility
+	ManaAbilities         []game.ManaAbility
+	LoyaltyAbilities      []game.LoyaltyAbility
+	TriggeredAbilities    []game.TriggeredAbility
+	ChapterAbilities      []game.ChapterAbility
+	ReplacementAbilities  []game.ReplacementAbility
+	SpellAbility          opt.V[game.AbilityContent]
+	Overload              opt.V[game.OverloadAbility]
+	AdditionalCosts       []cost.Additional
+	AdditionalCostChoices []cost.AdditionalChoice
+	AlternativeCosts      []cost.Alternative
+	EntersPrepared        bool
+	DynamicPower          opt.V[game.DynamicValue]
+	DynamicToughness      opt.V[game.DynamicValue]
 }
 
 // empty reports whether the face produced no abilities.
@@ -57,6 +60,7 @@ func (f loweredFaceAbilities) empty() bool {
 		!f.SpellAbility.Exists &&
 		!f.Overload.Exists &&
 		len(f.AdditionalCosts) == 0 &&
+		len(f.AdditionalCostChoices) == 0 &&
 		len(f.AlternativeCosts) == 0 &&
 		!f.DynamicPower.Exists &&
 		!f.DynamicToughness.Exists &&
@@ -66,23 +70,24 @@ func (f loweredFaceAbilities) empty() bool {
 // abilityLowering holds the typed result of lowering one CompiledAbility.
 // Fields are set according to which ability kind was matched.
 type abilityLowering struct {
-	staticAbilities    []loweredStaticAbility
-	activatedAbility   opt.V[game.ActivatedAbility]
-	manaAbility        opt.V[game.ManaAbility]
-	loyaltyAbility     opt.V[game.LoyaltyAbility]
-	triggeredAbility   opt.V[game.TriggeredAbility]
-	triggeredAbilities []game.TriggeredAbility
-	chapterAbility     opt.V[game.ChapterAbility]
-	replacementAbility opt.V[game.ReplacementAbility]
-	spellAbility       opt.V[game.AbilityContent]
-	overloadCost       opt.V[cost.Mana]
-	additionalCosts    []cost.Additional
-	alternativeCosts   []cost.Alternative
-	entersPrepared     bool
-	dynamicPower       opt.V[game.DynamicValue]
-	dynamicToughness   opt.V[game.DynamicValue]
-	consumed           semanticConsumption
-	sourceSpans        []shared.Span
+	staticAbilities       []loweredStaticAbility
+	activatedAbility      opt.V[game.ActivatedAbility]
+	manaAbility           opt.V[game.ManaAbility]
+	loyaltyAbility        opt.V[game.LoyaltyAbility]
+	triggeredAbility      opt.V[game.TriggeredAbility]
+	triggeredAbilities    []game.TriggeredAbility
+	chapterAbility        opt.V[game.ChapterAbility]
+	replacementAbility    opt.V[game.ReplacementAbility]
+	spellAbility          opt.V[game.AbilityContent]
+	overloadCost          opt.V[cost.Mana]
+	additionalCosts       []cost.Additional
+	additionalCostChoices []cost.AdditionalChoice
+	alternativeCosts      []cost.Alternative
+	entersPrepared        bool
+	dynamicPower          opt.V[game.DynamicValue]
+	dynamicToughness      opt.V[game.DynamicValue]
+	consumed              semanticConsumption
+	sourceSpans           []shared.Span
 }
 
 type semanticConsumption struct {
@@ -486,6 +491,7 @@ func appendSimpleLoweredAbilities(result *loweredFaceAbilities, lowered *ability
 	}
 	result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
 	result.AdditionalCosts = append(result.AdditionalCosts, lowered.additionalCosts...)
+	result.AdditionalCostChoices = append(result.AdditionalCostChoices, lowered.additionalCostChoices...)
 	result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
 }
 
@@ -1883,6 +1889,10 @@ func lowerSpellAdditionalCost(
 		)
 	}
 	additional := make([]cost.Additional, 0, len(ability.Cost.Components))
+	manaChoiceGroups := manaChoiceGroupIDs(ability.Cost.Components)
+	if len(manaChoiceGroups) > 0 {
+		return lowerSpellAdditionalCostWithChoices(cardName, ability, manaChoiceGroups)
+	}
 	for _, component := range ability.Cost.Components {
 		lowered, ok := lowerActivatedAdditionalCost(cardName, component)
 		if !ok {
@@ -1903,6 +1913,152 @@ func lowerSpellAdditionalCost(
 		},
 		sourceSpans: []shared.Span{ability.Span},
 	}, nil
+}
+
+// manaChoiceGroupIDs returns the ChoiceGroup ids, in first-seen order, of every
+// printed "<cost> or <cost>" choice that includes a mana branch. A mana branch
+// cannot be a cost.Additional (which stays a comparable scalar), so such a
+// choice is lowered to a cost.AdditionalChoice rather than the shared
+// ChoiceGroup-tagged cost.Additional path. Pure non-mana choices (e.g. Bone
+// Shards' "sacrifice a creature or discard a card") return no ids and keep the
+// existing path unchanged.
+func manaChoiceGroupIDs(components []compiler.CostComponent) []uint8 {
+	hasMana := map[uint8]bool{}
+	for _, component := range components {
+		if component.ChoiceGroup != 0 && component.Kind == compiler.CostMana {
+			hasMana[component.ChoiceGroup] = true
+		}
+	}
+	if len(hasMana) == 0 {
+		return nil
+	}
+	var order []uint8
+	seen := map[uint8]bool{}
+	for _, component := range components {
+		if hasMana[component.ChoiceGroup] && !seen[component.ChoiceGroup] {
+			seen[component.ChoiceGroup] = true
+			order = append(order, component.ChoiceGroup)
+		}
+	}
+	return order
+}
+
+// lowerSpellAdditionalCostWithChoices lowers a spell additional-cost paragraph
+// that contains at least one mana-bearing "<cost> or <cost>" choice, such as
+// Redirect Lightning's "pay 5 life or pay {2}". Each such choice group becomes a
+// cost.AdditionalChoice with one branch per member; any remaining standalone
+// components lower to ordinary additional costs. It fails closed on any
+// unsupported branch.
+func lowerSpellAdditionalCostWithChoices(
+	cardName string,
+	ability compiler.CompiledAbility,
+	manaChoiceGroups []uint8,
+) (abilityLowering, *shared.Diagnostic) {
+	inChoice := map[uint8]bool{}
+	for _, id := range manaChoiceGroups {
+		inChoice[id] = true
+	}
+	groupComponents := map[uint8][]compiler.CostComponent{}
+	var additional []cost.Additional
+	for _, component := range ability.Cost.Components {
+		if inChoice[component.ChoiceGroup] {
+			groupComponents[component.ChoiceGroup] = append(groupComponents[component.ChoiceGroup], component)
+			continue
+		}
+		lowered, ok := lowerActivatedAdditionalCost(cardName, component)
+		if !ok {
+			return abilityLowering{}, executableDiagnostic(
+				ability,
+				"unsupported activation cost",
+				"the executable source backend does not yet lower this additional cost to cast",
+			)
+		}
+		lowered.ChoiceGroup = component.ChoiceGroup
+		additional = append(additional, lowered)
+	}
+	choices := make([]cost.AdditionalChoice, 0, len(manaChoiceGroups))
+	for _, id := range manaChoiceGroups {
+		choice, diagnostic := buildAdditionalChoice(cardName, ability, groupComponents[id])
+		if diagnostic != nil {
+			return abilityLowering{}, diagnostic
+		}
+		choices = append(choices, choice)
+	}
+	return abilityLowering{
+		additionalCosts:       additional,
+		additionalCostChoices: choices,
+		consumed: semanticConsumption{
+			cost:       true,
+			references: len(ability.Content.References),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, nil
+}
+
+// buildAdditionalChoice lowers the members of one mana-bearing choice group into
+// a cost.AdditionalChoice. A CostMana member becomes an additive-mana branch; any
+// other member becomes a branch carrying a single non-mana cost.Additional. It
+// fails closed when a member is unsupported or the group has fewer than two
+// branches.
+func buildAdditionalChoice(
+	cardName string,
+	ability compiler.CompiledAbility,
+	components []compiler.CostComponent,
+) (cost.AdditionalChoice, *shared.Diagnostic) {
+	options := make([]cost.AdditionalChoiceOption, 0, len(components))
+	for _, component := range components {
+		if component.Kind == compiler.CostMana {
+			manaCost, err := parseManaCostValue(component.Symbol)
+			if err != nil || len(manaCost) == 0 {
+				return cost.AdditionalChoice{}, executableDiagnostic(
+					ability,
+					"unsupported activation cost",
+					"the executable source backend could not lower the mana branch of an additional-cost choice",
+				)
+			}
+			options = append(options, cost.AdditionalChoiceOption{
+				Label: additionalChoiceLabel(component),
+				Mana:  manaCost,
+			})
+			continue
+		}
+		lowered, ok := lowerActivatedAdditionalCost(cardName, component)
+		if !ok {
+			return cost.AdditionalChoice{}, executableDiagnostic(
+				ability,
+				"unsupported activation cost",
+				"the executable source backend does not yet lower a branch of this additional-cost choice",
+			)
+		}
+		lowered.ChoiceGroup = 0
+		options = append(options, cost.AdditionalChoiceOption{
+			Label: additionalChoiceLabel(component),
+			Costs: []cost.Additional{lowered},
+		})
+	}
+	if len(options) < 2 {
+		return cost.AdditionalChoice{}, executableDiagnostic(
+			ability,
+			"unsupported activation cost",
+			"an additional-cost choice needs at least two branches",
+		)
+	}
+	return cost.AdditionalChoice{Options: options}, nil
+}
+
+// additionalChoiceLabel produces a human-facing label for one additional-cost
+// choice branch, e.g. "Pay 5 life" or "Pay {2}", by capitalizing the retained
+// branch-cost text. The label is presentational only: branch payability and the
+// paid cost come entirely from the typed Mana and Costs fields, never from this
+// string, so this reshapes retained text for display without deriving meaning
+// from it.
+func additionalChoiceLabel(component compiler.CostComponent) string {
+	runes := []rune(strings.TrimSpace(component.Text))
+	if len(runes) == 0 {
+		return ""
+	}
+	runes[0] = unicode.ToUpper(runes[0])
+	return string(runes)
 }
 
 func lowerExecutableAbilitySpecialCase(

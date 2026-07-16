@@ -42,6 +42,7 @@ var Cards = []cardset.Entry{
 	{Name: "Battle Strain", New: BattleStrain},
 	{Name: "Battlefield Percher", New: BattlefieldPercher},
 	{Name: "Baxter, Fly in the Ointment", New: BaxterFlyInTheOintment},
+	{Name: "Bayou Groff", New: BayouGroff},
 	{Name: "Bazaar Trader", New: BazaarTrader},
 	{Name: "Beast Hunt", New: BeastHunt},
 	{Name: "Beast Within", New: BeastWithin},

@@ -127,6 +127,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 
 func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	options := spellCostOptionsForRequestWithoutModes(s, req)
+	options = applyAdditionalCostChoices(options, req.Card)
 	addSpreeModeCosts(options, req.Card, req.ChosenModes)
 	addEscalateModeCosts(options, req.Card, req.ChosenModes)
 	addSpliceCosts(options, req.SpliceManaCosts)
@@ -134,6 +135,65 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		addOffspringCost(options, req.Card)
 	}
 	return options
+}
+
+// applyAdditionalCostChoices expands each cost option across the cartesian
+// product of the card's printed additional-cost choices ("As an additional cost
+// to cast this spell, pay 5 life or pay {2}." — Redirect Lightning). Each chosen
+// branch contributes its additive mana to the option's mana cost (it never
+// replaces the printed cost, so a later tax or reduction on the printed cost
+// still applies to every branch) and its non-mana costs to the option's
+// additional costs. The expanded options are re-indexed sequentially so the
+// caster's branch selection is a stable option index preserved through payment.
+// A card with no additional-cost choices is returned unchanged, so every other
+// spell keeps its existing option indices.
+func applyAdditionalCostChoices(options []spellCostOption, card *game.CardDef) []spellCostOption {
+	if card == nil || len(card.AdditionalCostChoices) == 0 {
+		return options
+	}
+	expanded := options
+	for _, choice := range card.AdditionalCostChoices {
+		if len(choice.Options) == 0 {
+			continue
+		}
+		next := make([]spellCostOption, 0, len(expanded)*len(choice.Options))
+		for _, option := range expanded {
+			for _, branch := range choice.Options {
+				next = append(next, applyChoiceBranch(option, branch))
+			}
+		}
+		expanded = next
+	}
+	for i := range expanded {
+		expanded[i].index = i
+	}
+	return expanded
+}
+
+// applyChoiceBranch folds one additional-cost choice branch onto a cost option:
+// the branch's mana is appended to the option's mana cost and its non-mana costs
+// are appended to the option's additional costs. The branch's mana is additional
+// to, never a replacement of, the option's existing mana cost.
+func applyChoiceBranch(option spellCostOption, branch cost.AdditionalChoiceOption) spellCostOption {
+	if len(branch.Mana) > 0 {
+		combined := cost.Mana{}
+		if option.manaCost != nil {
+			combined = append(combined, (*option.manaCost)...)
+		}
+		combined = append(combined, branch.Mana...)
+		option.manaCost = &combined
+	}
+	if len(branch.Costs) > 0 {
+		option.additionalCosts = append(append([]cost.Additional(nil), option.additionalCosts...), branch.Costs...)
+	}
+	if branch.Label != "" {
+		if option.label == "" || option.label == "Normal cost" {
+			option.label = branch.Label
+		} else {
+			option.label += " + " + branch.Label
+		}
+	}
+	return option
 }
 
 // addOffspringCost adds the spell's Offspring additional mana cost (CR 702.171a)

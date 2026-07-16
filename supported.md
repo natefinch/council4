@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,978 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,988 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1236,6 +1236,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Bay Falcon
 - Bayou
 - Bayou Dragonfly
+- Bayou Groff
 - Bazaar Krovod
 - Bazaar of Baghdad
 - Bazaar Trademage
@@ -3919,6 +3920,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Disrupt
 - Disrupt Decorum
 - Disrupting Scepter
+- Disruption Protocol
 - Disruptive Pitmage
 - Disruptive Stormbrood // Petty Revenge
 - Disruptive Student
@@ -4378,6 +4380,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Eastfarthing Farmer
 - Easy Prey
 - Eat to Extinction
+- Eaten Alive
 - Eaten by Piranhas
 - Eater of Hope
 - Ebon Dragon
@@ -8609,6 +8612,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Laser Screwdriver
 - Laserbeak
 - Lash of Malice
+- Lash of the Balrog
 - Lash of the Whip
 - Lash of Thorns
 - Lashknife
@@ -8797,6 +8801,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Lightfoot Technique
 - Lightless Evangel
 - Lightning Angel
+- Lightning Axe
 - Lightning Berserker
 - Lightning Blast
 - Lightning Blow
@@ -9927,6 +9932,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Moriok Rigger
 - Moriok Scavenger
 - Morkrut Banshee
+- Morkrut Behemoth
 - Morkrut Necropod
 - Morningtide
 - Moroii
@@ -11565,6 +11571,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Pulse Tracker
 - Pulverize
 - Pummeler for Hire
+- Pumpkin Bombardment
 - Puncture Blast
 - Puncture Bolt
 - Puncturing Blow
@@ -12057,6 +12064,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Redemption Arc
 - Redemption Choir
 - Redirect
+- Redirect Lightning
 - Rediscover the Way
 - Redrock Sentinel
 - Redtooth Vanguard
@@ -14067,6 +14075,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Soaring Sandwing
 - Soaring Seacliff
 - Soaring Show-Off
+- Soaring Stoneglider
 - Soaring Thought-Thief
 - Social Climber
 - Sodden Verdure
@@ -14240,6 +14249,7 @@ Council4 currently supports **17,978 of 32,501 cards eligible for paper support 
 - Spark Double
 - Spark Elemental
 - Spark Elemental
+- Spark Harvest
 - Spark Jolt
 - Spark Reaper
 - Spark Spray

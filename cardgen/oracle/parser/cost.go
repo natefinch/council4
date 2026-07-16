@@ -378,6 +378,9 @@ func buildCostComponent(part []shared.Token, abilityKind AbilityKind, phrase Phr
 			component.Amount = strconv.Itoa(len(part) - 1)
 			component.AmountValue = len(part) - 1
 			component.AmountKnown = true
+		case startsWords(words, "pay") && allSymbols(part[1:]):
+			component.Kind = CostComponentMana
+			component.Symbol = costJoinedTokenText(part[1:])
 		case startsWords(words, "return") && slices.Contains(words, "hand"):
 			component.Kind = CostComponentReturn
 			component.Object = wordsAfterFirst(part)

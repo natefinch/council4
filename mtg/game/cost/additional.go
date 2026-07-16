@@ -216,6 +216,34 @@ type Additional struct {
 	Random bool
 }
 
+// AdditionalChoiceOption is one payable branch of an AdditionalChoice. Exactly
+// one branch of each choice is paid. Its Mana is additive: it is paid on top of
+// the spell's printed cost rather than replacing it (unlike Alternative.ManaCost),
+// so cost increases and reductions on the printed cost still apply to the branch.
+type AdditionalChoiceOption struct {
+	// Label names the branch for choice presentation and logs, e.g. "Pay 5
+	// life" or "Pay {2}".
+	Label string
+	// Mana is the additive mana this branch pays in addition to the spell's
+	// printed cost. It is nil when the branch pays no mana.
+	Mana Mana
+	// Costs are the non-mana additional costs this branch pays (pay life,
+	// sacrifice, discard, ...). Members carry no ChoiceGroup; the branch itself
+	// is the choice.
+	Costs []Additional
+}
+
+// AdditionalChoice is a printed choice among alternative additional costs to
+// cast a spell ("As an additional cost to cast this spell, pay 5 life or pay
+// {2}." — Redirect Lightning). The caster pays exactly one Option in addition to
+// the spell's printed cost and any mandatory additional costs. It differs from
+// Alternative, whose mana replaces the printed cost: every Option's mana is
+// additional, so a branch never discards the printed cost, and taxes and
+// reductions on the printed cost apply to each branch.
+type AdditionalChoice struct {
+	Options []AdditionalChoiceOption
+}
+
 // Alternative describes an optional cost that replaces a spell or ability's
 // normal mana cost when selected.
 type Alternative struct {
