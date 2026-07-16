@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **17,974 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **17,978 of 32,501 cards eligible for paper support (55.3%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4341,6 +4341,7 @@ Council4 currently supports **17,974 of 32,501 cards eligible for paper support 
 - Dwynen, Gilt-Leaf Daen
 - Dying to Serve
 - Dying Wail
+- Dying Wish
 - Dynacharge
 - Dynavolt Tower
 - Déjà Vu
@@ -9942,6 +9943,7 @@ Council4 currently supports **17,974 of 32,501 cards eligible for paper support 
 - Mortician Beetle
 - Mortify
 - Mortiphobia
+- Mortis Dogs
 - Mortivore
 - Mortuary Mire
 - Mortus Strider
@@ -11869,6 +11871,7 @@ Council4 currently supports **17,974 of 32,501 cards eligible for paper support 
 - Ransack the Lab
 - Ransom Note
 - Rapacious Dragon
+- Rapacious Guest
 - Rapacious One
 - Raph's Bravado
 - Raphael, Tough Turtle
@@ -16352,6 +16355,7 @@ Council4 currently supports **17,974 of 32,501 cards eligible for paper support 
 - Tyvar, the Pummeler
 - Ubul Sar Gatekeepers
 - Ugin's Insight
+- Ukkima, Stalking Shadow
 - Uktabi Drake
 - Uktabi Efreet
 - Uktabi Faerie

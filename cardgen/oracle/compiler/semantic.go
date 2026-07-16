@@ -4330,9 +4330,14 @@ type CompiledAmount struct {
 	// (DynamicAmountHalfPlayerLibrary). It is false for every other amount.
 	RoundUp       bool
 	ReferenceSpan shared.Span
-	Addend        int
-	CounterKind   counter.Kind
-	Text          string
+	// ReferenceNodeID is the parser-assigned NodeID of the reference that fills
+	// ReferenceSpan (the possessive naming a power/toughness source), or -1 when
+	// no reference fills that span. The compiler matches the amount's referent by
+	// this typed identity instead of comparing source spans.
+	ReferenceNodeID int
+	Addend          int
+	CounterKind     counter.Kind
+	Text            string
 	// Colors carries the colors of a devotion amount; empty otherwise.
 	Colors []color.Color
 	// Operands carries the sub-amounts of a DynamicAmountMaxOf combinator; empty

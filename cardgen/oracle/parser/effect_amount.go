@@ -686,7 +686,12 @@ func parseDynamicEffectAmount(tokens []shared.Token, atoms Atoms) (amount Effect
 	if len(matches) != 1 {
 		return EffectAmountSyntax{}, attempted, false
 	}
-	return matches[0], true, true
+	result := matches[0]
+	// Resolve the amount's power/toughness referent ("... equal to its power")
+	// to the NodeID of the reference that fills its span, so downstream stages
+	// match the referent by typed identity instead of comparing source spans.
+	result.ReferenceNodeID = atoms.ReferenceIDAt(result.ReferenceSpan)
+	return result, true, true
 }
 
 // parseCreateForEachAmount types a leading "for each <count subject>,"
