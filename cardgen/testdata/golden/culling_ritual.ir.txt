@@ -48,6 +48,7 @@
             DynamicKind: 27
             DynamicForm: 2
             Multiplier: 1
+            ReferenceNodeID: -1
             Text: for each permanent destroyed this way
           TokenCopyOverrideColors: 
           Details: 

@@ -87,6 +87,28 @@ func bindReferences(
 			reference.Binding = ReferenceBindingSource
 			continue
 		}
+		// A possessive pronoun that supplies a power or toughness amount ("...
+		// loses life equal to its power") in a leaves-the-battlefield or dies
+		// trigger names the triggering permanent, read through last-known
+		// information, even when the same clause targets a player. A player has no
+		// power or toughness, so the possessive cannot name the player target the
+		// preceding-target heuristic below would otherwise capture; it binds to
+		// the event permanent so the amount reads the departed permanent's LKI
+		// characteristic (Rapacious Guest). It stays ahead of the target
+		// antecedent and fails closed when the nearest antecedent target is itself
+		// an object, which a possessive power/toughness reading can name.
+		if trigger != nil &&
+			reference.Kind == ReferencePronoun &&
+			(reference.Pronoun == ReferencePronounIts ||
+				reference.Pronoun == ReferencePronounTheir) &&
+			reference.Order.Start >= trigger.Order.Start &&
+			!trigger.Pattern.OneOrMore &&
+			triggerEventBindsPermanent(trigger.Pattern.Event) &&
+			possessiveSuppliesObjectCharacteristic(*reference, effects) &&
+			closestPrecedingTargetIsPlayer(*reference, targets) {
+			reference.Binding = ReferenceBindingEventPermanent
+			continue
+		}
 		// In a self-source trigger whose event names the source permanent as its
 		// own subject — "When you cycle this card, it deals 1 damage to each
 		// opponent." (cycle, CR 702.29e) or "Whenever you put one or more +1/+1
@@ -474,6 +496,47 @@ func chosenCardsTargetAntecedent(reference CompiledReference, targets []Compiled
 		}
 	}
 	return closest, true
+}
+
+// possessiveSuppliesObjectCharacteristic reports whether the reference is the
+// referent of a power or toughness amount ("... equal to its power"), matched by
+// the amount's parser-assigned referent NodeID. Such a possessive modifies an
+// object's characteristic, so it can only name an object and never a player.
+func possessiveSuppliesObjectCharacteristic(reference CompiledReference, effects []CompiledEffect) bool {
+	for i := range effects {
+		amount := effects[i].Amount
+		if (amount.DynamicKind == DynamicAmountSourcePower ||
+			amount.DynamicKind == DynamicAmountSourceToughness) &&
+			amount.ReferenceNodeID == reference.NodeID {
+			return true
+		}
+	}
+	return false
+}
+
+// closestPrecedingTargetIsPlayer reports whether the nearest target declared
+// before the reference selects a player. A player has no power or toughness, so
+// a possessive "its power"/"its toughness" cannot name that target and must
+// instead read the triggering permanent through last-known information.
+func closestPrecedingTargetIsPlayer(reference CompiledReference, targets []CompiledTarget) bool {
+	closest := -1
+	for i, target := range targets {
+		if target.Order.Start >= reference.Order.Start {
+			continue
+		}
+		if closest < 0 || target.Order.Start > targets[closest].Order.Start {
+			closest = i
+		}
+	}
+	if closest < 0 {
+		return false
+	}
+	switch targets[closest].Selector.Kind {
+	case SelectorPlayer, SelectorOpponent:
+		return true
+	default:
+		return false
+	}
 }
 
 func precedingSourceReference(references []CompiledReference, order shared.SourceOrder) bool {

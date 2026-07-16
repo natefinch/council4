@@ -1067,10 +1067,16 @@ type EffectAmountSyntax struct {
 	// modeling the "plus N" rider on a counted amount ("the number of cards in
 	// your hand plus one.", Sea Gate Restoration). It is zero when no such rider
 	// is present.
-	Addend        int              `json:",omitempty"`
-	ReferenceSpan shared.Span      `json:"-"`
-	CounterKind   counter.Kind     `json:",omitempty"`
-	Selection     *SelectionSyntax `json:",omitempty"`
+	Addend        int         `json:",omitempty"`
+	ReferenceSpan shared.Span `json:"-"`
+	// ReferenceNodeID is the parser-assigned NodeID of the reference that fills
+	// ReferenceSpan (the possessive naming a power/toughness source, "... equal
+	// to its power"), or -1 when no reference fills that span. It lets downstream
+	// stages match the amount's referent by typed identity instead of comparing
+	// source spans.
+	ReferenceNodeID int              `json:"-"`
+	CounterKind     counter.Kind     `json:",omitempty"`
+	Selection       *SelectionSyntax `json:",omitempty"`
 	// Colors carries the colors of a devotion amount ("your devotion to
 	// <color(s)>"). It is empty for every other amount kind.
 	Colors []Color `json:",omitempty"`
