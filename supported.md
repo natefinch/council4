@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,025 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,030 of 32,501 cards eligible for paper support (55.5%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5803,6 +5803,7 @@ Council4 currently supports **18,025 of 32,501 cards eligible for paper support 
 - Fuel the Flames
 - Fugitive Wizard
 - Fugue
+- Full Throttle
 - Fully Grown
 - Fulminator Mage
 - Fumarole
@@ -5842,6 +5843,7 @@ Council4 currently supports **18,025 of 32,501 cards eligible for paper support 
 - Furor of the Bitten
 - Furtive Analyst
 - Furtive Homunculus
+- Fury of the Horde
 - Fury Sliver
 - Furyblade Vampire
 - Furyborn Hellkite
@@ -12142,6 +12144,7 @@ Council4 currently supports **18,025 of 32,501 cards eligible for paper support 
 - Release the Dogs
 - Release to Memory
 - Relentless Advance
+- Relentless Assault
 - Relentless Hunter
 - Relentless Pursuit
 - Relentless Rohirrim
@@ -12745,6 +12748,7 @@ Council4 currently supports **18,025 of 32,501 cards eligible for paper support 
 - Sai, Master Thopterist
 - Said // Done
 - Sailor of Means
+- Sakashima of a Thousand Faces
 - Sakashima's Student
 - Sakura-Tribe Elder
 - Sakura-Tribe Scout
@@ -17377,6 +17381,7 @@ Council4 currently supports **18,025 of 32,501 cards eligible for paper support 
 - Wave-Wing Elemental
 - Wavebreak Hippocamp
 - Wavecrash Triton
+- Waves of Aggression
 - Wavesifter
 - Waveskimmer Aven
 - Wax // Wane
