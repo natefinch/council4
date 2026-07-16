@@ -1576,8 +1576,9 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		payload := *effect
 		payload.Kind = RuleEffectNone
 		payload.AffectedSelection = Selection{}
+		payload.TriggerCauseCastOrCopyInstantSorcery = false
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
-			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "controlled-permanent trigger multiplier accepts only a source-permanent selection filter")
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "controlled-permanent trigger multiplier accepts only a source-permanent selection filter and optional cast-or-copy cause")
 		}
 	case RuleEffectSuppressOpponentEnteringTriggers:
 		payload := *effect

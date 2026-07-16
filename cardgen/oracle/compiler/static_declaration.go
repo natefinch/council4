@@ -1421,6 +1421,18 @@ func recognizeStaticEnteringTriggerMultiplier(ability CompiledAbility, statics [
 // another Wizard").
 type StaticControlledTriggerMultiplierDeclaration struct {
 	Branches []ControlledTriggerSourceFilter
+	// Power, when set, bounds the source permanent's effective power ("a creature
+	// you control with power 2 or less", Delney, Streetwise Lookout). It applies
+	// to the whole filter, so the runtime checks it against every matching source
+	// permanent regardless of which branch it satisfied.
+	Power *compare.Int
+	// CauseCastOrCopyInstantSorcery marks the magecraft-caused doubler whose
+	// source is any controlled permanent (no Branches) and whose trigger must be
+	// caused by the controller casting or copying an instant or sorcery spell
+	// ("If you casting or copying an instant or sorcery spell causes a triggered
+	// ability of a permanent you control to trigger ...", Veyran, Voice of
+	// Duality).
+	CauseCastOrCopyInstantSorcery bool
 }
 
 // ControlledTriggerSourceFilter is one branch of a controlled-trigger
@@ -1446,6 +1458,19 @@ func recognizeStaticControlledTriggerMultiplier(ability CompiledAbility, statics
 		return StaticDeclaration{}, false
 	}
 	node := statics[0]
+	if node.ControlledCauseCastOrCopyInstantSorcery {
+		if len(node.ControlledFilterBranches) != 0 || node.ControlledFilterPower != nil {
+			return StaticDeclaration{}, false
+		}
+		return StaticDeclaration{
+			Kind:          StaticDeclarationControlledTriggerMultiplier,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			ControlledMultiplier: &StaticControlledTriggerMultiplierDeclaration{
+				CauseCastOrCopyInstantSorcery: true,
+			},
+		}, true
+	}
 	if len(node.ControlledFilterBranches) == 0 {
 		return StaticDeclaration{}, false
 	}
@@ -1478,12 +1503,21 @@ func recognizeStaticControlledTriggerMultiplier(ability CompiledAbility, statics
 			ExcludeSelf: parsed.ExcludeSelf,
 		})
 	}
+	var power *compare.Int
+	if node.ControlledFilterPower != nil {
+		op := compare.LessOrEqual
+		if node.ControlledFilterPower.AtLeast {
+			op = compare.GreaterOrEqual
+		}
+		power = &compare.Int{Op: op, Value: node.ControlledFilterPower.Value}
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationControlledTriggerMultiplier,
 		Span:          node.Span,
 		OperationSpan: node.OperationSpan,
 		ControlledMultiplier: &StaticControlledTriggerMultiplierDeclaration{
 			Branches: branches,
+			Power:    power,
 		},
 	}, true
 }

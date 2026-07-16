@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -22,6 +23,23 @@ func controlledMultiplierSelection(t *testing.T, face loweredFaceAbilities) game
 		t.Fatalf("rule effects = %#v", effects)
 	}
 	return effects[0].AffectedSelection
+}
+
+// controlledMultiplierRuleEffect pulls the single
+// RuleEffectAdditionalTriggerForControlledPermanent out of a one-static,
+// one-rule-effect face, failing the test on any other shape. Unlike
+// controlledMultiplierSelection it returns the whole rule effect so callers can
+// assert on non-selection fields such as TriggerCauseCastOrCopyInstantSorcery.
+func controlledMultiplierRuleEffect(t *testing.T, face loweredFaceAbilities) game.RuleEffect {
+	t.Helper()
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %#v", face.StaticAbilities)
+	}
+	effects := face.StaticAbilities[0].Body.RuleEffects
+	if len(effects) != 1 || effects[0].Kind != game.RuleEffectAdditionalTriggerForControlledPermanent {
+		t.Fatalf("rule effects = %#v", effects)
+	}
+	return effects[0]
 }
 
 func TestLowerControlledTriggerMultiplierFilters(t *testing.T) {
@@ -110,12 +128,81 @@ func TestLowerControlledTriggerMultiplierDisjunction(t *testing.T) {
 	}
 }
 
+// TestLowerControlledTriggerMultiplierPower verifies Delney, Streetwise Lookout's
+// "a creature you control with power 2 or less" source filter lowers to a
+// power-bounded creature Selection. Delney itself is power 2 and the authoritative
+// Oracle text reads "a creature" (not "another"), so the filter must NOT set
+// ExcludeSource: Delney doubles its own controlled triggered abilities too.
+func TestLowerControlledTriggerMultiplierPower(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		oracleText string
+		want       compare.Int
+	}{
+		"power 2 or less (Delney)": {
+			oracleText: "If a triggered ability of a creature you control with power 2 or less triggers, that ability triggers an additional time.",
+			want:       compare.Int{Op: compare.LessOrEqual, Value: 2},
+		},
+		"power 4 or greater": {
+			oracleText: "If a triggered ability of a creature you control with power 4 or greater triggers, that ability triggers an additional time.",
+			want:       compare.Int{Op: compare.GreaterOrEqual, Value: 4},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Power Filter " + name,
+				Layout:     "normal",
+				TypeLine:   "Legendary Enchantment",
+				OracleText: tc.oracleText,
+			})
+			got := controlledMultiplierSelection(t, face)
+			if got.ExcludeSource {
+				t.Fatalf("ExcludeSource = true, want false (self-inclusion): %#v", got)
+			}
+			if !equalCardSlice(got.RequiredTypes, []types.Card{types.Creature}) {
+				t.Fatalf("RequiredTypes = %#v, want [Creature]", got.RequiredTypes)
+			}
+			if !got.Power.Exists || got.Power.Val != tc.want {
+				t.Fatalf("Power = %#v, want set %#v", got.Power, tc.want)
+			}
+		})
+	}
+}
+
+// TestLowerControlledTriggerMultiplierMagecraft verifies Veyran, Voice of
+// Duality's "If you casting or copying an instant or sorcery spell causes a
+// triggered ability of a permanent you control to trigger" clause lowers to the
+// causal magecraft doubler: TriggerCauseCastOrCopyInstantSorcery set, with an
+// empty source selection ("a permanent", no exclusion) and no branch or power
+// filter. Veyran itself is a permanent you control, so it doubles its own
+// magecraft-caused triggered abilities.
+func TestLowerControlledTriggerMultiplierMagecraft(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Magecraft Doubler",
+		Layout:     "normal",
+		TypeLine:   "Legendary Enchantment",
+		OracleText: "If you casting or copying an instant or sorcery spell causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+	})
+	effect := controlledMultiplierRuleEffect(t, face)
+	if !effect.TriggerCauseCastOrCopyInstantSorcery {
+		t.Fatalf("TriggerCauseCastOrCopyInstantSorcery = false, want true: %#v", effect)
+	}
+	if !effect.AffectedSelection.Empty() {
+		t.Fatalf("AffectedSelection = %#v, want empty (any permanent you control)", effect.AffectedSelection)
+	}
+}
+
 func TestLowerControlledTriggerMultiplierFailsClosed(t *testing.T) {
 	t.Parallel()
 	for name, oracleText := range map[string]string{
 		"bare supertype no noun": "If a triggered ability of a legendary permanent you control triggers, that ability triggers an additional time.",
 		"branch missing article": "If a triggered ability of a Shaman or Wizard you control triggers, that ability triggers an additional time.",
 		"bare another supertype": "If a triggered ability of another legendary you control triggers, that ability triggers an additional time.",
+		"magecraft wrong spell":  "If you casting or copying an artifact spell causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+		"power wrong stat":       "If a triggered ability of a creature you control with toughness 2 or less triggers, that ability triggers an additional time.",
+		"power wrong comparator": "If a triggered ability of a creature you control with power 2 or fewer triggers, that ability triggers an additional time.",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -192,6 +279,42 @@ func TestGenerateExecutableControlledTriggerMultiplierCards(t *testing.T) {
 			wants: []string{
 				"game.RuleEffectAdditionalTriggerForControlledPermanent",
 				`SubtypesAny: []types.Sub{types.Sub("Elemental")}, ExcludeSource: true`,
+			},
+		},
+		"veyran voice of duality": {
+			card: &ScryfallCard{
+				Name:       "Veyran, Voice of Duality",
+				Layout:     "normal",
+				ManaCost:   "{1}{U}{R}",
+				TypeLine:   "Legendary Creature — Efreet Wizard",
+				OracleText: "Magecraft — Whenever you cast or copy an instant or sorcery spell, Veyran, Voice of Duality gets +1/+1 until end of turn.\nIf you casting or copying an instant or sorcery spell causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			},
+			wants: []string{
+				"game.RuleEffectAdditionalTriggerForControlledPermanent",
+				"TriggerCauseCastOrCopyInstantSorcery: true",
+				"game.EventSpellCast",
+				"MatchSpellCopy: true",
+			},
+		},
+		// Delney's full card is not curatable (its "can't be blocked by creatures
+		// with power 3 or greater" evasion static does not parse), but its
+		// authoritative trigger sentence lowers on its own. It reads "a creature"
+		// (self-inclusion), so no ExcludeSource, and carries the power-2 bound.
+		"delney trigger clause": {
+			card: &ScryfallCard{
+				Name:       "Delney Trigger Clause",
+				Layout:     "normal",
+				TypeLine:   "Legendary Creature — Human Scout",
+				OracleText: "If a triggered ability of a creature you control with power 2 or less triggers, that ability triggers an additional time.",
+				Power:      new("2"),
+				Toughness:  new("2"),
+			},
+			wants: []string{
+				"game.RuleEffectAdditionalTriggerForControlledPermanent",
+				"RequiredTypes: []types.Card{types.Creature}",
+				"Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2})",
 			},
 		},
 	} {

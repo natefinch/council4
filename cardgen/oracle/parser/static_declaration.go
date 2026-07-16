@@ -752,6 +752,20 @@ type StaticDeclarationSyntax struct {
 	// every branch names at least one subtype or card type.
 	ControlledFilterBranches []ControlledTriggerSourceFilter `json:"-"`
 
+	// ControlledFilterPower carries an optional "with power <n> or (less|greater)"
+	// qualifier that trails "you control" in a controlled-trigger multiplier
+	// filter ("a creature you control with power 2 or less", Delney, Streetwise
+	// Lookout). It is nil when the filter carries no power bound.
+	ControlledFilterPower *ControlledTriggerPowerBound `json:"-"`
+
+	// ControlledCauseCastOrCopyInstantSorcery marks the magecraft-caused
+	// controlled-trigger multiplier "If you casting or copying an instant or
+	// sorcery spell causes a triggered ability of a permanent you control to
+	// trigger, that ability triggers an additional time." (Veyran, Voice of
+	// Duality). The source is any controlled permanent (no branches); the cause
+	// filter travels to the runtime instead.
+	ControlledCauseCastOrCopyInstantSorcery bool `json:"-"`
+
 	// Untap-during-other-players'-untap-step payload: the filtered set of the
 	// controller's permanents that gain an extra untap during each other
 	// player's (or opponent's) untap step.
@@ -1354,6 +1368,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseControlledTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parseMagecraftControlledTriggerMultiplierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -1548,9 +1565,12 @@ func parseEnteringFilter(tokens []shared.Token, index, end int) ([]CardType, boo
 // Travelers). <filter> is one or more "or"-joined branches, each an article
 // ("a", "an", or "another") followed by an optional supertype, optional subtype,
 // and optional card type ("a Shaman or another Wizard", Harmonic Prodigy); a
-// branch led by "another" excludes the doubler itself. Any deviation leaves the
-// clause unconsumed. The entering-permanent and "of the chosen type" forms are
-// owned by their own parsers and do not reach here.
+// branch led by "another" excludes the doubler itself. "you control" may be
+// followed by a "with power <n> or (less|greater)" qualifier bounding the source
+// permanent's power ("a creature you control with power 2 or less", Delney,
+// Streetwise Lookout). Any deviation leaves the clause unconsumed. The
+// entering-permanent and "of the chosen type" forms are owned by their own
+// parsers and do not reach here.
 func parseControlledTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
 	const prefixLen = 5
 	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
@@ -1559,7 +1579,7 @@ func parseControlledTriggerMultiplierDeclaration(tokens []shared.Token) (StaticD
 	if !staticWordsAt(tokens, 0, "if", "a", "triggered", "ability", "of") {
 		return StaticDeclarationSyntax{}, false
 	}
-	tail, ok := controlledTriggerMultiplierFilterEnd(tokens)
+	tail, power, ok := controlledTriggerMultiplierFilterEnd(tokens)
 	if !ok || tail <= prefixLen {
 		return StaticDeclarationSyntax{}, false
 	}
@@ -1572,27 +1592,108 @@ func parseControlledTriggerMultiplierDeclaration(tokens []shared.Token) (StaticD
 		Span:                     shared.SpanOf(tokens),
 		OperationSpan:            shared.SpanOf(tokens),
 		ControlledFilterBranches: branches,
+		ControlledFilterPower:    power,
+	}, true
+}
+
+// parseMagecraftControlledTriggerMultiplierDeclaration recognizes the
+// magecraft-caused controlled-trigger multiplier "If you casting or copying an
+// instant or sorcery spell causes a triggered ability of a permanent you control
+// to trigger, that ability triggers an additional time." (Veyran, Voice of
+// Duality). The source is any permanent the controller controls, so no filter
+// branch is emitted; the cause filter travels as
+// ControlledCauseCastOrCopyInstantSorcery. The phrasing is fixed, so any
+// deviation leaves the clause unconsumed.
+func parseMagecraftControlledTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	lead := []string{
+		"if", "you", "casting", "or", "copying", "an", "instant", "or", "sorcery",
+		"spell", "causes", "a", "triggered", "ability", "of", "a", "permanent",
+		"you", "control", "to", "trigger",
+	}
+	const closingLen = 8 // "," "that" "ability" "triggers" "an" "additional" "time" "."
+	if len(tokens) != len(lead)+closingLen ||
+		!staticWordsAt(tokens, 0, lead...) ||
+		tokens[len(lead)].Kind != shared.Comma ||
+		!staticWordsAt(tokens, len(lead)+1, "that", "ability", "triggers", "an", "additional", "time") ||
+		tokens[len(tokens)-1].Kind != shared.Period {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                                    StaticDeclarationControlledTriggerMultiplier,
+		Span:                                    shared.SpanOf(tokens),
+		OperationSpan:                           shared.SpanOf(tokens),
+		ControlledCauseCastOrCopyInstantSorcery: true,
 	}, true
 }
 
 // controlledTriggerMultiplierFilterEnd locates the index just past the source
-// filter, i.e. the start of the "you control triggers, <that ability|it>
-// triggers an additional time." suffix. It returns false when the suffix is not
-// the exact controlled-trigger multiplier closing clause.
-func controlledTriggerMultiplierFilterEnd(tokens []shared.Token) (int, bool) {
-	for _, suffix := range [][]string{
-		{"you", "control", "triggers", ",", "that", "ability", "triggers", "an", "additional", "time", "."},
-		{"you", "control", "triggers", ",", "it", "triggers", "an", "additional", "time", "."},
+// filter, i.e. the start of "you control", and reads an optional "with power
+// <n> or (less|greater)" qualifier that trails "you control" before the closing
+// "<that ability|it> triggers an additional time." clause. It returns false when
+// the tokens do not end with the exact controlled-trigger multiplier closing
+// clause.
+func controlledTriggerMultiplierFilterEnd(tokens []shared.Token) (int, *ControlledTriggerPowerBound, bool) {
+	closingStart, ok := controlledTriggerMultiplierClosingStart(tokens)
+	if !ok {
+		return 0, nil, false
+	}
+	youControlEnd := closingStart
+	power, powerLen := controlledTriggerPowerQualifier(tokens, closingStart)
+	youControlEnd -= powerLen
+	if youControlEnd < 2 || !staticWordsAt(tokens, youControlEnd-2, "you", "control") {
+		return 0, nil, false
+	}
+	return youControlEnd - 2, power, true
+}
+
+// controlledTriggerMultiplierClosingStart returns the index of the closing verb
+// "triggers" that begins the "<that ability|it> triggers an additional time."
+// tail, anchored at the end of the tokens.
+func controlledTriggerMultiplierClosingStart(tokens []shared.Token) (int, bool) {
+	for _, closing := range [][]string{
+		{"triggers", ",", "that", "ability", "triggers", "an", "additional", "time", "."},
+		{"triggers", ",", "it", "triggers", "an", "additional", "time", "."},
 	} {
-		start := len(tokens) - len(suffix)
+		start := len(tokens) - len(closing)
 		if start < 0 {
 			continue
 		}
-		if controlledTriggerSuffixMatches(tokens, start, suffix) {
+		if controlledTriggerSuffixMatches(tokens, start, closing) {
 			return start, true
 		}
 	}
 	return 0, false
+}
+
+// ControlledTriggerPowerBound records a "with power <n> or (less|greater)"
+// qualifier on a controlled-trigger multiplier's source filter. AtLeast is true
+// for "or greater" and false for "or less".
+type ControlledTriggerPowerBound struct {
+	Value   int
+	AtLeast bool
+}
+
+// controlledTriggerPowerQualifier reads an optional "with power <n> or
+// (less|greater)" qualifier ending at end. It returns the parsed bound and the
+// qualifier's token length, or (nil, 0) when the preceding tokens are not such a
+// qualifier.
+func controlledTriggerPowerQualifier(tokens []shared.Token, end int) (*ControlledTriggerPowerBound, int) {
+	const qualifierLen = 5 // "with" "power" <n> "or" ("less"|"greater")
+	from := end - qualifierLen
+	if from < 0 || !staticWordsAt(tokens, from, "with", "power") {
+		return nil, 0
+	}
+	value, ok := conditionNumberValue(tokens[from+2])
+	if !ok || value < 0 {
+		return nil, 0
+	}
+	switch {
+	case staticWordsAt(tokens, from+3, "or", "less"):
+		return &ControlledTriggerPowerBound{Value: value}, qualifierLen
+	case staticWordsAt(tokens, from+3, "or", "greater"):
+		return &ControlledTriggerPowerBound{Value: value, AtLeast: true}, qualifierLen
+	}
+	return nil, 0
 }
 
 // controlledTriggerSuffixMatches reports whether the tokens from start match the

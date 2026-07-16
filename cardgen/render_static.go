@@ -887,6 +887,9 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.SpendAnyMana {
 		fields = append(fields, "SpendAnyMana: true,")
 	}
+	if effect.TriggerCauseCastOrCopyInstantSorcery {
+		fields = append(fields, "TriggerCauseCastOrCopyInstantSorcery: true,")
+	}
 	if !effect.AffectedSelection.Empty() {
 		selection, err := r.renderSelection(ctx, effect.AffectedSelection)
 		if err != nil {

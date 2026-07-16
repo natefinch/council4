@@ -1659,13 +1659,28 @@ func appendStaticEnteringTriggerMultiplierDeclaration(body *game.StaticAbility, 
 // AffectedSelection: a single branch lowers to a flat selection (RequiredTypes
 // and Supertypes conjunctive, SubtypesAny disjunctive, ExcludeSource for
 // "another"), and an "or"-joined filter lowers to an AnyOf of those branch
-// selections. The runtime fires a matching triggered ability one extra time when
-// its source is a permanent the controller controls that satisfies the filter.
+// selections. A "with power <n> or (less|greater)" qualifier lowers to the
+// selection's Power bound (Delney, Streetwise Lookout). The magecraft-caused
+// form (Veyran, Voice of Duality) carries no filter and instead sets
+// TriggerCauseCastOrCopyInstantSorcery. The runtime fires a matching triggered
+// ability one extra time when its source is a permanent the controller controls
+// that satisfies the filter.
 func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility, declaration compiler.StaticDeclaration) bool {
 	if declaration.ControlledMultiplier == nil {
 		return false
 	}
-	branches := declaration.ControlledMultiplier.Branches
+	multiplier := declaration.ControlledMultiplier
+	if multiplier.CauseCastOrCopyInstantSorcery {
+		if len(multiplier.Branches) != 0 || multiplier.Power != nil {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                                 game.RuleEffectAdditionalTriggerForControlledPermanent,
+			TriggerCauseCastOrCopyInstantSorcery: true,
+		})
+		return true
+	}
+	branches := multiplier.Branches
 	if len(branches) == 0 {
 		return false
 	}
@@ -1684,6 +1699,9 @@ func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility
 	selection := selections[0]
 	if len(selections) > 1 {
 		selection = game.Selection{AnyOf: selections}
+	}
+	if multiplier.Power != nil {
+		selection.Power = opt.Val(*multiplier.Power)
 	}
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
 		Kind:              game.RuleEffectAdditionalTriggerForControlledPermanent,
