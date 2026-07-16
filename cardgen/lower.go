@@ -1703,6 +1703,9 @@ func lowerExecutableAbility(
 			if ability.Content.Effects[i].TibaltPreludeSpan != (shared.Span{}) {
 				spans = append(spans, ability.Content.Effects[i].TibaltPreludeSpan)
 			}
+			if ability.Content.Effects[i].ControllerChoosesKeepPreludeSpan != (shared.Span{}) {
+				spans = append(spans, ability.Content.Effects[i].ControllerChoosesKeepPreludeSpan)
+			}
 		}
 		for _, target := range ability.Content.Targets {
 			spans = append(spans, target.Span)

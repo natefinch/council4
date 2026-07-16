@@ -1512,6 +1512,13 @@ type Sentence struct {
 	// tokens" back reference as belonging to that create rather than as an
 	// unrecognized sibling.
 	GoadCreatedTokensRider bool `json:",omitempty"`
+	// ControllerChoosesKeepPrelude reports that this sentence is the credited
+	// zero-effect "For each player, you choose from among the permanents that
+	// player controls <list>." prelude folded onto the following controller-
+	// chooses keep-one-per-type sacrifice (Tragic Arrogance). Reference and
+	// coverage scans treat its tokens as belonging to that folded effect rather
+	// than as an unrecognized sibling.
+	ControllerChoosesKeepPrelude bool `json:",omitempty"`
 }
 
 // sentenceIsCreditedRider reports whether the sentence has been folded onto a
@@ -1536,7 +1543,8 @@ func sentenceIsCreditedRider(s *Sentence) bool {
 		s.ChooseCardNamePrelude ||
 		s.ChooseNumberAtRandomPrelude ||
 		s.EachOpponentAttackingSameRider ||
-		s.GoadCreatedTokensRider
+		s.GoadCreatedTokensRider ||
+		s.ControllerChoosesKeepPrelude
 }
 
 // StaticRuleSubjectKind identifies the source object constrained by a simple

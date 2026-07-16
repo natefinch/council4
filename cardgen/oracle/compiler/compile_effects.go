@@ -161,6 +161,32 @@ func runtimeCardTypeFromParser(cardType parser.CardType) (types.Card, bool) {
 	}
 }
 
+// CompiledKeepOnePerType is the compiled payload of a "keep one of each type"
+// sacrifice effect: the affected player scope, the runtime permanent types kept,
+// whether the affected pool is the player's nonland permanents only, and whether
+// the effect's controller chooses the kept permanents for every player.
+type CompiledKeepOnePerType struct {
+	Scope                   parser.KeepScope
+	Types                   []types.Card
+	NonlandOnly             bool
+	ControllerChoosesForAll bool
+}
+
+// compileKeepOnePerType maps the parser's keep-one-of-each-type payload to its
+// compiled form, translating the ordered permanent types to runtime card types.
+// The parser owns the wording, so this only carries the typed values forward.
+func compileKeepOnePerType(syntax *parser.KeepOnePerTypeSyntax) *CompiledKeepOnePerType {
+	if syntax == nil {
+		return nil
+	}
+	return &CompiledKeepOnePerType{
+		Scope:                   syntax.Scope,
+		Types:                   compilerCardTypes(syntax.Types),
+		NonlandOnly:             syntax.NonlandOnly,
+		ControllerChoosesForAll: syntax.ControllerChoosesForAll,
+	}
+}
+
 func runtimeSupertypeFromParser(supertype parser.Supertype) (types.Super, bool) {
 	switch supertype {
 	case parser.SupertypeBasic:
@@ -353,6 +379,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				EmblemAbilities:                    syntax.EmblemAbilities,
 				DelayedTriggerAbility:              syntax.DelayedTriggerAbility,
 				PayRepeatedlyAnimate:               syntax.PayRepeatedlyAnimate,
+				KeepOnePerType:                     compileKeepOnePerType(syntax.KeepOnePerType),
 				AnimateSelf:                        syntax.AnimateSelf,
 				AnimateTarget:                      syntax.AnimateTarget,
 				DelayedTriggerOneShot:              syntax.DelayedTriggerOneShot,
@@ -571,6 +598,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TibaltRandomMillMin:                           syntax.TibaltRandomMillMin,
 				TibaltRandomMillMax:                           syntax.TibaltRandomMillMax,
 				TibaltPreludeSpan:                             syntax.TibaltPreludeSpan,
+				ControllerChoosesKeepPreludeSpan:              syntax.ControllerChoosesKeepPreludeSpan,
 				ExiledCardSplitOpponentChooses:                syntax.ExiledCardSplitOpponentChooses,
 				ExiledCardChoiceRiderSpan:                     syntax.ExiledCardChoiceRiderSpan,
 				SourceSpellCostReduction:                      syntax.SourceSpellCostReduction,

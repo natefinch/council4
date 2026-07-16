@@ -2572,6 +2572,16 @@ func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTarget
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+func (p KeepOnePerType) validatePrimitive(_ []TargetSpec, _ bool) error {
+	if len(p.Types) == 0 {
+		return errors.New("KeepOnePerType requires at least one type")
+	}
+	if err := firstProblem(p.AffectedSelection.Validate()); err != nil {
+		return err
+	}
+	return validatePlayerGroupReference(p.Players)
+}
+
 func (p SacrificeFallback) validate(targets []TargetSpec, checkTargets bool) error {
 	switch p.Kind {
 	case SacrificeFallbackNone:

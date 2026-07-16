@@ -798,6 +798,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderSacrificePermanents(ctx, &value)
+	case game.PrimitiveKeepOnePerType:
+		value, err := assertPrimitive[game.KeepOnePerType](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderKeepOnePerType(ctx, &value)
 	case game.PrimitiveRevealUntil:
 		value, err := assertPrimitive[game.RevealUntil](primitive)
 		if err != nil {

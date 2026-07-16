@@ -41,6 +41,8 @@ var Cards = []cardset.Entry{
 	{Name: "Castle Garenbrig", New: CastleGarenbrig},
 	{Name: "Castle Raptors", New: CastleRaptors},
 	{Name: "Cat Collector", New: CatCollector},
+	{Name: "Cataclysm", New: Cataclysm},
+	{Name: "Cataclysmic Gearhulk", New: CataclysmicGearhulk},
 	{Name: "Cathartic Pyre", New: CatharticPyre},
 	{Name: "Caught in the Brights", New: CaughtInTheBrights},
 	{Name: "Cavalcade of Calamity", New: CavalcadeOfCalamity},

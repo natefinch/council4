@@ -852,6 +852,10 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		return content, nil
 	}
 
+	if len(ctx.content.Effects) == 1 && ctx.content.Effects[0].KeepOnePerType != nil {
+		return lowerKeepOnePerTypeSacrifice(ctx)
+	}
+
 	if content, ok := lowerMassSacrificeSpell(ctx); ok {
 		return content, nil
 	}

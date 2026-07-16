@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -119,13 +120,5 @@ func TestLowerReturnTargetInstantOrSorcerySpell(t *testing.T) {
 }
 
 func equalCardTypes(got, want []types.Card) bool {
-	if len(got) != len(want) {
-		return false
-	}
-	for i := range got {
-		if got[i] != want[i] {
-			return false
-		}
-	}
-	return true
+	return slices.Equal(got, want)
 }

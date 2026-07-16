@@ -2568,6 +2568,11 @@ type CompiledEffect struct {
 	// added creature subtype(s), and the granted keyword(s). It is nil for every
 	// other effect.
 	PayRepeatedlyAnimate *parser.PayRepeatedlyAnimateSyntax
+	// KeepOnePerType is the typed payload of a recognized "keep one of each type"
+	// sacrifice effect (Liliana, Dreadhorde General's −9; Cataclysm; Cataclysmic
+	// Gearhulk): the affected player scope, the runtime permanent types kept, and
+	// the nonland-pool flag. It is nil for every other sacrifice effect.
+	KeepOnePerType *CompiledKeepOnePerType
 	// AnimateSelf is the typed payload of an EffectAnimateSelf effect (Faerie
 	// Conclave, the Keyrune mana rocks, Mutavault): the source's set base
 	// power/toughness, the stated colors, the added artifact card type, the added
@@ -3125,6 +3130,11 @@ type CompiledEffect struct {
 	TibaltRandomMillMin int
 	TibaltRandomMillMax int
 	TibaltPreludeSpan   shared.Span
+	// ControllerChoosesKeepPreludeSpan carries the parser's credited zero-effect
+	// prelude span of a controller-chooses keep-one-per-type sequence (Tragic
+	// Arrogance), set only on the sacrifice effect so lowering accounts for the
+	// prelude's tokens as consumed.
+	ControllerChoosesKeepPreludeSpan shared.Span
 	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
 	// chooses one of the exiled cards." antecedent names an opponent as the
 	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).

@@ -230,7 +230,8 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return exactDirectPronounEffectSyntax(effect, "Sacrifice it.") ||
 			exactSelfSacrificeEffectSyntax(effect) ||
 			exactSacrificeChoiceEffectSyntax(effect) ||
-			exactSacrificeMassEffectSyntax(effect)
+			exactSacrificeMassEffectSyntax(effect) ||
+			exactKeepOnePerTypeSacrificeEffectSyntax(effect)
 	case EffectSearch:
 		return exactSearchEffectSyntax(effect)
 	case EffectScry:
