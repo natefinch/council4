@@ -804,6 +804,14 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	if value.EntryAttacking {
 		fields = append(fields, "EntryAttacking: true,")
 	}
+	if value.EntryAttackingDefender.Exists {
+		defender, err := r.renderPlayerReference(value.EntryAttackingDefender.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("EntryAttackingDefender: opt.Val(%s),", defender))
+	}
 	if value.Power.Exists {
 		power, err := r.renderQuantity(ctx, value.Power.Val)
 		if err != nil {

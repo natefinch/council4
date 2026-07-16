@@ -2511,6 +2511,10 @@ type CompiledEffect struct {
 	// each equal, evaluated once when the token is created. It is empty for fixed
 	// tokens.
 	TokenPTDynamic parser.EffectDynamicAmountKind
+	// TokenAttackDefender preserves the typed defender relation of a created
+	// attacking token. Card generation uses definite player forms to bind the
+	// token's attack to the triggering attack event's defending player.
+	TokenAttackDefender parser.AttackDefenderKind
 	// TokenCount is the explicit count of variable "X/X" tokens created when the
 	// count would otherwise be shadowed by the "where X is <dynamic>" size clause
 	// carried on Amount ("Create three ... X/X ... tokens, where X is

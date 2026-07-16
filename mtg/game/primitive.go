@@ -865,6 +865,13 @@ type CreateToken struct {
 	RecipientGroup PlayerGroupReference
 	EntryTapped    bool
 	EntryAttacking bool
+	// EntryAttackingDefender, when set, puts every created token onto the
+	// battlefield attacking the referenced defending player instead of asking
+	// its controller to choose among combat defenders. It is used by effects whose
+	// attack trigger and token entry name the same player ("attacking that
+	// opponent"). It is mutually exclusive with EntryAttacking,
+	// AttackEachOtherOpponent, and AttackSameAsSource.
+	EntryAttackingDefender opt.V[PlayerReference]
 
 	// AttackEachOtherOpponent, when set, creates one token for each opponent of
 	// the ability's controller other than the defending player of the attack

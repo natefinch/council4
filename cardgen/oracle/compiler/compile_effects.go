@@ -343,6 +343,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenPTKnown:                       syntax.TokenPTKnown,
 				TokenPTVariableX:                   syntax.TokenPTVariableX,
 				TokenPTDynamic:                     syntax.TokenPTDynamic,
+				TokenAttackDefender:                syntax.AttackDefender,
 				TokenCount:                         compileTypedAmount(syntax.TokenCount),
 				TokenKeywords:                      append([]parser.KeywordKind(nil), syntax.TokenKeywords...),
 				TokenToxic:                         syntax.TokenToxic,

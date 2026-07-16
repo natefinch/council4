@@ -9,7 +9,7 @@ import (
 // by one or more plural creature-subtype nouns, with no "creatures" head noun:
 //
 //	"[Other] <Subtype>s you control get/have ..."          (controlled)
-//	"[Other|All] <Subtype>s get/have ..."                  (battlefield-wide)
+//	"[Other|All] <Subtype>s get/have/can't ..."            (battlefield-wide)
 //	"<Sub1>s and <Sub2>s you control get/have ..."         (conjunction)
 //	"<Sub1>s, <Sub2>s, and <Sub3>s you control get/have ..."
 //	"Other <Sub1>s and <Sub2>s get/have ..."               (battlefield conjunction)
@@ -46,7 +46,10 @@ func parsePluralSubtypeGroupSubject(tokens []shared.Token, atoms Atoms) (EffectS
 		controlled = true
 		next += 2
 	}
-	if next >= len(tokens) || !staticGroupVerb(tokens[next]) {
+	if next >= len(tokens) ||
+		(!staticGroupVerb(tokens[next]) &&
+			!equalWord(tokens[next], "can't") &&
+			!equalWord(tokens[next], "cannot")) {
 		return EffectStaticSubjectSyntax{}, false
 	}
 	var kind EffectStaticSubjectKind

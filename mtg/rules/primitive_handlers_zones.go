@@ -597,6 +597,14 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
+	var attackingDefender game.PlayerID
+	if prim.EntryAttackingDefender.Exists {
+		var defenderOK bool
+		attackingDefender, defenderOK = r.resolvePlayer(prim.EntryAttackingDefender.Val)
+		if !defenderOK {
+			return res
+		}
+	}
 	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceEachInGroup {
 		return r.createCopyTokensForEach(prim, spec, recipient)
 	}
@@ -627,6 +635,11 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 
 	if prim.EntryAttacking {
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+	}
+	if prim.EntryAttackingDefender.Exists {
+		for _, token := range created {
+			declareTokenAttackingDefender(r.game, recipient, token, attackingDefender)
+		}
 	}
 	if prim.AttackSameAsSource {
 		r.declareTokensAttackingSameAsSource(created)
