@@ -391,6 +391,13 @@ func (r Renderer) renderGroupReference(ctx *renderCtx, group game.GroupReference
 		return fmt.Sprintf("game.LinkedObjectsGroup(game.LinkedKey(%q))", string(key)), nil
 	case game.GroupDomainAttackedThisTurn:
 		return fmt.Sprintf("game.AttackedThisTurnGroup(%s)", selection), nil
+	case game.GroupDomainSaddleContributors:
+		anchor, _ := group.Anchor()
+		renderedAnchor, err := r.renderObjectReference(anchor)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("game.SaddleContributorsGroup(%s, %s)", renderedAnchor, selection), nil
 	default:
 		return "", fmt.Errorf("render: unsupported group reference domain %d", group.Domain())
 	}

@@ -1096,10 +1096,19 @@ func handleAdapt(r *effectResolver, prim game.Adapt) effectResolved {
 func handleBecomeSaddled(r *effectResolver, prim game.BecomeSaddled) effectResolved {
 	res := effectResolved{accepted: true}
 	permanent, ok := r.resolveObject(prim.Object)
-	if ok && !permanent.Saddled {
-		permanent.Saddled = true
-		res.succeeded = true
+	if !ok {
+		return res
 	}
+	changed := !permanent.Saddled
+	permanent.Saddled = true
+	for _, contributorID := range r.obj.TappedAsCostIDs {
+		if contributorID == 0 || slices.Contains(permanent.SaddleContributorIDs, contributorID) {
+			continue
+		}
+		permanent.SaddleContributorIDs = append(permanent.SaddleContributorIDs, contributorID)
+		changed = true
+	}
+	res.succeeded = changed
 	return res
 }
 

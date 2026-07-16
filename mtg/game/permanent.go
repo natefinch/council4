@@ -153,6 +153,11 @@ type Permanent struct {
 	// Saddled records whether this Mount has been saddled this turn (CR 702.166).
 	// It is set by the BecomeSaddled keyword action and cleared during cleanup.
 	Saddled bool
+	// SaddleContributorIDs records the exact battlefield object identities tapped
+	// to pay Saddle abilities that resolved on this Mount this turn. Membership
+	// survives control changes but not a contributor leaving and returning as a
+	// new object. It is cleared during cleanup with Saddled.
+	SaddleContributorIDs []id.ID
 
 	// TributePaid records that a chosen opponent paid this creature's Tribute as
 	// it entered by putting its +1/+1 counters on it (CR 702.110). It is read by

@@ -9,10 +9,10 @@ import (
 // lowerRepeatProcessSpell lowers a "Repeat the following process <count> times.
 // <body>" loop (EffectRepeatProcess) to a single RepeatProcess instruction whose
 // Times is the repeat count (a fixed cardinal or the spell's variable X) and
-// whose Body is the recursively lowered sub-effect executed each iteration. It
+// whose Body is the recursively lowered ordered process executed each iteration. It
 // fails closed for any targets, conditions, keywords, or modes on the loop
-// itself, for an unsupported count, for anything but a single body effect, or
-// when the body itself does not lower.
+// itself, for an unsupported count, an empty body, or when the body itself does
+// not lower.
 func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -27,7 +27,7 @@ func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Abi
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(effect.RepeatBody) != 1 {
+		len(effect.RepeatBody) == 0 {
 		return unsupported()
 	}
 	times, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
@@ -38,7 +38,7 @@ func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Abi
 	bodyContent.Effects = effect.RepeatBody
 	bodyCtx := ctx
 	bodyCtx.content = bodyContent
-	body, diagnostic := lowerImmediateSingleEffectSpell(cardName, bodyCtx, syntax)
+	body, diagnostic := lowerContent(cardName, bodyCtx, syntax)
 	if diagnostic != nil {
 		return game.AbilityContent{}, diagnostic
 	}

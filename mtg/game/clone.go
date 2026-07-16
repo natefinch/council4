@@ -99,6 +99,7 @@ func cloneSliceMap[K comparable, V any](source map[K][]V) map[K][]V {
 func cloneDelayedTriggers(triggers []DelayedTrigger) []DelayedTrigger {
 	clone := slices.Clone(triggers)
 	for i := range clone {
+		clone[i].CapturedObjectIDs = cloneSlice(clone[i].CapturedObjectIDs)
 		clone[i].CapturedTargetControllerLKI = cloneComparableMap(clone[i].CapturedTargetControllerLKI)
 		clone[i].CapturedTargetManaValueLKI = cloneComparableMap(clone[i].CapturedTargetManaValueLKI)
 	}
@@ -214,6 +215,7 @@ func clonePermanent(p *Permanent) *Permanent {
 	clone.MergedCards = cloneSlice(p.MergedCards)
 	clone.Counters = p.Counters.Clone()
 	clone.Attachments = cloneSlice(p.Attachments)
+	clone.SaddleContributorIDs = cloneSlice(p.SaddleContributorIDs)
 	clone.Goaded = cloneComparableMap(p.Goaded)
 	clone.EntryChoices = cloneComparableMap(p.EntryChoices)
 	// TokenDef is an immutable shared definition and is intentionally shared.
@@ -251,7 +253,9 @@ func cloneStackObject(o *StackObject) *StackObject {
 	})
 	clone.AdditionalCostsPaid = cloneSlice(o.AdditionalCostsPaid)
 	clone.SacrificedAsCostIDs = cloneSlice(o.SacrificedAsCostIDs)
+	clone.TappedAsCostIDs = cloneSlice(o.TappedAsCostIDs)
 	clone.ExiledAsCostIDs = cloneSlice(o.ExiledAsCostIDs)
+	clone.CapturedObjectIDs = cloneSlice(o.CapturedObjectIDs)
 	clone.GainsKeywordsUntilEndOfTurn = cloneSlice(o.GainsKeywordsUntilEndOfTurn)
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)
@@ -333,6 +337,7 @@ func cloneObjectSnapshot(s ObjectSnapshot) ObjectSnapshot {
 	s.Subtypes = cloneSlice(s.Subtypes)
 	s.Keywords = cloneSlice(s.Keywords)
 	s.Attachments = cloneSlice(s.Attachments)
+	s.SaddleContributorIDs = cloneSlice(s.SaddleContributorIDs)
 	s.Counters = s.Counters.Clone()
 	s.EntryChoices = cloneComparableMap(s.EntryChoices)
 	s.RuleEffectKinds = cloneSlice(s.RuleEffectKinds)

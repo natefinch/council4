@@ -378,6 +378,7 @@ func (e *Engine) runEndingPhaseWithLog(g *game.Game, agents [game.NumPlayers]Pla
 		permanent.TemporaryToughnessModifier = 0
 		permanent.RegenerationShields = 0
 		permanent.Saddled = false
+		permanent.SaddleContributorIDs = nil
 	}
 	expireCleanupDurations(g)
 	expireEventDelayedTriggers(g)

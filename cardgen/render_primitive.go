@@ -812,6 +812,9 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("EntryAttackingDefender: opt.Val(%s),", defender))
 	}
+	if value.AttackSameAsSource {
+		fields = append(fields, "AttackSameAsSource: true,")
+	}
 	if value.Power.Exists {
 		power, err := r.renderQuantity(ctx, value.Power.Val)
 		if err != nil {
@@ -861,10 +864,34 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		return renderTokenCopyTriggeringSetSource(ctx, spec)
 	case game.TokenCopySourceChosenControlledCreatureToken:
 		return renderTokenCopyPopulateSource(ctx, spec)
+	case game.TokenCopySourceChosenFromGroup:
+		return r.renderTokenCopyChosenFromGroupSource(ctx, spec)
 	default:
 		return "", errors.New("render: unsupported CreateToken token source")
 	}
+}
 
+func (r Renderer) renderTokenCopyChosenFromGroupSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
+	if spec.Group == nil {
+		return "", errors.New("render: chosen-group token copy has no group")
+	}
+	group, err := r.renderGroupReference(ctx, *spec.Group)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		"Source: game.TokenCopySourceChosenFromGroup,",
+		fmt.Sprintf("Group: game.GroupRef(%s),", group),
+	}
+	fields, err = appendTokenCopyModifierFields(ctx, fields, spec)
+	if err != nil {
+		return "", err
+	}
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.TokenCopyOf(game.TokenCopySpec", rendered) + ")", nil
 }
 
 func renderTokenCopyPopulateSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {

@@ -54,6 +54,7 @@ func (o paymentOrchestratorType) buildAbilityCostPlan(g *game.Game, req payment.
 // IDs of cards exiled from a zone.
 type abilityCostPayment struct {
 	sacrificedIDs []id.ID
+	tappedIDs     []id.ID
 	exiledIDs     []id.ID
 }
 
@@ -72,7 +73,11 @@ func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.Abili
 	if hasRiders {
 		consumeManaSpendRidersForPayment(g, req.PlayerID, req.Source, before, paid.PoolSpend)
 	}
-	return abilityCostPayment{sacrificedIDs: paid.SacrificedIDs, exiledIDs: paid.ExiledIDs}, true
+	return abilityCostPayment{
+		sacrificedIDs: paid.SacrificedIDs,
+		tappedIDs:     paid.TappedIDs,
+		exiledIDs:     paid.ExiledIDs,
+	}, true
 }
 
 // canPayGenericCost reports whether the player can pay the mana cost described by req.

@@ -1981,9 +1981,20 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	if spec, ok := p.Source.TokenCopy(); ok && spec.Source == TokenCopySourceObject {
-		if err := validateObjectReference(spec.Object, targets, checkTargets); err != nil {
-			return err
+	if spec, ok := p.Source.TokenCopy(); ok {
+		switch spec.Source {
+		case TokenCopySourceObject:
+			if err := validateObjectReference(spec.Object, targets, checkTargets); err != nil {
+				return err
+			}
+		case TokenCopySourceEachInGroup, TokenCopySourceChosenFromGroup:
+			if spec.Group == nil {
+				return errors.New("create token copy group is nil")
+			}
+			if problems := spec.Group.Validate(); len(problems) != 0 {
+				return errors.New(problems[0])
+			}
+		default:
 		}
 	}
 	if p.Recipient.Exists {

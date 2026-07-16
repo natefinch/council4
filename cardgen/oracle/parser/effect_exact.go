@@ -55,6 +55,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCreatePredefinedTokenEffectSyntax(effect) ||
 			exactCreateNamedTokenChoiceEffectSyntax(effect) ||
 			exactCreateDynamicSourceCopyAttackingEffectSyntax(effect) ||
+			exactCreateChosenSaddleContributorCopyEffectSyntax(effect) ||
 			exactCreateCopyTokenEffectSyntax(effect) ||
 			exactCreateCopyTokenReferenceEffectSyntax(effect) ||
 			exactCreateCopyTokenHalvedReferenceEffectSyntax(effect) ||
@@ -272,6 +273,7 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 		return effect.EntersTribute && effect.EntersTributeCount > 0
 	case EffectSacrifice:
 		return exactDirectPronounEffectSyntax(effect, "Sacrifice it.") ||
+			exactDelayedCreatedTokenSacrificeEffectSyntax(effect) ||
 			exactSelfSacrificeEffectSyntax(effect) ||
 			exactSacrificeChoiceEffectSyntax(effect) ||
 			exactSacrificeMassEffectSyntax(effect) ||
@@ -325,6 +327,43 @@ func exactEffectSyntaxTail(effect *EffectSyntax) bool {
 	default:
 		return false
 	}
+}
+
+// exactCreateChosenSaddleContributorCopyEffectSyntax recognizes the reusable
+// Saddle-contributor choice and copy process. The resulting semantic flags are
+// independent of card name and source position.
+func exactCreateChosenSaddleContributorCopyEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.Negated ||
+		effect.DelayedTiming != DelayedTimingNone ||
+		len(effect.Targets) != 0 ||
+		!strings.EqualFold(
+			strings.TrimSpace(effect.Text),
+			"choose a nonlegendary creature that saddled it this turn and create a tapped and attacking token that's a copy of it.",
+		) {
+		return false
+	}
+	effect.TokenCopyOfChosenSaddleContributor = true
+	effect.TokenCopyEntersTapped = true
+	effect.TokenCopyAttacksWithSource = true
+	// "this turn" constrains which Saddle contributions qualify; it is not a
+	// duration on token creation.
+	effect.Duration = EffectDurationNone
+	return true
+}
+
+// exactDelayedCreatedTokenSacrificeEffectSyntax recognizes a delayed sacrifice
+// of the exact token batch created by the preceding process iteration.
+func exactDelayedCreatedTokenSacrificeEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.Negated ||
+		effect.DelayedTiming != DelayedTimingNextEndStep ||
+		len(effect.Targets) != 0 ||
+		!strings.EqualFold(exactEffectClauseText(effect), "Sacrifice that token.") {
+		return false
+	}
+	effect.CreatedTokensReference = true
+	return true
 }
 
 // exactTransformSelfEffectSyntax recognizes a transform/convert keyword action

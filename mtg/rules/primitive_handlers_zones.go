@@ -614,6 +614,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenControlledCreatureToken {
 		return r.populate(prim, spec, recipient)
 	}
+	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenFromGroup {
+		return r.createCopyTokenFromChosenGroup(prim, spec, recipient, res.amount)
+	}
 	if prim.PublishLinked != "" {
 		// Clear before creation so a zero-token resolution captures an empty
 		// batch instead of objects published by a prior resolution.
@@ -709,6 +712,77 @@ func (r *effectResolver) populate(prim game.CreateToken, spec game.TokenCopySpec
 	return res
 }
 
+// createCopyTokenFromChosenGroup has the resolving controller choose one live
+// permanent from an arbitrary GroupReference and creates the requested number of
+// copies. The created batch participates in the ordinary attack-entry and linked
+// capture machinery, including token-creation replacement effects.
+func (r *effectResolver) createCopyTokenFromChosenGroup(
+	prim game.CreateToken,
+	spec game.TokenCopySpec,
+	recipient game.PlayerID,
+	amount int,
+) effectResolved {
+	res := effectResolved{accepted: true}
+	var publishKey game.LinkedObjectKey
+	if prim.PublishLinked != "" {
+		publishKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, publishKey)
+	}
+	if spec.Group == nil {
+		return res
+	}
+	chosen, ok := r.chooseOnePermanentAmong(r.groupPermanents(*spec.Group), "Choose a permanent to copy")
+	if !ok {
+		return res
+	}
+	source, ok := permanentCopyDef(r.game, chosen)
+	if !ok {
+		return res
+	}
+	def, ok := applyTokenCopyOverrides(source, spec)
+	if !ok {
+		return res
+	}
+	created, ok := createTokenPermanentsCollectingWithChoices(
+		r.engine,
+		r.game,
+		recipient,
+		def,
+		amount,
+		prim.EntryTapped,
+		r.agents,
+		r.log,
+	)
+	if !ok {
+		return res
+	}
+	switch {
+	case prim.EntryAttacking:
+		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+	case prim.EntryAttackingDefender.Exists:
+		defender, defenderOK := r.resolvePlayer(prim.EntryAttackingDefender.Val)
+		if defenderOK {
+			for _, token := range created {
+				declareTokenAttackingDefender(r.game, recipient, token, defender)
+			}
+		}
+	case prim.AttackSameAsSource:
+		r.declareTokensAttackingSameAsSource(created)
+	default:
+	}
+	if prim.PublishLinked != "" {
+		for _, permanent := range created {
+			rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{
+				ObjectID: permanent.ObjectID,
+				CardID:   permanent.CardInstanceID,
+			})
+		}
+	}
+	res.amount = len(created)
+	res.succeeded = len(created) > 0
+	return res
+}
+
 // createTokensAttackingEachOtherOpponent creates one token per opponent of the
 // ability's controller other than the defending player of the attack that
 // triggered the ability, offering a separate "you may" for each and putting each
@@ -773,15 +847,16 @@ func (r *effectResolver) triggerEventDefendingPlayer() (game.PlayerID, bool) {
 }
 
 // declareTokensAttackingSameAsSource puts each created token onto the
-// battlefield attacking the same player or planeswalker the resolving ability's
-// source creature is attacking (CR 702.169b), backing the mobilize keyword. It
-// prefers the source's live attack declaration so a planeswalker or battle
+// battlefield attacking the same player, planeswalker, or battle the resolving
+// ability's source creature is attacking. It backs effects such as mobilize and
+// Saddle-contributor copy tokens. It prefers the source's live attack declaration
+// so a planeswalker or battle
 // target carries over, and falls back to the defending player recorded on the
 // trigger event when the source has already left combat, so token creation still
 // joins the correct player's combat. With no attack to join, the tokens stay on
 // the battlefield without attacking.
 func (r *effectResolver) declareTokensAttackingSameAsSource(tokens []*game.Permanent) {
-	target, ok := r.mobilizeAttackTarget()
+	target, ok := r.sourceAttackTarget()
 	if !ok {
 		return
 	}
@@ -791,13 +866,30 @@ func (r *effectResolver) declareTokensAttackingSameAsSource(tokens []*game.Perma
 	}
 }
 
-// mobilizeAttackTarget resolves the target a mobilize creature's tokens attack:
-// the source's live attack declaration target when it is still attacking,
-// otherwise the defending player recorded on the trigger event.
-func (r *effectResolver) mobilizeAttackTarget() (game.AttackTarget, bool) {
+// sourceAttackTarget resolves the target a source creature's created tokens
+// attack: the source's live attack declaration target when it is still attacking,
+// otherwise the exact permanent attack target or defending player recorded on the
+// trigger event.
+func (r *effectResolver) sourceAttackTarget() (game.AttackTarget, bool) {
 	if r.obj != nil {
 		if declaration, ok := attackDeclarationForAttacker(r.game, r.obj.SourceID); ok {
 			return declaration.Target, true
+		}
+		if r.obj.HasTriggerEvent && defendingPlayerEvent(r.obj.TriggerEvent.Kind) {
+			target := r.obj.TriggerEvent.AttackTarget
+			if !target.NoTarget && isPlayerAlive(r.game, target.Player) {
+				switch {
+				case target.PlaneswalkerID != 0:
+					if _, ok := permanentByObjectID(r.game, target.PlaneswalkerID); ok {
+						return target, true
+					}
+				case target.BattleID != 0:
+					if _, ok := permanentByObjectID(r.game, target.BattleID); ok {
+						return target, true
+					}
+				default:
+				}
+			}
 		}
 	}
 	if defender, ok := r.triggerEventDefendingPlayer(); ok {

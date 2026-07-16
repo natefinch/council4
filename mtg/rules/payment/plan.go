@@ -268,6 +268,7 @@ func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
 type AbilityCostPayment struct {
 	PoolSpend     map[mana.Unit]int
 	SacrificedIDs []id.ID
+	TappedIDs     []id.ID
 	ExiledIDs     []id.ID
 }
 
@@ -288,6 +289,7 @@ func payAbilityCosts(s State, req AbilityRequest) (AbilityCostPayment, bool) {
 	return AbilityCostPayment{
 		PoolSpend:     clonePoolSpend(plan.mana.poolSpend),
 		SacrificedIDs: sacrificedPermanentIDs(plan.additional),
+		TappedIDs:     tappedPermanentIDs(plan.additional),
 		ExiledIDs:     exiledCardIDs(plan.additional),
 	}, true
 }
@@ -316,6 +318,20 @@ func sacrificedPermanentIDs(plan additionalCostPlan) []id.ID {
 	ids := make([]id.ID, 0, len(plan.sacrifices))
 	for _, sacrifice := range plan.sacrifices {
 		ids = append(ids, sacrifice.ObjectID)
+	}
+	return ids
+}
+
+// tappedPermanentIDs returns the object IDs of permanents tapped to pay
+// additional costs, in plan order. It deliberately excludes mana-source,
+// convoke, and improvise taps, which are not AdditionalTapPermanents costs.
+func tappedPermanentIDs(plan additionalCostPlan) []id.ID {
+	if len(plan.permanentsToTap) == 0 {
+		return nil
+	}
+	ids := make([]id.ID, 0, len(plan.permanentsToTap))
+	for _, permanent := range plan.permanentsToTap {
+		ids = append(ids, permanent.ObjectID)
 	}
 	return ids
 }

@@ -1485,6 +1485,9 @@ const (
 	// TokenCopySourceChosenControlledCreatureToken implements populate: the
 	// controller chooses a creature token they control to copy.
 	TokenCopySourceChosenControlledCreatureToken
+	// TokenCopySourceChosenFromGroup copies one permanent the resolving
+	// controller chooses from Group.
+	TokenCopySourceChosenFromGroup
 )
 
 // TokenCopySpec describes a token that starts as a copy of another object/card,
@@ -1529,9 +1532,9 @@ type TokenCopySpec struct {
 	// AddKeywords grants additional keyword abilities to the created token on top
 	// of the copied characteristics ("That token gains haste").
 	AddKeywords []Keyword
-	// Group is the controlled battlefield group copied member-by-member when
-	// Source is TokenCopySourceEachInGroup; one token is created per matched
-	// permanent, copying that permanent. It is nil for every other source. It is
+	// Group is copied member-by-member when Source is
+	// TokenCopySourceEachInGroup, or supplies the candidates for
+	// TokenCopySourceChosenFromGroup. It is nil for every other source. It is
 	// held by pointer so the embedded GroupReference does not inflate the heavily
 	// value-passed TokenCopySpec past the by-value size budget.
 	Group *GroupReference

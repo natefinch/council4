@@ -815,6 +815,25 @@ func clonePrimitive(primitive Primitive) Primitive {
 		value.ContinuousEffects = slices.Clone(value.ContinuousEffects)
 		value.EntryCounters = slices.Clone(value.EntryCounters)
 		return value
+	case CreateToken:
+		if spec, ok := value.Source.TokenCopy(); ok {
+			spec.SetColors = slices.Clone(spec.SetColors)
+			spec.SetTypes = slices.Clone(spec.SetTypes)
+			spec.SetSubtypes = slices.Clone(spec.SetSubtypes)
+			spec.AddColors = slices.Clone(spec.AddColors)
+			spec.AddTypes = slices.Clone(spec.AddTypes)
+			spec.AddSubtypes = slices.Clone(spec.AddSubtypes)
+			spec.AddKeywords = slices.Clone(spec.AddKeywords)
+			if spec.Group != nil {
+				group := cloneGroupReference(*spec.Group)
+				spec.Group = &group
+			}
+			value.Source = TokenCopyOf(spec)
+		}
+		return value
+	case RepeatProcess:
+		value.Body = cloneAbilityContent(value.Body)
+		return value
 	case SacrificePermanents:
 		value.Selection = cloneSelection(value.Selection)
 		return value

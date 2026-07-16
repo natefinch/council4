@@ -2660,9 +2660,9 @@ func (v *cardDefValidator) validateTokenCopySpec(faceName, path string, spec Tok
 	case TokenCopySourceObject:
 		v.validateObjectRef(faceName, appendPath(path, "Object"), spec.Object, targets)
 	case TokenCopySourceSourceCard, TokenCopySourceChosenFromTriggerBatch, TokenCopySourceChosenControlledCreatureToken:
-	case TokenCopySourceEachInGroup:
+	case TokenCopySourceEachInGroup, TokenCopySourceChosenFromGroup:
 		if spec.Group == nil {
-			v.add(faceName, appendPath(path, "Group"), CardDefIssueInvalidReference, "token copy for-each group is nil")
+			v.add(faceName, appendPath(path, "Group"), CardDefIssueInvalidReference, "token copy group is nil")
 			return
 		}
 		v.validateGroupRef(faceName, appendPath(path, "Group"), *spec.Group, targets)
