@@ -29,6 +29,7 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 		default:
 			return exactChosenGraveyardReturnEffectSyntax(effect, text)
 		}
+
 	}
 	if len(effect.Targets) != 1 {
 		return false
@@ -40,6 +41,35 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 		return false
 	}
 	return matchesGraveyardReturnDestination(text, "Return "+effect.Targets[0].Text)
+}
+
+// exactTargetPlayerTaxedEventCardReturnEffectSyntax recognizes an event-card
+// return stopped by a fixed life payment from a direct player target:
+// "Return it to your hand unless target opponent pays 3 life." The target and
+// payment remain typed independently so downstream lowering can compose the
+// ordinary event-card return with a resolution Pay/result gate.
+func exactTargetPlayerTaxedEventCardReturnEffectSyntax(effect *EffectSyntax) bool {
+	if effect.ToZone != zone.Hand ||
+		len(effect.Targets) != 1 ||
+		!effect.Targets[0].Exact ||
+		(effect.Targets[0].Selection.Kind != SelectionPlayer &&
+			effect.Targets[0].Selection.Kind != SelectionOpponent) ||
+		effect.Payment.Form != EffectPaymentFormUnless ||
+		effect.Payment.Payer != EffectPaymentPayerTargetPlayer ||
+		effect.Payment.AdditionalCost == nil ||
+		len(effect.Payment.AdditionalCost.Components) != 1 ||
+		len(effect.References) != 1 {
+		return false
+	}
+	component := effect.Payment.AdditionalCost.Components[0]
+	if component.Kind != CostComponentPayLife ||
+		!component.AmountKnown ||
+		component.AmountValue <= 0 ||
+		effect.References[0].Kind != ReferencePronoun ||
+		effect.References[0].Pronoun != PronounIt {
+		return false
+	}
+	return strings.EqualFold(exactEffectClauseText(effect), "Return it to your hand.")
 }
 
 // graveyardReturnDestinationSuffixes are the canonical destination clauses that

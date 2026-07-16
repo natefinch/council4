@@ -3726,7 +3726,10 @@ const (
 	EffectPaymentPayerUnknown          EffectPaymentPayerKind = ""
 	EffectPaymentPayerController       EffectPaymentPayerKind = "EffectPaymentPayerController"
 	EffectPaymentPayerTargetController EffectPaymentPayerKind = "EffectPaymentPayerTargetController"
-	EffectPaymentPayerEventPlayer      EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
+	// EffectPaymentPayerTargetPlayer offers the payment to the ability's direct
+	// player target ("unless target opponent pays 3 life").
+	EffectPaymentPayerTargetPlayer EffectPaymentPayerKind = "EffectPaymentPayerTargetPlayer"
+	EffectPaymentPayerEventPlayer  EffectPaymentPayerKind = "EffectPaymentPayerEventPlayer"
 	// EffectPaymentPayerDefendingPlayer offers the payment to the player being
 	// attacked by the source ("defending player may pay {N}"), the payer role of
 	// an attack-triggered optional-payment gate (Shrouded Serpent). It resolves

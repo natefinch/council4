@@ -326,6 +326,9 @@ func lowerContentDispatch(
 	if content, ok := lowerEventCardBatchReanimation(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerTargetPlayerTaxedEventCardEffect(cardName, ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerEventCardEffect(ctx); ok {
 		return content, nil
 	}

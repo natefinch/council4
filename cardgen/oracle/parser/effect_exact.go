@@ -208,6 +208,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactReturnLinkedExiledToBattlefieldPartialEffectSyntax(effect) ||
 			exactReturnExiledCardsToHandEffectSyntax(effect) ||
 			exactReturnSourceAndExiledCardToHandEffectSyntax(effect) ||
+			exactTargetPlayerTaxedEventCardReturnEffectSyntax(effect) ||
 			exactDirectPronounEffectSyntax(effect, "Return it to its owner's hand.")
 	default:
 		return exactEffectSyntaxTail(effect)
