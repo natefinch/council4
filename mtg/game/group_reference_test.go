@@ -110,6 +110,7 @@ func TestGroupReferenceConstructorsAreValid(t *testing.T) {
 		ObjectControlledGroupExcluding(EventPermanentReference(), creatures, EventPermanentReference()),
 		PlayerControlledGroup(TargetPlayerReference(0), creatures),
 		PlayerControlledGroupExcluding(TargetPlayerReference(0), creatures, SourcePermanentReference()),
+		AttackedThisTurnGroup(creatures),
 	}
 	for _, group := range groups {
 		if !group.Valid() {

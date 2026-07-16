@@ -2274,6 +2274,11 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	effect.ExileAttached = effect.Kind == EffectExile && exactExileAttachedEffectSyntax(effect)
 	effect.TapAttached = effect.Kind == EffectTap && exactTapAttachedEffectSyntax(effect)
 	effect.UntapAttached = effect.Kind == EffectUntap && exactUntapAttachedEffectSyntax(effect)
+	if effect.Kind == EffectUntap &&
+		strings.EqualFold(exactEffectClauseText(effect), "Untap all creatures that attacked this turn.") {
+		effect.UntapAttackedThisTurn = true
+		effect.Exact = true
+	}
 	// A mass self-stun "<group> you control don't untap during your next untap
 	// step." carries its affected group only in its subject noun (no target or
 	// reference), so record that controlled-permanent group in StaticSubject for
@@ -4858,10 +4863,8 @@ func parseCastAsThoughFlashEffect(sentence Sentence, tokens []shared.Token) ([]E
 // (Aggravated Assault, Aurelia the Warleader, World at War, Combat Celebrant)
 // and the trailing "There is an additional combat phase after this phase."
 // (Raiyuu, Storm's Edge; Moraug, Fury of Akoum, which prints "there's"). It
-// inserts an additional combat phase into the current turn, optionally followed
-// by an additional main phase. The "after this <phase>" reference to the current
-// phase is descriptive; the simplified runtime model drains the inserted phases
-// after the postcombat main phase. A leading condition clause ("If it's the
+// inserts one or more additional combat phases into the current turn, optionally
+// followed by an additional main phase. A leading condition clause ("If it's the
 // first combat phase of the turn, ...") is stripped here so the extra-phase
 // grammar matches; that condition is recognized separately and re-associated by
 // the compiler through this effect's sentence-wide ClauseSpan. Any other wording
@@ -4889,17 +4892,18 @@ func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) 
 		return nil, false
 	}
 	return []EffectSyntax{{
-		Kind:                     EffectAdditionalCombatPhase,
-		Span:                     sentence.Span,
-		ClauseSpan:               sentence.Span,
-		VerbSpan:                 match.verb.Span,
-		Text:                     sentence.Text,
-		Tokens:                   append([]shared.Token(nil), tokens...),
-		Context:                  EffectContextController,
-		AdditionalCombatPhase:    !match.beginning,
-		AdditionalMainPhase:      match.additionalMain,
-		AdditionalBeginningPhase: match.beginning,
-		Exact:                    true,
+		Kind:                       EffectAdditionalCombatPhase,
+		Span:                       sentence.Span,
+		ClauseSpan:                 sentence.Span,
+		VerbSpan:                   match.verb.Span,
+		Text:                       sentence.Text,
+		Tokens:                     append([]shared.Token(nil), tokens...),
+		Context:                    EffectContextController,
+		AdditionalCombatPhase:      !match.beginning,
+		AdditionalCombatPhaseCount: match.combatCount,
+		AdditionalMainPhase:        match.additionalMain,
+		AdditionalBeginningPhase:   match.beginning,
+		Exact:                      true,
 	}}, true
 }
 
@@ -4908,6 +4912,7 @@ func parseAdditionalCombatPhaseEffect(sentence Sentence, tokens []shared.Token) 
 // is a beginning phase (as opposed to a combat phase).
 type additionalPhaseMatch struct {
 	verb           shared.Token
+	combatCount    int
 	additionalMain bool
 	beginning      bool
 }
@@ -4916,10 +4921,10 @@ type additionalPhaseMatch struct {
 // extra-phase clause in either order. It fails closed for any other wording.
 func matchAdditionalCombatPhaseWords(words []shared.Token) (additionalPhaseMatch, bool) {
 	if verb, main, ok := matchLeadingAdditionalCombatPhaseWords(words); ok {
-		return additionalPhaseMatch{verb: verb, additionalMain: main}, true
+		return additionalPhaseMatch{verb: verb, combatCount: main.count, additionalMain: main.additionalMain}, true
 	}
 	if verb, main, ok := matchTrailingAdditionalCombatPhaseWords(words); ok {
-		return additionalPhaseMatch{verb: verb, additionalMain: main}, true
+		return additionalPhaseMatch{verb: verb, combatCount: main.count, additionalMain: main.additionalMain}, true
 	}
 	if verb, ok := matchTrailingAdditionalBeginningPhaseWords(words); ok {
 		return additionalPhaseMatch{verb: verb, beginning: true}, true
@@ -4929,54 +4934,79 @@ func matchAdditionalCombatPhaseWords(words []shared.Token) (additionalPhaseMatch
 
 // matchLeadingAdditionalCombatPhaseWords matches "after this [main|combat] phase
 // there is an additional combat phase[ followed by an additional main phase]".
-func matchLeadingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+type additionalCombatMatch struct {
+	count          int
+	additionalMain bool
+}
+
+func matchLeadingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, match additionalCombatMatch, ok bool) {
 	rest, ok := cutTokenPrefix(words, "after", "this")
 	if !ok || len(rest) == 0 {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
 	if equalWord(rest[0], "main") || equalWord(rest[0], "combat") {
 		rest = rest[1:]
 	}
 	rest, ok = cutTokenPrefix(rest, "phase")
 	if !ok || len(rest) == 0 {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
 	verb = rest[0]
-	rest, ok = cutTokenPrefix(rest, "there", "is", "an", "additional", "combat", "phase")
+	count, rest, ok := cutAdditionalCombatCount(rest)
 	if !ok {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
 	main, ok := matchAdditionalMainPhaseTail(rest)
 	if !ok {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
-	return verb, main, true
+	return verb, additionalCombatMatch{count: count, additionalMain: main}, true
 }
 
 // matchTrailingAdditionalCombatPhaseWords matches "there is an additional combat
 // phase after this [phase|one][ followed by an additional main phase]", also
 // accepting the "there's" contraction.
-func matchTrailingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, additionalMain bool, ok bool) {
+func matchTrailingAdditionalCombatPhaseWords(words []shared.Token) (verb shared.Token, match additionalCombatMatch, ok bool) {
 	if len(words) == 0 {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
 	verb = words[0]
+	count := 1
 	rest, ok := cutTokenPrefix(words, "there's", "an", "additional", "combat", "phase")
 	if !ok {
-		rest, ok = cutTokenPrefix(words, "there", "is", "an", "additional", "combat", "phase")
+		count, rest, ok = cutAdditionalCombatCount(words)
 	}
 	if !ok {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
 	rest, ok = cutTokenPrefix(rest, "after", "this")
 	if !ok || len(rest) == 0 || (!equalWord(rest[0], "phase") && !equalWord(rest[0], "one")) {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
 	main, ok := matchAdditionalMainPhaseTail(rest[1:])
 	if !ok {
-		return shared.Token{}, false, false
+		return shared.Token{}, additionalCombatMatch{}, false
 	}
-	return verb, main, true
+	return verb, additionalCombatMatch{count: count, additionalMain: main}, true
+}
+
+func cutAdditionalCombatCount(words []shared.Token) (int, []shared.Token, bool) {
+	if rest, ok := cutTokenPrefix(words, "there", "is", "an", "additional", "combat", "phase"); ok {
+		return 1, rest, true
+	}
+	rest, ok := cutTokenPrefix(words, "there", "are")
+	if !ok || len(rest) < 4 {
+		return 0, nil, false
+	}
+	count, ok := CardinalWordValue(rest[0].Text)
+	if !ok || count < 2 {
+		return 0, nil, false
+	}
+	rest, ok = cutTokenPrefix(rest[1:], "additional", "combat", "phases")
+	if !ok {
+		return 0, nil, false
+	}
+	return count, rest, true
 }
 
 // matchAdditionalMainPhaseTail consumes an optional "followed by an additional

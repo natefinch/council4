@@ -16,6 +16,7 @@ func TestParseAdditionalCombatPhaseEffect(t *testing.T) {
 		{"After this phase, there is an additional combat phase.", false},
 		{"After this combat phase, there is an additional combat phase.", false},
 	}
+
 	for _, tc := range cases {
 		document, diagnostics := Parse(tc.source, Context{InstantOrSorcery: true})
 		if len(diagnostics) != 0 {
@@ -38,6 +39,24 @@ func TestParseAdditionalCombatPhaseEffect(t *testing.T) {
 		if effect.AdditionalMainPhase != tc.main {
 			t.Errorf("Parse(%q) AdditionalMainPhase = %v, want %v", tc.source, effect.AdditionalMainPhase, tc.main)
 		}
+	}
+}
+
+func TestParseMultipleAdditionalCombatPhases(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"After this main phase, there are two additional combat phases.",
+		Context{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	effect := document.Abilities[0].Sentences[0].Effects[0]
+	if effect.Kind != EffectAdditionalCombatPhase ||
+		!effect.AdditionalCombatPhase ||
+		effect.AdditionalCombatPhaseCount != 2 ||
+		effect.AdditionalMainPhase {
+		t.Fatalf("effect = %#v, want exactly two additional combats and no main", effect)
 	}
 }
 

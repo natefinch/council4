@@ -72,6 +72,12 @@ const (
 	// created now rather than re-querying the board. It draws no anchor and sets no
 	// Selection.
 	GroupDomainLinkedObjects
+
+	// GroupDomainAttackedThisTurn draws from permanents whose current object
+	// identity appears in an attacker-declared event during the current turn.
+	// Permanents that left the battlefield are absent, and a card that returned as
+	// a new object does not inherit its former attack history.
+	GroupDomainAttackedThisTurn
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -195,6 +201,12 @@ func LinkedObjectsGroup(key LinkedKey) GroupReference {
 	return GroupReference{domain: GroupDomainLinkedObjects, linkedKey: key}
 }
 
+// AttackedThisTurnGroup matches surviving battlefield permanents whose current
+// object identity was declared as an attacker earlier this turn.
+func AttackedThisTurnGroup(selection Selection) GroupReference {
+	return GroupReference{domain: GroupDomainAttackedThisTurn, selection: selection}
+}
+
 // Domain reports the candidate domain the group draws from.
 func (r GroupReference) Domain() GroupReferenceDomain { return r.domain }
 
@@ -311,6 +323,16 @@ func (r GroupReference) Validate() []string {
 		}
 		if !r.selection.Empty() {
 			problems = append(problems, "linked-objects group must not set a Selection")
+		}
+	case GroupDomainAttackedThisTurn:
+		if r.anchor.Exists {
+			problems = append(problems, "attacked-this-turn group must not set an anchor object")
+		}
+		if r.playerAnchor.Exists {
+			problems = append(problems, "attacked-this-turn group must not set an anchor player")
+		}
+		if r.exclude.Exists {
+			problems = append(problems, "attacked-this-turn group must not set an exclusion")
 		}
 	case groupDomainNone:
 		problems = append(problems, "group reference has no domain")

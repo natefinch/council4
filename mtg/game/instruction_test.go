@@ -143,6 +143,26 @@ func TestValidateInstructionSequenceAcceptsBoundedGroupUntap(t *testing.T) {
 	}
 }
 
+func TestValidateInstructionSequenceAcceptsCountedExtraCombats(t *testing.T) {
+	seq := []Instruction{{Primitive: AddExtraPhases{CombatCount: 2}}}
+	if err := ValidateInstructionSequence(seq); err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+}
+
+func TestValidateInstructionSequenceRejectsMalformedCountedExtraCombats(t *testing.T) {
+	for _, primitive := range []AddExtraPhases{
+		{Combat: true, CombatCount: 2},
+		{CombatCount: -1},
+		{Main: true},
+		{Beginning: true, CombatCount: 2},
+	} {
+		if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}); err == nil {
+			t.Fatalf("ValidateInstructionSequence(%#v) error = nil, want failure", primitive)
+		}
+	}
+}
+
 func TestValidateInstructionSequenceRejectsMalformedBoundedUntap(t *testing.T) {
 	for _, primitive := range []Untap{
 		{Object: TargetPermanentReference(0), ChooseUpTo: true, Amount: Fixed(3)},

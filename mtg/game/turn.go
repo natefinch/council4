@@ -141,14 +141,16 @@ type TurnState struct {
 	// the current turn ends. Processed LIFO (most recently added first).
 	ExtraTurns []PlayerID
 
-	// ExtraPhases is a FIFO queue of additional phases inserted into the
+	// ExtraPhases is the pending queue of additional phases inserted into the
 	// current turn by extra-phase effects ("After this main phase, there is
 	// an additional combat phase followed by an additional main phase." —
 	// Aggravated Assault, Aurelia, World at War). The turn loop drains the
-	// queue after each base phase, running each queued phase in order
+	// queue after each phase, running each queued phase in order
 	// immediately after the phase during which it was queued (CR 500.7); a
-	// queued phase that re-activates the source re-queues more phases, so the
-	// combo loop continues until the queue empties.
+	// newly created "after this phase" sequence is prepended ahead of phases that
+	// were waiting after an earlier phase, so it runs immediately after the phase
+	// that created it (CR 500.7). Multiple sequences created after the same phase
+	// therefore run most-recently-created first.
 	ExtraPhases []Phase
 
 	// ExtraUpkeepSteps is the count of additional upkeep steps queued into the

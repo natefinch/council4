@@ -3542,6 +3542,10 @@ type CompiledEffect struct {
 	// Bristly Bill, Spine Sower); the group rides on Selector. Lowering doubles
 	// the single kind on each member. It is false for the source and target forms.
 	DoubleCountersGroup bool
+	// UntapAttackedThisTurn mirrors the parser's historical mass-recipient form
+	// "Untap all creatures that attacked this turn." Lowering maps it to a group
+	// resolved from current-turn attacker-declared events and object identity.
+	UntapAttackedThisTurn bool
 	// UnderOwnersControl mirrors the parser flag for a battlefield-destination
 	// effect carrying the "under their owners' control" rider (Open the Vaults,
 	// Planar Birth), where each moved card enters under its owner's control. It
@@ -3591,8 +3595,9 @@ type CompiledEffect struct {
 	// AdditionalMainPhase mirrors the optional "followed by an additional main
 	// phase" tail. Both are false for every other effect; AdditionalMainPhase is
 	// set only together with AdditionalCombatPhase.
-	AdditionalCombatPhase bool
-	AdditionalMainPhase   bool
+	AdditionalCombatPhase      bool
+	AdditionalCombatPhaseCount int
+	AdditionalMainPhase        bool
 	// AdditionalBeginningPhase mirrors the parser flag for a "there is an
 	// additional beginning phase after this phase." effect (Sphinx of the Second
 	// Sun, Temple of Atropos, Cyclonus, Cybertronian Fighter): the effect inserts

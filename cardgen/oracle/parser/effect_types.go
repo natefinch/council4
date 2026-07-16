@@ -2611,6 +2611,11 @@ type EffectSyntax struct {
 	// only for the bare attached recipient; any other wording leaves it false so
 	// lowering fails closed.
 	UntapAttached bool `json:",omitempty"`
+	// UntapAttackedThisTurn reports the historical mass-recipient form "Untap all
+	// creatures that attacked this turn." The runtime resolves membership from
+	// attacker-declared events and object identity rather than current combat
+	// state. It is meaningful only for EffectUntap.
+	UntapAttackedThisTurn bool `json:",omitempty"`
 	// MoveCountersAll reports the kind-agnostic "move all counters" form of an
 	// EffectMoveCounters effect, where every counter on the source moves to the
 	// destination regardless of kind ("Move all counters from this permanent onto
@@ -3553,12 +3558,15 @@ type EffectSyntax struct {
 	// AdditionalCombatPhase reports an "After this [main] phase, there is an
 	// additional combat phase[ followed by an additional main phase]." effect
 	// (Aggravated Assault, Aurelia the Warleader, World at War): it inserts an
-	// extra combat phase into the current turn. AdditionalMainPhase reports the
+	// extra combat phase into the current turn. AdditionalCombatPhaseCount is the
+	// typed number of combat phases inserted (normally 1, but 2 for "there are two
+	// additional combat phases"). AdditionalMainPhase reports the
 	// optional "followed by an additional main phase" tail that inserts an extra
 	// main phase after that combat phase. Both are false for every other effect;
 	// AdditionalMainPhase is set only together with AdditionalCombatPhase.
-	AdditionalCombatPhase bool `json:",omitempty"`
-	AdditionalMainPhase   bool `json:",omitempty"`
+	AdditionalCombatPhase      bool `json:",omitempty"`
+	AdditionalCombatPhaseCount int  `json:",omitempty"`
+	AdditionalMainPhase        bool `json:",omitempty"`
 	// AdditionalBeginningPhase reports a "there is an additional beginning phase
 	// after this phase." effect (Sphinx of the Second Sun, Temple of Atropos,
 	// Cyclonus, Cybertronian Fighter): it inserts an extra beginning phase (untap,

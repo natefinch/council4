@@ -1823,15 +1823,21 @@ func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {
 }
 
 func handleAddExtraPhases(r *effectResolver, prim game.AddExtraPhases) effectResolved {
+	var phases []game.Phase
 	if prim.Beginning {
-		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhaseBeginning)
+		phases = append(phases, game.PhaseBeginning)
 	}
+	combatCount := prim.CombatCount
 	if prim.Combat {
-		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhaseCombat)
+		combatCount = 1
+	}
+	for range combatCount {
+		phases = append(phases, game.PhaseCombat)
 	}
 	if prim.Main {
-		r.game.Turn.ExtraPhases = append(r.game.Turn.ExtraPhases, game.PhasePostcombatMain)
+		phases = append(phases, game.PhasePostcombatMain)
 	}
+	r.game.Turn.ExtraPhases = append(phases, r.game.Turn.ExtraPhases...)
 	return effectResolved{accepted: true, succeeded: true}
 }
 
