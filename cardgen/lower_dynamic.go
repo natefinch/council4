@@ -569,6 +569,8 @@ func runtimeKeyword(keyword parser.KeywordKind) (game.Keyword, bool) {
 		return game.Deathtouch, true
 	case parser.KeywordIndestructible:
 		return game.Indestructible, true
+	case parser.KeywordUmbraArmor:
+		return game.UmbraArmor, true
 	case parser.KeywordHaste:
 		return game.Haste, true
 	case parser.KeywordMenace:

@@ -114,14 +114,9 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 	res := effectResolved{accepted: true}
 	targets := r.resolveObjectGroup(prim.Object, prim.Group)
 	if !targets.single {
-		destroyed := make([]*game.Permanent, 0, len(targets.permanents))
-		for _, permanent := range targets.permanents {
-			if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent, prim.PreventRegeneration) {
-				continue
-			}
-			destroyed = append(destroyed, permanent)
-		}
-		res.succeeded = movePermanentsToZoneSimultaneously(r.game, destroyed, zone.Graveyard)
+		batch := &destroyBatch{game: r.game, simultaneousID: r.game.IDGen.Next()}
+		destroyed, replacements := planDestroyPermanents(r.game, targets.permanents, prim.PreventRegeneration, batch.simultaneousID)
+		res.succeeded = applyPlannedDestroyBatch(r.game, destroyed, replacements, batch)
 		res.amount = len(destroyed)
 		return res
 	}

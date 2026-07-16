@@ -558,7 +558,11 @@ func movePermanentToZoneInBatch(g *game.Game, permanent *game.Permanent, destina
 // lets the owner arrange cards put into the same graveyard at once; this engine
 // does not prompt for that order and adds them in processing order instead.
 func movePermanentsToZoneSimultaneously(g *game.Game, permanents []*game.Permanent, destination zone.Type) bool {
-	results := movePermanentsToZoneSimultaneouslyWithResults(g, permanents, destination)
+	return movePermanentsToZoneSimultaneouslyInBatch(g, permanents, destination, 0)
+}
+
+func movePermanentsToZoneSimultaneouslyInBatch(g *game.Game, permanents []*game.Permanent, destination zone.Type, simultaneousID id.ID) bool {
+	results := movePermanentsToZoneSimultaneouslyWithResultsInBatch(g, permanents, destination, simultaneousID)
 	for _, result := range results {
 		if result.moved {
 			return true
@@ -578,6 +582,15 @@ type permanentZoneMoveResult struct {
 // so linked effects can distinguish a requested destination from a replacement
 // destination while retaining one simultaneous batch.
 func movePermanentsToZoneSimultaneouslyWithResults(g *game.Game, permanents []*game.Permanent, destination zone.Type) []permanentZoneMoveResult {
+	return movePermanentsToZoneSimultaneouslyWithResultsInBatch(g, permanents, destination, 0)
+}
+
+func movePermanentsToZoneSimultaneouslyWithResultsInBatch(g *game.Game, permanents []*game.Permanent, destination zone.Type, simultaneousID id.ID) []permanentZoneMoveResult {
+	moves := preparePermanentZoneMovesInBatch(g, permanents, destination, simultaneousID)
+	return applyPreparedPermanentZoneMoves(g, moves)
+}
+
+func preparePermanentZoneMovesInBatch(g *game.Game, permanents []*game.Permanent, destination zone.Type, simultaneousID id.ID) []preparedPermanentZoneMove {
 	moves := make([]preparedPermanentZoneMove, 0, len(permanents))
 	for _, permanent := range permanents {
 		move, ok := preparePermanentZoneMove(g, permanent, destination)
@@ -586,11 +599,17 @@ func movePermanentsToZoneSimultaneouslyWithResults(g *game.Game, permanents []*g
 		}
 	}
 	if len(moves) > 0 {
-		simultaneousID := g.IDGen.Next()
+		if simultaneousID == 0 {
+			simultaneousID = g.IDGen.Next()
+		}
 		for i := range moves {
 			moves[i].event.SimultaneousID = simultaneousID
 		}
 	}
+	return moves
+}
+
+func applyPreparedPermanentZoneMoves(g *game.Game, moves []preparedPermanentZoneMove) []permanentZoneMoveResult {
 	results := make([]permanentZoneMoveResult, 0, len(moves))
 	for i := range moves {
 		results = append(results, permanentZoneMoveResult{
@@ -875,24 +894,43 @@ func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {
 // by its owner as a state-based action (CR 903.9a). Returns the destroyed
 // permanent and whether it was actually destroyed.
 func destroyPermanentInBatch(g *game.Game, objectID, simultaneousID id.ID, preventRegeneration bool) (*game.Permanent, bool) {
+	permanent, destroyed, _ := destroyPermanentInBatchResult(g, objectID, simultaneousID, preventRegeneration)
+	return permanent, destroyed
+}
+
+// destroyPermanentInBatchResult also reports whether destruction or its
+// replacement changed game state, allowing state-based actions to repeat after a
+// replacement removes an Aura or otherwise changes the battlefield.
+func destroyPermanentInBatchResult(g *game.Game, objectID, simultaneousID id.ID, preventRegeneration bool) (permanent *game.Permanent, destroyed, changed bool) {
+	return destroyPermanentInBatchResultWithBatch(g, objectID, simultaneousID, preventRegeneration, nil)
+}
+
+func destroyPermanentInBatchResultWithBatch(g *game.Game, objectID, simultaneousID id.ID, preventRegeneration bool, batch *destroyBatch) (permanent *game.Permanent, destroyed, changed bool) {
 	permanent, ok := permanentByObjectID(g, objectID)
 	if !ok {
-		return nil, false
+		return nil, false, false
 	}
 	if hasKeyword(g, permanent, game.Indestructible) {
-		return nil, false
+		return nil, false, false
 	}
-	if replaceDestroyPermanent(g, permanent, preventRegeneration) {
-		return nil, false
+	if batch == nil {
+		if replaced, changed := replaceDestroyPermanent(g, permanent, preventRegeneration, simultaneousID); replaced {
+			return nil, false, changed
+		}
+	} else {
+		replacement, replaced := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID)
+		if replaced {
+			return nil, false, applyDestroyReplacement(g, permanent, replacement, batch)
+		}
 	}
 	if commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command {
-		movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID)
-		return nil, false
+		moved := movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID)
+		return nil, false, moved
 	}
 	if !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
-		return nil, false
+		return nil, false, false
 	}
-	return permanent, true
+	return permanent, true, true
 }
 
 // destinationZone returns the zone object for a given owner and zone type.

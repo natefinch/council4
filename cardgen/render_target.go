@@ -857,6 +857,8 @@ func renderKeyword(kw game.Keyword) (string, error) {
 		return "game.Hexproof", nil
 	case game.Indestructible:
 		return "game.Indestructible", nil
+	case game.UmbraArmor:
+		return "game.UmbraArmor", nil
 	case game.Lifelink:
 		return "game.Lifelink", nil
 	case game.Menace:

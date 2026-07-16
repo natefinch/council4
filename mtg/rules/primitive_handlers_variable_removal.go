@@ -21,18 +21,25 @@ func handleRemoveTargetsForToken(r *effectResolver, prim game.RemoveTargetsForTo
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
 	removing := make([]*game.Permanent, 0, len(r.obj.Targets))
 	refs := make([]game.LinkedObjectRef, 0, len(r.obj.Targets))
+	var candidates []*game.Permanent
 	for i := range r.obj.Targets {
 		permanent, ok := r.resolveObject(game.TargetPermanentReference(i))
 		if !ok {
 			continue
 		}
-		if !prim.Exile {
-			if hasKeyword(r.game, permanent, game.Indestructible) ||
-				replaceDestroyPermanent(r.game, permanent, prim.PreventRegeneration) {
-				continue
-			}
+		if prim.Exile {
+			removing = append(removing, permanent)
+		} else {
+			candidates = append(candidates, permanent)
 		}
-		removing = append(removing, permanent)
+	}
+	var batch *destroyBatch
+	var replacements []plannedDestroyReplacement
+	if !prim.Exile {
+		batch = &destroyBatch{game: r.game, simultaneousID: r.game.IDGen.Next()}
+		removing, replacements = planDestroyPermanents(r.game, candidates, prim.PreventRegeneration, batch.simultaneousID)
+	}
+	for _, permanent := range removing {
 		// permanentObjectBindingRef preserves the ObjectID even for a token
 		// (CardInstanceID == 0) so the paired CreateTokenForEachDestroyed still
 		// mints a token for a removed token permanent's controller;
@@ -43,7 +50,13 @@ func handleRemoveTargetsForToken(r *effectResolver, prim game.RemoveTargetsForTo
 	if prim.Exile {
 		destination = zone.Exile
 	}
-	if movePermanentsToZoneSimultaneously(r.game, removing, destination) {
+	moved := false
+	if prim.Exile {
+		moved = movePermanentsToZoneSimultaneously(r.game, removing, destination)
+	} else {
+		moved = applyPlannedDestroyBatch(r.game, removing, replacements, batch)
+	}
+	if moved {
 		res.succeeded = true
 		res.amount = len(removing)
 	}

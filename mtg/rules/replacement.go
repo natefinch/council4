@@ -283,42 +283,169 @@ func applicablePreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	return indices
 }
 
-// replaceDestroyPermanent applies effects that replace destroying a permanent
-// (CR 614): a shield counter (CR 122.1c) or a regeneration shield (a
-// destruction-replacement effect, CR 614.8) each replace the destroy event. When
-// both are available, the permanent's controller chooses which to apply
-// (CR 616.1). Returns whether the destroy was replaced.
-func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent, preventRegeneration bool) bool {
+type destroyReplacement struct {
+	label         string
+	emitsOwnEvent bool
+	apply         func(*destroyBatch) bool
+}
+
+type plannedDestroyReplacement struct {
+	permanent   *game.Permanent
+	replacement destroyReplacement
+}
+
+type destroyBatch struct {
+	game           *game.Game
+	simultaneousID id.ID
+	queued         []id.ID
+	changed        bool
+}
+
+func (b *destroyBatch) applyQueued() {
+	for len(b.queued) > 0 {
+		objectID := b.queued[0]
+		b.queued = b.queued[1:]
+		_, _, changed := destroyPermanentInBatchResultWithBatch(b.game, objectID, b.simultaneousID, false, b)
+		b.changed = b.changed || changed
+	}
+}
+
+func planDestroyPermanentReplacement(g *game.Game, permanent *game.Permanent, preventRegeneration bool, simultaneousID id.ID) (destroyReplacement, bool) {
 	if permanent == nil {
-		return false
+		return destroyReplacement{}, false
 	}
-	hasShieldCounter := permanent.Counters.Get(counter.Shield) > 0
-	hasRegeneration := permanent.RegenerationShields > 0 && !preventRegeneration
-	useShieldCounter := hasShieldCounter
-	if hasShieldCounter && hasRegeneration {
-		decision := chooseReplacementDecision(g, effectiveController(g, permanent), []string{"shield counter", "regeneration shield"})
-		useShieldCounter = decision.Selected[0] == 0
-	}
-	if useShieldCounter {
-		permanent.Counters.Remove(counter.Shield, 1)
-		emitEvent(g, game.Event{
-			Kind:        game.EventDestroyReplaced,
-			Controller:  effectiveController(g, permanent),
-			Player:      permanent.Owner,
-			CardID:      permanent.CardInstanceID,
-			FaceDown:    permanent.FaceDown,
-			PermanentID: permanent.ObjectID,
-			TokenName:   permanentTokenName(permanent),
-			TokenDef:    permanent.TokenDef,
-			FromZone:    zone.Battlefield,
-			ToZone:      zone.Graveyard,
+	var replacements []destroyReplacement
+	if permanent.Counters.Get(counter.Shield) > 0 {
+		replacements = append(replacements, destroyReplacement{
+			label: "shield counter",
+			apply: func(*destroyBatch) bool {
+				permanent.Counters.Remove(counter.Shield, 1)
+				return true
+			},
 		})
-		return true
 	}
-	if preventRegeneration {
-		return false
+	if permanent.RegenerationShields > 0 && !preventRegeneration {
+		replacements = append(replacements, destroyReplacement{
+			label:         "regeneration shield",
+			emitsOwnEvent: true,
+			apply: func(*destroyBatch) bool {
+				replaceDestroyWithRegeneration(g, permanent)
+				return true
+			},
+		})
 	}
-	return replaceDestroyWithRegeneration(g, permanent)
+	for _, aura := range umbraArmorAttachments(g, permanent) {
+		replacements = append(replacements, destroyReplacement{
+			label: fmt.Sprintf("umbra armor (%s)", permanentEffectiveName(g, aura)),
+			apply: func(batch *destroyBatch) bool {
+				changed := permanent.MarkedDamage != 0 || permanent.MarkedDeathtouchDamage
+				permanent.MarkedDamage = 0
+				permanent.MarkedDeathtouchDamage = false
+				if batch != nil {
+					batch.queued = append(batch.queued, aura.ObjectID)
+					return changed
+				}
+				_, _, auraChanged := destroyPermanentInBatchResult(g, aura.ObjectID, simultaneousID, false)
+				return changed || auraChanged
+			},
+		})
+	}
+	if len(replacements) == 0 {
+		return destroyReplacement{}, false
+	}
+	labels := make([]string, len(replacements))
+	for i := range replacements {
+		labels[i] = replacements[i].label
+	}
+	decision := chooseReplacementDecision(g, effectiveController(g, permanent), labels)
+	return replacements[decision.Selected[0]], true
+}
+
+func applyDestroyReplacement(g *game.Game, permanent *game.Permanent, replacement destroyReplacement, batch *destroyBatch) bool {
+	changed := replacement.apply(batch)
+	if !replacement.emitsOwnEvent {
+		emitDestroyReplacedEvent(g, permanent)
+	}
+	return changed
+}
+
+// replaceDestroyPermanent applies shield-counter, regeneration, and umbra-armor
+// replacements to one destruction event. The affected permanent's controller
+// chooses exactly one applicable effect (CR 616.1).
+func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent, preventRegeneration bool, simultaneousID id.ID) (replaced, changed bool) {
+	replacement, ok := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID)
+	if !ok {
+		return false, false
+	}
+	changed = applyDestroyReplacement(g, permanent, replacement, nil)
+	return true, changed
+}
+
+func planDestroyPermanents(g *game.Game, permanents []*game.Permanent, preventRegeneration bool, simultaneousID id.ID) ([]*game.Permanent, []plannedDestroyReplacement) {
+	destroyed := make([]*game.Permanent, 0, len(permanents))
+	replacements := make([]plannedDestroyReplacement, 0, len(permanents))
+	for _, permanent := range permanents {
+		if hasKeyword(g, permanent, game.Indestructible) {
+			continue
+		}
+		replacement, replaced := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID)
+		if replaced {
+			replacements = append(replacements, plannedDestroyReplacement{
+				permanent:   permanent,
+				replacement: replacement,
+			})
+			continue
+		}
+		destroyed = append(destroyed, permanent)
+	}
+	return destroyed, replacements
+}
+
+func applyPlannedDestroyBatch(g *game.Game, destroyed []*game.Permanent, replacements []plannedDestroyReplacement, batch *destroyBatch) bool {
+	moves := preparePermanentZoneMovesInBatch(g, destroyed, zone.Graveyard, batch.simultaneousID)
+	for _, planned := range replacements {
+		batch.changed = applyDestroyReplacement(g, planned.permanent, planned.replacement, batch) || batch.changed
+	}
+	batch.applyQueued()
+	results := applyPreparedPermanentZoneMoves(g, moves)
+	for _, result := range results {
+		if result.moved {
+			return true
+		}
+	}
+	return false
+}
+
+func umbraArmorAttachments(g *game.Game, permanent *game.Permanent) []*game.Permanent {
+	attachments := make([]*game.Permanent, 0, len(permanent.Attachments))
+	for _, objectID := range permanent.Attachments {
+		attachment, ok := permanentByObjectID(g, objectID)
+		if !ok ||
+			!activeBattlefieldPermanent(attachment) ||
+			!attachment.AttachedTo.Exists ||
+			attachment.AttachedTo.Val != permanent.ObjectID ||
+			!permanentHasSubtype(g, attachment, types.Aura) ||
+			!hasKeyword(g, attachment, game.UmbraArmor) {
+			continue
+		}
+		attachments = append(attachments, attachment)
+	}
+	return attachments
+}
+
+func emitDestroyReplacedEvent(g *game.Game, permanent *game.Permanent) {
+	emitEvent(g, game.Event{
+		Kind:        game.EventDestroyReplaced,
+		Controller:  effectiveController(g, permanent),
+		Player:      permanent.Owner,
+		CardID:      permanent.CardInstanceID,
+		FaceDown:    permanent.FaceDown,
+		PermanentID: permanent.ObjectID,
+		TokenName:   permanentTokenName(permanent),
+		TokenDef:    permanent.TokenDef,
+		FromZone:    zone.Battlefield,
+		ToZone:      zone.Graveyard,
+	})
 }
 
 // replacementDecisionPlayer returns the CR 616.1 chooser for a damage event: the

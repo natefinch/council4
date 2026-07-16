@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // handleEachPlayerChooseDestroy resolves "Starting with you, each player may
@@ -39,14 +38,9 @@ func handleEachPlayerChooseDestroy(r *effectResolver, prim game.EachPlayerChoose
 		seen[permanent.ObjectID] = true
 		chosen = append(chosen, permanent)
 	}
-	destroyed := make([]*game.Permanent, 0, len(chosen))
-	for _, permanent := range chosen {
-		if hasKeyword(r.game, permanent, game.Indestructible) || replaceDestroyPermanent(r.game, permanent, prim.PreventRegeneration) {
-			continue
-		}
-		destroyed = append(destroyed, permanent)
-	}
-	res.succeeded = movePermanentsToZoneSimultaneously(r.game, destroyed, zone.Graveyard)
+	batch := &destroyBatch{game: r.game, simultaneousID: r.game.IDGen.Next()}
+	destroyed, replacements := planDestroyPermanents(r.game, chosen, prim.PreventRegeneration, batch.simultaneousID)
+	res.succeeded = applyPlannedDestroyBatch(r.game, destroyed, replacements, batch)
 	res.amount = len(destroyed)
 	return res
 }
