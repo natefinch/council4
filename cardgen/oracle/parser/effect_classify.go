@@ -735,6 +735,13 @@ func effectContextAt(tokens []shared.Token, index int, atoms Atoms) EffectContex
 		return EffectContextControllerAndReferencedPlayer
 	case effectContainsWords(words, "target"):
 		return EffectContextTarget
+	case len(words) >= 3 &&
+		(words[len(words)-3] == "that" || words[len(words)-3] == "the") &&
+		words[len(words)-2] == "attacking" && words[len(words)-1] == "player":
+		// "That attacking player" names the player whose attack declaration
+		// triggered the ability. Keep it distinct from a generic "that player"
+		// reference so lowering can route the effect through EventPlayerReference.
+		return EffectContextEventPlayer
 	case len(words) >= 2 && words[len(words)-2] == "that" && words[len(words)-1] == "player":
 		return EffectContextReferencedPlayer
 	case len(words) >= 2 && words[len(words)-2] == "defending" && words[len(words)-1] == "player":

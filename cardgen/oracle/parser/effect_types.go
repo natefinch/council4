@@ -1576,10 +1576,10 @@ const (
 // AttackDefenderKind identifies the defender a created attacking token is
 // told to attack in the trailing "... attacking <defender>" clause (CR 508.4),
 // e.g. "create a 1/1 ... token that's tapped and attacking that player or a
-// planeswalker they control." (Adeline, Resplendent Cathar). The runtime
-// EntryAttacking model is defender-agnostic — it puts the token into combat
-// against a legal defender — so the kind records only the recognized Oracle
-// wording for byte-exact clause reconstruction; it does not change lowering.
+// planeswalker they control." (Adeline, Resplendent Cathar). Definite player
+// forms can lower to a resolving defending-player reference so the token enters
+// attacking the correlated player without a choice; wider player-or-planeswalker
+// forms remain represented for exact reconstruction.
 type AttackDefenderKind string
 
 // Created-attacking-token defender relations.

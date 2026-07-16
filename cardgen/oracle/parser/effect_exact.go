@@ -2963,6 +2963,7 @@ func grantableKeywordWord(keyword string) bool {
 func exactCreateTokenRecipientContext(effect *EffectSyntax) (targetRecipient, ok bool) {
 	targetRecipient = effect.Context == EffectContextTarget
 	if effect.Context != EffectContextController &&
+		effect.Context != EffectContextEventPlayer &&
 		effect.Context != EffectContextReferencedObjectController &&
 		!targetRecipient {
 		return false, false
@@ -3068,11 +3069,12 @@ func creatureTokenSpecBody(effect *EffectSyntax) (func(countWord, noun string) s
 	// ordering so the byte-exact reconstruction prints the modifier in front. A
 	// leading-attacking token never carries an explicit attacked-defender tail.
 	attackingLeading := sel.Attacking && tokenAttackingLeading(sel)
+	tappedLeading := sel.Tapped && tokenTappedLeading(sel)
 	if attackingLeading && effect.AttackDefender != AttackDefenderNone {
 		return nil, false
 	}
 	tappedPart := ""
-	if sel.Tapped && !sel.Attacking {
+	if sel.Tapped && (!sel.Attacking || tappedLeading) {
 		tappedPart = "tapped "
 	}
 	if attackingLeading {
@@ -3214,6 +3216,18 @@ func tokenAttackingLeading(sel SelectionSyntax) bool {
 	return size < 0 || attack < size
 }
 
+// tokenTappedLeading reports whether "tapped" appears before the token's
+// power/toughness rather than in its trailing attacking-entry clause.
+func tokenTappedLeading(sel SelectionSyntax) bool {
+	lower := strings.ToLower(sel.Text)
+	tapped := strings.Index(lower, "tapped")
+	if tapped < 0 {
+		return false
+	}
+	size := strings.Index(lower, "/")
+	return size < 0 || tapped < size
+}
+
 // tokenAttackClause renders the trailing attacking-entry relative clause for a
 // created token, or "" when the token does not enter attacking. The relative
 // pronoun matches the count noun ("that's" for a single "token", "that are" for
@@ -3230,7 +3244,7 @@ func tokenAttackClause(sel SelectionSyntax, noun string, defender AttackDefender
 		relative = "that's"
 	}
 	clause := " " + relative + " attacking"
-	if sel.Tapped {
+	if sel.Tapped && !tokenTappedLeading(sel) {
 		clause = " " + relative + " tapped and attacking"
 	}
 	switch defender {
@@ -3293,10 +3307,10 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 	switch effect.Amount.DynamicForm {
 	case EffectDynamicAmountFormNone:
 		if effect.Amount.VariableX {
-			return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody("X", "tokens")+".")
+			return createTokenSingleRecipientClauseMatches(effect, specBody("X", "tokens")+".")
 		}
 		if effect.Amount.DynamicKind == EffectDynamicAmountTriggeringCombatDamage {
-			return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody("that many", "tokens")+".")
+			return createTokenSingleRecipientClauseMatches(effect, specBody("that many", "tokens")+".")
 		}
 		if !effect.Amount.Known || effect.Amount.Value < 1 {
 			return false
@@ -3305,7 +3319,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		if effect.Amount.Value != 1 {
 			countWord, noun = effectAmountSourceText(effect), "tokens"
 		}
-		return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody(countWord, noun)+".")
+		return createTokenSingleRecipientClauseMatches(effect, specBody(countWord, noun)+".")
 	case EffectDynamicAmountFormForEach:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone || effect.Amount.Multiplier != 1 {
 			return false
@@ -3320,7 +3334,7 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 		// a number of X tokens equal to ..."), which effectSubjectStart does not
 		// strip, so accept both the bare and "You" prefixes.
 		spec := specBody("a number of", "tokens")
-		return createTokenControllerClauseMatches(exactEffectClauseText(effect), spec+" "+effect.Amount.Text+".")
+		return createTokenSingleRecipientClauseMatches(effect, spec+" "+effect.Amount.Text+".")
 	case EffectDynamicAmountFormWhereX:
 		if effect.Amount.DynamicKind == EffectDynamicAmountNone && !effect.Amount.VariableX {
 			return false
@@ -3337,10 +3351,10 @@ func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
 			if effect.TokenCount.Known && effect.TokenCount.Value >= 2 {
 				countWord, noun = tokenCountSourceText(effect), "tokens"
 			}
-			return createTokenControllerClauseMatches(exactEffectClauseText(effect),
+			return createTokenSingleRecipientClauseMatches(effect,
 				specBody(countWord, noun)+", "+effect.Amount.Text+".")
 		}
-		return createTokenControllerClauseMatches(exactEffectClauseText(effect),
+		return createTokenSingleRecipientClauseMatches(effect,
 			specBody("X", "tokens")+", "+effect.Amount.Text+".")
 	default:
 		return false

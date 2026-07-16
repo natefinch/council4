@@ -2834,19 +2834,11 @@ func recognizeStaticBattlefieldBlockRuleDeclarations(ability CompiledAbility, st
 }
 
 // recognizeStaticBattlefieldAttackRuleDeclarations maps a battlefield-scoped
-// "can't attack you" restriction gated on a live controller designation onto a
-// closed semantic declaration, e.g. Queen Mother Ramonda's "As long as you're
-// the monarch, creatures with power 2 or less can't attack you." The
-// battlefield-creatures subject yields an every-creature affected group narrowed
-// by the typed parser rule subject (its numeric power filter), and the
-// direct-only defender restriction leaves the controller's planeswalkers and
-// battles attackable (CR 508.1). The recognizer REQUIRES a single non-negated
-// live player-designation condition (the monarch gate); the runtime re-evaluates
-// the static ability's condition each time rule effects are gathered, so the
-// restriction turns on and off as the designation changes. Unconditional "can't
-// attack you" group forms carry no such gate and stay unrecognized here. Costs,
-// triggers, modes, targets, or any resolving content fail closed because a
-// continuous group rule carries none.
+// attack restriction onto a closed semantic declaration. It supports both an
+// unconditional subtype group that can't attack the controller or their
+// planeswalkers and the live-designation-gated direct-player restriction used by
+// Queen Mother Ramonda. Costs, triggers, modes, targets, or resolving content
+// fail closed because a continuous group rule carries none.
 func recognizeStaticBattlefieldAttackRuleDeclarations(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) ([]StaticDeclaration, bool) {
 	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationRule) {
 		return nil, false
@@ -2860,12 +2852,23 @@ func recognizeStaticBattlefieldAttackRuleDeclarations(ability CompiledAbility, s
 		return nil, false
 	}
 	rule, zone, ok := semanticStaticRuleForSyntax(ruleNode.Rule)
-	if !ok || rule != StaticRuleCantAttackYouDirect {
+	if !ok {
 		return nil, false
 	}
-	condition, ok := staticDeclarationCondition(ability.Content.Conditions)
-	if !ok || condition == nil || condition.Negated ||
-		!isLivePlayerDesignationPredicate(condition.Predicate) {
+	var condition *CompiledCondition
+	switch rule {
+	case StaticRuleCantAttackYou:
+		if len(ability.Content.Conditions) != 0 {
+			return nil, false
+		}
+	case StaticRuleCantAttackYouDirect:
+		var conditionOK bool
+		condition, conditionOK = staticDeclarationCondition(ability.Content.Conditions)
+		if !conditionOK || condition == nil || condition.Negated ||
+			!isLivePlayerDesignationPredicate(condition.Predicate) {
+			return nil, false
+		}
+	default:
 		return nil, false
 	}
 	if ability.Cost != nil ||

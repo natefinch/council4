@@ -49,6 +49,24 @@ func createTokenControllerClauseMatches(clause, body string) bool {
 		strings.EqualFold(clause, "You create "+body)
 }
 
+// createTokenSingleRecipientClauseMatches reconstructs the subject of a
+// single-recipient token creation from its typed effect context. Besides the
+// controller form, it admits the event-player wording used by attack triggers
+// ("that attacking player creates ..."). The parser owns these surface variants;
+// compiler and card generation consume only the typed context.
+func createTokenSingleRecipientClauseMatches(effect *EffectSyntax, body string) bool {
+	switch effect.Context {
+	case EffectContextController:
+		return createTokenControllerClauseMatches(exactEffectClauseText(effect), body)
+	case EffectContextEventPlayer:
+		clause := exactEffectClauseText(effect)
+		return strings.EqualFold(clause, "That attacking player creates "+body) ||
+			strings.EqualFold(clause, "The attacking player creates "+body)
+	default:
+		return false
+	}
+}
+
 // createTokenControllerForEachClauseMatches reports whether a "for each"
 // controller-form create-token clause matches either word order, in both the
 // bare imperative and "you create" subject wordings: the leading-iterator form

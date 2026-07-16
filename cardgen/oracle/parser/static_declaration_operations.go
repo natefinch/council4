@@ -2375,6 +2375,9 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectControlledCreatureSubtype:
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
+			}
 			if operation.Kind == StaticRuleOperationTransform && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectControlledCreatures, Span: subject.Span}, true
 			}
@@ -2400,6 +2403,9 @@ func staticRuleSubjectForDeclaration(subject StaticDeclarationSubject, operation
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}
 		case EffectStaticSubjectAllCreatureSubtype:
+			if operation.Kind == StaticRuleOperationAttack && operation.Voice == StaticRuleVoiceActive {
+				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
+			}
 			if operation.Kind == StaticRuleOperationUntap && operation.Voice == StaticRuleVoiceActive {
 				return StaticRuleSubject{Kind: StaticRuleSubjectBattlefieldCreatures, Span: subject.Span}, true
 			}

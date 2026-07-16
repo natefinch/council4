@@ -90,6 +90,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		}
 	}
 	controllerRecipient := effect.Context == parser.EffectContextController
+	eventPlayerRecipient := effect.Context == parser.EffectContextEventPlayer
 	referencedRecipient := effect.Context == parser.EffectContextReferencedObjectController
 	targetRecipient := effect.Context == parser.EffectContextTarget
 	extraKeywords, keywordsOK := tokenContentKeywords(ctx.content)
@@ -123,7 +124,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		panic(fmt.Sprintf("lowerCreateTokenSpellLinked: reached with effect kind %v; every caller guarantees EffectCreate", effect.Kind))
 	}
 	if !effect.Exact ||
-		(!controllerRecipient && !referencedRecipient && !targetRecipient) ||
+		(!controllerRecipient && !eventPlayerRecipient && !referencedRecipient && !targetRecipient) ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
 		!createTokenDurationOK(effect.Duration) ||
@@ -180,6 +181,11 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		default:
 		}
+	case eventPlayerRecipient:
+		if len(ctx.content.References) != 0 {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		recipient = opt.Val(game.EventPlayerReference())
 	case referencedRecipient:
 		if len(ctx.content.References) != 1 {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
@@ -243,6 +249,19 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		Power:          dynamicSize,
 		Toughness:      dynamicSize,
 		PublishLinked:  publishLinked,
+	}
+	switch effect.TokenAttackDefender {
+	case parser.AttackDefenderThatPlayer, parser.AttackDefenderThatOpponent:
+		if !effect.Selector.Attacking {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		if eventPlayerRecipient {
+			createToken.EntryAttackingDefender = opt.Val(game.DefendingPlayerReference())
+			createToken.EntryAttacking = false
+		}
+	case parser.AttackDefenderNone, parser.AttackDefenderThatPlayerOrPlaneswalker:
+	default:
+		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	if effect.Amount.DynamicKind == compiler.DynamicAmountDamagePreventedThisWay {
 		// "For each 1 damage prevented this way, create ..." (Inkshield) creates

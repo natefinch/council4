@@ -350,6 +350,9 @@ func (p CreateToken) validateCapturedTargetControllerReferences(targets []Target
 	if err := validateCapturedTargetControllerOptionalReference(p.Recipient, targets, checkTargets); err != nil {
 		return err
 	}
+	if err := validateCapturedTargetControllerOptionalReference(p.EntryAttackingDefender, targets, checkTargets); err != nil {
+		return err
+	}
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
@@ -1959,8 +1962,21 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if !p.Source.Valid() {
 		return errors.New("create token requires a valid source")
 	}
-	if p.AttackSameAsSource && (p.EntryAttacking || p.AttackEachOtherOpponent) {
-		return errors.New("create token AttackSameAsSource is mutually exclusive with EntryAttacking and AttackEachOtherOpponent")
+	attackModes := 0
+	if p.EntryAttacking {
+		attackModes++
+	}
+	if p.EntryAttackingDefender.Exists {
+		attackModes++
+	}
+	if p.AttackEachOtherOpponent {
+		attackModes++
+	}
+	if p.AttackSameAsSource {
+		attackModes++
+	}
+	if attackModes > 1 {
+		return errors.New("create token attack-entry modes are mutually exclusive")
 	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
@@ -1980,6 +1996,9 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 		if problems := p.RecipientGroup.Validate(); len(problems) != 0 {
 			return errors.New(problems[0])
 		}
+	}
+	if p.EntryAttackingDefender.Exists {
+		return validatePlayerReference(p.EntryAttackingDefender.Val, targets, checkTargets)
 	}
 	return nil
 }
