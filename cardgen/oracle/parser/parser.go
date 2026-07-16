@@ -203,6 +203,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripImpulseExileSemantics(document.Abilities)
 	stripPayRepeatedlyAnimateSemantics(document.Abilities)
 	stripAnimateSelfSemantics(document.Abilities)
+	stripGroupEntersBecomesSemantics(document.Abilities)
 	stripAnimateTargetSemantics(document.Abilities)
 	foldPreventNextSourceRedirect(document.Abilities)
 	stripTrampleExcessRiderConditionSemantics(document.Abilities)

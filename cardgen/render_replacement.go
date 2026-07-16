@@ -60,6 +60,9 @@ func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.Replace
 			ability.Replacement.SpellCopyAdditionalMayChooseNewTargets,
 		), nil
 	}
+	if ability.Replacement.EntersBecomesCharacteristic {
+		return r.renderGroupEntersBecomesReplacement(ctx, ability)
+	}
 	if ability.Replacement.EntersTappedOthers {
 		return r.renderGroupEntersTappedReplacement(ctx, ability)
 	}
@@ -368,6 +371,99 @@ func (Renderer) renderGroupEntersTappedReplacement(ctx *renderCtx, ability *game
 	}
 	return fmt.Sprintf("game.EntersTappedGroupReplacement(%q, %s, %s)",
 		ability.Text, controller, strings.Join(typeLiterals, ", ")), nil
+}
+
+// renderGroupEntersBecomesReplacement renders a continuous static group ETB
+// characteristic replacement that gives entering permanents new characteristics
+// ("As a historic permanent you control enters, it becomes a 7/7 Dinosaur
+// creature in addition to its other types." — Displaced Dinosaurs).
+func (Renderer) renderGroupEntersBecomesReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	replacement := ability.Replacement
+	if !replacement.EntersBecomesCharacteristic ||
+		replacement.EntersTapped ||
+		len(replacement.EntersWithCounters) != 0 ||
+		ability.UnlessPaid.Exists ||
+		replacement.Condition.Exists {
+		return "", errors.New("render: unsupported group enters-becomes replacement shape")
+	}
+
+	controller, err := renderGroupEntersTappedController(replacement.ControllerFilter)
+	if err != nil {
+		return "", err
+	}
+
+	historic, subjectTypes := decodeEntersBecomesSelection(replacement.EntersBecomesSelection)
+
+	fields := []string{fmt.Sprintf("Controller: %s", controller)}
+	if historic {
+		fields = append(fields, "Historic: true")
+	}
+	if len(subjectTypes) > 0 {
+		ctx.need(importTypes)
+		literals, err := cardTypeLiterals(subjectTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SubjectTypes: []types.Card{%s}", literals))
+	}
+	if len(replacement.EntersBecomesAddTypes) > 0 {
+		ctx.need(importTypes)
+		literals, err := cardTypeLiterals(replacement.EntersBecomesAddTypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AddTypes: []types.Card{%s}", literals))
+	}
+	if len(replacement.EntersBecomesAddSubtypes) > 0 {
+		subtypes, err := renderSubtypeSlice(ctx, replacement.EntersBecomesAddSubtypes)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AddSubtypes: %s", subtypes))
+	}
+	if len(replacement.EntersBecomesAddColors) > 0 {
+		ctx.need(importColor)
+		literals, err := colorValueLiterals(replacement.EntersBecomesAddColors)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("AddColors: []color.Color{%s}", literals))
+	}
+	if replacement.EntersBecomesBasePower.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("BasePower: opt.Val(%d)", replacement.EntersBecomesBasePower.Val))
+	}
+	if replacement.EntersBecomesBaseToughness.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("BaseToughness: opt.Val(%d)", replacement.EntersBecomesBaseToughness.Val))
+	}
+
+	return fmt.Sprintf("game.EntersBecomesGroupReplacement(%q, game.EntersBecomesGroupParams{%s})",
+		ability.Text, strings.Join(fields, ", ")), nil
+}
+
+// decodeEntersBecomesSelection recovers the Historic flag and SubjectTypes filter
+// that EntersBecomesGroupReplacement encoded into the entrant selection so the
+// renderer can reconstruct the original params.
+func decodeEntersBecomesSelection(selection *game.Selection) (historic bool, subjectTypes []types.Card) {
+	if selection == nil {
+		return false, nil
+	}
+	historic = len(selection.AnyOf) > 0
+	return historic, selection.RequiredTypes
+}
+
+// cardTypeLiterals renders a comma-separated list of card type literals.
+func cardTypeLiterals(cardTypes []types.Card) (string, error) {
+	literals := make([]string, 0, len(cardTypes))
+	for _, cardType := range cardTypes {
+		literal, err := cardTypeLiteral(cardType)
+		if err != nil {
+			return "", err
+		}
+		literals = append(literals, literal)
+	}
+	return strings.Join(literals, ", "), nil
 }
 
 func (Renderer) renderGroupEntersUntappedReplacement(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {

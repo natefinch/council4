@@ -523,6 +523,39 @@ type ReplacementEffect struct {
 	// is nil for the self form.
 	EntersWithCountersRecipient *Selection
 
+	// EntersBecomesCharacteristic marks a continuous static group ETB
+	// characteristic replacement that changes the characteristics of a group of
+	// permanents (including the source itself if it qualifies) as they enter (CR
+	// 614), as in "As a historic permanent you control enters, it becomes a 7/7
+	// Dinosaur creature in addition to its other types." (Displaced Dinosaurs). It
+	// is registered into Game.ReplacementEffects while its source is on the
+	// battlefield and matched against every entering permanent that satisfies
+	// ControllerFilter and EntersBecomesSelection. The change is applied through
+	// layer-appropriate continuous effects tied to the entering permanent, so it
+	// persists even if the source later leaves the battlefield.
+	EntersBecomesCharacteristic bool
+
+	// EntersBecomesSelection restricts an EntersBecomesCharacteristic replacement
+	// to entering permanents whose characteristics satisfy this canonical
+	// Selection (the "historic permanent" filter is the AnyOf of artifact,
+	// legendary, and Saga). It is nil when every entering permanent qualifies.
+	EntersBecomesSelection *Selection
+
+	// EntersBecomesAddTypes, EntersBecomesAddSubtypes, and EntersBecomesAddColors
+	// list the card types, creature subtypes, and colors an
+	// EntersBecomesCharacteristic entrant gains "in addition to its other types".
+	// They are only consulted when EntersBecomesCharacteristic is true.
+	EntersBecomesAddTypes    []types.Card
+	EntersBecomesAddSubtypes []types.Sub
+	EntersBecomesAddColors   []color.Color
+
+	// EntersBecomesBasePower and EntersBecomesBaseToughness set an
+	// EntersBecomesCharacteristic entrant's base power and toughness to a fixed
+	// size (Displaced Dinosaurs' 7/7). They are set together and only consulted
+	// when EntersBecomesCharacteristic is true.
+	EntersBecomesBasePower     opt.V[int]
+	EntersBecomesBaseToughness opt.V[int]
+
 	// CreateOneOfEachTokens replaces the creation of a token whose name matches
 	// one of these definitions with the creation of one of each listed token
 	// (Academy Manufactor: "If you would create a Clue, Food, or Treasure token,

@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -181,6 +182,9 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	if replacementAbility, handled, diagnostic := lowerTributeReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
+	if replacementAbility, handled, diagnostic := lowerGroupEntersBecomesReplacement(ability); handled || diagnostic != nil {
+		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+	}
 	if replacementAbility, handled, diagnostic := lowerGroupEntersTappedReplacement(ability); handled || diagnostic != nil {
 		return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
 	}
@@ -201,6 +205,58 @@ func lowerReplacementAbility(ability compiler.CompiledAbility) (abilityLowering,
 	}
 	replacementAbility, diagnostic := lowerEntersTappedReplacement(ability)
 	return replacementAbilityLowering(ability, &replacementAbility, diagnostic)
+}
+
+// lowerGroupEntersBecomesReplacement lowers a static group ETB characteristic
+// replacement ("As a historic permanent you control enters, it becomes a 7/7
+// Dinosaur creature in addition to its other types." — Displaced Dinosaurs) to a
+// continuous EntersBecomesGroupReplacement. It reports handled=false unless the
+// effect carries the enters-becomes-group modification so unrelated replacements
+// keep flowing down the chain.
+func lowerGroupEntersBecomesReplacement(
+	ability compiler.CompiledAbility,
+) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+	if len(ability.Content.Effects) != 1 || !ability.Content.Effects[0].EntersBecomesGroup() {
+		return game.ReplacementAbility{}, false, nil
+	}
+	unsupported := func(detail string) (game.ReplacementAbility, bool, *shared.Diagnostic) {
+		return game.ReplacementAbility{}, true, executableDiagnostic(
+			ability,
+			"unsupported group enters-becomes replacement",
+			detail,
+		)
+	}
+	if len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.References) != 0 {
+		return unsupported("the executable source backend supports only unconditional group enters-becomes replacements")
+	}
+	effect := ability.Content.Effects[0]
+	mod := effect.GroupEntryModification
+	controller, ok := groupEntersTappedController(mod.ControllerScope)
+	if !ok {
+		return unsupported("the executable source backend does not lower this enters-becomes controller scope")
+	}
+	var colors []color.Color
+	for _, parserColor := range mod.Colors {
+		runtimeColor, ok := animateSelfColor(parserColor)
+		if !ok {
+			return unsupported("the executable source backend does not lower this enters-becomes color")
+		}
+		colors = append(colors, runtimeColor)
+	}
+	return game.EntersBecomesGroupReplacement(ability.Text, game.EntersBecomesGroupParams{
+		Controller:    controller,
+		Historic:      mod.Historic,
+		SubjectTypes:  slices.Clone(mod.Types),
+		AddTypes:      slices.Clone(mod.AddTypes),
+		AddSubtypes:   slices.Clone(mod.AddSubtypes),
+		AddColors:     colors,
+		BasePower:     mod.BasePower,
+		BaseToughness: mod.BaseToughness,
+	}), true, nil
 }
 
 // lowerGroupEntersTappedReplacement lowers a static "<permanents> [your

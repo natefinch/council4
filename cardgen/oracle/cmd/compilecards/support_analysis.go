@@ -119,6 +119,7 @@ var diagnosticCapabilities = map[string]supportCapabilityID{
 	"unsupported Mutate ability":                        capabilityActivation,
 	"unsupported Ninjutsu ability":                      capabilityActivation,
 	"unsupported enters-tapped replacement":             capabilityReplacement,
+	"unsupported group enters-becomes replacement":      capabilityReplacement,
 	"unsupported enters-with-counters replacement":      capabilityReplacement,
 	"unsupported damage replacement":                    capabilityReplacement,
 	"unsupported conditional enters-tapped replacement": capabilityReplacement,

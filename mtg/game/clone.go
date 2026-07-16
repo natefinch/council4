@@ -287,9 +287,12 @@ func cloneReplacementDecision(d ReplacementDecision) ReplacementDecision {
 func fixupReplacementEffect(e *ReplacementEffect) {
 	e.DamageSourceColors = cloneSlice(e.DamageSourceColors)
 	e.EntersWithCounters = cloneSlice(e.EntersWithCounters)
+	e.EntersBecomesAddTypes = cloneSlice(e.EntersBecomesAddTypes)
+	e.EntersBecomesAddSubtypes = cloneSlice(e.EntersBecomesAddSubtypes)
+	e.EntersBecomesAddColors = cloneSlice(e.EntersBecomesAddColors)
 	// Condition, Selection, EntersAsCopySelection, EntersWithCountersRecipient,
-	// CounterRecipientSelection, and EntersTappedSelection are immutable rules
-	// data and are copied by value or shared pointer.
+	// CounterRecipientSelection, EntersTappedSelection, and EntersBecomesSelection
+	// are immutable rules data and are copied by value or shared pointer.
 }
 
 func fixupRuleEffect(e *RuleEffect) {

@@ -2413,6 +2413,17 @@ type CompiledGroupEntryModification struct {
 	Kind            parser.GroupEntryModificationKind
 	ControllerScope parser.EntersTappedGroupControllerScope
 	Types           []types.Card
+	// Historic, AddTypes, AddSubtypes, Colors, BasePower, and BaseToughness carry
+	// the enters-becomes-characteristic form (Displaced Dinosaurs): Historic
+	// restricts the entrant to historic permanents, and the rest describe the
+	// characteristics gained "in addition to its other types". They are empty for
+	// every other group entry modification.
+	Historic      bool
+	AddTypes      []types.Card
+	AddSubtypes   []types.Sub
+	Colors        []parser.Color
+	BasePower     opt.V[int]
+	BaseToughness opt.V[int]
 }
 
 // CompiledEffect is one recognized instruction verb and the sentence containing
@@ -3609,6 +3620,12 @@ func (e *CompiledEffect) EntersUntappedGroup() bool {
 // group entry-modification replacement.
 func (e *CompiledEffect) EntersWithCountersGroup() bool {
 	return e.GroupEntryModification.Kind == parser.GroupEntryModificationWithCounters
+}
+
+// EntersBecomesGroup reports the enters-becomes-characteristic form of a static
+// group entry-modification replacement (Displaced Dinosaurs).
+func (e *CompiledEffect) EntersBecomesGroup() bool {
+	return e.GroupEntryModification.Kind == parser.GroupEntryModificationBecomes
 }
 
 // CoinFlipBranch identifies which branch of a recognized "Flip a coin." outcome

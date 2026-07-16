@@ -3832,6 +3832,14 @@ const (
 	// permanents matched by the effect's Selection enter with the counter named by
 	// the effect's CounterKind/CounterKnown and Amount fields.
 	GroupEntryModificationWithCounters
+	// GroupEntryModificationBecomes is "As a <subject> you control enters, it
+	// becomes a [N/N] [<color>...] [<subtype>...] <card type>... in addition to
+	// its other types." (Displaced Dinosaurs). The entering permanents named by
+	// ControllerScope and restricted by the Historic flag and Types filter gain
+	// the AddTypes card types, AddSubtypes subtypes, and Colors, keeping their
+	// other types; when BasePower and BaseToughness are present the entrant's
+	// base power and toughness are set to that fixed size.
+	GroupEntryModificationBecomes
 )
 
 // GroupEntryModificationSyntax is a static replacement that modifies a group of
@@ -3844,6 +3852,21 @@ type GroupEntryModificationSyntax struct {
 	Kind            GroupEntryModificationKind       `json:",omitempty"`
 	ControllerScope EntersTappedGroupControllerScope `json:",omitempty"`
 	Types           []types.Card                     `json:",omitempty"`
+	// Historic restricts a GroupEntryModificationBecomes subject to historic
+	// permanents (artifacts, legendaries, and Sagas; CR 702.61b), the "a historic
+	// permanent you control" subject of Displaced Dinosaurs. It is false for every
+	// other group entry modification.
+	Historic bool `json:",omitempty"`
+	// AddTypes, AddSubtypes, and Colors are the card types, creature subtypes, and
+	// colors a GroupEntryModificationBecomes entrant gains "in addition to its
+	// other types" (Creature, Dinosaur for Displaced Dinosaurs). BasePower and
+	// BaseToughness, when present, set the entrant's base power and toughness to a
+	// fixed size (7/7). They are empty for every other group entry modification.
+	AddTypes      []types.Card `json:",omitempty"`
+	AddSubtypes   []types.Sub  `json:",omitempty"`
+	Colors        []Color      `json:",omitempty"`
+	BasePower     opt.V[int]   `json:",omitzero"`
+	BaseToughness opt.V[int]   `json:",omitzero"`
 }
 
 // EntersTappedGroup reports the enters-tapped-group form of a static group
@@ -3862,6 +3885,12 @@ func (e EffectSyntax) EntersUntappedGroup() bool {
 // group entry-modification replacement.
 func (e EffectSyntax) EntersWithCountersGroup() bool {
 	return e.GroupEntryModification.Kind == GroupEntryModificationWithCounters
+}
+
+// EntersBecomesGroup reports the enters-becomes-characteristic form of a static
+// group entry-modification replacement (Displaced Dinosaurs).
+func (e EffectSyntax) EntersBecomesGroup() bool {
+	return e.GroupEntryModification.Kind == GroupEntryModificationBecomes
 }
 
 // Static effect subjects recognized by resolving-effect grammar.

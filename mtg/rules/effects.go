@@ -693,6 +693,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			!replacement.EntersTappedOthers &&
 			!replacement.EntersUntappedOthers &&
 			!replacement.EntersWithCountersOthers &&
+			!replacement.EntersBecomesCharacteristic &&
 			replacement.DrawCardMultiplier <= 1 &&
 			replacement.DrawCardDigLook <= 0 &&
 			!replacement.DrawFromEmptyLibraryWins &&

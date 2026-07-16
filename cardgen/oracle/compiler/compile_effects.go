@@ -914,6 +914,12 @@ func compileGroupEntryModification(syntax parser.GroupEntryModificationSyntax) C
 		Kind:            syntax.Kind,
 		ControllerScope: syntax.ControllerScope,
 		Types:           slices.Clone(syntax.Types),
+		Historic:        syntax.Historic,
+		AddTypes:        slices.Clone(syntax.AddTypes),
+		AddSubtypes:     slices.Clone(syntax.AddSubtypes),
+		Colors:          slices.Clone(syntax.Colors),
+		BasePower:       syntax.BasePower,
+		BaseToughness:   syntax.BaseToughness,
 	}
 }
 

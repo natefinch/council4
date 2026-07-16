@@ -563,6 +563,29 @@ func (v *cardDefValidator) validateReplacementAbility(faceName, path string, abi
 	if ability.Replacement.Condition.Exists {
 		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), &ability.Replacement.Condition.Val, nil)
 	}
+	if ability.Replacement.EntersBecomesCharacteristic {
+		v.validateEntersBecomesReplacement(faceName, appendPath(path, "Replacement"), &ability.Replacement)
+	}
+}
+
+// validateEntersBecomesReplacement checks a continuous static group ETB
+// characteristic replacement (Displaced Dinosaurs). The entrant filter must be a
+// valid selection, the replacement must grant at least one characteristic, and a
+// fixed base power or toughness must set both so the entrant gets a complete P/T.
+func (v *cardDefValidator) validateEntersBecomesReplacement(faceName, path string, replacement *ReplacementEffect) {
+	if replacement.EntersBecomesSelection != nil {
+		v.validateSelection(faceName, appendPath(path, "EntersBecomesSelection"), *replacement.EntersBecomesSelection)
+	}
+	if len(replacement.EntersBecomesAddTypes) == 0 &&
+		len(replacement.EntersBecomesAddSubtypes) == 0 &&
+		len(replacement.EntersBecomesAddColors) == 0 &&
+		!replacement.EntersBecomesBasePower.Exists &&
+		!replacement.EntersBecomesBaseToughness.Exists {
+		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "enters-becomes replacement grants no characteristics")
+	}
+	if replacement.EntersBecomesBasePower.Exists != replacement.EntersBecomesBaseToughness.Exists {
+		v.add(faceName, path, CardDefIssueInvalidAbilityBody, "enters-becomes replacement must set both base power and base toughness or neither")
+	}
 }
 
 func validateEnterBattlefieldResolutionPayment(payment ResolutionPayment) error {
