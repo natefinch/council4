@@ -142,6 +142,7 @@ var Cards = []cardset.Entry{
 	{Name: "Tower of the Magistrate", New: TowerOfTheMagistrate},
 	{Name: "Towering-Wave Mystic", New: ToweringWaveMystic},
 	{Name: "Tractor Beam", New: TractorBeam},
+	{Name: "Tragic Arrogance", New: TragicArrogance},
 	{Name: "Tragic Banshee", New: TragicBanshee},
 	{Name: "Training Compound", New: TrainingCompound},
 	{Name: "Traitorous Instinct", New: TraitorousInstinct},

@@ -2240,6 +2240,14 @@ type EffectSyntax struct {
 	// token so that path stays byte-identical. Lowering reads it as the token
 	// count and Amount as the shared power/toughness size.
 	TokenCount EffectAmountSyntax `json:",omitzero"`
+	// KeepOnePerType is the typed payload of a recognized "keep one of each type"
+	// sacrifice sentence ("Each opponent chooses a permanent they control of each
+	// permanent type and sacrifices the rest." — Liliana, Dreadhorde General's
+	// −9; "Each player chooses ... an artifact, a creature, an enchantment, and a
+	// land ..., then sacrifices the rest." — Cataclysm). It records the affected
+	// player scope, the ordered permanent types kept, and whether the pool is
+	// nonland-only, and is nil for every other sacrifice effect.
+	KeepOnePerType *KeepOnePerTypeSyntax `json:"-"`
 	// TokenGrantedAbility is the full quoted ability a created token enters with
 	// ("... creature token with \"When this token dies, you gain 1 life.\""),
 	// parsed once through the same pipeline so downstream layers lower it from
@@ -3137,6 +3145,13 @@ type EffectSyntax struct {
 	// lowering accounts for the prelude's tokens as consumed. It is empty when the
 	// effect is not the head of a Tibalt's Trickery sequence.
 	TibaltPreludeSpan shared.Span `json:"-"`
+	// ControllerChoosesKeepPreludeSpan is the source span of the credited
+	// zero-effect "For each player, you choose from among the permanents that
+	// player controls <list>." prelude of a controller-chooses keep-one-per-type
+	// sequence (Tragic Arrogance), recorded on the sacrifice effect so lowering
+	// accounts for the prelude's tokens as consumed. It is empty when the effect
+	// is not the sacrifice of such a sequence.
+	ControllerChoosesKeepPreludeSpan shared.Span `json:"-"`
 	// ExiledCardSplitOpponentChooses reports that a recognized "An opponent
 	// chooses one of the exiled cards." antecedent names an opponent as the
 	// chooser of the cost-exiled card this put effect disposes of (Coin of Fate).

@@ -67,6 +67,7 @@ var Cards = []cardset.Entry{
 	{Name: "Lightwalker", New: Lightwalker},
 	{Name: "Liliana, Death's Majesty", New: LilianaDeathSMajesty},
 	{Name: "Liliana, Death Wielder", New: LilianaDeathWielder},
+	{Name: "Liliana, Dreadhorde General", New: LilianaDreadhordeGeneral},
 	{Name: "Liliana's Spoils", New: LilianaSSpoils},
 	{Name: "Lithophage", New: Lithophage},
 	{Name: "Living Armor", New: LivingArmor},

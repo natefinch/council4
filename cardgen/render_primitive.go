@@ -2350,6 +2350,32 @@ func (r Renderer) renderSacrificePermanents(ctx *renderCtx, value *game.Sacrific
 	return structLit("game.SacrificePermanents", fields), nil
 }
 
+func (r Renderer) renderKeepOnePerType(ctx *renderCtx, value *game.KeepOnePerType) (string, error) {
+	players, err := renderPlayerGroupReference(value.Players)
+	if err != nil {
+		return "", err
+	}
+	renderedTypes, err := renderTypesCardSlice(ctx, value.Types)
+	if err != nil {
+		return "", err
+	}
+	renderedSelection, err := r.renderSelection(ctx, value.AffectedSelection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Players: %s,", players),
+		fmt.Sprintf("Types: %s,", renderedTypes),
+	}
+	if renderedSelection != "game.Selection{}" {
+		fields = append(fields, fmt.Sprintf("AffectedSelection: %s,", renderedSelection))
+	}
+	if value.ControllerChoosesForAll {
+		fields = append(fields, "ControllerChoosesForAll: true,")
+	}
+	return structLit("game.KeepOnePerType", fields), nil
+}
+
 func (r Renderer) renderRevealUntil(ctx *renderCtx, value *game.RevealUntil) (string, error) {
 	destination, err := renderZone(value.Destination)
 	if err != nil {

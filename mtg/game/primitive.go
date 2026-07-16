@@ -354,10 +354,17 @@ const (
 	// in APNAP order, the option to choose one matching permanent they control and
 	// put counters on it (game.OptionalCounterForEachPlayer).
 	PrimitiveOptionalCounterForEachPlayer
+	// PrimitiveKeepOnePerType has each affected player keep one permanent of each
+	// named permanent type they control and sacrifice the rest, gathering every
+	// choice in APNAP order before sacrificing all unkept permanents
+	// simultaneously (game.KeepOnePerType). It backs the "keep one of each type"
+	// family (Liliana, Dreadhorde General's −9; Cataclysm; Cataclysmic Gearhulk).
+	// Added last so existing kinds keep their wire values.
+	PrimitiveKeepOnePerType
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveOptionalCounterForEachPlayer) + 1
+const primitiveKindCount = int(PrimitiveKeepOnePerType) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1825,6 +1832,50 @@ type SacrificePermanents struct {
 	// (Heart-Shaped Herb returns it from the graveyard by CardID), because a token
 	// has no card instance to return. It is inert without PublishLinked.
 	PublishObjectBinding bool
+}
+
+// KeepOnePerType has each affected player keep one permanent of each named
+// permanent type they control within the affected pool and sacrifice the rest.
+// It models the "keep one of each type" family: "Each opponent chooses a
+// permanent they control of each permanent type and sacrifices the rest."
+// (Liliana, Dreadhorde General's −9), "Each player chooses from among the
+// permanents they control an artifact, a creature, an enchantment, and a land,
+// then sacrifices the rest." (Cataclysm), and the nonland variant "each player
+// chooses an artifact, a creature, an enchantment, and a planeswalker from among
+// the nonland permanents they control, then sacrifices the rest." (Cataclysmic
+// Gearhulk).
+//
+// For each affected player, and for each type in Types that the player controls
+// at least one permanent of within the affected pool, the chooser selects one
+// such permanent to keep. A single permanent that has several of the named types
+// may be chosen to satisfy several type slots, so the kept set is the union of
+// the chosen permanents. Each affected player then sacrifices every permanent in
+// the affected pool that was not kept. All affected players' keep choices are
+// gathered first, in APNAP order, before any permanent is sacrificed, so every
+// player chooses with the full board present; the unkept permanents are then
+// sacrificed simultaneously.
+//
+// AffectedSelection narrows the pool subject to the effect for each player: a
+// zero selection covers every permanent the player controls, while a nonland
+// selection (ExcludedTypes: [Land]) leaves that player's lands untouched. When
+// ControllerChoosesForAll is false each affected player chooses which of their
+// own permanents to keep; when true the resolving controller chooses for every
+// affected player.
+type KeepOnePerType struct {
+	// Players is the group of players affected by the effect (its opponents for
+	// Liliana, all players for Cataclysm and Cataclysmic Gearhulk).
+	Players PlayerGroupReference
+	// Types is the list of permanent types, one kept permanent per type. It is
+	// the six permanent card types for "each permanent type", or the explicit
+	// listed types for the enumerated variants.
+	Types []types.Card
+	// AffectedSelection narrows the permanents subject to the effect for each
+	// affected player. A zero selection covers every permanent they control.
+	AffectedSelection Selection
+	// ControllerChoosesForAll, when set, makes the resolving controller choose the
+	// kept permanents for every affected player instead of each player choosing
+	// their own.
+	ControllerChoosesForAll bool
 }
 
 // SacrificeFallbackKind identifies the per-player rider applied to players who

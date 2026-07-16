@@ -538,6 +538,7 @@ func emitSentenceResolvingSyntax(
 	var roundUpRiderCandidates []int
 	var chooseCardNameCandidates []int
 	var chooseNumberAtRandomCandidates []int
+	var controllerChoosesKeepCandidates []int
 	for i := range sentences {
 		if sentences[i].StaticRule != nil ||
 			sourceCostReduction != nil && sentences[i].Span == sourceCostReduction.Span ||
@@ -584,6 +585,8 @@ func emitSentenceResolvingSyntax(
 				chooseCardNameCandidates = append(chooseCardNameCandidates, i)
 			case isChooseNumberAtRandomPreludeTokens(tokens):
 				chooseNumberAtRandomCandidates = append(chooseNumberAtRandomCandidates, i)
+			case isControllerChoosesKeepPreludeTokens(tokens):
+				controllerChoosesKeepCandidates = append(controllerChoosesKeepCandidates, i)
 			case isChooseTargetPreambleTokens(tokens) && len(sentences[i].Targets) > 0:
 				// A bare "Choose [another] target <object>." preamble declares a
 				// target consumed by a following effect's "it" pronoun and emits
@@ -604,6 +607,9 @@ func emitSentenceResolvingSyntax(
 		unrecognizedSibling = true
 	}
 	if len(chooseNumberAtRandomCandidates) > 0 && !recognizeTibaltsTrickerySequence(sentences) {
+		unrecognizedSibling = true
+	}
+	if len(controllerChoosesKeepCandidates) > 0 && !recognizeControllerChoosesKeepSequence(sentences) {
 		unrecognizedSibling = true
 	}
 	if len(pileSplitMiddleCandidates) > 0 && !recognizePileSplitSequence(sentences) {

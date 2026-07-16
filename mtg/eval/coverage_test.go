@@ -112,7 +112,15 @@ import (
 // The extra-phase/step primitives (AddExtraPhases, AddExtraUpkeepStep) are also
 // value-neutral: they insert additional turn structure whose value depends
 // entirely on what the controller does during it, so they have no stable atom.
-const knownPrimitiveCount = 146
+//
+// KeepOnePerType is value-neutral (no atom), matching the sibling per-player
+// removals EachPlayerChooseDestroy, DestroyForEachPlayer, and ExileForEachPlayer:
+// each affected player keeps one permanent of each type and sacrifices the rest,
+// so both the number of permanents removed and the player-relative audience (each
+// opponent for Liliana, Dreadhorde General; every player for Cataclysm and
+// Cataclysmic Gearhulk) depend on runtime board state and per-player choices,
+// which the single-target atom heuristic does not model.
+const knownPrimitiveCount = 147
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its
