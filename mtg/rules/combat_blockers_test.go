@@ -7,6 +7,8 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -1148,6 +1150,153 @@ func TestCantBeBlockedByCreaturesWithArtifactRejectsArtifactBlocker(t *testing.T
 	}))
 	if !engine.applyDeclareBlockers(g, game.Player2, nonArtifactBlock) {
 		t.Fatal("non-artifact blocker rejected for can't-be-blocked-by-artifact attacker")
+	}
+}
+
+// addControlledGroupPowerEvasionSource adds a permanent modeling Delney,
+// Streetwise Lookout's evasion static "Creatures you control with power 2 or less
+// can't be blocked by creatures with power 3 or greater." The rule effect is
+// controller-scoped (ControllerYou) with a self-inclusive power-2-or-less
+// affected selection, so it restricts every matching creature its controller
+// controls, including the source itself. sourcePower sets the source's own power
+// so tests can exercise self-inclusion.
+func addControlledGroupPowerEvasionSource(g *game.Game, controller game.PlayerID, sourcePower int) *game.Permanent {
+	pt := game.PT{Value: sourcePower}
+	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Streetwise Lookout",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantBeBlockedByCreaturesWith,
+				AffectedController: game.ControllerYou,
+				PermanentTypes:     []types.Card{types.Creature},
+				AffectedSelection:  game.Selection{Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2})},
+				BlockerRestriction: game.BlockerRestriction{Kind: game.BlockerRestrictionPowerGreaterOrEqual, Power: 3},
+			}},
+		}},
+	}})
+}
+
+// TestControlledGroupCantBeBlockedByPowerGreaterEvasion proves Delney, Streetwise
+// Lookout's group evasion static restricts every power-2-or-less creature its
+// controller controls (including the source itself, since the affected selection
+// is self-inclusive) from being blocked by power-3-or-greater creatures, while
+// leaving power-3 members, weaker blockers, and other players' creatures alone.
+func TestControlledGroupCantBeBlockedByPowerGreaterEvasion(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	source := addControlledGroupPowerEvasionSource(g, game.Player1, 2)
+	member := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	strongMember := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	opponentMember := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	bigBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	smallBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+
+	// The source is self-inclusive: a power-3 creature can't block it, a power-2
+	// creature can.
+	if canBlockAttacker(g, bigBlocker, source) {
+		t.Fatal("power-3 blocker blocked the self-inclusive group source, want restricted")
+	}
+	if !canBlockAttacker(g, smallBlocker, source) {
+		t.Fatal("power-2 blocker rejected against the group source, want allowed")
+	}
+	// Another power-2 member is restricted from power-3 blockers but not power-2.
+	if canBlockAttacker(g, bigBlocker, member) {
+		t.Fatal("power-3 blocker blocked a power-2 group member, want restricted")
+	}
+	if !canBlockAttacker(g, smallBlocker, member) {
+		t.Fatal("power-2 blocker rejected against a power-2 group member, want allowed")
+	}
+	// A power-3 controlled creature is outside the power-2-or-less selection.
+	if !canBlockAttacker(g, bigBlocker, strongMember) {
+		t.Fatal("power-3 blocker rejected against a power-3 controlled creature, want allowed")
+	}
+	// An opponent's power-2 creature is outside the you-control scope.
+	if !canBlockAttacker(g, bigBlocker, opponentMember) {
+		t.Fatal("power-3 blocker rejected against an opponent's power-2 creature, want allowed")
+	}
+}
+
+// TestControlledGroupCantBeBlockedByPowerUsesEffectivePower proves the affected
+// selection is evaluated against effective layered power at blocker declaration:
+// a base-power-2 member pumped to power 3 by a +1/+1 counter leaves the
+// power-2-or-less group and can again be blocked by power-3 creatures.
+func TestControlledGroupCantBeBlockedByPowerUsesEffectivePower(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	addControlledGroupPowerEvasionSource(g, game.Player1, 2)
+	member := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	bigBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+
+	if canBlockAttacker(g, bigBlocker, member) {
+		t.Fatal("power-3 blocker blocked a power-2 member, want restricted")
+	}
+	member.Counters.Add(counter.PlusOnePlusOne, 1)
+	if !canBlockAttacker(g, bigBlocker, member) {
+		t.Fatal("power-3 blocker rejected after member grew to power 3, want allowed")
+	}
+}
+
+// TestControlledGroupCantBeBlockedByPowerLiftedWhenSourcePhasedOut proves the
+// static stops applying while its source is phased out: a phased-out source
+// contributes no rule effect, so a power-2 member can again be blocked by a
+// power-3 creature.
+func TestControlledGroupCantBeBlockedByPowerLiftedWhenSourcePhasedOut(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	source := addControlledGroupPowerEvasionSource(g, game.Player1, 2)
+	member := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	bigBlocker := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+
+	if canBlockAttacker(g, bigBlocker, member) {
+		t.Fatal("power-3 blocker blocked a power-2 member, want restricted")
+	}
+	source.PhasedOut = true
+	if !canBlockAttacker(g, bigBlocker, member) {
+		t.Fatal("power-3 blocker rejected while source phased out, want allowed")
+	}
+}
+
+// TestControlledGroupCantBeBlockedByPowerCombinesWithOwnRestriction proves the
+// group power restriction combines with a member's own can't-be-blocked-by-flying
+// restriction: each restriction is enforced independently, so only a non-flying
+// power-2 blocker can block the member.
+func TestControlledGroupCantBeBlockedByPowerCombinesWithOwnRestriction(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	addControlledGroupPowerEvasionSource(g, game.Player1, 2)
+	pt := game.PT{Value: 2}
+	member := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:      "Evasive Group Member",
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+		StaticAbilities: []game.StaticAbility{{
+			RuleEffects: []game.RuleEffect{{
+				Kind:               game.RuleEffectCantBeBlockedByCreaturesWith,
+				AffectedSource:     true,
+				BlockerRestriction: game.BlockerRestriction{Kind: game.BlockerRestrictionFlying},
+			}},
+		}},
+	}})
+	weakGround := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	weakFlyer := addCombatCreaturePermanentWithPower(g, game.Player2, 2, game.Flying)
+	bigGround := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+
+	if !canBlockAttacker(g, weakGround, member) {
+		t.Fatal("power-2 non-flying blocker rejected against member, want allowed")
+	}
+	if canBlockAttacker(g, weakFlyer, member) {
+		t.Fatal("power-2 flying blocker blocked member despite its own flying restriction")
+	}
+	if canBlockAttacker(g, bigGround, member) {
+		t.Fatal("power-3 non-flying blocker blocked member despite the group power restriction")
 	}
 }
 

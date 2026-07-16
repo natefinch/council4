@@ -718,6 +718,69 @@ func TestParseStaticControlledCreaturesRuleFailsClosed(t *testing.T) {
 	}
 }
 
+// TestParseStaticControlledCreaturesCantBeBlockedByCreaturesWithPowerDeclarationMeaning
+// confirms Delney, Streetwise Lookout's evasion static "Creatures you control
+// with power 2 or less can't be blocked by creatures with power 3 or greater."
+// parses to a controlled-creatures block prohibition carrying the
+// power-3-or-greater blocker qualifier and a power-2-or-less affected group.
+func TestParseStaticControlledCreaturesCantBeBlockedByCreaturesWithPowerDeclarationMeaning(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(t, "Creatures you control with power 2 or less can't be blocked by creatures with power 3 or greater.", Context{})
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationRule {
+		t.Fatalf("kind = %v, want rule", declaration.Kind)
+	}
+	rule := declaration.Rule
+	if rule.Subject.Kind != StaticRuleSubjectControlledCreatures ||
+		rule.Constraint.Kind != StaticRuleConstraintProhibition ||
+		rule.Operation.Kind != StaticRuleOperationBlock ||
+		rule.Operation.Voice != StaticRuleVoicePassive ||
+		len(rule.Qualifiers) != 1 {
+		t.Fatalf("rule = %#v, want controlled-creatures can't-be-blocked-by prohibition", rule)
+	}
+	if rule.Qualifiers[0].Kind != StaticRuleQualifierBlockerPowerOrGreater ||
+		rule.Qualifiers[0].Amount != 3 {
+		t.Fatalf("qualifier = %#v, want blocker power 3 or greater", rule.Qualifiers[0])
+	}
+	group := declaration.Subject.Group
+	if group.Kind != EffectStaticSubjectControlledCreatures ||
+		!group.MatchPower || group.MatchToughness ||
+		group.Power.Op != compare.LessOrEqual || group.Power.Value != 2 {
+		t.Fatalf("group = %#v, want power-2-or-less controlled-creatures filter", group)
+	}
+}
+
+// TestParseStaticControlledCreaturesCantBeBlockedByCreaturesWithFailsClosed
+// confirms the controlled-group "can't be blocked by ..." form still fails closed
+// for the number-of-blockers limit and the "except by ..." family, which name a
+// distinct rule kind and the only permitted blockers rather than the prohibited
+// ones.
+func TestParseStaticControlledCreaturesCantBeBlockedByCreaturesWithFailsClosed(t *testing.T) {
+	t.Parallel()
+	rejected := []string{
+		"Creatures you control with power 2 or less can't be blocked by more than one creature.",
+		"Creatures you control with power 2 or less can't be blocked except by creatures with power 3 or greater.",
+	}
+	for _, source := range rejected {
+		document, diagnostics := Parse(source, Context{})
+		if len(diagnostics) != 0 {
+			t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+		}
+		if len(document.Abilities) != 1 {
+			t.Fatalf("Parse(%q) abilities = %#v, want one", source, document.Abilities)
+		}
+		for _, declaration := range document.Abilities[0].StaticDeclarations {
+			if declaration.Kind == StaticDeclarationRule &&
+				declaration.Rule.Subject.Kind == StaticRuleSubjectControlledCreatures {
+				t.Fatalf("Parse(%q) produced a controlled-creatures rule declaration, want fail closed", source)
+			}
+		}
+	}
+}
+
 func TestParseStaticBattlefieldCreaturesCantBlockSourceDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t, "Creatures with power less than this creature's power can't block it.", Context{})

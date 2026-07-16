@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -1621,6 +1622,47 @@ func TestCompileComposedQualifiedStaticRuleNearMissesFailClosed(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestCompileControlledGroupCantBeBlockedByCreaturesWithPower confirms Delney,
+// Streetwise Lookout's evasion static "Creatures you control with power 2 or less
+// can't be blocked by creatures with power 3 or greater." lowers to a single
+// controlled-group can't-be-blocked-by-creatures-with rule bounded by the
+// power-3-or-greater blocker restriction, over a power-2-or-less
+// controller-permanents affected group.
+func TestCompileControlledGroupCantBeBlockedByCreaturesWithPower(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource("Creatures you control with power 2 or less can't be blocked by creatures with power 3 or greater.", pipelineContext{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	rule := declaration.Rule
+	if rule == nil ||
+		rule.Kind != StaticRuleCantBeBlockedByCreaturesWith ||
+		rule.Domain != StaticRuleDomainBlock ||
+		rule.Domain != staticRuleDomain(StaticRuleCantBeBlockedByCreaturesWith) ||
+		rule.Zone != StaticZoneBattlefield {
+		t.Fatalf("rule declaration = %#v, want controlled-group can't-be-blocked-by rule", declaration)
+	}
+	if rule.Blocker != (StaticBlockerRestriction{Kind: StaticBlockerRestrictionPowerOrGreater, Amount: 3}) {
+		t.Fatalf("rule blocker = %#v, want power 3 or greater", rule.Blocker)
+	}
+	if declaration.Group.Domain != StaticGroupSourceControllerPermanents {
+		t.Fatalf("group domain = %v, want controller permanents", declaration.Group.Domain)
+	}
+	selection := declaration.Group.Selection
+	if !slices.Contains(selection.RequiredTypes, types.Creature) {
+		t.Fatalf("group selection = %#v, want creature-typed", selection)
+	}
+	if !selection.MatchPower || selection.MatchToughness ||
+		selection.Power.Op != compare.LessOrEqual || selection.Power.Value != 2 {
+		t.Fatalf("group selection power = %#v, want match power <= 2", selection)
 	}
 }
 
