@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,070 of 32,501 cards eligible for paper support (55.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,073 of 32,501 cards eligible for paper support (55.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1053,6 +1053,7 @@ Council4 currently supports **18,070 of 32,501 cards eligible for paper support 
 - Badger
 - Badlands
 - Badlands Revival
+- Baeloth Barrityl, Entertainer
 - Baffling End
 - Bag End Porter
 - Baird, Steward of Argive
@@ -6011,6 +6012,7 @@ Council4 currently supports **18,070 of 32,501 cards eligible for paper support 
 - Generous Pup
 - Generous Stray
 - Generous Visitor
+- Genesis Chamber
 - Genestealer Locus
 - Genghis Frog
 - Genji Glove
@@ -13216,6 +13218,7 @@ Council4 currently supports **18,070 of 32,501 cards eligible for paper support 
 - Sedraxis Alchemist
 - Sedraxis Specter
 - Seed Guardian
+- Seed the Land
 - Seedborn Muse
 - Seedcradle Witch
 - Seedglaive Mentor

@@ -9,7 +9,6 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 var Cards = []cardset.Entry{
 	{Name: "Back for More", New: BackForMore},
 	{Name: "Back to Basics", New: BackToBasics},
-	{Name: "Baeloth Barrityl, Entertainer", New: BaelothBarritylEntertainer},
 	{Name: "Baldur's Gate", New: BaldurSGate},
 	{Name: "Balduvian Atrocity", New: BalduvianAtrocity},
 	{Name: "Balduvian Horde", New: BalduvianHorde},
