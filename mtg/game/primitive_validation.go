@@ -1779,6 +1779,32 @@ func (p EachPlayerChooseDestroy) validatePrimitive([]TargetSpec, bool) error {
 	return firstProblem(p.Selection.Validate())
 }
 
+func (p OptionalCounterForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if problems := p.Players.Validate(); len(problems) != 0 {
+		return fmt.Errorf("optional counter player group: %s", problems[0])
+	}
+	if p.Selection.Empty() {
+		return errors.New("optional counter for each player requires a candidate selection")
+	}
+	if err := firstProblem(p.Selection.Validate()); err != nil {
+		return err
+	}
+	if p.Amount.IsDynamic() {
+		if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Amount.Value() <= 0 {
+		return errors.New("optional counter for each player requires a positive amount")
+	}
+	if !p.CounterKind.Valid() || p.CounterKind.PlayerOnly() {
+		return errors.New("optional counter for each player requires a permanent-placeable counter kind")
+	}
+	if p.PublishLinked == "" {
+		return errors.New("optional counter for each player requires PublishLinked")
+	}
+	return nil
+}
+
 func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("create token for each destroyed requires a linked key")
@@ -2919,6 +2945,12 @@ func (p Manifest) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 }
 
 func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.ConsumeLinked {
+		key, linked := p.Group.LinkedKey()
+		if !linked || key == "" || p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("consume-linked goad requires a linked-objects group")
+		}
+	}
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 

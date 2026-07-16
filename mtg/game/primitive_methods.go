@@ -54,6 +54,11 @@ func (DestroyForEachPlayer) Kind() PrimitiveKind { return PrimitiveDestroyForEac
 // Kind implements Primitive for EachPlayerChooseDestroy.
 func (EachPlayerChooseDestroy) Kind() PrimitiveKind { return PrimitiveEachPlayerChooseDestroy }
 
+// Kind implements Primitive for OptionalCounterForEachPlayer.
+func (OptionalCounterForEachPlayer) Kind() PrimitiveKind {
+	return PrimitiveOptionalCounterForEachPlayer
+}
+
 // Kind implements Primitive for CreateTokenForEachDestroyed.
 func (CreateTokenForEachDestroyed) Kind() PrimitiveKind {
 	return PrimitiveCreateTokenForEachDestroyed
@@ -454,6 +459,7 @@ func (ChampionExile) isPrimitive()                        {}
 func (ReturnLinkedExiledCardsToBattlefield) isPrimitive() {}
 func (DestroyForEachPlayer) isPrimitive()                 {}
 func (EachPlayerChooseDestroy) isPrimitive()              {}
+func (OptionalCounterForEachPlayer) isPrimitive()         {}
 func (CreateTokenForEachDestroyed) isPrimitive()          {}
 func (ExileForEachOpponent) isPrimitive()                 {}
 func (DrawForEachExiled) isPrimitive()                    {}
@@ -759,6 +765,11 @@ func (p DestroyForEachPlayer) instructionRefs() primitiveRefs {
 func (EachPlayerChooseDestroy) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
+func (p OptionalCounterForEachPlayer) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p CreateTokenForEachDestroyed) instructionRefs() primitiveRefs {
 	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkedKey}}
 }
@@ -857,7 +868,12 @@ func (Explore) instructionRefs() primitiveRefs                       { return pr
 func (p Manifest) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.PublishLinked}
 }
-func (Goad) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p Goad) instructionRefs() primitiveRefs {
+	if key, ok := p.Group.LinkedKey(); ok && p.ConsumeLinked {
+		return primitiveRefs{consumesLinked: []LinkedKey{key}}
+	}
+	return primitiveRefs{}
+}
 
 func (p RemoveCounter) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (Transform) instructionRefs() primitiveRefs               { return primitiveRefs{} }

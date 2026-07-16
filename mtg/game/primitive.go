@@ -350,10 +350,14 @@ const (
 	// (game.CreateCommanderCopyToken). It backs Baldur's Gate Wilderness's Circus
 	// of the Last Days.
 	PrimitiveCreateCommanderCopyToken
+	// PrimitiveOptionalCounterForEachPlayer offers each member of a player group,
+	// in APNAP order, the option to choose one matching permanent they control and
+	// put counters on it (game.OptionalCounterForEachPlayer).
+	PrimitiveOptionalCounterForEachPlayer
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveCreateCommanderCopyToken) + 1
+const primitiveKindCount = int(PrimitiveOptionalCounterForEachPlayer) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1396,6 +1400,22 @@ type EachPlayerChooseDestroy struct {
 	PreventRegeneration bool
 }
 
+// OptionalCounterForEachPlayer offers each member of Players, in APNAP order,
+// the option to choose one permanent they control matching Selection and put
+// Amount counters of CounterKind on it. A player with no matching permanent is
+// not offered the choice. Each accepting member is both the chooser and the
+// counter-placement controller, so replacement effects use that player's
+// semantics rather than the resolving ability's controller. PublishLinked, when
+// set, is cleared before the offers begin and records only permanents that
+// actually received at least one counter after replacements.
+type OptionalCounterForEachPlayer struct {
+	Players       PlayerGroupReference
+	Selection     Selection
+	Amount        Quantity
+	CounterKind   counter.Kind
+	PublishLinked LinkedKey
+}
+
 // PermanentChoiceExtremum restricts a permanent-choice pool to the objects tied
 // for an extreme characteristic value before the chooser selects among them.
 type PermanentChoiceExtremum uint8
@@ -2387,6 +2407,10 @@ type Goad struct {
 	// player's turn-based expiry. It is false for the ordinary turn-limited goad
 	// keyword action.
 	RestOfGame bool
+	// ConsumeLinked clears Group's linked-object set after resolving. It is valid
+	// only with a LinkedObjectsGroup and makes immediate "those creatures" payoffs
+	// one-shot, preventing stale objects from leaking into a later resolution.
+	ConsumeLinked bool
 }
 
 // RemoveCounter removes counters from one referenced permanent or every permanent in a referenced group.

@@ -597,6 +597,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderAddCounter(ctx, &value)
+	case game.PrimitiveOptionalCounterForEachPlayer:
+		value, err := assertPrimitive[game.OptionalCounterForEachPlayer](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderOptionalCounterForEachPlayer(ctx, value)
 	case game.PrimitiveAddPlayerCounter:
 		value, err := assertPrimitive[game.AddPlayerCounter](primitive)
 		if err != nil {

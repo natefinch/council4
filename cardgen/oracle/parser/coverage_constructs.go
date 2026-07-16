@@ -18,7 +18,20 @@ func appendConstructRecognizedSpans(spans []shared.Span, a *Ability) []shared.Sp
 	spans = appendCoinFlipSpans(spans, a)
 	spans = appendVoteSpans(spans, a)
 	spans = appendEachPlayerChooseDestroySpans(spans, a)
+	spans = appendOptionalCounterForEachPlayerSpans(spans, a)
 	spans = appendPileSplitSpans(spans, a)
+	return spans
+}
+
+func appendOptionalCounterForEachPlayerSpans(spans []shared.Span, a *Ability) []shared.Span {
+	if a.OptionalCounterForEachPlayer == nil {
+		return spans
+	}
+	for _, span := range a.OptionalCounterForEachPlayer.Spans {
+		if span != (shared.Span{}) {
+			spans = append(spans, span)
+		}
+	}
 	return spans
 }
 

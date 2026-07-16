@@ -2607,7 +2607,37 @@ func (r Renderer) renderGoad(ctx *renderCtx, value game.Goad) (string, error) {
 	if value.RestOfGame {
 		fields = append(fields, "RestOfGame: true,")
 	}
+	if value.ConsumeLinked {
+		fields = append(fields, "ConsumeLinked: true,")
+	}
 	return structLit("game.Goad", fields), nil
+}
+
+func (r Renderer) renderOptionalCounterForEachPlayer(ctx *renderCtx, value game.OptionalCounterForEachPlayer) (string, error) {
+	players, err := r.renderPlayerGroupReferenceWithContext(ctx, value.Players)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	amount, err := r.renderQuantity(ctx, value.Amount)
+	if err != nil {
+		return "", err
+	}
+	kind, err := renderCounterKind(value.CounterKind)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importCounter)
+	return structLit("game.OptionalCounterForEachPlayer", []string{
+		fmt.Sprintf("Players: %s,", players),
+		fmt.Sprintf("Selection: %s,", selection),
+		fmt.Sprintf("Amount: %s,", amount),
+		fmt.Sprintf("CounterKind: %s,", kind),
+		fmt.Sprintf("PublishLinked: game.LinkedKey(%q),", string(value.PublishLinked)),
+	}), nil
 }
 
 func (r Renderer) renderAddMana(ctx *renderCtx, value *game.AddMana) (string, error) {

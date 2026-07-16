@@ -165,6 +165,8 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 			return append(atoms, EffectAtom{Kind: EffectCounterAdded, IsDynamic: true, Affected: AffectedUnknown})
 		}
 		return append(atoms, quantityAtom(EffectCounterAdded, p.Amount, AffectedUnknown))
+	case game.OptionalCounterForEachPlayer:
+		return append(atoms, EffectAtom{Kind: EffectCounterAdded, IsDynamic: true, Affected: AffectedUnknown})
 	case game.Search:
 		if isLandRampSearch(p) {
 			return append(atoms, quantityAtom(EffectLandRamp, p.Amount, AffectedYou))

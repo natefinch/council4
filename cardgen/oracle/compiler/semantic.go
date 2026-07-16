@@ -3347,6 +3347,11 @@ type CompiledEffect struct {
 	// EachPlayerChooseDestroyOptional records the "may" of an
 	// EachPlayerChooseDestroy construct, so each chooser may decline.
 	EachPlayerChooseDestroyOptional bool
+	// OptionalCounterForEachPlayer carries a parser-recognized per-player optional
+	// chosen-permanent counter placement followed by goading exactly the
+	// permanents that received counters. Context names the player group, Selector
+	// the per-member controlled pool, and Amount/CounterKind the placement.
+	OptionalCounterForEachPlayer bool
 	// CreateTokenForEachDestroyedThisWay carries the parser-recognized per-
 	// controller payoff "For each creature destroyed this way, its controller
 	// creates a <token>." (The Curse of Fenric, chapter I) through the text-blind

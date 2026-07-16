@@ -231,6 +231,10 @@ func compileAbility(
 		compiled.Content.Effects = appendCoinFlipEffects(compiled.Content.Effects, ability.CoinFlip)
 		compiled.Content.Effects = appendVoteEffects(compiled.Content.Effects, ability.Vote)
 		compiled.Content.Effects = appendEachPlayerChooseDestroyEffect(compiled.Content.Effects, ability.EachPlayerChooseDestroy)
+		compiled.Content.Effects = appendOptionalCounterForEachPlayerEffect(
+			compiled.Content.Effects,
+			ability.OptionalCounterForEachPlayer,
+		)
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)
