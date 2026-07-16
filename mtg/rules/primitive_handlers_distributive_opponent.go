@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // handleExileForEachOpponent resolves the distributive enters trigger "for each
@@ -17,16 +18,33 @@ import (
 // here; the draw clause consumes it.
 func handleExileForEachOpponent(r *effectResolver, prim game.ExileForEachOpponent) effectResolved {
 	res := effectResolved{accepted: true}
-	chooser, ok := r.resolvePlayer(prim.Chooser)
-	if !ok {
-		return res
-	}
 	source, _ := sourcePermanent(r.game, r.obj)
 	resolver := newReferenceResolver(r.game, r.obj)
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
+	clearLinkedObjects(r.game, key)
+	type choice struct {
+		player    game.PlayerID
+		permanent *game.Permanent
+		ref       game.LinkedObjectRef
+	}
+	var choices []choice
+	prevMember := r.groupOfferMember
+	defer func() { r.groupOfferMember = prevMember }()
 	for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(game.OpponentsReference())) {
+		r.groupOfferMember = opt.Val(playerID)
+		chooser, ok := r.resolvePlayer(prim.Chooser)
+		if !ok {
+			continue
+		}
 		candidates := playerControlledSelectionCandidates(r.game, resolver, source, playerID, prim.Selection)
-		permanent, chosen := r.engine.chooseUpToOnePermanent(r.game, candidates, chooser, "Choose a permanent to exile", r.agents, r.log)
+		candidates = permanentChoiceExtremumCandidates(r.game, candidates, prim.Extremum)
+		var permanent *game.Permanent
+		var chosen bool
+		if prim.Required {
+			permanent, chosen = r.engine.chooseOnePermanent(r.game, candidates, chooser, "Choose a permanent to exile", r.agents, r.log)
+		} else {
+			permanent, chosen = r.engine.chooseUpToOnePermanent(r.game, candidates, chooser, "Choose a permanent to exile", r.agents, r.log)
+		}
 		if !chosen {
 			continue
 		}
@@ -35,9 +53,35 @@ func handleExileForEachOpponent(r *effectResolver, prim game.ExileForEachOpponen
 		// token permanent's controller. permanentLinkedObjectRef drops tokens,
 		// which would silently deny that opponent the guaranteed draw.
 		linkedRef := permanentObjectBindingRef(permanent)
-		if movePermanentToZone(r.game, permanent, zone.Exile) {
-			rememberLinkedObject(r.game, key, linkedRef)
+		linkedRef.CorrelatedPlayer = opt.Val(playerID)
+		if prim.Simultaneous {
+			choices = append(choices, choice{player: playerID, permanent: permanent, ref: linkedRef})
+			continue
+		}
+		move, ok := preparePermanentZoneMove(r.game, permanent, zone.Exile)
+		if ok && applyPreparedPermanentZoneMove(r.game, &move) {
+			if move.actualDestination == zone.Exile {
+				rememberLinkedObject(r.game, key, linkedRef)
+			}
 			res.succeeded = true
+		}
+	}
+	if !prim.Simultaneous || len(choices) == 0 {
+		return res
+	}
+	permanents := make([]*game.Permanent, len(choices))
+	refsByObject := make(map[game.ObjectID]game.LinkedObjectRef, len(choices))
+	for i, chosen := range choices {
+		permanents[i] = chosen.permanent
+		refsByObject[chosen.permanent.ObjectID] = chosen.ref
+	}
+	for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, permanents, zone.Exile) {
+		if !result.moved {
+			continue
+		}
+		res.succeeded = true
+		if result.destination == zone.Exile {
+			rememberLinkedObject(r.game, key, refsByObject[result.permanent.ObjectID])
 		}
 	}
 	return res

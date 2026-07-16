@@ -216,24 +216,8 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		return resolvePermanentOrLastKnown(r.g, permanent.AttachedTo.Val)
 	case game.ObjectReferenceLinkedObject:
 		for _, linked := range linkedObjects(r.g, linkedObjectSourceKey(r.g, r.obj, ref.LinkID())) {
-			if resolved, ok := resolvePermanentOrLastKnown(r.g, linked.ObjectID); ok {
+			if resolved, ok := resolveLinkedObjectRef(r.g, linked); ok {
 				return resolved, true
-			}
-			// A card-only linked reference (ObjectID zero) names a card that was
-			// never a battlefield permanent, such as a card exiled straight from a
-			// graveyard (The Aesir Escape Valhalla). It carries no object snapshot,
-			// so resolve it to a card snapshot the printed-characteristic readers
-			// (mana value) consult through the card instance.
-			if linked.ObjectID == 0 && linked.CardID != 0 {
-				if _, ok := r.g.GetCardInstance(linked.CardID); ok {
-					return resolvedObjectReference{snapshot: game.ObjectSnapshot{CardID: linked.CardID}}, true
-				}
-			}
-			if linked.CardID != 0 {
-				return resolvedObjectReference{snapshot: game.ObjectSnapshot{
-					CardID: linked.CardID,
-					Face:   game.FaceFront,
-				}}, true
 			}
 		}
 		return resolvedObjectReference{}, false
@@ -283,6 +267,41 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 	default:
 		return resolvedObjectReference{}, false
 	}
+}
+
+func resolveLinkedObjectRef(g *game.Game, linked game.LinkedObjectRef) (resolvedObjectReference, bool) {
+	if resolved, ok := resolvePermanentOrLastKnown(g, linked.ObjectID); ok {
+		return resolved, true
+	}
+	// A card-only linked reference (ObjectID zero) names a card that was never a
+	// battlefield permanent. It carries no object snapshot, so resolve it to a
+	// card snapshot the printed-characteristic readers consult through the card
+	// instance.
+	if linked.ObjectID == 0 && linked.CardID != 0 {
+		if _, ok := g.GetCardInstance(linked.CardID); ok {
+			return resolvedObjectReference{snapshot: game.ObjectSnapshot{CardID: linked.CardID}}, true
+		}
+	}
+	if linked.CardID != 0 {
+		return resolvedObjectReference{snapshot: game.ObjectSnapshot{
+			CardID: linked.CardID,
+			Face:   game.FaceFront,
+		}}, true
+	}
+	return resolvedObjectReference{}, false
+}
+
+func resolveCorrelatedLinkedObjectReference(g *game.Game, obj *game.StackObject, ref game.ObjectReference, player game.PlayerID) (resolvedObjectReference, bool) {
+	if ref.Kind() != game.ObjectReferenceLinkedObject {
+		return resolvedObjectReference{}, false
+	}
+	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, ref.LinkID())) {
+		if !linked.CorrelatedPlayer.Exists || linked.CorrelatedPlayer.Val != player {
+			continue
+		}
+		return resolveLinkedObjectRef(g, linked)
+	}
+	return resolvedObjectReference{}, false
 }
 
 // targetObject resolves a kind-agnostic target reference to whichever permanent

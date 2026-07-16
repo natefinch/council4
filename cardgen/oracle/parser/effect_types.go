@@ -2206,10 +2206,14 @@ type EffectSyntax struct {
 	// adding a new supported rider recipient extends this list instead of adding
 	// another Effect field pair. It is empty for clauses with no rider, and
 	// lowering emits one Damage instruction per rider after the primary damage.
-	DamageRiders   []DamageRiderSyntax `json:",omitempty"`
-	Amount         EffectAmountSyntax  `json:",omitzero"`
-	PowerDelta     SignedAmountSyntax  `json:",omitzero"`
-	ToughnessDelta SignedAmountSyntax  `json:",omitzero"`
+	DamageRiders []DamageRiderSyntax `json:",omitempty"`
+	// DamageEachOpponentCorrelatedExiledPower marks the exact group damage amount
+	// "the power of the creature they exiled", where each recipient's amount is
+	// read from that opponent's own object linked by a prior per-opponent exile.
+	DamageEachOpponentCorrelatedExiledPower bool               `json:",omitempty"`
+	Amount                                  EffectAmountSyntax `json:",omitzero"`
+	PowerDelta                              SignedAmountSyntax `json:",omitzero"`
+	ToughnessDelta                          SignedAmountSyntax `json:",omitzero"`
 	// TokenPower/TokenToughness/TokenPTKnown hold a created token's fixed
 	// power/toughness (e.g. "1/1"). Known is false for tokens with no printed
 	// power/toughness (named artifact tokens like Treasure).
@@ -3353,6 +3357,11 @@ type EffectSyntax struct {
 	// distributive anchor rather than a target. A paired DrawForEachExiledThisWay
 	// clause draws a card for each permanent exiled this way.
 	ExileForEachOpponent bool `json:",omitempty"`
+	// ExileEachOpponentChoosesGreatestPower marks "Each opponent exiles a
+	// creature with the greatest power among creatures that player controls."
+	// Each opponent owns the mandatory tied-greatest choice, and the resulting
+	// moves form one simultaneous batch.
+	ExileEachOpponentChoosesGreatestPower bool `json:",omitempty"`
 	// DrawForEachExiledThisWay marks the exact per-controller payoff "For each
 	// permanent exiled this way, its controller draws a card." (King Solomon's
 	// Frogs). It pairs with a preceding ExileForEachOpponent clause: each

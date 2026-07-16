@@ -18,7 +18,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectAddMana:
 		return effect.Mana.ChosenColorDevotion || exactDynamicColorlessManaEffectSyntax(effect)
 	case EffectDealDamage:
-		return exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
+		return exactEachOpponentCorrelatedExiledPowerDamageEffectSyntax(effect) ||
+			exactDamageEffectSyntax(effect) || exactSourcePowerDamageEffectSyntax(effect)
 	case EffectCanAttackAsThoughDefender:
 		return exactCanAttackAsThoughDefenderEffectSyntax(effect)
 	case EffectCantBeBlocked:
@@ -81,7 +82,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactLegacyFixedAmountSyntax(effect) ||
 			effect.GroupEntryModification.Kind != GroupEntryModificationNone
 	case EffectExile:
-		return exactSourceSpellExileSyntax(effect) ||
+		return exactEachOpponentGreatestPowerExileEffectSyntax(effect) ||
+			exactSourceSpellExileSyntax(effect) ||
 			exactSourcePermanentExileSyntax(effect) ||
 			exactCounteredSpellExileSyntax(effect) ||
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||

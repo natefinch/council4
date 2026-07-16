@@ -497,6 +497,9 @@ func lowerSameNameDestroySpell(ctx contentCtx, preventRegeneration bool) (game.A
 func lowerFixedExileSpell(
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerEachOpponentGreatestPowerExile(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerSourceSpellExile(ctx); ok {
 		return content, nil
 	}

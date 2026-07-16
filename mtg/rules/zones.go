@@ -544,6 +544,26 @@ func movePermanentToZoneInBatch(g *game.Game, permanent *game.Permanent, destina
 // lets the owner arrange cards put into the same graveyard at once; this engine
 // does not prompt for that order and adds them in processing order instead.
 func movePermanentsToZoneSimultaneously(g *game.Game, permanents []*game.Permanent, destination zone.Type) bool {
+	results := movePermanentsToZoneSimultaneouslyWithResults(g, permanents, destination)
+	for _, result := range results {
+		if result.moved {
+			return true
+		}
+	}
+	return false
+}
+
+type permanentZoneMoveResult struct {
+	permanent   *game.Permanent
+	destination zone.Type
+	moved       bool
+}
+
+// movePermanentsToZoneSimultaneouslyWithResults is the result-bearing form of
+// movePermanentsToZoneSimultaneously. It preserves one result per prepared move
+// so linked effects can distinguish a requested destination from a replacement
+// destination while retaining one simultaneous batch.
+func movePermanentsToZoneSimultaneouslyWithResults(g *game.Game, permanents []*game.Permanent, destination zone.Type) []permanentZoneMoveResult {
 	moves := make([]preparedPermanentZoneMove, 0, len(permanents))
 	for _, permanent := range permanents {
 		move, ok := preparePermanentZoneMove(g, permanent, destination)
@@ -557,11 +577,15 @@ func movePermanentsToZoneSimultaneously(g *game.Game, permanents []*game.Permane
 			moves[i].event.SimultaneousID = simultaneousID
 		}
 	}
-	succeeded := false
+	results := make([]permanentZoneMoveResult, 0, len(moves))
 	for i := range moves {
-		succeeded = applyPreparedPermanentZoneMove(g, &moves[i]) || succeeded
+		results = append(results, permanentZoneMoveResult{
+			permanent:   moves[i].permanent,
+			destination: moves[i].actualDestination,
+			moved:       applyPreparedPermanentZoneMove(g, &moves[i]),
+		})
 	}
-	return succeeded
+	return results
 }
 
 type mergedCardZoneMove struct {

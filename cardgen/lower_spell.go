@@ -263,6 +263,9 @@ func lowerContentDispatch(
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerEachOpponentGreatestPowerExile(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerTibaltsTrickerySequence(ctx); ok {
 		return content, nil
 	}
@@ -1807,6 +1810,9 @@ func backReferencedGraveyardCardReference(reference compiler.CompiledReference) 
 // power, "each of N targets") before falling back to group and fixed damage so
 // the broadest single-target path and its diagnostic stay last.
 func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerEachOpponentCorrelatedExiledPowerDamage(ctx); ok {
+		return content, nil
+	}
 	if ctx.content.Effects[0].Divided {
 		return lowerDividedDamageSpell(ctx)
 	}
