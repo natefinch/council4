@@ -3844,8 +3844,8 @@ func parseConditionSelection(tokens []shared.Token, atoms Atoms) (ConditionSelec
 }
 
 func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
-	if orIndex := tokenWordIndex(tokens, "or"); orIndex >= 0 {
-		return parseConditionAlternativeNoun(tokens, orIndex, atoms, selection)
+	if leftEnd, rightStart, ok := conditionAlternativeConnector(tokens); ok {
+		return parseConditionAlternativeNoun(tokens[:leftEnd], tokens[rightStart:], atoms, selection)
 	}
 	// Color-qualified "<colors> creature|permanent".
 	if clause, ok := parseConditionColorQualified(tokens, atoms, selection); ok {
@@ -3910,12 +3910,34 @@ func parseConditionSubtypeNoun(tokens []shared.Token, atoms Atoms, selection Con
 	return ConditionSelection{}, false
 }
 
-func parseConditionAlternativeNoun(tokens []shared.Token, orIndex int, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
-	if clause, ok := parseConditionColorQualified(tokens, atoms, selection); ok {
+// conditionAlternativeConnector locates a two-member "or" or "and/or" union.
+// The lexer splits "and/or" into Word("and"), Slash, Word("or").
+func conditionAlternativeConnector(tokens []shared.Token) (leftEnd, rightStart int, ok bool) {
+	for i := range tokens {
+		if equalWord(tokens[i], "or") {
+			return i, i + 1, i > 0 && i+1 < len(tokens)
+		}
+		if i+2 < len(tokens) &&
+			equalWord(tokens[i], "and") &&
+			tokens[i+1].Kind == shared.Slash &&
+			equalWord(tokens[i+2], "or") {
+			return i, i + 3, i > 0 && i+3 < len(tokens)
+		}
+	}
+	return 0, 0, false
+}
+
+func parseConditionAlternativeNoun(left, right []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
+	if len(left) == 0 || len(right) == 0 {
+		return ConditionSelection{}, false
+	}
+	combined := make([]shared.Token, 0, len(left)+1+len(right))
+	combined = append(combined, left...)
+	combined = append(combined, shared.Token{Kind: shared.Word, Text: "or"})
+	combined = append(combined, right...)
+	if clause, ok := parseConditionColorQualified(combined, atoms, selection); ok {
 		return clause, true
 	}
-	left := tokens[:orIndex]
-	right := tokens[orIndex+1:]
 	if trimmed, ok := cutTokenPrefix(right, "a"); ok {
 		right = trimmed
 	} else if trimmed, ok := cutTokenPrefix(right, "an"); ok {

@@ -160,6 +160,39 @@ func TestParseStaticCastThisFromExileDeclarationMeaning(t *testing.T) {
 	}
 }
 
+func TestParseStaticCastThisFromGraveyardWithTappedSubtypeUnionCondition(t *testing.T) {
+	t.Parallel()
+	source := "You may cast this card from your graveyard as long as you control three or more tapped Pirates and/or Vehicles."
+	document, diagnostics := Parse(source, Context{CardName: "The Indomitable"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v, want one", document.Abilities)
+	}
+	ability := document.Abilities[0]
+	if len(ability.ConditionClauses) != 1 {
+		t.Fatalf("conditions = %#v, want one", ability.ConditionClauses)
+	}
+	condition := ability.ConditionClauses[0]
+	if condition.Predicate != ConditionPredicateControls ||
+		condition.Comparison != ConditionComparisonAtLeast ||
+		condition.CompareValue != 3 ||
+		condition.Selection.Tapped != ConditionTappedTrue ||
+		!slices.Equal(condition.Selection.SubtypesAny, []types.Sub{types.Pirate, types.Vehicle}) {
+		t.Fatalf("condition = %#v", condition)
+	}
+	if len(ability.StaticDeclarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", ability.StaticDeclarations)
+	}
+	declaration := ability.StaticDeclarations[0]
+	if declaration.PlayerRule != StaticDeclarationPlayerRuleCastThisFromGraveyard ||
+		!declaration.HasCondition ||
+		declaration.ConditionSpan == (shared.Span{}) {
+		t.Fatalf("declaration = %#v", declaration)
+	}
+}
+
 func TestParseStaticAttackTaxDeclarationMeaning(t *testing.T) {
 	t.Parallel()
 	declarations := parseStaticDeclarationSyntax(t,

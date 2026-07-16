@@ -1334,6 +1334,33 @@ func TestCompileStaticSkipDrawStepDeclaration(t *testing.T) {
 	}
 }
 
+func TestCompileStaticCastThisFromGraveyardWithTappedSubtypeUnionCondition(t *testing.T) {
+	t.Parallel()
+	source := "You may cast this card from your graveyard as long as you control three or more tapped Pirates and/or Vehicles."
+	compilation, diagnostics := compileSource(source, pipelineContext{CardName: "The Indomitable"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("static semantics = %#v, want one declaration", ability.Static)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationPlayerRule ||
+		declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleCastThisFromGraveyard {
+		t.Fatalf("declaration = %#v, want graveyard self-cast player rule", declaration)
+	}
+	condition := declaration.Condition
+	if condition == nil ||
+		condition.Predicate != ConditionPredicateControllerControls ||
+		condition.Threshold != 3 ||
+		condition.Selection.Tapped != ConditionTriTrue ||
+		!slices.Equal(condition.Selection.SubtypesAny, []string{"Pirate", "Vehicle"}) {
+		t.Fatalf("condition = %#v", condition)
+	}
+}
+
 func TestCompileStaticAttackTaxDeclaration(t *testing.T) {
 	t.Parallel()
 	source := "Creatures can't attack you unless their controller pays {2} for each creature they control that's attacking you."
