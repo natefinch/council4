@@ -7,6 +7,55 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+// emitSourceSpellCostIncreasePerTarget recognizes the rules-bearing strive
+// sentence as typed source-spell cost data. The exact mana symbols are retained
+// on the effect so downstream layers never inspect Oracle text.
+func emitSourceSpellCostIncreasePerTarget(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.Modal != nil {
+			continue
+		}
+		effect := singleResolvingEffect(ability)
+		if effect == nil || effect.Kind != EffectCast || effect.Context != EffectContextSource {
+			continue
+		}
+		tokens := sourceSpellCostBodyTokens(ability)
+		if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period {
+			continue
+		}
+		idx, ok := sourceSpellSubjectEnd(tokens, ability.Atoms)
+		if !ok || !effectWordsAt(tokens, idx, "costs") {
+			continue
+		}
+		idx++
+		start := idx
+		for idx < len(tokens) && tokens[idx].Kind == shared.Symbol {
+			idx++
+		}
+		if idx == start ||
+			!effectWordsAt(tokens, idx, "more", "to", "cast", "for", "each", "target", "beyond", "the", "first") ||
+			idx+9 != len(tokens)-1 {
+			continue
+		}
+		effect.SourceSpellCostIncreasePerTarget = true
+		effect.Mana.Span = shared.SpanOf(tokens[start:idx])
+		for _, token := range tokens[start:idx] {
+			effect.Mana.Symbols = append(effect.Mana.Symbols, token.Text)
+		}
+		// "target" describes the announced target count used by the cost
+		// modifier; it is not itself a target declaration.
+		for sentenceIndex := range ability.Sentences {
+			sentence := &ability.Sentences[sentenceIndex]
+			sentence.Targets = nil
+			for effectIndex := range sentence.Effects {
+				sentence.Effects[effectIndex].Targets = nil
+				sentence.Effects[effectIndex].SubjectTargets = nil
+			}
+		}
+	}
+}
+
 // emitSourceSpellCostReduction marks the EffectCast effect of the exact
 // single-clause ability "This spell costs {N} less to cast for each <countable
 // battlefield object>." as a typed source-scoped cast cost reduction. The

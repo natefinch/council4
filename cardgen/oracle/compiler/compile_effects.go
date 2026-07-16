@@ -611,6 +611,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SourceSpellCostReductionDynamic:               syntax.SourceSpellCostReductionDynamic,
 				SourceSpellCostReductionConditional:           syntax.SourceSpellCostReductionConditional,
 				SourceSpellCostReductionTargetsTappedCreature: syntax.SourceSpellCostReductionTargetsTappedCreature,
+				SourceSpellCostIncreasePerTarget:              syntax.SourceSpellCostIncreasePerTarget,
 				RequiresOrderedLowering:                       syntax.RequiresOrderedLowering,
 				HasUnrecognizedSibling:                        syntax.HasUnrecognizedSibling,
 				UnsupportedDetail:                             syntax.UnsupportedDetail,

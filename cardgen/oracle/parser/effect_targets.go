@@ -441,6 +441,14 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 	}
 	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) {
 		text := joinedEffectText(tokens)
+		if cardinality == (TargetCardinalitySyntax{Min: 0, Max: 99}) {
+			switch {
+			case text == "any number of target opponents" && selection.Kind == SelectionOpponent:
+				return true
+			case text == "any number of target players" && selection.Kind == SelectionPlayer:
+				return true
+			}
+		}
 		// "Up to one target <noun>" (Min 0, Max 1) is a single optional target
 		// slot, so its <noun> phrase carries the same qualifiers (tapped state,
 		// excluded card type, mana-value rider, ...) the mandatory single-target

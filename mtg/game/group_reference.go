@@ -78,6 +78,12 @@ const (
 	// Permanents that left the battlefield are absent, and a card that returned as
 	// a new object does not inherit its former attack history.
 	GroupDomainAttackedThisTurn
+
+	// GroupDomainPlayerGroupControlled draws from battlefield permanents
+	// controlled by any player in a dynamic player group, such as the creatures
+	// controlled by all still-legal targeted opponents. Appended last so existing
+	// domain ordinals remain unchanged.
+	GroupDomainPlayerGroupControlled
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -90,6 +96,7 @@ type GroupReference struct {
 	selection    Selection
 	anchor       opt.V[ObjectReference]
 	playerAnchor opt.V[PlayerReference]
+	playerGroup  opt.V[PlayerGroupReference]
 	exclude      opt.V[ObjectReference]
 	// attackedDefenderFilter narrows a GroupDomainTriggeringAttackers group to the
 	// declared attackers whose defending player relates to the resolving ability's
@@ -151,6 +158,12 @@ func PlayerControlledGroup(player PlayerReference, selection Selection) GroupRef
 // identified by exclude.
 func PlayerControlledGroupExcluding(player PlayerReference, selection Selection, exclude ObjectReference) GroupReference {
 	return GroupReference{domain: GroupDomainPlayerControlled, selection: selection, playerAnchor: opt.Val(player), exclude: opt.Val(exclude)}
+}
+
+// PlayerGroupControlledGroup matches every battlefield permanent controlled by
+// any player in players and satisfying selection.
+func PlayerGroupControlledGroup(players PlayerGroupReference, selection Selection) GroupReference {
+	return GroupReference{domain: GroupDomainPlayerGroupControlled, selection: selection, playerGroup: opt.Val(players)}
 }
 
 // SameNamePermanentGroup matches every battlefield permanent whose name equals
@@ -216,6 +229,7 @@ func (r GroupReference) Empty() bool {
 		r.selection.Empty() &&
 		!r.anchor.Exists &&
 		!r.playerAnchor.Exists &&
+		!r.playerGroup.Exists &&
 		!r.exclude.Exists &&
 		r.attackedDefenderFilter == TriggerControllerAny &&
 		r.linkedKey == ""
@@ -245,6 +259,12 @@ func (r GroupReference) Anchor() (ObjectReference, bool) {
 // from, if any.
 func (r GroupReference) PlayerAnchor() (PlayerReference, bool) {
 	return r.playerAnchor.Val, r.playerAnchor.Exists
+}
+
+// PlayerGroup returns the dynamic player group whose controlled permanents the
+// domain draws from, if any.
+func (r GroupReference) PlayerGroup() (PlayerGroupReference, bool) {
+	return r.playerGroup.Val, r.playerGroup.Exists
 }
 
 // Exclusion returns the object dropped from the group, if any.
@@ -286,6 +306,13 @@ func (r GroupReference) Validate() []string {
 		}
 		if r.anchor.Exists {
 			problems = append(problems, "player-controlled group must not set an anchor object")
+		}
+	case GroupDomainPlayerGroupControlled:
+		if !r.playerGroup.Exists {
+			problems = append(problems, "player-group-controlled group requires a player group")
+		}
+		if r.anchor.Exists || r.playerAnchor.Exists {
+			problems = append(problems, "player-group-controlled group must not set an anchor")
 		}
 	case GroupDomainSameName:
 		if !r.anchor.Exists {
@@ -347,6 +374,12 @@ func (r GroupReference) Validate() []string {
 			problems = append(problems, "only a player-controlled group may set an anchor player")
 		}
 		problems = appendPrefixed(problems, "player anchor", r.playerAnchor.Val.Validate())
+	}
+	if r.playerGroup.Exists {
+		if r.domain != GroupDomainPlayerGroupControlled {
+			problems = append(problems, "only a player-group-controlled group may set a player group")
+		}
+		problems = appendPrefixed(problems, "player group", r.playerGroup.Val.Validate())
 	}
 	if r.exclude.Exists {
 		problems = appendPrefixed(problems, "exclude", r.exclude.Val.Validate())

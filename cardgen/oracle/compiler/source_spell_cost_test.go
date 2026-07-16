@@ -24,11 +24,37 @@ func TestCompileSourceSpellCostReductionFromTypedNodes(t *testing.T) {
 	if len(effects) != 1 {
 		t.Fatalf("compiled effects = %d, want 1", len(effects))
 	}
+
 	if !effects[0].SourceSpellCostReduction {
 		t.Fatal("SourceSpellCostReduction was not propagated to the compiled effect")
 	}
+
 	if effects[0].SourceSpellCostReductionAmount != 2 {
 		t.Fatalf("SourceSpellCostReductionAmount = %d, want 2", effects[0].SourceSpellCostReductionAmount)
+	}
+}
+
+func TestCompileSourceSpellCostIncreasePerTargetFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	sentences := []parser.Sentence{{
+		Effects: []parser.EffectSyntax{{
+			Kind:                             parser.EffectCast,
+			Context:                          parser.EffectContextSource,
+			SourceSpellCostIncreasePerTarget: true,
+			Mana: parser.EffectManaSyntax{
+				Symbols: []string{"{1}", "{W}"},
+			},
+		}},
+	}}
+	effects := compileEffects(sentences)
+	if len(effects) != 1 || !effects[0].SourceSpellCostIncreasePerTarget {
+		t.Fatalf("compiled effects = %#v", effects)
+	}
+	if len(effects[0].Mana.Symbols) != 2 {
+		t.Fatalf("compiled mana = %#v", effects[0].Mana)
+	}
+	if got := compileSelectionController(parser.SelectionControllerTargetedPlayers); got != ControllerTargetedPlayers {
+		t.Fatalf("targeted-player controller = %v", got)
 	}
 }
 

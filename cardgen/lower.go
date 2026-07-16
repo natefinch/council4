@@ -2108,6 +2108,9 @@ func lowerExecutableAbilitySpecialCase(
 	if ability.Partner {
 		return lowerPartnerAbility(ability), true, nil
 	}
+	if lowered, handled, diagnostic := lowerSourceSpellCostIncreasePerTarget(ability, syntax); handled {
+		return lowered, true, diagnostic
+	}
 	if lowered, handled, diagnostic := lowerSourceSpellCostReduction(ability, syntax); handled {
 		return lowered, true, diagnostic
 	}

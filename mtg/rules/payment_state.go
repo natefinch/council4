@@ -202,7 +202,7 @@ func (s *rulesPaymentState) SpellHasGrantedKeyword(playerID game.PlayerID, card 
 	return spellGrantedKeyword(s.g, playerID, card, cardID, sourceZone, keyword)
 }
 
-// sourceSpellSelfCostModifiers resolves a spell's own dynamic cost reductions
+// sourceSpellSelfCostModifiers resolves a spell's own dynamic cost modifiers
 // ("This spell costs {N} less to cast for each <object>", "This spell costs {X}
 // less to cast, where X is <dynamic amount>", "This spell costs {N} less to cast
 // if <condition>"). Such a modifier lives on the casting card's own static
@@ -216,7 +216,8 @@ func (s *rulesPaymentState) SpellHasGrantedKeyword(playerID game.PlayerID, card 
 // amount now, or evaluating the board- and player-state condition against the
 // caster now. Generic mana may fall to zero but colored requirements are never
 // touched, because the resolved reduction flows through the shared generic cost
-// modifier path.
+// modifier path. It also expands exact per-target-beyond-first increases such as
+// strive from the spell's announced targets.
 func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef, targets []game.Target, bargained bool) []game.CostModifier {
 	if card == nil {
 		return nil
@@ -231,6 +232,21 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 			}
 			modifier := effect.CostModifier
 			if modifier.Kind != game.CostModifierSpell {
+				continue
+			}
+			if len(modifier.PerTargetBeyondFirstIncrease) > 0 {
+				repetitions := max(0, len(targets)-1)
+				if repetitions == 0 {
+					continue
+				}
+				increase := make(cost.Mana, 0, repetitions*len(modifier.PerTargetBeyondFirstIncrease))
+				for range repetitions {
+					increase = append(increase, modifier.PerTargetBeyondFirstIncrease...)
+				}
+				modifiers = append(modifiers, game.CostModifier{
+					Kind:         game.CostModifierSpell,
+					ManaIncrease: increase,
+				})
 				continue
 			}
 			reduction := 0

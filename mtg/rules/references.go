@@ -717,6 +717,8 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.objectControlledGroupMembers(ref)
 	case game.GroupDomainPlayerControlled:
 		return r.playerControlledGroupMembers(ref)
+	case game.GroupDomainPlayerGroupControlled:
+		return r.playerGroupControlledGroupMembers(ref)
 	case game.GroupDomainBattlefield:
 		return r.battlefieldGroupMembers(ref)
 	case game.GroupDomainSameName:
@@ -1019,6 +1021,7 @@ func (r referenceResolver) playerControlledGroupMembers(ref game.GroupReference)
 	if !ok {
 		return []id.ID{}
 	}
+
 	controller, ok := r.player(anchor)
 	if !ok {
 		return []id.ID{}
@@ -1041,6 +1044,36 @@ func (r referenceResolver) playerControlledGroupMembers(ref game.GroupReference)
 			continue
 		}
 		members = append(members, permanent.ObjectID)
+	}
+	return members
+}
+
+func (r referenceResolver) playerGroupControlledGroupMembers(ref game.GroupReference) []id.ID {
+	group, ok := ref.PlayerGroup()
+	if !ok {
+		return []id.ID{}
+	}
+	controllers := make(map[game.PlayerID]bool)
+	for _, player := range r.playerGroup(group) {
+		controllers[player] = true
+	}
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	if sel.ExcludeSource && source == nil {
+		return []id.ID{}
+	}
+	excludedID := r.exclusionObjectID(ref)
+	members := make([]id.ID, 0, len(r.g.Battlefield))
+	for _, permanent := range r.g.Battlefield {
+		if excludedID != 0 && permanent.ObjectID == excludedID {
+			continue
+		}
+		if !controllers[effectiveController(r.g, permanent)] {
+			continue
+		}
+		if r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			members = append(members, permanent.ObjectID)
+		}
 	}
 	return members
 }

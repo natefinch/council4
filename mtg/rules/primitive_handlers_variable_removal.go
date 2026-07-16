@@ -20,7 +20,6 @@ func handleRemoveTargetsForToken(r *effectResolver, prim game.RemoveTargetsForTo
 	res := effectResolved{accepted: true}
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
 	removing := make([]*game.Permanent, 0, len(r.obj.Targets))
-	refs := make([]game.LinkedObjectRef, 0, len(r.obj.Targets))
 	var candidates []*game.Permanent
 	for i := range r.obj.Targets {
 		permanent, ok := r.resolveObject(game.TargetPermanentReference(i))
@@ -39,26 +38,35 @@ func handleRemoveTargetsForToken(r *effectResolver, prim game.RemoveTargetsForTo
 		batch = &destroyBatch{game: r.game, simultaneousID: r.game.IDGen.Next()}
 		removing, replacements = planDestroyPermanents(r.game, candidates, prim.PreventRegeneration, batch.simultaneousID)
 	}
-	for _, permanent := range removing {
-		// permanentObjectBindingRef preserves the ObjectID even for a token
-		// (CardInstanceID == 0) so the paired CreateTokenForEachDestroyed still
-		// mints a token for a removed token permanent's controller;
-		// permanentLinkedObjectRef would drop tokens and silently skip the payoff.
-		refs = append(refs, permanentObjectBindingRef(permanent))
-	}
 	destination := zone.Graveyard
 	if prim.Exile {
 		destination = zone.Exile
 	}
-	moved := false
+	var refs []game.LinkedObjectRef
+	movedCount := 0
 	if prim.Exile {
-		moved = movePermanentsToZoneSimultaneously(r.game, removing, destination)
+		results := movePermanentsToZoneSimultaneouslyWithResults(r.game, removing, destination)
+		for _, result := range results {
+			if !result.moved || result.destination != zone.Exile {
+				continue
+			}
+			refs = append(refs, permanentObjectBindingRef(result.permanent))
+			movedCount++
+		}
 	} else {
-		moved = applyPlannedDestroyBatch(r.game, removing, replacements, batch)
+		for _, permanent := range removing {
+			// permanentObjectBindingRef preserves the ObjectID even for a token
+			// (CardInstanceID == 0) so the paired CreateTokenForEachDestroyed still
+			// mints a token for a removed token permanent's controller.
+			refs = append(refs, permanentObjectBindingRef(permanent))
+		}
+		if applyPlannedDestroyBatch(r.game, removing, replacements, batch) {
+			movedCount = len(removing)
+		}
 	}
-	if moved {
+	if movedCount > 0 {
 		res.succeeded = true
-		res.amount = len(removing)
+		res.amount = movedCount
 	}
 	for _, ref := range refs {
 		rememberLinkedObject(r.game, key, ref)

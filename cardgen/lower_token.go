@@ -151,8 +151,13 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		controlledCountThatPlayerTokenAmount(&effect) &&
 		len(ctx.content.Targets) == 1 &&
 		singleThatPlayerTargetReference(ctx.content.References)
+	targetedPlayerGroupCount := controllerRecipient &&
+		effect.Amount.DynamicKind == compiler.DynamicAmountCount &&
+		effect.Amount.Selector().Controller == compiler.ControllerTargetedPlayers &&
+		len(ctx.content.Targets) == 1 &&
+		singleThoseTargetedPlayersReference(ctx.content.References)
 	expectedTargets := 0
-	if targetRecipient || controlledCountTarget {
+	if targetRecipient || controlledCountTarget || targetedPlayerGroupCount {
 		expectedTargets = 1
 	}
 	// Every caller guarantees the sole effect is an EffectCreate: lower_spell.go:1820
@@ -185,6 +190,12 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		// The tokens enter under the spell's controller ("You create ..."), so
 		// recipient stays unset; only the count is scoped to the target player.
 		spec, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targets = []game.TargetSpec{spec}
+	case targetedPlayerGroupCount:
+		spec, ok := targetPlayersGroupSpec(ctx.content.Targets[0])
 		if !ok {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
@@ -368,6 +379,12 @@ func singleThatPlayerTargetReference(references []compiler.CompiledReference) bo
 	return len(references) == 1 &&
 		references[0].Kind == compiler.ReferenceThatPlayer &&
 		references[0].Binding == compiler.ReferenceBindingTarget
+}
+
+func singleThoseTargetedPlayersReference(references []compiler.CompiledReference) bool {
+	return len(references) == 1 &&
+		references[0].Kind == compiler.ReferencePronoun &&
+		references[0].Pronoun == compiler.ReferencePronounThose
 }
 
 // lowerMultiTokenCreate lowers a multi-token create effect ("Create a 1/1 green

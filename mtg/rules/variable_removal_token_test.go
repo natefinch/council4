@@ -97,13 +97,40 @@ func TestRemoveTargetsForTokenExilesAllTargetsUnderLink(t *testing.T) {
 		if permanentByCardID(g, removed.CardInstanceID) != nil {
 			t.Fatal("a chosen target remained on the battlefield after exile")
 		}
+
 		if !g.Players[removed.Controller].Exile.Contains(removed.CardInstanceID) {
 			t.Fatalf("exiled creature %d did not reach its owner's exile zone", removed.CardInstanceID)
 		}
+
 	}
 	key := linkedObjectSourceKey(g, obj, "removed-targets-for-token")
 	if got := len(linkedObjects(g, key)); got != 2 {
 		t.Fatalf("linked removed objects = %d, want 2 (one per target)", got)
+	}
+}
+
+func TestRemoveTargetsForTokenDoesNotLinkCommanderRedirectedFromExile(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	commander := addCommanderPermanent(g, game.Player2)
+	ordinary := addCombatCreaturePermanent(g, game.Player2)
+	source := addCombatPermanent(g, game.Player1, variableRemovalSourceDef())
+	obj := removalStackObjectWithTargets(source, commander, ordinary)
+
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.RemoveTargetsForToken{
+		Exile:     true,
+		LinkedKey: game.LinkedKey("removed-targets-for-token"),
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.CreateTokenForEachDestroyed{
+		Source:    game.TokenDef(namedTokenDef("Sphinx", color.Blue)),
+		LinkedKey: game.LinkedKey("removed-targets-for-token"),
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if !g.Players[game.Player2].CommandZone.Contains(commander.CardInstanceID) {
+		t.Fatal("commander was not redirected to the command zone")
+	}
+	if got := namedTokenCount(g, game.Player2, "Sphinx"); got != 1 {
+		t.Fatalf("Sphinx tokens = %d, want 1 only for the creature exiled this way", got)
 	}
 }
 
