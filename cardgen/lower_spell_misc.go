@@ -2153,10 +2153,12 @@ func lowerBoundedUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Negated ||
 		effect.Optional ||
 		!effect.Exact ||
-		!effect.Amount.RangeKnown ||
-		effect.Amount.Minimum != 0 ||
-		effect.Amount.Maximum < 1 ||
 		effect.Selector.All {
+		return game.AbilityContent{}, false
+	}
+	chooseUpTo := effect.Amount.RangeKnown && effect.Amount.Minimum == 0 && effect.Amount.Maximum >= 1
+	chooseExactOne := effect.Amount.Known && effect.Amount.Value == 1
+	if !chooseUpTo && !chooseExactOne {
 		return game.AbilityContent{}, false
 	}
 	selection, ok := massGroupSelection(effect.Selector)
@@ -2166,7 +2168,8 @@ func lowerBoundedUntapSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.Untap{
 			Group:      game.BattlefieldGroup(selection),
-			ChooseUpTo: true,
+			ChooseUpTo: chooseUpTo,
+			ChooseOne:  chooseExactOne,
 			Amount:     game.Fixed(effect.Amount.Maximum),
 		},
 	}}}.Ability(), true

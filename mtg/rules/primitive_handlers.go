@@ -1300,6 +1300,13 @@ func markPlayerWinsGame(g *game.Game, winnerID game.PlayerID) bool {
 
 func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.ChooseOne {
+		if permanent, ok := r.chooseOneGroupPermanent(prim.Group); ok {
+			setPermanentTapped(r.game, permanent, false)
+			res.succeeded = true
+		}
+		return res
+	}
 	if prim.ChooseUpTo {
 		for _, permanent := range r.chooseUntapPermanents(prim) {
 			setPermanentTapped(r.game, permanent, false)
