@@ -42,6 +42,8 @@ const (
 	StaticDeclarationManaProductionMultiplier
 	StaticDeclarationCombatDamagePrevention
 	StaticDeclarationDevotionNotCreature
+	StaticDeclarationControlOpponentSearches
+	StaticDeclarationExileOpponentSearchFinds
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -943,6 +945,8 @@ type StaticDeclaration struct {
 	ManaProductionMultiplier    *StaticManaProductionMultiplierDeclaration
 	CombatDamagePrevention      *StaticCombatDamagePreventionDeclaration
 	DevotionNotCreature         *StaticDevotionNotCreatureDeclaration
+	ControlOpponentSearches     *StaticControlOpponentSearchesDeclaration
+	ExileOpponentSearchFinds    *StaticExileOpponentSearchFindsDeclaration
 }
 
 // StaticCreatureAttackTaxAmountKind identifies how a per-creature attack-tax
@@ -992,6 +996,23 @@ type StaticOpeningHandPlayDeclaration struct{}
 // entering-caused triggered abilities of permanents the controller's opponents
 // control. The semantics are fixed, so the declaration carries no payload.
 type StaticOpponentEnteringTriggerSuppressionDeclaration struct{}
+
+// StaticControlOpponentSearchesDeclaration marks the static "You control your
+// opponents while they're searching their libraries." (Opposition Agent). While
+// an opponent of the controller is searching their own library, the controller
+// makes that search's choices. The semantics are fixed, so the declaration
+// carries no payload.
+type StaticControlOpponentSearchesDeclaration struct{}
+
+// StaticExileOpponentSearchFindsDeclaration marks the static "While an opponent
+// is searching their library, they exile each card they find. You may play those
+// cards for as long as they remain exiled, and you may spend mana as though it
+// were mana of any color to cast them." (Opposition Agent). Every card an
+// opponent finds while searching their library is exiled, and the controller may
+// afterward play those exiled cards spending mana of any color for as long as
+// they remain exiled. The semantics are fixed, so the declaration carries no
+// payload.
+type StaticExileOpponentSearchFindsDeclaration struct{}
 
 // StaticManaProductionMultiplierDeclaration marks the mana-production replacement
 // "If you tap a permanent for mana, it produces N times as much of that mana
@@ -1135,6 +1156,14 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticOpponentEnteringTriggerSuppressionDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticControlOpponentSearchesDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticExileOpponentSearchFindsDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}

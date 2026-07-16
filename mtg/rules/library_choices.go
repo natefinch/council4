@@ -518,14 +518,19 @@ func manifestDreadChoiceRequest(g *game.Game, playerID game.PlayerID, cards []id
 	}
 }
 
-// chooseSearchMatches asks the searching player which matching library cards to
-// take. minChoices is zero for qualified or "up to" searches and one for an
-// unrestricted exact-card search with a nonempty library.
-func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount, minChoices int) []id.ID {
+// chooseSearchMatches asks the deciding player which matching library cards to
+// take. The decider is the searching player for an ordinary search and the
+// opponent controlling the search (Opposition Agent) when one applies; either way
+// the candidate card names are offered as visible choice labels, so the decider
+// sees the otherwise-hidden library. minChoices is zero for qualified or "up to"
+// searches and one for an unrestricted exact-card search with a nonempty library,
+// computed from the spec independently of who decides so fail-to-find stays
+// correct.
+func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID, candidates []id.ID, amount, minChoices int) []id.ID {
 	if len(candidates) == 0 || amount <= 0 {
 		return nil
 	}
-	selected := e.chooseChoice(g, agents, searchChoiceRequest(g, playerID, candidates, amount, minChoices), log)
+	selected := e.chooseChoice(g, agents, searchChoiceRequest(g, decider, candidates, amount, minChoices), log)
 	found := make([]id.ID, 0, len(selected))
 	for _, index := range selected {
 		if index >= 0 && index < len(candidates) {
@@ -535,7 +540,7 @@ func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]Playe
 	return found
 }
 
-func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.ID, amount, minChoices int) game.ChoiceRequest {
+func searchChoiceRequest(g *game.Game, decider game.PlayerID, candidates []id.ID, amount, minChoices int) game.ChoiceRequest {
 	options := make([]game.ChoiceOption, 0, len(candidates))
 	for i, cardID := range candidates {
 		label := "unknown card"
@@ -554,7 +559,7 @@ func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.I
 	}
 	return game.ChoiceRequest{
 		Kind:             game.ChoiceSearch,
-		Player:           playerID,
+		Player:           decider,
 		Prompt:           "Search your library: choose matching cards to find.",
 		Options:          options,
 		MinChoices:       min(minChoices, maxChoices),
@@ -571,7 +576,7 @@ func searchChoiceRequest(g *game.Game, playerID game.PlayerID, candidates []id.I
 // being chosen and then silently dropped (CR 701.19). The player may stop early
 // or fail to find entirely by choosing none at any stage. Agents that do not
 // answer fall back to the deterministic first-compatible-card selection.
-func (e *Engine) chooseCorrelatedSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount int) []id.ID {
+func (e *Engine) chooseCorrelatedSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID, candidates []id.ID, amount int) []id.ID {
 	if len(candidates) == 0 || amount <= 0 {
 		return nil
 	}
@@ -588,7 +593,7 @@ func (e *Engine) chooseCorrelatedSearchMatches(g *game.Game, agents [game.NumPla
 		if len(pool) == 0 {
 			break
 		}
-		pick, ok := e.chooseCorrelatedSearchCard(g, agents, log, playerID, pool)
+		pick, ok := e.chooseCorrelatedSearchCard(g, agents, log, decider, pool)
 		if !ok {
 			break
 		}
@@ -607,7 +612,7 @@ func (e *Engine) chooseCorrelatedSearchMatches(g *game.Game, agents [game.NumPla
 // (CR 701.19). The player may stop early or fail to find entirely by choosing
 // none at any stage. Agents that do not answer fall back to the deterministic
 // first-available-card selection.
-func (e *Engine) chooseDifferentNameSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, candidates []id.ID, amount int) []id.ID {
+func (e *Engine) chooseDifferentNameSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID, candidates []id.ID, amount int) []id.ID {
 	if len(candidates) == 0 || amount <= 0 {
 		return nil
 	}
@@ -624,7 +629,7 @@ func (e *Engine) chooseDifferentNameSearchMatches(g *game.Game, agents [game.Num
 		if len(pool) == 0 {
 			break
 		}
-		pick, ok := e.chooseCorrelatedSearchCard(g, agents, log, playerID, pool)
+		pick, ok := e.chooseCorrelatedSearchCard(g, agents, log, decider, pool)
 		if !ok {
 			break
 		}
@@ -649,7 +654,7 @@ func searchCardName(g *game.Game, cardID id.ID) string {
 // pool of a correlated search. It returns the chosen card and true, or ok=false
 // when the player declines (choosing none stops the search). Agents that do not
 // answer default to the first pool card so nil agents find deterministically.
-func (e *Engine) chooseCorrelatedSearchCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, pool []id.ID) (id.ID, bool) {
+func (e *Engine) chooseCorrelatedSearchCard(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID, pool []id.ID) (id.ID, bool) {
 	options := make([]game.ChoiceOption, 0, len(pool))
 	for i, cardID := range pool {
 		label := "unknown card"
@@ -660,7 +665,7 @@ func (e *Engine) chooseCorrelatedSearchCard(g *game.Game, agents [game.NumPlayer
 	}
 	request := game.ChoiceRequest{
 		Kind:             game.ChoiceSearch,
-		Player:           playerID,
+		Player:           decider,
 		Prompt:           "Search your library: choose matching cards to find.",
 		Options:          options,
 		MinChoices:       0,

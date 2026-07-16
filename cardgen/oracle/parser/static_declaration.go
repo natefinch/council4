@@ -55,6 +55,8 @@ const (
 	StaticDeclarationCombatDamagePrevention               StaticDeclarationKind = "StaticDeclarationCombatDamagePrevention"
 	StaticDeclarationRoomAbilityTriggerMultiplier         StaticDeclarationKind = "StaticDeclarationRoomAbilityTriggerMultiplier"
 	StaticDeclarationDevotionNotCreature                  StaticDeclarationKind = "StaticDeclarationDevotionNotCreature"
+	StaticDeclarationControlOpponentSearches              StaticDeclarationKind = "StaticDeclarationControlOpponentSearches"
+	StaticDeclarationExileOpponentSearchFinds             StaticDeclarationKind = "StaticDeclarationExileOpponentSearchFinds"
 )
 
 // StaticAttackTaxAmountKind identifies how a per-creature attack-tax declaration
@@ -1309,6 +1311,12 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticOpponentEnteringTriggerSuppressionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticControlOpponentSearchesDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
+	if declaration, ok := parseStaticExileOpponentSearchFindsDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
 	if declaration, ok := parseStaticCreatureAttackTaxDeclaration(tokens); ok {

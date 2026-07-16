@@ -1466,6 +1466,18 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent entering-trigger suppression does not accept additional payload")
 		}
+	case RuleEffectControlOpponentSearches:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent-search control does not accept additional payload")
+		}
+	case RuleEffectExileOpponentSearchFinds:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent-search exile does not accept additional payload")
+		}
 	case RuleEffectAscend:
 		payload := *effect
 		payload.Kind = RuleEffectNone

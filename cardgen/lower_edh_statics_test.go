@@ -86,6 +86,21 @@ func TestGenerateExecutableCardSourceEDHStatics(t *testing.T) {
 				"AttackTaxScaledAmount: game.AggregateControllerBasicLandTypeCount",
 			},
 		},
+		"opposition agent": {
+			card: &ScryfallCard{
+				Name:       "Opposition Agent",
+				Layout:     "normal",
+				ManaCost:   "{2}{B}",
+				TypeLine:   "Creature — Human Rogue",
+				OracleText: "Flash\nYou control your opponents while they're searching their libraries.\nWhile an opponent is searching their library, they exile each card they find. You may play those cards for as long as they remain exiled, and you may spend mana as though it were mana of any color to cast them.",
+				Power:      new("3"),
+				Toughness:  new("2"),
+			},
+			wants: []string{
+				"game.RuleEffectControlOpponentSearches",
+				"game.RuleEffectExileOpponentSearchFinds",
+			},
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

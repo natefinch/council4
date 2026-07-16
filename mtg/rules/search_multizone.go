@@ -23,13 +23,14 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 	if !ok {
 		return false, false
 	}
+	control := resolveSearchControl(g, playerID)
 	if spec.MaxManaValueFromX {
 		// "with mana value X or less" bounds the search by the spell's chosen X,
 		// resolved from the resolving stack object as the search runs.
 		spec.Filter.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: obj.XValue})
 		spec.MaxManaValueFromX = false
 	}
-	searchLibrary, searchGraveyard := e.chooseSearchZones(g, agents, log, playerID)
+	searchLibrary, searchGraveyard := e.chooseSearchZones(g, agents, log, control.decisionMaker)
 	if searchLibrary {
 		// Searching the library fires the search event once (CR 701.19a); the
 		// closing shuffle is a separate instruction gated on the reported result.
@@ -69,7 +70,7 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 	for i := range candidates {
 		candidateIDs[i] = candidates[i].cardID
 	}
-	found := e.chooseSearchMatches(g, agents, log, playerID, candidateIDs, 1, minChoices)
+	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidateIDs, 1, minChoices)
 	if len(found) == 0 {
 		return false, searchLibrary
 	}
@@ -92,21 +93,23 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 		}
 	}
 	dest := game.SearchDestination{Zone: spec.Destination, EntersTapped: spec.EntersTapped}
-	_, placed = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, fromZone)
+	_, placed = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, fromZone, control)
 	return placed, searchLibrary
 }
 
-// chooseSearchZones asks the searching player which of their library and
-// graveyard to search for the "search your library and/or graveyard" form. At
-// least one zone must be chosen; the deterministic fallback searches both.
-func (e *Engine) chooseSearchZones(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID) (searchLibrary, searchGraveyard bool) {
+// chooseSearchZones asks the deciding player which of the searcher's library and
+// graveyard to search for the "search your library and/or graveyard" form. The
+// decider is the searcher normally, or the opponent controlling the search
+// (Opposition Agent). At least one zone must be chosen; the deterministic
+// fallback searches both.
+func (e *Engine) chooseSearchZones(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID) (searchLibrary, searchGraveyard bool) {
 	const (
 		libraryOption   = 0
 		graveyardOption = 1
 	)
 	request := game.ChoiceRequest{
 		Kind:   game.ChoiceZoneSelection,
-		Player: playerID,
+		Player: decider,
 		Prompt: "Choose which zones to search.",
 		Options: []game.ChoiceOption{
 			{Index: libraryOption, Label: "Your library"},

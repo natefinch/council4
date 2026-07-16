@@ -42,7 +42,12 @@ func handleSearchExileFaceDown(r *effectResolver, prim game.Search) effectResolv
 // card's instance ID and true when a card is found, or false when the search
 // finds nothing (an empty library, or a legal decline). The library is always
 // shuffled because the searching player searched it (CR 701.19a), whether or not
-// a card was found.
+// a card was found. When an opponent's Opposition Agent controls the search, its
+// controller makes the choice and the found card is exiled face up to its owner
+// with lasting play permission for the controller instead of the searcher's
+// face-down exile; the library still shuffles and no card is returned, so the
+// searcher's linked follow-up (a conditional cast or move-to-hand) finds nothing
+// published and is a safe no-op.
 func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) (id.ID, bool) {
 	if amount <= 0 {
 		amount = 1
@@ -51,6 +56,7 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 	if !ok {
 		return 0, false
 	}
+	control := resolveSearchControl(g, playerID)
 	// The player searches their library when this runs regardless of whether a
 	// matching card is found (CR 701.19a), so the search event fires once here.
 	emitEvent(g, game.Event{
@@ -68,13 +74,18 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 	if searchMustFindIfAvailable(spec, amount) {
 		minChoices = 1
 	}
-	found := e.chooseSearchMatches(g, agents, log, playerID, candidates, 1, minChoices)
+	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, 1, minChoices)
 	if len(found) == 0 {
 		player.Library.Shuffle(e.rng)
 		return 0, false
 	}
 	cardID := found[0]
 	if !player.Library.Remove(cardID) {
+		player.Library.Shuffle(e.rng)
+		return 0, false
+	}
+	if control.exileFinds {
+		exileFoundCard(g, obj, control, player, playerID, cardID, zone.Library)
 		player.Library.Shuffle(e.rng)
 		return 0, false
 	}
