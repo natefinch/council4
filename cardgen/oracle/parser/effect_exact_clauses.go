@@ -3119,6 +3119,27 @@ func exactEffectClauseText(effect *EffectSyntax) string {
 	return text
 }
 
+// exactEachOfThemDamageText reports whether a damage effect deals its amount to
+// "each of them" — the plural back-reference to the targets chosen by a preceding
+// "Choose any target, then choose another target for each time this spell was
+// kicked." preamble (Comet Storm). The recipient is a bare PronounThem/PronounThey
+// reference with no per-effect target and no structured DamageRecipient, so the
+// clause is reconstructed as "<prefix> <amount> damage to each of them." and
+// compared against the source. It fails closed for any other amount or recipient
+// shape, keeping unrelated wordings unrecognized.
+func exactEachOfThemDamageText(effect *EffectSyntax, prefix, text string) bool {
+	if len(effect.Targets) != 0 ||
+		effect.DamageRecipient.Reference != DamageRecipientReferenceNone ||
+		!referencesIncludeThemPronoun(effect.References) {
+		return false
+	}
+	amount, ok := exactGroupDamageAmountText(effect.Amount)
+	if !ok {
+		return false
+	}
+	return text == fmt.Sprintf("%s %s damage to each of them.", prefix, amount)
+}
+
 func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	verb := slices.IndexFunc(effect.Tokens, func(token shared.Token) bool {
 		return token.Span == effect.VerbSpan
@@ -3164,6 +3185,9 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	}
 	if effect.Divided {
 		return exactDividedDamageText(effect, prefix, text)
+	}
+	if exactEachOfThemDamageText(effect, prefix, text) {
+		return true
 	}
 	if effect.DamageRecipient.Reference != DamageRecipientReferenceNone {
 		if len(effect.Targets) != 0 {

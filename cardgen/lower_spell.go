@@ -1822,6 +1822,9 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 	if content, ok := lowerEventPowerGroupDamageSpell(ctx); ok {
 		return content, nil
 	}
+	if content, ok := lowerKickerScaledEachTargetDamageSpell(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerEachOfTargetsDamageSpell(ctx); ok {
 		return content, nil
 	}

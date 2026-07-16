@@ -1480,6 +1480,12 @@ type CompiledTarget struct {
 	Cardinality TargetCardinality
 	Selector    CompiledSelector
 	Exact       bool
+	// KickerScaledCount marks a target whose chosen count is one plus the number
+	// of times the spell was kicked ("Choose any target, then choose another
+	// target for each time this spell was kicked.", Comet Storm; CR 702.32). It
+	// is propagated verbatim from the parser's folded preamble target; lowering
+	// maps it to game.TargetSpec.CountEqualsKickerPlusOne.
+	KickerScaledCount bool
 	// Order is the target's dense source-order rank, used to bind a reference to
 	// its closest preceding target without byte offsets.
 	Order shared.SourceOrder

@@ -58,6 +58,9 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	if prim.Divided {
 		return r.damageDivided(res, source, prim)
 	}
+	if prim.EachTarget {
+		return r.damageEachTarget(res, source, prim)
+	}
 	if object, ok := prim.Recipient.ObjectReference(); ok {
 		if prim.ExcessRecipient.Valid() {
 			return r.damagePermanentRedirectingExcess(res, source, prim, object)
@@ -162,6 +165,50 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 		}
 	}
 	res.amount = typedDamageResultAmount(prim.ResultAmountKind, res.amount, 0)
+	res.succeeded = dealtAny
+	return res
+}
+
+// damageEachTarget deals the full Amount independently to every target chosen for
+// the recipient's target spec ("deals X damage to each of them", Comet Storm).
+// Unlike damageDivided, the amount is not split: each still-legal chosen target is
+// dealt the whole res.amount as its own damage event. A target that became illegal
+// since announcement is skipped rather than dealt damage (CR 608.2b). The chosen
+// targets are located through the recipient's spec index, reusing dividedTargets'
+// per-spec target enumeration and legality determination.
+func (r *effectResolver) damageEachTarget(res effectResolved, source effectDamageSource, prim game.Damage) effectResolved {
+	object, ok := prim.Recipient.AnyTargetObjectReference()
+	if !ok {
+		return res
+	}
+	targets := r.dividedTargets(object.TargetIndex())
+	if len(targets) == 0 {
+		return res
+	}
+	amount := res.amount
+	dealtAny := false
+	for _, entry := range targets {
+		if !entry.legal {
+			continue
+		}
+		switch entry.target.Kind {
+		case game.TargetPermanent:
+			permanent, found := permanentByObjectID(r.game, entry.target.PermanentID)
+			if !found {
+				continue
+			}
+			dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, amount, false)
+			applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
+			dealtAny = dealtAny || dealt > 0
+		case game.TargetPlayer:
+			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, entry.target.PlayerID, amount, false)
+			applyDamageSourceLifelink(r.game, source, dealt)
+			dealtAny = dealtAny || dealt > 0
+		default:
+			continue
+		}
+	}
+	res.amount = typedDamageResultAmount(prim.ResultAmountKind, amount, 0)
 	res.succeeded = dealtAny
 	return res
 }

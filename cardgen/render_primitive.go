@@ -1258,6 +1258,9 @@ func (r Renderer) renderDamagePrimitive(ctx *renderCtx, primitive game.Primitive
 	if value.Divided {
 		fields = append(fields, "Divided: true,")
 	}
+	if value.EachTarget {
+		fields = append(fields, "EachTarget: true,")
+	}
 	if value.DamageSource.Exists {
 		source, err := r.renderObjectReference(value.DamageSource.Val)
 		if err != nil {

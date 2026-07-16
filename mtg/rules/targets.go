@@ -37,7 +37,23 @@ type targetChoiceResult struct {
 }
 
 func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, branch game.CastBranch) targetChoiceResult {
+	kickerCount := 0
+	if branch.Kicked {
+		kickerCount = 1
+	}
+	return targetChoicesForSpellWithKickerCount(g, controller, card, chosenModes, branch, kickerCount)
+}
+
+func targetChoicesForSpellWithKickerCount(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, branch game.CastBranch, kickerCount int) targetChoiceResult {
 	specs := spellTargetSpecs(card, chosenModes, branch)
+	for i := range specs {
+		if !specs[i].CountEqualsKickerPlusOne {
+			continue
+		}
+		count := kickerCount + 1
+		specs[i].MinTargets = count
+		specs[i].MaxTargets = count
+	}
 	return targetChoicesForSpecs(g, controller, card, 0, game.Event{}, specs)
 }
 
