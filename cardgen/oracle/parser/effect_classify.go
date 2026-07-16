@@ -1831,6 +1831,12 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectBecomeMonarch
 	case cantBecomeMonarchVerbAt(tokens, index):
 		return EffectCantBecomeMonarch
+	case ventureIntoDungeonVerbAt(tokens, index):
+		return EffectVentureIntoDungeon
+	case ventureIntoUndercityVerbAt(tokens, index):
+		return EffectVentureIntoUndercity
+	case takeInitiativeVerbAt(tokens, index):
+		return EffectTakeInitiative
 	case kind == EffectTap && index+2 < len(tokens) &&
 		equalWord(tokens[index+1], "or") && equalWord(tokens[index+2], "untap"):
 		return EffectTapOrUntap
@@ -1985,6 +1991,38 @@ func cantBecomeMonarchVerbAt(tokens []shared.Token, index int) bool {
 		effectWordsAt(tokens, index+1, "become", "the", "monarch", "this", "turn") &&
 		index+6 < len(tokens) &&
 		tokens[index+6].Kind == shared.Period
+}
+
+// ventureIntoDungeonVerbAt reports whether the "venture into the dungeon."
+// keyword action (CR 309.6) begins at index. The object is the fixed "into the
+// dungeon" phrase ending the sentence; any other object leaves the verb
+// unclassified so unrelated "venture" wordings keep their own recognizers.
+func ventureIntoDungeonVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "venture") || equalWord(tokens[index], "ventures")) &&
+		effectWordsAt(tokens, index+1, "into", "the", "dungeon") &&
+		index+4 < len(tokens) &&
+		tokens[index+4].Kind == shared.Period
+}
+
+// ventureIntoUndercityVerbAt reports whether the "venture into Undercity."
+// keyword action begins at index. The object is the fixed "into Undercity"
+// phrase ending the sentence.
+func ventureIntoUndercityVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "venture") || equalWord(tokens[index], "ventures")) &&
+		effectWordsAt(tokens, index+1, "into", "Undercity") &&
+		index+3 < len(tokens) &&
+		tokens[index+3].Kind == shared.Period
+}
+
+// takeInitiativeVerbAt reports whether the "take the initiative." keyword action
+// (CR 720) begins at index. The object is the fixed "the initiative" phrase
+// ending the sentence; any other object leaves the "take"/"takes" verb
+// unclassified so unrelated "take" wordings keep their own recognizers.
+func takeInitiativeVerbAt(tokens []shared.Token, index int) bool {
+	return (equalWord(tokens[index], "take") || equalWord(tokens[index], "takes")) &&
+		effectWordsAt(tokens, index+1, "the", "initiative") &&
+		index+3 < len(tokens) &&
+		tokens[index+3].Kind == shared.Period
 }
 
 // playerCounterWordAfter reports whether the tokens beginning at start name a

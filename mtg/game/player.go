@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // Player represents a single player in a Commander game with all their
@@ -101,8 +102,22 @@ type Player struct {
 	CantBecomeMonarchThisTurn bool
 
 	// HasInitiative is true if this player has the initiative (dungeon
-	// mechanic).
+	// mechanic). At most one living player has the initiative at a time (CR
+	// 720). Taking, and combat-damage transfer of, the initiative each cause the
+	// holder to venture into Undercity.
 	HasInitiative bool
+
+	// Dungeon is the player's live position in a dungeon (CR 309.4), unset when
+	// the player is not in any dungeon. A player is in at most one dungeon at a
+	// time; venturing enters a dungeon or advances the current one, and
+	// completing a dungeon clears this state.
+	Dungeon opt.V[DungeonState]
+
+	// DungeonsCompleted is the number of dungeons this player has completed this
+	// game (CR 309.7). It only ever increases, so cards that ask whether the
+	// player "has completed a dungeon" (Imoen, Mystic Trickster) are satisfied
+	// once it is at least one.
+	DungeonsCompleted int
 
 	// HasCityBlessing is true if this player has the city's blessing
 	// (ascend mechanic — gained when controlling 10+ permanents).

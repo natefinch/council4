@@ -116,6 +116,33 @@ func (CorrelatedFight) Kind() PrimitiveKind { return PrimitiveCorrelatedFight }
 // Kind implements Primitive for ExileTargetSpells.
 func (ExileTargetSpells) Kind() PrimitiveKind { return PrimitiveExileTargetSpells }
 
+// Kind implements Primitive for VentureIntoDungeon.
+func (VentureIntoDungeon) Kind() PrimitiveKind { return PrimitiveVentureIntoDungeon }
+
+// Kind implements Primitive for VentureIntoUndercity.
+func (VentureIntoUndercity) Kind() PrimitiveKind { return PrimitiveVentureIntoUndercity }
+
+// Kind implements Primitive for TakeInitiative.
+func (TakeInitiative) Kind() PrimitiveKind { return PrimitiveTakeInitiative }
+
+// Kind implements Primitive for RevealPutOntoBattlefield.
+func (RevealPutOntoBattlefield) Kind() PrimitiveKind { return PrimitiveRevealPutOntoBattlefield }
+
+// Kind implements Primitive for CastLinkedCardForFree.
+func (CastLinkedCardForFree) Kind() PrimitiveKind { return PrimitiveCastLinkedCardForFree }
+
+// Kind implements Primitive for RollDiceCreateTokens.
+func (RollDiceCreateTokens) Kind() PrimitiveKind { return PrimitiveRollDiceCreateTokens }
+
+// Kind implements Primitive for RevealToHandDrainManaValue.
+func (RevealToHandDrainManaValue) Kind() PrimitiveKind { return PrimitiveRevealToHandDrainManaValue }
+
+// Kind implements Primitive for GoadForEachOpponent.
+func (GoadForEachOpponent) Kind() PrimitiveKind { return PrimitiveGoadForEachOpponent }
+
+// Kind implements Primitive for CreateCommanderCopyToken.
+func (CreateCommanderCopyToken) Kind() PrimitiveKind { return PrimitiveCreateCommanderCopyToken }
+
 // Kind implements Primitive for Tap.
 func (Tap) Kind() PrimitiveKind { return PrimitiveTap }
 
@@ -444,6 +471,15 @@ func (ModifyPT) isPrimitive()                             {}
 func (Fight) isPrimitive()                                {}
 func (CorrelatedFight) isPrimitive()                      {}
 func (ExileTargetSpells) isPrimitive()                    {}
+func (VentureIntoDungeon) isPrimitive()                   {}
+func (VentureIntoUndercity) isPrimitive()                 {}
+func (TakeInitiative) isPrimitive()                       {}
+func (RevealPutOntoBattlefield) isPrimitive()             {}
+func (CastLinkedCardForFree) isPrimitive()                {}
+func (RollDiceCreateTokens) isPrimitive()                 {}
+func (RevealToHandDrainManaValue) isPrimitive()           {}
+func (GoadForEachOpponent) isPrimitive()                  {}
+func (CreateCommanderCopyToken) isPrimitive()             {}
 func (Tap) isPrimitive()                                  {}
 func (TapOrUntap) isPrimitive()                           {}
 func (Search) isPrimitive()                               {}
@@ -546,7 +582,11 @@ func (AddExtraPhases) isPrimitive() {}
 func (RollDie) isPrimitive() {}
 
 func (p Damage) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
-func (p Draw) instructionRefs() primitiveRefs   { return quantityRefs(p.Amount) }
+func (p Draw) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (p ReorderLibraryTop) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
@@ -755,10 +795,25 @@ func (p SacrificePermanents) instructionRefs() primitiveRefs {
 func (p Untap) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.Amount))
 }
-func (SkipNextUntap) instructionRefs() primitiveRefs     { return primitiveRefs{} }
-func (RemoveFromCombat) instructionRefs() primitiveRefs  { return primitiveRefs{} }
-func (CounterObject) instructionRefs() primitiveRefs     { return primitiveRefs{} }
-func (ExileTargetSpells) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (SkipNextUntap) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (RemoveFromCombat) instructionRefs() primitiveRefs     { return primitiveRefs{} }
+func (CounterObject) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (ExileTargetSpells) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (VentureIntoDungeon) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (VentureIntoUndercity) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (TakeInitiative) instructionRefs() primitiveRefs       { return primitiveRefs{} }
+func (p RevealPutOntoBattlefield) instructionRefs() primitiveRefs {
+	return mergePrimitiveRefs(quantityRefs(p.Look), quantityRefs(p.Counters))
+}
+func (p CastLinkedCardForFree) instructionRefs() primitiveRefs {
+	return primitiveRefs{consumesLinked: []LinkedKey{p.LinkID}}
+}
+func (RollDiceCreateTokens) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (p RevealToHandDrainManaValue) instructionRefs() primitiveRefs {
+	return quantityRefs(p.Amount)
+}
+func (GoadForEachOpponent) instructionRefs() primitiveRefs      { return primitiveRefs{} }
+func (CreateCommanderCopyToken) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Mill) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked

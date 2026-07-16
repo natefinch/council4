@@ -206,6 +206,14 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	// Beginning-of-step triggers fire at the start of the upkeep and are put on
 	// the stack before the game advances to draw (CR 603.6c, CR 117.3b).
 	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	// The initiative-holder ventures into Undercity at the beginning of their
+	// upkeep (CR 720). Upkeeps occur only on the active player's turn, so this is
+	// the initiative-holder's upkeep exactly when the active player has the
+	// initiative. The venture is queued and resolved by the upcoming trigger pass,
+	// where player choices are available.
+	if holder, ok := playerByID(g, g.Turn.ActivePlayer); ok && holder.HasInitiative {
+		queueInitiativeVenture(g, g.Turn.ActivePlayer)
+	}
 	e.processSuspendUpkeep(g, g.Turn.ActivePlayer)
 	e.processReboundUpkeep(g, g.Turn.ActivePlayer, agents, log)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer

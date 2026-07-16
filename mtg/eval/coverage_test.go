@@ -98,7 +98,13 @@ import (
 // ExileTargetSpells is value-neutral (no atom): exiling any number of target
 // spells removes them from the stack (Mindbreak Trap), so like the CounterObject
 // stack-removal primitive it has no modeled value atom in this vocabulary.
-const knownPrimitiveCount = 135
+//
+// The dungeon/initiative primitives (VentureIntoDungeon, VentureIntoUndercity,
+// TakeInitiative) are value-neutral here: they queue deferred room abilities and
+// designations rather than an immediate card-advantage/life swing, so like the
+// monarch-designation primitives they fall through to the default with no
+// modeled value atom.
+const knownPrimitiveCount = 144
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

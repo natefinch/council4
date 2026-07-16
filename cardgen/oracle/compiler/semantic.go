@@ -1017,6 +1017,14 @@ const (
 	// controller has the city's blessing (CR 702.131 ascend). It is a live
 	// single-player game-state predicate with no clause parameters.
 	ConditionPredicateControllerHasCityBlessing
+	// ConditionPredicateControllerCompletedADungeon is satisfied when the context
+	// controller has completed a dungeon this game (CR 309.7), as in "Draw
+	// another card if you've completed a dungeon" (Imoen, Mystic Trickster). It is
+	// a live single-player game-state predicate with no clause parameters:
+	// completion is monotonic, so once the controller has completed any dungeon
+	// the predicate stays satisfied for the rest of the game. It reads the
+	// controller's dungeon-completion count.
+	ConditionPredicateControllerCompletedADungeon
 	// ConditionPredicateControllerTurn is satisfied while it is the context
 	// controller's turn, i.e. the controller is the active player ("During your
 	// turn, this creature has first strike"; Fresh-Faced Recruit, Embereth
@@ -1992,6 +2000,14 @@ const (
 	EffectRemoveCounter
 	EffectBecomeMonarch
 	EffectCantBecomeMonarch
+	// EffectVentureIntoDungeon, EffectVentureIntoUndercity, and EffectTakeInitiative
+	// are the dungeon/initiative keyword actions (CR 309.6, CR 720): "venture into
+	// the dungeon.", "venture into Undercity.", and "you take the initiative." They
+	// are controller-scoped actions with no clause parameters. Added late so
+	// existing kinds keep their wire values.
+	EffectVentureIntoDungeon
+	EffectVentureIntoUndercity
+	EffectTakeInitiative
 	// EffectDelayedTrigger creates an event-based delayed triggered ability that
 	// fires on a matching game event within a bounded window ("Whenever you cast
 	// a spell this turn, ...", Showdown of the Skalds; "When you next cast a

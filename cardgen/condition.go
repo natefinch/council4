@@ -252,6 +252,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerHasInitiative = true
 	case compiler.ConditionPredicateControllerHasCityBlessing:
 		result.ControllerHasCityBlessing = true
+	case compiler.ConditionPredicateControllerCompletedADungeon:
+		result.ControllerCompletedADungeon = true
 	case compiler.ConditionPredicateEventHistory:
 		if condition.EventHistoryPattern == nil {
 			return game.Condition{}, false
@@ -430,7 +432,8 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
 			return ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateNoAttackerAttackedController,
-			compiler.ConditionPredicateFirstCombatPhaseOfTurn:
+			compiler.ConditionPredicateFirstCombatPhaseOfTurn,
+			compiler.ConditionPredicateControllerCompletedADungeon:
 			// "they draw a card if none of those creatures attacked you"
 			// (Firemane Commando) gates the resolving triggered ability's draw
 			// on its own attack batch, read from the resolving stack object's
@@ -439,6 +442,14 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			// "Whenever ..., if none of those creatures attacked you, they draw"
 			// wording. ConditionPredicateFirstCombatPhaseOfTurn shares the same
 			// effect-gate/intervening-trigger placement.
+			//
+			// "if you've completed a dungeon" (Imoen, Mystic Trickster) shares
+			// this placement too: it is a monotonic live single-player game-state
+			// predicate that gates the additional draw of an end-step trigger as
+			// a resolution-time effect gate, and can equally gate an intervening
+			// trigger. The runtime condition evaluator resolves it from the
+			// controller's live dungeon-completion count, including under
+			// negation, so both forms are safe.
 			return ctx == conditionContextEffectGate ||
 				ctx == conditionContextInterveningTrigger
 		case compiler.ConditionPredicateControllerTurn:

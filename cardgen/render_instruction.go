@@ -864,6 +864,24 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderCantBecomeMonarch(value)
+	case game.PrimitiveVentureIntoDungeon:
+		value, err := assertPrimitive[game.VentureIntoDungeon](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderVentureIntoDungeon(value)
+	case game.PrimitiveVentureIntoUndercity:
+		value, err := assertPrimitive[game.VentureIntoUndercity](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderVentureIntoUndercity(value)
+	case game.PrimitiveTakeInitiative:
+		value, err := assertPrimitive[game.TakeInitiative](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderTakeInitiative(value)
 	case game.PrimitiveGainCityBlessing:
 		value, err := assertPrimitive[game.GainCityBlessing](primitive)
 		if err != nil {

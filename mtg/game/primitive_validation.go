@@ -1945,6 +1945,60 @@ func (p CantBecomeMonarch) validatePrimitive(targets []TargetSpec, checkTargets 
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
+// validatePrimitive implements Primitive for VentureIntoDungeon,
+// VentureIntoUndercity, and TakeInitiative, each of which acts on a single
+// referenced player.
+func (p VentureIntoDungeon) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+func (p VentureIntoUndercity) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+func (p TakeInitiative) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+// validatePrimitive implements Primitive for RevealPutOntoBattlefield. It reveals
+// and puts onto the battlefield without consulting the ability's target specs.
+func (p RevealPutOntoBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateQuantity(p.Look, targets, checkTargets); err != nil {
+		return err
+	}
+	return validateQuantity(p.Counters, targets, checkTargets)
+}
+
+// validatePrimitive implements Primitive for CastLinkedCardForFree. It requires a
+// non-empty linked key naming the card group to cast from.
+func (p CastLinkedCardForFree) validatePrimitive([]TargetSpec, bool) error {
+	if p.LinkID == "" {
+		return errors.New("cast linked card for free requires a link key")
+	}
+	return validatePlayerReference(p.Player, nil, false)
+}
+
+// validatePrimitive implements Primitive for RollDiceCreateTokens. It requires a
+// positive die count and side count and a valid token source.
+func (p RollDiceCreateTokens) validatePrimitive([]TargetSpec, bool) error {
+	if p.Dice <= 0 || p.Sides <= 0 {
+		return errors.New("roll dice create tokens requires positive dice and sides")
+	}
+	if !p.Source.Valid() {
+		return errors.New("roll dice create tokens requires a valid token source")
+	}
+	return nil
+}
+
+// validatePrimitive implements Primitive for RevealToHandDrainManaValue.
+func (p RevealToHandDrainManaValue) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateQuantity(p.Amount, targets, checkTargets)
+}
+
+// validatePrimitive implements Primitive for GoadForEachOpponent and
+// CreateCommanderCopyToken. Both act on the resolving controller and consult no
+// target specs.
+func (GoadForEachOpponent) validatePrimitive([]TargetSpec, bool) error      { return nil }
+func (CreateCommanderCopyToken) validatePrimitive([]TargetSpec, bool) error { return nil }
+
 // validatePrimitive implements Primitive for GainCityBlessing. It always acts on
 // the resolving object's controller and consults no targets, so it has nothing
 // to validate against the ability's target specs.

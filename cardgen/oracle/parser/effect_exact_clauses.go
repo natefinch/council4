@@ -1546,6 +1546,29 @@ func exactCantBecomeMonarchEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), "You can't become the monarch this turn.")
 }
 
+// exactVentureIntoDungeonEffectSyntax recognizes the "venture into the dungeon."
+// keyword action (CR 309.6). It is a controller-scoped action with no target;
+// any other wording leaves the clause non-exact so lowering fails closed.
+func exactVentureIntoDungeonEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 0 &&
+		strings.EqualFold(exactEffectClauseText(effect), "Venture into the dungeon.")
+}
+
+// exactVentureIntoUndercityEffectSyntax recognizes the "venture into Undercity."
+// keyword action. It is a controller-scoped action with no target.
+func exactVentureIntoUndercityEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 0 &&
+		strings.EqualFold(exactEffectClauseText(effect), "Venture into Undercity.")
+}
+
+// exactTakeInitiativeEffectSyntax recognizes the initiative keyword action (CR
+// 720) in its controller form "You take the initiative." Any other subject or
+// wording leaves the clause non-exact so lowering fails closed.
+func exactTakeInitiativeEffectSyntax(effect *EffectSyntax) bool {
+	return len(effect.Targets) == 0 &&
+		strings.EqualFold(exactEffectClauseText(effect), "You take the initiative.")
+}
+
 // exactMultiDistinctTargetEffectSyntax recognizes a verb applied to two or more
 // distinct single targets, each named by its own "target <noun>" clause:
 // "Destroy target artifact, target creature, target enchantment, and target

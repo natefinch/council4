@@ -559,6 +559,7 @@ func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 
 	player.Eliminated = true
 	g.TurnOrder.Eliminate(playerID)
+	passInitiativeOnElimination(g, playerID)
 	cleanupEliminatedPlayer(g, playerID)
 	return true
 }

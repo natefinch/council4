@@ -295,6 +295,14 @@ type Condition struct {
 	// city's blessing (CR 702.131 ascend), as in "if you have the city's
 	// blessing, ...". It reads the controller's live HasCityBlessing flag.
 	ControllerHasCityBlessing bool
+	// ControllerCompletedADungeon is satisfied when the context controller has
+	// completed a dungeon this game (CR 309.7), as in "Draw another card if you've
+	// completed a dungeon" (Imoen, Mystic Trickster). Completion is monotonic —
+	// once the controller finishes any dungeon the flag stays set for the rest of
+	// the game — so it reads the controller's live DungeonsCompleted count and is
+	// satisfied when that count is at least one. As a resolution-time effect gate
+	// it is evaluated when the ability resolves, not when it triggers.
+	ControllerCompletedADungeon bool
 	// SourceControllerTurn is satisfied while it is the context controller's turn,
 	// i.e. the controller is the active player ("During your turn, this creature
 	// has first strike"; Fresh-Faced Recruit, Embereth Skyblazer). It gates a
@@ -444,6 +452,7 @@ func (c *Condition) Empty() bool {
 		!c.EventDefendingPlayerIsMonarch &&
 		!c.ControllerHasInitiative &&
 		!c.ControllerHasCityBlessing &&
+		!c.ControllerCompletedADungeon &&
 		!c.SourceControllerTurn &&
 		c.ControllerTurnOfGameAtMost == 0 &&
 		c.SpellColorManaSpent.Count == 0 &&

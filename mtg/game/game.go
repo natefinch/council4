@@ -99,6 +99,21 @@ type Game struct {
 	// stack the next time triggered abilities are gathered.
 	PendingReflexiveTriggers []ReflexiveTrigger
 
+	// PendingRoomAbilities are dungeon room-entry triggered abilities (CR 309.6)
+	// that a venture has queued and are waiting to be put on the stack the next
+	// time triggered abilities are gathered. Each carries the venturing player as
+	// its controller and the dungeon's synthetic object id as its source, so it
+	// resolves on the normal stack and room-ability trigger multipliers apply.
+	PendingRoomAbilities []RoomAbilityTrigger
+
+	// PendingInitiativeVentures are the players who must venture into Undercity
+	// because they took the initiative or began their upkeep holding it (CR 720).
+	// The initiative's "venture into Undercity" is a triggered ability, so it is
+	// queued when the initiative is taken (including via combat damage, where no
+	// player choices can be made) and resolved the next time triggered abilities
+	// are gathered, when player choices are available.
+	PendingInitiativeVentures []PlayerID
+
 	// PreventionShields are runtime damage-prevention replacement effects.
 	PreventionShields []PreventionShield
 
