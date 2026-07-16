@@ -77,6 +77,7 @@ var Cards = []cardset.Entry{
 	{Name: "The Gitrog Monster", New: TheGitrogMonster},
 	{Name: "The Haunt of Hightower", New: TheHauntOfHightower},
 	{Name: "The Howling Commandos", New: TheHowlingCommandos},
+	{Name: "The Indomitable", New: TheIndomitable},
 	{Name: "The Irencrag", New: TheIrencrag},
 	{Name: "The Reaper, King No More", New: TheReaperKingNoMore},
 	{Name: "The Scorpion God", New: TheScorpionGod},

@@ -180,6 +180,23 @@ func TestParseConditionGraveyardCardOfTypeCount(t *testing.T) {
 	}
 }
 
+func TestParseConditionTappedSubtypeUnionCount(t *testing.T) {
+	t.Parallel()
+	clause := parseSingleConditionClause(t,
+		"you control three or more tapped Pirates and/or Vehicles")
+	if clause.Predicate != ConditionPredicateControls ||
+		clause.Comparison != ConditionComparisonAtLeast ||
+		clause.CompareValue != 3 {
+		t.Fatalf("clause = %#v, want controller-controls threshold 3", clause)
+	}
+	if clause.Selection.Tapped != ConditionTappedTrue {
+		t.Fatalf("selection tapped = %v, want tapped", clause.Selection.Tapped)
+	}
+	if !slices.Equal(clause.Selection.SubtypesAny, []types.Sub{types.Pirate, types.Vehicle}) {
+		t.Fatalf("selection subtypes = %v, want Pirate or Vehicle", clause.Selection.SubtypesAny)
+	}
+}
+
 func TestParseCounterPlacementControlledTypeUnion(t *testing.T) {
 	t.Parallel()
 	clause := parseSingleConditionClause(t,

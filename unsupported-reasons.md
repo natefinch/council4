@@ -9,8 +9,8 @@ A sole blocker is the card's only distinct diagnostic summary. The most common c
 | Rank | Reason | Affected cards | Sole blockers | Sole blocker % | Most common co-blocker |
 | ---: | --- | ---: | ---: | ---: | --- |
 | 1 | unsupported ordered effect sequence | 4,206 | 2,531 | 60.2% | unsupported optional effect |
-| 2 | unsupported Oracle construct | 3,353 | 0 | 0.0% | unsupported static ability |
-| 3 | unsupported static ability | 2,373 | 405 | 17.1% | unsupported Oracle construct |
+| 2 | unsupported Oracle construct | 3,352 | 0 | 0.0% | unsupported static ability |
+| 3 | unsupported static ability | 2,372 | 405 | 17.1% | unsupported Oracle construct |
 | 4 | unsupported ability content | 1,303 | 147 | 11.3% | unsupported Oracle construct |
 | 5 | unsupported triggered ability | 1,281 | 750 | 58.5% | unsupported Oracle construct |
 | 6 | unsupported optional effect | 1,215 | 12 | 1.0% | unsupported ordered effect sequence |

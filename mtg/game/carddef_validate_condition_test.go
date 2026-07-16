@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -149,6 +150,35 @@ func TestValidateCardDefReportsInvalidControllerControlsSelection(t *testing.T) 
 
 	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
 		t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidSelection)
+	}
+}
+
+func TestValidateCardDefAcceptsConditionalSelfCastFromGraveyard(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:  "Conditional Vehicle",
+		Types: []types.Card{types.Artifact},
+		StaticAbilities: []StaticAbility{{
+			ZoneOfFunction: zone.Graveyard,
+			Condition: opt.Val(Condition{
+				ControlsMatching: opt.Val(SelectionCount{
+					Selection: Selection{
+						SubtypesAny: []types.Sub{types.Pirate, types.Vehicle},
+						Tapped:      TriTrue,
+					},
+					MinCount: 3,
+				}),
+			}),
+			RuleEffects: []RuleEffect{{
+				Kind:           RuleEffectCastFromZone,
+				AffectedPlayer: PlayerYou,
+				CastFromZone:   zone.Graveyard,
+				AffectedSource: true,
+			}},
+		}},
+	}}
+
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want valid conditional graveyard cast permission", issues)
 	}
 }
 

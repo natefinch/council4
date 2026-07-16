@@ -28,6 +28,42 @@ func sourceReference() CompiledReference {
 	return CompiledReference{Binding: ReferenceBindingSource}
 }
 
+func TestRecognizeStaticCastThisFromGraveyardFromTypedNodes(t *testing.T) {
+	t.Parallel()
+	condition := CompiledCondition{
+		Kind:      ConditionAsLongAs,
+		Predicate: ConditionPredicateControllerControls,
+		Threshold: 3,
+		Selection: ConditionSelection{
+			SubtypesAny: []string{"Pirate", "Vehicle"},
+			Tapped:      ConditionTriTrue,
+		},
+	}
+	ability := CompiledAbility{
+		Kind: AbilityStatic,
+		Content: AbilityContent{
+			Conditions: []CompiledCondition{condition},
+			References: []CompiledReference{sourceReference()},
+		},
+	}
+	statics := []parser.StaticDeclarationSyntax{{
+		Kind:       parser.StaticDeclarationPlayerRule,
+		Subject:    parser.StaticDeclarationSubject{Kind: parser.StaticDeclarationSubjectController},
+		PlayerRule: parser.StaticDeclarationPlayerRuleCastThisFromGraveyard,
+	}}
+	declaration, ok := recognizeStaticPlayerRuleDeclaration(ability, statics)
+	if !ok ||
+		declaration.Player == nil ||
+		declaration.Player.Kind != StaticPlayerRuleCastThisFromGraveyard ||
+		declaration.Condition == nil ||
+		declaration.Condition.Predicate != ConditionPredicateControllerControls ||
+		declaration.Condition.Threshold != 3 ||
+		declaration.Condition.Selection.Tapped != ConditionTriTrue ||
+		!slices.Equal(declaration.Condition.Selection.SubtypesAny, []string{"Pirate", "Vehicle"}) {
+		t.Fatalf("declaration = %#v ok = %v", declaration, ok)
+	}
+}
+
 func TestRecognizeStaticPowerToughnessFromTypedNodes(t *testing.T) {
 	t.Parallel()
 	ability := CompiledAbility{
