@@ -47,6 +47,7 @@ var Cards = []cardset.Entry{
 	{Name: "Nimblewright Schematic", New: NimblewrightSchematic},
 	{Name: "Nimbus Naiad", New: NimbusNaiad},
 	{Name: "Nirkana Cutthroat", New: NirkanaCutthroat},
+	{Name: "Nissa Revane", New: NissaRevane},
 	{Name: "Nivix Cyclops", New: NivixCyclops},
 	{Name: "Noble Purpose", New: NoblePurpose},
 	{Name: "Noble's Purse", New: NobleSPurse},

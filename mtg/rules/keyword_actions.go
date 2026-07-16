@@ -353,6 +353,13 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 			candidates = append(candidates, cardID)
 		}
 	}
+	if spec.AnyNumber {
+		// "any number of" is unbounded: the player may take none up to every
+		// matching card. The primitive carries no meaningful count, so the choice
+		// ceiling is the full candidate set; the zero floor (declining every card)
+		// is always legal and is enforced by searchMustFindIfAvailable below.
+		amount = len(candidates)
+	}
 	// The searching player chooses which matching cards to take. Qualified
 	// searches may legally fail to find even when matches exist (CR 701.19e);
 	// unrestricted exact-card searches must find one when the library is nonempty.
@@ -508,6 +515,12 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 }
 
 func searchMustFindIfAvailable(spec game.SearchSpec, amount int) bool {
+	if spec.AnyNumber {
+		// An "any number of" search may always find zero cards (CR 701.19c), so it
+		// never forces a find, even when the resolved candidate count is one and
+		// the filter is otherwise unrestricted.
+		return false
+	}
 	switch spec.FailToFindPolicy {
 	case game.SearchMustFindIfAvailable:
 		return true

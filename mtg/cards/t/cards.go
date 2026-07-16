@@ -81,6 +81,7 @@ var Cards = []cardset.Entry{
 	{Name: "The Reaper, King No More", New: TheReaperKingNoMore},
 	{Name: "The Scorpion God", New: TheScorpionGod},
 	{Name: "The Spear of Bashenga", New: TheSpearOfBashenga},
+	{Name: "The World Tree", New: TheWorldTree},
 	{Name: "Thickest in the Thicket", New: ThickestInTheThicket},
 	{Name: "Thieves' Guild Enforcer", New: ThievesGuildEnforcer},
 	{Name: "Thing from the Deep", New: ThingFromTheDeep},

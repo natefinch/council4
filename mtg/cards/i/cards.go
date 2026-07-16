@@ -29,6 +29,7 @@ var Cards = []cardset.Entry{
 	{Name: "Impending Doom", New: ImpendingDoom},
 	{Name: "In Garruk's Wake", New: InGarrukSWake},
 	{Name: "In the Presence of Ages", New: InThePresenceOfAges},
+	{Name: "Iname, Death Aspect", New: InameDeathAspect},
 	{Name: "Iname, Life Aspect", New: InameLifeAspect},
 	{Name: "Incisor Glider", New: IncisorGlider},
 	{Name: "Increasing Devotion", New: IncreasingDevotion},

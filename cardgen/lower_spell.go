@@ -1073,6 +1073,10 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		return searchGroup{}, false
 	}
 	spec.SourceZone = zone.Library
+	// "any number of" is unbounded: the resolving player finds none up to every
+	// matching card. The count carries no fixed or dynamic Quantity, so the spec
+	// flag drives the choice bounds (min 0, max all candidates) at resolution.
+	spec.AnyNumber = search.Amount.AnyNumber
 	if !dynamic && search.Amount.Value == 1 && spec.IsUnrestricted() {
 		spec.FailToFindPolicy = game.SearchMustFindIfAvailable
 	}
@@ -1141,6 +1145,13 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 // returns ok=false for a non-positive fixed count or a dynamic amount lowering
 // cannot model, so the search fails closed.
 func searchAmountQuantity(search compiler.CompiledEffect) (game.Quantity, bool) {
+	if search.Amount.AnyNumber {
+		// "any number of" is unbounded: none up to every matching card. The count
+		// is not fixed or dynamic, so it carries no runtime Quantity; the search
+		// spec's AnyNumber flag drives the resolving choice (min 0, max all
+		// candidates) instead. Report a zero fixed count as an inert placeholder.
+		return game.Fixed(0), true
+	}
 	if search.Amount.Known {
 		if search.Amount.Value < 1 {
 			return game.Quantity{}, false

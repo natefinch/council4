@@ -1159,6 +1159,7 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 
 	consumed, amount, plural := searchCountPrefix(rest)
 	dynamic := consumed == "up to X "
+	anyNumber := consumed == "any number of "
 	switch {
 	case consumed == "":
 		return searchClauseAnalysis{detail: "the executable source backend supports only exact singular-card search wording", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
@@ -1168,6 +1169,13 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		// typed dynamic amount so an unrecognized "X" fails closed.
 		if effect.Amount.DynamicForm != EffectDynamicAmountFormWhereX ||
 			effect.Amount.DynamicKind == EffectDynamicAmountNone {
+			return searchClauseAnalysis{detail: "the executable source backend supports only exact singular-card search wording", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		}
+	case anyNumber:
+		// The "any number of" count is unbounded: none up to every match. Require
+		// the typed AnyNumber marker the parser records for this wording so any
+		// other empty-amount form ("all", "the") fails closed here.
+		if !effect.Amount.AnyNumber {
 			return searchClauseAnalysis{detail: "the executable source backend supports only exact singular-card search wording", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
 	case !effect.Amount.Known || effect.Amount.Value != amount:
@@ -1624,15 +1632,19 @@ func stripMandatoryReflexiveConnector(text string) string {
 // singular articles "a "/"an " (amount 1) and the bounded "up to <word> " form
 // (amount 2..10, plural). The dynamic "up to X " form (amount 0, plural) defers
 // its bound to the effect's resolving "where X is ..." count, validated by the
-// caller against the typed amount. It returns the consumed literal (empty when
-// the phrase is unrecognized) so the caller can keep reconstructing the clause
-// byte-for-byte.
+// caller against the typed amount. The unbounded "any number of " form (amount 0,
+// plural) finds any quantity from none up to every match; the caller validates it
+// against the typed EffectAmountSyntax.AnyNumber marker. It returns the consumed
+// literal (empty when the phrase is unrecognized) so the caller can keep
+// reconstructing the clause byte-for-byte.
 func searchCountPrefix(rest string) (consumed string, amount int, plural bool) {
 	switch {
 	case strings.HasPrefix(rest, "a "):
 		return "a ", 1, false
 	case strings.HasPrefix(rest, "an "):
 		return "an ", 1, false
+	case strings.HasPrefix(rest, "any number of "):
+		return "any number of ", 0, true
 	case strings.HasPrefix(rest, "up to X "):
 		return "up to X ", 0, true
 	case strings.HasPrefix(rest, "up to "):

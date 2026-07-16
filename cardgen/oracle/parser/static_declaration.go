@@ -1683,13 +1683,22 @@ func parseStaticPermanentAbilityGrantDeclaration(
 	quoted []Delimited,
 	conditions []ConditionClause,
 ) (StaticDeclarationSyntax, bool) {
-	if len(conditions) != 0 ||
-		len(quoted) != 1 ||
-		len(tokens) != 4 ||
-		!staticWordsAt(tokens, 1, "you", "control", "have") {
+	// An optional "as long as <condition>" clause gates the grant ("As long as
+	// you control six or more lands, lands you control have ...", The World
+	// Tree). Strip the condition tokens so the grant body matches its bare
+	// four-token shape and attach the clause as the declaration's condition; the
+	// compiler and lowering apply it as an on/off gate on the continuous grant.
+	opTokens := tokens
+	condition, hasCondition := staticDeclarationCondition(tokens, conditions)
+	if hasCondition {
+		opTokens = tokensOutsideCondition(tokens, condition.Span)
+	}
+	if len(quoted) != 1 ||
+		len(opTokens) != 4 ||
+		!staticWordsAt(opTokens, 1, "you", "control", "have") {
 		return StaticDeclarationSyntax{}, false
 	}
-	subject, ok := staticPermanentGrantSubject(tokens[0], shared.SpanOf(tokens[:3]))
+	subject, ok := staticPermanentGrantSubject(opTokens[0], shared.SpanOf(opTokens[:3]))
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
@@ -1697,13 +1706,18 @@ func parseStaticPermanentAbilityGrantDeclaration(
 	if !ok {
 		return StaticDeclarationSyntax{}, false
 	}
-	return StaticDeclarationSyntax{
+	declaration := StaticDeclarationSyntax{
 		Kind:               StaticDeclarationPermanentAbilityGrant,
 		Span:               shared.Span{Start: tokens[0].Span.Start, End: quoted[0].Span.End},
 		OperationSpan:      quoted[0].Span,
 		Subject:            subject,
 		GrantedManaAbility: &ability,
-	}, true
+	}
+	if hasCondition {
+		declaration.HasCondition = true
+		declaration.ConditionSpan = condition.Span
+	}
+	return declaration, true
 }
 
 // staticPermanentGrantSubject maps the leading "<group> you control" noun of a

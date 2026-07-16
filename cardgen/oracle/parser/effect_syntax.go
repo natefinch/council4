@@ -2017,6 +2017,14 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		if kind == EffectCast && effectHasTokenWords(selectionClause, "any", "number", "of") {
 			amount.AnyNumber = true
 		}
+		// "Search your library for any number of <type> cards, put them onto the
+		// battlefield, then shuffle." (The World Tree) finds an unbounded
+		// selection from none up to every matching card. As with the put and cast
+		// forms above, the literal "any number of" run is the only positive count
+		// signal, distinguishing it from the singular "for a card" search.
+		if kind == EffectSearch && effectHasTokenWords(selectionClause, "any", "number", "of") {
+			amount.AnyNumber = true
+		}
 		// A created token's name is printed either as a leading "Create <Name>, a
 		// ..." prefix (named legendary tokens) or as a trailing "named <Name>"
 		// tail. Prefer the leading form when present and record its placement so

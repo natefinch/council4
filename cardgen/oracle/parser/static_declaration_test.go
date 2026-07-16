@@ -1163,6 +1163,34 @@ func TestParseStaticPermanentManaAbilityGrantSacrificeAnyColor(t *testing.T) {
 	}
 }
 
+// TestParseStaticPermanentManaAbilityGrantConditional proves the grant
+// recognizer accepts a leading duration condition and reports it on the
+// declaration, backing The World Tree's "As long as you control six or more
+// lands, lands you control have '{T}: Add one mana of any color.'" The compiler
+// validates the condition semantics (see the compiler package); the parser only
+// recognizes the shape and marks the condition present.
+func TestParseStaticPermanentManaAbilityGrantConditional(t *testing.T) {
+	t.Parallel()
+	declarations := parseStaticDeclarationSyntax(
+		t,
+		`As long as you control six or more lands, lands you control have "{T}: Add one mana of any color."`,
+		Context{},
+	)
+	if len(declarations) != 1 {
+		t.Fatalf("declarations = %#v, want one", declarations)
+	}
+	declaration := declarations[0]
+	if declaration.Kind != StaticDeclarationPermanentAbilityGrant ||
+		declaration.Subject.Group.Kind != EffectStaticSubjectControlledLands ||
+		!declaration.HasCondition {
+		t.Fatalf("declaration = %#v, want conditional controlled-land permanent ability grant", declaration)
+	}
+	granted := declaration.GrantedManaAbility
+	if granted == nil || !granted.TapCost || granted.Amount != 1 || !granted.AnyColor {
+		t.Fatalf("granted ability = %#v, want tap for one mana of any color", granted)
+	}
+}
+
 func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
@@ -1170,7 +1198,9 @@ func TestParseStaticPermanentManaAbilityGrantNearMissesFailClosed(t *testing.T) 
 		`Lands you control have "{T}: Add two mana of any color."`,
 		`Lands you control have "{1}, {T}: Add one mana of any color."`,
 		`Lands you control have "{T}: Add one mana of any color." and "{T}: Add {C}."`,
-		`As long as you control an artifact, lands you control have "{T}: Add one mana of any color."`,
+		// A leading duration condition ("As long as you control ...") is a
+		// supported grant, not a near miss; see
+		// TestParseStaticPermanentManaAbilityGrantConditional.
 		`Land cards in your hand have "{T}: Add one mana of any color."`,
 		`Enchantments you control have "{T}: Add one mana of any color."`,
 		`Treasures you control have "{T}, Sacrifice this artifact: Add one mana of any one color."`,
