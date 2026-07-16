@@ -602,6 +602,14 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if dynamic.Object.Kind() == ObjectReferenceCapturedTargetStackObject {
 			return errors.New("captured target stack object reference requires a captured target mana value amount")
 		}
+		if dynamic.Player != nil {
+			if dynamic.Object.Kind() != ObjectReferenceLinkedObject {
+				return errors.New("player-correlated object quantity requires a linked object reference")
+			}
+			if err := validatePlayerReference(*dynamic.Player, targets, checkTargets); err != nil {
+				return err
+			}
+		}
 		return validateObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCapturedTargetManaValue:
 		if dynamic.Object.Kind() != ObjectReferenceCapturedTargetStackObject {
@@ -1787,6 +1795,12 @@ func (p ExileForEachOpponent) validatePrimitive(targets []TargetSpec, checkTarge
 	}
 	if err := firstProblem(p.Selection.Validate()); err != nil {
 		return err
+	}
+	switch p.Extremum {
+	case PermanentChoiceExtremumNone, PermanentChoiceGreatestPower,
+		PermanentChoiceGreatestToughness, PermanentChoiceGreatestManaValue:
+	default:
+		return errors.New("exile for each opponent has an invalid choice extremum")
 	}
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
 }

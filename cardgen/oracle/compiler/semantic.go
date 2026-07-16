@@ -3358,12 +3358,20 @@ type CompiledEffect struct {
 	// permanent each opponent controls and links each exiled permanent for the
 	// paired draw payoff.
 	ExileForEachOpponent bool
+	// ExileEachOpponentChoosesGreatestPower carries the typed mandatory
+	// per-opponent tied-greatest-power exile choice through the text-blind
+	// compiler boundary.
+	ExileEachOpponentChoosesGreatestPower bool
 	// DrawForEachExiledThisWay carries the parser-recognized per-controller
 	// payoff "For each permanent exiled this way, its controller draws a card."
 	// (King Solomon's Frogs) through the text-blind compiler boundary so lowering
 	// draws one card for each permanent a sibling ExileForEachOpponent exiled,
 	// for that permanent's last-known controller.
 	DrawForEachExiledThisWay bool
+	// DamageEachOpponentCorrelatedExiledPower carries the per-recipient linked
+	// power amount: each opponent is dealt damage equal to the power of the
+	// creature that same opponent exiled.
+	DamageEachOpponentCorrelatedExiledPower bool
 	// CloakForEachExiledThisWay carries the parser-recognized per-controller
 	// payoff through the text-blind compiler boundary so lowering cloaks one card
 	// for each permanent a sibling ExileForEachPlayer exiled, under that

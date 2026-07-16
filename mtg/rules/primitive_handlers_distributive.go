@@ -43,6 +43,49 @@ func playerControlledSelectionCandidates(g *game.Game, resolver referenceResolve
 	return candidates
 }
 
+func permanentChoiceExtremumCandidates(g *game.Game, candidates []*game.Permanent, extremum game.PermanentChoiceExtremum) []*game.Permanent {
+	if extremum == game.PermanentChoiceExtremumNone || len(candidates) < 2 {
+		return candidates
+	}
+	value := func(permanent *game.Permanent) (int, bool) {
+		switch extremum {
+		case game.PermanentChoiceGreatestPower:
+			return effectivePower(g, permanent), true
+		case game.PermanentChoiceGreatestToughness:
+			return effectiveToughness(g, permanent)
+		case game.PermanentChoiceGreatestManaValue:
+			def, ok := permanentCardDef(g, permanent)
+			if !ok {
+				return 0, false
+			}
+			return def.ManaValue(), true
+		default:
+			return 0, false
+		}
+	}
+	bestSet := false
+	best := 0
+	values := make([]int, len(candidates))
+	valid := make([]bool, len(candidates))
+	for i, candidate := range candidates {
+		values[i], valid[i] = value(candidate)
+		if valid[i] && (!bestSet || values[i] > best) {
+			best = values[i]
+			bestSet = true
+		}
+	}
+	if !bestSet {
+		return nil
+	}
+	filtered := make([]*game.Permanent, 0, len(candidates))
+	for i, candidate := range candidates {
+		if valid[i] && values[i] == best {
+			filtered = append(filtered, candidate)
+		}
+	}
+	return filtered
+}
+
 // chooseUpToOnePermanent has chooser pick up to one permanent from candidates,
 // modeling the "up to one ... that player controls" cardinality of a
 // distributive per-player effect. An empty pool chooses nothing; otherwise the

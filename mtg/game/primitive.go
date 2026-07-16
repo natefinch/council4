@@ -1396,6 +1396,18 @@ type EachPlayerChooseDestroy struct {
 	PreventRegeneration bool
 }
 
+// PermanentChoiceExtremum restricts a permanent-choice pool to the objects tied
+// for an extreme characteristic value before the chooser selects among them.
+type PermanentChoiceExtremum uint8
+
+// Permanent choice extrema.
+const (
+	PermanentChoiceExtremumNone PermanentChoiceExtremum = iota
+	PermanentChoiceGreatestPower
+	PermanentChoiceGreatestToughness
+	PermanentChoiceGreatestManaValue
+)
+
 // CreateTokenForEachDestroyed creates one token defined by Source for each
 // permanent a sibling DestroyForEachPlayer recorded under LinkedKey, giving each
 // token to that destroyed permanent's last-known controller. It models the per-
@@ -1423,6 +1435,15 @@ type ExileForEachOpponent struct {
 	Chooser   PlayerReference
 	Selection Selection
 	LinkedKey LinkedKey
+	// Required makes each chooser select exactly one permanent when their pool is
+	// nonempty. The zero value retains the existing "up to one" behavior.
+	Required bool
+	// Extremum narrows each opponent's independent pool to permanents tied for the
+	// requested greatest characteristic before the choice is made.
+	Extremum PermanentChoiceExtremum
+	// Simultaneous collects every opponent's choice in APNAP order before moving
+	// all chosen permanents in one zone-change batch.
+	Simultaneous bool
 }
 
 // DrawForEachExiled has each permanent a sibling ExileForEachOpponent recorded

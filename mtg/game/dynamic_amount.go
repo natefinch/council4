@@ -326,10 +326,13 @@ type DynamicAmount struct {
 	CounterKind counter.Kind
 	Group       GroupReference
 	Object      ObjectReference
-	Player      *PlayerReference
-	CardZone    zone.Type
-	Selection   *Selection
-	ResultKey   ResultKey
+	// Player identifies the player read by player-scoped amounts. For linked
+	// object-characteristic amounts, it instead correlates Object with the
+	// per-player choice that published it.
+	Player    *PlayerReference
+	CardZone  zone.Type
+	Selection *Selection
+	ResultKey ResultKey
 	// Divisor, when greater than one, divides the amount after the multiplier and
 	// addend are applied, rounding down unless RoundUp is set. It backs the "half
 	// their library, rounded up/down" mill amounts (Traumatize, Fleet Swallower),

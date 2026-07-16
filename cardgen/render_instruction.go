@@ -1143,11 +1143,29 @@ func (r Renderer) renderExileForEachOpponent(ctx *renderCtx, value game.ExileFor
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.ExileForEachOpponent", []string{
+	fields := []string{
 		fmt.Sprintf("Chooser: %s,", chooser),
 		fmt.Sprintf("Selection: %s,", selection),
 		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
-	}), nil
+	}
+	if value.Required {
+		fields = append(fields, "Required: true,")
+	}
+	switch value.Extremum {
+	case game.PermanentChoiceExtremumNone:
+	case game.PermanentChoiceGreatestPower:
+		fields = append(fields, "Extremum: game.PermanentChoiceGreatestPower,")
+	case game.PermanentChoiceGreatestToughness:
+		fields = append(fields, "Extremum: game.PermanentChoiceGreatestToughness,")
+	case game.PermanentChoiceGreatestManaValue:
+		fields = append(fields, "Extremum: game.PermanentChoiceGreatestManaValue,")
+	default:
+		return "", fmt.Errorf("render: unsupported permanent choice extremum %d", value.Extremum)
+	}
+	if value.Simultaneous {
+		fields = append(fields, "Simultaneous: true,")
+	}
+	return structLit("game.ExileForEachOpponent", fields), nil
 }
 
 func (Renderer) renderDrawForEachExiled(value game.DrawForEachExiled) (string, error) {

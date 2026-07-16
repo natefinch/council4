@@ -441,6 +441,9 @@ func lowerFixedDamageSpell(
 	_ string,
 	ctx contentCtx,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, ok := lowerEachOpponentCorrelatedExiledPowerDamage(ctx); ok {
+		return content, nil
+	}
 	effect := ctx.content.Effects[0]
 	if len(ctx.content.Effects) != 1 ||
 		effect.Kind != compiler.EffectDealDamage ||

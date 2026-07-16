@@ -30,10 +30,14 @@ func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {
 }
 
 func dynamicAmountValue(g *game.Game, obj *game.StackObject, controller game.PlayerID, dynamic game.DynamicAmount) int {
-	return dynamicAmountValueBeforeLayer(g, opt.Val(obj), controller, dynamic, 0)
+	return dynamicAmountValueBeforeLayerWithGroupMember(g, opt.Val(obj), controller, dynamic, 0, opt.V[game.PlayerID]{})
 }
 
 func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
+	return dynamicAmountValueBeforeLayerWithGroupMember(g, obj, controller, dynamic, before, opt.V[game.PlayerID]{})
+}
+
+func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer, groupMember opt.V[game.PlayerID]) int {
 	amount := 0
 	switch dynamic.Kind {
 	case game.DynamicAmountConstant:
@@ -110,14 +114,14 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
 		game.DynamicAmountTotalManaValueInGroup,
 		game.DynamicAmountColorCountInGroup:
-		amount = groupDynamicAmount(g, obj, controller, &dynamic)
+		amount = groupDynamicAmount(g, obj, controller, &dynamic, groupMember)
 	case game.DynamicAmountCountCardsInZone:
 		if dynamic.Player != nil && dynamic.Selection != nil {
-			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection)
+			amount = countCardsInZoneMatchingSelection(g, obj, controller, *dynamic.Player, dynamic.CardZone, *dynamic.Selection, groupMember)
 		}
 	case game.DynamicAmountPlayerLife:
-		if dynamic.Player != nil && obj.Exists {
-			if playerID, ok := resolvePlayerReference(g, obj.Val, *dynamic.Player); ok {
+		if dynamic.Player != nil {
+			if playerID, ok := resolveDynamicPlayerReference(g, obj, controller, *dynamic.Player, groupMember); ok {
 				if player, ok := playerByID(g, playerID); ok {
 					amount = player.Life
 				}
@@ -161,18 +165,29 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok {
+		if resolved, ok := resolveDynamicAmountObjectReference(g, obj.Val, dynamic, groupMember); ok {
 			amount = resolvedObjectPower(g, &resolved)
 		}
 	case game.DynamicAmountObjectToughness:
 		if !obj.Exists {
 			break
 		}
-		if resolved, ok := resolveObjectReference(g, obj.Val, dynamic.Object); ok {
+		if resolved, ok := resolveDynamicAmountObjectReference(g, obj.Val, dynamic, groupMember); ok {
 			amount = resolvedObjectToughness(g, &resolved)
 		}
+	case game.DynamicAmountObjectManaValue:
+		if !obj.Exists {
+			break
+		}
+		if dynamic.Player == nil {
+			amount = dynamicObjectManaValue(g, obj.Val, &dynamic)
+			break
+		}
+		if resolved, ok := resolveDynamicAmountObjectReference(g, obj.Val, dynamic, groupMember); ok {
+			amount = resolvedObjectManaValue(g, &resolved)
+		}
 	case game.DynamicAmountSourceCardPower, game.DynamicAmountBlockingCreaturesBeyondFirst,
-		game.DynamicAmountObjectManaValue, game.DynamicAmountCapturedTargetManaValue:
+		game.DynamicAmountCapturedTargetManaValue:
 		amount = sourceDerivedDynamicAmount(g, obj, dynamic)
 	case game.DynamicAmountObjectCounters:
 		if !obj.Exists {
@@ -199,7 +214,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		}
 	case game.DynamicAmountSpellsCastThisTurn, game.DynamicAmountLifeLostThisTurn,
 		game.DynamicAmountLifeGainedThisTurn, game.DynamicAmountCardsDrawnThisTurn:
-		if player, ok := resolveTurnEventPlayer(g, obj, controller, dynamic.Player); ok {
+		if player, ok := resolveTurnEventPlayer(g, obj, controller, dynamic.Player, groupMember); ok {
 			amount = turnEventDynamicAmount(g, player, dynamic.Kind)
 		}
 	case game.DynamicAmountCardsNamedSourceInGraveyards:
@@ -215,7 +230,7 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 			amount = obj.Val.KickerCount
 		}
 	case game.DynamicAmountMaxOf:
-		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before)
+		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before, groupMember)
 	case game.DynamicAmountDamagePreventedThisWay:
 		if obj.Exists {
 			amount = damagePreventedThisWayAmount(g, obj.Val)
@@ -227,6 +242,31 @@ func dynamicAmountValueBeforeLayer(g *game.Game, obj opt.V[*game.StackObject], c
 		multiplier = 1
 	}
 	return applyDynamicAmountDivisor(amount*multiplier+dynamic.Addend, dynamic)
+}
+
+func resolveDynamicAmountObjectReference(g *game.Game, obj *game.StackObject, dynamic game.DynamicAmount, groupMember opt.V[game.PlayerID]) (resolvedObjectReference, bool) {
+	if dynamic.Player == nil {
+		return resolveObjectReference(g, obj, dynamic.Object)
+	}
+	player, ok := resolveDynamicPlayerReference(g, opt.Val(obj), obj.Controller, *dynamic.Player, groupMember)
+	if !ok {
+		return resolvedObjectReference{}, false
+	}
+	return resolveCorrelatedLinkedObjectReference(g, obj, dynamic.Object, player)
+}
+
+func dynamicReferenceResolver(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, groupMember opt.V[game.PlayerID]) referenceResolver {
+	var resolver referenceResolver
+	if obj.Exists && obj.Val != nil {
+		resolver = newReferenceResolver(g, obj.Val)
+	} else {
+		resolver = newReferenceResolver(g, &game.StackObject{Controller: controller})
+	}
+	return resolver.withGroupOfferMember(groupMember)
+}
+
+func resolveDynamicPlayerReference(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, ref game.PlayerReference, groupMember opt.V[game.PlayerID]) (game.PlayerID, bool) {
+	return dynamicReferenceResolver(g, obj, controller, groupMember).player(ref)
 }
 
 // applyDynamicAmountDivisor divides a dynamic amount's value by its Divisor when
@@ -332,17 +372,11 @@ func blockingCreaturesOf(g *game.Game, permanentID game.ObjectID) int {
 // that player lost/gained this turn" family — resolves against the resolving
 // stack object, matching the player the effect targets. It returns ok=false when
 // a non-controller reference cannot be resolved without a stack object.
-func resolveTurnEventPlayer(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, ref *game.PlayerReference) (game.PlayerID, bool) {
+func resolveTurnEventPlayer(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, ref *game.PlayerReference, groupMember opt.V[game.PlayerID]) (game.PlayerID, bool) {
 	if ref == nil {
 		return controller, true
 	}
-	if obj.Exists {
-		return resolvePlayerReference(g, obj.Val, *ref)
-	}
-	if ref.Kind() == game.PlayerReferenceController {
-		return controller, true
-	}
-	return 0, false
+	return resolveDynamicPlayerReference(g, obj, controller, *ref, groupMember)
 }
 
 // turnEventDynamicAmount dispatches the controller-scoped amounts derived from
@@ -367,10 +401,10 @@ func turnEventDynamicAmount(g *game.Game, controller game.PlayerID, kind game.Dy
 // against the same resolution context and returns the greatest value
 // (CR 608.2c). It backs the "whichever is greater" wording; an empty operand
 // list yields zero.
-func maxOfDynamicAmounts(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, operands []game.DynamicAmount, before game.ContinuousLayer) int {
+func maxOfDynamicAmounts(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, operands []game.DynamicAmount, before game.ContinuousLayer, groupMember opt.V[game.PlayerID]) int {
 	best := 0
 	for i := range operands {
-		value := dynamicAmountValueBeforeLayer(g, obj, controller, operands[i], before)
+		value := dynamicAmountValueBeforeLayerWithGroupMember(g, obj, controller, operands[i], before, groupMember)
 		if i == 0 || value > best {
 			best = value
 		}
@@ -627,14 +661,10 @@ func greatestGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
 // characteristic named by kind among the permanents of group, evaluated as the
 // effect resolves (CR 608.2c). An empty group yields zero, matching the "draw
 // cards equal to the greatest power among <group>" amounts whose group is empty.
-func greatestCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind) int {
-	resolverObj := obj
-	if resolverObj == nil {
-		resolverObj = &game.StackObject{Controller: controller}
-	}
+func greatestCharacteristicInGroup(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind, groupMember opt.V[game.PlayerID]) int {
 	which := greatestGroupCharacteristic(kind)
 	greatest := 0
-	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+	for _, objectID := range dynamicReferenceResolver(g, obj, controller, groupMember).groupMembers(group) {
 		permanent, ok := permanentByObjectID(g, objectID)
 		if !ok {
 			continue
@@ -664,14 +694,10 @@ func totalGroupCharacteristic(kind game.DynamicAmountKind) characteristic {
 // across the permanents of group, evaluated as the effect resolves (CR 608.2c).
 // An empty group yields zero, matching "the total power of <group>" amounts
 // (Ghalta, Primal Hunger's cost reduction) over an empty battlefield.
-func totalCharacteristicInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind) int {
-	resolverObj := obj
-	if resolverObj == nil {
-		resolverObj = &game.StackObject{Controller: controller}
-	}
+func totalCharacteristicInGroup(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, group game.GroupReference, kind game.DynamicAmountKind, groupMember opt.V[game.PlayerID]) int {
 	which := totalGroupCharacteristic(kind)
 	total := 0
-	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+	for _, objectID := range dynamicReferenceResolver(g, obj, controller, groupMember).groupMembers(group) {
 		permanent, ok := permanentByObjectID(g, objectID)
 		if !ok {
 			continue
@@ -764,18 +790,18 @@ func shareCreatureSubtype(a, b map[types.Sub]struct{}) bool {
 // the permanents of dynamic.Group as the effect resolves (CR 608.2c): the member
 // count, the greatest or total power/toughness/mana value, and the distinct
 // color count.
-func groupDynamicAmount(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, dynamic *game.DynamicAmount) int {
+func groupDynamicAmount(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, dynamic *game.DynamicAmount, groupMember opt.V[game.PlayerID]) int {
 	switch dynamic.Kind {
 	case game.DynamicAmountGreatestPowerInGroup, game.DynamicAmountGreatestToughnessInGroup,
 		game.DynamicAmountGreatestManaValueInGroup:
-		return greatestCharacteristicInGroup(g, obj.Val, controller, dynamic.Group, dynamic.Kind)
+		return greatestCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind, groupMember)
 	case game.DynamicAmountTotalPowerInGroup, game.DynamicAmountTotalToughnessInGroup,
 		game.DynamicAmountTotalManaValueInGroup:
-		return totalCharacteristicInGroup(g, obj.Val, controller, dynamic.Group, dynamic.Kind)
+		return totalCharacteristicInGroup(g, obj, controller, dynamic.Group, dynamic.Kind, groupMember)
 	case game.DynamicAmountColorCountInGroup:
-		return colorCountInGroup(g, obj.Val, controller, dynamic.Group)
+		return colorCountInGroup(g, obj, controller, dynamic.Group, groupMember)
 	default:
-		return countPermanentsMatchingGroup(g, obj.Val, controller, dynamic.Group)
+		return len(dynamicReferenceResolver(g, obj, controller, groupMember).groupMembers(dynamic.Group))
 	}
 }
 
@@ -785,13 +811,9 @@ func groupDynamicAmount(g *game.Game, obj opt.V[*game.StackObject], controller g
 // contributes none, so an empty or fully colorless group yields zero. It backs
 // Faeburrow Elder's "+1/+1 for each color among permanents you control" and the
 // "number of colors among <group>" amount family.
-func colorCountInGroup(g *game.Game, obj *game.StackObject, controller game.PlayerID, group game.GroupReference) int {
-	resolverObj := obj
-	if resolverObj == nil {
-		resolverObj = &game.StackObject{Controller: controller}
-	}
+func colorCountInGroup(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, group game.GroupReference, groupMember opt.V[game.PlayerID]) int {
 	var found colorSet
-	for _, objectID := range newReferenceResolver(g, resolverObj).groupMembers(group) {
+	for _, objectID := range dynamicReferenceResolver(g, obj, controller, groupMember).groupMembers(group) {
 		permanent, ok := permanentByObjectID(g, objectID)
 		if !ok {
 			continue
@@ -992,17 +1014,8 @@ func triggeringEventTotalCombatDamage(g *game.Game, obj *game.StackObject) int {
 	return total
 }
 
-func countCardsInZoneMatchingSelection(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, playerRef game.PlayerReference, cardZone zone.Type, selection game.Selection) int {
-	var playerID game.PlayerID
-	var ok bool
-	if obj.Exists {
-		playerID, ok = resolvePlayerReference(g, obj.Val, playerRef)
-	} else if playerRef.Kind() == game.PlayerReferenceController {
-		// Continuous-layer evaluation can occur without a stack object (for
-		// example while checking a resolving permanent's types). A Controller
-		// reference still resolves to the permanent's controller passed here.
-		playerID, ok = controller, true
-	}
+func countCardsInZoneMatchingSelection(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, playerRef game.PlayerReference, cardZone zone.Type, selection game.Selection, groupMember opt.V[game.PlayerID]) int {
+	playerID, ok := resolveDynamicPlayerReference(g, obj, controller, playerRef, groupMember)
 	if !ok {
 		return 0
 	}

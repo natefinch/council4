@@ -15,7 +15,14 @@ import (
 
 func (r *effectResolver) quantity(q game.Quantity) int {
 	if q.IsDynamic() {
-		return dynamicAmountValue(r.game, r.obj, stackObjectController(r.obj), q.DynamicAmount().Val)
+		return dynamicAmountValueBeforeLayerWithGroupMember(
+			r.game,
+			opt.Val(r.obj),
+			stackObjectController(r.obj),
+			q.DynamicAmount().Val,
+			0,
+			r.groupOfferMember,
+		)
 	}
 	return q.Value()
 }

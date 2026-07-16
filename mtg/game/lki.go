@@ -58,4 +58,8 @@ type LinkedObjectRef struct {
 	ObjectID        id.ID
 	CardID          id.ID
 	CardZoneVersion uint64
+	// CorrelatedPlayer records the player whose per-player choice produced this
+	// linked object. It lets later per-player instructions recover the specific
+	// object chosen by that player without relying on record order.
+	CorrelatedPlayer opt.V[PlayerID]
 }
