@@ -4297,7 +4297,14 @@ func exactCardCountEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVer
 func cardCountSubjectPrefixes(effect *EffectSyntax, controllerVerb, subjectVerb string) []string {
 	switch effect.Context {
 	case EffectContextController:
-		return []string{controllerVerb, "You " + controllerVerb}
+		// "Only you draw a card." is the emphatic controller voice a conditional
+		// "instead" replacement uses to contrast with the each-player effect it
+		// replaces (Kumena's Awakening: "each player draws a card. If you have the
+		// city's blessing, instead only you draw a card."). The leading "only" is
+		// an emphatic adverb on the controller subject and adds no rules meaning
+		// beyond the ordinary controller draw, so accept it as a controller
+		// prefix alongside the plain forms.
+		return []string{controllerVerb, "You " + controllerVerb, "Only you " + controllerVerb}
 	case EffectContextEachPlayer:
 		return inabilityAwarePrefixes(effect, "Each player", subjectVerb)
 	case EffectContextEachOtherPlayer:
