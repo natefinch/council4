@@ -827,6 +827,10 @@ func validStaticRuleSyntax(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			len(rule.Qualifiers) == 0) ||
 			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
+				rule.Operation.Kind == StaticRuleOperationBlock &&
+				rule.Operation.Voice == StaticRuleVoicePassive &&
+				staticCantBeBlockedByCreaturesWithQualifier(rule.Qualifiers)) ||
+			(rule.Constraint.Kind == StaticRuleConstraintProhibition &&
 				rule.Operation.Kind == StaticRuleOperationAttack &&
 				rule.Operation.Voice == StaticRuleVoiceActive &&
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierDefenderYou)) ||
@@ -899,6 +903,25 @@ func validAssignDamageByToughnessRule(rule StaticRuleSyntax) bool {
 		len(rule.Qualifiers) == 0
 }
 
+// staticCantBeBlockedByCreaturesWithQualifier reports whether qualifiers is
+// exactly one recognized restricted-blocker characteristic that bounds a "can't
+// be blocked by creatures with ..." prohibition: blockers with flying, a power
+// comparison ("power 3 or greater", Delney, Streetwise Lookout), a color,
+// artifact creatures, or the creatures the monarch controls. It is the
+// restricted-blocker set shared by the source-creature "This creature can't be
+// blocked by ..." form and the controlled-group "Creatures you control ... can't
+// be blocked by ..." form. The number-of-blockers limit ("by more than one
+// creature") is a distinct rule and the "except by ..." family names the only
+// permitted blockers rather than the prohibited ones; both are excluded.
+func staticCantBeBlockedByCreaturesWithQualifier(qualifiers []StaticRuleQualifier) bool {
+	return staticRuleQualifiersAre(qualifiers, StaticRuleQualifierBlockerFlying) ||
+		staticRuleQualifiersAre(qualifiers, StaticRuleQualifierBlockerPowerOrLess) ||
+		staticRuleQualifiersAre(qualifiers, StaticRuleQualifierBlockerPowerOrGreater) ||
+		staticRuleQualifiersAre(qualifiers, StaticRuleQualifierBlockerColor) ||
+		staticRuleQualifiersAre(qualifiers, StaticRuleQualifierBlockerArtifact) ||
+		staticRuleQualifiersAre(qualifiers, StaticRuleQualifierBlockerControlledByMonarch)
+}
+
 // validCreatureStaticRuleOperation reports whether a creature-scoped static rule
 // (a creature source or the creature an Aura or Equipment is attached to) carries
 // a recognized constraint, operation, voice, and qualifier set.
@@ -912,12 +935,7 @@ func validCreatureStaticRuleOperation(rule StaticRuleSyntax) bool {
 			rule.Operation.Voice == StaticRuleVoicePassive &&
 			(len(rule.Qualifiers) == 0 ||
 				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierByMoreThanOne) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerFlying) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrLess) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerPowerOrGreater) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerColor) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerArtifact) ||
-				staticRuleQualifiersAre(rule.Qualifiers, StaticRuleQualifierBlockerControlledByMonarch))) ||
+				staticCantBeBlockedByCreaturesWithQualifier(rule.Qualifiers))) ||
 		(rule.Constraint.Kind == StaticRuleConstraintRequirement &&
 			rule.Operation.Kind == StaticRuleOperationBlock &&
 			rule.Operation.Voice == StaticRuleVoicePassive &&

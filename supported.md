@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,067 of 32,501 cards eligible for paper support (55.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,068 of 32,501 cards eligible for paper support (55.6%)**. The Scryfall Oracle Cards corpus contains 5,753 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3688,6 +3688,7 @@ Council4 currently supports **18,067 of 32,501 cards eligible for paper support 
 - Deliberate
 - Delighted Halfling
 - Delirium Skeins
+- Delney, Streetwise Lookout
 - Delraich
 - Delusions of Mediocrity
 - Delver's Torch
