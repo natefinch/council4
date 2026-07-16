@@ -67,6 +67,17 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 		if dynamic, ok := dynamicCardZoneAmount(amount.Selector(), amount.Multiplier); ok {
 			return dynamic, true
 		}
+		if selector := amount.Selector(); selector.Controller == compiler.ControllerTargetedPlayers {
+			stripped := selector
+			stripped.Controller = compiler.ControllerAny
+			selection, ok := dynamicAmountSelection(stripped)
+			if !ok {
+				return game.DynamicAmount{}, false
+			}
+			dynamic.Kind = game.DynamicAmountCountSelector
+			dynamic.Group = game.PlayerGroupControlledGroup(game.TargetedPlayersReference(), selection)
+			return dynamic, true
+		}
 		if selector := amount.Selector(); selector.Controller == compiler.ControllerThatPlayer {
 			// "the number of nonbasic lands that player controls"
 			// (Anathemancer) counts the permanents a referenced player

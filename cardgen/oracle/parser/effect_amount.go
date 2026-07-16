@@ -2557,6 +2557,17 @@ func parseDynamicSelectionCountSubject(tokens []shared.Token, start int, atoms A
 			end:    end + 3, count: true, plural: plural,
 		}, true
 	}
+	if effectWordsAt(tokens, end, "those", "opponents", "control") && dynamicAmountBoundary(tokens, end+3) {
+		selection := buildDynamicCountSelection(tokens, start, end, atoms)
+		if selection.Zone != zone.None || !dynamicCountSelectionTypesFaithful(selection) {
+			return dynamicAmountSubject{}, false
+		}
+		selection.Controller = SelectionControllerTargetedPlayers
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+			end:    end + 3, count: true, plural: plural,
+		}, true
+	}
 	if effectWordsAt(tokens, end, "that", "player", "controls") && dynamicAmountBoundary(tokens, end+3) {
 		selection := buildDynamicCountSelection(tokens, start, end, atoms)
 		if selection.Zone != zone.None || !dynamicCountSelectionTypesFaithful(selection) {

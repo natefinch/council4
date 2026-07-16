@@ -479,6 +479,8 @@ func compileSelectionController(controller parser.SelectionController) Controlle
 		return ControllerThatPlayer
 	case parser.SelectionControllerDefendingPlayer:
 		return ControllerDefendingPlayer
+	case parser.SelectionControllerTargetedPlayers:
+		return ControllerTargetedPlayers
 	default:
 		return ControllerAny
 	}

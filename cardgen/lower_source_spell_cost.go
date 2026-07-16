@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"strings"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -8,6 +10,61 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
+
+func lowerSourceSpellCostIncreasePerTarget(
+	ability compiler.CompiledAbility,
+	syntax *parser.Ability,
+) (abilityLowering, bool, *shared.Diagnostic) {
+	if len(ability.Content.Effects) != 1 ||
+		!ability.Content.Effects[0].SourceSpellCostIncreasePerTarget {
+		return abilityLowering{}, false, nil
+	}
+	effect := ability.Content.Effects[0]
+	if ability.Cost != nil ||
+		ability.Trigger != nil ||
+		ability.Optional ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		len(ability.Content.Conditions) != 0 ||
+		len(ability.Content.Keywords) != 0 ||
+		(ability.AbilityWord != "Strive" && !rulesFreeAbilityWordLabel(ability.AbilityWord)) {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported per-target source spell cost increase shell",
+			"a per-target source spell cost increase requires an otherwise empty ability shell",
+		)
+	}
+	manaCost, err := parseManaCostValue(strings.Join(effect.Mana.Symbols, ""))
+	if err != nil || len(manaCost) == 0 {
+		return abilityLowering{}, true, executableDiagnostic(
+			ability,
+			"unsupported per-target source spell cost increase",
+			"the repeated mana cost could not be lowered",
+		)
+	}
+	return abilityLowering{
+		staticAbilities: []loweredStaticAbility{{Body: game.StaticAbility{
+			Text: ability.Text,
+			RuleEffects: []game.RuleEffect{{
+				Kind:           game.RuleEffectCostModifier,
+				AffectedSource: true,
+				CostModifier: game.CostModifier{
+					Kind:                         game.CostModifierSpell,
+					PerTargetBeyondFirstIncrease: manaCost,
+				},
+			}},
+		}}},
+		consumed: semanticConsumption{
+			modes:      len(ability.Content.Modes),
+			conditions: len(ability.Content.Conditions),
+			effects:    len(ability.Content.Effects),
+			keywords:   len(ability.Content.Keywords),
+			references: len(ability.Content.References),
+			targets:    len(ability.Content.Targets),
+		},
+		sourceSpans: []shared.Span{ability.Span},
+	}, true, nil
+}
 
 // lowerSourceSpellCostReduction lowers the exact source-scoped dynamic cast cost
 // reduction "This spell costs {N} less to cast for each <countable object>." into

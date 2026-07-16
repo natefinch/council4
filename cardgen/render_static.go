@@ -1282,6 +1282,20 @@ func (r Renderer) renderCostModifier(ctx *renderCtx, modifier game.CostModifier)
 	if modifier.GenericReduction != 0 {
 		fields = append(fields, fmt.Sprintf("GenericReduction: %d,", modifier.GenericReduction))
 	}
+	if len(modifier.ManaIncrease) != 0 {
+		manaCost, err := r.renderManaCost(ctx, modifier.ManaIncrease)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("ManaIncrease: %s,", manaCost))
+	}
+	if len(modifier.PerTargetBeyondFirstIncrease) != 0 {
+		manaCost, err := r.renderManaCost(ctx, modifier.PerTargetBeyondFirstIncrease)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PerTargetBeyondFirstIncrease: %s,", manaCost))
+	}
 	if len(modifier.ColoredIncrease) != 0 {
 		colors, err := renderManaColorSlice(ctx, modifier.ColoredIncrease)
 		if err != nil {

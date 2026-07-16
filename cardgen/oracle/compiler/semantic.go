@@ -1554,6 +1554,9 @@ const (
 	// defending player controls", Coveted Peacock). The lowering maps it to the
 	// runtime Selection.ControlledByDefendingPlayer predicate.
 	ControllerDefendingPlayer
+	// ControllerTargetedPlayers restricts a dynamic selection to permanents
+	// controlled by the spell or ability's still-legal targeted players.
+	ControllerTargetedPlayers
 )
 
 // CompiledSelector is a conservative semantic summary of a noun phrase.
@@ -3189,6 +3192,7 @@ type CompiledEffect struct {
 	// typed condition.
 	SourceSpellCostReductionConditional           bool
 	SourceSpellCostReductionTargetsTappedCreature bool
+	SourceSpellCostIncreasePerTarget              bool
 	RequiresOrderedLowering                       bool
 	HasUnrecognizedSibling                        bool
 	UnsupportedDetail                             string

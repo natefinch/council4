@@ -1385,6 +1385,9 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 	switch effect.Kind {
 	case RuleEffectCostModifier:
 		v.validateCostModifier(faceName, appendPath(path, "CostModifier"), effect.CostModifier, false)
+		if len(effect.CostModifier.PerTargetBeyondFirstIncrease) > 0 && !effect.AffectedSource {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidRuleEffect, "per-target-beyond-first cost increases must affect their source spell")
+		}
 	case RuleEffectGrantHandCardAbility:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "hand-card ability grants must set affected player")
@@ -1802,6 +1805,17 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 	}
 	if modifier.GenericReduction < 0 {
 		v.add(faceName, appendPath(path, "GenericReduction"), CardDefIssueInvalidRuleEffect, "generic cost reduction cannot be negative")
+	}
+	for _, field := range []struct {
+		name string
+		mana cost.Mana
+	}{
+		{name: "ManaIncrease", mana: modifier.ManaIncrease},
+		{name: "PerTargetBeyondFirstIncrease", mana: modifier.PerTargetBeyondFirstIncrease},
+	} {
+		if len(field.mana) > 0 && modifier.Kind != CostModifierSpell {
+			v.add(faceName, appendPath(path, field.name), CardDefIssueInvalidRuleEffect, "mana cost increases must be spell modifiers")
+		}
 	}
 	if modifier.LifeIncrease < 0 {
 		v.add(faceName, appendPath(path, "LifeIncrease"), CardDefIssueInvalidRuleEffect, "life cost increase cannot be negative")

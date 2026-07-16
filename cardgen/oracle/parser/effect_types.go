@@ -1613,6 +1613,9 @@ const (
 	// is assigned only by the narrow gain-control monarch recognizer, so no other
 	// card's "that player controls" wording is retyped.
 	SelectionControllerThatPlayer SelectionController = "SelectionControllerThatPlayer"
+	// SelectionControllerTargetedPlayers restricts a selection to permanents
+	// controlled by the spell or ability's still-legal targeted players.
+	SelectionControllerTargetedPlayers SelectionController = "SelectionControllerTargetedPlayers"
 )
 
 // SelectionKind identifies the broad object selected by a phrase.
@@ -3021,14 +3024,18 @@ type EffectSyntax struct {
 	SourceSpellCostReductionConditional bool `json:",omitempty"`
 	// SourceSpellCostReductionTargetsTappedCreature marks the exact condition
 	// "if it targets a tapped creature."
-	SourceSpellCostReductionTargetsTappedCreature bool                    `json:",omitempty"`
-	Replacement                                   EffectReplacementSyntax `json:",omitzero"`
-	References                                    []Reference             `json:",omitempty"`
-	SubjectReferences                             []Reference             `json:",omitempty"`
-	Targets                                       []TargetSyntax          `json:",omitempty"`
-	SubjectTargets                                []TargetSyntax          `json:",omitempty"`
-	Payment                                       EffectPaymentSyntax     `json:",omitzero"`
-	Exact                                         bool                    `json:",omitempty"`
+	SourceSpellCostReductionTargetsTappedCreature bool `json:",omitempty"`
+	// SourceSpellCostIncreasePerTarget marks "This spell costs {cost} more to
+	// cast for each target beyond the first." Mana carries the exact repeated
+	// cost, preserving colored and non-generic symbols.
+	SourceSpellCostIncreasePerTarget bool                    `json:",omitempty"`
+	Replacement                      EffectReplacementSyntax `json:",omitzero"`
+	References                       []Reference             `json:",omitempty"`
+	SubjectReferences                []Reference             `json:",omitempty"`
+	Targets                          []TargetSyntax          `json:",omitempty"`
+	SubjectTargets                   []TargetSyntax          `json:",omitempty"`
+	Payment                          EffectPaymentSyntax     `json:",omitzero"`
+	Exact                            bool                    `json:",omitempty"`
 	// TapUntapReferenceObjectClean reports that a tap or untap effect's clause is
 	// exactly "<verb> <object>." naming the source or a singular back-reference
 	// ("Untap it.", "Tap that creature.", "Untap this creature."), tolerating an

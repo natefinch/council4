@@ -21,7 +21,7 @@ const (
 	CostModifierAttack
 )
 
-// CostModifier is a generic-cost increase/reduction/set effect.
+// CostModifier changes mana and additional costs for spells and abilities.
 //
 // CardSelection is the sole card-subject filter for a spell cost modifier: it
 // names the spells the modifier affects by card type, excluded card type, color,
@@ -34,6 +34,16 @@ type CostModifier struct {
 	AbilityKeyword   Keyword
 	GenericIncrease  int
 	GenericReduction int
+
+	// ManaIncrease is an exact mana-symbol increase applied to an affected spell
+	// before reductions. Unlike GenericIncrease and ColoredIncrease, it can carry
+	// a mixed cost such as {1}{W}.
+	ManaIncrease cost.Mana
+
+	// PerTargetBeyondFirstIncrease is a source-spell cost increase repeated once
+	// for each chosen target beyond the first (strive). The rules layer resolves
+	// it from the announced targets into ManaIncrease before payment.
+	PerTargetBeyondFirstIncrease cost.Mana
 
 	// ColoredIncrease lists colored mana symbols added to the affected cost on
 	// top of any GenericIncrease ("Black spells you cast cost {B} more to
