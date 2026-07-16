@@ -3008,7 +3008,10 @@ type CompiledEffect struct {
 	// Lowering reads it to set the exiled cast's spend-any-mana permission; it is
 	// false for every other effect.
 	ImpulseSpendAnyColor bool
-	Negated              bool
+	// ImpulseWithoutPayingManaCost mirrors the parser flag for an impulse-exile
+	// play permission that lets the exiled card be cast for free.
+	ImpulseWithoutPayingManaCost bool
+	Negated                      bool
 	// FallbackOnInability mirrors the parser flag for a "who can't" relative
 	// clause effect ("Each player who can't discards a card."): it applies only
 	// to players who couldn't satisfy the immediately preceding required action.

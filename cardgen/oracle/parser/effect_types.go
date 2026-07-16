@@ -2940,7 +2940,10 @@ type EffectSyntax struct {
 	// caster spend mana of any type to cast the exiled card, and is meaningful
 	// only when Kind is EffectImpulseExile.
 	ImpulseSpendAnyColor bool `json:",omitempty"`
-	Negated              bool `json:",omitempty"`
+	// ImpulseWithoutPayingManaCost reports that an impulse-exile play permission
+	// lets the controller cast the exiled card without paying its mana cost.
+	ImpulseWithoutPayingManaCost bool `json:",omitempty"`
+	Negated                      bool `json:",omitempty"`
 	// FallbackOnInability marks an effect whose subject is a "who can't" relative
 	// clause ("Each player who can't discards a card."): it applies only to
 	// players who couldn't satisfy the immediately preceding required action. It

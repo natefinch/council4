@@ -722,11 +722,12 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		amount = game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.ImpulseExile{
-		Player:       libraryOwner,
-		Amount:       amount,
-		Duration:     duration,
-		Cast:         effect.ImpulseCast,
-		SpendAnyMana: effect.ImpulseSpendAnyColor,
+		Player:                libraryOwner,
+		Amount:                amount,
+		Duration:              duration,
+		Cast:                  effect.ImpulseCast,
+		SpendAnyMana:          effect.ImpulseSpendAnyColor,
+		WithoutPayingManaCost: effect.ImpulseWithoutPayingManaCost,
 	}}}}.Ability(), nil
 }
 

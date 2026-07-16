@@ -2196,6 +2196,9 @@ type ImpulseExile struct {
 	// instead of the play-permitting RuleEffectPlayFromZone. It is false for the
 	// ordinary "you may play" impulse.
 	Cast bool
+	// WithoutPayingManaCost lets the controller cast an exiled spell without
+	// paying its mana cost while still allowing an exiled land to be played.
+	WithoutPayingManaCost bool
 	// PublishLinked, when set, remembers each exiled card under this source-keyed
 	// linked set so a later ability can act on "cards exiled with this ..." (Court
 	// of Locthwain's monarch free-cast reads the accumulated pool). It is empty

@@ -2852,18 +2852,19 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 			kind = game.RuleEffectCastFromZone
 		}
 		r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
-			ID:             r.game.IDGen.Next(),
-			Kind:           kind,
-			Controller:     r.obj.Controller,
-			SourceCardID:   r.obj.SourceCardID,
-			SourceObjectID: r.obj.SourceID,
-			AffectedPlayer: game.PlayerYou,
-			Duration:       prim.Duration,
-			CreatedTurn:    r.game.Turn.TurnNumber,
-			CastFromZone:   zone.Exile,
-			AffectedCardID: cardID,
-			ExpiresFor:     r.obj.Controller,
-			SpendAnyMana:   prim.SpendAnyMana,
+			ID:                    r.game.IDGen.Next(),
+			Kind:                  kind,
+			Controller:            r.obj.Controller,
+			SourceCardID:          r.obj.SourceCardID,
+			SourceObjectID:        r.obj.SourceID,
+			AffectedPlayer:        game.PlayerYou,
+			Duration:              prim.Duration,
+			CreatedTurn:           r.game.Turn.TurnNumber,
+			CastFromZone:          zone.Exile,
+			AffectedCardID:        cardID,
+			ExpiresFor:            r.obj.Controller,
+			SpendAnyMana:          prim.SpendAnyMana,
+			WithoutPayingManaCost: prim.WithoutPayingManaCost,
 		})
 		if prim.PublishLinked != "" {
 			rememberLinkedObject(r.game, linkKey, game.LinkedObjectRef{CardID: cardID})

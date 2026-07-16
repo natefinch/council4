@@ -593,6 +593,7 @@ func emitSentenceResolvingSyntax(
 			}
 		}
 	}
+	recognizeConditionalImpulseExileSequence(sentences)
 	recognizeShuffleRevealPermanentSequence(sentences)
 	recognizeRevealUntilThenPutSequence(sentences)
 	recognizeRevealTopPartitionSequence(sentences)
