@@ -1653,6 +1653,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 	// single payment-bearing effect rather than a spurious two-effect sequence,
 	// and carry the recognized AdditionalCost forward onto that effect's Payment.
 	unlessCost := recognizeUnlessControllerAdditionalCost(sentence, tokens, atoms)
+	if !unlessCost.ok {
+		unlessCost = recognizeUnlessTargetPlayerPayLife(sentence, tokens)
+	}
 	if unlessCost.ok {
 		filtered := indices[:0:0]
 		for _, idx := range indices {
@@ -2053,6 +2056,10 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				additionalTokens = specs[1:]
 			}
 		}
+		effectTargets := targetsInSpan(sentence.Targets, ownershipSpan)
+		if payment.Payer == EffectPaymentPayerTargetPlayer {
+			effectTargets = append(effectTargets, targetsInSpan(sentence.Targets, payment.Span)...)
+		}
 		effects = append(effects, EffectSyntax{
 			Kind:                       kind,
 			Context:                    context,
@@ -2156,7 +2163,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 				sentence.Targets,
 			),
 			SubjectReferences:       referencesInSpan(atoms, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
-			Targets:                 targetsInSpan(sentence.Targets, ownershipSpan),
+			Targets:                 effectTargets,
 			SubjectTargets:          targetsInSpan(sentence.Targets, shared.SpanOf(tokens[ownershipStart:tokenIndex])),
 			Payment:                 payment,
 			RequiresOrderedLowering: requiresOrderedLowering,

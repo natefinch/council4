@@ -20,6 +20,55 @@ type recognizedUnlessCost struct {
 	unlessIndex int
 }
 
+// recognizeUnlessTargetPlayerPayLife recognizes a trailing "unless target
+// player/opponent pays N life" payment and folds it onto the preceding effect.
+// The targeted player remains an ordinary ability target; the payment carries a
+// fixed pay-life additional cost so lowering can offer it to that target and gate
+// the preceding effect on the payment result.
+func recognizeUnlessTargetPlayerPayLife(sentence Sentence, tokens []shared.Token) recognizedUnlessCost {
+	for i := 0; i+6 < len(tokens); i++ {
+		if !equalWord(tokens[i], "unless") ||
+			!equalWord(tokens[i+1], "target") ||
+			(!equalWord(tokens[i+2], "player") && !equalWord(tokens[i+2], "opponent")) ||
+			!equalWord(tokens[i+3], "pays") ||
+			tokens[i+4].Kind != shared.Integer ||
+			!equalWord(tokens[i+5], "life") ||
+			tokens[i+6].Kind != shared.Period ||
+			i+7 != len(tokens) {
+			continue
+		}
+		amount, err := strconv.Atoi(tokens[i+4].Text)
+		if err != nil || amount <= 0 {
+			return recognizedUnlessCost{}
+		}
+		costTokens := tokens[i+4 : i+6]
+		costSpan := shared.SpanOf(costTokens)
+		costText := shared.SliceSpan(sentence.Text, costRelativeSpan(costSpan, sentence.Span.Start.Offset))
+		additionalCost := Cost{
+			Span: costSpan,
+			Text: costText,
+			Components: []CostComponent{{
+				Kind:        CostComponentPayLife,
+				Span:        costSpan,
+				Text:        costText,
+				AmountValue: amount,
+				AmountKnown: true,
+			}},
+		}
+		return recognizedUnlessCost{
+			ok:          true,
+			unlessIndex: i,
+			payment: EffectPaymentSyntax{
+				Span:           shared.SpanOf(tokens[i : i+6]),
+				Form:           EffectPaymentFormUnless,
+				Payer:          EffectPaymentPayerTargetPlayer,
+				AdditionalCost: &additionalCost,
+			},
+		}
+	}
+	return recognizedUnlessCost{}
+}
+
 // recognizeUnlessControllerAdditionalCost recognizes the trailing "unless you
 // <cost>" controller payment of a single sentence whose cost is a non-mana
 // additional cost ("discard a card", "sacrifice another creature", "exile a card

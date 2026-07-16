@@ -38,7 +38,7 @@ func applyEffectPaymentsToConditions(effects []CompiledEffect, conditions []Comp
 		}
 		var predicate ConditionPredicate
 		switch effect.Payment.Payer {
-		case parser.EffectPaymentPayerTargetController:
+		case parser.EffectPaymentPayerTargetController, parser.EffectPaymentPayerTargetPlayer:
 			predicate = ConditionPredicateTargetControllerDoesNotPay
 		case parser.EffectPaymentPayerEventPlayer:
 			predicate = ConditionPredicateEventPlayerDoesNotPay
