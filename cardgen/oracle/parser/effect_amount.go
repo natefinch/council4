@@ -218,9 +218,15 @@ func parseTokenKeywordToxic(kind EffectKind, tokens []shared.Token, atoms Atoms)
 // clause are unaffected. The map key is the lowercased source word; the value is
 // the canonical token name.
 var predefinedTokenNames = map[string]string{
-	"mutavault":     "Mutavault",
-	"tarmogoyf":     "Tarmogoyf",
-	"virtuous role": "Virtuous Role",
+	"cursed role":     "Cursed Role",
+	"monster role":    "Monster Role",
+	"mutavault":       "Mutavault",
+	"royal role":      "Royal Role",
+	"sorcerer role":   "Sorcerer Role",
+	"tarmogoyf":       "Tarmogoyf",
+	"virtuous role":   "Virtuous Role",
+	"wicked role":     "Wicked Role",
+	"young hero role": "Young Hero Role",
 }
 
 // parsePredefinedTokenName captures a created predefined named token's name from

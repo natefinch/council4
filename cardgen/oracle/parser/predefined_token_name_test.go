@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // TestParsePredefinedTokenName proves the "Create a [tapped] <Name> token." form
 // for a predefined named token whose name is a card name rather than a card
@@ -12,10 +15,16 @@ func TestParsePredefinedTokenName(t *testing.T) {
 		name   string
 		tapped bool
 	}{
+		{"Create a Cursed Role token attached to that creature.", "Cursed Role", false},
+		{"Create a Monster Role token attached to that creature.", "Monster Role", false},
 		{"Create a Mutavault token.", "Mutavault", false},
 		{"Create a tapped Mutavault token.", "Mutavault", true},
+		{"Create a Royal Role token attached to that creature.", "Royal Role", false},
+		{"Create a Sorcerer Role token attached to that creature.", "Sorcerer Role", false},
 		{"Create a Tarmogoyf token.", "Tarmogoyf", false},
 		{"Create a Virtuous Role token attached to another target creature you control.", "Virtuous Role", false},
+		{"Create a Wicked Role token attached to that creature.", "Wicked Role", false},
+		{"Create a Young Hero Role token attached to that creature.", "Young Hero Role", false},
 	} {
 		document, diagnostics := Parse(tc.source, Context{})
 		if len(diagnostics) != 0 {
@@ -33,11 +42,15 @@ func TestParsePredefinedTokenName(t *testing.T) {
 		if effect.Selection.Tapped != tc.tapped {
 			t.Fatalf("Parse(%q) Tapped=%v, want %v", tc.source, effect.Selection.Tapped, tc.tapped)
 		}
-		if tc.name == "Virtuous Role" {
-			if !effect.TokenAttachedToTarget || len(effect.Targets) != 1 ||
-				!effect.Targets[0].Selection.Another ||
-				effect.Targets[0].Selection.Controller != SelectionControllerYou {
-				t.Fatalf("Parse(%q) attachment target = %#v", tc.source, effect)
+		if strings.HasSuffix(tc.name, " Role") {
+			if tc.name == "Virtuous Role" {
+				if !effect.TokenAttachedToTarget || len(effect.Targets) != 1 ||
+					!effect.Targets[0].Selection.Another ||
+					effect.Targets[0].Selection.Controller != SelectionControllerYou {
+					t.Fatalf("Parse(%q) attachment target = %#v", tc.source, effect)
+				}
+			} else if !effect.TokenAttachedToReference || len(effect.References) != 1 {
+				t.Fatalf("Parse(%q) attachment reference = %#v", tc.source, effect)
 			}
 		}
 	}

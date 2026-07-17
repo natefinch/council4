@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Culling Ritual
+// CullingRitual is the card definition for Culling Ritual.
 //
 // Type: Sorcery
 //

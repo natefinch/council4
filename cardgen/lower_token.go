@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -160,6 +161,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		len(ctx.content.Targets) == 1 &&
 		singleThoseTargetedPlayersReference(ctx.content.References)
 	attachedTarget := controllerRecipient && effect.TokenAttachedToTarget
+	attachedReference := controllerRecipient && effect.TokenAttachedToReference
 	expectedTargets := 0
 	if targetRecipient || controlledCountTarget || targetedPlayerGroupCount || attachedTarget {
 		expectedTargets = 1
@@ -187,6 +189,7 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	var recipient opt.V[game.PlayerReference]
 	var targets []game.TargetSpec
 	var amountObject game.ObjectReference
+	var attachedObject game.ObjectReference
 	amountReferencesObject := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount ||
 		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower
 	switch {
@@ -199,6 +202,20 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 		targets = []game.TargetSpec{spec}
+		attachedObject = game.TargetObjectReference(0)
+	case attachedReference:
+		if len(ctx.content.References) != 1 {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowTarget: true,
+			AllowEvent:  true,
+		})
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		attachedObject = object
 	case controlledCountTarget:
 		// The tokens enter under the spell's controller ("You create ..."), so
 		// recipient stays unset; only the count is scoped to the target player.
@@ -318,8 +335,8 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		Toughness:      dynamicSize,
 		PublishLinked:  publishLinked,
 	}
-	if attachedTarget {
-		createToken.EntryAttachedTo = opt.Val(game.TargetObjectReference(0))
+	if attachedTarget || attachedReference {
+		createToken.EntryAttachedTo = opt.Val(attachedObject)
 	}
 	switch effect.TokenAttackDefender {
 	case parser.AttackDefenderThatPlayer, parser.AttackDefenderThatOpponent:
@@ -1377,15 +1394,137 @@ func synthesizePredefinedTokenDef(effect *compiler.CompiledEffect) (*game.CardDe
 		return nil, false
 	}
 	switch effect.TokenPredefinedName {
+	case "Cursed Role":
+		return cursedRoleTokenDef(), true
+	case "Monster Role":
+		return monsterRoleTokenDef(), true
 	case "Mutavault":
 		return mutavaultTokenDef(), true
+	case "Royal Role":
+		return royalRoleTokenDef(), true
+	case "Sorcerer Role":
+		return sorcererRoleTokenDef(), true
 	case "Tarmogoyf":
 		return tarmogoyfTokenDef(), true
 	case "Virtuous Role":
 		return virtuousRoleTokenDef(), true
+	case "Wicked Role":
+		return wickedRoleTokenDef(), true
+	case "Young Hero Role":
+		return youngHeroRoleTokenDef(), true
 	default:
 		return nil, false
 	}
+}
+
+func roleTokenDef(name, oracleText string, abilities ...game.StaticAbility) *game.CardDef {
+	static := []game.StaticAbility{game.EnchantStaticAbility(&game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "creature",
+		Allow:      game.TargetAllowPermanent,
+		Selection: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+		}),
+	})}
+	static = append(static, abilities...)
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:            name,
+		Types:           []types.Card{types.Enchantment},
+		Subtypes:        []types.Sub{types.Aura, types.Role},
+		StaticAbilities: static,
+		OracleText:      oracleText,
+	}}
+}
+
+func attachedRoleContinuousEffects(effects ...game.ContinuousEffect) game.StaticAbility {
+	for i := range effects {
+		effects[i].Group = game.AttachedObjectGroup(game.SourcePermanentReference())
+	}
+	return game.StaticAbility{ContinuousEffects: effects}
+}
+
+func cursedRoleTokenDef() *game.CardDef {
+	return roleTokenDef(
+		"Cursed Role",
+		"Enchant creature\nEnchanted creature has base power and toughness 1/1.",
+		attachedRoleContinuousEffects(game.ContinuousEffect{
+			Layer:        game.LayerPowerToughnessSet,
+			SetPower:     opt.Val(game.PT{Value: 1}),
+			SetToughness: opt.Val(game.PT{Value: 1}),
+		}),
+	)
+}
+
+func monsterRoleTokenDef() *game.CardDef {
+	return roleTokenDef(
+		"Monster Role",
+		"Enchant creature\nEnchanted creature gets +1/+1 and has trample.",
+		attachedRoleContinuousEffects(
+			game.ContinuousEffect{
+				Layer:       game.LayerAbility,
+				AddKeywords: []game.Keyword{game.Trample},
+			},
+			game.ContinuousEffect{
+				Layer:          game.LayerPowerToughnessModify,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+			},
+		),
+	)
+}
+
+func royalRoleTokenDef() *game.CardDef {
+	ward := game.WardStaticAbility(cost.Mana{cost.O(1)})
+	return roleTokenDef(
+		"Royal Role",
+		"Enchant creature\nEnchanted creature gets +1/+1 and has ward {1}.\n(Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)",
+		attachedRoleContinuousEffects(
+			game.ContinuousEffect{
+				Layer:        game.LayerAbility,
+				AddAbilities: []game.Ability{&ward},
+			},
+			game.ContinuousEffect{
+				Layer:          game.LayerPowerToughnessModify,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+			},
+		),
+	)
+}
+
+func sorcererRoleTokenDef() *game.CardDef {
+	granted := &game.TriggeredAbility{
+		Text: "Whenever this creature attacks, scry 1.",
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:  game.EventAttackerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+		},
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Scry{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			},
+		}}}.Ability(),
+	}
+	return roleTokenDef(
+		"Sorcerer Role",
+		"Enchant creature\nEnchanted creature gets +1/+1 and has \"Whenever this creature attacks, scry 1.\"",
+		attachedRoleContinuousEffects(
+			game.ContinuousEffect{
+				Layer:        game.LayerAbility,
+				AddAbilities: []game.Ability{granted},
+			},
+			game.ContinuousEffect{
+				Layer:          game.LayerPowerToughnessModify,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+			},
+		),
+	)
 }
 
 // virtuousRoleTokenDef builds the predefined Virtuous Role Aura token. Its
@@ -1400,33 +1539,83 @@ func virtuousRoleTokenDef() *game.CardDef {
 			Controller:    game.ControllerYou,
 		}),
 	}
-	return &game.CardDef{
-		CardFace: game.CardFace{
-			Name:     "Virtuous Role",
-			Types:    []types.Card{types.Enchantment},
-			Subtypes: []types.Sub{types.Aura, types.Role},
-			StaticAbilities: []game.StaticAbility{
-				game.EnchantStaticAbility(&game.TargetSpec{
-					MinTargets: 1,
-					MaxTargets: 1,
-					Constraint: "creature",
-					Allow:      game.TargetAllowPermanent,
-					Selection: opt.Val(game.Selection{
-						RequiredTypesAny: []types.Card{types.Creature},
-					}),
-				}),
-				{
-					ContinuousEffects: []game.ContinuousEffect{{
-						Layer:                 game.LayerPowerToughnessModify,
-						Group:                 game.AttachedObjectGroup(game.SourcePermanentReference()),
-						PowerDeltaDynamic:     opt.Val(countEnchantments),
-						ToughnessDeltaDynamic: opt.Val(countEnchantments),
-					}},
-				},
+	return roleTokenDef(
+		"Virtuous Role",
+		"Enchant creature\nEnchanted creature gets +1/+1 for each enchantment you control.",
+		attachedRoleContinuousEffects(game.ContinuousEffect{
+			Layer:                 game.LayerPowerToughnessModify,
+			PowerDeltaDynamic:     opt.Val(countEnchantments),
+			ToughnessDeltaDynamic: opt.Val(countEnchantments),
+		}),
+	)
+}
+
+func wickedRoleTokenDef() *game.CardDef {
+	def := roleTokenDef(
+		"Wicked Role",
+		"Enchant creature\nEnchanted creature gets +1/+1.\nWhen this Aura is put into a graveyard from the battlefield, each opponent loses 1 life.",
+		attachedRoleContinuousEffects(game.ContinuousEffect{
+			Layer:          game.LayerPowerToughnessModify,
+			PowerDelta:     1,
+			ToughnessDelta: 1,
+		}),
+	)
+	def.TriggeredAbilities = []game.TriggeredAbility{{
+		Text: "When this Aura is put into a graveyard from the battlefield, each opponent loses 1 life.",
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhen,
+			Pattern: game.TriggerPattern{
+				Event:         game.EventZoneChanged,
+				Source:        game.TriggerSourceSelf,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+				MatchToZone:   true,
+				ToZone:        zone.Graveyard,
 			},
-			OracleText: "Enchant creature\nEnchanted creature gets +1/+1 for each enchantment you control.",
 		},
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.LoseLife{
+				Amount:      game.Fixed(1),
+				PlayerGroup: game.OpponentsReference(),
+			},
+		}}}.Ability(),
+	}}
+	return def
+}
+
+func youngHeroRoleTokenDef() *game.CardDef {
+	granted := &game.TriggeredAbility{
+		Text: "Whenever this creature attacks, if its toughness is 3 or less, put a +1/+1 counter on it.",
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:  game.EventAttackerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+			InterveningIf: "if its toughness is 3 or less",
+			InterveningCondition: opt.Val(game.Condition{
+				Object: opt.Val(game.EventPermanentReference()),
+				ObjectMatches: opt.Val(game.Selection{
+					Toughness: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				}),
+			}),
+		},
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(1),
+				Object:      game.EventPermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
 	}
+	return roleTokenDef(
+		"Young Hero Role",
+		"Enchant creature\nEnchanted creature has \"Whenever this creature attacks, if its toughness is 3 or less, put a +1/+1 counter on it.\"",
+		attachedRoleContinuousEffects(game.ContinuousEffect{
+			Layer:        game.LayerAbility,
+			AddAbilities: []game.Ability{granted},
+		}),
+	)
 }
 
 // mutavaultTokenDef builds the Mutavault token: a colorless land with the

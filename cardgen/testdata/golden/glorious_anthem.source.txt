@@ -5,7 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-// Glorious Anthem
+// GloriousAnthem is the card definition for Glorious Anthem.
 //
 // Type: Enchantment
 //

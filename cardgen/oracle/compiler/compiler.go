@@ -163,7 +163,7 @@ func compileAbility(
 	}
 	if ability.Modal != nil {
 		for i := range ability.Modal.Options {
-			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context)
+			compiledMode, modeDiagnostics := compileMode(&ability.Modal.Options[i], context, compiled.Trigger)
 			compiled.Content.Modes = append(compiled.Content.Modes, compiledMode)
 			diagnostics = append(diagnostics, modeDiagnostics...)
 		}
@@ -646,20 +646,23 @@ func referenceFollowsEffectVerbInClause(effectIndex int, effects []CompiledEffec
 func compileMode(
 	mode *parser.Mode,
 	context Context,
+	trigger *CompiledTrigger,
 ) (CompiledMode, []shared.Diagnostic) {
 	targets := compileTypedTargets(mode.Sentences)
 	effects := compileEffects(mode.Sentences)
-	references := bindReferences(compileTypedReferences(mode.SemanticReferences), targets, effects, nil)
+	references := bindReferences(compileTypedReferences(mode.SemanticReferences), targets, effects, trigger)
 	applyEffectReferenceBindings(effects, references)
 	resolveChosenPermanentSearchNames(effects)
-	resolvePaymentSourceSacrifices(effects, false)
+	resolvePaymentSourceSacrifices(effects, trigger != nil && trigger.Pattern.Source == TriggerSourceSelf)
+	conditions := compileConditions(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions)
+	bindConditionReferences(conditions, references, trigger)
 	compiled := CompiledMode{
 		Span:  mode.Span,
 		Text:  mode.Text,
 		Label: compileModeLabel(mode.Label),
 		Content: AbilityContent{
 			Targets:    targets,
-			Conditions: compileConditions(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions),
+			Conditions: conditions,
 			Effects:    effects,
 			Keywords:   compileKeywords(mode.SemanticKeywords),
 			References: references,

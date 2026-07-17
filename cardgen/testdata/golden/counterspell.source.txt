@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Counterspell
+// Counterspell is the card definition for Counterspell.
 //
 // Type: Instant
 //

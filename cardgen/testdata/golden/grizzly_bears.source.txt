@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Grizzly Bears
+// GrizzlyBears is the card definition for Grizzly Bears.
 //
 // Type: Creature — Bear
 //

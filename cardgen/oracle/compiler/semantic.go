@@ -2654,7 +2654,10 @@ type CompiledEffect struct {
 	// TokenAttachedToTarget carries the typed entry relationship from a create
 	// clause whose token enters attached to its sole permanent target.
 	TokenAttachedToTarget bool
-	TokenCopyOfTarget     bool
+	// TokenAttachedToReference carries the typed entry relationship from a create
+	// clause whose token enters attached to its sole bound object reference.
+	TokenAttachedToReference bool
+	TokenCopyOfTarget        bool
 	// TokenCopyOfSource copies the resolving ability's source permanent.
 	TokenCopyOfSource bool
 	// AmassSubtype is the creature subtype named by an EffectAmass keyword action

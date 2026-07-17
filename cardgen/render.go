@@ -297,7 +297,7 @@ func (Renderer) writeImports(b *strings.Builder, ctx *renderCtx) {
 }
 
 func (Renderer) writeCardComment(b *strings.Builder, card *ScryfallCard, root scryfallFaceFields, faces []scryfallFaceFields) {
-	_, _ = fmt.Fprintf(b, "// %s\n", card.Name)
+	_, _ = fmt.Fprintf(b, "// %s is the card definition for %s.\n", CardNameToVarName(root.Name), card.Name)
 	_, _ = b.WriteString("//\n")
 	_, _ = fmt.Fprintf(b, "// Type: %s\n", card.TypeLine)
 	if card.ManaCost != "" {

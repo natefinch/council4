@@ -7,7 +7,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Brainstorm
+// Brainstorm is the card definition for Brainstorm.
 //
 // Type: Instant
 //

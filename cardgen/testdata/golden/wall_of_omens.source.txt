@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Wall of Omens
+// WallOfOmens is the card definition for Wall of Omens.
 //
 // Type: Creature — Wall
 //

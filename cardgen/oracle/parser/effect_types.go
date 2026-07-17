@@ -2427,6 +2427,12 @@ type EffectSyntax struct {
 	// another target creature you control"). The target itself remains a normal
 	// typed TargetSyntax; this flag carries only the token-entry relationship.
 	TokenAttachedToTarget bool `json:",omitempty"`
+	// TokenAttachedToReference reports that the created token enters attached to
+	// the effect's sole semantic object reference ("create a Royal Role token
+	// attached to that creature"). Reference binding decides whether the
+	// demonstrative names the triggering permanent, source, target, or a prior
+	// result; this flag carries only the token-entry relationship.
+	TokenAttachedToReference bool `json:",omitempty"`
 	// TokenNameLeading reports that TokenName was captured from the leading
 	// "Create <Name>, a ... token ..." form (the named legendary tokens such as
 	// "Create Avacyn, a legendary 8/8 white Angel creature token ...") rather than
