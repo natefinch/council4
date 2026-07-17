@@ -2252,6 +2252,9 @@ func lowerImmediateSingleEffectSpellTail(
 		}
 		content, diag := lowerDoublePTSpell(ctx)
 		return content, diag, true
+	case compiler.EffectMustBeBlocked:
+		content, diag := lowerMustBeBlockedSpell(ctx)
+		return content, diag, true
 	case compiler.EffectCounter:
 		content, diag := lowerCounterSpell(ctx)
 		return content, diag, true

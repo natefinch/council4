@@ -2367,6 +2367,68 @@ func exactFightEffectSyntax(effect *EffectSyntax) bool {
 		strings.EqualFold(exactEffectClauseText(effect), effect.Targets[0].Text+" fights "+effect.Targets[1].Text+".")
 }
 
+func exactDoublePTEffectSyntax(effect *EffectSyntax) bool {
+	if len(effect.Targets) != 1 || !effect.Targets[0].Exact ||
+		effect.Duration != EffectDurationUntilEndOfTurn ||
+		!effect.DoublePower && !effect.DoubleToughness {
+		return false
+	}
+	characteristic := "power"
+	if effect.DoublePower && effect.DoubleToughness {
+		characteristic = "power and toughness"
+	} else if effect.DoubleToughness {
+		characteristic = "toughness"
+	}
+	target := effect.Targets[0].Text
+	text := exactEffectClauseText(effect)
+	wants := []string{
+		"Double the " + characteristic + " of " + target + " until end of turn.",
+		"Until end of turn, double the " + characteristic + " of " + target + ".",
+		"Double the " + characteristic + " of " + target + ".",
+	}
+	object := target
+	for _, suffix := range []string{"'s power and toughness", "'s power", "'s toughness"} {
+		if strings.HasSuffix(strings.ToLower(object), suffix) {
+			object = object[:len(object)-len(suffix)]
+			break
+		}
+	}
+	if object != target {
+		wants = append(wants,
+			"Double "+object+"'s "+characteristic+" until end of turn.",
+			"Until end of turn, double "+object+"'s "+characteristic+".",
+			"Double "+object+"'s "+characteristic+".",
+		)
+	}
+	for _, want := range wants {
+		if strings.EqualFold(text, want) {
+			return true
+		}
+	}
+	return false
+}
+
+func exactMustBeBlockedEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Duration != EffectDurationThisCombat {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	switch effect.Context {
+	case EffectContextReferencedObject:
+		return len(effect.Targets) == 0 &&
+			len(effect.References) == 1 &&
+			effect.References[0].Kind == ReferenceThatObject &&
+			strings.EqualFold(text, effect.References[0].Text+" must be blocked this combat.")
+	case EffectContextTarget:
+		return len(effect.Targets) == 1 &&
+			len(effect.References) == 0 &&
+			effect.Targets[0].Exact &&
+			strings.EqualFold(text, effect.Targets[0].Text+" must be blocked this combat.")
+	default:
+		return false
+	}
+}
+
 func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {
 	text := exactEffectClauseText(effect)
 	// A mass effect may carry an explicit "You" controller actor when it is one

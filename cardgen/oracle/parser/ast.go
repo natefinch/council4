@@ -725,6 +725,7 @@ const (
 	TriggerEventKindAttack           TriggerEventKind = "TriggerEventKindAttack"
 	TriggerEventKindBlock            TriggerEventKind = "TriggerEventKindBlock"
 	TriggerEventKindBecameBlocked    TriggerEventKind = "TriggerEventKindBecameBlocked"
+	TriggerEventKindFight            TriggerEventKind = "TriggerEventKindFight"
 	TriggerEventKindDamageDealt      TriggerEventKind = "TriggerEventKindDamageDealt"
 	TriggerEventKindCounterAdded     TriggerEventKind = "TriggerEventKindCounterAdded"
 	TriggerEventKindBecomesTapped    TriggerEventKind = "TriggerEventKindBecomesTapped"

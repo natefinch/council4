@@ -1215,6 +1215,19 @@ func combatTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "one or more controlled creatures fight",
+			source: "Whenever one or more creatures you control fight, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindFight ||
+					!clause.OneOrMore ||
+					clause.Controller != ControllerYou ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 
@@ -1290,6 +1303,34 @@ func blockUnionTriggerEventClauseTests() []triggerEventClauseTest {
 					clause.UnionKind != TriggerEventKindBecameBlocked ||
 					clause.Subject.Kind != TriggerEventSubjectSelf ||
 					!selectionHasType(clause.RelatedSelection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "fight or become blocked one or more controlled creatures",
+			source: "Whenever one or more creatures you control fight or become blocked, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindFight ||
+					clause.UnionKind != TriggerEventKindBecameBlocked ||
+					!clause.OneOrMore ||
+					clause.Controller != ControllerYou ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
+		{
+			name:   "becomes blocked or fights singular mirror",
+			source: "Whenever a creature you control becomes blocked or fights, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.Kind != TriggerEventKindFight ||
+					clause.UnionKind != TriggerEventKindBecameBlocked ||
+					clause.OneOrMore ||
+					clause.Controller != ControllerYou ||
+					!selectionHasType(clause.Subject.Selection, TriggerCardTypeCreature) {
 					t.Fatalf("clause = %#v", clause)
 				}
 			},

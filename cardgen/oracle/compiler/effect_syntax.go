@@ -502,6 +502,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectCantAttackOrBlock
 	case parser.EffectCantBeBlocked:
 		return EffectCantBeBlocked
+	case parser.EffectMustBeBlocked:
+		return EffectMustBeBlocked
 	case parser.EffectCantBeSacrificed:
 		return EffectCantBeSacrificed
 	case parser.EffectCantBlock:

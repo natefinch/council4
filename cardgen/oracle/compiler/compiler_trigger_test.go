@@ -626,6 +626,18 @@ func TestCompileActionTriggerPatterns(t *testing.T) {
 			},
 		},
 		{
+			source: "Whenever one or more creatures you control fight or become blocked, draw a card.",
+			check: func(t *testing.T, pattern TriggerPattern) {
+				if pattern.Event != TriggerEventFight ||
+					pattern.UnionEvent != TriggerEventAttackerBecameBlocked ||
+					pattern.Controller != ControllerYou ||
+					!pattern.OneOrMore ||
+					!slices.Equal(pattern.SubjectSelection.RequiredTypes, []types.Card{types.Creature}) {
+					t.Fatalf("pattern = %#v", pattern)
+				}
+			},
+		},
+		{
 			source: "Whenever an opponent activates an ability of a creature or land that isn't a mana ability, draw a card.",
 			check: func(t *testing.T, pattern TriggerPattern) {
 				if pattern.Event != TriggerEventAbilityActivated ||

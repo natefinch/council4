@@ -52,7 +52,7 @@ func emitConditionBoundaries(abilities []Ability, cardName string) {
 		ability.ConditionBoundaries = conditionBoundaries(
 			ability.Tokens,
 			ability.Kind == AbilityTriggered,
-			conditionForcedAttackIfAble(semantic),
+			conditionRequirementIfAble(semantic),
 			cardName,
 		)
 		if ability.Modal == nil {
@@ -64,7 +64,7 @@ func emitConditionBoundaries(abilities []Ability, cardName string) {
 			mode.ConditionBoundaries = conditionBoundaries(
 				mode.Tokens,
 				false,
-				conditionForcedAttackIfAble(semantic),
+				conditionRequirementIfAble(semantic),
 				cardName,
 			)
 		}
@@ -216,6 +216,14 @@ func conditionForcedAttackIfAble(semantic []shared.Token) bool {
 		conditionContainsSequence(semantic, 0, "attacks", "this", "turn", "if", "able") ||
 		conditionContainsSequence(semantic, 0, "must", "be", "blocked", "if", "able") ||
 		conditionContainsSequence(semantic, 0, "must", "be", "blocked", "by", "exactly", "one", "creature", "if", "able")
+}
+
+func conditionRequirementIfAble(semantic []shared.Token) bool {
+	if conditionForcedAttackIfAble(semantic) {
+		return true
+	}
+	return syntaxWordsIndex(semantic, "must", "be", "blocked", "this", "combat", "if", "able") >= 0 ||
+		syntaxWordsIndex(semantic, "must", "be", "blocked", "if", "able") >= 0
 }
 
 // conditionAsLongAsIsDuration reports whether an "as long as" introducer at index

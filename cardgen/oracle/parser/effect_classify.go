@@ -1755,6 +1755,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectCanAttackAsThoughDefender
 	case cantBeBlockedThisTurnVerbAt(tokens, index):
 		return EffectCantBeBlocked
+	case mustBeBlockedThisCombatVerbAt(tokens, index):
+		return EffectMustBeBlocked
 	case cantBeSacrificedThisTurnVerbAt(tokens, index):
 		return EffectCantBeSacrificed
 	case cantBlockThisTurnVerbAt(tokens, index):
@@ -1860,6 +1862,12 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 	default:
 		return kind
 	}
+}
+
+func mustBeBlockedThisCombatVerbAt(tokens []shared.Token, index int) bool {
+	return equalWord(tokens[index], "must") &&
+		(effectWordsAt(tokens, index, "must", "be", "blocked", "this", "combat", "if", "able") ||
+			effectWordsAt(tokens, index, "must", "be", "blocked", "if", "able"))
 }
 
 // removeCounterVerbAt reports whether the verb at index begins the resolving

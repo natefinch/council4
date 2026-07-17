@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,176 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,178 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5621,6 +5621,7 @@ Council4 currently supports **18,176 of 32,501 cards eligible for paper support 
 - Fodder Cannon
 - Fodder Launch
 - Fodder Tosser
+- Foe-Razer Regent
 - Fog
 - Fog Elemental
 - Fog of Gnats
@@ -10400,6 +10401,7 @@ Council4 currently supports **18,176 of 32,501 cards eligible for paper support 
 - New Perspectives
 - News Helicopter
 - Nexus Wardens
+- Neyith of the Dire Hunt
 - Nezumi Bladeblesser
 - Nezumi Bone-Reader
 - Nezumi Cutthroat

@@ -2218,13 +2218,10 @@ func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.
 
 // lowerDoublePTSpell lowers a power/toughness doubling effect ("double target
 // creature's power until end of turn", Unleash Fury; "double the power and
-// toughness of each creature you control until end of turn", Unnatural Growth)
-// into an until-end-of-turn continuous effect whose DoublePower/DoubleToughness
-// flags add each affected creature's own current value back into itself (CR
-// 107.16). The same continuous-effect building block is used for both targeted
-// and group recipients. Conditions, keyword riders, modes, and non-target
-// references fail closed here; richer supported combinations are handled by
-// sequence composition helpers.
+// toughness of each creature you control until end of turn", Unnatural Growth).
+// A single object's value is read as the instruction resolves and applied as a
+// fixed temporary modifier, as required by CR 701.9b. Group forms retain the
+// group continuous-effect representation.
 func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -2244,6 +2241,9 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 	if !ok {
 		return unsupported()
 	}
+	if effect.StaticSubject == compiler.StaticSubjectNone {
+		return doublePTObjectMode(ctx, effect, duration, unsupported)
+	}
 	continuous := doublePTContinuousEffect(effect)
 	continuousEffects := []game.ContinuousEffect{continuous}
 	return continuousSubjectMode(
@@ -2252,12 +2252,70 @@ func lowerDoublePTSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 		continuousEffects,
 		duration,
 		continuousSubjectOptions{
-			AllowGroup:           true,
-			AllowTarget:          true,
-			AllowReferenceObject: true,
+			AllowGroup: true,
 		},
 		unsupported,
 	)
+}
+
+func doublePTObjectMode(
+	ctx contentCtx,
+	effect *compiler.CompiledEffect,
+	duration game.EffectDuration,
+	unsupported func() (game.AbilityContent, *shared.Diagnostic),
+) (game.AbilityContent, *shared.Diagnostic) {
+	var object game.ObjectReference
+	var targets []game.TargetSpec
+	switch {
+	case effect.SubjectSourceAttached &&
+		len(ctx.content.Targets) == 0 &&
+		len(ctx.content.References) == 0:
+		object = game.SourceAttachedPermanentReference()
+	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
+		var ok bool
+		object, ok = continuousReferenceObject(
+			ctx.content.References[0],
+			effect,
+			false,
+			ctx.enclosingKind == compiler.AbilitySpell,
+		)
+		if !ok {
+			return unsupported()
+		}
+	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0:
+		target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+		if !ok || target.MinTargets != 1 || target.MaxTargets != 1 {
+			return unsupported()
+		}
+		object = game.TargetPermanentReference(0)
+		targets = []game.TargetSpec{target}
+	default:
+		return unsupported()
+	}
+	modify := game.ModifyPT{
+		Object:   object,
+		Duration: duration,
+	}
+	if effect.DoublePower {
+		modify.PowerDelta = game.Dynamic(game.DynamicAmount{
+			Kind:       game.DynamicAmountObjectPower,
+			Multiplier: 1,
+			Object:     object,
+		})
+	}
+	if effect.DoubleToughness {
+		modify.ToughnessDelta = game.Dynamic(game.DynamicAmount{
+			Kind:       game.DynamicAmountObjectToughness,
+			Multiplier: 1,
+			Object:     object,
+		})
+	}
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: modify,
+		}},
+	}.Ability(), nil
 }
 
 func doublePTContinuousEffect(effect *compiler.CompiledEffect) game.ContinuousEffect {
@@ -2271,12 +2329,11 @@ func doublePTContinuousEffect(effect *compiler.CompiledEffect) game.ContinuousEf
 	}
 }
 
-// lowerTemporaryDoublePTKeywordSpell composes two already-supported continuous
-// building blocks for the Legion Leadership shape: one targeted continuous
-// effect doubles power/toughness, and another grants keyword(s), all for the
-// shared until-end-of-turn duration. The keyword clause may inherit the target
-// either structurally ("target creature ... and gains ...") or through the
-// singular back-reference ("it gains ...").
+// lowerTemporaryDoublePTKeywordSpell composes the snapshot power/toughness
+// modifier with an until-end-of-turn keyword grant for the Legion Leadership
+// shape. The keyword clause may inherit the target either structurally ("target
+// creature ... and gains ...") or through the singular back-reference ("it gains
+// ...").
 func lowerTemporaryDoublePTKeywordSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 ||
 		len(ctx.content.Targets) != 1 ||
@@ -2324,24 +2381,40 @@ func lowerTemporaryDoublePTKeywordSpell(ctx contentCtx) (game.AbilityContent, bo
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	content, diag := continuousTargetMode(
-		ctx.content.Targets[0],
-		[]game.ContinuousEffect{
-			doublePTContinuousEffect(&doubleEffect),
-			{
-				Layer:       game.LayerAbility,
-				AddKeywords: keywords,
-			},
-		},
+	target, ok := permanentTargetSpecWithCardinality(ctx.content.Targets[0])
+	if !ok || target.MinTargets != 1 || target.MaxTargets != 1 {
+		return game.AbilityContent{}, false
+	}
+	object := game.TargetPermanentReference(0)
+	doubleCtx := ctx
+	doubleCtx.content.References = nil
+	modifyContent, diag := doublePTObjectMode(
+		doubleCtx,
+		&doubleEffect,
 		game.DurationUntilEndOfTurn,
 		func() (game.AbilityContent, *shared.Diagnostic) {
 			return game.AbilityContent{}, nil
 		},
 	)
-	if diag != nil {
+	if diag != nil || len(modifyContent.Modes) != 1 || len(modifyContent.Modes[0].Sequence) != 1 {
 		return game.AbilityContent{}, false
 	}
-	return content, true
+	return game.Mode{
+		Targets: []game.TargetSpec{target},
+		Sequence: []game.Instruction{
+			modifyContent.Modes[0].Sequence[0],
+			{
+				Primitive: game.ApplyContinuous{
+					Object: opt.Val(object),
+					ContinuousEffects: []game.ContinuousEffect{{
+						Layer:       game.LayerAbility,
+						AddKeywords: keywords,
+					}},
+					Duration: game.DurationUntilEndOfTurn,
+				},
+			},
+		},
+	}.Ability(), true
 }
 
 // lowerDoubleCountersSpell lowers a counter-doubling effect ("Double the number

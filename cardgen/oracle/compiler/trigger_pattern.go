@@ -42,6 +42,7 @@ const (
 	TriggerEventObjectBecameTarget
 	TriggerEventPermanentMutated
 	TriggerEventAttackerBecameBlocked
+	TriggerEventFight
 	TriggerEventTokenCreated
 	TriggerEventLibrarySearched
 	TriggerEventAttackerBecameUnblocked

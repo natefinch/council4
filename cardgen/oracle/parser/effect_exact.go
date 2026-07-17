@@ -108,6 +108,10 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactPlayerGraveyardExileEffectSyntax(effect)
 	case EffectFight:
 		return exactFightEffectSyntax(effect)
+	case EffectDouble:
+		return exactDoublePTEffectSyntax(effect)
+	case EffectMustBeBlocked:
+		return exactMustBeBlockedEffectSyntax(effect)
 	case EffectExplore:
 		return exactDirectPronounEffectSyntax(effect, "It explores.") ||
 			exactSourceExploresEffectSyntax(effect) ||

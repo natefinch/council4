@@ -32,22 +32,21 @@ func TestLowerTargetDoublePowerUntilEndOfTurn(t *testing.T) {
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence = %#v, want 1 instruction", mode.Sequence)
 			}
-			apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+			modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
 			if !ok {
-				t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+				t.Fatalf("primitive = %T, want game.ModifyPT", mode.Sequence[0].Primitive)
 			}
-			if apply.Object != opt.Val(game.TargetPermanentReference(0)) {
-				t.Fatalf("object = %#v, want target 0", apply.Object)
+			if modify.Object != game.TargetPermanentReference(0) {
+				t.Fatalf("object = %#v, want target 0", modify.Object)
 			}
-			if apply.Duration != game.DurationUntilEndOfTurn {
-				t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+			if modify.Duration != game.DurationUntilEndOfTurn {
+				t.Fatalf("duration = %v, want until end of turn", modify.Duration)
 			}
-			if len(apply.ContinuousEffects) != 1 {
-				t.Fatalf("continuous effects = %#v, want one", apply.ContinuousEffects)
-			}
-			effect := apply.ContinuousEffects[0]
-			if effect.Layer != game.LayerPowerToughnessModify || !effect.DoublePower || effect.DoubleToughness {
-				t.Fatalf("continuous effect = %#v, want double power only", effect)
+			power := modify.PowerDelta.DynamicAmount()
+			if !power.Exists ||
+				power.Val.Kind != game.DynamicAmountObjectPower ||
+				power.Val.Object != game.TargetPermanentReference(0) {
+				t.Fatalf("power delta = %#v, want target's power at resolution", modify.PowerDelta)
 			}
 		})
 	}
@@ -66,12 +65,26 @@ func TestLowerTargetDoublePowerAndKeywordUntilEndOfTurn(t *testing.T) {
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %d, want 1", len(mode.Targets))
 	}
-	if len(mode.Sequence) != 1 {
-		t.Fatalf("sequence = %#v, want 1 instruction", mode.Sequence)
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want modify and keyword instructions", mode.Sequence)
 	}
-	apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive[0] = %T, want game.ModifyPT", mode.Sequence[0].Primitive)
+	}
+	if modify.Object != game.TargetPermanentReference(0) ||
+		modify.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("modify = %#v, want target 0 until end of turn", modify)
+	}
+	power := modify.PowerDelta.DynamicAmount()
+	if !power.Exists ||
+		power.Val.Kind != game.DynamicAmountObjectPower ||
+		power.Val.Object != game.TargetPermanentReference(0) {
+		t.Fatalf("power delta = %#v, want target's power at resolution", modify.PowerDelta)
+	}
+	apply, ok := mode.Sequence[1].Primitive.(game.ApplyContinuous)
+	if !ok {
+		t.Fatalf("primitive[1] = %T, want game.ApplyContinuous", mode.Sequence[1].Primitive)
 	}
 	if apply.Object != opt.Val(game.TargetPermanentReference(0)) {
 		t.Fatalf("object = %#v, want target 0", apply.Object)
@@ -79,14 +92,10 @@ func TestLowerTargetDoublePowerAndKeywordUntilEndOfTurn(t *testing.T) {
 	if apply.Duration != game.DurationUntilEndOfTurn {
 		t.Fatalf("duration = %v, want until end of turn", apply.Duration)
 	}
-	if len(apply.ContinuousEffects) != 2 {
-		t.Fatalf("continuous effects = %#v, want PT + keyword", apply.ContinuousEffects)
+	if len(apply.ContinuousEffects) != 1 {
+		t.Fatalf("continuous effects = %#v, want keyword only", apply.ContinuousEffects)
 	}
-	pt := apply.ContinuousEffects[0]
-	if pt.Layer != game.LayerPowerToughnessModify || !pt.DoublePower || pt.DoubleToughness {
-		t.Fatalf("PT effect = %#v, want double power only", pt)
-	}
-	keywords := apply.ContinuousEffects[1]
+	keywords := apply.ContinuousEffects[0]
 	if keywords.Layer != game.LayerAbility || len(keywords.AddKeywords) != 1 || keywords.AddKeywords[0] != game.FirstStrike {
 		t.Fatalf("keyword effect = %#v, want first strike", keywords)
 	}
@@ -110,22 +119,22 @@ func TestLowerSourceDoublePowerAndToughnessUntilEndOfTurn(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence = %#v, want 1 instruction", mode.Sequence)
 	}
-	apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.ApplyContinuous", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.ModifyPT", mode.Sequence[0].Primitive)
 	}
-	if apply.Object != opt.Val(game.SourcePermanentReference()) {
-		t.Fatalf("object = %#v, want source permanent", apply.Object)
+	if modify.Object != game.SourcePermanentReference() {
+		t.Fatalf("object = %#v, want source permanent", modify.Object)
 	}
-	if apply.Duration != game.DurationUntilEndOfTurn {
-		t.Fatalf("duration = %v, want until end of turn", apply.Duration)
+	if modify.Duration != game.DurationUntilEndOfTurn {
+		t.Fatalf("duration = %v, want until end of turn", modify.Duration)
 	}
-	if len(apply.ContinuousEffects) != 1 {
-		t.Fatalf("continuous effects = %#v, want one", apply.ContinuousEffects)
-	}
-	effect := apply.ContinuousEffects[0]
-	if effect.Layer != game.LayerPowerToughnessModify || !effect.DoublePower || !effect.DoubleToughness {
-		t.Fatalf("continuous effect = %#v, want double power/toughness", effect)
+	for _, quantity := range []game.Quantity{modify.PowerDelta, modify.ToughnessDelta} {
+		dynamic := quantity.DynamicAmount()
+		if !dynamic.Exists ||
+			dynamic.Val.Object != game.SourcePermanentReference() {
+			t.Fatalf("delta = %#v, want source characteristic at resolution", quantity)
+		}
 	}
 }
 
@@ -183,18 +192,17 @@ func TestUnsupportedRepeatedDoublePowerDoesNotPanic(t *testing.T) {
 }
 
 // TestRenderDoublePowerToughnessFields guards against the regression where the
-// renderer dropped the ContinuousEffect DoublePower/DoubleToughness fields,
-// silently emitting a no-op power/toughness modify. It asserts the generated
-// source carries the doubling fields for the power-only and power-and-toughness
-// forms.
+// renderer dropped the dynamic object-power/object-toughness amounts, silently
+// emitting a no-op power/toughness modify. It asserts the generated source reads
+// the affected object's current values at resolution.
 func TestRenderDoublePowerToughnessFields(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		oracle string
 		want   []string
 	}{
-		{"Double target creature's power until end of turn.", []string{"DoublePower:"}},
-		{"Double target creature's power and toughness until end of turn.", []string{"DoublePower:", "DoubleToughness:"}},
+		{"Double target creature's power until end of turn.", []string{"game.DynamicAmountObjectPower"}},
+		{"Double target creature's power and toughness until end of turn.", []string{"game.DynamicAmountObjectPower", "game.DynamicAmountObjectToughness"}},
 	}
 	for _, test := range tests {
 		t.Run(test.oracle, func(t *testing.T) {
@@ -241,8 +249,8 @@ func TestGenerateJunkJetEquippedSubject(t *testing.T) {
 	}
 	for _, want := range []string{
 		"game.SourceAttachedPermanentReference()",
-		"DoublePower:",
-		"game.LayerPowerToughnessModify,",
+		"game.DynamicAmountObjectPower",
+		"Primitive: game.ModifyPT{",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)

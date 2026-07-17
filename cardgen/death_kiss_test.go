@@ -34,12 +34,13 @@ func TestLowerDeathKissAbilities(t *testing.T) {
 		pattern.SubjectSelection.RequiredTypes[0] != types.Creature {
 		t.Fatalf("attack pattern = %#v", pattern)
 	}
-	apply, ok := attack.Content.Modes[0].Sequence[0].Primitive.(game.ApplyContinuous)
-	if !ok || apply.Object.Val != game.EventPermanentReference() ||
-		apply.Duration != game.DurationUntilEndOfTurn ||
-		len(apply.ContinuousEffects) != 1 ||
-		!apply.ContinuousEffects[0].DoublePower ||
-		apply.ContinuousEffects[0].DoubleToughness {
+	modify, ok := attack.Content.Modes[0].Sequence[0].Primitive.(game.ModifyPT)
+	power := modify.PowerDelta.DynamicAmount()
+	if !ok || modify.Object != game.EventPermanentReference() ||
+		modify.Duration != game.DurationUntilEndOfTurn ||
+		!power.Exists ||
+		power.Val.Kind != game.DynamicAmountObjectPower ||
+		power.Val.Object != game.EventPermanentReference() {
 		t.Fatalf("attack effect = %#v", attack.Content.Modes[0].Sequence)
 	}
 
@@ -90,7 +91,7 @@ func TestGenerateDeathKissSource(t *testing.T) {
 		"MaxTargetsFromTriggerEventX: true",
 		"game.AllTargetPermanentsReference(0)",
 		"game.DynamicAmountX",
-		"DoublePower: true",
+		"game.DynamicAmountObjectPower",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
