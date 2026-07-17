@@ -742,6 +742,9 @@ const (
 	// (TappedForMana). Caged Sun uses it to trigger on any land ability adding
 	// the chosen color; High Tide uses it with a tapped/Island filter.
 	TriggerEventKindManaProduced TriggerEventKind = "TriggerEventKindManaProduced"
+	// TriggerEventKindCompletedDungeon marks a player completing a dungeon after
+	// its final room ability leaves the stack (CR 309.7).
+	TriggerEventKindCompletedDungeon TriggerEventKind = "TriggerEventKindCompletedDungeon"
 )
 
 // TriggerEventSubjectKind identifies the grammatical subject in a trigger event.
@@ -1215,6 +1218,7 @@ const (
 	TriggerPlayerSelectorYou                TriggerPlayerSelectorKind = "TriggerPlayerSelectorYou"
 	TriggerPlayerSelectorOpponent           TriggerPlayerSelectorKind = "TriggerPlayerSelectorOpponent"
 	TriggerPlayerSelectorMonarch            TriggerPlayerSelectorKind = "TriggerPlayerSelectorMonarch"
+	TriggerPlayerSelectorInitiative         TriggerPlayerSelectorKind = "TriggerPlayerSelectorInitiative"
 	TriggerPlayerSelectorSourceController   TriggerPlayerSelectorKind = "TriggerPlayerSelectorSourceController"
 	TriggerPlayerSelectorAttachedController TriggerPlayerSelectorKind = "TriggerPlayerSelectorAttachedController"
 	// TriggerPlayerSelectorEnchantedPlayer is the player an Aura is attached to

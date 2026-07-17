@@ -93,6 +93,9 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compileClassBecameLevelEvent(clause, &pattern)
 	case parser.TriggerEventKindDoorUnlocked:
 		ok = compileDoorUnlockEvent(clause, &pattern)
+	case parser.TriggerEventKindCompletedDungeon:
+		pattern.Event = TriggerEventCompletedDungeon
+		ok = clause.Player.Kind != parser.TriggerPlayerSelectorUnknown
 	default:
 		return TriggerPattern{}, false
 	}
@@ -124,6 +127,8 @@ func compileUnionTriggerEvent(kind parser.TriggerEventKind) (TriggerEvent, bool)
 		return TriggerEventBlockerDeclared, true
 	case parser.TriggerEventKindBecameBlocked:
 		return TriggerEventAttackerBecameBlocked, true
+	case parser.TriggerEventKindCompletedDungeon:
+		return TriggerEventCompletedDungeon, true
 	case parser.TriggerEventKindDied:
 		return TriggerEventPermanentDied, true
 	default:

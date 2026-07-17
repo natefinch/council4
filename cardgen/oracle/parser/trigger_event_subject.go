@@ -152,6 +152,13 @@ func parseAttackRecipient(tokens []shared.Token) (TriggerEventAttackRecipient, T
 			Span:   shared.SpanOf(tokens),
 			Player: player,
 		}, player, true
+	case syntaxWordsEqual(tokens, "the", "player", "who", "has", "the", "initiative"):
+		player := playerSelectorFromKind(TriggerPlayerSelectorInitiative, shared.SpanOf(tokens))
+		return TriggerEventAttackRecipient{
+			Kind:   TriggerEventAttackRecipientPlayer,
+			Span:   shared.SpanOf(tokens),
+			Player: player,
+		}, player, true
 	case syntaxWordsEqual(tokens, "a", "player", "or", "planeswalker"):
 		return TriggerEventAttackRecipient{
 			Kind: TriggerEventAttackRecipientPlayer | TriggerEventAttackRecipientPlaneswalker,

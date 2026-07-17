@@ -1012,6 +1012,9 @@ const (
 	// monarch ("At the beginning of the monarch's end step, ...", Archivist of
 	// Gondor).
 	TriggerPlayerMonarch
+	// TriggerPlayerInitiative matches an event whose affected player is the
+	// current initiative holder.
+	TriggerPlayerInitiative
 )
 
 // AttackRecipientKind identifies what an attacker was declared against.

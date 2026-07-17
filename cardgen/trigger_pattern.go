@@ -432,6 +432,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventLandPlayed, true
 	case compiler.TriggerEventManaProduced:
 		return game.EventManaProduced, true
+	case compiler.TriggerEventCompletedDungeon:
+		return game.EventCompletedDungeon, true
 	default:
 		return game.EventUnknown, false
 	}
@@ -460,6 +462,8 @@ func lowerTriggerPlayer(player compiler.TriggerPlayerRelation) (game.TriggerPlay
 		return game.TriggerPlayerOpponent, true
 	case compiler.TriggerPlayerMonarch:
 		return game.TriggerPlayerMonarch, true
+	case compiler.TriggerPlayerInitiative:
+		return game.TriggerPlayerInitiative, true
 	default:
 		return game.TriggerPlayerAny, false
 	}
