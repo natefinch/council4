@@ -334,6 +334,9 @@ func (e *Engine) chooseMay(g *game.Game, agents [game.NumPlayers]PlayerAgent, pl
 }
 
 func stackObjectSourceDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
+	if obj != nil && obj.Kind == game.StackSpell {
+		return stackObjectSpellDef(g, obj)
+	}
 	if obj.SourceCardID != 0 {
 		card, ok := g.GetCardInstance(obj.SourceCardID)
 		if !ok {
@@ -442,13 +445,7 @@ func deleteStateTriggerLatch(g *game.Game, sourceObjectID, sourceCardID id.ID, a
 // it isn't countered. Both the object-scoped effects captured when the spell was
 // cast and the currently active rule effects are consulted.
 func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
-	var spellDef *game.CardDef
-	var ok bool
-	if obj.SourceTokenDef != nil {
-		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
-	} else {
-		_, spellDef, ok = cardInstanceFaceDef(g, obj.SourceID, obj.Face)
-	}
+	spellDef, ok := stackObjectSpellDef(g, obj)
 	if !ok {
 		return true
 	}
@@ -525,13 +522,10 @@ func (e *Engine) resolveSpell(g *game.Game, obj *game.StackObject, log *TurnLog)
 
 func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	var card *game.CardInstance
-	var spellDef *game.CardDef
-	var ok bool
-	if obj.SourceTokenDef != nil {
-		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
-	} else {
-		card, spellDef, ok = cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	if obj.SourceTokenDef == nil {
+		card, _ = g.GetCardInstance(obj.SourceID)
 	}
+	spellDef, ok := stackObjectSpellDef(g, obj)
 	if !ok {
 		return "missing source"
 	}

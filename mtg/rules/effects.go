@@ -16,15 +16,9 @@ func (e *Engine) resolveSpellEffectsWithChoices(g *game.Game, obj *game.StackObj
 	if card != nil && e.resolveCardImplementationSpell(g, obj, card, agents, log) {
 		return
 	}
-	var spellDef *game.CardDef
-	if card != nil {
-		spellDef = cardFaceOrDefault(card, obj.Face)
-	} else {
-		var ok bool
-		spellDef, ok = obj.SourceTokenDef.FaceDef(obj.Face)
-		if !ok {
-			return
-		}
+	spellDef, ok := stackObjectSpellDef(g, obj)
+	if !ok {
+		return
 	}
 	ability, ok := firstSpellAbility(spellDef)
 	if obj.Overloaded && spellDef.Overload.Exists {

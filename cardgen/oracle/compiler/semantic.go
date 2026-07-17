@@ -3241,6 +3241,11 @@ type CompiledEffect struct {
 	// credit its tokens toward source coverage.
 	CopyMayChooseNewTargets       bool
 	CopyChooseNewTargetsRiderSpan shared.Span
+	// CopyCharacteristics carries typed copiable exceptions applied to each spell
+	// copy. CopySetColorsRiderSpan preserves source coverage without requiring
+	// the compiler or lowerer to inspect Oracle text.
+	CopyCharacteristics    *CompiledCopyCharacteristics
+	CopySetColorsRiderSpan shared.Span
 	// Dig carries the impulse put clause's structured fields from the parser so
 	// the combined dig lowerer can pair an EffectDig look with its EffectPut put.
 	Dig parser.DigSyntax
@@ -3701,6 +3706,12 @@ type CompiledEffect struct {
 	// source having trample and emits a plain damage branch otherwise. It is
 	// meaningful only when Amount.DynamicKind is DynamicAmountExcessDamageDealtThisWay.
 	RequireSourceTrample bool
+}
+
+// CompiledCopyCharacteristics contains copy-effect modifications that become
+// part of a spell copy's copiable values.
+type CompiledCopyCharacteristics struct {
+	SetColors []color.Color
 }
 
 // CompiledCounterPlacement is one (count, kind) placement of a compound

@@ -618,6 +618,7 @@ func emitSentenceResolvingSyntax(
 	if len(exiledCardChoiceCandidates) > 0 && !recognizeExiledCardOpponentChoiceSplit(sentences) {
 		unrecognizedSibling = true
 	}
+	creditCopySetColorsRider(sentences)
 	creditConjoinedCopyChooseNewTargetsRider(sentences)
 	if len(chooseColorCandidates) > 0 && !creditChosenColorChoice(sentences, chooseColorCandidates) {
 		unrecognizedSibling = true

@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -2473,6 +2474,10 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 	}
 	for range count {
 		copyObj := game.NewStackObjectCopy(original, r.game.IDGen.Next())
+		copyDef, copyOK := prepareStackSpellCopy(r.game, original, copyObj, prim.SetColors)
+		if original.Kind == game.StackSpell && !copyOK {
+			continue
+		}
 		// The copier controls the copy (CR 707.10a): the "may copy this spell"
 		// player becomes the copy's controller so the copy's own iterative offer
 		// chains off the copier's new target rather than the original controller.
@@ -2481,19 +2486,50 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		if prim.MayChooseNewTargets {
 			r.engine.retargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
 		}
+		if copyObj.Kind == game.StackSpell {
+			emitSpellCopiedEvent(r.game, copyObj, copyDef)
+		}
 	}
 	if original.Kind == game.StackSpell {
 		addend, mayChooseNewTargets := additionalSpellCopies(r.game, chooser)
 		for range addend {
 			additional := game.NewStackObjectCopy(original, r.game.IDGen.Next())
+			copyDef, copyOK := prepareStackSpellCopy(r.game, original, additional, prim.SetColors)
+			if !copyOK {
+				continue
+			}
 			additional.Controller = chooser
 			r.game.Stack.Push(additional)
 			if mayChooseNewTargets {
 				r.engine.retargetStackObjectChoice(r.game, chooser, additional, r.agents, r.log)
 			}
+			emitSpellCopiedEvent(r.game, additional, copyDef)
 		}
 	}
+
 	return effectResolved{accepted: true, succeeded: count > 0}
+}
+
+// prepareStackSpellCopy snapshots a spell's current copiable values onto its new
+// copy and applies the copy effect's color exception. Because the snapshot lives
+// on the stack object, it survives resolution and becomes the source for later
+// copies of this copy.
+func prepareStackSpellCopy(g *game.Game, original, copyObj *game.StackObject, setColors []color.Color) (*game.CardDef, bool) {
+	if original == nil || copyObj == nil || original.Kind != game.StackSpell {
+		return nil, original != nil && copyObj != nil
+	}
+	def, ok := stackObjectSpellDef(g, original)
+	if !ok {
+		return nil, setColors == nil
+	}
+	values := copyableValuesFromDef(def)
+	if setColors != nil {
+		values.Colors = append([]color.Color(nil), setColors...)
+	}
+	copyObj.CopyValues = opt.Val(values)
+	effective := copyCardDef(def)
+	applyCopyValuesToCardDef(effective, &values)
+	return effective, true
 }
 
 // copyStackObjectSource resolves the stack object a CopyStackObject effect
@@ -2656,14 +2692,10 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 	def, defOK := stackObjectSourceDef(g, obj)
 	switch obj.Kind {
 	case game.StackSpell:
-		spellDef, spellOK := def, defOK
-		if card, ok := g.GetCardInstance(obj.SourceID); ok {
-			spellDef, spellOK = card.Def.FaceDef(obj.Face)
-		}
-		if !spellOK {
+		if !defOK {
 			return stackObjectSpecs{}, false
 		}
-		return stackObjectSpecs{def: spellDef, specs: spellTargetSpecs(spellDef, obj.ChosenModes, castBranchForObject(obj))}, true
+		return stackObjectSpecs{def: def, specs: spellTargetSpecs(def, obj.ChosenModes, castBranchForObject(obj))}, true
 	case game.StackActivatedAbility:
 		if !defOK {
 			if permanent, permanentOK := permanentByObjectID(g, obj.SourceID); permanentOK {

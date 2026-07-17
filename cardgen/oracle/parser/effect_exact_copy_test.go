@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 // copyStackObjectAbility parses a single-ability copy source and returns its
 // folded sentences so tests can assert the copy effect's exactness and the
@@ -48,6 +51,7 @@ func TestParseCopyChooseNewTargetsRiderFolds(t *testing.T) {
 	if len(sentences) != 2 {
 		t.Fatalf("Parse(%q) sentences = %d, want 2", source, len(sentences))
 	}
+
 	if len(sentences[0].Effects) != 1 {
 		t.Fatalf("Parse(%q) copy sentence effects = %#v", source, sentences[0].Effects)
 	}
@@ -63,6 +67,28 @@ func TestParseCopyChooseNewTargetsRiderFolds(t *testing.T) {
 	}
 	if !sentences[1].CopyChooseNewTargetsRider {
 		t.Errorf("Parse(%q) rider sentence not credited", source)
+	}
+}
+
+func TestParseCopyColorExceptionAndRetargetRider(t *testing.T) {
+	t.Parallel()
+	source := "Copy target instant or sorcery spell, except that the copy is red. You may choose new targets for the copy."
+	sentences := copyStackObjectAbility(t, source)
+	if len(sentences) != 2 || len(sentences[0].Effects) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, sentences)
+	}
+	effect := sentences[0].Effects[0]
+	if effect.Kind != EffectCopyStackObject || !effect.Exact {
+		t.Fatalf("Parse(%q) copy effect = %#v", source, effect)
+	}
+	if !slices.Equal(effect.CopySetColors, []Color{ColorRed}) {
+		t.Fatalf("CopySetColors = %v, want [ColorRed]", effect.CopySetColors)
+	}
+	if effect.CopySetColorsRiderSpan == effect.Span {
+		t.Fatal("color exception was not recorded as a distinct rider span")
+	}
+	if !effect.CopyMayChooseNewTargets || !sentences[1].CopyChooseNewTargetsRider {
+		t.Fatalf("retarget rider not folded: effect=%#v sentence=%#v", effect, sentences[1])
 	}
 }
 

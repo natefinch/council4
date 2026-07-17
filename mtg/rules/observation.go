@@ -469,10 +469,10 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 	if obj.FaceDown || obj.Kind != game.StackSpell {
 		return view
 	}
-	if card, ok := o.g.GetCardInstance(obj.SourceID); ok {
-		view.ManaValue = card.Def.ManaValue()
-		view.Types = append([]types.Card(nil), card.Def.Types...)
-		view.Colors = append([]color.Color(nil), card.Def.Colors...)
+	if def, ok := stackObjectSpellDef(o.g, obj); ok {
+		view.ManaValue = stackManaValue(def, obj.XValue)
+		view.Types = stackObjectCardTypes(obj, def)
+		view.Colors = spellColors(def)
 	}
 	return view
 }
@@ -484,6 +484,11 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 func (o PlayerObservation) stackObjectName(obj *game.StackObject) string {
 	if obj.FaceDown {
 		return ""
+	}
+	if obj.Kind == game.StackSpell {
+		if def, ok := stackObjectSpellDef(o.g, obj); ok {
+			return def.Name
+		}
 	}
 	if card, ok := o.g.GetCardInstance(obj.SourceID); ok {
 		return card.Def.Name

@@ -5,8 +5,10 @@ import (
 	"math/rand/v2"
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 // Clone returns a deep copy of the entire game state. Mutating the clone never
@@ -266,9 +268,29 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.TargetNameLKI = cloneComparableMap(o.TargetNameLKI)
 	clone.CapturedTargetControllerLKI = cloneComparableMap(o.CapturedTargetControllerLKI)
 	clone.CapturedTargetManaValueLKI = cloneComparableMap(o.CapturedTargetManaValueLKI)
+	if o.CopyValues.Exists {
+		clone.CopyValues = opt.Val(cloneCopyableValues(o.CopyValues.Val))
+	}
 	// InlineTrigger/InlineActivated/InlineLoyalty and SourceTokenDef are
 	// immutable rules data and are intentionally shared.
 	return &clone
+}
+
+func cloneCopyableValues(values CopyableValues) CopyableValues {
+	values.ManaCost = cloneOptionalManaCost(values.ManaCost)
+	values.Colors = cloneSlice(values.Colors)
+	values.Supertypes = cloneSlice(values.Supertypes)
+	values.Types = cloneSlice(values.Types)
+	values.Subtypes = cloneSlice(values.Subtypes)
+	values.Abilities = cloneSlice(values.Abilities)
+	return values
+}
+
+func cloneOptionalManaCost(value opt.V[cost.Mana]) opt.V[cost.Mana] {
+	if !value.Exists {
+		return opt.V[cost.Mana]{}
+	}
+	return opt.Val(cost.Mana(cloneSlice(value.Val)))
 }
 
 func fixupContinuousEffect(e *ContinuousEffect) {

@@ -2,12 +2,15 @@ package game
 
 import (
 	"math/rand/v2"
+	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // buildRichGame constructs a non-trivial game with permanents on the
@@ -24,6 +27,7 @@ func buildRichGame(t *testing.T) *Game {
 		for range 6 {
 			configs[p].Deck = append(configs[p].Deck, def)
 		}
+
 	}
 	g := NewGameWithRand(configs, rand.New(rand.NewPCG(1, 2)))
 
@@ -101,6 +105,41 @@ func buildRichGame(t *testing.T) *Game {
 	g.AppendEvent(Event{Kind: EventCardDrawn, Player: Player1, Amount: 1})
 
 	return g
+}
+
+func TestCloneStackCopyValuesAndPrimitiveColors(t *testing.T) {
+	red := []color.Color{color.Red}
+	original := &StackObject{
+		ID:   1,
+		Kind: StackSpell,
+		CopyValues: opt.Val(CopyableValues{
+			Name:   "Copied Spell",
+			Colors: red,
+		}),
+	}
+	cloned := NewStackObjectCopy(original, 2)
+	original.CopyValues.Val.Colors[0] = color.Blue
+	if !slices.Equal(cloned.CopyValues.Val.Colors, []color.Color{color.Red}) {
+		t.Fatalf("cloned copy colors = %v, want independent [Red]", cloned.CopyValues.Val.Colors)
+	}
+
+	ability := Mode{Sequence: []Instruction{{Primitive: CopyStackObject{
+		Object:    ResolvingStackObjectReference(),
+		SetColors: []color.Color{color.Red},
+	}}}}.Ability()
+	abilityClone := cloneAbilityContent(ability)
+	primitive, ok := abilityClone.Modes[0].Sequence[0].Primitive.(CopyStackObject)
+	if !ok {
+		t.Fatalf("cloned primitive = %T, want CopyStackObject", abilityClone.Modes[0].Sequence[0].Primitive)
+	}
+	originalPrimitive, ok := ability.Modes[0].Sequence[0].Primitive.(CopyStackObject)
+	if !ok {
+		t.Fatalf("original primitive = %T, want CopyStackObject", ability.Modes[0].Sequence[0].Primitive)
+	}
+	originalPrimitive.SetColors[0] = color.Blue
+	if !slices.Equal(primitive.SetColors, []color.Color{color.Red}) {
+		t.Fatalf("cloned primitive colors = %v, want independent [Red]", primitive.SetColors)
+	}
 }
 
 func TestCloneStructurallyEqualImmediately(t *testing.T) {
