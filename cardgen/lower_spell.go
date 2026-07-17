@@ -419,6 +419,9 @@ func lowerContentDispatch(
 				"a standalone 'instead' replacement effect has no preceding effect to replace",
 			)
 		}
+		if content, ok := lowerDigRouteSequence(ctx); ok {
+			return content, nil
+		}
 		if content, ok := lowerNextCastEntersWithCountersReplacement(ctx); ok {
 			return content, nil
 		}

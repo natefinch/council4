@@ -3163,6 +3163,17 @@ type CompiledEffect struct {
 	// credit its tokens toward source coverage. It is set only on the Put effect
 	// of a recognized pile-split sequence.
 	PileSplitMiddleSpan shared.Span
+	// DigRouteSequence marks the single consolidated effect of a recognized
+	// look-and-route dig (Expressive Iteration): "Look at the top N cards of your
+	// library. Put one of them into your hand, put one of them on the bottom of
+	// your library, and exile one of them. You may play the exiled card this
+	// turn." Lowering keys on it (with DigRoute) to emit a single Dig with
+	// ordered slots; it is false for every other effect.
+	DigRouteSequence bool
+	// DigRoute carries the typed routes of a DigRouteSequence effect (the look
+	// count and the ordered hand / library-bottom / exile slots). It is the zero
+	// value for every effect that is not a recognized look-and-route dig.
+	DigRoute parser.DigRouteSyntax
 	// IterativeLibraryProcess and the head-effect knobs below carry the parser's
 	// typed markers for the closed iterative library-processing sequences
 	// (Tainted Pact's duplicate-name stop, Demonic Consultation's chosen-name

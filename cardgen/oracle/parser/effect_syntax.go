@@ -528,6 +528,9 @@ func emitSentenceResolvingSyntax(
 	if recognizeRepeatProcessSequence(sentences, atoms) {
 		return
 	}
+	if recognizeDigRouteSequence(sentences) {
+		return
+	}
 	legacyEffects := 0
 	currentEffects := 0
 	unrecognizedSibling := false
