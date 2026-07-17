@@ -601,7 +601,8 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
-		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) {
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) ||
+		!bodyTargetsSatisfyManaValueX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
 		return false
 	}
 	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)

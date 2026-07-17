@@ -313,6 +313,7 @@ var Cards = []cardset.Entry{
 	{Name: "Stocking the Pantry", New: StockingThePantry},
 	{Name: "Stoic Ephemera", New: StoicEphemera},
 	{Name: "Stoic Rebuttal", New: StoicRebuttal},
+	{Name: "Stolen by the Fae", New: StolenByTheFae},
 	{Name: "Stolen Stark Tech", New: StolenStarkTech},
 	{Name: "Stonehands", New: Stonehands},
 	{Name: "Stonybrook Banneret", New: StonybrookBanneret},

@@ -69,6 +69,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ensnare", New: Ensnare},
 	{Name: "Enterprising Scallywag", New: EnterprisingScallywag},
 	{Name: "Entourage of Trest", New: EntourageOfTrest},
+	{Name: "Entrancing Melody", New: EntrancingMelody},
 	{Name: "Epic Confrontation", New: EpicConfrontation},
 	{Name: "Epic Fight", New: EpicFight},
 	{Name: "Equestrian Skill", New: EquestrianSkill},

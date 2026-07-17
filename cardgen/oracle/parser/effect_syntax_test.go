@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -3353,8 +3354,15 @@ func TestParseResolvingEffectCompositionOwnership(t *testing.T) {
 
 	counterEffect := document.Abilities[3].Sentences[0].Effects[0]
 	if !counterEffect.Amount.Known || counterEffect.Amount.Value != 1 ||
-		len(counterEffect.Targets) != 1 || counterEffect.Targets[0].Selection.Kind != SelectionUnknown {
+		len(counterEffect.Targets) != 1 {
 		t.Fatalf("counter effect = %#v", counterEffect)
+	}
+	// "target artifact with mana value X" is recognized as an artifact target
+	// bound to the spell's X (exact comparison), not wiped to an unknown
+	// selection.
+	if sel := counterEffect.Targets[0].Selection; sel.Kind != SelectionArtifact ||
+		!sel.MatchManaValue || !sel.ManaValueX || sel.ManaValue.Op != compare.Equal {
+		t.Fatalf("counter target selection = %#v, want artifact with exact mana value X", counterEffect.Targets[0].Selection)
 	}
 
 	untapControl := document.Abilities[4].Sentences[0].Effects

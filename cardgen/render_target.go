@@ -60,6 +60,9 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	if spec.ManaValueAtMostX {
 		fields = append(fields, "ManaValueAtMostX: true,")
 	}
+	if spec.ManaValueEqualsX {
+		fields = append(fields, "ManaValueEqualsX: true,")
+	}
 	if spec.SameGraveyard {
 		fields = append(fields, "SameGraveyard: true,")
 	}

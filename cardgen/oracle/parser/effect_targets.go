@@ -1594,17 +1594,23 @@ func comparisonClauseWords(qualifier string, comparison compare.Int) ([]string, 
 }
 
 // manaValueClauseWords renders a permanent target's "mana value" comparison. When
-// the selection carries a spell-X-derived bound it reproduces the "mana value X or
-// less" spelling that parseSelectionNumbers recognizes, rather than the fixed
-// comparison over the placeholder value 0, so the text-blind round-trip stays
-// byte-exact. Only the "X or less" phrasing is recognized, so any other X-bounded
-// operator fails closed.
+// the selection carries a spell- or ability-X-derived bound it reproduces the
+// spelling parseSelectionNumbers recognizes — "mana value X or less" for the
+// upper bound (Dominate) or bare "mana value X" for the exact bound (The
+// Mycosynth Gardens) — rather than the fixed comparison over the placeholder
+// value 0, so the text-blind round-trip stays byte-exact. Only the "X or less"
+// and exact "X" phrasings are recognized, so any other X-bounded operator fails
+// closed.
 func manaValueClauseWords(selection SelectionSyntax) ([]string, bool) {
 	if selection.ManaValueX {
-		if selection.ManaValue.Op != compare.LessOrEqual {
+		switch selection.ManaValue.Op {
+		case compare.LessOrEqual:
+			return []string{"mana value", "X", "or", "less"}, true
+		case compare.Equal:
+			return []string{"mana value", "X"}, true
+		default:
 			return nil, false
 		}
-		return []string{"mana value", "X", "or", "less"}, true
 	}
 	return comparisonClauseWords("mana value", selection.ManaValue)
 }
@@ -3601,6 +3607,18 @@ func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *Select
 				selection.ManaValueX = true
 				continue
 			}
+			if equalWord(tokens[i+2], "X") {
+				// "mana value X" (no "or less") bounds the match to exactly the
+				// spell's or ability's chosen {X} (The Mycosynth Gardens: "target
+				// nontoken artifact you control with mana value X"). Record the
+				// equality operator and flag the X-derived bound; lowering
+				// resolves it from X. The "X or less" spelling above is matched
+				// first, so this bare form is reached only for the exact bound.
+				selection.ManaValue = compare.Int{Op: compare.Equal}
+				selection.MatchManaValue = true
+				selection.ManaValueX = true
+				continue
+			}
 			if kind, _, ok := parseSelectionManaValueDynamic(tokens, i+2); ok {
 				// "mana value less than or equal to the amount of life you
 				// (lost|gained) this turn" bounds the match by a turn-event life
@@ -3732,16 +3750,21 @@ func selectionManaValueDynamicSpan(tokens []shared.Token) (start, end int, ok bo
 	return 0, 0, false
 }
 
-// selectionManaValueXSpan reports the token span of a "mana value X or less"
-// rider, so the unsupported-qualifier gate treats the spell-X placeholder token
-// as a recognized qualifier rather than rejecting the whole selection. Only the
-// "X or less" spelling parseSelectionNumbers records is matched. It returns the
-// half-open [start, end) index range over tokens.
+// selectionManaValueXSpan reports the token span of a "mana value X or less" or
+// bare "mana value X" rider, so the unsupported-qualifier gate treats the
+// spell-X placeholder token as a recognized qualifier rather than rejecting the
+// whole selection. Both the "X or less" spelling and the exact "X" spelling that
+// parseSelectionNumbers records are matched. It returns the half-open
+// [start, end) index range over tokens.
 func selectionManaValueXSpan(tokens []shared.Token) (start, end int, ok bool) {
 	for i := range tokens {
 		if i+4 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") &&
 			equalWord(tokens[i+2], "X") && equalWord(tokens[i+3], "or") && equalWord(tokens[i+4], "less") {
 			return i, i + 5, true
+		}
+		if i+2 < len(tokens) && effectWordsAt(tokens, i, "mana", "value") &&
+			equalWord(tokens[i+2], "X") {
+			return i, i + 3, true
 		}
 	}
 	return 0, 0, false

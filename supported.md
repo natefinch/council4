@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,104 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,110 of 32,502 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3798,6 +3798,7 @@ Council4 currently supports **18,104 of 32,501 cards eligible for paper support 
 - Detained by Legionnaires
 - Detective
 - Detention Chariot
+- Detonate
 - Devastate
 - Devastating Summons
 - Devastation
@@ -3929,6 +3930,7 @@ Council4 currently supports **18,104 of 32,501 cards eligible for paper support 
 - Discordant Piper
 - Disdainful Stroke
 - Disease Carriers
+- Disembowel
 - Disempower
 - Disenchant
 - Disentomb
@@ -4784,6 +4786,7 @@ Council4 currently supports **18,104 of 32,501 cards eligible for paper support 
 - Entomb
 - Entourage of Trest
 - Entrails Feaster
+- Entrancing Melody
 - Entropic Eidolon
 - Envelop
 - Environmental Sciences
@@ -7056,6 +7059,7 @@ Council4 currently supports **18,104 of 32,501 cards eligible for paper support 
 - Heartfire Hero
 - Heartfire Immolator
 - Hearth Charm
+- Hearth Kami
 - Hearthborn Battler
 - Hearthcage Giant
 - Hearthfire Hobgoblin
@@ -14868,6 +14872,7 @@ Council4 currently supports **18,104 of 32,501 cards eligible for paper support 
 - Stoic Grove-Guide
 - Stoic Rebuttal
 - Stoke the Flames
+- Stolen by the Fae
 - Stolen Grain
 - Stolen Stark Tech
 - Stolen Vitality
@@ -15717,6 +15722,7 @@ Council4 currently supports **18,104 of 32,501 cards eligible for paper support 
 - The Mending of Dominaria
 - The Modern Age // Vector Glider
 - The Monumental Facade
+- The Mycosynth Gardens
 - The Odd Acorn Gang
 - The One Ring
 - The Ozolith
