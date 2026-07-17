@@ -176,16 +176,17 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 	}
 	if sourceZone == zone.Command && cardID != 0 {
 		player, ok := playerByID(s.g, playerID)
-		if ok && player.CommanderInstanceID == cardID && player.CommanderTax() > 0 {
+		if ok && isCommanderOwnedBy(s.g, playerID, cardID) && player.CommanderTaxFor(cardID) > 0 {
+			castCount := player.CommanderCastCountFor(cardID)
 			if cardPaysLifeForCommanderTax(card) {
 				modifiers = append(modifiers, game.CostModifier{
 					Kind:                    game.CostModifierSpell,
-					LifePayableTaxInstances: player.CommanderCastCount,
+					LifePayableTaxInstances: castCount,
 				})
 			} else {
 				modifiers = append(modifiers, game.CostModifier{
 					Kind:            game.CostModifierSpell,
-					GenericIncrease: player.CommanderTax(),
+					GenericIncrease: player.CommanderTaxFor(cardID),
 				})
 			}
 		}

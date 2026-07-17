@@ -950,7 +950,7 @@ func (ChooseNewTargets) instructionRefs() primitiveRefs { return primitiveRefs{}
 func (ChangeStackObjectController) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
-func (CopyStackObject) instructionRefs() primitiveRefs      { return primitiveRefs{} }
+func (p CopyStackObject) instructionRefs() primitiveRefs    { return quantityRefs(p.DynamicCount) }
 func (p GroupSourceDamage) instructionRefs() primitiveRefs  { return quantityRefs(p.Amount) }
 func (GroupSelfPowerDamage) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (MassReturnFromGraveyard) instructionRefs() primitiveRefs {

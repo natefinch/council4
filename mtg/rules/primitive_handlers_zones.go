@@ -2492,8 +2492,13 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		chooser = resolved
 	}
 	count := prim.Count
-	if count == 0 {
+	if prim.DynamicCount.IsDynamic() {
+		count = r.quantity(prim.DynamicCount)
+	} else if count == 0 {
 		count = 1
+	}
+	if count <= 0 {
+		return effectResolved{accepted: true}
 	}
 	for range count {
 		copyObj := game.NewStackObjectCopy(original, r.game.IDGen.Next())
@@ -2507,7 +2512,7 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		copyObj.Controller = chooser
 		r.game.Stack.Push(copyObj)
 		if prim.MayChooseNewTargets {
-			r.engine.retargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
+			r.engine.mayRetargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
 		}
 		if copyObj.Kind == game.StackSpell {
 			emitSpellCopiedEvent(r.game, copyObj, copyDef)
@@ -2524,7 +2529,7 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 			additional.Controller = chooser
 			r.game.Stack.Push(additional)
 			if mayChooseNewTargets {
-				r.engine.retargetStackObjectChoice(r.game, chooser, additional, r.agents, r.log)
+				r.engine.mayRetargetStackObjectChoice(r.game, chooser, additional, r.agents, r.log)
 			}
 			emitSpellCopiedEvent(r.game, additional, copyDef)
 		}
@@ -2616,17 +2621,25 @@ func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, target
 // copy may choose new targets for every instance of "target" including the
 // spliced text.
 func (e *Engine) retargetStackObjectChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.retargetStackObjectChoiceOptional(g, chooser, target, agents, log, false)
+}
+
+func (e *Engine) mayRetargetStackObjectChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.retargetStackObjectChoiceOptional(g, chooser, target, agents, log, true)
+}
+
+func (e *Engine) retargetStackObjectChoiceOptional(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, optional bool) bool {
 	specs, specsOK := stackObjectTargetSpecs(g, target)
 	hostRetargeted := false
 	if specsOK && len(specs.specs) > 0 {
-		if !e.applyHostRetargetChoice(g, chooser, target, specs, agents, log) {
+		hostRetargeted = e.applyHostRetargetChoice(g, chooser, target, specs, agents, log, optional)
+		if !hostRetargeted && !optional {
 			return false
 		}
-		hostRetargeted = true
 	}
 	splicedRetargeted := false
 	if specsOK {
-		splicedRetargeted = e.retargetSplicedChoices(g, chooser, target, specs.def, agents, log)
+		splicedRetargeted = e.retargetSplicedChoices(g, chooser, target, specs.def, agents, log, optional)
 	}
 	return hostRetargeted || splicedRetargeted
 }
@@ -2634,7 +2647,7 @@ func (e *Engine) retargetStackObjectChoice(g *game.Game, chooser game.PlayerID, 
 // applyHostRetargetChoice re-chooses and binds the host spell or ability's own
 // targets, returning false when no legal new target combination exists or the
 // selection is abandoned.
-func (e *Engine) applyHostRetargetChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, specs stackObjectSpecs, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) applyHostRetargetChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, specs stackObjectSpecs, agents [game.NumPlayers]PlayerAgent, log *TurnLog, optional bool) bool {
 	// Re-enumerating a triggered ability's targets must reuse its captured
 	// triggering event so event-relative target predicates (e.g. "target
 	// creature that player controls", Garland, Royal Kidnapper) resolve the
@@ -2647,7 +2660,12 @@ func (e *Engine) applyHostRetargetChoice(g *game.Game, chooser game.PlayerID, ta
 	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
 		return false
 	}
-	selected := e.chooseChoice(g, agents, targetChoiceRequest(chooser, "Choose new targets", result.choices), log)
+	request := targetChoiceRequest(chooser, "Choose new targets", result.choices)
+	if optional {
+		request.Options = append(request.Options, game.ChoiceOption{Index: len(result.choices), Label: "Keep current targets"})
+		request.DefaultSelection = []int{len(result.choices)}
+	}
+	selected := e.chooseChoice(g, agents, request, log)
 	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
 		return false
 	}
@@ -2666,7 +2684,7 @@ func (e *Engine) applyHostRetargetChoice(g *game.Game, chooser game.PlayerID, ta
 // relative to the host spell (the combined spell is the source), mirroring the
 // resolution-time recheck. A spliced card with no legal new target combination
 // keeps its original targets. It returns whether any spliced card was retargeted.
-func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, target *game.StackObject, hostDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, target *game.StackObject, hostDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog, optional bool) bool {
 	if target.Kind != game.StackSpell || len(target.SplicedContent) == 0 || hostDef == nil {
 		return false
 	}
@@ -2680,7 +2698,12 @@ func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, tar
 		if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
 			continue
 		}
-		selected := e.chooseChoice(g, agents, targetChoiceRequest(chooser, "Choose new targets for the spliced spell", result.choices), log)
+		request := targetChoiceRequest(chooser, "Choose new targets for the spliced spell", result.choices)
+		if optional {
+			request.Options = append(request.Options, game.ChoiceOption{Index: len(result.choices), Label: "Keep current targets"})
+			request.DefaultSelection = []int{len(result.choices)}
+		}
+		selected := e.chooseChoice(g, agents, request, log)
 		if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
 			continue
 		}

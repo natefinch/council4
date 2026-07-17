@@ -2103,7 +2103,11 @@ type CopyStackObject struct {
 	// Count is the number of copies created as one copy event. Zero preserves the
 	// historical single-copy behavior; values greater than one let replacement
 	// effects add to the batch once rather than once per copy.
-	Count               int
+	Count int
+	// DynamicCount, when set, overrides Count with a rules-derived batch size
+	// evaluated as the instruction resolves. Unlike Count's compatibility zero,
+	// a dynamic result of zero creates no copies and no copy replacement applies.
+	DynamicCount        Quantity
 	MayChooseNewTargets bool
 	// SetColors is a copiable exception that replaces each spell copy's color
 	// values while preserving every other copiable value. nil leaves colors

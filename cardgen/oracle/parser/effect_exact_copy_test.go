@@ -70,6 +70,32 @@ func TestParseCopyChooseNewTargetsRiderFolds(t *testing.T) {
 	}
 }
 
+func TestParseDynamicCopyBatchChooseNewTargetsRiderFolds(t *testing.T) {
+	t.Parallel()
+	source := "Copy it for each time you've cast your commander from the command zone this game. You may choose new targets for the copies."
+	sentences := copyStackObjectAbility(t, source)
+	if len(sentences) != 2 || len(sentences[0].Effects) != 1 {
+		t.Fatalf("Parse(%q) shape = %#v", source, sentences)
+	}
+	effect := sentences[0].Effects[0]
+	if effect.Kind != EffectCopyStackObject ||
+		!effect.Exact ||
+		effect.Amount.DynamicKind != EffectDynamicAmountCommanderCastCount ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		!effect.CopyMayChooseNewTargets {
+		t.Fatalf("Parse(%q) copy effect = %#v", source, effect)
+	}
+	if effect.RequiresOrderedLowering {
+		t.Fatal("dynamic copy batch still requires ordered lowering after rider fold")
+	}
+	if effect.Selection.Kind != SelectionUnknown || effect.FromZone != 0 {
+		t.Fatalf("dynamic count leaked into copy object selection: selection=%#v from=%v", effect.Selection, effect.FromZone)
+	}
+	if len(sentences[1].Effects) != 0 || !sentences[1].CopyChooseNewTargetsRider {
+		t.Fatalf("retarget rider not folded: %#v", sentences[1])
+	}
+}
+
 func TestParseCopyColorExceptionAndRetargetRider(t *testing.T) {
 	t.Parallel()
 	source := "Copy target instant or sorcery spell, except that the copy is red. You may choose new targets for the copy."

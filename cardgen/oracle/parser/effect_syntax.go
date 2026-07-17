@@ -2225,6 +2225,7 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 		!effect.MoveCountersDistribute && len(effect.Targets) == 2
 	effect.MoveCountersAnyKind = effect.Kind == EffectMoveCounters &&
 		!effect.MoveCountersDistribute && !effect.MoveCountersAll && !effect.CounterKnown
+	normalizeReferencedSpellCopyAmount(effect)
 	effect.Exact = exactEffectSyntax(effect)
 	effect.TapUntapReferenceObjectClean = tapUntapReferenceObjectClean(effect)
 	// A leading "For each 1 damage prevented this way, <effect>" rider scales the
@@ -2327,6 +2328,22 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 		effect.SearchControl = searchControlRider(effect)
 		effect.SearchSlots = searchHeterogeneousSlotSubtypes(effect)
 	}
+}
+
+// normalizeReferencedSpellCopyAmount removes noun-phrase fields spuriously
+// inferred from a dynamic count inside "Copy <reference> for each <amount>." The
+// copied object is the reference before the amount; nouns and zones inside the
+// count describe only how many copies to make.
+func normalizeReferencedSpellCopyAmount(effect *EffectSyntax) {
+	if effect.Kind != EffectCopyStackObject ||
+		effect.Amount.DynamicKind == EffectDynamicAmountNone ||
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+		len(effect.Targets) != 0 ||
+		len(effectClauseReferences(effect)) != 1 {
+		return
+	}
+	effect.Selection = SelectionSyntax{}
+	effect.FromZone = zone.None
 }
 
 func parseLibraryTopReorderEffect(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {

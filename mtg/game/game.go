@@ -43,16 +43,21 @@ type ReboundCard struct {
 }
 
 // PlayerConfig holds the configuration for a single player when setting
-// up a new game — their name, deck list, and commander.
+// up a new game — their name, deck list, and commanders.
 type PlayerConfig struct {
 	// Name is the player's display name.
 	Name string
 
-	// Commander is the card definition for the player's commander.
+	// Commander is the card definition for the player's primary commander.
+	// It is retained for callers that configure a single commander.
 	Commander *CardDef
 
-	// Deck is the list of card definitions for the player's 99-card deck
-	// (not including the commander).
+	// Commanders is the complete ordered list of the player's commanders. When
+	// non-empty, it takes precedence over Commander; the first entry is primary.
+	Commanders []*CardDef
+
+	// Deck is the list of card definitions for the player's deck, not including
+	// commanders. It normally has 99 cards, or 98 with two commanders.
 	Deck []*CardDef
 
 	// PowerBracket is optional deck metadata for future simulations/reports.
@@ -60,6 +65,17 @@ type PlayerConfig struct {
 
 	// PowerLevel is optional numeric deck metadata for future simulations/reports.
 	PowerLevel int
+}
+
+// CommanderDefs returns the configured commanders in primary-first order.
+func (c PlayerConfig) CommanderDefs() []*CardDef {
+	if len(c.Commanders) != 0 {
+		return c.Commanders
+	}
+	if c.Commander != nil {
+		return []*CardDef{c.Commander}
+	}
+	return nil
 }
 
 // Game is the top-level state of a 4-player Commander game. It ties
@@ -392,16 +408,21 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		p.PowerBracket = cfg.PowerBracket
 		p.PowerLevel = cfg.PowerLevel
 
-		// Create commander CardInstance and place in command zone.
-		if cfg.Commander != nil {
+		// Create commander CardInstances and place them in the command zone.
+		for _, commander := range cfg.CommanderDefs() {
+			if commander == nil {
+				continue
+			}
 			ci := &CardInstance{
 				ID:    g.IDGen.Next(),
-				Def:   cfg.Commander,
+				Def:   commander,
 				Owner: pid,
 			}
 			g.CardInstances[ci.ID] = ci
 			g.CommanderIDs[ci.ID] = true
-			p.CommanderInstanceID = ci.ID
+			if p.CommanderInstanceID == 0 {
+				p.CommanderInstanceID = ci.ID
+			}
 			p.CommandZone.Add(ci.ID)
 		}
 

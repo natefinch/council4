@@ -99,6 +99,7 @@ func buildRichGame(t *testing.T) *Game {
 	g.SkippedSteps[Player1] = map[Step]int{StepDraw: 1}
 	g.LinkedObjects[LinkedObjectKey{SourceID: 1, LinkID: "exile"}] = []LinkedObjectRef{{ObjectID: 5, CardID: 6}}
 	g.Players[Player1].CommanderDamage[g.Players[Player2].CommanderInstanceID] = 4
+	g.Players[Player1].CommanderCastCounts = map[id.ID]int{g.Players[Player1].CommanderInstanceID: 2}
 	g.TurnOrder.Eliminate(Player4)
 
 	// Record an event.
@@ -342,6 +343,7 @@ func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	origHand := g.Players[Player1].Hand.Size()
 	origLibrary := g.Players[Player1].Library.Size()
 	origCmdDmg := g.Players[Player1].CommanderDamage[g.Players[Player2].CommanderInstanceID]
+	origCmdCasts := g.Players[Player1].CommanderCastCounts[g.Players[Player1].CommanderInstanceID]
 	origGoad := len(g.Battlefield[0].Goaded)
 	origBlockerOrder := len(g.Combat.BlockerOrder[g.Battlefield[0].ObjectID])
 
@@ -355,6 +357,7 @@ func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	c.AppendEvent(Event{Kind: EventLifeLost, Player: Player1, Amount: 5})
 	c.IDGen.Next()
 	c.Players[Player1].CommanderDamage[g.Players[Player2].CommanderInstanceID] = 21
+	c.Players[Player1].CommanderCastCounts[g.Players[Player1].CommanderInstanceID] = 7
 	c.Combat.BlockerOrder[g.Battlefield[0].ObjectID] = append(c.Combat.BlockerOrder[g.Battlefield[0].ObjectID], 99)
 	c.SkippedSteps[Player1][StepDraw] = 99
 	*c.DayNight = Day
@@ -397,6 +400,9 @@ func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	}
 	if g.Players[Player1].CommanderDamage[g.Players[Player2].CommanderInstanceID] != origCmdDmg {
 		t.Errorf("original commander damage changed: got %d, want %d", g.Players[Player1].CommanderDamage[g.Players[Player2].CommanderInstanceID], origCmdDmg)
+	}
+	if got := g.Players[Player1].CommanderCastCounts[g.Players[Player1].CommanderInstanceID]; got != origCmdCasts {
+		t.Errorf("original commander cast history changed: got %d, want %d", got, origCmdCasts)
 	}
 	if len(g.Combat.BlockerOrder[g.Battlefield[0].ObjectID]) != origBlockerOrder {
 		t.Errorf("original blocker order changed: %d != %d", len(g.Combat.BlockerOrder[g.Battlefield[0].ObjectID]), origBlockerOrder)

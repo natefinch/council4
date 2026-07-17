@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,115 of 32,502 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,119 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4436,6 +4436,7 @@ Council4 currently supports **18,115 of 32,502 cards eligible for paper support 
 - Echo Circlet
 - Echo Inspector
 - Echo of Dusk
+- Echo Storm
 - Echo Tracer
 - Echoes of the Kin Tree
 - Echoing Calm
@@ -4713,6 +4714,7 @@ Council4 currently supports **18,115 of 32,502 cards eligible for paper support 
 - Empyrial Archangel
 - Empyrial Armor
 - Empyrial Plate
+- Empyrial Storm
 - Emrakul's Hatcher
 - Emrakul's Messenger
 - Emry, Lurker of the Loch
@@ -5883,6 +5885,7 @@ Council4 currently supports **18,115 of 32,502 cards eligible for paper support 
 - Furtive Homunculus
 - Fury of the Horde
 - Fury Sliver
+- Fury Storm
 - Furyblade Vampire
 - Furyborn Hellkite
 - Furycalm Snarl
@@ -6991,6 +6994,7 @@ Council4 currently supports **18,115 of 32,502 cards eligible for paper support 
 - Hate Weaver
 - Hateflayer
 - Hatred
+- Hatut Zeraze Strike Force
 - Haughty Djinn
 - Haunt of the Dead Marshes
 - Haunted Cadaver

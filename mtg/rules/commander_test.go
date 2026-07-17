@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -38,6 +39,52 @@ func TestNewGameTracksCommanderIDs(t *testing.T) {
 	commanderID := g.Players[game.Player1].CommanderInstanceID
 	if commanderID == 0 || !g.CommanderIDs[commanderID] {
 		t.Fatalf("commander id = %v tracked=%v, want commander tracked in Game.CommanderIDs", commanderID, g.CommanderIDs[commanderID])
+	}
+}
+
+func TestNewGameTracksMultipleCommanders(t *testing.T) {
+	primaryDef := commanderDef("Primary Commander", color.Green)
+	partner := commanderDef("Partner Commander", color.Blue)
+	configs := [game.NumPlayers]game.PlayerConfig{
+		game.Player1: {Commanders: []*game.CardDef{primaryDef, partner}},
+	}
+
+	g := game.NewGame(configs)
+	player := g.Players[game.Player1]
+	commanders := player.CommandZone.All()
+
+	if len(commanders) != 2 {
+		t.Fatalf("command zone has %d commanders, want 2", len(commanders))
+	}
+	primaryCard, ok := g.GetCardInstance(player.CommanderInstanceID)
+	if !ok || primaryCard.Def != primaryDef || !player.CommandZone.Contains(player.CommanderInstanceID) {
+		t.Fatalf("primary commander = %#v, want %q in command zone", primaryCard, primaryDef.Name)
+	}
+	for _, commanderID := range commanders {
+		if !g.CommanderIDs[commanderID] {
+			t.Fatalf("commander id %v is not tracked", commanderID)
+		}
+	}
+}
+
+func TestMultipleCommanderColorIdentityUsesUnion(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{
+		game.Player1: {Commanders: []*game.CardDef{
+			commanderDef("Green Commander", color.Green),
+			commanderDef("Blue Commander", color.Blue),
+		}},
+	})
+
+	if got := commanderColorIdentityCount(g, game.Player1); got != 2 {
+		t.Fatalf("commander color identity count = %d, want 2", got)
+	}
+	colors := commanderColorIdentityMana(g, game.Player1)
+	found := map[mana.Color]bool{}
+	for _, c := range colors {
+		found[c] = true
+	}
+	if len(colors) != 2 || !found[mana.G] || !found[mana.U] {
+		t.Fatalf("commander identity mana = %v, want green and blue", colors)
 	}
 }
 
@@ -182,6 +229,62 @@ func TestApplyCommanderCastPaysTaxAndIncrementsCastCount(t *testing.T) {
 	})
 }
 
+func TestPartnerCommanderCastsShareHistoryAndKeepSeparateTax(t *testing.T) {
+	primary := commanderDef("Primary Commander", color.Green)
+	primary.ManaCost = opt.Val(cost.Mana{})
+	partnerDef := commanderDef("Partner Commander", color.Blue)
+	partnerDef.ManaCost = opt.Val(cost.Mana{})
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{
+		game.Player1: {Commanders: []*game.CardDef{primary, partnerDef}},
+	})
+	engine := NewEngine(nil)
+	player := g.Players[game.Player1]
+	primaryID := player.CommanderInstanceID
+	var partnerID id.ID
+	for _, commanderID := range player.CommandZone.All() {
+		if commanderID != primaryID {
+			partnerID = commanderID
+			break
+		}
+	}
+	if partnerID == 0 {
+		t.Fatal("partner commander was not created")
+	}
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	legal := engine.legalActions(g, game.Player1)
+	if !containsAction(legal, action.CastCommanderSpell(primaryID, nil, 0, nil)) ||
+		!containsAction(legal, action.CastCommanderSpell(partnerID, nil, 0, nil)) {
+		t.Fatalf("legal actions do not include both commanders: %+v", legal)
+	}
+	if !engine.applyAction(g, game.Player1, action.CastCommanderSpell(partnerID, nil, 0, nil)) {
+		t.Fatal("casting partner commander failed")
+	}
+	if got := player.CommanderTaxFor(primaryID); got != 0 {
+		t.Fatalf("uncast primary commander tax = %d, want 0", got)
+	}
+	g.Stack = game.Stack{}
+	if !engine.applyAction(g, game.Player1, action.CastCommanderSpell(primaryID, nil, 0, nil)) {
+		t.Fatal("casting primary commander failed")
+	}
+
+	if player.CommanderCastCount != 2 {
+		t.Fatalf("aggregate commander cast count = %d, want 2", player.CommanderCastCount)
+	}
+	if got := player.CommanderCastCountFor(primaryID); got != 1 {
+		t.Fatalf("primary cast count = %d, want 1", got)
+	}
+	if got := player.CommanderCastCountFor(partnerID); got != 1 {
+		t.Fatalf("partner cast count = %d, want 1", got)
+	}
+	if player.CommanderTaxFor(primaryID) != 2 || player.CommanderTaxFor(partnerID) != 2 {
+		t.Fatalf("commander taxes = primary %d partner %d, want 2 each",
+			player.CommanderTaxFor(primaryID), player.CommanderTaxFor(partnerID))
+	}
+}
+
 func lifeForCommanderTaxCommander() *game.CardDef {
 	commander := commanderDef("Liesa, Shroud of Dusk", color.White, color.Black)
 	commander.ManaCost = opt.Val(cost.Mana{cost.G})
@@ -302,6 +405,98 @@ func TestValidateCommanderConfigRejectsWrongDeckSize(t *testing.T) {
 	assertCommanderLegalityError(t, errs, "deck has 98 cards")
 }
 
+func TestValidateCommanderConfigAcceptsTwoCommanders(t *testing.T) {
+	partner := func(name string, c color.Color) *game.CardDef {
+		card := commanderDef(name, c)
+		card.StaticAbilities = []game.StaticAbility{game.PartnerStaticBody}
+		return card
+	}
+	backgroundCommander := commanderDef("Background Chooser", color.White)
+	backgroundCommander.StaticAbilities = []game.StaticAbility{game.ChooseABackgroundStaticBody}
+	background := &game.CardDef{
+		CardFace: game.CardFace{
+			Name:       "Background",
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Enchantment},
+			Subtypes:   []types.Sub{types.Background},
+		},
+		ColorIdentity: color.NewIdentity(color.Black),
+	}
+	tests := []struct {
+		name       string
+		commanders []*game.CardDef
+	}{
+		{name: "partner", commanders: []*game.CardDef{partner("First Partner", color.Green), partner("Second Partner", color.Blue)}},
+		{name: "background", commanders: []*game.CardDef{backgroundCommander, background}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := game.PlayerConfig{Commanders: tt.commanders, Deck: make([]*game.CardDef, 98)}
+			for i := range config.Deck {
+				config.Deck[i] = creatureDef("Colorless Card " + strconv.Itoa(i))
+			}
+
+			if errs := validateCommanderConfig(game.Player1, config); len(errs) != 0 {
+				t.Fatalf("errors = %+v, want none", errs)
+			}
+		})
+	}
+}
+
+func TestValidateCommanderConfigChecksPartnerPairing(t *testing.T) {
+	partnerWith := func(name, other string) *game.CardDef {
+		card := commanderDef(name)
+		card.StaticAbilities = []game.StaticAbility{game.PartnerWithStaticBody}
+		card.OracleText = "Partner with " + other + " (When this creature enters, target player may search their library for a card named " + other + ".)"
+		return card
+	}
+	restrictedPartner := func(name, quality string) *game.CardDef {
+		card := commanderDef(name)
+		card.StaticAbilities = []game.StaticAbility{game.PartnerStaticBody}
+		card.OracleText = "Partner—" + quality
+		return card
+	}
+	tests := []struct {
+		name       string
+		commanders []*game.CardDef
+		wantError  bool
+	}{
+		{
+			name:       "matching partner with",
+			commanders: []*game.CardDef{partnerWith("Alpha", "Beta"), partnerWith("Beta", "Alpha")},
+		},
+		{
+			name:       "unrelated partner with",
+			commanders: []*game.CardDef{partnerWith("Alpha", "Beta"), partnerWith("Gamma", "Delta")},
+			wantError:  true,
+		},
+		{
+			name:       "matching restricted partner",
+			commanders: []*game.CardDef{restrictedPartner("Alpha", "Survivors"), restrictedPartner("Beta", "Survivors")},
+		},
+		{
+			name:       "mismatched restricted partner",
+			commanders: []*game.CardDef{restrictedPartner("Alpha", "Survivors"), restrictedPartner("Beta", "Friends forever")},
+			wantError:  true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := game.PlayerConfig{Commanders: tt.commanders, Deck: make([]*game.CardDef, 98)}
+			for i := range config.Deck {
+				config.Deck[i] = creatureDef("Colorless Card " + strconv.Itoa(i))
+			}
+
+			errs := validateCommanderConfig(game.Player1, config)
+			if tt.wantError {
+				assertCommanderLegalityError(t, errs, "partner")
+			} else if len(errs) != 0 {
+				t.Fatalf("errors = %+v, want none", errs)
+			}
+		})
+	}
+}
+
 func TestValidateCommanderConfigRejectsDuplicateNonbasicButAllowsBasic(t *testing.T) {
 	config := legalCommanderConfig()
 	config.Deck[1] = config.Deck[0]
@@ -355,7 +550,7 @@ func TestValidateCommanderConfigRejectsCommanderInDeck(t *testing.T) {
 }
 
 func legalCommanderConfig() game.PlayerConfig {
-	deck := make([]*game.CardDef, commanderDeckCardCount)
+	deck := make([]*game.CardDef, commanderTotalCardCount-1)
 	for i := range deck {
 		deck[i] = creatureDef("Green Card "+strconv.Itoa(i), color.Green)
 	}
