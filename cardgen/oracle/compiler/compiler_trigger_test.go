@@ -139,6 +139,35 @@ func TestCompileEnterTriggerNonTokenInterveningIf(t *testing.T) {
 	}
 }
 
+func TestCompileModalEffectBindsEventPermanentReference(t *testing.T) {
+	t.Parallel()
+	source := "Whenever Gylwain or another nontoken creature you control enters, choose one —\n" +
+		"• Create a Royal Role token attached to that creature.\n" +
+		"• Create a Sorcerer Role token attached to that creature.\n" +
+		"• Create a Monster Role token attached to that creature."
+	compilation, diagnostics := compileSource(source, pipelineContext{CardName: "Gylwain, Casting Director"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Trigger == nil || len(ability.Content.Modes) != 3 {
+		t.Fatalf("ability = %#v", ability)
+	}
+	for i, mode := range ability.Content.Modes {
+		if len(mode.Content.Effects) != 1 || len(mode.Content.References) != 1 {
+			t.Fatalf("mode %d = %#v", i, mode)
+		}
+		effect := mode.Content.Effects[0]
+		reference := mode.Content.References[0]
+		if !effect.TokenAttachedToReference ||
+			reference.Binding != ReferenceBindingEventPermanent ||
+			len(effect.References) != 1 ||
+			effect.References[0].Binding != ReferenceBindingEventPermanent {
+			t.Fatalf("mode %d effect/reference = %#v / %#v", i, effect, reference)
+		}
+	}
+}
+
 // TestCompileAttachedDiesThatSubjectInterveningIf proves the attached-permanent
 // dies trigger "When enchanted creature dies, if that creature was a Horror, ..."
 // compiles its "that creature was a <subtype>" back-reference to an

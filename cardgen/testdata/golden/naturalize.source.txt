@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Naturalize
+// Naturalize is the card definition for Naturalize.
 //
 // Type: Instant
 //

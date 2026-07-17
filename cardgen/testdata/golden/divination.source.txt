@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Divination
+// Divination is the card definition for Divination.
 //
 // Type: Sorcery
 //

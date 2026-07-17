@@ -49,6 +49,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ember Island Production", New: EmberIslandProduction},
 	{Name: "Embercleave", New: Embercleave},
 	{Name: "Embereth Paladin", New: EmberethPaladin},
+	{Name: "Embereth Veteran", New: EmberethVeteran},
 	{Name: "Emberheart Challenger", New: EmberheartChallenger},
 	{Name: "Emberwilde Caliph", New: EmberwildeCaliph},
 	{Name: "Emberwilde Captain", New: EmberwildeCaptain},

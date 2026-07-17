@@ -8,7 +8,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Prodigal Sorcerer
+// ProdigalSorcerer is the card definition for Prodigal Sorcerer.
 //
 // Type: Creature — Human Wizard
 //

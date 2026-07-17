@@ -50,6 +50,7 @@ var Cards = []cardset.Entry{
 	{Name: "Pincer Spider", New: PincerSpider},
 	{Name: "Pinion Feast", New: PinionFeast},
 	{Name: "Pious Warrior", New: PiousWarrior},
+	{Name: "Pip-Boy 3000", New: PipBoy3000},
 	{Name: "Pirate Ship", New: PirateShip},
 	{Name: "Pitfall Trap", New: PitfallTrap},
 	{Name: "Pitiless Fists", New: PitilessFists},

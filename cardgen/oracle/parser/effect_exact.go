@@ -3632,11 +3632,10 @@ func exactCreateNamedTokenEffectSyntax(effect *EffectSyntax) bool {
 // card subtype (Mutavault). Such a token carries no printed power/toughness,
 // color, subtype, keyword, or count modifier in its create clause; the name
 // alone identifies it (its characteristics live in its own definition). It
-// accepts only the controller recipient form with a single fixed count and an
-// optional leading "tapped" adjective, and byte-checks the reconstructed
-// "Create a [tapped] <Name> token." clause. Every richer shape (a count other
-// than one, a non-controller recipient, or any selection qualifier beyond
-// "tapped") fails closed.
+// accepts only the controller recipient form with a single fixed count, an
+// optional leading "tapped" adjective, and either no attachment, one exact
+// attachment target, or one semantic attachment reference. It byte-checks the
+// reconstructed clause; every richer shape fails closed.
 func exactCreatePredefinedTokenEffectSyntax(effect *EffectSyntax) bool {
 	if effect.TokenPredefinedName == "" ||
 		effect.Context != EffectContextController ||
@@ -3645,15 +3644,28 @@ func exactCreatePredefinedTokenEffectSyntax(effect *EffectSyntax) bool {
 		!effect.Amount.Known || effect.Amount.Value != 1 {
 		return false
 	}
-	if effect.TokenAttachedToTarget {
+	if effect.TokenAttachedToTarget && effect.TokenAttachedToReference {
+		return false
+	}
+	switch {
+	case effect.TokenAttachedToTarget:
 		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
 			return false
 		}
-	} else if len(effect.Targets) != 0 {
-		return false
+		if len(effect.References) != 0 {
+			return false
+		}
+	case effect.TokenAttachedToReference:
+		if len(effect.Targets) != 0 || len(effect.References) != 1 {
+			return false
+		}
+	default:
+		if len(effect.Targets) != 0 || len(effect.References) != 0 {
+			return false
+		}
 	}
 	sel := effect.Selection
-	if !effect.TokenAttachedToTarget {
+	if !effect.TokenAttachedToTarget && !effect.TokenAttachedToReference {
 		if sel.Kind != SelectionUnknown ||
 			len(sel.SubtypesAny) != 0 ||
 			sel.Keyword != KeywordUnknown ||
@@ -3674,6 +3686,8 @@ func exactCreatePredefinedTokenEffectSyntax(effect *EffectSyntax) bool {
 	specBody := fmt.Sprintf("a %s%s token", tappedPart, effect.TokenPredefinedName)
 	if effect.TokenAttachedToTarget {
 		specBody += " attached to " + effect.Targets[0].Text
+	} else if effect.TokenAttachedToReference {
+		specBody += " attached to " + effect.References[0].Text
 	}
 	return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody+".")
 }
@@ -3696,6 +3710,30 @@ func tokenAttachedToTarget(kind EffectKind, tokens []shared.Token) bool {
 				}
 			}
 		}
+	}
+	return false
+}
+
+// tokenAttachedToReference recognizes a predefined token entering attached to a
+// semantic object reference ("... token attached to that creature"). The
+// reference scanner and compiler own pronoun binding; exact predefined-token
+// recognition later requires exactly one reference and byte-checks its text.
+func tokenAttachedToReference(kind EffectKind, tokens []shared.Token) bool {
+	if kind != EffectCreate {
+		return false
+	}
+	for i := 0; i+3 < len(tokens); i++ {
+		if (!equalWord(tokens[i], "token") && !equalWord(tokens[i], "tokens")) ||
+			!equalWord(tokens[i+1], "attached") ||
+			!equalWord(tokens[i+2], "to") {
+			continue
+		}
+		for _, token := range tokens[i+3:] {
+			if equalWord(token, "target") {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }

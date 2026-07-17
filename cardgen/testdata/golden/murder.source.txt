@@ -6,7 +6,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Murder
+// Murder is the card definition for Murder.
 //
 // Type: Instant
 //
