@@ -2353,22 +2353,27 @@ func matchLibraryTopReorder(tokens []shared.Token, atoms Atoms) (EffectAmountSyn
 	return amount, amount.Known && amount.Value > 0
 }
 
-// parsePassiveTokenDoublingEffects recognizes the passive-voice token-doubling
-// replacement "If one or more tokens would be created under your control, twice
-// that many of those tokens are created instead." (Mondrak, Adrix and Nev). Its
-// active-voice equivalent "If an effect would create one or more tokens under
-// your control, it creates twice that many of those tokens instead." (Doubling
-// Season, Anointed Procession, Parallel Lives) parses through the ordinary
-// create-verb path. The passive wording carries no active "create" verb, so it
-// is recognized here and emitted as the same two EffectCreate instructions the
-// active form produces: the would-create group and the doubled output marked
-// EffectReplacementTwiceThatMany. The matching intervening-if condition is
+// parsePassiveTokenDoublingEffects recognizes the passive-voice
+// token-multiplication replacement "If one or more [type] tokens would be
+// created under your control, twice that many of those tokens are created
+// instead." (Mondrak, Adrix and Nev) and its tripling form "... three times
+// that many of those tokens are created instead." (Ojer Taq, Deepest
+// Foundation). Its active-voice equivalent "If an effect would create one or
+// more tokens under your control, it creates twice that many of those tokens
+// instead." (Doubling Season, Anointed Procession, Parallel Lives) parses
+// through the ordinary create-verb path. The passive wording carries no active
+// "create" verb, so it is recognized here and emitted as the same two
+// EffectCreate instructions the active form produces: the would-create group
+// (carrying the optional card-type filter in its selector) and the multiplied
+// output marked EffectReplacementTwiceThatMany or
+// EffectReplacementThreeTimesThatMany. The matching intervening-if condition is
 // recognized separately by recognizeTokenCreationCondition.
 func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
-	commaIndex, anyController, ok := matchPassiveTokenDoubling(tokens)
+	match, ok := matchPassiveTokenDoubling(tokens)
 	if !ok {
 		return nil, false
 	}
+	commaIndex, multiplier, anyController := match.commaIndex, match.multiplier, match.anyController
 	condition := tokens[:commaIndex]
 	resolving := tokens[commaIndex+1:]
 	createdIndex := commaIndex - 4
@@ -2386,18 +2391,35 @@ func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, 
 		Amount:           EffectAmountSyntax{Value: 1, Known: true},
 		UnderYourControl: !anyController,
 	}
-	doubledIndex := commaIndex + 8
+	// Thread an optional card-type word ("... one or more creature tokens ...")
+	// into the would-create group's selector so the lowering can restrict the
+	// multiplier to that type. The untyped wording ("one or more tokens",
+	// Mondrak/Primal Vigor) leaves the selector unset, preserving the exact prior
+	// emission for those cards.
+	if nounPhrase, typed := passiveTokenTypeNounPhrase(condition); typed {
+		createEffect.Selection = parseSelection(nounPhrase, atoms)
+		if conjunctiveTypeTarget(createEffect.Selection) {
+			createEffect.Selection.ConjunctiveTypes = true
+		}
+	}
+	replacementKind := EffectReplacementTwiceThatMany
+	if multiplier == 3 {
+		replacementKind = EffectReplacementThreeTimesThatMany
+	}
+	// The resolving clause always ends "... are created instead .", so the
+	// multiplied create verb is the third token from the end regardless of the
+	// "twice"/"three times" multiplier phrase length.
 	doubledEffect := EffectSyntax{
 		Kind:       EffectCreate,
 		Context:    EffectContextReferencedObject,
 		Span:       shared.SpanOf(resolving),
-		VerbSpan:   tokens[doubledIndex].Span,
+		VerbSpan:   resolving[len(resolving)-3].Span,
 		ClauseSpan: shared.SpanOf(resolving),
 		Text:       sentence.Text,
 		Tokens:     append([]shared.Token(nil), resolving...),
-		Amount:     EffectAmountSyntax{Value: 2, Known: true},
+		Amount:     EffectAmountSyntax{Value: multiplier, Known: true},
 		Replacement: EffectReplacementSyntax{
-			Kind: EffectReplacementTwiceThatMany,
+			Kind: replacementKind,
 			Span: tokens[len(tokens)-2].Span,
 		},
 		References: referencesInSpan(atoms, shared.SpanOf(resolving)),
@@ -2405,29 +2427,89 @@ func parsePassiveTokenDoublingEffects(sentence Sentence, tokens []shared.Token, 
 	return []EffectSyntax{createEffect, doubledEffect}, true
 }
 
+// passiveTokenTypeNounPhrase returns the "one or more [type] tokens" noun phrase
+// of a passive token-multiplication would-create clause, with its leading "if"
+// and trailing "would be created [under your control]" stripped, and reports
+// whether a card-type word appears between "more" and "tokens". The untyped
+// "one or more tokens" wording reports false so its would-create group carries
+// no selector, matching the historical emission for Mondrak and Primal Vigor.
+func passiveTokenTypeNounPhrase(condition []shared.Token) ([]shared.Token, bool) {
+	nounPhrase := condition
+	if len(nounPhrase) > 0 && equalWord(nounPhrase[0], "if") {
+		nounPhrase = nounPhrase[1:]
+	}
+	if trimmed, stripped := stripTokenSuffix(nounPhrase, "would", "be", "created", "under", "your", "control"); stripped {
+		nounPhrase = trimmed
+	} else if trimmed, stripped := stripTokenSuffix(nounPhrase, "would", "be", "created"); stripped {
+		nounPhrase = trimmed
+	}
+	typed := effectWordsAt(nounPhrase, 0, "one", "or", "more") &&
+		len(nounPhrase) > 4 &&
+		equalWord(nounPhrase[len(nounPhrase)-1], "tokens")
+	return nounPhrase, typed
+}
+
+// passiveTokenDoublingMatch describes a recognized passive token-multiplication
+// replacement: the comma index separating its would-create condition clause from
+// the multiplied output clause, the multiplier (2 for "twice that many", 3 for
+// "three times that many"), and whether the effect scope is any controller's
+// tokens rather than only the controller's.
+type passiveTokenDoublingMatch struct {
+	commaIndex    int
+	multiplier    int
+	anyController bool
+}
+
 // matchPassiveTokenDoubling reports the index of the comma separating the
-// would-create condition clause from the doubled output clause when tokens spell
-// the passive token-doubling replacement. The controller-only wording ("...under
-// your control, ...", Mondrak) and the controller-agnostic wording ("...would be
-// created, ...", Primal Vigor) are distinguished by anyController, which the
-// any-player runtime node honors via an any-player scope.
-func matchPassiveTokenDoubling(tokens []shared.Token) (commaIndex int, anyController, ok bool) {
-	if len(tokens) == 22 &&
-		effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") &&
-		effectWordsAt(tokens, 8, "under", "your", "control") &&
-		tokens[11].Kind == shared.Comma &&
-		effectWordsAt(tokens, 12, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") &&
-		tokens[21].Kind == shared.Period {
-		return 11, false, true
+// would-create condition clause from the multiplied output clause when tokens
+// spell the passive token-multiplication replacement, together with the
+// multiplier (2 for "twice that many", 3 for "three times that many"). The
+// controller-only wording ("...under your control, ...", Mondrak) and the
+// controller-agnostic wording ("...would be created, ...", Primal Vigor) are
+// distinguished by anyController, which the any-player runtime node honors via
+// an any-player scope. An optional card-type word between "more" and "tokens"
+// ("...creature tokens...", Ojer Taq) is tolerated and carried downstream by the
+// would-create group's selector, mirroring the additive form.
+func matchPassiveTokenDoubling(tokens []shared.Token) (passiveTokenDoublingMatch, bool) {
+	if !effectWordsAt(tokens, 0, "if", "one", "or", "more") {
+		return passiveTokenDoublingMatch{}, false
 	}
-	if len(tokens) == 19 &&
-		effectWordsAt(tokens, 0, "if", "one", "or", "more", "tokens", "would", "be", "created") &&
-		tokens[8].Kind == shared.Comma &&
-		effectWordsAt(tokens, 9, "twice", "that", "many", "of", "those", "tokens", "are", "created", "instead") &&
-		tokens[18].Kind == shared.Period {
-		return 8, true, true
+	for i := range tokens {
+		if tokens[i].Kind != shared.Comma {
+			continue
+		}
+		var (
+			afterMultiplier []shared.Token
+			multiplier      int
+		)
+		switch {
+		case effectWordsAt(tokens, i+1, "twice", "that", "many"):
+			multiplier = 2
+			afterMultiplier = tokens[i+4:]
+		case effectWordsAt(tokens, i+1, "three", "times", "that", "many"):
+			multiplier = 3
+			afterMultiplier = tokens[i+5:]
+		default:
+			continue
+		}
+		body := tokens[1:i]
+		controllerOnly := false
+		if _, stripped := stripTokenSuffix(body, "tokens", "would", "be", "created", "under", "your", "control"); stripped {
+			controllerOnly = true
+		} else if _, stripped := stripTokenSuffix(body, "tokens", "would", "be", "created"); !stripped {
+			continue
+		}
+		if !effectWordsAt(body, 0, "one", "or", "more") {
+			continue
+		}
+		if len(afterMultiplier) != 7 ||
+			!effectWordsAt(afterMultiplier, 0, "of", "those", "tokens", "are", "created", "instead") ||
+			afterMultiplier[6].Kind != shared.Period {
+			continue
+		}
+		return passiveTokenDoublingMatch{commaIndex: i, multiplier: multiplier, anyController: !controllerOnly}, true
 	}
-	return 0, false, false
+	return passiveTokenDoublingMatch{}, false
 }
 
 // parsePassiveTokenAdditiveEffects recognizes the passive-voice additive

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,091 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,092 of 32,502 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -10660,6 +10660,7 @@ Council4 currently supports **18,091 of 32,501 cards eligible for paper support 
 - Ohran Frostfang
 - Ohran Viper
 - Ohran Yeti
+- Ojer Taq, Deepest Foundation // Temple of Civilization
 - Oji, the Exquisite Blade
 - Ojutai Exemplars
 - Ojutai Monument
