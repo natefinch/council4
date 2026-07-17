@@ -2914,6 +2914,25 @@ func (p Dig) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.Destination == zone.Library && p.Reveal {
 		return errors.New("Dig with a library-top destination does not reveal the chosen cards")
 	}
+	for _, slot := range p.Slots {
+		if err := validateQuantity(slot.Count, targets, checkTargets); err != nil {
+			return err
+		}
+		if !slot.Count.IsDynamic() && slot.Count.Value() < 1 {
+			return errors.New("Dig slot requires routing a positive number of cards")
+		}
+		switch slot.Destination {
+		case zone.Hand, zone.Library, zone.Exile, zone.Graveyard:
+		default:
+			return errors.New("Dig slot has an unsupported destination")
+		}
+		if slot.Bottom && slot.Destination != zone.Library {
+			return errors.New("Dig slot bottom placement requires a library destination")
+		}
+		if slot.Play.Exists && slot.Destination != zone.Exile {
+			return errors.New("Dig slot play permission requires an exile destination")
+		}
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 

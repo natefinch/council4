@@ -305,7 +305,7 @@ type digFilter struct {
 // library ("put up to one of them on top of your library"). When
 // filter.takeUpTo is set the controller may take fewer than take cards (down to
 // none); when filter.reveal is set each taken card is revealed as it is taken.
-func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, obj *game.StackObject, playerID game.PlayerID, look, take int, remainder game.DigRemainder, filter digFilter) bool {
+func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, obj *game.StackObject, playerID game.PlayerID, look, take int, remainder game.DigRemainder, filter digFilter, slots []digRouteSlot) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || look <= 0 {
 		return false
@@ -374,8 +374,13 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 			})
 		}
 	}
+	routed := make(map[id.ID]bool, len(seen))
+	for _, cardID := range taken {
+		routed[cardID] = true
+	}
+	e.routeDigSlots(g, agents, log, obj, playerID, player, seen, routed, slots)
 	for _, cardID := range seen {
-		if slices.Contains(taken, cardID) {
+		if routed[cardID] {
 			continue
 		}
 		if !player.Library.Remove(cardID) {
@@ -395,6 +400,151 @@ func (e *Engine) digCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log
 		putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
 	}
 	return true
+}
+
+// digRouteSlot is one resolved ordered destination of a dig: count cards the
+// player chooses from the still-unrouted looked-at cards move to destination
+// (bottom of the library when bottom is set for a library destination), with an
+// impulse play/cast grant applied to each exiled card when play is present. It
+// is the runtime form of game.DigSlot with its Count already resolved.
+type digRouteSlot struct {
+	count       int
+	destination zone.Type
+	bottom      bool
+	play        opt.V[game.ImpulsePlayGrant]
+}
+
+// routeDigSlots fans the looked-at cards into the ordered slots after the
+// primary take. For each slot in printed order the digging player chooses from
+// the cards not yet routed, taking as many as the remaining pool allows when the
+// library is short ("as much as possible"), then those cards move to the slot's
+// destination. It records every routed card in routed so the caller sends only
+// the leftover looked-at cards to the remainder destination.
+func (e *Engine) routeDigSlots(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, obj *game.StackObject, playerID game.PlayerID, player *game.Player, seen []id.ID, routed map[id.ID]bool, slots []digRouteSlot) {
+	for _, slot := range slots {
+		avail := make([]id.ID, 0, len(seen))
+		for _, cardID := range seen {
+			if !routed[cardID] {
+				avail = append(avail, cardID)
+			}
+		}
+		count := min(slot.count, len(avail))
+		if count <= 0 {
+			continue
+		}
+		for _, cardID := range e.chooseDigSlotCards(g, agents, log, playerID, avail, count, slot) {
+			if routeDigSlotCard(g, obj, playerID, player, cardID, slot) {
+				routed[cardID] = true
+			}
+		}
+	}
+}
+
+// routeDigSlotCard moves cardID from playerID's library to slot's destination
+// and, for an exile slot with a play grant, records the impulse play/cast
+// permission over the exiled card. The exile slot moves the card through the
+// replacement-aware batch mover and the graveyard slot removes it and places it
+// through the replacement-aware graveyard mover, so a commander may be
+// redirected to the command zone and graveyard-replacement effects apply,
+// matching ImpulseExile and the dig graveyard remainder; the hand and library
+// destinations move it directly like the primary take and the library-bottom
+// remainder. It reports whether the card was routed.
+func routeDigSlotCard(g *game.Game, obj *game.StackObject, playerID game.PlayerID, player *game.Player, cardID id.ID, slot digRouteSlot) bool {
+	switch slot.destination {
+	case zone.Exile:
+		if !moveCardBetweenZonesInBatch(g, playerID, cardID, zone.Library, zone.Exile, false, 0) {
+			return false
+		}
+		if slot.play.Exists {
+			appendPlayFromExileGrant(g, obj, cardID, slot.play.Val)
+		}
+		return true
+	case zone.Graveyard:
+		if !player.Library.Remove(cardID) {
+			return false
+		}
+		putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
+		return true
+	case zone.Library:
+		if !player.Library.Remove(cardID) {
+			return false
+		}
+		if slot.bottom {
+			player.Library.AddToBottom(cardID)
+		} else {
+			player.Library.Add(cardID)
+		}
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   zone.Library,
+			Amount:   1,
+		})
+		return true
+	default:
+		if !player.Library.Remove(cardID) {
+			return false
+		}
+		player.Hand.Add(cardID)
+		emitZoneChangeEvent(g, game.Event{
+			Player:   playerID,
+			CardID:   cardID,
+			FromZone: zone.Library,
+			ToZone:   zone.Hand,
+			Amount:   1,
+		})
+		return true
+	}
+}
+
+// chooseDigSlotCards asks the digging player which count of the avail cards to
+// route to a dig slot's destination. It reuses the ChoiceDig pathway with the
+// selection bounded to exactly count so a short library takes as many as remain.
+// Agents that do not answer fall back to the deterministic first-count selection.
+func (e *Engine) chooseDigSlotCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, avail []id.ID, count int, slot digRouteSlot) []id.ID {
+	options := make([]game.ChoiceOption, len(avail))
+	defaults := make([]int, 0, count)
+	for i, cardID := range avail {
+		options[i] = game.ChoiceOption{Index: i, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)}
+		if i < count {
+			defaults = append(defaults, i)
+		}
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:             game.ChoiceDig,
+		Player:           playerID,
+		Prompt:           digSlotPrompt(slot),
+		Options:          options,
+		MinChoices:       count,
+		MaxChoices:       count,
+		DefaultSelection: defaults,
+	}, log)
+	chosen := make([]id.ID, 0, len(selected))
+	for _, index := range selected {
+		if index >= 0 && index < len(avail) {
+			chosen = append(chosen, avail[index])
+		}
+	}
+	return chosen
+}
+
+// digSlotPrompt names the destination a dig slot's chosen cards move to so the
+// choice prompt matches the printed effect.
+func digSlotPrompt(slot digRouteSlot) string {
+	switch slot.destination {
+	case zone.Exile:
+		return "Dig: choose cards to exile."
+	case zone.Graveyard:
+		return "Dig: choose cards to put into your graveyard."
+	case zone.Library:
+		if slot.bottom {
+			return "Dig: choose cards to put on the bottom of your library."
+		}
+		return "Dig: choose cards to put on top of your library."
+	default:
+		return "Dig: choose cards to put into your hand."
+	}
 }
 
 // chooseDigCards asks the digging player which of the eligible cards (already

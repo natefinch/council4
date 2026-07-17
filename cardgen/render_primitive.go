@@ -1861,7 +1861,59 @@ func (r Renderer) renderDigPrimitive(ctx *renderCtx, value game.Dig) (string, er
 	if value.EntersTapped {
 		fields = append(fields, "EntersTapped: true,")
 	}
+	if len(value.Slots) > 0 {
+		slots, slotErr := r.renderDigSlots(ctx, value.Slots)
+		if slotErr != nil {
+			return "", slotErr
+		}
+		fields = append(fields, slots)
+	}
 	return structLit("game.Dig", fields), nil
+}
+
+// renderDigSlots renders a Dig's ordered destination slots as a Go slice
+// literal. Each slot emits its count, destination zone, optional bottom
+// placement, and, for an exile slot, the impulse play/cast grant.
+func (r Renderer) renderDigSlots(ctx *renderCtx, slots []game.DigSlot) (string, error) {
+	elems := make([]string, 0, len(slots))
+	for _, slot := range slots {
+		count, err := r.renderQuantity(ctx, slot.Count)
+		if err != nil {
+			return "", err
+		}
+		destination, err := renderZone(slot.Destination)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importZone)
+		slotFields := []string{
+			fmt.Sprintf("Count: %s,", count),
+			fmt.Sprintf("Destination: %s,", destination),
+		}
+		if slot.Bottom {
+			slotFields = append(slotFields, "Bottom: true,")
+		}
+		if slot.Play.Exists {
+			duration, durErr := renderDuration(slot.Play.Val.Duration)
+			if durErr != nil {
+				return "", durErr
+			}
+			playFields := []string{fmt.Sprintf("Duration: %s,", duration)}
+			if slot.Play.Val.Cast {
+				playFields = append(playFields, "Cast: true,")
+			}
+			if slot.Play.Val.SpendAnyMana {
+				playFields = append(playFields, "SpendAnyMana: true,")
+			}
+			if slot.Play.Val.WithoutPayingManaCost {
+				playFields = append(playFields, "WithoutPayingManaCost: true,")
+			}
+			ctx.need(importOpt)
+			slotFields = append(slotFields, fmt.Sprintf("Play: opt.Val(%s),", structLit("game.ImpulsePlayGrant", playFields)))
+		}
+		elems = append(elems, structLit("game.DigSlot", slotFields)+",")
+	}
+	return sliceField("Slots", "game.DigSlot", elems), nil
 }
 
 func (r Renderer) renderObjectOrGroupPrimitive(ctx *renderCtx, primitive game.Primitive) (string, error) {

@@ -20,7 +20,7 @@ func (e *Engine) tryDrawCardDigReplacement(g *game.Game, playerID game.PlayerID,
 		if replacementCurrentController(g, replacement) != playerID {
 			continue
 		}
-		e.digCards(g, agents, log, nil, playerID, replacement.DrawCardDigLook, replacement.DrawCardDigTake, replacement.DrawCardDigRemainder, digFilter{})
+		e.digCards(g, agents, log, nil, playerID, replacement.DrawCardDigLook, replacement.DrawCardDigTake, replacement.DrawCardDigRemainder, digFilter{}, nil)
 		return true
 	}
 	return false

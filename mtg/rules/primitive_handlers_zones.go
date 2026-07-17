@@ -3044,13 +3044,22 @@ func handleDig(r *effectResolver, prim game.Dig) effectResolved {
 	res := effectResolved{accepted: true, amount: look}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
+		slots := make([]digRouteSlot, 0, len(prim.Slots))
+		for _, slot := range prim.Slots {
+			slots = append(slots, digRouteSlot{
+				count:       r.quantity(slot.Count),
+				destination: slot.Destination,
+				bottom:      slot.Bottom,
+				play:        slot.Play,
+			})
+		}
 		res.succeeded = r.engine.digCards(r.game, r.agents, r.log, r.obj, playerID, look, r.quantity(prim.Take), prim.Remainder, digFilter{
 			selection:    prim.Filter,
 			takeUpTo:     prim.TakeUpTo,
 			reveal:       prim.Reveal,
 			destination:  prim.Destination,
 			entersTapped: prim.EntersTapped,
-		})
+		}, slots)
 	}
 	return res
 }
@@ -3090,22 +3099,9 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 		if !ok || !moveCardBetweenZonesInBatch(r.game, playerID, cardID, zone.Library, zone.Exile, false, simultaneousID) {
 			continue
 		}
-		kind := game.RuleEffectPlayFromZone
-		if prim.Cast {
-			kind = game.RuleEffectCastFromZone
-		}
-		r.game.RuleEffects = append(r.game.RuleEffects, game.RuleEffect{
-			ID:                    r.game.IDGen.Next(),
-			Kind:                  kind,
-			Controller:            r.obj.Controller,
-			SourceCardID:          r.obj.SourceCardID,
-			SourceObjectID:        r.obj.SourceID,
-			AffectedPlayer:        game.PlayerYou,
+		appendPlayFromExileGrant(r.game, r.obj, cardID, game.ImpulsePlayGrant{
 			Duration:              prim.Duration,
-			CreatedTurn:           r.game.Turn.TurnNumber,
-			CastFromZone:          zone.Exile,
-			AffectedCardID:        cardID,
-			ExpiresFor:            r.obj.Controller,
+			Cast:                  prim.Cast,
 			SpendAnyMana:          prim.SpendAnyMana,
 			WithoutPayingManaCost: prim.WithoutPayingManaCost,
 		})
@@ -3115,6 +3111,35 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 		res.succeeded = true
 	}
 	return res
+}
+
+// appendPlayFromExileGrant records a rule effect letting obj's controller play
+// or cast cardID from exile for grant's duration, the shared impulse-draw
+// permission behind ImpulseExile and a Dig exile slot. A Cast grant permits
+// casting an exiled spell but not playing an exiled land, so it emits a
+// cast-only permission; otherwise it emits the play-permitting grant. The
+// permission is keyed to the source object so it applies to exactly the exiled
+// card and expires for the controller (CR 118.7).
+func appendPlayFromExileGrant(g *game.Game, obj *game.StackObject, cardID id.ID, grant game.ImpulsePlayGrant) {
+	kind := game.RuleEffectPlayFromZone
+	if grant.Cast {
+		kind = game.RuleEffectCastFromZone
+	}
+	g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+		ID:                    g.IDGen.Next(),
+		Kind:                  kind,
+		Controller:            obj.Controller,
+		SourceCardID:          obj.SourceCardID,
+		SourceObjectID:        obj.SourceID,
+		AffectedPlayer:        game.PlayerYou,
+		Duration:              grant.Duration,
+		CreatedTurn:           g.Turn.TurnNumber,
+		CastFromZone:          zone.Exile,
+		AffectedCardID:        cardID,
+		ExpiresFor:            obj.Controller,
+		SpendAnyMana:          grant.SpendAnyMana,
+		WithoutPayingManaCost: grant.WithoutPayingManaCost,
+	})
 }
 
 func handleExileLibraryUntilNonlandCast(r *effectResolver, prim game.ExileLibraryUntilNonlandCast) effectResolved {
