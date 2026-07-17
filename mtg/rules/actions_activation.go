@@ -509,6 +509,17 @@ func effectiveHandActivatedAbilities(g *game.Game, playerID game.PlayerID, card 
 }
 
 func handCardMatchesSelection(g *game.Game, card *game.CardInstance, selection game.Selection, viewer game.PlayerID) bool {
+	return handCardMatchesSelectionWithEvent(g, card, selection, viewer, game.Event{})
+}
+
+// handCardMatchesSelectionWithEvent is handCardMatchesSelection with an explicit
+// triggering event bound to the selection subject, so an event-relative
+// selection bound — Kodama of the East Tree's "with equal or lesser mana value"
+// filter, which compares each hand card to the permanent that just entered — can
+// read the triggering permanent's mana value (CR 608.2h) as the choice is made.
+// A zero event leaves that bound with no value, so it fails closed rather than
+// admitting every card; callers with no triggering event use the wrapper above.
+func handCardMatchesSelectionWithEvent(g *game.Game, card *game.CardInstance, selection game.Selection, viewer game.PlayerID, event game.Event) bool {
 	if card == nil || card.Def == nil {
 		return false
 	}
@@ -517,6 +528,7 @@ func handCardMatchesSelection(g *game.Game, card *game.CardInstance, selection g
 		g:      g,
 		card:   card,
 		viewer: viewer,
+		event:  event,
 	}, &selection)
 }
 

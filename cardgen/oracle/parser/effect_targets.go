@@ -3587,6 +3587,23 @@ func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *Select
 	for i := range tokens {
 		if i+1 < len(tokens) && i+2 >= len(tokens) &&
 			effectWordsAt(tokens, i, "mana", "value") &&
+			i >= 3 && equalWord(tokens[i-1], "lesser") &&
+			equalWord(tokens[i-2], "or") && equalWord(tokens[i-3], "equal") {
+			// "with equal or lesser mana value" as the trailing phrase of a
+			// selection — no comparison words follow "value" — bounds the match by
+			// the triggering event permanent's mana value inclusively (≤), the
+			// counterpart of the strict "lesser mana value" branch below. Kodama of
+			// the East Tree's put-from-hand selection ("put a permanent card with
+			// equal or lesser mana value from your hand onto the battlefield")
+			// places this qualifier last, so the general "mana value" handling
+			// below — which requires a following comparison token — never reaches
+			// it. Recording the ≤ bound on its own field keeps the strict "or"
+			// guard below intact so bare "lesser mana value" stays a strict bound.
+			selection.ManaValueLessOrEqualEventPermanent = true
+			continue
+		}
+		if i+1 < len(tokens) && i+2 >= len(tokens) &&
+			effectWordsAt(tokens, i, "mana", "value") &&
 			i >= 1 && equalWord(tokens[i-1], "lesser") &&
 			(i < 2 || !equalWord(tokens[i-2], "or")) {
 			// "with lesser mana value" as the trailing phrase of a selection —
@@ -3645,6 +3662,21 @@ func parseSelectionNumbers(tokens []shared.Token, atoms Atoms, selection *Select
 				// own field; only the graveyard-card target reconstruction renders
 				// it, so other contexts keep failing closed.
 				selection.ManaValueDynamic = kind
+				continue
+			}
+			if i >= 3 && equalWord(tokens[i-1], "lesser") &&
+				equalWord(tokens[i-2], "or") && equalWord(tokens[i-3], "equal") &&
+				!equalWord(tokens[i+2], "than") {
+				// "with equal or lesser mana value" compares the match to the
+				// triggering event permanent's mana value inclusively (≤) — the
+				// permanent that entered and fired the ability (Kodama of the East
+				// Tree) — not a fixed number. Record the relative ≤ qualifier and
+				// skip the fixed-comparison parse. It precedes the strict "lesser
+				// mana value" branch below, whose "or" guard already excludes this
+				// wording, so the two event-relative bounds stay distinct. The
+				// "than" guard excludes the explicit "lesser mana value than
+				// <object>" comparison, mirroring the strict branch.
+				selection.ManaValueLessOrEqualEventPermanent = true
 				continue
 			}
 			if i >= 1 && equalWord(tokens[i-1], "lesser") &&

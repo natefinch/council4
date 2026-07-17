@@ -948,6 +948,17 @@ type TriggerCondition struct {
 	// controller to be the caster.
 	InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard bool
 
+	// InterveningIfEventPermanentWasNotPutByThisAbilitySource is true for the
+	// enter-trigger intervening "if it wasn't put onto the battlefield with this
+	// ability" (Kodama of the East Tree). It fires only when the entering
+	// permanent was NOT put onto the battlefield by this same ability's source
+	// object, so an ability instance never re-triggers on the permanent it puts
+	// while a second copy or a separate Kodama — a different source object — still
+	// sees that permanent and chains per the rules. mtg/rules compares the
+	// entering event's recorded put-by-ability source against the trigger's own
+	// source object identity.
+	InterveningIfEventPermanentWasNotPutByThisAbilitySource bool
+
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]

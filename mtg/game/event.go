@@ -322,6 +322,16 @@ type Event struct {
 	// entries; EnterWasCast distinguishes those cases.
 	EnterXValue int
 
+	// EnterPutByAbilitySource is the object identity of the ability source that
+	// put this permanent onto the battlefield from a choose-from-zone effect (the
+	// resolving ability's source permanent, CR 113.7). It is zero for a permanent
+	// that entered any other way — cast, token, or a put not tagged with an origin
+	// ability. It backs the "if it wasn't put onto the battlefield with this
+	// ability" enter-trigger intervening-if (Kodama of the East Tree): a trigger
+	// whose source object matches this value did the putting, so it must not
+	// re-fire, while any other source object still sees the entry.
+	EnterPutByAbilitySource id.ID
+
 	// CardTypes records the relevant card types at event time for spell-cast
 	// filters such as "noncreature spell" or "artifact spell"; cast triggers
 	// look at the spell as cast on the stack (CR 601.2, CR 603.2).

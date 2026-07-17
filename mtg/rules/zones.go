@@ -91,6 +91,12 @@ type permanentCreationOptions struct {
 	// permanent that did not enter from a cast spell (a token, a copy, a
 	// put-into-play effect).
 	ManaSpentToCast int
+	// PutByAbilitySource records the object identity of the ability source that
+	// put this permanent onto the battlefield from a choose-from-zone effect, so
+	// the entering event can carry it for the "if it wasn't put onto the
+	// battlefield with this ability" enter-trigger intervening-if (Kodama of the
+	// East Tree). It is zero for every entry that carries no origin ability.
+	PutByAbilitySource id.ID
 }
 
 // createCardPermanentFaceWithOptions puts a card onto the battlefield as a new
@@ -170,25 +176,26 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 	}
 	event := game.Event{
-		SourceID:               card.ID,
-		Controller:             controller,
-		Player:                 card.Owner,
-		CardID:                 card.ID,
-		Face:                   face,
-		KickerPaid:             options.KickerPaid,
-		Bargained:              options.Bargained,
-		OffspringPaid:          options.OffspringPaid,
-		EnterEvoked:            options.Evoked,
-		EnterDashed:            options.Dashed,
-		EnterWasCast:           options.WasCast,
-		EnterCastController:    options.CastController,
-		EnterHasCastController: options.HasCastController,
-		EnterCastFromZone:      options.CastFromZone,
-		EnterXValue:            castXValue,
-		PermanentID:            objectID,
-		FromZone:               fromZone,
-		ToZone:                 zone.Battlefield,
-		SimultaneousID:         options.SimultaneousID,
+		SourceID:                card.ID,
+		Controller:              controller,
+		Player:                  card.Owner,
+		CardID:                  card.ID,
+		Face:                    face,
+		KickerPaid:              options.KickerPaid,
+		Bargained:               options.Bargained,
+		OffspringPaid:           options.OffspringPaid,
+		EnterEvoked:             options.Evoked,
+		EnterDashed:             options.Dashed,
+		EnterWasCast:            options.WasCast,
+		EnterCastController:     options.CastController,
+		EnterHasCastController:  options.HasCastController,
+		EnterCastFromZone:       options.CastFromZone,
+		EnterXValue:             castXValue,
+		PermanentID:             objectID,
+		FromZone:                fromZone,
+		ToZone:                  zone.Battlefield,
+		SimultaneousID:          options.SimultaneousID,
+		EnterPutByAbilitySource: options.PutByAbilitySource,
 	}
 	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
@@ -289,25 +296,26 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 		}
 		event := game.Event{
-			SourceID:               entry.card.ID,
-			Controller:             entry.controller,
-			Player:                 entry.card.Owner,
-			CardID:                 entry.card.ID,
-			Face:                   permanent.Face,
-			KickerPaid:             entry.options.KickerPaid,
-			Bargained:              entry.options.Bargained,
-			OffspringPaid:          entry.options.OffspringPaid,
-			EnterEvoked:            entry.options.Evoked,
-			EnterDashed:            entry.options.Dashed,
-			EnterWasCast:           entry.options.WasCast,
-			EnterCastController:    entry.options.CastController,
-			EnterHasCastController: entry.options.HasCastController,
-			EnterCastFromZone:      entry.options.CastFromZone,
-			EnterXValue:            permanent.CastXValue,
-			PermanentID:            permanent.ObjectID,
-			FromZone:               entry.fromZone,
-			ToZone:                 zone.Battlefield,
-			SimultaneousID:         entry.options.SimultaneousID,
+			SourceID:                entry.card.ID,
+			Controller:              entry.controller,
+			Player:                  entry.card.Owner,
+			CardID:                  entry.card.ID,
+			Face:                    permanent.Face,
+			KickerPaid:              entry.options.KickerPaid,
+			Bargained:               entry.options.Bargained,
+			OffspringPaid:           entry.options.OffspringPaid,
+			EnterEvoked:             entry.options.Evoked,
+			EnterDashed:             entry.options.Dashed,
+			EnterWasCast:            entry.options.WasCast,
+			EnterCastController:     entry.options.CastController,
+			EnterHasCastController:  entry.options.HasCastController,
+			EnterCastFromZone:       entry.options.CastFromZone,
+			EnterXValue:             permanent.CastXValue,
+			PermanentID:             permanent.ObjectID,
+			FromZone:                entry.fromZone,
+			ToZone:                  zone.Battlefield,
+			SimultaneousID:          entry.options.SimultaneousID,
+			EnterPutByAbilitySource: entry.options.PutByAbilitySource,
 		}
 		event = emitZoneChangeEvent(g, event)
 		event.Kind = game.EventPermanentEnteredBattlefield

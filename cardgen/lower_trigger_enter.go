@@ -80,6 +80,7 @@ func lowerEnterTrigger(
 			InterveningIfEventPermanentWasCastFromControllerHand:            intervening.wasCastFromCtrlHand,
 			InterveningIfEventPermanentEnteredOrCastFromGraveyard:           intervening.enteredOrCastFromGY,
 			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: intervening.enteredOrCastFromCGY,
+			InterveningIfEventPermanentWasNotPutByThisAbilitySource:         intervening.notPutByThisAbility,
 		},
 		Optional: triggerOptional,
 		Content:  content,
@@ -350,6 +351,7 @@ type enterInterveningCondition struct {
 	wasCastFromCtrlHand  bool
 	enteredOrCastFromGY  bool
 	enteredOrCastFromCGY bool
+	notPutByThisAbility  bool
 }
 
 func lowerSelfInterveningCondition(
@@ -441,6 +443,8 @@ func lowerEnterInterveningCondition(trigger *compiler.CompiledTrigger) (enterInt
 		return enterInterveningCondition{enteredOrCastFromGY: true}, true
 	case compiler.ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard:
 		return enterInterveningCondition{enteredOrCastFromCGY: true}, true
+	case compiler.ConditionPredicateEventSubjectWasNotPutByThisAbility:
+		return enterInterveningCondition{notPutByThisAbility: true}, true
 	default:
 	}
 	lowered, ok := lowerCondition(*condition, conditionContextInterveningTrigger)
@@ -1019,6 +1023,7 @@ func permanentZoneChangeTriggeredAbility(
 			InterveningIfEventPermanentWasCastFromControllerHand:            intervening.wasCastFromCtrlHand,
 			InterveningIfEventPermanentEnteredOrCastFromGraveyard:           intervening.enteredOrCastFromGY,
 			InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: intervening.enteredOrCastFromCGY,
+			InterveningIfEventPermanentWasNotPutByThisAbilitySource:         intervening.notPutByThisAbility,
 		},
 		Optional: triggerOptional,
 		Content:  content,

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,161 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,162 of 32,502 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -8520,6 +8520,7 @@ Council4 currently supports **18,161 of 32,501 cards eligible for paper support 
 - Kobold Taskmaster
 - Kobolds of Kher Keep
 - Kobolds of Kher Keep
+- Kodama of the East Tree
 - Kodama of the North Tree
 - Kodama of the South Tree
 - Kodama of the West Tree

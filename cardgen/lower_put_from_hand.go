@@ -305,9 +305,22 @@ func lowerPutFromHandSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		effect.Amount.Value != 1 {
 		return game.AbilityContent{}, false
 	}
+	// The event-relative "≤" mana-value bound ("with equal or lesser mana value",
+	// Kodama of the East Tree) compares each hand card to the permanent that just
+	// entered. cardSelectionForSelector fails closed on it because a card-zone
+	// selection cannot compare to an event permanent; strip it from a selector
+	// copy so the base filter builds, then reapply it onto the resulting Selection
+	// here — the put-from-hand choice threads the triggering event to the runtime
+	// matcher — mirroring the graveyard-return target lowering's strip-then-model
+	// pattern.
+	manaValueLessOrEqualEventPermanent := selector.ManaValueLessOrEqualEventPermanent
+	selector.ManaValueLessOrEqualEventPermanent = false
 	selection, ok := cardSelectionForSelector(selector)
 	if !ok {
 		return game.AbilityContent{}, false
+	}
+	if manaValueLessOrEqualEventPermanent {
+		selection.ManaValueLessOrEqualEventPermanent = true
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.PutFromHandChoice(

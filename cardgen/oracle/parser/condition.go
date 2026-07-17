@@ -49,6 +49,7 @@ const (
 	ConditionPredicateEventSubjectWasCastFromControllerHand            ConditionPredicateKind = "ConditionPredicateEventSubjectWasCastFromControllerHand"
 	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard           ConditionPredicateKind = "ConditionPredicateEventSubjectEnteredOrCastFromGraveyard"
 	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard ConditionPredicateKind = "ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard"
+	ConditionPredicateEventSubjectWasNotPutByThisAbility               ConditionPredicateKind = "ConditionPredicateEventSubjectWasNotPutByThisAbility"
 	ConditionPredicateEventSubjectHadNoCounter                         ConditionPredicateKind = "ConditionPredicateEventSubjectHadNoCounter"
 	ConditionPredicateEventSubjectHadCounter                           ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounter"
 	ConditionPredicateEventSubjectHadCounters                          ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
@@ -1502,6 +1503,16 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	}
 	if tokenWordsEqual(body, "it", "was", "cast") {
 		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasCast}, true
+	}
+	if tokenWordsEqual(body, "it", "wasn't", "put", "onto", "the", "battlefield", "with", "this", "ability") {
+		// "if it wasn't put onto the battlefield with this ability" (Kodama of the
+		// East Tree) gates an enter trigger so the permanent an ability instance
+		// puts never re-fires that same instance, while a separate copy or Kodama —
+		// a different source object — still sees the entry. The negation is baked
+		// into the predicate (the positive "was put ... with this ability" form
+		// appears on no card), so no Negated flag is set; every other "put onto the
+		// battlefield" phrasing stays unrecognized and fails closed.
+		return ConditionClause{Predicate: ConditionPredicateEventSubjectWasNotPutByThisAbility}, true
 	}
 	if clause, ok := recognizeEnteredOrCastFromGraveyardCondition(body); ok {
 		return clause, true

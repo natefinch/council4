@@ -596,14 +596,18 @@ func lowerManaValueDynamicCountBound(amount compiler.CompiledAmount) (game.ManaV
 func cardSelectionForSelector(selector compiler.CompiledSelector) (game.Selection, bool) {
 	if selector.PowerLessThanSource || selector.PowerGreaterThanSource ||
 		selector.ManaValueLessThanEventPermanent ||
+		selector.ManaValueLessOrEqualEventPermanent ||
 		selectorHasCounterQualifier(selector) ||
 		selectorHasAttachmentQualifier(selector) {
 		// Source-relative power and battlefield-counter predicates apply only to
 		// permanents; a card-zone selection cannot honor them, so reject them
 		// rather than silently dropping the filter. The event-relative mana-value
-		// bound ("with lesser mana value") is likewise rejected here: only the
-		// graveyard-return target lowering, which threads the triggering event to
-		// the runtime, strips it before this call and reapplies it afterward.
+		// bounds ("with lesser mana value", "with equal or lesser mana value") are
+		// likewise rejected here: only a lowering that threads the triggering event
+		// to the runtime — the graveyard-return target ("<") or the put-from-hand
+		// choice ("≤") — strips the bound before this call and reapplies it
+		// afterward. Every other path fails closed rather than silently dropping
+		// the comparison.
 		return game.Selection{}, false
 	}
 	selection := game.Selection{

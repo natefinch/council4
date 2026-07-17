@@ -376,6 +376,18 @@ type Selection struct {
 	// nothing. Placed at the end so the bool joins no existing cluster's packing.
 	ManaValueLessThanEventPermanent bool
 
+	// ManaValueLessOrEqualEventPermanent requires the matched card's mana value
+	// to be less than or equal to the mana value of the triggering event's
+	// permanent — the permanent that entered ("you may put a permanent card with
+	// equal or lesser mana value from your hand onto the battlefield", Kodama of
+	// the East Tree). It is the ≤ counterpart of ManaValueLessThanEventPermanent:
+	// the bound reads the triggering event's permanent through last-known
+	// information (CR 608.2h), not the ability's source, and admits an equal mana
+	// value where the strict form does not. Outside a triggered resolution, or
+	// when the event names no permanent, the bound matches nothing. Placed at the
+	// end so the bool joins no existing cluster's packing.
+	ManaValueLessOrEqualEventPermanent bool
+
 	// ManaValueLessThanSourcePower requires the matched card's mana value to be
 	// strictly less than the predicate's source permanent's power ("Whenever an
 	// opponent casts a noncreature spell with mana value less than this creature's
@@ -479,6 +491,7 @@ func (s Selection) Empty() bool {
 		!s.ControlledByEventPlayer &&
 		!s.ControlledByDefendingPlayer &&
 		!s.ManaValueLessThanEventPermanent &&
+		!s.ManaValueLessOrEqualEventPermanent &&
 		!s.ManaValueLessThanSourcePower
 }
 

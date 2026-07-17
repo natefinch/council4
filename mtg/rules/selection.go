@@ -241,6 +241,16 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ManaValueLessOrEqualEventPermanent {
+		manaValue, ok := s.manaValue()
+		if !ok {
+			return false
+		}
+		bound, ok := s.eventPermanentManaValue()
+		if !ok || manaValue > bound {
+			return false
+		}
+	}
 	if sel.ManaValueLessThanSourcePower {
 		manaValue, ok := s.manaValue()
 		if !ok {
