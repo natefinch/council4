@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,092 of 32,502 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,100 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3574,6 +3574,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Death Frenzy
 - Death Grasp
 - Death in the Family
+- Death Kiss
 - Death Pulse
 - Death Rattle
 - Death Speakers
@@ -4661,6 +4662,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Ember Hauler
 - Ember Island Production
 - Ember Shot
+- Ember Swallower
 - Ember Weaver
 - Ember-Eye Wolf
 - Embercleave
@@ -7532,6 +7534,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Hyrax Tower Scout
 - Hysterical Blindness
 - Hystrodon
+- Hythonia the Cruel
 - Icatian Crier
 - Icatian Infantry
 - Icatian Javelineers
@@ -8186,6 +8189,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Kalastria Highborn
 - Kalastria Nightwatch
 - Kaleidostone
+- Kalemne's Captain
 - Kalonian Behemoth
 - Kalonian Hydra
 - Kalonian Tusker
@@ -8288,6 +8292,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Keeper of the Nine Gales
 - Keeper of Tresserhorn
 - Keepers of the Faith
+- Keepsake Gorgon
 - Kefnet's Monument
 - Kei Takahashi
 - Keiga, the Tide Star
@@ -13182,6 +13187,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Seal of Primordium
 - Seal of Removal
 - Seal of Strength
+- Sealock Monster
 - Seam Rip
 - Sear
 - Search for Dagger
@@ -14598,6 +14604,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Splinterfright
 - Split Up
 - Split-Tail Miko
+- Splitting Slime
 - Spoils of Adventure
 - Spontaneous Artist
 - Spontaneous Combustion
@@ -14888,6 +14895,7 @@ Council4 currently supports **18,092 of 32,502 cards eligible for paper support 
 - Stonehoof Chieftain
 - Stonehorn Chanter
 - Stonerise Spirit
+- Stoneshock Giant
 - Stoneskin
 - Stonewood Invocation
 - Stonewood Invoker

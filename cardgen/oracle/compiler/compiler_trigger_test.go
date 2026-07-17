@@ -867,3 +867,29 @@ func TestCompileOptionalTriggeredAbility(t *testing.T) {
 		t.Fatalf("optional ability = %#v", ability)
 	}
 }
+
+func TestCompileBecomesMonstrousEventXTargets(t *testing.T) {
+	t.Parallel()
+	compilation, diagnostics := compileSource(
+		"When this creature becomes monstrous, goad up to X target creatures your opponents control.",
+		pipelineContext{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Trigger == nil ||
+		ability.Trigger.Pattern.Event != TriggerEventPermanentBecameMonstrous ||
+		ability.Trigger.Pattern.Source != TriggerSourceSelf {
+		t.Fatalf("trigger = %#v", ability.Trigger)
+	}
+	if len(ability.Content.Targets) != 1 {
+		t.Fatalf("targets = %#v", ability.Content.Targets)
+	}
+	target := ability.Content.Targets[0]
+	if target.Cardinality != (TargetCardinality{Min: 0, Max: 99, MaxEventX: true}) ||
+		target.Selector.Kind != SelectorCreature ||
+		target.Selector.Controller != ControllerOpponent {
+		t.Fatalf("target = %#v", target)
+	}
+}

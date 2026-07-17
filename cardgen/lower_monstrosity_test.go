@@ -26,6 +26,7 @@ func TestLowerMonstrosityActivatedAbility(t *testing.T) {
 	if len(face.ActivatedAbilities) != 1 {
 		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
 	}
+
 	mode := face.ActivatedAbilities[0].Content.Modes[0]
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("instruction count = %d, want 1", len(mode.Sequence))
@@ -39,5 +40,32 @@ func TestLowerMonstrosityActivatedAbility(t *testing.T) {
 	}
 	if monstrosity.Amount != game.Fixed(3) {
 		t.Fatalf("monstrosity amount = %#v, want Fixed(3)", monstrosity.Amount)
+	}
+}
+
+func TestLowerVariableMonstrosityActivatedAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Variable Monster",
+		Layout:     "normal",
+		TypeLine:   "Creature — Test",
+		OracleText: "{X}{X}{R}: Monstrosity X.",
+		Power:      new("5"),
+		Toughness:  new("5"),
+	})
+	if len(face.ActivatedAbilities) != 1 {
+		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+	}
+	ability := face.ActivatedAbilities[0]
+	if !ability.ManaCost.Exists || ability.ManaCost.Val.String() != "{X}{X}{R}" {
+		t.Fatalf("mana cost = %#v, want {X}{X}{R}", ability.ManaCost)
+	}
+	monstrosity, ok := ability.Content.Modes[0].Sequence[0].Primitive.(game.Monstrosity)
+	if !ok {
+		t.Fatalf("primitive = %#v, want game.Monstrosity", ability.Content.Modes[0].Sequence[0].Primitive)
+	}
+	if !monstrosity.Amount.IsDynamic() ||
+		monstrosity.Amount.DynamicAmount().Val.Kind != game.DynamicAmountX {
+		t.Fatalf("monstrosity amount = %#v, want DynamicAmountX", monstrosity.Amount)
 	}
 }

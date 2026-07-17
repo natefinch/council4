@@ -81,6 +81,8 @@ func compileTriggerEventClause(clause *parser.TriggerEventClause) (TriggerPatter
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventPermanentTurnedFaceUp)
 	case parser.TriggerEventKindSacrificed:
 		ok = compileSacrificeEvent(clause, &pattern)
+	case parser.TriggerEventKindBecameMonstrous:
+		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventPermanentBecameMonstrous)
 	case parser.TriggerEventKindMutated:
 		ok = compilePermanentSubjectEvent(clause, &pattern, TriggerEventPermanentMutated)
 	case parser.TriggerEventKindBecameTarget:

@@ -588,6 +588,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventManaProduced", nil
 	case game.EventGotCityBlessing:
 		return "game.EventGotCityBlessing", nil
+	case game.EventPermanentBecameMonstrous:
+		return "game.EventPermanentBecameMonstrous", nil
 	default:
 		return "", fmt.Errorf("render: unsupported event kind %d", event)
 	}

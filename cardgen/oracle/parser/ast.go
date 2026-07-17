@@ -713,6 +713,7 @@ const (
 	TriggerEventKindBecomesUntapped  TriggerEventKind = "TriggerEventKindBecomesUntapped"
 	TriggerEventKindTurnedFaceUp     TriggerEventKind = "TriggerEventKindTurnedFaceUp"
 	TriggerEventKindSacrificed       TriggerEventKind = "TriggerEventKindSacrificed"
+	TriggerEventKindBecameMonstrous  TriggerEventKind = "TriggerEventKindBecameMonstrous"
 	TriggerEventKindMutated          TriggerEventKind = "TriggerEventKindMutated"
 	TriggerEventKindBecameTarget     TriggerEventKind = "TriggerEventKindBecameTarget"
 	TriggerEventKindTokenCreated     TriggerEventKind = "TriggerEventKindTokenCreated"

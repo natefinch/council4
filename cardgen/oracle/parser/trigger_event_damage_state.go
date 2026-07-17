@@ -586,6 +586,7 @@ func parsePermanentStateTriggerEventClause(
 	}{
 		{suffix: []string{"becomes", "tapped"}, kind: TriggerEventKindBecomesTapped, allowWhen: true},
 		{suffix: []string{"becomes", "untapped"}, kind: TriggerEventKindBecomesUntapped, allowWhen: true},
+		{suffix: []string{"becomes", "monstrous"}, kind: TriggerEventKindBecameMonstrous, allowWhen: true},
 		{suffix: []string{"is", "turned", "face", "up"}, kind: TriggerEventKindTurnedFaceUp, allowWhen: true},
 	} {
 		if intro != TriggerIntroductionWhenever && (intro != TriggerIntroductionWhen || !template.allowWhen) {

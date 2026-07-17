@@ -2711,6 +2711,20 @@ func lowerMonstrosityContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	effect := ctx.content.Effects[0]
+	if effect.Amount.VariableX &&
+		!effect.Negated &&
+		effect.Exact &&
+		effect.Context == parser.EffectContextController &&
+		!ctx.content.Unconsumed() &&
+		len(ctx.content.References) == 0 {
+		return game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Monstrosity{
+				Object: game.SourcePermanentReference(),
+				Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}),
+			},
+		}}}.Ability(), nil
+	}
 	return lowerExactPrimitiveSpell(
 		ctx,
 		syntax,

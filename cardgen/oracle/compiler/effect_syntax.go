@@ -77,8 +77,9 @@ func compileTypedTargetList(syntaxes []parser.TargetSyntax) []CompiledTarget {
 			ChoiceSpan: syntax.ChoiceSpan,
 			Text:       syntax.Text,
 			Cardinality: TargetCardinality{
-				Min: syntax.Cardinality.Min,
-				Max: syntax.Cardinality.Max,
+				Min:       syntax.Cardinality.Min,
+				Max:       syntax.Cardinality.Max,
+				MaxEventX: syntax.Cardinality.MaxEventX,
 			},
 			Selector:          compileTypedSelection(syntax.Selection),
 			Exact:             syntax.Exact,

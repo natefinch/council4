@@ -1485,8 +1485,9 @@ type CompiledCondition struct {
 
 // TargetCardinality is an inclusive target count range.
 type TargetCardinality struct {
-	Min int
-	Max int
+	Min       int
+	Max       int
+	MaxEventX bool
 }
 
 // CompiledTarget is one occurrence of the word "target" and its local noun

@@ -30,12 +30,65 @@ func TestApplyActionCastXSpellPaysChosenX(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 2, nil)) {
 		t.Fatal("applyAction(cast X=2) = false, want true")
 	}
+
 	obj, ok := g.Stack.Peek()
 	if !ok {
 		t.Fatal("stack is empty after casting X spell")
 	}
 	if obj.XValue != 2 {
 		t.Fatalf("stack X value = %d, want 2", obj.XValue)
+	}
+}
+
+func TestActivateDoubleXCostPaysTwiceAndPreservesX(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		x         int
+		landCount int
+		wantLegal bool
+	}{
+		{name: "zero", x: 0, landCount: 1, wantLegal: true},
+		{name: "positive", x: 2, landCount: 5, wantLegal: true},
+		{name: "insufficient", x: 3, landCount: 6, wantLegal: false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
+				ManaCost: opt.Val(cost.Mana{cost.X, cost.X, cost.R}),
+				Content: game.Mode{Sequence: []game.Instruction{{
+					Primitive: game.Monstrosity{
+						Object: game.SourcePermanentReference(),
+						Amount: game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}),
+					},
+				}}}.Ability(),
+			}))
+			addBasicLandPermanent(g, game.Player1, types.Mountain)
+			for range test.landCount - 1 {
+				addBasicLandPermanent(g, game.Player1, types.Forest)
+			}
+			g.Turn.Phase = game.PhasePrecombatMain
+			g.Turn.Step = game.StepNone
+
+			act := action.ActivateAbility(source.ObjectID, 0, nil, test.x)
+			legal := containsAction(engine.legalActions(g, game.Player1), act)
+			if legal != test.wantLegal {
+				t.Fatalf("X=%d legal=%v, want %v", test.x, legal, test.wantLegal)
+			}
+			if !test.wantLegal {
+				if engine.applyAction(g, game.Player1, act) {
+					t.Fatal("insufficient double-X activation succeeded")
+				}
+				return
+			}
+			if !engine.applyAction(g, game.Player1, act) {
+				t.Fatal("payable double-X activation failed")
+			}
+			obj, ok := g.Stack.Peek()
+			if !ok || obj.XValue != test.x {
+				t.Fatalf("stack object = %#v, want X=%d", obj, test.x)
+			}
+		})
 	}
 }
 

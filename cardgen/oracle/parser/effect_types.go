@@ -1954,8 +1954,9 @@ type SpellTargetRestriction struct {
 
 // TargetCardinalitySyntax is an inclusive target-count range.
 type TargetCardinalitySyntax struct {
-	Min int `json:",omitempty"`
-	Max int `json:",omitempty"`
+	Min       int  `json:",omitempty"`
+	Max       int  `json:",omitempty"`
+	MaxEventX bool `json:",omitempty"`
 }
 
 // TargetSyntax is one typed target production.

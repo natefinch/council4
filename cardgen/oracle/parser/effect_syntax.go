@@ -3848,6 +3848,19 @@ func recognizeGoadThatPlayerControlsSentence(sentence *Sentence) {
 		return
 	}
 	target := effect.Targets[0]
+	if strings.EqualFold(target.Text, "up to X target creatures your opponents control") {
+		if effect.VerbSpan.Start.Offset != effect.ClauseSpan.Start.Offset ||
+			target.Cardinality != (TargetCardinalitySyntax{Min: 0, Max: 99, MaxEventX: true}) ||
+			target.Selection.Kind != SelectionCreature ||
+			target.Selection.Controller != SelectionControllerOpponent {
+			return
+		}
+		target.Exact = true
+		sentence.Targets[0] = target
+		effect.Targets[0] = target
+		effect.Exact = exactEffectSyntax(effect)
+		return
+	}
 	if !strings.EqualFold(target.Text, "target creature that player controls") {
 		return
 	}
