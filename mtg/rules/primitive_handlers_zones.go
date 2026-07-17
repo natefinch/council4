@@ -2234,12 +2234,34 @@ func playerHandSize(g *game.Game, playerID game.PlayerID) int {
 	return player.Hand.Size()
 }
 
-// handleRepeatProcess resolves a "Repeat the following process X times. <body>"
-// loop (Torment of Hailfire): it evaluates the repeat count and re-resolves the
-// body content that many times. The body is re-resolved from scratch on each
-// iteration so any per-player or random choices it makes recur independently.
+const maxConditionalRepeatIterations = 10000
+
+// handleRepeatProcess resolves bounded and result-driven processes. A
+// ContinueResult process executes at least once and repeats only while the body
+// freshly publishes a successful result under that key. Clearing the key before
+// each iteration prevents a skipped payoff from inheriting the prior iteration's
+// success, and the hard ceiling protects the engine from malformed non-progressing
+// bodies.
 func handleRepeatProcess(r *effectResolver, prim game.RepeatProcess) effectResolved {
 	res := effectResolved{accepted: true}
+	if prim.ContinueResult != "" {
+		for range maxConditionalRepeatIterations {
+			controller, ok := playerByID(r.game, r.obj.Controller)
+			if !ok || controller.Eliminated {
+				break
+			}
+			if r.obj.ResolutionResults != nil {
+				delete(r.obj.ResolutionResults, string(prim.ContinueResult))
+			}
+			r.engine.resolveAbilityContentWithChoices(r.game, r.obj, prim.Body, r.agents, r.log)
+			res.succeeded = true
+			result, ok := r.obj.ResolutionResults[string(prim.ContinueResult)]
+			if !ok || !result.Succeeded {
+				break
+			}
+		}
+		return res
+	}
 	times := r.quantity(prim.Times)
 	for range times {
 		r.engine.resolveAbilityContentWithChoices(r.game, r.obj, prim.Body, r.agents, r.log)

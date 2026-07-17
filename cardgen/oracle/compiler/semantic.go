@@ -3610,6 +3610,10 @@ type CompiledEffect struct {
 	// times. <body>" loop (EffectRepeatProcess). Lowering lowers it to a nested
 	// AbilityContent executed Amount times; it is nil for every other effect.
 	RepeatBody []CompiledEffect
+	// RepeatUntilFailure mirrors the parser's open-ended optional process marker.
+	// The nested body repeats while its final result-publishing instruction
+	// succeeds.
+	RepeatUntilFailure bool
 	// ReturnAsEnchantment mirrors the parser flag for a return-to-battlefield
 	// effect carrying an "It's an enchantment." rider (the Enduring cycle): the
 	// returned permanent enters as an Enchantment, losing its creature type.

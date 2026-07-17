@@ -6,10 +6,13 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
-// recognizeRepeatProcessSequence folds either a leading "Repeat the following
-// process <count> times. <body>" sequence or a trailing "<process>. Repeat this
-// process once." sequence into one EffectRepeatProcess.
+// recognizeRepeatProcessSequence folds bounded repeat wording and the open-ended
+// optional process "<action>. If you do, <payoff> and repeat this process." into
+// one EffectRepeatProcess.
 func recognizeRepeatProcessSequence(sentences []Sentence, atoms Atoms) bool {
+	if recognizeRepeatUntilFailureSequence(sentences, atoms) {
+		return true
+	}
 	if recognizeTrailingRepeatProcessSequence(sentences, atoms) {
 		return true
 	}
@@ -48,6 +51,78 @@ func recognizeRepeatProcessSequence(sentences []Sentence, atoms Atoms) bool {
 		Exact:      true,
 	}}
 	return true
+}
+
+// recognizeRepeatUntilFailureSequence recognizes the composable resolving shape
+// "<optional action>. If you do, <payoff> and repeat this process." The leading
+// action and payoff are parsed through the ordinary effect grammar, preserving
+// their typed optionality, selectors, zones, and entry riders. The wrapper merely
+// records that the resulting body is open-ended; compiler and lowering do not
+// inspect Oracle text.
+func recognizeRepeatUntilFailureSequence(sentences []Sentence, atoms Atoms) bool {
+	if len(sentences) != 2 || len(sentences[0].Effects) != 0 {
+		return false
+	}
+	firstTokens := semanticEffectTokens(sentences[0].Tokens)
+	firstTargets := parseTargets(firstTokens, atoms)
+	firstEffects := parseEffects(sentences[0], firstTokens, atoms)
+	if len(firstTargets) != 0 || len(firstEffects) != 1 || !firstEffects[0].Optional {
+		return false
+	}
+
+	secondTokens := semanticEffectTokens(sentences[1].Tokens)
+	payoffTokens, ok := cutRepeatThisProcessSuffix(secondTokens)
+	if !ok || !leadingIfYouDo(payoffTokens) {
+		return false
+	}
+	payoffTokens = stripLeadingIfYouDoClause(payoffTokens)
+	payoffTargets := parseTargets(payoffTokens, atoms)
+	payoffEffects := parseEffects(sentences[1], payoffTokens, atoms)
+	if len(payoffTargets) != 0 || len(payoffEffects) == 0 {
+		return false
+	}
+
+	body := make([]EffectSyntax, 0, len(firstEffects)+len(payoffEffects))
+	body = append(body, firstEffects...)
+	body = append(body, payoffEffects...)
+	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
+	for i := range sentences {
+		sentences[i].Effects = nil
+		sentences[i].Targets = nil
+	}
+	sentences[0].Effects = []EffectSyntax{{
+		Kind:               EffectRepeatProcess,
+		Context:            EffectContextController,
+		Span:               span,
+		ClauseSpan:         span,
+		Text:               joinSentenceText(sentences),
+		Tokens:             joinSentenceTokens(sentences),
+		RepeatBody:         body,
+		RepeatUntilFailure: true,
+		Exact:              true,
+	}}
+	return true
+}
+
+func leadingIfYouDo(tokens []shared.Token) bool {
+	return len(tokens) >= 4 &&
+		effectWordsAt(tokens, 0, "if", "you", "do") &&
+		tokens[3].Kind == shared.Comma
+}
+
+func cutRepeatThisProcessSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+	if len(tokens) < 5 {
+		return nil, false
+	}
+	end := len(tokens)
+	if tokens[end-1].Kind == shared.Period {
+		end--
+	}
+	if end < 4 ||
+		!effectWordsAt(tokens, end-4, "and", "repeat", "this", "process") {
+		return nil, false
+	}
+	return tokens[:end-4], true
 }
 
 // recognizeTrailingRepeatProcessSequence folds "<process>. Repeat this process

@@ -670,8 +670,12 @@ func prepareTriggerBody(
 	// flags the first effect Optional); either way the body is the same
 	// optional-flow sequence, so detection keys on an optional resolving effect
 	// rather than on the ability-level flag.
+	repeatedOptionalSequence := len(ability.Content.Effects) == 1 &&
+		ability.Content.Effects[0].Kind == compiler.EffectRepeatProcess &&
+		ability.Content.Effects[0].RepeatUntilFailure
 	optionalSequence := !hasInterveningCondition &&
-		len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)
+		((len(ability.Content.Effects) > 1 && hasOptionalResolvingEffect(ability.Content.Effects)) ||
+			repeatedOptionalSequence)
 	// The same optional-flow sequence may also appear behind an intervening "if"
 	// condition ("Whenever X, if CONDITION, you may Y. If you do, Z."). The
 	// intervening condition is removed from the body (it gates the trigger, not
@@ -830,7 +834,13 @@ func prepareTriggerBody(
 	bodySyntax.Kind = parser.AbilitySpell
 	bodySyntax.Tokens = bodyTokens
 	if ability.Optional {
-		if len(ability.Content.Effects) != 1 {
+		switch {
+		case repeatedOptionalSequence:
+			// The repeat wrapper contains the optional action and its gated
+			// payoff. The trigger itself is mandatory; nested lowering supplies
+			// the per-iteration choice.
+			triggerOptional = false
+		case len(ability.Content.Effects) != 1:
 			if !optionalUntapRemoveFromCombatBody(ability.Content) {
 				// A multi-effect optional body ("you may X. If you do, Y") keeps
 				// its resolving optionality inside the body so the shared content
@@ -845,7 +855,7 @@ func prepareTriggerBody(
 			}
 			// Otherwise the single "you may" governs both coordinated effects:
 			// keep the trigger optional and lower two mandatory instructions.
-		} else {
+		default:
 			effect := body.Content.Effects[0]
 			switch {
 			case hasInterveningCondition:

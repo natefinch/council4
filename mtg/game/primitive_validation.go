@@ -2323,13 +2323,34 @@ func (p PunisherEachLoseLife) validatePrimitive(targets []TargetSpec, checkTarge
 }
 
 func (p RepeatProcess) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateQuantity(p.Times, targets, checkTargets); err != nil {
-		return err
+	if p.ContinueResult == "" {
+		if err := validateQuantity(p.Times, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.Times.IsDynamic() || p.Times.Value() != 0 {
+		return errors.New("conditional RepeatProcess cannot also set Times")
 	}
 	if len(p.Body.Modes) == 0 {
 		return errors.New("RepeatProcess requires a body")
 	}
-	return validateNestedAbilityContent(p.Body, nil, targets, checkTargets, nil)
+	if err := validateNestedAbilityContent(p.Body, nil, targets, checkTargets, nil); err != nil {
+		return err
+	}
+	if p.ContinueResult != "" && !abilityContentPublishesResult(p.Body, p.ContinueResult) {
+		return errors.New("conditional RepeatProcess body must publish ContinueResult")
+	}
+	return nil
+}
+
+func abilityContentPublishesResult(content AbilityContent, key ResultKey) bool {
+	for i := range content.Modes {
+		for j := range content.Modes[i].Sequence {
+			if content.Modes[i].Sequence[j].PublishResult == key {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
