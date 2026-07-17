@@ -12,7 +12,6 @@ var Cards = []cardset.Entry{
 	{Name: "Ultra Magnus, Tactician", New: UltraMagnusTactician},
 	{Name: "Ultros, Obnoxious Octopus", New: UltrosObnoxiousOctopus},
 	{Name: "Umezawa's Jitte", New: UmezawaSJitte},
-	{Name: "Unassuming Sage", New: UnassumingSage},
 	{Name: "Uncovered Clues", New: UncoveredClues},
 	{Name: "Undercity Informer", New: UndercityInformer},
 	{Name: "Undercity's Embrace", New: UndercitySEmbrace},

@@ -73,7 +73,6 @@ var Cards = []cardset.Entry{
 	{Name: "Devilish Valet", New: DevilishValet},
 	{Name: "Diamond City", New: DiamondCity},
 	{Name: "Didact Echo", New: DidactEcho},
-	{Name: "Diminisher Witch", New: DiminisherWitch},
 	{Name: "Dimir House Guard", New: DimirHouseGuard},
 	{Name: "Dimir Infiltrator", New: DimirInfiltrator},
 	{Name: "Dingus Egg", New: DingusEgg},

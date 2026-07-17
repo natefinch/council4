@@ -150,5 +150,4 @@ var Cards = []cardset.Entry{
 	{Name: "Gustrider Exuberant", New: GustriderExuberant},
 	{Name: "Gwaihir, Greatest of the Eagles", New: GwaihirGreatestOfTheEagles},
 	{Name: "Gwendlyn Di Corci", New: GwendlynDiCorci},
-	{Name: "Gylwain, Casting Director", New: GylwainCastingDirector},
 }

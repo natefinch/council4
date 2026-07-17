@@ -61,7 +61,6 @@ var Cards = []cardset.Entry{
 	{Name: "Bereavement", New: Bereavement},
 	{Name: "Beseech the Mirror", New: BeseechTheMirror},
 	{Name: "Beseech the Queen", New: BeseechTheQueen},
-	{Name: "Besotted Knight", New: BesottedKnight},
 	{Name: "Betrayal at the Vault", New: BetrayalAtTheVault},
 	{Name: "Bilbo, Birthday Celebrant", New: BilboBirthdayCelebrant},
 	{Name: "Bilbo, Retired Burglar", New: BilboRetiredBurglar},

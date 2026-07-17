@@ -42,7 +42,6 @@ var Cards = []cardset.Entry{
 	{Name: "Femeref Healer", New: FemerefHealer},
 	{Name: "Feral Deathgorger", New: FeralDeathgorger},
 	{Name: "Feral Thallid", New: FeralThallid},
-	{Name: "Ferocious Werefox", New: FerociousWerefox},
 	{Name: "Feroz's Ban", New: FerozSBan},
 	{Name: "Field Research", New: FieldResearch},
 	{Name: "Field Surgeon", New: FieldSurgeon},

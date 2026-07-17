@@ -5,15 +5,249 @@ import (
 	"slices"
 	"testing"
 
-	cardc "github.com/natefinch/council4/mtg/cards/c"
-	carde "github.com/natefinch/council4/mtg/cards/e"
-	cardg "github.com/natefinch/council4/mtg/cards/g"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
+
+func testRoleDef(name, oracleText string, abilities ...game.StaticAbility) *game.CardDef {
+	staticAbilities := []game.StaticAbility{game.EnchantStaticAbility(&game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: "creature",
+		Allow:      game.TargetAllowPermanent,
+		Selection: opt.Val(game.Selection{
+			RequiredTypesAny: []types.Card{types.Creature},
+		}),
+	})}
+	staticAbilities = append(staticAbilities, abilities...)
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:            name,
+		Types:           []types.Card{types.Enchantment},
+		Subtypes:        []types.Sub{types.Aura, types.Role},
+		StaticAbilities: staticAbilities,
+		OracleText:      oracleText,
+	}}
+}
+
+func testAttachedRoleAbility(effects ...game.ContinuousEffect) game.StaticAbility {
+	for i := range effects {
+		effects[i].Group = game.AttachedObjectGroup(game.SourcePermanentReference())
+	}
+	return game.StaticAbility{ContinuousEffects: effects}
+}
+
+func cursedRoleDef() *game.CardDef {
+	return testRoleDef(
+		"Cursed Role",
+		"Enchant creature\nEnchanted creature has base power and toughness 1/1.",
+		testAttachedRoleAbility(game.ContinuousEffect{
+			Layer:        game.LayerPowerToughnessSet,
+			SetPower:     opt.Val(game.PT{Value: 1}),
+			SetToughness: opt.Val(game.PT{Value: 1}),
+		}),
+	)
+}
+
+func monsterRoleDef() *game.CardDef {
+	return testRoleDef(
+		"Monster Role",
+		"Enchant creature\nEnchanted creature gets +1/+1 and has trample.",
+		testAttachedRoleAbility(
+			game.ContinuousEffect{
+				Layer:       game.LayerAbility,
+				AddKeywords: []game.Keyword{game.Trample},
+			},
+			game.ContinuousEffect{
+				Layer:          game.LayerPowerToughnessModify,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+			},
+		),
+	)
+}
+
+func royalRoleDef() *game.CardDef {
+	ward := game.WardStaticAbility(cost.Mana{cost.O(1)})
+	return testRoleDef(
+		"Royal Role",
+		"Enchant creature\nEnchanted creature gets +1/+1 and has ward {1}.\n(Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {1}.)",
+		testAttachedRoleAbility(
+			game.ContinuousEffect{
+				Layer:        game.LayerAbility,
+				AddAbilities: []game.Ability{&ward},
+			},
+			game.ContinuousEffect{
+				Layer:          game.LayerPowerToughnessModify,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+			},
+		),
+	)
+}
+
+func sorcererRoleDef() *game.CardDef {
+	granted := &game.TriggeredAbility{
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:  game.EventAttackerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+		},
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Scry{
+				Amount: game.Fixed(1),
+				Player: game.ControllerReference(),
+			},
+		}}}.Ability(),
+	}
+	return testRoleDef(
+		"Sorcerer Role",
+		"Enchant creature\nEnchanted creature gets +1/+1 and has \"Whenever this creature attacks, scry 1.\"",
+		testAttachedRoleAbility(
+			game.ContinuousEffect{
+				Layer:        game.LayerAbility,
+				AddAbilities: []game.Ability{granted},
+			},
+			game.ContinuousEffect{
+				Layer:          game.LayerPowerToughnessModify,
+				PowerDelta:     1,
+				ToughnessDelta: 1,
+			},
+		),
+	)
+}
+
+func wickedRoleDef() *game.CardDef {
+	def := testRoleDef(
+		"Wicked Role",
+		"Enchant creature\nEnchanted creature gets +1/+1.\nWhen this Aura is put into a graveyard from the battlefield, each opponent loses 1 life.",
+		testAttachedRoleAbility(game.ContinuousEffect{
+			Layer:          game.LayerPowerToughnessModify,
+			PowerDelta:     1,
+			ToughnessDelta: 1,
+		}),
+	)
+	def.TriggeredAbilities = []game.TriggeredAbility{{
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhen,
+			Pattern: game.TriggerPattern{
+				Event:         game.EventZoneChanged,
+				Source:        game.TriggerSourceSelf,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+				MatchToZone:   true,
+				ToZone:        zone.Graveyard,
+			},
+		},
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.LoseLife{
+				Amount:      game.Fixed(1),
+				PlayerGroup: game.OpponentsReference(),
+			},
+		}}}.Ability(),
+	}}
+	return def
+}
+
+func youngHeroRoleDef() *game.CardDef {
+	granted := &game.TriggeredAbility{
+		Trigger: game.TriggerCondition{
+			Type: game.TriggerWhenever,
+			Pattern: game.TriggerPattern{
+				Event:  game.EventAttackerDeclared,
+				Source: game.TriggerSourceSelf,
+			},
+			InterveningIf: "if its toughness is 3 or less",
+			InterveningCondition: opt.Val(game.Condition{
+				Object: opt.Val(game.EventPermanentReference()),
+				ObjectMatches: opt.Val(game.Selection{
+					Toughness: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 3}),
+				}),
+			}),
+		},
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.AddCounter{
+				Amount:      game.Fixed(1),
+				Object:      game.EventPermanentReference(),
+				CounterKind: counter.PlusOnePlusOne,
+			},
+		}}}.Ability(),
+	}
+	return testRoleDef(
+		"Young Hero Role",
+		"Enchant creature\nEnchanted creature has \"Whenever this creature attacks, if its toughness is 3 or less, put a +1/+1 counter on it.\"",
+		testAttachedRoleAbility(game.ContinuousEffect{
+			Layer:        game.LayerAbility,
+			AddAbilities: []game.Ability{granted},
+		}),
+	)
+}
+
+func gylwainTestDef() *game.CardDef {
+	roles := []*game.CardDef{royalRoleDef(), sorcererRoleDef(), monsterRoleDef()}
+	modeText := []string{
+		"Create a Royal Role token attached to that creature.",
+		"Create a Sorcerer Role token attached to that creature.",
+		"Create a Monster Role token attached to that creature.",
+	}
+	modes := make([]game.Mode, len(roles))
+	for i, role := range roles {
+		modes[i] = game.Mode{
+			Text: modeText[i],
+			Sequence: []game.Instruction{{
+				Primitive: game.CreateToken{
+					Amount:          game.Fixed(1),
+					Source:          game.TokenDef(role),
+					EntryAttachedTo: opt.Val(game.EventPermanentReference()),
+				},
+			}},
+		}
+	}
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White, color.Green),
+		CardFace: game.CardFace{
+			Name:       "Gylwain, Casting Director",
+			ManaCost:   opt.Val(cost.Mana{cost.O(1), cost.G, cost.W}),
+			Colors:     []color.Color{color.Green, color.White},
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.Human, types.Bard},
+			Power:      opt.Val(game.PT{Value: 2}),
+			Toughness:  opt.Val(game.PT{Value: 3}),
+			TriggeredAbilities: []game.TriggeredAbility{{
+				Trigger: game.TriggerCondition{
+					Type: game.TriggerWhenever,
+					Pattern: game.TriggerPattern{
+						Event:                  game.EventPermanentEnteredBattlefield,
+						Controller:             game.TriggerControllerYou,
+						SubjectSelectionOrSelf: true,
+						SubjectSelection: game.Selection{
+							RequiredTypes: []types.Card{types.Creature},
+							NonToken:      true,
+						},
+					},
+				},
+				Content: game.AbilityContent{
+					Modes:    modes,
+					MinModes: 1,
+					MaxModes: 1,
+				},
+			}},
+			OracleText: "Whenever Gylwain or another nontoken creature you control enters, choose one —\n" +
+				"• Create a Royal Role token attached to that creature.\n" +
+				"• Create a Sorcerer Role token attached to that creature.\n" +
+				"• Create a Monster Role token attached to that creature.",
+		},
+	}
+}
 
 func roleTokenFromInstruction(t *testing.T, instruction game.Instruction) *game.CardDef {
 	t.Helper()
@@ -30,26 +264,8 @@ func roleTokenFromInstruction(t *testing.T, instruction game.Instruction) *game.
 
 func gylwainRoleDef(t *testing.T, mode int) *game.CardDef {
 	t.Helper()
-	def := cardg.GylwainCastingDirector()
+	def := gylwainTestDef()
 	return roleTokenFromInstruction(t, def.TriggeredAbilities[0].Content.Modes[mode].Sequence[0])
-}
-
-func cursedRoleDef(t *testing.T) *game.CardDef {
-	t.Helper()
-	def := cardc.CursedCourtier()
-	return roleTokenFromInstruction(t, def.TriggeredAbilities[0].Content.Modes[0].Sequence[0])
-}
-
-func wickedRoleDef(t *testing.T) *game.CardDef {
-	t.Helper()
-	def := cardc.CharmingScoundrel()
-	return roleTokenFromInstruction(t, def.TriggeredAbilities[0].Content.Modes[2].Sequence[0])
-}
-
-func youngHeroRoleDef(t *testing.T) *game.CardDef {
-	t.Helper()
-	def := carde.EmberethVeteran()
-	return roleTokenFromInstruction(t, def.ActivatedAbilities[0].Content.Modes[0].Sequence[0])
 }
 
 func roleAttachedTo(g *game.Game, target *game.Permanent) *game.Permanent {
@@ -77,7 +293,7 @@ func TestGylwainCreatesEachRoleForEventPermanentWithTriggerController(t *testing
 		t.Run(wantName, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
-			gylwain := addCombatPermanent(g, game.Player1, cardg.GylwainCastingDirector())
+			gylwain := addCombatPermanent(g, game.Player1, gylwainTestDef())
 			entering := addRoleTestCreature(g, game.Player1, "Entering Creature")
 			emitGylwainEntry(g, entering, game.Player1, 0)
 			agents := [game.NumPlayers]PlayerAgent{
@@ -110,7 +326,7 @@ func TestGylwainCreatesEachRoleForEventPermanentWithTriggerController(t *testing
 func TestGylwainEntryQualifiers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	gylwain := addCombatPermanent(g, game.Player1, cardg.GylwainCastingDirector())
+	gylwain := addCombatPermanent(g, game.Player1, gylwainTestDef())
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {1}}},
 	}
@@ -158,7 +374,7 @@ func TestGylwainEntryQualifiers(t *testing.T) {
 func TestGylwainSimultaneousEntriesKeepEventAttachmentsDistinct(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardg.GylwainCastingDirector())
+	addCombatPermanent(g, game.Player1, gylwainTestDef())
 	first := addRoleTestCreature(g, game.Player1, "First")
 	second := addRoleTestCreature(g, game.Player1, "Second")
 	batch := g.IDGen.Next()
@@ -188,7 +404,7 @@ func TestGylwainSimultaneousEntriesKeepEventAttachmentsDistinct(t *testing.T) {
 func TestGylwainDoesNotCreateRoleWhenEventPermanentLeft(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardg.GylwainCastingDirector())
+	addCombatPermanent(g, game.Player1, gylwainTestDef())
 	entering := addRoleTestCreature(g, game.Player1, "Departing Creature")
 	emitGylwainEntry(g, entering, game.Player1, 0)
 	agents := [game.NumPlayers]PlayerAgent{
@@ -225,7 +441,7 @@ func randomGylwainRoleSequence(t *testing.T, seed uint64) []string {
 	t.Helper()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardg.GylwainCastingDirector())
+	addCombatPermanent(g, game.Player1, gylwainTestDef())
 	agent := &seededGylwainAgent{rng: rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15))}
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
 	var names []string
@@ -262,7 +478,7 @@ func TestRoleDefinitionsApplyStaticAndGrantedAbilities(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 
 	cursedTarget := addCombatPermanent(g, game.Player1, vanillaCreature("Cursed Target", 4, 5))
-	cursed, _ := createTokenPermanent(g, game.Player1, cursedRoleDef(t))
+	cursed, _ := createTokenPermanent(g, game.Player1, cursedRoleDef())
 	attachPermanent(g, cursed, cursedTarget)
 	if power, toughness := effectivePower(g, cursedTarget), roleEffectiveToughness(t, g, cursedTarget); power != 1 || toughness != 1 {
 		t.Fatalf("Cursed target = %d/%d, want 1/1", power, toughness)
@@ -330,7 +546,7 @@ func TestSorcererAndYoungHeroRolesGrantAttackTriggers(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		attacker := addCombatPermanent(g, game.Player1, vanillaCreature("Young Hero", 2, 3))
-		role, _ := createTokenPermanent(g, game.Player1, youngHeroRoleDef(t))
+		role, _ := createTokenPermanent(g, game.Player1, youngHeroRoleDef())
 		attachPermanent(g, role, attacker)
 		attack := func() bool {
 			emitEvent(g, game.Event{
@@ -357,7 +573,7 @@ func TestWickedRoleUsesControllerAtDeathAgainstAllOpponents(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	target := addRoleTestCreature(g, game.Player1, "Wicked Target")
-	role, _ := createTokenPermanent(g, game.Player1, wickedRoleDef(t))
+	role, _ := createTokenPermanent(g, game.Player1, wickedRoleDef())
 	attachPermanent(g, role, target)
 	if power, toughness := effectivePower(g, target), roleEffectiveToughness(t, g, target); power != 3 || toughness != 3 {
 		t.Fatalf("Wicked target = %d/%d, want 3/3", power, toughness)

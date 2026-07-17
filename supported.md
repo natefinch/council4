@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,128 of 32,502 cards eligible for paper support (55.8%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,150 of 32,501 cards eligible for paper support (55.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1370,6 +1370,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Beseech the Mirror
 - Beseech the Queen
 - Beskir Shieldmate
+- Besotted Knight // Betroth the Beast
 - Bespoke Bō
 - Bessie, the Doctor's Roadster
 - Bestial Bloodline
@@ -2549,8 +2550,10 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Charismatic Vanguard
 - Charity Extractor
 - Charix, the Raging Isle
+- Charmed Clothier
 - Charmed Sleep
 - Charmed Stray
+- Charming Scoundrel
 - Charnelhoard Wurm
 - Chartooth Cougar
 - Chase Inspiration
@@ -2916,6 +2919,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Compy Swarm
 - Concealed Courtyard
 - Concealed Weapon
+- Conceited Witch // Price of Beauty
 - Concentrate
 - Concentrated Fire
 - Conciliator's Duelist
@@ -3341,6 +3345,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Curse of Wizardry
 - Cursebreak
 - Cursecatcher
+- Cursed Courtier
 - Cursed Flesh
 - Cursed Land
 - Cursed Minotaur
@@ -3856,6 +3861,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Diligent Excavator
 - Dimension X
 - Diminish
+- Diminisher Witch
 - Dimir Aqueduct
 - Dimir Cluestone
 - Dimir Cutpurse
@@ -4677,6 +4683,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Embercleave
 - Embereth Paladin
 - Embereth Shieldbreaker // Battle Display
+- Embereth Veteran
 - Emberheart Challenger
 - Embermage Goblin
 - Embermaw Hellion
@@ -5267,6 +5274,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Feral Thallid
 - Ferocious Charge
 - Ferocious Pup
+- Ferocious Werefox // Guard Change
 - Ferocious Zheng
 - Ferocity
 - Feroz's Ban
@@ -6873,6 +6881,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Gwendlyn Di Corci
 - Gwenom, Remorseless
 - Gwyllion Hedge-Mage
+- Gylwain, Casting Director
 - Gyre Engineer
 - Gyre Sage
 - H.E.R.B.I.E. Scout Unit
@@ -9633,6 +9642,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Merrow Skyswimmer
 - Merrow Wavebreakers
 - Merrow Witsniper
+- Merry Bards
 - Merry, Warden of Isengard
 - Mesa Cavalier
 - Mesa Enchantress
@@ -9975,6 +9985,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Monstrify
 - Monstrous Carabid
 - Monstrous Growth
+- Monstrous Rage
 - Monumental Henge
 - Moogle
 - Moon Heron
@@ -11304,6 +11315,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Pious Interdiction
 - Pious Warrior
 - Pious Wayfarer
+- Pip-Boy 3000
 - Piper of the Swarm
 - Pippin's Bravery
 - Pippin, Warden of Isengard
@@ -12169,6 +12181,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Redirect Lightning
 - Rediscover the Way
 - Redrock Sentinel
+- Redtooth Genealogist
 - Redtooth Vanguard
 - Reduce in Stature
 - Reduce to Ashes
@@ -12348,6 +12361,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Return to Nature
 - Return to the Earth
 - Return to the Ranks
+- Return Triumphant
 - Return Upon the Tide
 - Returned Centaur
 - Returned Phalanx
@@ -12665,6 +12679,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Royal Assassin
 - Royal Falcon
 - Royal Talon Fighter Jet
+- Royal Treatment
 - Royal Trooper
 - Royal Warden
 - Rubble Reading
@@ -14428,6 +14443,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Spellbinder
 - Spellbook
 - Spellbook Seeker // Careful Study
+- Spellbook Vendor
 - Spelleater Wolverine
 - Spellgorger Barbarian
 - Spellgorger Weird
@@ -14600,6 +14616,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Spiteful Banditry
 - Spiteful Blow
 - Spiteful Bully
+- Spiteful Hexmage
 - Spiteful Motives
 - Spiteful Prankster
 - Spiteful Sliver
@@ -15752,6 +15769,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - The Shire
 - The Skullspore Nexus
 - The Spear of Bashenga
+- The Spear of Leonidas
 - The Speed Demon
 - The Spirit Oasis
 - The Stasis Coffin
@@ -15772,6 +15790,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - The Weatherseed Treaty
 - The Whizzer, Classic Speedster
 - The Wind Crystal
+- The Witch's Vanity
 - The World Tree
 - Their Name Is Death
 - Thelon's Curse
@@ -16012,6 +16031,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Tigereye Cameo
 - Tightening Coils
 - Tigra, Feline Fury
+- Tiller Engine
 - Tiller of Flesh
 - Tilling Treefolk
 - Tilonalli's Knight
@@ -16530,6 +16550,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Umezawa's Charm
 - Umezawa's Jitte
 - Unagi's Spray
+- Unassuming Sage
 - Unauthorized Exit
 - Unbender Tine
 - Unbreakable Bond
@@ -16834,6 +16855,7 @@ Council4 currently supports **18,128 of 32,502 cards eligible for paper support 
 - Vanquisher's Axe
 - Vanquisher's Banner
 - Vantress Paladin
+- Vantress Transmuter // Croaking Curse
 - Vapor Snag
 - Vapor Snare
 - Vaporkin

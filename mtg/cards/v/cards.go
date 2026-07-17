@@ -20,7 +20,6 @@ var Cards = []cardset.Entry{
 	{Name: "Vampiric Link", New: VampiricLink},
 	{Name: "Vanguard of the Restless", New: VanguardOfTheRestless},
 	{Name: "Vantress Paladin", New: VantressPaladin},
-	{Name: "Vantress Transmuter", New: VantressTransmuter},
 	{Name: "Vapor Snare", New: VaporSnare},
 	{Name: "Vaporkin", New: Vaporkin},
 	{Name: "Vastlands Scavenger", New: VastlandsScavenger},
