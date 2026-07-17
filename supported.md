@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,103 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,104 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4514,6 +4514,7 @@ Council4 currently supports **18,103 of 32,501 cards eligible for paper support 
 - Electric Seaweed
 - Electrickery
 - Electrify
+- Electrodominance
 - Electrolyze
 - Electrostatic Field
 - Electrostatic Infantry

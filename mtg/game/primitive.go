@@ -1566,10 +1566,14 @@ type RemoveTargetsForToken struct {
 // casts nothing. It is only meaningful with a set Card reference (the targeted
 // card to cast); Selection-driven choice casts remain free.
 type CastForFree struct {
-	Player            PlayerReference
-	Selection         Selection
-	Zone              zone.Type
-	Card              CardReference
+	Player    PlayerReference
+	Selection Selection
+	Zone      zone.Type
+	Card      CardReference
+	// MaxManaValueFromX bounds a selection-driven cast by the resolving source
+	// spell or ability's X value. The chosen spell face is compared, so modal
+	// double-faced, split, and Adventure cards use the face actually cast.
+	MaxManaValueFromX bool
 	ExileOnResolution bool
 	PayManaCost       bool
 }

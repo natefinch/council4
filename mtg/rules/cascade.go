@@ -47,7 +47,7 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 		}
 	}
 	if found != 0 {
-		e.castFreeSpellFromExile(g, obj.Controller, found, agents, log)
+		e.castFreeSpellFromExileWithMaxManaValue(g, obj.Controller, found, spellDef.ManaValue()-1, agents, log)
 	}
 	bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
 }
@@ -65,7 +65,8 @@ func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue 
 		bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
 		return len(revealed) > 0
 	}
-	if e.chooseMay(g, agents, obj.Controller, "Cast discovered card without paying its mana cost?", log) && e.castFreeSpellFromExile(g, obj.Controller, found, agents, log) {
+	if e.chooseMay(g, agents, obj.Controller, "Cast discovered card without paying its mana cost?", log) &&
+		e.castFreeSpellFromExileWithMaxManaValue(g, obj.Controller, found, manaValue, agents, log) {
 		bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
 		return true
 	}
@@ -134,6 +135,25 @@ func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, ca
 	return e.castFreeSpellFromZone(g, playerID, cardID, zone.Exile, agents, log)
 }
 
+func (e *Engine) castFreeSpellFromExileWithMaxManaValue(g *game.Game, playerID game.PlayerID, cardID id.ID, maxManaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return false
+	}
+	return e.chooseAndCastFreeSpellFromSource(
+		g,
+		player,
+		playerID,
+		cardID,
+		zone.Exile,
+		game.Selection{},
+		opt.Val(maxManaValue),
+		false,
+		agents,
+		log,
+	)
+}
+
 // castAnyNumberFromExileForFree lets controllerID cast any number of the given
 // exiled cards without paying their mana costs, one at a time in an order the
 // controller chooses, during the resolution of the ability that exiled them
@@ -148,7 +168,7 @@ func (e *Engine) castAnyNumberFromExileForFree(g *game.Game, controllerID game.P
 	for len(remaining) > 0 {
 		var candidates []id.ID
 		for _, cardID := range remaining {
-			if castableExiledSpell(g, controllerID, cardID) {
+			if e.castableExiledSpell(g, controllerID, cardID) {
 				candidates = append(candidates, cardID)
 			}
 		}
@@ -184,9 +204,8 @@ func (e *Engine) castAnyNumberFromExileForFree(g *game.Game, controllerID game.P
 
 // castableExiledSpell reports whether cardID still rests in some player's exile
 // and has a legal free-cast choice for controllerID, the filter Etali's "cast
-// any number of spells from among those cards" applies to the exiled pool. Lands
-// and uncastable cards fail isSupportedSpell inside firstLegalSpellCastChoice.
-func castableExiledSpell(g *game.Game, controllerID game.PlayerID, cardID id.ID) bool {
+// any number of spells from among those cards" applies to the exiled pool.
+func (e *Engine) castableExiledSpell(g *game.Game, controllerID game.PlayerID, cardID id.ID) bool {
 	if _, ok := playerHoldingCastSource(g, cardID, zone.Exile); !ok {
 		return false
 	}
@@ -194,13 +213,12 @@ func castableExiledSpell(g *game.Game, controllerID game.PlayerID, cardID id.ID)
 	if !ok {
 		return false
 	}
-	_, _, legal := firstLegalSpellCastChoice(g, controllerID, cardFaceOrDefault(card, game.FaceFront))
-	return legal
+	return len(e.freeCastOptionsForCard(g, controllerID, card, zone.Exile, game.Selection{}, opt.V[int]{})) > 0
 }
 
 // castFreeSpellFromZone casts cardID from fromZone for playerID without paying
-// its mana cost, choosing the first legal modes/targets and pushing the spell to
-// the stack as a free cast. It returns false (casting nothing) when the card is
+// its mana cost, letting the player choose its legal face, modes, targets, and
+// optional additional costs. It returns false (casting nothing) when the card is
 // no longer in fromZone or has no legal cast choice.
 func (e *Engine) castFreeSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	player, ok := playerByID(g, playerID)
@@ -240,62 +258,22 @@ func playerHoldingCastSource(g *game.Game, cardID id.ID, fromZone zone.Type) (*g
 }
 
 // castFreeSpellFromSource casts cardID out of sourcePlayer's fromZone for
-// controllerID without paying its mana cost, choosing the first legal
-// modes/targets and pushing the spell to the stack as a free cast under
-// controllerID's control. The source player and controller differ only for a
-// targeted cast from another player's zone. exileOnResolution redirects the
-// resolved spell to exile in place of its owner's graveyard.
+// controllerID without paying its mana cost, letting the player choose its legal
+// face, modes, targets, and optional additional costs before pushing it to the
+// stack under controllerID's control. The source player and controller differ
+// only for a targeted cast from another player's zone. exileOnResolution
+// redirects the resolved spell to exile in place of its owner's graveyard.
 func (e *Engine) castFreeSpellFromSource(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) {
-		return false
-	}
-	card, ok := g.GetCardInstance(cardID)
-	if !ok {
-		return false
-	}
-	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	if !cardCastRestrictionsSatisfied(g, controllerID, spellDef) {
-		return false
-	}
-	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
-	if !ok {
-		return false
-	}
-	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, modes, targets, game.CastBranch{})
-	if !ok {
-		panic("validated free-cast spell targets could not be segmented")
-	}
-	if !removeCastSourceCard(g, sourcePlayer, cardID, fromZone) {
-		return false
-	}
-	obj := &game.StackObject{
-		ID:                g.IDGen.Next(),
-		Kind:              game.StackSpell,
-		SourceID:          cardID,
-		Face:              game.FaceFront,
-		Controller:        controllerID,
-		Targets:           append([]game.Target(nil), targets...),
-		TargetCounts:      targetCounts,
-		ChosenModes:       append([]int(nil), modes...),
-		ExileOnResolution: exileOnResolution,
-	}
-	stormCopies := stormCopyCount(g, spellDef)
-	pushSpellToStack(g, obj, game.Event{
-		SourceID:                     cardID,
-		StackObjectID:                obj.ID,
-		Controller:                   controllerID,
-		CardID:                       cardID,
-		CardTypes:                    cardTypes(spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 cardSubtypes(spellDef),
-		Colors:                       spellColors(spellDef),
-		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
-		ManaSpentToCast:              opt.Val(0),
-		ManaFromCreaturesSpentToCast: opt.Val(0),
-		FromZone:                     fromZone,
-		ToZone:                       zone.Stack,
-	})
-	createStormCopies(g, obj, spellDef, stormCopies)
-	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
-	return true
+	return e.chooseAndCastFreeSpellFromSource(
+		g,
+		sourcePlayer,
+		controllerID,
+		cardID,
+		fromZone,
+		game.Selection{},
+		opt.V[int]{},
+		exileOnResolution,
+		agents,
+		log,
+	)
 }
