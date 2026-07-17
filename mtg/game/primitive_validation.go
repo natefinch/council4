@@ -2725,6 +2725,19 @@ func (p ChooseNewTargets) validatePrimitive(targets []TargetSpec, checkTargets b
 	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }
 
+func (p ChangeStackObjectController) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Object.Kind() != ObjectReferenceTargetStackObject {
+		return errors.New("change stack object controller requires a target stack object reference")
+	}
+	if err := validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets); err != nil {
+		return err
+	}
+	return validatePlayerReference(p.Controller, targets, checkTargets)
+}
+
 func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err

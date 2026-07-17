@@ -612,9 +612,6 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	} else if !spellHasAnyLegalTargets(g, spellDef, obj) {
 		return counteredSpellResolution(g, obj, card)
 	}
-	if obj.Copy {
-		return "resolved"
-	}
 	if obj.FaceDown {
 		_, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy, agents, log)
 		if !ok {
@@ -623,35 +620,47 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		return "battlefield"
 	}
 
-	permanent, ok := createCardPermanentFaceWithOptions(
-		e,
-		g,
-		card,
-		obj.Controller,
-		zone.Stack,
-		obj.Face,
-		nil,
-		permanentCreationOptions{
-			KickerPaid:              obj.KickerPaid,
-			KickCount:               obj.KickerCount,
-			Bargained:               obj.Bargained,
-			OffspringPaid:           obj.OffspringPaid,
-			Evoked:                  obj.Evoked,
-			Dashed:                  obj.Dashed,
-			Bestowed:                obj.Bestowed,
-			EntersTransformed:       obj.Converted,
-			WasCast:                 !obj.Copy,
-			CastController:          obj.Controller,
-			HasCastController:       !obj.Copy,
-			CastFromZone:            obj.SourceZone,
-			XValue:                  obj.XValue,
-			ColorsOfManaSpentToCast: obj.ColorsOfManaSpentToCast,
-			ManaSpentByColorToCast:  obj.ManaSpentByColorToCast,
-			ManaSpentToCast:         obj.ManaSpentToCast,
-		},
-		agents,
-		log,
-	)
+	var permanent *game.Permanent
+	var ok bool
+	if obj.Copy {
+		permanent, ok = createTokenPermanent(g, obj.Controller, copyCardDef(spellDef))
+	} else {
+		permanent, ok = createCardPermanentFaceWithOptions(
+			e,
+			g,
+			card,
+			obj.Controller,
+			zone.Stack,
+			obj.Face,
+			nil,
+			permanentCreationOptions{
+				KickerPaid:              obj.KickerPaid,
+				KickCount:               obj.KickerCount,
+				Bargained:               obj.Bargained,
+				OffspringPaid:           obj.OffspringPaid,
+				Evoked:                  obj.Evoked,
+				Dashed:                  obj.Dashed,
+				Bestowed:                obj.Bestowed,
+				EntersTransformed:       obj.Converted,
+				WasCast:                 true,
+				CastController:          obj.Controller,
+				HasCastController:       true,
+				CastFromZone:            obj.SourceZone,
+				XValue:                  obj.XValue,
+				ColorsOfManaSpentToCast: obj.ColorsOfManaSpentToCast,
+				ManaSpentByColorToCast:  obj.ManaSpentByColorToCast,
+				ManaSpentToCast:         obj.ManaSpentToCast,
+			},
+			agents,
+			log,
+		)
+	}
+	if !ok {
+		if obj.Copy {
+			return "invalid copy"
+		}
+		return "invalid permanent"
+	}
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}

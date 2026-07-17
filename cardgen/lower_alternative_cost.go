@@ -1,6 +1,7 @@
 package cardgen
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 
@@ -553,12 +554,26 @@ func pitchAlternativeLabel(additionalCosts []cost.Additional) string {
 		}
 		if additional.MatchCardColor {
 			if name, ok := colorDisplayName(additional.CardColor); ok {
-				return "Exile a " + name + " card"
+				return exileCardsLabel(additional.Amount, name)
 			}
 		}
-		return "Exile a card"
+		return exileCardsLabel(additional.Amount, "")
 	}
 	return "Alternative cost"
+}
+
+func exileCardsLabel(amount int, colorName string) string {
+	if amount <= 1 {
+		if colorName == "" {
+			return "Exile a card"
+		}
+		return "Exile a " + colorName + " card"
+	}
+	label := "Exile " + fmt.Sprintf("%d", amount)
+	if colorName != "" {
+		label += " " + colorName
+	}
+	return label + " cards"
 }
 
 func colorDisplayName(c color.Color) (string, bool) {

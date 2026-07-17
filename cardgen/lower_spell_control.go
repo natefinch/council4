@@ -470,6 +470,22 @@ func lowerSingleControlSpell(
 	if len(ctx.content.Targets) != 1 {
 		return unsupported()
 	}
+	if targetSpec, ok := stackSpellTargetSpec(ctx.content.Targets[0]); ok {
+		if ctx.content.Effects[0].Duration != compiler.DurationNone ||
+			ctx.content.Effects[0].Optional ||
+			len(ctx.content.References) != 0 {
+			return unsupported()
+		}
+		return game.Mode{
+			Targets: []game.TargetSpec{targetSpec},
+			Sequence: []game.Instruction{{
+				Primitive: game.ChangeStackObjectController{
+					Object:     game.TargetStackObjectReference(0),
+					Controller: game.ControllerReference(),
+				},
+			}},
+		}.Ability(), nil
+	}
 	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
 	if !ok {
 		return unsupported()

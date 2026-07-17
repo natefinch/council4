@@ -396,6 +396,11 @@ func (MoveCommander) Kind() PrimitiveKind { return PrimitiveMoveCommander }
 // Kind implements Primitive for ChooseNewTargets.
 func (ChooseNewTargets) Kind() PrimitiveKind { return PrimitiveChooseNewTargets }
 
+// Kind implements Primitive for ChangeStackObjectController.
+func (ChangeStackObjectController) Kind() PrimitiveKind {
+	return PrimitiveChangeStackObjectController
+}
+
 // Kind implements Primitive for GroupSourceDamage.
 func (GroupSourceDamage) Kind() PrimitiveKind { return PrimitiveGroupSourceDamage }
 
@@ -577,6 +582,7 @@ func (PlayChosenExiledCard) isPrimitive()                 {}
 func (HideawayExile) isPrimitive()                        {}
 func (PlayHideawayCard) isPrimitive()                     {}
 func (ChooseNewTargets) isPrimitive()                     {}
+func (ChangeStackObjectController) isPrimitive()          {}
 func (PutPermanentOnLibrary) isPrimitive()                {}
 func (PutLinkedExiledCardsInLibrary) isPrimitive()        {}
 func (Attach) isPrimitive()                               {}
@@ -925,8 +931,11 @@ func (p MoveCard) instructionRefs() primitiveRefs {
 	}
 	return mergePrimitiveRefs(refs, cardReferenceRefs(p.Card))
 }
-func (MoveCommander) instructionRefs() primitiveRefs        { return primitiveRefs{} }
-func (ChooseNewTargets) instructionRefs() primitiveRefs     { return primitiveRefs{} }
+func (MoveCommander) instructionRefs() primitiveRefs    { return primitiveRefs{} }
+func (ChooseNewTargets) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (ChangeStackObjectController) instructionRefs() primitiveRefs {
+	return primitiveRefs{}
+}
 func (CopyStackObject) instructionRefs() primitiveRefs      { return primitiveRefs{} }
 func (p GroupSourceDamage) instructionRefs() primitiveRefs  { return quantityRefs(p.Amount) }
 func (GroupSelfPowerDamage) instructionRefs() primitiveRefs { return primitiveRefs{} }
