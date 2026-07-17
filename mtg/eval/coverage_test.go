@@ -77,6 +77,10 @@ import (
 // Spellbinder) derive their value from the copied card's own effects, not from
 // the copy/cast primitives themselves, matching CastForFree and CopyStackObject.
 //
+// ReplaceLinkedExiledCard is value-neutral (no atom): it exchanges the card
+// currently linked to the source between graveyard and exile, while the payoff
+// is modeled by the later instruction that consumes the imprint.
+//
 // TapChosenGroup is value-neutral (no atom): it optionally taps any number of
 // the controller's own matching permanents to publish that count (Myr
 // Battlesphere), so its payoff lives in the scaled ModifyPT and Damage
@@ -134,7 +138,7 @@ import (
 // TurnFaceDown is value-neutral (no atom): its value depends on the target's
 // hidden identity and any alternative face-down characteristics, so it has no
 // stable standalone value.
-const knownPrimitiveCount = 151
+const knownPrimitiveCount = 152
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

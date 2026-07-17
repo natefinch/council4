@@ -171,6 +171,16 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 			source = cardFaceOrDefault(card, resolved.snapshot.Face)
 		default:
 		}
+	case game.TokenCopySourceLinkedExiledCard:
+		cardID, _, ok := linkedExiledCardInExile(g, obj, string(spec.LinkID))
+		if !ok {
+			return nil, false
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			return nil, false
+		}
+		source = cardFaceOrDefault(card, game.FaceFront)
 	default:
 		return nil, false
 	}

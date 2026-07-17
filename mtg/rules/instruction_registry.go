@@ -179,6 +179,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleCreateReplacement)
 	registerPrimitiveHandler(reg, handlePreventDamage)
 	registerPrimitiveHandler(reg, handleMoveCard)
+	registerPrimitiveHandler(reg, handleReplaceLinkedExiledCard)
 	registerPrimitiveHandler(reg, handleMoveCommander)
 	registerPrimitiveHandler(reg, handleGrantCastPermission)
 	registerPrimitiveHandler(reg, handleExileForPlay)

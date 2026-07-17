@@ -2698,6 +2698,10 @@ func (v *cardDefValidator) validateTokenCopySpec(faceName, path string, spec Tok
 	case TokenCopySourceObject:
 		v.validateObjectRef(faceName, appendPath(path, "Object"), spec.Object, targets)
 	case TokenCopySourceSourceCard, TokenCopySourceChosenFromTriggerBatch, TokenCopySourceChosenControlledCreatureToken:
+	case TokenCopySourceLinkedExiledCard:
+		if spec.LinkID == "" {
+			v.add(faceName, appendPath(path, "LinkID"), CardDefIssueInvalidReference, "linked-exile token copy requires a link ID")
+		}
 	case TokenCopySourceEachInGroup, TokenCopySourceChosenFromGroup:
 		if spec.Group == nil {
 			v.add(faceName, appendPath(path, "Group"), CardDefIssueInvalidReference, "token copy group is nil")

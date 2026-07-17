@@ -2030,6 +2030,10 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 			if problems := spec.Group.Validate(); len(problems) != 0 {
 				return errors.New(problems[0])
 			}
+		case TokenCopySourceLinkedExiledCard:
+			if spec.LinkID == "" {
+				return errors.New("linked-exile token copy requires a link ID")
+			}
 		default:
 		}
 	}
@@ -2465,6 +2469,23 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	}
 	if p.PublishLinkedObjectScoped && p.PublishLinked == "" {
 		return errors.New("object-scoped move-card publication requires a linked key")
+	}
+	return nil
+}
+
+func (p ReplaceLinkedExiledCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateCardReference(p.Card); err != nil {
+		return err
+	}
+	if err := validateTargetCardReference(p.Card, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.FromZone == zone.None || p.FromZone == zone.Battlefield || p.FromZone == zone.Stack ||
+		p.FromZone == zone.Exile {
+		return errors.New("replace linked exiled card requires a non-battlefield, non-exile source zone")
+	}
+	if p.LinkID == "" {
+		return errors.New("replace linked exiled card requires a link ID")
 	}
 	return nil
 }

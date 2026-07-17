@@ -697,6 +697,12 @@ func (r Renderer) renderPrimitiveTail(ctx *renderCtx, primitive game.Primitive) 
 			return "", err
 		}
 		return r.renderMoveCard(ctx, value)
+	case game.PrimitiveReplaceLinkedExiledCard:
+		value, err := assertPrimitive[game.ReplaceLinkedExiledCard](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderReplaceLinkedExiledCard(ctx, value)
 	case game.PrimitiveMoveCommander:
 		value, err := assertPrimitive[game.MoveCommander](primitive)
 		if err != nil {

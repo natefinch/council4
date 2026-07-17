@@ -380,10 +380,13 @@ const (
 	PrimitiveReanimateLinkedCards
 	// PrimitiveTurnFaceDown turns a referenced battlefield permanent face down.
 	PrimitiveTurnFaceDown
+	// PrimitiveReplaceLinkedExiledCard atomically establishes one current
+	// object-scoped linked exile.
+	PrimitiveReplaceLinkedExiledCard
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveTurnFaceDown) + 1
+const primitiveKindCount = int(PrimitiveReplaceLinkedExiledCard) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1684,6 +1687,16 @@ type MoveCard struct {
 	// PublishLinkedObjectScoped keys PublishLinked by the source permanent's
 	// current object identity, so a re-entered source starts with a fresh pool.
 	PublishLinkedObjectScoped bool
+}
+
+// ReplaceLinkedExiledCard moves Card from FromZone to exile and, only when the
+// card actually reaches exile, returns every other card previously exiled under
+// LinkID by this source object to its owner's graveyard. The old link is then
+// replaced by the newly exiled card.
+type ReplaceLinkedExiledCard struct {
+	Card     CardReference
+	FromZone zone.Type
+	LinkID   LinkedKey
 }
 
 // MoveCommander moves Player's commander(s) from the command zone to

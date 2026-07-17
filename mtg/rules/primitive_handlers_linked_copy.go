@@ -72,7 +72,7 @@ func linkedExiledCardInExile(g *game.Game, obj *game.StackObject, linkID string)
 			continue
 		}
 		card, ok := g.GetCardInstance(cardID)
-		if !ok {
+		if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion {
 			continue
 		}
 		for i := range g.Players {

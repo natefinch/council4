@@ -213,6 +213,9 @@ func lowerTriggeredAbility(
 	if ability.ExactSequence == compiler.ExactSequenceLandfallPayCopyToken {
 		return lowerLandfallPayCopyTokenTrigger(ability)
 	}
+	if ability.ExactSequence == compiler.ExactSequenceReplaceLinkedExiledCard {
+		return lowerReplaceLinkedExiledCardTrigger(ability)
+	}
 	if pattern.Kind == compiler.TriggerAt {
 		return lowerAtTrigger(cardName, ability, syntax)
 	}

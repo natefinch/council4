@@ -363,6 +363,23 @@ func (r Renderer) renderMoveCard(ctx *renderCtx, value game.MoveCard) (string, e
 	return structLit("game.MoveCard", fields), nil
 }
 
+func (Renderer) renderReplaceLinkedExiledCard(ctx *renderCtx, value game.ReplaceLinkedExiledCard) (string, error) {
+	card, err := renderCardReference(value.Card)
+	if err != nil {
+		return "", err
+	}
+	fromZone, err := renderZone(value.FromZone)
+	if err != nil {
+		return "", err
+	}
+	ctx.need(importZone)
+	return structLit("game.ReplaceLinkedExiledCard", []string{
+		fmt.Sprintf("Card: %s,", card),
+		fmt.Sprintf("FromZone: %s,", fromZone),
+		fmt.Sprintf("LinkID: game.LinkedKey(%q),", string(value.LinkID)),
+	}), nil
+}
+
 func (r Renderer) renderMoveCommander(ctx *renderCtx, value game.MoveCommander) (string, error) {
 	player, err := r.renderPlayerReference(value.Player)
 	if err != nil {
@@ -889,9 +906,27 @@ func (r Renderer) renderTokenSource(ctx *renderCtx, source game.TokenSource) (st
 		return renderTokenCopyPopulateSource(ctx, spec)
 	case game.TokenCopySourceChosenFromGroup:
 		return r.renderTokenCopyChosenFromGroupSource(ctx, spec)
+	case game.TokenCopySourceLinkedExiledCard:
+		return renderTokenCopyLinkedExiledCardSource(ctx, spec)
 	default:
 		return "", errors.New("render: unsupported CreateToken token source")
 	}
+}
+
+func renderTokenCopyLinkedExiledCardSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {
+	fields := []string{
+		"Source: game.TokenCopySourceLinkedExiledCard,",
+		fmt.Sprintf("LinkID: game.LinkedKey(%q),", string(spec.LinkID)),
+	}
+	fields, err := appendTokenCopyModifierFields(ctx, fields, spec)
+	if err != nil {
+		return "", err
+	}
+	rendered, err := renderTokenCopyKeywordField(fields, spec)
+	if err != nil {
+		return "", err
+	}
+	return "game.TokenCopyOf(" + structLit("game.TokenCopySpec", rendered) + ")", nil
 }
 
 func (r Renderer) renderTokenCopyChosenFromGroupSource(ctx *renderCtx, spec game.TokenCopySpec) (string, error) {

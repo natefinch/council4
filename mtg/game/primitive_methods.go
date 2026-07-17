@@ -190,6 +190,11 @@ func (CopyCard) Kind() PrimitiveKind { return PrimitiveCopyCard }
 // Kind implements Primitive for PlayLinkedExiledCard.
 func (PlayLinkedExiledCard) Kind() PrimitiveKind { return PrimitivePlayLinkedExiledCard }
 
+// Kind implements Primitive for ReplaceLinkedExiledCard.
+func (ReplaceLinkedExiledCard) Kind() PrimitiveKind {
+	return PrimitiveReplaceLinkedExiledCard
+}
+
 // Kind implements Primitive for SetClassLevel.
 func (SetClassLevel) Kind() PrimitiveKind { return PrimitiveSetClassLevel }
 
@@ -578,6 +583,7 @@ func (CreateReflexiveTrigger) isPrimitive()               {}
 func (CreateReplacement) isPrimitive()                    {}
 func (PreventDamage) isPrimitive()                        {}
 func (MoveCard) isPrimitive()                             {}
+func (ReplaceLinkedExiledCard) isPrimitive()              {}
 func (MoveCommander) isPrimitive()                        {}
 func (GrantCastPermission) isPrimitive()                  {}
 func (ExileForPlay) isPrimitive()                         {}
@@ -677,6 +683,11 @@ func (p Search) instructionRefs() primitiveRefs {
 
 func (p CreateToken) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
+	if spec, ok := p.Source.TokenCopy(); ok &&
+		spec.Source == TokenCopySourceLinkedExiledCard &&
+		spec.LinkID != "" {
+		refs.consumesLinked = append(refs.consumesLinked, spec.LinkID)
+	}
 	if p.EntryAttachedTo.Exists {
 		refs = mergePrimitiveRefs(refs, objectReferenceRefs(p.EntryAttachedTo.Val))
 	}
@@ -700,6 +711,9 @@ func (p PlayLinkedExiledCard) instructionRefs() primitiveRefs {
 		return primitiveRefs{}
 	}
 	return primitiveRefs{consumesLinked: []LinkedKey{LinkedKey(p.LinkID)}}
+}
+func (p ReplaceLinkedExiledCard) instructionRefs() primitiveRefs {
+	return primitiveRefs{publishesLinked: p.LinkID}
 }
 func (PartitionExiledCostCards) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p SetClassLevel) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
