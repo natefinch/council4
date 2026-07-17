@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -136,6 +137,36 @@ func TestPrimalGrowthKickedSacrificesControlledTokenAndSearchesForTwo(t *testing
 	}
 	if found != 2 {
 		t.Fatalf("found lands = %d, want 2", found)
+	}
+}
+
+func TestPrimalGrowthKickerCanUseSacrificedCreatureForMana(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	for range 2 {
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+	}
+	manaCreature := addManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Mana Creature",
+		Types: []types.Card{types.Creature},
+	}}, mana.G, 1)
+	manaCreature.SummoningSick = false
+	first := addPrimalGrowthBasic(t, g, "Plains", types.Plains)
+	second := addPrimalGrowthBasic(t, g, "Island", types.Island)
+	spellID := addCardToHand(g, game.Player1, primalGrowthLikeDef())
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastKickedSpell(spellID, nil, 0, nil)) {
+		t.Fatal("kicked cast failed when the sacrificed creature was needed for mana")
+	}
+	if _, ok := permanentByObjectID(g, manaCreature.ObjectID); ok {
+		t.Fatal("mana creature was not sacrificed after producing mana")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if permanentForCard(g, first) == nil || permanentForCard(g, second) == nil {
+		t.Fatal("kicked search did not find two basic lands")
 	}
 }
 

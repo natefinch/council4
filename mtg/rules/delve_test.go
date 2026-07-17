@@ -109,6 +109,45 @@ func TestDelvePaymentExcludesSourceCardFromGraveyard(t *testing.T) {
 	}
 }
 
+func TestDelvePaymentExcludesCardsReservedForAdditionalCosts(t *testing.T) {
+	for _, test := range []struct {
+		name      string
+		cardCount int
+		wantPay   bool
+	}{
+		{name: "one card cannot pay both costs", cardCount: 1},
+		{name: "two cards can pay distinct costs", cardCount: 2, wantPay: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			card := delveSpell(cost.Mana{cost.O(1)})
+			card.AdditionalCosts = []cost.Additional{{
+				Kind:   cost.AdditionalExile,
+				Text:   "Exile a card from your graveyard",
+				Amount: 1,
+				Source: zone.Graveyard,
+			}}
+			for range test.cardCount {
+				addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+					Name:  "Delve Fuel",
+					Types: []types.Card{types.Sorcery},
+				}})
+			}
+			spellID := addCardToHand(g, game.Player1, card)
+
+			got := canPayTestSpellCosts(g, testSpellPaymentRequest{
+				playerID:   game.Player1,
+				cardID:     spellID,
+				sourceZone: zone.Hand,
+				card:       card,
+			})
+			if got != test.wantPay {
+				t.Fatalf("canPaySpellCosts() = %v, want %v", got, test.wantPay)
+			}
+		})
+	}
+}
+
 func delveSpell(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Delve Spell",
 		Types:           []types.Card{types.Sorcery},

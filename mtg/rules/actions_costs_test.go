@@ -1463,7 +1463,7 @@ func commanderAlternativeTestSpell(additional []cost.Additional) *game.CardDef {
 	}}
 }
 
-func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
+func TestSacrificedPermanentCanProduceManaBeforeCostsArePaid(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	manaCost := cost.Mana{cost.G}
@@ -1484,19 +1484,179 @@ func TestSacrificedPermanentIsExcludedFromManaPaymentPlan(t *testing.T) {
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 
+	if !containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("spell was not legal when the creature could produce mana before being sacrificed")
+	}
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast) = false, want true")
+	}
+	if _, ok := permanentByObjectID(g, dork.ObjectID); ok {
+		t.Fatal("mana creature remained on the battlefield after paying the sacrifice cost")
+	}
+	if g.Stack.Size() != 1 || g.Players[game.Player1].Hand.Contains(spellID) {
+		t.Fatal("paid spell was not moved from hand to the stack")
+	}
+}
+
+func TestSelfSacrificingManaAbilityCannotAlsoPaySacrificeCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Costly Harvest",
+		ManaCost: opt.Val(cost.Mana{cost.G}),
+		Types:    []types.Card{types.Sorcery},
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalSacrifice,
+			Text:               "Sacrifice a creature",
+			Amount:             1,
+			MatchPermanentType: true,
+			PermanentType:      types.Creature,
+		}},
+		SpellAbility: opt.Val(game.AbilityContent{}),
+	}})
+	ability := game.TapManaChoiceAbility(mana.G, mana.R)
+	ability.AdditionalCosts = append(ability.AdditionalCosts, cost.Additional{
+		Kind:               cost.AdditionalSacrificeSource,
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	})
+	source := addComplexManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Sacrificial Mana Creature",
+		Types: []types.Card{types.Artifact, types.Creature},
+	}}, &ability)
+	source.SummoningSick = false
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
 	if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
-		t.Fatal("spell was legal by using the creature to both produce mana and pay sacrifice cost")
+		t.Fatal("spell was legal by sacrificing the same creature for mana and the additional cost")
 	}
 	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
 		t.Fatal("applyAction(cast) = true, want false")
 	}
-	if dork.Tapped {
-		t.Fatal("sacrificed candidate was tapped by failed payment")
+	if _, ok := permanentByObjectID(g, source.ObjectID); !ok {
+		t.Fatal("failed payment sacrificed the mana source")
 	}
-	if _, ok := permanentByObjectID(g, dork.ObjectID); !ok {
-		t.Fatal("sacrificed candidate left battlefield after failed payment")
+}
+
+func TestSelfSacrificingManaAbilityPaysManaWhenNotReservedForAnotherCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:         "Green Spell",
+		ManaCost:     opt.Val(cost.Mana{cost.G}),
+		Types:        []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.AbilityContent{}),
+	}})
+	ability := game.TapManaChoiceAbility(mana.G, mana.R)
+	ability.AdditionalCosts = append(ability.AdditionalCosts, cost.Additional{
+		Kind:               cost.AdditionalSacrificeSource,
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	})
+	source := addComplexManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Treasure Creature",
+		Types: []types.Card{types.Artifact, types.Creature},
+	}}, &ability)
+	source.SummoningSick = false
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("self-sacrificing mana source could not pay an ordinary mana cost")
 	}
-	if !g.Players[game.Player1].Hand.Contains(spellID) {
-		t.Fatal("spell left hand after failed payment")
+	if _, ok := permanentByObjectID(g, source.ObjectID); ok {
+		t.Fatal("self-sacrificing mana source remained on the battlefield")
+	}
+}
+
+func TestSelfSacrificingManaAbilityCannotAlsoPayReturnCost(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:     "Costly Recall",
+		ManaCost: opt.Val(cost.Mana{cost.G}),
+		Types:    []types.Card{types.Sorcery},
+		AdditionalCosts: []cost.Additional{{
+			Kind:               cost.AdditionalReturnToHand,
+			Text:               "Return an artifact you control to its owner's hand",
+			Amount:             1,
+			MatchPermanentType: true,
+			PermanentType:      types.Artifact,
+		}},
+		SpellAbility: opt.Val(game.AbilityContent{}),
+	}})
+	ability := game.TapManaChoiceAbility(mana.G, mana.R)
+	ability.AdditionalCosts = append(ability.AdditionalCosts, cost.Additional{
+		Kind:               cost.AdditionalSacrificeSource,
+		Amount:             1,
+		MatchPermanentType: true,
+		PermanentType:      types.Artifact,
+	})
+	source := addComplexManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name:  "Treasure Creature",
+		Types: []types.Card{types.Artifact, types.Creature},
+	}}, &ability)
+	source.SummoningSick = false
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	if containsAction(engine.legalActions(g, game.Player1), action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("spell was legal by sacrificing the artifact for mana and returning it to hand")
+	}
+	if engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
+		t.Fatal("applyAction(cast) = true, want false")
+	}
+	if _, ok := permanentByObjectID(g, source.ObjectID); !ok {
+		t.Fatal("failed payment sacrificed the return-cost candidate")
+	}
+}
+
+func TestReturnCostStateConstraintControlsManaUse(t *testing.T) {
+	for _, test := range []struct {
+		name            string
+		requireUntapped bool
+		wantCast        bool
+	}{
+		{name: "plain return can tap land for mana", wantCast: true},
+		{name: "return untapped land cannot tap it for mana", requireUntapped: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name:     "Costly Recall",
+				ManaCost: opt.Val(cost.Mana{cost.G}),
+				Types:    []types.Card{types.Sorcery},
+				AdditionalCosts: []cost.Additional{{
+					Kind:               cost.AdditionalReturnToHand,
+					Text:               "Return a land you control to its owner's hand",
+					Amount:             1,
+					MatchPermanentType: true,
+					PermanentType:      types.Land,
+					RequireUntapped:    test.requireUntapped,
+				}},
+				SpellAbility: opt.Val(game.AbilityContent{}),
+			}})
+			land := addBasicLandPermanent(g, game.Player1, types.Forest)
+			g.Turn.Phase = game.PhasePrecombatMain
+			g.Turn.Step = game.StepNone
+
+			cast := engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil))
+			if cast != test.wantCast {
+				t.Fatalf("applyAction(cast) = %v, want %v", cast, test.wantCast)
+			}
+			if test.wantCast {
+				if !g.Players[game.Player1].Hand.Contains(land.CardInstanceID) {
+					t.Fatal("land tapped for mana was not returned to hand")
+				}
+				return
+			}
+			if _, ok := permanentByObjectID(g, land.ObjectID); land.Tapped || !ok {
+				t.Fatal("failed constrained return payment mutated the land")
+			}
+		})
 	}
 }
