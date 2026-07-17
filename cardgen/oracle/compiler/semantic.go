@@ -4598,7 +4598,11 @@ type CompiledKeyword struct {
 	// keyword, or nil for a mana-only Ward whose cost is ManaCost. Its components
 	// are lowered through the shared activation-cost kernel into the runtime
 	// ward's mana and additional costs.
-	WardCost        *CompiledCost
+	WardCost *CompiledCost
+	// KickerCost is the typed mana, nonmana, or composite payment of a
+	// "Kicker—<cost>" keyword. Space-delimited mana-only Kicker remains in
+	// ManaCost.
+	KickerCost      *CompiledCost
 	Integer         int
 	EnchantTarget   CompiledEnchantTarget
 	Protection      game.ProtectionKeyword

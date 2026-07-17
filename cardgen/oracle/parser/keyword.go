@@ -784,6 +784,10 @@ type Keyword struct {
 	// life." Its components are the same comma-separated cost operations the
 	// activated-ability cost parser recognizes.
 	WardCost *Cost `json:",omitempty"`
+	// KickerCost is the typed mana, nonmana, or composite payment of a
+	// "Kicker—<cost>" ability, or nil for the space-delimited mana-only form
+	// whose cost is carried by Parameter.
+	KickerCost *Cost `json:",omitempty"`
 	// EquipRestriction is the typed quality restriction on a restricted Equip
 	// ability ("Equip legendary creature {3}", "Equip Knight {2}"), or nil for an
 	// unrestricted Equip. The mana cost is still carried by Parameter.
@@ -1846,8 +1850,8 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 		}
 		parameter, parameterEnd := parseKeywordParameter(kind, tokens, end, atoms)
 		end = parameterEnd
-		if kind == KeywordWard {
-			end = wardEmDashCostEnd(tokens, end)
+		if kind == KeywordWard || kind == KeywordKicker || kind == KeywordMultikicker {
+			end = keywordEmDashCostEnd(tokens, end)
 		}
 		keywords = append(keywords, Keyword{
 			Kind:             kind,
@@ -1862,13 +1866,10 @@ func scanKeywords(tokens []shared.Token, atoms Atoms) []Keyword {
 	return keywords
 }
 
-// wardEmDashCostEnd extends a Ward keyword atom past the em dash and the
-// non-mana or composite cost clause that follows it ("Ward—Pay N life.",
-// "Ward—{2}, Pay 2 life."), returning the token index after the cost so the
-// keyword span covers its whole printed cost (CR 702.21). It stops before the
-// trailing top-level period and is a no-op when no em dash follows the keyword
-// name, leaving the mana-only "Ward {N}" form untouched.
-func wardEmDashCostEnd(tokens []shared.Token, start int) int {
+// keywordEmDashCostEnd extends a keyword atom past the em dash and the cost
+// clause that follows it, returning the token index after the cost. It stops
+// before the trailing top-level period and is a no-op when no em dash follows.
+func keywordEmDashCostEnd(tokens []shared.Token, start int) int {
 	if start >= len(tokens) || tokens[start].Kind != shared.EmDash {
 		return start
 	}

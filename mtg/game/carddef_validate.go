@@ -748,7 +748,7 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 	case MutateKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case KickerKeyword:
-		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+		v.validateKickerKeywordCost(faceName, path, keyword)
 		if len(keyword.BonusContent.Modes) > 0 {
 			v.validateAbilityContent(faceName, appendPath(path, "BonusContent"), keyword.BonusContent, targets)
 		}
@@ -1080,6 +1080,12 @@ func (v *cardDefValidator) validateManaKeywordCost(faceName, path string, manaCo
 func (v *cardDefValidator) validateWardKeywordCost(faceName, path string, ward WardKeyword) {
 	if len(ward.Cost) == 0 && len(ward.AdditionalCosts) == 0 {
 		v.add(faceName, appendPath(path, "Cost"), CardDefIssueInvalidKeywordAbility, "ward cost must be explicit")
+	}
+}
+
+func (v *cardDefValidator) validateKickerKeywordCost(faceName, path string, kicker KickerKeyword) {
+	if len(kicker.Cost) == 0 && len(kicker.AdditionalCosts) == 0 {
+		v.add(faceName, appendPath(path, "Cost"), CardDefIssueInvalidKeywordAbility, "kicker cost must be explicit")
 	}
 }
 

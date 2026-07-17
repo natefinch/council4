@@ -125,7 +125,14 @@ type Ability struct {
 	// is recognized instead of dropped, while the "Pay N life." cost tokens stay
 	// out of the body. It is meaningful only when wardCostPhrase is non-nil.
 	wardBodyStart int
-	Trigger       *TriggerClause `json:",omitempty"`
+	// kickerCostPhrase is the source cost phrase of a "Kicker—<cost>" keyword
+	// whose payment may contain mana and/or nonmana components. It is parsed
+	// through the shared cost grammar and attached to the semantic Kicker keyword.
+	kickerCostPhrase *Phrase
+	// kickerBodyStart is the token index after the Kicker cost's trailing period,
+	// preserving any reminder text as the ability body.
+	kickerBodyStart int
+	Trigger         *TriggerClause `json:",omitempty"`
 	// BodySpan is the source span of the ability's resolving body: the tokens
 	// after the activated/loyalty cost colon or the triggered event comma (and
 	// after any ability-word or chapter prefix). It is the zero span when the

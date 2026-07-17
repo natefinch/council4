@@ -348,6 +348,9 @@ func lowerContentDispatch(
 		return content, nil
 	}
 	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == compiler.EffectSearch {
+		if content, ok := lowerConditionalInsteadSearchSequence(ctx); ok {
+			return content, nil
+		}
 		content, diagnostic := lowerSearchSpell(ctx)
 		if diagnostic == nil {
 			return content, nil

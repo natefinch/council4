@@ -192,108 +192,6 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	g.Stack.Push(obj)
 
-	var prefs *payment.Preferences
-	switch {
-	case cast.Overloaded:
-		overloadCost := append(cost.Mana(nil), spellDef.Overload.Val.Cost...)
-		if cast.KickerPaid {
-			kicker, _ := spellKicker(spellDef)
-			overloadCost = append(overloadCost, kicker.Cost...)
-		}
-		prefs = e.paymentPreferencesForCostFromSource(
-			g,
-			playerID,
-			&overloadCost,
-			spellDef.AdditionalCosts,
-			cast.XValue,
-			card.ID,
-			sourceZone,
-			agents,
-			log,
-		)
-	case payLifeFromTop:
-		emptyMana := cost.Mana{}
-		additional := append([]cost.Additional(nil), spellDef.AdditionalCosts...)
-		additional = append(additional, payLifeManaValueAlternativeCost(spellDef, cast.XValue).AdditionalCosts...)
-		prefs = e.paymentPreferencesForCostFromSource(
-			g,
-			playerID,
-			&emptyMana,
-			additional,
-			cast.XValue,
-			card.ID,
-			sourceZone,
-			agents,
-			log,
-		)
-	case cast.Bestowed:
-		bestowCost := bestowAlternativeCost(spellDef).ManaCost.Val
-		prefs = e.paymentPreferencesForCostFromSource(
-			g,
-			playerID,
-			&bestowCost,
-			spellDef.AdditionalCosts,
-			cast.XValue,
-			card.ID,
-			sourceZone,
-			agents,
-			log,
-		)
-	case plotted:
-		emptyMana := cost.Mana{}
-		prefs = e.paymentPreferencesForCostFromSource(
-			g,
-			playerID,
-			&emptyMana,
-			spellDef.AdditionalCosts,
-			cast.XValue,
-			card.ID,
-			sourceZone,
-			agents,
-			log,
-		)
-	case freeLinkedExile:
-		emptyMana := cost.Mana{}
-		prefs = e.paymentPreferencesForCostFromSource(
-			g,
-			playerID,
-			&emptyMana,
-			spellDef.AdditionalCosts,
-			cast.XValue,
-			card.ID,
-			sourceZone,
-			agents,
-			log,
-		)
-	case freePlayFromZone:
-		emptyMana := cost.Mana{}
-		prefs = e.paymentPreferencesForCostFromSource(
-			g,
-			playerID,
-			&emptyMana,
-			spellDef.AdditionalCosts,
-			cast.XValue,
-			card.ID,
-			sourceZone,
-			agents,
-			log,
-		)
-	case spendAnyMana:
-		anyManaCost := anyManaSymbols(spellDef.ManaCost)
-		prefs = e.paymentPreferencesForCostFromSource(
-			g,
-			playerID,
-			&anyManaCost,
-			spellDef.AdditionalCosts,
-			cast.XValue,
-			card.ID,
-			sourceZone,
-			agents,
-			log,
-		)
-	default:
-		prefs = e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, cast.Face, spellDef, cast.XValue, agents, log)
-	}
 	permissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	request := payment.SpellRequest{
@@ -309,7 +207,6 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ChosenModes:     cast.ChosenModes,
 		CastPermissions: permissions,
 		Targets:         cast.Targets,
-		Prefs:           prefs,
 		SpliceManaCosts: splice.manaCosts,
 		Bestowed:        cast.Bestowed,
 	}
@@ -333,6 +230,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	default:
 		// No alternative cost; the spell is cast for its normal mana cost.
 	}
+	request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
 		// CR 728: the proposed cast is illegal because its costs can't be paid,
@@ -349,9 +247,9 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		consumeCastLinkedExileForFreePermission(g, freeLinkedExilePermissionID)
 	}
 	recordExilePlayPermissionUse(g, exilePlayPermission)
-	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, prefs.AlternativeIndex)
-	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, prefs.AlternativeIndex)
-	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, prefs.AlternativeIndex)
+	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
+	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
+	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
 	obj.Bestowed = cast.Bestowed
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
@@ -779,6 +677,9 @@ func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, pla
 
 func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return false
+	}
+	if kickerCount < 0 || kickerCount > maxLegalMultikickCount {
 		return false
 	}
 	kickerPaid := kickerCount > 0

@@ -4,7 +4,6 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
-	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/opt"
@@ -189,7 +188,7 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 	}
 	searchEffects := content.Effects[1:]
 	trailingRider, searchEffects, hasRider := peelTrailingSearchRider(searchEffects)
-	groups, starts, ok := splitSequenceSearchGroups(searchEffects)
+	groups, _, ok := splitSequenceSearchGroups(searchEffects)
 	if !ok || len(groups) < 1 || len(groups) > 2 {
 		return game.AbilityContent{}, false
 	}
@@ -226,37 +225,11 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 		return game.AbilityContent{}, false
 	}
 
-	// Two groups: the second is a conditional "instead" replacement of the
-	// first, gated on exactly one resolving condition contained in its clause.
-	insteadStart := starts[1] + 1
-	insteadSearch := &content.Effects[insteadStart]
-	if insteadSearch.Replacement.Kind != parser.EffectReplacementInstead ||
-		len(conditions) != 1 {
-		return game.AbilityContent{}, false
-	}
-	condition := conditions[0]
-	if !spanCovered(condition.Span, []shared.Span{insteadSearch.Span}) {
-		return game.AbilityContent{}, false
-	}
-	lowered, ok := lowerCondition(condition, conditionContextEffectGate)
+	searchSequence, _, ok := conditionalInsteadSearchInstructions(searchEffects, conditions)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	gate := game.EffectCondition{Condition: opt.Val(lowered)}
-	negated, ok := negatedEffectCondition(&gate)
-	if !ok {
-		return game.AbilityContent{}, false
-	}
-	baseSeq, ok := searchGroupInstructions(groups[0])
-	if !ok || !applyEffectConditionGate(baseSeq, &negated) {
-		return game.AbilityContent{}, false
-	}
-	insteadSeq, ok := searchGroupInstructions(groups[1])
-	if !ok || !applyEffectConditionGate(insteadSeq, &gate) {
-		return game.AbilityContent{}, false
-	}
-	sequence = append(sequence, baseSeq...)
-	sequence = append(sequence, insteadSeq...)
+	sequence = append(sequence, searchSequence...)
 	if reflexive {
 		gateInstructionsOnResult(sequence[1:], optionalIfYouDoResultKey)
 	}

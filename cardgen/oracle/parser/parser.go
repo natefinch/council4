@@ -205,6 +205,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitChooseABackgroundAbility(document.Abilities)
 	emitSemanticAccessors(document.Abilities)
 	emitWardKeywordCost(document.Abilities)
+	emitKickerKeywordCost(document.Abilities)
 	stripImpulseExileSemantics(document.Abilities)
 	stripPayRepeatedlyAnimateSemantics(document.Abilities)
 	stripAnimateSelfSemantics(document.Abilities)
@@ -845,9 +846,8 @@ func parseAbility(
 		} else if escape, costPhrase, ok := escapeAlternativeCostClause(source, tokens, dash); ok {
 			ability.AlternativeCost = escape
 			ability.costPhrase = &costPhrase
-		} else if costPhrase, wardBodyStart, ok := wardKeywordCostClause(source, tokens, dash); ok {
-			ability.wardCostPhrase = &costPhrase
-			ability.wardBodyStart = wardBodyStart
+		} else if keywordCost, ok := parameterizedKeywordCostClause(source, tokens, dash); ok {
+			attachParameterizedKeywordCost(&ability, keywordCost.phrase, keywordCost.bodyStart, keywordCost.kind)
 		} else {
 			phrase := phraseFromTokens(source, tokens[:dash])
 			ability.AbilityWord = &AbilityWordClause{
@@ -861,6 +861,11 @@ func parseAbility(
 			body = nil
 			if ability.wardBodyStart >= 0 && ability.wardBodyStart < len(tokens) {
 				body = tokens[ability.wardBodyStart:]
+			}
+		} else if ability.kickerCostPhrase != nil {
+			body = nil
+			if ability.kickerBodyStart >= 0 && ability.kickerBodyStart < len(tokens) {
+				body = tokens[ability.kickerBodyStart:]
 			}
 		}
 		if len(ability.Chapters) > 0 {
@@ -882,7 +887,7 @@ func parseAbility(
 		ability.Kind = AbilityChapter
 	case ability.AlternativeCost != nil:
 		ability.Kind = AbilitySpellAlternativeCost
-	case ability.wardCostPhrase != nil:
+	case ability.wardCostPhrase != nil || ability.kickerCostPhrase != nil:
 		ability.Kind = AbilityStatic
 	default:
 		ability.Kind = classifyAbility(body, context)
@@ -951,6 +956,16 @@ func parseAbility(
 	}
 
 	return ability, diagnostics
+}
+
+func attachParameterizedKeywordCost(ability *Ability, phrase Phrase, bodyStart int, kind KeywordKind) {
+	if kind == KeywordWard {
+		ability.wardCostPhrase = &phrase
+		ability.wardBodyStart = bodyStart
+		return
+	}
+	ability.kickerCostPhrase = &phrase
+	ability.kickerBodyStart = bodyStart
 }
 
 func resolvingBodyTokens(tokens []shared.Token, kind AbilityKind, cardName string) []shared.Token {

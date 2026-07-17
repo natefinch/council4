@@ -35,6 +35,10 @@ func compileKeywords(syntaxKeywords []parser.Keyword) []CompiledKeyword {
 			cost := compileCost(*keyword.WardCost)
 			compiled.WardCost = &cost
 		}
+		if keyword.KickerCost != nil {
+			cost := compileCost(*keyword.KickerCost)
+			compiled.KickerCost = &cost
+		}
 		if keyword.EquipRestriction != nil {
 			compiled.EquipRestriction = compileEquipRestriction(keyword.EquipRestriction)
 		}

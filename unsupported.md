@@ -1407,7 +1407,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Body Launderer** — unsupported return spell: the executable source backend supports only exact return of one target permanent to its owner's hand
 - **Body of Research** — unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Body Snatcher** — unsupported exile spell: the executable source backend supports only exact exile of one target permanent
-- **Bog Down** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word
 - **Bog Hoodlums** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Bog Rats** — unsupported Oracle construct: the compiler preserved but did not confidently lower: This creature can't be blocked by Walls.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Bogardan Dragonheart** — unsupported ability content: the executable source backend does not yet lower this ability content
@@ -3780,7 +3779,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Dwarven Forge-Chanter** — unsupported mixed keyword ability: the executable source backend recognized Ward but does not yet lower the additional rules text
 - **Dwarven Hammer** — unsupported permanent zone-change trigger effect: the executable source backend does not support this permanent zone-change trigger body
 - **Dwarven Hold** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target; unsupported activation cost: the executable source backend cannot lower every typed activation cost component
-- **Dwarven Landslide** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word
 - **Dwarven Lightsmith** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Assist (Another player can pay up to {5} of this spell's cost.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported power/toughness spell: the executable source backend supports only exact supported target-creature power/toughness changes until end of turn
 - **Dwarven Patrol** — unsupported triggered ability: the spell event exists, but this trigger requires a missing spell-event relation, copy, or provenance semantic slot
 - **Dwarven Recruiter** — unsupported search effect: unexpected non-result reference in search effect
@@ -4645,7 +4643,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Filigree Vector** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Fin-Clade Fugitives** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Encore {4}{G} ({4}{G}, Exile this card from your graveyard: For each opponent, create a token copy that attacks that opponent this turn if able. They gain haste. Sacrifice them at the beginning of the next end step. Activate only as a sorcery.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Final Act** — unsupported destroy spell: mode 3: the executable source backend supports only exact destruction of one target permanent; unsupported keyword or ability loss: mode 5: the executable source backend does not yet lower spells that remove a keyword or ability
-- **Final Flourish** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
 - **Final Fortune** — unsupported lose-game effect: the executable source backend supports only the exact controller, referenced, or target "loses the game" effect
 - **Final Parting** — unsupported search effect: the executable source backend supports only exact unconditional library-search sequences
 - **Final Punishment** — unsupported life spell: the executable source backend supports only exact supported life changes
@@ -9839,7 +9836,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Phyrexian Rebirth** — unsupported ordered effect sequence: sub-effect — unsupported token creation
 - **Phyrexian Revoker** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Activated abilities of sources with the chosen name can't be activated.; unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Phyrexian Scriptures** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target; unsupported exile spell: the executable source backend supports only exact exile of one target permanent
-- **Phyrexian Scuta** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word
 - **Phyrexian Slayer** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **Phyrexian Soulgorger** — unsupported ability word: the executable source backend does not yet lower the "Cumulative upkeep" ability word
 - **Phyrexian Splicer** — unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported activation cost: the executable source backend cannot lower every typed activation cost component
@@ -10099,7 +10095,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Primal Command** — unsupported shuffle effect: mode 3: the executable source backend supports only a source-spell shuffle into its owner's library or a controller graveyard shuffle into library
 - **Primal Elder Kitty** — unsupported type line: type line "Stickers" has no supported card type
 - **Primal Empathy** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: if you control a creature with the greatest power among creatures on the battlefield
-- **Primal Growth** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word; unsupported search effect: unexpected non-result reference in search effect
 - **Primal Order** — unsupported damage spell: the executable source backend supports only exact fixed or X group damage amounts
 - **Primal Plasma** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
 - **Primal Prayers** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
@@ -11229,7 +11224,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Rush of Inspiration // Crackling Falls** — unsupported ordered effect sequence: structural — per-effect condition kind not gateable
 - **Rushblade Commander** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
 - **Rushed Rebirth** — unsupported search effect: the executable source backend supports only searches of your library or a single target player's library ending with "then shuffle"
-- **Rushing River** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word
 - **Rushing-Tide Zubera** — unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger condition
 - **Rushwood Grove** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target; unsupported activation cost: the executable source backend cannot lower every typed activation cost component
 - **Rushwood Legate** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
@@ -12824,7 +12818,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Stolen Identity** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Cipher (Then you may exile this spell card encoded on a creature you control. Whenever that creature deals combat damage to a player, its controller may cast a copy of the encoded card without paying its mana cost.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Stolen Strategy** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect
 - **Stolen Uniform** — unsupported gain-control spell: the executable source backend supports only exact gain-control sequences targeting one permanent
-- **Stomped by the Foot** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
 - **Stomping Slabs** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If a card named Stomping Slabs was revealed this way
 - **Stone Catapult** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
 - **Stone Giant** — unsupported ordered effect sequence: sub-effect — unsupported temporary keyword spell
@@ -14631,7 +14624,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Vault 87: Forced Evolution** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Vaultborn Tyrant** — unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger condition
 - **Vaultbreaker** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Dash {2}{R} (You may cast this spell for its dash cost. If you do, it gains haste, and it's returned from the battlefield to its owner's hand at the beginning of the next end step.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
-- **Vayne's Treachery** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
 - **Vazi, Keen Negotiator** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color; unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot
 - **Vectis Dominator** — unsupported activation condition: the executable source backend cannot lower every activation condition
 - **Vectis Gloves** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
@@ -14746,7 +14738,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Vibrating Sphere** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
 - **Vicious Battlerager** — unsupported Oracle construct: the compiler preserved but did not confidently lower: When this creature enters, you take the initiative.; unsupported permanent zone-change trigger effect: the executable source backend does not support this permanent zone-change trigger body
 - **Vicious Betrayal** — unsupported activation cost: the executable source backend does not yet lower this additional cost to cast; unsupported power/toughness spell: the executable source backend supports only exact supported target-creature power/toughness changes until end of turn
-- **Vicious Offering** — unsupported ability word: the executable source backend does not yet lower the "Kicker" ability word; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
 - **Vicious Rivalry** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
 - **Vicious Shadows** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported damage spell
 - **Viconia, Drow Apostate** — unsupported return spell: the executable source backend supports only exact return of one target permanent to its owner's hand
