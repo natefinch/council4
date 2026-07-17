@@ -2,6 +2,67 @@ package parser
 
 import "github.com/natefinch/council4/cardgen/oracle/shared"
 
+// creditCopySetColorsRider folds a trailing copiable color exception
+// ", except that the copy is <color>." onto a copy-stack-object effect. The
+// exception is removed from the effect's bare copy clause before exactness is
+// recomputed, while its typed color and span remain available to downstream
+// text-blind stages.
+func creditCopySetColorsRider(sentences []Sentence) {
+	for si := range sentences {
+		for ei := range sentences[si].Effects {
+			effect := &sentences[si].Effects[ei]
+			if effect.Kind != EffectCopyStackObject || len(effect.CopySetColors) != 0 {
+				continue
+			}
+			riderStart, setColor, ok := copySetColorRider(effect.Tokens)
+			if !ok {
+				continue
+			}
+			riderSpan := shared.SpanOf(effect.Tokens[riderStart:])
+			effect.Tokens = effect.Tokens[:riderStart]
+			effect.CopySetColors = []Color{setColor}
+			effect.CopySetColorsRiderSpan = riderSpan
+			effect.Exact = exactEffectSyntax(effect)
+		}
+	}
+}
+
+func copySetColorRider(tokens []shared.Token) (int, Color, bool) {
+	for i := range tokens {
+		if !equalWord(tokens[i], "except") {
+			continue
+		}
+		j := i + 1
+		if j < len(tokens) && equalWord(tokens[j], "that") {
+			j++
+		}
+		if !effectWordsAt(tokens, j, "the", "copy", "is") {
+			continue
+		}
+		j += 3
+		if j >= len(tokens) {
+			continue
+		}
+		setColor, ok := recognizeColorWord(tokens[j].Text)
+		if !ok {
+			continue
+		}
+		j++
+		if j < len(tokens) && tokens[j].Kind == shared.Period {
+			j++
+		}
+		if j != len(tokens) {
+			continue
+		}
+		start := i
+		if start > 0 && tokens[start-1].Kind == shared.Comma {
+			start--
+		}
+		return start, setColor, true
+	}
+	return 0, ColorUnknown, false
+}
+
 // creditConjoinedCopyChooseNewTargetsRider folds a "copy <ref> and [may] choose
 // a new target[s]/new targets for the copy[ies]" rider that the parser absorbs
 // into the copy effect's own clause (Sevinne's Reclamation, the Chain cycle).

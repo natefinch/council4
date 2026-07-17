@@ -173,13 +173,30 @@ func spellRawTargetSpecsForObject(g *game.Game, obj *game.StackObject) ([]game.T
 	return spellTargetSpecsRaw(card, obj.ChosenModes), true
 }
 
-// stackObjectSpellDef returns the announced face definition of a spell on the
-// stack, matching the lookup stackObjectTargetSpecs uses for the spell case.
+// stackObjectSpellDef returns the selected face's effective copiable
+// characteristics. Spell copies overlay their layer-1 CopyValues without
+// mutating the physical source definition.
 func stackObjectSpellDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
-	if card, ok := g.GetCardInstance(obj.SourceID); ok {
-		if def, defOK := card.Def.FaceDef(obj.Face); defOK {
-			return def, true
+	if obj == nil || obj.Kind != game.StackSpell {
+		return nil, false
+	}
+	var def *game.CardDef
+	var ok bool
+	if obj.SourceTokenDef != nil {
+		def, ok = obj.SourceTokenDef.FaceDef(obj.Face)
+	} else {
+		_, def, ok = cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+		if !ok && obj.SourceCardID != 0 {
+			_, def, ok = cardInstanceFaceDef(g, obj.SourceCardID, obj.Face)
 		}
 	}
-	return stackObjectSourceDef(g, obj)
+	if !ok || def == nil {
+		return nil, false
+	}
+	if !obj.CopyValues.Exists {
+		return def, true
+	}
+	effective := copyCardDef(def)
+	applyCopyValuesToCardDef(effective, &obj.CopyValues.Val)
+	return effective, true
 }

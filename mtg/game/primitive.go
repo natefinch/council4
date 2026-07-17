@@ -2100,7 +2100,11 @@ type CopyStackObject struct {
 	// effects add to the batch once rather than once per copy.
 	Count               int
 	MayChooseNewTargets bool
-	Chooser             opt.V[PlayerReference]
+	// SetColors is a copiable exception that replaces each spell copy's color
+	// values while preserving every other copiable value. nil leaves colors
+	// unchanged.
+	SetColors []color.Color
+	Chooser   opt.V[PlayerReference]
 }
 
 // Mill puts cards from the top of a referenced player's library into their

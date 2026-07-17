@@ -834,6 +834,9 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case RepeatProcess:
 		value.Body = cloneAbilityContent(value.Body)
 		return value
+	case CopyStackObject:
+		value.SetColors = slices.Clone(value.SetColors)
+		return value
 	case SacrificePermanents:
 		value.Selection = cloneSelection(value.Selection)
 		return value

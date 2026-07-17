@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -795,6 +796,10 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 	if !ok {
 		return unsupported()
 	}
+	var setColors []color.Color
+	if effect.CopyCharacteristics != nil {
+		setColors = append([]color.Color(nil), effect.CopyCharacteristics.SetColors...)
+	}
 	return game.Mode{
 		Targets: targets,
 		Sequence: []game.Instruction{{
@@ -802,6 +807,7 @@ func lowerCopyStackObjectSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 				Object:              object,
 				Count:               count,
 				MayChooseNewTargets: effect.CopyMayChooseNewTargets,
+				SetColors:           setColors,
 			},
 		}},
 	}.Ability(), nil

@@ -269,6 +269,12 @@ type StackObject struct {
 	// physical source card.
 	Copy bool
 
+	// CopyValues snapshots the copiable characteristics of a spell copy,
+	// including modifications made by the copy effect itself. They are applied
+	// before later characteristic layers and are themselves copied when this
+	// spell is copied again.
+	CopyValues opt.V[CopyableValues]
+
 	// AdditionalCostsPaid describes any additional costs that were paid
 	// (e.g., "sacrificed a creature", "discarded a card").
 	AdditionalCostsPaid []string

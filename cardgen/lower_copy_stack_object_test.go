@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -90,6 +91,7 @@ func TestLowerCopySpellAbility(t *testing.T) {
 	if !face.SpellAbility.Exists {
 		t.Fatal("spell ability not lowered")
 	}
+
 	mode := face.SpellAbility.Val.Modes[0]
 	if len(mode.Targets) != 1 || mode.Targets[0].Allow != game.TargetAllowStackObject {
 		t.Fatalf("targets = %+v, want one stack-object target", mode.Targets)
@@ -103,6 +105,27 @@ func TestLowerCopySpellAbility(t *testing.T) {
 	copyPrim, ok := mode.Sequence[0].Primitive.(game.CopyStackObject)
 	if !ok {
 		t.Fatalf("primitive = %T, want game.CopyStackObject", mode.Sequence[0].Primitive)
+	}
+	if !copyPrim.MayChooseNewTargets {
+		t.Fatal("MayChooseNewTargets = false, want true")
+	}
+}
+
+func TestLowerForkColorException(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Fork",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		OracleText: "Copy target instant or sorcery spell, except that the copy is red. You may choose new targets for the copy.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	copyPrim, ok := mode.Sequence[0].Primitive.(game.CopyStackObject)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.CopyStackObject", mode.Sequence[0].Primitive)
+	}
+	if !slices.Equal(copyPrim.SetColors, []color.Color{color.Red}) {
+		t.Fatalf("SetColors = %v, want [Red]", copyPrim.SetColors)
 	}
 	if !copyPrim.MayChooseNewTargets {
 		t.Fatal("MayChooseNewTargets = false, want true")

@@ -115,23 +115,10 @@ func snapshotStackSpell(g *game.Game, obj *game.StackObject) game.ObjectSnapshot
 		Owner:      obj.Controller,
 		Controller: obj.Controller,
 	}
-	if obj.SourceTokenDef != nil {
-		if def, ok := obj.SourceTokenDef.FaceDef(obj.Face); ok {
-			snapshot.Colors = append([]color.Color(nil), def.Colors...)
-			snapshot.Types = append([]types.Card(nil), def.Types...)
-			snapshot.Subtypes = append([]types.Sub(nil), def.Subtypes...)
-		}
-		return snapshot
-	}
-	if obj.SourceID != 0 {
-		if card, ok := g.GetCardInstance(obj.SourceID); ok {
-			faceDef := cardFaceOrDefault(card, obj.Face)
-			if faceDef != nil {
-				snapshot.Colors = append([]color.Color(nil), faceDef.Colors...)
-				snapshot.Types = append([]types.Card(nil), faceDef.Types...)
-				snapshot.Subtypes = append([]types.Sub(nil), faceDef.Subtypes...)
-			}
-		}
+	if def, ok := stackObjectSpellDef(g, obj); ok {
+		snapshot.Colors = spellColors(def)
+		snapshot.Types = append([]types.Card(nil), def.Types...)
+		snapshot.Subtypes = append([]types.Sub(nil), def.Subtypes...)
 	}
 	return snapshot
 }

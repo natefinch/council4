@@ -2166,7 +2166,7 @@ func (r Renderer) renderTurnFaceDown(ctx *renderCtx, value game.TurnFaceDown) (s
 	return structLit("game.TurnFaceDown", fields), nil
 }
 
-func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (string, error) {
+func (r Renderer) renderCopyStackObjectPrimitive(ctx *renderCtx, value game.CopyStackObject) (string, error) {
 	rendered, err := r.renderObjectReference(value.Object)
 	if err != nil {
 		return "", err
@@ -2177,6 +2177,14 @@ func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (st
 	}
 	if value.MayChooseNewTargets {
 		fields = append(fields, "MayChooseNewTargets: true,")
+	}
+	if len(value.SetColors) > 0 {
+		literals, err := colorValueLiterals(value.SetColors)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importColor)
+		fields = append(fields, fmt.Sprintf("SetColors: []color.Color{%s},", literals))
 	}
 	if value.Chooser.Exists {
 		chooser, err := r.renderPlayerReference(value.Chooser.Val)

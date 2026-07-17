@@ -326,14 +326,7 @@ func stackObjectSourceHasTypes(g *game.Game, obj *game.StackObject, required []t
 }
 
 func stackSpellSupertypes(g *game.Game, obj *game.StackObject) []types.Super {
-	if obj.SourceTokenDef != nil {
-		def, ok := obj.SourceTokenDef.FaceDef(obj.Face)
-		if !ok {
-			return nil
-		}
-		return def.Supertypes
-	}
-	_, spellDef, ok := cardInstanceFaceDef(g, obj.SourceID, obj.Face)
+	spellDef, ok := stackObjectSpellDef(g, obj)
 	if !ok {
 		return nil
 	}

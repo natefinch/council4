@@ -400,7 +400,7 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		if err != nil {
 			return "", err
 		}
-		return r.renderCopyStackObjectPrimitive(value)
+		return r.renderCopyStackObjectPrimitive(ctx, value)
 	case game.PrimitiveAttach:
 		return r.renderAttachPrimitive(primitive)
 	case game.PrimitiveBecomeCopy:

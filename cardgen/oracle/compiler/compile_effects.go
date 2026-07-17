@@ -627,6 +627,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PersistUntilEndOfTurnRiderSpan:                syntax.PersistUntilEndOfTurnRiderSpan,
 				CopyMayChooseNewTargets:                       syntax.CopyMayChooseNewTargets,
 				CopyChooseNewTargetsRiderSpan:                 syntax.CopyChooseNewTargetsRiderSpan,
+				CopyCharacteristics:                           compileCopyCharacteristics(syntax.CopySetColors),
+				CopySetColorsRiderSpan:                        syntax.CopySetColorsRiderSpan,
 				Dig:                                           syntax.Dig,
 				HandLibraryPut:                                syntax.HandLibraryPut,
 				HandDiscard:                                   syntax.HandDiscard,
@@ -726,6 +728,13 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 		}
 	}
 	return effects
+}
+
+func compileCopyCharacteristics(colors []parser.Color) *CompiledCopyCharacteristics {
+	if len(colors) == 0 {
+		return nil
+	}
+	return &CompiledCopyCharacteristics{SetColors: compileParserColors(colors)}
 }
 
 // appendDiceTableEffects compiles each die-roll outcome-table row's resolving

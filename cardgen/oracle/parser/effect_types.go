@@ -3272,6 +3272,13 @@ type EffectSyntax struct {
 	// targets for the copy[ies]." rider sentence so the lowerer can credit it
 	// toward source coverage. It is set only when CopyMayChooseNewTargets is true.
 	CopyChooseNewTargetsRiderSpan shared.Span `json:"-"`
+	// CopySetColors carries a copiable color exception on a spell copy, such as
+	// Fork's "except that the copy is red." The parser owns the wording and
+	// lowering consumes only these typed colors.
+	CopySetColors []Color `json:",omitempty"`
+	// CopySetColorsRiderSpan covers the folded exception clause for source
+	// coverage. It is set only when CopySetColors is non-empty.
+	CopySetColorsRiderSpan shared.Span `json:"-"`
 	// Dig holds the structured fields of an impulse "Put N of them into your
 	// hand and the rest into your graveyard." clause. It is set only on the
 	// EffectPut half of an impulse dig sequence (Dig.Put true); the look half is

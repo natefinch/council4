@@ -136,6 +136,9 @@ func castSelectionFace(card *game.CardDef, bestowed bool) *game.CardDef {
 // spellColors returns the colors of a spell's effective face for use in
 // EventSpellCast, paralleling cardTypes for type-based filters.
 func spellColors(def *game.CardDef) []color.Color {
+	if def == nil || def.HasKeyword(game.Devoid) {
+		return nil
+	}
 	return append([]color.Color(nil), def.Colors...)
 }
 
@@ -144,6 +147,11 @@ func spellColors(def *game.CardDef) []color.Color {
 // records its physical source in SourceCardID/SourceTokenDef; both are resolved
 // so a resolving color condition ("if it's blue") can test the targeted object.
 func stackObjectColors(g *game.Game, obj *game.StackObject) ([]color.Color, bool) {
+	if obj != nil && obj.Kind == game.StackSpell {
+		if def, ok := stackObjectSpellDef(g, obj); ok {
+			return spellColors(def), true
+		}
+	}
 	if def, ok := stackObjectSourceDef(g, obj); ok {
 		return spellColors(def), true
 	}

@@ -127,21 +127,10 @@ func stackSpellName(g *game.Game, obj *game.StackObject) (string, bool) {
 		// treat a same-named card as matching.
 		return "", true
 	}
-	if obj.SourceTokenDef != nil {
-		face, ok := obj.SourceTokenDef.FaceDef(obj.Face)
-		if !ok {
-			return "", false
-		}
-		return face.Name, true
+	if def, ok := stackObjectSpellDef(g, obj); ok {
+		return def.Name, true
 	}
-	card, ok := g.GetCardInstance(obj.SourceID)
-	if !ok && obj.SourceCardID != 0 {
-		card, ok = g.GetCardInstance(obj.SourceCardID)
-	}
-	if !ok {
-		return "", false
-	}
-	return cardFaceOrDefault(card, obj.Face).Name, true
+	return "", false
 }
 
 func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
@@ -151,21 +140,11 @@ func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
 	if obj.FaceDown {
 		return 0, true
 	}
-	if obj.SourceTokenDef != nil {
-		face, ok := obj.SourceTokenDef.FaceDef(obj.Face)
-		if !ok {
-			return 0, false
-		}
-		return stackManaValue(face, obj.XValue), true
-	}
-	card, ok := g.GetCardInstance(obj.SourceID)
-	if !ok && obj.SourceCardID != 0 {
-		card, ok = g.GetCardInstance(obj.SourceCardID)
-	}
+	def, ok := stackObjectSpellDef(g, obj)
 	if !ok {
 		return 0, false
 	}
-	return stackManaValue(cardFaceOrDefault(card, obj.Face), obj.XValue), true
+	return stackManaValue(def, obj.XValue), true
 }
 
 func effectStackObjectID(g *game.Game, obj *game.StackObject, targetIndex int) (id.ID, bool) {
