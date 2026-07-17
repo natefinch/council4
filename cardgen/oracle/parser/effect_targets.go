@@ -2415,6 +2415,7 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 			(equalWord(token, "or") && end+1 < len(tokens) && orBackReferenceClauseFollowsAt(tokens, end+1)) ||
 			(equalWord(token, "or") && end+1 < len(tokens) && (equalWord(tokens[end+1], "remove") || equalWord(tokens[end+1], "removes"))) ||
 			(equalWord(token, "and") && end+1 < len(tokens) && effectWordKind(tokens[end+1]) != EffectUnknown) ||
+			copyTokenAttackingRiderFollowsAt(tokens, end) ||
 			(end > start && effectWordKind(token) != EffectUnknown) ||
 			(end > start && equalWord(token, "pays")) ||
 			(end > start && equalWord(token, "would")) ||
@@ -2446,6 +2447,15 @@ func targetSyntaxEnd(tokens []shared.Token, atoms Atoms, start int) int {
 	}
 
 	return end
+}
+
+// copyTokenAttackingRiderFollowsAt reports whether i opens the relative clause
+// describing a copy token's combat entry rather than the preceding copy target:
+// "... a copy of target attacking creature and that's tapped and attacking."
+func copyTokenAttackingRiderFollowsAt(tokens []shared.Token, i int) bool {
+	return effectWordsAt(tokens, i, "and", "that's", "tapped", "and", "attacking") ||
+		effectWordsAt(tokens, i, "and", "that", "is", "tapped", "and", "attacking") ||
+		effectWordsAt(tokens, i, "and", "that", "are", "tapped", "and", "attacking")
 }
 
 func counterPlacementForEachAmountAt(tokens []shared.Token, atoms Atoms, start, end int) bool {

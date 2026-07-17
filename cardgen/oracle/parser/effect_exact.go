@@ -272,9 +272,24 @@ func exactChoosePermanentEffectSyntax(effect *EffectSyntax) bool {
 func exactDelayedCreatedTokensExileEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Context != EffectContextController ||
 		effect.Negated ||
-		effect.DelayedTiming != DelayedTimingNextEndStep ||
-		len(effect.Targets) != 0 ||
-		!strings.EqualFold(exactEffectClauseText(effect), "Exile the tokens.") {
+		(effect.DelayedTiming != DelayedTimingNextEndStep &&
+			effect.DelayedTiming != DelayedTimingEndOfCombat) ||
+		len(effect.Targets) != 0 {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	switch effect.DelayedTiming {
+	case DelayedTimingNextEndStep:
+		if !strings.EqualFold(text, "Exile the token.") &&
+			!strings.EqualFold(text, "Exile the tokens.") {
+			return false
+		}
+	case DelayedTimingEndOfCombat:
+		if !strings.EqualFold(text, "Exile the token at end of combat.") &&
+			!strings.EqualFold(text, "Exile the tokens at end of combat.") {
+			return false
+		}
+	default:
 		return false
 	}
 	effect.CreatedTokensReference = true
@@ -3786,13 +3801,14 @@ func exactCreateCopyTokenEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	entersTapped, matched := createCopyTokenClauseMatches(effect, base, effect.Targets[0].Text)
+	entersTapped, attacksWithTarget, matched := createCopyTokenClauseMatches(effect, base, effect.Targets[0].Text)
 	if !matched {
 		return false
 	}
 	effect.TokenCopyDropLegendary = rider.dropLegendary
 	effect.TokenCopyGrantKeywords = rider.grantKeywords
 	effect.TokenCopyEntersTapped = entersTapped
+	effect.TokenCopyAttacksWithTarget = attacksWithTarget
 	if rider.override != nil {
 		applyCopyTokenOverride(effect, *rider.override)
 	}
@@ -3840,17 +3856,26 @@ func createCopyTokenClause(effect *EffectSyntax, source string, tapped bool) str
 }
 
 // createCopyTokenClauseMatches reports whether base equals the canonical create-
-// copy-token clause for source, accepting the optional "tapped" entry modifier.
-// It returns whether the tapped variant matched and whether either variant
-// matched at all.
-func createCopyTokenClauseMatches(effect *EffectSyntax, base, source string) (tapped, ok bool) {
+// copy-token clause for source, accepting either the optional leading "tapped"
+// modifier or the trailing "and that's/that are tapped and attacking" modifier.
+// The trailing form correlates the token's defender with the copied attacking
+// target. It returns the entry modifiers and whether any variant matched.
+func createCopyTokenClauseMatches(effect *EffectSyntax, base, source string) (tapped, attacksWithTarget, ok bool) {
 	if strings.EqualFold(base, createCopyTokenClause(effect, source, false)) {
-		return false, true
+		return false, false, true
 	}
 	if strings.EqualFold(base, createCopyTokenClause(effect, source, true)) {
-		return true, true
+		return true, false, true
 	}
-	return false, false
+	plain := strings.TrimSuffix(createCopyTokenClause(effect, source, false), ".")
+	relative := " and that are tapped and attacking."
+	if effect.Amount.Value == 1 {
+		relative = " and that's tapped and attacking."
+	}
+	if strings.EqualFold(base, plain+relative) {
+		return true, true, true
+	}
+	return false, false, false
 }
 
 // exactCreateCopyTokenReferenceEffectSyntax reports whether the effect is
@@ -3938,8 +3963,8 @@ func exactCreateCopyTokenReferenceEffectSyntax(effect *EffectSyntax) bool {
 		if !copyTokenReferenceSupported(effect.References[i]) {
 			continue
 		}
-		tapped, matched := createCopyTokenClauseMatches(effect, clause+".", effect.References[i].Text)
-		if matched {
+		tapped, attacksWithTarget, matched := createCopyTokenClauseMatches(effect, clause+".", effect.References[i].Text)
+		if matched && !attacksWithTarget {
 			sourceIndex = i
 			entersTapped = tapped
 			break
@@ -4030,8 +4055,8 @@ func exactCreateCopyTokenTriggeringSetEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	entersTapped, matched := createCopyTokenClauseMatches(effect, base, "one of them")
-	if !matched {
+	entersTapped, attacksWithTarget, matched := createCopyTokenClauseMatches(effect, base, "one of them")
+	if !matched || attacksWithTarget {
 		return false
 	}
 	for i := range effect.References {
@@ -4074,8 +4099,10 @@ func exactCreateCopyTokenAttachedEffectSyntax(effect *EffectSyntax) bool {
 	if !ok {
 		return false
 	}
-	equippedTapped, equippedOK := createCopyTokenClauseMatches(effect, base, "equipped creature")
-	enchantedTapped, enchantedOK := createCopyTokenClauseMatches(effect, base, "enchanted creature")
+	equippedTapped, equippedAttacking, equippedOK := createCopyTokenClauseMatches(effect, base, "equipped creature")
+	enchantedTapped, enchantedAttacking, enchantedOK := createCopyTokenClauseMatches(effect, base, "enchanted creature")
+	equippedOK = equippedOK && !equippedAttacking
+	enchantedOK = enchantedOK && !enchantedAttacking
 	if !equippedOK && !enchantedOK {
 		return false
 	}

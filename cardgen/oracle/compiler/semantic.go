@@ -2699,6 +2699,9 @@ type CompiledEffect struct {
 	// TokenCopyAttacksWithSource puts the copies into combat attacking the same
 	// player, planeswalker, or battle as the source attacker.
 	TokenCopyAttacksWithSource bool
+	// TokenCopyAttacksWithTarget puts a copy of an attacking target into combat
+	// attacking the same player, planeswalker, or battle as that target.
+	TokenCopyAttacksWithTarget bool
 	// TokenCopyGrantKeywords lists keyword abilities the created copy token gains
 	// from a folded "[That token/It] gains <keyword>." rider, in source order.
 	TokenCopyGrantKeywords []parser.KeywordKind

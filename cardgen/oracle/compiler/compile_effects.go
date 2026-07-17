@@ -403,6 +403,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				TokenCopyEntersTapped:              syntax.TokenCopyEntersTapped,
 				TokenCopyAttacksDefender:           syntax.TokenCopyAttacksDefender,
 				TokenCopyAttacksWithSource:         syntax.TokenCopyAttacksWithSource,
+				TokenCopyAttacksWithTarget:         syntax.TokenCopyAttacksWithTarget,
 				TokenCopyGrantKeywords:             append([]parser.KeywordKind(nil), syntax.TokenCopyGrantKeywords...),
 				TokenCopyGrantRiderSpan:            syntax.TokenCopyGrantRiderSpan,
 				EachOpponentAttackingSameRiderSpan: syntax.EachOpponentAttackingSameRiderSpan,

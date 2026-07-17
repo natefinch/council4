@@ -2488,6 +2488,9 @@ type EffectSyntax struct {
 	// TokenCopyAttacksWithSource reports that the copied tokens enter attacking
 	// the same player, planeswalker, or battle as the source attacker.
 	TokenCopyAttacksWithSource bool `json:",omitempty"`
+	// TokenCopyAttacksWithTarget reports that a copy of an attacking target enters
+	// attacking the same player, planeswalker, or battle as that target.
+	TokenCopyAttacksWithTarget bool `json:",omitempty"`
 	// TokenCopyGrantKeywords lists keyword abilities a copy-token gains from a
 	// folded "[That token/It] gains <keyword>." rider sentence following the
 	// create effect, in source order. It is empty when no such rider is folded.

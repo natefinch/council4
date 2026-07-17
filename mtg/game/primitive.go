@@ -927,6 +927,11 @@ type CreateToken struct {
 	// for a defender. It is unset for ordinary token creation and is mutually
 	// exclusive with EntryAttacking and AttackEachOtherOpponent.
 	AttackSameAsSource bool
+	// AttackSameAsObject, when set, puts each created token onto the battlefield
+	// attacking the same player, planeswalker, or battle as the referenced
+	// attacking permanent. It is mutually exclusive with every other attack-entry
+	// mode.
+	AttackSameAsObject opt.V[ObjectReference]
 
 	// Power and Toughness, when set, override the source definition's printed
 	// power and toughness with a dynamic amount evaluated once at creation
