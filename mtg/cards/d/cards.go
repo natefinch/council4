@@ -65,6 +65,7 @@ var Cards = []cardset.Entry{
 	{Name: "Desert's Due", New: DesertSDue},
 	{Name: "Desolation Twin", New: DesolationTwin},
 	{Name: "Desperate Ritual", New: DesperateRitual},
+	{Name: "Destiny Spinner", New: DestinySpinner},
 	{Name: "Destructive Force", New: DestructiveForce},
 	{Name: "Destructive Tampering", New: DestructiveTampering},
 	{Name: "Detonate", New: Detonate},

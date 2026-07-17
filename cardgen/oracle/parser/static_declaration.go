@@ -331,6 +331,12 @@ const (
 	StaticDeclarationSpellTypeInstant          StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeInstant"
 	StaticDeclarationSpellTypeSorcery          StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeSorcery"
 	StaticDeclarationSpellTypeInstantOrSorcery StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeInstantOrSorcery"
+	// StaticDeclarationSpellTypeCreatureOrEnchantment selects creature and
+	// enchantment spells ("Creature and enchantment spells you control can't be
+	// countered.", Destiny Spinner): a spell qualifies when it is a creature or an
+	// enchantment. It mirrors StaticDeclarationSpellTypeInstantOrSorcery as the
+	// second recognized two-card-type disjunction.
+	StaticDeclarationSpellTypeCreatureOrEnchantment StaticDeclarationSpellTypeKind = "StaticDeclarationSpellTypeCreatureOrEnchantment"
 )
 
 // StaticDeclarationSpellColorKind identifies the closed single-color filter a
@@ -4805,6 +4811,13 @@ func staticSpellTypeFilter(tokens []shared.Token) (StaticDeclarationSpellTypeKin
 		equalWord(tokens[2], "sorcery") &&
 		equalWord(tokens[3], "spells") {
 		return StaticDeclarationSpellTypeInstantOrSorcery, tokens[3:], true
+	}
+	if len(tokens) >= 4 &&
+		equalWord(tokens[0], "creature") &&
+		equalWord(tokens[1], "and") &&
+		equalWord(tokens[2], "enchantment") &&
+		equalWord(tokens[3], "spells") {
+		return StaticDeclarationSpellTypeCreatureOrEnchantment, tokens[3:], true
 	}
 	if len(tokens) < 2 || !equalWord(tokens[1], "spells") {
 		return StaticDeclarationSpellTypeAll, nil, false

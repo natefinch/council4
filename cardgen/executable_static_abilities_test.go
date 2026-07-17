@@ -587,6 +587,11 @@ func TestGenerateExecutableCardSourceGroupUncounterable(t *testing.T) {
 			oracleText: "Instant spells you control can't be countered.",
 			wantTypes:  "SpellTypes:         []types.Card{types.Instant},",
 		},
+		{
+			name:       "creature and enchantment spells",
+			oracleText: "Creature and enchantment spells you control can't be countered.",
+			wantTypes:  "SpellTypes:         []types.Card{types.Creature, types.Enchantment},",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

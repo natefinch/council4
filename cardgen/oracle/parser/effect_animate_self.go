@@ -13,14 +13,30 @@ import (
 // subtype(s) added; EveryCreatureType records the "with all creature types"
 // rider; and Keywords are the keyword(s) granted. The change lasts until end of
 // turn while the source keeps its existing land or artifact types.
+//
+// DynamicPowerToughness, when non-nil, replaces the literal Power/Toughness with
+// a variable X/X bound to a controlled-permanent count (Destiny Spinner). Power
+// and Toughness are then zero placeholders; the lowerer emits the count as the
+// base power/toughness. Only the target-animation parser sets it.
 type AnimateSelfSyntax struct {
-	Power             int
-	Toughness         int
-	Colors            []Color
-	AddArtifact       bool
-	Subtypes          []types.Sub
-	EveryCreatureType bool
-	Keywords          []KeywordKind
+	Power                 int
+	Toughness             int
+	Colors                []Color
+	AddArtifact           bool
+	Subtypes              []types.Sub
+	EveryCreatureType     bool
+	Keywords              []KeywordKind
+	DynamicPowerToughness *AnimateDynamicPowerToughness
+}
+
+// AnimateDynamicPowerToughness records a variable "X/X" animated base power and
+// toughness bound by a trailing "where X is the number of <type> you control"
+// clause (Destiny Spinner). ControlledType is the single permanent card type
+// counted among the controller's permanents; the count is locked when the
+// animation resolves (CR 608.2c). A nil *AnimateDynamicPowerToughness means the
+// animation sets a fixed N/N instead.
+type AnimateDynamicPowerToughness struct {
+	ControlledType types.Card
 }
 
 // parseAnimateSelfEffect recognizes the one-shot continuous self-animation "This

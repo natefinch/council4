@@ -2,6 +2,7 @@ package parser
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // parseAnimateTargetEffect recognizes the one-shot continuous target-animation
@@ -36,6 +37,7 @@ func parseAnimateTargetEffect(sentence Sentence, tokens []shared.Token, atoms At
 	leadingUntilEndOfTurn := leadingDuration == EffectDurationUntilEndOfTurn
 
 	work, inlineStill := trimInlineStillALand(remaining)
+	work, countedType, dynamicPT := trimAnimateWhereXClause(work)
 	work, trailingUntilEndOfTurn := becomeCopyTrimUntilEndOfTurn(work)
 	if leadingUntilEndOfTurn == trailingUntilEndOfTurn {
 		return nil, false
@@ -60,7 +62,7 @@ func parseAnimateTargetEffect(sentence Sentence, tokens []shared.Token, atoms At
 		return nil, false
 	}
 	cursor++
-	pt, ok := parsePowerToughness(work, cursor)
+	pt, ok := animateTargetPowerToughness(work, cursor, dynamicPT)
 	if !ok {
 		return nil, false
 	}
@@ -84,6 +86,11 @@ func parseAnimateTargetEffect(sentence Sentence, tokens []shared.Token, atoms At
 		return nil, false
 	}
 
+	var dynamicPTPayload *AnimateDynamicPowerToughness
+	if dynamicPT {
+		dynamicPTPayload = &AnimateDynamicPowerToughness{ControlledType: countedType}
+	}
+
 	effect := EffectSyntax{
 		Kind:       EffectAnimateTarget,
 		Context:    EffectContextController,
@@ -93,15 +100,81 @@ func parseAnimateTargetEffect(sentence Sentence, tokens []shared.Token, atoms At
 		Tokens:     append([]shared.Token(nil), body...),
 		Duration:   EffectDurationUntilEndOfTurn,
 		AnimateTarget: &AnimateSelfSyntax{
-			Power:             pt.Power,
-			Toughness:         pt.Toughness,
-			Colors:            colors,
-			Subtypes:          characteristics.Subtypes,
-			EveryCreatureType: false,
-			Keywords:          keywords,
+			Power:                 pt.Power,
+			Toughness:             pt.Toughness,
+			Colors:                colors,
+			Subtypes:              characteristics.Subtypes,
+			EveryCreatureType:     false,
+			Keywords:              keywords,
+			DynamicPowerToughness: dynamicPTPayload,
 		},
 	}
 	return []EffectSyntax{effect}, true
+}
+
+// animateTargetPowerToughness reads the animated base power/toughness at index,
+// dispatching on whether the sentence carried a "where X is ..." clause. With
+// the clause it matches the variable "X/X" form (reporting zero placeholders
+// bound by the clause); without it, the literal "N/N" form. Coupling the two
+// means an unbound "X/X" (no clause) and a bound clause without "X/X" both fail
+// closed.
+func animateTargetPowerToughness(tokens []shared.Token, index int, dynamic bool) (powerToughness, bool) {
+	if dynamic {
+		return parseVariableXAnimatePowerToughness(tokens, index)
+	}
+	return parsePowerToughness(tokens, index)
+}
+
+// parseVariableXAnimatePowerToughness matches a variable "X/X" base
+// power/toughness at index (Destiny Spinner's "becomes an X/X ... creature").
+// The reported power/toughness are zero; the actual value is bound by the
+// caller's "where X is the number of <type> you control" clause and locked at
+// resolution.
+func parseVariableXAnimatePowerToughness(tokens []shared.Token, index int) (powerToughness, bool) {
+	if index+2 >= len(tokens) ||
+		!equalWord(tokens[index], "X") ||
+		tokens[index+1].Kind != shared.Slash ||
+		!equalWord(tokens[index+2], "X") {
+		return powerToughness{}, false
+	}
+	return powerToughness{Power: 0, Toughness: 0, Next: index + 3}, true
+}
+
+// trimAnimateWhereXClause removes a trailing ", where X is the number of <type>
+// you control" clause that binds a variable X/X target animation (Destiny
+// Spinner) and reports the counted controlled permanent type. The clause must be
+// the exact supported shape running to the end of the animation sentence; any
+// other "where X is ..." wording leaves the tokens unchanged and reports false,
+// so a fixed N/N animation is untouched and an unsupported dynamic clause fails
+// closed downstream (the X/X base P/T is then left unbound).
+func trimAnimateWhereXClause(work []shared.Token) ([]shared.Token, types.Card, bool) {
+	whereIdx := -1
+	for i := range work {
+		if equalWord(work[i], "where") {
+			whereIdx = i
+			break
+		}
+	}
+	if whereIdx < 1 {
+		return work, "", false
+	}
+	clause := work[whereIdx:]
+	if len(clause) != 9 ||
+		!equalWord(clause[1], "X") || !equalWord(clause[2], "is") ||
+		!equalWord(clause[3], "the") || !equalWord(clause[4], "number") ||
+		!equalWord(clause[5], "of") || !equalWord(clause[7], "you") ||
+		!equalWord(clause[8], "control") {
+		return work, "", false
+	}
+	counted, ok := groupEntersTappedPermanentType(clause[6].Text)
+	if !ok {
+		return work, "", false
+	}
+	head := work[:whereIdx]
+	if len(head) > 0 && head[len(head)-1].Kind == shared.Comma {
+		head = head[:len(head)-1]
+	}
+	return head, counted, true
 }
 
 // animateTargetSubjectIsLand reports whether the words between "target" and
