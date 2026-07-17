@@ -844,6 +844,12 @@ type RuleEffect struct {
 	AffectedController ControllerRelation
 	PermanentTypes     []types.Card
 	SpellTypes         []types.Card
+	// SpellCharacteristicFilters optionally narrows a spell permission to an
+	// any-of list of characteristic branches. Within each branch, card types,
+	// supertypes, and subtypes are conjunctive categories. It represents
+	// disjunctions such as "legendary spells or artifact spells" without
+	// flattening them into an incorrect intersection.
+	SpellCharacteristicFilters []CharacteristicFilter
 	// SpellColors optionally narrows a cast permission to spells carrying any of
 	// these colors.
 	SpellColors []color.Color
@@ -1176,6 +1182,24 @@ type RuleEffect struct {
 	// cast-or-copy of an instant or sorcery spell. It is false for every doubler
 	// with no causal filter.
 	TriggerCauseCastOrCopyInstantSorcery bool
+
+	// TriggerCausePermanentFilters, on a
+	// RuleEffectAdditionalTriggerForControlledPermanent, restricts the doubler to
+	// triggered abilities caused by a permanent matching any filter branch
+	// entering or leaving the battlefield. TriggerCausePermanentEnters and
+	// TriggerCausePermanentLeaves select the qualifying transitions.
+	TriggerCausePermanentFilters []CharacteristicFilter
+	TriggerCausePermanentEnters  bool
+	TriggerCausePermanentLeaves  bool
+}
+
+// CharacteristicFilter is one reusable branch of an object-characteristic
+// disjunction. Values within each category are alternatives; nonempty categories
+// are conjunctive with one another.
+type CharacteristicFilter struct {
+	Types      []types.Card
+	Supertypes []types.Super
+	Subtypes   []types.Sub
 }
 
 // GraveyardCastGrantCost is the computed alternative cost a

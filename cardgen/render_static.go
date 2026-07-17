@@ -893,6 +893,19 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 	if effect.TriggerCauseCastOrCopyInstantSorcery {
 		fields = append(fields, "TriggerCauseCastOrCopyInstantSorcery: true,")
 	}
+	if len(effect.TriggerCausePermanentFilters) > 0 {
+		filters, err := renderCharacteristicFilters(ctx, effect.TriggerCausePermanentFilters)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("TriggerCausePermanentFilters: %s,", filters))
+	}
+	if effect.TriggerCausePermanentEnters {
+		fields = append(fields, "TriggerCausePermanentEnters: true,")
+	}
+	if effect.TriggerCausePermanentLeaves {
+		fields = append(fields, "TriggerCausePermanentLeaves: true,")
+	}
 	if !effect.AffectedSelection.Empty() {
 		selection, err := r.renderSelection(ctx, effect.AffectedSelection)
 		if err != nil {
@@ -935,6 +948,13 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 			return "", err
 		}
 		fields = append(fields, fmt.Sprintf("SpellTypes: %s,", spellTypes))
+	}
+	if len(effect.SpellCharacteristicFilters) > 0 {
+		filters, err := renderCharacteristicFilters(ctx, effect.SpellCharacteristicFilters)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("SpellCharacteristicFilters: %s,", filters))
 	}
 	if len(effect.SpellColors) > 0 {
 		ctx.need(importColor)
@@ -979,6 +999,36 @@ func (r Renderer) renderRuleEffect(ctx *renderCtx, effect *game.RuleEffect) (str
 		fields = append(fields, "AppliesToNextSpellOnly: true,")
 	}
 	return structLit("game.RuleEffect", fields), nil
+}
+
+func renderCharacteristicFilters(ctx *renderCtx, filters []game.CharacteristicFilter) (string, error) {
+	literals := make([]string, 0, len(filters))
+	for _, filter := range filters {
+		var fields []string
+		if len(filter.Types) > 0 {
+			cardTypes, err := renderTypesCardSlice(ctx, filter.Types)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("Types: %s,", cardTypes))
+		}
+		if len(filter.Supertypes) > 0 {
+			supertypes, err := renderSupertypeSlice(ctx, filter.Supertypes)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("Supertypes: %s,", supertypes))
+		}
+		if len(filter.Subtypes) > 0 {
+			subtypes, err := renderSubtypeSlice(ctx, filter.Subtypes)
+			if err != nil {
+				return "", err
+			}
+			fields = append(fields, fmt.Sprintf("Subtypes: %s,", subtypes))
+		}
+		literals = append(literals, structLit("game.CharacteristicFilter", fields))
+	}
+	return fmt.Sprintf("[]game.CharacteristicFilter{%s}", strings.Join(literals, ", ")), nil
 }
 
 // renderRuleEffectChosenSubtypeField renders the SpellChosenSubtypeFrom entry-

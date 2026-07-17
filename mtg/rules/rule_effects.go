@@ -411,9 +411,9 @@ func canGainLife(g *game.Game, playerID game.PlayerID) bool {
 // playerCanCastAsThoughFlash reports whether an active rule effect lets playerID
 // cast card as though it had flash, i.e. at instant speed ("You may cast spells
 // this turn as though they had flash.", Borne Upon a Wind; "You may cast spells
-// as though they had flash.", Vedalken Orrery; CR 702.8 / 601.3e). An effect's
-// optional SpellTypes/SpellSubtypes filters narrow the grant to spells of those
-// card types ("sorcery spells") or subtypes ("Aura and Equipment spells").
+// as though they had flash.", Vedalken Orrery; CR 702.8 / 601.3e). Characteristic
+// filter branches support disjunctions such as "legendary spells or artifact
+// spells"; the legacy type, color, and subtype filters compose with them.
 func playerCanCastAsThoughFlash(g *game.Game, playerID game.PlayerID, card *game.CardDef) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -436,6 +436,10 @@ func castAsThoughFlashEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 	if effect == nil || card == nil {
 		return false
 	}
+	if len(effect.SpellCharacteristicFilters) != 0 &&
+		!cardDefMatchesAnyCharacteristicFilter(card, effect.SpellCharacteristicFilters) {
+		return false
+	}
 	if len(effect.SpellTypes) != 0 && !cardDefHasAnyType(card, effect.SpellTypes) {
 		return false
 	}
@@ -454,6 +458,21 @@ func castAsThoughFlashEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 		return false
 	}
 	return true
+}
+
+func cardDefMatchesAnyCharacteristicFilter(card *game.CardDef, filters []game.CharacteristicFilter) bool {
+	return slices.ContainsFunc(filters, func(filter game.CharacteristicFilter) bool {
+		if len(filter.Types) != 0 && !cardDefHasAnyType(card, filter.Types) {
+			return false
+		}
+		if len(filter.Supertypes) != 0 && !slices.ContainsFunc(filter.Supertypes, card.HasSupertype) {
+			return false
+		}
+		if len(filter.Subtypes) != 0 && !card.HasAnySubtype(filter.Subtypes...) {
+			return false
+		}
+		return true
+	})
 }
 
 // additionalLandPlaysFor returns the number of extra land plays granted to

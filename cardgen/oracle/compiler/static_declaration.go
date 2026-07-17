@@ -889,6 +889,15 @@ type StaticCastAsThoughFlashDeclaration struct {
 	SpellTypes         []types.Card
 	SpellSubtypes      []types.Sub
 	ExcludedSpellTypes []types.Card
+	Filters            []CharacteristicFilter
+}
+
+// CharacteristicFilter is one branch of a reusable object-characteristic
+// disjunction.
+type CharacteristicFilter struct {
+	Types      []types.Card
+	Supertypes []types.Super
+	Subtypes   []types.Sub
 }
 
 // StaticCombatDamagePreventionDeclaration prevents all combat damage that would
@@ -1439,6 +1448,17 @@ type StaticControlledTriggerMultiplierDeclaration struct {
 	// ability of a permanent you control to trigger ...", Veyran, Voice of
 	// Duality).
 	CauseCastOrCopyInstantSorcery bool
+	// CausePermanentZoneChange restricts the multiplier to qualifying permanent
+	// battlefield entries and departures.
+	CausePermanentZoneChange *PermanentZoneChangeTriggerCause
+}
+
+// PermanentZoneChangeTriggerCause restricts a trigger multiplier to permanent
+// entries or departures matching any characteristic-filter branch.
+type PermanentZoneChangeTriggerCause struct {
+	Filters []CharacteristicFilter
+	Enters  bool
+	Leaves  bool
 }
 
 // ControlledTriggerSourceFilter is one branch of a controlled-trigger
@@ -1465,7 +1485,9 @@ func recognizeStaticControlledTriggerMultiplier(ability CompiledAbility, statics
 	}
 	node := statics[0]
 	if node.ControlledCauseCastOrCopyInstantSorcery {
-		if len(node.ControlledFilterBranches) != 0 || node.ControlledFilterPower != nil {
+		if len(node.ControlledFilterBranches) != 0 ||
+			node.ControlledFilterPower != nil ||
+			len(node.ControlledCausePermanentFilters) != 0 {
 			return StaticDeclaration{}, false
 		}
 		return StaticDeclaration{
@@ -1474,6 +1496,29 @@ func recognizeStaticControlledTriggerMultiplier(ability CompiledAbility, statics
 			OperationSpan: node.OperationSpan,
 			ControlledMultiplier: &StaticControlledTriggerMultiplierDeclaration{
 				CauseCastOrCopyInstantSorcery: true,
+			},
+		}, true
+	}
+	if len(node.ControlledCausePermanentFilters) != 0 {
+		if len(node.ControlledFilterBranches) != 0 ||
+			node.ControlledFilterPower != nil ||
+			!node.ControlledCausePermanentEnters && !node.ControlledCausePermanentLeaves {
+			return StaticDeclaration{}, false
+		}
+		filters, ok := compileStaticCharacteristicFilters(node.ControlledCausePermanentFilters)
+		if !ok {
+			return StaticDeclaration{}, false
+		}
+		return StaticDeclaration{
+			Kind:          StaticDeclarationControlledTriggerMultiplier,
+			Span:          node.Span,
+			OperationSpan: node.OperationSpan,
+			ControlledMultiplier: &StaticControlledTriggerMultiplierDeclaration{
+				CausePermanentZoneChange: &PermanentZoneChangeTriggerCause{
+					Filters: filters,
+					Enters:  node.ControlledCausePermanentEnters,
+					Leaves:  node.ControlledCausePermanentLeaves,
+				},
 			},
 		}, true
 	}
@@ -5447,6 +5492,12 @@ func recognizeStaticCastAsThoughFlashDeclaration(ability CompiledAbility, static
 	if len(excludedSpellTypes) != 0 && (len(spellTypes) != 0 || len(node.FlashSpellSubtypes) != 0) {
 		return StaticDeclaration{}, false
 	}
+	filters, ok := compileStaticCharacteristicFilters(node.FlashSpellFilters)
+	if !ok ||
+		len(filters) != 0 &&
+			(len(spellTypes) != 0 || len(node.FlashSpellSubtypes) != 0 || len(excludedSpellTypes) != 0) {
+		return StaticDeclaration{}, false
+	}
 	return StaticDeclaration{
 		Kind:          StaticDeclarationCastAsThoughFlash,
 		Span:          node.Span,
@@ -5459,8 +5510,40 @@ func recognizeStaticCastAsThoughFlashDeclaration(ability CompiledAbility, static
 			SpellTypes:         spellTypes,
 			SpellSubtypes:      node.FlashSpellSubtypes,
 			ExcludedSpellTypes: excludedSpellTypes,
+			Filters:            filters,
 		},
 	}, true
+}
+
+func compileStaticCharacteristicFilters(parsed []parser.StaticCharacteristicFilter) ([]CharacteristicFilter, bool) {
+	filters := make([]CharacteristicFilter, 0, len(parsed))
+	for _, branch := range parsed {
+		typesFilter := make([]types.Card, 0, len(branch.CardTypes))
+		for _, cardType := range branch.CardTypes {
+			converted, ok := compilerCardType(cardType)
+			if !ok {
+				return nil, false
+			}
+			typesFilter = append(typesFilter, converted)
+		}
+		supertypes := make([]types.Super, 0, len(branch.Supertypes))
+		for _, supertype := range branch.Supertypes {
+			converted, ok := compilerSupertype(supertype)
+			if !ok {
+				return nil, false
+			}
+			supertypes = append(supertypes, converted)
+		}
+		if len(typesFilter) == 0 && len(supertypes) == 0 && len(branch.Subtypes) == 0 {
+			return nil, false
+		}
+		filters = append(filters, CharacteristicFilter{
+			Types:      typesFilter,
+			Supertypes: supertypes,
+			Subtypes:   append([]types.Sub(nil), branch.Subtypes...),
+		})
+	}
+	return filters, true
 }
 
 // recognizeStaticCombatDamagePreventionDeclaration maps the parser-owned "Prevent

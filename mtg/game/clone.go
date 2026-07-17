@@ -336,6 +336,8 @@ func fixupRuleEffect(e *RuleEffect) {
 	e.PermanentTypes = cloneSlice(e.PermanentTypes)
 	e.SpellTypes = cloneSlice(e.SpellTypes)
 	e.SpellSubtypes = cloneSlice(e.SpellSubtypes)
+	e.SpellCharacteristicFilters = cloneCharacteristicFilters(e.SpellCharacteristicFilters)
+	e.TriggerCausePermanentFilters = cloneCharacteristicFilters(e.TriggerCausePermanentFilters)
 	e.CantCastFromZones = cloneSlice(e.CantCastFromZones)
 	e.EnterFromZones = cloneSlice(e.EnterFromZones)
 	e.Protection.FromColors = cloneSlice(e.Protection.FromColors)
@@ -343,6 +345,16 @@ func fixupRuleEffect(e *RuleEffect) {
 	e.Protection.FromSubtypes = cloneSlice(e.Protection.FromSubtypes)
 	// CostModifier, CardSelection, and GrantedAbility are immutable rules data
 	// copied by value.
+}
+
+func cloneCharacteristicFilters(filters []CharacteristicFilter) []CharacteristicFilter {
+	filters = cloneSlice(filters)
+	for i := range filters {
+		filters[i].Types = cloneSlice(filters[i].Types)
+		filters[i].Supertypes = cloneSlice(filters[i].Supertypes)
+		filters[i].Subtypes = cloneSlice(filters[i].Subtypes)
+	}
+	return filters
 }
 
 func cloneEmblem(e Emblem) Emblem {

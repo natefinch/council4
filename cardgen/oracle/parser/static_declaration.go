@@ -765,6 +765,12 @@ type StaticDeclarationSyntax struct {
 	// Duality). The source is any controlled permanent (no branches); the cause
 	// filter travels to the runtime instead.
 	ControlledCauseCastOrCopyInstantSorcery bool `json:"-"`
+	// ControlledCausePermanentFilters carries an any-of characteristic filter for
+	// a permanent whose battlefield entry or departure caused the controlled
+	// permanent's ability to trigger.
+	ControlledCausePermanentFilters []StaticCharacteristicFilter `json:"-"`
+	ControlledCausePermanentEnters  bool                         `json:"-"`
+	ControlledCausePermanentLeaves  bool                         `json:"-"`
 
 	// Untap-during-other-players'-untap-step payload: the filtered set of the
 	// controller's permanents that gain an extra untap during each other
@@ -814,6 +820,10 @@ type StaticDeclarationSyntax struct {
 	// mutually exclusive with the FlashSpellType single-card-type filter and the
 	// FlashSpellSubtypes subtype filter.
 	FlashSpellExcludedTypes []CardType `json:"-"`
+	// FlashSpellFilters carries a composable any-of spell characteristic filter
+	// for repeated-noun disjunctions such as "legendary spells and artifact
+	// spells".
+	FlashSpellFilters []StaticCharacteristicFilter `json:"-"`
 	// UncounterableSpellSubtypes carries the optional subtype filter of a
 	// StaticDeclarationSpellUncounterable declaration ("Human spells you control
 	// can't be countered."). An empty slice with SpellType affects spells by card
@@ -1378,6 +1388,9 @@ func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms At
 	if declaration, ok := parseMagecraftControlledTriggerMultiplierDeclaration(tokens); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
+	if declaration, ok := parsePermanentZoneChangeControlledTriggerMultiplierDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticCostModifierDeclaration(tokens, atoms, conditions); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}
@@ -1617,6 +1630,7 @@ func parseMagecraftControlledTriggerMultiplierDeclaration(tokens []shared.Token)
 		"spell", "causes", "a", "triggered", "ability", "of", "a", "permanent",
 		"you", "control", "to", "trigger",
 	}
+
 	const closingLen = 8 // "," "that" "ability" "triggers" "an" "additional" "time" "."
 	if len(tokens) != len(lead)+closingLen ||
 		!staticWordsAt(tokens, 0, lead...) ||
@@ -1630,6 +1644,48 @@ func parseMagecraftControlledTriggerMultiplierDeclaration(tokens []shared.Token)
 		Span:                                    shared.SpanOf(tokens),
 		OperationSpan:                           shared.SpanOf(tokens),
 		ControlledCauseCastOrCopyInstantSorcery: true,
+	}, true
+}
+
+// parsePermanentZoneChangeControlledTriggerMultiplierDeclaration recognizes the
+// event-caused family "If <filter> entering or leaving the battlefield causes a
+// triggered ability of a permanent you control to trigger, that ability triggers
+// an additional time." The cause filter is an any-of list of permanent
+// characteristic branches.
+func parsePermanentZoneChangeControlledTriggerMultiplierDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) == 0 || tokens[len(tokens)-1].Kind != shared.Period ||
+		!staticWordsAt(tokens, 0, "if") {
+		return StaticDeclarationSyntax{}, false
+	}
+	enter := -1
+	for i := 1; i < len(tokens); i++ {
+		if staticWordsAt(tokens, i, "entering", "or", "leaving", "the", "battlefield", "causes") {
+			enter = i
+			break
+		}
+	}
+	if enter < 0 ||
+		!staticWordsAt(tokens, enter+6,
+			"a", "triggered", "ability", "of", "a", "permanent", "you", "control", "to", "trigger") ||
+		enter+16 >= len(tokens) ||
+		tokens[enter+16].Kind != shared.Comma ||
+		!staticWordsAt(tokens, enter+17, "that", "ability", "triggers", "an", "additional", "time") ||
+		enter+23 >= len(tokens) ||
+		tokens[enter+23].Kind != shared.Period ||
+		enter+24 != len(tokens) {
+		return StaticDeclarationSyntax{}, false
+	}
+	filters, ok := parseStaticCharacteristicBranches(tokens, 1, enter, true)
+	if !ok {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:                            StaticDeclarationControlledTriggerMultiplier,
+		Span:                            shared.SpanOf(tokens),
+		OperationSpan:                   shared.SpanOf(tokens),
+		ControlledCausePermanentFilters: filters,
+		ControlledCausePermanentEnters:  true,
+		ControlledCausePermanentLeaves:  true,
 	}, true
 }
 
@@ -1736,6 +1792,65 @@ type ControlledTriggerSourceFilter struct {
 	Subtypes    []types.Sub
 	CardTypes   []CardType
 	ExcludeSelf bool
+}
+
+// StaticCharacteristicFilter is one branch of a reusable object-characteristic
+// disjunction.
+type StaticCharacteristicFilter struct {
+	Supertypes []Supertype
+	Subtypes   []types.Sub
+	CardTypes  []CardType
+}
+
+func parseStaticCharacteristicBranches(tokens []shared.Token, index, end int, allowPermanentNoun bool) ([]StaticCharacteristicFilter, bool) {
+	var filters []StaticCharacteristicFilter
+	for index < end {
+		if !equalWord(tokens[index], "a") && !equalWord(tokens[index], "an") {
+			return nil, false
+		}
+		index++
+		var filter StaticCharacteristicFilter
+		sawPermanent := false
+		for index < end && !equalWord(tokens[index], "or") && !equalWord(tokens[index], "and") {
+			switch {
+			case allowPermanentNoun && equalWord(tokens[index], "permanent"):
+				sawPermanent = true
+			case func() bool {
+				value, ok := recognizeSupertypeWord(tokens[index].Text)
+				if ok {
+					filter.Supertypes = append(filter.Supertypes, value)
+				}
+				return ok
+			}():
+			case func() bool {
+				value, ok := recognizeCardTypeWord(tokens[index].Text)
+				if ok {
+					filter.CardTypes = append(filter.CardTypes, value)
+				}
+				return ok
+			}():
+			case func() bool {
+				value, ok := recognizeSubtypePhrase(tokens[index].Text)
+				if ok {
+					filter.Subtypes = append(filter.Subtypes, value)
+				}
+				return ok
+			}():
+			default:
+				return nil, false
+			}
+			index++
+		}
+		if len(filter.Supertypes) == 0 && len(filter.CardTypes) == 0 && len(filter.Subtypes) == 0 && !sawPermanent {
+			return nil, false
+		}
+		filters = append(filters, filter)
+		if index == end {
+			return filters, true
+		}
+		index++
+	}
+	return nil, false
 }
 
 // parseControlledTriggerBranches consumes the source-permanent filter between the
@@ -4278,7 +4393,11 @@ func parseStaticCastAsThoughFlashDeclaration(tokens []shared.Token, atoms Atoms)
 	spellType := StaticDeclarationSpellTypeAll
 	var subtypes []types.Sub
 	var excludedTypes []CardType
-	if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
+	var filters []StaticCharacteristicFilter
+	if parsed, next, ok := staticRepeatedNounSpellCharacteristicFilters(rest); ok {
+		filters = parsed
+		rest = next
+	} else if subs, next, ok := staticSpellSubtypeFilter(rest, atoms); ok {
 		subtypes = subs
 		rest = next
 	} else if excluded, next, ok := staticSpellExcludedTypeFilter(rest); ok {
@@ -4303,7 +4422,80 @@ func parseStaticCastAsThoughFlashDeclaration(tokens []shared.Token, atoms Atoms)
 		FlashSpellType:          spellType,
 		FlashSpellSubtypes:      subtypes,
 		FlashSpellExcludedTypes: excludedTypes,
+		FlashSpellFilters:       filters,
 	}, true
+}
+
+func staticRepeatedNounSpellCharacteristicFilters(tokens []shared.Token) ([]StaticCharacteristicFilter, []shared.Token, bool) {
+	tail := -1
+	for i := range tokens {
+		if staticWordsAt(tokens, i, "as", "though", "they", "had", "flash") {
+			tail = i
+			break
+		}
+	}
+	if tail < 1 {
+		return nil, nil, false
+	}
+	filters, ok := parseStaticSpellCharacteristicBranches(tokens[:tail])
+	if !ok || len(filters) < 2 {
+		return nil, nil, false
+	}
+	return filters, tokens[tail-1:], true
+}
+
+func parseStaticSpellCharacteristicBranches(tokens []shared.Token) ([]StaticCharacteristicFilter, bool) {
+	var filters []StaticCharacteristicFilter
+	for len(tokens) > 0 {
+		spells := -1
+		for i := range tokens {
+			if equalWord(tokens[i], "spells") {
+				spells = i
+				break
+			}
+		}
+		if spells <= 0 {
+			return nil, false
+		}
+		var filter StaticCharacteristicFilter
+		for _, token := range tokens[:spells] {
+			switch {
+			case func() bool {
+				value, ok := recognizeSupertypeWord(token.Text)
+				if ok {
+					filter.Supertypes = append(filter.Supertypes, value)
+				}
+				return ok
+			}():
+			case func() bool {
+				value, ok := recognizeCardTypeWord(token.Text)
+				if ok {
+					filter.CardTypes = append(filter.CardTypes, value)
+				}
+				return ok
+			}():
+			case func() bool {
+				value, ok := recognizeSubtypePhrase(token.Text)
+				if ok {
+					filter.Subtypes = append(filter.Subtypes, value)
+				}
+				return ok
+			}():
+			default:
+				return nil, false
+			}
+		}
+		filters = append(filters, filter)
+		tokens = tokens[spells+1:]
+		if len(tokens) == 0 {
+			return filters, true
+		}
+		if !equalWord(tokens[0], "and") && !equalWord(tokens[0], "or") {
+			return nil, false
+		}
+		tokens = tokens[1:]
+	}
+	return nil, false
 }
 
 // parseStaticSpellUncounterableDeclaration recognizes the static

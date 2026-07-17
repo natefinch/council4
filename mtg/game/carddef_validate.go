@@ -1446,13 +1446,22 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		default:
 			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grants support only improvise, convoke, or delve")
 		}
-	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectCastSpellsAsThoughFlash, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectDamageDoesntCauseLifeLoss, RuleEffectRedirectDamageToSource, RuleEffectActivateAbilitiesAsThoughHaste, RuleEffectSkipExtraTurns, RuleEffectLegendRuleDoesNotApply:
+	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectDamageDoesntCauseLifeLoss, RuleEffectRedirectDamageToSource, RuleEffectActivateAbilitiesAsThoughHaste, RuleEffectSkipExtraTurns, RuleEffectLegendRuleDoesNotApply:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "player rule effects must set affected player")
 		}
 		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "player rule effects cannot affect a permanent")
 		}
+	case RuleEffectCastSpellsAsThoughFlash:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "cast-as-though-flash effects must set affected player")
+		}
+		if len(effect.SpellCharacteristicFilters) != 0 &&
+			(len(effect.SpellTypes) != 0 || len(effect.SpellSubtypes) != 0 || len(effect.ExcludedSpellTypes) != 0) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cast-as-though-flash characteristic branches cannot combine with legacy spell filters")
+		}
+		v.validateCharacteristicFilters(faceName, appendPath(path, "SpellCharacteristicFilters"), effect.SpellCharacteristicFilters)
 	case RuleEffectAdditionalLandPlays:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "additional land plays must set affected player")
@@ -1576,12 +1585,31 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "entering-permanent trigger multiplier accepts only a permanent-type filter")
 		}
 	case RuleEffectAdditionalTriggerForControlledPermanent:
+		if effect.TriggerCauseCastOrCopyInstantSorcery &&
+			(len(effect.TriggerCausePermanentFilters) != 0 ||
+				effect.TriggerCausePermanentEnters ||
+				effect.TriggerCausePermanentLeaves) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "controlled trigger multiplier cannot combine cast-or-copy and permanent-zone-change causes")
+		}
+		if len(effect.TriggerCausePermanentFilters) != 0 &&
+			!effect.TriggerCausePermanentEnters &&
+			!effect.TriggerCausePermanentLeaves {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "permanent-zone-change trigger cause must select entering or leaving")
+		}
+		if len(effect.TriggerCausePermanentFilters) == 0 &&
+			(effect.TriggerCausePermanentEnters || effect.TriggerCausePermanentLeaves) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "permanent-zone-change trigger cause requires a characteristic filter")
+		}
+		v.validateCharacteristicFilters(faceName, appendPath(path, "TriggerCausePermanentFilters"), effect.TriggerCausePermanentFilters)
 		payload := *effect
 		payload.Kind = RuleEffectNone
 		payload.AffectedSelection = Selection{}
 		payload.TriggerCauseCastOrCopyInstantSorcery = false
+		payload.TriggerCausePermanentFilters = nil
+		payload.TriggerCausePermanentEnters = false
+		payload.TriggerCausePermanentLeaves = false
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
-			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "controlled-permanent trigger multiplier accepts only a source-permanent selection filter and optional cast-or-copy cause")
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "controlled-permanent trigger multiplier accepts only a source-permanent selection filter and an optional supported cause")
 		}
 	case RuleEffectSuppressOpponentEnteringTriggers:
 		payload := *effect
@@ -1622,6 +1650,15 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			v.validateSelection(faceName, appendPath(path, "AttackDefenderControlsSelection"), effect.AttackDefenderControlsSelection)
 		}
 	default:
+	}
+}
+
+func (v *cardDefValidator) validateCharacteristicFilters(faceName, path string, filters []CharacteristicFilter) {
+	for i := range filters {
+		filter := &filters[i]
+		if len(filter.Types) == 0 && len(filter.Supertypes) == 0 && len(filter.Subtypes) == 0 {
+			v.add(faceName, appendPath(path, fmt.Sprintf("%d", i)), CardDefIssueInvalidRuleEffect, "characteristic filter branch must constrain at least one characteristic")
+		}
 	}
 }
 

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,112 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,115 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5947,6 +5947,7 @@ Council4 currently supports **18,112 of 32,501 cards eligible for paper support 
 - Game Trail
 - Game-Trail Changeling
 - Ganax, Astral Hunter
+- Gandalf the White
 - Gandalf's Sanction
 - Gang of Devils
 - Gang of Elk
@@ -12230,6 +12231,7 @@ Council4 currently supports **18,112 of 32,501 cards eligible for paper support 
 - Remote Isle
 - Remove
 - Remove Soul
+- Renari, Merchant of Marvels
 - Rend Flesh
 - Rend Spirit
 - Rendclaw Trow
@@ -17570,6 +17572,7 @@ Council4 currently supports **18,112 of 32,501 cards eligible for paper support 
 - Whirlwind
 - Whirlwind Adept
 - Whirlwind of Thought
+- Whirlwing Stormbrood // Dynamic Soar
 - Whisk Away
 - Whiskerquill Scribe
 - Whisper Agent

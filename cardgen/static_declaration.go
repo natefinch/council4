@@ -1603,11 +1603,12 @@ func appendStaticCastAsThoughFlashDeclaration(body *game.StaticAbility, declarat
 	}
 	spellTypes := slices.Clone(declaration.CastAsThoughFlash.SpellTypes)
 	body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
-		Kind:               game.RuleEffectCastSpellsAsThoughFlash,
-		AffectedPlayer:     game.PlayerYou,
-		SpellTypes:         spellTypes,
-		SpellSubtypes:      declaration.CastAsThoughFlash.SpellSubtypes,
-		ExcludedSpellTypes: slices.Clone(declaration.CastAsThoughFlash.ExcludedSpellTypes),
+		Kind:                       game.RuleEffectCastSpellsAsThoughFlash,
+		AffectedPlayer:             game.PlayerYou,
+		SpellTypes:                 spellTypes,
+		SpellSubtypes:              declaration.CastAsThoughFlash.SpellSubtypes,
+		ExcludedSpellTypes:         slices.Clone(declaration.CastAsThoughFlash.ExcludedSpellTypes),
+		SpellCharacteristicFilters: lowerCharacteristicFilters(declaration.CastAsThoughFlash.Filters),
 	})
 	return true
 }
@@ -1693,6 +1694,22 @@ func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility
 		})
 		return true
 	}
+	if multiplier.CausePermanentZoneChange != nil {
+		if len(multiplier.Branches) != 0 || multiplier.Power != nil {
+			return false
+		}
+		cause := multiplier.CausePermanentZoneChange
+		if len(cause.Filters) == 0 || !cause.Enters && !cause.Leaves {
+			return false
+		}
+		body.RuleEffects = append(body.RuleEffects, game.RuleEffect{
+			Kind:                         game.RuleEffectAdditionalTriggerForControlledPermanent,
+			TriggerCausePermanentFilters: lowerCharacteristicFilters(cause.Filters),
+			TriggerCausePermanentEnters:  cause.Enters,
+			TriggerCausePermanentLeaves:  cause.Leaves,
+		})
+		return true
+	}
 	branches := multiplier.Branches
 	if len(branches) == 0 {
 		return false
@@ -1721,6 +1738,18 @@ func appendStaticControlledTriggerMultiplierDeclaration(body *game.StaticAbility
 		AffectedSelection: selection,
 	})
 	return true
+}
+
+func lowerCharacteristicFilters(filters []compiler.CharacteristicFilter) []game.CharacteristicFilter {
+	lowered := make([]game.CharacteristicFilter, 0, len(filters))
+	for _, filter := range filters {
+		lowered = append(lowered, game.CharacteristicFilter{
+			Types:      slices.Clone(filter.Types),
+			Supertypes: slices.Clone(filter.Supertypes),
+			Subtypes:   slices.Clone(filter.Subtypes),
+		})
+	}
+	return lowered
 }
 
 // appendStaticOpeningHandPlayDeclaration lowers the pregame permission "If this

@@ -16,27 +16,28 @@ import (
 // player and source needed to build the StackObject, the triggering event, and
 // the mode/target choices made during preparation (CR 603.3c-d).
 type pendingTriggeredAbility struct {
-	controller                  game.PlayerID
-	sourceID                    id.ID
-	sourceCardID                id.ID
-	sourceToken                 *game.CardDef
-	face                        game.FaceIndex
-	abilityIndex                int
-	chosenModes                 []int
-	targets                     []game.Target
-	targetCounts                []int
-	event                       game.Event
-	hasEvent                    bool
-	inline                      *game.TriggeredAbility
-	sagaChapter                 bool
-	wardTargetID                id.ID
-	capturedTargetControllerLKI map[int]game.PlayerID
-	capturedTargetManaValueLKI  map[int]int
-	capturedObjectID            id.ID
-	capturedObjectIDs           []id.ID
-	capturedCardID              id.ID
-	additionalTriggers          int
-	triggerMultiplierCaptured   bool
+	controller                   game.PlayerID
+	sourceID                     id.ID
+	sourceCardID                 id.ID
+	sourceToken                  *game.CardDef
+	face                         game.FaceIndex
+	abilityIndex                 int
+	chosenModes                  []int
+	targets                      []game.Target
+	targetCounts                 []int
+	event                        game.Event
+	hasEvent                     bool
+	inline                       *game.TriggeredAbility
+	sagaChapter                  bool
+	wardTargetID                 id.ID
+	capturedTargetControllerLKI  map[int]game.PlayerID
+	capturedTargetManaValueLKI   map[int]int
+	capturedObjectID             id.ID
+	capturedObjectIDs            []id.ID
+	capturedCardID               id.ID
+	additionalTriggers           int
+	triggerMultiplierCaptured    bool
+	controlledMultiplierCaptured bool
 	// ordinaryTrigger marks a triggered ability eligible for chosen-creature-type
 	// trigger multiplication: an ordinary event-driven triggered ability of a
 	// permanent (including keyword triggers such as ward, prowess, and exalted).
@@ -230,13 +231,19 @@ func multiplyAdditionalTriggers(g *game.Game, pending []pendingTriggeredAbility)
 	multiplied := make([]pendingTriggeredAbility, 0, len(originals))
 	for i := range originals {
 		trigger := originals[i]
+		if controller, ok := capturedControlledTriggerSourceController(&trigger); ok {
+			trigger.controller = controller
+		}
 		multiplied = append(multiplied, trigger)
 		additional := trigger.additionalTriggers
 		if !trigger.triggerMultiplierCaptured {
-			additional = capturedChosenCreatureTypeAdditionalTriggerCount(g, &trigger)
+			additional += capturedChosenCreatureTypeAdditionalTriggerCount(g, &trigger)
 		}
 		additional += enteringPermanentAdditionalTriggerCount(g, &trigger)
 		additional += controlledPermanentAdditionalTriggerCount(g, &trigger)
+		if !trigger.controlledMultiplierCaptured {
+			additional += capturedControlledTriggerAdditionalTriggerCount(g, &trigger)
+		}
 		additional += roomAbilityAdditionalTriggerCount(g, &trigger)
 		for range additional {
 			multiplied = append(multiplied, trigger)
@@ -301,6 +308,11 @@ func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTri
 			effect.Controller != trigger.controller {
 			continue
 		}
+		if effect.TriggerCausePermanentEnters ||
+			effect.TriggerCausePermanentLeaves ||
+			len(effect.TriggerCausePermanentFilters) != 0 {
+			continue
+		}
 		if effect.TriggerCauseCastOrCopyInstantSorcery &&
 			!triggerCausedByControllerCastOrCopyInstantSorcery(g, &trigger.event, effect.Controller) {
 			continue
@@ -310,6 +322,131 @@ func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTri
 		}
 	}
 	return count
+}
+
+func captureControlledTriggerDoublers(g *game.Game) []game.ControlledTriggerDoubler {
+	effects := activeRuleEffects(g)
+	var doublers []game.ControlledTriggerDoubler
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != game.RuleEffectAdditionalTriggerForControlledPermanent ||
+			effect.SourceObjectID == 0 ||
+			len(effect.TriggerCausePermanentFilters) == 0 ||
+			!effect.TriggerCausePermanentEnters && !effect.TriggerCausePermanentLeaves {
+			continue
+		}
+		filters := make([]game.CharacteristicFilter, len(effect.TriggerCausePermanentFilters))
+		for j := range effect.TriggerCausePermanentFilters {
+			filters[j] = game.CharacteristicFilter{
+				Types:      slices.Clone(effect.TriggerCausePermanentFilters[j].Types),
+				Supertypes: slices.Clone(effect.TriggerCausePermanentFilters[j].Supertypes),
+				Subtypes:   slices.Clone(effect.TriggerCausePermanentFilters[j].Subtypes),
+			}
+		}
+		doublers = append(doublers, game.ControlledTriggerDoubler{
+			SourceID:        effect.SourceObjectID,
+			Controller:      effect.Controller,
+			PermanentFilter: filters,
+			Enters:          effect.TriggerCausePermanentEnters,
+			Leaves:          effect.TriggerCausePermanentLeaves,
+		})
+	}
+	return doublers
+}
+
+func captureControlledTriggerDoublerSnapshot(g *game.Game) *game.ControlledTriggerDoublerSnapshot {
+	doublers := captureControlledTriggerDoublers(g)
+	if len(doublers) == 0 {
+		return nil
+	}
+	snapshot := &game.ControlledTriggerDoublerSnapshot{Doublers: doublers}
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
+		snapshot.PermanentControllers = append(snapshot.PermanentControllers, game.PermanentControllerSnapshot{
+			SourceID:   permanent.ObjectID,
+			Controller: effectiveController(g, permanent),
+		})
+	}
+	return snapshot
+}
+
+func capturedControlledTriggerAdditionalTriggerCount(_ *game.Game, trigger *pendingTriggeredAbility) int {
+	return len(capturedControlledTriggerDoublerIDs(trigger))
+}
+
+func capturedControlledTriggerDoublerIDs(trigger *pendingTriggeredAbility) []id.ID {
+	if !trigger.ordinaryTrigger || !trigger.hasEvent || trigger.event.ControlledTriggerDoublers == nil {
+		return nil
+	}
+	controller, ok := capturedControlledTriggerSourceController(trigger)
+	if !ok {
+		return nil
+	}
+	var matches []id.ID
+	for i := range trigger.event.ControlledTriggerDoublers.Doublers {
+		doubler := &trigger.event.ControlledTriggerDoublers.Doublers[i]
+		if doubler.Controller != controller ||
+			!eventMatchesControlledTriggerCause(&trigger.event, doubler) {
+			continue
+		}
+		matches = append(matches, doubler.SourceID)
+	}
+	return matches
+}
+
+func capturedControlledTriggerSourceController(trigger *pendingTriggeredAbility) (game.PlayerID, bool) {
+	if trigger == nil {
+		return 0, false
+	}
+	return controlledTriggerSnapshotSourceController(&trigger.event, trigger.sourceID)
+}
+
+func controlledTriggerSnapshotSourceController(event *game.Event, sourceID id.ID) (game.PlayerID, bool) {
+	if event == nil || event.ControlledTriggerDoublers == nil {
+		return 0, false
+	}
+	for _, permanent := range event.ControlledTriggerDoublers.PermanentControllers {
+		if permanent.SourceID == sourceID {
+			return permanent.Controller, true
+		}
+	}
+	return 0, false
+}
+
+func eventPermanentEnteredOrLeft(event *game.Event) bool {
+	return event != nil && event.PermanentID != 0 &&
+		(event.FromZone != zone.Battlefield && event.ToZone == zone.Battlefield ||
+			event.FromZone == zone.Battlefield && event.ToZone != zone.Battlefield)
+}
+
+func eventMatchesControlledTriggerCause(event *game.Event, doubler *game.ControlledTriggerDoubler) bool {
+	if event == nil || doubler == nil || !eventPermanentEnteredOrLeft(event) {
+		return false
+	}
+	if event.ToZone == zone.Battlefield && !doubler.Enters ||
+		event.FromZone == zone.Battlefield && !doubler.Leaves {
+		return false
+	}
+	return slices.ContainsFunc(doubler.PermanentFilter, func(filter game.CharacteristicFilter) bool {
+		if len(filter.Types) != 0 && !slices.ContainsFunc(filter.Types, func(cardType types.Card) bool {
+			return slices.Contains(event.CardTypes, cardType)
+		}) {
+			return false
+		}
+		if len(filter.Supertypes) != 0 && !slices.ContainsFunc(filter.Supertypes, func(supertype types.Super) bool {
+			return slices.Contains(event.CardSupertypes, supertype)
+		}) {
+			return false
+		}
+		if len(filter.Subtypes) != 0 && !slices.ContainsFunc(filter.Subtypes, func(subtype types.Sub) bool {
+			return slices.Contains(event.CardSubtypes, subtype)
+		}) {
+			return false
+		}
+		return true
+	})
 }
 
 // triggerCausedByControllerCastOrCopyInstantSorcery reports whether the
@@ -866,7 +1003,11 @@ func coalescePendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredA
 		return pending
 	}
 	filtered := make([]pendingTriggeredAbility, 0, len(pending))
-	seenOneOrMore := make(map[triggerBatchKey]bool)
+	type coalescedTrigger struct {
+		index              int
+		controlledDoublers map[id.ID]bool
+	}
+	seenOneOrMore := make(map[triggerBatchKey]*coalescedTrigger)
 	for i := range pending {
 		trigger := &pending[i]
 		ability, ok := pendingTriggerAbility(g, trigger)
@@ -887,12 +1028,27 @@ func coalescePendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredA
 			if ability.Trigger.Pattern.OneOrMorePerDamagedPlayer {
 				key.damagedPlayer = trigger.event.Player
 			}
-			if seenOneOrMore[key] {
+			if coalesced, ok := seenOneOrMore[key]; ok {
+				for _, sourceID := range capturedControlledTriggerDoublerIDs(trigger) {
+					coalesced.controlledDoublers[sourceID] = true
+				}
 				continue
 			}
-			seenOneOrMore[key] = true
+			coalesced := &coalescedTrigger{
+				index:              len(filtered),
+				controlledDoublers: make(map[id.ID]bool),
+			}
+			for _, sourceID := range capturedControlledTriggerDoublerIDs(trigger) {
+				coalesced.controlledDoublers[sourceID] = true
+			}
+			seenOneOrMore[key] = coalesced
 		}
 		filtered = append(filtered, *trigger)
+	}
+	for _, coalesced := range seenOneOrMore {
+		trigger := &filtered[coalesced.index]
+		trigger.additionalTriggers += len(coalesced.controlledDoublers)
+		trigger.controlledMultiplierCaptured = true
 	}
 	return filtered
 }
@@ -933,6 +1089,9 @@ type triggerBatchKey struct {
 func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {
 	var pending []pendingTriggeredAbility
 	controller := effectiveController(g, permanent)
+	if captured, ok := controlledTriggerSnapshotSourceController(&event, permanent.ObjectID); ok {
+		controller = captured
+	}
 	for i, body := range permanentEffectiveAbilities(g, permanent) {
 		if chapter, ok := body.(*game.ChapterAbility); ok {
 			if event.Kind != game.EventCountersAdded ||
@@ -965,7 +1124,8 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 		}
 		if triggered, ok := body.(*game.TriggeredAbility); ok {
 			trigger := &triggered.Trigger
-			if !triggerMatchesEvent(g, permanent, &trigger.Pattern, event) || !triggerInterveningIf(g, permanent, controller, trigger, &event) {
+			if !triggerMatchesEventForController(g, permanent, controller, &trigger.Pattern, event) ||
+				!triggerInterveningIf(g, permanent, controller, trigger, &event) {
 				continue
 			}
 			pending = append(pending, pendingTriggeredAbility{
