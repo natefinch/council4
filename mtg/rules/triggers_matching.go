@@ -771,6 +771,12 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 		!eventEnteredOrCastFromControllerGraveyard(event, controller) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentWasNotPutByThisAbilitySource &&
+		event != nil && source != nil &&
+		event.EnterPutByAbilitySource != 0 &&
+		event.EnterPutByAbilitySource == source.ObjectID {
+		return false
+	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
 		source:     source,

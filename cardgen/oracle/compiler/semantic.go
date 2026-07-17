@@ -718,6 +718,14 @@ const (
 	ConditionPredicateEventSubjectWasCastFromControllerHand
 	ConditionPredicateEventSubjectEnteredOrCastFromGraveyard
 	ConditionPredicateEventSubjectEnteredOrCastFromControllerGraveyard
+	// ConditionPredicateEventSubjectWasNotPutByThisAbility is satisfied when the
+	// entering event's permanent was not put onto the battlefield by the resolving
+	// ability's own source object ("if it wasn't put onto the battlefield with this
+	// ability", Kodama of the East Tree). It gates the enter trigger so an ability
+	// instance never re-fires on the permanent it puts, while a separate copy or
+	// Kodama still chains. It lowers to
+	// TriggerCondition.InterveningIfEventPermanentWasNotPutByThisAbilitySource.
+	ConditionPredicateEventSubjectWasNotPutByThisAbility
 	ConditionPredicateEventSubjectHadNoCounter
 	// ConditionPredicateEventSubjectHadCounter is satisfied when the event's
 	// permanent had at least one counter of Counter's kind in its last-known
@@ -1730,6 +1738,15 @@ type CompiledSelector struct {
 	// the triggering event's permanent, not the ability's source, and lowers to
 	// Selection.ManaValueLessThanEventPermanent.
 	ManaValueLessThanEventPermanent bool
+	// ManaValueLessOrEqualEventPermanent requires each matched card's mana value
+	// to be less than or equal to the triggering event permanent's mana value
+	// ("you may put a permanent card with equal or lesser mana value from your
+	// hand onto the battlefield", Kodama of the East Tree, where the bound is the
+	// permanent that entered). It is the ≤ counterpart of
+	// ManaValueLessThanEventPermanent: the bound reads the triggering event's
+	// permanent, not the ability's source, and lowers to
+	// Selection.ManaValueLessOrEqualEventPermanent.
+	ManaValueLessOrEqualEventPermanent bool
 	// NameUniqueAmongControlled requires the matched permanent's name to differ
 	// from every other permanent its controller controls ("target enchantment
 	// you control that doesn't have the same name as another permanent you

@@ -1929,6 +1929,18 @@ type SelectionSyntax struct {
 	// only for the bare "lesser mana value" wording; "equal or lesser mana value"
 	// (a ≤ bound) and "greater mana value" stay unrecognized so they fail closed.
 	ManaValueLessThanEventPermanent bool `json:",omitempty"`
+	// ManaValueLessOrEqualEventPermanent records a trailing "with equal or lesser
+	// mana value" relative clause on a chosen card ("you may put a permanent card
+	// with equal or lesser mana value from your hand onto the battlefield", Kodama
+	// of the East Tree), restricting the match to cards whose mana value is less
+	// than or equal to the triggering event permanent's mana value — the permanent
+	// that entered and fired the ability. It is the ≤ counterpart of
+	// ManaValueLessThanEventPermanent: it carries no fixed comparison and lowers to
+	// Selection.ManaValueLessOrEqualEventPermanent. It is recognized only for the
+	// exact "equal or lesser mana value" wording; the bare "lesser mana value" (a
+	// strict < bound) and "greater mana value" stay their own forms so each fails
+	// closed rather than collapsing to a different bound.
+	ManaValueLessOrEqualEventPermanent bool `json:",omitempty"`
 	// NameUniqueAmongControlled records a trailing "that doesn't have the same
 	// name as another permanent you control" relative clause (Yenna, Redtooth
 	// Regent), restricting the match to a permanent whose name differs from every

@@ -1559,6 +1559,7 @@ func selectorHasUnsupportedPermanentFilters(selector compiler.CompiledSelector) 
 	return selector.Zone != zone.None ||
 		selector.Historic ||
 		selector.ManaValueLessThanEventPermanent ||
+		selector.ManaValueLessOrEqualEventPermanent ||
 		selector.SameNameGroup != nil
 }
 

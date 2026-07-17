@@ -115,6 +115,15 @@ func (r *effectResolver) chooseFromZoneCandidates(env game.ChooseFromZone, playe
 	if env.Riders.MaxManaValueFromX {
 		maxManaValue = r.obj.XValue
 	}
+	// An event-relative selection bound (Kodama of the East Tree's "with equal or
+	// lesser mana value") compares each candidate to the permanent that triggered
+	// this resolution, so bind the resolving object's triggering event to the
+	// match. A resolution with no triggering event passes the zero event, under
+	// which such a bound reads no value and fails closed.
+	var triggerEvent game.Event
+	if r.obj != nil && r.obj.HasTriggerEvent {
+		triggerEvent = r.obj.TriggerEvent
+	}
 	var candidates []id.ID
 	for _, cardID := range sourceCardIDs {
 		if linkedFilter != nil && !linkedFilter[cardID] {
@@ -127,7 +136,7 @@ func (r *effectResolver) chooseFromZoneCandidates(env game.ChooseFromZone, playe
 		if maxManaValue >= 0 && card.Def.ManaValue() > maxManaValue {
 			continue
 		}
-		if handCardMatchesSelection(r.game, card, env.Filter, playerID) {
+		if handCardMatchesSelectionWithEvent(r.game, card, env.Filter, playerID, triggerEvent) {
 			candidates = append(candidates, cardID)
 		}
 	}
@@ -387,8 +396,9 @@ func (r *effectResolver) chooseFromZoneEnterBattlefield(env game.ChooseFromZone,
 		r.chooseFromZonePublish(env, cardID)
 	}
 	permanents := r.putResolvedCardsOnBattlefieldCollecting(resolved, nil, permanentCreationOptions{
-		ForceTapped: tapped,
-		Counters:    env.Riders.EntryCounters,
+		ForceTapped:        tapped,
+		Counters:           env.Riders.EntryCounters,
+		PutByAbilitySource: r.obj.SourceID,
 	})
 	if env.Riders.EntersAttacking && len(permanents) > 0 {
 		declareCreatedTokensAttacking(r.engine, r.game, playerID, permanents, r.agents, r.log)

@@ -85,6 +85,8 @@ func castForFreeSelection(selector compiler.CompiledSelector) (selection game.Se
 	if selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||
 		selector.MatchPower || selector.MatchToughness ||
+		selector.ManaValueLessThanEventPermanent ||
+		selector.ManaValueLessOrEqualEventPermanent ||
 		selector.BasicLandType ||
 		len(selector.RequiredTypesAny()) != 0 ||
 		len(selector.ExcludedTypes()) != 0 ||

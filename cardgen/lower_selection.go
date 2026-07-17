@@ -167,6 +167,7 @@ func SelectionForSelectorMasked(selector compiler.CompiledSelector, mask Selecti
 		selector.MatchTotalManaValue ||
 		selector.ManaValueDynamic != compiler.DynamicAmountNone ||
 		selector.ManaValueLessThanEventPermanent ||
+		selector.ManaValueLessOrEqualEventPermanent ||
 		selector.ManaValueDynamicCount != nil ||
 		selector.InclusiveOneOfEach ||
 		len(selector.SourceTypes()) != 0 ||
