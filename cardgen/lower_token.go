@@ -159,8 +159,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		effect.Amount.Selector().Controller == compiler.ControllerTargetedPlayers &&
 		len(ctx.content.Targets) == 1 &&
 		singleThoseTargetedPlayersReference(ctx.content.References)
+	attachedTarget := controllerRecipient && effect.TokenAttachedToTarget
 	expectedTargets := 0
-	if targetRecipient || controlledCountTarget || targetedPlayerGroupCount {
+	if targetRecipient || controlledCountTarget || targetedPlayerGroupCount || attachedTarget {
 		expectedTargets = 1
 	}
 	// Every caller guarantees the sole effect is an EffectCreate: lower_spell.go:1820
@@ -189,6 +190,15 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 	amountReferencesObject := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount ||
 		effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower
 	switch {
+	case attachedTarget:
+		if len(ctx.content.References) != 0 {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		spec, ok := permanentTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		targets = []game.TargetSpec{spec}
 	case controlledCountTarget:
 		// The tokens enter under the spell's controller ("You create ..."), so
 		// recipient stays unset; only the count is scoped to the target player.
@@ -307,6 +317,9 @@ func lowerCreateTokenSpellLinked(ctx contentCtx, publishLinked game.LinkedKey) (
 		Power:          dynamicSize,
 		Toughness:      dynamicSize,
 		PublishLinked:  publishLinked,
+	}
+	if attachedTarget {
+		createToken.EntryAttachedTo = opt.Val(game.TargetObjectReference(0))
 	}
 	switch effect.TokenAttackDefender {
 	case parser.AttackDefenderThatPlayer, parser.AttackDefenderThatOpponent:
@@ -1358,8 +1371,51 @@ func synthesizePredefinedTokenDef(effect *compiler.CompiledEffect) (*game.CardDe
 		return mutavaultTokenDef(), true
 	case "Tarmogoyf":
 		return tarmogoyfTokenDef(), true
+	case "Virtuous Role":
+		return virtuousRoleTokenDef(), true
 	default:
 		return nil, false
+	}
+}
+
+// virtuousRoleTokenDef builds the predefined Virtuous Role Aura token. Its
+// dynamic bonus counts enchantments controlled by the Role's current controller,
+// while the affected object follows the Role's current attachment.
+func virtuousRoleTokenDef() *game.CardDef {
+	countEnchantments := game.DynamicAmount{
+		Kind:       game.DynamicAmountCountSelector,
+		Multiplier: 1,
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Enchantment},
+			Controller:    game.ControllerYou,
+		}),
+	}
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:     "Virtuous Role",
+			Types:    []types.Card{types.Enchantment},
+			Subtypes: []types.Sub{types.Aura, types.Role},
+			StaticAbilities: []game.StaticAbility{
+				game.EnchantStaticAbility(&game.TargetSpec{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "creature",
+					Allow:      game.TargetAllowPermanent,
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Creature},
+					}),
+				}),
+				{
+					ContinuousEffects: []game.ContinuousEffect{{
+						Layer:                 game.LayerPowerToughnessModify,
+						Group:                 game.AttachedObjectGroup(game.SourcePermanentReference()),
+						PowerDeltaDynamic:     opt.Val(countEnchantments),
+						ToughnessDeltaDynamic: opt.Val(countEnchantments),
+					}},
+				},
+			},
+			OracleText: "Enchant creature\nEnchanted creature gets +1/+1 for each enchantment you control.",
+		},
 	}
 }
 

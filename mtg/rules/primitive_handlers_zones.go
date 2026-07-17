@@ -637,6 +637,14 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
+	var attachedTo *game.Permanent
+	if prim.EntryAttachedTo.Exists {
+		resolved, resolvedOK := resolveObjectReference(r.game, r.obj, prim.EntryAttachedTo.Val)
+		if !resolvedOK || resolved.permanent == nil {
+			return res
+		}
+		attachedTo = resolved.permanent
+	}
 
 	if prim.Power.Exists && prim.Toughness.Exists {
 		sized := *token
@@ -644,7 +652,12 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		sized.Toughness = opt.Val(game.PT{Value: r.quantity(prim.Toughness.Val)})
 		token = &sized
 	}
-	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, r.agents, r.log)
+	var created []*game.Permanent
+	if attachedTo != nil {
+		created, ok = createTokenPermanentsCollectingAttachedWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, attachedTo, r.agents, r.log)
+	} else {
+		created, ok = createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, r.agents, r.log)
+	}
 	if !ok {
 		return res
 	}

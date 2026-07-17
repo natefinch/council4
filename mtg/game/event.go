@@ -397,6 +397,9 @@ type Event struct {
 	// the event occurred, for combat-damage batch triggers that bind that
 	// characteristic at trigger time.
 	DamageSourceHadTrample bool
+	// DamageSourceWasEnchanted records whether at least one Aura was attached to
+	// the damage source when the event occurred.
+	DamageSourceWasEnchanted bool
 
 	// TappedForMana is true when EventPermanentTapped recorded a tap that paid a
 	// mana ability's cost ("tapped for mana"), CR 106.11a / 605.

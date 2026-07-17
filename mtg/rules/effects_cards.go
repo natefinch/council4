@@ -449,6 +449,17 @@ func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.P
 // act on the freshly created tokens (for example, to put them onto the
 // battlefield attacking).
 func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
+	return createTokenPermanentsCollectingWithEntryChoices(e, g, controller, token, amount, tapped, nil, agents, log)
+}
+
+func createTokenPermanentsCollectingAttachedWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
+	if attachedTo == nil {
+		return nil, false
+	}
+	return createTokenPermanentsCollectingWithEntryChoices(e, g, controller, token, amount, tapped, attachedTo, agents, log)
+}
+
+func createTokenPermanentsCollectingWithEntryChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
 	defs := replacementTokenCreationTypes(g, controller, token)
 	amount = replacementTokenCreationAmount(g, controller, token, amount)
 	if amount <= 0 {
@@ -458,7 +469,7 @@ func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, control
 	created := make([]*game.Permanent, 0, amount*len(defs))
 	for _, def := range defs {
 		for range amount {
-			permanent, ok := createTokenPermanentWithChoicesInBatch(e, g, controller, def, simultaneousID, tapped, agents, log)
+			permanent, ok := createTokenPermanentWithEntryChoicesInBatch(e, g, controller, def, simultaneousID, tapped, attachedTo, agents, log)
 			if !ok {
 				return nil, false
 			}
@@ -514,6 +525,10 @@ func tokenCreationSimultaneousID(g *game.Game, amount int) id.ID {
 }
 
 func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	return createTokenPermanentWithEntryChoicesInBatch(e, g, controller, token, simultaneousID, tapped, nil, agents, log)
+}
+
+func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	if token == nil {
 		return nil, false
 	}
@@ -539,6 +554,9 @@ func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller 
 		permanent.Tapped = true
 	}
 	g.Battlefield = append(g.Battlefield, permanent)
+	if attachedTo != nil {
+		attachPermanent(g, permanent, attachedTo)
+	}
 	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
 		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 	}

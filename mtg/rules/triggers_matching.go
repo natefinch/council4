@@ -92,6 +92,9 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.RequireManaProducedByLand && !event.ManaSourceIsLand {
 		return false
 	}
+	if pattern.DamageSourceWasEnchanted && !event.DamageSourceWasEnchanted {
+		return false
+	}
 	if pattern.RequireTappedForMana && !event.TappedForMana {
 		return false
 	}
@@ -120,7 +123,9 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		sourceObjectID = source.ObjectID
 	}
 	subjectController := event.Controller
-	if pattern.Subject != game.TriggerSubjectDefault || !eventCapturesSubjectController(event.Kind) {
+	if pattern.Subject == game.TriggerSubjectDamageSource && event.Kind == game.EventDamageDealt {
+		subjectController = event.Controller
+	} else if pattern.Subject != game.TriggerSubjectDefault || !eventCapturesSubjectController(event.Kind) {
 		if permanent, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
 			subjectController = effectiveController(g, permanent)
 		}

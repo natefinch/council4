@@ -2216,6 +2216,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.DamageSourceSelectionOrSelf {
 		v.validateDamageSourceSelectionOrSelf(faceName, path, pattern)
 	}
+	if pattern.DamageSourceWasEnchanted && pattern.Event != EventDamageDealt {
+		v.add(faceName, appendPath(path, "DamageSourceWasEnchanted"), CardDefIssueInvalidSelection, "enchanted damage-source filter requires a damage-dealt event")
+	}
 	if pattern.DamageRecipientIsSource && pattern.DamageRecipient&DamageRecipientPermanent == 0 {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "DamageRecipientIsSource requires a permanent damage recipient")
 	}

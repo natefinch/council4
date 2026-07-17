@@ -17,8 +17,10 @@ func emitEvent(g *game.Game, event game.Event) {
 	if event.Kind == game.EventDamageDealt && event.SourceObjectID != 0 {
 		if source, ok := permanentByObjectID(g, event.SourceObjectID); ok {
 			event.DamageSourceHadTrample = hasKeyword(g, source, game.Trample)
+			event.DamageSourceWasEnchanted = permanentIsEnchanted(g, source)
 		} else if snapshot, ok := lastKnownObject(g, event.SourceObjectID); ok {
 			event.DamageSourceHadTrample = slices.Contains(snapshot.Keywords, game.Trample)
+			event.DamageSourceWasEnchanted = snapshotWasEnchanted(g, snapshot)
 		}
 	}
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
@@ -43,6 +45,22 @@ func emitEvent(g *game.Game, event game.Event) {
 		}
 	}
 	g.AppendEvent(event)
+}
+
+func snapshotWasEnchanted(g *game.Game, snapshot game.ObjectSnapshot) bool {
+	for _, attachmentID := range snapshot.Attachments {
+		if attachment, ok := permanentByObjectID(g, attachmentID); ok &&
+			isAuraPermanent(g, attachment) {
+			return true
+		}
+		if attachment, ok := lastKnownObject(g, attachmentID); ok &&
+			slices.Contains(attachment.Types, types.Enchantment) &&
+			(slices.Contains(attachment.Subtypes, types.Aura) ||
+				slices.Contains(attachment.Keywords, game.Enchant)) {
+			return true
+		}
+	}
+	return false
 }
 
 func nextPlayerEventOrdinalThisTurn(g *game.Game, kind game.EventKind, playerID game.PlayerID) int {

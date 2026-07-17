@@ -1157,6 +1157,9 @@ func renderTriggerPatternSelectionFields(ctx *renderCtx, pattern *game.TriggerPa
 	if pattern.DamageSourceSelectionOrSelf {
 		fields = append(fields, "DamageSourceSelectionOrSelf: true,")
 	}
+	if pattern.DamageSourceWasEnchanted {
+		fields = append(fields, "DamageSourceWasEnchanted: true,")
+	}
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
 		stepFields, err := renderTriggerPatternSelection(ctx, "StepPlayerSourceAttachedSelection", pattern.StepPlayerSourceAttachedSelection)
 		if err != nil {

@@ -308,6 +308,7 @@ const (
 	PermanentDeathReasonZeroDefense   PermanentDeathReason = "0 defense"
 	PermanentDeathReasonIllegalAura   PermanentDeathReason = "illegal aura"
 	PermanentDeathReasonLegendaryRule PermanentDeathReason = "legendary rule"
+	PermanentDeathReasonRoleRule      PermanentDeathReason = "Role rule"
 	PermanentDeathReasonSagaComplete  PermanentDeathReason = "Saga final chapter complete"
 )
 

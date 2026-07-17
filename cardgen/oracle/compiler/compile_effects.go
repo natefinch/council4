@@ -388,6 +388,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DelayedTriggerBindDyingObject:      syntax.DelayedTriggerBindDyingObject,
 				TokenName:                          syntax.TokenName,
 				TokenPredefinedName:                syntax.TokenPredefinedName,
+				TokenAttachedToTarget:              syntax.TokenAttachedToTarget,
 				AmassSubtype:                       syntax.AmassSubtype,
 				TokenCopyOfTarget:                  syntax.TokenCopyOfTarget,
 				TokenCopyOfSource:                  syntax.TokenCopyOfSource,

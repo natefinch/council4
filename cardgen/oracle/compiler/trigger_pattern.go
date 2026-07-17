@@ -273,6 +273,9 @@ type TriggerSelection struct {
 	// Modified requires the matched permanent to be modified (a counter, Aura, or
 	// Equipment, CR 701.50). It lowers to Selection.MatchModified.
 	Modified bool
+	// Enchanted marks an event-time Aura-attachment predicate. Damage-source
+	// compilation extracts it into TriggerPattern.DamageSourceWasEnchanted.
+	Enchanted bool
 	// Commander requires the matched permanent to be a commander ("your commander
 	// deals combat damage to a player", Archivist of Gondor). It lowers to
 	// Selection.MatchCommander.
@@ -329,6 +332,9 @@ type TriggerPattern struct {
 	// <Selection> you control deals combat damage" and "this creature or
 	// equipped creature deals combat damage".
 	DamageSourceSelectionOrSelf bool
+	// DamageSourceWasEnchanted requires the damage source to have had at least one
+	// Aura attached when the damage event occurred.
+	DamageSourceWasEnchanted bool
 
 	// DyingDamagedBySource restricts a permanent-died pattern to a permanent that
 	// was dealt damage by the ability's own source earlier this turn ("Whenever a

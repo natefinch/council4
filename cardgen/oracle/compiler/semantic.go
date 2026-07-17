@@ -2643,7 +2643,10 @@ type CompiledEffect struct {
 	// token." -> "Mutavault"). Lowering maps the name to the token's fixed
 	// definition. It is empty for tokens identified by their subtypes.
 	TokenPredefinedName string
-	TokenCopyOfTarget   bool
+	// TokenAttachedToTarget carries the typed entry relationship from a create
+	// clause whose token enters attached to its sole permanent target.
+	TokenAttachedToTarget bool
+	TokenCopyOfTarget     bool
 	// TokenCopyOfSource copies the resolving ability's source permanent.
 	TokenCopyOfSource bool
 	// AmassSubtype is the creature subtype named by an EffectAmass keyword action

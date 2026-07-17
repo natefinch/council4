@@ -127,6 +127,7 @@ func lowerTriggerPattern(pattern *compiler.TriggerPattern) (game.TriggerPattern,
 		DamageRecipientTypes:                    damageRecipientTypes,
 		DamageRecipientSelection:                damageSelection,
 		DamageSourceSelection:                   damageSourceSelection,
+		DamageSourceWasEnchanted:                pattern.DamageSourceWasEnchanted,
 		AttackRecipient:                         attackRecipient,
 		AttackRecipientSelection:                attackSelection,
 		Step:                                    step,
@@ -576,6 +577,9 @@ func lowerTriggerZone(triggerZone compiler.TriggerZone) (zone.Type, bool) {
 // projector lets triggered abilities inherit every Selection dimension
 // automatically instead of maintaining a second hand-written projector.
 func lowerTriggerSelection(selection compiler.TriggerSelection) (game.Selection, bool) {
+	if selection.Enchanted {
+		return game.Selection{}, false
+	}
 	controller, ok := lowerTriggerSelectionController(selection.Controller)
 	if !ok {
 		return game.Selection{}, false

@@ -28,6 +28,7 @@ func compileParsedTriggerPattern(
 		introduction = "Whenever"
 	default:
 	}
+
 	document, _ := parser.Parse(introduction+" "+event+", draw a card.", parser.Context{CardName: cardName})
 	if len(document.Abilities) != 1 || document.Abilities[0].Trigger == nil ||
 		document.Abilities[0].Trigger.TriggerEvent == nil {
@@ -36,6 +37,26 @@ func compileParsedTriggerPattern(
 	clause := *document.Abilities[0].Trigger.TriggerEvent
 	clause.Span = span
 	return compileTriggerEventPattern(&clause, kind, condition)
+}
+
+func TestCompileEnchantedCreatureCombatDamageTrigger(t *testing.T) {
+	t.Parallel()
+	pattern := compileParsedTriggerPattern(
+		"an enchanted creature you control deals combat damage to a player",
+		TriggerWhenever,
+		shared.Span{},
+		"",
+		nil,
+	)
+	if pattern.Event != TriggerEventDamageDealt ||
+		pattern.Subject != TriggerSubjectDamageSource ||
+		pattern.Controller != ControllerYou ||
+		!pattern.DamageSourceWasEnchanted ||
+		len(pattern.DamageSourceSelection.RequiredTypes) != 1 ||
+		pattern.DamageSourceSelection.RequiredTypes[0] != types.Creature ||
+		pattern.OneOrMore {
+		t.Fatalf("pattern = %#v", pattern)
+	}
 }
 
 func TestTypedTriggerEventsBindClosedSlots(t *testing.T) {

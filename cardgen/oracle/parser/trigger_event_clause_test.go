@@ -97,6 +97,18 @@ func subjectQualifierTriggerEventClauseTests() []triggerEventClauseTest {
 				}
 			},
 		},
+		{
+			name:   "enchanted creature combat damage",
+			source: "Whenever an enchanted creature you control deals combat damage to a player, draw a card.",
+			check: func(t *testing.T, clause *TriggerEventClause) {
+				t.Helper()
+				if clause.DamageSource.Kind != TriggerEventSubjectSelection ||
+					!clause.DamageSource.Selection.Enchanted ||
+					clause.Controller != ControllerYou {
+					t.Fatalf("clause = %#v", clause)
+				}
+			},
+		},
 	}
 }
 
