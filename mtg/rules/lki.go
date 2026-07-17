@@ -22,11 +22,13 @@ func optionalInt(value int, ok bool) opt.V[int] {
 func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Type) game.ObjectSnapshot {
 	values := effectivePermanentValues(g, permanent)
 	basePowerValues := permanentValuesBeforeLayer(g, permanent, game.LayerPowerToughnessModify)
+	copiableDef, _ := permanentCopyDef(g, permanent)
 	snapshot := game.ObjectSnapshot{
 		ObjectID:     permanent.ObjectID,
 		CardID:       permanent.CardInstanceID,
 		TokenName:    permanentTokenName(permanent),
 		TokenDef:     permanent.TokenDef,
+		CopiableDef:  copiableDef,
 		Face:         permanent.Face,
 		FaceDown:     permanent.FaceDown,
 		FaceDownFace: permanent.FaceDownFace,
@@ -57,6 +59,25 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		AttachedTo:       permanent.AttachedTo,
 		AttachedToPlayer: permanent.AttachedToPlayer,
 		ZoneOrderIndex:   -1,
+	}
+	if !permanent.Token {
+		if card, ok := g.GetCardInstance(permanent.CardInstanceID); ok {
+			snapshot.ZoneCards = append(snapshot.ZoneCards, game.ZoneCardSnapshot{
+				CardID:      card.ID,
+				ZoneVersion: card.ZoneVersion + 1,
+			})
+		}
+	}
+	for _, component := range permanent.MergedCards {
+		if component.CardInstanceID == 0 {
+			continue
+		}
+		if card, ok := g.GetCardInstance(component.CardInstanceID); ok {
+			snapshot.ZoneCards = append(snapshot.ZoneCards, game.ZoneCardSnapshot{
+				CardID:      card.ID,
+				ZoneVersion: card.ZoneVersion + 1,
+			})
+		}
 	}
 	snapshot.Counters = cloneCounters(permanent.Counters)
 	effects := activeRuleEffects(g)

@@ -11,10 +11,19 @@ import (
 
 // ObjectSnapshot is last-known information for an object that changed zones.
 type ObjectSnapshot struct {
-	ObjectID        id.ID
-	CardID          id.ID
-	TokenName       string
-	TokenDef        *CardDef
+	ObjectID  id.ID
+	CardID    id.ID
+	TokenName string
+	TokenDef  *CardDef
+	// CopiableDef preserves the object's exact copiable values as it last existed,
+	// including copy effects and merged-permanent abilities. It is immutable rules
+	// data used when a later effect creates a token copy from last-known information.
+	CopiableDef *CardDef
+	// ZoneCards identifies the exact physical card objects this permanent became
+	// when it left the battlefield. A merged permanent contributes every
+	// nontoken component, each with the post-move zone version that distinguishes
+	// that incarnation from a card that later leaves and reenters the zone.
+	ZoneCards       []ZoneCardSnapshot
 	Face            FaceIndex
 	FaceDown        bool
 	FaceDownFace    FaceIndex
@@ -47,6 +56,13 @@ type ObjectSnapshot struct {
 	AttachedTo           opt.V[id.ID]
 	AttachedToPlayer     opt.V[PlayerID]
 	ZoneOrderIndex       int
+}
+
+// ZoneCardSnapshot identifies one exact card incarnation produced when a
+// permanent leaves the battlefield.
+type ZoneCardSnapshot struct {
+	CardID      id.ID
+	ZoneVersion uint64
 }
 
 // LinkedObjectKey identifies objects exiled or otherwise tracked by one linked

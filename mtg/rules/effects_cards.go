@@ -161,6 +161,8 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 			if !ok {
 				return nil, false
 			}
+		case resolved.snapshot.CopiableDef != nil:
+			source = resolved.snapshot.CopiableDef
 		case resolved.snapshot.TokenDef != nil:
 			source = resolved.snapshot.TokenDef
 		case resolved.snapshot.CardID != 0:

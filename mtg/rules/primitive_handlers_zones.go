@@ -1670,32 +1670,109 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 		return handleMoveCardZoneGroup(r, prim)
 	}
 	res := effectResolved{accepted: true}
+	var publishKey game.LinkedObjectKey
+	if prim.PublishLinked != "" {
+		publishKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		if prim.PublishLinkedObjectScoped {
+			publishKey = linkedObjectByObjectKey(r.game, r.obj, string(prim.PublishLinked))
+		}
+		if prim.ReplacePublishedLinked {
+			clearLinkedObjects(r.game, publishKey)
+		}
+	}
+	if prim.IncludeEventPermanentComponents {
+		return handleMoveEventPermanentCards(r, prim, publishKey)
+	}
 	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
 	if !ok || fromZone != prim.FromZone {
 		return res
 	}
+
 	card, ok := r.game.GetCardInstance(cardID)
 	if !ok {
 		return res
 	}
-	res.succeeded = moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
+	moved := moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
+	destinationCards, destinationOK := destinationZone(r.game, card.Owner, prim.Destination)
+	reachedDestination := moved && destinationOK && destinationCards.Contains(cardID)
+	res.succeeded = reachedDestination
 	// Place the named exile counter only if the card actually landed in exile: a
 	// CR 614/903.9 replacement or commander redirect can send an exile-bound move
 	// elsewhere while still succeeding, and gating on the intended Destination
 	// would orphan a counter on a card that never reached exile.
-	if res.succeeded && prim.Counter.Exists && r.game.Players[card.Owner].Exile.Contains(cardID) {
+	if reachedDestination && prim.Counter.Exists && r.game.Players[card.Owner].Exile.Contains(cardID) {
 		r.game.AddExileCounter(cardID, prim.Counter.Val, 1)
 	}
-	if res.succeeded && prim.PublishLinked != "" && r.game.Players[card.Owner].Exile.Contains(cardID) {
-		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-		if prim.PublishLinkedObjectScoped {
-			key = linkedObjectByObjectKey(r.game, r.obj, string(prim.PublishLinked))
+	if reachedDestination && prim.PublishLinked != "" && r.game.Players[card.Owner].Exile.Contains(cardID) {
+		var objectID id.ID
+		if prim.Card.Kind == game.CardReferenceEvent &&
+			r.obj != nil && r.obj.HasTriggerEvent &&
+			r.obj.TriggerEvent.CardID == cardID {
+			objectID = r.obj.TriggerEvent.PermanentID
 		}
 		rememberLinkedObject(
 			r.game,
-			key,
-			game.LinkedObjectRef{CardID: cardID, CardZoneVersion: card.ZoneVersion},
+			publishKey,
+			game.LinkedObjectRef{ObjectID: objectID, CardID: cardID, CardZoneVersion: card.ZoneVersion},
 		)
+	}
+	return res
+}
+
+// handleMoveEventPermanentCards moves every exact card incarnation produced by
+// the triggering permanent's battlefield departure. It is the merged-permanent
+// form of MoveCard: each component is independently checked for the expected
+// zone version, moved through replacement effects, and published only if it
+// reaches the requested destination. The instruction succeeds when at least one
+// tracked card reaches that destination.
+func handleMoveEventPermanentCards(
+	r *effectResolver,
+	prim game.MoveCard,
+	publishKey game.LinkedObjectKey,
+) effectResolved {
+	res := effectResolved{accepted: true}
+	if r.obj == nil || !r.obj.HasTriggerEvent || r.obj.TriggerEvent.PermanentID == 0 {
+		return res
+	}
+	snapshot, ok := lastKnownObject(r.game, r.obj.TriggerEvent.PermanentID)
+	if !ok {
+		return res
+	}
+	simultaneousID := r.game.IDGen.Next()
+	for _, zoneCard := range snapshot.ZoneCards {
+		card, ok := r.game.GetCardInstance(zoneCard.CardID)
+		if !ok || card.ZoneVersion != zoneCard.ZoneVersion {
+			continue
+		}
+		currentZone, ok := cardZone(r.game, card.ID)
+		if !ok || currentZone != prim.FromZone {
+			continue
+		}
+		moved := moveCardBetweenZonesInBatch(
+			r.game,
+			card.Owner,
+			card.ID,
+			currentZone,
+			prim.Destination,
+			prim.DestinationBottom,
+			simultaneousID,
+		)
+		destinationCards, destinationOK := destinationZone(r.game, card.Owner, prim.Destination)
+		reachedDestination := moved && destinationOK && destinationCards.Contains(card.ID)
+		if !reachedDestination {
+			continue
+		}
+		res.succeeded = true
+		if prim.Counter.Exists && prim.Destination == zone.Exile {
+			r.game.AddExileCounter(card.ID, prim.Counter.Val, 1)
+		}
+		if prim.PublishLinked != "" && prim.Destination == zone.Exile {
+			rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{
+				ObjectID:        snapshot.ObjectID,
+				CardID:          card.ID,
+				CardZoneVersion: card.ZoneVersion,
+			})
+		}
 	}
 	return res
 }

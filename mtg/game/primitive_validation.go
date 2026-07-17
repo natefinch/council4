@@ -2470,6 +2470,12 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if p.PublishLinkedObjectScoped && p.PublishLinked == "" {
 		return errors.New("object-scoped move-card publication requires a linked key")
 	}
+	if p.ReplacePublishedLinked && p.PublishLinked == "" {
+		return errors.New("replacing move-card publication requires a linked key")
+	}
+	if p.IncludeEventPermanentComponents && p.Card.Kind != CardReferenceEvent {
+		return errors.New("event-component move-card requires an event card reference")
+	}
 	return nil
 }
 
