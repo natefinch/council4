@@ -139,6 +139,7 @@ var Cards = []cardset.Entry{
 	{Name: "Brazen Borrower", New: BrazenBorrower},
 	{Name: "Brazen Collector", New: BrazenCollector},
 	{Name: "Brazen Upstart", New: BrazenUpstart},
+	{Name: "Breach the Multiverse", New: BreachTheMultiverse},
 	{Name: "Break Through the Line", New: BreakThroughTheLine},
 	{Name: "Bred for the Hunt", New: BredForTheHunt},
 	{Name: "Bria, Riptide Rogue", New: BriaRiptideRogue},

@@ -2271,6 +2271,12 @@ const (
 	// permanent matching a typed selector. Added last so existing kinds keep their
 	// wire values.
 	EffectChoosePermanent
+	// EffectChooseFromEachGraveyard is the mass reanimation base "For each player,
+	// choose a creature [or planeswalker] card in that player's graveyard.": one
+	// chooser picks a matching card in every player's graveyard for a following
+	// "Put those cards onto the battlefield under your control." Added last so
+	// existing kinds keep their wire values.
+	EffectChooseFromEachGraveyard
 )
 
 // DurationKind identifies common continuous-effect durations.

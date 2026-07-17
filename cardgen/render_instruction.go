@@ -451,6 +451,18 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 			return "", err
 		}
 		return r.renderReturnLinkedExiledCardsToBattlefield(ctx, value)
+	case game.PrimitiveChooseCardFromEachGraveyard:
+		value, err := assertPrimitive[game.ChooseCardFromEachGraveyard](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderChooseCardFromEachGraveyard(ctx, value)
+	case game.PrimitiveReanimateLinkedCards:
+		value, err := assertPrimitive[game.ReanimateLinkedCards](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderReanimateLinkedCards(value)
 	case game.PrimitiveDestroyForEachPlayer:
 		value, err := assertPrimitive[game.DestroyForEachPlayer](primitive)
 		if err != nil {
@@ -1123,6 +1135,43 @@ func (r Renderer) renderReturnLinkedExiledCardsToBattlefield(ctx *renderCtx, val
 		fields = append(fields, "RestToLibraryBottom: true,")
 	}
 	return structLit("game.ReturnLinkedExiledCardsToBattlefield", fields), nil
+}
+
+func (r Renderer) renderChooseCardFromEachGraveyard(ctx *renderCtx, value game.ChooseCardFromEachGraveyard) (string, error) {
+	chooser, err := r.renderPlayerReference(value.Chooser)
+	if err != nil {
+		return "", err
+	}
+	players, err := renderPlayerGroupReference(value.Players)
+	if err != nil {
+		return "", err
+	}
+	selection, err := r.renderSelection(ctx, value.Selection)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Chooser: %s,", chooser),
+		fmt.Sprintf("Players: %s,", players),
+		fmt.Sprintf("Selection: %s,", selection),
+	}
+	if value.Optional {
+		fields = append(fields, "Optional: true,")
+	}
+	fields = append(fields, fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)))
+	return structLit("game.ChooseCardFromEachGraveyard", fields), nil
+}
+
+func (r Renderer) renderReanimateLinkedCards(value game.ReanimateLinkedCards) (string, error) {
+	controller, err := r.renderPlayerReference(value.Controller)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{
+		fmt.Sprintf("Controller: %s,", controller),
+		fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(value.LinkedKey)),
+	}
+	return structLit("game.ReanimateLinkedCards", fields), nil
 }
 
 func (r Renderer) renderDestroyForEachPlayer(ctx *renderCtx, value game.DestroyForEachPlayer) (string, error) {

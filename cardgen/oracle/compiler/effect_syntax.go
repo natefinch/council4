@@ -641,6 +641,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectExileIfWouldDieThisTurn
 	case parser.EffectMassReanimationExchange:
 		return EffectMassReanimationExchange
+	case parser.EffectChooseFromEachGraveyard:
+		return EffectChooseFromEachGraveyard
 	case parser.EffectPunisherLoseLife:
 		return EffectPunisherLoseLife
 	case parser.EffectMustAttack:
