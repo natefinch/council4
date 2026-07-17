@@ -622,6 +622,9 @@ func modalOptionCompletelyRecognized(content compiler.AbilityContent, syntax *pa
 	}
 	for _, target := range content.Targets {
 		spans = append(spans, target.Span)
+		if target.ChoiceSpan != (shared.Span{}) {
+			spans = append(spans, target.ChoiceSpan)
+		}
 	}
 	for _, condition := range content.Conditions {
 		spans = append(spans, condition.Span)

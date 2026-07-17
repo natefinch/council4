@@ -16,9 +16,11 @@ import (
 // spell this turn, ...") into a game.CreateDelayedTrigger instruction. The
 // nested triggered ability the parser reparsed is compiled and lowered
 // recursively; its trigger pattern and content become the event-based delayed
-// trigger's pattern and body, scoped to the rest of the turn. It fails closed
-// when the effect carries outer targets, references, conditions, keywords, or
-// modes, or when the nested ability does not lower to a plain event trigger.
+// trigger's pattern and body, scoped to the rest of the turn. A targeted-player
+// damage trigger may carry one outer player target that is captured at schedule
+// time; other outer targets or references fail closed, as do conditions,
+// keywords, modes, and nested abilities that do not lower to plain event
+// triggers.
 func lowerDelayedTriggerContent(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
 	unsupported := func(detail string) (game.AbilityContent, *shared.Diagnostic) {
@@ -29,23 +31,47 @@ func lowerDelayedTriggerContent(ctx contentCtx) (game.AbilityContent, *shared.Di
 		effect.Optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 {
+		len(ctx.content.Modes) != 0 {
+		return unsupported("the executable source backend supports only an unconditional event-based delayed trigger")
+	}
+	bindEventPlayer := effect.DelayedTriggerBindEventPlayer
+	var targets []game.TargetSpec
+	if bindEventPlayer {
+		if len(ctx.content.Targets) != 1 ||
+			len(ctx.content.References) != 1 ||
+			!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+			return unsupported("the delayed trigger event player must bind to exactly one player target")
+		}
+		target, ok := playerTargetSpec(ctx.content.Targets[0])
+		if !ok {
+			return unsupported("the delayed trigger event player must bind to a player target")
+		}
+		targets = []game.TargetSpec{target}
+	} else if len(ctx.content.Targets) != 0 || len(ctx.content.References) != 0 {
 		return unsupported("the executable source backend supports only an unconditional, untargeted event-based delayed trigger")
 	}
 	triggered, ok := lowerDelayedTriggerInner(effect.DelayedTriggerAbility)
 	if !ok {
 		return unsupported("the nested triggered ability did not lower to a plain event trigger")
 	}
+	if bindEventPlayer &&
+		(triggered.Trigger.Pattern.Event != game.EventDamageDealt ||
+			triggered.Trigger.Pattern.DamageRecipient&game.DamageRecipientPlayer == 0) {
+		return unsupported("the captured event-player delayed trigger must match damage dealt to a player")
+	}
+	def := game.DelayedTriggerDef{
+		EventPattern: opt.Val(triggered.Trigger.Pattern),
+		OneShot:      effect.DelayedTriggerOneShot,
+		Window:       game.DelayedWindowThisTurn,
+		Content:      triggered.Content,
+	}
+	if bindEventPlayer {
+		def.EventPlayer = opt.Val(game.TargetPlayerReference(0))
+	}
 	return game.Mode{
+		Targets: targets,
 		Sequence: []game.Instruction{{
-			Primitive: game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
-				EventPattern: opt.Val(triggered.Trigger.Pattern),
-				OneShot:      effect.DelayedTriggerOneShot,
-				Window:       game.DelayedWindowThisTurn,
-				Content:      triggered.Content,
-			}},
+			Primitive: game.CreateDelayedTrigger{Trigger: def},
 		}},
 	}.Ability(), nil
 }

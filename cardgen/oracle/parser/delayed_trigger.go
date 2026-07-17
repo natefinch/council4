@@ -20,11 +20,74 @@ func emitDelayedTriggerEffects(abilities []Ability, cardName string, legendary, 
 	for i := range abilities {
 		rewriteDelayedTriggerAbility(&abilities[i])
 		rewriteCapturedCombatDamageDelayedTrigger(&abilities[i], cardName, legendary)
+		rewriteCapturedEventPlayerDelayedTriggers(&abilities[i], cardName, legendary)
 		rewriteCapturedAttacksMonarchDelayedTrigger(&abilities[i])
 		rewriteCapturedDiesMonarchDelayedTrigger(&abilities[i])
 		rewriteSpellTriggeredThisTurnDelayedAbility(&abilities[i], instantOrSorcery)
 		rewriteUntilEndOfTurnTriggerSpell(&abilities[i], instantOrSorcery)
 		rewriteGeneralDeathDelayedTrigger(&abilities[i], cardName, legendary)
+	}
+}
+
+// rewriteCapturedEventPlayerDelayedTriggers converts a resolving body's
+// targeted-player delayed combat-damage sentence into a typed delayed trigger:
+//
+//	Choose target opponent. Whenever a creature you control deals combat
+//	damage to that player this turn, create a Treasure token.
+//
+// The nested trigger is reparsed with the generic recipient "a player", while
+// DelayedTriggerBindEventPlayer records that lowering must capture the option's
+// preceding player target and restrict the delayed trigger to that exact player.
+// Modal transformations stay mode-local, so every Spree option retains
+// independent targets and costs. The rewrite fails closed on any preamble
+// without exactly one explicit "that player" reference.
+func rewriteCapturedEventPlayerDelayedTriggers(ability *Ability, cardName string, legendary bool) {
+	rewriteCapturedEventPlayerDelayedTriggerSentences(ability.Sentences, ability.Atoms, cardName, legendary)
+	if ability.Modal != nil {
+		for modeIndex := range ability.Modal.Options {
+			mode := &ability.Modal.Options[modeIndex]
+			rewriteCapturedEventPlayerDelayedTriggerSentences(mode.Sentences, mode.Atoms, cardName, legendary)
+		}
+	}
+}
+
+func rewriteCapturedEventPlayerDelayedTriggerSentences(sentences []Sentence, atoms Atoms, cardName string, legendary bool) {
+	for sentenceIndex := range sentences {
+		sentence := &sentences[sentenceIndex]
+		tokens := semanticEffectTokens(sentence.Tokens)
+		comma := shared.TopLevelIndex(tokens, shared.Comma)
+		if comma <= 0 {
+			continue
+		}
+		lead := tokens[:comma]
+		if !isDelayedThisTurnPreamble(lead) || !leadMentionsCombatDamage(lead) {
+			continue
+		}
+		references := atoms.ReferencesIn(shared.SpanOf(lead))
+		if len(references) != 1 || references[0].Kind != ReferenceThatPlayer {
+			continue
+		}
+		inner, oneShot, ok := delayedTriggerInnerTextWithEventPlayer(sentence.Text)
+		if !ok {
+			continue
+		}
+		granted, ok := parseDelayedTriggerAbilityWithContext(inner, cardName, legendary)
+		if !ok {
+			continue
+		}
+		sentence.Effects = []EffectSyntax{{
+			Kind:                          EffectDelayedTrigger,
+			Span:                          sentence.Span,
+			VerbSpan:                      sentence.Span,
+			ClauseSpan:                    sentence.Span,
+			Text:                          sentence.Text,
+			References:                    references,
+			DelayedTriggerAbility:         &granted,
+			DelayedTriggerOneShot:         oneShot,
+			DelayedTriggerBindEventPlayer: true,
+		}}
+		sentence.Targets = nil
+		sentence.LegacyEffects = false
 	}
 }
 
@@ -625,6 +688,32 @@ func delayedTriggerInnerText(text string) (inner string, oneShot bool, ok bool) 
 		return "", false, false
 	}
 	return strings.TrimSpace(preamble) + body, oneShot, true
+}
+
+// delayedTriggerInnerTextWithEventPlayer is the targeted-player extension of
+// delayedTriggerInnerText. It replaces the exact combat-damage recipient
+// back-reference "that player" in the reconstructed trigger preamble with the
+// generic "a player", allowing the nested trigger parser to build an ordinary
+// damage-event pattern. A successful result tells lowering to recover the exact
+// player from the outer target reference instead of leaving the pattern broad.
+func delayedTriggerInnerTextWithEventPlayer(text string) (inner string, oneShot, ok bool) {
+	inner, oneShot, ok = delayedTriggerInnerText(text)
+	if !ok {
+		return "", false, false
+	}
+	comma := strings.Index(inner, ",")
+	if comma <= 0 {
+		return "", false, false
+	}
+	preamble := inner[:comma]
+	lowered := strings.ToLower(preamble)
+	const marker = "to that player"
+	index := strings.Index(lowered, marker)
+	if index < 0 || strings.Contains(lowered[index+len(marker):], marker) {
+		return "", false, false
+	}
+	preamble = preamble[:index] + "to a player" + preamble[index+len(marker):]
+	return preamble + inner[comma:], oneShot, true
 }
 
 // parseDelayedTriggerAbility reparses the reconstructed inner ability text

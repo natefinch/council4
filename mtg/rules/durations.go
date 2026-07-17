@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 func untilEndOfTurnPTContinuousEffect(g *game.Game, obj *game.StackObject, permanent *game.Permanent, powerDelta, toughnessDelta int) game.ContinuousEffect {
@@ -130,6 +131,10 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 	if obj == nil || def == nil || (def.Timing == 0 && !def.EventPattern.Exists) {
 		return false
 	}
+	boundEventPlayer, ok := capturedDelayedEventPlayer(g, obj, def)
+	if def.EventPlayer.Exists && !ok {
+		return false
+	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	ability := game.TriggeredAbility{
 		Optional: def.Optional,
@@ -158,6 +163,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		CapturedTargetControllerLKI: clonePlayerIDMap(obj.TargetControllerLKI),
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
 		BoundDamageSourceObjectID:   capturedDamageSourceObjectID(g, obj, def),
+		BoundEventPlayer:            boundEventPlayer,
 		BoundAttackerObjectID:       capturedAttackerObjectID(g, obj, def),
 		BoundDyingObjectID:          capturedDyingObjectID(g, obj, def),
 		CapturedObjectID:            capturedObjectID(g, obj, def),
@@ -165,6 +171,22 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		CapturedCardID:              capturedCardID(g, obj, def),
 	})
 	return true
+}
+
+// capturedDelayedEventPlayer freezes the player named by an event-based delayed
+// trigger's EventPlayer reference while the creating spell or ability and its
+// targets are still available. A missing reference is a wildcard; an
+// unresolvable reference fails scheduling so an illegal target cannot create a
+// trigger that later matches an unrelated player.
+func capturedDelayedEventPlayer(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) (opt.V[game.PlayerID], bool) {
+	if !def.EventPlayer.Exists {
+		return opt.V[game.PlayerID]{}, true
+	}
+	player, ok := resolvePlayerReference(g, obj, def.EventPlayer.Val)
+	if !ok {
+		return opt.V[game.PlayerID]{}, false
+	}
+	return opt.Val(player), true
 }
 
 // capturedObjectID freezes the permanent a fixed-phase delayed trigger binds to
@@ -414,6 +436,9 @@ func matchEventDelayedTriggerEvents(g *game.Game, trigger *game.DelayedTrigger, 
 	source, _ := permanentByObjectID(g, trigger.SourceObjectID)
 	var matched []game.Event
 	for i := range events {
+		if trigger.BoundEventPlayer.Exists && events[i].Player != trigger.BoundEventPlayer.Val {
+			continue
+		}
 		if pattern.DamageSourceCaptured &&
 			(trigger.BoundDamageSourceObjectID == 0 ||
 				events[i].SourceObjectID != trigger.BoundDamageSourceObjectID) {

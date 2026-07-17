@@ -107,6 +107,7 @@ const (
 	ConditionPredicateGraveyardInstantOrSorceryCountAtLeast            ConditionPredicateKind = "ConditionPredicateGraveyardInstantOrSorceryCountAtLeast"
 	ConditionPredicateControllerControlsNamed                          ConditionPredicateKind = "ConditionPredicateControllerControlsNamed"
 	ConditionPredicateFirstCombatPhaseOfTurn                           ConditionPredicateKind = "ConditionPredicateFirstCombatPhaseOfTurn"
+	ConditionPredicateControllerCombatPhase                            ConditionPredicateKind = "ConditionPredicateControllerCombatPhase"
 	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
 	ConditionPredicateControlsGreatestToughnessCreature                ConditionPredicateKind = "ConditionPredicateControlsGreatestToughnessCreature"
 	ConditionPredicateEventSubjectPowerGreatestOnBattlefield           ConditionPredicateKind = "ConditionPredicateEventSubjectPowerGreatestOnBattlefield"
@@ -888,6 +889,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDrawCardReplacementCondition,
 		recognizeCastTimingCondition,
 		recognizeFirstCombatPhaseCondition,
+		recognizeControllerCombatPhaseCondition,
 		recognizeControllerTurnCondition,
 		recognizeControllerTurnOfGameCondition,
 		recognizeAttackersAttackingControllerCondition,
@@ -1262,6 +1264,19 @@ func recognizeFirstCombatPhaseCondition(body []shared.Token, _ Atoms) (Condition
 	if tokenWordsEqual(body, "it's", "the", "first", "combat", "phase", "of", "the", "turn") ||
 		tokenWordsEqual(body, "it", "is", "the", "first", "combat", "phase", "of", "the", "turn") {
 		return ConditionClause{Predicate: ConditionPredicateFirstCombatPhaseOfTurn}, true
+	}
+	return ConditionClause{}, false
+}
+
+// recognizeControllerCombatPhaseCondition matches the resolution-time
+// turn-structure gate "it's your combat phase". Unlike the first-combat-phase
+// predicate, it requires both that the context controller is the active player
+// and that the current phase is combat, so it holds during any of that player's
+// combat phases and nowhere else.
+func recognizeControllerCombatPhaseCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if tokenWordsEqual(body, "it's", "your", "combat", "phase") ||
+		tokenWordsEqual(body, "it", "is", "your", "combat", "phase") {
+		return ConditionClause{Predicate: ConditionPredicateControllerCombatPhase}, true
 	}
 	return ConditionClause{}, false
 }

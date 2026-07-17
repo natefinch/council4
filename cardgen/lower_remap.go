@@ -340,6 +340,13 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		return value, ok
 	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		if value.Trigger.EventPlayer.Exists {
+			player, ok := transformPlayerReference(value.Trigger.EventPlayer.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Trigger.EventPlayer = opt.Val(player)
+		}
 		return value, true
 	}
 	if value, ok := primitive.(game.ApplyContinuous); ok {

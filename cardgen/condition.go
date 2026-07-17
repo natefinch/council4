@@ -230,6 +230,8 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerControlsNamed = append(result.ControllerControlsNamed, condition.ControlledNames...)
 	case compiler.ConditionPredicateFirstCombatPhaseOfTurn:
 		result.FirstCombatPhaseOfTurn = true
+	case compiler.ConditionPredicateControllerCombatPhase:
+		result.ControllerCombatPhase = true
 	case compiler.ConditionPredicateControllerTurn:
 		result.SourceControllerTurn = true
 	case compiler.ConditionPredicateControllerTurnOfGameAtMost:
@@ -441,6 +443,7 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 		case compiler.ConditionPredicateNoAttackerAttackedController,
 			compiler.ConditionPredicateObjectAttackedThisTurn,
 			compiler.ConditionPredicateFirstCombatPhaseOfTurn,
+			compiler.ConditionPredicateControllerCombatPhase,
 			compiler.ConditionPredicateControllerCompletedADungeon:
 			// "they draw a card if none of those creatures attacked you"
 			// (Firemane Commando) gates the resolving triggered ability's draw

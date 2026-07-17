@@ -384,6 +384,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				AnimateTarget:                      syntax.AnimateTarget,
 				DelayedTriggerOneShot:              syntax.DelayedTriggerOneShot,
 				DelayedTriggerBindDamageSource:     syntax.DelayedTriggerBindDamageSource,
+				DelayedTriggerBindEventPlayer:      syntax.DelayedTriggerBindEventPlayer,
 				DelayedTriggerBindAttacker:         syntax.DelayedTriggerBindAttacker,
 				DelayedTriggerBindDyingObject:      syntax.DelayedTriggerBindDyingObject,
 				TokenName:                          syntax.TokenName,

@@ -125,6 +125,13 @@ func (r Renderer) renderCreateDelayedTrigger(ctx *renderCtx, value game.CreateDe
 			}
 			triggerFields = append(triggerFields, fmt.Sprintf("DamageSourceObject: opt.Val(%s),", object))
 		}
+		if value.Trigger.EventPlayer.Exists {
+			player, err := r.renderPlayerReference(value.Trigger.EventPlayer.Val)
+			if err != nil {
+				return "", err
+			}
+			triggerFields = append(triggerFields, fmt.Sprintf("EventPlayer: opt.Val(%s),", player))
+		}
 		if value.Trigger.CapturedAttackerObject.Exists {
 			object, err := r.renderObjectReference(value.Trigger.CapturedAttackerObject.Val)
 			if err != nil {
