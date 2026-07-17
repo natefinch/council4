@@ -77,7 +77,7 @@ func cutDelayedTiming(tokens []shared.Token) ([]shared.Token, DelayedTimingKind)
 }
 
 func leadingDelayedTiming(tokens []shared.Token) DelayedTimingKind {
-	if len(tokens) != 9 || tokens[8].Kind != shared.Comma {
+	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Comma {
 		return DelayedTimingNone
 	}
 	for _, pattern := range []struct {
@@ -88,7 +88,8 @@ func leadingDelayedTiming(tokens []shared.Token) DelayedTimingKind {
 		{[]string{"at", "the", "beginning", "of", "the", "next", "end", "step"}, DelayedTimingNextEndStep},
 		{[]string{"at", "the", "beginning", "of", "your", "next", "end", "step"}, DelayedTimingNextEndStep},
 	} {
-		if effectWordsAt(tokens, 0, pattern.words...) {
+		start := len(tokens) - 1 - len(pattern.words)
+		if start >= 0 && effectWordsAt(tokens, start, pattern.words...) {
 			return pattern.timing
 		}
 	}

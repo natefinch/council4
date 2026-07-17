@@ -78,16 +78,9 @@ func selfBlinkReturnRiders(ctx contentCtx) (returnEffect compiler.CompiledEffect
 	if !hasDirectObject {
 		return compiler.CompiledEffect{}, nil, false
 	}
-	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
-	// known kind are modeled; every other counter form fails closed.
-	if returnEffect.CounterKindKnown {
-		if !returnEffect.Amount.Known || returnEffect.Amount.Value < 1 {
-			return compiler.CompiledEffect{}, nil, false
-		}
-		entryCounters = []game.CounterPlacement{{
-			Kind:   returnEffect.CounterKind,
-			Amount: returnEffect.Amount.Value,
-		}}
+	entryCounters, ok = blinkEntryCounters(returnEffect)
+	if !ok {
+		return compiler.CompiledEffect{}, nil, false
 	}
 	return returnEffect, entryCounters, true
 }

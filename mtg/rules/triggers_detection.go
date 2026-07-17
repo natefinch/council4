@@ -35,6 +35,7 @@ type pendingTriggeredAbility struct {
 	capturedObjectID             id.ID
 	capturedObjectIDs            []id.ID
 	capturedCardID               id.ID
+	capturedCardZoneVersion      uint64
 	additionalTriggers           int
 	triggerMultiplierCaptured    bool
 	controlledMultiplierCaptured bool
@@ -142,6 +143,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			CapturedObjectID:            trigger.capturedObjectID,
 			CapturedObjectIDs:           append([]id.ID(nil), trigger.capturedObjectIDs...),
 			CapturedCardID:              trigger.capturedCardID,
+			CapturedCardZoneVersion:     trigger.capturedCardZoneVersion,
 			DungeonRoom:                 trigger.dungeonRoom,
 		}
 		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {

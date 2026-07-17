@@ -148,6 +148,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 	if def.InterveningCondition.Exists {
 		ability.Trigger.InterveningCondition = def.InterveningCondition
 	}
+	capturedCardID, capturedCardZoneVersion := capturedCard(g, obj, def)
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
 		ID:                          g.IDGen.Next(),
 		SourceID:                    sourceID,
@@ -168,7 +169,8 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		BoundDyingObjectID:          capturedDyingObjectID(g, obj, def),
 		CapturedObjectID:            capturedObjectID(g, obj, def),
 		CapturedObjectIDs:           capturedObjectIDs(g, obj, def),
-		CapturedCardID:              capturedCardID(g, obj, def),
+		CapturedCardID:              capturedCardID,
+		CapturedCardZoneVersion:     capturedCardZoneVersion,
 	})
 	return true
 }
@@ -235,32 +237,39 @@ func capturedObjectIDs(g *game.Game, obj *game.StackObject, def *game.DelayedTri
 	return ids
 }
 
-// capturedCardID freezes the card a fixed-phase delayed trigger binds to from the
+// capturedCard freezes the card a fixed-phase delayed trigger binds to from the
 // creating ability's CapturedCard reference, resolving the referenced linked
 // object key against the creating ability's context at schedule time and reading
-// its card identity rather than a permanent's object identity. It backs delayed
+// its card and zone-incarnation identity rather than a permanent's object
+// identity. It backs delayed
 // return of a card an earlier clause in the same resolution exiled and published
 // under a linked key ("Exile the top card of your library face down. Put that
 // card into your hand at the beginning of your next end step.", Necropotence),
 // where the exiled card is not a permanent so it is identified by CardID, and the
 // shared link key may be reused by a later activation before the trigger fires,
-// so the card must be captured now. It returns zero when the definition carries
-// no such reference or no card was published (an empty library exiled nothing),
-// in which case the trigger's content finds nothing and does nothing.
-func capturedCardID(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) id.ID {
+// so the card must be captured now. It returns zero values when the definition
+// carries no such reference or no current card was published (an empty library
+// exiled nothing), in which case the trigger's content finds nothing and does
+// nothing.
+func capturedCard(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) (id.ID, uint64) {
 	if !def.CapturedCard.Exists {
-		return 0
+		return 0, 0
 	}
 	reference := def.CapturedCard.Val
 	if reference.Kind() != game.ObjectReferenceLinkedObject {
-		return 0
+		return 0, 0
 	}
 	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, reference.LinkID())) {
-		if linked.CardID != 0 {
-			return linked.CardID
+		if linked.CardID == 0 {
+			continue
 		}
+		card, ok := g.GetCardInstance(linked.CardID)
+		if !ok || linked.CardZoneVersion != 0 && card.ZoneVersion != linked.CardZoneVersion {
+			continue
+		}
+		return linked.CardID, card.ZoneVersion
 	}
-	return 0
+	return 0, 0
 }
 
 // capturedDamageSourceObjectID resolves the permanent a combat-damage delayed
@@ -507,6 +516,7 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 			capturedObjectID:            trigger.CapturedObjectID,
 			capturedObjectIDs:           append([]id.ID(nil), trigger.CapturedObjectIDs...),
 			capturedCardID:              trigger.CapturedCardID,
+			capturedCardZoneVersion:     trigger.CapturedCardZoneVersion,
 		})
 	}
 	g.DelayedTriggers = remaining

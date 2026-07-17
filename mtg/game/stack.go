@@ -357,12 +357,11 @@ type StackObject struct {
 	// after the linked key that named them may have been reused ("Exile the
 	// tokens at end of combat.", the myriad keyword).
 	CapturedObjectIDs []id.ID
-	// CapturedCardID is the card frozen at schedule time by the delayed trigger
-	// that produced this stack object, carried so content referencing
-	// CardReferenceCaptured can act on that exact card after the shared link key
-	// that named it may have been reused ("Put that card into your hand at the
-	// beginning of your next end step.", Necropotence).
-	CapturedCardID id.ID
+	// CapturedCardID and CapturedCardZoneVersion identify the specific zone
+	// incarnation frozen at schedule time by the delayed trigger that produced
+	// this stack object.
+	CapturedCardID          id.ID
+	CapturedCardZoneVersion uint64
 
 	// DungeonRoom, when set, marks this stack object as a dungeon room-entry
 	// triggered ability so completion is recorded exactly once when a final

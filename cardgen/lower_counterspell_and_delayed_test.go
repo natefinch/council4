@@ -1154,9 +1154,11 @@ func TestLowerDelayedBlink(t *testing.T) {
 				t.Fatalf("delayed = %#v, want next-end-step trigger", mode.Sequence[1].Primitive)
 			}
 			put, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
-			key, linked := put.Source.LinkedKey()
-			if !ok || !linked || key != exile.ExileLinkedKey {
-				t.Fatalf("delayed put = %#v, want linked source %q", put, exile.ExileLinkedKey)
+			ref, captured := put.Source.CardRef()
+			if !ok || !captured || ref.Kind != game.CardReferenceCaptured ||
+				!delayed.Trigger.CapturedCard.Exists ||
+				delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
+				t.Fatalf("delayed put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.ExileLinkedKey)
 			}
 		})
 	}
@@ -1190,9 +1192,11 @@ func TestLowerMultipleDelayedBlinkPairsUseDistinctKeys(t *testing.T) {
 		if !ok {
 			t.Fatalf("delayed instruction %d = %#v, want put on battlefield", i, delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
 		}
-		key, ok := put.Source.LinkedKey()
-		if !ok || key != exile.ExileLinkedKey {
-			t.Fatalf("put %d linked key = %q (%v), want %q", i, key, ok, exile.ExileLinkedKey)
+		ref, captured := put.Source.CardRef()
+		if !captured || ref.Kind != game.CardReferenceCaptured ||
+			!delayed.Trigger.CapturedCard.Exists ||
+			delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
+			t.Fatalf("put %d/trigger = %#v/%#v, want captured linked card %q", i, put, delayed.Trigger, exile.ExileLinkedKey)
 		}
 	}
 	if keys[0] == keys[1] {
@@ -1241,9 +1245,11 @@ func delayedBlinkPut(t *testing.T, mode game.Mode) game.PutOnBattlefield {
 	if !ok {
 		t.Fatalf("delayed content = %#v, want put on battlefield", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
 	}
-	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	ref, captured := put.Source.CardRef()
+	if !captured || ref.Kind != game.CardReferenceCaptured ||
+		!delayed.Trigger.CapturedCard.Exists ||
+		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
+		t.Fatalf("put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.ExileLinkedKey)
 	}
 	return put
 }

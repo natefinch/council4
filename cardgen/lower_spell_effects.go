@@ -491,15 +491,11 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 			// keeps that amount unambiguous (multi-target cardinality would also
 			// land in the amount), so only the fixed positive single-target form is
 			// modeled.
-			if targetSpec.MaxTargets != 1 ||
-				!effect.Amount.Known ||
-				effect.Amount.Value < 1 {
+			entryCounters, ok := blinkEntryCounters(effect)
+			if targetSpec.MaxTargets != 1 || !ok {
 				return game.AbilityContent{}, false
 			}
-			dest.EntryCounters = []game.CounterPlacement{{
-				Kind:   effect.CounterKind,
-				Amount: effect.Amount.Value,
-			}}
+			dest.EntryCounters = entryCounters
 		}
 	default:
 		return game.AbilityContent{}, false

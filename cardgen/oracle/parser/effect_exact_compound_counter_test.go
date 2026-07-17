@@ -92,3 +92,29 @@ func TestParseCompoundCounterUnknownKindFailsClosed(t *testing.T) {
 		t.Fatal("Exact = true, want false (finality counter has no runtime semantics)")
 	}
 }
+
+func TestParseConditionPrefixedDelayedReturnWithCompoundCounters(t *testing.T) {
+	t.Parallel()
+	const source = "{2}, {T}: Exile another target creature you control. You may return that card to the battlefield under its owner's control. If you don't, at the beginning of the next end step, return that card to the battlefield under its owner's control with a vigilance counter and a lifelink counter on it."
+	document, diagnostics := Parse(source, Context{CardName: "Test Protector"})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse diagnostics = %#v", diagnostics)
+	}
+	var effects []EffectSyntax
+	for _, sentence := range document.Abilities[0].Sentences {
+		effects = append(effects, sentence.Effects...)
+	}
+	if len(effects) != 3 {
+		t.Fatalf("effects = %#v, want three", effects)
+	}
+	returnEffect := effects[2]
+	if returnEffect.Kind != EffectReturn || returnEffect.DelayedTiming != DelayedTimingNextEndStep {
+		t.Fatalf("fallback return = %#v, want next-end-step return", returnEffect)
+	}
+	if !returnEffect.CounterKnown || returnEffect.CounterKind != counter.Vigilance ||
+		len(returnEffect.AdditionalCounterPlacements) != 1 ||
+		returnEffect.AdditionalCounterPlacements[0].Kind != counter.Lifelink ||
+		returnEffect.AdditionalCounterPlacements[0].Amount != 1 {
+		t.Fatalf("fallback counters = %v/%#v, want vigilance and lifelink", returnEffect.CounterKind, returnEffect.AdditionalCounterPlacements)
+	}
+}

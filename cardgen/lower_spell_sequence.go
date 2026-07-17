@@ -282,7 +282,7 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, matchReason)
 	}
 	consumedConditions := 0
-	if optionalFlow.enabled {
+	if optionalFlow.enabled && optionalFlow.gateCondition >= 0 {
 		consumedConditions++
 	}
 	if optionalFlow.elseGateCondition >= 0 {
@@ -2838,6 +2838,7 @@ func lowerMassGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	consumed := ctx
 	consumed.content.References = nil
+	consumed.content.Targets = nil
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}
@@ -3855,6 +3856,9 @@ func lowerDelayedSequenceClause(
 	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
 		sequence[len(sequence)-1].Primitive = exile
+		return delayedSequenceClauseResult{content: delayed, handled: true}
+	}
+	if delayed, ok := lowerOptionalBlinkFallbackReturn(effects, effectIndex, ctx, sequence); ok {
 		return delayedSequenceClauseResult{content: delayed, handled: true}
 	}
 	if exile, returnContent, ok := lowerImmediateBlinkReturn(effects, effectIndex, ctx, sequence); ok {
@@ -5068,17 +5072,9 @@ func lowerDelayedBlinkReturn(
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1) {
 		return game.Exile{}, game.AbilityContent{}, false
 	}
-	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
-	// known kind are modeled; every other counter form fails closed.
-	var entryCounters []game.CounterPlacement
-	if returnEffect.CounterKindKnown {
-		if !returnEffect.Amount.Known || returnEffect.Amount.Value < 1 {
-			return game.Exile{}, game.AbilityContent{}, false
-		}
-		entryCounters = []game.CounterPlacement{{
-			Kind:   returnEffect.CounterKind,
-			Amount: returnEffect.Amount.Value,
-		}}
+	entryCounters, ok := blinkEntryCounters(returnEffect)
+	if !ok {
+		return game.Exile{}, game.AbilityContent{}, false
 	}
 	// References validated — clear before fail-closed check.
 	consumed := ctx
@@ -5102,19 +5098,104 @@ func lowerDelayedBlinkReturn(
 	}
 	exile.ExileLinkedKey = key
 	put := game.PutOnBattlefield{
-		Source:           game.LinkedBattlefieldSource(key),
-		EntryTapped:      returnEffect.EntersTapped,
-		EntryTransformed: returnEffect.EntersTransformed,
-		EntryCounters:    entryCounters,
+		Source:            game.CardBattlefieldSource(game.CapturedCardReference()),
+		EntryTapped:       returnEffect.EntersTapped,
+		EntryTransformed:  returnEffect.EntersTransformed,
+		EntryCounters:     entryCounters,
+		LinkedReturnZones: []zone.Type{zone.Exile},
 	}
 	if returnEffect.UnderYourControl {
 		put.Recipient = opt.Val(game.ControllerReference())
 	}
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
-		Timing:  game.DelayedAtBeginningOfNextEndStep,
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(),
+		Timing:       game.DelayedAtBeginningOfNextEndStep,
+		CapturedCard: opt.Val(game.LinkedObjectReference(string(key))),
+		Content:      game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(),
 	}}
 	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+}
+
+// lowerOptionalBlinkFallbackReturn lowers the fallback branch of
+// "Exile target <permanent>. You may return that card ... If you don't, at the
+// beginning of the next end step, return that card ...". The preceding optional
+// immediate return has already linked the exile and publishes whether the card
+// returned. This clause captures that same card when scheduling the delayed
+// trigger, so repeated activations remain isolated and the source may leave.
+func lowerOptionalBlinkFallbackReturn(
+	effects []compiler.CompiledEffect,
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+) (game.AbilityContent, bool) {
+	if len(ctx.content.Effects) != 1 {
+		panic(fmt.Sprintf("lowerOptionalBlinkFallbackReturn: expected a single effect, got %d", len(ctx.content.Effects)))
+	}
+	returnEffect := ctx.content.Effects[0]
+	if effectIndex < 2 ||
+		len(sequence) != effectIndex ||
+		!effects[effectIndex-1].Optional ||
+		effects[effectIndex-1].Kind != compiler.EffectReturn ||
+		returnEffect.Kind != compiler.EffectReturn ||
+		returnEffect.DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		returnEffect.Negated ||
+		returnEffect.ToZone != zone.Battlefield ||
+		returnEffect.EntersColorChoice ||
+		returnEffect.EntersTypeChoice ||
+		returnEffect.EntersWithCounters ||
+		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+		return game.AbilityContent{}, false
+	}
+	entryCounters, ok := blinkEntryCounters(returnEffect)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return game.AbilityContent{}, false
+	}
+	immediate := sequence[len(sequence)-1]
+	immediatePut, ok := immediate.Primitive.(game.PutOnBattlefield)
+	if !ok || !immediate.Optional || immediate.PublishResult != optionalIfYouDoResultKey {
+		return game.AbilityContent{}, false
+	}
+	key, linked := immediatePut.Source.LinkedKey()
+	if !linked {
+		return game.AbilityContent{}, false
+	}
+	foundExile := false
+	for i := range sequence[:len(sequence)-1] {
+		exile, exileOK := sequence[i].Primitive.(game.Exile)
+		if !exileOK ||
+			exile.Object != game.TargetPermanentReference(0) ||
+			exile.ExileLinkedKey != key {
+			continue
+		}
+		if foundExile {
+			return game.AbilityContent{}, false
+		}
+		foundExile = true
+	}
+	if !foundExile {
+		return game.AbilityContent{}, false
+	}
+	put := game.PutOnBattlefield{
+		Source:            game.CardBattlefieldSource(game.CapturedCardReference()),
+		EntryTapped:       returnEffect.EntersTapped,
+		EntryTransformed:  returnEffect.EntersTransformed,
+		EntryCounters:     entryCounters,
+		LinkedReturnZones: []zone.Type{zone.Exile},
+	}
+	if returnEffect.UnderYourControl {
+		put.Recipient = opt.Val(game.ControllerReference())
+	}
+	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
+		Timing:       game.DelayedAtBeginningOfNextEndStep,
+		CapturedCard: opt.Val(game.LinkedObjectReference(string(key))),
+		Content:      game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(),
+	}}
+	return game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
 // lowerBolsterChosenCreatureSequence lowers the bolster attack rider that pairs a
@@ -5334,11 +5415,10 @@ func lowerImmediateBlinkReturn(
 		effects[effectIndex-1].Kind != compiler.EffectExile ||
 		effects[effectIndex-1].DelayedTiming != 0 ||
 		returnEffect.Kind != compiler.EffectReturn ||
-		// Only the ", then return …" connective form lowers immediately. A return
-		// whose clause omits "then" (e.g. a leading "At the beginning of the next
-		// end step, return …" whose delayed timing the parser does not capture in
-		// this position) is rejected so a delayed blink is never resolved at once.
-		returnEffect.Connection != parser.EffectConnectionThen ||
+		// A normal immediate blink uses ", then return …". A resolving optional
+		// return may instead begin its own sentence ("You may return …").
+		(returnEffect.Connection != parser.EffectConnectionThen &&
+			(!effects[effectIndex].Optional || returnEffect.Connection != parser.EffectConnectionNone)) ||
 		returnEffect.DelayedTiming != 0 ||
 		returnEffect.Negated ||
 		returnEffect.ToZone != zone.Battlefield ||
@@ -5350,17 +5430,9 @@ func lowerImmediateBlinkReturn(
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1) {
 		return game.Exile{}, game.AbilityContent{}, false
 	}
-	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
-	// known kind are modeled; every other counter form fails closed.
-	var entryCounters []game.CounterPlacement
-	if returnEffect.CounterKindKnown {
-		if !returnEffect.Amount.Known || returnEffect.Amount.Value < 1 {
-			return game.Exile{}, game.AbilityContent{}, false
-		}
-		entryCounters = []game.CounterPlacement{{
-			Kind:   returnEffect.CounterKind,
-			Amount: returnEffect.Amount.Value,
-		}}
+	entryCounters, ok := blinkEntryCounters(returnEffect)
+	if !ok {
+		return game.Exile{}, game.AbilityContent{}, false
 	}
 	consumed := ctx
 	consumed.content.References = nil
@@ -5392,6 +5464,30 @@ func lowerImmediateBlinkReturn(
 		put.Recipient = opt.Val(game.ControllerReference())
 	}
 	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
+}
+
+func blinkEntryCounters(effect compiler.CompiledEffect) ([]game.CounterPlacement, bool) {
+	if !effect.CounterKindKnown {
+		return nil, len(effect.AdditionalCounterPlacements) == 0
+	}
+	if !effect.Amount.Known || effect.Amount.Value < 1 || !effect.CounterKind.Valid() {
+		return nil, false
+	}
+	placements := make([]game.CounterPlacement, 0, 1+len(effect.AdditionalCounterPlacements))
+	placements = append(placements, game.CounterPlacement{
+		Kind:   effect.CounterKind,
+		Amount: effect.Amount.Value,
+	})
+	for _, additional := range effect.AdditionalCounterPlacements {
+		if !additional.Kind.Valid() || additional.Amount < 1 {
+			return nil, false
+		}
+		placements = append(placements, game.CounterPlacement{
+			Kind:   additional.Kind,
+			Amount: additional.Amount,
+		})
+	}
+	return placements, true
 }
 
 // joinedTokenText reconstructs the source text from a token slice, inserting

@@ -255,14 +255,13 @@ type DelayedTrigger struct {
 	// content referencing GroupDomainCapturedObjects finds nothing and does
 	// nothing.
 	CapturedObjectIDs []id.ID
-	// CapturedCardID is the concrete card frozen from the creating ability's
-	// CapturedCard reference at schedule time, carried into the fired trigger's
-	// content so it can act on that exact card ("Put that card into your hand at
-	// the beginning of your next end step.") after the shared link key that named
-	// it may have been reused by a later activation. Zero means no card was
-	// captured (for example the library was empty), so content referencing
-	// CardReferenceCaptured finds nothing and does nothing.
-	CapturedCardID id.ID
+	// CapturedCardID and CapturedCardZoneVersion identify the specific zone
+	// incarnation frozen from the creating ability's CapturedCard reference at
+	// schedule time. The version prevents the delayed effect from following that
+	// card after it changes zones and later returns to the expected zone. A zero ID
+	// means no card was captured, so CardReferenceCaptured finds nothing.
+	CapturedCardID          id.ID
+	CapturedCardZoneVersion uint64
 }
 
 // ReflexiveTrigger is a runtime reflexive triggered ability (CR 603.11) queued

@@ -538,12 +538,26 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 		return res
 	}
 	if card, ok := prim.Source.CardRef(); ok {
+		if len(prim.LinkedReturnZones) > 0 {
+			_, fromZone, resolved := resolveCardReference(r.game, r.obj, card)
+			if !resolved || !slices.Contains(prim.LinkedReturnZones, fromZone) {
+				return res
+			}
+		}
 		var key game.LinkedObjectKey
 		if prim.PublishLinked != "" {
 			key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 			clearLinkedObjects(r.game, key)
 		}
-		permanent, succeeded := r.putReferencedCardOnBattlefieldValue(card, recipient, prim.ContinuousEffects, battlefieldEntryOptions(prim))
+		ownerControl := card.Kind == game.CardReferenceEvent ||
+			(card.Kind == game.CardReferenceCaptured && !prim.Recipient.Exists)
+		permanent, succeeded := r.putReferencedCardOnBattlefieldValue(
+			card,
+			recipient,
+			prim.ContinuousEffects,
+			battlefieldEntryOptions(prim),
+			ownerControl,
+		)
 		res.succeeded = succeeded
 		if succeeded && prim.PublishLinked != "" {
 			rememberLinkedObject(
@@ -1241,21 +1255,22 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 		}
 		return res
 	}
+	var linkedKey game.LinkedObjectKey
+	if prim.ExileLinkedKey != "" {
+		linkedKey = linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey))
+		clearLinkedObjects(r.game, linkedKey)
+	}
 	targets := r.resolveObjectGroup(prim.Object, prim.Group)
 	if !targets.single {
 		// A group exile that carries a linked key (group blink) must remember
 		// every exiled permanent under that key, capturing each link before the
 		// move so a later linked return brings the whole group back together.
-		var key game.LinkedObjectKey
-		if prim.ExileLinkedKey != "" {
-			key = linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey))
-		}
 		for _, permanent := range targets.permanents {
 			linkedObjectRef := permanentLinkedObjectRef(permanent)
 			if movePermanentToZone(r.game, permanent, zone.Exile) {
 				res.succeeded = true
 				if prim.ExileLinkedKey != "" {
-					rememberLinkedObject(r.game, key, linkedObjectRef)
+					rememberLinkedObject(r.game, linkedKey, linkedObjectRef)
 				}
 			}
 		}
@@ -1268,7 +1283,11 @@ func handleExile(r *effectResolver, prim game.Exile) effectResolved {
 	linkedObjectRef := permanentLinkedObjectRef(permanent)
 	res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile)
 	if prim.ExileLinkedKey != "" {
-		rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey)), linkedObjectRef)
+		postMoveKey := linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey))
+		if postMoveKey != linkedKey {
+			clearLinkedObjects(r.game, postMoveKey)
+		}
+		rememberLinkedObject(r.game, postMoveKey, linkedObjectRef)
 	}
 	return res
 }
@@ -3389,7 +3408,13 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 	return false
 }
 
-func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardReference, recipientRef game.PlayerReference, continuousEffects []game.ContinuousEffect, options permanentCreationOptions) (*game.Permanent, bool) {
+func (r *effectResolver) putReferencedCardOnBattlefieldValue(
+	ref game.CardReference,
+	recipientRef game.PlayerReference,
+	continuousEffects []game.ContinuousEffect,
+	options permanentCreationOptions,
+	ownerControl bool,
+) (*game.Permanent, bool) {
 	cardID, fromZone, ok := resolveCardReference(r.game, r.obj, ref)
 	if !ok || fromZone == zone.None {
 		return nil, false
@@ -3402,7 +3427,7 @@ func (r *effectResolver) putReferencedCardOnBattlefieldValue(ref game.CardRefere
 	if !ok {
 		return nil, false
 	}
-	if ref.Kind == game.CardReferenceEvent {
+	if ownerControl {
 		if owner, ok := playerByID(r.game, card.Owner); ok {
 			controller = owner.ID
 		}
@@ -3604,7 +3629,65 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 		}
 		return nil, false
 	}
+	r.attachAuraEnteringFromEffect(permanent)
 	return permanent, permanent != nil
+}
+
+// attachAuraEnteringFromEffect implements CR 303.4f for an Aura put onto the
+// battlefield by an effect rather than resolving as an Aura spell. Its
+// controller chooses a legal object or player for it to enchant. If there is no
+// legal choice, it remains unattached and the normal state-based action moves it
+// to its owner's graveyard.
+func (r *effectResolver) attachAuraEnteringFromEffect(aura *game.Permanent) {
+	if aura == nil || !isAuraPermanent(r.game, aura) || aura.Bestowed {
+		return
+	}
+	spec, ok := enchantTargetSpecForPermanent(r.game, aura)
+	if !ok {
+		return
+	}
+	def, _ := permanentCardDef(r.game, aura)
+	result := targetChoicesForSpecs(
+		r.game,
+		effectiveController(r.game, aura),
+		def,
+		aura.ObjectID,
+		game.Event{},
+		[]game.TargetSpec{spec},
+	)
+	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
+		return
+	}
+	choiceIndex := 0
+	if len(result.choices) > 1 {
+		selected := r.engine.chooseChoice(
+			r.game,
+			r.agents,
+			targetChoiceRequest(effectiveController(r.game, aura), "Choose what the Aura enchants.", result.choices),
+			r.log,
+		)
+		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(result.choices) {
+			choiceIndex = selected[0]
+		}
+	}
+	targets := result.choices[choiceIndex]
+	if len(targets) != 1 {
+		return
+	}
+	target := targets[0]
+	switch target.Kind {
+	case game.TargetPermanent:
+		if permanent, ok := permanentByObjectID(r.game, target.PermanentID); ok {
+			attachPermanentWithChoices(r.game, aura, permanent, &replacementChoiceContext{
+				engine: r.engine,
+				agents: r.agents,
+				log:    r.log,
+			})
+		}
+	case game.TargetPlayer:
+		attachAuraToPlayer(r.game, aura, target.PlayerID)
+	default:
+	}
 }
 
 func (r *effectResolver) typedTokenDefinition(source game.TokenSource) (*game.CardDef, bool) {

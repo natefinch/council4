@@ -28,7 +28,13 @@ func handleConditionalDestinationPlace(r *effectResolver, prim game.ConditionalD
 		r.engine.chooseMay(r.game, r.agents, r.obj.Controller, conditionalDestinationThenPrompt(prim), r.log)) {
 		if prim.Then == zone.None {
 			options := permanentCreationOptions{ForceTapped: prim.EntryTapped}
-			if _, placed := r.putReferencedCardOnBattlefieldValue(prim.Card, game.PlayerReference{}, nil, options); placed {
+			if _, placed := r.putReferencedCardOnBattlefieldValue(
+				prim.Card,
+				game.PlayerReference{},
+				nil,
+				options,
+				prim.Card.Kind == game.CardReferenceEvent,
+			); placed {
 				res.succeeded = true
 				return res
 			}
