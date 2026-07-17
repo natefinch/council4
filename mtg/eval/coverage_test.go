@@ -120,7 +120,7 @@ import (
 // opponent for Liliana, Dreadhorde General; every player for Cataclysm and
 // Cataclysmic Gearhulk) depend on runtime board state and per-player choices,
 // which the single-target atom heuristic does not model.
-const knownPrimitiveCount = 147
+const knownPrimitiveCount = 148
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

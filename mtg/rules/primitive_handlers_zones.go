@@ -2390,6 +2390,26 @@ func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effec
 	}
 }
 
+func handleChangeStackObjectController(r *effectResolver, prim game.ChangeStackObjectController) effectResolved {
+	if prim.Object.Kind() != game.ObjectReferenceTargetStackObject {
+		return effectResolved{accepted: true}
+	}
+	stackObjectID, ok := effectStackObjectID(r.game, r.obj, prim.Object.TargetIndex())
+	if !ok {
+		return effectResolved{accepted: true}
+	}
+	target, ok := stackObjectByID(r.game, stackObjectID)
+	if !ok {
+		return effectResolved{accepted: true}
+	}
+	controller, ok := r.resolvePlayer(prim.Controller)
+	if !ok {
+		return effectResolved{accepted: true}
+	}
+	target.Controller = controller
+	return effectResolved{accepted: true, succeeded: true}
+}
+
 // handleCopyStackObject puts a copy of the targeted activated or triggered
 // ability onto the stack (CR 707). The copy is a new object that resolves
 // independently of the original; when the effect allows it, the resolving

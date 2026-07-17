@@ -190,6 +190,10 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		// card for that player, matching how the other "card into hand" library
 		// primitives are valued.
 		return append(atoms, EffectAtom{Kind: EffectCardsDrawn, Amount: 1, Affected: affectedFromPlayer(p.Player)})
+	case game.ChangeStackObjectController:
+		// The spell's eventual value depends on its full effect, targets, and
+		// destination, so changing its controller has no stable standalone atom.
+		return atoms
 	default:
 		return atoms
 	}

@@ -2130,6 +2130,21 @@ func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (st
 	return structLit("game.CopyStackObject", fields), nil
 }
 
+func (r Renderer) renderChangeStackObjectController(value game.ChangeStackObjectController) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	controller, err := r.renderPlayerReference(value.Controller)
+	if err != nil {
+		return "", err
+	}
+	return structLit("game.ChangeStackObjectController", []string{
+		fmt.Sprintf("Object: %s,", object),
+		fmt.Sprintf("Controller: %s,", controller),
+	}), nil
+}
+
 func (r Renderer) renderFightPrimitive(primitive game.Primitive) (string, error) {
 	value, err := assertPrimitive[game.Fight](primitive)
 	if err != nil {

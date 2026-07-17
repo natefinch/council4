@@ -1860,10 +1860,17 @@ func effectClauseReferences(effect *EffectSyntax) []Reference {
 // re-chosen. Any trailing rider ("choose new targets for the copy", "Then copy
 // that spell") leaves a non-stack target or extra clause text and fails closed.
 func exactChooseNewTargetsEffectSyntax(effect *EffectSyntax) bool {
-	return len(effect.Targets) == 1 &&
+	if len(effect.Targets) == 1 &&
 		effect.Targets[0].Exact &&
 		len(effect.References) == 0 &&
-		strings.EqualFold(exactEffectClauseText(effect), "Choose new targets for "+effect.Targets[0].Text+".")
+		strings.EqualFold(exactEffectClauseText(effect), "Choose new targets for "+effect.Targets[0].Text+".") {
+		return true
+	}
+	return len(effect.Targets) == 0 &&
+		len(effect.References) == 1 &&
+		effect.References[0].Kind == ReferencePronoun &&
+		effect.References[0].Pronoun == PronounIt &&
+		strings.EqualFold(exactEffectClauseText(effect), "Choose new targets for it.")
 }
 
 // negatedControlledGroupNextUntapStep recognizes the mass self-stun clause

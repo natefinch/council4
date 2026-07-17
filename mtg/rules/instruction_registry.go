@@ -143,6 +143,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleGoadForEachOpponent)
 	registerPrimitiveHandler(reg, handleCreateCommanderCopyToken)
 	registerPrimitiveHandler(reg, handleChooseNewTargets)
+	registerPrimitiveHandler(reg, handleChangeStackObjectController)
 	registerPrimitiveHandler(reg, handleCopyStackObject)
 	registerPrimitiveHandler(reg, handleMill)
 	registerPrimitiveHandler(reg, handleExileTopOfLibrary)

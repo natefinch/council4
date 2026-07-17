@@ -383,6 +383,12 @@ func (r Renderer) renderPrimitive(ctx *renderCtx, primitive game.Primitive) (str
 		game.PrimitiveChooseNewTargets, game.PrimitiveRemoveFromCombat,
 		game.PrimitiveTransform, game.PrimitiveExileTargetSpells:
 		return r.renderObjectPrimitive(primitive)
+	case game.PrimitiveChangeStackObjectController:
+		value, err := assertPrimitive[game.ChangeStackObjectController](primitive)
+		if err != nil {
+			return "", err
+		}
+		return r.renderChangeStackObjectController(value)
 	case game.PrimitiveCopyStackObject:
 		value, err := assertPrimitive[game.CopyStackObject](primitive)
 		if err != nil {

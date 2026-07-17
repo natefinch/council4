@@ -361,10 +361,14 @@ const (
 	// family (Liliana, Dreadhorde General's −9; Cataclysm; Cataclysmic Gearhulk).
 	// Added last so existing kinds keep their wire values.
 	PrimitiveKeepOnePerType
+	// PrimitiveChangeStackObjectController changes who controls a referenced
+	// spell or ability on the stack without changing its owner, source card, or
+	// stack identity (game.ChangeStackObjectController).
+	PrimitiveChangeStackObjectController
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveKeepOnePerType) + 1
+const primitiveKindCount = int(PrimitiveChangeStackObjectController) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -2040,6 +2044,15 @@ type ExileTargetSpells struct {
 // the "you may" wrapper.
 type ChooseNewTargets struct {
 	Object ObjectReference
+}
+
+// ChangeStackObjectController changes who controls a referenced spell or
+// ability on the stack. It leaves the stack object's identity, source card, and
+// ownership unchanged; those continue to determine copy behavior and the
+// physical card's destination when it leaves the stack.
+type ChangeStackObjectController struct {
+	Object     ObjectReference
+	Controller PlayerReference
 }
 
 // CopyStackObject copies a targeted activated or triggered ability on the stack
