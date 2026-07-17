@@ -241,6 +241,13 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		}
 		condition.Predicate = ConditionPredicateTargetColor
 		condition.Selection = selection
+	case parser.ConditionPredicateControlsGreatestManaValueInGroup:
+		selection, ok := compileConditionSelection(clause.Selection)
+		if !ok {
+			return
+		}
+		condition.Predicate = ConditionPredicateControlsGreatestManaValueInGroup
+		condition.Selection = selection
 	case parser.ConditionPredicateEventSubjectHadNoCounter:
 		counter, ok := compileConditionCounter(clause.Counter)
 		if !ok {

@@ -1313,6 +1313,15 @@ func (r Renderer) renderControllerControlsCondition(ctx *renderCtx, cond *game.C
 		fields = append(fields, "ControllerControlsGreatestToughnessCreature: true,")
 		hasPredicate = true
 	}
+	if cond.ControlsGreatestManaValueInGroup.Exists {
+		selection, err := r.renderSelection(ctx, cond.ControlsGreatestManaValueInGroup.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ControlsGreatestManaValueInGroup: opt.Val(%s),", selection))
+		hasPredicate = true
+	}
 	if cond.EventPermanentPowerGreaterThanEachOtherCreature {
 		fields = append(fields, "EventPermanentPowerGreaterThanEachOtherCreature: true,")
 		hasPredicate = true

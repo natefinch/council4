@@ -245,6 +245,12 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		result.ControllerControlsGreatestPowerCreature = true
 	case compiler.ConditionPredicateControlsGreatestToughnessCreature:
 		result.ControllerControlsGreatestToughnessCreature = true
+	case compiler.ConditionPredicateControlsGreatestManaValueInGroup:
+		selection, ok := lowerConditionSelection(condition.Selection)
+		if !ok {
+			return game.Condition{}, false
+		}
+		result.ControlsGreatestManaValueInGroup = opt.Val(selection)
 	case compiler.ConditionPredicateEventSubjectPowerGreatestOnBattlefield:
 		result.EventPermanentPowerGreaterThanEachOtherCreature = true
 	case compiler.ConditionPredicateControllerIsMonarch:
@@ -440,6 +446,17 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			// per-effect sequence gate.
 			compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
 			return ctx == conditionContextEffectGate
+		case compiler.ConditionPredicateControlsGreatestManaValueInGroup:
+			// "At the beginning of your upkeep, if you control the artifact with
+			// the greatest mana value or tied for the greatest mana value, draw a
+			// card." (Padeem, Consul of Innovation) is a true intervening-if,
+			// checked both when the ability would trigger and again as it resolves
+			// (CR 603.4). The same live-board predicate also gates a resolution-
+			// time "draw a card if you control ..." effect. It reads current
+			// battlefield mana values from the controller and every player, so
+			// both the intervening-trigger and per-effect-gate placements are
+			// safe; every other context fails closed.
+			return ctx == conditionContextInterveningTrigger || ctx == conditionContextEffectGate
 		case compiler.ConditionPredicateNoAttackerAttackedController,
 			compiler.ConditionPredicateObjectAttackedThisTurn,
 			compiler.ConditionPredicateFirstCombatPhaseOfTurn,

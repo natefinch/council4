@@ -346,6 +346,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.ControllerControlsGreatestToughnessCreature {
 		matches = matches && controllerControlsGreatestToughnessCreature(g, ctx)
 	}
+	if cond.ControlsGreatestManaValueInGroup.Exists {
+		matches = matches && controllerControlsGreatestManaValueInGroup(g, ctx, cond.ControlsGreatestManaValueInGroup.Val)
+	}
 	if cond.EventPermanentPowerGreaterThanEachOtherCreature {
 		matches = matches && eventPermanentPowerGreaterThanEachOtherCreature(g, ctx)
 	}
@@ -795,6 +798,69 @@ func controllerControlsGreatestToughnessCreature(g *game.Game, ctx conditionCont
 		}
 		if values.controller == ctx.controller && (!haveControllerGreatest || values.toughness > controllerGreatest) {
 			controllerGreatest = values.toughness
+			haveControllerGreatest = true
+		}
+	}
+	return haveGreatest && haveControllerGreatest && controllerGreatest >= greatest
+}
+
+// controllerControlsGreatestManaValueInGroup reports whether the context
+// controller controls a battlefield permanent matching sel whose effective mana
+// value equals the greatest effective mana value among every sel-matching
+// permanent on the battlefield ("you control the artifact with the greatest
+// mana value or tied for the greatest mana value", Padeem, Consul of
+// Innovation). sel carries the group filter with a controller-agnostic scope, so
+// it matches every player's permanents; the controlled side is narrowed to the
+// context controller here. It is false when the controller controls no matching
+// permanent, so it never passes vacuously on a battlefield where only opponents
+// (or no players) control a matching permanent. Copies and copy tokens
+// contribute their effective copiable mana value; phased-out permanents and any
+// permanent whose mana value cannot be resolved are skipped.
+func controllerControlsGreatestManaValueInGroup(g *game.Game, ctx conditionContext, sel game.Selection) bool {
+	greatest := 0
+	haveGreatest := false
+	controllerGreatest := 0
+	haveControllerGreatest := false
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			continue
+		}
+		values := permanentValuesForCondition(g, permanent, ctx)
+		subject := selectionSubject{
+			kind:      subjectPermanent,
+			g:         g,
+			permanent: permanent,
+			values:    values,
+			viewer:    ctx.controller,
+			useBase:   ctx.useBaseCharacteristics,
+		}
+		if sel.Controller != game.ControllerAny {
+			if ctx.useBaseCharacteristics {
+				subject.controller = permanent.Controller
+			} else {
+				subject.controller = values.controller
+			}
+		}
+		if ctx.source != nil {
+			subject.sourceObjectID = ctx.source.ObjectID
+		}
+		if !matchSelection(&subject, &sel) {
+			continue
+		}
+		manaValue, ok := effectivePermanentManaValue(g, permanent)
+		if !ok {
+			continue
+		}
+		if !haveGreatest || manaValue > greatest {
+			greatest = manaValue
+			haveGreatest = true
+		}
+		controller := values.controller
+		if ctx.useBaseCharacteristics {
+			controller = permanent.Controller
+		}
+		if controller == ctx.controller && (!haveControllerGreatest || manaValue > controllerGreatest) {
+			controllerGreatest = manaValue
 			haveControllerGreatest = true
 		}
 	}
