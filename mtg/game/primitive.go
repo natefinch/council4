@@ -1684,6 +1684,16 @@ type MoveCard struct {
 	// PublishLinked remembers a successfully exiled single card under a
 	// source-scoped linked key.
 	PublishLinked LinkedKey
+	// ReplacePublishedLinked clears the source-scoped linked group before this
+	// move resolves, then publishes only the card that actually reaches exile.
+	// It backs one-resolution "exile it; if you do, use that object" sequences
+	// without retaining a prior resolution's card under the same internal key.
+	ReplacePublishedLinked bool
+	// IncludeEventPermanentComponents moves every exact card incarnation produced
+	// by the triggering permanent's battlefield departure. It gives merged
+	// permanents the CR 727.3c behavior where an effect tracking "it" finds all
+	// component cards in the destination zone.
+	IncludeEventPermanentComponents bool
 	// PublishLinkedObjectScoped keys PublishLinked by the source permanent's
 	// current object identity, so a re-entered source starts with a fresh pool.
 	PublishLinkedObjectScoped bool

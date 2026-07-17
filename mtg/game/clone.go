@@ -366,6 +366,7 @@ func cloneEmblem(e Emblem) Emblem {
 
 func cloneObjectSnapshot(s ObjectSnapshot) ObjectSnapshot {
 	s.MergedCards = cloneSlice(s.MergedCards)
+	s.ZoneCards = cloneSlice(s.ZoneCards)
 	s.Colors = cloneSlice(s.Colors)
 	s.Supertypes = cloneSlice(s.Supertypes)
 	s.Types = cloneSlice(s.Types)
@@ -376,7 +377,7 @@ func cloneObjectSnapshot(s ObjectSnapshot) ObjectSnapshot {
 	s.Counters = s.Counters.Clone()
 	s.EntryChoices = cloneComparableMap(s.EntryChoices)
 	s.RuleEffectKinds = cloneSlice(s.RuleEffectKinds)
-	// TokenDef is an immutable shared definition.
+	// TokenDef and CopiableDef are immutable shared definitions.
 	return s
 }
 
