@@ -1932,15 +1932,16 @@ type PunisherEachLoseLife struct {
 	ControllerDrawEach bool
 }
 
-// RepeatProcess resolves Body a number of times equal to Times ("Repeat the
-// following process X times. <body>" — Torment of Hailfire), where X is the
-// resolving spell's chosen value of {X}. Body is a non-modal AbilityContent
-// holding the repeated sub-effect; it is re-resolved from scratch on each
-// iteration so any per-player or random choices recur independently. A Times of
-// zero or fewer resolves Body no times.
+// RepeatProcess repeatedly resolves Body. Bounded forms use Times ("Repeat the
+// following process X times"). Open-ended forms set ContinueResult and leave
+// Times zero: Body resolves once, then repeats while its latest published result
+// under ContinueResult succeeded. The runtime clears that result before every
+// iteration, so a declined, impossible, replaced, or gated-away action stops the
+// process instead of reusing stale state.
 type RepeatProcess struct {
-	Times Quantity
-	Body  AbilityContent
+	Times          Quantity
+	Body           AbilityContent
+	ContinueResult ResultKey
 }
 
 // Untap untaps one referenced permanent or permanents in a referenced group.

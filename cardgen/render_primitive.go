@@ -2550,10 +2550,14 @@ func (r Renderer) renderRepeatProcess(ctx *renderCtx, value *game.RepeatProcess)
 	if err != nil {
 		return "", err
 	}
-	return structLit("game.RepeatProcess", []string{
+	fields := []string{
 		fmt.Sprintf("Times: %s,", renderedTimes),
 		fmt.Sprintf("Body: %s,", renderedBody),
-	}), nil
+	}
+	if value.ContinueResult != "" {
+		fields = append(fields, fmt.Sprintf("ContinueResult: game.ResultKey(%q),", value.ContinueResult))
+	}
+	return structLit("game.RepeatProcess", fields), nil
 }
 
 func (r Renderer) renderSacrificeFallback(ctx *renderCtx, value game.SacrificeFallback) (string, error) {

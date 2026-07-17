@@ -110,9 +110,16 @@ func visitSentenceOrderNodes(sentences []Sentence, visit func(shared.Span, *shar
 		}
 		for ei := range sentence.Effects {
 			effect := &sentence.Effects[ei]
-			visit(effect.Span, &effect.Order)
-			visit(effect.VerbSpan, &effect.VerbOrder)
-			visit(effect.Payment.Span, &effect.Payment.Order)
+			visitEffectOrderNodes(effect, visit)
 		}
+	}
+}
+
+func visitEffectOrderNodes(effect *EffectSyntax, visit func(shared.Span, *shared.SourceOrder)) {
+	visit(effect.Span, &effect.Order)
+	visit(effect.VerbSpan, &effect.VerbOrder)
+	visit(effect.Payment.Span, &effect.Payment.Order)
+	for i := range effect.RepeatBody {
+		visitEffectOrderNodes(&effect.RepeatBody[i], visit)
 	}
 }

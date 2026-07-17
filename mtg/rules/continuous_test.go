@@ -795,6 +795,19 @@ func TestDynamicStarPowerToughnessTracksLandCount(t *testing.T) {
 	if got := effectivePower(g, creature); got != 5 {
 		t.Fatalf("effective power after extra land = %d, want 5", got)
 	}
+
+	for range 2 {
+		addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Island",
+			Types: []types.Card{types.Land}}})
+	}
+	creature.Controller = game.Player2
+	if got := effectivePower(g, creature); got != 2 {
+		t.Fatalf("effective power after control change = %d, want new controller's land count 2", got)
+	}
+	toughness, ok = effectiveToughness(g, creature)
+	if !ok || toughness != 2 {
+		t.Fatalf("effective toughness after control change = %d (ok=%v), want 2", toughness, ok)
+	}
 }
 
 func TestDynamicStarPowerAffectsCombatDamage(t *testing.T) {

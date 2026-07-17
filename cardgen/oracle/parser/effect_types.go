@@ -223,10 +223,10 @@ const (
 	// recognized duration; AttackTaxGeneric carries the per-attacker generic
 	// mana N.
 	EffectAttackTax EffectKind = "EffectAttackTax"
-	// EffectRepeatProcess models a "Repeat the following process X times.
-	// <body>" loop. Amount holds the repeat count (the spell's {X} via VariableX
-	// or a fixed cardinal) and RepeatBody holds the sub-effect(s) executed each
-	// iteration.
+	// EffectRepeatProcess models a repeated resolving process. Amount holds a
+	// fixed or variable repeat count for bounded forms. RepeatUntilFailure marks
+	// the open-ended "<optional action>. If you do, <payoff> and repeat this
+	// process." form, whose body repeats while its final payoff succeeds.
 	EffectRepeatProcess EffectKind = "EffectRepeatProcess"
 	// EffectCopyStackObject models the resolving effect "Copy target [activated
 	// or ]triggered ability you control[. You may choose new targets for the
@@ -3564,6 +3564,11 @@ type EffectSyntax struct {
 	// RepeatBody holds the sub-effect(s) of an EffectRepeatProcess loop ("Repeat
 	// the following process X times. <body>"). It is nil for every other effect.
 	RepeatBody []EffectSyntax `json:",omitempty"`
+	// RepeatUntilFailure marks an open-ended process whose body contains an
+	// optional leading action and an "if you do" payoff. Lowering wires the
+	// optional action through the ordinary result gate and repeats only while the
+	// final payoff succeeds.
+	RepeatUntilFailure bool `json:",omitempty"`
 	// ReturnAsEnchantment reports that a return-to-battlefield effect is followed
 	// by an "It's an enchantment." rider (the Enduring enchantment-creature
 	// cycle), so the returned permanent enters as an Enchantment (losing its
