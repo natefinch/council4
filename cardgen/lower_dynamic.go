@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -1345,11 +1346,20 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	applyAttachmentTargetSelection(&selection, target.Selector)
 	if target.Selector.MatchManaValue {
 		if target.Selector.ManaValueX {
-			// "mana value X or less" bounds the target by the spell's chosen {X},
-			// which the X-blind Selection matcher cannot express. Record the bound
-			// on the spec; the runtime enforces mana value <= X at announcement
-			// (spellTargetsSatisfyManaValueX) and re-checks it at resolution.
-			spec.ManaValueAtMostX = true
+			// "mana value X or less" / bare "mana value X" bound the target by
+			// the spell's or ability's chosen {X}, which the X-blind Selection
+			// matcher cannot express. Record the operator-specific X bound on the
+			// spec; the runtime enforces it at announcement
+			// (targetsSatisfyManaValueX) and re-checks it at resolution. Any
+			// other X-bounded operator fails closed.
+			switch target.Selector.ManaValue.Op {
+			case compare.LessOrEqual:
+				spec.ManaValueAtMostX = true
+			case compare.Equal:
+				spec.ManaValueEqualsX = true
+			default:
+				return game.TargetSpec{}, false
+			}
 		} else {
 			selection.ManaValue = opt.Val(target.Selector.ManaValue)
 		}

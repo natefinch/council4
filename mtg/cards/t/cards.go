@@ -78,6 +78,7 @@ var Cards = []cardset.Entry{
 	{Name: "The Haunt of Hightower", New: TheHauntOfHightower},
 	{Name: "The Howling Commandos", New: TheHowlingCommandos},
 	{Name: "The Irencrag", New: TheIrencrag},
+	{Name: "The Mycosynth Gardens", New: TheMycosynthGardens},
 	{Name: "The Reaper, King No More", New: TheReaperKingNoMore},
 	{Name: "The Scorpion God", New: TheScorpionGod},
 	{Name: "The Spear of Bashenga", New: TheSpearOfBashenga},

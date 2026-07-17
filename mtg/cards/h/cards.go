@@ -45,6 +45,7 @@ var Cards = []cardset.Entry{
 	{Name: "Healing Salve", New: HealingSalve},
 	{Name: "Heart-Shaped Herb", New: HeartShapedHerb},
 	{Name: "Heartfire Hero", New: HeartfireHero},
+	{Name: "Hearth Kami", New: HearthKami},
 	{Name: "Heartmender", New: Heartmender},
 	{Name: "Hearts on Fire", New: HeartsOnFire},
 	{Name: "Heat of Battle", New: HeatOfBattle},

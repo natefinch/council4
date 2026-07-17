@@ -1996,6 +1996,16 @@ type TargetSpec struct {
 	// chosen X. The default false imposes no X-derived mana value bound.
 	ManaValueAtMostX bool
 
+	// ManaValueEqualsX requires every object chosen for this spec to have mana
+	// value exactly equal to the spell's or ability's chosen X ("target nontoken
+	// artifact you control with mana value X", The Mycosynth Gardens). Like
+	// ManaValueAtMostX the Selection matcher is X-blind, so the equality bound is
+	// enforced against the resolving object's X at announcement
+	// (targetsSatisfyManaValueX) and re-checked at resolution (CR 608.2b). It
+	// backs an X activation cost bound to the target's mana value; the default
+	// false imposes no X-derived mana value bound.
+	ManaValueEqualsX bool
+
 	// SameGraveyard requires every card chosen for this spec to lie in one and
 	// the same graveyard ("Exile up to three target cards from a single
 	// graveyard"). A card in a graveyard is always in its owner's graveyard
