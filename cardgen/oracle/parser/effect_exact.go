@@ -4958,6 +4958,9 @@ func exactStandaloneActionEffectSyntax(effect *EffectSyntax, verb string) bool {
 		return strings.EqualFold(text, fmt.Sprintf("%s %s.", verb, effect.Amount.Text)) ||
 			strings.EqualFold(text, fmt.Sprintf("%s once %s.", verb, effect.Amount.Text))
 	}
+	if effect.Amount.VariableX {
+		return strings.EqualFold(text, verb+" X.")
+	}
 	if !effect.Amount.Known {
 		return false
 	}

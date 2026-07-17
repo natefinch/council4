@@ -142,12 +142,17 @@ const (
 	// the player who took the initiative. It backs "whenever you take the
 	// initiative" triggers and the initiative's venture-into-Undercity follow-up.
 	EventTookInitiative
+	// EventPermanentBecameMonstrous marks a permanent becoming monstrous.
+	// SourceObjectID/PermanentID identify the permanent, Controller is its
+	// controller at event time, XValue is the announced value of X, and Amount is
+	// the actual number of +1/+1 counters placed after replacements.
+	EventPermanentBecameMonstrous
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventTookInitiative) + 1
+const EventKindCount = int(EventPermanentBecameMonstrous) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
@@ -358,6 +363,10 @@ type Event struct {
 	// Amount is the number of damage dealt, cards drawn, cards discarded,
 	// counters added, or cards instructed to be scried or surveilled.
 	Amount int
+
+	// XValue is the value of X associated with an event-producing instruction.
+	// It is distinct from Amount when replacement effects change the result.
+	XValue int
 
 	// PlayerEventOrdinalThisTurn is this player's ordinal occurrence of Kind
 	// during the current turn. It is populated only for events with supported

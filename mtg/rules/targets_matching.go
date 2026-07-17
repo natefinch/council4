@@ -20,6 +20,14 @@ func normalizeTargetSpec(spec *game.TargetSpec) game.TargetSpec {
 	return normalized
 }
 
+func normalizeTargetSpecForEvent(spec *game.TargetSpec, event game.Event) game.TargetSpec {
+	normalized := normalizeTargetSpec(spec)
+	if normalized.MaxTargetsFromTriggerEventX {
+		normalized.MaxTargets = max(0, event.XValue)
+	}
+	return normalized
+}
+
 func targetSpecValid(spec *game.TargetSpec) bool {
 	if spec.MinTargets < 0 || spec.MaxTargets < spec.MinTargets {
 		return false

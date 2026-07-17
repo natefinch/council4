@@ -56,7 +56,7 @@ func targetCountsForSpecFrom(g *game.Game, controller game.PlayerID, source *gam
 	if specIndex == len(specs) {
 		return targetIndex == len(targets)
 	}
-	spec := normalizeTargetSpec(&specs[specIndex])
+	spec := normalizeTargetSpecForEvent(&specs[specIndex], triggerEvent)
 	if !targetSpecValid(&spec) {
 		return false
 	}
@@ -277,7 +277,7 @@ func appendMatchingTargetCounts(g *game.Game, controller game.PlayerID, source *
 		}
 		return
 	}
-	spec := normalizeTargetSpec(&specs[specIndex])
+	spec := normalizeTargetSpecForEvent(&specs[specIndex], triggerEvent)
 	if !targetSpecValid(&spec) {
 		return
 	}

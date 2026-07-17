@@ -54,6 +54,9 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 	if spec.CountEqualsKickerPlusOne {
 		fields = append(fields, "CountEqualsKickerPlusOne: true,")
 	}
+	if spec.MaxTargetsFromTriggerEventX {
+		fields = append(fields, "MaxTargetsFromTriggerEventX: true,")
+	}
 	if spec.ManaValueAtMostX {
 		fields = append(fields, "ManaValueAtMostX: true,")
 	}

@@ -1783,3 +1783,27 @@ func parseTriggerEventFromSource(t *testing.T, source, cardName string) *Trigger
 	}
 	return document.Abilities[0].Trigger.TriggerEvent
 }
+
+func TestParseBecomesMonstrousTriggerEvent(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"When this creature becomes monstrous, goad up to X target creatures your opponents control.",
+		Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	clause := document.Abilities[0].Trigger.TriggerEvent
+	if clause == nil ||
+		clause.Kind != TriggerEventKindBecameMonstrous ||
+		clause.Subject.Kind != TriggerEventSubjectSelf {
+		t.Fatalf("trigger event = %#v", clause)
+	}
+	target := document.Abilities[0].Sentences[0].Targets[0]
+	if target.Cardinality != (TargetCardinalitySyntax{Min: 0, Max: 99, MaxEventX: true}) ||
+		target.Selection.Kind != SelectionCreature ||
+		target.Selection.Controller != SelectionControllerOpponent ||
+		!target.Exact {
+		t.Fatalf("target = %#v", target)
+	}
+}

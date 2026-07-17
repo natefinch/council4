@@ -1234,9 +1234,10 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
-		MinTargets: target.Cardinality.Min,
-		MaxTargets: target.Cardinality.Max,
-		Allow:      game.TargetAllowPermanent,
+		MinTargets:                  target.Cardinality.Min,
+		MaxTargets:                  target.Cardinality.Max,
+		MaxTargetsFromTriggerEventX: target.Cardinality.MaxEventX,
+		Allow:                       game.TargetAllowPermanent,
 	}
 	if len(target.Selector.Alternatives) > 0 {
 		return alternativePermanentTargetSpec(&target, &spec, false)

@@ -103,7 +103,7 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 	}
 	for i := range specs {
 		spec := &specs[i]
-		normalized := normalizeTargetSpec(spec)
+		normalized := normalizeTargetSpecForEvent(spec, triggerEvent)
 		if !targetSpecValid(&normalized) {
 			return targetChoiceResult{
 				kind: targetInvalidSpec,
@@ -131,7 +131,7 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 		*targetCounts = append(*targetCounts, append([]int(nil), countPrefix...))
 		return
 	}
-	spec := normalizeTargetSpec(&specs[specIndex])
+	spec := normalizeTargetSpecForEvent(&specs[specIndex], triggerEvent)
 	if !targetSpecValid(&spec) {
 		return
 	}

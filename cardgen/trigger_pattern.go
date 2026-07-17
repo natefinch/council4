@@ -399,6 +399,8 @@ func lowerTriggerEvent(event compiler.TriggerEvent) (game.EventKind, bool) {
 		return game.EventPermanentTurnedFaceUp, true
 	case compiler.TriggerEventPermanentSacrificed:
 		return game.EventPermanentSacrificed, true
+	case compiler.TriggerEventPermanentBecameMonstrous:
+		return game.EventPermanentBecameMonstrous, true
 	case compiler.TriggerEventScry:
 		return game.EventScry, true
 	case compiler.TriggerEventSurveil:

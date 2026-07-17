@@ -1059,11 +1059,21 @@ func handleMonstrosity(r *effectResolver, prim game.Monstrosity) effectResolved 
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok && !permanent.Monstrous {
+		placed := 0
 		if res.amount > 0 {
-			addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), permanent, counter.PlusOnePlusOne, res.amount)
+			placed = addCountersToPermanentControlledByAmount(r.game, stackObjectController(r.obj), permanent, counter.PlusOnePlusOne, res.amount)
 		}
 		permanent.Monstrous = true
 		res.succeeded = true
+		emitEvent(r.game, game.Event{
+			Kind:           game.EventPermanentBecameMonstrous,
+			SourceID:       permanent.CardInstanceID,
+			SourceObjectID: permanent.ObjectID,
+			PermanentID:    permanent.ObjectID,
+			Controller:     effectiveController(r.game, permanent),
+			XValue:         res.amount,
+			Amount:         placed,
+		})
 	}
 	return res
 }

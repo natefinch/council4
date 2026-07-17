@@ -35,6 +35,7 @@ const (
 	TriggerEventPermanentUntapped
 	TriggerEventPermanentTurnedFaceUp
 	TriggerEventPermanentSacrificed
+	TriggerEventPermanentBecameMonstrous
 	TriggerEventScry
 	TriggerEventSurveil
 	TriggerEventAbilityActivated

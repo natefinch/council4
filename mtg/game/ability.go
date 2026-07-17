@@ -1924,6 +1924,10 @@ type TargetSpec struct {
 	// MaxTargets is the maximum number of targets.
 	MaxTargets int
 
+	// MaxTargetsFromTriggerEventX replaces MaxTargets with the triggering
+	// event's X value when the triggered ability is put on the stack.
+	MaxTargetsFromTriggerEventX bool
+
 	// Constraint describes what can be targeted (e.g., "creature",
 	// "creature or planeswalker", "player").
 	Constraint string

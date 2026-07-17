@@ -51,10 +51,15 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			case i >= 3 && effectWordsAt(tokens, i-3, "up", "to"):
 				start = i - 3
 				cardinality.Min = 0
-				var ok bool
-				cardinality.Max, ok = effectNumber(tokens[i-1], atoms)
-				if !ok || cardinality.Max < 1 {
-					cardinality = TargetCardinalitySyntax{}
+				if equalWord(tokens[i-1], "X") {
+					cardinality.Max = 99
+					cardinality.MaxEventX = true
+				} else {
+					var ok bool
+					cardinality.Max, ok = effectNumber(tokens[i-1], atoms)
+					if !ok || cardinality.Max < 1 {
+						cardinality = TargetCardinalitySyntax{}
+					}
 				}
 			case i >= 2 && equalWord(tokens[i-1], "other") &&
 				func() bool { c, ok := effectNumber(tokens[i-2], atoms); return ok && c > 1 }():
@@ -109,6 +114,9 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		end := targetSyntaxEnd(tokens, atoms, i+1)
 		selectionTokens := append([]shared.Token(nil), tokens[start:i]...)
 		selectionTokens = append(selectionTokens, tokens[i+1:end]...)
+		if cardinality.MaxEventX && start == i-3 {
+			selectionTokens = append([]shared.Token(nil), tokens[i+1:end]...)
+		}
 		nameUnique := false
 		if head, ok := splitSelectionNameUniqueTail(selectionTokens); ok {
 			selectionTokens = head

@@ -2047,7 +2047,47 @@ func lowerMassOrSinglePermanentSpell(
 			Sequence: []game.Instruction{{Primitive: objectPrimitive(object)}},
 		}.Ability(), nil
 	}
+	if content, ok := lowerEventXTargetPermanentSpell(ctx, objectPrimitive); ok {
+		return content, nil
+	}
 	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
+}
+
+func lowerEventXTargetPermanentSpell(
+	ctx contentCtx,
+	objectPrimitive func(object game.ObjectReference) game.Primitive,
+) (game.AbilityContent, bool) {
+	if len(ctx.content.Targets) != 1 || len(ctx.content.Effects) != 1 {
+		return game.AbilityContent{}, false
+	}
+	target := ctx.content.Targets[0]
+	if ctx.triggerEvent != game.EventPermanentBecameMonstrous ||
+		!target.Cardinality.MaxEventX ||
+		target.Cardinality.Min != 0 {
+		return game.AbilityContent{}, false
+	}
+	effect := ctx.content.Effects[0]
+	if effect.Negated ||
+		effect.Optional ||
+		!effect.Exact ||
+		effect.Context != parser.EffectContextController ||
+		ctx.optional ||
+		len(ctx.content.Conditions) != 0 ||
+		len(ctx.content.Keywords) != 0 ||
+		len(ctx.content.Modes) != 0 ||
+		len(ctx.content.References) != 0 {
+		return game.AbilityContent{}, false
+	}
+	targetSpec, ok := permanentTargetSpecAllowingUnbounded(target, true)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	return game.Mode{
+		Targets: []game.TargetSpec{targetSpec},
+		Sequence: []game.Instruction{{
+			Primitive: objectPrimitive(game.AllTargetPermanentsReference(0)),
+		}},
+	}.Ability(), true
 }
 
 // lowerSourceAttachedTapUntapObject resolves the attached-recipient tap or untap

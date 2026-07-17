@@ -47,14 +47,21 @@ func addCountersToPermanent(g *game.Game, permanent *game.Permanent, kind counte
 }
 
 func addCountersToPermanentControlledBy(g *game.Game, placementController game.PlayerID, permanent *game.Permanent, kind counter.Kind, amount int) bool {
+	return addCountersToPermanentControlledByAmount(g, placementController, permanent, kind, amount) > 0
+}
+
+func addCountersToPermanentControlledByAmount(g *game.Game, placementController game.PlayerID, permanent *game.Permanent, kind counter.Kind, amount int) int {
 	if permanent == nil || amount <= 0 {
-		return false
+		return 0
 	}
 	amount = replacementPermanentCounterPlacementAmount(g, placementController, permanent, kind, amount)
+	if amount <= 0 {
+		return 0
+	}
 	previous := permanent.Counters.Get(kind)
 	permanent.Counters.Add(kind, amount)
 	emitCounterAddedEvent(g, permanent, placementController, kind, previous, amount)
-	return true
+	return amount
 }
 
 func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, kind counter.Kind, previous, amount int) {

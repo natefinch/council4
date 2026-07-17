@@ -3366,8 +3366,8 @@ func TestParseResolvingEffectCompositionOwnership(t *testing.T) {
 	if target := document.Abilities[5].Sentences[0].Targets[0]; target.Selection.Kind != SelectionUnknown {
 		t.Fatalf("relative-clause target = %#v, want unknown selection", target)
 	}
-	if target := document.Abilities[6].Sentences[0].Targets[0]; target.Cardinality != (TargetCardinalitySyntax{}) {
-		t.Fatalf("variable target cardinality = %#v, want unknown", target.Cardinality)
+	if target := document.Abilities[6].Sentences[0].Targets[0]; target.Cardinality != (TargetCardinalitySyntax{Min: 0, Max: 99, MaxEventX: true}) {
+		t.Fatalf("variable target cardinality = %#v, want event-X bound", target.Cardinality)
 	}
 	if target := document.Abilities[7].Sentences[0].Targets[0]; target.Selection.Kind != SelectionCreature ||
 		target.Selection.RequiredName != "Bob" {
