@@ -11,6 +11,7 @@ import (
 )
 
 func emitEvent(g *game.Game, event game.Event) {
+	populateEventPermanentCharacteristics(g, &event)
 	if event.Kind == game.EventDamageDealt && event.DamageSourceName == "" {
 		event.DamageSourceName = damageEventSourceName(g, &event)
 	}
@@ -43,8 +44,37 @@ func emitEvent(g *game.Game, event game.Event) {
 		if doublers := captureChosenTypeTriggerDoublers(g); len(doublers) > 0 {
 			event.ChosenTypeTriggerDoublers = &game.ChosenTypeTriggerDoublerSnapshot{Doublers: doublers}
 		}
+		if event.ControlledTriggerDoublers == nil && eventPermanentEnteredOrLeft(&event) {
+			event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
+		}
 	}
 	g.AppendEvent(event)
+}
+
+func populateEventPermanentCharacteristics(g *game.Game, event *game.Event) {
+	if event == nil || event.PermanentID == 0 {
+		return
+	}
+	if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
+		values := effectivePermanentValues(g, permanent)
+		fillEventPermanentCharacteristics(event, values.types, values.supertypes, values.subtypes)
+		return
+	}
+	if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
+		fillEventPermanentCharacteristics(event, snapshot.Types, snapshot.Supertypes, snapshot.Subtypes)
+	}
+}
+
+func fillEventPermanentCharacteristics(event *game.Event, cardTypes []types.Card, supertypes []types.Super, subtypes []types.Sub) {
+	if len(event.CardTypes) == 0 {
+		event.CardTypes = append([]types.Card(nil), cardTypes...)
+	}
+	if len(event.CardSupertypes) == 0 {
+		event.CardSupertypes = append([]types.Super(nil), supertypes...)
+	}
+	if len(event.CardSubtypes) == 0 {
+		event.CardSubtypes = append([]types.Sub(nil), subtypes...)
+	}
 }
 
 func snapshotWasEnchanted(g *game.Game, snapshot game.ObjectSnapshot) bool {

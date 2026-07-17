@@ -210,13 +210,16 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 	destroyBatch.applyQueued()
 	var deaths []PermanentDeathLog
 	permanentsChanged := destroyBatch.changed
+	triggerSnapshot := captureControlledTriggerDoublerSnapshot(g)
 	for _, death := range pending {
 		var permanent *game.Permanent
 		if permanentDeathBypassesDestroy(death.reason) {
 			var ok bool
 			permanent, ok = permanentByObjectID(g, death.objectID)
 			replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
-			if !ok || !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
+			if !ok || !movePermanentToZoneInBatchWithControlledTriggerSnapshot(
+				g, permanent, zone.Graveyard, simultaneousID, triggerSnapshot,
+			) {
 				continue
 			}
 			permanentsChanged = true
@@ -234,7 +237,9 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 				continue
 			}
 			replacedToCommand := commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
-			if !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
+			if !movePermanentToZoneInBatchWithControlledTriggerSnapshot(
+				g, permanent, zone.Graveyard, simultaneousID, triggerSnapshot,
+			) {
 				continue
 			}
 			permanentsChanged = true

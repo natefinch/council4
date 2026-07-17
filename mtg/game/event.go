@@ -202,6 +202,30 @@ type ChosenTypeTriggerDoublerSnapshot struct {
 	Doublers []ChosenTypeTriggerDoubler
 }
 
+// ControlledTriggerDoubler captures an event-caused controlled-permanent trigger
+// multiplier at event time.
+type ControlledTriggerDoubler struct {
+	SourceID        id.ID
+	Controller      PlayerID
+	PermanentFilter []CharacteristicFilter
+	Enters          bool
+	Leaves          bool
+}
+
+// PermanentControllerSnapshot records a battlefield permanent's controller when
+// an event occurred.
+type PermanentControllerSnapshot struct {
+	SourceID   id.ID
+	Controller PlayerID
+}
+
+// ControlledTriggerDoublerSnapshot is the event-time set of causal controlled
+// trigger doublers and battlefield permanent controllers needed to match them.
+type ControlledTriggerDoublerSnapshot struct {
+	Doublers             []ControlledTriggerDoubler
+	PermanentControllers []PermanentControllerSnapshot
+}
+
 // Event records a rules-relevant fact emitted by rules helpers as state
 // changes happen. Events are data, not behavior: card definitions and reports
 // may refer to this vocabulary, while mtg/rules owns emission and consumers.
@@ -447,6 +471,11 @@ type Event struct {
 	// and chosen type rather than by state observed later at resolution. It is
 	// nil when no doublers were active.
 	ChosenTypeTriggerDoublers *ChosenTypeTriggerDoublerSnapshot
+
+	// ControlledTriggerDoublers snapshots event-caused trigger multipliers before
+	// battlefield state can change, preserving source control and simultaneous
+	// enter/leave behavior.
+	ControlledTriggerDoublers *ControlledTriggerDoublerSnapshot
 }
 
 // AppendEvent records a rules event. Unknown events are ignored.
@@ -510,6 +539,19 @@ func cloneEvent(event Event) Event {
 			Doublers: append([]ChosenTypeTriggerDoubler(nil), event.ChosenTypeTriggerDoublers.Doublers...),
 		}
 		event.ChosenTypeTriggerDoublers = &snapshot
+	}
+	if event.ControlledTriggerDoublers != nil {
+		snapshot := ControlledTriggerDoublerSnapshot{
+			Doublers: append([]ControlledTriggerDoubler(nil), event.ControlledTriggerDoublers.Doublers...),
+			PermanentControllers: append(
+				[]PermanentControllerSnapshot(nil),
+				event.ControlledTriggerDoublers.PermanentControllers...,
+			),
+		}
+		for i := range snapshot.Doublers {
+			snapshot.Doublers[i].PermanentFilter = cloneCharacteristicFilters(snapshot.Doublers[i].PermanentFilter)
+		}
+		event.ControlledTriggerDoublers = &snapshot
 	}
 	return event
 }

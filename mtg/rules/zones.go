@@ -444,6 +444,7 @@ func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destinati
 		FromZone:           zone.Battlefield,
 		ToZone:             destination,
 	}
+	event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
 	replacement := replacementZoneChange(g, event)
 	replacedDestination := replacement.destination
 	actualDestination := replacedDestination
@@ -489,12 +490,12 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 	destinationCards, _ := destinationZone(g, removed.Owner, move.actualDestination)
 	if removed.Token {
 		destinationCards.Add(removed.ObjectID)
-		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID)
+		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
 	} else {
 		destinationCards.Add(removed.CardInstanceID)
 		shuffleLibraryIfRequested(g, destinationCards, move.actualDestination, move.replacement.shuffleIntoLibrary)
 		placeRedirectExileCounter(g, removed.Owner, removed.CardInstanceID, move.replacement)
-		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID)
+		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
 	}
 	for _, component := range move.componentMoves {
 		if component.faceDown {
@@ -544,11 +545,24 @@ func movePermanentToZone(g *game.Game, permanent *game.Permanent, destination zo
 }
 
 func movePermanentToZoneInBatch(g *game.Game, permanent *game.Permanent, destination zone.Type, simultaneousID id.ID) bool {
+	return movePermanentToZoneInBatchWithControlledTriggerSnapshot(g, permanent, destination, simultaneousID, nil)
+}
+
+func movePermanentToZoneInBatchWithControlledTriggerSnapshot(
+	g *game.Game,
+	permanent *game.Permanent,
+	destination zone.Type,
+	simultaneousID id.ID,
+	triggerSnapshot *game.ControlledTriggerDoublerSnapshot,
+) bool {
 	move, ok := preparePermanentZoneMove(g, permanent, destination)
 	if !ok {
 		return false
 	}
 	move.event.SimultaneousID = simultaneousID
+	if triggerSnapshot != nil {
+		move.event.ControlledTriggerDoublers = triggerSnapshot
+	}
 	return applyPreparedPermanentZoneMove(g, &move)
 }
 
@@ -865,21 +879,22 @@ func shuffleLibraryIfRequested(g *game.Game, cards *zone.Zone, destination zone.
 	}
 }
 
-func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controller game.PlayerID, subjectGoaded, subjectGoadedKnown bool, destination zone.Type, simultaneousID id.ID) {
+func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controller game.PlayerID, subjectGoaded, subjectGoadedKnown bool, destination zone.Type, simultaneousID id.ID, doublers *game.ControlledTriggerDoublerSnapshot) {
 	event := game.Event{
-		Controller:         controller,
-		Player:             permanent.Owner,
-		CardID:             permanent.CardInstanceID,
-		Face:               permanent.Face,
-		FaceDown:           permanent.FaceDown,
-		PermanentID:        permanent.ObjectID,
-		SubjectGoaded:      subjectGoaded,
-		SubjectGoadedKnown: subjectGoadedKnown,
-		TokenName:          permanentTokenName(permanent),
-		TokenDef:           permanent.TokenDef,
-		FromZone:           zone.Battlefield,
-		ToZone:             destination,
-		SimultaneousID:     simultaneousID,
+		Controller:                controller,
+		Player:                    permanent.Owner,
+		CardID:                    permanent.CardInstanceID,
+		Face:                      permanent.Face,
+		FaceDown:                  permanent.FaceDown,
+		PermanentID:               permanent.ObjectID,
+		SubjectGoaded:             subjectGoaded,
+		SubjectGoadedKnown:        subjectGoadedKnown,
+		TokenName:                 permanentTokenName(permanent),
+		TokenDef:                  permanent.TokenDef,
+		FromZone:                  zone.Battlefield,
+		ToZone:                    destination,
+		SimultaneousID:            simultaneousID,
+		ControlledTriggerDoublers: doublers,
 	}
 	if card, ok := g.GetCardInstance(event.CardID); ok {
 		card.ZoneVersion++
