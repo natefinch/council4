@@ -3,9 +3,9 @@ package rules
 import (
 	"testing"
 
-	cardsg "github.com/natefinch/council4/mtg/cards/g"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -102,11 +102,37 @@ func gilraenCounters() []game.CounterPlacement {
 	}
 }
 
+func gilraenTestDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{
+		Name:       "Gilraen, Dúnedain Protector",
+		Types:      []types.Card{types.Creature},
+		Supertypes: []types.Super{types.Legendary},
+		ActivatedAbilities: []game.ActivatedAbility{{
+			ManaCost:        opt.Val(cost.Mana{cost.O(2)}),
+			AdditionalCosts: cost.Tap,
+			ZoneOfFunction:  zone.Battlefield,
+			Content: game.Mode{
+				Targets: []game.TargetSpec{{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Allow:      game.TargetAllowPermanent,
+					Selection: opt.Val(game.Selection{
+						RequiredTypesAny: []types.Card{types.Creature},
+						Controller:       game.ControllerYou,
+						ExcludeSource:    true,
+					}),
+				}},
+				Sequence: gilraenBlinkInstructions(gilraenCounters()),
+			}.Ability(),
+		}},
+	}}
+}
+
 func TestGilraenCardActivationCostsAndTargetLegality(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	gilraen := addCombatPermanent(g, game.Player1, cardsg.GilraenDúnedainProtector())
+	gilraen := addCombatPermanent(g, game.Player1, gilraenTestDef())
 	ownCreature := addCombatCreaturePermanent(g, game.Player1)
 	opponentCreature := addCombatCreaturePermanent(g, game.Player2)
 	ownLand := addBasicLandPermanent(g, game.Player1, types.Plains)
