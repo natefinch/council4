@@ -1873,6 +1873,9 @@ func (p CastForFree) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 		return err
 	}
 	if p.Card.Kind != CardReferenceNone {
+		if p.MaxManaValueFromX {
+			return errors.New("cast for free X mana-value bound requires a selection-driven cast")
+		}
 		if err := validateCardReference(p.Card); err != nil {
 			return err
 		}

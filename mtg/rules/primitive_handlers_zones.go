@@ -1298,17 +1298,24 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 	if !ok {
 		return res
 	}
+	maxManaValue := opt.V[int]{}
+	if prim.MaxManaValueFromX {
+		maxManaValue = opt.Val(r.obj.XValue)
+	}
 	var candidates []id.ID
 	for _, cardID := range castSourceZoneCards(player, prim.Zone) {
 		card, cardOK := r.game.GetCardInstance(cardID)
 		if !cardOK {
 			continue
 		}
-		if !handCardMatchesSelection(r.game, card, prim.Selection, playerID) {
-			continue
-		}
-		spellDef := cardFaceOrDefault(card, game.FaceFront)
-		if _, _, legal := firstLegalSpellCastChoice(r.game, playerID, spellDef); !legal {
+		if len(r.engine.freeCastOptionsForCard(
+			r.game,
+			playerID,
+			card,
+			prim.Zone,
+			prim.Selection,
+			maxManaValue,
+		)) == 0 {
 			continue
 		}
 		candidates = append(candidates, cardID)
@@ -1337,7 +1344,18 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 		if idx < 0 || idx >= len(candidates) {
 			continue
 		}
-		if r.engine.castFreeSpellFromZone(r.game, playerID, candidates[idx], prim.Zone, r.agents, r.log) {
+		if r.engine.chooseAndCastFreeSpellFromSource(
+			r.game,
+			player,
+			playerID,
+			candidates[idx],
+			prim.Zone,
+			prim.Selection,
+			maxManaValue,
+			false,
+			r.agents,
+			r.log,
+		) {
 			res.succeeded = true
 		}
 	}

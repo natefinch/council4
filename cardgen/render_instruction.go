@@ -1505,6 +1505,9 @@ func (r Renderer) renderCastForFree(ctx *renderCtx, value game.CastForFree) (str
 		fields = append(fields, fmt.Sprintf("Selection: %s,", selection))
 	}
 	fields = append(fields, fmt.Sprintf("Zone: %s,", sourceZone))
+	if value.MaxManaValueFromX {
+		fields = append(fields, "MaxManaValueFromX: true,")
+	}
 	if value.Card.Kind != game.CardReferenceNone {
 		card, err := renderCardReference(value.Card)
 		if err != nil {

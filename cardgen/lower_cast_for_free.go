@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -52,15 +53,16 @@ func lowerCastForFreeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 	if consumed.content.Unconsumed() {
 		return unsupported("unexpected residual ability content")
 	}
-	selection, ok := castForFreeSelection(effect.Selector)
+	selection, maxManaValueFromX, ok := castForFreeSelection(effect.Selector)
 	if !ok {
 		return unsupported("cast restriction is not expressible")
 	}
 	return game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.CastForFree{
-			Player:    game.ControllerReference(),
-			Selection: selection,
-			Zone:      zone.Hand,
+			Player:            game.ControllerReference(),
+			Selection:         selection,
+			Zone:              zone.Hand,
+			MaxManaValueFromX: maxManaValueFromX,
 		},
 	}}}.Ability(), nil
 }
@@ -75,9 +77,10 @@ func lowerCastForFreeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 // card-selection conversion. The bare "a spell" selector matches any nonland
 // card (lands can't be cast), optionally narrowed by mana value and color; it
 // fails closed for any other qualifier this backend cannot model on a spell.
-func castForFreeSelection(selector compiler.CompiledSelector) (game.Selection, bool) {
+func castForFreeSelection(selector compiler.CompiledSelector) (selection game.Selection, maxManaValueFromX, ok bool) {
 	if selector.Kind != compiler.SelectorSpell {
-		return cardSelectionForSelector(selector)
+		selection, ok = cardSelectionForSelector(selector)
+		return selection, false, ok
 	}
 	if selector.Keyword != parser.KeywordUnknown ||
 		selector.ExcludedKeyword != parser.KeywordUnknown ||
@@ -90,22 +93,23 @@ func castForFreeSelection(selector compiler.CompiledSelector) (game.Selection, b
 		len(selector.ColorsAny()) != 0 ||
 		len(selector.ExcludedColors()) != 0 ||
 		len(selector.Alternatives) != 0 {
-		return game.Selection{}, false
+		return game.Selection{}, false, false
 	}
 	if selector.Controller != compiler.ControllerYou && selector.Controller != compiler.ControllerAny {
-		return game.Selection{}, false
+		return game.Selection{}, false, false
 	}
-	selection := game.Selection{ExcludedTypes: []types.Card{types.Land}}
+	selection = game.Selection{ExcludedTypes: []types.Card{types.Land}}
 	if selector.MatchManaValue {
-		// The runtime spell filter uses a fixed mana-value comparison and cannot
-		// express the spell's chosen {X} ("a spell with mana value X or less"), so
-		// fail closed rather than lowering to a wrong fixed bound.
 		if selector.ManaValueX {
-			return game.Selection{}, false
+			if selector.ManaValue.Op != compare.LessOrEqual {
+				return game.Selection{}, false, false
+			}
+			maxManaValueFromX = true
+		} else {
+			selection.ManaValue = opt.Val(selector.ManaValue)
 		}
-		selection.ManaValue = opt.Val(selector.ManaValue)
 	}
 	selection.Colorless = selector.Colorless
 	selection.Multicolored = selector.Multicolored
-	return selection, true
+	return selection, maxManaValueFromX, true
 }
