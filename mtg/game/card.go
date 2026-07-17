@@ -109,6 +109,7 @@ type CardFace struct {
 	Loyalty          opt.V[int]
 	Defense          opt.V[int]
 	EntersPrepared   bool
+	CanBeCommander   bool
 
 	// SpellAbility is the resolving content of this face when cast as a spell.
 	// Its rules text is OracleText.
@@ -671,6 +672,7 @@ func (f *CardFace) clone() CardFace {
 		Loyalty:               f.Loyalty,
 		Defense:               f.Defense,
 		EntersPrepared:        f.EntersPrepared,
+		CanBeCommander:        f.CanBeCommander,
 		SpellAbility:          cloneOptionalAbilityContent(f.SpellAbility),
 		Overload:              cloneOverload(f.Overload),
 		ActivatedAbilities:    append([]ActivatedAbility(nil), f.ActivatedAbilities...),

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,150 of 32,501 cards eligible for paper support (55.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,158 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5793,6 +5793,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Fretwork Colony
 - Freyalise's Charm
 - Freyalise's Radiance
+- Freyalise, Llanowar's Fury
 - Friendly Ghost
 - Friendly Neighborhood
 - Friendly Teddy
@@ -5988,6 +5989,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Garruk, Caller of Beasts
 - Garruk, Cursed Huntsman
 - Garruk, Primal Hunter
+- Garruk, Unleashed
 - Garrulous Sycophant
 - Garza Zol, Plague Queen
 - Gastal Blockbuster
@@ -9797,6 +9799,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Minotaur Tactician
 - Minotaur Warrior
 - Minotaur, Roxxon CEO
+- Minsc & Boo, Timeless Heroes
 - Mintstrosity
 - Minwu, White Mage
 - Miraculous Recovery
@@ -10623,6 +10626,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Oath of Lim-Dûl
 - Oath of the Ancient Wood
 - Oathsworn Giant
+- Ob Nixilis of the Black Oath
 - Ob Nixilis's Cruelty
 - Ob Nixilis, the Fallen
 - Ob Nixilis, the Hate-Twisted
@@ -11813,6 +11817,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Quillspike
 - Quina, Qu Gourmet
 - Quintorius, Field Historian
+- Quintorius, History Chaser
 - Quirion Elves
 - Quirion Explorer
 - Quirion Ranger
@@ -14304,6 +14309,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Sorin's Guide
 - Sorin's Thirst
 - Sorin's Vengeance
+- Sorin, Imperious Bloodlord
 - Sosuke's Summons
 - Soul Bleed
 - Soul Channeling
@@ -15677,6 +15683,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Tezzeret's Gambit
 - Tezzeret's Gatebreaker
 - Tezzeret's Strider
+- Tezzeret, Artifice Master
 - Thalakos Deceiver
 - Thalakos Drifters
 - Thalakos Lowlands
@@ -17265,6 +17272,7 @@ Council4 currently supports **18,150 of 32,501 cards eligible for paper support 
 - Vraska's Conquistador
 - Vraska's Contempt
 - Vraska's Finisher
+- Vraska, Golgari Queen
 - Vryn Wingmare
 - Vug Lizard
 - Vulpikeet

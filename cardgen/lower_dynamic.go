@@ -1241,6 +1241,9 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		Allow:                       game.TargetAllowPermanent,
 	}
 	if len(target.Selector.Alternatives) > 0 {
+		if keywordUnion, ok := keywordAlternativePermanentTargetSpec(target, spec); ok {
+			return keywordUnion, true
+		}
 		return alternativePermanentTargetSpec(&target, &spec, false)
 	}
 	var selection game.Selection
@@ -1425,6 +1428,48 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	}
 	spec.Constraint = lowerFirst(target.Text)
 	return spec, true
+}
+
+func keywordAlternativePermanentTargetSpec(
+	target compiler.CompiledTarget,
+	spec game.TargetSpec,
+) (game.TargetSpec, bool) {
+	baseTarget := target
+	baseTarget.Selector.Alternatives = nil
+	base, ok := permanentTargetSpecWithCardinality(baseTarget)
+	if !ok {
+		return game.TargetSpec{}, false
+	}
+	alternatives := make([]game.Selection, 0, len(target.Selector.Alternatives))
+	for i := range target.Selector.Alternatives {
+		alternative := target.Selector.Alternatives[i]
+		if alternative.Kind != compiler.SelectorUnknown ||
+			alternative.Controller != compiler.ControllerAny ||
+			alternative.Keyword == parser.KeywordUnknown ||
+			alternative.ExcludedKeyword != parser.KeywordUnknown ||
+			len(alternative.RequiredTypesAny()) != 0 ||
+			len(alternative.SubtypesAny()) != 0 ||
+			len(alternative.ColorsAny()) != 0 ||
+			len(alternative.Alternatives) != 0 ||
+			selectorHasUnsupportedPermanentFilters(alternative) {
+			return game.TargetSpec{}, false
+		}
+		keyword, ok := runtimeKeyword(alternative.Keyword)
+		if !ok {
+			return game.TargetSpec{}, false
+		}
+		alternatives = append(alternatives, game.Selection{Keyword: keyword})
+	}
+	if len(alternatives) < 2 {
+		return game.TargetSpec{}, false
+	}
+	selection := game.Selection{AnyOf: alternatives}
+	if base.Selection.Exists {
+		selection = base.Selection.Val
+		selection.AnyOf = alternatives
+	}
+	base.Selection = opt.Val(selection)
+	return base, true
 }
 
 func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.TargetSpec, allowUnknownKind bool) (game.TargetSpec, bool) {

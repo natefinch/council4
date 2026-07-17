@@ -41,11 +41,19 @@ func TestExpandEntersAndSecondTrigger(t *testing.T) {
 				"Aberrant Tinkering — At the beginning of your upkeep, draw a card.",
 			},
 		},
+		{
+			name:   "exact comma-bearing card name and battlefield wording",
+			source: "When Minsc & Boo, Timeless Heroes enters the battlefield and at the beginning of your upkeep, draw a card.",
+			want: []string{
+				"When Minsc & Boo, Timeless Heroes enters the battlefield, draw a card.",
+				"At the beginning of your upkeep, draw a card.",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			got := expandEntersAndSecondTrigger(test.source)
+			got := expandEntersAndSecondTrigger(test.source, "Minsc & Boo, Timeless Heroes")
 			lines := splitSourceLines(got)
 			if len(lines) != len(test.want) {
 				t.Fatalf("expandEntersAndSecondTrigger(%q) = %q, want %d lines", test.source, got, len(test.want))

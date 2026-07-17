@@ -292,7 +292,6 @@ func lowerLoyaltyAbility(
 	if ability.Cost == nil ||
 		len(ability.Cost.Components) != 1 ||
 		ability.Cost.Components[0].Kind != compiler.CostLoyalty ||
-		len(ability.Content.Conditions) != 0 ||
 		len(ability.Content.Modes) != 0 ||
 		ability.AbilityWord != "" {
 		return abilityLowering{}, executableDiagnostic(ability, "unsupported loyalty ability", unsupportedDetail)
@@ -331,7 +330,7 @@ func lowerLoyaltyAbility(
 	spans := make(
 		[]shared.Span,
 		0,
-		1+len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.References)+len(syntax.Reminders),
+		1+len(ability.Content.Effects)+len(ability.Content.Targets)+len(ability.Content.Conditions)+len(ability.Content.References)+len(syntax.Reminders),
 	)
 	spans = append(spans, ability.Cost.Span)
 	for i := range ability.Content.Effects {
@@ -349,6 +348,9 @@ func lowerLoyaltyAbility(
 	for _, target := range ability.Content.Targets {
 		spans = append(spans, target.Span)
 	}
+	for _, condition := range ability.Content.Conditions {
+		spans = append(spans, condition.Span)
+	}
 	for _, reference := range ability.Content.References {
 		spans = append(spans, reference.Span)
 	}
@@ -365,6 +367,7 @@ func lowerLoyaltyAbility(
 		consumed: semanticConsumption{
 			cost:       true,
 			targets:    len(ability.Content.Targets),
+			conditions: len(ability.Content.Conditions),
 			effects:    len(ability.Content.Effects),
 			keywords:   len(ability.Content.Keywords),
 			references: len(ability.Content.References),

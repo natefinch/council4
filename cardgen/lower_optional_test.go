@@ -183,22 +183,29 @@ func TestLowerReflexiveWhenYouDoGatesOnOptional(t *testing.T) {
 	}
 }
 
-// TestLowerReflexiveWhenYouDoAfterMandatoryNotGated verifies that the reflexive
-// "When you do," preamble is only treated as an optional-dependent gate when a
-// "you may" optional action precedes it. After a mandatory action the trailing
-// effect must lower as a plain, ungated instruction (the reflexive trigger
-// always fires, so there is no optional result to gate on).
-func TestLowerReflexiveWhenYouDoAfterMandatoryNotGated(t *testing.T) {
+// TestLowerReflexiveWhenYouDoAfterMandatory verifies that a mandatory enabling
+// action still creates a true reflexive trigger. The success gate matters when
+// the mandatory action cannot actually happen.
+func TestLowerReflexiveWhenYouDoAfterMandatorySacrifice(t *testing.T) {
 	t.Parallel()
 	sequence := lowerSpellSequence(t, "Mandatory Reflexive Test",
-		"Draw two cards. When you do, you gain 2 life.")
+		"Sacrifice a creature. When you do, you gain 2 life.")
 	if len(sequence) != 2 {
 		t.Fatalf("sequence = %#v, want two instructions", sequence)
 	}
-	for i, instr := range sequence {
-		if instr.Optional || instr.PublishResult != "" || instr.ResultGate.Exists {
-			t.Fatalf("instruction[%d] must carry no optional-flow envelope: %#v", i, instr)
-		}
+	if sequence[0].Optional || sequence[0].PublishResult == "" || sequence[0].ResultGate.Exists {
+		t.Fatalf("mandatory enabling instruction = %#v", sequence[0])
+	}
+	reflexive, ok := sequence[1].Primitive.(game.CreateReflexiveTrigger)
+	if !ok || !sequence[1].ResultGate.Exists {
+		t.Fatalf("reflexive instruction = %#v", sequence[1])
+	}
+	body := reflexive.Trigger.Content.Modes[0]
+	if len(body.Sequence) != 1 {
+		t.Fatalf("reflexive body = %#v", body)
+	}
+	if _, ok := body.Sequence[0].Primitive.(game.GainLife); !ok {
+		t.Fatalf("reflexive body primitive = %T, want game.GainLife", body.Sequence[0].Primitive)
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 // surveil 1" (Unshakable Tail) and "When this artifact enters and when you
 // sacrifice it, ..." (Carrot Cake).
 const entersAndSecondTriggerMarker = " enters and "
+const entersBattlefieldAndSecondTriggerMarker = " enters the battlefield and "
 
 // secondTriggerLeadIns are the recognized lead-ins of the second trigger
 // condition in an enters-and conjunction. Restricting the split to these
@@ -27,12 +28,16 @@ var secondTriggerLeadIns = []string{"at the beginning of ", "when ", "whenever "
 // ability per condition lets the standard trigger pipeline lower each
 // constituent independently. The rewrite is parser-owned because it is a
 // wording substitution; downstream stages see ordinary triggered abilities.
-func expandEntersAndSecondTrigger(source string) string {
+func expandEntersAndSecondTrigger(source string, cardNames ...string) string {
+	cardName := ""
+	if len(cardNames) > 0 {
+		cardName = cardNames[0]
+	}
 	lines := strings.Split(source, "\n")
 	out := make([]string, 0, len(lines))
 	changed := false
 	for _, line := range lines {
-		expanded, ok := splitEntersAndSecondTriggerLine(line)
+		expanded, ok := splitEntersAndSecondTriggerLine(line, cardName)
 		if !ok {
 			out = append(out, line)
 			continue
@@ -53,7 +58,7 @@ func expandEntersAndSecondTrigger(source string) string {
 // "<word> — " ability word) whose enters condition has a comma-free subject,
 // whose second condition begins with a recognized trigger lead-in and is
 // comma-free, and whose effect body follows the single delimiting comma.
-func splitEntersAndSecondTriggerLine(line string) (lines []string, ok bool) {
+func splitEntersAndSecondTriggerLine(line, cardName string) (lines []string, ok bool) {
 	prefix, introduction := splitAbilityWordPrefix(line)
 	introWord := ""
 	switch {
@@ -64,12 +69,18 @@ func splitEntersAndSecondTriggerLine(line string) (lines []string, ok bool) {
 	default:
 		return nil, false
 	}
-	subject, tail, found := strings.Cut(
-		strings.TrimPrefix(introduction, introWord), entersAndSecondTriggerMarker)
+	rest := strings.TrimPrefix(introduction, introWord)
+	subject, tail, found := strings.Cut(rest, entersAndSecondTriggerMarker)
+	entersText := " enters"
+	if !found {
+		subject, tail, found = strings.Cut(rest, entersBattlefieldAndSecondTriggerMarker)
+		entersText = " enters the battlefield"
+	}
 	if !found {
 		return nil, false
 	}
-	if subject == "" || strings.Contains(subject, ",") {
+	if subject == "" ||
+		(strings.Contains(subject, ",") && !strings.EqualFold(subject, strings.TrimSpace(cardName))) {
 		return nil, false
 	}
 	secondCondition, body, hasBody := strings.Cut(tail, ", ")
@@ -79,7 +90,7 @@ func splitEntersAndSecondTriggerLine(line string) (lines []string, ok bool) {
 	if !hasSecondTriggerLeadIn(secondCondition) {
 		return nil, false
 	}
-	lines = append(lines, prefix+introWord+subject+" enters, "+body)
+	lines = append(lines, prefix+introWord+subject+entersText+", "+body)
 	lines = append(lines, prefix+capitalizeFirstRune(secondCondition)+", "+body)
 	return lines, true
 }

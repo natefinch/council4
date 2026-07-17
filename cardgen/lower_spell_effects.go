@@ -781,7 +781,8 @@ func lowerCounterPlacementSpell(
 		}
 	}
 	if len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
+		(ctx.content.Targets[0].Cardinality.Min != 0 &&
+			ctx.content.Targets[0].Cardinality.Min != 1) ||
 		ctx.content.Targets[0].Cardinality.Max != 1 ||
 		(effect.Amount.Known && effect.Amount.Value <= 0) ||
 		!effect.Amount.Known && !effect.Amount.VariableX && effect.Amount.DynamicKind == compiler.DynamicAmountNone ||

@@ -168,6 +168,10 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 		content.Effects[0].Kind != compiler.EffectSacrifice {
 		return game.AbilityContent{}, false
 	}
+	conditions, reflexive, ok := splitMandatoryReflexiveCondition(content.Conditions)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
 	// Every reference must belong either to the leading sacrifice clause (the
 	// "it"/"this land" self-reference the sacrifice lowerer resolves) or to the
 	// trailing search/rider clauses (the tutor's "put it" pronoun the
@@ -194,10 +198,13 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	if reflexive {
+		sacrifice.PublishResult = optionalIfYouDoResultKey
+	}
 	sequence := []game.Instruction{sacrifice}
 
 	if len(groups) == 1 {
-		if len(content.Conditions) != 0 {
+		if len(conditions) != 0 {
 			return game.AbilityContent{}, false
 		}
 		searchSeq, ok := searchGroupInstructions(groups[0])
@@ -207,6 +214,9 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 		sequence = append(sequence, searchSeq...)
 		if hasRider {
 			sequence = append(sequence, trailingRider)
+		}
+		if reflexive {
+			gateInstructionsOnResult(sequence[1:], optionalIfYouDoResultKey)
 		}
 		return game.Mode{Sequence: sequence}.Ability(), true
 	}
@@ -221,10 +231,10 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 	insteadStart := starts[1] + 1
 	insteadSearch := &content.Effects[insteadStart]
 	if insteadSearch.Replacement.Kind != parser.EffectReplacementInstead ||
-		len(content.Conditions) != 1 {
+		len(conditions) != 1 {
 		return game.AbilityContent{}, false
 	}
-	condition := content.Conditions[0]
+	condition := conditions[0]
 	if !spanCovered(condition.Span, []shared.Span{insteadSearch.Span}) {
 		return game.AbilityContent{}, false
 	}
@@ -247,7 +257,37 @@ func lowerSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityContent, bool
 	}
 	sequence = append(sequence, baseSeq...)
 	sequence = append(sequence, insteadSeq...)
+	if reflexive {
+		gateInstructionsOnResult(sequence[1:], optionalIfYouDoResultKey)
+	}
 	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+func splitMandatoryReflexiveCondition(
+	conditions []compiler.CompiledCondition,
+) (remaining []compiler.CompiledCondition, reflexive bool, ok bool) {
+	remaining = make([]compiler.CompiledCondition, 0, len(conditions))
+	for _, condition := range conditions {
+		if condition.Reflexive &&
+			condition.Predicate == compiler.ConditionPredicatePriorInstructionAccepted {
+			if reflexive {
+				return nil, false, false
+			}
+			reflexive = true
+			continue
+		}
+		remaining = append(remaining, condition)
+	}
+	return remaining, reflexive, true
+}
+
+func gateInstructionsOnResult(instructions []game.Instruction, key game.ResultKey) {
+	for i := range instructions {
+		instructions[i].ResultGate = opt.Val(game.InstructionResultGate{
+			Key:       key,
+			Succeeded: game.TriTrue,
+		})
+	}
 }
 
 // splitSequenceSearchGroups partitions a run of effects into consecutive

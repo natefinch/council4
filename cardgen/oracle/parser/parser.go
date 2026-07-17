@@ -38,7 +38,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	source = expandDiesOrExileTrigger(source)
 	source = expandEntersOrLeavesBattlefieldTrigger(source)
 	source = expandEntersOrTurnedFaceUpTrigger(source)
-	source = expandEntersAndSecondTrigger(source)
+	source = expandEntersAndSecondTrigger(source, context.CardName)
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
@@ -150,6 +150,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		document.Abilities = append(document.Abilities, ability)
 	}
 	emitAtoms(document.Abilities, context.CardName, context.Legendary)
+	emitCanBeCommander(document.Abilities, context.CardName)
 	emitDeclareAttackersCastRestriction(document.Abilities)
 	emitBeforeCombatDamageCastRestriction(document.Abilities)
 	emitGoadedOpponentCreaturesCantBlock(document.Abilities)

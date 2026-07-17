@@ -130,6 +130,17 @@ func TestCardDefAlternateFaceAbsent(t *testing.T) {
 	}
 }
 
+func TestCardFaceClonePreservesCommanderPermission(t *testing.T) {
+	face := CardFace{Name: "Planeswalker Commander", CanBeCommander: true}
+	cloned := face.clone()
+	if !cloned.CanBeCommander {
+		t.Fatal("clone lost CanBeCommander")
+	}
+	if def := face.ToCardDef(&CardDef{}); !def.CanBeCommander {
+		t.Fatal("ToCardDef lost CanBeCommander")
+	}
+}
+
 func TestCardFaceToCardDefDeepClonesOverload(t *testing.T) {
 	selection := Selection{RequiredTypes: []types.Card{types.Artifact}}
 	face := CardFace{

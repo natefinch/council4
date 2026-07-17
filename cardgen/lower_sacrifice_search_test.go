@@ -34,19 +34,27 @@ func TestLowerCabarettiCourtyardSacrificeFetch(t *testing.T) {
 		trigger.Pattern.Source != game.TriggerSourceSelf {
 		t.Fatalf("trigger = %#v, want self enters-battlefield", trigger)
 	}
-	seq := faces[0].TriggeredAbilities[0].Content.Modes[0].Sequence
-	if len(seq) != 3 {
-		t.Fatalf("sequence = %#v, want sacrifice, search, gain life", seq)
+	outer := faces[0].TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(outer) != 2 {
+		t.Fatalf("outer sequence = %#v, want sacrifice then reflexive trigger", outer)
 	}
 
-	sacrifice, ok := seq[0].Primitive.(game.Sacrifice)
-	if !ok || sacrifice.Object != game.EventPermanentReference() {
-		t.Fatalf("first primitive = %#v, want sacrifice of the entering land", seq[0].Primitive)
+	sacrifice, ok := outer[0].Primitive.(game.Sacrifice)
+	if !ok || sacrifice.Object != game.EventPermanentReference() || outer[0].PublishResult == "" {
+		t.Fatalf("first instruction = %#v, want published sacrifice of the entering land", outer[0])
+	}
+	reflexive, ok := outer[1].Primitive.(game.CreateReflexiveTrigger)
+	if !ok || !outer[1].ResultGate.Exists {
+		t.Fatalf("second instruction = %#v, want gated reflexive trigger", outer[1])
+	}
+	seq := reflexive.Trigger.Content.Modes[0].Sequence
+	if len(seq) != 2 {
+		t.Fatalf("reflexive sequence = %#v, want search then gain life", seq)
 	}
 
-	search, ok := seq[1].Primitive.(game.Search)
+	search, ok := seq[0].Primitive.(game.Search)
 	if !ok || search.Player != game.ControllerReference() || search.Amount.Value() != 1 {
-		t.Fatalf("second primitive = %#v, want controller search for one card", seq[1].Primitive)
+		t.Fatalf("first reflexive primitive = %#v, want controller search for one card", seq[0].Primitive)
 	}
 	wantSpec := game.SearchSpec{
 		SourceZone:   zone.Library,
@@ -65,9 +73,9 @@ func TestLowerCabarettiCourtyardSacrificeFetch(t *testing.T) {
 		t.Errorf("search spec = %+v, want %+v", search.Spec, wantSpec)
 	}
 
-	gain, ok := seq[2].Primitive.(game.GainLife)
+	gain, ok := seq[1].Primitive.(game.GainLife)
 	if !ok || gain.Amount.Value() != 1 || gain.Player != game.ControllerReference() {
-		t.Fatalf("third primitive = %#v, want controller gain 1 life", seq[2].Primitive)
+		t.Fatalf("second reflexive primitive = %#v, want controller gain 1 life", seq[1].Primitive)
 	}
 }
 
@@ -85,13 +93,21 @@ func TestLowerRiveteersOverlookSacrificeFetch(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	seq := faces[0].TriggeredAbilities[0].Content.Modes[0].Sequence
-	if len(seq) != 3 {
-		t.Fatalf("sequence = %#v, want sacrifice, search, gain life", seq)
+	outer := faces[0].TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(outer) != 2 {
+		t.Fatalf("outer sequence = %#v, want sacrifice then reflexive trigger", outer)
 	}
-	search, ok := seq[1].Primitive.(game.Search)
+	reflexive, ok := outer[1].Primitive.(game.CreateReflexiveTrigger)
 	if !ok {
-		t.Fatalf("second primitive = %#v, want game.Search", seq[1].Primitive)
+		t.Fatalf("second primitive = %#v, want game.CreateReflexiveTrigger", outer[1].Primitive)
+	}
+	seq := reflexive.Trigger.Content.Modes[0].Sequence
+	if len(seq) != 2 {
+		t.Fatalf("reflexive sequence = %#v, want search then gain life", seq)
+	}
+	search, ok := seq[0].Primitive.(game.Search)
+	if !ok {
+		t.Fatalf("first reflexive primitive = %#v, want game.Search", seq[0].Primitive)
 	}
 	wantSpec := game.SearchSpec{
 		SourceZone:   zone.Library,

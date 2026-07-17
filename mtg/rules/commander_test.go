@@ -28,6 +28,56 @@ func TestValidateCommanderConfigsAcceptsLegalDeck(t *testing.T) {
 	}
 }
 
+func TestValidateCommanderConfigAcceptsPlaneswalkerWithPermission(t *testing.T) {
+	config := legalCommanderConfig()
+	config.Commander = minscBooTimelessHeroesDef()
+	for i := range config.Deck {
+		config.Deck[i].ColorIdentity = color.NewIdentity(color.Green)
+	}
+	if errs := validateCommanderConfig(game.Player1, config); len(errs) != 0 {
+		t.Fatalf("errors = %+v, want none", errs)
+	}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{game.Player1: config})
+	commanderID := g.Players[game.Player1].CommanderInstanceID
+	if !g.Players[game.Player1].CommandZone.Contains(commanderID) {
+		t.Fatal("Minsc & Boo did not start in the command zone")
+	}
+	if got := commanderColorIdentityCount(g, game.Player1); got != 2 {
+		t.Fatalf("commander color identity count = %d, want 2", got)
+	}
+}
+
+func TestPlaneswalkerCommanderUsesCastTaxAndZoneReplacement(t *testing.T) {
+	g := newCommanderCastGame(minscBooTimelessHeroesDef())
+	engine := NewEngine(nil)
+	addBasicLandPermanent(g, game.Player1, types.Mountain)
+	for range 5 {
+		addBasicLandPermanent(g, game.Player1, types.Forest)
+	}
+	player := g.Players[game.Player1]
+	player.CommanderCastCount = 1
+	commanderID := player.CommanderInstanceID
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+
+	if !engine.applyAction(g, game.Player1, action.CastCommanderSpell(commanderID, nil, 0, nil)) {
+		t.Fatal("failed to cast planeswalker commander with tax")
+	}
+	if player.CommanderCastCount != 2 || player.CommanderTaxFor(commanderID) != 4 {
+		t.Fatalf("cast count/tax = %d/%d, want 2/4", player.CommanderCastCount, player.CommanderTaxFor(commanderID))
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	permanent := permanentByCardID(g, commanderID)
+	if permanent == nil {
+		t.Fatal("planeswalker commander did not resolve to the battlefield")
+	}
+	movePermanentToZone(g, permanent, zone.Graveyard)
+	if !player.CommandZone.Contains(commanderID) || player.Graveyard.Contains(commanderID) {
+		t.Fatal("planeswalker commander did not use command-zone replacement")
+	}
+}
+
 func TestNewGameTracksCommanderIDs(t *testing.T) {
 	commander := commanderDef("Tracked Commander", color.Green)
 	configs := [game.NumPlayers]game.PlayerConfig{

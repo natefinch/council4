@@ -13,6 +13,217 @@ import (
 // information once it has left the battlefield.
 const sacrificedCreatureLinkKey = game.LinkedKey("sacrificed-creature")
 
+// lowerSacrificeReflexiveDamage lowers optional or mandatory creature sacrifices
+// followed by reflexive source damage scaled to the sacrificed creature's power.
+// The reflexive body may also create tokens, or conditionally draw the same amount
+// based on the sacrificed creature's subtype. Its target is chosen only after the
+// sacrifice resolves, at the proper CR 603.11 time.
+func lowerSacrificeReflexiveDamage(ctx contentCtx) (game.AbilityContent, bool) {
+	content := ctx.content
+	if len(content.Modes) != 0 ||
+		len(content.Targets) != 1 ||
+		len(content.Keywords) != 0 ||
+		len(content.Effects) < 2 ||
+		len(content.Effects) > 3 ||
+		len(content.Conditions) < 1 ||
+		len(content.Conditions) > 2 {
+		return game.AbilityContent{}, false
+	}
+	sacrifice, damage := &content.Effects[0], &content.Effects[1]
+	if sacrifice.Kind != compiler.EffectSacrifice ||
+		!sacrifice.Exact ||
+		sacrifice.Negated ||
+		sacrifice.Context != parser.EffectContextController ||
+		!sacrifice.Amount.Known ||
+		sacrifice.Amount.Value != 1 ||
+		damage.Kind != compiler.EffectDealDamage ||
+		damage.Optional ||
+		!damage.Exact ||
+		damage.Negated {
+		return game.AbilityContent{}, false
+	}
+	if !effectAmountBindsPriorInstruction(damage, content.References, 0) {
+		return game.AbilityContent{}, false
+	}
+	if damage.Amount.DynamicKind != compiler.DynamicAmountSourcePower {
+		return game.AbilityContent{}, false
+	}
+	if !damageSourceReferencesSource(*damage) {
+		return game.AbilityContent{}, false
+	}
+	target, ok := singleAnyTargetSpec(content.Targets[0])
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	var subtypeCondition compiler.CompiledCondition
+	foundReflexive, foundSubtype := false, false
+	for i := range content.Conditions {
+		condition := content.Conditions[i]
+		switch {
+		case condition.Reflexive &&
+			condition.Predicate == compiler.ConditionPredicatePriorInstructionAccepted:
+			foundReflexive = true
+		case condition.Predicate == compiler.ConditionPredicateObjectMatches &&
+			condition.ObjectBinding == compiler.ReferenceBindingPriorInstructionResult &&
+			len(content.Effects) == 3 &&
+			condition.Order.Start > damage.VerbOrder.Start &&
+			condition.Order.Start < content.Effects[2].VerbOrder.Start:
+			subtypeCondition = condition
+			foundSubtype = true
+		default:
+			return game.AbilityContent{}, false
+		}
+	}
+	if !foundReflexive || !foundSubtype {
+		if !foundReflexive || len(content.Conditions) != 1 {
+			return game.AbilityContent{}, false
+		}
+	}
+	sacrificeInstr, ok := lowerSequenceSacrificeInstruction(ctx)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sacrificePrimitive, ok := sacrificeInstr.Primitive.(game.SacrificePermanents)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	sacrificePrimitive.PublishLinked = sacrificedCreatureLinkKey
+	sacrificePrimitive.PublishObjectBinding = true
+	sacrificeInstr.Primitive = sacrificePrimitive
+	sacrificeInstr.Optional = sacrifice.Optional
+	sacrificeInstr.PublishResult = optionalIfYouDoResultKey
+
+	sharedAmount, hasSharedAmount := sacrificeScaledSharedAmount(content.Effects[1:])
+	damageAmount, ok := sacrificeScaledRewardAmount(damage, sharedAmount, hasSharedAmount)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	innerSequence := []game.Instruction{{
+		Primitive: game.Damage{
+			Amount:       damageAmount,
+			Recipient:    game.AnyTargetDamageRecipient(0),
+			DamageSource: opt.Val(game.SourcePermanentReference()),
+		},
+	}}
+	if foundSubtype {
+		if len(content.Effects) != 3 {
+			return game.AbilityContent{}, false
+		}
+		draw := &content.Effects[2]
+		if draw.Kind != compiler.EffectDraw ||
+			draw.Optional ||
+			!draw.Exact ||
+			draw.Negated ||
+			draw.Context != parser.EffectContextController {
+			return game.AbilityContent{}, false
+		}
+		selection, ok := lowerConditionSelection(subtypeCondition.Selection)
+		if !ok || len(selection.SubtypesAny) == 0 {
+			return game.AbilityContent{}, false
+		}
+		if sacrificedCharacteristicKind(draw.Amount.DynamicKind) &&
+			!effectAmountBindsPriorInstruction(draw, content.References, 0) {
+			return game.AbilityContent{}, false
+		}
+		drawAmount, ok := sacrificeScaledRewardAmount(draw, sharedAmount, hasSharedAmount)
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		innerSequence = append(innerSequence, game.Instruction{
+			Primitive: game.Draw{
+				Player: game.ControllerReference(),
+				Amount: drawAmount,
+			},
+			Condition: opt.Val(game.EffectCondition{
+				Text:   subtypeCondition.Text,
+				Object: game.LinkedObjectReference(string(sacrificedCreatureLinkKey)),
+				Condition: opt.Val(game.Condition{
+					Text: subtypeCondition.Text,
+					Object: opt.Val(
+						game.LinkedObjectReference(string(sacrificedCreatureLinkKey)),
+					),
+					ObjectMatches: opt.Val(selection),
+				}),
+			}),
+		})
+	} else if len(content.Effects) == 3 {
+		create := &content.Effects[2]
+		if create.Kind != compiler.EffectCreate {
+			return game.AbilityContent{}, false
+		}
+		createCtx := contextForEffect(ctx, create)
+		createCtx.content.Conditions = nil
+		created, diagnostic := lowerCreateTokenSpell(createCtx)
+		if diagnostic != nil ||
+			len(created.Modes) != 1 ||
+			len(created.Modes[0].Targets) != 0 ||
+			len(created.Modes[0].Sequence) != 1 {
+			return game.AbilityContent{}, false
+		}
+		innerSequence = append(innerSequence, created.Modes[0].Sequence[0])
+	}
+	inner := game.Mode{
+		Targets:  []game.TargetSpec{target},
+		Sequence: innerSequence,
+	}.Ability()
+	outer := game.Mode{Sequence: []game.Instruction{
+		sacrificeInstr,
+		{
+			Primitive: game.CreateReflexiveTrigger{
+				Trigger: game.ReflexiveTriggerDef{Content: inner},
+			},
+			ResultGate: opt.Val(game.InstructionResultGate{
+				Key:       optionalIfYouDoResultKey,
+				Succeeded: game.TriTrue,
+			}),
+		},
+	}}.Ability()
+	err := game.ValidateInstructionSequence(
+		outer.Modes[0].Sequence,
+		outer.Modes[0].Targets,
+	)
+	return outer, err == nil
+}
+
+func effectAmountBindsPriorInstruction(
+	effect *compiler.CompiledEffect,
+	references []compiler.CompiledReference,
+	prior int,
+) bool {
+	for i := range references {
+		if references[i].NodeID == effect.Amount.ReferenceNodeID {
+			return references[i].Binding == compiler.ReferenceBindingPriorInstructionResult &&
+				references[i].PriorInstruction == prior
+		}
+	}
+	return false
+}
+
+func damageSourceReferencesSource(effect compiler.CompiledEffect) bool {
+	for i := range effect.SubjectReferences {
+		if effect.SubjectReferences[i].Binding == compiler.ReferenceBindingSource {
+			return true
+		}
+	}
+	return false
+}
+
+func singleAnyTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
+	if !target.Exact ||
+		target.Cardinality.Min != 1 ||
+		target.Cardinality.Max != 1 ||
+		target.Selector.Kind != compiler.SelectorAny ||
+		selectorHasUnsupportedPermanentFilters(target.Selector) {
+		return game.TargetSpec{}, false
+	}
+	return game.TargetSpec{
+		MinTargets: 1,
+		MaxTargets: 1,
+		Constraint: target.Text,
+		Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+	}, true
+}
+
 // lowerOptionalSacrificeScaledReward lowers the "you may sacrifice another
 // creature. If you do, <rewards>" family where each reward is a controller life
 // gain or card draw scaled by the sacrificed creature's power, toughness, or
