@@ -1099,16 +1099,21 @@ type EffectReplacementKind string
 
 // Resolving replacement modifiers recognized by the parser.
 const (
-	EffectReplacementNone           EffectReplacementKind = ""
-	EffectReplacementInstead        EffectReplacementKind = "EffectReplacementInstead"
-	EffectReplacementTwiceThatMany  EffectReplacementKind = "EffectReplacementTwiceThatMany"
-	EffectReplacementThatMuchPlus   EffectReplacementKind = "EffectReplacementThatMuchPlus"
-	EffectReplacementDoubleThat     EffectReplacementKind = "EffectReplacementDoubleThat"
-	EffectReplacementThatManyPlus   EffectReplacementKind = "EffectReplacementThatManyPlus"
-	EffectReplacementOneOfEach      EffectReplacementKind = "EffectReplacementOneOfEach"
-	EffectReplacementTripleThat     EffectReplacementKind = "EffectReplacementTripleThat"
-	EffectReplacementTwiceThatMuch  EffectReplacementKind = "EffectReplacementTwiceThatMuch"
-	EffectReplacementPlusAdditional EffectReplacementKind = "EffectReplacementPlusAdditional"
+	EffectReplacementNone          EffectReplacementKind = ""
+	EffectReplacementInstead       EffectReplacementKind = "EffectReplacementInstead"
+	EffectReplacementTwiceThatMany EffectReplacementKind = "EffectReplacementTwiceThatMany"
+	// EffectReplacementThreeTimesThatMany marks the tripled output of a passive
+	// token-multiplication replacement ("... three times that many of those
+	// tokens are created instead.", Ojer Taq, Deepest Foundation). It lowers to
+	// the same generic token multiplier as the doubling form with factor 3.
+	EffectReplacementThreeTimesThatMany EffectReplacementKind = "EffectReplacementThreeTimesThatMany"
+	EffectReplacementThatMuchPlus       EffectReplacementKind = "EffectReplacementThatMuchPlus"
+	EffectReplacementDoubleThat         EffectReplacementKind = "EffectReplacementDoubleThat"
+	EffectReplacementThatManyPlus       EffectReplacementKind = "EffectReplacementThatManyPlus"
+	EffectReplacementOneOfEach          EffectReplacementKind = "EffectReplacementOneOfEach"
+	EffectReplacementTripleThat         EffectReplacementKind = "EffectReplacementTripleThat"
+	EffectReplacementTwiceThatMuch      EffectReplacementKind = "EffectReplacementTwiceThatMuch"
+	EffectReplacementPlusAdditional     EffectReplacementKind = "EffectReplacementPlusAdditional"
 	// EffectReplacementThatManyIdentity marks the output of an identity
 	// substitution token-creation replacement: "If one or more <type> tokens
 	// would be created under your control, that many <other token> are created

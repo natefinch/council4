@@ -416,6 +416,30 @@ func TestLowerFilteredTokenCreationReplacement(t *testing.T) {
 			t.Fatalf("replacement = %+v, want any-player token doubler", replacement)
 		}
 	})
+	t.Run("creature tripler", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name:       "Ojer Taq, Deepest Foundation",
+			Layout:     "normal",
+			TypeLine:   "Legendary Creature — God",
+			OracleText: "If one or more creature tokens would be created under your control, three times that many of those tokens are created instead.",
+			Power:      new("6"),
+			Toughness:  new("6"),
+		})
+		if len(face.ReplacementAbilities) != 1 {
+			t.Fatalf("got %d replacement abilities, want 1", len(face.ReplacementAbilities))
+		}
+		replacement := face.ReplacementAbilities[0].Replacement
+		if replacement.MatchEvent != game.EventTokenCreated ||
+			replacement.ControllerFilter != game.TriggerControllerYou ||
+			replacement.TokenMultiplier != 3 ||
+			replacement.TokenAddend != 0 ||
+			len(replacement.TokenRequiredSubtypes) != 0 ||
+			len(replacement.TokenRequiredTypes) != 1 ||
+			replacement.TokenRequiredTypes[0] != types.Creature {
+			t.Fatalf("replacement = %+v, want creature-only token tripler", replacement)
+		}
+	})
 	t.Run("cross-type food addend", func(t *testing.T) {
 		t.Parallel()
 		face := lowerSingleFace(t, &ScryfallCard{

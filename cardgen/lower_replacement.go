@@ -1247,24 +1247,28 @@ func lowerTokenCreationReplacement(
 	}
 	output := ability.Content.Effects[1]
 	switch output.Replacement.Kind {
-	case parser.EffectReplacementTwiceThatMany:
+	case parser.EffectReplacementTwiceThatMany, parser.EffectReplacementThreeTimesThatMany:
+		multiplier := 2
+		if output.Replacement.Kind == parser.EffectReplacementThreeTimesThatMany {
+			multiplier = 3
+		}
 		if replacementSelectorHasUnsupportedQualifier(output.Selector) {
 			return unsupported("the executable source backend supports only token-doubling replacement amounts")
 		}
-		// The doubling spec carries a card-type filter but no subtype filter, so
+		// The multiplier spec carries a card-type filter but no subtype filter, so
 		// a subtype-restricted would-create group ("one or more Treasure tokens
 		// ... twice that many") must fail closed rather than lower to a
-		// subtype-blind doubler. The additive branch below threads the
+		// subtype-blind multiplier. The additive branch below threads the
 		// would-create subtypes through explicitly, so it has no such gap.
 		if len(ability.Content.Effects[0].Selector.SubtypesAny()) != 0 ||
 			len(ability.Content.Effects[0].Selector.ExcludedSubtypes()) != 0 {
 			return unsupported("the executable source backend supports only type-filtered token-doubling replacements")
 		}
 		if filter == game.TriggerControllerYou && len(requiredTypes) == 0 {
-			return game.TokenCreationReplacement(ability.Text, 2, filter), true, nil
+			return game.TokenCreationReplacement(ability.Text, multiplier, filter), true, nil
 		}
 		return game.TokenCreationReplacementFiltered(ability.Text, &game.TokenCreationReplacementSpec{
-			Multiplier: 2,
+			Multiplier: multiplier,
 			Types:      requiredTypes,
 			Filter:     filter,
 		}), true, nil

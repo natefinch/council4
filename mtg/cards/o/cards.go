@@ -25,6 +25,7 @@ var Cards = []cardset.Entry{
 	{Name: "Ogre-Head Helm", New: OgreHeadHelm},
 	{Name: "Ogre Siegebreaker", New: OgreSiegebreaker},
 	{Name: "Ohran Viper", New: OhranViper},
+	{Name: "Ojer Taq, Deepest Foundation", New: OjerTaqDeepestFoundation},
 	{Name: "Okoye, Mighty and Adored", New: OkoyeMightyAndAdored},
 	{Name: "Ollenbock Escort", New: OllenbockEscort},
 	{Name: "Oltec Archaeologists", New: OltecArchaeologists},
