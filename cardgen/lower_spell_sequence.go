@@ -123,6 +123,9 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerDelayedSelfBlinkSequence(ctx); ok {
 		return content, nil, true
 	}
+	if content, diagnostic, handled := lowerMassReanimationFromEachGraveyardSequence(ctx); handled {
+		return content, diagnostic, true
+	}
 	if content, ok := lowerMillThenPaidReturnSequence(cardName, ctx); ok {
 		return content, nil, true
 	}

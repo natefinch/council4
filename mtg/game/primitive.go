@@ -365,10 +365,23 @@ const (
 	// spell or ability on the stack without changing its owner, source card, or
 	// stack identity (game.ChangeStackObjectController).
 	PrimitiveChangeStackObjectController
+	// PrimitiveChooseCardFromEachGraveyard has one chooser pick a matching card in
+	// each player's (or opponent's) graveyard in APNAP order, remembering the
+	// chosen cards under a linked key for a paired ReanimateLinkedCards
+	// (game.ChooseCardFromEachGraveyard). It backs the mass reanimation base
+	// "For each player, choose a creature card in that player's graveyard."
+	// (Breach the Multiverse). Added last so existing kinds keep their wire values.
+	PrimitiveChooseCardFromEachGraveyard
+	// PrimitiveReanimateLinkedCards puts every card a ChooseCardFromEachGraveyard
+	// remembered onto the battlefield at once under one player's control, entering
+	// as a single simultaneous batch (game.ReanimateLinkedCards). It backs
+	// "Put those cards onto the battlefield under your control." Added last so
+	// existing kinds keep their wire values.
+	PrimitiveReanimateLinkedCards
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveChangeStackObjectController) + 1
+const primitiveKindCount = int(PrimitiveReanimateLinkedCards) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount

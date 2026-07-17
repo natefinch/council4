@@ -182,6 +182,17 @@ const (
 	// card-type filter (creature or artifact) is carried in the effect's
 	// Selection.
 	EffectMassReanimationExchange EffectKind = "EffectMassReanimationExchange"
+	// EffectChooseFromEachGraveyard models the mass reanimation base "For each
+	// player, choose a creature [or planeswalker] card in that player's
+	// graveyard." (Breach the Multiverse) and its "up to one" variant (Afterlife
+	// from the Loam). One chooser — the spell's controller (Context is
+	// EffectContextEachPlayer, the distribution runs over every player) — picks a
+	// matching card in each player's graveyard, exactly one when able or up to one
+	// when Optional. The card-type filter is carried in the effect's Selection; a
+	// following "Put those cards onto the battlefield under your control." puts the
+	// chosen cards onto the battlefield at once. The chosen cards do not move
+	// here.
+	EffectChooseFromEachGraveyard EffectKind = "EffectChooseFromEachGraveyard"
 	// EffectPunisherLoseLife models the "punisher" family ("Each opponent loses
 	// N life unless that player sacrifices a permanent of their choice or
 	// discards a card."). The life amount is in Amount, the player group in

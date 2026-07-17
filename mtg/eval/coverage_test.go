@@ -120,7 +120,17 @@ import (
 // opponent for Liliana, Dreadhorde General; every player for Cataclysm and
 // Cataclysmic Gearhulk) depend on runtime board state and per-player choices,
 // which the single-target atom heuristic does not model.
-const knownPrimitiveCount = 148
+//
+// The mass reanimation primitives (ChooseCardFromEachGraveyard,
+// ReanimateLinkedCards) are value-neutral here, matching the sibling per-player
+// selection and linked-group primitives ExileForEachPlayer and
+// ReturnLinkedExiledCardsToBattlefield: the choice moves nothing, and the
+// reanimation puts a runtime-determined set of cards (up to one per graveyard,
+// minus any redirected to the command zone) onto the battlefield, so both the
+// number of permanents gained and the per-graveyard candidate pools depend on
+// runtime board state and prior choices, which the single-target atom heuristic
+// does not model.
+const knownPrimitiveCount = 150
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

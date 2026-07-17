@@ -111,6 +111,8 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleExileForEachPlayer)
 	registerPrimitiveHandler(reg, handleChampionExile)
 	registerPrimitiveHandler(reg, handleReturnLinkedExiledCardsToBattlefield)
+	registerPrimitiveHandler(reg, handleChooseCardFromEachGraveyard)
+	registerPrimitiveHandler(reg, handleReanimateLinkedCards)
 	registerPrimitiveHandler(reg, handleDestroyForEachPlayer)
 	registerPrimitiveHandler(reg, handleEachPlayerChooseDestroy)
 	registerPrimitiveHandler(reg, handleOptionalCounterForEachPlayer)
