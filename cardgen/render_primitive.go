@@ -2116,6 +2116,56 @@ func (r Renderer) renderObjectPrimitive(primitive game.Primitive) (string, error
 	return structLit(typeName, []string{fmt.Sprintf("%s: %s,", fieldName, rendered)}), nil
 }
 
+func (r Renderer) renderTurnFaceDown(ctx *renderCtx, value game.TurnFaceDown) (string, error) {
+	object, err := r.renderObjectReference(value.Object)
+	if err != nil {
+		return "", err
+	}
+	fields := []string{fmt.Sprintf("Object: %s,", object)}
+	if !value.Characteristics.Exists {
+		return structLit("game.TurnFaceDown", fields), nil
+	}
+	characteristics := value.Characteristics.Val
+	characteristicFields := []string{}
+	if characteristics.Name != "" {
+		characteristicFields = append(characteristicFields, fmt.Sprintf("Name: %q,", characteristics.Name))
+	}
+	if len(characteristics.Colors) > 0 {
+		colors, err := renderColorSlice(ctx, characteristics.Colors)
+		if err != nil {
+			return "", err
+		}
+		characteristicFields = append(characteristicFields, fmt.Sprintf("Colors: %s,", colors))
+	}
+	if len(characteristics.Supertypes) > 0 {
+		supertypes, err := renderSupertypeSlice(ctx, characteristics.Supertypes)
+		if err != nil {
+			return "", err
+		}
+		characteristicFields = append(characteristicFields, fmt.Sprintf("Supertypes: %s,", supertypes))
+	}
+	typesLiteral, err := renderTypesCardSlice(ctx, characteristics.Types)
+	if err != nil {
+		return "", err
+	}
+	subtypesLiteral, err := renderSubtypeSlice(ctx, characteristics.Subtypes)
+	if err != nil {
+		return "", err
+	}
+	characteristicFields = append(characteristicFields,
+		fmt.Sprintf("Types: %s,", typesLiteral),
+		fmt.Sprintf("Subtypes: %s,", subtypesLiteral),
+		fmt.Sprintf("Power: game.PT{Value: %d},", characteristics.Power.Value),
+		fmt.Sprintf("Toughness: game.PT{Value: %d},", characteristics.Toughness.Value),
+	)
+	ctx.need(importOpt)
+	fields = append(fields, fmt.Sprintf(
+		"Characteristics: opt.Val(%s),",
+		structLit("game.FaceDownCharacteristics", characteristicFields),
+	))
+	return structLit("game.TurnFaceDown", fields), nil
+}
+
 func (r Renderer) renderCopyStackObjectPrimitive(value game.CopyStackObject) (string, error) {
 	rendered, err := r.renderObjectReference(value.Object)
 	if err != nil {

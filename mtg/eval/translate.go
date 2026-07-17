@@ -194,6 +194,10 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		// The spell's eventual value depends on its full effect, targets, and
 		// destination, so changing its controller has no stable standalone atom.
 		return atoms
+	case game.TurnFaceDown:
+		// The value depends on the target's hidden identity and any alternative
+		// face-down characteristics, so it has no stable standalone atom.
+		return atoms
 	default:
 		return atoms
 	}

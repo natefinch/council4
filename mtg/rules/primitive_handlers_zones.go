@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -3182,6 +3183,49 @@ func handleTransform(r *effectResolver, prim game.Transform) effectResolved {
 		res.succeeded = transformPermanent(r.game, permanent)
 	}
 	return res
+}
+
+func handleTurnFaceDown(r *effectResolver, prim game.TurnFaceDown) effectResolved {
+	res := effectResolved{accepted: true}
+	permanent, ok := r.resolveObject(prim.Object)
+	if !ok {
+		return res
+	}
+	// A double-faced permanent can't be turned face down (CR 712.14). The
+	// instruction still resolves successfully so later instructions in the same
+	// effect continue to apply.
+	if permanent.FaceDown || permanentIsDoubleFaced(r.game, permanent) {
+		return res
+	}
+	permanent.FaceDownFace = permanent.Face
+	permanent.FaceDown = true
+	permanent.FaceDownKind = game.FaceDownEffect
+	if prim.Characteristics.Exists {
+		characteristics := prim.Characteristics.Val
+		characteristics.Colors = slices.Clone(characteristics.Colors)
+		characteristics.Supertypes = slices.Clone(characteristics.Supertypes)
+		characteristics.Types = slices.Clone(characteristics.Types)
+		characteristics.Subtypes = slices.Clone(characteristics.Subtypes)
+		permanent.FaceDownCharacteristics = opt.Val(characteristics)
+	} else {
+		permanent.FaceDownCharacteristics = opt.V[game.FaceDownCharacteristics]{}
+	}
+	res.succeeded = true
+	return res
+}
+
+func permanentIsDoubleFaced(g *game.Game, permanent *game.Permanent) bool {
+	def, ok := physicalPermanentDef(g, permanent)
+	if !ok {
+		return false
+	}
+	switch def.Layout {
+	case game.LayoutTransform, game.LayoutModalDFC, game.LayoutMeld,
+		game.LayoutDoubleFacedToken, game.LayoutReversibleCard:
+		return true
+	default:
+		return false
+	}
 }
 
 func battlefieldEntryOptions(prim game.PutOnBattlefield) permanentCreationOptions {

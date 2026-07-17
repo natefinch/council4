@@ -232,12 +232,7 @@ func applyTokenCopyOverrides(source *game.CardDef, spec game.TokenCopySpec) (*ga
 
 func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, bool) {
 	if permanent.FaceDown {
-		pt := opt.Val(game.PT{Value: 2})
-		def := &game.CardDef{CardFace: game.CardFace{
-			Types:     []types.Card{types.Creature},
-			Power:     pt,
-			Toughness: pt,
-		}}
+		def := faceDownCopyDef(permanent)
 		if permanent.FaceDownKind == game.FaceDownDisguise || permanent.FaceDownKind == game.FaceDownCloak {
 			def.StaticAbilities = []game.StaticAbility{faceDownDisguiseWardBody()}
 		}
@@ -272,6 +267,28 @@ func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, b
 	}
 	applyPermanentCopyLayer(g, permanent, copied)
 	return copied, true
+}
+
+func faceDownCopyDef(permanent *game.Permanent) *game.CardDef {
+	pt := game.PT{Value: 2}
+	face := game.CardFace{
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(pt),
+		Toughness: opt.Val(pt),
+	}
+	if permanent.FaceDownCharacteristics.Exists {
+		characteristics := permanent.FaceDownCharacteristics.Val
+		face.Name = characteristics.Name
+		face.Colors = slices.Clone(characteristics.Colors)
+		face.Supertypes = slices.Clone(characteristics.Supertypes)
+		if len(characteristics.Types) > 0 {
+			face.Types = slices.Clone(characteristics.Types)
+		}
+		face.Subtypes = slices.Clone(characteristics.Subtypes)
+		face.Power = opt.Val(characteristics.Power)
+		face.Toughness = opt.Val(characteristics.Toughness)
+	}
+	return &game.CardDef{CardFace: face}
 }
 
 func effectivePermanentManaValue(g *game.Game, permanent *game.Permanent) (int, bool) {

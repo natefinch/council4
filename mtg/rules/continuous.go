@@ -261,6 +261,9 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 
 	values := basePermanentValues(g, permanent)
 	baseSubtypes := append([]types.Sub(nil), values.subtypes...)
+	if permanent.FaceDown {
+		baseSubtypes = nil
+	}
 	applyContinuousLayers(g, permanent, &values)
 	applyAddedBasicLandManaAbilities(&values, baseSubtypes)
 	for _, keyword := range keywordCounters(permanent) {
@@ -278,22 +281,11 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 // basePermanentValues returns the permanent's characteristics before any
 // continuous effects are applied: the starting point of the layer system, i.e.
 // the values printed on the card or defined by the effect that created a token
-// or copy (CR 613.1). Face-down permanents start as 2/2 creatures with no text,
-// name, subtypes, or mana cost (CR 613.2b, CR 708.2a).
+// or copy (CR 613.1). Face-down characteristics are applied after copy effects
+// in layer 1 (CR 613.2b), not at this pre-layer starting point.
 func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	values := permanentEffectiveValues{}
 	values.controller = permanent.Controller
-	if permanent.FaceDown {
-		values.types = []types.Card{types.Creature}
-		if permanent.FaceDownKind == game.FaceDownDisguise || permanent.FaceDownKind == game.FaceDownCloak {
-			ward := faceDownDisguiseWardBody()
-			values.abilities = []game.Ability{&ward}
-			rebuildKeywords(permanent, &values)
-		}
-		values.power, values.powerOK = 2, true
-		values.toughness, values.toughnessOK = 2, true
-		return values
-	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok {
 		return values
@@ -676,7 +668,42 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 		for i := range ordered {
 			applyContinuousEffect(g, permanent, values, &ordered[i])
 		}
+		if layer == game.LayerCopy && permanent.FaceDown {
+			applyFaceDownCharacteristics(permanent, values)
+		}
 	}
+}
+
+func applyFaceDownCharacteristics(permanent *game.Permanent, values *permanentEffectiveValues) {
+	controller := values.controller
+	*values = permanentEffectiveValues{
+		controller:  controller,
+		types:       []types.Card{types.Creature},
+		power:       2,
+		powerOK:     true,
+		toughness:   2,
+		toughnessOK: true,
+	}
+	if permanent.FaceDownCharacteristics.Exists {
+		characteristics := permanent.FaceDownCharacteristics.Val
+		power, toughness := characteristics.Power, characteristics.Toughness
+		values.name = characteristics.Name
+		values.colors = append([]color.Color(nil), characteristics.Colors...)
+		values.supertypes = append([]types.Super(nil), characteristics.Supertypes...)
+		if len(characteristics.Types) > 0 {
+			values.types = append([]types.Card(nil), characteristics.Types...)
+		}
+		values.subtypes = append([]types.Sub(nil), characteristics.Subtypes...)
+		values.power = power.Value
+		values.powerPT = &power
+		values.toughness = toughness.Value
+		values.toughnessPT = &toughness
+	}
+	if permanent.FaceDownKind == game.FaceDownDisguise || permanent.FaceDownKind == game.FaceDownCloak {
+		ward := faceDownDisguiseWardBody()
+		values.abilities = []game.Ability{&ward}
+	}
+	rebuildKeywords(permanent, values)
 }
 
 // counterAndTemporaryEffect builds the synthetic layer-7c continuous effect that
@@ -720,6 +747,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
 			applyContinuousEffect(g, permanent, &values, &ordered[i])
+		}
+		if layer == game.LayerCopy && permanent.FaceDown {
+			applyFaceDownCharacteristics(permanent, &values)
 		}
 	}
 	if fc != nil {

@@ -3068,6 +3068,10 @@ func (p Transform) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
+func (p TurnFaceDown) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Object, targets, checkTargets)
+}
+
 func (p PhaseOut) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }

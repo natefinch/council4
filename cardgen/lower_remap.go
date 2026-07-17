@@ -181,6 +181,10 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.TurnFaceDown); ok {
+		value.Object, ok = transformObjectReference(value.Object, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.TapOrUntap); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok

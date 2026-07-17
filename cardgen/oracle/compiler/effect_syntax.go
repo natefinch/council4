@@ -593,6 +593,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectBecomeColor
 	case parser.EffectPolymorph:
 		return EffectPolymorph
+	case parser.EffectTurnFaceDown:
+		return EffectTurnFaceDown
 	case parser.EffectSetBasePT:
 		return EffectSetBasePT
 	case parser.EffectSwitchPT:
