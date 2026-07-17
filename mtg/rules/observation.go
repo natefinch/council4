@@ -16,8 +16,9 @@ import (
 // ID, not a deep copy. Accessor methods expose only information the observing
 // player is allowed to see: their own hand, all public zones, life totals,
 // commander state, and the effective characteristics of battlefield
-// permanents. Opponents' hand contents, library order, and the hidden identity
-// of face-down permanents are never exposed.
+// permanents. Opponents' hand contents, library order, and face-down identities
+// are hidden; the controller of a face-down permanent receives its private card
+// views as allowed by CR 708.6.
 //
 // Agents must treat the observation as read-only; the returned view values are
 // copies and do not allow mutating game state.
@@ -95,23 +96,31 @@ type PlayerView struct {
 
 // PermanentView is a read-only view of one battlefield permanent with its
 // current effective characteristics (after continuous effects, counters, and
-// temporary modifiers). Face-down permanents report their public 2/2 nameless
-// characteristics, never their hidden identity.
+// temporary modifiers). Face-down permanents report only their public
+// characteristics; their controller also receives the underlying card views in
+// FaceDownCards.
 type PermanentView struct {
 	ObjectID       id.ID
 	CardInstanceID id.ID
-	Name           string
-	Controller     game.PlayerID
-	Owner          game.PlayerID
-	Power          int
-	Toughness      int
-	HasToughness   bool
-	Tapped         bool
-	SummoningSick  bool
-	FaceDown       bool
-	PhasedOut      bool
-	Types          []types.Card
-	Subtypes       []types.Sub
+	// CommanderInstanceIDs lists every commander card represented by this
+	// permanent, including cards merged beneath its top component. Commander
+	// designation is public even while the permanent is face down.
+	CommanderInstanceIDs []id.ID
+	// FaceDownCards contains the underlying card views only for the player who
+	// controls this face-down permanent. Other observers receive an empty slice.
+	FaceDownCards []CardView
+	Name          string
+	Controller    game.PlayerID
+	Owner         game.PlayerID
+	Power         int
+	Toughness     int
+	HasToughness  bool
+	Tapped        bool
+	SummoningSick bool
+	FaceDown      bool
+	PhasedOut     bool
+	Types         []types.Card
+	Subtypes      []types.Sub
 	// EntryChoices is a copy of the public persistent choices stored on the
 	// permanent.
 	EntryChoices map[game.ChoiceKey]game.ResolutionChoiceResult
@@ -351,25 +360,101 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 		entryChoices = maps.Clone(permanent.EntryChoices)
 	}
 	return PermanentView{
-		ObjectID:       permanent.ObjectID,
-		CardInstanceID: permanent.CardInstanceID,
-		Name:           values.name,
-		Controller:     effectiveController(o.g, permanent),
-		Owner:          permanent.Owner,
-		Power:          values.power,
-		Toughness:      values.toughness,
-		HasToughness:   values.toughnessOK,
-		Tapped:         permanent.Tapped,
-		SummoningSick:  permanent.SummoningSick,
-		FaceDown:       permanent.FaceDown,
-		PhasedOut:      permanent.PhasedOut,
-		Types:          append([]types.Card(nil), values.types...),
-		Subtypes:       append([]types.Sub(nil), values.subtypes...),
-		EntryChoices:   entryChoices,
-		ProducesMana:   producesMana,
-		ProducesColors: producesColors,
-		keywords:       keywords,
+		ObjectID:             permanent.ObjectID,
+		CardInstanceID:       permanent.CardInstanceID,
+		CommanderInstanceIDs: permanentCommanderInstanceIDs(o.g, permanent),
+		FaceDownCards:        o.faceDownCardViews(permanent),
+		Name:                 values.name,
+		Controller:           effectiveController(o.g, permanent),
+		Owner:                permanent.Owner,
+		Power:                values.power,
+		Toughness:            values.toughness,
+		HasToughness:         values.toughnessOK,
+		Tapped:               permanent.Tapped,
+		SummoningSick:        permanent.SummoningSick,
+		FaceDown:             permanent.FaceDown,
+		PhasedOut:            permanent.PhasedOut,
+		Types:                append([]types.Card(nil), values.types...),
+		Subtypes:             append([]types.Sub(nil), values.subtypes...),
+		EntryChoices:         entryChoices,
+		ProducesMana:         producesMana,
+		ProducesColors:       producesColors,
+		keywords:             keywords,
 	}
+}
+
+func (o PlayerObservation) faceDownCardViews(permanent *game.Permanent) []CardView {
+	if effectiveController(o.g, permanent) != o.Player {
+		return nil
+	}
+	var views []CardView
+	if permanent.FaceDown {
+		if def, ok := physicalPermanentFaceDef(o.g, permanent, permanent.FaceDownFace); ok {
+			views = append(views, o.cardViewForDef(permanent.CardInstanceID, permanent.Owner, def))
+		}
+	}
+	for _, component := range permanent.MergedCards {
+		if !permanent.FaceDown && !component.FaceDown {
+			continue
+		}
+		face := component.Face
+		if component.FaceDown {
+			face = component.FaceDownFace
+		}
+		var def *game.CardDef
+		var ok bool
+		if component.TokenDef != nil {
+			def, ok = component.TokenDef.FaceDefView(face)
+		} else if card, exists := o.g.GetCardInstance(component.CardInstanceID); exists {
+			def, ok = cardFaceDef(card, face)
+		}
+		if ok {
+			views = append(views, o.cardViewForDef(component.CardInstanceID, component.Owner, def))
+		}
+	}
+	return views
+}
+
+func physicalPermanentFaceDef(g *game.Game, permanent *game.Permanent, face game.FaceIndex) (*game.CardDef, bool) {
+	if permanent.Token {
+		if permanent.TokenDef == nil {
+			return nil, false
+		}
+		return permanent.TokenDef.FaceDefView(face)
+	}
+	card, ok := g.GetCardInstance(permanent.CardInstanceID)
+	if !ok {
+		return nil, false
+	}
+	return cardFaceDef(card, face)
+}
+
+func (o PlayerObservation) cardViewForDef(cardID id.ID, owner game.PlayerID, def *game.CardDef) CardView {
+	return CardView{
+		CardInstanceID: cardID,
+		Name:           def.Name,
+		Owner:          owner,
+		Types:          append([]types.Card(nil), def.Types...),
+		ManaValue:      def.ManaValue(),
+		Colors:         append([]color.Color(nil), def.Colors...),
+		ProducesColors: cardFaceManaColors(&def.CardFace, commanderIdentityColors(o.g, owner)),
+		ProducesMana:   len(def.ManaAbilities) > 0,
+		RampsLand:      cardFaceRampsLand(&def.CardFace),
+		EntersTapped:   cardFaceEntersTapped(&def.CardFace),
+	}
+}
+
+func permanentCommanderInstanceIDs(g *game.Game, permanent *game.Permanent) []id.ID {
+	var ids []id.ID
+	if isCommanderCardID(g, permanent.CardInstanceID) {
+		ids = append(ids, permanent.CardInstanceID)
+	}
+	for _, component := range permanent.MergedCards {
+		if isCommanderCardID(g, component.CardInstanceID) {
+			ids = append(ids, component.CardInstanceID)
+		}
+	}
+	return ids
 }
 
 func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectView {

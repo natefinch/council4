@@ -1,8 +1,10 @@
 package game
 
 import (
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -23,7 +25,25 @@ const (
 	// (mana cost when the hidden card is a creature) and Disguise's ward {2}
 	// characteristic.
 	FaceDownCloak
+	// FaceDownEffect is a permanent turned face down by a resolving spell or
+	// ability. It may be turned face up only using an inherent Morph or Disguise
+	// cost; unlike Manifest and Cloak it grants no mana-cost permission.
+	FaceDownEffect
 )
+
+// FaceDownCharacteristics are alternative copiable values defined by the
+// effect that turns a permanent face down (CR 708.2a-b). Unspecified
+// characteristics retain the normal face-down defaults: no name, mana cost,
+// color, supertypes, subtypes, or abilities.
+type FaceDownCharacteristics struct {
+	Name       string
+	Colors     []color.Color
+	Supertypes []types.Super
+	Types      []types.Card
+	Subtypes   []types.Sub
+	Power      PT
+	Toughness  PT
+}
 
 // Permanent represents a card (or token) on the battlefield with all its
 // in-game state. A Permanent is created when a spell resolves as a permanent
@@ -95,6 +115,11 @@ type Permanent struct {
 	// FaceDownKind records whether this was cast or created face-down by Morph,
 	// Disguise, or a future face-down mechanic. It is ignored unless FaceDown is true.
 	FaceDownKind FaceDownKind
+
+	// FaceDownCharacteristics records alternative copiable values defined by the
+	// effect that turned this permanent face down. It ends when the permanent is
+	// turned face up or leaves the battlefield.
+	FaceDownCharacteristics opt.V[FaceDownCharacteristics]
 
 	// Face is the printed face currently visible for face-up double-faced
 	// permanents. Single-faced cards use FaceFront.

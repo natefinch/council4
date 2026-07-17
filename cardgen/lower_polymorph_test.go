@@ -92,6 +92,7 @@ func TestLowerNamedBecomePolymorphSpell(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	if len(diagnostics) != 0 {
 		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 	}
@@ -114,5 +115,42 @@ func TestLowerNamedBecomePolymorphSpell(t *testing.T) {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
+	}
+}
+
+func TestLowerCyberConversion(t *testing.T) {
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Cyber Conversion",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{U}",
+		OracleText: "Turn target creature face down. It's a 2/2 Cyberman artifact creature.",
+	}, "t")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("unexpected diagnostics: %#v", diagnostics)
+	}
+	if _, err := goparser.ParseFile(token.NewFileSet(), "cyber_conversion.go", source, goparser.AllErrors); err != nil {
+		t.Fatalf("generated source does not parse: %v\n%s", err, source)
+	}
+	for _, want := range []string{
+		"Primitive: game.TurnFaceDown{",
+		"Object: game.TargetPermanentReference(0),",
+		"Characteristics: opt.Val(game.FaceDownCharacteristics{",
+		"Types:     []types.Card{types.Artifact, types.Creature},",
+		"Subtypes:  []types.Sub{types.Cyberman},",
+		"Power:     game.PT{Value: 2},",
+		"Toughness: game.PT{Value: 2},",
+	} {
+		if !strings.Contains(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
+	if strings.Contains(source, "RemoveAllAbilities: true") ||
+		strings.Contains(source, "SetColorless: true") ||
+		strings.Contains(source, "game.ApplyContinuous") {
+		t.Fatalf("generated source contains an unprinted characteristic change:\n%s", source)
 	}
 }

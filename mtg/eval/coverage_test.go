@@ -130,7 +130,11 @@ import (
 // number of permanents gained and the per-graveyard candidate pools depend on
 // runtime board state and prior choices, which the single-target atom heuristic
 // does not model.
-const knownPrimitiveCount = 150
+//
+// TurnFaceDown is value-neutral (no atom): its value depends on the target's
+// hidden identity and any alternative face-down characteristics, so it has no
+// stable standalone value.
+const knownPrimitiveCount = 151
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

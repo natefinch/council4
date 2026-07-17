@@ -333,6 +333,9 @@ func (RemoveCounter) Kind() PrimitiveKind { return PrimitiveRemoveCounter }
 // Kind implements Primitive for Transform.
 func (Transform) Kind() PrimitiveKind { return PrimitiveTransform }
 
+// Kind implements Primitive for TurnFaceDown.
+func (TurnFaceDown) Kind() PrimitiveKind { return PrimitiveTurnFaceDown }
+
 // Kind implements Primitive for PhaseOut.
 func (PhaseOut) Kind() PrimitiveKind { return PrimitivePhaseOut }
 
@@ -555,6 +558,7 @@ func (Manifest) isPrimitive()                             {}
 func (Goad) isPrimitive()                                 {}
 func (RemoveCounter) isPrimitive()                        {}
 func (Transform) isPrimitive()                            {}
+func (TurnFaceDown) isPrimitive()                         {}
 func (PhaseOut) isPrimitive()                             {}
 func (Regenerate) isPrimitive()                           {}
 func (BecomeCopy) isPrimitive()                           {}
@@ -891,6 +895,7 @@ func (p Goad) instructionRefs() primitiveRefs {
 
 func (p RemoveCounter) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
 func (Transform) instructionRefs() primitiveRefs               { return primitiveRefs{} }
+func (TurnFaceDown) instructionRefs() primitiveRefs            { return primitiveRefs{} }
 func (PhaseOut) instructionRefs() primitiveRefs                { return primitiveRefs{} }
 func (Regenerate) instructionRefs() primitiveRefs              { return primitiveRefs{} }
 func (BecomeCopy) instructionRefs() primitiveRefs              { return primitiveRefs{} }

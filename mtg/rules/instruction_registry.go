@@ -169,6 +169,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleGoad)
 	registerPrimitiveHandler(reg, handleRemoveCounter)
 	registerPrimitiveHandler(reg, handleTransform)
+	registerPrimitiveHandler(reg, handleTurnFaceDown)
 	registerPrimitiveHandler(reg, handlePhaseOut)
 	registerPrimitiveHandler(reg, handleRegenerate)
 	registerPrimitiveHandler(reg, handleSkipStep)

@@ -134,7 +134,7 @@ func commanderOnBattlefield(obs rules.PlayerObservation, player rules.PlayerView
 	}
 	battlefield := obs.Battlefield()
 	for i := range battlefield {
-		if battlefield[i].CardInstanceID == player.CommanderInstanceID {
+		if slices.Contains(battlefield[i].CommanderInstanceIDs, player.CommanderInstanceID) {
 			return true
 		}
 	}

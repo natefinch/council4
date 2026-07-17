@@ -39,12 +39,12 @@ func faceDownCostsForCard(card *game.CardDef, kind game.FaceDownKind) []cost.Man
 	}
 	for i := range card.ActivatedAbilities {
 		ability := &card.ActivatedAbilities[i]
-		if kind == game.FaceDownMorph || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
+		if kind == game.FaceDownMorph || kind == game.FaceDownManifest || kind == game.FaceDownCloak || kind == game.FaceDownEffect {
 			if manaCost, ok := game.ActivatedBodyMorphCost(ability); ok {
 				costs = append(costs, manaCost)
 			}
 		}
-		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
+		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest || kind == game.FaceDownCloak || kind == game.FaceDownEffect {
 			if manaCost, ok := game.ActivatedBodyDisguiseCost(ability); ok {
 				costs = append(costs, manaCost)
 			}
@@ -52,12 +52,12 @@ func faceDownCostsForCard(card *game.CardDef, kind game.FaceDownKind) []cost.Man
 	}
 	for i := range card.StaticAbilities {
 		ability := &card.StaticAbilities[i]
-		if kind == game.FaceDownMorph || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
+		if kind == game.FaceDownMorph || kind == game.FaceDownManifest || kind == game.FaceDownCloak || kind == game.FaceDownEffect {
 			if manaCost, ok := game.StaticBodyMorphCost(ability); ok {
 				costs = append(costs, manaCost)
 			}
 		}
-		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest || kind == game.FaceDownCloak {
+		if kind == game.FaceDownDisguise || kind == game.FaceDownManifest || kind == game.FaceDownCloak || kind == game.FaceDownEffect {
 			if manaCost, ok := game.StaticBodyDisguiseCost(ability); ok {
 				costs = append(costs, manaCost)
 			}
@@ -199,15 +199,7 @@ func (*Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID i
 	if !ok || permanent.PhasedOut || !permanent.FaceDown || effectiveController(g, permanent) != playerID || permanent.FaceDownKind == game.FaceDownNone {
 		return false
 	}
-	card, ok := physicalPermanentDef(g, permanent)
-	if !ok {
-		return false
-	}
-	face, ok := card.FaceDef(permanent.FaceDownFace)
-	if !ok {
-		return false
-	}
-	return len(payableFaceDownCosts(g, playerID, face, permanent.FaceDownKind)) > 0
+	return len(payableFaceDownCostsForPermanent(g, playerID, permanent)) > 0
 }
 
 func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID, permanentID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -215,9 +207,13 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 		return false
 	}
 	permanent, _ := permanentByObjectID(g, permanentID)
-	card, _ := physicalPermanentDef(g, permanent)
-	face, _ := card.FaceDef(permanent.FaceDownFace)
-	manaCost, ok := e.chooseFaceDownCost(g, playerID, face, permanent.FaceDownKind, agents, log)
+	manaCost, ok := e.chooseFaceDownCostOptions(
+		g,
+		playerID,
+		payableFaceDownCostsForPermanent(g, playerID, permanent),
+		agents,
+		log,
+	)
 	if !ok {
 		return false
 	}
@@ -228,7 +224,9 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 	permanent.Face = permanent.FaceDownFace
 	permanent.FaceDown = false
 	permanent.FaceDownKind = game.FaceDownNone
+	permanent.FaceDownCharacteristics = opt.V[game.FaceDownCharacteristics]{}
 	emitFaceDownRevealEvent(g, permanent)
+	emitMergedTurnFaceUpRevealEvents(g, permanent)
 	emitEvent(g, game.Event{
 		Kind:        game.EventPermanentTurnedFaceUp,
 		Controller:  playerID,
@@ -250,8 +248,42 @@ func payableFaceDownCosts(g *game.Game, playerID game.PlayerID, face *game.CardD
 	return costs
 }
 
+func payableFaceDownCostsForPermanent(g *game.Game, playerID game.PlayerID, permanent *game.Permanent) []cost.Mana {
+	var costs []cost.Mana
+	for _, face := range faceDownTurnUpFaces(g, permanent) {
+		for _, manaCost := range payableFaceDownCosts(g, playerID, face, permanent.FaceDownKind) {
+			duplicate := false
+			for _, prior := range costs {
+				if prior.String() == manaCost.String() {
+					duplicate = true
+					break
+				}
+			}
+			if !duplicate {
+				costs = append(costs, manaCost)
+			}
+		}
+	}
+	return costs
+}
+
+func faceDownTurnUpFaces(g *game.Game, permanent *game.Permanent) []*game.CardDef {
+	faceUp := *permanent
+	faceUp.FaceDown = false
+	faceUp.FaceDownKind = game.FaceDownNone
+	faceUp.FaceDownCharacteristics = opt.V[game.FaceDownCharacteristics]{}
+	def, ok := permanentCopyDef(g, &faceUp)
+	if !ok {
+		return nil
+	}
+	return []*game.CardDef{def}
+}
+
 func (e *Engine) chooseFaceDownCost(g *game.Game, playerID game.PlayerID, face *game.CardDef, kind game.FaceDownKind, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (cost.Mana, bool) {
-	costs := payableFaceDownCosts(g, playerID, face, kind)
+	return e.chooseFaceDownCostOptions(g, playerID, payableFaceDownCosts(g, playerID, face, kind), agents, log)
+}
+
+func (e *Engine) chooseFaceDownCostOptions(g *game.Game, playerID game.PlayerID, costs []cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (cost.Mana, bool) {
 	if len(costs) == 0 {
 		return nil, false
 	}
@@ -279,6 +311,23 @@ func (e *Engine) chooseFaceDownCost(g *game.Game, playerID game.PlayerID, face *
 		return costs[selected[0]], true
 	}
 	return costs[0], true
+}
+
+func emitMergedTurnFaceUpRevealEvents(g *game.Game, permanent *game.Permanent) {
+	for _, component := range permanent.MergedCards {
+		if component.FaceDown {
+			continue
+		}
+		emitEvent(g, game.Event{
+			Kind:       game.EventCardRevealed,
+			Controller: effectiveController(g, permanent),
+			Player:     component.Owner,
+			CardID:     component.CardInstanceID,
+			Face:       component.Face,
+			TokenName:  permanentTokenDefName(component.TokenDef),
+			TokenDef:   component.TokenDef,
+		})
+	}
 }
 
 func emitFaceDownRevealEvent(g *game.Game, permanent *game.Permanent) {

@@ -361,6 +361,9 @@ func lowerContentDispatch(
 		return content, diagnostic
 	}
 	if len(ctx.content.Effects) > 1 {
+		if content, ok := lowerTurnFaceDownCharacteristicsContent(ctx); ok {
+			return content, nil
+		}
 		if content, diagnostic, handled := lowerOrAlternativeModal(cardName, ctx, syntax); handled {
 			return content, diagnostic
 		}
@@ -501,6 +504,8 @@ func lowerContentDispatch(
 			return lowerBecomeColorContent(ctx)
 		case compiler.EffectPolymorph:
 			return lowerPolymorphContent(ctx)
+		case compiler.EffectTurnFaceDown:
+			return lowerTurnFaceDownContent(ctx)
 		case compiler.EffectSetBasePT:
 			return lowerSetBasePTContent(ctx)
 		case compiler.EffectSwitchPT:

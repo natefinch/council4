@@ -1561,6 +1561,10 @@ func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) 
 		func() ([]EffectSyntax, bool) { return parseDevourEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseTributeEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parseBecomeCopyEffect(sentence, tokens, atoms) },
+		func() ([]EffectSyntax, bool) { return parseTurnFaceDownEffect(sentence, tokens) },
+		func() ([]EffectSyntax, bool) {
+			return parseReferencedBecomeCharacteristicsEffect(sentence, tokens, atoms)
+		},
 		func() ([]EffectSyntax, bool) {
 			return parseHaveBecomeCopyOfReferenceEffect(sentence, tokens, atoms)
 		},
@@ -7865,17 +7869,19 @@ func parsePolymorphEffect(sentence Sentence, tokens []shared.Token, atoms Atoms)
 		return nil, false
 	}
 	effect := EffectSyntax{
-		Kind:                   EffectPolymorph,
-		Context:                EffectContextController,
-		Span:                   sentence.Span,
-		ClauseSpan:             sentence.Span,
-		Text:                   sentence.Text,
-		Tokens:                 append([]shared.Token(nil), body...),
-		PolymorphColors:        list.colors,
-		PolymorphColorless:     colorless,
-		PolymorphSubtypes:      list.subtypes,
-		PolymorphBasePower:     basePT.power,
-		PolymorphBaseToughness: basePT.toughness,
+		Kind:                       EffectPolymorph,
+		Context:                    EffectContextController,
+		Span:                       sentence.Span,
+		ClauseSpan:                 sentence.Span,
+		Text:                       sentence.Text,
+		Tokens:                     append([]shared.Token(nil), body...),
+		PolymorphColors:            list.colors,
+		PolymorphColorless:         colorless,
+		PolymorphTypes:             []types.Card{types.Creature},
+		PolymorphSubtypes:          list.subtypes,
+		PolymorphBasePower:         basePT.power,
+		PolymorphBaseToughness:     basePT.toughness,
+		PolymorphLosesAllAbilities: true,
 	}
 	return []EffectSyntax{effect}, true
 }
@@ -7969,21 +7975,156 @@ func parseNamedBecomePolymorphEffect(sentence Sentence, tokens []shared.Token, a
 		return nil, false
 	}
 	effect := EffectSyntax{
+		Kind:                       EffectPolymorph,
+		Context:                    EffectContextController,
+		Span:                       sentence.Span,
+		ClauseSpan:                 sentence.Span,
+		Text:                       sentence.Text,
+		Tokens:                     append([]shared.Token(nil), body...),
+		PolymorphColors:            list.colors,
+		PolymorphTypes:             []types.Card{types.Creature},
+		PolymorphSubtypes:          list.subtypes,
+		PolymorphBasePower:         power,
+		PolymorphBaseToughness:     toughness,
+		PolymorphName:              name,
+		PolymorphSupertypes:        supertypes,
+		PolymorphPermanent:         true,
+		PolymorphLosesAllAbilities: true,
+	}
+	return []EffectSyntax{effect}, true
+}
+
+// parseTurnFaceDownEffect recognizes the generic one-shot instruction "Turn
+// target <permanent selector> face down." Target parsing owns the selector and
+// this effect owns only the action words.
+func parseTurnFaceDownEffect(sentence Sentence, tokens []shared.Token) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 6 ||
+		!equalWord(body[0], "turn") ||
+		!effectWordsAt(body, len(body)-3, "face", "down") ||
+		body[len(body)-1].Kind != shared.Period ||
+		len(sentence.Targets) != 1 ||
+		!sentence.Targets[0].Exact {
+		return nil, false
+	}
+	target := sentence.Targets[0]
+	if target.Span.Start.Offset <= body[0].Span.Start.Offset ||
+		target.Span.End.Offset > body[len(body)-3].Span.Start.Offset {
+		return nil, false
+	}
+	return []EffectSyntax{{
+		Kind:       EffectTurnFaceDown,
+		Context:    EffectContextController,
+		Span:       sentence.Span,
+		VerbSpan:   body[0].Span,
+		ClauseSpan: sentence.Span,
+		Text:       sentence.Text,
+		Tokens:     append([]shared.Token(nil), body...),
+		Targets:    targetsInSpan(sentence.Targets, sentence.Span),
+	}}, true
+}
+
+// parseReferencedBecomeCharacteristicsEffect recognizes a referenced permanent
+// receiving a literal base-power/toughness characteristic set with no duration,
+// such as "It's a 2/2 Cyberman artifact creature." or "It becomes a 2/2
+// Cyberman artifact creature."
+func parseReferencedBecomeCharacteristicsEffect(
+	sentence Sentence,
+	tokens []shared.Token,
+	atoms Atoms,
+) ([]EffectSyntax, bool) {
+	body := semanticEffectTokens(tokens)
+	if len(body) < 7 || body[len(body)-1].Kind != shared.Period {
+		return nil, false
+	}
+	prefixLength := 0
+	var verbSpan shared.Span
+	switch {
+	case len(body) >= 2 && equalWord(body[0], "it") && equalWord(body[1], "becomes"):
+		prefixLength = 2
+		verbSpan = body[1].Span
+	case equalWord(body[0], "it's"):
+		prefixLength = 1
+		verbSpan = body[0].Span
+	default:
+		return nil, false
+	}
+	inner := body[prefixLength : len(body)-1]
+	cursor := 0
+	if staticWordsAt(inner, cursor, "a") || staticWordsAt(inner, cursor, "an") {
+		cursor++
+	}
+	if cursor+3 > len(inner) ||
+		inner[cursor].Kind != shared.Integer ||
+		inner[cursor+1].Kind != shared.Slash ||
+		inner[cursor+2].Kind != shared.Integer {
+		return nil, false
+	}
+	power, err := strconv.Atoi(inner[cursor].Text)
+	if err != nil {
+		return nil, false
+	}
+	toughness, err := strconv.Atoi(inner[cursor+2].Text)
+	if err != nil {
+		return nil, false
+	}
+	cursor += 3
+	list, next, ok := parseStaticCharacteristicList(inner, cursor, len(inner), atoms)
+	if !ok || next != len(inner) || len(list.cardTypes) == 0 {
+		return nil, false
+	}
+	cardTypes := make([]types.Card, 0, len(list.cardTypes))
+	hasCreature := false
+	for _, cardType := range list.cardTypes {
+		typ, ok := runtimeCardType(cardType)
+		if !ok {
+			return nil, false
+		}
+		cardTypes = append(cardTypes, typ)
+		hasCreature = hasCreature || typ == types.Creature
+	}
+	if !hasCreature {
+		return nil, false
+	}
+	return []EffectSyntax{{
 		Kind:                   EffectPolymorph,
-		Context:                EffectContextController,
+		Context:                EffectContextReferencedObject,
 		Span:                   sentence.Span,
+		VerbSpan:               verbSpan,
 		ClauseSpan:             sentence.Span,
 		Text:                   sentence.Text,
 		Tokens:                 append([]shared.Token(nil), body...),
 		PolymorphColors:        list.colors,
+		PolymorphTypes:         cardTypes,
 		PolymorphSubtypes:      list.subtypes,
 		PolymorphBasePower:     power,
 		PolymorphBaseToughness: toughness,
-		PolymorphName:          name,
-		PolymorphSupertypes:    supertypes,
 		PolymorphPermanent:     true,
+		References:             referencesInSpan(atoms, sentence.Span),
+	}}, true
+}
+
+func runtimeCardType(cardType CardType) (types.Card, bool) {
+	switch cardType {
+	case CardTypeArtifact:
+		return types.Artifact, true
+	case CardTypeBattle:
+		return types.Battle, true
+	case CardTypeCreature:
+		return types.Creature, true
+	case CardTypeEnchantment:
+		return types.Enchantment, true
+	case CardTypeInstant:
+		return types.Instant, true
+	case CardTypeLand:
+		return types.Land, true
+	case CardTypePlaneswalker:
+		return types.Planeswalker, true
+	case CardTypeSorcery:
+		return types.Sorcery, true
+	default:
+		return types.Card(""), false
 	}
-	return []EffectSyntax{effect}, true
 }
 
 // becomeCopyTrimUntilEndOfTurn removes a trailing "until end of turn" phrase from

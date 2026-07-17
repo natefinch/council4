@@ -378,10 +378,12 @@ const (
 	// "Put those cards onto the battlefield under your control." Added last so
 	// existing kinds keep their wire values.
 	PrimitiveReanimateLinkedCards
+	// PrimitiveTurnFaceDown turns a referenced battlefield permanent face down.
+	PrimitiveTurnFaceDown
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveReanimateLinkedCards) + 1
+const primitiveKindCount = int(PrimitiveTurnFaceDown) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -2523,6 +2525,12 @@ type RemoveCounter struct {
 // Transform transforms the referenced permanent.
 type Transform struct {
 	Object ObjectReference
+}
+
+// TurnFaceDown turns the referenced battlefield permanent face down.
+type TurnFaceDown struct {
+	Object          ObjectReference
+	Characteristics opt.V[FaceDownCharacteristics]
 }
 
 // PhaseOut phases out one referenced permanent or every permanent in a

@@ -2050,13 +2050,9 @@ const (
 	// Ring-bearer. It lowers to a game.RingTempts primitive scoped to the
 	// controller. Added last so existing kinds keep their wire values.
 	EffectRingTempts
-	// EffectPolymorph sets a targeted creature's color, creature type, and base
-	// power/toughness while removing all of its abilities until end of turn
-	// ("Until end of turn, target creature loses all abilities and becomes a
-	// <color> <subtype> with base power and toughness N/N.", Turn to Frog). It
-	// lowers to an ApplyContinuous across the ability, color, type, and
-	// power/toughness layers. Added last so existing kinds keep their wire
-	// values.
+	// EffectPolymorph applies a typed fixed characteristic set to a target,
+	// optionally removing abilities or setting color, and lowers across the
+	// appropriate continuous-effect layers.
 	EffectPolymorph
 	// EffectAttackTax is the resolving, duration-bounded attack-tax effect
 	// "Until your next turn, creatures can't attack you unless their controller
@@ -2277,6 +2273,9 @@ const (
 	// "Put those cards onto the battlefield under your control." Added last so
 	// existing kinds keep their wire values.
 	EffectChooseFromEachGraveyard
+	// EffectTurnFaceDown turns the targeted permanent face down. Added last so
+	// existing kinds keep their wire values.
+	EffectTurnFaceDown
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -2969,11 +2968,11 @@ type CompiledEffect struct {
 	BecomeColorUntilEndOfTurn bool
 	// Polymorph* mirror the parser's EffectPolymorph payload ("Until end of turn,
 	// target creature loses all abilities and becomes a <color> <subtype> with
-	// base power and toughness N/N."). Lowering reads them to build the
-	// ApplyContinuous that removes all abilities and SETS the creature's color,
-	// type, and base power/toughness until end of turn.
+	// base power and toughness N/N."). Lowering reads them to build a layered
+	// ApplyContinuous for exactly the characteristics the syntax specifies.
 	PolymorphColors        []color.Color
 	PolymorphColorless     bool
+	PolymorphTypes         []types.Card
 	PolymorphSubtypes      []types.Sub
 	PolymorphBasePower     int
 	PolymorphBaseToughness int
@@ -2983,9 +2982,10 @@ type CompiledEffect struct {
 	// abilities."). Lowering reads them to add a LayerText name change, the added
 	// supertypes, and a permanent duration on top of the shared polymorph
 	// continuous effects. They are zero for the until-end-of-turn polymorph forms.
-	PolymorphName       string
-	PolymorphSupertypes []types.Super
-	PolymorphPermanent  bool
+	PolymorphName              string
+	PolymorphSupertypes        []types.Super
+	PolymorphPermanent         bool
+	PolymorphLosesAllAbilities bool
 	// SetBasePower, SetBaseToughness, SetBasePTVariableX,
 	// SetBasePTEveryCreatureType, and SetBasePTSource mirror the parser's
 	// EffectSetBasePT payload ("{X}: Until end of turn, creatures you control have

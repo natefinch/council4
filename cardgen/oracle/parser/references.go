@@ -312,10 +312,10 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 				Text:   joinTokens(phrase),
 			})
 			i++
-		case pronounKind(tokens[i]) != PronounUnknown:
+		case referencePronounKind(tokens, i) != PronounUnknown:
 			references = append(references, Reference{
 				Kind:    ReferencePronoun,
-				Pronoun: pronounKind(tokens[i]),
+				Pronoun: referencePronounKind(tokens, i),
 				Span:    tokens[i].Span,
 				Tokens:  tokens[i : i+1],
 				Text:    joinTokens(tokens[i : i+1]),
@@ -327,6 +327,34 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 		references[i].NodeID = i
 	}
 	return references
+}
+
+// referencePronounKind recognizes "it's" as the object pronoun "it" plus the
+// contracted verb "is" only in the fixed-P/T characteristic grammar consumed by
+// parseReferencedBecomeCharacteristicsEffect. Keeping this contextual avoids
+// manufacturing a free reference for separately modeled fixed idioms such as
+// "It's still a land."
+func referencePronounKind(tokens []shared.Token, index int) PronounKind {
+	if index >= 0 && index < len(tokens) &&
+		equalWord(tokens[index], "it's") &&
+		(index == 0 || tokens[index-1].Kind == shared.Period) &&
+		contractionBeginsFixedPT(tokens[index+1:]) {
+		return PronounIt
+	}
+	if index < 0 || index >= len(tokens) {
+		return PronounUnknown
+	}
+	return pronounKind(tokens[index])
+}
+
+func contractionBeginsFixedPT(tokens []shared.Token) bool {
+	if len(tokens) > 0 && (equalWord(tokens[0], "a") || equalWord(tokens[0], "an")) {
+		tokens = tokens[1:]
+	}
+	return len(tokens) >= 3 &&
+		tokens[0].Kind == shared.Integer &&
+		tokens[1].Kind == shared.Slash &&
+		tokens[2].Kind == shared.Integer
 }
 
 func pronounKind(token shared.Token) PronounKind {

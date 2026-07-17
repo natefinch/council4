@@ -636,11 +636,16 @@ type mergedCardZoneMove struct {
 func mergedComponentZoneMoves(g *game.Game, permanent *game.Permanent, destination zone.Type) ([]mergedCardZoneMove, bool) {
 	moves := make([]mergedCardZoneMove, 0, len(permanent.MergedCards))
 	for _, component := range permanent.MergedCards {
+		faceDown := component.FaceDown || permanent.FaceDown
+		faceDownFace := component.FaceDownFace
+		if permanent.FaceDown && !component.FaceDown {
+			faceDownFace = component.Face
+		}
 		if component.TokenDef != nil {
 			moves = append(moves, mergedCardZoneMove{
 				face:         component.Face,
-				faceDown:     component.FaceDown,
-				faceDownFace: component.FaceDownFace,
+				faceDown:     faceDown,
+				faceDownFace: faceDownFace,
 				owner:        component.Owner,
 				destination:  destination,
 				tokenDef:     component.TokenDef,
@@ -658,8 +663,8 @@ func mergedComponentZoneMoves(g *game.Game, permanent *game.Permanent, destinati
 		moves = append(moves, mergedCardZoneMove{
 			cardID:       card.ID,
 			face:         component.Face,
-			faceDown:     component.FaceDown,
-			faceDownFace: component.FaceDownFace,
+			faceDown:     faceDown,
+			faceDownFace: faceDownFace,
 			owner:        card.Owner,
 			destination:  actualDestination,
 		})

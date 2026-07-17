@@ -388,9 +388,13 @@ const (
 	// Tusks). The set colors, creature subtype, and base power/toughness are
 	// carried in the Polymorph* fields; the targeted creature is left as an
 	// ordinary target for the target machinery. It lowers to an ApplyContinuous
-	// that removes all abilities and sets the creature's color, types, and base
-	// power/toughness until end of turn.
+	// that can independently set abilities, color, card types, creature subtypes,
+	// name, and base power/toughness for a typed duration.
 	EffectPolymorph EffectKind = "EffectPolymorph"
+	// EffectTurnFaceDown models the one-shot special action instruction "Turn
+	// target <permanent> face down." The target remains owned by the ordinary
+	// target machinery and lowering emits a TurnFaceDown primitive.
+	EffectTurnFaceDown EffectKind = "EffectTurnFaceDown"
 	// EffectSetBasePT models a one-shot continuous base power/toughness SET on a
 	// group, single target, or the source itself, optionally riding a grant of
 	// every creature type, for a duration ("{X}: Until end of turn, creatures you
@@ -2881,14 +2885,14 @@ type EffectSyntax struct {
 	// Polymorph* carry the structured payload of an EffectPolymorph resolving
 	// polymorph ("Until end of turn, target creature loses all abilities and
 	// becomes a <color> <subtype> with base power and toughness N/N."). The
-	// effect always removes all abilities and sets the base power/toughness; the
-	// colors and subtypes SET the creature's color and creature type. The
-	// duration is always until end of turn for the recognized form.
-	PolymorphColors        []Color     `json:"-"`
-	PolymorphColorless     bool        `json:",omitempty"`
-	PolymorphSubtypes      []types.Sub `json:"-"`
-	PolymorphBasePower     int         `json:",omitempty"`
-	PolymorphBaseToughness int         `json:",omitempty"`
+	// fields carry independently modeled ability, color, type, subtype, name, and
+	// base-power/toughness changes.
+	PolymorphColors        []Color      `json:"-"`
+	PolymorphColorless     bool         `json:",omitempty"`
+	PolymorphTypes         []types.Card `json:"-"`
+	PolymorphSubtypes      []types.Sub  `json:"-"`
+	PolymorphBasePower     int          `json:",omitempty"`
+	PolymorphBaseToughness int          `json:",omitempty"`
 	// PolymorphName, PolymorphSupertypes, and PolymorphPermanent carry the extra
 	// payload of the permanent named-become polymorph "<target> becomes a N/N
 	// [legendary] <subtype> creature named <Name> and loses all abilities." (The
@@ -2898,6 +2902,9 @@ type EffectSyntax struct {
 	PolymorphName       string      `json:",omitempty"`
 	PolymorphSupertypes []Supertype `json:"-"`
 	PolymorphPermanent  bool        `json:",omitempty"`
+	// PolymorphLosesAllAbilities distinguishes ordinary polymorphs from
+	// characteristic-setting effects that leave abilities unchanged.
+	PolymorphLosesAllAbilities bool `json:",omitempty"`
 	// SetBasePower, SetBaseToughness, SetBasePTVariableX,
 	// SetBasePTEveryCreatureType, and SetBasePTSource carry the EffectSetBasePT
 	// one-shot base-power/toughness SET payload. SetBasePower/SetBaseToughness
