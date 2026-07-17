@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,077 of 32,501 cards eligible for paper support (55.6%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,091 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1634,6 +1634,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Bloodchief's Thirst
 - Bloodcrazed Neonate
 - Bloodcrazed Socialite
+- Bloodcrusher of Khorne
 - Bloodcurdling Scream
 - Bloodfell Caves
 - Bloodfire Colossus
@@ -2219,6 +2220,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Canonized in Blood
 - Canoptek Scarab Swarm
 - Canoptek Tomb Sentinel
+- Canoptek Wraith
 - Canopy Baloth
 - Canopy Claws
 - Canopy Cover
@@ -2688,6 +2690,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Claim the Firstborn
 - Claim the Precious
 - Clairvoyance
+- Clamavus
 - Clammy Prowler
 - Clamor Shaman
 - Clamorous Ironclad
@@ -3273,6 +3276,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Cryptic Command
 - Cryptic Serpent
 - Cryptolith Rite
+- Cryptothrall
 - Cryptwailing
 - Crystacean
 - Crystal Ball
@@ -6073,6 +6077,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Ghost Ship
 - Ghost Tactician
 - Ghost Warden
+- Ghost, Spectral Saboteur
 - Ghost-Lit Nourisher
 - Ghost-Lit Raider
 - Ghost-Lit Redeemer
@@ -7130,6 +7135,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Herald of Kozilek
 - Herald of Secret Streams
 - Herald of Serra
+- Herald of Slaanesh
 - Herald of the Dreadhorde
 - Herald of the Fair
 - Herald of the Host
@@ -11000,6 +11006,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Patched Plaything
 - Patchwork Automaton
 - Patchwork Banner
+- Patchwork Beastie
 - Patchwork Gnomes
 - Path of Ancestry
 - Path of Anger's Flame
@@ -11649,6 +11656,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Puppeteer
 - Puppeteer Clique
 - Puresteel Paladin
+- Purestrain Genestealer
 - Purge the Profane
 - Purging Stormbrood // Absorb Essence
 - Purify
@@ -13880,6 +13888,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Skophos Reaver
 - Skophos Warleader
 - Skorpekh Destroyer
+- Skorpekh Lord
 - Skred
 - Skulduggery
 - Skulking Fugitive
@@ -14442,6 +14451,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Spider-Byte, Web Warden
 - Spider-Girl, Legacy Hero
 - Spider-Gwen, Free Spirit
+- Spider-Ham, Peter Porker
 - Spider-Man 2099, Miguel O'Hara
 - Spider-Man, Hometown Hero
 - Spider-Man, Miles Morales
@@ -16432,6 +16442,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Tyranid Gargoyle
 - Tyranid Harridan
 - Tyranid Invasion
+- Tyranid Prime
 - Tyranid Warrior
 - Tyrant of Kher Ridges
 - Tyrant's Choice
@@ -16932,6 +16943,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Veteran's Powerblade
 - Veteran's Reflexes
 - Veteran's Sidearm
+- Vexilus Praetor
 - Vexing Bauble
 - Vexing Devil
 - Vexing Gull
@@ -17669,6 +17681,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Wingblade Disciple
 - Winged Boots
 - Winged Coatl
+- Winged Hive Tyrant
 - Winged Shepherd
 - Winged Sliver
 - Winged Words
@@ -17820,6 +17833,7 @@ Council4 currently supports **18,077 of 32,501 cards eligible for paper support 
 - Wose Pathfinder
 - Wrack with Madness
 - Wraith
+- Wraith, Vicious Vigilante
 - Wrangle
 - Wrap in Vigor
 - Wrath of God
