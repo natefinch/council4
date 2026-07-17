@@ -86,8 +86,12 @@ func lowerLeadingSequenceThenSearch(
 	// (the put/reveal "it"/"that card"), already consumed by collapsing the group
 	// into one Search instruction. Any other binding there would be silently
 	// dropped, so fail closed.
-	searchSpan := search.Span
-	for _, ref := range referencesWithinSpan(ctx.content.References, searchSpan) {
+	searchReferences := referencesForEffects(effects[searchIndex:])
+	leadingReferences := referencesForEffects(effects[:searchIndex])
+	if len(searchReferences)+len(leadingReferences) != len(ctx.content.References) {
+		return game.AbilityContent{}, false
+	}
+	for _, ref := range searchReferences {
 		if ref.Binding != compiler.ReferenceBindingPriorInstructionResult {
 			return game.AbilityContent{}, false
 		}
@@ -95,7 +99,7 @@ func lowerLeadingSequenceThenSearch(
 
 	leadingCtx := ctx
 	leadingCtx.content.Effects = effects[:searchIndex]
-	leadingCtx.content.References = referencesOutsideSpan(ctx.content.References, searchSpan)
+	leadingCtx.content.References = leadingReferences
 	leadingContent, diagnostic := lowerOrderedEffectSequence(cardName, leadingCtx, syntax)
 	if diagnostic != nil ||
 		leadingContent.IsModal() ||
@@ -107,4 +111,12 @@ func lowerLeadingSequenceThenSearch(
 	mode.Sequence = append(mode.Sequence, searchSeq...)
 	leadingContent.Modes[0] = mode
 	return leadingContent, true
+}
+
+func referencesForEffects(effects []compiler.CompiledEffect) []compiler.CompiledReference {
+	var references []compiler.CompiledReference
+	for i := range effects {
+		references = append(references, effects[i].References...)
+	}
+	return references
 }

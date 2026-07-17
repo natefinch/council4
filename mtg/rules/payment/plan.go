@@ -378,7 +378,7 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), nil, req.SourceCardID, zone.None, 0)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, req.SourceCardID, zone.None, 0)
 	if !ok {
 		return plan, false
 	}
@@ -402,7 +402,7 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), nil, req.SourceCardID, zone.None, 0, paymentPlanTappedPermanents(manaPlan)...)
+	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), req.Source, req.SourceCardID, zone.None, 0, paymentPlanTappedPermanents(manaPlan)...)
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}

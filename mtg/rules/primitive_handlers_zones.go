@@ -387,6 +387,14 @@ func (r *effectResolver) discardCardsAtRandom(playerID game.PlayerID, amount int
 
 func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	if prim.Spec.NameFromChoice != "" {
+		choice, ok := linkedResolutionChoice(r.obj, string(prim.Spec.NameFromChoice))
+		if !ok || choice.Kind != game.ResolutionChoicePermanent || choice.CardName == "" {
+			return res
+		}
+		prim.Spec.Name = choice.CardName
+		prim.Spec.NameFromChoice = ""
+	}
 	if !searchSpecSupported(prim.Spec) {
 		return res
 	}

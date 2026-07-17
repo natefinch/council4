@@ -1774,6 +1774,9 @@ type SearchSpec struct {
 	// Scout, Embermage Goblin). It composes with the other filters but in
 	// practice stands alone on a plain "card named X" tutor.
 	Name string
+	// NameFromChoice restricts matches to the name captured by a prior resolution
+	// choice in the same instruction sequence.
+	NameFromChoice ChoiceKey
 
 	// SlotFilters, when non-empty, makes the search find one card matching each
 	// per-slot filter in source order instead of applying the single Filter to
@@ -1859,7 +1862,8 @@ func (s SearchSpec) IsUnrestricted() bool {
 		!s.DifferentNames &&
 		!s.AlsoGraveyard &&
 		len(s.SlotFilters) == 0 &&
-		s.Name == ""
+		s.Name == "" &&
+		s.NameFromChoice == ""
 }
 
 // SearchDestination is one single-card destination slot of a split-destination

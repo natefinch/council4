@@ -42,6 +42,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 		return exactChooseNewTargetsEffectSyntax(effect)
 	case EffectChooseCreatureType:
 		return strings.EqualFold(exactEffectClauseText(effect), "Choose a creature type.")
+	case EffectChoosePermanent:
+		return exactChoosePermanentEffectSyntax(effect)
 	case EffectCreate:
 		if createTokenLeadingPlayerSetForEachUnmodeled(effect) {
 			return false
@@ -236,6 +238,7 @@ func exactCreateDynamicSourceCopyAttackingEffectSyntax(effect *EffectSyntax) boo
 		len(effect.Targets) != 0 {
 		return false
 	}
+
 	if !strings.EqualFold(
 		exactEffectClauseText(effect),
 		"Create X tokens that are copies of it and that are tapped and attacking, where X is the number of creatures defending player controls.",
@@ -246,6 +249,22 @@ func exactCreateDynamicSourceCopyAttackingEffectSyntax(effect *EffectSyntax) boo
 	effect.TokenCopyEntersTapped = true
 	effect.TokenCopyAttacksDefender = true
 	return true
+}
+
+func exactChoosePermanentEffectSyntax(effect *EffectSyntax) bool {
+	if effect.Context != EffectContextController ||
+		effect.Optional ||
+		effect.Negated ||
+		effect.Duration != EffectDurationNone ||
+		effect.DelayedTiming != DelayedTimingNone ||
+		len(effect.Targets) != 0 ||
+		len(effect.References) != 0 ||
+		effect.Selection.Kind == SelectionUnknown {
+		return false
+	}
+	text := exactEffectClauseText(effect)
+	return strings.HasPrefix(strings.ToLower(text), "choose a ") ||
+		strings.HasPrefix(strings.ToLower(text), "choose an ")
 }
 
 // exactDelayedCreatedTokensExileEffectSyntax recognizes a delayed exile whose
@@ -1178,6 +1197,10 @@ func searchDifferentNamesRider(effect *EffectSyntax) bool {
 	return analyzeSearchClause(effect).differentNames
 }
 
+func searchSameNameAsChosenObjectRider(effect *EffectSyntax) bool {
+	return analyzeSearchClause(effect).sameNameAsChosenObject
+}
+
 // stripSearchDifferentNamesRider removes a recognized different-names correlation
 // rider prefix ("with different names", "that have different names", or "that
 // each have different names") from a reconstructed search clause tail, returning
@@ -1190,6 +1213,26 @@ func stripSearchDifferentNamesRider(tail string) (string, bool) {
 	} {
 		if remainder, ok := strings.CutPrefix(tail, rider); ok {
 			return remainder, true
+		}
+	}
+	return tail, false
+}
+
+func stripSearchSameNameAsChosenObjectRider(effect *EffectSyntax, tail string) (string, bool) {
+	for _, reference := range effect.References {
+		if reference.Kind != ReferenceThatObject ||
+			!strings.HasPrefix(strings.ToLower(reference.Text), "the chosen ") {
+			continue
+		}
+		for _, prefix := range []string{
+			" which have the same name as ",
+			" that have the same name as ",
+			" which has the same name as ",
+			" that has the same name as ",
+		} {
+			if remainder, ok := strings.CutPrefix(tail, prefix+reference.Text); ok {
+				return remainder, true
+			}
 		}
 	}
 	return tail, false
@@ -1212,11 +1255,12 @@ func searchControlRider(effect *EffectSyntax) SearchControlRider {
 // fail-closed diagnostic detail (empty when supported) and the riders the
 // recognized clause carries.
 type searchClauseAnalysis struct {
-	detail              string
-	sharedSubtype       bool
-	differentNames      bool
-	destinationPosition EffectDestinationPosition
-	control             SearchControlRider
+	detail                 string
+	sharedSubtype          bool
+	differentNames         bool
+	sameNameAsChosenObject bool
+	destinationPosition    EffectDestinationPosition
+	control                SearchControlRider
 }
 
 // analyzeSearchClause reconstructs the canonical library-search clause from the
@@ -1237,6 +1281,7 @@ type searchClauseAnalysis struct {
 func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 	var sharedSubtype bool
 	var differentNames bool
+	var sameNameAsChosenObject bool
 	prefix, text := searchClausePrefix(effect)
 	if !strings.HasPrefix(text, prefix) {
 		return searchClauseAnalysis{detail: `the executable source backend supports only exact searches of your library`, sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
@@ -1380,13 +1425,17 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		afterNoun = remainder
 		differentNames = true
 	}
+	if remainder, ok := stripSearchSameNameAsChosenObjectRider(effect, afterNoun); ok {
+		afterNoun = remainder
+		sameNameAsChosenObject = true
+	}
 	if afterNoun == "." {
 		// A two-sentence search ("Search your library for <filter>[, where X is
 		// ...]. Put those cards onto the battlefield, then shuffle.") ends the
 		// search sentence after the filter and any count phrase; its destination
 		// is a separate following put effect that lowering validates and lowers as
 		// the search destination. The search clause itself is exact.
-		return searchClauseAnalysis{detail: "", sharedSubtype: false, differentNames: differentNames, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: false, differentNames: differentNames, sameNameAsChosenObject: sameNameAsChosenObject, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if remainder, ok := strings.CutPrefix(afterNoun, searchSharedSubtypeRiderText); ok {
 		// "that share a land type" correlates the found cards: each must share a
@@ -1411,7 +1460,7 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		// the rider-free base must be a supported battlefield destination; any other
 		// base (hand, library top, a split put) fails closed.
 		if !sharedSubtype && searchDestinationSupported(base, plural) && strings.Contains(base, "onto the battlefield") {
-			return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: control}
+			return searchClauseAnalysis{detail: "", sharedSubtype: false, sameNameAsChosenObject: sameNameAsChosenObject, destinationPosition: EffectDestinationUnspecified, control: control}
 		}
 		return searchClauseAnalysis{detail: "the executable source backend supports the \"under target player's control\" rider only on a battlefield search destination", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
@@ -1424,10 +1473,10 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		if amount != 2 || sharedSubtype {
 			return searchClauseAnalysis{detail: "the executable source backend supports a split search destination only for an \"up to two\" search", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 		}
-		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: false, sameNameAsChosenObject: sameNameAsChosenObject, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if searchDestinationSupported(destination, plural) {
-		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, differentNames: differentNames, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, differentNames: differentNames, sameNameAsChosenObject: sameNameAsChosenObject, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if base, ok := stripSearchRiderClause(destination); ok && searchDestinationSupported(base, plural) {
 		// A supported rider ("discard a card at random", "you lose N life") may
@@ -1435,7 +1484,7 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		// compiled as its own effect that lowering validates and lowers after the
 		// search; here we only confirm the base destination is one the runtime
 		// models so the search clause itself stays exact.
-		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, differentNames: differentNames, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, differentNames: differentNames, sameNameAsChosenObject: sameNameAsChosenObject, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if base, ok := stripSearchLifeGainRider(destination); ok && searchDestinationSupported(base, plural) {
 		// A "you gain N life" reward may close the search sentence, joined to the
@@ -1444,10 +1493,10 @@ func analyzeSearchClause(effect *EffectSyntax) searchClauseAnalysis {
 		// is compiled as its own effect that lowering validates and lowers after
 		// the search; here we only confirm the rider-free base destination is one
 		// the runtime models so the search clause itself stays exact.
-		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: sharedSubtype, sameNameAsChosenObject: sameNameAsChosenObject, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 	}
 	if !plural && searchTopDestinationSupported(destination) && !sharedSubtype {
-		return searchClauseAnalysis{detail: "", sharedSubtype: false, destinationPosition: EffectDestinationTop, control: SearchControlRiderNone}
+		return searchClauseAnalysis{detail: "", sharedSubtype: false, sameNameAsChosenObject: sameNameAsChosenObject, destinationPosition: EffectDestinationTop, control: SearchControlRiderNone}
 	}
 	return searchClauseAnalysis{detail: "the executable source backend supports only exact hand, battlefield, or singular library-top search destinations", sharedSubtype: false, destinationPosition: EffectDestinationUnspecified, control: SearchControlRiderNone}
 }
@@ -1588,6 +1637,13 @@ func searchClausePrefix(effect *EffectSyntax) (prefix, text string) {
 	const affectedPlayerPrefix = "That player may search their library for "
 	text = trimLeadingInterveningCondition(effect.Text)
 	text = stripMandatoryReflexiveConnector(text)
+	if effect.Connection == EffectConnectionThen {
+		if rest, ok := strings.CutPrefix(text, "Then "); ok {
+			text = titleFirstEffectText(rest)
+		} else if rest, ok := strings.CutPrefix(text, "then "); ok {
+			text = rest
+		}
+	}
 	// A clause-initial "instead" marks a conditional replacement search ("If
 	// <condition>, instead search your library ..."); strip it so the search
 	// wording that follows reconstructs against the canonical prefix. The

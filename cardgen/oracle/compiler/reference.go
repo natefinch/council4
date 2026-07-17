@@ -390,7 +390,7 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 		return search, true
 	}
 	switch effects[prior].Kind {
-	case EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
+	case EffectChoosePermanent, EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
 	case EffectMill:
 		if referencedCardsTotalManaValueReference(reference, effects) {
@@ -430,6 +430,79 @@ func referencedCardsTotalManaValueReference(reference CompiledReference, effects
 		}
 	}
 	return false
+}
+
+// resolveChosenPermanentSearchNames turns parser-recognized same-name wording
+// into an executable link only when typed reference binding proves that the
+// chosen-object phrase names an earlier permanent-choice effect.
+func resolveChosenPermanentSearchNames(effects []CompiledEffect) {
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind != EffectSearch || !effect.SearchSameNameAsChosenObject {
+			continue
+		}
+		bound := false
+		for _, reference := range effect.References {
+			prior := reference.PriorInstruction
+			if reference.Kind == ReferenceThatObject &&
+				reference.Binding == ReferenceBindingPriorInstructionResult &&
+				prior >= 0 &&
+				prior < len(effects) &&
+				effects[prior].Kind == EffectChoosePermanent {
+				bound = true
+				break
+			}
+		}
+		if bound {
+			effect.SearchNameFromChosenPermanent = true
+			continue
+		}
+		effect.UnsupportedDetail = "same-name search reference does not bind to a prior permanent choice"
+	}
+}
+
+// resolvePaymentSourceSacrifices binds a folded "sacrifice it" payment component
+// to the ability source when its parser-owned sacrifice prelude has a typed source
+// reference. This avoids teaching cost parsing about trigger antecedents.
+func resolvePaymentSourceSacrifices(effects []CompiledEffect, selfTrigger bool) {
+	for i := range effects {
+		payment := &effects[i].Payment
+		if payment.AdditionalCost == nil {
+			continue
+		}
+		sacrificeComponent := -1
+		for component := range payment.AdditionalCost.Components {
+			if payment.AdditionalCost.Components[component].Kind != CostSacrifice {
+				continue
+			}
+			if sacrificeComponent != -1 {
+				sacrificeComponent = -2
+				break
+			}
+			sacrificeComponent = component
+		}
+		if sacrificeComponent < 0 {
+			continue
+		}
+		sourceSacrifice := false
+		for j := range i {
+			prelude := &effects[j] // #nosec G602 -- j ranges only over effects before i.
+			if prelude.Kind != EffectSacrifice ||
+				prelude.VerbOrder.Start < payment.Order.Start ||
+				prelude.VerbOrder.End > payment.Order.End ||
+				len(prelude.References) != 1 ||
+				(prelude.References[0].Binding != ReferenceBindingSource &&
+					(!selfTrigger || prelude.References[0].Binding != ReferenceBindingEventPermanent)) {
+				continue
+			}
+			sourceSacrifice = true
+			break
+		}
+		if !sourceSacrifice {
+			continue
+		}
+		payment.AdditionalCost.Components[sacrificeComponent].SourceSelf = true
+	}
 }
 
 func priorSearchMoveAntecedent(current int, effects []CompiledEffect) (int, bool) {

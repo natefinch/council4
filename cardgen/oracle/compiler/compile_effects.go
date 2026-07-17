@@ -640,6 +640,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				SearchSharedSubtype:                           syntax.SearchSharedSubtype,
 				SearchLandElseHand:                            syntax.SearchLandElseHand,
 				SearchDifferentNames:                          syntax.SearchDifferentNames,
+				SearchSameNameAsChosenObject:                  syntax.SearchSameNameAsChosenObject,
 				SearchDestination:                             syntax.SearchDestination,
 				SearchControl:                                 syntax.SearchControl,
 				SearchSlots:                                   syntax.SearchSlots,

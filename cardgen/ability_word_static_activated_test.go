@@ -99,14 +99,14 @@ func TestLowerUndergrowthAbilityWord(t *testing.T) {
 	}
 }
 
-// TestLowerUnknownStaticAbilityWordFailsClosed guards the rules-free gate: a
-// flavor label that is not in the curated whitelist still fails closed on a
-// static ability so only known rules-free ability words lower.
-func TestLowerUnknownStaticAbilityWordFailsClosed(t *testing.T) {
+// TestLowerRulesFreeStaticAbilityWordDoesNotNeedANameWhitelist verifies that a
+// static body whose semantics are independently typed does not depend on its
+// flavor heading being pre-enumerated.
+func TestLowerRulesFreeStaticAbilityWordDoesNotNeedANameWhitelist(t *testing.T) {
 	t.Parallel()
 	power := "1"
 	toughness := "4"
-	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Unknown Static Word",
 		Layout:     "normal",
 		TypeLine:   "Creature — Human Soldier",
@@ -115,4 +115,7 @@ func TestLowerUnknownStaticAbilityWordFailsClosed(t *testing.T) {
 		Power:      &power,
 		Toughness:  &toughness,
 	})
+	if len(face.StaticAbilities) != 1 {
+		t.Fatalf("static abilities = %d, want 1", len(face.StaticAbilities))
+	}
 }

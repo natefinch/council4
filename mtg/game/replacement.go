@@ -123,6 +123,9 @@ const (
 	// CardNameType. The result stores the public printed name rather than a card
 	// instance, so it persists independently of zones and object identity.
 	ResolutionChoiceCardName
+	// ResolutionChoicePermanent chooses a battlefield permanent and captures both
+	// its object identity and its effective name at choice time.
+	ResolutionChoicePermanent
 )
 
 // ResolutionChoiceColorSource identifies dynamic sources for color choice
@@ -240,14 +243,15 @@ type ResolutionChoice struct {
 
 // ResolutionChoiceResult stores the selected value from a ResolutionChoice.
 type ResolutionChoiceResult struct {
-	Kind     ResolutionChoiceKind
-	Color    mana.Color
-	CardType types.Card
-	Subtype  types.Sub
-	Player   PlayerID
-	CardID   id.ID
-	CardName string
-	Number   int
+	Kind        ResolutionChoiceKind
+	Color       mana.Color
+	CardType    types.Card
+	Subtype     types.Sub
+	Player      PlayerID
+	CardID      id.ID
+	PermanentID id.ID
+	CardName    string
+	Number      int
 }
 
 // ResolutionPayment describes an optional cost that may be paid during
@@ -815,3 +819,7 @@ const AttachmentSubtypeChoiceKey = ChoiceKey("oracle-attachment-subtype")
 // creature type. Draw a card for each permanent you control of that type."
 // (Distant Melody).
 const SpellChosenTypeChoiceKey = ChoiceKey("oracle-chosen-type")
+
+// ResolutionChosenPermanentChoiceKey publishes a permanent selected by a
+// resolving effect so later instructions can consume its captured identity/name.
+const ResolutionChosenPermanentChoiceKey = ChoiceKey("oracle-chosen-permanent")

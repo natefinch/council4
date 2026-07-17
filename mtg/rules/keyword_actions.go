@@ -258,6 +258,7 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 			!spec.SharedSubtype &&
 			!spec.DifferentNames &&
 			spec.Name == "" &&
+			spec.NameFromChoice == "" &&
 			!spec.EntersTapped &&
 			spec.DestinationPosition == game.SearchPositionUnspecified
 	}
@@ -284,6 +285,7 @@ func searchSpecSupported(spec game.SearchSpec) bool {
 			spec.MaxManaValueFromX ||
 			spec.MaxManaValueFromSacrificedCost.Exists ||
 			spec.Name != "" ||
+			spec.NameFromChoice != "" ||
 			!spec.Filter.Empty() ||
 			primary.Zone == zone.Library {
 			return false
