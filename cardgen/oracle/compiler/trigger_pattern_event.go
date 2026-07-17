@@ -582,6 +582,10 @@ func compileDamageSourceSubject(subject *parser.TriggerEventSubject, pattern *Tr
 	if !ok {
 		return false
 	}
+	if selection.Enchanted {
+		pattern.DamageSourceWasEnchanted = true
+		selection.Enchanted = false
+	}
 	switch subject.Kind {
 	case parser.TriggerEventSubjectSelf:
 		if selfOrAnother {

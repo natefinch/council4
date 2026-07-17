@@ -1138,6 +1138,9 @@ type TriggerPattern struct {
 	// valid on an EventDamageDealt pattern with either Source == TriggerSourceAny
 	// and a non-empty DamageSourceSelection, or Source == TriggerSourceAttachedPermanent.
 	DamageSourceSelectionOrSelf bool
+	// DamageSourceWasEnchanted requires EventDamageDealt's source to have had one
+	// or more Aura permanents attached when the event occurred.
+	DamageSourceWasEnchanted bool
 
 	// DamageSourceCaptured restricts an EventDamageDealt pattern to combat damage
 	// dealt by a specific permanent captured when the trigger was created, rather

@@ -889,6 +889,11 @@ type CreateToken struct {
 	RecipientGroup PlayerGroupReference
 	EntryTapped    bool
 	EntryAttacking bool
+	// EntryAttachedTo, when set, makes each created token enter attached to the
+	// referenced permanent. The attachment is established before enter-the-
+	// battlefield and token-created events are emitted, so event snapshots observe
+	// the token in its entered-attached state.
+	EntryAttachedTo opt.V[ObjectReference]
 	// EntryAttackingDefender, when set, puts every created token onto the
 	// battlefield attacking the referenced defending player instead of asking
 	// its controller to choose among combat defenders. It is used by effects whose

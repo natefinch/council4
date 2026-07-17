@@ -1988,6 +1988,11 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.EntryAttachedTo.Exists {
+		if err := validateObjectReference(p.EntryAttachedTo.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
 	if spec, ok := p.Source.TokenCopy(); ok {
 		switch spec.Source {
 		case TokenCopySourceObject:

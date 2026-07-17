@@ -217,16 +217,17 @@ func parseTokenKeywordToxic(kind EffectKind, tokens []shared.Token, atoms Atoms)
 // clause are unaffected. The map key is the lowercased source word; the value is
 // the canonical token name.
 var predefinedTokenNames = map[string]string{
-	"mutavault": "Mutavault",
-	"tarmogoyf": "Tarmogoyf",
+	"mutavault":     "Mutavault",
+	"tarmogoyf":     "Tarmogoyf",
+	"virtuous role": "Virtuous Role",
 }
 
 // parsePredefinedTokenName captures a created predefined named token's name from
 // the noun slot of a create clause ("create a tapped Mutavault token." ->
 // "Mutavault"). The name must be one of the recognized predefined-token names
-// (predefinedTokenNames) and must sit immediately before the "token"/"tokens"
+// (predefinedTokenNames) and must end immediately before the "token"/"tokens"
 // noun. It returns "" for non-create clauses and for any clause whose pre-noun
-// word is not a recognized predefined-token name. The create-token exactness
+// words do not end in a recognized predefined-token name. The create-token exactness
 // recognizer reconstructs and byte-checks the "<Name> token" noun phrase, so a
 // spurious capture fails closed there.
 func parsePredefinedTokenName(kind EffectKind, tokens []shared.Token) string {
@@ -243,10 +244,27 @@ func parsePredefinedTokenName(kind EffectKind, tokens []shared.Token) string {
 	if noun < 1 {
 		return ""
 	}
-	if name, ok := predefinedTokenNames[strings.ToLower(tokens[noun-1].Text)]; ok {
-		return name
+	bestName := ""
+	bestLength := 0
+	for phrase, name := range predefinedTokenNames {
+		words := strings.Fields(phrase)
+		if len(words) > noun || len(words) <= bestLength {
+			continue
+		}
+		start := noun - len(words)
+		matches := true
+		for i := range words {
+			if !equalWord(tokens[start+i], words[i]) {
+				matches = false
+				break
+			}
+		}
+		if matches {
+			bestName = name
+			bestLength = len(words)
+		}
 	}
-	return ""
+	return bestName
 }
 
 // parseTokenName captures a created creature token's explicit Oracle name from

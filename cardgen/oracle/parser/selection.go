@@ -141,6 +141,9 @@ type TriggerSelection struct {
 	// control"): the matched permanent must carry a counter or have an Aura or
 	// Equipment attached (CR 701.50). It compiles to Selection.MatchModified.
 	Modified bool `json:",omitempty"`
+	// Enchanted records an "enchanted" damage-source qualifier. Damage-trigger
+	// lowering snapshots whether the source had an Aura attached at event time.
+	Enchanted bool `json:",omitempty"`
 
 	// Commander records a "commander" subject ("your commander deals combat
 	// damage to a player", Archivist of Gondor). The matched permanent must be a
@@ -357,6 +360,8 @@ func consumeTriggerSelectionModifiers(words []string, selection *TriggerSelectio
 			selection.CombatState = TriggerSelectionBlocking
 		case "modified":
 			selection.Modified = true
+		case "enchanted":
+			selection.Enchanted = true
 		case "goaded":
 			selection.Goaded = true
 		default:

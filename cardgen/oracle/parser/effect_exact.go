@@ -3627,29 +3627,62 @@ func exactCreatePredefinedTokenEffectSyntax(effect *EffectSyntax) bool {
 		effect.Context != EffectContextController ||
 		effect.TokenPTKnown || effect.TokenCopyOfTarget ||
 		effect.TokenChoice || effect.Negated ||
-		len(effect.Targets) != 0 ||
 		!effect.Amount.Known || effect.Amount.Value != 1 {
 		return false
 	}
-	sel := effect.Selection
-	if sel.Kind != SelectionUnknown ||
-		len(sel.SubtypesAny) != 0 ||
-		sel.Keyword != KeywordUnknown ||
-		len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 ||
-		len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
-		len(sel.SourceTypes) != 0 || len(sel.Supertypes) != 0 ||
-		sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
-		sel.Untapped || sel.Attacking || sel.Blocking ||
-		sel.All || sel.Another || sel.Other ||
-		sel.Colorless || sel.Multicolored {
+	if effect.TokenAttachedToTarget {
+		if len(effect.Targets) != 1 || !effect.Targets[0].Exact {
+			return false
+		}
+	} else if len(effect.Targets) != 0 {
 		return false
+	}
+	sel := effect.Selection
+	if !effect.TokenAttachedToTarget {
+		if sel.Kind != SelectionUnknown ||
+			len(sel.SubtypesAny) != 0 ||
+			sel.Keyword != KeywordUnknown ||
+			len(sel.ColorsAny) != 0 || len(sel.ExcludedColors) != 0 ||
+			len(sel.RequiredTypesAny) != 0 || len(sel.ExcludedTypes) != 0 ||
+			len(sel.SourceTypes) != 0 || len(sel.Supertypes) != 0 ||
+			sel.MatchPower || sel.MatchToughness || sel.MatchManaValue ||
+			sel.Untapped || sel.Attacking || sel.Blocking ||
+			sel.All || sel.Another || sel.Other ||
+			sel.Colorless || sel.Multicolored {
+			return false
+		}
 	}
 	tappedPart := ""
 	if sel.Tapped {
 		tappedPart = "tapped "
 	}
 	specBody := fmt.Sprintf("a %s%s token", tappedPart, effect.TokenPredefinedName)
+	if effect.TokenAttachedToTarget {
+		specBody += " attached to " + effect.Targets[0].Text
+	}
 	return createTokenControllerClauseMatches(exactEffectClauseText(effect), specBody+".")
+}
+
+// tokenAttachedToTarget recognizes the create-token entry relationship
+// "... token attached to ... target ...". Target parsing owns the target's
+// selection and cardinality; exactCreatePredefinedTokenEffectSyntax byte-checks
+// the complete clause and rejects every richer or malformed shape.
+func tokenAttachedToTarget(kind EffectKind, tokens []shared.Token) bool {
+	if kind != EffectCreate {
+		return false
+	}
+	for i := 0; i+3 < len(tokens); i++ {
+		if (equalWord(tokens[i], "token") || equalWord(tokens[i], "tokens")) &&
+			equalWord(tokens[i+1], "attached") &&
+			equalWord(tokens[i+2], "to") {
+			for _, token := range tokens[i+3:] {
+				if equalWord(token, "target") {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // exactCreateNamedTokenChoiceEffectSyntax recognizes an N-way (N >= 2) choice

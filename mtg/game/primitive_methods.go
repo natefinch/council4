@@ -673,6 +673,9 @@ func (p Search) instructionRefs() primitiveRefs {
 
 func (p CreateToken) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
+	if p.EntryAttachedTo.Exists {
+		refs = mergePrimitiveRefs(refs, objectReferenceRefs(p.EntryAttachedTo.Val))
+	}
 	refs.publishesLinked = p.PublishLinked
 	refs.publishesLinkedGroup = p.PublishCountGroup
 	return refs

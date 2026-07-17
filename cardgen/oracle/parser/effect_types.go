@@ -2384,6 +2384,11 @@ type EffectSyntax struct {
 	// phrase, and lowering maps the name to the token's fixed definition. It is
 	// empty for tokens identified by their subtypes or printed in full.
 	TokenPredefinedName string `json:",omitempty"`
+	// TokenAttachedToTarget reports that the created token enters attached to the
+	// effect's sole permanent target ("create a Virtuous Role token attached to
+	// another target creature you control"). The target itself remains a normal
+	// typed TargetSyntax; this flag carries only the token-entry relationship.
+	TokenAttachedToTarget bool `json:",omitempty"`
 	// TokenNameLeading reports that TokenName was captured from the leading
 	// "Create <Name>, a ... token ..." form (the named legendary tokens such as
 	// "Create Avacyn, a legendary 8/8 white Angel creature token ...") rather than

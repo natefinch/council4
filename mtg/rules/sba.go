@@ -21,7 +21,6 @@ const maxStateBasedActionPasses = 1000
 //   - CR 704.5r: removing counters beyond a "can't have more than N" cap.
 //   - CR 704.5t/u/w/x/z: dungeon venture, space sculptor, battle protector, and
 //     start-your-engines speed actions.
-//   - CR 704.5y: keeping only the most recent of multiple same-controller Roles.
 //   - CR 704.6a/b/e/f: Two-Headed Giant, Archenemy, and Planechase variant SBAs.
 
 func (e *Engine) applyStateBasedActions(g *game.Game) []LossLog {
@@ -62,6 +61,7 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 		permanentsChanged, passDeaths := e.checkPermanentStateBasedActions(g, batchID)
 		attachmentsChanged, attachmentDeaths := checkAttachmentStateBasedActions(g, batchID)
 		legendaryChanged, legendaryDeaths := checkLegendaryRuleStateBasedActions(g, batchID)
+		rolesChanged, roleDeaths := checkRoleRuleStateBasedActions(g, batchID)
 		countersChanged := checkCounterStateBasedActions(g)
 		tokensChanged := removeTokensFromNonBattlefieldZones(g)
 		blessingChanged := checkAscendCityBlessing(g)
@@ -69,7 +69,8 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 		deaths = append(deaths, passDeaths...)
 		deaths = append(deaths, attachmentDeaths...)
 		deaths = append(deaths, legendaryDeaths...)
-		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !countersChanged && !tokensChanged && !durationsChanged && !blessingChanged {
+		deaths = append(deaths, roleDeaths...)
+		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !rolesChanged && !countersChanged && !tokensChanged && !durationsChanged && !blessingChanged {
 			return losses, deaths
 		}
 	}
@@ -461,6 +462,84 @@ func permanentOlderThan(left, right *game.Permanent) bool {
 		return leftTimestamp < rightTimestamp
 	}
 	return left.ObjectID < right.ObjectID
+}
+
+type roleRuleKey struct {
+	controller game.PlayerID
+	attachedTo id.ID
+}
+
+// checkRoleRuleStateBasedActions enforces CR 704.5y. For each player and each
+// permanent, only that player's Role Aura with the newest timestamp remains
+// attached; Roles controlled by different players are independent and coexist.
+func checkRoleRuleStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
+	pending := roleRuleStateBasedActionCandidates(g)
+	if len(pending) == 0 {
+		return false, nil
+	}
+	simultaneousID := batchID()
+	var deaths []PermanentDeathLog
+	changed := false
+	for _, objectID := range pending {
+		role, ok := permanentByObjectID(g, objectID)
+		replacedToCommand := ok && commanderReplacementDestination(g, role.CardInstanceID, zone.Graveyard) == zone.Command
+		if !ok || !movePermanentToZoneInBatch(g, role, zone.Graveyard, simultaneousID) {
+			continue
+		}
+		changed = true
+		if replacedToCommand {
+			continue
+		}
+		deaths = append(deaths, PermanentDeathLog{
+			Permanent:  role.ObjectID,
+			SourceID:   role.CardInstanceID,
+			TokenName:  permanentTokenName(role),
+			Owner:      role.Owner,
+			Controller: role.Controller,
+			Reason:     PermanentDeathReasonRoleRule,
+		})
+	}
+	return changed, deaths
+}
+
+func roleRuleStateBasedActionCandidates(g *game.Game) []id.ID {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
+
+	newest := make(map[roleRuleKey]*game.Permanent)
+	counts := make(map[roleRuleKey]int)
+	for _, permanent := range g.Battlefield {
+		key, ok := permanentRoleRuleKey(g, permanent)
+		if !ok {
+			continue
+		}
+		counts[key]++
+		if current := newest[key]; current == nil || permanentOlderThan(current, permanent) {
+			newest[key] = permanent
+		}
+	}
+	var pending []id.ID
+	for _, permanent := range g.Battlefield {
+		key, ok := permanentRoleRuleKey(g, permanent)
+		if !ok || counts[key] <= 1 || newest[key] == permanent {
+			continue
+		}
+		pending = append(pending, permanent.ObjectID)
+	}
+	return pending
+}
+
+func permanentRoleRuleKey(g *game.Game, permanent *game.Permanent) (roleRuleKey, bool) {
+	if !activeBattlefieldPermanent(permanent) ||
+		!permanent.AttachedTo.Exists ||
+		!permanentHasSubtype(g, permanent, types.Aura) ||
+		!permanentHasSubtype(g, permanent, types.Role) {
+		return roleRuleKey{}, false
+	}
+	return roleRuleKey{
+		controller: effectiveController(g, permanent),
+		attachedTo: permanent.AttachedTo.Val,
+	}, true
 }
 
 // checkCounterStateBasedActions removes paired +1/+1 and -1/-1 counters.

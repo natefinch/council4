@@ -92,6 +92,7 @@ func compileTriggerSelection(syntax parser.TriggerSelection) (TriggerSelection, 
 	selection.MatchCounter = syntax.MatchCounter
 	selection.RequiredCounter = syntax.RequiredCounter
 	selection.Modified = syntax.Modified
+	selection.Enchanted = syntax.Enchanted
 	selection.Commander = syntax.Commander
 	selection.Goaded = syntax.Goaded
 	selection.PowerAboveBase = syntax.PowerAboveBase

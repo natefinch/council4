@@ -2120,6 +2120,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			TokenToxic:                    tokenToxic,
 			TokenName:                     tokenName,
 			TokenPredefinedName:           tokenPredefinedName,
+			TokenAttachedToTarget:         tokenAttachedToTarget(kind, clause),
 			TokenNameLeading:              tokenNameLeading,
 			AdditionalTokens:              additionalTokens,
 			AttackDefender:                tokenAttackDefender,
