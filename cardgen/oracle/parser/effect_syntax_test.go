@@ -4393,6 +4393,9 @@ func TestParsePossessiveDoublePowerToughnessObject(t *testing.T) {
 			if len(effect.Targets) > 0 && effect.Targets[0].Selection.Kind != SelectionCreature {
 				t.Fatalf("target selection = %#v, want creature", effect.Targets[0].Selection)
 			}
+			if len(effect.Targets) > 0 && !effect.Exact {
+				t.Fatal("effect Exact = false, want true")
+			}
 		})
 	}
 }
@@ -4427,7 +4430,39 @@ func TestParseTargetDoublePowerToughnessObject(t *testing.T) {
 			if len(effect.Targets) != 1 || effect.Targets[0].Selection.Kind != SelectionCreature {
 				t.Fatalf("targets = %#v, want one creature target", effect.Targets)
 			}
+			if !effect.Exact {
+				t.Fatal("effect Exact = false, want true")
+			}
 		})
+	}
+}
+
+func TestParseMustBeBlockedThisCombat(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := Parse(
+		"That creature must be blocked this combat if able.",
+		Context{InstantOrSorcery: true},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	ability := document.Abilities[0]
+	effects := ability.Sentences[0].Effects
+	if len(effects) != 1 {
+		t.Fatalf("effects = %#v, want one", effects)
+	}
+	effect := effects[0]
+	if effect.Kind != EffectMustBeBlocked ||
+		effect.Context != EffectContextReferencedObject ||
+		effect.Duration != EffectDurationThisCombat ||
+		!effect.Exact {
+		t.Fatalf("effect = %#v", effect)
+	}
+	if len(effect.References) != 1 || effect.References[0].Kind != ReferenceThatObject {
+		t.Fatalf("references = %#v, want one that-object reference", effect.References)
+	}
+	if len(ability.ConditionClauses) != 0 {
+		t.Fatalf("condition clauses = %#v, want if-able requirement rider excluded", ability.ConditionClauses)
 	}
 }
 

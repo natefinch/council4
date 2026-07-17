@@ -99,7 +99,7 @@ func TestNeyithCombatTriggerInstructionSequencePaysAndAppliesEffects(t *testing.
 		SourceID:     neyith.ObjectID,
 		SourceCardID: neyith.CardInstanceID,
 		Controller:   game.Player1,
-		AbilityIndex: 2,
+		AbilityIndex: 1,
 		Targets:      []game.Target{game.PermanentTarget(target.ObjectID)},
 	})
 	log := TurnLog{}
@@ -112,8 +112,8 @@ func TestNeyithCombatTriggerInstructionSequencePaysAndAppliesEffects(t *testing.
 	if g.Players[game.Player1].ManaPool.Total() != 0 {
 		t.Fatalf("remaining mana = %d, want 0 after paying {2}{R/G}", g.Players[game.Player1].ManaPool.Total())
 	}
-	if len(log.Choices) != 2 {
-		t.Fatalf("choice count = %d, want 2 optional/payment prompts", len(log.Choices))
+	if len(log.Choices) != 1 {
+		t.Fatalf("choice count = %d, want one optional payment prompt", len(log.Choices))
 	}
 	if !slices.ContainsFunc(activeRuleEffects(g), func(effect game.RuleEffect) bool {
 		return effect.Kind == game.RuleEffectMustBeBlocked && effect.AffectedObjectID == target.ObjectID

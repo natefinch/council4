@@ -49,15 +49,15 @@ func newBulkUp() *game.CardDef {
 				},
 				Sequence: []game.Instruction{
 					{
-						Primitive: game.ApplyContinuous{
-							Object: opt.Val(game.TargetPermanentReference(0)),
-							ContinuousEffects: []game.ContinuousEffect{
-								game.ContinuousEffect{
-									Layer:       game.LayerPowerToughnessModify,
-									DoublePower: true,
-								},
-							},
-							Duration: game.DurationUntilEndOfTurn,
+						Primitive: game.ModifyPT{
+							Object: game.TargetPermanentReference(0),
+							PowerDelta: game.Dynamic(game.DynamicAmount{
+								Kind:       game.DynamicAmountObjectPower,
+								Multiplier: 1,
+								Object:     game.TargetPermanentReference(0),
+							}),
+							ToughnessDelta: game.Fixed(0),
+							Duration:       game.DurationUntilEndOfTurn,
 						},
 					},
 				},

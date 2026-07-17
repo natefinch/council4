@@ -18,9 +18,11 @@ import (
 //
 //	Whenever one or more creatures you control fight or become blocked, draw a card.
 //	At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
-var NeyithOfTheDireHunt = func() *game.CardDef {
+var NeyithOfTheDireHunt = newNeyithOfTheDireHunt
+
+func newNeyithOfTheDireHunt() *game.CardDef {
 	return &game.CardDef{
-		ColorIdentity: color.NewIdentity(color.Green, color.Red),
+		ColorIdentity: color.NewIdentity(color.Red, color.Green),
 		CardFace: game.CardFace{
 			Name: "Neyith of the Dire Hunt",
 			ManaCost: opt.Val(cost.Mana{
@@ -34,24 +36,16 @@ var NeyithOfTheDireHunt = func() *game.CardDef {
 			Subtypes:   []types.Sub{types.Human, types.Warrior},
 			Power:      opt.Val(game.PT{Value: 3}),
 			Toughness:  opt.Val(game.PT{Value: 3}),
-			OracleText: `
-			Whenever one or more creatures you control fight or become blocked, draw a card.
-			At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
-		`,
 			TriggeredAbilities: []game.TriggeredAbility{
-				{
-					Text: `
-					Whenever one or more creatures you control fight or become blocked, draw a card.
-				`,
+				game.TriggeredAbility{
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:      game.EventFight,
-							Controller: game.TriggerControllerYou,
-							RequirePermanentTypes: []types.Card{
-								types.Creature,
-							},
-							OneOrMore: true,
+							Event:            game.EventFight,
+							Controller:       game.TriggerControllerYou,
+							UnionEvent:       game.EventAttackerBecameBlocked,
+							OneOrMore:        true,
+							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 						},
 					},
 					Content: game.Mode{
@@ -65,37 +59,7 @@ var NeyithOfTheDireHunt = func() *game.CardDef {
 						},
 					}.Ability(),
 				},
-				{
-					Text: `
-					Whenever one or more creatures you control fight or become blocked, draw a card.
-				`,
-					Trigger: game.TriggerCondition{
-						Type: game.TriggerWhenever,
-						Pattern: game.TriggerPattern{
-							Event:      game.EventBlockerDeclared,
-							Subject:    game.TriggerSubjectBlockedAttacker,
-							Controller: game.TriggerControllerYou,
-							RequirePermanentTypes: []types.Card{
-								types.Creature,
-							},
-							OneOrMore: true,
-						},
-					},
-					Content: game.Mode{
-						Sequence: []game.Instruction{
-							{
-								Primitive: game.Draw{
-									Amount: game.Fixed(1),
-									Player: game.ControllerReference(),
-								},
-							},
-						},
-					}.Ability(),
-				},
-				{
-					Text: `
-					At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able.
-				`,
+				game.TriggeredAbility{
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerAt,
 						Pattern: game.TriggerPattern{
@@ -106,16 +70,12 @@ var NeyithOfTheDireHunt = func() *game.CardDef {
 					},
 					Content: game.Mode{
 						Targets: []game.TargetSpec{
-							{
+							game.TargetSpec{
 								MinTargets: 1,
 								MaxTargets: 1,
-								Constraint: "creature",
+								Constraint: "target creature's power",
 								Allow:      game.TargetAllowPermanent,
-								Selection: opt.Val(game.Selection{
-									RequiredTypesAny: []types.Card{
-										types.Creature,
-									},
-								}),
+								Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
 							},
 						},
 						Sequence: []game.Instruction{
@@ -129,21 +89,21 @@ var NeyithOfTheDireHunt = func() *game.CardDef {
 										}),
 									},
 								},
-								Optional:      true,
-								PublishResult: game.ResultKey("neyith-combat-pay"),
+								PublishResult: game.ResultKey("controller-paid"),
 							},
 							{
 								Primitive: game.ModifyPT{
 									Object: game.TargetPermanentReference(0),
 									PowerDelta: game.Dynamic(game.DynamicAmount{
-										Kind:   game.DynamicAmountObjectPower,
-										Object: game.TargetPermanentReference(0),
+										Kind:       game.DynamicAmountObjectPower,
+										Multiplier: 1,
+										Object:     game.TargetPermanentReference(0),
 									}),
-									Duration: game.DurationUntilEndOfTurn,
+									ToughnessDelta: game.Fixed(0),
+									Duration:       game.DurationUntilEndOfTurn,
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
-									Key:       game.ResultKey("neyith-combat-pay"),
-									Accepted:  game.TriTrue,
+									Key:       "controller-paid",
 									Succeeded: game.TriTrue,
 								}),
 							},
@@ -151,15 +111,14 @@ var NeyithOfTheDireHunt = func() *game.CardDef {
 								Primitive: game.ApplyRule{
 									Object: opt.Val(game.TargetPermanentReference(0)),
 									RuleEffects: []game.RuleEffect{
-										{
+										game.RuleEffect{
 											Kind: game.RuleEffectMustBeBlocked,
 										},
 									},
-									Duration: game.DurationUntilEndOfTurn,
+									Duration: game.DurationUntilEndOfCombat,
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
-									Key:       game.ResultKey("neyith-combat-pay"),
-									Accepted:  game.TriTrue,
+									Key:       "controller-paid",
 									Succeeded: game.TriTrue,
 								}),
 							},
@@ -167,6 +126,10 @@ var NeyithOfTheDireHunt = func() *game.CardDef {
 					}.Ability(),
 				},
 			},
+			OracleText: `
+			Whenever one or more creatures you control fight or become blocked, draw a card.
+			At the beginning of combat on your turn, you may pay {2}{R/G}. If you do, double target creature's power until end of turn. That creature must be blocked this combat if able. ({R/G} can be paid with either {R} or {G}.)
+		`,
 		},
 	}
 }

@@ -8,8 +8,8 @@ import (
 
 // unrenderedEventKinds lists the game.EventKind values that renderEventKind
 // deliberately does not map to generated source. These events are consumed only
-// by runtime machinery (replacement effects, copies, phasing, fight resolution,
-// reveals) and are never embedded as literals in generated card definitions, so
+// by runtime machinery (replacement effects, copies, phasing, reveals) and are
+// never embedded as literals in generated card definitions, so
 // fail-closed rendering is correct for them.
 //
 // This set exists so EventKind drift fails loudly: adding a new EventKind, or
@@ -21,7 +21,6 @@ var unrenderedEventKinds = map[game.EventKind]bool{
 	game.EventDamagePrevented:    true,
 	game.EventDestroyReplaced:    true,
 	game.EventCardRevealed:       true,
-	game.EventFight:              true,
 	game.EventSpellCopied:        true,
 	game.EventPermanentPhasedOut: true,
 	game.EventPermanentPhasedIn:  true,

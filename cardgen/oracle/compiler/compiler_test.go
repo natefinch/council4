@@ -333,6 +333,7 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 		{"they in life trigger", "Whenever an opponent gains life, they draw a card.", []ReferenceBinding{ReferenceBindingEventPlayer}},
 		{"they in scry trigger", "Whenever a player scries, they draw a card.", []ReferenceBinding{ReferenceBindingEventPlayer}},
 		{"they in non-player trigger binds permanent", "Whenever a creature attacks, they deal 1 damage to any target.", []ReferenceBinding{ReferenceBindingEventPermanent}},
+		{"fight event permanent", "Whenever a creature fights, that creature gains trample until end of turn.", []ReferenceBinding{ReferenceBindingEventPermanent}},
 		{"that player in combat damage trigger", "Whenever this creature deals combat damage to a player, that player discards a card.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingEventPlayer}},
 		{"they in combat damage to player trigger", "Whenever this creature deals combat damage to a player, they draw a card.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingEventPlayer}},
 		{"their in combat damage to player trigger", "Whenever this creature deals combat damage to a player, exile a card from their hand.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingEventPlayer}},
