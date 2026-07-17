@@ -964,6 +964,11 @@ const (
 	// extra-combat insertion against TurnState.CombatPhasesThisTurn so the loop
 	// fires once per turn.
 	ConditionPredicateFirstCombatPhaseOfTurn
+	// ConditionPredicateControllerCombatPhase is satisfied while the current
+	// phase is a combat phase of the context controller's turn ("if it's your
+	// combat phase"; Great Train Heist). It remains true during additional combat
+	// phases controlled by that player.
+	ConditionPredicateControllerCombatPhase
 	// ConditionPredicateControlsGreatestPowerCreature is satisfied when the
 	// context controller controls a creature whose power is greater than or equal
 	// to every other creature's power on the battlefield ("if you control the
@@ -2621,6 +2626,10 @@ type CompiledEffect struct {
 	// deals combat damage to a player this turn, ..."). It is meaningful only
 	// when Kind is EffectDelayedTrigger.
 	DelayedTriggerBindDamageSource bool
+	// DelayedTriggerBindEventPlayer records that an EffectDelayedTrigger's event
+	// player is the player target selected by an earlier clause in the same
+	// resolution. It is meaningful only when Kind is EffectDelayedTrigger.
+	DelayedTriggerBindEventPlayer bool
 	// DelayedTriggerBindAttacker records that an EffectDelayedTrigger's
 	// attacker-declared event binds to the permanent an earlier clause in the
 	// same resolution acted on ("... target creature ... Whenever that creature

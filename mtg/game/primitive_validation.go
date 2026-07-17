@@ -3213,6 +3213,19 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 	} else if p.Trigger.EventPattern.Exists && p.Trigger.EventPattern.Val.DamageSourceCaptured {
 		return errors.New("delayed trigger DamageSourceCaptured pattern requires a DamageSourceObject")
 	}
+	if p.Trigger.EventPlayer.Exists {
+		if !p.Trigger.EventPattern.Exists {
+			return errors.New("delayed trigger EventPlayer requires an event pattern")
+		}
+		if p.Trigger.EventPlayer.Val.Kind() == PlayerReferenceTargetPlayer {
+			if err := validateTargetAllows(p.Trigger.EventPlayer.Val.TargetIndex(), TargetAllowPlayer, targets, checkTargets); err != nil {
+				return err
+			}
+		}
+		if err := validatePlayerReference(p.Trigger.EventPlayer.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
 	if p.Trigger.CapturedAttackerObject.Exists {
 		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.AttackerCaptured {
 			return errors.New("delayed trigger CapturedAttackerObject requires an AttackerCaptured event pattern")

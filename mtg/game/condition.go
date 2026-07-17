@@ -230,6 +230,12 @@ type Condition struct {
 	// extra-combat insertion it gates fires once per turn rather than looping.
 	FirstCombatPhaseOfTurn bool
 
+	// ControllerCombatPhase is satisfied while the context controller is the
+	// active player and the current phase is combat ("if it's your combat phase";
+	// Great Train Heist). It holds during both the normal and additional combat
+	// phases of that player's turn.
+	ControllerCombatPhase bool
+
 	// ControllerControlsGreatestPowerCreature is satisfied when the context
 	// controller controls a creature whose power is greater than or equal to
 	// every creature's power on the battlefield ("if you control the creature
@@ -446,6 +452,7 @@ func (c *Condition) Empty() bool {
 		c.ControllerGraveyardInstantOrSorceryCountAtLeast == 0 &&
 		len(c.ControllerControlsNamed) == 0 &&
 		!c.FirstCombatPhaseOfTurn &&
+		!c.ControllerCombatPhase &&
 		!c.ControllerControlsGreatestPowerCreature &&
 		!c.ControllerControlsGreatestToughnessCreature &&
 		!c.EventPermanentPowerGreaterThanEachOtherCreature &&

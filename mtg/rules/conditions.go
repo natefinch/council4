@@ -335,6 +335,11 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.FirstCombatPhaseOfTurn {
 		matches = matches && g.Turn.CombatPhasesThisTurn <= 1
 	}
+	if cond.ControllerCombatPhase {
+		matches = matches &&
+			g.Turn.ActivePlayer == ctx.controller &&
+			g.Turn.Phase == game.PhaseCombat
+	}
 	if cond.ControllerControlsGreatestPowerCreature {
 		matches = matches && controllerControlsGreatestPowerCreature(g, ctx)
 	}

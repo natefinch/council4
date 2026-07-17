@@ -1,9 +1,11 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -166,6 +168,7 @@ func TestFirstCombatPhaseGatedExtraCombatRunsOnce(t *testing.T) {
 	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, gate.Val.Condition) {
 		t.Fatal("gate must pass during first combat phase before queueing")
 	}
+
 	g.Turn.ExtraPhases = append(g.Turn.ExtraPhases, game.PhaseCombat)
 
 	startLife := g.Players[game.Player2].Life
@@ -185,5 +188,73 @@ func TestFirstCombatPhaseGatedExtraCombatRunsOnce(t *testing.T) {
 	}
 	if len(g.Turn.ExtraPhases) != 0 {
 		t.Fatalf("extra phases not drained: %#v", g.Turn.ExtraPhases)
+	}
+}
+
+func TestControllerCombatPhaseCondition(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	condition := opt.Val(game.Condition{ControllerCombatPhase: true})
+
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.Phase = game.PhaseCombat
+	if !conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition failed during the controller's combat phase")
+	}
+
+	g.Turn.ActivePlayer = game.Player2
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition passed during another player's combat phase")
+	}
+
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	if conditionSatisfied(g, conditionContext{controller: game.Player1}, condition) {
+		t.Fatal("condition passed outside combat")
+	}
+}
+
+func TestControllerCombatGatedExtraCombatResolvesAfterUntap(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	creature := addCombatCreaturePermanent(g, game.Player1)
+	creature.Tapped = true
+	group := game.BattlefieldGroup(game.Selection{
+		RequiredTypes: []types.Card{types.Creature},
+		Controller:    game.ControllerYou,
+	})
+	sequence := []game.Instruction{
+		{Primitive: game.Untap{Group: group}},
+		{
+			Primitive: game.AddExtraPhases{Combat: true},
+			Condition: opt.Val(game.EffectCondition{
+				Condition: opt.Val(game.Condition{ControllerCombatPhase: true}),
+			}),
+		},
+	}
+
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.Phase = game.PhaseCombat
+	addInstructionSpellToStackForController(g, game.Player1, sequence, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if creature.Tapped {
+		t.Fatal("untap did not resolve outside the spell controller's combat phase")
+	}
+	if len(g.Turn.ExtraPhases) != 0 {
+		t.Fatalf("extra phases = %#v, want none during another player's combat", g.Turn.ExtraPhases)
+	}
+
+	creature.Tapped = true
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.ExtraPhases = []game.Phase{game.PhasePostcombatMain}
+	for range 2 {
+		addInstructionSpellToStackForController(g, game.Player1, sequence, nil)
+		engine.resolveTopOfStack(g, &TurnLog{})
+	}
+	if creature.Tapped {
+		t.Fatal("creature remained tapped after the combat-phase resolution")
+	}
+	want := []game.Phase{game.PhaseCombat, game.PhaseCombat, game.PhasePostcombatMain}
+	if !slices.Equal(g.Turn.ExtraPhases, want) {
+		t.Fatalf("extra phases = %#v, want %#v", g.Turn.ExtraPhases, want)
 	}
 }

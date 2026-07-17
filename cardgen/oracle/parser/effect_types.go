@@ -2340,6 +2340,13 @@ type EffectSyntax struct {
 	// pattern's source to the captured object. It is meaningful only when Kind is
 	// EffectDelayedTrigger.
 	DelayedTriggerBindDamageSource bool `json:",omitempty"`
+	// DelayedTriggerBindEventPlayer records that an EffectDelayedTrigger's event
+	// player binds to the player target chosen by an earlier clause in the same
+	// resolution ("Choose target opponent. Whenever ... deals combat damage to
+	// that player this turn, ..."). The nested ability is reparsed with "a player"
+	// as the generic event recipient; lowering captures the exact target player
+	// when the delayed trigger is created.
+	DelayedTriggerBindEventPlayer bool `json:",omitempty"`
 	// DelayedTriggerBindAttacker records that an EffectDelayedTrigger's
 	// attacker-declared event binds to the permanent an earlier clause in the
 	// same resolution acted on, named here by a back-reference ("... target

@@ -82,3 +82,37 @@ func TestParseSpreeKeywordCostlessOptionHasNoCostClause(t *testing.T) {
 		t.Fatalf("costless option fabricated a cost clause %+v; want nil", modal.Options[1].SpreeCost)
 	}
 }
+
+func TestParseGreatTrainHeistSpreeModes(t *testing.T) {
+	t.Parallel()
+	source := "Spree (Choose one or more additional costs.)\n" +
+		"+ {2}{R} — Untap all creatures you control. If it's your combat phase, there is an additional combat phase after this phase.\n" +
+		"+ {2} — Creatures you control get +1/+0 and gain first strike until end of turn.\n" +
+		"+ {R} — Choose target opponent. Whenever a creature you control deals combat damage to that player this turn, create a tapped Treasure token."
+	modal := spreeModalFor(t, source)
+	if modal.MinModes != 1 || modal.MaxModes != 3 || len(modal.Options) != 3 {
+		t.Fatalf("modal range/options = %d/%d/%d, want 1/3/3", modal.MinModes, modal.MaxModes, len(modal.Options))
+	}
+	for i, want := range []int{3, 2, 1} {
+		if modal.Options[i].SpreeCost == nil || modal.Options[i].SpreeCost.Cost.ManaValue() != want {
+			t.Fatalf("mode %d cost = %#v, want mana value %d", i, modal.Options[i].SpreeCost, want)
+		}
+	}
+	var combatCondition bool
+	for _, clause := range modal.Options[0].ConditionClauses {
+		combatCondition = combatCondition || clause.Predicate == ConditionPredicateControllerCombatPhase
+	}
+	if !combatCondition {
+		t.Fatalf("mode 1 conditions = %#v, want controller combat-phase condition", modal.Options[0].ConditionClauses)
+	}
+	if len(modal.Options[2].Sentences) != 2 {
+		t.Fatalf("mode 3 sentences = %#v, want target declaration and delayed trigger", modal.Options[2].Sentences)
+	}
+	delayed := modal.Options[2].Sentences[1].Effects
+	if len(delayed) != 1 ||
+		delayed[0].Kind != EffectDelayedTrigger ||
+		!delayed[0].DelayedTriggerBindEventPlayer ||
+		delayed[0].DelayedTriggerAbility == nil {
+		t.Fatalf("mode 3 delayed effect = %#v", delayed)
+	}
+}

@@ -118,6 +118,12 @@ type DelayedTriggerDef struct {
 	// turn, ..."). It is only valid with EventPattern whose DamageSourceCaptured
 	// flag is set.
 	DamageSourceObject opt.V[ObjectReference]
+	// EventPlayer, when present, binds an EventPattern delayed trigger to the
+	// specific player this reference resolves to when the trigger is created. The
+	// delayed trigger then matches only events whose affected player is that
+	// captured player ("Choose target opponent. Whenever ... deals combat damage
+	// to that player this turn, ..."). It is valid only with EventPattern.
+	EventPlayer opt.V[PlayerReference]
 	// CapturedAttackerObject, when present, binds an EventPattern
 	// attacker-declared delayed trigger to the specific permanent this object
 	// reference resolves to at schedule time (the creature an earlier clause in
@@ -218,6 +224,10 @@ type DelayedTrigger struct {
 	// ability's DamageSourceObject reference when the trigger is scheduled. Zero
 	// means the captured permanent was already gone, so the trigger never fires.
 	BoundDamageSourceObjectID id.ID
+	// BoundEventPlayer restricts an EventPattern delayed trigger to events whose
+	// affected player is the player captured from DelayedTriggerDef.EventPlayer
+	// when the trigger was created.
+	BoundEventPlayer opt.V[PlayerID]
 	// BoundAttackerObjectID restricts an EventPattern attacker-declared delayed
 	// trigger whose pattern sets AttackerCaptured to events whose attacker is
 	// this captured permanent. It is resolved from the creating ability's
