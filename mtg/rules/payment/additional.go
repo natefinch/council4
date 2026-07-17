@@ -19,6 +19,7 @@ type additionalCostPlan struct {
 	paid            []string
 	sacrifices      []*game.Permanent
 	permanentsToTap []*game.Permanent
+	manaExcluded    []*game.Permanent
 	returnsToHand   []returnToHand
 	exilePermanents []*game.Permanent
 	exertSource     *game.Permanent
@@ -233,6 +234,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.sacrifices = append(plan.sacrifices, chosen...)
+			excludeStateConstrainedManaSources(&plan, additional, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalTapPermanents:
 			if additional.TotalPowerAtLeast > 0 {
@@ -284,6 +286,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 					additional: additional,
 				})
 			}
+			excludeStateConstrainedManaSources(&plan, additional, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrificeSource:
 			sacrificeSource := source
@@ -296,6 +299,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.sacrifices = append(plan.sacrifices, sacrificeSource)
+			excludeStateConstrainedManaSources(&plan, additional, sacrificeSource)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalDiscard:
 			if additional.Random {
@@ -391,6 +395,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 					return plan, false
 				}
 				plan.exilePermanents = append(plan.exilePermanents, source)
+				excludeStateConstrainedManaSources(&plan, additional, source)
 				plan.paid = append(plan.paid, AdditionalCostText(additional))
 				continue
 			}
@@ -412,6 +417,13 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 	}
 
 	return plan, true
+}
+
+func excludeStateConstrainedManaSources(plan *additionalCostPlan, additional cost.Additional, permanents ...*game.Permanent) {
+	if !additional.RequireTapped && !additional.RequireUntapped {
+		return
+	}
+	plan.manaExcluded = append(plan.manaExcluded, permanents...)
 }
 
 func permanentIsCurrent(s State, permanent *game.Permanent) bool {

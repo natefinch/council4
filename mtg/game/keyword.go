@@ -141,8 +141,9 @@ type MutateKeyword struct {
 
 // KickerKeyword parameterizes Kicker additional costs and bonus instructions.
 type KickerKeyword struct {
-	Cost         cost.Mana
-	BonusContent AbilityContent
+	Cost            cost.Mana
+	AdditionalCosts []cost.Additional
+	BonusContent    AbilityContent
 	// Multi marks the keyword as Multikicker (CR 702.32): the additional cost may
 	// be paid any number of times as the spell is cast, and the number of times
 	// it was paid (the kick count) scales "for each time it was kicked" payoffs.
@@ -440,6 +441,7 @@ func (ability MutateKeyword) cloneKeywordAbility() KeywordAbility {
 }
 func (ability KickerKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
+	ability.AdditionalCosts = slices.Clone(ability.AdditionalCosts)
 	ability.BonusContent = cloneAbilityContent(ability.BonusContent)
 	return ability
 }

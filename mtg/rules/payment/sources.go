@@ -370,7 +370,7 @@ func convokeCandidates(s State, playerID game.PlayerID, exclude map[id.ID]bool) 
 	return append(nonMana, manaCreatures...)
 }
 
-func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, sourceCardID id.ID, sourceZone zone.Type) ([]id.ID, int, bool) {
+func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, sourceCardID id.ID, sourceZone zone.Type, reserved map[id.ID]bool) ([]id.ID, int, bool) {
 	_, generic, ok := costRequirements(manaCost, xValue)
 	if !ok || generic <= 0 {
 		return nil, 0, false
@@ -384,7 +384,7 @@ func delveCandidates(s State, playerID game.PlayerID, manaCost *cost.Mana, xValu
 		if len(exiles) == generic {
 			break
 		}
-		if sourceZone == zone.Graveyard && cardID == sourceCardID {
+		if (sourceZone == zone.Graveyard && cardID == sourceCardID) || reserved[cardID] {
 			continue
 		}
 		exiles = append(exiles, cardID)
@@ -533,15 +533,16 @@ func costWithGenericRequirement(manaCost *cost.Mana, generic int) *cost.Mana {
 // availableManaSources groups sources by color. Callers must consume it through
 // paymentColors or explicit symbol colors, never by ranging over the map, so
 // payment ordering remains deterministic.
-func availableManaSources(s State, playerID game.PlayerID, exclude map[id.ID]bool) map[mana.Color][]manaSource {
+func availableManaSources(s State, playerID game.PlayerID, restrictions manaSourceRestrictions) map[mana.Color][]manaSource {
 	available := make(map[mana.Color][]manaSource)
 	for _, permanent := range s.Battlefield() {
-		if s.EffectiveController(permanent) != playerID || exclude[permanent.ObjectID] {
+		if s.EffectiveController(permanent) != playerID || restrictions.excluded[permanent.ObjectID] {
 			continue
 		}
 		outputs := permanentManaOutputs(s, permanent)
 		for _, output := range outputs {
-			if permanent.Tapped != output.untap {
+			if permanent.Tapped != output.untap ||
+				restrictions.nonSacrificingOnly[permanent.ObjectID] && output.sacrifice {
 				continue
 			}
 			available[output.color] = append(available[output.color], manaSource{

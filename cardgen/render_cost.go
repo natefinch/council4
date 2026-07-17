@@ -259,11 +259,21 @@ func (r Renderer) renderKeywordAbility(ctx *renderCtx, keyword game.KeywordAbili
 		if err != nil {
 			return "", err
 		}
+		additionalCosts, err := r.renderAdditionalCosts(ctx, kicker.AdditionalCosts)
+		if err != nil {
+			return "", err
+		}
 		if len(kicker.BonusContent.Modes) != 0 {
 			return "", errors.New("render: Kicker bonus content must be rendered by its owning ability")
 		}
 		if kicker.Multi {
-			return fmt.Sprintf("game.KickerKeyword{Cost: %s, Multi: true}", kickerCost), nil
+			if len(kicker.AdditionalCosts) == 0 {
+				return fmt.Sprintf("game.KickerKeyword{Cost: %s, Multi: true}", kickerCost), nil
+			}
+			return fmt.Sprintf("game.KickerKeyword{Cost: %s, AdditionalCosts: %s, Multi: true}", kickerCost, additionalCosts), nil
+		}
+		if len(kicker.AdditionalCosts) > 0 {
+			return fmt.Sprintf("game.KickerKeyword{Cost: %s, AdditionalCosts: %s}", kickerCost, additionalCosts), nil
 		}
 		return fmt.Sprintf("game.KickerKeyword{Cost: %s}", kickerCost), nil
 	}

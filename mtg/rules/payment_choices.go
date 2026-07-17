@@ -68,8 +68,26 @@ func (e *Engine) paymentPreferencesForSpell(g *game.Game, playerID game.PlayerID
 }
 
 func (e *Engine) paymentPreferencesForSpellFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
-	option := e.chooseSpellCostOptionFromZone(g, playerID, cardID, sourceZone, face, card, xValue, agents, log)
-	prefs := e.paymentPreferencesForCostFromSource(g, playerID, option.ManaCost, option.AdditionalCosts, xValue, cardID, sourceZone, agents, log)
+	return e.paymentPreferencesForSpellFromZoneWithKicker(g, playerID, cardID, sourceZone, face, card, xValue, false, 0, agents, log)
+}
+
+func (e *Engine) paymentPreferencesForSpellFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, card *game.CardDef, xValue int, kickerPaid bool, kickerCount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+	request := payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          cardID,
+		SourceZone:      sourceZone,
+		Card:            card,
+		XValue:          xValue,
+		KickerPaid:      kickerPaid,
+		KickerCount:     kickerCount,
+		CastPermissions: castPermissionsForZone(g, playerID, cardID, sourceZone, face),
+	}
+	return e.paymentPreferencesForSpellRequest(g, request, agents, log)
+}
+
+func (e *Engine) paymentPreferencesForSpellRequest(g *game.Game, request payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
+	option := e.chooseSpellCostOptionForRequest(g, request, agents, log)
+	prefs := e.paymentPreferencesForCostFromSource(g, request.PlayerID, option.ManaCost, option.AdditionalCosts, request.XValue, request.CardID, request.SourceZone, agents, log)
 	prefs.AlternativeIndex = option.Index
 	return prefs
 }
@@ -102,15 +120,24 @@ func additionalCostSourceZone(additionalCost cost.Additional) zone.Type {
 }
 
 func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, card *game.CardDef, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
-	permissions := castPermissionsForZone(g, playerID, cardID, sourceZone, face)
-	options := paymentOrch.planner(g).PayableSpellOptions(payment.SpellRequest{
+	return e.chooseSpellCostOptionFromZoneWithKicker(g, playerID, cardID, sourceZone, face, card, xValue, false, 0, agents, log)
+}
+
+func (e *Engine) chooseSpellCostOptionFromZoneWithKicker(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, card *game.CardDef, xValue int, kickerPaid bool, kickerCount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
+	return e.chooseSpellCostOptionForRequest(g, payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          cardID,
 		SourceZone:      sourceZone,
 		Card:            card,
 		XValue:          xValue,
-		CastPermissions: permissions,
-	})
+		KickerPaid:      kickerPaid,
+		KickerCount:     kickerCount,
+		CastPermissions: castPermissionsForZone(g, playerID, cardID, sourceZone, face),
+	}, agents, log)
+}
+
+func (e *Engine) chooseSpellCostOptionForRequest(g *game.Game, request payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) payment.SpellOptionSummary {
+	options := paymentOrch.planner(g).PayableSpellOptions(request)
 	if len(options) == 0 {
 		return payment.SpellOptionSummary{}
 	}
@@ -121,16 +148,16 @@ func (e *Engine) chooseSpellCostOptionFromZone(g *game.Game, playerID game.Playe
 	for _, option := range options {
 		choiceOptions = append(choiceOptions, game.ChoiceOption{Index: option.Index, Label: option.Label})
 	}
-	request := game.ChoiceRequest{
+	choiceRequest := game.ChoiceRequest{
 		Kind:             game.ChoicePayment,
-		Player:           playerID,
+		Player:           request.PlayerID,
 		Prompt:           "Choose spell cost",
 		Options:          choiceOptions,
 		MinChoices:       1,
 		MaxChoices:       1,
 		DefaultSelection: []int{options[0].Index},
 	}
-	selected := e.chooseChoice(g, agents, request, log)
+	selected := e.chooseChoice(g, agents, choiceRequest, log)
 	if len(selected) == 1 {
 		for _, option := range options {
 			if option.Index == selected[0] {

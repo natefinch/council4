@@ -17,6 +17,8 @@ const flashbackAlternativeLabel = "Flashback"
 // escapeAlternativeLabel is the canonical label for escape alternative costs.
 const escapeAlternativeLabel = "Escape"
 
+const maxKickerPaymentCount = 20
+
 // spellCostOption describes one payable cost option for a spell.
 type spellCostOption struct {
 	index           int
@@ -34,7 +36,7 @@ type spellCostOption struct {
 // option so the cast is legal only when the caster can sacrifice an artifact,
 // enchantment, or token.
 func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, kickerCount int, bargained bool, permissions []SpellCastPermission) []spellCostOption {
-	if card == nil {
+	if card == nil || kickerCount < 0 || kickerCount > maxKickerPaymentCount {
 		return nil
 	}
 	kicker, kickerOK := spellKicker(card)
@@ -75,12 +77,17 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		slices.Contains(permissions, SpellCastPermissionEscape)
 	var options []spellCostOption
 	if canCastNormally {
+		additional := append([]cost.Additional(nil), requiredAdditional...)
+		additional, ok := appendKickerAdditionalCosts(additional, kicker, kickerOK, kickerPaid, kickerCount)
+		if !ok {
+			return nil
+		}
 		options = append(options, spellCostOption{
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
 			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid, kickerCount),
-			additionalCosts: append([]cost.Additional(nil), requiredAdditional...),
+			additionalCosts: additional,
 			castPermission:  normalPermission,
 			bargained:       bargained,
 		})
@@ -108,6 +115,10 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		}
 		additional := append([]cost.Additional(nil), requiredAdditional...)
 		additional = append(additional, alternative.AdditionalCosts...)
+		additional, ok := appendKickerAdditionalCosts(additional, kicker, kickerOK, kickerPaid, kickerCount)
+		if !ok {
+			return nil
+		}
 		label := alternative.Label
 		if label == "" {
 			label = "Alternative cost"
@@ -238,6 +249,9 @@ func addSpliceCosts(options []spellCostOption, spliceManaCosts []cost.Mana) {
 }
 
 func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCostOption {
+	if req.KickerCount < 0 || req.KickerCount > maxKickerPaymentCount {
+		return nil
+	}
 	if !req.Alternative.Exists {
 		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.KickerCount, req.Bargained, req.CastPermissions)
 	}
@@ -263,6 +277,10 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 	kicker, kickerOK := spellKicker(req.Card)
 	additional := append([]cost.Additional(nil), req.Card.AdditionalCosts...)
 	additional = append(additional, alternative.AdditionalCosts...)
+	additional, ok = appendKickerAdditionalCosts(additional, kicker, kickerOK, req.KickerPaid, req.KickerCount)
+	if !ok {
+		return nil
+	}
 	if req.Bargained {
 		additional = append(additional, BargainSacrificeCost())
 	}
@@ -465,6 +483,56 @@ func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerO
 		combined = append(combined, kicker.Cost...)
 	}
 	return &combined
+}
+
+func appendKickerAdditionalCosts(
+	additional []cost.Additional,
+	kicker game.KickerKeyword,
+	kickerOK bool,
+	kickerPaid bool,
+	kickerCount int,
+) ([]cost.Additional, bool) {
+	if !kickerOK || !kickerPaid || len(kicker.AdditionalCosts) == 0 {
+		return additional, true
+	}
+	if kickerCount <= 0 {
+		kickerCount = 1
+	}
+	if kickerCount > maxKickerPaymentCount {
+		return nil, false
+	}
+	for range kickerCount {
+		var ok bool
+		additional, ok = appendIndependentAdditionalCosts(additional, kicker.AdditionalCosts)
+		if !ok {
+			return nil, false
+		}
+	}
+	return additional, true
+}
+
+func appendIndependentAdditionalCosts(dst, src []cost.Additional) ([]cost.Additional, bool) {
+	nextGroup := uint8(0)
+	for _, additional := range dst {
+		nextGroup = max(nextGroup, additional.ChoiceGroup)
+	}
+	var remapped [256]uint8
+	for _, additional := range src {
+		if additional.ChoiceGroup != 0 {
+			group := remapped[additional.ChoiceGroup]
+			if group == 0 {
+				if nextGroup == ^uint8(0) {
+					return nil, false
+				}
+				nextGroup++
+				group = nextGroup
+				remapped[additional.ChoiceGroup] = group
+			}
+			additional.ChoiceGroup = group
+		}
+		dst = append(dst, additional)
+	}
+	return dst, true
 }
 
 func spellKicker(card *game.CardDef) (game.KickerKeyword, bool) {

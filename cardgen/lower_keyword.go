@@ -2386,7 +2386,9 @@ func lowerKeywordAbility(
 	bodies := make([]loweredStaticAbility, 0, len(ability.Content.Keywords))
 	var triggered []game.TriggeredAbility
 	for _, keyword := range ability.Content.Keywords {
-		if keyword.ParameterKind != parser.KeywordParameterNone || keyword.WardCost != nil {
+		if keyword.ParameterKind != parser.KeywordParameterNone ||
+			keyword.WardCost != nil ||
+			keyword.KickerCost != nil {
 			if body, ok, diag := lowerParameterizedKeywordToStaticAbility(ability, keyword); ok {
 				if diag != nil {
 					return nil, nil, diag
@@ -2580,17 +2582,24 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 	body := game.StaticAbility{Text: keyword.Name + " " + keyword.Parameter}
 	switch keyword.Kind {
 	case parser.KeywordKicker:
-		manaCost, ok := fixedKeywordManaCost(keyword)
+		manaCost, additionalCosts, ok := lowerKickerKeywordCost(keyword)
 		if !ok {
 			return game.StaticAbility{}, false
 		}
-		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost}}
+		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{
+			Cost:            manaCost,
+			AdditionalCosts: additionalCosts,
+		}}
 	case parser.KeywordMultikicker:
-		manaCost, ok := fixedKeywordManaCost(keyword)
+		manaCost, additionalCosts, ok := lowerKickerKeywordCost(keyword)
 		if !ok {
 			return game.StaticAbility{}, false
 		}
-		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{Cost: manaCost, Multi: true}}
+		body.KeywordAbilities = []game.KeywordAbility{game.KickerKeyword{
+			Cost:            manaCost,
+			AdditionalCosts: additionalCosts,
+			Multi:           true,
+		}}
 	case parser.KeywordMadness:
 		manaCost, ok := fixedKeywordManaCost(keyword)
 		if !ok {
@@ -2642,6 +2651,18 @@ func lowerParameterizedStaticKeyword(keyword compiler.CompiledKeyword) (game.Sta
 		return game.StaticAbility{}, false
 	}
 	return body, true
+}
+
+func lowerKickerKeywordCost(keyword compiler.CompiledKeyword) (cost.Mana, []cost.Additional, bool) {
+	if keyword.KickerCost != nil {
+		manaCost, additionalCosts, ok := lowerActivationCostComponents("", keyword.KickerCost)
+		if !ok || (len(manaCost) == 0 && len(additionalCosts) == 0) {
+			return nil, nil, false
+		}
+		return manaCost, additionalCosts, true
+	}
+	manaCost, ok := fixedKeywordManaCost(keyword)
+	return manaCost, nil, ok
 }
 
 func fixedKeywordManaCost(keyword compiler.CompiledKeyword) (cost.Mana, bool) {

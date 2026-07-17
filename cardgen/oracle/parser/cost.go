@@ -226,7 +226,34 @@ func emitCost(abilities []Ability) {
 // reminder text, if any), so the caller can keep that content as the ability
 // body instead of discarding it.
 func wardKeywordCostClause(source string, tokens []shared.Token, dash int) (Phrase, int, bool) {
-	if !slices.Equal(normalizedWords(tokens[:dash]), []string{"ward"}) {
+	return keywordCostClause(source, tokens, dash, "ward")
+}
+
+// kickerKeywordCostClause recognizes "Kicker—<cost>" before generic
+// ability-word classification. Its phrase is parsed by the same typed component
+// grammar as activated and Ward costs.
+func kickerKeywordCostClause(source string, tokens []shared.Token, dash int) (Phrase, int, bool) {
+	return keywordCostClause(source, tokens, dash, "kicker")
+}
+
+type keywordCostClauseResult struct {
+	phrase    Phrase
+	bodyStart int
+	kind      KeywordKind
+}
+
+func parameterizedKeywordCostClause(source string, tokens []shared.Token, dash int) (keywordCostClauseResult, bool) {
+	if phrase, bodyStart, ok := wardKeywordCostClause(source, tokens, dash); ok {
+		return keywordCostClauseResult{phrase: phrase, bodyStart: bodyStart, kind: KeywordWard}, true
+	}
+	if phrase, bodyStart, ok := kickerKeywordCostClause(source, tokens, dash); ok {
+		return keywordCostClauseResult{phrase: phrase, bodyStart: bodyStart, kind: KeywordKicker}, true
+	}
+	return keywordCostClauseResult{}, false
+}
+
+func keywordCostClause(source string, tokens []shared.Token, dash int, keyword string) (Phrase, int, bool) {
+	if !slices.Equal(normalizedWords(tokens[:dash]), []string{keyword}) {
 		return Phrase{}, 0, false
 	}
 	clause := tokens[dash+1:]
@@ -259,6 +286,25 @@ func emitWardKeywordCost(abilities []Ability) {
 			}
 			clone := cost
 			ability.SemanticKeywords[k].WardCost = &clone
+		}
+	}
+}
+
+// emitKickerKeywordCost parses each recognized "Kicker—<cost>" phrase and
+// attaches the typed cost to its semantic Kicker keyword.
+func emitKickerKeywordCost(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		if ability.kickerCostPhrase == nil {
+			continue
+		}
+		cost := parseCost(*ability.kickerCostPhrase, AbilityStatic, ability.Atoms)
+		for k := range ability.SemanticKeywords {
+			if ability.SemanticKeywords[k].Kind != KeywordKicker {
+				continue
+			}
+			clone := cost
+			ability.SemanticKeywords[k].KickerCost = &clone
 		}
 	}
 }

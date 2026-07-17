@@ -123,7 +123,7 @@ func TestSpellPaymentPlanCharacterization(t *testing.T) {
 			},
 		},
 		{
-			name: "sacrifice additional cost excludes sacrificed permanent from mana payment",
+			name: "sacrifice additional cost composes with mana payment",
 			setup: func() (*game.Game, *game.CardDef, id.ID, int) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				addCombatPermanent(g, game.Player1, namedCreature("Offering Creature"))

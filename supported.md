@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,167 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,176 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1729,6 +1729,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Body of Jukai
 - Body of Knowledge
 - Bog Badger
+- Bog Down
 - Bog Elemental
 - Bog Glider
 - Bog Gnarr
@@ -4374,6 +4375,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Dwarven Demolition Team
 - Dwarven Forge-Chanter
 - Dwarven Grunt
+- Dwarven Landslide
 - Dwarven Lieutenant
 - Dwarven Mine
 - Dwarven Miner
@@ -5359,6 +5361,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Fin Fang Foom
 - Final Death
 - Final Flare
+- Final Flourish
 - Final Judgment
 - Final Payment
 - Final Revels
@@ -11266,6 +11269,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Phyrexian Rager
 - Phyrexian Reclamation
 - Phyrexian Saproling
+- Phyrexian Scuta
 - Phyrexian Snowcrusher
 - Phyrexian Tower
 - Phyrexian Tribute
@@ -11539,6 +11543,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Primal Druid
 - Primal Forcemage
 - Primal Frenzy
+- Primal Growth
 - Primal Huntbeast
 - Primal Might
 - Primal Rage
@@ -12766,6 +12771,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Rush of Knowledge
 - Rush of Vitality
 - Rush the Room
+- Rushing River
 - Rushwood Dryad
 - Rushwood Elemental
 - Rushwood Herbalist
@@ -14925,6 +14931,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Stolen Stark Tech
 - Stolen Vitality
 - Stomp and Howl
+- Stomped by the Foot
 - Stomper Cub
 - Stomping Ground
 - Stone Calendar
@@ -16900,6 +16907,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Vaultborn Tyrant
 - Vaultbreaker
 - Vaultguard Trooper
+- Vayne's Treachery
 - Vebulid
 - Vec Townships
 - Vecna
@@ -17056,6 +17064,7 @@ Council4 currently supports **18,167 of 32,501 cards eligible for paper support 
 - Vicious Conquistador
 - Vicious Hunger
 - Vicious Kavu
+- Vicious Offering
 - Vicious Rumors
 - Vicious Shadows
 - Victimize

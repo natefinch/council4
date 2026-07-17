@@ -234,6 +234,39 @@ func TestCompileCumulativeUpkeepFollowsTypedParserSyntax(t *testing.T) {
 	}
 }
 
+func TestCompileKickerCostFollowsTypedParserSyntax(t *testing.T) {
+	t.Parallel()
+	tokens := compilerTokens(t, "irrelevant source text")
+	typedCost := parser.Cost{
+		Text: "not a sacrifice",
+		Components: []parser.CostComponent{{
+			Kind:        parser.CostComponentSacrifice,
+			Text:        "not a creature",
+			AmountKnown: true,
+			AmountValue: 1,
+			ObjectNoun:  parser.ObjectNounCreature,
+		}},
+	}
+	atoms := parser.NewAtoms(parser.WithKeywords(parser.Keyword{
+		Kind:       parser.KeywordKicker,
+		NameSpan:   tokens[0].Span,
+		Span:       shared.SpanOf(tokens),
+		Text:       "not kicker",
+		KickerCost: &typedCost,
+	}))
+	keywords := compileKeywords(atoms.KeywordsWithin(tokens))
+	if len(keywords) != 1 || keywords[0].KickerCost == nil {
+		t.Fatalf("compiled keywords = %#v, want typed Kicker cost", keywords)
+	}
+	components := keywords[0].KickerCost.Components
+	if len(components) != 1 ||
+		components[0].Kind != CostSacrifice ||
+		components[0].ObjectKind != SelectorCreature ||
+		components[0].ObjectType != types.Creature {
+		t.Fatalf("compiled components = %#v, want typed creature sacrifice", components)
+	}
+}
+
 func TestCompileReferencesFollowsTypedAtoms(t *testing.T) {
 	t.Parallel()
 	tokens := compilerTokens(t, "Mistform Ultimus attacks")
