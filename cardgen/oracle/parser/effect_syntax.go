@@ -19,6 +19,7 @@ func emitResolvingSyntax(abilities []Ability) {
 		if recognizeChosenTypeLibraryTopSequence(&abilities[i]) {
 			continue
 		}
+
 		if recognizeConditionalLookAtTopSequence(&abilities[i]) {
 			continue
 		}
@@ -969,6 +970,27 @@ func underOwnersControl(tokens []shared.Token) bool {
 		effectContainsWords(words, "owner's", "control")
 }
 
+// battlefieldEntryCounterTokens narrows a return-to-battlefield clause to its
+// "with ... counter(s) on it" entry rider. Put effects already begin with their
+// counter noun phrase; return effects carry destination and control wording
+// before it, which would otherwise be mistaken for part of the first placement.
+func battlefieldEntryCounterTokens(kind EffectKind, tokens []shared.Token) []shared.Token {
+	if kind != EffectReturn {
+		return tokens
+	}
+	for i := range tokens {
+		if !equalWord(tokens[i], "with") {
+			continue
+		}
+		for _, token := range tokens[i+1:] {
+			if equalWord(token, "counter") || equalWord(token, "counters") {
+				return tokens[i+1:]
+			}
+		}
+	}
+	return tokens
+}
+
 // ability's lone chosen-color add-mana effect by widening that effect's span to
 // cover the choice sentence, so the mana ability's coverage scan credits the
 // choice. It succeeds only when the ability holds exactly one add-mana effect
@@ -1886,10 +1908,11 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 		counterKind, counterKnown := parseCounterPlacementScopedToCount(entersTappedCounterClause(kind, clause), amount, atoms)
 		var counterKindChoices []counter.Kind
 		var additionalCounterPlacements []CounterPlacementSyntax
-		if kind == EffectPut && !counterKnown {
-			counterKindChoices = parseCounterPlacementChoices(clause, atoms)
+		if (kind == EffectPut || kind == EffectReturn) && !counterKnown {
+			counterClause := battlefieldEntryCounterTokens(kind, clause)
+			counterKindChoices = parseCounterPlacementChoices(counterClause, atoms)
 			if len(counterKindChoices) == 0 {
-				if placements := parseCompoundCounterPlacement(clause, atoms); len(placements) >= 2 {
+				if placements := parseCompoundCounterPlacement(counterClause, atoms); len(placements) >= 2 {
 					counterKind = placements[0].Kind
 					counterKnown = true
 					additionalCounterPlacements = placements[1:]

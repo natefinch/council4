@@ -84,6 +84,12 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 		if obj == nil || obj.CapturedCardID == 0 {
 			return 0, zone.None, false
 		}
+		card, ok := g.GetCardInstance(obj.CapturedCardID)
+		if !ok ||
+			obj.CapturedCardZoneVersion == 0 ||
+			card.ZoneVersion != obj.CapturedCardZoneVersion {
+			return 0, zone.None, false
+		}
 		capturedZone, ok := cardZone(g, obj.CapturedCardID)
 		return obj.CapturedCardID, capturedZone, ok
 	default:

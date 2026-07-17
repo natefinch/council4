@@ -34,6 +34,7 @@ func (e *Engine) resolveReanimationAura(g *game.Game, obj *game.StackObject, aur
 		game.ControllerReference(),
 		nil,
 		permanentCreationOptions{},
+		false,
 	)
 	if !ok || creature == nil {
 		// The enchanted card could not be returned to the battlefield (for

@@ -260,6 +260,27 @@ func TestLowerTargetedGraveyardReturnToBattlefieldWithCounters(t *testing.T) {
 	}
 }
 
+func TestLowerTargetedGraveyardReturnToBattlefieldWithCompoundCounters(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Perennation",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Return target permanent card from your graveyard to the battlefield with a hexproof counter and an indestructible counter on it.",
+	})
+	put, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	if !ok {
+		t.Fatalf("primitive = %T, want game.PutOnBattlefield", face.SpellAbility.Val.Modes[0].Sequence[0].Primitive)
+	}
+	want := []game.CounterPlacement{
+		{Kind: counter.Hexproof, Amount: 1},
+		{Kind: counter.Indestructible, Amount: 1},
+	}
+	if !reflect.DeepEqual(put.EntryCounters, want) {
+		t.Fatalf("EntryCounters = %#v, want %#v", put.EntryCounters, want)
+	}
+}
+
 func TestLowerTargetedGraveyardPutOntoBattlefieldUnderYourControl(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{

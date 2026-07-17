@@ -1952,8 +1952,21 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	if len(p.Sources) > 0 && p.PublishLinked != "" {
 		return errors.New("simultaneous put on battlefield cannot publish one linked permanent")
 	}
+	if len(p.Sources) > 0 && len(p.LinkedReturnZones) > 0 {
+		return errors.New("simultaneous put on battlefield cannot restrict return zones")
+	}
 	if len(p.Sources) > 0 && len(p.ContinuousEffects) > 0 {
 		return errors.New("simultaneous put on battlefield does not support continuous effects")
+	}
+	if len(p.LinkedReturnZones) > 0 {
+		if ref, ok := p.Source.CardRef(); ok && ref.Kind != CardReferenceCaptured {
+			return errors.New("referenced-card return zones require a captured card")
+		}
+		for _, returnZone := range p.LinkedReturnZones {
+			if returnZone != zone.Exile && returnZone != zone.Graveyard {
+				return errors.New("put on battlefield return zones require exile or graveyard")
+			}
+		}
 	}
 	if p.Recipient.Exists {
 		if err := validatePlayerReference(p.Recipient.Val, targets, checkTargets); err != nil {

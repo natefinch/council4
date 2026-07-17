@@ -1159,6 +1159,9 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		}
 	}
 	if priorAcceptedConditions == 0 {
+		if plan, ok, handled := planOptionalIfNotFlow(content, optionalIndex, extraOptional); handled {
+			return plan, ok
+		}
 		// Multiple independent bare optionals with no resolving-success gate:
 		// "you may X, then you may Y[, then you may Z]." Every effect must carry
 		// its own resolving "you may" so none silently resolves as though gated
@@ -1172,6 +1175,7 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 					content.Effects[ei].DelayedTiming != 0 {
 					return optionalFlowPlan{}, false
 				}
+
 			}
 			return optionalFlowPlan{bareIndex: -1, elseIndex: -1, elseGateCondition: -1, extraOptionalIndex: -1, independentOptional: true}, true
 		}
@@ -1335,6 +1339,65 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 		elseGateCondition:  elseGateCondition,
 		extraOptionalIndex: extraOptional,
 	}, true
+}
+
+// planOptionalIfNotFlow recognizes a mandatory prelude followed by a bare
+// optional effect and a complement branch: "X. You may Y. If you don't, Z."
+// The optional effect publishes its result and every trailing effect carrying
+// the single prior-not-accepted condition is gated on failure.
+func planOptionalIfNotFlow(
+	content compiler.AbilityContent,
+	optionalIndex int,
+	extraOptional int,
+) (plan optionalFlowPlan, ok bool, handled bool) {
+	complementCondition := -1
+	for ci := range content.Conditions {
+		condition := content.Conditions[ci]
+		if condition.Predicate != compiler.ConditionPredicatePriorInstructionNotAccepted {
+			continue
+		}
+		if complementCondition != -1 {
+			return optionalFlowPlan{}, false, true
+		}
+		complementCondition = ci
+	}
+	if complementCondition == -1 {
+		return optionalFlowPlan{}, false, false
+	}
+	if extraOptional != -1 ||
+		optionalIndex <= 0 ||
+		optionalIndex >= len(content.Effects)-1 ||
+		content.Effects[optionalIndex].Negated ||
+		content.Effects[optionalIndex].DelayedTiming != 0 {
+		return optionalFlowPlan{}, false, true
+	}
+	condition := content.Conditions[complementCondition]
+	if condition.Kind != compiler.ConditionIf ||
+		condition.Negated ||
+		condition.Intervening ||
+		content.Effects[optionalIndex].Order.Contains(condition.Order) {
+		return optionalFlowPlan{}, false, true
+	}
+	for i := optionalIndex + 1; i < len(content.Effects); i++ {
+		effect := content.Effects[i]
+		negatedArtifact := i == optionalIndex+1
+		if effect.Optional ||
+			(effect.Negated && !negatedArtifact) ||
+			!effect.Order.Contains(condition.Order) {
+			return optionalFlowPlan{}, false, true
+		}
+	}
+	return optionalFlowPlan{
+		enabled:                true,
+		optionalIndex:          optionalIndex,
+		gateIndex:              optionalIndex + 1,
+		gateCondition:          -1,
+		bareIndex:              -1,
+		elseIndex:              optionalIndex + 1,
+		elseGateCondition:      complementCondition,
+		extraOptionalIndex:     -1,
+		publishWithoutOptional: false,
+	}, true, true
 }
 
 // optionalEffectIsGatedConsequence reports whether the optional effect at

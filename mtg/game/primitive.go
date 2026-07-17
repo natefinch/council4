@@ -858,7 +858,8 @@ type PutOnBattlefield struct {
 	// Oblivion Ring), which must return the card only while it remains the same
 	// object in exile and do nothing once it has left. A sacrifice-then-return
 	// effect that put the card into the graveyard sets {zone.Graveyard} so it
-	// returns that card from the graveyard.
+	// returns that card from the graveyard. When Source is a captured-card
+	// reference, an explicitly non-empty list applies the same zone restriction.
 	LinkedReturnZones []zone.Type
 }
 
