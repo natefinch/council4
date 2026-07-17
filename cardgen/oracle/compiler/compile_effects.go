@@ -599,6 +599,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				PileSplitOtherZone:                            syntax.PileSplitOtherZone,
 				PileSplitAmount:                               syntax.PileSplitAmount,
 				PileSplitMiddleSpan:                           syntax.PileSplitMiddleSpan,
+				DigRouteSequence:                              syntax.DigRouteSequence,
+				DigRoute:                                      syntax.DigRoute,
 				IterativeLibraryProcess:                       syntax.IterativeLibraryProcess,
 				IterativeLibraryStop:                          syntax.IterativeLibraryStop,
 				IterativeLibraryChooseName:                    syntax.IterativeLibraryChooseName,

@@ -98,6 +98,7 @@ var Cards = []cardset.Entry{
 	{Name: "Explorer's Cache", New: ExplorerSCache},
 	{Name: "Explorer's Scope", New: ExplorerSScope},
 	{Name: "Explosive Growth", New: ExplosiveGrowth},
+	{Name: "Expressive Iteration", New: ExpressiveIteration},
 	{Name: "Expunge", New: Expunge},
 	{Name: "Extruder", New: Extruder},
 	{Name: "Eyeblight Massacre", New: EyeblightMassacre},

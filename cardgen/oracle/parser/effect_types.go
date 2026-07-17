@@ -584,6 +584,33 @@ type HandLibraryPutSyntax struct {
 	Present bool `json:",omitempty"`
 }
 
+// DigRouteSlotSyntax is one ordered destination of a recognized look-and-route
+// dig (Expressive Iteration). Count is the number of looked-at cards routed to
+// this slot; Destination is zone.Hand, zone.Library, or zone.Exile; Bottom marks
+// a library slot placed on the bottom rather than the top; PlayThisTurn marks an
+// exile slot that grants "you may play the exiled card this turn." The slots
+// carry no Oracle text.
+type DigRouteSlotSyntax struct {
+	Count        int       `json:",omitempty"`
+	Destination  zone.Type `json:",omitempty"`
+	Bottom       bool      `json:",omitempty"`
+	PlayThisTurn bool      `json:",omitempty"`
+}
+
+// DigRouteSyntax carries the typed payload of a recognized look-and-route dig:
+// "Look at the top Look cards of your library. Put one of them into your hand,
+// put one of them on the bottom of your library, and exile one of them. You may
+// play the exiled card this turn." (Expressive Iteration). Slots holds the
+// printed-order routes; Slots[0] is the primary hand take and the remaining
+// slots fan the rest of the looked-at cards into their mutually-exclusive
+// destinations. The lowerer reads these typed fields to emit a single Dig with
+// ordered slots; the recognizer requires the exact three-way hand / library-
+// bottom / exile routing and fails closed on any other shape.
+type DigRouteSyntax struct {
+	Look  int                  `json:",omitempty"`
+	Slots []DigRouteSlotSyntax `json:",omitempty"`
+}
+
 // HandDiscardSyntax marks an exact fixed-cardinality discard of cards from the
 // resolving controller's hand. Present excludes targeted, opponent, typed-card,
 // and variable-cardinality discard forms. AtRandom marks the "at random" variant
@@ -3176,6 +3203,19 @@ type EffectSyntax struct {
 	// piles.") so the lowerer can credit its tokens toward source coverage. It is
 	// set only on the Put effect of a recognized pile-split sequence.
 	PileSplitMiddleSpan shared.Span `json:"-"`
+	// DigRouteSequence marks the single consolidated effect of a recognized
+	// look-and-route dig "Look at the top N cards of your library. Put one of
+	// them into your hand, put one of them on the bottom of your library, and
+	// exile one of them. You may play the exiled card this turn." (Expressive
+	// Iteration). The recognizer folds all three sentences into one EffectDig
+	// and records the ordered routes on DigRoute; the lowerer reads those typed
+	// fields to emit a single Dig with ordered slots. The marker is false for
+	// every other effect.
+	DigRouteSequence bool `json:",omitempty"`
+	// DigRoute carries the typed routes of a DigRouteSequence effect (the look
+	// count and the ordered hand / library-bottom / exile slots). It is the zero
+	// value for every effect that is not a recognized look-and-route dig.
+	DigRoute DigRouteSyntax `json:",omitzero"`
 	// IterativeLibraryProcess marks every effect of a recognized iterative
 	// library-processing sequence (Tainted Pact's duplicate-name stop, Demonic
 	// Consultation's chosen-name stop). The parser keeps the effect shape and
