@@ -207,6 +207,17 @@ func renderAdditionalDynamicAmount(kind cost.AdditionalDynamicAmount) (string, e
 	}
 }
 
+func renderPowerContributionKind(kind cost.PowerContributionKind) (string, error) {
+	switch kind {
+	case cost.PowerContributionEffective:
+		return "cost.PowerContributionEffective", nil
+	case cost.PowerContributionCrew:
+		return "cost.PowerContributionCrew", nil
+	default:
+		return "", fmt.Errorf("render: unsupported power contribution kind %d", kind)
+	}
+}
+
 func renderCounterKind(kind counter.Kind) (string, error) {
 	switch kind {
 	case counter.PlusOnePlusOne:

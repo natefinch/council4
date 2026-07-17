@@ -18,7 +18,7 @@ import (
 // spec — and every spec is either a fixed power/toughness creature token the
 // single-token path already synthesizes or a predefined artifact token (Food,
 // Treasure, ...) the runtime already models. Every other shape — a single token,
-// any quoted granted ability, mixed or unrepresentable counts, a variable "X/X"
+// mixed or unrepresentable counts, a variable "X/X"
 // token, or a trailing count phrase — returns ok=false so the clause stays on
 // its existing single-token path and fails closed when unsupported.
 func multiTokenCreateSpecs(kind EffectKind, clause []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
@@ -141,16 +141,11 @@ func sameMultiTokenAmount(a, b EffectAmountSyntax) bool {
 // token-spec run per created token. Each spec begins with the article "a"/"an"
 // or the spell's variable "X" at the start of the clause or immediately after a
 // top-level comma or "and" connector, and must itself contain a "token"/"tokens"
-// noun. The clause must hold two or more such specs and no quoted text;
-// otherwise it returns nil so the caller leaves the clause on its single-token
-// path. Trailing connector tokens (the comma and/or "and" that separate one spec
-// from the next) are trimmed from each returned run.
+// noun. The clause must hold two or more such specs; otherwise it returns nil so
+// the caller leaves the clause on its single-token path. Trailing connector
+// tokens (the comma and/or "and" that separate one spec from the next) are
+// trimmed from each returned run.
 func splitMultiTokenClause(clause []shared.Token) [][]shared.Token {
-	for _, token := range clause {
-		if token.Kind == shared.Quote {
-			return nil
-		}
-	}
 	var starts []int
 	for i, token := range clause {
 		if !multiTokenSpecStart(token) {
@@ -272,7 +267,7 @@ func exactCreateMultiTokenEffectSyntax(effect *EffectSyntax) bool {
 // the shared count (variable X or a single token each). A fixed power/toughness
 // creature token reuses the single-token creature reconstruction; a predefined
 // artifact token (Food, Treasure, ...) renders "<count> [tapped ]<Subtype>
-// token(s)". It fails closed for a variable "X/X" token, a granted ability, or a
+// token(s)". It fails closed for a variable "X/X" token or a
 // predefined spec carrying any color, keyword, name, or extra selector.
 func multiTokenSpecBody(spec *EffectSyntax, variableX bool) (string, bool) {
 	noun := "token"
@@ -280,7 +275,7 @@ func multiTokenSpecBody(spec *EffectSyntax, variableX bool) (string, bool) {
 		noun = "tokens"
 	}
 	if spec.TokenPTKnown {
-		if spec.TokenPTVariableX || spec.TokenGrantedAbility != nil {
+		if spec.TokenPTVariableX {
 			return "", false
 		}
 		body, ok := creatureTokenSpecBody(spec)

@@ -215,8 +215,9 @@ func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {
 }
 
 type fakePaymentState struct {
-	battlefield []*game.Permanent
-	powers      map[id.ID]int
+	battlefield       []*game.Permanent
+	powers            map[id.ID]int
+	contributionPower map[id.ID]int
 }
 
 func (fakePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
@@ -277,8 +278,13 @@ func (fakePaymentState) CardMatchesSelection(*game.CardDef, game.Selection) bool
 func (fakePaymentState) GraveyardCastGrantedAlternatives(game.PlayerID, *game.CardDef) []cost.Alternative {
 	return nil
 }
-func (fakePaymentState) PermanentEffectiveAbilities(*game.Permanent) []game.Ability {
-	return nil
+func (s fakePaymentState) PermanentEffectiveAbilities(p *game.Permanent) []game.Ability {
+	contribution, ok := s.contributionPower[p.ObjectID]
+	if !ok {
+		return nil
+	}
+	bonus := contribution - s.PermanentPower(p)
+	return []game.Ability{&game.StaticAbility{CrewPowerBonus: bonus}}
 }
 func (fakePaymentState) ActivationConditionSatisfied(game.PlayerID, *game.Permanent, opt.V[game.Condition]) bool {
 	return true
@@ -405,6 +411,34 @@ func TestChooseTapPermanentsTotalPowerUnreachableReturnsNil(t *testing.T) {
 	}
 	if chosen := chooseTapPermanentsTotalPower(state, game.Player1, additional, nil, source); chosen != nil {
 		t.Fatalf("expected nil when threshold unreachable, got %v", chosen)
+	}
+}
+
+func TestCrewContributionUsedByGreedyAndPreferredPowerSelection(t *testing.T) {
+	pilot := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	other := &game.Permanent{ObjectID: 2, Controller: game.Player1}
+	state := fakePaymentState{
+		battlefield:       []*game.Permanent{pilot, other},
+		powers:            map[id.ID]int{1: 1, 2: 2},
+		contributionPower: map[id.ID]int{1: 3, 2: 2},
+	}
+	additional := cost.Additional{
+		Kind:               cost.AdditionalTapPermanents,
+		TotalPowerAtLeast:  3,
+		PowerContribution:  cost.PowerContributionCrew,
+		MatchPermanentType: true,
+		PermanentType:      types.Creature,
+	}
+
+	chosen := chooseTapPermanentsTotalPower(state, game.Player1, additional, nil, nil)
+	if len(chosen) != 1 || chosen[0] != pilot {
+		t.Fatalf("greedy chosen = %#v, want Pilot alone", chosen)
+	}
+
+	prefs := &Preferences{TapChoices: []id.ID{pilot.ObjectID}}
+	chosen = preferredTapPermanentsTotalPower(state, game.Player1, additional, nil, nil, prefs)
+	if len(chosen) != 1 || chosen[0] != pilot || len(prefs.TapChoices) != 0 {
+		t.Fatalf("preferred chosen = %#v remaining=%#v, want Pilot alone", chosen, prefs.TapChoices)
 	}
 }
 

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,162 of 32,502 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,167 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7417,6 +7417,7 @@ Council4 currently supports **18,162 of 32,502 cards eligible for paper support 
 - Hot Soup
 - Hot Springs
 - Hotfoot Gnome
+- Hotshot Mechanic
 - Hound of Griselbrand
 - Hound of the Farbogs
 - Hour of Defeat
@@ -11311,6 +11312,7 @@ Council4 currently supports **18,162 of 32,502 cards eligible for paper support 
 - Pillardrop Warden
 - Pillarfield Ox
 - Pillory of the Sleepless
+- Pilot
 - Pin to the Earth
 - Pincer Spider
 - Pincher Beetles
@@ -11590,6 +11592,7 @@ Council4 currently supports **18,162 of 32,502 cards eligible for paper support 
 - Prodigal Pyromancer
 - Prodigal Sorcerer
 - Prodigious Growth
+- Prodigy's Prototype
 - Profane Memento
 - Profane Prayers
 - Professional Face-Breaker
@@ -12157,6 +12160,7 @@ Council4 currently supports **18,162 of 32,502 cards eligible for paper support 
 - Reckless Reveler
 - Reckless Scholar
 - Reckless Wurm
+- Reckoner Bankbuster
 - Reclaim
 - Reclaiming Vines
 - Reclamation Sage
@@ -13669,6 +13673,7 @@ Council4 currently supports **18,162 of 32,502 cards eligible for paper support 
 - Shoreline Raider
 - Shoreline Ranger
 - Shoreline Salvager
+- Shorikai, Genesis Engine
 - Short Bow
 - Short Sword
 - Shortcut Seeker

@@ -624,6 +624,16 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	if additional.TotalManaValueAtLeast != 0 {
 		fields = append(fields, fmt.Sprintf("TotalManaValueAtLeast: %d,", additional.TotalManaValueAtLeast))
 	}
+	if additional.TotalPowerAtLeast != 0 {
+		fields = append(fields, fmt.Sprintf("TotalPowerAtLeast: %d,", additional.TotalPowerAtLeast))
+	}
+	if additional.PowerContribution != cost.PowerContributionEffective {
+		contribution, err := renderPowerContributionKind(additional.PowerContribution)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("PowerContribution: %s,", contribution))
+	}
 	if additional.MatchCardColor {
 		colorLiteral, err := colorValueToLiteral(additional.CardColor)
 		if err != nil {

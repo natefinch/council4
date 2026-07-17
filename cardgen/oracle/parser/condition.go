@@ -2491,7 +2491,7 @@ func recognizeSourceNoCounterCondition(body []shared.Token, atoms Atoms) (Condit
 		return ConditionClause{}, false
 	}
 	// Strip trailing source subject: "on this <type>" or "on it".
-	inner, ok := stripSourceSuffix(rest)
+	inner, ok := stripSourceSuffix(rest, atoms)
 	if !ok {
 		return ConditionClause{}, false
 	}
@@ -2530,7 +2530,7 @@ func recognizeSourceThresholdCounterCondition(body []shared.Token, atoms Atoms) 
 	if !ok {
 		return ConditionClause{}, false
 	}
-	inner, ok := stripSourceSuffix(rest)
+	inner, ok := stripSourceSuffix(rest, atoms)
 	if !ok {
 		return ConditionClause{}, false
 	}
@@ -2554,10 +2554,9 @@ func recognizeSourceThresholdCounterCondition(body []shared.Token, atoms Atoms) 
 	}, true
 }
 
-// stripSourceSuffix strips a trailing "on this <type>" or "on it" source subject
-// from a token slice, returning the remaining inner tokens. It fails closed when
-// neither form is present.
-func stripSourceSuffix(tokens []shared.Token) ([]shared.Token, bool) {
+// stripSourceSuffix strips a trailing "on this <type>", "on it", or
+// "on <source name>" subject from a token slice.
+func stripSourceSuffix(tokens []shared.Token, atoms Atoms) ([]shared.Token, bool) {
 	if trimmed, ok := stripTokenSuffix(tokens, "on", "it"); ok {
 		return trimmed, true
 	}
@@ -2567,6 +2566,22 @@ func stripSourceSuffix(tokens []shared.Token) ([]shared.Token, bool) {
 		strings.EqualFold(tokens[n-3].Text, "on") &&
 		strings.EqualFold(tokens[n-2].Text, "this") {
 		return tokens[:n-3], true
+	}
+	for i := 1; i < len(tokens); i++ {
+		if !strings.EqualFold(tokens[i-1].Text, "on") {
+			continue
+		}
+		span, ok := atoms.SelfNameSpanStartingAt(tokens[i].Span)
+		if !ok {
+			continue
+		}
+		j := i
+		for j < len(tokens) && spanCovers(span, tokens[j].Span) {
+			j++
+		}
+		if j == len(tokens) {
+			return tokens[:i-1], true
+		}
 	}
 	return nil, false
 }

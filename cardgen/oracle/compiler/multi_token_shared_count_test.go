@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
 
 // TestCompileMultiTokenSharedVariableX proves the compiler carries a shared-count
@@ -40,5 +41,59 @@ func TestCompileMultiTokenSharedVariableX(t *testing.T) {
 	}
 	if !food.Amount.VariableX {
 		t.Errorf("Food spec amount = %+v, want VariableX", food.Amount)
+	}
+}
+
+func TestCompileCrewPowerContributionStatic(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := parser.Parse(
+		"This creature crews Vehicles as though its power were 2 greater.",
+		parser.Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("parse diagnostics = %#v", diagnostics)
+	}
+
+	compilation, diagnostics := Compile(document, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("compile diagnostics = %#v", diagnostics)
+	}
+	ability := compilation.Abilities[0]
+	if ability.Static == nil || len(ability.Static.Declarations) != 1 {
+		t.Fatalf("compiled ability = %#v, want one static declaration", ability)
+	}
+	declaration := ability.Static.Declarations[0]
+	if declaration.Kind != StaticDeclarationCrewPowerContribution ||
+		declaration.CrewPowerContribution == nil ||
+		declaration.CrewPowerContribution.Bonus != 2 {
+		t.Fatalf("compiled declaration = %#v", declaration)
+	}
+}
+
+func TestCompileCrewPowerContributionIsTextAndPositionBlind(t *testing.T) {
+	t.Parallel()
+	document, diagnostics := parser.Parse(
+		"This creature crews Vehicles as though its power were 2 greater.",
+		parser.Context{},
+	)
+	if len(diagnostics) != 0 {
+		t.Fatalf("parse diagnostics = %#v", diagnostics)
+	}
+	ability := &document.Abilities[0]
+	ability.Text = "unrelated metadata"
+	ability.Tokens = nil
+	ability.Span = shared.Span{}
+	ability.StaticDeclarations[0].Span = shared.Span{}
+	ability.StaticDeclarations[0].OperationSpan = shared.Span{}
+	ability.StaticDeclarations[0].Subject.Span = shared.Span{}
+
+	compilation, diagnostics := Compile(document, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("compile diagnostics = %#v", diagnostics)
+	}
+	declaration := compilation.Abilities[0].Static.Declarations[0]
+	if declaration.CrewPowerContribution == nil ||
+		declaration.CrewPowerContribution.Bonus != 2 {
+		t.Fatalf("compiled declaration = %#v", declaration)
 	}
 }

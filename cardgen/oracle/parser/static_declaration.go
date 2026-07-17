@@ -59,6 +59,7 @@ const (
 	StaticDeclarationDevotionNotCreature                  StaticDeclarationKind = "StaticDeclarationDevotionNotCreature"
 	StaticDeclarationControlOpponentSearches              StaticDeclarationKind = "StaticDeclarationControlOpponentSearches"
 	StaticDeclarationExileOpponentSearchFinds             StaticDeclarationKind = "StaticDeclarationExileOpponentSearchFinds"
+	StaticDeclarationCrewPowerContribution                StaticDeclarationKind = "StaticDeclarationCrewPowerContribution"
 )
 
 // StaticAttackTaxAmountKind identifies how a per-creature attack-tax declaration
@@ -467,6 +468,9 @@ type StaticDeclarationSyntax struct {
 	Span          shared.Span              `json:"-"`
 	OperationSpan shared.Span              `json:"-"`
 	Subject       StaticDeclarationSubject `json:",omitzero"`
+	// CrewPowerBonus is the amount this creature adds to its power contribution
+	// specifically while crewing a Vehicle.
+	CrewPowerBonus int `json:",omitempty"`
 
 	// HasCondition records whether a single supported-shaped condition clause
 	// applies to this declaration; ConditionSpan links to that clause.
@@ -1357,7 +1361,35 @@ func isRemoveAuraRider(sentence []shared.Token) bool {
 	}
 }
 
+// parseStaticCrewPowerContributionDeclaration recognizes the source-scoped
+// contribution modifier "This creature crews Vehicles as though its power were
+// N greater." The amount is retained as typed syntax for text-blind compilation.
+func parseStaticCrewPowerContributionDeclaration(tokens []shared.Token) (StaticDeclarationSyntax, bool) {
+	if len(tokens) != 12 ||
+		tokens[9].Kind != shared.Integer ||
+		tokens[11].Kind != shared.Period ||
+		(!staticWordsAt(tokens, 0, "this", "creature", "crews", "vehicles", "as", "though", "its", "power", "were") &&
+			!staticWordsAt(tokens, 0, "this", "token", "crews", "vehicles", "as", "though", "its", "power", "were")) ||
+		!staticWordsAt(tokens, 10, "greater") {
+		return StaticDeclarationSyntax{}, false
+	}
+	bonus, err := strconv.Atoi(tokens[9].Text)
+	if err != nil || bonus <= 0 {
+		return StaticDeclarationSyntax{}, false
+	}
+	return StaticDeclarationSyntax{
+		Kind:           StaticDeclarationCrewPowerContribution,
+		Span:           shared.SpanOf(tokens),
+		OperationSpan:  shared.SpanOf(tokens[2:11]),
+		Subject:        StaticDeclarationSubject{Kind: StaticDeclarationSubjectSourceCreature, Span: shared.SpanOf(tokens[:2])},
+		CrewPowerBonus: bonus,
+	}, true
+}
+
 func parseStaticDeclarations(tokens []shared.Token, quoted []Delimited, atoms Atoms, conditions []ConditionClause) []StaticDeclarationSyntax {
+	if declaration, ok := parseStaticCrewPowerContributionDeclaration(tokens); ok {
+		return []StaticDeclarationSyntax{declaration}
+	}
 	if declaration, ok := parseStaticLegendRuleDoesNotApplyDeclaration(tokens, quoted); ok {
 		return []StaticDeclarationSyntax{declaration}
 	}

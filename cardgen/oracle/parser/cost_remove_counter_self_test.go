@@ -62,3 +62,16 @@ func TestParseRemoveCounterFromSelfNamedKind(t *testing.T) {
 		t.Fatalf("counter = (%v, known %t), want charge", component.CounterKind, component.CounterKindKnown)
 	}
 }
+
+func TestParseRemoveCounterFromThisSubtype(t *testing.T) {
+	t.Parallel()
+	component := soleCostComponent(t, "Remove a charge counter from this Vehicle: Draw a card.")
+	if component.Kind != CostComponentRemoveCounter ||
+		!component.SourceSelf ||
+		!component.CounterKindKnown ||
+		component.CounterKind != counter.Charge ||
+		!component.AmountKnown ||
+		component.AmountValue != 1 {
+		t.Fatalf("component = %#v, want one charge counter removed from source", component)
+	}
+}

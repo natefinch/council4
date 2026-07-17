@@ -622,6 +622,7 @@ func CrewActivatedAbility(n int) ActivatedAbility {
 			MatchPermanentType: true,
 			PermanentType:      types.Creature,
 			TotalPowerAtLeast:  n,
+			PowerContribution:  cost.PowerContributionCrew,
 		}},
 		ZoneOfFunction: zone.Battlefield,
 		KeywordAbilities: []KeywordAbility{

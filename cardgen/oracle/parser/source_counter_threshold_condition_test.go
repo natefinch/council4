@@ -59,3 +59,22 @@ func TestParseRemoveThoseCountersSegmentsEffect(t *testing.T) {
 		t.Fatalf("tail[1] kind = %v, want untap", tail[1].Kind)
 	}
 }
+
+func TestParseNamedSourceNoCounterCondition(t *testing.T) {
+	t.Parallel()
+	ability := parseSingleAbility(t,
+		"Draw a card. Then if there are no charge counters on Reckoner Bankbuster, create a Treasure token.",
+		Context{CardName: "Reckoner Bankbuster"})
+	if len(ability.ConditionClauses) != 1 {
+		t.Fatalf("conditions = %#v, want one", ability.ConditionClauses)
+	}
+	clause := ability.ConditionClauses[0]
+	if clause.Predicate != ConditionPredicateObjectMatches ||
+		clause.ObjectBinding != ConditionObjectBindingSource ||
+		!clause.Negated ||
+		!clause.Selection.CounterKindKnown ||
+		clause.Selection.CounterKind != counter.Charge ||
+		clause.Selection.CounterCountAtLeast != 1 {
+		t.Fatalf("condition = %#v, want source has no charge counters", clause)
+	}
+}
