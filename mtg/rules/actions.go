@@ -346,13 +346,24 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 		return nil
 	}
 	player, ok := playerByID(g, playerID)
-	if !ok || player.CommanderInstanceID == 0 || !player.CommandZone.Contains(player.CommanderInstanceID) {
-		return nil
-	}
-	card, ok := g.GetCardInstance(player.CommanderInstanceID)
 	if !ok {
 		return nil
 	}
+	var actions []action.Action
+	for _, cardID := range player.CommandZone.All() {
+		if !isCommanderOwnedBy(g, playerID, cardID) {
+			continue
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		actions = append(actions, e.legalCommanderCardCastActions(g, playerID, card)...)
+	}
+	return actions
+}
+
+func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.PlayerID, card *game.CardInstance) []action.Action {
 	var actions []action.Action
 	for _, face := range card.Def.LegalCastFaces() {
 		spellDef := cardFaceOrDefault(card, face)

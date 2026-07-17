@@ -836,6 +836,10 @@ func clonePrimitive(primitive Primitive) Primitive {
 		return value
 	case CopyStackObject:
 		value.SetColors = slices.Clone(value.SetColors)
+		if value.DynamicCount.IsDynamic() {
+			dynamic := value.DynamicCount.DynamicAmount().Val
+			value.DynamicCount = Dynamic(cloneDynamicAmount(&dynamic))
+		}
 		return value
 	case SacrificePermanents:
 		value.Selection = cloneSelection(value.Selection)

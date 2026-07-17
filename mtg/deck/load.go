@@ -59,9 +59,7 @@ func Load(inputs [game.NumPlayers]PlayerInput, underTest game.PlayerID, reg *car
 }
 
 // buildConfig resolves one player's decklist into a PlayerConfig, returning any
-// card names that were not found in reg. The first commander entry becomes the
-// PlayerConfig commander; additional commander entries (partners) are not yet
-// represented and are ignored.
+// card names that were not found in reg.
 func buildConfig(playerID game.PlayerID, input *PlayerInput, reg *cards.Registry) (game.PlayerConfig, []UnresolvedCard) {
 	config := game.PlayerConfig{Name: input.Name}
 	if input.Decklist == nil {
@@ -69,13 +67,19 @@ func buildConfig(playerID game.PlayerID, input *PlayerInput, reg *cards.Registry
 	}
 
 	var unresolved []UnresolvedCard
-	if len(input.Decklist.Commander) > 0 {
-		name := input.Decklist.Commander[0].Name
-		if def := reg.Lookup(name); def != nil {
-			config.Commander = def
-		} else {
-			unresolved = append(unresolved, UnresolvedCard{Player: playerID, Name: name})
+	for i := range input.Decklist.Commander {
+		entry := &input.Decklist.Commander[i]
+		def := reg.Lookup(entry.Name)
+		if def == nil {
+			unresolved = append(unresolved, UnresolvedCard{Player: playerID, Name: entry.Name})
+			continue
 		}
+		for range entry.Quantity {
+			config.Commanders = append(config.Commanders, def)
+		}
+	}
+	if len(config.Commanders) != 0 {
+		config.Commander = config.Commanders[0]
 	}
 
 	for i := range input.Decklist.Cards {

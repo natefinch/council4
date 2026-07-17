@@ -2235,6 +2235,13 @@ func (r Renderer) renderCopyStackObjectPrimitive(ctx *renderCtx, value game.Copy
 	if value.Count > 1 {
 		fields = append(fields, fmt.Sprintf("Count: %d,", value.Count))
 	}
+	if value.DynamicCount.IsDynamic() {
+		count, err := r.renderQuantity(ctx, value.DynamicCount)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("DynamicCount: %s,", count))
+	}
 	if value.MayChooseNewTargets {
 		fields = append(fields, "MayChooseNewTargets: true,")
 	}

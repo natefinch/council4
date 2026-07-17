@@ -196,6 +196,7 @@ func clonePtrMap[K comparable, V any](m map[K]*V, clone func(*V) *V) map[K]*V {
 func clonePlayer(p *Player) *Player {
 	clone := *p
 	clone.CommanderDamage = cloneComparableMap(p.CommanderDamage)
+	clone.CommanderCastCounts = cloneComparableMap(p.CommanderCastCounts)
 	clone.ManaPool = p.ManaPool.Clone()
 	clone.ManaRiders = cloneSlice(p.ManaRiders)
 	clone.Library = p.Library.Clone()

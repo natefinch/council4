@@ -91,6 +91,40 @@ func TestLoadCleanFourDecks(t *testing.T) {
 	}
 }
 
+func TestLoadPartnerCommanders(t *testing.T) {
+	first := legendaryCreature("First Partner", color.Green)
+	first.StaticAbilities = []game.StaticAbility{game.PartnerStaticBody}
+	second := legendaryCreature("Second Partner", color.Blue)
+	second.StaticAbilities = []game.StaticAbility{game.PartnerStaticBody}
+	registry := cards.NewRegistry([]*game.CardDef{
+		first,
+		second,
+		basicLand("Forest", color.Green),
+	})
+	decklist := &deck.Decklist{
+		Commander: []deck.Entry{
+			{Quantity: 1, Name: first.Name},
+			{Quantity: 1, Name: second.Name},
+		},
+		Cards: []deck.Entry{{Quantity: 98, Name: "Forest"}},
+	}
+
+	res := deck.Load(fourInputs(decklist), game.Player1, registry)
+
+	if !res.OK() {
+		t.Fatalf("expected OK load, got unresolved=%v legality=%v", res.Unresolved, res.Legality)
+	}
+	for i := range res.Configs {
+		config := res.Configs[i]
+		if len(config.Commanders) != 2 || config.Commander != first {
+			t.Errorf("player %d commanders = %v primary=%v", i, config.Commanders, config.Commander)
+		}
+		if len(config.Deck) != 98 {
+			t.Errorf("player %d deck size = %d, want 98", i, len(config.Deck))
+		}
+	}
+}
+
 func TestLoadUnknownCard(t *testing.T) {
 	illegal := &deck.Decklist{
 		Commander: []deck.Entry{{Quantity: 1, Name: "Test Commander"}},

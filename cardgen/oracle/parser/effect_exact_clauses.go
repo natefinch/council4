@@ -1833,6 +1833,12 @@ func exactCopyReferencedSpellEffectSyntax(effect *EffectSyntax) bool {
 			return false
 		}
 		clause += " " + effectAmountSourceText(effect)
+	} else if effect.Amount.DynamicKind != EffectDynamicAmountNone {
+		if effect.Amount.DynamicForm != EffectDynamicAmountFormForEach ||
+			effect.Amount.Multiplier < 1 {
+			return false
+		}
+		clause += " " + effectAmountSourceText(effect)
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), clause+".")
 }

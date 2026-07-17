@@ -44,9 +44,13 @@ type Player struct {
 	CommanderInstanceID id.ID
 
 	// CommanderCastCount is the number of times this player has cast their
-	// commander from the command zone. The commander tax is +{2} generic
-	// per previous cast (CR 903.8).
+	// commanders from the command zone this game. It is the aggregate history
+	// used by effects that count casts of "your commander."
 	CommanderCastCount int
+	// CommanderCastCounts records the per-card history used for commander tax
+	// when a player has multiple commanders. It is populated lazily so legacy
+	// single-commander states that set CommanderCastCount directly keep working.
+	CommanderCastCounts map[id.ID]int
 
 	// CommanderMulligansTaken is the number of mulligans this player has taken
 	// during the current game's Commander mulligan procedure.
@@ -194,10 +198,41 @@ func NewPlayer(seat PlayerID, name string) *Player {
 }
 
 // CommanderTax returns the additional generic mana that must be paid
-// to cast this player's commander from the command zone, based on
-// how many times it has been cast previously (CR 903.8).
+// to cast this player's primary commander from the command zone. New code that
+// has a commander card ID should use CommanderTaxFor.
 func (p *Player) CommanderTax() int {
-	return p.CommanderCastCount * 2
+	return p.CommanderTaxFor(p.CommanderInstanceID)
+}
+
+// CommanderCastCountFor returns this player's command-zone cast count for one
+// commander card. The primary commander falls back to the legacy aggregate when
+// no per-card history has been recorded.
+func (p *Player) CommanderCastCountFor(cardID id.ID) int {
+	if p.CommanderCastCounts != nil {
+		return p.CommanderCastCounts[cardID]
+	}
+	if cardID == p.CommanderInstanceID {
+		return p.CommanderCastCount
+	}
+	return 0
+}
+
+// CommanderTaxFor returns the commander tax for one commander card.
+func (p *Player) CommanderTaxFor(cardID id.ID) int {
+	return p.CommanderCastCountFor(cardID) * 2
+}
+
+// RecordCommanderCast adds one command-zone cast to both the aggregate history
+// and the individual commander's tax history.
+func (p *Player) RecordCommanderCast(cardID id.ID) {
+	if p.CommanderCastCounts == nil {
+		p.CommanderCastCounts = make(map[id.ID]int)
+		if p.CommanderInstanceID != 0 && p.CommanderCastCount > 0 {
+			p.CommanderCastCounts[p.CommanderInstanceID] = p.CommanderCastCount
+		}
+	}
+	p.CommanderCastCounts[cardID]++
+	p.CommanderCastCount++
 }
 
 // IsAlive reports whether this player is still in the game.

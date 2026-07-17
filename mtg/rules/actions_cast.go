@@ -342,8 +342,8 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
 		return false
 	}
-	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
-		player.CommanderCastCount++
+	if sourceZone == zone.Command {
+		recordCommanderCast(g, playerID, cast.CardID)
 	}
 	if freeLinkedExile {
 		consumeCastLinkedExileForFreePermission(g, freeLinkedExilePermissionID)
@@ -442,8 +442,8 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
 		return false
 	}
-	if sourceZone == zone.Command && player.CommanderInstanceID == cast.CardID {
-		player.CommanderCastCount++
+	if sourceZone == zone.Command {
+		recordCommanderCast(g, playerID, cast.CardID)
 	}
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
@@ -483,7 +483,7 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 	switch sourceZone {
 	case zone.Hand:
 	case zone.Command:
-		if player.CommanderInstanceID != cardID {
+		if !isCommanderOwnedBy(g, playerID, cardID) {
 			return false
 		}
 	case zone.Exile:
@@ -802,7 +802,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	foretold := sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, cardID)
 	switch sourceZone {
 	case zone.Command:
-		if player.CommanderInstanceID != cardID {
+		if !isCommanderOwnedBy(g, playerID, cardID) {
 			return false
 		}
 	case zone.Hand:

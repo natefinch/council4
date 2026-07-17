@@ -2775,6 +2775,16 @@ func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if p.Count < 0 {
 		return errors.New("copy stack object count must be nonnegative")
 	}
+	if p.DynamicCount.IsDynamic() {
+		if p.Count != 0 {
+			return errors.New("copy stack object cannot combine fixed and dynamic counts")
+		}
+		if err := validateQuantity(p.DynamicCount, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if p.DynamicCount.Value() != 0 {
+		return errors.New("copy stack object dynamic count must be dynamic")
+	}
 	if p.Chooser.Exists {
 		if err := validatePlayerReference(p.Chooser.Val, targets, checkTargets); err != nil {
 			return err
