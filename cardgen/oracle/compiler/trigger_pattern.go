@@ -75,6 +75,9 @@ const (
 	// colors, total amount, whether the source was a land, and whether the
 	// source tapped, replacing tap inference for mana-production triggers.
 	TriggerEventManaProduced
+	// TriggerEventCompletedDungeon is the authoritative player completion event
+	// emitted after a dungeon's final room ability leaves the stack.
+	TriggerEventCompletedDungeon
 )
 
 // TriggerCastTurn restricts a player event by the active player.
@@ -123,6 +126,9 @@ const (
 	// TriggerPlayerMonarch matches an event whose player is the current monarch
 	// ("At the beginning of the monarch's end step, ...", Archivist of Gondor).
 	TriggerPlayerMonarch
+	// TriggerPlayerInitiative matches an event whose player is the current
+	// initiative holder.
+	TriggerPlayerInitiative
 )
 
 // TriggerZone identifies a zone used by a trigger pattern.

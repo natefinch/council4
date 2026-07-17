@@ -36,7 +36,8 @@ func emitEvent(g *game.Game, event game.Event) {
 	if event.Kind == game.EventDamageDealt ||
 		event.Kind == game.EventCardDrawn ||
 		event.Kind == game.EventBeginningOfStep ||
-		event.Kind == game.EventAttackerDeclared {
+		event.Kind == game.EventAttackerDeclared ||
+		event.Kind == game.EventCompletedDungeon {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
 		event.TriggeredAbilitiesCaptured = true
 	}

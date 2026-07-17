@@ -55,6 +55,7 @@ func parseTriggerEventClause(
 		parseSelfGraveyardOrAnotherUnionTriggerEventClause,
 		parseClassBecameLevelTriggerEventClause,
 		parseDoorUnlockTriggerEventClause,
+		parseCompletedDungeonTriggerEventClause,
 	} {
 		clause := parse(tokens, intro, atoms, cardName)
 		if clause == nil {

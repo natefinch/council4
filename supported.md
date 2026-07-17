@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,121 of 32,502 cards eligible for paper support (55.8%)**. The Scryfall Oracle Cards corpus contains 5,752 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,127 of 32,501 cards eligible for paper support (55.8%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4314,6 +4314,7 @@ Council4 currently supports **18,121 of 32,502 cards eligible for paper support 
 - Dune Mover
 - Dune-Brood Nephilim
 - Dunes of the Dead
+- Dungeon Crawler
 - Dungeon Delver
 - Dungeon Descent
 - Dungeon Map
@@ -6189,6 +6190,7 @@ Council4 currently supports **18,121 of 32,502 cards eligible for paper support 
 - Gilded Scuttler
 - Gilded Sentinel
 - Gilder Bairn
+- Gilraen, Dúnedain Protector
 - Gilt-Leaf Archdruid
 - Gilt-Leaf Palace
 - Gilt-Leaf Seer
@@ -9045,6 +9047,7 @@ Council4 currently supports **18,121 of 32,502 cards eligible for paper support 
 - Looming Hoverguard
 - Looming Shade
 - Looming Spires
+- Loot Dispute
 - Looter il-Kor
 - Loporrit Scout
 - Loran of the Third Path
@@ -11106,6 +11109,7 @@ Council4 currently supports **18,121 of 32,502 cards eligible for paper support 
 - Peregrine Drake
 - Peregrine Griffin
 - Peregrine Mask
+- Perennation
 - Perennial Behemoth
 - Perfect Intimidation
 - Perforating Artist
@@ -13277,6 +13281,7 @@ Council4 currently supports **18,121 of 32,502 cards eligible for paper support 
 - Seething Landscape
 - Seething Pathblazer
 - Seething Song
+- Sefris of the Hidden Ways
 - Segmented Wurm
 - Segovian Angel
 - Segovian Leviathan
@@ -16831,6 +16836,7 @@ Council4 currently supports **18,121 of 32,502 cards eligible for paper support 
 - Vapor Snag
 - Vapor Snare
 - Vaporkin
+- Varis, Silverymoon Ranger
 - Varmint
 - Varragoth, Bloodsky Sire
 - Vashta Nerada

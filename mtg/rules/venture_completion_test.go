@@ -83,6 +83,7 @@ func TestCounteredFinalRoomStillCompletes(t *testing.T) {
 	g := mainPhaseGame(game.Player1)
 	engine := NewEngine(nil)
 	stockLibrary(g, game.Player1, 12)
+	addDungeonCompletionDragonTrigger(g, game.Player1)
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: &ventureChoiceAgent{
 		prefer: []string{"Lost Mine of Phandelver", "Goblin Lair", "Dark Pool", "Temple of Dumathoin"},
 	}}
@@ -108,6 +109,10 @@ func TestCounteredFinalRoomStillCompletes(t *testing.T) {
 	}
 	if g.Players[game.Player1].Dungeon.Exists {
 		t.Fatal("player still in a dungeon after a countered final room ability")
+	}
+	drainDungeonStack(engine, g, agents)
+	if got := dragonTokensControlledBy(g, game.Player1); got != 1 {
+		t.Fatalf("Dragon tokens = %d, want 1 after countered final room", got)
 	}
 }
 
@@ -152,6 +157,7 @@ func TestBaldursGateGithyankiFinalRoomNoCreaturesCompletes(t *testing.T) {
 func TestDroppedFinalRoomTriggerCompletesDungeon(t *testing.T) {
 	g := mainPhaseGame(game.Player1)
 	engine := NewEngine(nil)
+	addDungeonCompletionDragonTrigger(g, game.Player1)
 	// The player is in a dungeon at a room whose (synthetic) final ability targets
 	// a creature. With no creatures on the battlefield the ability has no legal
 	// targets and is dropped before reaching the stack (CR 603.3c); the dungeon
@@ -188,5 +194,9 @@ func TestDroppedFinalRoomTriggerCompletesDungeon(t *testing.T) {
 	}
 	if g.Players[game.Player1].DungeonsCompleted != 1 {
 		t.Fatalf("DungeonsCompleted = %d, want 1 (dropped final room still completes)", g.Players[game.Player1].DungeonsCompleted)
+	}
+	drainDungeonStack(engine, g, [game.NumPlayers]PlayerAgent{})
+	if got := dragonTokensControlledBy(g, game.Player1); got != 1 {
+		t.Fatalf("Dragon tokens = %d, want 1 after dropped final room", got)
 	}
 }

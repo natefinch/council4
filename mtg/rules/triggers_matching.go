@@ -969,6 +969,9 @@ func triggerPlayerMatches(g *game.Game, sourceController game.PlayerID, filter g
 	case game.TriggerPlayerMonarch:
 		monarch := livingMonarch(g)
 		return monarch.Exists && monarch.Val == eventPlayer
+	case game.TriggerPlayerInitiative:
+		initiative := livingInitiative(g)
+		return initiative.Exists && initiative.Val == eventPlayer
 	default:
 		return true
 	}

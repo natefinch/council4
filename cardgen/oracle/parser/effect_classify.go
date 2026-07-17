@@ -2042,15 +2042,17 @@ func ventureIntoUndercityVerbAt(tokens []shared.Token, index int) bool {
 		tokens[index+3].Kind == shared.Period
 }
 
-// takeInitiativeVerbAt reports whether the "take the initiative." keyword action
-// (CR 720) begins at index. The object is the fixed "the initiative" phrase
-// ending the sentence; any other object leaves the "take"/"takes" verb
-// unclassified so unrelated "take" wordings keep their own recognizers.
+// takeInitiativeVerbAt reports whether the "take the initiative" keyword action
+// (CR 720) begins at index. It may end the sentence or be joined by "and" to a
+// following effect. Any other object leaves the "take"/"takes" verb unclassified
+// so unrelated "take" wordings keep their own recognizers.
 func takeInitiativeVerbAt(tokens []shared.Token, index int) bool {
-	return (equalWord(tokens[index], "take") || equalWord(tokens[index], "takes")) &&
-		effectWordsAt(tokens, index+1, "the", "initiative") &&
-		index+3 < len(tokens) &&
-		tokens[index+3].Kind == shared.Period
+	if (!equalWord(tokens[index], "take") && !equalWord(tokens[index], "takes")) ||
+		!effectWordsAt(tokens, index+1, "the", "initiative") ||
+		index+3 >= len(tokens) {
+		return false
+	}
+	return tokens[index+3].Kind == shared.Period || equalWord(tokens[index+3], "and")
 }
 
 // playerCounterWordAfter reports whether the tokens beginning at start name a

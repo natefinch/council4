@@ -513,6 +513,8 @@ func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
 		return "game.TriggerPlayerOpponent", nil
 	case game.TriggerPlayerMonarch:
 		return "game.TriggerPlayerMonarch", nil
+	case game.TriggerPlayerInitiative:
+		return "game.TriggerPlayerInitiative", nil
 	default:
 		return "", fmt.Errorf("render: unsupported trigger player filter %d", player)
 	}
@@ -586,6 +588,8 @@ func renderEventKind(event game.EventKind) (string, error) {
 		return "game.EventLandPlayed", nil
 	case game.EventManaProduced:
 		return "game.EventManaProduced", nil
+	case game.EventCompletedDungeon:
+		return "game.EventCompletedDungeon", nil
 	case game.EventGotCityBlessing:
 		return "game.EventGotCityBlessing", nil
 	case game.EventPermanentBecameMonstrous:
