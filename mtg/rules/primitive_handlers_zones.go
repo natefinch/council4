@@ -2630,7 +2630,14 @@ func handleMill(r *effectResolver, prim game.Mill) effectResolved {
 			key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 			clearLinkedObjects(r.game, key)
 			for _, cardID := range milled {
-				rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+				card, ok := r.game.GetCardInstance(cardID)
+				if !ok {
+					continue
+				}
+				rememberLinkedObject(r.game, key, game.LinkedObjectRef{
+					CardID:          cardID,
+					CardZoneVersion: card.ZoneVersion,
+				})
 			}
 		}
 		res.succeeded = res.amount > 0

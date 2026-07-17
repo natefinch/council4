@@ -230,6 +230,10 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before, groupMember)
+	case game.DynamicAmountReferencedCardsTotalManaValue:
+		if obj.Exists {
+			amount = referencedCardsTotalManaValue(g, obj.Val, dynamic.LinkedKey)
+		}
 	case game.DynamicAmountDamagePreventedThisWay:
 		if obj.Exists {
 			amount = damagePreventedThisWayAmount(g, obj.Val)
@@ -241,6 +245,28 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		multiplier = 1
 	}
 	return applyDynamicAmountDivisor(amount*multiplier+dynamic.Addend, dynamic)
+}
+
+// referencedCardsTotalManaValue sums the printed mana values of the exact card
+// identities published by an earlier instruction in this resolution. Card
+// identity, rather than current zone, is authoritative: a replacement or later
+// zone move cannot substitute a different card for "those cards."
+func referencedCardsTotalManaValue(g *game.Game, obj *game.StackObject, key game.LinkedKey) int {
+	if obj == nil || key == "" {
+		return 0
+	}
+	total := 0
+	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, string(key))) {
+		card, ok := g.GetCardInstance(linked.CardID)
+		if !ok || card.Def == nil {
+			continue
+		}
+		total += card.Def.ManaValue()
+		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
+			total += card.Def.Alternate.Val.ManaValue()
+		}
+	}
+	return total
 }
 
 func resolveDynamicAmountObjectReference(g *game.Game, obj *game.StackObject, dynamic game.DynamicAmount, groupMember opt.V[game.PlayerID]) (resolvedObjectReference, bool) {

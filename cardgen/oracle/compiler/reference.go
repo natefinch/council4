@@ -81,7 +81,8 @@ func bindReferences(
 		}
 
 		if trigger != nil &&
-			(reference.Kind != ReferenceThatPlayer || !triggerPatternBindsThatPlayer(&trigger.Pattern)) &&
+			reference.Kind != ReferenceThatPlayer &&
+			!referencedCardsTotalManaValueReference(*reference, effects) &&
 			!thatObjectPrefersEventPermanent(*reference, trigger) &&
 			precedingSourceReferenceAfter(bound[:i], reference.Order, trigger.Order.End) {
 			reference.Binding = ReferenceBindingSource
@@ -138,7 +139,7 @@ func bindReferences(
 				bound[:i],
 				reference.Order,
 				effects[prior].VerbOrder.Start,
-			) {
+			) && !referencedCardsTotalManaValueReference(*reference, effects) {
 				reference.Binding = ReferenceBindingSource
 			} else {
 				reference.Binding = ReferenceBindingPriorInstructionResult
@@ -391,6 +392,11 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	switch effects[prior].Kind {
 	case EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
+	case EffectMill:
+		if referencedCardsTotalManaValueReference(reference, effects) {
+			return prior, true
+		}
+		return 0, false
 	case EffectBolster:
 		// "that creature" after a bolster and its chosen-creature rider ("...
 		// bolster N. The chosen creature gains ... When that creature deals combat
@@ -411,6 +417,19 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	default:
 		return 0, false
 	}
+}
+
+func referencedCardsTotalManaValueReference(reference CompiledReference, effects []CompiledEffect) bool {
+	if reference.Kind != ReferencePronoun || reference.Pronoun != ReferencePronounThose {
+		return false
+	}
+	for i := range effects {
+		if effects[i].Amount.DynamicKind == DynamicAmountReferencedCardsTotalManaValue &&
+			effects[i].Amount.ReferenceNodeID == reference.NodeID {
+			return true
+		}
+	}
+	return false
 }
 
 func priorSearchMoveAntecedent(current int, effects []CompiledEffect) (int, bool) {

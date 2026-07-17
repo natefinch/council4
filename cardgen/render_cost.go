@@ -773,6 +773,9 @@ func (r Renderer) renderDynamicAmount(ctx *renderCtx, dynamic *game.DynamicAmoun
 	if dynamic.ResultKey != "" {
 		fields = append(fields, fmt.Sprintf("ResultKey: game.ResultKey(%q),", string(dynamic.ResultKey)))
 	}
+	if dynamic.LinkedKey != "" {
+		fields = append(fields, fmt.Sprintf("LinkedKey: game.LinkedKey(%q),", string(dynamic.LinkedKey)))
+	}
 	if len(dynamic.Colors) > 0 {
 		ctx.need(importColor)
 		colorLits, err := colorValueLiterals(dynamic.Colors)
@@ -873,6 +876,8 @@ func renderDynamicAmountKind(kind game.DynamicAmountKind) (string, error) {
 		return "game.DynamicAmountTotalToughnessInGroup", nil
 	case game.DynamicAmountTotalManaValueInGroup:
 		return "game.DynamicAmountTotalManaValueInGroup", nil
+	case game.DynamicAmountReferencedCardsTotalManaValue:
+		return "game.DynamicAmountReferencedCardsTotalManaValue", nil
 	case game.DynamicAmountColorCountInGroup:
 		return "game.DynamicAmountColorCountInGroup", nil
 	case game.DynamicAmountSharedCreatureTypeCountInGroup:
