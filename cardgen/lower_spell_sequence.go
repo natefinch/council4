@@ -3658,10 +3658,10 @@ func isDelayedTargetSacrificeEffect(effect *compiler.CompiledEffect) bool {
 		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
 }
 
-// lowerDelayedCreatedTokensExile links a delayed "Exile the tokens at the
-// beginning of the next end step." clause to the exact batch produced by the
-// preceding CreateToken instruction. The delayed trigger snapshots object IDs at
-// schedule time, isolating simultaneous resolutions and preserving token LKI.
+// lowerDelayedCreatedTokensExile links a delayed "Exile the token(s)" clause at
+// end of combat or the next end step to the exact batch produced by the preceding
+// CreateToken instruction. The delayed trigger snapshots object IDs at schedule
+// time, isolating simultaneous resolutions and preserving token LKI.
 func lowerDelayedCreatedTokensExile(
 	effectIndex int,
 	ctx contentCtx,
@@ -3676,7 +3676,8 @@ func lowerDelayedCreatedTokensExile(
 		effect.Kind != compiler.EffectExile ||
 		!effect.Exact ||
 		!effect.CreatedTokensReference ||
-		effect.DelayedTiming != game.DelayedAtBeginningOfNextEndStep ||
+		(effect.DelayedTiming != game.DelayedAtBeginningOfNextEndStep &&
+			effect.DelayedTiming != game.DelayedAtEndOfCombat) ||
 		effect.Negated ||
 		effect.Context != parser.EffectContextController ||
 		ctx.optional ||
@@ -3696,7 +3697,7 @@ func lowerDelayedCreatedTokensExile(
 	key := game.LinkedKey(fmt.Sprintf("delayed-created-token-exile-%d", effectIndex))
 	create.PublishLinked = key
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
-		Timing:              game.DelayedAtBeginningOfNextEndStep,
+		Timing:              effect.DelayedTiming,
 		CapturedObjectGroup: opt.Val(game.LinkedObjectReference(string(key))),
 		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Exile{
 			Group: game.CapturedObjectsGroup(),

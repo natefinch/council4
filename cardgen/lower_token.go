@@ -749,6 +749,15 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
+	var attackSameAs opt.V[game.ObjectReference]
+	if effect.TokenCopyAttacksWithTarget {
+		if !effect.TokenCopyEntersTapped ||
+			!ctx.content.Targets[0].Selector.Attacking ||
+			copySource.Kind() != game.ObjectReferenceTargetPermanent {
+			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
+		}
+		attackSameAs = opt.Val(copySource)
+	}
 	amount, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
 	if !ok {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
@@ -757,9 +766,10 @@ func lowerCreateCopyTokenSpell(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
 			Primitive: game.CreateToken{
-				Amount:      amount,
-				Source:      game.TokenCopyOf(spec),
-				EntryTapped: effect.TokenCopyEntersTapped,
+				Amount:             amount,
+				Source:             game.TokenCopyOf(spec),
+				EntryTapped:        effect.TokenCopyEntersTapped,
+				AttackSameAsObject: attackSameAs,
 			},
 		}},
 	}.Ability(), nil

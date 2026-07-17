@@ -823,6 +823,14 @@ func (r Renderer) renderCreateToken(ctx *renderCtx, value game.CreateToken) (str
 	if value.AttackSameAsSource {
 		fields = append(fields, "AttackSameAsSource: true,")
 	}
+	if value.AttackSameAsObject.Exists {
+		object, err := r.renderObjectReference(value.AttackSameAsObject.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("AttackSameAsObject: opt.Val(%s),", object))
+	}
 	if value.Power.Exists {
 		power, err := r.renderQuantity(ctx, value.Power.Val)
 		if err != nil {

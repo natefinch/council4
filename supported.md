@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,111 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,112 of 32,501 cards eligible for paper support (55.7%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5465,6 +5465,7 @@ Council4 currently supports **18,111 of 32,501 cards eligible for paper support 
 - Flamekin Harbinger
 - Flamekin Spitfire
 - Flamekin Village
+- Flamerush Rider
 - Flames of the Firebrand
 - Flameshadow Conjuring
 - Flameshot

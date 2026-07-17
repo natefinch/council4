@@ -1985,6 +1985,9 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if p.AttackSameAsSource {
 		attackModes++
 	}
+	if p.AttackSameAsObject.Exists {
+		attackModes++
+	}
 	if attackModes > 1 {
 		return errors.New("create token attack-entry modes are mutually exclusive")
 	}
@@ -1993,6 +1996,11 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	}
 	if p.EntryAttachedTo.Exists {
 		if err := validateObjectReference(p.EntryAttachedTo.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	if p.AttackSameAsObject.Exists {
+		if err := validateObjectReference(p.AttackSameAsObject.Val, targets, checkTargets); err != nil {
 			return err
 		}
 	}

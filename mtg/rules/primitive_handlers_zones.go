@@ -675,6 +675,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if prim.AttackSameAsSource {
 		r.declareTokensAttackingSameAsSource(created)
 	}
+	if prim.AttackSameAsObject.Exists {
+		r.declareTokensAttackingSameAsObject(created, prim.AttackSameAsObject.Val)
+	}
 	if prim.PublishLinked != "" {
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		for _, permanent := range created {
@@ -791,6 +794,8 @@ func (r *effectResolver) createCopyTokenFromChosenGroup(
 		}
 	case prim.AttackSameAsSource:
 		r.declareTokensAttackingSameAsSource(created)
+	case prim.AttackSameAsObject.Exists:
+		r.declareTokensAttackingSameAsObject(created, prim.AttackSameAsObject.Val)
 	default:
 	}
 	if prim.PublishLinked != "" {
@@ -886,6 +891,24 @@ func (r *effectResolver) declareTokensAttackingSameAsSource(tokens []*game.Perma
 	controller := r.obj.Controller
 	for _, token := range tokens {
 		declareTokenAttackingTarget(r.game, controller, token, target)
+	}
+}
+
+// declareTokensAttackingSameAsObject puts each created token into combat against
+// the same player, planeswalker, or battle as the referenced attacking permanent.
+// A reference that no longer resolves to a live attacker leaves the tokens on the
+// battlefield without attacking.
+func (r *effectResolver) declareTokensAttackingSameAsObject(tokens []*game.Permanent, ref game.ObjectReference) {
+	resolved, ok := resolveObjectReference(r.game, r.obj, ref)
+	if !ok || resolved.permanent == nil {
+		return
+	}
+	declaration, ok := attackDeclarationForAttacker(r.game, resolved.permanent.ObjectID)
+	if !ok {
+		return
+	}
+	for _, token := range tokens {
+		declareTokenAttackingTarget(r.game, r.obj.Controller, token, declaration.Target)
 	}
 }
 
