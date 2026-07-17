@@ -4,6 +4,8 @@ package magefiles
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,10 +53,13 @@ func installTool(ctx context.Context, tool string) error {
 	return nil
 }
 
-func runTool(ctx context.Context, tool string, args ...string) error {
+func runTool(ctx context.Context, extraEnv []string, tool string, args ...string) error {
 	cmd := exec.CommandContext(ctx, filepath.Join(bin, tool), args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
+	if len(extraEnv) > 0 {
+		cmd.Env = append(os.Environ(), extraEnv...)
+	}
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run %s: %w", tool, err)
 	}
@@ -67,7 +72,49 @@ func Lint(ctx context.Context) error {
 		return err
 	}
 
-	return runTool(ctx, "golangci-lint", "run")
+	// Point golangci-lint at a per-worktree cache directory so concurrent lint
+	// runs across git worktrees don't serialize on a shared cache lock. Paired
+	// with allow-parallel-runners in .golangci.toml, this lets many worktrees
+	// lint simultaneously without the "parallel golangci-lint is running" error.
+	env, err := lintCacheEnv(ctx)
+	if err != nil {
+		return err
+	}
+	return runTool(ctx, env, "golangci-lint", "run")
+}
+
+// lintCacheEnv returns environment overrides that point golangci-lint at a
+// cache directory unique to the current git worktree, keyed by the worktree
+// root path. An explicit GOLANGCI_LINT_CACHE in the environment is respected
+// and left untouched.
+func lintCacheEnv(ctx context.Context) ([]string, error) {
+	if _, ok := os.LookupEnv("GOLANGCI_LINT_CACHE"); ok {
+		return nil, nil
+	}
+	root, err := worktreeRoot(ctx)
+	if err != nil {
+		return nil, err
+	}
+	base, err := os.UserCacheDir()
+	if err != nil {
+		return nil, err
+	}
+	sum := sha256.Sum256([]byte(root))
+	dir := filepath.Join(base, "council4-golangci-lint", hex.EncodeToString(sum[:8]))
+	if err := os.MkdirAll(dir, 0o750); err != nil {
+		return nil, fmt.Errorf("failed to create lint cache dir %s: %w", dir, err)
+	}
+	return []string{"GOLANGCI_LINT_CACHE=" + dir}, nil
+}
+
+// worktreeRoot returns the absolute root of the current git worktree, falling
+// back to the working directory when git is unavailable.
+func worktreeRoot(ctx context.Context) (string, error) {
+	out, err := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return os.Getwd()
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 // ensureTool installs a tool only when the binary is missing or not already at
