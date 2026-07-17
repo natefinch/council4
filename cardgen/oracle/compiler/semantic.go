@@ -986,6 +986,17 @@ const (
 	// highest-toughness creature or is tied for highest, and is false when no
 	// creatures exist.
 	ConditionPredicateControlsGreatestToughnessCreature
+	// ConditionPredicateControlsGreatestManaValueInGroup is satisfied when the
+	// context controller controls a permanent matching the condition's Selection
+	// whose effective mana value is greater than or equal to every other
+	// Selection-matching permanent's mana value on the battlefield ("if you
+	// control the artifact with the greatest mana value or tied for the greatest
+	// mana value"; Padeem, Consul of Innovation). Unlike the creature-only power
+	// and toughness predicates it carries a Selection, so it generalizes over any
+	// battlefield permanent filter. It holds when the controller has the sole
+	// highest-mana-value matching permanent or is tied for highest, and is false
+	// when the controller controls no matching permanent.
+	ConditionPredicateControlsGreatestManaValueInGroup
 	// ConditionPredicateEventSubjectPowerGreatestOnBattlefield is satisfied when
 	// the permanent named by the triggering zone-change event has power strictly
 	// greater than every other creature's power on the battlefield ("if its power

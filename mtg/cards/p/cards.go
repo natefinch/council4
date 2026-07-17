@@ -7,6 +7,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // Cards lists all card definitions in this package, each paired with a
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
+	{Name: "Padeem, Consul of Innovation", New: PadeemConsulOfInnovation},
 	{Name: "Paired Tactician", New: PairedTactician},
 	{Name: "Palace Jailer", New: PalaceJailer},
 	{Name: "Paladin of Atonement", New: PaladinOfAtonement},

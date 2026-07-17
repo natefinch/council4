@@ -110,6 +110,7 @@ const (
 	ConditionPredicateControllerCombatPhase                            ConditionPredicateKind = "ConditionPredicateControllerCombatPhase"
 	ConditionPredicateControlsGreatestPowerCreature                    ConditionPredicateKind = "ConditionPredicateControlsGreatestPowerCreature"
 	ConditionPredicateControlsGreatestToughnessCreature                ConditionPredicateKind = "ConditionPredicateControlsGreatestToughnessCreature"
+	ConditionPredicateControlsGreatestManaValueInGroup                 ConditionPredicateKind = "ConditionPredicateControlsGreatestManaValueInGroup"
 	ConditionPredicateEventSubjectPowerGreatestOnBattlefield           ConditionPredicateKind = "ConditionPredicateEventSubjectPowerGreatestOnBattlefield"
 	ConditionPredicateSubjectSharesCreatureTypeWithSource              ConditionPredicateKind = "ConditionPredicateSubjectSharesCreatureTypeWithSource"
 	ConditionPredicateControllerIsMonarch                              ConditionPredicateKind = "ConditionPredicateControllerIsMonarch"
@@ -871,6 +872,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeLandEnteredOrControlsBasicCondition,
 		recognizeControlsGreatestPowerCondition,
 		recognizeControlsGreatestToughnessCondition,
+		recognizeControlsGreatestManaValueCondition,
 		recognizeDestroyedThisWayCondition,
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
@@ -1150,6 +1152,44 @@ func recognizeControlsGreatestToughnessCondition(body []shared.Token, _ Atoms) (
 		return ConditionClause{Predicate: ConditionPredicateControlsGreatestToughnessCreature}, true
 	}
 	return ConditionClause{}, false
+}
+
+// recognizeControlsGreatestManaValueCondition matches the conditional-draw gate
+// "you control the <group> with the greatest mana value or tied for the greatest
+// mana value" (Padeem, Consul of Innovation: "you control the artifact with the
+// greatest mana value or tied for the greatest mana value"). The <group> noun is
+// parsed through the shared condition-selection recognizer, so the predicate is
+// generic over any battlefield permanent filter the vocabulary can express, not
+// only artifacts. The predicate holds when the controller controls a matching
+// permanent whose effective mana value is at least as high as every other
+// matching permanent's mana value on the battlefield (sole highest or tied for
+// highest); it fails closed when the controller controls no matching permanent.
+// It fails closed on any other wording or on a group phrase the selection
+// recognizer cannot express.
+func recognizeControlsGreatestManaValueCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "you", "control", "the")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	suffix := []string{
+		"with", "the", "greatest", "mana", "value",
+		"or", "tied", "for", "the", "greatest", "mana", "value",
+	}
+	if len(rest) <= len(suffix) {
+		return ConditionClause{}, false
+	}
+	nounTokens := rest[:len(rest)-len(suffix)]
+	if !tokenWordsEqual(rest[len(rest)-len(suffix):], suffix...) {
+		return ConditionClause{}, false
+	}
+	selection, ok := parseConditionSelection(nounTokens, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate: ConditionPredicateControlsGreatestManaValueInGroup,
+		Selection: selection,
+	}, true
 }
 
 // recognizePriorInstructionCondition matches the resolving-success/failure gate

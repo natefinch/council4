@@ -252,6 +252,20 @@ type Condition struct {
 	// creature or is tied for highest, and is false when no creatures exist.
 	ControllerControlsGreatestToughnessCreature bool
 
+	// ControlsGreatestManaValueInGroup is satisfied when the context controller
+	// controls a battlefield permanent matching the Selection whose effective
+	// mana value is greater than or equal to every other Selection-matching
+	// permanent's mana value on the battlefield ("if you control the artifact
+	// with the greatest mana value or tied for the greatest mana value"; Padeem,
+	// Consul of Innovation). The Selection carries the group filter with a
+	// controller-agnostic scope; the runtime restricts the controlled side to the
+	// context controller itself. It holds when the controller has the sole
+	// highest-mana-value matching permanent or is tied for highest, and is false
+	// when the controller controls no matching permanent (so it never passes
+	// vacuously on an empty battlefield). It is the mana-value, Selection-filtered
+	// generalization of ControllerControlsGreatestPowerCreature.
+	ControlsGreatestManaValueInGroup opt.V[Selection]
+
 	// EventPermanentPowerGreaterThanEachOtherCreature is satisfied when the
 	// permanent named by the triggering zone-change event has power strictly
 	// greater than every other creature's power on the battlefield ("if its power
@@ -455,6 +469,7 @@ func (c *Condition) Empty() bool {
 		!c.ControllerCombatPhase &&
 		!c.ControllerControlsGreatestPowerCreature &&
 		!c.ControllerControlsGreatestToughnessCreature &&
+		!c.ControlsGreatestManaValueInGroup.Exists &&
 		!c.EventPermanentPowerGreaterThanEachOtherCreature &&
 		!c.ControllerIsMonarch &&
 		!c.ControllerWasMonarchAtTurnStart &&
