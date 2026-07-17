@@ -111,3 +111,58 @@ func TestAnimateTargetFailsClosedOnIndefiniteDuration(t *testing.T) {
 		t.Fatal("expected diagnostics for indefinite-duration land animation, got none")
 	}
 }
+
+// TestLowerAnimateTargetDynamicXX covers Destiny Spinner's variable "X/X"
+// animation bound by a trailing "where X is the number of enchantments you
+// control" clause. The base power/toughness lower to SetPowerDynamic and
+// SetToughnessDynamic reading a controlled-enchantment count (locked at
+// resolution) rather than the fixed SetPower/SetToughness of an N/N animation.
+func TestLowerAnimateTargetDynamicXX(t *testing.T) {
+	ptr := func(s string) *string { return &s }
+	source := generateAnimateTargetSource(t, &ScryfallCard{
+		Name:       "Destiny Spinner",
+		Layout:     "normal",
+		TypeLine:   "Enchantment Creature — Human",
+		ManaCost:   "{1}{G}",
+		Power:      ptr("2"),
+		Toughness:  ptr("3"),
+		OracleText: "Creature and enchantment spells you control can't be countered.\n{3}{G}: Target land you control becomes an X/X Elemental creature with trample and haste until end of turn, where X is the number of enchantments you control. It's still a land.",
+	}, "d")
+	assertSourceContains(t, source,
+		"Constraint: \"target land you control\",",
+		"Controller: game.ControllerYou",
+		"AddSubtypes: []types.Sub{types.Elemental},",
+		"game.Trample,",
+		"game.Haste,",
+		"Layer: game.LayerPowerToughnessSet,",
+		"SetPowerDynamic: opt.Val(game.DynamicAmount{",
+		"Kind:       game.DynamicAmountCountSelector,",
+		"Group:      game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Enchantment}, Controller: game.ControllerYou}),",
+		"SetToughnessDynamic: opt.Val(game.DynamicAmount{",
+		"Duration: game.DurationUntilEndOfTurn,",
+	)
+	if strings.Contains(source, "SetPower:     opt.Val") || strings.Contains(source, "SetToughness: opt.Val") {
+		t.Fatalf("dynamic X/X animation must not emit a fixed base power/toughness:\n%s", source)
+	}
+}
+
+// TestAnimateTargetFailsClosedOnUnsupportedWhereX confirms a variable "X/X"
+// animation whose "where X is ..." clause is not the supported "number of
+// <permanent type> you control" shape stays unsupported rather than fabricating
+// a base power/toughness. A creature-subtype count ("Allies") is not a permanent
+// card type, so the X binding fails closed.
+func TestAnimateTargetFailsClosedOnUnsupportedWhereX(t *testing.T) {
+	_, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		Name:       "Ally Animator",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{2}{G}",
+		OracleText: "Target land you control becomes an X/X Elemental creature until end of turn, where X is the number of Allies you control. It's still a land.",
+	}, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) == 0 {
+		t.Fatal("expected diagnostics for an unsupported where-X subtype count, got none")
+	}
+}

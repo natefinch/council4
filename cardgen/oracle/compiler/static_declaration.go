@@ -4604,6 +4604,8 @@ func staticSpellTypeCardTypes(filter parser.StaticDeclarationSpellTypeKind) ([]t
 		return []types.Card{types.Sorcery}, true
 	case parser.StaticDeclarationSpellTypeInstantOrSorcery:
 		return []types.Card{types.Instant, types.Sorcery}, true
+	case parser.StaticDeclarationSpellTypeCreatureOrEnchantment:
+		return []types.Card{types.Creature, types.Enchantment}, true
 	default:
 		return nil, false
 	}
