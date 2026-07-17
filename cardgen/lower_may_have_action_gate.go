@@ -14,6 +14,8 @@ import (
 // it ("If they do, ..." / "If they don't, ...").
 const mayHaveActionKey = game.ResultKey("may-have-action")
 
+const mayHaveMilledCardsLinkKey = game.LinkedKey("may-have-milled-cards")
+
 // mayHaveOfferPlan describes how a "may have" causative offer's deciding player
 // is modeled from the "have" grant's context. The chooser is the player who
 // decides whether the caused action happens; setOptionalActor reports whether
@@ -139,7 +141,7 @@ func lowerMayHaveActionGate(
 
 	sequence := make([]game.Instruction, 0, len(ctx.content.Effects))
 	sequence = append(sequence, offerInstr)
-	consequence, ok := lowerMayHaveConsequence(cardName, ctx, succeeded, clauseSyntaxes)
+	consequence, ok := lowerMayHaveConsequence(cardName, ctx, plan, succeeded, clauseSyntaxes)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -251,7 +253,8 @@ func lowerMayHaveOfferInstruction(
 func lowerMayHaveConsequence(
 	cardName string,
 	ctx contentCtx,
-	succeeded game.TriState,
+	plan mayHaveOfferPlan,
+	accepted game.TriState,
 	clauseSyntaxes []parser.Ability,
 ) ([]game.Instruction, bool) {
 	conditionSpan := ctx.content.Conditions[0].Span
@@ -268,7 +271,13 @@ func lowerMayHaveConsequence(
 		if len(consequenceCtx.content.Targets) != 0 {
 			return nil, false
 		}
-		consequenceContent, diag := lowerContent(cardName, consequenceCtx, &clauseSyntaxes[i])
+		var consequenceContent game.AbilityContent
+		var diag *shared.Diagnostic
+		if damage, ok := lowerMayHaveLinkedMillDamage(ctx.content.Effects, i, plan); ok {
+			consequenceContent = game.Mode{Sequence: []game.Instruction{{Primitive: damage}}}.Ability()
+		} else {
+			consequenceContent, diag = lowerContent(cardName, consequenceCtx, &clauseSyntaxes[i])
+		}
 		if diag != nil ||
 			consequenceContent.IsModal() ||
 			len(consequenceContent.SharedTargets) != 0 ||
@@ -283,12 +292,79 @@ func lowerMayHaveConsequence(
 				instr.ResultGate.Exists {
 				return nil, false
 			}
-			instr.ResultGate = opt.Val(game.InstructionResultGate{
-				Key:       mayHaveActionKey,
-				Succeeded: succeeded,
-			})
+			linkedMillBranch := mayHaveMillFeedsLinkedTotal(ctx.content.Effects, i) ||
+				(i > 0 && referencedCardsAmountBindsPrior(ctx.content.Effects[i], i-1))
+			if mill, ok := instr.Primitive.(game.Mill); ok && linkedMillBranch {
+				mill.PublishLinked = mayHaveMilledCardsLinkKey
+				instr.Primitive = mill
+			}
+			gate := game.InstructionResultGate{Key: mayHaveActionKey}
+			if linkedMillBranch {
+				// This branch is selected by the opponent's decision, not by
+				// whether the offered draw could physically move all cards.
+				gate.Accepted = accepted
+			} else {
+				gate.Succeeded = accepted
+			}
+			instr.ResultGate = opt.Val(gate)
 			sequence = append(sequence, instr)
 		}
 	}
 	return sequence, true
+}
+
+func mayHaveMillFeedsLinkedTotal(effects []compiler.CompiledEffect, index int) bool {
+	return index+1 < len(effects) &&
+		effects[index].Kind == compiler.EffectMill &&
+		referencedCardsAmountBindsPrior(effects[index+1], index)
+}
+
+func referencedCardsAmountBindsPrior(effect compiler.CompiledEffect, prior int) bool {
+	if effect.Amount.DynamicKind != compiler.DynamicAmountReferencedCardsTotalManaValue ||
+		effect.Amount.DynamicForm != compiler.DynamicAmountEqual ||
+		effect.Amount.Multiplier != 1 ||
+		effect.Amount.Addend != 0 ||
+		effect.Amount.ReferenceNodeID < 0 {
+		return false
+	}
+	for _, reference := range effect.References {
+		if reference.NodeID == effect.Amount.ReferenceNodeID &&
+			reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
+			reference.PriorInstruction == prior {
+			return true
+		}
+	}
+	return false
+}
+
+func lowerMayHaveLinkedMillDamage(
+	effects []compiler.CompiledEffect,
+	index int,
+	plan mayHaveOfferPlan,
+) (game.Damage, bool) {
+	if !plan.chooserIsTarget || index == 0 || !referencedCardsAmountBindsPrior(effects[index], index-1) {
+		return game.Damage{}, false
+	}
+	effect := effects[index]
+	if effect.Kind != compiler.EffectDealDamage ||
+		effect.Context != parser.EffectContextSource ||
+		!effect.Exact ||
+		effect.Negated ||
+		effect.Optional ||
+		effect.DelayedTiming != 0 ||
+		effect.Divided ||
+		effect.DamageRecipient.Reference != parser.DamageRecipientReferenceThatPlayer ||
+		len(effect.Targets) != 0 ||
+		len(effect.DamageRiders) != 0 {
+		return game.Damage{}, false
+	}
+	return game.Damage{
+		Amount: game.Dynamic(game.DynamicAmount{
+			Kind:       game.DynamicAmountReferencedCardsTotalManaValue,
+			Multiplier: 1,
+			LinkedKey:  mayHaveMilledCardsLinkKey,
+		}),
+		Recipient:    game.PlayerDamageRecipient(game.TargetPlayerReference(0)),
+		DamageSource: opt.Val(game.SourcePermanentReference()),
+	}, true
 }

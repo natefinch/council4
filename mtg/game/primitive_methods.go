@@ -1003,6 +1003,10 @@ func quantityRefs(quantity Quantity) primitiveRefs {
 		if dynamic.ResultKey != "" {
 			refs.consumesChoices = append(refs.consumesChoices, ChoiceKey(dynamic.ResultKey))
 		}
+	case DynamicAmountReferencedCardsTotalManaValue:
+		if dynamic.LinkedKey != "" {
+			refs.consumesLinked = append(refs.consumesLinked, dynamic.LinkedKey)
+		}
 	case DynamicAmountMaxOf:
 		for i := range dynamic.Operands {
 			refs = mergePrimitiveRefs(refs, quantityRefs(Dynamic(dynamic.Operands[i])))

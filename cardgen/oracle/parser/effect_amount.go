@@ -1656,6 +1656,17 @@ func parseDynamicTotalCharacteristicSubject(tokens []shared.Token, start int, at
 	default:
 		return dynamicAmountSubject{}, false
 	}
+	if kind == EffectDynamicAmountTotalManaValue &&
+		effectWordsAt(tokens, groupStart, "those", "cards") &&
+		dynamicAmountBoundary(tokens, groupStart+2) {
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{
+				DynamicKind:   EffectDynamicAmountReferencedCardsTotalManaValue,
+				ReferenceSpan: tokens[groupStart].Span,
+			},
+			end: groupStart + 2,
+		}, true
+	}
 	inner, ok := parseDynamicCountSubject(tokens, groupStart, atoms)
 	if !ok || inner.amount.DynamicKind != EffectDynamicAmountCount || inner.amount.Selection == nil ||
 		inner.amount.Selection.Zone != zone.None {

@@ -4395,6 +4395,11 @@ const (
 	// damage each matched controlled creature dealt to that one player. Added
 	// last so existing kinds keep their wire values.
 	DynamicAmountTriggeringEventTotalCombatDamage
+	// DynamicAmountReferencedCardsTotalManaValue is the sum of the mana values of
+	// the exact card batch produced by a prior instruction ("the total mana value
+	// of those cards"). The amount's reference NodeID binds it to that producer.
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountReferencedCardsTotalManaValue
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.

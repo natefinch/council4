@@ -901,6 +901,11 @@ const (
 	// Earthquake Dragon, Excalibur, Sword of Eden). Added last so existing kinds
 	// keep their values.
 	EffectDynamicAmountTotalManaValue EffectDynamicAmountKind = "EffectDynamicAmountTotalManaValue"
+	// EffectDynamicAmountReferencedCardsTotalManaValue is the sum of the mana
+	// values of an exact card batch named by a prior-instruction reference ("the
+	// total mana value of those cards"). The reference span identifies the
+	// plural demonstrative so the compiler can bind it to the producing effect.
+	EffectDynamicAmountReferencedCardsTotalManaValue EffectDynamicAmountKind = "EffectDynamicAmountReferencedCardsTotalManaValue"
 	// EffectDynamicAmountTimesKicked is the number of times the spell was kicked
 	// (its Multikicker count, CR 702.32), the "for each time it was kicked" amount
 	// (Everflowing Chalice's enters-with-counters quantity, Wolfbriar Elemental's

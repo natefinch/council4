@@ -308,6 +308,11 @@ const (
 	// combat-damage batch that matched the trigger, the combat damage each
 	// matched source dealt to that one player (Quartzwood Crasher).
 	DynamicAmountTriggeringEventTotalCombatDamage
+	// DynamicAmountReferencedCardsTotalManaValue sums the mana values of the exact
+	// card identities a prior instruction published under LinkedKey. It reads
+	// printed characteristics outside the stack: split cards contribute both
+	// halves, while double-faced and Adventure cards contribute their front face.
+	DynamicAmountReferencedCardsTotalManaValue
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
@@ -333,6 +338,9 @@ type DynamicAmount struct {
 	CardZone  zone.Type
 	Selection *Selection
 	ResultKey ResultKey
+	// LinkedKey names the exact card batch consumed by linked-card aggregate
+	// amounts. It is empty for every other dynamic amount kind.
+	LinkedKey LinkedKey
 	// Divisor, when greater than one, divides the amount after the multiplier and
 	// addend are applied, rounding down unless RoundUp is set. It backs the "half
 	// their library, rounded up/down" mill amounts (Traumatize, Fleet Swallower),

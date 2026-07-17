@@ -639,6 +639,10 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 			return errors.New("card-zone count requires a player")
 		}
 		return validatePlayerReference(*dynamic.Player, targets, checkTargets)
+	case DynamicAmountReferencedCardsTotalManaValue:
+		if dynamic.LinkedKey == "" {
+			return errors.New("referenced-cards total mana value requires a linked key")
+		}
 	case DynamicAmountPreviousEffectResult, DynamicAmountPreviousEffectExcessDamage:
 		if dynamic.ResultKey == "" {
 			return errors.New("previous-result quantity requires a result key")
