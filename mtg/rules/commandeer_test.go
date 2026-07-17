@@ -212,6 +212,39 @@ func TestCommandeerPermanentSpellEntersUnderNewController(t *testing.T) {
 	}
 }
 
+func TestAethersnatchCreatureSpellEntersUnderNewController(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	target := addCreaturePermanent(g, game.Player1)
+	victim, card := targetedStackSpell(
+		g,
+		game.Player2,
+		game.Player2,
+		[]types.Card{types.Creature},
+		game.PermanentTarget(target.ObjectID),
+	)
+	ability := commandeerAbility()
+	ability.Modes[0].Targets[0].Predicate.ExcludedSpellCardTypes = nil
+	addInstructionSpellToStackForController(
+		g,
+		game.Player1,
+		ability.Modes[0].Sequence,
+		[]game.Target{game.StackObjectTarget(victim.ID)},
+	)
+	engine := NewEngine(nil)
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	}, &TurnLog{})
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	permanent := permanentByCardID(g, card.ID)
+	if permanent == nil || permanent.Controller != game.Player1 {
+		t.Fatalf("resolved creature = %#v, want controlled by Player1", permanent)
+	}
+	if card.Owner != game.Player2 {
+		t.Fatalf("card owner = %v, want Player2", card.Owner)
+	}
+}
+
 func TestCommandeerPermanentSpellCopyBecomesTokenForNewController(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := &game.CardInstance{

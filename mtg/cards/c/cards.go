@@ -129,7 +129,6 @@ var Cards = []cardset.Entry{
 	{Name: "Combat Research", New: CombatResearch},
 	{Name: "Command Bridge", New: CommandBridge},
 	{Name: "Command Tower", New: CommandTower},
-	{Name: "Commandeer", New: Commandeer},
 	{Name: "Commander's Insignia", New: CommanderSInsignia},
 	{Name: "Commander's Plate", New: CommanderSPlate},
 	{Name: "Commune with Beavers", New: CommuneWithBeavers},

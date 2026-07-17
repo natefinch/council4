@@ -92,3 +92,30 @@ func TestGenerateCommandeerSource(t *testing.T) {
 		}
 	}
 }
+
+func TestLowerAethersnatchIncludesCreatureSpells(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Aethersnatch",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{4}{U}{U}",
+		OracleText: "Gain control of target spell. You may choose new targets for it.",
+	})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+		t.Fatalf("mode = %#v, want one target and two instructions", mode)
+	}
+	target := mode.Targets[0]
+	if target.Allow != game.TargetAllowStackObject ||
+		!slices.Equal(target.Predicate.StackObjectKinds, []game.StackObjectKind{game.StackSpell}) ||
+		len(target.Predicate.ExcludedSpellCardTypes) != 0 {
+		t.Fatalf("target = %#v, want any spell", target)
+	}
+	if _, ok := mode.Sequence[0].Primitive.(game.ChangeStackObjectController); !ok {
+		t.Fatalf("first instruction = %#v, want stack controller change", mode.Sequence[0])
+	}
+	if _, ok := mode.Sequence[1].Primitive.(game.ChooseNewTargets); !ok || !mode.Sequence[1].Optional {
+		t.Fatalf("second instruction = %#v, want optional retarget", mode.Sequence[1])
+	}
+}
