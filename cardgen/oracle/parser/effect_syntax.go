@@ -16,6 +16,12 @@ import (
 
 func emitResolvingSyntax(abilities []Ability) {
 	for i := range abilities {
+		if recognizeReplaceLinkedExiledCardSequence(&abilities[i]) {
+			continue
+		}
+		if recognizeLinkedExiledCopyTokenSequence(&abilities[i]) {
+			continue
+		}
 		if recognizeChosenTypeLibraryTopSequence(&abilities[i]) {
 			continue
 		}

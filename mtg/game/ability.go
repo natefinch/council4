@@ -1494,6 +1494,9 @@ const (
 	// TokenCopySourceChosenFromGroup copies one permanent the resolving
 	// controller chooses from Group.
 	TokenCopySourceChosenFromGroup
+	// TokenCopySourceLinkedExiledCard copies the card currently in exile under
+	// LinkID for the resolving source permanent's object-scoped linked group.
+	TokenCopySourceLinkedExiledCard
 )
 
 // TokenCopySpec describes a token that starts as a copy of another object/card,
@@ -1502,6 +1505,7 @@ const (
 type TokenCopySpec struct {
 	Source TokenCopySource
 	Object ObjectReference
+	LinkID LinkedKey
 
 	SetName       string
 	SetColors     []color.Color

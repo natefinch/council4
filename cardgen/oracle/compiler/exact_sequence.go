@@ -108,6 +108,12 @@ const (
 	// extra data; lowering composes the payment, reflexive token-copy, and
 	// fixed-Insect fallback primitives from the kind alone.
 	ExactSequenceLandfallPayCopyToken
+	// ExactSequenceReplaceLinkedExiledCard is the typed single-current-imprint
+	// trigger body.
+	ExactSequenceReplaceLinkedExiledCard
+	// ExactSequenceLinkedExiledCopyToken is the typed hasty temporary token-copy
+	// payoff for an object-scoped linked exile.
+	ExactSequenceLinkedExiledCopyToken
 )
 
 func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
@@ -138,6 +144,10 @@ func compileExactSequenceKind(kind parser.ExactSequenceKind) ExactSequenceKind {
 		return ExactSequenceDrawPutLandSubtypeLife
 	case parser.ExactSequenceLandfallPayCopyToken:
 		return ExactSequenceLandfallPayCopyToken
+	case parser.ExactSequenceReplaceLinkedExiledCard:
+		return ExactSequenceReplaceLinkedExiledCard
+	case parser.ExactSequenceLinkedExiledCopyToken:
+		return ExactSequenceLinkedExiledCopyToken
 	default:
 		return ExactSequenceUnknown
 	}

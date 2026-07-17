@@ -177,6 +177,9 @@ func lowerActivatedBodyContent(
 			Sequence: conditionalLookAtTopBattlefieldSequence(ability),
 		}.Ability(), nil
 	}
+	if ability.ExactSequence == compiler.ExactSequenceLinkedExiledCopyToken {
+		return lowerLinkedExiledCopyTokenActivation(ability, bodyText)
+	}
 	ctx := contentCtx{
 		text:                       bodySyntax.Text,
 		span:                       bodySyntax.Span,

@@ -440,6 +440,14 @@ const (
 	// extra data; lowering composes the payment, reflexive token-copy, and
 	// fixed-Insect fallback primitives from the kind alone.
 	ExactSequenceLandfallPayCopyToken
+	// ExactSequenceReplaceLinkedExiledCard is the triggered single-current-imprint
+	// body: optionally exile the exact card that caused the trigger, then return
+	// every other card exiled with the source to its owner's graveyard.
+	ExactSequenceReplaceLinkedExiledCard
+	// ExactSequenceLinkedExiledCopyToken is the activated imprint payoff: create
+	// a hasty token copy of the card exiled with the source and exile every token
+	// created by that instruction at the beginning of the next end step.
+	ExactSequenceLinkedExiledCopyToken
 )
 
 // LookAtTopBattlefieldElse identifies the trailing fallback disposition of an
