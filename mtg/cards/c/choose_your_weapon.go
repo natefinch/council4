@@ -46,18 +46,15 @@ func newChooseYourWeapon() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.ModifyPT{
-									Object: game.TargetPermanentReference(0),
-									PowerDelta: game.Dynamic(game.DynamicAmount{
-										Kind:       game.DynamicAmountObjectPower,
-										Multiplier: 1,
-										Object:     game.TargetPermanentReference(0),
-									}),
-									ToughnessDelta: game.Dynamic(game.DynamicAmount{
-										Kind:       game.DynamicAmountObjectToughness,
-										Multiplier: 1,
-										Object:     game.TargetPermanentReference(0),
-									}),
+								Primitive: game.ApplyContinuous{
+									Object: opt.Val(game.TargetPermanentReference(0)),
+									ContinuousEffects: []game.ContinuousEffect{
+										game.ContinuousEffect{
+											Layer:           game.LayerPowerToughnessModify,
+											DoublePower:     true,
+											DoubleToughness: true,
+										},
+									},
 									Duration: game.DurationUntilEndOfTurn,
 								},
 							},

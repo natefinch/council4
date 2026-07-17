@@ -2409,15 +2409,24 @@ func exactDoublePTEffectSyntax(effect *EffectSyntax) bool {
 }
 
 func exactMustBeBlockedEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Context != EffectContextReferencedObject ||
-		len(effect.Targets) != 0 ||
-		len(effect.References) != 1 ||
-		effect.References[0].Kind != ReferenceThatObject ||
-		effect.Duration != EffectDurationThisCombat {
+	if effect.Duration != EffectDurationThisCombat {
 		return false
 	}
 	text := exactEffectClauseText(effect)
-	return strings.EqualFold(text, effect.References[0].Text+" must be blocked this combat.")
+	switch effect.Context {
+	case EffectContextReferencedObject:
+		return len(effect.Targets) == 0 &&
+			len(effect.References) == 1 &&
+			effect.References[0].Kind == ReferenceThatObject &&
+			strings.EqualFold(text, effect.References[0].Text+" must be blocked this combat.")
+	case EffectContextTarget:
+		return len(effect.Targets) == 1 &&
+			len(effect.References) == 0 &&
+			effect.Targets[0].Exact &&
+			strings.EqualFold(text, effect.Targets[0].Text+" must be blocked this combat.")
+	default:
+		return false
+	}
 }
 
 func exactMassEffectSyntax(effect *EffectSyntax, prefix string) bool {

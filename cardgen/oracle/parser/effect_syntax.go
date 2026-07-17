@@ -598,6 +598,7 @@ func emitSentenceResolvingSyntax(
 		recognizeGoadThatPlayerControlsSentence(&sentences[i])
 		recognizeDamageTargetThatPlayerControlsSentence(&sentences[i])
 		reconcileRetargetSentenceTargets(&sentences[i])
+		reconcileMustBeBlockedSentenceTargets(&sentences[i])
 		collapseManaSpendRiderSentence(&sentences[i], tokens)
 		currentEffects += len(sentences[i].Effects)
 		if len(tokens) > 0 && len(sentences[i].Effects) == 0 &&
@@ -1611,6 +1612,7 @@ func leadingForEachDamagePreventedThisWay(effect *EffectSyntax) bool {
 // dispatch sequence.
 func parseSpecialEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) ([]EffectSyntax, bool) {
 	for _, recognize := range []func() ([]EffectSyntax, bool){
+		func() ([]EffectSyntax, bool) { return parseTargetMustBeBlockedEffect(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenDoublingEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenAdditiveEffects(sentence, tokens, atoms) },
 		func() ([]EffectSyntax, bool) { return parsePassiveTokenIdentityEffects(sentence, tokens, atoms) },
@@ -5854,6 +5856,16 @@ func reconcileRetargetSentenceTargets(sentence *Sentence) {
 		sentence.Effects[0].Kind != EffectChooseNewTargets ||
 		len(sentence.Effects[0].Targets) != 1 ||
 		len(sentence.Targets) == 1 {
+		return
+	}
+	sentence.Targets = append([]TargetSyntax(nil), sentence.Effects[0].Targets...)
+}
+
+func reconcileMustBeBlockedSentenceTargets(sentence *Sentence) {
+	if len(sentence.Effects) != 1 ||
+		sentence.Effects[0].Kind != EffectMustBeBlocked ||
+		sentence.Effects[0].Context != EffectContextTarget ||
+		len(sentence.Effects[0].Targets) != 1 {
 		return
 	}
 	sentence.Targets = append([]TargetSyntax(nil), sentence.Effects[0].Targets...)

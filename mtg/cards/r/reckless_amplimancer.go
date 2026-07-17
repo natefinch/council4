@@ -41,18 +41,15 @@ func newRecklessAmplimancer() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.ModifyPT{
-									Object: game.SourcePermanentReference(),
-									PowerDelta: game.Dynamic(game.DynamicAmount{
-										Kind:       game.DynamicAmountObjectPower,
-										Multiplier: 1,
-										Object:     game.SourcePermanentReference(),
-									}),
-									ToughnessDelta: game.Dynamic(game.DynamicAmount{
-										Kind:       game.DynamicAmountObjectToughness,
-										Multiplier: 1,
-										Object:     game.SourcePermanentReference(),
-									}),
+								Primitive: game.ApplyContinuous{
+									Object: opt.Val(game.SourcePermanentReference()),
+									ContinuousEffects: []game.ContinuousEffect{
+										game.ContinuousEffect{
+											Layer:           game.LayerPowerToughnessModify,
+											DoublePower:     true,
+											DoubleToughness: true,
+										},
+									},
 									Duration: game.DurationUntilEndOfTurn,
 								},
 							},

@@ -81,3 +81,30 @@ func TestLowerNeyithOfTheDireHunt(t *testing.T) {
 		}
 	}
 }
+
+func TestLowerTargetMustBeBlockedThisCombat(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Compel the Block",
+		Layout:     "normal",
+		ManaCost:   "{R}",
+		TypeLine:   "Sorcery",
+		OracleText: "Target creature must be blocked this combat if able.",
+	})
+	if !face.SpellAbility.Exists || len(face.SpellAbility.Val.Modes) != 1 {
+		t.Fatalf("spell ability = %#v, want one mode", face.SpellAbility)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 1 {
+		t.Fatalf("mode = %#v, want one creature target and one instruction", mode)
+	}
+	mustBlock, ok := mode.Sequence[0].Primitive.(game.ApplyRule)
+	if !ok ||
+		!mustBlock.Object.Exists ||
+		mustBlock.Object.Val != game.TargetPermanentReference(0) ||
+		mustBlock.Duration != game.DurationUntilEndOfCombat ||
+		len(mustBlock.RuleEffects) != 1 ||
+		mustBlock.RuleEffects[0].Kind != game.RuleEffectMustBeBlocked {
+		t.Fatalf("instruction = %#v, want target must be blocked this combat", mode.Sequence[0])
+	}
+}

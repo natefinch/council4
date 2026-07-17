@@ -4,19 +4,111 @@ import (
 	"strings"
 	"testing"
 
-	cardn "github.com/natefinch/council4/mtg/cards/n"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 type neyithChoiceAgent struct {
 	target id.ID
 	pay    bool
+}
+
+func neyithTestDef() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red, color.Green),
+		CardFace: game.CardFace{
+			Name:       "Neyith of the Dire Hunt",
+			ManaCost:   opt.Val(cost.Mana{cost.O(2), cost.G, cost.G}),
+			Colors:     []color.Color{color.Green},
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.Human, types.Warrior},
+			Power:      opt.Val(game.PT{Value: 3}),
+			Toughness:  opt.Val(game.PT{Value: 3}),
+			TriggeredAbilities: []game.TriggeredAbility{
+				{
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:            game.EventFight,
+							Controller:       game.TriggerControllerYou,
+							UnionEvent:       game.EventAttackerBecameBlocked,
+							OneOrMore:        true,
+							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+						},
+					},
+					Content: game.Mode{Sequence: []game.Instruction{{
+						Primitive: game.Draw{
+							Amount: game.Fixed(1),
+							Player: game.ControllerReference(),
+						},
+					}}}.Ability(),
+				},
+				{
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerAt,
+						Pattern: game.TriggerPattern{
+							Event:      game.EventBeginningOfStep,
+							Controller: game.TriggerControllerYou,
+							Step:       game.StepBeginningOfCombat,
+						},
+					},
+					Content: game.Mode{
+						Targets: []game.TargetSpec{{
+							MinTargets: 1,
+							MaxTargets: 1,
+							Constraint: "target creature's power",
+							Allow:      game.TargetAllowPermanent,
+							Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+						}},
+						Sequence: []game.Instruction{
+							{
+								Primitive: game.Pay{Payment: game.ResolutionPayment{
+									Prompt:   "Pay {2}{R/G}?",
+									ManaCost: opt.Val(cost.Mana{cost.O(2), cost.HybridMana(mana.R, mana.G)}),
+								}},
+								PublishResult: game.ResultKey("controller-paid"),
+							},
+							{
+								Primitive: game.ModifyPT{
+									Object: game.TargetPermanentReference(0),
+									PowerDelta: game.Dynamic(game.DynamicAmount{
+										Kind:       game.DynamicAmountObjectPower,
+										Multiplier: 1,
+										Object:     game.TargetPermanentReference(0),
+									}),
+									Duration: game.DurationUntilEndOfTurn,
+								},
+								ResultGate: opt.Val(game.InstructionResultGate{
+									Key:       "controller-paid",
+									Succeeded: game.TriTrue,
+								}),
+							},
+							{
+								Primitive: game.ApplyRule{
+									Object:      opt.Val(game.TargetPermanentReference(0)),
+									RuleEffects: []game.RuleEffect{{Kind: game.RuleEffectMustBeBlocked}},
+									Duration:    game.DurationUntilEndOfCombat,
+								},
+								ResultGate: opt.Val(game.InstructionResultGate{
+									Key:       "controller-paid",
+									Succeeded: game.TriTrue,
+								}),
+							},
+						},
+					}.Ability(),
+				},
+			},
+		},
+	}
 }
 
 func (*neyithChoiceAgent) ChooseAction(PlayerObservation, []action.Action) action.Action {
@@ -68,7 +160,7 @@ func putNeyithCombatTrigger(
 func TestNeyithDrawTriggerBatchesFightAndBlockedCreatures(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
+	addCombatPermanent(g, game.Player1, neyithTestDef())
 	for range 2 {
 		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 	}
@@ -117,7 +209,7 @@ func TestNeyithDrawTriggerBatchesFightAndBlockedCreatures(t *testing.T) {
 func TestNeyithFightTriggerSurvivesLethalFight(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	neyith := addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
+	neyith := addCombatPermanent(g, game.Player1, neyithTestDef())
 	opponent := addCombatCreaturePermanentWithPower(g, game.Player2, 3)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
 
@@ -145,7 +237,7 @@ func TestNeyithHybridPaymentUsesLivePowerAndCombatDuration(t *testing.T) {
 		t.Run(string(hybrid), func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
-			addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
+			addCombatPermanent(g, game.Player1, neyithTestDef())
 			target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 			blocker := addCombatCreaturePermanentWithPower(g, game.Player2, 1)
 			g.Players[game.Player1].ManaPool.Add(mana.C, 2)
@@ -226,7 +318,7 @@ func TestNeyithDeclinedOrFailedPaymentHasNoConsequences(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
-			addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
+			addCombatPermanent(g, game.Player1, neyithTestDef())
 			target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 			g.Players[game.Player1].ManaPool.Add(mana.C, 2)
 			g.Players[game.Player1].ManaPool.Add(mana.G, tc.colorMana)
@@ -252,7 +344,7 @@ func TestNeyithDeclinedOrFailedPaymentHasNoConsequences(t *testing.T) {
 func TestNeyithTargetsOnTriggerAndRespectsObjectAndSourceControlChanges(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	neyith := addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
+	neyith := addCombatPermanent(g, game.Player1, neyithTestDef())
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	noncreature := addBasicLandPermanent(g, game.Player1, types.Forest)
 	g.Players[game.Player1].ManaPool.Add(mana.C, 2)
@@ -300,7 +392,7 @@ func TestNeyithTargetsOnTriggerAndRespectsObjectAndSourceControlChanges(t *testi
 func TestNeyithTriggerFizzlesWhenTargetLeavesBeforeResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addCombatPermanent(g, game.Player1, cardn.NeyithOfTheDireHunt())
+	addCombatPermanent(g, game.Player1, neyithTestDef())
 	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	g.Players[game.Player1].ManaPool.Add(mana.C, 2)
 	g.Players[game.Player1].ManaPool.Add(mana.G, 1)

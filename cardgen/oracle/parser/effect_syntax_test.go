@@ -4439,30 +4439,43 @@ func TestParseTargetDoublePowerToughnessObject(t *testing.T) {
 
 func TestParseMustBeBlockedThisCombat(t *testing.T) {
 	t.Parallel()
-	document, diagnostics := Parse(
-		"That creature must be blocked this combat if able.",
-		Context{InstantOrSorcery: true},
-	)
-	if len(diagnostics) != 0 {
-		t.Fatalf("diagnostics = %#v", diagnostics)
-	}
-	ability := document.Abilities[0]
-	effects := ability.Sentences[0].Effects
-	if len(effects) != 1 {
-		t.Fatalf("effects = %#v, want one", effects)
-	}
-	effect := effects[0]
-	if effect.Kind != EffectMustBeBlocked ||
-		effect.Context != EffectContextReferencedObject ||
-		effect.Duration != EffectDurationThisCombat ||
-		!effect.Exact {
-		t.Fatalf("effect = %#v", effect)
-	}
-	if len(effect.References) != 1 || effect.References[0].Kind != ReferenceThatObject {
-		t.Fatalf("references = %#v, want one that-object reference", effect.References)
-	}
-	if len(ability.ConditionClauses) != 0 {
-		t.Fatalf("condition clauses = %#v, want if-able requirement rider excluded", ability.ConditionClauses)
+	for _, test := range []struct {
+		source  string
+		context EffectContextKind
+	}{
+		{source: "That creature must be blocked this combat if able.", context: EffectContextReferencedObject},
+		{source: "Target creature must be blocked this combat if able.", context: EffectContextTarget},
+	} {
+		t.Run(test.source, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.source, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			ability := document.Abilities[0]
+			effects := ability.Sentences[0].Effects
+			if len(effects) != 1 {
+				t.Fatalf("effects = %#v, want one", effects)
+			}
+			effect := effects[0]
+			if effect.Kind != EffectMustBeBlocked ||
+				effect.Context != test.context ||
+				effect.Duration != EffectDurationThisCombat ||
+				!effect.Exact {
+				t.Fatalf("effect = %#v; clause=%q targets=%#v", effect, exactEffectClauseText(&effect), effect.Targets)
+			}
+			if test.context == EffectContextReferencedObject &&
+				(len(effect.References) != 1 || effect.References[0].Kind != ReferenceThatObject) {
+				t.Fatalf("references = %#v, want one that-object reference", effect.References)
+			}
+			if test.context == EffectContextTarget &&
+				(len(effect.Targets) != 1 || !effect.Targets[0].Exact) {
+				t.Fatalf("targets = %#v, want one exact creature target", effect.Targets)
+			}
+			if len(ability.ConditionClauses) != 0 {
+				t.Fatalf("condition clauses = %#v, want if-able requirement rider excluded", ability.ConditionClauses)
+			}
+		})
 	}
 }
 

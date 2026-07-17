@@ -51,15 +51,15 @@ func newJunkJet() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.ModifyPT{
-									Object: game.SourceAttachedPermanentReference(),
-									PowerDelta: game.Dynamic(game.DynamicAmount{
-										Kind:       game.DynamicAmountObjectPower,
-										Multiplier: 1,
-										Object:     game.SourceAttachedPermanentReference(),
-									}),
-									ToughnessDelta: game.Fixed(0),
-									Duration:       game.DurationUntilEndOfTurn,
+								Primitive: game.ApplyContinuous{
+									Object: opt.Val(game.SourceAttachedPermanentReference()),
+									ContinuousEffects: []game.ContinuousEffect{
+										game.ContinuousEffect{
+											Layer:       game.LayerPowerToughnessModify,
+											DoublePower: true,
+										},
+									},
+									Duration: game.DurationUntilEndOfTurn,
 								},
 							},
 						},
