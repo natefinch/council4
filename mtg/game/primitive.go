@@ -2283,6 +2283,49 @@ type Dig struct {
 	// wording (Elvish Rejuvenator, Freestrider Lookout). It is meaningful only
 	// when Destination is zone.Battlefield; the zero value enters untapped.
 	EntersTapped bool
+	// Slots, when non-empty, routes the looked-at cards into additional ordered
+	// destinations after the primary Take: for each slot in printed order the
+	// player chooses cards from the still-unrouted looked-at cards to send to
+	// that slot's destination, and any cards left after every slot go to
+	// Remainder. It models a single look that fans out into several
+	// mutually-exclusive destinations, such as "Put one of them into your hand,
+	// put one of them on the bottom of your library, and exile one of them."
+	// (Expressive Iteration): the primary Take is the hand slot and Slots holds
+	// the library-bottom and exile slots. The zero-length slice keeps the plain
+	// two-way dig (Take to Destination, the rest to Remainder), so existing dig
+	// callers are unaffected.
+	Slots []DigSlot
+}
+
+// DigSlot is one ordered routing step of a Dig applied after the primary Take:
+// the player chooses Count of the still-unrouted looked-at cards to move to
+// Destination, taking as many as the remaining looked-at cards allow when the
+// library is short ("as much as possible", CR 608.2). Destination is zone.Hand,
+// zone.Library (placed on the bottom when Bottom is set, else the top),
+// zone.Exile, or zone.Graveyard. When Destination is zone.Exile and Play is
+// present, each card the slot moves to exile gains permission to be played or
+// cast for Play's duration, modeling the impulse "you may play the exiled card
+// this turn" rider. Slots carry no card names or Oracle text.
+type DigSlot struct {
+	Count       Quantity
+	Destination zone.Type
+	Bottom      bool
+	Play        opt.V[ImpulsePlayGrant]
+}
+
+// ImpulsePlayGrant describes the play/cast permission an effect grants over the
+// cards it moves to exile, so a DigSlot exile slot and ImpulseExile share one
+// permission shape (CR 118.7 impulse draw). Duration bounds the permission
+// (DurationThisTurn for "you may play ... this turn"); Cast grants casting a
+// spell but not playing a land; SpendAnyMana lets the controller spend mana of
+// any type; WithoutPayingManaCost casts an exiled spell for free while still
+// allowing an exiled land to be played. The zero value grants ordinary "you may
+// play" permission with normal timing, cost, and land-per-turn limits.
+type ImpulsePlayGrant struct {
+	Duration              EffectDuration
+	Cast                  bool
+	SpendAnyMana          bool
+	WithoutPayingManaCost bool
 }
 
 // PileSplit reveals the top Amount cards of the referenced player's library,

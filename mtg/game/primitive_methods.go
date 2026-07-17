@@ -864,9 +864,15 @@ func (DiscardUnlessType) instructionRefs() primitiveRefs        { return primiti
 func (RevealUntil) instructionRefs() primitiveRefs              { return primitiveRefs{} }
 func (p Scry) instructionRefs() primitiveRefs                   { return quantityRefs(p.Amount) }
 func (p Surveil) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
-func (p Dig) instructionRefs() primitiveRefs                    { return quantityRefs(p.Look) }
-func (p PileSplit) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
-func (p RevealTopPartition) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
+func (p Dig) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Look)
+	for _, slot := range p.Slots {
+		refs = mergePrimitiveRefs(refs, quantityRefs(slot.Count))
+	}
+	return refs
+}
+func (p PileSplit) instructionRefs() primitiveRefs          { return quantityRefs(p.Amount) }
+func (p RevealTopPartition) instructionRefs() primitiveRefs { return quantityRefs(p.Amount) }
 func (p ImpulseExile) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked
