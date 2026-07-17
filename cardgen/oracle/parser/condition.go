@@ -287,6 +287,10 @@ const (
 	ConditionObjectBindingEventPermanent ConditionObjectBinding = "ConditionObjectBindingEventPermanent"
 	ConditionObjectBindingSourceAttached ConditionObjectBinding = "ConditionObjectBindingSourceAttached"
 	ConditionObjectBindingCreatedToken   ConditionObjectBinding = "ConditionObjectBindingCreatedToken"
+	// ConditionObjectBindingPriorInstructionResult binds a resolving condition
+	// to the permanent produced or selected by a preceding instruction, including
+	// a creature sacrificed earlier in the same ability.
+	ConditionObjectBindingPriorInstructionResult ConditionObjectBinding = "ConditionObjectBindingPriorInstructionResult"
 	// ConditionObjectBindingTarget binds the condition's object to the spell or
 	// activated ability's first target rather than to a triggering event
 	// permanent. Used by "if it's a <subtype>" and "if it's legendary" riders
@@ -760,11 +764,9 @@ func isControllerTurnIntro(tokens []shared.Token, index int) bool {
 }
 
 // reflexive preamble "When you do," that gates its trailing effect on a
-// preceding optional action having been taken. Only a reflexive that follows an
-// earlier "you may" in the same body is treated as a resolving condition gate;
-// a "When you do," after a mandatory action (which always happens) is left to
-// the existing sequencing so its trailing effect resolves unconditionally, and
-// every other "when"/"whenever" clause is left to the trigger machinery.
+// preceding action actually having happened. Optional actions and mandatory
+// sacrifices need this gate because either can fail to produce the enabling
+// event.
 func isReflexiveWhenYouDoIntro(tokens []shared.Token, index int) bool {
 	if index+3 >= len(tokens) ||
 		!equalWord(tokens[index], "when") ||
@@ -773,7 +775,23 @@ func isReflexiveWhenYouDoIntro(tokens []shared.Token, index int) bool {
 		tokens[index+3].Kind != shared.Comma {
 		return false
 	}
-	return precedingOptionalMayClause(tokens, index)
+	if precedingOptionalMayClause(tokens, index) {
+		return true
+	}
+	periods := 0
+	for i := index - 1; i >= 0; i-- {
+		if tokens[i].Kind == shared.Period {
+			periods++
+			if periods == 2 {
+				break
+			}
+			continue
+		}
+		if equalWord(tokens[i], "sacrifice") {
+			return true
+		}
+	}
+	return false
 }
 
 // precedingOptionalMayClause reports whether a "you may" optional action appears
@@ -1730,9 +1748,13 @@ func recognizeEventSubjectHadCounterCondition(body []shared.Token, atoms Atoms) 
 // back-reference (e.g. "that creature was a Horror") that names the triggering
 // object by its type rather than the bare pronoun.
 func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	if clause, ok := recognizePriorInstructionSubjectMatchCondition(body, atoms); ok {
+		return clause, true
+	}
 	if clause, ok := recognizeThatSubjectMatchCondition(body, atoms); ok {
 		return clause, true
 	}
+
 	rest, ok := cutTokenPrefix(body, "it", "was", "a")
 	if !ok {
 		if rest, ok = cutTokenPrefix(body, "it", "was", "an"); !ok {
@@ -1750,6 +1772,24 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	return ConditionClause{
 		Predicate:     ConditionPredicateObjectMatches,
 		ObjectBinding: ConditionObjectBindingEventPermanent,
+		Selection:     selection,
+	}, true
+}
+
+func recognizePriorInstructionSubjectMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "the", "sacrificed", "creature", "was", "a")
+	if !ok {
+		if rest, ok = cutTokenPrefix(body, "the", "sacrificed", "creature", "was", "an"); !ok {
+			return ConditionClause{}, false
+		}
+	}
+	selection, ok := parseConditionSelection(rest, atoms)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingPriorInstructionResult,
 		Selection:     selection,
 	}, true
 }

@@ -151,6 +151,9 @@ type Ability struct {
 	// CastOnlyBeforeCombatDamageStep marks the temporal spell restriction "Cast
 	// this spell only before the combat damage step."
 	CastOnlyBeforeCombatDamageStep bool `json:",omitempty"`
+	// CanBeCommander marks the self-referential static permission "<name> can be
+	// your commander." Downstream stages consume only this typed permission.
+	CanBeCommander bool `json:",omitempty"`
 	// GoadedOpponentCreaturesCantBlock marks the exact static restriction.
 	GoadedOpponentCreaturesCantBlock bool `json:",omitempty"`
 	// QuestForRenewalUntap marks the exact conditional extra-untap rule.

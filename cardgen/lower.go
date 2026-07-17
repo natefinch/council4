@@ -44,6 +44,7 @@ type loweredFaceAbilities struct {
 	AdditionalCostChoices []cost.AdditionalChoice
 	AlternativeCosts      []cost.Alternative
 	EntersPrepared        bool
+	CanBeCommander        bool
 	DynamicPower          opt.V[game.DynamicValue]
 	DynamicToughness      opt.V[game.DynamicValue]
 }
@@ -64,7 +65,8 @@ func (f loweredFaceAbilities) empty() bool {
 		len(f.AlternativeCosts) == 0 &&
 		!f.DynamicPower.Exists &&
 		!f.DynamicToughness.Exists &&
-		!f.EntersPrepared
+		!f.EntersPrepared &&
+		!f.CanBeCommander
 }
 
 // abilityLowering holds the typed result of lowering one CompiledAbility.
@@ -84,6 +86,7 @@ type abilityLowering struct {
 	additionalCostChoices []cost.AdditionalChoice
 	alternativeCosts      []cost.Alternative
 	entersPrepared        bool
+	canBeCommander        bool
 	dynamicPower          opt.V[game.DynamicValue]
 	dynamicToughness      opt.V[game.DynamicValue]
 	consumed              semanticConsumption
@@ -490,6 +493,7 @@ func appendSimpleLoweredAbilities(result *loweredFaceAbilities, lowered *ability
 		result.ReplacementAbilities = append(result.ReplacementAbilities, lowered.replacementAbility.Val)
 	}
 	result.EntersPrepared = result.EntersPrepared || lowered.entersPrepared
+	result.CanBeCommander = result.CanBeCommander || lowered.canBeCommander
 	result.AdditionalCosts = append(result.AdditionalCosts, lowered.additionalCosts...)
 	result.AdditionalCostChoices = append(result.AdditionalCostChoices, lowered.additionalCostChoices...)
 	result.AlternativeCosts = append(result.AlternativeCosts, lowered.alternativeCosts...)
@@ -2098,6 +2102,15 @@ func lowerExecutableAbilitySpecialCase(
 	}
 	if ability.Companion {
 		return lowerCompanionAbility(ability), true, nil
+	}
+	if ability.CanBeCommander {
+		return abilityLowering{
+			canBeCommander: true,
+			consumed: semanticConsumption{
+				references: len(ability.Content.References),
+			},
+			sourceSpans: []shared.Span{ability.Span},
+		}, true, nil
 	}
 	if ability.PartnerWith {
 		return lowerPartnerWithAbility(ability), true, nil

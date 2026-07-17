@@ -148,6 +148,11 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			spellTargetRestrictions = restrictions
 		}
 		selection := parseSelection(selectionTokens, atoms)
+		keywordUnion := false
+		if union, ok := parseKeywordUnionTargetSelection(selectionTokens, cardinality, atoms); ok {
+			selection = union
+			keywordUnion = true
+		}
 		thatPlayerTypeUnion := len(selection.RequiredTypesAny) >= 2 &&
 			endsWithWords(selectionTokens, "that", "player", "controls")
 		if thatPlayerTypeUnion {
@@ -177,7 +182,7 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			// wiped by the unrecognized name tokens (The Curse of Fenric III).
 			qualifierTokens = head
 		}
-		if !possessivePTTarget && targetSelectionHasUnsupportedQualifier(qualifierTokens, atoms) {
+		if !possessivePTTarget && !keywordUnion && targetSelectionHasUnsupportedQualifier(qualifierTokens, atoms) {
 			selection = SelectionSyntax{Span: selection.Span, Text: selection.Text}
 		}
 		selection.NameUniqueAmongControlled = nameUnique
@@ -484,11 +489,15 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // set of single-target qualifiers; exactRuntimeTargetSyntax also reuses it for
 // the "up to one target <noun>" optional form after stripping the count words.
 func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bool {
+	if len(selection.Alternatives) > 0 && exactKeywordUnionTargetSyntax(text, selection) {
+		return true
+	}
 	if selectionHasCounterQualifier(selection) {
 		base, ok := massCounterBasePhrase(&selection, text)
 		if !ok {
 			return false
 		}
+
 		text = base
 		clearSelectionCounterQualifier(&selection)
 	}

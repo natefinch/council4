@@ -65,8 +65,8 @@ func validateCommanderConfig(playerID game.PlayerID, config game.PlayerConfig) [
 		commanderNames[commander.Name] = true
 		commanderColors = append(commanderColors, commander.ColorIdentity.Colors()...)
 	}
-	if len(commanders) == 1 && commanders[0] != nil && !isLegendaryCreature(commanders[0]) {
-		add("commander must be a legendary creature")
+	if len(commanders) == 1 && commanders[0] != nil && !isLegalSingleCommander(commanders[0]) {
+		add("commander must be a legendary creature or have permission to be your commander")
 	}
 	if len(commanders) == 2 && commanders[0] != nil && commanders[1] != nil && !validCommanderPair(commanders[0], commanders[1]) {
 		add("commanders must both have partner or form a choose-a-Background pair")
@@ -98,6 +98,10 @@ func validateCommanderConfig(playerID game.PlayerID, config game.PlayerConfig) [
 
 func isLegendaryCreature(card *game.CardDef) bool {
 	return card.HasSupertype(types.Legendary) && card.HasType(types.Creature)
+}
+
+func isLegalSingleCommander(card *game.CardDef) bool {
+	return isLegendaryCreature(card) || card.CanBeCommander
 }
 
 func isBackground(card *game.CardDef) bool {

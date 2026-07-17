@@ -79,6 +79,11 @@ func bindReferences(
 			reference.Binding = ReferenceBindingEventRelatedPermanent
 			continue
 		}
+		if prior, ok := priorSacrificeAntecedent(*reference, effects); ok {
+			reference.Binding = ReferenceBindingPriorInstructionResult
+			reference.PriorInstruction = prior
+			continue
+		}
 
 		if trigger != nil &&
 			reference.Kind != ReferenceThatPlayer &&
@@ -417,6 +422,24 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	default:
 		return 0, false
 	}
+}
+
+func priorSacrificeAntecedent(reference CompiledReference, effects []CompiledEffect) (int, bool) {
+	isPossessiveObject := (reference.Kind == ReferencePronoun &&
+		(reference.Pronoun == ReferencePronounIts || reference.Pronoun == ReferencePronounIt)) ||
+		reference.Kind == ReferenceThatObject
+	if !isPossessiveObject || !possessiveSuppliesObjectCharacteristic(reference, effects) {
+		return 0, false
+	}
+	prior := -1
+	for i := range effects {
+		if effects[i].Kind == EffectSacrifice &&
+			effects[i].VerbOrder.Start < reference.Order.Start &&
+			(prior < 0 || effects[i].VerbOrder.Start > effects[prior].VerbOrder.Start) {
+			prior = i
+		}
+	}
+	return prior, prior >= 0
 }
 
 func referencedCardsTotalManaValueReference(reference CompiledReference, effects []CompiledEffect) bool {

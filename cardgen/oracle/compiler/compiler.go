@@ -35,6 +35,7 @@ func compileAbility(
 		Text: ability.Text,
 		CastOnlyDuringDeclareAttackersAfterAttacked: ability.CastOnlyDuringDeclareAttackersAfterAttacked,
 		CastOnlyBeforeCombatDamageStep:              ability.CastOnlyBeforeCombatDamageStep,
+		CanBeCommander:                              ability.CanBeCommander,
 		GoadedOpponentCreaturesCantBlock:            ability.GoadedOpponentCreaturesCantBlock,
 		QuestForRenewalUntap:                        ability.QuestForRenewalUntap,
 		SemblanceAnvilImprint:                       ability.SemblanceAnvilImprint,
@@ -274,6 +275,7 @@ func compileAbility(
 		!compiled.Partner &&
 		!compiled.CastOnlyDuringDeclareAttackersAfterAttacked &&
 		!compiled.CastOnlyBeforeCombatDamageStep &&
+		!compiled.CanBeCommander &&
 		!compiled.GoadedOpponentCreaturesCantBlock &&
 		!compiled.QuestForRenewalUntap &&
 		!compiled.SemblanceAnvilImprint &&

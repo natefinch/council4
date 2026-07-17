@@ -97,6 +97,7 @@ type CompiledAbility struct {
 	Optional                                    bool
 	CastOnlyDuringDeclareAttackersAfterAttacked bool
 	CastOnlyBeforeCombatDamageStep              bool
+	CanBeCommander                              bool
 	GoadedOpponentCreaturesCantBlock            bool
 	QuestForRenewalUntap                        bool
 	SemblanceAnvilImprint                       bool

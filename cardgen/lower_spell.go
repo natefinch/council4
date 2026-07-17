@@ -260,6 +260,9 @@ func lowerContentDispatch(
 		}
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — vote arm not lowered")
 	}
+	if content, ok := lowerSacrificeReflexiveDamage(ctx); ok {
+		return content, nil
+	}
 	if content, ok := lowerPonderSequence(ctx); ok {
 		return content, nil
 	}
