@@ -486,8 +486,7 @@ func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, reci
 	if !controllerRecipient ||
 		publishLinked != "" ||
 		len(extraKeywords) != 0 ||
-		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 {
+		len(ctx.content.Targets) != 0 {
 		return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 	}
 	specs := make([]*compiler.CompiledEffect, 0, 1+len(effect.AdditionalTokens))
@@ -498,7 +497,7 @@ func lowerMultiTokenCreate(ctx contentCtx, effect *compiler.CompiledEffect, reci
 	sequence := make([]game.Instruction, 0, len(specs))
 	seen := make(map[string]*game.CardDef, len(specs))
 	for _, spec := range specs {
-		if spec.TokenPTVariableX || spec.TokenChoice || spec.TokenGrantedAbility != nil {
+		if spec.TokenPTVariableX || spec.TokenChoice {
 			return game.AbilityContent{}, unsupportedTokenCreationDiagnostic(ctx)
 		}
 		def, ok := synthesizeCreatureTokenDef(spec, spec.TokenKeywords)

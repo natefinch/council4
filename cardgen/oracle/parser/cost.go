@@ -995,6 +995,11 @@ func costSelfReference(tokens []shared.Token, atoms Atoms, allowIt bool) bool {
 	if len(tokens) == 0 {
 		return false
 	}
+	if len(tokens) == 2 && equalWord(tokens[0], "this") {
+		if _, ok := atoms.SubtypeAt(tokens[1].Span); ok {
+			return true
+		}
+	}
 	span := shared.SpanOf(tokens)
 	for _, reference := range atoms.ReferencesIn(span) {
 		if reference.Span != span {
@@ -1020,6 +1025,9 @@ func costSelfReference(tokens []shared.Token, atoms Atoms, allowIt bool) bool {
 				ObjectNounLand, ObjectNounPermanent, ObjectNounToken, ObjectNounCard:
 				return true
 			default:
+				if _, ok := atoms.SubtypeAt(tokens[1].Span); ok {
+					return true
+				}
 			}
 		default:
 		}

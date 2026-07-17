@@ -96,6 +96,9 @@ func (r Renderer) renderStaticAbility(ctx *renderCtx, body *game.StaticAbility, 
 		return fmt.Sprintf("game.DredgeStaticAbility(%d)", count), nil
 	}
 	var fields []string
+	if body.CrewPowerBonus > 0 {
+		fields = append(fields, fmt.Sprintf("CrewPowerBonus: %d,", body.CrewPowerBonus))
+	}
 	if body.CastOnlyAfterAttackedThisStep {
 		fields = append(fields, "CastOnlyAfterAttackedThisStep: true,")
 	}

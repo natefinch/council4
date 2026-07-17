@@ -158,6 +158,9 @@ type ChapterAbility struct {
 // StaticAbility is a static ability that functions from a zone.
 type StaticAbility struct {
 	Text string
+	// CrewPowerBonus increases only this permanent's power contribution while
+	// paying a Crew cost. Multiple effective abilities add together.
+	CrewPowerBonus int
 	// CastOnlyAfterAttackedThisStep restricts the source spell to the declare
 	// attackers step after its caster was attacked during that step.
 	CastOnlyAfterAttackedThisStep bool

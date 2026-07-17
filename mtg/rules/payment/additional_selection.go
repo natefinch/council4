@@ -364,7 +364,8 @@ func chooseTapPermanentsTotalPower(s State, playerID game.PlayerID, additional c
 	}
 	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reservedPermanentIDs(alreadyChosen))
 	slices.SortStableFunc(candidates, func(a, b *game.Permanent) int {
-		return s.PermanentPower(b) - s.PermanentPower(a)
+		return permanentPowerContribution(s, b, additional.PowerContribution) -
+			permanentPowerContribution(s, a, additional.PowerContribution)
 	})
 	var chosen []*game.Permanent
 	total := 0
@@ -373,7 +374,7 @@ func chooseTapPermanentsTotalPower(s State, playerID game.PlayerID, additional c
 			break
 		}
 		chosen = append(chosen, permanent)
-		total += s.PermanentPower(permanent)
+		total += permanentPowerContribution(s, permanent, additional.PowerContribution)
 	}
 	if total < additional.TotalPowerAtLeast {
 		return nil
@@ -402,7 +403,7 @@ func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additiona
 		}
 		chosen = append(chosen, permanent)
 		chosenIDs[permanentID] = true
-		total += s.PermanentPower(permanent)
+		total += permanentPowerContribution(s, permanent, additional.PowerContribution)
 		consumed++
 		if total >= additional.TotalPowerAtLeast {
 			prefs.TapChoices = prefs.TapChoices[consumed:]
@@ -410,6 +411,19 @@ func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additiona
 		}
 	}
 	return nil
+}
+
+func permanentPowerContribution(s State, permanent *game.Permanent, kind cost.PowerContributionKind) int {
+	power := s.PermanentPower(permanent)
+	if kind != cost.PowerContributionCrew {
+		return power
+	}
+	for _, ability := range s.PermanentEffectiveAbilities(permanent) {
+		if static, ok := ability.(*game.StaticAbility); ok {
+			power += static.CrewPowerBonus
+		}
+	}
+	return power
 }
 
 // costSourcePermanentByCardID resolves an object cost's ExcludeSource source

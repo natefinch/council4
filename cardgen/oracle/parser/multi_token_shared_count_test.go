@@ -90,3 +90,37 @@ func TestParseMultiTokenMixedCountFailsClosed(t *testing.T) {
 		t.Fatalf("AdditionalTokens = %d, want 0 (mixed counts must not fold)", len(effect.AdditionalTokens))
 	}
 }
+
+func TestParseMultiTokenGrantedStaticAbilityBindsToMatchingSpec(t *testing.T) {
+	t.Parallel()
+	source := `Create a Treasure token and a 1/1 colorless Pilot creature token with "This creature crews Vehicles as though its power were 2 greater."`
+	document, diagnostics := Parse(source, Context{})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse diagnostics = %#v", diagnostics)
+	}
+	effect := &document.Abilities[0].Sentences[0].Effects[0]
+	if len(effect.AdditionalTokens) != 1 {
+		t.Fatalf("additional tokens = %d, exact=%v", len(effect.AdditionalTokens), effect.Exact)
+	}
+	if !effect.Exact {
+		t.Fatalf("effect exact=false; first grant=%v pilot grant=%v root=%d..%d pilot=%d..%d quote=%d..%d",
+			effect.TokenGrantedAbility != nil,
+			effect.AdditionalTokens[0].TokenGrantedAbility != nil,
+			effect.ClauseSpan.Start.Offset, effect.ClauseSpan.End.Offset,
+			effect.AdditionalTokens[0].ClauseSpan.Start.Offset, effect.AdditionalTokens[0].ClauseSpan.End.Offset,
+			document.Abilities[0].Quoted[0].Span.Start.Offset, document.Abilities[0].Quoted[0].Span.End.Offset)
+	}
+	if effect.TokenGrantedAbility != nil {
+		t.Fatal("Treasure unexpectedly received Pilot ability")
+	}
+	pilot := &effect.AdditionalTokens[0]
+	if pilot.TokenGrantedAbility == nil {
+		t.Fatalf("Pilot spec = %#v, want granted static ability", pilot)
+	}
+	granted := pilot.TokenGrantedAbility.document.Abilities[0]
+	if len(granted.StaticDeclarations) != 1 ||
+		granted.StaticDeclarations[0].Kind != StaticDeclarationCrewPowerContribution ||
+		granted.StaticDeclarations[0].CrewPowerBonus != 2 {
+		t.Fatalf("granted static declarations = %#v", granted.StaticDeclarations)
+	}
+}

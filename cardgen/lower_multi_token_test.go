@@ -149,3 +149,41 @@ func TestLowerMultiTokenDistinctKeywordTokens(t *testing.T) {
 		t.Fatal("tokenDefKey collapsed the deathtouch and lifelink tokens onto one key")
 	}
 }
+
+func TestLowerMultiTokenGrantedStaticAbility(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pilot",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: `Create a Treasure token and a 1/1 colorless Pilot creature token with "This creature crews Vehicles as though its power were 2 greater."`,
+	})
+	creates := multiTokenCreateInstructions(t, face)
+	if len(creates) != 2 {
+		t.Fatalf("sequence length = %d, want 2", len(creates))
+	}
+	treasure := multiTokenDef(t, creates[0])
+	if len(treasure.StaticAbilities) != 0 {
+		t.Fatalf("Treasure static abilities = %#v, want none", treasure.StaticAbilities)
+	}
+	pilot := multiTokenDef(t, creates[1])
+	if len(pilot.StaticAbilities) != 1 || pilot.StaticAbilities[0].CrewPowerBonus != 2 {
+		t.Fatalf("Pilot static abilities = %#v, want CrewPowerBonus 2", pilot.StaticAbilities)
+	}
+}
+
+func TestLowerCrewPowerContributionStatic(t *testing.T) {
+	t.Parallel()
+	power, toughness := "1", "1"
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Test Pilot",
+		Layout:     "normal",
+		TypeLine:   "Creature — Pilot",
+		OracleText: "This creature crews Vehicles as though its power were 2 greater.",
+		Power:      &power,
+		Toughness:  &toughness,
+	})
+	if len(face.StaticAbilities) != 1 || face.StaticAbilities[0].Body.CrewPowerBonus != 2 {
+		t.Fatalf("static abilities = %#v, want CrewPowerBonus 2", face.StaticAbilities)
+	}
+}

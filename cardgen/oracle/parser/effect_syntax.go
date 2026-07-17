@@ -164,7 +164,13 @@ func attachTokenGrantedAbilities(ability *Ability) {
 	for q := range ability.Quoted {
 		quoted := ability.Quoted[q]
 		if effect := createEffectContainingSpan(ability, quoted.Span); effect != nil {
-			attachTokenGrantedAbilityToEffect(effect, quoted)
+			target := multiTokenSpecContainingSpan(effect, quoted.Span)
+			if target == nil {
+				target = effect
+			}
+			if attachTokenGrantedAbilityToEffect(target, quoted) && target != effect {
+				effect.Exact = exactEffectSyntax(effect)
+			}
 			continue
 		}
 		// A trailing "It has \"<ability>\"." / "They have \"<ability>\"." sentence
@@ -194,6 +200,25 @@ func attachTokenGrantedAbilities(ability *Ability) {
 			}
 		}
 	}
+}
+
+// multiTokenSpecContainingSpan returns the one additional token spec containing
+// span. The root effect is intentionally excluded because its clause spans the
+// full conjoined create expression.
+func multiTokenSpecContainingSpan(effect *EffectSyntax, span shared.Span) *EffectSyntax {
+	var match *EffectSyntax
+	for i := range effect.AdditionalTokens {
+		spec := &effect.AdditionalTokens[i]
+		if span.Start.Offset < spec.ClauseSpan.Start.Offset ||
+			span.Start.Offset > spec.ClauseSpan.End.Offset+1 {
+			continue
+		}
+		if match != nil {
+			return nil
+		}
+		match = spec
+	}
+	return match
 }
 
 // attachTokenGrantedAbilityToEffect parses a quoted triggered, activated, mana,

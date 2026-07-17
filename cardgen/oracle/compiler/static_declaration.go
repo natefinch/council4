@@ -45,6 +45,7 @@ const (
 	StaticDeclarationDevotionNotCreature
 	StaticDeclarationControlOpponentSearches
 	StaticDeclarationExileOpponentSearchFinds
+	StaticDeclarationCrewPowerContribution
 )
 
 // StaticDeclarationBlocker identifies exact static wording whose declaration
@@ -980,6 +981,33 @@ type StaticDeclaration struct {
 	DevotionNotCreature               *StaticDevotionNotCreatureDeclaration
 	ControlOpponentSearches           *StaticControlOpponentSearchesDeclaration
 	ExileOpponentSearchFinds          *StaticExileOpponentSearchFindsDeclaration
+	CrewPowerContribution             *StaticCrewPowerContributionDeclaration
+}
+
+// StaticCrewPowerContributionDeclaration increases the source creature's power
+// contribution only while it is tapped to pay a Crew cost.
+type StaticCrewPowerContributionDeclaration struct {
+	Bonus int
+}
+
+func recognizeStaticCrewPowerContributionDeclaration(ability CompiledAbility, statics []parser.StaticDeclarationSyntax) (StaticDeclaration, bool) {
+	if !staticSyntaxKindsAre(statics, parser.StaticDeclarationCrewPowerContribution) ||
+		ability.Cost != nil ||
+		ability.Trigger != nil ||
+		len(ability.Content.Modes) != 0 ||
+		len(ability.Content.Targets) != 0 ||
+		statics[0].CrewPowerBonus <= 0 {
+		return StaticDeclaration{}, false
+	}
+	node := statics[0]
+	return StaticDeclaration{
+		Kind:          StaticDeclarationCrewPowerContribution,
+		Span:          ability.Span,
+		OperationSpan: node.OperationSpan,
+		CrewPowerContribution: &StaticCrewPowerContributionDeclaration{
+			Bonus: node.CrewPowerBonus,
+		},
+	}, true
 }
 
 // StaticCreatureAttackTaxAmountKind identifies how a per-creature attack-tax
@@ -1197,6 +1225,10 @@ func recognizeStaticDeclarations(compiled *CompiledAbility, syntax *parser.Abili
 		return
 	}
 	if declaration, ok := recognizeStaticExileOpponentSearchFindsDeclaration(*compiled, statics); ok {
+		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
+		return
+	}
+	if declaration, ok := recognizeStaticCrewPowerContributionDeclaration(*compiled, statics); ok {
 		compiled.Static = &CompiledStaticSemantics{Declarations: []StaticDeclaration{declaration}}
 		return
 	}

@@ -36,7 +36,6 @@ func lowerStaticDeclarations(
 		return abilityLowering{}, true, lowerStaticDeclarationBlocker(ability)
 	}
 	declarations := ability.Static.Declarations
-
 	if lowered, ok, diagnostic := lowerStaticCharacteristicPowerToughness(ability, syntax); ok {
 		return lowered, true, diagnostic
 	}
@@ -170,6 +169,9 @@ func lowerStaticDeclarations(
 				ok = appendStaticControlOpponentSearchesDeclaration(&body, declaration)
 			case compiler.StaticDeclarationExileOpponentSearchFinds:
 				ok = appendStaticExileOpponentSearchFindsDeclaration(&body, declaration)
+			case compiler.StaticDeclarationCrewPowerContribution:
+				body.CrewPowerBonus = declaration.CrewPowerContribution.Bonus
+				ok = body.CrewPowerBonus > 0
 			default:
 				ok = false
 			}
@@ -516,6 +518,9 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 	if declaration.ExileOpponentSearchFinds != nil {
 		payloads++
 	}
+	if declaration.CrewPowerContribution != nil {
+		payloads++
+	}
 	if payloads != 1 {
 		return false
 	}
@@ -574,6 +579,8 @@ func staticDeclarationPayloadValid(declaration compiler.StaticDeclaration) bool 
 		return declaration.ControlOpponentSearches != nil
 	case compiler.StaticDeclarationExileOpponentSearchFinds:
 		return declaration.ExileOpponentSearchFinds != nil
+	case compiler.StaticDeclarationCrewPowerContribution:
+		return declaration.CrewPowerContribution != nil
 	default:
 		return false
 	}

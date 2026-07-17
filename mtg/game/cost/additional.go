@@ -18,6 +18,16 @@ type AdditionalKind int
 // machinery (which lives in package game and cannot be imported here).
 type AdditionalDynamicAmount uint8
 
+// PowerContributionKind identifies the characteristic used when a tap cost
+// totals the selected permanents' power.
+type PowerContributionKind uint8
+
+// Power contribution kinds recognized by total-power tap costs.
+const (
+	PowerContributionEffective PowerContributionKind = iota
+	PowerContributionCrew
+)
+
 // Additional dynamic amount kinds recognized by the payment planner.
 const (
 	AdditionalDynamicAmountNone AdditionalDynamicAmount = iota
@@ -193,6 +203,10 @@ type Additional struct {
 	// payer taps enough matching permanents to reach the threshold; Amount is
 	// ignored when this is set.
 	TotalPowerAtLeast int
+	// PowerContribution selects the contribution rule used to total power.
+	// Crew applies effects that let a creature crew Vehicles as though its power
+	// were greater; the zero value uses ordinary effective power.
+	PowerContribution PowerContributionKind
 
 	// TotalManaValueAtLeast, when positive, changes an AdditionalExile cost from
 	// a fixed count to "exile any number of matching cards with total mana value
