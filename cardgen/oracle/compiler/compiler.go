@@ -240,6 +240,11 @@ func compileAbility(
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Trigger)
 	applyEffectReferenceBindings(compiled.Content.Effects, compiled.Content.References)
+	resolveChosenPermanentSearchNames(compiled.Content.Effects)
+	resolvePaymentSourceSacrifices(
+		compiled.Content.Effects,
+		compiled.Trigger != nil && compiled.Trigger.Pattern.Source == TriggerSourceSelf,
+	)
 	recognizeActivationZone(&compiled)
 	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
 		for i := range compiled.Content.Conditions {
@@ -646,6 +651,8 @@ func compileMode(
 	effects := compileEffects(mode.Sentences)
 	references := bindReferences(compileTypedReferences(mode.SemanticReferences), targets, effects, nil)
 	applyEffectReferenceBindings(effects, references)
+	resolveChosenPermanentSearchNames(effects)
+	resolvePaymentSourceSacrifices(effects, false)
 	compiled := CompiledMode{
 		Span:  mode.Span,
 		Text:  mode.Text,

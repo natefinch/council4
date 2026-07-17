@@ -624,6 +624,8 @@ func compileEffectKind(kind parser.EffectKind) EffectKind {
 		return EffectTribute
 	case parser.EffectChooseCreatureType:
 		return EffectChooseCreatureType
+	case parser.EffectChoosePermanent:
+		return EffectChoosePermanent
 	case parser.EffectNoMaximumHandSize:
 		return EffectNoMaximumHandSize
 	case parser.EffectAdditionalCombatPhase:

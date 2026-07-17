@@ -86,6 +86,7 @@ type AbilityRequest struct {
 // planner, such as a madness cost.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
+	Source          *game.Permanent
 	SourceCardID    id.ID
 	Spell           *game.CardDef
 	Cost            *cost.Mana

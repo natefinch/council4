@@ -1819,6 +1819,8 @@ func effectKindAt(tokens []shared.Token, index int) EffectKind {
 		return EffectChooseNewTargets
 	case chooseCreatureTypeVerbAt(tokens, index):
 		return EffectChooseCreatureType
+	case choosePermanentVerbAt(tokens, index):
+		return EffectChoosePermanent
 	case kind == EffectGain && index+1 < len(tokens) && equalWord(tokens[index+1], "control"):
 		return EffectGainControl
 	case kind == EffectGain && everyCreatureTypeGainRiderAt(tokens, index) && priorBasePowerToughnessSet(tokens, index):
@@ -2302,6 +2304,42 @@ func chooseCreatureTypeVerbAt(tokens []shared.Token, index int) bool {
 	return (equalWord(tokens[index], "choose") || equalWord(tokens[index], "chooses")) &&
 		effectWordsAt(tokens, index+1, "a", "creature", "type") &&
 		(index+4 >= len(tokens) || tokens[index+4].Kind == shared.Period)
+}
+
+// choosePermanentVerbAt recognizes a standalone resolving choice of one
+// battlefield permanent. Modal choices, targets, card-zone choices, and entry
+// replacement choices remain outside this effect.
+func choosePermanentVerbAt(tokens []shared.Token, index int) bool {
+	if index != 0 &&
+		tokens[index-1].Kind != shared.Period &&
+		tokens[index-1].Kind != shared.Comma {
+		return false
+	}
+	if !equalWord(tokens[index], "choose") || index+2 >= len(tokens) {
+		return false
+	}
+	if !equalWord(tokens[index+1], "a") && !equalWord(tokens[index+1], "an") {
+		return false
+	}
+	hasPermanentNoun := false
+	for i := index + 2; i < len(tokens); i++ {
+		if equalWord(tokens[i], "target") ||
+			equalWord(tokens[i], "card") ||
+			equalWord(tokens[i], "and") ||
+			equalWord(tokens[i], "then") {
+			return false
+		}
+		if referenceObjectNoun(tokens[i]) {
+			hasPermanentNoun = true
+		}
+		if tokens[i].Kind == shared.Period {
+			return hasPermanentNoun &&
+				i >= index+5 &&
+				equalWord(tokens[i-2], "you") &&
+				equalWord(tokens[i-1], "control")
+		}
+	}
+	return false
 }
 func copyVerbAt(tokens []shared.Token, index int) bool {
 	if index == 0 {

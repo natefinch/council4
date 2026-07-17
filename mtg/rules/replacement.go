@@ -1490,7 +1490,7 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 		return false
 	}
 	res = resolved
-	if !canPayResolutionPayment(g, playerID, source.CardInstanceID, &res) {
+	if !canPayResolutionPayment(g, playerID, source, source.CardInstanceID, &res) {
 		return false
 	}
 	engine := ctx.engine
@@ -1507,6 +1507,7 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 	prefs := engine.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, res.XValue, ctx.agents, ctx.log)
 	return paymentOrch.payGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
+		Source:          source,
 		SourceCardID:    source.CardInstanceID,
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,

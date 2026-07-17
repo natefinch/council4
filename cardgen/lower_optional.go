@@ -111,6 +111,7 @@ func lowerControllerPaidEffect(
 		restEffects[i].Span = alignedSpan
 	}
 	strippedCtx.content.Effects = append(strippedCtx.content.Effects, restEffects...)
+	strippedCtx.content.References = referencesForEffects(strippedCtx.content.Effects)
 	// The dropped prefix cost effects (a non-mana payment such as "discard a
 	// card" parses to its own effect in the payment sentence) inflate the
 	// ability's legacy-effect count, which marks every sibling effect
@@ -133,7 +134,6 @@ func lowerControllerPaidEffect(
 	consequence := content.Modes[0].Sequence
 	for i := range consequence {
 		if consequence[i].Optional ||
-			consequence[i].PublishResult != "" ||
 			consequence[i].ResultGate.Exists {
 			return game.AbilityContent{}, false
 		}

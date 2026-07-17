@@ -1347,6 +1347,9 @@ func (p Search) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.Spec.Name != "" && p.Spec.NameFromChoice != "" {
+		return errors.New("search cannot combine fixed and choice-derived names")
+	}
 	if p.Spec.RevealOnly {
 		return p.validateRevealOnlySearch(targets, checkTargets)
 	}
@@ -1578,7 +1581,7 @@ func (p Search) validateExileFaceDownSearch(targets []TargetSpec, checkTargets b
 		p.Spec.SharedSubtype ||
 		p.Spec.DifferentNames ||
 		len(p.Spec.SlotFilters) != 0 ||
-		p.Spec.Name != "" ||
+		(p.Spec.Name != "" || p.Spec.NameFromChoice != "") ||
 		p.Spec.DestinationPosition != SearchPositionUnspecified {
 		return errors.New("exile-face-down search does not support reveal, split destination, tapped entry, X bound, name, slot, or library-position riders")
 	}
@@ -1612,7 +1615,7 @@ func (p Search) validateConditionalShuffleSearch() error {
 	if p.Spec.Reveal ||
 		p.Spec.RevealOnly ||
 		p.Spec.ExileFaceDown ||
-		p.Spec.Name != "" ||
+		(p.Spec.Name != "" || p.Spec.NameFromChoice != "") ||
 		p.Spec.MaxManaValueFromSacrificedCost.Exists ||
 		p.Spec.SharedSubtype ||
 		p.Spec.DifferentNames ||
@@ -2253,6 +2256,17 @@ func (p Choose) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	}
 	if p.Choice.AtRandom && p.Choice.Kind != ResolutionChoiceNumber {
 		return errors.New("random resolution choice requires a number choice")
+	}
+	if p.Choice.Kind == ResolutionChoicePermanent {
+		if p.Choice.PlayerReference == nil {
+			return errors.New("permanent choice requires a player reference")
+		}
+		if p.Choice.Selection == nil {
+			return errors.New("permanent choice requires a selection")
+		}
+		if problems := p.Choice.Selection.Validate(); len(problems) != 0 {
+			return errors.New("permanent choice selection: " + problems[0])
+		}
 	}
 	return nil
 }

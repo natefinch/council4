@@ -1085,6 +1085,9 @@ func searchGroupSpec(effects []compiler.CompiledEffect) (searchGroup, bool) {
 		return searchGroup{}, false
 	}
 	spec.SourceZone = zone.Library
+	if search.SearchNameFromChosenPermanent {
+		spec.NameFromChoice = game.ResolutionChosenPermanentChoiceKey
+	}
 	// "any number of" is unbounded: the resolving player finds none up to every
 	// matching card. The count carries no fixed or dynamic Quantity, so the spec
 	// flag drives the choice bounds (min 0, max all candidates) at resolution.
@@ -2246,6 +2249,9 @@ func lowerImmediateSingleEffectSpellTail(
 		return content, diag, true
 	case compiler.EffectChooseCreatureType:
 		content, diag := lowerChooseCreatureTypeSpell(ctx)
+		return content, diag, true
+	case compiler.EffectChoosePermanent:
+		content, diag := lowerChoosePermanentSpell(ctx)
 		return content, diag, true
 	case compiler.EffectSacrifice:
 		content, diag := lowerSacrificeSpell(ctx)

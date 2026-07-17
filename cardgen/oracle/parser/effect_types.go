@@ -301,6 +301,9 @@ const (
 	// type." (Distant Melody). It lowers to a game.Choose instruction whose
 	// ResolutionChoice is a ResolutionChoiceSubtype over creature types.
 	EffectChooseCreatureType EffectKind = "EffectChooseCreatureType"
+	// EffectChoosePermanent models a resolution-time choice of one battlefield
+	// permanent matching Selection, such as "Choose a land you control."
+	EffectChoosePermanent EffectKind = "EffectChoosePermanent"
 	// EffectNoMaximumHandSize models the controller-scoped, rest-of-game
 	// continuous effect "You have no maximum hand size for the rest of the game."
 	// (Sea Gate Restoration). As a resolving spell effect it removes the
@@ -3285,6 +3288,9 @@ type EffectSyntax struct {
 	// requires every found card to have a distinct name (CR 701.19), modeling
 	// Three Dreams, Shared Summons, and Deathbellow War Cry.
 	SearchDifferentNames bool `json:",omitempty"`
+	// SearchSameNameAsChosenObject reports a name-correlation rider that refers to
+	// a permanent chosen by an earlier effect in the same resolution.
+	SearchSameNameAsChosenObject bool `json:",omitempty"`
 	// SearchDestination carries the ordered destination of an exact library
 	// search whose found card stays in the library. It is currently set only for
 	// the singular "then shuffle and put that card on top" family.

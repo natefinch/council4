@@ -413,9 +413,7 @@ func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additiona
 }
 
 // costSourcePermanentByCardID resolves an object cost's ExcludeSource source
-// permanent for a resolution payment that carries only the source card ID: it
-// returns the battlefield permanent based on that card instance, or nil when the
-// source is no longer on the battlefield, in which case no permanent is dropped.
+// permanent for a generic payment that carries only the source card ID.
 func costSourcePermanentByCardID(s State, sourceCardID id.ID) *game.Permanent {
 	if sourceCardID == 0 {
 		return nil

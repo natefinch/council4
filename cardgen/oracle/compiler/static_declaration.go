@@ -1720,20 +1720,10 @@ func classifyStaticDeclarationBlocker(ability CompiledAbility) StaticDeclaration
 
 func recognizedStaticAbilityWord(word string) bool {
 	switch word {
-	case "",
-		"Coven",
-		"Delirium",
-		"Descend",
-		"Domain",
-		"Ferocious",
-		"Hellbent",
-		"Max speed",
-		"Metalcraft",
-		"Threshold",
-		"Unlock Ability":
-		return true
-	default:
+	case "Max speed":
 		return false
+	default:
+		return true
 	}
 }
 
@@ -1743,7 +1733,7 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 		len(ability.Content.Modes) != 0 ||
 		len(ability.Content.Targets) != 0 ||
 		len(ability.Content.Keywords) != 0 ||
-		ability.AbilityWord != "" ||
+		!recognizedStaticAbilityWord(ability.AbilityWord) ||
 		len(syntax.Sentences) != 1 ||
 		syntax.Sentences[0].StaticRule == nil ||
 		len(syntax.Reminders) != 0 ||

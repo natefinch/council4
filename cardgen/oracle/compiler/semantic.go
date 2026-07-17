@@ -2266,6 +2266,10 @@ const (
 	// affected attacker be blocked by one creature, and no more than one, if able.
 	// Added last so existing kinds keep their wire values.
 	EffectMustBeBlockedByExactlyOne
+	// EffectChoosePermanent is a resolution-time choice of one battlefield
+	// permanent matching a typed selector. Added last so existing kinds keep their
+	// wire values.
+	EffectChoosePermanent
 )
 
 // DurationKind identifies common continuous-effect durations.
@@ -3285,6 +3289,11 @@ type CompiledEffect struct {
 	// from the parser so the search lowerer can set SearchSpec.DifferentNames
 	// without re-reading the search text.
 	SearchDifferentNames bool
+	// SearchSameNameAsChosenObject carries the parser-recognized correlation
+	// wording; SearchNameFromChosenPermanent is set only after typed reference
+	// binding proves that it names an earlier permanent-choice effect.
+	SearchSameNameAsChosenObject  bool
+	SearchNameFromChosenPermanent bool
 	// SearchDestination carries the parser-recognized ordered destination for a
 	// found card that remains in the library.
 	SearchDestination parser.EffectDestinationPosition

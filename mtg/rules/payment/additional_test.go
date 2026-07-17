@@ -645,3 +645,40 @@ func TestCostSourcePermanentByCardID(t *testing.T) {
 		t.Fatalf("costSourcePermanentByCardID(0) = %#v, want nil for zero card ID", got)
 	}
 }
+
+func TestGenericResolutionSacrificeUsesExactCurrentSource(t *testing.T) {
+	t.Parallel()
+	source := &game.Permanent{ObjectID: 10, Controller: game.Player1, Token: true}
+	other := &game.Permanent{ObjectID: 20, Controller: game.Player1, CardInstanceID: 42}
+	additional := []cost.Additional{{Kind: cost.AdditionalSacrificeSource, Amount: 1}}
+
+	state := fakePaymentState{battlefield: []*game.Permanent{source, other}}
+	plan, ok := buildGenericCostPlan(state, GenericRequest{
+		PlayerID:        game.Player1,
+		Source:          source,
+		AdditionalCosts: additional,
+	})
+	if !ok || len(plan.additional.sacrifices) != 1 || plan.additional.sacrifices[0] != source {
+		t.Fatalf("plan = %#v, ok = %v, want exact token source", plan, ok)
+	}
+
+	source.Controller = game.Player2
+	if _, ok := buildGenericCostPlan(state, GenericRequest{
+		PlayerID:        game.Player1,
+		Source:          source,
+		AdditionalCosts: additional,
+	}); ok {
+		t.Fatal("source controlled by another player was sacrifice-payable")
+	}
+	source.Controller = game.Player1
+
+	absent := fakePaymentState{battlefield: []*game.Permanent{other}}
+	if _, ok := buildGenericCostPlan(absent, GenericRequest{
+		PlayerID:        game.Player1,
+		Source:          source,
+		SourceCardID:    other.CardInstanceID,
+		AdditionalCosts: additional,
+	}); ok {
+		t.Fatal("absent source was sacrifice-payable using a replacement object")
+	}
+}

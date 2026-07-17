@@ -20,7 +20,8 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 	if !ok {
 		return false, false
 	}
-	if !canPayResolutionPayment(g, playerID, stackObjectSourceID(obj), res) {
+	source := resolutionPaymentSource(g, obj)
+	if !canPayResolutionPayment(g, playerID, source, stackObjectSourceID(obj), res) {
 		return false, false
 	}
 	prompt := res.Prompt
@@ -33,6 +34,7 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(res.ManaCost), res.AdditionalCosts, res.XValue, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
+		Source:          source,
 		SourceCardID:    stackObjectSourceID(obj),
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
@@ -140,15 +142,27 @@ func resolutionPaymentPayer(g *game.Game, obj *game.StackObject, res *game.Resol
 	return stackObjectController(obj), true
 }
 
-func canPayResolutionPayment(g *game.Game, playerID game.PlayerID, sourceCardID id.ID, res *game.ResolutionPayment) bool {
+func canPayResolutionPayment(g *game.Game, playerID game.PlayerID, source *game.Permanent, sourceCardID id.ID, res *game.ResolutionPayment) bool {
 	if res == nil {
 		return true
 	}
 	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
 		PlayerID:        playerID,
+		Source:          source,
 		SourceCardID:    sourceCardID,
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
 		AdditionalCosts: res.AdditionalCosts,
 	})
+}
+
+func resolutionPaymentSource(g *game.Game, obj *game.StackObject) *game.Permanent {
+	if obj == nil {
+		return nil
+	}
+	permanent, ok := permanentByObjectID(g, obj.SourceID)
+	if !ok || obj.SourceCardID != 0 && permanent.CardInstanceID != obj.SourceCardID {
+		return nil
+	}
+	return permanent
 }

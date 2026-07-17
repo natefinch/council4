@@ -16,6 +16,13 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// rulesFreeStaticAbilityWordLabel treats a heading as rules-free only after the
+// body has independently compiled to complete typed static declarations. Max
+// speed is excluded because its heading carries runtime semantics of its own.
+func rulesFreeStaticAbilityWordLabel(label string) bool {
+	return label != "Max speed"
+}
+
 // lowerStaticDeclarations is the only semantic Static Declaration to runtime
 // static-value lowering path.
 func lowerStaticDeclarations(
@@ -46,13 +53,14 @@ func lowerStaticDeclarations(
 		ability.Trigger != nil ||
 		len(ability.Content.Modes) != 0 ||
 		(len(ability.Content.Targets) != 0 && !declarationsTargetSource(declarations)) ||
-		!rulesFreeAbilityWordLabel(ability.AbilityWord) {
+		!rulesFreeStaticAbilityWordLabel(ability.AbilityWord) {
 		return abilityLowering{}, true, staticDeclarationDiagnostic(
 			ability,
 			"unsupported static declaration shell",
 			"the recognized static declarations require an otherwise empty static ability shell",
 		)
 	}
+
 	body := game.StaticAbility{Text: ability.Text}
 	varName := ""
 	conditionSpan := shared.Span{}
@@ -187,6 +195,9 @@ func lowerStaticDeclarations(
 	}
 	for _, reminder := range syntax.Reminders {
 		spans = append(spans, reminder.Span)
+	}
+	if syntax.AbilityWord != nil {
+		spans = append(spans, syntax.AbilityWord.Span, syntax.AbilityWord.SeparatorSpan)
 	}
 	return abilityLowering{
 		staticAbilities: []loweredStaticAbility{{

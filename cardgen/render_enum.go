@@ -695,6 +695,8 @@ func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) 
 		return "game.ResolutionChoicePlayer", nil
 	case game.ResolutionChoiceCard:
 		return "game.ResolutionChoiceCard", nil
+	case game.ResolutionChoicePermanent:
+		return "game.ResolutionChoicePermanent", nil
 	case game.ResolutionChoiceNumber:
 		return "game.ResolutionChoiceNumber", nil
 	case game.ResolutionChoiceSubtype:

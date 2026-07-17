@@ -286,14 +286,16 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			}
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrificeSource:
+			sacrificeSource := source
 			if amount != 1 ||
-				source == nil ||
-				permanentsInclude(plan.permanentsToTap, source) ||
-				s.EffectiveController(source) != playerID ||
-				!additionalCostMatchesPermanent(s, source, additional) {
+				sacrificeSource == nil ||
+				!permanentIsCurrent(s, sacrificeSource) ||
+				permanentsInclude(plan.permanentsToTap, sacrificeSource) ||
+				s.EffectiveController(sacrificeSource) != playerID ||
+				!additionalCostMatchesPermanent(s, sacrificeSource, additional) {
 				return plan, false
 			}
-			plan.sacrifices = append(plan.sacrifices, source)
+			plan.sacrifices = append(plan.sacrifices, sacrificeSource)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalDiscard:
 			if additional.Random {
@@ -410,6 +412,11 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 	}
 
 	return plan, true
+}
+
+func permanentIsCurrent(s State, permanent *game.Permanent) bool {
+	current, ok := s.PermanentByObjectID(permanent.ObjectID)
+	return ok && current == permanent
 }
 
 // costsHaveChoiceGroup reports whether any cost belongs to a printed "or" choice

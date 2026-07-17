@@ -152,6 +152,26 @@ func resolutionChoiceOptions(g *game.Game, obj *game.StackObject, playerID game.
 		for i, cardID := range resolutionChoiceCardIDs(g, playerID, choiceZone) {
 			add(i, cardChoiceLabel(g, cardID), game.ResolutionChoiceResult{Kind: choice.Kind, CardID: cardID})
 		}
+	case game.ResolutionChoicePermanent:
+		if choice.Selection == nil {
+			break
+		}
+		resolver := referenceResolver{g: g, obj: obj}
+		index := 0
+		for _, permanent := range g.Battlefield {
+			if permanent == nil ||
+				!resolver.permanentMatchesGroupSelection(choice.Selection, nil, permanent) {
+				continue
+			}
+			name := permanentEffectiveName(g, permanent)
+			add(index, name, game.ResolutionChoiceResult{
+				Kind:        choice.Kind,
+				CardID:      permanent.CardInstanceID,
+				PermanentID: permanent.ObjectID,
+				CardName:    name,
+			})
+			index++
+		}
 	case game.ResolutionChoiceNumber:
 		index := 0
 		for number := choice.MinNumber; number <= choice.MaxNumber; number++ {

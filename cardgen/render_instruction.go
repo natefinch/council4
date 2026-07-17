@@ -1618,6 +1618,9 @@ func (r Renderer) renderSearchPrimitive(ctx *renderCtx, value game.Search) (stri
 	if value.Spec.Name != "" {
 		specFields = append(specFields, fmt.Sprintf("Name: %q,", value.Spec.Name))
 	}
+	if value.Spec.NameFromChoice != "" {
+		specFields = append(specFields, fmt.Sprintf("NameFromChoice: game.ChoiceKey(%q),", string(value.Spec.NameFromChoice)))
+	}
 	if value.Spec.Reveal {
 		specFields = append(specFields, "Reveal: true,")
 	}
