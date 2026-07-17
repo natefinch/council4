@@ -3922,6 +3922,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Electrickery** — unsupported overload effect: overload requires one exact permanent target and a supported target-only effect
 - **Electro's Bolt** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Mayhem {1}{R} (You may cast this card from your graveyard for {1}{R} if you discarded it this turn. Timing rules still apply.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Electro, Assaulting Battery** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
+- **Electrodominance** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect
 - **Electroduplicate** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color
 - **Electropotence** — unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
 - **Electrosiphon** — unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
