@@ -22,13 +22,20 @@ const necropotenceOracleText = "Skip your draw step.\n" +
 // controller-keyed end-step return captures.
 func TestGenerateNecropotence(t *testing.T) {
 	t.Parallel()
-	generatedSourceContains(t, &ScryfallCard{
+	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
 		Name:       "Necropotence",
 		Layout:     "normal",
 		ManaCost:   "{B}{B}{B}",
 		TypeLine:   "Enchantment",
 		OracleText: necropotenceOracleText,
-	}, []string{
+	}, "cards")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(diagnostics) != 0 {
+		t.Fatalf("diagnostics = %#v", diagnostics)
+	}
+	for _, want := range []string{
 		"game.SkipDrawStepStaticBody",
 		"game.EventCardDiscarded",
 		"game.ExileTopOfLibrary{",
@@ -37,8 +44,14 @@ func TestGenerateNecropotence(t *testing.T) {
 		"game.CreateDelayedTrigger{",
 		"game.DelayedAtBeginningOfYourNextEndStep",
 		`CapturedCard: opt.Val(game.LinkedObjectReference("delayed-top-card-1"))`,
+		// Struct fields are now emitted multi-line; containsNormalized handles
+		// whitespace/comma differences.
 		"game.CardReference{Kind: game.CardReferenceCaptured}",
-	})
+	} {
+		if !containsNormalized(source, want) {
+			t.Fatalf("generated source missing %q:\n%s", want, source)
+		}
+	}
 }
 
 // TestLowerNecropotenceDiscardExileTrigger proves the discard clause lowers to a

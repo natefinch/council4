@@ -120,16 +120,6 @@ func supertypeLiteral(st types.Super) (string, error) {
 	return lit, nil
 }
 
-// counteredSpellDestinationLiteral returns the Go constant for a non-default
-// CounterObject destination. It errors for the graveyard default (which renders
-// no Destination field) and any unknown value.
-func counteredSpellDestinationLiteral(d game.CounteredSpellDestination) (string, error) {
-	if d == game.CounteredSpellGraveyard {
-		return "", fmt.Errorf("render: countered-spell destination %d is the default and renders no field", int(d))
-	}
-	return enumLiteral(gameCounteredSpellDestinationLiterals, "countered-spell destination", d)
-}
-
 func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
 	return enumLiteralNonZero(costAdditionalKindLiterals, "additional cost kind", kind)
 }
@@ -221,28 +211,8 @@ func renderDuration(duration game.EffectDuration) (string, error) {
 	return enumLiteral(gameEffectDurationLiterals, "effect duration", duration)
 }
 
-func renderDelayedTriggerTiming(timing game.DelayedTriggerTiming) (string, error) {
-	return enumLiteral(gameDelayedTriggerTimingLiterals, "delayed trigger timing", timing)
-}
-
-func renderDelayedTriggerWindow(window game.DelayedTriggerWindow) (string, error) {
-	return enumLiteralNonZero(gameDelayedTriggerWindowLiterals, "delayed trigger window", window)
-}
-
 func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) {
 	return enumLiteralNonZero(gameResolutionChoiceKindLiterals, "resolution choice kind", kind)
-}
-
-func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) (string, error) {
-	return enumLiteral(gameResolutionChoiceColorSourceLiterals, "resolution choice color source", source)
-}
-
-func renderManaSpendConditionKind(kind game.ManaSpendConditionKind) (string, error) {
-	return enumLiteralNonZero(gameManaSpendConditionKindLiterals, "mana spend condition kind", kind)
-}
-
-func renderManaSpendRestrictionKind(kind game.ManaSpendRestrictionKind) (string, error) {
-	return enumLiteral(gameManaSpendRestrictionKindLiterals, "mana spend restriction kind", kind)
 }
 
 func renderZone(zoneType zone.Type) (string, error) {

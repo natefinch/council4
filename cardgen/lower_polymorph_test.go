@@ -39,7 +39,7 @@ func TestLowerPolymorphSpell(t *testing.T) {
 		"SetToughness: opt.Val(game.PT{Value: 1}),",
 		"Duration: game.DurationUntilEndOfTurn,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -112,7 +112,7 @@ func TestLowerNamedBecomePolymorphSpell(t *testing.T) {
 		"SetToughness: opt.Val(game.PT{Value: 6}),",
 		"Duration: game.DurationPermanent,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -144,7 +144,7 @@ func TestLowerCyberConversion(t *testing.T) {
 		"Power:     game.PT{Value: 2},",
 		"Toughness: game.PT{Value: 2},",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

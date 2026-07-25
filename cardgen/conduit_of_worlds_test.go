@@ -39,7 +39,9 @@ func TestGenerateConduitOfWorlds(t *testing.T) {
 		"ExcludedTypes: []types.Card{types.Land}",
 		"Controller: game.ControllerYou",
 		"game.CastForFree{",
-		"Card:        game.CardReference{Kind: game.CardReferenceTarget}",
+		// CardReference is now rendered multi-line; assert on field opener and Kind separately.
+		"Card: game.CardReference{",
+		"Kind: game.CardReferenceTarget,",
 		"PayManaCost: true",
 		"Negate: true",
 		"Event:      game.EventSpellCast",

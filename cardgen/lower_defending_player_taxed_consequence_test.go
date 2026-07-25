@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -36,7 +35,7 @@ func TestGenerateExecutableCardSourceDefendingPlayerTaxedCantBeBlocked(t *testin
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Succeeded: game.TriFalse,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

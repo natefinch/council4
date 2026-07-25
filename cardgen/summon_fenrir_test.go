@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -48,7 +47,7 @@ func TestGenerateSummonFenrir(t *testing.T) {
 		"Primitive: game.Draw{",
 		"ControllerControlsGreatestPowerCreature: true,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

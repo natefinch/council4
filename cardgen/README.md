@@ -1102,8 +1102,8 @@ got/want diff.
 - `cardgen/cmd/gencardlist`: `go generate` helper that writes each
   `mtg/cards/<letter>/cards.go` Card Registry list.
 - `cardgen/cmd/genrender`: `go generate` helper that writes
-  `cardgen/render_literals_generated.go`, the enum-to-source-literal tables the
-  renderer uses.
+  `cardgen/render_literals_generated.go`, the enum-to-source-literal tables, and
+  `cardgen/render_structs_generated.go`, the struct and interface renderers.
 
 ## Generated rendering tables
 
@@ -1133,9 +1133,54 @@ The renderer consumes the tables through the helpers in
   their values, so `cardgen/cmd/genrender/bitmask.go` lists them explicitly and
   the generator asserts every non-zero constant is a power of two.
 
-Constructor-valued types (`game.Quantity`, `color.Identity`, the reference
-types) and formatting helpers stay hand-written in `cardgen/render_enum.go`;
-they are not enum mappings.
+## Generated struct renderers
+
+The same walk also writes a renderer for every struct reachable from
+`game.CardDef`, plus dispatch for the `game.Primitive`, `game.Ability`, and
+`game.KeywordAbility` interfaces, into `cardgen/render_structs_generated.go`.
+A struct renderer emits each exported field in declaration order, omitting
+fields that hold their zero value; a field absent from a Go composite literal
+takes exactly the zero value the omitted field held.
+
+Adding a field to a lowered type therefore needs no renderer edit. Previously
+each new field meant a new arm in a hand-written renderer, and a forgotten arm
+silently dropped the field from every generated card — a failure mode that had
+already reached the corpus, which is why 89 cards gained fields when the
+generated renderer replaced the hand-written one.
+
+Four hand-maintained tables remain, each validated during generation so it
+cannot silently rot:
+
+- `opaqueRenderers` (`structs.go`) names the hand-written emitter for types
+  cardgen cannot write as a literal because their state is unexported, such as
+  `game.Quantity` and `color.Identity`. It also covers types that *are*
+  literal-renderable but read far better through their constructors, such as
+  `cost.Symbol` (`cost.O(2)`) and `game.PlayerGroupReference`
+  (`game.OpponentsReference()`). Types Go cannot compare with `==` must supply
+  an `Empty` test; without one the generator would treat every value as zero and
+  drop it.
+- `openStringTypes` (`openstring.go`) lists named string types that carry
+  constants but are not closed sets, such as `game.ChoiceKey`. A value that a
+  constant names renders as that constant; anything else renders as a
+  conversion. Closed string enums such as `types.Sub` instead fail the render on
+  an undeclared value, because there it is a lowering bug.
+- `alwaysEmitEnums` (`alwaysemit.go`) lists enums whose zero names a real value
+  rather than "unset" *in every position they appear*, so the field is written
+  even when it is zero.
+- `alwaysEmitFields` (`alwaysemit.go`) does the same for individual fields of
+  enums that are only sometimes operative. `counter.Kind` is the motivating
+  case: in `game.AddCounter.CounterKind` the zero value names the `+1/+1`
+  counter and omitting it would read as no counter kind at all, but in
+  `game.Selection.RequiredCounter` the same zero means "no counter filter" and
+  emitting it would invent a restriction the card does not have. Both tables are
+  validated at generation time against the real constant sets, so an entry
+  naming a field that is not an enum, or an enum whose zero is not a declared
+  constant, fails the build.
+- `bitmaskTypes` (`bitmask.go`), as above.
+
+Presentation stays hand-written: import tracking, token `CardDef` hoisting,
+doc comments, and the static-ability variable references in `faceRenderHints`.
+
 
 ## Supported layouts
 

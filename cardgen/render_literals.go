@@ -2,9 +2,11 @@ package cardgen
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 )
 
 // enumLiteral returns the Go expression naming v in generated card source.
@@ -96,4 +98,70 @@ func bitmaskLiteral[T bitmaskValue](flags []enumFlag[T], kind string, v T) (stri
 		return "", fmt.Errorf("render: %s %d sets bits that are not declared flags", kind, v)
 	}
 	return strings.Join(set, " | "), nil
+}
+
+// renderColorIdentity renders a color.Identity as the constructor call that
+// rebuilds it. Identity keeps its colors in unexported state, so it cannot be
+// written as a composite literal from this package.
+func (Renderer) renderColorIdentity(ctx *renderCtx, identity color.Identity) (string, error) {
+	cols := identity.Colors()
+	if len(cols) == 0 {
+		return "color.Identity{}", nil
+	}
+	ctx.need(importColor)
+	lits, err := colorValueLiterals(cols)
+	if err != nil {
+		return "", err
+	}
+	return "color.NewIdentity(" + lits + ")", nil
+}
+
+// compactSliceLit renders a slice literal on a single line, for use inside a
+// struct literal that must itself stay inline.
+func compactSliceLit(elementType string, elements []string) string {
+	return "[]" + elementType + "{" + strings.Join(elements, ", ") + "}"
+}
+
+// namedSliceLit renders a slice literal. A defined slice type such as cost.Mana
+// spells its literal with that name; an unnamed slice spells it with the element
+// type, as []T.
+func namedSliceLit(namedType, elementType string, elements []string) string {
+	if namedType == "" {
+		return sliceLit(elementType, elements)
+	}
+	if len(elements) == 0 {
+		return namedType + "{}"
+	}
+	return namedType + "{\n" + strings.Join(elements, "\n") + "\n}"
+}
+
+// compactNamedSliceLit is namedSliceLit on a single line, for use inside a
+// struct literal that must stay inline.
+func compactNamedSliceLit(namedType, elementType string, elements []string) string {
+	if namedType == "" {
+		return compactSliceLit(elementType, elements)
+	}
+	return namedType + "{" + strings.Join(elements, ", ") + "}"
+}
+
+// pointerLit renders a pointer to a value whose literal is a constructor call.
+// Go has no address-of for a call result, so the value is bound to a local
+// inside an immediately-called function literal.
+func pointerLit(typeName, valueLit string) string {
+	return "func() *" + typeName + " { ref := " + valueLit + "; return &ref }()"
+}
+
+// openStringLiteral renders a value of a named string type that has exported
+// constants but is not a closed set, such as game.ChoiceKey.
+//
+// A constant name is used when one names the value, because that is what the
+// generated card should say; anything else is a conversion of the literal
+// string. Unlike enumLiteral this cannot fail: lowering synthesizes keys such as
+// "oracle-mana-color" that no constant names, and those are routine rather than
+// a bug.
+func openStringLiteral[T ~string](literals map[T]string, kind string, v T) (string, error) {
+	if literal, ok := literals[v]; ok {
+		return literal, nil
+	}
+	return kind + "(" + strconv.Quote(string(v)) + ")", nil
 }

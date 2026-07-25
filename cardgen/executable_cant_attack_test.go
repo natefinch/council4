@@ -30,7 +30,7 @@ func TestGenerateExecutableCardSourceCantAttackThisTurn(t *testing.T) {
 		"Kind: game.RuleEffectCantAttack,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -64,7 +64,7 @@ func TestGenerateExecutableCardSourceCantAttackOrBlockThisTurn(t *testing.T) {
 		"Kind: game.RuleEffectCantBlock,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -96,7 +96,7 @@ func TestGenerateExecutableCardSourceTargetMustAttackThisTurn(t *testing.T) {
 		"Kind: game.RuleEffectMustAttack,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

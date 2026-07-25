@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -25,6 +24,7 @@ func TestGenerateCastFromGraveyardSource(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
+	// Face: game.FaceFront is the zero value and is now omitted; front face is the default.
 	for _, want := range []string{
 		"game.VigilanceStaticBody",
 		"Constraint: \"target enchantment card from your graveyard\",",
@@ -33,10 +33,9 @@ func TestGenerateCastFromGraveyardSource(t *testing.T) {
 		"Primitive: game.GrantCastPermission{",
 		"Card:     game.CardReference{Kind: game.CardReferenceTarget},",
 		"FromZone: zone.Graveyard,",
-		"Face:     game.FaceFront,",
 		"Duration: game.DurationUntilEndOfTurn,",
 	} {
-		if !strings.Contains(spaceCollapsed(source), spaceCollapsed(want)) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

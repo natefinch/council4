@@ -23,7 +23,7 @@ func TestGenerateCaptainHowlerSeaScourge(t *testing.T) {
 	}
 	generatedSourceContains(t, card, []string{
 		"game.WardStaticAbilityWithCosts(",
-		"PublishLinked:  game.LinkedKey(\"delayed-target-1\")",
+		"PublishLinked: game.LinkedKey(\"delayed-target-1\")",
 		"Primitive: game.CreateDelayedTrigger{",
 		"Event:                game.EventDamageDealt",
 		"RequireCombatDamage:  true",

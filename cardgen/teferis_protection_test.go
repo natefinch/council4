@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -78,7 +77,7 @@ func TestGenerateTeferisProtectionSource(t *testing.T) {
 		"game.Exile{",
 		"SourceSpell: true,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

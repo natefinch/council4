@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -102,7 +101,7 @@ func TestGenerateManaVaultExecutableSource(t *testing.T) {
 		"game.TriTrue",
 		"DamageSource: opt.Val(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

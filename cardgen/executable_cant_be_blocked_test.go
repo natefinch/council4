@@ -30,7 +30,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnInstant(t *testing.T) 
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -61,7 +61,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnActivatedAbility(t *te
 		"Duration: game.DurationThisTurn,",
 		"game.TapManaAbility(mana.C)",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -95,7 +95,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSelf(t *testing.T) {
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -131,7 +131,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnUpToOne(t *testing.T) 
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -171,7 +171,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceAndTarget(t *tes
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -207,7 +207,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceBackReference(t 
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -241,7 +241,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnTargetBackReference(t 
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -277,7 +277,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisCombatEventBackReference(t
 		"Kind: game.RuleEffectCantBeBlocked,",
 		"Duration: game.DurationUntilEndOfCombat,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

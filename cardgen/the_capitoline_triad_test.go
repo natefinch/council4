@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -43,7 +42,7 @@ func TestGenerateExecutableCardSourceTheCapitolineTriad(t *testing.T) {
 		"SetPower:     opt.Val(game.PT{Value: 9})",
 		"SetToughness: opt.Val(game.PT{Value: 9})",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

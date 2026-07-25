@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -143,10 +142,11 @@ func TestGenerateExecutableCardSourceLandfallPayCopyToken(t *testing.T) {
 		"Source: game.TokenCopySourceObject,",
 		"Object: game.SourceAttachedPermanentReference(),",
 		`game.ResultKey("springheart-landfall-paid")`,
-		`Key:       "springheart-landfall-copied",`,
+		// ResultKey is now rendered as game.ResultKey(...) not a bare string literal.
+		`Key:       game.ResultKey("springheart-landfall-copied"),`,
 		"Subtypes:  []types.Sub{types.Insect},",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

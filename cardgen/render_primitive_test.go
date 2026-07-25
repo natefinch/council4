@@ -241,11 +241,11 @@ func TestRenderPayRepeatedlyPrimitive(t *testing.T) {
 	}
 	for _, want := range []string{
 		"game.PayRepeatedly",
-		"PublishCount: \"paid-count\"",
+		"PublishCount: game.ResultKey(\"paid-count\")",
 		"Prompt: \"Pay {1}{G}?\"",
 		"game.ResolutionPayment",
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered PayRepeatedly missing %q:\n%s", want, rendered)
 		}
 	}
@@ -377,12 +377,12 @@ func TestRenderSearchPrimitive(t *testing.T) {
 		"Destination: zone.Battlefield",
 		"RequiredTypes: []types.Card{types.Land}",
 		"Supertypes: []types.Super{types.Basic}",
-		`SubtypesAny: []types.Sub{types.Sub("Forest"), types.Sub("Plains")}`,
+		`SubtypesAny: []types.Sub{types.Forest, types.Plains}`,
 		"Reveal: true",
 		"EntersTapped: true",
 		"Amount: game.Fixed(1)",
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered search missing %q:\n%s", want, rendered)
 		}
 	}
@@ -415,10 +415,10 @@ func TestRenderSearchPrimitivePermanentManaValue(t *testing.T) {
 
 	for _, want := range []string{
 		"RequirePermanentCard: true",
-		`SubtypesAny: []types.Sub{types.Sub("Rebel")}`,
+		`SubtypesAny: []types.Sub{types.Rebel}`,
 		"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5})",
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered search missing %q:\n%s", want, rendered)
 		}
 	}
@@ -663,13 +663,13 @@ func TestRenderDelayedBoundedDrawPrimitive(t *testing.T) {
 	for _, want := range []string{
 		"PlayerReference: func() *game.PlayerReference { ref := game.CapturedTargetControllerReference(0); return &ref }()",
 		"game.ResolutionChoiceNumber",
-		"MinNumber: 0",
+		// MinNumber: 0 is omitted (zero value); the minimum is implied by the absence of MinNumber.
 		"MaxNumber: 2",
 		`PublishChoice: game.ChoiceKey("draw-count")`,
 		"game.DynamicAmountChosenNumber",
 		`ResultKey: game.ResultKey("draw-count")`,
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered delayed bounded draw missing %q:\n%s", want, rendered)
 		}
 	}
@@ -950,7 +950,7 @@ func TestRenderPayPrimitive(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"game.Pay", "Payment: game.ResolutionPayment", "cost.U"} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered pay missing %q:\n%s", want, rendered)
 		}
 	}
@@ -1006,7 +1006,7 @@ func TestRenderMoveCountersPrimitive(t *testing.T) {
 		"CounterKind: counter.PlusOnePlusOne",
 		"Source: game.CounterSourceSpec{Kind: game.CounterSourceSelf}",
 	} {
-		if !strings.Contains(named, want) {
+		if !containsNormalized(named, want) {
 			t.Fatalf("rendered named move missing %q:\n%s", want, named)
 		}
 	}
@@ -1020,7 +1020,9 @@ func TestRenderMoveCountersPrimitive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(all, "AllKinds: true") || strings.Contains(all, "CounterKind:") {
+	// CounterKind is always emitted even at its zero value (counter.PlusOnePlusOne)
+	// because zero names a real counter kind. Only check that AllKinds: true is present.
+	if !containsNormalized(all, "AllKinds: true") {
 		t.Fatalf("rendered all-kinds move = %s", all)
 	}
 	if _, err := parser.ParseExprFrom(token.NewFileSet(), "", "game.Instruction"+named, 0); err != nil {
@@ -1172,7 +1174,7 @@ func TestRenderMoveCardSingleCard(t *testing.T) {
 		"game.MoveCard",
 		"Card: game.CardReference{Kind: game.CardReferenceTarget}",
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered move card missing %q:\n%s", want, rendered)
 		}
 	}

@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -41,13 +40,14 @@ func TestGenerateExecutableCardSourceEivorWolfKissed(t *testing.T) {
 		"game.Mill{",
 		"Kind:       game.DynamicAmountEventDamage",
 		"PublishLinked: game.LinkedKey(\"milled-cards\")",
-		"Filter:     game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Saga\")}}",
+		// types.Sub("Saga") now renders as the named constant types.Saga.
+		"Filter:     game.Selection{SubtypesAny: []types.Sub{types.Saga}}",
 		"Filter:     game.Selection{RequiredTypes: []types.Card{types.Land}}",
 		"FromLinked: game.LinkedKey(\"milled-cards\")",
 		"Zone: zone.Battlefield",
 		"Optional: true",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

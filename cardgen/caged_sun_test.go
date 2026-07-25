@@ -37,7 +37,8 @@ func TestGenerateExecutableCardSourceCagedSun(t *testing.T) {
 		"RequireManaProducedByLand:               true",
 		// Additional mana of the chosen color routed through the entry choice.
 		"game.AddMana{",
-		`EntryChoiceFrom: game.ChoiceKey("oracle-entry-color")`,
+		// game.ChoiceKey("oracle-entry-color") is now rendered as the named constant game.EntryColorChoiceKey.
+		"EntryChoiceFrom: game.EntryColorChoiceKey",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)

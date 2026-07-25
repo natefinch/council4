@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -33,7 +32,7 @@ func TestGenerateExecutableCardSourceAttackEnergyPayment(t *testing.T) {
 		"Amount: 2",
 		"game.AddCounter{",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

@@ -1078,7 +1078,7 @@ func TestGenerateExecutableCardSourceUtopiaSprawl(t *testing.T) {
 	for _, wanted := range []string{
 		"game.EntryColorChoiceReplacement(",
 		"RequireTappedForMana: true",
-		"EntryChoiceFrom: game.ChoiceKey(\"oracle-entry-color\")",
+		"EntryChoiceFrom: game.EntryColorChoiceKey,",
 		"opt.Val(game.ObjectControllerReference(game.EventPermanentReference()))",
 	} {
 		if !strings.Contains(source, wanted) {

@@ -70,7 +70,7 @@ func TestGenerateExecutableCardSourceStolenVitality(t *testing.T) {
 		"SourceControllerTurn: true,",
 		"Negate:               true,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

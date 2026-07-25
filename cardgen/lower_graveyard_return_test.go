@@ -588,7 +588,7 @@ func TestGenerateExecutableCardSourceTargetedGraveyardReturnRendersCardTargetCon
 		"DestinationBottom:",
 		"true",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -617,7 +617,7 @@ func TestGenerateExecutableCardSourceWithCyclingTargetsRenderIndexedCardReferenc
 		"Keyword: game.Cycling",
 		"game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: 1}",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -681,7 +681,7 @@ func TestGenerateExecutableCardSourceSelfGraveyardReturnUsesEntryOptions(t *test
 		"true",
 		"EntryCounters: []game.CounterPlacement{game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 2}}",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

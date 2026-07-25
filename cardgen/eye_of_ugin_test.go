@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -33,7 +32,7 @@ func TestGenerateExecutableCardSourceEyeOfUgin(t *testing.T) {
 		"Filter:      game.Selection{RequiredTypes: []types.Card{types.Creature}, Colorless: true}",
 		"Reveal:      true",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

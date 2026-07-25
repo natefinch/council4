@@ -26,9 +26,11 @@ func TestGenerateExecutableCardSourceHagPunisher(t *testing.T) {
 		"game.Fixed(3)",
 		"AllowSacrifice:",
 		"AllowDiscard:",
+		// counter.Kind fields are always emitted (zero names a real value); the
+		// zero-value counter.PlusOnePlusOne is cosmetic, not a counter restriction.
 		"game.Selection{ExcludedTypes: []types.Card{types.Land}}",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

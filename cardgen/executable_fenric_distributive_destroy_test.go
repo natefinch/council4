@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -40,7 +39,7 @@ func TestGenerateExecutableFenricDistributiveDestroy(t *testing.T) {
 		"Source:    game.TokenDef(",
 		"game.DeathtouchStaticBody,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

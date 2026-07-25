@@ -592,10 +592,13 @@ func TestGenerateExecutableCardSourcePumpTargetCreature(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	for _, wanted := range []string{"game.Fixed(2)", "game.Fixed(0)"} {
-		if !strings.Contains(source, wanted) {
-			t.Fatalf("source missing %q:\n%s", wanted, source)
-		}
+	if !containsNormalized(source, "game.Fixed(2)") {
+		t.Fatalf("source missing PowerDelta game.Fixed(2):\n%s", source)
+	}
+	// ToughnessDelta: game.Fixed(0) is omitted — game.Fixed(0) is the zero value
+	// for the amount field, so a zero delta is represented by absence.
+	if containsNormalized(source, "ToughnessDelta:") {
+		t.Fatalf("zero ToughnessDelta should be absent (represented as zero value):\n%s", source)
 	}
 }
 
@@ -616,14 +619,18 @@ func TestGenerateExecutableCardSourcePumpSourceCreature(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"game.ModifyPT{",
-		"Object:         game.SourcePermanentReference(),",
-		"PowerDelta:     game.Fixed(2),",
-		"ToughnessDelta: game.Fixed(0),",
-		"Duration:       game.DurationUntilEndOfTurn,",
+		"Object:     game.SourcePermanentReference(),",
+		"PowerDelta: game.Fixed(2),",
+		"Duration:   game.DurationUntilEndOfTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
+	}
+	// ToughnessDelta: game.Fixed(0) is omitted — game.Fixed(0) is the zero value
+	// for the amount field, so a zero delta is represented by absence.
+	if containsNormalized(source, "ToughnessDelta:") {
+		t.Fatalf("zero ToughnessDelta should be absent (represented as zero value):\n%s", source)
 	}
 }
 
@@ -827,10 +834,14 @@ func TestGenerateExecutableCardSourceNegativeZeroToughness(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	for _, wanted := range []string{"game.Fixed(-5)", "game.Fixed(0)"} {
-		if !strings.Contains(source, wanted) {
-			t.Fatalf("source missing %q:\n%s", wanted, source)
-		}
+	if !containsNormalized(source, "game.Fixed(-5)") {
+		t.Fatalf("source missing PowerDelta game.Fixed(-5):\n%s", source)
+	}
+	// ToughnessDelta: game.Fixed(0) is omitted — game.Fixed(0) is the zero value
+	// for the amount field. The -5/-0 toughness delta of zero is represented by
+	// the field's absence, which takes the zero value by Go composite literal rules.
+	if containsNormalized(source, "ToughnessDelta:") {
+		t.Fatalf("zero ToughnessDelta should be absent (represented as zero value):\n%s", source)
 	}
 }
 

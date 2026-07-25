@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -34,12 +33,15 @@ func TestGenerateEmryGraveyardTargetCastSource(t *testing.T) {
 		"Allow:      game.TargetAllowCard,",
 		"TargetZone: zone.Graveyard,",
 		"Primitive: game.GrantCastPermission{",
+		// Card is now formatted multi-line; containsNormalized handles whitespace.
 		"Card:     game.CardReference{Kind: game.CardReferenceTarget},",
 		"FromZone: zone.Graveyard,",
-		"Face:     game.FaceFront,",
+		// Face: game.FaceFront is omitted (zero value — front face is the default).
+		// Assert the full GrantCastPermission shape to verify Face is not set.
+		"game.GrantCastPermission{Card: game.CardReference{Kind: game.CardReferenceTarget}, FromZone: zone.Graveyard, Duration: game.DurationUntilEndOfTurn}",
 		"Duration: game.DurationUntilEndOfTurn,",
 	} {
-		if !strings.Contains(spaceCollapsed(source), spaceCollapsed(want)) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -37,12 +36,13 @@ func TestGenerateExecutableCardSourceBloodSpeaker(t *testing.T) {
 		"Optional:      true",
 		"PublishResult: game.ResultKey(\"if-you-do\")",
 		"game.Search{",
-		"Filter:      game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Demon\")}}",
+		// types.Sub("Demon") now renders as the named constant types.Demon.
+		"Filter:      game.Selection{SubtypesAny: []types.Sub{types.Demon}}",
 		"ResultGate: opt.Val(game.InstructionResultGate{",
 		"Key:       \"if-you-do\"",
 		"Succeeded: game.TriTrue",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

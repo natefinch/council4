@@ -308,7 +308,7 @@ func TestGenerateExecutableCardSourceOptionalHaveKeywordGrant(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, want := range test.wantParts {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}
