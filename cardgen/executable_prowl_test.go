@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGenerateExecutableProwl exercises the four mechanics Prowl, Stoic
 // Strategist // Prowl, Pursuit Vehicle combines (issue #2826), each through the
@@ -64,17 +61,17 @@ func TestGenerateExecutableProwl(t *testing.T) {
 		"Event:  game.EventAttackerDeclared,",
 		"Primitive: game.ExilePermanentForPlay{",
 		`LinkedKey: game.LinkedKey("exiled-with-source"),`,
-		"Selection:  opt.Val(game.Selection{AnyOf: []game.Selection{game.Selection{RequiredTypesAny: []types.Card{types.Creature}}, game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Vehicle\")}}}, Tapped: game.TriTrue, ExcludeSource: true}),",
+		"Selection:  opt.Val(game.Selection{AnyOf: []game.Selection{game.Selection{RequiredTypesAny: []types.Card{types.Creature}}, game.Selection{SubtypesAny: []types.Sub{types.Vehicle}}}, ExcludeSource: true, Tapped: game.TriTrue}),",
 		// Front plays-exiled trigger: draw + convert on the same link key.
 		"Event:                game.EventCardPlayedFromExile,",
 		`PlaysLinkedExileCard: game.LinkedKey("exiled-with-source"),`,
 		// Back enters trigger: type-or-subtype subject union and the
 		// Nth-resolution-this-turn gate.
-		"SubjectSelection: game.Selection{AnyOf: []game.Selection{game.Selection{RequiredTypesAny: []types.Card{types.Creature}}, game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Vehicle\")}}}}",
+		"SubjectSelection: game.Selection{AnyOf: []game.Selection{game.Selection{RequiredTypesAny: []types.Card{types.Creature}}, game.Selection{SubtypesAny: []types.Sub{types.Vehicle}}}}",
 		"CountsResolutionsThisTurn: true,",
 		"SourceAbilityResolutionOrdinalThisTurn: 2,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

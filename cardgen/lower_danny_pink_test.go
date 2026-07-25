@@ -43,7 +43,7 @@ func TestGenerateExecutableCardSourceDannyPink(t *testing.T) {
 		// Draws for that creature's controller.
 		"Player: game.ControllerReference()",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

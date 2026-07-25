@@ -1148,7 +1148,7 @@ silently dropped the field from every generated card — a failure mode that had
 already reached the corpus, which is why 89 cards gained fields when the
 generated renderer replaced the hand-written one.
 
-Four hand-maintained tables remain, each validated during generation so it
+Six hand-maintained tables remain, each validated during generation so it
 cannot silently rot:
 
 - `opaqueRenderers` (`structs.go`) names the hand-written emitter for types
@@ -1177,6 +1177,29 @@ cannot silently rot:
   naming a field that is not an enum, or an enum whose zero is not a declared
   constant, fails the build.
 - `bitmaskTypes` (`bitmask.go`), as above.
+- `preRenderValidators` (`validators.go`) names a `func(T) error` the generated
+  renderer calls before building the literal, so a value the executable backend
+  genuinely cannot run is still reported unsupported. Rendering and support
+  gating were fused in the hand-written renderers; only *runtime-capability*
+  gates were carried over. Gates that only meant "nobody wrote a render arm for
+  this" were dropped, which is the point of generating the renderer.
+- `constructorRenderers` (`validators.go`) names a
+  `func(*renderCtx, T) (string, bool, error)` the generated renderer consults
+  first, so a value a `game` constructor produces is spelled as that call rather
+  than as the literal it expands to. Every arm proves the spelling faithful by
+  `reflect.DeepEqual`-ing the value against the constructor's own output.
+
+Both hook tables have to hang off the *generated* renderer rather than off a
+hand-written wrapper. The generated renderer for a parent struct calls the
+generated renderer for a nested field type directly, so a gate or a constructor
+check placed only at the outermost call site is skipped for every ability
+reached through a card face, a mode, or a continuous effect.
+
+A type with a constructor hook also gets a `...Literal` renderer that skips the
+hook and a `...Pointer` renderer that picks the spelling Go requires for an
+address: `&game.StaticAbility{...}` for a composite literal, and
+`new(game.WardStaticAbility(cost.Mana{cost.O(2)}))` for a constructor call,
+whose result is not addressable. `new` accepts an expression as of Go 1.26.
 
 Presentation stays hand-written: import tracking, token `CardDef` hoisting,
 doc comments, and the static-ability variable references in `faceRenderHints`.

@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -39,7 +38,7 @@ func TestLowerMonarchCantAttackYou(t *testing.T) {
 		"PermanentTypes:            []types.Card{types.Creature},",
 		"AffectedSelection:         game.Selection{Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 2})},",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

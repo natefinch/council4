@@ -2,7 +2,6 @@ package cardgen
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -248,7 +247,7 @@ func TestGenerateExecutableControlledTriggerMultiplierCards(t *testing.T) {
 			},
 			wants: []string{
 				"game.RuleEffectAdditionalTriggerForControlledPermanent",
-				`SubtypesAny: []types.Sub{types.Sub("Ally")}`,
+				"SubtypesAny: []types.Sub{types.Ally}",
 			},
 		},
 		"harmonic prodigy": {
@@ -263,7 +262,7 @@ func TestGenerateExecutableControlledTriggerMultiplierCards(t *testing.T) {
 			},
 			wants: []string{
 				"game.RuleEffectAdditionalTriggerForControlledPermanent",
-				`AnyOf: []game.Selection{game.Selection{SubtypesAny: []types.Sub{types.Sub("Shaman")}}, game.Selection{SubtypesAny: []types.Sub{types.Sub("Wizard")}, ExcludeSource: true}}`,
+				"AnyOf: []game.Selection{game.Selection{SubtypesAny: []types.Sub{types.Shaman}}, game.Selection{SubtypesAny: []types.Sub{types.Wizard}, ExcludeSource: true}}",
 			},
 		},
 		"twinflame travelers": {
@@ -278,7 +277,7 @@ func TestGenerateExecutableControlledTriggerMultiplierCards(t *testing.T) {
 			},
 			wants: []string{
 				"game.RuleEffectAdditionalTriggerForControlledPermanent",
-				`SubtypesAny: []types.Sub{types.Sub("Elemental")}, ExcludeSource: true`,
+				"SubtypesAny: []types.Sub{types.Elemental}, ExcludeSource: true",
 			},
 		},
 		"veyran voice of duality": {
@@ -328,7 +327,7 @@ func TestGenerateExecutableControlledTriggerMultiplierCards(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, wanted := range tc.wants {
-				if !strings.Contains(source, wanted) {
+				if !containsNormalized(source, wanted) {
 					t.Fatalf("source missing %q:\n%s", wanted, source)
 				}
 			}

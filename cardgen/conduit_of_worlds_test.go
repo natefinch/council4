@@ -32,7 +32,8 @@ func TestGenerateConduitOfWorlds(t *testing.T) {
 		OracleText: conduitOfWorldsOracleText,
 	}, []string{
 		"game.PlayLandsFromGraveyardStaticBody",
-		"AdditionalCosts: cost.Tap",
+		"AdditionalCosts: []cost.Additional{",
+		"Kind:        cost.AdditionalTap,",
 		"Timing:          game.SorceryOnly",
 		"Allow:      game.TargetAllowCard",
 		"TargetZone: zone.Graveyard",
@@ -46,13 +47,13 @@ func TestGenerateConduitOfWorlds(t *testing.T) {
 		"Negate: true",
 		"Event:      game.EventSpellCast",
 		"Controller: game.TriggerControllerYou",
-		"game.EventHistoryCurrentTurn",
+		"EventHistory: opt.Val(game.EventHistoryCondition{",
 		"Optional:      true",
 		`PublishResult: game.ResultKey("if-you-do")`,
 		"Kind:           game.RuleEffectCantCastSpells",
 		"AffectedPlayer: game.PlayerYou",
 		"Duration: game.DurationThisTurn",
-		`Key:       "if-you-do"`,
+		`Key:       game.ResultKey("if-you-do")`,
 		"Succeeded: game.TriTrue",
 	})
 }

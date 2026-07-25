@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -27,7 +26,7 @@ func TestGenerateExecutableSpliceOntoArcane(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "game.SpliceKeyword{Cost:") {
+	if !containsNormalized(source, "game.SpliceKeyword{Cost: cost.Mana{cost.O(1), cost.R}}") {
 		t.Fatalf("source missing game.SpliceKeyword:\n%s", source)
 	}
 }
@@ -54,7 +53,7 @@ func TestGenerateExecutableSpliceOntoArcaneTargeted(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "game.SpliceKeyword{Cost:") {
+	if !containsNormalized(source, "game.SpliceKeyword{Cost: cost.Mana{cost.O(1), cost.R}}") {
 		t.Fatalf("source missing game.SpliceKeyword:\n%s", source)
 	}
 }
@@ -74,7 +73,7 @@ func TestGenerateExecutableSpliceNonManaUnsupported(t *testing.T) {
 		Colors: []string{"B"},
 	}
 	source, _, err := GenerateExecutableCardSource(card, "h")
-	if err == nil && strings.Contains(source, "game.SpliceKeyword{Cost:") {
+	if err == nil && containsNormalized(source, "game.SpliceKeyword{Cost:") {
 		t.Fatalf("nonmana splice must not lower to game.SpliceKeyword:\n%s", source)
 	}
 }

@@ -26,14 +26,19 @@ func TestGenerateExecutableCardSourceEnterDrawTrigger(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"TriggeredAbilities: []game.TriggeredAbility",
-		"Type: game.TriggerWhen",
+		"Trigger: game.TriggerCondition{",
+		// TriggerWhen is the zero game.TriggerType, so it is emitted only
+		// because that field is in the generator's alwaysEmitEnums table.
+		// Pinned so dropping the entry fails here instead of silently erasing
+		// the trigger type from every card.
+		"Type: game.TriggerWhen,",
 		"game.EventPermanentEnteredBattlefield",
 		"game.TriggerSourceSelf",
 		"Primitive: game.Draw",
 		"game.Fixed(1)",
 		"Player: game.ControllerReference()",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -858,7 +863,7 @@ func TestGenerateExecutableCardSourceEnterOrDiesUnionTrigger(t *testing.T) {
 		"UnionEvent: game.EventPermanentDied",
 		"game.TriggerSourceSelf",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -890,7 +895,7 @@ func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
 		"game.PutOnBattlefield",
 		"zone.Graveyard",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

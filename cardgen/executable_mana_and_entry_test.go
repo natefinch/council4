@@ -57,7 +57,7 @@ func TestGenerateExecutableCardSourceManaCostActivatedAbility(t *testing.T) {
 		"ZoneOfFunction: zone.Battlefield",
 		"game.Draw",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -80,13 +80,13 @@ func TestGenerateExecutableCardSourceTapCostActivatedAbility(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"AdditionalCosts: cost.Tap",
+		"Kind: cost.AdditionalTap,",
 		"ZoneOfFunction:",
 		"zone.Battlefield",
 		"game.TargetPermanentReference(0)",
 		"Primitive: game.Tap",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -110,10 +110,10 @@ func TestGenerateExecutableCardSourceManaAndTapCostActivatedAbility(t *testing.T
 	}
 	for _, wanted := range []string{
 		"opt.Val(cost.Mana{cost.O(2)})",
-		"AdditionalCosts: cost.Tap",
+		"Kind: cost.AdditionalTap,",
 		"game.Draw",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -159,7 +159,7 @@ func TestGenerateExecutableCardSourceNonManaActivatedCosts(t *testing.T) {
 		"cost.AdditionalRemoveCounter",
 		"counter.Charge",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -1105,9 +1105,9 @@ func TestGenerateExecutableCardSourceSupertypeAnthemWithWard(t *testing.T) {
 	for _, wanted := range []string{
 		"Supertypes: []types.Super{types.Legendary}",
 		"ExcludedSupertype: types.Legendary",
-		"game.WardStaticAbility(cost.Mana{cost.O(1)})",
+		"new(game.WardStaticAbility(cost.Mana{cost.O(1)}))",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

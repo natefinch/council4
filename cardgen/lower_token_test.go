@@ -1478,7 +1478,7 @@ func TestGenerateExecutableCardSourceGoldLanderMutagenTokensCompile(t *testing.T
 			"Primitive: game.CreateToken{",
 			"Types:    []types.Card{types.Artifact},",
 		}, tc.wanted...) {
-			if !strings.Contains(source, wanted) {
+			if !containsNormalized(source, wanted) {
 				t.Fatalf("%q: source missing %q:\n%s", tc.oracle, wanted, source)
 			}
 		}

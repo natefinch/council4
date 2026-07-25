@@ -1029,11 +1029,7 @@ func (r Renderer) renderGameAbilityValue(ctx *renderCtx, v game.Ability) (string
 		if value == nil {
 			return "", errors.New("render: nil *game.ActivatedAbility")
 		}
-		lit, err := r.renderGameActivatedAbility(ctx, *value)
-		if err != nil {
-			return "", err
-		}
-		return "&" + lit, nil
+		return r.renderGameActivatedAbilityPointer(ctx, *value)
 	case *game.ChapterAbility:
 		if value == nil {
 			return "", errors.New("render: nil *game.ChapterAbility")
@@ -1056,11 +1052,7 @@ func (r Renderer) renderGameAbilityValue(ctx *renderCtx, v game.Ability) (string
 		if value == nil {
 			return "", errors.New("render: nil *game.ManaAbility")
 		}
-		lit, err := r.renderGameManaAbility(ctx, *value)
-		if err != nil {
-			return "", err
-		}
-		return "&" + lit, nil
+		return r.renderGameManaAbilityPointer(ctx, *value)
 	case *game.ReplacementAbility:
 		if value == nil {
 			return "", errors.New("render: nil *game.ReplacementAbility")
@@ -1074,20 +1066,12 @@ func (r Renderer) renderGameAbilityValue(ctx *renderCtx, v game.Ability) (string
 		if value == nil {
 			return "", errors.New("render: nil *game.StaticAbility")
 		}
-		lit, err := r.renderGameStaticAbility(ctx, *value)
-		if err != nil {
-			return "", err
-		}
-		return "&" + lit, nil
+		return r.renderGameStaticAbilityPointer(ctx, *value)
 	case *game.TriggeredAbility:
 		if value == nil {
 			return "", errors.New("render: nil *game.TriggeredAbility")
 		}
-		lit, err := r.renderGameTriggeredAbility(ctx, *value)
-		if err != nil {
-			return "", err
-		}
-		return "&" + lit, nil
+		return r.renderGameTriggeredAbilityPointer(ctx, *value)
 	default:
 		return "", fmt.Errorf("render: unhandled game.Ability: %T", v)
 	}
@@ -1957,8 +1941,31 @@ func (r Renderer) renderGameAbilityContent(ctx *renderCtx, v game.AbilityContent
 	return structLit("game.AbilityContent", fields), nil
 }
 
-// renderGameActivatedAbility renders a game.ActivatedAbility value as a Go composite literal.
+// renderGameActivatedAbility renders a game.ActivatedAbility value, preferring a constructor call.
 func (r Renderer) renderGameActivatedAbility(ctx *renderCtx, v game.ActivatedAbility) (string, error) {
+	if s, ok, err := r.constructorActivatedAbility(ctx, v); ok || err != nil {
+		return s, err
+	}
+	return r.renderGameActivatedAbilityLiteral(ctx, v)
+}
+
+// renderGameActivatedAbilityPointer renders a pointer to a game.ActivatedAbility value.
+func (r Renderer) renderGameActivatedAbilityPointer(ctx *renderCtx, v game.ActivatedAbility) (string, error) {
+	if s, ok, err := r.constructorActivatedAbility(ctx, v); ok || err != nil {
+		if err != nil {
+			return "", err
+		}
+		return "new(" + s + ")", nil
+	}
+	lit, err := r.renderGameActivatedAbilityLiteral(ctx, v)
+	if err != nil {
+		return "", err
+	}
+	return "&" + lit, nil
+}
+
+// renderGameActivatedAbilityLiteral renders a game.ActivatedAbility value as a Go composite literal.
+func (r Renderer) renderGameActivatedAbilityLiteral(ctx *renderCtx, v game.ActivatedAbility) (string, error) {
 	var fields []string
 	if v.Text != "" {
 		lit1 := strconv.Quote(string(v.Text))
@@ -4154,6 +4161,9 @@ func (r Renderer) renderGameConnive(ctx *renderCtx, v game.Connive) (string, err
 
 // renderGameContinuousEffect renders a game.ContinuousEffect value as a Go composite literal.
 func (r Renderer) renderGameContinuousEffect(ctx *renderCtx, v game.ContinuousEffect) (string, error) {
+	if err := validateContinuousEffect(v); err != nil {
+		return "", err
+	}
 	var fields []string
 	if v.ID != 0 {
 		lit1 := "id.ID(" + strconv.FormatInt(int64(v.ID), 10) + ")"
@@ -4872,8 +4882,11 @@ func (r Renderer) renderGameCorrelatedFight(ctx *renderCtx, v game.CorrelatedFig
 
 // renderGameCostModifier renders a game.CostModifier value as a Go composite literal.
 func (r Renderer) renderGameCostModifier(ctx *renderCtx, v game.CostModifier) (string, error) {
+	if err := validateCostModifier(v); err != nil {
+		return "", err
+	}
 	var fields []string
-	if v.Kind != 0 {
+	if true {
 		lit1, err2 := enumLiteral(gameCostModifierKindLiterals, "game.CostModifierKind", v.Kind)
 		if err2 != nil {
 			return "", fmt.Errorf("game.CostModifier.Kind: %w", err2)
@@ -6284,7 +6297,7 @@ func (r Renderer) renderGameEventHistoryCondition(ctx *renderCtx, v game.EventHi
 		ctx.need(importGame)
 		fields = append(fields, "Pattern: "+lit1+",")
 	}
-	if v.Window != 0 {
+	if true {
 		lit3, err4 := enumLiteral(gameEventHistoryWindowLiterals, "game.EventHistoryWindow", v.Window)
 		if err4 != nil {
 			return "", fmt.Errorf("game.EventHistoryCondition.Window: %w", err4)
@@ -7545,8 +7558,31 @@ func (r Renderer) renderGameMadnessKeyword(ctx *renderCtx, v game.MadnessKeyword
 	return structLit("game.MadnessKeyword", fields), nil
 }
 
-// renderGameManaAbility renders a game.ManaAbility value as a Go composite literal.
+// renderGameManaAbility renders a game.ManaAbility value, preferring a constructor call.
 func (r Renderer) renderGameManaAbility(ctx *renderCtx, v game.ManaAbility) (string, error) {
+	if s, ok, err := r.constructorManaAbility(ctx, v); ok || err != nil {
+		return s, err
+	}
+	return r.renderGameManaAbilityLiteral(ctx, v)
+}
+
+// renderGameManaAbilityPointer renders a pointer to a game.ManaAbility value.
+func (r Renderer) renderGameManaAbilityPointer(ctx *renderCtx, v game.ManaAbility) (string, error) {
+	if s, ok, err := r.constructorManaAbility(ctx, v); ok || err != nil {
+		if err != nil {
+			return "", err
+		}
+		return "new(" + s + ")", nil
+	}
+	lit, err := r.renderGameManaAbilityLiteral(ctx, v)
+	if err != nil {
+		return "", err
+	}
+	return "&" + lit, nil
+}
+
+// renderGameManaAbilityLiteral renders a game.ManaAbility value as a Go composite literal.
+func (r Renderer) renderGameManaAbilityLiteral(ctx *renderCtx, v game.ManaAbility) (string, error) {
 	var fields []string
 	if v.Text != "" {
 		lit1 := strconv.Quote(string(v.Text))
@@ -10627,6 +10663,9 @@ func (r Renderer) renderGameRollDie(ctx *renderCtx, v game.RollDie) (string, err
 
 // renderGameRuleEffect renders a game.RuleEffect value as a Go composite literal.
 func (r Renderer) renderGameRuleEffect(ctx *renderCtx, v game.RuleEffect) (string, error) {
+	if err := validateRuleEffect(v); err != nil {
+		return "", err
+	}
 	var fields []string
 	if v.ID != 0 {
 		lit1 := "id.ID(" + strconv.FormatInt(int64(v.ID), 10) + ")"
@@ -12175,8 +12214,31 @@ func (r Renderer) renderGameStateTriggerCondition(ctx *renderCtx, v game.StateTr
 	return structLit("game.StateTriggerCondition", fields), nil
 }
 
-// renderGameStaticAbility renders a game.StaticAbility value as a Go composite literal.
+// renderGameStaticAbility renders a game.StaticAbility value, preferring a constructor call.
 func (r Renderer) renderGameStaticAbility(ctx *renderCtx, v game.StaticAbility) (string, error) {
+	if s, ok, err := r.constructorStaticAbility(ctx, v); ok || err != nil {
+		return s, err
+	}
+	return r.renderGameStaticAbilityLiteral(ctx, v)
+}
+
+// renderGameStaticAbilityPointer renders a pointer to a game.StaticAbility value.
+func (r Renderer) renderGameStaticAbilityPointer(ctx *renderCtx, v game.StaticAbility) (string, error) {
+	if s, ok, err := r.constructorStaticAbility(ctx, v); ok || err != nil {
+		if err != nil {
+			return "", err
+		}
+		return "new(" + s + ")", nil
+	}
+	lit, err := r.renderGameStaticAbilityLiteral(ctx, v)
+	if err != nil {
+		return "", err
+	}
+	return "&" + lit, nil
+}
+
+// renderGameStaticAbilityLiteral renders a game.StaticAbility value as a Go composite literal.
+func (r Renderer) renderGameStaticAbilityLiteral(ctx *renderCtx, v game.StaticAbility) (string, error) {
 	var fields []string
 	if v.Text != "" {
 		lit1 := strconv.Quote(string(v.Text))
@@ -12833,8 +12895,11 @@ func (r Renderer) renderGameTransmuteKeyword(ctx *renderCtx, v game.TransmuteKey
 
 // renderGameTriggerCondition renders a game.TriggerCondition value as a Go composite literal.
 func (r Renderer) renderGameTriggerCondition(ctx *renderCtx, v game.TriggerCondition) (string, error) {
+	if err := validateTriggerCondition(v); err != nil {
+		return "", err
+	}
 	var fields []string
-	if v.Type != 0 {
+	if true {
 		lit1, err2 := enumLiteral(gameTriggerTypeLiterals, "game.TriggerType", v.Type)
 		if err2 != nil {
 			return "", fmt.Errorf("game.TriggerCondition.Type: %w", err2)
@@ -12947,6 +13012,9 @@ func (r Renderer) renderGameTriggerCondition(ctx *renderCtx, v game.TriggerCondi
 
 // renderGameTriggerPattern renders a game.TriggerPattern value as a Go composite literal.
 func (r Renderer) renderGameTriggerPattern(ctx *renderCtx, v game.TriggerPattern) (string, error) {
+	if err := validateTriggerPattern(v); err != nil {
+		return "", err
+	}
 	var fields []string
 	if v.Event != 0 {
 		lit1, err2 := enumLiteral(gameEventKindLiterals, "game.EventKind", v.Event)
@@ -13149,7 +13217,7 @@ func (r Renderer) renderGameTriggerPattern(ctx *renderCtx, v game.TriggerPattern
 		lit59 := strconv.FormatBool(bool(v.MatchStackObjectKind))
 		fields = append(fields, "MatchStackObjectKind: "+lit59+",")
 	}
-	if v.StackObjectKind != 0 {
+	if true {
 		lit60, err61 := enumLiteral(gameStackObjectKindLiterals, "game.StackObjectKind", v.StackObjectKind)
 		if err61 != nil {
 			return "", fmt.Errorf("game.TriggerPattern.StackObjectKind: %w", err61)
@@ -13436,8 +13504,31 @@ func (r Renderer) renderGameTriggerPattern(ctx *renderCtx, v game.TriggerPattern
 	return structLit("game.TriggerPattern", fields), nil
 }
 
-// renderGameTriggeredAbility renders a game.TriggeredAbility value as a Go composite literal.
+// renderGameTriggeredAbility renders a game.TriggeredAbility value, preferring a constructor call.
 func (r Renderer) renderGameTriggeredAbility(ctx *renderCtx, v game.TriggeredAbility) (string, error) {
+	if s, ok, err := r.constructorTriggeredAbility(ctx, v); ok || err != nil {
+		return s, err
+	}
+	return r.renderGameTriggeredAbilityLiteral(ctx, v)
+}
+
+// renderGameTriggeredAbilityPointer renders a pointer to a game.TriggeredAbility value.
+func (r Renderer) renderGameTriggeredAbilityPointer(ctx *renderCtx, v game.TriggeredAbility) (string, error) {
+	if s, ok, err := r.constructorTriggeredAbility(ctx, v); ok || err != nil {
+		if err != nil {
+			return "", err
+		}
+		return "new(" + s + ")", nil
+	}
+	lit, err := r.renderGameTriggeredAbilityLiteral(ctx, v)
+	if err != nil {
+		return "", err
+	}
+	return "&" + lit, nil
+}
+
+// renderGameTriggeredAbilityLiteral renders a game.TriggeredAbility value as a Go composite literal.
+func (r Renderer) renderGameTriggeredAbilityLiteral(ctx *renderCtx, v game.TriggeredAbility) (string, error) {
 	var fields []string
 	if v.Text != "" {
 		lit1 := strconv.Quote(string(v.Text))

@@ -33,7 +33,7 @@ func TestGenerateExecutableCardSourceTavernSwindler(t *testing.T) {
 		`PublishResult: game.ResultKey("coin-flip-result")`,
 		"game.GainLife{",
 		`ResultGate: opt.Val(game.InstructionResultGate{`,
-		`Key:         "coin-flip-result"`,
+		`Key:         game.ResultKey("coin-flip-result")`,
 		"AmountRange: opt.Val(game.IntRange{Min: 2, Max: 2})",
 	} {
 		if !strings.Contains(normalizeSource(source), normalizeSource(wanted)) {

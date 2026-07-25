@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+// literalRendererName is the generated method that renders a value of a type
+// with a constructor hook as a plain composite literal, skipping the hook.
+func literalRendererName(named *types.Named) string {
+	return generatedName(named) + "Literal"
+}
+
+// pointerRendererName is the generated method that renders a pointer to a value
+// of a type with a constructor hook.
+func pointerRendererName(named *types.Named) string {
+	return generatedName(named) + "Pointer"
+}
+
 // dispatchName is the generated method that renders any value of an interface
 // type by switching on its concrete type.
 func dispatchName(named *types.Named) string {
@@ -40,8 +52,32 @@ func (e *emitter) emitStructRenderer(b *strings.Builder, named *types.Named) err
 	e.compact = compactLiteralTypes[ref]
 	defer func() { e.compact = false }()
 	fields := e.class.fieldsOf(named)
-	_, _ = fmt.Fprintf(b, "\n// %s renders a %s value as a Go composite literal.\n", generatedName(named), ref)
-	_, _ = fmt.Fprintf(b, "func (r Renderer) %s(ctx *renderCtx, v %s) (string, error) {\n", generatedName(named), e.ref(named))
+	name := generatedName(named)
+	if constructor, ok := constructorRenderers[ref]; ok {
+		// Split the hook off the literal so the pointer form can address each
+		// spelling the way Go requires: &x for a composite literal, new(x) for
+		// a constructor call, whose result is not addressable.
+		_, _ = fmt.Fprintf(b, "\n// %s renders a %s value, preferring a constructor call.\n", name, ref)
+		_, _ = fmt.Fprintf(b, "func (r Renderer) %s(ctx *renderCtx, v %s) (string, error) {\n", name, e.ref(named))
+		_, _ = fmt.Fprintf(b, "\tif s, ok, err := r.%s(ctx, v); ok || err != nil {\n\t\treturn s, err\n\t}\n", constructor)
+		_, _ = fmt.Fprintf(b, "\treturn r.%s(ctx, v)\n}\n", literalRendererName(named))
+
+		_, _ = fmt.Fprintf(b, "\n// %s renders a pointer to a %s value.\n", pointerRendererName(named), ref)
+		_, _ = fmt.Fprintf(b, "func (r Renderer) %s(ctx *renderCtx, v %s) (string, error) {\n", pointerRendererName(named), e.ref(named))
+		_, _ = fmt.Fprintf(b, "\tif s, ok, err := r.%s(ctx, v); ok || err != nil {\n", constructor)
+		_, _ = fmt.Fprint(b, "\t\tif err != nil {\n\t\t\treturn \"\", err\n\t\t}\n")
+		_, _ = fmt.Fprint(b, "\t\treturn \"new(\" + s + \")\", nil\n\t}\n")
+		_, _ = fmt.Fprintf(b, "\tlit, err := r.%s(ctx, v)\n", literalRendererName(named))
+		_, _ = fmt.Fprint(b, "\tif err != nil {\n\t\treturn \"\", err\n\t}\n")
+		_, _ = fmt.Fprint(b, "\treturn \"&\" + lit, nil\n}\n")
+
+		name = literalRendererName(named)
+	}
+	_, _ = fmt.Fprintf(b, "\n// %s renders a %s value as a Go composite literal.\n", name, ref)
+	_, _ = fmt.Fprintf(b, "func (r Renderer) %s(ctx *renderCtx, v %s) (string, error) {\n", name, e.ref(named))
+	if validator, ok := preRenderValidators[ref]; ok {
+		_, _ = fmt.Fprintf(b, "\tif err := %s(v); err != nil {\n\t\treturn \"\", err\n\t}\n", validator)
+	}
 	if len(fields) == 0 {
 		_, _ = fmt.Fprintf(b, "\t_ = ctx\n\t_ = v\n\treturn %q, nil\n}\n", ref+"{}")
 		return nil
@@ -173,6 +209,12 @@ func (e *emitter) emitDispatch(b *strings.Builder, iface *types.Named, impls []*
 			_, _ = fmt.Fprintf(b, "\tcase *%s:\n", e.ref(impl))
 			_, _ = fmt.Fprint(b, "\t\tif value == nil {\n")
 			_, _ = fmt.Fprintf(b, "\t\t\treturn \"\", errors.New(%q)\n\t\t}\n", "render: nil *"+qualified(impl))
+			// A type with a constructor hook has a generated pointer form that
+			// picks &literal or new(constructor) as the spelling requires.
+			if constructorRenderers[qualified(impl)] != "" {
+				_, _ = fmt.Fprintf(b, "\t\treturn r.%s(ctx, *value)\n", pointerRendererName(impl))
+				continue
+			}
 			_, _ = fmt.Fprintf(b, "\t\tlit, err := r.%s(ctx, *value)\n", generatedName(impl))
 			_, _ = fmt.Fprint(b, "\t\tif err != nil {\n\t\t\treturn \"\", err\n\t\t}\n")
 			_, _ = fmt.Fprint(b, "\t\treturn \"&\" + lit, nil\n")

@@ -13,7 +13,8 @@ func TestGeneratePrimalGrowth(t *testing.T) {
 			"Search your library for a basic land card, put that card onto the battlefield, then shuffle. If this spell was kicked, instead search your library for up to two basic land cards, put them onto the battlefield, then shuffle.",
 	}
 	generatedSourceContains(t, card, []string{
-		"game.KickerKeyword{Cost: cost.Mana{}, AdditionalCosts: []cost.Additional{",
+		"game.KickerKeyword{",
+		"AdditionalCosts: []cost.Additional{",
 		"Kind:               cost.AdditionalSacrifice",
 		"PermanentType:      types.Creature",
 		"Amount: game.Fixed(1)",

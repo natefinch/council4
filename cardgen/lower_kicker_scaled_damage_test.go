@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -39,11 +38,8 @@ func TestGenerateExecutableCardSourceKickerScaledDamage(t *testing.T) {
 		"Recipient: game.AnyTargetDamageRecipient(0),",
 		"EachTarget: true,",
 	}
-	// gofmt aligns struct-field colons with runs of spaces; collapse whitespace
-	// so the snippet comparison ignores column alignment.
-	collapsed := strings.Join(strings.Fields(source), " ")
 	for _, wanted := range wantedSnips {
-		if !strings.Contains(collapsed, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

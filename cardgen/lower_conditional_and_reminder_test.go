@@ -483,7 +483,7 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 		{"hellbent activation", "Hellbent Bear", "Creature — Bear", "Hellbent — {1}: Draw a card. Activate only if you have no cards in hand.", []string{"ActivationCondition: opt.Val(game.Condition{", "ControllerHandEmpty: true"}},
 		{"ferocious activation", "Ferocious Bear", "Creature — Bear", "Ferocious — {1}: Draw a card. Activate only if you control a creature with power 4 or greater.", []string{"ActivationCondition: opt.Val(game.Condition{", "Value: 4"}},
 		{"coven trigger", "Coven Bear", "Creature — Bear", "Coven — At the beginning of combat on your turn, if you control three or more creatures with different powers, draw a card.", []string{"InterveningCondition: opt.Val(game.Condition{", "Aggregate: game.AggregateControllerCreaturePowerDiversity, Op: compare.GreaterOrEqual, Value: 3"}},
-		{"morbid trigger", "Morbid Bear", "Creature — Bear", "Morbid — At the beginning of your end step, if a creature died this turn, put a +1/+1 counter on this creature.", []string{"InterveningCondition: opt.Val(game.Condition{", "game.EventPermanentDied", "Window: game.EventHistoryCurrentTurn"}},
+		{"morbid trigger", "Morbid Bear", "Creature — Bear", "Morbid — At the beginning of your end step, if a creature died this turn, put a +1/+1 counter on this creature.", []string{"InterveningCondition: opt.Val(game.Condition{", "EventHistory: opt.Val(game.EventHistoryCondition{", "game.EventPermanentDied"}},
 		{"survival trigger", "Survival Bear", "Creature — Bear", "Survival — At the beginning of your second main phase, if this creature is tapped, you gain 2 life.", []string{"InterveningCondition: opt.Val(game.Condition{", "Tapped: game.TriTrue"}},
 	}
 	for _, test := range tests {
@@ -509,7 +509,7 @@ func TestLowerAbilityWordConditions(t *testing.T) {
 				t.Fatal("expected generated source")
 			}
 			for _, want := range test.wants {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}
@@ -602,7 +602,7 @@ func TestLowerActivationConditionPermanentSelections(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, want := range test.wants {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}

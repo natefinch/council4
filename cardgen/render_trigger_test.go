@@ -17,7 +17,7 @@ import (
 
 func TestRenderCombatTriggerPattern(t *testing.T) {
 	ctx := newRenderCtx()
-	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+	lit, err := (Renderer{}).renderGameTriggerPattern(ctx, game.TriggerPattern{
 		Event:                game.EventDamageDealt,
 		Source:               game.TriggerSourceSelf,
 		Subject:              game.TriggerSubjectDamageSource,
@@ -44,7 +44,7 @@ func TestRenderCombatTriggerPattern(t *testing.T) {
 
 func TestRenderSaturatedCombatTriggerPattern(t *testing.T) {
 	ctx := newRenderCtx()
-	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+	lit, err := (Renderer{}).renderGameTriggerPattern(ctx, game.TriggerPattern{
 		Event:                    game.EventAttackerDeclared,
 		RelatedSubjectSelection:  game.Selection{RequiredTypes: []types.Card{types.Creature}},
 		DamageRecipientSelection: game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}},
@@ -81,7 +81,7 @@ func TestRenderSaturatedCombatTriggerPattern(t *testing.T) {
 
 func TestRenderTriggerPatternRecipientTypesWithoutRecipient(t *testing.T) {
 	ctx := newRenderCtx()
-	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+	lit, err := (Renderer{}).renderGameTriggerPattern(ctx, game.TriggerPattern{
 		Event:                game.EventDamageDealt,
 		DamageRecipientTypes: []types.Card{types.Creature},
 	})
@@ -95,7 +95,7 @@ func TestRenderTriggerPatternRecipientTypesWithoutRecipient(t *testing.T) {
 
 func TestRenderLifeTriggerPattern(t *testing.T) {
 	ctx := newRenderCtx()
-	lit, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+	lit, err := (Renderer{}).renderGameTriggerPattern(ctx, game.TriggerPattern{
 		Event:  game.EventLifeGained,
 		Player: game.TriggerPlayerOpponent,
 	})
@@ -124,7 +124,7 @@ func TestRenderTriggerPatternNonSelfFields(t *testing.T) {
 		ExcludePermanentTypes: []types.Card{types.Artifact},
 		RequireNonToken:       true,
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, pattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestRenderTriggerPatternOneOrMore(t *testing.T) {
 		RequirePermanentTypes: []types.Card{types.Artifact},
 		Controller:            game.TriggerControllerYou,
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, pattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestRenderTriggerPatternOpponentController(t *testing.T) {
 		Controller:            game.TriggerControllerOpponent,
 		RequirePermanentTypes: []types.Card{types.Land},
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, pattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,20 +215,46 @@ func TestRenderTriggerPatternRejectsUnsupportedFields(t *testing.T) {
 		Event:         game.EventPermanentEnteredBattlefield,
 		MatchFromZone: true,
 	}
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
 		t.Fatal("expected unsupported trigger pattern field error")
+	}
+}
+
+// TestRenderTriggerPatternRejectsRuntimeOnlyEvents pins the one exclusion set
+// the renderer deliberately keeps. The kinds in unrenderedEventKinds are
+// produced and consumed only by runtime machinery, so a pattern carrying one
+// came from a lowering bug and must fail the render rather than compile into a
+// card whose trigger never fires. The unset zero must fail for the same reason.
+//
+// The gate lives in validateTriggerPattern because the generated renderer
+// spells every declared constant, and it is reached through the generated
+// renderer because that is what every nested position calls.
+func TestRenderTriggerPatternRejectsRuntimeOnlyEvents(t *testing.T) {
+	t.Parallel()
+	for kind := range unrenderedEventKinds {
+		pattern := game.TriggerPattern{Event: kind}
+		if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
+			t.Errorf("runtime-only event kind %d rendered into card source", int(kind))
+		}
+		union := game.TriggerPattern{Event: game.EventPermanentDied, UnionEvent: kind}
+		if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), union); err == nil {
+			t.Errorf("runtime-only event kind %d rendered as a union event", int(kind))
+		}
+	}
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), game.TriggerPattern{}); err == nil {
+		t.Fatal("trigger pattern with an unset event rendered")
 	}
 }
 
 func TestRenderTriggerPatternRejectsUnrestrictedAbilityActivatedEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{Event: game.EventAbilityActivated}
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
 		t.Fatal("unrestricted ability-activated trigger pattern rendered")
 	}
 
 	pattern.ExcludeManaAbility = true
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err != nil {
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err != nil {
 		t.Fatalf("non-mana ability-activated trigger pattern: %v", err)
 	}
 }
@@ -241,7 +267,7 @@ func TestRenderTriggerPatternBeginningOfStep(t *testing.T) {
 		Controller: game.TriggerControllerYou,
 		Step:       game.StepUpkeep,
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, pattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +337,7 @@ func TestRenderTriggerPatternAllSteps(t *testing.T) {
 			Event: game.EventBeginningOfStep,
 			Step:  tc.step,
 		}
-		rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+		rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, pattern)
 		if err != nil {
 			t.Errorf("step %d: unexpected error: %v", tc.step, err)
 			continue
@@ -332,7 +358,7 @@ func TestRenderTriggerPatternUnknownStepErrors(t *testing.T) {
 		Event: game.EventBeginningOfStep,
 		Step:  game.Step(99),
 	}
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
 		t.Fatal("expected error for unknown step in trigger pattern")
 	}
 }
@@ -344,7 +370,7 @@ func TestRenderTriggerPatternRejectsMismatchedStepEvent(t *testing.T) {
 		{Event: game.EventBeginningOfStep},
 	}
 	for _, pattern := range tests {
-		if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+		if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
 			t.Fatalf("expected mismatched pattern error for %+v", pattern)
 		}
 	}
@@ -472,7 +498,7 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 					SubtypesAny: []types.Sub{types.Spirit, types.Arcane},
 				},
 			},
-			wantParts: []string{"CardSelection:", "SubtypesAny:", `types.Sub("Spirit")`, `types.Sub("Arcane")`},
+			wantParts: []string{"CardSelection:", "SubtypesAny:", "types.Spirit", "types.Arcane"},
 		},
 		{
 			name: "legendary spell",
@@ -518,7 +544,7 @@ func TestRenderTriggerPatternCastWithCardSelection(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			ctx := newRenderCtx()
-			rendered, err := (Renderer{}).renderTriggerPattern(ctx, &tc.pattern)
+			rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, tc.pattern)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -563,7 +589,7 @@ func TestRenderTriggerPatternCyclingEvents(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			rendered, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &tc.pattern)
+			rendered, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), tc.pattern)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -602,7 +628,7 @@ func TestRenderStaticAbilityHandCyclingGrant(t *testing.T) {
 		"RequiredTypes: []types.Card{types.Land}",
 		"game.CyclingActivatedAbility(cost.Mana{cost.R})",
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered static ability missing %q:\n%s", want, rendered)
 		}
 	}
@@ -641,7 +667,7 @@ func TestRenderStaticAbilityCyclingCostModifier(t *testing.T) {
 		"AbilityKeyword: game.Cycling",
 		"SetManaCost: opt.Val(cost.Mana{})",
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered static ability missing %q:\n%s", want, rendered)
 		}
 	}
@@ -669,11 +695,11 @@ func TestRenderStaticAbilityColorSpellCostModifier(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"Kind: game.CostModifierSpell",
+		"game.RuleEffectCostModifier",
 		"CardSelection: game.Selection{ColorsAny: []color.Color{color.Red}}",
 		"GenericReduction: 1",
 	} {
-		if !strings.Contains(rendered, want) {
+		if !containsNormalized(rendered, want) {
 			t.Fatalf("rendered static ability missing %q:\n%s", want, rendered)
 		}
 	}
@@ -720,7 +746,7 @@ func TestRenderTriggerPatternRejectsCardSelectionOnNonCastEvent(t *testing.T) {
 		Event:         game.EventPermanentEnteredBattlefield,
 		CardSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 	}
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
 		t.Fatal("expected error: CardSelection only allowed on EventSpellCast patterns")
 	}
 }
@@ -733,7 +759,7 @@ func TestRenderTriggerPatternRejectsUnsupportedCardSelectionFields(t *testing.T)
 			Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2}),
 		},
 	}
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
 		t.Fatal("expected error: Power is unsupported in CardSelection")
 	}
 }
@@ -747,7 +773,7 @@ func TestRenderTriggerPatternAllowsSubtypeCardSelectionOnDiscardEvent(t *testing
 			SubtypesAny: []types.Sub{types.Island, types.Pirate, types.Vehicle},
 		},
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern)
 	if err != nil {
 		t.Fatalf("rendering subtype-union discard CardSelection: %v", err)
 	}
@@ -763,7 +789,7 @@ func TestRenderTriggerPatternRejectsUnavailableCardSelectionOnDiscardEvent(t *te
 		Player:        game.TriggerPlayerYou,
 		CardSelection: game.Selection{Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 2})},
 	}
-	if _, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern); err == nil {
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
 		t.Fatal("expected error: discard CardSelection cannot filter on power")
 	}
 }
@@ -781,7 +807,7 @@ func TestRenderTriggerPatternSubjectSelection(t *testing.T) {
 			RequiredTypes: []types.Card{types.Creature},
 		},
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, pattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -814,7 +840,7 @@ func TestRenderTriggerPatternSubjectSelectionNonToken(t *testing.T) {
 			NonToken:      true,
 		},
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, pattern)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -835,7 +861,7 @@ func TestRenderTriggerPatternSubjectSelectionSupportsEnterEvent(t *testing.T) {
 			RequiredTypes: []types.Card{types.Creature},
 		},
 	}
-	rendered, err := (Renderer{}).renderTriggerPattern(newRenderCtx(), &pattern)
+	rendered, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern)
 	if err != nil {
 		t.Fatal(err)
 	}

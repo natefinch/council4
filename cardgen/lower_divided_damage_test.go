@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGenerateExecutableCardSourceDividedDamage asserts that "deals N damage
 // divided as you choose among <cardinality> <targets>" with a fixed or variable
@@ -152,7 +149,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			name:       "dynamic count total",
 			oracleText: "Test Bolt deals X damage divided as you choose among any number of target creatures and/or planeswalkers your opponents control, where X is the number of lands you control.",
 			wantedSnips: []string{
-				"MinTargets: 0",
+				"Constraint: \"any number of target creatures and/or planeswalkers your opponents control\"",
 				"MaxTargets: 99",
 				"RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker}",
 				"game.ControllerOpponent",
@@ -165,7 +162,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 			oracleText: "At the beginning of your end step, this enchantment deals X damage divided as you choose among any number of target creatures, where X is the number of age counters on it.",
 			typeLine:   "Enchantment",
 			wantedSnips: []string{
-				"MinTargets: 0",
+				"Constraint: \"any number of target creatures\"",
 				"MaxTargets: 99",
 				"RequiredTypesAny: []types.Card{types.Creature}",
 				"game.DynamicAmountObjectCounters",
@@ -197,7 +194,7 @@ func TestGenerateExecutableCardSourceDividedDamage(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, wanted := range append([]string{"Primitive: game.Damage"}, test.wantedSnips...) {
-				if !strings.Contains(source, wanted) {
+				if !containsNormalized(source, wanted) {
 					t.Fatalf("source missing %q:\n%s", wanted, source)
 				}
 			}

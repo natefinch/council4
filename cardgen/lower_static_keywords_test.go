@@ -949,7 +949,7 @@ func TestGenerateMixedStaticDeclarationsSource(t *testing.T) {
 		"game.RuleEffectMustAttack",
 		"AffectedSource: true",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -1297,17 +1297,21 @@ func TestGenerateSourceConditionalProtectionGrant(t *testing.T) {
 	tests := []struct {
 		name       string
 		oracleText string
-		wantSnip   string
+		wantSnips  []string
 	}{
 		{
 			name:       "protection from color conditional",
 			oracleText: "As long as you control an artifact, this creature has protection from black.",
-			wantSnip:   "game.ProtectionFromColorsStaticAbility(color.Black)",
+			wantSnips: []string{
+				"new(game.ProtectionFromColorsStaticAbility(color.Black))",
+			},
 		},
 		{
 			name:       "protection from each color conditional postfix",
 			oracleText: "This creature has protection from each color as long as you control three or more artifacts.",
-			wantSnip:   "game.ProtectionFromEachColorStaticAbility()",
+			wantSnips: []string{
+				"new(game.ProtectionFromEachColorStaticAbility())",
+			},
 		},
 	}
 	for _, tc := range tests {
@@ -1327,12 +1331,13 @@ func TestGenerateSourceConditionalProtectionGrant(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("unexpected diagnostics: %#v", diagnostics)
 			}
-			for _, want := range []string{
+			wants := []string{
 				"AffectedSource: true",
 				"AddAbilities:",
-				tc.wantSnip,
-			} {
-				if !strings.Contains(source, want) {
+			}
+			wants = append(wants, tc.wantSnips...)
+			for _, want := range wants {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}

@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -98,9 +97,10 @@ func TestGenerateExecutableTheOneRingSource(t *testing.T) {
 		"game.DurationUntilYourNextTurn",
 		"counter.Burden",
 		"game.DynamicAmountObjectCounters",
-		"AdditionalCosts: cost.Tap",
+		"AdditionalCosts: []cost.Additional{",
+		"Kind:        cost.AdditionalTap,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

@@ -112,9 +112,9 @@ func TestGenerateExileForPlayCombinedPayDiscardSource(t *testing.T) {
 		"Kind:   cost.AdditionalDiscard,",
 		"PublishResult: game.ResultKey(\"controller-paid\"),",
 		"Primitive: game.Draw{",
-		"Key:       \"controller-paid\",",
+		"Key: game.ResultKey(\"controller-paid\"),",
 	} {
-		if !strings.Contains(spaceCollapsed(source), spaceCollapsed(want)) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

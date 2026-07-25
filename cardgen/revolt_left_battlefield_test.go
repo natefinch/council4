@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -43,7 +42,7 @@ func TestGenerateExecutableCardSourceNarnamRenegade(t *testing.T) {
 		"Window: game.EventHistoryCurrentTurn",
 		"game.CounterPlacement{Kind: counter.PlusOnePlusOne, Amount: 1}",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

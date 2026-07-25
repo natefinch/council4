@@ -1508,7 +1508,7 @@ func (r Renderer) renderEventHistoryCondition(
 	history *game.EventHistoryCondition,
 	context string,
 ) (string, error) {
-	pattern, err := r.renderTriggerPattern(ctx, &history.Pattern)
+	pattern, err := r.renderGameTriggerPattern(ctx, history.Pattern)
 	if err != nil {
 		return "", err
 	}
@@ -1676,11 +1676,15 @@ func (r Renderer) renderEntersAsCopyReplacement(ctx *renderCtx, ability *game.Re
 	if len(ability.Replacement.EntersAsCopyAddAbilities) > 0 {
 		added := make([]string, 0, len(ability.Replacement.EntersAsCopyAddAbilities))
 		for _, addAbility := range ability.Replacement.EntersAsCopyAddAbilities {
-			abilitySource, err := r.renderEmblemAbility(ctx, addAbility)
+			// EntersAsCopyWithAddedAbilities takes game.Ability values, which
+			// are implemented on pointer receivers, so the dispatch's pointer
+			// form -- &literal or new(constructor) as the spelling requires --
+			// is exactly what is wanted here.
+			abilitySource, err := r.renderGameAbilityValue(ctx, addAbility)
 			if err != nil {
 				return "", err
 			}
-			added = append(added, "new("+abilitySource+")")
+			added = append(added, abilitySource)
 		}
 		rendered = fmt.Sprintf("game.EntersAsCopyWithAddedAbilities(%s, %s)", rendered, strings.Join(added, ", "))
 	}

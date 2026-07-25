@@ -2,7 +2,6 @@ package cardgen
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -71,19 +70,6 @@ func renderManaSymbol(ctx *renderCtx, symbol cost.Symbol) (string, error) {
 
 func renderManaColor(c mana.Color) (string, error) {
 	return enumLiteral(manaColorLiterals, "mana color", c)
-}
-
-func renderManaColorSlice(ctx *renderCtx, colors []mana.Color) (string, error) {
-	ctx.need(importMana)
-	literals := make([]string, 0, len(colors))
-	for _, c := range colors {
-		literal, err := renderManaColor(c)
-		if err != nil {
-			return "", err
-		}
-		literals = append(literals, literal)
-	}
-	return "[]mana.Color{" + strings.Join(literals, ", ") + "}", nil
 }
 
 func renderTypesCardSlice(ctx *renderCtx, cardTypes []types.Card) (string, error) {
@@ -162,14 +148,6 @@ func renderStep(step game.Step) (string, error) {
 	return enumLiteralNonZero(gameStepLiterals, "step", step)
 }
 
-func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
-	return enumLiteralNonZero(gameTriggerSourceFilterLiterals, "trigger source filter", source)
-}
-
-func renderTriggerSubject(subject game.TriggerSubjectObject) (string, error) {
-	return enumLiteralNonZero(gameTriggerSubjectObjectLiterals, "trigger subject", subject)
-}
-
 func renderTriggerController(controller game.TriggerControllerFilter) (string, error) {
 	return enumLiteralNonZero(gameTriggerControllerFilterLiterals, "trigger controller filter", controller)
 }
@@ -198,15 +176,6 @@ func renderDamageRecipient(recipient game.DamageRecipientKind) (string, error) {
 	return bitmaskLiteral(gameDamageRecipientKindFlags, "damage recipient", recipient)
 }
 
-// renderAttackRecipient renders the recipient flags an attack trigger matches.
-// The zero value means the trigger matches any recipient and renders no field.
-func renderAttackRecipient(recipient game.AttackRecipientKind) (string, error) {
-	if recipient == game.AttackRecipientAny {
-		return "", fmt.Errorf("render: attack recipient %d matches any recipient and renders no field", int(recipient))
-	}
-	return bitmaskLiteral(gameAttackRecipientKindFlags, "attack recipient", recipient)
-}
-
 func renderDuration(duration game.EffectDuration) (string, error) {
 	return enumLiteral(gameEffectDurationLiterals, "effect duration", duration)
 }
@@ -217,19 +186,6 @@ func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) 
 
 func renderZone(zoneType zone.Type) (string, error) {
 	return enumLiteralNonZero(zoneTypeLiterals, "zone", zoneType)
-}
-
-// renderText renders a string field value, preferring a raw backtick literal for
-// multi-line text and falling back to a quoted literal when the text already
-// contains a backtick.
-func renderText(text string) string {
-	if strings.ContainsRune(text, '`') {
-		return strconv.Quote(text)
-	}
-	if strings.ContainsRune(text, '\n') {
-		return "`" + text + "`"
-	}
-	return strconv.Quote(text)
 }
 
 func structLit(typeName string, fields []string) string {

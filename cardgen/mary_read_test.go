@@ -23,7 +23,7 @@ func TestGenerateMaryReadAndAnneBonny(t *testing.T) {
 	}
 	generatedSourceContains(t, card, []string{
 		"game.EventCardDiscarded",
-		"SubtypesAny: []types.Sub{types.Sub(\"Island\"), types.Sub(\"Pirate\"), types.Sub(\"Vehicle\")}",
+		"SubtypesAny: []types.Sub{types.Island, types.Pirate, types.Vehicle}",
 		"game.CreateToken{",
 		"EntryTapped: true,",
 	})

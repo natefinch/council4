@@ -226,7 +226,7 @@ func TestGenerateExecutableCardSourceCyclingTrigger(t *testing.T) {
 		"game.TriggerPlayerYou",
 		"ExcludeSelf: true",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -776,7 +776,7 @@ func TestGenerateExecutableCardSourceProtectionFromEachColor(t *testing.T) {
 		"game.ProtectionFromEachColorStaticAbility()",
 		"AddAbilities:",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -859,7 +859,7 @@ func TestGenerateExecutableCardSourceChosenColorProtection(t *testing.T) {
 		"game.EntryColorChoiceReplacement(",
 		"Group: game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -885,7 +885,7 @@ func TestGenerateExecutableCardSourceChosenColorProtectionSelf(t *testing.T) {
 		"game.EntryColorChoiceReplacement(",
 		"AffectedSource: true",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -911,7 +911,7 @@ func TestGenerateExecutableCardSourceChosenColorProtectionGroup(t *testing.T) {
 		"game.EntryColorChoiceReplacement(",
 		"game.BattlefieldGroup(",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

@@ -152,7 +152,7 @@ func TestGenerateExecutableCardSourceVexingDevil(t *testing.T) {
 		"OptionalActorGroup: opt.Val(game.OpponentsReference())",
 		"PublishResult:      game.ResultKey(\"group-may-have-action\")",
 		"Primitive: game.Sacrifice{",
-		"Key:      \"group-may-have-action\"",
+		"Key:      game.ResultKey(\"group-may-have-action\")",
 		"Accepted: game.TriTrue",
 	} {
 		if !strings.Contains(source, want) {

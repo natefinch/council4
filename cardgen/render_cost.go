@@ -517,21 +517,6 @@ func (r Renderer) renderAdditionalCostChoices(ctx *renderCtx, choices []cost.Add
 	return sliceLit("cost.AdditionalChoice", elements), nil
 }
 
-func (r Renderer) renderGraveyardCastGrantCost(ctx *renderCtx, castCost game.GraveyardCastGrantCost) (string, error) {
-	var fields []string
-	if castCost.UseCardManaCost {
-		fields = append(fields, "UseCardManaCost: true,")
-	}
-	if len(castCost.AdditionalCosts) > 0 {
-		rendered, err := r.renderAdditionalCosts(ctx, castCost.AdditionalCosts)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
-	}
-	return structLit("game.GraveyardCastGrantCost", fields), nil
-}
-
 func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error) {
 	ctx.need(importCost)
 	kind, err := renderAdditionalKind(additional.Kind)

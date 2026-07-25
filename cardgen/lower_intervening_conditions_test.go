@@ -384,7 +384,7 @@ func TestRenderGeneratedEventHistoryInterveningCondition(t *testing.T) {
 		"Event: game.EventSpellCast",
 		"Window: game.EventHistoryPreviousTurn",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}
@@ -798,7 +798,7 @@ func TestAttackingControllerInterveningConditionLowers(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: 2") {
+	if !containsNormalized(source, "Aggregate: game.AggregateAttackersAttackingController, Op: compare.GreaterOrEqual, Value: 2") {
 		t.Fatalf("source missing attackers-attacking-controller aggregate:\n%s", source)
 	}
 }

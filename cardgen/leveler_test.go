@@ -42,7 +42,7 @@ func TestGenerateExecutableCardSourceLevelUp(t *testing.T) {
 		"SourceLevelCountersAtLeast: 3",
 		"game.LayerPowerToughnessSet",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -78,7 +78,7 @@ func TestGenerateExecutableCardSourceLevelBandKeywords(t *testing.T) {
 		"SourceLevelCountersLessThan: 7",
 		"SourceLevelCountersAtLeast: 7",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

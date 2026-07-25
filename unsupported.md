@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,179 of 32,503 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,839 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,180 of 32,503 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,839 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -5575,7 +5575,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Hex Parasite** — unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Hexavus** — unsupported activation cost: the executable source backend cannot lower every typed activation cost component
 - **Hexbane Tortoise** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Enlist (As this creature attacks, you may tap a nonattacking creature you control without summoning sickness. When you do, add its power to this creature's until end of turn.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
-- **Hexdrinker** — source generation failed: render: unsupported keyword ability game.ProtectionKeyword
 - **Hexgold Halberd** — unsupported Oracle construct: the compiler preserved but did not confidently lower: For Mirrodin! (When this Equipment enters, create a 2/2 red Rebel creature token, then attach this to it.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
 - **Hexgold Hoverwings** — unsupported Oracle construct: the compiler preserved but did not confidently lower: For Mirrodin! (When this Equipment enters, create a 2/2 red Rebel creature token, then attach this to it.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
 - **Hexgold Slash** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If that creature has toxic

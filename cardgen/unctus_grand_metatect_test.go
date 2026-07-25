@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func unctusGrandMetatectCard() *ScryfallCard {
 	return &ScryfallCard{
@@ -45,7 +42,7 @@ func TestGenerateExecutableCardSourceUnctusGrandMetatect(t *testing.T) {
 		"AddColors: []color.Color{color.Blue},",
 		"Duration: game.DurationUntilEndOfTurn,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

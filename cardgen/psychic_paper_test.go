@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func TestGenerateExecutableCardSourcePsychicPaper(t *testing.T) {
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -28,7 +25,7 @@ func TestGenerateExecutableCardSourcePsychicPaper(t *testing.T) {
 		"Kind:             game.RuleEffectCantBeBlocked",
 		"game.EquipActivatedAbility(cost.Mana{cost.O(2)})",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Errorf("generated source missing %q:\n%s", want, source)
 		}
 	}
