@@ -34,7 +34,17 @@ func TestRenderEventKindCoverage(t *testing.T) {
 	}
 }
 
-// TestEnumLiteralRejectsUndeclaredValue asserts that a value outside a type's
+// TestRenderEventKindRejectsUnknown pins the fail-closed behavior for the unset
+// sentinel. game.EventUnknown is the zero EventKind and means "no event was
+// specified", so a trigger pattern carrying it is malformed and must fail the
+// render rather than emit game.EventUnknown into generated card source.
+func TestRenderEventKindRejectsUnknown(t *testing.T) {
+	t.Parallel()
+	if _, err := renderEventKind(game.EventUnknown); err == nil {
+		t.Fatal("expected an error for the unset event kind sentinel")
+	}
+}
+
 // declared constants fails rather than emitting an unparseable literal.
 func TestEnumLiteralRejectsUndeclaredValue(t *testing.T) {
 	t.Parallel()

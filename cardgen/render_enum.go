@@ -189,12 +189,13 @@ func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
 }
 
 // renderEventKind returns the Go expression naming an event kind, refusing the
-// kinds recorded in unrenderedEventKinds.
+// kinds recorded in unrenderedEventKinds. The zero value is the unset sentinel
+// and never renders.
 func renderEventKind(event game.EventKind) (string, error) {
 	if unrenderedEventKinds[event] {
 		return "", fmt.Errorf("render: event kind %d is produced only by runtime machinery and is not emitted into generated source", int(event))
 	}
-	return enumLiteral(gameEventKindLiterals, "event kind", event)
+	return enumLiteralNonZero(gameEventKindLiterals, "event kind", event)
 }
 
 // renderDamageRecipient renders the recipient flags a damage trigger matches.
