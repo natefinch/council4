@@ -5,10 +5,12 @@ Council4 is a Go playtesting engine for Magic: The Gathering Commander decks. Th
 ## Card support
 
 <!-- card-support:start -->
-Council4 currently supports **16,856 of 32,501 cards eligible for paper support (51.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total. See [`supported.md`](./supported.md) and [`unsupported.md`](./unsupported.md) for the complete lists, and [`unsupported-reasons.md`](./unsupported-reasons.md) for capability-aware blocker planning.
+Council4 currently supports **18,178 of 32,501 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,724 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total. See [`supported.md`](./supported.md) and [`unsupported.md`](./unsupported.md) for the complete lists, and [`unsupported-reasons.md`](./unsupported-reasons.md) for capability-aware blocker planning.
 <!-- card-support:end -->
 
-Run `go run github.com/magefile/mage@v1.17.1 cardSupport` after card-support changes. The target reuses the Scryfall Oracle Cards corpus cached outside the repository, runs cardgen in ignored `.cardwork` scratch space, and updates the support documentation. Set `COUNCIL4_ORACLE_CARDS` to use a specific local corpus file; remove the cached file printed by the target to download the latest corpus. To generate only the compiled card tree in another repository, use `cardSupport -output=/path/to/cards`; the compile report remains at `.cardwork/current-report.json`.
+Run `go run github.com/magefile/mage@v1.15.0 cardSupport` after card-support changes. The target reuses the Scryfall Oracle Cards corpus cached outside the repository, runs cardgen in ignored `.cardwork` scratch space, and updates the support documentation. Set `COUNCIL4_ORACLE_CARDS` to use a specific local corpus file; remove the cached file printed by the target to download the latest corpus. To generate only the compiled card tree in another repository, use `go run github.com/magefile/mage@v1.15.0 cardTree /path/to/cards`; the compile report remains at `.cardwork/current-report.json`.
+
+To refresh only the documentation above without rewriting the generated card tree, run `go run github.com/magefile/mage@v1.15.0 supportDocs`. CI runs that target on every pull request and commits the result, so these files stay current even when a change forgets them.
 
 ## Parser coverage
 
