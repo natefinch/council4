@@ -15,10 +15,9 @@ import (
 func TestCardSupportSettings(t *testing.T) {
 	t.Parallel()
 	externalOutput := filepath.Join("other", "cards")
-	emptyOutput := ""
 	tests := []struct {
 		name         string
-		output       *string
+		output       string
 		wantOutput   string
 		wantCompiler string
 		wantDocs     bool
@@ -30,15 +29,8 @@ func TestCardSupportSettings(t *testing.T) {
 			wantDocs:     true,
 		},
 		{
-			name:         "empty output uses repository generation",
-			output:       &emptyOutput,
-			wantOutput:   filepath.FromSlash(defaultCardSupportOutput),
-			wantCompiler: "./cardgen/oracle/cmd/compilecards",
-			wantDocs:     true,
-		},
-		{
 			name:         "external generation",
-			output:       &externalOutput,
+			output:       externalOutput,
 			wantOutput:   externalOutput,
 			wantCompiler: "github.com/natefinch/council4/cardgen/oracle/cmd/compilecards",
 		},

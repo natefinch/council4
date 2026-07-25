@@ -21,10 +21,37 @@ const (
 	CardSupportReportPath = ".cardwork/current-report.json"
 )
 
-// CardSupport regenerates card definitions and the repository's card-support documentation.
-// Set output to generate the card tree in another repository without modifying
-// council4 support documentation.
-func CardSupport(ctx context.Context, output *string) error {
+// CardSupport regenerates card definitions and the repository's card-support
+// documentation into the ignored .cardwork scratch space.
+//
+// Use CardTree to generate the card tree into another repository without
+// touching council4 documentation.
+func CardSupport(ctx context.Context) error {
+	return generateCards(ctx, "")
+}
+
+// CardTree generates the compiled card tree into output, an existing directory
+// outside this repository, without modifying council4 support documentation. The
+// compile report is still written to CardSupportReportPath.
+//
+// mage passes target arguments positionally: mage cardTree /path/to/cards.
+func CardTree(ctx context.Context, output string) error {
+	if output == "" {
+		return errors.New("cardTree requires an output directory; use cardSupport to generate into this repository")
+	}
+	return generateCards(ctx, output)
+}
+
+// generateCards implements both card-generation targets. An empty output selects
+// repository generation, which also refreshes the committed documentation.
+//
+// CardSupport and CardTree are separate exported targets rather than one target
+// with an optional argument because mage only binds string, int, bool,
+// time.Duration, and context.Context parameters. The former single target took an
+// *string, so mage refused to register it at all and `mage cardSupport` — the
+// command the README and docs/oracle-compiler-expansion.md tell contributors to
+// run — failed with "Unknown target".
+func generateCards(ctx context.Context, output string) error {
 	corpusPath, err := oracleCardsCachePath()
 	if err != nil {
 		return err
@@ -43,13 +70,13 @@ func CardSupport(ctx context.Context, output *string) error {
 	return runCommand(ctx, "go", args...)
 }
 
-func cardSupportSettings(output *string) (generatedRoot, compiler string, documentation bool) {
-	if output == nil || *output == "" {
+func cardSupportSettings(output string) (generatedRoot, compiler string, documentation bool) {
+	if output == "" {
 		return filepath.FromSlash(defaultCardSupportOutput),
 			"./cardgen/oracle/cmd/compilecards",
 			true
 	}
-	return *output,
+	return output,
 		"github.com/natefinch/council4/cardgen/oracle/cmd/compilecards",
 		false
 }
@@ -62,14 +89,24 @@ func cardSupportArgs(compiler, corpusPath, generatedRoot string, documentation b
 		"-report", filepath.FromSlash(CardSupportReportPath),
 	}
 	if documentation {
-		args = append(args,
-			"-supported", "supported.md",
-			"-unsupported", "unsupported.md",
-			"-unsupported-reasons", "unsupported-reasons.md",
-			"-readme", "README.md",
-		)
+		args = append(args, documentationArgs()...)
 	}
 	return args
+}
+
+// documentationArgs lists the compilecards flags that write the committed
+// card-support documentation set. Every target that refreshes documentation
+// shares this one list: when it was split across CardSupport and SupportDocs,
+// only supported.md was wired into CI, so unsupported.md, unsupported-reasons.md
+// (which carries the unblock roadmap that prioritizes card-support work), and the
+// README summary silently went stale.
+func documentationArgs() []string {
+	return []string{
+		"-supported", "supported.md",
+		"-unsupported", "unsupported.md",
+		"-unsupported-reasons", "unsupported-reasons.md",
+		"-readme", "README.md",
+	}
 }
 
 func oracleCardsCachePath() (string, error) {

@@ -159,8 +159,8 @@ go run github.com/magefile/mage@v1.15.0 cardSupport
 ```
 
 It reuses the cached Scryfall Oracle Cards corpus, generates definitions in
-ignored `.cardwork` scratch space, and updates `README.md`, `supported.md`, and
-`unsupported.md`.
+ignored `.cardwork` scratch space, and updates `README.md`, `supported.md`,
+`unsupported.md`, and `unsupported-reasons.md`.
 
 Record:
 

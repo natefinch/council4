@@ -1,10 +1,16 @@
-name: Keep supported.md current
+name: Keep card-support docs current
 
-# Card-support changes are expected to refresh the committed supported-card list
-# (supported.md), but that step is easy to forget. On every pull request this
-# regenerates supported.md from the current Oracle corpus and, when it differs,
-# commits the refreshed list back to the PR branch so the page that reads it (and
-# anyone browsing the repo) always sees an accurate list.
+# Card-support changes are expected to refresh the committed card-support
+# documentation (supported.md, unsupported.md, unsupported-reasons.md, and the
+# README summary), but that step is easy to forget. On every pull request this
+# regenerates them from the current Oracle corpus and, when they differ, commits
+# the refreshed docs back to the PR branch so the page that reads them (and anyone
+# browsing the repo) always sees accurate data.
+#
+# unsupported-reasons.md matters most here: it carries the greedy unblock roadmap
+# ranking which capability gaps block the most cards, so it is the input to
+# choosing the next card-support task. When only supported.md was regenerated it
+# went stale for weeks and the roadmap was effectively invisible.
 #
 # The refreshed commit is pushed with a fine-grained personal access token
 # (secrets.SUPPORTED_MD_TOKEN, contents: read/write) rather than the default
@@ -21,12 +27,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: supported-md-${{ github.head_ref }}
+  group: support-docs-${{ github.head_ref }}
   cancel-in-progress: true
 
 jobs:
   regenerate:
-    name: Regenerate supported.md
+    name: Regenerate card-support docs
     # Pull requests from forks get a read-only token and cannot be pushed to, so
     # only run for branches in this repository.
     if: github.event.pull_request.head.repo.full_name == github.repository
@@ -57,17 +63,18 @@ jobs:
           path: ~/.cache/council4/oracle-cards.json
           key: scryfall-oracle-${{ runner.os }}-${{ steps.scryfall-cache.outputs.date }}
 
-      - name: Regenerate supported.md
-        run: go run github.com/magefile/mage@v1.15.0 supportedDoc
+      - name: Regenerate card-support docs
+        run: go run github.com/magefile/mage@v1.15.0 supportDocs
 
-      - name: Commit supported.md when it changed
+      - name: Commit card-support docs when they changed
         run: |
-          if git diff --quiet -- supported.md; then
-            echo "supported.md is already up to date."
+          docs="supported.md unsupported.md unsupported-reasons.md README.md"
+          if git diff --quiet -- $docs; then
+            echo "Card-support docs are already up to date."
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add supported.md
-          git commit -m "Regenerate supported.md"
+          git add -- $docs
+          git commit -m "Regenerate card-support docs"
           git push origin "HEAD:${{ github.head_ref }}"
