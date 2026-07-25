@@ -85,17 +85,6 @@ type distributiveChoice struct {
 	ref       game.LinkedObjectRef
 }
 
-// removalDestination is the zone a distributive removal sends its permanent to.
-// A destroy is only nominally a graveyard move: regeneration and replacement
-// effects may keep the permanent on the battlefield, which destroyPermanentInBatch
-// already reports.
-func removalDestination(removal game.DistributiveRemoval) zone.Type {
-	if removal == game.DistributiveRemovalDestroy {
-		return zone.Graveyard
-	}
-	return zone.Exile
-}
-
 // applyDistributiveRemoval removes one chosen permanent and publishes its linked
 // reference only when the permanent actually reached the intended destination,
 // so a replacement effect that redirects the removal does not leave a paired
@@ -119,8 +108,14 @@ func applyDistributiveRemoval(r *effectResolver, removal game.DistributiveRemova
 }
 
 // applyDistributiveRemovalBatch removes every deferred choice in one
-// simultaneous zone-change batch, so the whole distribution is a single event
-// for replacement and trigger purposes.
+// simultaneous batch, so the whole distribution is a single event for
+// replacement and trigger purposes.
+//
+// A destroy is not a graveyard move. Routing one through the plain zone-move
+// batch would destroy an indestructible permanent, ignore a regeneration
+// shield, and skip destroy-replacement and commander redirection, all of which
+// live in the destroy planner rather than in the move. The two removals
+// therefore share the apply step but not the plan step.
 func applyDistributiveRemovalBatch(r *effectResolver, removal game.DistributiveRemoval, choices []distributiveChoice, key game.LinkedObjectKey) bool {
 	permanents := make([]*game.Permanent, len(choices))
 	refsByObject := make(map[game.ObjectID]game.LinkedObjectRef, len(choices))
@@ -128,9 +123,16 @@ func applyDistributiveRemovalBatch(r *effectResolver, removal game.DistributiveR
 		permanents[i] = chosen.permanent
 		refsByObject[chosen.permanent.ObjectID] = chosen.ref
 	}
-	destination := removalDestination(removal)
+	var results []permanentZoneMoveResult
+	destination := zone.Exile
+	if removal == game.DistributiveRemovalDestroy {
+		destination = zone.Graveyard
+		results = applyDistributiveDestroyBatch(r, permanents)
+	} else {
+		results = movePermanentsToZoneSimultaneouslyWithResults(r.game, permanents, destination)
+	}
 	succeeded := false
-	for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, permanents, destination) {
+	for _, result := range results {
 		if !result.moved {
 			continue
 		}
@@ -140,4 +142,23 @@ func applyDistributiveRemovalBatch(r *effectResolver, removal game.DistributiveR
 		}
 	}
 	return succeeded
+}
+
+// applyDistributiveDestroyBatch destroys permanents simultaneously through the
+// destroy planner, so indestructible permanents, regeneration shields, and
+// destroy replacements are honoured, and reports per-permanent results so the
+// caller links only the permanents that actually died.
+//
+// It plans and applies inline rather than calling applyPlannedDestroyBatch
+// because that helper collapses the outcome to a single bool, and the linked
+// payoff needs to know which permanents reached the graveyard.
+func applyDistributiveDestroyBatch(r *effectResolver, permanents []*game.Permanent) []permanentZoneMoveResult {
+	batch := &destroyBatch{game: r.game, simultaneousID: r.game.IDGen.Next()}
+	destroyed, replacements := planDestroyPermanents(r.game, permanents, false, batch.simultaneousID)
+	moves := preparePermanentZoneMovesInBatch(r.game, destroyed, zone.Graveyard, batch.simultaneousID)
+	for _, planned := range replacements {
+		batch.changed = applyDestroyReplacement(r.game, planned.permanent, planned.replacement, batch) || batch.changed
+	}
+	batch.applyQueued()
+	return applyPreparedPermanentZoneMoves(r.game, moves)
 }
