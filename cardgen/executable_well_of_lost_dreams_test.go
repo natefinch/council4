@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -33,7 +32,7 @@ func TestGenerateExecutableCardSourceWellOfLostDreams(t *testing.T) {
 		"Primitive: game.PayRepeatedly{",
 		"Payer:  opt.Val(game.ControllerReference()),",
 		"cost.O(1),",
-		`PublishCount: "variable-pay-scaled-draw-count",`,
+		`PublishCount: game.ResultKey("variable-pay-scaled-draw-count"),`,
 		"MaxCount: opt.Val(&game.DynamicAmount{",
 		"Kind:       game.DynamicAmountEventLifeChange,",
 		`PublishResult: game.ResultKey("variable-pay-scaled-draw-count"),`,
@@ -44,7 +43,7 @@ func TestGenerateExecutableCardSourceWellOfLostDreams(t *testing.T) {
 		"ResultGate: opt.Val(game.InstructionResultGate{",
 		"Succeeded: game.TriTrue,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

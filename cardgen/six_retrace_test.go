@@ -50,7 +50,7 @@ func TestGenerateExecutableCardSourceSix(t *testing.T) {
 		"FromLinked: game.LinkedKey(\"milled-cards\")",
 		"Filter:     game.Selection{RequiredTypes: []types.Card{types.Land}}",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

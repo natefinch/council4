@@ -30,7 +30,7 @@ func TestGenerateExecutableCardSourceCantBlockThisTurnSorcery(t *testing.T) {
 		"Kind: game.RuleEffectCantBlock,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -64,7 +64,7 @@ func TestGenerateExecutableCardSourceCantBlockThisTurnMultiTarget(t *testing.T) 
 		"Kind: game.RuleEffectCantBlock,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

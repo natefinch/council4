@@ -48,7 +48,7 @@ func TestGenerateExecutableCardSourceCopyTokenGraveyardCard(t *testing.T) {
 		"Primitive: game.Sacrifice{",
 		"Object: game.CapturedObjectReference(),",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

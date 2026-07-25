@@ -28,7 +28,7 @@ func TestGenerateExecutableCardSourceThroneOfEldraine(t *testing.T) {
 		// Mana ability adds four of the chosen color.
 		"game.ManaAbility{",
 		"Amount:          game.Fixed(4)",
-		`EntryChoiceFrom: game.ChoiceKey("oracle-entry-color")`,
+		`EntryChoiceFrom: game.EntryColorChoiceKey`,
 		// Monocolored-chosen-color spend rider on the produced mana.
 		"SpendRider: opt.Val(game.ManaSpendRider{",
 		"Condition:   game.ManaSpendCastMonocoloredSpellOfChosenColor",

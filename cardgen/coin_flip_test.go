@@ -136,3 +136,15 @@ func TestGenerateExecutableCardSourceLoyaltyCoinFlipFailsClosed(t *testing.T) {
 		t.Fatalf("loyalty coin flip must not emit an ungated effect:\n%s", source)
 	}
 }
+
+// containsNormalized reports whether generated source contains want after both
+// are normalized by normalizeSource.
+//
+// Source-shape assertions check that a lowered field reached the generated card,
+// not how gofmt laid it out. Comparing raw text makes them fail on unrelated
+// changes: adding or removing a neighbouring field re-aligns a whole literal
+// block, and a slice written on one line carries no trailing comma while the
+// same slice split across lines does.
+func containsNormalized(source, want string) bool {
+	return strings.Contains(normalizeSource(source), normalizeSource(want))
+}

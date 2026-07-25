@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -34,7 +33,7 @@ func TestGenerateExecutableHelvaultNamedToken(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Primitive: game.ExileForEachPlayer{",
-		"Selection: game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludedSubtype: types.Sub(\"Saga\")},",
+		"Selection: game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludedSubtype: types.Saga},",
 		`LinkedKey: game.LinkedKey("exile-until-leaves"),`,
 		"Primitive: game.CreateToken{",
 		"Source: game.TokenDef(battleAtTheHelvaultToken),",
@@ -46,7 +45,7 @@ func TestGenerateExecutableHelvaultNamedToken(t *testing.T) {
 		"game.VigilanceStaticBody,",
 		"game.IndestructibleStaticBody,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

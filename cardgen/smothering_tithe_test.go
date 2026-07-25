@@ -32,7 +32,7 @@ func TestGenerateExecutableCardSourceSmotheringTithe(t *testing.T) {
 		"Subtypes: []types.Sub{types.Treasure}",
 		"ManaAbilities: []game.ManaAbility",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

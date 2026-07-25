@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -40,7 +39,7 @@ func TestGenerateFlamerushRiderComposableMechanics(t *testing.T) {
 		"Mechanic: cost.AlternativeMechanicDash",
 		"game.DashTriggeredAbility()",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Errorf("generated source missing %q:\n%s", wanted, source)
 		}
 	}

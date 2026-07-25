@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -35,7 +34,7 @@ func TestGenerateExecutableCardSourceScholarOfNewHorizons(t *testing.T) {
 		"game.Search{",
 		"RevealOnly: true",
 		"Reveal:     true",
-		"Filter:     game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Plains\")}}",
+		"Filter:     game.Selection{SubtypesAny: []types.Sub{types.Plains}}",
 		"PublishLinked: game.LinkedKey(\"conditional-destination-card\")",
 		"game.ConditionalDestinationPlace{",
 		"Card:     game.CardReference{Kind: game.CardReferenceLinked, LinkID: \"conditional-destination-card\"}",
@@ -45,7 +44,7 @@ func TestGenerateExecutableCardSourceScholarOfNewHorizons(t *testing.T) {
 		"Else:        zone.Hand",
 		"game.ShuffleLibrary{",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

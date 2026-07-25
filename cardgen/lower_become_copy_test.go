@@ -32,7 +32,7 @@ func TestLowerBecomeCopyOfGraveyardCard(t *testing.T) {
 		"game.CardReference{Kind: game.CardReferenceTarget}",
 		"UntilEndOfTurn: true,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

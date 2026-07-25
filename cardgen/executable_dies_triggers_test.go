@@ -165,7 +165,7 @@ func TestGenerateExecutableCardSourceSelfDiesEventCardReturn(t *testing.T) {
 		"zone.Graveyard",
 		"zone.Hand",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -207,7 +207,7 @@ func TestGenerateExecutableCardSourceSelfDiesAdventurePermission(t *testing.T) {
 		"Face:     game.FaceAlternate",
 		"Duration: game.DurationUntilEndOfYourNextTurn",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

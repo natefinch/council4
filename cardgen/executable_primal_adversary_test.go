@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -38,7 +37,7 @@ func TestGenerateExecutablePrimalAdversary(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Primitive: game.PayRepeatedly{",
-		`PublishCount: "pay-repeatedly-count",`,
+		`PublishCount: game.ResultKey("pay-repeatedly-count"),`,
 		"Primitive: game.AddCounter{",
 		"Kind:      game.DynamicAmountChosenNumber,",
 		`ResultKey: game.ResultKey("pay-repeatedly-count"),`,
@@ -51,7 +50,7 @@ func TestGenerateExecutablePrimalAdversary(t *testing.T) {
 		"SetPower:     opt.Val(game.PT{Value: 3}),",
 		"Duration:   game.DurationPermanent,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

@@ -62,7 +62,7 @@ func TestGenerateExecutableCardSourceCavernOfSouls(t *testing.T) {
 		"game.RuleEffectCantBeCountered",
 		"ChosenSubtypeFrom: game.EntryTypeChoiceKey,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -130,7 +130,7 @@ func TestGenerateExecutableCardSourceArenaOfGlory(t *testing.T) {
 		"SpellGainsKeywords: []game.Keyword{",
 		"game.Haste,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -170,7 +170,7 @@ func TestGenerateExecutableCardSourceSecludedCourtyard(t *testing.T) {
 		"game.ManaSpendRestrictedToCondition",
 		"ChosenSubtypeFrom: game.EntryTypeChoiceKey,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -204,7 +204,7 @@ func TestGenerateExecutableCardSourceUnclaimedTerritory(t *testing.T) {
 		"game.ManaSpendRestrictedToCondition",
 		"ChosenSubtypeFrom: game.EntryTypeChoiceKey,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

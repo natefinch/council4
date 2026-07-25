@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -35,10 +34,10 @@ func TestGenerateExecutableCardSourceEzurisPredation(t *testing.T) {
 		"PublishLinked:     game.LinkedKey(\"correlated-fight-tokens\")",
 		"PublishCountGroup: game.LinkedKey(\"correlated-fight-creatures\")",
 		"Primitive: game.CorrelatedFight{",
-		"Subjects: \"correlated-fight-tokens\"",
-		"Objects:  \"correlated-fight-creatures\"",
+		"Subjects: game.LinkedKey(\"correlated-fight-tokens\")",
+		"Objects:  game.LinkedKey(\"correlated-fight-creatures\")",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

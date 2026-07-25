@@ -4,7 +4,6 @@ import (
 	goparser "go/parser"
 	"go/token"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -124,7 +123,7 @@ func TestGenerateTotalManaValueReanimationSource(t *testing.T) {
 		"Zone: zone.Battlefield,",
 		"MaxTotalManaValue: opt.Val(4),",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

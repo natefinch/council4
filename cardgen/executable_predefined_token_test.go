@@ -48,7 +48,7 @@ func TestGenerateExecutablePredefinedMutavaultToken(t *testing.T) {
 		"SetPower:     opt.Val(game.PT{Value: 2}),",
 		"Duration: game.DurationUntilEndOfTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

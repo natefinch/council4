@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -39,11 +38,13 @@ func TestGenerateExecutableCardSourceBeseechTheQueen(t *testing.T) {
 		"game.Search{",
 		"SourceZone:  zone.Library,",
 		"Destination: zone.Hand,",
-		"Filter:      game.Selection{ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{Kind: game.DynamicAmountCountSelector, Multiplier: 1, Group: game.GroupRef(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Land}, Controller: game.ControllerYou}))})},",
+		// Group is now emitted as an inline anonymous func (not game.GroupRef); split into two assertions.
+		"ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{Kind: game.DynamicAmountCountSelector, Multiplier: 1,",
+		"game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Land}, Controller: game.ControllerYou})",
 		"Reveal:      true,",
 		"Amount: game.Fixed(1),",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

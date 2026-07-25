@@ -45,7 +45,7 @@ func TestGenerateExecutableKingSolomonSFrogs(t *testing.T) {
 		// The separate become-monarch activated ability.
 		"Primitive: game.BecomeMonarch{",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

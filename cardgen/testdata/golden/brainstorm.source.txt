@@ -32,9 +32,9 @@ func newBrainstorm() *game.CardDef {
 					{
 						Primitive: game.MoveCard{
 							Player:      game.ControllerReference(),
+							Amount:      game.Fixed(2),
 							FromZone:    zone.Hand,
 							Destination: zone.Library,
-							Amount:      game.Fixed(2),
 						},
 					},
 				},

@@ -40,7 +40,7 @@ func TestGenerateExecutableCardSourceAttackInTheBox(t *testing.T) {
 		"Key:       \"may-have-action\"",
 		"Succeeded: game.TriTrue",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

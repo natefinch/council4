@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -30,7 +29,7 @@ func TestGenerateExecutableCardSourceRhysticStudy(t *testing.T) {
 		"Optional: true",
 		"Succeeded: game.TriFalse",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

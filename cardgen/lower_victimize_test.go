@@ -4,7 +4,6 @@ import (
 	goparser "go/parser"
 	"go/token"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -103,7 +102,7 @@ func TestGenerateSacrificeConditionedReanimationSource(t *testing.T) {
 		"Key:",
 		"Succeeded: game.TriTrue",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

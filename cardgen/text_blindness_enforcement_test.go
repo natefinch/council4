@@ -82,6 +82,10 @@ type allowedTextUse struct {
 	Justification string
 }
 
+// generatedStructRendererFile is the machine-generated struct renderer, which is
+// allowlisted as a unit rather than function by function.
+const generatedStructRendererFile = "render_structs_generated.go"
+
 // loweringTextUseAllowlist is the complete, justified classification of every
 // place cardgen lowering reads Oracle wording. There are exactly two categories:
 // diagnostics (which never change whether a card is supported or how it behaves)
@@ -138,6 +142,16 @@ var loweringTextUseAllowlist = []allowedTextUse{
 			"text as ChoiceModal option labels; semantic mode identity and behavior come entirely " +
 			"from typed parser/compiler fields and lowered instructions.",
 	},
+	{
+		File:     generatedStructRendererFile,
+		Func:     "*",
+		Category: "rendering",
+		Justification: "The generated struct renderers empty-check every string field uniformly, " +
+			"including retained Text fields, so that a zero-valued field is omitted from the " +
+			"emitted literal. The emitters are derived mechanically from the type graph and have " +
+			"no notion of Oracle wording: they cannot branch on text content, only on emptiness, " +
+			"which TestGeneratedRendererOnlyEmptyChecksText proves for every site in the file.",
+	},
 }
 
 // TestCompilerIsTextBlind proves the compiler package performs no semantic
@@ -173,6 +187,13 @@ func TestLoweringTextInterpretationIsAllowlisted(t *testing.T) {
 	for _, s := range sites {
 		key := s.File + "::" + s.Func
 		entry, ok := allowed[key]
+		if !ok {
+			// A generated file is allowlisted as a unit: its emitters are
+			// derived from the type graph, so the set of functions holding a
+			// Text field changes whenever mtg/game does.
+			key = s.File + "::*"
+			entry, ok = allowed[key]
+		}
 		if !ok {
 			t.Errorf("unallowlisted Oracle-text interpretation in lowering: %s:%d %s interprets %q (%s)\n"+
 				"  migrate it to typed parser/compiler syntax, or add a justified entry to loweringTextUseAllowlist",
@@ -493,5 +514,35 @@ func exprString(n ast.Node) string {
 		return "(" + exprString(x.X) + ")"
 	default:
 		return "<expr>"
+	}
+}
+
+// TestGeneratedRendererOnlyEmptyChecksText proves the claim that justifies the
+// file-scoped allowlist entry for the generated struct renderers: every Oracle
+// text site in that file is a comparison against the empty string, so the
+// generated code decides only whether a field is present, never what it says.
+//
+// This is what makes a wildcard entry safe. The generated emitters change
+// whenever mtg/game gains a struct with a Text field, so enumerating their
+// function names would churn without adding any guarantee; this property holds
+// for all of them at once, and fails loudly if the generator ever emits a
+// content comparison.
+func TestGeneratedRendererOnlyEmptyChecksText(t *testing.T) {
+	t.Parallel()
+
+	var found int
+	for _, s := range analyzeTextInterpretation(t, ".") {
+		if s.File != generatedStructRendererFile {
+			continue
+		}
+		found++
+		if !strings.HasSuffix(s.Expr, `!= ""`) && !strings.HasSuffix(s.Expr, `== ""`) {
+			t.Errorf("%s:%d %s interprets Oracle text beyond an emptiness check: %q",
+				s.File, s.Line, s.Func, s.Expr)
+		}
+	}
+	if found == 0 {
+		t.Fatalf("no Oracle-text sites found in %s; the allowlist entry is stale",
+			generatedStructRendererFile)
 	}
 }

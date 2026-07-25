@@ -133,7 +133,7 @@ func TestGenerateExecutableCardSourceGroupCantBlockKeyword(t *testing.T) {
 		"AffectedSelection: game.Selection{ExcludedKeyword: game.Flying},",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -183,7 +183,7 @@ func TestGenerateExecutableCardSourceGroupCantBlockColor(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "AffectedSelection: game.Selection{ColorsAny: []color.Color{color.Green}},") {
+	if !containsNormalized(source, "AffectedSelection: game.Selection{ColorsAny: []color.Color{color.Green}},") {
 		t.Fatalf("source missing green color filter:\n%s", source)
 	}
 }

@@ -228,13 +228,13 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 		{
 			name:       "Three Visits",
 			oracleText: "Search your library for a Forest card, put it onto the battlefield, then shuffle.",
-			wants:      []string{"zone.Battlefield", `SubtypesAny: []types.Sub{types.Sub("Forest")}`},
+			wants:      []string{"zone.Battlefield", `SubtypesAny: []types.Sub{types.Forest}`},
 		},
 		{
 			name:       "Farseek",
 			oracleText: "Search your library for a Plains, Island, Swamp, or Mountain card, put it onto the battlefield tapped, then shuffle.",
 			wants: []string{
-				`[]types.Sub{types.Sub("Plains"), types.Sub("Island"), types.Sub("Swamp"), types.Sub("Mountain")}`,
+				`[]types.Sub{types.Plains, types.Island, types.Swamp, types.Mountain}`,
 				"zone.Battlefield",
 				"EntersTapped",
 			},
@@ -243,7 +243,7 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			name:       "Safewright Quest",
 			oracleText: "Search your library for a Forest or Plains card, reveal it, put it into your hand, then shuffle.",
 			wants: []string{
-				`SubtypesAny: []types.Sub{types.Sub("Forest"), types.Sub("Plains")}`,
+				`SubtypesAny: []types.Sub{types.Forest, types.Plains}`,
 				"zone.Hand",
 				"Reveal",
 			},
@@ -254,7 +254,7 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 			wants: []string{
 				"zone.Battlefield",
 				"RequirePermanentCard: true",
-				`SubtypesAny: []types.Sub{types.Sub("Rebel")}`,
+				`SubtypesAny: []types.Sub{types.Rebel}`,
 				"ManaValue: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 5})",
 			},
 		},
@@ -308,7 +308,7 @@ func TestGenerateExecutableCardSourceLibrarySearches(t *testing.T) {
 				"zone.Library",
 				"Player: game.ControllerReference()",
 			}, test.wants...) {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}
@@ -369,7 +369,7 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 			oracleText: "When this creature enters, search your library for a Forest card, put that card onto the battlefield, then shuffle.",
 			wants: []string{
 				"zone.Battlefield",
-				`SubtypesAny: []types.Sub{types.Sub("Forest")}`,
+				`SubtypesAny: []types.Sub{types.Forest}`,
 			},
 		},
 		{
@@ -388,7 +388,7 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 			wants: []string{
 				"zone.Hand",
 				"Supertypes: []types.Super{types.Basic}",
-				`[]types.Sub{types.Sub("Island"), types.Sub("Mountain"), types.Sub("Plains")}`,
+				`[]types.Sub{types.Island, types.Mountain, types.Plains}`,
 				"Reveal",
 			},
 		},
@@ -418,7 +418,7 @@ func TestGenerateExecutableCardSourceEnterTriggerLibrarySearch(t *testing.T) {
 				"zone.Library",
 				"Player: game.ControllerReference()",
 			}, test.wants...) {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}

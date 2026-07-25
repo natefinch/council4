@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -29,7 +28,8 @@ func TestGenerateExecutableCardSourcePerCreatureUntapNongreen(t *testing.T) {
 	for _, wanted := range []string{
 		"Primitive: game.PayRepeatedly",
 		"Payer:  opt.Val(game.EventPlayerReference())",
-		"PublishCount: \"per-creature-untap-count\"",
+		// PublishCount is now rendered as game.ResultKey(...) not a bare string literal.
+		"PublishCount: game.ResultKey(\"per-creature-untap-count\")",
 		"Primitive: game.Untap",
 		"ChooseUpTo: true,",
 		"Chooser: game.EventPlayerReference(),",
@@ -38,7 +38,7 @@ func TestGenerateExecutableCardSourcePerCreatureUntapNongreen(t *testing.T) {
 		"Tapped: game.TriTrue",
 		"game.PlayerControlledGroup(game.EventPlayerReference()",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -70,7 +70,7 @@ func TestGenerateExecutableCardSourcePerCreatureUntapColored(t *testing.T) {
 		"ColorsAny: []color.Color{color.Blue}",
 		"Tapped: game.TriTrue",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

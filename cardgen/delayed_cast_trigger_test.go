@@ -39,7 +39,7 @@ func TestGenerateExecutableShowdownDelayedCastTrigger(t *testing.T) {
 		"Primitive: game.AddCounter",
 		"CounterKind: counter.PlusOnePlusOne,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}
@@ -83,7 +83,7 @@ func TestGenerateExecutableOneShotDelayedCastTrigger(t *testing.T) {
 		"OneShot: true,",
 		"game.DelayedWindowThisTurn,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

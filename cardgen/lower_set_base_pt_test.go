@@ -25,7 +25,7 @@ func generateSetBasePTSource(t *testing.T, card *ScryfallCard, letter string) st
 func assertSourceContains(t *testing.T, source string, wants ...string) {
 	t.Helper()
 	for _, want := range wants {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
@@ -89,7 +89,9 @@ func TestLowerSetBasePTGroupOpponentFixed(t *testing.T) {
 	assertSourceContains(t, source,
 		"game.LayerPowerToughnessSet,",
 		"Controller: game.ControllerOpponent",
-		"SetPower:     opt.Val(game.PT{Value: 0}),",
+		// game.PT{Value: 0} is the zero struct, rendered as game.PT{}. The
+		// opt.Val(...) wrapper is what proves base power is being SET to 0.
+		"SetPower:     opt.Val(game.PT{}),",
 		"SetToughness: opt.Val(game.PT{Value: 1}),",
 	)
 }
@@ -164,7 +166,9 @@ func TestLowerSetBasePTTargetLosesAllAbilities(t *testing.T) {
 	assertSourceContains(t, source,
 		"game.LayerPowerToughnessSet,",
 		"game.TargetPermanentReference(0)",
-		"SetPower:     opt.Val(game.PT{Value: 0}),",
+		// game.PT{Value: 0} is the zero struct, rendered as game.PT{}. The
+		// opt.Val(...) wrapper is what proves base power is being SET to 0.
+		"SetPower:     opt.Val(game.PT{}),",
 		"SetToughness: opt.Val(game.PT{Value: 1}),",
 		"game.LayerAbility,",
 		"RemoveAllAbilities: true,",

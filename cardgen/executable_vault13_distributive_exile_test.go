@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -45,7 +44,7 @@ func TestGenerateExecutableVault13DistributiveExile(t *testing.T) {
 		`Source: game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves")),`,
 		"game.EventZoneChanged",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

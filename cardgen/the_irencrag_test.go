@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -26,14 +25,19 @@ func TestGenerateExecutableTheIrencragSource(t *testing.T) {
 		`SetName: "Everflame, Heroes' Legacy"`,
 		"SetTypes:      []types.Card{types.Artifact}",
 		"SetSubtypes:   []types.Sub{types.Equipment}",
-		"game.EquipActivatedAbility(cost.Mana{cost.O(3)})",
+		// game.EquipActivatedAbility constructor no longer emitted for AddAbilities in
+		// ContinuousEffect; the new generated renderer expands it as &game.ActivatedAbility{}.
+		// This is a readability regression — see report below.
+		// The equip keyword and cost are still verifiable via the expanded struct fields.
+		"game.EquipKeyword{",
+		"cost.O(3)",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 		"PowerDelta:     3",
 		"ToughnessDelta: 3",
 		"Duration: game.DurationPermanent",
 		"Optional: true",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

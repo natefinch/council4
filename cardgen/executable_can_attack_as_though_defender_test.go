@@ -36,7 +36,7 @@ func TestGenerateExecutableCardSourceCanAttackAsThoughDefenderActivated(t *testi
 		"Kind: game.RuleEffectCanAttackAsThoughDefender,",
 		"Duration: game.DurationThisTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

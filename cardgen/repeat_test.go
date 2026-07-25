@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -24,10 +23,10 @@ func TestGenerateExecutableCardSourceTormentRepeatProcess(t *testing.T) {
 		"game.RepeatProcess{",
 		"Times: game.Dynamic(game.DynamicAmount{",
 		"Kind: game.DynamicAmountX",
-		"Body: game.Mode{",
+		"Body: game.AbilityContent{",
 		"game.PunisherEachLoseLife{",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

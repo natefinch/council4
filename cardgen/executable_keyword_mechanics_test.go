@@ -288,7 +288,7 @@ func TestGenerateExecutableCardSourceBasicLandcycling(t *testing.T) {
 		"Filter:      game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}},",
 		"Reveal:      true,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -315,10 +315,10 @@ func TestGenerateExecutableCardSourceTypedLandcycling(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Primitive: game.Search{",
-		`SubtypesAny: []types.Sub{types.Sub("Swamp")}`,
+		`SubtypesAny: []types.Sub{types.Swamp}`,
 		"Destination: zone.Hand,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

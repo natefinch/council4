@@ -30,12 +30,13 @@ func TestGenerateExileForPlaySource(t *testing.T) {
 	for _, want := range []string{
 		"Event:  game.EventCardDiscarded,",
 		"Primitive: game.ExileForPlay{",
-		"Card:     game.CardReference{Kind: game.CardReferenceEvent},",
+		// Card field now rendered multi-line; containsNormalized matches regardless of layout.
+		"Card: game.CardReference{Kind: game.CardReferenceEvent},",
 		"FromZone: zone.Graveyard,",
 		"Duration: game.DurationThisTurn,",
 		"Optional: true,",
 	} {
-		if !strings.Contains(spaceCollapsed(source), spaceCollapsed(want)) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

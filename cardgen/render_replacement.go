@@ -1114,44 +1114,6 @@ func (r Renderer) renderResolutionPayment(ctx *renderCtx, payment game.Resolutio
 	return structLit("game.ResolutionPayment", fields), nil
 }
 
-func (r Renderer) renderPay(ctx *renderCtx, pay game.Pay) (string, error) {
-	payment, err := r.renderResolutionPayment(ctx, pay.Payment)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{fmt.Sprintf("Payment: %s,", payment)}
-	if pay.Prompt != "" {
-		fields = append(fields, fmt.Sprintf("Prompt: %q,", pay.Prompt))
-	}
-	return structLit("game.Pay", fields), nil
-}
-
-func (r Renderer) renderPayRepeatedly(ctx *renderCtx, pay game.PayRepeatedly) (string, error) {
-	payment, err := r.renderResolutionPayment(ctx, pay.Payment)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{fmt.Sprintf("Payment: %s,", payment)}
-	if pay.PublishCount != "" {
-		fields = append(fields, fmt.Sprintf("PublishCount: %q,", string(pay.PublishCount)))
-	}
-	if pay.Prompt != "" {
-		fields = append(fields, fmt.Sprintf("Prompt: %q,", pay.Prompt))
-	}
-	if pay.MaxCount.Exists {
-		if pay.MaxCount.Val == nil {
-			return "", errors.New("render: PayRepeatedly has nil max count")
-		}
-		dynamic, err := r.renderDynamicAmount(ctx, pay.MaxCount.Val)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("MaxCount: opt.Val(&%s),", dynamic))
-	}
-	return structLit("game.PayRepeatedly", fields), nil
-}
-
 // renderConditionForETBReplacement renders a game.Condition for use in a
 // conditional enters-tapped replacement. Only the exact supported shape is
 // accepted; any other combination returns an error.

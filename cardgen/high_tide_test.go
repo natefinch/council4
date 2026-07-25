@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -28,13 +27,15 @@ func TestGenerateExecutableCardSourceHighTide(t *testing.T) {
 		// filtered to Islands tapped for mana.
 		"game.EventManaProduced",
 		"RequireTappedForMana: true",
-		`game.Selection{SubtypesAny: []types.Sub{types.Sub("Island")}}`,
+		// types.Sub("Island") is now rendered as the typed constant types.Island.
+		// counter.Kind fields are always emitted (zero names a real value).
+		`game.Selection{SubtypesAny: []types.Sub{types.Island}}`,
 		// Each tapping player adds an additional {U}.
 		"game.AddMana{",
 		"ManaColor: mana.U",
 		"game.EventPlayerReference()",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}
