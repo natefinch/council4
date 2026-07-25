@@ -427,6 +427,14 @@ var gameDigRemainderLiterals = map[game.DigRemainder]string{
 	game.DigRemainderLibraryBottom: "game.DigRemainderLibraryBottom",
 }
 
+// gameDistributiveRemovalLiterals maps each exported game.DistributiveRemoval constant to the Go
+// expression that names it in generated card source.
+var gameDistributiveRemovalLiterals = map[game.DistributiveRemoval]string{
+	game.DistributiveRemovalUnknown: "game.DistributiveRemovalUnknown",
+	game.DistributiveRemovalExile:   "game.DistributiveRemovalExile",
+	game.DistributiveRemovalDestroy: "game.DistributiveRemovalDestroy",
+}
+
 // gameDynamicAmountKindLiterals maps each exported game.DynamicAmountKind constant to the Go
 // expression that names it in generated card source.
 var gameDynamicAmountKindLiterals = map[game.DynamicAmountKind]string{
@@ -1864,6 +1872,9 @@ func enumSpelling(v any) (string, bool) {
 		return name, ok
 	case game.DigRemainder:
 		name, ok := gameDigRemainderLiterals[value]
+		return name, ok
+	case game.DistributiveRemoval:
+		name, ok := gameDistributiveRemovalLiterals[value]
 		return name, ok
 	case game.DynamicAmountKind:
 		name, ok := gameDynamicAmountKindLiterals[value]

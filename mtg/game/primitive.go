@@ -111,9 +111,7 @@ const (
 	PrimitiveReturnExiledCardsToHand
 	PrimitivePutLinkedExiledCardsInLibrary
 	PrimitiveConditionalDestinationPlace
-	PrimitiveExileForEachPlayer
 	PrimitiveReturnLinkedExiledCardsToBattlefield
-	PrimitiveDestroyForEachPlayer
 	PrimitiveCreateTokenForEachDestroyed
 	PrimitiveRemoveTargetsForToken
 	PrimitiveAdapt
@@ -175,13 +173,6 @@ const (
 	// of the exiled cards. You put that card on the bottom of your library and
 	// return the other to the battlefield tapped." (Coin of Fate).
 	PrimitivePartitionExiledCostCards
-	// PrimitiveExileForEachOpponent walks each opponent of the resolving
-	// controller and, for each, has Chooser exile up to one permanent that
-	// opponent controls matching Selection, publishing each exiled permanent
-	// under LinkedKey (game.ExileForEachOpponent). It models "for each opponent,
-	// exile up to one target permanent that player controls ..." (King Solomon's
-	// Frogs).
-	PrimitiveExileForEachOpponent
 	// PrimitiveDrawForEachExiled has each linked exiled permanent's last-known
 	// controller draw one card, consuming the LinkedKey a sibling
 	// ExileForEachOpponent published (game.DrawForEachExiled). It models "For
@@ -383,10 +374,17 @@ const (
 	// PrimitiveReplaceLinkedExiledCard atomically establishes one current
 	// object-scoped linked exile.
 	PrimitiveReplaceLinkedExiledCard
+	// PrimitiveForEachPlayer walks each player in Scope and, for each, has
+	// Chooser select from that player's own pool of permanents matching
+	// Selection and applies Removal, publishing every removed permanent under
+	// LinkedKey (game.ForEachPlayer). It models the whole distributive removal
+	// template "For each player, <verb> up to one target permanent that player
+	// controls."
+	PrimitiveForEachPlayer
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveReplaceLinkedExiledCard) + 1
+const primitiveKindCount = int(PrimitiveForEachPlayer) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1366,21 +1364,6 @@ type ReturnExiledCardsWithCounter struct {
 	Counter counter.Kind
 }
 
-// ExileForEachPlayer walks every player in the game and, for each, has Chooser
-// pick up to one permanent that player controls matching Selection and exiles
-// it, remembering each chosen permanent under LinkedKey keyed by the source. It
-// models both exile-until-leaves Saga chapters (Vault 13: Dweller's Journey,
-// Battle at the Helvault) and plain distributive removal with a linked payoff
-// (Unexplained Absence). Each player's permanents are an independent candidate
-// pool, so the effect exiles at most one per player. Selection's ExcludeSource
-// models the "other" qualifier. LinkedKey must be set so a paired return or
-// payoff can consume the exiled set.
-type ExileForEachPlayer struct {
-	Chooser   PlayerReference
-	Selection Selection
-	LinkedKey LinkedKey
-}
-
 // ChampionExile is the Champion keyword enters-the-battlefield action (CR
 // 702.71): the source's controller exiles another permanent they control
 // matching Selection, remembering it under LinkedKey (an exile-until-leaves
@@ -1409,22 +1392,6 @@ type ReturnLinkedExiledCardsToBattlefield struct {
 	LinkedKey           LinkedKey
 	Amount              Quantity
 	RestToLibraryBottom bool
-}
-
-// DestroyForEachPlayer walks every player in the game and, for each, has Chooser
-// pick up to one permanent that player controls matching Selection and destroys
-// it, remembering each destroyed permanent under LinkedKey keyed by the source
-// permanent. It models the distributive Saga chapter "For each player, destroy
-// up to one target creature that player controls." (The Curse of Fenric, chapter
-// I). Each player's permanents are an independent candidate pool, so the chapter
-// destroys at most one per player. The destroyed permanents are linked so a
-// paired CreateTokenForEachDestroyed clause creates one token for each, under
-// that permanent's last-known controller. LinkedKey must be set; the destroyed
-// permanents are otherwise unrecoverable for the token payoff.
-type DestroyForEachPlayer struct {
-	Chooser   PlayerReference
-	Selection Selection
-	LinkedKey LinkedKey
 }
 
 // EachPlayerChooseDestroy has every player, in turn order starting with the
@@ -1484,33 +1451,6 @@ const (
 type CreateTokenForEachDestroyed struct {
 	Source    TokenSource
 	LinkedKey LinkedKey
-}
-
-// ExileForEachOpponent walks each opponent of the resolving controller and, for
-// each, has Chooser pick up to one permanent that opponent controls matching
-// Selection and exiles it permanently, remembering each exiled permanent under
-// LinkedKey keyed by the source permanent. It models the distributive enters
-// trigger "for each opponent, exile up to one target permanent that player
-// controls with mana value 3 or greater." (King Solomon's Frogs). Each
-// opponent's permanents are an independent candidate pool, so the trigger exiles
-// at most one per opponent. Unlike ExileForEachPlayer this is a plain exile with
-// no return link; the linked set is recorded only so a paired DrawForEachExiled
-// payoff can iterate the exiled permanents and read each one's last-known
-// controller. LinkedKey must be set; the exiled permanents are otherwise
-// unrecoverable for the draw payoff.
-type ExileForEachOpponent struct {
-	Chooser   PlayerReference
-	Selection Selection
-	LinkedKey LinkedKey
-	// Required makes each chooser select exactly one permanent when their pool is
-	// nonempty. The zero value retains the existing "up to one" behavior.
-	Required bool
-	// Extremum narrows each opponent's independent pool to permanents tied for the
-	// requested greatest characteristic before the choice is made.
-	Extremum PermanentChoiceExtremum
-	// Simultaneous collects every opponent's choice in APNAP order before moving
-	// all chosen permanents in one zone-change batch.
-	Simultaneous bool
 }
 
 // DrawForEachExiled has each permanent a sibling ExileForEachOpponent recorded

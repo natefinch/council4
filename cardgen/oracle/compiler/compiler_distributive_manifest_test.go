@@ -1,6 +1,10 @@
 package compiler
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+)
 
 func TestCompileDistributiveExileCloak(t *testing.T) {
 	t.Parallel()
@@ -12,7 +16,9 @@ func TestCompileDistributiveExileCloak(t *testing.T) {
 	effects := compilation.Abilities[0].Content.Effects
 	if len(effects) != 2 ||
 		!effects[0].Exact ||
-		!effects[0].ExileForEachPlayer ||
+		effects[0].DistributiveRemoval == nil ||
+		effects[0].DistributiveRemoval.Scope != parser.DistributiveScopeEachPlayer ||
+		effects[0].DistributiveRemoval.Verb != parser.DistributiveVerbExile ||
 		!effects[1].Exact ||
 		!effects[1].CloakForEachExiledThisWay {
 		t.Fatalf("effects = %#v", effects)

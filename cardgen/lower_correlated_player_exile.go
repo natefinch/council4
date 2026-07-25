@@ -35,10 +35,13 @@ func lowerEachOpponentGreatestPowerExile(ctx contentCtx) (game.AbilityContent, b
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ExileForEachOpponent{
+		Primitive: game.ForEachPlayer{
+			Scope:        game.OpponentsReference(),
 			Chooser:      game.GroupOfferMemberReference(),
 			Selection:    selection,
+			Removal:      game.DistributiveRemovalExile,
 			LinkedKey:    correlatedOpponentExileKey,
+			ReplaceLink:  true,
 			Required:     true,
 			Extremum:     game.PermanentChoiceGreatestPower,
 			Simultaneous: true,

@@ -138,7 +138,7 @@ import (
 // TurnFaceDown is value-neutral (no atom): its value depends on the target's
 // hidden identity and any alternative face-down characteristics, so it has no
 // stable standalone value.
-const knownPrimitiveCount = 152
+const knownPrimitiveCount = 150
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

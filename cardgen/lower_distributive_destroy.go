@@ -41,7 +41,7 @@ func lowerDestroyForEachPlayerTokenChainContent(ctx contentCtx) (game.AbilityCon
 	}
 	destroyEffect := ctx.content.Effects[0]
 	if destroyEffect.Kind != compiler.EffectDestroy ||
-		!destroyEffect.DestroyForEachPlayer ||
+		destroyEffect.DistributiveRemoval == nil ||
 		!destroyEffect.Exact ||
 		destroyEffect.Negated ||
 		destroyEffect.Optional ||
@@ -64,6 +64,10 @@ func lowerDestroyForEachPlayerTokenChainContent(ctx contentCtx) (game.AbilityCon
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	removal, ok := distributiveRemovalPrimitive(destroyEffect, parser.DistributiveVerbDestroy, false, selection, destroyedForEachPlayerKey)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
 	def, ok := synthesizeCreatureTokenDef(&createEffect, nil)
 	if !ok {
 		return game.AbilityContent{}, false
@@ -71,11 +75,7 @@ func lowerDestroyForEachPlayerTokenChainContent(ctx contentCtx) (game.AbilityCon
 	return game.Mode{
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.DestroyForEachPlayer{
-					Chooser:   game.ControllerReference(),
-					Selection: selection,
-					LinkedKey: destroyedForEachPlayerKey,
-				},
+				Primitive: removal,
 			},
 			{
 				Primitive: game.CreateTokenForEachDestroyed{

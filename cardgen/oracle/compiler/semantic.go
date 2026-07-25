@@ -3436,17 +3436,6 @@ type CompiledEffect struct {
 	// text-blind compiler boundary so lowering emits the linked library-bottom
 	// disposal paired with the sibling exile.
 	BottomLinkedExiledCards bool
-	// ExileForEachPlayerUntilSourceLeaves carries the parser-recognized
-	// distributive Saga exile clause "For each player, exile up to one [other]
-	// target <permanent> that player controls until <this Saga> leaves the
-	// battlefield." (Vault 13: Dweller's Journey) through the text-blind compiler
-	// boundary so lowering links each player's chosen permanent to the source.
-	ExileForEachPlayerUntilSourceLeaves bool
-	// ExileForEachPlayer carries the parser-recognized plain distributive exile
-	// clause through the text-blind compiler boundary so lowering exiles up to one
-	// permanent each player controls and links the removed set for a paired
-	// per-controller payoff.
-	ExileForEachPlayer bool
 	// ReturnLinkedExiledToBattlefieldPartial carries the parser-recognized
 	// partial payoff clause "Return <count> cards exiled with <this Saga> to the
 	// battlefield under their owners' control." (Vault 13: Dweller's Journey)
@@ -3459,12 +3448,6 @@ type CompiledEffect struct {
 	// lowering routes the unreturned remainder of the linked exiled set to the
 	// bottom of their owners' libraries.
 	PutLinkedExiledRestOnLibraryBottom bool
-	// DestroyForEachPlayer carries the parser-recognized distributive Saga destroy
-	// clause "For each player, destroy up to one target creature that player
-	// controls." (The Curse of Fenric, chapter I) through the text-blind compiler
-	// boundary so lowering destroys up to one creature each player controls and
-	// links each destroyed creature for the paired token payoff.
-	DestroyForEachPlayer bool
 	// EachPlayerChooseDestroy carries the parser-recognized "Starting with you,
 	// each player may choose <permanent>. Destroy each permanent chosen this
 	// way." construct (Druid of Purification) through the text-blind compiler
@@ -3491,13 +3474,10 @@ type CompiledEffect struct {
 	// lowering creates one token for each creature a sibling variable-target exile
 	// removed, controlled by that creature's controller.
 	CreateTokenForEachExiledThisWay bool
-	// ExileForEachOpponent carries the parser-recognized distributive enters
-	// exile clause "for each opponent, exile up to one target permanent that
-	// player controls with mana value 3 or greater." (King Solomon's Frogs)
-	// through the text-blind compiler boundary so lowering exiles up to one
-	// permanent each opponent controls and links each exiled permanent for the
-	// paired draw payoff.
-	ExileForEachOpponent bool
+	// DistributiveRemoval carries the parser-recognized "For each <group>,
+	// <verb> up to one target <permanent> that player controls" clause family.
+	// It replaced one boolean per scope-and-verb combination.
+	DistributiveRemoval *parser.DistributiveRemoval
 	// ExileEachOpponentChoosesGreatestPower carries the typed mandatory
 	// per-opponent tied-greatest-power exile choice through the text-blind
 	// compiler boundary.

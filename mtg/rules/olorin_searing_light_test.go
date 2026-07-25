@@ -15,10 +15,13 @@ func olorinTestContent() game.AbilityContent {
 	member := game.GroupOfferMemberReference()
 	return game.Mode{Sequence: []game.Instruction{
 		{
-			Primitive: game.ExileForEachOpponent{
+			Primitive: game.ForEachPlayer{
+				Scope:        game.OpponentsReference(),
 				Chooser:      member,
 				Selection:    game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				Removal:      game.DistributiveRemovalExile,
 				LinkedKey:    testCorrelatedOpponentExileKey,
+				ReplaceLink:  true,
 				Required:     true,
 				Extremum:     game.PermanentChoiceGreatestPower,
 				Simultaneous: true,

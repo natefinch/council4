@@ -1215,7 +1215,7 @@ c5e7c937ad216e61  Battering Sliver
 a2e9a7b7b77a9226  Battershield Warrior
 01879889f7982b13  Batterskull
 37028167bd7e3abf  Battle at the Bridge
-a00af10a2b55dfcc  Battle at the Helvault
+0e517f0e27641287  Battle at the Helvault
 f85c115bf4bd8792  Battle Brawler
 c061c6ff8aa1df79  Battle Hurda
 c0097f1ef73c5725  Battle Hymn
@@ -8413,7 +8413,7 @@ d2a6711464634153  Kinetic Augur
 c152d68de7f0c907  King Crab
 d020912aec1cc844  King Macar, the Gold-Cursed
 e6500842f4198526  King of the Pride
-791da1ebef663501  King Solomon's Frogs
+a4b1d40574b6fd3d  King Solomon's Frogs
 d07e23176d0bcf81  King Suleiman
 3d50c226e56ab22a  King's Assassin
 9069d05e9c012bdd  Kingfisher
@@ -10751,7 +10751,7 @@ b542035090fa9f53  Ollenbock Escort
 10a3e6430d566066  Oltec Archaeologists
 cd0bf64f28dbd775  Oltec Cloud Guard
 ea922a8cbce17695  Oltec Matterweaver
-4655d07bf1bc10a4  Olórin's Searing Light
+10fb2f3d4e3d7b68  Olórin's Searing Light
 3a7a42dfdc9a6485  Omashu City
 d4bd82cd32feff63  Omega Myr
 13d7a6a7c03c6c22  Omen
@@ -15754,7 +15754,7 @@ b8c7dacfd6b1fbd5  The Cabbage Merchant
 994959b31a2fa6c8  The Chase Is On
 5d948273c64620ce  The Council of Four
 faaf0821ca67222c  The Crystal's Chosen
-018b2ab83acb0f24  The Curse of Fenric
+8b2a2a278c62fdb4  The Curse of Fenric
 daba62c8659d1c72  The Dawning Archaic
 ebff53ad040e95bb  The Dross Pits
 d40e53c87db32796  The Earth Crystal
@@ -16658,7 +16658,7 @@ a26e38a23839d433  Unesh, Criosphinx Sovereign
 1853589cf5c090ec  Unexpected Assistance
 eb1b3784488a22dc  Unexpected Fangs
 305df2bcadaa4a67  Unexpected Windfall
-a2ed27ef42585999  Unexplained Absence
+3ca4efb3f4401ebd  Unexplained Absence
 1ea69f2dc5978802  Unexplained Disappearance
 c035130b5308c9b4  Unexplained Vision
 fa6cfb5498d5d5cc  Unfathomable Truths
@@ -16903,7 +16903,7 @@ e92c8670c0a7ca1b  Vassal Soul
 ddfd847477cf8d22  Vastwood Surge
 ec66eeb6a41346a9  Vat Emergence
 246f2b62aeabe14a  Vat of Rebirth
-9c2d0221fc6e8460  Vault 13: Dweller's Journey
+f2641497ed7279f0  Vault 13: Dweller's Journey
 8aced64f2e4fd809  Vault 75: Middle School
 b13fd835874d6597  Vault 87: Forced Evolution
 2eb2eb0bc7600300  Vault Guardsman

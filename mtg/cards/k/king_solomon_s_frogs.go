@@ -78,10 +78,13 @@ func newKingSolomonSFrogs() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.ExileForEachOpponent{
-									Chooser:   game.ControllerReference(),
-									Selection: game.Selection{ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3})},
-									LinkedKey: game.LinkedKey("exiled-for-each-opponent"),
+								Primitive: game.ForEachPlayer{
+									Scope:       game.OpponentsReference(),
+									Chooser:     game.ControllerReference(),
+									Selection:   game.Selection{ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3})},
+									Removal:     game.DistributiveRemovalExile,
+									LinkedKey:   game.LinkedKey("exiled-for-each-opponent"),
+									ReplaceLink: true,
 								},
 							},
 							{

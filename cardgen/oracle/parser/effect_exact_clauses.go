@@ -437,56 +437,6 @@ func exactExileUntilOpponentBecomesMonarchEffectSyntax(effect *EffectSyntax) boo
 	return true
 }
 
-// exactExileForEachPlayerUntilLeavesEffectSyntax recognizes the distributive
-// Saga exile clause "For each player, exile up to one [other] target
-// <permanent> that player controls until <this Saga> leaves the battlefield."
-// (Vault 13: Dweller's Journey). The leading "For each player," distributes a
-// single "up to one" target pool across every player; the controller chooses
-// one eligible permanent per player at resolution and the exiled permanents are
-// linked to the source so a paired chapter returns them. The "that player"
-// reference is the distributive anchor and the trailing self-reference is the
-// duration anchor, neither a second object.
-//
-// effectSubjectStart drops the "For each player," prefix from the reconstructed
-// clause text, so the recognizer confirms that prefix on the raw effect text and
-// rebuilds the remainder from the single target and source anchor. The trailing
-// "until this Saga leaves the battlefield" contributes the source's own "Saga"
-// subtype to the parsed selection; because the clause is matched by exact
-// wording, that spurious subtype is removed so the candidate filter is the
-// printed "[other] <permanent>" rather than "Saga". Any other exile shape leaves
-// the clause non-exact so lowering fails closed.
-func exactExileForEachPlayerUntilLeavesEffectSyntax(effect *EffectSyntax) bool {
-	if effect.Kind != EffectExile || effect.Negated || effect.Optional {
-		return false
-	}
-	if effect.Context != EffectContextController {
-		return false
-	}
-	if effect.Duration != EffectDurationNone || effect.FromZone != zone.None || effect.ToZone != zone.None {
-		return false
-	}
-	if len(effect.Targets) != 1 {
-		return false
-	}
-	if effect.Targets[0].Cardinality.Min != 0 || effect.Targets[0].Cardinality.Max != 1 {
-		return false
-	}
-	sourceRef, ok := exileForEachPlayerReferences(effect.References)
-	if !ok {
-		return false
-	}
-	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(effect.Text)), "for each player, ") {
-		return false
-	}
-	expected := "Exile " + effect.Targets[0].Text + " until " + sourceRef.Text + " leaves the battlefield."
-	if !strings.EqualFold(exactEffectClauseText(effect), expected) {
-		return false
-	}
-	stripSourceSubtypeContamination(&effect.Selection, sourceRef)
-	effect.ExileForEachPlayerUntilSourceLeaves = true
-	return true
-}
-
 // exileForEachPlayerReferences confirms the distributive exile clause carries
 // exactly the two anchors its wording requires: a "that player" reference (the
 // per-player distribution anchor) and a self reference (the duration anchor). It

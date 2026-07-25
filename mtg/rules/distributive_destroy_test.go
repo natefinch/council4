@@ -56,9 +56,11 @@ func TestDestroyForEachPlayerDestroysOnePerPlayerUnderLink(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.DestroyForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Removal:   game.DistributiveRemovalDestroy,
 		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -111,9 +113,11 @@ func TestCreateTokenForEachDestroyedMintsForDestroyedToken(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.DestroyForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Removal:   game.DistributiveRemovalDestroy,
 		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -137,9 +141,11 @@ func TestCreateTokenForEachDestroyedMintsPerController(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.DestroyForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Removal:   game.DistributiveRemovalDestroy,
 		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 

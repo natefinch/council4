@@ -29,8 +29,8 @@ func TestLowerOlorinsSearingLightCorrelatedOpponentChoices(t *testing.T) {
 	if len(sequence) != 2 {
 		t.Fatalf("sequence = %#v, want exile and damage", sequence)
 	}
-	exile, ok := sequence[0].Primitive.(game.ExileForEachOpponent)
-	if !ok {
+	exile, ok := sequence[0].Primitive.(game.ForEachPlayer)
+	if !ok || exile.Scope != game.OpponentsReference() || exile.Removal != game.DistributiveRemovalExile {
 		t.Fatalf("first primitive = %#v", sequence[0].Primitive)
 	}
 	if exile.Chooser.Kind() != game.PlayerReferenceGroupOfferMember ||
@@ -73,7 +73,7 @@ func TestGenerateOlorinsSearingLightExecutableSource(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, want := range []string{
-		"game.ExileForEachOpponent{",
+		"game.ForEachPlayer{",
 		"Chooser: game.GroupOfferMemberReference()",
 		"Extremum: game.PermanentChoiceGreatestPower",
 		"Simultaneous: true",
