@@ -25,7 +25,7 @@ func lowerExileForEachPlayerManifestChainContent(ctx contentCtx) (game.AbilityCo
 	}
 	exileEffect := ctx.content.Effects[0]
 	if exileEffect.Kind != compiler.EffectExile ||
-		!exileEffect.ExileForEachPlayer ||
+		exileEffect.DistributiveRemoval == nil ||
 		!exileEffect.Exact ||
 		exileEffect.Negated ||
 		exileEffect.Optional ||
@@ -48,12 +48,12 @@ func lowerExileForEachPlayerManifestChainContent(ctx contentCtx) (game.AbilityCo
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	removal, ok := distributiveRemovalPrimitive(exileEffect, parser.DistributiveVerbExile, false, selection, exiledForEachPlayerManifestKey)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
 	return game.Mode{Sequence: []game.Instruction{
-		{Primitive: game.ExileForEachPlayer{
-			Chooser:   game.ControllerReference(),
-			Selection: selection,
-			LinkedKey: exiledForEachPlayerManifestKey,
-		}},
+		{Primitive: removal},
 		{Primitive: game.ManifestForEachLinked{
 			Cloak:     true,
 			LinkedKey: exiledForEachPlayerManifestKey,

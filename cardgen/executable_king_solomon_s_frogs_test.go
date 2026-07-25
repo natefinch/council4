@@ -36,7 +36,8 @@ func TestGenerateExecutableKingSolomonSFrogs(t *testing.T) {
 		// The ETB trigger is gated on the "if you cast it" intervening condition.
 		"InterveningIfEventPermanentWasCastByController: true,",
 		// The paired distributive exile-per-opponent under a link.
-		"Primitive: game.ExileForEachOpponent{",
+		"Primitive: game.ForEachPlayer{",
+		"Removal:     game.DistributiveRemovalExile,",
 		"Chooser:   game.ControllerReference(),",
 		"Selection: game.Selection{ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 3})},",
 		`LinkedKey: game.LinkedKey("exiled-for-each-opponent"),`,
@@ -51,7 +52,7 @@ func TestGenerateExecutableKingSolomonSFrogs(t *testing.T) {
 	}
 	// The exile primitive must precede the draw payoff in the sequence so the link
 	// is published before it is consumed.
-	exileIdx := strings.Index(source, "game.ExileForEachOpponent{")
+	exileIdx := strings.Index(source, "game.ForEachPlayer{")
 	drawIdx := strings.Index(source, "game.DrawForEachExiled{")
 	if exileIdx < 0 || drawIdx < 0 || exileIdx > drawIdx {
 		t.Fatalf("exile (%d) must precede draw (%d):\n%s", exileIdx, drawIdx, source)

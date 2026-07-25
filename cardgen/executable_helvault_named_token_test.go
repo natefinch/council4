@@ -32,7 +32,8 @@ func TestGenerateExecutableHelvaultNamedToken(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.ExileForEachPlayer{",
+		"Primitive: game.ForEachPlayer{",
+		"Removal:   game.DistributiveRemovalExile,",
 		"Selection: game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludedSubtype: types.Saga},",
 		`LinkedKey: game.LinkedKey("exile-until-leaves"),`,
 		"Primitive: game.CreateToken{",

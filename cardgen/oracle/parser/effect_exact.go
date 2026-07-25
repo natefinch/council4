@@ -75,7 +75,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactMultiDistinctTargetEffectSyntax(effect, "Destroy") ||
 			exactMassEffectSyntax(effect, "Destroy all ") ||
 			exactMassEachEffectSyntax(effect, "Destroy each ") ||
-			exactDestroyForEachPlayerEffectSyntax(effect) ||
+			exactDistributiveRemovalEffectSyntax(effect) ||
 			exactBackReferenceEffectSyntax(effect, "Destroy")
 	case EffectDig:
 		return exactDigLookEffectSyntax(effect)
@@ -93,9 +93,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactCounteredSpellExileSyntax(effect) ||
 			exactExileUntilSourceLeavesEffectSyntax(effect) ||
 			exactExileUntilOpponentBecomesMonarchEffectSyntax(effect) ||
-			exactExileForEachPlayerUntilLeavesEffectSyntax(effect) ||
-			exactExileForEachPlayerEffectSyntax(effect) ||
-			exactExileForEachOpponentEffectSyntax(effect) ||
+			exactDistributiveRemovalEffectSyntax(effect) ||
 			exactExileTopOfLibrarySyntax(effect) ||
 			exactExileEntireHandEffectSyntax(effect) ||
 			exactExileAttachedEffectSyntax(effect) ||

@@ -20,8 +20,10 @@ func TestLowerUnexplainedAbsence(t *testing.T) {
 	if len(mode.Targets) != 0 || len(mode.Sequence) != 2 {
 		t.Fatalf("mode = %#v", mode)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.ExileForEachPlayer)
+	exile, ok := mode.Sequence[0].Primitive.(game.ForEachPlayer)
 	if !ok ||
+		exile.Scope != game.AllPlayersReference() ||
+		exile.Removal != game.DistributiveRemovalExile ||
 		exile.Chooser != game.ControllerReference() ||
 		len(exile.Selection.ExcludedTypes) != 1 ||
 		exile.Selection.ExcludedTypes[0] != types.Land ||

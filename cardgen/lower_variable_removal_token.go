@@ -59,7 +59,7 @@ func lowerRemovalVariableTargetsForEachTokenContent(ctx contentCtx) (game.Abilit
 	}
 	if removeEffect.Negated ||
 		removeEffect.Optional ||
-		removeEffect.DestroyForEachPlayer ||
+		removeEffect.DistributiveRemoval != nil ||
 		removeEffect.Context != parser.EffectContextController {
 		return game.AbilityContent{}, false
 	}

@@ -33,7 +33,8 @@ func TestGenerateExecutableVault13DistributiveExile(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.ExileForEachPlayer{",
+		"Primitive: game.ForEachPlayer{",
+		"Removal:   game.DistributiveRemovalExile,",
 		"Chooser:   game.ControllerReference(),",
 		"Selection: game.Selection{RequiredTypesAny: []types.Card{types.Enchantment, types.Creature}, ExcludeSource: true},",
 		`LinkedKey: game.LinkedKey("exile-until-leaves"),`,

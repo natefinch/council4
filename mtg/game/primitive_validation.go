@@ -1742,16 +1742,6 @@ func (p ReturnExiledCardsWithCounter) validatePrimitive(targets []TargetSpec, ch
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
-func (p ExileForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if p.LinkedKey == "" {
-		return errors.New("exile for each player requires a linked key")
-	}
-	if err := firstProblem(p.Selection.Validate()); err != nil {
-		return err
-	}
-	return validatePlayerReference(p.Chooser, targets, checkTargets)
-}
-
 func (p ChampionExile) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("champion exile requires a linked key")
@@ -1768,16 +1758,6 @@ func (p ReturnLinkedExiledCardsToBattlefield) validatePrimitive(targets []Target
 	}
 	if p.Amount.IsDynamic() || p.Amount.Value() < 1 {
 		return errors.New("return linked exiled cards to battlefield requires a fixed positive Amount")
-	}
-	return validatePlayerReference(p.Chooser, targets, checkTargets)
-}
-
-func (p DestroyForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if p.LinkedKey == "" {
-		return errors.New("destroy for each player requires a linked key")
-	}
-	if err := firstProblem(p.Selection.Validate()); err != nil {
-		return err
 	}
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
 }
@@ -1825,9 +1805,17 @@ func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error
 	return nil
 }
 
-func (p ExileForEachOpponent) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+func (p ForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.LinkedKey == "" {
-		return errors.New("exile for each opponent requires a linked key")
+		return errors.New("for each player requires a linked key")
+	}
+	switch p.Removal {
+	case DistributiveRemovalExile, DistributiveRemovalDestroy:
+	default:
+		return errors.New("for each player requires a removal verb")
+	}
+	if p.Scope.Kind == PlayerGroupReferenceNone {
+		return errors.New("for each player requires a player scope")
 	}
 	if err := firstProblem(p.Selection.Validate()); err != nil {
 		return err
@@ -1836,7 +1824,7 @@ func (p ExileForEachOpponent) validatePrimitive(targets []TargetSpec, checkTarge
 	case PermanentChoiceExtremumNone, PermanentChoiceGreatestPower,
 		PermanentChoiceGreatestToughness, PermanentChoiceGreatestManaValue:
 	default:
-		return errors.New("exile for each opponent has an invalid choice extremum")
+		return errors.New("for each player has an invalid choice extremum")
 	}
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
 }

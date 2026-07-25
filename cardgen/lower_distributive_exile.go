@@ -39,7 +39,7 @@ func lowerExileForEachPlayerUntilLeavesContent(ctx contentCtx) (game.AbilityCont
 	}
 	effect := ctx.content.Effects[0]
 	if effect.Kind != compiler.EffectExile ||
-		!effect.ExileForEachPlayerUntilSourceLeaves ||
+		effect.DistributiveRemoval == nil ||
 		!effect.Exact ||
 		effect.Negated ||
 		effect.Optional ||
@@ -53,13 +53,13 @@ func lowerExileForEachPlayerUntilLeavesContent(ctx contentCtx) (game.AbilityCont
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	removal, ok := distributiveRemovalPrimitive(effect, parser.DistributiveVerbExile, true, selection, exileUntilLeavesKey)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{{
-			Primitive: game.ExileForEachPlayer{
-				Chooser:   game.ControllerReference(),
-				Selection: selection,
-				LinkedKey: exileUntilLeavesKey,
-			},
+			Primitive: removal,
 		}},
 	}.Ability(), true
 }

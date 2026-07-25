@@ -14,7 +14,11 @@ func TestParseDistributiveExileCloak(t *testing.T) {
 		t.Fatalf("document = %#v", document)
 	}
 	exile := document.Abilities[0].Sentences[0].Effects[0]
-	if !exile.Exact || !exile.ExileForEachPlayer {
+	if !exile.Exact ||
+		exile.DistributiveRemoval == nil ||
+		exile.DistributiveRemoval.Scope != DistributiveScopeEachPlayer ||
+		exile.DistributiveRemoval.Verb != DistributiveVerbExile ||
+		exile.DistributiveRemoval.UntilSourceLeaves {
 		t.Fatalf("exile = %#v", exile)
 	}
 	cloak := document.Abilities[0].Sentences[1].Effects[0]

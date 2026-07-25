@@ -1260,8 +1260,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameDamage(ctx, value)
 	case game.Destroy:
 		return r.renderGameDestroy(ctx, value)
-	case game.DestroyForEachPlayer:
-		return r.renderGameDestroyForEachPlayer(ctx, value)
 	case game.Dig:
 		return r.renderGameDig(ctx, value)
 	case game.Discard:
@@ -1284,10 +1282,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameExile(ctx, value)
 	case game.ExileEntireHand:
 		return r.renderGameExileEntireHand(ctx, value)
-	case game.ExileForEachOpponent:
-		return r.renderGameExileForEachOpponent(ctx, value)
-	case game.ExileForEachPlayer:
-		return r.renderGameExileForEachPlayer(ctx, value)
 	case game.ExileForPlay:
 		return r.renderGameExileForPlay(ctx, value)
 	case game.ExileLibraryUntilNonlandCast:
@@ -1304,6 +1298,8 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameExplore(ctx, value)
 	case game.Fight:
 		return r.renderGameFight(ctx, value)
+	case game.ForEachPlayer:
+		return r.renderGameForEachPlayer(ctx, value)
 	case game.GainCityBlessing:
 		return r.renderGameGainCityBlessing(ctx, value)
 	case game.GainLife:
@@ -5662,33 +5658,6 @@ func (r Renderer) renderGameDestroy(ctx *renderCtx, v game.Destroy) (string, err
 	return structLit("game.Destroy", fields), nil
 }
 
-// renderGameDestroyForEachPlayer renders a game.DestroyForEachPlayer value as a Go composite literal.
-func (r Renderer) renderGameDestroyForEachPlayer(ctx *renderCtx, v game.DestroyForEachPlayer) (string, error) {
-	var fields []string
-	if v.Chooser != (game.PlayerReference{}) {
-		lit1, err2 := r.renderPlayerReference(v.Chooser)
-		if err2 != nil {
-			return "", fmt.Errorf("game.DestroyForEachPlayer.Chooser: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Chooser: "+lit1+",")
-	}
-	if !isZeroGameSelection(v.Selection) {
-		lit3, err4 := r.renderGameSelection(ctx, v.Selection)
-		if err4 != nil {
-			return "", fmt.Errorf("game.DestroyForEachPlayer.Selection: %w", err4)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Selection: "+lit3+",")
-	}
-	if v.LinkedKey != "" {
-		lit5 := "game.LinkedKey(" + strconv.Quote(string(v.LinkedKey)) + ")"
-		ctx.need(importGame)
-		fields = append(fields, "LinkedKey: "+lit5+",")
-	}
-	return structLit("game.DestroyForEachPlayer", fields), nil
-}
-
 // renderGameDig renders a game.Dig value as a Go composite literal.
 func (r Renderer) renderGameDig(ctx *renderCtx, v game.Dig) (string, error) {
 	var fields []string
@@ -6384,76 +6353,6 @@ func (r Renderer) renderGameExileEntireHand(ctx *renderCtx, v game.ExileEntireHa
 	return structLit("game.ExileEntireHand", fields), nil
 }
 
-// renderGameExileForEachOpponent renders a game.ExileForEachOpponent value as a Go composite literal.
-func (r Renderer) renderGameExileForEachOpponent(ctx *renderCtx, v game.ExileForEachOpponent) (string, error) {
-	var fields []string
-	if v.Chooser != (game.PlayerReference{}) {
-		lit1, err2 := r.renderPlayerReference(v.Chooser)
-		if err2 != nil {
-			return "", fmt.Errorf("game.ExileForEachOpponent.Chooser: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Chooser: "+lit1+",")
-	}
-	if !isZeroGameSelection(v.Selection) {
-		lit3, err4 := r.renderGameSelection(ctx, v.Selection)
-		if err4 != nil {
-			return "", fmt.Errorf("game.ExileForEachOpponent.Selection: %w", err4)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Selection: "+lit3+",")
-	}
-	if v.LinkedKey != "" {
-		lit5 := "game.LinkedKey(" + strconv.Quote(string(v.LinkedKey)) + ")"
-		ctx.need(importGame)
-		fields = append(fields, "LinkedKey: "+lit5+",")
-	}
-	if v.Required {
-		lit6 := strconv.FormatBool(bool(v.Required))
-		fields = append(fields, "Required: "+lit6+",")
-	}
-	if v.Extremum != 0 {
-		lit7, err8 := enumLiteral(gamePermanentChoiceExtremumLiterals, "game.PermanentChoiceExtremum", v.Extremum)
-		if err8 != nil {
-			return "", fmt.Errorf("game.ExileForEachOpponent.Extremum: %w", err8)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Extremum: "+lit7+",")
-	}
-	if v.Simultaneous {
-		lit9 := strconv.FormatBool(bool(v.Simultaneous))
-		fields = append(fields, "Simultaneous: "+lit9+",")
-	}
-	return structLit("game.ExileForEachOpponent", fields), nil
-}
-
-// renderGameExileForEachPlayer renders a game.ExileForEachPlayer value as a Go composite literal.
-func (r Renderer) renderGameExileForEachPlayer(ctx *renderCtx, v game.ExileForEachPlayer) (string, error) {
-	var fields []string
-	if v.Chooser != (game.PlayerReference{}) {
-		lit1, err2 := r.renderPlayerReference(v.Chooser)
-		if err2 != nil {
-			return "", fmt.Errorf("game.ExileForEachPlayer.Chooser: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Chooser: "+lit1+",")
-	}
-	if !isZeroGameSelection(v.Selection) {
-		lit3, err4 := r.renderGameSelection(ctx, v.Selection)
-		if err4 != nil {
-			return "", fmt.Errorf("game.ExileForEachPlayer.Selection: %w", err4)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Selection: "+lit3+",")
-	}
-	if v.LinkedKey != "" {
-		lit5 := "game.LinkedKey(" + strconv.Quote(string(v.LinkedKey)) + ")"
-		ctx.need(importGame)
-		fields = append(fields, "LinkedKey: "+lit5+",")
-	}
-	return structLit("game.ExileForEachPlayer", fields), nil
-}
-
 // renderGameExileForPlay renders a game.ExileForPlay value as a Go composite literal.
 func (r Renderer) renderGameExileForPlay(ctx *renderCtx, v game.ExileForPlay) (string, error) {
 	var fields []string
@@ -6743,6 +6642,69 @@ func (r Renderer) renderGameFlashbackKeyword(ctx *renderCtx, v game.FlashbackKey
 		fields = append(fields, "Cost: "+lit1+",")
 	}
 	return structLit("game.FlashbackKeyword", fields), nil
+}
+
+// renderGameForEachPlayer renders a game.ForEachPlayer value as a Go composite literal.
+func (r Renderer) renderGameForEachPlayer(ctx *renderCtx, v game.ForEachPlayer) (string, error) {
+	var fields []string
+	if v.Scope != (game.PlayerGroupReference{}) {
+		lit1, err2 := r.renderPlayerGroupReferenceWithContext(ctx, v.Scope)
+		if err2 != nil {
+			return "", fmt.Errorf("game.ForEachPlayer.Scope: %w", err2)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Scope: "+lit1+",")
+	}
+	if v.Chooser != (game.PlayerReference{}) {
+		lit3, err4 := r.renderPlayerReference(v.Chooser)
+		if err4 != nil {
+			return "", fmt.Errorf("game.ForEachPlayer.Chooser: %w", err4)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Chooser: "+lit3+",")
+	}
+	if !isZeroGameSelection(v.Selection) {
+		lit5, err6 := r.renderGameSelection(ctx, v.Selection)
+		if err6 != nil {
+			return "", fmt.Errorf("game.ForEachPlayer.Selection: %w", err6)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Selection: "+lit5+",")
+	}
+	if v.Removal != 0 {
+		lit7, err8 := enumLiteral(gameDistributiveRemovalLiterals, "game.DistributiveRemoval", v.Removal)
+		if err8 != nil {
+			return "", fmt.Errorf("game.ForEachPlayer.Removal: %w", err8)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Removal: "+lit7+",")
+	}
+	if v.LinkedKey != "" {
+		lit9 := "game.LinkedKey(" + strconv.Quote(string(v.LinkedKey)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "LinkedKey: "+lit9+",")
+	}
+	if v.ReplaceLink {
+		lit10 := strconv.FormatBool(bool(v.ReplaceLink))
+		fields = append(fields, "ReplaceLink: "+lit10+",")
+	}
+	if v.Required {
+		lit11 := strconv.FormatBool(bool(v.Required))
+		fields = append(fields, "Required: "+lit11+",")
+	}
+	if v.Extremum != 0 {
+		lit12, err13 := enumLiteral(gamePermanentChoiceExtremumLiterals, "game.PermanentChoiceExtremum", v.Extremum)
+		if err13 != nil {
+			return "", fmt.Errorf("game.ForEachPlayer.Extremum: %w", err13)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Extremum: "+lit12+",")
+	}
+	if v.Simultaneous {
+		lit14 := strconv.FormatBool(bool(v.Simultaneous))
+		fields = append(fields, "Simultaneous: "+lit14+",")
+	}
+	return structLit("game.ForEachPlayer", fields), nil
 }
 
 // renderGameForetellKeyword renders a game.ForetellKeyword value as a Go composite literal.

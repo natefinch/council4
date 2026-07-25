@@ -31,7 +31,8 @@ func TestGenerateExecutableFenricDistributiveDestroy(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.DestroyForEachPlayer{",
+		"Primitive: game.ForEachPlayer{",
+		"Removal:   game.DistributiveRemovalDestroy,",
 		"Chooser:   game.ControllerReference(),",
 		"Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},",
 		`LinkedKey: game.LinkedKey("destroyed-for-each-player"),`,

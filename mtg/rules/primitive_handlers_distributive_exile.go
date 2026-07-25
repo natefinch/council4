@@ -5,37 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-// handleExileForEachPlayer walks every player in APNAP order, has prim.Chooser
-// pick up to one matching permanent that player controls, and remembers every
-// exiled permanent under prim.LinkedKey. The paired consumer may return the set
-// later or apply an immediate per-controller payoff; nothing is cleared here.
-func handleExileForEachPlayer(r *effectResolver, prim game.ExileForEachPlayer) effectResolved {
-	res := effectResolved{accepted: true}
-	chooser, ok := r.resolvePlayer(prim.Chooser)
-	if !ok {
-		return res
-	}
-	source, _ := sourcePermanent(r.game, r.obj)
-	resolver := newReferenceResolver(r.game, r.obj)
-	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
-	for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(game.AllPlayersReference())) {
-		candidates := playerControlledSelectionCandidates(r.game, resolver, source, playerID, prim.Selection)
-		permanent, chosen := r.engine.chooseUpToOnePermanent(r.game, candidates, chooser, "Choose a permanent to exile", r.agents, r.log)
-		if !chosen {
-			continue
-		}
-		// Preserve ObjectID even for a token so a paired per-controller payoff can
-		// still read its last-known controller. Return-style consumers naturally
-		// skip token entries because they have no CardID.
-		linkedRef := permanentObjectBindingRef(permanent)
-		if movePermanentToZone(r.game, permanent, zone.Exile) {
-			rememberLinkedObject(r.game, key, linkedRef)
-			res.succeeded = true
-		}
-	}
-	return res
-}
-
 // handleReturnLinkedExiledCardsToBattlefield resolves the partial Saga payoff
 // "Return N cards exiled with this Saga to the battlefield under their owners'
 // control and put the rest on the bottom of their owners' libraries." (Vault 13:

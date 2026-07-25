@@ -42,7 +42,7 @@ func lowerExileForEachOpponentDrawChainContent(ctx contentCtx) (game.AbilityCont
 	}
 	exileEffect := ctx.content.Effects[0]
 	if exileEffect.Kind != compiler.EffectExile ||
-		!exileEffect.ExileForEachOpponent ||
+		exileEffect.DistributiveRemoval == nil ||
 		!exileEffect.Exact ||
 		exileEffect.Negated ||
 		exileEffect.Optional ||
@@ -65,14 +65,14 @@ func lowerExileForEachOpponentDrawChainContent(ctx contentCtx) (game.AbilityCont
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	removal, ok := distributiveRemovalPrimitive(exileEffect, parser.DistributiveVerbExile, false, selection, exiledForEachOpponentKey)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
 	return game.Mode{
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.ExileForEachOpponent{
-					Chooser:   game.ControllerReference(),
-					Selection: selection,
-					LinkedKey: exiledForEachOpponentKey,
-				},
+				Primitive: removal,
 			},
 			{
 				Primitive: game.DrawForEachExiled{

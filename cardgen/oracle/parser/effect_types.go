@@ -3465,21 +3465,6 @@ type EffectSyntax struct {
 	// monarch" trigger returns it; the trailing "until an opponent becomes the
 	// monarch" is the return condition, not a second effect or a target.
 	ExileUntilOpponentBecomesMonarch bool `json:",omitempty"`
-	// ExileForEachPlayerUntilSourceLeaves marks the exact distributive Saga
-	// exile clause "For each player, exile up to one [other] target <permanent>
-	// that player controls until this Saga leaves the battlefield." (Vault 13:
-	// Dweller's Journey, Battle at the Helvault). Each player's permanents are an
-	// independent "up to one" pool and the exiled permanents are linked to the
-	// source so a paired return brings the set back; the "that player" and source
-	// references are the distributive and duration anchors, not targets.
-	ExileForEachPlayerUntilSourceLeaves bool `json:",omitempty"`
-	// ExileForEachPlayer marks the exact distributive exile clause "For each
-	// player, exile up to one target <permanent> that player controls."
-	// (Unexplained Absence). Each player's permanents are an independent "up to
-	// one" pool; the "that player" reference is the distributive anchor rather
-	// than a target. A paired CloakForEachExiledThisWay clause consumes the linked
-	// exiled set.
-	ExileForEachPlayer bool `json:",omitempty"`
 	// ReturnLinkedExiledToBattlefieldPartial marks the exact partial Saga payoff
 	// "Return N cards exiled with this Saga to the battlefield under their
 	// owners' control." (Vault 13: Dweller's Journey, chapter III). The returned
@@ -3493,13 +3478,6 @@ type EffectSyntax struct {
 	// ReturnLinkedExiledToBattlefieldPartial clause so lowering routes the rest
 	// of the linked exiled set to the bottom of its owners' libraries.
 	PutLinkedExiledRestOnLibraryBottom bool `json:",omitempty"`
-	// DestroyForEachPlayer marks the exact distributive Saga destroy clause "For
-	// each player, destroy up to one target creature that player controls." (The
-	// Curse of Fenric, chapter I). Each player's creatures are an independent "up
-	// to one" pool; the "that player" reference is the distributive anchor rather
-	// than a target. A paired CreateTokenForEachDestroyedThisWay clause creates a
-	// token for each creature destroyed this way.
-	DestroyForEachPlayer bool `json:",omitempty"`
 	// CreateTokenForEachDestroyedThisWay marks the exact per-controller payoff
 	// "For each creature destroyed this way, its controller creates a <token>."
 	// (The Curse of Fenric, chapter I). It pairs with a preceding
@@ -3514,13 +3492,11 @@ type EffectSyntax struct {
 	// its controller create one token, so the count is one per exiled creature
 	// rather than a multiplier on the create.
 	CreateTokenForEachExiledThisWay bool `json:",omitempty"`
-	// ExileForEachOpponent marks the exact distributive enters clause "for each
-	// opponent, exile up to one target permanent that player controls with mana
-	// value 3 or greater." (King Solomon's Frogs). Each opponent's permanents are
-	// an independent "up to one" pool; the "that player" reference is the
-	// distributive anchor rather than a target. A paired DrawForEachExiledThisWay
-	// clause draws a card for each permanent exiled this way.
-	ExileForEachOpponent bool `json:",omitempty"`
+	// DistributiveRemoval marks the "For each <group>, <verb> up to one target
+	// <permanent> that player controls" clause family, in both the plain and the
+	// exile-until-leaves forms. It replaced one boolean per scope-and-verb
+	// combination.
+	DistributiveRemoval *DistributiveRemoval `json:",omitempty"`
 	// ExileEachOpponentChoosesGreatestPower marks "Each opponent exiles a
 	// creature with the greatest power among creatures that player controls."
 	// Each opponent owns the mandatory tied-greatest choice, and the resulting

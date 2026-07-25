@@ -32,9 +32,11 @@ func TestExileForEachPlayerExilesOnePerPlayerUnderLink(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveExileSagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ExileForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludeSource: true},
+		Removal:   game.DistributiveRemovalExile,
 		LinkedKey: game.LinkedKey("exile-until-leaves"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -65,9 +67,11 @@ func TestReturnLinkedExiledCardsToBattlefieldPartial(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveExileSagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ExileForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludeSource: true},
+		Removal:   game.DistributiveRemovalExile,
 		LinkedKey: game.LinkedKey("exile-until-leaves"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -118,9 +122,11 @@ func TestManifestForEachLinkedCloaksPerRemovedController(t *testing.T) {
 	player2Top := addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Player 2 Top"}})
 	const link = game.LinkedKey("exiled-for-cloak")
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ExileForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludeSource: true},
+		Removal:   game.DistributiveRemovalExile,
 		LinkedKey: link,
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ManifestForEachLinked{

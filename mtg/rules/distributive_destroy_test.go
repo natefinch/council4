@@ -56,9 +56,11 @@ func TestDestroyForEachPlayerDestroysOnePerPlayerUnderLink(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.DestroyForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Removal:   game.DistributiveRemovalDestroy,
 		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -111,9 +113,11 @@ func TestCreateTokenForEachDestroyedMintsForDestroyedToken(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.DestroyForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Removal:   game.DistributiveRemovalDestroy,
 		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -137,9 +141,11 @@ func TestCreateTokenForEachDestroyedMintsPerController(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
 	obj := linkedSourceObject(source)
 
-	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.DestroyForEachPlayer{
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:     game.AllPlayersReference(),
 		Chooser:   game.ControllerReference(),
 		Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Removal:   game.DistributiveRemovalDestroy,
 		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
@@ -157,5 +163,53 @@ func TestCreateTokenForEachDestroyedMintsPerController(t *testing.T) {
 	key := linkedObjectSourceKey(g, obj, "destroyed-for-each-player")
 	if got := len(linkedObjects(g, key)); got != 0 {
 		t.Fatalf("linked destroyed objects after payoff = %d, want 0 (link cleared)", got)
+	}
+}
+
+// TestForEachPlayerSimultaneousDestroyHonorsIndestructible pins the difference
+// between a destroy and a graveyard move in the simultaneous batch path.
+//
+// Code review caught this: the batch path originally routed every removal
+// through movePermanentsToZoneSimultaneouslyWithResults, which for a destroy
+// would have killed an indestructible permanent, ignored a regeneration shield,
+// and skipped destroy replacements and commander redirection - all of which
+// live in the destroy planner rather than in the move. No card reached the
+// combination, so nothing would have failed; it would simply have been wrong the
+// first time a lowering produced it.
+func TestForEachPlayerSimultaneousDestroyHonorsIndestructible(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	mortal := addCombatCreaturePermanent(g, game.Player1)
+	immortal := addCombatCreaturePermanent(g, game.Player2, game.Indestructible)
+	source := addCombatPermanent(g, game.Player1, distributiveDestroySagaDef())
+	obj := linkedSourceObject(source)
+
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.ForEachPlayer{
+		Scope:        game.AllPlayersReference(),
+		Chooser:      game.ControllerReference(),
+		Selection:    game.Selection{RequiredTypes: []types.Card{types.Creature}},
+		Removal:      game.DistributiveRemovalDestroy,
+		LinkedKey:    game.LinkedKey("destroyed-for-each-player"),
+		Simultaneous: true,
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	if _, ok := permanentByObjectID(g, mortal.ObjectID); ok {
+		t.Fatal("destructible creature survived the simultaneous distributive destroy")
+	}
+	if _, ok := permanentByObjectID(g, immortal.ObjectID); !ok {
+		t.Fatal("indestructible creature was destroyed by the simultaneous distributive destroy")
+	}
+
+	// The payoff must fire only for the permanent that actually died, so an
+	// indestructible creature does not hand its controller a free token.
+	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{Primitive: game.CreateTokenForEachDestroyed{
+		Source:    game.TokenDef(mutantTokenDef()),
+		LinkedKey: game.LinkedKey("destroyed-for-each-player"),
+	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	if got := mutantTokenCount(g, game.Player1); got != 1 {
+		t.Fatalf("Player1 Mutant tokens = %d, want 1", got)
+	}
+	if got := mutantTokenCount(g, game.Player2); got != 0 {
+		t.Fatalf("Player2 Mutant tokens = %d, want 0 (their creature was indestructible)", got)
 	}
 }
