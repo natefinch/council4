@@ -1153,6 +1153,12 @@ proof that a refactor preserved behaviour across all of them.
 Read it as a review signal: a card pull request should change the fingerprints
 of the cards it claims to add, plus any it deliberately fixes, and nothing else.
 
+One caveat: the file is keyed to a Scryfall snapshot, so CI also adds and removes
+lines when Wizards prints new cards. Added or removed lines can be data drift;
+*changed* digests are always a code change. To rule data drift out entirely, run
+`compilecards` on the merge base and on the branch against the same
+`oracle-cards.json` and diff the two outputs.
+
 ## Golden snapshot harness
 
 `golden_test.go` snapshots, for a small curated set of representative cards,
