@@ -877,7 +877,11 @@ func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPatt
 	}
 	fields = append(fields, selectionFields...)
 	if pattern.SpellTargetAllow != game.TargetAllowUnspecified {
-		fields = append(fields, fmt.Sprintf("SpellTargetAllow: %s,", renderTargetAllow(pattern.SpellTargetAllow)))
+		allow, allowErr := renderTargetAllow(pattern.SpellTargetAllow)
+		if allowErr != nil {
+			return "", allowErr
+		}
+		fields = append(fields, fmt.Sprintf("SpellTargetAllow: %s,", allow))
 	}
 	if pattern.SpellTargetPattern.Exists {
 		lit, err := r.renderSelection(ctx, pattern.SpellTargetPattern.Val)

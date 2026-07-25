@@ -936,7 +936,9 @@ Vanguard cards are excluded with explicit report reasons.
    remain fail-closed.
 3. **Rendering (`render.go`).** `Renderer.RenderCardSource` walks only validated
    typed values, derives imports from those values, and emits byte-deterministic,
-   gofmt-stable Go source.
+   gofmt-stable Go source. Enum-valued fields render through generated tables
+   (see [Generated rendering tables](#generated-rendering-tables)) rather than
+   hand-written switches.
 
 The bulk compiler detects distinct Oracle cards that map to the same filename or
 Go identifier and appends a stable Scryfall-derived suffix to both generated
@@ -1099,6 +1101,41 @@ got/want diff.
   Scryfall data shapes, and source naming helpers.
 - `cardgen/cmd/gencardlist`: `go generate` helper that writes each
   `mtg/cards/<letter>/cards.go` Card Registry list.
+- `cardgen/cmd/genrender`: `go generate` helper that writes
+  `cardgen/render_literals_generated.go`, the enum-to-source-literal tables the
+  renderer uses.
+
+## Generated rendering tables
+
+Every enum constant reachable from `game.CardDef` renders through a generated
+table, not a hand-written `switch`. `cardgen/cmd/genrender` type-checks
+`mtg/game` and its subpackages, walks the type graph from `game.CardDef` and
+`game.CardFace`, and writes one table per reachable enum type into
+`cardgen/render_literals_generated.go`.
+
+Adding a constant to `mtg/game` therefore needs no renderer edit. Run:
+
+```bash
+go generate ./cardgen/
+```
+
+`TestGeneratedFileIsCurrent` fails if the committed file is stale, so CI catches
+a forgotten regeneration.
+
+The renderer consumes the tables through the helpers in
+`cardgen/render_literals.go`:
+
+- `enumLiteral` maps any declared value, including the zero value.
+- `enumLiteralNonZero` additionally rejects the zero value, for enums whose zero
+  means "unset" (`zone.None`, `game.StepNone`). Enums whose zero is a real value
+  (`game.DurationPermanent`) use `enumLiteral`.
+- `bitmaskLiteral` renders an OR of flags. Bitmask enums cannot be detected from
+  their values, so `cardgen/cmd/genrender/bitmask.go` lists them explicitly and
+  the generator asserts every non-zero constant is a power of two.
+
+Constructor-valued types (`game.Quantity`, `color.Identity`, the reference
+types) and formatting helpers stay hand-written in `cardgen/render_enum.go`;
+they are not enum mappings.
 
 ## Supported layouts
 

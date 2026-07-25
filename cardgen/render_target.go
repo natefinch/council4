@@ -22,7 +22,11 @@ func (r Renderer) renderTargetSpec(ctx *renderCtx, spec *game.TargetSpec) (strin
 		fields = append(fields, fmt.Sprintf("Constraint: %q,", spec.Constraint))
 	}
 	if spec.Allow != game.TargetAllowUnspecified {
-		fields = append(fields, fmt.Sprintf("Allow: %s,", renderTargetAllow(spec.Allow)))
+		allow, err := renderTargetAllow(spec.Allow)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, fmt.Sprintf("Allow: %s,", allow))
 	}
 	if spec.TargetZone != zone.None {
 		targetZone, err := renderZone(spec.TargetZone)
