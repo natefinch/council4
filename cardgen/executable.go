@@ -34,28 +34,6 @@ func (g ExecutableGenerator) GenerateCardSource(
 	card *ScryfallCard,
 	pkgName string,
 ) (string, []shared.Diagnostic, error) {
-	if DisownedCard(*card) {
-		return "", []shared.Diagnostic{{
-			Severity: shared.SeverityWarning,
-			Summary:  "disowned card excluded from generation",
-			Detail:   fmt.Sprintf("%q is a disowned card and is never generated", card.Name),
-		}}, nil
-	}
-	if !supportedLayouts[card.Layout] {
-		return "", []shared.Diagnostic{{
-			Severity: shared.SeverityWarning,
-			Summary:  "unsupported card layout",
-			Detail:   fmt.Sprintf("the source generator does not support Scryfall layout %q", card.Layout),
-		}}, nil
-	}
-	if layoutEmitsAlternate(card.Layout) && len(card.CardFaces) > 2 {
-		return "", []shared.Diagnostic{{
-			Severity: shared.SeverityWarning,
-			Summary:  "unsupported card layout",
-			Detail:   fmt.Sprintf("the source generator supports at most 2 faces for %q layout cards, found %d", card.Layout, len(card.CardFaces)),
-		}}, nil
-	}
-
 	compiled, diagnostics, err := compileValidatedCardDefs(card)
 	if err != nil || len(diagnostics) > 0 {
 		return "", diagnostics, err
@@ -79,10 +57,42 @@ func (g ExecutableGenerator) GenerateCardSource(
 // a field path cannot accidentally match text belonging to a different ability.
 //
 // An unsupported card returns nil defs alongside its diagnostics, exactly as
-// GenerateExecutableCardSource does.
+// GenerateExecutableCardSource does, including the corpus-policy refusals for
+// disowned cards and unsupported layouts.
 func CompileCardDefs(card *ScryfallCard) ([]*game.CardDef, []shared.Diagnostic, error) {
 	compiled, diagnostics, err := compileValidatedCardDefs(card)
 	return compiled.Defs, diagnostics, err
+}
+
+// corpusPolicyRefusal reports the diagnostic refusing a card the generator never
+// emits regardless of whether its text lowers.
+//
+// These are identity refusals rather than capability gaps: a disowned card is on
+// a curated exclusion list, and an unsupported layout would otherwise be lowered
+// as if it were a normal card, because cardLayoutValue maps an unknown layout to
+// LayoutNormal.
+func corpusPolicyRefusal(card *ScryfallCard) (shared.Diagnostic, bool) {
+	switch {
+	case DisownedCard(*card):
+		return shared.Diagnostic{
+			Severity: shared.SeverityWarning,
+			Summary:  "disowned card excluded from generation",
+			Detail:   fmt.Sprintf("%q is a disowned card and is never generated", card.Name),
+		}, true
+	case !supportedLayouts[card.Layout]:
+		return shared.Diagnostic{
+			Severity: shared.SeverityWarning,
+			Summary:  "unsupported card layout",
+			Detail:   fmt.Sprintf("the source generator does not support Scryfall layout %q", card.Layout),
+		}, true
+	case layoutEmitsAlternate(card.Layout) && len(card.CardFaces) > 2:
+		return shared.Diagnostic{
+			Severity: shared.SeverityWarning,
+			Summary:  "unsupported card layout",
+			Detail:   fmt.Sprintf("the source generator supports at most 2 faces for %q layout cards, found %d", card.Layout, len(card.CardFaces)),
+		}, true
+	}
+	return shared.Diagnostic{}, false
 }
 
 // compiledCard is one card's validated CardDefs alongside the lowering results
@@ -93,9 +103,19 @@ type compiledCard struct {
 	FaceAbilities []loweredFaceAbilities
 }
 
-// compileValidatedCardDefs lowers, assembles, and validates a card, returning a
-// zero compiledCard when the card is unsupported.
+// compileValidatedCardDefs applies the corpus-policy refusals, then lowers,
+// assembles, and validates a card, returning a zero compiledCard when the card
+// is unsupported.
+//
+// The refusals live here rather than in GenerateCardSource so that every entry
+// point shares them. When they sat in the renderer-facing path, CompileCardDefs
+// happily compiled a disowned card into a full CardDef with no diagnostics, so
+// a test could assert a card was supported that production never generates, and
+// assertCardUnsupported could not test the very refusals it advertises.
 func compileValidatedCardDefs(card *ScryfallCard) (compiledCard, []shared.Diagnostic, error) {
+	if refusal, refused := corpusPolicyRefusal(card); refused {
+		return compiledCard{}, []shared.Diagnostic{refusal}, nil
+	}
 	faceAbilities, diagnostics := lowerExecutableFaces(card)
 	if len(diagnostics) > 0 {
 		return compiledCard{}, diagnostics, nil
