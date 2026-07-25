@@ -86,14 +86,21 @@ func literalFunc(ref string) string {
 // with ==, which is any struct holding a slice, map, or function field.
 func (e *emitter) emitZeroFunc(b *strings.Builder, named *types.Named) error {
 	ref := qualified(named)
+	fields := e.class.fieldsOf(named)
+	if len(fields) == 0 {
+		// fieldsOf yields nothing for a non-struct underlying (a named array,
+		// say) and for a struct with no exported fields. Emitting the obvious
+		// `return true` there would make the predicate report every value zero,
+		// so every field of that type would be silently dropped from every
+		// card. Refuse to generate instead: a named array whose element is
+		// non-comparable reaches this path, and an opaque type must supply an
+		// Empty test rather than a generated predicate.
+		return fmt.Errorf("%s: cannot generate a zero predicate for a type with no renderable fields; "+
+			"give it an opaqueRenderers entry with an Empty test", ref)
+	}
 	_, _ = fmt.Fprintf(b, "\n// %s reports whether every field of a %s holds its zero value.\n",
 		zeroFuncName(named), ref)
 	_, _ = fmt.Fprintf(b, "func %s(v %s) bool {\n", zeroFuncName(named), e.ref(named))
-	fields := e.class.fieldsOf(named)
-	if len(fields) == 0 {
-		_, _ = fmt.Fprint(b, "\t_ = v\n\treturn true\n}\n")
-		return nil
-	}
 	var conds []string
 	for _, f := range fields {
 		cond, err := e.nonZero("v."+f.Name, f.Type)
