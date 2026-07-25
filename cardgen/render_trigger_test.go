@@ -220,6 +220,32 @@ func TestRenderTriggerPatternRejectsUnsupportedFields(t *testing.T) {
 	}
 }
 
+// TestRenderTriggerPatternRejectsRuntimeOnlyEvents pins the one exclusion set
+// the renderer deliberately keeps. The kinds in unrenderedEventKinds are
+// produced and consumed only by runtime machinery, so a pattern carrying one
+// came from a lowering bug and must fail the render rather than compile into a
+// card whose trigger never fires. The unset zero must fail for the same reason.
+//
+// The gate lives in validateTriggerPattern because the generated renderer
+// spells every declared constant, and it is reached through the generated
+// renderer because that is what every nested position calls.
+func TestRenderTriggerPatternRejectsRuntimeOnlyEvents(t *testing.T) {
+	t.Parallel()
+	for kind := range unrenderedEventKinds {
+		pattern := game.TriggerPattern{Event: kind}
+		if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), pattern); err == nil {
+			t.Errorf("runtime-only event kind %d rendered into card source", int(kind))
+		}
+		union := game.TriggerPattern{Event: game.EventPermanentDied, UnionEvent: kind}
+		if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), union); err == nil {
+			t.Errorf("runtime-only event kind %d rendered as a union event", int(kind))
+		}
+	}
+	if _, err := (Renderer{}).renderGameTriggerPattern(newRenderCtx(), game.TriggerPattern{}); err == nil {
+		t.Fatal("trigger pattern with an unset event rendered")
+	}
+}
+
 func TestRenderTriggerPatternRejectsUnrestrictedAbilityActivatedEvent(t *testing.T) {
 	t.Parallel()
 	pattern := game.TriggerPattern{Event: game.EventAbilityActivated}

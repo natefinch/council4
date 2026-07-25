@@ -27,6 +27,11 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 				CountSelection:     &game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			},
 			wantParts: []string{
+				// CostModifierSpell is the zero game.CostModifierKind,
+				// emitted only because that field is in the generator's
+				// alwaysEmitEnums table. Pinned so dropping the entry fails
+				// here rather than silently erasing the kind.
+				"Kind: game.CostModifierSpell,",
 				"PerObjectReduction: 1,",
 				"CountSelection:",
 				"RequiredTypes:",

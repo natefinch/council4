@@ -76,6 +76,11 @@ func TestGenerateExecutableOjerTaqBothFaces(t *testing.T) {
 		"Timing: game.SorceryOnly,",
 		"EventHistory: opt.Val(game.EventHistoryCondition{Pattern: game.TriggerPattern{",
 		"Event: game.EventAttackerDeclared,",
+		// EventHistoryCurrentTurn is the zero game.EventHistoryWindow, emitted
+		// only because that field is in the generator's alwaysEmitEnums table.
+		// Pinned so dropping the entry fails here rather than silently
+		// widening every event-history condition's window.
+		"Window: game.EventHistoryCurrentTurn,",
 		"MinCount: 3,",
 		"Primitive: game.Transform{",
 	} {

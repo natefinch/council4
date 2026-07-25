@@ -26,6 +26,19 @@ import (
 // validateTriggerPattern rejects trigger patterns whose field combinations the
 // executable backend cannot match.
 func validateTriggerPattern(p game.TriggerPattern) error {
+	// renderEventKind is a support gate rather than a spelling: it refuses the
+	// unrenderedEventKinds, which runtime machinery produces and no card's text
+	// lowers to, and it refuses the unset zero, which a pattern must never
+	// carry. The generated renderer spells every declared constant, so this has
+	// to stay explicit. UnionEvent is optional, so only its kind is checked.
+	if _, err := renderEventKind(p.Event); err != nil {
+		return err
+	}
+	if p.UnionEvent != game.EventUnknown {
+		if _, err := renderEventKind(p.UnionEvent); err != nil {
+			return err
+		}
+	}
 	if (p.Event == game.EventBeginningOfStep) != (p.Step != game.StepNone) {
 		return errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
 	}

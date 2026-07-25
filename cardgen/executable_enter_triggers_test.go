@@ -27,6 +27,11 @@ func TestGenerateExecutableCardSourceEnterDrawTrigger(t *testing.T) {
 	for _, wanted := range []string{
 		"TriggeredAbilities: []game.TriggeredAbility",
 		"Trigger: game.TriggerCondition{",
+		// TriggerWhen is the zero game.TriggerType, so it is emitted only
+		// because that field is in the generator's alwaysEmitEnums table.
+		// Pinned so dropping the entry fails here instead of silently erasing
+		// the trigger type from every card.
+		"Type: game.TriggerWhen,",
 		"game.EventPermanentEnteredBattlefield",
 		"game.TriggerSourceSelf",
 		"Primitive: game.Draw",

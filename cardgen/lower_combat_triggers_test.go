@@ -778,6 +778,12 @@ func TestGenerateExecutableCardSourceExpandedSemanticTriggerPatterns(t *testing.
 				"game.EventObjectBecameTarget",
 				"game.TriggerSourceSelf",
 				"MatchStackObjectKind: true",
+				// StackSpell is the zero game.StackObjectKind, emitted only
+				// because that field is in the generator's alwaysEmitEnums
+				// table. Pinned so dropping the entry fails here rather than
+				// silently turning a spell-only match into a match on
+				// everything on the stack.
+				"game.StackSpell,",
 			},
 		},
 		{
