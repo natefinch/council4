@@ -261,7 +261,7 @@ func TestGenerateExecutableCardSourceDyingToServe(t *testing.T) {
 		"game.TriggerPlayerYou",
 		"OneOrMore: true",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

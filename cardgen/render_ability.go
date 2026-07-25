@@ -9,175 +9,109 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func (r Renderer) renderActivatedAbility(ctx *renderCtx, ability *game.ActivatedAbility) (string, error) {
+	return r.renderGameActivatedAbility(ctx, *ability)
+}
+
+// constructorActivatedAbility spells an ActivatedAbility as a game constructor call when one
+// produces exactly this value. See constructorRenderers in cardgen/cmd/genrender.
+func (r Renderer) constructorActivatedAbility(ctx *renderCtx, v game.ActivatedAbility) (string, bool, error) {
+	ability := &v
+
 	if manaCost, ok := game.ActivatedBodyEquipCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.EquipActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.EquipActivatedAbility(%s)", renderedCost), nil
+		return fmt.Sprintf("game.EquipActivatedAbility(%s)", renderedCost), true, nil
 	}
 	if manaCost, ok := game.ActivatedBodyEquipCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.EquipCommanderActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.EquipCommanderActivatedAbility(%s)", renderedCost), nil
+		return fmt.Sprintf("game.EquipCommanderActivatedAbility(%s)", renderedCost), true, nil
 	}
 	if manaCost, ok := game.ActivatedBodyEquipCost(ability); ok && len(ability.CostModifiers) == 1 &&
 		reflect.DeepEqual(*ability, game.EquipCostReductionActivatedAbility(manaCost, ability.CostModifiers[0])) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 		renderedModifier, err := r.renderCostModifier(ctx, ability.CostModifiers[0])
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.EquipCostReductionActivatedAbility(%s, %s)", renderedCost, renderedModifier), nil
+		return fmt.Sprintf("game.EquipCostReductionActivatedAbility(%s, %s)", renderedCost, renderedModifier), true, nil
 	}
 	if rendered, ok, err := r.renderEquipRestrictedCostReductionAbility(ctx, ability); ok {
-		return rendered, err
+		return rendered, true, err
 	}
 	if rendered, ok, err := r.renderEquipRestrictedAbility(ctx, ability); ok {
-		return rendered, err
+		return rendered, true, err
 	}
 	if manaCost, ok := game.ActivatedBodyReconfigureCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.ReconfigureActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.ReconfigureActivatedAbility(%s)", renderedCost), nil
+		return fmt.Sprintf("game.ReconfigureActivatedAbility(%s)", renderedCost), true, nil
 	}
 	if manaCost, ok := game.ActivatedBodyCyclingCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.CyclingActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.CyclingActivatedAbility(%s)", renderedCost), nil
+		return fmt.Sprintf("game.CyclingActivatedAbility(%s)", renderedCost), true, nil
 	}
 	if manaCost, ok := game.ActivatedBodyScavengeCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.ScavengeActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.ScavengeActivatedAbility(%s)", renderedCost), nil
+		return fmt.Sprintf("game.ScavengeActivatedAbility(%s)", renderedCost), true, nil
 	}
 	if manaCost, sourceManaValue, ok := game.ActivatedBodyTransmuteParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.TransmuteActivatedAbility(manaCost, sourceManaValue)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.TransmuteActivatedAbility(%s, %d)", renderedCost, sourceManaValue), nil
+		return fmt.Sprintf("game.TransmuteActivatedAbility(%s, %d)", renderedCost, sourceManaValue), true, nil
 	}
 	if manaCost, ok := game.ActivatedBodyUnearthCost(ability); ok &&
 		reflect.DeepEqual(*ability, game.UnearthActivatedAbility(manaCost)) {
 		renderedCost, err := r.renderManaCost(ctx, manaCost)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.UnearthActivatedAbility(%s)", renderedCost), nil
+		return fmt.Sprintf("game.UnearthActivatedAbility(%s)", renderedCost), true, nil
 	}
 	if power, ok := game.ActivatedBodySaddlePower(ability); ok &&
 		reflect.DeepEqual(*ability, game.SaddleActivatedAbility(power)) {
-		return fmt.Sprintf("game.SaddleActivatedAbility(%d)", power), nil
+		return fmt.Sprintf("game.SaddleActivatedAbility(%d)", power), true, nil
 	}
 	if power, ok := game.ActivatedBodyCrewPower(ability); ok &&
 		reflect.DeepEqual(*ability, game.CrewActivatedAbility(power)) {
-		return fmt.Sprintf("game.CrewActivatedAbility(%d)", power), nil
+		return fmt.Sprintf("game.CrewActivatedAbility(%d)", power), true, nil
 	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEternalizeParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EternalizeActivatedBody(manaCost, subtypes...)) {
-		return r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes)
+		return matchedRender(r.renderEternalizeFamilyAbility(ctx, "game.EternalizeActivatedBody", manaCost, subtypes))
 	}
 	if manaCost, subtypes, ok := game.ActivatedBodyEmbalmParams(ability); ok &&
 		reflect.DeepEqual(*ability, game.EmbalmActivatedBody(manaCost, subtypes...)) {
-		return r.renderEternalizeFamilyAbility(ctx, "game.EmbalmActivatedBody", manaCost, subtypes)
+		return matchedRender(r.renderEternalizeFamilyAbility(ctx, "game.EmbalmActivatedBody", manaCost, subtypes))
 	}
 
-	var fields []string
-	fields = append(fields, fmt.Sprintf("Text: %s,", renderText(ability.Text)))
-	if ability.ManaCost.Exists {
-		ctx.need(importOpt)
-		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCostLit))
-	}
-	if len(ability.AdditionalCosts) > 0 {
-		rendered, err := r.renderAdditionalCosts(ctx, ability.AdditionalCosts)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
-	}
-	if len(ability.CostModifiers) > 0 {
-		rendered := make([]string, 0, len(ability.CostModifiers))
-		for i := range ability.CostModifiers {
-			value, err := r.renderCostModifier(ctx, ability.CostModifiers[i])
-			if err != nil {
-				return "", err
-			}
-			rendered = append(rendered, value)
-		}
-		fields = append(fields, fmt.Sprintf("CostModifiers: []game.CostModifier{%s},", strings.Join(rendered, ", ")))
-	}
-	if ability.ZoneOfFunction != zone.None {
-		ctx.need(importZone)
-		zoneLiteral, err := renderZone(ability.ZoneOfFunction)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
-	}
-	if ability.Timing != game.NoTimingRestriction {
-		timing, err := renderTimingRestriction(ability.Timing)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
-	}
-	if ability.MaxActivationsPerTurn > 0 {
-		fields = append(fields, fmt.Sprintf("MaxActivationsPerTurn: %d,", ability.MaxActivationsPerTurn))
-	}
-	if ability.ManaCostRestrictedToEntryChosenColor {
-		fields = append(fields, "ManaCostRestrictedToEntryChosenColor: true,")
-	}
-	if len(ability.KeywordAbilities) > 0 {
-		elements := make([]string, 0, len(ability.KeywordAbilities))
-		for _, keyword := range ability.KeywordAbilities {
-			rendered, err := r.renderKeywordAbility(ctx, keyword)
-			if err != nil {
-				return "", err
-			}
-			elements = append(elements, rendered+",")
-		}
-		fields = append(fields, sliceField("KeywordAbilities", "game.KeywordAbility", elements))
-	}
-	if ability.ActivationCondition.Exists {
-		condition, err := r.renderControllerControlsCondition(ctx, &ability.ActivationCondition.Val, "activated ability")
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("ActivationCondition: opt.Val(%s),", condition))
-	}
-	content, err := r.renderAbilityContent(ctx, ability.Content)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, fmt.Sprintf("Content: %s,", content))
-	return structLit("game.ActivatedAbility", fields), nil
+	return "", false, nil
 }
 
 func (r Renderer) renderEquipRestrictedAbility(
@@ -292,6 +226,14 @@ func renderSubtypeSlice(ctx *renderCtx, subtypes []types.Sub) (string, error) {
 }
 
 func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (string, error) {
+	return r.renderGameManaAbility(ctx, *ability)
+}
+
+// constructorManaAbility spells a ManaAbility as a game constructor call when one
+// produces exactly this value. See constructorRenderers in cardgen/cmd/genrender.
+func (r Renderer) constructorManaAbility(ctx *renderCtx, v game.ManaAbility) (string, bool, error) {
+	ability := &v
+
 	for _, manaColor := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C} {
 		if !reflect.DeepEqual(*ability, game.TapManaAbility(manaColor)) {
 			continue
@@ -299,9 +241,9 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		ctx.need(importMana)
 		colorLiteral, err := renderManaColor(manaColor)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.TapManaAbility(%s)", colorLiteral), nil
+		return fmt.Sprintf("game.TapManaAbility(%s)", colorLiteral), true, nil
 	}
 	if colors, ok := tapManaChoiceColors(ability); ok &&
 		reflect.DeepEqual(*ability, game.TapManaChoiceAbility(colors...)) {
@@ -310,11 +252,11 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		for _, manaColor := range colors {
 			colorLiteral, err := renderManaColor(manaColor)
 			if err != nil {
-				return "", err
+				return "", false, err
 			}
 			colorLiterals = append(colorLiterals, colorLiteral)
 		}
-		return fmt.Sprintf("game.TapManaChoiceAbility(%s)", strings.Join(colorLiterals, ", ")), nil
+		return fmt.Sprintf("game.TapManaChoiceAbility(%s)", strings.Join(colorLiterals, ", ")), true, nil
 	}
 	if colors, count, ok := tapManaChoiceCountColors(ability); ok &&
 		reflect.DeepEqual(*ability, game.TapManaChoiceCountAbility(ability.Text, count, colors...)) {
@@ -323,135 +265,68 @@ func (r Renderer) renderManaAbility(ctx *renderCtx, ability *game.ManaAbility) (
 		for _, manaColor := range colors {
 			colorLiteral, err := renderManaColor(manaColor)
 			if err != nil {
-				return "", err
+				return "", false, err
 			}
 			colorLiterals = append(colorLiterals, colorLiteral)
 		}
-		return fmt.Sprintf("game.TapManaChoiceCountAbility(%q, %d, %s)", ability.Text, count, strings.Join(colorLiterals, ", ")), nil
+		return fmt.Sprintf("game.TapManaChoiceCountAbility(%q, %d, %s)", ability.Text, count, strings.Join(colorLiterals, ", ")), true, nil
 	}
 	if reflect.DeepEqual(*ability, game.TapChosenColorManaAbility(ability.Text)) {
-		return fmt.Sprintf("game.TapChosenColorManaAbility(%q)", ability.Text), nil
+		return fmt.Sprintf("game.TapChosenColorManaAbility(%q)", ability.Text), true, nil
 	}
 	for _, fixed := range []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G, mana.C} {
 		if reflect.DeepEqual(*ability, game.TapFixedOrChosenColorManaAbility(ability.Text, fixed)) {
 			ctx.need(importMana)
 			colorLiteral, err := renderManaColor(fixed)
 			if err != nil {
-				return "", err
+				return "", false, err
 			}
-			return fmt.Sprintf("game.TapFixedOrChosenColorManaAbility(%q, %s)", ability.Text, colorLiteral), nil
+			return fmt.Sprintf("game.TapFixedOrChosenColorManaAbility(%q, %s)", ability.Text, colorLiteral), true, nil
 		}
 	}
 	if reflect.DeepEqual(*ability, game.TapManaCommanderIdentityAbility()) {
-		return "game.TapManaCommanderIdentityAbility()", nil
+		return "game.TapManaCommanderIdentityAbility()", true, nil
 	}
 	for _, relation := range []game.PlayerRelation{game.PlayerYou, game.PlayerOpponent} {
 		for _, includeColorless := range []bool{false, true} {
 			if reflect.DeepEqual(*ability, game.TapManaLandsProduceAbility(relation, includeColorless)) {
 				literal, err := renderPlayerRelation(relation)
 				if err != nil {
-					return "", err
+					return "", false, err
 				}
-				return fmt.Sprintf("game.TapManaLandsProduceAbility(%s, %t)", literal, includeColorless), nil
+				return fmt.Sprintf("game.TapManaLandsProduceAbility(%s, %t)", literal, includeColorless), true, nil
 			}
 		}
 	}
 	if linkID, ok := linkedExileColorManaLinkID(ability); ok &&
 		reflect.DeepEqual(*ability, game.TapLinkedExileColorManaAbility(linkID)) {
-		return fmt.Sprintf("game.TapLinkedExileColorManaAbility(%q)", linkID), nil
+		return fmt.Sprintf("game.TapLinkedExileColorManaAbility(%q)", linkID), true, nil
 	}
 	if selection, ok := amongControlledColorsSelection(ability); ok &&
 		reflect.DeepEqual(*ability, game.TapManaAmongControlledColorsAbility(ability.Text, selection)) {
 		rendered, err := r.renderSelection(ctx, selection)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.TapManaAmongControlledColorsAbility(%q, %s)", ability.Text, rendered), nil
+		return fmt.Sprintf("game.TapManaAmongControlledColorsAbility(%q, %s)", ability.Text, rendered), true, nil
 	}
 	if selection, ok := eachControlledColorSelection(ability); ok &&
 		reflect.DeepEqual(*ability, game.TapManaEachControlledColorAbility(ability.Text, selection)) {
 		rendered, err := r.renderSelection(ctx, selection)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
-		return fmt.Sprintf("game.TapManaEachControlledColorAbility(%q, %s)", ability.Text, rendered), nil
+		return fmt.Sprintf("game.TapManaEachControlledColorAbility(%q, %s)", ability.Text, rendered), true, nil
 	}
 
 	if game.IsTapSacrificeAnyOneColorManaAbility(ability) {
 		_, count, ok := game.ManaAbilityChoiceOutput(ability)
 		if ok {
-			return fmt.Sprintf("game.TapSacrificeAnyOneColorManaAbility(%q, %d)", ability.Text, count), nil
+			return fmt.Sprintf("game.TapSacrificeAnyOneColorManaAbility(%q, %d)", ability.Text, count), true, nil
 		}
 	}
 
-	var fields []string
-	if ability.ZoneOfFunction != zone.None {
-		ctx.need(importZone)
-		zoneLiteral, err := renderZone(ability.ZoneOfFunction)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ZoneOfFunction: %s,", zoneLiteral))
-	}
-	if ability.ManaCost.Exists {
-		ctx.need(importOpt)
-		manaCostLit, err := r.renderManaCost(ctx, ability.ManaCost.Val)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("ManaCost: opt.Val(%s),", manaCostLit))
-	}
-	if len(ability.AdditionalCosts) > 0 {
-		rendered, err := r.renderAdditionalCosts(ctx, ability.AdditionalCosts)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("AdditionalCosts: %s,", rendered))
-	}
-	if ability.Timing != game.NoTimingRestriction {
-		timing, err := renderTimingRestriction(ability.Timing)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Timing: %s,", timing))
-	}
-	if ability.ActivationCondition.Exists {
-		condition, err := r.renderControllerControlsCondition(ctx, &ability.ActivationCondition.Val, "mana ability")
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("ActivationCondition: opt.Val(%s),", condition))
-	}
-	content, err := r.renderAbilityContent(ctx, ability.Content)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, fmt.Sprintf("Content: %s,", content))
-	return structLit("game.ManaAbility", fields), nil
-}
-
-func renderTimingRestriction(timing game.TimingRestriction) (string, error) {
-	switch timing {
-	case game.NoTimingRestriction:
-		return "game.NoTimingRestriction", nil
-	case game.SorceryOnly:
-		return "game.SorceryOnly", nil
-	case game.OncePerTurn:
-		return "game.OncePerTurn", nil
-	case game.SorceryOncePerTurn:
-		return "game.SorceryOncePerTurn", nil
-	case game.DuringCombat:
-		return "game.DuringCombat", nil
-	case game.DuringUpkeep:
-		return "game.DuringUpkeep", nil
-	case game.DuringYourTurn:
-		return "game.DuringYourTurn", nil
-	case game.DuringYourTurnBeforeAttackers:
-		return "game.DuringYourTurnBeforeAttackers", nil
-	default:
-		return "", fmt.Errorf("unsupported timing restriction %d", timing)
-	}
+	return "", false, nil
 }
 
 func tapManaChoiceColors(ability *game.ManaAbility) ([]mana.Color, bool) {
@@ -544,14 +419,22 @@ func renderMobilizeAmount(amount game.MobilizeAmount) string {
 }
 
 func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.TriggeredAbility) (string, error) {
+	return r.renderGameTriggeredAbility(ctx, *ability)
+}
+
+// constructorTriggeredAbility spells a TriggeredAbility as a game constructor call when one
+// produces exactly this value. See constructorRenderers in cardgen/cmd/genrender.
+func (r Renderer) constructorTriggeredAbility(ctx *renderCtx, v game.TriggeredAbility) (string, bool, error) {
+	ability := &v
+
 	if keyword, ok := game.BodyKeywordAbility(ability, game.CumulativeUpkeep); ok {
 		if cumulative, ok := keyword.(game.CumulativeUpkeepKeyword); ok &&
 			reflect.DeepEqual(*ability, game.CumulativeUpkeepTriggeredAbility(cumulative.Cost)) {
 			renderedCost, err := r.renderManaCost(ctx, cumulative.Cost)
 			if err != nil {
-				return "", err
+				return "", false, err
 			}
-			return fmt.Sprintf("game.CumulativeUpkeepTriggeredAbility(%s)", renderedCost), nil
+			return fmt.Sprintf("game.CumulativeUpkeepTriggeredAbility(%s)", renderedCost), true, nil
 		}
 	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Echo); ok {
@@ -559,697 +442,86 @@ func (r Renderer) renderTriggeredAbility(ctx *renderCtx, ability *game.Triggered
 			reflect.DeepEqual(*ability, game.EchoTriggeredAbility(echo.Cost)) {
 			renderedCost, err := r.renderManaCost(ctx, echo.Cost)
 			if err != nil {
-				return "", err
+				return "", false, err
 			}
-			return fmt.Sprintf("game.EchoTriggeredAbility(%s)", renderedCost), nil
+			return fmt.Sprintf("game.EchoTriggeredAbility(%s)", renderedCost), true, nil
 		}
 	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Fabricate); ok {
 		if fabricate, ok := keyword.(game.FabricateKeyword); ok &&
 			reflect.DeepEqual(*ability, game.FabricateTriggeredAbility(fabricate.Count)) {
-			return fmt.Sprintf("game.FabricateTriggeredAbility(%d)", fabricate.Count), nil
+			return fmt.Sprintf("game.FabricateTriggeredAbility(%d)", fabricate.Count), true, nil
 		}
 	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Hideaway); ok {
 		if hideaway, ok := keyword.(game.HideawayKeyword); ok &&
 			reflect.DeepEqual(*ability, game.HideawayTriggeredAbility(hideaway.Amount)) {
-			return fmt.Sprintf("game.HideawayTriggeredAbility(%d)", hideaway.Amount), nil
+			return fmt.Sprintf("game.HideawayTriggeredAbility(%d)", hideaway.Amount), true, nil
 		}
 	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Soulshift); ok {
 		if soulshift, ok := keyword.(game.SoulshiftKeyword); ok &&
 			reflect.DeepEqual(*ability, game.SoulshiftTriggeredAbility(soulshift.Count)) {
-			return fmt.Sprintf("game.SoulshiftTriggeredAbility(%d)", soulshift.Count), nil
+			return fmt.Sprintf("game.SoulshiftTriggeredAbility(%d)", soulshift.Count), true, nil
 		}
 	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Rampage); ok {
 		if rampage, ok := keyword.(game.RampageKeyword); ok &&
 			reflect.DeepEqual(*ability, game.RampageTriggeredAbility(rampage.Count)) {
-			return fmt.Sprintf("game.RampageTriggeredAbility(%d)", rampage.Count), nil
+			return fmt.Sprintf("game.RampageTriggeredAbility(%d)", rampage.Count), true, nil
 		}
 	}
 	if keyword, ok := game.BodyKeywordAbility(ability, game.Mobilize); ok {
 		if mobilize, ok := keyword.(game.MobilizeKeyword); ok &&
 			reflect.DeepEqual(*ability, game.MobilizeTriggeredBody(mobilize.Amount)) {
-			return fmt.Sprintf("game.MobilizeTriggeredBody(%s)", renderMobilizeAmount(mobilize.Amount)), nil
+			return fmt.Sprintf("game.MobilizeTriggeredBody(%s)", renderMobilizeAmount(mobilize.Amount)), true, nil
 		}
 	}
 	if reflect.DeepEqual(*ability, game.UndyingTriggeredBody) {
-		return "game.UndyingTriggeredBody", nil
+		return "game.UndyingTriggeredBody", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.PersistTriggeredBody) {
-		return "game.PersistTriggeredBody", nil
+		return "game.PersistTriggeredBody", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.DethroneTriggeredBody) {
-		return "game.DethroneTriggeredBody", nil
+		return "game.DethroneTriggeredBody", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.StartEnginesTriggeredBody) {
-		return "game.StartEnginesTriggeredBody", nil
+		return "game.StartEnginesTriggeredBody", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.FlankingTriggeredBody) {
-		return "game.FlankingTriggeredBody", nil
+		return "game.FlankingTriggeredBody", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.TrainingTriggeredBody) {
-		return "game.TrainingTriggeredBody", nil
+		return "game.TrainingTriggeredBody", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.MyriadTriggeredBody) {
-		return "game.MyriadTriggeredBody", nil
+		return "game.MyriadTriggeredBody", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.LivingWeaponTriggeredAbility()) {
-		return "game.LivingWeaponTriggeredAbility()", nil
+		return "game.LivingWeaponTriggeredAbility()", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.RavenousDrawTriggeredAbility()) {
-		return "game.RavenousDrawTriggeredAbility()", nil
+		return "game.RavenousDrawTriggeredAbility()", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.OffspringEnterTriggeredAbility()) {
-		return "game.OffspringEnterTriggeredAbility()", nil
+		return "game.OffspringEnterTriggeredAbility()", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.EvokeSacrificeTriggeredAbility()) {
-		return "game.EvokeSacrificeTriggeredAbility()", nil
+		return "game.EvokeSacrificeTriggeredAbility()", true, nil
 	}
 	if reflect.DeepEqual(*ability, game.DashTriggeredAbility()) {
-		return "game.DashTriggeredAbility()", nil
+		return "game.DashTriggeredAbility()", true, nil
 	}
-	var fields []string
-	trigger, err := r.renderTriggerCondition(ctx, &ability.Trigger)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, fmt.Sprintf("Trigger: %s,", trigger))
-	if ability.Optional {
-		fields = append(fields, "Optional: true,")
-	}
-	if ability.MaxTriggersPerTurn != 0 {
-		fields = append(fields, fmt.Sprintf("MaxTriggersPerTurn: %d,", ability.MaxTriggersPerTurn))
-	}
-	if ability.CountsResolutionsThisTurn {
-		fields = append(fields, "CountsResolutionsThisTurn: true,")
-	}
-	content, err := r.renderAbilityContent(ctx, ability.Content)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, fmt.Sprintf("Content: %s,", content))
-	return structLit("game.TriggeredAbility", fields), nil
+	return "", false, nil
 }
 
 func (r Renderer) renderChapterAbility(ctx *renderCtx, ability *game.ChapterAbility) (string, error) {
-	content, err := r.renderAbilityContent(ctx, ability.Content)
-	if err != nil {
-		return "", err
-	}
-	return structLit("game.ChapterAbility", []string{
-		fmt.Sprintf("Text: %s,", renderText(ability.Text)),
-		fmt.Sprintf("Chapters: %#v,", ability.Chapters),
-		fmt.Sprintf("Content: %s,", content),
-	}), nil
+	return r.renderGameChapterAbility(ctx, *ability)
 }
 
 func (r Renderer) renderLoyaltyAbility(ctx *renderCtx, ability *game.LoyaltyAbility) (string, error) {
-	var fields []string
-	fields = append(fields, fmt.Sprintf("LoyaltyCost: %d,", ability.LoyaltyCost))
-	content, err := r.renderAbilityContent(ctx, ability.Content)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, fmt.Sprintf("Content: %s,", content))
-	return structLit("game.LoyaltyAbility", fields), nil
-}
-
-func (r Renderer) renderTriggerCondition(ctx *renderCtx, trigger *game.TriggerCondition) (string, error) {
-	triggerType, err := renderTriggerType(trigger.Type)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{
-		fmt.Sprintf("Type: %s,", triggerType),
-	}
-	if trigger.Type != game.TriggerState {
-		pattern, err := r.renderTriggerPattern(ctx, &trigger.Pattern)
-		if err != nil {
-			return "", err
-		}
-		fields = append(fields, fmt.Sprintf("Pattern: %s,", pattern))
-	}
-	if trigger.InterveningIf != "" {
-		fields = append(fields, fmt.Sprintf("InterveningIf: %q,", trigger.InterveningIf))
-	}
-	if trigger.InterveningCondition.Exists {
-		condition, err := r.renderControllerControlsCondition(ctx, &trigger.InterveningCondition.Val, "trigger intervening")
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("InterveningCondition: opt.Val(%s),", condition))
-	}
-	if trigger.State.Exists {
-		state, err := r.renderStateTriggerCondition(ctx, &trigger.State.Val)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("State: opt.Val(%s),", state))
-	}
-	if trigger.InterveningIfEventPermanentHadNoCounterKind.Exists {
-		kind, err := renderCounterKind(trigger.InterveningIfEventPermanentHadNoCounterKind.Val)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importCounter)
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("InterveningIfEventPermanentHadNoCounterKind: opt.Val(%s),", kind))
-	}
-	if trigger.InterveningIfEventPermanentHadCounterKind.Exists {
-		kind, err := renderCounterKind(trigger.InterveningIfEventPermanentHadCounterKind.Val)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importCounter)
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("InterveningIfEventPermanentHadCounterKind: opt.Val(%s),", kind))
-	}
-	if trigger.InterveningIfEventPermanentHadCounters {
-		fields = append(fields, "InterveningIfEventPermanentHadCounters: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasKicked {
-		fields = append(fields, "InterveningIfEventPermanentWasKicked: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasBargained {
-		fields = append(fields, "InterveningIfEventPermanentWasBargained: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasOffspring {
-		fields = append(fields, "InterveningIfEventPermanentWasOffspring: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasCast {
-		fields = append(fields, "InterveningIfEventPermanentWasCast: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasEvoked {
-		fields = append(fields, "InterveningIfEventPermanentWasEvoked: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasDashed {
-		fields = append(fields, "InterveningIfEventPermanentWasDashed: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasCastByController {
-		fields = append(fields, "InterveningIfEventPermanentWasCastByController: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasCastFromControllerHand {
-		fields = append(fields, "InterveningIfEventPermanentWasCastFromControllerHand: true,")
-	}
-	if trigger.InterveningIfEventPermanentEnteredOrCastFromGraveyard {
-		fields = append(fields, "InterveningIfEventPermanentEnteredOrCastFromGraveyard: true,")
-	}
-	if trigger.InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard {
-		fields = append(fields, "InterveningIfEventPermanentEnteredOrCastFromControllerGraveyard: true,")
-	}
-	if trigger.InterveningIfEventPermanentWasNotPutByThisAbilitySource {
-		fields = append(fields, "InterveningIfEventPermanentWasNotPutByThisAbilitySource: true,")
-	}
-	return structLit("game.TriggerCondition", fields), nil
-}
-
-// renderStateTriggerCondition renders a state trigger's board-state condition
-// (CR 603.8). Only the general Condition form is produced by the compiler; the
-// dedicated life-threshold fields are rendered when set for completeness.
-func (r Renderer) renderStateTriggerCondition(ctx *renderCtx, state *game.StateTriggerCondition) (string, error) {
-	var fields []string
-	if state.MatchControllerLifeLessOrEqual {
-		fields = append(fields, "MatchControllerLifeLessOrEqual: true,")
-		fields = append(fields, fmt.Sprintf("ControllerLifeLessOrEqual: %d,", state.ControllerLifeLessOrEqual))
-	}
-	if state.Condition.Exists {
-		condition, err := r.renderControllerControlsCondition(ctx, &state.Condition.Val, "state trigger")
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", condition))
-	}
-	return structLit("game.StateTriggerCondition", fields), nil
-}
-
-func (r Renderer) renderTriggerPattern(ctx *renderCtx, pattern *game.TriggerPattern) (string, error) {
-	if (pattern.Event == game.EventBeginningOfStep) != (pattern.Step != game.StepNone) {
-		return "", errors.New("render: beginning-of-step trigger pattern must set exactly one supported step")
-	}
-	allowZoneChangeZones := pattern.Event == game.EventZoneChanged
-	allowFromZone := pattern.MatchFromZone &&
-		(pattern.Event == game.EventSpellCast || pattern.Event == game.EventPermanentEnteredBattlefield || allowZoneChangeZones) &&
-		!pattern.MatchToZone
-	allowExcludeFromZone := pattern.ExcludeFromZone &&
-		(pattern.Event == game.EventSpellCast || allowZoneChangeZones)
-	if len(pattern.RequireCardTypes) != 0 ||
-		len(pattern.ExcludeCardTypes) != 0 ||
-		(pattern.MatchFromZone && !allowFromZone && !allowZoneChangeZones) ||
-		(pattern.MatchToZone && !allowZoneChangeZones) ||
-		(pattern.ExcludeToZone && !allowZoneChangeZones) ||
-		(pattern.MatchToZone && pattern.ExcludeToZone) ||
-		(pattern.ExcludeFromZone && !allowExcludeFromZone) ||
-		(pattern.MatchFromZone && pattern.ExcludeFromZone) ||
-		(len(pattern.FromZones) > 0 &&
-			(!allowZoneChangeZones || pattern.MatchFromZone || pattern.ExcludeFromZone || len(pattern.FromZones) < 2)) ||
-		pattern.DamageRecipientCombatState != game.CombatStateAny ||
-		(pattern.SpellTargetsSource && pattern.Event != game.EventSpellCast) ||
-		((pattern.SpellTargetAllow != game.TargetAllowUnspecified || pattern.SpellTargetPattern.Exists) && pattern.Event != game.EventSpellCast) ||
-		(pattern.RequireKickerPaid && pattern.Event != game.EventSpellCast) ||
-		(pattern.RequireHistoric && pattern.Event != game.EventSpellCast) ||
-		(pattern.MatchSpellCopy && pattern.Event != game.EventSpellCast) ||
-		(pattern.SelfWasCast && pattern.Event != game.EventSpellCast) ||
-		(pattern.RequireTappedForMana && pattern.Event != game.EventPermanentTapped && pattern.Event != game.EventManaProduced) ||
-		(pattern.RequireProducedManaColorFromEntryChoice && pattern.Event != game.EventPermanentTapped && pattern.Event != game.EventManaProduced) ||
-		(pattern.RequireManaProducedByLand && pattern.Event != game.EventManaProduced) ||
-		(pattern.ExcludeManaAbility && pattern.Event != game.EventAbilityActivated) ||
-		(pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility) ||
-		(pattern.PlayerEventOrdinalThisTurn > 0 &&
-			pattern.Event != game.EventCardDrawn &&
-			pattern.Event != game.EventCardDiscarded &&
-			pattern.Event != game.EventCycled &&
-			pattern.Event != game.EventLifeGained &&
-			pattern.Event != game.EventLifeLost &&
-			pattern.Event != game.EventScry &&
-			pattern.Event != game.EventSurveil &&
-			pattern.Event != game.EventSpellCast) ||
-		(pattern.RequireCombatDamage && pattern.RequireNonCombatDamage) ||
-		(pattern.AttackAlone && pattern.Event != game.EventAttackerDeclared) ||
-		(pattern.AttackerCaptured && pattern.Event != game.EventAttackerDeclared) ||
-		(pattern.DyingObjectCaptured && pattern.Event != game.EventPermanentDied) ||
-		(pattern.AttackWhileSaddled && pattern.Event != game.EventAttackerDeclared) ||
-		(pattern.AttacksDifferentPlayerThanAnother && pattern.Event != game.EventAttackerDeclared) ||
-		(pattern.AttackedPlayerIsSourceEnchantedPlayer && pattern.Event != game.EventAttackerDeclared) ||
-		(pattern.StepPlayerIsSourceEnchantedPlayer && pattern.Event != game.EventBeginningOfStep) ||
-		(pattern.FirstUpkeepStepEachTurn && (pattern.Event != game.EventBeginningOfStep || pattern.Step != game.StepUpkeep)) ||
-		(pattern.AttacksAlongsideCount != 0 &&
-			(pattern.Event != game.EventAttackerDeclared || pattern.AttacksAlongsideSelection.Empty())) ||
-		(pattern.DyingDamagedBySource && pattern.Event != game.EventPermanentDied) ||
-		(pattern.ExcludeFirstDrawInDrawStep && pattern.Event != game.EventCardDrawn) ||
-		(pattern.ClassBecameLevel > 0 && pattern.Event != game.EventClassLevelGained) ||
-		(pattern.PlaysLinkedExileCard != "" && pattern.Event != game.EventCardPlayedFromExile) ||
-		(pattern.AttackerCountAtLeast != 0 &&
-			(pattern.Event != game.EventAttackerDeclared || pattern.AttackAlone || pattern.AttackerCountAtLeast < 2 ||
-				(!pattern.OneOrMore && pattern.Source != game.TriggerSourceSelf))) {
-		return "", errors.New("render: unsupported trigger pattern fields")
-	}
-	if err := validateTriggerPatternCardSelection(pattern); err != nil {
-		return "", err
-	}
-	event, err := renderEventKind(pattern.Event)
-	if err != nil {
-		return "", err
-	}
-	fields := []string{fmt.Sprintf("Event: %s,", event)}
-	relationFields, err := renderTriggerPatternRelationFields(pattern)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, relationFields...)
-	zoneFields, err := renderTriggerPatternZoneFields(ctx, pattern)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, zoneFields...)
-	flagFields, err := renderTriggerPatternFlagFields(ctx, pattern)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, flagFields...)
-	selectionFields, err := renderTriggerPatternSelectionFields(ctx, pattern)
-	if err != nil {
-		return "", err
-	}
-	fields = append(fields, selectionFields...)
-	if pattern.SpellTargetAllow != game.TargetAllowUnspecified {
-		allow, allowErr := renderTargetAllow(pattern.SpellTargetAllow)
-		if allowErr != nil {
-			return "", allowErr
-		}
-		fields = append(fields, fmt.Sprintf("SpellTargetAllow: %s,", allow))
-	}
-	if pattern.SpellTargetPattern.Exists {
-		lit, err := r.renderSelection(ctx, pattern.SpellTargetPattern.Val)
-		if err != nil {
-			return "", err
-		}
-		ctx.need(importOpt)
-		fields = append(fields, fmt.Sprintf("SpellTargetPattern: opt.Val(%s),", lit))
-	}
-	return structLit("game.TriggerPattern", fields), nil
-}
-
-func renderTriggerPatternRelationFields(pattern *game.TriggerPattern) ([]string, error) {
-	var fields []string
-	if pattern.Source != game.TriggerSourceAny {
-		source, err := renderTriggerSource(pattern.Source)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("Source: %s,", source))
-	}
-	if pattern.Controller != game.TriggerControllerAny {
-		controller, err := renderTriggerController(pattern.Controller)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("Controller: %s,", controller))
-	}
-	if pattern.CauseController != game.TriggerControllerAny {
-		controller, err := renderTriggerController(pattern.CauseController)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("CauseController: %s,", controller))
-	}
-	if pattern.Step != game.StepNone {
-		step, err := renderStep(pattern.Step)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("Step: %s,", step))
-	}
-	if pattern.Subject != game.TriggerSubjectDefault {
-		subject, err := renderTriggerSubject(pattern.Subject)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("Subject: %s,", subject))
-	}
-	if pattern.ExcludeSelf {
-		fields = append(fields, "ExcludeSelf: true,")
-	}
-	if pattern.SubjectSelectionOrSelf {
-		fields = append(fields, "SubjectSelectionOrSelf: true,")
-	}
-	if pattern.Player != game.TriggerPlayerAny {
-		player, err := renderTriggerPlayer(pattern.Player)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("Player: %s,", player))
-	}
-	return fields, nil
-}
-
-func renderTriggerPatternFlagFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
-	var fields []string
-	if pattern.MatchFaceDown {
-		fields = append(fields, "MatchFaceDown: true,", fmt.Sprintf("FaceDown: %t,", pattern.FaceDown))
-	}
-	if pattern.RequireKickerPaid {
-		fields = append(fields, "RequireKickerPaid: true,")
-	}
-	if pattern.RequireHistoric {
-		fields = append(fields, "RequireHistoric: true,")
-	}
-	if pattern.MatchSpellCopy {
-		fields = append(fields, "MatchSpellCopy: true,")
-	}
-	if pattern.SelfWasCast {
-		fields = append(fields, "SelfWasCast: true,")
-	}
-	if pattern.SpellTargetsSource {
-		fields = append(fields, "SpellTargetsSource: true,")
-	}
-	if pattern.CastDuringTurn != game.TriggerTurnAny {
-		relation, err := renderTriggerTurnRelation(pattern.CastDuringTurn)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("CastDuringTurn: %s,", relation))
-	}
-	if pattern.RequireTappedForMana {
-		fields = append(fields, "RequireTappedForMana: true,")
-	}
-	if pattern.RequireProducedManaColor != "" {
-		colorLiteral, err := renderManaColor(pattern.RequireProducedManaColor)
-		if err != nil {
-			return nil, err
-		}
-		ctx.need(importMana)
-		fields = append(fields, fmt.Sprintf("RequireProducedManaColor: %s,", colorLiteral))
-	}
-	if pattern.RequireProducedManaColorFromEntryChoice {
-		fields = append(fields, "RequireProducedManaColorFromEntryChoice: true,")
-	}
-	if pattern.RequireManaProducedByLand {
-		fields = append(fields, "RequireManaProducedByLand: true,")
-	}
-	if pattern.UnionEvent != game.EventUnknown {
-		unionEvent, err := renderEventKind(pattern.UnionEvent)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("UnionEvent: %s,", unionEvent))
-	}
-	if pattern.ExcludeManaAbility {
-		fields = append(fields, "ExcludeManaAbility: true,")
-	}
-	if pattern.PlayerEventOrdinalThisTurn > 0 {
-		fields = append(fields, fmt.Sprintf("PlayerEventOrdinalThisTurn: %d,", pattern.PlayerEventOrdinalThisTurn))
-	}
-	if pattern.ExcludeFirstDrawInDrawStep {
-		fields = append(fields, "ExcludeFirstDrawInDrawStep: true,")
-	}
-	if pattern.ClassBecameLevel > 0 {
-		fields = append(fields, fmt.Sprintf("ClassBecameLevel: %d,", pattern.ClassBecameLevel))
-	}
-	if pattern.MatchStackObjectKind {
-		stackObjectKind, err := renderStackObjectKind(pattern.StackObjectKind)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, "MatchStackObjectKind: true,", fmt.Sprintf("StackObjectKind: %s,", stackObjectKind))
-	}
-	if len(pattern.RequirePermanentTypes) > 0 {
-		rpt, err := renderTypesCardSlice(ctx, pattern.RequirePermanentTypes)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("RequirePermanentTypes: %s,", rpt))
-	}
-	if len(pattern.ExcludePermanentTypes) > 0 {
-		ept, err := renderTypesCardSlice(ctx, pattern.ExcludePermanentTypes)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("ExcludePermanentTypes: %s,", ept))
-	}
-	if pattern.RequireNonToken {
-		fields = append(fields, "RequireNonToken: true,")
-	}
-	if pattern.OneOrMore {
-		fields = append(fields, "OneOrMore: true,")
-	}
-	if pattern.OneOrMorePerAttackTarget {
-		fields = append(fields, "OneOrMorePerAttackTarget: true,")
-	}
-	if pattern.OneOrMorePerDamagedPlayer {
-		fields = append(fields, "OneOrMorePerDamagedPlayer: true,")
-	}
-	if pattern.AttackAlone {
-		fields = append(fields, "AttackAlone: true,")
-	}
-	if pattern.AttackerCaptured {
-		fields = append(fields, "AttackerCaptured: true,")
-	}
-	if pattern.DyingObjectCaptured {
-		fields = append(fields, "DyingObjectCaptured: true,")
-	}
-	if pattern.AttackWhileSaddled {
-		fields = append(fields, "AttackWhileSaddled: true,")
-	}
-	if pattern.AttacksDifferentPlayerThanAnother {
-		fields = append(fields, "AttacksDifferentPlayerThanAnother: true,")
-	}
-	if pattern.AttackedPlayerIsSourceEnchantedPlayer {
-		fields = append(fields, "AttackedPlayerIsSourceEnchantedPlayer: true,")
-	}
-	if pattern.StepPlayerIsSourceEnchantedPlayer {
-		fields = append(fields, "StepPlayerIsSourceEnchantedPlayer: true,")
-	}
-	if pattern.FirstUpkeepStepEachTurn {
-		fields = append(fields, "FirstUpkeepStepEachTurn: true,")
-	}
-	if pattern.DyingDamagedBySource {
-		fields = append(fields, "DyingDamagedBySource: true,")
-	}
-	if pattern.AttackerCountAtLeast != 0 {
-		fields = append(fields, fmt.Sprintf("AttackerCountAtLeast: %d,", pattern.AttackerCountAtLeast))
-	}
-	if pattern.AttacksAlongsideCount != 0 {
-		fields = append(fields, fmt.Sprintf("AttacksAlongsideCount: %d,", pattern.AttacksAlongsideCount))
-	}
-	if pattern.MatchCounterKind {
-		kindFields, err := renderTriggerPatternCounterKind(ctx, pattern)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, kindFields...)
-	}
-	if pattern.CounterThreshold != 0 {
-		fields = append(fields, fmt.Sprintf("CounterThreshold: %d,", pattern.CounterThreshold))
-	}
-	if pattern.RequireCombatDamage {
-		fields = append(fields, "RequireCombatDamage: true,")
-	}
-	if pattern.RequireNonCombatDamage {
-		fields = append(fields, "RequireNonCombatDamage: true,")
-	}
-	if pattern.DamageRecipientIsSource {
-		fields = append(fields, "DamageRecipientIsSource: true,")
-	}
-	if pattern.AttackRecipient != game.AttackRecipientAny {
-		recipient, err := renderAttackRecipient(pattern.AttackRecipient)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("AttackRecipient: %s,", recipient))
-	}
-	if pattern.PlaysLinkedExileCard != "" {
-		fields = append(fields, fmt.Sprintf("PlaysLinkedExileCard: game.LinkedKey(%q),", string(pattern.PlaysLinkedExileCard)))
-	}
-	return fields, nil
-}
-
-func renderTriggerPatternSelectionFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
-	var fields []string
-	if pattern.DamageRecipient != game.DamageRecipientNone ||
-		len(pattern.DamageRecipientTypes) > 0 ||
-		!pattern.DamageRecipientSelection.Empty() {
-		damageFields, err := renderTriggerPatternDamageFields(ctx, pattern)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, damageFields...)
-	}
-	if !pattern.CardSelection.Empty() {
-		cardFields, err := renderTriggerPatternCardSelectionFields(ctx, pattern)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, cardFields...)
-	}
-	if !pattern.SubjectSelection.Empty() {
-		subjectFields, err := renderTriggerPatternSelection(ctx, "SubjectSelection", pattern.SubjectSelection)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, subjectFields...)
-	}
-	if !pattern.RelatedSubjectSelection.Empty() {
-		relatedFields, err := renderTriggerPatternSelection(ctx, "RelatedSubjectSelection", pattern.RelatedSubjectSelection)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, relatedFields...)
-	}
-	if !pattern.AttackRecipientSelection.Empty() {
-		attackFields, err := renderTriggerPatternSelection(ctx, "AttackRecipientSelection", pattern.AttackRecipientSelection)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, attackFields...)
-	}
-	if !pattern.AttacksAlongsideSelection.Empty() {
-		alongsideFields, err := renderTriggerPatternSelection(ctx, "AttacksAlongsideSelection", pattern.AttacksAlongsideSelection)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, alongsideFields...)
-	}
-	if !pattern.DamageSourceSelection.Empty() {
-		sourceFields, err := renderTriggerPatternSelection(ctx, "DamageSourceSelection", pattern.DamageSourceSelection)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, sourceFields...)
-	}
-	if pattern.DamageSourceSelectionOrSelf {
-		fields = append(fields, "DamageSourceSelectionOrSelf: true,")
-	}
-	if pattern.DamageSourceWasEnchanted {
-		fields = append(fields, "DamageSourceWasEnchanted: true,")
-	}
-	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
-		stepFields, err := renderTriggerPatternSelection(ctx, "StepPlayerSourceAttachedSelection", pattern.StepPlayerSourceAttachedSelection)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, stepFields...)
-	}
-	return fields, nil
-}
-
-func renderTriggerPatternZoneFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
-	var fields []string
-	if pattern.MatchFromZone {
-		fromZone, err := renderZone(pattern.FromZone)
-		if err != nil {
-			return nil, err
-		}
-		ctx.need(importZone)
-		fields = append(fields, "MatchFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
-	}
-	if pattern.ExcludeFromZone {
-		fromZone, err := renderZone(pattern.FromZone)
-		if err != nil {
-			return nil, err
-		}
-		ctx.need(importZone)
-		fields = append(fields, "ExcludeFromZone: true,", fmt.Sprintf("FromZone: %s,", fromZone))
-	}
-	if len(pattern.FromZones) > 0 {
-		rendered := make([]string, 0, len(pattern.FromZones))
-		for _, from := range pattern.FromZones {
-			lit, err := renderZone(from)
-			if err != nil {
-				return nil, err
-			}
-			rendered = append(rendered, lit)
-		}
-		ctx.need(importZone)
-		fields = append(fields, fmt.Sprintf("FromZones: []zone.Type{%s},", strings.Join(rendered, ", ")))
-	}
-	if pattern.MatchToZone {
-		toZone, err := renderZone(pattern.ToZone)
-		if err != nil {
-			return nil, err
-		}
-		ctx.need(importZone)
-		fields = append(fields, "MatchToZone: true,", fmt.Sprintf("ToZone: %s,", toZone))
-	}
-	if pattern.ExcludeToZone {
-		toZone, err := renderZone(pattern.ToZone)
-		if err != nil {
-			return nil, err
-		}
-		ctx.need(importZone)
-		fields = append(fields, "ExcludeToZone: true,", fmt.Sprintf("ToZone: %s,", toZone))
-	}
-	return fields, nil
-}
-
-func renderStackObjectKind(kind game.StackObjectKind) (string, error) {
-	switch kind {
-	case game.StackSpell:
-		return "game.StackSpell", nil
-	case game.StackActivatedAbility:
-		return "game.StackActivatedAbility", nil
-	case game.StackTriggeredAbility:
-		return "game.StackTriggeredAbility", nil
-	default:
-		return "", fmt.Errorf("render: unsupported stack object kind %d", kind)
-	}
-}
-
-func renderTriggerTurnRelation(relation game.TriggerTurnRelation) (string, error) {
-	switch relation {
-	case game.TriggerTurnYours:
-		return "game.TriggerTurnYours", nil
-	case game.TriggerTurnNotYours:
-		return "game.TriggerTurnNotYours", nil
-	case game.TriggerTurnEventPlayer:
-		return "game.TriggerTurnEventPlayer", nil
-	default:
-		return "", fmt.Errorf("render: unsupported trigger turn relation %d", relation)
-	}
+	return r.renderGameLoyaltyAbility(ctx, *ability)
 }
 
 // validateTriggerPatternCardSelection validates CardSelection constraints for a
@@ -1295,64 +567,8 @@ func validateTriggerPatternCardSelection(pattern *game.TriggerPattern) error {
 	return nil
 }
 
-// renderTriggerPatternCardSelectionFields renders the CardSelection field for a
-// TriggerPattern and returns it as a slice of struct-literal field strings.
-func renderTriggerPatternCardSelectionFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
-	sel, err := (Renderer{}).renderSelection(ctx, pattern.CardSelection)
-	if err != nil {
-		return nil, err
-	}
-	return []string{fmt.Sprintf("CardSelection: %s,", sel)}, nil
-}
-
-// renderTriggerPatternSelection renders a Selection-valued TriggerPattern
-// field and returns it as a slice of struct-literal field strings.
-func renderTriggerPatternSelection(ctx *renderCtx, field string, selection game.Selection) ([]string, error) {
-	sel, err := (Renderer{}).renderSelection(ctx, selection)
-	if err != nil {
-		return nil, err
-	}
-	return []string{fmt.Sprintf("%s: %s,", field, sel)}, nil
-}
-
-// renderTriggerPatternCounterKind renders the MatchCounterKind and CounterKind
-// fields for a TriggerPattern and appends the import requirement.
-func renderTriggerPatternCounterKind(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
-	kind, err := renderCounterKind(pattern.CounterKind)
-	if err != nil {
-		return nil, fmt.Errorf("render: trigger pattern counter kind: %w", err)
-	}
-	ctx.need(importCounter)
-	return []string{"MatchCounterKind: true,", fmt.Sprintf("CounterKind: %s,", kind)}, nil
-}
-
-// renderTriggerPatternDamageFields renders DamageRecipient and
-// DamageRecipientTypes fields for a TriggerPattern.
-func renderTriggerPatternDamageFields(ctx *renderCtx, pattern *game.TriggerPattern) ([]string, error) {
-	var fields []string
-	if pattern.DamageRecipient != game.DamageRecipientNone {
-		recipient, err := renderDamageRecipient(pattern.DamageRecipient)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("DamageRecipient: %s,", recipient))
-	}
-	if len(pattern.DamageRecipientTypes) > 0 {
-		recipientTypes, err := renderTypesCardSlice(ctx, pattern.DamageRecipientTypes)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("DamageRecipientTypes: %s,", recipientTypes))
-	}
-	if !pattern.DamageRecipientSelection.Empty() {
-		selection, err := (Renderer{}).renderSelection(ctx, pattern.DamageRecipientSelection)
-		if err != nil {
-			return nil, err
-		}
-		fields = append(fields, fmt.Sprintf("DamageRecipientSelection: %s,", selection))
-	}
-	if pattern.DamageSourceCaptured {
-		fields = append(fields, "DamageSourceCaptured: true,")
-	}
-	return fields, nil
+// matchedRender adapts a hand-written renderer that always matches to the
+// (rendered, matched, err) shape the constructor hooks return.
+func matchedRender(rendered string, err error) (string, bool, error) {
+	return rendered, true, err
 }

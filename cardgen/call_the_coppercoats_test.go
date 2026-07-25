@@ -2,7 +2,6 @@ package cardgen
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -54,7 +53,7 @@ func TestLowerCallTheCoppercoats(t *testing.T) {
 		"PerTargetBeyondFirstIncrease: cost.Mana{cost.O(1), cost.W}",
 		"game.PlayerGroupControlledGroup(game.TargetedPlayersReference()",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

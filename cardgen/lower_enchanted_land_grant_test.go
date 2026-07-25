@@ -40,7 +40,7 @@ func TestGenerateExecutableCardSourceChamberOfManipulation(t *testing.T) {
 		"Layer:         game.LayerControl,",
 		"Duration: game.DurationUntilEndOfTurn,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -77,7 +77,7 @@ func TestGenerateExecutableCardSourceEnchantedLandGrant(t *testing.T) {
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 		"AddAbilities: []game.Ability{",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

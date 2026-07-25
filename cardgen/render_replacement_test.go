@@ -169,7 +169,7 @@ func TestRenderReplacementAbilityEntersTappedWithCounters(t *testing.T) {
 func TestRenderZoneChangeTriggerExclusionAndFaceDownFilters(t *testing.T) {
 	t.Parallel()
 	ctx := newRenderCtx()
-	rendered, err := (Renderer{}).renderTriggerPattern(ctx, &game.TriggerPattern{
+	rendered, err := (Renderer{}).renderGameTriggerPattern(ctx, game.TriggerPattern{
 		Event:         game.EventZoneChanged,
 		MatchFromZone: true,
 		FromZone:      zone.Battlefield,

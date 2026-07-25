@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGenerateExecutableCardSourceShakedownHeavy covers the defending-player
 // "may have" causative gate whose affirmative consequence untaps the source and
@@ -38,10 +35,10 @@ func TestGenerateExecutableCardSourceShakedownHeavy(t *testing.T) {
 		"Primitive: game.Untap{",
 		"Object: game.SourcePermanentReference()",
 		"Primitive: game.RemoveFromCombat{",
-		"Key:       \"may-have-action\"",
+		"Key:       game.ResultKey(\"may-have-action\")",
 		"Succeeded: game.TriTrue",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

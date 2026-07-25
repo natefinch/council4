@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGeneratePadeem verifies Padeem, Consul of Innovation lowers end to end.
 // Its first ability, "Artifacts you control have hexproof.", reuses the existing
@@ -44,7 +41,7 @@ func TestGeneratePadeem(t *testing.T) {
 		"ControlsGreatestManaValueInGroup: opt.Val(game.Selection{RequiredTypes: []types.Card{types.Artifact}}),",
 		"Primitive: game.Draw{",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

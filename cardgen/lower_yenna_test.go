@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGenerateExecutableCardSourceYenna exercises the three Yenna, Redtooth
 // Regent features together: a same-name target restriction ("target enchantment
@@ -42,10 +39,10 @@ func TestGenerateExecutableCardSourceYenna(t *testing.T) {
 		"Primitive: game.Untap{",
 		"Object: game.SourcePermanentReference(),",
 		"Object:        opt.Val(game.LinkedObjectReference(\"created-token\")),",
-		"ObjectMatches: opt.Val(game.Selection{SubtypesAny: []types.Sub{types.Sub(\"Aura\")}}),",
+		"ObjectMatches: opt.Val(game.Selection{SubtypesAny: []types.Sub{types.Aura}}),",
 		"Primitive: game.Scry{",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

@@ -37,7 +37,7 @@ func TestGenerateExecutableCardSourceAttackInTheBox(t *testing.T) {
 		"Primitive: game.CreateDelayedTrigger{",
 		"Timing: game.DelayedAtBeginningOfNextEndStep",
 		"Primitive: game.Sacrifice{",
-		"Key:       \"may-have-action\"",
+		"Key:       game.ResultKey(\"may-have-action\")",
 		"Succeeded: game.TriTrue",
 	} {
 		if !containsNormalized(source, want) {

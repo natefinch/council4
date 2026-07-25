@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -40,10 +39,10 @@ func TestGenerateExecutableCardSourceRakdosPatronOfChaos(t *testing.T) {
 		"PublishResult: game.ResultKey(\"non-controller-optional-action\")",
 		"Primitive: game.Draw",
 		"Player: game.ControllerReference()",
-		"Key:       \"non-controller-optional-action\"",
+		`Key: game.ResultKey("non-controller-optional-action")`,
 		"Succeeded: game.TriFalse",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

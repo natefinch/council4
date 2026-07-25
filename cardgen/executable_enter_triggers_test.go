@@ -26,14 +26,14 @@ func TestGenerateExecutableCardSourceEnterDrawTrigger(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"TriggeredAbilities: []game.TriggeredAbility",
-		"Type: game.TriggerWhen",
+		"Trigger: game.TriggerCondition{",
 		"game.EventPermanentEnteredBattlefield",
 		"game.TriggerSourceSelf",
 		"Primitive: game.Draw",
 		"game.Fixed(1)",
 		"Player: game.ControllerReference()",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -858,7 +858,7 @@ func TestGenerateExecutableCardSourceEnterOrDiesUnionTrigger(t *testing.T) {
 		"UnionEvent: game.EventPermanentDied",
 		"game.TriggerSourceSelf",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -890,7 +890,7 @@ func TestGenerateExecutableCardSourceEnterOrAttackUnionTrigger(t *testing.T) {
 		"game.PutOnBattlefield",
 		"zone.Graveyard",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

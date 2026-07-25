@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGenerateExecutableForetellKeyword exercises the Foretell keyword
 // (CR 702.144): a card with "Foretell <cost>" lowers to a game.ForetellKeyword
@@ -27,7 +24,7 @@ func TestGenerateExecutableForetellKeyword(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "game.ForetellKeyword{Cost:") {
+	if !containsNormalized(source, "game.ForetellKeyword{Cost:") {
 		t.Fatalf("source missing game.ForetellKeyword:\n%s", source)
 	}
 }

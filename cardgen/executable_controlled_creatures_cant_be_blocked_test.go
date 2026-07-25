@@ -33,7 +33,7 @@ func TestGenerateExecutableCardSourceControlledCreaturesCantBeBlocked(t *testing
 		"AffectedController: game.ControllerYou,",
 		"PermanentTypes:     []types.Card{types.Creature},",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -98,7 +98,7 @@ func TestGenerateExecutableCardSourceColorFilteredControlledCreaturesCantBeBlock
 		"PermanentTypes:     []types.Card{types.Creature},",
 		"AffectedSelection:  game.Selection{ColorsAny: []color.Color{color.Blue}},",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -132,9 +132,9 @@ func TestGenerateExecutableCardSourceCounterFilteredControlledCreaturesCantBeBlo
 		"Kind:               game.RuleEffectCantBeBlocked,",
 		"AffectedController: game.ControllerYou,",
 		"PermanentTypes:     []types.Card{types.Creature},",
-		"AffectedSelection:  game.Selection{MatchCounter: true, RequiredCounter: counter.PlusOnePlusOne},",
+		"AffectedSelection:  game.Selection{MatchCounter: true},",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -170,7 +170,7 @@ func TestGenerateExecutableCardSourcePowerToughnessFilteredControlledCreaturesCa
 		"PermanentTypes:     []types.Card{types.Creature},",
 		"AnyOf: []game.Selection{game.Selection{Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})}, game.Selection{Toughness: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})}}",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -206,7 +206,7 @@ func TestGenerateExecutableCardSourceSourcePowerFilteredControlledCreaturesCantB
 		"PermanentTypes:     []types.Card{types.Creature},",
 		"AffectedSelection:  game.Selection{PowerGreaterThanSource: true},",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

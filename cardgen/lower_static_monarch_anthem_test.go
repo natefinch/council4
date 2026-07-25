@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestLowerMonarchGroupAnthem verifies that a group anthem gated on a live player
 // designation ("As long as you're the monarch, permanents you control have
@@ -34,7 +31,7 @@ func TestLowerMonarchGroupAnthem(t *testing.T) {
 		"AddKeywords: []game.Keyword{",
 		"game.Hexproof,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

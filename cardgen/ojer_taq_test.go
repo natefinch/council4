@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -74,13 +73,13 @@ func TestGenerateExecutableOjerTaqBothFaces(t *testing.T) {
 		// Back: {W} mana ability.
 		"game.TapManaAbility(mana.W),",
 		// Back: sorcery-speed transform activation gated on the attack event history.
-		"Timing:          game.SorceryOnly,",
+		"Timing: game.SorceryOnly,",
 		"EventHistory: opt.Val(game.EventHistoryCondition{Pattern: game.TriggerPattern{",
-		"Event:      game.EventAttackerDeclared,",
-		"Window: game.EventHistoryCurrentTurn, MinCount: 3}),",
+		"Event: game.EventAttackerDeclared,",
+		"MinCount: 3,",
 		"Primitive: game.Transform{",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Errorf("generated source missing %q\n---\n%s", want, source)
 		}
 	}

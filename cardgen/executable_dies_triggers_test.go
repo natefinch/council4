@@ -54,7 +54,7 @@ func TestGenerateExecutableCardSourcePermanentZoneChangeTriggerPatterns(t *testi
 		{
 			name:       "qualified Human dies",
 			oracleText: "Whenever another legendary green Human you control dies, draw a card.",
-			wants:      []string{"game.EventPermanentDied", "SubtypesAny: []types.Sub{types.Sub(\"Human\")}", "Supertypes: []types.Super{types.Legendary}", "ColorsAny: []color.Color{color.Green}", "ExcludeSelf:"},
+			wants:      []string{"game.EventPermanentDied", "SubtypesAny: []types.Sub{types.Human}", "Supertypes: []types.Super{types.Legendary}", "ColorsAny: []color.Color{color.Green}", "ExcludeSelf:"},
 		},
 		{
 			name:       "self enters or put into graveyard union",
@@ -80,7 +80,7 @@ func TestGenerateExecutableCardSourcePermanentZoneChangeTriggerPatterns(t *testi
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, want := range test.wants {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}
@@ -521,7 +521,7 @@ func TestGenerateExecutableCardSourceDiesOrExileReanimationAura(t *testing.T) {
 		"Primitive: game.PutOnBattlefield",
 		"game.CardReferenceEvent",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

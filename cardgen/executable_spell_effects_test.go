@@ -1380,10 +1380,10 @@ func TestGenerateExecutableCardSourceReferencedFightSourcePermanent(t *testing.T
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "Primitive: game.Fight") ||
-		!strings.Contains(source, "Object:        game.SourcePermanentReference()") ||
-		!strings.Contains(source, "RelatedObject: game.TargetPermanentReference(0)") ||
-		!strings.Contains(source, "MinTargets: 0,") {
+	if !containsNormalized(source, "Primitive: game.Fight") ||
+		!containsNormalized(source, "Object: game.SourcePermanentReference()") ||
+		!containsNormalized(source, "RelatedObject: game.TargetPermanentReference(0)") ||
+		!containsNormalized(source, `Constraint: "up to one target creature you don't control"`) {
 		t.Fatalf("source missing source-permanent fight primitive:\n%s", source)
 	}
 }

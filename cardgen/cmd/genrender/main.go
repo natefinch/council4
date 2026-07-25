@@ -114,6 +114,9 @@ func load(root string) (*reachable, error) {
 	if err := checkOpenStringTypes(graph, pkgs); err != nil {
 		return nil, err
 	}
+	if err := checkPreRenderValidators(graph); err != nil {
+		return nil, err
+	}
 	if err := checkAlwaysEmit(graph, pkgs); err != nil {
 		return nil, err
 	}

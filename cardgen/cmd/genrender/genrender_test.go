@@ -107,7 +107,9 @@ func TestRootTypesAreReachable(t *testing.T) {
 // entry drops a value from every card that carries it, a stale openStringTypes
 // entry turns a synthesized key into a render error, and a stale
 // alwaysEmitEnums or alwaysEmitFields entry silently stops emitting a field
-// whose zero names a real value. The check functions are the same ones generation runs, so this reports
+// whose zero names a real value, and a stale preRenderValidators or
+// constructorRenderers entry wires a support gate or a constructor spelling to
+// a type nothing renders any more. The check functions are the same ones generation runs, so this reports
 // the rot as a test failure rather than as a broken corpus.
 func TestCuratedTablesAreCurrent(t *testing.T) {
 	if testing.Short() {
@@ -128,6 +130,9 @@ func TestCuratedTablesAreCurrent(t *testing.T) {
 		t.Error(err)
 	}
 	if err := checkAlwaysEmit(graph, pkgs); err != nil {
+		t.Error(err)
+	}
+	if err := checkPreRenderValidators(graph); err != nil {
 		t.Error(err)
 	}
 }

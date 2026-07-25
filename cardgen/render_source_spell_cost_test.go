@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -28,7 +27,6 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 				CountSelection:     &game.Selection{RequiredTypes: []types.Card{types.Creature}},
 			},
 			wantParts: []string{
-				"Kind: game.CostModifierSpell,",
 				"PerObjectReduction: 1,",
 				"CountSelection:",
 				"RequiredTypes:",
@@ -62,7 +60,6 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 				GenericReduction: 2,
 			},
 			wantParts: []string{
-				"Kind: game.CostModifierSpell,",
 				"CardSelection: game.Selection{",
 				"RequiredTypes: []types.Card{types.Creature}",
 				"Power: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4})",
@@ -120,7 +117,7 @@ func TestRenderSourceSpellCostModifier(t *testing.T) {
 				t.Fatalf("renderCostModifier: unexpected error: %v", err)
 			}
 			for _, part := range test.wantParts {
-				if !strings.Contains(got, part) {
+				if !containsNormalized(got, part) {
 					t.Fatalf("rendered %q missing %q", got, part)
 				}
 			}

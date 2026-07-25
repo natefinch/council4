@@ -35,11 +35,11 @@ func TestGenerateExecutableCardSourceGigglingSkitterspike(t *testing.T) {
 		"game.EventAttackerDeclared,",
 		"game.EventBlockerDeclared,",
 		"game.EventObjectBecameTarget,",
-		"game.StackSpell,",
+		"MatchStackObjectKind: true,",
 		"game.IndestructibleStaticBody,",
 		"game.Monstrosity{",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

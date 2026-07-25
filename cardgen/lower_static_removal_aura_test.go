@@ -33,7 +33,7 @@ func TestGenerateExecutableCardSourceRemovalAuraTypeSet(t *testing.T) {
 		"types.Forest",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -72,10 +72,10 @@ func TestGenerateExecutableCardSourceRemovalAuraLoseAbilitiesGrantMana(t *testin
 		"RemoveAllAbilities: true,",
 		"SetColorless: true,",
 		"types.Land",
-		"game.TapManaAbility(mana.C)",
+		"new(game.TapManaAbility(mana.C))",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -110,13 +110,13 @@ func TestGenerateExecutableCardSourceRemovalAuraColorlessBasePT(t *testing.T) {
 	for _, wanted := range []string{
 		"RemoveAllAbilities: true,",
 		"SetColorless: true,",
-		"SetSubtypes: []types.Sub{types.Sub(\"Noggle\")},",
+		"SetSubtypes: []types.Sub{types.Noggle},",
 		"SetPower:",
 		"SetToughness:",
 		"opt.Val(game.PT{Value: 1}),",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -150,14 +150,14 @@ func TestGenerateExecutableCardSourceRemovalAuraIsFirstBasePT(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"RemoveAllAbilities: true,",
-		"SetSubtypes: []types.Sub{types.Sub(\"Treefolk\")},",
+		"SetSubtypes: []types.Sub{types.Treefolk},",
 		"SetPower:",
-		"opt.Val(game.PT{Value: 0}),",
+		"SetPower: opt.Val(game.PT{}),",
 		"SetToughness:",
 		"opt.Val(game.PT{Value: 4}),",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

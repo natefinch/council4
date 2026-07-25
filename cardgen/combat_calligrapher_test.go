@@ -2,7 +2,6 @@ package cardgen
 
 import (
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -100,12 +99,12 @@ func TestRenderCombatCalligrapherUsesTypedCorrelation(t *testing.T) {
 	for _, want := range []string{
 		"Kind:              game.RuleEffectCantAttack,",
 		"DefendingPlayer:   game.PlayerYou,",
-		`SubtypesAny: []types.Sub{types.Sub("Inkling")}`,
+		"SubtypesAny: []types.Sub{types.Inkling}",
 		"OneOrMorePerAttackTarget: true,",
 		"opt.Val(game.EventPlayerReference())",
 		"opt.Val(game.DefendingPlayerReference())",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

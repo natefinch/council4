@@ -53,7 +53,7 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnActivatedAbility(t *te
 	}
 	for _, wanted := range []string{
 		"ActivatedAbilities:",
-		"AdditionalCosts: cost.Tap,",
+		"Kind: cost.AdditionalTap,",
 		`Constraint: "target creature"`,
 		"Primitive: game.ApplyRule{",
 		"Object: opt.Val(game.TargetPermanentReference(0)),",
@@ -124,8 +124,8 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnUpToOne(t *testing.T) 
 		"ActivatedAbilities:",
 		"Kind: cost.AdditionalTap,",
 		"Kind:   cost.AdditionalDiscard,",
-		"MinTargets: 0,",
 		"MaxTargets: 1,",
+		`Constraint: "up to one target creature",`,
 		"Primitive: game.ApplyRule{",
 		"Object: opt.Val(game.TargetPermanentReference(0)),",
 		"Kind: game.RuleEffectCantBeBlocked,",
@@ -163,8 +163,8 @@ func TestGenerateExecutableCardSourceCantBeBlockedThisTurnSourceAndTarget(t *tes
 	}
 	for _, wanted := range []string{
 		"TriggeredAbilities:",
-		"MinTargets: 0,",
 		"MaxTargets: 1,",
+		`Constraint: "up to one other target creature",`,
 		"ExcludeSource: true",
 		"Object: opt.Val(game.SourcePermanentReference()),",
 		"Object: opt.Val(game.TargetPermanentReference(0)),",

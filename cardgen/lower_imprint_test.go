@@ -3,7 +3,6 @@ package cardgen
 import (
 	goparser "go/parser"
 	"go/token"
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -89,9 +88,9 @@ func TestGenerateExecutableMimicVatSource(t *testing.T) {
 		"AddKeywords: []game.Keyword{game.Haste}",
 		"game.DelayedAtBeginningOfNextEndStep",
 		"CapturedObjectGroup:",
-		"AdditionalCosts: cost.Tap",
+		"Kind: cost.AdditionalTap",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGenerateExecutablePluralSubtypeAnthems proves the plural creature-subtype
 // anthem group subjects lower end to end: a multi-subtype "you control" anthem
@@ -114,9 +111,8 @@ func TestGenerateExecutablePluralSubtypeAnthems(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
-			normalized := strings.Join(strings.Fields(source), " ")
 			for _, want := range tc.wants {
-				if !strings.Contains(normalized, strings.Join(strings.Fields(want), " ")) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}

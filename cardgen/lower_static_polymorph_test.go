@@ -38,7 +38,7 @@ func TestGenerateExecutableCardSourcePolymorphAura(t *testing.T) {
 		"SetToughness: opt.Val(game.PT{Value: 1})",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -73,7 +73,7 @@ func TestGenerateExecutableCardSourcePolymorphBaseOnly(t *testing.T) {
 		"SetPower:     opt.Val(game.PT{Value: 1})",
 		"SetToughness: opt.Val(game.PT{Value: 1})",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -110,12 +110,12 @@ func TestGenerateExecutableCardSourcePolymorphBecomesFirst(t *testing.T) {
 		"RemoveAllAbilities: true,",
 		"SetTypes:    []types.Card{types.Artifact, types.Creature}",
 		"SetSubtypes: []types.Sub{types.Insect}",
-		"SetPower:     opt.Val(game.PT{Value: 0})",
+		"SetPower:     opt.Val(game.PT{})",
 		"SetToughness: opt.Val(game.PT{Value: 1})",
 		"game.Indestructible",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -147,11 +147,11 @@ func TestGenerateExecutableCardSourcePolymorphBecomesFirstSubtypeOnly(t *testing
 	}
 	for _, wanted := range []string{
 		"RemoveAllAbilities: true,",
-		"SetSubtypes: []types.Sub{types.Sub(\"Treefolk\")}",
-		"SetPower:     opt.Val(game.PT{Value: 0})",
+		"SetSubtypes: []types.Sub{types.Treefolk}",
+		"SetPower:     opt.Val(game.PT{})",
 		"SetToughness: opt.Val(game.PT{Value: 4})",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

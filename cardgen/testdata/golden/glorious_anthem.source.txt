@@ -21,10 +21,12 @@ func newGloriousAnthem() *game.CardDef {
 			Types: []types.Card{types.Enchantment},
 			StaticAbilities: []game.StaticAbility{
 				game.StaticAbility{
+					Text: "Creatures you control get +1/+1.",
 					ContinuousEffects: []game.ContinuousEffect{
 						game.ContinuousEffect{
-							Layer:          game.LayerPowerToughnessModify,
+							Duration:       game.DurationPermanent,
 							Group:          game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+							Layer:          game.LayerPowerToughnessModify,
 							PowerDelta:     1,
 							ToughnessDelta: 1,
 						},

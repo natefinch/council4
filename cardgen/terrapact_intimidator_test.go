@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -37,10 +36,10 @@ func TestGenerateExecutableCardSourceTerrapactIntimidator(t *testing.T) {
 		"Primitive: game.AddCounter{",
 		"Object:      game.SourcePermanentReference()",
 		"CounterKind: counter.PlusOnePlusOne",
-		"Key:       \"may-have-action\"",
+		`Key: game.ResultKey("may-have-action")`,
 		"Succeeded: game.TriFalse",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

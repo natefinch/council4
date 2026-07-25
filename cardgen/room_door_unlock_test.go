@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
@@ -60,7 +59,7 @@ func TestGenerateExecutableCardSourceRoomDoorUnlockSplit(t *testing.T) {
 		`Object:      game.LinkedObjectReference("manifested-creature"),`,
 		"CounterKind: counter.PlusOnePlusOne,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

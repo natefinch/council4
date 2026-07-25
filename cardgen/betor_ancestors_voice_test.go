@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -42,7 +41,7 @@ func TestGenerateExecutableCardSourceBetorAncestorsVoice(t *testing.T) {
 		"ManaValueDynamic: opt.Val(game.ManaValueDynamicBound{Kind: game.DynamicAmountLifeLostThisTurn, Multiplier: 1})",
 		"game.PutOnBattlefield{",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

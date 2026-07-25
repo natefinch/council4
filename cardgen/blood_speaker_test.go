@@ -39,7 +39,7 @@ func TestGenerateExecutableCardSourceBloodSpeaker(t *testing.T) {
 		// types.Sub("Demon") now renders as the named constant types.Demon.
 		"Filter:      game.Selection{SubtypesAny: []types.Sub{types.Demon}}",
 		"ResultGate: opt.Val(game.InstructionResultGate{",
-		"Key:       \"if-you-do\"",
+		`Key: game.ResultKey("if-you-do")`,
 		"Succeeded: game.TriTrue",
 	} {
 		if !containsNormalized(source, want) {

@@ -333,7 +333,7 @@ func TestGenerateDreadReturnFlashbackSource(t *testing.T) {
 		"Kind:               cost.AdditionalSacrifice,",
 		"PermanentType:      types.Creature,",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

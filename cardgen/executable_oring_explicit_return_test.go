@@ -56,7 +56,7 @@ func TestGenerateExecutableExplicitORingReturn(t *testing.T) {
 				`game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves"))`,
 				"game.EventZoneChanged",
 			} {
-				if !strings.Contains(source, wanted) {
+				if !containsNormalized(source, wanted) {
 					t.Fatalf("source missing %q:\n%s", wanted, source)
 				}
 			}
@@ -138,10 +138,10 @@ func TestGenerateExecutableExileUntilLeavesTargetWordings(t *testing.T) {
 				wanted = append(wanted, "Optional: true,")
 			}
 			if test.wantUpTo {
-				wanted = append(wanted, "MinTargets: 0,", "MaxTargets: 1,")
+				wanted = append(wanted, "MaxTargets: 1,", `Constraint: "up to one target artifact or creature"`)
 			}
 			for _, want := range wanted {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}
@@ -188,7 +188,7 @@ func TestGenerateExecutableSagaChapterExileUntilLeaves(t *testing.T) {
 		"Primitive: game.PutOnBattlefield",
 		`game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves"))`,
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}

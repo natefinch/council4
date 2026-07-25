@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -26,7 +25,7 @@ func TestGenerateExecutablePlotKeyword(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "game.PlotKeyword{Cost:") {
+	if !containsNormalized(source, "game.PlotKeyword{Cost: cost.Mana{cost.O(1), cost.U}}") {
 		t.Fatalf("source missing game.PlotKeyword:\n%s", source)
 	}
 }

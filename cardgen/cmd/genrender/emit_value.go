@@ -200,6 +200,11 @@ func (e *emitter) emitValue(b *strings.Builder, indent, expr string, t *renderTy
 		_, _ = fmt.Fprintf(b, "%sctx.need(importOpt)\n", indent)
 		_, _ = fmt.Fprintf(b, "%s%s := \"opt.Val(\" + %s + \")\"\n", indent, name, inner)
 	case kindPointer:
+		if t.Elem.Kind == kindStruct && constructorRenderers[t.Elem.Ref()] != "" {
+			// The generated pointer form picks &literal or new(constructor).
+			e.emitChecked(b, indent, name, fmt.Sprintf("r.%s(ctx, *%s)", pointerRendererName(t.Elem.Named), expr), path)
+			return name, nil
+		}
 		inner, err := e.emitValue(b, indent, "*"+expr, t.Elem, path)
 		if err != nil {
 			return "", err

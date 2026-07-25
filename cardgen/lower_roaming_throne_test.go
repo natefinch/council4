@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -29,7 +28,7 @@ func TestGenerateExecutableCardSourceRoamingThroneCategory(t *testing.T) {
 		"AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey",
 		"Kind: game.RuleEffectAdditionalTriggerForChosenCreatureType",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

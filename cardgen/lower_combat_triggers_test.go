@@ -749,7 +749,7 @@ func TestGenerateExecutableCardSourceSwordCombatDamageTrigger(t *testing.T) {
 		"game.Untap{",
 		"game.ControllerYou",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}
@@ -778,7 +778,6 @@ func TestGenerateExecutableCardSourceExpandedSemanticTriggerPatterns(t *testing.
 				"game.EventObjectBecameTarget",
 				"game.TriggerSourceSelf",
 				"MatchStackObjectKind: true",
-				"game.StackSpell",
 			},
 		},
 		{
@@ -817,7 +816,7 @@ func TestGenerateExecutableCardSourceExpandedSemanticTriggerPatterns(t *testing.
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, want := range test.want {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}

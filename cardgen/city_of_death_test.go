@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 func TestGenerateCityOfDeathCopyNonSagaToken(t *testing.T) {
 	t.Parallel()
@@ -23,11 +20,11 @@ func TestGenerateCityOfDeathCopyNonSagaToken(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"TokenOnly: true",
-		"ExcludedSubtype: types.Sub(\"Saga\")",
+		"ExcludedSubtype: types.Saga",
 		"Source: game.TokenCopySourceObject,",
 		"Object: game.TargetPermanentReference(0),",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}

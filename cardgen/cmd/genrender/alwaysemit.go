@@ -19,6 +19,23 @@ var alwaysEmitEnums = map[string]bool{
 	// distinction between "gets +1/+1" and "gets +1/+1 until end of turn", so
 	// every effect that has a duration says which one it is.
 	"game.EffectDuration": true,
+
+	// TriggerType(0) is TriggerWhen. "When" and "Whenever" are different
+	// triggers, so a trigger condition that shows no type reads as if the
+	// lowering forgot one.
+	"game.TriggerType": true,
+
+	// CostModifierKind(0) is CostModifierSpell. What a modifier applies to is
+	// the whole content of the modifier.
+	"game.CostModifierKind": true,
+
+	// StackObjectKind(0) is StackSpell. A match on stack object kind that
+	// states no kind reads as matching anything.
+	"game.StackObjectKind": true,
+
+	// EventHistoryWindow(0) is EventHistoryCurrentTurn. How far back a history
+	// condition looks is the condition.
+	"game.EventHistoryWindow": true,
 }
 
 // alwaysEmitFields are individual struct fields whose zero names a real value,

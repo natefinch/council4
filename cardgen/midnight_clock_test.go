@@ -40,7 +40,7 @@ func TestGenerateExecutableCardSourceMidnightClock(t *testing.T) {
 		"Event: game.EventBeginningOfStep",
 		"Step:  game.StepUpkeep",
 		// Nth-counter threshold trigger, keyed to hour counters crossing twelve.
-		"Type: game.TriggerWhen",
+		`Text: "When the twelfth hour counter is put on this artifact, shuffle your hand and graveyard into your library, then draw seven cards. Exile this artifact."`,
 		"Event:            game.EventCountersAdded",
 		"Source:           game.TriggerSourceSelf",
 		"MatchCounterKind: true",
@@ -54,7 +54,7 @@ func TestGenerateExecutableCardSourceMidnightClock(t *testing.T) {
 		"game.Exile{",
 		"Object: game.SourceCardPermanentReference()",
 	} {
-		if !strings.Contains(source, want) {
+		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
 		}
 	}

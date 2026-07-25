@@ -2,6 +2,7 @@ package g
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -25,23 +26,32 @@ func newWallOfOmens() *game.CardDef {
 			Toughness: opt.Val(game.PT{Value: 4}),
 			TriggeredAbilities: []game.TriggeredAbility{
 				game.TriggeredAbility{
+					Text: "When this creature enters, draw a card.",
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhen,
 						Pattern: game.TriggerPattern{
-							Event:  game.EventPermanentEnteredBattlefield,
-							Source: game.TriggerSourceSelf,
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
 						},
 					},
-					Content: game.Mode{
-						Sequence: []game.Instruction{
-							{
-								Primitive: game.Draw{
-									Amount: game.Fixed(1),
-									Player: game.ControllerReference(),
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Draw{
+											Amount: game.Fixed(1),
+											Player: game.ControllerReference(),
+										},
+									},
 								},
 							},
 						},
-					}.Ability(),
+						MinModes: 1,
+						MaxModes: 1,
+					},
 				},
 			},
 			OracleText: `

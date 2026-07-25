@@ -1,9 +1,6 @@
 package cardgen
 
-import (
-	"strings"
-	"testing"
-)
+import "testing"
 
 // TestGenerateExecutableNonHandSpellCostReduction exercises the static cast-cost
 // discount "Spells you cast from anywhere other than your hand cost {N} less to
@@ -32,13 +29,13 @@ func TestGenerateExecutableNonHandSpellCostReduction(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "SourceZones:      []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command},") {
+	if !containsNormalized(source, "SourceZones:      []zone.Type{zone.Graveyard, zone.Exile, zone.Library, zone.Command},") {
 		t.Fatalf("source missing non-hand SourceZones cost modifier:\n%s", source)
 	}
-	if !strings.Contains(source, "GenericReduction: 2,") {
+	if !containsNormalized(source, "GenericReduction: 2,") {
 		t.Fatalf("source missing {2} generic reduction:\n%s", source)
 	}
-	if !strings.Contains(source, "game.ForetellKeyword{Cost:") {
+	if !containsNormalized(source, "game.ForetellKeyword{Cost:") {
 		t.Fatalf("source missing Foretell keyword:\n%s", source)
 	}
 }

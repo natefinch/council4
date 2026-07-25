@@ -62,7 +62,7 @@ func TestGenerateExecutableCardSourceSpellCastTrigger(t *testing.T) {
 		"game.TriggerControllerOpponent",
 		"CardSelection: game.Selection{ColorsAny: []color.Color{color.Blue}}",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -430,10 +430,10 @@ func TestGenerateExecutableCardSourceConditionalCannotAttack(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "Kind:                            game.RuleEffectCantAttack") {
+	if !containsNormalized(source, "Kind: game.RuleEffectCantAttack") {
 		t.Fatalf("source missing can't-attack rule effect:\n%s", source)
 	}
-	if !strings.Contains(source, `AttackDefenderControlsSelection: game.Selection{SubtypesAny: []types.Sub{types.Sub("Island")}}`) {
+	if !containsNormalized(source, `AttackDefenderControlsSelection: game.Selection{SubtypesAny: []types.Sub{types.Island}}`) {
 		t.Fatalf("source missing defender-controls selection:\n%s", source)
 	}
 }
@@ -681,7 +681,7 @@ func TestGenerateExecutableCardSourceUntapDuringOtherUntapStep(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, want := range test.wantFields {
-				if !strings.Contains(source, want) {
+				if !containsNormalized(source, want) {
 					t.Fatalf("source missing %q:\n%s", want, source)
 				}
 			}
@@ -1004,11 +1004,11 @@ func TestGenerateExecutableCardSourceAuraBasePowerToughness(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"Layer:        game.LayerPowerToughnessSet,",
-		"SetPower:     opt.Val(game.PT{Value: 0}),",
+		"SetPower:     opt.Val(game.PT{}),",
 		"SetToughness: opt.Val(game.PT{Value: 2}),",
 		"game.AttachedObjectGroup(game.SourcePermanentReference())",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -1034,9 +1034,9 @@ func TestGenerateExecutableCardSourceAuraCharacteristicAddition(t *testing.T) {
 		"Layer:     game.LayerColor,",
 		"AddColors: []color.Color{color.Black},",
 		"Layer:       game.LayerType,",
-		"AddSubtypes: []types.Sub{types.Sub(\"Zombie\")},",
+		"AddSubtypes: []types.Sub{types.Zombie},",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -1501,22 +1501,22 @@ func TestGenerateExecutableCardSourceAllLandsTypeAddition(t *testing.T) {
 	for name, tc := range map[string]struct {
 		typeLine   string
 		oracleText string
-		subtype    string
+		subtypeRef string
 	}{
 		"yavimaya": {
 			typeLine:   "Legendary Land",
 			oracleText: "Each land is a Forest in addition to its other land types.",
-			subtype:    "Forest",
+			subtypeRef: "types.Forest",
 		},
 		"urborg": {
 			typeLine:   "Legendary Land",
 			oracleText: "Each land is a Swamp in addition to its other land types.",
-			subtype:    "Swamp",
+			subtypeRef: "types.Swamp",
 		},
 		"blanket of night": {
 			typeLine:   "Enchantment",
 			oracleText: "Each land is a Swamp in addition to its other land types.",
-			subtype:    "Swamp",
+			subtypeRef: "types.Swamp",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -1537,9 +1537,9 @@ func TestGenerateExecutableCardSourceAllLandsTypeAddition(t *testing.T) {
 			for _, wanted := range []string{
 				"Layer:       game.LayerType,",
 				"game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Land}})",
-				"AddSubtypes: []types.Sub{types.Sub(\"" + tc.subtype + "\")},",
+				"AddSubtypes: []types.Sub{" + tc.subtypeRef + "},",
 			} {
-				if !strings.Contains(source, wanted) {
+				if !containsNormalized(source, wanted) {
 					t.Fatalf("source missing %q:\n%s", wanted, source)
 				}
 			}
@@ -1795,7 +1795,7 @@ func TestGenerateExecutableCardSourceConditionalAttachedKeywordGrant(t *testing.
 		"Group: game.AttachedObjectGroup(game.SourcePermanentReference()),",
 		"game.Hexproof,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
@@ -1826,7 +1826,7 @@ func TestGenerateExecutableCardSourceConditionalEnchantedKeywordGrant(t *testing
 		"Group: game.AttachedObjectGroup(game.SourcePermanentReference()),",
 		"game.Hexproof,",
 	} {
-		if !strings.Contains(source, wanted) {
+		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
 		}
 	}
