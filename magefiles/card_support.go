@@ -27,7 +27,7 @@ const (
 // Use CardTree to generate the card tree into another repository without
 // touching council4 documentation.
 func CardSupport(ctx context.Context) error {
-	return cardSupport(ctx, "")
+	return generateCards(ctx, "")
 }
 
 // CardTree generates the compiled card tree into output, an existing directory
@@ -39,10 +39,10 @@ func CardTree(ctx context.Context, output string) error {
 	if output == "" {
 		return errors.New("cardTree requires an output directory; use cardSupport to generate into this repository")
 	}
-	return cardSupport(ctx, output)
+	return generateCards(ctx, output)
 }
 
-// cardSupport implements both card-generation targets. An empty output selects
+// generateCards implements both card-generation targets. An empty output selects
 // repository generation, which also refreshes the committed documentation.
 //
 // CardSupport and CardTree are separate exported targets rather than one target
@@ -51,7 +51,7 @@ func CardTree(ctx context.Context, output string) error {
 // *string, so mage refused to register it at all and `mage cardSupport` — the
 // command the README and docs/oracle-compiler-expansion.md tell contributors to
 // run — failed with "Unknown target".
-func cardSupport(ctx context.Context, output string) error {
+func generateCards(ctx context.Context, output string) error {
 	corpusPath, err := oracleCardsCachePath()
 	if err != nil {
 		return err
