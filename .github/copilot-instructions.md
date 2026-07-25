@@ -150,3 +150,28 @@ result proves zero behavioral change across every supported card, and the whole
 check takes only a few seconds. Use it for refactors that must not change output;
 for intentional behavior changes, confirm the diff is exactly the intended cards
 and explain every difference.
+
+### Test card support at the CardDef, not at the rendered source
+
+When adding card support, assert on the compiled `game.CardDef` with
+`assertCardPaths` / `assertCardPathsAbsent` / `assertCardUnsupported` rather than
+matching substrings of the renderer's Go output. A source match tests the
+renderer, but what a card-support change adds is lowering; it is also imprecise,
+because a substring matches anywhere in the file and happily passes against a
+different ability than the one under test. Keep a source assertion only when the
+property really is about the emitted text: that it parses, a constructor
+spelling, or a zero-valued enum held open by the generator's `alwaysEmitEnums`
+table.
+
+Test the capability, not the card: a table-driven test in the lowering or
+primitive's own file, covering the qualifying case and the near-miss that must
+fail closed, is what still catches a bug on the tenth card that uses it. Add a
+named-card test only when a card composes capabilities in a combination nothing
+else does. Do not ship a 400-line per-card `CardDef` literal.
+
+`card-fingerprints.txt` is the corpus-wide regression net: CI regenerates and
+commits a digest per supported card on every pull request, so the diff already
+shows exactly which cards a change altered. Read it instead of writing defensive
+assertions, and expect it to change only the cards the change claims to affect.
+
+See `cardgen/README.md` ("Testing convention") for the full rationale.

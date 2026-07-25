@@ -1056,6 +1056,109 @@ Cards outside compiler coverage remain unsupported by Card Generation. Truly
 exceptional mechanics may still use a hand-written **Card Implementation** with
 an `ImplementationID`; that escape hatch is independent of this compiler.
 
+## Testing convention
+
+Card-support work has three distinct things to test, and they belong in three
+distinct places. Putting them in the wrong place is what made a card pull
+request cost 300-600 lines of test code.
+
+### 1. Behaviour of a capability: table-driven, in the capability's own test file
+
+A pull request that adds a capability is adding a *capability*, not a card. The
+card is the occasion. Test the capability once, table-driven, in the test file
+for the lowering or primitive it belongs to, covering the boundaries that
+matter: the qualifying case, the near-miss that must fail closed, and each
+distinct wording that should reach it.
+
+That is the test that pays off, because it is the one that still fails when the
+tenth card using the same capability lowers wrongly.
+
+### 2. Composition of a specific card: `assertCardPaths`
+
+A named card deserves a test when it composes capabilities in a combination
+nothing else does. Assert on the compiled `game.CardDef`, not on rendered Go
+source:
+
+```go
+func TestKodamaOfTheEastTreeCompilesBothNewCapabilities(t *testing.T) {
+	t.Parallel()
+	card := kodamaEastTreeCard()
+	assertCardPaths(t, card,
+		"TriggeredAbilities[0].Trigger.Pattern.Event = game.EventPermanentEnteredBattlefield",
+		"TriggeredAbilities[0].Trigger.Pattern.ExcludeSelf = true",
+		"Sequence[0].Primitive.(game.ChooseFromZone).SourceZone = zone.Hand",
+	)
+	assertCardPathsAbsent(t, card, "TriggeredAbilities[1]", "Modes[0].Sequence[1]")
+}
+```
+
+`CompileCardDefs` runs the pipeline up to but not including rendering, and
+`cardDefPaths` flattens the result into one `path = value` line per non-zero
+leaf field, naming enums by their Go constant through the generated
+`enumSpelling` table. The helpers live in `carddef_assert_test.go`:
+
+- `assertCardPaths` — every listed substring must match some path line.
+- `assertCardPathsAbsent` — no path line may match. Use it to pin shape ("there
+  is no second ability") and fail-closed properties ("this carries no target").
+- `assertCardUnsupported` — the card must be refused, with a diagnostic
+  mentioning each given substring. Refusals are a feature; test them.
+- `pathValue` — the value at exactly one path, for asserting a *relation*
+  between two fields rather than an incidental literal.
+
+Why not match the rendered source? Because a source match tests the renderer,
+while what a card-support change adds is lowering. The two were coupled hard
+enough that a renderer refactor which altered no compiled card still had to
+rewrite roughly 120 assertions. Source matching is also imprecise: a substring
+matches anywhere in the file, so `"ExcludeSelf: true"` passes when a completely
+different ability sets it, and `"SetPower:"` passes for any card that sets a
+power at all. A path names one field of one value and cannot do either.
+
+The dump walks unexported state as well as exported fields, because several
+primitives keep their entire payload behind constructors — `game.CreateToken`
+holds the whole token specification in an unexported `TokenSource`. A non-zero
+value the walk cannot describe is emitted as `<unwalkable T>` rather than
+dropped, and `TestCardDefPathsWalkAllReachableState` fails on that marker. A
+test helper may be wrong, but it must never be silent.
+
+### 3. Rendering: only for properties that are genuinely about the text
+
+Keep a source-text assertion only when the property *is* a property of the
+emitted Go. There are three such cases, and they are rare:
+
+- the source parses or compiles,
+- a constructor spelling (`game.WardStaticAbility(...)`) is used,
+- a zero-valued enum is emitted because its type is in the generator's
+  `alwaysEmitEnums` table.
+
+That last one matters: those entries have no other test. Removing an
+`alwaysEmitEnums` entry silently erases the value from every generated card, so
+each entry keeps one pinning assertion (see `ojer_taq_test.go` and
+`giggling_skitterspike_test.go`). Do not convert those to path assertions.
+
+### Runtime behaviour: `mtg/rules`
+
+Engine behaviour belongs in `mtg/rules`, and it should be table-driven over the
+primitive, not written per card. The existing per-card files there are retained
+as a regression net; new work should extend a primitive's table instead of
+adding another 400-line card file.
+
+### The corpus is the regression net
+
+`card-fingerprints.txt` records a digest of every supported card's generated
+source, and CI regenerates and commits it on every pull request. The diff shows
+exactly which cards a change altered, so a change no longer needs a defensive
+hand-written assertion for every card it might have disturbed. An empty diff is
+proof that a refactor preserved behaviour across all of them.
+
+Read it as a review signal: a card pull request should change the fingerprints
+of the cards it claims to add, plus any it deliberately fixes, and nothing else.
+
+One caveat: the file is keyed to a Scryfall snapshot, so CI also adds and removes
+lines when Wizards prints new cards. Added or removed lines can be data drift;
+*changed* digests are always a code change. To rule data drift out entirely, run
+`compilecards` on the merge base and on the branch against the same
+`oracle-cards.json` and diff the two outputs.
+
 ## Golden snapshot harness
 
 `golden_test.go` snapshots, for a small curated set of representative cards,

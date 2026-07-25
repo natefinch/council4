@@ -2,9 +2,6 @@ package cardgen
 
 import (
 	"testing"
-
-	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // kodamaEastTreeCard builds the authoritative Kodama of the East Tree printing.
@@ -29,68 +26,38 @@ func kodamaEastTreeCard() *ScryfallCard {
 	}
 }
 
-// TestGenerateExecutableKodamaOfTheEastTreeSource proves the whole card lowers
-// with no diagnostics and threads both new capabilities to the runtime: the
-// choose-from-hand filter carries the event-relative ManaValueLessOrEqualEvent-
-// Permanent bound, and the enter trigger carries both ExcludeSelf ("another")
-// and the InterveningIfEventPermanentWasNotPutByThisAbilitySource provenance
-// guard, wrapped in an optional resolution ("you may").
-func TestGenerateExecutableKodamaOfTheEastTreeSource(t *testing.T) {
+// TestKodamaOfTheEastTreeCompilesBothNewCapabilities proves the whole card
+// compiles with no diagnostics and threads both new capabilities into the
+// CardDef: the choose-from-hand filter carries the event-relative
+// ManaValueLessOrEqualEventPermanent bound, and the enter trigger carries both
+// ExcludeSelf ("another") and the provenance guard, wrapped in an optional
+// resolution ("you may").
+func TestKodamaOfTheEastTreeCompilesBothNewCapabilities(t *testing.T) {
 	t.Parallel()
-	source, diagnostics, err := GenerateExecutableCardSource(kodamaEastTreeCard(), "k")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(diagnostics) != 0 {
-		t.Fatalf("diagnostics = %#v", diagnostics)
-	}
-	for _, want := range []string{
-		"game.ReachStaticBody",
-		"game.PartnerStaticBody",
-		"Event:       game.EventPermanentEnteredBattlefield",
-		"ExcludeSelf: true",
-		"InterveningIfEventPermanentWasNotPutByThisAbilitySource: true",
-		"Primitive: game.ChooseFromZone{",
-		"ManaValueLessOrEqualEventPermanent: true",
-		"Optional: true",
-	} {
-		if !containsNormalized(source, want) {
-			t.Fatalf("source missing %q:\n%s", want, source)
-		}
-	}
-}
-
-// TestKodamaEastTreeLowersPutFromHandChoice confirms the resolving effect lowers
-// to a single optional put-from-hand choice of exactly one card carrying the
-// event-relative mana-value bound, rather than any partial or over-permissive
-// shape.
-func TestKodamaEastTreeLowersPutFromHandChoice(t *testing.T) {
-	t.Parallel()
-	face := lowerSingleFace(t, kodamaEastTreeCard())
-	if len(face.TriggeredAbilities) != 1 {
-		t.Fatalf("triggered abilities = %d; want the single ETB put trigger", len(face.TriggeredAbilities))
-	}
-	trigger := face.TriggeredAbilities[0]
-	if !trigger.Trigger.Pattern.ExcludeSelf {
-		t.Fatalf("trigger pattern = %#v; want ExcludeSelf for \"another permanent\"", trigger.Trigger.Pattern)
-	}
-	if !trigger.Trigger.InterveningIfEventPermanentWasNotPutByThisAbilitySource {
-		t.Fatalf("trigger = %#v; want provenance intervening-if", trigger.Trigger)
-	}
-	mode := trigger.Content.Modes[0]
-	if len(mode.Sequence) != 1 || !mode.Sequence[0].Optional {
-		t.Fatalf("sequence = %#v; want one optional instruction", mode.Sequence)
-	}
-	choose, ok := mode.Sequence[0].Primitive.(game.ChooseFromZone)
-	if !ok {
-		t.Fatalf("primitive = %#v; want game.ChooseFromZone", mode.Sequence[0].Primitive)
-	}
-	if choose.SourceZone != zone.Hand || choose.Destination.Zone != zone.Battlefield {
-		t.Fatalf("choose zones = %v -> %v; want hand -> battlefield", choose.SourceZone, choose.Destination.Zone)
-	}
-	if !choose.Filter.ManaValueLessOrEqualEventPermanent {
-		t.Fatalf("choose filter = %#v; want ManaValueLessOrEqualEventPermanent", choose.Filter)
-	}
+	card := kodamaEastTreeCard()
+	assertCardPaths(t, card,
+		// Reach and Partner survive alongside the new trigger.
+		"StaticAbilities[0].KeywordAbilities[0].(game.SimpleKeyword).Kind = game.Reach",
+		"StaticAbilities[1].KeywordAbilities[0].(game.SimpleKeyword).Kind = game.Partner",
+		// "Whenever another permanent you control enters".
+		"TriggeredAbilities[0].Trigger.Pattern.Event = game.EventPermanentEnteredBattlefield",
+		"TriggeredAbilities[0].Trigger.Pattern.Controller = game.TriggerControllerYou",
+		"TriggeredAbilities[0].Trigger.Pattern.ExcludeSelf = true",
+		// "if it wasn't put onto the battlefield with this ability": the
+		// anti-recursion guard that stops one instance re-triggering on the
+		// permanent it put onto the battlefield.
+		"TriggeredAbilities[0].Trigger.InterveningIfEventPermanentWasNotPutByThisAbilitySource = true",
+		// "you may put a permanent card with equal or lesser mana value from
+		// your hand onto the battlefield", carrying the event-relative bound.
+		"TriggeredAbilities[0].Content.Modes[0].Sequence[0].Optional = true",
+		"Sequence[0].Primitive.(game.ChooseFromZone).SourceZone = zone.Hand",
+		"Sequence[0].Primitive.(game.ChooseFromZone).Destination.Zone = zone.Battlefield",
+		"Sequence[0].Primitive.(game.ChooseFromZone).Filter.ManaValueLessOrEqualEventPermanent = true",
+	)
+	// The shape must be exactly one trigger running exactly one instruction.
+	// An extra ability or instruction would mean the text lowered twice or
+	// partially, which the assertions above cannot detect on their own.
+	assertCardPathsAbsent(t, card, "TriggeredAbilities[1]", "Modes[0].Sequence[1]", "Content.Modes[1]")
 }
 
 // TestEventRelativeManaValueCastForFreeFailsClosed guards the anti-fail-open

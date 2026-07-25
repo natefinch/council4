@@ -34,36 +34,95 @@ func (g ExecutableGenerator) GenerateCardSource(
 	card *ScryfallCard,
 	pkgName string,
 ) (string, []shared.Diagnostic, error) {
-	if DisownedCard(*card) {
-		return "", []shared.Diagnostic{{
+	compiled, diagnostics, err := compileValidatedCardDefs(card)
+	if err != nil || len(diagnostics) > 0 {
+		return "", diagnostics, err
+	}
+
+	source, err := (Renderer{IdentifierSuffix: g.IdentifierSuffix}).RenderCardSource(card, compiled.Defs, faceHintsFrom(compiled.FaceAbilities), pkgName)
+	if err != nil {
+		return "", nil, err
+	}
+	return source, nil, nil
+}
+
+// CompileCardDefs runs the pipeline up to, but not including, rendering: it
+// lowers every face, assembles the game.CardDef values, and validates them.
+//
+// This is the seam tests should assert against. A test that matches on rendered
+// Go source is really testing the renderer, while what a card-support change
+// adds is lowering; the two were coupled hard enough that a renderer refactor
+// which altered no compiled card still had to rewrite roughly 120 assertions.
+// Asserting on the CardDef is both cheaper to maintain and more precise, because
+// a field path cannot accidentally match text belonging to a different ability.
+//
+// An unsupported card returns nil defs alongside its diagnostics, exactly as
+// GenerateExecutableCardSource does, including the corpus-policy refusals for
+// disowned cards and unsupported layouts.
+func CompileCardDefs(card *ScryfallCard) ([]*game.CardDef, []shared.Diagnostic, error) {
+	compiled, diagnostics, err := compileValidatedCardDefs(card)
+	return compiled.Defs, diagnostics, err
+}
+
+// corpusPolicyRefusal reports the diagnostic refusing a card the generator never
+// emits regardless of whether its text lowers.
+//
+// These are identity refusals rather than capability gaps: a disowned card is on
+// a curated exclusion list, and an unsupported layout would otherwise be lowered
+// as if it were a normal card, because cardLayoutValue maps an unknown layout to
+// LayoutNormal.
+func corpusPolicyRefusal(card *ScryfallCard) (shared.Diagnostic, bool) {
+	switch {
+	case DisownedCard(*card):
+		return shared.Diagnostic{
 			Severity: shared.SeverityWarning,
 			Summary:  "disowned card excluded from generation",
 			Detail:   fmt.Sprintf("%q is a disowned card and is never generated", card.Name),
-		}}, nil
-	}
-	if !supportedLayouts[card.Layout] {
-		return "", []shared.Diagnostic{{
+		}, true
+	case !supportedLayouts[card.Layout]:
+		return shared.Diagnostic{
 			Severity: shared.SeverityWarning,
 			Summary:  "unsupported card layout",
 			Detail:   fmt.Sprintf("the source generator does not support Scryfall layout %q", card.Layout),
-		}}, nil
-	}
-	if layoutEmitsAlternate(card.Layout) && len(card.CardFaces) > 2 {
-		return "", []shared.Diagnostic{{
+		}, true
+	case layoutEmitsAlternate(card.Layout) && len(card.CardFaces) > 2:
+		return shared.Diagnostic{
 			Severity: shared.SeverityWarning,
 			Summary:  "unsupported card layout",
 			Detail:   fmt.Sprintf("the source generator supports at most 2 faces for %q layout cards, found %d", card.Layout, len(card.CardFaces)),
-		}}, nil
+		}, true
 	}
+	return shared.Diagnostic{}, false
+}
 
+// compiledCard is one card's validated CardDefs alongside the lowering results
+// the renderer needs for presentation hints and nothing outside this package
+// should see.
+type compiledCard struct {
+	Defs          []*game.CardDef
+	FaceAbilities []loweredFaceAbilities
+}
+
+// compileValidatedCardDefs applies the corpus-policy refusals, then lowers,
+// assembles, and validates a card, returning a zero compiledCard when the card
+// is unsupported.
+//
+// The refusals live here rather than in GenerateCardSource so that every entry
+// point shares them. When they sat in the renderer-facing path, CompileCardDefs
+// happily compiled a disowned card into a full CardDef with no diagnostics, so
+// a test could assert a card was supported that production never generates, and
+// assertCardUnsupported could not test the very refusals it advertises.
+func compileValidatedCardDefs(card *ScryfallCard) (compiledCard, []shared.Diagnostic, error) {
+	if refusal, refused := corpusPolicyRefusal(card); refused {
+		return compiledCard{}, []shared.Diagnostic{refusal}, nil
+	}
 	faceAbilities, diagnostics := lowerExecutableFaces(card)
 	if len(diagnostics) > 0 {
-		return "", diagnostics, nil
+		return compiledCard{}, diagnostics, nil
 	}
-
 	defs, err := assembleCardDefs(card, faceAbilities)
 	if err != nil {
-		return "", nil, err
+		return compiledCard{}, nil, err
 	}
 	var validationDiagnostics []shared.Diagnostic
 	for _, def := range defs {
@@ -76,14 +135,9 @@ func (g ExecutableGenerator) GenerateCardSource(
 		}
 	}
 	if len(validationDiagnostics) > 0 {
-		return "", validationDiagnostics, nil
+		return compiledCard{}, validationDiagnostics, nil
 	}
-
-	source, err := (Renderer{IdentifierSuffix: g.IdentifierSuffix}).RenderCardSource(card, defs, faceHintsFrom(faceAbilities), pkgName)
-	if err != nil {
-		return "", nil, err
-	}
-	return source, nil, nil
+	return compiledCard{Defs: defs, FaceAbilities: faceAbilities}, nil, nil
 }
 
 // faceHintsFrom converts the typed lowering results into narrow rendering hints.

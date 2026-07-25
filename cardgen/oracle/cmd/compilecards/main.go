@@ -23,6 +23,7 @@ type config struct {
 	unsupportedPath        string
 	unsupportedReasonsPath string
 	readmePath             string
+	fingerprintsPath       string
 	workers                int
 }
 
@@ -98,6 +99,7 @@ func parseFlags(args []string) (config, error) {
 	flags.StringVar(&cfg.unsupportedPath, "unsupported", "", "unsupported-card Markdown path")
 	flags.StringVar(&cfg.unsupportedReasonsPath, "unsupported-reasons", "", "card-support planning Markdown path")
 	flags.StringVar(&cfg.readmePath, "readme", "", "README path whose card-support block should be updated")
+	flags.StringVar(&cfg.fingerprintsPath, "fingerprints", "", "corpus fingerprint manifest path")
 	flags.IntVar(&cfg.workers, "workers", runtime.NumCPU(), "number of compiler workers")
 	if err := flags.Parse(args); err != nil {
 		return config{}, err

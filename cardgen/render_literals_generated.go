@@ -1772,3 +1772,248 @@ var zoneTypeLiterals = map[zone.Type]string{
 	zone.Exile:       "zone.Exile",
 	zone.Command:     "zone.Command",
 }
+
+// enumSpelling names any generated enum value, reporting false for a value of
+// any other type or a constant this package does not know.
+func enumSpelling(v any) (string, bool) {
+	switch value := v.(type) {
+	case color.Color:
+		name, ok := colorColorLiterals[value]
+		return name, ok
+	case compare.Op:
+		name, ok := compareOpLiterals[value]
+		return name, ok
+	case cost.AdditionalDynamicAmount:
+		name, ok := costAdditionalDynamicAmountLiterals[value]
+		return name, ok
+	case cost.AdditionalKind:
+		name, ok := costAdditionalKindLiterals[value]
+		return name, ok
+	case cost.AlternativeCondition:
+		name, ok := costAlternativeConditionLiterals[value]
+		return name, ok
+	case cost.AlternativeMechanic:
+		name, ok := costAlternativeMechanicLiterals[value]
+		return name, ok
+	case cost.PowerContributionKind:
+		name, ok := costPowerContributionKindLiterals[value]
+		return name, ok
+	case cost.SymbolKind:
+		name, ok := costSymbolKindLiterals[value]
+		return name, ok
+	case counter.Kind:
+		name, ok := counterKindLiterals[value]
+		return name, ok
+	case game.AggregateKind:
+		name, ok := gameAggregateKindLiterals[value]
+		return name, ok
+	case game.AttackRecipientKind:
+		return flagsSpelling(value, gameAttackRecipientKindFlags)
+	case game.BlockerRestrictionKind:
+		name, ok := gameBlockerRestrictionKindLiterals[value]
+		return name, ok
+	case game.CardLayout:
+		name, ok := gameCardLayoutLiterals[value]
+		return name, ok
+	case game.CardReferenceKind:
+		name, ok := gameCardReferenceKindLiterals[value]
+		return name, ok
+	case game.ChoiceKey:
+		name, ok := gameChoiceKeyLiterals[value]
+		return name, ok
+	case game.ChooseCount:
+		name, ok := gameChooseCountLiterals[value]
+		return name, ok
+	case game.ChooseGrouping:
+		name, ok := gameChooseGroupingLiterals[value]
+		return name, ok
+	case game.ChoosePosition:
+		name, ok := gameChoosePositionLiterals[value]
+		return name, ok
+	case game.ColorChoiceSource:
+		name, ok := gameColorChoiceSourceLiterals[value]
+		return name, ok
+	case game.CombatStateFilter:
+		name, ok := gameCombatStateFilterLiterals[value]
+		return name, ok
+	case game.ContinuousLayer:
+		name, ok := gameContinuousLayerLiterals[value]
+		return name, ok
+	case game.ControlPlayerScope:
+		name, ok := gameControlPlayerScopeLiterals[value]
+		return name, ok
+	case game.ControllerRelation:
+		name, ok := gameControllerRelationLiterals[value]
+		return name, ok
+	case game.CostModifierKind:
+		name, ok := gameCostModifierKindLiterals[value]
+		return name, ok
+	case game.CounterSourceKind:
+		name, ok := gameCounterSourceKindLiterals[value]
+		return name, ok
+	case game.CounteredSpellDestination:
+		name, ok := gameCounteredSpellDestinationLiterals[value]
+		return name, ok
+	case game.DamageRecipientKind:
+		return flagsSpelling(value, gameDamageRecipientKindFlags)
+	case game.DelayedTriggerTiming:
+		name, ok := gameDelayedTriggerTimingLiterals[value]
+		return name, ok
+	case game.DelayedTriggerWindow:
+		name, ok := gameDelayedTriggerWindowLiterals[value]
+		return name, ok
+	case game.DigRemainder:
+		name, ok := gameDigRemainderLiterals[value]
+		return name, ok
+	case game.DynamicAmountKind:
+		name, ok := gameDynamicAmountKindLiterals[value]
+		return name, ok
+	case game.DynamicValueKind:
+		name, ok := gameDynamicValueKindLiterals[value]
+		return name, ok
+	case game.EffectDuration:
+		name, ok := gameEffectDurationLiterals[value]
+		return name, ok
+	case game.EffectResultAmountKind:
+		name, ok := gameEffectResultAmountKindLiterals[value]
+		return name, ok
+	case game.EventHistoryWindow:
+		name, ok := gameEventHistoryWindowLiterals[value]
+		return name, ok
+	case game.EventKind:
+		name, ok := gameEventKindLiterals[value]
+		return name, ok
+	case game.FaceDownKind:
+		name, ok := gameFaceDownKindLiterals[value]
+		return name, ok
+	case game.FaceIndex:
+		name, ok := gameFaceIndexLiterals[value]
+		return name, ok
+	case game.GroupReferenceDomain:
+		name, ok := gameGroupReferenceDomainLiterals[value]
+		return name, ok
+	case game.IterativeLibraryStop:
+		name, ok := gameIterativeLibraryStopLiterals[value]
+		return name, ok
+	case game.Keyword:
+		name, ok := gameKeywordLiterals[value]
+		return name, ok
+	case game.ManaSpendConditionKind:
+		name, ok := gameManaSpendConditionKindLiterals[value]
+		return name, ok
+	case game.ManaSpendRestrictionKind:
+		name, ok := gameManaSpendRestrictionKindLiterals[value]
+		return name, ok
+	case game.MobilizeDynamicKind:
+		name, ok := gameMobilizeDynamicKindLiterals[value]
+		return name, ok
+	case game.ModeChoiceCondition:
+		name, ok := gameModeChoiceConditionLiterals[value]
+		return name, ok
+	case game.ObjectReferenceKind:
+		name, ok := gameObjectReferenceKindLiterals[value]
+		return name, ok
+	case game.OwnerRelation:
+		name, ok := gameOwnerRelationLiterals[value]
+		return name, ok
+	case game.PermanentChoiceExtremum:
+		name, ok := gamePermanentChoiceExtremumLiterals[value]
+		return name, ok
+	case game.PlayerGroupReferenceKind:
+		name, ok := gamePlayerGroupReferenceKindLiterals[value]
+		return name, ok
+	case game.PlayerID:
+		name, ok := gamePlayerIDLiterals[value]
+		return name, ok
+	case game.PlayerReferenceKind:
+		name, ok := gamePlayerReferenceKindLiterals[value]
+		return name, ok
+	case game.PlayerRelation:
+		name, ok := gamePlayerRelationLiterals[value]
+		return name, ok
+	case game.ResolutionChoiceColorSource:
+		name, ok := gameResolutionChoiceColorSourceLiterals[value]
+		return name, ok
+	case game.ResolutionChoiceKind:
+		name, ok := gameResolutionChoiceKindLiterals[value]
+		return name, ok
+	case game.RuleEffectKind:
+		name, ok := gameRuleEffectKindLiterals[value]
+		return name, ok
+	case game.SacrificeFallbackKind:
+		name, ok := gameSacrificeFallbackKindLiterals[value]
+		return name, ok
+	case game.SearchFailToFindPolicy:
+		name, ok := gameSearchFailToFindPolicyLiterals[value]
+		return name, ok
+	case game.SearchPosition:
+		name, ok := gameSearchPositionLiterals[value]
+		return name, ok
+	case game.SourcePowerToughness:
+		name, ok := gameSourcePowerToughnessLiterals[value]
+		return name, ok
+	case game.SpellTargetRequirementKind:
+		name, ok := gameSpellTargetRequirementKindLiterals[value]
+		return name, ok
+	case game.StackObjectKind:
+		name, ok := gameStackObjectKindLiterals[value]
+		return name, ok
+	case game.Step:
+		name, ok := gameStepLiterals[value]
+		return name, ok
+	case game.SubtypeChoiceSource:
+		name, ok := gameSubtypeChoiceSourceLiterals[value]
+		return name, ok
+	case game.TargetAllow:
+		return flagsSpelling(value, gameTargetAllowFlags)
+	case game.TargetChooser:
+		name, ok := gameTargetChooserLiterals[value]
+		return name, ok
+	case game.TargetGate:
+		name, ok := gameTargetGateLiterals[value]
+		return name, ok
+	case game.TimingRestriction:
+		name, ok := gameTimingRestrictionLiterals[value]
+		return name, ok
+	case game.TokenCopySource:
+		name, ok := gameTokenCopySourceLiterals[value]
+		return name, ok
+	case game.TriState:
+		name, ok := gameTriStateLiterals[value]
+		return name, ok
+	case game.TriggerControllerFilter:
+		name, ok := gameTriggerControllerFilterLiterals[value]
+		return name, ok
+	case game.TriggerPlayerFilter:
+		name, ok := gameTriggerPlayerFilterLiterals[value]
+		return name, ok
+	case game.TriggerSourceFilter:
+		name, ok := gameTriggerSourceFilterLiterals[value]
+		return name, ok
+	case game.TriggerSubjectObject:
+		name, ok := gameTriggerSubjectObjectLiterals[value]
+		return name, ok
+	case game.TriggerTurnRelation:
+		name, ok := gameTriggerTurnRelationLiterals[value]
+		return name, ok
+	case game.TriggerType:
+		name, ok := gameTriggerTypeLiterals[value]
+		return name, ok
+	case mana.Color:
+		name, ok := manaColorLiterals[value]
+		return name, ok
+	case types.Card:
+		name, ok := typesCardLiterals[value]
+		return name, ok
+	case types.Sub:
+		name, ok := typesSubLiterals[value]
+		return name, ok
+	case types.Super:
+		name, ok := typesSuperLiterals[value]
+		return name, ok
+	case zone.Type:
+		name, ok := zoneTypeLiterals[value]
+		return name, ok
+	}
+	return "", false
+}

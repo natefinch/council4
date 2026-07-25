@@ -165,3 +165,16 @@ func openStringLiteral[T ~string](literals map[T]string, kind string, v T) (stri
 	}
 	return kind + "(" + strconv.Quote(string(v)) + ")", nil
 }
+
+// flagsSpelling names a bitmask value for enumSpelling, reporting false when the
+// value sets an undeclared bit.
+//
+// The zero value names no flags, which reads as an empty spelling rather than an
+// error: for a bitmask, "nothing set" is a legitimate state.
+func flagsSpelling[T bitmaskValue](v T, flags []enumFlag[T]) (string, bool) {
+	spelling, err := bitmaskLiteral(flags, "flags", v)
+	if err != nil {
+		return "", false
+	}
+	return spelling, true
+}

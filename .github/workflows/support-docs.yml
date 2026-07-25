@@ -1,11 +1,16 @@
 name: Keep card-support docs current
 
 # Card-support changes are expected to refresh the committed card-support
-# documentation (supported.md, unsupported.md, unsupported-reasons.md, and the
-# README summary), but that step is easy to forget. On every pull request this
-# regenerates them from the current Oracle corpus and, when they differ, commits
-# the refreshed docs back to the PR branch so the page that reads them (and anyone
-# browsing the repo) always sees accurate data.
+# documentation (supported.md, unsupported.md, unsupported-reasons.md, the README
+# summary, and card-fingerprints.txt), but that step is easy to forget. On every
+# pull request this regenerates them from the current Oracle corpus and, when they
+# differ, commits the refreshed docs back to the PR branch so the page that reads
+# them (and anyone browsing the repo) always sees accurate data.
+#
+# card-fingerprints.txt is the corpus-wide regression net: one digest per
+# supported card, so the committed diff shows a reviewer exactly which cards a
+# pull request changed. That is what lets a card pull request stop shipping a
+# defensive hand-written assertion for every card it might have disturbed.
 #
 # unsupported-reasons.md matters most here: it carries the greedy unblock roadmap
 # ranking which capability gaps block the most cards, so it is the input to
@@ -66,15 +71,22 @@ jobs:
       - name: Regenerate card-support docs
         run: go run github.com/magefile/mage@v1.15.0 supportDocs
 
+      # Commit whatever the regeneration changed rather than a hardcoded file
+      # list. The list already drifted once: it lived in two places, only
+      # supported.md was wired into CI, and unsupported-reasons.md (which carries
+      # the roadmap that picks the next card-support task) went stale for weeks.
+      # A list here would be a third copy, so this stages tracked modifications
+      # instead. supportDocs writes the generated card tree to a temp directory
+      # outside the repository, so nothing else in the worktree can change.
       - name: Commit card-support docs when they changed
         run: |
-          docs="supported.md unsupported.md unsupported-reasons.md README.md"
-          if git diff --quiet -- $docs; then
+          if git diff --quiet; then
             echo "Card-support docs are already up to date."
             exit 0
           fi
+          echo "Regenerated files:"
+          git diff --stat
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- $docs
-          git commit -m "Regenerate card-support docs"
+          git commit -a -m "Regenerate card-support docs"
           git push origin "HEAD:${{ github.head_ref }}"
