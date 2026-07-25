@@ -56,14 +56,53 @@ func (g ExecutableGenerator) GenerateCardSource(
 		}}, nil
 	}
 
-	faceAbilities, diagnostics := lowerExecutableFaces(card)
-	if len(diagnostics) > 0 {
-		return "", diagnostics, nil
+	compiled, diagnostics, err := compileValidatedCardDefs(card)
+	if err != nil || len(diagnostics) > 0 {
+		return "", diagnostics, err
 	}
 
-	defs, err := assembleCardDefs(card, faceAbilities)
+	source, err := (Renderer{IdentifierSuffix: g.IdentifierSuffix}).RenderCardSource(card, compiled.Defs, faceHintsFrom(compiled.FaceAbilities), pkgName)
 	if err != nil {
 		return "", nil, err
+	}
+	return source, nil, nil
+}
+
+// CompileCardDefs runs the pipeline up to, but not including, rendering: it
+// lowers every face, assembles the game.CardDef values, and validates them.
+//
+// This is the seam tests should assert against. A test that matches on rendered
+// Go source is really testing the renderer, while what a card-support change
+// adds is lowering; the two were coupled hard enough that a renderer refactor
+// which altered no compiled card still had to rewrite roughly 120 assertions.
+// Asserting on the CardDef is both cheaper to maintain and more precise, because
+// a field path cannot accidentally match text belonging to a different ability.
+//
+// An unsupported card returns nil defs alongside its diagnostics, exactly as
+// GenerateExecutableCardSource does.
+func CompileCardDefs(card *ScryfallCard) ([]*game.CardDef, []shared.Diagnostic, error) {
+	compiled, diagnostics, err := compileValidatedCardDefs(card)
+	return compiled.Defs, diagnostics, err
+}
+
+// compiledCard is one card's validated CardDefs alongside the lowering results
+// the renderer needs for presentation hints and nothing outside this package
+// should see.
+type compiledCard struct {
+	Defs          []*game.CardDef
+	FaceAbilities []loweredFaceAbilities
+}
+
+// compileValidatedCardDefs lowers, assembles, and validates a card, returning a
+// zero compiledCard when the card is unsupported.
+func compileValidatedCardDefs(card *ScryfallCard) (compiledCard, []shared.Diagnostic, error) {
+	faceAbilities, diagnostics := lowerExecutableFaces(card)
+	if len(diagnostics) > 0 {
+		return compiledCard{}, diagnostics, nil
+	}
+	defs, err := assembleCardDefs(card, faceAbilities)
+	if err != nil {
+		return compiledCard{}, nil, err
 	}
 	var validationDiagnostics []shared.Diagnostic
 	for _, def := range defs {
@@ -76,14 +115,9 @@ func (g ExecutableGenerator) GenerateCardSource(
 		}
 	}
 	if len(validationDiagnostics) > 0 {
-		return "", validationDiagnostics, nil
+		return compiledCard{}, validationDiagnostics, nil
 	}
-
-	source, err := (Renderer{IdentifierSuffix: g.IdentifierSuffix}).RenderCardSource(card, defs, faceHintsFrom(faceAbilities), pkgName)
-	if err != nil {
-		return "", nil, err
-	}
-	return source, nil, nil
+	return compiledCard{Defs: defs, FaceAbilities: faceAbilities}, nil, nil
 }
 
 // faceHintsFrom converts the typed lowering results into narrow rendering hints.

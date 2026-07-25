@@ -106,6 +106,7 @@ func documentationArgs() []string {
 		"-unsupported", "unsupported.md",
 		"-unsupported-reasons", "unsupported-reasons.md",
 		"-readme", "README.md",
+		"-fingerprints", "card-fingerprints.txt",
 	}
 }
 

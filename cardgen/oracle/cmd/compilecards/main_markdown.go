@@ -37,6 +37,11 @@ func writeSupportDocumentation(cfg config, output report, results []result) erro
 			return err
 		}
 	}
+	if cfg.fingerprintsPath != "" {
+		if err := writeFingerprints(cfg.fingerprintsPath, results); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

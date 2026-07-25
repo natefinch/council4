@@ -16,6 +16,7 @@ func renderLiterals(enums []enumType) ([]byte, error) {
 	if err := writeTables(&b, enums); err != nil {
 		return nil, err
 	}
+	writeEnumSpelling(&b, enums)
 	src, err := format.Source([]byte(b.String()))
 	if err != nil {
 		return nil, fmt.Errorf("formatting generated source: %w", err)
@@ -75,4 +76,28 @@ func writeFlags(b *strings.Builder, e enumType) error {
 	}
 	_, _ = b.WriteString("}\n\n")
 	return nil
+}
+
+// writeEnumSpelling emits a type switch naming any enum value.
+//
+// The generator exists because reflection cannot enumerate constants, and this
+// is where test code needs exactly that: a CardDef dump that prints
+// "Event = game.EventPermanentEnteredBattlefield" rather than "Event = 3". The
+// walk itself stays reflective, so the two tools are used for what each can
+// uniquely do. Every enum the renderer knows is covered, so a new constant
+// becomes readable in test failures the moment this file is regenerated.
+func writeEnumSpelling(b *strings.Builder, enums []enumType) {
+	_, _ = b.WriteString("// enumSpelling names any generated enum value, reporting false for a value of\n")
+	_, _ = b.WriteString("// any other type or a constant this package does not know.\n")
+	_, _ = b.WriteString("func enumSpelling(v any) (string, bool) {\n")
+	_, _ = b.WriteString("\tswitch value := v.(type) {\n")
+	for _, e := range enums {
+		_, _ = fmt.Fprintf(b, "\tcase %s:\n", e.Ref())
+		if isBitmask(e) {
+			_, _ = fmt.Fprintf(b, "\t\treturn flagsSpelling(value, %s)\n", e.FlagsName())
+			continue
+		}
+		_, _ = fmt.Fprintf(b, "\t\tname, ok := %s[value]\n\t\treturn name, ok\n", e.TableName())
+	}
+	_, _ = b.WriteString("\t}\n\treturn \"\", false\n}\n")
 }

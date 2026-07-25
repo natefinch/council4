@@ -3,12 +3,7 @@ package cardgen
 import (
 	"go/parser"
 	"go/token"
-	"strings"
 	"testing"
-
-	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 const nightmareShepherdOracleText = "Flying\nWhenever another nontoken creature you control dies, you may exile it. If you do, create a token that's a copy of that creature, except it's 1/1 and it's a Nightmare in addition to its other types."
@@ -25,51 +20,62 @@ func nightmareShepherdCard() *ScryfallCard {
 	}
 }
 
-func TestLowerNightmareShepherdComposesEventExileAndLKICopy(t *testing.T) {
+// TestNightmareShepherdComposesEventExileAndLKICopy proves the card's three
+// capabilities compose into one CardDef: a died trigger restricted to another
+// nontoken creature you control, an optional exile of the card the event names
+// (reached in the graveyard, because the permanent has already left the
+// battlefield), and an "if you do" gate on a token that copies the dead
+// creature except for its printed 1/1 body and added Nightmare type.
+//
+// The copy specification lives in game.CreateToken's unexported TokenSource, so
+// these assertions are only meaningful because the dumper walks unexported
+// state; see TestCardDefPathsWalkAllReachableState.
+func TestNightmareShepherdComposesEventExileAndLKICopy(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFace(t, nightmareShepherdCard())
-	if len(face.TriggeredAbilities) != 1 {
-		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	card := nightmareShepherdCard()
+	assertCardPaths(t, card,
+		"StaticAbilities[0].KeywordAbilities[0].(game.SimpleKeyword).Kind = game.Flying",
+		// "Whenever another nontoken creature you control dies".
+		"Trigger.Pattern.Event = game.EventPermanentDied",
+		"Trigger.Pattern.Controller = game.TriggerControllerYou",
+		"Trigger.Pattern.ExcludeSelf = true",
+		"Trigger.Pattern.SubjectSelection.RequiredTypes[0] = types.Creature",
+		"Trigger.Pattern.SubjectSelection.NonToken = true",
+		// "you may exile it": the card the event names, taken from the
+		// graveyard it has already reached, publishing a link the copy reads.
+		"Sequence[0].Primitive.(game.MoveCard).Card.Kind = game.CardReferenceEvent",
+		"Sequence[0].Primitive.(game.MoveCard).FromZone = zone.Graveyard",
+		"Sequence[0].Primitive.(game.MoveCard).Destination = zone.Exile",
+		`Sequence[0].Primitive.(game.MoveCard).PublishLinked = "event-card-exile-copy"`,
+		"Sequence[0].Primitive.(game.MoveCard).ReplacePublishedLinked = true",
+		"Sequence[0].Primitive.(game.MoveCard).IncludeEventPermanentComponents = true",
+		"Sequence[0].Optional = true",
+		// "If you do": the token is created only when the exile succeeded.
+		"Sequence[1].ResultGate.Val.Succeeded = game.TriTrue",
+		// "a token that's a copy of that creature, except it's 1/1 and it's a
+		// Nightmare in addition to its other types".
+		"Sequence[1].Primitive.(game.CreateToken).Source.copy.Source = game.TokenCopySourceObject",
+		"Sequence[1].Primitive.(game.CreateToken).Source.copy.Object.kind = game.ObjectReferenceLinkedObject",
+		`Sequence[1].Primitive.(game.CreateToken).Source.copy.Object.linkID = "event-card-exile-copy"`,
+		"Sequence[1].Primitive.(game.CreateToken).Source.copy.SetPower.Val.Value = 1",
+		"Sequence[1].Primitive.(game.CreateToken).Source.copy.SetToughness.Val.Value = 1",
+		"Sequence[1].Primitive.(game.CreateToken).Source.copy.AddSubtypes[0] = types.Nightmare",
+	)
+	// The gate must name the exile's own published result rather than some
+	// other key, and the ability must be exactly the two instructions.
+	paths := cardDefPaths(t, card)
+	published := pathValue(t, paths, "Sequence[0].PublishResult")
+	gated := pathValue(t, paths, "Sequence[1].ResultGate.Val.Key")
+	if published != gated {
+		t.Fatalf("exile publishes %s but the token gate reads %s, want the same key", published, gated)
 	}
-	trigger := face.TriggeredAbilities[0]
-	pattern := trigger.Trigger.Pattern
-	if pattern.Event != game.EventPermanentDied ||
-		pattern.Controller != game.TriggerControllerYou ||
-		!pattern.ExcludeSelf ||
-		!pattern.SubjectSelection.NonToken ||
-		len(pattern.SubjectSelection.RequiredTypes) != 1 ||
-		pattern.SubjectSelection.RequiredTypes[0] != types.Creature {
-		t.Fatalf("trigger pattern = %#v", pattern)
-	}
-	sequence := trigger.Content.Modes[0].Sequence
-	if len(sequence) != 2 {
-		t.Fatalf("sequence length = %d, want exile then copy", len(sequence))
-	}
-	move, ok := sequence[0].Primitive.(game.MoveCard)
-	if !ok || move.Card.Kind != game.CardReferenceEvent ||
-		move.FromZone != zone.Graveyard || move.Destination != zone.Exile ||
-		!move.ReplacePublishedLinked ||
-		!move.IncludeEventPermanentComponents ||
-		!sequence[0].Optional || sequence[0].PublishResult == "" {
-		t.Fatalf("exile instruction = %#v", sequence[0])
-	}
-	create, ok := sequence[1].Primitive.(game.CreateToken)
-	if !ok || !sequence[1].ResultGate.Exists ||
-		sequence[1].ResultGate.Val.Key != sequence[0].PublishResult ||
-		sequence[1].ResultGate.Val.Succeeded != game.TriTrue {
-		t.Fatalf("create instruction = %#v", sequence[1])
-	}
-	spec, ok := create.Source.TokenCopy()
-	if !ok || spec.Source != game.TokenCopySourceObject ||
-		spec.Object.Kind() != game.ObjectReferenceLinkedObject ||
-		!spec.SetPower.Exists || spec.SetPower.Val.Value != 1 ||
-		!spec.SetToughness.Exists || spec.SetToughness.Val.Value != 1 ||
-		len(spec.AddSubtypes) != 1 || spec.AddSubtypes[0] != types.Nightmare {
-		t.Fatalf("copy spec = %#v", spec)
-	}
+	assertCardPathsAbsent(t, card, "Modes[0].Sequence[2]", "TriggeredAbilities[1]")
 }
 
-func TestGenerateExecutableNightmareShepherdSource(t *testing.T) {
+// TestGenerateExecutableNightmareShepherdSourceParses keeps one renderer-level
+// check on this card: the emitted Go must actually parse. That is a property of
+// the rendered text and cannot be expressed as a CardDef assertion.
+func TestGenerateExecutableNightmareShepherdSourceParses(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(nightmareShepherdCard(), "n")
 	if err != nil {
@@ -77,24 +83,6 @@ func TestGenerateExecutableNightmareShepherdSource(t *testing.T) {
 	}
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
-	}
-	for _, want := range []string{
-		"game.EventPermanentDied",
-		"ExcludeSelf:",
-		"NonToken: true",
-		"game.CardReferenceEvent",
-		"ReplacePublishedLinked:",
-		"IncludeEventPermanentComponents:",
-		"game.LinkedObjectReference(\"event-card-exile-copy\")",
-		"SetPower:",
-		"SetToughness:",
-		"types.Nightmare",
-		"PublishResult:",
-		"ResultGate:",
-	} {
-		if !strings.Contains(source, want) {
-			t.Fatalf("generated source missing %q:\n%s", want, source)
-		}
 	}
 	if _, err := parser.ParseFile(token.NewFileSet(), "nightmare_shepherd.go", source, parser.AllErrors); err != nil {
 		t.Fatalf("generated source does not parse: %v\n%s", err, source)

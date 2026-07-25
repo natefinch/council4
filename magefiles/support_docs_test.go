@@ -76,4 +76,5 @@ func assertDocumentationArgs(t *testing.T, args []string) {
 	assertArgPair(t, args, "-unsupported", "unsupported.md")
 	assertArgPair(t, args, "-unsupported-reasons", "unsupported-reasons.md")
 	assertArgPair(t, args, "-readme", "README.md")
+	assertArgPair(t, args, "-fingerprints", "card-fingerprints.txt")
 }
