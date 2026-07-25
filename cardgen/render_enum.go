@@ -70,22 +70,7 @@ func renderManaSymbol(ctx *renderCtx, symbol cost.Symbol) (string, error) {
 }
 
 func renderManaColor(c mana.Color) (string, error) {
-	switch c {
-	case mana.W:
-		return "mana.W", nil
-	case mana.U:
-		return "mana.U", nil
-	case mana.B:
-		return "mana.B", nil
-	case mana.R:
-		return "mana.R", nil
-	case mana.G:
-		return "mana.G", nil
-	case mana.C:
-		return "mana.C", nil
-	default:
-		return "", fmt.Errorf("render: unsupported mana color %q", string(c))
-	}
+	return enumLiteral(manaColorLiterals, "mana color", c)
 }
 
 func renderManaColorSlice(ctx *renderCtx, colors []mana.Color) (string, error) {
@@ -139,678 +124,129 @@ func supertypeLiteral(st types.Super) (string, error) {
 // CounterObject destination. It errors for the graveyard default (which renders
 // no Destination field) and any unknown value.
 func counteredSpellDestinationLiteral(d game.CounteredSpellDestination) (string, error) {
-	switch d {
-	case game.CounteredSpellLibraryTop:
-		return "game.CounteredSpellLibraryTop", nil
-	case game.CounteredSpellHand:
-		return "game.CounteredSpellHand", nil
-	default:
-		return "", fmt.Errorf("render: unsupported countered-spell destination %d", d)
+	if d == game.CounteredSpellGraveyard {
+		return "", fmt.Errorf("render: countered-spell destination %d is the default and renders no field", int(d))
 	}
+	return enumLiteral(gameCounteredSpellDestinationLiterals, "countered-spell destination", d)
 }
 
 func renderAdditionalKind(kind cost.AdditionalKind) (string, error) {
-	switch kind {
-	case cost.AdditionalSacrifice:
-		return "cost.AdditionalSacrifice", nil
-	case cost.AdditionalSacrificeSource:
-		return "cost.AdditionalSacrificeSource", nil
-	case cost.AdditionalDiscard:
-		return "cost.AdditionalDiscard", nil
-	case cost.AdditionalPayLife:
-		return "cost.AdditionalPayLife", nil
-	case cost.AdditionalExile:
-		return "cost.AdditionalExile", nil
-	case cost.AdditionalReveal:
-		return "cost.AdditionalReveal", nil
-	case cost.AdditionalTap:
-		return "cost.AdditionalTap", nil
-	case cost.AdditionalExileSource:
-		return "cost.AdditionalExileSource", nil
-	case cost.AdditionalUntap:
-		return "cost.AdditionalUntap", nil
-	case cost.AdditionalRemoveCounter:
-		return "cost.AdditionalRemoveCounter", nil
-	case cost.AdditionalRemoveCounterAmong:
-		return "cost.AdditionalRemoveCounterAmong", nil
-	case cost.AdditionalReturnUnblockedAttacker:
-		return "cost.AdditionalReturnUnblockedAttacker", nil
-	case cost.AdditionalTapPermanents:
-		return "cost.AdditionalTapPermanents", nil
-	case cost.AdditionalEnergy:
-		return "cost.AdditionalEnergy", nil
-	case cost.AdditionalReturnToHand:
-		return "cost.AdditionalReturnToHand", nil
-	case cost.AdditionalExert:
-		return "cost.AdditionalExert", nil
-	case cost.AdditionalMill:
-		return "cost.AdditionalMill", nil
-	case cost.AdditionalPutCounter:
-		return "cost.AdditionalPutCounter", nil
-	case cost.AdditionalCollectEvidence:
-		return "cost.AdditionalCollectEvidence", nil
-	default:
-		return "", fmt.Errorf("render: unsupported additional cost kind %d", kind)
-	}
+	return enumLiteralNonZero(costAdditionalKindLiterals, "additional cost kind", kind)
 }
 
 func renderAdditionalDynamicAmount(kind cost.AdditionalDynamicAmount) (string, error) {
-	switch kind {
-	case cost.AdditionalDynamicCommanderColorIdentityCount:
-		return "cost.AdditionalDynamicCommanderColorIdentityCount", nil
-	case cost.AdditionalDynamicHandSize:
-		return "cost.AdditionalDynamicHandSize", nil
-	case cost.AdditionalDynamicLifeGainedThisTurn:
-		return "cost.AdditionalDynamicLifeGainedThisTurn", nil
-	default:
-		return "", fmt.Errorf("render: unsupported additional dynamic amount %d", kind)
-	}
+	return enumLiteralNonZero(costAdditionalDynamicAmountLiterals, "additional dynamic amount", kind)
 }
 
 func renderPowerContributionKind(kind cost.PowerContributionKind) (string, error) {
-	switch kind {
-	case cost.PowerContributionEffective:
-		return "cost.PowerContributionEffective", nil
-	case cost.PowerContributionCrew:
-		return "cost.PowerContributionCrew", nil
-	default:
-		return "", fmt.Errorf("render: unsupported power contribution kind %d", kind)
-	}
+	return enumLiteral(costPowerContributionKindLiterals, "power contribution kind", kind)
 }
 
 func renderCounterKind(kind counter.Kind) (string, error) {
-	switch kind {
-	case counter.PlusOnePlusOne:
-		return "counter.PlusOnePlusOne", nil
-	case counter.MinusOneMinusOne:
-		return "counter.MinusOneMinusOne", nil
-	case counter.Charge:
-		return "counter.Charge", nil
-	case counter.Loyalty:
-		return "counter.Loyalty", nil
-	case counter.Time:
-		return "counter.Time", nil
-	case counter.Defense:
-		return "counter.Defense", nil
-	case counter.Poison:
-		return "counter.Poison", nil
-	case counter.Lore:
-		return "counter.Lore", nil
-	case counter.Verse:
-		return "counter.Verse", nil
-	case counter.Shield:
-		return "counter.Shield", nil
-	case counter.Stun:
-		return "counter.Stun", nil
-	case counter.Finality:
-		return "counter.Finality", nil
-	case counter.Brick:
-		return "counter.Brick", nil
-	case counter.Page:
-		return "counter.Page", nil
-	case counter.Enlightened:
-		return "counter.Enlightened", nil
-	case counter.Oil:
-		return "counter.Oil", nil
-	case counter.Blood:
-		return "counter.Blood", nil
-	case counter.Indestructible:
-		return "counter.Indestructible", nil
-	case counter.Deathtouch:
-		return "counter.Deathtouch", nil
-	case counter.Flying:
-		return "counter.Flying", nil
-	case counter.FirstStrike:
-		return "counter.FirstStrike", nil
-	case counter.Hexproof:
-		return "counter.Hexproof", nil
-	case counter.Lifelink:
-		return "counter.Lifelink", nil
-	case counter.Menace:
-		return "counter.Menace", nil
-	case counter.Reach:
-		return "counter.Reach", nil
-	case counter.Trample:
-		return "counter.Trample", nil
-	case counter.Vigilance:
-		return "counter.Vigilance", nil
-	case counter.Energy:
-		return "counter.Energy", nil
-	case counter.Experience:
-		return "counter.Experience", nil
-	case counter.Burden:
-		return "counter.Burden", nil
-	case counter.Age:
-		return "counter.Age", nil
-	case counter.Quest:
-		return "counter.Quest", nil
-	case counter.Level:
-		return "counter.Level", nil
-	case counter.PlusOnePlusZero:
-		return "counter.PlusOnePlusZero", nil
-	case counter.PlusTwoPlusTwo:
-		return "counter.PlusTwoPlusTwo", nil
-	case counter.MinusZeroMinusOne:
-		return "counter.MinusZeroMinusOne", nil
-	case counter.PlusZeroPlusOne:
-		return "counter.PlusZeroPlusOne", nil
-	case counter.MinusZeroMinusTwo:
-		return "counter.MinusZeroMinusTwo", nil
-	case counter.MinusTwoMinusTwo:
-		return "counter.MinusTwoMinusTwo", nil
-	case counter.PlusOnePlusTwo:
-		return "counter.PlusOnePlusTwo", nil
-	case counter.PlusZeroPlusTwo:
-		return "counter.PlusZeroPlusTwo", nil
-	case counter.MinusTwoMinusOne:
-		return "counter.MinusTwoMinusOne", nil
-	case counter.MinusOneMinusZero:
-		return "counter.MinusOneMinusZero", nil
-	case counter.Spore:
-		return "counter.Spore", nil
-	case counter.Fade:
-		return "counter.Fade", nil
-	case counter.Divinity:
-		return "counter.Divinity", nil
-	case counter.Healing:
-		return "counter.Healing", nil
-	case counter.Wish:
-		return "counter.Wish", nil
-	case counter.Study:
-		return "counter.Study", nil
-	case counter.Dream:
-		return "counter.Dream", nil
-	case counter.Supply:
-		return "counter.Supply", nil
-	case counter.Story:
-		return "counter.Story", nil
-	case counter.Film:
-		return "counter.Film", nil
-	case counter.Hoofprint:
-		return "counter.Hoofprint", nil
-	case counter.Suspect:
-		return "counter.Suspect", nil
-	case counter.Javelin:
-		return "counter.Javelin", nil
-	case counter.Cube:
-		return "counter.Cube", nil
-	case counter.Polyp:
-		return "counter.Polyp", nil
-	case counter.Component:
-		return "counter.Component", nil
-	case counter.Eon:
-		return "counter.Eon", nil
-	case counter.Incubation:
-		return "counter.Incubation", nil
-	case counter.Devotion:
-		return "counter.Devotion", nil
-	case counter.Foreshadow:
-		return "counter.Foreshadow", nil
-	case counter.Arrowhead:
-		return "counter.Arrowhead", nil
-	case counter.Carrion:
-		return "counter.Carrion", nil
-	case counter.Corpse:
-		return "counter.Corpse", nil
-	case counter.Loot:
-		return "counter.Loot", nil
-	case counter.Net:
-		return "counter.Net", nil
-	case counter.Gold:
-		return "counter.Gold", nil
-	case counter.Currency:
-		return "counter.Currency", nil
-	case counter.Book:
-		return "counter.Book", nil
-	case counter.Blaze:
-		return "counter.Blaze", nil
-	case counter.Palliation:
-		return "counter.Palliation", nil
-	case counter.Gem:
-		return "counter.Gem", nil
-	case counter.Pressure:
-		return "counter.Pressure", nil
-	case counter.Flame:
-		return "counter.Flame", nil
-	case counter.Ice:
-		return "counter.Ice", nil
-	case counter.Coin:
-		return "counter.Coin", nil
-	case counter.Depletion:
-		return "counter.Depletion", nil
-	case counter.Croak:
-		return "counter.Croak", nil
-	case counter.Void:
-		return "counter.Void", nil
-	case counter.Intel:
-		return "counter.Intel", nil
-	case counter.Collection:
-		return "counter.Collection", nil
-	case counter.Hour:
-		return "counter.Hour", nil
-	case counter.Ribbon:
-		return "counter.Ribbon", nil
-	default:
-		return "", fmt.Errorf("render: unsupported counter kind %d", kind)
-	}
+	return enumLiteral(counterKindLiterals, "counter kind", kind)
 }
 
-func renderTargetAllow(allow game.TargetAllow) string {
-	var parts []string
-	if allow&game.TargetAllowPermanent != 0 {
-		parts = append(parts, "game.TargetAllowPermanent")
+// renderTargetAllow renders the target categories a target slot allows. Unlike
+// the recipient bitmasks the zero value is meaningful: it names the unspecified
+// constant rather than failing.
+func renderTargetAllow(allow game.TargetAllow) (string, error) {
+	if allow == game.TargetAllowUnspecified {
+		return "game.TargetAllowUnspecified", nil
 	}
-	if allow&game.TargetAllowPlayer != 0 {
-		parts = append(parts, "game.TargetAllowPlayer")
-	}
-	if allow&game.TargetAllowStackObject != 0 {
-		parts = append(parts, "game.TargetAllowStackObject")
-	}
-	if allow&game.TargetAllowCard != 0 {
-		parts = append(parts, "game.TargetAllowCard")
-	}
-	if len(parts) == 0 {
-		return "game.TargetAllowUnspecified"
-	}
-	return strings.Join(parts, " | ")
+	return bitmaskLiteral(gameTargetAllowFlags, "target allow", allow)
 }
 
 func renderPlayerRelation(relation game.PlayerRelation) (string, error) {
-	switch relation {
-	case game.PlayerAny:
-		return "game.PlayerAny", nil
-	case game.PlayerYou:
-		return "game.PlayerYou", nil
-	case game.PlayerOpponent:
-		return "game.PlayerOpponent", nil
-	case game.PlayerNotYou:
-		return "game.PlayerNotYou", nil
-	default:
-		return "", fmt.Errorf("render: unsupported player relation %d", relation)
-	}
+	return enumLiteral(gamePlayerRelationLiterals, "player relation", relation)
 }
 
 func renderOwnerRelation(relation game.OwnerRelation) (string, error) {
-	switch relation {
-	case game.OwnerAny:
-		return "game.OwnerAny", nil
-	case game.OwnerYou:
-		return "game.OwnerYou", nil
-	case game.OwnerOpponent:
-		return "game.OwnerOpponent", nil
-	case game.OwnerNotYou:
-		return "game.OwnerNotYou", nil
-	default:
-		return "", fmt.Errorf("render: unsupported owner relation %d", relation)
-	}
+	return enumLiteral(gameOwnerRelationLiterals, "owner relation", relation)
 }
 
 func renderTriggerType(triggerType game.TriggerType) (string, error) {
-	switch triggerType {
-	case game.TriggerWhen:
-		return "game.TriggerWhen", nil
-	case game.TriggerWhenever:
-		return "game.TriggerWhenever", nil
-	case game.TriggerAt:
-		return "game.TriggerAt", nil
-	case game.TriggerState:
-		return "game.TriggerState", nil
-	default:
-		return "", fmt.Errorf("render: unsupported trigger type %d", triggerType)
-	}
+	return enumLiteral(gameTriggerTypeLiterals, "trigger type", triggerType)
 }
 
 func renderStep(step game.Step) (string, error) {
-	switch step {
-	case game.StepUpkeep:
-		return "game.StepUpkeep", nil
-	case game.StepDraw:
-		return "game.StepDraw", nil
-	case game.StepBeginningOfCombat:
-		return "game.StepBeginningOfCombat", nil
-	case game.StepEndOfCombat:
-		return "game.StepEndOfCombat", nil
-	case game.StepEnd:
-		return "game.StepEnd", nil
-	case game.StepPrecombatMain:
-		return "game.StepPrecombatMain", nil
-	case game.StepPostcombatMain:
-		return "game.StepPostcombatMain", nil
-	default:
-		return "", fmt.Errorf("render: unsupported step %d", step)
-	}
+	return enumLiteralNonZero(gameStepLiterals, "step", step)
 }
 
 func renderTriggerSource(source game.TriggerSourceFilter) (string, error) {
-	switch source {
-	case game.TriggerSourceSelf:
-		return "game.TriggerSourceSelf", nil
-	case game.TriggerSourceAttachedPermanent:
-		return "game.TriggerSourceAttachedPermanent", nil
-	default:
-		return "", fmt.Errorf("render: unsupported trigger source %d", source)
-	}
+	return enumLiteralNonZero(gameTriggerSourceFilterLiterals, "trigger source filter", source)
 }
 
 func renderTriggerSubject(subject game.TriggerSubjectObject) (string, error) {
-	switch subject {
-	case game.TriggerSubjectPermanent:
-		return "game.TriggerSubjectPermanent", nil
-	case game.TriggerSubjectBlockedAttacker:
-		return "game.TriggerSubjectBlockedAttacker", nil
-	case game.TriggerSubjectDamageSource:
-		return "game.TriggerSubjectDamageSource", nil
-	default:
-		return "", fmt.Errorf("render: unsupported trigger subject %d", subject)
-	}
+	return enumLiteralNonZero(gameTriggerSubjectObjectLiterals, "trigger subject", subject)
 }
 
 func renderTriggerController(controller game.TriggerControllerFilter) (string, error) {
-	switch controller {
-	case game.TriggerControllerYou:
-		return "game.TriggerControllerYou", nil
-	case game.TriggerControllerOpponent:
-		return "game.TriggerControllerOpponent", nil
-	default:
-		return "", fmt.Errorf("render: unsupported trigger controller filter %d", controller)
-	}
+	return enumLiteralNonZero(gameTriggerControllerFilterLiterals, "trigger controller filter", controller)
 }
 
 func renderTriggerPlayer(player game.TriggerPlayerFilter) (string, error) {
-	switch player {
-	case game.TriggerPlayerYou:
-		return "game.TriggerPlayerYou", nil
-	case game.TriggerPlayerOpponent:
-		return "game.TriggerPlayerOpponent", nil
-	case game.TriggerPlayerMonarch:
-		return "game.TriggerPlayerMonarch", nil
-	case game.TriggerPlayerInitiative:
-		return "game.TriggerPlayerInitiative", nil
-	default:
-		return "", fmt.Errorf("render: unsupported trigger player filter %d", player)
-	}
+	return enumLiteralNonZero(gameTriggerPlayerFilterLiterals, "trigger player filter", player)
 }
 
+// renderEventKind returns the Go expression naming an event kind, refusing the
+// kinds recorded in unrenderedEventKinds. The zero value is the unset sentinel
+// and never renders.
 func renderEventKind(event game.EventKind) (string, error) {
-	switch event {
-	case game.EventDamageDealt:
-		return "game.EventDamageDealt", nil
-	case game.EventCardDrawn:
-		return "game.EventCardDrawn", nil
-	case game.EventAttackerBecameBlocked:
-		return "game.EventAttackerBecameBlocked", nil
-	case game.EventFight:
-		return "game.EventFight", nil
-	case game.EventAttackerBecameUnblocked:
-		return "game.EventAttackerBecameUnblocked", nil
-	case game.EventAttackerDeclared:
-		return "game.EventAttackerDeclared", nil
-	case game.EventBlockerDeclared:
-		return "game.EventBlockerDeclared", nil
-	case game.EventSpellCast:
-		return "game.EventSpellCast", nil
-	case game.EventLifeGained:
-		return "game.EventLifeGained", nil
-	case game.EventLifeLost:
-		return "game.EventLifeLost", nil
-	case game.EventPermanentEnteredBattlefield:
-		return "game.EventPermanentEnteredBattlefield", nil
-	case game.EventPermanentDied:
-		return "game.EventPermanentDied", nil
-	case game.EventZoneChanged:
-		return "game.EventZoneChanged", nil
-	case game.EventCardDiscarded:
-		return "game.EventCardDiscarded", nil
-	case game.EventCycled:
-		return "game.EventCycled", nil
-	case game.EventPermanentMutated:
-		return "game.EventPermanentMutated", nil
-	case game.EventPermanentTapped:
-		return "game.EventPermanentTapped", nil
-	case game.EventPermanentUntapped:
-		return "game.EventPermanentUntapped", nil
-	case game.EventPermanentTurnedFaceUp:
-		return "game.EventPermanentTurnedFaceUp", nil
-	case game.EventPermanentSacrificed:
-		return "game.EventPermanentSacrificed", nil
-	case game.EventScry:
-		return "game.EventScry", nil
-	case game.EventSurveil:
-		return "game.EventSurveil", nil
-	case game.EventAbilityActivated:
-		return "game.EventAbilityActivated", nil
-	case game.EventObjectBecameTarget:
-		return "game.EventObjectBecameTarget", nil
-	case game.EventCountersAdded:
-		return "game.EventCountersAdded", nil
-	case game.EventBeginningOfStep:
-		return "game.EventBeginningOfStep", nil
-	case game.EventTokenCreated:
-		return "game.EventTokenCreated", nil
-	case game.EventLibrarySearched:
-		return "game.EventLibrarySearched", nil
-	case game.EventClassLevelGained:
-		return "game.EventClassLevelGained", nil
-	case game.EventCrimeCommitted:
-		return "game.EventCrimeCommitted", nil
-	case game.EventBecameMonarch:
-		return "game.EventBecameMonarch", nil
-	case game.EventCardPlayedFromExile:
-		return "game.EventCardPlayedFromExile", nil
-	case game.EventLandPlayed:
-		return "game.EventLandPlayed", nil
-	case game.EventManaProduced:
-		return "game.EventManaProduced", nil
-	case game.EventCompletedDungeon:
-		return "game.EventCompletedDungeon", nil
-	case game.EventGotCityBlessing:
-		return "game.EventGotCityBlessing", nil
-	case game.EventPermanentBecameMonstrous:
-		return "game.EventPermanentBecameMonstrous", nil
-	default:
-		return "", fmt.Errorf("render: unsupported event kind %d", event)
+	if unrenderedEventKinds[event] {
+		return "", fmt.Errorf("render: event kind %d is produced only by runtime machinery and is not emitted into generated source", int(event))
 	}
+	return enumLiteralNonZero(gameEventKindLiterals, "event kind", event)
 }
 
+// renderDamageRecipient renders the recipient flags a damage trigger matches.
+// The zero value means no recipient was specified, which is never a value the
+// trigger pattern should carry.
 func renderDamageRecipient(recipient game.DamageRecipientKind) (string, error) {
-	const known = game.DamageRecipientPlayer | game.DamageRecipientPermanent
-	if recipient == game.DamageRecipientNone || recipient&^known != 0 {
-		return "", fmt.Errorf("render: unsupported damage recipient %d", recipient)
+	if recipient == game.DamageRecipientNone {
+		return "", fmt.Errorf("render: damage recipient %d specifies no recipient", int(recipient))
 	}
-	var values []string
-	if recipient&game.DamageRecipientPlayer != 0 {
-		values = append(values, "game.DamageRecipientPlayer")
-	}
-	if recipient&game.DamageRecipientPermanent != 0 {
-		values = append(values, "game.DamageRecipientPermanent")
-	}
-	return strings.Join(values, " | "), nil
+	return bitmaskLiteral(gameDamageRecipientKindFlags, "damage recipient", recipient)
 }
 
+// renderAttackRecipient renders the recipient flags an attack trigger matches.
+// The zero value means the trigger matches any recipient and renders no field.
 func renderAttackRecipient(recipient game.AttackRecipientKind) (string, error) {
-	const known = game.AttackRecipientPlayer |
-		game.AttackRecipientPlaneswalker |
-		game.AttackRecipientBattle
-	if recipient == game.AttackRecipientAny || recipient&^known != 0 {
-		return "", fmt.Errorf("render: unsupported attack recipient %d", recipient)
+	if recipient == game.AttackRecipientAny {
+		return "", fmt.Errorf("render: attack recipient %d matches any recipient and renders no field", int(recipient))
 	}
-	var values []string
-	if recipient&game.AttackRecipientPlayer != 0 {
-		values = append(values, "game.AttackRecipientPlayer")
-	}
-	if recipient&game.AttackRecipientPlaneswalker != 0 {
-		values = append(values, "game.AttackRecipientPlaneswalker")
-	}
-	if recipient&game.AttackRecipientBattle != 0 {
-		values = append(values, "game.AttackRecipientBattle")
-	}
-	return strings.Join(values, " | "), nil
+	return bitmaskLiteral(gameAttackRecipientKindFlags, "attack recipient", recipient)
 }
 
 func renderDuration(duration game.EffectDuration) (string, error) {
-	switch duration {
-	case game.DurationPermanent:
-		return "game.DurationPermanent", nil
-	case game.DurationUntilEndOfTurn:
-		return "game.DurationUntilEndOfTurn", nil
-	case game.DurationUntilYourNextTurn:
-		return "game.DurationUntilYourNextTurn", nil
-	case game.DurationThisTurn:
-		return "game.DurationThisTurn", nil
-	case game.DurationUntilEndOfYourNextTurn:
-		return "game.DurationUntilEndOfYourNextTurn", nil
-	case game.DurationUntilYourNextEndStep:
-		return "game.DurationUntilYourNextEndStep", nil
-	case game.DurationUntilEndOfCombat:
-		return "game.DurationUntilEndOfCombat", nil
-	case game.DurationForAsLongAsSourceOnBattlefield:
-		return "game.DurationForAsLongAsSourceOnBattlefield", nil
-	case game.DurationForAsLongAsYouControlSource:
-		return "game.DurationForAsLongAsYouControlSource", nil
-	case game.DurationForAsLongAsControlledCreatureEnchanted:
-		return "game.DurationForAsLongAsControlledCreatureEnchanted", nil
-	case game.DurationForAsLongAsPlayerIsMonarch:
-		return "game.DurationForAsLongAsPlayerIsMonarch", nil
-	default:
-		return "", fmt.Errorf("render: unsupported effect duration %d", duration)
-	}
+	return enumLiteral(gameEffectDurationLiterals, "effect duration", duration)
 }
 
 func renderDelayedTriggerTiming(timing game.DelayedTriggerTiming) (string, error) {
-	switch timing {
-	case game.DelayedAtBeginningOfNextEndStep:
-		return "game.DelayedAtBeginningOfNextEndStep", nil
-	case game.DelayedAtBeginningOfNextUpkeep:
-		return "game.DelayedAtBeginningOfNextUpkeep", nil
-	case game.DelayedAtBeginningOfNextMainPhase:
-		return "game.DelayedAtBeginningOfNextMainPhase", nil
-	case game.DelayedAtEndOfCombat:
-		return "game.DelayedAtEndOfCombat", nil
-	case game.DelayedAtBeginningOfYourNextEndStep:
-		return "game.DelayedAtBeginningOfYourNextEndStep", nil
-	default:
-		return "", fmt.Errorf("render: unsupported delayed trigger timing %d", timing)
-	}
+	return enumLiteral(gameDelayedTriggerTimingLiterals, "delayed trigger timing", timing)
 }
 
 func renderDelayedTriggerWindow(window game.DelayedTriggerWindow) (string, error) {
-	switch window {
-	case game.DelayedWindowThisTurn:
-		return "game.DelayedWindowThisTurn", nil
-	case game.DelayedWindowUntilFires:
-		return "game.DelayedWindowUntilFires", nil
-	default:
-		return "", fmt.Errorf("render: unsupported delayed trigger window %d", window)
-	}
+	return enumLiteralNonZero(gameDelayedTriggerWindowLiterals, "delayed trigger window", window)
 }
 
 func renderResolutionChoiceKind(kind game.ResolutionChoiceKind) (string, error) {
-	switch kind {
-	case game.ResolutionChoiceMana:
-		return "game.ResolutionChoiceMana", nil
-	case game.ResolutionChoiceCardType:
-		return "game.ResolutionChoiceCardType", nil
-	case game.ResolutionChoicePlayer:
-		return "game.ResolutionChoicePlayer", nil
-	case game.ResolutionChoiceCard:
-		return "game.ResolutionChoiceCard", nil
-	case game.ResolutionChoicePermanent:
-		return "game.ResolutionChoicePermanent", nil
-	case game.ResolutionChoiceNumber:
-		return "game.ResolutionChoiceNumber", nil
-	case game.ResolutionChoiceSubtype:
-		return "game.ResolutionChoiceSubtype", nil
-	default:
-		return "", fmt.Errorf("render: unsupported resolution choice kind %d", kind)
-	}
+	return enumLiteralNonZero(gameResolutionChoiceKindLiterals, "resolution choice kind", kind)
 }
 
 func renderResolutionChoiceColorSource(source game.ResolutionChoiceColorSource) (string, error) {
-	switch source {
-	case game.ResolutionChoiceColorSourceStatic:
-		return "game.ResolutionChoiceColorSourceStatic", nil
-	case game.ResolutionChoiceColorSourceCommanderIdentity:
-		return "game.ResolutionChoiceColorSourceCommanderIdentity", nil
-	case game.ResolutionChoiceColorSourceLandsProduce:
-		return "game.ResolutionChoiceColorSourceLandsProduce", nil
-	case game.ResolutionChoiceColorSourceLinkedExileColors:
-		return "game.ResolutionChoiceColorSourceLinkedExileColors", nil
-	case game.ResolutionChoiceColorSourceControlledPermanentColors:
-		return "game.ResolutionChoiceColorSourceControlledPermanentColors", nil
-	case game.ResolutionChoiceColorSourceTriggerLandProduced:
-		return "game.ResolutionChoiceColorSourceTriggerLandProduced", nil
-	default:
-		return "", fmt.Errorf("render: unsupported resolution choice color source %d", source)
-	}
+	return enumLiteral(gameResolutionChoiceColorSourceLiterals, "resolution choice color source", source)
 }
 
 func renderManaSpendConditionKind(kind game.ManaSpendConditionKind) (string, error) {
-	switch kind {
-	case game.ManaSpendCastCommanderCreatureType:
-		return "game.ManaSpendCastCommanderCreatureType", nil
-	case game.ManaSpendCastChosenCreatureType:
-		return "game.ManaSpendCastChosenCreatureType", nil
-	case game.ManaSpendCastLegendarySpell:
-		return "game.ManaSpendCastLegendarySpell", nil
-	case game.ManaSpendCastOrActivateChosenCreatureType:
-		return "game.ManaSpendCastOrActivateChosenCreatureType", nil
-	case game.ManaSpendCastCreatureSpell:
-		return "game.ManaSpendCastCreatureSpell", nil
-	case game.ManaSpendCastArtifactSpell:
-		return "game.ManaSpendCastArtifactSpell", nil
-	case game.ManaSpendCastArtifactSpellOnly:
-		return "game.ManaSpendCastArtifactSpellOnly", nil
-	case game.ManaSpendCastOrActivateArtifact:
-		return "game.ManaSpendCastOrActivateArtifact", nil
-	case game.ManaSpendActivateArtifactAbility:
-		return "game.ManaSpendActivateArtifactAbility", nil
-	case game.ManaSpendCastArtifactOrActivateAbility:
-		return "game.ManaSpendCastArtifactOrActivateAbility", nil
-	case game.ManaSpendCastInstantOrSorcerySpell:
-		return "game.ManaSpendCastInstantOrSorcerySpell", nil
-	case game.ManaSpendCastNoncreatureSpell:
-		return "game.ManaSpendCastNoncreatureSpell", nil
-	case game.ManaSpendCastMulticoloredSpell:
-		return "game.ManaSpendCastMulticoloredSpell", nil
-	case game.ManaSpendCastPlaneswalkerSpell:
-		return "game.ManaSpendCastPlaneswalkerSpell", nil
-	case game.ManaSpendCastOrActivateCreature:
-		return "game.ManaSpendCastOrActivateCreature", nil
-	case game.ManaSpendCastMonocoloredSpellOfChosenColor:
-		return "game.ManaSpendCastMonocoloredSpellOfChosenColor", nil
-	default:
-		return "", fmt.Errorf("render: unsupported mana spend condition kind %d", kind)
-	}
+	return enumLiteralNonZero(gameManaSpendConditionKindLiterals, "mana spend condition kind", kind)
 }
 
 func renderManaSpendRestrictionKind(kind game.ManaSpendRestrictionKind) (string, error) {
-	switch kind {
-	case game.ManaSpendUnrestricted:
-		return "game.ManaSpendUnrestricted", nil
-	case game.ManaSpendRestrictedToCondition:
-		return "game.ManaSpendRestrictedToCondition", nil
-	default:
-		return "", fmt.Errorf("render: unsupported mana spend restriction kind %d", kind)
-	}
+	return enumLiteral(gameManaSpendRestrictionKindLiterals, "mana spend restriction kind", kind)
 }
 
 func renderZone(zoneType zone.Type) (string, error) {
-	switch zoneType {
-	case zone.Battlefield:
-		return "zone.Battlefield", nil
-	case zone.Hand:
-		return "zone.Hand", nil
-	case zone.Graveyard:
-		return "zone.Graveyard", nil
-	case zone.Library:
-		return "zone.Library", nil
-	case zone.Exile:
-		return "zone.Exile", nil
-	case zone.Command:
-		return "zone.Command", nil
-	default:
-		return "", fmt.Errorf("render: unsupported zone %d", zoneType)
-	}
+	return enumLiteralNonZero(zoneTypeLiterals, "zone", zoneType)
 }
 
 // renderText renders a string field value, preferring a raw backtick literal for

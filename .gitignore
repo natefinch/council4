@@ -9,4 +9,6 @@ oracle-cards-*.json
 .DS_Store
 # Compiled CLI binary from `go build ./cmd/council4`
 /council4
+# Compiled generator binary from `go build ./cardgen/cmd/genrender`
+/genrender
 .scratch/
