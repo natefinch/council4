@@ -36,19 +36,22 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 		// every permanent it moved under that key, capturing each link before
 		// the move so a later linked return brings the whole group back
 		// together.
-		refs := make([]game.LinkedObjectRef, len(targets.permanents))
-		for i, permanent := range targets.permanents {
-			refs[i] = permanentLinkedObjectRef(permanent)
+		// Key the pre-move links by permanent rather than by position: the
+		// batch drops permanents it cannot prepare, so result order is not
+		// guaranteed to stay aligned with the input slice.
+		refs := make(map[*game.Permanent]game.LinkedObjectRef, len(targets.permanents))
+		for _, permanent := range targets.permanents {
+			refs[permanent] = permanentLinkedObjectRef(permanent)
 		}
 		moved := make([]*game.Permanent, 0, len(targets.permanents))
-		for i, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, targets.permanents, prim.Destination) {
+		for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, targets.permanents, prim.Destination) {
 			if !result.moved {
 				continue
 			}
 			res.succeeded = true
 			moved = append(moved, result.permanent)
-			if prim.PublishLinked != "" && i < len(refs) {
-				rememberLinkedObject(r.game, linkedKey, refs[i])
+			if ref, ok := refs[result.permanent]; ok && prim.PublishLinked != "" {
+				rememberLinkedObject(r.game, linkedKey, ref)
 			}
 		}
 		r.placeMovedOnLibraryBottom(prim, moved)
