@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18179 supported cards
+# 18180 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -6384,6 +6384,7 @@ cddc93bc75e532f9  Goblin
 3b8e3c7ed29b9e2d  Goblin // Blood
 36f82705a62a9fdf  Goblin // Soldier
 1c703a6ab558801a  Goblin Anarchomancer
+de41dc7090b894cd  Goblin Army Token
 f5a532aa14a833e2  Goblin Arsonist
 3bf405bd27fccc79  Goblin Artillery
 db55b62969bc4dca  Goblin Assailant
