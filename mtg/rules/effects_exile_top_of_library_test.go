@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -16,7 +17,7 @@ func TestExileTopOfLibraryControllerExilesTopCard(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.ExileTopOfLibrary{
+	addEffectSpellToStack(g, game.Player1, game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount: game.Fixed(1),
 		Player: game.ControllerReference(),
 	}, nil)
@@ -40,7 +41,7 @@ func TestExileTopOfLibraryGroupPlacesNamedCounter(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.ExileTopOfLibrary{
+	addEffectSpellToStack(g, game.Player1, game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount:      game.Fixed(1),
 		PlayerGroup: game.AllPlayersReference(),
 		Counter:     opt.Val(counter.Collection),
@@ -66,7 +67,7 @@ func TestExileTopOfLibraryGroupExilesForEveryPlayer(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.ExileTopOfLibrary{
+	addEffectSpellToStack(g, game.Player1, game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount:      game.Fixed(2),
 		PlayerGroup: game.AllPlayersReference(),
 	}, nil)

@@ -60,7 +60,7 @@ func newTibaltSTrickery() *game.CardDef {
 						},
 					},
 					{
-						Primitive: game.Mill{
+						Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 							Amount: game.Dynamic(game.DynamicAmount{
 								Kind:      game.DynamicAmountChosenNumber,
 								ResultKey: game.ResultKey("tibalts-trickery-mill-count"),

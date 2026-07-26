@@ -136,7 +136,7 @@ func newFlamewarBrashVeteran() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.ExileTopOfLibrary{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Exile,
 									Amount: game.Dynamic(game.DynamicAmount{
 										Kind:       game.DynamicAmountEventDamage,
 										Multiplier: 1,

@@ -26,7 +26,7 @@ func TestExileTopLinkedAnyNumberChoiceUsesOnlyExiledBatch(t *testing.T) {
 	})
 	const link game.LinkedKey = "exiled-top-cards"
 	addInstructionSpellToStack(g, []game.Instruction{
-		{Primitive: game.ExileTopOfLibrary{
+		{Primitive: game.MoveTopOfLibrary{Destination: zone.Exile,
 			Amount:        game.Fixed(3),
 			Player:        game.ControllerReference(),
 			PublishLinked: link,

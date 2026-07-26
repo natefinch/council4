@@ -355,9 +355,9 @@ func TestLowerEventPlayerMillInTrigger(t *testing.T) {
 		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
 	}
 	mode := face.TriggeredAbilities[0].Content.Modes[0]
-	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	mill, ok := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.MoveTopOfLibrary", mode.Sequence[0].Primitive)
 	}
 	if mill.Amount.Value() != 2 {
 		t.Errorf("amount = %v, want 2", mill.Amount)

@@ -50,7 +50,7 @@ func newNecropotence() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.ExileTopOfLibrary{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Exile,
 									Amount:        game.Fixed(1),
 									Player:        game.ControllerReference(),
 									PublishLinked: game.LinkedKey("delayed-top-card-1"),

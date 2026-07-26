@@ -695,7 +695,7 @@ func TestGenerateExecutableCardSourceExileTopOfLibrary(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if !strings.Contains(source, "Primitive: game.ExileTopOfLibrary") {
+	if !strings.Contains(source, "Primitive: game.MoveTopOfLibrary") {
 		t.Fatalf("source missing ExileTopOfLibrary primitive:\n%s", source)
 	}
 }
@@ -720,7 +720,8 @@ func TestGenerateExecutableCardSourceExileTopOfLibraryCounter(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, want := range []string{
-		"Primitive: game.ExileTopOfLibrary{",
+		"Primitive: game.MoveTopOfLibrary{",
+		"Destination: zone.Exile,",
 		"PlayerGroup: game.AllPlayersReference()",
 		"opt.Val(counter.Collection)",
 	} {
@@ -2564,7 +2565,8 @@ func TestGenerateExecutableExileTopOfEachPlayersLibrary(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, want := range []string{
-		"Primitive: game.ExileTopOfLibrary{",
+		"Primitive: game.MoveTopOfLibrary{",
+		"Destination: zone.Exile,",
 		"PlayerGroup: game.AllPlayersReference(),",
 	} {
 		if !strings.Contains(source, want) {

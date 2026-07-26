@@ -23,7 +23,7 @@ func combustibleGearhulkSequence() []game.Instruction {
 			Optional:  true, OptionalActor: opt.Val(game.TargetPlayerReference(0)), PublishResult: "offer",
 		},
 		{
-			Primitive: game.Mill{
+			Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 				Amount: game.Fixed(3), Player: game.ControllerReference(), PublishLinked: combustibleMilledKey,
 			},
 			ResultGate: declined,

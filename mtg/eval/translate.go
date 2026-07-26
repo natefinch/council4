@@ -104,8 +104,15 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 			atom.IsDynamic = true
 		}
 		return append(atoms, atom)
-	case game.Mill:
-		return append(atoms, quantityAtom(EffectCardsLost, p.Amount, affectedFromPlayer(p.Player)))
+	case game.MoveTopOfLibrary:
+		// Milling to the graveyard costs the player those library cards; exiling
+		// the top of a library is value-neutral in this model (the old
+		// ExileTopOfLibrary primitive contributed no atom), so only the graveyard
+		// destination emits a loss.
+		if p.Destination == zone.Graveyard {
+			return append(atoms, quantityAtom(EffectCardsLost, p.Amount, affectedFromPlayer(p.Player)))
+		}
+		return atoms
 	case game.DiscardThenDraw:
 		if p.DrawOffset == 0 {
 			return atoms

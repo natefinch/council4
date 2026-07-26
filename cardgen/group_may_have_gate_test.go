@@ -75,8 +75,9 @@ func TestGenerateExecutableCardSourceBookBurning(t *testing.T) {
 		"Recipient: game.PlayerDamageRecipient(game.GroupOfferMemberReference())",
 		"OptionalActorGroup: opt.Val(game.AllPlayersReference())",
 		"PublishResult:      game.ResultKey(\"group-may-have-action\")",
-		"Primitive: game.Mill{",
-		"Player: game.TargetPlayerReference(0)",
+		"Primitive: game.MoveTopOfLibrary{",
+		"Destination: zone.Graveyard,",
+		"game.TargetPlayerReference(0)",
 		"Accepted: game.TriFalse",
 	} {
 		if !strings.Contains(source, want) {

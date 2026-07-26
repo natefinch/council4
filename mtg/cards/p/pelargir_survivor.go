@@ -52,7 +52,7 @@ func newPelargirSurvivor() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount: game.Fixed(3),
 									Player: game.TargetPlayerReference(0),
 								},

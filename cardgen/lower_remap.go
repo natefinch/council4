@@ -287,14 +287,10 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
-	if value, ok := primitive.(game.Mill); ok {
-		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-			return value, true
-		}
-		value.Player, ok = transformPlayerReference(value.Player, transform)
-		return value, ok
-	}
-	if value, ok := primitive.(game.ExileTopOfLibrary); ok {
+	if value, ok := primitive.(game.MoveTopOfLibrary); ok {
+		// The player remap is identical for every destination, so this stays
+		// destination-generic: both the graveyard (mill) and exile forms remap
+		// their single-player referent the same way.
 		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 			return value, true
 		}

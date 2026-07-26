@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerDynamicWhereXSurveilSpell proves a standalone surveil whose amount is
@@ -94,8 +95,8 @@ func TestLowerYouSubjectScrySequence(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
 	}
-	if _, ok := mode.Sequence[0].Primitive.(game.Mill); !ok {
-		t.Fatalf("primitive[0] = %T, want game.Mill", mode.Sequence[0].Primitive)
+	if !isMoveTopOfLibraryTo(mode.Sequence[0].Primitive, zone.Graveyard) {
+		t.Fatalf("primitive[0] = %T, want a graveyard game.MoveTopOfLibrary", mode.Sequence[0].Primitive)
 	}
 	scry, ok := mode.Sequence[1].Primitive.(game.Scry)
 	if !ok {

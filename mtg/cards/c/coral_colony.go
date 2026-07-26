@@ -54,7 +54,7 @@ func newCoralColony() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount: game.Dynamic(game.DynamicAmount{
 										Kind:       game.DynamicAmountCountSelector,
 										Multiplier: 1,

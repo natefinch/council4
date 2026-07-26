@@ -77,7 +77,7 @@ func lowerMillThenOptionalAmongOneOfEachToBattlefield(ctx contentCtx) (game.Abil
 		return game.AbilityContent{}, false
 	}
 	sequence := []game.Instruction{
-		{Primitive: game.Mill{
+		{Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 			Amount:        game.Dynamic(millAmount),
 			Player:        game.ControllerReference(),
 			PublishLinked: milledCardsLinkKey,
@@ -183,7 +183,7 @@ func lowerMillThenPutAmongToBattlefield(ctx contentCtx) (game.AbilityContent, bo
 	)
 	sequence := []game.Instruction{
 		{
-			Primitive: game.Mill{
+			Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 				Amount:        millAmount,
 				Player:        game.ControllerReference(),
 				PublishLinked: milledCardsLinkKey,

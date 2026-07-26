@@ -73,7 +73,7 @@ func TestLowerTibaltsTrickerySequence(t *testing.T) {
 		t.Fatalf("PublishChoice = %q, want the shared mill-count key", choose.PublishChoice)
 	}
 
-	mill, ok := mode.Sequence[2].Primitive.(game.Mill)
+	mill, ok := mode.Sequence[2].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
 		t.Fatalf("sequence[2] = %#v, want Mill", mode.Sequence[2].Primitive)
 	}
@@ -148,7 +148,8 @@ func TestGenerateTibaltsTrickerySource(t *testing.T) {
 		"MaxNumber: 3,",
 		"AtRandom: true,",
 		"PublishChoice: game.ChoiceKey(\"tibalts-trickery-mill-count\"),",
-		"game.Mill{",
+		"game.MoveTopOfLibrary{",
+		"Destination: zone.Graveyard,",
 		"Kind: game.DynamicAmountChosenNumber,",
 		"ResultKey: game.ResultKey(\"tibalts-trickery-mill-count\"),",
 		"game.ObjectControllerReference(game.TargetStackObjectReference(0))",

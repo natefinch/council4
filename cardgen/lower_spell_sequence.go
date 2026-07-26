@@ -660,7 +660,7 @@ func sequenceAmountReferencesPlayerSlotPermanent(sequence []game.Instruction, ta
 		if value, ok := primitive.(game.Draw); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
 			return true
 		}
-		if value, ok := primitive.(game.Mill); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
+		if value, ok := moveTopOfLibraryTo(primitive, zone.Graveyard); ok && amountReferencesPlayerSlotPermanent(value.Amount, targets) {
 			return true
 		}
 	}
@@ -4657,10 +4657,7 @@ func lowerDelayedTopCardReturn(
 // publishes, so the delayed return links only a predecessor whose exiled card it
 // can faithfully identify.
 func publishLinkedExiledTopCard(primitive game.Primitive, key game.LinkedKey) (game.Primitive, bool) {
-	if primitive.Kind() != game.PrimitiveExileTopOfLibrary {
-		return nil, false
-	}
-	exile, ok := primitive.(game.ExileTopOfLibrary)
+	exile, ok := moveTopOfLibraryTo(primitive, zone.Exile)
 	if !ok ||
 		!exile.FaceDown ||
 		exile.PublishLinked != "" ||

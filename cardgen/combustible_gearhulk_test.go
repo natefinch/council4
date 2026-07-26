@@ -36,7 +36,7 @@ func TestLowerCombustibleGearhulk(t *testing.T) {
 		mode.Sequence[0].OptionalActor.Val != game.TargetPlayerReference(0) {
 		t.Fatalf("draw offer = %#v", mode.Sequence[0])
 	}
-	mill, ok := mode.Sequence[1].Primitive.(game.Mill)
+	mill, ok := mode.Sequence[1].Primitive.(game.MoveTopOfLibrary)
 	if !ok || mill.Player != game.ControllerReference() || mill.PublishLinked == "" {
 		t.Fatalf("mill = %#v", mode.Sequence[1])
 	}

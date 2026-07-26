@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestDrawGroupEffectDrawsForEveryPlayer proves "each player draws" gives a card
@@ -61,7 +62,7 @@ func TestMillGroupEffectMillsForEveryPlayer(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.Mill{
+	addEffectSpellToStack(g, game.Player1, game.MoveTopOfLibrary{Destination: zone.Graveyard,
 		Amount:      game.Fixed(2),
 		PlayerGroup: game.AllPlayersReference(),
 	}, nil)

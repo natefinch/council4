@@ -23,7 +23,7 @@ func millPaidReturnInstructions() []game.Instruction {
 	paid := opt.Val(game.InstructionResultGate{Key: "controller-paid", Succeeded: game.TriTrue})
 	return []game.Instruction{
 		{
-			Primitive: game.Mill{
+			Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 				Amount:        game.Fixed(3),
 				Player:        game.ControllerReference(),
 				PublishLinked: game.LinkedKey(milledCardsTestLink),

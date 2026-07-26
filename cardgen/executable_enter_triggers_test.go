@@ -179,7 +179,7 @@ func TestGenerateExecutableCardSourceThenJoinedSpellEffects(t *testing.T) {
 		{
 			name:       "targeted mill then draw",
 			oracleText: "Target player mills three cards, then draws a card.",
-			first:      "game.Mill",
+			first:      "game.MoveTopOfLibrary",
 			second:     "game.Draw",
 		},
 	}

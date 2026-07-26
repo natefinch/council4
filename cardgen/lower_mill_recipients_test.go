@@ -34,7 +34,7 @@ func millCreature(name, oracle string) *ScryfallCard {
 	}
 }
 
-func soleSpellMill(t *testing.T, face loweredFaceAbilities) game.Mill {
+func soleSpellMill(t *testing.T, face loweredFaceAbilities) game.MoveTopOfLibrary {
 	t.Helper()
 	if !face.SpellAbility.Exists || len(face.SpellAbility.Val.Modes) == 0 {
 		t.Fatal("expected a spell ability with at least one mode")
@@ -43,14 +43,14 @@ func soleSpellMill(t *testing.T, face loweredFaceAbilities) game.Mill {
 	if len(sequence) != 1 {
 		t.Fatalf("spell sequence length = %d, want 1", len(sequence))
 	}
-	mill, ok := sequence[0].Primitive.(game.Mill)
+	mill, ok := sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
 		t.Fatalf("spell primitive = %#v, want Mill", sequence[0].Primitive)
 	}
 	return mill
 }
 
-func soleTriggeredMill(t *testing.T, face loweredFaceAbilities) game.Mill {
+func soleTriggeredMill(t *testing.T, face loweredFaceAbilities) game.MoveTopOfLibrary {
 	t.Helper()
 	if len(face.TriggeredAbilities) != 1 {
 		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
@@ -63,7 +63,7 @@ func soleTriggeredMill(t *testing.T, face loweredFaceAbilities) game.Mill {
 	if len(sequence) != 1 {
 		t.Fatalf("triggered sequence length = %d, want 1", len(sequence))
 	}
-	mill, ok := sequence[0].Primitive.(game.Mill)
+	mill, ok := sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
 		t.Fatalf("triggered primitive = %#v, want Mill", sequence[0].Primitive)
 	}
@@ -179,7 +179,7 @@ func TestLowerMillDefendingPlayer(t *testing.T) {
 func TestLowerMillHalfLibrary(t *testing.T) {
 	t.Parallel()
 
-	assertHalfLibrary := func(t *testing.T, mill game.Mill, wantPlayer game.PlayerReference, wantRoundUp bool) {
+	assertHalfLibrary := func(t *testing.T, mill game.MoveTopOfLibrary, wantPlayer game.PlayerReference, wantRoundUp bool) {
 		t.Helper()
 		dynamic := mill.Amount.DynamicAmount()
 		if !dynamic.Exists {
@@ -316,9 +316,9 @@ func TestLowerMillSourceCounterCount(t *testing.T) {
 	if len(face.ActivatedAbilities) != 1 {
 		t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
 	}
-	mill, ok := face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.Mill)
+	mill, ok := face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.Mill", face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.MoveTopOfLibrary", face.ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive)
 	}
 	dynamic := mill.Amount.DynamicAmount()
 	if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountObjectCounters ||

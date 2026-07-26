@@ -36,7 +36,7 @@ func TestLowerXenagosTheReveler(t *testing.T) {
 	if len(ultimate) != 2 {
 		t.Fatalf("ultimate sequence = %#v, want two instructions", ultimate)
 	}
-	exile, ok := ultimate[0].Primitive.(game.ExileTopOfLibrary)
+	exile, ok := ultimate[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok ||
 		exile.Amount.Value() != 7 ||
 		exile.Player != game.ControllerReference() ||

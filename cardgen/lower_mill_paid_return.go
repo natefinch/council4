@@ -78,7 +78,7 @@ func lowerMillThenPaidReturnSequence(cardName string, ctx contentCtx) (game.Abil
 		return game.AbilityContent{}, false
 	}
 	sequence := []game.Instruction{
-		{Primitive: game.Mill{
+		{Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 			Amount:        millAmount,
 			Player:        game.ControllerReference(),
 			PublishLinked: milledCardsLinkKey,

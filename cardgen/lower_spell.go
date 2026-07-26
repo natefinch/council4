@@ -2123,9 +2123,9 @@ func lowerImmediateSingleEffectSpell(
 	case compiler.EffectMill:
 		return lowerFixedCardCountPlayerSpell(
 			ctx, syntax, "mill", "mills", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
-				return game.Mill{Amount: amount, Player: player}
+				return game.MoveTopOfLibrary{Amount: amount, Player: player, Destination: zone.Graveyard}
 			}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
-				return game.Mill{Amount: amount, PlayerGroup: group}
+				return game.MoveTopOfLibrary{Amount: amount, PlayerGroup: group, Destination: zone.Graveyard}
 			},
 		)
 	case compiler.EffectTap:
@@ -2170,9 +2170,9 @@ func lowerImmediateSingleEffectSpell(
 			// game.Fixed regardless of this flag.
 			return lowerFixedCardCountPlayerSpell(
 				ctx, syntax, "exile", "exiles", true, func(amount game.Quantity, player game.PlayerReference) game.Primitive {
-					return game.ExileTopOfLibrary{Amount: amount, Player: player, Counter: exileCounter, FaceDown: faceDown}
+					return game.MoveTopOfLibrary{Amount: amount, Player: player, Destination: zone.Exile, Counter: exileCounter, FaceDown: faceDown}
 				}, func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
-					return game.ExileTopOfLibrary{Amount: amount, PlayerGroup: group, Counter: exileCounter, FaceDown: faceDown}
+					return game.MoveTopOfLibrary{Amount: amount, PlayerGroup: group, Destination: zone.Exile, Counter: exileCounter, FaceDown: faceDown}
 				},
 			)
 		}

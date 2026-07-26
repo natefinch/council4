@@ -535,7 +535,7 @@ func TestLowerLoyaltyAbilityNegativeCost(t *testing.T) {
 	if la.LoyaltyCost != -2 {
 		t.Fatalf("LoyaltyCost = %d, want -2", la.LoyaltyCost)
 	}
-	mill, ok := la.Content.Modes[0].Sequence[0].Primitive.(game.Mill)
+	mill, ok := la.Content.Modes[0].Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok || mill.Amount.Value() != 3 {
 		t.Fatalf("primitive = %+v, want mills three", la.Content.Modes[0].Sequence[0].Primitive)
 	}

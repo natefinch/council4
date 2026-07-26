@@ -48,7 +48,7 @@ func newLilianaDeathSMajesty() *game.CardDef {
 								},
 							},
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount: game.Fixed(2),
 									Player: game.ControllerReference(),
 								},

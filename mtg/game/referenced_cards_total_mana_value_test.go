@@ -1,11 +1,15 @@
 package game
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/natefinch/council4/mtg/game/zone"
+)
 
 func TestValidateReferencedCardsTotalManaValueLink(t *testing.T) {
 	const key LinkedKey = "milled"
 	sequence := []Instruction{
-		{Primitive: Mill{Amount: Fixed(3), Player: ControllerReference(), PublishLinked: key}},
+		{Primitive: MoveTopOfLibrary{Amount: Fixed(3), Player: ControllerReference(), Destination: zone.Graveyard, PublishLinked: key}},
 		{Primitive: Damage{
 			Amount: Dynamic(DynamicAmount{
 				Kind:      DynamicAmountReferencedCardsTotalManaValue,

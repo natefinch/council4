@@ -82,7 +82,7 @@ func lowerTibaltsTrickerySequence(ctx contentCtx) (game.AbilityContent, bool) {
 				},
 				PublishChoice: tibaltsTrickeryMillCountKey,
 			}},
-			{Primitive: game.Mill{
+			{Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 				Amount: game.Dynamic(game.DynamicAmount{
 					Kind:      game.DynamicAmountChosenNumber,
 					ResultKey: game.ResultKey(tibaltsTrickeryMillCountKey),

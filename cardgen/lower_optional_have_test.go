@@ -154,8 +154,9 @@ func TestGenerateExecutableCardSourceOptionalHavePlayerSubject(t *testing.T) {
 			typeLine:   "Sorcery",
 			oracleText: "You may have target player mill two cards.",
 			wantParts: []string{
-				"Primitive: game.Mill",
-				"Player: game.TargetPlayerReference(0)",
+				"Primitive: game.MoveTopOfLibrary",
+				"Destination: zone.Graveyard,",
+				"game.TargetPlayerReference(0)",
 				"Constraint: \"target player\"",
 				"Optional: true",
 			},

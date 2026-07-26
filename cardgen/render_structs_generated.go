@@ -1288,8 +1288,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameExileTargetSpells(ctx, value)
 	case game.ExileTopEachLibraryCastFree:
 		return r.renderGameExileTopEachLibraryCastFree(ctx, value)
-	case game.ExileTopOfLibrary:
-		return r.renderGameExileTopOfLibrary(ctx, value)
 	case game.Explore:
 		return r.renderGameExplore(ctx, value)
 	case game.Fight:
@@ -1336,8 +1334,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameMassReanimationExchange(ctx, value)
 	case game.MassReturnFromGraveyard:
 		return r.renderGameMassReturnFromGraveyard(ctx, value)
-	case game.Mill:
-		return r.renderGameMill(ctx, value)
 	case game.ModifyPT:
 		return r.renderGameModifyPT(ctx, value)
 	case game.Monstrosity:
@@ -1352,6 +1348,8 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameMovePermanent(ctx, value)
 	case game.MoveResolvingSpell:
 		return r.renderGameMoveResolvingSpell(ctx, value)
+	case game.MoveTopOfLibrary:
+		return r.renderGameMoveTopOfLibrary(ctx, value)
 	case game.OptionalCounterForEachPlayer:
 		return r.renderGameOptionalCounterForEachPlayer(ctx, value)
 	case game.PartitionExiledCostCards:
@@ -6383,55 +6381,6 @@ func (r Renderer) renderGameExileTopEachLibraryCastFree(ctx *renderCtx, v game.E
 	return structLit("game.ExileTopEachLibraryCastFree", fields), nil
 }
 
-// renderGameExileTopOfLibrary renders a game.ExileTopOfLibrary value as a Go composite literal.
-func (r Renderer) renderGameExileTopOfLibrary(ctx *renderCtx, v game.ExileTopOfLibrary) (string, error) {
-	var fields []string
-	if v.Amount != (game.Quantity{}) {
-		lit1, err2 := r.renderQuantity(ctx, v.Amount)
-		if err2 != nil {
-			return "", fmt.Errorf("game.ExileTopOfLibrary.Amount: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Amount: "+lit1+",")
-	}
-	if v.Player != (game.PlayerReference{}) {
-		lit3, err4 := r.renderPlayerReference(v.Player)
-		if err4 != nil {
-			return "", fmt.Errorf("game.ExileTopOfLibrary.Player: %w", err4)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Player: "+lit3+",")
-	}
-	if v.PlayerGroup != (game.PlayerGroupReference{}) {
-		lit5, err6 := r.renderPlayerGroupReferenceWithContext(ctx, v.PlayerGroup)
-		if err6 != nil {
-			return "", fmt.Errorf("game.ExileTopOfLibrary.PlayerGroup: %w", err6)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "PlayerGroup: "+lit5+",")
-	}
-	if v.PublishLinked != "" {
-		lit7 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
-		ctx.need(importGame)
-		fields = append(fields, "PublishLinked: "+lit7+",")
-	}
-	if v.Counter.Exists {
-		lit9, err10 := enumLiteral(counterKindLiterals, "counter.Kind", v.Counter.Val)
-		if err10 != nil {
-			return "", fmt.Errorf("game.ExileTopOfLibrary.Counter: %w", err10)
-		}
-		ctx.need(importCounter)
-		ctx.need(importOpt)
-		lit8 := "opt.Val(" + lit9 + ")"
-		fields = append(fields, "Counter: "+lit8+",")
-	}
-	if v.FaceDown {
-		lit11 := strconv.FormatBool(bool(v.FaceDown))
-		fields = append(fields, "FaceDown: "+lit11+",")
-	}
-	return structLit("game.ExileTopOfLibrary", fields), nil
-}
-
 // renderGameExplore renders a game.Explore value as a Go composite literal.
 func (r Renderer) renderGameExplore(ctx *renderCtx, v game.Explore) (string, error) {
 	var fields []string
@@ -7746,41 +7695,6 @@ func (r Renderer) renderGameMassReturnFromGraveyard(ctx *renderCtx, v game.MassR
 	return structLit("game.MassReturnFromGraveyard", fields), nil
 }
 
-// renderGameMill renders a game.Mill value as a Go composite literal.
-func (r Renderer) renderGameMill(ctx *renderCtx, v game.Mill) (string, error) {
-	var fields []string
-	if v.Amount != (game.Quantity{}) {
-		lit1, err2 := r.renderQuantity(ctx, v.Amount)
-		if err2 != nil {
-			return "", fmt.Errorf("game.Mill.Amount: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Amount: "+lit1+",")
-	}
-	if v.Player != (game.PlayerReference{}) {
-		lit3, err4 := r.renderPlayerReference(v.Player)
-		if err4 != nil {
-			return "", fmt.Errorf("game.Mill.Player: %w", err4)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Player: "+lit3+",")
-	}
-	if v.PlayerGroup != (game.PlayerGroupReference{}) {
-		lit5, err6 := r.renderPlayerGroupReferenceWithContext(ctx, v.PlayerGroup)
-		if err6 != nil {
-			return "", fmt.Errorf("game.Mill.PlayerGroup: %w", err6)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "PlayerGroup: "+lit5+",")
-	}
-	if v.PublishLinked != "" {
-		lit7 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
-		ctx.need(importGame)
-		fields = append(fields, "PublishLinked: "+lit7+",")
-	}
-	return structLit("game.Mill", fields), nil
-}
-
 // renderGameMobilizeAmount renders a game.MobilizeAmount value as a Go composite literal.
 func (r Renderer) renderGameMobilizeAmount(ctx *renderCtx, v game.MobilizeAmount) (string, error) {
 	var fields []string
@@ -8211,6 +8125,63 @@ func (r Renderer) renderGameMoveResolvingSpell(ctx *renderCtx, v game.MoveResolv
 		fields = append(fields, "Shuffle: "+lit3+",")
 	}
 	return structLit("game.MoveResolvingSpell", fields), nil
+}
+
+// renderGameMoveTopOfLibrary renders a game.MoveTopOfLibrary value as a Go composite literal.
+func (r Renderer) renderGameMoveTopOfLibrary(ctx *renderCtx, v game.MoveTopOfLibrary) (string, error) {
+	var fields []string
+	if v.Amount != (game.Quantity{}) {
+		lit1, err2 := r.renderQuantity(ctx, v.Amount)
+		if err2 != nil {
+			return "", fmt.Errorf("game.MoveTopOfLibrary.Amount: %w", err2)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Amount: "+lit1+",")
+	}
+	if v.Player != (game.PlayerReference{}) {
+		lit3, err4 := r.renderPlayerReference(v.Player)
+		if err4 != nil {
+			return "", fmt.Errorf("game.MoveTopOfLibrary.Player: %w", err4)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Player: "+lit3+",")
+	}
+	if v.PlayerGroup != (game.PlayerGroupReference{}) {
+		lit5, err6 := r.renderPlayerGroupReferenceWithContext(ctx, v.PlayerGroup)
+		if err6 != nil {
+			return "", fmt.Errorf("game.MoveTopOfLibrary.PlayerGroup: %w", err6)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "PlayerGroup: "+lit5+",")
+	}
+	if v.Destination != 0 {
+		lit7, err8 := enumLiteral(zoneTypeLiterals, "zone.Type", v.Destination)
+		if err8 != nil {
+			return "", fmt.Errorf("game.MoveTopOfLibrary.Destination: %w", err8)
+		}
+		ctx.need(importZone)
+		fields = append(fields, "Destination: "+lit7+",")
+	}
+	if v.PublishLinked != "" {
+		lit9 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "PublishLinked: "+lit9+",")
+	}
+	if v.Counter.Exists {
+		lit11, err12 := enumLiteral(counterKindLiterals, "counter.Kind", v.Counter.Val)
+		if err12 != nil {
+			return "", fmt.Errorf("game.MoveTopOfLibrary.Counter: %w", err12)
+		}
+		ctx.need(importCounter)
+		ctx.need(importOpt)
+		lit10 := "opt.Val(" + lit11 + ")"
+		fields = append(fields, "Counter: "+lit10+",")
+	}
+	if v.FaceDown {
+		lit13 := strconv.FormatBool(bool(v.FaceDown))
+		fields = append(fields, "FaceDown: "+lit13+",")
+	}
+	return structLit("game.MoveTopOfLibrary", fields), nil
 }
 
 // renderGameMutateKeyword renders a game.MutateKeyword value as a Go composite literal.

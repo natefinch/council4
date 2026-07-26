@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestMillTargetedPlayersMillsEachChosenTarget proves that a group mill naming
@@ -19,7 +20,7 @@ func TestMillTargetedPlayersMillsEachChosenTarget(t *testing.T) {
 		}
 	}
 
-	addEffectSpellToStack(g, game.Player1, game.Mill{
+	addEffectSpellToStack(g, game.Player1, game.MoveTopOfLibrary{Destination: zone.Graveyard,
 		Amount:      game.Fixed(2),
 		PlayerGroup: game.TargetedPlayersReference(),
 	}, []game.Target{

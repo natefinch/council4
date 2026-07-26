@@ -47,7 +47,7 @@ func newTerisianMindbreaker() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount: game.Dynamic(game.DynamicAmount{
 										Kind:      game.DynamicAmountCountCardsInZone,
 										Divisor:   2,

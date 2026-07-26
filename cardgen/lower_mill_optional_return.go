@@ -68,7 +68,7 @@ func lowerMillThenOptionalAmongToHandSequence(ctx contentCtx) (game.AbilityConte
 		return game.AbilityContent{}, false
 	}
 	sequence := []game.Instruction{
-		{Primitive: game.Mill{
+		{Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 			Amount:        millAmount,
 			Player:        game.ControllerReference(),
 			PublishLinked: milledCardsLinkKey,

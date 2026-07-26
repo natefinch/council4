@@ -933,7 +933,7 @@ func TestLowerMillThenChosenGraveyardReanimateSequence(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
 	}
-	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	mill, ok := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok || mill.Amount.Value() != 3 {
 		t.Fatalf("first instruction = %#v, want Mill 3", mode.Sequence[0].Primitive)
 	}

@@ -96,7 +96,7 @@ func lowerOptionalRevealKeepOneOfEach(ctx contentCtx) (game.AbilityContent, bool
 		}
 	}
 
-	sequence := []game.Instruction{{Primitive: game.Mill{
+	sequence := []game.Instruction{{Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 		Amount:        game.Fixed(revealCount),
 		Player:        game.ControllerReference(),
 		PublishLinked: milledCardsLinkKey,
