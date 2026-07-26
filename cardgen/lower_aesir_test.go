@@ -43,7 +43,7 @@ func TestGenerateExecutableCardSourceAesirEscapeValhalla(t *testing.T) {
 		"CounterKind: counter.PlusOnePlusOne,",
 		"Primitive: game.ReturnExiledCardsToHand{",
 		`LinkedKey: game.LinkedKey("exile-graveyard-card"),`,
-		"Primitive: game.Bounce{",
+		"Primitive: game.MovePermanent{",
 		"Object: game.SourcePermanentReference(),",
 	} {
 		if !strings.Contains(normalizeSource(source), normalizeSource(wanted)) {

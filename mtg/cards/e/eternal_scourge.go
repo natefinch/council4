@@ -56,8 +56,9 @@ func newEternalScourge() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Object: game.SourceCardPermanentReference(),
+								Primitive: game.MovePermanent{
+									Object:      game.SourceCardPermanentReference(),
+									Destination: zone.Exile,
 								},
 							},
 						},

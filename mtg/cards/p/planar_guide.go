@@ -48,9 +48,10 @@ func newPlanarGuide() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Group:          game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
-									ExileLinkedKey: game.LinkedKey("group-blink"),
+								Primitive: game.MovePermanent{
+									Group:         game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+									PublishLinked: game.LinkedKey("group-blink"),
+									Destination:   zone.Exile,
 								},
 							},
 							{

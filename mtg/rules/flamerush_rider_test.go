@@ -53,7 +53,7 @@ func flamerushRiderDef() *game.CardDef {
 						Timing:              game.DelayedAtEndOfCombat,
 						CapturedObjectGroup: opt.Val(game.LinkedObjectReference(string(flamerushTokenLink))),
 						Content: game.Mode{Sequence: []game.Instruction{{
-							Primitive: game.Exile{Group: game.CapturedObjectsGroup()},
+							Primitive: game.MovePermanent{Group: game.CapturedObjectsGroup(), Destination: zone.Exile},
 						}}}.Ability(),
 					}}},
 				},

@@ -31,9 +31,10 @@ func explicitORingCardDef() *game.CardDef {
 				},
 				Content: game.Mode{
 					Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPermanent}},
-					Sequence: []game.Instruction{{Primitive: game.Exile{
-						Object:         game.TargetPermanentReference(0),
-						ExileLinkedKey: key,
+					Sequence: []game.Instruction{{Primitive: game.MovePermanent{
+						Object:        game.TargetPermanentReference(0),
+						PublishLinked: key,
+						Destination:   zone.Exile,
 					}}},
 				}.Ability(),
 			},
@@ -72,9 +73,10 @@ func TestExplicitORingReturnReleasesNonCreatureOnSourceLeaving(t *testing.T) {
 
 	obj := linkedSourceObject(source)
 	obj.Targets = []game.Target{game.PermanentTarget(victim.ObjectID)}
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: game.LinkedKey("exile-until-leaves"),
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: game.LinkedKey("exile-until-leaves"),
+		Destination:   zone.Exile,
 	}, nil)
 
 	if permanentByCardID(g, victim.CardInstanceID) != nil {

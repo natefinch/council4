@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -86,8 +87,9 @@ func newManaBloom() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Bounce{
-									Object: game.SourcePermanentReference(),
+								Primitive: game.MovePermanent{
+									Object:      game.SourcePermanentReference(),
+									Destination: zone.Hand,
 								},
 							},
 						},

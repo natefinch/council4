@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerSurveilSpell(t *testing.T) {
@@ -609,7 +610,7 @@ func TestLowerRemovalManifestSequence(t *testing.T) {
 			oracle: "Exile target creature. Its controller manifests the top card of their library.",
 			dread:  false,
 			removalIs: func(p game.Primitive) bool {
-				_, ok := p.(game.Exile)
+				_, ok := movePermanentTo(p, zone.Exile)
 				return ok
 			},
 		},

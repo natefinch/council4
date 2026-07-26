@@ -17,7 +17,7 @@ import (
 // permanent's last-known controller incubate its last-known mana value.
 func exciseSequence() []game.Instruction {
 	return []game.Instruction{
-		{Primitive: game.Exile{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Exile}},
 		{Primitive: game.Incubate{
 			Amount: game.Dynamic(game.DynamicAmount{
 				Kind:       game.DynamicAmountObjectManaValue,

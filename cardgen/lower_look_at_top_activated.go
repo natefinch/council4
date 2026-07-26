@@ -31,7 +31,7 @@ func lowerActivatedBodyContent(
 		const resultKey = game.ResultKey("temur-sabertooth-returned")
 		return game.Mode{Sequence: []game.Instruction{
 			{
-				Primitive: game.Bounce{
+				Primitive: game.MovePermanent{
 					Group: game.BattlefieldGroupExcluding(
 						game.Selection{
 							RequiredTypes: []types.Card{types.Creature},
@@ -41,6 +41,7 @@ func lowerActivatedBodyContent(
 					),
 					ControlledChoice: true,
 					Amount:           game.Fixed(1),
+					Destination:      zone.Hand,
 				},
 				Optional:      true,
 				PublishResult: resultKey,

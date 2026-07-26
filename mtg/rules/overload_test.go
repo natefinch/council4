@@ -367,7 +367,7 @@ func TestOverloadSiblingGroupsResolveSimultaneously(t *testing.T) {
 			NewEngine(nil),
 			g,
 			&game.StackObject{Controller: game.Player1},
-			game.Bounce{Group: game.BattlefieldGroup(selection)},
+			game.MovePermanent{Group: game.BattlefieldGroup(selection), Destination: zone.Hand},
 			&TurnLog{},
 		)
 		if !g.Players[first.Owner].Hand.Contains(first.CardInstanceID) ||

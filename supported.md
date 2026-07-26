@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,180 of 32,503 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,839 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,180 of 32,503 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,841 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn

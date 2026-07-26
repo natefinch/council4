@@ -556,7 +556,7 @@ func lowerFixedExileSpell(
 	if group, ok := exactMassExileGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{
-				Primitive: game.Exile{Group: group},
+				Primitive: game.MovePermanent{Group: group, Destination: zone.Exile},
 			}},
 		}.Ability(), nil
 	}
@@ -564,12 +564,12 @@ func lowerFixedExileSpell(
 		return content, nil
 	}
 	if content, ok := lowerMultiDistinctTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
-		return game.Exile{Object: object}
+		return game.MovePermanent{Object: object, Destination: zone.Exile}
 	}); ok {
 		return content, nil
 	}
 	return lowerFixedPermanentTargetSpell(ctx, "Exile", func(object game.ObjectReference) game.Primitive {
-		return game.Exile{Object: object}
+		return game.MovePermanent{Object: object, Destination: zone.Exile}
 	})
 }
 
@@ -595,7 +595,7 @@ func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.Exile{SourceSpell: true},
+		Primitive: game.MoveResolvingSpell{Destination: zone.Exile},
 	}}}.Ability(), true
 }
 
@@ -642,7 +642,7 @@ func lowerSourcePermanentExile(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.Exile{Object: object},
+		Primitive: game.MovePermanent{Object: object, Destination: zone.Exile},
 	}}}.Ability(), true
 }
 
@@ -681,7 +681,7 @@ func lowerSourceAttachedExile(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.Exile{Object: object},
+		Primitive: game.MovePermanent{Object: object, Destination: zone.Exile},
 	}}}.Ability(), true
 }
 
@@ -738,7 +738,7 @@ func lowerSourceSpellShuffleIntoLibrary(ctx contentCtx) (game.AbilityContent, bo
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{
-		Primitive: game.ShuffleSpellIntoLibrary{},
+		Primitive: game.MoveResolvingSpell{Destination: zone.Library, Shuffle: true},
 	}}}.Ability(), true
 }
 
@@ -1897,7 +1897,7 @@ func lowerControllerGraveyardChoiceExile(ctx contentCtx) (game.AbilityContent, b
 // the single-target form so that path stays on lowerFixedPermanentTargetSpell.
 func lowerMultiTargetExileSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return lowerMultiTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
-		return game.Exile{Object: object}
+		return game.MovePermanent{Object: object, Destination: zone.Exile}
 	})
 }
 

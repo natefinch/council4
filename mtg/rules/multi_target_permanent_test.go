@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestMultiTargetDestroyDestroysEachChosenTarget proves the multi-instruction
@@ -84,7 +85,7 @@ func TestMultiTargetBounceReturnsEachChosenTarget(t *testing.T) {
 		instructions := make([]game.Instruction, 0, slots)
 		for i := range slots {
 			instructions = append(instructions, game.Instruction{
-				Primitive: game.Bounce{Object: game.TargetPermanentReference(i)},
+				Primitive: game.MovePermanent{Object: game.TargetPermanentReference(i), Destination: zone.Hand},
 			})
 		}
 		return instructions

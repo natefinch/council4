@@ -319,7 +319,7 @@ func TestDelayedSourceCardPermanentExileFollowsReturnedCard(t *testing.T) {
 	}, &game.DelayedTriggerDef{
 		Timing: game.DelayedAtBeginningOfNextEndStep,
 		Content: game.Mode{
-			Sequence: []game.Instruction{{Primitive: game.Exile{Object: game.SourceCardPermanentReference()}}},
+			Sequence: []game.Instruction{{Primitive: game.MovePermanent{Object: game.SourceCardPermanentReference(), Destination: zone.Exile}}},
 		}.Ability(),
 	}) {
 		t.Fatal("scheduleDelayedTrigger failed")

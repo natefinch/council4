@@ -49,13 +49,15 @@ func newCyclopeanSnare() *game.CardDef {
 								},
 							},
 							{
-								Primitive: game.Bounce{
-									Object: game.SourcePermanentReference(),
+								Primitive: game.MovePermanent{
+									Object:      game.SourcePermanentReference(),
+									Destination: zone.Hand,
 								},
 							},
 							{
-								Primitive: game.Bounce{
-									Object: game.TargetPermanentReference(0),
+								Primitive: game.MovePermanent{
+									Object:      game.TargetPermanentReference(0),
+									Destination: zone.Hand,
 								},
 							},
 						},

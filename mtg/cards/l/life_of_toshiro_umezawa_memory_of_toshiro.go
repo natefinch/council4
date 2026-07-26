@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -111,9 +112,10 @@ func newLifeOfToshiroUmezawa() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Object:         game.SourcePermanentReference(),
-									ExileLinkedKey: game.LinkedKey("self-blink"),
+								Primitive: game.MovePermanent{
+									Object:        game.SourcePermanentReference(),
+									PublishLinked: game.LinkedKey("self-blink"),
+									Destination:   zone.Exile,
 								},
 							},
 							{

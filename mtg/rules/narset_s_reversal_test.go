@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -16,7 +17,7 @@ import (
 func narsetReversalInstructions() []game.Instruction {
 	return []game.Instruction{
 		{Primitive: game.CopyStackObject{Object: game.TargetStackObjectReference(0), MayChooseNewTargets: true}},
-		{Primitive: game.Bounce{Object: game.TargetObjectReference(0)}},
+		{Primitive: game.MovePermanent{Object: game.TargetObjectReference(0), Destination: zone.Hand}},
 	}
 }
 

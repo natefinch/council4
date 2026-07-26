@@ -45,9 +45,9 @@ func TestLowerRemovalThenControllerSearch(t *testing.T) {
 	if seq[0].Optional || seq[0].OptionalActor.Exists {
 		t.Errorf("removal instruction optionality = (%v, %v), want mandatory", seq[0].Optional, seq[0].OptionalActor.Exists)
 	}
-	exile, ok := seq[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(seq[0].Primitive, zone.Exile)
 	if !ok {
-		t.Fatalf("first primitive = %#v, want game.Exile", seq[0].Primitive)
+		t.Fatalf("first primitive = %#v, want an exile move", seq[0].Primitive)
 	}
 	if exile.Object != game.TargetPermanentReference(0) {
 		t.Errorf("exile object = %#v, want TargetPermanentReference(0)", exile.Object)

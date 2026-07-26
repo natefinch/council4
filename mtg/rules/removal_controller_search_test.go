@@ -17,7 +17,7 @@ import (
 func pathToExileSequence() []game.Instruction {
 	searcher := game.ObjectControllerReference(game.TargetPermanentReference(0))
 	return []game.Instruction{
-		{Primitive: game.Exile{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Exile}},
 		{
 			Optional:      true,
 			OptionalActor: opt.Val(searcher),

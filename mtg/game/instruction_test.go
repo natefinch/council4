@@ -225,7 +225,7 @@ func TestValidateInstructionSequenceRejectsInvalidLinkedSearch(t *testing.T) {
 func TestValidateInstructionSequenceAcceptsDelayedLinkedBattlefieldSource(t *testing.T) {
 	key := LinkedKey("delayed-blink")
 	seq := []Instruction{
-		{Primitive: Exile{Object: TargetPermanentReference(0), ExileLinkedKey: key}},
+		{Primitive: MovePermanent{Object: TargetPermanentReference(0), PublishLinked: key, Destination: zone.Exile}},
 		{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 			Timing: DelayedAtBeginningOfNextEndStep,
 			Content: Mode{Sequence: []Instruction{{Primitive: PutOnBattlefield{
@@ -262,8 +262,9 @@ func TestValidateInstructionSequenceAcceptsDelayedLinkedObject(t *testing.T) {
 		}},
 		{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 			Timing: DelayedAtBeginningOfNextEndStep,
-			Content: Mode{Sequence: []Instruction{{Primitive: Bounce{
-				Object: LinkedObjectReference(string(key)),
+			Content: Mode{Sequence: []Instruction{{Primitive: MovePermanent{
+				Object:      LinkedObjectReference(string(key)),
+				Destination: zone.Hand,
 			}}}}.Ability(),
 		}}},
 	}, []TargetSpec{{MinTargets: 1, MaxTargets: 1}})
@@ -275,8 +276,9 @@ func TestValidateInstructionSequenceAcceptsDelayedLinkedObject(t *testing.T) {
 func TestValidateInstructionSequenceRejectsDelayedUnknownLinkedObject(t *testing.T) {
 	err := ValidateInstructionSequence([]Instruction{{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 		Timing: DelayedAtBeginningOfNextEndStep,
-		Content: Mode{Sequence: []Instruction{{Primitive: Bounce{
-			Object: LinkedObjectReference("missing"),
+		Content: Mode{Sequence: []Instruction{{Primitive: MovePermanent{
+			Object:      LinkedObjectReference("missing"),
+			Destination: zone.Hand,
 		}}}}.Ability(),
 	}}}})
 	if err == nil {

@@ -667,8 +667,9 @@ func myriadTriggeredBody() TriggeredAbility {
 						Content: Mode{
 							Sequence: []Instruction{
 								{
-									Primitive: Exile{
-										Group: CapturedObjectsGroup(),
+									Primitive: MovePermanent{
+										Group:       CapturedObjectsGroup(),
+										Destination: zone.Exile,
 									},
 								},
 							},
@@ -1694,7 +1695,7 @@ func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 					Timing: DelayedAtBeginningOfNextEndStep,
 					Content: Mode{Sequence: []Instruction{{
-						Primitive: Exile{Object: SourceCardPermanentReference()},
+						Primitive: MovePermanent{Object: SourceCardPermanentReference(), Destination: zone.Exile},
 					}}}.Ability(),
 				}},
 			},

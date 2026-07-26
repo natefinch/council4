@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -402,7 +403,7 @@ func TestResolvingSourceSpellExilesItselfButCopyDoesNot(t *testing.T) {
 		Name:  "Self Exile",
 		Types: []types.Card{types.Instant},
 		SpellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{{
-			Primitive: game.Exile{SourceSpell: true},
+			Primitive: game.MoveResolvingSpell{Destination: zone.Exile},
 		}}}.Ability()),
 	}}
 

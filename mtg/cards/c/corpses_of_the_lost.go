@@ -100,8 +100,9 @@ func newCorpsesOfTheLost() *game.CardDef {
 								PublishResult: game.ResultKey("if-you-do"),
 							},
 							{
-								Primitive: game.Bounce{
-									Object: game.SourcePermanentReference(),
+								Primitive: game.MovePermanent{
+									Object:      game.SourcePermanentReference(),
+									Destination: zone.Hand,
 								},
 								ResultGate: opt.Val(game.InstructionResultGate{
 									Key:       "if-you-do",

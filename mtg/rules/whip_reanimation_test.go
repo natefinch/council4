@@ -45,7 +45,7 @@ func whipReanimationInstructions() []game.Instruction {
 				Timing: game.DelayedAtBeginningOfNextEndStep,
 				Content: game.Mode{
 					Sequence: []game.Instruction{{
-						Primitive: game.Exile{Object: game.LinkedObjectReference(string(exileKey))},
+						Primitive: game.MovePermanent{Object: game.LinkedObjectReference(string(exileKey)), Destination: zone.Exile},
 					}},
 				}.Ability(),
 			}},

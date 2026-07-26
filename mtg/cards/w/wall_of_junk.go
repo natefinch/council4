@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -50,8 +51,9 @@ func newWallOfJunk() *game.CardDef {
 										Content: game.Mode{
 											Sequence: []game.Instruction{
 												{
-													Primitive: game.Bounce{
-														Object: game.SourceCardPermanentReference(),
+													Primitive: game.MovePermanent{
+														Object:      game.SourceCardPermanentReference(),
+														Destination: zone.Hand,
 													},
 												},
 											},

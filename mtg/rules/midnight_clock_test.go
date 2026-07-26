@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // midnightClockThresholdPattern mirrors the trigger the compiler lowers for
@@ -242,8 +243,9 @@ func TestMidnightClockResolutionShufflesHandAndGraveyardThenDrawsThenExiles(t *t
 	}
 
 	// Step 3: exile the source artifact.
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object: game.SourceCardPermanentReference(),
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:      game.SourceCardPermanentReference(),
+		Destination: zone.Exile,
 	}, &TurnLog{})
 	if _, ok := permanentByObjectID(g, clock.ObjectID); ok {
 		t.Fatal("Midnight Clock remained on the battlefield after resolution")
@@ -274,7 +276,7 @@ func TestMidnightClockResolutionWithEmptyHandAndGraveyard(t *testing.T) {
 	sequence := []game.Primitive{
 		game.ShuffleGraveyardIntoLibrary{Player: game.ControllerReference(), IncludeHand: true},
 		game.Draw{Amount: game.Fixed(7), Player: game.ControllerReference()},
-		game.Exile{Object: game.SourceCardPermanentReference()},
+		game.MovePermanent{Object: game.SourceCardPermanentReference(), Destination: zone.Exile},
 	}
 	for _, prim := range sequence {
 		resolveInstruction(engine, g, obj, prim, &TurnLog{})

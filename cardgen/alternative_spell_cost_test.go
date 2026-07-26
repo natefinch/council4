@@ -391,7 +391,7 @@ func TestLowerSafeOverloadSiblings(t *testing.T) {
 			text:     `Return target nonland permanent you don't control to its owner's hand.` + "\n" + `Overload {6}{U} (You may cast this spell for its overload cost. If you do, change "target" in its text to "each.")`,
 			cost:     cost.Mana{cost.O(6), cost.U},
 			primitive: func(primitive game.Primitive) bool {
-				bounce, ok := primitive.(game.Bounce)
+				bounce, ok := movePermanentTo(primitive, zone.Hand)
 				return ok && bounce.Group.Valid()
 			},
 		},
@@ -491,7 +491,7 @@ func TestLowerDeadlyRollick(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence = %#v, want one exile", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
 	if !ok || exile.Object != game.TargetPermanentReference(0) {
 		t.Fatalf("primitive = %#v, want exile of target reference 0", mode.Sequence[0].Primitive)
 	}
@@ -506,8 +506,9 @@ func TestLowerDeadlyRollick(t *testing.T) {
 	for _, want := range []string{
 		"Condition: cost.AlternativeConditionControlsCommander",
 		"RequiredTypesAny: []types.Card{types.Creature}",
-		"Primitive: game.Exile",
-		"Object: game.TargetPermanentReference(0)",
+		"Primitive: game.MovePermanent{",
+		"Destination: zone.Exile,",
+		"Object:      game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)

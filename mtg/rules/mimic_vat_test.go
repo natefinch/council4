@@ -47,7 +47,7 @@ func mimicVatTokenContent() game.AbilityContent {
 				Timing:              game.DelayedAtBeginningOfNextEndStep,
 				CapturedObjectGroup: opt.Val(game.LinkedObjectReference(string(tokenLink))),
 				Content: game.Mode{Sequence: []game.Instruction{{
-					Primitive: game.Exile{Group: game.CapturedObjectsGroup()},
+					Primitive: game.MovePermanent{Group: game.CapturedObjectsGroup(), Destination: zone.Exile},
 				}}}.Ability(),
 			}},
 		},

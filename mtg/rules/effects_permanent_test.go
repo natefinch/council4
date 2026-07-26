@@ -97,8 +97,8 @@ func TestExileAndBounceEffectsMovePermanentsToOwnerZones(t *testing.T) {
 		name      string
 		primitive game.Primitive
 	}{
-		{name: "exile", primitive: game.Exile{Object: game.TargetPermanentReference(0)}},
-		{name: "bounce", primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+		{name: "exile", primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Exile}},
+		{name: "bounce", primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -422,8 +422,8 @@ func TestDualTargetBounceReturnsBothTargetsToOwnersHands(t *testing.T) {
 	mine := addCreaturePermanent(g, game.Player1)
 	theirs := addCreaturePermanent(g, game.Player2)
 	addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
-		{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
-		{Primitive: game.Bounce{Object: game.TargetPermanentReference(1)}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(1), Destination: zone.Hand}},
 	}, []game.Target{
 		game.PermanentTarget(mine.ObjectID),
 		game.PermanentTarget(theirs.ObjectID),
@@ -453,8 +453,9 @@ func TestMassBounceCreaturesReturnsOnlyCreaturesToOwnersHands(t *testing.T) {
 	land := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Island",
 		Types: []types.Card{types.Land}},
 	})
-	addEffectSpellToStack(g, game.Player1, game.Bounce{
-		Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{
+		Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+		Destination: zone.Hand,
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -481,11 +482,12 @@ func TestMassBounceYouControlReturnsOnlyControllersPermanents(t *testing.T) {
 	engine := NewEngine(nil)
 	mine := addCreaturePermanent(g, game.Player1)
 	theirs := addCreaturePermanent(g, game.Player2)
-	addEffectSpellToStack(g, game.Player1, game.Bounce{
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{
 		Group: game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},
 			Controller:    game.ControllerYou,
 		}),
+		Destination: zone.Hand,
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -511,11 +513,12 @@ func TestMassBounceAttackingReturnsOnlyAttackingCreatures(t *testing.T) {
 			{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
 		},
 	}
-	addEffectSpellToStack(g, game.Player1, game.Bounce{
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{
 		Group: game.BattlefieldGroup(game.Selection{
 			RequiredTypes: []types.Card{types.Creature},
 			CombatState:   game.CombatStateAttacking,
 		}),
+		Destination: zone.Hand,
 	}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -539,10 +542,11 @@ func TestControlledChoiceBounceAutoChoosesWhenEligibleCountLEAmount(t *testing.T
 		Types: []types.Card{types.Land}},
 	})
 	theirs := addCreaturePermanent(g, game.Player2)
-	addEffectSpellToStack(g, game.Player1, game.Bounce{
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{
 		ControlledChoice: true,
 		Amount:           game.Fixed(1),
 		Group:            game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+		Destination:      zone.Hand,
 	}, nil)
 
 	log := TurnLog{}
@@ -570,10 +574,11 @@ func TestControlledChoiceBounceAsksControllerToChooseWhenExcessEligible(t *testi
 	engine := NewEngine(nil)
 	creature1 := addCreaturePermanent(g, game.Player1)
 	creature2 := addCreaturePermanent(g, game.Player1)
-	addEffectSpellToStack(g, game.Player1, game.Bounce{
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{
 		ControlledChoice: true,
 		Amount:           game.Fixed(1),
 		Group:            game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+		Destination:      zone.Hand,
 	}, nil)
 	agents := [game.NumPlayers]PlayerAgent{
 		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
@@ -619,7 +624,7 @@ func TestControlledChoiceBounceAnotherExcludesSourceAndUsesOwnerHand(t *testing.
 		Controller: game.Player1,
 	}
 	log := TurnLog{}
-	resolveInstruction(engine, g, obj, game.Bounce{
+	resolveInstruction(engine, g, obj, game.MovePermanent{
 		ControlledChoice: true,
 		Amount:           game.Fixed(1),
 		Group: game.BattlefieldGroup(game.Selection{
@@ -627,6 +632,7 @@ func TestControlledChoiceBounceAnotherExcludesSourceAndUsesOwnerHand(t *testing.
 			Controller:    game.ControllerYou,
 			ExcludeSource: true,
 		}),
+		Destination: zone.Hand,
 	}, &log)
 
 	if _, ok := permanentByObjectID(g, source.ObjectID); !ok {
@@ -1606,7 +1612,7 @@ func TestBounceTargetObjectReturnsSpellOnStackToOwnersHand(t *testing.T) {
 		Controller: game.Player2,
 	}
 	g.Stack.Push(targetObj)
-	addEffectSpellToStack(g, game.Player1, game.Bounce{Object: game.TargetObjectReference(0)},
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{Object: game.TargetObjectReference(0), Destination: zone.Hand},
 		[]game.Target{game.StackObjectTarget(targetObj.ID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -1626,7 +1632,7 @@ func TestBounceTargetObjectReturnsPermanentToOwnersHand(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCreaturePermanent(g, game.Player2)
-	addEffectSpellToStack(g, game.Player1, game.Bounce{Object: game.TargetObjectReference(0)},
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{Object: game.TargetObjectReference(0), Destination: zone.Hand},
 		[]game.Target{game.PermanentTarget(creature.ObjectID)})
 
 	engine.resolveTopOfStack(g, &TurnLog{})

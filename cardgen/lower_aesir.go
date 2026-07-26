@@ -213,6 +213,6 @@ func lowerAesirReturnSourceAndExiledCard(ctx contentCtx) (game.AbilityContent, b
 	}
 	return game.Mode{Sequence: []game.Instruction{
 		{Primitive: game.ReturnExiledCardsToHand{LinkedKey: aesirExiledCardKey}},
-		{Primitive: game.Bounce{Object: game.SourcePermanentReference()}},
+		{Primitive: game.MovePermanent{Object: game.SourcePermanentReference(), Destination: zone.Hand}},
 	}}.Ability(), true
 }

@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -55,7 +56,7 @@ func lowerTrailingBackReferenceExile(ctx contentCtx) (game.AbilityContent, bool)
 		return game.AbilityContent{}, false
 	}
 	instruction := game.Instruction{
-		Primitive: game.Exile{Object: game.TargetPermanentReference(0)},
+		Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Exile},
 	}
 	switch len(ctx.content.Conditions) {
 	case 0:

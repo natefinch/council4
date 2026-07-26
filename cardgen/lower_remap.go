@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -215,14 +216,14 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
-	if value, ok := primitive.(game.Exile); ok {
+	if value, ok := movePermanentTo(primitive, zone.Exile); ok {
 		if value.Group.Valid() {
 			return nil, false
 		}
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
-	if value, ok := primitive.(game.Bounce); ok {
+	if value, ok := movePermanentTo(primitive, zone.Hand); ok {
 		if value.Group.Valid() {
 			return nil, false
 		}

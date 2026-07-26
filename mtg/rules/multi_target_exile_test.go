@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestMultiTargetExileExilesEachChosenTarget proves the multi-instruction exile
@@ -18,7 +19,7 @@ func TestMultiTargetExileExilesEachChosenTarget(t *testing.T) {
 		instructions := make([]game.Instruction, 0, slots)
 		for i := range slots {
 			instructions = append(instructions, game.Instruction{
-				Primitive: game.Exile{Object: game.TargetPermanentReference(i)},
+				Primitive: game.MovePermanent{Object: game.TargetPermanentReference(i), Destination: zone.Exile},
 			})
 		}
 		return instructions

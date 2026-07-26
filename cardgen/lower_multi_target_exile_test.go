@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerMultiTargetExile proves plural and optional permanent exile wordings
@@ -77,9 +78,9 @@ func TestLowerMultiTargetExile(t *testing.T) {
 				t.Fatalf("sequence len = %d, want %d", len(mode.Sequence), test.maxTargets)
 			}
 			for i := range mode.Sequence {
-				exile, ok := mode.Sequence[i].Primitive.(game.Exile)
+				exile, ok := movePermanentTo(mode.Sequence[i].Primitive, zone.Exile)
 				if !ok {
-					t.Fatalf("sequence[%d] = %T, want game.Exile", i, mode.Sequence[i].Primitive)
+					t.Fatalf("sequence[%d] = %T, want an exile move", i, mode.Sequence[i].Primitive)
 				}
 				if exile.Object != game.TargetPermanentReference(i) {
 					t.Fatalf("sequence[%d] object = %v, want TargetPermanentReference(%d)", i, exile.Object, i)
@@ -106,7 +107,7 @@ func TestLowerMultiTargetExileSingleTargetUnchanged(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
 	}
-	if exile, ok := mode.Sequence[0].Primitive.(game.Exile); !ok || exile.Object != game.TargetPermanentReference(0) {
+	if exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile); !ok || exile.Object != game.TargetPermanentReference(0) {
 		t.Fatalf("sequence[0] = %#v, want Exile of TargetPermanentReference(0)", mode.Sequence[0].Primitive)
 	}
 }
@@ -198,7 +199,7 @@ func TestLowerUnionExile(t *testing.T) {
 			if len(mode.Sequence) != 1 {
 				t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
 			}
-			exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+			exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
 			if !ok || exile.Object != game.TargetPermanentReference(0) {
 				t.Fatalf("sequence[0] = %#v, want Exile of TargetPermanentReference(0)", mode.Sequence[0].Primitive)
 			}

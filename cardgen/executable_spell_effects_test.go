@@ -80,52 +80,52 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 		{
 			name:       "all creatures",
 			oracleText: "Return all creatures to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),",
 		},
 		{
 			name:       "all permanents",
 			oracleText: "Return all permanents to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{}),",
 		},
 		{
 			name:       "all artifacts you control",
 			oracleText: "Return all artifacts you control to their owner's hand.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerYou}),",
 		},
 		{
 			name:       "all attacking creatures",
 			oracleText: "Return all attacking creatures to their owner's hand.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateAttacking}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateAttacking}),",
 		},
 		{
 			name:       "all blocking creatures",
 			oracleText: "Return all blocking creatures to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateBlocking}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, CombatState: game.CombatStateBlocking}),",
 		},
 		{
 			name:       "each creature without a +1/+1 counter",
 			oracleText: "Return each creature without a +1/+1 counter on it to its owner's hand.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchExcludedCounter: true, ExcludedCounter: counter.PlusOnePlusOne}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, MatchExcludedCounter: true, ExcludedCounter: counter.PlusOnePlusOne}),",
 		},
 		{
 			name:       "each permanent",
 			oracleText: "Return each permanent to its owner's hand.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{}),",
 		},
 		{
 			name:       "all noncreature, nonland permanents",
 			oracleText: "Return all noncreature, nonland permanents to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}}),",
 		},
 		{
 			name:       "all nonland permanents",
 			oracleText: "Return all nonland permanents to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Land}}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Land}}),",
 		},
 		{
 			name:       "all non-Elemental creatures",
 			oracleText: "Return all non-Elemental creatures to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedSubtype: types.Sub(\"Elemental\")}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedSubtype: types.Sub(\"Elemental\")}),",
 		},
 	}
 	for _, test := range tests {
@@ -144,8 +144,10 @@ func TestLowerMassBounceSpellToGroup(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("mass bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
 			}
-			if !strings.Contains(source, "Primitive: game.Bounce{") || !strings.Contains(source, test.wantGroup) {
-				t.Fatalf("mass bounce %q did not lower to the expected group Bounce:\n%s", test.oracleText, source)
+			if !strings.Contains(source, "Primitive: game.MovePermanent{") ||
+				!strings.Contains(source, "Destination: zone.Hand,") ||
+				!strings.Contains(source, test.wantGroup) {
+				t.Fatalf("mass bounce %q did not lower to the expected group return:\n%s", test.oracleText, source)
 			}
 		})
 	}
@@ -166,22 +168,22 @@ func TestLowerTriggeredMassBounceToGroup(t *testing.T) {
 		{
 			name:       "other nonland permanents",
 			oracleText: "When this creature enters, return all other nonland permanents to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludeSource: true}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludeSource: true}),",
 		},
 		{
 			name:       "other tapped creatures",
 			oracleText: "When this creature enters, return all other tapped creatures to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Tapped: game.TriTrue, ExcludeSource: true}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Tapped: game.TriTrue, ExcludeSource: true}),",
 		},
 		{
 			name:       "non-Elemental creatures",
 			oracleText: "When this creature enters, return all non-Elemental creatures to their owners' hands.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedSubtype: types.Sub(\"Elemental\")}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedSubtype: types.Sub(\"Elemental\")}),",
 		},
 		{
 			name:       "each other creature you control",
 			oracleText: "When this creature enters, return each other creature you control to its owner's hand.",
-			wantGroup:  "Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true}),",
+			wantGroup:  "Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true}),",
 		},
 	}
 	for _, test := range tests {
@@ -200,7 +202,7 @@ func TestLowerTriggeredMassBounceToGroup(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("triggered mass bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
 			}
-			if !strings.Contains(source, "Primitive: game.Bounce{") || !strings.Contains(source, test.wantGroup) {
+			if !strings.Contains(source, "Primitive: game.MovePermanent{") || !strings.Contains(source, test.wantGroup) {
 				t.Fatalf("triggered mass bounce %q did not lower to the expected group Bounce:\n%s", test.oracleText, source)
 			}
 		})
@@ -246,7 +248,7 @@ func TestLowerControlledChoiceBounceSpell(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("choice bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
 			}
-			if !strings.Contains(source, "Primitive: game.Bounce{") ||
+			if !strings.Contains(source, "Primitive: game.MovePermanent{") ||
 				!strings.Contains(source, "ControlledChoice: true,") ||
 				!strings.Contains(source, "Amount:           game.Fixed(1),") ||
 				!strings.Contains(source, test.wantSelection) {
@@ -474,7 +476,7 @@ func TestLowerSelfBounceReturn(t *testing.T) {
 		if len(diagnostics) != 0 {
 			t.Fatalf("self-bounce %q unexpectedly failed: %v", oracleText, diagnostics)
 		}
-		if !strings.Contains(source, "game.Bounce") ||
+		if !strings.Contains(source, "game.MovePermanent") ||
 			!strings.Contains(source, "game.SourcePermanentReference()") {
 			t.Fatalf("self-bounce %q did not lower to a source Bounce:\n%s", oracleText, source)
 		}
@@ -514,7 +516,7 @@ func TestLowerSelfNameBounceReturn(t *testing.T) {
 			if len(diagnostics) != 0 {
 				t.Fatalf("self-name bounce %q unexpectedly failed: %v", test.oracleText, diagnostics)
 			}
-			if !strings.Contains(source, "game.Bounce") ||
+			if !strings.Contains(source, "game.MovePermanent") ||
 				!strings.Contains(source, "game.SourcePermanentReference()") {
 				t.Fatalf("self-name bounce %q did not lower to a source Bounce:\n%s", test.oracleText, source)
 			}

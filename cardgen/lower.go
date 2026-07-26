@@ -610,8 +610,8 @@ func appendTrailingSourceSpellExile(content *game.AbilityContent, suffix game.Ab
 		len(suffix.Modes[0].Sequence) != 1 {
 		return false
 	}
-	exile, ok := suffix.Modes[0].Sequence[0].Primitive.(game.Exile)
-	if !ok || !exile.SourceSpell {
+	move, ok := suffix.Modes[0].Sequence[0].Primitive.(game.MoveResolvingSpell)
+	if !ok || move.Destination != zone.Exile {
 		return false
 	}
 	content.Modes[0].Sequence = append(content.Modes[0].Sequence, suffix.Modes[0].Sequence[0])
@@ -1014,10 +1014,12 @@ func lowerExecutableAbility(
 	if ability.UrzasRuinousBlast {
 		return abilityLowering{
 			spellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{{
-				Primitive: game.Exile{Group: game.BattlefieldGroup(game.Selection{
+				Primitive: game.MovePermanent{Group: game.BattlefieldGroup(game.Selection{
 					ExcludedTypes:     []types.Card{types.Land},
 					ExcludedSupertype: types.Legendary,
-				})},
+				}),
+					Destination: zone.Exile,
+				},
 			}}}.Ability()),
 			consumed: semanticConsumption{
 				conditions: len(ability.Content.Conditions),
@@ -1115,10 +1117,12 @@ func lowerExecutableAbility(
 					},
 					PublishChoice: game.SpellChosenTypeChoiceKey,
 				}},
-				{Primitive: game.Bounce{Group: game.BattlefieldGroup(game.Selection{
+				{Primitive: game.MovePermanent{Group: game.BattlefieldGroup(game.Selection{
 					RequiredTypes: []types.Card{types.Creature},
 					SubtypeChoice: game.SubtypeChoiceResolutionExcluded,
-				})}},
+				}),
+					Destination: zone.Hand,
+				}},
 			}}.Ability()),
 			consumed: semanticConsumption{
 				conditions: len(ability.Content.Conditions),
@@ -1363,7 +1367,7 @@ func lowerExecutableAbility(
 								Timing:         game.DelayedAtBeginningOfNextEndStep,
 								CapturedObject: opt.Val(game.LinkedObjectReference(string(copyLink))),
 								Content: game.Mode{Sequence: []game.Instruction{{
-									Primitive: game.Exile{Object: game.CapturedObjectReference()},
+									Primitive: game.MovePermanent{Object: game.CapturedObjectReference(), Destination: zone.Exile},
 								}}}.Ability(),
 							},
 						},
@@ -1832,7 +1836,7 @@ func lowerOverloadSpell(
 		primitive.Object = game.ObjectReference{}
 		primitive.Group = group
 		instruction.Primitive = primitive
-	case game.Bounce:
+	case game.MovePermanent:
 		if primitive.Object != game.TargetPermanentReference(0) ||
 			primitive.Group.Valid() ||
 			primitive.ControlledChoice {

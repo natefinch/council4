@@ -54,18 +54,23 @@ func TestGroupDestroyDeathsShareOneSimultaneousID(t *testing.T) {
 	}
 }
 
-// TestGroupExileMovesAreSequentialNotBatched proves the shared executor
-// preserves the exile group form's pre-existing per-permanent (non-simultaneous)
-// emission: each exiled permanent leaves the battlefield under its own zero
-// SimultaneousID rather than a shared batch id. Exile is not a death and the
-// group form historically did not coalesce, so the refactor must not introduce
-// a shared batch id.
-func TestGroupExileMovesAreSequentialNotBatched(t *testing.T) {
+// TestGroupExileMovesShareOneSimultaneousID proves that a mass exile moves every
+// permanent at once, under a single shared non-zero SimultaneousID.
+//
+// This test previously asserted the opposite. handleExile moved a group one
+// permanent at a time while handleBounce used the simultaneous batch, and the
+// divergence was locked in as "the group form historically did not coalesce"
+// rather than defended on the rules. It is not defensible: a single effect that
+// moves several objects to the same zone moves them simultaneously, which is why
+// "Destroy all creatures" and "Exile all creatures" both fire a
+// one-or-more-permanents-left trigger exactly once. Collapsing the two handlers
+// into one forced the question and fixed the exile side.
+func TestGroupExileMovesShareOneSimultaneousID(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	addCreaturePermanent(g, game.Player1)
 	addCreaturePermanent(g, game.Player2)
-	addEffectSpellToStack(g, game.Player1, game.Exile{Group: creatureBattlefieldGroup()}, nil)
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{Group: creatureBattlefieldGroup(), Destination: zone.Exile}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -76,10 +81,11 @@ func TestGroupExileMovesAreSequentialNotBatched(t *testing.T) {
 		t.Fatalf("exile zone-change events = %d, want 2 for mass exile of two creatures", len(ids))
 	}
 	var zeroID id.ID
-	for i, simID := range ids {
-		if simID != zeroID {
-			t.Fatalf("exile move %d SimultaneousID = %v, want zero (sequential, not batched)", i, simID)
-		}
+	if ids[0] == zeroID {
+		t.Fatalf("mass exile SimultaneousID = %v, want a non-zero batch id", ids[0])
+	}
+	if ids[0] != ids[1] {
+		t.Fatalf("mass exile moves have SimultaneousIDs %v and %v, want one shared batch id", ids[0], ids[1])
 	}
 }
 
@@ -91,7 +97,7 @@ func TestGroupBounceMovesShareOneSimultaneousID(t *testing.T) {
 	engine := NewEngine(nil)
 	addCreaturePermanent(g, game.Player1)
 	addCreaturePermanent(g, game.Player2)
-	addEffectSpellToStack(g, game.Player1, game.Bounce{Group: creatureBattlefieldGroup()}, nil)
+	addEffectSpellToStack(g, game.Player1, game.MovePermanent{Group: creatureBattlefieldGroup(), Destination: zone.Hand}, nil)
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -157,8 +163,12 @@ func TestSingleObjectDestroyExileBounceResolveThroughSharedExecutor(t *testing.T
 		toZone    zone.Type
 	}{
 		{"destroy", func(id.ID) game.Primitive { return game.Destroy{Object: game.TargetPermanentReference(0)} }, zone.Graveyard},
-		{"exile", func(id.ID) game.Primitive { return game.Exile{Object: game.TargetPermanentReference(0)} }, zone.Exile},
-		{"bounce", func(id.ID) game.Primitive { return game.Bounce{Object: game.TargetPermanentReference(0)} }, zone.Hand},
+		{"exile", func(id.ID) game.Primitive {
+			return game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Exile}
+		}, zone.Exile},
+		{"bounce", func(id.ID) game.Primitive {
+			return game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}
+		}, zone.Hand},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

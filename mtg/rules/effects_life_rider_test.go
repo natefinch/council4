@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -39,7 +40,7 @@ func TestSwordsToPlowsharesLifeRiderUsesLastKnownPower(t *testing.T) {
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
 	instrs := []game.Instruction{
-		{Primitive: game.Exile{Object: game.TargetPermanentReference(0), ExileLinkedKey: "life-rider"}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), PublishLinked: "life-rider", Destination: zone.Exile}},
 		{Primitive: game.GainLife{
 			Amount: game.Dynamic(game.DynamicAmount{
 				Kind:       game.DynamicAmountObjectPower,
@@ -82,7 +83,7 @@ func TestToughnessLifeRiderUsesLastKnownToughness(t *testing.T) {
 		Targets:    []game.Target{game.PermanentTarget(target.ObjectID)},
 	}
 	instrs := []game.Instruction{
-		{Primitive: game.Exile{Object: game.TargetPermanentReference(0), ExileLinkedKey: "life-rider"}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), PublishLinked: "life-rider", Destination: zone.Exile}},
 		{Primitive: game.GainLife{
 			Amount: game.Dynamic(game.DynamicAmount{
 				Kind:       game.DynamicAmountObjectToughness,

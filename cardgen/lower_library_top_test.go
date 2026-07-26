@@ -40,8 +40,8 @@ func TestLowerSenseisDiviningTopEndToEnd(t *testing.T) {
 	if _, ok := drawSeq[0].Primitive.(game.Draw); !ok {
 		t.Fatalf("first instruction = %#v, want game.Draw", drawSeq[0].Primitive)
 	}
-	put, ok := drawSeq[1].Primitive.(game.PutPermanentOnLibrary)
-	if !ok || put.Bottom || put.Object.Kind() != game.ObjectReferenceSourcePermanent {
+	put, ok := movePermanentTo(drawSeq[1].Primitive, zone.Library)
+	if !ok || put.LibraryBottom || put.Object.Kind() != game.ObjectReferenceSourcePermanent {
 		t.Fatalf("put = %#v", drawSeq[1].Primitive)
 	}
 }
@@ -78,8 +78,8 @@ func TestLowerPutSourceOnLibraryBottom(t *testing.T) {
 		OracleText: "{T}: Put this artifact on the bottom of its owner's library.",
 	})
 	seq := face.ActivatedAbilities[0].Content.Modes[0].Sequence
-	put, ok := seq[len(seq)-1].Primitive.(game.PutPermanentOnLibrary)
-	if !ok || !put.Bottom || put.Object.Kind() != game.ObjectReferenceSourcePermanent {
+	put, ok := movePermanentTo(seq[len(seq)-1].Primitive, zone.Library)
+	if !ok || !put.LibraryBottom || put.Object.Kind() != game.ObjectReferenceSourcePermanent {
 		t.Fatalf("put = %#v", seq[len(seq)-1].Primitive)
 	}
 }

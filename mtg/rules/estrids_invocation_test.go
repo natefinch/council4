@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -28,7 +29,7 @@ func estridGrantedUpkeepBlink() *game.TriggeredAbility {
 		Content: game.Mode{
 			Sequence: []game.Instruction{
 				{
-					Primitive:     game.Exile{Object: game.SourceCardPermanentReference(), ExileLinkedKey: link},
+					Primitive:     game.MovePermanent{Object: game.SourceCardPermanentReference(), PublishLinked: link, Destination: zone.Exile},
 					Optional:      true,
 					PublishResult: game.ResultKey("if-you-do"),
 				},

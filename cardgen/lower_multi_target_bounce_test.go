@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerMultiTargetBounceExcludedTypeAndUpToOne proves the bounce paths the
@@ -94,7 +95,7 @@ func TestLowerMultiTargetBounceExcludedTypeAndUpToOne(t *testing.T) {
 				t.Fatalf("sequence len = %d, want %d", len(mode.Sequence), test.maxTargets)
 			}
 			for i := range mode.Sequence {
-				p, ok := mode.Sequence[i].Primitive.(game.Bounce)
+				p, ok := movePermanentTo(mode.Sequence[i].Primitive, zone.Hand)
 				if !ok || p.Object != game.TargetPermanentReference(i) {
 					t.Fatalf("sequence[%d] = %#v, want Bounce of TargetPermanentReference(%d)", i, mode.Sequence[i].Primitive, i)
 				}
@@ -133,7 +134,7 @@ func TestLowerUpToOneTargetTappedBounce(t *testing.T) {
 		if len(mode.Sequence) != 1 {
 			t.Fatalf("sequence len = %d, want 1", len(mode.Sequence))
 		}
-		p, ok := mode.Sequence[0].Primitive.(game.Bounce)
+		p, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Hand)
 		if !ok || p.Object != game.TargetPermanentReference(0) {
 			t.Fatalf("sequence[0] = %#v, want Bounce of TargetPermanentReference(0)", mode.Sequence[0].Primitive)
 		}

@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestResolveTopOfStackAppendsResolveLog(t *testing.T) {
@@ -138,7 +139,7 @@ func TestShuffleSpellIntoLibraryReturnsSpellToOwnersLibrary(t *testing.T) {
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Deck Card"}})
 	sourceID := addInstructionSpellToStackForController(g, game.Player1, []game.Instruction{
 		{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}},
-		{Primitive: game.ShuffleSpellIntoLibrary{}},
+		{Primitive: game.MoveResolvingSpell{Destination: zone.Library, Shuffle: true}},
 	}, nil)
 	log := TurnLog{}
 

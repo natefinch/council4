@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -62,9 +63,10 @@ func newSalvationSwan() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Object:         game.TargetPermanentReference(0),
-									ExileLinkedKey: game.LinkedKey("delayed-blink-1"),
+								Primitive: game.MovePermanent{
+									Object:        game.TargetPermanentReference(0),
+									PublishLinked: game.LinkedKey("delayed-blink-1"),
+									Destination:   zone.Exile,
 								},
 							},
 							{

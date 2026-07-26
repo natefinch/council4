@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerKickedAdditiveRider verifies the "If this spell was kicked, <effect>"
@@ -28,8 +29,8 @@ func TestLowerKickedAdditiveRider(t *testing.T) {
 		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
 	}
 
-	if _, ok := mode.Sequence[0].Primitive.(game.Bounce); !ok {
-		t.Fatalf("instruction 0 = %T, want game.Bounce", mode.Sequence[0].Primitive)
+	if _, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Hand); !ok {
+		t.Fatalf("instruction 0 = %T, want a return-to-hand move", mode.Sequence[0].Primitive)
 	}
 	if mode.Sequence[0].Condition.Exists {
 		t.Fatal("base bounce must not be gated on kicker")

@@ -51,7 +51,7 @@ func TestGenerateExecutableCardSourceMidnightClock(t *testing.T) {
 		"IncludeHand: true",
 		"game.Draw{",
 		"Amount: game.Fixed(7)",
-		"game.Exile{",
+		"game.MovePermanent{",
 		"Object: game.SourceCardPermanentReference()",
 	} {
 		if !containsNormalized(source, want) {

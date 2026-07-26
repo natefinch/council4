@@ -4,19 +4,22 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-// bounceInstructions returns the game.Bounce primitives emitted in the first mode
+// bounceInstructions returns the return-to-hand moves emitted in the first mode
 // of a lowered spell ability, in order, so a scope test can assert how many
-// permanents/objects the return moves and how each is addressed.
-func bounceInstructions(t *testing.T, face loweredFaceAbilities) []game.Bounce {
+// permanents/objects the return moves and how each is addressed. It filters on
+// the destination as well as the primitive type, because a bounce is now
+// game.MovePermanent with a hand destination rather than its own type.
+func bounceInstructions(t *testing.T, face loweredFaceAbilities) []game.MovePermanent {
 	t.Helper()
 	if !face.SpellAbility.Exists || len(face.SpellAbility.Val.Modes) == 0 {
 		t.Fatal("expected a spell ability with at least one mode")
 	}
-	var bounces []game.Bounce
+	var bounces []game.MovePermanent
 	for _, instruction := range face.SpellAbility.Val.Modes[0].Sequence {
-		if bounce, ok := instruction.Primitive.(game.Bounce); ok {
+		if bounce, ok := movePermanentTo(instruction.Primitive, zone.Hand); ok {
 			bounces = append(bounces, bounce)
 		}
 	}
@@ -24,12 +27,12 @@ func bounceInstructions(t *testing.T, face loweredFaceAbilities) []game.Bounce {
 }
 
 // TestLowerBounceScopesShareDestinationPrecondition proves that every
-// battlefield bounce-to-hand scope still lowers to the same game.Bounce shape
+// battlefield bounce-to-hand scope still lowers to the same game.MovePermanent shape
 // after they were converged onto the shared plainControllerBounceToHand
 // destination/context precondition and the shared bounce-to-hand destination
 // constants. One representative card per scope (single target, two independent
 // target slots, controlled choose-at-resolution, stack/permanent target union,
-// and mass group) is lowered and its emitted Bounce instructions are checked for
+// and mass group) is lowered and its emitted move instructions are checked for
 // the scope's distinguishing routing, so a regression in the shared precondition
 // would drop or mis-shape one of these without slipping past the corpus gate.
 func TestLowerBounceScopesShareDestinationPrecondition(t *testing.T) {

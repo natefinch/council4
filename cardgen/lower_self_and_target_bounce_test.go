@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerSelfAndTargetBounce proves the source-and-target battlefield bounce
@@ -50,11 +51,11 @@ func TestLowerSelfAndTargetBounce(t *testing.T) {
 			if len(mode.Sequence) != 2 {
 				t.Fatalf("sequence len = %d, want 2", len(mode.Sequence))
 			}
-			source, ok := mode.Sequence[0].Primitive.(game.Bounce)
+			source, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Hand)
 			if !ok || source.Object != game.SourcePermanentReference() {
 				t.Fatalf("sequence[0] = %#v, want Bounce of source permanent", mode.Sequence[0].Primitive)
 			}
-			target, ok := mode.Sequence[1].Primitive.(game.Bounce)
+			target, ok := movePermanentTo(mode.Sequence[1].Primitive, zone.Hand)
 			if !ok || target.Object != game.TargetPermanentReference(0) {
 				t.Fatalf("sequence[1] = %#v, want Bounce of TargetPermanentReference(0)", mode.Sequence[1].Primitive)
 			}

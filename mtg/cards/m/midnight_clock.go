@@ -103,8 +103,9 @@ func newMidnightClock() *game.CardDef {
 								},
 							},
 							{
-								Primitive: game.Exile{
-									Object: game.SourceCardPermanentReference(),
+								Primitive: game.MovePermanent{
+									Object:      game.SourceCardPermanentReference(),
+									Destination: zone.Exile,
 								},
 							},
 						},

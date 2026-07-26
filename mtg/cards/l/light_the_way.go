@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -71,8 +72,9 @@ func newLightTheWay() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Bounce{
-									Object: game.TargetPermanentReference(0),
+								Primitive: game.MovePermanent{
+									Object:      game.TargetPermanentReference(0),
+									Destination: zone.Hand,
 								},
 							},
 						},

@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -16,7 +17,7 @@ import (
 func optionalBlinkInstructions() []game.Instruction {
 	return []game.Instruction{
 		{
-			Primitive:     game.Exile{Object: game.TargetPermanentReference(0), ExileLinkedKey: "blink"},
+			Primitive:     game.MovePermanent{Object: game.TargetPermanentReference(0), PublishLinked: "blink", Destination: zone.Exile},
 			Optional:      true,
 			PublishResult: game.ResultKey("if-you-do"),
 		},

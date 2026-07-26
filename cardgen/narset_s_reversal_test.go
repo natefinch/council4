@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerNarsetsReversalCopyThenReturn proves the copy-then-return stack-spell
@@ -64,7 +65,7 @@ func TestLowerNarsetsReversalCopyThenReturn(t *testing.T) {
 		t.Fatalf("copy object target index = %d, want 0", copyPrim.Object.TargetIndex())
 	}
 
-	bounce, ok := mode.Sequence[1].Primitive.(game.Bounce)
+	bounce, ok := movePermanentTo(mode.Sequence[1].Primitive, zone.Hand)
 	if !ok {
 		t.Fatalf("sequence[1] = %#v, want Bounce", mode.Sequence[1].Primitive)
 	}
@@ -110,7 +111,7 @@ func TestLowerReturnTargetInstantOrSorcerySpell(t *testing.T) {
 	if len(mode.Sequence) != 1 {
 		t.Fatalf("sequence length = %d, want 1 (return only)", len(mode.Sequence))
 	}
-	bounce, ok := mode.Sequence[0].Primitive.(game.Bounce)
+	bounce, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Hand)
 	if !ok {
 		t.Fatalf("sequence[0] = %#v, want Bounce", mode.Sequence[0].Primitive)
 	}

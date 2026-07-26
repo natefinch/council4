@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -29,7 +30,7 @@ func kickerContingentTargetSpell() *game.CardDef {
 				{MinTargets: 1, MaxTargets: 1, Constraint: "creature", DistinctFromPriorTargets: true, Gate: game.TargetGateSpellKicked},
 			},
 			Sequence: []game.Instruction{
-				{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+				{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
 				{
 					Primitive: game.Damage{Recipient: game.AnyTargetDamageRecipient(1), Amount: game.Fixed(2)},
 					Condition: opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{SpellWasKicked: true})}),
@@ -61,7 +62,7 @@ func giftContingentTargetSpell() *game.CardDef {
 				{MinTargets: 1, MaxTargets: 1, Constraint: "artifact", Gate: game.TargetGateGiftPromised},
 			},
 			Sequence: []game.Instruction{
-				{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+				{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
 				{
 					Primitive: game.Destroy{Object: game.TargetPermanentReference(1)},
 					Condition: opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{GiftPromised: true})}),
@@ -335,7 +336,7 @@ func TestInvalidTargetGateFailsCardValidation(t *testing.T) {
 			Targets: []game.TargetSpec{
 				{MinTargets: 1, MaxTargets: 1, Constraint: "creature", Gate: game.TargetGate(99)},
 			},
-			Sequence: []game.Instruction{{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}}},
+			Sequence: []game.Instruction{{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}}},
 		}.Ability()),
 	}}
 

@@ -28,9 +28,10 @@ func TestGenerateExecutableCardSourceExciseIncubate(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.Exile{",
-		"Object:         game.TargetPermanentReference(0),",
-		"ExileLinkedKey: game.LinkedKey(",
+		"Primitive: game.MovePermanent{",
+		"Object:        game.TargetPermanentReference(0),",
+		"Destination:   zone.Exile,",
+		"PublishLinked: game.LinkedKey(",
 		"Primitive: game.Incubate{",
 		"Kind:       game.DynamicAmountObjectManaValue,",
 		"Object:     game.LinkedObjectReference(",

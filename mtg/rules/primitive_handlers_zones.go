@@ -1210,85 +1210,9 @@ func handleShufflePermanentIntoLibrary(r *effectResolver, prim game.ShufflePerma
 	return res
 }
 
-func handleShuffleSpellIntoLibrary(r *effectResolver, _ game.ShuffleSpellIntoLibrary) effectResolved {
-	res := effectResolved{accepted: true}
-	if r.obj != nil {
-		r.obj.ShuffleIntoLibraryOnResolution = true
-		res.succeeded = true
-	}
-	return res
-}
-
-func handlePutPermanentOnLibrary(r *effectResolver, prim game.PutPermanentOnLibrary) effectResolved {
-	res := effectResolved{accepted: true}
-	permanent, ok := r.resolveObject(prim.Object)
-	if !ok {
-		return res
-	}
-	owner := permanent.Owner
-	cardID := permanent.CardInstanceID
-	token := permanent.Token
-	if !movePermanentToZone(r.game, permanent, zone.Library) {
-		return res
-	}
-	if prim.Bottom && !token {
-		if player, ok := playerByID(r.game, owner); ok && player.Library.Remove(cardID) {
-			player.Library.AddToBottom(cardID)
-		}
-	}
-	res.succeeded = true
-	return res
-}
-
 func handleDiscoverCards(r *effectResolver, prim game.DiscoverCards) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	res.succeeded = r.engine.resolveDiscover(r.game, r.obj, res.amount, r.agents, r.log)
-	return res
-}
-
-func handleExile(r *effectResolver, prim game.Exile) effectResolved {
-	res := effectResolved{accepted: true}
-	if prim.SourceSpell {
-		if r.obj != nil {
-			r.obj.ExileOnResolution = true
-			res.succeeded = true
-		}
-		return res
-	}
-	var linkedKey game.LinkedObjectKey
-	if prim.ExileLinkedKey != "" {
-		linkedKey = linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey))
-		clearLinkedObjects(r.game, linkedKey)
-	}
-	targets := r.resolveObjectGroup(prim.Object, prim.Group)
-	if !targets.single {
-		// A group exile that carries a linked key (group blink) must remember
-		// every exiled permanent under that key, capturing each link before the
-		// move so a later linked return brings the whole group back together.
-		for _, permanent := range targets.permanents {
-			linkedObjectRef := permanentLinkedObjectRef(permanent)
-			if movePermanentToZone(r.game, permanent, zone.Exile) {
-				res.succeeded = true
-				if prim.ExileLinkedKey != "" {
-					rememberLinkedObject(r.game, linkedKey, linkedObjectRef)
-				}
-			}
-		}
-		return res
-	}
-	if !targets.resolved {
-		return res
-	}
-	permanent := targets.permanents[0]
-	linkedObjectRef := permanentLinkedObjectRef(permanent)
-	res.succeeded = movePermanentToZone(r.game, permanent, zone.Exile)
-	if prim.ExileLinkedKey != "" {
-		postMoveKey := linkedObjectSourceKey(r.game, r.obj, string(prim.ExileLinkedKey))
-		if postMoveKey != linkedKey {
-			clearLinkedObjects(r.game, postMoveKey)
-		}
-		rememberLinkedObject(r.game, postMoveKey, linkedObjectRef)
-	}
 	return res
 }
 
@@ -1594,72 +1518,6 @@ func handleMassReanimationExchange(r *effectResolver, prim game.MassReanimationE
 	}
 	res.succeeded = r.putResolvedCardsOnBattlefieldValue(resolved, nil, permanentCreationOptions{})
 	return res
-}
-
-func handleBounce(r *effectResolver, prim game.Bounce) effectResolved {
-	res := effectResolved{accepted: true}
-	if prim.ControlledChoice {
-		res.succeeded = movePermanentsToZoneSimultaneously(
-			r.game,
-			r.chooseControlledBouncePermanents(prim),
-			zone.Hand,
-		)
-		return res
-	}
-	targets := r.resolveObjectGroup(prim.Object, prim.Group)
-	if !targets.single {
-		res.succeeded = movePermanentsToZoneSimultaneously(r.game, targets.permanents, zone.Hand)
-		return res
-	}
-	if targets.resolved {
-		res.succeeded = movePermanentToZone(r.game, targets.permanents[0], zone.Hand)
-		return res
-	}
-	if resolved, ok := resolveObjectReference(r.game, r.obj, prim.Object); ok && resolved.stack != nil {
-		res.succeeded = bounceStackSpellToHand(r.game, resolved.stack)
-	}
-	return res
-}
-
-// chooseControlledBouncePermanents has the resolving controller choose
-// prim.Amount permanents from prim.Group's candidate pool (the permanents they
-// control matching the bounce's selection), for "Return a creature you control
-// to its owner's hand." style bounces. When the candidate pool holds no more
-// permanents than the requested amount, every candidate is chosen without a
-// prompt.
-func (r *effectResolver) chooseControlledBouncePermanents(prim game.Bounce) []*game.Permanent {
-	amount := r.quantity(prim.Amount)
-	if amount <= 0 {
-		return nil
-	}
-	candidates := r.groupPermanents(prim.Group)
-	if len(candidates) == 0 {
-		return nil
-	}
-	if len(candidates) <= amount {
-		return candidates
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, permanent := range candidates {
-		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(r.game, permanent), Card: permanentChoiceInfo(r.game, permanent)}
-	}
-	request := game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           r.obj.Controller,
-		Prompt:           "Choose a permanent to return to its owner's hand",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, request, r.log)
-	chosen := make([]*game.Permanent, 0, len(selected))
-	for _, idx := range selected {
-		if idx >= 0 && idx < len(candidates) {
-			chosen = append(chosen, candidates[idx])
-		}
-	}
-	return chosen
 }
 
 func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {

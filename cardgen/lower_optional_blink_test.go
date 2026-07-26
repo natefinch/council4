@@ -37,7 +37,7 @@ func optionalBlinkSpellMode(t *testing.T, name, oracleText string) game.Mode {
 // assertOptionalBlink checks that a lowered blink mode carries one target and a
 // two-instruction [Exile, PutOnBattlefield] sequence whose exile is Optional and
 // publishes its result and whose put is gated on the exile succeeding.
-func assertOptionalBlink(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBattlefield) {
+func assertOptionalBlink(t *testing.T, mode game.Mode) (game.MovePermanent, game.PutOnBattlefield) {
 	t.Helper()
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %#v, want one", mode.Targets)
@@ -46,8 +46,8 @@ func assertOptionalBlink(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBa
 		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
 	}
 	exileInstr := mode.Sequence[0]
-	exile, ok := exileInstr.Primitive.(game.Exile)
-	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(exileInstr.Primitive, zone.Exile)
+	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.PublishLinked == "" {
 		t.Fatalf("instruction[0] = %#v, want linked target exile", exileInstr.Primitive)
 	}
 	if !exileInstr.Optional {
@@ -65,8 +65,8 @@ func assertOptionalBlink(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBa
 		t.Fatalf("instruction[1] = %#v, want put on battlefield", putInstr.Primitive)
 	}
 	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	if !linked || key != exile.PublishLinked {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 	}
 	if putInstr.Optional || putInstr.PublishResult != "" {
 		t.Fatalf("instruction[1] gated put must carry no optional/publish envelope: %#v", putInstr)
@@ -148,7 +148,7 @@ func TestLowerOptionalBlinkTriggeredAbility(t *testing.T) {
 // whose exile is Optional and publishes its result and whose delayed return is
 // gated on the exile succeeding. The wrapped delayed trigger fires at the next
 // end step and puts the linked card back onto the battlefield.
-func assertOptionalDelayedBlink(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBattlefield) {
+func assertOptionalDelayedBlink(t *testing.T, mode game.Mode) (game.MovePermanent, game.PutOnBattlefield) {
 	t.Helper()
 	if len(mode.Targets) != 1 {
 		t.Fatalf("targets = %#v, want one", mode.Targets)
@@ -157,8 +157,8 @@ func assertOptionalDelayedBlink(t *testing.T, mode game.Mode) (game.Exile, game.
 		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
 	}
 	exileInstr := mode.Sequence[0]
-	exile, ok := exileInstr.Primitive.(game.Exile)
-	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(exileInstr.Primitive, zone.Exile)
+	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.PublishLinked == "" {
 		t.Fatalf("instruction[0] = %#v, want linked target exile", exileInstr.Primitive)
 	}
 	if !exileInstr.Optional || exileInstr.PublishResult != optionalIfYouDoResultKey {
@@ -184,8 +184,8 @@ func assertOptionalDelayedBlink(t *testing.T, mode game.Mode) (game.Exile, game.
 	ref, captured := put.Source.CardRef()
 	if !captured || ref.Kind != game.CardReferenceCaptured ||
 		!delayed.Trigger.CapturedCard.Exists ||
-		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
-		t.Fatalf("put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.ExileLinkedKey)
+		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.PublishLinked)) {
+		t.Fatalf("put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.PublishLinked)
 	}
 	return exile, put
 }
@@ -258,14 +258,14 @@ func TestLowerGilraenOptionalImmediateOrDelayedBlink(t *testing.T) {
 		selection.Controller != game.ControllerYou || !selection.ExcludeSource {
 		t.Fatalf("selection = %#v, want another creature you control", selection)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.PublishLinked == "" {
 		t.Fatalf("instruction[0] = %#v, want linked target exile", mode.Sequence[0])
 	}
 	immediate := mode.Sequence[1]
 	put, ok := immediate.Primitive.(game.PutOnBattlefield)
 	key, linked := put.Source.LinkedKey()
-	if !ok || !linked || key != exile.ExileLinkedKey || !immediate.Optional ||
+	if !ok || !linked || key != exile.PublishLinked || !immediate.Optional ||
 		immediate.PublishResult != optionalIfYouDoResultKey {
 		t.Fatalf("instruction[1] = %#v, want optional immediate linked return", immediate)
 	}
@@ -275,7 +275,7 @@ func TestLowerGilraenOptionalImmediateOrDelayedBlink(t *testing.T) {
 		delayedInstruction.ResultGate.Val.Key != optionalIfYouDoResultKey ||
 		delayedInstruction.ResultGate.Val.Succeeded != game.TriFalse ||
 		!delayed.Trigger.CapturedCard.Exists ||
-		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
+		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.PublishLinked)) {
 		t.Fatalf("instruction[2] = %#v, want failed-optional captured delayed return", delayedInstruction)
 	}
 	delayedPut, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)

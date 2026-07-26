@@ -5,17 +5,18 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // blinkInstructions extracts the exile and put-onto-battlefield instructions of a
 // two-step immediate blink spell mode, failing the test if the shape differs.
-func blinkInstructions(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBattlefield) {
+func blinkInstructions(t *testing.T, mode game.Mode) (game.MovePermanent, game.PutOnBattlefield) {
 	t.Helper()
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.PublishLinked == "" {
 		t.Fatalf("exile = %#v, want linked target exile", mode.Sequence[0].Primitive)
 	}
 	put, ok := mode.Sequence[1].Primitive.(game.PutOnBattlefield)
@@ -23,8 +24,8 @@ func blinkInstructions(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBatt
 		t.Fatalf("second primitive = %#v, want put on battlefield", mode.Sequence[1].Primitive)
 	}
 	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	if !linked || key != exile.PublishLinked {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 	}
 	return exile, put
 }
@@ -101,7 +102,7 @@ func TestLowerImmediateBlinkWithCounter(t *testing.T) {
 // selfBlinkInstructions extracts the exile and put-onto-battlefield instructions
 // of a two-step self-blink mode, where the exiled object is the source permanent
 // itself ("Exile this creature, then return it …") rather than a target.
-func selfBlinkInstructions(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBattlefield) {
+func selfBlinkInstructions(t *testing.T, mode game.Mode) (game.MovePermanent, game.PutOnBattlefield) {
 	t.Helper()
 	if len(mode.Targets) != 0 {
 		t.Fatalf("targets = %#v, want none for self-blink", mode.Targets)
@@ -109,8 +110,8 @@ func selfBlinkInstructions(t *testing.T, mode game.Mode) (game.Exile, game.PutOn
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || exile.Object != game.SourcePermanentReference() || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || exile.Object != game.SourcePermanentReference() || exile.PublishLinked == "" {
 		t.Fatalf("exile = %#v, want linked source exile", mode.Sequence[0].Primitive)
 	}
 	put, ok := mode.Sequence[1].Primitive.(game.PutOnBattlefield)
@@ -118,8 +119,8 @@ func selfBlinkInstructions(t *testing.T, mode game.Mode) (game.Exile, game.PutOn
 		t.Fatalf("second primitive = %#v, want put on battlefield", mode.Sequence[1].Primitive)
 	}
 	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	if !linked || key != exile.PublishLinked {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 	}
 	return exile, put
 }
@@ -173,8 +174,8 @@ func TestLowerSelfBlinkStandaloneSelfExileIsPlainExile(t *testing.T) {
 	if len(sequence) != 1 {
 		t.Fatalf("sequence = %#v, want a single plain exile", sequence)
 	}
-	exile, ok := sequence[0].Primitive.(game.Exile)
-	if !ok || exile.ExileLinkedKey != "" || exile.SourceSpell ||
+	exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
+	if !ok || exile.PublishLinked != "" ||
 		exile.Object != game.SourceCardPermanentReference() {
 		t.Fatalf("instruction = %#v, want plain source-permanent exile", sequence[0].Primitive)
 	}
@@ -265,8 +266,8 @@ func TestLowerGroupBlinkImmediate(t *testing.T) {
 		t.Fatalf("sequence = %#v, want two exiles and two puts", mode.Sequence)
 	}
 	for i := range 2 {
-		exile, ok := mode.Sequence[i].Primitive.(game.Exile)
-		if !ok || exile.Object != game.TargetPermanentReference(i) || exile.ExileLinkedKey == "" {
+		exile, ok := movePermanentTo(mode.Sequence[i].Primitive, zone.Exile)
+		if !ok || exile.Object != game.TargetPermanentReference(i) || exile.PublishLinked == "" {
 			t.Fatalf("instruction[%d] = %#v, want linked target exile", i, mode.Sequence[i].Primitive)
 		}
 		put, ok := mode.Sequence[2+i].Primitive.(game.PutOnBattlefield)
@@ -274,8 +275,8 @@ func TestLowerGroupBlinkImmediate(t *testing.T) {
 			t.Fatalf("instruction[%d] = %#v, want put on battlefield", 2+i, mode.Sequence[2+i].Primitive)
 		}
 		key, linked := put.Source.LinkedKey()
-		if !linked || key != exile.ExileLinkedKey {
-			t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+		if !linked || key != exile.PublishLinked {
+			t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 		}
 		if put.Recipient.Exists {
 			t.Fatalf("recipient = %#v, want unset (owner's control)", put.Recipient)
@@ -338,8 +339,8 @@ func TestLowerGroupBlinkAnyNumberDelayed(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want one exile and one delayed trigger", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || exile.Object != game.AllTargetPermanentsReference(0) || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || exile.Object != game.AllTargetPermanentsReference(0) || exile.PublishLinked == "" {
 		t.Fatalf("exile = %#v, want linked all-target-permanents exile", mode.Sequence[0].Primitive)
 	}
 	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
@@ -351,8 +352,8 @@ func TestLowerGroupBlinkAnyNumberDelayed(t *testing.T) {
 		t.Fatalf("delayed content = %#v, want one put on battlefield", delayed.Trigger.Content.Modes[0].Sequence)
 	}
 	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	if !linked || key != exile.PublishLinked {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 	}
 }
 
@@ -366,8 +367,8 @@ func TestLowerGroupBlinkAnyNumberImmediate(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want one exile and one put", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || exile.Object != game.AllTargetPermanentsReference(0) || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || exile.Object != game.AllTargetPermanentsReference(0) || exile.PublishLinked == "" {
 		t.Fatalf("exile = %#v, want linked all-target-permanents exile", mode.Sequence[0].Primitive)
 	}
 	put, ok := mode.Sequence[1].Primitive.(game.PutOnBattlefield)
@@ -375,8 +376,8 @@ func TestLowerGroupBlinkAnyNumberImmediate(t *testing.T) {
 		t.Fatalf("instruction[1] = %#v, want put on battlefield", mode.Sequence[1].Primitive)
 	}
 	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	if !linked || key != exile.PublishLinked {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 	}
 }
 
@@ -393,8 +394,8 @@ func TestLowerMassGroupBlink(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want one exile and one delayed trigger", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || !exile.Group.Valid() || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || !exile.Group.Valid() || exile.PublishLinked == "" {
 		t.Fatalf("exile = %#v, want linked group exile", mode.Sequence[0].Primitive)
 	}
 	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
@@ -406,7 +407,7 @@ func TestLowerMassGroupBlink(t *testing.T) {
 		t.Fatalf("delayed content = %#v, want one put on battlefield", delayed.Trigger.Content.Modes[0].Sequence)
 	}
 	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	if !linked || key != exile.PublishLinked {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 	}
 }

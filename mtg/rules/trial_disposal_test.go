@@ -20,9 +20,10 @@ func TestPutLinkedExiledCardsInLibraryMovesToBottomAndClearsLink(t *testing.T) {
 
 	obj := linkedSourceObject(source)
 	obj.Targets = []game.Target{game.PermanentTarget(victim.ObjectID)}
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: game.LinkedKey("exile-until-leaves"),
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: game.LinkedKey("exile-until-leaves"),
+		Destination:   zone.Exile,
 	}, nil)
 	if !g.Players[game.Player2].Exile.Contains(victim.CardInstanceID) {
 		t.Fatal("victim did not reach its owner's exile zone")
@@ -55,9 +56,10 @@ func TestPutLinkedExiledCardsInLibraryLeavesNothingToReturn(t *testing.T) {
 
 	obj := linkedSourceObject(source)
 	obj.Targets = []game.Target{game.PermanentTarget(victim.ObjectID)}
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: game.LinkedKey("exile-until-leaves"),
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: game.LinkedKey("exile-until-leaves"),
+		Destination:   zone.Exile,
 	}, nil)
 	resolveInstruction(engine, g, obj, game.PutLinkedExiledCardsInLibrary{
 		LinkedKey: game.LinkedKey("exile-until-leaves"),

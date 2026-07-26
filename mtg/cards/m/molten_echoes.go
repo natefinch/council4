@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -60,8 +61,9 @@ func newMoltenEchoes() *game.CardDef {
 										Content: game.Mode{
 											Sequence: []game.Instruction{
 												{
-													Primitive: game.Exile{
-														Object: game.EventPermanentReference(),
+													Primitive: game.MovePermanent{
+														Object:      game.EventPermanentReference(),
+														Destination: zone.Exile,
 													},
 												},
 											},

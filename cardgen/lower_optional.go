@@ -2110,7 +2110,7 @@ func markBlinkExileOptional(content *game.AbilityContent) bool {
 	exile := &content.Modes[0].Sequence[0]
 	put := &content.Modes[0].Sequence[1]
 	if exile.Primitive == nil ||
-		exile.Primitive.Kind() != game.PrimitiveExile ||
+		!isMovePermanentTo(exile.Primitive, zone.Exile) ||
 		exile.Optional ||
 		exile.PublishResult != "" ||
 		exile.ResultGate.Exists ||

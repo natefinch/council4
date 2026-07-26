@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -41,9 +42,10 @@ func newEerieInterlude() *game.CardDef {
 				},
 				Sequence: []game.Instruction{
 					{
-						Primitive: game.Exile{
-							Object:         game.AllTargetPermanentsReference(0),
-							ExileLinkedKey: game.LinkedKey("group-blink"),
+						Primitive: game.MovePermanent{
+							Object:        game.AllTargetPermanentsReference(0),
+							PublishLinked: game.LinkedKey("group-blink"),
+							Destination:   zone.Exile,
 						},
 					},
 					{

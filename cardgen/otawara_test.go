@@ -58,7 +58,7 @@ func TestGenerateOtawaraSoaringCity(t *testing.T) {
 	if len(content.Modes) != 1 || len(content.Modes[0].Sequence) != 1 {
 		t.Fatalf("content = %#v, want one instruction", content)
 	}
-	bounce, ok := content.Modes[0].Sequence[0].Primitive.(game.Bounce)
+	bounce, ok := movePermanentTo(content.Modes[0].Sequence[0].Primitive, zone.Hand)
 	if !ok || bounce.Object != game.TargetPermanentReference(0) {
 		t.Fatalf("primitive = %#v, want target permanent bounce", content.Modes[0].Sequence[0].Primitive)
 	}
@@ -84,7 +84,8 @@ func TestGenerateOtawaraSourceRendersTypedChannelData(t *testing.T) {
 		"PerObjectReduction: 1",
 		"Supertypes: []types.Super{types.Legendary}",
 		"RequiredTypesAny: []types.Card{types.Artifact, types.Creature, types.Enchantment, types.Planeswalker}",
-		"Primitive: game.Bounce",
+		"Primitive: game.MovePermanent{",
+		"Destination: zone.Hand,",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

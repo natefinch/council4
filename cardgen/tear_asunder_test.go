@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerTearAsunder(t *testing.T) {
@@ -42,7 +43,7 @@ func TestLowerTearAsunder(t *testing.T) {
 		game.TargetPermanentReference(0),
 		game.TargetPermanentReference(1),
 	} {
-		exile, ok := mode.Sequence[i].Primitive.(game.Exile)
+		exile, ok := movePermanentTo(mode.Sequence[i].Primitive, zone.Exile)
 		if !ok || exile.Object != want {
 			t.Fatalf("sequence[%d] = %#v, want exile of target %d", i, mode.Sequence[i].Primitive, i)
 		}

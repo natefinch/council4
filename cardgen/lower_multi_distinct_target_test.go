@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerMultiDistinctTargetDestroy proves the multi-distinct-typed-target
@@ -101,7 +102,7 @@ func TestLowerMultiDistinctTargetExile(t *testing.T) {
 		if len(mode.Targets[i].Selection.Val.RequiredTypesAny) != 1 || mode.Targets[i].Selection.Val.RequiredTypesAny[0] != wantTypes[i] {
 			t.Fatalf("spec[%d] types = %v, want [%v]", i, mode.Targets[i].Selection.Val.RequiredTypesAny, wantTypes[i])
 		}
-		exile, ok := mode.Sequence[i].Primitive.(game.Exile)
+		exile, ok := movePermanentTo(mode.Sequence[i].Primitive, zone.Exile)
 		if !ok || exile.Object != game.TargetPermanentReference(i) {
 			t.Fatalf("sequence[%d] = %#v, want Exile of TargetPermanentReference(%d)", i, mode.Sequence[i].Primitive, i)
 		}

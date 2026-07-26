@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerDualTargetBounce proves the dual-target bounce "Return target <A> and
@@ -63,7 +64,7 @@ func TestLowerDualTargetBounce(t *testing.T) {
 						t.Fatalf("spec[%d] types = %v, want [%v]", i, spec.Selection.Val.RequiredTypesAny, test.permTypes[i])
 					}
 				}
-				bounce, ok := mode.Sequence[i].Primitive.(game.Bounce)
+				bounce, ok := movePermanentTo(mode.Sequence[i].Primitive, zone.Hand)
 				if !ok || bounce.Object != game.TargetPermanentReference(i) {
 					t.Fatalf("sequence[%d] = %#v, want Bounce of TargetPermanentReference(%d)", i, mode.Sequence[i].Primitive, i)
 				}
@@ -98,7 +99,7 @@ func TestLowerMultiTargetPermanentVerbs(t *testing.T) {
 		}
 	}
 	bounceCheck := func(t *testing.T, i int, prim game.Primitive) {
-		p, ok := prim.(game.Bounce)
+		p, ok := movePermanentTo(prim, zone.Hand)
 		if !ok || p.Object != game.TargetPermanentReference(i) {
 			t.Fatalf("sequence[%d] = %#v, want Bounce of TargetPermanentReference(%d)", i, prim, i)
 		}
@@ -176,7 +177,7 @@ func TestLowerMultiTargetPermanentSingleTargetUnchanged(t *testing.T) {
 			}
 		}},
 		{"bounce", "Return target creature to its owner's hand.", func(t *testing.T, prim game.Primitive) {
-			if p, ok := prim.(game.Bounce); !ok || p.Object != game.TargetPermanentReference(0) {
+			if p, ok := movePermanentTo(prim, zone.Hand); !ok || p.Object != game.TargetPermanentReference(0) {
 				t.Fatalf("prim = %#v, want Bounce of TargetPermanentReference(0)", prim)
 			}
 		}},

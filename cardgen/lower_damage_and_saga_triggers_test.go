@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerDamageSourceTriggers(t *testing.T) {
@@ -476,7 +477,7 @@ func TestLowerGraveyardEnterSelfExileThenCreateToken(t *testing.T) {
 	if len(sequence) != 2 {
 		t.Fatalf("sequence = %+v, want two instructions", sequence)
 	}
-	exile, ok := sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
 	if !ok || exile.Object != game.EventPermanentReference() {
 		t.Fatalf("instruction[0] = %+v, want exile of the entering object", sequence[0])
 	}

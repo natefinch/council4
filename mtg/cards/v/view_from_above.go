@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -55,8 +56,9 @@ func newViewFromAbove() *game.CardDef {
 						},
 					},
 					{
-						Primitive: game.Bounce{
-							Object: game.SourcePermanentReference(),
+						Primitive: game.MovePermanent{
+							Object:      game.SourcePermanentReference(),
+							Destination: zone.Hand,
 						},
 						Condition: opt.Val(game.EffectCondition{
 							Condition: opt.Val(game.Condition{
@@ -67,8 +69,9 @@ func newViewFromAbove() *game.CardDef {
 						}),
 					},
 					{
-						Primitive: game.Bounce{
-							Object: game.TargetPermanentReference(0),
+						Primitive: game.MovePermanent{
+							Object:      game.TargetPermanentReference(0),
+							Destination: zone.Hand,
 						},
 						Condition: opt.Val(game.EffectCondition{
 							Condition: opt.Val(game.Condition{
