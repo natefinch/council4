@@ -44,7 +44,8 @@ func TestGenerateExecutableCardSourceSix(t *testing.T) {
 		"RestrictedDuringControllerTurn: true",
 		"RequiredTypesAny: []types.Card{types.Creature, types.Artifact, types.Enchantment, types.Planeswalker, types.Battle}",
 		"ExcludedTypes: []types.Card{types.Land}",
-		"game.Mill{",
+		"game.MoveTopOfLibrary{",
+		"Destination: zone.Graveyard,",
 		"PublishLinked: game.LinkedKey(\"milled-cards\")",
 		"game.ChooseFromZone{",
 		"FromLinked: game.LinkedKey(\"milled-cards\")",
@@ -97,7 +98,7 @@ func TestLowerSixMillThenOptionalLandReturn(t *testing.T) {
 	if len(sequence) != 2 {
 		t.Fatalf("sequence length = %d, want 2", len(sequence))
 	}
-	mill, ok := sequence[0].Primitive.(game.Mill)
+	mill, ok := sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
 		t.Fatalf("first primitive = %#v, want Mill", sequence[0].Primitive)
 	}

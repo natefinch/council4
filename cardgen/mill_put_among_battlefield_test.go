@@ -51,7 +51,7 @@ func TestLowerMillThenOptionalPutPermanentAmongToBattlefield(t *testing.T) {
 	if len(sequence) != 2 {
 		t.Fatalf("sequence length = %d, want 2", len(sequence))
 	}
-	mill, ok := sequence[0].Primitive.(game.Mill)
+	mill, ok := sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
 		t.Fatalf("sequence[0] = %#v, want Mill", sequence[0].Primitive)
 	}
@@ -121,7 +121,7 @@ func TestLowerMillThenPutAnyNumberLandsAmongToBattlefield(t *testing.T) {
 	if len(sequence) != 2 {
 		t.Fatalf("sequence length = %d, want 2", len(sequence))
 	}
-	mill, ok := sequence[0].Primitive.(game.Mill)
+	mill, ok := sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
 		t.Fatalf("sequence[0] = %#v, want Mill", sequence[0].Primitive)
 	}

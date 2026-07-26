@@ -706,7 +706,7 @@ func TestLowerInterveningTriggerUtilityKeywordBodies(t *testing.T) {
 		{
 			name:      "mill",
 			text:      "When this creature enters, if you control an artifact, mill two cards.",
-			primitive: game.Mill{Amount: game.Fixed(2), Player: game.ControllerReference()},
+			primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard, Amount: game.Fixed(2), Player: game.ControllerReference()},
 		},
 	}
 	for _, tc := range tests {
@@ -737,9 +737,9 @@ func TestLowerVariableMillSpell(t *testing.T) {
 		OracleText: "Mill X cards, where X is the number of creatures you control.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	mill, ok := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want game.MoveTopOfLibrary", mode.Sequence[0].Primitive)
 	}
 	dynamic := mill.Amount.DynamicAmount()
 	if !dynamic.Exists {
@@ -780,9 +780,9 @@ func TestLowerSacrificedCreatureMill(t *testing.T) {
 				OracleText: tc.text,
 			})
 			mode := face.ActivatedAbilities[0].Content.Modes[0]
-			mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+			mill, ok := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 			if !ok {
-				t.Fatalf("primitive = %T, want game.Mill", mode.Sequence[0].Primitive)
+				t.Fatalf("primitive = %T, want game.MoveTopOfLibrary", mode.Sequence[0].Primitive)
 			}
 			if mill.Player != game.TargetPlayerReference(0) {
 				t.Fatalf("mill player = %+v, want target player 0", mill.Player)

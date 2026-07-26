@@ -79,7 +79,7 @@ func newEvelynTheCovetous() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.ExileTopOfLibrary{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Exile,
 									Amount:      game.Fixed(1),
 									PlayerGroup: game.AllPlayersReference(),
 									Counter:     opt.Val(counter.Collection),

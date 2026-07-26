@@ -296,9 +296,9 @@ func TestLowerOrderedEffectsTargetIndexRemappingInActivatedBody(t *testing.T) {
 	if !ok {
 		t.Fatalf("second primitive = %T, want game.Tap", m.Sequence[1].Primitive)
 	}
-	mill, ok := m.Sequence[2].Primitive.(game.Mill)
+	mill, ok := m.Sequence[2].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
-		t.Fatalf("third primitive = %T, want game.Mill", m.Sequence[2].Primitive)
+		t.Fatalf("third primitive = %T, want game.MoveTopOfLibrary", m.Sequence[2].Primitive)
 	}
 	if destroy.Object.TargetIndex() != 0 || tap.Object.TargetIndex() != 1 || mill.Player.TargetIndex() != 2 {
 		t.Errorf(

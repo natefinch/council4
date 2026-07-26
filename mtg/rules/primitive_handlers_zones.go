@@ -2728,38 +2728,18 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 	}
 }
 
-func handleMill(r *effectResolver, prim game.Mill) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			millCards(r.game, playerID, res.amount)
-		}
-		res.succeeded = res.amount > 0
-		return res
-	}
-	playerID, ok := r.resolvePlayer(prim.Player)
-	if ok {
-		milled := millCards(r.game, playerID, res.amount)
-		if prim.PublishLinked != "" {
-			key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-			clearLinkedObjects(r.game, key)
-			for _, cardID := range milled {
-				card, ok := r.game.GetCardInstance(cardID)
-				if !ok {
-					continue
-				}
-				rememberLinkedObject(r.game, key, game.LinkedObjectRef{
-					CardID:          cardID,
-					CardZoneVersion: card.ZoneVersion,
-				})
-			}
-		}
-		res.succeeded = res.amount > 0
-	}
-	return res
-}
-
-func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) effectResolved {
+// handleMoveTopOfLibrary moves the top prim.Amount cards of a referenced
+// player's library, or of every player's library in a referenced group, to
+// prim.Destination. It is the single runtime path for both mill (graveyard) and
+// exile-top-of-library: the destination selects which per-card move helper runs
+// while the referent resolution and linked-object publishing scaffolding is
+// shared.
+//
+// PublishLinked remembers every card that actually reaches the destination under
+// a source-scoped key. The single-Player form always published; the group form
+// now publishes too, at either destination — a rider the split Mill primitive
+// could never carry for its group form.
+func handleMoveTopOfLibrary(r *effectResolver, prim game.MoveTopOfLibrary) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	var key game.LinkedObjectKey
 	if prim.PublishLinked != "" {
@@ -2767,6 +2747,9 @@ func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) eff
 		clearLinkedObjects(r.game, key)
 	}
 	publish := func(cardIDs []id.ID) {
+		if prim.PublishLinked == "" {
+			return
+		}
 		for _, cardID := range cardIDs {
 			card, ok := r.game.GetCardInstance(cardID)
 			if !ok {
@@ -2778,16 +2761,22 @@ func handleExileTopOfLibrary(r *effectResolver, prim game.ExileTopOfLibrary) eff
 			})
 		}
 	}
+	moveTop := func(playerID game.PlayerID) []id.ID {
+		if prim.Destination == zone.Exile {
+			return exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
+		}
+		return millCards(r.game, playerID, res.amount)
+	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			publish(exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown))
+			publish(moveTop(playerID))
 		}
 		res.succeeded = res.amount > 0
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		publish(exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown))
+		publish(moveTop(playerID))
 		res.succeeded = res.amount > 0
 	}
 	return res

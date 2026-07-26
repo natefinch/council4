@@ -37,7 +37,8 @@ func TestGenerateExecutableCardSourceHedgeShredder(t *testing.T) {
 	}
 	for _, want := range []string{
 		"game.CrewActivatedAbility(1)",
-		"game.Mill{",
+		"game.MoveTopOfLibrary{",
+		"Destination: zone.Graveyard,",
 		"game.MassReturnFromGraveyard{",
 		"Destination:      zone.Battlefield,",
 		"EntryTapped:      true,",

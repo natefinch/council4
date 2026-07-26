@@ -25,9 +25,9 @@ func necropotencePayLifeAbility(t *testing.T) game.ActivatedAbility {
 	if len(seq) != 2 {
 		t.Fatalf("activated ability body has %d instructions, want 2 (exile, delayed return)", len(seq))
 	}
-	exile, ok := seq[0].Primitive.(game.ExileTopOfLibrary)
+	exile, ok := seq[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
-		t.Fatalf("first instruction is %T, want game.ExileTopOfLibrary", seq[0].Primitive)
+		t.Fatalf("first instruction is %T, want game.MoveTopOfLibrary", seq[0].Primitive)
 	}
 	if !exile.FaceDown {
 		t.Fatal("top-of-library exile must be face down")

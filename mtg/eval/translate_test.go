@@ -26,7 +26,7 @@ func TestScorableEffectClassifiesValueDominantPrimitives(t *testing.T) {
 	}{
 		{"draw", game.Draw{Amount: game.Fixed(2), Player: you}, EffectAtom{Kind: EffectCardsDrawn, Amount: 2, Affected: AffectedYou}},
 		{"discard", game.Discard{Amount: game.Fixed(3), Player: you}, EffectAtom{Kind: EffectCardsLost, Amount: 3, Affected: AffectedYou}},
-		{"mill", game.Mill{Amount: game.Fixed(2), Player: you}, EffectAtom{Kind: EffectCardsLost, Amount: 2, Affected: AffectedYou}},
+		{"mill", game.MoveTopOfLibrary{Destination: zone.Graveyard, Amount: game.Fixed(2), Player: you}, EffectAtom{Kind: EffectCardsLost, Amount: 2, Affected: AffectedYou}},
 		{"gain life", game.GainLife{Amount: game.Fixed(4), Player: you}, EffectAtom{Kind: EffectLifeGained, Amount: 4, Affected: AffectedYou}},
 		{"lose life", game.LoseLife{Amount: game.Fixed(1), Player: you}, EffectAtom{Kind: EffectLifeLost, Amount: 1, Affected: AffectedYou}},
 		{"damage", game.Damage{Amount: game.Fixed(3)}, EffectAtom{Kind: EffectDamageDealt, Amount: 3, Affected: AffectedTarget}},

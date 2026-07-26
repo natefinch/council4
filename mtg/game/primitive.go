@@ -47,7 +47,7 @@ const (
 	PrimitiveSacrifice
 	PrimitiveUntap
 	PrimitiveCounterObject
-	PrimitiveMill
+	PrimitiveMoveTopOfLibrary
 	PrimitiveScry
 	PrimitiveSurveil
 	PrimitiveInvestigate
@@ -88,7 +88,6 @@ const (
 	PrimitiveBecomeCopy
 	PrimitiveAmass
 	PrimitiveRenown
-	PrimitiveExileTopOfLibrary
 	PrimitivePutHandOnLibraryThenDraw
 	PrimitiveDiscardThenDraw
 	PrimitiveRevealUntil
@@ -2036,47 +2035,8 @@ type CopyStackObject struct {
 	Chooser   opt.V[PlayerReference]
 }
 
-// Mill puts cards from the top of a referenced player's library into their
-// graveyard, or does so for every player in a referenced group ("each player
-// mills", "each opponent mills"). Exactly one of Player or PlayerGroup is set.
-// Mill moves the top Amount cards of a referenced player's library to that
-// player's graveyard.
-type Mill struct {
-	Amount      Quantity
-	Player      PlayerReference      // single player; zero if PlayerGroup is set
-	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
-
-	// PublishLinked, when set, remembers every card milled this way as a
-	// card-scoped linked object on the source permanent so a later instruction
-	// can act on exactly those cards ("mill three cards. ... put a card from
-	// among those cards into your hand"). It is meaningful only for the single
-	// Player form; the group form publishes nothing.
-	PublishLinked LinkedKey
-}
-
-// ExileTopOfLibrary moves the top Amount cards of a referenced player's library
-// to exile.
-type ExileTopOfLibrary struct {
-	Amount      Quantity
-	Player      PlayerReference      // single player; zero if PlayerGroup is set
-	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
-	// PublishLinked remembers each card that actually reaches exile under this
-	// source-keyed set for a later instruction to select "from among them".
-	PublishLinked LinkedKey
-	// Counter names a named marker counter placed on each card exiled this way
-	// once it reaches exile ("exile the top card of each player's library with a
-	// collection counter on it.", Evelyn, the Covetous). The counter is recorded
-	// in Game.ExileCounters, mirroring MoveCard.Counter, so the source's paired
-	// play/cast-from-exile ability can later select "a card ... in exile with a
-	// <name> counter on it". It is unset for every exile that places no counter.
-	Counter opt.V[counter.Kind]
-	// FaceDown exiles each card face down ("exile that many cards from the top of
-	// your library face down.", Flamewar, Streetwise Operative). A face-down card
-	// in exile hides its identity from every observer (CR 713); the zone records
-	// the face-down state and clears it when the card leaves exile. It is false
-	// for the ordinary face-up exile.
-	FaceDown bool
-}
+// The MoveTopOfLibrary primitive (see primitive_move_top_of_library.go) covers
+// moving the top of a library to the graveyard (mill) or to exile.
 
 // RevealUntil reveals cards from the top of a referenced player's library one at
 // a time until a revealed card matches Until, then puts every card revealed this

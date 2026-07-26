@@ -51,7 +51,7 @@ func edenLikeReflexiveAbility() game.ActivatedAbility {
 		Content: game.Mode{
 			Sequence: []game.Instruction{
 				{
-					Primitive: game.Mill{
+					Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 						Amount: game.Fixed(2),
 						Player: game.ControllerReference(),
 					},

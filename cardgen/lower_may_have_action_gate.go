@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -294,7 +295,7 @@ func lowerMayHaveConsequence(
 			}
 			linkedMillBranch := mayHaveMillFeedsLinkedTotal(ctx.content.Effects, i) ||
 				(i > 0 && referencedCardsAmountBindsPrior(ctx.content.Effects[i], i-1))
-			if mill, ok := instr.Primitive.(game.Mill); ok && linkedMillBranch {
+			if mill, ok := moveTopOfLibraryTo(instr.Primitive, zone.Graveyard); ok && linkedMillBranch {
 				mill.PublishLinked = mayHaveMilledCardsLinkKey
 				instr.Primitive = mill
 			}

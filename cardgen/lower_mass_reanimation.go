@@ -80,7 +80,7 @@ func lowerMassReanimationFromEachGraveyardSequence(ctx contentCtx) (game.Ability
 		if !ok {
 			return unsupported("structural — unsupported mass reanimation mill amount")
 		}
-		sequence = append(sequence, game.Instruction{Primitive: game.Mill{
+		sequence = append(sequence, game.Instruction{Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 			Amount:      millAmount,
 			PlayerGroup: game.AllPlayersReference(),
 		}})

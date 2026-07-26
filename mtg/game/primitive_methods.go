@@ -257,11 +257,8 @@ func (RemoveFromCombat) Kind() PrimitiveKind { return PrimitiveRemoveFromCombat 
 // Kind implements Primitive for CounterObject.
 func (CounterObject) Kind() PrimitiveKind { return PrimitiveCounterObject }
 
-// Kind implements Primitive for Mill.
-func (Mill) Kind() PrimitiveKind { return PrimitiveMill }
-
-// Kind implements Primitive for ExileTopOfLibrary.
-func (ExileTopOfLibrary) Kind() PrimitiveKind { return PrimitiveExileTopOfLibrary }
+// Kind implements Primitive for MoveTopOfLibrary.
+func (MoveTopOfLibrary) Kind() PrimitiveKind { return PrimitiveMoveTopOfLibrary }
 
 // Kind implements Primitive for PutHandOnLibraryThenDraw.
 func (PutHandOnLibraryThenDraw) Kind() PrimitiveKind { return PrimitivePutHandOnLibraryThenDraw }
@@ -524,8 +521,7 @@ func (Untap) isPrimitive()                                {}
 func (SkipNextUntap) isPrimitive()                        {}
 func (RemoveFromCombat) isPrimitive()                     {}
 func (CounterObject) isPrimitive()                        {}
-func (Mill) isPrimitive()                                 {}
-func (ExileTopOfLibrary) isPrimitive()                    {}
+func (MoveTopOfLibrary) isPrimitive()                     {}
 func (PutHandOnLibraryThenDraw) isPrimitive()             {}
 func (DiscardThenDraw) isPrimitive()                      {}
 func (DiscardUnlessType) isPrimitive()                    {}
@@ -839,12 +835,7 @@ func (p RevealToHandDrainManaValue) instructionRefs() primitiveRefs {
 }
 func (GoadForEachOpponent) instructionRefs() primitiveRefs      { return primitiveRefs{} }
 func (CreateCommanderCopyToken) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p Mill) instructionRefs() primitiveRefs {
-	refs := quantityRefs(p.Amount)
-	refs.publishesLinked = p.PublishLinked
-	return refs
-}
-func (p ExileTopOfLibrary) instructionRefs() primitiveRefs {
+func (p MoveTopOfLibrary) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked
 	return refs

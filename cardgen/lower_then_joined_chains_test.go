@@ -38,11 +38,11 @@ func TestLowerThenJoinedThreeEffectSharedTargetSequence(t *testing.T) {
 	if len(mode.Sequence) != 3 {
 		t.Fatalf("sequence = %d, want 3", len(mode.Sequence))
 	}
-	mill, millOK := mode.Sequence[0].Primitive.(game.Mill)
+	mill, millOK := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
 	discard, discardOK := mode.Sequence[2].Primitive.(game.Discard)
 	if !millOK || !drawOK || !discardOK {
-		t.Fatalf("primitives = %T, %T, %T; want game.Mill, game.Draw, game.Discard",
+		t.Fatalf("primitives = %T, %T, %T; want game.MoveTopOfLibrary, game.Draw, game.Discard",
 			mode.Sequence[0].Primitive,
 			mode.Sequence[1].Primitive,
 			mode.Sequence[2].Primitive,

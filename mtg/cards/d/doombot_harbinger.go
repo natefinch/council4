@@ -51,7 +51,7 @@ func newDoombotHarbinger() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount: game.Fixed(4),
 									Player: game.ControllerReference(),
 								},

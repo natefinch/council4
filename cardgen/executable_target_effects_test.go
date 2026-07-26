@@ -1476,9 +1476,9 @@ func TestGenerateExecutableCardSourceMill(t *testing.T) {
 	}
 	for _, wanted := range []string{
 		"game.TargetAllowPlayer",
-		"Primitive: game.Mill",
+		"Primitive: game.MoveTopOfLibrary",
 		"game.Fixed(3)",
-		"Player: game.TargetPlayerReference(0)",
+		"game.TargetPlayerReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -1502,9 +1502,10 @@ func TestGenerateExecutableCardSourceControllerMill(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.Mill",
+		"Primitive: game.MoveTopOfLibrary",
 		"game.Fixed(4)",
-		"Player: game.ControllerReference()",
+		"game.ControllerReference()",
+		"Destination: zone.Graveyard,",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

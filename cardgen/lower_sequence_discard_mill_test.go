@@ -86,7 +86,8 @@ func TestLowerSequenceThatPlayerMills(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"Primitive: game.Mill{",
+		"Primitive: game.MoveTopOfLibrary{",
+		"Destination: zone.Graveyard,",
 		"game.Fixed(2)",
 		"game.TargetPlayerReference(0)",
 	} {

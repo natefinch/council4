@@ -37,7 +37,8 @@ func TestGenerateExecutableCardSourceEivorWolfKissed(t *testing.T) {
 		"Event:               game.EventDamageDealt",
 		"RequireCombatDamage: true",
 		"DamageRecipient:     game.DamageRecipientPlayer",
-		"game.Mill{",
+		"game.MoveTopOfLibrary{",
+		"Destination: zone.Graveyard,",
 		"Kind:       game.DynamicAmountEventDamage",
 		"PublishLinked: game.LinkedKey(\"milled-cards\")",
 		// types.Sub("Saga") now renders as the named constant types.Saga.
@@ -74,7 +75,7 @@ func TestLowerEivorMillsThatManyThenOptionalOneOfEachToBattlefield(t *testing.T)
 	if len(sequence) != 3 {
 		t.Fatalf("sequence length = %d, want 3", len(sequence))
 	}
-	mill, ok := sequence[0].Primitive.(game.Mill)
+	mill, ok := sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
 		t.Fatalf("sequence[0] = %#v, want Mill", sequence[0].Primitive)
 	}

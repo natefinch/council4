@@ -130,7 +130,7 @@ func TestRenderExileTopOfLibraryPrimitive(t *testing.T) {
 	t.Parallel()
 	// Optional linked publication and named exile counters append only their
 	// respective fields; the counter requests the counter and opt imports.
-	plain, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ExileTopOfLibrary{
+	plain, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount:      game.Fixed(1),
 		PlayerGroup: game.AllPlayersReference(),
 	})
@@ -140,14 +140,14 @@ func TestRenderExileTopOfLibraryPrimitive(t *testing.T) {
 	if strings.Contains(plain, "Counter:") {
 		t.Fatalf("counterless exile-top rendered a Counter field:\n%s", plain)
 	}
-	for _, want := range []string{"game.ExileTopOfLibrary", "Amount: game.Fixed(1)", "PlayerGroup: game.AllPlayersReference()"} {
+	for _, want := range []string{"game.MoveTopOfLibrary", "Amount: game.Fixed(1)", "PlayerGroup: game.AllPlayersReference()"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("rendered exile-top missing %q:\n%s", want, plain)
 		}
 	}
 
 	ctx := newRenderCtx()
-	withCounter, err := (Renderer{}).renderPrimitive(ctx, game.ExileTopOfLibrary{
+	withCounter, err := (Renderer{}).renderPrimitive(ctx, game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount:      game.Fixed(1),
 		PlayerGroup: game.AllPlayersReference(),
 		Counter:     opt.Val(counter.Collection),
@@ -156,7 +156,7 @@ func TestRenderExileTopOfLibraryPrimitive(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"game.ExileTopOfLibrary",
+		"game.MoveTopOfLibrary",
 		"PlayerGroup: game.AllPlayersReference()",
 		"Counter: opt.Val(counter.Collection)",
 	} {
@@ -171,7 +171,7 @@ func TestRenderExileTopOfLibraryPrimitive(t *testing.T) {
 		t.Fatal("exile-top with counter did not request opt import")
 	}
 
-	linked, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.ExileTopOfLibrary{
+	linked, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount:        game.Fixed(7),
 		Player:        game.ControllerReference(),
 		PublishLinked: "exiled-top-cards",

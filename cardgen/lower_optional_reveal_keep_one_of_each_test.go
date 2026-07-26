@@ -28,7 +28,7 @@ func TestLowerOptionalRevealKeepOneOfEach(t *testing.T) {
 	if len(seq) != 3 {
 		t.Fatalf("sequence = %d instructions, want 3 (mill + two keeps)", len(seq))
 	}
-	mill, ok := seq[0].Primitive.(game.Mill)
+	mill, ok := seq[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok || mill.Amount != game.Fixed(5) || mill.Player != game.ControllerReference() {
 		t.Fatalf("sequence[0] = %#v, want Mill 5 by controller", seq[0].Primitive)
 	}

@@ -67,7 +67,7 @@ func newTyvarJubilantBrawler() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount: game.Fixed(3),
 									Player: game.ControllerReference(),
 								},

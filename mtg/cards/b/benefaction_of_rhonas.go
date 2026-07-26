@@ -33,7 +33,7 @@ func newBenefactionOfRhonas() *game.CardDef {
 			SpellAbility: opt.Val(game.Mode{
 				Sequence: []game.Instruction{
 					{
-						Primitive: game.Mill{
+						Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 							Amount:        game.Fixed(5),
 							Player:        game.ControllerReference(),
 							PublishLinked: game.LinkedKey("milled-cards"),

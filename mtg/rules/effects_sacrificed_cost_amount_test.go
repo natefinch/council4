@@ -36,7 +36,7 @@ func TestSacrificedCostReferenceMillReadsLastKnownPower(t *testing.T) {
 		Targets:             []game.Target{game.PlayerTarget(game.Player2)},
 		SacrificedAsCostIDs: []id.ID{sacrificed.ObjectID},
 	}
-	resolveInstruction(engine, g, obj, game.Mill{
+	resolveInstruction(engine, g, obj, game.MoveTopOfLibrary{Destination: zone.Graveyard,
 		Amount: game.Dynamic(game.DynamicAmount{
 			Kind:       game.DynamicAmountObjectPower,
 			Multiplier: 1,

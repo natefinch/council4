@@ -436,11 +436,7 @@ func (p SacrificePermanents) validateCapturedTargetControllerReferences(targets 
 	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
-func (p Mill) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
-	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
-}
-
-func (p ExileTopOfLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+func (p MoveTopOfLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
@@ -2837,32 +2833,32 @@ func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bo
 	}
 }
 
-func (p Mill) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+func (p MoveTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	// Destination selects the runtime path in handleMoveTopOfLibrary. Only the
+	// graveyard (mill) and exile paths exist; reject everything else here rather
+	// than letting a lowering emit an instruction that silently resolves to no
+	// zone. A new destination means a new arm in handleMoveTopOfLibrary.
+	if p.Destination != zone.Graveyard && p.Destination != zone.Exile {
+		return errors.New("MoveTopOfLibrary supports only the graveyard and exile destinations")
+	}
+	// Counter and FaceDown are exile-only state. A named marker counter is
+	// recorded in Game.ExileCounters, which holds only cards in exile, and
+	// face-down state is tracked solely by the exile zone. Honoring either at the
+	// graveyard would need the graveyard zone to record that state, so reject the
+	// combination instead of letting handleMoveTopOfLibrary silently drop it.
+	if p.Counter.Exists && p.Destination != zone.Exile {
+		return errors.New("MoveTopOfLibrary counter placement requires an exile destination")
+	}
+	if p.FaceDown && p.Destination != zone.Exile {
+		return errors.New("MoveTopOfLibrary face-down placement requires an exile destination")
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
-	if err := validateMassPlayerOrGroup("Mill", p.Player, p.PlayerGroup); err != nil {
+	if err := validateMassPlayerOrGroup("MoveTopOfLibrary", p.Player, p.PlayerGroup); err != nil {
 		return err
 	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	if hasGroup {
-		if p.PublishLinked != "" {
-			return errors.New("Mill cannot publish linked cards for the group form")
-		}
-		return validatePlayerGroupReference(p.PlayerGroup)
-	}
-	return validatePlayerReference(p.Player, targets, checkTargets)
-}
-
-func (p ExileTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
-		return err
-	}
-	if err := validateMassPlayerOrGroup("ExileTopOfLibrary", p.Player, p.PlayerGroup); err != nil {
-		return err
-	}
-	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
-	if hasGroup {
+	if p.PlayerGroup.Kind != PlayerGroupReferenceNone {
 		return validatePlayerGroupReference(p.PlayerGroup)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)

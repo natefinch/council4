@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -90,7 +91,7 @@ func TestMillScryAndSurveilLibraryEffectsUseDeterministicFallback(t *testing.T) 
 		t.Fatalf("library after surveil = %+v, want deterministic keep-top order", got)
 	}
 
-	addEffectSpellToStack(g, game.Player1, game.Mill{Amount: game.Fixed(2), Player: game.ControllerReference()}, nil)
+	addEffectSpellToStack(g, game.Player1, game.MoveTopOfLibrary{Destination: zone.Graveyard, Amount: game.Fixed(2), Player: game.ControllerReference()}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if !g.Players[game.Player1].Graveyard.Contains(third) || !g.Players[game.Player1].Graveyard.Contains(second) {
 		t.Fatal("mill did not move top two cards to graveyard")

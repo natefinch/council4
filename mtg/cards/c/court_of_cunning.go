@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -70,7 +71,7 @@ func newCourtOfCunning() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount:      game.Fixed(2),
 									PlayerGroup: game.TargetedPlayersReference(),
 								},
@@ -82,7 +83,7 @@ func newCourtOfCunning() *game.CardDef {
 								}),
 							},
 							{
-								Primitive: game.Mill{
+								Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 									Amount:      game.Fixed(10),
 									PlayerGroup: game.TargetedPlayersReference(),
 								},

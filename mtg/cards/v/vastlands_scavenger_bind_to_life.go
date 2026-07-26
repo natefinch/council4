@@ -57,7 +57,7 @@ func newVastlandsScavenger() *game.CardDef {
 			SpellAbility: opt.Val(game.Mode{
 				Sequence: []game.Instruction{
 					{
-						Primitive: game.Mill{
+						Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 							Amount:        game.Fixed(7),
 							Player:        game.ControllerReference(),
 							PublishLinked: game.LinkedKey("milled-cards"),

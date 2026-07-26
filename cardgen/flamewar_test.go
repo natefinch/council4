@@ -70,10 +70,11 @@ func TestGenerateExecutableFlamewarBothFaces(t *testing.T) {
 		"Counter: counter.Intel,",
 		// Back: combat-damage-scaled face-down exile with the named counter.
 		"Event:               game.EventDamageDealt,",
-		"Primitive: game.ExileTopOfLibrary{",
+		"Primitive: game.MoveTopOfLibrary{",
+		"Destination: zone.Exile,",
 		"Kind:       game.DynamicAmountEventDamage,",
-		"Counter:  opt.Val(counter.Intel),",
-		"FaceDown: true,",
+		"opt.Val(counter.Intel),",
+		"FaceDown:    true,",
 		"Primitive: game.Transform{",
 	} {
 		if !strings.Contains(source, want) {

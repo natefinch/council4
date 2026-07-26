@@ -38,7 +38,8 @@ func TestGenerateNecropotence(t *testing.T) {
 	for _, want := range []string{
 		"game.SkipDrawStepStaticBody",
 		"game.EventCardDiscarded",
-		"game.ExileTopOfLibrary{",
+		"game.MoveTopOfLibrary{",
+		"Destination: zone.Exile,",
 		`PublishLinked: game.LinkedKey("delayed-top-card-1")`,
 		"FaceDown:      true,",
 		"game.CreateDelayedTrigger{",
@@ -121,9 +122,9 @@ func TestLowerNecropotencePayLifeExileDelayedReturn(t *testing.T) {
 		t.Fatalf("ability body = %d instructions, want 2 (exile, delayed return)", len(seq))
 	}
 
-	exile, ok := seq[0].Primitive.(game.ExileTopOfLibrary)
+	exile, ok := seq[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok {
-		t.Fatalf("instruction 0 = %T, want game.ExileTopOfLibrary", seq[0].Primitive)
+		t.Fatalf("instruction 0 = %T, want game.MoveTopOfLibrary", seq[0].Primitive)
 	}
 	if !exile.FaceDown {
 		t.Fatal("top-card exile must be face down")

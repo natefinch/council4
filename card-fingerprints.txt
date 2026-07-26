@@ -89,7 +89,7 @@ f568349c10cfb782  Accursed Horde
 6ac344d57f4690c9  Acid Web Spider
 0bb25f542a276bdd  Acidic Slime
 33ae39b94536587a  Acolyte of Aclazotz
-ba699ab66170acd9  Acolyte of Affliction
+5f07e14a381877e3  Acolyte of Affliction
 f16b5c7e489939a4  Acolyte of the Inferno
 77ebdcfa9ef1fa4d  Acolyte of Xathrid
 7350e8a52e6731c0  Acorn Harvest
@@ -180,7 +180,7 @@ a3d1971ff65d4382  Aether Poisoner
 ee42b0ffce000983  Aether Spellbomb
 22d5d910a0910eac  Aether Sting
 d0d5e591fea67071  Aether Swooper
-78b5adec822c2b74  Aether Syphon
+70ae5f07e9cf7137  Aether Syphon
 4f65bece2fba35b0  Aether Theorist
 89cccb8df3c290f0  Aether Tradewinds
 5b8f4dc8c709e223  Aether Tunnel
@@ -200,7 +200,7 @@ e3e4945d8b44a393  Affa Protector
 11966725acd7b853  Affectionate Indrik
 82621051c9e6f928  Afflict
 1717f81da116baf5  Afterlife
-dc78865f50520955  Aftermath Analyst
+7d04e8cd79ec5437  Aftermath Analyst
 b4e6d5a3dffa289d  Aftershock
 6196afa4e9327eaf  Against All Odds
 0202412090e2b637  Agate Instigator
@@ -378,16 +378,16 @@ f3eea7b8681c8079  Altac Bloodseeker
 82e9c3d129d96300  Altanak, the Thrice-Called
 04b6e03a62ef737d  Altar Golem
 33f92d1672d5398b  Altar of Bone
-cca7303cd33a5516  Altar of Dementia
+ebe7980b310e67c2  Altar of Dementia
 0b17fad0324ee6fc  Altar of Shadows
-317008f4b5d753c0  Altar of the Brood
+1ca68f829eccff65  Altar of the Brood
 c972d227bd40614b  Altar's Light
 789167230ba0a670  Altar's Reap
 a8cd408037fac2ef  Always Watching
 edc0a34c68a5ef50  Amaranthine Wall
 adab671917a23d26  Amateur Hero
 aab7ce12a8d33dd7  Amazing Acrobatics
-8a3fa79ef569023e  Ambassador Laquatus
+1a2ca8e300151502  Ambassador Laquatus
 83b46246d87e82c4  Ambassador Oak
 12a217de606e7fc1  Ambition's Cost
 091c5f388eaa434a  Ambitious Aetherborn
@@ -729,7 +729,7 @@ fb9f2193473ce613  Argentum Armor
 7d120cf32a15a286  Argivian Find
 f1c0dca04a4e52f4  Argivian Phalanx
 4b623b06f6fcffa9  Argivian Restoration
-c64fdef77f8c2339  Argoth, Sanctum of Nature
+bb2251cbf85c4fae  Argoth, Sanctum of Nature
 95199dd1ae40f7da  Argothian Elder
 fa79cb1436e1ad9e  Argothian Enchantress
 bc1c310ee12d6e64  Argothian Opportunist
@@ -764,7 +764,7 @@ b4316b40b2415f12  Armored Galleon
 1e9e6b0ff1043c14  Armored Guardian
 1f645a7531512a64  Armored Pegasus
 97593784378dc821  Armored Scrapgorger
-97a22af6bf7f9817  Armored Skaab
+44736832ddd8481f  Armored Skaab
 4f09668776905c77  Armored Warhorse
 ea592b369f475018  Armored Whirl Turtle
 7ee8bddca48de1f6  Armored Wolf-Rider
@@ -834,7 +834,7 @@ b5898a56b779d294  Ashenmoor Liege
 9e2858abeaebd178  Ashiok's Forerunner
 235c555a181b3c38  Ashiok's Reaper
 ba686ac9db60ffd0  Ashiok's Skulker
-431f4eb167ba0497  Ashiok, Sculptor of Fears
+365ef0d2c3b84a7a  Ashiok, Sculptor of Fears
 23dcd885aaaf9a7c  Ashmouth Hound
 17a78250ab93e045  Ashnod's Altar
 30cdbddf1dae0a90  Ashnod's Harvester
@@ -890,7 +890,7 @@ efd0487fd5679d4e  Atmosphere Surgeon
 983556915118fb78  Atogatog
 88c1b7e3173e72bd  Atomize
 10aa2ab37f267dab  Atraxa, Praetors' Voice
-271ebc198fba0b63  Atrocious Experiment
+b7a9ce3a213b4d88  Atrocious Experiment
 437743d250bc2fcb  Atsushi, the Blazing Sky
 390cd12761944602  Attack-in-the-Box
 c9b71a48509cd8e1  Attendant of Vraska
@@ -946,7 +946,7 @@ c5b26face1497077  Auspicious Ancestor
 ecbb1fa22a95d23e  Automated Artificer
 9f1e10b0c83c33a0  Automated Assembly Line
 6ac877bb403b02dc  Automatic Librarian
-b7a3f6b8057e4d4a  Autumnal Gloom // Ancient of the Equinox
+6ca080b3d936c528  Autumnal Gloom // Ancient of the Equinox
 36ad2a212e817e7b  Auxiliary Boosters
 4ccc64903fb82abc  Avacyn
 d3433a13204f5faf  Avacyn's Collar
@@ -977,7 +977,7 @@ b07e4418045db964  Aven Fateshaper
 d4817330ccb677f2  Aven Flock
 8b23997ee4011c9c  Aven Fogbringer
 9894c010559c8c64  Aven Gagglemaster
-512decf5d63fc8a4  Aven Heartstabber
+4dc00070ebc54995  Aven Heartstabber
 4d950d33a68df653  Aven Initiate
 84cbc48153535e38  Aven Initiate
 96b4a2e56a71632b  Aven Liberator
@@ -1008,7 +1008,7 @@ f2c9e2027937a2c4  Aviary Mechanic
 ef103fb09959fc8c  Aviation Pioneer
 59a099d2f1e3baee  Avishkar Raceway
 4bedc3fc69d85650  Awaken the Bear
-dd8447509c319c38  Awaken the Honored Dead
+30431407acbd1f30  Awaken the Honored Dead
 eb9458f38ce558e4  Awakening
 3529d7d6a4fdfaa7  Awakening Zone
 ba96f619b64d1550  Axebane Beast
@@ -1353,7 +1353,7 @@ aa138a5d9a7e5806  Benalish Trapper
 59a6379c76ff0fc7  Benalish Veteran
 9cbcc913b404a800  Bender's Waterskin
 05ae167ae4be16cc  Beneath the Sands
-a79882d74dbcdbb4  Benefaction of Rhonas
+abd2536f9a0709f8  Benefaction of Rhonas
 ad29ce7bbdd15715  Benefactor's Draught
 74854fa7bd2f1cb8  Benevolent Ancestor
 f08a9ea443393de9  Benevolent Blessing
@@ -1405,7 +1405,7 @@ c563f2113caf841c  Bighorner Rancher
 ebd6580fce84ce23  Bile-Vial Boggart
 04129070b24d573d  Bilious Skulldweller
 4e4f38950b364d25  Billiard Room
-d591d4039a24b80c  Billowing Shriekmass
+76c20347bd637227  Billowing Shriekmass
 14ef304cc29e22b5  Bind
 03283c9ae43539f9  Binding Grasp
 d27f57154555a176  Binding Mummy
@@ -1471,7 +1471,7 @@ fa395ac423f6937e  Black Scarab
 c5417e813443cb5c  Black Sun's Zenith
 8135a732df2ab395  Black Ward
 5df7095f8609ba33  Black Widow, Agile Avenger
-abcd33fd372e61dc  Black Widow, Daring Operative
+393029d536624909  Black Widow, Daring Operative
 eb5123e4fdb2cf4c  Black Widow, Deadly Hunter
 e8e1abb74498d1e4  Black Widow, Double Agent
 a7be5de3449b4a5c  Black Widow, Intel Expert
@@ -1829,7 +1829,7 @@ a24f5de785c4fe8c  Boneyard Wurm
 d51adaf91841eed8  Bontu's Last Reckoning
 bf68465a4f4c2c76  Bontu's Monument
 655af7e37758744f  Boo
-5c8de35c680c3cc9  Book Burning
+f7d2c9ff69e3ed67  Book Burning
 df435a5d321189eb  Book Devourer
 86fc47a88ff29519  Book of Mazarbul
 3ce3abef6fc6db92  Book of Rass
@@ -1911,7 +1911,7 @@ ffcf1e0f27361a1d  Bountiful Promenade
 553f975288071bbc  Braids, Cabal Minion
 471d78435d465b42  Braidwood Cup
 176e56f87196d886  Braidwood Sextant
-3b8b0da23d462fc6  Brain Freeze
+c60c1793f92b6e3f  Brain Freeze
 34ba414186e4348b  Brain Weevil
 3d88c344de0a53a5  Brainbite
 a08617e640ff5127  Braingeyser
@@ -1958,7 +1958,7 @@ b264b47c4d829b7b  Brazen Scourge
 7725cbfa9ab1599f  Brazen Upstart
 745a9f29b51da790  Brazen Wolves
 a860651a10eeaff6  Breach
-566217b654b16e7d  Breach the Multiverse
+4be27370a54b603d  Breach the Multiverse
 2211372fac09a43b  Breaching Hippocamp
 bc26e90d53fd5cd1  Break Asunder
 1616cb322aeb5c98  Break Down
@@ -2123,7 +2123,7 @@ f58695571e11abd8  Burrenton Shield-Bearers
 5b5629aa9cec9339  Burrog Befuddler
 a1f5a39a3d6f7d59  Burrowguard Mentor
 51926a15cfc094b1  Burrowing
-824c7c6d78e03313  Burrowing Razormaw
+9e411fd8ac727abb  Burrowing Razormaw
 85dcca33071a2044  Burst Lightning
 e1e81420b2b3ac03  Burst of Energy
 d4fce595846ffe6b  Burst of Speed
@@ -2383,7 +2383,7 @@ e265700a31cb7c01  Cateran Summons
 e39cfbf48f106cc3  Cathar's Companion
 4bf9bec6778244e8  Cathar's Shield
 1ba911cd173dcf58  Cathars' Crusade
-b7cc28e8219d0e0a  Cathartic Adept
+f03557c90c65586c  Cathartic Adept
 402d1133152dab8f  Cathartic Pyre
 99e618c4b27c0382  Cathartic Reunion
 ddbe8697586d344f  Cathedral of War
@@ -2434,7 +2434,7 @@ de03cc38e03abdd5  Celestial Prism
 04a66370c10f9a8a  Cemetery Gate
 c6e5d0d85d413ea8  Cemetery Prowler
 94a7a0026a6a167b  Cemetery Reaper
-dbc3a632351f4013  Cemetery Tampering
+c0c04a954d09b8ce  Cemetery Tampering
 a934bc8721311622  Cenn's Enlistment
 a9729be183f064fa  Cenn's Heir
 0be31b48d69bc68a  Cenote Scout
@@ -2455,7 +2455,7 @@ c42113f5d49ec1c2  Centaur Rootcaster
 d933710933ef0499  Centaur Veteran
 713d2049052e0938  Centaur's Herald
 72aa6538b9b4bd94  Center Soul
-8ec9953681d95050  Cephalid Aristocrat
+cafc012a783e9a21  Cephalid Aristocrat
 1bb8a0f3f7595551  Cephalid Broker
 574bd1605aa3b9bd  Cephalid Coliseum
 c64081cc084667d9  Cephalid Inkshrouder
@@ -2588,7 +2588,7 @@ a257b9856ff69a47  Child of Thorns
 9e1456643014c4d5  Children of Korlis
 e610069fdfc5997f  Chill
 12ad754afe555c77  Chill Haunting
-f5d9a51c38ace6f8  Chill of Foreboding
+457d206507241aed  Chill of Foreboding
 02513262b0b0afd0  Chill of the Grave
 fac2c4b56bc7a465  Chill to the Bone
 5cdc6ee3a2e6a026  Chillbringer
@@ -2640,7 +2640,7 @@ b9939d64568f2ec6  Chrome Companion
 ae45e89c5e90f2e0  Chrome Steed
 f03e74045873c156  Chromescale Drake
 1657676a37ebaf9d  Chromium
-91241838d96139e3  Chronic Flooding
+42a4ab36a2324928  Chronic Flooding
 7fffccabbdc2ef43  Chronicle of Victory
 00beb8bcc3196772  Chronomaton
 e72bd9a301039b06  Chub Toad
@@ -2669,7 +2669,7 @@ f823931e543aab59  Circle of Protection: Blue
 b773d69f6a4d02ce  Circle of Protection: Green
 f2e4a91a649cb25e  Circle of Protection: Red
 95ceaf2231b2467e  Circle of Protection: White
-9ed70afe567c27ec  Circle of the Land Druid
+e6850e0bde3b84d7  Circle of the Land Druid
 d70d34fb38ae0726  Circuit Mender
 d630a4cd37e3d313  Circular Logic
 18946b436dad16c8  Cirith Ungol Patrol
@@ -2830,7 +2830,7 @@ b1bceff0e87d0428  Cobalt Golem
 2296cdfe947e1c12  Cobbled Lancer
 fc43c6f484f0498d  Cobbled Wings
 c544210eded5fc91  Code of Constraint
-5b5c8460a20e50b2  Codex Shredder
+ae6b5ad35543f2a2  Codex Shredder
 a9b713969d153cdd  Coerced to Kill
 5b0b44ae2d3477f9  Coercion
 e8ef03c3d320871d  Coercive Impetus
@@ -2865,7 +2865,7 @@ e002e224a70af59f  Colos Yearling
 705e99c42d956d07  Colossal Collision
 7729aa92e7d1ce3e  Colossal Dreadmask
 e5aec50fd7c0b855  Colossal Dreadmaw
-d9e6b7eb8d91a307  Colossal Grave-Reaver
+2c9651c1db60d846  Colossal Grave-Reaver
 be54939a695cadb9  Colossal Growth
 06b1a5af3a3ed98a  Colossal Majesty
 17dd9ed4a8764ff9  Colossal Might
@@ -2886,7 +2886,7 @@ bcc59082567a43f4  Combat Medic
 145336c41a62829a  Combat Research
 0f5358161cb39267  Combat Tutorial
 f0dc5ee348a5e6e0  Combine Chrysalis
-92290c2fb601d061  Combustible Gearhulk
+976f83d621816644  Combustible Gearhulk
 acc3157a43c43cb5  Combustion Technique
 3bd7d2e4b88ecb12  Comet Crawler
 6a9bf77e0970aff0  Comet Storm
@@ -2915,7 +2915,7 @@ c5b3d01e5fdf6f12  Companion of the Trials
 9298d8d5459e82a6  Company Commander
 ba0829cce9ca8ec5  Compass Gnome
 d38878f432e75167  Compassionate Healer
-98761cfc0b39f161  Compelling Argument
+f6ff86938c86eef2  Compelling Argument
 e0871ff36350cfa3  Compelling Deterrence
 71978314244ce34a  Compleated Huntmaster
 a429320c35205d12  Complete Disregard
@@ -3043,7 +3043,7 @@ f49ea161d2bcc027  Copper-Leaf Angel
 c09d31ab09fa73fc  Copy Land
 ea05d5ab17b9ca03  Coral Atoll
 e24353cc9dcb6ad1  Coral Barrier
-c164f5f60409b677  Coral Colony
+49b6d5e78f2232b9  Coral Colony
 d84f410e694d0584  Coral Commando
 3761b4bdb40fb495  Coral Eel
 6f67fcabb4c941bc  Coral Helm
@@ -3062,7 +3062,7 @@ aa97d6bb2551dfc8  Cormela, Glamour Thief
 9e46486c8756f716  Cornered by Black Mages
 25c6ae254ef1a0b0  Cornered Crook
 af4acf4501365fae  Corpse Blockade
-ff7c502558016c2b  Corpse Churn
+8b1c8b56f4aae6c4  Corpse Churn
 de838df77d732175  Corpse Connoisseur
 9cc63d3ba138fdf7  Corpse Hauler
 cbca82a5c78281ef  Corpse Knight
@@ -3100,7 +3100,7 @@ bd31979ef30fe298  Cost of Brilliance
 750051e190766b38  Count on Luck
 acafca6e9a579d6d  Counterintelligence
 1e7c94dc170aef08  Counterlash
-d5443c80bdf11fa3  Countermand
+c74699d538291e6d  Countermand
 693ad9b83ca2fee0  Counterspell
 4334ae490a0e0071  Countersquall
 00798ed6e1fcbde6  Countervailing Winds
@@ -3121,7 +3121,7 @@ f5ecbcb6b8f5fdab  Courser of Kruphix
 db333b8060f868d6  Court of Ambition
 052e6f771b71b194  Court of Ardenvale
 2082cb08416e554f  Court of Bounty
-a3cd2a7f5d037ee3  Court of Cunning
+9e9e662c80e2c168  Court of Cunning
 abb76c22c402fc1a  Court of Embereth
 01b105ebd7aa7fef  Court of Garenbrig
 0ba9c435e3efbc71  Court of Grace
@@ -3226,12 +3226,12 @@ acde8f0aaee03339  Crossroads Candleguide
 6ab4544d7bae0ce3  Crossroads Consecrator
 efebc005f499ab50  Crossroads Village
 ba2fc5d79d16afca  Crossroads Watcher
-14f4048f8a373d19  Crosstown Courier
+30499570aeade03c  Crosstown Courier
 e05fb1aa301a99cc  Crossway Troublemakers
 c35c7e62124d0c1f  Crossway Vampire
 eb06cad4912571b0  Crosswinds
 857c9e6ad8e9448d  Crovax the Cursed
-f9dd5391e45860df  Crow of Dark Tidings
+c4a1d27a0ac1a23b  Crow of Dark Tidings
 1d4997879483d9ba  Crowd Favorites
 fa26ed7142f6c2f5  Crowd of Cinders
 0406afc670fe3fc2  Crowd's Favor
@@ -3250,7 +3250,7 @@ ca0db37e1f72eb1a  Cruel Celebrant
 3463f7d8dcdb0e70  Cruel Finality
 029d1550e480a8eb  Cruel Grimnarch
 479be867ad67069d  Cruel Revival
-04e05936657c9f65  Cruel Somnophage // Can't Wake Up
+9b08d377ff35be18  Cruel Somnophage // Can't Wake Up
 c2dbb1c4e4f5caf2  Cruel Truths
 6212aa988235878f  Cruel Tutor
 14b93d6071a98a3c  Cruel Witness
@@ -3345,7 +3345,7 @@ f7ff453ff96a163a  Curse of Chains
 3b99f98d56fba750  Curse of Disturbance
 cc01fcf4893d1fb0  Curse of Marit Lage
 f4f937947cd78e6b  Curse of Opulence
-2e0975f617c3b7a4  Curse of the Bloody Tome
+c60c434c797771fb  Curse of the Bloody Tome
 a4066195172acb8b  Curse of the Swine
 0a8a10cc3429f60a  Curse of Verbosity
 661b3b8e0c266f49  Curse of Vitality
@@ -3390,7 +3390,7 @@ b93aca6948f5dfc2  D'Avenant Trapper
 672823df022f47c8  Daggerback Basilisk
 f59c1856e817770d  Daggerclaw Imp
 053cc79fc4fde931  Daggerdrome Imp
-d9361335e18cf64d  Daggerfang Duo
+4ec4ed3d9adedf7c  Daggerfang Duo
 6d67881207c7c7fc  Daggermaw Megalodon
 f6f67332bd191642  Daggersail Aeronaut
 7f3163d7742ff1d1  Daghatar the Adamant
@@ -3414,7 +3414,7 @@ f480291bed6b1824  Dalek Squadron
 0c21c1f8463d2228  Damnable Pact
 7ad296066dfcdd6f  Damnation
 5510c886249b2e65  Damning Verdict
-7bda6f9b97b03f7a  Dampen Thought
+966a5568f7ccba82  Dampen Thought
 3a9c351a0fbdf444  Dampening Pulse
 f0235cae4ae0b5e6  Dance of Shadows
 6df7618f62e47c8f  Dance of the Tumbleweeds
@@ -3581,7 +3581,7 @@ ca1422eb8a0dafe3  Deadly Derision
 afe0640dec83a98a  Deadshot
 f3eb84a997695a5b  Deadshot Minotaur
 6ac8890c61c431ff  Deafening Clarion
-b2bdf0e36d813f98  Deal Gone Bad
+d09669918abfb54d  Deal Gone Bad
 c3f453ee6a13996e  Death Bomb
 ccd415cc134b180b  Death Cultist
 9a200a8433d21360  Death Denied
@@ -3608,7 +3608,7 @@ d822732767cadfe2  Deathbloom Thallid
 1500626958270176  Deathbringer Thoctar
 92f3a40f19bdf90e  Deathcap Cultivator
 d4629ed40b5b996b  Deathcap Glade
-59d09b1f16be8a98  Deathcap Marionette
+c79abb44355e09ad  Deathcap Marionette
 683c4b416621480c  Deathcoil Wurm
 3c2dfb8325bad301  Deathcurse Ogre
 ba2b987533782927  Deathgaze Cockatrice
@@ -3660,7 +3660,7 @@ ca1863f3c12e4415  Deep-Slumber Titan
 cca63ef601dc8adc  Deepchannel Duelist
 dc3628faead2e92b  Deepchannel Mentor
 6b8fe5c0df585598  Deepfathom Skulker
-469bf0aaea64830f  Deepmuck Desperado
+9ea055dd76a75841  Deepmuck Desperado
 263c32350c53c3f1  Deeproot Champion
 e77334cd1bbce4fb  Deeproot Elite
 35b3f6322346ea9a  Deeproot Warrior
@@ -3720,7 +3720,7 @@ ce2ad37c96a6b530  Delver's Torch
 3d4bd28d317cf217  Demand Answers
 aef0455ce99c59fc  Dematerialize
 4d73d62ffc8226d5  Dementia Bat
-d12163e3e7936741  Demogorgon's Clutches
+ba505517e1a603bb  Demogorgon's Clutches
 59acb5df1cf20003  Demolish
 bd67efcd528390c4  Demolisher Spawn
 32f7cbd9e56647a6  Demolition Field
@@ -3790,7 +3790,7 @@ d2cdff12fa5cb6c4  Desolate Lighthouse
 18f98f49cf25f011  Desolate Mire
 c19f3fba06e30d89  Desolation Twin
 a3fe00524a00c3e1  Despark
-5609889f0694ee2c  Desperate Bloodseeker
+218b1a088b26f4cf  Desperate Bloodseeker
 18c41e95eaecf487  Desperate Charge
 3d997cc369893ef2  Desperate Farmer // Depraved Harvester
 d91f3f12c7b2b6a3  Desperate Lunge
@@ -3830,7 +3830,7 @@ c2bbb10b93f48c6a  Devoted Hero
 7d5de9b4cd2e453e  Devotee of Strength
 de7e302ea3f69b5f  Devour in Flames
 bc1514b7194839dd  Devour in Shadow
-d68fba22dacc52e2  Devourer of Memory
+a1dec0c69d0d7878  Devourer of Memory
 a3b3dcad77744fce  Devouring Deep
 959e984023ce7c9b  Devouring Light
 cd5d9a320d1f04f6  Devouring Strossus
@@ -3859,13 +3859,13 @@ df3adc072132fd0e  Dictate of Kruphix
 36198547cf8849e4  Dictate of the Twin Gods
 ebc0f3812ff1d9a1  Didact Echo
 a2ad3c6ed6e5f7f8  Didgeridoo
-84c359363a5baaeb  Didn't Say Please
+8e7d6f4900542ef6  Didn't Say Please
 666ed23a3b6ee984  Diffusion Sliver
 6a181ac2f306f695  Dig Site Inventory
 409bfd1f908ce739  Dig Through Time
 d2f0947aec543105  Digsite Conservator
 d5406037d15a7d57  Digsite Engineer
-39ba0cac5587a0d8  Diligent Excavator
+0d5ebc4d2eff2887  Diligent Excavator
 d3579ba3e7d9020a  Dimension X
 b26fae2bbcc23bc6  Diminish
 2b48d1ee24198f47  Diminisher Witch
@@ -4049,9 +4049,9 @@ d5888567e8ee140c  Donate
 a8e6469111db9f1a  Donatello, Way with Machines
 72717a8d796a6240  Doom Blade
 1a87abba38bce896  Doom Whisperer
-c3c444d2c8dc3e4b  Doom's Servo-Guards
+891c24dae1c407e4  Doom's Servo-Guards
 1e1c2a3198478d62  Doombot
-f9c66a3e778a466d  Doombot Harbinger
+f8e956c7d8af4edd  Doombot Harbinger
 c62b940ae616fc60  Doomed Dissenter
 d00811ffc31dc0bc  Doomed Necromancer
 2d721727221c627f  Doomed Traveler
@@ -4061,7 +4061,7 @@ d1ecf700a3c20759  Doomskar Oracle
 7d85ba4ccc647d30  Doomwake Giant
 b311e88d0123c74b  Door of Destinies
 7c0e3452c747d9f8  Door to Nothingness
-5dbef4340599110f  Doorkeeper
+01076efc4e5083d9  Doorkeeper
 ae5a029bef669269  Doran, the Siege Tower
 6abeed1e4bf1cd59  Dormant Volcano
 92d9abf210e26461  Dosan's Oldest Chant
@@ -4197,7 +4197,7 @@ c392e8e601aa19cc  Dreadhorde Butcher
 25971fca3d3cf313  Dreadhorde Twins
 61c5a18d3e4640a8  Dreadmalkin
 f03dde8dfe2905ed  Dreadmobile
-0aff7dadc9015092  Dreadwaters
+e8c376ddfe396bbc  Dreadwaters
 fb887aa0870d76bb  Dreadwing
 37382467bd3ac73f  Dreadwing Scavenger
 4ea0eb778c868749  Dreadwurm
@@ -4208,7 +4208,7 @@ c17199486439776a  Dream Beavers
 cee225fff65e3178  Dream Stalker
 6244a4d79e94de0b  Dream Tides
 a661320c3c84017b  Dream Trawler
-0b626633142cc42f  Dream Twist
+88aec2c6d7b5c072  Dream Twist
 75f68881307cd64c  Dreamcaller Siren
 942f7a2932def950  Dreamcatcher
 1ae072b7cee4ede9  Dreamdrinker Vampire
@@ -4276,10 +4276,10 @@ af84ac7ab1235707  Drover of the Mighty
 ce0817bf2e6d5d4e  Drowned
 1087053c28f602a5  Drowned Catacomb
 e58f3f7bdce22916  Drowned Rusalka
-457f274ab00ac8bc  Drowned Secrets
-6a03cc90f4af59a8  Drowner Initiate
-9b099f7ee7cd6ec3  Drowner of Secrets
-8a5516b4084e5abb  Drownyard Amalgam
+8e532b4003aa0410  Drowned Secrets
+f8eef6e0791e44d9  Drowner Initiate
+2e61fa372f6b7f8e  Drowner of Secrets
+ebbff379f778988c  Drownyard Amalgam
 1186dd45ecc72a19  Drownyard Explorers
 78465e85415d1014  Drownyard Temple
 64e599d241dc95ef  Drudge Beetle
@@ -4354,7 +4354,7 @@ f0484db76ade7df0  Dusk Urchins
 9bbc8d4d7856febb  Duskhunter Bat
 6978de7c8d1d6a1b  Duskmantle Operative
 616bdb090b533dd2  Duskmantle Prowler
-302439702a0e77ad  Duskmantle, House of Shadow
+d61a2ba1f865a42d  Duskmantle, House of Shadow
 2715e1378783fe75  Duskrider Falcon
 01d9d57527e73b66  Duskshell Crawler
 d05da7450efa2177  Duskwielder
@@ -4448,7 +4448,7 @@ f7e8107853ec97ba  Ebon Stronghold
 79f13d9f1ffc0138  Ebony Owl Netsuke
 122f15665527f587  Ebony Rhino
 9a26351d1f16b974  Ebony Treefolk
-688a89bf04ec1cfa  Eccentric Farmer
+a94c6b4dbbd6f4a1  Eccentric Farmer
 b85a93f1bbe4199d  Echo Circlet
 983d368cc6eb2112  Echo Inspector
 690480de3a175ca9  Echo of Dusk
@@ -4469,17 +4469,17 @@ a75e95ac69cfbf3c  Ecologist's Terrarium
 c96b98eaf1874ff1  Ecstatic Awakener // Awoken Demon
 d894c063021b0828  Ecstatic Electromancer
 41d791355e21c456  Edea, Possessed Sorceress
-d245ac4ed8a1d634  Eden, Seat of the Sanctum
+e4b3b7f6398b2777  Eden, Seat of the Sanctum
 bbfeeaa97c58b6a1  Edge of the Divinity
 db89d00ff3411aad  Edge Rover
 fbab9201f60dfb41  Edgewall Pack
 3ed330a0723b162d  Edric, Spymaster of Trest
 2ae04b095ed712b6  Eel Umbra
 0b69adc9411e8efc  Eel-Hounds
-debdd66684383434  Eerie Gravestone
+99989e0954017ece  Eerie Gravestone
 1edf69fb19b3400c  Eerie Interlude
 533462304b920b61  Eerie Procession
-94ee53b4b151b87e  Eerie Soultender
+c93dbaef2e079de6  Eerie Soultender
 31e79efa72d0bfb4  Efficient Construction
 91f1d536e921a0b4  Effortless Master
 d86c7e983ec8e4b1  Efreet Flamepainter
@@ -4495,7 +4495,7 @@ db75f45600759135  Eiganjo Castle
 8a16b55bdc42e2dc  Eiganjo Free-Riders
 3d062a145066ad3f  Eiganjo, Seat of the Empire
 ff5c223eeed94b07  Eightfold Maze
-8122f71158cf7fdb  Eivor, Wolf-Kissed
+ebd1a606d780a496  Eivor, Wolf-Kissed
 a18e34b9d5572feb  Eject
 5918d84ec5a1614e  Ekundu Griffin
 9651f1c671bdb530  El-Hajjâj
@@ -4734,7 +4734,7 @@ aa2409047013fe80  Empyrial Armor
 f81024bdf662b3d9  Empyrial Storm
 aaca844a8d8a387f  Emrakul's Hatcher
 b9cd3dec70ee8264  Emrakul's Messenger
-b92fdaee5ed50636  Emry, Lurker of the Loch
+f13583fa22e79d70  Emry, Lurker of the Loch
 57657eb011b8949b  Enatu Golem
 d329d17531437473  Encampment Keeper
 89effa2ed1d965c9  Enchanted Carriage
@@ -4778,7 +4778,7 @@ d1ea13b3610fe3e7  Enduring Vitality
 da16ffa70ff7d30f  Engulfing Slagwurm
 2acd35e74660359d  Enhanced Awareness
 eaa3ce54b10811f7  Enigma Drake
-cec047a8f706b146  Enigma Eidolon
+7e387fc03d606681  Enigma Eidolon
 9266176780468797  Enlightened Ascetic
 7bd0faa2521677bd  Enlightened Maniac
 529df9d246c7f131  Enlightened Tutor
@@ -4796,7 +4796,7 @@ cfc0cedf44363022  Enslaved Scout
 8fad1745cdd5754e  Ensnare
 fa9c3f3b200a890a  Ensouled Scimitar
 3da64c8e01321006  Enter the Enigma
-a60cfbc19df614d9  Enter the God-Eternals
+f493422cbf8cab88  Enter the God-Eternals
 d116cf971bff6e31  Enter the Unknown
 f943ba3b3c320f77  Enterprising Scallywag
 8ef319bcaf88d31a  Enthralling Victor
@@ -4919,10 +4919,10 @@ a646539c86da70bc  Etherium-Horn Sorcerer
 e0e8a19c7cef0c4e  Eureka Moment
 3defe4e2071093ef  Eutropia the Twice-Favored
 11a7ee33c21a82ba  Evacuation
-4d34b10453e24015  Evanescent Intellect
+3c0384850b00315b  Evanescent Intellect
 f99f90092af612d7  Evangel of Heliod
 a8188ab4cbc91171  Evasive Action
-690ef10f69cc2d3b  Evelyn, the Covetous
+71c157f73b8faaf8  Evelyn, the Covetous
 959e785c8a411fd7  Everbark Shaman
 d64dd0c435eea7c6  Everflowing Chalice
 fe28a267c3cf84b5  Everglades
@@ -4944,11 +4944,11 @@ f50d7ec0eec46977  Exalted Angel
 30e80aaee1961e44  Exava, Rakdos Blood Witch
 ad6df4fbf746d1c7  Excalibur II
 e7675eaa0ffb7119  Excalibur, Sword of Eden
-ebf91fa3a4544ef4  Excavated Wall
+f892f5c1050e6168  Excavated Wall
 714ae5f52db7dab2  Excavating Anurid
 98598b2fea307897  Excavation Elephant
 d5e85263eb37ef8f  Excavation Explosion
-4c68dcbb0578b888  Excavation Mole
+ce048a54417a03ec  Excavation Mole
 9eb87f51b2b64c67  Excise the Imperfect
 c474214011e39878  Exclude
 3920baf709a553cd  Exclusion Mage
@@ -5010,21 +5010,21 @@ bd241152c04dc071  Exsanguinator Cavalry
 a2a20716fbf558e1  Extinguish
 8dc6d6bec11b964b  Extinguish All Hope
 c4020e8f2f167e7f  Extra Arms
-69f0f01283128df9  Extract from Darkness
-221e4602596e9b45  Extractor Demon
+3bea088185c2291c  Extract from Darkness
+193049b1452e90b5  Extractor Demon
 1628639ffc960a61  Extravagant Replication
 fc12936479227afc  Extruder
 b1857efd5ddc069d  Exuberant Firestoker
 ec7db9907fb3c25c  Exultant Cultist
 fc2c268a41085b5d  Exultant Skymarcher
-04e96028bc88ff6c  Eye Collector
+38574a40cdf725ac  Eye Collector
 18f42907fa7b2b4d  Eye Gouge
 8f31e88aafaf9924  Eye of Malcator
 b61cf3b616e06e03  Eye of Nowhere
 b6c0549cb4e017c3  Eye of Ramos
 8b5a32692235677e  Eye of Ugin
 2e5f94fa6829d51f  Eyeblight Assassin
-a9046792b3086e66  Eyeblight Cullers
+7e22a2fdf8ece791  Eyeblight Cullers
 0aa8fa0e8dfc0146  Eyeblight Massacre
 db6134376aeee7fd  Eyeblight's Ending
 ba1bec4849f767bf  Eyeless Watcher
@@ -5124,7 +5124,7 @@ bd736a91cbdaccac  Fallowsage
 468640fe3b9b6ed7  False Defeat
 60dc864bca5f80b9  False Demise
 db29844a4eef3f76  False Floor
-78b20db116d68112  False Memories
+46f127dc08b7a0cb  False Memories
 fd194170be220858  False Mourning
 2acca9f7168ee53c  False Prophet
 a9136db4a7366740  False Summoning
@@ -5172,7 +5172,7 @@ cd2ee6c7b4eda570  Farmer Cotton
 e6a5275e48835f36  Farmstead Gleaner
 6898244f785060a1  Farseek
 4af1b623deabbe7e  Farsight Adept
-281c323ac681dd81  Fascination
+e3b77d7584224c15  Fascination
 4140a861a814be6f  Fast // Furious
 b3f4133c77301cb0  Fatal Blow
 8511b14a62b78bf6  Fatal Frenzy
@@ -5304,7 +5304,7 @@ a64722dd8f554a00  Fervent Denial
 057c27e5aeb91e9c  Festering Gulch
 4310dc3912216a24  Festering Mummy
 6d15be1607a57ba7  Festering Thicket
-83725bdcc4755888  Festerleech
+049af0b28ef88b63  Festerleech
 6f86101d40a9b29a  Festival Crasher
 efaa08620c43e333  Festival of Trokin
 29436985d720077d  Festive Funeral
@@ -5496,7 +5496,7 @@ cd86268889ed7147  Flamespeaker's Will
 989dd7e7b2cc8b4e  Flametongue Kavu
 8477761ffab02e79  Flametongue Yearling
 5642403d22bcf540  Flamewake Phoenix
-e0c5c80e42bc6b85  Flamewar, Brash Veteran // Flamewar, Streetwise Operative
+39dc73964c0d62df  Flamewar, Brash Veteran // Flamewar, Streetwise Operative
 ed17823a87b219df  Flamewave Invoker
 8361ddad9b28f2cc  Flaming Fist
 45695106a9216737  Flaming Fist Officer
@@ -5519,7 +5519,7 @@ cab4423b71498b7b  Flatten
 7357114221ef7c48  Flawless Maneuver
 9fdf920394544856  Flaxen Intruder // Welcome Home
 b66b84ef197ec5c4  Flayed Nim
-1d336c84adcdad7b  Flayed One
+b7551ed4cf9d5cc7  Flayed One
 ad4e7e9c283a5243  Flayer Drone
 792e4884d51d2a48  Flayer Husk
 41948f99eb326c61  Fledgling Djinn
@@ -5527,7 +5527,7 @@ ad4e7e9c283a5243  Flayer Drone
 a5de795061d8b30e  Fledgling Imp
 6e3338b36ccc1ad1  Fledgling Mawcor
 e244295c6ece4bfd  Fledgling Osprey
-6e513cbe6c6a5f3b  Fleet Swallower
+314bb0d0f80b9c85  Fleet Swallower
 f9c71c61675479e8  Fleet-Footed Monk
 3467b2257620c7e9  Fleetfeather Cockatrice
 f56244a445126ead  Fleetfeather Sandals
@@ -5538,7 +5538,7 @@ b400f0ac218669a0  Fleeting Aven
 fadf98a9a640aa6f  Fleeting Effigy
 c4c9ca5be81be086  Fleeting Flight
 3c4b91ff5d141828  Fleeting Image
-3844958c7fff75df  Fleeting Memories
+87d8220a0565fee3  Fleeting Memories
 e4f90d4927fe9997  Fleeting Spirit
 ac7f54797d8f5cf9  Flensermite
 45b95742172d794b  Flensing Raptor
@@ -5565,11 +5565,11 @@ be6ef95e02b308d7  Flight of Equenauts
 cfeb558c14c0aeac  Flight Spellbomb
 127a00094ee940d5  Flight-Deck Coordinator
 32753d43ab499a5d  Fling
-4f66138d13cbddb1  Flint Golem
+3f0b56f41bdc9b45  Flint Golem
 4e631e6ea7ba1569  Flinthoof Boar
 172546ecf050f2f1  Flitterstep Eidolon
 3ed210fe56c34e79  Flitterwing Nuisance
-de30a062de9f72fd  Flitting Guerrilla
+c6eff963040dd99e  Flitting Guerrilla
 9724c334eab620f5  Floating Shield
 86bcb0d590641063  Flock Impostor
 a275c4499256e673  Flockchaser Phantom
@@ -5645,7 +5645,7 @@ ffe1d3ff4cf503ab  Font of Fertility
 c00242ae0f7d2914  Font of Fortunes
 12d77ed3114a1cef  Font of Ire
 9b2c55f6f41de21c  Font of Mythos
-aa22e13ad371bf8d  Font of Progress
+3cf9bebd0ff4ee01  Font of Progress
 08dc92780e26db90  Font of Return
 b7a66967609f6f9d  Font of Vigor
 28f39ae254ea22f1  Food
@@ -5725,7 +5725,7 @@ bf64eede3f3a407f  Formation
 a5e725baa674ae47  Formless Genesis
 0cbed60caeaac44c  Forsake the Worldly
 092b50bae6b3beee  Forsaken City
-be7512c188f05c67  Forsaken Drifters
+9fc53c08fb22f088  Forsaken Drifters
 774d45dc3e1183eb  Forsaken Miner
 f94771bc8aa54ba2  Forsaken Monument
 6cd15c5682fd937f  Forsaken Sanctuary
@@ -5773,7 +5773,7 @@ b4a4d18ebcd89dd0  Fractal
 668b7c7e93dfe0e2  Fractal Mascot
 61898d78af25cd7f  Fractal Summoning
 0a620149f62f4eca  Fracture
-dbb81d89c1c3054c  Fractured Sanity
+faf70689c26d9b76  Fractured Sanity
 0386a2d953f80cb3  Fracturing Gust
 2c2e6585baccfebd  Fragmentize
 0295a7433f0d1a45  Francisco, Fowl Marauder
@@ -5874,7 +5874,7 @@ f8f9ed73ca8cd1df  Fumigate
 1512d774da8d9334  Fuming Effigy
 8b94477eb3183365  Funeral Charm
 82968f5a28a8569a  Funeral Longboat
-7964dd5815681db6  Funeral Rites
+b6a26f8e9531c2f2  Funeral Rites
 1182e2fd9deac7fb  Funeral Room // Awakening Hall
 c35b525efdb3069f  Fungal Bloom
 231aea2b210e6b0f  Fungal Fortitude
@@ -6070,7 +6070,7 @@ eebe114f347e3aa3  Geothermal Crevice
 4d5e6b48e45d7c75  Geothermal Kami
 1f046b2383495d3c  Geralf's Masterpiece
 d4776294b989d545  Geralf's Messenger
-3d8be37aa2541ae6  Geralf's Mindcrusher
+f6016a81d5385a1b  Geralf's Mindcrusher
 63fde843054ff90c  Geralf, Visionary Stitcher
 73188d3e49baffcf  Germ
 458a24540ba7e1c0  Gerrard's Battle Cry
@@ -6136,7 +6136,7 @@ c040c139f30b1e40  Ghostly Visit
 d2802e2db635c446  Ghoul's Feast
 86aaa183930edb80  Ghoulcaller Gisa
 717394a005d4a3a4  Ghoulcaller's Accomplice
-54d5de0b3e1abfd2  Ghoulcaller's Bell
+114e45698bf37f98  Ghoulcaller's Bell
 992a843aaf3f3217  Ghoulcaller's Chant
 c6ff523b612796a5  Ghoulflesh
 35dbbdb65ff6c8ae  Ghoulish Procession
@@ -6239,7 +6239,7 @@ c6fac1d33d8e0680  Gixian Infiltrator
 77a6ada50b26ff53  Gixian Skullflayer
 a639913f83e2365a  Glacial Floodplain
 a02e698772d96c6a  Glacial Fortress
-9fbac0c1ca5dcb0d  Glacial Grasp
+73a43ff89865558e  Glacial Grasp
 97cd5d3502e75c6a  Glacial Plating
 46c094de4a81723c  Glacial Ray
 55dc9515402414e4  Glacial Revelation
@@ -6294,7 +6294,7 @@ ead782eddec67e0a  Glimmervoid
 4fdbce164ca8d87d  Glimpse of Nature
 6c81c5e16540c569  Glimpse the Core
 45985b5bc3717871  Glimpse the Future
-848cdb89fb7d8648  Glimpse the Unthinkable
+57a0bacd090dcc59  Glimpse the Unthinkable
 44d2cde411cc1f8f  Glint
 43f4667c489a0e65  Glint Hawk
 9b1e1b9e93c6950a  Glint Weaver
@@ -6357,7 +6357,7 @@ bfbe2aad8ea75cba  Gnarlid Colony
 33b2ef1a9c733507  Gnathosaur
 76e74d3372b76571  Gnaw to the Bone
 db6e2ea8a8490903  Gnawing Crescendo
-a54591eec824564c  Gnawing Vermin
+74b396fb62dfac2b  Gnawing Vermin
 0e7fbbcc769927f8  Gnawing Zombie
 02979f46b7c7a865  Gnome
 038c9a23a2752f99  Gnottvold Hermit // Chrome Host Hulk
@@ -6370,7 +6370,7 @@ b0fd12e443300c4a  Go for the Throat
 291f09a9856c3f08  Go-Shintai of Ancient Wars
 208108902a822ea9  Go-Shintai of Boundless Vigor
 981468639267e1f6  Go-Shintai of Life's Origin
-a78282d9bd715900  Go-Shintai of Lost Wisdom
+9b8261a5a47a6198  Go-Shintai of Lost Wisdom
 07fc77190b611d69  Go-Shintai of Shared Purpose
 b280cb1da46c0ee6  Goat
 f246305db95c329f  Goatnapper
@@ -6632,7 +6632,7 @@ b90eeb92037fb8ea  Graham O'Brien
 72d8bd52424eda7f  Grapeshot
 1ce0147cb49286ac  Grapeshot Catapult
 f6fcc2688849a1b1  Grapple with Death
-d01aa23ffa045486  Grapple with the Past
+34b359f43c5c569e  Grapple with the Past
 72bd9ee060692cb8  Grappler Spider
 79727bef769820f0  Grappling Kraken
 2f334fed7edb76e7  Grappling Sundew
@@ -6653,7 +6653,7 @@ dd4f42c0e8308a80  Grave Exchange
 d108e46260831e04  Grave Pact
 6ff3c53363b59a6d  Grave Peril
 e9e1a0574f7f96a0  Grave Robbers
-918da19585dfc0a2  Grave Strength
+c6e011f84cea66c9  Grave Strength
 da5b86cbb12f6240  Grave Titan
 2fffce9b5fa93604  Grave Upheaval
 cbd8ea45e59b9e33  Grave Venerations
@@ -6683,7 +6683,7 @@ b05f5d86bfb37071  Gravitational Shift
 5231e6861febc4e0  Gravpack Monoist
 a208228fe6bfa115  Gray Merchant of Asphodel
 335c9f5cab4ef0ed  Gray Ogre
-fcb42982bb149786  Gray Slaad // Entropic Decay
+faa2818c274fd451  Gray Slaad // Entropic Decay
 215309916236055e  Graypelt Hunter
 23e3b41b7c8fde4b  Graypelt Refuge
 f9bd50bffef73f78  Grayscaled Gharial
@@ -6768,8 +6768,8 @@ ff99f07f57c3d007  Grim Roustabout
 29a9dd53cbfcc014  Grim Strider
 81c553790cd50a8c  Grim Tutor
 acb2999e892cd404  Grimclaw Bats
-3e4f724d38948ae3  Grindclock
-f4747ea0fb21ee8c  Grinding Station
+4fc9c4c63d453190  Grindclock
+0d66667537b82421  Grinding Station
 25a22c67e96273c8  Grinning Demon
 2b2bd6957eb7e041  Grip of Desolation
 b166a943109e32d8  Griptide
@@ -6790,7 +6790,7 @@ ee4026b8459edd12  Grixis Slavedriver
 c4e30e6ef59f6003  Grizzled Outrider
 e4ed820f6839eb34  Grizzly Bears
 de7db31be51ff458  Grollub
-12ec0211fd3bff7b  Grolnok, the Omnivore
+fa96d53c2d982bac  Grolnok, the Omnivore
 5bb8d8c0d4f31d7b  Grotag Bug-Catcher
 ff4024e376178c5f  Grotag Night-Runner
 f2d9105d33dafe5a  Grotag Siege-Runner
@@ -6915,12 +6915,12 @@ ca9396abfcb257ef  Hagra Diabolist
 7bb8ee67019f8994  Hagra Sharpshooter
 b64d586b3b3ceff5  Hail of Arrows
 7eb51c674dc4398e  Hailstorm Valkyrie
-89f2c18c437fa8d2  Hair-Strung Koto
+c8d29c682aaac185  Hair-Strung Koto
 ca904867f6416678  Halana and Alena, Partners
 a91544faa74a311c  Halberdier
 973076a022479342  Halfling
 2b5c7b2bdaaff4b8  Halimar Depths
-d2981ee0ee4be17f  Halimar Excavator
+c08c40e13ed7bb4c  Halimar Excavator
 d44a879c1ad6b093  Halimar Wavewatch
 1d67aee4a9670260  Haliya, Ascendant Cadet
 0407d60987ae96ce  Hall
@@ -7114,11 +7114,11 @@ fb0d23164c8725c4  Heavenly Qilin
 664e3cf55869b4e8  Heckling Fiends
 004da602296db5dc  Hecteyes
 e11988dffa328baf  Hedge Maze
-ea137f3a305264d9  Hedge Shredder
+bc98cafcc6226d5e  Hedge Shredder
 5d1d710755f718ee  Hedge Troll
 df97d59b0bf33f85  Hedgewitch's Mask
 4159dd7326ee2805  Hedron Archive
-7d124713a26e3e80  Hedron Crab
+ba7b766a0dda3939  Hedron Crab
 24ebbedb1f188b07  Hedron Crawler
 9ffb5ddb561476b2  Hedron Detonator
 fa6da28d3fc211e6  Hedron Rover
@@ -7322,7 +7322,7 @@ e7cf996889b02d65  Hollow Dogs
 c66f8a246867c18e  Holy Day
 d5a5f02ba32cb529  Holy Mantle
 0a20b575a04598ad  Holy Strength
-c7c4fad9541371d3  Homarid Explorer
+e526f8a526bf933a  Homarid Explorer
 7a82d84f9498f6c3  Homarid Shaman
 61bc5319ace3fc36  Homarid Spawning Bed
 95b7dda27da16fc3  Homestead Courage
@@ -7362,7 +7362,7 @@ bbeaee127c984c39  Hook Swords
 1786cb4c0d9ae3ca  Hop to It
 12e832176da499e2  Hope Against Hope
 a5f1ee2ac9b82223  Hope Charm
-bb6c48511a45dd98  Hope Estheim
+ba8a18520677f08f  Hope Estheim
 9a97863031319775  Hope Tender
 ac7129aaf8ea1b83  Hopeful Eidolon
 4b5c33cdf5c76445  Hopeful Initiate
@@ -7405,7 +7405,7 @@ ed7e84999a177b58  Horobi, Death's Wail
 6f30e5699b66f9c3  Horribly Awry
 8ad131e286019cf5  Horrid Vigor
 0a5ba654b3c1568c  Horrific Assault
-ab35250b94d977f0  Horrifying Revelation
+d1ad27b30395a2b7  Horrifying Revelation
 4aefa4b80261becd  Horror
 744e91407ffb437f  Horror
 79cbd82c68070df3  Horror
@@ -7552,7 +7552,7 @@ feed5bc254e8951b  Hyalopterous Lemure
 ead636cd68e055f7  HYDRA Assault Robot
 b8ac1f5bd03b2c49  HYDRA Disintegrator
 77ce4b76b53cd56c  HYDRA Infiltration
-91c30270c30f48c2  HYDRA Troopers
+869010f62a06f5d7  HYDRA Troopers
 831b3c5acaefbd90  Hydra's Growth
 325a26b1ef437ce0  Hydro-Channeler
 e6f69c43c208c598  Hydroblast
@@ -7593,14 +7593,14 @@ d4c7cae2c747b7fe  Ice Out
 06611f4fa76ea028  Ice Storm
 647b0601ee789716  Ice Tunnel
 21c8a1cd98a80883  Iceberg
-411f55f0d665db80  Iceberg Cancrix
+13a333b5be42fecd  Iceberg Cancrix
 09a0bd357436f8b9  Icebind Pillar
 131363cc66bd83f4  Icecave Crasher
 6beb35a3471cacdf  Icefeather Aven
 993ee0ac19ff8e1b  Icehide Troll
 9b2f846832fbaedf  Iceman and Firestar
 56676e4bc78dfd68  Iceridge Serpent
-4793a8a1077bf087  Icetill Explorer
+c735ef4925cf2406  Icetill Explorer
 9b88666210701847  Icewind Elemental
 d40d217aaef42c3c  Icewind Stalwart
 c041dd85b3147fa4  Ichor Drinker
@@ -7726,7 +7726,7 @@ f420438a6f53531f  Improvised Armor
 4147b65dd6d7a8f5  Impulse
 0c1a640afea5c8f7  In Garruk's Wake
 622c702ac1bfcf4d  In Oketra's Name
-5974414c864c6d20  In the Presence of Ages
+3cf04ac2dede1954  In the Presence of Ages
 62aed944af9f496e  In the Web of War
 7c0e9b7a3173701c  Iname, Death Aspect
 2da047eee07c63fc  Iname, Life Aspect
@@ -7808,7 +7808,7 @@ ec722ff77a2d79db  Inheritance
 264a02321596542f  Inherited Envelope
 476f9bf8c00d5ac1  Initiate's Companion
 a766456569c56f5a  Injector Crocodile
-8906e52efbe90f4b  Ink Dissolver
+279c6f23cf578a44  Ink Dissolver
 d2b33be96a940103  Inkfathom Divers
 968d58945ccc7c71  Inkfathom Infiltrator
 2e7e898b8dd55f6d  Inkling
@@ -7866,7 +7866,7 @@ fe87ece335c9e60d  Insight
 c21364732a1645ef  Insolent Neonate
 2056efcfe05512e1  Insomnia, Crown City
 74b636d84b33bfa3  Inspiration
-1aac2bbf9f6af37c  Inspiration from Beyond
+07cea333125efec3  Inspiration from Beyond
 3679050f36fbc1ee  Inspired Charge
 a0cfe8b30515a9a3  Inspired Insurgent
 09317ab47db2763d  Inspired Inventor
@@ -7951,7 +7951,7 @@ ea530b2cc9521d91  Invoke the Winds
 b47ce7fe2309b49f  Iona's Judgment
 5aa5f06367bf2c91  Ionize
 12b111af9d7c17af  Ior Ruin Expedition
-eef113da3962895e  Ipnu Rivulet
+91a12f4838ed4c8c  Ipnu Rivulet
 cf136205639efb89  Irascible Wolverine
 f06bd5efc8cb1c4f  Iraxxa, Empress of Mars
 1608d5d5b404985b  Ire of Kaminari
@@ -8039,8 +8039,8 @@ c77b1ad68df22884  Izzet Chronarch
 160ccf5faac177a7  Izzet Guildgate
 c61d3b57e96a13b6  Izzet Locket
 3db3acde42c239bf  Izzet Signet
-db9b0cecd6cc80eb  Jace Beleren
-b8b48586192e376a  Jace's Erasure
+84c89d60d93e9e04  Jace Beleren
+287ad159a89508d9  Jace's Erasure
 df6e14d96a94b4c2  Jace's Ingenuity
 b39344a542e0359b  Jace's Phantasm
 9e2b7ea84371ad6e  Jace's Projection
@@ -8135,7 +8135,7 @@ d72a0a2712514f72  Jhovall Queen
 fafe9d79631bf1c2  Jhovall Rider
 28745d0aba297c58  Jiang Yanggu, Wildcrafter
 ce1da5e3e88f3650  Jibbirik Omnivore
-f412990ccf71308f  Jidoor, Aristocratic Capital // Overture
+1f9472f62f1be5f4  Jidoor, Aristocratic Capital // Overture
 03a72712be903a6d  Jill, Shiva's Dominant // Shiva, Warden of Ice
 9c5a5dadf2f77512  Jilt
 93f7ed4f8e7eb820  Jin-Gitaxias, Progress Tyrant
@@ -8549,7 +8549,7 @@ bc6529a3cf9ed58a  Kolaghan Skirmisher
 f7b3916b2ea8e0c1  Kolaghan's Command
 7df5095a70c0d5a4  Kolaghan, the Storm's Fury
 d8329d672c71f5d3  Koma's Coil
-230cd1f795db03e5  Koma's Faithful
+6dd72db101e5139c  Koma's Faithful
 1a2cd2cdf90fe916  Koma, World-Eater
 7cc51dd8ccd9c4e7  Komodo Rhino
 ac34a7c7b0d4e9ac  Konda's Hatamoto
@@ -8644,7 +8644,7 @@ d67cd3b7645d327c  Krovikan Elementalist
 a854c3888b2e4712  Kroxa and Kunoros
 14c2003cd365fb23  Kruin Striker
 7e568f838d75f62c  Krumar Bond-Kin
-dd827928eb552acd  Krydle of Baldur's Gate
+7716c26159dd3cd2  Krydle of Baldur's Gate
 0dcc1d18b4eeb673  Kujar Seedsculptor
 e6e40ff6c770c458  Kuldotha Flamefiend
 d9fe82e8e2634433  Kuldotha Forgemaster
@@ -8675,7 +8675,7 @@ a1712bcaa6ce8baa  Kyoshi Battle Fan
 476c1dc8252fb854  Kyren Negotiations
 3d9eb09d74a1e9d4  Kyren Sniper
 b0e77d87906813bf  Kytheon's Irregulars
-e858ae0d488bdc19  Laboratory Brute
+c9f52aeebdc8f6ae  Laboratory Brute
 826e175d99229366  Laboratory Maniac
 c5304aaa62ea6f0b  Labyrinth Adversary
 c937c2e4356cf50b  Labyrinth Champion
@@ -8877,7 +8877,7 @@ a6a1eaa66bb40dd8  Liberate
 478a3b8bbc0e88c1  Library
 849c7090bc1d3cc4  Library Larcenist
 0120a50a9e99c03a  Library of Alexandria
-5ee70fd085a87aab  Lich Lord of Unx
+233a426358b0de81  Lich Lord of Unx
 aa7c3a3c9bf9eaf3  Lich's Caress
 28afc48bdaaa240a  Liege of the Axe
 05be3a1201db58f9  Liesa, Shroud of Dusk
@@ -8959,7 +8959,7 @@ e7d906efaf36dcde  Liliana's Shade
 b31d4ac1f12ed8b6  Liliana's Spoils
 7659d963846f02d5  Liliana's Steward
 4761fe650f385682  Liliana, Death Wielder
-19f8caeb9ba29177  Liliana, Death's Majesty
+578fa8ad6847af54  Liliana, Death's Majesty
 c7476bd72a76a0c8  Liliana, Dreadhorde General
 80a56b0480dd143a  Lilysplash Mentor
 ab79fb6e0a52907f  Lim-Dûl's High Guard
@@ -9171,7 +9171,7 @@ c8b05bcb5c1fef60  Luminous Angel
 920093b3acb30f98  Luminous Rebuke
 6be1d3ef37641740  Luminous Wake
 33820562f3331d90  Lumithread Field
-6d66ba9ab945bdde  Lumra, Bellow of the Woods
+b35992aa305362bb  Lumra, Bellow of the Woods
 830be93b58780553  Lunar Frenzy
 ef263b8050b97fc6  Lunar Mystic
 5f7e7f47ce3c309b  Lunarch Mantle
@@ -9220,7 +9220,7 @@ fad9e2a74e2604d4  Machine Over Matter
 27256e338733e8e3  Mad Prophet
 b253ffdd8df2724a  Mad Ratter
 b7323ae3016458aa  Madame Hydra
-b450f23d2b0aa00b  Madame Hydra, Reanimated
+4e96bdf2ea8d2664  Madame Hydra, Reanimated
 2dfc712016de64a7  Madame Vastra
 6ac755c4d704a9f1  Madcap Skills
 ddbafa506dc78f7d  Maddening Wind
@@ -9355,7 +9355,7 @@ d6e9f5ae5103b71e  Mandibular Kite
 0ecf7364473f6632  Manglehorn
 09517b97166b6b5e  Manhole Cover
 ab55722c0b999fbf  Maniacal Rage
-af35a68b1a80b467  Manic Scribe
+ed3acf5975867328  Manic Scribe
 692f183739b3c06e  Manic Vandal
 ef47a526899f924b  Manifestation Sage
 2a06c9c4e718189e  Manifold Key
@@ -9505,7 +9505,7 @@ f99624a5dfb4e56d  Master Apothecary
 00b106cff3f17c91  Master of the Feast
 ed55ef3e6504d009  Master of the Pearl Trident
 fcc4fb47abe4d7c9  Master of Waves
-76112f5d24c7846b  Master Pakku
+4cf9f596f59398bc  Master Pakku
 88037a73d19d327b  Master Piandao
 ebf41a629a9d36c8  Master Skald
 38327299191c9f45  Master Splicer
@@ -9587,7 +9587,7 @@ b8d304d3c8e7b832  Memorial to Folly
 97a60265ca582897  Memorial to Unity
 73223c35cf47ba87  Memorial to War
 e212ac1bbdbb267b  Memory Drain
-64b983dbe26bb583  Memory Erosion
+caeb8f2d484758f3  Memory Erosion
 3abc85da7cd10b2f  Memory Guardian
 9118fd6d24f66363  Memory Lapse
 5233def4e987d69c  Memory Plunder
@@ -9602,7 +9602,7 @@ ac777ce0cf76ebfc  Menagerie Liberator
 515d6c8515e65457  Mental Discipline
 f09b551789a23bd1  Mental Journey
 e5a5979adfdeaa46  Mental Misstep
-19a6e3d3c74c9694  Mental Note
+0f82b820bf56117f  Mental Note
 8ab4d9f464d99f10  Mentor of the Meek
 5564aea6e72a21ef  Mentor's Guidance
 5787541fccf3596f  Mephitic Draught
@@ -9632,14 +9632,14 @@ c174375c73901029  Merfolk // Treasure
 3fdc3859c95a446e  Merfolk Coralsmith
 fcbc128eafa9ff53  Merfolk Falconer
 6b9c8e1f5df3eb41  Merfolk Looter
-4e987ec964cec5d0  Merfolk Mesmerist
+b797ed6e6347d8d0  Merfolk Mesmerist
 74e328a70ef59509  Merfolk Mistbinder
 fef3d6a9ac10f129  Merfolk Observer
 e4badb55a71aa2b1  Merfolk of the Depths
 1ec78a845fa65018  Merfolk of the Pearl Trident
 938611f44abb5f10  Merfolk Pupil
 89c55b02d89bc288  Merfolk Seastalkers
-4c689e1d65d0ad71  Merfolk Secretkeeper // Venture Deeper
+85e49224bb7d93ef  Merfolk Secretkeeper // Venture Deeper
 1db8a737664a1fed  Merfolk Seer
 4b55816ed3b50cd1  Merfolk Skydiver
 a0e441243fff50d2  Merfolk Skyscout
@@ -9647,7 +9647,7 @@ a0e441243fff50d2  Merfolk Skyscout
 b65a972449015a03  Merfolk Traders
 502727f2c1c6e372  Merfolk Trickster
 dbe26733e5a65e4a  Merfolk Wayfinder
-15d5715cbd604a73  Merfolk Windrobber
+ab32ece64693ec87  Merfolk Windrobber
 4eb7415e827ac604  Merfolk Wizard
 db61be1c879fc081  Meria's Outrider
 0ed1cf632a075cf7  Meriadoc Brandybuck
@@ -9657,7 +9657,7 @@ db61be1c879fc081  Meria's Outrider
 7a3be11d2e899d90  Merrow Reejerey
 5a26e9153987c7c6  Merrow Skyswimmer
 7229351736a8f149  Merrow Wavebreakers
-699ec9e8446c966f  Merrow Witsniper
+c302e006faf396ff  Merrow Witsniper
 75af8b02ae4d10a0  Merry Bards
 50e8708250e4ca2d  Merry, Warden of Isengard
 b4878ab803f6a7ac  Mesa Cavalier
@@ -9665,7 +9665,7 @@ b4878ab803f6a7ac  Mesa Cavalier
 f15b35860bbbbb51  Mesa Falcon
 3cbf08f4f42c18a9  Mesa Pegasus
 e08f898e3acefc81  Mesa Unicorn
-61347678cd955c86  Mesmeric Orb
+cedcebbf08d860dd  Mesmeric Orb
 cd9334d8aade630c  Mesmeric Trance
 3db880cf1af19f23  Mesmerizing Benthid
 42ab9c674020a011  Mesmerizing Dose
@@ -9749,21 +9749,21 @@ f06235f86051f8f2  Militia Rallier
 69cdfcd5ecced604  Militia's Pride
 94f796cbb4f3a378  Millennial Gargoyle
 3e838187a649c61f  Millikin
-4b2411a89307bd6c  Millstone
+f261df6121e75fe1  Millstone
 f7abcd5c259310ab  Mimic Vat
 3885689afb647620  Miming Slime
 748a98c06afad66a  Mina and Denn, Wildborn
 1032a1783a3cbacc  Minamo, School at Water's Edge
 87a5cdb20fdff7bd  Minas Tirith
 df0b83a418ccfd3e  Mind Control
-8b52f5bb5d9a8b48  Mind Drain
+e94e478e0d1706a0  Mind Drain
 e980cff774d3c4ab  Mind Drill Assailant
 d65219ddebaafaf1  Mind Flayer
 46a1e0295a296cc1  Mind Knives
 7612018ea2db0f42  Mind Over Matter
 43c71d4700e99064  Mind Ravel
 7a998fc46f91fd71  Mind Rot
-911253b6241cf738  Mind Sculpt
+07fa6af1cec0fdbd  Mind Sculpt
 27e13740ccdeba96  Mind Shatter
 5003cece380e8e04  Mind Sludge
 da443537a6729b34  Mind Spiral
@@ -9773,20 +9773,20 @@ e47ad12307ec95a6  Mind Stone
 19b3bd7f035cb317  Mind Unbound
 95c84cb1e4f10582  Mind's Eye
 7fa0710ffc9b235b  Mindbreak Trap
-43dc0cbc8a957b7b  Mindcrank
+8e2f8943add06f95  Mindcrank
 09cdb46b6daf1102  Mindculling
-76b749057fe5ab47  Mindeye Drake
+a7639205769fc126  Mindeye Drake
 0d5dcb410e3ee98e  Mindful Biomancer
 87f55f9a1d72800b  Mindless Automaton
 07b3701908c85183  Mindless Conscription
 bd0570ef3e60286f  Mindmelter
-845fe98fe915488b  Mindscour Dragon
+a732a23587f0ac05  Mindscour Dragon
 a1ceef3ba0e4c06d  Mindslicer
 781215ad28e0a257  Mindstab Thrull
 831f1c941445fd8b  Mindstatic
 418e63671bd3903e  Mindwarper
 96ad30334147a7cb  Mindwhisker
-321480df50f48c4e  Mindwrack Harpy
+ddc12e7f3d65ff5a  Mindwrack Harpy
 c34a1ec7807b9a16  Mindwrack Liege
 4e3a93dff6ea29b9  Mine Bearer
 d3efdcf3ddafbac4  Mine Collapse
@@ -9794,13 +9794,13 @@ d19478d616791f04  Minecart Daredevil // Ride the Rails
 6383496160583c4f  Miner's Bane
 ba96211046fd641d  Miner's Guidewing
 c06facd3a0dbdcc6  Mines of Moria
-f7e4a9a7dc92ab3f  Mineshaft Spider
+7a13032858f87bf3  Mineshaft Spider
 e83d07f079b67cea  Minion
 e981af7541e5f2fe  Minion Missile
 40f294046675c267  Minion's Return
 431151debff48f89  Minions' Murmurs
 b6aa6ebfa3a9ce1e  Minister of Impediments
-bbd677978f9d570b  Minister of Inquiries
+d1f35190c208364a  Minister of Inquiries
 1489f5b1e975f666  Ministrant of Obligation
 5b2032a32833a71b  Minn, Wily Illusionist
 aed4fa4ee5392fa1  Minor Misstep
@@ -9827,7 +9827,7 @@ e50f744cb53b1453  Mirari's Wake
 960bd0c8668217bd  Mire in Misery
 4ba14eeea3d4e2bb  Mire Kavu
 c3a702e49770789f  Mire Shade
-822215900757d1b7  Mire Triton
+b12e3a91cc3c3b1a  Mire Triton
 b916fc9bf0fe646e  Mire's Grasp
 ac48130d8826e1b5  Miren, the Moaning Well
 08bbb626b3166ce5  Mirkwood Bats
@@ -9949,13 +9949,13 @@ c21b889c68a1a56a  Moldering Gym // Weight Room
 34cf5afd0100e338  Moldering Karok
 b3aa234cdce06225  Moldervine Cloak
 c052a74181a50eb6  Moldervine Reclamation
-bb09e4b9bb6d5b52  Moldgraf Millipede
+f6b99f2781f3e06c  Moldgraf Millipede
 2f24c309633026f3  Moldgraf Scavenger
-16f8139783d81b56  Mole Module
+a516db47535b5bab  Mole Module
 056c9b135ba2195a  Molecular Modifier
 c62e67d92f73f284  Molimo, Maro-Sorcerer
-92668d09918b4a5b  Moloid
-e87b4fcae7e6fe83  Molt Tender
+9b65494465029938  Moloid
+7d649d3ef7a07afe  Molt Tender
 856efab352fb0ed3  Molten Blast
 b7ac1a13815eef5b  Molten Duplication
 e1e4f29edf754c46  Molten Echoes
@@ -10044,7 +10044,7 @@ fc8573f4003ed9d3  Morcant's Eyes
 4ebe5c47770c0f2a  Morcant's Loyalist
 b8d1e9ebe5363642  Mordor Muster
 1be4ce8de5c334ff  Morgue Theft
-d4f07bff2001e23e  Morgue Thrull
+beba2656fd0dc076  Morgue Thrull
 ba73e4ebac3cd49b  Morgue Toad
 a2c96cb6f6a37497  Moria Marauder
 d38d91e4e7ce37d9  Moriok Reaver
@@ -10210,7 +10210,7 @@ c1df361389684847  Myr Scrapling
 79b7ef4eb5fa7d44  Myriad Landscape
 6e8c2495c6df032c  Myrsmith
 54851e1ef6e91d63  Mysidian Elder
-d3220b18b47c530f  Mysterio's Phantasm
+ab5bf1b3b235567c  Mysterio's Phantasm
 e85896d5e9b95590  Mysterious Egg
 371ebe033b3c36db  Mysterious Tome // Chilling Chronicle
 3cecec9fcdb5c62d  Mystery Key
@@ -10219,7 +10219,7 @@ e85896d5e9b95590  Mysterious Egg
 ee2184a140d95f78  Mystic Denial
 b5ef7c452442106e  Mystic Enforcer
 5a38304deaa0aa9f  Mystic Familiar
-ec58f503c0de4572  Mystic Forge
+2cca2476c3c753bf  Mystic Forge
 a391583c68955eac  Mystic Gate
 3a67880e29e4b4e6  Mystic Meditation
 d7d94d857e5b6858  Mystic Melting
@@ -10227,7 +10227,7 @@ b0c1f6754b2c332a  Mystic Might
 8fe3277b3a9acc80  Mystic Monastery
 b4a8f2a7d694189b  Mystic of the Hidden Way
 b57e9925ab7d6be0  Mystic Penitent
-c7fccbd9831448c0  Mystic Redaction
+376e7de1379ad54f  Mystic Redaction
 23831a88412d269d  Mystic Remora
 b8688ddfad9979b5  Mystic Repeal
 a4b9c971d771a1ca  Mystic Restraints
@@ -10301,7 +10301,7 @@ a4603192be515392  Nature's Way
 b5c87b14c003a075  Nature's Will
 0e9c31ee95eeb2ed  Nausea
 1f52c39fec395233  Nav Squad Commandos
-dfe643cf07a98729  Navigator's Ruin
+aa81a8fec9760833  Navigator's Ruin
 6b06b37a026c5020  Naya Battlemage
 596309cdf62a33cc  Naya Hushblade
 2e144b284061e93e  Naya Panorama
@@ -10322,17 +10322,17 @@ b62f782aabbb0530  Necrogen Censer
 cd8c65876b5d0a66  Necrogen Spellbomb
 19a9bd0f9bb5aa7b  Necrogenesis
 4c101ad92dd28bd7  Necrogoyf
-92ab7d1dd5089013  Necromancer's Assistant
+00fa018218e6e359  Necromancer's Assistant
 cd5088285b2958fa  Necromancer's Familiar
 2742a9e2cd78ea12  Necromantic Thirst
-71a75d8184b9bc0d  Necron Deathmark
-842d95810512465d  Necron Monolith
+725505a2d2eee3d7  Necron Deathmark
+379b39914f3e7f4c  Necron Monolith
 f606bf8fe4210e27  Necron Warrior
 13c438e8d8982574  Necropanther
 56866d18c14b647f  Necropede
 6771a9582af4ebc2  Necropolis Fiend
 40819526d3904179  Necropolis Regent
-49baab93fd96001f  Necropotence
+0e2deb831fe3f165  Necropotence
 0535ebdd9d0368bc  Necropouncer
 e9ddb1bac2197e18  Necrosavant
 9e56844a9846d040  Necroskitter
@@ -10359,9 +10359,9 @@ b3b2e9f0d506a144  Neglected Manor
 2371f0e6974c198c  Nema Siltlurker
 d9bf63a6fb79061a  Nemata, Grove Guardian
 a0b27af4b63bfe68  Nemesis Mask
-7267a7b56fdb24ba  Nemesis of Reason
+5cce129520f3d69a  Nemesis of Reason
 8301ee33d20d1d43  Neonate's Rush
-7b01746b6c4a6423  Nephalia Drownyard
+e019e51a930b9e8e  Nephalia Drownyard
 ac344fe8313a43c6  Nephalia Moondrakes
 5cd25cc63c097a1f  Nephalia Seakite
 cad908b1a85925f1  Nephalia Smuggler
@@ -10480,7 +10480,7 @@ dc298f355afe0363  Nim Lasher
 de2fbbcf2ebfea4a  Nim Shrieker
 881b729a503e28aa  Nimana Sell-Sword
 1760bf644c84b0d4  Nimana Skitter-Sneak
-e594b19da86529f0  Nimana Skydancer
+273134d7753e44a3  Nimana Skydancer
 75617fc7e3493119  Nimble Birdsticker
 cdff22a50f01ecaf  Nimble Innovator
 22ac0b820ea6064a  Nimble Mongoose
@@ -10612,7 +10612,7 @@ a597682950f71b3d  Nylea's Forerunner
 5b25c42561a1754a  Nylea, God of the Hunt
 76f9b9e2bfdddfdb  Nymris, Oona's Trickster
 bcb56d8d4277cf61  Nyx Lotus
-eba83f7a53a1ca4e  Nyx Weaver
+bbb1ca81095f284b  Nyx Weaver
 917ab0e022b6d847  Nyx-Fleece Ram
 25cc22e1632a0147  Nyxbloom Ancient
 d1689d3ab335e31e  Nyxborn Behemoth
@@ -10957,7 +10957,7 @@ ac463fc7dde3fcb4  Overseer of the Damned
 269141fa7bcf568b  Oversoul of Dusk
 f36e19db9cd0da79  Overtaker
 4b82e593541f70a9  Overwhelm
-6772c31de331d6e7  Overwhelmed Apprentice
+d0e5899e00c0f5f4  Overwhelmed Apprentice
 e62365281f143367  Overwhelming Instinct
 c1f2041198932721  Overwhelming Remorse
 f1f5a417f08954eb  Overwhelming Stampede
@@ -11038,7 +11038,7 @@ cc41c653ade79cb8  Paragon of Eternal Wilds
 5c10f3a940f2d4f0  Parallel Lives
 0ca3e6b23647c596  Paralyze
 4b47e4745a33216f  Paralyzing Grasp
-171f884d9eff12fc  Paramecia Coloniex
+916e280d4d332f22  Paramecia Coloniex
 6a648962d5b03d1c  Paranoid Parish-Blade
 eb165069c675a18c  Parapet Watchers
 0986b0b8fef13de5  Paraselene
@@ -11066,7 +11066,7 @@ bb43f62b645784df  Patagia Golem
 e6edb350033f1788  Patched Plaything
 8999968bb22abae4  Patchwork Automaton
 c337422a7007287d  Patchwork Banner
-f5d7097be892c996  Patchwork Beastie
+584c8628b697ac20  Patchwork Beastie
 060f8a77cfa9194f  Patchwork Gnomes
 bcb33583f64da599  Path of Ancestry
 2135f5c4400188b9  Path of Anger's Flame
@@ -11123,7 +11123,7 @@ d81318aa984ed0d5  Pegasus
 6954d9d260c2cf4b  Pegasus Refuge
 719ccb67d201b675  Peggy Carter, Secret Agent
 1532269e8f6e3ed0  Pelakka Wurm
-adedce0c693ff377  Pelargir Survivor
+78b95f9b9d6a0204  Pelargir Survivor
 022d863e03125275  Pendelhaven
 48670341efc7ead3  Pendrell Drake
 d4ca32807a918e5c  Pendulum of Patterns
@@ -11174,7 +11174,7 @@ f1b71cceaa4ddc83  Pest Summoning
 f64b9b1d7c481ad0  Pestered Wellguard
 81526337d5969bb2  Pestermite
 24dd0426e4e2d34f  Pestilence Demon
-339ea8b0491a5540  Pestilent Cauldron // Restorative Burst
+15936568eec006f3  Pestilent Cauldron // Restorative Burst
 691b2903641f43ba  Pestilent Haze
 b75f4d2f5a45e3b4  Pestilent Kathari
 430a051de35d9b2e  Pestilent Souleater
@@ -11309,7 +11309,7 @@ dabdde0cca9c3c88  Piggy Bank
 6e4699e068dab247  Pile On
 9860c3a32207aa59  Pileated Provisioner
 72ebaae7b7be4c64  Pilfer
-9b5c53dfdf6b7a3a  Pilfered Plans
+70ae1e38bd547711  Pilfered Plans
 1f2d2f51a163ec24  Pilfering Hawk
 b644313b93f9a9cd  Pilgrim of the Ages
 4e2e3260c287876f  Pilgrim of the Fires
@@ -11466,13 +11466,13 @@ e64bcd7789589072  Popular Egotist
 82b6eb8d8af3376e  Popular Entertainer
 2f088671ab6e43c2  Porcelain Legionnaire
 fbb728d32e94c4be  Pore Over the Pages
-1f59f3c2bcf9c8ff  Port of Karfell
+45069473726a7940  Port of Karfell
 40d94e5bd51b95fb  Port Town
 4ccab4a6ec143789  Portable Hole
 91ce80e3727de106  Portal to Phyrexia
 e1b8ba29929ab16a  Portent of Betrayal
 73cccc13e46e2969  Possessed Skaab
-fc59b3038a487e44  Pothole Mole
+e0a3e2c86c0a616d  Pothole Mole
 c9e9714a62083e1b  Potion of Healing
 ca6d06f87ed5f967  Potioner's Trove
 44bb3dfd16888d85  Pounce
@@ -11500,7 +11500,7 @@ de036bda36ecbd21  Prayer of Binding
 0daae68cf232d5f4  Precinct Captain
 fe70e890414ddea4  Precise Strike
 0664a7d646950194  Precision Bolt
-ac55bf24158f8a7f  Precognition Field
+cd3dc224ace19d96  Precognition Field
 24ca9e74f31f2f9e  Predation Steward
 7ea32ea370e9c532  Predator Dragon
 4deb65d9662dcc29  Predator Ooze
@@ -11676,15 +11676,15 @@ ed7199f0c1460b0d  Pseudodragon Familiar
 5f6e08ac384c47f7  Psionic Snoop
 41103a1ba34f8d38  Psychatog
 b0bba28853dfb2b4  Psychic Barrier
-c602ba189a21767d  Psychic Corrosion
-9a1b22e24d6e0e95  Psychic Drain
+07accb05780d9b4a  Psychic Corrosion
+94dbe076d0b3b775  Psychic Drain
 d290f560f8cf315a  Psychic Frog
 d3b6821973c93b31  Psychic Impetus
 a6129702625b7450  Psychic Membrane
 0dae8102792fc976  Psychic Overload
 9e597520376b02fa  Psychic Paper
 d32fe523e3ca73bb  Psychic Puppetry
-c5d65ce965c633bc  Psychic Strike
+03a8bd417c1722f8  Psychic Strike
 317e861583cd5546  Psychic Symbiont
 ceec0be50d6d09e3  Psychic Venom
 873e481bb2ebccd4  Psychic Whorl
@@ -11839,7 +11839,7 @@ dec5495e69a4dd77  Quilled Wolf
 d96a97ff54a10b35  Quillspike
 ff6087c14a5670bf  Quina, Qu Gourmet
 9a34cbccce02c8fe  Quintorius, Field Historian
-1d39960ac3e78919  Quintorius, History Chaser
+df978939a1af2c88  Quintorius, History Chaser
 7d015867ce0d59b0  Quirion Elves
 cf6d5c42d810f2f9  Quirion Explorer
 121b00fa8b8097f4  Quirion Ranger
@@ -11927,7 +11927,7 @@ e3389c66a81c449f  Rain of Salt
 066abc1826f5be27  Rain of Thorns
 ca24c1ffa5e9dfa4  Rain-Slicked Copse
 c83c7dcdb24cef2a  Rainbow Efreet
-359ae472828b1483  Rainveil Rejuvenator
+6475416c4622862b  Rainveil Rejuvenator
 7e9d6c116293d752  Raise Dead
 77b15563d4354d76  Raise the Alarm
 36f3ba8d4ed368f7  Raise the Palisade
@@ -11962,7 +11962,7 @@ a0df4ec6c4430831  Raking Claws
 013221c210d1432e  Rakshasa Deathdealer
 5abde1bfcc28907e  Rakshasa's Bargain
 1e87dab8fdbaea12  Rakshasa's Disdain
-a8c57363cb7ae849  Rakshasa's Secret
+6060d9a3c8c936bd  Rakshasa's Secret
 dbc70a6cfa76a863  Ral's Reinforcements
 350d8c78742ec05f  Ral's Staticaster
 31e4a187c3a3c9f6  Ral, Caller of Storms
@@ -12094,7 +12094,7 @@ da9f514186f057e2  Ray Fillet, Man Ray
 0460b1d5f33d50ef  Ray Fillet, Wave Warrior
 34051e40a7434d32  Ray of Dissolution
 28a44bf58a46ba61  Ray of Distortion
-d44ed29d09dc1421  Ray of Erasure
+3e6f7c632997c874  Ray of Erasure
 068781b814221299  Ray of Revelation
 3a97172767b08791  Razaketh's Rite
 140f0cf7899c1020  Razaketh, the Foulblooded
@@ -12217,7 +12217,7 @@ a6e5c67316e98054  Reduce to Dreams
 cdcc45d7890ef973  Reduce to Memory
 10547b31b681f728  Redwing
 8d175a5ac717f98a  Redwood Treefolk
-12489e136302171d  Reef Pirates
+eb54359d73a19a90  Reef Pirates
 e3cbcfb53b57a1d8  Referee Squad
 6125459b3e1b4050  Reflecting Pool
 54c92ecd8eba8fba  Reflection
@@ -12251,7 +12251,7 @@ dcaa9719aca4311a  Reinforced Bulwark
 711d39eaba025b9c  Reinforced Ronin
 d40e924a71147f60  Reinforcements
 fd189bd3a36a044b  Reito Lantern
-0b070dad724a06b7  Reito Sentinel
+22635c5ec0f79ce9  Reito Sentinel
 4ba2ec0a9c9b09cc  Rejuvenate
 51b17d77648a3cab  Rejuvenating Springs
 ebe6dd8844d14c2b  Reknit
@@ -12261,11 +12261,11 @@ d4a715cd8d20ba44  Release the Dogs
 a7a6c9bfbb0f5aeb  Relentless Advance
 7b937a43b65a6b70  Relentless Assault
 a8fd19eb6d28326b  Relentless Hunter
-fec1fb598f89d87b  Relentless Pursuit
+30afec78facd28f7  Relentless Pursuit
 4a53c8ae536d12e8  Relentless Rohirrim
 d02b90a240a44802  Relentless Skaabs
 ea666f47c543d1d9  Relic Barrier
-9cb25c08d33f3b01  Relic Golem
+eb7459613e92e002  Relic Golem
 e4386d42b6f9087b  Relic of Legends
 7609ff277ce96eab  Relic of Sauron
 dc8aabecc3e00c96  Relic Putrescence
@@ -12391,9 +12391,9 @@ c4b092c4f5f579a2  Return to Dust
 0a3f7313f490a07b  Return to the Ranks
 aece00448eec6e88  Return Triumphant
 96cbd711e28a923b  Return Upon the Tide
-a9bf737d92da6d47  Returned Centaur
+7b37be998ecbbca2  Returned Centaur
 6c3405f732fe037d  Returned Phalanx
-ddb0d86114d2e587  Returned Reveler
+c9e042ca1bd851d6  Returned Reveler
 5d0db725b54f8a6b  Reveillark
 3686fbdd14d06483  Reveille Squad
 41e6d5731473e1e1  Revel in Riches
@@ -12450,7 +12450,7 @@ c85f677d5701a237  Rhys the Exiled
 2da5fc17effa715e  Ribskiff
 3b8f3cdba9ddd976  Ribtruss Roaster
 d3750bcb2a862fc6  Rictus Robber
-f9cd6697328ae564  Riddlekeeper
+49128a75a02f3bb4  Riddlekeeper
 e45ed1d99af4974c  Riddlemaster Sphinx
 2adedd6595517e45  Riddlesmith
 4afac25f274fa9a0  Riders of Rohan
@@ -12505,7 +12505,7 @@ a73791f00d607586  Rip-Clan Crasher
 cb7f6e3e0af422dc  Ripchain Razorkin
 acd7520528f17280  Ripclaw Wrangler
 bd441c65296134a0  Ripjaw Raptor
-4457d84951924743  Ripples of Undeath
+51fbb437072475aa  Ripples of Undeath
 759a1d1387bb6d46  Ripscale Predator
 aaa0f943639e2bb0  Riptide
 12a024269b3cd65f  Riptide Biologist
@@ -12679,7 +12679,7 @@ f7cc552c1d908082  Rosie Cotton of South Lane
 1746964d00e380f3  Rot Farm Skeleton
 e48b80b86fd97712  Rot Shambler
 a96aa7d3a3d256a7  Rot Wolf
-f17f29ae2e9eb4b3  Rotcrown Ghoul
+51483e66f59197f9  Rotcrown Ghoul
 a73eea9004e12729  Roterothopter
 43aa0d5547c86649  Rotlung Reanimator
 76c976a3a494812e  Rotted Hulk
@@ -12725,7 +12725,7 @@ fe67f9c97a1665fd  Ruby Medallion
 48cf58b887f57538  Ruby, Daring Tracker
 52b3af90b0c2a45e  Rugged Highlands
 7d1b407dac66d352  Rugged Prairie
-fcf338e005571b37  Ruin Crab
+193d62acaf40fd5d  Ruin Crab
 88c289f985751c8c  Ruin Ghost
 e50fa357ccfd00f4  Ruin Rat
 67e53b2a873d7d96  Ruin-Lurker Bat
@@ -12847,13 +12847,13 @@ e7bb5c418a1a9433  Sage Aven
 d01d26320b1ca883  Sage of Epityr
 3a4181e280080a0f  Sage of Fables
 60ee18ee6bf0e411  Sage of Lat-Nam
-3910431e044aad06  Sage of Mysteries
+33b4b2c30c4e3e73  Sage of Mysteries
 f2ee107b53c07712  Sage of Shaila's Claim
 9de591309073140f  Sage of the Beyond
 e1450c89b70b88d7  Sage of the Inward Eye
 8ab41886d2aab77e  Sage Owl
 d880a94ec53f15c4  Sage's Knowledge
-0f6ae65af6d67af8  Sage's Row Denizen
+33fa68a126d8734c  Sage's Row Denizen
 444c61d5c64cd513  Sage's Row Savant
 fe678e3369842f4d  Sage-Eye Harrier
 204d0177ff85eb08  Sagu Archer
@@ -12933,7 +12933,7 @@ dcbfb0ce748b49e7  Sandbar Merfolk
 3a36ca5c939d1cd3  Sandbar Serpent
 8cea5e09e32c846b  Sandblast
 b797791478a9d2d1  Sandcrafter Mage
-533580e130d6ba43  Sands of Delirium
+4ddcf803e9a07fe7  Sands of Delirium
 844224a8b48da8b1  Sandsower
 e3a87ffd2f1952d4  Sandsteppe Citadel
 f0d3e9a499b51382  Sandsteppe Mastodon
@@ -13070,7 +13070,7 @@ ceb49538b0ca6101  Scampering Surveyor
 a30f97e13dde41ef  Scar
 060142a5304de62e  Scarab Feast
 0f9af5a001c26ced  Scarblade Elite
-7bd7a1d49cb668dd  Scarblade Scout
+f2ad945781f03d43  Scarblade Scout
 308ed7d2878e6ab1  Scare Tactics
 1a2d3b90ed823ddd  Scarecrone
 13a78f79ade27beb  Scarecrow
@@ -13179,9 +13179,9 @@ e7d6a9c0c3261785  Scrapyard Recombiner
 f0d448741a98e626  Scream Puff
 7a10cb53c24320fb  Screamer-Killer
 2b0b2219345e8a14  Screaming Fury
-f6fdc8bccab0729d  Screaming Phantom
+d2cd9e9eb08b1742  Screaming Phantom
 bfc6b245c017cf4f  Screaming Seahawk
-20dc2041f869141a  Screaming Shield
+9c201238ada5d339  Screaming Shield
 9efb5b4506a3d943  Screamreach Brawler
 e4d110eec3cb128d  Screams from Within
 706733ea775be7ee  Screams of the Damned
@@ -13190,8 +13190,8 @@ a66975c772757301  Screeching Buzzard
 1af6ddcfd3b006a3  Screeching Drake
 fd8b470d0c8e42c2  Screeching Harpy
 170a42972739213b  Screeching Phoenix
-965530dfba6da16e  Screeching Silcaw
-ff1a2c24d8ebfb1c  Screeching Skaab
+863f99c9c8610f8e  Screeching Silcaw
+edd9098546122a24  Screeching Skaab
 459dc6daf3eba074  Scribe of the Mindful
 277a7d2da47c4a08  Scrivener
 8a01dea6f73d5f20  Scroll of the Masters
@@ -13320,7 +13320,7 @@ e560a563ec167e65  Seeker of the Way
 26e16029f7ecd54c  Seeker's Folly
 4b06e7351199cea6  Seekers' Squire
 007613f58ed7b22f  Seer of Stolen Sight
-a3626413e2954970  Seer of the Last Tomorrow
+38e795ad08e15823  Seer of the Last Tomorrow
 baf064c4c435efa1  Seer's Lantern
 358ba1ce6ce06ce0  Seer's Sundial
 361755fbc3e14b5c  Seething Landscape
@@ -13377,7 +13377,7 @@ d71e962569e1482c  Selfless Glyphweaver // Deadly Vanity
 424ffe3f956a4c24  Selfless Savior
 b036e190bc46295a  Selfless Spirit
 bac775b1bda8d8cf  Selhoff Entomber
-4aa66c5f9d3a1daf  Selhoff Occultist
+070357d2f6cdbdea  Selhoff Occultist
 9cde2e3dbbefe857  Selkie Hedge-Mage
 b57b0b4f1ab5b6c9  Sell-Sword Brute
 946702bfa6f3bf97  Seller of Songbirds
@@ -13498,7 +13498,7 @@ d6565ab03c5cd563  Shadow Lance
 aafdc1ae67146eff  Shadow Rider
 682717665184b3c5  Shadow Rift
 fd939c85fbd77b37  Shadow Sliver
-f1216185e8e6f3d7  Shadow Stinger
+57d2f4ae8ccb337b  Shadow Stinger
 a938d87669c253dc  Shadow Summoning
 8a54ab58d14b8123  Shadow-Rite Priest
 907d74820b06d4dd  Shadowbeast Sighting
@@ -13543,7 +13543,7 @@ f4bebd0693adc05f  Shapers' Sanctuary
 cf9a2f99279feff1  Shapeshifter
 f6f32a83334fa987  Shapeshifter
 0b86752b29abe9b8  Shard
-9b6171e8741ff117  Shard of Broken Glass
+78cb1772698c42cf  Shard of Broken Glass
 689fd9aa315be0e9  Shard Phoenix
 c09ca685cb226a62  Shard Volley
 42eb76082606957d  Sharding Sphinx
@@ -13647,7 +13647,7 @@ a8e032cc4ba420d8  Shinewend
 b6790e096c047bf6  Shining Aerosaur
 1fdf80e0ef1724a3  Shining Armor
 714d85aaa85c94ab  Shinka, the Bloodsoaked Keep
-68bc0fccc720a511  Shinra Reinforcements
+4b98eca0ea907efd  Shinra Reinforcements
 889f7f6d495c62e0  Shiny Impetus
 e308652628e32c7e  Shipwreck Dowser
 20b5fe3b9068f98e  Shipwreck Looter
@@ -13707,8 +13707,8 @@ c66fa60514430e28  Shrewd Storyteller
 9fce34394a6b3031  Shriek of Dread
 f3c9f611cbbf99ef  Shriek Raptor
 c63556f3ef576704  Shriekdiver
-4ba6661bd3b4e9ab  Shriekgeist
-1b2a851e7252025c  Shriekhorn
+714941a08f08481d  Shriekgeist
+8857f8829acbeb2d  Shriekhorn
 23b93eaca62893e1  Shrieking Affliction
 f97e62106417e559  Shrieking Drake
 4a877c3b9e118393  Shrieking Mogg
@@ -13740,7 +13740,7 @@ fb83e478d8fbcf0d  Shuri, Vibranium Technologist
 e7b9a52602a613fe  Sibilant Spirit
 cd47a2f9d7078bcd  Sibling Rivalry
 7f8c3fa083be4e53  Sibsig Appraiser
-5f00a9793063ddfc  Sibsig Host
+57e60874b3b9fd41  Sibsig Host
 699e540680bbea90  Sibsig Icebreakers
 9439c2ba3e5e3c23  Sibsig Muckdraggers
 4c3181fdf3d0e753  Sicarian Infiltrator
@@ -13751,7 +13751,7 @@ f3089772456b3bea  Sickleslicer
 c8df68b3326e572b  Sidar Jabari
 15fd19916925317b  Sidequest: Card Collection // Magicked Card
 def4430c21202cf7  Sidisi's Pet
-6664bcee0de1ced9  Sidisi, Brood Tyrant
+3a00fd6a1defd759  Sidisi, Brood Tyrant
 b38aa6154d977278  Siege Mastodon
 bd0e1a130d380f16  Siege Rhino
 d628f560068bb99e  Siege Smash
@@ -13762,7 +13762,7 @@ d8270240861f8025  Siege-Gang Commander
 ebee132a441b6244  Siegebreaker Giant
 94ce56d02751192f  Siegecraft
 d6364d01dcc4dd81  Siegehorn Ceratops
-58e78c4fa04f67e4  Siegfried, Famed Swordsman
+78b52ae5920df3aa  Siegfried, Famed Swordsman
 64b335db0c4efda1  Sierra, Nuka's Biggest Fan
 fee4b4f5669a0937  Sif's Spearmaster
 a69b56c8d95b4e6e  Sift
@@ -13892,7 +13892,7 @@ fd98dabb0a276485  Sire of Insanity
 9db52822f3465d9c  Sire of the Storm
 52ca463a38317e63  Siren Lookout
 a41f5e72a2d9c985  Siren of the Fanged Coast
-c6ab86c3d9cdc24d  Siren of the Silent Song
+87c34af0e778d222  Siren of the Silent Song
 9034f45c2aaa2cf0  Siren Song Lyre
 5c1f2579f8a18ae1  Sisay's Ring
 381b6de9305d0870  Sister Hospitaller
@@ -13900,7 +13900,7 @@ e18ce58a3ced1ae7  Sister of Silence
 341538dcf887811f  Sisterhood of Karn
 59aa5e64058dde61  Sisters of the Flame
 348992fc642b09a8  Sivitri Scarzam
-510faadedbba2fc6  Six
+23b592be82ca6d3f  Six
 58ecb6c90169087f  Sixth Sense
 659aab70ae71104b  Sizzle
 d3531493547e6057  Sizzling Changeling
@@ -13960,7 +13960,7 @@ ff5459a4a4d2b86a  Skitter Eel
 51a8da4b7ffe1abb  Skittering Precursor
 3ca7ae5e7767533c  Skittering Surveyor
 b25de54022d0fe95  Skitterskin
-0f1eafa3f0a4cfad  Skola Grovedancer
+8d35565925853d59  Skola Grovedancer
 af8f182446c9b565  Skophos Reaver
 22d66535cf17b4a1  Skophos Warleader
 20c87958f189ae24  Skorpekh Destroyer
@@ -13975,7 +13975,7 @@ e0ad7d093f0f7b9f  Skull Catapult
 85d2bc1b05eeddef  Skull Fracture
 3907a9f712df3b6d  Skull of Orm
 8041fec1b8226c30  Skull of Ramos
-48f3ccb881dad11a  Skull Prophet
+f65076532c345fcb  Skull Prophet
 cca90a2a96c6d94a  Skullcap Snail
 2b177f69e4dd4d21  Skullclamp
 8a4bc55f72a8094e  Skullknocker Ogre
@@ -14136,7 +14136,7 @@ a0fae5b4c5a7c6a8  Sliversmith
 2555d4618e584532  Slobad, Goblin Tinkerer
 7e381f87993f121a  Slogurk, the Overslime
 5ade8d881ee8da01  Sludge Strider
-77e50afa12c8d27f  Sludge Titan
+fa53e2851eb750f9  Sludge Titan
 ae2da8e72a4491ff  Slug
 ee2b6fc672139c3a  Sluggishness
 f66a710c1baab709  Sluiceway Scorpion
@@ -14210,7 +14210,7 @@ bdb45957440a8573  Snarling Undorak
 27d105bdb1d5e3c2  Snarling Wolf
 5760df1cb6fcd151  Sneaking Guide
 9b323de0ee6c8b31  Sneering Shadewriter
-33fa3ba6a2ccf0b1  Snooping Newsie
+8346a18601c16484  Snooping Newsie
 c54ff53943f4246e  Snooping Page
 16573ad232920cee  Snorting Gahr
 bfe386d19ee98212  Snow Day
@@ -14234,7 +14234,7 @@ ab09e1131c1b0112  So Shiny
 4f4a4d6b42ad238d  Soaring Seacliff
 1ee7f9fd90831137  Soaring Show-Off
 5f3d201e0ef546c8  Soaring Stoneglider
-72e5e4168314e416  Soaring Thought-Thief
+20080b3b0082bc65  Soaring Thought-Thief
 47a7848adbb11d2a  Social Climber
 00a7df3c0c8412bb  Sodden Verdure
 a40dfc5ec65e57bd  Soilshaper
@@ -14321,7 +14321,7 @@ e902f2b5da4be614  Soothsayer Adept
 6d4e4376e0deefde  Sophic Centaur
 e973bc6d0292d749  Soramaro, First to Dream
 3a15c17bf993da90  Soratami Cloudskater
-9a645452d8121141  Soratami Mindsweeper
+447f2cbbd6d33a3a  Soratami Mindsweeper
 16aaef01139cf06e  Soratami Mirror-Guard
 68795308198fd2a2  Soratami Mirror-Mage
 b8dd6068b619c0a3  Soratami Rainshaper
@@ -14500,7 +14500,7 @@ e7ef2c49963a8439  Sphere of the Suns
 232c18928ddef8a8  Sphere of Truth
 63a2cea60e4a92b3  Sphinx
 9dd79dc748260e84  Sphinx
-046f5d1f2e8e0448  Sphinx Mindbreaker
+604dc4b5d35d0694  Sphinx Mindbreaker
 5c3fe5a1e992fc7a  Sphinx of Enlightenment
 407bb258ae6965c3  Sphinx of Jwar Isle
 5668d2aba237e836  Sphinx of Magosi
@@ -14673,7 +14673,7 @@ a33ba325ee3c65a1  Splendor Mare
 6fc6804651ee0a7e  Splinter Twin
 657c569bab074a84  Splinter, Radical Rat
 63c2839132b1643f  Splinter, the Mentor
-cdd42eb00bcf8a18  Splinterfright
+fff0afa8dde69154  Splinterfright
 748e0afc7bc21e61  Split Up
 c9155a616a9aad1f  Split-Tail Miko
 215f578858122a8e  Splitting Slime
@@ -14924,7 +14924,7 @@ a5d2b3137590cf0d  Stir the Sands
 c05f18ef202e4c2d  Stitched Drake
 5b100d3cc3b97d73  Stitched Mangler
 2571cbaa142c284f  Stitcher's Apprentice
-f323f7ed14fe0bd7  Stitcher's Supplier
+c54aac2f1000f6b4  Stitcher's Supplier
 e1289bd66cde7ce4  Stitchwing Skaab
 1ec6965dafe48a48  Stock Up
 7aad3d2d257bfa96  Stocking the Pantry
@@ -15152,7 +15152,7 @@ ee41f1cda6a81fcc  Sultai Emissary
 60c6e4e1c7e3fa6a  Sultai Flayer
 9c30691e0ac774bd  Sultai Monument
 9ce87655673ada4a  Sultai Scavenger
-04ea1eaa85ddc930  Sultai Skullkeeper
+c1a1e4ca80484e33  Sultai Skullkeeper
 e8089f5223e1b71a  Sultai Soothsayer
 36858a159dc284b7  Sumala Rumblers
 51773d395b254b28  Sumala Woodshaper
@@ -15325,7 +15325,7 @@ b6b0556b151e366a  Swarmyard
 c678abdce2a67a99  Swashbuckling
 ecaece8d204570ea  Swat
 e3b13ecca22ede27  Sweatworks Brawler
-5dd57e9a0cbc1795  Sweet Oblivion
+ff74a4c350161392  Sweet Oblivion
 b29069edb021cfca  Sweettooth Witch
 18159cca085774e4  Swell of Growth
 2843e5e7abfdf485  Swelter
@@ -15347,7 +15347,7 @@ c9f52656f00f459a  Swirling Sandstorm
 6bd493628d9ec5af  Swooping Lookout
 0848daaeffcd9d5d  Swooping Protector
 df9ef19b61bee712  Sword Dancer
-29ba1f1eef8b3da3  Sword of Body and Mind
+b8a1be4186283429  Sword of Body and Mind
 5d08b7f3a337b765  Sword of Feast and Famine
 82e2be4c9df699a4  Sword of Fire and Ice
 d8674ac4168a2591  Sword of Forge and Frontier
@@ -15410,7 +15410,7 @@ be2f205c5e128655  Syndicate Trafficker
 6d7c55f97672c7fd  Syr Elenora, the Discerning
 929b378955bd91c3  Syr Faren, the Hengehammer
 1f8130ac290a3429  Syr Ginger, the Meal Ender
-9dc4dcafcfbde8e3  Syr Konrad, the Grim
+234a1106669e450f  Syr Konrad, the Grim
 46e75c45287ad464  Syr Vondam, the Lucent
 eb509819a6478c38  Sythis, Harvest's Hand
 eef21c764dfe11e2  T'Chaka, Venerable King
@@ -15451,7 +15451,7 @@ d31455f704a6af05  Take Up Arms
 cd52963eca8d739b  Take Up the Shield
 f269dccb669d60a4  Take Vengeance
 bc9c3b9418ecc802  Taken by Nightmares
-2e9203efcb7ec391  Takenuma, Abandoned Mire
+40ec5c32638c9897  Takenuma, Abandoned Mire
 a24f7a603bc3e2ad  Talas Air Ship
 e63a536289326d64  Talas Explorer
 5eec048534333d3d  Talas Lookout
@@ -15542,7 +15542,7 @@ aa9f62d0f5bfad67  Tatyova, Benthic Druid
 dc9cb67027d5b4bb  Tavern Swindler
 3bd129a294d90098  Tawnos's Wand
 60884f732d452cfe  Taxi Driver
-19753a281373bc4c  Tayam, Luminous Enigma
+76f7d8d9347cc5aa  Tayam, Luminous Enigma
 a781f000292e9f4c  Tazeem Raptor
 8b83fdfada44a451  Tazeem Roilmage
 566abfb520173b75  Tazri, Beacon of Unity
@@ -15568,7 +15568,7 @@ a18d6fbcfc5f2b6c  Teferi's Ageless Insight
 96ca0f2e152648a7  Teferi's Protection
 467a2a14621d19bb  Teferi's Protege
 7598a8439076741c  Teferi's Sentinel
-61361dc42d101e73  Teferi's Tutelage
+ab986940c15327d2  Teferi's Tutelage
 cd95ebbad9b03c84  Teferi's Wavecaster
 28bf2be730b1d0eb  Tegwyll, Duke of Splendor
 85e2d6052bf111cc  Tel-Jilad Archers
@@ -15652,14 +15652,14 @@ dd6db3b49daa0803  Tenth District Guard
 be18d4ac0a339cfe  Tenth District Legionnaire
 42cede1173f65e3d  Tenth District Veteran
 462df4361e853da9  Tenured Inkcaster
-bf110505bd0acb70  Tenured Oilcaster
+931b7a23609db2b2  Tenured Oilcaster
 e7354b55a6b7d35a  Teo, Spirited Glider
 304e2b26dff3e60a  Terashi's Cry
 2728e5b3336b0193  Terashi's Grasp
 9443b36efd23bd91  Terashi's Verdict
 f3bf707a30cd3cb8  Teremko Griffin
 dd233a4a12b5d346  Tergrid's Shadow
-b4d852c47f28fedc  Terisian Mindbreaker
+ea650312d172328b  Terisian Mindbreaker
 43a6a0142c68231a  Termagant Swarm
 479aaafdd235e5bf  Terminal Agony
 3dad5367a599693c  Terminal Moraine
@@ -15667,7 +15667,7 @@ d79de13df30837ff  Terminate
 764589ff9f124a63  Teroh's Faithful
 496fde9c6ab9e6b1  Terra Ravager
 1865018925d8c551  Terra Stomper
-4e273bcbc8389b3c  Terra, Herald of Hope
+8b59544ab807d80c  Terra, Herald of Hope
 1ded3ffc63e934ca  Terrain Elemental
 e68f9a76314d0529  Terrain Generator
 19bbbbaf76120f72  Terramorph
@@ -15700,7 +15700,7 @@ d49faf59dbae71ea  Testament Bearer
 e9436ff291986d37  Tethmos High Priest
 d7954aa25ec645fe  Tetsuko Umezawa, Fugitive
 d874ef0e254da513  Teval's Judgment
-1f8e0b47d39a1be4  Teval, the Balanced Scale
+ba855da7bdb1cad1  Teval, the Balanced Scale
 e45258ab6a1ada18  Teyo's Lightshield
 17c4ae4829fd8a58  Teyo, the Shieldmage
 0b1001d150c545e7  Teysa, Envoy of Ghosts
@@ -15727,8 +15727,8 @@ dce7491441974a60  Thallid Germinator
 04311ee8fedccfac  Thallid Soothsayer
 e591aa2e07a3fb21  Thanos, Death's Consort
 bfe0a1857d296f8f  Thantis, the Warweaver
-7f9e24b9d2d0c014  Thassa's Bounty
-2507f903ba71b562  Thassa's Devourer
+4a425425ba4ff88c  Thassa's Bounty
+428e52186517872c  Thassa's Devourer
 2e7995a0baf456f4  Thassa's Emissary
 8957618eeb00d295  Thassa's Ire
 d41ed544f05f020f  Thassa's Oracle
@@ -15744,7 +15744,7 @@ dd88310a12b47f8d  The Akroan War
 273226f7cf47ed72  The Atropal
 348aac26be282536  The Autonomous Furnace
 15e93d5e2e76fadd  The Battle of Bywater
-d4f827677ddb2f6e  The Binding of the Titans
+3ae68f49f3c38179  The Binding of the Titans
 286c89f566e803cf  The Birth of Meletis
 7b9bc22ea223c756  The Black Breath
 e748f1ccec7c84b1  The Brothers' War
@@ -15785,7 +15785,7 @@ e4838a830c744ef2  The Immortal Weapons
 16d5510feaf72cc0  The Lady of the Mountain
 51dcc6dba8c17b93  The Locust God
 fe8c221cb3746e03  The Meathook Massacre
-1fb357c6c220b22c  The Mending of Dominaria
+fdd01f71e3ccdcfb  The Mending of Dominaria
 c2149864cde8e585  The Modern Age // Vector Glider
 168b54fe9fd39b2f  The Monumental Facade
 3a73e9e1b5a7b9cb  The Mycosynth Gardens
@@ -15838,7 +15838,7 @@ a224ea0580b1417c  Thermo-Alchemist
 ac70d8beb7405d10  Thickest in the Thicket
 5d63255b75dcb76e  Thicket Crasher
 8a56e13f7045ea22  Thief of Hope
-4c5c7e6c9d366ce4  Thieves' Guild Enforcer
+af6143a0f10eaa4b  Thieves' Guild Enforcer
 788c376d2abca66d  Thieving Magpie
 c52130092e0c68a2  Thieving Otter
 016b096208716f84  Thing from the Deep
@@ -15895,13 +15895,13 @@ a97a2f100c36c028  Thornwind Faeries
 8db4bd8440499a8c  Thornwood Falls
 df624e65e1bafa2e  Thorough Investigation
 f436775c0e89066f  Those Who Serve
-8606641ebd1af51c  Thought Collapse
+79e8f8a84058e72e  Thought Collapse
 f2ccfaaea9e81e11  Thought Courier
 cc244dbabfeade7b  Thought Erasure
 e90c9dec126454fd  Thought Gorger
 07a40adb29222a52  Thought Monitor
 8d8077a7ec2f3c81  Thought Reflection
-8532d8d4816f4f43  Thought Scour
+f5a56ed6650e74b4  Thought Scour
 0380d3b163f4fab2  Thought Vessel
 ef832c1cfd93d73f  Thoughtbind
 7a0e491ae649ac7d  Thoughtcast
@@ -16038,7 +16038,7 @@ d85471ef9c4eb7b1  Thwart
 f9df6c217e70a281  Théoden, King of Rohan
 95acbc5441fb2e71  Tiamat's Fanatics
 15a7af033f89ff4f  Tibalt's Rager
-dc358a8cead6a5ec  Tibalt's Trickery
+c1680b290c0907f3  Tibalt's Trickery
 13918cf238927426  Tibor and Lumia
 6a4f340b24b3defa  Ticked Off
 880e80a0878ea3b9  Ticket Booth // Tunnel of Hate
@@ -16135,13 +16135,13 @@ ce4358f70f02c160  Tolarian Emissary
 1189b5b5bf7da183  Tolarian Geyser
 e89f17aeee18716e  Tolarian Scholar
 bf2b04526fcd7958  Tolarian Sentinel
-1df2135c138d51a3  Tolarian Serpent
+f854f64307fec268  Tolarian Serpent
 ebc2d52525005989  Tolarian Terror
 54f5ba2005ab6d71  Tolarian Winds
 6e400ccc6de4afc0  Toll of the Invasion
 fc8e24efed6db756  Tolsimir Wolfblood
 005c72ee530eff8d  Tomakul Honor Guard
-1d2e33721c1dd6fe  Tomb Fortress
+00a930e06e51a6a0  Tomb Fortress
 6ecb2925fb979b10  Tomb of Horrors Adventurer
 67a40f18d8dfa353  Tomb of the Spirit Dragon
 a66f601ccdc7b674  Tomb Robber
@@ -16152,7 +16152,7 @@ a50d3660440eee1e  Tombstone, Career Criminal
 6c3b4111eebcb569  Tome of Legends
 13d34f89ec2146c4  Tome of the Guildpact
 5102e573aa6b8467  Tome Raider
-b9086c606c728cd1  Tome Scour
+4e3ee7a8018761c4  Tome Scour
 9e85c82fc344aeca  Tonic Peddler
 3f24d41746ba98e8  Took Reaper
 cdf1baadfd287a68  Toolcraft Exemplar
@@ -16215,12 +16215,12 @@ d8e3cfc8192b3bb8  Tower Geist
 5c35770cd2a230ed  Tower of Champions
 7012c4adc040558b  Tower of Eons
 6ae8fc5a8e24b1ab  Tower of Fortunes
-67d5fd4257ed52c6  Tower of Murmurs
+bd1eff1acaef23e6  Tower of Murmurs
 04700a3a4e30d736  Tower of the Magistrate
 87ffaaa88484fd28  Towering Baloth
 e2681111a415da63  Towering Indrik
 9ef62d3a284ce3f3  Towering Thunderfist
-acd78e04576c74f1  Towering-Wave Mystic
+d898c133a64c4d8c  Towering-Wave Mystic
 a5611d36b69d6974  Town Gossipmonger // Incited Rabble
 311965e0a49a51df  Town Sentry
 bbddc5fdefedd170  Toxic Abomination
@@ -16287,7 +16287,7 @@ b9ae7a744139f2cd  Trapjaw Kelpie
 f9c1ba4be12d9e76  Trash for Treasure
 ba4ecf3c17460bd9  Traumatic Critique
 067053b2d17473a6  Traumatic Visions
-2da6635bd388895a  Traumatize
+acaa2641956bad09  Traumatize
 8e3f0c23b540c896  Travel Preparations
 a4eb79f56c4bc841  Travel the Overworld
 97d344e21c899b40  Traveler's Amulet
@@ -16339,7 +16339,7 @@ aba0f879480a3cad  Trelasarra, Moon Dancer
 47958d3cc260cc2a  Tremor
 2682b688ccefd03c  Trench Wurm
 8d3afe2e7030357b  Trenching Steed
-b904fdb8c83866b1  Trenchpost
+fc1579a7763cb0a2  Trenchpost
 63f748f56b44ac28  Treno, Dark City
 ebf07e0596ee7d84  Trespasser il-Vec
 1423b6649f083b9a  Trespassing Souleater
@@ -16357,7 +16357,7 @@ a39a80b14892bd6f  Trial of Strength
 620b4452b134364a  Triangle of War
 d866856d2d792a74  Triarch Praetorian
 80740a854a2d202b  Tribal Flames
-b3caece1854b803d  Tribune of Rot
+e76900bbf8c58473  Tribune of Rot
 e8f7a4f46a7bcc91  Tributary Instructor
 250d44757fc0c681  Tributary Vaulter
 f0215f14cabe1e91  Tribute Mage
@@ -16522,7 +16522,7 @@ c49a461ed3f7cd4a  Two-Handed Axe // Sweeping Cleave
 0c9b8dd3b7850a91  Two-Headed Sliver
 b784999d77b0fc67  Two-Headed Zombie
 85ed9aa6b861bb42  Ty Lee, Artful Acrobat
-eaae901978def9c7  Tymaret Calls the Dead
+87ade1564fad7617  Tymaret Calls the Dead
 813335bf78076af3  Tymaret, the Murder King
 c34fd4bec43b35a0  Typhoid Rats
 02dd3b0fc6275573  Tyranid
@@ -16543,7 +16543,7 @@ d6d57f85e7e9dea3  Tyrant's Choice
 5eae2b5305fd80b9  Tyrranax Rex
 44cb125e08bc158c  Tyvar Kell
 b15ab3bbae919065  Tyvar's Stand
-1f7309404dfecb6f  Tyvar, Jubilant Brawler
+214764f11bd328e6  Tyvar, Jubilant Brawler
 7b6b6631d1c04a1e  Tyvar, the Pummeler
 c71ab9597935a46d  Ubul Sar Gatekeepers
 e80a40325d1699b0  Ugin's Insight
@@ -16604,7 +16604,7 @@ c332858188ce710e  Unconventional Tactics
 7138f84dd52bd11b  Uncovered Clues
 16178c155c1bcfbf  Unctus, Grand Metatect
 afa387e991c385ec  Undead Augur
-16c3bd8b6b88f99a  Undead Butler
+726222daf396b7ef  Undead Butler
 50fe3e9e65dbaffe  Undead Executioner
 477a54b7367aad4f  Undead Gladiator
 baf180b40405e6ea  Undead Hand Ninja
@@ -16897,7 +16897,7 @@ c53ff44620c49ef6  Vaporkin
 428aea81c38b8d65  Varragoth, Bloodsky Sire
 d68f818ab1628f7b  Vashta Nerada
 e92c8670c0a7ca1b  Vassal Soul
-52badc92e1c243fe  Vastlands Scavenger // Bind to Life
+7187296fc0b6b9fd  Vastlands Scavenger // Bind to Life
 7b4e720eb41bbda8  Vastwood Fortification // Vastwood Thicket
 606e7a58d63c2ee7  Vastwood Gorger
 ddfd847477cf8d22  Vastwood Surge
@@ -16930,7 +16930,7 @@ fd24a54c305ff37d  Vedalken Blademaster
 da58cf6603017703  Vedalken Certarch
 2b33b4370dd4278b  Vedalken Dismisser
 740b8d121434b4b0  Vedalken Engineer
-dfb9d155e7dcba60  Vedalken Entrancer
+8fefa9fa4a19b742  Vedalken Entrancer
 d2512241ce86387b  Vedalken Ghoul
 2f05948b4694a53d  Vedalken Heretic
 980e3e2fe78276eb  Vedalken Humiliator
@@ -16978,11 +16978,11 @@ d103450c114e0c85  Venom's Hunger
 72cd4f61a28ca2f8  Venom, Eddie Brock
 b3ca5f922cbc34aa  Venom, Evil Unleashed
 70c48f3de87252da  Venomcrawler
-edcbef551a4bf92f  Venomized Cat
+e216ac9ee272110f  Venomized Cat
 b1408918dc296d55  Venomous Brutalizer
 09c1c0db28abb347  Venomous Changeling
 7d57e5521a7a39f2  Venomous Dragonfly
-4639ef218575faf9  Venomous Hierophant
+ba487380a913c1c1  Venomous Hierophant
 59ee1391a8f1cc9e  Venomous Vines
 a259892d0179a6e1  Venomsac Lagac
 4d81a39dd27fa1e0  Venomspout Brackus
@@ -17018,7 +17018,7 @@ e218ddb225f5675b  Vessel of Endless Rest
 65f2f391727f8380  Vessel of Ephemera
 f370484e908d3a6b  Vessel of Malignity
 43a97485c2bf0ac4  Vessel of Nascency
-ce40c69f5844b9dd  Vessel of Paramnesia
+3571b9efdb66bd94  Vessel of Paramnesia
 f6025f20a13672a1  Vessel of Volatility
 285065e3022ca5f1  Vestige of Emrakul
 f16f7c00a41ba036  Vesuva
@@ -17075,7 +17075,7 @@ b7e68ef54413261e  Vicious Conquistador
 ac63cbc6d551ab32  Vicious Hunger
 431fd03c4c5ab347  Vicious Kavu
 b8f130500b845e47  Vicious Offering
-8dcb4692fe1acad3  Vicious Rumors
+74cfdeb6d7223f94  Vicious Rumors
 0712a5b27e87857f  Vicious Shadows
 fb36a07c3deb3edf  Victimize
 50a39930eacfbdb0  Victor Timely, Wily Tycoon
@@ -17094,7 +17094,7 @@ a3b5e2e4be5e9fbd  Vile Deacon
 2f6b4a28dc594ac2  Vile Entomber
 4b56df3c32bbfa76  Vile Manifestation
 74eafadd57ec87df  Vile Rebirth
-bac9f2c8d4fecf71  Vilespawn Spider
+3e3c39095c3c15b1  Vilespawn Spider
 9d9615ff2db3acac  Vilis, Broker of Blood
 a3c30fa3329f022a  Village Bell-Ringer
 69e1a183040ca66b  Village Cannibals
@@ -17315,7 +17315,7 @@ a1a103426abf8cac  Vulshok Replica
 41617cc1b2b9f32e  Vulshok War Boar
 87e3b46dc61ee528  Vulture, Scheming Scavenger
 ca11a5501a8ca133  Vulturous Zombie
-64913027e4b7bd16  Wailing Ghoul
+0eac5f77de557f2b  Wailing Ghoul
 ff99143eaeb6de59  Wakandan Drone Flock
 f5f43cc4d66f687f  Wakandan Shield Guard
 1607162c56c3b8fe  Wakandan Tusker
@@ -17366,7 +17366,7 @@ c83290f321eb719f  Wall of Kelp
 4a01d931a6ccce20  Wall of Lava
 9fc2899b4cc171ce  Wall of Light
 e110e1370cd738d5  Wall of Limbs
-d0f33fb14a3f7644  Wall of Lost Thoughts
+1ffcb63412f1e034  Wall of Lost Thoughts
 310618bace081d59  Wall of Mist
 0a2f5aac3c43bf20  Wall of Mulch
 4dc4af5845cf62f0  Wall of Omens
@@ -17502,7 +17502,7 @@ ff470ec5b00006f3  Wasteland
 15e6f27e31a3fa80  Wastes
 49be67f962d1df08  Wastewood Verge
 3b72b1fa48682155  Watcher in the Mist
-d1a0a8a14030ca57  Watcher of the Wayside
+0c6aa6a2d3f09554  Watcher of the Wayside
 c6e0cd9ab8794ae9  Watcher Sliver
 9b61ec4a94b47f7d  Watchful Automaton
 a09db0a6c05bec53  Watchful Blisterzoa
@@ -17589,7 +17589,7 @@ b43d115b75dff1e6  Wei Night Raiders
 093f3c7525819fce  Wei Strike Force
 9c62f5502f11d21c  Weigh Down
 800803ebf5c68b46  Weight Advantage
-f0957e223d01dff9  Weight of Memory
+320bb0b81bc3084b  Weight of Memory
 cb6565cf224fe005  Weight of the Underworld
 063146448c75c1d4  Weird
 948e0eb42c0d6747  Weird // Goblin
@@ -17622,8 +17622,8 @@ dc1ff65efce68c72  Whale
 248179dfb9bac47d  Wharf Infiltrator
 7660ca319bead9d2  Wheel of Fortune
 a5be1c7071e1dec1  Where Ancients Tread
-f5f454be7ec80e1b  Whetstone
-a86e9016d0b8a084  Whetwheel
+49b6567acbd0fe22  Whetstone
+b574e708b9fd5643  Whetwheel
 14654eddf5e35670  Whimwader
 53fc362723a19f69  Whip of Erebos
 6ad29b2b1a796bb3  Whip Sergeant
@@ -17721,7 +17721,7 @@ ca349fc38b26b728  Wildwood Mentor
 31a8d133c257124c  Wildwood Rebirth
 3d730c94957642d8  Will of the All-Hunter
 9bebfb51c8dc69c5  Will of the Naga
-d89d06014f679a69  Will of the Sultai
+af937dc2faf62d1a  Will of the Sultai
 0caf61ff015f3296  Will of the Temur
 ab0919c8fc1414e0  Will-Forged Golem
 b8389bec21ac4294  Will-o'-the-Wisp
@@ -17751,7 +17751,7 @@ e3643cc94c5a7131  Windbrisk Heights
 bf9023603e343669  Windbrisk Raptor
 b79487f369b75123  Windcaller Aven
 b8bc62e02de031d2  Windfall
-80df7c372a259819  Windgrace Acolyte
+25594e338fe0541b  Windgrace Acolyte
 1c588697e909792b  Winding Wurm
 53c6ad545085b677  Windreader Sphinx
 f6456997117a6755  Windreaper Falcon
@@ -17759,7 +17759,7 @@ c6d4028347510e61  Windreaver
 0cd6266d60fb9230  Windrider Eel
 3910f17d2b4a1fb8  Windrider Patrol
 60ac2353c7a59361  Windrider Wizard
-71d6efe64d6906ce  Winds of Rebuke
+19d00213649e6798  Winds of Rebuke
 688c968fcd7ac25f  Windscouter
 ee1f3993b4a75110  Windseeker Centaur
 d663535625063d69  Windstorm
@@ -17908,7 +17908,7 @@ bbfa1fb0fba6c106  Word of Seizing
 d23d2df678b26a7b  Workshop Assistant
 a5dd3226e1f702c2  World Breaker
 275622c395dc8aed  World Map
-d5bc7976e2ae3c32  World Shaper
+4c72d9d626c8bfa0  World Shaper
 4167cf15101a6e6e  World-Weary
 187e4d8379934703  Worldly Tutor
 60452579352fb04b  Worldsoul Colossus
@@ -17921,7 +17921,7 @@ c36ac7bf4e952aec  Wormhole Serpent
 732bc4b4179e9070  Wormwood Dryad
 b16b99129b763e59  Wormwood Treefolk
 b0b78ca7f1a7ef2c  Worn Powerstone
-de3215584e7a38fe  Worry Beads
+61418d1c7b9b2845  Worry Beads
 65fc81dc58b317b6  Wort, Boggart Auntie
 3c3a5052b1a8bb32  Worthy Cost
 59267c6988d37dde  Worthy Knight
@@ -17981,7 +17981,7 @@ e6f576cf585829db  Wyrm's Crossing Patrol
 a5b63b7d953d4d23  Xathrid Necromancer
 b10262d9df68f273  Xathrid Slyblade
 664329cbd0f5bf74  Xenagos, God of Revels
-59d741e225ebb486  Xenagos, the Reveler
+5b43b911c8ed0694  Xenagos, the Reveler
 a260360becd0d33e  Xenograft
 a7bf80bfece2065b  Xerex Strobe-Knight
 b74e1d0917c49dab  Xiahou Dun, the One-Eyed
@@ -17998,7 +17998,7 @@ ac18345ac408cb5e  Yamabushi's Flame
 de0ad65bb135006a  Yarok's Wavecrasher
 d7eaaa385eed75b2  Yarok, the Desecrated
 774792ec5f235f80  Yasmin Khan
-efdcd8b9d9cc7987  Yathan Roadwatcher
+f5440669562a1be8  Yathan Roadwatcher
 21208683d77b949b  Yathan Tombguard
 a00c8dd1514ef078  Yavimaya Ancients
 6485e7437245f6ed  Yavimaya Ants

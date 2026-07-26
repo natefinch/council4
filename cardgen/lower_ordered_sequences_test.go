@@ -146,10 +146,10 @@ func TestLowerOrderedSpellEffectsRebasesEveryTargetClause(t *testing.T) {
 	}
 	destroy, destroyOK := mode.Sequence[0].Primitive.(game.Destroy)
 	tap, tapOK := mode.Sequence[1].Primitive.(game.Tap)
-	mill, millOK := mode.Sequence[2].Primitive.(game.Mill)
+	mill, millOK := mode.Sequence[2].Primitive.(game.MoveTopOfLibrary)
 	if !destroyOK || !tapOK || !millOK {
 		t.Fatalf(
-			"primitives = %T, %T, %T; want game.Destroy, game.Tap, game.Mill",
+			"primitives = %T, %T, %T; want game.Destroy, game.Tap, game.MoveTopOfLibrary",
 			mode.Sequence[0].Primitive,
 			mode.Sequence[1].Primitive,
 			mode.Sequence[2].Primitive,
@@ -299,11 +299,11 @@ func TestLowerThenJoinedSharedTargetSequence(t *testing.T) {
 	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
 		t.Fatalf("mode = %+v, want one target and two instructions", mode)
 	}
-	mill, millOK := mode.Sequence[0].Primitive.(game.Mill)
+	mill, millOK := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
 	if !millOK || !drawOK {
 		t.Fatalf(
-			"primitives = %T, %T; want game.Mill, game.Draw",
+			"primitives = %T, %T; want game.MoveTopOfLibrary, game.Draw",
 			mode.Sequence[0].Primitive,
 			mode.Sequence[1].Primitive,
 		)
@@ -419,10 +419,10 @@ func TestLowerThenJoinedSharedTargetNoExtraSpec(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %d, want 2", len(mode.Sequence))
 	}
-	mill, millOK := mode.Sequence[0].Primitive.(game.Mill)
+	mill, millOK := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	draw, drawOK := mode.Sequence[1].Primitive.(game.Draw)
 	if !millOK || !drawOK {
-		t.Fatalf("primitives = %T, %T, want game.Mill, game.Draw",
+		t.Fatalf("primitives = %T, %T, want game.MoveTopOfLibrary, game.Draw",
 			mode.Sequence[0].Primitive, mode.Sequence[1].Primitive)
 	}
 	if mill.Player.TargetIndex() != 0 {
@@ -465,7 +465,7 @@ func TestLowerThenJoinedSharedTargetAfterEarlierTarget(t *testing.T) {
 		t.Fatalf("sequence = %d, want 3 (destroy, mill, draw)", len(mode.Sequence))
 	}
 	destroy, destroyOK := mode.Sequence[0].Primitive.(game.Destroy)
-	mill, millOK := mode.Sequence[1].Primitive.(game.Mill)
+	mill, millOK := mode.Sequence[1].Primitive.(game.MoveTopOfLibrary)
 	draw, drawOK := mode.Sequence[2].Primitive.(game.Draw)
 	if !destroyOK || !millOK || !drawOK {
 		t.Fatalf("primitives = %T, %T, %T; want Destroy, Mill, Draw",
@@ -599,7 +599,7 @@ func TestLowerGroupCardFlowClauses(t *testing.T) {
 			oracle:    "Each player mills three cards.",
 			wantGroup: game.AllPlayersReference(),
 			assert: func(t *testing.T, prim game.Primitive) {
-				mill, ok := prim.(game.Mill)
+				mill, ok := prim.(game.MoveTopOfLibrary)
 				if !ok || mill.Amount.Value() != 3 || mill.PlayerGroup != game.AllPlayersReference() {
 					t.Fatalf("primitive = %+v, want each player mills three", prim)
 				}

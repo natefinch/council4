@@ -69,7 +69,7 @@ func lowerExileTopThenPutAnyAmongToBattlefield(ctx contentCtx) (game.AbilityCont
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{
-		{Primitive: game.ExileTopOfLibrary{
+		{Primitive: game.MoveTopOfLibrary{Destination: zone.Exile,
 			Amount:        amount,
 			Player:        game.ControllerReference(),
 			PublishLinked: exiledTopCardsLinkKey,

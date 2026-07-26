@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -18,7 +19,7 @@ func TestExileTopOfLibraryFaceDownPlacesNamedCounter(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
-	addEffectSpellToStack(g, game.Player1, game.ExileTopOfLibrary{
+	addEffectSpellToStack(g, game.Player1, game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount:   game.Fixed(2),
 		Player:   game.ControllerReference(),
 		Counter:  opt.Val(counter.Intel),
@@ -65,7 +66,7 @@ func TestExileTopOfLibraryCombatDamageScaledFaceDownCounter(t *testing.T) {
 		Subject:             game.TriggerSubjectDamageSource,
 		DamageRecipient:     game.DamageRecipientPlayer,
 		RequireCombatDamage: true,
-	}, []game.Instruction{{Primitive: game.ExileTopOfLibrary{
+	}, []game.Instruction{{Primitive: game.MoveTopOfLibrary{Destination: zone.Exile,
 		Amount:   game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountEventDamage}),
 		Player:   game.ControllerReference(),
 		Counter:  opt.Val(counter.Intel),
@@ -115,7 +116,7 @@ func TestFlamewarExileThenReturnEndToEnd(t *testing.T) {
 		DamageRecipient:     game.DamageRecipientPlayer,
 		RequireCombatDamage: true,
 	}, []game.Instruction{
-		{Primitive: game.ExileTopOfLibrary{
+		{Primitive: game.MoveTopOfLibrary{Destination: zone.Exile,
 			Amount:   game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountEventDamage}),
 			Player:   game.ControllerReference(),
 			Counter:  opt.Val(counter.Intel),

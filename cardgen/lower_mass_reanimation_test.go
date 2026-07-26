@@ -31,7 +31,7 @@ func TestLowerBreachTheMultiverse(t *testing.T) {
 	if len(mode.Targets) != 0 || len(mode.Sequence) != 4 {
 		t.Fatalf("mode = %+v, want no targets and four instructions", mode)
 	}
-	mill, ok := mode.Sequence[0].Primitive.(game.Mill)
+	mill, ok := mode.Sequence[0].Primitive.(game.MoveTopOfLibrary)
 	if !ok || mill.PlayerGroup != game.AllPlayersReference() || mill.Amount.Value() != 10 {
 		t.Fatalf("first primitive = %+v, want each player mills ten", mode.Sequence[0].Primitive)
 	}

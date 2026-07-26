@@ -811,7 +811,7 @@ func TestLowerCastTriggerBindsThatPlayerToEventActor(t *testing.T) {
 			oracle: "Whenever an opponent casts a spell, that player mills two cards.",
 			assert: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
-				mill, ok := primitive.(game.Mill)
+				mill, ok := primitive.(game.MoveTopOfLibrary)
 				if !ok || mill.Player != game.EventPlayerReference() {
 					t.Fatalf("primitive = %#v, want event-player mill", primitive)
 				}

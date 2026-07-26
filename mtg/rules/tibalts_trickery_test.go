@@ -41,7 +41,7 @@ func tibaltTrickerySequence() []game.Instruction {
 			},
 			PublishChoice: tibaltMillCountKey,
 		}},
-		{Primitive: game.Mill{
+		{Primitive: game.MoveTopOfLibrary{Destination: zone.Graveyard,
 			Amount: game.Dynamic(game.DynamicAmount{
 				Kind:      game.DynamicAmountChosenNumber,
 				ResultKey: game.ResultKey(tibaltMillCountKey),

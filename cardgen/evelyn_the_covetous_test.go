@@ -36,7 +36,8 @@ func TestGenerateExecutableCardSourceEvelynTheCovetous(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, want := range []string{
-		"Primitive: game.ExileTopOfLibrary{",
+		"Primitive: game.MoveTopOfLibrary{",
+		"Destination: zone.Exile,",
 		"PlayerGroup: game.AllPlayersReference(),",
 		"Counter:     opt.Val(counter.Collection),",
 		"Kind:                           game.RuleEffectPlayLandsFromZone,",
