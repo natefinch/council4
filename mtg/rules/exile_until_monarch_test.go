@@ -21,9 +21,10 @@ func resolveExileUntilMonarch(t *testing.T, engine *Engine, g *game.Game, source
 	t.Helper()
 	obj := linkedSourceObject(source)
 	obj.Targets = []game.Target{game.PermanentTarget(victim.ObjectID)}
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: exileUntilMonarchLinkKey,
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: exileUntilMonarchLinkKey,
+		Destination:   zone.Exile,
 	}, nil)
 	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		EventPattern: opt.Val(game.TriggerPattern{

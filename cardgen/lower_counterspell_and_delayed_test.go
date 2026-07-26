@@ -1017,7 +1017,7 @@ func TestLowerSimpleDelayedOneShotEffects(t *testing.T) {
 			timing:     game.DelayedAtBeginningOfNextEndStep,
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
-				exile, ok := primitive.(game.Exile)
+				exile, ok := movePermanentTo(primitive, zone.Exile)
 				if !ok || exile.Object.Kind() != game.ObjectReferenceSourceCard {
 					t.Fatalf("primitive = %#v, want source-card exile", primitive)
 				}
@@ -1145,8 +1145,8 @@ func TestLowerDelayedBlink(t *testing.T) {
 			if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
 				t.Fatalf("mode = %#v, want one target and two instructions", mode)
 			}
-			exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-			if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+			exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+			if !ok || exile.Object != game.TargetPermanentReference(0) || exile.PublishLinked == "" {
 				t.Fatalf("exile = %#v, want linked target exile", mode.Sequence[0].Primitive)
 			}
 			delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
@@ -1157,8 +1157,8 @@ func TestLowerDelayedBlink(t *testing.T) {
 			ref, captured := put.Source.CardRef()
 			if !ok || !captured || ref.Kind != game.CardReferenceCaptured ||
 				!delayed.Trigger.CapturedCard.Exists ||
-				delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
-				t.Fatalf("delayed put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.ExileLinkedKey)
+				delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.PublishLinked)) {
+				t.Fatalf("delayed put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.PublishLinked)
 			}
 		})
 	}
@@ -1179,11 +1179,11 @@ func TestLowerMultipleDelayedBlinkPairsUseDistinctKeys(t *testing.T) {
 	}
 	var keys []game.LinkedKey
 	for i, targetIndex := range []int{0, 1} {
-		exile, ok := mode.Sequence[i*2].Primitive.(game.Exile)
-		if !ok || exile.Object != game.TargetPermanentReference(targetIndex) || exile.ExileLinkedKey == "" {
+		exile, ok := movePermanentTo(mode.Sequence[i*2].Primitive, zone.Exile)
+		if !ok || exile.Object != game.TargetPermanentReference(targetIndex) || exile.PublishLinked == "" {
 			t.Fatalf("exile %d = %#v, want linked target %d", i, mode.Sequence[i*2].Primitive, targetIndex)
 		}
-		keys = append(keys, exile.ExileLinkedKey)
+		keys = append(keys, exile.PublishLinked)
 		delayed, ok := mode.Sequence[i*2+1].Primitive.(game.CreateDelayedTrigger)
 		if !ok {
 			t.Fatalf("instruction %d = %#v, want delayed trigger", i*2+1, mode.Sequence[i*2+1].Primitive)
@@ -1195,8 +1195,8 @@ func TestLowerMultipleDelayedBlinkPairsUseDistinctKeys(t *testing.T) {
 		ref, captured := put.Source.CardRef()
 		if !captured || ref.Kind != game.CardReferenceCaptured ||
 			!delayed.Trigger.CapturedCard.Exists ||
-			delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
-			t.Fatalf("put %d/trigger = %#v/%#v, want captured linked card %q", i, put, delayed.Trigger, exile.ExileLinkedKey)
+			delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.PublishLinked)) {
+			t.Fatalf("put %d/trigger = %#v/%#v, want captured linked card %q", i, put, delayed.Trigger, exile.PublishLinked)
 		}
 	}
 	if keys[0] == keys[1] {
@@ -1233,8 +1233,8 @@ func delayedBlinkPut(t *testing.T, mode game.Mode) game.PutOnBattlefield {
 	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
 		t.Fatalf("mode = %#v, want one target and two instructions", mode)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || exile.Object != game.TargetPermanentReference(0) || exile.PublishLinked == "" {
 		t.Fatalf("exile = %#v, want linked target exile", mode.Sequence[0].Primitive)
 	}
 	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
@@ -1248,8 +1248,8 @@ func delayedBlinkPut(t *testing.T, mode game.Mode) game.PutOnBattlefield {
 	ref, captured := put.Source.CardRef()
 	if !captured || ref.Kind != game.CardReferenceCaptured ||
 		!delayed.Trigger.CapturedCard.Exists ||
-		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
-		t.Fatalf("put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.ExileLinkedKey)
+		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.PublishLinked)) {
+		t.Fatalf("put/trigger = %#v/%#v, want captured linked card %q", put, delayed.Trigger, exile.PublishLinked)
 	}
 	return put
 }
@@ -1318,7 +1318,7 @@ func TestLowerDelayedTargetReturnUsesLinkedReference(t *testing.T) {
 	if !ok {
 		t.Fatalf("second primitive = %#v, want delayed trigger", mode.Sequence[1].Primitive)
 	}
-	bounce, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Bounce)
+	bounce, ok := movePermanentTo(delayed.Trigger.Content.Modes[0].Sequence[0].Primitive, zone.Hand)
 	if !ok ||
 		bounce.Object.Kind() != game.ObjectReferenceLinkedObject ||
 		bounce.Object.LinkID() != string(modify.PublishLinked) {

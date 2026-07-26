@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -51,9 +52,10 @@ func lowerExileUntilOpponentBecomesMonarchContent(ctx contentCtx) (game.AbilityC
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.Exile{
-					Object:         game.TargetPermanentReference(0),
-					ExileLinkedKey: exileUntilMonarchKey,
+				Primitive: game.MovePermanent{
+					Object:        game.TargetPermanentReference(0),
+					PublishLinked: exileUntilMonarchKey,
+					Destination:   zone.Exile,
 				},
 			},
 			{

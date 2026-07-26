@@ -94,15 +94,17 @@ func TestLinkedExileReturnOnlyUsesSameSourceLink(t *testing.T) {
 
 	objA := linkedSourceObject(sourceA)
 	objA.Targets = []game.Target{game.PermanentTarget(first.ObjectID)}
-	resolveInstruction(engine, g, objA, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: game.LinkedKey(linkID),
+	resolveInstruction(engine, g, objA, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: game.LinkedKey(linkID),
+		Destination:   zone.Exile,
 	}, nil)
 	objB := linkedSourceObject(sourceB)
 	objB.Targets = []game.Target{game.PermanentTarget(second.ObjectID)}
-	resolveInstruction(engine, g, objB, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: game.LinkedKey(linkID),
+	resolveInstruction(engine, g, objB, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: game.LinkedKey(linkID),
+		Destination:   zone.Exile,
 	}, nil)
 
 	resolveInstruction(engine, g, linkedSourceObject(sourceA), game.PutOnBattlefield{
@@ -131,9 +133,10 @@ func TestDelayedLinkedExileReturnUsesOwnerControlAndEmitsEnterEvent(t *testing.T
 	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
 	key := game.LinkedKey("delayed-blink")
 
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: key,
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: key,
+		Destination:   zone.Exile,
 	}, nil)
 	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing: game.DelayedAtBeginningOfNextEndStep,
@@ -163,9 +166,10 @@ func TestDelayedLinkedExileReturnFailsClosedAfterCardLeavesExile(t *testing.T) {
 	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
 	key := game.LinkedKey("delayed-blink")
 
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: key,
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: key,
+		Destination:   zone.Exile,
 	}, nil)
 	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing: game.DelayedAtBeginningOfNextEndStep,
@@ -204,8 +208,9 @@ func TestDelayedLinkedModifyPTReturnsSameTarget(t *testing.T) {
 	}, nil)
 	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing: game.DelayedAtBeginningOfNextEndStep,
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Bounce{
-			Object: game.LinkedObjectReference(string(key)),
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MovePermanent{
+			Object:      game.LinkedObjectReference(string(key)),
+			Destination: zone.Hand,
 		}}}}.Ability(),
 	}}, nil)
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})

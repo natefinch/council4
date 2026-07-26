@@ -182,9 +182,7 @@ func newPestilentCauldron() *game.CardDef {
 						},
 					},
 					{
-						Primitive: game.Exile{
-							SourceSpell: true,
-						},
+						Primitive: game.MoveResolvingSpell{Destination: zone.Exile},
 					},
 				},
 			}.Ability()),

@@ -49,9 +49,10 @@ func TestGenerateExecutableExplicitORingReturn(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			for _, wanted := range []string{
-				"Primitive: game.Exile",
-				"Object:         game.TargetPermanentReference(0)",
-				`ExileLinkedKey: game.LinkedKey("exile-until-leaves")`,
+				"Primitive: game.MovePermanent{",
+				"Destination: zone.Exile,",
+				"Object:      game.TargetPermanentReference(0)",
+				`PublishLinked: game.LinkedKey("exile-until-leaves")`,
 				"Primitive: game.PutOnBattlefield",
 				`game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves"))`,
 				"game.EventZoneChanged",
@@ -128,8 +129,9 @@ func TestGenerateExecutableExileUntilLeavesTargetWordings(t *testing.T) {
 				t.Fatalf("diagnostics = %#v", diagnostics)
 			}
 			wanted := []string{
-				"Primitive: game.Exile",
-				`ExileLinkedKey: game.LinkedKey("exile-until-leaves")`,
+				"Primitive: game.MovePermanent{",
+				"Destination: zone.Exile,",
+				`PublishLinked: game.LinkedKey("exile-until-leaves")`,
 				"Primitive: game.PutOnBattlefield",
 				`game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves"))`,
 				"game.EventZoneChanged",
@@ -179,8 +181,9 @@ func TestGenerateExecutableSagaChapterExileUntilLeaves(t *testing.T) {
 	for _, want := range []string{
 		"ChapterAbilities: []game.ChapterAbility",
 		"Chapters: []int{1, 2, 3}",
-		"Primitive: game.Exile",
-		`ExileLinkedKey: game.LinkedKey("exile-until-leaves")`,
+		"Primitive: game.MovePermanent{",
+		"Destination: zone.Exile,",
+		`PublishLinked: game.LinkedKey("exile-until-leaves")`,
 		"nontoken creature",
 		"NonToken:",
 		"TriggeredAbilities: []game.TriggeredAbility",

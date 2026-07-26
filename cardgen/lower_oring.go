@@ -68,9 +68,10 @@ func lowerExileUntilLeavesContent(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
-			Primitive: game.Exile{
-				Object:         game.TargetPermanentReference(0),
-				ExileLinkedKey: exileUntilLeavesKey,
+			Primitive: game.MovePermanent{
+				Object:        game.TargetPermanentReference(0),
+				PublishLinked: exileUntilLeavesKey,
+				Destination:   zone.Exile,
 			},
 		}},
 	}.Ability(), true
@@ -203,12 +204,12 @@ func linkExplicitExileReturns(result *loweredFaceAbilities) {
 		return
 	}
 	if sequence, exile, ok := soleEntersTargetExile(result); ok {
-		exile.ExileLinkedKey = exileUntilLeavesKey
+		exile.PublishLinked = exileUntilLeavesKey
 		sequence[0].Primitive = exile
 		return
 	}
 	if sequence, exile, ok := soleChapterTargetExile(result); ok {
-		exile.ExileLinkedKey = exileUntilLeavesKey
+		exile.PublishLinked = exileUntilLeavesKey
 		sequence[0].Primitive = exile
 	}
 }
@@ -218,9 +219,9 @@ func linkExplicitExileReturns(result *loweredFaceAbilities) {
 // a single target permanent with no existing linked key. It returns ok=false
 // when there is not exactly one such exile, so the caller links nothing
 // ambiguous.
-func soleEntersTargetExile(result *loweredFaceAbilities) ([]game.Instruction, game.Exile, bool) {
+func soleEntersTargetExile(result *loweredFaceAbilities) ([]game.Instruction, game.MovePermanent, bool) {
 	var foundSequence []game.Instruction
-	var foundExile game.Exile
+	var foundExile game.MovePermanent
 	count := 0
 	for abilityIndex := range result.TriggeredAbilities {
 		ability := &result.TriggeredAbilities[abilityIndex]
@@ -233,8 +234,8 @@ func soleEntersTargetExile(result *loweredFaceAbilities) ([]game.Instruction, ga
 			if len(sequence) != 1 {
 				continue
 			}
-			exile, ok := sequence[0].Primitive.(game.Exile)
-			if !ok || exile.ExileLinkedKey != "" ||
+			exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
+			if !ok || exile.PublishLinked != "" ||
 				exile.Object.Kind() != game.ObjectReferenceTargetPermanent {
 				continue
 			}
@@ -244,7 +245,7 @@ func soleEntersTargetExile(result *loweredFaceAbilities) ([]game.Instruction, ga
 		}
 	}
 	if count != 1 {
-		return nil, game.Exile{}, false
+		return nil, game.MovePermanent{Destination: zone.Exile}, false
 	}
 	return foundSequence, foundExile, true
 }
@@ -255,9 +256,9 @@ func soleEntersTargetExile(result *loweredFaceAbilities) ([]game.Instruction, ga
 // chapter form. It returns ok=false when there is not exactly one such chapter
 // exile, so the caller links nothing ambiguous (The Princess Takes Flight has
 // exactly one: chapter I).
-func soleChapterTargetExile(result *loweredFaceAbilities) ([]game.Instruction, game.Exile, bool) {
+func soleChapterTargetExile(result *loweredFaceAbilities) ([]game.Instruction, game.MovePermanent, bool) {
 	var foundSequence []game.Instruction
-	var foundExile game.Exile
+	var foundExile game.MovePermanent
 	count := 0
 	for abilityIndex := range result.ChapterAbilities {
 		content := &result.ChapterAbilities[abilityIndex].Content
@@ -266,8 +267,8 @@ func soleChapterTargetExile(result *loweredFaceAbilities) ([]game.Instruction, g
 			if len(sequence) != 1 {
 				continue
 			}
-			exile, ok := sequence[0].Primitive.(game.Exile)
-			if !ok || exile.ExileLinkedKey != "" ||
+			exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
+			if !ok || exile.PublishLinked != "" ||
 				exile.Object.Kind() != game.ObjectReferenceTargetPermanent {
 				continue
 			}
@@ -277,7 +278,7 @@ func soleChapterTargetExile(result *loweredFaceAbilities) ([]game.Instruction, g
 		}
 	}
 	if count != 1 {
-		return nil, game.Exile{}, false
+		return nil, game.MovePermanent{Destination: zone.Exile}, false
 	}
 	return foundSequence, foundExile, true
 }
@@ -312,7 +313,7 @@ func contentExilesUntilLeaves(content *game.AbilityContent) bool {
 	for modeIndex := range content.Modes {
 		for instructionIndex := range content.Modes[modeIndex].Sequence {
 			primitive := content.Modes[modeIndex].Sequence[instructionIndex].Primitive
-			if exile, ok := primitive.(game.Exile); ok && exile.ExileLinkedKey == exileUntilLeavesKey {
+			if exile, ok := movePermanentTo(primitive, zone.Exile); ok && exile.PublishLinked == exileUntilLeavesKey {
 				return true
 			}
 			if exile, ok := primitive.(game.ForEachPlayer); ok && exile.LinkedKey == exileUntilLeavesKey {

@@ -41,7 +41,7 @@ func TestGenerateExileAttached(t *testing.T) {
 			if len(diags) != 0 {
 				t.Fatalf("diags = %#v", diags)
 			}
-			if !strings.Contains(source, "game.Exile{") {
+			if !strings.Contains(source, "game.MovePermanent{") {
 				t.Fatalf("missing Exile primitive:\n%s", source)
 			}
 			if !strings.Contains(source, "game.SourceAttachedPermanentReference()") {
@@ -68,7 +68,7 @@ func TestGenerateExileAttachedSacrificeCost(t *testing.T) {
 	if len(diags) != 0 {
 		t.Fatalf("diags = %#v", diags)
 	}
-	if !strings.Contains(source, "game.Exile{") ||
+	if !strings.Contains(source, "game.MovePermanent{") ||
 		!strings.Contains(source, "game.SourceAttachedPermanentReference()") {
 		t.Fatalf("missing attached exile lowering:\n%s", source)
 	}
@@ -89,7 +89,7 @@ func TestExileAttachedFailsClosed(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if strings.Contains(source, "game.Exile{") &&
+			if strings.Contains(source, "game.MovePermanent{") &&
 				strings.Contains(source, "game.SourceAttachedPermanentReference()") {
 				t.Fatalf("clause %q mislowered to attached exile:\n%s", text, source)
 			}

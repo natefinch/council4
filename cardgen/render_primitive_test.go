@@ -201,13 +201,14 @@ func TestRenderExplorePrimitive(t *testing.T) {
 
 func TestRenderPutPermanentOnLibraryPrimitive(t *testing.T) {
 	t.Parallel()
-	top, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PutPermanentOnLibrary{
-		Object: game.SourcePermanentReference(),
+	top, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MovePermanent{
+		Object:      game.SourcePermanentReference(),
+		Destination: zone.Library,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{"game.PutPermanentOnLibrary", "Object: game.SourcePermanentReference()"} {
+	for _, want := range []string{"game.MovePermanent", "Object: game.SourcePermanentReference()", "Destination: zone.Library"} {
 		if !strings.Contains(top, want) {
 			t.Fatalf("rendered put-on-library missing %q:\n%s", want, top)
 		}
@@ -215,9 +216,10 @@ func TestRenderPutPermanentOnLibraryPrimitive(t *testing.T) {
 	if strings.Contains(top, "Bottom") {
 		t.Fatalf("top placement should omit Bottom field:\n%s", top)
 	}
-	bottom, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.PutPermanentOnLibrary{
-		Object: game.SourcePermanentReference(),
-		Bottom: true,
+	bottom, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MovePermanent{
+		Object:        game.SourcePermanentReference(),
+		LibraryBottom: true,
+		Destination:   zone.Library,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -677,17 +679,18 @@ func TestRenderDelayedBoundedDrawPrimitive(t *testing.T) {
 
 func TestRenderLinkedExilePrimitive(t *testing.T) {
 	t.Parallel()
-	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.Exile{
-		Object:         game.TargetPermanentReference(1),
-		ExileLinkedKey: game.LinkedKey("delayed-blink-1"),
+	rendered, err := (Renderer{}).renderPrimitive(newRenderCtx(), game.MovePermanent{
+		Object:        game.TargetPermanentReference(1),
+		PublishLinked: game.LinkedKey("delayed-blink-1"),
+		Destination:   zone.Exile,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"game.Exile",
+		"game.MovePermanent",
 		"game.TargetPermanentReference(1)",
-		`ExileLinkedKey: game.LinkedKey("delayed-blink-1")`,
+		`PublishLinked: game.LinkedKey("delayed-blink-1")`,
 	} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("rendered linked exile missing %q:\n%s", want, rendered)

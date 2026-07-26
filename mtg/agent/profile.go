@@ -245,9 +245,8 @@ func tagsForCard(def *game.CardDef) map[CardTag]bool {
 
 func modeHasRemoval(kinds map[game.PrimitiveKind]bool) bool {
 	return kinds[game.PrimitiveDestroy] ||
-		kinds[game.PrimitiveExile] ||
+		kinds[game.PrimitiveMovePermanent] ||
 		kinds[game.PrimitiveDamage] ||
-		kinds[game.PrimitiveBounce] ||
 		kinds[game.PrimitiveFight]
 }
 

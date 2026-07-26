@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerRaiseThePalisadeChosenTypeBounce(t *testing.T) {
@@ -27,7 +28,7 @@ func TestLowerRaiseThePalisadeChosenTypeBounce(t *testing.T) {
 		choose.PublishChoice != game.SpellChosenTypeChoiceKey {
 		t.Fatalf("choice = %#v", mode.Sequence[0].Primitive)
 	}
-	bounce, ok := mode.Sequence[1].Primitive.(game.Bounce)
+	bounce, ok := movePermanentTo(mode.Sequence[1].Primitive, zone.Hand)
 	if !ok ||
 		!bounce.Group.Valid() ||
 		bounce.Group.Selection().SubtypeChoice != game.SubtypeChoiceResolutionExcluded {

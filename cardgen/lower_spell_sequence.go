@@ -2220,7 +2220,7 @@ func lowerRemovalManifestSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	var removalPrimitive game.Primitive
 	switch removal.Kind {
 	case compiler.EffectExile:
-		removalPrimitive = game.Exile{Object: removed}
+		removalPrimitive = game.MovePermanent{Object: removed, Destination: zone.Exile}
 	case compiler.EffectDestroy:
 		removalPrimitive = game.Destroy{Object: removed}
 	default:
@@ -2723,9 +2723,10 @@ func lowerGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	// group across the exile and return.
 	if targetCardinalityIsUnbounded(target) {
 		const key = game.LinkedKey("group-blink")
-		exileInstr := game.Instruction{Primitive: game.Exile{
-			Object:         game.AllTargetPermanentsReference(0),
-			ExileLinkedKey: key,
+		exileInstr := game.Instruction{Primitive: game.MovePermanent{
+			Object:        game.AllTargetPermanentsReference(0),
+			PublishLinked: key,
+			Destination:   zone.Exile,
 		}}
 		putInstr := game.Instruction{Primitive: makePut(key)}
 		var sequence []game.Instruction
@@ -2747,9 +2748,10 @@ func lowerGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 	for i := range targetSpec.MaxTargets {
 		key := game.LinkedKey(fmt.Sprintf("group-blink-%d", i))
 		keys[i] = key
-		sequence = append(sequence, game.Instruction{Primitive: game.Exile{
-			Object:         game.TargetPermanentReference(i),
-			ExileLinkedKey: key,
+		sequence = append(sequence, game.Instruction{Primitive: game.MovePermanent{
+			Object:        game.TargetPermanentReference(i),
+			PublishLinked: key,
+			Destination:   zone.Exile,
 		}})
 	}
 	puts := make([]game.Instruction, 0, targetSpec.MaxTargets)
@@ -2846,9 +2848,10 @@ func lowerMassGroupBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	const key = game.LinkedKey("group-blink")
-	exileInstr := game.Instruction{Primitive: game.Exile{
-		Group:          game.BattlefieldGroup(selection),
-		ExileLinkedKey: key,
+	exileInstr := game.Instruction{Primitive: game.MovePermanent{
+		Group:         game.BattlefieldGroup(selection),
+		PublishLinked: key,
+		Destination:   zone.Exile,
 	}}
 	put := game.PutOnBattlefield{
 		Source:        game.LinkedBattlefieldSource(key),
@@ -3643,8 +3646,9 @@ func lowerDelayedTargetReturn(
 	modify.PublishLinked = key
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing: game.DelayedAtBeginningOfNextEndStep,
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Bounce{
-			Object: object,
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MovePermanent{
+			Object:      object,
+			Destination: zone.Hand,
 		}}}}.Ability(),
 	}}
 	return modify, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
@@ -3703,8 +3707,9 @@ func lowerDelayedCreatedTokensExile(
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing:              effect.DelayedTiming,
 		CapturedObjectGroup: opt.Val(game.LinkedObjectReference(string(key))),
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Exile{
-			Group: game.CapturedObjectsGroup(),
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MovePermanent{
+			Group:       game.CapturedObjectsGroup(),
+			Destination: zone.Exile,
 		}}}}.Ability(),
 	}}
 	return create, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
@@ -4136,7 +4141,7 @@ func priorClauseDestroys(sequence []game.Instruction, effectIndex int, object ga
 // has left the battlefield so its last-known mana value is available. It fails
 // closed for group exiles and for an exile of a different object.
 func priorClauseExiles(sequence []game.Instruction, effectIndex int, object game.ObjectReference) bool {
-	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[effectIndex-1].Primitive, zone.Exile)
 	if !ok || exile.Group.Valid() {
 		return false
 	}
@@ -4313,11 +4318,11 @@ func lifeRiderAmountObject(
 		if amountRef.PriorInstruction != effectIndex-1 {
 			return lifeRiderAmountLowering{}, false
 		}
-		exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+		exile, ok := movePermanentTo(sequence[effectIndex-1].Primitive, zone.Exile)
 		if ok {
 			if exile.Group.Valid() ||
 				exile.Object.Kind() != game.ObjectReferenceTargetPermanent ||
-				exile.ExileLinkedKey != "" {
+				exile.PublishLinked != "" {
 				return lifeRiderAmountLowering{}, false
 			}
 			key := game.LinkedKey(fmt.Sprintf("life-rider-%d", effectIndex))
@@ -4328,7 +4333,7 @@ func lifeRiderAmountObject(
 			if !ok {
 				return lifeRiderAmountLowering{}, false
 			}
-			exile.ExileLinkedKey = key
+			exile.PublishLinked = key
 			return lifeRiderAmountLowering{object: obj, priorPrimitive: exile}, true
 		}
 		put, ok := sequence[effectIndex-1].Primitive.(game.PutOnBattlefield)
@@ -4555,8 +4560,9 @@ func lowerDelayedTargetExile(
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing:         game.DelayedAtBeginningOfNextEndStep,
 		CapturedObject: opt.Val(object),
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Exile{
-			Object: game.CapturedObjectReference(),
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MovePermanent{
+			Object:      game.CapturedObjectReference(),
+			Destination: zone.Exile,
 		}}}}.Ability(),
 	}}
 	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
@@ -5050,7 +5056,7 @@ func lowerDelayedBlinkReturn(
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
-) (game.Exile, game.AbilityContent, bool) {
+) (game.MovePermanent, game.AbilityContent, bool) {
 	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
 	// built at lowerOrderedEffectSequence and threaded through
 	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
@@ -5070,36 +5076,36 @@ func lowerDelayedBlinkReturn(
 		returnEffect.EntersColorChoice ||
 		returnEffect.EntersTypeChoice ||
 		returnEffect.EntersWithCounters {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1) {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	entryCounters, ok := blinkEntryCounters(returnEffect)
 	if !ok {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	// References validated — clear before fail-closed check.
 	consumed := ctx
 	consumed.content.References = nil
 	if consumed.content.Unconsumed() {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
-	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[effectIndex-1].Primitive, zone.Exile)
 	if !ok ||
 		exile.Group.Valid() ||
 		exile.Object.Kind() != game.ObjectReferenceTargetPermanent ||
-		exile.ExileLinkedKey != "" {
-		return game.Exile{}, game.AbilityContent{}, false
+		exile.PublishLinked != "" {
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	key := game.LinkedKey(fmt.Sprintf("delayed-blink-%d", effectIndex))
 	if _, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
 		PriorInstruction: effectIndex - 1,
 		PriorLinkedKey:   key,
 	}); !ok {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
-	exile.ExileLinkedKey = key
+	exile.PublishLinked = key
 	put := game.PutOnBattlefield{
 		Source:            game.CardBattlefieldSource(game.CapturedCardReference()),
 		EntryTapped:       returnEffect.EntersTapped,
@@ -5169,10 +5175,10 @@ func lowerOptionalBlinkFallbackReturn(
 	}
 	foundExile := false
 	for i := range sequence[:len(sequence)-1] {
-		exile, exileOK := sequence[i].Primitive.(game.Exile)
+		exile, exileOK := movePermanentTo(sequence[i].Primitive, zone.Exile)
 		if !exileOK ||
 			exile.Object != game.TargetPermanentReference(0) ||
-			exile.ExileLinkedKey != key {
+			exile.PublishLinked != key {
 			continue
 		}
 		if foundExile {
@@ -5379,7 +5385,7 @@ func lowerSelfBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	key := game.LinkedKey("self-blink")
-	exile := game.Exile{Object: game.SourcePermanentReference(), ExileLinkedKey: key}
+	exile := game.MovePermanent{Object: game.SourcePermanentReference(), PublishLinked: key, Destination: zone.Exile}
 	put := selfBlinkPutOnBattlefield(key, returnEffect, entryCounters)
 	return game.Mode{Sequence: []game.Instruction{
 		{Primitive: exile},
@@ -5404,7 +5410,7 @@ func lowerImmediateBlinkReturn(
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
-) (game.Exile, game.AbilityContent, bool) {
+) (game.MovePermanent, game.AbilityContent, bool) {
 	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
 	// built at lowerOrderedEffectSequence and threaded through
 	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
@@ -5428,35 +5434,35 @@ func lowerImmediateBlinkReturn(
 		returnEffect.EntersColorChoice ||
 		returnEffect.EntersTypeChoice ||
 		returnEffect.EntersWithCounters {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	if !referencesBindTo(ctx.content.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1) {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	entryCounters, ok := blinkEntryCounters(returnEffect)
 	if !ok {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	consumed := ctx
 	consumed.content.References = nil
 	if consumed.content.Unconsumed() {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
-	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[effectIndex-1].Primitive, zone.Exile)
 	if !ok ||
 		exile.Group.Valid() ||
 		exile.Object.Kind() != game.ObjectReferenceTargetPermanent ||
-		exile.ExileLinkedKey != "" {
-		return game.Exile{}, game.AbilityContent{}, false
+		exile.PublishLinked != "" {
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	key := game.LinkedKey(fmt.Sprintf("blink-%d", effectIndex))
 	if _, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
 		PriorInstruction: effectIndex - 1,
 		PriorLinkedKey:   key,
 	}); !ok {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
-	exile.ExileLinkedKey = key
+	exile.PublishLinked = key
 	put := game.PutOnBattlefield{
 		Source:           game.LinkedBattlefieldSource(key),
 		EntryTapped:      returnEffect.EntersTapped,

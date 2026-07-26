@@ -3296,7 +3296,7 @@ func lowerFixedBounceSpell(
 		if ok {
 			return game.Mode{
 				Sequence: []game.Instruction{{
-					Primitive: game.Bounce{Object: object},
+					Primitive: game.MovePermanent{Object: object, Destination: zone.Hand},
 				}},
 			}.Ability(), nil
 		}
@@ -3334,8 +3334,9 @@ func lowerFixedBounceSpell(
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{
 			{
-				Primitive: game.Bounce{
-					Object: object,
+				Primitive: game.MovePermanent{
+					Object:      object,
+					Destination: zone.Hand,
 				},
 			},
 		},
@@ -3373,7 +3374,7 @@ func lowerSpellBounce(ctx contentCtx) (game.AbilityContent, bool) {
 	instructions := make([]game.Instruction, 0, spec.MaxTargets)
 	for i := 0; i < spec.MaxTargets; i++ {
 		instructions = append(instructions, game.Instruction{
-			Primitive: game.Bounce{Object: game.TargetObjectReference(i)},
+			Primitive: game.MovePermanent{Object: game.TargetObjectReference(i), Destination: zone.Hand},
 		})
 	}
 	return game.Mode{
@@ -3501,7 +3502,7 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	return multiTargetPermanentMode(target, func(object game.ObjectReference) game.Primitive {
-		return game.Bounce{Object: object}
+		return game.MovePermanent{Object: object, Destination: zone.Hand}
 	})
 }
 
@@ -3539,7 +3540,7 @@ func lowerDualTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		}
 		specs = append(specs, spec)
 		sequence = append(sequence, game.Instruction{
-			Primitive: game.Bounce{Object: game.TargetPermanentReference(i)},
+			Primitive: game.MovePermanent{Object: game.TargetPermanentReference(i), Destination: zone.Hand},
 		})
 	}
 	return game.Mode{Targets: specs, Sequence: sequence}.Ability(), true
@@ -3579,8 +3580,8 @@ func lowerSelfAndTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{
 		Targets: []game.TargetSpec{spec},
 		Sequence: []game.Instruction{
-			{Primitive: game.Bounce{Object: source}},
-			{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+			{Primitive: game.MovePermanent{Object: source, Destination: zone.Hand}},
+			{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
 		},
 	}.Ability(), true
 }
@@ -3643,10 +3644,11 @@ func lowerControlledBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	selection.ExcludeSource = effect.Selector.Other || effect.Selector.Another
 	return game.Mode{
 		Sequence: []game.Instruction{{
-			Primitive: game.Bounce{
+			Primitive: game.MovePermanent{
 				ControlledChoice: true,
 				Amount:           game.Fixed(1),
 				Group:            game.BattlefieldGroup(selection),
+				Destination:      zone.Hand,
 			},
 		}},
 	}.Ability(), true
@@ -3693,10 +3695,11 @@ func lowerControlledCountBounceSpell(ctx contentCtx) (game.AbilityContent, bool)
 	selection.ExcludeSource = effect.Selector.Other || effect.Selector.Another
 	return game.Mode{
 		Sequence: []game.Instruction{{
-			Primitive: game.Bounce{
+			Primitive: game.MovePermanent{
 				ControlledChoice: true,
 				Amount:           game.Fixed(count),
 				Group:            game.BattlefieldGroup(selection),
+				Destination:      zone.Hand,
 			},
 		}},
 	}.Ability(), true

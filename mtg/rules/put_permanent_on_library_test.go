@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestPutPermanentOnLibraryTopMovesSourceToTop verifies the PutPermanentOnLibrary
@@ -28,7 +29,7 @@ func TestPutPermanentOnLibraryTopMovesSourceToTop(t *testing.T) {
 		Controller: game.Player1,
 	}
 	log := TurnLog{}
-	instr := game.Instruction{Primitive: game.PutPermanentOnLibrary{Object: game.SourcePermanentReference()}}
+	instr := game.Instruction{Primitive: game.MovePermanent{Object: game.SourcePermanentReference(), Destination: zone.Library}}
 	engine.resolveInstructionWithChoices(g, obj, &instr, [game.NumPlayers]PlayerAgent{}, &log)
 
 	if _, ok := permanentByObjectID(g, permanent.ObjectID); ok {
@@ -59,7 +60,7 @@ func TestPutPermanentOnLibraryBottomMovesSourceToBottom(t *testing.T) {
 		Controller: game.Player1,
 	}
 	log := TurnLog{}
-	instr := game.Instruction{Primitive: game.PutPermanentOnLibrary{Object: game.SourcePermanentReference(), Bottom: true}}
+	instr := game.Instruction{Primitive: game.MovePermanent{Object: game.SourcePermanentReference(), LibraryBottom: true, Destination: zone.Library}}
 	engine.resolveInstructionWithChoices(g, obj, &instr, [game.NumPlayers]PlayerAgent{}, &log)
 
 	if _, ok := permanentByObjectID(g, permanent.ObjectID); ok {

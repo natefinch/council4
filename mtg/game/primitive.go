@@ -42,8 +42,8 @@ const (
 	PrimitiveChoose
 	PrimitiveGainLife
 	PrimitiveLoseLife
-	PrimitiveExile
-	PrimitiveBounce
+	PrimitiveMovePermanent
+	PrimitiveMoveResolvingSpell
 	PrimitiveSacrifice
 	PrimitiveUntap
 	PrimitiveCounterObject
@@ -77,7 +77,6 @@ const (
 	PrimitivePlayerLosesGame
 	PrimitiveAttach
 	PrimitiveMoveCommander
-	PrimitivePutPermanentOnLibrary
 	PrimitiveChooseNewTargets
 	PrimitiveGroupSourceDamage
 	PrimitiveMassReturnFromGraveyard
@@ -89,7 +88,6 @@ const (
 	PrimitiveBecomeCopy
 	PrimitiveAmass
 	PrimitiveRenown
-	PrimitiveShuffleSpellIntoLibrary
 	PrimitiveExileTopOfLibrary
 	PrimitivePutHandOnLibraryThenDraw
 	PrimitiveDiscardThenDraw
@@ -967,22 +965,6 @@ type ShufflePermanentIntoLibrary struct {
 	Object ObjectReference
 }
 
-// ShuffleSpellIntoLibrary shuffles the resolving source spell into its owner's
-// library instead of putting it into the graveyard. It backs the "Shuffle this
-// card into its owner's library." resolution tail (Green Sun's Zenith, the
-// Beacon cycle, Blue Sun's Zenith). Like Exile with SourceSpell, it has no
-// referent of its own: it always acts on the spell currently resolving.
-type ShuffleSpellIntoLibrary struct{}
-
-// PutPermanentOnLibrary moves the referenced permanent from the battlefield to
-// the top of its owner's library, or to the bottom when Bottom is set. It backs
-// "put this [permanent] on top of its owner's library" (Sensei's Divining Top)
-// and the corresponding bottom wording, without shuffling.
-type PutPermanentOnLibrary struct {
-	Object ObjectReference
-	Bottom bool
-}
-
 // PutLinkedExiledCardsInLibrary moves every card a sibling clause exiled under
 // LinkedKey from exile to its owner's library, to the bottom when Bottom is set.
 // RandomOrder randomizes each owner's cards before putting them on the bottom.
@@ -1319,16 +1301,6 @@ type PlayerWinsGame struct {
 	Player PlayerReference
 }
 
-// Exile exiles one referenced permanent, every permanent in a referenced group,
-// or the resolving source spell.
-// ExileLinkedKey remembers the exiled object for later "exile it, then return it" patterns.
-type Exile struct {
-	Object         ObjectReference
-	Group          GroupReference
-	SourceSpell    bool
-	ExileLinkedKey LinkedKey
-}
-
 // ExileEntireHand exiles every card in Player's hand at once with no choice,
 // modeling the involuntary whole-hand wording "exile all cards from your hand."
 // (Wormfang Behemoth). Each exiled card is remembered under LinkedKey, keyed by
@@ -1572,22 +1544,6 @@ type MassReturnFromGraveyard struct {
 // or artifact); it never narrows by controller.
 type MassReanimationExchange struct {
 	Selection Selection
-}
-
-// Bounce returns one referenced permanent or every permanent in a referenced
-// group to hand. When ControlledChoice is set, the resolving controller chooses
-// Amount permanents from among the permanents matched by Group (its candidate
-// pool, e.g. "permanents you control") and returns each to its owner's hand
-// ("Return a creature you control to its owner's hand.").
-type Bounce struct {
-	Object ObjectReference
-	Group  GroupReference
-
-	// ControlledChoice has the resolving controller choose Amount permanents from
-	// among those matched by Group. Object must be unset and Group set when it is
-	// true; otherwise the whole Group (or single Object) is bounced.
-	ControlledChoice bool
-	Amount           Quantity
 }
 
 // MoveCard moves cards between two non-battlefield zones. It has two forms,

@@ -23,9 +23,10 @@ func TestValidateCardDefAllowsCrossAbilityLinkedExileReturn(t *testing.T) {
 				}},
 				Content: Mode{
 					Targets: []TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPermanent}},
-					Sequence: []Instruction{{Primitive: Exile{
-						Object:         TargetPermanentReference(0),
-						ExileLinkedKey: key,
+					Sequence: []Instruction{{Primitive: MovePermanent{
+						Object:        TargetPermanentReference(0),
+						PublishLinked: key,
+						Destination:   zone.Exile,
 					}}},
 				}.Ability(),
 			},
@@ -111,9 +112,10 @@ func TestValidateCardDefAllowsDelayedTriggerUsingEnclosingLinkedObject(t *testin
 				Allow:      TargetAllowPermanent,
 			}},
 			Sequence: []Instruction{
-				{Primitive: Exile{
-					Object:         TargetPermanentReference(0),
-					ExileLinkedKey: key,
+				{Primitive: MovePermanent{
+					Object:        TargetPermanentReference(0),
+					PublishLinked: key,
+					Destination:   zone.Exile,
 				}},
 				{Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 					Timing: DelayedAtBeginningOfNextEndStep,

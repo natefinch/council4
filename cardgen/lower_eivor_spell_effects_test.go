@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -169,12 +170,12 @@ func TestLowerSagaSplitExileReturn(t *testing.T) {
 	if len(face.ChapterAbilities) != 3 {
 		t.Fatalf("chapter abilities = %d, want 3", len(face.ChapterAbilities))
 	}
-	exile, ok := face.ChapterAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(face.ChapterAbilities[0].Content.Modes[0].Sequence[0].Primitive, zone.Exile)
 	if !ok {
-		t.Fatalf("chapter I primitive = %T, want game.Exile", face.ChapterAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+		t.Fatalf("chapter I primitive = %T, want an exile move", face.ChapterAbilities[0].Content.Modes[0].Sequence[0].Primitive)
 	}
-	if exile.ExileLinkedKey != exileUntilLeavesKey {
-		t.Fatalf("chapter I exile key = %q, want %q", exile.ExileLinkedKey, exileUntilLeavesKey)
+	if exile.PublishLinked != exileUntilLeavesKey {
+		t.Fatalf("chapter I exile key = %q, want %q", exile.PublishLinked, exileUntilLeavesKey)
 	}
 	put, ok := face.ChapterAbilities[2].Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
 	if !ok {

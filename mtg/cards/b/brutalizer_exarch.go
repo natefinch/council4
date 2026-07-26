@@ -77,9 +77,10 @@ func newBrutalizerExarch() *game.CardDef {
 								},
 								Sequence: []game.Instruction{
 									{
-										Primitive: game.PutPermanentOnLibrary{
-											Object: game.TargetPermanentReference(0),
-											Bottom: true,
+										Primitive: game.MovePermanent{
+											Object:        game.TargetPermanentReference(0),
+											LibraryBottom: true,
+											Destination:   zone.Library,
 										},
 									},
 								},

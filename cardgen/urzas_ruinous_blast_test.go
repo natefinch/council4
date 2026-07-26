@@ -3,8 +3,8 @@ package cardgen
 import (
 	"testing"
 
-	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerUrzasRuinousBlast(t *testing.T) {
@@ -16,7 +16,7 @@ func TestLowerUrzasRuinousBlast(t *testing.T) {
 		ManaCost:   "{4}{W}",
 		OracleText: "(You may cast a legendary sorcery only if you control a legendary creature or planeswalker.)\nExile all nonland permanents that aren't legendary.",
 	})
-	exile, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(face.SpellAbility.Val.Modes[0].Sequence[0].Primitive, zone.Exile)
 	if !ok || !exile.Group.Valid() {
 		t.Fatalf("exile = %#v", face.SpellAbility.Val)
 	}

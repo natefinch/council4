@@ -137,9 +137,10 @@ func lowerPutSourceOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.Mode{Sequence: []game.Instruction{instruction}}.Ability(), true
 	case zone.None:
 		return game.Mode{Sequence: []game.Instruction{{
-			Primitive: game.PutPermanentOnLibrary{
-				Object: game.SourcePermanentReference(),
-				Bottom: bottom,
+			Primitive: game.MovePermanent{
+				Object:        game.SourcePermanentReference(),
+				LibraryBottom: bottom,
+				Destination:   zone.Library,
 			},
 		}}}.Ability(), true
 	default:
@@ -211,9 +212,10 @@ func lowerPutTargetOnLibrary(ctx contentCtx) (game.AbilityContent, bool) {
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
-			Primitive: game.PutPermanentOnLibrary{
-				Object: game.TargetPermanentReference(0),
-				Bottom: bottom,
+			Primitive: game.MovePermanent{
+				Object:        game.TargetPermanentReference(0),
+				LibraryBottom: bottom,
+				Destination:   zone.Library,
 			},
 		}},
 	}.Ability(), true

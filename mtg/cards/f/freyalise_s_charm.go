@@ -39,8 +39,9 @@ func newFreyaliseSCharm() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Bounce{
-									Object: game.SourcePermanentReference(),
+								Primitive: game.MovePermanent{
+									Object:      game.SourcePermanentReference(),
+									Destination: zone.Hand,
 								},
 							},
 						},

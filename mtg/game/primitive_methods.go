@@ -230,11 +230,11 @@ func (RepeatProcess) Kind() PrimitiveKind { return PrimitiveRepeatProcess }
 // Kind implements Primitive for CopyStackObject.
 func (CopyStackObject) Kind() PrimitiveKind { return PrimitiveCopyStackObject }
 
-// Kind implements Primitive for Exile.
-func (Exile) Kind() PrimitiveKind { return PrimitiveExile }
+// Kind implements Primitive for MovePermanent.
+func (MovePermanent) Kind() PrimitiveKind { return PrimitiveMovePermanent }
 
-// Kind implements Primitive for Bounce.
-func (Bounce) Kind() PrimitiveKind { return PrimitiveBounce }
+// Kind implements Primitive for MoveResolvingSpell.
+func (MoveResolvingSpell) Kind() PrimitiveKind { return PrimitiveMoveResolvingSpell }
 
 // Kind implements Primitive for Sacrifice.
 func (Sacrifice) Kind() PrimitiveKind { return PrimitiveSacrifice }
@@ -365,9 +365,6 @@ func (BecomeSaddled) Kind() PrimitiveKind { return PrimitiveBecomeSaddled }
 // Kind implements Primitive for RecordEchoObligation.
 func (RecordEchoObligation) Kind() PrimitiveKind { return PrimitiveRecordEchoObligation }
 
-// Kind implements Primitive for ShuffleSpellIntoLibrary.
-func (ShuffleSpellIntoLibrary) Kind() PrimitiveKind { return PrimitiveShuffleSpellIntoLibrary }
-
 // Kind implements Primitive for SkipStep.
 func (SkipStep) Kind() PrimitiveKind { return PrimitiveSkipStep }
 
@@ -405,9 +402,6 @@ func (GroupSourceDamage) Kind() PrimitiveKind { return PrimitiveGroupSourceDamag
 
 // Kind implements Primitive for GroupSelfPowerDamage.
 func (GroupSelfPowerDamage) Kind() PrimitiveKind { return PrimitiveGroupSelfPowerDamage }
-
-// Kind implements Primitive for PutPermanentOnLibrary.
-func (PutPermanentOnLibrary) Kind() PrimitiveKind { return PrimitivePutPermanentOnLibrary }
 
 // Kind implements Primitive for PutLinkedExiledCardsInLibrary.
 func (PutLinkedExiledCardsInLibrary) Kind() PrimitiveKind {
@@ -521,8 +515,8 @@ func (PlayerWinsGame) isPrimitive()                       {}
 func (PunisherEachLoseLife) isPrimitive()                 {}
 func (RepeatProcess) isPrimitive()                        {}
 func (CopyStackObject) isPrimitive()                      {}
-func (Exile) isPrimitive()                                {}
-func (Bounce) isPrimitive()                               {}
+func (MovePermanent) isPrimitive()                        {}
+func (MoveResolvingSpell) isPrimitive()                   {}
 func (Sacrifice) isPrimitive()                            {}
 func (SacrificePermanents) isPrimitive()                  {}
 func (KeepOnePerType) isPrimitive()                       {}
@@ -564,7 +558,6 @@ func (Bolster) isPrimitive()                              {}
 func (Connive) isPrimitive()                              {}
 func (BecomeSaddled) isPrimitive()                        {}
 func (RecordEchoObligation) isPrimitive()                 {}
-func (ShuffleSpellIntoLibrary) isPrimitive()              {}
 func (SkipStep) isPrimitive()                             {}
 func (CreateEmblem) isPrimitive()                         {}
 func (CreateDelayedTrigger) isPrimitive()                 {}
@@ -582,7 +575,6 @@ func (HideawayExile) isPrimitive()                        {}
 func (PlayHideawayCard) isPrimitive()                     {}
 func (ChooseNewTargets) isPrimitive()                     {}
 func (ChangeStackObjectController) isPrimitive()          {}
-func (PutPermanentOnLibrary) isPrimitive()                {}
 func (PutLinkedExiledCardsInLibrary) isPrimitive()        {}
 func (Attach) isPrimitive()                               {}
 func (MassReturnFromGraveyard) isPrimitive()              {}
@@ -759,9 +751,13 @@ func (ExchangeLifeTotalWithSourceCharacteristic) instructionRefs() primitiveRefs
 	return primitiveRefs{}
 }
 
-func (p Exile) instructionRefs() primitiveRefs {
-	return primitiveRefs{publishesLinked: p.ExileLinkedKey}
+func (p MovePermanent) instructionRefs() primitiveRefs {
+	refs := objectReferenceRefs(p.Object)
+	refs.publishesLinked = p.PublishLinked
+	return refs
 }
+
+func (MoveResolvingSpell) instructionRefs() primitiveRefs { return primitiveRefs{} }
 
 func (p ExileEntireHand) instructionRefs() primitiveRefs {
 	return primitiveRefs{publishesLinked: p.LinkedKey}
@@ -812,7 +808,6 @@ func (p ChooseFromZone) instructionRefs() primitiveRefs {
 	refs.publishesLinked = p.Riders.PublishLinked
 	return refs
 }
-func (p Bounce) instructionRefs() primitiveRefs  { return objectReferenceRefs(p.Object) }
 func (Sacrifice) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p SacrificePermanents) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
@@ -895,22 +890,21 @@ func (p Goad) instructionRefs() primitiveRefs {
 	return primitiveRefs{}
 }
 
-func (p RemoveCounter) instructionRefs() primitiveRefs         { return quantityRefs(p.Amount) }
-func (Transform) instructionRefs() primitiveRefs               { return primitiveRefs{} }
-func (TurnFaceDown) instructionRefs() primitiveRefs            { return primitiveRefs{} }
-func (PhaseOut) instructionRefs() primitiveRefs                { return primitiveRefs{} }
-func (Regenerate) instructionRefs() primitiveRefs              { return primitiveRefs{} }
-func (BecomeCopy) instructionRefs() primitiveRefs              { return primitiveRefs{} }
-func (p Amass) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
-func (p Incubate) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
-func (p Renown) instructionRefs() primitiveRefs                { return quantityRefs(p.Amount) }
-func (p Adapt) instructionRefs() primitiveRefs                 { return quantityRefs(p.Amount) }
-func (p Connive) instructionRefs() primitiveRefs               { return quantityRefs(p.Amount) }
-func (BecomeSaddled) instructionRefs() primitiveRefs           { return primitiveRefs{} }
-func (RecordEchoObligation) instructionRefs() primitiveRefs    { return primitiveRefs{} }
-func (ShuffleSpellIntoLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (SkipStep) instructionRefs() primitiveRefs                { return primitiveRefs{} }
-func (CreateEmblem) instructionRefs() primitiveRefs            { return primitiveRefs{} }
+func (p RemoveCounter) instructionRefs() primitiveRefs      { return quantityRefs(p.Amount) }
+func (Transform) instructionRefs() primitiveRefs            { return primitiveRefs{} }
+func (TurnFaceDown) instructionRefs() primitiveRefs         { return primitiveRefs{} }
+func (PhaseOut) instructionRefs() primitiveRefs             { return primitiveRefs{} }
+func (Regenerate) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (BecomeCopy) instructionRefs() primitiveRefs           { return primitiveRefs{} }
+func (p Amass) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
+func (p Incubate) instructionRefs() primitiveRefs           { return quantityRefs(p.Amount) }
+func (p Renown) instructionRefs() primitiveRefs             { return quantityRefs(p.Amount) }
+func (p Adapt) instructionRefs() primitiveRefs              { return quantityRefs(p.Amount) }
+func (p Connive) instructionRefs() primitiveRefs            { return quantityRefs(p.Amount) }
+func (BecomeSaddled) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (RecordEchoObligation) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (SkipStep) instructionRefs() primitiveRefs             { return primitiveRefs{} }
+func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (p Bolster) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked
@@ -978,10 +972,6 @@ func (p HideawayExile) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
 func (PlayHideawayCard) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p PutPermanentOnLibrary) instructionRefs() primitiveRefs {
-	return objectReferenceRefs(p.Object)
-}
-
 func (p PutLinkedExiledCardsInLibrary) instructionRefs() primitiveRefs {
 	if p.LinkedKey == "" {
 		return primitiveRefs{}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func estridsInvocationCard() *ScryfallCard {
@@ -65,14 +66,14 @@ func TestLowerEstridsInvocationEntersAsCopyGrantedAbility(t *testing.T) {
 	if len(sequence) != 2 {
 		t.Fatalf("granted ability sequence = %d instructions, want 2", len(sequence))
 	}
-	exile, ok := sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
 	if !ok {
-		t.Fatalf("sequence[0] = %T, want game.Exile", sequence[0].Primitive)
+		t.Fatalf("sequence[0] = %T, want an exile move", sequence[0].Primitive)
 	}
 	if !sequence[0].Optional {
 		t.Fatal("self-exile must be optional (\"you may exile\")")
 	}
-	if exile.ExileLinkedKey == "" {
+	if exile.PublishLinked == "" {
 		t.Fatal("self-exile must carry a linked key so the return can find the same card")
 	}
 	put, ok := sequence[1].Primitive.(game.PutOnBattlefield)
@@ -83,8 +84,8 @@ func TestLowerEstridsInvocationEntersAsCopyGrantedAbility(t *testing.T) {
 	if !ok {
 		t.Fatal("return source is not the linked exiled card (must return under owner's control)")
 	}
-	if linkedKey != exile.ExileLinkedKey {
-		t.Fatalf("return linked key = %q, want the exile's key %q", linkedKey, exile.ExileLinkedKey)
+	if linkedKey != exile.PublishLinked {
+		t.Fatalf("return linked key = %q, want the exile's key %q", linkedKey, exile.PublishLinked)
 	}
 }
 
@@ -107,7 +108,7 @@ func TestGenerateExecutableEstridsInvocation(t *testing.T) {
 		"game.ControllerYou",
 		"game.TriggeredAbility{",
 		"game.StepUpkeep",
-		"game.Exile{",
+		"game.MovePermanent{",
 		"game.PutOnBattlefield{",
 		"game.LinkedBattlefieldSource(",
 	} {
@@ -147,11 +148,11 @@ func TestLowerImmediateSelfBlinkReturnStandalone(t *testing.T) {
 	if len(sequence) != 2 {
 		t.Fatalf("sequence = %d instructions, want 2", len(sequence))
 	}
-	exile, ok := sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
 	if !ok {
-		t.Fatalf("sequence[0] = %T, want game.Exile", sequence[0].Primitive)
+		t.Fatalf("sequence[0] = %T, want an exile move", sequence[0].Primitive)
 	}
-	if !sequence[0].Optional || exile.ExileLinkedKey == "" {
+	if !sequence[0].Optional || exile.PublishLinked == "" {
 		t.Fatalf("self-exile must be optional and linked, got %#v", sequence[0])
 	}
 	put, ok := sequence[1].Primitive.(game.PutOnBattlefield)
@@ -159,7 +160,7 @@ func TestLowerImmediateSelfBlinkReturnStandalone(t *testing.T) {
 		t.Fatalf("sequence[1] = %T, want game.PutOnBattlefield", sequence[1].Primitive)
 	}
 	linkedKey, ok := put.Source.LinkedKey()
-	if !ok || linkedKey != exile.ExileLinkedKey {
-		t.Fatalf("return must reuse the exile's linked key, got %#v (exile key %q)", put.Source, exile.ExileLinkedKey)
+	if !ok || linkedKey != exile.PublishLinked {
+		t.Fatalf("return must reuse the exile's linked key, got %#v (exile key %q)", put.Source, exile.PublishLinked)
 	}
 }

@@ -437,9 +437,9 @@ func TestLowerEventPermanentExileItInTrigger(t *testing.T) {
 		t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
 	}
 	mode := face.TriggeredAbilities[0].Content.Modes[0]
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
 	if !ok {
-		t.Fatalf("primitive = %T, want game.Exile", mode.Sequence[0].Primitive)
+		t.Fatalf("primitive = %T, want an exile move", mode.Sequence[0].Primitive)
 	}
 	if exile.Object != game.EventPermanentReference() {
 		t.Errorf("object = %v, want EventPermanentReference", exile.Object)
@@ -510,9 +510,9 @@ func TestLowerEventPermanentReturnToHandInTrigger(t *testing.T) {
 				t.Fatalf("got %d triggered abilities, want 1", len(face.TriggeredAbilities))
 			}
 			mode := face.TriggeredAbilities[0].Content.Modes[0]
-			bounce, ok := mode.Sequence[0].Primitive.(game.Bounce)
+			bounce, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Hand)
 			if !ok {
-				t.Fatalf("primitive = %T, want game.Bounce", mode.Sequence[0].Primitive)
+				t.Fatalf("primitive = %T, want a return-to-hand move", mode.Sequence[0].Primitive)
 			}
 			if bounce.Object != game.EventPermanentReference() {
 				t.Errorf("object = %v, want EventPermanentReference", bounce.Object)

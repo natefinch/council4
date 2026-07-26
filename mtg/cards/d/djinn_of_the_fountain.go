@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -69,9 +70,10 @@ func newDjinnOfTheFountain() *game.CardDef {
 								Text: "Exile this creature. Return it to the battlefield under its owner's control at the beginning of the next end step.",
 								Sequence: []game.Instruction{
 									{
-										Primitive: game.Exile{
-											Object:         game.SourcePermanentReference(),
-											ExileLinkedKey: game.LinkedKey("delayed-self-blink"),
+										Primitive: game.MovePermanent{
+											Object:        game.SourcePermanentReference(),
+											PublishLinked: game.LinkedKey("delayed-self-blink"),
+											Destination:   zone.Exile,
 										},
 									},
 									{

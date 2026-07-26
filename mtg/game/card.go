@@ -796,7 +796,7 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case Untap:
 		value.Group = cloneGroupReference(value.Group)
 		return value
-	case Bounce:
+	case MovePermanent:
 		value.Group = cloneGroupReference(value.Group)
 		return value
 	case GroupSourceDamage:

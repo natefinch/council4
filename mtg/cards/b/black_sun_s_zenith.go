@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -43,7 +44,7 @@ func newBlackSunSZenith() *game.CardDef {
 						},
 					},
 					{
-						Primitive: game.ShuffleSpellIntoLibrary{},
+						Primitive: game.MoveResolvingSpell{Destination: zone.Library, Shuffle: true},
 					},
 				},
 			}.Ability()),

@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -38,7 +39,7 @@ func resolveGroupBlink(t *testing.T, put game.PutOnBattlefield, count int) (g *g
 	}
 	log := TurnLog{}
 	instrs := []game.Instruction{
-		{Primitive: game.Exile{Object: game.AllTargetPermanentsReference(0), ExileLinkedKey: "group-blink"}},
+		{Primitive: game.MovePermanent{Object: game.AllTargetPermanentsReference(0), PublishLinked: "group-blink", Destination: zone.Exile}},
 		{Primitive: put},
 	}
 	for i := range instrs {
@@ -130,7 +131,7 @@ func resolveMassGroupBlink(t *testing.T, count int) []*game.Permanent {
 	put := game.PutOnBattlefield{Source: game.LinkedBattlefieldSource("group-blink")}
 	put.Recipient = opt.Val(game.ControllerReference())
 	instrs := []game.Instruction{
-		{Primitive: game.Exile{Group: group, ExileLinkedKey: "group-blink"}},
+		{Primitive: game.MovePermanent{Group: group, PublishLinked: "group-blink", Destination: zone.Exile}},
 		{Primitive: put},
 	}
 	for i := range instrs {

@@ -3,7 +3,7 @@ package cardgen
 import (
 	"testing"
 
-	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerArcanisSelfReturn(t *testing.T) {
@@ -19,7 +19,7 @@ func TestLowerArcanisSelfReturn(t *testing.T) {
 		t.Fatalf("activated abilities = %#v, want two", face.ActivatedAbilities)
 	}
 	primitive := face.ActivatedAbilities[1].Content.Modes[0].Sequence[0].Primitive
-	if _, ok := primitive.(game.Bounce); !ok {
+	if _, ok := movePermanentTo(primitive, zone.Hand); !ok {
 		t.Fatalf("primitive = %#v, want self bounce", primitive)
 	}
 }

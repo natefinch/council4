@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // lifeRiderDynamic extracts the dynamic amount of a GainLife/LoseLife primitive,
@@ -38,12 +39,12 @@ func TestLowerSwordsToPlowsharesLifeRider(t *testing.T) {
 	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
 		t.Fatalf("mode = %+v, want one target and two instructions", mode)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
 	if !ok || exile.Object != game.TargetPermanentReference(0) {
 		t.Fatalf("first primitive = %+v, want exile of target 0", mode.Sequence[0].Primitive)
 	}
-	if exile.ExileLinkedKey == "" {
-		t.Fatalf("exile = %+v, want a published ExileLinkedKey", exile)
+	if exile.PublishLinked == "" {
+		t.Fatalf("exile = %+v, want a published PublishLinked", exile)
 	}
 	gain, ok := mode.Sequence[1].Primitive.(game.GainLife)
 	if !ok {
@@ -57,8 +58,8 @@ func TestLowerSwordsToPlowsharesLifeRider(t *testing.T) {
 	if dyn.Kind != game.DynamicAmountObjectPower || dyn.Multiplier != 1 {
 		t.Fatalf("dynamic = %+v, want ObjectPower multiplier 1", dyn)
 	}
-	if dyn.Object != game.LinkedObjectReference(string(exile.ExileLinkedKey)) {
-		t.Fatalf("dynamic object = %+v, want linked object %q", dyn.Object, exile.ExileLinkedKey)
+	if dyn.Object != game.LinkedObjectReference(string(exile.PublishLinked)) {
+		t.Fatalf("dynamic object = %+v, want linked object %q", dyn.Object, exile.PublishLinked)
 	}
 }
 

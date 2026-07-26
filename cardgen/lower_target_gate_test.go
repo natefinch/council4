@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -24,7 +25,7 @@ func TestAssignTargetGatesGatesKickerOnlyTarget(t *testing.T) {
 		{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
 	}
 	sequence := []game.Instruction{
-		{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
 		branchGatedInstruction(
 			game.Damage{Recipient: game.AnyTargetDamageRecipient(1), Amount: game.Fixed(2)},
 			game.Condition{SpellWasKicked: true},
@@ -51,7 +52,7 @@ func TestAssignTargetGatesGatesPromisedOnlyTarget(t *testing.T) {
 		{MinTargets: 1, MaxTargets: 1, Constraint: "artifact"},
 	}
 	sequence := []game.Instruction{
-		{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
 		branchGatedInstruction(
 			game.Destroy{Object: game.TargetPermanentReference(1)},
 			game.Condition{GiftPromised: true},
@@ -75,7 +76,7 @@ func TestAssignTargetGatesComplementaryGatesResolveToAlways(t *testing.T) {
 	targets := []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 	sequence := []game.Instruction{
 		branchGatedInstruction(
-			game.Bounce{Object: game.TargetPermanentReference(0)},
+			game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand},
 			game.Condition{SpellWasKicked: true, Negate: true},
 		),
 		branchGatedInstruction(
@@ -102,7 +103,7 @@ func TestAssignTargetGatesFailsClosedOnCrossMechanicConflict(t *testing.T) {
 	targets := []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
 	sequence := []game.Instruction{
 		branchGatedInstruction(
-			game.Bounce{Object: game.TargetPermanentReference(0)},
+			game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand},
 			game.Condition{SpellWasKicked: true},
 		),
 		branchGatedInstruction(
@@ -121,7 +122,7 @@ func TestAssignTargetGatesFailsClosedOnCrossMechanicConflict(t *testing.T) {
 // untouched (same slice), so every non-gift, non-kicker card is unaffected.
 func TestAssignTargetGatesUngatedSequenceUnchanged(t *testing.T) {
 	targets := []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Constraint: "creature"}}
-	sequence := []game.Instruction{{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}}}
+	sequence := []game.Instruction{{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}}}
 
 	out, ok := assignTargetGates(targets, sequence)
 	if !ok {
@@ -176,7 +177,7 @@ func TestAssignTargetGatesFailsClosedOnUnwalkableGatedTarget(t *testing.T) {
 		{MinTargets: 1, MaxTargets: 1, Constraint: "creature"},
 	}
 	sequence := []game.Instruction{
-		{Primitive: game.Bounce{Object: game.TargetPermanentReference(0)}},
+		{Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Hand}},
 		branchGatedInstruction(
 			game.Fight{Object: game.TargetPermanentReference(1), RelatedObject: game.ObjectReference{}},
 			game.Condition{SpellWasKicked: true},

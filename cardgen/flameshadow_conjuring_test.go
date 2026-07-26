@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerFlameshadowConjuringPaidTemporaryCopy(t *testing.T) {
@@ -43,7 +44,7 @@ func TestLowerFlameshadowConjuringPaidTemporaryCopy(t *testing.T) {
 		!reflect.DeepEqual(cleanup.Trigger.CapturedObject.Val, game.LinkedObjectReference(string(create.PublishLinked))) {
 		t.Fatalf("cleanup = %#v, want delayed exile", ability.Content.Modes[0].Sequence[2])
 	}
-	exile, ok := cleanup.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(cleanup.Trigger.Content.Modes[0].Sequence[0].Primitive, zone.Exile)
 	if !ok || !reflect.DeepEqual(exile.Object, game.CapturedObjectReference()) {
 		t.Fatalf("cleanup object = %#v, want captured token", exile.Object)
 	}

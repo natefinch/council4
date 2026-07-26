@@ -422,8 +422,9 @@ func TestUmbraArmorDoesNotReplaceSacrificeExileOrZeroToughness(t *testing.T) {
 		engine := NewEngine(nil)
 		creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 		umbraArmorAura(g, game.Player1, creature, "Exile Umbra")
-		addEffectSpellToStack(g, game.Player1, game.Exile{
-			Object: game.TargetPermanentReference(0),
+		addEffectSpellToStack(g, game.Player1, game.MovePermanent{
+			Object:      game.TargetPermanentReference(0),
+			Destination: zone.Exile,
 		}, []game.Target{game.PermanentTarget(creature.ObjectID)})
 		engine.resolveTopOfStack(g, &TurnLog{})
 		if _, ok := permanentByObjectID(g, creature.ObjectID); ok {

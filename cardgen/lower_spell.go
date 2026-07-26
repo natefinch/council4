@@ -935,10 +935,10 @@ func lowerSearchSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 		sequence = append(sequence, inst)
 	}
 	if appendSelfShuffle {
-		sequence = append(sequence, game.Instruction{Primitive: game.ShuffleSpellIntoLibrary{}})
+		sequence = append(sequence, game.Instruction{Primitive: game.MoveResolvingSpell{Destination: zone.Library, Shuffle: true}})
 	}
 	if appendSelfExile {
-		sequence = append(sequence, game.Instruction{Primitive: game.Exile{SourceSpell: true}})
+		sequence = append(sequence, game.Instruction{Primitive: game.MoveResolvingSpell{Destination: zone.Exile}})
 	}
 	return game.Mode{Targets: searchTargets, Sequence: sequence}.Ability(), nil
 }
@@ -1613,7 +1613,7 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	effect := ctx.content.Effects[0]
 	switch effect.Kind {
 	case compiler.EffectExile:
-		return game.Exile{Object: sourcePermanent}, true
+		return game.MovePermanent{Object: sourcePermanent, Destination: zone.Exile}, true
 	case compiler.EffectTransform:
 		return game.Transform{Object: sourcePermanent}, true
 	case compiler.EffectSacrifice:
@@ -1630,7 +1630,7 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 		// of combat, so it bounces; after a dies trigger it rests in the
 		// graveyard, so it reanimates to hand.
 		if selfTriggerSourceOnBattlefield(ctx.triggerEvent) {
-			return game.Bounce{Object: sourcePermanent}, true
+			return game.MovePermanent{Object: sourcePermanent, Destination: zone.Hand}, true
 		}
 		sourceCard, ok := lowerCardReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
 		if !ok {
@@ -1654,7 +1654,7 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 		default:
 			return nil, false
 		}
-		return game.PutPermanentOnLibrary{Object: sourcePermanent, Bottom: bottom}, true
+		return game.MovePermanent{Object: sourcePermanent, LibraryBottom: bottom, Destination: zone.Library}, true
 	default:
 		return nil, false
 	}
@@ -1789,7 +1789,7 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 	case compiler.EffectDestroy:
 		primitive = game.Destroy{Object: object}
 	case compiler.EffectExile:
-		primitive = game.Exile{Object: object}
+		primitive = game.MovePermanent{Object: object, Destination: zone.Exile}
 	case compiler.EffectTap:
 		primitive = game.Tap{Object: object}
 	case compiler.EffectUntap:
@@ -1806,7 +1806,7 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		if effect.ToZone != zone.Hand {
 			return game.AbilityContent{}, false
 		}
-		primitive = game.Bounce{Object: object}
+		primitive = game.MovePermanent{Object: object, Destination: zone.Hand}
 	default:
 		return game.AbilityContent{}, false
 	}
@@ -1915,7 +1915,7 @@ func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) 
 	if group, ok := exactMassBounceGroup(ctx); ok {
 		return game.Mode{
 			Sequence: []game.Instruction{{
-				Primitive: game.Bounce{Group: group},
+				Primitive: game.MovePermanent{Group: group, Destination: zone.Hand},
 			}},
 		}.Ability(), nil
 	}

@@ -31,7 +31,7 @@ func TestGenerateExecutableCardSourceTemporaryCopyTokenActivated(t *testing.T) {
 		"Primitive: game.CreateToken{",
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"AddKeywords: []game.Keyword{game.Haste},",
-		"Primitive: game.Exile{",
+		"Primitive: game.MovePermanent{",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -67,7 +67,7 @@ func TestGenerateExecutableCardSourceTemporaryCopyTokenTrigger(t *testing.T) {
 		"Source: game.TokenCopyOf(game.TokenCopySpec{",
 		"AddKeywords: []game.Keyword{game.Haste},",
 		"Primitive: game.CreateDelayedTrigger{",
-		"Primitive: game.Exile{",
+		"Primitive: game.MovePermanent{",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

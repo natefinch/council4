@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // delayedSelfBlinkInstructions extracts the exile and delayed-trigger
@@ -11,7 +12,7 @@ import (
 // the exiled object is the source permanent itself ("Exile this creature. Return
 // it … at the beginning of the next end step.") and the return is wrapped in a
 // next-end-step delayed trigger rather than resolved immediately.
-func delayedSelfBlinkInstructions(t *testing.T, mode game.Mode) (game.Exile, game.PutOnBattlefield) {
+func delayedSelfBlinkInstructions(t *testing.T, mode game.Mode) (game.MovePermanent, game.PutOnBattlefield) {
 	t.Helper()
 	if len(mode.Targets) != 0 {
 		t.Fatalf("targets = %#v, want none for self-blink", mode.Targets)
@@ -19,8 +20,8 @@ func delayedSelfBlinkInstructions(t *testing.T, mode game.Mode) (game.Exile, gam
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v, want exile and delayed trigger", mode.Sequence)
 	}
-	exile, ok := mode.Sequence[0].Primitive.(game.Exile)
-	if !ok || exile.Object != game.SourcePermanentReference() || exile.ExileLinkedKey == "" {
+	exile, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Exile)
+	if !ok || exile.Object != game.SourcePermanentReference() || exile.PublishLinked == "" {
 		t.Fatalf("exile = %#v, want linked source exile", mode.Sequence[0].Primitive)
 	}
 	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
@@ -36,8 +37,8 @@ func delayedSelfBlinkInstructions(t *testing.T, mode game.Mode) (game.Exile, gam
 		t.Fatalf("delayed content = %#v, want put on battlefield", inner[0].Primitive)
 	}
 	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.ExileLinkedKey {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.ExileLinkedKey)
+	if !linked || key != exile.PublishLinked {
+		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
 	}
 	return exile, put
 }
@@ -144,14 +145,14 @@ func TestLowerDelayedSelfBlinkStandaloneSelfExileIsPlainExile(t *testing.T) {
 	if len(sequence) != 1 {
 		t.Fatalf("sequence = %#v, want a single plain exile", sequence)
 	}
-	exile, ok := sequence[0].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
 	if !ok {
 		t.Fatalf("instruction = %#v, want a plain exile", sequence[0].Primitive)
 	}
-	if exile.ExileLinkedKey != "" {
+	if exile.PublishLinked != "" {
 		t.Fatalf("exile = %#v, want no linked key (not a blink)", exile)
 	}
-	if exile.SourceSpell || exile.Object != game.SourceCardPermanentReference() {
+	if exile.Object != game.SourceCardPermanentReference() {
 		t.Fatalf("exile = %#v, want source-permanent exile", exile)
 	}
 }

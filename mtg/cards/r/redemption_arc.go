@@ -67,8 +67,9 @@ func newRedemptionArc() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Object: game.SourceAttachedPermanentReference(),
+								Primitive: game.MovePermanent{
+									Object:      game.SourceAttachedPermanentReference(),
+									Destination: zone.Exile,
 								},
 							},
 						},

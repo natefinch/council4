@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // tuckSpellInstruction lowers a single-face spell whose only effect is a
 // "put target <permanent> on top/bottom of its owner's library" tuck and
 // returns the lowered target spec and the PutPermanentOnLibrary primitive.
-func tuckSpellInstruction(t *testing.T, oracleText string) (game.TargetSpec, game.PutPermanentOnLibrary) {
+func tuckSpellInstruction(t *testing.T, oracleText string) (game.TargetSpec, game.MovePermanent) {
 	t.Helper()
 	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Tuck Spell",
@@ -24,7 +25,7 @@ func tuckSpellInstruction(t *testing.T, oracleText string) (game.TargetSpec, gam
 	if len(modes) != 1 || len(modes[0].Targets) != 1 || len(modes[0].Sequence) != 1 {
 		t.Fatalf("modes = %#v, want one mode with one target and one instruction", modes)
 	}
-	prim, ok := modes[0].Sequence[0].Primitive.(game.PutPermanentOnLibrary)
+	prim, ok := movePermanentTo(modes[0].Sequence[0].Primitive, zone.Library)
 	if !ok {
 		t.Fatalf("primitive = %#v, want PutPermanentOnLibrary", modes[0].Sequence[0].Primitive)
 	}
@@ -37,7 +38,7 @@ func tuckSpellInstruction(t *testing.T, oracleText string) (game.TargetSpec, gam
 func TestLowerPutTargetCreatureOnTopOfLibrary(t *testing.T) {
 	t.Parallel()
 	spec, prim := tuckSpellInstruction(t, "Put target creature on top of its owner's library.")
-	if prim.Bottom {
+	if prim.LibraryBottom {
 		t.Fatalf("prim = %#v, want top (Bottom false)", prim)
 	}
 	if spec.Allow != game.TargetAllowPermanent {
@@ -59,7 +60,7 @@ func TestLowerPutTargetCreatureOnTopOfLibrary(t *testing.T) {
 func TestLowerPutTargetOnBottomOfLibrary(t *testing.T) {
 	t.Parallel()
 	_, prim := tuckSpellInstruction(t, "Put target creature on the bottom of its owner's library.")
-	if !prim.Bottom {
+	if !prim.LibraryBottom {
 		t.Fatalf("prim = %#v, want bottom (Bottom true)", prim)
 	}
 }
@@ -85,7 +86,7 @@ func TestLowerPutTargetPowerQualifierOnLibrary(t *testing.T) {
 		t,
 		"Put target creature with power 4 or greater on the bottom of its owner's library.",
 	)
-	if !prim.Bottom {
+	if !prim.LibraryBottom {
 		t.Fatalf("prim = %#v, want bottom", prim)
 	}
 	if !spec.Selection.Val.Power.Exists {
@@ -131,7 +132,7 @@ func TestLowerPutTargetOnLibraryIsExact(t *testing.T) {
 	// effect sequence" or inexactness leaks; lowerSingleFace asserts zero
 	// diagnostics.
 	_, prim := tuckSpellInstruction(t, "Put target nonland permanent on top of its owner's library.")
-	if prim.Bottom {
+	if prim.LibraryBottom {
 		t.Fatalf("prim = %#v, want top", prim)
 	}
 }

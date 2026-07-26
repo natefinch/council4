@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -45,9 +46,10 @@ func newSaltskitter() *game.CardDef {
 					Content: game.Mode{
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Object:         game.SourcePermanentReference(),
-									ExileLinkedKey: game.LinkedKey("delayed-self-blink"),
+								Primitive: game.MovePermanent{
+									Object:        game.SourcePermanentReference(),
+									PublishLinked: game.LinkedKey("delayed-self-blink"),
+									Destination:   zone.Exile,
 								},
 							},
 							{

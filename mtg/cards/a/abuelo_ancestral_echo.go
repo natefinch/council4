@@ -57,9 +57,10 @@ func newAbueloAncestralEcho() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Object:         game.TargetPermanentReference(0),
-									ExileLinkedKey: game.LinkedKey("delayed-blink-1"),
+								Primitive: game.MovePermanent{
+									Object:        game.TargetPermanentReference(0),
+									PublishLinked: game.LinkedKey("delayed-blink-1"),
+									Destination:   zone.Exile,
 								},
 							},
 							{

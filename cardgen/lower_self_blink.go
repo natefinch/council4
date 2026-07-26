@@ -119,7 +119,7 @@ func lowerDelayedSelfBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	key := game.LinkedKey("delayed-self-blink")
-	exile := game.Exile{Object: game.SourcePermanentReference(), ExileLinkedKey: key}
+	exile := game.MovePermanent{Object: game.SourcePermanentReference(), PublishLinked: key, Destination: zone.Exile}
 	put := selfBlinkPutOnBattlefield(key, returnEffect, entryCounters)
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing:  game.DelayedAtBeginningOfNextEndStep,
@@ -150,7 +150,7 @@ func lowerImmediateSelfBlinkReturn(
 	effectIndex int,
 	ctx contentCtx,
 	sequence []game.Instruction,
-) (game.Exile, game.AbilityContent, bool) {
+) (game.MovePermanent, game.AbilityContent, bool) {
 	// Invariant: ctx is the contextForEffect-narrowed per-clause effectAbility
 	// built at lowerOrderedEffectSequence and threaded through
 	// lowerDelayedSequenceClause, so content.Effects always holds exactly one
@@ -173,7 +173,7 @@ func lowerImmediateSelfBlinkReturn(
 		returnEffect.EntersTypeChoice ||
 		returnEffect.EntersWithCounters ||
 		len(returnEffect.References) == 0 {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	// The return's "it"/"its"/"this <permanent>" co-reference the just-exiled
 	// source permanent; one of them must name it directly ("it" or "this
@@ -181,7 +181,7 @@ func lowerImmediateSelfBlinkReturn(
 	hasDirectObject := false
 	for _, ref := range returnEffect.References {
 		if ref.Binding != compiler.ReferenceBindingSource {
-			return game.Exile{}, game.AbilityContent{}, false
+			return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 		}
 		switch {
 		case ref.Kind == compiler.ReferenceThisObject:
@@ -190,18 +190,18 @@ func lowerImmediateSelfBlinkReturn(
 			hasDirectObject = true
 		case ref.Kind == compiler.ReferencePronoun && ref.Pronoun == compiler.ReferencePronounIts:
 		default:
-			return game.Exile{}, game.AbilityContent{}, false
+			return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 		}
 	}
 	if !hasDirectObject {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	// "with a <kind> counter on it" rider: only fixed, known, positive counts of a
 	// known kind are modeled; every other counter form fails closed.
 	var entryCounters []game.CounterPlacement
 	if returnEffect.CounterKindKnown {
 		if !returnEffect.Amount.Known || returnEffect.Amount.Value < 1 {
-			return game.Exile{}, game.AbilityContent{}, false
+			return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 		}
 		entryCounters = []game.CounterPlacement{{
 			Kind:   returnEffect.CounterKind,
@@ -212,17 +212,17 @@ func lowerImmediateSelfBlinkReturn(
 	consumed := ctx
 	consumed.content.References = nil
 	if consumed.content.Unconsumed() {
-		return game.Exile{}, game.AbilityContent{}, false
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
-	exile, ok := sequence[effectIndex-1].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(sequence[effectIndex-1].Primitive, zone.Exile)
 	if !ok ||
 		exile.Group.Valid() ||
 		(exile.Object != game.SourcePermanentReference() && exile.Object != game.SourceCardPermanentReference()) ||
-		exile.ExileLinkedKey != "" {
-		return game.Exile{}, game.AbilityContent{}, false
+		exile.PublishLinked != "" {
+		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}
 	key := game.LinkedKey(fmt.Sprintf("self-blink-%d", effectIndex))
-	exile.ExileLinkedKey = key
+	exile.PublishLinked = key
 	put := selfBlinkPutOnBattlefield(key, returnEffect, entryCounters)
 	return exile, game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
 }

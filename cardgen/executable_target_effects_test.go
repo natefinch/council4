@@ -863,8 +863,9 @@ func TestGenerateExecutableCardSourceExileCreature(t *testing.T) {
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
 		"RequiredTypesAny: []types.Card{types.Creature}",
-		"Primitive: game.Exile",
-		"Object: game.TargetPermanentReference(0)",
+		"Primitive: game.MovePermanent{",
+		"Destination: zone.Exile,",
+		"Object:      game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -890,8 +891,9 @@ func TestGenerateExecutableCardSourceExileManaValueQualified(t *testing.T) {
 	for _, wanted := range []string{
 		`Constraint: "target permanent with mana value 4 or greater"`,
 		"ManaValue: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 4})",
-		"Primitive: game.Exile",
-		"Object: game.TargetPermanentReference(0)",
+		"Primitive: game.MovePermanent{",
+		"Destination: zone.Exile,",
+		"Object:      game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -917,8 +919,9 @@ func TestGenerateExecutableCardSourceBounceCreature(t *testing.T) {
 	for _, wanted := range []string{
 		`Constraint: "target creature"`,
 		"RequiredTypesAny: []types.Card{types.Creature}",
-		"Primitive: game.Bounce",
-		"Object: game.TargetPermanentReference(0)",
+		"Primitive: game.MovePermanent{",
+		"Destination: zone.Hand,",
+		"Object:      game.TargetPermanentReference(0)",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)
@@ -939,7 +942,7 @@ func TestGenerateExecutableCardSourceBounceSpell(t *testing.T) {
 			wanted: []string{
 				`Allow:      game.TargetAllowStackObject`,
 				"StackObjectKinds: []game.StackObjectKind{game.StackSpell}",
-				"Object: game.TargetObjectReference(0)",
+				"Object:      game.TargetObjectReference(0)",
 			},
 		},
 		{
@@ -949,7 +952,7 @@ func TestGenerateExecutableCardSourceBounceSpell(t *testing.T) {
 				"game.TargetAllowPermanent | game.TargetAllowStackObject",
 				"types.Card{types.Land}",
 				"game.ControllerOpponent",
-				"Object: game.TargetObjectReference(0)",
+				"Object:      game.TargetObjectReference(0)",
 			},
 		},
 		{
@@ -958,7 +961,7 @@ func TestGenerateExecutableCardSourceBounceSpell(t *testing.T) {
 			wanted: []string{
 				"game.TargetAllowPermanent | game.TargetAllowStackObject",
 				"types.Card{types.Creature}",
-				"Object: game.TargetObjectReference(0)",
+				"Object:      game.TargetObjectReference(0)",
 			},
 		},
 	}

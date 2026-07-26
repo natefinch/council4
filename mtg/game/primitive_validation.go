@@ -2046,10 +2046,6 @@ func (p ShufflePermanentIntoLibrary) validatePrimitive(targets []TargetSpec, che
 	return validateObjectReference(p.Object, targets, checkTargets)
 }
 
-func (p PutPermanentOnLibrary) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateObjectReference(p.Object, targets, checkTargets)
-}
-
 func (p PutLinkedExiledCardsInLibrary) validatePrimitive([]TargetSpec, bool) error {
 	if p.LinkedKey == "" {
 		return errors.New("put linked exiled cards in library requires a linked key")
@@ -2205,10 +2201,6 @@ func (p BecomeSaddled) validatePrimitive(targets []TargetSpec, checkTargets bool
 
 func (p RecordEchoObligation) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validateObjectReference(p.Object, targets, checkTargets)
-}
-
-func (ShuffleSpellIntoLibrary) validatePrimitive(_ []TargetSpec, _ bool) error {
-	return nil
 }
 
 func (p Pay) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
@@ -2388,30 +2380,47 @@ func abilityContentPublishesResult(content AbilityContent, key ResultKey) bool {
 	return false
 }
 
-func (p Exile) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if p.SourceSpell {
-		if p.Object.Kind() != ObjectReferenceNone || p.Group.Valid() || p.ExileLinkedKey != "" {
-			return errors.New("source-spell exile cannot set an object, group, or linked key")
+func (p MovePermanent) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.Destination == zone.None {
+		return errors.New("move permanent requires a destination zone")
+	}
+	if p.Destination == zone.Battlefield {
+		return errors.New("move permanent cannot target the battlefield; use PutOnBattlefield")
+	}
+	if p.LibraryBottom && p.Destination != zone.Library {
+		return errors.New("move permanent library-bottom placement requires a library destination")
+	}
+	if p.ControlledChoice {
+		if p.Object.Kind() != ObjectReferenceNone {
+			return errors.New("controlled-choice move permanent must not set Object")
+		}
+		if !p.Group.Valid() {
+			return errors.New("controlled-choice move permanent requires a candidate Group")
 		}
 		return nil
 	}
-	if p.ExileLinkedKey != "" && p.Group.Valid() && p.Object.Kind() != ObjectReferenceNone {
-		return errors.New("linked exile must not set both an object and a group")
+	if p.PublishLinked != "" && p.Group.Valid() && p.Object.Kind() != ObjectReferenceNone {
+		return errors.New("linked move permanent must not set both an object and a group")
 	}
 	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
 }
 
-func (p Bounce) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if p.ControlledChoice {
-		if p.Object.Kind() != ObjectReferenceNone {
-			return errors.New("controlled-choice bounce must not set Object")
-		}
-		if !p.Group.Valid() {
-			return errors.New("controlled-choice bounce requires a candidate Group")
-		}
-		return nil
+func (p MoveResolvingSpell) validatePrimitive([]TargetSpec, bool) error {
+	if p.Destination == zone.None {
+		return errors.New("move resolving spell requires a destination zone")
 	}
-	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
+	// The runtime redirects a resolving spell through StackObject's
+	// ExileOnResolution / ShuffleIntoLibraryOnResolution flags, so only those two
+	// destinations are reachable today. Reject the rest here rather than letting
+	// a lowering produce an instruction that silently resolves to the graveyard;
+	// widening this means giving StackObject a destination zone.
+	if p.Destination != zone.Exile && p.Destination != zone.Library {
+		return errors.New("move resolving spell supports only the exile and library destinations")
+	}
+	if p.Destination == zone.Library && !p.Shuffle {
+		return errors.New("move resolving spell to the library requires a shuffle")
+	}
+	return nil
 }
 
 func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

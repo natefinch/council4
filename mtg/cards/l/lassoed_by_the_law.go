@@ -52,9 +52,10 @@ func newLassoedByTheLaw() *game.CardDef {
 						},
 						Sequence: []game.Instruction{
 							{
-								Primitive: game.Exile{
-									Object:         game.TargetPermanentReference(0),
-									ExileLinkedKey: game.LinkedKey("exile-until-leaves"),
+								Primitive: game.MovePermanent{
+									Object:        game.TargetPermanentReference(0),
+									PublishLinked: game.LinkedKey("exile-until-leaves"),
+									Destination:   zone.Exile,
 								},
 							},
 						},

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerModalCastTriggerUpToOne proves a "Whenever you cast a spell, choose
@@ -40,7 +41,7 @@ func TestLowerModalCastTriggerUpToOne(t *testing.T) {
 		if len(ability.Content.Modes[i].Sequence) != 1 {
 			t.Fatalf("mode %d sequence = %#v, want a single bounce", i, ability.Content.Modes[i].Sequence)
 		}
-		if _, ok := ability.Content.Modes[i].Sequence[0].Primitive.(game.Bounce); !ok {
+		if _, ok := movePermanentTo(ability.Content.Modes[i].Sequence[0].Primitive, zone.Hand); !ok {
 			t.Fatalf("mode %d primitive = %#v, want bounce", i, ability.Content.Modes[i].Sequence[0].Primitive)
 		}
 	}

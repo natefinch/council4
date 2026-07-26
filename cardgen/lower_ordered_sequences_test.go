@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerAndJoinedLifeSequence(t *testing.T) {
@@ -52,7 +53,7 @@ func TestLowerOrderedSpellEffectsBackReferenceRemoval(t *testing.T) {
 	if !ok || tap.Object.TargetIndex() != 0 {
 		t.Fatalf("first primitive = %+v, want target 0 tap", mode.Sequence[0].Primitive)
 	}
-	exile, ok := mode.Sequence[1].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(mode.Sequence[1].Primitive, zone.Exile)
 	if !ok || exile.Object.TargetIndex() != 0 {
 		t.Fatalf("second primitive = %+v, want target 0 exile", mode.Sequence[1].Primitive)
 	}
@@ -76,7 +77,7 @@ func TestLowerOrderedSpellEffectsConditionalBackReferenceRemoval(t *testing.T) {
 	if _, ok := mode.Sequence[0].Primitive.(game.Tap); !ok {
 		t.Fatalf("first primitive = %T, want game.Tap", mode.Sequence[0].Primitive)
 	}
-	exile, ok := mode.Sequence[1].Primitive.(game.Exile)
+	exile, ok := movePermanentTo(mode.Sequence[1].Primitive, zone.Exile)
 	if !ok || exile.Object.TargetIndex() != 0 {
 		t.Fatalf("second primitive = %+v, want target 0 exile", mode.Sequence[1].Primitive)
 	}
@@ -746,11 +747,11 @@ func TestLowerReturnTwoThenDrawDiscard(t *testing.T) {
 	if len(mode.Targets) != 1 || len(mode.Sequence) != 4 {
 		t.Fatalf("mode = %+v, want one target spec and four instructions", mode)
 	}
-	b0, ok := mode.Sequence[0].Primitive.(game.Bounce)
+	b0, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Hand)
 	if !ok || b0.Object != game.TargetPermanentReference(0) {
 		t.Fatalf("first primitive = %+v, want bounce target 0", mode.Sequence[0].Primitive)
 	}
-	b1, ok := mode.Sequence[1].Primitive.(game.Bounce)
+	b1, ok := movePermanentTo(mode.Sequence[1].Primitive, zone.Hand)
 	if !ok || b1.Object != game.TargetPermanentReference(1) {
 		t.Fatalf("second primitive = %+v, want bounce target 1", mode.Sequence[1].Primitive)
 	}

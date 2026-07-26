@@ -34,7 +34,7 @@ func TestGenerateNacatlWarPrideExecutableSource(t *testing.T) {
 		"EntryAttackingDefender: opt.Val(game.DefendingPlayerReference())",
 		"PublishLinked:",
 		"CapturedObjectGroup:",
-		"Group: game.CapturedObjectsGroup()",
+		"Group:       game.CapturedObjectsGroup()",
 	} {
 		if !strings.Contains(source, wanted) {
 			t.Errorf("generated source missing %q:\n%s", wanted, source)

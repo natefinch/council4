@@ -1206,8 +1206,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameBecomeSaddled(ctx, value)
 	case game.Bolster:
 		return r.renderGameBolster(ctx, value)
-	case game.Bounce:
-		return r.renderGameBounce(ctx, value)
 	case game.CantBecomeMonarch:
 		return r.renderGameCantBecomeMonarch(ctx, value)
 	case game.CastForFree:
@@ -1278,8 +1276,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameEachPlayerChooseDestroy(ctx, value)
 	case game.ExchangeLifeTotalWithSourceCharacteristic:
 		return r.renderGameExchangeLifeTotalWithSourceCharacteristic(ctx, value)
-	case game.Exile:
-		return r.renderGameExile(ctx, value)
 	case game.ExileEntireHand:
 		return r.renderGameExileEntireHand(ctx, value)
 	case game.ExileForPlay:
@@ -1352,6 +1348,10 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameMoveCommander(ctx, value)
 	case game.MoveCounters:
 		return r.renderGameMoveCounters(ctx, value)
+	case game.MovePermanent:
+		return r.renderGameMovePermanent(ctx, value)
+	case game.MoveResolvingSpell:
+		return r.renderGameMoveResolvingSpell(ctx, value)
 	case game.OptionalCounterForEachPlayer:
 		return r.renderGameOptionalCounterForEachPlayer(ctx, value)
 	case game.PartitionExiledCostCards:
@@ -1388,8 +1388,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGamePutLinkedExiledCardsInLibrary(ctx, value)
 	case game.PutOnBattlefield:
 		return r.renderGamePutOnBattlefield(ctx, value)
-	case game.PutPermanentOnLibrary:
-		return r.renderGamePutPermanentOnLibrary(ctx, value)
 	case game.ReanimateLinkedCards:
 		return r.renderGameReanimateLinkedCards(ctx, value)
 	case game.RecordEchoObligation:
@@ -1448,8 +1446,6 @@ func (r Renderer) renderGamePrimitiveValue(ctx *renderCtx, v game.Primitive) (st
 		return r.renderGameShuffleLibrary(ctx, value)
 	case game.ShufflePermanentIntoLibrary:
 		return r.renderGameShufflePermanentIntoLibrary(ctx, value)
-	case game.ShuffleSpellIntoLibrary:
-		return r.renderGameShuffleSpellIntoLibrary(ctx, value)
 	case game.SkipNextUntap:
 		return r.renderGameSkipNextUntap(ctx, value)
 	case game.SkipStep:
@@ -2657,40 +2653,6 @@ func (r Renderer) renderGameBolster(ctx *renderCtx, v game.Bolster) (string, err
 		fields = append(fields, "PublishLinked: "+lit3+",")
 	}
 	return structLit("game.Bolster", fields), nil
-}
-
-// renderGameBounce renders a game.Bounce value as a Go composite literal.
-func (r Renderer) renderGameBounce(ctx *renderCtx, v game.Bounce) (string, error) {
-	var fields []string
-	if v.Object != (game.ObjectReference{}) {
-		lit1, err2 := r.renderObjectReference(v.Object)
-		if err2 != nil {
-			return "", fmt.Errorf("game.Bounce.Object: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Object: "+lit1+",")
-	}
-	if !(v.Group.Empty()) {
-		lit3, err4 := r.renderGroupReference(ctx, v.Group)
-		if err4 != nil {
-			return "", fmt.Errorf("game.Bounce.Group: %w", err4)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Group: "+lit3+",")
-	}
-	if v.ControlledChoice {
-		lit5 := strconv.FormatBool(bool(v.ControlledChoice))
-		fields = append(fields, "ControlledChoice: "+lit5+",")
-	}
-	if v.Amount != (game.Quantity{}) {
-		lit6, err7 := r.renderQuantity(ctx, v.Amount)
-		if err7 != nil {
-			return "", fmt.Errorf("game.Bounce.Amount: %w", err7)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Amount: "+lit6+",")
-	}
-	return structLit("game.Bounce", fields), nil
 }
 
 // renderGameCantBecomeMonarch renders a game.CantBecomeMonarch value as a Go composite literal.
@@ -6303,37 +6265,6 @@ func (r Renderer) renderGameExchangeLifeTotalWithSourceCharacteristic(ctx *rende
 	return structLit("game.ExchangeLifeTotalWithSourceCharacteristic", fields), nil
 }
 
-// renderGameExile renders a game.Exile value as a Go composite literal.
-func (r Renderer) renderGameExile(ctx *renderCtx, v game.Exile) (string, error) {
-	var fields []string
-	if v.Object != (game.ObjectReference{}) {
-		lit1, err2 := r.renderObjectReference(v.Object)
-		if err2 != nil {
-			return "", fmt.Errorf("game.Exile.Object: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Object: "+lit1+",")
-	}
-	if !(v.Group.Empty()) {
-		lit3, err4 := r.renderGroupReference(ctx, v.Group)
-		if err4 != nil {
-			return "", fmt.Errorf("game.Exile.Group: %w", err4)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Group: "+lit3+",")
-	}
-	if v.SourceSpell {
-		lit5 := strconv.FormatBool(bool(v.SourceSpell))
-		fields = append(fields, "SourceSpell: "+lit5+",")
-	}
-	if v.ExileLinkedKey != "" {
-		lit6 := "game.LinkedKey(" + strconv.Quote(string(v.ExileLinkedKey)) + ")"
-		ctx.need(importGame)
-		fields = append(fields, "ExileLinkedKey: "+lit6+",")
-	}
-	return structLit("game.Exile", fields), nil
-}
-
 // renderGameExileEntireHand renders a game.ExileEntireHand value as a Go composite literal.
 func (r Renderer) renderGameExileEntireHand(ctx *renderCtx, v game.ExileEntireHand) (string, error) {
 	var fields []string
@@ -8213,6 +8144,75 @@ func (r Renderer) renderGameMoveCounters(ctx *renderCtx, v game.MoveCounters) (s
 	return structLit("game.MoveCounters", fields), nil
 }
 
+// renderGameMovePermanent renders a game.MovePermanent value as a Go composite literal.
+func (r Renderer) renderGameMovePermanent(ctx *renderCtx, v game.MovePermanent) (string, error) {
+	var fields []string
+	if v.Object != (game.ObjectReference{}) {
+		lit1, err2 := r.renderObjectReference(v.Object)
+		if err2 != nil {
+			return "", fmt.Errorf("game.MovePermanent.Object: %w", err2)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Object: "+lit1+",")
+	}
+	if !(v.Group.Empty()) {
+		lit3, err4 := r.renderGroupReference(ctx, v.Group)
+		if err4 != nil {
+			return "", fmt.Errorf("game.MovePermanent.Group: %w", err4)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Group: "+lit3+",")
+	}
+	if v.Destination != 0 {
+		lit5, err6 := enumLiteral(zoneTypeLiterals, "zone.Type", v.Destination)
+		if err6 != nil {
+			return "", fmt.Errorf("game.MovePermanent.Destination: %w", err6)
+		}
+		ctx.need(importZone)
+		fields = append(fields, "Destination: "+lit5+",")
+	}
+	if v.LibraryBottom {
+		lit7 := strconv.FormatBool(bool(v.LibraryBottom))
+		fields = append(fields, "LibraryBottom: "+lit7+",")
+	}
+	if v.ControlledChoice {
+		lit8 := strconv.FormatBool(bool(v.ControlledChoice))
+		fields = append(fields, "ControlledChoice: "+lit8+",")
+	}
+	if v.Amount != (game.Quantity{}) {
+		lit9, err10 := r.renderQuantity(ctx, v.Amount)
+		if err10 != nil {
+			return "", fmt.Errorf("game.MovePermanent.Amount: %w", err10)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Amount: "+lit9+",")
+	}
+	if v.PublishLinked != "" {
+		lit11 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "PublishLinked: "+lit11+",")
+	}
+	return structLit("game.MovePermanent", fields), nil
+}
+
+// renderGameMoveResolvingSpell renders a game.MoveResolvingSpell value as a Go composite literal.
+func (r Renderer) renderGameMoveResolvingSpell(ctx *renderCtx, v game.MoveResolvingSpell) (string, error) {
+	var fields []string
+	if v.Destination != 0 {
+		lit1, err2 := enumLiteral(zoneTypeLiterals, "zone.Type", v.Destination)
+		if err2 != nil {
+			return "", fmt.Errorf("game.MoveResolvingSpell.Destination: %w", err2)
+		}
+		ctx.need(importZone)
+		fields = append(fields, "Destination: "+lit1+",")
+	}
+	if v.Shuffle {
+		lit3 := strconv.FormatBool(bool(v.Shuffle))
+		fields = append(fields, "Shuffle: "+lit3+",")
+	}
+	return structLit("game.MoveResolvingSpell", fields), nil
+}
+
 // renderGameMutateKeyword renders a game.MutateKeyword value as a Go composite literal.
 func (r Renderer) renderGameMutateKeyword(ctx *renderCtx, v game.MutateKeyword) (string, error) {
 	var fields []string
@@ -9045,24 +9045,6 @@ func (r Renderer) renderGamePutOnBattlefield(ctx *renderCtx, v game.PutOnBattlef
 		fields = append(fields, "LinkedReturnZones: "+lit24+",")
 	}
 	return structLit("game.PutOnBattlefield", fields), nil
-}
-
-// renderGamePutPermanentOnLibrary renders a game.PutPermanentOnLibrary value as a Go composite literal.
-func (r Renderer) renderGamePutPermanentOnLibrary(ctx *renderCtx, v game.PutPermanentOnLibrary) (string, error) {
-	var fields []string
-	if v.Object != (game.ObjectReference{}) {
-		lit1, err2 := r.renderObjectReference(v.Object)
-		if err2 != nil {
-			return "", fmt.Errorf("game.PutPermanentOnLibrary.Object: %w", err2)
-		}
-		ctx.need(importGame)
-		fields = append(fields, "Object: "+lit1+",")
-	}
-	if v.Bottom {
-		lit3 := strconv.FormatBool(bool(v.Bottom))
-		fields = append(fields, "Bottom: "+lit3+",")
-	}
-	return structLit("game.PutPermanentOnLibrary", fields), nil
 }
 
 // renderGameRampageKeyword renders a game.RampageKeyword value as a Go composite literal.
@@ -11999,13 +11981,6 @@ func (r Renderer) renderGameShufflePermanentIntoLibrary(ctx *renderCtx, v game.S
 		fields = append(fields, "Object: "+lit1+",")
 	}
 	return structLit("game.ShufflePermanentIntoLibrary", fields), nil
-}
-
-// renderGameShuffleSpellIntoLibrary renders a game.ShuffleSpellIntoLibrary value as a Go composite literal.
-func (r Renderer) renderGameShuffleSpellIntoLibrary(ctx *renderCtx, v game.ShuffleSpellIntoLibrary) (string, error) {
-	_ = ctx
-	_ = v
-	return "game.ShuffleSpellIntoLibrary{}", nil
 }
 
 // renderGameSimpleKeyword renders a game.SimpleKeyword value as a Go composite literal.

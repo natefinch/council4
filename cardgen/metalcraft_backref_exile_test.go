@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerDispatchMetalcraftBackReferenceExile proves the two-paragraph
@@ -47,7 +48,7 @@ func TestLowerDispatchMetalcraftBackReferenceExile(t *testing.T) {
 	}
 
 	exileInstruction := mode.Sequence[1]
-	exile, ok := exileInstruction.Primitive.(game.Exile)
+	exile, ok := movePermanentTo(exileInstruction.Primitive, zone.Exile)
 	if !ok || exile.Object != game.TargetPermanentReference(0) {
 		t.Fatalf("second instruction = %#v, want exile of target zero", exileInstruction)
 	}

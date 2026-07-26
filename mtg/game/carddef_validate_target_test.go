@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -527,7 +528,7 @@ func TestValidateCardDefMultiTargetSpecAdmitsPerSlotReferences(t *testing.T) {
 		sequence := make([]Instruction, 0, len(refIndexes))
 		for _, index := range refIndexes {
 			sequence = append(sequence, Instruction{
-				Primitive: Exile{Object: TargetPermanentReference(index)},
+				Primitive: MovePermanent{Object: TargetPermanentReference(index), Destination: zone.Exile},
 			})
 		}
 		return &CardDef{CardFace: CardFace{

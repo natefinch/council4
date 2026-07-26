@@ -56,8 +56,9 @@ func newCogworkAssembler() *game.CardDef {
 								},
 							},
 							{
-								Primitive: game.Exile{
-									Object: game.TargetPermanentReference(0),
+								Primitive: game.MovePermanent{
+									Object:      game.TargetPermanentReference(0),
+									Destination: zone.Exile,
 								},
 							},
 						},

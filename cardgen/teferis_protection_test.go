@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 const teferisProtectionOracle = "Until your next turn, your life total can't change and you gain protection from everything. All permanents you control phase out. (While they're phased out, they're treated as though they don't exist. They phase in before you untap during your untap step.)\nExile Teferi's Protection."
@@ -47,8 +48,8 @@ func TestLowerTeferisProtection(t *testing.T) {
 		len(selection.RequiredTypes) != 0 {
 		t.Fatalf("phase-out selection = %+v, want all permanents you control", selection)
 	}
-	exile, ok := sequence[3].Primitive.(game.Exile)
-	if !ok || !exile.SourceSpell {
+	exile, ok := sequence[3].Primitive.(game.MoveResolvingSpell)
+	if !ok || exile.Destination != zone.Exile {
 		t.Fatalf("sequence[3] = %+v, want source-spell exile", sequence[3])
 	}
 }
@@ -73,9 +74,9 @@ func TestGenerateTeferisProtectionSource(t *testing.T) {
 		"game.ProtectionKeyword{Everything: true}",
 		"game.DurationUntilYourNextTurn",
 		"game.PhaseOut{",
-		"Group: game.BattlefieldGroup(",
-		"game.Exile{",
-		"SourceSpell: true,",
+		"Group:       game.BattlefieldGroup(",
+		"Primitive: game.MoveResolvingSpell{",
+		"Destination: zone.Exile,",
 	} {
 		if !containsNormalized(source, want) {
 			t.Fatalf("generated source missing %q:\n%s", want, source)
@@ -119,8 +120,8 @@ func TestLowerSourceSpellExileRequiresSpellShell(t *testing.T) {
 			if len(sequence) != 1 {
 				t.Fatalf("sequence = %+v, want one instruction", sequence)
 			}
-			exile, ok := sequence[0].Primitive.(game.Exile)
-			if !ok || !exile.SourceSpell {
+			exile, ok := sequence[0].Primitive.(game.MoveResolvingSpell)
+			if !ok || exile.Destination != zone.Exile {
 				t.Fatalf("instruction = %+v, want source-spell exile", sequence[0])
 			}
 		})
@@ -128,8 +129,8 @@ func TestLowerSourceSpellExileRequiresSpellShell(t *testing.T) {
 
 	// Outside a resolving spell, a self-directed exile names the source
 	// permanent, not the (nonexistent) spell: it lowers to a supported
-	// source-permanent exile rather than a SourceSpell exile. This preserves the
-	// invariant that SourceSpell exile requires a spell shell while confirming
+	// source-permanent exile rather than a resolving-spell exile. This preserves
+	// the invariant that a resolving-spell exile requires a spell shell while confirming
 	// the permanent self-exile Midnight Clock relies on.
 	activatedCases := map[string]string{
 		"activated":          "{T}: Exile Test Relic.",
@@ -174,23 +175,23 @@ func TestLowerSourceSpellExileRequiresSpellShell(t *testing.T) {
 
 // assertSourcePermanentExile fails unless the content's instruction sequence
 // contains exactly one exile that targets the ability's source permanent (never
-// a SourceSpell exile).
+// a resolving-spell exile).
 func assertSourcePermanentExile(t *testing.T, content game.AbilityContent) {
 	t.Helper()
 	if len(content.Modes) != 1 {
 		t.Fatalf("content modes = %d, want 1", len(content.Modes))
 	}
-	var exiles []game.Exile
+	var exiles []game.MovePermanent
 	for _, instruction := range content.Modes[0].Sequence {
-		if exile, ok := instruction.Primitive.(game.Exile); ok {
+		if exile, ok := movePermanentTo(instruction.Primitive, zone.Exile); ok {
 			exiles = append(exiles, exile)
+		}
+		if _, ok := instruction.Primitive.(game.MoveResolvingSpell); ok {
+			t.Fatalf("self exile on a permanent lowered to a resolving-spell exile: %+v", instruction.Primitive)
 		}
 	}
 	if len(exiles) != 1 {
 		t.Fatalf("exile instructions = %d, want 1 (sequence %+v)", len(exiles), content.Modes[0].Sequence)
-	}
-	if exiles[0].SourceSpell {
-		t.Fatalf("self exile on a permanent lowered to a SourceSpell exile: %+v", exiles[0])
 	}
 	if exiles[0].Object != game.SourceCardPermanentReference() {
 		t.Fatalf("exile object = %+v, want source-card permanent reference", exiles[0].Object)

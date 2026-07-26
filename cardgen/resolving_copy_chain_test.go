@@ -30,7 +30,8 @@ func TestGenerateResolvingCopyChainSource(t *testing.T) {
 			manaCost: "{U}",
 			oracle:   "Return target creature to its owner's hand. Then that creature's controller may pay {U}{U}. If the player does, they may copy this spell and may choose a new target for that copy.",
 			want: []string{
-				"Primitive: game.Bounce{",
+				"Primitive: game.MovePermanent{",
+				"Destination: zone.Hand,",
 				"Primitive: game.Pay{",
 				"Payer:  opt.Val(game.AffectedTargetControllerReference(0)),",
 				"PublishResult: game.ResultKey(\"copy-chain-paid\"),",
@@ -117,7 +118,8 @@ func TestGenerateResolvingCopyChainSource(t *testing.T) {
 			manaCost: "{U}",
 			oracle:   "Return target nonland permanent to its owner's hand. Then that permanent's controller may sacrifice a land of their choice. If the player does, they may copy this spell and may choose a new target for that copy.",
 			want: []string{
-				"Primitive: game.Bounce{",
+				"Primitive: game.MovePermanent{",
+				"Destination: zone.Hand,",
 				"Primitive: game.Pay{",
 				"Prompt: \"Sacrifice a land?\",",
 				"Kind:               cost.AdditionalSacrifice,",

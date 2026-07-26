@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -778,12 +779,12 @@ func TestLowerMassDestroyAndExile(t *testing.T) {
 			switch primitive := primitive.(type) {
 			case game.Destroy:
 				if test.exile {
-					t.Fatalf("primitive = %T, want game.Exile", primitive)
+					t.Fatalf("primitive = %T, want a mass exile", primitive)
 				}
 				group = primitive.Group
-			case game.Exile:
-				if !test.exile {
-					t.Fatalf("primitive = %T, want game.Destroy", primitive)
+			case game.MovePermanent:
+				if !test.exile || primitive.Destination != zone.Exile {
+					t.Fatalf("primitive = %#v, want game.Destroy", primitive)
 				}
 				group = primitive.Group
 			default:

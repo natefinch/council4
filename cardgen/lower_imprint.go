@@ -104,7 +104,7 @@ func lowerLinkedExiledCopyTokenActivation(
 			Timing:              game.DelayedAtBeginningOfNextEndStep,
 			CapturedObjectGroup: opt.Val(game.LinkedObjectReference(string(imprintCreatedTokenLink))),
 			Content: game.Mode{Sequence: []game.Instruction{{
-				Primitive: game.Exile{Group: game.CapturedObjectsGroup()},
+				Primitive: game.MovePermanent{Group: game.CapturedObjectsGroup(), Destination: zone.Exile},
 			}}}.Ability(),
 		}},
 	}

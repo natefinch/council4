@@ -58,7 +58,7 @@ func nacatlWarPrideDef() *game.CardDef {
 								game.LinkedObjectReference("delayed-created-token-exile-1"),
 							),
 							Content: game.Mode{Sequence: []game.Instruction{{
-								Primitive: game.Exile{Group: game.CapturedObjectsGroup()},
+								Primitive: game.MovePermanent{Group: game.CapturedObjectsGroup(), Destination: zone.Exile},
 							}}}.Ability(),
 						},
 					},

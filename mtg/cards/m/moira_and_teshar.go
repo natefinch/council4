@@ -90,8 +90,9 @@ func newMoiraAndTeshar() *game.CardDef {
 										Content: game.Mode{
 											Sequence: []game.Instruction{
 												{
-													Primitive: game.Exile{
-														Object: game.CapturedObjectReference(),
+													Primitive: game.MovePermanent{
+														Object:      game.CapturedObjectReference(),
+														Destination: zone.Exile,
 													},
 												},
 											},

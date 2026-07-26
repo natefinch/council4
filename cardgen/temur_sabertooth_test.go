@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerTemurSabertoothOptionalReturn(t *testing.T) {
@@ -21,7 +22,7 @@ func TestLowerTemurSabertoothOptionalReturn(t *testing.T) {
 	if len(mode.Sequence) != 2 {
 		t.Fatalf("sequence = %#v", mode.Sequence)
 	}
-	bounce, ok := mode.Sequence[0].Primitive.(game.Bounce)
+	bounce, ok := movePermanentTo(mode.Sequence[0].Primitive, zone.Hand)
 	if !ok ||
 		!bounce.ControlledChoice ||
 		bounce.Amount.Value() != 1 ||

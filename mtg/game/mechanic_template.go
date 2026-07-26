@@ -979,7 +979,7 @@ func DashTriggeredAbility() TriggeredAbility {
 					Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 						Timing: DelayedAtBeginningOfNextEndStep,
 						Content: Mode{Sequence: []Instruction{{
-							Primitive: Bounce{Object: SourcePermanentReference()},
+							Primitive: MovePermanent{Object: SourcePermanentReference(), Destination: zone.Hand},
 						}}}.Ability(),
 					}},
 				},

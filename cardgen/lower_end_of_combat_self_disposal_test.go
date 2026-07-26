@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerEndOfCombatSelfDisposal proves the fragile attacker/blocker idiom
@@ -46,7 +47,7 @@ func TestLowerEndOfCombatSelfDisposal(t *testing.T) {
 			text: "When this creature attacks or blocks, return it to its owner's hand at end of combat.",
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
-				bounce, ok := primitive.(game.Bounce)
+				bounce, ok := movePermanentTo(primitive, zone.Hand)
 				if !ok || bounce.Object != game.SourceCardPermanentReference() {
 					t.Fatalf("primitive = %#v, want source-card bounce", primitive)
 				}
@@ -57,8 +58,8 @@ func TestLowerEndOfCombatSelfDisposal(t *testing.T) {
 			text: "When this creature attacks or blocks, put it on top of its owner's library at end of combat.",
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
-				put, ok := primitive.(game.PutPermanentOnLibrary)
-				if !ok || put.Object != game.SourceCardPermanentReference() || put.Bottom {
+				put, ok := movePermanentTo(primitive, zone.Library)
+				if !ok || put.Object != game.SourceCardPermanentReference() || put.LibraryBottom {
 					t.Fatalf("primitive = %#v, want source-card put on top of library", primitive)
 				}
 			},

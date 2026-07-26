@@ -42,9 +42,10 @@ func (a gilraenChoiceAgent) ChooseChoice(_ PlayerObservation, request game.Choic
 func gilraenBlinkInstructions(entryCounters []game.CounterPlacement) []game.Instruction {
 	return []game.Instruction{
 		{
-			Primitive: game.Exile{
-				Object:         game.TargetPermanentReference(0),
-				ExileLinkedKey: gilraenBlinkKey,
+			Primitive: game.MovePermanent{
+				Object:        game.TargetPermanentReference(0),
+				PublishLinked: gilraenBlinkKey,
+				Destination:   zone.Exile,
 			},
 		},
 		{
@@ -390,9 +391,10 @@ func TestCapturedDelayedReturnHonorsExplicitController(t *testing.T) {
 	obj := linkedSourceObject(source)
 	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
 
-	resolveInstruction(engine, g, obj, game.Exile{
-		Object:         game.TargetPermanentReference(0),
-		ExileLinkedKey: gilraenBlinkKey,
+	resolveInstruction(engine, g, obj, game.MovePermanent{
+		Object:        game.TargetPermanentReference(0),
+		PublishLinked: gilraenBlinkKey,
+		Destination:   zone.Exile,
 	}, nil)
 	resolveInstruction(engine, g, obj, game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
 		Timing:       game.DelayedAtBeginningOfNextEndStep,

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerKickedConditionalGainOrLoseLife proves the marquee shape of
@@ -76,8 +77,9 @@ func TestLowerKickedConditionalGainOrLoseLife(t *testing.T) {
 		t.Fatalf("lose player = %+v, want controller", lose.Player)
 	}
 
-	if _, ok := mode.Sequence[3].Primitive.(game.Exile); !ok {
-		t.Fatalf("seq3 = %T, want game.Exile (self-exile)", mode.Sequence[3].Primitive)
+	selfExile, ok := mode.Sequence[3].Primitive.(game.MoveResolvingSpell)
+	if !ok || selfExile.Destination != zone.Exile {
+		t.Fatalf("seq3 = %#v, want a resolving-spell exile (self-exile)", mode.Sequence[3].Primitive)
 	}
 
 	if len(face.StaticAbilities) != 1 {
