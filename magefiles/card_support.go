@@ -1,6 +1,8 @@
 package magefiles
 
 import (
+	"bufio"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -122,7 +124,7 @@ func oracleCardsCachePath() (string, error) {
 }
 
 type bulkDataMetadata struct {
-	DownloadURI string `json:"download_uri"`
+	JSONLDownloadURI string `json:"jsonl_download_uri"`
 }
 
 func ensureOracleCards(ctx context.Context, client *http.Client, metadataURL, path string) error {
@@ -154,11 +156,11 @@ func ensureOracleCards(ctx context.Context, client *http.Client, metadataURL, pa
 	if err := json.NewDecoder(response.Body).Decode(&metadata); err != nil {
 		return fmt.Errorf("decoding Scryfall bulk-data metadata: %w", err)
 	}
-	if metadata.DownloadURI == "" {
-		return errors.New("scryfall bulk-data metadata has no download URI")
+	if metadata.JSONLDownloadURI == "" {
+		return errors.New("scryfall bulk-data metadata has no JSONL download URI")
 	}
 
-	request, err = http.NewRequestWithContext(ctx, http.MethodGet, metadata.DownloadURI, http.NoBody)
+	request, err = http.NewRequestWithContext(ctx, http.MethodGet, metadata.JSONLDownloadURI, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("creating Scryfall Oracle Cards download request: %w", err)
 	}
@@ -180,14 +182,9 @@ func ensureOracleCards(ctx context.Context, client *http.Client, metadataURL, pa
 	}
 	temporaryPath := temporary.Name()
 	defer os.Remove(temporaryPath)
-	written, err := io.Copy(temporary, response.Body)
-	if err != nil {
+	if err := writeOracleCardsJSON(temporary, response.Body); err != nil {
 		_ = temporary.Close()
-		return fmt.Errorf("writing Scryfall Oracle Cards cache: %w", err)
-	}
-	if written == 0 {
-		_ = temporary.Close()
-		return errors.New("scryfall Oracle Cards download was empty")
+		return err
 	}
 	if err := temporary.Close(); err != nil {
 		return fmt.Errorf("closing Scryfall Oracle Cards cache: %w", err)
@@ -196,6 +193,56 @@ func ensureOracleCards(ctx context.Context, client *http.Client, metadataURL, pa
 		return fmt.Errorf("installing Scryfall Oracle Cards cache: %w", err)
 	}
 	_, _ = fmt.Fprintf(os.Stdout, "Downloaded Scryfall Oracle Cards corpus: %s\n", path)
+	return nil
+}
+
+// writeOracleCardsJSON converts Scryfall's gzipped JSONL download to the
+// top-level JSON array consumed by the repository's corpus tools. It streams one
+// card at a time so neither representation is held wholly in memory.
+func writeOracleCardsJSON(destination io.Writer, compressed io.Reader) error {
+	reader, err := gzip.NewReader(compressed)
+	if err != nil {
+		return fmt.Errorf("opening Scryfall Oracle Cards gzip stream: %w", err)
+	}
+	defer reader.Close()
+
+	writer := bufio.NewWriter(destination)
+	if err := writer.WriteByte('['); err != nil {
+		return fmt.Errorf("writing Scryfall Oracle Cards cache: %w", err)
+	}
+	decoder := json.NewDecoder(reader)
+	count := 0
+	for {
+		var card json.RawMessage
+		err := decoder.Decode(&card)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			return fmt.Errorf("decoding Scryfall Oracle Cards JSONL record %d: %w", count+1, err)
+		}
+		if len(card) == 0 || card[0] != '{' {
+			return fmt.Errorf("decoding Scryfall Oracle Cards JSONL record %d: expected a JSON object", count+1)
+		}
+		if count > 0 {
+			if err := writer.WriteByte(','); err != nil {
+				return fmt.Errorf("writing Scryfall Oracle Cards cache: %w", err)
+			}
+		}
+		if _, err := writer.Write(card); err != nil {
+			return fmt.Errorf("writing Scryfall Oracle Cards cache: %w", err)
+		}
+		count++
+	}
+	if count == 0 {
+		return errors.New("scryfall Oracle Cards download contained no cards")
+	}
+	if err := writer.WriteByte(']'); err != nil {
+		return fmt.Errorf("writing Scryfall Oracle Cards cache: %w", err)
+	}
+	if err := writer.Flush(); err != nil {
+		return fmt.Errorf("writing Scryfall Oracle Cards cache: %w", err)
+	}
 	return nil
 }
 
