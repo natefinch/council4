@@ -1,20 +1,19 @@
 package magefiles
 
 import (
-	"os"
 	"slices"
 	"testing"
 )
 
 func TestSupportDocsArgs(t *testing.T) {
 	t.Parallel()
-	args := supportDocsArgs("/cache/oracle-cards.json", "/tmp/scratch")
+	args := supportDocsArgs("/cache/oracle-cards.json", "/tmp/scratch", "/tmp/scratch/compile-report.json")
 	if len(args) < 2 || args[0] != "run" || args[1] != "./cardgen/oracle/cmd/compilecards" {
 		t.Fatalf("args = %v, want a compilecards run invocation", args)
 	}
 	assertArgPair(t, args, "-in", "/cache/oracle-cards.json")
 	assertArgPair(t, args, "-out", "/tmp/scratch")
-	assertArgPair(t, args, "-report", os.DevNull)
+	assertArgPair(t, args, "-report", "/tmp/scratch/compile-report.json")
 	assertDocumentationArgs(t, args)
 }
 
@@ -29,7 +28,7 @@ func TestSupportDocsArgs(t *testing.T) {
 // That still fails if a future change reintroduces an inline list in one path.
 func TestSupportDocsArgsMatchCardSupportDocumentation(t *testing.T) {
 	t.Parallel()
-	docs := documentationFlags(t, supportDocsArgs("/cache/oracle-cards.json", "/tmp/scratch"))
+	docs := documentationFlags(t, supportDocsArgs("/cache/oracle-cards.json", "/tmp/scratch", "/tmp/scratch/compile-report.json"))
 	full := documentationFlags(t, cardSupportArgs("./cardgen/oracle/cmd/compilecards", "/cache/oracle-cards.json", "/tmp/generated", true))
 	if !slices.Equal(docs, full) {
 		t.Fatalf("supportDocsArgs documentation flags = %v, cardSupportArgs documentation flags = %v, want identical", docs, full)

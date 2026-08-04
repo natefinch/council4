@@ -112,13 +112,20 @@ func parseCorpus(input io.Reader, workers int) ([]cardOutcome, error) {
 }
 
 // evaluateCard computes the parser signal and the per-card guard signal for one
-// card. Excluded cards return an ineligible outcome so they are dropped before
-// routing, exactly as compilecards and parsercoverage drop them. The
+// card. Disowned and excluded cards return an ineligible outcome so they are
+// dropped before routing, exactly as compilecards and parsercoverage drop them:
+// DisownedCard is checked first because compilecards omits those cards from
+// every bucket of its report (they are never generated, unsupported, or
+// excluded), so leaving this card eligible here would let the reconciliation
+// guard below misread that omission as an authoritative "generated" verdict. The
 // authoritative generated/lowering signal is applied separately from
 // compilecards' report; this function never decides generated membership.
 func evaluateCard(item job) cardOutcome {
 	card := item.card
 	outcome := cardOutcome{index: item.index, id: card.ID, name: card.Name}
+	if cardgen.DisownedCard(card) {
+		return outcome
+	}
 	if _, excluded := (cardgen.CorpusPolicy{}).Exclusion(card); excluded {
 		return outcome
 	}

@@ -24,7 +24,8 @@ const (
 )
 
 // CardSupport regenerates card definitions and the repository's card-support
-// documentation into the ignored .cardwork scratch space.
+// documentation, including card-backlog.md, into the ignored .cardwork scratch
+// space.
 //
 // Use CardTree to generate the card tree into another repository without
 // touching council4 documentation.
@@ -69,7 +70,17 @@ func generateCards(ctx context.Context, output string) error {
 		return fmt.Errorf("creating cardgen work directory: %w", err)
 	}
 	args := cardSupportArgs(compiler, corpusPath, generatedRoot, documentation)
-	return runCommand(ctx, "go", args...)
+	if err := runCommand(ctx, "go", args...); err != nil {
+		return err
+	}
+	if !documentation {
+		return nil
+	}
+	// CardSupportReportPath was just written by the run above (documentation
+	// implies the repository-generation compiler, whose args always include
+	// -report CardSupportReportPath below), so reuse it instead of compiling the
+	// corpus again solely to refresh card-backlog.md.
+	return regenerateCardBacklog(ctx, corpusPath, CardSupportReportPath, os.DevNull)
 }
 
 func cardSupportSettings(output string) (generatedRoot, compiler string, documentation bool) {
