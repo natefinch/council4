@@ -1,6 +1,8 @@
 package magefiles
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -83,13 +85,16 @@ func containsArg(args []string, want string) bool {
 func TestEnsureOracleCardsDownloadsAndReusesCache(t *testing.T) {
 	t.Parallel()
 	var requests atomic.Int32
+	download := gzipJSONL(t, `{"name":"Bear"}`, `{"name":"Wolf"}`)
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		requests.Add(1)
 		switch request.URL.Path {
 		case "/metadata":
-			_ = json.NewEncoder(writer).Encode(bulkDataMetadata{DownloadURI: serverURL(request) + "/cards"})
+			_ = json.NewEncoder(writer).Encode(map[string]string{
+				"jsonl_download_uri": serverURL(request) + "/cards",
+			})
 		case "/cards":
-			_, _ = writer.Write([]byte(`[{"name":"Bear"}]`))
+			_, _ = writer.Write(download)
 		default:
 			http.NotFound(writer, request)
 		}
@@ -107,12 +112,27 @@ func TestEnsureOracleCardsDownloadsAndReusesCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got, want := string(data), `[{"name":"Bear"}]`; got != want {
+	if got, want := string(data), `[{"name":"Bear"},{"name":"Wolf"}]`; got != want {
 		t.Fatalf("cache = %q, want %q", got, want)
 	}
 	if got := requests.Load(); got != 2 {
 		t.Fatalf("requests = %d, want metadata and download only", got)
 	}
+}
+
+func gzipJSONL(t *testing.T, records ...string) []byte {
+	t.Helper()
+	var compressed bytes.Buffer
+	writer := gzip.NewWriter(&compressed)
+	for _, record := range records {
+		if _, err := writer.Write([]byte(record + "\n")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return compressed.Bytes()
 }
 
 func serverURL(request *http.Request) string {
@@ -143,11 +163,28 @@ func TestEnsureOracleCardsFailsClosed(t *testing.T) {
 		name            string
 		metadataStatus  int
 		downloadStatus  int
-		downloadContent string
+		downloadContent []byte
 	}{
 		{name: "metadata status", metadataStatus: http.StatusServiceUnavailable},
 		{name: "download status", metadataStatus: http.StatusOK, downloadStatus: http.StatusServiceUnavailable},
-		{name: "empty download", metadataStatus: http.StatusOK, downloadStatus: http.StatusOK},
+		{
+			name:            "invalid gzip",
+			metadataStatus:  http.StatusOK,
+			downloadStatus:  http.StatusOK,
+			downloadContent: []byte("not gzip"),
+		},
+		{
+			name:            "empty JSONL",
+			metadataStatus:  http.StatusOK,
+			downloadStatus:  http.StatusOK,
+			downloadContent: gzipJSONL(t),
+		},
+		{
+			name:            "invalid JSONL",
+			metadataStatus:  http.StatusOK,
+			downloadStatus:  http.StatusOK,
+			downloadContent: gzipJSONL(t, `{"name":`),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -157,11 +194,13 @@ func TestEnsureOracleCardsFailsClosed(t *testing.T) {
 				case "/metadata":
 					writer.WriteHeader(test.metadataStatus)
 					if test.metadataStatus == http.StatusOK {
-						_ = json.NewEncoder(writer).Encode(bulkDataMetadata{DownloadURI: serverURL(request) + "/cards"})
+						_ = json.NewEncoder(writer).Encode(map[string]string{
+							"jsonl_download_uri": serverURL(request) + "/cards",
+						})
 					}
 				case "/cards":
 					writer.WriteHeader(test.downloadStatus)
-					_, _ = writer.Write([]byte(test.downloadContent))
+					_, _ = writer.Write(test.downloadContent)
 				default:
 					http.NotFound(writer, request)
 				}

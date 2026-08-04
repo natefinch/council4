@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,180 of 32,503 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,841 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,184 of 32,508 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1005,6 +1005,7 @@ Council4 currently supports **18,180 of 32,503 cards eligible for paper support 
 - Awaken the Honored Dead
 - Awakening
 - Awakening Zone
+- Axe
 - Axebane Beast
 - Axebane Ferox
 - Axebane Guardian
@@ -1428,6 +1429,7 @@ Council4 currently supports **18,180 of 32,503 cards eligible for paper support 
 - Bird
 - Bird Illusion
 - Bird Maiden
+- Bird Soldier
 - Bird Soldier
 - Birds of Paradise
 - Birnin Zana Plaza
@@ -4365,8 +4367,8 @@ Council4 currently supports **18,180 of 32,503 cards eligible for paper support 
 - Duty Beyond Death
 - Duty-Bound Dead
 - Dwarf
+- Dwarf
 - Dwarf Berserker
-- Dwarf Token
 - Dwarfhold Champion
 - Dwarven Berserker
 - Dwarven Blastminer
@@ -4585,6 +4587,7 @@ Council4 currently supports **18,180 of 32,503 cards eligible for paper support 
 - Elephant-Rat
 - Elesh Norn, Grand Cenobite
 - Elesh Norn, Mother of Machines
+- Elf
 - Elf
 - Elf Druid
 - Elf Knight
@@ -6378,7 +6381,7 @@ Council4 currently supports **18,180 of 32,503 cards eligible for paper support 
 - Goblin // Blood
 - Goblin // Soldier
 - Goblin Anarchomancer
-- Goblin Army Token
+- Goblin Army
 - Goblin Arsonist
 - Goblin Artillery
 - Goblin Assailant
@@ -14938,6 +14941,7 @@ Council4 currently supports **18,180 of 32,503 cards eligible for paper support 
 - Stomped by the Foot
 - Stomper Cub
 - Stomping Ground
+- Stone Boulder
 - Stone Calendar
 - Stone Docent
 - Stone Golem
