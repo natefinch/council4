@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,180 of 32,503 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,841 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,184 of 32,508 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -11644,6 +11644,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Star Charter** — unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition
 - **Star Whale** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Suspend 6—{1}{U} (Rather than cast this card from your hand, you may pay {1}{U} and exile it with six time counters on it. At the beginning of your upkeep, remove a time counter. When the last is removed, you may cast it without paying its mana cost. It has haste.); unsupported ability word: the executable source backend does not yet lower the "Suspend 6" ability word
 - **Starbreach Whale** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Warp {1}{U} (You may cast this card from your hand for its warp cost. Exile this creature at the beginning of the next end step, then you may cast it from exile on a later turn.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
+- **Stardew Valley** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported gain-control spell
 - **Starfall** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If that creature is an enchantment
 - **Starfall Invocation** — unsupported ordered effect sequence: sub-effect — unsupported return spell; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Starfield of Nyx** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
