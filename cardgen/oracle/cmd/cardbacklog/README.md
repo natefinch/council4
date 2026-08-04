@@ -121,3 +121,8 @@ go run ./cardgen/oracle/cmd/cardbacklog \
 ```
 
 `mage cardBacklog` runs both steps in order and regenerates the committed report.
+This is also kept current automatically: CI runs it on every pull request (as
+part of `mage supportDocs`, alongside `supported.md`/`unsupported.md`/
+`unsupported-reasons.md`), and a local `mage cardSupport` refreshes it too —
+both reuse whichever compile report they already produced rather than
+compiling the corpus a second time.

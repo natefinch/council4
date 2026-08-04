@@ -2,10 +2,18 @@ name: Keep card-support docs current
 
 # Card-support changes are expected to refresh the committed card-support
 # documentation (supported.md, unsupported.md, unsupported-reasons.md, the README
-# summary, and card-fingerprints.txt), but that step is easy to forget. On every
-# pull request this regenerates them from the current Oracle corpus and, when they
-# differ, commits the refreshed docs back to the PR branch so the page that reads
-# them (and anyone browsing the repo) always sees accurate data.
+# summary, card-fingerprints.txt, and card-backlog.md), but that step is easy to
+# forget. On every pull request this regenerates them from the current Oracle
+# corpus and, when they differ, commits the refreshed docs back to the PR branch
+# so the page that reads them (and anyone browsing the repo) always sees
+# accurate data.
+#
+# card-backlog.md routes every unsupported card to the layer (parser or
+# lowering) that blocks it, ranked by how many cards each blocker affects — the
+# most actionable single artifact for choosing what to work on next. Before this
+# workflow covered it, nothing regenerated it automatically and it went stale for
+# months, the same invisible-roadmap failure mode unsupported-reasons.md already
+# had before this workflow existed.
 #
 # card-fingerprints.txt is the corpus-wide regression net: one digest per
 # supported card, so the committed diff shows a reviewer exactly which cards a
