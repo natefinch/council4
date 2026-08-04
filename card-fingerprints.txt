@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18179 supported cards
+# 18184 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -1011,6 +1011,7 @@ ef103fb09959fc8c  Aviation Pioneer
 30431407acbd1f30  Awaken the Honored Dead
 eb9458f38ce558e4  Awakening
 3529d7d6a4fdfaa7  Awakening Zone
+585662b354ada183  Axe
 ba96f619b64d1550  Axebane Beast
 d193b8e9fc85ae2a  Axebane Ferox
 d1d49d32bf99fac3  Axebane Guardian
@@ -1434,6 +1435,7 @@ e22a09046318dbd4  Bird
 ee3dca8efdfbe6de  Bird
 3abedef5bac0820d  Bird Illusion
 c8540ecd54052b9d  Bird Maiden
+beead3b4f537b427  Bird Soldier
 e03d438b4d25bb56  Bird Soldier
 a08fc43279877a38  Birds of Paradise
 21c185af56e9992b  Birnin Zana Plaza
@@ -4371,8 +4373,8 @@ b3e1b280fe403cff  Dutiful Thrull
 f89bfeba5e81eb1d  Duty Beyond Death
 a1906d4723a96814  Duty-Bound Dead
 5345bbfacb61f469  Dwarf
+8b8ec984b31d888d  Dwarf
 fb9996e8b69ee10b  Dwarf Berserker
-73604ee49de7b386  Dwarf Token
 a35cca64e8399c23  Dwarfhold Champion
 0c7f86ba2c159c0e  Dwarven Berserker
 4b511d2a9bc69bf9  Dwarven Blastminer
@@ -4592,6 +4594,7 @@ b17255f7e8a14b88  Elephant-Rat
 54d5e9647a320a25  Elesh Norn, Grand Cenobite
 b835dbb1bac6bfac  Elesh Norn, Mother of Machines
 71e5f060b4cd9865  Elf
+7b3e98ab09c8e92a  Elf
 b036eede1cb76afc  Elf Druid
 4012c6b5affa4e0a  Elf Knight
 380d42dcbde7266f  Elf Replica
@@ -6384,6 +6387,7 @@ cddc93bc75e532f9  Goblin
 3b8e3c7ed29b9e2d  Goblin // Blood
 36f82705a62a9fdf  Goblin // Soldier
 1c703a6ab558801a  Goblin Anarchomancer
+6475e97c22070d42  Goblin Army
 f5a532aa14a833e2  Goblin Arsonist
 3bf405bd27fccc79  Goblin Artillery
 db55b62969bc4dca  Goblin Assailant
@@ -7197,7 +7201,7 @@ a3b73ad104d906e5  Herd Migration
 f8570c68482259b7  Hermetic Study
 a2bf710dad84abd2  Hermitic Nautilus
 4becdfe957ce76b2  Hero
-fe2761f38a074d1d  Hero
+4e608bd9655977e4  Hero
 95eeefff34941de5  Hero in Training
 5dbb86e7da37696a  Hero of Bladehold
 6e7c5f06d109a869  Hero of Goma Fada
@@ -7810,7 +7814,7 @@ a766456569c56f5a  Injector Crocodile
 279c6f23cf578a44  Ink Dissolver
 d2b33be96a940103  Inkfathom Divers
 968d58945ccc7c71  Inkfathom Infiltrator
-2e7e898b8dd55f6d  Inkling
+4f7f2673f7b03ade  Inkling
 8e21b0b258cbdae9  Inkling
 cf73c74d6ab7801c  Inkling Mascot
 df5c4d7340e65477  Inkling Summoning
@@ -14943,6 +14947,7 @@ b5ff5269b962e778  Stolen Grain
 c0c0e19323b32124  Stomped by the Foot
 8636136f4bc7b1cb  Stomper Cub
 c4806c8165908250  Stomping Ground
+24c7688bc0186e08  Stone Boulder
 70387d7baea3c44c  Stone Calendar
 f9c0975359391d47  Stone Docent
 1f98e5074a28f84d  Stone Golem

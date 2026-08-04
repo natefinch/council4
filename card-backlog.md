@@ -9,13 +9,13 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 
 ## Headline
 
-- Eligible cards: 32501
-- Supported (generated): 18179
-- Parser-complete: 22311
+- Eligible cards: 32508
+- Supported (generated): 18184
+- Parser-complete: 22316
 - **Lowering backlog** (parser-complete, not generated): 4896
-- **Parser backlog** (not parser-complete, not generated): 9426
+- **Parser backlog** (not parser-complete, not generated): 9428
 
-Partition check: 18179 supported + 4896 lowering-backlog + 9426 parser-backlog = 32501 eligible. ✓
+Partition check: 18184 supported + 4896 lowering-backlog + 9428 parser-backlog = 32508 eligible. ✓
 
 764 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18179 supported + 4896 lowering-backlog + 9426 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18179
-- Independent per-card recompile generated: 18179
+- Authoritative generated (compilecards report): 18184
+- Independent per-card recompile generated: 18184
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -162,7 +162,7 @@ Cards that are not parser-complete (and do not lower), bucketed by owning compon
 | 9 | effect | nightbound (if a player casts at least two spells during their own turn, it becomes day next turn.) | 34 | Graveyard Trespasser // Graveyard Glutton; Shady Traveler // Stalking Predator; Tovolar's Huntmaster // Tovolar's Packleader; Oakshade Stalker // Moonlit Ambusher; Brutal Cathar // Moonrage Brute |
 | 10 | condition | if a player cast two or more spells last turn | 33 | Ulrich of the Krallenhorde // Ulrich, Uncontested Alpha; Lambholt Elder // Silverpelt Werewolf; Instigator Gang // Wildblood Pack; Daybreak Ranger // Nightfall Predator; Hinterland Logger // Timber Shredder |
 | 11 | effect | any player may activate this ability. | 33 | Flailing Manticore; Vintara Elephant; Xantcha, Sleeper Agent; Casey Jones, Asphalt Hooligan; Deadly Designs |
-| 12 | condition | if it's a creature card | 32 | Search for Survivors; Elven Farsight; Hauntwoods Shrieker; Sapling of Colfenor; Domri Rade |
+| 12 | condition | if it's a creature card | 30 | Search for Survivors; Hauntwoods Shrieker; Sapling of Colfenor; Domri Rade; Llanowar Empath |
 | 13 | condition | if it's a land card | 30 | Unexpected Results; Countryside Crusher; Skyclave Aerialist // Skyclave Invader; Nissa, Vastwood Seer // Nissa, Sage Animist; Thrasios, Triton Hero |
 | 14 | effect | take an extra turn after this one. | 29 | Twice Upon a Time // Unlikely Meeting; Temporal Extortion; The Legend of Kuruk // Avatar Kuruk; Alchemist's Gambit; Chance for Glory |
 | 15 | condition | if you win | 28 | Research the Deep; Woodland Guidance; Titan's Revenge; Captivating Glance; Sentry Oak |
