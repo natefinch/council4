@@ -2827,18 +2827,23 @@ func sameNameBackReferenceNoun(token shared.Token) bool {
 // card with an "in <owner> graveyard" zone phrase that scanZones does not tag,
 // because the phrase uses the "in" preposition rather than a "from"/"to" zone
 // atom. It accepts "your graveyard" (Emry, Lurker of the Loch), the
-// any-graveyard "a graveyard" (Havengul Lich), and the opponent-scoped "an
-// opponent's graveyard" (Jailbreak) owner phrases -- the same three controller
-// relations parseSelection's own "your"/"opponent's" controller switch already
-// recognizes elsewhere in the word list, so this only widens the zone-phrase
-// shape, not the set of controllers a graveyard selection can carry. It accepts
-// the phrase when it ends the noun clause ("target creature card in your
-// graveyard") or when it immediately precedes a trailing "with" qualifier
-// ("target artifact card in your graveyard with lesser mana value", the
-// fronted-destination graveyard return used by Scrap Trawler). Requiring the
-// phrase to sit at the noun clause's tail keeps an embedded count sub-clause
-// ("the number of cards in your graveyard", which is never followed by "with")
-// from being mistaken for the selection's own zone.
+// any-graveyard "a graveyard" (Havengul Lich), the opponent-scoped "an
+// opponent's graveyard" (Jailbreak), the bare plural "graveyards" (Turn the
+// Earth: "Choose up to three target cards in graveyards."), and "a single
+// graveyard" -- the same owner phrases the "from" family's graveyardZonePhrase
+// (atoms.go) already recognizes for the "from"/"to" prepositions, kept in
+// parity here for the "in" preposition. The controller relations themselves
+// (SelectionControllerYou/Opponent) are assigned by parseSelection's own
+// "your"/"opponent's" switch elsewhere in the word list, and SingleGraveyard by
+// its own generic "single"+"graveyard" word check, so this only widens the
+// zone-phrase shape, not those separate assignments. It accepts the phrase when
+// it ends the noun clause ("target creature card in your graveyard") or when it
+// immediately precedes a trailing "with" qualifier ("target artifact card in
+// your graveyard with lesser mana value", the fronted-destination graveyard
+// return used by Scrap Trawler). Requiring the phrase to sit at the noun
+// clause's tail keeps an embedded count sub-clause ("the number of cards in
+// your graveyard", which is never followed by "with") from being mistaken for
+// the selection's own zone.
 func graveyardInPhraseZone(words []string) bool {
 	for i := range words {
 		if words[i] != "in" {
@@ -2857,17 +2862,23 @@ func graveyardInPhraseZone(words []string) bool {
 
 // graveyardInPhraseOwnerEnd recognizes the owner phrase following the "in"
 // preposition of an "in <owner> graveyard" zone phrase -- "your graveyard", "a
-// graveyard", or "an opponent's graveyard" -- starting at index start, and
-// returns the index just past "graveyard". It fails closed for any other owner
-// phrase (a bare plural "graveyards", a referenced-player pronoun such as
-// "their graveyard", or "each"/"all" graveyards), which belong to the mass-group
-// and dynamic-count families' own zone recognition instead.
+// graveyard", "an opponent's graveyard", the bare plural "graveyards", or "a
+// single graveyard" -- starting at index start, and returns the index just past
+// the graveyard noun. It fails closed for any other owner phrase (a
+// referenced-player pronoun such as "their graveyard", or "each"/"all"
+// graveyards), which belong to the mass-group and dynamic-count families' own
+// zone recognition instead.
 func graveyardInPhraseOwnerEnd(words []string, start int) (int, bool) {
 	switch {
+	case start < len(words) && words[start] == "graveyards":
+		return start + 1, true
 	case start+1 < len(words) && words[start] == "your" && words[start+1] == "graveyard":
 		return start + 2, true
 	case start+1 < len(words) && words[start] == "a" && words[start+1] == "graveyard":
 		return start + 2, true
+	case start+2 < len(words) && words[start] == "a" && words[start+1] == "single" &&
+		(words[start+2] == "graveyard" || words[start+2] == "graveyards"):
+		return start + 3, true
 	case start+2 < len(words) && words[start] == "an" && words[start+1] == "opponent's" && words[start+2] == "graveyard":
 		return start + 3, true
 	default:
