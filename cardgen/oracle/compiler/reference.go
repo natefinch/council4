@@ -411,19 +411,6 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 		if reference.Kind == ReferenceThatObject {
 			return 0, false
 		}
-		// A delayed "Exile it"/"Sacrifice it at the beginning of the next end
-		// step" cleanup clause immediately after a token creation (Kiki-Jiki,
-		// Mirror Breaker; Cogwork Assembler; Feldon of the Third Path) is instead
-		// claimed by the lowering layer's isDelayedTargetExileEffect /
-		// isDelayedTargetSacrificeEffect, which still expects
-		// ReferenceBindingTarget rather than this classification. Exclude that
-		// shape here so it keeps resolving exactly as it did before this case was
-		// added, until that lowering path is also taught to accept a
-		// PriorInstructionResult antecedent.
-		if (effects[current].Kind == EffectExile || effects[current].Kind == EffectSacrifice) &&
-			effects[current].DelayedTiming != 0 {
-			return 0, false
-		}
 		return prior, true
 	case EffectMill:
 		if referencedCardsTotalManaValueReference(reference, effects) {

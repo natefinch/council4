@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18185 supported cards
+# 18195 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -1074,6 +1074,7 @@ d4f9a7537968d3a7  Balamb Garden, SeeD Academy // Balamb Garden, Airborne
 a3ab4d7fa30ababc  Balduvian Atrocity
 1d65a923a2e80a95  Balduvian Barbarians
 5711ee4f95773819  Balduvian Bears
+3593d7b79406aecb  Balduvian Dead
 f82507b0e69b870d  Balduvian Horde
 88e687208d4ae658  Balduvian Rage
 1bc6037a90905f14  Balduvian War-Makers
@@ -2636,7 +2637,7 @@ ea2df4dc33468637  Chromatic Lantern
 88adb714c344ab72  Chromatic Star
 56f1ee8637b3a1db  Chrome Cat
 b9939d64568f2ec6  Chrome Companion
-5eb890375265b389  Chrome Dome
+c7e984ba379df0a8  Chrome Dome
 465a20a5fdf4219e  Chrome Mox
 49c9ce2e9251312d  Chrome Prowler
 ae45e89c5e90f2e0  Chrome Steed
@@ -2839,7 +2840,7 @@ e8ef03c3d320871d  Coercive Impetus
 0902e082542a05db  Coeurl
 c91b4164ee48fc2a  Coffin Purge
 381a1ac8a0b05d3c  Cogwork Archivist
-63bf0359204bb440  Cogwork Assembler
+177a560e4edc4b55  Cogwork Assembler
 8e6117859d66ee38  Cogwork Wrestler
 75adb75a9eab4448  Cogworker's Puzzleknot
 40f3f3a1f1cfc969  Coiled Tinviper
@@ -3411,6 +3412,7 @@ f5889f4d54e17b39  Dakmor Sorceress
 50f2c62ee9df187b  Dalek
 640852de234279bf  Dalek Drone
 f480291bed6b1824  Dalek Squadron
+bbfd677d1cd58d65  Dalkovan Encampment
 19cada88a0e8c848  Dalkovan Packbeasts
 6fba2ca7fe4d9e71  Damn
 0c21c1f8463d2228  Damnable Pact
@@ -3441,6 +3443,7 @@ cdba2d69e563bb73  Daring Discovery
 da51d9f6975fbf3b  Daring Fiendbonder
 c43991a6f5cda1bd  Daring Leap
 b19a4334e4100949  Daring Mechanic
+fce4fa0b803929eb  Daring Piracy
 051566f444ded373  Daring Saboteur
 e6b5361f67598596  Daring Skyjek
 e41be38e43027ea4  Daring Sleuth // Bearer of Overwhelming Truths
@@ -5242,7 +5245,7 @@ b8b265ab84291eee  Feeding Frenzy
 388951787da0b27e  Feign Death
 7dbdeb76a982294b  Feisty Spikeling
 c49406eefbff2e09  Feiyi Snake
-2fda9487cfe8e8df  Feldon of the Third Path
+d2ce55675e6215f6  Feldon of the Third Path
 f1ba1cbcd1c57e83  Feldon's Cane
 9320183fadd38011  Felhide Minotaur
 34b97245570ecc29  Felhide Petrifier
@@ -5278,6 +5281,7 @@ df090d515be1c2aa  Feral Ferocity
 27ad8efc32ef032a  Feral Instinct
 7f05dbe0d054415f  Feral Invocation
 f9f0ffc17b85792c  Feral Krushok
+1b1579b8476406ec  Feral Lightning
 727f95eabaa7cd23  Feral Maaka
 83d4194126ba9d9a  Feral Prowler
 c21efa0e7ef9f401  Feral Ridgewolf
@@ -5426,6 +5430,7 @@ c0ead65113490016  Firebrand Archer
 317829e516354e93  Firebrand Ranger
 8f25b17b6547230e  Firebreathing
 3b9425ff7c1997ac  Firecannon Blast
+acf90b0a16b5a7f3  Firecat Blitz
 b10690587cd24d24  Firefiend Elemental
 b712e4c7fe0a80f4  Firefist Adept
 7b8de7b01ca506ef  Firefist Striker
@@ -7518,6 +7523,7 @@ d952cbb94a4149b1  Hundred-Talon Kami
 7728f68b05fd757a  Hunger of the Nim
 ecfb4613bda34ffa  Hungering Hydra
 95876851e0f298c8  Hungry Flames
+ed87c2bb1e27115a  Hungry for More
 18acbeb0f4571856  Hungry Ghoul
 4ba39673e8e2f184  Hungry Lynx
 b220209bfc7d1bab  Hungry Megasloth
@@ -8389,7 +8395,7 @@ d847a45021cefe41  Khalni Garden
 6ea1679b49a7c298  Khenra Spellspear // Gitaxian Spellstalker
 647fa8ce9d2082e1  Kheru Bloodsucker
 4344bc68c864f489  Kheru Dreadmaw
-df0b6a0f9b2b266c  Kiki-Jiki, Mirror Breaker
+6aee22b84d2b2540  Kiki-Jiki, Mirror Breaker
 bfe2f66fb9060cf4  Kiku's Shadow
 c5198450dc97679c  Kiku, Night's Flower
 00b0f47b9f219105  Kill Shot
@@ -9962,7 +9968,7 @@ c62e67d92f73f284  Molimo, Maro-Sorcerer
 7d649d3ef7a07afe  Molt Tender
 856efab352fb0ed3  Molten Blast
 b7ac1a13815eef5b  Molten Duplication
-e1e4f29edf754c46  Molten Echoes
+dc37eddd6181340a  Molten Echoes
 5fa4540e939afad5  Molten Frame
 b0b3c0073474ffd8  Molten Gatekeeper
 eacc64946e971ec6  Molten Man, Inferno Incarnate
@@ -10904,7 +10910,7 @@ ede5d681377b4ac0  Ornithopter
 72554570dd17b6f1  Orochi Leafcaller
 94cfccf15c746aab  Orochi Ranger
 056823820dc40cad  Orochi Sustainer
-3f0e2b7d00d36d9f  Orthion, Hero of Lavabrink
+3a6ae656631183dd  Orthion, Hero of Lavabrink
 8a08448fea0e8306  Orthodoxy Enforcer
 f1afee7036c75254  Orzhov Basilica
 85cdc7b3ffa5659b  Orzhov Cluestone
@@ -11946,6 +11952,7 @@ caa5996b836e0634  Rakdos Charm
 ae0e6d5d17eda813  Rakdos Cluestone
 50ae13abeafcaf3a  Rakdos Drake
 08ec98fc8fa068c0  Rakdos Guildgate
+61d142b676f31f58  Rakdos Guildmage
 41b660efe17c29a0  Rakdos Joins Up
 949594402924a51e  Rakdos Keyrune
 4c521297fa0cd50e  Rakdos Locket
@@ -12864,10 +12871,10 @@ fe678e3369842f4d  Sage-Eye Harrier
 970e72759367cfe7  Sagu Mauler
 359239f50bc1a50c  Sagu Wildling // Roost Seek
 b6a3d6b9fd9799a6  Sahagin
-fdd5b6ff81e8c585  Saheeli Rai
+85c4dc97a91450b3  Saheeli Rai
 329aa08c70e27962  Saheeli's Artistry
 cdf3c40e0f890114  Saheeli's Silverwing
-86474fd7d7ae77c4  Saheeli, the Sun's Brilliance
+d482af6f182348f3  Saheeli, the Sun's Brilliance
 3b2743b2afdfcb4d  Sai, Master Thopterist
 916d309ac5677d35  Said // Done
 75b448e72de678f1  Sailor of Means
@@ -15604,7 +15611,7 @@ b5e4ffc9afdbe606  Tempest Hart // Scan the Clouds
 6e847848e54e1cbf  Tempest of Light
 045c50ee6192e1c0  Tempest Owl
 c93d7e04dd0d82fc  Tempest Technique
-58b05694b7b7d4c9  Tempestra, Dame of Games
+b3399d6982ea9e55  Tempestra, Dame of Games
 ccc9a63a37e9f02f  Temple Acolyte
 d57d78f872b0b9a3  Temple Bell
 e268a3b89d076b25  Temple Elder
@@ -15740,6 +15747,7 @@ d41ed544f05f020f  Thassa's Oracle
 657326ee086d6df8  Thassa, Deep-Dwelling
 03367110f65cd10d  Thassa, God of the Sea
 4b2f12ddb4a6d98e  That's Rough Buddy
+087cfb5b1bdd33c7  Thatcher Revolt
 2acd94eaccd702d9  Thaumatog
 cc9eb060a5a047d5  Thaumaturge's Familiar
 b290d2f7abdb4ca2  Thawbringer
@@ -15769,7 +15777,7 @@ ee53f13dbc937b90  The Fabulous Frog-Man
 b8983c1168432f7d  The Fair Basilica
 7cf949ad73f2830d  The Falcon, Airship Restored
 2b7094c44e4d4bc9  The Falcon, Sam Wilson
-d36a8f97d157a6e1  The Fire Crystal
+af33e53a409f22cd  The Fire Crystal
 34016ce493a20dc4  The Fire Nation Drill
 fb3cd09ccb6305d5  The First Eruption
 b50731d73db3eeea  The First Iroan Games
@@ -16053,6 +16061,7 @@ a012f168c59e1754  Ticking Gnomes
 a239fff5dc0cdd35  Tidal Courier
 b57b1b8b374a87ec  Tidal Force
 9e88137b2115621c  Tidal Kraken
+2660fc172f305db3  Tidal Wave
 3ea01e8b308b7c6c  Tide Drifter
 306e548de3f85ba9  Tidecaller Mentor
 372d4321e2ca680a  Tideforce Elemental
@@ -17423,6 +17432,7 @@ fa365f2a298ed345  Wanted Griffin
 1ef8a76270d974a3  War Behemoth
 f4fd6dd65ef2e51b  War Chariot
 f700d900448ca82e  War Dance
+24c0b20251345819  War Effort
 6197c6b4492835ff  War Elephant
 beb8bb71786a8717  War Flare
 27e63f76bca499e6  War Horn
@@ -18092,7 +18102,7 @@ ee31ad6e8274ab8b  Zealous Lorecaster
 423bae2a5d6599ca  Zealous Persecution
 b84dd54e7f73d979  Zealous Strike
 86042f586457a08e  Zebra Unicorn
-9ca0d289ccfd4dd4  Zektar Shrine Expedition
+9194112a9ae34e64  Zektar Shrine Expedition
 69273cae02eb1e38  Zell Dincht
 d4a887f90d23415a  Zendikar Farguide
 5f691e13bb593010  Zendikar Incarnate

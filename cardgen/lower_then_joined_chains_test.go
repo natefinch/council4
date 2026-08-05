@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // TestLowerThenJoinedThreeEffectSharedTargetSequence is the primary regression
@@ -121,6 +122,51 @@ func TestLowerActivatedAbilitySequenceWithDelayedTargetSacrifice(t *testing.T) {
 	sacrifice, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Sacrifice)
 	if !ok || sacrifice.Object.Kind() != game.ObjectReferenceCapturedObject {
 		t.Fatalf("delayed sacrifice = %#v, want captured-object sacrifice", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
+	}
+}
+
+// TestLowerDelayedExileOfCreatedTokenGroup guards the same "plural product must
+// resolve to the whole group, never a single object" hazard for the delayed
+// exile path (Firecat Blitz: "Create X ... tokens ... Exile them at the
+// beginning of the next end step."). The antecedent is a dynamic-count
+// CreateToken reached via ReferenceBindingPriorInstructionResult (no target
+// involved at all), so this exercises delayedTargetLinkedObject's group branch
+// end-to-end: CapturedObjectGroup must hold a linked-object-kind reference
+// naming every token the creation published, and the delayed content must
+// exile game.CapturedObjectsGroup(), not a single game.CapturedObjectReference().
+func TestLowerDelayedExileOfCreatedTokenGroup(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Firecat Blitz",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{X}{R}{R}",
+		OracleText: "Create X 1/1 red Elemental Cat creature tokens with haste. Exile them at the beginning of the next end step.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatalf("no spell ability lowered: %#v", face)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want create then delayed exile", mode.Sequence)
+	}
+	create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+	if !ok || !create.Amount.IsDynamic() || create.PublishLinked == "" {
+		t.Fatalf("create = %#v, want a dynamic-count token creation publishing a link", mode.Sequence[0].Primitive)
+	}
+	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
+	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
+		t.Fatalf("second primitive = %#v, want delayed end-step trigger", mode.Sequence[1].Primitive)
+	}
+	if !delayed.Trigger.CapturedObjectGroup.Exists ||
+		delayed.Trigger.CapturedObjectGroup.Val.Kind() != game.ObjectReferenceLinkedObject ||
+		delayed.Trigger.CapturedObjectGroup.Val.LinkID() != string(create.PublishLinked) ||
+		delayed.Trigger.CapturedObject.Exists {
+		t.Fatalf("delayed trigger = %#v, want CapturedObjectGroup linked to %q and no single CapturedObject", delayed.Trigger, create.PublishLinked)
+	}
+	move, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.MovePermanent)
+	if !ok || move.Group.Domain() != game.GroupDomainCapturedObjects || move.Destination != zone.Exile || move.Object.Kind() != game.ObjectReferenceNone {
+		t.Fatalf("delayed move = %#v, want a captured-objects-group exile, not a single object", delayed.Trigger.Content.Modes[0].Sequence[0].Primitive)
 	}
 }
 

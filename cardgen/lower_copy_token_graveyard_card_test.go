@@ -41,10 +41,10 @@ func TestGenerateExecutableCardSourceCopyTokenGraveyardCard(t *testing.T) {
 		"Object:      game.TargetCardReference(0),",
 		"AddTypes:    []types.Card{types.Artifact},",
 		"AddKeywords: []game.Keyword{game.Haste},",
-		"PublishLinked: game.LinkedKey(\"delayed-sacrifice-1\"),",
+		"PublishLinked: game.LinkedKey(\"sequence-effect-0-product\"),",
 		"Primitive: game.CreateDelayedTrigger{",
 		"Timing:         game.DelayedAtBeginningOfNextEndStep,",
-		"CapturedObject: opt.Val(game.LinkedObjectReference(\"delayed-sacrifice-1\")),",
+		"CapturedObject: opt.Val(game.LinkedObjectReference(\"sequence-effect-0-product\")),",
 		"Primitive: game.Sacrifice{",
 		"Object: game.CapturedObjectReference(),",
 	} {
