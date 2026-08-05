@@ -3681,14 +3681,104 @@ func lowerDelayedTargetReturn(
 
 // isDelayedTargetSacrificeEffect reports whether effect is a delayed
 // "sacrifice it/that creature at the beginning of the next end step" clause whose
-// subject is the permanent targeted by an earlier effect in the same sequence.
-func isDelayedTargetSacrificeEffect(effect *compiler.CompiledEffect) bool {
+// subject is the permanent targeted by an earlier effect in the same sequence, or
+// (CR 607 "Linked Abilities") a permanent an earlier clause created rather than
+// targeted (Kiki-Jiki, Mirror Breaker: "Create a token that's a copy of target
+// creature. ... Sacrifice it at the beginning of the next end step.").
+// effectIndex is this clause's own position, needed to confirm a
+// PriorInstructionResult reference names the immediately preceding clause.
+func isDelayedTargetSacrificeEffect(effect *compiler.CompiledEffect, effectIndex int) bool {
 	return effect.Kind == compiler.EffectSacrifice &&
 		effect.DelayedTiming == game.DelayedAtBeginningOfNextEndStep &&
 		!effect.Negated &&
 		effect.Context == parser.EffectContextController &&
 		!effect.CounterKindKnown &&
-		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+		(referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0) ||
+			referencesBindTo(effect.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1))
+}
+
+// delayedTargetLinkedObject resolves the linked recipient a delayed "Exile
+// it"/"Sacrifice it at the beginning of the next end step." cleanup clause acts
+// on, and returns the (possibly rewritten) publishing instruction alongside
+// either a single captured object or, when the antecedent produced more than
+// one object, the whole captured group. The clause's sole reference names either
+// the permanent an earlier clause targeted (Whip of Erebos: "Return target
+// creature card ... Exile it at the beginning of the next end step.") or, via
+// the same mechanism every other clause in the sequence already uses
+// (sequencePriorInstructionLink, called from the main sequence loop before this
+// clause lowers), a permanent an earlier clause created rather than targeted
+// (Kiki-Jiki, Mirror Breaker; Firecat Blitz's "Create X ... tokens ... Exile
+// them"). For the target case this publishes the link itself, mirroring the
+// pre-existing behavior; for the prior-instruction case the link is already
+// published, so it reuses ctx.priorLinkedKey rather than publishing a second
+// time. It fails closed for any other reference shape.
+//
+// Routing on the antecedent's own produced count (create.Amount), not on the
+// reference's singular/plural pronoun, is deliberate and matches the one path
+// that already made this decision before this function existed
+// (lowerDelayedTargetSacrifice's own prior CreateToken check): a card that
+// creates a dynamic or plural number of objects always means all of them when
+// it says "it"/"them" at the following delayed cleanup, so the two callers no
+// longer each need their own copy of this check.
+func delayedTargetLinkedObject(
+	effectIndex int,
+	ctx contentCtx,
+	sequence []game.Instruction,
+	keyPrefix string,
+) (delayedLinkedObject, bool) {
+	if effectIndex == 0 || len(sequence) != effectIndex || ctx.optional || len(ctx.content.References) != 1 {
+		return delayedLinkedObject{}, false
+	}
+	reference := ctx.content.References[0]
+	key := game.LinkedKey(fmt.Sprintf("%s-%d", keyPrefix, effectIndex))
+	var publisher game.Primitive
+	switch {
+	case reference.Binding == compiler.ReferenceBindingTarget && reference.Occurrence == 0:
+		var published bool
+		publisher, published = publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+		if !published {
+			return delayedLinkedObject{}, false
+		}
+	case reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
+		reference.PriorInstruction == effectIndex-1 && ctx.priorLinkedKey != "":
+		key = ctx.priorLinkedKey
+		publisher = sequence[effectIndex-1].Primitive
+	default:
+		return delayedLinkedObject{}, false
+	}
+	consumed := ctx
+	consumed.content.References = nil
+	consumed.content.Targets = nil
+	if consumed.content.Unconsumed() {
+		return delayedLinkedObject{}, false
+	}
+	if create, ok := publisher.(game.CreateToken); ok &&
+		(create.Amount.IsDynamic() || create.Amount.Value() != 1) {
+		return delayedLinkedObject{publisher: publisher, group: game.LinkedObjectReference(string(key)), isGroup: true}, true
+	}
+	object, ok := lowerObjectReference(reference, referenceLoweringContext{
+		TargetLinkedKey:  key,
+		PriorInstruction: effectIndex - 1,
+		PriorLinkedKey:   key,
+	})
+	if !ok {
+		return delayedLinkedObject{}, false
+	}
+	return delayedLinkedObject{publisher: publisher, object: object}, true
+}
+
+// delayedLinkedObject is delayedTargetLinkedObject's result: the publishing
+// instruction, and either the single object the delayed trigger should capture
+// (CapturedObject) or, when isGroup, the linked-object-kind reference naming
+// every object published under the antecedent's key, for CapturedObjectGroup —
+// which despite the name is itself an ObjectReference (of kind LinkedObject),
+// not a GroupReference; the delayed-trigger runtime treats a linked reference in
+// that field as "every object published under this key" rather than one object.
+type delayedLinkedObject struct {
+	publisher game.Primitive
+	object    game.ObjectReference
+	group     game.ObjectReference
+	isGroup   bool
 }
 
 // lowerDelayedCreatedTokensExile links a delayed "Exile the token(s)" clause at
@@ -3830,7 +3920,7 @@ func lowerDelayedSequenceClause(
 			consumedGate: effectCondition.Condition.Exists,
 		}
 	}
-	if isDelayedTargetSacrificeEffect(&effects[effectIndex]) {
+	if isDelayedTargetSacrificeEffect(&effects[effectIndex], effectIndex) {
 		publisher, delayed, ok := lowerDelayedTargetSacrifice(effectIndex, ctx, sequence)
 		if !ok {
 			return delayedSequenceClauseResult{handled: true, failed: true}
@@ -4478,61 +4568,52 @@ func lowerDelayedTargetSacrifice(
 	if len(ctx.content.Effects) != 1 {
 		panic(fmt.Sprintf("lowerDelayedTargetSacrifice: expected a single effect, got %d", len(ctx.content.Effects)))
 	}
-	if effectIndex == 0 ||
-		len(sequence) != effectIndex ||
-		!isDelayedTargetSacrificeEffect(&ctx.content.Effects[0]) ||
-		ctx.optional ||
-		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+	if !isDelayedTargetSacrificeEffect(&ctx.content.Effects[0], effectIndex) {
 		return nil, game.AbilityContent{}, false
 	}
-	key := game.LinkedKey(fmt.Sprintf("delayed-sacrifice-%d", effectIndex))
-	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	linked, ok := delayedTargetLinkedObject(effectIndex, ctx, sequence, "delayed-sacrifice")
 	if !ok {
 		return nil, game.AbilityContent{}, false
 	}
-	consumed := ctx
-	consumed.content.References = nil
-	consumed.content.Targets = nil
-	if consumed.content.Unconsumed() {
-		return nil, game.AbilityContent{}, false
-	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		TargetLinkedKey: key,
-	})
-	if !ok {
-		return nil, game.AbilityContent{}, false
-	}
-	trigger := game.DelayedTriggerDef{
-		Timing:         game.DelayedAtBeginningOfNextEndStep,
-		CapturedObject: opt.Val(object),
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
-			Object: game.CapturedObjectReference(),
-		}}}}.Ability(),
-	}
-	if create, ok := publisher.(game.CreateToken); ok &&
-		(create.Amount.IsDynamic() || create.Amount.Value() != 1) {
-		trigger.CapturedObject = opt.V[game.ObjectReference]{}
-		trigger.CapturedObjectGroup = opt.Val(game.LinkedObjectReference(string(key)))
-		trigger.Content = game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
-			Group: game.CapturedObjectsGroup(),
-		}}}}.Ability()
+	var trigger game.DelayedTriggerDef
+	if linked.isGroup {
+		trigger = game.DelayedTriggerDef{
+			Timing:              game.DelayedAtBeginningOfNextEndStep,
+			CapturedObjectGroup: opt.Val(linked.group),
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
+				Group: game.CapturedObjectsGroup(),
+			}}}}.Ability(),
+		}
+	} else {
+		trigger = game.DelayedTriggerDef{
+			Timing:         game.DelayedAtBeginningOfNextEndStep,
+			CapturedObject: opt.Val(linked.object),
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.Sacrifice{
+				Object: game.CapturedObjectReference(),
+			}}}}.Ability(),
+		}
 	}
 	delayed := game.CreateDelayedTrigger{Trigger: trigger}
-	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+	return linked.publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
 // isDelayedTargetExileEffect reports whether effect is a delayed "exile it/that
 // creature at the beginning of the next end step" clause whose subject is the
 // permanent targeted by an earlier effect in the same sequence (the temporary-
 // reanimation cleanup "Return target creature card ... Exile it at the beginning
-// of the next end step." — Whip of Erebos and kin).
-func isDelayedTargetExileEffect(effect *compiler.CompiledEffect) bool {
+// of the next end step." — Whip of Erebos and kin), or (CR 607 "Linked
+// Abilities") a permanent an earlier clause created rather than targeted
+// (Kiki-Jiki, Mirror Breaker). effectIndex is this clause's own position, needed
+// to confirm a PriorInstructionResult reference names the immediately preceding
+// clause.
+func isDelayedTargetExileEffect(effect *compiler.CompiledEffect, effectIndex int) bool {
 	return effect.Kind == compiler.EffectExile &&
 		effect.DelayedTiming == game.DelayedAtBeginningOfNextEndStep &&
 		!effect.Negated &&
 		effect.Context == parser.EffectContextController &&
 		!effect.CounterKindKnown &&
-		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+		(referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0) ||
+			referencesBindTo(effect.References, compiler.ReferenceBindingPriorInstructionResult, effectIndex-1))
 }
 
 // lowerDelayedTargetExile lowers a delayed "Exile it at the beginning of the next
@@ -4558,39 +4639,35 @@ func lowerDelayedTargetExile(
 	if len(ctx.content.Effects) != 1 {
 		panic(fmt.Sprintf("lowerDelayedTargetExile: expected a single effect, got %d", len(ctx.content.Effects)))
 	}
-	if effectIndex == 0 ||
-		len(sequence) != effectIndex ||
-		!isDelayedTargetExileEffect(&ctx.content.Effects[0]) ||
-		ctx.optional ||
-		!referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0) {
+	if !isDelayedTargetExileEffect(&ctx.content.Effects[0], effectIndex) {
 		return nil, game.AbilityContent{}, false
 	}
-	key := game.LinkedKey(fmt.Sprintf("delayed-exile-%d", effectIndex))
-	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	linked, ok := delayedTargetLinkedObject(effectIndex, ctx, sequence, "delayed-exile")
 	if !ok {
 		return nil, game.AbilityContent{}, false
 	}
-	consumed := ctx
-	consumed.content.References = nil
-	consumed.content.Targets = nil
-	if consumed.content.Unconsumed() {
-		return nil, game.AbilityContent{}, false
+	var trigger game.DelayedTriggerDef
+	if linked.isGroup {
+		trigger = game.DelayedTriggerDef{
+			Timing:              game.DelayedAtBeginningOfNextEndStep,
+			CapturedObjectGroup: opt.Val(linked.group),
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MovePermanent{
+				Group:       game.CapturedObjectsGroup(),
+				Destination: zone.Exile,
+			}}}}.Ability(),
+		}
+	} else {
+		trigger = game.DelayedTriggerDef{
+			Timing:         game.DelayedAtBeginningOfNextEndStep,
+			CapturedObject: opt.Val(linked.object),
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MovePermanent{
+				Object:      game.CapturedObjectReference(),
+				Destination: zone.Exile,
+			}}}}.Ability(),
+		}
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		TargetLinkedKey: key,
-	})
-	if !ok {
-		return nil, game.AbilityContent{}, false
-	}
-	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
-		Timing:         game.DelayedAtBeginningOfNextEndStep,
-		CapturedObject: opt.Val(object),
-		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.MovePermanent{
-			Object:      game.CapturedObjectReference(),
-			Destination: zone.Exile,
-		}}}}.Ability(),
-	}}
-	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
+	delayed := game.CreateDelayedTrigger{Trigger: trigger}
+	return linked.publisher, game.Mode{Sequence: []game.Instruction{{Primitive: delayed}}}.Ability(), true
 }
 
 // isDelayedTopCardReturnEffect reports whether effect is a delayed "Put that card

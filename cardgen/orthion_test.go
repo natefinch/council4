@@ -66,7 +66,7 @@ func TestGenerateOrthionCapturedGroupCleanup(t *testing.T) {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
 	for _, wanted := range []string{
-		"CapturedObjectGroup: opt.Val(game.LinkedObjectReference(\"delayed-sacrifice-1\"))",
+		"CapturedObjectGroup: opt.Val(game.LinkedObjectReference(\"sequence-effect-0-product\"))",
 		"Group: game.CapturedObjectsGroup()",
 	} {
 		if !strings.Contains(source, wanted) {
