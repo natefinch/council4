@@ -158,6 +158,127 @@ func TestExactChosenCreatureCardsInYourGraveyardTarget(t *testing.T) {
 	}
 }
 
+// TestExactGraveyardCardInPhraseTargetAccepts guards
+// exactGraveyardCardInPhraseTargetSyntax, the "in <owner> graveyard" sibling of
+// exactGraveyardCardTargetSyntax's "from" family (TestExactGraveyardCardTargetAccepts
+// above). Real cards using this idiom: Emry, Lurker of the Loch ("Choose target
+// artifact card in your graveyard."), Snapcaster Mage ("target instant or
+// sorcery card in your graveyard gains flashback..."), Confession Dial ("target
+// legendary creature card in your graveyard gains escape..."), Havengul Lich
+// ("target creature card in a graveyard"), Jailbreak ("target permanent card in
+// an opponent's graveyard"), Too Evil to Stay Dead ("target creature card in
+// your graveyard with mana value 4 or less"), and Turn the Earth ("Choose up to
+// three target cards in graveyards.") -- each exercises a qualifier shape the
+// old narrow per-shape functions (one exact literal for two creature cards, one
+// for a single required type, one for nonland permanent) rejected outright
+// before this generic reconstruction replaced them. "In a single graveyard" has
+// no attested real card yet but mirrors the "from" family's already-real
+// SingleGraveyard handling for parity between the two prepositions.
+func TestExactGraveyardCardInPhraseTargetAccepts(t *testing.T) {
+	t.Parallel()
+	for _, source := range []string{
+		// Emry's exact shape: a single required card type.
+		"Choose target artifact card in your graveyard.",
+		// A type union renders with "or" for a singular target (Snapcaster
+		// Mage's antecedent, minus its "gains flashback" rider, which lowering
+		// handles separately from the target itself).
+		"Choose target instant or sorcery card in your graveyard.",
+		// A supertype adjective precedes the type noun (Confession Dial).
+		"Choose target legendary creature card in your graveyard.",
+		// "up to one" cardinality combined with a type union (Jolted Awake).
+		"Choose up to one target artifact or creature card in your graveyard.",
+		// The nonland-permanent exclusion (Conduit of Worlds).
+		"Choose target nonland permanent card in your graveyard.",
+		// A mana-value qualifier trails the owner clause in this idiom, the
+		// opposite order from the "from" family (Too Evil to Stay Dead).
+		"Choose target creature card in your graveyard with mana value 4 or less.",
+		// The bare plural "graveyards" names any number of, possibly different,
+		// graveyards (Turn the Earth).
+		"Choose up to three target cards in graveyards.",
+		// "a single graveyard" restricts every chosen card to the same
+		// graveyard; SingleGraveyard's generic assignment in parseSelection
+		// fires for this idiom the same way it already does for "from".
+		"Choose target creature card in a single graveyard.",
+	} {
+		document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Errorf("Parse(%q) diagnostics = %#v", source, diagnostics)
+			continue
+		}
+		targets := document.Abilities[0].Sentences[0].Targets
+		if len(targets) != 1 {
+			t.Errorf("Parse(%q) targets = %#v, want one target", source, targets)
+			continue
+		}
+		target := targets[0]
+		if !target.Exact || target.Selection.Zone != zone.Graveyard {
+			t.Errorf("Parse(%q) target = %#v, want an exact graveyard-card target", source, target)
+			continue
+		}
+		if got := shared.SliceSpan(source, target.ChoiceSpan); got != "Choose" {
+			t.Errorf("Parse(%q) choice span = %q, want %q", source, got, "Choose")
+		}
+	}
+}
+
+// TestExactGraveyardCardInPhraseTargetSingleGraveyard specifically guards the
+// SingleGraveyard flag itself (not just Exact/Zone, which the table above
+// already checks), since it depends on graveyardInPhraseOwnerEnd recognizing "a
+// single graveyard" so parseSelection's zone assignment fires at all before its
+// separate, generic "single"+"graveyard" word check can set the flag.
+func TestExactGraveyardCardInPhraseTargetSingleGraveyard(t *testing.T) {
+	t.Parallel()
+	source := "Choose target creature card in a single graveyard."
+	document, diagnostics := Parse(source, Context{InstantOrSorcery: true})
+	if len(diagnostics) != 0 {
+		t.Fatalf("Parse(%q) diagnostics = %#v", source, diagnostics)
+	}
+	targets := document.Abilities[0].Sentences[0].Targets
+	if len(targets) != 1 || !targets[0].Selection.SingleGraveyard {
+		t.Fatalf("targets = %#v, want SingleGraveyard = true", targets)
+	}
+}
+
+// TestExactGraveyardCardInPhraseTargetAcceptsOrdinaryVerb guards that the "in"
+// family also reconstructs a graveyard-card target outside the "Choose" idiom,
+// for a verb that locates the target without moving it out of the graveyard
+// (Havengul Lich: "You may cast target creature card in a graveyard this
+// turn."). Before exactGraveyardCardInPhraseTargetSyntax replaced the three
+// Choose-only functions, only exactChosenCreatureCardsInYourGraveyardTargetSyntax's
+// single hardcoded "two target creature cards" literal was reachable from
+// exactRuntimeTargetSyntax (the general target path every verb uses), so any
+// other qualifier shape reaching this idiom outside "Choose" never achieved
+// Exact=true at all. Jailbreak's "in an opponent's graveyard" wording exercises
+// graveyardInPhraseZone's opponent-owner recognition (the general parseSelection
+// zone detector, not just the target-exactness reconstruction) in the same way.
+func TestExactGraveyardCardInPhraseTargetAcceptsOrdinaryVerb(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		source     string
+		controller SelectionController
+	}{
+		{"You may cast target creature card in a graveyard this turn.", SelectionControllerAny},
+		{"Return target permanent card in an opponent's graveyard to the battlefield under their control.", SelectionControllerOpponent},
+	} {
+		document, diagnostics := Parse(tc.source, Context{InstantOrSorcery: true})
+		if len(diagnostics) != 0 {
+			t.Errorf("Parse(%q) diagnostics = %#v", tc.source, diagnostics)
+			continue
+		}
+		effects := document.Abilities[0].Sentences[0].Effects
+		if len(effects) != 1 || len(effects[0].Targets) != 1 {
+			t.Errorf("Parse(%q) effects = %#v", tc.source, effects)
+			continue
+		}
+		target := effects[0].Targets[0]
+		if !target.Exact ||
+			target.Selection.Zone != zone.Graveyard ||
+			target.Selection.Controller != tc.controller {
+			t.Errorf("Parse(%q) target = %#v, want an exact graveyard-card target with controller %v", tc.source, target, tc.controller)
+		}
+	}
+}
+
 func TestExactGraveyardCardTargetAccepts(t *testing.T) {
 	t.Parallel()
 	accepted := []string{

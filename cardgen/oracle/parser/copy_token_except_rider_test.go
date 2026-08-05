@@ -57,10 +57,15 @@ func TestParseCopyTokenExceptQuotedAbilityFailsClosed(t *testing.T) {
 // TestParseCopyTokenGraveyardCardTarget verifies that a copy-token whose
 // blueprint is a card chosen in a graveyard ("Create a token that's a copy of
 // target creature card in your graveyard, except it's an artifact in addition to
-// its other types." — Feldon of the Third Path) is recognized as a target copy
-// even though a graveyard-card target does not round-trip through the
-// permanent-target reconstruction. The graveyard target keeps its Graveyard zone
-// and the "except it's an artifact" additive-type rider folds into the copy.
+// its other types." — Feldon of the Third Path) is recognized as a target copy.
+// The graveyard target keeps its Graveyard zone and the "except it's an
+// artifact" additive-type rider folds into the copy. The target's own
+// "target creature card in your graveyard" phrase now round-trips through
+// exactGraveyardCardInPhraseTargetSyntax (the "in" preposition sibling of the
+// return/put/exile family's "from" reconstruction), so Exact is true; the
+// copy-token lowering (copyTokenTargetSpecAndSource) never gated on this
+// target's Exact field for the graveyard case, so this is a pure widening, not
+// a behavior change for this card.
 func TestParseCopyTokenGraveyardCardTarget(t *testing.T) {
 	t.Parallel()
 	document, diagnostics := Parse(
@@ -80,8 +85,8 @@ func TestParseCopyTokenGraveyardCardTarget(t *testing.T) {
 	if len(effect.Targets) != 1 || effect.Targets[0].Selection.Zone != zone.Graveyard {
 		t.Fatalf("target = %#v, want a single graveyard-card target", effect.Targets)
 	}
-	if effect.Targets[0].Exact {
-		t.Error("graveyard-card target Exact = true, want false")
+	if !effect.Targets[0].Exact {
+		t.Error("graveyard-card target Exact = false, want true")
 	}
 }
 

@@ -148,7 +148,7 @@ func exactVariableXGraveyardTargetText(target *TargetSyntax) (string, bool) {
 		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
 		return "", false
 	}
-	owner, ok := graveyardOwnerSuffix(sel.Controller, false)
+	owner, ok := graveyardOwnerSuffix(sel.Controller, false, "from")
 	if !ok {
 		return "", false
 	}
@@ -956,7 +956,7 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	if !ok {
 		return false
 	}
-	owner, ok := graveyardOwnerSuffix(sel.Controller, plural)
+	owner, ok := graveyardOwnerSuffix(sel.Controller, plural, "from")
 	if !ok {
 		return false
 	}
@@ -984,23 +984,93 @@ func exactGraveyardCardTargetSyntax(target *TargetSyntax) bool {
 	return strings.EqualFold(target.Text, prefix+noun+manaClause+" "+owner)
 }
 
-// graveyardOwnerSuffix renders the canonical "from <owner> graveyard" clause for
-// a graveyard-card target's controller relation: "your" for the controller,
-// "a" for any graveyard, and "an opponent's" for an opponent. A plural
-// multi-target count over any graveyard renders "from graveyards", letting each
-// chosen card lie in a different graveyard. It fails closed for the "you don't
-// control" relation, which has no graveyard-owner phrasing.
-func graveyardOwnerSuffix(controller SelectionController, plural bool) (string, bool) {
+// exactGraveyardCardInPhraseTargetSyntax reports whether a target's tokens
+// reconstruct the "in <owner> graveyard" idiom, the "in" preposition sibling of
+// exactGraveyardCardTargetSyntax's "from" family. Unlike "from", which the
+// return/put/exile family uses because the governing verb itself moves the card
+// out of the graveyard, "in" locates a target the surrounding effect resolves
+// some other way: choosing it ("Choose target artifact card in your
+// graveyard", Emry, Lurker of the Loch) or granting it something in place
+// ("target instant or sorcery card in your graveyard gains flashback until end
+// of turn", Snapcaster Mage). It shares every noun/cardinality/numeric-qualifier
+// reconstruction helper with the "from" family and so accepts the identical
+// qualifier surface -- a single card type, a union of card types, a permanent
+// card, a single color, a colorless or multicolored card, a single subtype, a
+// single supertype adjective, or the plain "card" noun, with an optional power,
+// toughness, or "with mana value N or less" qualifier and an optional
+// multi-target or "up to N" count -- and fails closed for every other shape,
+// including any trailing relative clause ("that was put there from the
+// battlefield this turn", "with toughness less than this creature's toughness")
+// the shared helpers do not render.
+//
+// The numeric qualifier trails the owner clause here ("target creature card in
+// your graveyard with mana value 4 or less", Too Evil to Stay Dead), the
+// opposite order from the "from" family, which places it before ("target
+// creature card with mana value X or less from your graveyard", Blighted
+// Nightmare); both orders are real, independently attested Oracle wordings, not
+// a single convention with one family lagging the other.
+func exactGraveyardCardInPhraseTargetSyntax(tokens []shared.Token, cardinality TargetCardinalitySyntax, sel SelectionSyntax) bool {
+	if sel.Zone != zone.Graveyard || sel.Other {
+		return false
+	}
+	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
+		sel.Keyword != KeywordUnknown ||
+		len(sel.SourceTypes) != 0 ||
+		len(sel.ExcludedColors) != 0 {
+		return false
+	}
+	prefix, plural, ok := graveyardCardCardinalityPrefix(cardinality, sel.Another)
+	if !ok {
+		return false
+	}
+	owner, ok := graveyardOwnerSuffix(sel.Controller, plural, "in")
+	if !ok {
+		return false
+	}
+	// "in a single graveyard" is the "in"-preposition sibling of "from a single
+	// graveyard"; see exactGraveyardCardTargetSyntax's SingleGraveyard handling.
+	if sel.SingleGraveyard {
+		if sel.Controller != SelectionControllerAny {
+			return false
+		}
+		owner = "in a single graveyard"
+	}
+	noun, ok := graveyardCardNoun(sel, plural)
+	if !ok {
+		return false
+	}
+	if plural {
+		noun += "s"
+	}
+	manaClause, ok := graveyardNumericQualifier(sel)
+	if !ok {
+		return false
+	}
+	return strings.EqualFold(joinedEffectText(tokens), prefix+noun+" "+owner+manaClause)
+}
+
+// graveyardOwnerSuffix renders the canonical "<preposition> <owner> graveyard"
+// clause for a graveyard-card target's controller relation: "your" for the
+// controller, "a" for any graveyard, and "an opponent's" for an opponent. A
+// plural multi-target count over any graveyard renders "<preposition>
+// graveyards", letting each chosen card lie in a different graveyard. It fails
+// closed for the "you don't control" relation, which has no graveyard-owner
+// phrasing. preposition is "from" for the return/put/exile family (the
+// governing verb itself moves the card out of the graveyard) and "in" for the
+// family that only locates a target already resolved by some other verb
+// ("Choose target artifact card in your graveyard", "target creature card in
+// your graveyard gains flashback"); both prepositions share every other word.
+func graveyardOwnerSuffix(controller SelectionController, plural bool, preposition string) (string, bool) {
 	switch controller {
 	case SelectionControllerYou:
-		return "from your graveyard", true
+		return preposition + " your graveyard", true
 	case SelectionControllerAny:
 		if plural {
-			return "from graveyards", true
+			return preposition + " graveyards", true
 		}
-		return "from a graveyard", true
+		return preposition + " a graveyard", true
 	case SelectionControllerOpponent:
-		return "from an opponent's graveyard", true
+		return preposition + " an opponent's graveyard", true
 	default:
 		return "", false
 	}

@@ -449,7 +449,7 @@ func enumeratedTargetCardinality(tokens []shared.Token, i int) (int, TargetCardi
 }
 
 func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
-	if exactChosenCreatureCardsInYourGraveyardTargetSyntax(tokens, cardinality, selection) {
+	if exactGraveyardCardInPhraseTargetSyntax(tokens, cardinality, selection) {
 		return true
 	}
 	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) {
@@ -658,163 +658,6 @@ func targetManaValueRider(mv compare.Int) (string, bool) {
 	}
 }
 
-func exactChosenCreatureCardsInYourGraveyardTargetSyntax(
-	tokens []shared.Token,
-	cardinality TargetCardinalitySyntax,
-	selection SelectionSyntax,
-) bool {
-	if cardinality != (TargetCardinalitySyntax{Min: 2, Max: 2}) ||
-		selection.Kind != SelectionCreature ||
-		selection.Controller != SelectionControllerYou ||
-		selection.Zone != zone.Graveyard ||
-		chosenCreatureTargetHasScalarQualifiers(selection) ||
-		chosenCreatureTargetHasListQualifiers(selection) {
-		return false
-	}
-	return slices.Equal(selection.RequiredTypesAny, []CardType{CardTypeCreature}) &&
-		strings.EqualFold(
-			joinedEffectText(tokens),
-			"two target creature cards in your graveyard",
-		)
-}
-
-func chosenCreatureTargetHasScalarQualifiers(selection SelectionSyntax) bool {
-	return selection.All ||
-		selection.Another ||
-		selection.Other ||
-		selection.Attacking ||
-		selection.Blocking ||
-		selection.Tapped ||
-		selection.Untapped ||
-		selection.Modified ||
-		selection.Enchanted ||
-		selection.Equipped ||
-		selection.Colorless ||
-		selection.Multicolored ||
-		selection.MatchManaValue ||
-		selection.MatchPower ||
-		selection.MatchToughness ||
-		selection.Keyword != KeywordUnknown ||
-		selection.ExcludedKeyword != KeywordUnknown
-}
-
-func chosenCreatureTargetHasListQualifiers(selection SelectionSyntax) bool {
-	return len(selection.ExcludedTypes) != 0 ||
-		len(selection.SourceTypes) != 0 ||
-		len(selection.Supertypes) != 0 ||
-		len(selection.ExcludedSupertypes) != 0 ||
-		len(selection.ColorsAny) != 0 ||
-		len(selection.ExcludedColors) != 0 ||
-		len(selection.SubtypesAny) != 0 ||
-		len(selection.Alternatives) != 0
-}
-
-// exactChosenCardInYourGraveyardTargetSyntax reconstructs the canonical Oracle
-// phrase for a single chosen card of one card type in the controller's
-// graveyard ("target artifact card in your graveyard", Emry, Lurker of the
-// Loch) and reports whether it round-trips byte-for-byte against the target
-// tokens. It exists so the leading "Choose" verb of "Choose target <type> card
-// in your graveyard." is consumed by exactTargetChoiceSpan; the target itself is
-// already recognized through the normal graveyard-card target path.
-//
-// It accepts only the mandatory single-target cardinality, a controller-scoped
-// graveyard zone, and exactly one required card type with no other qualifier, so
-// any plural count, opponent or shared graveyard, additional type, color,
-// supertype, subtype, name, mana-value, historic, or counter qualifier fails
-// closed.
-func exactChosenCardInYourGraveyardTargetSyntax(
-	tokens []shared.Token,
-	cardinality TargetCardinalitySyntax,
-	selection SelectionSyntax,
-) bool {
-	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) ||
-		selection.Controller != SelectionControllerYou ||
-		selection.Zone != zone.Graveyard ||
-		selection.Historic ||
-		selection.ConjunctiveTypes ||
-		selection.NonToken ||
-		selection.TokenOnly ||
-		selection.BasicLandType ||
-		selection.InclusiveOneOfEach ||
-		selection.ManaValueX ||
-		selection.RequiredName != "" ||
-		selection.CounterRequired ||
-		selection.CounterAny ||
-		selection.CounterAbsent ||
-		chosenCreatureTargetHasScalarQualifiers(selection) ||
-		chosenCreatureTargetHasListQualifiers(selection) {
-		return false
-	}
-	if len(selection.RequiredTypesAny) != 1 {
-		return false
-	}
-	word, ok := cardTypeWord(selection.RequiredTypesAny[0])
-	if !ok {
-		return false
-	}
-	return strings.EqualFold(
-		joinedEffectText(tokens),
-		"target "+word+" card in your graveyard",
-	)
-}
-
-// exactChosenNonlandPermanentCardInYourGraveyardTargetSyntax reconstructs the
-// canonical Oracle phrase for a single chosen nonland permanent card in the
-// controller's graveyard ("target nonland permanent card in your graveyard",
-// Conduit of Worlds) and reports whether it round-trips byte-for-byte against the
-// target tokens. Like exactChosenCardInYourGraveyardTargetSyntax it exists so the
-// leading "Choose" verb of "Choose target nonland permanent card in your
-// graveyard." is attributed to the target's ChoiceSpan for source coverage; the
-// target itself is recognized through the normal graveyard-card target path.
-//
-// It accepts only the mandatory single-target cardinality, a controller-scoped
-// graveyard zone, the bare permanent selection noun, and exactly the single
-// "land" excluded type with no other qualifier, so any plural count, opponent or
-// shared graveyard, different noun, required type, additional or different
-// exclusion, color, supertype, subtype, name, mana-value, historic, or counter
-// qualifier fails closed.
-func exactChosenNonlandPermanentCardInYourGraveyardTargetSyntax(
-	tokens []shared.Token,
-	cardinality TargetCardinalitySyntax,
-	selection SelectionSyntax,
-) bool {
-	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) ||
-		selection.Kind != SelectionPermanent ||
-		selection.Controller != SelectionControllerYou ||
-		selection.Zone != zone.Graveyard ||
-		selection.Historic ||
-		selection.ConjunctiveTypes ||
-		selection.NonToken ||
-		selection.TokenOnly ||
-		selection.BasicLandType ||
-		selection.InclusiveOneOfEach ||
-		selection.ManaValueX ||
-		selection.RequiredName != "" ||
-		selection.CounterRequired ||
-		selection.CounterAny ||
-		selection.CounterAbsent ||
-		chosenCreatureTargetHasScalarQualifiers(selection) {
-		return false
-	}
-	if len(selection.RequiredTypesAny) != 0 ||
-		len(selection.SourceTypes) != 0 ||
-		len(selection.Supertypes) != 0 ||
-		len(selection.ExcludedSupertypes) != 0 ||
-		len(selection.ColorsAny) != 0 ||
-		len(selection.ExcludedColors) != 0 ||
-		len(selection.SubtypesAny) != 0 ||
-		len(selection.Alternatives) != 0 {
-		return false
-	}
-	if !slices.Equal(selection.ExcludedTypes, []CardType{CardTypeLand}) {
-		return false
-	}
-	return strings.EqualFold(
-		joinedEffectText(tokens),
-		"target nonland permanent card in your graveyard",
-	)
-}
-
 func exactTargetChoiceSpan(
 	tokens []shared.Token,
 	start int,
@@ -824,10 +667,7 @@ func exactTargetChoiceSpan(
 ) shared.Span {
 	if start == 1 &&
 		equalWord(tokens[0], "choose") &&
-		(exactChosenCreatureCardsInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
-			exactChosenCardInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
-			exactChosenNonlandPermanentCardInYourGraveyardTargetSyntax(targetTokens, cardinality, selection) ||
-			exactRuntimeTargetSyntax(targetTokens, cardinality, selection)) {
+		exactRuntimeTargetSyntax(targetTokens, cardinality, selection) {
 		return tokens[0].Span
 	}
 	return shared.Span{}
@@ -2984,25 +2824,66 @@ func sameNameBackReferenceNoun(token shared.Token) bool {
 }
 
 // graveyardInPhraseZone reports whether a selection's words locate the chosen
-// card with an "in your graveyard" zone phrase that scanZones does not tag,
+// card with an "in <owner> graveyard" zone phrase that scanZones does not tag,
 // because the phrase uses the "in" preposition rather than a "from"/"to" zone
-// atom. It accepts the phrase when it ends the noun clause ("target creature
-// card in your graveyard") or when it immediately precedes a trailing "with"
-// qualifier ("target artifact card in your graveyard with lesser mana value",
-// the fronted-destination graveyard return used by Scrap Trawler). Requiring the
-// phrase to sit at the noun clause's tail keeps an embedded count sub-clause
-// ("the number of cards in your graveyard", which is never followed by "with")
-// from being mistaken for the selection's own zone.
+// atom. It accepts "your graveyard" (Emry, Lurker of the Loch), the
+// any-graveyard "a graveyard" (Havengul Lich), the opponent-scoped "an
+// opponent's graveyard" (Jailbreak), the bare plural "graveyards" (Turn the
+// Earth: "Choose up to three target cards in graveyards."), and "a single
+// graveyard" -- the same owner phrases the "from" family's graveyardZonePhrase
+// (atoms.go) already recognizes for the "from"/"to" prepositions, kept in
+// parity here for the "in" preposition. The controller relations themselves
+// (SelectionControllerYou/Opponent) are assigned by parseSelection's own
+// "your"/"opponent's" switch elsewhere in the word list, and SingleGraveyard by
+// its own generic "single"+"graveyard" word check, so this only widens the
+// zone-phrase shape, not those separate assignments. It accepts the phrase when
+// it ends the noun clause ("target creature card in your graveyard") or when it
+// immediately precedes a trailing "with" qualifier ("target artifact card in
+// your graveyard with lesser mana value", the fronted-destination graveyard
+// return used by Scrap Trawler). Requiring the phrase to sit at the noun
+// clause's tail keeps an embedded count sub-clause ("the number of cards in
+// your graveyard", which is never followed by "with") from being mistaken for
+// the selection's own zone.
 func graveyardInPhraseZone(words []string) bool {
-	for i := 0; i+2 < len(words); i++ {
-		if words[i] != "in" || words[i+1] != "your" || words[i+2] != "graveyard" {
+	for i := range words {
+		if words[i] != "in" {
 			continue
 		}
-		if i+3 == len(words) || words[i+3] == "with" {
+		end, ok := graveyardInPhraseOwnerEnd(words, i+1)
+		if !ok {
+			continue
+		}
+		if end == len(words) || words[end] == "with" {
 			return true
 		}
 	}
 	return false
+}
+
+// graveyardInPhraseOwnerEnd recognizes the owner phrase following the "in"
+// preposition of an "in <owner> graveyard" zone phrase -- "your graveyard", "a
+// graveyard", "an opponent's graveyard", the bare plural "graveyards", or "a
+// single graveyard" -- starting at index start, and returns the index just past
+// the graveyard noun. It fails closed for any other owner phrase (a
+// referenced-player pronoun such as "their graveyard", or "each"/"all"
+// graveyards), which belong to the mass-group and dynamic-count families' own
+// zone recognition instead.
+func graveyardInPhraseOwnerEnd(words []string, start int) (int, bool) {
+	switch {
+	case start < len(words) && words[start] == "graveyards":
+		return start + 1, true
+	case start+1 < len(words) && words[start] == "your" && words[start+1] == "graveyard":
+		return start + 2, true
+	case start+1 < len(words) && words[start] == "a" && words[start+1] == "graveyard":
+		return start + 2, true
+	case start+2 < len(words) && words[start] == "a" && words[start+1] == "single" &&
+		(words[start+2] == "graveyard" || words[start+2] == "graveyards"):
+		return start + 3, true
+	case start+2 < len(words) && words[start] == "an" && words[start+1] == "opponent's" && words[start+2] == "graveyard":
+		return start + 3, true
+	default:
+		return 0, false
+	}
 }
 
 func parseSelection(tokens []shared.Token, atoms Atoms) SelectionSyntax {
