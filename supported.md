@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,185 of 32,508 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,195 of 32,508 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1068,6 +1068,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Balduvian Atrocity
 - Balduvian Barbarians
 - Balduvian Bears
+- Balduvian Dead
 - Balduvian Horde
 - Balduvian Rage
 - Balduvian War-Makers
@@ -3405,6 +3406,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Dalek
 - Dalek Drone
 - Dalek Squadron
+- Dalkovan Encampment
 - Dalkovan Packbeasts
 - Damn
 - Damnable Pact
@@ -3435,6 +3437,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Daring Fiendbonder
 - Daring Leap
 - Daring Mechanic
+- Daring Piracy
 - Daring Saboteur
 - Daring Skyjek
 - Daring Sleuth // Bearer of Overwhelming Truths
@@ -5272,6 +5275,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Feral Instinct
 - Feral Invocation
 - Feral Krushok
+- Feral Lightning
 - Feral Maaka
 - Feral Prowler
 - Feral Ridgewolf
@@ -5420,6 +5424,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Firebrand Ranger
 - Firebreathing
 - Firecannon Blast
+- Firecat Blitz
 - Firefiend Elemental
 - Firefist Adept
 - Firefist Striker
@@ -7512,6 +7517,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Hunger of the Nim
 - Hungering Hydra
 - Hungry Flames
+- Hungry for More
 - Hungry Ghoul
 - Hungry Lynx
 - Hungry Megasloth
@@ -11940,6 +11946,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Rakdos Cluestone
 - Rakdos Drake
 - Rakdos Guildgate
+- Rakdos Guildmage
 - Rakdos Joins Up
 - Rakdos Keyrune
 - Rakdos Locket
@@ -15734,6 +15741,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Thassa, Deep-Dwelling
 - Thassa, God of the Sea
 - That's Rough Buddy
+- Thatcher Revolt
 - Thaumatog
 - Thaumaturge's Familiar
 - Thawbringer
@@ -16047,6 +16055,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - Tidal Courier
 - Tidal Force
 - Tidal Kraken
+- Tidal Wave
 - Tide Drifter
 - Tidecaller Mentor
 - Tideforce Elemental
@@ -17417,6 +17426,7 @@ Council4 currently supports **18,185 of 32,508 cards eligible for paper support 
 - War Behemoth
 - War Chariot
 - War Dance
+- War Effort
 - War Elephant
 - War Flare
 - War Horn

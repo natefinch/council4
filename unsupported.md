@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,185 of 32,508 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,195 of 32,508 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -414,7 +414,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Angel's Trumpet** — unsupported ordered effect sequence: sub-effect — unsupported damage spell
 - **Angelic Aberration** — unsupported ordered effect sequence: sub-effect — unsupported sacrifice spell; unsupported ordered effect sequence: sub-effect — unsupported token creation
 - **Angelic Arbiter** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
-- **Angelic Favor** — unsupported cast effect: only cast-without-paying-mana-cost spells are supported; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
+- **Angelic Favor** — unsupported cast effect: only cast-without-paying-mana-cost spells are supported
 - **Angelic Field Marshal** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
 - **Angelic Intervention** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's a creature
 - **Angelic Skirmisher** — unsupported phase/step trigger phrase effect: the executable source backend does not support this phase/step trigger body
@@ -887,7 +887,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Baldin, Century Herdmaster** — unsupported Oracle construct: the compiler preserved but did not confidently lower: During your turn, each creature assigns combat damage equal to its toughness rather than its power.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported power/toughness spell: the executable source backend supports only exact supported target-creature power/toughness changes until end of turn
 - **Balduvian Berserker** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Enlist (As this creature attacks, you may tap a nonattacking creature you control without summoning sickness. When you do, add its power to this creature's until end of turn.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Balduvian Conjurer** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {T}: Target snow land becomes a 2/2 creature until end of turn. It's still a land.; unsupported ability content: the executable source backend does not yet lower this ability content
-- **Balduvian Dead** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Balduvian Fallen** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **Balduvian Frostwaker** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {U}, {T}: Target snow land becomes a 2/2 blue Elemental creature with flying. It's still a land.; unsupported ability content: the executable source backend does not yet lower this ability content
 - **Balduvian Hydra** — unsupported activation cost: the executable source backend cannot lower every typed activation cost component
@@ -1923,7 +1922,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Chandra, Fire of Kaladesh // Chandra, Roaring Flame** — unsupported activation condition: the executable source backend cannot lower every activation condition; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
 - **Chandra, Flame's Catalyst** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If that spell would be put into your graveyard; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect
 - **Chandra, Flame's Fury** — unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
-- **Chandra, Flamecaller** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect; unsupported ordered effect sequence: sub-effect — unsupported draw spell; unsupported loyalty ability: the executable source backend supports only fixed integer loyalty costs, not variable costs
+- **Chandra, Flamecaller** — unsupported ordered effect sequence: sub-effect — unsupported draw spell; unsupported loyalty ability: the executable source backend supports only fixed integer loyalty costs, not variable costs
 - **Chandra, Flameshaper** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color
 - **Chandra, Heart of Fire** — unsupported ordered effect sequence: structural — multi-effect body not lowered as a sequence; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported search effect: unexpected non-result reference in search effect
 - **Chandra, Hope's Beacon** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect; unsupported loyalty ability: the executable source backend supports only fixed integer loyalty costs, not variable costs
@@ -2662,7 +2661,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Dakkon, Shadow Slayer** — unsupported enters-with-counters replacement: the executable source backend supports only exact self enters-with-counters replacements; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Dakra Mystic** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Dalakos, Crafter of Wonders** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
-- **Dalkovan Encampment** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Damage Control Crew** — unsupported return spell: mode 1: the executable source backend supports only exact return of one target permanent to its owner's hand
 - **Damia, Sage of Stone** — unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition
 - **Damocles Base, Sword of Kang** — unsupported ability word: the executable source backend does not yet lower the "Whenever Damocles Base deals combat damage to a player, that player faces a villainous choice" ability word
@@ -2692,7 +2690,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Darigaaz, the Igniter** — unsupported ordered effect sequence: structural — unsupported resolving optionality
 - **Daring Buccaneer** — unsupported activation cost: the executable source backend does not yet lower a branch of this additional-cost choice
 - **Daring Demolition** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
-- **Daring Piracy** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Daring Thief** — unsupported ability content: the executable source backend does not yet lower this ability content
 - **Dark Apostle** — unsupported activation ability word: the executable source backend cannot lower this activated ability word
 - **Dark Bargain** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported counter placement
@@ -3589,7 +3586,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Elemental** — unsupported ordered effect sequence: sub-effect — unsupported return spell
 - **Elemental // Elemental** — unsupported type line: type line "Token" has no supported card type
 - **Elemental // Elemental** — unsupported type line: type line "Token" has no supported card type
-- **Elemental Appeal** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
+- **Elemental Appeal** — unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell
 - **Elemental Augury** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Elemental Expressionist** — unsupported temporary keyword spell: the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn
 - **Elemental Mascot** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If five or more mana was spent to cast that spell
@@ -4180,7 +4177,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Feral Encounter** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported library placement; unsupported ordered effect sequence: sub-effect — unsupported cast effect
 - **Feral Ghoul** — unsupported power/toughness spell: the executable source backend supports only exact until-end-of-turn power/toughness changes to the triggering permanent
 - **Feral Hydra** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
-- **Feral Lightning** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Feral Throwback** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Amplify 2 (As this creature enters, put two +1/+1 counters on it for each Beast card you reveal in your hand.); unsupported Oracle construct: the compiler preserved but did not confidently lower: Provoke (Whenever this creature attacks, you may have target creature defending player controls untap and block it if able.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Ferocification** — unsupported phase/step trigger phrase effect: modes and ability words are not supported in phase/step triggers
 - **Ferocious Tigorilla** — unsupported enters-with-counters replacement: the executable source backend does not support this enters-with-counters counter kind
@@ -4267,7 +4263,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Firebender Ascension** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color; unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **Firebending Student** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Firebending X, where X is this creature's power. (Whenever this creature attacks, add X {R}. This mana lasts until end of combat.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Firebird, Blazing Ranger** — unsupported group power/toughness spell: the executable source backend supports exact fixed group power/toughness changes and linked all-creatures -X/-X until end of turn
-- **Firecat Blitz** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Firedrinker Satyr** — unsupported damage spell: the executable source backend supports only exact fixed or X damage to you
 - **Fireflux Squad** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — unsupported resolving optionality
 - **Firefright Mage** — unsupported can't-be-blocked effect: the executable source backend supports only exact "&lt;subject&gt; can't be blocked this turn."
@@ -4789,7 +4784,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Giant Trap Door Spider** — unsupported exile spell: the executable source backend supports only exact exile of one target permanent
 - **Giant Turtle** — unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition
 - **Giant's Amulet** — unsupported permanent zone-change trigger effect: the executable source backend does not support this permanent zone-change trigger body; unsupported static declaration operation: the recognized static declaration operation is not representable by the runtime static-value vocabulary
-- **Giantbaiting** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Conspire (As you cast this spell, you may tap two untapped creatures you control that share a color with it. When you do, copy it.); unsupported ordered effect sequence: sub-effect — unsupported delayed effect; unsupported ability content: the executable source backend does not yet lower this ability content
+- **Giantbaiting** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Conspire (As you cast this spell, you may tap two untapped creatures you control that share a color with it. When you do, copy it.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Gibbering Descent** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Hellbent — Skip your upkeep step if you have no cards in hand.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Gibbering Hyenas** — unsupported Oracle construct: the compiler preserved but did not confidently lower: This creature can't block black creatures.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Gideon Blackblade** — unsupported Oracle construct: the compiler preserved but did not confidently lower: During your turn, Gideon Blackblade is a 4/4 Human Soldier creature with indestructible that's still a planeswalker.; unsupported Oracle construct: the compiler preserved but did not confidently lower: Prevent all damage that would be dealt to Gideon Blackblade during your turn.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported temporary keyword spell: the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn
@@ -5755,7 +5750,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Hundred-Talon Strike** — unsupported ability word: the executable source backend does not yet lower the "Splice onto Arcane" ability word
 - **Hunger of the Howlpack** — unsupported ability content: a standalone 'instead' replacement effect has no preceding effect to replace
 - **Hungering Yeti** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
-- **Hungry for More** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Hungry Graffalon** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Hunt Down** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Target creature blocks target creature this turn if able.; unsupported ability content: the executable source backend does not yet lower this ability content
 - **Hunt for Specimens** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Learn. (You may reveal a Lesson card you own from outside the game and put it into your hand, or discard a card to draw a card.); unsupported ability content: the executable source backend does not yet lower this ability content
@@ -6812,7 +6806,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Lady Loki, Agent of Chaos** — unsupported triggered ability: the spell event exists, but this trigger requires a missing spell-event relation, copy, or provenance semantic slot
 - **Lady Octopus, Inspired Inventor** — unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported cast effect: cast restriction is not expressible
 - **Lae'zel's Acrobatics** — unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported delayed effect; unsupported ordered effect sequence: sub-effect — unsupported return spell
-- **Lagomos, Hand of Hatred** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect; unsupported activation condition: the executable source backend cannot lower every activation condition
+- **Lagomos, Hand of Hatred** — unsupported activation condition: the executable source backend cannot lower every activation condition
 - **Lagonna-Band Storyteller** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported life spell
 - **Lagonna-Band Trailblazer** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Lagorin, Soul of Alacria** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
@@ -7438,7 +7432,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Mardu Charm** — unsupported ordered effect sequence: mode 2: sub-effect — unsupported temporary keyword spell; unsupported ability modes: a modal option contains rules text without complete executable semantics
 - **Mardu Monument** — unsupported ordered effect sequence: sub-effect — unsupported temporary keyword spell
 - **Mardu Runemark** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
-- **Mardu Siegebreaker** — unsupported ordered effect sequence: sub-effect — unsupported token creation; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
+- **Mardu Siegebreaker** — unsupported ordered effect sequence: sub-effect — unsupported token creation
 - **Mari, the Killing Quill** — unsupported static declaration operation: the recognized static declaration operation is not representable by the runtime static-value vocabulary
 - **Marina Vendrell** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {T}: Lock or unlock a door of target Room you control. Activate only as a sorcery.; unsupported ability content: the executable source backend does not yet lower this ability content
 - **Marina Vendrell's Grimoire** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported ordered effect sequence: sub-effect — unsupported discard spell
@@ -8239,7 +8233,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Nemata, Primeval Warden** — unsupported graveyard-redirect replacement: the executable source backend supports only exile graveyard-redirect replacements
 - **Nemesis of Mortals** — unsupported monstrosity spell: the executable source backend supports only exact monstrosity
 - **Nemesis Phoenix** — unsupported activation timing: the executable source backend cannot lower this activation timing restriction
-- **Nemesis Trap** — unsupported Oracle construct: the compiler preserved but did not confidently lower: If a white creature is attacking, you may pay {B}{B} rather than pay this spell's mana cost.; unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ordered effect sequence: sub-effect — unsupported token creation
+- **Nemesis Trap** — unsupported Oracle construct: the compiler preserved but did not confidently lower: If a white creature is attacking, you may pay {B}{B} rather than pay this spell's mana cost.; unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ordered effect sequence: sub-effect — unsupported token creation; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Neoform** — unsupported search effect: the executable source backend supports only exact unconditional library-search sequences
 - **Nephalia Academy** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Nerd Rage** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
@@ -9390,7 +9384,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Purging Scythe** — unsupported damage spell: the executable source backend supports only exact fixed or X group damage amounts
 - **Purifying Dragon** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If that creature is a Zombie
 - **Purity** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
-- **Purphoros's Intervention** — unsupported ordered effect sequence: mode 1: sub-effect — unsupported token creation; unsupported ordered effect sequence: sub-effect — unsupported delayed effect; unsupported damage spell: mode 2: the executable source backend supports only exact supported damage amounts to one target
+- **Purphoros's Intervention** — unsupported ordered effect sequence: mode 1: sub-effect — unsupported token creation; unsupported damage spell: mode 2: the executable source backend supports only exact supported damage amounts to one target
 - **Purphoros, Bronze-Blooded** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Purple Worm** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Pursued Whale** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color
@@ -9541,7 +9535,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Rakavolver** — unsupported mixed keyword ability: the executable source backend recognized Kicker but does not yet lower the additional rules text; unsupported enters-with-counters replacement: the executable source backend supports only exact self enters-with-counters replacements; unsupported enters-with-counters replacement: the executable source backend supports only exact self enters-with-counters replacements
 - **Rakdos Augermage** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported discard spell
 - **Rakdos Firewheeler** — unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
-- **Rakdos Guildmage** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Rakdos Headliner** — unsupported ability word: the executable source backend does not yet lower the "Echo" ability word
 - **Rakdos Ickspitter** — unsupported ordered effect sequence: sub-effect — unsupported damage spell; unsupported ordered effect sequence: sub-effect — unsupported life spell
 - **Rakdos Riteknife** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable; unsupported sacrifice spell: the executable source backend does not yet lower this sacrifice effect
@@ -9755,7 +9748,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Redeem** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Prevent all damage that would be dealt this turn to up to two target creatures.; unsupported ability content: the executable source backend does not yet lower this ability content
 - **Redeem the Lost** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If you win
 - **Redemptor Dreadnought** — unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported activation cost: the executable source backend does not yet lower this additional cost to cast; unsupported triggered ability: the executable source backend supports only recognized semantic self triggers with supported effects
-- **Redoubled Stormsinger** — unsupported ordered effect sequence: sub-effect — unsupported token creation; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
+- **Redoubled Stormsinger** — unsupported ordered effect sequence: sub-effect — unsupported token creation
 - **Redress Fate** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Miracle {3}{W} (You may cast this card for its miracle cost when you draw it if it's the first card you drew this turn.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Redshift, Rocketeer Chief** — unsupported mana effect: the executable source backend supports only exact unconditional add-mana content; unsupported activation ability word: the executable source backend cannot lower this activated ability word
 - **Reduce // Rubble** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Aftermath (Cast this spell only from your graveyard. Then exile it.); unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ordered effect sequence: structural — single effect requires ordered lowering
@@ -12369,7 +12362,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Thassa's Intervention** — unsupported ordered effect sequence: mode 1: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported counter spell: mode 2: the executable source backend supports only exact counter of one target spell
 - **Thassa's Rebuff** — unsupported counter spell: the executable source backend supports only exact counter of one target spell
 - **That Which Was Taken** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
-- **Thatcher Revolt** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Thaumatic Compass // Spires of Orazca** — unsupported ordered effect sequence: sub-effect — unsupported untap spell
 - **Thaumaton Torpedo** — unsupported activation condition: the executable source backend cannot lower every activation condition
 - **Thawing Glaciers** — unsupported search effect: unexpected non-result reference in search effect
@@ -12716,7 +12708,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Thunderclap Drake** — unsupported alternative effects: the executable source backend supports only alternatives over a single shared target
 - **Thunderdrum Soloist** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If five or more mana was spent to cast that spell
 - **Thunderfoot Baloth** — unsupported mixed keyword ability: the executable source backend recognized Trample but does not yet lower the additional rules text
-- **Thunderheads** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Replicate {2}{U} (When you cast this spell, copy it for each time you paid its replicate cost.); unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
+- **Thunderheads** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Replicate {2}{U} (When you cast this spell, copy it for each time you paid its replicate cost.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Thunderherd Migration** — unsupported activation cost: the executable source backend does not yet lower a branch of this additional-cost choice
 - **Thundering Mightmare** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Soulbond (You may pair this creature with another unpaired creature when either enters. They remain paired for as long as you control both of them.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition
 - **Thundering Raiju** — unsupported ordered effect sequence: sub-effect — unsupported damage spell
@@ -12747,7 +12739,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Tidal Terror** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported tap spell
 - **Tidal Visionary** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {T}: Target creature becomes the color of your choice until end of turn.; unsupported ability content: the executable source backend does not yet lower this ability content
 - **Tidal Warrior** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {T}: Target land becomes an Island until end of turn.; unsupported ability content: the executable source backend does not yet lower this ability content
-- **Tidal Wave** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Tide of War** — unsupported keyword or ability loss: the executable source backend does not yet lower spells that remove a keyword or ability
 - **Tide Shaper** — unsupported Oracle construct: the compiler preserved but did not confidently lower: When this creature enters, if it was kicked, target land becomes an Island for as long as this creature remains on the battlefield.; unsupported permanent zone-change trigger effect: the executable source backend does not support this permanent zone-change trigger body
 - **Tide Skimmer** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
@@ -13742,7 +13733,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **War Balloon** — unsupported Oracle construct: the compiler preserved but did not confidently lower: As long as this Vehicle has three or more fire counters on it, it's an artifact creature.; unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **War Barge** — unsupported ordered effect sequence: sub-effect — unsupported destroy spell
 - **War Cadence** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {X}{R}: This turn, creatures can't block unless their controller pays {X} for each blocking creature they control.; unsupported activation condition: the executable source backend cannot lower every activation condition
-- **War Effort** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **War Elemental** — unsupported sacrifice spell: the executable source backend does not yet lower this sacrifice effect; unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **War Falcon** — unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition
 - **War Historian** — unsupported static declaration duration: the static declaration has a duration that is not valid for a source-derived static value
