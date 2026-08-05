@@ -2117,6 +2117,31 @@ func parseDynamicTypeUnionCountSubject(tokens []shared.Token, start int, atoms A
 	return dynamicAmountSubject{}, false
 }
 
+// dynamicCountGraveyardOrHandZoneSuffix recognizes the "in your graveyard"/"in
+// your hand" zone suffix shared by every controller-scoped dynamic card-count
+// subject (parseDynamicInstantSorceryCountSubject and
+// parseDynamicSelectionCountSubject both count only the controller's own
+// graveyard or hand, the two zones instant/sorcery and other card-type
+// counting reaches in practice), returning the zone it names and the token
+// index just past it. It fails closed for any other zone phrase or a suffix
+// that doesn't reach a dynamic-amount boundary (a following "you control" or
+// verb, not a mid-clause continuation).
+func dynamicCountGraveyardOrHandZoneSuffix(tokens []shared.Token, end int) (zone.Type, int, bool) {
+	for _, zoneSuffix := range []struct {
+		words []string
+		kind  zone.Type
+	}{
+		{[]string{"in", "your", "graveyard"}, zone.Graveyard},
+		{[]string{"in", "your", "hand"}, zone.Hand},
+	} {
+		if !effectWordsAt(tokens, end, zoneSuffix.words...) || !dynamicAmountBoundary(tokens, end+len(zoneSuffix.words)) {
+			continue
+		}
+		return zoneSuffix.kind, end + len(zoneSuffix.words), true
+	}
+	return zone.None, end, false
+}
+
 // parseDynamicInstantSorceryCountSubject recognizes a "for each instant and
 // sorcery card[s] in your graveyard/hand" count subject. "Instant and sorcery
 // cards" is a fixed idiom for cards that are instants or sorceries (no card is
@@ -2146,29 +2171,20 @@ func parseDynamicInstantSorceryCountSubject(tokens []shared.Token, start int, at
 	}
 	plural := strings.EqualFold(tokens[headIndex].Text, "cards")
 	end := headIndex + 1
-	for _, zoneSuffix := range []struct {
-		words []string
-		kind  zone.Type
-	}{
-		{[]string{"in", "your", "graveyard"}, zone.Graveyard},
-		{[]string{"in", "your", "hand"}, zone.Hand},
-	} {
-		if !effectWordsAt(tokens, end, zoneSuffix.words...) || !dynamicAmountBoundary(tokens, end+len(zoneSuffix.words)) {
-			continue
-		}
-		subjectEnd := end + len(zoneSuffix.words)
-		selection := buildDynamicCountSelection(tokens, start, subjectEnd, atoms)
-		if len(selection.RequiredTypesAny) != 2 {
-			return dynamicAmountSubject{}, false
-		}
-		selection.Controller = SelectionControllerYou
-		selection.Zone = zoneSuffix.kind
-		return dynamicAmountSubject{
-			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
-			end:    subjectEnd, count: true, plural: plural,
-		}, true
+	zoneKind, subjectEnd, ok := dynamicCountGraveyardOrHandZoneSuffix(tokens, end)
+	if !ok {
+		return dynamicAmountSubject{}, false
 	}
-	return dynamicAmountSubject{}, false
+	selection := buildDynamicCountSelection(tokens, start, subjectEnd, atoms)
+	if len(selection.RequiredTypesAny) != 2 {
+		return dynamicAmountSubject{}, false
+	}
+	selection.Controller = SelectionControllerYou
+	selection.Zone = zoneKind
+	return dynamicAmountSubject{
+		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
+		end:    subjectEnd, count: true, plural: plural,
+	}, true
 }
 
 // instantSorceryPair reports whether the two card types are exactly the instant
@@ -2632,23 +2648,14 @@ func parseDynamicSelectionCountSubject(tokens []shared.Token, start int, atoms A
 			end: end + 2, count: true, plural: plural,
 		}, true
 	}
-	for _, zoneSuffix := range []struct {
-		words []string
-		kind  zone.Type
-	}{
-		{[]string{"in", "your", "graveyard"}, zone.Graveyard},
-		{[]string{"in", "your", "hand"}, zone.Hand},
-	} {
-		if !effectWordsAt(tokens, end, zoneSuffix.words...) || !dynamicAmountBoundary(tokens, end+len(zoneSuffix.words)) {
-			continue
-		}
-		subjectEnd := end + len(zoneSuffix.words)
+	zoneKind, subjectEnd, ok := dynamicCountGraveyardOrHandZoneSuffix(tokens, end)
+	if ok {
 		selection := buildDynamicCountSelection(tokens, start, subjectEnd, atoms)
 		if !dynamicCountSelectionTypesFaithful(selection) {
 			return dynamicAmountSubject{}, false
 		}
 		selection.Controller = SelectionControllerYou
-		selection.Zone = zoneSuffix.kind
+		selection.Zone = zoneKind
 		return dynamicAmountSubject{
 			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountCount, Selection: &selection},
 			end:    subjectEnd, count: true, plural: plural,
