@@ -397,6 +397,34 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	switch effects[prior].Kind {
 	case EffectChoosePermanent, EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
 		return prior, true
+	case EffectCreate:
+		// "That creature"/"that token" (ReferenceThatObject) after a create
+		// clause is either the clause's own copy source (contained within the
+		// create's own span, and already excluded above) or, in a repeated
+		// multi-clause offer ("... may create a token that's a copy of that
+		// creature. For each opponent who does, create a token that's a copy of
+		// that creature.", Tempt with Reflections), a demonstrative renaming the
+		// originally chosen copy source — not this clause's own created object.
+		// Only the bare pronoun forms ("it"/"them"/"those") reliably name a
+		// creation's own product; leave ReferenceThatObject unclassified here so
+		// its existing copy-source binding still runs.
+		if reference.Kind == ReferenceThatObject {
+			return 0, false
+		}
+		// A delayed "Exile it"/"Sacrifice it at the beginning of the next end
+		// step" cleanup clause immediately after a token creation (Kiki-Jiki,
+		// Mirror Breaker; Cogwork Assembler; Feldon of the Third Path) is instead
+		// claimed by the lowering layer's isDelayedTargetExileEffect /
+		// isDelayedTargetSacrificeEffect, which still expects
+		// ReferenceBindingTarget rather than this classification. Exclude that
+		// shape here so it keeps resolving exactly as it did before this case was
+		// added, until that lowering path is also taught to accept a
+		// PriorInstructionResult antecedent.
+		if (effects[current].Kind == EffectExile || effects[current].Kind == EffectSacrifice) &&
+			effects[current].DelayedTiming != 0 {
+			return 0, false
+		}
+		return prior, true
 	case EffectMill:
 		if referencedCardsTotalManaValueReference(reference, effects) {
 			return prior, true

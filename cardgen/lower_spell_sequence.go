@@ -331,6 +331,13 @@ func lowerOrderedEffectSequence(
 	// sequence reports all of its blockers, not just the first. It stays empty
 	// for a fully-supported sequence, so the success path below is unchanged.
 	var clauseReasons []shared.Diagnostic
+	// effectInstructionRanges records the [start, end) span within sequence each
+	// effect's instructions occupy, populated as each clause lowers in order. A
+	// later clause's own ReferenceBindingPriorInstructionResult reference looks
+	// up its antecedent here (see sequencePriorInstructionLink) to publish and
+	// consume a generic link, so this must stay indexed by effect position even
+	// for a clause that fails to lower (leaving its zero-value [0,0) entry).
+	effectInstructionRanges := make([][2]int, len(ctx.content.Effects))
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
@@ -444,6 +451,23 @@ func lowerOrderedEffectSequence(
 		consumedTargets += len(clauseTargets)
 		consumedKeywords += len(effectAbility.content.Keywords)
 		consumedReferences += ownedReferenceCount + len(riderReferences)
+		// A reference bound to a prior instruction's result ("it"/"that token"
+		// naming what an earlier clause created, exiled, milled, ...) generalizes
+		// across every producer/consumer verb pair: publish that antecedent's
+		// instruction under a canonical key and hand this clause the same key, so
+		// any single-effect lowerer that already resolves its object through
+		// lowerObjectReference/lowerCardReference can consume it without its own
+		// bespoke linking logic. It is a no-op (leaves priorLinkedKey empty, which
+		// every such lowerer already treats as "no link") whenever the antecedent
+		// produced anything other than exactly one instruction, or already
+		// publishes a different key — so this only ever adds capability and never
+		// changes an outcome that succeeded before.
+		if antecedent, key, ok := sequencePriorInstructionLink(
+			effectAbility.content.References, sequence, effectInstructionRanges[:i],
+		); ok {
+			effectAbility.priorInstruction = antecedent
+			effectAbility.priorLinkedKey = key
+		}
 		// Lower the effect through the shared lowerAbilityContent entry point.
 		// allSharedTargets: try with inherited targets; if that fails, retry
 		//   with targets cleared (e.g. "then proliferate" rejects any target).
@@ -486,14 +510,14 @@ func lowerOrderedEffectSequence(
 			}
 			content = delayed.content
 		} else if allSharedTargets {
-			content, diagnostic = lowerSequenceClauseContent(cardName, ctx, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
+			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 			if diagnostic != nil {
 				effectAbilityNoTarget := effectAbility
 				effectAbilityNoTarget.content.Targets = nil
-				content, diagnostic = lowerSequenceClauseContent(cardName, ctx, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility, allowEventPronoun)
+				content, diagnostic = lowerSequenceClauseContent(cardName, effectAbilityNoTarget, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility, allowEventPronoun)
 			}
 		} else {
-			content, diagnostic = lowerSequenceClauseContent(cardName, ctx, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
+			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 		}
 		if diagnostic != nil ||
 			len(content.SharedTargets) != 0 ||
@@ -558,6 +582,7 @@ func lowerOrderedEffectSequence(
 			}
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — effect produced no instructions")
 		}
+		effectInstructionRanges[i] = [2]int{len(sequence), len(sequence) + len(mode.Sequence)}
 		sequence = append(sequence, mode.Sequence...)
 	}
 	// If any clause failed to lower, the sequence is unsupported. Report every

@@ -136,3 +136,45 @@ func TestLowerCreateTwoTokensThenCountersOnEach(t *testing.T) {
 		t.Fatalf("add = %#v, want two counters on the linked token group", mode.Sequence[1].Primitive)
 	}
 }
+
+// TestLowerCreateTokenAndCountersOnItSingleSentence proves the create-then-link
+// mechanism generalizes beyond the two-sentence "Create a token. Put N counters
+// on it." shape every sibling test above exercises: Fractal Anomaly instead
+// joins the creation and the placement with "and" in one sentence ("Create a
+// ... token and put X +1/+1 counters on it, where X is ..."), which the
+// hand-written lowerCreateTokenThenCountersSequence never recognized (its own
+// guard requires exactly two ordered effects). This composes through the
+// generic per-effect sequence loop instead: compiler.EffectCreate is a valid
+// ReferenceBindingPriorInstructionResult antecedent (cardgen/oracle/compiler/
+// reference.go), so the loop publishes the create instruction's link generically
+// (sequencePriorInstructionLink) and the ordinary single-effect counter-placement
+// lowerer (lowerReferencedCounterPlacement) resolves "it" through it — no
+// bespoke pair function was written or needed for this shape.
+func TestLowerCreateTokenAndCountersOnItSingleSentence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Fractal Anomaly",
+		Layout:     "normal",
+		TypeLine:   "Instant",
+		ManaCost:   "{2}{G}{U}",
+		OracleText: "Create a 0/0 green and blue Fractal creature token and put X +1/+1 counters on it, where X is the number of cards you've drawn this turn.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatalf("no spell ability lowered: %#v", face)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want create then counter placement", mode.Sequence)
+	}
+	create, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+	if !ok || create.PublishLinked == "" {
+		t.Fatalf("create = %#v, want a token creation publishing a link", mode.Sequence[0].Primitive)
+	}
+	add, ok := mode.Sequence[1].Primitive.(game.AddCounter)
+	if !ok ||
+		add.Object.Kind() != game.ObjectReferenceLinkedObject ||
+		add.Object.LinkID() != string(create.PublishLinked) ||
+		!add.Amount.IsDynamic() {
+		t.Fatalf("add = %#v, want a dynamic counter placement on the linked token", mode.Sequence[1].Primitive)
+	}
+}

@@ -876,13 +876,21 @@ func lowerCounterPlacementSpell(
 	}.Ability(), nil
 }
 
+// counterPlacementReferenceBindingSupported reports whether lowerObjectReference
+// can resolve binding for a counter-placement recipient. This must stay in sync
+// with lowerObjectReference's own switch (reference.go): every binding case that
+// function can turn into a game.ObjectReference belongs here too, or a
+// perfectly resolvable recipient (for instance, "it" naming a token an earlier
+// clause created — ReferenceBindingPriorInstructionResult) is silently skipped
+// before lowerReferencedCounterPlacement ever gets to try it.
 func counterPlacementReferenceBindingSupported(binding compiler.ReferenceBinding) bool {
 	switch binding {
 	case compiler.ReferenceBindingSource,
 		compiler.ReferenceBindingSourceAttached,
 		compiler.ReferenceBindingTarget,
 		compiler.ReferenceBindingEventPermanent,
-		compiler.ReferenceBindingEventRelatedPermanent:
+		compiler.ReferenceBindingEventRelatedPermanent,
+		compiler.ReferenceBindingPriorInstructionResult:
 		return true
 	default:
 		return false
@@ -1397,9 +1405,11 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
 	}
 	object, ok := lowerObjectReference(recipientReferences[0], referenceLoweringContext{
-		AllowSource: true,
-		AllowTarget: true,
-		AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
+		AllowSource:      true,
+		AllowTarget:      true,
+		PriorInstruction: ctx.priorInstruction,
+		PriorLinkedKey:   ctx.priorLinkedKey,
+		AllowEvent:       !ctx.sequenceClause || ctx.allowEventPronoun,
 	})
 	if !ok {
 		return game.AbilityContent{}, unsupportedCounterPlacementDiagnostic(ctx)
