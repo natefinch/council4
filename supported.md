@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,184 of 32,508 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,185 of 32,508 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5767,6 +5767,7 @@ Council4 currently supports **18,184 of 32,508 cards eligible for paper support 
 - Foxfire
 - Foxfire Oak
 - Fractal
+- Fractal Anomaly
 - Fractal Mascot
 - Fractal Summoning
 - Fracture

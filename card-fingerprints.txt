@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18184 supported cards
+# 18185 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -593,7 +593,7 @@ e3bc0ffcb0609460  Appeal to Eirdu
 861524110def61ff  Appendage Amalgam
 e9fd4ed504d9b265  Appetite for the Unnatural
 83a412a4141ce5a4  Applied Biomancy
-545801185e6942eb  Applied Geometry
+6cf5cdf5cb588c27  Applied Geometry
 1baac7344d1458c3  Apprentice Necromancer
 217f74069b208863  Apprentice Sharpshooter
 7e87a6d0a5630971  Apprentice Sorcerer
@@ -5773,6 +5773,7 @@ f7bdcc1acf3564a3  Fox
 3ee5cd16f7953348  Foxfire
 7e3ce53c74f46e95  Foxfire Oak
 b4a4d18ebcd89dd0  Fractal
+b31eaf1638fab720  Fractal Anomaly
 668b7c7e93dfe0e2  Fractal Mascot
 61898d78af25cd7f  Fractal Summoning
 0a620149f62f4eca  Fracture

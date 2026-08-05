@@ -102,6 +102,17 @@ type contentCtx struct {
 	// (ChosenColorAnaphor) resolve to that same entry-time chosen color; the
 	// anaphor fails closed outside such a trigger.
 	triggerProducedManaChosenColor bool
+	// priorInstruction and priorLinkedKey identify the single sequence effect
+	// (by index) this clause's ReferenceBindingPriorInstructionResult reference
+	// names, and the link key the generic sequence loop already published that
+	// effect's instruction under (see sequencePriorInstructionLink). They are
+	// zero (0, "") outside a sequence clause carrying such a reference, which
+	// lowerObjectReference and lowerCardReference already treat as "no link
+	// available" — so a single-effect lowerer needs no other change to accept a
+	// prior-instruction-result object once it threads these two fields into its
+	// own referenceLoweringContext.
+	priorInstruction int
+	priorLinkedKey   game.LinkedKey
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -190,6 +201,8 @@ func lowerSequenceClauseContent(
 
 		variableCounterRemovalCost: parent.variableCounterRemovalCost,
 		spellTargetPattern:         parent.spellTargetPattern,
+		priorInstruction:           parent.priorInstruction,
+		priorLinkedKey:             parent.priorLinkedKey,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }

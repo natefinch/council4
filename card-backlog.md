@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 32508
-- Supported (generated): 18184
+- Supported (generated): 18185
 - Parser-complete: 22316
-- **Lowering backlog** (parser-complete, not generated): 4896
+- **Lowering backlog** (parser-complete, not generated): 4895
 - **Parser backlog** (not parser-complete, not generated): 9428
 
-Partition check: 18184 supported + 4896 lowering-backlog + 9428 parser-backlog = 32508 eligible. ✓
+Partition check: 18185 supported + 4895 lowering-backlog + 9428 parser-backlog = 32508 eligible. ✓
 
 764 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18184 supported + 4896 lowering-backlog + 9428 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18184
-- Independent per-card recompile generated: 18184
+- Authoritative generated (compilecards report): 18185
+- Independent per-card recompile generated: 18185
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -101,7 +101,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 15 | unsupported enters-tapped replacement | 90 | 55 | Stenn, Paranoid Partisan; Choco-Comet; Nevermore; True-Name Nemesis; Jailbreak |
 | 16 | unsupported exile spell | 88 | 63 | Ravnica at War; Toluz, Clever Conductor; Consuming Sinkhole; Sengir Autocrat; Ulamog, the Ceaseless Hunger |
 | 17 | unsupported power/toughness spell | 87 | 67 | Murk Dwellers; Park Bleater; Shaper Parasite; Battle Frenzy; Blood Age General |
-| 18 | unsupported activation references | 75 | 63 | Planebound Accomplice; Puresight Merrow; Titans' Nest; Spurnmage Advocate; Pulsemage Advocate |
+| 18 | unsupported activation references | 73 | 62 | Planebound Accomplice; Puresight Merrow; Titans' Nest; Spurnmage Advocate; Pulsemage Advocate |
 | 19 | unsupported gain-control spell | 66 | 53 | Slave of Bolas; Legacy's Allure; The Super Hero Civil War; Dominating Vampire; Skyfire Kirin |
 | 20 | unsupported enters-with-counters replacement | 64 | 47 | Flycatcher Giraffid; Malefic Scythe; Callous Sell-Sword // Burn Together; Bone Devourer; Faerie Squadron |
 | 21 | unsupported type line | 61 | 60 | Playable Delusionary Hydra; Notorious Sliver War; City's Blessing // Elemental; Demonic Tourist Laser; Night Brushwagg Ringmaster |
