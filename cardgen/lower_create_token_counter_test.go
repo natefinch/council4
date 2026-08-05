@@ -178,3 +178,42 @@ func TestLowerCreateTokenAndCountersOnItSingleSentence(t *testing.T) {
 		t.Fatalf("add = %#v, want a dynamic counter placement on the linked token", mode.Sequence[1].Primitive)
 	}
 }
+
+// TestLowerCreateTwoTokensAndCountersOnEachOfThemSingleSentence guards the
+// silent-miscompile hazard the generic path introduces: a plural back-reference
+// ("each of them") to a multi-token creation must resolve to the whole
+// LinkedObjectsGroup, never to a single LinkedObjectReference. lowerObjectReference
+// only ever resolves one object, so treating a plural reference as an ordinary
+// single one would place the counters on just one of the created tokens instead
+// of each -- and would do so silently (a fully-formed, validated CardDef with no
+// diagnostic), not fail closed. This shape reaches the generic path because a
+// third effect ("draw a card") pushes it off lowerCreateTokenThenCountersSequence's
+// exact-two-effect guard.
+func TestLowerCreateTwoTokensAndCountersOnEachOfThemSingleSentence(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Probe Twin Fractals Draw",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		ManaCost:   "{2}{G}{U}",
+		OracleText: "Create two 1/1 white Soldier creature tokens, put a +1/+1 counter on each of them, then draw a card.",
+	})
+	if !face.SpellAbility.Exists {
+		t.Fatalf("no spell ability lowered: %#v", face)
+	}
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence = %#v, want create, counter placement, then draw", mode.Sequence)
+	}
+	create2, ok := mode.Sequence[0].Primitive.(game.CreateToken)
+	if !ok || create2.Amount.Value() != 2 || create2.PublishLinked == "" {
+		t.Fatalf("create = %#v, want a two-token creation publishing a link", mode.Sequence[0].Primitive)
+	}
+	add2, ok := mode.Sequence[1].Primitive.(game.AddCounter)
+	key, linked := add2.Group.LinkedKey()
+	if !ok || !linked || key != create2.PublishLinked ||
+		add2.Object.Kind() != game.ObjectReferenceNone ||
+		add2.Amount.Value() != 1 {
+		t.Fatalf("add = %#v, want counters on the whole linked token group, not a single object", mode.Sequence[1].Primitive)
+	}
+}
