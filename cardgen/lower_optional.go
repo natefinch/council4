@@ -1502,15 +1502,25 @@ func resultThisWayMatchesEffect(condition compiler.CompiledCondition, effect com
 // it succeeded and the trailing "if you do" effects are gated on that success,
 // exactly like the optional "you may X. If you do, Y." pair (CR 608.2c).
 //
-// handled is false when the sequence carries no "if you do" gate, so the caller
-// proceeds with normal ungated lowering. When an "if you do" gate is present but
-// does not form a supported mandatory pair, it returns handled=true with ok=false
-// so the caller fails closed rather than dropping the gate.
+// It also detects the outcome-worded equivalent "X, then Y. If a <noun> is
+// <participle> this way, Z." (Lord Windgrace: "Discard a card, then draw a
+// card. If a land card is discarded this way, draw an additional card."),
+// where X is a plain mandatory effect that can affect less than its full
+// possible scope (an empty hand leaves nothing to discard) rather than an
+// optional one — isResolvingSuccessGate and resultThisWayMatchesEffect apply
+// the same verb-matching guard used for the optional "this way" gate
+// (planOptionalFlow) so a mismatched participle still fails closed.
+//
+// handled is false when the sequence carries no "if you do"/"this way" gate,
+// so the caller proceeds with normal ungated lowering. When such a gate is
+// present but does not form a supported mandatory pair, it returns
+// handled=true with ok=false so the caller fails closed rather than dropping
+// the gate.
 func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlowPlan, ok bool, handled bool) {
 	gateCondition := -1
 	for ci := range content.Conditions {
 		condition := content.Conditions[ci]
-		if condition.Predicate != compiler.ConditionPredicatePriorInstructionAccepted {
+		if !isResolvingSuccessGate(condition.Predicate) {
 			continue
 		}
 		if gateCondition != -1 ||
@@ -1525,9 +1535,8 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 		return optionalFlowPlan{}, false, false
 	}
 	gateConditionOrder := content.Conditions[gateCondition].Order
-	// The gated "if you do" effects are the contiguous tail whose clause Order
-	// contains the gate condition; the publishing effect is the one immediately
-	// before that tail.
+	// The gated "if you do"/"this way" effects are the contiguous tail whose
+	// clause Order contains the gate condition.
 	gateIndex := -1
 	for i := range content.Effects {
 		if content.Effects[i].Order.Contains(gateConditionOrder) {
@@ -1538,13 +1547,38 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 	if gateIndex <= 0 {
 		return optionalFlowPlan{}, false, true
 	}
+	// The literal "if you do" gate always refers to the immediately preceding
+	// effect -- that's inherent to the wording, "do" standing in for the entire
+	// action just described. The outcome-worded "this way" gate can name a
+	// producing effect further back, since Oracle text may interpose an
+	// unconditional effect between the producer and its "this way" callback
+	// (Lord Windgrace: "Discard a card, then draw a card. If a land card is
+	// discarded this way, draw an additional card." -- the gate's producer is
+	// the discard, two effects back, not the intervening unconditional draw).
+	// The backward scan takes the nearest matching producer, mirroring how a
+	// back-reference resolves to the most recent candidate elsewhere in the
+	// compiler (e.g. CR 607 linked-token references).
 	publishIndex := gateIndex - 1
+	if content.Conditions[gateCondition].Predicate == compiler.ConditionPredicateResultThisWay {
+		publishIndex = -1
+		for i := gateIndex - 1; i >= 0; i-- {
+			if content.Effects[i].Kind == content.Conditions[gateCondition].ThisWayOutcome {
+				publishIndex = i
+				break
+			}
+		}
+		if publishIndex == -1 {
+			return optionalFlowPlan{}, false, true
+		}
+	}
 	// The publishing effect must be a plain mandatory effect that does not itself
-	// belong to the gated clause.
+	// belong to the gated clause and, for the outcome-worded gate, must be the
+	// same producing verb the participle names.
 	if content.Effects[publishIndex].Optional ||
 		content.Effects[publishIndex].Negated ||
 		content.Effects[publishIndex].DelayedTiming != 0 ||
-		content.Effects[publishIndex].Order.Contains(gateConditionOrder) {
+		content.Effects[publishIndex].Order.Contains(gateConditionOrder) ||
+		!resultThisWayMatchesEffect(content.Conditions[gateCondition], content.Effects[publishIndex]) {
 		return optionalFlowPlan{}, false, true
 	}
 	// Every effect from the gate index onward must belong to the single "if you

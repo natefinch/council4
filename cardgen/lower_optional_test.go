@@ -374,6 +374,148 @@ func TestLowerOptionalMilledThisWayVerbMismatchFailsClosed(t *testing.T) {
 	}
 }
 
+// TestLowerLoyaltyMandatoryDiscardThisWayNonAdjacentProducer guards
+// planMandatoryIfYouDoFlow's outcome-worded ("this way") extension with a real
+// card whose producing effect is NOT the one immediately preceding the gate:
+// Lord Windgrace's "+2: Discard a card, then draw a card. If a land card is
+// discarded this way, draw an additional card." interposes an unconditional
+// draw between the discard (the gate's actual producer, two effects back) and
+// the gated additional draw. Both the discard and the draw between them are
+// fully mandatory -- there is no "you may" anywhere in the ability -- so this
+// exercises planMandatoryIfYouDoFlow's backward scan rather than
+// planOptionalFlow's optional-effect path.
+func TestLowerLoyaltyMandatoryDiscardThisWayNonAdjacentProducer(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Lord Windgrace",
+		Layout:     "normal",
+		TypeLine:   "Legendary Planeswalker — Windgrace",
+		ManaCost:   "{3}{B}{R}{G}",
+		OracleText: "+2: Discard a card, then draw a card. If a land card is discarded this way, draw an additional card.",
+		Loyalty:    new("4"),
+	})
+	if len(face.LoyaltyAbilities) == 0 {
+		t.Fatal("loyalty abilities not found")
+	}
+	mode := face.LoyaltyAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 3 {
+		t.Fatalf("sequence = %#v, want three instructions (discard, draw, gated additional draw)", mode.Sequence)
+	}
+	discard := mode.Sequence[0]
+	if _, ok := discard.Primitive.(game.Discard); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Discard", discard.Primitive)
+	}
+	if discard.Optional || discard.PublishResult == "" {
+		t.Fatalf("discard must be mandatory and publish a result: %#v", discard)
+	}
+	between := mode.Sequence[1]
+	if _, ok := between.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[1] = %T, want game.Draw", between.Primitive)
+	}
+	if between.Optional || between.PublishResult != "" || between.ResultGate.Exists {
+		t.Fatalf("intervening draw must be plain and ungated: %#v", between)
+	}
+	gated := mode.Sequence[2]
+	if _, ok := gated.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[2] = %T, want game.Draw", gated.Primitive)
+	}
+	if !gated.ResultGate.Exists {
+		t.Fatal("additional draw must be gated on the discard's published result")
+	}
+	if g := gated.ResultGate.Val; g.Key != discard.PublishResult || g.Succeeded != game.TriTrue {
+		t.Fatalf("additional-draw ResultGate = %#v, want succeeded gate on %q", g, discard.PublishResult)
+	}
+}
+
+// TestLowerMandatoryExileThisWayNonAdjacentProducer covers the same
+// non-adjacent-producer shape with a spell rather than a loyalty ability, and
+// with the producing effect's result consumed via a linked object rather than
+// a plain zone move: Siren's Ruse's "Exile target creature you control, then
+// return that card to the battlefield under its owner's control. If a Pirate
+// was exiled this way, draw a card." The exile publishes its result, the
+// linked return-to-battlefield is untouched, and the trailing draw gates on
+// the exile having succeeded.
+func TestLowerMandatoryExileThisWayNonAdjacentProducer(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Siren's Ruse Test",
+		"Exile target creature you control, then return that card to the battlefield under its owner's control. If a Pirate was exiled this way, draw a card.")
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %#v, want three instructions (exile, return, gated draw)", sequence)
+	}
+	exile := sequence[0]
+	if _, ok := exile.Primitive.(game.MovePermanent); !ok {
+		t.Fatalf("instruction[0] = %T, want game.MovePermanent", exile.Primitive)
+	}
+	if exile.Optional || exile.PublishResult == "" {
+		t.Fatalf("exile must be mandatory and publish a result: %#v", exile)
+	}
+	returnToBattlefield := sequence[1]
+	if returnToBattlefield.PublishResult != "" || returnToBattlefield.ResultGate.Exists {
+		t.Fatalf("return-to-battlefield must be plain and ungated: %#v", returnToBattlefield)
+	}
+	draw := sequence[2]
+	if _, ok := draw.Primitive.(game.Draw); !ok {
+		t.Fatalf("instruction[2] = %T, want game.Draw", draw.Primitive)
+	}
+	if !draw.ResultGate.Exists {
+		t.Fatal("draw must be gated on the exile's published result")
+	}
+	if g := draw.ResultGate.Val; g.Key != exile.PublishResult || g.Succeeded != game.TriTrue {
+		t.Fatalf("draw ResultGate = %#v, want succeeded gate on %q", g, exile.PublishResult)
+	}
+}
+
+// TestLowerMandatoryDestroyThisWayAdjacentProducer covers the simpler adjacent
+// mandatory shape (no intervening effect between the producer and the gate),
+// which planMandatoryIfYouDoFlow already supported for the literal "if you do"
+// gate but not the outcome-worded "this way" gate before this generalization:
+// Smashing Success's "Destroy target artifact or land. If an artifact is
+// destroyed this way, create a Treasure token."
+func TestLowerMandatoryDestroyThisWayAdjacentProducer(t *testing.T) {
+	t.Parallel()
+	sequence := lowerSpellSequence(t, "Smashing Success Test",
+		"Destroy target artifact or land. If an artifact is destroyed this way, create a Treasure token.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions (destroy, gated token)", sequence)
+	}
+	destroy := sequence[0]
+	if _, ok := destroy.Primitive.(game.Destroy); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Destroy", destroy.Primitive)
+	}
+	if destroy.Optional || destroy.PublishResult == "" {
+		t.Fatalf("destroy must be mandatory and publish a result: %#v", destroy)
+	}
+	token := sequence[1]
+	if !token.ResultGate.Exists {
+		t.Fatal("token creation must be gated on the destroy's published result")
+	}
+	if g := token.ResultGate.Val; g.Key != destroy.PublishResult || g.Succeeded != game.TriTrue {
+		t.Fatalf("token ResultGate = %#v, want succeeded gate on %q", g, destroy.PublishResult)
+	}
+}
+
+// TestLowerMandatoryThisWayVerbMismatchFailsClosed guards
+// resultThisWayMatchesEffect for the mandatory (non-optional) flow, mirroring
+// TestLowerOptionalMilledThisWayVerbMismatchFailsClosed: a fully mandatory
+// producing effect followed by a "this way" gate naming a different verb must
+// fail closed rather than silently binding to the wrong producer.
+func TestLowerMandatoryThisWayVerbMismatchFailsClosed(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Mismatched Mandatory Mill Probe",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "Mill a card. If a creature is destroyed this way, draw a card.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatalf("GenerateExecutableCardSource error = %v", err)
+	}
+	if len(diagnostics) == 0 && source != "" {
+		t.Fatal("verb-mismatched mandatory this-way gate unexpectedly compiled without any diagnostic")
+	}
+}
+
 func TestLowerOptionalIfYouDoAfterLeadingEffect(t *testing.T) {
 	t.Parallel()
 	sequence := lowerSpellSequence(t, "Singe",
