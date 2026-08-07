@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18196 supported cards
+# 18299 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -31,6 +31,7 @@ b86655e15f9c16a6  Abbey Griffin
 ca0c078238a29aad  Abbot of Keral Keep
 9bb6fe363f9bab73  Abduction
 97c00956a1d2f0d0  Aberrant
+c839246f9e9f963b  Aberrant Researcher // Perfected Form
 13f23c94baabe965  Abhorrent Oculus
 b6e57532d0825509  Abhorrent Overlord
 d5a63afb660b6f2e  Abjure
@@ -362,6 +363,7 @@ a7698fc946284f4f  Ally
 7695726a82263223  Almighty Brushwagg
 ee12ae7034ba405b  Almost Perfect
 0987d524ec8a1fc0  Alms of the Vein
+816c7698a0a07fc7  Along the Crooked Way
 ced33006fc7bcc76  Alpha Authority
 58f84b20fb964752  Alpha Kavu
 dbdfaf66c1976409  Alpha Myr
@@ -419,6 +421,7 @@ a22c1785e79961ec  Amethyst Dragon // Explosive Crystal
 32ce99c8fbf97a0a  Amulet of Unmaking
 84d15f0864668d16  Amulet of Vigor
 561cff7e66daaa09  An Offer You Can't Refuse
+23c5875eaf791043  An Unexpected Party // At the Door
 3d653a02ff5bea16  An-Havva Township
 ca68e7c181604acf  Ana Disciple
 ed45c4fa274a1682  Anaba Ancestor
@@ -898,6 +901,7 @@ af5c8fc1f06f4009  Attended Healer
 4f1068d9849cc65c  Attended Knight
 dbef407f8fc2e03b  Attended Socialite
 57d27e4eaacf802d  Attentive Sunscribe
+edcb7b7fe27f463e  Attercop
 a83c44d7d321ce2c  Attrition
 cf4bd3b95bf1796f  Attuma, Atlantean Warlord
 9fe210c77cb08ec8  Attune with Aether
@@ -1063,6 +1067,7 @@ f13dcb3059ab5475  Backwoods Survivalists
 c965613f75faa6ba  Badlands Revival
 2ac4610d6b607a11  Baeloth Barrityl, Entertainer
 c2840e9c8830ba31  Baffling End
+a471ea3b49c7957c  Bag End Banquet
 c050d97d70addf48  Bag End Porter
 436afee476c374fe  Baird, Steward of Argive
 21504fb0d60504fb  Bake into a Pie
@@ -1142,6 +1147,9 @@ c0890bbe0a880385  Barbed Bloodletter
 634de65ffac67ff6  Barbed Field
 004fb50b8d57e05d  Barbed Spike
 41736373d710e9bb  Barbtooth Wurm
+0c4e6e257048f5c5  Bard the Bowman
+d83ef8bfc31f235f  Bard, Heir of Girion
+b224ccf4c05a07ce  Bard, King of Dale
 1945bab336e405f5  Bargain
 7ee2ad31b53bcd2f  Barging Sergeant
 f523c34cf01e6e55  Barkchannel Pathway // Tidechannel Pathway
@@ -1321,6 +1329,7 @@ d0539161c1fbac13  Befuddle
 02df1a102ebb797b  Behemoth Sledge
 03d1a9bd88de1fda  Behind the Scenes
 cf497f73bd81d250  Behold the Multiverse
+08ce4cbd932c8204  Bejeweled Warg
 db2f7319fec5b2ad  Belbe's Armor
 2d8fe0039bfc2254  Belbe's Percher
 fe89e6466b78cab2  Belbe's Portal
@@ -1368,6 +1377,7 @@ ae52c2af3635cc18  Benthic Biomancer
 ce9f30fc9abd49e6  Benthic Djinn
 e18f58cf1a935ff1  Benthic Giant
 fa19a421fd67ca2e  Benthicore
+8bfc5e1fec09404e  Beorn, Reluctant Host // Till and Tend
 a4cd428204c3b143  Bequeathal
 c6690417b62eaacc  Bereavement
 a2aeceeae6963daa  Beregond of the Guard
@@ -1400,6 +1410,9 @@ a3d2bc89126a5f0e  Big Apple, 3 a.m.
 cff097a6e2c2f661  Big Wheel
 f749584dc984dc70  Bigfin Bouncer
 c563f2113caf841c  Bighorner Rancher
+0b5636363cd6ad60  Bilbo Baggins, Burglar // Take a Glance
+9258fb8e3e41a0cb  Bilbo's Deadly Slice
+1de148e8370465e9  Bilbo's Gambit
 6a02fb82d066c765  Bilbo, Birthday Celebrant
 9c5fe287f7225640  Bilbo, Retired Burglar
 5a7142d8d516c5a1  Bile Blight
@@ -1737,6 +1750,7 @@ cd3b8799dd3932e0  Boartusk Liege
 5ef20c3794654620  Body Dropper
 1ddc692168c73663  Body of Jukai
 1b02daea31323116  Body of Knowledge
+7d1d9e9fb298a044  Bofur, Reliable Guardian // Concerted Care
 1abf7a0a8a282c7b  Bog Badger
 70f148cdf7552e49  Bog Down
 7fff2b3c52b29496  Bog Elemental
@@ -1783,6 +1797,8 @@ c0499df772d5c31c  Bojuka Bog
 d383f8e74146322a  Bolas's Citadel
 33835eacaa6cadff  Bold Impaler
 40df186b0c434518  Boldwyr Aggressor
+fcbe56004356f99c  Bolg's Company
+f5fa553e43963370  Bolg, Erebor's Reckoning
 81c0ce97554e6cb4  Bolrac-Clan Basher
 0776c256b52a0acd  Bolrac-Clan Crusher
 8d20ad483ba95f42  Bolt Bend
@@ -1891,11 +1907,13 @@ f07c42719f62f9dd  Bosk Banneret
 9326a3663c9e3850  Bot Bashing Time
 e88389f9882a051a  Botanical Plaza
 df1e056b212a3ea9  Botanical Sanctum
+252bbd329ea3b769  Bothersome Noisemaker
 093a7857b43c7f49  Bothersome Quasit
 c8c2eb66befaff46  Bottle Gnomes
 a0e5255746607b78  Bottle Golems
 2b22142acb6326d5  Bottomless Pit
 653e3fdbc77b3923  Bottomless Pool // Locker Room
+8b273b7b66e09dde  Boughside Wanderers
 a2af8d7549628eb8  Boulder Dash
 b3b3b80643d4f221  Boulderborn Dragon
 90e9c0774c88022d  Boulderfall
@@ -2103,6 +2121,7 @@ dcbb6c1a1d3e1305  Buried Treasure
 2e929acf5eee1f25  Burlfist Oak
 e74a78acad83d380  Burn Bright
 18eff1480b4d7939  Burn the Accursed
+fd10fc4c6e5d5890  Burn, Burn, Tree and Fern
 3968a44afe2ff444  Burner Rocket
 de44b5bc76d2fb69  Burning Anger
 84364532b726b517  Burning Fields
@@ -2953,6 +2972,7 @@ ca4749c7e8f3a780  Conduit of Worlds
 95119d846a6d217d  Confiscate
 8117369adfd87659  Confound
 f2654d013c0fa459  Confounding Riddle
+71a32fd80cada2f1  Confusticate and Bebother
 7cc4cf4a049aa338  Congregate
 321e8724c4576076  Congregation Gryff
 75ea21dc595e5e7e  Conifer Strider
@@ -3246,6 +3266,7 @@ cefd6ac275093c21  Crown-Hunter Hireling
 dba9e3c0a2098d3b  Crowned Ceratok
 26489d5838994cd0  Crucible of Fire
 afd3d1f67ee2fc13  Crucible of Worlds
+cd9f80ffcb651fa4  Crude Bent Blade
 be186947a626a19c  Crude Rampart
 71ce0814f2c157f7  Cruel Bargain
 ca0db37e1f72eb1a  Cruel Celebrant
@@ -3423,6 +3444,7 @@ bbfd677d1cd58d65  Dalkovan Encampment
 f0235cae4ae0b5e6  Dance of Shadows
 6df7618f62e47c8f  Dance of the Tumbleweeds
 ceffaac1299c92c5  Dance with Devils
+f549f878158b4954  Dancing from Dark to Dawn
 2d3f41112fe89b07  Dancing Scimitar
 63559723c7f2b742  Dandân
 8b5577dba556d0da  Dangerous Wager
@@ -3794,6 +3816,7 @@ c0a7ce587d32a48d  Deserted Temple
 76fbcf01349946be  Desiccated Naga
 d2cdff12fa5cb6c4  Desolate Lighthouse
 18f98f49cf25f011  Desolate Mire
+ec5ce52b8e08dad7  Desolation Prowler
 c19f3fba06e30d89  Desolation Twin
 a3fe00524a00c3e1  Despark
 218b1a088b26f4cf  Desperate Bloodseeker
@@ -3924,6 +3947,7 @@ a8faa16aa5ef3c51  Diregraf Captain
 eff7593d2caa7ba7  Diregraf Colossus
 5b7a177cd3047a2e  Diregraf Ghoul
 ce8ec3a06dcdd86f  Diregraf Horde
+67a07f4f6cfdaebe  Diregraf Scavenger
 d37cfebda4c344b0  Diresight
 d7fa80afc7cfdaad  Dirge Bat
 62b0ead5808858af  Dirge of Dread
@@ -4069,6 +4093,7 @@ b311e88d0123c74b  Door of Destinies
 7c0e3452c747d9f8  Door to Nothingness
 01076efc4e5083d9  Doorkeeper
 ae5a029bef669269  Doran, the Siege Tower
+c257bcfcd3dc6ad0  Dori, Bearer of Friends
 6abeed1e4bf1cd59  Dormant Volcano
 92d9abf210e26461  Dosan's Oldest Chant
 d37002dea14a603d  Double Cleave
@@ -4081,6 +4106,7 @@ fe8f636195b6defb  Douse in Gloom
 61d87fde622dd6bf  Dovin's Automaton
 5f61ac4e7d3d738d  Dovin's Veto
 35752e46821622bf  Down // Dirty
+5b077f1a61ee48b5  Down in the Valley
 1d01b1d5eb88a876  Downdraft
 30c8c0fddc8eaf8d  Downhill Charge
 bac1b07822ffccc7  Downpour
@@ -4128,10 +4154,12 @@ eb34004969f6de2c  Dragon Tempest
 68afb776e2a92f5c  Dragon Tyrant
 717cc6ad833df864  Dragon Whisperer
 d27cbde9bb62a277  Dragon's Claw
+163b37f3afd565ae  Dragon's Desire
 355cadf56edbf51b  Dragon's Eye Sentry
 8cfd6163da1820b3  Dragon's Hoard
 837afe4d361a76f7  Dragon's Presence
 628c1fa424216c64  Dragon's Rage Channeler
+192bf163c3cb9915  Dragon-Cursed Halls
 c80607c1bb015adc  Dragon-Scarred Bear
 51198f18d1dfb7e7  Dragon-Style Twins
 520f156ab35e39c3  Dragonback Assault
@@ -4389,13 +4417,16 @@ d9d269e4aaf3048b  Dwarven Castle Guard
 59ab66045ec7d413  Dwarven Grunt
 02c5c9c7808811eb  Dwarven Landslide
 2b42ffb8c7cc6aa3  Dwarven Lieutenant
+afb9e092d37e278a  Dwarven Mattock
 4298b1c68235f45f  Dwarven Mine
 41524bb0c87fc208  Dwarven Miner
 db9a00c33eb79271  Dwarven Nomad
 0b7aff887b7fc79e  Dwarven Pony
 52bb716c0a5bce78  Dwarven Priest
+3e65e92eaf86a428  Dwarven Provisioner
 4956f9568af6a903  Dwarven Reinforcements
 8baeab1580daedec  Dwarven Ruins
+de7b34fec142d60e  Dwarven Shortsword
 82d180fad966d37d  Dwarven Strike Force
 99034c25d4a1a571  Dwarven Trader
 a447fa409a8c7697  Dwarven Warriors
@@ -4408,12 +4439,14 @@ bd29b364d4de2ea0  Dying Wail
 d4167cd1437bb897  Dying Wish
 f12e823d07a200bb  Dynacharge
 91568baaaa5344f1  Dynavolt Tower
+beb38946f2490a5c  Dáin's Company
 688aa869179df445  Déjà Vu
 f57245cdeba4bb13  Dúnedain Blade
 e38b99d192ca4bae  Eager Cadet
 78933f3722bbf70a  Eager First-Year
 c5be7740f76f6b11  Eager Glyphmage
 488accc452076b26  Eager Trufflesnout
+2c0f8813d3ee59f1  Eagle of the Great Shelf
 218e7c891dc1f7c3  Eagle of the Watch
 d0f7ef04172d8e31  Eagles of the North
 71636f0f8aa8c59e  Early Frost
@@ -4646,7 +4679,10 @@ d47f8293bd6938a9  Elven Chorus
 50551ef7a8d46381  Elven Fortress
 c5159dfd5251d877  Elven Lyre
 57c61ad1ff2fdadf  Elven Palisade
+82ee2fc9f1840aed  Elven Raft-Steerer
 1acb730f74a9f90c  Elven Rite
+69b7418c5e2dd416  Elvenking's Halls
+33f5751606be1af7  Elvenking's Harper
 4fc0bff671130a57  Elves of Deep Shadow
 9dc14f52a8dd2e5d  Elvish Aberration
 f3c3900b5c98a278  Elvish Archdruid
@@ -5193,6 +5229,7 @@ a97f5cfc19590265  Fate Transfer
 2db3f41a57ecbb67  Fated Intervention
 898488fa78c0f998  Fated Retribution
 134ba230878feb98  Fated Return
+39afd890ea49d009  Fateful Discovery
 d76ea2c842484ba4  Fateful End
 bf75d21c8e7b9cd1  Fates' Reversal
 cc6978472fc9e256  Fatestitcher
@@ -5221,6 +5258,7 @@ b08333cd3eebf499  Fearless Halberdier
 043c7a76227230c9  Fearless Liberator
 17519f9c6cc2d3da  Fearless Pup
 afa18fab4db04fb9  Fearsome Awakening
+6bed735c821c7c0d  Fearsome Goblin Pair
 4ed58aff1d44470a  Feast of Sanity
 41aca9ba518be851  Feast of Succession
 4505e7885c2666c5  Feast of the Unicorn
@@ -5837,6 +5875,7 @@ be48539965c9443e  Frogify
 cd00e0b23e0ae13b  Frolicking Familiar // Blow Off Steam
 bdfe51f6008b094e  From Beyond
 47fa15d753dd2074  Frondland Felidar
+643cc4a3c762f3dd  Front Porch Sentries
 91666635a0c36f4d  Frontier Bivouac
 a83b125454ac8294  Frontier Guide
 43d98791fe6e88d6  Frontier Mastodon
@@ -6025,6 +6064,7 @@ bc41a971b0975e2e  Gateway Shade
 b7f35d45aaa98ab8  Gateway Sneak
 f9127fa68eeb770a  Gather Courage
 a08967fcf7783e42  Gather the White Lotus
+b11391252ef41449  Gathering of Darkness
 e56dcf705e14694e  Gathering Place
 5d6b60a245d370f5  Gathering Throng
 0da4b3344a9c6258  Gauntlet of Might
@@ -6179,6 +6219,7 @@ a0760ed69e03d2d4  Giant Teddy Bear
 ad9486f14f3aee19  Giant Warrior
 0a4fe214c8135228  Giant Warthog
 5345dc9ebc91392a  Giant Wizard
+190f637d75a8be3f  Giant's Boulder
 d98ce5b99ace7fe8  Giant's Grasp
 8b47610b740b46f6  Giant's Ire
 f50f562de8f4b359  Giant's Skewer
@@ -6205,6 +6246,7 @@ c76e7d0ac288042e  Gift of the Woods
 6c405fdbd0fd04af  Gift of Tusks
 38061b6cf782bad6  Gift of Wrath
 7da7c589247879c9  Gifted Aetherborn
+ad17e56819dab5e9  Gigantic Big Bear
 7bf58649a346c3e9  Gigantiform
 9b8b6f15b6d2f844  Gigantoad
 1394cbbe897b854e  Gigantomancer
@@ -6353,6 +6395,7 @@ add3422b9e672d34  Glowrider
 8c9f604f816e75d4  Glyph Elemental
 69765242ea2597d3  Glyph Keeper
 88f24222708689d7  Glyph Keeper
+0ac3016115ff7626  Glóin the Mighty // Easy Pickings
 1aebbb3cd45a53dd  Glóin, Dwarf Emissary
 2f3ced006c9a87c0  Gnarlback Rhino
 9693362bc14994e4  Gnarlbark Elm
@@ -6513,6 +6556,8 @@ f002d127d073375a  Goblin Warchief
 add38d54414ab8f3  Goblin Wizard
 eba223e68d34b2f3  Goblin Wizard
 497015fc6f244079  Goblin Wizardry
+1ab49cd4eb344e1c  Goblin-town
+b988a0c0d17ef045  Goblin-town Flunkies
 6c9e2969e996b124  Goblinslide
 d16411d89a0c5b56  God-Favored General
 9bd0be543a447a66  God-Pharaoh's Faithful
@@ -6586,9 +6631,11 @@ c0d2a9a57efb18c3  Goliath Beetle
 ab4063e0500fb3fb  Goliath Sphinx
 071eff1267137aff  Goliath Spider
 fca33e844cc64075  Goliath Truck
+0b689e5ce6fa7344  Gollum the Abandoned
 302d8906cc821098  Gollum's Bite
 8d4bbd0f12ee907c  Gollum, Obsessed Stalker
 a364be3830b88f8d  Gollum, Patient Plotter
+52187ff254e87b26  Gollum, Silent Slinker // Meager Meal
 5e6d005b2b19b66d  Gone Missing
 9119f0c61abe76d3  Gongaga, Reactor Town
 8f45ea9884381c06  Gonti's Machinations
@@ -6704,12 +6751,15 @@ ebbc180e52121fb3  Grazing Kelpie
 4c511816ff461f85  Great Arashin City
 b0601a71975bcf3e  Great Defender
 babb84bf4161b095  Great Desert Prospector
+c04a595017287b89  Great Fierce Bee
 6a336f2359c27a57  Great Forest Druid
 96e9b931bb9d4318  Great Furnace
+9b2c5a967ba2ee02  Great Goblin, Foul-Hearted
 529eba6ebb97df59  Great Hart
 7820ec2a713f8834  Great Sable Stag
 88f01e5cbe872623  Great Teacher's Decree
 e65bf7d9a8090bb5  Great Train Heist
+f1f35192397d4b39  Great Ugly-Looking Goblin // Clap! Snap!
 d8705e18f24cfcdb  Great Whale
 1b3fc9a40c461777  Great-Horn Krushok
 317ba71ba26c5d9c  Greataxe
@@ -6862,6 +6912,7 @@ ca2b1a13249f46fa  Guardian of Ghirapur
 d20640eecb4cc6d5  Guardian of Solitude
 e9bc96ffe5487508  Guardian of the Great Conduit
 d95a9602f7fecf3f  Guardian of the Guildpact
+efcc459561691180  Guardian of the Halls
 fc854f0273c0e1d9  Guardian of Vitu-Ghazi
 fffef9694ac3cce4  Guardian Project
 c7ed3060971c64f4  Guardian Seraph
@@ -6881,6 +6932,7 @@ e30f44756ec91de9  Guildpact Informant
 20cd4e84998ef076  Guise of Fire
 4604e4b0ff33c265  Gulping Scraptrap
 0a6f4a6a98812481  Guma
+54cf2bb6a2345f59  Gundabad Opportunist
 3143f72d5faad904  Gurmag Angler
 d4969ea6ec6a75f7  Gurmag Rakshasa
 d3a2d7618028e121  Gurmag Swiftwing
@@ -7981,6 +8033,7 @@ d32babd0d5cadda1  Iroh's Demonstration
 b31560a706afc1c1  Iron Apprentice
 636c742b7b346a84  Iron Bully
 a24be17e1c4bc117  Iron Giant
+99e02c4040f5d28e  Iron Hills
 9a566f9c7798adb7  Iron Lad, Young Avenger
 149d465da341c6e6  Iron Lance
 b71ab13f68c8dd4e  Iron League Steed
@@ -8707,6 +8760,8 @@ a59e32d965950a13  Lady Sun
 9ffb039ccb483a7e  Lagonna-Band Elder
 b6b384865b02fd8a  Laid to Rest
 22688c824cb0a75b  Lair Delve
+218185b252774ce6  Lake-town
+e254cace3e3dfb91  Lakeshore Apothecary
 09dad0f5512e3789  Lakeside Shack
 4c506904b31a9445  Lambholt Harrier
 e84d5dc71412b36c  Lampad of Death's Vigil
@@ -8730,6 +8785,7 @@ bdf548f9513a10be  Lapse of Certainty
 b19a6e25b8823608  Laquatus's Champion
 d4df5a6936e1e320  Larceny
 70bdf3a257787005  Larder Zombie
+5a90af2bfba89648  Large Bear
 db03b6370a220b16  Larger Than Life
 c9a0a4f4f5e443be  Laser Screwdriver
 f55acdbaa83e3cb6  Laserbeak
@@ -9071,6 +9127,7 @@ fc05dc2bd05ad8d9  Logic Knot
 0e63681465e2ca53  Lonesome Unicorn // Rider in Need
 fbf27afcdbb1b112  Long River's Pull
 8089c9b5ab570904  Long Road Home
+a27ee60431f9c49f  Long-Bodied Grey Dog
 081d29b13c68b6b7  Long-Finned Skywhale
 f5922986d5b87dd4  Long-Forgotten Gohei
 88e3bf01429c6477  Long-Range Sensor
@@ -9099,6 +9156,7 @@ f7ae7f1bf730b616  Lord of Change
 60dd3a1f0ce029b3  Lord of the Unreal
 a01d1bba6f8c594c  Lord of Tresserhorn
 a26b5999f5f3b43e  Lord Skitter, Sewer King
+312cb7d2b3361cec  Lord Windgrace
 9d591e74503fa1bb  Lore Broker
 51b8dc69dbc0abc3  Lore Drakkis
 ddc8bd7ae989a420  Lore Weaver
@@ -9279,6 +9337,7 @@ bc01db87046d2dd4  Magmatic Insight
 50f7dab2fe613495  Magmaw
 65e0cf02a9d44b61  Magnetic Mine
 6e619ef43e4877f2  Magnetic Mountain
+caef161886947a84  Magnificent End
 01b2055b2245a6c6  Magnify
 db45fa171bf81942  Magnifying Glass
 defd679b80e0388d  Magnigoth Sentry
@@ -9841,8 +9900,11 @@ c3a702e49770789f  Mire Shade
 b12e3a91cc3c3b1a  Mire Triton
 b916fc9bf0fe646e  Mire's Grasp
 ac48130d8826e1b5  Miren, the Moaning Well
+27290b3d87817a65  Mirkwood
 08bbb626b3166ce5  Mirkwood Bats
 9919e6fecf2e1acb  Mirkwood Elk
+e39c776595858301  Mirkwood Nurturer
+6b6a0ea516018851  Mirkwood Pathmaker
 5f241d556d7a48af  Mirkwood Spider
 ae9c25e6328348f6  Mirozel
 f7ec6a08612ec848  Mirran Banesplitter
@@ -9906,6 +9968,7 @@ e36df824af336d62  Mistvault Bridge
 5bf661a1cd75f598  Mistveil Plains
 f48624b7bf910ab3  Mistvein Borderpost
 0755f63bef3575ea  Mistwalker
+825e9a6f0bb54966  Misty Mountains Raider
 2b6b8cdb638398a8  Misty Palms Oasis
 77be6b47b63f6d7c  Misty Rainforest
 6f62a30aeefb48c4  Mite Overseer
@@ -9985,6 +10048,7 @@ b8502a515be9e853  Molting Harpy
 284456910105e108  Molting Snakeskin
 6d364a5399467123  Moment of Craving
 a3ec5e2714687b3b  Moment of Defiance
+e65b85a5816a687e  Moment of Glory
 7c6852bd8666d675  Moment of Heroism
 69eb5c20f56ef1fa  Moment of Triumph
 a0e2204b7a3daa8b  Moment of Valor
@@ -10291,6 +10355,7 @@ ff6db5e06615c7a5  Narset, Jeskai Waymaster
 d4eef46ae44fc010  Narstad Scrapper
 6c341026332eb30f  Naru Meha, Master Wizard
 4840b79e597c350c  Narwhal
+8f1cf62b8472703b  Nasty Little Rabbit
 eb271048c9a656d9  Nath of the Gilt-Leaf
 4a1fb0884762beb1  Nath's Buffoon
 423b2ec5f943bba1  Natural Connection
@@ -10324,6 +10389,7 @@ a8c66bd9cb60a547  Near-Death Experience
 39ee7ee2d19e3c75  Nebelgast Intruder
 3c757b5b6114c2ae  Nebula Dragon
 59f9904feda227b2  Neck Snap
+bbce1075de063f3b  Necklace of Girion
 86dcfdf3bb9af1df  Necra Disciple
 8be41b35696b6185  Necroblossom Snarl
 82ef0d4ffdb50228  Necroduality
@@ -10457,6 +10523,7 @@ cd6aa481107b98e8  Nightfire Giant
 cc1d1afa23f292c2  Nightguard Patrol
 222b9c0675ae3209  Nighthawk, Dark Defender
 afbed209cabba4f5  Nighthaze
+8dc773c3948f50ac  Nighthowl Pursuer
 335e883ca542028e  Nightmare
 4baafbca56536e02  Nightmare Horror
 fe933f7faf4e9dda  Nightmare Shepherd
@@ -10560,6 +10627,7 @@ da25ddf7f5186427  Nomad Stadium
 51a8fca50f3e8d57  Nomads' Assembly
 b6321bfa92202268  Noose Constrictor
 413e616915c94595  Noosegraf Mob
+098f57b594147183  Nori, Teller of Tales
 e7c15a1a32c7a5e5  Norika Yamazaki, the Poet
 d10ce7004252ba02  Norn's Wellspring
 3db88584b1c822a3  North Pole Gates
@@ -10746,6 +10814,7 @@ e13be9228e01cc97  Okina, Temple to the Grandfathers
 1a348b23700fe162  Oko's Accomplices
 73ece0ecf38e3c91  Okoye, Dora Milaje Leader
 b88e04542e2892f7  Okoye, Mighty and Adored
+647ac8e6dafd1ffe  Old Fat Spider
 d3b13137a519a9bd  Old Flitterfang
 ffb1c5e138620e52  Old Ghastbark
 a03d67046df9325f  Old Gnawbone
@@ -10869,6 +10938,7 @@ c108c3f09ae721c1  Orcish Hellraiser
 924e9d38936ef01b  Orcish Oriflamme
 c55a575522a94185  Orcish Siegemaster
 bc04e7101819f93a  Orcish Vandal
+59d3429fd13580ea  Orcrist, Goblin-cleaver
 7c63bc242755b15e  Order // Chaos
 707ed7a6e93dd3ca  Order of Leitbur
 32fead1b3764163f  Order of Midnight // Alter Fate
@@ -10881,6 +10951,7 @@ a5707a4b3ee6389d  Order of the White Shield
 351a646b4acca2a7  Order of Whiteclay
 fa699f6d6efe9136  Order of Yawgmoth
 e0ae637e97b8a4e5  Ordered Migration
+74106138c3a4cce3  Ordinary Bear
 2616751f0900f717  Ordruun Commando
 f63a4fc16e835bd6  Ordruun Veteran
 1df2883493032cb5  Ore Gorger
@@ -10891,6 +10962,7 @@ f6c9757e36c37dd0  Oreplate Pangolin
 f30853b3f880320a  Oreskos Swiftclaw
 eccb94279caffd9e  Organ Grinder
 703333c27e5de1c1  Organic Extinction
+9f81cf445edd59d9  Ori, Plate Stacker
 6bcc33e91c9e081e  Origin of Metalbending
 c58770cd24a50ff8  Origin of the Hidden Ones
 5c77967634bfb423  Origin of the Hulk
@@ -11441,6 +11513,7 @@ e6f5acf1aa7bc1a6  Plumecreed Escort
 e93ca6c886049aed  Plumecreed Mentor
 cb2f0a8c64a81a98  Plumeveil
 f7de4a6e2cc178a5  Plummet
+e334056eba43e872  Plunder the Trollshaws
 2cd2731f59bbfe90  Plundering Barbarian
 0eeb1600b41250e4  Plundering Pirate
 f415c5b553ed27d7  Plundering Predator
@@ -11805,6 +11878,7 @@ c97f19d380dee8bb  Quandrix Charm
 83a519662c03bd29  Quandrix Cultivator
 cac371690fddc142  Quandrix Pledgemage
 b52009fe9a41f2a7  Quantum Misalignment
+ce004ff291bf7c9d  Quarrel
 d5e47abab3be738d  Quarrel's End
 62ada6c32c10ffd4  Quarry Beetle
 9368e82c221010b6  Quartzwood Crasher
@@ -11900,6 +11974,7 @@ add936a6fad94454  Raffine's Informant
 347937f103241371  Ragamuffyn
 44911c568842adc8  Ragavan
 ef473bd86863c68b  Ragavan, Nimble Pilferer
+0c8271e6284a886b  Rage into the Valley
 f5f4a40974410cf7  Rage Nimbus
 47da446be6e59906  Rage Reflection
 c2e31c3bfa7c26ef  Rage Thrower
@@ -11909,6 +11984,7 @@ c2e31c3bfa7c26ef  Rage Thrower
 0f6bca39767530a5  Ragefire
 efe498f84ae0d8c9  Ragefire Hellkite
 3cdd07586a33440d  Ragged Playmate
+f8b7eb801b24319a  Ragged Short Spear
 d5c861f5ea027e47  Ragged Veins
 7f2fc0df93b499a0  Raging Bull
 b6bbe3e0a72d1782  Raging Cougar
@@ -12076,12 +12152,15 @@ ad5c511fea74f817  Raucous Theater
 159fb592f9100c3c  Ravages of War
 eaf846444f30b8a0  Ravaging Horde
 7e80367fcb989851  Raven Clan War-Axe
+e097e1e3c07a32f1  Raven Eagle
 73890505fca2b0ca  Raven Familiar
 e09e2d6d15a565a0  Raven of Fell Omens
 d7213873779b1473  Raven Wings
 d68fb1de0e19f2f2  Raven's Crime
 f8febce9a00bfc93  Raven's Run Dragoon
 d86bae22885d6584  Ravenform
+0e90fd39c08a0d4b  Ravenhill Flock
+f320490e48bbc7b1  Ravening Warg
 90f96f68edd9e5fd  Ravenous Baboons
 c7766c05522a5ce2  Ravenous Baloth
 477f18a021d39ec5  Ravenous Bloodseeker
@@ -12419,6 +12498,7 @@ bfa2fab90ef1345c  Revenge of Ravens
 f2395ea907bcded9  Revered Dead
 f87e0606687f07d9  Revered Elder
 57aff094bb044766  Reverent Hoplite
+c7404315c6e1632e  Reverent Howl
 984a394017d93f31  Reverent Hunter
 f76ebade01b0334a  Reverse Engineer
 c8736bf697579e13  Revitalize
@@ -13906,6 +13986,7 @@ fd98dabb0a276485  Sire of Insanity
 a41f5e72a2d9c985  Siren of the Fanged Coast
 87c34af0e778d222  Siren of the Silent Song
 9034f45c2aaa2cf0  Siren Song Lyre
+a487c40a8863d0a5  Siren's Ruse
 5c1f2579f8a18ae1  Sisay's Ring
 381b6de9305d0870  Sister Hospitaller
 e18ce58a3ced1ae7  Sister of Silence
@@ -14162,7 +14243,11 @@ c652f0bdcb9f99f4  Sly Requisitioner
 b8494f9f9fe4baad  Smash to Dust
 f6bf8ecdf2899014  Smash to Smithereens
 be16d798d31c26be  Smashing Spree
+d085897a9ee4119e  Smashing Success
 e6b54590345ed234  Smaug
+e69255007e2f56de  Smaug the Impenetrable
+783b7751f8ca7c21  Smaug's Fury
+deb598f2790269a5  Smaug, the Great Calamity // Spew Flame
 e8887c926b6e5b8d  Smellerbee, Rebel Fighter
 5918036f2b538365  Smelt
 d33fa26ac2f44394  Smelt-Ward Gatekeepers
@@ -14967,6 +15052,7 @@ f3edf41f109ea120  Stone of Erech
 07b49370b9d944e9  Stone Rain
 e48db536f329c63d  Stone Retrieval Unit
 b7824f4e383f0c41  Stone Spirit
+8401de5d019cb6a4  Stone-Giant of High Pass
 1a085e96a00bbf90  Stone-Seeder Hierophant
 654f69c09f66c130  Stonebound Mentor
 f8dcadec5656f4ab  Stonebrow, Krosan Hero
@@ -14988,6 +15074,7 @@ dc8cdff119894d97  Stonewood Invocation
 d5f757bed8c7f48c  Stonewood Invoker
 926104e2a3ef113b  Stonework Puma
 58eed1c9bc0375a4  Stony Strength
+6def258eaa676523  Stony-Voiced Goblins
 2b42188b4ba6f5b5  Stonybrook Angler
 1b5f37df14993c64  Stonybrook Banneret
 f85770112ba8bafb  Stonybrook Schoolmaster
@@ -15754,6 +15841,7 @@ cc9eb060a5a047d5  Thaumaturge's Familiar
 b290d2f7abdb4ca2  Thawbringer
 1eb1f4d3cd1c28a8  The Aesir Escape Valhalla
 dd88310a12b47f8d  The Akroan War
+eb34eee2795db42b  The Arkenstone // Seek the Heart
 0e5168ad79644ffa  The Art of Tea
 273226f7cf47ed72  The Atropal
 348aac26be282536  The Autonomous Furnace
@@ -15766,6 +15854,7 @@ c7a4ad7f42dd6228  The Brute
 b8c7dacfd6b1fbd5  The Cabbage Merchant
 1fefe37337b517e9  The Capitoline Triad
 994959b31a2fa6c8  The Chase Is On
+8639ba8575dd8922  The Chief Warg
 5d948273c64620ce  The Council of Four
 faaf0821ca67222c  The Crystal's Chosen
 8b2a2a278c62fdb4  The Curse of Fenric
@@ -15798,8 +15887,10 @@ e4838a830c744ef2  The Immortal Weapons
 8511a2a19126a50f  The Irencrag
 16d5510feaf72cc0  The Lady of the Mountain
 51dcc6dba8c17b93  The Locust God
+031994ea61bb98fa  The Lord of the Eagles
 fe8c221cb3746e03  The Meathook Massacre
 fdd01f71e3ccdcfb  The Mending of Dominaria
+0fdbdf852f0cd955  The Misty Mountains Cold
 c2149864cde8e585  The Modern Age // Vector Glider
 168b54fe9fd39b2f  The Monumental Facade
 3a73e9e1b5a7b9cb  The Mycosynth Gardens
@@ -15811,6 +15902,7 @@ c2149864cde8e585  The Modern Age // Vector Glider
 75fade6a266f4e46  The Reaver Cleaver
 8bdf7ddbf0f1c0e7  The Restoration of Eiganjo // Architect of Restoration
 01583ab835fc83dc  The Royal Scions
+c3793c1bbab77d0e  The Sackville-Bagginses
 3baeb28999a3d89e  The Scorpion God
 01c4386a34fbce40  The Shattered States Era // Nameless Conqueror
 5009fd3f93988094  The Shire
@@ -15885,6 +15977,8 @@ b7c4263baa3cfe68  Thopter Foundry
 23cbc5acddd99884  Thopter Squadron
 2da5beaa07008446  Thor Odinson
 e8544e8b33483415  Thor, Asgard's Avenger
+61c9b8d5579f7a86  Thorin's Last Stand
+37b1f03be7f4b95b  Thorin, Company's Leader
 209927080a24d2c8  Thorn Elemental
 704ad439a65a500e  Thorn Lieutenant
 7d45241f4240b350  Thorn Mammoth
@@ -16006,6 +16100,7 @@ d23addfe1b147539  Thrull Retainer
 dadbc855482c9cff  Thrumming Hivepool
 c8c9128d8adb6d1d  Thrummingbird
 6f62d6ae81433f80  Thrun, the Last Troll
+26121bdd97aacedb  Thrór's Map
 01af475b9a036c3b  Thud
 f40029e35cdcf478  Thunder Brute
 afeef7b2fc3c8176  Thunder Dragon
@@ -16070,6 +16165,7 @@ b57b1b8b374a87ec  Tidal Force
 8a067ecb340c478f  Tidepool Turtle
 45b9bb34ad4cf8f1  Tidespout Tyrant
 22a5253ceb56e0e8  Tidings
+4da7b7a9888cfb24  Tidings of War
 b47de1d2be8492a6  Tidus, Blitzball Star
 88e2ccdc118dc645  Tidy Conclusion
 996d81ffda61e9e0  Tifa Lockhart
@@ -16411,12 +16507,14 @@ ab0d74976cafdb84  Triumph of the Hordes
 94d5c47759422580  Triumphant Surge
 5bc81a3ad83eba35  Trokin High Guard
 73e6e578a2b46627  Troll Ascetic
+6c3c318ca3068cc5  Troll Negotiations
 7067bc00d4442264  Troll Warrior
 1cbac5dfc29aa2fa  Troll-Horn Cameo
 1561b57bd73faffb  Trollbred Guardian
 57484d1f58633863  Trollhide
 071eef1228d1eb12  Trolls of Tel-Jilad
 f324160456b8bafa  Tromp the Domains
+f74e62d99dec121d  Troop of Ponies
 9c3c32c17738804f  Trophy Hunter
 07ace2cfeb47b8f6  Trophy Mage
 c661432fd341d5f9  Tropical Island
@@ -16967,6 +17065,7 @@ da9685523f975453  Vein Ripper
 347fe218f838b125  Vela the Night-Clad
 ea8b4a5c7b175b1d  Veldrane of Sengir
 61bba7813a9bd833  Veloheart Bike
+92e5443633d02e74  Velvetwing Butterflies // Gaze in Wonder
 b53ae492e16a730e  Vendetta
 9487c3ad388ebba9  Venerable Knight
 c1a88358f9620fb0  Venerable Kumo
@@ -17466,7 +17565,9 @@ d0b7a6a81d48aaa9  Warehouse Tabby
 2a17c907bfaad52f  Warehouse Thief
 be127658b66896b9  Warfire Javelineer
 9ce658e38a3ecfa0  Warg Rider
+7c16fe1847816696  Warg Tactics
 dde153c268c46fd2  Wargate
+d3143f83bd08c258  Wargling
 b4325f31e96cc889  Warhorn Blast
 72d35299adec6849  Warkite Marauder
 8aff7ee827a302f0  Warleader's Call
@@ -17625,6 +17726,7 @@ a5bdf129f80c8869  Welding Sparks
 26b6cf65809a2142  Well of Life
 4b81d35228c3ffd3  Well of Lost Dreams
 f5568abe2cb79a24  Well Rested
+2db067d5aed4d7b1  Well-Worn Spatula
 e4e3d462cf593363  Wellwisher
 a0df686f38058d2f  Werebear
 36349133a9f03b7c  West Wind Avatar
@@ -17719,6 +17821,7 @@ d473ff2482d4e837  Wild Ox
 4d896712bfcc1d41  Wild Wanderer
 4660a97b0157525a  Wild Wasteland
 cdce8168eca56028  Wild-Field Scarecrow
+ae788cb107986902  Wilderland Scrounger
 10a813c8f1ca8baf  Wilderness Hypnotist
 c125a32aebdcc0b9  Wilderness Reclamation
 245ab5edaaaa0d3b  Wildest Dreams
