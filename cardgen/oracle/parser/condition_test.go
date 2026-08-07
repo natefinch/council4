@@ -780,6 +780,11 @@ func TestParseConditionResultThisWay(t *testing.T) {
 			body:    "You may discard a card. If a red card is discarded this way, you gain 2 life.",
 			outcome: EffectDiscard,
 		},
+		{
+			name:    "a bare subtype noun omits the card suffix even for a card-domain outcome",
+			body:    "You may exile target creature. If a Pirate was exiled this way, you gain 2 life.",
+			outcome: EffectExile,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -887,18 +892,24 @@ func TestParseConditionGainedLifeThisTurn(t *testing.T) {
 
 // TestParseConditionResultThisWayRejectsOtherWording confirms the recognizer
 // fails closed on wording it does not model, leaving an unsupported condition
-// rather than a silently-wrong success gate. A verb/antecedent mismatch (e.g.
-// "destroy target creature" followed by "if a creature is exiled this way") is
-// deliberately not tested here: the parser recognizes that text shape (its
-// participle names a real outcome, Exile), and rejecting the mismatch against
-// its specific antecedent is lowering's job (resultThisWayMatchesEffect in
-// cardgen/lower_optional.go), not the parser's.
+// rather than a silently-wrong success gate. A verb/antecedent mismatch within
+// the same noun domain (e.g. "mill a card" followed by "if a creature is
+// destroyed this way") is deliberately not tested here: the parser recognizes
+// that text shape (both destroy and sacrifice are permanent-domain outcomes,
+// so "creature" is a valid noun for either participle, regardless of which one
+// actually preceded it), and rejecting the mismatch against its specific
+// antecedent is lowering's job (resultThisWayMatchesEffect in
+// cardgen/lower_optional.go; see TestLowerOptionalMilledThisWayVerbMismatchFailsClosed),
+// not the parser's. A cross-domain mismatch (e.g. "if a creature is exiled
+// this way") is rejected by the parser itself, since "creature" lacks the
+// "card" suffix Exile's card-domain noun requires (validResultThisWayNoun).
 func TestParseConditionResultThisWayRejectsOtherWording(t *testing.T) {
 	t.Parallel()
 	bodies := []string{
 		"You may destroy target creature. If a spell is destroyed this way, you gain 2 life.",
 		"You may destroy target creature. If a creature is teleported this way, you gain 2 life.",
 		"You may destroy target creature. If the creature is destroyed this way, you gain 2 life.",
+		"You may destroy target creature. If a creature is exiled this way, you gain 2 life.",
 	}
 	for _, body := range bodies {
 		t.Run(body, func(t *testing.T) {

@@ -1289,7 +1289,10 @@ func resultThisWayOutcomeKind(word string) (kind EffectKind, cardNoun bool, ok b
 // Windgrace: "if a land card is discarded this way"). The noun phrase is parsed
 // by the shared selection parser (parseSelection), so it accepts the same card
 // type, type union, subtype, color, and excluded-type filters real cards use,
-// not just a bare single-word noun.
+// not just a bare single-word noun. A bare creature-type subtype (Saproling,
+// Goblin, Pirate, ...) with no type noun at all never takes the "card" suffix
+// even for a card-domain outcome (Siren's Ruse: "exile target creature you
+// control, then return that card... If a Pirate was exiled this way").
 //
 // Like the original destroy-only recognizer, the noun names only a descriptive
 // subset of what the producing effect could have affected (e.g. "if an artifact
@@ -1340,25 +1343,29 @@ func recognizeResultThisWayCondition(body []shared.Token, atoms Atoms) (Conditio
 // phrase must end in the literal "card"/"cards" noun (CR 109.3's off-battlefield
 // naming) and parse to a recognized card selection; a permanent-domain phrase
 // must not end in "card"/"cards" and parse to one of the permanent-object kinds
-// (CR 110.1) or a bare creature-type subtype (Saproling, Goblin, ...) with no
-// type noun at all.
+// (CR 110.1). A bare creature-type subtype with no type noun at all (Saproling,
+// Goblin, ...) is valid in either domain and never takes the "card" suffix
+// regardless of which zone verb produced it -- Siren's Ruse names its exiled
+// object "a Pirate", not "a Pirate card", even though Exile is a card-domain
+// outcome, because the antecedent's object was a permanent a moment earlier.
 func validResultThisWayNoun(tokens []shared.Token, cardNoun bool, atoms Atoms) bool {
 	if len(tokens) == 0 {
 		return false
 	}
 	lastIsCardWord := equalWord(tokens[len(tokens)-1], "card") || equalWord(tokens[len(tokens)-1], "cards")
-	if lastIsCardWord != cardNoun {
+	sel := parseSelection(tokens, atoms)
+	bareSubtype := sel.Kind == SelectionUnknown && len(sel.SubtypesAny) > 0
+	if lastIsCardWord != cardNoun && !bareSubtype {
 		return false
 	}
-	sel := parseSelection(tokens, atoms)
 	if cardNoun {
-		return sel.Kind != SelectionUnknown
+		return bareSubtype || sel.Kind != SelectionUnknown
 	}
 	switch sel.Kind {
 	case SelectionPermanent, SelectionCreature, SelectionArtifact, SelectionEnchantment, SelectionLand, SelectionPlaneswalker, SelectionBattle:
 		return true
 	case SelectionUnknown:
-		return len(sel.SubtypesAny) > 0
+		return bareSubtype
 	default:
 		return false
 	}
