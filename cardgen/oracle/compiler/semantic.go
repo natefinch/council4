@@ -737,17 +737,20 @@ const (
 	// optional instruction was performed ("if you do"). It is the affirmative
 	// complement of ConditionPredicatePriorInstructionNotAccepted.
 	ConditionPredicatePriorInstructionAccepted
-	// ConditionPredicateDestroyedThisWay is satisfied when a permanent matching
-	// the named type was destroyed by the prior destroy effect ("if a creature is
-	// destroyed this way"). The typed condition carries no selection, so it is the
-	// resolving-success equivalent of "if you do" only when the named type matches
-	// every object the prior clause could have destroyed; the lowering treats it
-	// as an "if you do" gate solely for the optional-destroy shape and otherwise
-	// fails closed.
-	ConditionPredicateDestroyedThisWay
+	// ConditionPredicateResultThisWay is satisfied when an object matching
+	// ThisWayOutcome's card/permanent noun was affected by the prior effect of
+	// that same kind ("if a creature is destroyed this way", "if a Saproling was
+	// sacrificed this way", "if an instant or sorcery card is exiled this way",
+	// "if a Lesson card is milled this way", "if a land card is discarded this
+	// way"). The typed condition carries no selection beyond ThisWayOutcome, so
+	// it is the resolving-success equivalent of "if you do" only when the named
+	// noun matches every object the prior clause of that kind could have
+	// affected; the lowering treats it as an "if you do" gate solely for the
+	// matching single-producing-effect shape and otherwise fails closed.
+	ConditionPredicateResultThisWay
 	// ConditionPredicateDiesThisWay is satisfied when the prior destroy effect's
 	// target was actually put into a graveyard from the battlefield ("if that
-	// creature dies this way"; Saw in Half). Unlike ConditionPredicateDestroyedThisWay
+	// creature dies this way"; Saw in Half). Unlike ConditionPredicateResultThisWay
 	// it back-references the destroy's single target rather than a named type, so
 	// it gates the linked follow-up on that specific creature having died. The
 	// dies-this-way copy sequence lowering treats it as the resolving-success gate
@@ -1385,6 +1388,13 @@ type CompiledCondition struct {
 	Selection     ConditionSelection
 	Counter       ConditionCounter
 	ObjectBinding ReferenceBinding
+
+	// ThisWayOutcome carries the producing EffectKind a
+	// ConditionPredicateResultThisWay condition's participle named (EffectDestroy,
+	// EffectSacrifice, EffectExile, EffectMill, or EffectDiscard). Lowering
+	// matches it against the immediately preceding effect's own Kind rather than
+	// assuming a single fixed producing verb.
+	ThisWayOutcome EffectKind
 
 	// NodeID is the parser-assigned identity of this condition's boundary. A
 	// triggered ability's intervening condition shares a NodeID with its content

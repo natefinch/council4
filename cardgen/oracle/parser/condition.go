@@ -55,7 +55,7 @@ const (
 	ConditionPredicateEventSubjectHadCounters                          ConditionPredicateKind = "ConditionPredicateEventSubjectHadCounters"
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
-	ConditionPredicateDestroyedThisWay                                 ConditionPredicateKind = "ConditionPredicateDestroyedThisWay"
+	ConditionPredicateResultThisWay                                    ConditionPredicateKind = "ConditionPredicateResultThisWay"
 	ConditionPredicateDiesThisWay                                      ConditionPredicateKind = "ConditionPredicateDiesThisWay"
 	ConditionPredicateNoLifeLostThisWay                                ConditionPredicateKind = "ConditionPredicateNoLifeLostThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
@@ -419,6 +419,14 @@ type ConditionClause struct {
 	Selection     ConditionSelection     `json:",omitzero"`
 	Counter       ConditionCounterKind   `json:",omitempty"`
 	ObjectBinding ConditionObjectBinding `json:",omitempty"`
+
+	// ThisWayOutcome carries the producing effect kind a
+	// ConditionPredicateResultThisWay clause's participle names (EffectDestroy,
+	// EffectSacrifice, EffectExile, EffectMill, or EffectDiscard) -- the
+	// generalized parameter recognizeResultThisWayCondition extracts so lowering
+	// can match the gate against whichever single producing verb actually
+	// precedes it, instead of one bespoke predicate per verb.
+	ThisWayOutcome EffectKind `json:",omitempty"`
 
 	// SubjectSpan is set for source-death predicates so the compiler can confirm
 	// the subject binds the source via a typed reference.
@@ -874,7 +882,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsGreatestPowerCondition,
 		recognizeControlsGreatestToughnessCondition,
 		recognizeControlsGreatestManaValueCondition,
-		recognizeDestroyedThisWayCondition,
+		recognizeResultThisWayCondition,
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,
@@ -1241,38 +1249,126 @@ func recognizeSharesCreatureTypeCondition(body []shared.Token, _ Atoms) (Conditi
 	return ConditionClause{}, false
 }
 
-// recognizeDestroyedThisWayCondition matches the resolving success gate "a
-// <permanent noun> is destroyed this way" (and the plural "are" form) that
-// follows a preceding optional destroy effect, as in Noxious Gearhulk's "you may
-// destroy another target creature. If a creature is destroyed this way, you gain
-// life equal to its toughness." It maps to its own predicate distinct from the
-// literal "if you do" gate: the noun names only a descriptive subset of what the
-// prior clause could have destroyed (e.g. "if an artifact is destroyed this way"
-// after "destroy target artifact or land"), so it is the resolving-success
-// equivalent of "if you do" only when that noun matches every possible destroyed
-// object. The lowering treats it as an "if you do" gate solely for the existing
-// optional-destroy shape and fails closed elsewhere. It fails closed on any other
-// wording.
-func recognizeDestroyedThisWayCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+// resultThisWayOutcomeKind maps a "this way" resolving-success gate's participle
+// to the producing effect kind it names, and reports whether that effect leaves
+// a card-domain object (exile, mill, and discard put the affected object into a
+// non-battlefield zone, where CR 109.3 templating names it "card") or a
+// permanent-domain object (destroy and sacrifice act on battlefield permanents,
+// no "card" suffix). Other producing verbs seen in the corpus ("that spell is
+// countered this way", "damage is prevented/dealt this way", "a card is
+// revealed/cast/returned this way", "you search your library this way") have
+// either a different antecedent-binding shape (a specific back-reference, not a
+// descriptive subset) or more than one possible antecedent effect kind, and are
+// deliberately left unrecognized here for a follow-up slice.
+func resultThisWayOutcomeKind(word string) (kind EffectKind, cardNoun bool, ok bool) {
+	switch strings.ToLower(word) {
+	case "destroyed":
+		return EffectDestroy, false, true
+	case "sacrificed":
+		return EffectSacrifice, false, true
+	case "exiled":
+		return EffectExile, true, true
+	case "milled":
+		return EffectMill, true, true
+	case "discarded":
+		return EffectDiscard, true, true
+	default:
+		return "", false, false
+	}
+}
+
+// recognizeResultThisWayCondition matches the outcome-worded resolving-success
+// gate "a/an <noun phrase> is/are/was/were <participle> this way" that follows a
+// preceding producing effect, generalizing what was previously a single
+// destroy-only recognizer (Noxious Gearhulk: "you may destroy target creature.
+// If a creature is destroyed this way, you gain life equal to its toughness.")
+// to every producing verb Oracle templates the same way: destroyed, sacrificed
+// (Thallid Omnivore: "if a Saproling was sacrificed this way"), exiled
+// (Taster of Wares: "if an instant or sorcery card is exiled this way"), milled
+// (Sparring Dummy: "if a Lesson card is milled this way"), and discarded (Lord
+// Windgrace: "if a land card is discarded this way"). The noun phrase is parsed
+// by the shared selection parser (parseSelection), so it accepts the same card
+// type, type union, subtype, color, and excluded-type filters real cards use,
+// not just a bare single-word noun. A bare creature-type subtype (Saproling,
+// Goblin, Pirate, ...) with no type noun at all never takes the "card" suffix
+// even for a card-domain outcome (Siren's Ruse: "exile target creature you
+// control, then return that card... If a Pirate was exiled this way").
+//
+// Like the original destroy-only recognizer, the noun names only a descriptive
+// subset of what the producing effect could have affected (e.g. "if an artifact
+// is destroyed this way" after "destroy target artifact or land"); it is the
+// resolving-success equivalent of "if you do" only when that noun matches every
+// object the producing effect could affect. Lowering (isResolvingSuccessGate and
+// its callers) verifies the producing effect immediately precedes the gate and
+// carries a matching EffectKind, and otherwise fails closed. It fails closed on
+// any participle outside the fixed set above -- including "that <X> dies/is
+// countered this way" back-references, which name a specific prior object
+// rather than a descriptive subset and stay separately recognized
+// (recognizeDiesThisWayCondition) -- and on any noun parseSelection does not
+// recognize as a real card/permanent kind, subtype, or type exclusion.
+func recognizeResultThisWayCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "a")
 	if !ok {
 		rest, ok = cutTokenPrefix(body, "an")
 	}
-	if !ok || len(rest) == 0 {
-		return ConditionClause{}, false
-	}
-	plural, ok := destroyedThisWayNounPlural(rest[0])
 	if !ok {
 		return ConditionClause{}, false
 	}
-	copula := "is"
-	if plural {
-		copula = "are"
+	copulaIdx := -1
+	for i, tok := range rest {
+		if equalWord(tok, "is") || equalWord(tok, "are") || equalWord(tok, "was") || equalWord(tok, "were") {
+			copulaIdx = i
+			break
+		}
 	}
-	if !tokenWordsEqual(rest[1:], copula, "destroyed", "this", "way") {
+	if copulaIdx <= 0 || copulaIdx+2 >= len(rest) {
 		return ConditionClause{}, false
 	}
-	return ConditionClause{Predicate: ConditionPredicateDestroyedThisWay}, true
+	nounTokens := rest[:copulaIdx]
+	outcome, cardNoun, ok := resultThisWayOutcomeKind(rest[copulaIdx+1].Text)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest[copulaIdx+2:], "this", "way") {
+		return ConditionClause{}, false
+	}
+	if !validResultThisWayNoun(nounTokens, cardNoun, atoms) {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{Predicate: ConditionPredicateResultThisWay, ThisWayOutcome: outcome}, true
+}
+
+// validResultThisWayNoun reports whether tokens is a noun phrase
+// recognizeResultThisWayCondition accepts for the given domain: a card-domain
+// phrase must end in the literal "card"/"cards" noun (CR 109.3's off-battlefield
+// naming) and parse to a recognized card selection; a permanent-domain phrase
+// must not end in "card"/"cards" and parse to one of the permanent-object kinds
+// (CR 110.1). A bare creature-type subtype with no type noun at all (Saproling,
+// Goblin, ...) is valid in either domain and never takes the "card" suffix
+// regardless of which zone verb produced it -- Siren's Ruse names its exiled
+// object "a Pirate", not "a Pirate card", even though Exile is a card-domain
+// outcome, because the antecedent's object was a permanent a moment earlier.
+func validResultThisWayNoun(tokens []shared.Token, cardNoun bool, atoms Atoms) bool {
+	if len(tokens) == 0 {
+		return false
+	}
+	lastIsCardWord := equalWord(tokens[len(tokens)-1], "card") || equalWord(tokens[len(tokens)-1], "cards")
+	sel := parseSelection(tokens, atoms)
+	bareSubtype := sel.Kind == SelectionUnknown && len(sel.SubtypesAny) > 0
+	if lastIsCardWord != cardNoun && !bareSubtype {
+		return false
+	}
+	if cardNoun {
+		return bareSubtype || sel.Kind != SelectionUnknown
+	}
+	switch sel.Kind {
+	case SelectionPermanent, SelectionCreature, SelectionArtifact, SelectionEnchantment, SelectionLand, SelectionPlaneswalker, SelectionBattle:
+		return true
+	case SelectionUnknown:
+		return bareSubtype
+	default:
+		return false
+	}
 }
 
 // recognizeDiesThisWayCondition matches the linked resolving-success gate "that

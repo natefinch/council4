@@ -716,26 +716,74 @@ func TestParseConditionPriorInstruction(t *testing.T) {
 	}
 }
 
-// TestParseConditionDestroyedThisWay covers the outcome-worded resolving success
-// gate "If a <permanent> is destroyed this way, ..." (Noxious Gearhulk), which
-// follows a preceding optional destroy and maps to its own destroyed-this-way
-// predicate, distinct from the literal "if you do" gate.
-func TestParseConditionDestroyedThisWay(t *testing.T) {
+// TestParseConditionResultThisWay covers the outcome-worded resolving success
+// gate "If a <noun> is/was <participle> this way, ..." across every producing
+// verb it generalizes: destroyed (Noxious Gearhulk), sacrificed (Thallid
+// Omnivore), exiled (Taster of Wares), milled (Sparring Dummy), and discarded
+// (Lord Windgrace). Each maps to the shared ConditionPredicateResultThisWay
+// predicate carrying the producing EffectKind the participle names, distinct
+// from the literal "if you do" gate.
+func TestParseConditionResultThisWay(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name      string
-		body      string
-		predicate ConditionPredicateKind
+		name    string
+		body    string
+		outcome EffectKind
 	}{
 		{
-			name:      "a creature is destroyed this way",
-			body:      "You may destroy target creature. If a creature is destroyed this way, you gain 2 life.",
-			predicate: ConditionPredicateDestroyedThisWay,
+			name:    "a creature is destroyed this way",
+			body:    "You may destroy target creature. If a creature is destroyed this way, you gain 2 life.",
+			outcome: EffectDestroy,
 		},
 		{
-			name:      "a permanent is destroyed this way",
-			body:      "You may destroy target permanent. If a permanent is destroyed this way, you gain 2 life.",
-			predicate: ConditionPredicateDestroyedThisWay,
+			name:    "a permanent is destroyed this way",
+			body:    "You may destroy target permanent. If a permanent is destroyed this way, you gain 2 life.",
+			outcome: EffectDestroy,
+		},
+		{
+			name:    "a Saproling was sacrificed this way",
+			body:    "You may sacrifice a Saproling. If a Saproling was sacrificed this way, you gain 2 life.",
+			outcome: EffectSacrifice,
+		},
+		{
+			name:    "a nonland permanent is sacrificed this way",
+			body:    "You may sacrifice a nonland permanent. If a nonland permanent is sacrificed this way, you gain 2 life.",
+			outcome: EffectSacrifice,
+		},
+		{
+			name:    "an instant or sorcery card is exiled this way",
+			body:    "You may exile the top card of your library. If an instant or sorcery card is exiled this way, you gain 2 life.",
+			outcome: EffectExile,
+		},
+		{
+			name:    "a creature card is exiled this way",
+			body:    "You may exile the top card of your library. If a creature card is exiled this way, you gain 2 life.",
+			outcome: EffectExile,
+		},
+		{
+			name:    "a Lesson card is milled this way",
+			body:    "You may mill a card. If a Lesson card is milled this way, you gain 2 life.",
+			outcome: EffectMill,
+		},
+		{
+			name:    "a land card was milled this way",
+			body:    "You may mill a card. If a land card was milled this way, you gain 2 life.",
+			outcome: EffectMill,
+		},
+		{
+			name:    "a land card is discarded this way",
+			body:    "You may discard a card. If a land card is discarded this way, you gain 2 life.",
+			outcome: EffectDiscard,
+		},
+		{
+			name:    "a red card is discarded this way",
+			body:    "You may discard a card. If a red card is discarded this way, you gain 2 life.",
+			outcome: EffectDiscard,
+		},
+		{
+			name:    "a bare subtype noun omits the card suffix even for a card-domain outcome",
+			body:    "You may exile target creature. If a Pirate was exiled this way, you gain 2 life.",
+			outcome: EffectExile,
 		},
 	}
 	for _, test := range tests {
@@ -749,8 +797,10 @@ func TestParseConditionDestroyedThisWay(t *testing.T) {
 				t.Fatalf("abilities = %#v", document.Abilities)
 			}
 			clauses := document.Abilities[0].ConditionClauses
-			if len(clauses) != 1 || clauses[0].Predicate != test.predicate {
-				t.Fatalf("clauses = %#v, want predicate %s", clauses, test.predicate)
+			if len(clauses) != 1 ||
+				clauses[0].Predicate != ConditionPredicateResultThisWay ||
+				clauses[0].ThisWayOutcome != test.outcome {
+				t.Fatalf("clauses = %#v, want ConditionPredicateResultThisWay with outcome %s", clauses, test.outcome)
 			}
 		})
 	}
@@ -840,14 +890,26 @@ func TestParseConditionGainedLifeThisTurn(t *testing.T) {
 	}
 }
 
-// TestParseConditionDestroyedThisWayRejectsOtherWording confirms the recognizer
+// TestParseConditionResultThisWayRejectsOtherWording confirms the recognizer
 // fails closed on wording it does not model, leaving an unsupported condition
-// rather than a silently-wrong success gate.
-func TestParseConditionDestroyedThisWayRejectsOtherWording(t *testing.T) {
+// rather than a silently-wrong success gate. A verb/antecedent mismatch within
+// the same noun domain (e.g. "mill a card" followed by "if a creature is
+// destroyed this way") is deliberately not tested here: the parser recognizes
+// that text shape (both destroy and sacrifice are permanent-domain outcomes,
+// so "creature" is a valid noun for either participle, regardless of which one
+// actually preceded it), and rejecting the mismatch against its specific
+// antecedent is lowering's job (resultThisWayMatchesEffect in
+// cardgen/lower_optional.go; see TestLowerOptionalMilledThisWayVerbMismatchFailsClosed),
+// not the parser's. A cross-domain mismatch (e.g. "if a creature is exiled
+// this way") is rejected by the parser itself, since "creature" lacks the
+// "card" suffix Exile's card-domain noun requires (validResultThisWayNoun).
+func TestParseConditionResultThisWayRejectsOtherWording(t *testing.T) {
 	t.Parallel()
 	bodies := []string{
-		"You may destroy target creature. If a creature is exiled this way, you gain 2 life.",
 		"You may destroy target creature. If a spell is destroyed this way, you gain 2 life.",
+		"You may destroy target creature. If a creature is teleported this way, you gain 2 life.",
+		"You may destroy target creature. If the creature is destroyed this way, you gain 2 life.",
+		"You may destroy target creature. If a creature is exiled this way, you gain 2 life.",
 	}
 	for _, body := range bodies {
 		t.Run(body, func(t *testing.T) {
@@ -858,7 +920,7 @@ func TestParseConditionDestroyedThisWayRejectsOtherWording(t *testing.T) {
 			}
 			for _, clause := range document.Abilities[0].ConditionClauses {
 				if clause.Predicate == ConditionPredicatePriorInstructionAccepted ||
-					clause.Predicate == ConditionPredicateDestroyedThisWay {
+					clause.Predicate == ConditionPredicateResultThisWay {
 					t.Fatalf("clause unexpectedly recognized as prior-instruction success: %#v", clause)
 				}
 			}

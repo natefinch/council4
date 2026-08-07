@@ -49,7 +49,6 @@ var simplePredicateMap = map[parser.ConditionPredicateKind]ConditionPredicate{
 	parser.ConditionPredicateEventSubjectWasNotPutByThisAbility:               ConditionPredicateEventSubjectWasNotPutByThisAbility,
 	parser.ConditionPredicatePriorInstructionNotAccepted:                      ConditionPredicatePriorInstructionNotAccepted,
 	parser.ConditionPredicatePriorInstructionAccepted:                         ConditionPredicatePriorInstructionAccepted,
-	parser.ConditionPredicateDestroyedThisWay:                                 ConditionPredicateDestroyedThisWay,
 	parser.ConditionPredicateDiesThisWay:                                      ConditionPredicateDiesThisWay,
 	parser.ConditionPredicateNoLifeLostThisWay:                                ConditionPredicateNoLifeLostThisWay,
 	parser.ConditionPredicateEventPlayerDoesNotPay:                            ConditionPredicateEventPlayerDoesNotPay,
@@ -109,6 +108,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		return
 	}
 	switch clause.Predicate {
+	case parser.ConditionPredicateResultThisWay:
+		condition.Predicate = ConditionPredicateResultThisWay
+		condition.ThisWayOutcome = compileEffectKind(clause.ThisWayOutcome)
 	case parser.ConditionPredicateControllerLifeAtLeast:
 		condition.Predicate = ConditionPredicateControllerLifeAtLeast
 		condition.Threshold = clause.Threshold
