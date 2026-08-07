@@ -9,15 +9,15 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 
 ## Headline
 
-- Eligible cards: 32508
-- Supported (generated): 18196
-- Parser-complete: 22337
-- **Lowering backlog** (parser-complete, not generated): 4905
-- **Parser backlog** (not parser-complete, not generated): 9407
+- Eligible cards: 32715
+- Supported (generated): 18299
+- Parser-complete: 22470
+- **Lowering backlog** (parser-complete, not generated): 4942
+- **Parser backlog** (not parser-complete, not generated): 9474
 
-Partition check: 18196 supported + 4905 lowering-backlog + 9407 parser-backlog = 32508 eligible. ✓
+Partition check: 18299 supported + 4942 lowering-backlog + 9474 parser-backlog = 32715 eligible. ✓
 
-764 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+771 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
@@ -74,8 +74,8 @@ Partition check: 18196 supported + 4905 lowering-backlog + 9407 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18196
-- Independent per-card recompile generated: 18196
+- Authoritative generated (compilecards report): 18299
+- Independent per-card recompile generated: 18299
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,23 +84,23 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1686 | 1137 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 510 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
-| 3 | unsupported static declaration operation | 276 | 232 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
-| 4 | unsupported static ability | 267 | 184 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
-| 5 | unsupported counter placement | 204 | 119 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
-| 6 | unsupported damage spell | 187 | 158 | Armed Response; Combo Attack; Huatli, Dinosaur Knight; Kill! Maim! Burn!; Call Forth the Tempest |
-| 7 | unsupported activation cost | 181 | 128 | Thunderherd Migration; Krovikan Sorcerer; Etchings of the Chosen; Tourach's Gate; City of Shadows |
-| 8 | unsupported return spell | 161 | 134 | Dragon Fangs; Dragon Scales; Venser's Diffusion; Scapegoat; Kazandu Stomper |
-| 9 | unsupported static declaration group | 160 | 123 | Sedge Sliver; Freewind Equenaut; Rune of Sustenance; Indomitable Might; Cast Through Time |
+| 1 | unsupported ordered effect sequence | 1702 | 1146 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 514 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
+| 3 | unsupported static declaration operation | 278 | 234 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
+| 4 | unsupported static ability | 271 | 186 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
+| 5 | unsupported counter placement | 207 | 121 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
+| 6 | unsupported damage spell | 189 | 160 | Armed Response; Combo Attack; Huatli, Dinosaur Knight; Kill! Maim! Burn!; Call Forth the Tempest |
+| 7 | unsupported activation cost | 183 | 130 | Thunderherd Migration; Krovikan Sorcerer; Etchings of the Chosen; Tourach's Gate; City of Shadows |
+| 8 | unsupported return spell | 162 | 135 | Dragon Fangs; Dragon Scales; Venser's Diffusion; Scapegoat; Kazandu Stomper |
+| 9 | unsupported static declaration group | 161 | 124 | Sedge Sliver; Freewind Equenaut; Rune of Sustenance; Indomitable Might; Cast Through Time |
 | 10 | unsupported destroy spell | 128 | 111 | Coils of the Medusa; Unliving Psychopath; Bounty Agent; Rampaging War Mammoth; Feline Sovereign |
-| 11 | unsupported search effect | 120 | 79 | Remembrance; Kasmina, Enigma Sage; Avatar of Growth; Increasing Ambition; Quest for the Holy Relic |
+| 11 | unsupported search effect | 121 | 79 | Remembrance; Kasmina, Enigma Sage; Avatar of Growth; Increasing Ambition; Quest for the Holy Relic |
 | 12 | unsupported token creation | 113 | 86 | Witch's Mark; Goblin Gathering; Sorin, Grim Nemesis; Nesting Dragon; Kibo, Uktabi Prince |
 | 13 | unsupported activation ability word | 109 | 101 | Half-Elf Monk; Sagu Pummeler; Blazing Bomb; Champion of Dusan; Red Death, Shipwrecker |
 | 14 | unsupported ability word | 96 | 84 | Bloodthorn Flail; The Dalek Emperor; Solar Tide; Terror Tide; Ensnared by the Mara |
 | 15 | unsupported enters-tapped replacement | 90 | 55 | Stenn, Paranoid Partisan; Choco-Comet; Nevermore; True-Name Nemesis; Jailbreak |
-| 16 | unsupported exile spell | 88 | 63 | Ravnica at War; Toluz, Clever Conductor; Consuming Sinkhole; Sengir Autocrat; Ulamog, the Ceaseless Hunger |
-| 17 | unsupported power/toughness spell | 87 | 67 | Murk Dwellers; Park Bleater; Shaper Parasite; Battle Frenzy; Blood Age General |
+| 16 | unsupported power/toughness spell | 88 | 67 | Murk Dwellers; Park Bleater; Shaper Parasite; Battle Frenzy; Blood Age General |
+| 17 | unsupported exile spell | 88 | 63 | Ravnica at War; Toluz, Clever Conductor; Consuming Sinkhole; Sengir Autocrat; Ulamog, the Ceaseless Hunger |
 | 18 | unsupported activation references | 70 | 59 | Planebound Accomplice; Puresight Merrow; Titans' Nest; Spurnmage Advocate; Pulsemage Advocate |
 | 19 | unsupported gain-control spell | 66 | 53 | Slave of Bolas; Legacy's Allure; The Super Hero Civil War; Dominating Vampire; Skyfire Kirin |
 | 20 | unsupported enters-with-counters replacement | 64 | 47 | Flycatcher Giraffid; Malefic Scythe; Callous Sell-Sword // Burn Together; Bone Devourer; Faerie Squadron |
@@ -108,21 +108,21 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 22 | unsupported cast effect | 58 | 31 | Oracle of Bones; Founding the Third Path; Forger's Foundry; Spell Queller; Xantid Swarm |
 | 23 | unsupported life spell | 56 | 51 | Guiltfeeder; Wall of Reverence; Revered Unicorn; Atarka's Command; Netherborn Phalanx |
 | 24 | unsupported temporary keyword spell | 56 | 48 | Order of the Golden Cricket; Pale Wayfarer; Violent Urge; Outmuscle; Gravity Negator |
-| 25 | unsupported ability content | 55 | 46 | Vihaan, Goldwaker; Heated Debate; Renegade Doppelganger; Shifting Loyalties; Symmetry Sage |
-| 26 | unsupported static declaration condition | 47 | 37 | Desperate Castaways; Nadaar, Selfless Paladin; Veldt; Gloom Stalker; Hazy Homunculus |
-| 27 | unsupported draw spell | 42 | 34 | Theft of Dreams; Fatigue; Gregor, Shrewd Magistrate; Nessian Boar; Thought Sponge |
+| 25 | unsupported ability content | 56 | 47 | Vihaan, Goldwaker; Heated Debate; Renegade Doppelganger; Shifting Loyalties; Symmetry Sage |
+| 26 | unsupported static declaration condition | 48 | 38 | Desperate Castaways; Nadaar, Selfless Paladin; Veldt; Gloom Stalker; Hazy Homunculus |
+| 27 | unsupported draw spell | 44 | 36 | Theft of Dreams; Fatigue; Gregor, Shrewd Magistrate; Nessian Boar; Thought Sponge |
 | 28 | unsupported library placement | 40 | 33 | Misinformation; Chittering Rats; Murderous Rider // Swift End; Landscaper Colos; God-Eternal Bontu |
 | 29 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
 | 30 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |
-| 31 | unsupported activation condition | 35 | 34 | Sparring Dummy; Ebon Praetor; Inner-Flame Igniter; Everflame Eidolon; Roadside Reliquary |
-| 32 | unsupported attach effect | 35 | 30 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
+| 31 | unsupported attach effect | 36 | 31 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
+| 32 | unsupported activation condition | 35 | 34 | Sparring Dummy; Ebon Praetor; Inner-Flame Igniter; Everflame Eidolon; Roadside Reliquary |
 | 33 | unsupported mana effect | 34 | 28 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
 | 34 | unsupported counter spell | 29 | 24 | Spell Blast; Drown in the Loch; Unyaro Griffin; Hisoka's Defiance; Frontline Medic |
 | 35 | unsupported shuffle effect | 28 | 26 | Dwell on the Past; Madblind Mountain; Perpetual Timepiece; Renewing Touch; Piper's Melody |
 | 36 | unsupported parameterized keyword | 28 | 23 | Goblin Barrage; Vexing Scuttler; Ulamog's Dreadsire; Garruk's Harbinger; Sporeweb Weaver |
 | 37 | unsupported tap spell | 28 | 22 | Torrent Elemental; Gridlock; Dawnglare Invoker; Tectonic Instability; Arena of the Ancients |
 | 38 | unsupported mana symbol | 23 | 21 | Pit of Offerings; Blinkmoth Urn; Elemental Resonance; Inner Fire; Songs of the Damned |
-| 39 | unsupported activation timing | 21 | 18 | Vivi Ornitier; Hall of Oracles; Tomb Tyrant; In the Trenches; Desert |
+| 39 | unsupported activation timing | 22 | 19 | Vivi Ornitier; Hall of Oracles; Tomb Tyrant; In the Trenches; Desert |
 | 40 | unsupported card layout | 20 | 20 | Nezumi Graverobber // Nighteyes the Desecrator; Faithful Squire // Kaiso, Memory of Loyalty; Jushi Apprentice // Tomoya the Revealer; Cunning Bandit // Azamuki, Treachery Incarnate; Nezumi Shortfang // Stabwhisker the Odious |
 | 41 | unsupported delayed effect | 19 | 16 | Silent Assassin; Wicker Warcrawler; Marchesa, the Black Rose; Rienne, Angel of Rebirth; Ghoulish Impetus |
 | 42 | unsupported keyword or ability grant | 19 | 13 | Furystoke Giant; Huatli, Poet of Unity // Roar of the Fifth People; Mist Dragon; Urza's Saga; Quicksmith Spy |
@@ -141,8 +141,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 55 | unsupported alternative spell cost | 12 | 9 | Nethergoyf; Conflagrate; Nourishing Shoal; Sickening Shoal; Spinning Darkness |
 | 56 | unsupported can't-be-blocked effect | 11 | 10 | Gingerbrute; Speed, Young Avenger; Runed Arch; Leitmotif Composer; Secret Tunnel |
 | 57 | unsupported overload effect | 11 | 5 | Mizzium Skin; Corporeal Projection; Mind Rake; Break the Ice; Weapon Surge |
-| 58 | unsupported manifest spell | 10 | 8 | Orcish Spy; They Came from the Pipes; Smoke Teller; Omarthis, Ghostfire Initiate; Etrata, Deadly Fugitive |
-| 59 | validation failed: invalid-ability-body | 9 | 9 | Sachi, Daughter of Seshiro; Gift of Paradise; Forgotten Monument; Find the Path; New Horizons |
+| 58 | validation failed: invalid-ability-body | 10 | 10 | Sachi, Daughter of Seshiro; Gift of Paradise; Forgotten Monument; Thranduil the Strategist; Find the Path |
+| 59 | unsupported manifest spell | 10 | 8 | Orcish Spy; They Came from the Pipes; Smoke Teller; Omarthis, Ghostfire Initiate; Etrata, Deadly Fugitive |
 | 60 | unsupported enters-as-copy replacement | 8 | 8 | Mercurial Pretender; Pirated Copy; Masterwork of Ingenuity; Callidus Assassin; Gigantoplasm |
 
 ## Parser queue
@@ -157,7 +157,7 @@ Cards that are not parser-complete (and do not lower), bucketed by owning compon
 | 4 | effect | you may choose new targets for the copy. | 53 | Melek, Izzet Paragon; Lithoform Engine; Echoes of Eternity; Fire Lord Azula; Najal, the Storm Runner |
 | 5 | effect | it can't be regenerated. | 51 | Polymorph; Phage the Untouchable; Wooden Stake; Shivan Emissary; Phyrexian Reaper |
 | 6 | other | partner | 48 | Ghost of Ramirez DePietro; Sophina, Spearsage Deserter; Silas Renn, Seeker Adept; Krark, the Thumbless; Vial Smasher the Fierce |
-| 7 | condition | if you search your library this way | 42 | Vraska's Scorn; Claim Jumper; Fang-Druid Summoner; Grand Master of Flowers; Invasion of Ikoria // Zilortha, Apex of Ikoria |
+| 7 | condition | if you search your library this way | 43 | Vraska's Scorn; Claim Jumper; Fang-Druid Summoner; Grand Master of Flowers; Invasion of Ikoria // Zilortha, Apex of Ikoria |
 | 8 | effect | daybound (if a player casts no spells during their own turn, it becomes night next turn.) | 34 | Graveyard Trespasser // Graveyard Glutton; Shady Traveler // Stalking Predator; Tovolar's Huntmaster // Tovolar's Packleader; Oakshade Stalker // Moonlit Ambusher; Brutal Cathar // Moonrage Brute |
 | 9 | effect | nightbound (if a player casts at least two spells during their own turn, it becomes day next turn.) | 34 | Graveyard Trespasser // Graveyard Glutton; Shady Traveler // Stalking Predator; Tovolar's Huntmaster // Tovolar's Packleader; Oakshade Stalker // Moonlit Ambusher; Brutal Cathar // Moonrage Brute |
 | 10 | condition | if a player cast two or more spells last turn | 33 | Ulrich of the Krallenhorde // Ulrich, Uncontested Alpha; Lambholt Elder // Silverpelt Werewolf; Instigator Gang // Wildblood Pack; Daybreak Ranger // Nightfall Predator; Hinterland Logger // Timber Shredder |
@@ -181,9 +181,9 @@ Cards that are not parser-complete (and do not lower), bucketed by owning compon
 | 28 | effect | learn. | 20 | Professor of Symbology; Field Trip; Sparring Regimen; Igneous Inspiration; Enthusiastic Study |
 | 29 | effect | choose target creature. | 19 | Arcbond; Fatal Fissure; Spark of Creativity; Sewers of Estark; Erratic Mutation |
 | 30 | effect | open an attraction. | 19 | Complaints Clerk; Discourtesy Clerk; Myra the Magnificent; Soul Swindler; Coming Attraction |
-| 31 | trigger | when this creature exploits a creature | 19 | Fell Stinger; Rakshasa Gravecaller; Infernal Captor; Diver Skaab; Sidisi's Faithful |
-| 32 | condition | if you can't | 18 | Frankenstein's Monster; Ravenous Demon // Archdemon of Greed; Rust Elemental; Infernal Denizen; Out of the Tombs |
-| 33 | effect | you choose a nonland card from it. | 18 | Grief; Memory Theft; Cerebral Confiscation; Check for Traps; Down for Repairs |
+| 31 | effect | you choose a nonland card from it. | 19 | Grief; Memory Theft; Cerebral Confiscation; Check for Traps; Down for Repairs |
+| 32 | trigger | when this creature exploits a creature | 19 | Fell Stinger; Rakshasa Gravecaller; Infernal Captor; Diver Skaab; Sidisi's Faithful |
+| 33 | condition | if you can't | 18 | Frankenstein's Monster; Ravenous Demon // Archdemon of Greed; Rust Elemental; Infernal Denizen; Out of the Tombs |
 | 34 | condition | if you cast a spell this way | 17 | Eye of Duskmantle; Brainstealer Dragon; Noctis, Prince of Lucis; Xander's Pact; Outrageous Robbery |
 | 35 | effect | buyback{3}(you may pay an additional{3}as you cast this spell. if you do, put this card into your hand as it resolves.) | 17 | Spell Burst; Fanning the Flames; Invulnerability; Seething Anger; Reiterate |
 | 36 | effect | choose a color. | 17 | Skrelv, Defector Mite; Radiant Lotus; Addle; Glory; Sungold Sentinel |
@@ -206,9 +206,9 @@ Cards that are not parser-complete (and do not lower), bucketed by owning compon
 | 53 | condition | if that spell would be put into your graveyard | 14 | Mavinda, Students' Advocate; Sword of Once and Future; Power Pack; Vohar, Vodalian Desecrator; Dreadhorde Arcanist |
 | 54 | condition | if this card is in your graveyard | 14 | Ghastly Remains; Bridge from Below; Master of Death; Ichorid; Jocasta, Automaton Avenger |
 | 55 | condition | if this spell was cast using teamwork | 14 | Go Nuts!; Crossover Collaboration; Repulsor Blast; Earth's Mightiest Heroes; Murdock's Crusade |
-| 56 | effect | hidden agenda (start the game with this conspiracy face down in the command zone and secretly choose a card name. you may turn this conspiracy face up any time and reveal that name.) | 14 | Muzzio's Preparations; Secret Summoning; Unexpected Potential; Echoing Boon; Brago's Favor |
-| 57 | effect | you may pay{1}. | 14 | Ancestral Katana; Dutiful Replicator; Nadir Kraken; Oloro, Ageless Ascetic; Valentin, Dean of the Vein // Lisette, Dean of the Root |
-| 58 | condition | if a nonland permanent left the battlefield this turn or a spell was warped this turn | 13 | Decode Transmissions; Temporal Intervention; Hylderblade; Insatiable Skittermaw; Roving Actuator |
-| 59 | effect | after this phase, there is an additional combat phase. | 13 | Karlach, Fury of Avernus; Scourge of the Throne; Najeela, the Blade-Blossom; Bumi, Unleashed; Illusionist's Gambit |
+| 56 | effect | after this phase, there is an additional combat phase. | 14 | Karlach, Fury of Avernus; Scourge of the Throne; Najeela, the Blade-Blossom; Bumi, Unleashed; Illusionist's Gambit |
+| 57 | effect | hidden agenda (start the game with this conspiracy face down in the command zone and secretly choose a card name. you may turn this conspiracy face up any time and reveal that name.) | 14 | Muzzio's Preparations; Secret Summoning; Unexpected Potential; Echoing Boon; Brago's Favor |
+| 58 | effect | you may pay{1}. | 14 | Ancestral Katana; Dutiful Replicator; Nadir Kraken; Oloro, Ageless Ascetic; Valentin, Dean of the Vein // Lisette, Dean of the Root |
+| 59 | condition | if a nonland permanent left the battlefield this turn or a spell was warped this turn | 13 | Decode Transmissions; Temporal Intervention; Hylderblade; Insatiable Skittermaw; Roving Actuator |
 | 60 | effect | choose target creature you control. | 13 | Heroic Sacrifice; Mandate of Abaddon; Loki, Lord of Misrule; Hall of Mirrors; Eidolon of Astral Winds |
 
