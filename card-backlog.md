@@ -11,11 +11,11 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 
 - Eligible cards: 32508
 - Supported (generated): 18196
-- Parser-complete: 22336
-- **Lowering backlog** (parser-complete, not generated): 4904
-- **Parser backlog** (not parser-complete, not generated): 9408
+- Parser-complete: 22337
+- **Lowering backlog** (parser-complete, not generated): 4905
+- **Parser backlog** (not parser-complete, not generated): 9407
 
-Partition check: 18196 supported + 4904 lowering-backlog + 9408 parser-backlog = 32508 eligible. ✓
+Partition check: 18196 supported + 4905 lowering-backlog + 9407 parser-backlog = 32508 eligible. ✓
 
 764 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -84,7 +84,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1685 | 1136 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 1 | unsupported ordered effect sequence | 1686 | 1137 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
 | 2 | unsupported optional effect | 510 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
 | 3 | unsupported static declaration operation | 276 | 232 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 267 | 184 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |

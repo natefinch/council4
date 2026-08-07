@@ -11070,7 +11070,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Siren Reaver** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Siren Stormtamer** — unsupported counter spell: the executable source backend supports only exact counter of one target spell
 - **Siren's Call** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Creatures the active player controls attack this turn if able.; unsupported cast effect: only cast-without-paying-mana-cost spells are supported; unsupported ability content: the executable source backend does not yet lower this ability content; unsupported phase/step trigger phrase: the semantic Trigger Pattern contains a field with no runtime lowering adapter
-- **Siren's Ruse** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If a Pirate was exiled this way
+- **Siren's Ruse** — unsupported ordered effect sequence: structural — per-effect condition predicate not gateable
 - **Sirocco** — unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
 - **Sisay's Ingenuity** — unsupported static declaration operation: the recognized static declaration operation is not representable by the runtime static-value vocabulary
 - **Sisay, Weatherlight Captain** — unsupported search effect: unexpected non-result reference in search effect

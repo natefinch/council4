@@ -166,7 +166,7 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 
 | Category | Affected cards | Sole blockers |
 | --- | ---: | ---: |
-| structural — per-effect condition unrecognized | 682 | 417 |
+| structural — per-effect condition unrecognized | 681 | 416 |
 | sub-effect — unsupported counter placement | 717 | 388 |
 | sub-effect — unsupported ability content | 597 | 320 |
 | sub-effect — unsupported exile spell | 353 | 165 |
@@ -194,7 +194,7 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | sub-effect — unsupported search effect | 60 | 33 |
 | structural — multi-effect body not lowered as a sequence | 38 | 29 |
 | structural — unsupported resolving optionality | 99 | 27 |
-| structural — per-effect condition predicate not gateable | 69 | 20 |
+| structural — per-effect condition predicate not gateable | 70 | 21 |
 | structural — per-effect condition has no containing clause | 24 | 20 |
 | structural — coin flip branch not lowered | 22 | 20 |
 | structural — inherited target not remappable | 28 | 18 |
@@ -372,7 +372,6 @@ Distinct `if <condition>` wordings inside ordered sequences whose predicate the 
 | If a Dinosaur is dealt damage this way | 1 | 1 |
 | If a Food entered under your control this turn | 1 | 1 |
 | If a Hero enters this way | 1 | 1 |
-| If a Pirate was exiled this way | 1 | 1 |
 | If a Rat is attacking | 1 | 1 |
 | If a card is put into exile this way | 1 | 1 |
 | If a card named Stomping Slabs was revealed this way | 1 | 1 |
