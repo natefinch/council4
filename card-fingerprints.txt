@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18195 supported cards
+# 18196 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -3610,6 +3610,7 @@ e535ed63cb60952a  Death-Hood Cobra
 bf376a303ec2edf6  Deathbloom Gardener
 acb2cde99ba72550  Deathbloom Ritualist
 d822732767cadfe2  Deathbloom Thallid
+e012030efdc74c16  Deathbonnet Sprout // Deathbonnet Hulk
 1500626958270176  Deathbringer Thoctar
 92f3a40f19bdf90e  Deathcap Cultivator
 d4629ed40b5b996b  Deathcap Glade

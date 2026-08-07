@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,195 of 32,508 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 6,027 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,196 of 32,508 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 6,108 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -3604,6 +3604,7 @@ Council4 currently supports **18,195 of 32,508 cards eligible for paper support 
 - Deathbloom Gardener
 - Deathbloom Ritualist
 - Deathbloom Thallid
+- Deathbonnet Sprout // Deathbonnet Hulk
 - Deathbringer Thoctar
 - Deathcap Cultivator
 - Deathcap Glade

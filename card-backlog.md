@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 32508
-- Supported (generated): 18195
-- Parser-complete: 22316
-- **Lowering backlog** (parser-complete, not generated): 4885
-- **Parser backlog** (not parser-complete, not generated): 9428
+- Supported (generated): 18196
+- Parser-complete: 22336
+- **Lowering backlog** (parser-complete, not generated): 4904
+- **Parser backlog** (not parser-complete, not generated): 9408
 
-Partition check: 18195 supported + 4885 lowering-backlog + 9428 parser-backlog = 32508 eligible. ✓
+Partition check: 18196 supported + 4904 lowering-backlog + 9408 parser-backlog = 32508 eligible. ✓
 
 764 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18195 supported + 4885 lowering-backlog + 9428 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18195
-- Independent per-card recompile generated: 18195
+- Authoritative generated (compilecards report): 18196
+- Independent per-card recompile generated: 18196
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1673 | 1128 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 506 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
+| 1 | unsupported ordered effect sequence | 1685 | 1136 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 510 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
 | 3 | unsupported static declaration operation | 276 | 232 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 267 | 184 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 204 | 119 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
@@ -94,9 +94,9 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 8 | unsupported return spell | 161 | 134 | Dragon Fangs; Dragon Scales; Venser's Diffusion; Scapegoat; Kazandu Stomper |
 | 9 | unsupported static declaration group | 160 | 123 | Sedge Sliver; Freewind Equenaut; Rune of Sustenance; Indomitable Might; Cast Through Time |
 | 10 | unsupported destroy spell | 128 | 111 | Coils of the Medusa; Unliving Psychopath; Bounty Agent; Rampaging War Mammoth; Feline Sovereign |
-| 11 | unsupported search effect | 119 | 78 | Remembrance; Kasmina, Enigma Sage; Avatar of Growth; Increasing Ambition; Quest for the Holy Relic |
+| 11 | unsupported search effect | 120 | 79 | Remembrance; Kasmina, Enigma Sage; Avatar of Growth; Increasing Ambition; Quest for the Holy Relic |
 | 12 | unsupported token creation | 113 | 86 | Witch's Mark; Goblin Gathering; Sorin, Grim Nemesis; Nesting Dragon; Kibo, Uktabi Prince |
-| 13 | unsupported activation ability word | 108 | 100 | Half-Elf Monk; Sagu Pummeler; Blazing Bomb; Champion of Dusan; Red Death, Shipwrecker |
+| 13 | unsupported activation ability word | 109 | 101 | Half-Elf Monk; Sagu Pummeler; Blazing Bomb; Champion of Dusan; Red Death, Shipwrecker |
 | 14 | unsupported ability word | 96 | 84 | Bloodthorn Flail; The Dalek Emperor; Solar Tide; Terror Tide; Ensnared by the Mara |
 | 15 | unsupported enters-tapped replacement | 90 | 55 | Stenn, Paranoid Partisan; Choco-Comet; Nevermore; True-Name Nemesis; Jailbreak |
 | 16 | unsupported exile spell | 88 | 63 | Ravnica at War; Toluz, Clever Conductor; Consuming Sinkhole; Sengir Autocrat; Ulamog, the Ceaseless Hunger |
@@ -114,9 +114,9 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 28 | unsupported library placement | 40 | 33 | Misinformation; Chittering Rats; Murderous Rider // Swift End; Landscaper Colos; God-Eternal Bontu |
 | 29 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
 | 30 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |
-| 31 | unsupported attach effect | 35 | 30 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
-| 32 | unsupported mana effect | 34 | 28 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
-| 33 | unsupported activation condition | 30 | 29 | Ebon Praetor; Inner-Flame Igniter; Everflame Eidolon; Roadside Reliquary; Arch of Orazca |
+| 31 | unsupported activation condition | 35 | 34 | Sparring Dummy; Ebon Praetor; Inner-Flame Igniter; Everflame Eidolon; Roadside Reliquary |
+| 32 | unsupported attach effect | 35 | 30 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
+| 33 | unsupported mana effect | 34 | 28 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
 | 34 | unsupported counter spell | 29 | 24 | Spell Blast; Drown in the Loch; Unyaro Griffin; Hisoka's Defiance; Frontline Medic |
 | 35 | unsupported shuffle effect | 28 | 26 | Dwell on the Past; Madblind Mountain; Perpetual Timepiece; Renewing Touch; Piper's Melody |
 | 36 | unsupported parameterized keyword | 28 | 23 | Goblin Barrage; Vexing Scuttler; Ulamog's Dreadsire; Garruk's Harbinger; Sporeweb Weaver |
