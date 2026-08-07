@@ -1221,7 +1221,8 @@ func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) 
 			condition.Kind != compiler.ConditionIf ||
 			condition.Negated ||
 			condition.Intervening ||
-			content.Effects[optionalIndex].Order.Contains(condition.Order) {
+			content.Effects[optionalIndex].Order.Contains(condition.Order) ||
+			!resultThisWayMatchesEffect(condition, content.Effects[optionalIndex]) {
 			return optionalFlowPlan{}, false
 		}
 		gateCondition = ci
@@ -1464,14 +1465,34 @@ func elseGateConditionIndex(content compiler.AbilityContent, effectIndex int) in
 }
 
 // isResolvingSuccessGate reports whether a condition predicate is the affirmative
-// "if you do" resolving-success gate, either the literal "if you do" or the
-// outcome-worded "a <type> is destroyed this way". Both gate trailing effects on
-// the immediately preceding effect having succeeded; the destroyed-this-way form
-// is accepted only in the optional-destroy shape where the destroyed type matches
-// the destroy target, and the mandatory result flow accepts only the literal form.
+// "if you do" resolving-success gate, either the literal "if you do" or an
+// outcome-worded "a <noun> is destroyed/sacrificed/exiled/milled/discarded this
+// way". Both gate trailing effects on the immediately preceding effect having
+// succeeded; the outcome-worded form is accepted only in the matching
+// optional-effect shape, verified by resultThisWayMatchesEffect against the
+// specific preceding effect (the outcome must name the same producing verb),
+// and the mandatory result flow (planMandatoryIfYouDoFlow) accepts only the
+// literal "if you do" form.
 func isResolvingSuccessGate(predicate compiler.ConditionPredicate) bool {
 	return predicate == compiler.ConditionPredicatePriorInstructionAccepted ||
-		predicate == compiler.ConditionPredicateDestroyedThisWay
+		predicate == compiler.ConditionPredicateResultThisWay
+}
+
+// resultThisWayMatchesEffect reports whether condition is not a
+// ConditionPredicateResultThisWay gate at all (nothing to check), or is one
+// whose ThisWayOutcome names the same producing verb as effect's own Kind. A
+// "creature is destroyed this way" gate can only be the resolving-success
+// equivalent of "if you do" for a preceding destroy effect, never a preceding
+// exile/mill/discard/sacrifice effect that merely happens to also carry a
+// resolving-success-shaped condition elsewhere in the ability; this keeps
+// verb-mismatched text (which no real card would write, but which the shared
+// recognizer no longer statically prevents once more than one outcome kind is
+// possible) failing closed instead of silently binding to the wrong producer.
+func resultThisWayMatchesEffect(condition compiler.CompiledCondition, effect compiler.CompiledEffect) bool {
+	if condition.Predicate != compiler.ConditionPredicateResultThisWay {
+		return true
+	}
+	return condition.ThisWayOutcome == effect.Kind
 }
 
 // planMandatoryIfYouDoFlow detects a mandatory "X. If you do, Y." result gate,

@@ -305,6 +305,75 @@ func TestLowerNoxiousGearhulkOptionalDestroyedThisWay(t *testing.T) {
 	}
 }
 
+// TestLowerDeathbonnetHulkOptionalExiledThisWay guards the ConditionPredicateResultThisWay
+// generalization's Exile outcome with a real card: "At the beginning of your
+// upkeep, you may exile a card from a graveyard. If a creature card was exiled
+// this way, put a +1/+1 counter on this creature." (Deathbonnet Hulk). Unlike
+// the destroy-only predicate this replaced, the exile is gated by a card-domain
+// noun ("creature card"), and lowering must match the gate to the preceding
+// exile specifically -- not any resolving-success gate -- via
+// resultThisWayMatchesEffect.
+func TestLowerDeathbonnetHulkOptionalExiledThisWay(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name:       "Deathbonnet Hulk",
+		Layout:     "transform",
+		TypeLine:   "Creature — Fungus",
+		ManaCost:   "",
+		OracleText: "At the beginning of your upkeep, you may exile a card from a graveyard. If a creature card was exiled this way, put a +1/+1 counter on this creature.",
+		Power:      new("4"),
+		Toughness:  new("4"),
+	})
+	if len(face.TriggeredAbilities) != 1 {
+		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+	}
+	mode := face.TriggeredAbilities[0].Content.Modes[0]
+	if len(mode.Sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions", mode.Sequence)
+	}
+	exile := mode.Sequence[0]
+	if _, ok := exile.Primitive.(game.ChooseFromZone); !ok {
+		t.Fatalf("instruction[0] = %T, want a choose-from-zone exile", exile.Primitive)
+	}
+	if !exile.Optional || exile.PublishResult != optionalIfYouDoResultKey {
+		t.Fatalf("exile must be optional and publish %q: %#v", optionalIfYouDoResultKey, exile)
+	}
+	counter := mode.Sequence[1]
+	if _, ok := counter.Primitive.(game.AddCounter); !ok {
+		t.Fatalf("instruction[1] = %T, want game.AddCounter", counter.Primitive)
+	}
+	if !counter.ResultGate.Exists {
+		t.Fatal("counter placement must be gated on the exile result")
+	}
+	if g := counter.ResultGate.Val; g.Key != optionalIfYouDoResultKey || g.Succeeded != game.TriTrue {
+		t.Fatalf("counter placement ResultGate = %#v, want succeeded gate on %q", g, optionalIfYouDoResultKey)
+	}
+}
+
+// TestLowerOptionalMilledThisWayVerbMismatchFailsClosed guards
+// resultThisWayMatchesEffect: a "this way" gate whose participle names a
+// different producing verb than the effect it follows must fail closed rather
+// than silently binding to the wrong producer's result. "You may mill a card."
+// followed by "if a creature is destroyed this way" (Mill outcome required,
+// Destroy outcome named) has no valid antecedent match, so the ability must not
+// lower as a resolving-success gate at all.
+func TestLowerOptionalMilledThisWayVerbMismatchFailsClosed(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name:       "Mismatched Mill Probe",
+		Layout:     "normal",
+		TypeLine:   "Sorcery",
+		OracleText: "You may mill a card. If a creature is destroyed this way, draw a card.",
+	}
+	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
+	if err != nil {
+		t.Fatalf("GenerateExecutableCardSource error = %v", err)
+	}
+	if len(diagnostics) == 0 && source != "" {
+		t.Fatal("verb-mismatched this-way gate unexpectedly compiled without any diagnostic")
+	}
+}
+
 func TestLowerOptionalIfYouDoAfterLeadingEffect(t *testing.T) {
 	t.Parallel()
 	sequence := lowerSpellSequence(t, "Singe",
