@@ -494,11 +494,17 @@ func TestLowerMandatoryDestroyThisWayAdjacentProducer(t *testing.T) {
 	}
 }
 
-// TestLowerMandatoryThisWayVerbMismatchFailsClosed guards
-// resultThisWayMatchesEffect for the mandatory (non-optional) flow, mirroring
+// TestLowerMandatoryThisWayVerbMismatchFailsClosed guards the mandatory
+// (non-optional) flow's backward scan, mirroring
 // TestLowerOptionalMilledThisWayVerbMismatchFailsClosed: a fully mandatory
 // producing effect followed by a "this way" gate naming a different verb must
-// fail closed rather than silently binding to the wrong producer.
+// fail closed rather than silently binding to the wrong producer. Unlike the
+// optional flow (which checks resultThisWayMatchesEffect explicitly, since it
+// has no Kind pre-filter), the mandatory flow's backward scan in
+// planMandatoryIfYouDoFlow only ever considers effects whose Kind already
+// matches the gate's named outcome, so a mismatch here fails closed because
+// the scan finds no candidate at all (publishIndex stays -1), not via a
+// separate post-scan check.
 func TestLowerMandatoryThisWayVerbMismatchFailsClosed(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{

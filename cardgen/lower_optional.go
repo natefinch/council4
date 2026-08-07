@@ -1555,9 +1555,12 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 	// (Lord Windgrace: "Discard a card, then draw a card. If a land card is
 	// discarded this way, draw an additional card." -- the gate's producer is
 	// the discard, two effects back, not the intervening unconditional draw).
-	// The backward scan takes the nearest matching producer, mirroring how a
-	// back-reference resolves to the most recent candidate elsewhere in the
-	// compiler (e.g. CR 607 linked-token references).
+	// The backward scan takes the nearest effect whose Kind matches the
+	// participle's named outcome, mirroring how a back-reference resolves to
+	// the most recent candidate elsewhere in the compiler (e.g. CR 607
+	// linked-token references); a verb mismatch (no candidate found before the
+	// gate) fails closed via publishIndex staying -1, so no separate check is
+	// needed once the scan itself requires the Kind match.
 	publishIndex := gateIndex - 1
 	if content.Conditions[gateCondition].Predicate == compiler.ConditionPredicateResultThisWay {
 		publishIndex = -1
@@ -1572,13 +1575,11 @@ func planMandatoryIfYouDoFlow(content compiler.AbilityContent) (plan optionalFlo
 		}
 	}
 	// The publishing effect must be a plain mandatory effect that does not itself
-	// belong to the gated clause and, for the outcome-worded gate, must be the
-	// same producing verb the participle names.
+	// belong to the gated clause.
 	if content.Effects[publishIndex].Optional ||
 		content.Effects[publishIndex].Negated ||
 		content.Effects[publishIndex].DelayedTiming != 0 ||
-		content.Effects[publishIndex].Order.Contains(gateConditionOrder) ||
-		!resultThisWayMatchesEffect(content.Conditions[gateCondition], content.Effects[publishIndex]) {
+		content.Effects[publishIndex].Order.Contains(gateConditionOrder) {
 		return optionalFlowPlan{}, false, true
 	}
 	// Every effect from the gate index onward must belong to the single "if you
