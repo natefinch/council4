@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,301 of 32,715 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,901 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,305 of 32,715 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,901 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -336,7 +336,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Amalia Benavides Aguirre** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: if its power is exactly 20
 - **Amarant Coral** — unsupported damage spell: the executable source backend does not support this group recipient
 - **Amareth, the Lustrous** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it shares a card type with that permanent
-- **Amass the Components** — unsupported ordered effect sequence: sub-effect — unsupported library placement
 - **Amazing Alliance** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **Amazing Spider-Girl** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Web-slinging {2}{W} (You may cast this spell for {2}{W} if you also return a tapped creature you control to its owner's hand.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Ambassador Blorpityblorpboop** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell; unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported ability content: the executable source backend does not yet lower this ability content
@@ -347,7 +346,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Ambitious Dragonborn** — unsupported enters-with-counters replacement: the executable source backend does not support this dynamic enters-with-counters quantity
 - **Ambush Commander** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Forests you control are 1/1 green Elf creatures that are still lands.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Aminatou's Augury** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported ordered effect sequence: sub-effect — unsupported cast effect
-- **Aminatou, the Fateshifter** — unsupported ordered effect sequence: sub-effect — unsupported library placement; unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported return spell; unsupported gain-control spell: the executable source backend supports only mass gain-control of a selector or player-controlled group
+- **Aminatou, the Fateshifter** — unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported return spell; unsupported gain-control spell: the executable source backend supports only mass gain-control of a selector or player-controlled group
 - **Aminatou, Veil Piercer** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
 - **Ammit Eternal** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
 - **Amnesia** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported discard spell
@@ -2264,7 +2263,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Concerted Defense** — unsupported counter spell: the executable source backend supports only exact counter of one target spell
 - **Concerted Effort** — unsupported phase/step trigger phrase effect: the executable source backend does not support this phase/step trigger body
 - **Concession Stand** — unsupported ability word: the executable source backend does not yet lower the "Visit" ability word
-- **Conch Horn** — unsupported ordered effect sequence: sub-effect — unsupported library placement
 - **Conclave Sledge-Captain** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Backup 1, backup 1, backup 1 (When this creature enters, put a +1/+1 counter on target creature. If that's another creature, it gains the following abilities until end of turn. Each backup ability triggers separately.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Concord with the Kami** — unsupported phase/step trigger phrase effect: modes and ability words are not supported in phase/step triggers
 - **Concussive Bolt** — unsupported can't-block effect: the executable source backend supports only exact "&lt;targets&gt; can't block this turn."
@@ -8017,7 +8015,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Morbid Bloom** — unsupported ordered effect sequence: sub-effect — unsupported token creation
 - **Morbid Curiosity** — unsupported draw spell: the executable source backend supports only exact fixed card draw
 - **Mordant Dragon** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported damage spell
-- **Mordenkainen** — unsupported ordered effect sequence: sub-effect — unsupported library placement; unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color; unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported shuffle effect
+- **Mordenkainen** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color; unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported shuffle effect
 - **Mordenkainen's Polymorph** — unsupported temporary keyword spell: the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn
 - **Mordor on the March** — unsupported ordered effect sequence: sub-effect — unsupported token creation; unsupported ordered effect sequence: sub-effect — unsupported temporary keyword spell; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Mordor Trebuchet** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
@@ -10554,7 +10552,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Sawblade Skinripper** — unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition
 - **Sawblade Slinger** — unsupported fight spell: mode 2: the executable source backend supports only a source permanent fighting one target creature
 - **Sawhorn Nemesis** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements; unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
-- **Sawtooth Loon** — unsupported ordered effect sequence: sub-effect — unsupported library placement
 - **Sawtooth Ogre** — unsupported delayed effect: the executable source backend supports only exact non-target delayed one-shot effects
 - **Sawtooth Thresher** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Sunburst (This creature enters with a +1/+1 counter on it for each color of mana spent to cast it.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported power/toughness spell: the executable source backend supports only exact until-end-of-turn power/toughness changes to the source or referenced permanent
 - **Say Its Name** — unsupported activation condition: the executable source backend cannot lower every activation condition
@@ -12053,7 +12050,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Survey Mechan** — unsupported ordered effect sequence: structural — multi-effect body not lowered as a sequence
 - **Surveyor's Scope** — unsupported search effect: the executable source backend supports only exact unconditional library-search sequences
 - **Survival Cache** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: if you have more life than an opponent
-- **Survivor of the Unseen** — unsupported ordered effect sequence: sub-effect — unsupported library placement
 - **Survivor's Med Kit** — unsupported activation modes: the modal choice range does not match the number of modes
 - **Survivors' Bond** — unsupported return spell: mode 2: the executable source backend supports only exact return of one target permanent to its owner's hand
 - **Susan Foreman** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements

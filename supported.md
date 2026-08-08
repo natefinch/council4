@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,301 of 32,715 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,901 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,305 of 32,715 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,901 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -381,6 +381,7 @@ Council4 currently supports **18,301 of 32,715 cards eligible for paper support 
 - Altar's Reap
 - Always Watching
 - Amaranthine Wall
+- Amass the Components
 - Amateur Hero
 - Amazing Acrobatics
 - Ambassador Laquatus
@@ -2946,6 +2947,7 @@ Council4 currently supports **18,301 of 32,715 cards eligible for paper support 
 - Conceited Witch // Price of Beauty
 - Concentrate
 - Concentrated Fire
+- Conch Horn
 - Conciliator's Duelist
 - Conclave Cavalier
 - Conclave Equenaut
@@ -13130,6 +13132,7 @@ Council4 currently supports **18,301 of 32,715 cards eligible for paper support 
 - Saw It Coming
 - Sawback Manticore
 - Sawblade Scamp
+- Sawtooth Loon
 - Sawtusk Demolisher
 - Sazacap's Brew
 - Sazh's Chocobo
@@ -15393,6 +15396,7 @@ Council4 currently supports **18,301 of 32,715 cards eligible for paper support 
 - Survive the Night
 - Survivor
 - Survivor of Korlis
+- Survivor of the Unseen
 - Survivors' Encampment
 - Suspension Field
 - Suspicious Bookcase
