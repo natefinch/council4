@@ -1373,6 +1373,32 @@ type ConditionSelection struct {
 	CounterKindKnown     bool
 	CounterCountAtLeast  int
 	CounterCountLessThan int
+	// AttributeCompare restricts the selection to objects whose named numeric
+	// attribute (mana value, power, or toughness) satisfies a typed comparator
+	// against a threshold. Its zero value (Attribute == ConditionAttributeNone)
+	// applies no attribute filter. See parser.ConditionAttributeComparison.
+	AttributeCompare ConditionAttributeComparison
+}
+
+// ConditionAttributeKind identifies the numeric object attribute a
+// ConditionSelection's AttributeCompare field measures.
+type ConditionAttributeKind string
+
+// Attributes recognized by the compiler, mirroring parser.ConditionAttributeKind.
+const (
+	ConditionAttributeNone      ConditionAttributeKind = ""
+	ConditionAttributeManaValue ConditionAttributeKind = "ConditionAttributeManaValue"
+	ConditionAttributePower     ConditionAttributeKind = "ConditionAttributePower"
+	ConditionAttributeToughness ConditionAttributeKind = "ConditionAttributeToughness"
+)
+
+// ConditionAttributeComparison compares a referenced object's numeric
+// attribute against a threshold using a typed comparator, mirroring
+// parser.ConditionAttributeComparison.
+type ConditionAttributeComparison struct {
+	Attribute ConditionAttributeKind
+	Op        compare.Op
+	Value     int
 }
 
 // CompiledCondition is a closed, source-spanned semantic condition.

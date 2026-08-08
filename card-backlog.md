@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 32715
-- Supported (generated): 18299
-- Parser-complete: 22470
-- **Lowering backlog** (parser-complete, not generated): 4942
-- **Parser backlog** (not parser-complete, not generated): 9474
+- Supported (generated): 18301
+- Parser-complete: 22474
+- **Lowering backlog** (parser-complete, not generated): 4944
+- **Parser backlog** (not parser-complete, not generated): 9470
 
-Partition check: 18299 supported + 4942 lowering-backlog + 9474 parser-backlog = 32715 eligible. ✓
+Partition check: 18301 supported + 4944 lowering-backlog + 9470 parser-backlog = 32715 eligible. ✓
 
 771 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18299 supported + 4942 lowering-backlog + 9474 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18299
-- Independent per-card recompile generated: 18299
+- Authoritative generated (compilecards report): 18301
+- Independent per-card recompile generated: 18301
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,7 +84,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1702 | 1146 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 1 | unsupported ordered effect sequence | 1704 | 1148 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
 | 2 | unsupported optional effect | 514 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
 | 3 | unsupported static declaration operation | 278 | 234 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 271 | 186 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
