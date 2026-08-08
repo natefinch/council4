@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18299 supported cards
+# 18301 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -2320,6 +2320,7 @@ b76b985d24fcbbeb  Carnival // Carnage
 d6d6bb487ca355c0  Carnival Hellsteed
 fb78da5b87430ab3  Carnival of Souls
 226283dd6badc85f  Carnivore
+5d952a039aca3b9b  Carnivorous Canopy
 29ad426e9bdb3f1c  Carnivorous Moss-Beast
 6df59a5f80cef457  Carnivorous Plant
 4aa6f013256b916c  Carrier Pigeons
@@ -4446,6 +4447,7 @@ e38b99d192ca4bae  Eager Cadet
 78933f3722bbf70a  Eager First-Year
 c5be7740f76f6b11  Eager Glyphmage
 488accc452076b26  Eager Trufflesnout
+197ab4b8236bab0e  Eagle of Deliverance
 2c0f8813d3ee59f1  Eagle of the Great Shelf
 218e7c891dc1f7c3  Eagle of the Watch
 d0f7ef04172d8e31  Eagles of the North

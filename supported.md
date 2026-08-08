@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,299 of 32,715 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,901 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,301 of 32,715 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,901 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2314,6 +2314,7 @@ Council4 currently supports **18,299 of 32,715 cards eligible for paper support 
 - Carnival Hellsteed
 - Carnival of Souls
 - Carnivore
+- Carnivorous Canopy
 - Carnivorous Moss-Beast
 - Carnivorous Plant
 - Carrier Pigeons
@@ -4440,6 +4441,7 @@ Council4 currently supports **18,299 of 32,715 cards eligible for paper support 
 - Eager First-Year
 - Eager Glyphmage
 - Eager Trufflesnout
+- Eagle of Deliverance
 - Eagle of the Great Shelf
 - Eagle of the Watch
 - Eagles of the North
