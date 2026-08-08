@@ -868,16 +868,19 @@ func TestParseConditionTargetAttributeCompare(t *testing.T) {
 // clause's own target and a triggering event's permanent, and a pre-existing
 // recognizer already owns "its power is/was <n> or greater" for the
 // event-permanent binding a real, already-shipped card depends on).
-// "That spell's mana value..." always fails closed here (Reject
-// Imperfection's "Counter target spell. If that spell's mana value was 3 or
-// less, ..." is not yet supported), since lowerObjectReference's Target case
-// has no path to a TargetStackObjectReference. A magecraft possessive that
-// binds a triggering event's spell rather than the clause's own target (e.g.
-// "If that spell's mana value is 5 or greater" with no target anywhere in
-// the ability) is separately rejected end to end by the compiler's existing
+// "That spell's mana value..." always fails closed at the parser level here
+// (Reject Imperfection's "Counter target spell. If that spell's mana value
+// was 3 or less, ..." is not yet supported): the recognizer's noun
+// allowlist rejects "spell" outright, since lowerObjectReference's Target
+// case has no path to a TargetStackObjectReference a spell binding would
+// need. A possessive that names an allowed permanent-type noun but still has
+// no real target anywhere in the ability (e.g. a hypothetical "that
+// creature's mana value is 3 or greater" in a target-free trigger) parses
+// successfully -- it is not one of the wordings this test covers -- but is
+// separately rejected end to end by the compiler's existing
 // target-reference-binding validation (bindConditionReferences in
 // cardgen/oracle/compiler/condition.go), proven by
-// TestLowerMagecraftAttributeCompareNoTargetFailsClosed.
+// TestLowerNoTargetAttributeCompareFailsClosed.
 func TestParseConditionTargetAttributeCompareRejectsOtherWording(t *testing.T) {
 	t.Parallel()
 	bodies := []string{

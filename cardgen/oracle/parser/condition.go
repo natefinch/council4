@@ -2201,12 +2201,16 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 // attribute other than mana value, power, or toughness, and on a possessive
 // antecedent that names a triggering event's spell rather than the clause's
 // own target ("Whenever you cast or copy an instant or sorcery spell... If
-// that spell's mana value is 5 or greater...", Zaffai, Thunder Conductor),
-// which needs a different object binding entirely -- the compiler's existing
-// target-reference-binding validation (bindConditionReferences) rejects
-// ConditionObjectBindingTarget when no actual target exists, so that shape
-// fails closed downstream even though its noun form (had it named a
-// permanent instead of a spell) would otherwise parse.
+// that spell's mana value is 5 or greater...", Zaffai, Thunder Conductor):
+// that shape is rejected right here by the "spell" noun exclusion above (the
+// same exclusion Reject Imperfection hits), since the recognizer has no way
+// to bind a triggering event's spell in the first place. A possessive
+// antecedent that names a permanent-type noun but still has no real target in
+// scope (a hypothetical trigger using "that creature's <attribute>..." with
+// no target anywhere) parses successfully here but is separately rejected
+// downstream by the compiler's existing target-reference-binding validation
+// (bindConditionReferences), which rejects ConditionObjectBindingTarget when
+// no actual target reference exists.
 func recognizeTargetAttributeCompareCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
 	if len(body) < 3 || !equalWord(body[0], "that") || !strings.HasSuffix(body[1].Text, "'s") ||
 		!conditionAttributeComparePermanentNoun(strings.TrimSuffix(body[1].Text, "'s")) {

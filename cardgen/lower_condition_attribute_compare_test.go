@@ -128,25 +128,31 @@ func TestLowerBareItsAttributeCompareNotClaimedByTarget(t *testing.T) {
 	}
 }
 
-// TestLowerMagecraftAttributeCompareNoTargetFailsClosed guards against the
-// target-attribute-compare recognizer's blind spot: it cannot tell from the
-// text alone whether a possessive "that spell's" names the clause's own
-// target or a triggering event's spell (Zaffai, Thunder Conductor's magecraft
-// "Whenever you cast or copy an instant or sorcery spell, ... If that
-// spell's mana value is 5 or greater, ..." has no target anywhere in the
-// ability). The compiler's existing target-reference-binding validation
-// (bindConditionReferences) rejects ConditionObjectBindingTarget when no
-// actual target reference exists, so the ability fails closed as
-// structurally unsupported rather than silently binding to nothing.
-func TestLowerMagecraftAttributeCompareNoTargetFailsClosed(t *testing.T) {
+// TestLowerNoTargetAttributeCompareFailsClosed guards the compiler's
+// target-reference-binding validation (bindConditionReferences in
+// cardgen/oracle/compiler/condition.go), which is the actual safety net for
+// a possessive antecedent that parses to ConditionObjectBindingTarget but
+// names no real target: "Whenever a creature you control enters, scry 1. If
+// that creature's mana value is 3 or greater, draw a card." uses an allowed
+// permanent-type noun ("creature"), so the condition parses successfully as
+// ConditionPredicateObjectMatches/ConditionObjectBindingTarget (confirmed
+// directly against the parser: Parse() on this exact text produces one such
+// clause) -- but the ability has no target anywhere, so
+// bindConditionReferences correctly rejects the binding and the ability
+// fails closed as unsupported rather than silently resolving against
+// nothing. This is deliberately NOT the Zaffai/magecraft shape used
+// elsewhere in this file (TestLowerTargetAttributeCompareSpellNounFailsClosed):
+// that card's "that spell's" is rejected by the parser's noun allowlist
+// before any binding is ever attempted (Parse() on Zaffai's text produces
+// zero condition clauses), so it does not exercise this validation step at
+// all, even though its own doc comment once claimed it did.
+func TestLowerNoTargetAttributeCompareFailsClosed(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
-		Name:       "Magecraft Attribute Compare Probe",
+		Name:       "No Target Attribute Compare Probe",
 		Layout:     "normal",
-		TypeLine:   "Creature — Human Wizard",
-		OracleText: "Magecraft — Whenever you cast or copy an instant or sorcery spell, scry 1. If that spell's mana value is 5 or greater, create a 4/4 blue and red Elemental creature token.",
-		Power:      new("3"),
-		Toughness:  new("3"),
+		TypeLine:   "Enchantment",
+		OracleText: "Whenever a creature you control enters, scry 1. If that creature's mana value is 3 or greater, draw a card.",
 	}
 	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
 	if err != nil {
