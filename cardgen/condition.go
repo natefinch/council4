@@ -703,6 +703,24 @@ func lowerConditionSelection(selection compiler.ConditionSelection) (game.Select
 	} else if selection.PowerAtLeast != 0 {
 		return game.Selection{}, false
 	}
+	switch selection.AttributeCompare.Attribute {
+	case compiler.ConditionAttributeNone:
+	case compiler.ConditionAttributeManaValue:
+		result.ManaValue = opt.Val(compare.Int{Op: selection.AttributeCompare.Op, Value: selection.AttributeCompare.Value})
+	case compiler.ConditionAttributePower:
+		// PowerAtLeast/MatchPowerAtLeast (the narrower "with power N or greater"
+		// trailing selection qualifier) and AttributeCompare are populated by
+		// disjoint recognizers and should never both name Power; fail closed
+		// rather than silently letting one bound overwrite the other.
+		if result.Power.Exists {
+			return game.Selection{}, false
+		}
+		result.Power = opt.Val(compare.Int{Op: selection.AttributeCompare.Op, Value: selection.AttributeCompare.Value})
+	case compiler.ConditionAttributeToughness:
+		result.Toughness = opt.Val(compare.Int{Op: selection.AttributeCompare.Op, Value: selection.AttributeCompare.Value})
+	default:
+		return game.Selection{}, false
+	}
 	return result, len(result.Validate()) == 0
 }
 

@@ -516,7 +516,31 @@ func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelec
 	selection.CounterKindKnown = syntax.CounterKindKnown
 	selection.CounterCountAtLeast = syntax.CounterCountAtLeast
 	selection.CounterCountLessThan = syntax.CounterCountLessThan
+	attributeCompare, ok := conditionAttributeCompareFromParser(syntax.AttributeCompare)
+	if !ok {
+		return ConditionSelection{}, false
+	}
+	selection.AttributeCompare = attributeCompare
 	return selection, true
+}
+
+// conditionAttributeCompareFromParser maps a parser.ConditionAttributeComparison
+// to its compiler counterpart, failing closed on any attribute kind the
+// compiler does not recognize. A zero-value comparison (Attribute ==
+// parser.ConditionAttributeNone) maps to the zero-value result unchanged.
+func conditionAttributeCompareFromParser(syntax parser.ConditionAttributeComparison) (ConditionAttributeComparison, bool) {
+	switch syntax.Attribute {
+	case parser.ConditionAttributeNone:
+		return ConditionAttributeComparison{}, true
+	case parser.ConditionAttributeManaValue:
+		return ConditionAttributeComparison{Attribute: ConditionAttributeManaValue, Op: syntax.Op, Value: syntax.Value}, true
+	case parser.ConditionAttributePower:
+		return ConditionAttributeComparison{Attribute: ConditionAttributePower, Op: syntax.Op, Value: syntax.Value}, true
+	case parser.ConditionAttributeToughness:
+		return ConditionAttributeComparison{Attribute: ConditionAttributeToughness, Op: syntax.Op, Value: syntax.Value}, true
+	default:
+		return ConditionAttributeComparison{}, false
+	}
 }
 
 func conditionCardTypeFromTrigger(value parser.TriggerCardType) (types.Card, bool) {

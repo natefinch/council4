@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -225,6 +226,28 @@ const (
 	ConditionComparisonAtMost  ConditionComparison = "ConditionComparisonAtMost"
 )
 
+// ConditionAttributeKind identifies the numeric object attribute a
+// ConditionSelection's AttributeCompare field measures.
+type ConditionAttributeKind string
+
+// Attributes recognized by the parser. ConditionAttributeNone is the zero
+// value and applies no attribute comparison.
+const (
+	ConditionAttributeNone      ConditionAttributeKind = ""
+	ConditionAttributeManaValue ConditionAttributeKind = "ConditionAttributeManaValue"
+	ConditionAttributePower     ConditionAttributeKind = "ConditionAttributePower"
+	ConditionAttributeToughness ConditionAttributeKind = "ConditionAttributeToughness"
+)
+
+// ConditionAttributeComparison compares a referenced object's numeric
+// attribute against a threshold using a typed comparator. See
+// ConditionSelection.AttributeCompare.
+type ConditionAttributeComparison struct {
+	Attribute ConditionAttributeKind `json:",omitempty"`
+	Op        compare.Op             `json:",omitempty"`
+	Value     int                    `json:",omitempty"`
+}
+
 // ConditionTappedState is a typed tapped-state selection filter.
 type ConditionTappedState string
 
@@ -342,6 +365,19 @@ type ConditionSelection struct {
 	// marks the threshold present so a zero threshold remains expressible.
 	DistinctNamesAtLeast      int  `json:",omitempty"`
 	MatchDistinctNamesAtLeast bool `json:",omitempty"`
+
+	// AttributeCompare restricts the selection to objects whose named numeric
+	// attribute (mana value, power, or toughness) satisfies a typed comparator
+	// against a threshold ("if its mana value is 2 or less", "if that
+	// creature's toughness is 4 or greater", "if that permanent's power was 2
+	// or less"). It generalizes what would otherwise require a dedicated
+	// AtLeast/AtMost field pair per attribute -- as PowerAtLeast/MatchPowerAtLeast
+	// already is for the narrower "with power N or greater" trailing selection
+	// qualifier -- into one parameterized comparison, following the same
+	// Attribute+Op+Value shape game.AggregateComparison already uses for
+	// player- and board-derived quantities. Its zero value (Attribute ==
+	// ConditionAttributeNone) applies no attribute filter.
+	AttributeCompare ConditionAttributeComparison `json:",omitzero"`
 
 	// DamageRecipientOpponent, DamageNoncombatOnly, and DamageSourceAnyController
 	// qualify a ConditionPredicateDamageByControlledSource clause (CR 614).
@@ -886,6 +922,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,
+		recognizeTargetAttributeCompareCondition,
 		recognizeObjectAttackedThisTurnCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceSaddledCondition,
@@ -2108,6 +2145,131 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 		ObjectBinding: ConditionObjectBindingTarget,
 		Selection:     selection,
 	}, true
+}
+
+// recognizeTargetAttributeCompareCondition matches the resolving per-effect
+// gate that compares a numeric attribute (mana value, power, or toughness) of
+// the clause's own target against a threshold: "that <permanent-noun>'s
+// <attribute> is/was <n> or less/greater" (Carnivorous Canopy: "Destroy target
+// artifact, enchantment, or creature with flying. If that permanent's mana
+// value was 3 or less, ..."). The named possessive binds the condition's
+// object to the clause's own target (CR 608.2b), exactly as
+// recognizeTargetObjectMatchCondition's "it's a <type>" does; the possessive
+// noun itself is not re-validated against the target's actual type, mirroring
+// that recognizer's treatment of a redundant type-restating subject.
+//
+// The bare possessive "its <attribute> is/was <n> or less/greater" (also used
+// by real cards for this same target-bound shape, e.g. Containment Breach's
+// "Destroy target artifact or enchantment. If its mana value is 2 or less,
+// ...") is deliberately NOT accepted here, even though it is the more common
+// wording: "its" is also how a triggered ability's intervening body refers
+// back to the *triggering event's* permanent, not a target, for the exact
+// same attributes (Emperor Apatzec Intli IV: "Whenever another creature
+// enters under your control, that creature perpetually gains haste if its
+// power is 4 or greater. If its toughness is 4 or greater, you gain 4 life.
+// If its mana value is 4 or greater, seek a creature card." -- no target
+// anywhere in the ability) and a pre-existing recognizer
+// (recognizeEventSubjectPowerState) already binds "its power is/was <n> or
+// greater" to the event permanent for exactly this trigger shape (Tribute to
+// the World Tree). Accepting bare "its" here as well would have to either
+// shadow that recognizer (breaking already-shipped cards depending on the
+// event-permanent binding) or lose to it in dispatch order (silently binding
+// every other "its <attribute>" wording -- toughness, mana value, and "power
+// ... or less", none of which recognizeEventSubjectPowerState covers -- to
+// the wrong object whenever they appear in a trigger body with no target,
+// since the parser has no way to tell from the wording alone which object
+// "its" names). The named possessive has no such collision: every real
+// corpus card using "that <permanent-noun>'s <attribute> is/was <n> or
+// less/greater" binds a clause's own target, never a triggering event's
+// permanent (which conditions instead name via "that creature's power is
+// greater than X's power"-style strict comparisons, a different grammatical
+// shape entirely, or never use the possessive-noun form for this purpose at
+// all).
+//
+// The named-possessive form only accepts a permanent-type noun (permanent,
+// creature, artifact, enchantment, land, planeswalker, battle) and rejects
+// "spell" (and any other noun), even though real cards do use "that spell's"
+// for a targeted spell (Reject Imperfection: "Counter target spell. If that
+// spell's mana value was 3 or less, ..."): lowerObjectReference's Target case
+// always produces a TargetPermanentReference for ConditionObjectBindingTarget,
+// with no path to a TargetStackObjectReference, so binding a spell target this
+// way would silently resolve the wrong reference kind rather than fail closed.
+// This is a real, separate gap (documented on #1148 as a follow-up), not
+// exercised by this recognizer.
+//
+// It fails closed on any comparator other than "or less"/"or greater", on any
+// attribute other than mana value, power, or toughness, and on a possessive
+// antecedent that names a triggering event's spell rather than the clause's
+// own target ("Whenever you cast or copy an instant or sorcery spell... If
+// that spell's mana value is 5 or greater...", Zaffai, Thunder Conductor),
+// which needs a different object binding entirely -- the compiler's existing
+// target-reference-binding validation (bindConditionReferences) rejects
+// ConditionObjectBindingTarget when no actual target exists, so that shape
+// fails closed downstream even though its noun form (had it named a
+// permanent instead of a spell) would otherwise parse.
+func recognizeTargetAttributeCompareCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
+	if len(body) < 3 || !equalWord(body[0], "that") || !strings.HasSuffix(body[1].Text, "'s") ||
+		!conditionAttributeComparePermanentNoun(strings.TrimSuffix(body[1].Text, "'s")) {
+		return ConditionClause{}, false
+	}
+	rest := body[2:]
+	attribute, rest, ok := cutConditionAttributeWord(rest)
+	if !ok {
+		return ConditionClause{}, false
+	}
+	if len(rest) != 4 || (!equalWord(rest[0], "is") && !equalWord(rest[0], "was")) {
+		return ConditionClause{}, false
+	}
+	value, ok := conditionNumberValue(rest[1])
+	if !ok || !equalWord(rest[2], "or") {
+		return ConditionClause{}, false
+	}
+	var op compare.Op
+	switch {
+	case equalWord(rest[3], "less"):
+		op = compare.LessOrEqual
+	case equalWord(rest[3], "greater"):
+		op = compare.GreaterOrEqual
+	default:
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingTarget,
+		Selection: ConditionSelection{
+			AttributeCompare: ConditionAttributeComparison{Attribute: attribute, Op: op, Value: value},
+		},
+	}, true
+}
+
+// conditionAttributeComparePermanentNoun reports whether noun is one of the
+// permanent-type words recognizeTargetAttributeCompareCondition accepts as a
+// named-possessive antecedent ("that permanent's", "that creature's", ...).
+// It deliberately excludes "spell" and any other noun -- see that function's
+// doc comment for why a spell antecedent is not safe to accept here.
+func conditionAttributeComparePermanentNoun(noun string) bool {
+	switch strings.ToLower(noun) {
+	case "permanent", "creature", "artifact", "enchantment", "land", "planeswalker", "battle":
+		return true
+	default:
+		return false
+	}
+}
+
+// cutConditionAttributeWord matches the leading numeric-attribute word ("mana
+// value", "power", or "toughness") recognizeTargetAttributeCompareCondition
+// accepts, returning the attribute kind and the remaining tokens.
+func cutConditionAttributeWord(tokens []shared.Token) (ConditionAttributeKind, []shared.Token, bool) {
+	if len(tokens) >= 2 && equalWord(tokens[0], "mana") && equalWord(tokens[1], "value") {
+		return ConditionAttributeManaValue, tokens[2:], true
+	}
+	if len(tokens) >= 1 && equalWord(tokens[0], "power") {
+		return ConditionAttributePower, tokens[1:], true
+	}
+	if len(tokens) >= 1 && equalWord(tokens[0], "toughness") {
+		return ConditionAttributeToughness, tokens[1:], true
+	}
+	return ConditionAttributeNone, tokens, false
 }
 
 // recognizeSourceSaddledCondition matches the per-effect gate "this <noun> is

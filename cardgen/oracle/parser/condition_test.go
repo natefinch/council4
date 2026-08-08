@@ -5,6 +5,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -801,6 +802,104 @@ func TestParseConditionResultThisWay(t *testing.T) {
 				clauses[0].Predicate != ConditionPredicateResultThisWay ||
 				clauses[0].ThisWayOutcome != test.outcome {
 				t.Fatalf("clauses = %#v, want ConditionPredicateResultThisWay with outcome %s", clauses, test.outcome)
+			}
+		})
+	}
+}
+
+// TestParseConditionTargetAttributeCompare covers the resolving per-effect
+// gate that compares a numeric attribute of the clause's own target against a
+// threshold via the named-possessive form "that <permanent-noun>'s
+// <attribute> is/was <n> or less/greater" (Carnivorous Canopy). It binds the
+// condition's object to the target and carries the attribute, comparator, and
+// threshold on Selection.AttributeCompare. The bare possessive "its
+// <attribute> is/was <n> or less/greater" is deliberately not accepted --
+// see recognizeTargetAttributeCompareCondition's doc comment.
+func TestParseConditionTargetAttributeCompare(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		body    string
+		compare ConditionAttributeComparison
+	}{
+		{
+			name:    "that permanent's mana value was N or less",
+			body:    "Destroy target artifact, enchantment, or creature with flying. If that permanent's mana value was 3 or less, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributeManaValue, Op: compare.LessOrEqual, Value: 3},
+		},
+		{
+			name:    "that creature's power is N or less",
+			body:    "Destroy target creature. If that creature's power is 2 or less, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributePower, Op: compare.LessOrEqual, Value: 2},
+		},
+		{
+			name:    "that creature's toughness is N or greater",
+			body:    "Destroy target creature. If that creature's toughness is 1 or greater, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributeToughness, Op: compare.GreaterOrEqual, Value: 1},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.body, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			clauses := document.Abilities[0].ConditionClauses
+			if len(clauses) != 1 ||
+				clauses[0].Predicate != ConditionPredicateObjectMatches ||
+				clauses[0].ObjectBinding != ConditionObjectBindingTarget ||
+				clauses[0].Selection.AttributeCompare != test.compare {
+				t.Fatalf("clauses = %#v, want ConditionPredicateObjectMatches/Target with attribute compare %#v", clauses, test.compare)
+			}
+		})
+	}
+}
+
+// TestParseConditionTargetAttributeCompareRejectsOtherWording confirms the
+// recognizer fails closed on wording it does not model: an unsupported
+// comparator, an unsupported attribute, a possessive noun naming a spell
+// rather than a permanent-type object, and -- most importantly -- the bare
+// possessive "its" form, which the recognizer deliberately never accepts
+// (see its doc comment for why: "its" is genuinely ambiguous between a
+// clause's own target and a triggering event's permanent, and a pre-existing
+// recognizer already owns "its power is/was <n> or greater" for the
+// event-permanent binding a real, already-shipped card depends on).
+// "That spell's mana value..." always fails closed here (Reject
+// Imperfection's "Counter target spell. If that spell's mana value was 3 or
+// less, ..." is not yet supported), since lowerObjectReference's Target case
+// has no path to a TargetStackObjectReference. A magecraft possessive that
+// binds a triggering event's spell rather than the clause's own target (e.g.
+// "If that spell's mana value is 5 or greater" with no target anywhere in
+// the ability) is separately rejected end to end by the compiler's existing
+// target-reference-binding validation (bindConditionReferences in
+// cardgen/oracle/compiler/condition.go), proven by
+// TestLowerMagecraftAttributeCompareNoTargetFailsClosed.
+func TestParseConditionTargetAttributeCompareRejectsOtherWording(t *testing.T) {
+	t.Parallel()
+	bodies := []string{
+		"Destroy target creature. If its mana value is 2 or less, draw a card.",
+		"Destroy target creature. If its power is 4 or greater, draw a card.",
+		"Destroy target creature. If its toughness is 1 or greater, draw a card.",
+		"Destroy target creature. If that creature's mana value is exactly 2, draw a card.",
+		"Destroy target creature. If that creature's mana value is less than 2, draw a card.",
+		"Destroy target creature. If that creature's loyalty is 2 or less, draw a card.",
+		"Counter target spell. If that spell's mana value was 3 or less, draw a card.",
+	}
+	for _, body := range bodies {
+		t.Run(body, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(body, Context{InstantOrSorcery: true})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Selection.AttributeCompare.Attribute != ConditionAttributeNone {
+					t.Fatalf("clause unexpectedly recognized an attribute compare: %#v", clause)
+				}
 			}
 		})
 	}
