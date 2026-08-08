@@ -2,6 +2,7 @@ package rules
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -147,6 +148,67 @@ func TestBrainstormInsufficientHandMovesAllAvailable(t *testing.T) {
 	assertBrainstormZoneEvents(t, g.Events, 1)
 }
 
+func brainstormBottomInstructions() []game.Instruction {
+	return []game.Instruction{
+		{Primitive: game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(2)}},
+		{Primitive: game.MoveCard{
+			Player:            game.ControllerReference(),
+			Amount:            game.Fixed(2),
+			FromZone:          zone.Hand,
+			Destination:       zone.Library,
+			DestinationBottom: true,
+		}},
+	}
+}
+
+// TestSawtoothLoonDrawsThenChoosesBottomOrder guards the bottom-destination
+// half of handleMoveChosenHandCards (Sawtooth Loon: "draw two cards, then put
+// two cards from your hand on the bottom of your library."). It mirrors
+// TestBrainstormDrawsThenChoosesIncludingDrawnCardsInTopOrder's top-order
+// coverage, checking the opposite processing direction lands the
+// first-chosen card shallowest among the newly-placed group (soonest drawn
+// among the pair) with the second-chosen card at the absolute bottom, giving
+// "first choice" a consistent meaning across both destinations despite
+// Zone.Add/AddToBottom's opposite insertion points.
+func TestSawtoothLoonDrawsThenChoosesBottomOrder(t *testing.T) {
+	t.Parallel()
+	for _, order := range [][]string{
+		{"Drawn B", "Old A"},
+		{"Old A", "Drawn B"},
+	} {
+		order := append([]string(nil), order...)
+		t.Run(order[0]+" first", func(t *testing.T) {
+			t.Parallel()
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Old A"}})
+			addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Anchor"}})
+			addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn A"}})
+			addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn B"}})
+			addInstructionSpellToStack(g, brainstormBottomInstructions())
+
+			agent := &orderedHandChoiceAgent{order: order}
+			var agents [game.NumPlayers]PlayerAgent
+			agents[game.Player1] = agent
+			log := &TurnLog{}
+			NewEngine(nil).resolveTopOfStackWithChoices(g, agents, log)
+
+			if !slices.Contains(agent.observedHand, "Drawn B") {
+				t.Fatalf("choice observation hand = %v, want newly drawn card", agent.observedHand)
+			}
+			if len(agent.requests) != 1 {
+				t.Fatalf("choice requests = %d, want 1", len(agent.requests))
+			}
+			request := agent.requests[0]
+			if request.Player != game.Player1 || request.MinChoices != 2 || request.MaxChoices != 2 ||
+				!strings.Contains(request.Prompt, "bottom") {
+				t.Fatalf("request = %#v, want controller exact two, bottom-destination prompt", request)
+			}
+			assertLibraryBottomNames(t, g, game.Player1, order)
+			assertBrainstormZoneEvents(t, g.Events, 2)
+		})
+	}
+}
+
 func assertLibraryTopNames(t *testing.T, g *game.Game, playerID game.PlayerID, want []string) {
 	t.Helper()
 	ids := g.Players[playerID].Library.All()
@@ -157,6 +219,25 @@ func assertLibraryTopNames(t *testing.T, g *game.Game, playerID game.PlayerID, w
 		card, ok := g.GetCardInstance(ids[i])
 		if !ok || card.Def.Name != name {
 			t.Fatalf("library[%d] = %#v, want %q", i, card, name)
+		}
+	}
+}
+
+// assertLibraryBottomNames checks the LAST len(want) cards of the library,
+// where want[0] must land shallowest among that group (soonest drawn among
+// the newly-placed cards) and want[len(want)-1] at the absolute bottom -- the
+// bottom-destination counterpart of assertLibraryTopNames.
+func assertLibraryBottomNames(t *testing.T, g *game.Game, playerID game.PlayerID, want []string) {
+	t.Helper()
+	ids := g.Players[playerID].Library.All()
+	if len(ids) < len(want) {
+		t.Fatalf("library = %v, want at least %d cards", ids, len(want))
+	}
+	start := len(ids) - len(want)
+	for i, name := range want {
+		card, ok := g.GetCardInstance(ids[start+i])
+		if !ok || card.Def.Name != name {
+			t.Fatalf("library[%d] = %#v, want %q", start+i, card, name)
 		}
 	}
 }

@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18301 supported cards
+# 18305 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -387,6 +387,7 @@ c972d227bd40614b  Altar's Light
 789167230ba0a670  Altar's Reap
 a8cd408037fac2ef  Always Watching
 edc0a34c68a5ef50  Amaranthine Wall
+63f42877aac75a12  Amass the Components
 adab671917a23d26  Amateur Hero
 aab7ce12a8d33dd7  Amazing Acrobatics
 1a2ca8e300151502  Ambassador Laquatus
@@ -2952,6 +2953,7 @@ a2bd47e8ea4de421  Concealed Weapon
 cdb982a9a6a914c5  Conceited Witch // Price of Beauty
 52fb473b60e7df30  Concentrate
 898226f7e20c56de  Concentrated Fire
+cf24a3d74ac04ada  Conch Horn
 227035a839197113  Conciliator's Duelist
 1c5e0445643735c4  Conclave Cavalier
 460750afbfadba92  Conclave Equenaut
@@ -13136,6 +13138,7 @@ df53d9c3aada58a1  Saved by the Shell
 545360db12a2adec  Saw It Coming
 c2143f20d206e006  Sawback Manticore
 b21d59277000d9e3  Sawblade Scamp
+986431d000079f3a  Sawtooth Loon
 731e9e7c5cfec2c9  Sawtusk Demolisher
 d8b5c546035c9316  Sazacap's Brew
 3e97ca19765eeba3  Sazh's Chocobo
@@ -15399,6 +15402,7 @@ fd279c90127b211b  Survival of the Fittest
 13b0d650124c15f8  Survive the Night
 2fd316b89cab0202  Survivor
 d35e2e1e40d5f63f  Survivor of Korlis
+935bc02c839c006d  Survivor of the Unseen
 c3cb380ce34ff09e  Survivors' Encampment
 f35030852402f550  Suspension Field
 04882b602b6e5c6d  Suspicious Bookcase

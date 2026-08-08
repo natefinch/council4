@@ -578,11 +578,28 @@ type DigSyntax struct {
 }
 
 // HandLibraryPutSyntax marks the exact clause "Put N cards from your hand on
-// top of your library in any order." The fixed amount remains in EffectSyntax;
-// Present carries the player-chosen ordering semantics downstream without
-// requiring consumers to inspect Oracle text.
+// top of (or the bottom of) your library[ in any order]." The fixed amount
+// remains in EffectSyntax; Present carries the player-chosen ordering
+// semantics downstream without requiring consumers to inspect Oracle text.
+// Bottom records which library position was named.
+//
+// The trailing "in any order" qualifier and its complete omission are treated
+// identically (Present is set either way, with no separate flag): CR 401.4
+// ("If an effect puts two or more cards in a specific position in a library
+// at the same time, the owner of those cards may arrange them in any order.")
+// already grants the player-chosen-order permission by default whenever
+// multiple cards go to the same library position simultaneously, so real
+// cards frequently omit the qualifier for an equivalent effect (Sawtooth
+// Loon: "draw two cards, then put two cards from your hand on the bottom of
+// your library.", two cards, no order qualifier at all). A card naming a
+// genuinely different ordering rule -- "in a random order" (Discover,
+// Hideaway, Cascade's game-randomized order, CR 701.57a et al.) or "in the
+// same order" (an explicit preserved-order rule) -- is a different mechanic
+// this syntax does not model; exactHandLibraryPutEffectSyntax's literal
+// string match rejects both, since neither matches either accepted template.
 type HandLibraryPutSyntax struct {
 	Present bool `json:",omitempty"`
+	Bottom  bool `json:",omitempty"`
 }
 
 // DigRouteSlotSyntax is one ordered destination of a recognized look-and-route

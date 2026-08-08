@@ -6505,12 +6505,24 @@ func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {
 		!effect.Amount.Known || effect.Amount.Value < 1 ||
 		effect.FromZone != zone.Hand ||
 		effect.ToZone != zone.Library ||
-		effect.Destination != EffectDestinationTop ||
-		len(effect.Targets) != 0 ||
-		!effectContainsWords(normalizedWords(effect.Tokens), "in", "any", "order") {
+		len(effect.Targets) != 0 {
 		return HandLibraryPutSyntax{}
 	}
-	return HandLibraryPutSyntax{Present: true}
+	var bottom bool
+	switch effect.Destination {
+	case EffectDestinationTop:
+		bottom = false
+	case EffectDestinationBottom:
+		bottom = true
+	default:
+		return HandLibraryPutSyntax{}
+	}
+	// The trailing "in any order" qualifier (or its complete omission — see
+	// HandLibraryPutSyntax's doc comment) is not checked structurally here;
+	// exactHandLibraryPutEffectSyntax's literal string match is the actual
+	// arbiter of which trailing wording is accepted, rejecting a genuinely
+	// different ordering rule ("in a random order", "in the same order").
+	return HandLibraryPutSyntax{Present: true, Bottom: bottom}
 }
 
 // parseDigPut recognizes the impulse put clause "Put N <of them|of those cards>

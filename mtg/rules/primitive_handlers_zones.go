@@ -1694,6 +1694,22 @@ func handleMoveCardZoneGroup(r *effectResolver, prim game.MoveCard) effectResolv
 	return res
 }
 
+// handleMoveChosenHandCards prompts the player to choose amount cards from
+// their hand and moves them to the destination library position as one
+// simultaneous batch (CR 401.4: since multiple cards go to the same library
+// position at once, the owner may arrange them in any order — the choice
+// order below realizes that arrangement).
+//
+// The two destinations use opposite processing orders to give both the same
+// "first choice ends up soonest-drawn among the group" meaning despite Zone's
+// opposite Add/AddToBottom insertion points: for the top, each subsequent Add
+// prepends (CR 401.4 order), so processing selections in reverse makes the
+// first-chosen card the last one prepended, landing it at the very top
+// (soonest drawn). For the bottom, each subsequent AddToBottom appends, so
+// processing selections forward makes the first-chosen card the first one
+// appended, landing it shallowest among the newly-placed group -- still
+// behind the entire remainder of the library, but soonest-drawn relative to
+// the other chosen cards, matching the top case's meaning.
 func handleMoveChosenHandCards(r *effectResolver, prim game.MoveCard, playerID game.PlayerID) effectResolved {
 	res := effectResolved{accepted: true}
 	player, ok := playerByID(r.game, playerID)
@@ -1714,20 +1730,23 @@ func handleMoveChosenHandCards(r *effectResolver, prim game.MoveCard, playerID g
 			Card:  cardChoiceInfo(r.game, cardID),
 		}
 	}
+	prompt := "Choose cards to put on top of your library, top card first"
+	if prim.DestinationBottom {
+		prompt = "Choose cards to put on the bottom of your library, first card drawn first"
+	}
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           playerID,
-		Prompt:           "Choose cards to put on top of your library, top card first",
+		Prompt:           prompt,
 		Options:          options,
 		MinChoices:       amount,
 		MaxChoices:       amount,
 		DefaultSelection: firstChoiceIndices(amount),
 	}, r.log)
 	simultaneousID := r.game.IDGen.Next()
-	for i := len(selected) - 1; i >= 0; i-- {
-		idx := selected[i]
+	moveSelected := func(idx int) {
 		if idx < 0 || idx >= len(candidates) {
-			continue
+			return
 		}
 		if moveCardBetweenZonesInBatch(
 			r.game,
@@ -1735,10 +1754,19 @@ func handleMoveChosenHandCards(r *effectResolver, prim game.MoveCard, playerID g
 			candidates[idx],
 			zone.Hand,
 			zone.Library,
-			false,
+			prim.DestinationBottom,
 			simultaneousID,
 		) {
 			res.succeeded = true
+		}
+	}
+	if prim.DestinationBottom {
+		for i := range selected {
+			moveSelected(selected[i])
+		}
+	} else {
+		for i := len(selected) - 1; i >= 0; i-- {
+			moveSelected(selected[i])
 		}
 	}
 	return res
