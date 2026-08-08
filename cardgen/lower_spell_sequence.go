@@ -3073,8 +3073,11 @@ func digRemainder(remainder parser.DigRemainderKind) game.DigRemainder {
 }
 
 // lowerDrawHandLibrarySequence lowers "Draw N cards, then put M cards from your
-// hand on top of your library in any order." The runtime MoveCard choice sees
-// the post-draw hand and preserves the selected option order as library order.
+// hand on top of (or the bottom of) your library[ in any order]." The runtime
+// MoveCard choice sees the post-draw hand and preserves the selected option
+// order as library order (CR 401.4's default player-chosen order for multiple
+// cards placed in the same library position at once, whether or not the
+// clause spells out "in any order").
 func lowerDrawHandLibrarySequence(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 2 || ctx.optional ||
 		len(ctx.content.Targets) != 0 ||
@@ -3103,10 +3106,11 @@ func lowerDrawHandLibrarySequence(ctx contentCtx) (game.AbilityContent, bool) {
 				Amount: game.Fixed(draw.Amount.Value),
 			}},
 			{Primitive: game.MoveCard{
-				Player:      game.ControllerReference(),
-				Amount:      game.Fixed(put.Amount.Value),
-				FromZone:    zone.Hand,
-				Destination: zone.Library,
+				Player:            game.ControllerReference(),
+				Amount:            game.Fixed(put.Amount.Value),
+				FromZone:          zone.Hand,
+				Destination:       zone.Library,
+				DestinationBottom: put.HandLibraryPut.Bottom,
 			}},
 		},
 	}.Ability(), true

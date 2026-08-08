@@ -18,6 +18,20 @@ func TestValidateChosenHandToLibraryMove(t *testing.T) {
 	if err := ValidateInstructionSequence([]Instruction{{Primitive: valid}}); err != nil {
 		t.Fatalf("valid chosen-card move: %v", err)
 	}
+	// A chosen-card hand-to-library move may also request bottom placement
+	// (handleMoveChosenHandCards reads DestinationBottom): Sawtooth Loon,
+	// "draw two cards, then put two cards from your hand on the bottom of
+	// your library."
+	validBottom := MoveCard{
+		Player:            ControllerReference(),
+		Amount:            Fixed(2),
+		FromZone:          zone.Hand,
+		Destination:       zone.Library,
+		DestinationBottom: true,
+	}
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: validBottom}}); err != nil {
+		t.Fatalf("valid chosen-card bottom move: %v", err)
+	}
 
 	tests := []struct {
 		name string
@@ -55,11 +69,14 @@ func TestValidateChosenHandToLibraryMove(t *testing.T) {
 			want: "chosen-card move requires hand to library",
 		},
 		{
-			name: "bottom",
+			// The whole-zone move ("move every card from a player's zone",
+			// Amount == 0) does not support bottom placement --
+			// handleMoveCardZoneGroup's whole-zone branch always places on
+			// top -- unlike the chosen-card move validated above.
+			name: "whole-zone move bottom",
 			move: MoveCard{
 				Player:            ControllerReference(),
-				Amount:            Fixed(2),
-				FromZone:          zone.Hand,
+				FromZone:          zone.Graveyard,
 				Destination:       zone.Library,
 				DestinationBottom: true,
 			},

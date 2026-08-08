@@ -651,6 +651,12 @@ func exactBoundedUntapEffectSyntax(effect *EffectSyntax) bool {
 	)
 }
 
+// exactHandLibraryPutEffectSyntax recognizes the exact clause text for
+// HandLibraryPutSyntax: "Put N cards from your hand on top of (or the bottom
+// of) your library[ in any order]." The trailing "in any order" qualifier and
+// its complete omission both match (see HandLibraryPutSyntax's doc comment
+// for why); a genuinely different ordering rule ("in a random order", "in
+// the same order") matches neither accepted literal string and is rejected.
 func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
 	if !effect.HandLibraryPut.Present ||
 		effect.Amount.DynamicForm != EffectDynamicAmountFormNone ||
@@ -661,14 +667,21 @@ func exactHandLibraryPutEffectSyntax(effect *EffectSyntax) bool {
 	if effect.Amount.Value == 1 {
 		noun = "card"
 	}
-	return strings.EqualFold(
-		exactEffectClauseText(effect),
-		fmt.Sprintf(
-			"Put %s %s from your hand on top of your library in any order.",
-			effectAmountSourceText(effect),
-			noun,
-		),
-	)
+	position := "on top of"
+	if effect.HandLibraryPut.Bottom {
+		position = "on the bottom of"
+	}
+	clauseText := exactEffectClauseText(effect)
+	amountAndNoun := fmt.Sprintf("%s %s", effectAmountSourceText(effect), noun)
+	for _, template := range []string{
+		"Put %s from your hand %s your library in any order.",
+		"Put %s from your hand %s your library.",
+	} {
+		if strings.EqualFold(clauseText, fmt.Sprintf(template, amountAndNoun, position)) {
+			return true
+		}
+	}
+	return false
 }
 
 // exactSelfSacrificeEffectSyntax recognizes the controller sacrificing the

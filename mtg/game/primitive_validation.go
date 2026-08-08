@@ -2502,7 +2502,14 @@ func (p MoveCard) validateMoveReference(hasCard bool, targets []TargetSpec, chec
 	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
 		return err
 	}
-	if p.Amount.IsDynamic() || p.Amount.Value() != 0 {
+	// The chosen-card hand-to-library move (Amount > 0, "put N cards from your
+	// hand on top of/the bottom of your library") supports bottom placement
+	// (handleMoveChosenHandCards reads DestinationBottom). The whole-zone move
+	// ("move every card from a player's zone", Amount == 0) does not --
+	// handleMoveCardZoneGroup's whole-zone branch always places on top -- so
+	// bottom placement is rejected for that sub-case only.
+	chosenCardMove := p.Amount.IsDynamic() || p.Amount.Value() != 0
+	if chosenCardMove {
 		if err := validatePositiveQuantity(p.Amount, targets, checkTargets); err != nil {
 			return fmt.Errorf("chosen-card move amount: %w", err)
 		}
@@ -2510,7 +2517,7 @@ func (p MoveCard) validateMoveReference(hasCard bool, targets []TargetSpec, chec
 			return errors.New("chosen-card move requires hand to library")
 		}
 	}
-	if p.DestinationBottom {
+	if p.DestinationBottom && !chosenCardMove {
 		return errors.New("player-zone move must not request bottom placement")
 	}
 	return nil
