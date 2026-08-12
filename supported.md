@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,305 of 32,715 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,901 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,315 of 32,715 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,904 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -1492,6 +1492,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Blackcleave Cliffs
 - Blackcleave Goblin
 - Blacklance Paragon
+- Blacksmith's Skill
 - Blacksnag Buzzard
 - Blade Banish
 - Blade Historian
@@ -2091,6 +2092,8 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Bucky Barnes, Eager Ally
 - Bugenhagen, Wise Elder
 - Builder's Blessing
+- Built to Last
+- Built to Smash
 - Bulette
 - Bulk Up
 - Bull Aurochs
@@ -3619,6 +3622,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Death Stroke
 - Death Ward
 - Death Wind
+- Death's Caress
 - Death's Duet
 - Death's Presence
 - Death's-Head Buzzard
@@ -5507,6 +5511,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Fit of Rage
 - Five Hundred Year Diary
 - Five-Alarm Fire
+- Fixer, Techno Terror
 - Flagstones of Trokair
 - Flame Blitz
 - Flame Elemental
@@ -7660,6 +7665,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Icefeather Aven
 - Icehide Troll
 - Iceman and Firestar
+- Icequake
 - Iceridge Serpent
 - Icetill Explorer
 - Icewind Elemental
@@ -12376,6 +12382,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Rend Flesh
 - Rend Spirit
 - Rendclaw Trow
+- Rending Flame
 - Rending Volley
 - Renegade Demon
 - Renegade Firebrand
@@ -14897,6 +14904,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Star of Extinction
 - Star Pupil
 - Star-Crowned Stag
+- Starfall
 - Starfield Mystic
 - Starfighter Pilot
 - Stark Industries
@@ -15938,6 +15946,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Thermal Glider
 - Thermal Navigator
 - Thermo-Alchemist
+- Thermokarst
 - Thermopod
 - Thespian's Stage
 - They Went This Way
@@ -16276,6 +16285,7 @@ Council4 currently supports **18,305 of 32,715 cards eligible for paper support 
 - Topaz Dragon // Entropic Cloud
 - Topiary Panther
 - Topiary Stomper
+- Topple the Statue
 - Tor Giant
 - Tor Wauki
 - Torbran, Thane of Red Fell
