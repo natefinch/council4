@@ -166,16 +166,16 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 
 | Category | Affected cards | Sole blockers |
 | --- | ---: | ---: |
-| sub-effect — unsupported counter placement | 734 | 398 |
-| structural — per-effect condition unrecognized | 653 | 388 |
+| sub-effect — unsupported counter placement | 732 | 396 |
+| structural — per-effect condition unrecognized | 661 | 395 |
 | sub-effect — unsupported ability content | 604 | 323 |
-| sub-effect — unsupported exile spell | 358 | 168 |
-| sub-effect — unsupported damage spell | 218 | 156 |
+| sub-effect — unsupported exile spell | 357 | 167 |
 | sub-effect — unsupported cast effect | 346 | 154 |
+| sub-effect — unsupported damage spell | 216 | 154 |
 | sub-effect — unsupported token creation | 186 | 144 |
-| sub-effect — unsupported return spell | 199 | 138 |
-| sub-effect — unsupported power/toughness spell | 176 | 131 |
-| sub-effect — unsupported temporary keyword spell | 164 | 126 |
+| sub-effect — unsupported return spell | 198 | 138 |
+| sub-effect — unsupported power/toughness spell | 177 | 132 |
+| sub-effect — unsupported temporary keyword spell | 162 | 124 |
 | sub-effect — unsupported life spell | 177 | 123 |
 | sub-effect — unsupported draw spell | 172 | 105 |
 | sub-effect — unsupported shuffle effect | 153 | 88 |
@@ -183,7 +183,7 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | structural — per-effect condition spans multiple clauses | 107 | 74 |
 | sub-effect — unsupported sacrifice spell | 107 | 74 |
 | sub-effect — unsupported destroy spell | 73 | 61 |
-| sub-effect — unsupported untap spell | 79 | 58 |
+| sub-effect — unsupported untap spell | 78 | 57 |
 | structural — per-effect condition kind not gateable | 66 | 54 |
 | sub-effect — unsupported library placement | 133 | 52 |
 | sub-effect — unsupported manifest spell | 105 | 52 |
@@ -227,13 +227,13 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | sub-effect — unsupported amass spell | 5 | 4 |
 | sub-effect — unsupported divided damage spell | 4 | 4 |
 | sub-effect — unsupported scry spell | 6 | 3 |
-| sub-effect — unsupported double counters spell | 4 | 3 |
 | sub-effect — unsupported emblem ability | 4 | 3 |
 | sub-effect — unsupported explore spell | 3 | 3 |
 | sub-effect — unsupported set base power/toughness effect | 3 | 3 |
 | structural — non-exact legacy effect pair | 5 | 2 |
 | sub-effect — unsupported transform effect | 4 | 2 |
 | mode 2: sub-effect — unsupported temporary keyword spell | 3 | 2 |
+| sub-effect — unsupported double counters spell | 3 | 2 |
 | sub-effect — unsupported forced-attack effect | 3 | 2 |
 | sub-effect — unsupported incubate spell | 3 | 2 |
 | sub-effect — unsupported surveil spell | 3 | 2 |
@@ -445,7 +445,13 @@ Distinct `if <condition>` wordings inside ordered sequences whose predicate the 
 | If that creature has flying | 1 | 1 |
 | If that creature has infect | 1 | 1 |
 | If that creature has two or more +1/+1 counters on it | 1 | 1 |
+| If that creature is a Bear | 1 | 1 |
 | If that creature is a Bird | 1 | 1 |
+| If that creature is a Demon | 1 | 1 |
+| If that creature is a Human | 1 | 1 |
+| If that creature is a Zombie | 1 | 1 |
+| If that creature is a token | 1 | 1 |
+| If that creature is an Assassin | 1 | 1 |
 | If that creature is another Hero | 1 | 1 |
 | If that creature is black or red | 1 | 1 |
 | If that creature is white | 1 | 1 |
@@ -454,8 +460,8 @@ Distinct `if <condition>` wordings inside ordered sequences whose predicate the 
 | If that creature was cast for its warp cost | 1 | 1 |
 | If that creature was green or white | 1 | 1 |
 | If that creature wasn't dealt damage this turn | 1 | 1 |
-| If that land is a Forest | 1 | 1 |
-| If that land is a Swamp | 1 | 1 |
+| If that land is a Mountain | 1 | 1 |
+| If that land is an Island | 1 | 1 |
 | If that land was legendary | 1 | 1 |
 | If that library contains exactly the chosen number of cards with the chosen name | 1 | 1 |
 | If that permanent had mana value 3 or less | 1 | 1 |
@@ -566,6 +572,7 @@ Distinct `if <condition>` wordings inside ordered sequences whose predicate the 
 | if its power is exactly 20 | 1 | 1 |
 | if its power is less than Shelinda's power | 1 | 1 |
 | if that creature has three or more +1/+1 counters on it | 1 | 1 |
+| if that creature is a Mutant | 1 | 1 |
 | if that creature was destroyed this way | 1 | 1 |
 | if that creature's power is greater than Yorvo's power | 1 | 1 |
 | if that player has more cards in hand than each other player | 1 | 1 |
@@ -667,6 +674,7 @@ Distinct `if <condition>` wordings inside ordered sequences whose predicate the 
 | If that creature is red | 1 | 0 |
 | If that creature shares a color with the mana that land produced | 1 | 0 |
 | If that enchantment is an Aura | 1 | 0 |
+| If that land is a Plains | 1 | 0 |
 | If that permanent is destroyed this way | 1 | 0 |
 | If that player doesn't | 1 | 0 |
 | If that token is a Squirrel | 1 | 0 |
