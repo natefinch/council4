@@ -807,17 +807,20 @@ func TestParseConditionResultThisWay(t *testing.T) {
 	}
 }
 
-// TestParseConditionThatSubjectTargetMatch covers the present-tense resolving
-// per-effect gate "that <permanent-noun> is/are a/an <selection>", binding
-// the condition's object to the clause's own target: Splash Portal ("Exile
-// target creature you control, then return it to the battlefield... If that
-// creature is a Bird, Frog, Otter, or Rat, draw a card.") and Yip Yip!
-// ("Target creature you control gets +2/+2... If that creature is an Ally,
-// ..."). Present tense is what makes the binding unambiguous -- see
-// recognizeThatSubjectTargetMatchCondition's doc comment for why the
-// past-tense sibling (recognizeThatSubjectMatchCondition, "that <noun> was a
-// <selection>") cannot bind Target directly the same way.
-func TestParseConditionThatSubjectTargetMatch(t *testing.T) {
+// TestParseConditionThatSubjectMatchPresentTense covers the present-tense
+// spelling of the intervening subtype gate "that <permanent-noun> is/are a/an
+// <selection>": Splash Portal ("Exile target creature you control, then
+// return it to the battlefield... If that creature is a Bird, Frog, Otter,
+// or Rat, draw a card.") and Yip Yip! ("Target creature you control gets
+// +2/+2... If that creature is an Ally, ..."). recognizeThatSubjectMatchCondition
+// seeds ConditionObjectBindingEventPermanent for this spelling exactly as it
+// does for its past-tense sibling ("that creature was a Human"), because
+// tense alone cannot decide whether "that <noun>" names a resolving clause's
+// own target or a still-on-the-battlefield triggering permanent (see the
+// function's doc comment); bindConditionReferences' no-trigger fallback is
+// what rebinds this to Target for the common non-triggered case, which the
+// cardgen-level lowering tests cover end to end.
+func TestParseConditionThatSubjectMatchPresentTense(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name  string
@@ -857,8 +860,8 @@ func TestParseConditionThatSubjectTargetMatch(t *testing.T) {
 			}
 			clause := clauses[0]
 			if clause.Predicate != ConditionPredicateObjectMatches ||
-				clause.ObjectBinding != ConditionObjectBindingTarget {
-				t.Fatalf("clause = %#v, want ConditionPredicateObjectMatches/Target", clause)
+				clause.ObjectBinding != ConditionObjectBindingEventPermanent {
+				t.Fatalf("clause = %#v, want ConditionPredicateObjectMatches/EventPermanent (compile-time fallback resolves Target)", clause)
 			}
 			if test.subs != nil && !slices.Equal(clause.Selection.SubtypesAny, test.subs) {
 				t.Fatalf("clause.Selection.SubtypesAny = %#v, want %#v", clause.Selection.SubtypesAny, test.subs)
@@ -870,14 +873,12 @@ func TestParseConditionThatSubjectTargetMatch(t *testing.T) {
 	}
 }
 
-// TestParseConditionThatSubjectTargetMatchRejectsOtherWording confirms the
-// recognizer fails closed on wording it does not model: past tense (owned by
-// recognizeThatSubjectMatchCondition instead), a subject noun that is not a
-// permanent-type noun, and a copula with no article.
-func TestParseConditionThatSubjectTargetMatchRejectsOtherWording(t *testing.T) {
+// TestParseConditionThatSubjectMatchRejectsOtherWording confirms the
+// recognizer fails closed on wording it does not model: a subject noun that
+// is not a permanent-type noun, and a copula with no article.
+func TestParseConditionThatSubjectMatchRejectsOtherWording(t *testing.T) {
 	t.Parallel()
 	bodies := []string{
-		"Destroy target creature. If that creature was a Human, draw a card.",
 		"Destroy target creature. If that spell is a Human, draw a card.",
 		"Destroy target creature. If that creature is legendary, draw a card.",
 	}
@@ -889,8 +890,8 @@ func TestParseConditionThatSubjectTargetMatchRejectsOtherWording(t *testing.T) {
 				t.Fatalf("abilities = %#v", document.Abilities)
 			}
 			for _, clause := range document.Abilities[0].ConditionClauses {
-				if clause.Predicate == ConditionPredicateObjectMatches && clause.ObjectBinding == ConditionObjectBindingTarget {
-					t.Fatalf("clause unexpectedly recognized as ObjectMatches/Target: %#v", clause)
+				if clause.Predicate == ConditionPredicateObjectMatches && clause.ObjectBinding == ConditionObjectBindingEventPermanent {
+					t.Fatalf("clause unexpectedly recognized as ObjectMatches/EventPermanent: %#v", clause)
 				}
 			}
 		})

@@ -750,7 +750,7 @@ func bindConditionReferences(conditions []CompiledCondition, references []Compil
 			ConditionPredicateEventSubjectHadCounters,
 			ConditionPredicateObjectAttackedThisTurn:
 			// A condition parsed as bound to the triggering event's permanent
-			// ("that <noun> was a <selection>", recognizeThatSubjectMatchCondition;
+			// ("that <noun> is/are/was a <selection>", recognizeThatSubjectMatchCondition;
 			// or the bare event pronoun "it was/it's a <selection>",
 			// recognizeEventSubjectMatchCondition) cannot possibly denote that
 			// permanent when the ability has no trigger at all -- there is no
@@ -771,7 +771,14 @@ func bindConditionReferences(conditions []CompiledCondition, references []Compil
 			// have (Carrion Locust: "When this creature enters, exile target
 			// card... If it was a creature card..." binds the exiled target
 			// card, not the entering creature, but nothing here can yet tell
-			// the two apart).
+			// the two apart). Tense alone cannot make this decision either: an
+			// enters-the-battlefield trigger's own permanent is still on the
+			// battlefield when this clause runs, so present tense ("that
+			// creature is a Bird") is exactly as viable an EventPermanent
+			// antecedent as past tense is -- which is why the parser always
+			// seeds EventPermanent for both spellings and leaves the choice to
+			// this trigger-aware fallback, rather than the present-tense form
+			// binding Target directly.
 			//
 			// This must be applied to the condition's OWN recorded binding before
 			// calling conditionObjectBinding, not to that call's result: the
