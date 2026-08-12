@@ -95,13 +95,15 @@ func TestLowerActivatedAbilityCardTypeNounBindsTarget(t *testing.T) {
 
 // TestLowerActivatedAbilitySourceBoundGateStaysActivationCondition guards
 // against activationConditionOwnedByBody over-broadening: a Source-bound
-// ObjectMatches condition on an activated ability must still be extracted as
-// an activation condition for the specialized lowerers that expect to
-// receive it that way (e.g. the conditional-mana "instead" doubling
-// TestLowerIncubationDruidCounterMultiplierMana already covers), not treated
-// as a body-owned per-effect gate. Restricting the new fix to Target binding
-// specifically is what keeps this working; broadening it to Source during
-// development regressed Incubation Druid's mana ability.
+// ObjectMatches condition on an activated add-mana ability must still route
+// through isSemanticManaAbility (one of this function's two callers) to the
+// mana-ability lowerer, which strips and reinterprets that same condition
+// itself, rather than being treated as a body-owned per-effect gate here.
+// Restricting the new Target-bound case to Target specifically is what keeps
+// this working; broadening it to Source during development flipped
+// isSemanticManaAbility to false for this exact shape and regressed
+// TestLowerIncubationDruidCounterMultiplierMana (still unmodified, the
+// primary regression guard for this).
 func TestLowerActivatedAbilitySourceBoundGateStaysActivationCondition(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
