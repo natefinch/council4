@@ -1979,35 +1979,59 @@ func recognizePriorInstructionSubjectMatchCondition(body []shared.Token, atoms A
 }
 
 // recognizeThatSubjectMatchCondition handles the intervening subtype gate
-// "that <permanent-type> was a <selection>" ("if that creature was a Horror";
-// Endless Evil). Like the bare-pronoun "it was a <selection>" form it binds the
-// triggering event permanent and is evaluated against that object's last-known
-// information, so it holds even after the permanent has left the battlefield.
-// The subject between "that" and "was" must be either the bare noun "permanent"
-// or a permanent-type noun phrase (naming the triggering object by its type);
-// any other subject fails closed so the pronoun recognizer keeps ownership of
-// the "it was a" spellings.
+// "that <permanent-type> is/are/was a <selection>" ("if that creature was a
+// Horror", Endless Evil; "if that creature is a Bird", Rending Flame; "if
+// that permanent is a Spirit", Starfall). Like the bare-pronoun "it was/it's
+// a <selection>" form it seeds the triggering event permanent binding, even
+// for the present-tense copula: a triggered ability whose event supplies a
+// permanent that is STILL on the battlefield when this clause runs (e.g. an
+// enters-the-battlefield trigger) can be present-tense-referenced by "that
+// creature" exactly as readily as a resolving spell's own target can, so
+// tense alone cannot decide the antecedent up front. bindConditionReferences'
+// no-trigger fallback resolves the (very common) case where no trigger
+// exists at all -- there, an event permanent binding is provably impossible,
+// so it rebinds to the ability's sole target instead (Death's Caress:
+// "Destroy target creature. If that creature was a Human, ..."; Splash
+// Portal-shaped spells: "... If that creature is a Bird, ..."). When a
+// trigger DOES exist, this seed is evaluated against that object's
+// last-known information, so it holds even after the permanent has left the
+// battlefield. The subject between "that" and the copula must be either the
+// bare noun "permanent" or a permanent-type noun phrase (naming the object by
+// its type); any other subject fails closed so the pronoun recognizer keeps
+// ownership of the "it was/it's a" spellings.
 func recognizeThatSubjectMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	rest, ok := cutTokenPrefix(body, "that")
 	if !ok {
 		return ConditionClause{}, false
 	}
-	wasIndex := tokenWordIndex(rest, "was")
-	if wasIndex < 1 {
+	copulaIdx := -1
+	for i, tok := range rest {
+		if equalWord(tok, "was") || equalWord(tok, "is") || equalWord(tok, "are") {
+			copulaIdx = i
+			break
+		}
+	}
+	if copulaIdx < 1 {
 		return ConditionClause{}, false
 	}
-	if !tokenWordsEqual(rest[:wasIndex], "permanent") {
-		subjectSelection, ok := parseConditionSelection(rest[:wasIndex], atoms)
+	if !tokenWordsEqual(rest[:copulaIdx], "permanent") {
+		subjectSelection, ok := parseConditionSelection(rest[:copulaIdx], atoms)
 		if !ok || !conditionSelectionEmptyExceptType(subjectSelection) {
 			return ConditionClause{}, false
 		}
 	}
-	after := rest[wasIndex:]
-	matchRest, ok := cutTokenPrefix(after, "was", "a")
-	if !ok {
-		if matchRest, ok = cutTokenPrefix(after, "was", "an"); !ok {
-			return ConditionClause{}, false
+	after := rest[copulaIdx:]
+	var matchRest []shared.Token
+	for _, copula := range []string{"was", "is", "are"} {
+		if matchRest, ok = cutTokenPrefix(after, copula, "a"); ok {
+			break
 		}
+		if matchRest, ok = cutTokenPrefix(after, copula, "an"); ok {
+			break
+		}
+	}
+	if !ok {
+		return ConditionClause{}, false
 	}
 	selection, ok := parseConditionSelection(matchRest, atoms)
 	if !ok {

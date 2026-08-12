@@ -10,14 +10,14 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 32715
-- Supported (generated): 18305
-- Parser-complete: 22474
-- **Lowering backlog** (parser-complete, not generated): 4940
-- **Parser backlog** (not parser-complete, not generated): 9470
+- Supported (generated): 18315
+- Parser-complete: 22502
+- **Lowering backlog** (parser-complete, not generated): 4955
+- **Parser backlog** (not parser-complete, not generated): 9445
 
-Partition check: 18305 supported + 4940 lowering-backlog + 9470 parser-backlog = 32715 eligible. ✓
+Partition check: 18315 supported + 4955 lowering-backlog + 9445 parser-backlog = 32715 eligible. ✓
 
-771 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+768 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
@@ -74,8 +74,8 @@ Partition check: 18305 supported + 4940 lowering-backlog + 9470 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18305
-- Independent per-card recompile generated: 18305
+- Authoritative generated (compilecards report): 18315
+- Independent per-card recompile generated: 18315
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1700 | 1144 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 514 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
+| 1 | unsupported ordered effect sequence | 1710 | 1152 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 517 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
 | 3 | unsupported static declaration operation | 278 | 234 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 271 | 186 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 207 | 121 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
@@ -102,7 +102,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 16 | unsupported power/toughness spell | 88 | 67 | Murk Dwellers; Park Bleater; Shaper Parasite; Battle Frenzy; Blood Age General |
 | 17 | unsupported exile spell | 88 | 63 | Ravnica at War; Toluz, Clever Conductor; Consuming Sinkhole; Sengir Autocrat; Ulamog, the Ceaseless Hunger |
 | 18 | unsupported activation references | 70 | 59 | Planebound Accomplice; Puresight Merrow; Titans' Nest; Spurnmage Advocate; Pulsemage Advocate |
-| 19 | unsupported gain-control spell | 66 | 53 | Slave of Bolas; Legacy's Allure; The Super Hero Civil War; Dominating Vampire; Skyfire Kirin |
+| 19 | unsupported gain-control spell | 67 | 54 | Goatnap; Slave of Bolas; Legacy's Allure; The Super Hero Civil War; Dominating Vampire |
 | 20 | unsupported enters-with-counters replacement | 64 | 47 | Flycatcher Giraffid; Malefic Scythe; Callous Sell-Sword // Burn Together; Bone Devourer; Faerie Squadron |
 | 21 | unsupported type line | 61 | 60 | Playable Delusionary Hydra; Notorious Sliver War; City's Blessing // Elemental; Demonic Tourist Laser; Night Brushwagg Ringmaster |
 | 22 | unsupported cast effect | 58 | 31 | Oracle of Bones; Founding the Third Path; Forger's Foundry; Spell Queller; Xantid Swarm |
@@ -112,10 +112,10 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 26 | unsupported static declaration condition | 48 | 38 | Desperate Castaways; Nadaar, Selfless Paladin; Veldt; Gloom Stalker; Hazy Homunculus |
 | 27 | unsupported draw spell | 44 | 36 | Theft of Dreams; Fatigue; Gregor, Shrewd Magistrate; Nessian Boar; Thought Sponge |
 | 28 | unsupported library placement | 40 | 33 | Misinformation; Chittering Rats; Murderous Rider // Swift End; Landscaper Colos; God-Eternal Bontu |
-| 29 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
-| 30 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |
-| 31 | unsupported attach effect | 36 | 31 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
-| 32 | unsupported activation condition | 35 | 34 | Sparring Dummy; Ebon Praetor; Inner-Flame Igniter; Everflame Eidolon; Roadside Reliquary |
+| 29 | unsupported activation condition | 38 | 37 | Sparring Dummy; Ebon Praetor; Inner-Flame Igniter; Kaseto, Orochi Archmage; Everflame Eidolon |
+| 30 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
+| 31 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |
+| 32 | unsupported attach effect | 36 | 31 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
 | 33 | unsupported mana effect | 34 | 28 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
 | 34 | unsupported counter spell | 29 | 24 | Spell Blast; Drown in the Loch; Unyaro Griffin; Hisoka's Defiance; Frontline Medic |
 | 35 | unsupported shuffle effect | 28 | 26 | Dwell on the Past; Madblind Mountain; Perpetual Timepiece; Renewing Touch; Piper's Melody |
@@ -134,7 +134,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 48 | unsupported untap spell | 14 | 10 | Magus of the Candelabra; Early Harvest; Reality Spasm; The Thirteenth Doctor; Urtet, Remnant of Memnarch |
 | 49 | unsupported phase/step trigger phrase effect | 13 | 13 | Umaro, Raging Yeti; Quiet Disrepair; Sylvan Scavenging; Mister Hyde, Monster Within; Ferocification |
 | 50 | unsupported group power/toughness spell | 13 | 10 | Bloodline Culling; Thran Weaponry; Rabble-Rouser; Mercadia's Downfall; Firebird, Blazing Ranger |
-| 51 | unsupported emblem ability | 13 | 6 | Zariel, Archduke of Avernus; Tezzeret, Cruel Captain; Chandra, Torch of Defiance; Kaya the Inexorable; Koth, Fire of Resistance |
+| 51 | unsupported emblem ability | 13 | 7 | Zariel, Archduke of Avernus; Tezzeret, Cruel Captain; Chandra, Torch of Defiance; Kaya the Inexorable; Koth, Fire of Resistance |
 | 52 | unsupported can't-block effect | 12 | 12 | Blinding Flare; Temur Charm; Manacles of Decay; Goma Fada Vanguard; Mournwillow |
 | 53 | unsupported discard spell | 12 | 12 | Tormented Thoughts; Warped Devotion; Zhang Liao, Hero of Hefei; Cabal Conditioning; Jagged Poppet |
 | 54 | unsupported multiple spell abilities | 12 | 12 | Orcish Medicine; Agony Warp; Force Away; Incinerating Blast; Bounty of Might |
