@@ -885,6 +885,10 @@ func conditionIsBodyResolvingGate(condition compiler.CompiledCondition) bool {
 //   - "If <source object matches>, <effect>" conditional body rider (e.g.
 //     depletion taplands: "If there are no depletion counters on this land,
 //     sacrifice it.")
+//   - a per-effect object-match gate contained within one of the body's own
+//     effect clauses (e.g. "{G}: Exile target card from a graveyard. If it
+//     was a creature card, put a +1/+1 counter on this creature and you gain
+//     1 life.", Scavenging Ooze), regardless of which object it binds to
 func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
 	if len(content.Conditions) != 1 {
 		return false
@@ -909,6 +913,25 @@ func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
 		condition.Predicate == compiler.ConditionPredicateObjectMatches &&
 		condition.ObjectBinding == compiler.ReferenceBindingSource &&
 		condition.Negated {
+		return true
+	}
+	// A per-effect object-match gate bound to the ability's own target, whose
+	// span is contained within one of the body's own effect clauses ("If it
+	// was a creature card, put a +1/+1 counter...", Scavenging Ooze), is
+	// always a per-effect resolution gate, never an activation restriction: a
+	// genuine "Activate only if <gate>: <effect>" restriction always precedes
+	// every body effect (enforced later in prepareActivationCondition's own
+	// span check), so it could never be contained by one. Restricted to
+	// Target binding specifically (unlike the negated-Source rider above,
+	// which is Source-only): a Source-bound match ("if this creature has a
+	// +1/+1 counter on it") is exactly the shape specialized lowerers like
+	// the conditional-mana "instead" doubling (Incubation Druid) expect to
+	// receive as an EXTRACTED activation condition, not a body-owned gate;
+	// broadening this to Source regressed that lowerer when first tried.
+	if condition.Kind == compiler.ConditionIf &&
+		condition.Predicate == compiler.ConditionPredicateObjectMatches &&
+		condition.ObjectBinding == compiler.ReferenceBindingTarget &&
+		conditionCoveredByEffectClause(condition, content.Effects) {
 		return true
 	}
 	return false

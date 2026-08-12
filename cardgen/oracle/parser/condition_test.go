@@ -898,6 +898,77 @@ func TestParseConditionThatSubjectMatchRejectsOtherWording(t *testing.T) {
 	}
 }
 
+// TestParseConditionCardTypeNoun covers the "<type>+ card(s)" noun phrase
+// naming an object by its card type(s) while off the battlefield (CR 108.3):
+// "if it was a creature card" (Scavenging Ooze, Cling to Dust), "if it was a
+// land card" (Misfortune Teller). Real cards use this phrase inside the bare
+// "it was a <selection>" wording (recognizeEventSubjectMatchCondition), not
+// the "that <noun>" wording, so these cases exercise parseConditionNoun
+// through that entry point.
+func TestParseConditionCardTypeNoun(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		body  string
+		types []TriggerCardType
+	}{
+		{
+			name:  "creature card (singular)",
+			body:  "Exile target card from a graveyard. If it was a creature card, you gain 3 life.",
+			types: []TriggerCardType{TriggerCardTypeCreature},
+		},
+		{
+			name:  "land card",
+			body:  "Exile target card from a graveyard. If it was a land card, you gain 1 life.",
+			types: []TriggerCardType{TriggerCardTypeLand},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.body, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			clauses := document.Abilities[0].ConditionClauses
+			if len(clauses) != 1 {
+				t.Fatalf("clauses = %#v, want exactly one", clauses)
+			}
+			clause := clauses[0]
+			if clause.Predicate != ConditionPredicateObjectMatches ||
+				clause.ObjectBinding != ConditionObjectBindingEventPermanent {
+				t.Fatalf("clause = %#v, want ConditionPredicateObjectMatches/EventPermanent", clause)
+			}
+			if !slices.Equal(clause.Selection.RequiredTypes, test.types) {
+				t.Fatalf("clause.Selection.RequiredTypes = %#v, want %#v", clause.Selection.RequiredTypes, test.types)
+			}
+		})
+	}
+}
+
+// TestParseConditionCardTypeNounRejectsBarePermanentCard confirms "permanent
+// card" (Lion Sash: "if it was a permanent card") fails closed rather than
+// silently producing an empty, always-matching selection. Unlike every other
+// production this family supports, "permanent card" needs a disjunctive "any
+// card type but instant/sorcery" match that ConditionSelection has no field
+// for; see parseConditionCardTypeNoun's doc comment for the full rationale.
+func TestParseConditionCardTypeNounRejectsBarePermanentCard(t *testing.T) {
+	t.Parallel()
+	body := "Exile target card from a graveyard. If it was a permanent card, put a +1/+1 counter on this permanent."
+	document, _ := Parse(body, Context{InstantOrSorcery: true})
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %#v", document.Abilities)
+	}
+	for _, clause := range document.Abilities[0].ConditionClauses {
+		if clause.Predicate == ConditionPredicateObjectMatches {
+			t.Fatalf("clause unexpectedly recognized as ObjectMatches: %#v", clause)
+		}
+	}
+}
+
 // TestParseConditionTargetAttributeCompare covers the resolving per-effect
 // gate that compares a numeric attribute of the clause's own target against a
 // threshold via the named-possessive form "that <permanent-noun>'s

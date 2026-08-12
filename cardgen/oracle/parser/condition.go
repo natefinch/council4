@@ -4286,8 +4286,57 @@ func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionS
 		selection.TokenOnly = true
 		return selection, true
 	}
+	// A card noun naming the object by its card type(s) while off the
+	// battlefield, tested by characteristics alone per CR 108.3: "if it was a
+	// creature card" (Scavenging Ooze, Cling to Dust), "if it was a land card"
+	// (Misfortune Teller). This must come before parseConditionSubtypeNoun
+	// below: without a required-type prefix, a lone trailing "card"/"cards"
+	// is not itself a recognized noun (unlike "permanent"/"token"), and
+	// parseConditionSubtypeNoun's <name> suffix productions only accept
+	// "planeswalker" or "creature", so neither would otherwise accept it.
+	if clause, ok := parseConditionCardTypeNoun(tokens, atoms, selection); ok {
+		return clause, true
+	}
 	// A subtype noun: creature, land, or "<name> planeswalker".
 	return parseConditionSubtypeNoun(tokens, atoms, selection)
+}
+
+// parseConditionCardTypeNoun matches "<type>+ card(s)" ("if it was a creature
+// card", "if it was a land card"). It only accepts a trailing literal
+// "card"/"cards" noun preceded by one or more explicit card-type words; every
+// other tail (the bare "permanent"/"token" nouns, or a subtype noun like
+// "creature") is handled by its own dedicated production in the caller
+// instead. The bare "permanent card" wording (Lion Sash: "if it was a
+// permanent card") is deliberately NOT handled here and fails closed: unlike
+// every other production in this function, it needs a disjunctive "any card
+// type but instant/sorcery" match that ConditionSelection has no field for
+// today (RequiredTypes is conjunctive, requiring every listed type
+// simultaneously; returning it empty here would wrongly match literally any
+// card, including instants and sorceries, which are Cards but never
+// permanents) -- a real, documented follow-up, not attempted in this slice.
+func parseConditionCardTypeNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
+	if len(tokens) < 2 {
+		return ConditionSelection{}, false
+	}
+	last := tokens[len(tokens)-1]
+	if !equalWord(last, "card") && !equalWord(last, "cards") {
+		return ConditionSelection{}, false
+	}
+	head := tokens[:len(tokens)-1]
+	headTypes := make([]TriggerCardType, 0, len(head))
+	for _, token := range head {
+		cardType, ok := atoms.CardTypeAt(token.Span)
+		if !ok {
+			return ConditionSelection{}, false
+		}
+		mapped := triggerCardTypeFromAtom(cardType)
+		if slices.Contains(headTypes, mapped) {
+			return ConditionSelection{}, false
+		}
+		headTypes = append(headTypes, mapped)
+	}
+	selection.RequiredTypes = append(selection.RequiredTypes, headTypes...)
+	return selection, len(selection.RequiredTypes) > 0
 }
 
 func parseConditionSubtypeNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
