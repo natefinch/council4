@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18315 supported cards
+# 18321 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -2782,6 +2782,7 @@ f5314beaa6094efd  Cliffhaven Kitesail
 a6615d78253f9692  Cliffrunner Behemoth
 22aac4d5afe81c5d  Cliffside Lookout
 791d217eda212b08  Clifftop Retreat
+3f9b010bdc27f370  Cling to Dust
 6afea633aa9a2c61  Clinging Anemones
 57d062f370f4b0d1  Clinging Darkness
 c3849131ac501e5a  Clinquant Skymage
@@ -4950,6 +4951,7 @@ fd2a693ea0b2b6fc  Eternal Warrior
 8c8a3ea74ac26f17  Eternal Witness
 0173cac874c40675  Eternity Snare
 6b5969e658af9a4d  Ethercaste Knight
+2d1c6eb0ceb7e0d2  Ethereal Absolution
 bfa1d385228f611a  Ethereal Armor
 8a5cb195b362de9d  Ethereal Champion
 05fbf4cc0dfbd302  Ethereal Elk
@@ -6810,6 +6812,7 @@ f6aa89ecae7838e0  Grenzo, Havoc Raiser
 934c99422a91e01d  Grief Tyrant
 ff95310b339f7e6a  Griffin
 cdd30e571d0c776e  Griffin Aerie
+eb6a64f6ccc3f073  Griffin Canyon
 0579403ab5b7ce82  Griffin Dreamfinder
 5457fb532ba96ff5  Griffin Guide
 e5388b4ae3a06de2  Griffin Protector
@@ -7995,6 +7998,7 @@ a835e836d9ccd7ce  Inundate
 149f7db8a7c7855d  Invading Manticore
 88239f2fdefebae5  Invasion of Belenon // Belenon War Anthem
 2e3e6686425bcef5  Invasion of Dominaria // Serra Faithkeeper
+36111abf98c506e1  Invasion of Innistrad // Deluge of the Dead
 48c1a1dd6e3ecc75  Invasion of Ixalan // Belligerent Regisaur
 607beb8b19ed93b5  Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship
 af0ecca92e6303f7  Invasion of Kamigawa // Rooftop Saboteurs
@@ -8359,6 +8363,7 @@ c7fbf6383b0d021a  Karoo
 657a9a5859169f3a  Karplusan Hound
 7bccec88ae6d1f80  Karplusan Wolverine
 bfbf7b79dc0b2454  Karstoderm
+21ac62047c72cf81  Kaseto, Orochi Archmage
 cd2e8e5bd040dfac  Kashi-Tribe Reaver
 bd928ded8b3e3645  Kashi-Tribe Warriors
 730354c51a5e0bea  Kasimir the Lone Wolf
@@ -17711,6 +17716,7 @@ c7405d2c3a63b130  Web of Life and Destiny
 b176535076b78c63  Web-Warriors
 5f4d37b00e8d1458  Webspinner Cuff
 8997fdfd10fcd961  Webweaver Changeling
+b11418d9aa9b9317  Wedding Invitation
 6a3318a1ca044bca  Wedding Security
 ea40a70de00481a2  Wee Dragonauts
 1ba6ce2a7dc46ce6  Weed-Pruner Poplar

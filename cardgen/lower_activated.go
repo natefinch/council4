@@ -879,12 +879,17 @@ func conditionIsBodyResolvingGate(condition compiler.CompiledCondition) bool {
 }
 
 // activationConditionOwnedByBody reports whether an activated ability's single
-// condition is a body-level gate that the ordered-sequence lowerer consumes
-// directly, rather than an activation gate. Recognized forms:
+// condition is a body-level gate that the ordered-sequence lowerer (or the
+// mana-ability lowerer, via isSemanticManaAbility's own call to this function)
+// consumes directly, rather than an activation gate. Recognized forms:
 //   - "unless its controller pays" tax (counter-unless-pays)
 //   - "If <source object matches>, <effect>" conditional body rider (e.g.
 //     depletion taplands: "If there are no depletion counters on this land,
 //     sacrifice it.")
+//   - a per-effect object-match gate bound to the ability's own target,
+//     contained within one of the body's own effect clauses (e.g. "{G}{U}:
+//     Target creature can't be blocked this turn. If that creature is a
+//     Snake, it gets +2/+2 until end of turn.", Kaseto, Orochi Archmage)
 func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
 	if len(content.Conditions) != 1 {
 		return false
@@ -909,6 +914,27 @@ func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
 		condition.Predicate == compiler.ConditionPredicateObjectMatches &&
 		condition.ObjectBinding == compiler.ReferenceBindingSource &&
 		condition.Negated {
+		return true
+	}
+	// A per-effect object-match gate bound to the ability's own target, whose
+	// span is contained within one of the body's own effect clauses ("If that
+	// creature is a Snake, ...", Kaseto, Orochi Archmage), is always a
+	// per-effect resolution gate, never an activation restriction: a genuine
+	// "Activate only if <gate>: <effect>" restriction always precedes every
+	// body effect (enforced later in prepareActivationCondition's own span
+	// check), so it could never be contained by one. Restricted to Target
+	// binding specifically (unlike the negated-Source rider above, which is
+	// Source-only): this function also gates isSemanticManaAbility, and
+	// broadening this new case to Source during development flipped that
+	// check to false for Incubation Druid's conditional-mana "instead"
+	// doubling ("If this creature has a +1/+1 counter on it, add three mana
+	// of that type instead."), diverting it away from the mana-ability
+	// lowerer entirely (which strips and re-interprets that same Source-bound
+	// condition itself, before prepareActivationCondition would ever see it).
+	if condition.Kind == compiler.ConditionIf &&
+		condition.Predicate == compiler.ConditionPredicateObjectMatches &&
+		condition.ObjectBinding == compiler.ReferenceBindingTarget &&
+		conditionCoveredByEffectClause(condition, content.Effects) {
 		return true
 	}
 	return false

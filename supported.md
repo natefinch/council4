@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,315 of 32,715 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,904 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,321 of 32,715 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,904 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2776,6 +2776,7 @@ Council4 currently supports **18,315 of 32,715 cards eligible for paper support 
 - Cliffrunner Behemoth
 - Cliffside Lookout
 - Clifftop Retreat
+- Cling to Dust
 - Clinging Anemones
 - Clinging Darkness
 - Clinquant Skymage
@@ -4944,6 +4945,7 @@ Council4 currently supports **18,315 of 32,715 cards eligible for paper support 
 - Eternal Witness
 - Eternity Snare
 - Ethercaste Knight
+- Ethereal Absolution
 - Ethereal Armor
 - Ethereal Champion
 - Ethereal Elk
@@ -6804,6 +6806,7 @@ Council4 currently supports **18,315 of 32,715 cards eligible for paper support 
 - Grief Tyrant
 - Griffin
 - Griffin Aerie
+- Griffin Canyon
 - Griffin Dreamfinder
 - Griffin Guide
 - Griffin Protector
@@ -7989,6 +7992,7 @@ Council4 currently supports **18,315 of 32,715 cards eligible for paper support 
 - Invading Manticore
 - Invasion of Belenon // Belenon War Anthem
 - Invasion of Dominaria // Serra Faithkeeper
+- Invasion of Innistrad // Deluge of the Dead
 - Invasion of Ixalan // Belligerent Regisaur
 - Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship
 - Invasion of Kamigawa // Rooftop Saboteurs
@@ -8353,6 +8357,7 @@ Council4 currently supports **18,315 of 32,715 cards eligible for paper support 
 - Karplusan Hound
 - Karplusan Wolverine
 - Karstoderm
+- Kaseto, Orochi Archmage
 - Kashi-Tribe Reaver
 - Kashi-Tribe Warriors
 - Kasimir the Lone Wolf
@@ -17705,6 +17710,7 @@ Council4 currently supports **18,315 of 32,715 cards eligible for paper support 
 - Web-Warriors
 - Webspinner Cuff
 - Webweaver Changeling
+- Wedding Invitation
 - Wedding Security
 - Wee Dragonauts
 - Weed-Pruner Poplar
