@@ -922,6 +922,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,
+		recognizeThatSubjectTargetMatchCondition,
 		recognizeTargetAttributeCompareCondition,
 		recognizeObjectAttackedThisTurnCondition,
 		recognizeEventSubjectCondition,
@@ -2138,6 +2139,76 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	// creature") are left for recognizeEventSubjectCondition so they keep the
 	// EventPermanent binding used by trigger intervening-if conditions.
 	if len(selection.RequiredTypes) > 0 {
+		return ConditionClause{}, false
+	}
+	return ConditionClause{
+		Predicate:     ConditionPredicateObjectMatches,
+		ObjectBinding: ConditionObjectBindingTarget,
+		Selection:     selection,
+	}, true
+}
+
+// recognizeThatSubjectTargetMatchCondition matches the resolving per-effect
+// gate "that <permanent-noun> is/are a/an <selection>" (present tense),
+// binding the condition's object to the clause's own target: "Exile target
+// creature you control, then return it to the battlefield... If that
+// creature is a Bird, Frog, Otter, or Rat, draw a card." (Splash Portal),
+// "Target creature you control gets +2/+2... If that creature is an Ally,
+// ..." (Yip Yip!). The subject between "that" and "is"/"are" must be either
+// the bare noun "permanent" or a permanent-type noun phrase, mirroring
+// recognizeThatSubjectMatchCondition's identical subject restriction.
+//
+// Present tense is the discriminator that makes this binding unambiguous, in
+// contrast to the past-tense "that <noun> was a <selection>" form
+// (recognizeThatSubjectMatchCondition), which real cards use for BOTH a
+// departed target (Death's Caress: "Destroy target creature. If that
+// creature was a Human, ...", last-known information after the destroy) and
+// a triggering event's permanent (Endless Evil: "When enchanted creature
+// dies, if that creature was a Horror, ...", last-known information after
+// the death) -- CR 608.2b requires past tense once an object has left the
+// battlefield, regardless of WHICH antecedent it was. Present tense "is"/
+// "are" only makes grammatical sense while the referenced object is still on
+// the battlefield, which for a per-effect condition can only be this
+// clause's own target (a departed event permanent would need "was", not
+// "is"); a corpus survey of every real "that creature/permanent is a/an ..."
+// card found none bound to an event permanent, confirming this reading holds
+// in practice, not just in principle. It therefore binds Target directly,
+// unlike the past-tense form, which needs compile-time disambiguation (see
+// bindConditionReferences's no-trigger fallback).
+func recognizeThatSubjectTargetMatchCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
+	rest, ok := cutTokenPrefix(body, "that")
+	if !ok {
+		return ConditionClause{}, false
+	}
+	copulaIdx := -1
+	for i, tok := range rest {
+		if equalWord(tok, "is") || equalWord(tok, "are") {
+			copulaIdx = i
+			break
+		}
+	}
+	if copulaIdx < 1 {
+		return ConditionClause{}, false
+	}
+	if !tokenWordsEqual(rest[:copulaIdx], "permanent") {
+		subjectSelection, ok := parseConditionSelection(rest[:copulaIdx], atoms)
+		if !ok || !conditionSelectionEmptyExceptType(subjectSelection) {
+			return ConditionClause{}, false
+		}
+	}
+	after := rest[copulaIdx:]
+	matchRest, ok := cutTokenPrefix(after, "is", "a")
+	if !ok {
+		if matchRest, ok = cutTokenPrefix(after, "is", "an"); !ok {
+			if matchRest, ok = cutTokenPrefix(after, "are", "a"); !ok {
+				if matchRest, ok = cutTokenPrefix(after, "are", "an"); !ok {
+					return ConditionClause{}, false
+				}
+			}
+		}
+	}
+	selection, ok := parseConditionSelection(matchRest, atoms)
+	if !ok {
 		return ConditionClause{}, false
 	}
 	return ConditionClause{

@@ -98,33 +98,51 @@ func TestLowerTargetAttributeCompareSpellNounFailsClosed(t *testing.T) {
 	}
 }
 
-// TestLowerBareItsAttributeCompareNotClaimedByTarget guards against the
-// recognizer regression this family's development uncovered: a bare "its
-// power is/was N or greater" always binds to the triggering event's
-// permanent via the pre-existing recognizeEventSubjectPowerState, never to
-// the clause's own target, because a real, already-shipped card depends on
-// that binding for a trigger body with no target at all (Tribute to the
-// World Tree: "Whenever a creature you control enters, draw a card if its
-// power is 3 or greater. Otherwise, put two +1/+1 counters on it."). This
-// guards that a spell-sequence body using the SAME bare "its power ... or
-// greater" wording after a target effect does not silently get bound to the
-// (irrelevant) event-permanent reference instead of failing closed: with no
-// event permanent available in a plain spell body, it should compile as
-// unsupported, not target the wrong object.
-func TestLowerBareItsAttributeCompareNotClaimedByTarget(t *testing.T) {
+// TestLowerBareItsAttributeCompareBindsTargetWhenNoTriggerExists guards the
+// bare "its power/toughness/mana value is/was N or greater" gate's binding
+// resolution across BOTH real shapes it covers, which is why the parser's
+// recognizeTargetAttributeCompareCondition still deliberately never accepts
+// "its" directly (see its doc comment) -- the two shapes are disambiguated
+// downstream, at compile time in bindConditionReferences, not by the parser:
+//
+//   - In a triggered ability with no target ("Whenever a creature you
+//     control enters, draw a card if its power is 3 or greater. Otherwise,
+//     put two +1/+1 counters on it.", Tribute to the World Tree, guarded by
+//     TestLowerOtherwiseBranchKeyedOnEventPower), "its" binds the triggering
+//     event's permanent via recognizeEventSubjectPowerState's parse and
+//     stays bound there: a trigger exists, so the event-permanent reading
+//     remains a live candidate and is preferred.
+//   - In a plain, non-triggered spell with exactly one single-object target
+//     ("Destroy target creature. If its power is 4 or greater, draw a
+//     card."), no trigger exists at all, so the event-permanent reading
+//     recognizeEventSubjectPowerState's parse initially assumed can never
+//     have been correct; bindConditionReferences's no-trigger fallback (the
+//     same mechanism added for "that <noun> was a <selection>",
+//     recognizeThatSubjectMatchCondition) rebinds it to the sole target
+//     instead, reading its post-destroy characteristics through last-known
+//     information (CR 608.2b).
+//
+// This test guards the second shape now succeeds instead of failing closed;
+// TestLowerOtherwiseBranchKeyedOnEventPower guards the first shape is
+// unaffected by the fallback (a trigger exists there, so it never engages).
+func TestLowerBareItsAttributeCompareBindsTargetWhenNoTriggerExists(t *testing.T) {
 	t.Parallel()
-	card := &ScryfallCard{
-		Name:       "Bare Its Power Probe",
-		Layout:     "normal",
-		TypeLine:   "Sorcery",
-		OracleText: "Destroy target creature. If its power is 4 or greater, draw a card.",
+	sequence := lowerSpellSequence(t, "Bare Its Power Test",
+		"Destroy target creature. If its power is 4 or greater, draw a card.")
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %#v, want two instructions (destroy, gated draw)", sequence)
 	}
-	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
-	if err != nil {
-		t.Fatalf("GenerateExecutableCardSource error = %v", err)
+	destroy := sequence[0]
+	if _, ok := destroy.Primitive.(game.Destroy); !ok {
+		t.Fatalf("instruction[0] = %T, want game.Destroy", destroy.Primitive)
 	}
-	if len(diagnostics) == 0 && source != "" {
-		t.Fatal("bare-its attribute-compare gate unexpectedly compiled without any diagnostic")
+	draw := sequence[1]
+	gate := effectConditionMatch(t, draw)
+	if gate.Object.Val.Kind() != game.ObjectReferenceTargetPermanent || gate.Object.Val.TargetIndex() != 0 {
+		t.Fatalf("gate object = %#v, want target permanent 0", gate.Object)
+	}
+	if got := gate.ObjectMatches.Val.Power; !got.Exists || got.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 4}) {
+		t.Fatalf("gate power = %#v, want >= 4", got)
 	}
 }
 

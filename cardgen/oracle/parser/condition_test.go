@@ -807,6 +807,96 @@ func TestParseConditionResultThisWay(t *testing.T) {
 	}
 }
 
+// TestParseConditionThatSubjectTargetMatch covers the present-tense resolving
+// per-effect gate "that <permanent-noun> is/are a/an <selection>", binding
+// the condition's object to the clause's own target: Splash Portal ("Exile
+// target creature you control, then return it to the battlefield... If that
+// creature is a Bird, Frog, Otter, or Rat, draw a card.") and Yip Yip!
+// ("Target creature you control gets +2/+2... If that creature is an Ally,
+// ..."). Present tense is what makes the binding unambiguous -- see
+// recognizeThatSubjectTargetMatchCondition's doc comment for why the
+// past-tense sibling (recognizeThatSubjectMatchCondition, "that <noun> was a
+// <selection>") cannot bind Target directly the same way.
+func TestParseConditionThatSubjectTargetMatch(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name  string
+		body  string
+		types []TriggerCardType
+		subs  []types.Sub
+	}{
+		{
+			name: "that creature is a subtype (singular copula)",
+			body: "Destroy target creature. If that creature is a Human, you gain 2 life.",
+			subs: []types.Sub{"Human"},
+		},
+		{
+			name: "that creature is an Ally",
+			body: "Target creature you control gets +2/+2 until end of turn. If that creature is an Ally, you draw a card.",
+			subs: []types.Sub{"Ally"},
+		},
+		{
+			name:  "that permanent is a planeswalker (required type)",
+			body:  "Destroy target Forest, green enchantment, or green planeswalker. If that permanent is a planeswalker, draw a card.",
+			types: []TriggerCardType{TriggerCardTypePlaneswalker},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			document, diagnostics := Parse(test.body, Context{InstantOrSorcery: true})
+			if len(diagnostics) != 0 {
+				t.Fatalf("diagnostics = %#v", diagnostics)
+			}
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			clauses := document.Abilities[0].ConditionClauses
+			if len(clauses) != 1 {
+				t.Fatalf("clauses = %#v, want exactly one", clauses)
+			}
+			clause := clauses[0]
+			if clause.Predicate != ConditionPredicateObjectMatches ||
+				clause.ObjectBinding != ConditionObjectBindingTarget {
+				t.Fatalf("clause = %#v, want ConditionPredicateObjectMatches/Target", clause)
+			}
+			if test.subs != nil && !slices.Equal(clause.Selection.SubtypesAny, test.subs) {
+				t.Fatalf("clause.Selection.SubtypesAny = %#v, want %#v", clause.Selection.SubtypesAny, test.subs)
+			}
+			if test.types != nil && !slices.Equal(clause.Selection.RequiredTypes, test.types) {
+				t.Fatalf("clause.Selection.RequiredTypes = %#v, want %#v", clause.Selection.RequiredTypes, test.types)
+			}
+		})
+	}
+}
+
+// TestParseConditionThatSubjectTargetMatchRejectsOtherWording confirms the
+// recognizer fails closed on wording it does not model: past tense (owned by
+// recognizeThatSubjectMatchCondition instead), a subject noun that is not a
+// permanent-type noun, and a copula with no article.
+func TestParseConditionThatSubjectTargetMatchRejectsOtherWording(t *testing.T) {
+	t.Parallel()
+	bodies := []string{
+		"Destroy target creature. If that creature was a Human, draw a card.",
+		"Destroy target creature. If that spell is a Human, draw a card.",
+		"Destroy target creature. If that creature is legendary, draw a card.",
+	}
+	for _, body := range bodies {
+		t.Run(body, func(t *testing.T) {
+			t.Parallel()
+			document, _ := Parse(body, Context{InstantOrSorcery: true})
+			if len(document.Abilities) != 1 {
+				t.Fatalf("abilities = %#v", document.Abilities)
+			}
+			for _, clause := range document.Abilities[0].ConditionClauses {
+				if clause.Predicate == ConditionPredicateObjectMatches && clause.ObjectBinding == ConditionObjectBindingTarget {
+					t.Fatalf("clause unexpectedly recognized as ObjectMatches/Target: %#v", clause)
+				}
+			}
+		})
+	}
+}
+
 // TestParseConditionTargetAttributeCompare covers the resolving per-effect
 // gate that compares a numeric attribute of the clause's own target against a
 // threshold via the named-possessive form "that <permanent-noun>'s
