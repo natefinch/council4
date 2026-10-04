@@ -64,6 +64,7 @@ type selectionSubject struct {
 
 	// event and cardTypes back the event-permanent and cast-spell subjects.
 	event     game.Event
+	snapshot  *game.ObjectSnapshot
 	cardTypes []types.Card
 	card      *game.CardInstance
 
@@ -370,6 +371,9 @@ func (s *selectionSubject) hasType(cardType types.Card) bool {
 	case subjectPermanent:
 		return slices.Contains(s.values.types, cardType)
 	case subjectEventPermanent:
+		if s.snapshot != nil {
+			return slices.Contains(s.snapshot.Types, cardType)
+		}
 		return eventPermanentHasType(s.g, s.event, cardType)
 	case subjectCastSpell:
 		return slices.Contains(s.cardTypes, cardType)
@@ -990,6 +994,9 @@ func (s *selectionSubject) name() (string, bool) {
 		}
 		return permanentEffectiveName(s.g, s.permanent), true
 	case subjectEventPermanent:
+		if s.snapshot != nil {
+			return s.snapshot.Name, s.snapshot.Name != ""
+		}
 		def, ok := s.eventPermanentCardDef()
 		if !ok {
 			return "", false
@@ -1133,6 +1140,9 @@ func cardFacePT(card *game.CardInstance, pick func(game.CardFace) opt.V[game.PT]
 }
 
 func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, bool) {
+	if s.snapshot != nil {
+		return snapshotSelectionValues(*s.snapshot), true
+	}
 	if s.event.PermanentID == 0 {
 		return permanentEffectiveValues{}, false
 	}
@@ -1143,6 +1153,10 @@ func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, boo
 	if !ok {
 		return permanentEffectiveValues{}, false
 	}
+	return snapshotSelectionValues(snapshot), true
+}
+
+func snapshotSelectionValues(snapshot game.ObjectSnapshot) permanentEffectiveValues {
 	var keywords keywordSet
 	for _, keyword := range snapshot.Keywords {
 		keywords.set(keyword, true)
@@ -1159,7 +1173,7 @@ func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, boo
 		toughness:   snapshot.Toughness.Val,
 		toughnessOK: snapshot.Toughness.Exists,
 		keywords:    keywords,
-	}, true
+	}
 }
 
 func (s *selectionSubject) eventPermanentCardDef() (*game.CardDef, bool) {

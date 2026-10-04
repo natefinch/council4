@@ -28,6 +28,34 @@ diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Resolving object-match conditions retain the parser-owned subject reference,
+its target occurrence, and its target domain. A prior targeted graveyard card
+can therefore remain the subject after exile without being confused with the
+permanent that triggered the ability. Permanent targets use current effective
+characteristics while present and last-known characteristics after departure;
+card targets use card identity and card characteristics. Leading condition
+references belong to the condition, not to the gated effect's reconstructed
+subject. Singular subjects with ambiguous or plural target ownership fail
+closed, as do optional preceding target slots. Typed demonstrative nouns also
+constrain the antecedent: an event's "that land" is not a later creature target.
+Supported compound card-noun contractions use the same selection grammar as
+their uncontracted forms; missing contextual ownership never selects the event
+as a default. Blink-result incarnations, resolution-chosen cards, and permanent/card
+union selection remain separate capabilities. Existing subtype-only contracted
+target gates retain their legacy lowering; this tranche does not rewrite their
+linked return/blink behavior.
+
+Condition type selections share the selection atom vocabulary: adjacent types
+are conjunctive (`artifact creature`), `or`/`and/or` joins alternatives,
+and `noncreature`/`nonland` exclude types. A `permanent card` condition is
+the union of artifact, battle, creature, enchantment, land, and planeswalker
+types, evaluated against the bound object's characteristics, including typed
+last-known information. It is not an empty permanent filter or a conjunction
+of all six types. Unexpected qualifiers and unknown constructed type values
+fail closed. Expanded type selections do not admit card-target or competing
+event/target gates until their subject binding is runtime-capable; recognizing
+the noun phrase alone does not make the whole card supported.
+
 Trigger recognition belongs to the Oracle parser. Its composable grammar emits
 source-spanned typed syntax for permanent zone-change, spell/ability, combat,
 damage, phase/step, permanent-state, counter, sacrifice, mutate, targeting, and
@@ -72,7 +100,8 @@ Vanguard cards are excluded with explicit report reasons.
    call `lowerAbilityContent` directly; no shell lowerer constructs a fake spell
    ability to reach body lowering. `condition.go` is the single
    `oracle.CompiledCondition` to `game.Condition` adapter and requires an
-   explicit static, activation, replacement, or intervening-trigger context.
+   explicit static, activation, replacement, resolving-effect, or
+   intervening-trigger context.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
    prior-instruction results. Ordered lowering also supports the exact linked
@@ -126,7 +155,12 @@ Vanguard cards are excluded with explicit report reasons.
    those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
    Keyword identity, keyword-selector identity, and keyword parameters arrive
-   from parser-owned typed syntax. Lowering maps typed keyword kinds to runtime
+   from parser-owned typed syntax. Ordered sequences remap single-object
+   `game.MovePermanent` references independently of destination, including
+   library top/bottom placement followed or preceded by supported riders.
+   Group moves and controlled-choice moves remain outside this remapping path;
+   unsupported subjects, conditions, and placement parameters still fail closed.
+   Lowering maps typed keyword kinds to runtime
    templates and consumes already-parsed mana costs, integers, Enchant targets,
    and Protection predicates; it never parses keyword names or parameter text.
    Multi-keyword lines whose keywords are separated by semicolons (e.g. older
@@ -365,6 +399,14 @@ Vanguard cards are excluded with explicit report reasons.
    exact consumed-target/reference/keyword/condition counts rather than a
    one-instruction-per-effect tally (`Tandem Tactics`, `Calamitous Tide`,
    `Seismic Spike`).
+   A counter tax's typed payment condition is linked by its parser boundary
+   NodeID to the owning counter clause, rather than lowered as a boolean gate.
+   The existing clause lowerer emits `game.Pay` for the target/event spell's
+   controller and counters only on payment failure; independent riders retain
+   their own gates. A supported outer state condition gates both instructions
+   without replacing the payment result gate. Fixed, `X`, and already-supported
+   mana multipliers compose this way; multiple embedded taxes and payment-outcome
+   callbacks remain fail-closed until their result provenance is modeled.
    Exact fixed, `X`, and supported dynamic placement of recognized named
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
@@ -696,7 +738,28 @@ Vanguard cards are excluded with explicit report reasons.
    in the contiguous gated tail is gated on the optional having succeeded. An
    independent later sentence ("… If you do, Y. Z.") does not contain the gate
    condition and would resolve unconditionally, so the whole body fails closed
-   rather than gating only part of the tail. The exact mandatory
+   rather than gating only part of the tail. Passive singular result conditions
+   ("If a land card is discarded this way", "If a Pirate was exiled this way")
+   retain the shared typed noun selection and bind the nearest preceding
+   producer of that outcome. Their instruction gate requires success **and**
+   a matching actual result member. Card moves retain printed characteristics;
+   permanent departures freeze effective last-known characteristics before
+   intervening effects or linked returns can change object identity. This does
+   not constrain the producer's choices: Lord Windgrace may discard a nonland
+   and still gets his unconditional draw, but not his additional draw.
+   Literal "if you do" stays an unfiltered success gate. Result filters admit
+   stable type, supertype, subtype, color, and name atoms; contextual predicates,
+   active-voice antecedents, plural quantifiers, and cost antecedents are not
+   expanded by this path. "Otherwise" negates the complete successful-result
+   predicate, including noun membership, without changing the producer's
+   scalar result. Explicit "If you don't" retains the unfiltered producer-failure
+   gate rather than testing noun mismatch. An explicit "card" noun requires a
+   card-result publisher
+   (`Discard`, `MoveCard`, `ChooseFromZone`, or `MoveTopOfLibrary`); applying it
+   to a permanent departure fails closed rather than confusing pre-move LKI
+   with a post-move card. Permanent result publishers (`Destroy`, `Sacrifice`,
+   `SacrificePermanents`, and `MovePermanent`) retain the old object's identity,
+   not a newly returned blink permanent. The exact mandatory
    sacrifice-conditioned reanimation shape lowers
    separately: sacrifice one creature through `game.SacrificePermanents`, publish
    that instruction's success, and gate one tapped `PutOnBattlefield` instruction

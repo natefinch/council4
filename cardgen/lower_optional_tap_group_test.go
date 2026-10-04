@@ -95,7 +95,7 @@ func TestLowerOptionalTapGroupScaledConsequence(t *testing.T) {
 	if pump.Duration != game.DurationUntilEndOfTurn {
 		t.Fatalf("pump duration = %#v, want until end of turn", pump.Duration)
 	}
-	if !sequence[1].ResultGate.Exists || sequence[1].ResultGate.Val != wantGate {
+	if !sequence[1].ResultGate.Exists || !reflect.DeepEqual(sequence[1].ResultGate.Val, wantGate) {
 		t.Fatalf("pump result gate = %#v, want %#v", sequence[1].ResultGate, wantGate)
 	}
 
@@ -112,7 +112,7 @@ func TestLowerOptionalTapGroupScaledConsequence(t *testing.T) {
 	if !damage.DamageSource.Exists || damage.DamageSource.Val != game.SourcePermanentReference() {
 		t.Fatalf("damage source = %#v, want source permanent", damage.DamageSource)
 	}
-	if !sequence[2].ResultGate.Exists || sequence[2].ResultGate.Val != wantGate {
+	if !sequence[2].ResultGate.Exists || !reflect.DeepEqual(sequence[2].ResultGate.Val, wantGate) {
 		t.Fatalf("damage result gate = %#v, want %#v", sequence[2].ResultGate, wantGate)
 	}
 }

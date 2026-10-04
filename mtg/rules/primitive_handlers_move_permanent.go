@@ -23,7 +23,7 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 
 	if prim.ControlledChoice {
 		chosen := r.chooseControlledMovePermanents(prim)
-		res.succeeded = movePermanentsToZoneSimultaneously(r.game, chosen, prim.Destination)
+		res.succeeded = r.moveResultPermanents(chosen, prim.Destination)
 		if res.succeeded {
 			r.placeMovedOnLibraryBottom(prim, chosen)
 		}
@@ -49,6 +49,9 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 				continue
 			}
 			res.succeeded = true
+			if result.destination == prim.Destination {
+				r.rememberResultObject(permanentObjectBindingRef(result.permanent))
+			}
 			moved = append(moved, result.permanent)
 			if ref, ok := refs[result.permanent]; ok && prim.PublishLinked != "" {
 				rememberLinkedObject(r.game, linkedKey, ref)
@@ -61,7 +64,7 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 	if targets.resolved {
 		permanent := targets.permanents[0]
 		linkedObjectRef := permanentLinkedObjectRef(permanent)
-		res.succeeded = movePermanentToZone(r.game, permanent, prim.Destination)
+		res.succeeded = r.moveResultPermanents(targets.permanents, prim.Destination)
 		if res.succeeded {
 			r.placeMovedOnLibraryBottom(prim, targets.permanents)
 		}

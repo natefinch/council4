@@ -1020,7 +1020,17 @@ func resolvedObjectMatchesConditionSelection(
 		return matchSelection(&subject, selection)
 	}
 	if resolved.snapshot.ObjectID == 0 {
-		return false
+		card, ok := g.GetCardInstance(resolved.snapshot.CardID)
+		if !ok {
+			return false
+		}
+		subject := selectionSubject{
+			kind:   subjectCard,
+			g:      g,
+			card:   card,
+			viewer: ctx.controller,
+		}
+		return matchSelection(&subject, selection)
 	}
 	subject := selectionSubject{
 		kind:             subjectEventPermanent,

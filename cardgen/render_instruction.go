@@ -157,7 +157,7 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		fields = append(fields, fmt.Sprintf("CardCondition: opt.Val(%s),", condition))
 	}
 	if instruction.ResultGate.Exists {
-		gate, err := renderInstructionResultGate(instruction.ResultGate.Val)
+		gate, err := r.renderInstructionResultGate(ctx, instruction.ResultGate.Val)
 		if err != nil {
 			return "", err
 		}
@@ -246,7 +246,7 @@ func (r Renderer) renderEffectCondition(ctx *renderCtx, condition *game.EffectCo
 	return structLit("game.EffectCondition", fields), nil
 }
 
-func renderInstructionResultGate(gate game.InstructionResultGate) (string, error) {
+func (r Renderer) renderInstructionResultGate(ctx *renderCtx, gate game.InstructionResultGate) (string, error) {
 	var fields []string
 	if gate.Key != "" {
 		fields = append(fields, fmt.Sprintf("Key: %q,", gate.Key))
@@ -277,6 +277,20 @@ func renderInstructionResultGate(gate game.InstructionResultGate) (string, error
 			"AmountRange: opt.Val(game.IntRange{Min: %d, Max: %d}),",
 			gate.AmountRange.Val.Min, gate.AmountRange.Val.Max,
 		))
+	}
+	if gate.ObjectSelection.Exists {
+		selection, err := r.renderSelection(ctx, gate.ObjectSelection.Val)
+		if err != nil {
+			return "", err
+		}
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf("ObjectSelection: opt.Val(%s),", selection))
+	}
+	if gate.Negate {
+		fields = append(fields, "Negate: true,")
+	}
+	if gate.CardOnly {
+		fields = append(fields, "CardOnly: true,")
 	}
 	return structLit("game.InstructionResultGate", fields), nil
 }

@@ -273,29 +273,15 @@ func lowerOrderedEffectSequence(
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported resolving optionality")
 	}
-	// The affirmative "if you do" clause is consumed as the optional-flow gate,
-	// not as an ordinary effect-gate condition, so exclude it from the per-effect
-	// condition matching (its predicate is not a supported effect-gate predicate).
-	gateConditions := optionalFlowGateConditions(ctx.content.Conditions, optionalFlow)
-	// Match each condition to the single effect whose clause span contains it and
-	// lower it as an effect gate. Fails closed if any condition is not contained
-	// in exactly one effect or is not a supported effect-gate condition.
-	effectConditions, matchReason, ok := matchSequenceEffectConditions(ctx.content.Effects, gateConditions)
+	conditionPlan, matchReason, ok := planSequenceConditions(ctx.content, optionalFlow)
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, matchReason)
 	}
-	consumedConditions := 0
-	if optionalFlow.enabled && optionalFlow.gateCondition >= 0 {
-		consumedConditions++
-	}
-	if optionalFlow.elseGateCondition >= 0 {
-		consumedConditions++
-	}
-	// Every gate condition is consumed by the matching above (which fails closed
-	// unless all conditions matched and lowered). A single condition may gate
-	// multiple effects of a shared-sentence group, so count conditions here
-	// rather than per gated effect.
-	consumedConditions += len(gateConditions)
+	effectConditions := conditionPlan.gates
+	gateConditions := conditionPlan.gateConditions
+	// Planning assigns every condition once; clause-owned conditions must
+	// additionally succeed in their owner lowerer before assembly can finish.
+	consumedConditions := len(ctx.content.Conditions)
 	// "If <condition>, <create> instead." replaces the immediately preceding
 	// effect when the condition holds (an either/or, not an additive effect).
 	// The conditional clause is already gated on the condition by
@@ -342,10 +328,9 @@ func lowerOrderedEffectSequence(
 		effect := &ctx.content.Effects[i]
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
-		// Per-effect conditions are handled by the sequence gate (effectConditions),
-		// not by the individual effect lowerers, so clear the content-level
-		// conditions inherited from the parent context before per-effect lowering.
-		effectAbility.content.Conditions = nil
+		// Embedded payment conditions belong to the clause lowerer; ordinary
+		// conditions belong to the sequence envelope.
+		effectAbility.content.Conditions = conditionPlan.clauseConditions[i]
 		clauseTargets := effect.Targets
 		// A leading condition that shares its effect's sentence (e.g. "If this
 		// spell was kicked, draw a card.") contributes its own references (the
@@ -353,13 +338,13 @@ func lowerOrderedEffectSequence(
 		// attributes them to the effect. Those references belong to the
 		// condition, not the effect body, and are credited separately below via
 		// conditionReferenceCount; strip them here so the per-effect lowerer sees
-		// only the effect's own references. Strip against every condition (not just
-		// the effect-gate conditions): an optional-flow gate the sequence consumes
+		// only the effect's own references. Strip against all external conditions
+		// (not just effect gates): an optional-flow gate the sequence consumes
 		// itself ("... If that player does, they lose 2 life.") also carries an
 		// anaphoric player reference ("that player") inside the consequence's
 		// clause span, which would otherwise survive as a phantom second reference
 		// and make the consequence's own "they" lowering fail closed.
-		clauseRefs := referencesOutsideConditionSpans(effect.References, ctx.content.Conditions)
+		clauseRefs := conditionPlan.referencesForClause(ctx.content, i)
 		ownedReferenceCount := len(clauseRefs)
 		// A group counter-placement clause whose group filter carries a "with a
 		// <kind> counter on it/them" qualifier introduces a pronoun naming each
@@ -385,6 +370,9 @@ func lowerOrderedEffectSequence(
 		// too. Otherwise a kicked-condition's "this spell" object survives as a
 		// phantom subject reference and the per-effect lowerer fails closed.
 		effectAbility.content.Effects[0].References = slices.Clone(clauseRefs)
+		effectAbility.content.Effects[0].SubjectReferences = referencesOutsideConditionSpans(
+			effectAbility.content.Effects[0].SubjectReferences, ctx.content.Conditions,
+		)
 		var inheritedTargets []compiler.CompiledTarget
 		if effect.Context == parser.EffectContextPriorSubject {
 			inheritedTargets = priorSubjectTargets(ctx.content.Effects, i)
@@ -550,6 +538,11 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — inherited target not remappable")
 		}
 		targets = newTargets
+		if !remapSequenceConditionTargets(i, effectConditions, ctx.content.Targets, oracleSpanToGameIdx) ||
+			!remapSequenceConditionTargets(i, insteadGates, ctx.content.Targets, oracleSpanToGameIdx) ||
+			!remapSequenceConditionTargets(i, otherwiseGates, ctx.content.Targets, oracleSpanToGameIdx) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — condition target not remappable")
+		}
 		if effect.PlayHideawayExiledCard {
 			materializeHideawaySelectionMinimum(effectConditions, i)
 		}
@@ -596,10 +589,10 @@ func lowerOrderedEffectSequence(
 	// is 3 or greater") sits outside every effect clause span, so it is consumed
 	// by the matched condition gate rather than by an effect. Credit those
 	// references so the consumed-count check does not see them as dropped. Count
-	// against every condition to match the clause-reference stripping above, so an
+	// against external conditions to match the clause-reference stripping above, so an
 	// optional-flow gate's own anaphor ("that player" in "If that player does")
 	// is credited rather than reported as an unconsumed reference.
-	consumedReferences += conditionReferenceCount(ctx.content.References, ctx.content.Conditions)
+	consumedReferences += conditionReferenceCount(ctx.content.References, conditionPlan.externalConditions)
 	// A punisher clause ("each opponent loses N life unless they discard a card")
 	// carries a subject pronoun ("they" / "that player") that the parser folds
 	// into the EffectPunisherLoseLife effect, so it never lands in the effect's own
@@ -1045,6 +1038,9 @@ func exactControllerLandCountCondition(condition compiler.CompiledCondition) boo
 		condition.Threshold == 4 &&
 		len(selection.RequiredTypes) == 1 &&
 		selection.RequiredTypes[0] == types.Land &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.AnyOf) == 0 &&
 		len(selection.Supertypes) == 0 &&
 		len(selection.SubtypesAny) == 0 &&
 		len(selection.ColorsAny) == 0 &&
@@ -1828,7 +1824,7 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 	}
 	condition := ctx.content.Conditions[0]
 	if condition.Kind != compiler.ConditionIf ||
-		condition.Predicate != compiler.ConditionPredicateUnsupported ||
+		!shuffleRevealPermanentCondition(condition) ||
 		!spanCovered(condition.Span, []shared.Span{put.ClauseSpan}) {
 		return game.AbilityContent{}, false
 	}
@@ -4185,7 +4181,15 @@ func lowerCharacteristicLifeRider(
 		len(ctx.content.Modes) != 0 {
 		return characteristicLifeRiderLowering{}, false
 	}
-	amountRef, subjectRefs, ok := sourcePowerReferences(effect)
+	amountRef, _, ok := sourcePowerReferences(effect)
+	if !ok {
+		return characteristicLifeRiderLowering{}, false
+	}
+	localEffect := *effect
+	localEffect.References = ctx.content.References
+	// Amounts bind already-lowered antecedents in accumulated target space.
+	// Life remapping rewrites Player, so only the recipient is clause-local.
+	_, subjectRefs, ok := sourcePowerReferences(&localEffect)
 	if !ok {
 		return characteristicLifeRiderLowering{}, false
 	}

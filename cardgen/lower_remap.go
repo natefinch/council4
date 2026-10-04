@@ -7,7 +7,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -216,22 +215,23 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
-	if value, ok := movePermanentTo(primitive, zone.Exile); ok {
-		if value.Group.Valid() {
+	if value, ok := primitive.(game.MovePermanent); ok {
+		if value.Group.Valid() || value.ControlledChoice || len(value.Object.Validate()) != 0 {
 			return nil, false
 		}
 		value.Object, ok = transformObjectReference(value.Object, transform)
-		return value, ok
-	}
-	if value, ok := movePermanentTo(primitive, zone.Hand); ok {
-		if value.Group.Valid() {
+		if !ok {
 			return nil, false
 		}
-		value.Object, ok = transformObjectReference(value.Object, transform)
+		value.Amount, ok = transformQuantity(value.Amount, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.CounterObject); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Pay); ok {
+		value.Payment, ok = transformManaPaymentTargets(value.Payment, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.CopyStackObject); ok {
@@ -503,6 +503,7 @@ func transformDamageRecipient(recipient game.DamageRecipient, transform targetIn
 func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	switch reference.Kind() {
 	case game.ObjectReferenceTargetPermanent,
+		game.ObjectReferenceTargetCard,
 		game.ObjectReferenceTargetStackObject,
 		game.ObjectReferenceTargetAttachedPermanent,
 		game.ObjectReferenceTargetObject:
@@ -531,6 +532,12 @@ func transformQuantity(amount game.Quantity, transform targetIndexTransform) (ga
 
 func transformObjectReference(reference game.ObjectReference, transform targetIndexTransform) (game.ObjectReference, bool) {
 	switch reference.Kind() {
+	case game.ObjectReferenceTargetCard:
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
+			return game.ObjectReference{}, false
+		}
+		return game.TargetCardReference(idx), true
 	case game.ObjectReferenceTargetPermanent:
 		idx, ok := transform(targetIndexObject, reference.TargetIndex())
 		if !ok {

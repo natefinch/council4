@@ -50,6 +50,14 @@ type InstructionResultGate struct {
 	// table ("Roll a d20. 1—9 | ...; 10—19 | ...; 20 | ...") where each row's
 	// instructions are gated on the rolled value's range.
 	AmountRange opt.V[IntRange]
+	// ObjectSelection requires at least one object actually affected by the
+	// published result to match. Permanent characteristics use departure LKI.
+	ObjectSelection opt.V[Selection]
+	// CardOnly requires post-move card results rather than permanent departures.
+	CardOnly bool
+	// Negate complements the complete filtered predicate for "Otherwise".
+	// A missing result publication still fails the gate.
+	Negate bool
 }
 
 // Instruction wraps one Primitive with sequencing envelope metadata.
@@ -268,6 +276,9 @@ func validateInstructionSequenceWithLinked(
 			}
 		}
 		if instr.ResultGate.Exists {
+			if err := validateResultObjectGate(instr.ResultGate.Val, seq, publishedResults); err != nil {
+				return fmt.Errorf("instruction[%d]: ResultGate: %w", i, err)
+			}
 			key := instr.ResultGate.Val.Key
 			if key != "" {
 				if _, ok := publishedResults[key]; !ok {
