@@ -205,6 +205,7 @@ func (e *Engine) resolveInstructionWithChoices(g *game.Game, obj *game.StackObje
 // effectResolver bundles the per-resolution context so the resolution body
 // can be a method rather than a free function with five repeated parameters.
 type effectResolver struct {
+	resultObjects      []game.ObjectSnapshot
 	engine             *Engine
 	game               *game.Game
 	obj                *game.StackObject
@@ -273,7 +274,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		return
 	}
 	if instr.ResultGate.Exists {
-		if !instructionResultGateSatisfied(r.obj, instr.ResultGate.Val) {
+		if !instructionResultGateSatisfied(r.game, r.obj, instr.ResultGate.Val) {
 			return
 		}
 	}
@@ -284,6 +285,14 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 			panic("rules: nil instruction primitive")
 		}
 	}
+	prev := r.currentInstruction
+	prevObjects := r.resultObjects
+	r.currentInstruction = instr
+	r.resultObjects = nil
+	defer func() {
+		r.currentInstruction = prev
+		r.resultObjects = prevObjects
+	}()
 	if instr.Optional && instr.OptionalActorGroup.Exists {
 		if instr.TemptingOffer {
 			r.resolveTemptingOffer(instr)
@@ -307,7 +316,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 				// affected permanent's controller has left the game), so no one
 				// can choose to perform the optional effect: skip it.
 				if instr.PublishResult != "" {
-					recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: false})
+					r.publishInstructionResult(instr, effectResolved{accepted: false})
 				}
 				return
 			}
@@ -317,21 +326,14 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	}
 	if !accepted {
 		if instr.PublishResult != "" {
-			recordResultKey(r.obj, instr.PublishResult, effectResolved{accepted: false})
+			r.publishInstructionResult(instr, effectResolved{accepted: false})
 		}
 		return
 	}
 	kind := instr.Primitive.Kind()
 	handler := globalPrimitiveRegistry().dispatch(kind)
-	prev := r.currentInstruction
-	r.currentInstruction = instr
-	defer func() {
-		r.currentInstruction = prev
-	}()
 	res := handler(r, instr.Primitive)
-	if instr.PublishResult != "" {
-		recordResultKey(r.obj, instr.PublishResult, res)
-	}
+	r.publishInstructionResult(instr, res)
 }
 
 // resolveForEachPlayerGroup resolves a mandatory per-player-group instruction:
@@ -368,7 +370,7 @@ func (r *effectResolver) resolveForEachPlayerGroup(instr *game.Instruction) {
 		acted = acted.With(member)
 	}
 	if instr.PublishResult != "" {
-		recordResultKey(r.obj, instr.PublishResult, effectResolved{
+		r.publishInstructionResult(instr, effectResolved{
 			accepted:       true,
 			succeeded:      anySucceeded,
 			amount:         acted.Count(),
@@ -414,7 +416,7 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 		}
 	}
 	if instr.PublishResult != "" {
-		recordResultKey(r.obj, instr.PublishResult, effectResolved{
+		r.publishInstructionResult(instr, effectResolved{
 			accepted:       anyAccepted,
 			succeeded:      anySucceeded,
 			amount:         accepters.Count(),
@@ -470,7 +472,7 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 		}
 	}
 	if instr.PublishResult != "" {
-		recordResultKey(r.obj, instr.PublishResult, effectResolved{
+		r.publishInstructionResult(instr, effectResolved{
 			accepted:       anyAccepted,
 			succeeded:      anySucceeded,
 			amount:         accepters.Count(),

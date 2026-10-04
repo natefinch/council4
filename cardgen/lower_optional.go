@@ -1026,6 +1026,8 @@ const optionalIfYouDoResultKey = game.ResultKey("if-you-do")
 // wording (whose else effect carries no condition) and whenever there is no else
 // branch.
 type optionalFlowPlan struct {
+	resultSelection        opt.V[game.Selection]
+	resultCardNoun         bool
 	enabled                bool
 	optionalIndex          int
 	gateIndex              int
@@ -1116,7 +1118,7 @@ func (p optionalFlowPlan) clearsNegated(i int) bool {
 // (fail closed) when optionality is present but does not form one of those
 // supported shapes, so the caller rejects rather than lowering a silently-wrong
 // sequence.
-func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) {
+func planOptionalFlowBase(content compiler.AbilityContent) (optionalFlowPlan, bool) {
 	// The primary optional is the first "you may X" effect; it is the one a
 	// following "if/when you do" gate keys on. A nested "you may X. If you do,
 	// you may Y" body carries a second optional in the gated tail (Y), which the
@@ -1467,12 +1469,9 @@ func elseGateConditionIndex(content compiler.AbilityContent, effectIndex int) in
 // isResolvingSuccessGate reports whether a condition predicate is the affirmative
 // "if you do" resolving-success gate, either the literal "if you do" or an
 // outcome-worded "a <noun> is destroyed/sacrificed/exiled/milled/discarded this
-// way". Both gate trailing effects on the immediately preceding effect having
-// succeeded; the outcome-worded form is accepted only in the matching
-// optional-effect shape, verified by resultThisWayMatchesEffect against the
-// specific preceding effect (the outcome must name the same producing verb),
-// and the mandatory result flow (planMandatoryIfYouDoFlow) accepts only the
-// literal "if you do" form.
+// way". Both require producer success; the outcome-worded form additionally
+// requires an actual result object matching the typed noun selection. Its verb
+// binds the nearest preceding matching producer, which need not be adjacent.
 func isResolvingSuccessGate(predicate compiler.ConditionPredicate) bool {
 	return predicate == compiler.ConditionPredicatePriorInstructionAccepted ||
 		predicate == compiler.ConditionPredicateResultThisWay
@@ -1481,8 +1480,8 @@ func isResolvingSuccessGate(predicate compiler.ConditionPredicate) bool {
 // resultThisWayMatchesEffect reports whether condition is not a
 // ConditionPredicateResultThisWay gate at all (nothing to check), or is one
 // whose ThisWayOutcome names the same producing verb as effect's own Kind. A
-// "creature is destroyed this way" gate can only be the resolving-success
-// equivalent of "if you do" for a preceding destroy effect, never a preceding
+// "creature is destroyed this way" gate can only bind a preceding destroy
+// effect, never a preceding
 // exile/mill/discard/sacrifice effect that merely happens to also carry a
 // resolving-success-shaped condition elsewhere in the ability; this keeps
 // verb-mismatched text (which no real card would write, but which the shared
@@ -1768,7 +1767,7 @@ func applyResultFlowPublish(sequence []game.Instruction) bool {
 // the optional effect's published result matching succeeded: TriTrue for the
 // affirmative "if you do" clause, TriFalse for the "Otherwise" else branch. It
 // fails closed if any instruction already carries a result gate.
-func applyOptionalFlowGate(sequence []game.Instruction, succeeded game.TriState) bool {
+func applyOptionalFlowGate(sequence []game.Instruction, plan optionalFlowPlan, succeeded game.TriState) bool {
 	if len(sequence) == 0 {
 		return false
 	}
@@ -1776,10 +1775,7 @@ func applyOptionalFlowGate(sequence []game.Instruction, succeeded game.TriState)
 		if sequence[k].ResultGate.Exists {
 			return false
 		}
-		sequence[k].ResultGate = opt.Val(game.InstructionResultGate{
-			Key:       optionalIfYouDoResultKey,
-			Succeeded: succeeded,
-		})
+		sequence[k].ResultGate = opt.Val(plan.resultGate(succeeded))
 	}
 	return true
 }
@@ -1826,11 +1822,14 @@ func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Ins
 				if !applyGatedOptionalFlow(sequence) {
 					return "structural — gated optional not single-instruction", false
 				}
-			} else if !applyOptionalFlowGate(sequence, plan.gateSucceeded()) {
+			} else if !applyOptionalFlowGate(sequence, plan, plan.gateSucceeded()) {
 				return "structural — if-you-do gate not applicable", false
 			}
+			for k := range sequence {
+				sequence[k].ResultGate = opt.Val(plan.resultGate(plan.gateSucceeded()))
+			}
 		}
-		if plan.gatesElse(i) && !applyOptionalFlowGate(sequence, game.TriFalse) {
+		if plan.gatesElse(i) && !applyOptionalFlowGate(sequence, plan, game.TriFalse) {
 			return "structural — otherwise gate not applicable", false
 		}
 	}

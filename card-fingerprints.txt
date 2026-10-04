@@ -31,7 +31,7 @@ b86655e15f9c16a6  Abbey Griffin
 ca0c078238a29aad  Abbot of Keral Keep
 9bb6fe363f9bab73  Abduction
 97c00956a1d2f0d0  Aberrant
-c839246f9e9f963b  Aberrant Researcher // Perfected Form
+ae0aeca897dd55bc  Aberrant Researcher // Perfected Form
 13f23c94baabe965  Abhorrent Oculus
 b6e57532d0825509  Abhorrent Overlord
 d5a63afb660b6f2e  Abjure
@@ -3663,7 +3663,7 @@ e535ed63cb60952a  Death-Hood Cobra
 bf376a303ec2edf6  Deathbloom Gardener
 acb2cde99ba72550  Deathbloom Ritualist
 d822732767cadfe2  Deathbloom Thallid
-e012030efdc74c16  Deathbonnet Sprout // Deathbonnet Hulk
+5baac5b3923d7e6f  Deathbonnet Sprout // Deathbonnet Hulk
 1500626958270176  Deathbringer Thoctar
 92f3a40f19bdf90e  Deathcap Cultivator
 d4629ed40b5b996b  Deathcap Glade
@@ -3979,7 +3979,7 @@ a8faa16aa5ef3c51  Diregraf Captain
 eff7593d2caa7ba7  Diregraf Colossus
 5b7a177cd3047a2e  Diregraf Ghoul
 ce8ec3a06dcdd86f  Diregraf Horde
-67a07f4f6cfdaebe  Diregraf Scavenger
+ac602786d4dd682b  Diregraf Scavenger
 d37cfebda4c344b0  Diresight
 d7fa80afc7cfdaad  Dirge Bat
 62b0ead5808858af  Dirge of Dread
@@ -9240,7 +9240,7 @@ f7ae7f1bf730b616  Lord of Change
 60dd3a1f0ce029b3  Lord of the Unreal
 a01d1bba6f8c594c  Lord of Tresserhorn
 a26b5999f5f3b43e  Lord Skitter, Sewer King
-312cb7d2b3361cec  Lord Windgrace
+95b0e53a2e8e6ead  Lord Windgrace
 9d591e74503fa1bb  Lore Broker
 51b8dc69dbc0abc3  Lore Drakkis
 ddc8bd7ae989a420  Lore Weaver
@@ -10753,7 +10753,7 @@ e4cf76c2b221e6e4  Novijen Sages
 f518df7a964b3025  Novijen, Heart of Progress
 4390c642b3773102  Noxious Dragon
 6f244b210d2f47c2  Noxious Field
-f651d06bb87c7f87  Noxious Gearhulk
+cb83eebf342949ae  Noxious Gearhulk
 f1070a9b62248945  Noxious Ghoul
 f9af7b7431b8cbe9  Noxious Groodion
 7e6a52b3f1295ed7  Noxious Hatchling
@@ -12265,7 +12265,7 @@ ad5c511fea74f817  Raucous Theater
 159fb592f9100c3c  Ravages of War
 eaf846444f30b8a0  Ravaging Horde
 7e80367fcb989851  Raven Clan War-Axe
-e097e1e3c07a32f1  Raven Eagle
+cd4fe86a5d3a5ca9  Raven Eagle
 73890505fca2b0ca  Raven Familiar
 e09e2d6d15a565a0  Raven of Fell Omens
 d7213873779b1473  Raven Wings
@@ -14116,7 +14116,7 @@ f7b46ac35c708f84  Sire of Seven Deaths
 a41f5e72a2d9c985  Siren of the Fanged Coast
 87c34af0e778d222  Siren of the Silent Song
 9034f45c2aaa2cf0  Siren Song Lyre
-a487c40a8863d0a5  Siren's Ruse
+db86c311c760dc11  Siren's Ruse
 5c1f2579f8a18ae1  Sisay's Ring
 381b6de9305d0870  Sister Hospitaller
 e18ce58a3ced1ae7  Sister of Silence
@@ -14374,7 +14374,7 @@ c652f0bdcb9f99f4  Sly Requisitioner
 b8494f9f9fe4baad  Smash to Dust
 f6bf8ecdf2899014  Smash to Smithereens
 be16d798d31c26be  Smashing Spree
-d085897a9ee4119e  Smashing Success
+5ed4e04f594160c4  Smashing Success
 e6b54590345ed234  Smaug
 e69255007e2f56de  Smaug the Impenetrable
 783b7751f8ca7c21  Smaug's Fury

@@ -288,11 +288,8 @@ func lowerOptionalSacrificeScaledReward(ctx contentCtx) (game.AbilityContent, bo
 			return game.AbilityContent{}, false
 		}
 		rewards = append(rewards, game.Instruction{
-			Primitive: primitive,
-			ResultGate: opt.Val(game.InstructionResultGate{
-				Key:       optionalIfYouDoResultKey,
-				Succeeded: game.TriTrue,
-			}),
+			Primitive:  primitive,
+			ResultGate: opt.Val(plan.resultGate(game.TriTrue)),
 		})
 	}
 
