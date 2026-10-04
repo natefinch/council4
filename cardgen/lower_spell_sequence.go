@@ -4185,7 +4185,15 @@ func lowerCharacteristicLifeRider(
 		len(ctx.content.Modes) != 0 {
 		return characteristicLifeRiderLowering{}, false
 	}
-	amountRef, subjectRefs, ok := sourcePowerReferences(effect)
+	amountRef, _, ok := sourcePowerReferences(effect)
+	if !ok {
+		return characteristicLifeRiderLowering{}, false
+	}
+	localEffect := *effect
+	localEffect.References = ctx.content.References
+	// Amounts bind already-lowered antecedents in accumulated target space.
+	// Life remapping rewrites Player, so only the recipient is clause-local.
+	_, subjectRefs, ok := sourcePowerReferences(&localEffect)
 	if !ok {
 		return characteristicLifeRiderLowering{}, false
 	}
