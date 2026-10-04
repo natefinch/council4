@@ -234,6 +234,10 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.Pay); ok {
+		value.Payment, ok = transformManaPaymentTargets(value.Payment, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.CopyStackObject); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		if !ok {
