@@ -57,6 +57,9 @@
               Selector: 
                 Kind: 1
               Exact: true
+              Order: 
+                Start: 6
+                End: 7
           SubjectTargets: 
           Selector: 
             Kind: 1

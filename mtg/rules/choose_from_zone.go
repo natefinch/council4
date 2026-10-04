@@ -345,6 +345,9 @@ func (r *effectResolver) chooseFromZoneMoveOne(env game.ChooseFromZone, playerID
 	if !moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, env.SourceZone, dest.Zone, env.Riders.DestinationBottom) {
 		return false
 	}
+	if actual, ok := cardZone(r.game, cardID); ok && actual == dest.Zone {
+		r.rememberResultCard(cardID)
+	}
 	r.chooseFromZonePublish(env, cardID)
 	return true
 }

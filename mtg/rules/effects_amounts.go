@@ -1388,7 +1388,7 @@ func cardMatchesSelection(g *game.Game, obj *game.StackObject, card *game.CardIn
 	return matchSelection(subject, &selection)
 }
 
-func instructionResultGateSatisfied(obj *game.StackObject, gate game.InstructionResultGate) bool {
+func instructionResultGateSatisfied(g *game.Game, obj *game.StackObject, gate game.InstructionResultGate) bool {
 	if gate.Key == "" {
 		return true
 	}
@@ -1399,20 +1399,14 @@ func instructionResultGateSatisfied(obj *game.StackObject, gate game.Instruction
 	if !ok {
 		return false
 	}
-	if gate.Accepted != game.TriAny && (gate.Accepted == game.TriTrue) != result.Accepted {
-		return false
+	matches := (gate.Accepted == game.TriAny || (gate.Accepted == game.TriTrue) == result.Accepted) &&
+		(gate.Succeeded == game.TriAny || (gate.Succeeded == game.TriTrue) == result.Succeeded) &&
+		(gate.SearchedLibrary == game.TriAny || (gate.SearchedLibrary == game.TriTrue) == result.SearchedLibrary) &&
+		(!gate.AmountRange.Exists || (result.Amount >= gate.AmountRange.Val.Min && result.Amount <= gate.AmountRange.Val.Max))
+	if matches && gate.ObjectSelection.Exists {
+		matches = resultObjectsMatchFilter(g, obj, obj.ResolutionResultObjects[string(gate.Key)], gate.ObjectSelection.Val, gate.CardOnly)
 	}
-	if gate.Succeeded != game.TriAny && (gate.Succeeded == game.TriTrue) != result.Succeeded {
-		return false
-	}
-	if gate.SearchedLibrary != game.TriAny && (gate.SearchedLibrary == game.TriTrue) != result.SearchedLibrary {
-		return false
-	}
-	if gate.AmountRange.Exists &&
-		(result.Amount < gate.AmountRange.Val.Min || result.Amount > gate.AmountRange.Val.Max) {
-		return false
-	}
-	return true
+	return matches != gate.Negate
 }
 
 func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, accepted, succeeded bool, amount int, searchedLibrary bool, acceptedActors game.PlayerSet) {
@@ -1429,4 +1423,5 @@ func rememberInstructionResolutionResult(obj *game.StackObject, linkID string, a
 		SearchedLibrary: searchedLibrary,
 		AcceptedActors:  acceptedActors,
 	}
+	delete(obj.ResolutionResultObjects, linkID)
 }

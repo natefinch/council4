@@ -742,11 +742,10 @@ const (
 	// that same kind ("if a creature is destroyed this way", "if a Saproling was
 	// sacrificed this way", "if an instant or sorcery card is exiled this way",
 	// "if a Lesson card is milled this way", "if a land card is discarded this
-	// way"). The typed condition carries no selection beyond ThisWayOutcome, so
-	// it is the resolving-success equivalent of "if you do" only when the named
-	// noun matches every object the prior clause of that kind could have
-	// affected; the lowering treats it as an "if you do" gate solely for the
-	// matching single-producing-effect shape and otherwise fails closed.
+	// way"). ThisWayOutcome binds the producing effect; ThisWaySelection
+	// restricts its actual successful result objects without restricting what
+	// the producer may affect. Unlike literal "if you do", success alone does
+	// not satisfy the condition.
 	ConditionPredicateResultThisWay
 	// ConditionPredicateDiesThisWay is satisfied when the prior destroy effect's
 	// target was actually put into a graveyard from the battlefield ("if that
@@ -1304,13 +1303,16 @@ const (
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
-	RequiredTypes []types.Card
-	Supertypes    []types.Super
-	SubtypesAny   []string
-	ColorsAny     []color.Color
-	Colorless     bool
-	Multicolored  bool
-	TokenOnly     bool
+	RequiredTypes    []types.Card
+	RequiredTypesAny []types.Card
+	ExcludedTypes    []types.Card
+	AnyOf            []ConditionSelection
+	Supertypes       []types.Super
+	SubtypesAny      []string
+	ColorsAny        []color.Color
+	Colorless        bool
+	Multicolored     bool
+	TokenOnly        bool
 	// NonToken requires the matched permanent to not be a token ("if it's not a
 	// token", Life of the Party). It is the negation of TokenOnly and mutually
 	// exclusive with it.
@@ -1414,13 +1416,19 @@ type CompiledCondition struct {
 	Selection     ConditionSelection
 	Counter       ConditionCounter
 	ObjectBinding ReferenceBinding
+	// ObjectReference retains the bound subject's identity and occurrence.
+	// ObjectTarget supplies the domain of a target-derived subject.
+	ObjectReference *CompiledReference
+	ObjectTarget    *CompiledTarget
 
 	// ThisWayOutcome carries the producing EffectKind a
 	// ConditionPredicateResultThisWay condition's participle named (EffectDestroy,
 	// EffectSacrifice, EffectExile, EffectMill, or EffectDiscard). Lowering
 	// matches it against the immediately preceding effect's own Kind rather than
 	// assuming a single fixed producing verb.
-	ThisWayOutcome EffectKind
+	ThisWayOutcome   EffectKind
+	ThisWaySelection *CompiledSelector
+	ThisWayCardNoun  bool
 
 	// NodeID is the parser-assigned identity of this condition's boundary. A
 	// triggered ability's intervening condition shares a NodeID with its content
@@ -1433,16 +1441,15 @@ type CompiledCondition struct {
 	ClauseIndex       int
 	EventHistoryIndex int
 
-	// SubjectSpan is the source span of the subject noun phrase for the
-	// source-death predicates (ConditionPredicateSourceWouldDie and
-	// ConditionPredicateSourceWouldGoToGraveyard). Reference binding confirms a
-	// typed source reference fills that span; the compiler never re-derives the
-	// subject from condition text.
-	SubjectSpan shared.Span
+	// SubjectSpan is diagnostic metadata for the parser-owned subject.
+	// HasSubjectReference identifies contextual ObjectMatches subjects.
+	SubjectSpan         shared.Span
+	HasSubjectReference bool
+	SubjectTypes        []types.Card
 
 	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
-	// subject span for the source-death predicates, or -1 when none does. The
-	// compiler confirms the subject binds the source by matching this identity
+	// subject span for source-death or contextual object predicates, or -1 when
+	// none does. The compiler binds the subject by matching this identity
 	// rather than comparing the reference span to the subject span.
 	SubjectRefID int
 

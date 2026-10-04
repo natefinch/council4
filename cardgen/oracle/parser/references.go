@@ -79,7 +79,7 @@ type Reference struct {
 // cardName so the parser, not the compiler, owns recognition of the source
 // name's spelling. Source-tied duration subjects ("for as long as you control
 // [CardName]"/"this [type]") are intentionally not reported as references.
-func collectReferences(tokens []shared.Token, cardName string, legendary bool) []Reference {
+func collectReferences(tokens []shared.Token, cardName string, legendary bool, atoms Atoms) []Reference {
 	var references []Reference
 	for _, nameWords := range selfNameReferenceAliases(cardName, legendary) {
 		for i := 0; i+len(nameWords) <= len(tokens); i++ {
@@ -312,10 +312,10 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 				Text:   joinTokens(phrase),
 			})
 			i++
-		case referencePronounKind(tokens, i) != PronounUnknown:
+		case referencePronounKind(tokens, i, atoms) != PronounUnknown:
 			references = append(references, Reference{
 				Kind:    ReferencePronoun,
-				Pronoun: referencePronounKind(tokens, i),
+				Pronoun: referencePronounKind(tokens, i, atoms),
 				Span:    tokens[i].Span,
 				Tokens:  tokens[i : i+1],
 				Text:    joinTokens(tokens[i : i+1]),
@@ -330,11 +330,22 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool) [
 }
 
 // referencePronounKind recognizes "it's" as the object pronoun "it" plus the
-// contracted verb "is" only in the fixed-P/T characteristic grammar consumed by
-// parseReferencedBecomeCharacteristicsEffect. Keeping this contextual avoids
-// manufacturing a free reference for separately modeled fixed idioms such as
-// "It's still a land."
-func referencePronounKind(tokens []shared.Token, index int) PronounKind {
+// contracted verb "is" in conditional card-noun matches and the fixed-P/T
+// characteristic grammar consumed by parseReferencedBecomeCharacteristicsEffect.
+// Subtype-only target gates and fixed idioms retain their existing ownership.
+func referencePronounKind(tokens []shared.Token, index int, atoms Atoms) PronounKind {
+	if index > 0 && index+2 < len(tokens) &&
+		equalWord(tokens[index], "it's") &&
+		(equalWord(tokens[index-1], "if") || equalWord(tokens[index-1], "unless")) &&
+		(equalWord(tokens[index+1], "a") || equalWord(tokens[index+1], "an")) {
+		end := conditionClauseEnd(tokens, index-1)
+		noun := tokens[index+2 : end]
+		if tokenSuffixWord(noun, "card") || tokenSuffixWord(noun, "cards") {
+			if selection, ok := parseConditionSelection(noun, atoms); ok && len(selection.RequiredTypes) > 0 {
+				return PronounIt
+			}
+		}
+	}
 	if index >= 0 && index < len(tokens) &&
 		equalWord(tokens[index], "it's") &&
 		(index == 0 || tokens[index-1].Kind == shared.Period) &&

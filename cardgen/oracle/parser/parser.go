@@ -189,6 +189,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitAttachmentChoices(document.Abilities)
 	emitSourceAbilityCostReduction(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
+	emitCounterTaxConditionOwners(document.Abilities)
 	emitSourceSpellCostIncreasePerTarget(document.Abilities)
 	emitSourceSpellCostReduction(document.Abilities)
 	emitSourceSpellCostReductionDynamic(document.Abilities)
