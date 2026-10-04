@@ -248,7 +248,7 @@ func TestResolvingUnlessPreservesIndependentResultGate(t *testing.T) {
 	if reason := applySequenceClauseGates(sequence, 0, map[int]game.EffectCondition{0: condition}, nil, nil); reason != "" {
 		t.Fatalf("gate application failed: %s", reason)
 	}
-	if sequence[0].ResultGate.Val != gate || !sequence[0].Condition.Val.Condition.Val.Negate {
+	if !reflect.DeepEqual(sequence[0].ResultGate.Val, gate) || !sequence[0].Condition.Val.Condition.Val.Negate {
 		t.Fatalf("instruction = %#v, want both independent gates", sequence[0])
 	}
 	if applyEffectConditionGate(sequence, &condition) {
