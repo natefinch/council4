@@ -1328,8 +1328,9 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 		}
 	}
 	if !conditionSatisfied(g, conditionContext{
-		controller: stackObjectController(obj),
-		obj:        obj,
+		controller:     stackObjectController(obj),
+		sourceObjectID: obj.SourceID,
+		obj:            obj,
 	}, cond.Condition) {
 		return false
 	}
