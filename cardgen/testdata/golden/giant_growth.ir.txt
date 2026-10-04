@@ -30,6 +30,8 @@
               Selector: 
                 Kind: 5
               Exact: true
+              Order: 
+                End: 1
           SubjectTargets: 
             [0]: 
               Text: Target creature
@@ -39,6 +41,8 @@
               Selector: 
                 Kind: 5
               Exact: true
+              Order: 
+                End: 1
           Duration: 1
           Selector: 
           DamageRecipient: 

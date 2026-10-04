@@ -2268,6 +2268,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 }
 
 func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) {
+	separateObjectConditionReferences(effect, atoms)
 	effect.Divided = dividedDamageEffect(effect)
 	effect.DistributeCounters = distributeCountersEffect(effect)
 	effect.DamageRecipient.Reference = damageRecipientReference(effect)

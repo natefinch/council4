@@ -278,12 +278,23 @@ func TestResolvingUnlessRecognizedSyntax(t *testing.T) {
 	}
 }
 
-func TestResolvingUnlessDoesNotBypassSequenceBlockers(t *testing.T) {
+func TestResolvingUnlessComposesWithLibraryRemapping(t *testing.T) {
 	t.Parallel()
-	assertCardUnsupported(t, &ScryfallCard{
+	card := &ScryfallCard{
 		Name: "The Spot's Portal", Layout: "normal", TypeLine: "Instant", ManaCost: "{2}{B}",
 		OracleText: "Put target creature on the bottom of its owner's library. You lose 2 life unless you control a Villain.",
-	}, "structural — inherited target not remappable")
+	}
+	assertCardPaths(t, card,
+		"Sequence[0].Primitive.(game.MovePermanent).Destination = zone.Library",
+		"Sequence[0].Primitive.(game.MovePermanent).LibraryBottom = true",
+		"Sequence[0].Primitive.(game.MovePermanent).Object.kind = game.ObjectReferenceTargetPermanent",
+		"Sequence[1].Primitive.(game.LoseLife).Amount.fixed = 2",
+		"Sequence[1].Primitive.(game.LoseLife).Player.kind = game.PlayerReferenceController",
+		"Sequence[1].Condition.Val.Condition.Val.Negate = true",
+		"Sequence[1].Condition.Val.Condition.Val.ControlsMatching.Exists = true",
+		"Sequence[1].Condition.Val.Condition.Val.ControlsMatching.Val.Selection.SubtypesAny[0] = types.Villain",
+	)
+	assertCardPathsAbsent(t, card, "Sequence[0].Condition.Exists", "Sequence[2]")
 }
 
 func TestResolvingUnlessManaAbilityFailsClosed(t *testing.T) {

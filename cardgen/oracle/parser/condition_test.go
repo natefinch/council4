@@ -949,23 +949,22 @@ func TestParseConditionCardTypeNoun(t *testing.T) {
 	}
 }
 
-// TestParseConditionCardTypeNounRejectsBarePermanentCard confirms "permanent
-// card" (Lion Sash: "if it was a permanent card") fails closed rather than
-// silently producing an empty, always-matching selection. Unlike every other
-// production this family supports, "permanent card" needs a disjunctive "any
-// card type but instant/sorcery" match that ConditionSelection has no field
-// for; see parseConditionCardTypeNoun's doc comment for the full rationale.
-func TestParseConditionCardTypeNounRejectsBarePermanentCard(t *testing.T) {
+func TestParseConditionPermanentCardUsesTypeUnion(t *testing.T) {
 	t.Parallel()
 	body := "Exile target card from a graveyard. If it was a permanent card, put a +1/+1 counter on this permanent."
 	document, _ := Parse(body, Context{InstantOrSorcery: true})
 	if len(document.Abilities) != 1 {
 		t.Fatalf("abilities = %#v", document.Abilities)
 	}
-	for _, clause := range document.Abilities[0].ConditionClauses {
-		if clause.Predicate == ConditionPredicateObjectMatches {
-			t.Fatalf("clause unexpectedly recognized as ObjectMatches: %#v", clause)
-		}
+	clauses := document.Abilities[0].ConditionClauses
+	if len(clauses) != 1 || clauses[0].Predicate != ConditionPredicateObjectMatches {
+		t.Fatalf("clauses = %#v, want one object match", clauses)
+	}
+	want := []TriggerCardType{TriggerCardTypeArtifact, TriggerCardTypeBattle, TriggerCardTypeCreature,
+		TriggerCardTypeEnchantment, TriggerCardTypeLand, TriggerCardTypePlaneswalker}
+	if len(clauses[0].Selection.RequiredTypes) != 0 ||
+		!slices.Equal(clauses[0].Selection.RequiredTypesAny, want) {
+		t.Fatalf("selection = %#v, want permanent type union", clauses[0].Selection)
 	}
 }
 

@@ -2889,6 +2889,11 @@ func hasThatPlayerTargetReference(references []compiler.CompiledReference) bool 
 // (fail closed) for any other antecedent kind. The single inherited target sits
 // at clause-local index 0.
 func referencedThatPlayerRef(target compiler.CompiledTarget) (game.PlayerReference, bool) {
+	if target.Selector.Kind == compiler.SelectorCard &&
+		target.Selector.Zone == zone.Graveyard &&
+		target.Selector.Controller == compiler.ControllerOpponent {
+		return game.ObjectOwnerReference(game.TargetCardReference(0)), true
+	}
 	switch target.Selector.Kind {
 	case compiler.SelectorPlayer, compiler.SelectorOpponent:
 		return game.TargetPlayerReference(0), true

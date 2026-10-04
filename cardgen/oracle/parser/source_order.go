@@ -119,6 +119,12 @@ func visitEffectOrderNodes(effect *EffectSyntax, visit func(shared.Span, *shared
 	visit(effect.Span, &effect.Order)
 	visit(effect.VerbSpan, &effect.VerbOrder)
 	visit(effect.Payment.Span, &effect.Payment.Order)
+	for i := range effect.Targets {
+		visit(effect.Targets[i].Span, &effect.Targets[i].Order)
+	}
+	for i := range effect.SubjectTargets {
+		visit(effect.SubjectTargets[i].Span, &effect.SubjectTargets[i].Order)
+	}
 	for i := range effect.RepeatBody {
 		visitEffectOrderNodes(&effect.RepeatBody[i], visit)
 	}

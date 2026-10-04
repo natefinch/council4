@@ -278,6 +278,8 @@ func handleChooseDiscardFromHand(r *effectResolver, prim game.ChooseDiscardFromH
 }
 
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
+	start := len(r.game.Events)
+	defer func() { r.rememberDiscardResultEvents(start) }()
 	if prim.EntireHand {
 		return handleDiscardEntireHand(r, prim)
 	}
@@ -1554,6 +1556,9 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 	destinationCards, destinationOK := destinationZone(r.game, card.Owner, prim.Destination)
 	reachedDestination := moved && destinationOK && destinationCards.Contains(cardID)
 	res.succeeded = reachedDestination
+	if reachedDestination {
+		r.rememberResultCard(cardID)
+	}
 	// Place the named exile counter only if the card actually landed in exile: a
 	// CR 614/903.9 replacement or commander redirect can send an exile-bound move
 	// elsewhere while still succeeding, and gating on the intended Destination
@@ -1621,6 +1626,7 @@ func handleMoveEventPermanentCards(
 			continue
 		}
 		res.succeeded = true
+		r.rememberResultCard(card.ID)
 		if prim.Counter.Exists && prim.Destination == zone.Exile {
 			r.game.AddExileCounter(card.ID, prim.Counter.Val, 1)
 		}
@@ -1655,6 +1661,9 @@ func handleMoveCardPlayerGroup(r *effectResolver, prim game.MoveCard) effectReso
 			}
 			moved := moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, prim.FromZone, prim.Destination, false, simultaneousID)
 			res.succeeded = moved || res.succeeded
+			if moved {
+				r.rememberMovedResultCard(cardID, prim.Destination)
+			}
 		}
 	}
 	return res
@@ -1690,6 +1699,9 @@ func handleMoveCardZoneGroup(r *effectResolver, prim game.MoveCard) effectResolv
 		}
 		moved := moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, prim.FromZone, prim.Destination, false, simultaneousID)
 		res.succeeded = moved || res.succeeded
+		if moved {
+			r.rememberMovedResultCard(cardID, prim.Destination)
+		}
 	}
 	return res
 }
@@ -1758,6 +1770,7 @@ func handleMoveChosenHandCards(r *effectResolver, prim game.MoveCard, playerID g
 			simultaneousID,
 		) {
 			res.succeeded = true
+			r.rememberMovedResultCard(candidates[idx], prim.Destination)
 		}
 	}
 	if prim.DestinationBottom {
@@ -2135,6 +2148,7 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 			sacrificed = append(sacrificed, permanent)
 		}
 		res.succeeded = sacrificePermanentsSimultaneously(r.game, sacrificed)
+		r.rememberDepartedResultPermanents(sacrificed)
 		return res
 	}
 	permanent, ok := r.resolveObject(prim.Object)
@@ -2154,6 +2168,9 @@ func handleSacrifice(r *effectResolver, prim game.Sacrifice) effectResolved {
 		return res
 	}
 	res.succeeded = sacrificePermanent(r.game, permanent)
+	if res.succeeded {
+		r.rememberDepartedResultPermanents([]*game.Permanent{permanent})
+	}
 	return res
 }
 
@@ -2209,6 +2226,7 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 	// the many edicts that do not publish a count.
 	res.amount = len(chosen)
 	res.succeeded = sacrificePermanentsSimultaneously(r.game, chosen)
+	r.rememberDepartedResultPermanents(chosen)
 	r.applySacrificeFallback(prim.Fallback, cantSacrifice)
 	return res
 }
@@ -2775,6 +2793,9 @@ func handleMoveTopOfLibrary(r *effectResolver, prim game.MoveTopOfLibrary) effec
 		clearLinkedObjects(r.game, key)
 	}
 	publish := func(cardIDs []id.ID) {
+		for _, cardID := range cardIDs {
+			r.rememberResultCard(cardID)
+		}
 		if prim.PublishLinked == "" {
 			return
 		}

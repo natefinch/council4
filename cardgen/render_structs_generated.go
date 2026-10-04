@@ -854,6 +854,18 @@ func isZeroGameTriggerPattern(v game.TriggerPattern) bool {
 		!(v.PlaysLinkedExileCard != "")
 }
 
+// isZeroGameInstructionResultGate reports whether every field of a game.InstructionResultGate holds its zero value.
+func isZeroGameInstructionResultGate(v game.InstructionResultGate) bool {
+	return !(v.Key != "") &&
+		!(v.Accepted != 0) &&
+		!(v.Succeeded != 0) &&
+		!(v.SearchedLibrary != 0) &&
+		!(v.AmountRange.Exists) &&
+		!(v.ObjectSelection.Exists) &&
+		!(v.CardOnly) &&
+		!(v.Negate)
+}
+
 // isZeroGameInstruction reports whether every field of a game.Instruction holds its zero value.
 func isZeroGameInstruction(v game.Instruction) bool {
 	return !(v.Primitive != nil) &&
@@ -7080,6 +7092,24 @@ func (r Renderer) renderGameInstructionResultGate(ctx *renderCtx, v game.Instruc
 		ctx.need(importOpt)
 		lit8 := "opt.Val(" + lit9 + ")"
 		fields = append(fields, "AmountRange: "+lit8+",")
+	}
+	if v.ObjectSelection.Exists {
+		lit12, err13 := r.renderGameSelection(ctx, v.ObjectSelection.Val)
+		if err13 != nil {
+			return "", fmt.Errorf("game.InstructionResultGate.ObjectSelection: %w", err13)
+		}
+		ctx.need(importGame)
+		ctx.need(importOpt)
+		lit11 := "opt.Val(" + lit12 + ")"
+		fields = append(fields, "ObjectSelection: "+lit11+",")
+	}
+	if v.CardOnly {
+		lit14 := strconv.FormatBool(bool(v.CardOnly))
+		fields = append(fields, "CardOnly: "+lit14+",")
+	}
+	if v.Negate {
+		lit15 := strconv.FormatBool(bool(v.Negate))
+		fields = append(fields, "Negate: "+lit15+",")
 	}
 	return structLit("game.InstructionResultGate", fields), nil
 }

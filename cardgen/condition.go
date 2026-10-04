@@ -166,7 +166,7 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateObjectMatches:
-		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
+		object, ok := lowerObjectMatchReference(condition, ctx)
 		if !ok {
 			return game.Condition{}, false
 		}
@@ -293,6 +293,40 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		return game.Condition{}, false
 	}
 	return result, !result.Empty()
+}
+
+func lowerObjectMatchReference(condition compiler.CompiledCondition, ctx conditionLoweringContext) (game.ObjectReference, bool) {
+	if condition.ObjectReference == nil {
+		if condition.HasSubjectReference {
+			return game.ObjectReference{}, false
+		}
+		return lowerConditionObjectReference(condition.ObjectBinding)
+	}
+	reference := *condition.ObjectReference
+	if reference.Binding != condition.ObjectBinding ||
+		(condition.HasSubjectReference && reference.NodeID != condition.SubjectRefID) {
+		return game.ObjectReference{}, false
+	}
+	if reference.Binding == compiler.ReferenceBindingTarget {
+		if ctx != conditionContextEffectGate || condition.ObjectTarget == nil || reference.Occurrence < 0 {
+			return game.ObjectReference{}, false
+		}
+		target := *condition.ObjectTarget
+		if target.Selector.Kind == compiler.SelectorCard {
+			if _, ok := cardInZoneTargetSpec(target, target.Selector.Zone); !ok {
+				return game.ObjectReference{}, false
+			}
+			return game.TargetCardReference(reference.Occurrence), true
+		}
+		if _, ok := permanentTargetSpec(target); !ok {
+			return game.ObjectReference{}, false
+		}
+	}
+	return lowerObjectReference(reference, referenceLoweringContext{
+		AllowSource: true,
+		AllowEvent:  ctx == conditionContextEffectGate || ctx == conditionContextInterveningTrigger,
+		AllowTarget: ctx == conditionContextEffectGate,
+	})
 }
 
 func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx conditionLoweringContext) bool {
@@ -657,154 +691,6 @@ func lowerComparisonScope(scope compiler.ConditionComparisonScope) (game.Control
 	default:
 		return game.ControlPlayerController, false
 	}
-}
-
-// lowerConditionSelection projects a condition-filter onto the canonical
-// game.Selection. It is a thin adapter over the shared SelectionForSelector
-// projector: conditionSelectionSelector translates the parallel
-// ConditionSelection clone enums into a compiler.CompiledSelector,
-// SelectionForSelectorMasked maps that shared dimension cluster
-// (types/supertypes/subtypes/colors/colorless/multicolored/tapped/combat/keyword)
-// onto the runtime Selection, and the genuine condition-specific extras are
-// applied as a documented rider afterward. Routing the shared cluster through
-// the canonical projector keeps condition filters in lockstep with every other
-// selector context instead of maintaining a second hand-written projector.
-func lowerConditionSelection(selection compiler.ConditionSelection) (game.Selection, bool) {
-	selector, ok := conditionSelectionSelector(selection)
-	if !ok {
-		return game.Selection{}, false
-	}
-	result, ok := SelectionForSelectorMasked(selector, SelectionMask{}.Rejecting(DimRequiredName))
-	if !ok {
-		return game.Selection{}, false
-	}
-	// Per-context extras kept on the projector result (umbrella #1414):
-	// AnyCounter (MatchAnyCounter), the named-counter count threshold
-	// (RequiredCounter + RequiredCounterCount), ExcludeSource, the power-at-least
-	// bound (Power), and TokenOnly. None of these round-trip byte-identically
-	// through CompiledSelector here (the counter-count threshold has no selector
-	// field at all), so they ride directly on the shared-core result.
-	result.MatchAnyCounter = selection.AnyCounter
-	result.ExcludeSource = selection.ExcludeSource
-	result.TokenOnly = selection.TokenOnly
-	result.NonToken = selection.NonToken
-	switch selection.Attachment {
-	case compiler.ConditionAttachmentEnchanted:
-		result.MatchEnchanted = true
-	case compiler.ConditionAttachmentEquipped:
-		result.MatchEquipped = true
-	default:
-	}
-	if selection.CounterKindKnown {
-		result.RequiredCounter = selection.CounterKind
-		if selection.CounterCountLessThan > 0 {
-			result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.LessThan, Value: selection.CounterCountLessThan})
-		} else {
-			result.RequiredCounterCount = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.CounterCountAtLeast})
-		}
-	}
-	if selection.MatchPowerAtLeast {
-		result.Power = opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: selection.PowerAtLeast})
-	} else if selection.PowerAtLeast != 0 {
-		return game.Selection{}, false
-	}
-	switch selection.AttributeCompare.Attribute {
-	case compiler.ConditionAttributeNone:
-	case compiler.ConditionAttributeManaValue:
-		result.ManaValue = opt.Val(compare.Int{Op: selection.AttributeCompare.Op, Value: selection.AttributeCompare.Value})
-	case compiler.ConditionAttributePower:
-		// PowerAtLeast/MatchPowerAtLeast (the narrower "with power N or greater"
-		// trailing selection qualifier) and AttributeCompare are populated by
-		// disjoint recognizers and should never both name Power; fail closed
-		// rather than silently letting one bound overwrite the other.
-		if result.Power.Exists {
-			return game.Selection{}, false
-		}
-		result.Power = opt.Val(compare.Int{Op: selection.AttributeCompare.Op, Value: selection.AttributeCompare.Value})
-	case compiler.ConditionAttributeToughness:
-		result.Toughness = opt.Val(compare.Int{Op: selection.AttributeCompare.Op, Value: selection.AttributeCompare.Value})
-	default:
-		return game.Selection{}, false
-	}
-	return result, len(result.Validate()) == 0
-}
-
-// conditionSelectionSelector translates a ConditionSelection's filter
-// dimensions into a compiler.CompiledSelector. Its shared-typed required-type,
-// supertype, and color fields are consumed directly, failing closed on any
-// value outside the permanent-selection vocabulary. The condition extras
-// (counters, ExcludeSource, the power-at-least bound, and TokenOnly) are applied
-// by lowerConditionSelection directly because they do not round-trip through
-// CompiledSelector.
-func conditionSelectionSelector(selection compiler.ConditionSelection) (compiler.CompiledSelector, bool) {
-	required, ok := conditionCardTypes(selection.RequiredTypes)
-	if !ok {
-		return compiler.CompiledSelector{}, false
-	}
-	supertypes, ok := conditionSupertypes(selection.Supertypes)
-	if !ok {
-		return compiler.CompiledSelector{}, false
-	}
-	colors, ok := conditionColors(selection.ColorsAny)
-	if !ok {
-		return compiler.CompiledSelector{}, false
-	}
-	tapped, ok := lowerConditionTriState(selection.Tapped)
-	if !ok {
-		return compiler.CompiledSelector{}, false
-	}
-	combatState, ok := lowerConditionCombatState(selection.CombatState)
-	if !ok {
-		return compiler.CompiledSelector{}, false
-	}
-	subtypes := make([]types.Sub, 0, len(selection.SubtypesAny))
-	for _, subtype := range selection.SubtypesAny {
-		if subtype == "" {
-			return compiler.CompiledSelector{}, false
-		}
-		subtypes = append(subtypes, types.Sub(subtype))
-	}
-
-	selector := compiler.CompiledSelector{
-		Kind:         compiler.SelectorPermanent,
-		Colorless:    selection.Colorless,
-		Multicolored: selection.Multicolored,
-		// A condition's required-type nouns are conjunctive (the matched
-		// permanent must carry every named type at once), matching the legacy
-		// projector that put them in Selection.RequiredTypes. ConjunctiveTypes
-		// makes SelectionForSelectorMasked fold RequiredTypesAny into the
-		// conjunctive RequiredTypes field.
-		ConjunctiveTypes: true,
-		Keyword:          selection.Keyword,
-	}
-
-	switch tapped {
-	case game.TriTrue:
-		selector.Tapped = true
-	case game.TriFalse:
-		selector.Untapped = true
-	default:
-	}
-
-	switch combatState {
-	case game.CombatStateAttacking:
-		selector.Attacking = true
-	case game.CombatStateBlocking:
-		selector.Blocking = true
-	case game.CombatStateAttackingOrBlocking:
-		selector.Attacking = true
-		selector.Blocking = true
-	default:
-	}
-
-	selector = selector.WithAtoms(compiler.CompiledSelectorAtoms{
-		RequiredTypesAny: required,
-		Supertypes:       supertypes,
-		SubtypesAny:      subtypes,
-		ColorsAny:        colors,
-	})
-
-	return selector, true
 }
 
 func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.ObjectReference, bool) {

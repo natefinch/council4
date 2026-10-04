@@ -358,6 +358,10 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	if current < 0 {
 		return 0, false
 	}
+	return priorInstructionAntecedentAt(reference, effects, current)
+}
+
+func priorInstructionAntecedentAt(reference CompiledReference, effects []CompiledEffect, current int) (int, bool) {
 	// "That token" / "those tokens" reads as the subject of a following clause
 	// ("That token gains ...") rather than the object of the current one, so the
 	// nearest preceding verb belongs to the antecedent effect itself. When that

@@ -60,10 +60,7 @@ func objectIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.RemoveFromCombat); ok {
 		return v.Object.TargetIndex(), true
 	}
-	if v, ok := movePermanentTo(p, zone.Exile); ok {
-		return v.Object.TargetIndex(), true
-	}
-	if v, ok := movePermanentTo(p, zone.Hand); ok {
+	if v, ok := p.(game.MovePermanent); ok {
 		return v.Object.TargetIndex(), true
 	}
 	if v, ok := p.(game.CounterObject); ok {
@@ -152,6 +149,11 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 		objectPrimitive("RemoveFromCombat", func() game.Primitive { return game.RemoveFromCombat{Object: obj()} }),
 		objectPrimitive("Exile", func() game.Primitive { return game.MovePermanent{Object: obj(), Destination: zone.Exile} }),
 		objectPrimitive("Bounce", func() game.Primitive { return game.MovePermanent{Object: obj(), Destination: zone.Hand} }),
+		objectPrimitive("Library top", func() game.Primitive { return game.MovePermanent{Object: obj(), Destination: zone.Library} }),
+		objectPrimitive("Library bottom", func() game.Primitive {
+			return game.MovePermanent{Object: obj(), Destination: zone.Library, LibraryBottom: true}
+		}),
+		objectPrimitive("Graveyard", func() game.Primitive { return game.MovePermanent{Object: obj(), Destination: zone.Graveyard} }),
 		objectPrimitive("CounterObject", func() game.Primitive { return game.CounterObject{Object: obj()} }),
 		objectPrimitive("CopyStackObject", func() game.Primitive {
 			return game.CopyStackObject{Object: game.TargetStackObjectReference(0), MayChooseNewTargets: true}
