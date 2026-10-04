@@ -163,7 +163,7 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateObjectMatches:
-		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
+		object, ok := lowerObjectMatchReference(condition, ctx)
 		if !ok {
 			return game.Condition{}, false
 		}
@@ -290,6 +290,40 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 		return game.Condition{}, false
 	}
 	return result, !result.Empty()
+}
+
+func lowerObjectMatchReference(condition compiler.CompiledCondition, ctx conditionLoweringContext) (game.ObjectReference, bool) {
+	if condition.ObjectReference == nil {
+		if condition.HasSubjectReference {
+			return game.ObjectReference{}, false
+		}
+		return lowerConditionObjectReference(condition.ObjectBinding)
+	}
+	reference := *condition.ObjectReference
+	if reference.Binding != condition.ObjectBinding ||
+		(condition.HasSubjectReference && reference.NodeID != condition.SubjectRefID) {
+		return game.ObjectReference{}, false
+	}
+	if reference.Binding == compiler.ReferenceBindingTarget {
+		if ctx != conditionContextEffectGate || condition.ObjectTarget == nil || reference.Occurrence < 0 {
+			return game.ObjectReference{}, false
+		}
+		target := *condition.ObjectTarget
+		if target.Selector.Kind == compiler.SelectorCard {
+			if _, ok := cardInZoneTargetSpec(target, target.Selector.Zone); !ok {
+				return game.ObjectReference{}, false
+			}
+			return game.TargetCardReference(reference.Occurrence), true
+		}
+		if _, ok := permanentTargetSpec(target); !ok {
+			return game.ObjectReference{}, false
+		}
+	}
+	return lowerObjectReference(reference, referenceLoweringContext{
+		AllowSource: true,
+		AllowEvent:  ctx == conditionContextEffectGate || ctx == conditionContextInterveningTrigger,
+		AllowTarget: ctx == conditionContextEffectGate,
+	})
 }
 
 func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx conditionLoweringContext) bool {

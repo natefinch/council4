@@ -29,8 +29,8 @@ func TestLowerClingToDustCardTypeNoun(t *testing.T) {
 		t.Fatalf("instruction[1] = %T, want game.GainLife", gainLife.Primitive)
 	}
 	gate := effectConditionMatch(t, gainLife)
-	if gate.Object.Val.Kind() != game.ObjectReferenceTargetPermanent || gate.Object.Val.TargetIndex() != 0 {
-		t.Fatalf("gate object = %#v, want target permanent 0", gate.Object)
+	if gate.Object.Val.Kind() != game.ObjectReferenceTargetCard || gate.Object.Val.TargetIndex() != 0 {
+		t.Fatalf("gate object = %#v, want target card 0", gate.Object)
 	}
 	if !slices.Contains(gate.ObjectMatches.Val.RequiredTypes, types.Creature) {
 		t.Fatalf("gate selection = %#v, want required type Creature", gate.ObjectMatches.Val)

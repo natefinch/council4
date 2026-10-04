@@ -43,6 +43,9 @@
               Selector: 
                 Kind: 1
               Exact: true
+              Order: 
+                Start: 4
+                End: 5
           SubjectTargets: 
           Selector: 
             Kind: 1

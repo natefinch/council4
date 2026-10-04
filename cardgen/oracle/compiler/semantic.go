@@ -1417,6 +1417,10 @@ type CompiledCondition struct {
 	Selection     ConditionSelection
 	Counter       ConditionCounter
 	ObjectBinding ReferenceBinding
+	// ObjectReference retains the bound subject's identity and occurrence.
+	// ObjectTarget supplies the domain of a target-derived subject.
+	ObjectReference *CompiledReference
+	ObjectTarget    *CompiledTarget
 
 	// ThisWayOutcome carries the producing EffectKind a
 	// ConditionPredicateResultThisWay condition's participle named (EffectDestroy,
@@ -1436,16 +1440,15 @@ type CompiledCondition struct {
 	ClauseIndex       int
 	EventHistoryIndex int
 
-	// SubjectSpan is the source span of the subject noun phrase for the
-	// source-death predicates (ConditionPredicateSourceWouldDie and
-	// ConditionPredicateSourceWouldGoToGraveyard). Reference binding confirms a
-	// typed source reference fills that span; the compiler never re-derives the
-	// subject from condition text.
-	SubjectSpan shared.Span
+	// SubjectSpan is diagnostic metadata for the parser-owned subject.
+	// HasSubjectReference identifies contextual ObjectMatches subjects.
+	SubjectSpan         shared.Span
+	HasSubjectReference bool
+	SubjectTypes        []types.Card
 
 	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
-	// subject span for the source-death predicates, or -1 when none does. The
-	// compiler confirms the subject binds the source by matching this identity
+	// subject span for source-death or contextual object predicates, or -1 when
+	// none does. The compiler binds the subject by matching this identity
 	// rather than comparing the reference span to the subject span.
 	SubjectRefID int
 

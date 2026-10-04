@@ -328,6 +328,16 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateObjectMatches
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
 		condition.Selection = selection
+		for _, subjectType := range clause.SubjectTypes {
+			condition.SubjectTypes = append(condition.SubjectTypes, compileTriggerCardType(subjectType))
+		}
+		if clause.HasSubjectSpan {
+			condition.SubjectSpan = clause.SubjectSpan
+			condition.SubjectRefID = clause.SubjectRefID
+			condition.HasSubjectReference = true
+		} else {
+			condition.SubjectRefID = -1
+		}
 		if clause.Negated {
 			condition.Negated = !condition.Negated
 		}
@@ -758,7 +768,7 @@ func compileEventHistoryWindow(
 	}
 }
 
-func bindConditionReferences(conditions []CompiledCondition, references []CompiledReference, targets []CompiledTarget, trigger *CompiledTrigger) {
+func bindConditionReferences(conditions []CompiledCondition, references []CompiledReference, targets []CompiledTarget, effects []CompiledEffect, trigger *CompiledTrigger) {
 	for i := range conditions {
 		switch conditions[i].Predicate {
 		case ConditionPredicateSourceWouldDie, ConditionPredicateSourceWouldGoToGraveyard:
@@ -769,47 +779,16 @@ func bindConditionReferences(conditions []CompiledCondition, references []Compil
 			ConditionPredicateObjectExists,
 			ConditionPredicateEventSubjectHadCounters,
 			ConditionPredicateObjectAttackedThisTurn:
-			// A condition parsed as bound to the triggering event's permanent
-			// ("that <noun> is/are/was a <selection>", recognizeThatSubjectMatchCondition;
-			// or the bare event pronoun "it was/it's a <selection>",
-			// recognizeEventSubjectMatchCondition) cannot possibly denote that
-			// permanent when the ability has no trigger at all -- there is no
-			// triggering event to bind to. When the ability instead has exactly
-			// one single-object target, the phrase naturally refers to it
-			// instead, read through last-known information once it has left the
-			// battlefield (CR 608.2b): "Destroy target creature. If that
-			// creature was a Human, you gain life equal to its toughness."
-			// (Death's Caress); "Target permanent gains hexproof and
-			// indestructible until end of turn. If it's an artifact creature,
-			// it gets +2/+2 until end of turn." (Blacksmith's Skill, present
-			// tense, still on the battlefield). This is unambiguous only
-			// because no trigger exists at all to compete as an antecedent; a
-			// triggered ability whose event does provide a permanent (or
-			// provides one only sometimes, via OneOrMore) keeps failing closed
-			// below, since disambiguating between a target and that trigger's
-			// permanent needs clause-order awareness this fallback does not
-			// have (Carrion Locust: "When this creature enters, exile target
-			// card... If it was a creature card..." binds the exiled target
-			// card, not the entering creature, but nothing here can yet tell
-			// the two apart). Tense alone cannot make this decision either: an
-			// enters-the-battlefield trigger's own permanent is still on the
-			// battlefield when this clause runs, so present tense ("that
-			// creature is a Bird") is exactly as viable an EventPermanent
-			// antecedent as past tense is -- which is why the parser always
-			// seeds EventPermanent for both spellings and leaves the choice to
-			// this trigger-aware fallback, rather than the present-tense form
-			// binding Target directly.
-			//
-			// This must be applied to the condition's OWN recorded binding before
-			// calling conditionObjectBinding, not to that call's result: the
-			// same "that creature" phrase is independently scanned and resolved
-			// by the general reference machinery too (bindReferences), which
-			// already correctly resolves it to Target using its own mature
-			// nearest-antecedent logic. conditionObjectBinding treats any
-			// reference-derived binding that disagrees with the condition's own
-			// (pre-fallback) EventPermanent guess as an unresolvable conflict and
-			// fails closed before this fallback ever runs. Rewriting the
-			// condition's own binding first lets the two signals agree.
+			if conditions[i].Predicate == ConditionPredicateObjectMatches &&
+				conditions[i].HasSubjectReference {
+				if !bindContextualObjectCondition(&conditions[i], references, targets, effects, trigger) {
+					conditions[i].Predicate = ConditionPredicateUnsupported
+				}
+				continue
+			}
+			// Fixed-binding grammars without a contextual subject retain their
+			// existing no-trigger fallback. Contextual matches above instead use
+			// the parser-owned subject and full antecedent identity.
 			if conditions[i].Predicate == ConditionPredicateObjectMatches &&
 				conditions[i].ObjectBinding == ReferenceBindingEventPermanent &&
 				trigger == nil &&
