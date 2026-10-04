@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18476 supported cards
+# 18478 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -448,6 +448,7 @@ c46b506d06aee46a  Ancestral Blade
 9feb346a736dc418  Ancestral Reminiscence
 280bb062683c60dd  Ancestral Tribute
 fe6bc7df630f1c48  Ancestral Vengeance
+46c38423ff12490c  Anchor to the Aether
 26697500bdcec6c2  Anchovy & Banana Pizza
 1ead86e5a26911b5  Ancient Amphitheater
 548fc94ff6dc1ef8  Ancient Animus
@@ -2989,6 +2990,7 @@ ad85ce8162b00a24  Conclave Mentor
 5b9db6e0b7472746  Conclave's Blessing
 885d7bb16129d0ac  Concordant Crossroads
 4fd8a502456ba4b8  Concordia Pegasus
+c4606a614b408605  Condemn
 6928b98950f35a37  Condescend
 546a003d845be426  Conductor of Cacophony
 ca4749c7e8f3a780  Conduit of Worlds
