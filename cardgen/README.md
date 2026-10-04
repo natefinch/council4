@@ -28,6 +28,23 @@ diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Resolving object-match conditions retain the parser-owned subject reference,
+its target occurrence, and its target domain. A prior targeted graveyard card
+can therefore remain the subject after exile without being confused with the
+permanent that triggered the ability. Permanent targets use current effective
+characteristics while present and last-known characteristics after departure;
+card targets use card identity and card characteristics. Leading condition
+references belong to the condition, not to the gated effect's reconstructed
+subject. Singular subjects with ambiguous or plural target ownership fail
+closed, as do optional preceding target slots. Typed demonstrative nouns also
+constrain the antecedent: an event's "that land" is not a later creature target.
+Supported compound card-noun contractions use the same selection grammar as
+their uncontracted forms; missing contextual ownership never selects the event
+as a default. Blink-result incarnations, resolution-chosen cards, and permanent/card
+union selection remain separate capabilities. Existing subtype-only contracted
+target gates retain their legacy lowering; this tranche does not rewrite their
+linked return/blink behavior.
+
 Trigger recognition belongs to the Oracle parser. Its composable grammar emits
 source-spanned typed syntax for permanent zone-change, spell/ability, combat,
 damage, phase/step, permanent-state, counter, sacrifice, mutate, targeting, and
@@ -72,7 +89,8 @@ Vanguard cards are excluded with explicit report reasons.
    call `lowerAbilityContent` directly; no shell lowerer constructs a fake spell
    ability to reach body lowering. `condition.go` is the single
    `oracle.CompiledCondition` to `game.Condition` adapter and requires an
-   explicit static, activation, replacement, or intervening-trigger context.
+   explicit static, activation, replacement, resolving-effect, or
+   intervening-trigger context.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
    prior-instruction results. Ordered lowering also supports the exact linked

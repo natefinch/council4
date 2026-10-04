@@ -464,15 +464,15 @@ type ConditionClause struct {
 	// precedes it, instead of one bespoke predicate per verb.
 	ThisWayOutcome EffectKind `json:",omitempty"`
 
-	// SubjectSpan is set for source-death predicates so the compiler can confirm
-	// the subject binds the source via a typed reference.
+	// SubjectSpan identifies a source-death or contextual object-match subject.
 	SubjectSpan    shared.Span `json:"-"`
 	HasSubjectSpan bool        `json:",omitempty"`
 	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
 	// subject span for source-death predicates, or -1 when no reference does. The
 	// compiler confirms the subject binds the source by matching this identity
 	// instead of comparing the reference span to the subject span.
-	SubjectRefID int `json:"-"`
+	SubjectRefID int               `json:"-"`
+	SubjectTypes []TriggerCardType `json:",omitempty"`
 
 	// ControlComparison carries the typed cross-player control-count comparison
 	// for ConditionPredicateControlComparison ("an opponent controls more lands
@@ -1927,7 +1927,8 @@ func recognizeEventSubjectHadCounterCondition(body []shared.Token, atoms Atoms) 
 }
 
 // recognizeEventSubjectMatchCondition handles "it was a <selection>" and the
-// "it's a <selection>" contraction, binding the event permanent. It also
+// "it's a <selection>" contraction, preserving the subject reference for
+// contextual binding. It also
 // recognizes the equivalent "that <permanent-type> was a <selection>"
 // back-reference (e.g. "that creature was a Horror") that names the triggering
 // object by its type rather than the bare pronoun.
@@ -1953,10 +1954,17 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	if !ok {
 		return ConditionClause{}, false
 	}
+	subjectID := atoms.ReferenceIDAt(body[0].Span)
+	contextualCardNoun := len(selection.RequiredTypes) > 0 && slices.ContainsFunc(rest, func(token shared.Token) bool {
+		return equalWord(token, "card") || equalWord(token, "cards")
+	})
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingEventPermanent,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingEventPermanent,
+		Selection:      selection,
+		SubjectSpan:    body[0].Span,
+		HasSubjectSpan: subjectID >= 0 || contextualCardNoun,
+		SubjectRefID:   subjectID,
 	}, true
 }
 
@@ -1978,24 +1986,14 @@ func recognizePriorInstructionSubjectMatchCondition(body []shared.Token, atoms A
 	}, true
 }
 
-// recognizeThatSubjectMatchCondition handles the intervening subtype gate
+// recognizeThatSubjectMatchCondition handles the subtype gate
 // "that <permanent-type> is/are/was a <selection>" ("if that creature was a
 // Horror", Endless Evil; "if that creature is a Bird", Rending Flame; "if
-// that permanent is a Spirit", Starfall). Like the bare-pronoun "it was/it's
-// a <selection>" form it seeds the triggering event permanent binding, even
-// for the present-tense copula: a triggered ability whose event supplies a
-// permanent that is STILL on the battlefield when this clause runs (e.g. an
-// enters-the-battlefield trigger) can be present-tense-referenced by "that
-// creature" exactly as readily as a resolving spell's own target can, so
-// tense alone cannot decide the antecedent up front. bindConditionReferences'
-// no-trigger fallback resolves the (very common) case where no trigger
-// exists at all -- there, an event permanent binding is provably impossible,
-// so it rebinds to the ability's sole target instead (Death's Caress:
-// "Destroy target creature. If that creature was a Human, ..."; Splash
-// Portal-shaped spells: "... If that creature is a Bird, ..."). When a
-// trigger DOES exist, this seed is evaluated against that object's
-// last-known information, so it holds even after the permanent has left the
-// battlefield. The subject between "that" and the copula must be either the
+// that permanent is a Spirit", Starfall). Tense alone cannot decide whether
+// the antecedent is a prior target or a triggering permanent. The parser
+// preserves the exact subject reference; the compiler resolves its ownership
+// using the same antecedents as effect references. The subject between "that"
+// and the copula must be either the
 // bare noun "permanent" or a permanent-type noun phrase (naming the object by
 // its type); any other subject fails closed so the pronoun recognizer keeps
 // ownership of the "it was/it's a" spellings.
@@ -2014,11 +2012,13 @@ func recognizeThatSubjectMatchCondition(body []shared.Token, atoms Atoms) (Condi
 	if copulaIdx < 1 {
 		return ConditionClause{}, false
 	}
+	var subjectTypes []TriggerCardType
 	if !tokenWordsEqual(rest[:copulaIdx], "permanent") {
 		subjectSelection, ok := parseConditionSelection(rest[:copulaIdx], atoms)
 		if !ok || !conditionSelectionEmptyExceptType(subjectSelection) {
 			return ConditionClause{}, false
 		}
+		subjectTypes = subjectSelection.RequiredTypes
 	}
 	after := rest[copulaIdx:]
 	var matchRest []shared.Token
@@ -2038,9 +2038,13 @@ func recognizeThatSubjectMatchCondition(body []shared.Token, atoms Atoms) (Condi
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingEventPermanent,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingEventPermanent,
+		Selection:      selection,
+		SubjectSpan:    shared.SpanOf(body[:copulaIdx+1]),
+		HasSubjectSpan: true,
+		SubjectRefID:   atoms.ReferenceIDAt(shared.SpanOf(body[:copulaIdx+1])),
+		SubjectTypes:   subjectTypes,
 	}, true
 }
 

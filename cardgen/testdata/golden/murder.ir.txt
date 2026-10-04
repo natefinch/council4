@@ -31,6 +31,9 @@
               Selector: 
                 Kind: 5
               Exact: true
+              Order: 
+                Start: 2
+                End: 3
           SubjectTargets: 
           Selector: 
             Kind: 5

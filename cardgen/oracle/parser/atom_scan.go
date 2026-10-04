@@ -19,7 +19,6 @@ import (
 func collectAtoms(tokens []shared.Token, reminders, quoted []Delimited, cardName string, legendary bool) Atoms {
 	tokens = atomSemanticTokens(tokens, reminders, quoted)
 	atoms := Atoms{
-		references:        collectReferences(tokens, cardName, legendary),
 		selfNameSpans:     collectSelfNameSpans(tokens, cardName, legendary),
 		sourceNameSpans:   collectSourceNameSpans(tokens, cardName, legendary),
 		sourceMarkerSpans: collectSourceMarkerSpans(tokens),
@@ -79,6 +78,7 @@ func collectAtoms(tokens []shared.Token, reminders, quoted []Delimited, cardName
 	for _, atom := range scanCounters(tokens) {
 		appendAtomCounter(&atoms, atom.Kind, atom.Span)
 	}
+	atoms.references = collectReferences(tokens, cardName, legendary, atoms)
 	atoms.keywords = scanKeywords(tokens, atoms)
 	atoms.keywordSelectors = scanKeywordSelectors(tokens)
 	return atoms
