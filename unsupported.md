@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,472 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,476 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -2554,7 +2554,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Cryptex** — unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported activation condition: the executable source backend cannot lower every activation condition
 - **Cryptic Cruiser** — unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported activation cost: the executable source backend cannot lower every typed activation cost component
 - **Cryptic Gateway** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
-- **Cryptic Pursuit** — unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: if it's an instant or sorcery card
+- **Cryptic Pursuit** — unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect
 - **Cryptic Spires** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported mana symbol: the executable source backend cannot lower this add-mana content
 - **Cryptic Trilobite** — unsupported mana symbol: the executable source backend cannot lower this add-mana content
 - **Cryptid Inspector** — unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot
@@ -4345,7 +4345,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Fish** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color
 - **Fish // Kraken** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color
 - **Fisher's Talent** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: if it's a land card; unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements; unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
-- **Fishing Gear** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's a permanent card
+- **Fishing Gear** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition predicate not gateable
 - **Fishing Pole** — unsupported static declaration operation: the recognized static declaration operation is not representable by the runtime static-value vocabulary; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Fist of Suns** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Fistful of Force** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If you win
@@ -4437,7 +4437,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Fluctuator** — unsupported Cycling ability: the executable source backend supports only exact Cycling with a mana cost
 - **Flummoxed Cyclops** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Whenever two or more creatures your opponents control attack, this creature can't block this combat.; unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability
 - **Flunk** — unsupported power/toughness spell: the executable source backend supports only exact supported target-creature power/toughness changes until end of turn
-- **Flutterfox** — unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition
 - **Flux** — unsupported ordered effect sequence: sub-effect — unsupported discard spell; unsupported ordered effect sequence: sub-effect — unsupported draw spell
 - **Fluxcharger** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Whenever you cast an instant or sorcery spell, you may switch this creature's power and toughness until end of turn.; unsupported triggered ability effect: the executable source backend does not support this spell-cast trigger body
 - **Flycatcher Giraffid** — unsupported enters-with-counters replacement: the executable source backend does not support this enters-with-counters counter kind
@@ -5679,7 +5678,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Hide in Plain Sight** — unsupported ordered effect sequence: sub-effect — unsupported manifest spell; unsupported ordered effect sequence: sub-effect — unsupported library placement
 - **Hide on the Ceiling** — unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Hideous Taskmaster** — unsupported gain-control spell: the executable source backend supports only exact gain-control sequences targeting one permanent; unsupported parameterized keyword: the executable source backend does not yet lower Annihilator with parameter "1"
-- **Hidetsugu and Kairi** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's an instant or sorcery card
+- **Hidetsugu and Kairi** — unsupported condition type-selection binding: expanded type selections require an unambiguous runtime-capable object binding
 - **Hidetsugu Consumes All // Vessel of the All-Consuming** — unsupported triggered ability: the executable source backend does not support this semantic life or damage trigger condition
 - **Hidetsugu's Second Rite** — unsupported damage spell: the executable source backend supports only exact fixed, X, or source-power damage to that player
 - **Hidetsugu, Devouring Chaos** — unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported damage spell
@@ -7168,7 +7167,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Linvala, Keeper of Silence** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Activated abilities of creatures your opponents control can't be activated.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Linvala, Shield of Sea Gate** — unsupported Oracle construct: the compiler preserved but did not confidently lower: At the beginning of combat on your turn, if you have a full party, choose target nonland permanent an opponent controls. Until your next turn, it can't attack or block, and its activated abilities can't be activated.; unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition; unsupported temporary keyword spell: the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn
 - **Linvala, the Preserver** — unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger condition
-- **Lion Sash** — unsupported activation condition: the executable source backend cannot lower every activation condition
+- **Lion Sash** — unsupported condition type-selection binding: expanded type selections require an unambiguous runtime-capable object binding
 - **Lion Umbra** — unsupported Enchant ability: the executable source backend supports only exact Enchant with a supported target kind
 - **Liquid Fire** — unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported activation cost: the executable source backend does not yet lower this additional cost to cast; unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
 - **Lita, Little Orphan Amphibian** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Alliance — Whenever another creature you control enters, choose one that hasn't been chosen this turn.; unsupported permanent zone-change trigger effect: the executable source backend does not support this permanent zone-change trigger body; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
@@ -8065,7 +8064,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Moonlight Bargain** — unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
 - **Moonlight Hunt** — unsupported damage spell: the executable source backend supports only exact fixed, X, or source-power damage to that creature
 - **Moonlit Meditation** — unsupported optional replacement effect: the executable source backend does not yet lower optional replacement effects
-- **Moonlit Scavengers** — unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger condition
 - **Moonmist** — unsupported transform effect: the executable source backend supports only "transform this &lt;permanent&gt;" transforming the source
 - **Moonrager's Slash** — unsupported cast effect: only cast-without-paying-mana-cost spells are supported
 - **Moonring Mirror** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported counter placement
@@ -9867,7 +9865,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Reckoner's Bargain** — unsupported ordered effect sequence: sub-effect — unsupported life spell
 - **Reclaim the Wastes** — unsupported search effect: unexpected non-result reference in search effect
 - **Reclamation** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
-- **Reclusive Wight** — unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition
 - **Recommission** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
 - **Reconstruct History** — unsupported return spell: the executable source backend supports only exact return of one target permanent to its owner's hand
 - **Recoup** — unsupported temporary keyword spell: the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn
@@ -11903,7 +11900,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Stone Catapult** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
 - **Stone Giant** — unsupported ordered effect sequence: sub-effect — unsupported temporary keyword spell
 - **Stone Haven Outfitter** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous; unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger pattern
-- **Stone Haven Pilgrim** — unsupported triggered ability: the executable source backend supports only recognized semantic self triggers with supported effects
 - **Stone Idol Generator** — unsupported cost: the compiler preserved this cost component but did not assign executable semantics; unsupported activation cost: the executable source backend cannot lower every typed activation cost component
 - **Stone Idol Trap** — unsupported ordered effect sequence: sub-effect — unsupported delayed effect
 - **Stone-Tongue Basilisk** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Threshold — As long as there are seven or more cards in your graveyard, all creatures able to block this creature do so.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
@@ -13519,7 +13515,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Vacuumelt** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Replicate {2}{U} (When you cast this spell, copy it for each time you paid its replicate cost. You may choose new targets for the copies.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Vadrik, Astral Archmage** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot
 - **Vadrok, Apex of Thunder** — unsupported cast effect: only casting from the hand is supported
-- **Vaevictis Asmadi, the Dire** — unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
+- **Vaevictis Asmadi, the Dire** — unsupported condition type-selection binding: expanded type selections require an unambiguous runtime-capable object binding
 - **Valakut Exploration** — unsupported exile spell: the executable source backend supports only exact fixed exile by one player; unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition
 - **Valakut Fireboar** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Whenever this creature attacks, switch its power and toughness until end of turn.; unsupported triggered ability effect: the executable source backend supports only recognized semantic self triggers with supported effects
 - **Valakut, the Molten Pinnacle** — unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger condition
@@ -13926,7 +13922,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Waltz of Rage** — unsupported ordered effect sequence: sub-effect — unsupported damage spell
 - **Wan Shi Tong, All-Knowing** — unsupported library placement: the executable source backend supports only exact target graveyard-to-library placement; unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot
 - **Wan Shi Tong, Librarian** — unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported ordered effect sequence: sub-effect — unsupported draw spell
-- **Wand of Denial** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: If it's a nonland card
+- **Wand of Denial** — unsupported condition type-selection binding: expanded type selections require an unambiguous runtime-capable object binding
 - **Wand of Ith** — unsupported activation condition: the executable source backend cannot lower every activation condition
 - **Wand of Orcus** — unsupported temporary keyword spell: the executable source backend supports only exact non-parameterized keyword grants to one target creature or permanent until end of turn
 - **Wand of Vertebrae** — unsupported shuffle effect: the executable source backend supports only a source-spell shuffle into its owner's library, a controller graveyard shuffle into library, or a target player shuffling their graveyard into their library

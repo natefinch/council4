@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18472 supported cards
+# 18476 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -5712,6 +5712,7 @@ ddbb0191696e892e  Flumph
 50df1ffba789747e  Flurry of Horns
 c473dcd2ac2543f5  Flurry of Wings
 04295ace0d8179ff  Flusterstorm
+7e81ba247ff5d80e  Flutterfox
 23948e67be9df7a8  Flux Channeler
 1aca18096ac5dcc9  Fly
 7bf5e1391a0bad33  Flying Carpet
@@ -10188,6 +10189,7 @@ d32272cd70d9fd8a  Moonglove Extract
 900216e893a075d0  Moonglove Winnower
 f5761132b7119d48  Moonlight Geist
 934c65d4342140ff  Moonlit Lamenter
+a60b4da87083de1d  Moonlit Scavengers
 ecd08cf65673ccad  Moonlit Strider
 3f666f2a76923f8f  Moonlit Wake
 a4956cceeaa425bc  Moonring Island
@@ -12383,6 +12385,7 @@ f8daa52853008131  Reclaiming Vines
 c05601ef7b595052  Reclamation Sage
 eb2e7ec1db5612c2  Reclusive Artificer
 8a78d6bf12c0c805  Reclusive Taxidermist
+04f39c6cf85d4985  Reclusive Wight
 a6c3b1d4c2fc61a0  Recoil
 b5eaab638da67d9f  Recollect
 f9d97dfd5374f5b4  Recon Craft Theta
@@ -15178,6 +15181,7 @@ c4806c8165908250  Stomping Ground
 f9c0975359391d47  Stone Docent
 1f98e5074a28f84d  Stone Golem
 0c784dc5417a3343  Stone Haven Medic
+ff2a11b9173a40d4  Stone Haven Pilgrim
 9f32b60c110c796e  Stone Kavu
 f3edf41f109ea120  Stone of Erech
 548602f3b6768492  Stone Quarry
