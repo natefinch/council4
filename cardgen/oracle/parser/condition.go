@@ -323,16 +323,19 @@ const (
 	ConditionObjectBindingTarget ConditionObjectBinding = "ConditionObjectBindingTarget"
 )
 
-// ConditionSelection is the source-independent permanent selection used by typed
+// ConditionSelection is the source-independent object selection used by typed
 // condition clauses. Subtype names are canonical typed identities.
 type ConditionSelection struct {
-	RequiredTypes []TriggerCardType    `json:",omitempty"`
-	Supertypes    []ConditionSupertype `json:",omitempty"`
-	SubtypesAny   []types.Sub          `json:",omitempty"`
-	ColorsAny     []TriggerColor       `json:",omitempty"`
-	Colorless     bool                 `json:",omitempty"`
-	Multicolored  bool                 `json:",omitempty"`
-	TokenOnly     bool                 `json:",omitempty"`
+	RequiredTypes    []TriggerCardType    `json:",omitempty"`
+	RequiredTypesAny []TriggerCardType    `json:",omitempty"`
+	ExcludedTypes    []TriggerCardType    `json:",omitempty"`
+	AnyOf            []ConditionSelection `json:",omitempty"`
+	Supertypes       []ConditionSupertype `json:",omitempty"`
+	SubtypesAny      []types.Sub          `json:",omitempty"`
+	ColorsAny        []TriggerColor       `json:",omitempty"`
+	Colorless        bool                 `json:",omitempty"`
+	Multicolored     bool                 `json:",omitempty"`
+	TokenOnly        bool                 `json:",omitempty"`
 	// NonToken requires the matched permanent to not be a token, backing the
 	// negated intervening condition "if it's not a token" (Life of the Party).
 	// It is the negation of TokenOnly and mutually exclusive with it; its zero
@@ -466,15 +469,15 @@ type ConditionClause struct {
 	ThisWaySelection *SelectionSyntax `json:",omitempty"`
 	ThisWayCardNoun  bool             `json:",omitempty"`
 
-	// SubjectSpan is set for source-death predicates so the compiler can confirm
-	// the subject binds the source via a typed reference.
+	// SubjectSpan identifies a source-death or contextual object-match subject.
 	SubjectSpan    shared.Span `json:"-"`
 	HasSubjectSpan bool        `json:",omitempty"`
 	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
 	// subject span for source-death predicates, or -1 when no reference does. The
 	// compiler confirms the subject binds the source by matching this identity
 	// instead of comparing the reference span to the subject span.
-	SubjectRefID int `json:"-"`
+	SubjectRefID int               `json:"-"`
+	SubjectTypes []TriggerCardType `json:",omitempty"`
 
 	// ControlComparison carries the typed cross-player control-count comparison
 	// for ConditionPredicateControlComparison ("an opponent controls more lands
@@ -1935,7 +1938,8 @@ func recognizeEventSubjectHadCounterCondition(body []shared.Token, atoms Atoms) 
 }
 
 // recognizeEventSubjectMatchCondition handles "it was a <selection>" and the
-// "it's a <selection>" contraction, binding the event permanent. It also
+// "it's a <selection>" contraction, preserving the subject reference for
+// contextual binding. It also
 // recognizes the equivalent "that <permanent-type> was a <selection>"
 // back-reference (e.g. "that creature was a Horror") that names the triggering
 // object by its type rather than the bare pronoun.
@@ -1961,10 +1965,17 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	if !ok {
 		return ConditionClause{}, false
 	}
+	subjectID := atoms.ReferenceIDAt(body[0].Span)
+	contextualCardNoun := len(selection.RequiredTypes) > 0 && slices.ContainsFunc(rest, func(token shared.Token) bool {
+		return equalWord(token, "card") || equalWord(token, "cards")
+	})
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingEventPermanent,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingEventPermanent,
+		Selection:      selection,
+		SubjectSpan:    body[0].Span,
+		HasSubjectSpan: subjectID >= 0 || contextualCardNoun,
+		SubjectRefID:   subjectID,
 	}, true
 }
 
@@ -1986,24 +1997,14 @@ func recognizePriorInstructionSubjectMatchCondition(body []shared.Token, atoms A
 	}, true
 }
 
-// recognizeThatSubjectMatchCondition handles the intervening subtype gate
+// recognizeThatSubjectMatchCondition handles the subtype gate
 // "that <permanent-type> is/are/was a <selection>" ("if that creature was a
 // Horror", Endless Evil; "if that creature is a Bird", Rending Flame; "if
-// that permanent is a Spirit", Starfall). Like the bare-pronoun "it was/it's
-// a <selection>" form it seeds the triggering event permanent binding, even
-// for the present-tense copula: a triggered ability whose event supplies a
-// permanent that is STILL on the battlefield when this clause runs (e.g. an
-// enters-the-battlefield trigger) can be present-tense-referenced by "that
-// creature" exactly as readily as a resolving spell's own target can, so
-// tense alone cannot decide the antecedent up front. bindConditionReferences'
-// no-trigger fallback resolves the (very common) case where no trigger
-// exists at all -- there, an event permanent binding is provably impossible,
-// so it rebinds to the ability's sole target instead (Death's Caress:
-// "Destroy target creature. If that creature was a Human, ..."; Splash
-// Portal-shaped spells: "... If that creature is a Bird, ..."). When a
-// trigger DOES exist, this seed is evaluated against that object's
-// last-known information, so it holds even after the permanent has left the
-// battlefield. The subject between "that" and the copula must be either the
+// that permanent is a Spirit", Starfall). Tense alone cannot decide whether
+// the antecedent is a prior target or a triggering permanent. The parser
+// preserves the exact subject reference; the compiler resolves its ownership
+// using the same antecedents as effect references. The subject between "that"
+// and the copula must be either the
 // bare noun "permanent" or a permanent-type noun phrase (naming the object by
 // its type); any other subject fails closed so the pronoun recognizer keeps
 // ownership of the "it was/it's a" spellings.
@@ -2022,11 +2023,13 @@ func recognizeThatSubjectMatchCondition(body []shared.Token, atoms Atoms) (Condi
 	if copulaIdx < 1 {
 		return ConditionClause{}, false
 	}
+	var subjectTypes []TriggerCardType
 	if !tokenWordsEqual(rest[:copulaIdx], "permanent") {
 		subjectSelection, ok := parseConditionSelection(rest[:copulaIdx], atoms)
 		if !ok || !conditionSelectionEmptyExceptType(subjectSelection) {
 			return ConditionClause{}, false
 		}
+		subjectTypes = subjectSelection.RequiredTypes
 	}
 	after := rest[copulaIdx:]
 	var matchRest []shared.Token
@@ -2046,9 +2049,13 @@ func recognizeThatSubjectMatchCondition(body []shared.Token, atoms Atoms) (Condi
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingEventPermanent,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingEventPermanent,
+		Selection:      selection,
+		SubjectSpan:    shared.SpanOf(body[:copulaIdx+1]),
+		HasSubjectSpan: true,
+		SubjectRefID:   atoms.ReferenceIDAt(shared.SpanOf(body[:copulaIdx+1])),
+		SubjectTypes:   subjectTypes,
 	}, true
 }
 
@@ -2169,7 +2176,7 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	// Selections with required card types (e.g. "a creature", "a legendary
 	// creature") are left for recognizeEventSubjectCondition so they keep the
 	// EventPermanent binding used by trigger intervening-if conditions.
-	if len(selection.RequiredTypes) > 0 {
+	if !conditionTypeSelectionEmpty(selection) {
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
@@ -2469,10 +2476,13 @@ func applySourceState(stateTokens []shared.Token, atoms Atoms, selection *Condit
 		return false
 	}
 	typeSelection, ok := parseConditionSelection(rest, atoms)
-	if !ok || len(typeSelection.RequiredTypes) == 0 {
+	if !ok || conditionTypeSelectionEmpty(typeSelection) {
 		return false
 	}
 	selection.RequiredTypes = append(selection.RequiredTypes, typeSelection.RequiredTypes...)
+	selection.RequiredTypesAny = append(selection.RequiredTypesAny, typeSelection.RequiredTypesAny...)
+	selection.ExcludedTypes = append(selection.ExcludedTypes, typeSelection.ExcludedTypes...)
+	selection.AnyOf = append(selection.AnyOf, typeSelection.AnyOf...)
 	selection.SubtypesAny = append(selection.SubtypesAny, typeSelection.SubtypesAny...)
 	selection.ColorsAny = append(selection.ColorsAny, typeSelection.ColorsAny...)
 	selection.Supertypes = append(selection.Supertypes, typeSelection.Supertypes...)
@@ -2562,6 +2572,9 @@ func applyAttachedCharacteristicState(stateTokens []shared.Token, atoms Atoms, s
 		return false
 	}
 	selection.RequiredTypes = append(selection.RequiredTypes, parsed.RequiredTypes...)
+	selection.RequiredTypesAny = append(selection.RequiredTypesAny, parsed.RequiredTypesAny...)
+	selection.ExcludedTypes = append(selection.ExcludedTypes, parsed.ExcludedTypes...)
+	selection.AnyOf = append(selection.AnyOf, parsed.AnyOf...)
 	selection.SubtypesAny = append(selection.SubtypesAny, parsed.SubtypesAny...)
 	selection.ColorsAny = append(selection.ColorsAny, parsed.ColorsAny...)
 	selection.Supertypes = append(selection.Supertypes, parsed.Supertypes...)
@@ -2600,6 +2613,9 @@ func bareColorList(tokens []shared.Token, atoms Atoms) ([]TriggerColor, bool) {
 // to the shared tap/combat source-state vocabulary.
 func conditionSelectionCharacteristicEmpty(selection ConditionSelection) bool {
 	return len(selection.RequiredTypes) == 0 &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.AnyOf) == 0 &&
 		len(selection.SubtypesAny) == 0 &&
 		len(selection.ColorsAny) == 0 &&
 		len(selection.Supertypes) == 0
@@ -4212,289 +4228,6 @@ func parseControlsDeterminer(tokens []shared.Token) (controlsDeterminer, bool) {
 	return controlsDeterminer{Count: count, Exclude: exclude, Rest: rest}, true
 }
 
-// parseConditionSelection parses a permanent noun phrase into a typed selection,
-// consuming card-type, subtype, color, and supertype atoms by span. It fails
-// closed unless every token belongs to a recognized production.
-func parseConditionSelection(tokens []shared.Token, atoms Atoms) (ConditionSelection, bool) {
-	if len(tokens) == 0 {
-		return ConditionSelection{}, false
-	}
-	var selection ConditionSelection
-	// Trailing "with <qualifier>" clause: either "with power <n> or greater" or
-	// "with <keyword>" (e.g. "a creature with flying").
-	if idx := tokenWordIndex(tokens, "with"); idx >= 0 {
-		qualifier := tokens[idx+1:]
-		if !parseConditionPowerQualifier(qualifier, &selection) &&
-			!parseConditionKeywordQualifier(qualifier, &selection) {
-			return ConditionSelection{}, false
-		}
-		tokens = tokens[:idx]
-	}
-	if len(tokens) == 0 {
-		return ConditionSelection{}, false
-	}
-	// Leading tapped/untapped state.
-	switch {
-	case equalWord(tokens[0], "tapped"):
-		selection.Tapped = ConditionTappedTrue
-		tokens = tokens[1:]
-	case equalWord(tokens[0], "untapped"):
-		selection.Tapped = ConditionTappedFalse
-		tokens = tokens[1:]
-	default:
-	}
-	// Leading supertypes (basic/snow/legendary).
-	for len(tokens) > 0 {
-		supertype, ok := conditionSupertypeAtom(tokens[0].Span, atoms)
-		if !ok {
-			break
-		}
-		selection.Supertypes = append(selection.Supertypes, supertype)
-		tokens = tokens[1:]
-	}
-	if len(tokens) == 0 {
-		return selection, false
-	}
-	return parseConditionNoun(tokens, atoms, selection)
-}
-
-func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
-	if leftEnd, rightStart, ok := conditionAlternativeConnector(tokens); ok {
-		return parseConditionAlternativeNoun(tokens[:leftEnd], tokens[rightStart:], atoms, selection)
-	}
-	// Color-qualified "<colors> creature|permanent".
-	if clause, ok := parseConditionColorQualified(tokens, atoms, selection); ok {
-		return clause, true
-	}
-	// One or more distinct card-type words.
-	cardTypes := make([]TriggerCardType, 0, len(tokens))
-	allTypes := true
-	for _, token := range tokens {
-		cardType, ok := atoms.CardTypeAt(token.Span)
-		if !ok {
-			allTypes = false
-			break
-		}
-		mapped := triggerCardTypeFromAtom(cardType)
-		if slices.Contains(cardTypes, mapped) {
-			return ConditionSelection{}, false
-		}
-		cardTypes = append(cardTypes, mapped)
-	}
-	if allTypes {
-		selection.RequiredTypes = append(selection.RequiredTypes, cardTypes...)
-		return selection, len(selection.RequiredTypes) > 0
-	}
-	// A bare permanent (no required type), e.g. "permanent" or "permanents".
-	if tokenWordsEqual(tokens, "permanent") || tokenWordsEqual(tokens, "permanents") {
-		return selection, true
-	}
-	// A bare token, e.g. "you control a token".
-	if tokenWordsEqual(tokens, "token") || tokenWordsEqual(tokens, "tokens") {
-		selection.TokenOnly = true
-		return selection, true
-	}
-	// A card noun naming the object by its card type(s) while off the
-	// battlefield, tested by characteristics alone per CR 108.3: "if it was a
-	// creature card" (Scavenging Ooze, Cling to Dust), "if it was a land card"
-	// (Misfortune Teller). This must come before parseConditionSubtypeNoun
-	// below: without a required-type prefix, a lone trailing "card"/"cards"
-	// is not itself a recognized noun (unlike "permanent"/"token"), and
-	// parseConditionSubtypeNoun's <name> suffix productions only accept
-	// "planeswalker" or "creature", so neither would otherwise accept it.
-	if clause, ok := parseConditionCardTypeNoun(tokens, atoms, selection); ok {
-		return clause, true
-	}
-	// A subtype noun: creature, land, or "<name> planeswalker".
-	return parseConditionSubtypeNoun(tokens, atoms, selection)
-}
-
-// parseConditionCardTypeNoun matches "<type>+ card(s)" ("if it was a creature
-// card", "if it was a land card"). It only accepts a trailing literal
-// "card"/"cards" noun preceded by one or more explicit card-type words; every
-// other tail (the bare "permanent"/"token" nouns, or a subtype noun like
-// "creature") is handled by its own dedicated production in the caller
-// instead. The bare "permanent card" wording (Lion Sash: "if it was a
-// permanent card") is deliberately NOT handled here and fails closed: unlike
-// every other production in this function, it needs a disjunctive "any card
-// type but instant/sorcery" match that ConditionSelection has no field for
-// today (RequiredTypes is conjunctive, requiring every listed type
-// simultaneously; returning it empty here would wrongly match literally any
-// card, including instants and sorceries, which are Cards but never
-// permanents) -- a real, documented follow-up, not attempted in this slice.
-func parseConditionCardTypeNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
-	if len(tokens) < 2 {
-		return ConditionSelection{}, false
-	}
-	last := tokens[len(tokens)-1]
-	if !equalWord(last, "card") && !equalWord(last, "cards") {
-		return ConditionSelection{}, false
-	}
-	head := tokens[:len(tokens)-1]
-	headTypes := make([]TriggerCardType, 0, len(head))
-	for _, token := range head {
-		cardType, ok := atoms.CardTypeAt(token.Span)
-		if !ok {
-			return ConditionSelection{}, false
-		}
-		mapped := triggerCardTypeFromAtom(cardType)
-		if slices.Contains(headTypes, mapped) {
-			return ConditionSelection{}, false
-		}
-		headTypes = append(headTypes, mapped)
-	}
-	selection.RequiredTypes = append(selection.RequiredTypes, headTypes...)
-	return selection, len(selection.RequiredTypes) > 0
-}
-
-func parseConditionSubtypeNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
-	span := shared.SpanOf(tokens)
-	if subtype, ok := atoms.SubtypeAt(span); ok {
-		selection.SubtypesAny = append(selection.SubtypesAny, subtype)
-		return selection, true
-	}
-	if len(tokens) >= 2 && equalWord(tokens[len(tokens)-1], "planeswalker") {
-		nameSpan := shared.SpanOf(tokens[:len(tokens)-1])
-		if subtype, ok := conditionSubtypeAtom(nameSpan, atoms, CardTypePlaneswalker); ok {
-			selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypePlaneswalker)
-			selection.SubtypesAny = append(selection.SubtypesAny, subtype)
-			return selection, true
-		}
-	}
-	// A typed subtype noun "<name> creature", e.g. "a Griffin creature".
-	if len(tokens) >= 2 &&
-		(equalWord(tokens[len(tokens)-1], "creature") || equalWord(tokens[len(tokens)-1], "creatures")) {
-		nameSpan := shared.SpanOf(tokens[:len(tokens)-1])
-		if subtype, ok := conditionSubtypeAtom(nameSpan, atoms, CardTypeCreature); ok {
-			selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeCreature)
-			selection.SubtypesAny = append(selection.SubtypesAny, subtype)
-			return selection, true
-		}
-	}
-	return ConditionSelection{}, false
-}
-
-// conditionAlternativeConnector locates a two-member "or" or "and/or" union.
-// The lexer splits "and/or" into Word("and"), Slash, Word("or").
-func conditionAlternativeConnector(tokens []shared.Token) (leftEnd, rightStart int, ok bool) {
-	for i := range tokens {
-		if equalWord(tokens[i], "or") {
-			return i, i + 1, i > 0 && i+1 < len(tokens)
-		}
-		if i+2 < len(tokens) &&
-			equalWord(tokens[i], "and") &&
-			tokens[i+1].Kind == shared.Slash &&
-			equalWord(tokens[i+2], "or") {
-			return i, i + 3, i > 0 && i+3 < len(tokens)
-		}
-	}
-	return 0, 0, false
-}
-
-func parseConditionAlternativeNoun(left, right []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
-	if len(left) == 0 || len(right) == 0 {
-		return ConditionSelection{}, false
-	}
-	combined := make([]shared.Token, 0, len(left)+1+len(right))
-	combined = append(combined, left...)
-	combined = append(combined, shared.Token{Kind: shared.Word, Text: "or"})
-	combined = append(combined, right...)
-	if clause, ok := parseConditionColorQualified(combined, atoms, selection); ok {
-		return clause, true
-	}
-	if trimmed, ok := cutTokenPrefix(right, "a"); ok {
-		right = trimmed
-	} else if trimmed, ok := cutTokenPrefix(right, "an"); ok {
-		right = trimmed
-	}
-	// Land subtype disjunction ("a Forest or an Island") carries the Land card
-	// type so the matched permanent must be a land of either basic type.
-	leftLand, leftLandOK := conditionSubtypeAtom(shared.SpanOf(left), atoms, CardTypeLand)
-	rightLand, rightLandOK := conditionSubtypeAtom(shared.SpanOf(right), atoms, CardTypeLand)
-	if leftLandOK && rightLandOK {
-		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeLand)
-		selection.SubtypesAny = append(selection.SubtypesAny, leftLand, rightLand)
-		return selection, true
-	}
-	// Generic subtype disjunction ("another Wolf or Werewolf"). Each side names a
-	// subtype of any card type and the match constrains only the subtype, exactly
-	// like the single-subtype noun production, so a permanent matches if it has
-	// either named subtype.
-	leftSub, leftOK := atoms.SubtypeAt(shared.SpanOf(left))
-	rightSub, rightOK := atoms.SubtypeAt(shared.SpanOf(right))
-	if !leftOK || !rightOK {
-		return ConditionSelection{}, false
-	}
-	selection.SubtypesAny = append(selection.SubtypesAny, leftSub, rightSub)
-	return selection, true
-}
-
-// parseConditionColorQualified handles "<colors> creature(s)" and "<colors>
-// permanent(s)", where colors are one or more color atoms joined by "or", or the
-// "colorless"/"multicolored" qualifier.
-func parseConditionColorQualified(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
-	if len(tokens) < 2 {
-		return ConditionSelection{}, false
-	}
-	last := tokens[len(tokens)-1]
-	colorTokens := tokens[:len(tokens)-1]
-	switch {
-	case equalWord(last, "creature"), equalWord(last, "creatures"):
-		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeCreature)
-	case equalWord(last, "permanent"), equalWord(last, "permanents"):
-	default:
-		return ConditionSelection{}, false
-	}
-	if tokenWordsEqual(colorTokens, "colorless") {
-		selection.Colorless = true
-		return selection, true
-	}
-	if tokenWordsEqual(colorTokens, "multicolored") {
-		selection.Multicolored = true
-		return selection, true
-	}
-	for _, token := range colorTokens {
-		if equalWord(token, "or") {
-			continue
-		}
-		color, ok := atoms.ColorAt(token.Span)
-		if !ok {
-			return ConditionSelection{}, false
-		}
-		selection.ColorsAny = append(selection.ColorsAny, triggerColorFromAtom(color))
-	}
-	if len(selection.ColorsAny) == 0 {
-		return ConditionSelection{}, false
-	}
-	return selection, true
-}
-
-func parseConditionPowerQualifier(tokens []shared.Token, selection *ConditionSelection) bool {
-	rest, ok := cutTokenPrefix(tokens, "power")
-	if !ok || len(rest) != 3 {
-		return false
-	}
-	value, ok := conditionNumberValue(rest[0])
-	if !ok || !equalWord(rest[1], "or") || !equalWord(rest[2], "greater") {
-		return false
-	}
-	selection.PowerAtLeast = value
-	selection.MatchPowerAtLeast = true
-	return true
-}
-
-// parseConditionKeywordQualifier recognizes a single keyword name following
-// "with" (e.g. "a creature with flying"). The qualifier tokens must form exactly
-// one keyword name; trailing text fails closed.
-func parseConditionKeywordQualifier(tokens []shared.Token, selection *ConditionSelection) bool {
-	kind, length, ok := recognizeKeywordNameAt(tokens, 0)
-	if !ok || length != len(tokens) {
-		return false
-	}
-	selection.Keyword = kind
-	return true
-}
-
 func cutControlScope(tokens []shared.Token) (ConditionControlScope, []shared.Token, bool) {
 	if rest, ok := cutTokenPrefix(tokens, "you", "control"); ok {
 		return ConditionControlScopeController, rest, true
@@ -4607,6 +4340,9 @@ func triggerColorFromAtom(color Color) TriggerColor {
 
 func conditionSelectionEmptyExceptType(selection ConditionSelection) bool {
 	return len(selection.RequiredTypes) == 1 &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.AnyOf) == 0 &&
 		len(selection.Supertypes) == 0 &&
 		len(selection.SubtypesAny) == 0 &&
 		len(selection.ColorsAny) == 0 &&

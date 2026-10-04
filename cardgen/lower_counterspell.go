@@ -1304,6 +1304,7 @@ func sacrificeChoiceSelection(selector compiler.CompiledSelector) (game.Selectio
 
 func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if len(ctx.content.Effects) != 1 ||
+		ctx.content.Effects[0].Kind != compiler.EffectCounter ||
 		ctx.content.Effects[0].Negated ||
 		!ctx.content.Effects[0].Exact ||
 		len(ctx.content.Conditions) != 1 ||
@@ -1319,7 +1320,7 @@ func lowerCounterUnlessPaysSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	if payment.Payer != parser.EffectPaymentPayerTargetController ||
 		len(payment.ManaCost) == 0 ||
 		(manaCostHasVariableSymbol(payment.ManaCost) && !variableX) ||
-		ctx.content.Conditions[0].Predicate != compiler.ConditionPredicateTargetControllerDoesNotPay {
+		!counterTaxConditionMatches(payment, ctx.content.Conditions[0]) {
 		return game.AbilityContent{}, false
 	}
 	object, targets, ok := counterTaxStackObjectReference(ctx)
