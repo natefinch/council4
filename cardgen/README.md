@@ -365,6 +365,14 @@ Vanguard cards are excluded with explicit report reasons.
    exact consumed-target/reference/keyword/condition counts rather than a
    one-instruction-per-effect tally (`Tandem Tactics`, `Calamitous Tide`,
    `Seismic Spike`).
+   A counter tax's typed payment condition is linked by its parser boundary
+   NodeID to the owning counter clause, rather than lowered as a boolean gate.
+   The existing clause lowerer emits `game.Pay` for the target/event spell's
+   controller and counters only on payment failure; independent riders retain
+   their own gates. A supported outer state condition gates both instructions
+   without replacing the payment result gate. Fixed, `X`, and already-supported
+   mana multipliers compose this way; multiple embedded taxes and payment-outcome
+   callbacks remain fail-closed until their result provenance is modeled.
    Exact fixed, `X`, and supported dynamic placement of recognized named
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`
