@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,476 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,478 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -385,7 +385,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Ancestral Statue** — unsupported return spell: the executable source backend supports only exact return of one target permanent to its owner's hand
 - **Ancestral Vision** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Suspend 4—{U} (Rather than cast this card from your hand, pay {U} and exile it with four time counters on it. At the beginning of your upkeep, remove a time counter. When the last is removed, you may cast it without paying its mana cost.); unsupported ability word: the executable source backend does not yet lower the "Suspend 4" ability word
 - **Anchor to Reality** — unsupported search effect: unexpected non-result reference in search effect
-- **Anchor to the Aether** — unsupported ordered effect sequence: structural — inherited target not remappable
 - **Ancient Adamantoise** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Damage isn't removed from this creature during cleanup steps.; unsupported Oracle construct: the compiler preserved but did not confidently lower: All damage that would be dealt to you and other permanents you control is dealt to this creature instead.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
 - **Ancient Brass Dragon** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Ancient Bronze Dragon** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported counter placement
@@ -2278,7 +2277,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Conclave Sledge-Captain** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Backup 1, backup 1, backup 1 (When this creature enters, put a +1/+1 counter on target creature. If that's another creature, it gains the following abilities until end of turn. Each backup ability triggers separately.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Concord with the Kami** — unsupported phase/step trigger phrase effect: modes and ability words are not supported in phase/step triggers
 - **Concussive Bolt** — unsupported can't-block effect: the executable source backend supports only exact "&lt;targets&gt; can't block this turn."
-- **Condemn** — unsupported ordered effect sequence: structural — inherited target not remappable
 - **Conduct Electricity** — unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
 - **Conductive Machete** — unsupported ordered effect sequence: sub-effect — unsupported attach effect
 - **Conduit Goblin** — unsupported phase/step trigger phrase effect: the executable source backend does not support this phase/step trigger body
@@ -7743,7 +7741,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Metalworker** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported mana symbol
 - **Metamorphic Alteration** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Enchanted creature is a copy of the chosen creature.; unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Metamorphic Blast** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {1} — Until end of turn, target creature becomes a white Rabbit with base power and toughness 0/1.; unsupported ability content: mode 1: the executable source backend does not yet lower this ability content
-- **Metamorphose** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — inherited target not remappable
+- **Metamorphose** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Metamorphosis** — unsupported mana effect: the restricted creature-spell rider requires an exact modeled add-mana effect
 - **Metamorphosis Fanatic** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Miracle {1}{B} (You may cast this card for its miracle cost when you draw it if it's the first card you drew this turn.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Metathran Aerostat** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported counter placement
@@ -9456,7 +9454,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Protector of the Wastes** — unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot
 - **Protege's Awakening** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Empower Jace 6. (Put six loyalty counters on a Jace token you control. If you don't control one, first create a blue Jace planeswalker token with "\[−1\]: Surveil 1" and "\[−3\]: Draw a card."); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Proteus Machine** — unsupported Oracle construct: the compiler preserved but did not confidently lower: When this creature is turned face up, it becomes the creature type of your choice. (This effect lasts indefinitely.); unsupported triggered ability effect: the executable source backend supports only recognized semantic self triggers with supported effects
-- **Proteus Staff** — unsupported ordered effect sequence: structural — inherited target not remappable
+- **Proteus Staff** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Prototype Portal** — unsupported exile spell: the executable source backend supports only exact exile of one target permanent; unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color
 - **Proud Wildbonder** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
 - **Providence** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Your life total becomes 26.; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ability content: the executable source backend does not yet lower this ability content

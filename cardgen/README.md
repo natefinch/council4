@@ -155,7 +155,12 @@ Vanguard cards are excluded with explicit report reasons.
    those values with printed Scryfall fields and calls
    [`game.ValidateCardDef`](../mtg/game/README.md#carddef-structural-validation).
    Keyword identity, keyword-selector identity, and keyword parameters arrive
-   from parser-owned typed syntax. Lowering maps typed keyword kinds to runtime
+   from parser-owned typed syntax. Ordered sequences remap single-object
+   `game.MovePermanent` references independently of destination, including
+   library top/bottom placement followed or preceded by supported riders.
+   Group moves and controlled-choice moves remain outside this remapping path;
+   unsupported subjects, conditions, and placement parameters still fail closed.
+   Lowering maps typed keyword kinds to runtime
    templates and consumes already-parsed mana costs, integers, Enchant targets,
    and Protection predicates; it never parses keyword names or parameter text.
    Multi-keyword lines whose keywords are separated by semicolons (e.g. older

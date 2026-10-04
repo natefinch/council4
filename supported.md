@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,476 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,478 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -442,6 +442,7 @@ Council4 currently supports **18,476 of 33,013 cards eligible for paper support 
 - Ancestral Reminiscence
 - Ancestral Tribute
 - Ancestral Vengeance
+- Anchor to the Aether
 - Anchovy & Banana Pizza
 - Ancient Amphitheater
 - Ancient Animus
@@ -2983,6 +2984,7 @@ Council4 currently supports **18,476 of 33,013 cards eligible for paper support 
 - Conclave's Blessing
 - Concordant Crossroads
 - Concordia Pegasus
+- Condemn
 - Condescend
 - Conductor of Cacophony
 - Conduit of Worlds
