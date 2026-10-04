@@ -696,7 +696,28 @@ Vanguard cards are excluded with explicit report reasons.
    in the contiguous gated tail is gated on the optional having succeeded. An
    independent later sentence ("… If you do, Y. Z.") does not contain the gate
    condition and would resolve unconditionally, so the whole body fails closed
-   rather than gating only part of the tail. The exact mandatory
+   rather than gating only part of the tail. Passive singular result conditions
+   ("If a land card is discarded this way", "If a Pirate was exiled this way")
+   retain the shared typed noun selection and bind the nearest preceding
+   producer of that outcome. Their instruction gate requires success **and**
+   a matching actual result member. Card moves retain printed characteristics;
+   permanent departures freeze effective last-known characteristics before
+   intervening effects or linked returns can change object identity. This does
+   not constrain the producer's choices: Lord Windgrace may discard a nonland
+   and still gets his unconditional draw, but not his additional draw.
+   Literal "if you do" stays an unfiltered success gate. Result filters admit
+   stable type, supertype, subtype, color, and name atoms; contextual predicates,
+   active-voice antecedents, plural quantifiers, and cost antecedents are not
+   expanded by this path. "Otherwise" negates the complete successful-result
+   predicate, including noun membership, without changing the producer's
+   scalar result. Explicit "If you don't" retains the unfiltered producer-failure
+   gate rather than testing noun mismatch. An explicit "card" noun requires a
+   card-result publisher
+   (`Discard`, `MoveCard`, `ChooseFromZone`, or `MoveTopOfLibrary`); applying it
+   to a permanent departure fails closed rather than confusing pre-move LKI
+   with a post-move card. Permanent result publishers (`Destroy`, `Sacrifice`,
+   `SacrificePermanents`, and `MovePermanent`) retain the old object's identity,
+   not a newly returned blink permanent. The exact mandatory
    sacrifice-conditioned reanimation shape lowers
    separately: sacrifice one creature through `game.SacrificePermanents`, publish
    that instruction's success, and gate one tapped `PutOnBattlefield` instruction

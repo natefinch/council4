@@ -462,7 +462,9 @@ type ConditionClause struct {
 	// generalized parameter recognizeResultThisWayCondition extracts so lowering
 	// can match the gate against whichever single producing verb actually
 	// precedes it, instead of one bespoke predicate per verb.
-	ThisWayOutcome EffectKind `json:",omitempty"`
+	ThisWayOutcome   EffectKind       `json:",omitempty"`
+	ThisWaySelection *SelectionSyntax `json:",omitempty"`
+	ThisWayCardNoun  bool             `json:",omitempty"`
 
 	// SubjectSpan is set for source-death predicates so the compiler can confirm
 	// the subject binds the source via a typed reference.
@@ -1335,9 +1337,10 @@ func resultThisWayOutcomeKind(word string) (kind EffectKind, cardNoun bool, ok b
 // subset of what the producing effect could have affected (e.g. "if an artifact
 // is destroyed this way" after "destroy target artifact or land"); it is the
 // resolving-success equivalent of "if you do" only when that noun matches every
-// object the producing effect could affect. Lowering (isResolvingSuccessGate and
-// its callers) verifies the producing effect immediately precedes the gate and
-// carries a matching EffectKind, and otherwise fails closed. It fails closed on
+// object the producing effect could affect. The typed noun selection survives
+// compilation and filters the producer's actual result objects at resolution.
+// Lowering binds the gate to the nearest preceding producer with a matching
+// EffectKind, including non-adjacent producers, and otherwise fails closed. It fails closed on
 // any participle outside the fixed set above -- including "that <X> dies/is
 // countered this way" back-references, which name a specific prior object
 // rather than a descriptive subset and stay separately recognized
@@ -1372,7 +1375,12 @@ func recognizeResultThisWayCondition(body []shared.Token, atoms Atoms) (Conditio
 	if !validResultThisWayNoun(nounTokens, cardNoun, atoms) {
 		return ConditionClause{}, false
 	}
-	return ConditionClause{Predicate: ConditionPredicateResultThisWay, ThisWayOutcome: outcome}, true
+	selection := parseSelection(nounTokens, atoms)
+	return ConditionClause{
+		Predicate: ConditionPredicateResultThisWay, ThisWayOutcome: outcome,
+		ThisWaySelection: &selection,
+		ThisWayCardNoun:  equalWord(nounTokens[len(nounTokens)-1], "card") || equalWord(nounTokens[len(nounTokens)-1], "cards"),
+	}, true
 }
 
 // validResultThisWayNoun reports whether tokens is a noun phrase

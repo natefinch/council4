@@ -109,8 +109,14 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 	}
 	switch clause.Predicate {
 	case parser.ConditionPredicateResultThisWay:
+		if clause.ThisWaySelection == nil {
+			return
+		}
 		condition.Predicate = ConditionPredicateResultThisWay
 		condition.ThisWayOutcome = compileEffectKind(clause.ThisWayOutcome)
+		selection := compileTypedSelection(*clause.ThisWaySelection)
+		condition.ThisWaySelection = &selection
+		condition.ThisWayCardNoun = clause.ThisWayCardNoun
 	case parser.ConditionPredicateControllerLifeAtLeast:
 		condition.Predicate = ConditionPredicateControllerLifeAtLeast
 		condition.Threshold = clause.Threshold

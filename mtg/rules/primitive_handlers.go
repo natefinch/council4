@@ -117,11 +117,15 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 		batch := &destroyBatch{game: r.game, simultaneousID: r.game.IDGen.Next()}
 		destroyed, replacements := planDestroyPermanents(r.game, targets.permanents, prim.PreventRegeneration, batch.simultaneousID)
 		res.succeeded = applyPlannedDestroyBatch(r.game, destroyed, replacements, batch)
+		r.rememberDepartedResultPermanents(destroyed)
 		res.amount = len(destroyed)
 		return res
 	}
 	if targets.resolved {
 		_, res.succeeded = destroyPermanentInBatch(r.game, targets.permanents[0].ObjectID, 0, prim.PreventRegeneration)
+		if res.succeeded {
+			r.rememberDepartedResultPermanents(targets.permanents)
+		}
 	}
 	return res
 }

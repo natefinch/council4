@@ -322,6 +322,10 @@ type StackObject struct {
 	// instructions on this stack object for "if you do" / "if you don't" branches.
 	ResolutionResults map[string]InstructionResolutionResult
 
+	// ResolutionResultObjects freezes the actual members of a named result at
+	// its producing mutation, independently of later moves or linked-key reuse.
+	ResolutionResultObjects map[string][]ObjectSnapshot
+
 	// ResolutionChoices stores named values chosen while resolving this stack
 	// object, for later instructions such as "of the chosen color" (CR 608.2c).
 	ResolutionChoices map[string]ResolutionChoiceResult
