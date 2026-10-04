@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33013
-- Supported (generated): 18465
+- Supported (generated): 18458
 - Parser-complete: 22718
-- **Lowering backlog** (parser-complete, not generated): 5023
+- **Lowering backlog** (parser-complete, not generated): 5030
 - **Parser backlog** (not parser-complete, not generated): 9525
 
-Partition check: 18465 supported + 5023 lowering-backlog + 9525 parser-backlog = 33013 eligible. ✓
+Partition check: 18458 supported + 5030 lowering-backlog + 9525 parser-backlog = 33013 eligible. ✓
 
 770 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18465 supported + 5023 lowering-backlog + 9525 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18465
-- Independent per-card recompile generated: 18465
+- Authoritative generated (compilecards report): 18458
+- Independent per-card recompile generated: 18458
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1735 | 1166 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 526 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
+| 1 | unsupported ordered effect sequence | 1745 | 1175 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 527 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Moonring Mirror |
 | 3 | unsupported static declaration operation | 283 | 238 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 275 | 190 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 212 | 124 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
@@ -110,8 +110,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 24 | unsupported life spell | 56 | 51 | Guiltfeeder; Wall of Reverence; Revered Unicorn; Atarka's Command; Netherborn Phalanx |
 | 25 | unsupported temporary keyword spell | 55 | 47 | Order of the Golden Cricket; Pale Wayfarer; Violent Urge; Outmuscle; Gravity Negator |
 | 26 | unsupported static declaration condition | 48 | 38 | Desperate Castaways; Nadaar, Selfless Paladin; Veldt; Gloom Stalker; Hazy Homunculus |
-| 27 | unsupported activation condition | 46 | 39 | Sparring Dummy; Ebon Praetor; Inner-Flame Igniter; Roadside Reliquary; Arch of Orazca |
-| 28 | unsupported draw spell | 44 | 36 | Theft of Dreams; Fatigue; Gregor, Shrewd Magistrate; Nessian Boar; Thought Sponge |
+| 27 | unsupported draw spell | 44 | 36 | Theft of Dreams; Fatigue; Gregor, Shrewd Magistrate; Nessian Boar; Thought Sponge |
+| 28 | unsupported activation condition | 43 | 36 | Sparring Dummy; Ebon Praetor; Inner-Flame Igniter; Roadside Reliquary; Arch of Orazca |
 | 29 | unsupported library placement | 39 | 33 | Misinformation; Chittering Rats; Murderous Rider // Swift End; Landscaper Colos; Drafna's Restoration |
 | 30 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
 | 31 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,465 of 33,013 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,458 of 33,013 cards eligible for paper support (55.9%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2346,7 +2346,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Carrion Feeder
 - Carrion Howler
 - Carrion Imp
-- Carrion Locust
 - Carrion Screecher
 - Carrion Thrash
 - Carrion Wall
@@ -2983,6 +2982,7 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Conclave's Blessing
 - Concordant Crossroads
 - Concordia Pegasus
+- Condescend
 - Conductor of Cacophony
 - Conduit of Worlds
 - Conduit Pylons
@@ -4574,7 +4574,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Eland Umbra
 - Elas il-Kor, Sadistic Pilgrim
 - Elder Auntie
-- Elder Cathar
 - Elder Druid
 - Elder Mastery
 - Elder of Laurels
@@ -5898,6 +5897,7 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Friendly Neighborhood
 - Friendly Teddy
 - Frightcrawler
+- Frightful Delusion
 - Frilled Cave-Wurm
 - Frilled Deathspitter
 - Frilled Mystic
@@ -6847,7 +6847,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Greta, Sweettooth Scourge
 - Gretchen Titchwillow
 - Grey Havens Navigator
-- Grey Knight Paragon
 - Grief Tyrant
 - Griffin
 - Griffin Aerie
@@ -6961,7 +6960,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Guardian of Ghirapur
 - Guardian of Pilgrims
 - Guardian of Solitude
-- Guardian of Tazeem
 - Guardian of the Great Conduit
 - Guardian of the Guildpact
 - Guardian of the Halls
@@ -7171,7 +7169,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Haystack
 - Haywire Mite
 - Hazardous Blast
-- Hazardroot Herbalist
 - Haze of Pollen
 - Hazel's Nocturne
 - Hazerider Drake
@@ -7346,7 +7343,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Hexplate Golem
 - Hibernation
 - Hickory Woodlot
-- Hidden Blade
 - Hidden Cataract
 - Hidden Courtyard
 - Hidden Footblade
@@ -7440,7 +7436,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Holy Armor
 - Holy Cow
 - Holy Day
-- Holy Justiciar
 - Holy Mantle
 - Holy Strength
 - Homarid Explorer
@@ -7923,7 +7918,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Infuse
 - Inga and Esika
 - Ingenious Infiltrator
-- Ingenious Leonin
 - Ingenious Prodigy
 - Ingenious Skaab
 - Ingenious Smith
@@ -9126,7 +9120,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Lithobraking
 - Lithophage
 - Littjara Glade-Warden
-- Little Bear
 - Liturgy of Blood
 - Live Fast
 - Live or Die
@@ -9938,6 +9931,7 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Mindslicer
 - Mindstab Thrull
 - Mindstatic
+- Mindswipe
 - Mindwarper
 - Mindwhisker
 - Mindwrack Harpy
@@ -10862,6 +10856,7 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Offalsnout
 - Offender at Large
 - Offer Immortality
+- Offering to Asha
 - Oggyar Battle-Seer
 - Ognis, the Dragon's Lash
 - Ogre
@@ -10998,7 +10993,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Oracle's Insight
 - Oracle's Restoration
 - Orah, Skyclave Hierophant
-- Oran-Rief Hydra
 - Oran-Rief Invoker
 - Oran-Rief Ooze
 - Oran-Rief Recluse
@@ -11122,10 +11116,10 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Overgrown Pest
 - Overgrown Tomb
 - Overgrowth
-- Overgrowth Elemental
 - Overkill
 - Overprotect
 - Override
+- Overrule
 - Overrun
 - Overseer of the Damned
 - Oversoul of Dusk
@@ -13050,6 +13044,7 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Sage of the Beyond
 - Sage of the Inward Eye
 - Sage Owl
+- Sage's Dousing
 - Sage's Knowledge
 - Sage's Row Denizen
 - Sage's Row Savant
@@ -13296,7 +13291,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Scavenger Folk
 - Scavenger Grounds
 - Scavenging Harpy
-- Scavenging Ooze
 - Scavenging Scarab
 - Scene of the Crime
 - Scepter of Celebration
@@ -15332,6 +15326,7 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Sturdy Hatchling
 - Sturdy Shield
 - Sturmgeist
+- Stymied Hopes
 - Su-Chi
 - Su-Chi Cave Guard
 - Subjugator Angel
@@ -16802,7 +16797,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Tyvar, the Pummeler
 - Ubul Sar Gatekeepers
 - Ugin's Insight
-- Uglúk of the White Hand
 - Ukkima, Stalking Shadow
 - Uktabi Drake
 - Uktabi Efreet
@@ -18304,7 +18298,6 @@ Council4 currently supports **18,465 of 33,013 cards eligible for paper support 
 - Yeva's Forcemage
 - Yeva, Nature's Herald
 - Yew Spirit
-- Yip Yip!
 - Yoked Ox
 - Yoked Plowbeast
 - Yomiji, Who Bars the Way
