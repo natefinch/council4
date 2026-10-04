@@ -51,6 +51,10 @@ type selectionSubject struct {
 	// sourceObjectID is the predicate source object excluded by ExcludeSource.
 	sourceObjectID id.ID
 
+	// snapshotObjectID enables source exclusion for resolved condition snapshots.
+	// Ordinary trigger-event subjects leave it zero.
+	snapshotObjectID id.ID
+
 	// clampPower selects the target-style power read (clamped to >= 0, always
 	// applicable) over the strict controller-controls read (requires printed
 	// power). useBase forfeits power and toughness, preserving the base
@@ -1238,7 +1242,8 @@ func (s *selectionSubject) isSource() bool {
 	if s.sourceObjectID == 0 {
 		return false
 	}
-	return s.kind == subjectPermanent && s.permanent != nil && s.permanent.ObjectID == s.sourceObjectID
+	return s.kind == subjectPermanent && s.permanent != nil && s.permanent.ObjectID == s.sourceObjectID ||
+		s.kind == subjectEventPermanent && s.snapshotObjectID == s.sourceObjectID
 }
 
 func (s *selectionSubject) isToken() bool {

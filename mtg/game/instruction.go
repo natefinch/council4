@@ -67,6 +67,8 @@ type Instruction struct {
 	Primitive Primitive
 
 	// Condition is an additional condition evaluated against the resolving stack object.
+	// Source-excluding permanent selections compare the original SourceID, not
+	// SourceCardID or a new permanent created when that card returns.
 	Condition opt.V[EffectCondition]
 
 	// CardCondition gates the instruction on properties of a referenced card.

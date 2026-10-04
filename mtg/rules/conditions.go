@@ -16,6 +16,7 @@ import (
 type conditionContext struct {
 	controller             game.PlayerID
 	source                 *game.Permanent
+	sourceObjectID         id.ID
 	event                  *game.Event
 	obj                    *game.StackObject
 	useBaseCharacteristics bool
@@ -841,9 +842,7 @@ func controllerControlsGreatestManaValueInGroup(g *game.Game, ctx conditionConte
 				subject.controller = values.controller
 			}
 		}
-		if ctx.source != nil {
-			subject.sourceObjectID = ctx.source.ObjectID
-		}
+		subject.sourceObjectID = conditionSourceObjectID(ctx)
 		if !matchSelection(&subject, &sel) {
 			continue
 		}
@@ -1004,9 +1003,7 @@ func resolvedObjectMatchesConditionSelection(
 		if selection.Controller != game.ControllerAny {
 			subject.controller = values.controller
 		}
-		if ctx.source != nil {
-			subject.sourceObjectID = ctx.source.ObjectID
-		}
+		subject.sourceObjectID = conditionSourceObjectID(ctx)
 		return matchSelection(&subject, selection)
 	}
 	if resolved.stack != nil {
@@ -1036,17 +1033,16 @@ func resolvedObjectMatchesConditionSelection(
 		return matchSelection(&subject, selection)
 	}
 	subject := selectionSubject{
-		kind:   subjectEventPermanent,
-		g:      g,
-		event:  game.Event{PermanentID: resolved.snapshot.ObjectID},
-		viewer: ctx.controller,
+		kind:             subjectEventPermanent,
+		g:                g,
+		event:            game.Event{PermanentID: resolved.snapshot.ObjectID},
+		viewer:           ctx.controller,
+		snapshotObjectID: resolved.snapshot.ObjectID,
 	}
 	if selection.Controller != game.ControllerAny {
 		subject.controller = resolved.snapshot.Controller
 	}
-	if ctx.source != nil {
-		subject.sourceObjectID = ctx.source.ObjectID
-	}
+	subject.sourceObjectID = conditionSourceObjectID(ctx)
 	return matchSelection(&subject, selection)
 }
 
@@ -1167,9 +1163,7 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 				subject.controller = values.controller
 			}
 		}
-		if ctx.source != nil {
-			subject.sourceObjectID = ctx.source.ObjectID
-		}
+		subject.sourceObjectID = conditionSourceObjectID(ctx)
 		if !matchSelection(&subject, &sel) {
 			continue
 		}
@@ -1256,9 +1250,7 @@ func countPlayerMatchingSelection(g *game.Game, ctx conditionContext, player gam
 				subject.controller = values.controller
 			}
 		}
-		if ctx.source != nil {
-			subject.sourceObjectID = ctx.source.ObjectID
-		}
+		subject.sourceObjectID = conditionSourceObjectID(ctx)
 		if matchSelection(&subject, &sel) {
 			count++
 		}
