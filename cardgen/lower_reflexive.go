@@ -20,6 +20,10 @@ func lowerContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if !conditionTypeSelectionBindingsSupported(ctx.content) {
+		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported condition type-selection binding",
+			"expanded type selections require an unambiguous runtime-capable object binding")
+	}
 	content, diagnostic := lowerContentDispatch(cardName, ctx, syntax)
 	if diagnostic != nil {
 		return content, diagnostic

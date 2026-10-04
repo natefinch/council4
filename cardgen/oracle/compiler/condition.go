@@ -245,7 +245,7 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateTargetColor
 		condition.Selection = selection
 	case parser.ConditionPredicateControlsGreatestManaValueInGroup:
-		selection, ok := compileConditionSelection(clause.Selection)
+		selection, ok := compileConditionPermanentSelection(clause.Selection)
 		if !ok {
 			return
 		}
@@ -365,7 +365,7 @@ func compileControlsCondition(condition *CompiledCondition, clause *parser.Condi
 	if !ok {
 		return
 	}
-	selection, ok := compileConditionSelection(clause.Selection)
+	selection, ok := compileConditionPermanentSelection(clause.Selection)
 	if !ok {
 		return
 	}
@@ -425,7 +425,7 @@ func compileControlComparisonCondition(condition *CompiledCondition, clause *par
 	if (left == ConditionComparisonScopeController) == (right == ConditionComparisonScopeController) {
 		return
 	}
-	selection, ok := compileConditionSelection(clause.Selection)
+	selection, ok := compileConditionPermanentSelection(clause.Selection)
 	if !ok {
 		return
 	}
@@ -456,12 +456,28 @@ func comparisonScopeFromParser(scope parser.ConditionControlScope) (ConditionCom
 // supertype, tapped state, or subtype identity is outside that vocabulary.
 func compileConditionSelection(syntax parser.ConditionSelection) (ConditionSelection, bool) {
 	var selection ConditionSelection
-	for _, value := range syntax.RequiredTypes {
-		cardType, ok := conditionCardTypeFromTrigger(value)
+	for _, field := range []struct {
+		values []parser.TriggerCardType
+		dest   *[]types.Card
+	}{
+		{syntax.RequiredTypes, &selection.RequiredTypes},
+		{syntax.RequiredTypesAny, &selection.RequiredTypesAny},
+		{syntax.ExcludedTypes, &selection.ExcludedTypes},
+	} {
+		for _, value := range field.values {
+			cardType, ok := conditionCardTypeFromTrigger(value)
+			if !ok {
+				return ConditionSelection{}, false
+			}
+			*field.dest = append(*field.dest, cardType)
+		}
+	}
+	for _, alternative := range syntax.AnyOf {
+		compiled, ok := compileConditionSelection(alternative)
 		if !ok {
 			return ConditionSelection{}, false
 		}
-		selection.RequiredTypes = append(selection.RequiredTypes, cardType)
+		selection.AnyOf = append(selection.AnyOf, compiled)
 	}
 	for _, value := range syntax.Supertypes {
 		supertype, ok := conditionSupertypeFromParser(value)
@@ -563,10 +579,14 @@ func conditionCardTypeFromTrigger(value parser.TriggerCardType) (types.Card, boo
 		return types.Creature, true
 	case parser.TriggerCardTypeEnchantment:
 		return types.Enchantment, true
+	case parser.TriggerCardTypeInstant:
+		return types.Instant, true
 	case parser.TriggerCardTypeLand:
 		return types.Land, true
 	case parser.TriggerCardTypePlaneswalker:
 		return types.Planeswalker, true
+	case parser.TriggerCardTypeSorcery:
+		return types.Sorcery, true
 	default:
 		return "", false
 	}

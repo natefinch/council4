@@ -1038,6 +1038,9 @@ func exactControllerLandCountCondition(condition compiler.CompiledCondition) boo
 		condition.Threshold == 4 &&
 		len(selection.RequiredTypes) == 1 &&
 		selection.RequiredTypes[0] == types.Land &&
+		len(selection.RequiredTypesAny) == 0 &&
+		len(selection.ExcludedTypes) == 0 &&
+		len(selection.AnyOf) == 0 &&
 		len(selection.Supertypes) == 0 &&
 		len(selection.SubtypesAny) == 0 &&
 		len(selection.ColorsAny) == 0 &&
@@ -1821,7 +1824,7 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 	}
 	condition := ctx.content.Conditions[0]
 	if condition.Kind != compiler.ConditionIf ||
-		condition.Predicate != compiler.ConditionPredicateUnsupported ||
+		!shuffleRevealPermanentCondition(condition) ||
 		!spanCovered(condition.Span, []shared.Span{put.ClauseSpan}) {
 		return game.AbilityContent{}, false
 	}

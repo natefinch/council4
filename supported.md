@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,472 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,476 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -5706,6 +5706,7 @@ Council4 currently supports **18,472 of 33,013 cards eligible for paper support 
 - Flurry of Horns
 - Flurry of Wings
 - Flusterstorm
+- Flutterfox
 - Flux Channeler
 - Fly
 - Flying Carpet
@@ -10182,6 +10183,7 @@ Council4 currently supports **18,472 of 33,013 cards eligible for paper support 
 - Moonglove Winnower
 - Moonlight Geist
 - Moonlit Lamenter
+- Moonlit Scavengers
 - Moonlit Strider
 - Moonlit Wake
 - Moonring Island
@@ -12377,6 +12379,7 @@ Council4 currently supports **18,472 of 33,013 cards eligible for paper support 
 - Reclamation Sage
 - Reclusive Artificer
 - Reclusive Taxidermist
+- Reclusive Wight
 - Recoil
 - Recollect
 - Recon Craft Theta
@@ -15172,6 +15175,7 @@ Council4 currently supports **18,472 of 33,013 cards eligible for paper support 
 - Stone Docent
 - Stone Golem
 - Stone Haven Medic
+- Stone Haven Pilgrim
 - Stone Kavu
 - Stone of Erech
 - Stone Quarry

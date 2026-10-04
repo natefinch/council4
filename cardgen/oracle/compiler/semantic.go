@@ -1304,13 +1304,16 @@ const (
 // ConditionSelection is the source-independent Selection vocabulary used by
 // semantic conditions. Subtype names are canonicalized during recognition.
 type ConditionSelection struct {
-	RequiredTypes []types.Card
-	Supertypes    []types.Super
-	SubtypesAny   []string
-	ColorsAny     []color.Color
-	Colorless     bool
-	Multicolored  bool
-	TokenOnly     bool
+	RequiredTypes    []types.Card
+	RequiredTypesAny []types.Card
+	ExcludedTypes    []types.Card
+	AnyOf            []ConditionSelection
+	Supertypes       []types.Super
+	SubtypesAny      []string
+	ColorsAny        []color.Color
+	Colorless        bool
+	Multicolored     bool
+	TokenOnly        bool
 	// NonToken requires the matched permanent to not be a token ("if it's not a
 	// token", Life of the Party). It is the negation of TokenOnly and mutually
 	// exclusive with it.

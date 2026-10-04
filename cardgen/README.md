@@ -45,6 +45,17 @@ union selection remain separate capabilities. Existing subtype-only contracted
 target gates retain their legacy lowering; this tranche does not rewrite their
 linked return/blink behavior.
 
+Condition type selections share the selection atom vocabulary: adjacent types
+are conjunctive (`artifact creature`), `or`/`and/or` joins alternatives,
+and `noncreature`/`nonland` exclude types. A `permanent card` condition is
+the union of artifact, battle, creature, enchantment, land, and planeswalker
+types, evaluated against the bound object's characteristics, including typed
+last-known information. It is not an empty permanent filter or a conjunction
+of all six types. Unexpected qualifiers and unknown constructed type values
+fail closed. Expanded type selections do not admit card-target or competing
+event/target gates until their subject binding is runtime-capable; recognizing
+the noun phrase alone does not make the whole card supported.
+
 Trigger recognition belongs to the Oracle parser. Its composable grammar emits
 source-spanned typed syntax for permanent zone-change, spell/ability, combat,
 damage, phase/step, permanent-state, counter, sacrifice, mutate, targeting, and
