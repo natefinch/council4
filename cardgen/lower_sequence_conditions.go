@@ -74,7 +74,7 @@ func planSequenceConditions(
 			return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 		}
 	}
-	gates, reason, ok := matchSequenceEffectConditions(content.Effects, plan.gateConditions)
+	gates, reason, ok := matchOrderedSequenceEffectConditions(content.Effects, plan.gateConditions)
 	plan.gates = gates
 	return plan, reason, ok
 }

@@ -883,6 +883,7 @@ func conditionIsBodyResolvingGate(condition compiler.CompiledCondition) bool {
 // mana-ability lowerer, via isSemanticManaAbility's own call to this function)
 // consumes directly, rather than an activation gate. Recognized forms:
 //   - "unless its controller pays" tax (counter-unless-pays)
+//   - recognized pure-state "unless" gates contained in the resolving body
 //   - "If <source object matches>, <effect>" conditional body rider (e.g.
 //     depletion taplands: "If there are no depletion counters on this land,
 //     sacrifice it.")
@@ -901,6 +902,11 @@ func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
 	// "Unless its controller pays" body tax.
 	if condition.Kind == compiler.ConditionUnless &&
 		condition.Predicate == compiler.ConditionPredicateTargetControllerDoesNotPay {
+		return true
+	}
+	if resolvingStateUnless(condition) &&
+		!abilityContentHasAddManaEffect(content) &&
+		conditionCoveredByEffectClause(condition, content.Effects) {
 		return true
 	}
 	// Body-level "If <gate>, <effect>" rider (e.g. "If there are no depletion

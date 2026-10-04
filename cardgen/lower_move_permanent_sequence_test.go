@@ -57,7 +57,6 @@ func TestMovePermanentLibrarySequenceRefusals(t *testing.T) {
 		"Put target creature into its owner's library third from the top. Draw a card.",
 		"Put target creature on the bottom of its controller's library. Draw a card.",
 		"Tap target creature. Put that creature on the bottom of its owner's library.",
-		"Put target creature on the bottom of its owner's library. You lose 2 life unless you control a Villain.",
 	} {
 		t.Run(oracle, func(t *testing.T) {
 			t.Parallel()

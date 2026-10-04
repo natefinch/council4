@@ -100,8 +100,18 @@ Vanguard cards are excluded with explicit report reasons.
    call `lowerAbilityContent` directly; no shell lowerer constructs a fake spell
    ability to reach body lowering. `condition.go` is the single
    `oracle.CompiledCondition` to `game.Condition` adapter and requires an
-   explicit static, activation, replacement, resolving-effect, or
-   intervening-trigger context.
+   explicit static, activation, replacement, intervening-trigger, or resolving
+   effect-gate context. Resolving `unless` gates admit only the already recognized
+   controller-controls, controller-graveyard-card-count, and
+   controller-graveyard-distinct-mana-value-count predicates, using the shared
+   Selection/aggregate adapters and `Condition.Negate`. Each must belong to one
+   effect proven by the ordered-sequence matcher; specialized group lowerers do
+   not acquire `unless` support. Source-in-graveyard and source-excluding
+   qualifications, gated mana-ability bodies, multi-instruction expansions, and
+   `Otherwise`/replacement branch derivations remain unsupported. Shared mutable
+   multi-effect groups, payment/choice outcomes, result antecedents, unrecognized
+   predicates, and unconsumed source remain fail-closed
+   as boolean gates. Existing clause-owned payment lowering is unchanged.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
    prior-instruction results. Ordered lowering also supports the exact linked

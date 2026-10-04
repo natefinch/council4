@@ -18,6 +18,9 @@ const (
 	conditionContextInterveningTrigger
 	conditionContextReplacement
 	conditionContextEffectGate
+	// Only the sequence matcher supplies this context, after proving the
+	// Unless condition belongs to one effect rather than a mutable group.
+	conditionContextUnlessEffectGate
 	// conditionContextEntryCounters gates the "if ..." conditions on
 	// enters-with-counters replacements ("This creature enters with a +1/+1
 	// counter on it if you attacked this turn."). The runtime evaluates these
@@ -354,6 +357,8 @@ func conditionKindAllowedInContext(condition compiler.CompiledCondition, ctx con
 		// negation in Negated), so accept either non-intervening shape.
 		return (condition.Kind == compiler.ConditionUnless ||
 			condition.Kind == compiler.ConditionIf) && !condition.Intervening
+	case conditionContextUnlessEffectGate:
+		return resolvingStateUnless(condition)
 	case conditionContextEntryCounters, conditionContextEffectGate, conditionContextSpellCostReduction:
 		return condition.Kind == compiler.ConditionIf && !condition.Intervening
 	default:
