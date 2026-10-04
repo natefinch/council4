@@ -1020,6 +1020,9 @@ func resolvedObjectMatchesConditionSelection(
 			event:  game.Event{Colors: colors},
 			viewer: ctx.controller,
 		}
+		if manaValue, known := stackObjectManaValue(g, resolved.stack); known {
+			subject.event.ManaValue = opt.Val(manaValue)
+		}
 		return matchSelection(&subject, selection)
 	}
 	if resolved.snapshot.ObjectID == 0 {
