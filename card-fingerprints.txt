@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18478 supported cards
+# 18481 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -13909,6 +13909,7 @@ e6708cf65a2d30f3  Shore Lurker
 69377f3195252cab  Shore Snapper
 4bd561ae7e1f93fa  Shore Up
 8bff746c0f52e10c  Shorecomber Crab
+cf2bb36b6f0dd811  Shoreline Looter
 6464172446ee0647  Shoreline Raider
 77add540a796ebd1  Shoreline Ranger
 3d1bfdcebfbd55af  Shoreline Salvager
@@ -15668,6 +15669,7 @@ f7402f1ec3bafd4b  Taigam's Strike
 53bcf07503a6b2f0  Taigam, Sidisi's Hand
 8f6ffbcc5f91f248  Tail Slash
 92dbfc367af52402  Tainted Field
+8f31586fed13f59e  Tainted Indulgence
 a42ca7647ed4f5ab  Tainted Isle
 8e5b994af356a235  Tainted Observer
 22b57f2bcc2ad21e  Tainted Pact
@@ -16059,6 +16061,7 @@ c3793c1bbab77d0e  The Sackville-Bagginses
 ae9be73a871db859  The Spear of Leonidas
 2285daac719c5798  The Speed Demon
 14d0523dd5063c21  The Spirit Oasis
+58e90aa6b5f9f1e5  The Spot's Portal
 0bb4293ab9033724  The Stasis Coffin
 c060ad517ceedc4c  The Surgical Bay
 04635e4880aafb37  The Swarmweaver

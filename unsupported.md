@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,478 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,481 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -11073,7 +11073,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Shoot the Sheriff** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
 - **Shorecrasher Elemental** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Megamorph {4}{U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its megamorph cost and put a +1/+1 counter on it.); unsupported power/toughness spell: the executable source backend supports only exact until-end-of-turn power/toughness changes to the source or referenced permanent; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Shorecrasher Mimic** — unsupported triggered ability: the spell event exists, but this trigger requires a missing spell-event relation, copy, or provenance semantic slot
-- **Shoreline Looter** — unsupported ordered effect sequence: structural — per-effect condition kind not gateable
 - **Short Circuit** — unsupported mixed keyword ability: the executable source backend recognized Flying but does not yet lower the additional rules text
 - **Shortcut to Mushrooms** — unsupported phase/step trigger phrase: the executable source backend does not support this intervening-if condition
 - **Shoulder to Shoulder** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Support 2. (Put a +1/+1 counter on each of up to two target creatures.); unsupported ability content: the executable source backend does not yet lower this ability content
@@ -12267,7 +12266,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Tail Swipe** — unsupported ordered effect sequence: sub-effect — unsupported power/toughness spell; unsupported ordered effect sequence: sub-effect — unsupported fight spell
 - **Tainted Adversary** — unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported ordered effect sequence: sub-effect — unsupported token creation
 - **Tainted Aether** — unsupported sacrifice spell: the executable source backend does not yet lower this sacrifice effect
-- **Tainted Indulgence** — unsupported ordered effect sequence: structural — per-effect condition kind not gateable
 - **Tainted Remedy** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
 - **Tainted Sigil** — unsupported life spell: the executable source backend supports only exact fixed life changes
 - **Tainted Specter** — unsupported activation condition: the executable source backend cannot lower every activation condition
@@ -12728,7 +12726,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **The Soul Stone** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {6}{B}, {T}, Exile a creature you control: Harness The Soul Stone. (Once harnessed, its ∞ ability is active.); unsupported activation cost: the executable source backend cannot lower every typed activation cost component
 - **The Sound of Drums** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Enchanted creature is goaded.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements
 - **The Space Family Goblinson** — unsupported static declaration duration: the static declaration has a duration that is not valid for a source-derived static value; unsupported triggered ability: the runtime does not emit an authoritative event for this game action
-- **The Spot's Portal** — unsupported ordered effect sequence: structural — per-effect condition kind not gateable
 - **The Spot, Living Portal** — unsupported exile spell: the executable source backend supports only exact exile of one target permanent; unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported ordered effect sequence: sub-effect — unsupported return spell
 - **The Squadron Sinister** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Mayhem {3}{U}{R} (You may cast this card from your graveyard for {3}{U}{R} if you discarded it this turn. Timing rules still apply.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **The Stone Brain** — unsupported search effect: the executable source backend supports only searches of your library or a single target player's library ending with "then shuffle"

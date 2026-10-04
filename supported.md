@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,478 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,481 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -13903,6 +13903,7 @@ Council4 currently supports **18,478 of 33,013 cards eligible for paper support 
 - Shore Snapper
 - Shore Up
 - Shorecomber Crab
+- Shoreline Looter
 - Shoreline Raider
 - Shoreline Ranger
 - Shoreline Salvager
@@ -15662,6 +15663,7 @@ Council4 currently supports **18,478 of 33,013 cards eligible for paper support 
 - Taigam, Sidisi's Hand
 - Tail Slash
 - Tainted Field
+- Tainted Indulgence
 - Tainted Isle
 - Tainted Observer
 - Tainted Pact
@@ -16053,6 +16055,7 @@ Council4 currently supports **18,478 of 33,013 cards eligible for paper support 
 - The Spear of Leonidas
 - The Speed Demon
 - The Spirit Oasis
+- The Spot's Portal
 - The Stasis Coffin
 - The Surgical Bay
 - The Swarmweaver
