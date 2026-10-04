@@ -370,6 +370,9 @@ func lowerOrderedEffectSequence(
 		// too. Otherwise a kicked-condition's "this spell" object survives as a
 		// phantom subject reference and the per-effect lowerer fails closed.
 		effectAbility.content.Effects[0].References = slices.Clone(clauseRefs)
+		effectAbility.content.Effects[0].SubjectReferences = referencesOutsideConditionSpans(
+			effectAbility.content.Effects[0].SubjectReferences, ctx.content.Conditions,
+		)
 		var inheritedTargets []compiler.CompiledTarget
 		if effect.Context == parser.EffectContextPriorSubject {
 			inheritedTargets = priorSubjectTargets(ctx.content.Effects, i)
@@ -535,6 +538,11 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — inherited target not remappable")
 		}
 		targets = newTargets
+		if !remapSequenceConditionTargets(i, effectConditions, ctx.content.Targets, oracleSpanToGameIdx) ||
+			!remapSequenceConditionTargets(i, insteadGates, ctx.content.Targets, oracleSpanToGameIdx) ||
+			!remapSequenceConditionTargets(i, otherwiseGates, ctx.content.Targets, oracleSpanToGameIdx) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — condition target not remappable")
+		}
 		if effect.PlayHideawayExiledCard {
 			materializeHideawaySelectionMinimum(effectConditions, i)
 		}

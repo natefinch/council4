@@ -507,6 +507,7 @@ func transformDamageRecipient(recipient game.DamageRecipient, transform targetIn
 func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	switch reference.Kind() {
 	case game.ObjectReferenceTargetPermanent,
+		game.ObjectReferenceTargetCard,
 		game.ObjectReferenceTargetStackObject,
 		game.ObjectReferenceTargetAttachedPermanent,
 		game.ObjectReferenceTargetObject:
@@ -535,6 +536,12 @@ func transformQuantity(amount game.Quantity, transform targetIndexTransform) (ga
 
 func transformObjectReference(reference game.ObjectReference, transform targetIndexTransform) (game.ObjectReference, bool) {
 	switch reference.Kind() {
+	case game.ObjectReferenceTargetCard:
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
+			return game.ObjectReference{}, false
+		}
+		return game.TargetCardReference(idx), true
 	case game.ObjectReferenceTargetPermanent:
 		idx, ok := transform(targetIndexObject, reference.TargetIndex())
 		if !ok {

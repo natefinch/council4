@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18458 supported cards
+# 18472 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -2352,6 +2352,7 @@ c9347242e53cc01b  Carrion Crow
 93652c5eb781cecf  Carrion Feeder
 6aa8c450ca2eec1b  Carrion Howler
 309d6151a6a89c23  Carrion Imp
+a9f7d67589126e0b  Carrion Locust
 1d3627803f07e745  Carrion Screecher
 43d7fc9064ad8762  Carrion Thrash
 ec8135cf1f898863  Carrion Wall
@@ -2800,7 +2801,7 @@ f5314beaa6094efd  Cliffhaven Kitesail
 a6615d78253f9692  Cliffrunner Behemoth
 22aac4d5afe81c5d  Cliffside Lookout
 791d217eda212b08  Clifftop Retreat
-3f9b010bdc27f370  Cling to Dust
+881b4527c33eca58  Cling to Dust
 6afea633aa9a2c61  Clinging Anemones
 57d062f370f4b0d1  Clinging Darkness
 c3849131ac501e5a  Clinquant Skymage
@@ -4580,6 +4581,7 @@ a66d8e40808a3689  Eladamri's Vineyard
 d94fd80af593d381  Eland Umbra
 066ce8d79edaf071  Elas il-Kor, Sadistic Pilgrim
 c489861ab4847651  Elder Auntie
+0c10bc21b7ab4826  Elder Cathar
 a46507e0e5cb30ad  Elder Druid
 c4c55eb2248326bb  Elder Mastery
 d7f39d708e51516b  Elder of Laurels
@@ -4979,7 +4981,7 @@ fd2a693ea0b2b6fc  Eternal Warrior
 8c8a3ea74ac26f17  Eternal Witness
 0173cac874c40675  Eternity Snare
 6b5969e658af9a4d  Ethercaste Knight
-2d1c6eb0ceb7e0d2  Ethereal Absolution
+659ec3ce5830a884  Ethereal Absolution
 bfa1d385228f611a  Ethereal Armor
 8a5cb195b362de9d  Ethereal Champion
 05fbf4cc0dfbd302  Ethereal Elk
@@ -6853,6 +6855,7 @@ f6aa89ecae7838e0  Grenzo, Havoc Raiser
 591d669cc8675c45  Greta, Sweettooth Scourge
 73c18962c2ebf07b  Gretchen Titchwillow
 9e6c70395fe41226  Grey Havens Navigator
+138667ddde2377e8  Grey Knight Paragon
 934c99422a91e01d  Grief Tyrant
 ff95310b339f7e6a  Griffin
 cdd30e571d0c776e  Griffin Aerie
@@ -6966,6 +6969,7 @@ c83dc8ef4ffadfb0  Guardian Kirin
 ca2b1a13249f46fa  Guardian of Ghirapur
 556945f24574336c  Guardian of Pilgrims
 d20640eecb4cc6d5  Guardian of Solitude
+d9b5ba0fec12e3e9  Guardian of Tazeem
 e9bc96ffe5487508  Guardian of the Great Conduit
 d95a9602f7fecf3f  Guardian of the Guildpact
 efcc459561691180  Guardian of the Halls
@@ -7175,6 +7179,7 @@ c9cebbca4c9fa4a5  Hawkeye's Shot
 ebe41ac675cab288  Haystack
 9e82199f91a774d5  Haywire Mite
 b98a2a940abf4cba  Hazardous Blast
+2d28635968d19d5d  Hazardroot Herbalist
 d4a5891980ccdb75  Haze of Pollen
 5c471995bf39b294  Hazel's Nocturne
 e4e790f467b21173  Hazerider Drake
@@ -7349,6 +7354,7 @@ e4d1517120ab38e7  Hexing Squelcher
 2d40c02c65ecdb25  Hexplate Golem
 4d66a5a6f206b393  Hibernation
 9a92c8583c25f572  Hickory Woodlot
+cb7957d9f5219a3f  Hidden Blade
 0a1a13f5d9711dd6  Hidden Cataract
 2da86f5198468e64  Hidden Courtyard
 d2b29c7c38e3303a  Hidden Footblade
@@ -7442,6 +7448,7 @@ e7cf996889b02d65  Hollow Dogs
 8d61aca214279f06  Holy Armor
 62a0a57801aef98c  Holy Cow
 c66f8a246867c18e  Holy Day
+d919e5fe081a1d39  Holy Justiciar
 d5a5f02ba32cb529  Holy Mantle
 0a20b575a04598ad  Holy Strength
 e526f8a526bf933a  Homarid Explorer
@@ -7924,6 +7931,7 @@ f3684ce053af3480  Infuriate
 94b2c952d3eae6a0  Infuse
 24adfccd4269ba78  Inga and Esika
 3e5127ffd5dfa410  Ingenious Infiltrator
+7fef88124bb1b6fc  Ingenious Leonin
 6dbfa8633a98db60  Ingenious Prodigy
 a3e90eb60d3da7b5  Ingenious Skaab
 f9b97559b2904e5b  Ingenious Smith
@@ -8049,7 +8057,7 @@ a835e836d9ccd7ce  Inundate
 149f7db8a7c7855d  Invading Manticore
 88239f2fdefebae5  Invasion of Belenon // Belenon War Anthem
 2e3e6686425bcef5  Invasion of Dominaria // Serra Faithkeeper
-36111abf98c506e1  Invasion of Innistrad // Deluge of the Dead
+5bc655673e63b014  Invasion of Innistrad // Deluge of the Dead
 48c1a1dd6e3ecc75  Invasion of Ixalan // Belligerent Regisaur
 607beb8b19ed93b5  Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship
 af0ecca92e6303f7  Invasion of Kamigawa // Rooftop Saboteurs
@@ -9126,6 +9134,7 @@ d5cdf8a1bf534726  Lionheart Glimmer
 530032aaa0b28eb6  Lithobraking
 9ac5f62afa5582f7  Lithophage
 dec565506f2e3054  Littjara Glade-Warden
+b23ae3bb6be1da32  Little Bear
 239b541b4c94d55c  Liturgy of Blood
 c355c64b5c1bd2d3  Live Fast
 8b2f9a0b80de3f85  Live or Die
@@ -10999,6 +11008,7 @@ b4187958fe729f7e  Optimus Prime, Hero // Optimus Prime, Autobot Leader
 11837c84cbbf2b5b  Oracle's Insight
 6193f3deca32e130  Oracle's Restoration
 053285a70888be05  Orah, Skyclave Hierophant
+75e1ee090a75bb45  Oran-Rief Hydra
 3c27696c99d4927a  Oran-Rief Invoker
 c522cc72b722dd5d  Oran-Rief Ooze
 01d7a4bf42cee865  Oran-Rief Recluse
@@ -11122,6 +11132,7 @@ aaffd408847ff008  Overgrown Farmland
 6ad880865e3242c8  Overgrown Pest
 0b8dc77bf68a7f89  Overgrown Tomb
 25cdecbd6e33415e  Overgrowth
+456837e737f46934  Overgrowth Elemental
 a7ff9a7e1da8c747  Overkill
 616e971a7895a2ce  Overprotect
 6a3c0154d96ace6b  Override
@@ -13297,6 +13308,7 @@ dbed06c4a4a16ca9  Scavenged Weaponry
 5a5f11d1af8fa1ea  Scavenger Folk
 aa4d0192cb168dff  Scavenger Grounds
 031ce19c3c93fab2  Scavenging Harpy
+ae373e98bf668a40  Scavenging Ooze
 76295fa1ba57a1b2  Scavenging Scarab
 4502bbb644542c24  Scene of the Crime
 aba4253d78440c0a  Scepter of Celebration
@@ -16803,6 +16815,7 @@ b15ab3bbae919065  Tyvar's Stand
 7b6b6631d1c04a1e  Tyvar, the Pummeler
 c71ab9597935a46d  Ubul Sar Gatekeepers
 e80a40325d1699b0  Ugin's Insight
+d1c975ac6063b36a  Uglúk of the White Hand
 0837146757fef6f6  Ukkima, Stalking Shadow
 4adfb4dd80a2bf82  Uktabi Drake
 71c1aca366adffbc  Uktabi Efreet
@@ -18304,6 +18317,7 @@ beedd83e9ce5abde  Yellow Scarves Troops
 5e9d813acae2b5ae  Yeva's Forcemage
 dbf033e62f93ce1f  Yeva, Nature's Herald
 3008d604df130ac0  Yew Spirit
+d4ef8aa7bb7f8eb3  Yip Yip!
 f0172fe8469a749b  Yoked Ox
 7c413d8a7228cda6  Yoked Plowbeast
 3fc1d4a47e6b6440  Yomiji, Who Bars the Way
