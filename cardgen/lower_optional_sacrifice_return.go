@@ -81,10 +81,7 @@ func lowerOptionalSacrificeReturnWithCounters(ctx contentCtx) (game.AbilityConte
 	sacrificeInstr.Optional = true
 	sacrificeInstr.PublishResult = optionalIfYouDoResultKey
 
-	gate := opt.Val(game.InstructionResultGate{
-		Key:       optionalIfYouDoResultKey,
-		Succeeded: game.TriTrue,
-	})
+	gate := opt.Val(plan.resultGate(game.TriTrue))
 	sequence := []game.Instruction{
 		sacrificeInstr,
 		{

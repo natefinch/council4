@@ -76,7 +76,7 @@ func lowerOptionalSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityConte
 		return game.AbilityContent{}, false
 	}
 	searchSeq, ok := searchGroupInstructions(groups[0])
-	if !ok || !applyOptionalFlowGate(searchSeq, game.TriTrue) {
+	if !ok || !applyOptionalFlowGate(searchSeq, plan, game.TriTrue) {
 		return game.AbilityContent{}, false
 	}
 	sequence := make([]game.Instruction, 0, len(sacrificeSeq)+len(searchSeq))

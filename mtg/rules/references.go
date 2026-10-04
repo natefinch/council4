@@ -129,6 +129,12 @@ func (r *resolvedObjectReference) owner(g *game.Game) (game.PlayerID, bool) {
 	if r.snapshot.ObjectID != 0 {
 		return r.snapshot.Owner, true
 	}
+	if r.snapshot.CardID != 0 {
+		if card, ok := g.GetCardInstance(r.snapshot.CardID); ok {
+			return card.Owner, true
+		}
+		return 0, false
+	}
 	if r.stack != nil {
 		if r.stack.Kind != game.StackSpell || r.stack.Copy {
 			return r.stack.Controller, true

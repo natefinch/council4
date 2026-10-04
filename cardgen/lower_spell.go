@@ -553,9 +553,11 @@ func lowerContentDispatch(
 		// condition to the instruction. The single-effect lowerers reject any
 		// condition, so this only adds support and never changes an
 		// unconditional single effect.
-		if len(ctx.content.Conditions) != 0 {
+		if len(ctx.content.Conditions) != 0 && !ctx.sequenceClause {
 			gatedCtx := ctx
-			gatedCtx.content = contentWithoutConditionSpannedReferences(ctx.content)
+			if !effectOwnsCounterTax(ctx.content.Effects[0]) {
+				gatedCtx.content = contentWithoutConditionSpannedReferences(ctx.content)
+			}
 			if content, diagnostic := lowerOrderedEffectSequence(cardName, gatedCtx, syntax); diagnostic == nil {
 				return content, nil
 			}
