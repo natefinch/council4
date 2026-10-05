@@ -101,6 +101,36 @@ func recognizePaidCostSubjectCondition(body []shared.Token, atoms Atoms) (Condit
 	}, true
 }
 
+// Legacy characteristic amounts own their cost noun without a free reference.
+// Only an exact typed predicate consumer introduces the new paid-cost binding.
+func emitPaidCostPredicateReferences(abilities []Ability) {
+	for i := range abilities {
+		ability := &abilities[i]
+		ability.Atoms.references = paidCostPredicateReferences(ability.Atoms.references, ability.ConditionClauses)
+		if ability.Modal != nil {
+			for j := range ability.Modal.Options {
+				mode := &ability.Modal.Options[j]
+				mode.Atoms.references = paidCostPredicateReferences(mode.Atoms.references, mode.ConditionClauses)
+			}
+		}
+	}
+}
+
+func paidCostPredicateReferences(references []Reference, conditions []ConditionClause) []Reference {
+	return slices.DeleteFunc(slices.Clone(references), func(reference Reference) bool {
+		if reference.Kind != ReferencePaidCostSubject {
+			return false
+		}
+		for _, condition := range conditions {
+			if condition.Predicate == ConditionPredicateObjectMatches && condition.HasSubjectSpan &&
+				condition.SubjectRefID == reference.NodeID && condition.SubjectSpan == reference.Span {
+				return false
+			}
+		}
+		return true
+	})
+}
+
 func emitPaidCostSubjectBindings(abilities []Ability) {
 	for ai := range abilities {
 		ability := &abilities[ai]

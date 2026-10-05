@@ -186,6 +186,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitStateTriggerClauses(document.Abilities)
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
+	emitPaidCostPredicateReferences(document.Abilities)
 	emitAttachmentChoices(document.Abilities)
 	emitSourceAbilityCostReduction(document.Abilities)
 	emitResolvingSyntax(document.Abilities)

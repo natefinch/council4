@@ -108,7 +108,11 @@ producer subjects remain unsupported.
 
 Paid-cost subject references are separate from resolving-action products. The
 parser binds a past-cost predicate to one singular sacrifice/discard component
-by cost clause, component, and consumer identity. Payment captures the actual
+by cost clause, component, and consumer identity. Only a recognized predicate
+consumer promotes a cost noun into this reference domain, before effect syntax
+is assembled; existing sacrificed-characteristic amounts retain their legacy
+scalar contract and other typed operands keep their exact reference identities.
+Payment captures the actual
 selected permanent or discarded card before its move; stack copies retain that
 immutable snapshot, including effective permanent characteristics and a known
 original card version (zero is valid). A resolving condition reads these facts,
