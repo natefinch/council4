@@ -20,9 +20,13 @@ func TestCompileConditionOwnershipFromTypedNodes(t *testing.T) {
 		t.Fatalf("conditions=%#v, want unchanged typed ownership", conditions)
 	}
 	effects := compileEffects([]parser.Sentence{{Effects: []parser.EffectSyntax{
-		{ClauseID: 8, Kind: parser.EffectDraw}, {ClauseID: 21, Kind: parser.EffectDiscard},
+		{ClauseID: 8, Kind: parser.EffectDraw, Optional: true, OptionalActionClauseIDs: []int{8, 21}},
+		{ClauseID: 21, Kind: parser.EffectDiscard},
 	}}})
 	if len(effects) != 2 || effects[0].ClauseID != 8 || effects[1].ClauseID != 21 {
 		t.Fatalf("effects=%#v, want parser identities unchanged", effects)
+	}
+	if !reflect.DeepEqual(effects[0].OptionalActionClauseIDs, []int{8, 21}) {
+		t.Fatalf("optional group=%v, want unchanged parser identities", effects[0].OptionalActionClauseIDs)
 	}
 }

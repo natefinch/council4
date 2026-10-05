@@ -533,7 +533,8 @@ func lowerSingleControlSpell(
 			return unsupported()
 		}
 	default:
-		if len(ctx.content.References) != 0 {
+		if len(ctx.content.References) != 0 &&
+			!(ctx.sequenceClause && referencesTargetZero(ctx.content.References)) {
 			return unsupported()
 		}
 	}

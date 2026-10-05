@@ -486,6 +486,10 @@ func lowerOrderedEffectSequence(
 		// the grant fails closed instead of chaining off a publisher it cannot
 		// rely on.
 		publisherGated := i > 0 && sequenceClauseInstructionGated(i-1, effectConditions, insteadGates, otherwiseGates)
+		if len(sequence) > 0 {
+			prior := sequence[len(sequence)-1]
+			publisherGated = publisherGated || prior.Optional || prior.OptionalDecisionGate != ""
+		}
 		if effect.PlayHideawayExiledCard {
 			content, diagnostic = lowerHideawayPlayEffect(effectAbility)
 		} else if delayed := lowerDelayedSequenceClause(

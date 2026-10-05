@@ -69,6 +69,14 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: If you have no cards in hand, draw a card, then draw a card.",
 	},
 	{
+		Name: "RT Optional Group", Layout: "normal", TypeLine: "Instant",
+		OracleText: "If you have no cards in hand, you may draw a card and gain 2 life. You gain 1 life.",
+	},
+	{
+		Name: "RT Expanded Optional", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: You may put a +1/+1 counter on each of up to two target creatures.",
+	},
+	{
 		Name: "RT Returned Subject", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Return target creature card from your graveyard to the battlefield. If it's an Elf, put a +1/+1 counter on it.",
 	},
@@ -399,6 +407,22 @@ func TestRTResultCountSemantic(t *testing.T) {
 	complement := RTResultCount().SpellAbility.Val.Modes[0].Sequence[2].ResultGate.Val
 	if !complement.Negate || complement.ObjectCountRange.Val.Min != 2 {
 		t.Fatal("count predicate complement did not round-trip")
+	}
+}
+
+func TestRTOptionalGroupSemantic(t *testing.T) {
+	group := RTOptionalGroup().SpellAbility.Val.Modes[0].Sequence
+	expanded := RTExpandedOptional().ActivatedAbilities[0].Content.Modes[0].Sequence
+	for _, seq := range [][]game.Instruction{group, expanded} {
+		if !seq[0].Optional || seq[0].PublishOptionalDecision == "" ||
+			seq[1].Optional || seq[1].OptionalDecisionGate != seq[0].PublishOptionalDecision ||
+			seq[0].PublishResult != "" || seq[1].ResultGate.Exists {
+			t.Fatal("single decision independent of actual results did not round-trip")
+		}
+	}
+	if group[0].PublishCondition == "" || group[1].ConditionGate != group[0].PublishCondition ||
+		group[2].Optional || group[2].OptionalDecisionGate != "" || group[2].ConditionGate != "" {
+		t.Fatal("conditional optional group swallowed the independent rider")
 	}
 }
 

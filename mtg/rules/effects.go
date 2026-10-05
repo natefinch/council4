@@ -209,6 +209,7 @@ func (e *Engine) resolveInstructionSequence(g *game.Game, obj *game.StackObject,
 // can be a method rather than a free function with five repeated parameters.
 type effectResolver struct {
 	conditionEvaluations map[game.ConditionKey]bool
+	optionalDecisions    map[game.OptionalDecisionKey]bool
 	resultObjects        []game.ObjectSnapshot
 	engine               *Engine
 	game                 *game.Game
@@ -275,6 +276,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		delete(r.obj.ResolutionResults, string(instr.PublishResult))
 		delete(r.obj.ResolutionResultObjects, string(instr.PublishResult))
 	}
+	delete(r.optionalDecisions, instr.PublishOptionalDecision)
 	// Envelope: evaluate conditions first.
 	if !r.instructionConditionSatisfied(instr) {
 		return
@@ -286,6 +288,9 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		if !instructionResultGateSatisfied(r.game, r.obj, instr.ResultGate.Val) {
 			return
 		}
+	}
+	if instr.OptionalDecisionGate != "" && !r.optionalDecisions[instr.OptionalDecisionGate] {
+		return
 	}
 	if instr.Primitive == nil {
 		// A Tempting offer with a multi-primitive shared body carries no
@@ -333,6 +338,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		}
 		accepted = r.engine.chooseMay(r.game, r.agents, decider, "Apply optional effect?", r.log)
 	}
+	r.publishOptionalDecision(instr, accepted)
 	if !accepted {
 		if instr.PublishResult != "" {
 			r.publishInstructionResult(instr, effectResolved{accepted: false})

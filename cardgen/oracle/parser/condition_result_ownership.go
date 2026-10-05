@@ -118,7 +118,8 @@ func emitOptionalEffectGroups(effects []EffectSyntax, segments []ConditionSegmen
 			consequence := &effects[next]
 			if consequence.Span != effect.Span || consequence.Optional ||
 				slices.ContainsFunc(segments, func(segment ConditionSegment) bool {
-					return slices.Contains(segment.Ownership.ClauseIDs, consequence.ClauseID)
+					return slices.Contains(segment.Ownership.ClauseIDs, consequence.ClauseID) &&
+						!slices.Contains(segment.Ownership.ClauseIDs, effect.ClauseID)
 				}) {
 				break
 			}

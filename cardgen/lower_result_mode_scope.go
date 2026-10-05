@@ -20,7 +20,8 @@ func modeResultScopesCompatible(modes []game.Mode) bool {
 func collectModeResultPublications(sequence []game.Instruction, inheritedConditional bool, publications map[game.ResultKey]bool) {
 	for _, instruction := range sequence {
 		conditional := inheritedConditional || instruction.Condition.Exists ||
-			instruction.ConditionGate != "" || instruction.ResultGate.Exists
+			instruction.ConditionGate != "" || instruction.ResultGate.Exists ||
+			instruction.OptionalDecisionGate != ""
 		if instruction.PublishResult != "" {
 			publications[instruction.PublishResult] = publications[instruction.PublishResult] || conditional
 		}

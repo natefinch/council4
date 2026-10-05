@@ -182,8 +182,21 @@ Vanguard cards are excluded with explicit report reasons.
    local result keys. Literal `If you don't` tests action failure, whereas
    `Otherwise` complements the complete preceding filtered predicate. Both refuse
    unavailable publications. Bare optional actions can coexist with mandatory
-   independent clauses; an expanded optional action needs modeled group acceptance,
-   not separate choices per Instruction. Positive exact and at-least result counts
+   independent clauses. Parser-owned `OptionalActionClauseIDs` model a single
+   controller decision governing several supported clauses, or one clause that
+   expands into several Instructions. The first governed Instruction asks once
+   and publishes `PublishOptionalDecision`; the rest consume
+   `OptionalDecisionGate`. This sequence-local acceptance is independent of
+   actual-result/object/scalar publications and their gates: an ineffective first
+   action does not suppress the accepted bare group's remaining actions.
+   Conditional groups ask only after their printed predicate is true; independent
+   riders and separately printed optional groups retain their own envelopes.
+   Skipped publishers and unavailable deciders publish no decision, while an actual
+   decline publishes false. Repeat iterations, selected modes, and copied
+   resolutions do not inherit a prior sequence's decision. Whole-group `If you do`
+   outcomes, compound optional costs, and unmodeled actor ownership remain refused;
+   neither the first nor last primitive's success stands in for group success.
+   Positive exact and at-least result counts
    count matching actual members, not the requested amount. Active `you` result
    grammar requires modeled controller action ownership. Costs, opaque verbs,
    shared-characteristic relationships, expanded producers without an aggregate,

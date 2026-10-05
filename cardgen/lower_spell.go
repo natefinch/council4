@@ -33,8 +33,8 @@ type contentCtx struct {
 	// would place counters on the wrong object. Standalone effects keep the
 	// EventPermanent binding, which always denotes the triggering permanent.
 	sequenceClause bool
-	// singleAction preserves the envelope's one-choice/publication contract
-	// when a fixed mana output can otherwise expand into one instruction per pip.
+	// singleAction preserves existing homogeneous optional mana output as one
+	// primitive; mixed-color output uses the shared expanded-action envelope.
 	singleAction bool
 	// allowEventPronoun re-permits an EventPermanent "it"/"that creature"
 	// reference inside a sequence clause that is a mutually-exclusive branch
@@ -656,7 +656,7 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalWheelDiscardDraw(ctx); ok {
 		return content, nil
 	}
-	if content, ok := lowerOptionalUntapRemoveFromCombat(ctx); ok {
+	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
 		return content, nil
 	}
 	if len(ctx.content.Modes) == 0 &&
@@ -704,9 +704,6 @@ func lowerOptionalContent(
 		return content, nil
 	}
 	if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
-		return content, nil
-	}
-	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
 		return content, nil
 	}
 	optionalReason := contentDiagnostic(

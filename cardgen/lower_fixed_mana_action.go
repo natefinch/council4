@@ -19,6 +19,5 @@ func lowerFixedManaAction(ctx contentCtx, effect compiler.CompiledEffect) (game.
 			Primitive: game.AddMana{Amount: game.Fixed(len(colors)), ManaColor: colors[0]},
 		}}}.Ability(), nil
 	}
-	return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported optional mana action",
-		"a mixed-color fixed output requires a modeled single optional action")
+	return manaFixedContent(colors), nil
 }
