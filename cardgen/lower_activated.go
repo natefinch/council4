@@ -594,6 +594,9 @@ func lowerModalContent(
 	if len(modeReasons) > 0 {
 		return game.AbilityContent{}, combineReasons(modeReasons)
 	}
+	if max(maxModes, bonus.MaxModes)+bonus.AdditionalMaxModes > 1 && !modeResultScopesCompatible(modes) {
+		return unsupported("cross-mode conditional result publication requires scoped namespaces")
+	}
 	result := game.AbilityContent{
 		Modes:              modes,
 		MinModes:           minModes,

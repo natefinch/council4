@@ -38,6 +38,7 @@ func lowerOptionalSacrificeThenSearchSequence(ctx contentCtx) (game.AbilityConte
 	}
 	plan, ok := planOptionalFlow(content)
 	if !ok ||
+		!plan.singleOptionalTail(len(content.Effects)) ||
 		!plan.enabled ||
 		plan.publishWithoutOptional ||
 		plan.optionalIndex != 0 ||

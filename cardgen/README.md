@@ -156,6 +156,22 @@ Vanguard cards are excluded with explicit report reasons.
    predicates, and unconsumed source remain fail-closed as boolean gates.
    Existing clause-owned payment lowering and actual-result gates are distinct
    from boolean condition evaluation.
+   Actual-result gates use parser-owned producer and governed ClauseIDs, including
+   across independent unconditional riders. Several noun filters share one actual
+   publication without narrowing the producer; independent producers have distinct
+   local result keys. Literal `If you don't` tests action failure, whereas
+   `Otherwise` complements the complete preceding filtered predicate. Both refuse
+   unavailable publications. Bare optional actions can coexist with mandatory
+   independent clauses; an expanded optional action needs modeled group acceptance,
+   not separate choices per Instruction. Positive exact and at-least result counts
+   count matching actual members, not the requested amount. Active `you` result
+   grammar requires modeled controller action ownership. Costs, opaque verbs,
+   shared-characteristic relationships, expanded producers without an aggregate,
+   overlapping result predicates, and mixed reflexive/ordinary result flows
+   remain fail-closed. Clause IDs are local to a mode; selecting multiple modes
+   with colliding, potentially skipped result publications requires a shared
+   namespace and is refused. This includes repeat bodies and bonus mode choices;
+   guaranteed publishers may overwrite a key before their own local consumers.
    Existing state-gated `Otherwise` and `instead` branches consume the same
    captured decision (or its complement); they do not re-test state after the
    preceding action. Missing publications fail closed even for complements.

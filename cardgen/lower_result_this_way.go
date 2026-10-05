@@ -7,6 +7,9 @@ import (
 )
 
 func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) {
+	if plan, ok, handled := planScopedResultFlow(content); handled {
+		return plan, ok
+	}
 	plan, ok := planOptionalFlowBase(content)
 	if !ok || !plan.enabled || plan.gateCondition < 0 {
 		return plan, ok
@@ -39,9 +42,16 @@ func (p optionalFlowPlan) resultGate(succeeded game.TriState) game.InstructionRe
 		Key: optionalIfYouDoResultKey, Succeeded: succeeded, ObjectSelection: p.resultSelection,
 		CardOnly: p.resultCardNoun,
 	}
+	if p.scoped != nil {
+		if planned, exists := p.scoped.gates[p.gateIndex]; exists {
+			gate = planned
+			gate.Succeeded = succeeded
+		}
+	}
 	if p.resultSelection.Exists && succeeded == game.TriFalse {
 		if p.elseGateCondition >= 0 {
 			gate.ObjectSelection = opt.V[game.Selection]{}
+			gate.ObjectCountRange = opt.V[game.IntRange]{}
 			gate.CardOnly = false
 		} else {
 			gate.Succeeded = game.TriTrue
