@@ -52,13 +52,14 @@ func TestObjectMatchesTargetCardAfterExile(t *testing.T) {
 			resolver.resolveInstruction(&game.Instruction{Primitive: game.MoveCard{
 				Card:     game.CardReference{Kind: game.CardReferenceTarget, TargetIndex: slot},
 				FromZone: zone.Graveyard, Destination: zone.Exile,
-			}})
+			}, PublishResult: "moved"})
 			if !g.Players[game.Player2].Exile.Contains(cardID) {
 				t.Fatal("target did not move to exile")
 			}
 			condition := opt.Val(game.Condition{
-				Object:        opt.Val(game.TargetCardReference(slot)),
-				ObjectMatches: opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+				Object:              opt.Val(game.TargetCardReference(slot)),
+				ObjectMatches:       opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+				TargetCardResultKey: "moved",
 			})
 			ctx := conditionContext{controller: game.Player1, source: source, obj: obj, event: &obj.TriggerEvent}
 			if got := conditionSatisfied(g, ctx, condition); got != (cardType == types.Creature) {
@@ -82,6 +83,7 @@ func TestObjectMatchesTargetCardAfterExile(t *testing.T) {
 				t.Fatal("payoff affected the preceding target's owner")
 			}
 			condition.Val.Object = opt.Val(game.EventPermanentReference())
+			condition.Val.TargetCardResultKey = ""
 			if !conditionSatisfied(g, ctx, condition) {
 				t.Fatal("event-bound creature condition changed")
 			}

@@ -1549,12 +1549,16 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 	if !ok {
 		return res
 	}
+	originalZoneVersion := card.ZoneVersion
 	moved := moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
 	destinationCards, destinationOK := destinationZone(r.game, card.Owner, prim.Destination)
 	reachedDestination := moved && destinationOK && destinationCards.Contains(cardID)
 	res.succeeded = reachedDestination
 	if reachedDestination {
 		r.rememberResultCard(cardID)
+		if prim.Card.Kind == game.CardReferenceTarget && len(r.resultObjects) > 0 {
+			r.resultObjects[len(r.resultObjects)-1].TargetCardZoneVersion = opt.Val(originalZoneVersion)
+		}
 	}
 	// Place the named exile counter only if the card actually landed in exile: a
 	// CR 614/903.9 replacement or commander redirect can send an exile-bound move

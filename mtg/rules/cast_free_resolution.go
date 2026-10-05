@@ -338,7 +338,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		CardSupertypes:               cardSupertypes(spellDef),
 		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
 		Colors:                       spellColors(spellDef),
-		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
 		KickerPaid:                   cast.KickerPaid,

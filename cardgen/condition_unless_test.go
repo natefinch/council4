@@ -391,14 +391,21 @@ func TestResolvingUnlessSourceExclusionShellRouting(t *testing.T) {
 	}
 }
 
-func TestResolvingUnlessUnmodeledSourceExclusionFailsClosed(t *testing.T) {
+func TestResolvingUnlessNumericSourceExclusion(t *testing.T) {
 	t.Parallel()
-	assertCardUnsupported(t, &ScryfallCard{
+	card := &ScryfallCard{
 		Name: "Splitskin Doll", Layout: "normal", ManaCost: "{1}{W}",
 		TypeLine:   "Artifact Creature — Toy",
 		OracleText: "When this creature enters, draw a card. Then discard a card unless you control another creature with power 2 or less.",
 		Power:      new("2"), Toughness: new("1"),
-	}, effectGateCategoryKind)
+	}
+	prefix := "CardDef.CardFace.TriggeredAbilities[0].Content.Modes[0].Sequence[1].Condition.Val.Condition.Val."
+	assertCardPaths(t, card, prefix+"Negate = true",
+		prefix+"ControlsMatching.Val.Selection.ExcludeSource = true",
+		prefix+"ControlsMatching.Val.Selection.Power.Val.Op = compare.LessOrEqual",
+		prefix+"ControlsMatching.Val.Selection.Power.Val.Value = 2",
+	)
+	assertCardPathsAbsent(t, card, "Sequence[0].Condition", "ActivationCondition", "InterveningCondition")
 }
 
 func TestResolvingUnlessSourceExclusionGroupCardDef(t *testing.T) {

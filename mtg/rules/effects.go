@@ -271,6 +271,10 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		return
 	}
 	r.clearPermanentResultPublication(instr)
+	if r.obj != nil && instr.PublishResult != "" {
+		delete(r.obj.ResolutionResults, string(instr.PublishResult))
+		delete(r.obj.ResolutionResultObjects, string(instr.PublishResult))
+	}
 	// Envelope: evaluate conditions first.
 	if !r.instructionConditionSatisfied(instr) {
 		return

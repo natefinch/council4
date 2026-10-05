@@ -344,6 +344,9 @@ type StackObject struct {
 	// TargetManaValueLKI preserves the mana value of a targeted spell after an
 	// earlier instruction removes it from the stack.
 	TargetManaValueLKI map[int]int
+	// TargetManaValueLKIObjectIDs ties local numeric information to the exact
+	// stack object, preventing a reassigned target slot from reading stale data.
+	TargetManaValueLKIObjectIDs map[int]id.ID
 	// TargetNameLKI preserves the cast-face name of a targeted spell after an
 	// earlier instruction removes it from the stack, so a later name comparison
 	// (Tibalt's Trickery's "a different name than that spell") still knows the

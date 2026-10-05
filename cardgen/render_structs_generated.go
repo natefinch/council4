@@ -112,6 +112,8 @@ func isZeroGameCondition(v game.Condition) bool {
 		!(v.ControlComparison.Exists) &&
 		!(v.Object.Exists) &&
 		!(v.ObjectMatches.Exists) &&
+		!(v.UseCounteredSpellManaValue) &&
+		!(v.TargetCardResultKey != "") &&
 		!(v.ObjectAttackedThisTurn) &&
 		!(len(v.Types) > 0) &&
 		!(v.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures) &&
@@ -3725,279 +3727,288 @@ func (r Renderer) renderGameCondition(ctx *renderCtx, v game.Condition) (string,
 		lit28 := "opt.Val(" + lit29 + ")"
 		fields = append(fields, "ObjectMatches: "+lit28+",")
 	}
+	if v.UseCounteredSpellManaValue {
+		lit31 := strconv.FormatBool(bool(v.UseCounteredSpellManaValue))
+		fields = append(fields, "UseCounteredSpellManaValue: "+lit31+",")
+	}
+	if v.TargetCardResultKey != "" {
+		lit32 := "game.ResultKey(" + strconv.Quote(string(v.TargetCardResultKey)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "TargetCardResultKey: "+lit32+",")
+	}
 	if v.ObjectAttackedThisTurn {
-		lit31 := strconv.FormatBool(bool(v.ObjectAttackedThisTurn))
-		fields = append(fields, "ObjectAttackedThisTurn: "+lit31+",")
+		lit33 := strconv.FormatBool(bool(v.ObjectAttackedThisTurn))
+		fields = append(fields, "ObjectAttackedThisTurn: "+lit33+",")
 	}
 	if len(v.Types) > 0 {
-		var items33 []string
-		for _, item34 := range v.Types {
-			lit35, err36 := enumLiteral(typesCardLiterals, "types.Card", item34)
-			if err36 != nil {
-				return "", fmt.Errorf("game.Condition.Types[]: %w", err36)
+		var items35 []string
+		for _, item36 := range v.Types {
+			lit37, err38 := enumLiteral(typesCardLiterals, "types.Card", item36)
+			if err38 != nil {
+				return "", fmt.Errorf("game.Condition.Types[]: %w", err38)
 			}
 			ctx.need(importTypes)
-			items33 = append(items33, lit35)
+			items35 = append(items35, lit37)
 		}
-		lit32 := compactNamedSliceLit("", "types.Card", items33)
-		fields = append(fields, "Types: "+lit32+",")
+		lit34 := compactNamedSliceLit("", "types.Card", items35)
+		fields = append(fields, "Types: "+lit34+",")
 	}
 	if v.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures {
-		lit37 := strconv.FormatBool(bool(v.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures))
-		fields = append(fields, "EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: "+lit37+",")
+		lit39 := strconv.FormatBool(bool(v.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures))
+		fields = append(fields, "EventPermanentNameUniqueAmongControlledAndGraveyardCreatures: "+lit39+",")
 	}
 	if v.SourceClassLevelAtLeast != 0 {
-		lit38 := strconv.FormatInt(int64(v.SourceClassLevelAtLeast), 10)
-		fields = append(fields, "SourceClassLevelAtLeast: "+lit38+",")
+		lit40 := strconv.FormatInt(int64(v.SourceClassLevelAtLeast), 10)
+		fields = append(fields, "SourceClassLevelAtLeast: "+lit40+",")
 	}
 	if v.SourceClassLevelLessThan != 0 {
-		lit39 := strconv.FormatInt(int64(v.SourceClassLevelLessThan), 10)
-		fields = append(fields, "SourceClassLevelLessThan: "+lit39+",")
+		lit41 := strconv.FormatInt(int64(v.SourceClassLevelLessThan), 10)
+		fields = append(fields, "SourceClassLevelLessThan: "+lit41+",")
 	}
 	if v.SourceLevelCountersAtLeast != 0 {
-		lit40 := strconv.FormatInt(int64(v.SourceLevelCountersAtLeast), 10)
-		fields = append(fields, "SourceLevelCountersAtLeast: "+lit40+",")
+		lit42 := strconv.FormatInt(int64(v.SourceLevelCountersAtLeast), 10)
+		fields = append(fields, "SourceLevelCountersAtLeast: "+lit42+",")
 	}
 	if v.SourceLevelCountersLessThan != 0 {
-		lit41 := strconv.FormatInt(int64(v.SourceLevelCountersLessThan), 10)
-		fields = append(fields, "SourceLevelCountersLessThan: "+lit41+",")
+		lit43 := strconv.FormatInt(int64(v.SourceLevelCountersLessThan), 10)
+		fields = append(fields, "SourceLevelCountersLessThan: "+lit43+",")
 	}
 	if true {
-		lit42, err43 := enumLiteral(counterKindLiterals, "counter.Kind", v.SourceCounterKind)
-		if err43 != nil {
-			return "", fmt.Errorf("game.Condition.SourceCounterKind: %w", err43)
+		lit44, err45 := enumLiteral(counterKindLiterals, "counter.Kind", v.SourceCounterKind)
+		if err45 != nil {
+			return "", fmt.Errorf("game.Condition.SourceCounterKind: %w", err45)
 		}
 		ctx.need(importCounter)
-		fields = append(fields, "SourceCounterKind: "+lit42+",")
+		fields = append(fields, "SourceCounterKind: "+lit44+",")
 	}
 	if v.SourceCounterKindKnown {
-		lit44 := strconv.FormatBool(bool(v.SourceCounterKindKnown))
-		fields = append(fields, "SourceCounterKindKnown: "+lit44+",")
+		lit46 := strconv.FormatBool(bool(v.SourceCounterKindKnown))
+		fields = append(fields, "SourceCounterKindKnown: "+lit46+",")
 	}
 	if v.SourceCountersAtLeast != 0 {
-		lit45 := strconv.FormatInt(int64(v.SourceCountersAtLeast), 10)
-		fields = append(fields, "SourceCountersAtLeast: "+lit45+",")
+		lit47 := strconv.FormatInt(int64(v.SourceCountersAtLeast), 10)
+		fields = append(fields, "SourceCountersAtLeast: "+lit47+",")
 	}
 	if v.SourceAttachedCombatCounterpartSubtypes != ([2]types.Sub{}) {
-		var items47 []string
-		for i48 := range v.SourceAttachedCombatCounterpartSubtypes {
-			if !(v.SourceAttachedCombatCounterpartSubtypes[i48] != "") {
+		var items49 []string
+		for i50 := range v.SourceAttachedCombatCounterpartSubtypes {
+			if !(v.SourceAttachedCombatCounterpartSubtypes[i50] != "") {
 				continue
 			}
-			lit49, err50 := enumLiteral(typesSubLiterals, "types.Sub", v.SourceAttachedCombatCounterpartSubtypes[i48])
-			if err50 != nil {
-				return "", fmt.Errorf("game.Condition.SourceAttachedCombatCounterpartSubtypes[]: %w", err50)
+			lit51, err52 := enumLiteral(typesSubLiterals, "types.Sub", v.SourceAttachedCombatCounterpartSubtypes[i50])
+			if err52 != nil {
+				return "", fmt.Errorf("game.Condition.SourceAttachedCombatCounterpartSubtypes[]: %w", err52)
 			}
 			ctx.need(importTypes)
-			items47 = append(items47, strconv.Itoa(i48)+": "+lit49)
+			items49 = append(items49, strconv.Itoa(i50)+": "+lit51)
 		}
-		lit46 := "[2]types.Sub" + "{" + strings.Join(items47, ", ") + "}"
-		fields = append(fields, "SourceAttachedCombatCounterpartSubtypes: "+lit46+",")
+		lit48 := "[2]types.Sub" + "{" + strings.Join(items49, ", ") + "}"
+		fields = append(fields, "SourceAttachedCombatCounterpartSubtypes: "+lit48+",")
 	}
 	if v.SourceNotMonstrous {
-		lit51 := strconv.FormatBool(bool(v.SourceNotMonstrous))
-		fields = append(fields, "SourceNotMonstrous: "+lit51+",")
+		lit53 := strconv.FormatBool(bool(v.SourceNotMonstrous))
+		fields = append(fields, "SourceNotMonstrous: "+lit53+",")
 	}
 	if v.SourceBestowed {
-		lit52 := strconv.FormatBool(bool(v.SourceBestowed))
-		fields = append(fields, "SourceBestowed: "+lit52+",")
+		lit54 := strconv.FormatBool(bool(v.SourceBestowed))
+		fields = append(fields, "SourceBestowed: "+lit54+",")
 	}
 	if v.SourceSaddled {
-		lit53 := strconv.FormatBool(bool(v.SourceSaddled))
-		fields = append(fields, "SourceSaddled: "+lit53+",")
+		lit55 := strconv.FormatBool(bool(v.SourceSaddled))
+		fields = append(fields, "SourceSaddled: "+lit55+",")
 	}
 	if v.SourceTributeNotPaid {
-		lit54 := strconv.FormatBool(bool(v.SourceTributeNotPaid))
-		fields = append(fields, "SourceTributeNotPaid: "+lit54+",")
+		lit56 := strconv.FormatBool(bool(v.SourceTributeNotPaid))
+		fields = append(fields, "SourceTributeNotPaid: "+lit56+",")
 	}
 	if v.SourceCameUnderControlSinceLastUpkeep {
-		lit55 := strconv.FormatBool(bool(v.SourceCameUnderControlSinceLastUpkeep))
-		fields = append(fields, "SourceCameUnderControlSinceLastUpkeep: "+lit55+",")
+		lit57 := strconv.FormatBool(bool(v.SourceCameUnderControlSinceLastUpkeep))
+		fields = append(fields, "SourceCameUnderControlSinceLastUpkeep: "+lit57+",")
 	}
 	if v.ControllerHasMaxSpeed {
-		lit56 := strconv.FormatBool(bool(v.ControllerHasMaxSpeed))
-		fields = append(fields, "ControllerHasMaxSpeed: "+lit56+",")
+		lit58 := strconv.FormatBool(bool(v.ControllerHasMaxSpeed))
+		fields = append(fields, "ControllerHasMaxSpeed: "+lit58+",")
 	}
 	if v.TargetEnteredThisTurn.Exists {
-		lit58 := strconv.FormatInt(int64(v.TargetEnteredThisTurn.Val), 10)
+		lit60 := strconv.FormatInt(int64(v.TargetEnteredThisTurn.Val), 10)
 		ctx.need(importOpt)
-		lit57 := "opt.Val(" + lit58 + ")"
-		fields = append(fields, "TargetEnteredThisTurn: "+lit57+",")
+		lit59 := "opt.Val(" + lit60 + ")"
+		fields = append(fields, "TargetEnteredThisTurn: "+lit59+",")
 	}
 	if v.CastFromZone.Exists {
-		lit60, err61 := enumLiteral(zoneTypeLiterals, "zone.Type", v.CastFromZone.Val)
-		if err61 != nil {
-			return "", fmt.Errorf("game.Condition.CastFromZone: %w", err61)
+		lit62, err63 := enumLiteral(zoneTypeLiterals, "zone.Type", v.CastFromZone.Val)
+		if err63 != nil {
+			return "", fmt.Errorf("game.Condition.CastFromZone: %w", err63)
 		}
 		ctx.need(importZone)
 		ctx.need(importOpt)
-		lit59 := "opt.Val(" + lit60 + ")"
-		fields = append(fields, "CastFromZone: "+lit59+",")
+		lit61 := "opt.Val(" + lit62 + ")"
+		fields = append(fields, "CastFromZone: "+lit61+",")
 	}
 	if v.CastDuringControllerMainPhase {
-		lit62 := strconv.FormatBool(bool(v.CastDuringControllerMainPhase))
-		fields = append(fields, "CastDuringControllerMainPhase: "+lit62+",")
+		lit64 := strconv.FormatBool(bool(v.CastDuringControllerMainPhase))
+		fields = append(fields, "CastDuringControllerMainPhase: "+lit64+",")
 	}
 	if v.EventHistory.Exists {
-		lit64, err65 := r.renderGameEventHistoryCondition(ctx, v.EventHistory.Val)
-		if err65 != nil {
-			return "", fmt.Errorf("game.Condition.EventHistory: %w", err65)
+		lit66, err67 := r.renderGameEventHistoryCondition(ctx, v.EventHistory.Val)
+		if err67 != nil {
+			return "", fmt.Errorf("game.Condition.EventHistory: %w", err67)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit63 := "opt.Val(" + lit64 + ")"
-		fields = append(fields, "EventHistory: "+lit63+",")
+		lit65 := "opt.Val(" + lit66 + ")"
+		fields = append(fields, "EventHistory: "+lit65+",")
 	}
 	if v.ControllerControlsCommander {
-		lit66 := strconv.FormatBool(bool(v.ControllerControlsCommander))
-		fields = append(fields, "ControllerControlsCommander: "+lit66+",")
+		lit68 := strconv.FormatBool(bool(v.ControllerControlsCommander))
+		fields = append(fields, "ControllerControlsCommander: "+lit68+",")
 	}
 	if v.SpellWasKicked {
-		lit67 := strconv.FormatBool(bool(v.SpellWasKicked))
-		fields = append(fields, "SpellWasKicked: "+lit67+",")
+		lit69 := strconv.FormatBool(bool(v.SpellWasKicked))
+		fields = append(fields, "SpellWasKicked: "+lit69+",")
 	}
 	if v.SpellWasBargained {
-		lit68 := strconv.FormatBool(bool(v.SpellWasBargained))
-		fields = append(fields, "SpellWasBargained: "+lit68+",")
+		lit70 := strconv.FormatBool(bool(v.SpellWasBargained))
+		fields = append(fields, "SpellWasBargained: "+lit70+",")
 	}
 	if v.GiftPromised {
-		lit69 := strconv.FormatBool(bool(v.GiftPromised))
-		fields = append(fields, "GiftPromised: "+lit69+",")
+		lit71 := strconv.FormatBool(bool(v.GiftPromised))
+		fields = append(fields, "GiftPromised: "+lit71+",")
 	}
 	if v.EventPermanentWasKicked {
-		lit70 := strconv.FormatBool(bool(v.EventPermanentWasKicked))
-		fields = append(fields, "EventPermanentWasKicked: "+lit70+",")
+		lit72 := strconv.FormatBool(bool(v.EventPermanentWasKicked))
+		fields = append(fields, "EventPermanentWasKicked: "+lit72+",")
 	}
 	if v.EventPermanentWasBargained {
-		lit71 := strconv.FormatBool(bool(v.EventPermanentWasBargained))
-		fields = append(fields, "EventPermanentWasBargained: "+lit71+",")
+		lit73 := strconv.FormatBool(bool(v.EventPermanentWasBargained))
+		fields = append(fields, "EventPermanentWasBargained: "+lit73+",")
 	}
 	if v.SpellWasOffspring {
-		lit72 := strconv.FormatBool(bool(v.SpellWasOffspring))
-		fields = append(fields, "SpellWasOffspring: "+lit72+",")
+		lit74 := strconv.FormatBool(bool(v.SpellWasOffspring))
+		fields = append(fields, "SpellWasOffspring: "+lit74+",")
 	}
 	if v.EventPermanentWasOffspring {
-		lit73 := strconv.FormatBool(bool(v.EventPermanentWasOffspring))
-		fields = append(fields, "EventPermanentWasOffspring: "+lit73+",")
+		lit75 := strconv.FormatBool(bool(v.EventPermanentWasOffspring))
+		fields = append(fields, "EventPermanentWasOffspring: "+lit75+",")
 	}
 	if v.EventPermanentWasCastFromControllerHand {
-		lit74 := strconv.FormatBool(bool(v.EventPermanentWasCastFromControllerHand))
-		fields = append(fields, "EventPermanentWasCastFromControllerHand: "+lit74+",")
+		lit76 := strconv.FormatBool(bool(v.EventPermanentWasCastFromControllerHand))
+		fields = append(fields, "EventPermanentWasCastFromControllerHand: "+lit76+",")
 	}
 	if v.ControllerGraveyardCardOfTypeCountAtLeast != 0 {
-		lit75 := strconv.FormatInt(int64(v.ControllerGraveyardCardOfTypeCountAtLeast), 10)
-		fields = append(fields, "ControllerGraveyardCardOfTypeCountAtLeast: "+lit75+",")
+		lit77 := strconv.FormatInt(int64(v.ControllerGraveyardCardOfTypeCountAtLeast), 10)
+		fields = append(fields, "ControllerGraveyardCardOfTypeCountAtLeast: "+lit77+",")
 	}
 	if v.ControllerGraveyardCountCardType != "" {
-		lit76, err77 := enumLiteral(typesCardLiterals, "types.Card", v.ControllerGraveyardCountCardType)
-		if err77 != nil {
-			return "", fmt.Errorf("game.Condition.ControllerGraveyardCountCardType: %w", err77)
+		lit78, err79 := enumLiteral(typesCardLiterals, "types.Card", v.ControllerGraveyardCountCardType)
+		if err79 != nil {
+			return "", fmt.Errorf("game.Condition.ControllerGraveyardCountCardType: %w", err79)
 		}
 		ctx.need(importTypes)
-		fields = append(fields, "ControllerGraveyardCountCardType: "+lit76+",")
+		fields = append(fields, "ControllerGraveyardCountCardType: "+lit78+",")
 	}
 	if v.ControllerGraveyardInstantOrSorceryCountAtLeast != 0 {
-		lit78 := strconv.FormatInt(int64(v.ControllerGraveyardInstantOrSorceryCountAtLeast), 10)
-		fields = append(fields, "ControllerGraveyardInstantOrSorceryCountAtLeast: "+lit78+",")
+		lit80 := strconv.FormatInt(int64(v.ControllerGraveyardInstantOrSorceryCountAtLeast), 10)
+		fields = append(fields, "ControllerGraveyardInstantOrSorceryCountAtLeast: "+lit80+",")
 	}
 	if len(v.ControllerControlsNamed) > 0 {
-		var items80 []string
-		for _, item81 := range v.ControllerControlsNamed {
-			lit82 := strconv.Quote(string(item81))
-			items80 = append(items80, lit82)
+		var items82 []string
+		for _, item83 := range v.ControllerControlsNamed {
+			lit84 := strconv.Quote(string(item83))
+			items82 = append(items82, lit84)
 		}
-		lit79 := compactNamedSliceLit("", "string", items80)
-		fields = append(fields, "ControllerControlsNamed: "+lit79+",")
+		lit81 := compactNamedSliceLit("", "string", items82)
+		fields = append(fields, "ControllerControlsNamed: "+lit81+",")
 	}
 	if v.FirstCombatPhaseOfTurn {
-		lit83 := strconv.FormatBool(bool(v.FirstCombatPhaseOfTurn))
-		fields = append(fields, "FirstCombatPhaseOfTurn: "+lit83+",")
+		lit85 := strconv.FormatBool(bool(v.FirstCombatPhaseOfTurn))
+		fields = append(fields, "FirstCombatPhaseOfTurn: "+lit85+",")
 	}
 	if v.ControllerCombatPhase {
-		lit84 := strconv.FormatBool(bool(v.ControllerCombatPhase))
-		fields = append(fields, "ControllerCombatPhase: "+lit84+",")
+		lit86 := strconv.FormatBool(bool(v.ControllerCombatPhase))
+		fields = append(fields, "ControllerCombatPhase: "+lit86+",")
 	}
 	if v.ControllerControlsGreatestPowerCreature {
-		lit85 := strconv.FormatBool(bool(v.ControllerControlsGreatestPowerCreature))
-		fields = append(fields, "ControllerControlsGreatestPowerCreature: "+lit85+",")
+		lit87 := strconv.FormatBool(bool(v.ControllerControlsGreatestPowerCreature))
+		fields = append(fields, "ControllerControlsGreatestPowerCreature: "+lit87+",")
 	}
 	if v.ControllerControlsGreatestToughnessCreature {
-		lit86 := strconv.FormatBool(bool(v.ControllerControlsGreatestToughnessCreature))
-		fields = append(fields, "ControllerControlsGreatestToughnessCreature: "+lit86+",")
+		lit88 := strconv.FormatBool(bool(v.ControllerControlsGreatestToughnessCreature))
+		fields = append(fields, "ControllerControlsGreatestToughnessCreature: "+lit88+",")
 	}
 	if v.ControlsGreatestManaValueInGroup.Exists {
-		lit88, err89 := r.renderGameSelection(ctx, v.ControlsGreatestManaValueInGroup.Val)
-		if err89 != nil {
-			return "", fmt.Errorf("game.Condition.ControlsGreatestManaValueInGroup: %w", err89)
+		lit90, err91 := r.renderGameSelection(ctx, v.ControlsGreatestManaValueInGroup.Val)
+		if err91 != nil {
+			return "", fmt.Errorf("game.Condition.ControlsGreatestManaValueInGroup: %w", err91)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit87 := "opt.Val(" + lit88 + ")"
-		fields = append(fields, "ControlsGreatestManaValueInGroup: "+lit87+",")
+		lit89 := "opt.Val(" + lit90 + ")"
+		fields = append(fields, "ControlsGreatestManaValueInGroup: "+lit89+",")
 	}
 	if v.EventPermanentPowerGreaterThanEachOtherCreature {
-		lit90 := strconv.FormatBool(bool(v.EventPermanentPowerGreaterThanEachOtherCreature))
-		fields = append(fields, "EventPermanentPowerGreaterThanEachOtherCreature: "+lit90+",")
+		lit92 := strconv.FormatBool(bool(v.EventPermanentPowerGreaterThanEachOtherCreature))
+		fields = append(fields, "EventPermanentPowerGreaterThanEachOtherCreature: "+lit92+",")
 	}
 	if v.ControllerIsMonarch {
-		lit91 := strconv.FormatBool(bool(v.ControllerIsMonarch))
-		fields = append(fields, "ControllerIsMonarch: "+lit91+",")
+		lit93 := strconv.FormatBool(bool(v.ControllerIsMonarch))
+		fields = append(fields, "ControllerIsMonarch: "+lit93+",")
 	}
 	if v.ControllerWasMonarchAtTurnStart {
-		lit92 := strconv.FormatBool(bool(v.ControllerWasMonarchAtTurnStart))
-		fields = append(fields, "ControllerWasMonarchAtTurnStart: "+lit92+",")
+		lit94 := strconv.FormatBool(bool(v.ControllerWasMonarchAtTurnStart))
+		fields = append(fields, "ControllerWasMonarchAtTurnStart: "+lit94+",")
 	}
 	if v.AnOpponentIsMonarch {
-		lit93 := strconv.FormatBool(bool(v.AnOpponentIsMonarch))
-		fields = append(fields, "AnOpponentIsMonarch: "+lit93+",")
+		lit95 := strconv.FormatBool(bool(v.AnOpponentIsMonarch))
+		fields = append(fields, "AnOpponentIsMonarch: "+lit95+",")
 	}
 	if v.NoMonarch {
-		lit94 := strconv.FormatBool(bool(v.NoMonarch))
-		fields = append(fields, "NoMonarch: "+lit94+",")
+		lit96 := strconv.FormatBool(bool(v.NoMonarch))
+		fields = append(fields, "NoMonarch: "+lit96+",")
 	}
 	if v.EventDefendingPlayerIsMonarch {
-		lit95 := strconv.FormatBool(bool(v.EventDefendingPlayerIsMonarch))
-		fields = append(fields, "EventDefendingPlayerIsMonarch: "+lit95+",")
+		lit97 := strconv.FormatBool(bool(v.EventDefendingPlayerIsMonarch))
+		fields = append(fields, "EventDefendingPlayerIsMonarch: "+lit97+",")
 	}
 	if v.ControllerHasInitiative {
-		lit96 := strconv.FormatBool(bool(v.ControllerHasInitiative))
-		fields = append(fields, "ControllerHasInitiative: "+lit96+",")
+		lit98 := strconv.FormatBool(bool(v.ControllerHasInitiative))
+		fields = append(fields, "ControllerHasInitiative: "+lit98+",")
 	}
 	if v.ControllerHasCityBlessing {
-		lit97 := strconv.FormatBool(bool(v.ControllerHasCityBlessing))
-		fields = append(fields, "ControllerHasCityBlessing: "+lit97+",")
+		lit99 := strconv.FormatBool(bool(v.ControllerHasCityBlessing))
+		fields = append(fields, "ControllerHasCityBlessing: "+lit99+",")
 	}
 	if v.ControllerCompletedADungeon {
-		lit98 := strconv.FormatBool(bool(v.ControllerCompletedADungeon))
-		fields = append(fields, "ControllerCompletedADungeon: "+lit98+",")
+		lit100 := strconv.FormatBool(bool(v.ControllerCompletedADungeon))
+		fields = append(fields, "ControllerCompletedADungeon: "+lit100+",")
 	}
 	if v.SourceControllerTurn {
-		lit99 := strconv.FormatBool(bool(v.SourceControllerTurn))
-		fields = append(fields, "SourceControllerTurn: "+lit99+",")
+		lit101 := strconv.FormatBool(bool(v.SourceControllerTurn))
+		fields = append(fields, "SourceControllerTurn: "+lit101+",")
 	}
 	if v.ControllerTurnOfGameAtMost != 0 {
-		lit100 := strconv.FormatInt(int64(v.ControllerTurnOfGameAtMost), 10)
-		fields = append(fields, "ControllerTurnOfGameAtMost: "+lit100+",")
+		lit102 := strconv.FormatInt(int64(v.ControllerTurnOfGameAtMost), 10)
+		fields = append(fields, "ControllerTurnOfGameAtMost: "+lit102+",")
 	}
 	if v.SpellColorManaSpent != (game.ColorManaSpendThreshold{}) {
-		lit101, err102 := r.renderGameColorManaSpendThreshold(ctx, v.SpellColorManaSpent)
-		if err102 != nil {
-			return "", fmt.Errorf("game.Condition.SpellColorManaSpent: %w", err102)
+		lit103, err104 := r.renderGameColorManaSpendThreshold(ctx, v.SpellColorManaSpent)
+		if err104 != nil {
+			return "", fmt.Errorf("game.Condition.SpellColorManaSpent: %w", err104)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "SpellColorManaSpent: "+lit101+",")
+		fields = append(fields, "SpellColorManaSpent: "+lit103+",")
 	}
 	if v.SpellSameColorManaSpentAtLeast != 0 {
-		lit103 := strconv.FormatInt(int64(v.SpellSameColorManaSpentAtLeast), 10)
-		fields = append(fields, "SpellSameColorManaSpentAtLeast: "+lit103+",")
+		lit105 := strconv.FormatInt(int64(v.SpellSameColorManaSpentAtLeast), 10)
+		fields = append(fields, "SpellSameColorManaSpentAtLeast: "+lit105+",")
 	}
 	if v.LandEnteredThisTurnOrControlsBasicLand {
-		lit104 := strconv.FormatBool(bool(v.LandEnteredThisTurnOrControlsBasicLand))
-		fields = append(fields, "LandEnteredThisTurnOrControlsBasicLand: "+lit104+",")
+		lit106 := strconv.FormatBool(bool(v.LandEnteredThisTurnOrControlsBasicLand))
+		fields = append(fields, "LandEnteredThisTurnOrControlsBasicLand: "+lit106+",")
 	}
 	if v.SourceAbilityResolutionOrdinalThisTurn != 0 {
-		lit105 := strconv.FormatInt(int64(v.SourceAbilityResolutionOrdinalThisTurn), 10)
-		fields = append(fields, "SourceAbilityResolutionOrdinalThisTurn: "+lit105+",")
+		lit107 := strconv.FormatInt(int64(v.SourceAbilityResolutionOrdinalThisTurn), 10)
+		fields = append(fields, "SourceAbilityResolutionOrdinalThisTurn: "+lit107+",")
 	}
 	return structLit("game.Condition", fields), nil
 }

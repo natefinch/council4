@@ -271,6 +271,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.ResolutionChoices = cloneComparableMap(o.ResolutionChoices)
 	clone.TargetControllerLKI = cloneComparableMap(o.TargetControllerLKI)
 	clone.TargetManaValueLKI = cloneComparableMap(o.TargetManaValueLKI)
+	clone.TargetManaValueLKIObjectIDs = cloneComparableMap(o.TargetManaValueLKIObjectIDs)
 	clone.TargetNameLKI = cloneComparableMap(o.TargetNameLKI)
 	clone.CapturedTargetControllerLKI = cloneComparableMap(o.CapturedTargetControllerLKI)
 	clone.CapturedTargetManaValueLKI = cloneComparableMap(o.CapturedTargetManaValueLKI)

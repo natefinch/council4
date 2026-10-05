@@ -286,6 +286,7 @@ func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 	g.Stack.Push(&StackObject{
 		TargetControllerLKI:         map[int]PlayerID{0: Player3},
 		TargetManaValueLKI:          map[int]int{0: 5},
+		TargetManaValueLKIObjectIDs: map[int]id.ID{0: 17},
 		CapturedTargetControllerLKI: map[int]PlayerID{0: Player2},
 		CapturedTargetManaValueLKI:  map[int]int{0: 4},
 	})
@@ -301,6 +302,7 @@ func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 	}
 	obj.TargetControllerLKI[0] = Player4
 	obj.TargetManaValueLKI[0] = 9
+	obj.TargetManaValueLKIObjectIDs[0] = 23
 	obj.CapturedTargetControllerLKI[0] = Player4
 	obj.CapturedTargetManaValueLKI[0] = 9
 	clone.DelayedTriggers[0].CapturedTargetControllerLKI[0] = Player4
@@ -315,6 +317,9 @@ func TestCloneSeparatesCapturedAndLocalTargetControllerLKI(t *testing.T) {
 	}
 	if original.TargetManaValueLKI[0] != 5 {
 		t.Fatalf("original local target mana value LKI = %v, want 5", original.TargetManaValueLKI[0])
+	}
+	if original.TargetManaValueLKIObjectIDs[0] != 17 {
+		t.Fatal("cloned target spell identity map aliases the original")
 	}
 	if original.CapturedTargetControllerLKI[0] != Player2 {
 		t.Fatalf("original captured target LKI = %v, want Player2", original.CapturedTargetControllerLKI[0])

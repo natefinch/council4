@@ -24,28 +24,24 @@ func conditionObjectCardTypes(values []types.Card) ([]types.Card, bool) {
 	return result, true
 }
 
-// New type vocabulary must not admit a gate whose existing binding cannot
-// execute. Contextual target/card and event/target binding is a separate adapter.
+// Expanded selections use the same exact reference/domain check as their gate.
 func conditionTypeSelectionBindingsSupported(content compiler.AbilityContent) bool {
+	if _, ok := lowerShuffleRevealPermanentSequence(contentCtx{content: content}); ok {
+		return true
+	}
 	for _, condition := range content.Conditions {
 		if condition.Predicate != compiler.ConditionPredicateObjectMatches ||
 			!expandedConditionTypeSelection(condition.Selection) {
 			continue
 		}
-		switch condition.ObjectBinding {
-		case compiler.ReferenceBindingTarget:
-			if len(content.Targets) != 1 {
-				return false
-			}
-			if _, ok := permanentTargetSpec(content.Targets[0]); !ok {
-				return false
-			}
-		case compiler.ReferenceBindingEventPermanent:
-			if len(content.Targets) != 0 {
-				return false
-			}
-		default:
+		if condition.ObjectBinding != compiler.ReferenceBindingTarget && condition.ObjectBinding != compiler.ReferenceBindingEventPermanent {
 			continue
+		}
+		if condition.ObjectBinding == compiler.ReferenceBindingTarget && !condition.HasSubjectReference {
+			return false
+		}
+		if _, ok := lowerObjectMatchReference(condition, conditionContextEffectGate); !ok {
+			return false
 		}
 	}
 	return true

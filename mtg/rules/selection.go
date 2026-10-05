@@ -962,6 +962,14 @@ func (s *selectionSubject) manaValue() (int, bool) {
 		return s.card.Def.ManaValue(), true
 	}
 	if s.kind == subjectEventPermanent {
+		if s.snapshot != nil {
+			if s.snapshot.FaceDown {
+				return 0, true
+			}
+			if s.snapshot.CopiableDef != nil {
+				return s.snapshot.CopiableDef.ManaValue(), true
+			}
+		}
 		def, ok := s.eventPermanentCardDef()
 		if !ok {
 			return 0, false
