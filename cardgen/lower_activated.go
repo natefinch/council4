@@ -143,7 +143,8 @@ func lowerActivatedAbilityKind(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
-	if contentHasResolutionCount(ability.Content) && abilityContentHasAddManaEffect(ability.Content) {
+	if contentHasResolutionCount(ability.Content) && abilityContentHasAddManaEffect(ability.Content) &&
+		!abilityContentHasTargets(ability.Content) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported activated resolution-count condition",
@@ -890,7 +891,7 @@ func conditionIsBodyResolvingGate(condition compiler.CompiledCondition) bool {
 // condition is a body-level gate that the ordered-sequence lowerer (or the
 // mana-ability lowerer, via isSemanticManaAbility's own call to this function)
 // consumes directly, rather than an activation gate. Recognized forms:
-//   - typed ordinary If/Unless clause or group owners in non-mana bodies
+//   - typed ordinary If/Unless clause or group owners in non-mana or targeted bodies
 //   - "unless its controller pays" tax (counter-unless-pays)
 //   - recognized pure-state "unless" gates contained in the resolving body
 //   - "If <source object matches>, <effect>" conditional body rider (e.g.

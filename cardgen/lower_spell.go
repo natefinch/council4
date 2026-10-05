@@ -33,6 +33,9 @@ type contentCtx struct {
 	// would place counters on the wrong object. Standalone effects keep the
 	// EventPermanent binding, which always denotes the triggering permanent.
 	sequenceClause bool
+	// singleAction preserves the envelope's one-choice/publication contract
+	// when a fixed mana output can otherwise expand into one instruction per pip.
+	singleAction bool
 	// allowEventPronoun re-permits an EventPermanent "it"/"that creature"
 	// reference inside a sequence clause that is a mutually-exclusive branch
 	// (an "Otherwise," else branch). Such a branch never resolves alongside its
@@ -190,6 +193,7 @@ func lowerSequenceClauseContent(
 		content:                 content,
 		enclosingKind:           parent.enclosingKind,
 		sequenceClause:          true,
+		singleAction:            parent.singleAction,
 		allowEventPronoun:       allowEventPronoun,
 		triggerCardCountEvent:   parent.triggerCardCountEvent,
 		triggerEvent:            parent.triggerEvent,
@@ -250,6 +254,11 @@ func lowerContentDispatch(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if !ctx.sequenceClause && len(ctx.content.Effects) == 1 &&
+		ctx.content.Effects[0].Kind == compiler.EffectAddMana && len(ctx.content.Conditions) != 0 {
+		ctx.content = contentWithoutOwnedConditionReferences(ctx.content)
+		return lowerOrderedEffectSequence(cardName, ctx, syntax)
+	}
 	if syntax != nil && syntax.CoinFlip != nil {
 		// A recognized coin flip must lower through its dedicated path, which
 		// gates every branch effect on the flip result. If that path fails

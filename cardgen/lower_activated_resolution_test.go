@@ -33,7 +33,6 @@ func TestActivatedResolutionOrdinalNearMisses(t *testing.T) {
 		"{1}: If this is the second time an ability has resolved this turn, draw a card.",
 		"{T}: If this is the second time this ability has resolved this turn, add {G}.",
 		"{T}: Draw a card. If this is the second time this ability has resolved this turn, add {G}.",
-		"{1}: Target creature gains trample until end of turn. If this is the second time this ability has resolved this turn, add {G}.",
 	} {
 		assertCardUnsupported(t, &ScryfallCard{Name: "Ordinal Near Miss", Layout: "normal", TypeLine: "Artifact", OracleText: text})
 	}
