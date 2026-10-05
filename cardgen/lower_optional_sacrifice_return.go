@@ -34,6 +34,7 @@ func lowerOptionalSacrificeReturnWithCounters(ctx contentCtx) (game.AbilityConte
 	// sacrifice first and every follow-up gated on it, and no else branch.
 	plan, ok := planOptionalFlow(content)
 	if !ok ||
+		!plan.singleOptionalTail(len(content.Effects)) ||
 		!plan.enabled ||
 		plan.publishWithoutOptional ||
 		plan.independentOptional ||

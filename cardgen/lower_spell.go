@@ -705,6 +705,10 @@ func lowerOptionalContent(
 		"unsupported optional effect",
 		"the executable source backend does not yet lower optional resolving effects",
 	)
+	if plan, ok, handled := planScopedResultFlow(ctx.content); handled && !ok && plan.failureCategory != "" {
+		optionalReason.Additional = append(optionalReason.Additional,
+			*unsupportedEffectSequenceDiagnostic(ctx, plan.failureCategory))
+	}
 	// Discover whether optionality is the ONLY blocker. Re-lowering the same
 	// content with the "may" removed reveals any independent blockers that would
 	// remain even if optional effects were supported, so support-prioritization

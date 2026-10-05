@@ -715,13 +715,6 @@ func TestLowerOptionalFlowFailsClosed(t *testing.T) {
 		name       string
 		oracleText string
 	}{
-		{"if you don't branch", "You may discard a card. If you don't, draw a card."},
-		{"optional without if-you-do", "You may discard a card. Draw a card."},
-		// An independent effect after the gated "if you do" tail ("Scry 2.")
-		// does not structurally contain the gate condition, so it would resolve
-		// unconditionally. The flow must reject the whole body rather than gate
-		// only part of it.
-		{"if-you-do independent tail", "You may discard a card. If you do, draw a card. Scry 2."},
 		// Single optional effect whose inner effect (putting a permanent from
 		// the library onto the battlefield, i.e. a tutor-to-play) is itself
 		// unsupported must still fail closed rather than emit a partial card.

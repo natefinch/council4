@@ -53,7 +53,7 @@ func planSequenceConditions(
 				return sequenceConditionPlan{}, sequenceTaxOwnerCategory, false
 			}
 			plan.externalConditions = append(plan.externalConditions, condition)
-			if !optionalFlow.enabled || ci != optionalFlow.gateCondition && ci != optionalFlow.elseGateCondition {
+			if !optionalFlow.consumesCondition(ci) {
 				plan.gateConditions = append(plan.gateConditions, condition)
 			}
 			continue
@@ -70,6 +70,13 @@ func planSequenceConditions(
 	// A payment's "if they do" cannot be attributed to the counter action.
 	// Keep such outcome-dependent flows closed until payment provenance is modeled.
 	if optionalFlow.enabled {
+		if optionalFlow.scoped != nil {
+			for producer := range optionalFlow.scoped.publishers {
+				if _, owned := plan.clauseConditions[producer]; owned {
+					return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
+				}
+			}
+		}
 		if _, owned := plan.clauseConditions[optionalFlow.optionalIndex]; owned {
 			return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 		}

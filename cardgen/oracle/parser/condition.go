@@ -465,9 +465,12 @@ type ConditionClause struct {
 	// generalized parameter recognizeResultThisWayCondition extracts so lowering
 	// can match the gate against whichever single producing verb actually
 	// precedes it, instead of one bespoke predicate per verb.
-	ThisWayOutcome   EffectKind       `json:",omitempty"`
-	ThisWaySelection *SelectionSyntax `json:",omitempty"`
-	ThisWayCardNoun  bool             `json:",omitempty"`
+	ThisWayOutcome         EffectKind          `json:",omitempty"`
+	ThisWaySelection       *SelectionSyntax    `json:",omitempty"`
+	ThisWayCardNoun        bool                `json:",omitempty"`
+	ThisWayController      bool                `json:",omitempty"`
+	ThisWayCount           int                 `json:",omitempty"`
+	ThisWayCountComparison ConditionComparison `json:",omitempty"`
 
 	// SubjectSpan identifies a source-death or contextual object-match subject.
 	SubjectSpan    shared.Span `json:"-"`
@@ -1359,40 +1362,7 @@ func resultThisWayOutcomeKind(word string) (kind EffectKind, cardNoun bool, ok b
 // (recognizeDiesThisWayCondition) -- and on any noun parseSelection does not
 // recognize as a real card/permanent kind, subtype, or type exclusion.
 func recognizeResultThisWayCondition(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
-	rest, ok := cutTokenPrefix(body, "a")
-	if !ok {
-		rest, ok = cutTokenPrefix(body, "an")
-	}
-	if !ok {
-		return ConditionClause{}, false
-	}
-	copulaIdx := -1
-	for i, tok := range rest {
-		if equalWord(tok, "is") || equalWord(tok, "are") || equalWord(tok, "was") || equalWord(tok, "were") {
-			copulaIdx = i
-			break
-		}
-	}
-	if copulaIdx <= 0 || copulaIdx+2 >= len(rest) {
-		return ConditionClause{}, false
-	}
-	nounTokens := rest[:copulaIdx]
-	outcome, cardNoun, ok := resultThisWayOutcomeKind(rest[copulaIdx+1].Text)
-	if !ok {
-		return ConditionClause{}, false
-	}
-	if !tokenWordsEqual(rest[copulaIdx+2:], "this", "way") {
-		return ConditionClause{}, false
-	}
-	if !validResultThisWayNoun(nounTokens, cardNoun, atoms) {
-		return ConditionClause{}, false
-	}
-	selection := parseSelection(nounTokens, atoms)
-	return ConditionClause{
-		Predicate: ConditionPredicateResultThisWay, ThisWayOutcome: outcome,
-		ThisWaySelection: &selection,
-		ThisWayCardNoun:  equalWord(nounTokens[len(nounTokens)-1], "card") || equalWord(nounTokens[len(nounTokens)-1], "cards"),
-	}, true
+	return recognizeQuantifiedResultCondition(body, atoms)
 }
 
 // validResultThisWayNoun reports whether tokens is a noun phrase

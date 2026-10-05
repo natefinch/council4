@@ -1026,6 +1026,8 @@ const optionalIfYouDoResultKey = game.ResultKey("if-you-do")
 // wording (whose else effect carries no condition) and whenever there is no else
 // branch.
 type optionalFlowPlan struct {
+	scoped                 *scopedResultFlow
+	failureCategory        string
 	resultSelection        opt.V[game.Selection]
 	resultCardNoun         bool
 	enabled                bool
@@ -1071,6 +1073,9 @@ func (p optionalFlowPlan) gateSucceeded() game.TriState {
 // by effect i Optional: the optional effect of an "if you do" pair, the trailing
 // bare optional effect, or — in the all-independent shape — every effect.
 func (p optionalFlowPlan) marksOptional(i int) bool {
+	if p.scoped != nil {
+		return p.scoped.optional[i]
+	}
 	if p.independentOptional {
 		return true
 	}
@@ -1089,6 +1094,10 @@ func (p optionalFlowPlan) marksOptional(i int) bool {
 // "Otherwise" else tail (elseIndex onward) is excluded — those are gated on the
 // optional effect having failed by gatesElse instead.
 func (p optionalFlowPlan) gates(i int) bool {
+	if p.scoped != nil {
+		_, exists := p.scoped.gates[i]
+		return exists && !p.scoped.otherwise[i]
+	}
 	return p.enabled && i >= p.gateIndex && (p.elseIndex < 0 || i < p.elseIndex)
 }
 
@@ -1097,6 +1106,9 @@ func (p optionalFlowPlan) gates(i int) bool {
 // ("Otherwise, <Z>." or "If you don't, <Z>.") resolves only when the controller
 // declined the optional effect.
 func (p optionalFlowPlan) gatesElse(i int) bool {
+	if p.scoped != nil {
+		return p.scoped.otherwise[i]
+	}
 	return p.enabled && p.elseIndex >= 0 && i >= p.elseIndex
 }
 
@@ -1107,6 +1119,9 @@ func (p optionalFlowPlan) gatesElse(i int) bool {
 // belongs to the complement gate (recorded as elseGateCondition), not to Z, so
 // it is cleared on the gate-carrying else effect.
 func (p optionalFlowPlan) clearsNegated(i int) bool {
+	if p.scoped != nil {
+		return p.scoped.clearNegated[i]
+	}
 	return p.enabled && p.elseGateCondition >= 0 && i == p.elseIndex
 }
 
@@ -1794,6 +1809,9 @@ func optionalFlowGateConditions(
 	}
 	filtered := make([]compiler.CompiledCondition, 0, len(conditions))
 	for ci := range conditions {
+		if plan.scoped != nil && plan.scoped.conditions[ci] {
+			continue
+		}
 		if ci == plan.gateCondition || ci == plan.elseGateCondition {
 			continue
 		}
@@ -1807,6 +1825,9 @@ func optionalFlowGateConditions(
 // category and false when the optionality cannot be realized, keeping the
 // sequence fail closed.
 func applyOptionalFlowEnvelope(plan optionalFlowPlan, i int, sequence []game.Instruction) (string, bool) {
+	if plan.scoped != nil {
+		return plan.scoped.apply(i, sequence)
+	}
 	if plan.enabled {
 		if i == plan.optionalIndex {
 			if plan.publishWithoutOptional {

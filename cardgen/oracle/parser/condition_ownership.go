@@ -19,29 +19,29 @@ type ConditionOwnership struct {
 	Scope            ConditionScope `json:",omitempty"`
 	ClauseIDs        []int          `json:",omitempty"`
 	ReferenceNodeIDs []int          `json:",omitempty"`
+	// ResultProducerClauseID names an earlier resolving action, never a cost.
+	ResultProducerClauseID int `json:",omitempty"`
 }
 
 func emitAbilityConditionOwnership(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
 		emitConditionOwnership(ability.Sentences, ability.ConditionSegments, ability.SemanticReferences)
+		emitResultConditionOwnership(ability.Sentences, ability.ConditionSegments, ability.ConditionClauses)
 		if ability.Modal != nil {
 			for j := range ability.Modal.Options {
 				mode := &ability.Modal.Options[j]
 				emitConditionOwnership(mode.Sentences, mode.ConditionSegments, mode.SemanticReferences)
+				emitResultConditionOwnership(mode.Sentences, mode.ConditionSegments, mode.ConditionClauses)
 			}
 		}
 	}
 }
 
 func emitConditionOwnership(sentences []Sentence, segments []ConditionSegment, references []Reference) {
-	var effects []*EffectSyntax
-	for si := range sentences {
-		for ei := range sentences[si].Effects {
-			effect := &sentences[si].Effects[ei]
-			effect.ClauseID = len(effects) + 1
-			effects = append(effects, effect)
-		}
+	effects := conditionEffects(sentences)
+	for ei, effect := range effects {
+		effect.ClauseID = ei + 1
 	}
 	for ci := range segments {
 		segment := &segments[ci]
@@ -75,6 +75,25 @@ func emitConditionOwnership(sentences []Sentence, segments []ConditionSegment, r
 			}
 		}
 	}
+}
+
+func conditionEffects(sentences []Sentence) []*EffectSyntax {
+	var effects []*EffectSyntax
+	var appendEffects func([]EffectSyntax)
+	appendEffects = func(syntaxes []EffectSyntax) {
+		for ei := range syntaxes {
+			effect := &syntaxes[ei]
+			if len(effect.RepeatBody) > 0 {
+				appendEffects(effect.RepeatBody)
+			} else {
+				effects = append(effects, effect)
+			}
+		}
+	}
+	for si := range sentences {
+		appendEffects(sentences[si].Effects)
+	}
+	return effects
 }
 
 func parserSpanContains(outer, inner shared.Span) bool {

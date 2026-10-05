@@ -257,6 +257,7 @@ func lowerOptionalSacrificeScaledReward(ctx contentCtx) (game.AbilityContent, bo
 	// branch, so every reward is gated on the sacrifice having succeeded.
 	plan, ok := planOptionalFlow(content)
 	if !ok ||
+		!plan.singleOptionalTail(len(content.Effects)) ||
 		!plan.enabled ||
 		plan.publishWithoutOptional ||
 		plan.optionalIndex != 0 ||

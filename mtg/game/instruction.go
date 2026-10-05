@@ -57,6 +57,10 @@ type InstructionResultGate struct {
 	// ObjectSelection requires at least one object actually affected by the
 	// published result to match. Permanent characteristics use departure LKI.
 	ObjectSelection opt.V[Selection]
+	// ObjectCountRange counts actual members matching ObjectSelection, not the
+	// requested action amount. Max zero is unbounded. Without it, one matching
+	// member suffices.
+	ObjectCountRange opt.V[IntRange]
 	// CardOnly requires post-move card results rather than permanent departures.
 	CardOnly bool
 	// Negate complements the complete filtered predicate for "Otherwise".
