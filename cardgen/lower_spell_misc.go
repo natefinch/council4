@@ -19,6 +19,12 @@ func lowerFixedLifeSpell(
 	groupPrimitiveFactory func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	// "This turn" also describes modeled event/count operands; it is not a
+	// persistent life action. Other durations cannot be flattened into one change.
+	if effect.Duration != compiler.DurationNone && effect.Duration != compiler.DurationThisTurn {
+		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported life action duration",
+			"a duration-qualified life action requires a modeled persistent effect")
+	}
 	reflexiveRider := reflexiveAttackingSameRiderPresent(&effect)
 	if reflexiveRider && !reflexiveAttackingSameControllerFixed(ctx, &effect) {
 		return game.AbilityContent{}, contentDiagnostic(

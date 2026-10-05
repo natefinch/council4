@@ -327,6 +327,7 @@ func lowerOrderedEffectSequence(
 		effect := &ctx.content.Effects[i]
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
+		effectAbility.singleAction = optionalFlow.marksOptional(i)
 		// Embedded payment conditions belong to the clause lowerer; ordinary
 		// conditions belong to the sequence envelope.
 		effectAbility.content.Conditions = conditionPlan.clauseConditions[i]

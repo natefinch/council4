@@ -49,6 +49,14 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: Choose one \u2014\n\u2022 If this is the second time this ability has resolved this turn, draw a card, then draw a card.\n\u2022 You gain 2 life.",
 	},
 	{
+		Name: "RT Ordinal Mana", Layout: "normal", TypeLine: "Artifact",
+		OracleText: flamekinBody,
+	},
+	{
+		Name: "RT Gated Mana", Layout: "normal", TypeLine: "Instant",
+		OracleText: "If you have no cards in hand, draw a card, then add {R}{G}.",
+	},
+	{
 		Name:       "RT Bog",
 		Layout:     "normal",
 		TypeLine:   "Land",
@@ -269,6 +277,31 @@ func TestRTOrdinalModesSemantic(t *testing.T) {
 		seq[0].Condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn != 2 ||
 		seq[0].PublishCondition == "" || seq[1].ConditionGate != seq[0].PublishCondition {
 		t.Fatal("modal resolution ordinal and grouped consumer did not round-trip")
+	}
+}
+
+func TestRTOrdinaryManaSemantic(t *testing.T) {
+	ability := RTOrdinalMana().ActivatedAbilities[0]
+	seq := ability.Content.Modes[0].Sequence
+	if !ability.CountsResolutionsThisTurn || ability.ActivationCondition.Exists ||
+		len(RTOrdinalMana().ManaAbilities) != 0 || len(seq) != 2 || seq[0].Condition.Exists {
+		t.Fatal("ordinary fixed-mana shell did not round-trip")
+	}
+	add, ok := seq[1].Primitive.(game.AddMana)
+	if !ok || add.Amount.Value() != 8 || add.ManaColor != mana.R || !seq[1].Optional ||
+		seq[1].Condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn != 3 {
+		t.Fatal("one optional fixed-mana action did not round-trip")
+	}
+	group := RTGatedMana().SpellAbility.Val.Modes[0].Sequence
+	if len(group) != 3 || group[0].PublishCondition == "" ||
+		group[1].ConditionGate != group[0].PublishCondition || group[2].ConditionGate != group[0].PublishCondition {
+		t.Fatal("expanded fixed-mana group decision did not round-trip")
+	}
+	for i, color := range []mana.Color{mana.R, mana.G} {
+		add, ok := group[i+1].Primitive.(game.AddMana)
+		if !ok || add.Amount.Value() != 1 || add.ManaColor != color {
+			t.Fatal("fixed-mana color or amount did not round-trip")
+		}
 	}
 }
 `, pkgName)

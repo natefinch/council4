@@ -154,6 +154,14 @@ func lowerManaAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (game.ManaAbility, *shared.Diagnostic) {
+	if slices.ContainsFunc(ability.Content.Effects, func(effect compiler.CompiledEffect) bool {
+		optional := effect.Optional
+		effect.Optional = false
+		return optional && fixedAddManaToController(effect, false)
+	}) {
+		return game.ManaAbility{}, executableDiagnostic(ability, "unsupported optional mana ability",
+			"the Payment Planner does not model an optional fixed-output mana action")
+	}
 	if ability.MaxActivationsPerTurn > 0 {
 		// A mana ability's per-turn activation cap ("Activate no more than three
 		// times each turn.", Manaforge Cinder) is not enforced on the mana-payment
@@ -893,6 +901,9 @@ func markManaPersistUntilEndOfTurn(content *game.AbilityContent) bool {
 
 func lowerAddManaContentInner(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if fixedAddManaToController(effect, false) && !ctx.optional && !ctx.content.Unconsumed() {
+		return lowerFixedManaAction(ctx, effect)
+	}
 	if content, ok := lowerTriggerLandProducedMana(ctx); ok {
 		return content, nil
 	}
