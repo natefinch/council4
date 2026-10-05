@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18491 supported cards
+# 18492 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -5281,6 +5281,7 @@ cc8239c22c2eecfd  Fatehold Chronologist // Peer Review
 bf75d21c8e7b9cd1  Fates' Reversal
 04ddf9e43ca17828  Fateshaper Aspirant
 cc6978472fc9e256  Fatestitcher
+eb513c0c5aa7548e  Fathom Fleet Boarder
 414bc3c686bd18d4  Fathom Fleet Cutthroat
 2e2638613b3139b9  Fathom Fleet Firebrand
 4558e80b742d5c55  Fathom Mage
@@ -7966,7 +7967,6 @@ d3c4a0d4cf6d326c  Inner Calm, Outer Strength
 86c440bea61dc8d4  Inner Struggle
 95983267318bc297  Inner-Chamber Guard
 7af39375a8fba37a  Inner-Flame Acolyte
-94f0fc53d76d5560  Inner-Flame Igniter
 21900004392da031  Innkeeper's Talent
 b2f0aa9038198eb5  Innocence Kami
 707b317f7e407472  Innocent Blood
@@ -12359,6 +12359,7 @@ c14c12ae6ba4af8a  Reaper King
 fc8ec8584a33a9fc  Reassembling Skeleton
 ee0f13e421d936de  Reave Soul
 88803f2399195ad8  Reaver Ambush
+3659463c27479563  Reaver Drone
 0007d73709ea8235  Rebel
 ed43d035795461db  Rebellious Strike
 a033d89f00fdcb4b  Reborn Hope
