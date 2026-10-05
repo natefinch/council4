@@ -156,26 +156,7 @@ func TestLowerBareItsRequiredTypeNoTriggerBindsTarget(t *testing.T) {
 	}
 }
 
-// TestLowerBlinkThatSubjectStillFailsClosed guards against a genuine
-// ambiguity this family's development uncovered: Splash Portal's exact
-// wording ("Exile target creature you control, then return it to the
-// battlefield under its owner's control. If that creature is a Bird, Frog,
-// Otter, or Rat, draw a card.") still fails closed, because "that creature"
-// here does not name the ORIGINAL target -- CR 400.7 makes the blinked
-// permanent a new object once it returns, so "that creature" names the
-// just-returned object (a prior-instruction-result / linked-object
-// antecedent the general reference machinery already correctly resolves),
-// not literally game.ObjectReferenceTargetPermanent. The parser's present-
-// tense recognizer still guesses Target (a reasonable default for the
-// non-blink shapes above), but the compiler's existing conflict-detection
-// safety net (conditionObjectBinding, unchanged by this family's work) finds
-// the reference machinery's own resolution disagrees and fails closed rather
-// than picking either one -- exactly the same fail-safe that made the
-// no-trigger Target fallback above safe to add in the first place. This
-// blink-family variant is a real, documented follow-up (needs
-// ConditionObjectBindingPriorInstructionResult support for this predicate),
-// not a bug in this slice.
-func TestLowerBlinkThatSubjectStillFailsClosed(t *testing.T) {
+func TestLowerBlinkThatSubjectPublishesNewPermanent(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:       "Splash Portal Probe",
@@ -183,11 +164,8 @@ func TestLowerBlinkThatSubjectStillFailsClosed(t *testing.T) {
 		TypeLine:   "Instant",
 		OracleText: "Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Bird, Frog, Otter, or Rat, draw a card.",
 	}
-	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
-	if err != nil {
-		t.Fatalf("GenerateExecutableCardSource error = %v", err)
-	}
-	if len(diagnostics) == 0 && source != "" {
-		t.Fatal("blink that-subject gate unexpectedly compiled without any diagnostic")
-	}
+	assertCardPaths(t, card,
+		"SpellAbility.Val.Modes[0].Sequence[1].Primitive.(game.PutOnBattlefield).PublishLinked",
+		"SpellAbility.Val.Modes[0].Sequence[2].Condition.Val.Condition.Val.ObjectMatches.Val.SubtypesAny[3] = types.Rat",
+	)
 }

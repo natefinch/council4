@@ -100,7 +100,11 @@ func matchOrderedSequenceEffectConditions(effects []compiler.CompiledEffect, con
 			return nil, reason, false
 		}
 		ctx := effectGateLoweringContext(condition)
-		lowered, ok := lowerCondition(condition, ctx)
+		references, ok := sequenceConditionReferenceContext(condition, owners[0])
+		if !ok {
+			return nil, effectGateCategoryLowering, false
+		}
+		lowered, ok := lowerConditionWithReferences(condition, ctx, references)
 		if !ok {
 			return nil, effectGateRejectCategory(condition, ctx), false
 		}

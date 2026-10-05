@@ -10,14 +10,14 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33013
-- Supported (generated): 18496
-- Parser-complete: 22735
-- **Lowering backlog** (parser-complete, not generated): 5008
+- Supported (generated): 18494
+- Parser-complete: 22737
+- **Lowering backlog** (parser-complete, not generated): 5010
 - **Parser backlog** (not parser-complete, not generated): 9509
 
-Partition check: 18496 supported + 5008 lowering-backlog + 9509 parser-backlog = 33013 eligible. ✓
+Partition check: 18494 supported + 5010 lowering-backlog + 9509 parser-backlog = 33013 eligible. ✓
 
-769 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+767 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
@@ -74,8 +74,8 @@ Partition check: 18496 supported + 5008 lowering-backlog + 9509 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18496
-- Independent per-card recompile generated: 18496
+- Authoritative generated (compilecards report): 18494
+- Independent per-card recompile generated: 18494
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -115,7 +115,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 29 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
 | 30 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |
 | 31 | unsupported attach effect | 36 | 31 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
-| 32 | unsupported mana effect | 33 | 27 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
+| 32 | unsupported mana effect | 34 | 28 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
 | 33 | unsupported counter spell | 31 | 26 | Spell Blast; Drown in the Loch; Unyaro Griffin; Hisoka's Defiance; Frontline Medic |
 | 34 | unsupported shuffle effect | 28 | 26 | Dwell on the Past; Madblind Mountain; Perpetual Timepiece; Renewing Touch; Piper's Melody |
 | 35 | unsupported parameterized keyword | 28 | 23 | Goblin Barrage; Vexing Scuttler; Ulamog's Dreadsire; Garruk's Harbinger; Sporeweb Weaver |

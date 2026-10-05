@@ -270,6 +270,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	if instr == nil {
 		return
 	}
+	r.clearPermanentResultPublication(instr)
 	// Envelope: evaluate conditions first.
 	if !r.instructionConditionSatisfied(instr) {
 		return
@@ -786,54 +787,6 @@ func permanentObjectBindingRef(permanent *game.Permanent) game.LinkedObjectRef {
 // graveyard — whereas a sacrifice-then-return effect (Heart-Shaped Herb) passes
 // {zone.Graveyard} to return the card it just put there.
 func returnLinkedNonBattlefieldObjects(e *Engine, g *game.Game, obj *game.StackObject, linkID string, returnZones []zone.Type, controllerOverride opt.V[game.PlayerID], options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	key := linkedObjectSourceKey(g, obj, linkID)
-	returned := false
-	for _, ref := range linkedObjects(g, key) {
-		if snapshot, ok := lastKnownObject(g, ref.ObjectID); !ok || snapshot.CardID != ref.CardID {
-			continue
-		}
-		card, ok := g.GetCardInstance(ref.CardID)
-		if !ok {
-			continue
-		}
-		owner, ok := playerByID(g, card.Owner)
-		if !ok {
-			continue
-		}
-		fromZone, ok := removeLinkedCardFromZones(owner, ref.CardID, returnZones)
-		if !ok {
-			continue
-		}
-		controller := card.Owner
-		if controllerOverride.Exists {
-			controller = controllerOverride.Val
-		}
-		if _, ok := createCardPermanentFaceWithOptions(e, g, card, controller, fromZone, game.FaceFront, nil, options, agents, log); ok {
-			returned = true
-		}
-	}
-	clearLinkedObjects(g, key)
-	return returned
-}
-
-// removeLinkedCardFromZones removes cardID from the first of zones that holds it
-// and reports that zone so the re-entry uses the correct origin for CR 603/614
-// zone-change events. It only consults the given zones, so a caller that permits
-// exile alone never reanimates a card that has moved on to the graveyard.
-func removeLinkedCardFromZones(owner *game.Player, cardID id.ID, zones []zone.Type) (zone.Type, bool) {
-	for _, z := range zones {
-		switch z {
-		case zone.Exile:
-			if owner.Exile.Remove(cardID) {
-				return zone.Exile, true
-			}
-		case zone.Graveyard:
-			if owner.Graveyard.Remove(cardID) {
-				return zone.Graveyard, true
-			}
-		default:
-			// Other zones cannot back a linked-source return; skip them.
-		}
-	}
-	return zone.None, false
+	r := effectResolver{engine: e, game: g, obj: obj, agents: agents, log: log}
+	return len(r.returnLinkedNonBattlefieldPermanents(linkID, returnZones, controllerOverride, options)) > 0
 }

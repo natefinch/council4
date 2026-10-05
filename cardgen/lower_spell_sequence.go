@@ -450,11 +450,15 @@ func lowerOrderedEffectSequence(
 		// produced anything other than exactly one instruction, or already
 		// publishes a different key — so this only ever adds capability and never
 		// changes an outcome that succeeded before.
+		conditionReferences := conditionPlan.resultReferencesForClause(ctx.content.Effects, i)
+		productReferences := append(slices.Clone(effectAbility.content.References), conditionReferences...)
 		if antecedent, key, ok := sequencePriorInstructionLink(
-			effectAbility.content.References, sequence, effectInstructionRanges[:i],
+			productReferences, sequence, effectInstructionRanges[:i],
 		); ok {
 			effectAbility.priorInstruction = antecedent
 			effectAbility.priorLinkedKey = key
+		} else if len(conditionReferences) > 0 {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — condition subject producer not publishable")
 		}
 		// Lower the effect through the shared lowerAbilityContent entry point.
 		// allSharedTargets: try with inherited targets; if that fails, retry
@@ -4413,7 +4417,7 @@ func reanimationManaValuePublish(
 	effectIndex int,
 	targetBound bool,
 ) (lifeRiderAmountLowering, bool) {
-	if put.PublishLinked != "" {
+	if put.PublishLinked != "" && put.PublishLinked != sequenceProductKey(effectIndex-1) {
 		return lifeRiderAmountLowering{}, false
 	}
 	card, ok := put.Source.CardRef()
@@ -4421,6 +4425,9 @@ func reanimationManaValuePublish(
 		return lifeRiderAmountLowering{}, false
 	}
 	key := game.LinkedKey(fmt.Sprintf("life-rider-%d", effectIndex))
+	if put.PublishLinked != "" {
+		key = put.PublishLinked
+	}
 	refCtx := referenceLoweringContext{}
 	if targetBound {
 		refCtx.TargetLinkedKey = key

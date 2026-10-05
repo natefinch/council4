@@ -330,20 +330,21 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 }
 
 // referencePronounKind recognizes "it's" as the object pronoun "it" plus the
-// contracted verb "is" in conditional card-noun matches and the fixed-P/T
+// contracted verb "is" in conditional object matches and the fixed-P/T
 // characteristic grammar consumed by parseReferencedBecomeCharacteristicsEffect.
-// Subtype-only target gates and fixed idioms retain their existing ownership.
 func referencePronounKind(tokens []shared.Token, index int, atoms Atoms) PronounKind {
 	if index > 0 && index+2 < len(tokens) &&
 		equalWord(tokens[index], "it's") &&
 		(equalWord(tokens[index-1], "if") || equalWord(tokens[index-1], "unless")) &&
 		(equalWord(tokens[index+1], "a") || equalWord(tokens[index+1], "an")) {
+		if entersAsCopyCounterRiderConditionAt(tokens, index-1) {
+			return PronounUnknown
+		}
 		end := conditionClauseEnd(tokens, index-1)
 		noun := tokens[index+2 : end]
-		if tokenSuffixWord(noun, "card") || tokenSuffixWord(noun, "cards") {
-			if selection, ok := parseConditionSelection(noun, atoms); ok && len(selection.RequiredTypes) > 0 {
-				return PronounIt
-			}
+		if selection, ok := parseConditionSelection(noun, atoms); ok &&
+			(len(selection.RequiredTypes) > 0 || len(selection.SubtypesAny) > 0 || len(selection.Supertypes) > 0) {
+			return PronounIt
 		}
 	}
 	if index >= 0 && index < len(tokens) &&
