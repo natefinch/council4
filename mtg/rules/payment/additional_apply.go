@@ -118,7 +118,8 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 // (paymentApplicationReady / additionalCostPlanStillValid) first; every failure
 // here therefore denotes an internal invariant violation and panics rather than
 // returning after partial mutation, so a clean payment failure is atomic.
-func applyAdditionalCostPlan(s State, plan additionalCostPlan) {
+func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSubject {
+	var subjects []game.PaidCostSubject
 	if plan.lifePaid > 0 {
 		player, ok := s.Player(plan.player)
 		if !ok || player.Life < plan.lifePaid || !s.CanPayLife(plan.player) {
@@ -145,7 +146,14 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) {
 		s.MillCards(plan.player, plan.millAmount)
 	}
 	for _, sacrifice := range plan.sacrifices {
-		if !s.SacrificePermanent(sacrifice) {
+		key := plan.sacrificeSubjectKey(sacrifice.ObjectID)
+		if key != "" {
+			subject, ok := s.PaySacrificeSubject(sacrifice, key)
+			if !ok {
+				panic("additional cost plan became invalid while capturing sacrificed subject")
+			}
+			subjects = append(subjects, subject)
+		} else if !s.SacrificePermanent(sacrifice) {
 			panic("additional cost plan became invalid while sacrificing permanents")
 		}
 	}
@@ -163,12 +171,29 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) {
 		}
 	}
 	for _, cardID := range plan.discards {
-		if !s.DiscardFromHand(plan.player, cardID) {
+		key := plan.discardSubjectKey(cardID)
+		if key != "" {
+			subject, ok := s.PayDiscardSubject(plan.player, cardID, key)
+			if !ok {
+				panic("additional cost plan became invalid while capturing discarded subject")
+			}
+			subjects = append(subjects, subject)
+		} else if !s.DiscardFromHand(plan.player, cardID) {
 			panic("additional cost plan became invalid while discarding cards")
 		}
 	}
-	if plan.randomDiscardAmount > 0 && !s.DiscardAtRandom(plan.player, plan.randomDiscardAmount) {
-		panic("additional cost plan became invalid while discarding cards at random")
+	if plan.randomDiscardAmount > 0 {
+		keys := plan.randomDiscardSubjectKeys()
+		bound := slices.ContainsFunc(keys, func(key string) bool { return key != "" })
+		if bound {
+			paid, ok := s.PayRandomDiscardSubjects(plan.player, keys)
+			if !ok {
+				panic("additional cost plan became invalid while capturing random discarded subjects")
+			}
+			subjects = append(subjects, paid...)
+		} else if !s.DiscardAtRandom(plan.player, plan.randomDiscardAmount) {
+			panic("additional cost plan became invalid while discarding cards at random")
+		}
 	}
 	for _, exile := range plan.exiles {
 		if !s.MoveCard(plan.player, exile.cardID, exile.zone, zone.Exile) {
@@ -197,6 +222,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) {
 			panic("additional cost plan failed to set energy counters")
 		}
 	}
+	return subjects
 }
 
 func zoneContainsCard(s State, playerID game.PlayerID, zoneType zone.Type, cardID id.ID) bool {

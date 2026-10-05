@@ -220,10 +220,12 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitOptionalCounterForEachPlayerSequences(document.Abilities)
 	emitKeywordShareGrants(document.Abilities)
 	emitReminderInner(document.Abilities)
+	emitPaidCostThisWaySubjects(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)
 	emitDelayedTriggerEffects(document.Abilities, context.CardName, context.Legendary, context.InstantOrSorcery)
 	emitAbilityConditionOwnership(document.Abilities)
+	emitPaidCostSubjectBindings(document.Abilities)
 	return document, diagnostics
 }
 

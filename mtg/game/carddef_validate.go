@@ -2141,6 +2141,11 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 		if condition.ObjectMatches.Val.Player != PlayerAny {
 			v.add(faceName, appendPath(path, "ObjectMatches.Player"), CardDefIssueInvalidSelection, "object Selection cannot use a player relation")
 		}
+		if condition.Object.Exists && condition.Object.Val.Kind() == ObjectReferencePaidCost &&
+			!PaidCostSelectionSupported(condition.ObjectMatches.Val) {
+			v.add(faceName, appendPath(path, "ObjectMatches"), CardDefIssueInvalidSelection,
+				"paid-cost Selection requires captured characteristic predicates")
+		}
 	}
 	if condition.EventHistory.Exists {
 		v.validateEventHistoryCondition(faceName, appendPath(path, "EventHistory"), &condition.EventHistory.Val)

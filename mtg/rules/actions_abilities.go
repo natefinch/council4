@@ -52,7 +52,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
 		manaSource := captureManaProducedSource(g, permanent)
 		eventsBeforePayment := len(g.Events)
-		if _, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
+		costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 			PlayerID:        playerID,
 			Source:          permanent,
 			ManaCost:        manaBody.ManaCost,
@@ -60,18 +60,20 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			XValue:          0,
 			Prefs:           prefs,
 			ForMana:         true,
-		}); !ok {
+		})
+		if !ok {
 			return false
 		}
 		obj := &game.StackObject{
-			ID:             g.IDGen.Next(),
-			Kind:           game.StackActivatedAbility,
-			SourceID:       permanent.ObjectID,
-			Face:           permanent.Face,
-			SourceCardID:   permanent.CardInstanceID,
-			SourceTokenDef: permanent.TokenDef,
-			AbilityIndex:   activate.AbilityIndex,
-			Controller:     playerID,
+			ID:               g.IDGen.Next(),
+			Kind:             game.StackActivatedAbility,
+			SourceID:         permanent.ObjectID,
+			Face:             permanent.Face,
+			SourceCardID:     permanent.CardInstanceID,
+			SourceTokenDef:   permanent.TokenDef,
+			AbilityIndex:     activate.AbilityIndex,
+			Controller:       playerID,
+			PaidCostSubjects: costPaid.subjects,
 		}
 		if len(manaBody.Content.Modes) > 0 {
 			seedEntryChoices(obj, permanent)
@@ -172,6 +174,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		ChosenModes:            append([]int(nil), activate.ChosenModes...),
 		XValue:                 activate.XValue,
 		SacrificedAsCostIDs:    costPaid.sacrificedIDs,
+		PaidCostSubjects:       costPaid.subjects,
 		TappedAsCostIDs:        costPaid.tappedIDs,
 		ExiledAsCostIDs:        costPaid.exiledIDs,
 		ActivatedResolutionUse: resolutionUse,
@@ -218,6 +221,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	discardSelf := !selfEntry && len(ability.AdditionalCosts) == 1 && abilityHasDiscardThisCardCost(ability.AdditionalCosts)
 	var additionalCostsPaid []string
 	var sacrificedAsCostIDs, tappedAsCostIDs, exiledAsCostIDs []id.ID
+	var paidCostSubjects []game.PaidCostSubject
 	if selfEntry {
 		prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Hand, agents, log)
 		costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
@@ -234,6 +238,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 			return false
 		}
 		sacrificedAsCostIDs = costPaid.sacrificedIDs
+		paidCostSubjects = costPaid.subjects
 		tappedAsCostIDs = costPaid.tappedIDs
 		exiledAsCostIDs = costPaid.exiledIDs
 	} else {
@@ -248,6 +253,11 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 			return false
 		}
 		if discardSelf {
+			for _, additional := range ability.AdditionalCosts {
+				if additional.SubjectKey != "" {
+					paidCostSubjects = append(paidCostSubjects, captureDiscardCostSubject(g, playerID, card.ID, additional.SubjectKey))
+				}
+			}
 			if !discardCardFromHand(g, playerID, card.ID) {
 				panic("hand activation source disappeared after validation")
 			}
@@ -269,6 +279,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		XValue:                 activate.XValue,
 		AdditionalCostsPaid:    additionalCostsPaid,
 		SacrificedAsCostIDs:    sacrificedAsCostIDs,
+		PaidCostSubjects:       paidCostSubjects,
 		TappedAsCostIDs:        tappedAsCostIDs,
 		ExiledAsCostIDs:        exiledAsCostIDs,
 		InlineActivated:        &ability,
@@ -359,6 +370,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		ChosenModes:            append([]int(nil), activate.ChosenModes...),
 		XValue:                 activate.XValue,
 		SacrificedAsCostIDs:    costPaid.sacrificedIDs,
+		PaidCostSubjects:       costPaid.subjects,
 		TappedAsCostIDs:        costPaid.tappedIDs,
 		ExiledAsCostIDs:        costPaid.exiledIDs,
 		InlineActivated:        &ability,

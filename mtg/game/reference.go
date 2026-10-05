@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -83,6 +84,7 @@ const (
 	// where one effect must act on all chosen spells together over an unbounded
 	// target count. It is the stack-object twin of ObjectReferenceAllTargetPermanents.
 	ObjectReferenceAllTargetStackObjects
+	ObjectReferencePaidCost
 )
 
 // ObjectReference describes how a rules effect finds an object at resolution.
@@ -95,6 +97,10 @@ type ObjectReference struct {
 
 	// linkID identifies a linked object recorded by an earlier effect.
 	linkID string
+
+	costKey  string
+	costKind PaidCostKind
+	costNoun types.Card
 }
 
 // Kind reports the reference kind.
@@ -231,7 +237,16 @@ func CapturedObjectReference() ObjectReference {
 // bounds depend on the surrounding TargetSpec list and are checked by
 // ValidateCardDef.
 func (r ObjectReference) Validate() []string {
+	if r.kind != ObjectReferencePaidCost && (r.costKey != "" || r.costKind != PaidCostUnknown || r.costNoun != "") {
+		return []string{"only a paid cost reference may set CostKey or CostKind"}
+	}
 	switch r.kind {
+	case ObjectReferencePaidCost:
+		if r.costKey == "" || (r.costKind != PaidCostSacrifice && r.costKind != PaidCostDiscard) ||
+			r.targetIndex != 0 || r.linkID != "" ||
+			r.costNoun != "" && (r.costKind != PaidCostSacrifice || !r.costNoun.IsPermanent()) {
+			return []string{"paid cost reference requires CostKey and sacrifice/discard CostKind, without TargetIndex or LinkID"}
+		}
 	case ObjectReferenceTargetPermanent:
 		if r.linkID != "" {
 			return []string{"target permanent reference must not set LinkID"}

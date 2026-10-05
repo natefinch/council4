@@ -97,6 +97,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	}
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
+	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)

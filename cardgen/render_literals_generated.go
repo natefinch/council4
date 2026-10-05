@@ -827,6 +827,7 @@ var gameObjectReferenceKindLiterals = map[game.ObjectReferenceKind]string{
 	game.ObjectReferenceCapturedObject:            "game.ObjectReferenceCapturedObject",
 	game.ObjectReferenceTargetCard:                "game.ObjectReferenceTargetCard",
 	game.ObjectReferenceAllTargetStackObjects:     "game.ObjectReferenceAllTargetStackObjects",
+	game.ObjectReferencePaidCost:                  "game.ObjectReferencePaidCost",
 }
 
 // gameOwnerRelationLiterals maps each exported game.OwnerRelation constant to the Go
@@ -836,6 +837,14 @@ var gameOwnerRelationLiterals = map[game.OwnerRelation]string{
 	game.OwnerYou:      "game.OwnerYou",
 	game.OwnerOpponent: "game.OwnerOpponent",
 	game.OwnerNotYou:   "game.OwnerNotYou",
+}
+
+// gamePaidCostKindLiterals maps each exported game.PaidCostKind constant to the Go
+// expression that names it in generated card source.
+var gamePaidCostKindLiterals = map[game.PaidCostKind]string{
+	game.PaidCostUnknown:   "game.PaidCostUnknown",
+	game.PaidCostSacrifice: "game.PaidCostSacrifice",
+	game.PaidCostDiscard:   "game.PaidCostDiscard",
 }
 
 // gamePermanentChoiceExtremumLiterals maps each exported game.PermanentChoiceExtremum constant to the Go
@@ -1926,6 +1935,9 @@ func enumSpelling(v any) (string, bool) {
 		return name, ok
 	case game.OwnerRelation:
 		name, ok := gameOwnerRelationLiterals[value]
+		return name, ok
+	case game.PaidCostKind:
+		name, ok := gamePaidCostKindLiterals[value]
 		return name, ok
 	case game.PermanentChoiceExtremum:
 		name, ok := gamePermanentChoiceExtremumLiterals[value]
