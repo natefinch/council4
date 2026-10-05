@@ -18,6 +18,9 @@ func bindReferences(
 	bound := append([]CompiledReference(nil), references...)
 	for i := range bound {
 		reference := &bound[i]
+		if bindDelayedSubjectReference(reference, effects) {
+			continue
+		}
 		switch reference.Kind {
 		case ReferencePaidCostSubject:
 			if reference.PaidCost != nil && reference.PaidCost.Known &&

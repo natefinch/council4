@@ -350,6 +350,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				FaceDown:                       syntax.FaceDown,
 				RequirePermanentCard:           syntax.RequirePermanentCard,
 				ExileDieSubjectDamagedCreature: syntax.ExileDieSubjectDamagedCreature,
+				DelayedSubject:                 syntax.DelayedSubject,
 				References:                     compileTypedReferences(syntax.References),
 				SubjectReferences:              compileTypedReferences(syntax.SubjectReferences),
 				Targets:                        compileTypedTargetList(syntax.Targets),

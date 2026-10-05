@@ -42,8 +42,8 @@ func TestLowerBerserkReusableMechanics(t *testing.T) {
 	if !amount.Exists ||
 		amount.Val.Kind != game.DynamicAmountObjectPower ||
 		amount.Val.Object != game.TargetPermanentReference(0) ||
-		modify.PublishLinked == "" {
-		t.Fatalf("pump = %#v, want published target-power snapshot", modify)
+		modify.PublishLinked != "" {
+		t.Fatalf("pump = %#v, want target-power snapshot without redundant publication", modify)
 	}
 	delayed, ok := mode.Sequence[2].Primitive.(game.CreateDelayedTrigger)
 	if !ok ||

@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -98,7 +99,7 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			return plan, false, true
 		}
 		indices[effect.ClauseID] = ei
-		flow.optional[ei] = effect.Optional
+		flow.optional[ei] = effect.Optional && !effect.DelayedSubject.OptionalAtDelayedTime
 	}
 	var actionReason string
 	flow.actions, actionReason = planOptionalActionGroups(content.Effects, indices)
@@ -186,7 +187,10 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 		for _, optional := range flow.optional {
 			hasOptional = hasOptional || optional
 		}
-		if !hasOptional {
+		hasDelayedOptional := slices.ContainsFunc(content.Effects, func(effect compiler.CompiledEffect) bool {
+			return effect.Optional && effect.DelayedSubject.OptionalAtDelayedTime && fixedPhaseSubjectEffectModeled(effect)
+		})
+		if !hasOptional && !hasDelayedOptional {
 			return optionalFlowPlan{}, false, false
 		}
 	}
@@ -209,7 +213,7 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 	}
 	for ei, effect := range content.Effects {
 		if effect.Negated && !flow.clearNegated[ei] ||
-			effect.Optional && effect.DelayedTiming != 0 {
+			effect.Optional && effect.DelayedTiming != 0 && !fixedPhaseSubjectEffectModeled(effect) {
 			return plan, false, true
 		}
 		if flow.gates[ei].Key == "" && !flow.actions.ownsOptionalAntecedents(content, ei) && optionalAntecedentUnmodeled(content, ei) {
@@ -230,6 +234,10 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 }
 
 func optionalAntecedentUnmodeled(content compiler.AbilityContent, ei int) bool {
+	if fixedPhaseSubjectEffectModeled(content.Effects[ei]) &&
+		content.Effects[ei].DelayedSubject.Kind == parser.DelayedSubjectProduct {
+		return false
+	}
 	amount := content.Effects[ei].Amount
 	if ei > 0 && content.Effects[ei-1].Optional &&
 		(amount.DynamicKind == compiler.DynamicAmountSourceManaValue ||

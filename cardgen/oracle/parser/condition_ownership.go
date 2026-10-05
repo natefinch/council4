@@ -16,6 +16,7 @@ const (
 
 // ConditionOwnership names grammatical owners, not instruction positions.
 type ConditionOwnership struct {
+	DelayedBody      bool           `json:",omitempty"`
 	Scope            ConditionScope `json:",omitempty"`
 	ClauseIDs        []int          `json:",omitempty"`
 	ReferenceNodeIDs []int          `json:",omitempty"`
@@ -62,6 +63,7 @@ func emitConditionOwnership(sentences []Sentence, segments []ConditionSegment, r
 		case 1:
 			segment.Ownership.Scope = ConditionScopeClause
 			segment.Ownership.ClauseIDs = []int{owners[0].ClauseID}
+			segment.Ownership.DelayedBody = delayedConditionEvaluation(owners[0], segment, sentences)
 		default:
 			segment.Ownership.Scope = ConditionScopeGroup
 			for _, effect := range owners {

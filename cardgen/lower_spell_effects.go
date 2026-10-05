@@ -1414,7 +1414,9 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 	// the plural handling lowerCreateTokenThenCountersSequence already has for
 	// the two-sentence form; this generalizes it to any producing effect and any
 	// sentence shape reaching this lowerer, not just token creation.
-	if reference := recipientReferences[0]; reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
+	if ctx.capturedSubject != nil && ctx.capturedSubject.group {
+		add.Group = game.CapturedObjectsGroup()
+	} else if reference := recipientReferences[0]; reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
 		reference.Kind == compiler.ReferencePronoun &&
 		(reference.Pronoun == compiler.ReferencePronounThem || reference.Pronoun == compiler.ReferencePronounThose) {
 		if ctx.priorLinkedKey == "" || reference.PriorInstruction != ctx.priorInstruction {
@@ -1422,7 +1424,7 @@ func lowerReferencedCounterPlacement(ctx contentCtx) (game.AbilityContent, *shar
 		}
 		add.Group = game.LinkedObjectsGroup(ctx.priorLinkedKey)
 	} else {
-		object, ok := lowerObjectReference(recipientReferences[0], referenceLoweringContext{
+		object, ok := lowerContentObjectReference(ctx, recipientReferences[0], referenceLoweringContext{
 			AllowSource:      true,
 			AllowTarget:      true,
 			PriorInstruction: ctx.priorInstruction,
@@ -1893,10 +1895,12 @@ func removeCounterObjectAndTargets(ctx contentCtx) (game.ObjectReference, []game
 		}
 		return game.TargetPermanentReference(0), []game.TargetSpec{target}, true
 	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
-		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-			AllowSource: true,
-			AllowTarget: true,
-			AllowEvent:  !ctx.sequenceClause || ctx.allowEventPronoun,
+		object, ok := lowerContentObjectReference(ctx, ctx.content.References[0], referenceLoweringContext{
+			AllowSource:      true,
+			AllowTarget:      true,
+			AllowEvent:       !ctx.sequenceClause || ctx.allowEventPronoun,
+			PriorInstruction: ctx.priorInstruction,
+			PriorLinkedKey:   ctx.priorLinkedKey,
 		})
 		if !ok {
 			return game.ObjectReference{}, nil, false

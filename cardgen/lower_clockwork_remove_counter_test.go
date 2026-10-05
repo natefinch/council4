@@ -21,7 +21,7 @@ func TestLowerClockworkEndOfCombatCounterRemoval(t *testing.T) {
 	if !ok ||
 		delayed.Trigger.Timing != game.DelayedAtEndOfCombat ||
 		!delayed.Trigger.CapturedObject.Exists ||
-		delayed.Trigger.CapturedObject.Val != game.EventPermanentReference() {
+		delayed.Trigger.CapturedObject.Val != game.SourcePermanentReference() {
 		t.Fatalf("instruction = %#v, want captured end-of-combat trigger", sequence[0])
 	}
 	remove, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.RemoveCounter)

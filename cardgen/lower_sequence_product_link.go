@@ -5,12 +5,14 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // Ordered sequence consumers share a canonical object publication with the
-// exact producer identified by the compiler. Currently the supported producers
-// are CreateToken and single-source PutOnBattlefield; other primitive kinds need
-// their own actual-result publication proof before participating.
+// exact producer identified by the compiler. Resolving permanent consumers use
+// CreateToken and single-source PutOnBattlefield; fixed-phase capture additionally
+// admits proven single-card exile publishers. A publication field alone is not
+// an actual-result proof.
 
 // sequencePriorInstructionLink reports the antecedent effect index and link key
 // a clause's own references need to resolve a ReferenceBindingPriorInstructionResult
@@ -27,6 +29,15 @@ func sequencePriorInstructionLink(
 	sequence []game.Instruction,
 	ranges [][2]int,
 ) (priorEffect int, key game.LinkedKey, ok bool) {
+	return sequencePriorInstructionPublication(references, sequence, ranges, false)
+}
+
+func sequencePriorInstructionPublication(
+	references []compiler.CompiledReference,
+	sequence []game.Instruction,
+	ranges [][2]int,
+	capture bool,
+) (priorEffect int, key game.LinkedKey, ok bool) {
 	for _, reference := range references {
 		if reference.Binding != compiler.ReferenceBindingPriorInstructionResult {
 			continue
@@ -36,11 +47,8 @@ func sequencePriorInstructionLink(
 			return 0, "", false
 		}
 		span := ranges[j]
-		if span[1]-span[0] != 1 {
-			return 0, "", false
-		}
-		instructionIndex := span[0]
-		if instructionIndex < 0 || instructionIndex >= len(sequence) {
+		if span[0] < 0 || span[1] > len(sequence) || span[1] <= span[0] ||
+			(!capture && span[1]-span[0] != 1) {
 			return 0, "", false
 		}
 		for _, other := range references {
@@ -49,9 +57,50 @@ func sequencePriorInstructionLink(
 			}
 		}
 		candidateKey := sequenceProductKey(j)
-		linked, published := trySetInstructionPublishLinked(&sequence[instructionIndex], candidateKey)
+		instructionIndex := -1
+		for i := span[0]; i < span[1]; i++ {
+			candidate := sequence[i]
+			if !capture && candidate.Primitive != nil &&
+				captureMovePublisher(candidate.Primitive) {
+				return 0, "", false
+			}
+			key := sequenceProductKey(j)
+			if capture {
+				candidate.Optional = false
+				if existing := game.PublishedLinkedKey(candidate.Primitive); existing != "" {
+					if captureMovePublisher(candidate.Primitive) && !candidate.ClearLinkedBeforeGate {
+						return 0, "", false
+					}
+					key = existing
+				}
+			}
+			if _, published := trySetInstructionPublishLinked(&candidate, key); !published {
+				if capture && (game.PublishedLinkedKey(candidate.Primitive) != "" ||
+					!captureExpansionInstructionCompatible(candidate.Primitive)) {
+					return 0, "", false
+				}
+				continue
+			}
+			if instructionIndex >= 0 {
+				return 0, "", false
+			}
+			instructionIndex = i
+			candidateKey = key
+		}
+		if instructionIndex < 0 {
+			return 0, "", false
+		}
+		candidate := sequence[instructionIndex]
+		if capture {
+			candidate.Optional = false
+		}
+		linked, published := trySetInstructionPublishLinked(&candidate, candidateKey)
 		if !published {
 			return 0, "", false
+		}
+		sequence[instructionIndex].Primitive = candidate.Primitive
+		if capture && captureMovePublisher(candidate.Primitive) {
+			sequence[instructionIndex].ClearLinkedBeforeGate = true
 		}
 		return j, linked, true
 	}
@@ -67,6 +116,25 @@ func sequenceProductKey(index int) game.LinkedKey {
 func sequencePublisherInvalidatesBeforeGates(primitive game.Primitive) bool {
 	return primitive != nil &&
 		(primitive.Kind() == game.PrimitivePutOnBattlefield || primitive.Kind() == game.PrimitiveCreateToken)
+}
+
+func captureExpansionInstructionCompatible(primitive game.Primitive) bool {
+	if primitive == nil {
+		return false
+	}
+	switch primitive.Kind() {
+	case game.PrimitiveDraw, game.PrimitiveGainLife, game.PrimitiveLoseLife,
+		game.PrimitiveAddCounter, game.PrimitiveModifyPT, game.PrimitiveApplyContinuous,
+		game.PrimitiveTap, game.PrimitiveUntap:
+		return true
+	default:
+		return false
+	}
+}
+
+func captureMovePublisher(primitive game.Primitive) bool {
+	return primitive != nil && (primitive.Kind() == game.PrimitiveMovePermanent ||
+		primitive.Kind() == game.PrimitiveMoveTopOfLibrary || primitive.Kind() == game.PrimitiveMoveCard)
 }
 
 // trySetInstructionPublishLinked sets instr's PublishLinked field to key,
@@ -110,6 +178,53 @@ func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey)
 			return primitive.PublishLinked, primitive.PublishLinked == key
 		}
 		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveMoveTopOfLibrary:
+		primitive, ok := instr.Primitive.(game.MoveTopOfLibrary)
+		if !ok || primitive.Destination != zone.Exile ||
+			primitive.PlayerGroup.Kind != game.PlayerGroupReferenceNone ||
+			primitive.Amount.IsDynamic() || primitive.Amount.Value() != 1 {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveMovePermanent:
+		primitive, ok := instr.Primitive.(game.MovePermanent)
+		if !ok || primitive.Destination != zone.Exile || primitive.ControlledChoice ||
+			primitive.Group.Domain() != 0 || primitive.Object.Kind() == game.ObjectReferenceNone {
+			return "", false
+		}
+		switch primitive.Object.Kind() {
+		case game.ObjectReferenceTargetPermanent, game.ObjectReferenceSourcePermanent,
+			game.ObjectReferenceEventPermanent, game.ObjectReferenceEventRelatedPermanent,
+			game.ObjectReferenceLinkedObject, game.ObjectReferenceCapturedObject:
+		default:
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveMoveCard:
+		primitive, ok := instr.Primitive.(game.MoveCard)
+		if !ok || primitive.Destination != zone.Exile || primitive.Card.Kind == game.CardReferenceNone ||
+			primitive.Player.Kind() != game.PlayerReferenceNone ||
+			primitive.PlayerGroup.Kind != game.PlayerGroupReferenceNone ||
+			primitive.IncludeEventPermanentComponents || primitive.PublishLinkedObjectScoped {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		primitive.ReplacePublishedLinked = true
 		instr.Primitive = primitive
 		return key, true
 	default:

@@ -193,7 +193,7 @@ func assertSourcePermanentExile(t *testing.T, content game.AbilityContent) {
 	if len(exiles) != 1 {
 		t.Fatalf("exile instructions = %d, want 1 (sequence %+v)", len(exiles), content.Modes[0].Sequence)
 	}
-	if exiles[0].Object != game.SourceCardPermanentReference() {
-		t.Fatalf("exile object = %+v, want source-card permanent reference", exiles[0].Object)
+	if exiles[0].Object != game.SourcePermanentReference() {
+		t.Fatalf("exile object = %+v, want original source permanent reference", exiles[0].Object)
 	}
 }

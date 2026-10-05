@@ -81,6 +81,11 @@ type Instruction struct {
 	// Primitive is the data-only effect building block.
 	Primitive Primitive
 
+	// ClearLinkedBeforeGate clears this instruction's transient actual-product
+	// publication even when a gate or optional choice skips the primitive.
+	// Persistent CR 607 links must not opt in.
+	ClearLinkedBeforeGate bool
+
 	// Condition is an additional condition evaluated against the resolving stack object.
 	// Source-excluding permanent selections compare the original SourceID, not
 	// SourceCardID or a new permanent created when that card returns.
