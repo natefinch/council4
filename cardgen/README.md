@@ -42,6 +42,18 @@ not one choice per symbol. Mixed-color expanded optional actions require a model
 group and remain unsupported. Activation restrictions and untargeted mana-shell
 ordinals retain their separate, fail-closed boundaries.
 
+Actual removed-counter quantities retain the parser-owned producing ClauseID
+within an Ability Content body. Ordinary damage, life, and draw consumers share
+the prior-effect scalar amount path, not object-result membership. A scalar
+availability gate distinguishes observed zero from a skipped, declined, or
+unavailable producer; counter publishers clear their own old results before
+envelope gates. Removal publishes the number actually removed, including
+aggregated fixed-kind group removals. Named-all single-object removal removes
+only that kind, preserving all other counters. Ambiguous antecedents, expanded
+publishers, named-all groups, conflicting result gates, and modal scalar
+namespaces remain fail-closed. Parser-owned group conditions capture their
+truth once before removal and retain it for every expanded consumer.
+
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
 can therefore remain the subject after exile without being confused with the
@@ -105,6 +117,32 @@ Ordinary live comparisons still fail after removal. Unknown numeric information
 fails closed even under negation or a cached group condition's complement.
 Unavailable captured evaluations do not publish a false value. Dynamic thresholds and unresolved actual
 producer subjects remain unsupported.
+
+Paid-cost subject references are separate from resolving-action products. The
+parser binds a past-cost predicate to one singular sacrifice/discard component
+by cost clause, component, and consumer identity. Only a recognized predicate
+consumer promotes a cost noun into this reference domain, before effect syntax
+is assembled; existing sacrificed-characteristic amounts retain their legacy
+scalar contract and other typed operands keep their exact reference identities.
+Payment captures the actual
+selected permanent or discarded card before its move; stack copies retain that
+immutable snapshot, including effective permanent characteristics and a known
+original card version (zero is valid). A resolving condition reads these facts,
+not the nominal cost, a target, a later graveyard incarnation, or an effect's
+success key. The cost remains paid when the predicate is false. Random discard
+records the existing payment operation's actual choice, without replaying it.
+Ambiguous components, plural subjects, unsupported branches, and competing
+resolving sacrifice/discard producers refuse instead of choosing the first
+member. This includes earlier resolving spell paragraphs and co-selectable
+modal bodies, plus same-domain alternative payments anywhere on the face.
+Optional alternatives do not become required cost publishers. Separate
+activated and triggered abilities retain their own ownership scope.
+Unavailable characteristics cannot enable a negated predicate.
+Fixed past-tense mana-value, power, and toughness bounds reuse the shared
+attribute-comparison grammar and information-availability preflight, including
+cached Instead complements. Current-tense cost subjects, relative thresholds,
+and state/relationship predicates not projected from the snapshot refuse; they
+never read the object's later incarnation or treat an unknown number as zero.
 
 Trigger recognition belongs to the Oracle parser. Its composable grammar emits
 source-spanned typed syntax for permanent zone-change, spell/ability, combat,

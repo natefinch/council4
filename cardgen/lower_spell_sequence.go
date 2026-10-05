@@ -635,6 +635,9 @@ func lowerOrderedEffectSequence(
 	if !linkDamageDealtThisWay(sequence) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — damage-dealt-this-way drain not linkable")
 	}
+	if reason := linkRemovedCounterQuantities(ctx.content.Effects, effectInstructionRanges, sequence); reason != "" {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
+	}
 	if sequenceAmountReferencesPlayerSlotPermanent(sequence, targets) {
 		// A payoff amount that reads a permanent's characteristics ("gain life
 		// equal to that creature's toughness") but whose object resolves to a

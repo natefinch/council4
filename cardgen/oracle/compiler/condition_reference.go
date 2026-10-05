@@ -33,6 +33,15 @@ func bindContextualObjectCondition(
 			subject.Binding = ReferenceBindingEventStackObject
 		}
 		wasSource := subject.Binding == ReferenceBindingSource
+		if subject.Binding == ReferenceBindingPaidCost {
+			if subject.PaidCost == nil || !subject.PaidCost.Known ||
+				subject.PaidCost.ConsumerNodeID != condition.SubjectRefID || !condition.SubjectPast || condition.SubjectSpell {
+				return false
+			}
+			condition.ObjectBinding = subject.Binding
+			condition.ObjectReference = &subject
+			return true
+		}
 		sourceOrder := -1
 		if wasSource && subject.Kind == ReferencePronoun {
 			for _, reference := range references {

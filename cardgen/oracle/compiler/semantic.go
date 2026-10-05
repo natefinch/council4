@@ -534,12 +534,13 @@ type CompiledCost struct {
 
 // CostComponent is one comma-separated cost operation.
 type CostComponent struct {
-	Kind   CostKind
-	Span   shared.Span
-	Text   string
-	Symbol string
-	Amount string
-	Object string
+	PaidSubject *parser.PaidCostProducer
+	Kind        CostKind
+	Span        shared.Span
+	Text        string
+	Symbol      string
+	Amount      string
+	Object      string
 
 	AmountValue int
 	AmountKnown bool
@@ -2941,7 +2942,8 @@ type CompiledEffect struct {
 	// form of an EffectRemoveCounter effect through to lowering, which removes
 	// every counter on the object regardless of kind. It is false for a fixed or
 	// kind-specific removal, whose count is in Amount and kind in CounterKind.
-	RemoveCountersAll bool
+	RemoveCountersAll       bool
+	RemoveCountersAllOfKind bool
 	// RemoveThoseCounters carries the parser's back-referencing "remove those
 	// counters" form of an EffectRemoveCounter effect through to lowering. "Those
 	// counters" names the counters a preceding same-sequence clause placed on the
@@ -4527,6 +4529,7 @@ const (
 	// of those cards"). The amount's reference NodeID binds it to that producer.
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountReferencedCardsTotalManaValue
+	DynamicAmountRemovedCounterCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -4557,10 +4560,11 @@ type CompiledAmount struct {
 	// parser.EffectAmountSyntax.AnyNumber. It is the only positive signal for
 	// that form, since "all", "the", and a bare plural noun share the same empty
 	// amount shape.
-	AnyNumber   bool
-	DynamicKind DynamicAmountKind
-	DynamicForm DynamicAmountForm
-	Multiplier  int
+	AnyNumber        bool
+	DynamicKind      DynamicAmountKind
+	DynamicForm      DynamicAmountForm
+	Multiplier       int
+	ProducerClauseID int
 	// RoundUp records that a half-library mill amount rounds up rather than down
 	// (DynamicAmountHalfPlayerLibrary). It is false for every other amount.
 	RoundUp       bool
@@ -4691,6 +4695,7 @@ const (
 	// ReferenceThatObject it never names a target, so bindReferences binds it
 	// straight to the event permanent rather than a target antecedent.
 	ReferenceDiedCreature
+	ReferencePaidCostSubject
 )
 
 // ReferenceBinding identifies the intended referent of a reference occurrence.
@@ -4733,15 +4738,17 @@ const (
 	// this through the event's RelatedPermanentID, which the block and
 	// became-blocked events populate with the opposing combatant.
 	ReferenceBindingEventRelatedPermanent
+	ReferenceBindingPaidCost
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.
 type CompiledReference struct {
-	Kind    ReferenceKind
-	Pronoun ReferencePronounKind
-	Span    shared.Span
-	Text    string
-	Binding ReferenceBinding
+	PaidCost *parser.PaidCostBinding
+	Kind     ReferenceKind
+	Pronoun  ReferencePronounKind
+	Span     shared.Span
+	Text     string
+	Binding  ReferenceBinding
 	// CardIdentity mirrors the parser's card-identity self-reference marker: a
 	// "this card" self reference (card identity, tracked into its current zone)
 	// as opposed to "this Aura"/"this creature" (a battlefield object). Lowering

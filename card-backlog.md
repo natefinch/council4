@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33013
-- Supported (generated): 18526
-- Parser-complete: 22774
-- **Lowering backlog** (parser-complete, not generated): 5015
-- **Parser backlog** (not parser-complete, not generated): 9472
+- Supported (generated): 18546
+- Parser-complete: 22787
+- **Lowering backlog** (parser-complete, not generated): 5008
+- **Parser backlog** (not parser-complete, not generated): 9459
 
-Partition check: 18526 supported + 5015 lowering-backlog + 9472 parser-backlog = 33013 eligible. ✓
+Partition check: 18546 supported + 5008 lowering-backlog + 9459 parser-backlog = 33013 eligible. ✓
 
 767 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18526 supported + 5015 lowering-backlog + 9472 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18526
-- Independent per-card recompile generated: 18526
+- Authoritative generated (compilecards report): 18546
+- Independent per-card recompile generated: 18546
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,13 +84,13 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1781 | 1169 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 1 | unsupported ordered effect sequence | 1775 | 1163 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
 | 2 | unsupported optional effect | 531 | 3 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Sparring Dummy |
 | 3 | unsupported static declaration operation | 282 | 237 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
-| 4 | unsupported static ability | 275 | 190 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
-| 5 | unsupported counter placement | 212 | 124 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
+| 4 | unsupported static ability | 276 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
+| 5 | unsupported counter placement | 210 | 121 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
 | 6 | unsupported damage spell | 191 | 161 | Armed Response; Combo Attack; Huatli, Dinosaur Knight; Kill! Maim! Burn!; Call Forth the Tempest |
-| 7 | unsupported activation cost | 187 | 134 | Thunderherd Migration; Krovikan Sorcerer; Etchings of the Chosen; Tourach's Gate; City of Shadows |
+| 7 | unsupported activation cost | 188 | 134 | Thunderherd Migration; Krovikan Sorcerer; Etchings of the Chosen; Tourach's Gate; City of Shadows |
 | 8 | unsupported return spell | 164 | 137 | Dragon Fangs; Dragon Scales; Venser's Diffusion; Scapegoat; Kazandu Stomper |
 | 9 | unsupported static declaration group | 163 | 126 | Sedge Sliver; Freewind Equenaut; Rune of Sustenance; Indomitable Might; Cast Through Time |
 | 10 | unsupported destroy spell | 128 | 111 | Coils of the Medusa; Unliving Psychopath; Bounty Agent; Rampaging War Mammoth; Feline Sovereign |

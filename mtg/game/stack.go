@@ -293,6 +293,10 @@ type StackObject struct {
 	// power"). Empty when no permanent was sacrificed as a cost.
 	SacrificedAsCostIDs []id.ID
 
+	// PaidCostSubjects contains component-owned, pre-move facts from successful
+	// spell/ability payment. Stack copies inherit these facts without paying again.
+	PaidCostSubjects []PaidCostSubject
+
 	// TappedAsCostIDs are the object IDs of permanents tapped to pay this
 	// ability's additional activation costs. Saddle uses them to preserve the
 	// exact creatures that saddled its source when the ability resolves.

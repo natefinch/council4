@@ -317,6 +317,15 @@ func (fakePaymentState) MovePermanentToZone(*game.Permanent, zone.Type) bool    
 func (fakePaymentState) SacrificePermanent(*game.Permanent) bool                { return true }
 func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool              { return false }
 func (fakePaymentState) DiscardAtRandom(game.PlayerID, int) bool                { return false }
+func (fakePaymentState) PaySacrificeSubject(*game.Permanent, string) (game.PaidCostSubject, bool) {
+	return game.PaidCostSubject{}, false
+}
+func (fakePaymentState) PayDiscardSubject(game.PlayerID, id.ID, string) (game.PaidCostSubject, bool) {
+	return game.PaidCostSubject{}, false
+}
+func (fakePaymentState) PayRandomDiscardSubjects(game.PlayerID, []string) ([]game.PaidCostSubject, bool) {
+	return nil, false
+}
 func (fakePaymentState) MoveCard(game.PlayerID, id.ID, zone.Type, zone.Type) bool {
 	return false
 }

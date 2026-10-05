@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18526 supported cards
+# 18546 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -410,6 +410,7 @@ d9c442b647d161b3  Ambush Krotiq
 7e943b0f9d804699  Ambush Viper
 c11bd132b8511e79  Ambush Wolf
 a22c1785e79961ec  Amethyst Dragon // Explosive Crystal
+eae6ff8f3c5525dd  Ammit Eternal
 42f51c6ef5451f1d  Amok
 450cfb0abd695127  Amonkhet Raceway
 3da7c51aab9aee05  Amorphous Axe
@@ -571,6 +572,7 @@ b4f4acfb1546d985  Ant-Man's Army
 c75e1bf898930623  Ant-Man, Scott Lang
 9143d64354de54f4  Antagonize
 d57f7c293b2329a3  Anthem of Champions
+9529012713541022  Anthroplasm
 1f36a463477dea56  Anticipate
 1c159486e803e061  Anurid Barkripper
 941b668cc376ddb0  Anurid Brushhopper
@@ -847,6 +849,7 @@ b5898a56b779d294  Ashenmoor Liege
 235c555a181b3c38  Ashiok's Reaper
 ba686ac9db60ffd0  Ashiok's Skulker
 365ef0d2c3b84a7a  Ashiok, Sculptor of Fears
+cc07fd9067a781dd  Ashling the Pilgrim
 23dcd885aaaf9a7c  Ashmouth Hound
 17a78250ab93e045  Ashnod's Altar
 30cdbddf1dae0a90  Ashnod's Harvester
@@ -1642,6 +1645,7 @@ eb076180214ee9c7  Blood Feud
 48c06b33c1e9a6ac  Blood Frenzy
 64074ab08119f2da  Blood Glutton
 42886c519578ed16  Blood Host
+37cb2dc6fc8cf4ba  Blood Hound
 e877373e5d7ce6ab  Blood Hustler
 f93a97121a4dc94f  Blood Hypnotist
 cbb3882b1e4ee529  Blood Knight
@@ -3706,6 +3710,7 @@ c2e20819fe830da3  Deceive the Messenger
 2706667a02dcd5e5  Deceptive Frostkite
 113d7b058c28f161  Deceptive Landscape
 efa9c4d5c91a8e37  Decimate
+03c88e529c9daee9  Decimator Beetle
 eccdfc162bf99344  Decision Paralysis
 075a433d8897a7cb  Decisive Denial
 a8259ac2c06f820e  Decoction Module
@@ -5019,6 +5024,7 @@ f99f90092af612d7  Evangel of Heliod
 a8188ab4cbc91171  Evasive Action
 71c157f73b8faaf8  Evelyn, the Covetous
 959e785c8a411fd7  Everbark Shaman
+aafaa032618d4971  Evereth, Viceroy of Plunder
 d64dd0c435eea7c6  Everflowing Chalice
 fe28a267c3cf84b5  Everglades
 639cba4f6934eb16  Evermind
@@ -5199,6 +5205,7 @@ ebb84c4daad94037  Faithful Pikemaster
 b206b4caddfe57b0  Falcon and Redwing
 d509ab8c994b8052  Falcon's Wing Harness
 ce7f2236d6eb61f6  Falconer Adept
+cc002256e458d4d0  Falkenrath Aristocrat
 991d7b2996eb4d50  Falkenrath Celebrants
 368ca15d3ac8f697  Falkenrath Exterminator
 b948539d5f6b527e  Falkenrath Forebear
@@ -5206,6 +5213,7 @@ fad2781e4d9d7b3f  Falkenrath Marauders
 635bf1ec9a58ebe1  Falkenrath Noble
 37e17c2d006a5de9  Falkenrath Pit Fighter
 918a5ae0428a0876  Falkenrath Reaver
+00eb968779c67b7c  Falkenrath Torturer
 f7a4c149b886f40e  Fall from Favor
 a9df083a07715d3a  Fall of the Gavel
 f36fc1585db78d99  Fall of the Hammer
@@ -5870,6 +5878,7 @@ c2fd1a69c7568e75  Foundation Breaker
 fb4ff17e08321bbc  Founding of Omashu
 e2f571b7429022f2  Foundry Assembler
 6275b7d1cc4621d5  Foundry Champion
+efb6b478a11c8e20  Foundry Helix
 3069889c58a42685  Foundry Inspector
 73229c24d8c1bd89  Foundry of the Consuls
 010ff848dfed472d  Foundry Screecher
@@ -6358,6 +6367,7 @@ db6002f304a8ac6f  Gitaxian Anatomist
 ab4831c975e0cf7d  Gitaxian Probe
 9d16be351cf8cc78  Gitaxian Raptor
 ca9ee24027c76b9c  Githzerai Monk
+6ce892830aad1df9  Give // Take
 9b7434c407456eeb  Give In to Violence
 5c2a722b12b262ee  Gix's Caress
 c6fac1d33d8e0680  Gixian Infiltrator
@@ -6734,6 +6744,7 @@ b6711f7133fc24dd  Gorion, Wise Mentor
 c94ecd8bb52ece90  Goryo's Vengeance
 cc239ad3a8f09be0  Gossamer Phantasm
 8a761fda3873ca0e  Gothmog, Morgul Lieutenant
+2c00b597cba90057  Grab the Prize
 94c1d5d198866422  Grabby Giant // That's Mine
 6bfa62cacdc10e1d  Graceful Adept
 e188052fd1606071  Graceful Cat
@@ -7108,6 +7119,7 @@ df0a535f9f585e98  Hanged Executioner
 aa54e270f3b99f75  Hanweir Garrison
 0c9a616ec87b82f5  Hanweir Militia Captain // Westvale Cult Leader
 abb24884668dd668  Hanweir, the Writhing Township
+2c479361c6ac9add  Hapatra's Mark
 1cf569c5fbf74137  Hapatra, Vizier of Poisons
 1fefe564be442e79  Hapless Researcher
 6f4c2f48c162778d  Happy Hogan, Dauntless Driver
@@ -10242,6 +10254,7 @@ b8d1e9ebe5363642  Mordor Muster
 beba2656fd0dc076  Morgue Thrull
 ba73e4ebac3cd49b  Morgue Toad
 a2c96cb6f6a37497  Moria Marauder
+a37c6097846874c3  Moria Scavenger
 d38d91e4e7ce37d9  Moriok Reaver
 34893cd90ba03e20  Moriok Replica
 0b9bdc6557c4502a  Moriok Rigger
@@ -10478,6 +10491,7 @@ ff6db5e06615c7a5  Narset, Jeskai Waymaster
 d4eef46ae44fc010  Narstad Scrapper
 6c341026332eb30f  Naru Meha, Master Wizard
 4840b79e597c350c  Narwhal
+2c15d1e0f37447f5  Nasty End
 8f1cf62b8472703b  Nasty Little Rabbit
 eb271048c9a656d9  Nath of the Gilt-Leaf
 4a1fb0884762beb1  Nath's Buffoon
@@ -10524,6 +10538,7 @@ cd8c65876b5d0a66  Necrogen Spellbomb
 4c101ad92dd28bd7  Necrogoyf
 00fa018218e6e359  Necromancer's Assistant
 cd5088285b2958fa  Necromancer's Familiar
+5f3fd71af9d20207  Necromancer's Stockpile
 2742a9e2cd78ea12  Necromantic Thirst
 725505a2d2eee3d7  Necron Deathmark
 379b39914f3e7f4c  Necron Monolith
@@ -14949,6 +14964,7 @@ fff0afa8dde69154  Splinterfright
 c9155a616a9aad1f  Split-Tail Miko
 c16f43edc6d26bbe  Splitskin Doll
 215f578858122a8e  Splitting Slime
+d39243aed425b0e6  Splitting the Powerstone
 d6c4588563d8022e  Spoils of Adventure
 343f43313cbe979c  Spontaneous Artist
 8aece0234f1f2462  Spontaneous Combustion
@@ -16015,6 +16031,7 @@ f9c2d93d7948cfc8  Thalia, Guardian of Thraben
 93678919855df37e  Thallid
 90338c315b30ed3e  Thallid Devourer
 dce7491441974a60  Thallid Germinator
+6ea0154f86793613  Thallid Omnivore
 2b15df82d8c880ff  Thallid Shell-Dweller
 04311ee8fedccfac  Thallid Soothsayer
 e591aa2e07a3fb21  Thanos, Death's Consort
@@ -18161,6 +18178,7 @@ dccd7fbd746af770  Witch's Cauldron
 5a50507afe392ed5  Witch's Cottage
 92f2a7414f37621a  Witch's Familiar
 39b1b394549ebf8d  Witch's Mist
+4585025d4d548a52  Witch's Oven
 e8428212a28466b2  Witch's Web
 ff9eef0455430761  Witch-Maw Nephilim
 06094e374a8daf07  Witches' Eye
@@ -18174,6 +18192,7 @@ f6d366f3addf4093  Witherbloom Charm
 10dfbf936c9d04b1  Withered Wretch
 ae1d93968b890c57  Withering Boon
 b22dbc188e9a5247  Withering Torment
+4b39f31a1e0cf801  Witherscale Wurm
 6de5dac132804ff9  Without Weakness
 33ffca08e0aeb5f9  Withstand
 9d069963bc9b73d2  Withstand Death
@@ -18194,6 +18213,7 @@ a3b828c6d27440f7  Wizards of Thay
 53773520abb9b7c5  Wizened Cenn
 51a2771a1b0217dc  Wizened Mentor
 a6906e40547a7d76  Woebearer
+5831c0d7aacd3c78  Woeleecher
 9bda2db8ba99b9f6  Wojek Bodyguard
 02ff3af1d1032723  Wojek Halberdiers
 4754e578c655e077  Wolf

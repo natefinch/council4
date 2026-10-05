@@ -76,12 +76,13 @@ type Cost struct {
 // Amount, Object) are retained rendering/diagnostic metadata and a genuine mana
 // literal (Symbol), never re-parsed for structural meaning.
 type CostComponent struct {
-	Kind   CostComponentKind `json:",omitempty"`
-	Span   shared.Span       `json:"-"`
-	Text   string            `json:",omitempty"`
-	Symbol string            `json:",omitempty"`
-	Amount string            `json:",omitempty"`
-	Object string            `json:",omitempty"`
+	PaidSubject *PaidCostProducer `json:",omitempty"`
+	Kind        CostComponentKind `json:",omitempty"`
+	Span        shared.Span       `json:"-"`
+	Text        string            `json:",omitempty"`
+	Symbol      string            `json:",omitempty"`
+	Amount      string            `json:",omitempty"`
+	Object      string            `json:",omitempty"`
 
 	AmountValue int  `json:",omitempty"`
 	AmountKnown bool `json:",omitempty"`

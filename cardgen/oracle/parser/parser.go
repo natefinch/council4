@@ -186,6 +186,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitStateTriggerClauses(document.Abilities)
 	emitEventHistoryConditions(document.Abilities)
 	emitConditionClauses(document.Abilities)
+	emitPaidCostPredicateReferences(document.Abilities)
 	emitAttachmentChoices(document.Abilities)
 	emitSourceAbilityCostReduction(document.Abilities)
 	emitResolvingSyntax(document.Abilities)
@@ -220,10 +221,13 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitOptionalCounterForEachPlayerSequences(document.Abilities)
 	emitKeywordShareGrants(document.Abilities)
 	emitReminderInner(document.Abilities)
+	emitPaidCostThisWaySubjects(document.Abilities)
 	emitSourceOrder(document.Abilities)
 	stripConditionalModalHeaderSemantics(document.Abilities)
 	emitDelayedTriggerEffects(document.Abilities, context.CardName, context.Legendary, context.InstantOrSorcery)
 	emitAbilityConditionOwnership(document.Abilities)
+	emitRemovedCounterQuantityOwnership(document.Abilities)
+	emitPaidCostSubjectBindings(document.Abilities)
 	return document, diagnostics
 }
 
