@@ -44,9 +44,12 @@ type IntRange struct {
 
 // InstructionResultGate gates an Instruction on a previously published ResultKey.
 type InstructionResultGate struct {
-	Key       ResultKey
-	Accepted  TriState
-	Succeeded TriState
+	Key ResultKey
+	// AmountAvailable requires an observed scalar, including zero, rather than
+	// an absent, skipped, declined, or unavailable producer.
+	AmountAvailable bool
+	Accepted        TriState
+	Succeeded       TriState
 	// SearchedLibrary, when not TriAny, additionally requires the published
 	// result's SearchedLibrary flag to match. It implements the "If you search
 	// your library this way, shuffle." gate: a ShuffleLibrary instruction set to

@@ -228,6 +228,10 @@ type Additional struct {
 	// cards rather than cards of their choice, so the rules layer selects the
 	// discarded cards uniformly at random instead of honoring a player choice.
 	Random bool
+
+	// SubjectKey publishes the actual objects consumed by this cost component
+	// for resolving predicates. It is independent of effect result/link keys.
+	SubjectKey string
 }
 
 // AdditionalChoiceOption is one payable branch of an AdditionalChoice. Exactly

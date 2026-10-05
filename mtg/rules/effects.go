@@ -237,6 +237,7 @@ type effectResolved struct {
 	accepted     bool
 	succeeded    bool
 	amount       int
+	amountKnown  bool
 	excessDamage int
 	// searchedLibrary records whether a multi-zone "search your library and/or
 	// graveyard" instruction actually searched the library, published so a
@@ -253,7 +254,7 @@ type effectResolved struct {
 // "if you do" / "that much" instructions see what actually happened
 // (CR 608.2c; impossible actions CR 101.3).
 func (res effectResolved) record(obj *game.StackObject, linkID string) {
-	if res.accepted && res.succeeded {
+	if res.accepted && (res.succeeded || res.amountKnown) {
 		rememberEffectAmount(obj, linkID, res.amount)
 		rememberEffectExcessDamage(obj, linkID, res.excessDamage)
 	}
@@ -271,6 +272,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	if instr == nil {
 		return
 	}
+	r.clearCounterQuantityPublication(instr)
 	r.clearPermanentResultPublication(instr)
 	if r.obj != nil && instr.PublishResult != "" {
 		delete(r.obj.ResolutionResults, string(instr.PublishResult))

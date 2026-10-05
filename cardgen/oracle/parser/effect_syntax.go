@@ -2224,6 +2224,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			MoveCountersAll:               kind == EffectMoveCounters && moveAllCountersClause(clause),
 			MoveCountersAllOfKind:         kind == EffectMoveCounters && counterKnown && moveAllOfKindCountersClause(clause),
 			RemoveCountersAll:             kind == EffectRemoveCounter && removeAllCountersClause(clause),
+			RemoveCountersAllOfKind:       kind == EffectRemoveCounter && effectWordsAt(clause, 0, "all") && !removeAllCountersClause(clause),
 			RemoveThoseCounters:           kind == EffectRemoveCounter && removeThoseCountersClause(clause),
 			MoveCountersDistribute:        kind == EffectMoveCounters && moveCountersDistributeClause(clause),
 			MoveThoseCounters:             kind == EffectPut && moveThoseCountersClause(clause),

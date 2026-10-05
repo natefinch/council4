@@ -5505,6 +5505,9 @@ func exactMoveCountersEffectSyntax(effect *EffectSyntax) bool {
 // and matched byte-exact, so the mass "all counters" form, dynamic counts, and
 // any referenced or pronoun-object shape stay non-exact and fail closed.
 func exactRemoveCounterEffectSyntax(effect *EffectSyntax) bool {
+	if effect.RemoveCountersAllOfKind {
+		return exactRemoveAllOfKindCountersEffectSyntax(effect)
+	}
 	if !effect.Amount.Known || effect.Amount.Value < 1 {
 		return false
 	}

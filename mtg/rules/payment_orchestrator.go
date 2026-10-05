@@ -53,6 +53,7 @@ func (o paymentOrchestratorType) buildAbilityCostPlan(g *game.Game, req payment.
 // stack object: the object IDs of permanents sacrificed and the card-instance
 // IDs of cards exiled from a zone.
 type abilityCostPayment struct {
+	subjects      []game.PaidCostSubject
 	sacrificedIDs []id.ID
 	tappedIDs     []id.ID
 	exiledIDs     []id.ID
@@ -74,6 +75,7 @@ func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.Abili
 		consumeManaSpendRidersForPayment(g, req.PlayerID, req.Source, before, paid.PoolSpend)
 	}
 	return abilityCostPayment{
+		subjects:      paid.PaidCostSubjects,
 		sacrificedIDs: paid.SacrificedIDs,
 		tappedIDs:     paid.TappedIDs,
 		exiledIDs:     paid.ExiledIDs,

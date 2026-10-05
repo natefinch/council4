@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,526 of 33,013 cards eligible for paper support (56.1%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,546 of 33,013 cards eligible for paper support (56.2%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -404,6 +404,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Ambush Viper
 - Ambush Wolf
 - Amethyst Dragon // Explosive Crystal
+- Ammit Eternal
 - Amok
 - Amonkhet Raceway
 - Amorphous Axe
@@ -565,6 +566,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Ant-Man, Scott Lang
 - Antagonize
 - Anthem of Champions
+- Anthroplasm
 - Anticipate
 - Anurid Barkripper
 - Anurid Brushhopper
@@ -841,6 +843,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Ashiok's Reaper
 - Ashiok's Skulker
 - Ashiok, Sculptor of Fears
+- Ashling the Pilgrim
 - Ashmouth Hound
 - Ashnod's Altar
 - Ashnod's Harvester
@@ -1636,6 +1639,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Blood Frenzy
 - Blood Glutton
 - Blood Host
+- Blood Hound
 - Blood Hustler
 - Blood Hypnotist
 - Blood Knight
@@ -3700,6 +3704,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Deceptive Frostkite
 - Deceptive Landscape
 - Decimate
+- Decimator Beetle
 - Decision Paralysis
 - Decisive Denial
 - Decoction Module
@@ -5013,6 +5018,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Evasive Action
 - Evelyn, the Covetous
 - Everbark Shaman
+- Evereth, Viceroy of Plunder
 - Everflowing Chalice
 - Everglades
 - Evermind
@@ -5193,6 +5199,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Falcon and Redwing
 - Falcon's Wing Harness
 - Falconer Adept
+- Falkenrath Aristocrat
 - Falkenrath Celebrants
 - Falkenrath Exterminator
 - Falkenrath Forebear
@@ -5200,6 +5207,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Falkenrath Noble
 - Falkenrath Pit Fighter
 - Falkenrath Reaver
+- Falkenrath Torturer
 - Fall from Favor
 - Fall of the Gavel
 - Fall of the Hammer
@@ -5864,6 +5872,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Founding of Omashu
 - Foundry Assembler
 - Foundry Champion
+- Foundry Helix
 - Foundry Inspector
 - Foundry of the Consuls
 - Foundry Screecher
@@ -6352,6 +6361,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Gitaxian Probe
 - Gitaxian Raptor
 - Githzerai Monk
+- Give // Take
 - Give In to Violence
 - Gix's Caress
 - Gixian Infiltrator
@@ -6728,6 +6738,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Goryo's Vengeance
 - Gossamer Phantasm
 - Gothmog, Morgul Lieutenant
+- Grab the Prize
 - Grabby Giant // That's Mine
 - Graceful Adept
 - Graceful Cat
@@ -7102,6 +7113,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Hanweir Garrison
 - Hanweir Militia Captain // Westvale Cult Leader
 - Hanweir, the Writhing Township
+- Hapatra's Mark
 - Hapatra, Vizier of Poisons
 - Hapless Researcher
 - Happy Hogan, Dauntless Driver
@@ -10236,6 +10248,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Morgue Thrull
 - Morgue Toad
 - Moria Marauder
+- Moria Scavenger
 - Moriok Reaver
 - Moriok Replica
 - Moriok Rigger
@@ -10472,6 +10485,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Narstad Scrapper
 - Naru Meha, Master Wizard
 - Narwhal
+- Nasty End
 - Nasty Little Rabbit
 - Nath of the Gilt-Leaf
 - Nath's Buffoon
@@ -10518,6 +10532,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Necrogoyf
 - Necromancer's Assistant
 - Necromancer's Familiar
+- Necromancer's Stockpile
 - Necromantic Thirst
 - Necron Deathmark
 - Necron Monolith
@@ -14943,6 +14958,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Split-Tail Miko
 - Splitskin Doll
 - Splitting Slime
+- Splitting the Powerstone
 - Spoils of Adventure
 - Spontaneous Artist
 - Spontaneous Combustion
@@ -16009,6 +16025,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Thallid
 - Thallid Devourer
 - Thallid Germinator
+- Thallid Omnivore
 - Thallid Shell-Dweller
 - Thallid Soothsayer
 - Thanos, Death's Consort
@@ -18155,6 +18172,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Witch's Cottage
 - Witch's Familiar
 - Witch's Mist
+- Witch's Oven
 - Witch's Web
 - Witch-Maw Nephilim
 - Witches' Eye
@@ -18168,6 +18186,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Withered Wretch
 - Withering Boon
 - Withering Torment
+- Witherscale Wurm
 - Without Weakness
 - Withstand
 - Withstand Death
@@ -18188,6 +18207,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Wizened Cenn
 - Wizened Mentor
 - Woebearer
+- Woeleecher
 - Wojek Bodyguard
 - Wojek Halberdiers
 - Wolf

@@ -24,6 +24,19 @@ func lowerAdditionalDynamicAmount(kind compiler.DynamicAmountKind) (cost.Additio
 }
 
 func lowerActivatedAdditionalCost(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
+	additional, ok := lowerAdditionalCostComponent(cardName, component)
+	if !ok || component.PaidSubject == nil {
+		return additional, ok
+	}
+	key, known := paidCostSubjectKey(component.PaidSubject)
+	if !known {
+		return cost.Additional{}, false
+	}
+	additional.SubjectKey = key
+	return additional, true
+}
+
+func lowerAdditionalCostComponent(cardName string, component compiler.CostComponent) (cost.Additional, bool) {
 	switch component.Kind {
 	case compiler.CostSacrifice:
 		return lowerSacrificeCost(cardName, component)

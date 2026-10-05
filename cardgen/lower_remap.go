@@ -136,6 +136,18 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Amount, ok = transformQuantity(value.Amount, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.RemoveCounter); ok {
+		if value.Group.Valid() {
+			value.Group, ok = transformGroupReference(value.Group, transform)
+		} else {
+			value.Object, ok = transformObjectReference(value.Object, transform)
+		}
+		if !ok {
+			return nil, false
+		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.AddPlayerCounter); ok {
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok

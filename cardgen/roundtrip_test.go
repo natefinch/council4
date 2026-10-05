@@ -13,6 +13,18 @@ import (
 // ability categories through the full typed pipeline.
 var roundTripCards = []*ScryfallCard{
 	{
+		Name: "Ashling", Layout: "normal", TypeLine: "Legendary Creature - Elemental Shaman",
+		OracleText: ashlingRemovedCounterText, Power: new("1"), Toughness: new("1"),
+	},
+	{
+		Name: "RT Counter Quantity", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: Remove all charge counters from this artifact. Draw that many cards.",
+	},
+	{
+		Name: "RT Counter Quantity Spell", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Remove all +1/+1 counters from target creature. Draw that many cards.",
+	},
+	{
 		Name: "RT Reached Target Card", Layout: "normal", TypeLine: "Creature",
 		OracleText: "{1}: Exile target card from a graveyard. If it was a permanent card, put a +1/+1 counter on this creature.",
 		Power:      new("2"), Toughness: new("2"),
@@ -107,6 +119,18 @@ var roundTripCards = []*ScryfallCard{
 	{
 		Name: "RT Gated Mana", Layout: "normal", TypeLine: "Instant",
 		OracleText: "If you have no cards in hand, draw a card, then add {R}{G}.",
+	},
+	{
+		Name: "RT Sacrifice Cost Subject", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "Sacrifice a creature: You gain 1 life. If the sacrificed creature was red, draw a card.",
+	},
+	{
+		Name: "RT Discard Cost Subject", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "As an additional cost to cast this spell, discard a card.\nDraw a card. If the discarded card wasn't a land card, you gain 2 life.",
+	},
+	{
+		Name: "RT Numeric Cost Subject", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{T}, Sacrifice a creature: Create a Food token. If the sacrificed creature had toughness 4 or greater, create two Food tokens instead.",
 	},
 	{
 		Name:       "RT Bog",
@@ -249,8 +273,48 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
+
+func TestRTRemovedCounterQuantitySemantic(t *testing.T) {
+	seq := RTCounterQuantity().ActivatedAbilities[0].Content.Modes[0].Sequence
+	remove := seq[0].Primitive.(game.RemoveCounter)
+	draw := seq[1].Primitive.(game.Draw)
+	if remove.AllKinds || remove.CounterKind != counter.Charge ||
+		remove.Amount.DynamicAmount().Val.Kind != game.DynamicAmountObjectCounters ||
+		seq[0].PublishResult == "" || !seq[1].ResultGate.Val.AmountAvailable ||
+		draw.Amount.DynamicAmount().Val.ResultKey != seq[0].PublishResult {
+		t.Fatal("named-kind actual quantity publication did not round-trip")
+	}
+	seq = RTCounterQuantitySpell().SpellAbility.Val.Modes[0].Sequence
+	remove = seq[0].Primitive.(game.RemoveCounter)
+	draw = seq[1].Primitive.(game.Draw)
+	if remove.AllKinds || remove.CounterKind != counter.PlusOnePlusOne ||
+		!seq[1].ResultGate.Val.AmountAvailable ||
+		draw.Amount.DynamicAmount().Val.ResultKey != seq[0].PublishResult {
+		t.Fatal("spell scalar availability did not round-trip")
+	}
+	ability := Ashling().ActivatedAbilities[0]
+	seq = ability.Content.Modes[0].Sequence
+	remove = seq[1].Primitive.(game.RemoveCounter)
+	if !ability.CountsResolutionsThisTurn || len(seq) != 4 ||
+		remove.AllKinds || remove.CounterKind != counter.PlusOnePlusOne ||
+		seq[1].Condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn != 3 ||
+		seq[1].PublishCondition == "" {
+		t.Fatal("ordinal named-kind removal did not round-trip")
+	}
+	for _, instruction := range seq[2:] {
+		damage := instruction.Primitive.(game.Damage)
+		if instruction.ConditionGate != seq[1].PublishCondition ||
+			!instruction.ResultGate.Val.AmountAvailable ||
+			instruction.ResultGate.Val.Key != seq[1].PublishResult ||
+			damage.Amount.DynamicAmount().Val.ResultKey != seq[1].PublishResult {
+			t.Fatal("expanded damage scalar and condition identities did not round-trip")
+		}
+	}
+}
 
 func TestRTNumericConditionSemantic(t *testing.T) {
 	past := RTCounteredSpellCondition().SpellAbility.Val.Modes[0].Sequence[1].Condition.Val.Condition.Val
@@ -448,6 +512,31 @@ func TestRTOrdinaryManaSemantic(t *testing.T) {
 		if !ok || add.Amount.Value() != 1 || add.ManaColor != color {
 			t.Fatal("fixed-mana color or amount did not round-trip")
 		}
+	}
+}
+
+func TestRTPaidCostSubjectSemantic(t *testing.T) {
+	ability := RTSacrificeCostSubject().ActivatedAbilities[0]
+	key := ability.AdditionalCosts[0].SubjectKey
+	ref := ability.Content.Modes[0].Sequence[1].Condition.Val.Condition.Val.Object.Val
+	if key == "" || ref != game.PaidCostReference(key, game.PaidCostSacrifice, types.Creature) {
+		t.Fatal("sacrifice component identity, domain and noun did not round-trip")
+	}
+	card := RTDiscardCostSubject()
+	key = card.AdditionalCosts[0].SubjectKey
+	condition := card.SpellAbility.Val.Modes[0].Sequence[1].Condition.Val.Condition.Val
+	if key == "" || condition.Object.Val != game.PaidCostReference(key, game.PaidCostDiscard, "") || !condition.Negate {
+		t.Fatalf("discard cost key=%%q reference key=%%q negated=%%v", key, condition.Object.Val.CostKey(), condition.Negate)
+	}
+	numeric := RTNumericCostSubject().ActivatedAbilities[0]
+	key = numeric.AdditionalCosts[1].SubjectKey
+	sequence := numeric.Content.Modes[0].Sequence
+	condition = sequence[0].Condition.Val.Condition.Val
+	if key == "" || condition.Object.Val != game.PaidCostReference(key, game.PaidCostSacrifice, types.Creature) ||
+		condition.ObjectMatches.Val.Toughness.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 4}) ||
+		!condition.Negate || sequence[0].PublishCondition == "" ||
+		sequence[1].ConditionGate != sequence[0].PublishCondition || !sequence[1].ConditionGateNegate {
+		t.Fatal("numeric paid-cost predicate and exclusive replacement envelope did not round-trip")
 	}
 }
 `, pkgName)

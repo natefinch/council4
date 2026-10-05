@@ -1014,6 +1014,14 @@ func resolvedObjectMatchesConditionSelection(
 	if resolved == nil || selection == nil {
 		return false
 	}
+	if resolved.frozen {
+		subject := selectionSubject{
+			kind: subjectEventPermanent, g: g, snapshot: &resolved.snapshot,
+			viewer: ctx.controller, controller: resolved.snapshot.Controller,
+			sourceObjectID: conditionSourceObjectID(ctx),
+		}
+		return matchSelection(&subject, selection)
+	}
 	if resolved.permanent != nil {
 		values := permanentValuesForCondition(g, resolved.permanent, ctx)
 		subject := selectionSubject{

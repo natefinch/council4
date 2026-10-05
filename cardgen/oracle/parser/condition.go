@@ -931,6 +931,7 @@ func parseConditionClause(
 
 func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	for _, recognize := range []func([]shared.Token, Atoms) (ConditionClause, bool){
+		recognizePaidCostSubjectCondition,
 		recognizePriorInstructionCondition,
 		recognizeControlsCommanderCondition,
 		recognizeLandEnteredOrControlsBasicCondition,
