@@ -77,7 +77,10 @@ func cutDelayedTiming(tokens []shared.Token) ([]shared.Token, DelayedTimingKind)
 }
 
 func leadingDelayedTiming(tokens []shared.Token) DelayedTimingKind {
-	if len(tokens) < 9 || tokens[len(tokens)-1].Kind != shared.Comma {
+	if len(tokens) >= 2 && effectWordsAt(tokens, len(tokens)-2, "you", "may") {
+		tokens = tokens[:len(tokens)-2]
+	}
+	if len(tokens) < 5 || tokens[len(tokens)-1].Kind != shared.Comma {
 		return DelayedTimingNone
 	}
 	for _, pattern := range []struct {
@@ -87,6 +90,8 @@ func leadingDelayedTiming(tokens []shared.Token) DelayedTimingKind {
 		{[]string{"at", "the", "beginning", "of", "your", "next", "main", "phase"}, DelayedTimingNextMain},
 		{[]string{"at", "the", "beginning", "of", "the", "next", "end", "step"}, DelayedTimingNextEndStep},
 		{[]string{"at", "the", "beginning", "of", "your", "next", "end", "step"}, DelayedTimingYourNextEndStep},
+		{[]string{"at", "the", "beginning", "of", "the", "next", "turn's", "upkeep"}, DelayedTimingNextUpkeep},
+		{[]string{"at", "end", "of", "combat"}, DelayedTimingEndOfCombat},
 	} {
 		if len(tokens) > len(pattern.words) && tokens[len(pattern.words)].Kind == shared.Comma &&
 			effectWordsAt(tokens, 0, pattern.words...) {

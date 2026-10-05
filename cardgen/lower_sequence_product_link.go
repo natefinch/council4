@@ -60,7 +60,7 @@ func sequencePriorInstructionPublication(
 		for i := span[0]; i < span[1]; i++ {
 			candidate := sequence[i]
 			if !capture && candidate.Primitive != nil &&
-				(candidate.Primitive.Kind() == game.PrimitiveMovePermanent || candidate.Primitive.Kind() == game.PrimitiveMoveTopOfLibrary) {
+				captureMovePublisher(candidate.Primitive) {
 				return 0, "", false
 			}
 			key := sequenceProductKey(j)
@@ -125,7 +125,8 @@ func captureExpansionInstructionCompatible(primitive game.Primitive) bool {
 }
 
 func captureMovePublisher(primitive game.Primitive) bool {
-	return primitive != nil && (primitive.Kind() == game.PrimitiveMovePermanent || primitive.Kind() == game.PrimitiveMoveTopOfLibrary)
+	return primitive != nil && (primitive.Kind() == game.PrimitiveMovePermanent ||
+		primitive.Kind() == game.PrimitiveMoveTopOfLibrary || primitive.Kind() == game.PrimitiveMoveCard)
 }
 
 // trySetInstructionPublishLinked sets instr's PublishLinked field to key,
@@ -200,6 +201,21 @@ func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey)
 			return primitive.PublishLinked, primitive.PublishLinked == key
 		}
 		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveMoveCard:
+		primitive, ok := instr.Primitive.(game.MoveCard)
+		if !ok || primitive.Destination != zone.Exile || primitive.Card.Kind == game.CardReferenceNone ||
+			primitive.Player.Kind() != game.PlayerReferenceNone ||
+			primitive.PlayerGroup.Kind != game.PlayerGroupReferenceNone ||
+			primitive.IncludeEventPermanentComponents || primitive.PublishLinkedObjectScoped {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		primitive.ReplacePublishedLinked = true
 		instr.Primitive = primitive
 		return key, true
 	default:

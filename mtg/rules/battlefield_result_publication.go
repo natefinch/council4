@@ -13,12 +13,12 @@ func (r *effectResolver) clearPermanentResultPublication(instruction *game.Instr
 		return
 	}
 	kind := instruction.Primitive.Kind()
-	if (kind == game.PrimitiveMoveTopOfLibrary || kind == game.PrimitiveMovePermanent) &&
+	if (kind == game.PrimitiveMoveTopOfLibrary || kind == game.PrimitiveMovePermanent || kind == game.PrimitiveMoveCard) &&
 		!instruction.ClearLinkedBeforeGate {
 		return
 	}
 	if kind != game.PrimitivePutOnBattlefield && kind != game.PrimitiveCreateToken &&
-		kind != game.PrimitiveMoveTopOfLibrary && kind != game.PrimitiveMovePermanent {
+		kind != game.PrimitiveMoveTopOfLibrary && kind != game.PrimitiveMovePermanent && kind != game.PrimitiveMoveCard {
 		return
 	}
 	if key := game.PublishedLinkedKey(instruction.Primitive); key != "" {

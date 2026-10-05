@@ -661,6 +661,10 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalUntapRemoveFromCombat(ctx); ok {
 		return content, nil
 	}
+	if len(ctx.content.Modes) == 0 && len(ctx.content.Effects) == 1 &&
+		fixedPhaseSubjectEffectModeled(ctx.content.Effects[0]) {
+		return lowerOrderedEffectSequence(cardName, ctx, syntax)
+	}
 	if len(ctx.content.Modes) == 0 &&
 		len(ctx.content.Effects) > 1 &&
 		ctx.content.Effects[0].Kind != compiler.EffectSearch &&
@@ -2079,6 +2083,10 @@ func lowerImmediateSingleEffectSpell(
 	// benefit from the same lowering.
 	if content, ok := lowerReferencedCardMove(ctx); ok {
 		return content, nil
+	}
+	if ctx.capturedSubject != nil && ctx.capturedSubject.card {
+		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported captured card action",
+			"the immediate card action or its parameters have no captured-reference adapter")
 	}
 	if content, ok := lowerReferencedPermanentEffect(ctx); ok {
 		return content, nil

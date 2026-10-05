@@ -28,11 +28,15 @@ func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	effect := ctx.content.Effects[0]
+	destination := effect.ToZone
+	if effect.Kind == compiler.EffectExile {
+		destination = zone.Exile
+	}
 	if !effect.Exact || effect.Negated || effect.Optional ||
 		effect.Context != parser.EffectContextController ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
-		(effect.Kind != compiler.EffectReturn && effect.Kind != compiler.EffectPut) ||
-		(effect.ToZone != zone.Hand && effect.ToZone != zone.Battlefield) {
+		(effect.Kind != compiler.EffectReturn && effect.Kind != compiler.EffectPut && effect.Kind != compiler.EffectExile) ||
+		(destination != zone.Hand && destination != zone.Battlefield && destination != zone.Exile) {
 		return game.AbilityContent{}, false
 	}
 	from := effect.FromZone
@@ -65,7 +69,7 @@ func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
 			return game.AbilityContent{}, false
 		}
 	}
-	if effect.ToZone == zone.Battlefield {
+	if destination == zone.Battlefield {
 		put := game.PutOnBattlefield{
 			Source: game.CardBattlefieldSource(card), EntryTapped: effect.EntersTapped, EntryTransformed: effect.EntersTransformed,
 		}
@@ -80,10 +84,10 @@ func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
 		}
 		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
 	}
-	if effect.EntersTapped || effect.EntersTransformed || effect.UnderYourControl {
+	if effect.EntersTapped || effect.EntersTransformed || effect.UnderYourControl || effect.CounterKindKnown {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
-		Card: card, FromZone: from, Destination: zone.Hand,
+		Card: card, FromZone: from, Destination: destination,
 	}}}}.Ability(), true
 }

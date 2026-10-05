@@ -41,14 +41,7 @@ func lowerFixedPhaseSubject(
 	effects []compiler.CompiledEffect,
 ) (game.AbilityContent, *shared.Diagnostic, bool) {
 	effect := ctx.content.Effects[0]
-	if effect.DelayedTiming == 0 || effect.DelayedSubject.Kind == parser.DelayedSubjectUnknown {
-		return game.AbilityContent{}, nil, false
-	}
-	switch effect.Kind {
-	case compiler.EffectSacrifice, compiler.EffectDestroy, compiler.EffectExile,
-		compiler.EffectReturn, compiler.EffectPut, compiler.EffectTransform,
-		compiler.EffectTap, compiler.EffectUntap, compiler.EffectRemoveCounter:
-	default:
+	if !fixedPhaseSubjectEffectModeled(effect) {
 		return game.AbilityContent{}, nil, false
 	}
 	refuse := func(detail string) (game.AbilityContent, *shared.Diagnostic, bool) {
@@ -141,8 +134,21 @@ func lowerFixedPhaseSubject(
 	timing := effect.DelayedTiming
 	delayedConditions := ctx.content.Conditions
 	ctx.content.Conditions = nil
+	ctx.content.References = slices.Clone(ctx.content.References)
+	for _, condition := range delayedConditions {
+		ctx.content.References = slices.DeleteFunc(ctx.content.References, func(reference compiler.CompiledReference) bool {
+			if slices.Contains(subject.ReferenceNodeIDs, reference.NodeID) {
+				return false
+			}
+			return slices.Contains(condition.Ownership.ReferenceNodeIDs, reference.NodeID) ||
+				condition.HasSubjectReference && condition.SubjectRefID == reference.NodeID ||
+				condition.ObjectReference != nil && condition.ObjectReference.NodeID == reference.NodeID
+		})
+	}
 	ctx.content.Effects = slices.Clone(ctx.content.Effects)
 	ctx.content.Effects[0].DelayedTiming = 0
+	ctx.content.Effects[0].Optional = false
+	ctx.optional = false
 	ctx.content.Targets = nil
 	ctx.capturedSubject = &capturedContentSubject{
 		references: subject.ReferenceNodeIDs,
@@ -165,14 +171,14 @@ func lowerFixedPhaseSubject(
 	}
 	for _, condition := range delayedConditions {
 		lowered, ok := lowerCapturedDelayedCondition(condition, subject, ctx)
-		if !ok || group || card {
+		if !ok || (group || card) && lowered.Object.Exists {
 			return refuse("future delayed-body condition or its subject is not modeled")
 		}
 		for i := range content.Modes[0].Sequence {
 			content.Modes[0].Sequence[i].Condition = opt.Val(game.EffectCondition{Condition: opt.Val(lowered)})
 		}
 	}
-	trigger := game.DelayedTriggerDef{Timing: timing, Content: content}
+	trigger := game.DelayedTriggerDef{Timing: timing, Content: content, Optional: subject.OptionalAtDelayedTime}
 	if card {
 		trigger.CapturedCard = opt.Val(object)
 	} else if group {
@@ -231,5 +237,19 @@ func lowerCapturedDelayedCondition(condition compiler.CompiledCondition, subject
 		return lowered, true
 	default:
 		return game.Condition{}, false
+	}
+}
+
+func fixedPhaseSubjectEffectModeled(effect compiler.CompiledEffect) bool {
+	if effect.DelayedTiming == 0 || effect.DelayedSubject.Kind == parser.DelayedSubjectUnknown {
+		return false
+	}
+	switch effect.Kind {
+	case compiler.EffectSacrifice, compiler.EffectDestroy, compiler.EffectExile,
+		compiler.EffectReturn, compiler.EffectPut, compiler.EffectTransform,
+		compiler.EffectTap, compiler.EffectUntap, compiler.EffectRemoveCounter:
+		return true
+	default:
+		return false
 	}
 }

@@ -862,6 +862,8 @@ func prepareTriggerBody(
 		default:
 			effect := body.Content.Effects[0]
 			switch {
+			case fixedPhaseSubjectEffectModeled(effect) && effect.DelayedSubject.OptionalAtDelayedTime:
+				triggerOptional = false
 			case hasInterveningCondition:
 				body.Optional = true
 				body.OptionalSpan = ability.OptionalSpan

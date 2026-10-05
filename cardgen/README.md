@@ -100,6 +100,10 @@ redirect an earlier capture.
 
 Resolving conditions gate scheduling; future body conditions execute at the
 printed delayed phase and require an available captured subject before negation.
+Parser-owned optional timing distinguishes choosing to schedule an action
+(`you may ... at the next step`) from choosing when the delayed body resolves
+(`at the next step, you may ...`). A current actual-result gate controls
+scheduling, not an unavailable result at the later phase.
 Unavailable subject domains, future quantities, multiple future conditions, and
 multi-selected-mode product namespaces retain precise whole-card refusals.
 Event-based delayed triggers retain their separate event-matching interface.

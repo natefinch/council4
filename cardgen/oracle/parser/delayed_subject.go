@@ -24,28 +24,29 @@ const (
 
 // DelayedSubjectOwnership preserves the exact subject of a fixed-phase body.
 type DelayedSubjectOwnership struct {
-	Kind             DelayedSubjectKind `json:",omitempty"`
-	ReferenceNodeIDs []int              `json:",omitempty"`
-	ProducerClauseID int                `json:",omitempty"`
-	TargetOccurrence int                `json:",omitempty"`
-	CardZone         zone.Type          `json:",omitempty"`
-	DirectTarget     bool               `json:",omitempty"`
+	Kind                  DelayedSubjectKind `json:",omitempty"`
+	ReferenceNodeIDs      []int              `json:",omitempty"`
+	ProducerClauseID      int                `json:",omitempty"`
+	TargetOccurrence      int                `json:",omitempty"`
+	CardZone              zone.Type          `json:",omitempty"`
+	DirectTarget          bool               `json:",omitempty"`
+	OptionalAtDelayedTime bool               `json:",omitempty"`
 }
 
 func emitDelayedSubjectOwnership(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
-		emitDelayedSubjects(ability.Sentences, ability.SemanticReferences, ability.Trigger)
+		emitDelayedSubjects(ability.Sentences, ability.SemanticReferences, ability.ConditionSegments, ability.Trigger)
 		if ability.Modal != nil {
 			for j := range ability.Modal.Options {
 				mode := &ability.Modal.Options[j]
-				emitDelayedSubjects(mode.Sentences, mode.SemanticReferences, ability.Trigger)
+				emitDelayedSubjects(mode.Sentences, mode.SemanticReferences, mode.ConditionSegments, ability.Trigger)
 			}
 		}
 	}
 }
 
-func emitDelayedSubjects(sentences []Sentence, references []Reference, trigger *TriggerClause) {
+func emitDelayedSubjects(sentences []Sentence, references []Reference, conditions []ConditionSegment, trigger *TriggerClause) {
 	var effects []*EffectSyntax
 	var targets []TargetSyntax
 	for si := range sentences {
@@ -59,6 +60,9 @@ func emitDelayedSubjects(sentences []Sentence, references []Reference, trigger *
 			continue
 		}
 		immediate := *effect
+		immediate.References = slices.DeleteFunc(slices.Clone(effect.References), func(reference Reference) bool {
+			return delayedConditionOwnsReference(conditions, reference.NodeID)
+		})
 		immediate.Tokens, _ = cutDelayedTiming(effect.Tokens)
 		if len(immediate.Tokens) > 0 && immediate.Tokens[len(immediate.Tokens)-1].Kind == shared.Period {
 			immediate.Tokens = immediate.Tokens[:len(immediate.Tokens)-1]
@@ -85,6 +89,9 @@ func emitDelayedSubjects(sentences []Sentence, references []Reference, trigger *
 			}
 		}
 		for _, owned := range effect.References {
+			if delayedConditionOwnsReference(conditions, owned.NodeID) {
+				continue
+			}
 			index := slices.IndexFunc(references, func(reference Reference) bool {
 				return reference.NodeID == owned.NodeID
 			})
@@ -124,7 +131,32 @@ func emitDelayedSubjects(sentences []Sentence, references []Reference, trigger *
 			subject.CardZone = zone.Graveyard
 		}
 		effect.DelayedSubject = subject
+		if effect.Optional {
+			for _, sentence := range sentences {
+				if !parserSpanContains(sentence.Span, effect.VerbSpan) {
+					continue
+				}
+				end := slices.IndexFunc(sentence.Tokens, func(token shared.Token) bool {
+					return token.Span.Start.Offset >= effect.OptionalSpan.Start.Offset
+				})
+				if end < 0 {
+					continue
+				}
+				for ti := range end {
+					if leadingDelayedTiming(sentence.Tokens[ti:end]) != DelayedTimingNone {
+						effect.DelayedSubject.OptionalAtDelayedTime = true
+						break
+					}
+				}
+			}
+		}
 	}
+}
+
+func delayedConditionOwnsReference(conditions []ConditionSegment, nodeID int) bool {
+	return slices.ContainsFunc(conditions, func(condition ConditionSegment) bool {
+		return slices.Contains(condition.Ownership.ReferenceNodeIDs, nodeID)
+	})
 }
 
 func exactDelayedPluralDisposal(effect *EffectSyntax) bool {
@@ -243,6 +275,9 @@ func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targe
 			(prior.Kind != ReferenceSelfName && prior.Kind != ReferenceThisObject) {
 			continue
 		}
+		if !delayedReferenceMatchesSource(reference, prior) {
+			continue
+		}
 		if prior.Order.Start > bestOrder {
 			bestOrder = prior.Order.Start
 			subject = DelayedSubjectOwnership{Kind: DelayedSubjectSource}
@@ -300,6 +335,11 @@ func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targe
 		return DelayedSubjectOwnership{Kind: DelayedSubjectSource}
 	}
 	if event.Subject.Kind == TriggerEventSubjectSelf {
+		if slices.ContainsFunc(references, func(prior Reference) bool {
+			return prior.Order.Start < trigger.Order.End && !delayedReferenceMatchesSource(reference, prior)
+		}) {
+			return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
+		}
 		return DelayedSubjectOwnership{Kind: DelayedSubjectSource}
 	}
 
@@ -310,6 +350,37 @@ func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targe
 		return DelayedSubjectOwnership{Kind: DelayedSubjectEvent}
 	}
 	return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
+}
+
+func delayedReferenceMatchesSource(reference, source Reference) bool {
+	if source.Kind != ReferenceThisObject {
+		return true
+	}
+	known := false
+	for _, token := range source.Tokens {
+		var selection SelectionKind
+		switch strings.ToLower(token.Text) {
+		case "creature":
+			selection = SelectionCreature
+		case "land":
+			selection = SelectionLand
+		case "artifact":
+			selection = SelectionArtifact
+		case "enchantment":
+			selection = SelectionEnchantment
+		case "planeswalker":
+			selection = SelectionPlaneswalker
+		case "battle":
+			selection = SelectionBattle
+		default:
+			continue
+		}
+		known = true
+		if delayedReferenceMatchesSelection(reference, selection) {
+			return true
+		}
+	}
+	return !known
 }
 
 func delayedPermanentEvent(event *TriggerEventClause) bool {

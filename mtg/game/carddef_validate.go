@@ -977,7 +977,8 @@ func (v *cardDefValidator) validateInstructionSequence(
 			primitive := seq[i].Primitive
 			if PublishedLinkedKey(primitive) == "" ||
 				primitive.Kind() != PrimitiveCreateToken && primitive.Kind() != PrimitivePutOnBattlefield &&
-					primitive.Kind() != PrimitiveMovePermanent && primitive.Kind() != PrimitiveMoveTopOfLibrary {
+					primitive.Kind() != PrimitiveMovePermanent && primitive.Kind() != PrimitiveMoveTopOfLibrary &&
+					primitive.Kind() != PrimitiveMoveCard {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "transient publication clearing requires a supported linked publisher")
 			}
 		}
