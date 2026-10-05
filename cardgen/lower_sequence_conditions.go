@@ -72,12 +72,12 @@ func planSequenceConditions(
 	if optionalFlow.enabled {
 		if optionalFlow.scoped != nil {
 			for producer := range optionalFlow.scoped.publishers {
-				if _, owned := plan.clauseConditions[producer]; owned {
+				if _, owned := plan.clauseConditions[producer]; owned && !counterHasActualSuccessCondition(content, producer) {
 					return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 				}
 			}
 		}
-		if _, owned := plan.clauseConditions[optionalFlow.optionalIndex]; owned {
+		if _, owned := plan.clauseConditions[optionalFlow.optionalIndex]; owned && !counterHasActualSuccessCondition(content, optionalFlow.optionalIndex) {
 			return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 		}
 	}

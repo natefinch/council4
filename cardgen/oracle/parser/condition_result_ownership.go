@@ -4,6 +4,7 @@ import "slices"
 
 func resultConditionPredicate(predicate ConditionPredicateKind) bool {
 	return predicate == ConditionPredicateResultThisWay ||
+		predicate == ConditionPredicateCounterSucceeded ||
 		predicate == ConditionPredicatePriorInstructionAccepted ||
 		predicate == ConditionPredicatePriorInstructionNotAccepted
 }
@@ -29,7 +30,11 @@ func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegm
 			continue
 		}
 		producer := first - 1
-		if clause.Predicate == ConditionPredicateResultThisWay {
+		if clause.Predicate == ConditionPredicateCounterSucceeded {
+			producer = slices.IndexFunc(effects, func(effect *EffectSyntax) bool {
+				return effect.ClauseID == segment.Ownership.ResultProducerClauseID
+			})
+		} else if clause.Predicate == ConditionPredicateResultThisWay {
 			for producer >= 0 && effects[producer].Kind != clause.ThisWayOutcome {
 				producer--
 			}

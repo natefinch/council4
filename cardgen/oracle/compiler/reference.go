@@ -348,7 +348,8 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	current := -1
 	for i := range effects {
 		effect := &effects[i]
-		if effect.VerbOrder.Start >= reference.Order.Start {
+		if effect.VerbOrder.Start >= reference.Order.Start ||
+			effect.CounteredSpellExileReplacement || effect.CounteredSpellDestinationReplacement {
 			continue
 		}
 		if current < 0 || effect.VerbOrder.Start > effects[current].VerbOrder.Start {
@@ -385,7 +386,8 @@ func priorInstructionAntecedentAt(reference CompiledReference, effects []Compile
 	prior := -1
 	for i := range effects {
 		effect := &effects[i]
-		if effect.VerbOrder.Start >= effects[current].VerbOrder.Start {
+		if effect.VerbOrder.Start >= effects[current].VerbOrder.Start ||
+			effect.CounteredSpellExileReplacement || effect.CounteredSpellDestinationReplacement {
 			continue
 		}
 		if prior < 0 || effect.VerbOrder.Start > effects[prior].VerbOrder.Start {

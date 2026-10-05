@@ -2427,15 +2427,7 @@ func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResol
 		if !ok {
 			return effectResolved{accepted: true}
 		}
-		target, ok := stackObjectByID(r.game, stackObjectID)
-		if !ok {
-			return effectResolved{accepted: true}
-		}
-		if prim.ExileInstead {
-			target.ExileOnResolution = true
-		}
-		target.CounteredDestination = prim.Destination
-		return effectResolved{accepted: true, succeeded: counterStackObject(r.game, stackObjectID)}
+		return effectResolved{accepted: true, succeeded: counterStackObjectWithDestination(r.game, stackObjectID, prim.ExileInstead, prim.Destination)}
 	default:
 		return effectResolved{accepted: true}
 	}
