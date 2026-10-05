@@ -76,6 +76,21 @@ func TestFixedPhaseCapturedCard(t *testing.T) {
 	}
 }
 
+func TestFixedPhaseDepartedSourceRetainsTransformedEntry(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name: "Captured Departed Source", Layout: "normal", TypeLine: "Creature",
+		OracleText: "When this creature dies, return it to the battlefield transformed under your control at the beginning of the next end step.",
+		Power:      new("2"), Toughness: new("2"),
+	})
+	trigger := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
+	move := trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	card, ok := move.Source.CardRef()
+	if !trigger.CapturedCard.Exists || !ok || card != game.CapturedCardReference() || !move.EntryTransformed {
+		t.Fatal("departed source lost its captured card or transformed-entry rider")
+	}
+}
+
 func TestFixedPhaseSubjectRefusesUnavailableDomains(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{

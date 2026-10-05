@@ -1093,16 +1093,19 @@ func TestLowerSimpleDelayedOneShotEffects(t *testing.T) {
 	}
 }
 
-func TestLowerDelayedOneShotEffectRejectsTargetReference(t *testing.T) {
+func TestLowerDelayedOneShotEffectCapturesTargetReference(t *testing.T) {
 	t.Parallel()
-	_, diagnostics := lowerExecutableFaces(&ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Delay",
 		Layout:     "normal",
 		TypeLine:   "Instant",
 		OracleText: "Exile target creature at the beginning of the next end step.",
 	})
-	if len(diagnostics) == 0 {
-		t.Fatal("expected delayed target effect to remain unsupported")
+	trigger := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
+	move, ok := movePermanentTo(trigger.Content.Modes[0].Sequence[0].Primitive, zone.Exile)
+	if !ok || move.Object != game.CapturedObjectReference() ||
+		!trigger.CapturedObject.Exists || trigger.CapturedObject.Val != game.TargetPermanentReference(0) {
+		t.Fatal("delayed target effect did not freeze the chosen target")
 	}
 }
 
@@ -1337,14 +1340,6 @@ func TestLowerConditionAndDelayedReferenceNearMissesFailClosed(t *testing.T) {
 			OracleText: "If a creature dealt damage by this creature this turn would die, exile it instead.",
 			Power:      new("3"),
 			Toughness:  new("3"),
-		},
-		{
-			Name:       "Test Cathar",
-			Layout:     "normal",
-			TypeLine:   "Creature — Human",
-			OracleText: "When this creature dies, return it to the battlefield transformed under your control at the beginning of the next end step.",
-			Power:      new("2"),
-			Toughness:  new("2"),
 		},
 		{
 			Name:       "Test Orb",

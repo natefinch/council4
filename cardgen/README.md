@@ -98,6 +98,11 @@ publications explicitly clear before gates or optional choices, without clearing
 persistent CR 607 links. Later source activations, copies, and zone reentry cannot
 redirect an earlier capture.
 
+Every token-creation route publishes its actual entered batch through the same
+collector, including per-object copies, trigger-batch choices, and populate.
+Per-object creation accumulates all successful outputs instead of overwriting an
+earlier member's publication; an empty or prevented batch stays empty.
+
 Battlefield source effects retain the original permanent ID, rather than resolving
 the source card to a later incarnation. A source already in a graveyard or exile
 captures only its exact stack `SourceZone`/`SourceZoneVersion`. Captured returns
