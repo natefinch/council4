@@ -17,7 +17,19 @@ func recognizeContextualAttributeCompareCondition(body []shared.Token, atoms Ato
 	possessive := equalWord(body[0], "its")
 	spell := false
 	var subjectTypes []TriggerCardType
-	if !possessive && !equalWord(body[0], "it") {
+	if paidWidth, domain, paid := paidCostSubjectAt(body, 0); paid {
+		width = paidWidth
+		noun := strings.ToLower(body[width-1].Text)
+		possessive = strings.HasSuffix(noun, "'s")
+		noun = strings.TrimSuffix(noun, "'s")
+		if domain == PaidCostDomainSacrificedPermanent && noun != "permanent" {
+			cardType, ok := recognizeCardTypeWord(noun)
+			if !ok {
+				return ConditionClause{}, false
+			}
+			subjectTypes = []TriggerCardType{triggerCardTypeFromAtom(cardType)}
+		}
+	} else if !possessive && !equalWord(body[0], "it") {
 		if !equalWord(body[0], "that") && !equalWord(body[0], "this") {
 			return ConditionClause{}, false
 		}

@@ -963,6 +963,9 @@ func (s *selectionSubject) manaValue() (int, bool) {
 	}
 	if s.kind == subjectEventPermanent {
 		if s.snapshot != nil {
+			if s.snapshot.ManaValue.Exists {
+				return s.snapshot.ManaValue.Val, true
+			}
 			if s.snapshot.FaceDown {
 				return 0, true
 			}

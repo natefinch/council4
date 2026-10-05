@@ -72,6 +72,19 @@ func (r Renderer) renderDamageRecipient(ctx *renderCtx, recipient game.DamageRec
 
 func (Renderer) renderObjectReference(reference game.ObjectReference) (string, error) {
 	switch reference.Kind() {
+	case game.ObjectReferencePaidCost:
+		kind, err := enumLiteralNonZero(gamePaidCostKindLiterals, "paid cost kind", reference.CostKind())
+		if err != nil {
+			return "", err
+		}
+		noun := `""`
+		if reference.CostNoun() != "" {
+			noun, err = enumLiteral(typesCardLiterals, "paid cost noun", reference.CostNoun())
+			if err != nil {
+				return "", err
+			}
+		}
+		return fmt.Sprintf("game.PaidCostReference(%q, %s, %s)", reference.CostKey(), kind, noun), nil
 	case game.ObjectReferenceTargetPermanent:
 		return fmt.Sprintf("game.TargetPermanentReference(%d)", reference.TargetIndex()), nil
 	case game.ObjectReferenceTargetStackObject:
@@ -670,6 +683,9 @@ func renderAdditional(ctx *renderCtx, additional cost.Additional) (string, error
 	}
 	if additional.Random {
 		fields = append(fields, "Random: true,")
+	}
+	if additional.SubjectKey != "" {
+		fields = append(fields, fmt.Sprintf("SubjectKey: %q,", additional.SubjectKey))
 	}
 	return structLit("", fields), nil
 }

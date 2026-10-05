@@ -534,12 +534,13 @@ type CompiledCost struct {
 
 // CostComponent is one comma-separated cost operation.
 type CostComponent struct {
-	Kind   CostKind
-	Span   shared.Span
-	Text   string
-	Symbol string
-	Amount string
-	Object string
+	PaidSubject *parser.PaidCostProducer
+	Kind        CostKind
+	Span        shared.Span
+	Text        string
+	Symbol      string
+	Amount      string
+	Object      string
 
 	AmountValue int
 	AmountKnown bool
@@ -4692,6 +4693,7 @@ const (
 	// ReferenceThatObject it never names a target, so bindReferences binds it
 	// straight to the event permanent rather than a target antecedent.
 	ReferenceDiedCreature
+	ReferencePaidCostSubject
 )
 
 // ReferenceBinding identifies the intended referent of a reference occurrence.
@@ -4734,15 +4736,17 @@ const (
 	// this through the event's RelatedPermanentID, which the block and
 	// became-blocked events populate with the opposing combatant.
 	ReferenceBindingEventRelatedPermanent
+	ReferenceBindingPaidCost
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.
 type CompiledReference struct {
-	Kind    ReferenceKind
-	Pronoun ReferencePronounKind
-	Span    shared.Span
-	Text    string
-	Binding ReferenceBinding
+	PaidCost *parser.PaidCostBinding
+	Kind     ReferenceKind
+	Pronoun  ReferencePronounKind
+	Span     shared.Span
+	Text     string
+	Binding  ReferenceBinding
 	// CardIdentity mirrors the parser's card-identity self-reference marker: a
 	// "this card" self reference (card identity, tracked into its current zone)
 	// as opposed to "this Aura"/"this creature" (a battlefield object). Lowering

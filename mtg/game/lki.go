@@ -46,6 +46,7 @@ type ObjectSnapshot struct {
 	Power                 opt.V[int]
 	BasePower             opt.V[int]
 	Toughness             opt.V[int]
+	ManaValue             opt.V[int]
 	Keywords              []Keyword
 	Counters              counter.Set
 	EntryChoices          map[ChoiceKey]ResolutionChoiceResult

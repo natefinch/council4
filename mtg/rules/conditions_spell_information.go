@@ -9,6 +9,10 @@ import (
 // Availability is separate from comparison truth: negation must not turn an
 // unknown characteristic into a successful numeric condition.
 func objectConditionInformationAvailable(g *game.Game, ctx conditionContext, cond *game.Condition) bool {
+	if cond.Object.Exists && cond.Object.Val.Kind() == game.ObjectReferencePaidCost &&
+		!paidCostConditionAvailable(ctx.obj, cond) {
+		return false
+	}
 	if cond.TargetCardResultKey != "" && (!cond.Object.Exists ||
 		cond.Object.Val.Kind() != game.ObjectReferenceTargetCard || !cond.ObjectMatches.Exists) {
 		return false

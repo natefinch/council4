@@ -38,6 +38,7 @@ type additionalCostPlan struct {
 	untapSource         *game.Permanent
 	counterRemovals     []counterRemoval
 	counterAdds         []counterPlacement
+	subjects            []costSubjectSelection
 }
 
 type counterRemoval struct {
@@ -234,6 +235,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.sacrifices = append(plan.sacrifices, chosen...)
+			plan.recordSacrificeSubjects(additional.SubjectKey, chosen)
 			excludeStateConstrainedManaSources(&plan, additional, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalTapPermanents:
@@ -299,6 +301,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.sacrifices = append(plan.sacrifices, sacrificeSource)
+			plan.recordSacrificeSubjects(additional.SubjectKey, []*game.Permanent{sacrificeSource})
 			excludeStateConstrainedManaSources(&plan, additional, sacrificeSource)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalDiscard:
@@ -317,6 +320,9 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 					return plan, false
 				}
 				plan.randomDiscardAmount += amount
+				plan.subjects = append(plan.subjects, costSubjectSelection{
+					key: additional.SubjectKey, kind: game.PaidCostDiscard, random: true, amount: amount,
+				})
 				plan.paid = append(plan.paid, AdditionalCostText(additional))
 				continue
 			}
@@ -330,6 +336,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.discards = append(plan.discards, chosen...)
+			plan.recordDiscardSubjects(additional.SubjectKey, chosen)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalPayLife:
 			player, ok := s.Player(playerID)

@@ -19,6 +19,14 @@ func bindReferences(
 	for i := range bound {
 		reference := &bound[i]
 		switch reference.Kind {
+		case ReferencePaidCostSubject:
+			if reference.PaidCost != nil && reference.PaidCost.Known &&
+				reference.PaidCost.ConsumerNodeID == reference.NodeID {
+				reference.Binding = ReferenceBindingPaidCost
+			} else {
+				reference.Binding = ReferenceBindingUnsupported
+			}
+			continue
 		case ReferenceSelfName, ReferenceThisObject:
 			reference.Binding = ReferenceBindingSource
 			continue

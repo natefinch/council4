@@ -18,6 +18,7 @@ func compileCost(parserCost parser.Cost) CompiledCost {
 
 func compileCostComponent(component parser.CostComponent) CostComponent {
 	compiled := CostComponent{
+		PaidSubject:           component.PaidSubject,
 		Kind:                  compileCostKind(component.Kind),
 		Span:                  component.Span,
 		Text:                  component.Text,

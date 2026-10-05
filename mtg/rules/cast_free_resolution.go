@@ -323,6 +323,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 	}
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
+	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)

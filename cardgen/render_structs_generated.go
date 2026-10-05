@@ -1706,6 +1706,10 @@ func (r Renderer) renderCostAdditional(ctx *renderCtx, v cost.Additional) (strin
 		lit48 := strconv.FormatBool(bool(v.Random))
 		fields = append(fields, "Random: "+lit48+",")
 	}
+	if v.SubjectKey != "" {
+		lit49 := strconv.Quote(string(v.SubjectKey))
+		fields = append(fields, "SubjectKey: "+lit49+",")
+	}
 	return structLit("cost.Additional", fields), nil
 }
 
