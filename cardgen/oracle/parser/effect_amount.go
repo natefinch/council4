@@ -998,6 +998,14 @@ func parseDynamicTriggeringPlayerHandSizeSubject(tokens []shared.Token, start in
 // maintainability budget; the remaining inline switch handles the shorter
 // keyword-phrase forms.
 func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if effectWordsAt(tokens, start, "counters", "removed", "this", "way") &&
+		dynamicAmountBoundary(tokens, start+4) {
+		return dynamicAmountSubject{
+			amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountRemovedCounterCount},
+			end:    start + 4,
+			count:  true, plural: true,
+		}, true
+	}
 	if subject, ok := parseDynamicTriggeringPlayerHandSizeSubject(tokens, start); ok {
 		return subject, true
 	}

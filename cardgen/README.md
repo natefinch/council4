@@ -38,6 +38,18 @@ increments once, before any chosen mode or Instruction evaluates its gate.
 Activation restrictions and mana-producing conditional bodies remain separate,
 fail-closed capabilities.
 
+Actual removed-counter quantities retain the parser-owned producing ClauseID
+within an Ability Content body. Ordinary damage, life, and draw consumers share
+the prior-effect scalar amount path, not object-result membership. A scalar
+availability gate distinguishes observed zero from a skipped, declined, or
+unavailable producer; counter publishers clear their own old results before
+envelope gates. Removal publishes the number actually removed, including
+aggregated fixed-kind group removals. Named-all single-object removal removes
+only that kind, preserving all other counters. Ambiguous antecedents, expanded
+publishers, named-all groups, conflicting result gates, and modal scalar
+namespaces remain fail-closed. Parser-owned group conditions capture their
+truth once before removal and retain it for every expanded consumer.
+
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
 can therefore remain the subject after exile without being confused with the

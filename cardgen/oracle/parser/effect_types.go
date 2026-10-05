@@ -1085,6 +1085,7 @@ const (
 	// ("the amount of damage those creatures dealt to that player" —
 	// Quartzwood Crasher).
 	EffectDynamicAmountTriggeringEventTotalCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringEventTotalCombatDamage"
+	EffectDynamicAmountRemovedCounterCount              EffectDynamicAmountKind = "EffectDynamicAmountRemovedCounterCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -1127,6 +1128,9 @@ type EffectAmountSyntax struct {
 	DynamicKind EffectDynamicAmountKind `json:",omitempty"`
 	DynamicForm EffectDynamicAmountForm `json:",omitempty"`
 	Multiplier  int                     `json:",omitempty"`
+	// ProducerClauseID names the exact scalar producer within this ability body.
+	// Zero means that the antecedent is unavailable or ambiguous.
+	ProducerClauseID int `json:",omitempty"`
 	// RoundUp records that a halving amount rounds up rather than down ("rounded
 	// up" versus "rounded down"). It is meaningful only for the half-library mill
 	// amount (EffectDynamicAmountHalfPlayerLibrary) and is false otherwise.
@@ -2761,7 +2765,8 @@ type EffectSyntax struct {
 	// Hexmage). It is false for a fixed-count removal ("Remove a counter ...",
 	// "Remove two +1/+1 counters ..."), whose count is carried in Amount and kind
 	// in CounterKind / CounterKnown.
-	RemoveCountersAll bool `json:",omitempty"`
+	RemoveCountersAll       bool `json:",omitempty"`
+	RemoveCountersAllOfKind bool `json:",omitempty"`
 	// RemoveThoseCounters reports the back-referencing form of an
 	// EffectRemoveCounter effect, "remove those counters", where "those counters"
 	// names the counters a preceding same-sequence clause placed on the source

@@ -1507,18 +1507,18 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 	if prim.AllKinds {
 		return handleRemoveAllCounters(r, prim)
 	}
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
-	if res.amount <= 0 {
-		return res
-	}
+	res := effectResolved{accepted: true}
+	requested := max(0, r.quantity(prim.Amount))
 	if prim.Group.Valid() {
+		res.amountKnown = true
 		for _, permanent := range r.groupPermanents(prim.Group) {
-			permanent.Counters.Remove(prim.CounterKind, res.amount)
-			res.succeeded = true
+			res.amount += permanent.Counters.Remove(prim.CounterKind, requested)
 		}
+		res.succeeded = res.amount > 0
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
+		res.amountKnown = true
 		kind := prim.CounterKind
 		if prim.ChooseKind {
 			chosen, ok := r.chooseCounterKindToMove(permanent.Counters)
@@ -1527,8 +1527,8 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 			}
 			kind = chosen
 		}
-		permanent.Counters.Remove(kind, res.amount)
-		res.succeeded = true
+		res.amount = permanent.Counters.Remove(kind, requested)
+		res.succeeded = res.amount > 0
 	}
 	return res
 }
@@ -1539,15 +1539,17 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 func handleRemoveAllCounters(r *effectResolver, prim game.RemoveCounter) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.Group.Valid() {
+		res.amountKnown = true
 		for _, permanent := range r.groupPermanents(prim.Group) {
 			res.amount += permanent.Counters.RemoveAll()
-			res.succeeded = true
 		}
+		res.succeeded = res.amount > 0
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
+		res.amountKnown = true
 		res.amount = permanent.Counters.RemoveAll()
-		res.succeeded = true
+		res.succeeded = res.amount > 0
 	}
 	return res
 }

@@ -858,6 +858,7 @@ func isZeroGameTriggerPattern(v game.TriggerPattern) bool {
 // isZeroGameInstructionResultGate reports whether every field of a game.InstructionResultGate holds its zero value.
 func isZeroGameInstructionResultGate(v game.InstructionResultGate) bool {
 	return !(v.Key != "") &&
+		!(v.AmountAvailable) &&
 		!(v.Accepted != 0) &&
 		!(v.Succeeded != 0) &&
 		!(v.SearchedLibrary != 0) &&
@@ -7081,57 +7082,61 @@ func (r Renderer) renderGameInstructionResultGate(ctx *renderCtx, v game.Instruc
 		ctx.need(importGame)
 		fields = append(fields, "Key: "+lit1+",")
 	}
+	if v.AmountAvailable {
+		lit2 := strconv.FormatBool(bool(v.AmountAvailable))
+		fields = append(fields, "AmountAvailable: "+lit2+",")
+	}
 	if v.Accepted != 0 {
-		lit2, err3 := enumLiteral(gameTriStateLiterals, "game.TriState", v.Accepted)
-		if err3 != nil {
-			return "", fmt.Errorf("game.InstructionResultGate.Accepted: %w", err3)
+		lit3, err4 := enumLiteral(gameTriStateLiterals, "game.TriState", v.Accepted)
+		if err4 != nil {
+			return "", fmt.Errorf("game.InstructionResultGate.Accepted: %w", err4)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "Accepted: "+lit2+",")
+		fields = append(fields, "Accepted: "+lit3+",")
 	}
 	if v.Succeeded != 0 {
-		lit4, err5 := enumLiteral(gameTriStateLiterals, "game.TriState", v.Succeeded)
-		if err5 != nil {
-			return "", fmt.Errorf("game.InstructionResultGate.Succeeded: %w", err5)
+		lit5, err6 := enumLiteral(gameTriStateLiterals, "game.TriState", v.Succeeded)
+		if err6 != nil {
+			return "", fmt.Errorf("game.InstructionResultGate.Succeeded: %w", err6)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "Succeeded: "+lit4+",")
+		fields = append(fields, "Succeeded: "+lit5+",")
 	}
 	if v.SearchedLibrary != 0 {
-		lit6, err7 := enumLiteral(gameTriStateLiterals, "game.TriState", v.SearchedLibrary)
-		if err7 != nil {
-			return "", fmt.Errorf("game.InstructionResultGate.SearchedLibrary: %w", err7)
+		lit7, err8 := enumLiteral(gameTriStateLiterals, "game.TriState", v.SearchedLibrary)
+		if err8 != nil {
+			return "", fmt.Errorf("game.InstructionResultGate.SearchedLibrary: %w", err8)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "SearchedLibrary: "+lit6+",")
+		fields = append(fields, "SearchedLibrary: "+lit7+",")
 	}
 	if v.AmountRange.Exists {
-		lit9, err10 := r.renderGameIntRange(ctx, v.AmountRange.Val)
-		if err10 != nil {
-			return "", fmt.Errorf("game.InstructionResultGate.AmountRange: %w", err10)
+		lit10, err11 := r.renderGameIntRange(ctx, v.AmountRange.Val)
+		if err11 != nil {
+			return "", fmt.Errorf("game.InstructionResultGate.AmountRange: %w", err11)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit8 := "opt.Val(" + lit9 + ")"
-		fields = append(fields, "AmountRange: "+lit8+",")
+		lit9 := "opt.Val(" + lit10 + ")"
+		fields = append(fields, "AmountRange: "+lit9+",")
 	}
 	if v.ObjectSelection.Exists {
-		lit12, err13 := r.renderGameSelection(ctx, v.ObjectSelection.Val)
-		if err13 != nil {
-			return "", fmt.Errorf("game.InstructionResultGate.ObjectSelection: %w", err13)
+		lit13, err14 := r.renderGameSelection(ctx, v.ObjectSelection.Val)
+		if err14 != nil {
+			return "", fmt.Errorf("game.InstructionResultGate.ObjectSelection: %w", err14)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit11 := "opt.Val(" + lit12 + ")"
-		fields = append(fields, "ObjectSelection: "+lit11+",")
+		lit12 := "opt.Val(" + lit13 + ")"
+		fields = append(fields, "ObjectSelection: "+lit12+",")
 	}
 	if v.CardOnly {
-		lit14 := strconv.FormatBool(bool(v.CardOnly))
-		fields = append(fields, "CardOnly: "+lit14+",")
+		lit15 := strconv.FormatBool(bool(v.CardOnly))
+		fields = append(fields, "CardOnly: "+lit15+",")
 	}
 	if v.Negate {
-		lit15 := strconv.FormatBool(bool(v.Negate))
-		fields = append(fields, "Negate: "+lit15+",")
+		lit16 := strconv.FormatBool(bool(v.Negate))
+		fields = append(fields, "Negate: "+lit16+",")
 	}
 	return structLit("game.InstructionResultGate", fields), nil
 }

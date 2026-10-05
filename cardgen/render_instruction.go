@@ -260,6 +260,9 @@ func (r Renderer) renderInstructionResultGate(ctx *renderCtx, gate game.Instruct
 	if gate.Key != "" {
 		fields = append(fields, fmt.Sprintf("Key: %q,", gate.Key))
 	}
+	if gate.AmountAvailable {
+		fields = append(fields, "AmountAvailable: true,")
+	}
 	if gate.Accepted != game.TriAny {
 		accepted, err := renderTriState(gate.Accepted)
 		if err != nil {

@@ -1779,6 +1779,9 @@ func lowerRemoveThoseCountersSpell(ctx contentCtx) (game.AbilityContent, *shared
 // modal content.
 func lowerRemoveCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	effect := ctx.content.Effects[0]
+	if effect.RemoveCountersAllOfKind {
+		return lowerRemoveAllOfKindCounters(ctx)
+	}
 	if effect.RemoveCountersAll {
 		return lowerRemoveAllCountersSpell(ctx)
 	}
