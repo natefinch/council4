@@ -18,6 +18,9 @@ func bindReferences(
 	bound := append([]CompiledReference(nil), references...)
 	for i := range bound {
 		reference := &bound[i]
+		if bindLibraryCardReference(reference, effects) {
+			continue
+		}
 		switch reference.Kind {
 		case ReferenceSelfName, ReferenceThisObject:
 			reference.Binding = ReferenceBindingSource
@@ -398,6 +401,9 @@ func priorInstructionAntecedentAt(reference CompiledReference, effects []Compile
 	}
 	if search, ok := priorSearchMoveAntecedent(current, effects); ok {
 		return search, true
+	}
+	if SingularLibraryCardProducer(effects[prior]) && effects[current].Kind == EffectRemoveFromCombat {
+		return 0, false
 	}
 	switch effects[prior].Kind {
 	case EffectChoosePermanent, EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:

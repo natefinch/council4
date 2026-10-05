@@ -265,6 +265,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)
 	clone.ResolutionResults = cloneComparableMap(o.ResolutionResults)
+	clone.LocalLinkedProducts = cloneComparableMap(o.LocalLinkedProducts)
 	clone.ResolutionResultObjects = cloneMapFunc(o.ResolutionResultObjects, func(objects []ObjectSnapshot) []ObjectSnapshot {
 		return cloneSliceFunc(objects, cloneObjectSnapshot)
 	})

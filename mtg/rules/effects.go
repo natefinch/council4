@@ -74,13 +74,18 @@ func (e *Engine) resolveSplicedContent(g *game.Game, obj *game.StackObject, agen
 }
 
 func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	e.resolveAbilityContentReceipt(g, obj, content, agents, log, "")
+}
+
+func (e *Engine) resolveAbilityContentReceipt(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, key game.ResultKey) (game.InstructionResolutionResult, bool) {
 	if len(content.Modes) == 0 {
-		return
+		return game.InstructionResolutionResult{}, false
 	}
 	if !content.IsModal() {
-		e.resolveInstructionSequence(g, obj, content.Modes[0].Sequence, agents, log)
-		return
+		return e.resolveInstructionSequenceReceipt(g, obj, content.Modes[0].Sequence, agents, log, key)
 	}
+	var receipt game.InstructionResolutionResult
+	var available bool
 	allTargets := obj.Targets
 	defer func() {
 		obj.Targets = allTargets
@@ -90,8 +95,9 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 			continue
 		}
 		obj.Targets = targetsForChosenMode(content, obj, allTargets, chosenIndex)
-		e.resolveInstructionSequence(g, obj, content.Modes[modeIndex].Sequence, agents, log)
+		receipt, available = e.resolveInstructionSequenceReceipt(g, obj, content.Modes[modeIndex].Sequence, agents, log, key)
 	}
+	return receipt, available
 }
 
 func targetsForChosenMode(content game.AbilityContent, obj *game.StackObject, allTargets []game.Target, chosenIndex int) []game.Target {
@@ -195,14 +201,27 @@ func firstSpellAbility(card *game.CardDef) (*game.AbilityContent, bool) {
 }
 
 func (e *Engine) resolveInstructionWithChoices(g *game.Game, obj *game.StackObject, instr *game.Instruction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	newEffectResolver(e, g, obj, agents, log).resolveInstruction(instr)
+	if instr != nil {
+		e.resolveInstructionSequence(g, obj, []game.Instruction{*instr}, agents, log)
+	}
 }
 
 func (e *Engine) resolveInstructionSequence(g *game.Game, obj *game.StackObject, sequence []game.Instruction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	e.resolveInstructionSequenceReceipt(g, obj, sequence, agents, log, "")
+}
+
+func (e *Engine) resolveInstructionSequenceReceipt(g *game.Game, obj *game.StackObject, sequence []game.Instruction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, key game.ResultKey) (game.InstructionResolutionResult, bool) {
+	restoreProducts := enterLocalProductFrame(g, obj, sequence)
+	defer restoreProducts()
 	resolver := newEffectResolver(e, g, obj, agents, log)
 	for i := range sequence {
 		resolver.resolveInstruction(&sequence[i])
 	}
+	if obj == nil || key == "" {
+		return game.InstructionResolutionResult{}, false
+	}
+	receipt, available := obj.ResolutionResults[string(key)]
+	return receipt, available
 }
 
 // effectResolver bundles the per-resolution context so the resolution body
@@ -273,10 +292,21 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	}
 	r.clearCounterQuantityPublication(instr)
 	r.clearPermanentResultPublication(instr)
+	r.clearLibraryCardScalars(libraryCardCharacteristicOutputs(instr.Primitive))
 	if r.obj != nil && instr.PublishResult != "" {
 		delete(r.obj.ResolutionResults, string(instr.PublishResult))
 		delete(r.obj.ResolutionResultObjects, string(instr.PublishResult))
 	}
+	publication, observesOwnLink := libraryCardPublication(instr)
+	publicationAttempted := false
+	if !observesOwnLink {
+		r.clearLibraryCardPublication(publication)
+	}
+	defer func() {
+		if observesOwnLink && !publicationAttempted {
+			r.clearLibraryCardPublication(publication)
+		}
+	}()
 	// Envelope: evaluate conditions first.
 	if !r.instructionConditionSatisfied(instr) {
 		return
@@ -343,6 +373,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	}
 	kind := instr.Primitive.Kind()
 	handler := globalPrimitiveRegistry().dispatch(kind)
+	publicationAttempted = true
 	res := handler(r, instr.Primitive)
 	r.publishInstructionResult(instr, res)
 }

@@ -465,8 +465,8 @@ func dynamicValueBase(
 			if ref.CardID == 0 {
 				continue
 			}
-			card, ok := g.GetCardInstance(ref.CardID)
-			if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion {
+			_, ok := linkedCardInstance(g, ref)
+			if !ok {
 				continue
 			}
 			for _, player := range g.Players {

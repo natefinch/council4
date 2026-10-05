@@ -2568,15 +2568,16 @@ type CompiledEffect struct {
 	// loses ..."). Lowering routes the life change to the opponents dealt combat
 	// damage this game by a creature with that name. It is empty for every other
 	// context.
-	CombatDamageSourceName string
-	Connection             parser.EffectConnectionKind
-	ConnectionSpan         shared.Span
-	Span                   shared.Span
-	ClauseSpan             shared.Span
-	Text                   string
-	VerbSpan               shared.Span
-	Player                 parser.EffectPlayerKind
-	CardSource             parser.EffectCardSourceKind
+	CombatDamageSourceName  string
+	Connection              parser.EffectConnectionKind
+	ConnectionSpan          shared.Span
+	Span                    shared.Span
+	ClauseSpan              shared.Span
+	Text                    string
+	VerbSpan                shared.Span
+	Player                  parser.EffectPlayerKind
+	CardSource              parser.EffectCardSourceKind
+	LibraryOwnerDestination bool
 	// FaceDown mirrors EffectSyntax.FaceDown: a top-of-library exile card source
 	// that exiles its cards face down. Lowering threads it onto the
 	// ExileTopOfLibrary primitive; it is false for every face-up exile.
@@ -3335,7 +3336,8 @@ type CompiledEffect struct {
 	// LifeObject reports that a gain/lose effect's object is the player's life
 	// rather than a keyword or quoted ability. Consumers route only true life
 	// changes to the life lowerer.
-	LifeObject bool
+	LifeObject  bool
+	LifePayment parser.EffectLifePaymentKind
 	// PreventRegeneration reports a destroy effect carrying a "can't be
 	// regenerated" rider. RegenerationRiderSpan covers the rider sentence so
 	// lowering can credit its tokens toward source coverage.
@@ -4734,6 +4736,9 @@ const (
 	// this through the event's RelatedPermanentID, which the block and
 	// became-blocked events populate with the opposing combatant.
 	ReferenceBindingEventRelatedPermanent
+	// ReferenceBindingLibraryOwner names the player whose library produced the
+	// exact observed card, not the card object or the consequence actor.
+	ReferenceBindingLibraryOwner
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.
@@ -4751,6 +4756,7 @@ type CompiledReference struct {
 	CardIdentity     bool
 	Occurrence       int
 	PriorInstruction int
+	ProducerClauseID int
 	// NodeID is the parser-assigned stable identity of this reference within its
 	// ability or mode. Distinct copies of the same source reference share a
 	// NodeID, so the compiler matches references by identity instead of span

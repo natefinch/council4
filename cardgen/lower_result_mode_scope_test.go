@@ -6,18 +6,26 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
-func TestScopedResultMultiModePublicationBoundary(t *testing.T) {
+func TestScopedResultMultiModeUsesLexicalNamespaces(t *testing.T) {
 	body := "\n\u2022 Discard a card. If a land card was discarded this way, you gain 1 life.\n" +
 		"\u2022 If you control a creature, discard a card. If a land card was discarded this way, you gain 5 life."
-	for _, header := range []string{
-		"Choose two \u2014",
-		"Choose one or both \u2014",
-		"Choose one. If you control a commander as you cast this spell, you may choose both instead.",
+	for _, test := range []struct {
+		header    string
+		countPath string
+	}{
+		{"Choose two \u2014", "SpellAbility.Val.MaxModes = 2"},
+		{"Choose one or both \u2014", "SpellAbility.Val.MaxModes = 2"},
+		{"Choose one. If you control a commander as you cast this spell, you may choose both instead.",
+			"SpellAbility.Val.ModeChoiceBonus.AdditionalMaxModes = 1"},
 	} {
-		t.Run(header, func(t *testing.T) {
-			assertCardUnsupported(t, &ScryfallCard{
-				Name: "Mode Scope Refusal", Layout: "normal", TypeLine: "Sorcery", OracleText: header + body,
-			}, "cross-mode conditional result publication requires scoped namespaces")
+		t.Run(test.header, func(t *testing.T) {
+			assertCardPaths(t, &ScryfallCard{
+				Name: "Mode Result Namespaces", Layout: "normal", TypeLine: "Sorcery", OracleText: test.header + body,
+			}, test.countPath,
+				"Modes[0].Sequence[0].LocalProducts.Results[0]",
+				"Modes[1].Sequence[0].LocalProducts.Results[0]",
+				"Modes[0].Sequence[1].ResultGate.Val.Key",
+				"Modes[1].Sequence[1].ResultGate.Val.Key")
 		})
 	}
 	assertCardPaths(t, &ScryfallCard{

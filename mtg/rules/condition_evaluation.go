@@ -3,6 +3,16 @@ package rules
 import "github.com/natefinch/council4/mtg/game"
 
 func (r *effectResolver) instructionConditionSatisfied(instr *game.Instruction) bool {
+	if instr.Condition.Exists && instr.Condition.Val.Condition.Exists {
+		condition := instr.Condition.Val.Condition.Val
+		if condition.ObjectMatches.Exists && condition.Object.Exists &&
+			condition.Object.Val.Kind() == game.ObjectReferenceLinkedObject {
+			if _, available := resolveObjectReference(r.game, r.obj, condition.Object.Val); !available {
+				delete(r.conditionEvaluations, instr.PublishCondition)
+				return false
+			}
+		}
+	}
 	satisfied := effectConditionSatisfied(r.game, r.obj, instr.Condition)
 	if instr.PublishCondition != "" {
 		if !instr.Condition.Exists {

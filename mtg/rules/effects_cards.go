@@ -44,8 +44,8 @@ func resolveCardReference(g *game.Game, obj *game.StackObject, ref game.CardRefe
 			if linked.CardID == 0 {
 				continue
 			}
-			card, ok := g.GetCardInstance(linked.CardID)
-			if !ok || linked.CardZoneVersion != 0 && card.ZoneVersion != linked.CardZoneVersion {
+			_, ok := linkedCardInstance(g, linked)
+			if !ok {
 				continue
 			}
 			if linkedZone, ok := cardZone(g, linked.CardID); ok {

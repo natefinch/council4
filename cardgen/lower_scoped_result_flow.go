@@ -233,13 +233,22 @@ func optionalAntecedentUnmodeled(content compiler.AbilityContent, ei int) bool {
 	for _, reference := range content.Effects[ei].References {
 		if reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
 			reference.PriorInstruction >= 0 && reference.PriorInstruction < ei &&
-			content.Effects[reference.PriorInstruction].Optional {
+			content.Effects[reference.PriorInstruction].Optional &&
+			!sequenceLibraryCardReference(reference, content.Effects) {
 			return true
 		}
 	}
-	return ei > 0 && content.Effects[ei-1].Optional &&
+	if ei > 0 && content.Effects[ei-1].Optional &&
 		(content.Effects[ei].Context == parser.EffectContextReferencedObject ||
-			content.Effects[ei].Context == parser.EffectContextPriorSubject)
+			content.Effects[ei].Context == parser.EffectContextPriorSubject) {
+		for _, reference := range content.Effects[ei].References {
+			if reference.PriorInstruction == ei-1 && sequenceLibraryCardReference(reference, content.Effects) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 func resultProducerActsForController(effect compiler.CompiledEffect) bool {
 	if effect.Context == parser.EffectContextController {
@@ -268,9 +277,11 @@ func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string
 		if publishes && sequence[0].ResultGate.Exists {
 			return "structural — result publication conflicts with clause result wiring", false
 		}
-		sequence[0].Optional = flow.optional[ei]
+		// Pay owns its affordability check and its single payment decision.
+		sequence[0].Optional = flow.optional[ei] && sequence[0].Primitive.Kind() != game.PrimitivePay
 		if publishes {
 			sequence[0].PublishResult = key
+			sequence[0].LocalProducts.Results = append(sequence[0].LocalProducts.Results, key)
 		}
 	}
 	if gate, exists := flow.gates[ei]; exists {

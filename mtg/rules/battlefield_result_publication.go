@@ -47,8 +47,8 @@ func (r *effectResolver) returnLinkedNonBattlefieldPermanents(
 		if !ok || snapshot.CardID != ref.CardID {
 			continue
 		}
-		card, ok := r.game.GetCardInstance(ref.CardID)
-		if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion {
+		card, ok := linkedCardInstance(r.game, ref)
+		if !ok {
 			continue
 		}
 		current := slices.ContainsFunc(snapshot.ZoneCards, func(c game.ZoneCardSnapshot) bool {

@@ -258,6 +258,9 @@ func referencedCardsTotalManaValue(g *game.Game, obj *game.StackObject, key game
 	total := 0
 	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, string(key))) {
 		card, ok := g.GetCardInstance(linked.CardID)
+		if linked.CardZoneVersionSet {
+			card, ok = linkedCardInstance(g, linked)
+		}
 		if !ok || card.Def == nil {
 			continue
 		}
@@ -1349,8 +1352,8 @@ func cardConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt.V
 		if ref.CardID == 0 {
 			continue
 		}
-		card, ok := g.GetCardInstance(ref.CardID)
-		if ok && cardMatchesSelection(g, obj, card, cond.Selection) {
+		card, ok := linkedCardInstance(g, ref)
+		if ok && card.Def != nil && cardMatchesSelection(g, obj, card, cond.Selection) {
 			return true
 		}
 	}

@@ -1674,12 +1674,9 @@ func exactRemoveFromCombatEffectSyntax(effect *EffectSyntax) bool {
 
 // exactRemoveFromCombatSelfEffectSyntax recognizes the self/back-reference form
 // "Remove this creature from combat." / "Remove <CardName> from combat." / the
-// pronoun "Remove it from combat." (Shakedown Heavy), where the creature taken
-// out of combat is the ability's own source. There is no target; the single
-// reference is the source self-reference ("this <object>" or the card's own
-// name) or the "it" pronoun that a self trigger binds to the source. Lowering
-// routes it to the runtime's source permanent reference. Any other wording
-// leaves the clause non-exact so lowering fails closed.
+// pronoun "Remove it from combat." / "Remove that creature from combat.".
+// The single permanent reference supplies the subject; lowering owns whether
+// it names the source, a target, or the triggering permanent.
 func exactRemoveFromCombatSelfEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Targets) != 0 || len(effect.References) != 1 {
 		return false
@@ -1687,6 +1684,10 @@ func exactRemoveFromCombatSelfEffectSyntax(effect *EffectSyntax) bool {
 	reference := effect.References[0]
 	switch reference.Kind {
 	case ReferenceThisObject, ReferenceSelfName:
+	case ReferenceThatObject:
+		if reference.CardIdentity {
+			return false
+		}
 	case ReferencePronoun:
 		if reference.Pronoun != PronounIt {
 			return false

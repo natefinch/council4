@@ -263,8 +263,8 @@ func capturedCard(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerD
 		if linked.CardID == 0 {
 			continue
 		}
-		card, ok := g.GetCardInstance(linked.CardID)
-		if !ok || linked.CardZoneVersion != 0 && card.ZoneVersion != linked.CardZoneVersion {
+		card, ok := linkedCardInstance(g, linked)
+		if !ok {
 			continue
 		}
 		return linked.CardID, card.ZoneVersion

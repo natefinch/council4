@@ -347,6 +347,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				VerbSpan:                       syntax.VerbSpan,
 				Player:                         syntax.Player,
 				CardSource:                     syntax.CardSource,
+				LibraryOwnerDestination:        syntax.LibraryOwnerDestination,
 				FaceDown:                       syntax.FaceDown,
 				RequirePermanentCard:           syntax.RequirePermanentCard,
 				ExileDieSubjectDamagedCreature: syntax.ExileDieSubjectDamagedCreature,
@@ -551,6 +552,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DistributeCounters:             syntax.DistributeCounters,
 				OptionalSpan:                   syntax.OptionalSpan,
 				LifeObject:                     syntax.LifeObject,
+				LifePayment:                    syntax.LifePayment,
 				Mana: CompiledEffectMana{
 					Span:                     syntax.Mana.Span,
 					Symbols:                  slices.Clone(syntax.Mana.Symbols),

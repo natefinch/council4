@@ -173,6 +173,8 @@ type Instruction struct {
 	// downstream instructions can reference it via ResultGate.
 	PublishResult ResultKey
 
+	LocalProducts LocalProducts
+
 	// Description is a short human-readable label for logs and diagnostics.
 	Description string
 }
@@ -253,6 +255,9 @@ func validateInstructionSequenceWithLinked(
 	maps.Copy(publishedLinked, inheritedLinked)
 	for i := range seq {
 		instr := &seq[i]
+		if err := validateLocalProducts(instr); err != nil {
+			return fmt.Errorf("instruction[%d]: %w", i, err)
+		}
 		if instr.Primitive == nil {
 			// A Tempting offer with a multi-primitive shared body carries no
 			// top-level primitive; its body instructions are validated instead.
@@ -355,6 +360,12 @@ func validateInstructionSequenceWithLinked(
 				return fmt.Errorf("instruction[%d]: duplicate result key %q (first used at index %d)", i, instr.PublishResult, prev)
 			}
 			publishedResults[instr.PublishResult] = i
+		}
+		for _, key := range refs.publishesResults {
+			if prev, dup := publishedResults[key]; dup {
+				return fmt.Errorf("instruction[%d]: duplicate scalar result key %q (first used at index %d)", i, key, prev)
+			}
+			publishedResults[key] = i
 		}
 		if refs.publishesChoice != "" {
 			if prev, dup := publishedChoices[refs.publishesChoice]; dup {

@@ -9,7 +9,8 @@ import (
 
 // Ordered sequence consumers share a canonical object publication with the
 // exact producer identified by the compiler. Currently the supported producers
-// are CreateToken and single-source PutOnBattlefield; other primitive kinds need
+// include single-card library observations, CreateToken and single-source
+// PutOnBattlefield; other primitive kinds need
 // their own actual-result publication proof before participating.
 
 // sequencePriorInstructionLink reports the antecedent effect index and link key
@@ -19,7 +20,8 @@ import (
 // instruction span within sequence, recorded as each clause lowers in effect
 // order; sequence holds the instructions lowered so far.
 //
-// Optional, multi-instruction and competing antecedents fail closed. An
+// Multi-instruction and competing antecedents fail closed. Optional observations
+// publish only accepted, actual cards; other optional producers fail closed. An
 // incompatible existing publication is never overwritten.
 func sequencePriorInstructionLink(
 	references []compiler.CompiledReference,
@@ -27,7 +29,8 @@ func sequencePriorInstructionLink(
 	ranges [][2]int,
 ) (priorEffect int, key game.LinkedKey, ok bool) {
 	for _, reference := range references {
-		if reference.Binding != compiler.ReferenceBindingPriorInstructionResult {
+		if reference.Binding != compiler.ReferenceBindingPriorInstructionResult &&
+			reference.Binding != compiler.ReferenceBindingLibraryOwner {
 			continue
 		}
 		j := reference.PriorInstruction
@@ -43,7 +46,8 @@ func sequencePriorInstructionLink(
 			return 0, "", false
 		}
 		for _, other := range references {
-			if other.Binding == compiler.ReferenceBindingPriorInstructionResult && other.PriorInstruction != j {
+			if (other.Binding == compiler.ReferenceBindingPriorInstructionResult ||
+				other.Binding == compiler.ReferenceBindingLibraryOwner) && other.PriorInstruction != j {
 				return 0, "", false
 			}
 		}
@@ -52,6 +56,9 @@ func sequencePriorInstructionLink(
 		if !published {
 			return 0, "", false
 		}
+		if reference.ProducerClauseID > 0 && !sequence[instructionIndex].LocalProducts.HasLink(linked) {
+			sequence[instructionIndex].LocalProducts.Links = append(sequence[instructionIndex].LocalProducts.Links, linked)
+		}
 		return j, linked, true
 	}
 	return 0, "", false
@@ -59,6 +66,14 @@ func sequencePriorInstructionLink(
 
 func sequenceProductKey(index int) game.LinkedKey {
 	return game.LinkedKey(fmt.Sprintf("sequence-effect-%d-product", index))
+}
+
+func sequenceLibraryCardReference(reference compiler.CompiledReference, effects []compiler.CompiledEffect) bool {
+	index := reference.PriorInstruction
+	return reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
+		reference.ProducerClauseID > 0 && index >= 0 && index < len(effects) &&
+		effects[index].ClauseID == reference.ProducerClauseID &&
+		compiler.SingularLibraryCardProducer(effects[index])
 }
 
 // trySetInstructionPublishLinked sets instr's PublishLinked field to key,
@@ -72,10 +87,31 @@ func sequenceProductKey(index int) game.LinkedKey {
 // A PublishLinked field alone is not proof that a primitive publishes the
 // correct actual result.
 func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey) (game.LinkedKey, bool) {
-	if instr.Optional || instr.Primitive == nil {
+	if instr.Primitive == nil || instr.Optional && instr.Primitive.Kind() != game.PrimitiveLookAtLibraryTop &&
+		instr.Primitive.Kind() != game.PrimitiveReveal {
 		return "", false
 	}
 	switch instr.Primitive.Kind() {
+	case game.PrimitiveLookAtLibraryTop:
+		primitive := instr.Primitive.(game.LookAtLibraryTop)
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveReveal:
+		primitive := instr.Primitive.(game.Reveal)
+		if primitive.Card.Kind == game.CardReferenceNone &&
+			(primitive.Amount.IsDynamic() || primitive.Amount.Value() != 1) {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
 	case game.PrimitiveCreateToken:
 		primitive, ok := instr.Primitive.(game.CreateToken)
 		if !ok {

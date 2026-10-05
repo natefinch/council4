@@ -2141,6 +2141,7 @@ type EffectSyntax struct {
 	Tokens                     []shared.Token       `json:"-"`
 	Player                     EffectPlayerKind     `json:",omitempty"`
 	CardSource                 EffectCardSourceKind `json:",omitempty"`
+	LibraryOwnerDestination    bool                 `json:",omitempty"`
 	// FaceDown marks a card-source effect that exiles its cards face down
 	// ("exile that many cards from the top of your library face down.", Flamewar,
 	// Streetwise Operative). It is meaningful only for a top-of-library exile card
@@ -3343,6 +3344,9 @@ type EffectSyntax struct {
 	// black"). It lets consumers route only true life changes to the life
 	// lowerer rather than misclassifying keyword/ability grants and losses.
 	LifeObject bool `json:",omitempty"`
+	// LifePayment preserves payment identity after optional clause envelopes
+	// are separated from their primitive body.
+	LifePayment EffectLifePaymentKind `json:",omitempty"`
 	// PreventRegeneration reports that a destroy effect is followed by a
 	// regeneration rider ("It/They can't be regenerated."). The rider is a
 	// separate zero-effect sentence whose pronoun refers to the destroyed

@@ -19,6 +19,12 @@ func TestSequenceProductLinkRequiresExactPublisher(t *testing.T) {
 		{"card return", game.Instruction{Primitive: game.PutOnBattlefield{
 			Source: game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
 		}}, []int{0}, [][2]int{{0, 1}}, true},
+		{"single look", game.Instruction{Primitive: game.LookAtLibraryTop{}}, []int{0}, [][2]int{{0, 1}}, true},
+		{"optional look", game.Instruction{Primitive: game.LookAtLibraryTop{}, Optional: true}, []int{0}, [][2]int{{0, 1}}, true},
+		{"single reveal", game.Instruction{Primitive: game.Reveal{Amount: game.Fixed(1)}}, []int{0}, [][2]int{{0, 1}}, true},
+		{"optional reveal", game.Instruction{Primitive: game.Reveal{Amount: game.Fixed(1)}, Optional: true}, []int{0}, [][2]int{{0, 1}}, true},
+		{"plural reveal", game.Instruction{Primitive: game.Reveal{Amount: game.Fixed(2)}}, []int{0}, [][2]int{{0, 1}}, false},
+		{"dynamic reveal", game.Instruction{Primitive: game.Reveal{Amount: game.Dynamic(game.DynamicAmount{})}}, []int{0}, [][2]int{{0, 1}}, false},
 		{"blink return", game.Instruction{Primitive: game.PutOnBattlefield{
 			Source: game.LinkedBattlefieldSource("departed"),
 		}}, []int{0, 0}, [][2]int{{0, 1}}, true},

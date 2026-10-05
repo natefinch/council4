@@ -398,11 +398,12 @@ type Primitive interface {
 // primitiveRefs describes what keys a Primitive consumes and publishes
 // (distinct from the Instruction envelope's PublishResult).
 type primitiveRefs struct {
-	consumesResults []ResultKey
-	consumesChoices []ChoiceKey
-	consumesLinked  []LinkedKey
-	publishesChoice ChoiceKey
-	publishesLinked LinkedKey
+	consumesResults  []ResultKey
+	publishesResults []ResultKey
+	consumesChoices  []ChoiceKey
+	consumesLinked   []LinkedKey
+	publishesChoice  ChoiceKey
+	publishesLinked  LinkedKey
 	// publishesLinkedGroup is a second linked key a primitive records under, used
 	// by a primitive that publishes two independent object-scoped linked groups
 	// in one resolution (CreateToken's created tokens and its counted-permanent
@@ -487,12 +488,13 @@ type ReorderLibraryTop struct {
 	Player PlayerReference
 }
 
-// LookAtLibraryTop privately shows the top card of a player's library to that
-// player and links the exact card for later instructions. It does not reveal the
-// card or move it.
+// LookAtLibraryTop privately shows the top card of Player's library to the
+// resolving controller and links its observed identity and zone version for
+// later instructions. It does not reveal the card or move it.
 type LookAtLibraryTop struct {
-	Player        PlayerReference
-	PublishLinked LinkedKey
+	Player                 PlayerReference
+	PublishLinked          LinkedKey
+	PublishCharacteristics LibraryCardCharacteristics
 }
 
 // ShuffleLibrary randomizes a referenced player's library.
@@ -826,11 +828,12 @@ type Search struct {
 
 // Reveal reveals cards from a player's zone and optionally links them.
 type Reveal struct {
-	Amount        Quantity
-	Player        PlayerReference
-	Recipient     opt.V[PlayerReference]
-	PublishLinked LinkedKey
-	Card          CardReference
+	Amount                 Quantity
+	Player                 PlayerReference
+	Recipient              opt.V[PlayerReference]
+	PublishLinked          LinkedKey
+	Card                   CardReference
+	PublishCharacteristics LibraryCardCharacteristics
 }
 
 // PutOnBattlefield puts a card or linked object onto the battlefield. Sources

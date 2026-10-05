@@ -32,6 +32,15 @@ func bindContextualObjectCondition(
 			}
 			subject.Binding = ReferenceBindingEventStackObject
 		}
+		if bindLibraryCardReference(&subject, effects) {
+			if subject.Binding != ReferenceBindingPriorInstructionResult {
+				return false
+			}
+			condition.ObjectBinding = subject.Binding
+			condition.ObjectReference = &subject
+			return true
+
+		}
 		wasSource := subject.Binding == ReferenceBindingSource
 		sourceOrder := -1
 		if wasSource && subject.Kind == ReferencePronoun {

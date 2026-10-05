@@ -2262,8 +2262,7 @@ func lookAtTopCardAnyTimeInstruction(tokens []shared.Token) bool {
 // privately sees the top card once as the ability resolves, conveying hidden
 // information without moving the card.
 func lookAtLibraryTopInstruction(tokens []shared.Token) bool {
-	n := len(tokens)
-	if n < 9 || tokens[n-1].Kind != shared.Period || !equalWord(tokens[n-2], "library") {
+	if len(tokens) < 9 {
 		return false
 	}
 	if !effectWordsAt(tokens, 0, "look", "at", "the", "top", "card", "of") {
@@ -2273,11 +2272,17 @@ func lookAtLibraryTopInstruction(tokens []shared.Token) bool {
 	// Kinship's leading peek) or the possessive "target player's"/"target
 	// opponent's"/"that player's" (Merfolk Observer, Dewdrop Spy, Saheeli's
 	// Silverwing), where the controller peeks another player's library.
-	owner := tokens[6 : n-2]
-	if len(owner) == 1 && equalWord(owner[0], "your") {
-		return true
+	end := 7
+	if equalWord(tokens[6], "target") || equalWord(tokens[6], "that") {
+		end = 8
 	}
-	return len(owner) == 2 &&
+	if end+1 >= len(tokens) || !equalWord(tokens[end], "library") ||
+		(tokens[end+1].Kind != shared.Period && tokens[end+1].Kind != shared.Comma &&
+			!equalWord(tokens[end+1], "and") && !equalWord(tokens[end+1], "then")) {
+		return false
+	}
+	owner := tokens[6:end]
+	return len(owner) == 1 && equalWord(owner[0], "your") || len(owner) == 2 &&
 		(strings.EqualFold(owner[1].Text, "player's") || strings.EqualFold(owner[1].Text, "opponent's")) &&
 		(equalWord(owner[0], "target") || equalWord(owner[0], "that"))
 }

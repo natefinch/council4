@@ -334,6 +334,10 @@ type StackObject struct {
 	// its producing mutation, independently of later moves or linked-key reuse.
 	ResolutionResultObjects map[string][]ObjectSnapshot
 
+	// LocalLinkedProducts addresses resolution-local links independently of a
+	// source's changing card/object incarnation.
+	LocalLinkedProducts map[LinkedKey]LinkedObjectKey
+
 	// ResolutionChoices stores named values chosen while resolving this stack
 	// object, for later instructions such as "of the chosen color" (CR 608.2c).
 	ResolutionChoices map[string]ResolutionChoiceResult

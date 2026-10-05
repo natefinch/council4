@@ -153,6 +153,11 @@ func lastKnownObject(g *game.Game, objectID id.ID) (game.ObjectSnapshot, bool) {
 }
 
 func linkedObjectSourceKey(g *game.Game, obj *game.StackObject, linkID string) game.LinkedObjectKey {
+	if obj != nil {
+		if address, exists := obj.LocalLinkedProducts[game.LinkedKey(linkID)]; exists {
+			return address
+		}
+	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	if sourceID == 0 {
 		sourceID = sourceObjectID
@@ -168,6 +173,11 @@ func linkedObjectSourceKey(g *game.Game, obj *game.StackObject, linkID string) g
 // game IDs come from one monotonic generator, so an object ID never collides
 // with a card-instance-scoped key in the shared LinkedObjects map.
 func linkedObjectByObjectKey(g *game.Game, obj *game.StackObject, linkID string) game.LinkedObjectKey {
+	if obj != nil {
+		if address, exists := obj.LocalLinkedProducts[game.LinkedKey(linkID)]; exists {
+			return address
+		}
+	}
 	_, sourceObjectID := damageSourceIDs(g, obj)
 	return game.LinkedObjectKey{SourceID: sourceObjectID, LinkID: linkID}
 }

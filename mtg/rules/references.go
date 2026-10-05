@@ -288,9 +288,12 @@ func resolveLinkedObjectRef(g *game.Game, linked game.LinkedObjectRef) (resolved
 	// card snapshot the printed-characteristic readers consult through the card
 	// instance.
 	if linked.ObjectID == 0 && linked.CardID != 0 {
-		if card, ok := g.GetCardInstance(linked.CardID); ok &&
-			(linked.CardZoneVersion == 0 || card.ZoneVersion == linked.CardZoneVersion) {
-			return resolvedObjectReference{snapshot: game.ObjectSnapshot{CardID: linked.CardID}}, true
+		if card, ok := linkedCardInstance(g, linked); ok && card.Def != nil {
+			power, powerOK := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
+			toughness, toughnessOK := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+			return resolvedObjectReference{snapshot: game.ObjectSnapshot{
+				CardID: linked.CardID, Power: optionalInt(power, powerOK), Toughness: optionalInt(toughness, toughnessOK),
+			}}, true
 		}
 		return resolvedObjectReference{}, false
 	}

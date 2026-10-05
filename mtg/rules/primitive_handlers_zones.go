@@ -114,12 +114,11 @@ func handleReorderLibraryTop(r *effectResolver, prim game.ReorderLibraryTop) eff
 
 func handleLookAtLibraryTop(r *effectResolver, prim game.LookAtLibraryTop) effectResolved {
 	res := effectResolved{accepted: true}
+	r.clearLibraryCardPublication(prim.PublishLinked)
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if !ok {
 		return res
 	}
-	key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-	clearLinkedObjects(r.game, key)
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
 		return res
@@ -129,7 +128,10 @@ func handleLookAtLibraryTop(r *effectResolver, prim game.LookAtLibraryTop) effec
 		return res
 	}
 	cardID := cards[0]
-	rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+	if !r.publishObservedCard(prim.PublishLinked, cardID) {
+		return res
+	}
+	r.publishLibraryCardScalars(prim.PublishLinked, prim.PublishCharacteristics)
 	r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:       game.ChoiceResolution,
 		Player:     r.obj.Controller,
@@ -482,9 +484,10 @@ func handleSearchRevealOnly(r *effectResolver, prim game.Search) effectResolved 
 }
 
 func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	res := effectResolved{accepted: true}
 	if prim.Card.Kind != game.CardReferenceNone {
 		cardID, fromZone, ok := resolveCardReference(r.game, r.obj, prim.Card)
+		r.clearLibraryCardPublication(prim.PublishLinked)
 		if !ok || fromZone != zone.Library {
 			return res
 		}
@@ -493,10 +496,15 @@ func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 			return res
 		}
 		emitCardRevealEvent(r.game, r.obj, card.Owner, cardID, fromZone)
+		if !r.publishObservedCard(prim.PublishLinked, cardID) {
+			return res
+		}
+		r.publishLibraryCardScalars(prim.PublishLinked, prim.PublishCharacteristics)
 		res.amount = 1
 		res.succeeded = true
 		return res
 	}
+	r.clearLibraryCardPublication(prim.PublishLinked)
 	playerRef := prim.Player
 	if prim.Recipient.Exists {
 		playerRef = prim.Recipient.Val
@@ -505,14 +513,16 @@ func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 	if !ok {
 		return res
 	}
-	revealed := revealCardIDs(r.game, r.obj, playerID, zone.Library, res.amount)
-	if prim.PublishLinked != "" {
-		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-		for _, cardID := range revealed {
-			rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+	revealed := revealCardIDs(r.game, r.obj, playerID, zone.Library, r.quantity(prim.Amount))
+	for _, cardID := range revealed {
+		if r.publishObservedCard(prim.PublishLinked, cardID) {
+			res.amount++
 		}
 	}
-	res.succeeded = len(revealed) > 0
+	res.succeeded = res.amount > 0
+	if res.amount == 1 {
+		r.publishLibraryCardScalars(prim.PublishLinked, prim.PublishCharacteristics)
+	}
 	return res
 }
 
@@ -1549,6 +1559,9 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 	if !ok {
 		return res
 	}
+	if fromZone == zone.Library && prim.Destination == zone.Library {
+		return r.placeObservedLibraryCard(card, prim.DestinationBottom)
+	}
 	originalZoneVersion := card.ZoneVersion
 	moved := moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
 	destinationCards, destinationOK := destinationZone(r.game, card.Owner, prim.Destination)
@@ -2310,17 +2323,22 @@ const maxConditionalRepeatIterations = 10000
 func handleRepeatProcess(r *effectResolver, prim game.RepeatProcess) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ContinueResult != "" {
+		localContinuation := false
+		for _, mode := range prim.Body.Modes {
+			for _, instruction := range mode.Sequence {
+				localContinuation = localContinuation || instruction.LocalProducts.HasResult(prim.ContinueResult)
+			}
+		}
 		for range maxConditionalRepeatIterations {
 			controller, ok := playerByID(r.game, r.obj.Controller)
 			if !ok || controller.Eliminated {
 				break
 			}
-			if r.obj.ResolutionResults != nil {
+			if r.obj.ResolutionResults != nil && !localContinuation {
 				delete(r.obj.ResolutionResults, string(prim.ContinueResult))
 			}
-			r.engine.resolveAbilityContentWithChoices(r.game, r.obj, prim.Body, r.agents, r.log)
+			result, ok := r.engine.resolveAbilityContentReceipt(r.game, r.obj, prim.Body, r.agents, r.log, prim.ContinueResult)
 			res.succeeded = true
-			result, ok := r.obj.ResolutionResults[string(prim.ContinueResult)]
 			if !ok || !result.Succeeded {
 				break
 			}
@@ -3365,8 +3383,8 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 		if ref.ObjectID != 0 || ref.CardID == 0 {
 			continue
 		}
-		card, ok := r.game.GetCardInstance(ref.CardID)
-		if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion ||
+		card, ok := linkedCardInstance(r.game, ref)
+		if !ok || card.Def == nil ||
 			!cardConditionPredicateSatisfied(r.game, r.obj, card, cardCondition) {
 			continue
 		}

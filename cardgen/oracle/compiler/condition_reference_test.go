@@ -20,7 +20,7 @@ func TestContextualObjectConditionSubject(t *testing.T) {
 		{"nonadjacent card target", "When this creature enters, exile target card from a graveyard. You gain 1 life. If it was a creature card, draw a card.", ReferenceBindingTarget, 0, SelectorCard},
 		{"contracted card target", "When this creature enters, exile target card from a graveyard. If it's a creature card, draw a card.", ReferenceBindingTarget, 0, SelectorCard},
 		{"compound contracted card target", "When this creature enters, exile target card from a graveyard. If it's an artifact creature card, draw a card.", ReferenceBindingTarget, 0, SelectorCard},
-		{"unsupported qualified contraction", "When this creature enters, exile target card from a graveyard. If it's a blue creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
+		{"qualified card contraction", "When this creature enters, exile target card from a graveyard. If it's a blue creature card, draw a card.", ReferenceBindingTarget, 0, SelectorCard},
 		{"second target occurrence", "When this creature enters, tap target creature. Exile target card from a graveyard. If it was a land card, draw a card.", ReferenceBindingTarget, 1, SelectorCard},
 		{"permanent target", "When this creature enters, destroy target creature. If that creature was a Human, draw a card.", ReferenceBindingTarget, 0, SelectorCreature},
 		{"plural target is ambiguous", "When this creature enters, exile two target cards from a graveyard. If it was a creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
@@ -51,11 +51,11 @@ func TestContextualObjectConditionSubject(t *testing.T) {
 		{"target supersedes earlier source", "When this creature enters, sacrifice this creature. Exile target card from a graveyard. If it was a creature card, draw a card.", ReferenceBindingTarget, 0, SelectorCard},
 		{"batched event has no singular subject", "Whenever one or more creatures enter, if that creature was a Human, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
 		{"unbound subject", "If it was a creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
-		{"resolution choice stays deferred", "When this creature enters, reveal the top card of your library. If it was a creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
-		{"resolution choice supersedes earlier target", "When this creature enters, tap target creature. Reveal the top card of your library. If it was a creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
-		{"resolution choice supersedes earlier source", "When this creature enters, sacrifice this creature. Reveal the top card of your library. If it was a creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
-		{"nonadjacent choice supersedes earlier source", "When this creature enters, sacrifice this creature. Reveal the top card of your library. You gain 1 life. If it was a creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
-		{"choice supersedes newer target and older source", "When this creature enters, sacrifice this creature. Exile target card from a graveyard. Reveal the top card of your library. You gain 1 life. If it was a creature card, draw a card.", ReferenceBindingUnsupported, 0, SelectorUnknown},
+		{"single observation publishes actual card", "When this creature enters, reveal the top card of your library. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 0, SelectorUnknown},
+		{"resolution choice supersedes earlier target", "When this creature enters, tap target creature. Reveal the top card of your library. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 1, SelectorUnknown},
+		{"resolution choice supersedes earlier source", "When this creature enters, sacrifice this creature. Reveal the top card of your library. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 1, SelectorUnknown},
+		{"nonadjacent choice supersedes earlier source", "When this creature enters, sacrifice this creature. Reveal the top card of your library. You gain 1 life. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 1, SelectorUnknown},
+		{"choice supersedes newer target and older source", "When this creature enters, sacrifice this creature. Exile target card from a graveyard. Reveal the top card of your library. You gain 1 life. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 2, SelectorUnknown},
 		{"blink incarnation is published", "When this creature enters, exile target creature. Return it to the battlefield under its owner's control. If that creature was a Human, draw a card.", ReferenceBindingPriorInstructionResult, 0, SelectorUnknown},
 	}
 	for _, test := range tests {
@@ -77,6 +77,10 @@ func TestContextualObjectConditionSubject(t *testing.T) {
 			}
 			if condition.ObjectReference.NodeID != condition.SubjectRefID {
 				t.Fatal("condition lost parser-owned subject identity")
+			}
+			if condition.ObjectReference.ProducerClauseID > 0 &&
+				condition.ObjectReference.PriorInstruction != test.occurrence {
+				t.Fatalf("observed producer=%d, want %d", condition.ObjectReference.PriorInstruction, test.occurrence)
 			}
 			if test.binding == ReferenceBindingTarget &&
 				(condition.ObjectReference.Occurrence != test.occurrence ||

@@ -593,6 +593,7 @@ func emitSentenceResolvingSyntax(
 		recognizeTargetOpponentHandManaSentence(&sentences[i])
 		recognizeLookAtTargetPlayerHandSentence(&sentences[i])
 		recognizeLookAtTargetPlayerLibrarySentence(&sentences[i])
+		recognizeLibraryCardEffects(&sentences[i])
 		recognizeGainControlThatPlayerMonarchSentence(&sentences[i])
 		recognizeDestroyTappedNonlandThatPlayerControlsSentence(&sentences[i])
 		recognizeGoadThatPlayerControlsSentence(&sentences[i])
@@ -2250,6 +2251,7 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			Optional:            optional,
 			OptionalSpan:        optionalSpan,
 			LifeObject:          gainLoseLifeObject(kind, clause),
+			LifePayment:         effectLifePayment(kind, optional, tokens, tokenIndex),
 			LoseAllAbilities:    loseAllAbilitiesObject(kind, sentence.Text),
 			Symbol:              firstEffectSymbol(clause),
 			Mana:                parseEffectMana(kind, clause, nextConnection != EffectConnectionNone),

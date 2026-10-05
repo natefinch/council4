@@ -316,6 +316,24 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.LookAtLibraryTop); ok {
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		return value, ok
+	}
+	if value, ok := primitive.(game.Reveal); ok {
+		value.Card, ok = transformCardReference(value.Card, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
+		if !ok {
+			return nil, false
+		}
+		if value.Player.Kind() != game.PlayerReferenceNone {
+			value.Player, ok = transformPlayerReference(value.Player, transform)
+		}
+		return value, ok
+	}
 	if value, ok := primitive.(game.RevealTopPartition); ok {
 		value.Player, ok = transformPlayerReference(value.Player, transform)
 		return value, ok

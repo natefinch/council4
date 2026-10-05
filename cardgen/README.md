@@ -81,11 +81,56 @@ Postfix characteristic gates retain their own parser subject occurrences.
 Conditional copiable counter riders are excluded only when the shared
 enter-with-counter grammar owns them; ordinary counter placement must keep
 its creature or planeswalker gate and consume the actual target or product.
-Optional/plural producers, competing antecedents, resolution-chosen reveal/look
-subjects, and permanent/card union selection retain fail-closed boundaries.
+Optional/plural battlefield producers, competing antecedents, and permanent/card
+union selection retain fail-closed boundaries.
 Immediate referenced-permanent consequences use the same exact product context
 in modal and non-modal bodies. A delayed product consumer without an explicit
 captured reference refuses rather than rereading a later publication.
+
+Singular top-library LOOK and REVEAL clauses use the shared ordered-clause
+lowerer. The parser owns the exact library owner and each card reference's
+producer ClauseID; the compiler binds that typed identity and the sequence
+planner publishes a canonical product key. Intervening independent clauses do
+not change the observed subject. Sequence clipping and folding reindex these
+references by ClauseID, never by Oracle text.
+
+Observations publish the actual CardID and captured zone incarnation, including
+known version zero. Empty, declined, skipped, or unavailable observations clear
+only their own publication. LOOK is private to the ability controller; REVEAL
+emits the actual owner's public event. Card predicates consume that observation,
+not a later top card or a battlefield incarnation. Unavailable subjects do not
+publish a false predicate for `Otherwise`. A grouped predicate is evaluated once;
+independent predicates reevaluate at their own printpoint. Supported card moves
+preserve ownership, and placing the same observed card at its library's top or
+bottom does not create a new zone incarnation.
+
+Observed power and toughness amounts publish separate characteristic scalar
+keys, after proving the actual card and its captured incarnation. Literal zero
+is available; absent or star characteristics are unavailable. Draw and life
+consumers read those exact frozen scalars through `AmountAvailable`, not through
+the observation's success or card count. Scalars survive a subsequent draw or
+move, while later independent card predicates still require the live captured
+incarnation. Overlapping unmodeled result gates fail closed.
+
+An observed-card move into "that player's" zone carries separate parser-owned
+library-owner provenance matching the card's producer. The observed player and
+card owner do not become the consequence actor. Optional fixed life payments
+lower to the existing `Pay` cost primitive, which checks affordability and asks
+once; the following move requires actual payment success, not choice acceptance.
+Ordinary optional life loss remains a nonpayment primitive.
+
+Optional observations do not make their condition consumers or unrelated riders
+optional: those consumers read actual product availability. Positively owned
+publishers declare typed `LocalProducts` with one instruction-sequence invocation
+as their lifetime. Selected modes and repeat iterations receive fresh product
+frames, including scalar, excess, receipt, and result-object cells. Read-only
+nested bodies see intended parent products; a nested same-key publisher hides
+and then restores them. Local linked objects have unique resolution addresses,
+independent of a source leaving and returning. Schedule-time frozen captures
+survive frame cleanup, and conditional repeat control reads its current receipt
+before the frame exits. Persistent CR 607 links and paid-cost facts do not enter
+these frames; condition booleans remain resolver-local. Legacy undeclared,
+colliding conditional publications retain their fail-closed boundary.
 
 Condition type selections share the selection atom vocabulary: adjacent types
 are conjunctive (`artifact creature`), `or`/`and/or` joins alternatives,
@@ -200,10 +245,11 @@ Vanguard cards are excluded with explicit report reasons.
    grammar requires modeled controller action ownership. Costs, opaque verbs,
    shared-characteristic relationships, expanded producers without an aggregate,
    overlapping result predicates, and mixed reflexive/ordinary result flows
-   remain fail-closed. Clause IDs are local to a mode; selecting multiple modes
-   with colliding, potentially skipped result publications requires a shared
-   namespace and is refused. This includes repeat bodies and bonus mode choices;
-   guaranteed publishers may overwrite a key before their own local consumers.
+   remain fail-closed. Clause IDs are local to a mode; positively owned result
+   publications use lexical product frames for multiple modes, repeat bodies,
+   and bonus mode choices. Undeclared legacy conditional publications with
+   colliding keys remain refused; guaranteed legacy publishers may overwrite a
+   key before their own consumers.
    Existing state-gated `Otherwise` and `instead` branches consume the same
    captured decision (or its complement); they do not re-test state after the
    preceding action. Missing publications fail closed even for complements.

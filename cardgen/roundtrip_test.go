@@ -177,6 +177,10 @@ var roundTripCards = []*ScryfallCard{
 // writeRoundTripPackage generates source for roundTripCards into a fresh package
 // directory inside the module and returns the directory and package name.
 func writeRoundTripPackage(t *testing.T) (dir, pkgName string) {
+	return writeCardRoundTripPackage(t, roundTripCards)
+}
+
+func writeCardRoundTripPackage(t *testing.T, cards []*ScryfallCard) (dir, pkgName string) {
 	t.Helper()
 	suffix := filepath.Base(t.TempDir())
 	dir = filepath.Join(".", "roundtrippkg"+suffix)
@@ -188,7 +192,7 @@ func writeRoundTripPackage(t *testing.T) (dir, pkgName string) {
 	})
 
 	pkgName = filepath.Base(dir)
-	for _, card := range roundTripCards {
+	for _, card := range cards {
 		source, diagnostics, err := GenerateExecutableCardSource(card, pkgName)
 		if err != nil {
 			t.Fatalf("GenerateExecutableCardSource(%q): %v", card.Name, err)

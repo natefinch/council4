@@ -797,6 +797,9 @@ func (p LookAtLibraryTop) validatePrimitive(targets []TargetSpec, checkTargets b
 	if p.PublishLinked == "" {
 		return errors.New("LookAtLibraryTop requires PublishLinked")
 	}
+	if err := p.PublishCharacteristics.validate(p.PublishLinked); err != nil {
+		return err
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
@@ -1630,6 +1633,13 @@ func (p Search) validateConditionalShuffleSearch() error {
 }
 
 func (p Reveal) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := p.PublishCharacteristics.validate(p.PublishLinked); err != nil {
+		return err
+	}
+	if len(p.PublishCharacteristics.keys()) != 0 &&
+		(p.Card.Kind != CardReferenceNone || p.Amount.IsDynamic() || p.Amount.Value() != 1) {
+		return errors.New("reveal characteristics require exactly one library card")
+	}
 	if p.Card.Kind != CardReferenceNone {
 		if p.Player.Kind() != PlayerReferenceNone ||
 			p.Recipient.Exists ||
@@ -2454,7 +2464,8 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	if p.Destination == zone.None || p.Destination == zone.Battlefield || p.Destination == zone.Stack {
 		return errors.New("move card requires a non-battlefield destination zone")
 	}
-	if p.FromZone == p.Destination {
+	if p.FromZone == p.Destination &&
+		(p.FromZone != zone.Library || p.Card.Kind != CardReferenceLinked) {
 		return errors.New("move card requires different source and destination zones")
 	}
 	if p.DestinationBottom && p.Destination != zone.Library {

@@ -32,7 +32,8 @@ type contentCtx struct {
 	// (e.g. a created token) to the triggering event permanent, so accepting it
 	// would place counters on the wrong object. Standalone effects keep the
 	// EventPermanent binding, which always denotes the triggering permanent.
-	sequenceClause bool
+	sequenceClause      bool
+	sequenceEffectIndex int
 	// singleAction preserves the envelope's one-choice/publication contract
 	// when a fixed mana output can otherwise expand into one instruction per pip.
 	singleAction bool
@@ -114,8 +115,9 @@ type contentCtx struct {
 	// available" — so a single-effect lowerer needs no other change to accept a
 	// prior-instruction-result object once it threads these two fields into its
 	// own referenceLoweringContext.
-	priorInstruction int
-	priorLinkedKey   game.LinkedKey
+	priorInstruction          int
+	priorLinkedKey            game.LinkedKey
+	observedCharacteristicKey game.ResultKey
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -194,6 +196,7 @@ func lowerSequenceClauseContent(
 		enclosingKind:           parent.enclosingKind,
 		sequenceClause:          true,
 		singleAction:            parent.singleAction,
+		sequenceEffectIndex:     parent.sequenceEffectIndex,
 		allowEventPronoun:       allowEventPronoun,
 		triggerCardCountEvent:   parent.triggerCardCountEvent,
 		triggerEvent:            parent.triggerEvent,
@@ -207,6 +210,7 @@ func lowerSequenceClauseContent(
 		spellTargetPattern:         parent.spellTargetPattern,
 		priorInstruction:           parent.priorInstruction,
 		priorLinkedKey:             parent.priorLinkedKey,
+		observedCharacteristicKey:  parent.observedCharacteristicKey,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -2028,6 +2032,9 @@ func lowerImmediateSingleEffectSpell(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, diagnostic, handled := lowerLibraryCardClause(ctx); handled {
+		return content, diagnostic
+	}
 	ctx.text = textWithoutDelimited(ctx.text, ctx.span, syntax.Reminders)
 	syntax.Tokens = slices.DeleteFunc(
 		append([]shared.Token(nil), syntax.Tokens...),
@@ -2502,6 +2509,9 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 // lowerLoseSpellEffect lowers an EffectLose body: either a temporary keyword
 // loss, a life-loss effect, or an unsupported keyword/ability loss.
 func lowerLoseSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if ctx.content.Effects[0].LifePayment != parser.EffectLifePaymentNone {
+		return lowerLifePaymentClause(ctx)
+	}
 	if (len(ctx.content.Keywords) != 0 || ctx.content.Effects[0].LoseAllAbilities) &&
 		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 		return lowerTemporaryKeywordLossSpell(ctx)

@@ -262,6 +262,11 @@ func lowerOrderedEffectSequence(
 	// gate source. Sequences that do not open with this causative shape are
 	// returned unchanged.
 	ctx.content.Effects = collapseCausativeHavePairs(ctx.content.Effects, ctx.content.Keywords)
+	normalized, normalizedOK := normalizeSequenceProductReferences(ctx.content)
+	if !normalizedOK {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unavailable or ambiguous producer clause identity")
+	}
+	ctx.content = normalized
 	// Resolve the counter kind for any "remove those counters" clause from the
 	// preceding same-source placement clause before per-effect lowering, so the
 	// removal names the kind the sequence just placed on the source.
@@ -333,6 +338,7 @@ func lowerOrderedEffectSequence(
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
 		effectAbility.singleAction = optionalFlow.marksOptional(i)
+		effectAbility.sequenceEffectIndex = i
 		// Embedded payment conditions belong to the clause lowerer; ordinary
 		// conditions belong to the sequence envelope.
 		effectAbility.content.Conditions = conditionPlan.clauseConditions[i]
@@ -379,7 +385,11 @@ func lowerOrderedEffectSequence(
 			effectAbility.content.Effects[0].SubjectReferences, ctx.content.Conditions,
 		)
 		var inheritedTargets []compiler.CompiledTarget
-		if effect.Context == parser.EffectContextPriorSubject {
+		conditionOnlyProductSubject := len(clauseRefs) == 0 &&
+			len(conditionPlan.resultReferencesForClause(ctx.content.Effects, i)) > 0
+		if effect.Context == parser.EffectContextPriorSubject &&
+			!conditionOnlyProductSubject &&
+			(len(effect.SubjectReferences) == 0 || len(effectAbility.content.Effects[0].SubjectReferences) > 0) {
 			inheritedTargets = priorSubjectTargets(ctx.content.Effects, i)
 			clauseRefs = append(clauseRefs, priorSubjectReferences(ctx.content.Effects, i)...)
 		}
@@ -420,6 +430,13 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — clause reference not localizable")
 		}
 		effectAbility.content.References = localReferences
+		if effect.Kind == compiler.EffectRemoveFromCombat {
+			for _, reference := range localReferences {
+				if sequenceLibraryCardReference(reference, ctx.content.Effects) {
+					return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — a library card is not a combat permanent")
+				}
+			}
+		}
 		effectKeywords := keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
 		// A copy-token effect's "[That token] gains <keyword>." rider is a folded
 		// sibling sentence whose keyword and pronoun fall outside the create
@@ -464,6 +481,17 @@ func lowerOrderedEffectSequence(
 			effectAbility.priorLinkedKey = key
 		} else if len(conditionReferences) > 0 {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — condition subject producer not publishable")
+		}
+		if libraryCardCharacteristicConsumer(effectAbility.content.Effects[0], ctx.content.Effects) {
+			if effect.Kind != compiler.EffectDraw && effect.Kind != compiler.EffectGain && effect.Kind != compiler.EffectLose {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — observed characteristic consumer primitive not modeled")
+			}
+			key, ok := sequenceLibraryCardCharacteristic(effectAbility.content.Effects[0],
+				ctx.content.Effects, sequence, effectInstructionRanges[:i])
+			if !ok {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — observed characteristic producer unavailable or unmodeled")
+			}
+			effectAbility.observedCharacteristicKey = key
 		}
 		// Lower the effect through the shared lowerAbilityContent entry point.
 		// allSharedTargets: try with inherited targets; if that fails, retry
@@ -568,6 +596,9 @@ func lowerOrderedEffectSequence(
 				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}
+		}
+		if !applyLibraryCardCharacteristicGate(mode.Sequence, effectAbility.observedCharacteristicKey) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — observed characteristic availability overlaps another result gate")
 		}
 		// A clause must contribute at least one instruction; an empty lowering
 		// would silently drop the effect. Earlier code required exactly one

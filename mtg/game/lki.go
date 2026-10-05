@@ -71,8 +71,9 @@ type ZoneCardSnapshot struct {
 // LinkedObjectKey identifies objects exiled or otherwise tracked by one linked
 // ability pair on one source.
 type LinkedObjectKey struct {
-	SourceID id.ID
-	LinkID   string
+	SourceID        id.ID
+	LinkID          string
+	ResolutionScope id.ID
 }
 
 // LinkedObjectRef records an object/card pair or a card-only reference tracked
@@ -81,6 +82,9 @@ type LinkedObjectRef struct {
 	ObjectID        id.ID
 	CardID          id.ID
 	CardZoneVersion uint64
+	// CardZoneVersionSet distinguishes a captured initial version zero from a
+	// legacy reference without an incarnation snapshot.
+	CardZoneVersionSet bool
 	// CorrelatedPlayer records the player whose per-player choice produced this
 	// linked object. It lets later per-player instructions recover the specific
 	// object chosen by that player without relying on record order.
