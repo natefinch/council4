@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,492 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,494 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -12493,9 +12493,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Teval, Arbiter of Virtue** — unsupported life spell: the executable source backend supports only exact supported life changes
 - **Tevesh Szat, Doom of Fools** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses; unsupported gain-control spell: the executable source backend supports only exact gain-control sequences targeting one permanent
 - **Textbook Tabulator** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Increment (Whenever you cast a spell, if the amount of mana you spent is greater than this creature's power or toughness, put a +1/+1 counter on this creature.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
-- **Teyo, Diamondblade Mage** — unsupported ordered effect sequence: structural — unconsumed targets/references/keywords
 - **Teyo, Geometric Tactician** — unsupported Oracle construct: the compiler preserved but did not confidently lower: −2: Choose left or right. Until your next turn, each player may attack only the nearest opponent in the last chosen direction and planeswalkers controlled by that opponent.; unsupported ability content: the executable source backend does not yet lower this ability content
-- **Teyo, Lightshield Expert** — unsupported ordered effect sequence: structural — unconsumed targets/references/keywords
 - **Teysa Karlov** — unsupported Oracle construct: the compiler preserved but did not confidently lower: If a creature dying causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Teysa, Opulent Oligarch** — unsupported investigate spell: the executable source backend supports only exact fixed controller investigate
 - **Tezzeret the Schemer** — unsupported token creation: the executable source backend supports only a single fixed-power/toughness creature token with one subtype and at most one color; unsupported emblem ability: the executable source backend does not yet lower one of this emblem's quoted abilities

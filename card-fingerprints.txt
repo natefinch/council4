@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18492 supported cards
+# 18494 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -15959,6 +15959,8 @@ d7954aa25ec645fe  Tetsuko Umezawa, Fugitive
 d874ef0e254da513  Teval's Judgment
 ba855da7bdb1cad1  Teval, the Balanced Scale
 e45258ab6a1ada18  Teyo's Lightshield
+65666ce20cf80f27  Teyo, Diamondblade Mage
+433da93b2ab0809c  Teyo, Lightshield Expert
 17c4ae4829fd8a58  Teyo, the Shieldmage
 0b1001d150c545e7  Teysa, Envoy of Ghosts
 aec3525f520b4c65  Teysa, Orzhov Scion
