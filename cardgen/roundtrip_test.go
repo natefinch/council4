@@ -45,6 +45,18 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: If you have no cards in hand, draw a card, then draw a card.",
 	},
 	{
+		Name: "RT Returned Subject", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Return target creature card from your graveyard to the battlefield. If it's an Elf, put a +1/+1 counter on it.",
+	},
+	{
+		Name: "RT Blinked Subject", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Bird, Frog, Otter, or Rat, draw a card.",
+	},
+	{
+		Name: "RT Modal Subject", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Choose one —\n• Exile target creature you control, then return it to the battlefield tapped under its owner's control. If it's an Elf, untap it.\n• Draw a card.",
+	},
+	{
 		Name: "RT Ordinal Modes", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: Choose one \u2014\n\u2022 If this is the second time this ability has resolved this turn, draw a card, then draw a card.\n\u2022 You gain 2 life.",
 	},
@@ -205,6 +217,32 @@ func TestRTLandSemantic(t *testing.T) {
 	}
 	if add.ManaColor != mana.G {
 		t.Fatalf("mana color = %%q", add.ManaColor)
+	}
+}
+
+func TestRTPublishedSubjectSemantic(t *testing.T) {
+	returned := RTReturnedSubject().SpellAbility.Val.Modes[0].Sequence
+	put := returned[0].Primitive.(game.PutOnBattlefield)
+	want := game.LinkedObjectReference(string(put.PublishLinked))
+	if put.PublishLinked == "" || returned[1].Condition.Val.Condition.Val.Object.Val != want ||
+		returned[1].Primitive.(game.AddCounter).Object != want {
+		t.Fatal("returned subject publication did not round-trip")
+	}
+	blinked := RTBlinkedSubject().SpellAbility.Val.Modes[0].Sequence
+	put = blinked[1].Primitive.(game.PutOnBattlefield)
+	input, ok := put.Source.LinkedKey()
+	condition := blinked[2].Condition.Val.Condition.Val
+	if !ok || put.PublishLinked == "" || input == put.PublishLinked ||
+		condition.Object.Val != game.LinkedObjectReference(string(put.PublishLinked)) ||
+		len(condition.ObjectMatches.Val.SubtypesAny) != 4 {
+		t.Fatal("blink input, output or full subject selection did not round-trip")
+	}
+	modal := RTModalSubject().SpellAbility.Val.Modes[0].Sequence
+	put = modal[1].Primitive.(game.PutOnBattlefield)
+	want = game.LinkedObjectReference(string(put.PublishLinked))
+	if put.PublishLinked == "" || modal[2].Primitive.(game.Untap).Object != want ||
+		modal[2].Condition.Val.Condition.Val.Object.Val != want {
+		t.Fatal("modal subject and consequence identity did not round-trip")
 	}
 }
 

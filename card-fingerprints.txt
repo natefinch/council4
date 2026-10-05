@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18493 supported cards
+# 18494 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -3766,7 +3766,7 @@ fecca09b10bed413  Deflecting Swat
 c4c25a096eeb7138  Deflection
 050423862db1188c  Deft Dismissal
 1964ec293bbd692f  Deft Duelist
-8a0061ea1662fb30  Defy Death
+14d415976bd83331  Defy Death
 c433dea0d9a5d1fd  Defy Gravity
 2b6082508b987bce  Dega Disciple
 9359c3211299f7af  Dehydration
@@ -4956,7 +4956,7 @@ ccd8ab08a0370fdd  Esper Cormorants
 edbe173a7b0307a4  Essence Extraction
 a666e72e0d86379b  Essence Feed
 14fce85f3b2c076f  Essence Flare
-a1834bdf35b531bb  Essence Flux
+8cf9593130f5753b  Essence Flux
 8223b26d1f4aaacd  Essence Fracture
 338cd958d35b9710  Essence Harvest
 7cf5688e66c8792d  Essence Infusion
@@ -5306,7 +5306,7 @@ c6842519536ab601  Fear of Missing Out
 b08333cd3eebf499  Fearless Halberdier
 043c7a76227230c9  Fearless Liberator
 17519f9c6cc2d3da  Fearless Pup
-afa18fab4db04fb9  Fearsome Awakening
+88fd1a301bec1c2f  Fearsome Awakening
 6bed735c821c7c0d  Fearsome Goblin Pair
 4ed58aff1d44470a  Feast of Sanity
 41aca9ba518be851  Feast of Succession
@@ -12346,7 +12346,7 @@ d2544a4b8c17f21d  Reality Shift
 a3245bb1b44843e0  Realm-Scorcher Hellkite
 f3d49aa41897ccdb  Realmbreaker's Grasp
 b6572bab699ac8f1  Realmwalker
-f85144f07fee4f61  Reanimate
+d03640d0bcaa4637  Reanimate
 4ac416c3244bbc3b  Reap the Seagraf
 804430855c6e0d75  Reap What Is Sown
 1c891f302d35c941  Reaper from the Abyss
@@ -12607,7 +12607,7 @@ c4b092c4f5f579a2  Return to Dust
 3ee26fc2eafc41bf  Return to the Light Realms
 0a3f7313f490a07b  Return to the Ranks
 aece00448eec6e88  Return Triumphant
-96cbd711e28a923b  Return Upon the Tide
+e93a8a1b963188c1  Return Upon the Tide
 7b37be998ecbbca2  Returned Centaur
 6c3405f732fe037d  Returned Phalanx
 c9e042ca1bd851d6  Returned Reveler
@@ -14907,6 +14907,7 @@ da76d25af44eef6c  Spitting Drake
 2e5219b6b36037f9  Spitting Spider
 19f087c613b61c07  Splash Lasher
 d0bc190524ad67da  Splash Lasher
+1dcb36f427f2153f  Splash Portal
 3d974a7bc7b6b720  Splatter Goblin
 f43bfc471befc2b0  Splatter Technique
 422cb61ffa9cecf7  Splatter Thug
@@ -15958,8 +15959,8 @@ d7954aa25ec645fe  Tetsuko Umezawa, Fugitive
 d874ef0e254da513  Teval's Judgment
 ba855da7bdb1cad1  Teval, the Balanced Scale
 e45258ab6a1ada18  Teyo's Lightshield
-12f2ecc4bc8aea91  Teyo, Diamondblade Mage
-27c091945c8dff8e  Teyo, Lightshield Expert
+65666ce20cf80f27  Teyo, Diamondblade Mage
+433da93b2ab0809c  Teyo, Lightshield Expert
 17c4ae4829fd8a58  Teyo, the Shieldmage
 0b1001d150c545e7  Teysa, Envoy of Ghosts
 aec3525f520b4c65  Teysa, Orzhov Scion
@@ -16871,7 +16872,7 @@ a80c0193a5ebb7c4  Umbral Juke
 f141a794f62416cf  Umbral Mantle
 b178abd1555b4c05  Umezawa's Charm
 16bea25bbaf14d0c  Umezawa's Jitte
-e5108cbc3559c64d  Unagi's Spray
+0fcee4187e7a512c  Unagi's Spray
 3d8afeabf04d1cf5  Unassuming Sage
 c20284883b977c07  Unauthorized Exit
 cc6b082eb236d32a  Unbender Tine

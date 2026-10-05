@@ -666,10 +666,9 @@ func parseConditionClauses(tokens []shared.Token, atoms Atoms) []ConditionClause
 // index i belongs to an enters-as-copy conditional copiable counter rider ("...
 // counter on it if it's a creature"; Spark Double). Such an "if" is parsed into
 // the enters-as-copy effect's conditional counters, so it must not also surface
-// as a standalone intervening condition. It requires both the preceding "counter
-// on it" context and a following "if it's a <type>" predicate, so ordinary
-// conditional enters-with-counter clauses ("... counter on it if you control
-// ...", Ascendant Packleader) keep their condition.
+// as a standalone intervening condition. The shared enter-with-counter rider
+// recognizer proves ownership; ordinary postfix counter-placement conditions
+// must retain their own subjects and gates.
 func entersAsCopyCounterRiderConditionAt(tokens []shared.Token, i int) bool {
 	if i < 3 || !equalWord(tokens[i], "if") {
 		return false
@@ -677,7 +676,16 @@ func entersAsCopyCounterRiderConditionAt(tokens []shared.Token, i int) bool {
 	if !equalWord(tokens[i-3], "counter") || !equalWord(tokens[i-2], "on") || !equalWord(tokens[i-1], "it") {
 		return false
 	}
-	return entersAsCopyConditionalTypePrefix(normalizedWords(tokens[i:]))
+	if !entersAsCopyConditionalTypePrefix(normalizedWords(tokens[i:])) {
+		return false
+	}
+	start := i - 3
+	for start > 0 && tokens[start-1].Kind != shared.Comma && tokens[start-1].Kind != shared.Period {
+		start--
+	}
+	end := conditionClauseEnd(tokens, i)
+	_, ok := entersAsCopyConditionalCounterClause(tokens[start:end])
+	return ok
 }
 
 // conditionLeaveBattlefieldExileReplacementAt reports whether the "if" at index
@@ -859,7 +867,8 @@ func precedingOptionalMayClause(tokens []shared.Token, index int) bool {
 
 func conditionClauseEnd(tokens []shared.Token, start int) int {
 	for i := start; i < len(tokens); i++ {
-		if tokens[i].Kind == shared.Period || i > start && tokens[i].Kind == shared.Comma {
+		if tokens[i].Kind == shared.Period || i > start && tokens[i].Kind == shared.Comma &&
+			!conditionSubtypeListContinues(tokens, i) {
 			return i
 		}
 	}
@@ -2180,9 +2189,12 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingTarget,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingTarget,
+		Selection:      selection,
+		SubjectSpan:    body[0].Span,
+		HasSubjectSpan: true,
+		SubjectRefID:   atoms.ReferenceIDAt(body[0].Span),
 	}, true
 }
 

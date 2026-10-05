@@ -49,6 +49,11 @@ func parseConditionSelection(tokens []shared.Token, atoms Atoms) (ConditionSelec
 }
 
 func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
+	for _, token := range tokens {
+		if token.Kind == shared.Comma {
+			return parseConditionSubtypeList(tokens, atoms, selection)
+		}
+	}
 	if clause, ok := parseConditionTypeNoun(tokens, atoms, selection); ok {
 		return clause, true
 	}

@@ -53,6 +53,10 @@ const (
 // The explicit context prevents a structurally valid predicate from being used
 // in an ability shell whose runtime does not evaluate it.
 func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringContext) (game.Condition, bool) {
+	return lowerConditionWithReferences(condition, ctx, referenceLoweringContext{})
+}
+
+func lowerConditionWithReferences(condition compiler.CompiledCondition, ctx conditionLoweringContext, references referenceLoweringContext) (game.Condition, bool) {
 	if !conditionKindAllowedInContext(condition, ctx) ||
 		!conditionPredicateAllowedInContext(condition.Predicate, ctx) {
 		return game.Condition{}, false
@@ -166,7 +170,7 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 	case compiler.ConditionPredicateControllerGainedLifeThisTurnAtLeast:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateControllerGainedLifeThisTurn, Op: compare.GreaterOrEqual, Value: condition.Threshold})
 	case compiler.ConditionPredicateObjectMatches:
-		object, ok := lowerObjectMatchReference(condition, ctx)
+		object, ok := lowerObjectMatchReferenceWithContext(condition, ctx, references)
 		if !ok {
 			return game.Condition{}, false
 		}
@@ -299,6 +303,10 @@ func lowerCondition(condition compiler.CompiledCondition, ctx conditionLoweringC
 }
 
 func lowerObjectMatchReference(condition compiler.CompiledCondition, ctx conditionLoweringContext) (game.ObjectReference, bool) {
+	return lowerObjectMatchReferenceWithContext(condition, ctx, referenceLoweringContext{})
+}
+
+func lowerObjectMatchReferenceWithContext(condition compiler.CompiledCondition, ctx conditionLoweringContext, references referenceLoweringContext) (game.ObjectReference, bool) {
 	if condition.ObjectReference == nil {
 		if condition.HasSubjectReference {
 			return game.ObjectReference{}, false
@@ -309,6 +317,12 @@ func lowerObjectMatchReference(condition compiler.CompiledCondition, ctx conditi
 	if reference.Binding != condition.ObjectBinding ||
 		(condition.HasSubjectReference && reference.NodeID != condition.SubjectRefID) {
 		return game.ObjectReference{}, false
+	}
+	if reference.Binding == compiler.ReferenceBindingPriorInstructionResult {
+		if ctx != conditionContextEffectGate || !condition.HasSubjectReference {
+			return game.ObjectReference{}, false
+		}
+		return lowerObjectReference(reference, references)
 	}
 	if reference.Binding == compiler.ReferenceBindingTarget {
 		if ctx != conditionContextEffectGate || condition.ObjectTarget == nil || reference.Occurrence < 0 {

@@ -546,11 +546,6 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 				return res
 			}
 		}
-		var key game.LinkedObjectKey
-		if prim.PublishLinked != "" {
-			key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-			clearLinkedObjects(r.game, key)
-		}
 		ownerControl := card.Kind == game.CardReferenceEvent ||
 			(card.Kind == game.CardReferenceCaptured && !prim.Recipient.Exists)
 		permanent, succeeded := r.putReferencedCardOnBattlefieldValue(
@@ -561,17 +556,17 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 			ownerControl,
 		)
 		res.succeeded = succeeded
-		if succeeded && prim.PublishLinked != "" {
-			rememberLinkedObject(
-				r.game,
-				key,
-				permanentLinkedObjectRef(permanent),
-			)
+		if succeeded {
+			r.publishEnteredPermanents(prim.PublishLinked, permanent)
 		}
 		return res
 	}
 	if key, ok := prim.Source.LinkedKey(); ok {
-		res.succeeded = r.putLinkedCardOnBattlefieldValue(key, recipient, battlefieldEntryOptions(prim))
+		permanent, entered := r.putLinkedCardOnBattlefieldValue(key, recipient, battlefieldEntryOptions(prim))
+		res.succeeded = entered
+		if entered {
+			r.publishEnteredPermanents(prim.PublishLinked, permanent)
+		}
 		if !res.succeeded {
 			var controllerOverride opt.V[game.PlayerID]
 			if prim.Recipient.Exists {
@@ -579,7 +574,9 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 					controllerOverride = opt.Val(controller)
 				}
 			}
-			res.succeeded = returnLinkedNonBattlefieldObjects(r.engine, r.game, r.obj, string(key), prim.LinkedReturnZonesOrExile(), controllerOverride, battlefieldEntryOptions(prim), r.agents, r.log)
+			returned := r.returnLinkedNonBattlefieldPermanents(string(key), prim.LinkedReturnZonesOrExile(), controllerOverride, battlefieldEntryOptions(prim))
+			res.succeeded = len(returned) > 0
+			r.publishEnteredPermanents(prim.PublishLinked, returned...)
 		}
 	}
 	return res
@@ -3349,15 +3346,15 @@ func battlefieldEntryOptions(prim game.PutOnBattlefield) permanentCreationOption
 	}
 }
 
-func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKey, recipientRef game.PlayerReference, options permanentCreationOptions) bool {
+func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKey, recipientRef game.PlayerReference, options permanentCreationOptions) (*game.Permanent, bool) {
 	key := linkedObjectSourceKey(r.game, r.obj, string(linkedKey))
 	refs := linkedObjects(r.game, key)
 	if len(refs) == 0 {
-		return false
+		return nil, false
 	}
 	controller, ok := r.recipientController(recipientRef)
 	if !ok {
-		return false
+		return nil, false
 	}
 	cardCondition := r.currentInstruction.CardCondition
 	for _, ref := range refs {
@@ -3365,20 +3362,19 @@ func (r *effectResolver) putLinkedCardOnBattlefieldValue(linkedKey game.LinkedKe
 			continue
 		}
 		card, ok := r.game.GetCardInstance(ref.CardID)
-		if !ok || !cardConditionPredicateSatisfied(r.game, r.obj, card, cardCondition) {
+		if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion ||
+			!cardConditionPredicateSatisfied(r.game, r.obj, card, cardCondition) {
 			continue
 		}
-		owner, ok := playerByID(r.game, card.Owner)
-		if !ok || !owner.Library.Remove(card.ID) {
+		if actual, ok := cardZone(r.game, card.ID); !ok || actual != zone.Library {
 			continue
 		}
-		if _, ok := createCardPermanentFaceWithOptions(r.engine, r.game, card, controller, zone.Library, game.FaceFront, nil, options, r.agents, r.log); ok {
+		if permanent, ok := r.putResolvedCardOnBattlefieldValue(card, zone.Library, controller, nil, options); ok {
 			clearLinkedObjects(r.game, key)
-			return true
+			return permanent, true
 		}
-		owner.Library.Add(card.ID)
 	}
-	return false
+	return nil, false
 }
 
 func (r *effectResolver) putReferencedCardOnBattlefieldValue(

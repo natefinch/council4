@@ -1908,6 +1908,12 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")
 	}
+	if key, linked := p.Source.LinkedKey(); linked && key == p.PublishLinked {
+		return errors.New("put on battlefield input and output links must be distinct")
+	}
+	if ref, card := p.Source.CardRef(); card && ref.Kind == CardReferenceLinked && ref.LinkID == string(p.PublishLinked) {
+		return errors.New("put on battlefield input and output links must be distinct")
+	}
 	sources := p.Sources
 	if p.Source.Valid() {
 		sources = []BattlefieldSource{p.Source}
@@ -1920,9 +1926,6 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 		if !ok {
 			if len(p.Sources) > 0 {
 				return errors.New("simultaneous put on battlefield requires referenced-card sources")
-			}
-			if p.PublishLinked != "" {
-				return errors.New("put on battlefield can publish only a referenced card")
 			}
 			continue
 		}
