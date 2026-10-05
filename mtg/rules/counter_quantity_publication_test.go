@@ -136,6 +136,8 @@ func TestCounterQuantitySkippedDeclinedAndUnavailable(t *testing.T) {
 					}
 					returned.Counters.Add(counter.Charge, 7)
 				}
+			default:
+				t.Fatalf("unknown unavailable-producer case %q", mode)
 			}
 			consumer := game.Instruction{
 				Primitive:  game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)},
