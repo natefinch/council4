@@ -31,14 +31,15 @@ func dynamicValuePtr(v opt.V[game.DynamicValue]) *game.DynamicValue {
 }
 
 type permanentEffectiveValues struct {
-	name       string
-	oracleText string
-	colors     []color.Color
-	supertypes []types.Super
-	types      []types.Card
-	subtypes   []types.Sub
-	abilities  []game.Ability
-	controller game.PlayerID
+	name           string
+	oracleText     string
+	colors         []color.Color
+	supertypes     []types.Super
+	types          []types.Card
+	subtypes       []types.Sub
+	abilities      []game.Ability
+	resolutionUses map[int]game.ActivatedAbilityResolutionUse
+	controller     game.PlayerID
 
 	power            int
 	powerOK          bool
@@ -298,13 +299,13 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.subtypes = append([]types.Sub(nil), card.Subtypes...)
 	values.abilities = make([]game.Ability, 0, card.AbilityCount())
 	for i := 0; i < card.AbilityCount(); i++ {
-		values.abilities = append(values.abilities, card.BodyAt(i))
+		appendEffectiveAbility(&values, permanent, card.BodyAt(i), permanentAbilityOrigin(permanent))
 	}
 	for _, component := range permanent.MergedCards {
 		if component.FaceDown {
 			if component.FaceDownKind == game.FaceDownDisguise || component.FaceDownKind == game.FaceDownCloak {
 				ward := faceDownDisguiseWardBody()
-				values.abilities = append(values.abilities, &ward)
+				appendEffectiveAbility(&values, permanent, &ward, game.ActivatedAbilityResolutionUse{})
 			}
 			continue
 		}
@@ -314,7 +315,8 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 				continue
 			}
 			for i := 0; i < componentDef.AbilityCount(); i++ {
-				values.abilities = append(values.abilities, componentDef.BodyAt(i))
+				appendEffectiveAbility(&values, permanent, componentDef.BodyAt(i),
+					game.ActivatedAbilityResolutionUse{OriginID: component.AbilityOriginID})
 			}
 			continue
 		}
@@ -327,7 +329,8 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 			continue
 		}
 		for i := 0; i < componentDef.AbilityCount(); i++ {
-			values.abilities = append(values.abilities, componentDef.BodyAt(i))
+			appendEffectiveAbility(&values, permanent, componentDef.BodyAt(i),
+				game.ActivatedAbilityResolutionUse{OriginID: component.CardInstanceID})
 		}
 	}
 	if card.Power.Exists {
@@ -702,6 +705,7 @@ func applyFaceDownCharacteristics(permanent *game.Permanent, values *permanentEf
 	if permanent.FaceDownKind == game.FaceDownDisguise || permanent.FaceDownKind == game.FaceDownCloak {
 		ward := faceDownDisguiseWardBody()
 		values.abilities = []game.Ability{&ward}
+		values.resolutionUses = nil
 	}
 	rebuildKeywords(permanent, values)
 }
@@ -1441,10 +1445,14 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerAbility:
 		if effect.RemoveAllAbilities {
 			values.abilities = nil
+			values.resolutionUses = nil
 			values.keywords.clear()
 		}
-		for _, body := range effect.AddAbilities {
-			values.abilities = append(values.abilities, body)
+		for i, body := range effect.AddAbilities {
+			appendEffectiveAbility(values, permanent, body, game.ActivatedAbilityResolutionUse{
+				OriginID: effect.SourceCardID, Granted: true, GrantID: effect.ID,
+				GrantSourceID: effect.SourceObjectID, Occurrence: i,
+			})
 			addBodyKeywords(&values.keywords, body)
 		}
 		for _, keyword := range effect.RemoveKeywords {
@@ -1520,7 +1528,13 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	values.supertypes = append([]types.Super(nil), copyValues.Supertypes...)
 	values.types = append([]types.Card(nil), copyValues.Types...)
 	values.subtypes = append([]types.Sub(nil), copyValues.Subtypes...)
-	values.abilities = append([]game.Ability(nil), copyValues.Abilities...)
+	values.abilities = nil
+	values.resolutionUses = nil
+	for i, body := range copyValues.Abilities {
+		appendEffectiveAbility(values, permanent, body, game.ActivatedAbilityResolutionUse{
+			OriginID: permanent.ObjectID, Occurrence: i,
+		})
+	}
 	values.powerPT = ptPtr(copyValues.Power)
 	values.dynamicPower = dynamicValuePtr(copyValues.DynamicPower)
 	values.toughnessPT = ptPtr(copyValues.Toughness)

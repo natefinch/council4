@@ -695,19 +695,25 @@ func sourceLandEnteredThisTurnOrControlsBasicLand(g *game.Game, ctx conditionCon
 	return countPlayerMatchingSelection(g, ctx, ctx.controller, selection) >= 1
 }
 
-// sourceAbilityResolutionOrdinalMatches reports whether the resolving triggered
-// ability has resolved exactly ordinal times this turn, counting the current
-// resolution. It reads the resolving stack object's (source, ability) tally from
-// Game.ResolvedTriggeredAbilitiesThisTurn, which the ability increments as it
-// begins resolving ("if this is the second time this ability has resolved this
-// turn"; Prowl, Pursuit Vehicle). It fails closed when no resolving triggered
-// ability is in context.
+// The ordinal is captured once as real resolution begins, never during
+// announcement or separately for each mode or Instruction.
 func sourceAbilityResolutionOrdinalMatches(g *game.Game, ctx conditionContext, ordinal int) bool {
-	if ctx.obj == nil {
+	if ctx.obj == nil || ordinal <= 0 || ctx.obj.SourceID == 0 ||
+		ctx.obj.AbilityIndex < 0 || ctx.obj.ResolutionOrdinalThisTurn != ordinal {
 		return false
 	}
-	key := game.TriggeredAbilityUse{SourceID: ctx.obj.SourceID, AbilityIndex: ctx.obj.AbilityIndex}
-	return g.ResolvedTriggeredAbilitiesThisTurn[key] == ordinal
+	switch ctx.obj.Kind {
+	case game.StackActivatedAbility:
+		use := ctx.obj.ActivatedResolutionUse
+		return use.Exists && use.Val.SourceID == ctx.obj.SourceID &&
+			use.Val.Ability != nil && use.Val.Ability.CountsResolutionsThisTurn &&
+			g.ResolvedActivatedAbilitiesThisTurn[use.Val] == ordinal
+	case game.StackTriggeredAbility:
+		key := game.TriggeredAbilityUse{SourceID: ctx.obj.SourceID, AbilityIndex: ctx.obj.AbilityIndex}
+		return g.ResolvedTriggeredAbilitiesThisTurn[key] == ordinal
+	default:
+		return false
+	}
 }
 
 func controllerBasicLandTypeCount(g *game.Game, ctx conditionContext) int {

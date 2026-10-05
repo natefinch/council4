@@ -368,13 +368,12 @@ type Condition struct {
 	LandEnteredThisTurnOrControlsBasicLand bool
 
 	// SourceAbilityResolutionOrdinalThisTurn is satisfied when the resolving
-	// triggered ability has resolved exactly this many times during the current
+	// activated or triggered ability has resolved exactly this many times during the current
 	// turn, counting the current resolution ("if this is the second time this
 	// ability has resolved this turn"; Prowl, Pursuit Vehicle). It reads the
-	// resolving stack object's (source, ability) resolution tally from
-	// Game.ResolvedTriggeredAbilitiesThisTurn, which the ability increments as it
-	// begins resolving, and is meaningful only while a triggered ability is
-	// resolving. Zero disables the predicate.
+	// resolving stack object's captured ordinal, populated from its shell's
+	// isolated tally as real resolution begins. The enclosing ability must opt
+	// into resolution accounting. Zero disables the predicate.
 	SourceAbilityResolutionOrdinalThisTurn int
 }
 

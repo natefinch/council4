@@ -285,6 +285,11 @@ type Game struct {
 	// including the current resolution. It is reset when the turn advances.
 	ResolvedTriggeredAbilitiesThisTurn map[TriggeredAbilityUse]int
 
+	// ResolvedActivatedAbilitiesThisTurn counts real resolutions, not
+	// activations. Captured body identities survive source changes and copies;
+	// source incarnations and repeated body occurrences remain independent.
+	ResolvedActivatedAbilitiesThisTurn map[ActivatedAbilityResolutionUse]int
+
 	// ChosenModesThisTurn records modal choices that may not repeat during the
 	// current turn, keyed by source object and triggered ability.
 	ChosenModesThisTurn map[TriggeredAbilityUse]uint64
@@ -389,6 +394,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		AbilityActivationsThisTurn:         make(map[ActivatedAbilityUse]int),
 		TriggeredAbilitiesThisTurn:         make(map[TriggeredAbilityUse]int),
 		ResolvedTriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
+		ResolvedActivatedAbilitiesThisTurn: make(map[ActivatedAbilityResolutionUse]int),
 		ChosenModesThisTurn:                make(map[TriggeredAbilityUse]uint64),
 		EventTurnStarts:                    []int{0},
 		Turn: TurnState{

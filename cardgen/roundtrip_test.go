@@ -45,6 +45,10 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: If you have no cards in hand, draw a card, then draw a card.",
 	},
 	{
+		Name: "RT Ordinal Modes", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: Choose one \u2014\n\u2022 If this is the second time this ability has resolved this turn, draw a card, then draw a card.\n\u2022 You gain 2 life.",
+	},
+	{
 		Name:       "RT Bog",
 		Layout:     "normal",
 		TypeLine:   "Land",
@@ -251,6 +255,20 @@ func TestRTConditionAbilitySemantic(t *testing.T) {
 		seq[0].PublishCondition == "" ||
 		seq[1].Condition.Exists || seq[1].ConditionGate != seq[0].PublishCondition {
 		t.Fatal("nested scoped condition evaluation did not round-trip")
+	}
+}
+
+func TestRTOrdinalModesSemantic(t *testing.T) {
+	ability := RTOrdinalModes().ActivatedAbilities[0]
+	if !ability.CountsResolutionsThisTurn || ability.ActivationCondition.Exists ||
+		len(ability.Content.Modes) != 2 {
+		t.Fatal("resolution-count shell metadata did not round-trip")
+	}
+	seq := ability.Content.Modes[0].Sequence
+	if len(seq) != 2 || !seq[0].Condition.Exists ||
+		seq[0].Condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn != 2 ||
+		seq[0].PublishCondition == "" || seq[1].ConditionGate != seq[0].PublishCondition {
+		t.Fatal("modal resolution ordinal and grouped consumer did not round-trip")
 	}
 }
 `, pkgName)

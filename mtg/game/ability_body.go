@@ -92,6 +92,9 @@ type ActivatedAbility struct {
 	// separately; a positive cap is enforced against the per-ability activation
 	// count regardless of timing.
 	MaxActivationsPerTurn int
+	// CountsResolutionsThisTurn opts into actual resolution accounting, including
+	// resolving copies, for SourceAbilityResolutionOrdinalThisTurn body gates.
+	CountsResolutionsThisTurn bool
 	// ManaCostRestrictedToEntryChosenColor marks an ability whose cost may be
 	// paid only with mana of the source permanent's entry-time chosen color
 	// ("Spend only mana of the chosen color to activate this ability." — Throne
