@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18497 supported cards
+# 18507 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -2608,6 +2608,7 @@ c4ea411fce3f475e  Charmed Clothier
 1ea92c94565adcb4  Charmed Sleep
 7271bead4bf34a3d  Charmed Stray
 99e4004a84e1ac14  Charming Scoundrel
+12bec014ee4576ba  Charnel Troll
 7b59c246c8a9a620  Charnelhoard Wurm
 e000f622e8a0a939  Chartooth Cougar
 e2d2ff1fdf58c55e  Chase Inspiration
@@ -3675,6 +3676,7 @@ c79abb44355e09ad  Deathcap Marionette
 3c2dfb8325bad301  Deathcurse Ogre
 ba2b987533782927  Deathgaze Cockatrice
 0b892585e4ab2a87  Deathgazer
+3dcb46c0f48b7adf  Deathgorge Scavenger
 d556168c8435e0a7  Deathgreeter
 ecc139e42a11080e  Deathgrip
 cc482468b28f7151  Deathknell Berserker
@@ -5071,6 +5073,7 @@ ce0a014a898b491a  Expedition Envoy
 26ce2362fa1c2f6c  Experimental Armor
 15001e9d0914c33c  Experimental Aviator
 a35119442879fda6  Experimental Confectioner
+a85a59d3bcdefbae  Experimental Overload
 5f927f143962e47e  Experimental Synthesizer
 6f76093793114828  Exploding Borders
 f58f1f6d8c96fa88  Exploration
@@ -6069,6 +6072,7 @@ b489713bc69118f9  Gallant Citizen
 4a3f3c4589582b0d  Gallant Strike
 cb48ec37fea5664f  Gallantry
 bf5d08bfd2c59e0b  Gallia of the Endless Dance
+6f0bcfbc6720dfbb  Gallifrey Stands
 7a9ca8628eaecccc  Gallows at Willow Hill
 b9a5e120b9a48668  Gallows Warden
 3eee28a45ae60880  Galvanic Arc
@@ -9256,6 +9260,7 @@ ddc8bd7ae989a420  Lore Weaver
 565b2b598dbc43ab  Lorehold Campus
 72aa5df3573415e6  Lorehold Charm
 18047ca65d21888b  Lorehold Command
+1e5736e730c702a0  Lorehold Excavation
 5354fccaa3b28e8d  Lorehold Pledgemage
 6b44c576f5479c7d  Lorescale Coatl
 a47f6c9ff8b987d8  Los Diablos Missile Base
@@ -10053,6 +10058,7 @@ e074af52851527cc  Misshapen Fiend
 a034c21237cb0f72  Mist Raven
 a4f8cfb9bb8008b3  Mist-Cloaked Herald
 cd0953fbd4d05a20  Mist-Syndicate Naga
+1c369424175924d8  Mistbreath Elder
 d48577d47ec2d263  Mistcutter Hydra
 0f637aef05852d4b  Mister Fantastic, Reed Richards
 17d97a0515a117df  Mister Gutsy
@@ -11075,6 +11081,7 @@ eccb94279caffd9e  Organ Grinder
 703333c27e5de1c1  Organic Extinction
 9f81cf445edd59d9  Ori, Plate Stacker
 6bcc33e91c9e081e  Origin of Metalbending
+eccc8ed6f4a80862  Origin of the Avengers
 c58770cd24a50ff8  Origin of the Hidden Ones
 5c77967634bfb423  Origin of the Hulk
 5858a326d2f625cc  Origin Spellbomb
@@ -12850,6 +12857,7 @@ f0516d7d0b39781c  Rohgahh, Kher Keep Overlord
 b0d620b8859f84fe  Roiling Dragonstorm
 d73b886b33f49d72  Roiling Regrowth
 3172674236a0fb0f  Roku's Mastery
+04a08603c4a6a6c6  Roll-Roll-Roll-Roll
 86b41b3fc4b865c9  Rollick of Abandon
 b31cd7a55299d154  Rolling Hamsphere
 b399ae38f272636e  Rolling Temblor
@@ -15417,6 +15425,7 @@ c2a2c920c53f3afb  Summit Intimidator
 17e931a5dd715159  Summit Prowler
 3fd6ccd18bb9931a  Summit Sentinel
 d78540e882adfebc  Summon the School
+d01d8b4255f1b601  Summon Undead
 0e373bd29497010b  Summon: Anima
 da29a9dfb48094cc  Summon: Bahamut
 8434085e39befc2d  Summon: Choco/Mog
@@ -18328,6 +18337,7 @@ dc843ace58bb427c  Yavimaya Scion
 f0b38cd5ed4c8a7a  Yavimaya Wurm
 21a38d08baa5586a  Yavimaya's Embrace
 0497746c65336ee3  Yavimaya, Cradle of Growth
+114d2da92331c6af  Yawgmoth Demon
 271305855ea71ab6  Yawgmoth's Bargain
 9f6a1f2de4aa338c  Yawgmoth's Edict
 6cde15f64c84ab03  Yawgmoth's Vile Offering

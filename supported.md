@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,497 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,507 of 33,013 cards eligible for paper support (56.1%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2602,6 +2602,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Charmed Sleep
 - Charmed Stray
 - Charming Scoundrel
+- Charnel Troll
 - Charnelhoard Wurm
 - Chartooth Cougar
 - Chase Inspiration
@@ -3669,6 +3670,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Deathcurse Ogre
 - Deathgaze Cockatrice
 - Deathgazer
+- Deathgorge Scavenger
 - Deathgreeter
 - Deathgrip
 - Deathknell Berserker
@@ -5065,6 +5067,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Experimental Armor
 - Experimental Aviator
 - Experimental Confectioner
+- Experimental Overload
 - Experimental Synthesizer
 - Exploding Borders
 - Exploration
@@ -6063,6 +6066,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Gallant Strike
 - Gallantry
 - Gallia of the Endless Dance
+- Gallifrey Stands
 - Gallows at Willow Hill
 - Gallows Warden
 - Galvanic Arc
@@ -9250,6 +9254,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Lorehold Campus
 - Lorehold Charm
 - Lorehold Command
+- Lorehold Excavation
 - Lorehold Pledgemage
 - Lorescale Coatl
 - Los Diablos Missile Base
@@ -10047,6 +10052,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Mist Raven
 - Mist-Cloaked Herald
 - Mist-Syndicate Naga
+- Mistbreath Elder
 - Mistcutter Hydra
 - Mister Fantastic, Reed Richards
 - Mister Gutsy
@@ -11069,6 +11075,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Organic Extinction
 - Ori, Plate Stacker
 - Origin of Metalbending
+- Origin of the Avengers
 - Origin of the Hidden Ones
 - Origin of the Hulk
 - Origin Spellbomb
@@ -12844,6 +12851,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Roiling Dragonstorm
 - Roiling Regrowth
 - Roku's Mastery
+- Roll-Roll-Roll-Roll
 - Rollick of Abandon
 - Rolling Hamsphere
 - Rolling Temblor
@@ -15411,6 +15419,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Summit Prowler
 - Summit Sentinel
 - Summon the School
+- Summon Undead
 - Summon: Anima
 - Summon: Bahamut
 - Summon: Choco/Mog
@@ -18322,6 +18331,7 @@ Council4 currently supports **18,497 of 33,013 cards eligible for paper support 
 - Yavimaya Wurm
 - Yavimaya's Embrace
 - Yavimaya, Cradle of Growth
+- Yawgmoth Demon
 - Yawgmoth's Bargain
 - Yawgmoth's Edict
 - Yawgmoth's Vile Offering
