@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18493 supported cards
+# 18496 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -3514,6 +3514,7 @@ d26be448203adb6b  Dark Heart of the Wood
 1ad9b9f1e1ae2811  Dark Maze
 002ec71c6ed31c21  Dark Nourishment
 67953cb71d33995e  Dark Offering
+b0259a5aa26110d0  Dark Petition
 1f5a7a3690016358  Dark Privilege
 0e59284558b9fd76  Dark Prophecy
 e758c75b0c61924c  Dark Remedy
@@ -8731,6 +8732,7 @@ e78fa7806bc70d8c  Koskun Falls
 393ddea265e5d102  Koskun Keep
 f26137eadf6d31d9  Koth of the Homestead
 6cc5b9321f07dff0  Koth's Courier
+6ebefac5debd64dc  Koth, the Geomancer
 46d70015fda4c88e  Kothophed, Soul Hoarder
 e0a3593bb7e6b88c  Kozilek's Channeler
 714afdc2344717b2  Kozilek's Predator
@@ -14618,6 +14620,7 @@ d3721f92c09ff4e7  Soul-Strike Technique
 c7c4306085b46715  Soulblade Corrupter
 5b3f201118263e3a  Soulblade Djinn
 b3725e79f44f8690  Soulbound Guardians
+86a73eaa9762ad0b  Soulbright Flamekin
 e06978e4043e1d49  Soulcage Fiend
 f5ce0915e2386b93  Soulcatcher
 40fca274a19d8fc8  Souldrinker
