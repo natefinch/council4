@@ -126,11 +126,11 @@ func TestLowerMonarchInsteadEscalationEffectGate(t *testing.T) {
 	}
 	seq := upkeep.Modes[0].Sequence
 	base := seq[0].Condition
-	escalated := seq[1].Condition
 	if !base.Exists || !base.Val.Condition.Exists ||
 		!base.Val.Condition.Val.ControllerIsMonarch || !base.Val.Condition.Val.Negate {
 		t.Fatalf("base gate = %#v, want negated ControllerIsMonarch", base)
 	}
+	escalated := seq[1].Condition
 	if !escalated.Exists || !escalated.Val.Condition.Exists ||
 		!escalated.Val.Condition.Val.ControllerIsMonarch || escalated.Val.Condition.Val.Negate {
 		t.Fatalf("escalated gate = %#v, want ControllerIsMonarch", escalated)
@@ -171,15 +171,11 @@ func TestLowerMonarchInsteadTokenEscalation(t *testing.T) {
 		t.Fatalf("escalation primitive = %#v, want CreateToken", seq[1].Primitive)
 	}
 	base := seq[0].Condition
-	escalated := seq[1].Condition
 	if !base.Exists || !base.Val.Condition.Exists ||
 		!base.Val.Condition.Val.ControllerIsMonarch || !base.Val.Condition.Val.Negate {
 		t.Fatalf("base gate = %#v, want negated ControllerIsMonarch", base)
 	}
-	if !escalated.Exists || !escalated.Val.Condition.Exists ||
-		!escalated.Val.Condition.Val.ControllerIsMonarch || escalated.Val.Condition.Val.Negate {
-		t.Fatalf("escalation gate = %#v, want ControllerIsMonarch", escalated)
-	}
+	assertConditionConsumer(t, seq[0], seq[1], true)
 }
 
 // TestLowerStandaloneCreateTokenInsteadFailsClosed proves the trailing-"instead"

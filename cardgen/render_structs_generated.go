@@ -870,6 +870,9 @@ func isZeroGameInstructionResultGate(v game.InstructionResultGate) bool {
 func isZeroGameInstruction(v game.Instruction) bool {
 	return !(v.Primitive != nil) &&
 		!(v.Condition.Exists) &&
+		!(v.PublishCondition != "") &&
+		!(v.ConditionGate != "") &&
+		!(v.ConditionGateNegate) &&
 		!(v.CardCondition.Exists) &&
 		!(v.ResultGate.Exists) &&
 		!(v.Optional) &&
@@ -6968,85 +6971,99 @@ func (r Renderer) renderGameInstruction(ctx *renderCtx, v game.Instruction) (str
 		lit3 := "opt.Val(" + lit4 + ")"
 		fields = append(fields, "Condition: "+lit3+",")
 	}
-	if v.CardCondition.Exists {
-		lit7, err8 := r.renderGameCardSelection(ctx, v.CardCondition.Val)
-		if err8 != nil {
-			return "", fmt.Errorf("game.Instruction.CardCondition: %w", err8)
-		}
+	if v.PublishCondition != "" {
+		lit6 := "game.ConditionKey(" + strconv.Quote(string(v.PublishCondition)) + ")"
 		ctx.need(importGame)
-		ctx.need(importOpt)
-		lit6 := "opt.Val(" + lit7 + ")"
-		fields = append(fields, "CardCondition: "+lit6+",")
+		fields = append(fields, "PublishCondition: "+lit6+",")
 	}
-	if v.ResultGate.Exists {
-		lit10, err11 := r.renderGameInstructionResultGate(ctx, v.ResultGate.Val)
+	if v.ConditionGate != "" {
+		lit7 := "game.ConditionKey(" + strconv.Quote(string(v.ConditionGate)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "ConditionGate: "+lit7+",")
+	}
+	if v.ConditionGateNegate {
+		lit8 := strconv.FormatBool(bool(v.ConditionGateNegate))
+		fields = append(fields, "ConditionGateNegate: "+lit8+",")
+	}
+	if v.CardCondition.Exists {
+		lit10, err11 := r.renderGameCardSelection(ctx, v.CardCondition.Val)
 		if err11 != nil {
-			return "", fmt.Errorf("game.Instruction.ResultGate: %w", err11)
+			return "", fmt.Errorf("game.Instruction.CardCondition: %w", err11)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
 		lit9 := "opt.Val(" + lit10 + ")"
-		fields = append(fields, "ResultGate: "+lit9+",")
+		fields = append(fields, "CardCondition: "+lit9+",")
 	}
-	if v.Optional {
-		lit12 := strconv.FormatBool(bool(v.Optional))
-		fields = append(fields, "Optional: "+lit12+",")
-	}
-	if v.OptionalActor.Exists {
-		lit14, err15 := r.renderPlayerReference(v.OptionalActor.Val)
-		if err15 != nil {
-			return "", fmt.Errorf("game.Instruction.OptionalActor: %w", err15)
+	if v.ResultGate.Exists {
+		lit13, err14 := r.renderGameInstructionResultGate(ctx, v.ResultGate.Val)
+		if err14 != nil {
+			return "", fmt.Errorf("game.Instruction.ResultGate: %w", err14)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit13 := "opt.Val(" + lit14 + ")"
-		fields = append(fields, "OptionalActor: "+lit13+",")
+		lit12 := "opt.Val(" + lit13 + ")"
+		fields = append(fields, "ResultGate: "+lit12+",")
 	}
-	if v.OptionalActorGroup.Exists {
-		lit17, err18 := r.renderPlayerGroupReferenceWithContext(ctx, v.OptionalActorGroup.Val)
+	if v.Optional {
+		lit15 := strconv.FormatBool(bool(v.Optional))
+		fields = append(fields, "Optional: "+lit15+",")
+	}
+	if v.OptionalActor.Exists {
+		lit17, err18 := r.renderPlayerReference(v.OptionalActor.Val)
 		if err18 != nil {
-			return "", fmt.Errorf("game.Instruction.OptionalActorGroup: %w", err18)
+			return "", fmt.Errorf("game.Instruction.OptionalActor: %w", err18)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
 		lit16 := "opt.Val(" + lit17 + ")"
-		fields = append(fields, "OptionalActorGroup: "+lit16+",")
+		fields = append(fields, "OptionalActor: "+lit16+",")
 	}
-	if v.ForEachPlayerGroup.Exists {
-		lit20, err21 := r.renderPlayerGroupReferenceWithContext(ctx, v.ForEachPlayerGroup.Val)
+	if v.OptionalActorGroup.Exists {
+		lit20, err21 := r.renderPlayerGroupReferenceWithContext(ctx, v.OptionalActorGroup.Val)
 		if err21 != nil {
-			return "", fmt.Errorf("game.Instruction.ForEachPlayerGroup: %w", err21)
+			return "", fmt.Errorf("game.Instruction.OptionalActorGroup: %w", err21)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
 		lit19 := "opt.Val(" + lit20 + ")"
-		fields = append(fields, "ForEachPlayerGroup: "+lit19+",")
+		fields = append(fields, "OptionalActorGroup: "+lit19+",")
+	}
+	if v.ForEachPlayerGroup.Exists {
+		lit23, err24 := r.renderPlayerGroupReferenceWithContext(ctx, v.ForEachPlayerGroup.Val)
+		if err24 != nil {
+			return "", fmt.Errorf("game.Instruction.ForEachPlayerGroup: %w", err24)
+		}
+		ctx.need(importGame)
+		ctx.need(importOpt)
+		lit22 := "opt.Val(" + lit23 + ")"
+		fields = append(fields, "ForEachPlayerGroup: "+lit22+",")
 	}
 	if v.TemptingOffer {
-		lit22 := strconv.FormatBool(bool(v.TemptingOffer))
-		fields = append(fields, "TemptingOffer: "+lit22+",")
+		lit25 := strconv.FormatBool(bool(v.TemptingOffer))
+		fields = append(fields, "TemptingOffer: "+lit25+",")
 	}
 	if len(v.TemptingOfferBody) > 0 {
-		var items24 []string
-		for _, item25 := range v.TemptingOfferBody {
-			lit26, err27 := r.renderGameInstruction(ctx, item25)
-			if err27 != nil {
-				return "", fmt.Errorf("game.Instruction.TemptingOfferBody[]: %w", err27)
+		var items27 []string
+		for _, item28 := range v.TemptingOfferBody {
+			lit29, err30 := r.renderGameInstruction(ctx, item28)
+			if err30 != nil {
+				return "", fmt.Errorf("game.Instruction.TemptingOfferBody[]: %w", err30)
 			}
 			ctx.need(importGame)
-			items24 = append(items24, lit26+",")
+			items27 = append(items27, lit29+",")
 		}
-		lit23 := namedSliceLit("", "game.Instruction", items24)
-		fields = append(fields, "TemptingOfferBody: "+lit23+",")
+		lit26 := namedSliceLit("", "game.Instruction", items27)
+		fields = append(fields, "TemptingOfferBody: "+lit26+",")
 	}
 	if v.PublishResult != "" {
-		lit28 := "game.ResultKey(" + strconv.Quote(string(v.PublishResult)) + ")"
+		lit31 := "game.ResultKey(" + strconv.Quote(string(v.PublishResult)) + ")"
 		ctx.need(importGame)
-		fields = append(fields, "PublishResult: "+lit28+",")
+		fields = append(fields, "PublishResult: "+lit31+",")
 	}
 	if v.Description != "" {
-		lit29 := strconv.Quote(string(v.Description))
-		fields = append(fields, "Description: "+lit29+",")
+		lit32 := strconv.Quote(string(v.Description))
+		fields = append(fields, "Description: "+lit32+",")
 	}
 	return structLit("game.Instruction", fields), nil
 }

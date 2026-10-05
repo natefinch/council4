@@ -12,6 +12,10 @@ import (
 // Other instructions reference it in ResultGate or InstructionResultGate.
 type ResultKey string
 
+// ConditionKey names a boolean evaluation within one instruction sequence,
+// independent of an effect's acceptance or success.
+type ConditionKey string
+
 // ChoiceKey is a key published by a Choose primitive.
 // It is consumed by AddMana.ChoiceFrom and similar choice-consuming fields.
 type ChoiceKey string
@@ -70,6 +74,16 @@ type Instruction struct {
 	// Source-excluding permanent selections compare the original SourceID, not
 	// SourceCardID or a new permanent created when that card returns.
 	Condition opt.V[EffectCondition]
+
+	// PublishCondition records Condition before any other envelope gate or
+	// primitive runs, including when it evaluates false.
+	PublishCondition ConditionKey
+
+	// ConditionGate consumes a prior evaluation. Missing evaluations fail closed.
+	ConditionGate ConditionKey
+
+	// ConditionGateNegate complements a published boolean, never a missing one.
+	ConditionGateNegate bool
 
 	// CardCondition gates the instruction on properties of a referenced card.
 	CardCondition opt.V[CardSelection]
@@ -223,6 +237,9 @@ func validateInstructionSequenceWithLinked(
 	checkCapturedTargets bool,
 	siblingLinked map[LinkedKey]int,
 ) error {
+	if err := validateConditionEvaluations(seq); err != nil {
+		return err
+	}
 	publishedResults := map[ResultKey]int{}
 	publishedChoices := map[ChoiceKey]int{}
 	publishedLinked := map[LinkedKey]int{}

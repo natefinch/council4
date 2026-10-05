@@ -282,6 +282,8 @@ func sacrificeManaChoiceOutput(body *game.ManaAbility) ([]mana.Color, int, bool)
 
 func unconditionalPaymentInstruction(instruction *game.Instruction) bool {
 	return !instruction.Condition.Exists &&
+		instruction.ConditionGate == "" &&
+		instruction.PublishCondition == "" &&
 		!instruction.CardCondition.Exists &&
 		!instruction.ResultGate.Exists &&
 		!instruction.Optional &&

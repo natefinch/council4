@@ -5,6 +5,7 @@
     Content: 
       Effects: 
         [0]: 
+          ClauseID: 1
           Kind: 15
           Context: EffectContextController
           Text: Destroy each nonland permanent with mana value 2 or less.
@@ -33,6 +34,7 @@
           VerbOrder: 
             End: 1
         [1]: 
+          ClauseID: 2
           Kind: 1
           Context: EffectContextController
           Text: Add {B} or {G} for each permanent destroyed this way.

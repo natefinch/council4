@@ -288,6 +288,7 @@ func compileConditions(
 	var conditions []CompiledCondition
 	for _, segment := range segments {
 		condition := CompiledCondition{
+			Ownership:             segment.Ownership,
 			Kind:                  compileConditionIntro(segment.Kind),
 			Span:                  segment.Span,
 			Text:                  segment.Text,
@@ -332,6 +333,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 		for syntaxIndex := range sentence.Effects {
 			syntax := &sentence.Effects[syntaxIndex]
 			effects = append(effects, CompiledEffect{
+				ClauseID:                       syntax.ClauseID,
 				Kind:                           compileEffectKind(syntax.Kind),
 				Context:                        syntax.Context,
 				CombatDamageSourceName:         syntax.CombatDamageSourceName,

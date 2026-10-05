@@ -784,15 +784,13 @@ func TestLowerLeadingConditionGatesThenGroup(t *testing.T) {
 	if mode.Sequence[0].Condition.Exists {
 		t.Fatalf("counter instruction should be ungated, got %+v", mode.Sequence[0].Condition)
 	}
-	for _, idx := range []int{1, 2} {
-		if !mode.Sequence[idx].Condition.Exists {
-			t.Fatalf("instruction %d should be gated by the leading condition", idx)
-		}
-		if !mode.Sequence[idx].Condition.Val.Condition.Exists {
-			t.Fatalf("instruction %d gate missing wrapped condition", idx)
-		}
-		if mode.Sequence[idx].Condition.Val.Condition.Val.Empty() {
-			t.Fatalf("instruction %d gate condition is empty, want a control predicate", idx)
-		}
+	if !mode.Sequence[1].Condition.Exists ||
+		!mode.Sequence[1].Condition.Val.Condition.Exists ||
+		mode.Sequence[1].Condition.Val.Condition.Val.Empty() {
+		t.Fatal("first group member must evaluate the control predicate")
+	}
+	if mode.Sequence[1].PublishCondition == "" || mode.Sequence[2].Condition.Exists ||
+		mode.Sequence[2].ConditionGate != mode.Sequence[1].PublishCondition {
+		t.Fatal("second group member must consume that single evaluation")
 	}
 }

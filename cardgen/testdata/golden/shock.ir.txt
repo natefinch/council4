@@ -17,6 +17,7 @@
             End: 5
       Effects: 
         [0]: 
+          ClauseID: 1
           Kind: 14
           Context: EffectContextSource
           Text: Shock deals 2 damage to any target.

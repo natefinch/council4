@@ -88,16 +88,11 @@ func TestSubtypeRiderInsteadPTKeywordGrant(t *testing.T) {
 	if !base.Negate {
 		t.Fatalf("base buff gate = %+v, want negated Human match", base)
 	}
-	for i := 1; i < 3; i++ {
-		gate := requireSubtypeGate(t, mode.Sequence[i])
-		if gate.Negate {
-			t.Fatalf("replacement[%d] gate negated = true, want positive Human match", i)
-		}
-		if len(gate.ObjectMatches.Val.SubtypesAny) != 1 ||
-			gate.ObjectMatches.Val.SubtypesAny[0] != types.Sub("Human") {
-			t.Fatalf("replacement[%d] selection = %+v, want subtype Human", i, gate.ObjectMatches.Val)
-		}
+	if len(base.ObjectMatches.Val.SubtypesAny) != 1 || base.ObjectMatches.Val.SubtypesAny[0] != types.Sub("Human") {
+		t.Fatalf("base gate = %+v, want Human match", base)
 	}
+	assertConditionConsumer(t, mode.Sequence[0], mode.Sequence[1], true)
+	assertConditionConsumer(t, mode.Sequence[0], mode.Sequence[2], true)
 }
 
 // requireSubtypeGate asserts the instruction carries an effect condition that

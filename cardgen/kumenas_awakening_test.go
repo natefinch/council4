@@ -57,18 +57,15 @@ func TestLowerKumenasAwakeningConditionalDraw(t *testing.T) {
 					ControllerHasCityBlessing: true,
 				}),
 			}),
+			PublishCondition: "condition-0",
 		},
 		{
 			Primitive: game.Draw{
 				Amount: game.Fixed(1),
 				Player: game.ControllerReference(),
 			},
-			Condition: opt.Val(game.EffectCondition{
-				Condition: opt.Val(game.Condition{
-					Text:                      "If you have the city's blessing",
-					ControllerHasCityBlessing: true,
-				}),
-			}),
+			ConditionGate:       "condition-0",
+			ConditionGateNegate: true,
 		},
 	}
 	if !reflect.DeepEqual(got, want) {

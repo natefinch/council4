@@ -109,11 +109,37 @@ func assignTargetGates(targets []game.TargetSpec, sequence []game.Instruction) (
 	// is present does the reference walk run, whose failure then fails the card
 	// closed rather than approximate the gating.
 	gatesByInst := make([]instructionGate, len(sequence))
+	evaluations := make(map[game.ConditionKey]instructionGate)
 	anyGated := false
 	for i := range sequence {
 		gate, gated, ok := castBranchGate(&sequence[i])
 		if !ok {
 			return nil, false
+		}
+		if key := sequence[i].PublishCondition; key != "" {
+			if _, duplicate := evaluations[key]; duplicate || !sequence[i].Condition.Exists {
+				return nil, false
+			}
+			evaluations[key] = instructionGate{gate: gate, gated: gated}
+		}
+		if key := sequence[i].ConditionGate; key != "" {
+			captured, exists := evaluations[key]
+			if !exists {
+				return nil, false
+			}
+			if captured.gated && sequence[i].ConditionGateNegate {
+				var ok bool
+				captured.gate, ok = complementCastBranchGate(captured.gate)
+				if !ok {
+					return nil, false
+				}
+			}
+			if gated && captured.gated && gate != captured.gate {
+				return nil, false
+			}
+			if captured.gated {
+				gate, gated = captured.gate, true
+			}
 		}
 		gatesByInst[i] = instructionGate{gate: gate, gated: gated}
 		if gated {
@@ -192,6 +218,25 @@ func assignTargetGates(targets []game.TargetSpec, sequence []game.Instruction) (
 		return targets, true
 	}
 	return out, true
+}
+
+func complementCastBranchGate(gate game.TargetGate) (game.TargetGate, bool) {
+	switch gate {
+	case game.TargetGateGiftPromised:
+		return game.TargetGateGiftNotPromised, true
+	case game.TargetGateGiftNotPromised:
+		return game.TargetGateGiftPromised, true
+	case game.TargetGateSpellKicked:
+		return game.TargetGateSpellNotKicked, true
+	case game.TargetGateSpellNotKicked:
+		return game.TargetGateSpellKicked, true
+	case game.TargetGateSpellBargained:
+		return game.TargetGateSpellNotBargained, true
+	case game.TargetGateSpellNotBargained:
+		return game.TargetGateSpellBargained, true
+	default:
+		return game.TargetGateAlways, false
+	}
 }
 
 // instructionGate carries an instruction's classified cast-branch gate through

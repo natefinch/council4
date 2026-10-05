@@ -15,6 +15,7 @@
     Content: 
       Effects: 
         [0]: 
+          ClauseID: 1
           Kind: 20
           Context: EffectContextController
           Text: draw a card.

@@ -138,9 +138,10 @@ func TestResolvingUnlessClauseOwnership(t *testing.T) {
 		Kind: compiler.ConditionUnless, Negated: true,
 		Predicate: compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
 		Threshold: 7, Span: span(21, 29),
+		Ownership: parser.ConditionOwnership{Scope: parser.ConditionScopeClause, ClauseIDs: []int{2}},
 	}
-	effect := compiler.CompiledEffect{Span: span(20, 50), ClauseSpan: span(20, 50), VerbSpan: span(30, 35)}
-	other := compiler.CompiledEffect{Span: span(0, 20), ClauseSpan: span(0, 20), VerbSpan: span(0, 4)}
+	effect := compiler.CompiledEffect{ClauseID: 2, Span: span(20, 50), ClauseSpan: span(20, 50), VerbSpan: span(30, 35)}
+	other := compiler.CompiledEffect{ClauseID: 1, Span: span(0, 20), ClauseSpan: span(0, 20), VerbSpan: span(0, 4)}
 	for _, tt := range []struct {
 		name       string
 		effects    []compiler.CompiledEffect
@@ -148,8 +149,8 @@ func TestResolvingUnlessClauseOwnership(t *testing.T) {
 		reason     string
 	}{
 		{"one owned clause", []compiler.CompiledEffect{other, effect}, []compiler.CompiledCondition{condition}, ""},
-		{"no owner", []compiler.CompiledEffect{other}, []compiler.CompiledCondition{condition}, effectGateCategoryNoClause},
-		{"shared leading group", []compiler.CompiledEffect{effect, effect}, []compiler.CompiledCondition{condition}, effectGateCategoryMultiClause},
+		{"missing typed owner", []compiler.CompiledEffect{other}, []compiler.CompiledCondition{condition}, conditionEvaluationCategory},
+		{"ambiguous typed owner", []compiler.CompiledEffect{effect, effect}, []compiler.CompiledCondition{condition}, conditionEvaluationCategory},
 		{"multiple conditions", []compiler.CompiledEffect{effect}, []compiler.CompiledCondition{condition, condition}, effectGateCategoryMultiCondition},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -198,11 +199,9 @@ func TestResolvingUnlessFullConsumption(t *testing.T) {
 		"Draw a card. Discard a card unless you choose to.",
 		"Draw a card. Discard a card unless a land card was discarded this way.",
 		"Draw a card. Discard a card unless you control a Villain with a hat.",
-		"Unless you control a Villain, draw a card, then discard a card.",
 		"Draw a card, then discard a card unless there are seven or more cards in your graveyard.",
 		"Draw a card. You lose 2 life unless this card is in your graveyard and you control a Villain.",
 		"Creatures you control gain indestructible until end of turn.\nAddendum — Unless you control a creature with power 2 or greater, put a +1/+1 counter on each of those creatures and they gain vigilance until end of turn.",
-		"Unless you control a creature with power 2 or greater, put a +1/+1 counter on each of up to two target creatures you control.",
 		"Discard a card unless there are seven or more cards in your graveyard. Otherwise, draw a card.",
 		"Draw a card. You lose 2 life unless you control another Pirate.",
 	} {

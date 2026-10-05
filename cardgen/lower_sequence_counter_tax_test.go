@@ -46,9 +46,13 @@ func TestSequenceCounterTaxCapabilities(t *testing.T) {
 			if _, ok := sequence[2].Primitive.(game.GainLife); !ok {
 				t.Fatalf("rider = %T", sequence[2].Primitive)
 			}
-			if sequence[0].Condition.Exists != tt.outerGate || sequence[1].Condition.Exists != tt.outerGate ||
+			if sequence[0].Condition.Exists != tt.outerGate || sequence[1].Condition.Exists ||
 				sequence[2].Condition.Exists || sequence[2].ResultGate.Exists {
 				t.Fatalf("condition routing = %#v", sequence)
+			}
+			if tt.outerGate && (sequence[0].PublishCondition == "" ||
+				sequence[1].ConditionGate != sequence[0].PublishCondition) {
+				t.Fatal("Pay and CounterObject must share one outer condition evaluation")
 			}
 		})
 	}
@@ -103,7 +107,8 @@ func TestSequenceCounterTaxOuterConditionWithoutRider(t *testing.T) {
 	}
 	assertCardPaths(t, card,
 		"SpellAbility.Val.Modes[0].Sequence[0].Condition.Exists = true",
-		"SpellAbility.Val.Modes[0].Sequence[1].Condition.Exists = true",
+		`SpellAbility.Val.Modes[0].Sequence[0].PublishCondition = "condition-0"`,
+		`SpellAbility.Val.Modes[0].Sequence[1].ConditionGate = "condition-0"`,
 		"SpellAbility.Val.Modes[0].Sequence[1].ResultGate.Val.Key = \"unless-paid\"",
 	)
 }

@@ -2109,8 +2109,9 @@ type EntersAsCopyConditionalCounter struct {
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
-	Kind    EffectKind        `json:",omitempty"`
-	Context EffectContextKind `json:",omitempty"`
+	ClauseID int               `json:",omitempty"`
+	Kind     EffectKind        `json:",omitempty"`
+	Context  EffectContextKind `json:",omitempty"`
 	// CombatDamageSourceName carries the required creature name when Context is
 	// EffectContextEachOpponentDealtCombatDamageByNamed ("each opponent dealt
 	// combat damage this game by a creature named Gollum, Obsessed Stalker

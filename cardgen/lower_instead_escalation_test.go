@@ -47,10 +47,7 @@ func TestLowerInsteadEscalationLifeGain(t *testing.T) {
 		!base.Condition.Val.Condition.Val.Negate {
 		t.Fatalf("base gate = %#v, want negated condition", base.Condition)
 	}
-	if !escalated.Condition.Exists || !escalated.Condition.Val.Condition.Exists ||
-		escalated.Condition.Val.Condition.Val.Negate {
-		t.Fatalf("escalation gate = %#v, want plain condition", escalated.Condition)
-	}
+	assertConditionConsumer(t, base, escalated, true)
 }
 
 // TestLowerInsteadEscalationDraw proves the draw-spell "instead" escalation
@@ -77,8 +74,5 @@ func TestLowerInsteadEscalationDraw(t *testing.T) {
 		!base.Condition.Val.Condition.Val.Negate {
 		t.Fatalf("base gate = %#v, want negated condition", base.Condition)
 	}
-	if !escalated.Condition.Exists || !escalated.Condition.Val.Condition.Exists ||
-		escalated.Condition.Val.Condition.Val.Negate {
-		t.Fatalf("escalation gate = %#v, want plain condition", escalated.Condition)
-	}
+	assertConditionConsumer(t, base, escalated, true)
 }
