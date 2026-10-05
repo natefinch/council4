@@ -442,6 +442,7 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.ExilePlayPermissionUsedThisTurn = make(map[game.ObjectID]bool)
 	g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 	g.ResolvedTriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
+	g.ResolvedActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityResolutionUse]int)
 	g.ChosenModesThisTurn = make(map[game.TriggeredAbilityUse]uint64)
 	g.Combat = nil
 	markCurrentTurnEventStart(g)

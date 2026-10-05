@@ -28,6 +28,16 @@ diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Resolution-ordinal body conditions ("if this is the second/third time this
+ability has resolved this turn") opt ordinary activated and triggered shells
+into real resolution accounting. Activated shells capture the immutable body
+and defining component or granting effect before costs, isolate source
+incarnations, and include resolving stack copies. Countered abilities and
+abilities whose targets all become illegal do not count. One whole resolution
+increments once, before any chosen mode or Instruction evaluates its gate.
+Activation restrictions and mana-producing conditional bodies remain separate,
+fail-closed capabilities.
+
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
 can therefore remain the subject after exile without being confused with the

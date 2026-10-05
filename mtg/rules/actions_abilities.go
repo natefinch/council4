@@ -126,6 +126,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	}
 	sourceCardID := permanent.CardInstanceID
 	sourceTokenDef := permanent.TokenDef
+	resolutionUse := permanentActivatedResolutionUse(g, permanent, body, activate.AbilityIndex)
 	manaCost := opt.V[cost.Mana]{}
 	var additionalCosts []cost.Additional
 	var alternativeCosts []cost.Alternative
@@ -158,21 +159,22 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		applyLoyaltyCost(permanent, loyaltyBody.LoyaltyCost)
 	}
 	obj := &game.StackObject{
-		ID:                  g.IDGen.Next(),
-		Kind:                game.StackActivatedAbility,
-		SourceID:            permanent.ObjectID,
-		Face:                permanent.Face,
-		SourceCardID:        sourceCardID,
-		SourceTokenDef:      sourceTokenDef,
-		AbilityIndex:        activate.AbilityIndex,
-		Controller:          playerID,
-		Targets:             append([]game.Target(nil), activate.Targets...),
-		TargetCounts:        targetCounts,
-		ChosenModes:         append([]int(nil), activate.ChosenModes...),
-		XValue:              activate.XValue,
-		SacrificedAsCostIDs: costPaid.sacrificedIDs,
-		TappedAsCostIDs:     costPaid.tappedIDs,
-		ExiledAsCostIDs:     costPaid.exiledIDs,
+		ID:                     g.IDGen.Next(),
+		Kind:                   game.StackActivatedAbility,
+		SourceID:               permanent.ObjectID,
+		Face:                   permanent.Face,
+		SourceCardID:           sourceCardID,
+		SourceTokenDef:         sourceTokenDef,
+		AbilityIndex:           activate.AbilityIndex,
+		Controller:             playerID,
+		Targets:                append([]game.Target(nil), activate.Targets...),
+		TargetCounts:           targetCounts,
+		ChosenModes:            append([]int(nil), activate.ChosenModes...),
+		XValue:                 activate.XValue,
+		SacrificedAsCostIDs:    costPaid.sacrificedIDs,
+		TappedAsCostIDs:        costPaid.tappedIDs,
+		ExiledAsCostIDs:        costPaid.exiledIDs,
+		ActivatedResolutionUse: resolutionUse,
 	}
 	if activatedOK {
 		obj.InlineActivated = activatedBody
@@ -196,6 +198,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	}
 	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
+	resolutionUse := cardActivatedResolutionUse(card, def, activate.AbilityIndex)
 	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
 	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
 		return false
@@ -252,23 +255,24 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		}
 	}
 	obj := &game.StackObject{
-		ID:                  g.IDGen.Next(),
-		Kind:                game.StackActivatedAbility,
-		SourceID:            card.ID,
-		SourceCardID:        card.ID,
-		SourceZone:          zone.Hand,
-		SourceZoneVersion:   sourceZoneVersion,
-		AbilityIndex:        activate.AbilityIndex,
-		Controller:          playerID,
-		Targets:             append([]game.Target(nil), completedTargets...),
-		TargetCounts:        targetCounts,
-		ChosenModes:         append([]int(nil), activate.ChosenModes...),
-		XValue:              activate.XValue,
-		AdditionalCostsPaid: additionalCostsPaid,
-		SacrificedAsCostIDs: sacrificedAsCostIDs,
-		TappedAsCostIDs:     tappedAsCostIDs,
-		ExiledAsCostIDs:     exiledAsCostIDs,
-		InlineActivated:     &ability,
+		ID:                     g.IDGen.Next(),
+		Kind:                   game.StackActivatedAbility,
+		SourceID:               card.ID,
+		SourceCardID:           card.ID,
+		SourceZone:             zone.Hand,
+		SourceZoneVersion:      sourceZoneVersion,
+		AbilityIndex:           activate.AbilityIndex,
+		Controller:             playerID,
+		Targets:                append([]game.Target(nil), completedTargets...),
+		TargetCounts:           targetCounts,
+		ChosenModes:            append([]int(nil), activate.ChosenModes...),
+		XValue:                 activate.XValue,
+		AdditionalCostsPaid:    additionalCostsPaid,
+		SacrificedAsCostIDs:    sacrificedAsCostIDs,
+		TappedAsCostIDs:        tappedAsCostIDs,
+		ExiledAsCostIDs:        exiledAsCostIDs,
+		InlineActivated:        &ability,
+		ActivatedResolutionUse: resolutionUse,
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)
@@ -318,6 +322,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	}
 	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
+	resolutionUse := cardActivatedResolutionUse(card, def, activate.AbilityIndex)
 	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
 	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
 		return false
@@ -341,21 +346,23 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		return false
 	}
 	obj := &game.StackObject{
-		ID:                  g.IDGen.Next(),
-		Kind:                game.StackActivatedAbility,
-		SourceID:            card.ID,
-		SourceCardID:        card.ID,
-		SourceZone:          zone.Graveyard,
-		SourceZoneVersion:   sourceZoneVersion,
-		AbilityIndex:        activate.AbilityIndex,
-		Controller:          playerID,
-		Targets:             append([]game.Target(nil), completedTargets...),
-		TargetCounts:        targetCounts,
-		ChosenModes:         append([]int(nil), activate.ChosenModes...),
-		XValue:              activate.XValue,
-		SacrificedAsCostIDs: costPaid.sacrificedIDs,
-		TappedAsCostIDs:     costPaid.tappedIDs,
-		ExiledAsCostIDs:     costPaid.exiledIDs,
+		ID:                     g.IDGen.Next(),
+		Kind:                   game.StackActivatedAbility,
+		SourceID:               card.ID,
+		SourceCardID:           card.ID,
+		SourceZone:             zone.Graveyard,
+		SourceZoneVersion:      sourceZoneVersion,
+		AbilityIndex:           activate.AbilityIndex,
+		Controller:             playerID,
+		Targets:                append([]game.Target(nil), completedTargets...),
+		TargetCounts:           targetCounts,
+		ChosenModes:            append([]int(nil), activate.ChosenModes...),
+		XValue:                 activate.XValue,
+		SacrificedAsCostIDs:    costPaid.sacrificedIDs,
+		TappedAsCostIDs:        costPaid.tappedIDs,
+		ExiledAsCostIDs:        costPaid.exiledIDs,
+		InlineActivated:        &ability,
+		ActivatedResolutionUse: resolutionUse,
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)

@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,492 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,493 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -7961,6 +7961,7 @@ Council4 currently supports **18,492 of 33,013 cards eligible for paper support 
 - Inner Struggle
 - Inner-Chamber Guard
 - Inner-Flame Acolyte
+- Inner-Flame Igniter
 - Innkeeper's Talent
 - Innocence Kami
 - Innocent Blood

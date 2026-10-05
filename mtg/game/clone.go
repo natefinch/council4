@@ -73,6 +73,7 @@ func (g *Game) Clone() *Game {
 		ExilePlayPermissionUsedThisTurn:    cloneComparableMap(g.ExilePlayPermissionUsedThisTurn),
 		TriggeredAbilitiesThisTurn:         cloneComparableMap(g.TriggeredAbilitiesThisTurn),
 		ResolvedTriggeredAbilitiesThisTurn: cloneComparableMap(g.ResolvedTriggeredAbilitiesThisTurn),
+		ResolvedActivatedAbilitiesThisTurn: cloneComparableMap(g.ResolvedActivatedAbilitiesThisTurn),
 		ChosenModesThisTurn:                cloneComparableMap(g.ChosenModesThisTurn),
 	}
 	clone.IDGen.Restore(g.IDGen.Current())
@@ -238,6 +239,7 @@ func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
 	clone := cloneStackObject(o)
 	clone.ID = newID
 	clone.Copy = true
+	clone.ResolutionOrdinalThisTurn = 0
 	return clone
 }
 

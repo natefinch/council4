@@ -247,6 +247,9 @@ func lowerConditionWithReferences(condition compiler.CompiledCondition, ctx cond
 		}
 		result.ControllerTurnOfGameAtMost = condition.Threshold
 	case compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
+		if condition.Threshold <= 0 {
+			return game.Condition{}, false
+		}
 		result.SourceAbilityResolutionOrdinalThisTurn = condition.Threshold
 	case compiler.ConditionPredicateControlsGreatestPowerCreature:
 		result.ControllerControlsGreatestPowerCreature = true
@@ -493,9 +496,9 @@ func conditionPredicateAllowedInContext(predicate compiler.ConditionPredicate, c
 			compiler.ConditionPredicateControllerControlsNamed,
 			// "If this is the second time this ability has resolved this turn,
 			// convert Prowl." gates the trailing effect of a resolving triggered
-			// ability on that ability's own per-turn resolution count. The runtime
-			// reads the resolving stack object's tally, which is available only
-			// while the triggered ability resolves, so it is confined to the
+			// ability on that ability's own per-turn resolution count. Activated
+			// bodies use the same predicate. The runtime captures the current
+			// resolution's ordinal, so it is confined to the
 			// per-effect sequence gate.
 			compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn:
 			return ctx == conditionContextEffectGate
@@ -842,7 +845,7 @@ func lowerEventHistoryWindow(window compiler.ConditionEventHistoryWindow) (game.
 // abilityContentGatesOnResolutionCount reports whether any instruction in the
 // content is gated by the per-turn resolution-count predicate ("if this is the
 // second time this ability has resolved this turn"; Prowl, Pursuit Vehicle). It
-// lets the lowerer flag the enclosing triggered ability so the runtime tallies
+// lets the lowerer flag the enclosing activated or triggered ability so the runtime tallies
 // the ability's resolutions.
 func abilityContentGatesOnResolutionCount(content *game.AbilityContent) bool {
 	for i := range content.Modes {

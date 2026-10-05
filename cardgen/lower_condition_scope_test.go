@@ -120,19 +120,6 @@ func TestConditionScopeNearMisses(t *testing.T) {
 	}
 }
 
-func TestActivatedResolutionOrdinalRemainsUnsupported(t *testing.T) {
-	t.Parallel()
-	card := &ScryfallCard{
-		Name: "Inner-Flame Igniter", Layout: "normal", TypeLine: "Creature - Elemental Warrior",
-		OracleText: "{2}{R}: Creatures you control get +1/+0 until end of turn. If this is the third time this ability has resolved this turn, creatures you control gain first strike until end of turn.",
-	}
-	assertCardUnsupported(t, card)
-	_, diagnostics := lowerExecutableFaces(card)
-	if len(diagnostics) != 1 || diagnostics[0].Detail != "resolution ordinals are modeled only for triggered abilities" {
-		t.Fatalf("diagnostics=%#v, want explicit unmodeled activated resolution count", diagnostics)
-	}
-}
-
 func TestConditionEvaluationPreservesCastTargetGates(t *testing.T) {
 	t.Parallel()
 	for _, condition := range []game.Condition{{SpellWasKicked: true}, {GiftPromised: true}, {SpellWasBargained: true}} {
