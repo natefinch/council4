@@ -26,8 +26,8 @@ func TestLowerEndOfCombatSelfDisposal(t *testing.T) {
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
 				sacrifice, ok := primitive.(game.Sacrifice)
-				if !ok || sacrifice.Object != game.SourceCardPermanentReference() {
-					t.Fatalf("primitive = %#v, want source-card sacrifice", primitive)
+				if !ok || sacrifice.Object != game.CapturedObjectReference() {
+					t.Fatalf("primitive = %#v, want captured sacrifice", primitive)
 				}
 			},
 		},
@@ -37,8 +37,8 @@ func TestLowerEndOfCombatSelfDisposal(t *testing.T) {
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
 				destroy, ok := primitive.(game.Destroy)
-				if !ok || destroy.Object != game.SourceCardPermanentReference() {
-					t.Fatalf("primitive = %#v, want source-card destroy", primitive)
+				if !ok || destroy.Object != game.CapturedObjectReference() {
+					t.Fatalf("primitive = %#v, want captured destroy", primitive)
 				}
 			},
 		},
@@ -48,8 +48,8 @@ func TestLowerEndOfCombatSelfDisposal(t *testing.T) {
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
 				bounce, ok := movePermanentTo(primitive, zone.Hand)
-				if !ok || bounce.Object != game.SourceCardPermanentReference() {
-					t.Fatalf("primitive = %#v, want source-card bounce", primitive)
+				if !ok || bounce.Object != game.CapturedObjectReference() {
+					t.Fatalf("primitive = %#v, want captured bounce", primitive)
 				}
 			},
 		},
@@ -59,8 +59,8 @@ func TestLowerEndOfCombatSelfDisposal(t *testing.T) {
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
 				put, ok := movePermanentTo(primitive, zone.Library)
-				if !ok || put.Object != game.SourceCardPermanentReference() || put.LibraryBottom {
-					t.Fatalf("primitive = %#v, want source-card put on top of library", primitive)
+				if !ok || put.Object != game.CapturedObjectReference() || put.LibraryBottom {
+					t.Fatalf("primitive = %#v, want captured put on top of library", primitive)
 				}
 			},
 		},

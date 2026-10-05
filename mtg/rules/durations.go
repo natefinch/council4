@@ -2,6 +2,7 @@ package rules
 
 import (
 	"maps"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -257,7 +258,32 @@ func capturedCard(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerD
 	}
 	reference := def.CapturedCard.Val
 	if reference.Kind() != game.ObjectReferenceLinkedObject {
-		return 0, 0
+		var cardReference game.CardReference
+		switch reference.Kind() {
+		case game.ObjectReferenceSourcePermanent:
+			cardReference.Kind = game.CardReferenceSource
+		case game.ObjectReferenceEventPermanent:
+			cardReference.Kind = game.CardReferenceEvent
+		default:
+			return 0, 0
+		}
+		cardID, _, ok := resolveCardReference(g, obj, cardReference)
+		if !ok {
+			return 0, 0
+		}
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || card.ZoneVersion == 0 {
+			return 0, 0
+		}
+		if reference.Kind() == game.ObjectReferenceSourcePermanent {
+			snapshot, ok := lastKnownObject(g, obj.SourceID)
+			if !ok || snapshot.CardID != cardID || !slices.ContainsFunc(snapshot.ZoneCards, func(zoneCard game.ZoneCardSnapshot) bool {
+				return zoneCard.CardID == cardID && zoneCard.ZoneVersion == card.ZoneVersion
+			}) {
+				return 0, 0
+			}
+		}
+		return cardID, card.ZoneVersion
 	}
 	for _, linked := range linkedObjects(g, linkedObjectSourceKey(g, obj, reference.LinkID())) {
 		if linked.CardID == 0 {

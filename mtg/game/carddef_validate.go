@@ -1021,6 +1021,23 @@ func (v *cardDefValidator) validateInstructionSequence(
 					v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.CapturedObjectGroup"), CardDefIssueInvalidAbilityBody, err.Error())
 				}
 			}
+			if delayed.Trigger.CapturedCard.Exists {
+				if delayed.Trigger.EventPattern.Exists || delayed.Trigger.Timing == 0 {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed CapturedCard requires fixed-phase timing")
+				}
+				switch delayed.Trigger.CapturedCard.Val.Kind() {
+				case ObjectReferenceLinkedObject, ObjectReferenceSourcePermanent, ObjectReferenceEventPermanent:
+				default:
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed CapturedCard has an incompatible reference domain")
+				}
+				if err := firstProblem(delayed.Trigger.CapturedCard.Val.Validate()); err != nil {
+					v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.CapturedCard"), CardDefIssueInvalidAbilityBody, err.Error())
+				}
+			}
+			if delayed.Trigger.CapturedObject.Exists && (delayed.Trigger.CapturedObjectGroup.Exists || delayed.Trigger.CapturedCard.Exists) ||
+				delayed.Trigger.CapturedObjectGroup.Exists && delayed.Trigger.CapturedCard.Exists {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger has conflicting captured subject domains")
+			}
 			v.validateAbilityContentWithLinked(
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),

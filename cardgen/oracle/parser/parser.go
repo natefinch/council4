@@ -228,6 +228,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitAbilityConditionOwnership(document.Abilities)
 	emitRemovedCounterQuantityOwnership(document.Abilities)
 	emitPaidCostSubjectBindings(document.Abilities)
+	emitDelayedSubjectOwnership(document.Abilities)
 	return document, diagnostics
 }
 

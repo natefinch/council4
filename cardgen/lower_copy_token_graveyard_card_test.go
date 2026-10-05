@@ -15,8 +15,8 @@ import (
 // spec. The "It gains haste." rider folds into the copy's granted keywords and
 // the delayed "Sacrifice it" clause binds to the freshly created token through a
 // linked key the CreateToken publishes, then captures that linked object to a
-// concrete id at schedule time (CapturedObject) so several same-turn activations
-// each sacrifice their own token instead of re-resolving one shared link key.
+// concrete group at schedule time so replacement-modified batches and several
+// same-turn activations each sacrifice their own actual tokens.
 func TestGenerateExecutableCardSourceCopyTokenGraveyardCard(t *testing.T) {
 	t.Parallel()
 	source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
@@ -44,9 +44,9 @@ func TestGenerateExecutableCardSourceCopyTokenGraveyardCard(t *testing.T) {
 		"PublishLinked: game.LinkedKey(\"sequence-effect-0-product\"),",
 		"Primitive: game.CreateDelayedTrigger{",
 		"Timing:         game.DelayedAtBeginningOfNextEndStep,",
-		"CapturedObject: opt.Val(game.LinkedObjectReference(\"sequence-effect-0-product\")),",
+		"CapturedObjectGroup: opt.Val(game.LinkedObjectReference(\"sequence-effect-0-product\")),",
 		"Primitive: game.Sacrifice{",
-		"Object: game.CapturedObjectReference(),",
+		"Group: game.CapturedObjectsGroup(),",
 	} {
 		if !containsNormalized(source, wanted) {
 			t.Fatalf("source missing %q:\n%s", wanted, source)

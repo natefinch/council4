@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // Ordered sequence consumers share a canonical object publication with the
@@ -26,6 +27,15 @@ func sequencePriorInstructionLink(
 	sequence []game.Instruction,
 	ranges [][2]int,
 ) (priorEffect int, key game.LinkedKey, ok bool) {
+	return sequencePriorInstructionPublication(references, sequence, ranges, false)
+}
+
+func sequencePriorInstructionPublication(
+	references []compiler.CompiledReference,
+	sequence []game.Instruction,
+	ranges [][2]int,
+	capture bool,
+) (priorEffect int, key game.LinkedKey, ok bool) {
 	for _, reference := range references {
 		if reference.Binding != compiler.ReferenceBindingPriorInstructionResult {
 			continue
@@ -35,11 +45,8 @@ func sequencePriorInstructionLink(
 			return 0, "", false
 		}
 		span := ranges[j]
-		if span[1]-span[0] != 1 {
-			return 0, "", false
-		}
-		instructionIndex := span[0]
-		if instructionIndex < 0 || instructionIndex >= len(sequence) {
+		if span[0] < 0 || span[1] > len(sequence) || span[1] <= span[0] ||
+			(!capture && span[1]-span[0] != 1) {
 			return 0, "", false
 		}
 		for _, other := range references {
@@ -48,10 +55,44 @@ func sequencePriorInstructionLink(
 			}
 		}
 		candidateKey := sequenceProductKey(j)
-		linked, published := trySetInstructionPublishLinked(&sequence[instructionIndex], candidateKey)
+		instructionIndex := -1
+		for i := span[0]; i < span[1]; i++ {
+			candidate := sequence[i]
+			if !capture && candidate.Primitive != nil &&
+				(candidate.Primitive.Kind() == game.PrimitiveMovePermanent || candidate.Primitive.Kind() == game.PrimitiveMoveTopOfLibrary) {
+				return 0, "", false
+			}
+			key := sequenceProductKey(j)
+			if capture {
+				candidate.Optional = false
+				if existing := game.PublishedLinkedKey(candidate.Primitive); existing != "" {
+					key = existing
+				}
+			}
+			if _, published := trySetInstructionPublishLinked(&candidate, key); !published {
+				if capture && game.PublishedLinkedKey(candidate.Primitive) != "" {
+					return 0, "", false
+				}
+				continue
+			}
+			if instructionIndex >= 0 {
+				return 0, "", false
+			}
+			instructionIndex = i
+			candidateKey = key
+		}
+		if instructionIndex < 0 {
+			return 0, "", false
+		}
+		candidate := sequence[instructionIndex]
+		if capture {
+			candidate.Optional = false
+		}
+		linked, published := trySetInstructionPublishLinked(&candidate, candidateKey)
 		if !published {
 			return 0, "", false
 		}
+		sequence[instructionIndex].Primitive = candidate.Primitive
 		return j, linked, true
 	}
 	return 0, "", false
@@ -96,6 +137,31 @@ func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey)
 			if _, linked := primitive.Source.LinkedKey(); !linked {
 				return "", false
 			}
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveMoveTopOfLibrary:
+		primitive, ok := instr.Primitive.(game.MoveTopOfLibrary)
+		if !ok || primitive.Destination != zone.Exile ||
+			primitive.PlayerGroup.Kind != game.PlayerGroupReferenceNone ||
+			primitive.Amount.IsDynamic() || primitive.Amount.Value() != 1 {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveMovePermanent:
+		primitive, ok := instr.Primitive.(game.MovePermanent)
+		if !ok || primitive.Destination != zone.Exile || primitive.ControlledChoice ||
+			primitive.Group.Domain() != 0 || primitive.Object.Kind() == game.ObjectReferenceNone {
+			return "", false
 		}
 		if primitive.PublishLinked != "" {
 			return primitive.PublishLinked, primitive.PublishLinked == key

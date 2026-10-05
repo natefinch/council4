@@ -2558,6 +2558,7 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
+	DelayedSubject          parser.DelayedSubjectOwnership
 	ClauseID                int
 	ResultElseOfClauseID    int
 	OptionalActionClauseIDs []int

@@ -77,8 +77,6 @@ func TestPublishedReturnConditionRefusesUnavailableSubjects(t *testing.T) {
 		"Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Bird, Frog, Otter, and Rat, draw a card.",
 		"Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Bird, , Otter, or Rat, draw a card.",
 		"Return target creature card from your graveyard to the battlefield. Exile target creature. If it's an Elf, draw a card.",
-		"Return target creature card from your graveyard to the battlefield. If it's an Elf, destroy it at the beginning of the next end step.",
-		"Create a 1/1 colorless Insect artifact creature token with flying and haste named Hornet. Destroy it at the beginning of the next end step.",
 	} {
 		card := &ScryfallCard{Name: "Unavailable Subject", Layout: "normal", TypeLine: "Instant", OracleText: text}
 		_, diagnostics := lowerExecutableFaces(card)

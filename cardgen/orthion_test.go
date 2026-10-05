@@ -40,14 +40,6 @@ func TestLowerOrthionDelayedCopyTokenSacrifice(t *testing.T) {
 		if !ok {
 			t.Fatalf("ability %d cleanup = %#v, want Sacrifice", i, delayed.Trigger.Content)
 		}
-		if wantAmount == 1 {
-			if !delayed.Trigger.CapturedObject.Exists ||
-				delayed.Trigger.CapturedObjectGroup.Exists ||
-				sacrifice.Object != game.CapturedObjectReference() {
-				t.Fatalf("single-token cleanup = %#v", delayed.Trigger)
-			}
-			continue
-		}
 		if delayed.Trigger.CapturedObject.Exists ||
 			!delayed.Trigger.CapturedObjectGroup.Exists ||
 			!reflect.DeepEqual(sacrifice.Group, game.CapturedObjectsGroup()) {

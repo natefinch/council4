@@ -86,7 +86,7 @@ func leadingDelayedTiming(tokens []shared.Token) DelayedTimingKind {
 	}{
 		{[]string{"at", "the", "beginning", "of", "your", "next", "main", "phase"}, DelayedTimingNextMain},
 		{[]string{"at", "the", "beginning", "of", "the", "next", "end", "step"}, DelayedTimingNextEndStep},
-		{[]string{"at", "the", "beginning", "of", "your", "next", "end", "step"}, DelayedTimingNextEndStep},
+		{[]string{"at", "the", "beginning", "of", "your", "next", "end", "step"}, DelayedTimingYourNextEndStep},
 	} {
 		start := len(tokens) - 1 - len(pattern.words)
 		if start >= 0 && effectWordsAt(tokens, start, pattern.words...) {

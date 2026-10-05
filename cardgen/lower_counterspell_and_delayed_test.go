@@ -1018,8 +1018,8 @@ func TestLowerSimpleDelayedOneShotEffects(t *testing.T) {
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
 				exile, ok := movePermanentTo(primitive, zone.Exile)
-				if !ok || exile.Object.Kind() != game.ObjectReferenceSourceCard {
-					t.Fatalf("primitive = %#v, want source-card exile", primitive)
+				if !ok || exile.Object != game.CapturedObjectReference() {
+					t.Fatalf("primitive = %#v, want captured exile", primitive)
 				}
 			},
 		},
@@ -1032,8 +1032,8 @@ func TestLowerSimpleDelayedOneShotEffects(t *testing.T) {
 			check: func(t *testing.T, primitive game.Primitive) {
 				t.Helper()
 				sacrifice, ok := primitive.(game.Sacrifice)
-				if !ok || sacrifice.Object.Kind() != game.ObjectReferenceSourceCard {
-					t.Fatalf("primitive = %#v, want source-card sacrifice", primitive)
+				if !ok || sacrifice.Object != game.CapturedObjectReference() {
+					t.Fatalf("primitive = %#v, want captured sacrifice", primitive)
 				}
 			},
 		},
@@ -1047,7 +1047,7 @@ func TestLowerSimpleDelayedOneShotEffects(t *testing.T) {
 				t.Helper()
 				move, ok := primitive.(game.MoveCard)
 				if !ok ||
-					move.Card.Kind != game.CardReferenceSource ||
+					move.Card.Kind != game.CardReferenceCaptured ||
 					move.FromZone != zone.Graveyard ||
 					move.Destination != zone.Hand {
 					t.Fatalf("primitive = %#v, want source card graveyard-to-hand move", primitive)
@@ -1298,7 +1298,7 @@ func TestLowerDelayedBlinkWithCounter(t *testing.T) {
 	}
 }
 
-func TestLowerDelayedTargetReturnUsesLinkedReference(t *testing.T) {
+func TestLowerDelayedTargetReturnCapturesIdentity(t *testing.T) {
 	t.Parallel()
 	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Mask",
@@ -1311,8 +1311,8 @@ func TestLowerDelayedTargetReturnUsesLinkedReference(t *testing.T) {
 		t.Fatalf("mode = %#v, want one target and two instructions", mode)
 	}
 	modify, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
-	if !ok || modify.PublishLinked == "" {
-		t.Fatalf("modify = %#v, want published linked target", mode.Sequence[0].Primitive)
+	if !ok || modify.PublishLinked != "" {
+		t.Fatalf("modify = %#v, want no unnecessary linked publication", mode.Sequence[0].Primitive)
 	}
 	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
 	if !ok {
@@ -1320,9 +1320,10 @@ func TestLowerDelayedTargetReturnUsesLinkedReference(t *testing.T) {
 	}
 	bounce, ok := movePermanentTo(delayed.Trigger.Content.Modes[0].Sequence[0].Primitive, zone.Hand)
 	if !ok ||
-		bounce.Object.Kind() != game.ObjectReferenceLinkedObject ||
-		bounce.Object.LinkID() != string(modify.PublishLinked) {
-		t.Fatalf("delayed bounce = %#v, want linked object bounce", bounce)
+		bounce.Object != game.CapturedObjectReference() ||
+		!delayed.Trigger.CapturedObject.Exists ||
+		delayed.Trigger.CapturedObject.Val != game.TargetPermanentReference(0) {
+		t.Fatalf("delayed bounce = %#v, want frozen target identity", delayed)
 	}
 }
 

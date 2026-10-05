@@ -40,11 +40,11 @@ func TestGenerateNecropotence(t *testing.T) {
 		"game.EventCardDiscarded",
 		"game.MoveTopOfLibrary{",
 		"Destination: zone.Exile,",
-		`PublishLinked: game.LinkedKey("delayed-top-card-1")`,
+		`PublishLinked: game.LinkedKey("sequence-effect-0-product")`,
 		"FaceDown:      true,",
 		"game.CreateDelayedTrigger{",
 		"game.DelayedAtBeginningOfYourNextEndStep",
-		`CapturedCard: opt.Val(game.LinkedObjectReference("delayed-top-card-1"))`,
+		`CapturedCard: opt.Val(game.LinkedObjectReference("sequence-effect-0-product"))`,
 		// Struct fields are now emitted multi-line; containsNormalized handles
 		// whitespace/comma differences.
 		"game.CardReference{Kind: game.CardReferenceCaptured}",
@@ -132,8 +132,8 @@ func TestLowerNecropotencePayLifeExileDelayedReturn(t *testing.T) {
 	if exile.Amount != game.Fixed(1) {
 		t.Fatalf("exile amount = %v, want exactly one top card", exile.Amount)
 	}
-	if exile.PublishLinked != game.LinkedKey("delayed-top-card-1") {
-		t.Fatalf("exile publish key = %q, want delayed-top-card-1", exile.PublishLinked)
+	if exile.PublishLinked != game.LinkedKey("sequence-effect-0-product") {
+		t.Fatalf("exile publish key = %q, want canonical product key", exile.PublishLinked)
 	}
 
 	delayed, ok := seq[1].Primitive.(game.CreateDelayedTrigger)
@@ -147,8 +147,8 @@ func TestLowerNecropotencePayLifeExileDelayedReturn(t *testing.T) {
 		t.Fatal("delayed trigger must capture the exiled card")
 	}
 	if delayed.Trigger.CapturedCard.Val.Kind() != game.ObjectReferenceLinkedObject ||
-		delayed.Trigger.CapturedCard.Val.LinkID() != "delayed-top-card-1" {
-		t.Fatalf("captured card reference = %#v, want linked object delayed-top-card-1", delayed.Trigger.CapturedCard.Val)
+		delayed.Trigger.CapturedCard.Val.LinkID() != string(exile.PublishLinked) {
+		t.Fatalf("captured card reference = %#v, want exact published result", delayed.Trigger.CapturedCard.Val)
 	}
 	returnSeq := delayed.Trigger.Content.Modes[0].Sequence
 	if len(returnSeq) != 1 {

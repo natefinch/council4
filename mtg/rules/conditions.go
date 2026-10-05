@@ -190,6 +190,15 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if !objectConditionInformationAvailable(g, ctx, &cond) {
 		return false
 	}
+	if cond.Object.Exists && cond.Object.Val.Kind() == game.ObjectReferenceCapturedObject {
+		if ctx.obj == nil {
+			return false
+		}
+		permanent, ok := permanentByObjectID(g, ctx.obj.CapturedObjectID)
+		if !ok || permanent.PhasedOut {
+			return false
+		}
+	}
 	matches := true
 	if cond.ControlsMatching.Exists {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
