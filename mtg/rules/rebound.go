@@ -116,7 +116,7 @@ func (e *Engine) offerReboundCast(g *game.Game, playerID game.PlayerID, cardID i
 		CardSupertypes:               cardSupertypes(spellDef),
 		CardSubtypes:                 cardSubtypes(spellDef),
 		Colors:                       spellColors(spellDef),
-		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(0),
 		ManaFromCreaturesSpentToCast: opt.Val(0),
 		FromZone:                     zone.Exile,

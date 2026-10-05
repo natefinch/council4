@@ -218,7 +218,10 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 				Text:   joinTokens(phrase),
 			})
 			i++
-		case i+1 < len(tokens) && equalWord(tokens[i], "this") && referenceSelfMarkerNoun(tokens[i+1]):
+		case i+1 < len(tokens) && equalWord(tokens[i], "this") &&
+			(referenceSelfMarkerNoun(tokens[i+1]) ||
+				referencePossessiveObjectNoun(tokens[i+1]) && i+2 < len(tokens) &&
+					(equalWord(tokens[i+2], "power") || equalWord(tokens[i+2], "toughness") || equalWord(tokens[i+2], "mana"))):
 			if i >= 6 {
 				pre := normalizedWords(tokens[i-6 : i])
 				if referenceContainsSequence(pre, "for", "as", "long", "as", "you", "control") {

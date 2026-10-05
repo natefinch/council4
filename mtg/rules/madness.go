@@ -88,7 +88,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		CardSupertypes:               cardSupertypes(spellDef),
 		CardSubtypes:                 cardSubtypes(spellDef),
 		Colors:                       spellColors(spellDef),
-		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaValue:                    stackObjectKnownManaValue(g, stackObj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(poolSpent)),
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(poolSpent)),
 		FromZone:                     zone.Exile,

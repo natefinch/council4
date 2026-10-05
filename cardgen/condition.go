@@ -180,6 +180,20 @@ func lowerConditionWithReferences(condition compiler.CompiledCondition, ctx cond
 		}
 		result.Object = opt.Val(object)
 		result.ObjectMatches = opt.Val(selection)
+		if condition.TargetCardProducerClauseID > 0 {
+			if object.Kind() != game.ObjectReferenceTargetCard {
+				return game.Condition{}, false
+			}
+			result.TargetCardResultKey = targetCardConditionResultKey(condition.TargetCardProducerClauseID)
+		}
+		if object.Kind() == game.ObjectReferenceTargetStackObject || object.Kind() == game.ObjectReferenceEventStackObject {
+			remaining := selection
+			remaining.ManaValue = opt.V[compare.Int]{}
+			if !selection.ManaValue.Exists || !remaining.Empty() {
+				return game.Condition{}, false
+			}
+			result.UseCounteredSpellManaValue = condition.SubjectPast && object.Kind() == game.ObjectReferenceTargetStackObject
+		}
 	case compiler.ConditionPredicateObjectExists:
 		if condition.ObjectBinding != compiler.ReferenceBindingSource ||
 			!conditionSelectionEmpty(condition.Selection) {
@@ -329,6 +343,12 @@ func lowerObjectMatchReferenceWithContext(condition compiler.CompiledCondition, 
 			return game.ObjectReference{}, false
 		}
 		target := *condition.ObjectTarget
+		if target.Selector.Kind == compiler.SelectorSpell {
+			if _, ok := stackSpellTargetSpec(target); !ok {
+				return game.ObjectReference{}, false
+			}
+			return game.TargetStackObjectReference(reference.Occurrence), true
+		}
 		if target.Selector.Kind == compiler.SelectorCard {
 			if _, ok := cardInZoneTargetSpec(target, target.Selector.Zone); !ok {
 				return game.ObjectReference{}, false

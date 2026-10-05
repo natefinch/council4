@@ -485,8 +485,12 @@ func TestParseConditionEventSubjectAndSourceState(t *testing.T) {
 				clause.ObjectBinding != test.binding ||
 				!slices.Equal(clause.Selection.SubtypesAny, test.subtypes) ||
 				clause.Selection.CombatState != test.combat ||
-				clause.Selection.PowerAtLeast != test.power {
+				clause.Selection.AttributeCompare.Value != test.power {
 				t.Fatalf("clause = %#v", clause)
+			}
+			if test.power != 0 && (clause.Selection.AttributeCompare.Attribute != ConditionAttributePower ||
+				clause.Selection.AttributeCompare.Op != compare.GreaterOrEqual) {
+				t.Fatalf("power comparison = %#v", clause.Selection.AttributeCompare)
 			}
 		})
 	}
@@ -539,8 +543,9 @@ func TestParseEventSubjectPastTensePowerCondition(t *testing.T) {
 		clause := parseSingleConditionClause(t, condition)
 		if clause.Predicate != ConditionPredicateObjectMatches ||
 			clause.ObjectBinding != ConditionObjectBindingEventPermanent ||
-			!clause.Selection.MatchPowerAtLeast ||
-			clause.Selection.PowerAtLeast != 3 {
+			clause.Selection.AttributeCompare.Attribute != ConditionAttributePower ||
+			clause.Selection.AttributeCompare.Op != compare.GreaterOrEqual ||
+			clause.Selection.AttributeCompare.Value != 3 {
 			t.Fatalf("condition %q clause = %#v", condition, clause)
 		}
 	}
@@ -968,14 +973,7 @@ func TestParseConditionPermanentCardUsesTypeUnion(t *testing.T) {
 	}
 }
 
-// TestParseConditionTargetAttributeCompare covers the resolving per-effect
-// gate that compares a numeric attribute of the clause's own target against a
-// threshold via the named-possessive form "that <permanent-noun>'s
-// <attribute> is/was <n> or less/greater" (Carnivorous Canopy). It binds the
-// condition's object to the target and carries the attribute, comparator, and
-// threshold on Selection.AttributeCompare. The bare possessive "its
-// <attribute> is/was <n> or less/greater" is deliberately not accepted --
-// see recognizeTargetAttributeCompareCondition's doc comment.
+// The parser records an exact subject identity, leaving its binding contextual.
 func TestParseConditionTargetAttributeCompare(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -998,6 +996,30 @@ func TestParseConditionTargetAttributeCompare(t *testing.T) {
 			body:    "Destroy target creature. If that creature's toughness is 1 or greater, draw a card.",
 			compare: ConditionAttributeComparison{Attribute: ConditionAttributeToughness, Op: compare.GreaterOrEqual, Value: 1},
 		},
+		{
+			name: "bare mana value", body: "Destroy target creature. If its mana value is 2 or less, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributeManaValue, Op: compare.LessOrEqual, Value: 2},
+		},
+		{
+			name: "bare power", body: "Destroy target creature. If its power is 4 or greater, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributePower, Op: compare.GreaterOrEqual, Value: 4},
+		},
+		{
+			name: "bare toughness", body: "Destroy target creature. If its toughness is 1 or greater, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributeToughness, Op: compare.GreaterOrEqual, Value: 1},
+		},
+		{
+			name: "spell possessive", body: "Counter target spell. If that spell's mana value was 3 or less, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributeManaValue, Op: compare.LessOrEqual, Value: 3},
+		},
+		{
+			name: "has power", body: "Tap target creature. If that creature has power 4 or greater, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributePower, Op: compare.GreaterOrEqual, Value: 4},
+		},
+		{
+			name: "had mana value", body: "Exile target creature. If it had mana value 3 or less, draw a card.",
+			compare: ConditionAttributeComparison{Attribute: ConditionAttributeManaValue, Op: compare.LessOrEqual, Value: 3},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1012,46 +1034,22 @@ func TestParseConditionTargetAttributeCompare(t *testing.T) {
 			clauses := document.Abilities[0].ConditionClauses
 			if len(clauses) != 1 ||
 				clauses[0].Predicate != ConditionPredicateObjectMatches ||
-				clauses[0].ObjectBinding != ConditionObjectBindingTarget ||
+				!clauses[0].HasSubjectSpan || clauses[0].SubjectRefID < 0 ||
 				clauses[0].Selection.AttributeCompare != test.compare {
-				t.Fatalf("clauses = %#v, want ConditionPredicateObjectMatches/Target with attribute compare %#v", clauses, test.compare)
+				t.Fatalf("clauses = %#v, want contextual ObjectMatches with attribute compare %#v", clauses, test.compare)
 			}
 		})
 	}
 }
 
-// TestParseConditionTargetAttributeCompareRejectsOtherWording confirms the
-// recognizer fails closed on wording it does not model: an unsupported
-// comparator, an unsupported attribute, a possessive noun naming a spell
-// rather than a permanent-type object, and -- most importantly -- the bare
-// possessive "its" form, which the recognizer deliberately never accepts
-// (see its doc comment for why: "its" is genuinely ambiguous between a
-// clause's own target and a triggering event's permanent, and a pre-existing
-// recognizer already owns "its power is/was <n> or greater" for the
-// event-permanent binding a real, already-shipped card depends on).
-// "That spell's mana value..." always fails closed at the parser level here
-// (Reject Imperfection's "Counter target spell. If that spell's mana value
-// was 3 or less, ..." is not yet supported): the recognizer's noun
-// allowlist rejects "spell" outright, since lowerObjectReference's Target
-// case has no path to a TargetStackObjectReference a spell binding would
-// need. A possessive that names an allowed permanent-type noun but still has
-// no real target anywhere in the ability (e.g. a hypothetical "that
-// creature's mana value is 3 or greater" in a target-free trigger) parses
-// successfully -- it is not one of the wordings this test covers -- but is
-// separately rejected end to end by the compiler's existing
-// target-reference-binding validation (bindConditionReferences in
-// cardgen/oracle/compiler/condition.go), proven by
-// TestLowerNoTargetAttributeCompareFailsClosed.
 func TestParseConditionTargetAttributeCompareRejectsOtherWording(t *testing.T) {
 	t.Parallel()
 	bodies := []string{
-		"Destroy target creature. If its mana value is 2 or less, draw a card.",
-		"Destroy target creature. If its power is 4 or greater, draw a card.",
-		"Destroy target creature. If its toughness is 1 or greater, draw a card.",
 		"Destroy target creature. If that creature's mana value is exactly 2, draw a card.",
 		"Destroy target creature. If that creature's mana value is less than 2, draw a card.",
 		"Destroy target creature. If that creature's loyalty is 2 or less, draw a card.",
-		"Counter target spell. If that spell's mana value was 3 or less, draw a card.",
+		"Destroy target creature. If its power is X or greater, draw a card.",
+		"Destroy target creature. If its power is greater than this creature's power, draw a card.",
 	}
 	for _, body := range bodies {
 		t.Run(body, func(t *testing.T) {

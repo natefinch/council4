@@ -1,190 +1,118 @@
 package cardgen
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/compare"
 )
 
-// TestLowerCarnivorousCanopyManaValueComparePermanentNoun guards the
-// target-attribute-compare condition family with a real card: "Destroy
-// target artifact, enchantment, or creature with flying. If that permanent's
-// mana value was 3 or less, proliferate." (Carnivorous Canopy). The
-// named-possessive "that permanent's" binds the gate's object to the
-// destroy's own target, and the gate carries a mana-value less-or-equal
-// comparison rather than any type/subtype restriction.
-func TestLowerCarnivorousCanopyManaValueComparePermanentNoun(t *testing.T) {
+func TestLowerContextualNumericConditions(t *testing.T) {
 	t.Parallel()
-	sequence := lowerSpellSequence(t, "Carnivorous Canopy Test",
-		"Destroy target artifact, enchantment, or creature with flying. If that permanent's mana value was 3 or less, proliferate. (Choose any number of permanents and/or players, then give each another counter of each kind already there.)")
-	if len(sequence) != 2 {
-		t.Fatalf("sequence = %#v, want two instructions (destroy, gated proliferate)", sequence)
+	tests := []struct {
+		name, typeLine, text, prefix, object, attribute, op string
+		index, slot, value                                  int
+		past                                                bool
+	}{
+		{"permanent possessive", "Instant", "Destroy target creature. If that permanent's mana value was 3 or less, draw a card.", "SpellAbility", "TargetPermanent", "ManaValue", "LessOrEqual", 1, 0, 3, false},
+		{"bare target power", "Instant", "Destroy target creature. If its power is 4 or greater, draw a card.", "SpellAbility", "TargetPermanent", "Power", "GreaterOrEqual", 1, 0, 4, false},
+		{"bare target toughness", "Instant", "Tap target creature. If its toughness is 1 or greater, you gain 1 life.", "SpellAbility", "TargetPermanent", "Toughness", "GreaterOrEqual", 1, 0, 1, false},
+		{"nonzero target after rider", "Instant", "Tap target creature. Destroy target creature. You gain 1 life. If its mana value was 3 or less, draw a card.", "SpellAbility", "TargetPermanent", "ManaValue", "LessOrEqual", 3, 1, 3, false},
+		{"countered spell", "Instant", "Counter target spell. If that spell's mana value was 3 or less, proliferate.", "SpellAbility", "TargetStackObject", "ManaValue", "LessOrEqual", 1, 0, 3, true},
+		{"second countered spell", "Instant", "Counter target spell. Counter target spell. You gain 1 life. If that spell's mana value was 3 or less, you gain 2 life.", "SpellAbility", "TargetStackObject", "ManaValue", "LessOrEqual", 3, 1, 3, true},
+		{"targeted card after exile", "Instant", "Exile target card from a graveyard. If its mana value was 3 or less, you gain 1 life.", "SpellAbility", "TargetCard", "ManaValue", "LessOrEqual", 1, 0, 3, false},
+		{"live spell", "Instant", "Counter target spell if its mana value is 3 or less.", "SpellAbility", "TargetStackObject", "ManaValue", "LessOrEqual", 0, 0, 3, false},
+		{"event permanent", "Creature", "Whenever another creature enters, draw a card. If its toughness is 3 or greater, you gain 1 life.", "TriggeredAbilities[0].Content", "EventPermanent", "Toughness", "GreaterOrEqual", 1, 0, 3, false},
+		{"event spell", "Creature", "Whenever you cast an instant or sorcery spell, you gain 1 life. If that spell has mana value 5 or greater, put a +1/+1 counter on this creature.", "TriggeredAbilities[0].Content", "EventStackObject", "ManaValue", "GreaterOrEqual", 1, 0, 5, false},
+		{"event spell after returned permanent", "Creature", "Whenever you cast an instant or sorcery spell, return target creature card from your graveyard to the battlefield. You gain 1 life. If that spell has mana value 5 or greater, you gain 2 life.", "TriggeredAbilities[0].Content", "EventStackObject", "ManaValue", "GreaterOrEqual", 2, 0, 5, false},
+		{"activated", "Creature", "{1}: Destroy target creature. If its mana value was 3 or less, you gain 1 life.", "ActivatedAbilities[0].Content", "TargetPermanent", "ManaValue", "LessOrEqual", 1, 0, 3, false},
+		{"source after target", "Creature", "When this creature enters, tap target creature. This creature gets +1/+1 until end of turn. If its toughness is 3 or greater, you gain 1 life.", "TriggeredAbilities[0].Content", "SourcePermanent", "Toughness", "GreaterOrEqual", 2, 0, 3, false},
+		{"has after mutation", "Creature", "At the beginning of combat on your turn, put a +1/+1 counter on target creature you control. Then if that creature has toughness 6 or greater, transform this creature.", "TriggeredAbilities[0].Content", "TargetPermanent", "Toughness", "GreaterOrEqual", 1, 0, 6, false},
+		{"modal", "Instant", "Choose one —\n• Destroy target creature. If its mana value was 3 or less, you gain 1 life.\n• Draw a card.", "SpellAbility", "TargetPermanent", "ManaValue", "LessOrEqual", 1, 0, 3, false},
 	}
-	destroy := sequence[0]
-	if _, ok := destroy.Primitive.(game.Destroy); !ok {
-		t.Fatalf("instruction[0] = %T, want game.Destroy", destroy.Primitive)
-	}
-	if destroy.Condition.Exists {
-		t.Fatalf("destroy must carry no gate of its own: %#v", destroy)
-	}
-	proliferate := sequence[1]
-	gate := effectConditionMatch(t, proliferate)
-	if gate.Object.Val.Kind() != game.ObjectReferenceTargetPermanent || gate.Object.Val.TargetIndex() != 0 {
-		t.Fatalf("gate object = %#v, want target permanent 0", gate.Object)
-	}
-	if got := gate.ObjectMatches.Val.ManaValue; !got.Exists || got.Val != (compare.Int{Op: compare.LessOrEqual, Value: 3}) {
-		t.Fatalf("gate mana value = %#v, want <= 3", got)
-	}
-	if gate.ObjectMatches.Val.Power.Exists || gate.ObjectMatches.Val.Toughness.Exists {
-		t.Fatalf("gate must carry no power/toughness bound: %#v", gate)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			card := &ScryfallCard{Name: "Numeric Comparison", Layout: "normal", TypeLine: tt.typeLine,
+				OracleText: tt.text, Power: new("2"), Toughness: new("2")}
+			prefix := tt.prefix
+			if prefix == "SpellAbility" {
+				prefix += ".Val"
+			}
+			path := fmt.Sprintf("%s.Modes[0].Sequence[%d].Condition.Val.Condition.Val", prefix, tt.index)
+			assertCardPaths(t, card,
+				path+".Object.Val.kind = game.ObjectReference"+tt.object,
+				fmt.Sprintf("%s.ObjectMatches.Val.%s.Val.Op = compare.%s", path, tt.attribute, tt.op),
+				fmt.Sprintf("%s.ObjectMatches.Val.%s.Val.Value = %d", path, tt.attribute, tt.value),
+			)
+			if tt.slot != 0 {
+				assertCardPaths(t, card, fmt.Sprintf("%s.Object.Val.targetIndex = %d", path, tt.slot))
+			}
+			if tt.past {
+				assertCardPaths(t, card, path+".UseCounteredSpellManaValue = true")
+			} else {
+				assertCardPathsAbsent(t, card, path+".UseCounteredSpellManaValue")
+			}
+			assertCardPathsAbsent(t, card, "ActivationCondition", "Trigger.InterveningIf")
+		})
 	}
 }
 
-// TestLowerTargetAttributeComparePowerToughnessPermanentNoun covers the power
-// and toughness attributes of the same family via the named-possessive form.
-// Real cards use this grammar (Depressurize: "Target creature gets -3/-0
-// until end of turn. Then if that creature's power is 0 or less, destroy
-// it."; Gore Vassal: "... Then if that creature's toughness is 1 or greater,
-// regenerate it."), but both currently hit an unrelated blocker in the
-// gated consequence (an unsupported "destroy it"/"regenerate it" back-
-// reference, not the condition itself), so this test isolates the condition
-// gate alone with an otherwise-equivalent, fully supported gated effect.
-func TestLowerTargetAttributeComparePowerToughnessPermanentNoun(t *testing.T) {
-	t.Parallel()
-	sequence := lowerSpellSequence(t, "Power Toughness Compare Test",
-		"Destroy target creature. If that creature's power is 4 or greater, draw a card. If that creature's toughness is 1 or greater, you gain 1 life.")
-	if len(sequence) != 3 {
-		t.Fatalf("sequence = %#v, want three instructions (destroy, gated draw, gated life gain)", sequence)
-	}
-	draw := sequence[1]
-	drawGate := effectConditionMatch(t, draw)
-	if got := drawGate.ObjectMatches.Val.Power; !got.Exists || got.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 4}) {
-		t.Fatalf("draw gate power = %#v, want >= 4", got)
-	}
-	if drawGate.ObjectMatches.Val.ManaValue.Exists || drawGate.ObjectMatches.Val.Toughness.Exists {
-		t.Fatalf("draw gate must carry no mana-value/toughness bound: %#v", drawGate)
-	}
-	gainLife := sequence[2]
-	lifeGate := effectConditionMatch(t, gainLife)
-	if got := lifeGate.ObjectMatches.Val.Toughness; !got.Exists || got.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 1}) {
-		t.Fatalf("life-gain gate toughness = %#v, want >= 1", got)
-	}
-}
-
-// TestLowerTargetAttributeCompareSpellNounFailsClosed guards
-// recognizeTargetAttributeCompareCondition's deliberate exclusion of a "that
-// spell's" possessive antecedent: Reject Imperfection ("Counter target
-// spell. If that spell's mana value was 3 or less, proliferate.") is not yet
-// supported, because lowerObjectReference's Target case always produces a
-// TargetPermanentReference with no path to a TargetStackObjectReference --
-// binding a spell target that way would silently resolve the wrong reference
-// kind rather than fail closed. The recognizer rejects the "spell" noun
-// outright so the ability fails closed as unsupported instead.
-func TestLowerTargetAttributeCompareSpellNounFailsClosed(t *testing.T) {
+func TestLowerNumericActivationRestrictionRemainsAnnouncementOnly(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
-		Name:       "Reject Imperfection Probe",
-		Layout:     "normal",
-		TypeLine:   "Instant",
-		OracleText: "Counter target spell. If that spell's mana value was 3 or less, proliferate.",
+		Name: "Numeric Restriction", Layout: "normal", TypeLine: "Creature",
+		OracleText: "Ferocious — {1}: Draw a card. Activate only if you control a creature with power 3 or less.",
+		Power:      new("2"), Toughness: new("2"),
 	}
-	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
-	if err != nil {
-		t.Fatalf("GenerateExecutableCardSource error = %v", err)
-	}
-	if len(diagnostics) == 0 && source != "" {
-		t.Fatal("spell-noun attribute-compare gate unexpectedly compiled without any diagnostic")
-	}
+	prefix := "CardDef.CardFace.ActivatedAbilities[0]."
+	assertCardPaths(t, card,
+		prefix+"ActivationCondition.Val.ControlsMatching.Val.Selection.Power.Val.Op = compare.LessOrEqual",
+		prefix+"ActivationCondition.Val.ControlsMatching.Val.Selection.Power.Val.Value = 3",
+		prefix+"Content.Modes[0].Sequence[0].Primitive",
+	)
+	assertCardPathsAbsent(t, card, prefix+"Content.Modes[0].Sequence[0].Condition", "TriggeredAbilities")
 }
 
-// TestLowerBareItsAttributeCompareBindsTargetWhenNoTriggerExists guards the
-// bare "its power/toughness/mana value is/was N or greater" gate's binding
-// resolution across BOTH real shapes it covers, which is why the parser's
-// recognizeTargetAttributeCompareCondition still deliberately never accepts
-// "its" directly (see its doc comment) -- the two shapes are disambiguated
-// downstream, at compile time in bindConditionReferences, not by the parser:
-//
-//   - In a triggered ability with no target ("Whenever a creature you
-//     control enters, draw a card if its power is 3 or greater. Otherwise,
-//     put two +1/+1 counters on it.", Tribute to the World Tree, guarded by
-//     TestLowerOtherwiseBranchKeyedOnEventPower), "its" binds the triggering
-//     event's permanent via recognizeEventSubjectPowerState's parse and
-//     stays bound there: a trigger exists, so the event-permanent reading
-//     remains a live candidate and is preferred.
-//   - In a plain, non-triggered spell with exactly one single-object target
-//     ("Destroy target creature. If its power is 4 or greater, draw a
-//     card."), no trigger exists at all, so the event-permanent reading
-//     recognizeEventSubjectPowerState's parse initially assumed can never
-//     have been correct; bindConditionReferences's no-trigger fallback (the
-//     same mechanism added for "that <noun> was a <selection>",
-//     recognizeThatSubjectMatchCondition) rebinds it to the sole target
-//     instead, reading its post-destroy characteristics through last-known
-//     information (CR 608.2b).
-//
-// This test guards the second shape now succeeds instead of failing closed;
-// TestLowerOtherwiseBranchKeyedOnEventPower guards the first shape is
-// unaffected by the fallback (a trigger exists there, so it never engages).
-func TestLowerBareItsAttributeCompareBindsTargetWhenNoTriggerExists(t *testing.T) {
+func TestContextualNumericConditionsFailClosed(t *testing.T) {
 	t.Parallel()
-	sequence := lowerSpellSequence(t, "Bare Its Power Test",
-		"Destroy target creature. If its power is 4 or greater, draw a card.")
-	if len(sequence) != 2 {
-		t.Fatalf("sequence = %#v, want two instructions (destroy, gated draw)", sequence)
+	for _, text := range []string{
+		"Tap target creature. If that spell's mana value was 3 or less, draw a card.",
+		"Counter target spell. If that spell's power is 4 or greater, draw a card.",
+		"Whenever you cast a creature spell, if that spell's power is 4 or greater, draw a card.",
+		"Destroy two target creatures. If its toughness is 3 or greater, draw a card.",
+		"Destroy target creature. If its power is X or greater, draw a card.",
+		"Destroy target creature. If its power is greater than this creature's power, draw a card.",
+		"Reveal the top card of your library. If it had mana value 3 or less, draw a card.",
+		"Exile target creature. If it had mana value 3 or less, draw a card.",
+	} {
+		assertCardUnsupported(t, &ScryfallCard{Name: "Unavailable Numeric Subject", Layout: "normal",
+			TypeLine: "Creature", OracleText: "When this creature enters, " + text,
+			Power: new("2"), Toughness: new("2")})
 	}
-	destroy := sequence[0]
-	if _, ok := destroy.Primitive.(game.Destroy); !ok {
-		t.Fatalf("instruction[0] = %T, want game.Destroy", destroy.Primitive)
-	}
-	draw := sequence[1]
-	gate := effectConditionMatch(t, draw)
-	if gate.Object.Val.Kind() != game.ObjectReferenceTargetPermanent || gate.Object.Val.TargetIndex() != 0 {
-		t.Fatalf("gate object = %#v, want target permanent 0", gate.Object)
-	}
-	if got := gate.ObjectMatches.Val.Power; !got.Exists || got.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 4}) {
-		t.Fatalf("gate power = %#v, want >= 4", got)
-	}
+
+	assertCardUnsupported(t, &ScryfallCard{Name: "Unbound Numeric Subject", Layout: "normal",
+		TypeLine: "Instant", OracleText: "If its power is 4 or greater, draw a card."})
 }
 
-// TestLowerNoTargetAttributeCompareFailsClosed guards the compiler's
-// target-reference-binding validation (bindConditionReferences in
-// cardgen/oracle/compiler/condition.go), which is the actual safety net for
-// a possessive antecedent that parses to ConditionObjectBindingTarget but
-// names no real target: "Whenever a creature you control enters, scry 1. If
-// that creature's mana value is 3 or greater, draw a card." uses an allowed
-// permanent-type noun ("creature"), so the condition parses successfully as
-// ConditionPredicateObjectMatches/ConditionObjectBindingTarget (confirmed
-// directly against the parser: Parse() on this exact text produces one such
-// clause) -- but the ability has no target anywhere, so
-// bindConditionReferences correctly rejects the binding and the ability
-// fails closed as unsupported rather than silently resolving against
-// nothing. This is deliberately NOT the Zaffai/magecraft shape used
-// elsewhere in this file (TestLowerTargetAttributeCompareSpellNounFailsClosed):
-// that card's "that spell's" is rejected by the parser's noun allowlist
-// before any binding is ever attempted (Parse() on Zaffai's text produces
-// zero condition clauses), so it does not exercise this validation step at
-// all, even though its own doc comment once claimed it did.
-func TestLowerNoTargetAttributeCompareFailsClosed(t *testing.T) {
+func TestContextualTypeConditionActualLookSubjectStaysRefused(t *testing.T) {
 	t.Parallel()
-	card := &ScryfallCard{
-		Name:       "No Target Attribute Compare Probe",
-		Layout:     "normal",
-		TypeLine:   "Enchantment",
-		OracleText: "Whenever a creature you control enters, scry 1. If that creature's mana value is 3 or greater, draw a card.",
-	}
-	source, diagnostics, err := GenerateExecutableCardSource(card, "p")
-	if err != nil {
-		t.Fatalf("GenerateExecutableCardSource error = %v", err)
-	}
-	if len(diagnostics) == 0 && source != "" {
-		t.Fatal("no-target attribute-compare gate unexpectedly compiled without any diagnostic")
-	}
+	assertCardUnsupported(t, &ScryfallCard{Name: "Wand of Denial", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{T}: Look at the top card of target player's library. If it's a nonland card, you may pay 2 life. If you do, put it into that player's graveyard."})
 }
 
-// effectConditionMatch extracts the nested game.Condition an instruction's
-// per-effect gate carries (its Object reference and ObjectMatches selection),
-// failing the test if the instruction is not gated by exactly one such
-// condition.
+func TestLowerSplitskinDollUsesSharedUpperBound(t *testing.T) {
+	t.Parallel()
+	assertCardPaths(t, &ScryfallCard{Name: "Splitskin Doll", Layout: "normal", TypeLine: "Artifact Creature",
+		OracleText: "When this creature enters, draw a card. Then discard a card unless you control another creature with power 2 or less.",
+		Power:      new("2"), Toughness: new("1")},
+		"Sequence[1].Condition.Val.Condition.Val.Negate = true",
+		"Sequence[1].Condition.Val.Condition.Val.ControlsMatching.Val.Selection.ExcludeSource = true",
+		"Sequence[1].Condition.Val.Condition.Val.ControlsMatching.Val.Selection.Power.Val.Op = compare.LessOrEqual",
+		"Sequence[1].Condition.Val.Condition.Val.ControlsMatching.Val.Selection.Power.Val.Value = 2")
+}
+
 func effectConditionMatch(t *testing.T, instr game.Instruction) game.Condition {
 	t.Helper()
 	if !instr.Condition.Exists || !instr.Condition.Val.Condition.Exists || !instr.Condition.Val.Condition.Val.ObjectMatches.Exists {

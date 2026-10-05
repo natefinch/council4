@@ -95,11 +95,17 @@ func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex i
 		obj.TargetControllerLKI = make(map[int]game.PlayerID)
 	}
 	obj.TargetControllerLKI[targetIndex] = target.Controller
+	delete(obj.TargetManaValueLKI, targetIndex)
+	delete(obj.TargetManaValueLKIObjectIDs, targetIndex)
 	if manaValue, known := stackObjectManaValue(g, target); known {
 		if obj.TargetManaValueLKI == nil {
 			obj.TargetManaValueLKI = make(map[int]int)
 		}
 		obj.TargetManaValueLKI[targetIndex] = manaValue
+		if obj.TargetManaValueLKIObjectIDs == nil {
+			obj.TargetManaValueLKIObjectIDs = make(map[int]id.ID)
+		}
+		obj.TargetManaValueLKIObjectIDs[targetIndex] = target.ID
 	}
 	if name, known := stackSpellName(g, target); known {
 		if obj.TargetNameLKI == nil {
@@ -145,6 +151,11 @@ func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
 		return 0, false
 	}
 	return stackManaValue(def, obj.XValue), true
+}
+
+func stackObjectKnownManaValue(g *game.Game, obj *game.StackObject) opt.V[int] {
+	value, known := stackObjectManaValue(g, obj)
+	return optionalInt(value, known)
 }
 
 func effectStackObjectID(g *game.Game, obj *game.StackObject, targetIndex int) (id.ID, bool) {

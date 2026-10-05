@@ -3,7 +3,6 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/opt"
 )
 
 func stormCopyCount(g *game.Game, spell *game.CardDef) int {
@@ -69,7 +68,7 @@ func emitSpellCopiedEvent(g *game.Game, copyObj *game.StackObject, spell *game.C
 		event.CardSupertypes = cardSupertypes(spell)
 		event.CardSubtypes = stackObjectCardSubtypes(copyObj, spell)
 		event.Colors = spellColors(spell)
-		event.ManaValue = opt.Val(stackManaValue(spell, copyObj.XValue))
+		event.ManaValue = stackObjectKnownManaValue(g, copyObj)
 	}
 	emitEvent(g, event)
 }

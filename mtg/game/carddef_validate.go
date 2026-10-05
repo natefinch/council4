@@ -12,6 +12,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // CardDefIssueCode identifies a class of structural CardDef validation issue.
@@ -2143,6 +2144,21 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 	}
 	if condition.EventHistory.Exists {
 		v.validateEventHistoryCondition(faceName, appendPath(path, "EventHistory"), &condition.EventHistory.Val)
+	}
+	if condition.UseCounteredSpellManaValue {
+		selection := condition.ObjectMatches.Val
+		numeric := selection.ManaValue.Exists
+		selection.ManaValue = opt.V[compare.Int]{}
+		if !condition.Object.Exists || condition.Object.Val.Kind() != ObjectReferenceTargetStackObject ||
+			!condition.ObjectMatches.Exists || !numeric || !selection.Empty() || len(condition.Types) != 0 {
+			v.add(faceName, appendPath(path, "UseCounteredSpellManaValue"), CardDefIssueInvalidCondition,
+				"countered spell information requires a target stack object and only a mana-value Selection")
+		}
+	}
+	if condition.TargetCardResultKey != "" &&
+		(!condition.Object.Exists || condition.Object.Val.Kind() != ObjectReferenceTargetCard || !condition.ObjectMatches.Exists) {
+		v.add(faceName, appendPath(path, "TargetCardResultKey"), CardDefIssueInvalidCondition,
+			"targeted-card result information requires a target card and an ObjectMatches Selection")
 	}
 	if condition.SpellColorManaSpent.Count < 0 {
 		v.add(faceName, appendPath(path, "SpellColorManaSpent.Count"), CardDefIssueInvalidCondition, "colored-mana-spend threshold cannot be negative")

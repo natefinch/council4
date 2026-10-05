@@ -23,32 +23,35 @@ type ObjectSnapshot struct {
 	// when it left the battlefield. A merged permanent contributes every
 	// nontoken component, each with the post-move zone version that distinguishes
 	// that incarnation from a card that later leaves and reenters the zone.
-	ZoneCards       []ZoneCardSnapshot
-	Face            FaceIndex
-	FaceDown        bool
-	FaceDownFace    FaceIndex
-	FaceDownKind    FaceDownKind
-	MergedCards     []MergedCard
-	Name            string
-	Owner           PlayerID
-	Controller      PlayerID
-	FromZone        zone.Type
-	Tapped          bool
-	Attacking       bool
-	Blocking        bool
-	Colors          []color.Color
-	Supertypes      []types.Super
-	Types           []types.Card
-	Subtypes        []types.Sub
-	Power           opt.V[int]
-	BasePower       opt.V[int]
-	Toughness       opt.V[int]
-	Keywords        []Keyword
-	Counters        counter.Set
-	EntryChoices    map[ChoiceKey]ResolutionChoiceResult
-	RuleEffectKinds []RuleEffectKind
-	MarkedDamage    int
-	Attachments     []id.ID
+	ZoneCards []ZoneCardSnapshot
+	// TargetCardZoneVersion identifies the original selected card incarnation
+	// when this snapshot publishes a successful targeted-card move.
+	TargetCardZoneVersion opt.V[uint64]
+	Face                  FaceIndex
+	FaceDown              bool
+	FaceDownFace          FaceIndex
+	FaceDownKind          FaceDownKind
+	MergedCards           []MergedCard
+	Name                  string
+	Owner                 PlayerID
+	Controller            PlayerID
+	FromZone              zone.Type
+	Tapped                bool
+	Attacking             bool
+	Blocking              bool
+	Colors                []color.Color
+	Supertypes            []types.Super
+	Types                 []types.Card
+	Subtypes              []types.Sub
+	Power                 opt.V[int]
+	BasePower             opt.V[int]
+	Toughness             opt.V[int]
+	Keywords              []Keyword
+	Counters              counter.Set
+	EntryChoices          map[ChoiceKey]ResolutionChoiceResult
+	RuleEffectKinds       []RuleEffectKind
+	MarkedDamage          int
+	Attachments           []id.ID
 	// SaddleContributorIDs preserves the exact creature objects that saddled this
 	// permanent this turn so a triggered ability can resolve after its source
 	// leaves the battlefield.
