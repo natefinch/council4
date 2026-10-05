@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18535 supported cards
+# 18546 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -5024,6 +5024,7 @@ f99f90092af612d7  Evangel of Heliod
 a8188ab4cbc91171  Evasive Action
 71c157f73b8faaf8  Evelyn, the Covetous
 959e785c8a411fd7  Everbark Shaman
+aafaa032618d4971  Evereth, Viceroy of Plunder
 d64dd0c435eea7c6  Everflowing Chalice
 fe28a267c3cf84b5  Everglades
 639cba4f6934eb16  Evermind
@@ -5204,6 +5205,7 @@ ebb84c4daad94037  Faithful Pikemaster
 b206b4caddfe57b0  Falcon and Redwing
 d509ab8c994b8052  Falcon's Wing Harness
 ce7f2236d6eb61f6  Falconer Adept
+cc002256e458d4d0  Falkenrath Aristocrat
 991d7b2996eb4d50  Falkenrath Celebrants
 368ca15d3ac8f697  Falkenrath Exterminator
 b948539d5f6b527e  Falkenrath Forebear
@@ -5211,6 +5213,7 @@ fad2781e4d9d7b3f  Falkenrath Marauders
 635bf1ec9a58ebe1  Falkenrath Noble
 37e17c2d006a5de9  Falkenrath Pit Fighter
 918a5ae0428a0876  Falkenrath Reaver
+00eb968779c67b7c  Falkenrath Torturer
 f7a4c149b886f40e  Fall from Favor
 a9df083a07715d3a  Fall of the Gavel
 f36fc1585db78d99  Fall of the Hammer
@@ -5875,6 +5878,7 @@ c2fd1a69c7568e75  Foundation Breaker
 fb4ff17e08321bbc  Founding of Omashu
 e2f571b7429022f2  Foundry Assembler
 6275b7d1cc4621d5  Foundry Champion
+efb6b478a11c8e20  Foundry Helix
 3069889c58a42685  Foundry Inspector
 73229c24d8c1bd89  Foundry of the Consuls
 010ff848dfed472d  Foundry Screecher
@@ -6740,6 +6744,7 @@ b6711f7133fc24dd  Gorion, Wise Mentor
 c94ecd8bb52ece90  Goryo's Vengeance
 cc239ad3a8f09be0  Gossamer Phantasm
 8a761fda3873ca0e  Gothmog, Morgul Lieutenant
+2c00b597cba90057  Grab the Prize
 94c1d5d198866422  Grabby Giant // That's Mine
 6bfa62cacdc10e1d  Graceful Adept
 e188052fd1606071  Graceful Cat
@@ -10249,6 +10254,7 @@ b8d1e9ebe5363642  Mordor Muster
 beba2656fd0dc076  Morgue Thrull
 ba73e4ebac3cd49b  Morgue Toad
 a2c96cb6f6a37497  Moria Marauder
+a37c6097846874c3  Moria Scavenger
 d38d91e4e7ce37d9  Moriok Reaver
 34893cd90ba03e20  Moriok Replica
 0b9bdc6557c4502a  Moriok Rigger
@@ -10485,6 +10491,7 @@ ff6db5e06615c7a5  Narset, Jeskai Waymaster
 d4eef46ae44fc010  Narstad Scrapper
 6c341026332eb30f  Naru Meha, Master Wizard
 4840b79e597c350c  Narwhal
+2c15d1e0f37447f5  Nasty End
 8f1cf62b8472703b  Nasty Little Rabbit
 eb271048c9a656d9  Nath of the Gilt-Leaf
 4a1fb0884762beb1  Nath's Buffoon
@@ -10531,6 +10538,7 @@ cd8c65876b5d0a66  Necrogen Spellbomb
 4c101ad92dd28bd7  Necrogoyf
 00fa018218e6e359  Necromancer's Assistant
 cd5088285b2958fa  Necromancer's Familiar
+5f3fd71af9d20207  Necromancer's Stockpile
 2742a9e2cd78ea12  Necromantic Thirst
 725505a2d2eee3d7  Necron Deathmark
 379b39914f3e7f4c  Necron Monolith
@@ -14956,6 +14964,7 @@ fff0afa8dde69154  Splinterfright
 c9155a616a9aad1f  Split-Tail Miko
 c16f43edc6d26bbe  Splitskin Doll
 215f578858122a8e  Splitting Slime
+d39243aed425b0e6  Splitting the Powerstone
 d6c4588563d8022e  Spoils of Adventure
 343f43313cbe979c  Spontaneous Artist
 8aece0234f1f2462  Spontaneous Combustion
@@ -16022,6 +16031,7 @@ f9c2d93d7948cfc8  Thalia, Guardian of Thraben
 93678919855df37e  Thallid
 90338c315b30ed3e  Thallid Devourer
 dce7491441974a60  Thallid Germinator
+6ea0154f86793613  Thallid Omnivore
 2b15df82d8c880ff  Thallid Shell-Dweller
 04311ee8fedccfac  Thallid Soothsayer
 e591aa2e07a3fb21  Thanos, Death's Consort
@@ -18168,6 +18178,7 @@ dccd7fbd746af770  Witch's Cauldron
 5a50507afe392ed5  Witch's Cottage
 92f2a7414f37621a  Witch's Familiar
 39b1b394549ebf8d  Witch's Mist
+4585025d4d548a52  Witch's Oven
 e8428212a28466b2  Witch's Web
 ff9eef0455430761  Witch-Maw Nephilim
 06094e374a8daf07  Witches' Eye
