@@ -36,6 +36,9 @@ func TestFixedPhaseMovePublicationClearsOnlyTransientLinks(t *testing.T) {
 				sequence[0].Optional = true
 			case "condition":
 				sequence[0].Condition = opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{ControllerHandEmpty: true, Negate: true})})
+			case "failed":
+			default:
+				t.Fatalf("unknown unavailable-producer case %q", reason)
 			}
 			engine.resolveInstructionSequence(g, obj, sequence, [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{}}, &TurnLog{})
 			if len(g.DelayedTriggers) != 2 || g.DelayedTriggers[1].CapturedCardID != 0 {

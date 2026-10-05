@@ -108,9 +108,11 @@ func TestFixedPhaseSkippedProductDoesNotCaptureStaleGroup(t *testing.T) {
 			case "declined":
 				sequence[0].Optional = true
 			case "empty":
-				create := sequence[0].Primitive.(game.CreateToken)
+				create := captureTestPrimitive[game.CreateToken](t, sequence[0].Primitive)
 				create.Amount = game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 				sequence[0].Primitive = create
+			default:
+				t.Fatalf("unknown unavailable-producer case %q", reason)
 			}
 			engine.resolveInstructionSequence(g, obj, sequence, [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{}}, &TurnLog{})
 			if len(g.DelayedTriggers) != 2 || len(g.DelayedTriggers[1].CapturedObjectIDs) != 0 {

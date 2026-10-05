@@ -1758,6 +1758,9 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 // trailing unrecognized conjunct ("untap it and all Samurai you control"); such a
 // tap/untap stays unsupported rather than silently dropping the conjunct.
 func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	group := ctx.capturedSubject != nil && ctx.capturedSubject.group
+	hasDirectObject := group && ctx.content.Effects[0].CreatedTokensReference ||
+		ctx.capturedSubject != nil && ctx.capturedSubject.direct
 	exact := ctx.content.Effects[0].Exact
 	if (ctx.content.Effects[0].Kind == compiler.EffectUntap ||
 		ctx.content.Effects[0].Kind == compiler.EffectTap) &&
@@ -1765,8 +1768,7 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		exact = true
 	}
 	if len(ctx.content.Targets) != 0 ||
-		(len(ctx.content.References) == 0 && !(ctx.capturedSubject != nil &&
-			(ctx.capturedSubject.group && ctx.content.Effects[0].CreatedTokensReference || ctx.capturedSubject.direct))) ||
+		(len(ctx.content.References) == 0 && !hasDirectObject) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1775,8 +1777,6 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		ctx.content.Effects[0].Context != parser.EffectContextController {
 		return game.AbilityContent{}, false
 	}
-	group := ctx.capturedSubject != nil && ctx.capturedSubject.group
-	hasDirectObject := group && ctx.content.Effects[0].CreatedTokensReference || ctx.capturedSubject != nil && ctx.capturedSubject.direct
 	for _, ref := range ctx.content.References {
 		if ref.Binding != compiler.ReferenceBindingEventPermanent &&
 			ref.Binding != compiler.ReferenceBindingEventRelatedPermanent &&
@@ -1792,8 +1792,7 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 			// "its" carries no direct object and is rejected below.
 			if ref.Pronoun != compiler.ReferencePronounIt &&
 				ref.Pronoun != compiler.ReferencePronounIts &&
-				!(ctx.capturedSubject != nil && ctx.capturedSubject.group &&
-					(ref.Pronoun == compiler.ReferencePronounThem || ref.Pronoun == compiler.ReferencePronounThose)) {
+				(!group || ref.Pronoun != compiler.ReferencePronounThem && ref.Pronoun != compiler.ReferencePronounThose) {
 				return game.AbilityContent{}, false
 			}
 			hasDirectObject = hasDirectObject || ref.Pronoun == compiler.ReferencePronounIt ||

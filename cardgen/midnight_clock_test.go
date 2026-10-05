@@ -42,8 +42,8 @@ func TestGenerateExecutableCardSourceMidnightClock(t *testing.T) {
 	)
 	assertCardPathsAbsent(t, card, "TriggeredAbilities[0].Trigger.Pattern.Player")
 	face := lowerSingleFace(t, card)
-	addMana := face.ManaAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.AddMana)
-	draw := face.TriggeredAbilities[1].Content.Modes[0].Sequence[1].Primitive.(game.Draw)
+	addMana := captureTestPrimitive[game.AddMana](t, face.ManaAbilities[0].Content.Modes[0].Sequence[0].Primitive)
+	draw := captureTestPrimitive[game.Draw](t, face.TriggeredAbilities[1].Content.Modes[0].Sequence[1].Primitive)
 	if addMana.ManaColor != mana.U || addMana.Amount != game.Fixed(1) || draw.Amount != game.Fixed(7) {
 		t.Fatal("Midnight Clock lost its fixed mana output or seven-card draw")
 	}

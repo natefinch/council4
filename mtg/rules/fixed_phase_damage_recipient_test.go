@@ -22,7 +22,7 @@ func TestFixedPhaseDamageSourceFilterCapturesDamagedRecipient(t *testing.T) {
 		t.Fatalf("compile: %v; diagnostics: %v; definitions: %d", err, diagnostics, len(defs))
 	}
 	ability := defs[0].TriggeredAbilities[0]
-	capture := ability.Content.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
+	capture := captureTestPrimitive[game.CreateDelayedTrigger](t, ability.Content.Modes[0].Sequence[0].Primitive).Trigger
 	if ability.Trigger.Pattern.Subject != game.TriggerSubjectDamageSource ||
 		!capture.CapturedObject.Exists || capture.CapturedObject.Val != game.EventPermanentReference() ||
 		capture.Timing != game.DelayedAtEndOfCombat {

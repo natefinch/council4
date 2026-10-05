@@ -53,8 +53,9 @@ func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
 		}
 		from = ctx.capturedSubject.fromZone
 	}
-	if from != zone.Exile && from != zone.Graveyard &&
-		!(from == zone.None && destination == zone.Battlefield && ctx.capturedSubject != nil && ctx.capturedSubject.card) {
+	capturedDeparture := from == zone.None && destination == zone.Battlefield &&
+		ctx.capturedSubject != nil && ctx.capturedSubject.card
+	if from != zone.Exile && from != zone.Graveyard && !capturedDeparture {
 		return game.AbilityContent{}, false
 	}
 	if effect.Amount.Known && (!effect.CounterKindKnown || effect.ToZone != zone.Battlefield) {

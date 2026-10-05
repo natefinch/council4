@@ -1101,7 +1101,7 @@ func TestLowerDelayedOneShotEffectCapturesTargetReference(t *testing.T) {
 		TypeLine:   "Instant",
 		OracleText: "Exile target creature at the beginning of the next end step.",
 	})
-	trigger := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
+	trigger := captureTestPrimitive[game.CreateDelayedTrigger](t, face.SpellAbility.Val.Modes[0].Sequence[0].Primitive).Trigger
 	move, ok := movePermanentTo(trigger.Content.Modes[0].Sequence[0].Primitive, zone.Exile)
 	if !ok || move.Object != game.CapturedObjectReference() ||
 		!trigger.CapturedObject.Exists || trigger.CapturedObject.Val != game.TargetPermanentReference(0) {

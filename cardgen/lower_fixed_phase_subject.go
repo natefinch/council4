@@ -186,11 +186,12 @@ func lowerFixedPhaseSubject(
 		}
 	}
 	trigger := game.DelayedTriggerDef{Timing: timing, Content: content, Optional: subject.OptionalAtDelayedTime}
-	if card {
+	switch {
+	case card:
 		trigger.CapturedCard = opt.Val(object)
-	} else if group {
+	case group:
 		trigger.CapturedObjectGroup = opt.Val(object)
-	} else {
+	default:
 		trigger.CapturedObject = opt.Val(object)
 	}
 

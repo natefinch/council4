@@ -33,17 +33,20 @@ func TestFixedPhaseCapturedSubjectComposes(t *testing.T) {
 			if !ok {
 				t.Fatalf("last primitive = %T", sequence[len(sequence)-1].Primitive)
 			}
-			if test.group {
+			switch {
+			case test.group:
 				if !delayed.Trigger.CapturedObjectGroup.Exists {
 					t.Fatal("actual produced group was not captured")
 				}
-			} else if test.target < 0 {
+			case test.target < 0:
 				if !delayed.Trigger.CapturedObject.Exists || delayed.Trigger.CapturedObject.Val.Kind() != game.ObjectReferenceLinkedObject {
 					t.Fatal("returned actual permanent was not captured")
 				}
-			} else if !delayed.Trigger.CapturedObject.Exists ||
-				delayed.Trigger.CapturedObject.Val != game.TargetPermanentReference(test.target) {
-				t.Fatalf("capture = %#v, want target %d", delayed.Trigger.CapturedObject, test.target)
+			default:
+				if !delayed.Trigger.CapturedObject.Exists ||
+					delayed.Trigger.CapturedObject.Val != game.TargetPermanentReference(test.target) {
+					t.Fatalf("capture = %#v, want target %d", delayed.Trigger.CapturedObject, test.target)
+				}
 			}
 		})
 	}
@@ -65,8 +68,8 @@ func TestFixedPhaseCapturedCard(t *testing.T) {
 			t.Parallel()
 			face := lowerSingleFace(t, &ScryfallCard{Name: "Captured Card", Layout: "normal", TypeLine: "Enchantment", OracleText: test.text})
 			sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
-			move := sequence[0].Primitive.(game.MoveTopOfLibrary)
-			trigger := sequence[1].Primitive.(game.CreateDelayedTrigger).Trigger
+			move := captureTestPrimitive[game.MoveTopOfLibrary](t, sequence[0].Primitive)
+			trigger := captureTestPrimitive[game.CreateDelayedTrigger](t, sequence[1].Primitive).Trigger
 			if move.FaceDown != test.faceDown || trigger.Timing != test.timing ||
 				!trigger.CapturedCard.Exists || !sequence[0].ClearLinkedBeforeGate {
 				t.Fatal("captured card lost its publication, visibility, or phase timing")
@@ -83,8 +86,8 @@ func TestFixedPhaseDepartedSourceRetainsTransformedEntry(t *testing.T) {
 		OracleText: "When this creature dies, return it to the battlefield transformed under your control at the beginning of the next end step.",
 		Power:      new("2"), Toughness: new("2"),
 	})
-	trigger := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
-	move := trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	trigger := captureTestPrimitive[game.CreateDelayedTrigger](t, face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive).Trigger
+	move := captureTestPrimitive[game.PutOnBattlefield](t, trigger.Content.Modes[0].Sequence[0].Primitive)
 	card, ok := move.Source.CardRef()
 	if !trigger.CapturedCard.Exists || !ok || card != game.CapturedCardReference() || !move.EntryTransformed {
 		t.Fatal("departed source lost its captured card or transformed-entry rider")
@@ -117,8 +120,8 @@ func TestFixedPhasePriorTargetCardProduct(t *testing.T) {
 		OracleText: "Exile target creature card from your graveyard. Draw a card. Return that card to the battlefield at the beginning of the next end step.",
 	})
 	sequence := face.SpellAbility.Val.Modes[0].Sequence
-	move := sequence[0].Primitive.(game.MoveCard)
-	trigger := sequence[2].Primitive.(game.CreateDelayedTrigger).Trigger
+	move := captureTestPrimitive[game.MoveCard](t, sequence[0].Primitive)
+	trigger := captureTestPrimitive[game.CreateDelayedTrigger](t, sequence[2].Primitive).Trigger
 	if move.PublishLinked == "" || !move.ReplacePublishedLinked || !sequence[0].ClearLinkedBeforeGate ||
 		!trigger.CapturedCard.Exists || trigger.CapturedCard.Val != game.LinkedObjectReference(string(move.PublishLinked)) {
 		t.Fatal("delayed card body did not consume the exact actual card publisher")
@@ -139,7 +142,7 @@ func TestFixedPhaseTriggeredOptionalTiming(t *testing.T) {
 			face := lowerSingleFace(t, &ScryfallCard{Name: "Captured Source", Layout: "normal", TypeLine: "Creature", OracleText: test.text})
 			ability := face.TriggeredAbilities[0]
 			sequence := ability.Content.Modes[0].Sequence
-			delayed := sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
+			delayed := captureTestPrimitive[game.CreateDelayedTrigger](t, sequence[0].Primitive).Trigger
 			if ability.Optional == test.future || delayed.Optional != test.future ||
 				!delayed.CapturedObject.Exists || delayed.CapturedObject.Val != game.SourcePermanentReference() {
 				t.Fatal("triggered source choice/capture evaluated at the wrong time")
@@ -153,8 +156,8 @@ func TestFixedPhaseDepartedEventCardExile(t *testing.T) {
 	face := lowerSingleFace(t, &ScryfallCard{Name: "Captured Card", Layout: "normal", TypeLine: "Enchantment",
 		OracleText: "Whenever a creature you control dies, exile that card at the beginning of the next end step.",
 	})
-	delayed := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
-	body := delayed.Content.Modes[0].Sequence[0].Primitive.(game.MoveCard)
+	delayed := captureTestPrimitive[game.CreateDelayedTrigger](t, face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive).Trigger
+	body := captureTestPrimitive[game.MoveCard](t, delayed.Content.Modes[0].Sequence[0].Primitive)
 	if !delayed.CapturedCard.Exists || body.Card != game.CapturedCardReference() {
 		t.Fatal("departed event card was replaced by a live source/event reference")
 	}

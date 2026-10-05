@@ -18,7 +18,7 @@ func TestFixedPhaseOptionalChoiceOccursAtPrintedTime(t *testing.T) {
 		t.Run(test.text, func(t *testing.T) {
 			t.Parallel()
 			sequence := compiledCaptureSequence(t, test.text)
-			trigger := sequence[1].Primitive.(game.CreateDelayedTrigger).Trigger
+			trigger := captureTestPrimitive[game.CreateDelayedTrigger](t, sequence[1].Primitive).Trigger
 			if sequence[1].Optional == test.future || trigger.Optional != test.future {
 				t.Fatal("current and delayed optional choices were conflated")
 			}

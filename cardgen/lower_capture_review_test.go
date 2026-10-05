@@ -13,7 +13,7 @@ func TestCaptureReviewDirectTargetRetainsOwnSlot(t *testing.T) {
 		OracleText: "Tap target creature. Destroy target creature at end of combat.",
 	})
 	mode := face.SpellAbility.Val.Modes[0]
-	delayed := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger).Trigger
+	delayed := captureTestPrimitive[game.CreateDelayedTrigger](t, mode.Sequence[1].Primitive).Trigger
 	if len(mode.Targets) != 2 || delayed.CapturedObject.Val != game.TargetPermanentReference(1) {
 		t.Fatal("direct delayed target lost its own selection or captured an earlier target")
 	}
@@ -40,8 +40,8 @@ func TestCaptureReviewReturnedCardPreservesEnchantment(t *testing.T) {
 	face := lowerSingleFace(t, &ScryfallCard{Name: "Enchanting Return", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Exile target creature. Return that card to the battlefield at the beginning of the next end step. It's an enchantment. (It's not a creature.)",
 	})
-	delayed := face.SpellAbility.Val.Modes[0].Sequence[1].Primitive.(game.CreateDelayedTrigger).Trigger
-	put := delayed.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	delayed := captureTestPrimitive[game.CreateDelayedTrigger](t, face.SpellAbility.Val.Modes[0].Sequence[1].Primitive).Trigger
+	put := captureTestPrimitive[game.PutOnBattlefield](t, delayed.Content.Modes[0].Sequence[0].Primitive)
 	if len(put.ContinuousEffects) != 1 || put.ContinuousEffects[0].Layer != game.LayerType ||
 		len(put.ContinuousEffects[0].SetTypes) != 1 || put.ContinuousEffects[0].SetTypes[0] != types.Enchantment {
 		t.Fatal("returned card silently discarded its type-setting entry rider")
@@ -53,8 +53,8 @@ func TestCaptureReviewDepartedCardUsesCapturedOperand(t *testing.T) {
 	face := lowerSingleFace(t, &ScryfallCard{Name: "Departed Capture", Layout: "normal", TypeLine: "Enchantment",
 		OracleText: "Whenever another creature you control leaves the battlefield, return that card to the battlefield at the beginning of the next end step.",
 	})
-	delayed := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.CreateDelayedTrigger).Trigger
-	put := delayed.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	delayed := captureTestPrimitive[game.CreateDelayedTrigger](t, face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive).Trigger
+	put := captureTestPrimitive[game.PutOnBattlefield](t, delayed.Content.Modes[0].Sequence[0].Primitive)
 	card, ok := put.Source.CardRef()
 	if !delayed.CapturedCard.Exists || !ok || card != game.CapturedCardReference() {
 		t.Fatal("departed card body bypassed its captured card incarnation")

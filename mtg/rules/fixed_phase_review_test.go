@@ -79,7 +79,7 @@ func TestFixedPhaseOriginalReturnDoesNotCaptureHasteShim(t *testing.T) {
 		t.Run(reason, func(t *testing.T) {
 			t.Parallel()
 			sequence := compiledCaptureSequence(t, "Return target creature card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step.")
-			put := sequence[0].Primitive.(game.PutOnBattlefield)
+			put := captureTestPrimitive[game.PutOnBattlefield](t, sequence[0].Primitive)
 			key := put.PublishLinked
 			if key == "" {
 				t.Fatal("the exact original returned product was not published")
@@ -105,6 +105,9 @@ func TestFixedPhaseOriginalReturnDoesNotCaptureHasteShim(t *testing.T) {
 				sequence[0].Optional = true
 			case "condition":
 				sequence[0].Condition = opt.Val(game.EffectCondition{Condition: opt.Val(game.Condition{ControllerHandEmpty: true, Negate: true})})
+			case "failed":
+			default:
+				t.Fatalf("unknown unavailable-producer case %q", reason)
 			}
 			engine.resolveInstructionSequence(g, obj, sequence, [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{}}, &TurnLog{})
 			if len(g.DelayedTriggers) != 2 || g.DelayedTriggers[1].CapturedObjectID != 0 ||
@@ -121,7 +124,8 @@ func TestFixedPhaseOriginalReturnDoesNotCaptureHasteShim(t *testing.T) {
 func TestFixedPhaseReturnedCardRetainsEntryTypeEffect(t *testing.T) {
 	t.Parallel()
 	sequence := compiledCaptureSequence(t, "Exile target creature. Return that card to the battlefield at the beginning of the next end step. It's an enchantment. (It's not a creature.)")
-	put := sequence[1].Primitive.(game.CreateDelayedTrigger).Trigger.Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+	delayed := captureTestPrimitive[game.CreateDelayedTrigger](t, sequence[1].Primitive).Trigger
+	put := captureTestPrimitive[game.PutOnBattlefield](t, delayed.Content.Modes[0].Sequence[0].Primitive)
 	if len(put.ContinuousEffects) != 1 || put.ContinuousEffects[0].SetTypes[0] != types.Enchantment {
 		t.Fatal("captured return discarded its modeled entry type effect")
 	}

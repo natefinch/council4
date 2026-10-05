@@ -11,6 +11,7 @@ import (
 // DelayedSubjectKind names a grammatical antecedent, not a runtime snapshot.
 type DelayedSubjectKind uint8
 
+// Delayed subject kinds distinguish exact grammatical ownership domains.
 const (
 	DelayedSubjectUnknown DelayedSubjectKind = iota
 	DelayedSubjectSource
@@ -200,6 +201,8 @@ func exactDelayedPluralDisposal(effect *EffectSyntax) bool {
 			verb = "Sacrifice"
 		case EffectDestroy:
 			verb = "Destroy"
+		default:
+			return false
 		}
 		if verb != "" && (strings.EqualFold(exactEffectClauseText(effect), verb+" those tokens.") ||
 			strings.EqualFold(exactEffectClauseText(effect), verb+" the tokens.")) {
@@ -257,6 +260,8 @@ func exactReferencedZoneMove(effect *EffectSyntax) bool {
 			position = "top"
 		case EffectDestinationBottom:
 			position = "the bottom"
+		default:
+			return false
 		}
 		return position != "" && strings.EqualFold(exactEffectClauseText(effect), "Put "+subject+" on "+position+" of its owner's library.")
 	}
