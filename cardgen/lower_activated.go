@@ -143,11 +143,11 @@ func lowerActivatedAbilityKind(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
-	if activatedBodyHasUnmodeledResolutionCount(ability.Content) {
+	if contentHasResolutionCount(ability.Content) && abilityContentHasAddManaEffect(ability.Content) {
 		return abilityLowering{}, executableDiagnostic(
 			ability,
 			"unsupported activated resolution-count condition",
-			"resolution ordinals are modeled only for triggered abilities",
+			"resolution ordinals in mana-producing bodies are not modeled",
 		)
 	}
 	if isSemanticManaAbility(ability) {
@@ -761,6 +761,7 @@ func lowerActivatedAbility(
 		ZoneOfFunction:                       shell.zoneOfFunction,
 		Timing:                               shell.timing,
 		MaxActivationsPerTurn:                ability.MaxActivationsPerTurn,
+		CountsResolutionsThisTurn:            abilityContentGatesOnResolutionCount(&shell.content),
 		ManaCostRestrictedToEntryChosenColor: ability.ManaCostChosenColorRestricted,
 		ActivationCondition:                  shell.activationCondition,
 		Content:                              shell.content,

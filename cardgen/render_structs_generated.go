@@ -461,6 +461,7 @@ func isZeroGameActivatedAbility(v game.ActivatedAbility) bool {
 		!(v.ZoneOfFunction != 0) &&
 		!(v.Timing != 0) &&
 		!(v.MaxActivationsPerTurn != 0) &&
+		!(v.CountsResolutionsThisTurn) &&
 		!(v.ManaCostRestrictedToEntryChosenColor) &&
 		!(v.ActivationCondition.Exists) &&
 		!(!isZeroGameAbilityContent(v.Content)) &&
@@ -2050,40 +2051,44 @@ func (r Renderer) renderGameActivatedAbilityLiteral(ctx *renderCtx, v game.Activ
 		lit27 := strconv.FormatInt(int64(v.MaxActivationsPerTurn), 10)
 		fields = append(fields, "MaxActivationsPerTurn: "+lit27+",")
 	}
+	if v.CountsResolutionsThisTurn {
+		lit28 := strconv.FormatBool(bool(v.CountsResolutionsThisTurn))
+		fields = append(fields, "CountsResolutionsThisTurn: "+lit28+",")
+	}
 	if v.ManaCostRestrictedToEntryChosenColor {
-		lit28 := strconv.FormatBool(bool(v.ManaCostRestrictedToEntryChosenColor))
-		fields = append(fields, "ManaCostRestrictedToEntryChosenColor: "+lit28+",")
+		lit29 := strconv.FormatBool(bool(v.ManaCostRestrictedToEntryChosenColor))
+		fields = append(fields, "ManaCostRestrictedToEntryChosenColor: "+lit29+",")
 	}
 	if v.ActivationCondition.Exists {
-		lit30, err31 := r.renderGameCondition(ctx, v.ActivationCondition.Val)
-		if err31 != nil {
-			return "", fmt.Errorf("game.ActivatedAbility.ActivationCondition: %w", err31)
+		lit31, err32 := r.renderGameCondition(ctx, v.ActivationCondition.Val)
+		if err32 != nil {
+			return "", fmt.Errorf("game.ActivatedAbility.ActivationCondition: %w", err32)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit29 := "opt.Val(" + lit30 + ")"
-		fields = append(fields, "ActivationCondition: "+lit29+",")
+		lit30 := "opt.Val(" + lit31 + ")"
+		fields = append(fields, "ActivationCondition: "+lit30+",")
 	}
 	if !isZeroGameAbilityContent(v.Content) {
-		lit32, err33 := r.renderGameAbilityContent(ctx, v.Content)
-		if err33 != nil {
-			return "", fmt.Errorf("game.ActivatedAbility.Content: %w", err33)
+		lit33, err34 := r.renderGameAbilityContent(ctx, v.Content)
+		if err34 != nil {
+			return "", fmt.Errorf("game.ActivatedAbility.Content: %w", err34)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "Content: "+lit32+",")
+		fields = append(fields, "Content: "+lit33+",")
 	}
 	if len(v.KeywordAbilities) > 0 {
-		var items35 []string
-		for _, item36 := range v.KeywordAbilities {
-			lit37, err38 := r.renderGameKeywordAbilityValue(ctx, item36)
-			if err38 != nil {
-				return "", fmt.Errorf("game.ActivatedAbility.KeywordAbilities[]: %w", err38)
+		var items36 []string
+		for _, item37 := range v.KeywordAbilities {
+			lit38, err39 := r.renderGameKeywordAbilityValue(ctx, item37)
+			if err39 != nil {
+				return "", fmt.Errorf("game.ActivatedAbility.KeywordAbilities[]: %w", err39)
 			}
 			ctx.need(importGame)
-			items35 = append(items35, lit37+",")
+			items36 = append(items36, lit38+",")
 		}
-		lit34 := namedSliceLit("", "game.KeywordAbility", items35)
-		fields = append(fields, "KeywordAbilities: "+lit34+",")
+		lit35 := namedSliceLit("", "game.KeywordAbility", items36)
+		fields = append(fields, "KeywordAbilities: "+lit35+",")
 	}
 	return structLit("game.ActivatedAbility", fields), nil
 }

@@ -25,8 +25,7 @@ func contentWithoutOwnedConditionReferences(content compiler.AbilityContent) com
 }
 
 func conditionsOwnedByResolvingBody(content compiler.AbilityContent) bool {
-	if len(content.Conditions) == 0 || abilityContentHasAddManaEffect(content) ||
-		activatedBodyHasUnmodeledResolutionCount(content) {
+	if len(content.Conditions) == 0 || abilityContentHasAddManaEffect(content) {
 		return false
 	}
 	for _, condition := range content.Conditions {
@@ -41,14 +40,14 @@ func conditionsOwnedByResolvingBody(content compiler.AbilityContent) bool {
 	return true
 }
 
-func activatedBodyHasUnmodeledResolutionCount(content compiler.AbilityContent) bool {
+func contentHasResolutionCount(content compiler.AbilityContent) bool {
 	if slices.ContainsFunc(content.Conditions, func(condition compiler.CompiledCondition) bool {
 		return condition.Predicate == compiler.ConditionPredicateSourceAbilityResolutionOrdinalThisTurn
 	}) {
 		return true
 	}
 	for _, mode := range content.Modes {
-		if activatedBodyHasUnmodeledResolutionCount(mode.Content) {
+		if contentHasResolutionCount(mode.Content) {
 			return true
 		}
 	}

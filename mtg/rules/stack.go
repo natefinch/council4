@@ -135,6 +135,8 @@ func (e *Engine) resolveActivatedAbility(g *game.Game, obj *game.StackObject, lo
 }
 
 func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	obj.ResolutionOrdinalThisTurn = 0
+	defer func() { obj.ResolutionOrdinalThisTurn = 0 }()
 	permanent, permanentOK := permanentByObjectID(g, obj.SourceID)
 	def, defOK := stackObjectSourceDef(g, obj)
 	if !defOK && permanentOK {
@@ -210,6 +212,9 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 		if !bodyHasAnyLegalTargetsFromSourceObject(g, def, obj.SourceID, activatedBody, obj) {
 			return "countered by rules"
 		}
+		if !recordActivatedAbilityResolution(g, obj, activatedBody) {
+			return "missing resolution identity"
+		}
 		if len(activatedBody.Content.Modes) > 0 {
 			e.resolveAbilityContentWithChoices(g, obj, activatedBody.Content, agents, log)
 		}
@@ -271,6 +276,8 @@ func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.Stac
 }
 
 func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.StackObject, source *game.CardDef, body *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	obj.ResolutionOrdinalThisTurn = 0
+	defer func() { obj.ResolutionOrdinalThisTurn = 0 }()
 	if body == nil {
 		return "missing source"
 	}
@@ -299,6 +306,7 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 			g.ResolvedTriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 		}
 		g.ResolvedTriggeredAbilitiesThisTurn[game.TriggeredAbilityUse{SourceID: obj.SourceID, AbilityIndex: obj.AbilityIndex}]++
+		obj.ResolutionOrdinalThisTurn = g.ResolvedTriggeredAbilitiesThisTurn[game.TriggeredAbilityUse{SourceID: obj.SourceID, AbilityIndex: obj.AbilityIndex}]
 	}
 	e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
 	return "resolved"
@@ -743,18 +751,21 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 	if onTop {
 		shiftPermanentAbilityUseIndexes(g, target.ObjectID, spellDef.AbilityCount())
 		lower := game.MergedCard{
-			CardInstanceID: target.CardInstanceID,
-			Face:           target.Face,
-			FaceDown:       target.FaceDown,
-			FaceDownFace:   target.FaceDownFace,
-			FaceDownKind:   target.FaceDownKind,
-			TokenDef:       target.TokenDef,
-			Owner:          target.Owner,
+			AbilityOriginID: permanentAbilityOrigin(target).OriginID,
+			CardInstanceID:  target.CardInstanceID,
+			Face:            target.Face,
+			FaceDown:        target.FaceDown,
+			FaceDownFace:    target.FaceDownFace,
+			FaceDownKind:    target.FaceDownKind,
+			TokenDef:        target.TokenDef,
+			Owner:           target.Owner,
 		}
 		target.MergedCards = append([]game.MergedCard{lower}, target.MergedCards...)
 		target.Face = obj.Face
 		target.Owner = owner
+		target.AbilityOriginID = 0
 		if obj.Copy {
+			target.AbilityOriginID = obj.ID
 			target.CardInstanceID = 0
 			target.Token = true
 			target.TokenDef = copyCardDef(spellDef)
@@ -769,7 +780,7 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 		target.Flipped = false
 		target.Transformed = false
 	} else {
-		lower := game.MergedCard{Face: obj.Face, Owner: owner}
+		lower := game.MergedCard{Face: obj.Face, Owner: owner, AbilityOriginID: obj.ID}
 		if obj.Copy {
 			lower.TokenDef = copyCardDef(spellDef)
 		} else {

@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18492 supported cards
+# 18493 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -7967,6 +7967,7 @@ d3c4a0d4cf6d326c  Inner Calm, Outer Strength
 86c440bea61dc8d4  Inner Struggle
 95983267318bc297  Inner-Chamber Guard
 7af39375a8fba37a  Inner-Flame Acolyte
+94f0fc53d76d5560  Inner-Flame Igniter
 21900004392da031  Innkeeper's Talent
 b2f0aa9038198eb5  Innocence Kami
 707b317f7e407472  Innocent Blood
