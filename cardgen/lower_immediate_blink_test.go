@@ -176,7 +176,7 @@ func TestLowerSelfBlinkStandaloneSelfExileIsPlainExile(t *testing.T) {
 	}
 	exile, ok := movePermanentTo(sequence[0].Primitive, zone.Exile)
 	if !ok || exile.PublishLinked != "" ||
-		exile.Object != game.SourceCardPermanentReference() {
+		exile.Object != game.SourcePermanentReference() {
 		t.Fatalf("instruction = %#v, want plain source-permanent exile", sequence[0].Primitive)
 	}
 }

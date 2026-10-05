@@ -45,6 +45,7 @@ func TestSequenceProductLinkRequiresExactPublisher(t *testing.T) {
 					Binding: compiler.ReferenceBindingPriorInstructionResult, PriorInstruction: index,
 				})
 			}
+
 			sequence := []game.Instruction{test.instruction}
 			before := game.PublishedLinkedKey(sequence[0].Primitive)
 			producer, key, ok := sequencePriorInstructionLink(references, sequence, test.ranges)

@@ -85,6 +85,26 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "Return target creature card from your graveyard to the battlefield. If it's an Elf, put a +1/+1 counter on it.",
 	},
 	{
+		Name: "RT Captured Product", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Create a 1/1 green Insect creature token. You gain 1 life. Sacrifice it at the beginning of the next end step.",
+	},
+	{
+		Name: "RT Captured Card", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Exile target creature card from your graveyard. You gain 1 life. Return that card to the battlefield at the beginning of the next end step.",
+	},
+	{
+		Name: "RT Captured Target", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Tap target creature. Untap target creature. You gain 1 life. Exile it at the beginning of the next end step.",
+	},
+	{
+		Name: "RT Captured Future", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Tap target creature. At the beginning of the next end step, if it's an Elf, destroy it.",
+	},
+	{
+		Name: "RT Captured Future Choice", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Tap target creature. At the beginning of the next end step, you may exile it.",
+	},
+	{
 		Name: "RT Blinked Subject", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Bird, Frog, Otter, or Rat, draw a card.",
 	},
@@ -404,6 +424,40 @@ func TestRTCounterOutcomeSemantic(t *testing.T) {
 	}
 	if sequences[0][3].ResultGate.Exists {
 		t.Fatal("independent counter rider became success-gated")
+	}
+}
+
+func TestRTFixedPhaseSubjectSemantic(t *testing.T) {
+	product := RTCapturedProduct().SpellAbility.Val.Modes[0].Sequence
+	create := product[0].Primitive.(game.CreateToken)
+	trigger := product[2].Primitive.(game.CreateDelayedTrigger).Trigger
+	if create.PublishLinked == "" || !trigger.CapturedObjectGroup.Exists ||
+		trigger.CapturedObjectGroup.Val != game.LinkedObjectReference(string(create.PublishLinked)) {
+		t.Fatal("actual product group did not round-trip")
+	}
+	card := RTCapturedCard().SpellAbility.Val.Modes[0].Sequence
+	move := card[0].Primitive.(game.MoveCard)
+	trigger = card[2].Primitive.(game.CreateDelayedTrigger).Trigger
+	if !card[0].ClearLinkedBeforeGate || !move.ReplacePublishedLinked || move.PublishLinked == "" ||
+		!trigger.CapturedCard.Exists || trigger.CapturedCard.Val != game.LinkedObjectReference(string(move.PublishLinked)) {
+		t.Fatal("transient card publication/capture did not round-trip")
+	}
+	target := RTCapturedTarget().SpellAbility.Val.Modes[0].Sequence
+	trigger = target[3].Primitive.(game.CreateDelayedTrigger).Trigger
+	if !trigger.CapturedObject.Exists || trigger.CapturedObject.Val != game.TargetPermanentReference(1) {
+		t.Fatal("nonzero captured target occurrence did not round-trip")
+	}
+	future := RTCapturedFuture().SpellAbility.Val.Modes[0].Sequence
+	trigger = future[1].Primitive.(game.CreateDelayedTrigger).Trigger
+	condition := trigger.Content.Modes[0].Sequence[0].Condition
+	if future[1].Condition.Exists || !condition.Exists ||
+		condition.Val.Condition.Val.Object.Val != game.CapturedObjectReference() {
+		t.Fatal("future captured-subject condition evaluated at the wrong time")
+	}
+	choice := RTCapturedFutureChoice().SpellAbility.Val.Modes[0].Sequence
+	trigger = choice[1].Primitive.(game.CreateDelayedTrigger).Trigger
+	if choice[1].Optional || !trigger.Optional || !trigger.CapturedObject.Exists {
+		t.Fatal("future captured-subject choice did not round-trip")
 	}
 }
 

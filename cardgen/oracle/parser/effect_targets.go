@@ -13,6 +13,7 @@ import (
 )
 
 func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
+	tokens, _ = cutDelayedTiming(tokens)
 	var targets []TargetSyntax
 	for i, token := range tokens {
 		plural := equalWord(token, "targets")

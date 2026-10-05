@@ -189,8 +189,9 @@ type DelayedTriggerDef struct {
 	// beginning of your next end step.", Necropotence), where per-activation
 	// capture keeps several same-turn activations from all resolving one shared,
 	// source-scoped link key when the triggers fire. The content references
-	// CardReferenceCaptured. It is only valid with a fixed-phase Timing and a
-	// linked-object reference.
+	// CardReferenceCaptured. Source/event references also freeze a card's current
+	// zone incarnation after a modeled zone transition. It is only valid with a
+	// fixed-phase Timing and a linked-object, source, or event reference.
 	CapturedCard opt.V[ObjectReference]
 }
 
