@@ -35,8 +35,12 @@ and defining component or granting effect before costs, isolate source
 incarnations, and include resolving stack copies. Countered abilities and
 abilities whose targets all become illegal do not count. One whole resolution
 increments once, before any chosen mode or Instruction evaluates its gate.
-Activation restrictions and mana-producing conditional bodies remain separate,
-fail-closed capabilities.
+Target-bearing ordinary activated bodies compose fixed controller mana outputs
+through shared Ability Content with resolving If/Unless/ordinal gates. Repeated
+single-color optional outputs form one AddMana quantity and one resolving choice,
+not one choice per symbol. Mixed-color expanded optional actions require a modeled
+group and remain unsupported. Activation restrictions and untargeted mana-shell
+ordinals retain their separate, fail-closed boundaries.
 
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
@@ -174,8 +178,9 @@ Vanguard cards are excluded with explicit report reasons.
    Activated non-mana bodies use the same typed ownership to keep resolving
    conditions out of activation restrictions. Specialized mana-body routing
    and genuine `Activate only if` restrictions retain their existing boundaries.
-   Activated resolution-ordinal conditions remain unsupported: the runtime
-   currently counts only triggered-ability resolutions.
+   Ordinary activated resolution-ordinal conditions use the captured ability
+   provenance and real resolution tally described above; true mana abilities
+   remain outside that accounting path.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
    prior-instruction results. Ordered lowering also supports the exact linked

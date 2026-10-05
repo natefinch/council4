@@ -626,6 +626,7 @@ func lowerSingleOptionalEffect(
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	strippedCtx.singleAction = true
 	content, diagnostic := lowerContent(cardName, strippedCtx, &strippedSyntax)
 	if diagnostic != nil {
 		return game.AbilityContent{}, false

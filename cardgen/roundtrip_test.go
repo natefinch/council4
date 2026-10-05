@@ -69,6 +69,14 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: Discard three cards. If two land cards were discarded this way, draw a card.",
 	},
 	{
+		Name: "RT Ordinal Mana", Layout: "normal", TypeLine: "Artifact",
+		OracleText: flamekinBody,
+	},
+	{
+		Name: "RT Gated Mana", Layout: "normal", TypeLine: "Instant",
+		OracleText: "If you have no cards in hand, draw a card, then add {R}{G}.",
+	},
+	{
 		Name:       "RT Bog",
 		Layout:     "normal",
 		TypeLine:   "Land",
@@ -333,6 +341,31 @@ func TestRTResultCountSemantic(t *testing.T) {
 	complement := RTResultCount().SpellAbility.Val.Modes[0].Sequence[2].ResultGate.Val
 	if !complement.Negate || complement.ObjectCountRange.Val.Min != 2 {
 		t.Fatal("count predicate complement did not round-trip")
+	}
+}
+
+func TestRTOrdinaryManaSemantic(t *testing.T) {
+	ability := RTOrdinalMana().ActivatedAbilities[0]
+	seq := ability.Content.Modes[0].Sequence
+	if !ability.CountsResolutionsThisTurn || ability.ActivationCondition.Exists ||
+		len(RTOrdinalMana().ManaAbilities) != 0 || len(seq) != 2 || seq[0].Condition.Exists {
+		t.Fatal("ordinary fixed-mana shell did not round-trip")
+	}
+	add, ok := seq[1].Primitive.(game.AddMana)
+	if !ok || add.Amount.Value() != 8 || add.ManaColor != mana.R || !seq[1].Optional ||
+		seq[1].Condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn != 3 {
+		t.Fatal("one optional fixed-mana action did not round-trip")
+	}
+	group := RTGatedMana().SpellAbility.Val.Modes[0].Sequence
+	if len(group) != 3 || group[0].PublishCondition == "" ||
+		group[1].ConditionGate != group[0].PublishCondition || group[2].ConditionGate != group[0].PublishCondition {
+		t.Fatal("expanded fixed-mana group decision did not round-trip")
+	}
+	for i, color := range []mana.Color{mana.R, mana.G} {
+		add, ok := group[i+1].Primitive.(game.AddMana)
+		if !ok || add.Amount.Value() != 1 || add.ManaColor != color {
+			t.Fatal("fixed-mana color or amount did not round-trip")
+		}
 	}
 }
 `, pkgName)
