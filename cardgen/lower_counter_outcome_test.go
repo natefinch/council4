@@ -205,8 +205,12 @@ func TestCounterDestinationPlannerTypedOwnersAndNearMisses(t *testing.T) {
 		}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			// Compile afresh so each mutation owns its nested slices.
-			fresh, diags := compiler.Compile(document, compiler.Context{})
+			t.Parallel()
+			freshDocument, diags := parser.Parse(text, parser.Context{InstantOrSorcery: true})
+			if len(diags) != 0 {
+				t.Fatal(diags)
+			}
+			fresh, diags := compiler.Compile(freshDocument, compiler.Context{})
 			if len(diags) != 0 {
 				t.Fatal(diags)
 			}

@@ -30,15 +30,16 @@ func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegm
 			continue
 		}
 		producer := first - 1
-		if clause.Predicate == ConditionPredicateCounterSucceeded {
+		switch {
+		case clause.Predicate == ConditionPredicateCounterSucceeded:
 			producer = slices.IndexFunc(effects, func(effect *EffectSyntax) bool {
 				return effect.ClauseID == segment.Ownership.ResultProducerClauseID
 			})
-		} else if clause.Predicate == ConditionPredicateResultThisWay {
+		case clause.Predicate == ConditionPredicateResultThisWay:
 			for producer >= 0 && effects[producer].Kind != clause.ThisWayOutcome {
 				producer--
 			}
-		} else if clause.Predicate == ConditionPredicatePriorInstructionNotAccepted && !effects[producer].Optional {
+		case clause.Predicate == ConditionPredicatePriorInstructionNotAccepted && !effects[producer].Optional:
 			// "If you don't" complements the action, not an intervening
 			// filtered predicate or its consequence.
 			if previous, exists := resultOwner[effects[producer].ClauseID]; exists {
@@ -46,6 +47,7 @@ func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegm
 					return effect.ClauseID == segments[previous].Ownership.ResultProducerClauseID
 				})
 			}
+		default:
 		}
 		if producer < 0 {
 			continue

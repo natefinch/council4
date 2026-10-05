@@ -179,8 +179,8 @@ func (plan counterDestinationPlan) apply(ei int, sequence []game.Instruction) bo
 	if !ok {
 		return false
 	}
-	counter := sequence[index].Primitive.(game.CounterObject)
-	if counter.ExileInstead || counter.Destination != game.CounteredSpellGraveyard {
+	counter, ok := sequence[index].Primitive.(game.CounterObject)
+	if !ok || counter.ExileInstead || counter.Destination != game.CounteredSpellGraveyard {
 		return false
 	}
 	counter.ExileInstead, counter.Destination = modifier.ExileInstead, modifier.Destination

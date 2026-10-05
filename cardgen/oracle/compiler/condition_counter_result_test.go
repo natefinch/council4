@@ -17,6 +17,7 @@ func TestCompileCounterResultOwnership(t *testing.T) {
 		"Choose one \u2014\n\u2022 Counter target spell. If that spell is countered this way, draw a card.\n\u2022 You gain 2 life.",
 	} {
 		t.Run(text, func(t *testing.T) {
+			t.Parallel()
 			document, diagnostics := parser.Parse(text, parser.Context{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatal(diagnostics)
@@ -82,6 +83,7 @@ func TestCounterResultSubjectBindingRefusesUnprovenOwner(t *testing.T) {
 		{"missing target occurrence", func(c *CompiledCondition) { c.Ownership.ResultSubjectTargetOccurrence = -1 }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			conditions := slices.Clone(content.Conditions)
 			references := slices.Clone(content.References)
 			tt.mutate(&conditions[0])

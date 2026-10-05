@@ -53,6 +53,7 @@ func TestCounterSucceededGrammarRejectsOtherOutcomes(t *testing.T) {
 		"that spell is countered by an opponent this way",
 	} {
 		t.Run(body, func(t *testing.T) {
+			t.Parallel()
 			document, diagnostics := Parse("Counter target spell. If "+body+", draw a card.", Context{InstantOrSorcery: true})
 			if len(diagnostics) != 0 {
 				t.Fatal(diagnostics)

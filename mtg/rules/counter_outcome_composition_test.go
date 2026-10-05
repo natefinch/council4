@@ -113,6 +113,8 @@ func TestCompiledCounterDestinationAndActualOutcome(t *testing.T) {
 							if !ok || top != card.ID {
 								t.Fatal("wrong library top or owner")
 							}
+						default:
+							t.Fatalf("unexpected counter destination: %v", destination.zone)
 						}
 					} else if target.ExileOnResolution || target.CounteredDestination != game.CounteredSpellGraveyard {
 						t.Fatal("failed/skipped counter leaked its destination into later resolution")
