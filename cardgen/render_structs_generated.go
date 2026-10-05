@@ -864,6 +864,7 @@ func isZeroGameInstructionResultGate(v game.InstructionResultGate) bool {
 		!(v.SearchedLibrary != 0) &&
 		!(v.AmountRange.Exists) &&
 		!(v.ObjectSelection.Exists) &&
+		!(v.ObjectCountRange.Exists) &&
 		!(v.CardOnly) &&
 		!(v.Negate)
 }
@@ -7130,13 +7131,23 @@ func (r Renderer) renderGameInstructionResultGate(ctx *renderCtx, v game.Instruc
 		lit12 := "opt.Val(" + lit13 + ")"
 		fields = append(fields, "ObjectSelection: "+lit12+",")
 	}
+	if v.ObjectCountRange.Exists {
+		lit16, err17 := r.renderGameIntRange(ctx, v.ObjectCountRange.Val)
+		if err17 != nil {
+			return "", fmt.Errorf("game.InstructionResultGate.ObjectCountRange: %w", err17)
+		}
+		ctx.need(importGame)
+		ctx.need(importOpt)
+		lit15 := "opt.Val(" + lit16 + ")"
+		fields = append(fields, "ObjectCountRange: "+lit15+",")
+	}
 	if v.CardOnly {
-		lit15 := strconv.FormatBool(bool(v.CardOnly))
-		fields = append(fields, "CardOnly: "+lit15+",")
+		lit18 := strconv.FormatBool(bool(v.CardOnly))
+		fields = append(fields, "CardOnly: "+lit18+",")
 	}
 	if v.Negate {
-		lit16 := strconv.FormatBool(bool(v.Negate))
-		fields = append(fields, "Negate: "+lit16+",")
+		lit19 := strconv.FormatBool(bool(v.Negate))
+		fields = append(fields, "Negate: "+lit19+",")
 	}
 	return structLit("game.InstructionResultGate", fields), nil
 }

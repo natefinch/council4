@@ -117,6 +117,9 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		selection := compileTypedSelection(*clause.ThisWaySelection)
 		condition.ThisWaySelection = &selection
 		condition.ThisWayCardNoun = clause.ThisWayCardNoun
+		condition.ThisWayController = clause.ThisWayController
+		condition.ThisWayCount = clause.ThisWayCount
+		condition.ThisWayCountComparison = clause.ThisWayCountComparison
 	case parser.ConditionPredicateControllerLifeAtLeast:
 		condition.Predicate = ConditionPredicateControllerLifeAtLeast
 		condition.Threshold = clause.Threshold

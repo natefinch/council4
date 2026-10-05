@@ -14,19 +14,20 @@ func TestRenderResultObjectSelectionGate(t *testing.T) {
 		Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
 		ResultGate: opt.Val(game.InstructionResultGate{
 			Key: "exile", Succeeded: game.TriTrue,
-			ObjectSelection: opt.Val(game.Selection{SubtypesAny: []types.Sub{types.Pirate}}),
-			Negate:          true,
-			CardOnly:        true,
+			ObjectSelection:  opt.Val(game.Selection{SubtypesAny: []types.Sub{types.Pirate}}),
+			Negate:           true,
+			CardOnly:         true,
+			ObjectCountRange: opt.Val(game.IntRange{Min: 2, Max: 3}),
 		}),
 	}
 	for _, test := range []struct {
-		name, subtype string
-		render        func(Renderer, *renderCtx, game.Instruction) (string, error)
+		name, subtype, count string
+		render               func(Renderer, *renderCtx, game.Instruction) (string, error)
 	}{
-		{"ordered instruction", `types.Sub("Pirate")`, func(r Renderer, ctx *renderCtx, instruction game.Instruction) (string, error) {
+		{"ordered instruction", `types.Sub("Pirate")`, "ObjectCountRange: opt.Val(game.IntRange{Min: 2, Max: 3})", func(r Renderer, ctx *renderCtx, instruction game.Instruction) (string, error) {
 			return r.renderInstruction(ctx, &instruction)
 		}},
-		{"generated struct", "types.Pirate", func(r Renderer, ctx *renderCtx, instruction game.Instruction) (string, error) {
+		{"generated struct", "types.Pirate", "ObjectCountRange: opt.Val(game.IntRange{\nMin: 2,\nMax: 3,\n})", func(r Renderer, ctx *renderCtx, instruction game.Instruction) (string, error) {
 			return r.renderGameInstruction(ctx, instruction)
 		}},
 	} {
@@ -36,7 +37,7 @@ func TestRenderResultObjectSelectionGate(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			for _, want := range []string{"ObjectSelection: opt.Val(game.Selection{", "SubtypesAny: []types.Sub{" + test.subtype + "}", "Succeeded: game.TriTrue", "Negate: true", "CardOnly: true"} {
+			for _, want := range []string{"ObjectSelection: opt.Val(game.Selection{", "SubtypesAny: []types.Sub{" + test.subtype + "}", "Succeeded: game.TriTrue", "Negate: true", "CardOnly: true", test.count} {
 				if !strings.Contains(source, want) {
 					t.Fatalf("rendered gate lost %q:\n%s", want, source)
 				}

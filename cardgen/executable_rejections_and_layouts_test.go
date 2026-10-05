@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.T) {
+func TestCompiledPartiallyOptionalTriggerPreservesIndependentRider(t *testing.T) {
 	t.Parallel()
 	card := &ScryfallCard{
 		Name:       "Unclear Bear",
@@ -16,16 +16,12 @@ func TestGenerateExecutableCardSourceRejectsPartiallyOptionalTrigger(t *testing.
 		Toughness:  new("2"),
 	}
 
-	source, diagnostics, err := GenerateExecutableCardSource(card, "u")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if source != "" {
-		t.Fatalf("source = %q, want no partial card", source)
-	}
-	if len(diagnostics) != 1 || diagnostics[0].Summary != "unsupported optional effect" {
-		t.Fatalf("diagnostics = %#v", diagnostics)
-	}
+	assertCardPaths(t, card, "TriggeredAbilities[0].Content.Modes[0].Sequence[0].Optional = true")
+	assertCardPathsAbsent(t, card,
+		"TriggeredAbilities[0].Optional = true",
+		"TriggeredAbilities[0].Content.Modes[0].Sequence[1].Optional = true",
+		"TriggeredAbilities[0].Content.Modes[0].Sequence[1].ResultGate.Exists = true",
+	)
 }
 
 // TestGenerateExecutableCardSourceSupportsOptionalKickedEnterTrigger verifies

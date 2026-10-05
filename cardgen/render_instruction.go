@@ -298,6 +298,13 @@ func (r Renderer) renderInstructionResultGate(ctx *renderCtx, gate game.Instruct
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ObjectSelection: opt.Val(%s),", selection))
 	}
+	if gate.ObjectCountRange.Exists {
+		ctx.need(importOpt)
+		fields = append(fields, fmt.Sprintf(
+			"ObjectCountRange: opt.Val(game.IntRange{Min: %d, Max: %d}),",
+			gate.ObjectCountRange.Val.Min, gate.ObjectCountRange.Val.Max,
+		))
+	}
 	if gate.Negate {
 		fields = append(fields, "Negate: true,")
 	}

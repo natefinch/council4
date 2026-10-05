@@ -1410,7 +1410,12 @@ func instructionResultGateSatisfied(g *game.Game, obj *game.StackObject, gate ga
 		(gate.SearchedLibrary == game.TriAny || (gate.SearchedLibrary == game.TriTrue) == result.SearchedLibrary) &&
 		(!gate.AmountRange.Exists || (result.Amount >= gate.AmountRange.Val.Min && result.Amount <= gate.AmountRange.Val.Max))
 	if matches && gate.ObjectSelection.Exists {
-		matches = resultObjectsMatchFilter(g, obj, obj.ResolutionResultObjects[string(gate.Key)], gate.ObjectSelection.Val, gate.CardOnly)
+		count := countResultObjectsMatching(g, obj, obj.ResolutionResultObjects[string(gate.Key)], gate.ObjectSelection.Val, gate.CardOnly)
+		matches = count > 0
+		if gate.ObjectCountRange.Exists {
+			matches = count >= gate.ObjectCountRange.Val.Min &&
+				(gate.ObjectCountRange.Val.Max == 0 || count <= gate.ObjectCountRange.Val.Max)
+		}
 	}
 	return matches != gate.Negate
 }

@@ -73,6 +73,14 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: Choose one \u2014\n\u2022 If this is the second time this ability has resolved this turn, draw a card, then draw a card.\n\u2022 You gain 2 life.",
 	},
 	{
+		Name: "RT Result Count", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Discard three cards. If you discarded two land cards this way, draw a card. Otherwise, you gain 2 life.",
+	},
+	{
+		Name: "RT Result Ability", Layout: "normal", TypeLine: "Enchantment",
+		OracleText: "{1}: Discard three cards. If two land cards were discarded this way, draw a card.",
+	},
+	{
 		Name: "RT Ordinal Mana", Layout: "normal", TypeLine: "Artifact",
 		OracleText: flamekinBody,
 	},
@@ -366,6 +374,24 @@ func TestRTOrdinalModesSemantic(t *testing.T) {
 		seq[0].Condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn != 2 ||
 		seq[0].PublishCondition == "" || seq[1].ConditionGate != seq[0].PublishCondition {
 		t.Fatal("modal resolution ordinal and grouped consumer did not round-trip")
+	}
+}
+
+func TestRTResultCountSemantic(t *testing.T) {
+	for _, seq := range [][]game.Instruction{
+		RTResultCount().SpellAbility.Val.Modes[0].Sequence,
+		RTResultAbility().ActivatedAbilities[0].Content.Modes[0].Sequence,
+	} {
+		gate := seq[1].ResultGate.Val
+		if seq[0].PublishResult == "" || gate.Key != seq[0].PublishResult ||
+			!gate.ObjectSelection.Exists || !gate.CardOnly || !gate.ObjectCountRange.Exists ||
+			gate.ObjectCountRange.Val.Min != 2 || gate.ObjectCountRange.Val.Max != 2 {
+			t.Fatal("actual matching-result count did not round-trip")
+		}
+	}
+	complement := RTResultCount().SpellAbility.Val.Modes[0].Sequence[2].ResultGate.Val
+	if !complement.Negate || complement.ObjectCountRange.Val.Min != 2 {
+		t.Fatal("count predicate complement did not round-trip")
 	}
 }
 

@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33013
-- Supported (generated): 18497
-- Parser-complete: 22737
-- **Lowering backlog** (parser-complete, not generated): 5007
-- **Parser backlog** (not parser-complete, not generated): 9509
+- Supported (generated): 18507
+- Parser-complete: 22743
+- **Lowering backlog** (parser-complete, not generated): 5003
+- **Parser backlog** (not parser-complete, not generated): 9503
 
-Partition check: 18497 supported + 5007 lowering-backlog + 9509 parser-backlog = 33013 eligible. ✓
+Partition check: 18507 supported + 5003 lowering-backlog + 9503 parser-backlog = 33013 eligible. ✓
 
 767 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18497 supported + 5007 lowering-backlog + 9509 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18497
-- Independent per-card recompile generated: 18497
+- Authoritative generated (compilecards report): 18507
+- Independent per-card recompile generated: 18507
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1739 | 1163 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 533 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Sparring Dummy |
+| 1 | unsupported ordered effect sequence | 1770 | 1163 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 526 | 3 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Sparring Dummy |
 | 3 | unsupported static declaration operation | 283 | 238 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 275 | 190 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 212 | 124 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
@@ -99,9 +99,9 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 13 | unsupported activation ability word | 110 | 102 | Half-Elf Monk; Sagu Pummeler; Blazing Bomb; Champion of Dusan; Red Death, Shipwrecker |
 | 14 | unsupported ability word | 96 | 84 | Bloodthorn Flail; The Dalek Emperor; Solar Tide; Terror Tide; Ensnared by the Mara |
 | 15 | unsupported enters-tapped replacement | 90 | 55 | Stenn, Paranoid Partisan; Choco-Comet; Nevermore; True-Name Nemesis; Jailbreak |
-| 16 | unsupported power/toughness spell | 88 | 67 | Murk Dwellers; Park Bleater; Shaper Parasite; Battle Frenzy; Blood Age General |
+| 16 | unsupported power/toughness spell | 89 | 67 | Murk Dwellers; Park Bleater; Shaper Parasite; Battle Frenzy; Blood Age General |
 | 17 | unsupported exile spell | 88 | 63 | Ravnica at War; Toluz, Clever Conductor; Consuming Sinkhole; Sengir Autocrat; Ulamog, the Ceaseless Hunger |
-| 18 | unsupported activation references | 81 | 65 | Planebound Accomplice; Puresight Merrow; Titans' Nest; Spurnmage Advocate; Pulsemage Advocate |
+| 18 | unsupported activation references | 81 | 66 | Planebound Accomplice; Puresight Merrow; Titans' Nest; Spurnmage Advocate; Pulsemage Advocate |
 | 19 | unsupported gain-control spell | 67 | 54 | Goatnap; Slave of Bolas; Legacy's Allure; The Super Hero Civil War; Dominating Vampire |
 | 20 | unsupported enters-with-counters replacement | 64 | 47 | Flycatcher Giraffid; Malefic Scythe; Callous Sell-Sword // Burn Together; Bone Devourer; Faerie Squadron |
 | 21 | unsupported type line | 61 | 60 | Playable Delusionary Hydra; Notorious Sliver War; City's Blessing // Elemental; Demonic Tourist Laser; Night Brushwagg Ringmaster |

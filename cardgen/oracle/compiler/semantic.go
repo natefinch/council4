@@ -1427,9 +1427,12 @@ type CompiledCondition struct {
 	// EffectSacrifice, EffectExile, EffectMill, or EffectDiscard). Lowering
 	// matches it against the immediately preceding effect's own Kind rather than
 	// assuming a single fixed producing verb.
-	ThisWayOutcome   EffectKind
-	ThisWaySelection *CompiledSelector
-	ThisWayCardNoun  bool
+	ThisWayOutcome         EffectKind
+	ThisWaySelection       *CompiledSelector
+	ThisWayCardNoun        bool
+	ThisWayController      bool
+	ThisWayCount           int
+	ThisWayCountComparison parser.ConditionComparison
 
 	// NodeID is the parser-assigned identity of this condition's boundary. A
 	// triggered ability's intervening condition shares a NodeID with its content
@@ -2549,9 +2552,11 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	ClauseID int
-	Kind     EffectKind
-	Context  parser.EffectContextKind
+	ClauseID                int
+	ResultElseOfClauseID    int
+	OptionalActionClauseIDs []int
+	Kind                    EffectKind
+	Context                 parser.EffectContextKind
 	// CombatDamageSourceName carries the required creature name when Context is
 	// EffectContextEachOpponentDealtCombatDamageByNamed ("each opponent dealt
 	// combat damage this game by a creature named Gollum, Obsessed Stalker

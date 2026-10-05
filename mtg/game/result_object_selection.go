@@ -61,6 +61,11 @@ func ValidateResultObjectSelection(selection Selection) []string {
 }
 
 func validateResultObjectGate(gate InstructionResultGate, sequence []Instruction, published map[ResultKey]int) error {
+	if gate.ObjectCountRange.Exists && (!gate.ObjectSelection.Exists ||
+		gate.ObjectCountRange.Val.Min < 1 || gate.ObjectCountRange.Val.Max != 0 &&
+		gate.ObjectCountRange.Val.Max < gate.ObjectCountRange.Val.Min) {
+		return errors.New("result object count requires a selection and a positive ordered range")
+	}
 	if gate.Negate && !gate.ObjectSelection.Exists {
 		return errors.New("negated result gate requires an object selection")
 	}

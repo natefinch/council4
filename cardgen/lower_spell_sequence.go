@@ -199,6 +199,8 @@ func collapseCausativeHavePairs(
 			action := effects[i+1]
 			action.Optional = true
 			action.OptionalSpan = effects[i].OptionalSpan
+			action.OptionalActionClauseIDs = slices.DeleteFunc(slices.Clone(effects[i].OptionalActionClauseIDs),
+				func(id int) bool { return id == effects[i].ClauseID })
 			// The action carried RequiresOrderedLowering only because the ability
 			// had the structural "have" sibling; as the folded optional effect it
 			// lowers through the ordinary single-effect clause path.
@@ -270,6 +272,9 @@ func lowerOrderedEffectSequence(
 	// optionality forms exactly one supported pair.
 	optionalFlow, ok := planOptionalFlow(ctx.content)
 	if !ok {
+		if optionalFlow.failureCategory != "" {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, optionalFlow.failureCategory)
+		}
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported resolving optionality")
 	}
 	conditionPlan, matchReason, ok := planSequenceConditions(ctx.content, optionalFlow)

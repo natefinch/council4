@@ -105,6 +105,11 @@ func resultObjectsMatchSelection(g *game.Game, obj *game.StackObject, snapshots 
 }
 
 func resultObjectsMatchFilter(g *game.Game, obj *game.StackObject, snapshots []game.ObjectSnapshot, selection game.Selection, cardOnly bool) bool {
+	return countResultObjectsMatching(g, obj, snapshots, selection, cardOnly) > 0
+}
+
+func countResultObjectsMatching(g *game.Game, obj *game.StackObject, snapshots []game.ObjectSnapshot, selection game.Selection, cardOnly bool) int {
+	count := 0
 	for i := range snapshots {
 		snapshot := &snapshots[i]
 		if cardOnly && (snapshot.ObjectID != 0 || snapshot.CardID == 0) {
@@ -116,8 +121,8 @@ func resultObjectsMatchFilter(g *game.Game, obj *game.StackObject, snapshots []g
 			sourceObjectID: obj.SourceID, resolutionChoices: obj.ResolutionChoices, obj: obj,
 		}
 		if matchSelection(&subject, &selection) {
-			return true
+			count++
 		}
 	}
-	return false
+	return count
 }
