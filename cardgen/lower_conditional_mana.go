@@ -91,6 +91,8 @@ func fixedAddManaToController(effect compiler.CompiledEffect, wantInstead bool) 
 	if effect.Kind != compiler.EffectAddMana ||
 		effect.Negated ||
 		effect.Optional ||
+		effect.HasUnrecognizedSibling ||
+		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
 		effect.DelayedTiming != 0 ||
 		effect.Duration != compiler.DurationNone ||
 		effect.Context != parser.EffectContextController ||

@@ -25,7 +25,8 @@ func contentWithoutOwnedConditionReferences(content compiler.AbilityContent) com
 }
 
 func conditionsOwnedByResolvingBody(content compiler.AbilityContent) bool {
-	if len(content.Conditions) == 0 || abilityContentHasAddManaEffect(content) {
+	if len(content.Conditions) == 0 ||
+		(abilityContentHasAddManaEffect(content) && !abilityContentHasTargets(content)) {
 		return false
 	}
 	for _, condition := range content.Conditions {
