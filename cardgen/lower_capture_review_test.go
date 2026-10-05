@@ -25,6 +25,8 @@ func TestCaptureReviewUnavailableQuantityAndPluralOwnership(t *testing.T) {
 		"Tap target creature. Put X +1/+1 counters on it at the beginning of the next end step.",
 		"Create a 1/1 green Insect creature token. Create a Treasure token. Sacrifice them at the beginning of the next end step.",
 		"Create a 1/1 green Insect creature token. Create a Treasure token. Sacrifice the tokens at the beginning of the next end step.",
+		"Create a 1/1 green Insect creature token. Create a 1/1 green Insect creature token. Sacrifice the tokens at the beginning of the next end step.",
+		"Create a 1/1 green Insect creature token. Create a 1/1 green Insect creature token. Sacrifice them at the beginning of the next end step.",
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()

@@ -505,17 +505,21 @@ func delayedReferenceMatchesProduct(reference Reference, effect *EffectSyntax) b
 }
 
 func delayedProductSubject(effects []*EffectSyntax) DelayedSubjectOwnership {
+	subject := DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
 	for i := len(effects) - 1; i >= 0; i-- {
 		effect := effects[i]
 		if effect.Kind == EffectCreate {
-			return DelayedSubjectOwnership{Kind: DelayedSubjectProduct, ProducerClauseID: effect.ClauseID}
+			if subject.Kind == DelayedSubjectProduct {
+				return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
+			}
+			subject = DelayedSubjectOwnership{Kind: DelayedSubjectProduct, ProducerClauseID: effect.ClauseID}
 		}
 		if len(effect.Targets) != 0 || effect.Kind == EffectExile ||
 			effect.Kind == EffectReveal || effect.Kind == EffectSearch {
 			break
 		}
 	}
-	return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
+	return subject
 }
 
 func delayedConditionEvaluation(effect *EffectSyntax, segment *ConditionSegment, sentences []Sentence) bool {
