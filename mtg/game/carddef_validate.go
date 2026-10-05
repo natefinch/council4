@@ -973,6 +973,14 @@ func (v *cardDefValidator) validateInstructionSequence(
 			}
 		}
 		effectCondition := seq[i].Condition
+		if seq[i].ClearLinkedBeforeGate {
+			primitive := seq[i].Primitive
+			if PublishedLinkedKey(primitive) == "" ||
+				primitive.Kind() != PrimitiveCreateToken && primitive.Kind() != PrimitivePutOnBattlefield &&
+					primitive.Kind() != PrimitiveMovePermanent && primitive.Kind() != PrimitiveMoveTopOfLibrary {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "transient publication clearing requires a supported linked publisher")
+			}
+		}
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
 			condition := effectCondition.Val.Condition.Val
 			v.validateCondition(

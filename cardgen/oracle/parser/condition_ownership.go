@@ -63,7 +63,7 @@ func emitConditionOwnership(sentences []Sentence, segments []ConditionSegment, r
 		case 1:
 			segment.Ownership.Scope = ConditionScopeClause
 			segment.Ownership.ClauseIDs = []int{owners[0].ClauseID}
-			segment.Ownership.DelayedBody = delayedConditionEvaluation(owners[0], segment)
+			segment.Ownership.DelayedBody = delayedConditionEvaluation(owners[0], segment, sentences)
 		default:
 			segment.Ownership.Scope = ConditionScopeGroup
 			for _, effect := range owners {

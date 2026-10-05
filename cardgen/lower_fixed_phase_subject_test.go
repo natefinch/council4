@@ -46,10 +46,28 @@ func TestFixedPhaseCapturedSubjectComposes(t *testing.T) {
 }
 
 func TestFixedPhaseCapturedCard(t *testing.T) {
-	text := "Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of your next end step."
-	face := lowerSingleFace(t, &ScryfallCard{Name: "Captured Card", Layout: "normal", TypeLine: "Enchantment", OracleText: text})
-	if !face.ActivatedAbilities[0].Content.Modes[0].Sequence[1].Primitive.(game.CreateDelayedTrigger).Trigger.CapturedCard.Exists {
-		t.Fatal("missing captured card")
+	t.Parallel()
+	for _, test := range []struct {
+		text     string
+		timing   game.DelayedTriggerTiming
+		faceDown bool
+	}{
+		{"Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of your next end step.", game.DelayedAtBeginningOfYourNextEndStep, true},
+		{"Pay 1 life: Exile the top card of your library. Put that card into your hand at the beginning of your next end step.", game.DelayedAtBeginningOfYourNextEndStep, false},
+		{"Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of the next end step.", game.DelayedAtBeginningOfNextEndStep, true},
+		{"Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of the next turn's upkeep.", game.DelayedAtBeginningOfNextUpkeep, true},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{Name: "Captured Card", Layout: "normal", TypeLine: "Enchantment", OracleText: test.text})
+			sequence := face.ActivatedAbilities[0].Content.Modes[0].Sequence
+			move := sequence[0].Primitive.(game.MoveTopOfLibrary)
+			trigger := sequence[1].Primitive.(game.CreateDelayedTrigger).Trigger
+			if move.FaceDown != test.faceDown || trigger.Timing != test.timing ||
+				!trigger.CapturedCard.Exists || !sequence[0].ClearLinkedBeforeGate {
+				t.Fatal("captured card lost its publication, visibility, or phase timing")
+			}
+		})
 	}
 }
 
@@ -59,6 +77,8 @@ func TestFixedPhaseSubjectRefusesUnavailableDomains(t *testing.T) {
 		"Tap target creature. Sacrifice that land at the beginning of the next end step.",
 		"Create a 1/1 green Insect creature token. Exile that spell at end of combat.",
 		"Whenever you cast a creature spell, exile it at the beginning of the next end step.",
+		"Exile this spell at the beginning of the next end step.",
+		"Sacrifice Unavailable Capture at the beginning of the next end step.",
 		"Create a 1/1 green Insect creature token. Sacrifice it at the beginning of the next end step if it's an Elf.",
 		"Tap target creature. Remove X +1/+1 counters from it at end of combat.",
 		"Choose two —\n• Create a 1/1 green Insect creature token. Sacrifice it at end of combat.\n• Create a 1/1 green Insect creature token. Exile it at end of combat.",

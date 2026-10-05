@@ -222,16 +222,16 @@ func exactReferencedZoneMove(effect *EffectSyntax) bool {
 }
 
 func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targets []TargetSyntax, references []Reference, trigger *TriggerClause) DelayedSubjectOwnership {
+	for _, token := range reference.Tokens {
+		if strings.EqualFold(token.Text, "spell") {
+			return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
+		}
+	}
 	if reference.Kind == ReferenceSelfName || reference.Kind == ReferenceThisObject {
 		return DelayedSubjectOwnership{Kind: DelayedSubjectSource}
 	}
 	if reference.Kind != ReferenceThatObject && reference.Kind != ReferencePronoun {
 		return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
-	}
-	for _, token := range reference.Tokens {
-		if strings.EqualFold(token.Text, "spell") {
-			return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
-		}
 	}
 	// Explicit source mentions and target/product introductions compete in
 	// grammatical order. Unconditional non-object clauses introduce no subject.
@@ -417,12 +417,21 @@ func delayedProductSubject(effects []*EffectSyntax) DelayedSubjectOwnership {
 	return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
 }
 
-func delayedConditionEvaluation(effect *EffectSyntax, segment *ConditionSegment) bool {
+func delayedConditionEvaluation(effect *EffectSyntax, segment *ConditionSegment, sentences []Sentence) bool {
 	if effect.DelayedTiming == DelayedTimingNone {
 		return false
 	}
 	if segment.Span.Start.Offset > effect.VerbSpan.Start.Offset {
 		return true
+	}
+	for _, sentence := range sentences {
+		if !parserSpanContains(sentence.Span, segment.Span) {
+			continue
+		}
+		comma := shared.TopLevelIndex(sentence.Tokens, shared.Comma)
+		if comma >= 0 && leadingDelayedTiming(sentence.Tokens[:comma+1]) != DelayedTimingNone {
+			return true
+		}
 	}
 	for i, token := range effect.Tokens {
 		if token.Span.Start.Offset == segment.Span.Start.Offset {

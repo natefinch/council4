@@ -199,33 +199,13 @@ func TestLowerNecropotenceDiscardExileRejectsTargetForm(t *testing.T) {
 	}
 }
 
-// TestNecropotenceNearMissesFailClosed proves the strict near-misses around each
-// new construct fail closed (report diagnostics and lower no ability) rather than
-// being coerced into Necropotence's shape. Each case is Necropotence's own wording
-// with a single deviation that must break the match.
+// Unsupported parameters must not be coerced into Necropotence's shape.
 func TestNecropotenceNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name       string
 		oracleText string
 	}{
-		{
-			// Face-up: the hidden-information return requires the card be exiled
-			// face down, so the face-up predecessor cannot be linked.
-			name:       "exile top card face up",
-			oracleText: "Pay 1 life: Exile the top card of your library. Put that card into your hand at the beginning of your next end step.",
-		},
-		{
-			// Non-controller-keyed "the next end step" is a different timing than
-			// the controller-keyed "your next end step".
-			name:       "shared next end step timing",
-			oracleText: "Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of the next end step.",
-		},
-		{
-			// Next upkeep is a different delayed timing entirely.
-			name:       "next upkeep timing",
-			oracleText: "Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of the next turn's upkeep.",
-		},
 		{
 			// A different destination zone is not the "into your hand" return.
 			name:       "return to graveyard",

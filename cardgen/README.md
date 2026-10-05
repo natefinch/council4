@@ -87,6 +87,23 @@ Immediate referenced-permanent consequences use the same exact product context
 in modal and non-modal bodies. A delayed product consumer without an explicit
 captured reference refuses rather than rereading a later publication.
 
+Fixed-phase delayed bodies use that same shared sequence interface. Parser-owned
+NodeID, producer ClauseID, target occurrence, subject domain, and condition timing
+select the subject without compiler text or positional guesses. At scheduling,
+the existing delayed-trigger capture freezes the exact permanent, the complete
+actual token batch (including replacement-created copies), or the reached card
+incarnation. Unconditional intervening effects do not change the antecedent;
+expanded producers require exactly one proven publisher. Capture-owned card-move
+publications explicitly clear before gates or optional choices, without clearing
+persistent CR 607 links. Later source activations, copies, and zone reentry cannot
+redirect an earlier capture.
+
+Resolving conditions gate scheduling; future body conditions execute at the
+printed delayed phase and require an available captured subject before negation.
+Unavailable subject domains, future quantities, multiple future conditions, and
+multi-selected-mode product namespaces retain precise whole-card refusals.
+Event-based delayed triggers retain their separate event-matching interface.
+
 Condition type selections share the selection atom vocabulary: adjacent types
 are conjunctive (`artifact creature`), `or`/`and/or` joins alternatives,
 and `noncreature`/`nonland` exclude types. A `permanent card` condition is

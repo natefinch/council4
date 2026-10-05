@@ -152,3 +152,65 @@ func TestFixedPhaseEventCardFreezesReachedIncarnation(t *testing.T) {
 		t.Fatal("delayed return followed a card that left and reentered its graveyard")
 	}
 }
+
+func TestFixedPhaseConditionEvaluatesAtPrintedTime(t *testing.T) {
+	t.Parallel()
+	for _, test := range []struct {
+		text   string
+		future bool
+	}{
+		{"Tap target creature. If you have 20 or more life, destroy it at the beginning of the next end step.", false},
+		{"Tap target creature. At the beginning of the next end step, destroy it if you have 20 or more life.", true},
+		{"Tap target creature. At the beginning of the next end step, if you have 20 or more life, destroy it.", true},
+	} {
+		t.Run(test.text, func(t *testing.T) {
+			t.Parallel()
+			sequence := compiledCaptureSequence(t, test.text)
+			for _, initiallyTrue := range []bool{false, true} {
+				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+				engine := NewEngine(nil)
+				subject := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+				g.Players[game.Player1].Life = 19
+				if initiallyTrue {
+					g.Players[game.Player1].Life = 20
+				}
+				obj := &game.StackObject{Controller: game.Player1, Targets: []game.Target{{Kind: game.TargetPermanent, PermanentID: subject.ObjectID}}, TargetCounts: []int{1}}
+				engine.resolveInstructionSequence(g, obj, sequence, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+				wantScheduled := 0
+				if test.future || initiallyTrue {
+					wantScheduled = 1
+				}
+				if len(g.DelayedTriggers) != wantScheduled {
+					t.Fatalf("scheduled=%d, want %d: current and future conditions were conflated", len(g.DelayedTriggers), wantScheduled)
+				}
+				g.Players[game.Player1].Life = 20
+				if initiallyTrue {
+					g.Players[game.Player1].Life = 19
+				}
+				engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+				_, survived := permanentByObjectID(g, subject.ObjectID)
+				wantDestroyed := initiallyTrue
+				if test.future {
+					wantDestroyed = !initiallyTrue
+				}
+				if survived == wantDestroyed {
+					t.Fatal("condition was not evaluated at its printed resolving time")
+				}
+			}
+		})
+	}
+}
+
+func TestFixedPhaseUnavailableConditionIsNotInverted(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	for _, negate := range []bool{false, true} {
+		condition := opt.Val(game.Condition{
+			Negate: negate, Object: opt.Val(game.CapturedObjectReference()),
+			ObjectMatches: opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+		})
+		if conditionSatisfied(g, conditionContext{controller: game.Player1, obj: &game.StackObject{}}, condition) {
+			t.Fatal("unavailable captured subject became true, possibly by negation")
+		}
+	}
+}

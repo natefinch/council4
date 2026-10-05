@@ -88,11 +88,14 @@ func lowerFixedPhaseSubject(
 		ctx.priorInstruction, ctx.priorLinkedKey = producer, key
 	case parser.DelayedSubjectTarget:
 		index := 0
-		if !subject.DirectTarget && len(ctx.content.References) == 0 {
-			return refuse("fixed-phase target subject reference is unavailable")
-		}
 		if !subject.DirectTarget {
-			reference := ctx.content.References[0]
+			referenceIndex := slices.IndexFunc(ctx.content.References, func(reference compiler.CompiledReference) bool {
+				return slices.Contains(subject.ReferenceNodeIDs, reference.NodeID)
+			})
+			if referenceIndex < 0 {
+				return refuse("fixed-phase target subject reference is unavailable")
+			}
+			reference := ctx.content.References[referenceIndex]
 			if reference.Binding != compiler.ReferenceBindingTarget {
 				return refuse("fixed-phase target subject has no exact local occurrence")
 			}
@@ -109,6 +112,9 @@ func lowerFixedPhaseSubject(
 		}
 		object = game.TargetPermanentReference(index)
 	case parser.DelayedSubjectSource:
+		if ctx.enclosingKind == compiler.AbilitySpell && subject.CardZone == zone.None {
+			return refuse("a resolving spell is not a battlefield source subject")
+		}
 		object = game.SourcePermanentReference()
 		if subject.CardZone != zone.None {
 			card, fromZone = true, subject.CardZone

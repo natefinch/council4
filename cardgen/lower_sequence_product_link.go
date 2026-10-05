@@ -9,9 +9,10 @@ import (
 )
 
 // Ordered sequence consumers share a canonical object publication with the
-// exact producer identified by the compiler. Currently the supported producers
-// are CreateToken and single-source PutOnBattlefield; other primitive kinds need
-// their own actual-result publication proof before participating.
+// exact producer identified by the compiler. Resolving permanent consumers use
+// CreateToken and single-source PutOnBattlefield; fixed-phase capture additionally
+// admits proven single-card exile publishers. A publication field alone is not
+// an actual-result proof.
 
 // sequencePriorInstructionLink reports the antecedent effect index and link key
 // a clause's own references need to resolve a ReferenceBindingPriorInstructionResult
@@ -66,11 +67,15 @@ func sequencePriorInstructionPublication(
 			if capture {
 				candidate.Optional = false
 				if existing := game.PublishedLinkedKey(candidate.Primitive); existing != "" {
+					if captureMovePublisher(candidate.Primitive) && !candidate.ClearLinkedBeforeGate {
+						return 0, "", false
+					}
 					key = existing
 				}
 			}
 			if _, published := trySetInstructionPublishLinked(&candidate, key); !published {
-				if capture && game.PublishedLinkedKey(candidate.Primitive) != "" {
+				if capture && (game.PublishedLinkedKey(candidate.Primitive) != "" ||
+					!captureExpansionInstructionCompatible(candidate.Primitive)) {
 					return 0, "", false
 				}
 				continue
@@ -93,6 +98,9 @@ func sequencePriorInstructionPublication(
 			return 0, "", false
 		}
 		sequence[instructionIndex].Primitive = candidate.Primitive
+		if capture && captureMovePublisher(candidate.Primitive) {
+			sequence[instructionIndex].ClearLinkedBeforeGate = true
+		}
 		return j, linked, true
 	}
 	return 0, "", false
@@ -100,6 +108,24 @@ func sequencePriorInstructionPublication(
 
 func sequenceProductKey(index int) game.LinkedKey {
 	return game.LinkedKey(fmt.Sprintf("sequence-effect-%d-product", index))
+}
+
+func captureExpansionInstructionCompatible(primitive game.Primitive) bool {
+	if primitive == nil {
+		return false
+	}
+	switch primitive.Kind() {
+	case game.PrimitiveDraw, game.PrimitiveGainLife, game.PrimitiveLoseLife,
+		game.PrimitiveAddCounter, game.PrimitiveModifyPT, game.PrimitiveApplyContinuous,
+		game.PrimitiveTap, game.PrimitiveUntap:
+		return true
+	default:
+		return false
+	}
+}
+
+func captureMovePublisher(primitive game.Primitive) bool {
+	return primitive != nil && (primitive.Kind() == game.PrimitiveMovePermanent || primitive.Kind() == game.PrimitiveMoveTopOfLibrary)
 }
 
 // trySetInstructionPublishLinked sets instr's PublishLinked field to key,
@@ -161,6 +187,13 @@ func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey)
 		primitive, ok := instr.Primitive.(game.MovePermanent)
 		if !ok || primitive.Destination != zone.Exile || primitive.ControlledChoice ||
 			primitive.Group.Domain() != 0 || primitive.Object.Kind() == game.ObjectReferenceNone {
+			return "", false
+		}
+		switch primitive.Object.Kind() {
+		case game.ObjectReferenceTargetPermanent, game.ObjectReferenceSourcePermanent,
+			game.ObjectReferenceEventPermanent, game.ObjectReferenceEventRelatedPermanent,
+			game.ObjectReferenceLinkedObject, game.ObjectReferenceCapturedObject:
+		default:
 			return "", false
 		}
 		if primitive.PublishLinked != "" {
