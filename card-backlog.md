@@ -10,21 +10,20 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33013
-- Supported (generated): 18570
-- Parser-complete: 22787
-- **Lowering backlog** (parser-complete, not generated): 4986
-- **Parser backlog** (not parser-complete, not generated): 9457
+- Supported (generated): 18574
+- Parser-complete: 22811
+- **Lowering backlog** (parser-complete, not generated): 4993
+- **Parser backlog** (not parser-complete, not generated): 9446
 
-Partition check: 18570 supported + 4986 lowering-backlog + 9457 parser-backlog = 33013 eligible. ✓
+Partition check: 18574 supported + 4993 lowering-backlog + 9446 parser-backlog = 33013 eligible. ✓
 
-769 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+756 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
 - Stormchaser's Talent
 - Puppeteer Clique
 - Lantern of Revealing
-- Deny the Divine
 - Dawnbringer Cleric
 - Gix's Caress
 - Bedlam Reveler
@@ -45,7 +44,6 @@ Partition check: 18570 supported + 4986 lowering-backlog + 9457 parser-backlog =
 - Summon: Magus Sisters
 - Chorus of Might
 - Colossus of the Blood Age
-- Assert Authority
 - Silvar, Devourer of the Free
 - Rune of Protection: Blue
 - Phantom Nantuko
@@ -69,13 +67,15 @@ Partition check: 18570 supported + 4986 lowering-backlog + 9457 parser-backlog =
 - Teferi's Protection
 - Faerie Impostor
 - Phantom Interference
+- Drill Bit
+- Bile Blight
 
 ### Reconciliation guard
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18570
-- Independent per-card recompile generated: 18570
+- Authoritative generated (compilecards report): 18574
+- Independent per-card recompile generated: 18574
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1764 | 1153 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 530 | 3 | Dazzling Sphinx; Planebound Accomplice; Mindclaw Shaman; Remembrance; Park Bleater |
+| 1 | unsupported ordered effect sequence | 1771 | 1156 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 534 | 3 | Dazzling Sphinx; Planebound Accomplice; Mindclaw Shaman; Remembrance; Park Bleater |
 | 3 | unsupported static declaration operation | 281 | 237 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 276 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 210 | 121 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
