@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18507 supported cards
+# 18526 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -822,6 +822,7 @@ ed04750bca156432  Arwen Undómiel
 c66f537885abe241  Arwen's Gift
 1ef4e4505c59328e  Arwen, Weaver of Hope
 dfa5c1532e7a2a7f  Ascendant Dustspeaker
+aa30eb7372cbc1cd  Ascendant Packleader
 295a567d51a7d536  Ascended Lawmage
 dbbfd43045595fce  Ascending Aven
 0d55325b224b48c6  Asceticism
@@ -1265,6 +1266,7 @@ a4de34457cecb9a8  Battlewing Mystic
 31371a79c409f470  Battlewise Aven
 527943c61d6148d1  Battlewise Hoplite
 34829aeb34c69b91  Battlewise Valor
+69274fa2ca713de4  Baxter Building
 1120f08a34daff89  Baxter Stockman
 8dc4883c9c1023fc  Baxter, Fly in the Ointment
 ba6c19db224d882f  Bay Falcon
@@ -2353,7 +2355,7 @@ c9347242e53cc01b  Carrion Crow
 93652c5eb781cecf  Carrion Feeder
 6aa8c450ca2eec1b  Carrion Howler
 309d6151a6a89c23  Carrion Imp
-a9f7d67589126e0b  Carrion Locust
+93aa5f25b985b07a  Carrion Locust
 1d3627803f07e745  Carrion Screecher
 43d7fc9064ad8762  Carrion Thrash
 ec8135cf1f898863  Carrion Wall
@@ -2803,7 +2805,7 @@ f5314beaa6094efd  Cliffhaven Kitesail
 a6615d78253f9692  Cliffrunner Behemoth
 22aac4d5afe81c5d  Cliffside Lookout
 791d217eda212b08  Clifftop Retreat
-f716eda7cabf4e0d  Cling to Dust
+8df2e5171724de61  Cling to Dust
 6afea633aa9a2c61  Clinging Anemones
 57d062f370f4b0d1  Clinging Darkness
 c3849131ac501e5a  Clinquant Skymage
@@ -3049,6 +3051,7 @@ e36cb65457370076  Contagion
 d9a4b6101f9f0090  Contagion Clasp
 d6c9d16613ba322d  Contagion Engine
 a0965c1a83732f2b  Contagious Nim
+420adac7da61f3db  Containment Breach
 8fe5a2029af4d71c  Containment Construct
 655986c9b25c454e  Containment Protocol
 5b43942a2f549fc8  Contaminant Grafter
@@ -3821,6 +3824,7 @@ fc2c08e87d3ae5be  Depart the Realm
 a47846b046c82360  Dependable Quinjet
 66628bcbc1d4c310  Deploy to the Front
 76e8a3ed5ec4bba8  Depose // Deploy
+5990d3892fb714db  Depressurize
 a69dd341903338d0  Deprive
 2effdb9e30d21905  Depths of Desire
 df39b434769c5457  Deputized Protester
@@ -4132,6 +4136,7 @@ b311e88d0123c74b  Door of Destinies
 01076efc4e5083d9  Doorkeeper
 ae5a029bef669269  Doran, the Siege Tower
 c257bcfcd3dc6ad0  Dori, Bearer of Friends
+57f2e07cae60642e  Dormant Grove // Gnarled Grovestrider
 6abeed1e4bf1cd59  Dormant Volcano
 92d9abf210e26461  Dosan's Oldest Chant
 d37002dea14a603d  Double Cleave
@@ -4882,6 +4887,7 @@ e683acbde14f3cc0  Enslaved Dwarf
 cfc0cedf44363022  Enslaved Scout
 8fad1745cdd5754e  Ensnare
 fa9c3f3b200a890a  Ensouled Scimitar
+39d6dee212369628  Ent's Fury
 3da64c8e01321006  Enter the Enigma
 f493422cbf8cab88  Enter the God-Eternals
 d116cf971bff6e31  Enter the Unknown
@@ -4987,7 +4993,7 @@ fd2a693ea0b2b6fc  Eternal Warrior
 8c8a3ea74ac26f17  Eternal Witness
 0173cac874c40675  Eternity Snare
 6b5969e658af9a4d  Ethercaste Knight
-659ec3ce5830a884  Ethereal Absolution
+168204ba0c2b1bd4  Ethereal Absolution
 bfa1d385228f611a  Ethereal Armor
 8a5cb195b362de9d  Ethereal Champion
 05fbf4cc0dfbd302  Ethereal Elk
@@ -5100,6 +5106,7 @@ bd241152c04dc071  Exsanguinator Cavalry
 deff4459004b4926  Extended Absence
 a2a20716fbf558e1  Extinguish
 8dc6d6bec11b964b  Extinguish All Hope
+0dc3ef08e3b398b9  Extinguish the Light
 c4020e8f2f167e7f  Extra Arms
 3bea088185c2291c  Extract from Darkness
 193049b1452e90b5  Extractor Demon
@@ -5144,6 +5151,7 @@ ba72cd8b3a7d571a  Facet Reader
 62d9b018aebcc8eb  Fade from History
 660a216f73362c74  Fade from Memory
 b597609b72868dda  Fade into Antiquity
+1008d08eaf9a9eda  Fading Hope
 da29243c0be93b0e  Fae Flight
 83230c9cd39a6a36  Faebloom Trick
 7fde73ac67bfdba6  Faeburrow Elder
@@ -8070,7 +8078,7 @@ a835e836d9ccd7ce  Inundate
 149f7db8a7c7855d  Invading Manticore
 88239f2fdefebae5  Invasion of Belenon // Belenon War Anthem
 2e3e6686425bcef5  Invasion of Dominaria // Serra Faithkeeper
-5bc655673e63b014  Invasion of Innistrad // Deluge of the Dead
+d68a8a74e402eb83  Invasion of Innistrad // Deluge of the Dead
 48c1a1dd6e3ecc75  Invasion of Ixalan // Belligerent Regisaur
 607beb8b19ed93b5  Invasion of Kaladesh // Aetherwing, Golden-Scale Flagship
 af0ecca92e6303f7  Invasion of Kamigawa // Rooftop Saboteurs
@@ -9013,6 +9021,7 @@ b5eae1c6a15a0a92  Leshrac's Rite
 a27d3de21bd35bdc  Lethal Protection
 0980a3ba82835793  Lethargy Trap
 aeabfbd780a7cbb6  Letter of Acceptance
+d82d9c70cc5673af  Level Up
 3b1cb2ac932750ce  Leviathan
 d62b992f5d1f5523  Leviathan
 294cc46c2f890710  Levitating Statue
@@ -9137,6 +9146,7 @@ c33d4c2b45ec2932  Lingering Phantom
 d642f384ffbb7188  Lingering Souls
 235c2550ab61a826  Lingering Tormentor
 d74f36aa078116e6  Lion Heart
+ef3c8a8f9a66001f  Lion Sash
 f9344f701c3a135f  Lion Vulture
 c8a4fdda7ddf1bdc  Lion's Eye Diamond
 d5cdf8a1bf534726  Lionheart Glimmer
@@ -11357,6 +11367,7 @@ b1fc928137bf21d4  Perilous Myr
 f77fb3cce2942934  Perilous Research
 829f57fd5968e4c4  Perilous Shadow
 3b5c7639cb44fd61  Perilous Vault
+a3d8d56e27d063cd  Perilous Voyage
 4bc43d5ec2d9eaaf  Perimeter Captain
 07990d78a7e7dd4d  Perimeter Enforcer
 7c4e389a762aaaf7  Perimeter Patrol
@@ -11787,6 +11798,7 @@ a42955db9524a775  Primordial Sage
 1391efbeaa78d457  Prince Imrahil the Fair
 a9322ea057036c58  Princess Lucrezia
 8e50b081becf79fc  Prism Ring
+b64da4d1af0a15c9  Prismari Apprentice
 067a05a576261a2b  Prismari Campus
 f609efb626182a58  Prismari Charm
 02306edf69b9a259  Prismari Command
@@ -12320,6 +12332,7 @@ da9f514186f057e2  Ray Fillet, Man Ray
 140f0cf7899c1020  Razaketh, the Foulblooded
 9867cf7e2d48dcd2  Raze
 91fedb28056c6ee0  Raze the Effigy
+7dcd02839a4b8049  Raze to the Ground
 c8e9fb3e769c600a  Razing Snidd
 589a1b0f44aedf5e  Razor Golem
 c5bd43aaec0052d9  Razor Rings
@@ -12474,6 +12487,7 @@ dcaa9719aca4311a  Reinforced Bulwark
 d40e924a71147f60  Reinforcements
 fd189bd3a36a044b  Reito Lantern
 22635c5ec0f79ce9  Reito Sentinel
+2192236b28bfc1ab  Reject Imperfection
 4ba2ec0a9c9b09cc  Rejuvenate
 51b17d77648a3cab  Rejuvenating Springs
 ebe6dd8844d14c2b  Reknit
@@ -13331,7 +13345,7 @@ dbed06c4a4a16ca9  Scavenged Weaponry
 5a5f11d1af8fa1ea  Scavenger Folk
 aa4d0192cb168dff  Scavenger Grounds
 031ce19c3c93fab2  Scavenging Harpy
-ee5678c3a90e74c9  Scavenging Ooze
+186a49b83cedce8d  Scavenging Ooze
 76295fa1ba57a1b2  Scavenging Scarab
 4502bbb644542c24  Scene of the Crime
 aba4253d78440c0a  Scepter of Celebration
@@ -13552,6 +13566,7 @@ fec73c92c5596f4e  Seedcradle Witch
 a12cbd1fc23b7a41  Seedguide Ash
 a5fc5342984904c1  Seedpod Squire
 a5cc6e83320ee7e5  Seedship Agrarian
+31c190a5993e3c44  Seedship Impact
 add261c9ae2a7286  Seek the Horizon
 06a3d6e7e9de46aa  Seek the Wilds
 1b4b445562506ca6  Seeker of Insight
@@ -13688,6 +13703,7 @@ f639c1ad85b0cebd  Serra's Blessing
 7851ee5f7fe4aa0f  Serrated Arrows
 fc16642910fad399  Serrated Scorpion
 b91bf69f78af5132  Serum Raker
+92e35c47756eb8b4  Serum Snare
 8691b73950328751  Serum Sovereign
 fbd037750cc8b799  Serum Tank
 a9f2150167a19e14  Serum Visionary
@@ -14931,6 +14947,7 @@ a33ba325ee3c65a1  Splendor Mare
 fff0afa8dde69154  Splinterfright
 748e0afc7bc21e61  Split Up
 c9155a616a9aad1f  Split-Tail Miko
+c16f43edc6d26bbe  Splitskin Doll
 215f578858122a8e  Splitting Slime
 d6c4588563d8022e  Spoils of Adventure
 343f43313cbe979c  Spontaneous Artist
@@ -15327,6 +15344,7 @@ ee661483d5c3239e  Strength of the Pack
 ef82a5e72c5969d4  Strength of Unity
 074a7fdad37e9a92  Stridehangar Automaton
 952a99a445cde8b5  Strider Harness
+8060edc30c73d269  Strider, Ranger of the North
 1667b5e15050b163  Strife Scholar // Awaken the Ages
 affdff25df882d3d  Strike It Rich
 028adaaf12b46d66  Striking Sliver
@@ -15698,6 +15716,7 @@ a42ca7647ed4f5ab  Tainted Isle
 22b57f2bcc2ad21e  Tainted Pact
 77dee840bb928577  Tainted Peak
 44b761fbd67b21a4  Tainted Strike
+850ef9d2a30c640d  Tainted Treats
 6bfd89eba03f2870  Tainted Well
 47e547d4431b4bf7  Tainted Wood
 8499f92240d13dea  Tajic, Blade of the Legion
