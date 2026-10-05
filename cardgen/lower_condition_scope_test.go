@@ -107,7 +107,7 @@ func TestConditionScopeNearMisses(t *testing.T) {
 		"If you have no cards in hand and win the game, draw a card, then draw a card.",
 		"Draw a card, then discard a card unless you control a Villain.",
 		"Unless you pay {1}, draw a card, then discard a card.",
-		"Unless you control another Pirate, draw a card, then discard a card.",
+		"Unless you control another Pirate with a hat, draw a card, then discard a card.",
 		"Unless you control a Villain, draw a card, then discard a card. Otherwise, you gain 2 life.",
 	} {
 		assertCardUnsupported(t, &ScryfallCard{Name: "Scope Near Miss", Layout: "normal", TypeLine: "Instant", OracleText: text})

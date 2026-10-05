@@ -10,14 +10,14 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33013
-- Supported (generated): 18489
+- Supported (generated): 18492
 - Parser-complete: 22735
-- **Lowering backlog** (parser-complete, not generated): 5013
-- **Parser backlog** (not parser-complete, not generated): 9511
+- **Lowering backlog** (parser-complete, not generated): 5012
+- **Parser backlog** (not parser-complete, not generated): 9509
 
-Partition check: 18489 supported + 5013 lowering-backlog + 9511 parser-backlog = 33013 eligible. ✓
+Partition check: 18492 supported + 5012 lowering-backlog + 9509 parser-backlog = 33013 eligible. ✓
 
-767 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+769 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
@@ -74,8 +74,8 @@ Partition check: 18489 supported + 5013 lowering-backlog + 9511 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18489
-- Independent per-card recompile generated: 18489
+- Authoritative generated (compilecards report): 18492
+- Independent per-card recompile generated: 18492
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,7 +84,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1739 | 1163 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 1 | unsupported ordered effect sequence | 1740 | 1164 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
 | 2 | unsupported optional effect | 533 | 11 | Dazzling Sphinx; Mindclaw Shaman; Remembrance; Park Bleater; Sparring Dummy |
 | 3 | unsupported static declaration operation | 283 | 238 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 275 | 190 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
@@ -107,8 +107,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 21 | unsupported type line | 61 | 60 | Playable Delusionary Hydra; Notorious Sliver War; City's Blessing // Elemental; Demonic Tourist Laser; Night Brushwagg Ringmaster |
 | 22 | unsupported cast effect | 58 | 31 | Oracle of Bones; Founding the Third Path; Forger's Foundry; Spell Queller; Xantid Swarm |
 | 23 | unsupported ability content | 57 | 47 | Vihaan, Goldwaker; Heated Debate; Renegade Doppelganger; Shifting Loyalties; Symmetry Sage |
-| 24 | unsupported life spell | 56 | 51 | Guiltfeeder; Wall of Reverence; Revered Unicorn; Atarka's Command; Netherborn Phalanx |
-| 25 | unsupported temporary keyword spell | 55 | 47 | Order of the Golden Cricket; Pale Wayfarer; Violent Urge; Outmuscle; Gravity Negator |
+| 24 | unsupported temporary keyword spell | 55 | 47 | Order of the Golden Cricket; Pale Wayfarer; Violent Urge; Outmuscle; Gravity Negator |
+| 25 | unsupported life spell | 54 | 49 | Guiltfeeder; Wall of Reverence; Revered Unicorn; Atarka's Command; Netherborn Phalanx |
 | 26 | unsupported static declaration condition | 48 | 38 | Desperate Castaways; Nadaar, Selfless Paladin; Veldt; Gloom Stalker; Hazy Homunculus |
 | 27 | unsupported draw spell | 45 | 37 | Theft of Dreams; Fatigue; Gregor, Shrewd Magistrate; Nessian Boar; Thought Sponge |
 | 28 | unsupported library placement | 39 | 33 | Misinformation; Chittering Rats; Murderous Rider // Swift End; Landscaper Colos; Drafna's Restoration |

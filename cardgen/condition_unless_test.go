@@ -34,6 +34,18 @@ func TestLowerResolvingStateUnless(t *testing.T) {
 			})},
 		},
 		{
+			name: "another controlled Pirate",
+			condition: compiler.CompiledCondition{
+				Predicate: compiler.ConditionPredicateControllerControls,
+				Selection: compiler.ConditionSelection{SubtypesAny: []string{"Pirate"}, ExcludeSource: true},
+				Threshold: 1,
+			},
+			want: game.Condition{ControlsMatching: opt.Val(game.SelectionCount{
+				Selection: game.Selection{SubtypesAny: []types.Sub{types.Pirate}, ExcludeSource: true},
+				MinCount:  1,
+			})},
+		},
+		{
 			name: "graveyard cards",
 			condition: compiler.CompiledCondition{
 				Predicate: compiler.ConditionPredicateControllerGraveyardCardCountAtLeast,
@@ -71,6 +83,7 @@ func TestLowerResolvingStateUnless(t *testing.T) {
 			if tt.want.ControlsMatching.Exists {
 				if !got.ControlsMatching.Exists ||
 					!reflect.DeepEqual(got.ControlsMatching.Val.Selection.SubtypesAny, tt.want.ControlsMatching.Val.Selection.SubtypesAny) ||
+					got.ControlsMatching.Val.Selection.ExcludeSource != tt.want.ControlsMatching.Val.Selection.ExcludeSource ||
 					got.ControlsMatching.Val.MinCount != tt.want.ControlsMatching.Val.MinCount ||
 					!got.Negate || got.Text != tt.want.Text {
 					t.Fatalf("condition = %#v, want %#v", got, tt.want)
@@ -117,11 +130,12 @@ func TestResolvingUnlessRejectsOtherSemantics(t *testing.T) {
 		{Kind: compiler.ConditionUnless, Negated: true, SourceInGraveyard: true,
 			Predicate: compiler.ConditionPredicateControllerControls, Threshold: 1,
 			Selection: compiler.ConditionSelection{SubtypesAny: []string{"Villain"}}},
-		{Kind: compiler.ConditionUnless, Negated: true,
-			Predicate: compiler.ConditionPredicateControllerControls, Threshold: 1,
-			Selection: compiler.ConditionSelection{SubtypesAny: []string{"Pirate"}, ExcludeSource: true}},
 		{Kind: compiler.ConditionUnless, Negated: true, Predicate: compiler.ConditionPredicateControllerGraveyardCardCountAtLeast, Threshold: 7,
 			Selection: compiler.ConditionSelection{RequiredTypes: []types.Card{types.Creature}}},
+		{Kind: compiler.ConditionUnless, Negated: true, Predicate: compiler.ConditionPredicateControllerGraveyardCardCountAtLeast, Threshold: 7,
+			Selection: compiler.ConditionSelection{ExcludeSource: true}},
+		{Kind: compiler.ConditionUnless, Negated: true, Predicate: compiler.ConditionPredicateControllerGraveyardManaValueCountAtLeast, Threshold: 5,
+			Selection: compiler.ConditionSelection{ExcludeSource: true}},
 	} {
 		if _, ok := lowerCondition(condition, conditionContextUnlessEffectGate); ok {
 			t.Fatalf("incomplete/qualified condition accepted: %#v", condition)
@@ -203,7 +217,9 @@ func TestResolvingUnlessFullConsumption(t *testing.T) {
 		"Draw a card. You lose 2 life unless this card is in your graveyard and you control a Villain.",
 		"Creatures you control gain indestructible until end of turn.\nAddendum — Unless you control a creature with power 2 or greater, put a +1/+1 counter on each of those creatures and they gain vigilance until end of turn.",
 		"Discard a card unless there are seven or more cards in your graveyard. Otherwise, draw a card.",
-		"Draw a card. You lose 2 life unless you control another Pirate.",
+		"Draw a card. You lose 2 life unless you control another Pirate with a hat.",
+		"Draw a card. You lose 2 life unless you control another Pirate or pay 2 life.",
+		"Draw a card. You lose 2 life unless you control another Pirate and you control an artifact.",
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
@@ -304,20 +320,102 @@ func TestResolvingUnlessManaAbilityFailsClosed(t *testing.T) {
 	}, "unsupported activation condition")
 }
 
-func TestResolvingUnlessSourceExclusionFailsClosed(t *testing.T) {
+func TestResolvingUnlessSourceExclusionCardDefs(t *testing.T) {
 	t.Parallel()
-	for _, tt := range []struct{ name, text string }{
-		{"Fathom Fleet Boarder", "When this creature enters, you lose 2 life unless you control another Pirate."},
-		{"Reaver Drone", "Devoid (This card has no color.)\nAt the beginning of your upkeep, you lose 1 life unless you control another colorless creature."},
+	for _, tt := range []struct {
+		card      ScryfallCard
+		primitive string
+		selection []string
+	}{
+		{
+			card: ScryfallCard{
+				Name: "Fathom Fleet Boarder", Layout: "normal", ManaCost: "{2}{B}", Colors: []string{"B"},
+				TypeLine:   "Creature — Orc Pirate",
+				OracleText: "When this creature enters, you lose 2 life unless you control another Pirate.",
+				Power:      new("3"), Toughness: new("3"),
+			},
+			primitive: "Primitive.(game.LoseLife).Amount.fixed = 2",
+			selection: []string{"SubtypesAny[0] = types.Pirate"},
+		},
+		{
+			card: ScryfallCard{
+				Name: "Reaver Drone", Layout: "normal", ManaCost: "{B}",
+				TypeLine:   "Creature — Eldrazi Drone",
+				OracleText: "Devoid (This card has no color.)\nAt the beginning of your upkeep, you lose 1 life unless you control another colorless creature.",
+				Power:      new("2"), Toughness: new("1"),
+			},
+			primitive: "Primitive.(game.LoseLife).Amount.fixed = 1",
+			selection: []string{"RequiredTypes[0] = types.Creature", "Colorless = true"},
+		},
+	} {
+		t.Run(tt.card.Name, func(t *testing.T) {
+			t.Parallel()
+			prefix := "CardDef.CardFace.TriggeredAbilities[0].Content.Modes[0].Sequence[0]."
+			gate := prefix + "Condition.Val.Condition.Val."
+			paths := []string{
+				prefix + tt.primitive,
+				gate + "Negate = true",
+				gate + "ControlsMatching.Val.Selection.ExcludeSource = true",
+			}
+			for _, selection := range tt.selection {
+				paths = append(paths, gate+"ControlsMatching.Val.Selection."+selection)
+			}
+			assertCardPaths(t, &tt.card, paths...)
+			assertCardPathsAbsent(t, &tt.card, "InterveningCondition", "ResultGate", "Sequence[1]", gate+"ControlsMatching.Val.MinCount")
+		})
+	}
+}
+
+func TestResolvingUnlessSourceExclusionShellRouting(t *testing.T) {
+	t.Parallel()
+	for _, tt := range []struct {
+		name, typeLine, text, path string
+	}{
+		{"spell", "Instant", "Draw a card. You lose 2 life unless you control another Pirate.", "SpellAbility.Val"},
+		{"activated", "Creature — Pirate", "{1}: Draw a card. You lose 2 life unless you control another Pirate.", "ActivatedAbilities[0].Content"},
+		{"triggered", "Creature — Pirate", "When this creature enters, draw a card. You lose 2 life unless you control another Pirate.", "TriggeredAbilities[0].Content"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			assertCardUnsupported(t, &ScryfallCard{
-				Name: tt.name, Layout: "normal", TypeLine: "Creature — Eldrazi Pirate",
-				OracleText: tt.text, Power: new("2"), Toughness: new("2"),
-			})
+			card := &ScryfallCard{
+				Name: "Unless Source Shell", Layout: "normal", TypeLine: tt.typeLine, OracleText: tt.text,
+				Power: new("2"), Toughness: new("2"),
+			}
+			prefix := "CardDef.CardFace." + tt.path + ".Modes[0].Sequence[1].Condition.Val.Condition.Val."
+			assertCardPaths(t, card, prefix+"Negate = true",
+				prefix+"ControlsMatching.Val.Selection.ExcludeSource = true",
+				prefix+"ControlsMatching.Val.Selection.SubtypesAny[0] = types.Pirate",
+			)
+			assertCardPathsAbsent(t, card, "Sequence[0].Condition", "ActivationCondition", "InterveningCondition", "ResultGate")
 		})
 	}
+}
+
+func TestResolvingUnlessUnmodeledSourceExclusionFailsClosed(t *testing.T) {
+	t.Parallel()
+	assertCardUnsupported(t, &ScryfallCard{
+		Name: "Splitskin Doll", Layout: "normal", ManaCost: "{1}{W}",
+		TypeLine:   "Artifact Creature — Toy",
+		OracleText: "When this creature enters, draw a card. Then discard a card unless you control another creature with power 2 or less.",
+		Power:      new("2"), Toughness: new("1"),
+	}, effectGateCategoryKind)
+}
+
+func TestResolvingUnlessSourceExclusionGroupCardDef(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name: "Unless Source Group", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Unless you control another Pirate, draw a card, then discard a card.",
+	}
+	prefix := "CardDef.CardFace.SpellAbility.Val.Modes[0].Sequence"
+	assertCardPaths(t, card,
+		prefix+"[0].Condition.Val.Condition.Val.Negate = true",
+		prefix+"[0].Condition.Val.Condition.Val.ControlsMatching.Val.Selection.ExcludeSource = true",
+		prefix+"[0].Condition.Val.Condition.Val.ControlsMatching.Val.Selection.SubtypesAny[0] = types.Pirate",
+		prefix+`[0].PublishCondition = "condition-0"`,
+		prefix+`[1].ConditionGate = "condition-0"`,
+	)
+	assertCardPathsAbsent(t, card, "Sequence[1].Condition.Val", "ResultGate", "Sequence[2]")
 }
 
 func TestResolvingUnlessOtherwiseFailsClosed(t *testing.T) {

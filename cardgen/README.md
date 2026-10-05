@@ -116,7 +116,12 @@ Vanguard cards are excluded with explicit report reasons.
    effect-gate context. Resolving `unless` gates admit only the already recognized
    controller-controls, controller-graveyard-card-count, and
    controller-graveyard-distinct-mana-value-count predicates, using the shared
-   Selection/aggregate adapters and `Condition.Negate`. The parser assigns
+   Selection/aggregate adapters and `Condition.Negate`. Controller-controls gates
+   include modeled source-excluding Selections: "another" excludes only the
+   resolving source's original battlefield incarnation, using the captured stack
+   controller and current characteristics of candidate permanents. A returned
+   incarnation is another object; a source card ID is not a battlefield object ID.
+   The parser assigns
    clause identities and typed condition/reference ownership; the generic
    sequence planner consumes those identities, not source-span containment.
    Leading group conditions and clauses expanding into several Instructions
@@ -127,7 +132,7 @@ Vanguard cards are excluded with explicit report reasons.
    suppress ordinary consumers. Cast-time target gates retain the captured condition's
    gift/kicker/bargain branch. Specialized matchers do not acquire `unless`
    support. Ambiguous trailing group scope, overlapping conditions,
-   source-in-graveyard/source-excluding qualifications, gated mana-ability
+   source-in-graveyard qualifications, gated mana-ability
    bodies, and `Otherwise`/replacement derivations for `unless` remain
    unsupported. Payment/choice outcomes, result antecedents, unrecognized
    predicates, and unconsumed source remain fail-closed as boolean gates.
