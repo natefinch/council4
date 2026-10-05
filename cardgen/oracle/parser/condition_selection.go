@@ -1,6 +1,9 @@
 package parser
 
-import "github.com/natefinch/council4/cardgen/oracle/shared"
+import (
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game/compare"
+)
 
 // parseConditionSelection parses a permanent noun phrase into a typed selection,
 // consuming card-type, subtype, color, and supertype atoms by span. It fails
@@ -200,16 +203,20 @@ func parseConditionColorQualified(tokens []shared.Token, atoms Atoms, selection 
 }
 
 func parseConditionPowerQualifier(tokens []shared.Token, selection *ConditionSelection) bool {
-	rest, ok := cutTokenPrefix(tokens, "power")
-	if !ok || len(rest) != 3 {
+	attribute, rest, ok := cutConditionAttributeWord(tokens)
+	if !ok {
 		return false
 	}
-	value, ok := conditionNumberValue(rest[0])
-	if !ok || !equalWord(rest[1], "or") || !equalWord(rest[2], "greater") {
+	comparison, ok := conditionFixedAttributeComparison(attribute, rest)
+	if !ok {
 		return false
 	}
-	selection.PowerAtLeast = value
-	selection.MatchPowerAtLeast = true
+	if attribute == ConditionAttributePower && comparison.Op == compare.GreaterOrEqual {
+		selection.PowerAtLeast = comparison.Value
+		selection.MatchPowerAtLeast = true
+		return true
+	}
+	selection.AttributeCompare = comparison
 	return true
 }
 

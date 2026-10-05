@@ -94,9 +94,29 @@ the union of artifact, battle, creature, enchantment, land, and planeswalker
 types, evaluated against the bound object's characteristics, including typed
 last-known information. It is not an empty permanent filter or a conjunction
 of all six types. Unexpected qualifiers and unknown constructed type values
-fail closed. Expanded type selections do not admit card-target or competing
-event/target gates until their subject binding is runtime-capable; recognizing
-the noun phrase alone does not make the whole card supported.
+fail closed. Expanded type selections use the same exact contextual reference
+and domain checks as other object predicates, including card targets and
+competing event/target subjects. A post-exile targeted-card condition reads only
+the actual successful producer's published card incarnation. The original
+selected zone version and the reached zone version must both match; a skipped
+move, replacement redirection, reassigned target, or later zone change cannot
+reuse that information. Existing linked reveal/return adapters keep their own
+validated object binding.
+
+Fixed upper/lower numeric bounds on power, toughness, and mana value use the
+shared `AttributeCompare`/`Selection` projection. The parser supplies the exact
+subject reference, noun domain, and tense; neither compiler nor lowerer infers
+them from retained text. Source, live target, singular trigger event, and departed
+permanent snapshots remain distinct. Stack-spell comparisons currently model
+mana value, not creature-spell power/toughness. Spell events capture the actual
+spell's known mana value (including copies, X, alternate faces, and face-down
+zero), rather than the ability source's printed value. Only an explicit
+past-tense target-spell mana-value condition may read an earlier counter
+instruction's captured value, and only for that exact target ID and occurrence.
+Ordinary live comparisons still fail after removal. Unknown numeric information
+fails closed even under negation or a cached group condition's complement.
+Unavailable captured evaluations do not publish a false value. Dynamic thresholds and unresolved actual
+producer subjects remain unsupported.
 
 Trigger recognition belongs to the Oracle parser. Its composable grammar emits
 source-spanned typed syntax for permanent zone-change, spell/ability, combat,

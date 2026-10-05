@@ -1514,8 +1514,12 @@ func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.To
 	if len(tokens) == 0 {
 		return tokens
 	}
-	intro, introWidth := conditionIntroAt(tokens, 0)
-	end := conditionClauseEnd(tokens, 0)
+	start := 0
+	if equalWord(tokens[0], "then") {
+		start = 1
+	}
+	intro, introWidth := conditionIntroAt(tokens, start)
+	end := conditionClauseEnd(tokens, start)
 	if end >= len(tokens) || tokens[end].Kind != shared.Comma {
 		return tokens
 	}
@@ -1523,7 +1527,13 @@ func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.To
 	case ConditionIntroAsLongAs:
 		return tokens[end+1:]
 	case ConditionIntroIf:
-		body := tokens[introWidth:end]
+		body := tokens[start+introWidth : end]
+		if start != 0 {
+			if _, ok := recognizeContextualAttributeCompareCondition(body, atoms); ok {
+				return tokens[end+1:]
+			}
+			return tokens
+		}
 		for _, recognize := range leadingResolvingGateRecognizers {
 			if _, ok := recognize(body, atoms); ok {
 				return tokens[end+1:]
@@ -1543,6 +1553,7 @@ func stripLeadingConditionClause(tokens []shared.Token, atoms Atoms) []shared.To
 // replacement effect whose leading "If <event> would ..." clause defines the
 // replaced event.
 var leadingResolvingGateRecognizers = []func([]shared.Token, Atoms) (ConditionClause, bool){
+	recognizeContextualAttributeCompareCondition,
 	recognizeSourceCounterStateCondition,
 	recognizeSourceAbilityResolutionOrdinalCondition,
 	recognizeSpellXCondition,

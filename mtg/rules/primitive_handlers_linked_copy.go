@@ -135,7 +135,7 @@ func (*Engine) castFreeCopyOfCard(g *game.Game, controllerID game.PlayerID, card
 		CardSupertypes:               cardSupertypes(spellDef),
 		CardSubtypes:                 cardSubtypes(spellDef),
 		Colors:                       spellColors(spellDef),
-		ManaValue:                    opt.Val(stackManaValue(spellDef, 0)),
+		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(0),
 		ManaFromCreaturesSpentToCast: opt.Val(0),
 		FromZone:                     zone.Exile,

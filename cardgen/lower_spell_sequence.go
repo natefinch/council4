@@ -637,6 +637,9 @@ func lowerOrderedEffectSequence(
 	if !conditionPlan.captureEvaluations(ctx.content.Effects, effectInstructionRanges, sequence, insteadGates, otherwiseGates) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, conditionEvaluationCategory)
 	}
+	if !publishConditionTargetCards(ctx.content, effectInstructionRanges, sequence) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — targeted-card condition producer not modeled")
+	}
 	// A later "another target" clause requires a target distinct from the
 	// spell's earlier targets (CR 601.2c); mark it before gating so both passes
 	// see the corrected spec list.

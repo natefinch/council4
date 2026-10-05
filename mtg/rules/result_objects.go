@@ -48,7 +48,8 @@ func resultCharacteristicSnapshot(snapshot game.ObjectSnapshot) game.ObjectSnaps
 	return game.ObjectSnapshot{
 		ObjectID: snapshot.ObjectID, CardID: snapshot.CardID,
 		ZoneCards: slices.Clone(snapshot.ZoneCards), Name: snapshot.Name,
-		Owner: snapshot.Owner, Controller: snapshot.Controller, FromZone: snapshot.FromZone,
+		TargetCardZoneVersion: snapshot.TargetCardZoneVersion,
+		Owner:                 snapshot.Owner, Controller: snapshot.Controller, FromZone: snapshot.FromZone,
 		Types: slices.Clone(snapshot.Types), Supertypes: slices.Clone(snapshot.Supertypes),
 		Subtypes: slices.Clone(snapshot.Subtypes), Colors: slices.Clone(snapshot.Colors),
 	}

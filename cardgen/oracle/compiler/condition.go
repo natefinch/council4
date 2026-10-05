@@ -337,6 +337,8 @@ func compileConditionClause(condition *CompiledCondition, clause *parser.Conditi
 		condition.Predicate = ConditionPredicateObjectMatches
 		condition.ObjectBinding = compileConditionObjectBinding(clause.ObjectBinding)
 		condition.Selection = selection
+		condition.SubjectSpell = clause.SubjectSpell
+		condition.SubjectPast = clause.SubjectPast
 		for _, subjectType := range clause.SubjectTypes {
 			condition.SubjectTypes = append(condition.SubjectTypes, compileTriggerCardType(subjectType))
 		}

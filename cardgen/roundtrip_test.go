@@ -25,6 +25,30 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "Remove all +1/+1 counters from target creature. Draw that many cards.",
 	},
 	{
+		Name: "RT Reached Target Card", Layout: "normal", TypeLine: "Creature",
+		OracleText: "{1}: Exile target card from a graveyard. If it was a permanent card, put a +1/+1 counter on this creature.",
+		Power:      new("2"), Toughness: new("2"),
+	},
+	{
+		Name: "RT Countered Spell Condition", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Counter target spell. If that spell's mana value was 3 or less, proliferate.",
+	},
+	{
+		Name: "RT Event Spell Condition", Layout: "normal", TypeLine: "Creature",
+		OracleText: "Whenever you cast an instant or sorcery spell, you gain 1 life. If that spell has mana value 5 or greater, put a +1/+1 counter on this creature.",
+		Power:      new("2"), Toughness: new("2"),
+	},
+	{
+		Name: "RT Spell After Return", Layout: "normal", TypeLine: "Creature",
+		OracleText: "Whenever you cast an instant or sorcery spell, return target creature card from your graveyard to the battlefield. You gain 1 life. If that spell has mana value 5 or greater, you gain 2 life.",
+		Power:      new("2"), Toughness: new("2"),
+	},
+	{
+		Name: "RT Numeric Unless", Layout: "normal", TypeLine: "Creature",
+		OracleText: "When this creature enters, draw a card. Then discard a card unless you control another creature with power 2 or less.",
+		Power:      new("2"), Toughness: new("2"),
+	},
+	{
 		Name:       "RT Bear",
 		Layout:     "normal",
 		TypeLine:   "Creature — Bear",
@@ -228,6 +252,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
@@ -267,6 +292,39 @@ func TestRTRemovedCounterQuantitySemantic(t *testing.T) {
 			damage.Amount.DynamicAmount().Val.ResultKey != seq[1].PublishResult {
 			t.Fatal("expanded damage scalar and condition identities did not round-trip")
 		}
+	}
+}
+
+func TestRTNumericConditionSemantic(t *testing.T) {
+	past := RTCounteredSpellCondition().SpellAbility.Val.Modes[0].Sequence[1].Condition.Val.Condition.Val
+	if !past.UseCounteredSpellManaValue ||
+		past.Object.Val.Kind() != game.ObjectReferenceTargetStackObject ||
+		past.ObjectMatches.Val.ManaValue.Val.Op != compare.LessOrEqual ||
+		past.ObjectMatches.Val.ManaValue.Val.Value != 3 {
+		t.Fatal("past target-spell information did not round-trip")
+	}
+	event := RTEventSpellCondition().TriggeredAbilities[0].Content.Modes[0].Sequence[1].Condition.Val.Condition.Val
+	if event.UseCounteredSpellManaValue || event.Object.Val.Kind() != game.ObjectReferenceEventStackObject ||
+		event.ObjectMatches.Val.ManaValue.Val.Op != compare.GreaterOrEqual ||
+		event.ObjectMatches.Val.ManaValue.Val.Value != 5 {
+		t.Fatal("exact event-spell numeric reference did not round-trip")
+	}
+	returnedCompetitor := RTSpellAfterReturn().TriggeredAbilities[0].Content.Modes[0].Sequence[2].Condition.Val.Condition.Val
+	if returnedCompetitor.Object.Val.Kind() != game.ObjectReferenceEventStackObject ||
+		returnedCompetitor.ObjectMatches.Val.ManaValue.Val.Value != 5 {
+		t.Fatal("returned permanent captured the event-spell condition")
+	}
+	unless := RTNumericUnless().TriggeredAbilities[0].Content.Modes[0].Sequence[1].Condition.Val.Condition.Val
+	if !unless.Negate || !unless.ControlsMatching.Val.Selection.ExcludeSource ||
+		unless.ControlsMatching.Val.Selection.Power.Val.Op != compare.LessOrEqual ||
+		unless.ControlsMatching.Val.Selection.Power.Val.Value != 2 {
+		t.Fatal("source-excluding numeric Unless did not round-trip")
+	}
+	seq := RTReachedTargetCard().ActivatedAbilities[0].Content.Modes[0].Sequence
+	card := seq[1].Condition.Val.Condition.Val
+	if card.Object.Val.Kind() != game.ObjectReferenceTargetCard ||
+		card.TargetCardResultKey == "" || card.TargetCardResultKey != seq[0].PublishResult {
+		t.Fatal("actual reached-card publication did not round-trip")
 	}
 }
 

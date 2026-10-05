@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,507 of 33,013 cards eligible for paper support (56.1%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,526 of 33,013 cards eligible for paper support (56.1%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -816,6 +816,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Arwen's Gift
 - Arwen, Weaver of Hope
 - Ascendant Dustspeaker
+- Ascendant Packleader
 - Ascended Lawmage
 - Ascending Aven
 - Asceticism
@@ -1259,6 +1260,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Battlewise Aven
 - Battlewise Hoplite
 - Battlewise Valor
+- Baxter Building
 - Baxter Stockman
 - Baxter, Fly in the Ointment
 - Bay Falcon
@@ -3043,6 +3045,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Contagion Clasp
 - Contagion Engine
 - Contagious Nim
+- Containment Breach
 - Containment Construct
 - Containment Protocol
 - Contaminant Grafter
@@ -3815,6 +3818,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Dependable Quinjet
 - Deploy to the Front
 - Depose // Deploy
+- Depressurize
 - Deprive
 - Depths of Desire
 - Deputized Protester
@@ -4126,6 +4130,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Doorkeeper
 - Doran, the Siege Tower
 - Dori, Bearer of Friends
+- Dormant Grove // Gnarled Grovestrider
 - Dormant Volcano
 - Dosan's Oldest Chant
 - Double Cleave
@@ -4876,6 +4881,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Enslaved Scout
 - Ensnare
 - Ensouled Scimitar
+- Ent's Fury
 - Enter the Enigma
 - Enter the God-Eternals
 - Enter the Unknown
@@ -5094,6 +5100,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Extended Absence
 - Extinguish
 - Extinguish All Hope
+- Extinguish the Light
 - Extra Arms
 - Extract from Darkness
 - Extractor Demon
@@ -5138,6 +5145,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Fade from History
 - Fade from Memory
 - Fade into Antiquity
+- Fading Hope
 - Fae Flight
 - Faebloom Trick
 - Faeburrow Elder
@@ -9007,6 +9015,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Lethal Protection
 - Lethargy Trap
 - Letter of Acceptance
+- Level Up
 - Leviathan
 - Leviathan
 - Levitating Statue
@@ -9131,6 +9140,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Lingering Souls
 - Lingering Tormentor
 - Lion Heart
+- Lion Sash
 - Lion Vulture
 - Lion's Eye Diamond
 - Lionheart Glimmer
@@ -11351,6 +11361,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Perilous Research
 - Perilous Shadow
 - Perilous Vault
+- Perilous Voyage
 - Perimeter Captain
 - Perimeter Enforcer
 - Perimeter Patrol
@@ -11781,6 +11792,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Prince Imrahil the Fair
 - Princess Lucrezia
 - Prism Ring
+- Prismari Apprentice
 - Prismari Campus
 - Prismari Charm
 - Prismari Command
@@ -12314,6 +12326,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Razaketh, the Foulblooded
 - Raze
 - Raze the Effigy
+- Raze to the Ground
 - Razing Snidd
 - Razor Golem
 - Razor Rings
@@ -12468,6 +12481,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Reinforcements
 - Reito Lantern
 - Reito Sentinel
+- Reject Imperfection
 - Rejuvenate
 - Rejuvenating Springs
 - Reknit
@@ -13546,6 +13560,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Seedguide Ash
 - Seedpod Squire
 - Seedship Agrarian
+- Seedship Impact
 - Seek the Horizon
 - Seek the Wilds
 - Seeker of Insight
@@ -13682,6 +13697,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Serrated Arrows
 - Serrated Scorpion
 - Serum Raker
+- Serum Snare
 - Serum Sovereign
 - Serum Tank
 - Serum Visionary
@@ -14925,6 +14941,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Splinterfright
 - Split Up
 - Split-Tail Miko
+- Splitskin Doll
 - Splitting Slime
 - Spoils of Adventure
 - Spontaneous Artist
@@ -15321,6 +15338,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Strength of Unity
 - Stridehangar Automaton
 - Strider Harness
+- Strider, Ranger of the North
 - Strife Scholar // Awaken the Ages
 - Strike It Rich
 - Striking Sliver
@@ -15692,6 +15710,7 @@ Council4 currently supports **18,507 of 33,013 cards eligible for paper support 
 - Tainted Pact
 - Tainted Peak
 - Tainted Strike
+- Tainted Treats
 - Tainted Well
 - Tainted Wood
 - Tajic, Blade of the Legion

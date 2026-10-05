@@ -310,6 +310,23 @@ func validateInstructionSequenceWithLinked(
 				}
 			}
 		}
+		if instr.Condition.Exists && instr.Condition.Val.Condition.Exists {
+			condition := instr.Condition.Val.Condition.Val
+			if key := condition.TargetCardResultKey; key != "" {
+				producer, ok := publishedResults[key]
+				if !ok {
+					return fmt.Errorf("instruction[%d]: targeted-card condition references key %q not yet published", i, key)
+				}
+				move, ok := seq[producer].Primitive.(MoveCard)
+				if !ok || move.Card.Kind != CardReferenceTarget {
+					return fmt.Errorf("instruction[%d]: targeted-card condition requires a targeted MoveCard producer", i)
+				}
+				if !condition.Object.Exists || condition.Object.Val.Kind() != ObjectReferenceTargetCard ||
+					checkTargets && !targetCardConditionSlotMatches(move.Card, condition.Object.Val, targets) {
+					return fmt.Errorf("instruction[%d]: targeted-card condition must reference its producer's target slot", i)
+				}
+			}
+		}
 		if err := validateLinkedCardCondition(i, instr.CardCondition, publishedLinked, siblingLinked); err != nil {
 			return err
 		}
