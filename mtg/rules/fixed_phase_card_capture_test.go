@@ -70,3 +70,35 @@ func TestFixedPhaseSourceCardUsesDepartedIncarnation(t *testing.T) {
 		t.Fatal("an earlier delayed source-card action followed graveyard reentry")
 	}
 }
+
+func TestFixedPhaseSourceAlreadyInGraveyardRequiresExactIncarnation(t *testing.T) {
+	t.Parallel()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID, SourceCardID: source.CardInstanceID}
+	r := &effectResolver{engine: engine, game: g, obj: obj, log: &TurnLog{}}
+	handleMovePermanent(r, game.MovePermanent{Object: game.SourcePermanentReference(), Destination: zone.Graveyard})
+	card, _ := g.GetCardInstance(source.CardInstanceID)
+	obj.SourceZone = zone.Graveyard
+	obj.SourceZoneVersion = card.ZoneVersion
+	def := &game.DelayedTriggerDef{
+		Timing: game.DelayedAtBeginningOfNextEndStep, CapturedCard: opt.Val(game.SourceCardPermanentReference()),
+		Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
+			Source: game.CardBattlefieldSource(game.CapturedCardReference()),
+		}}}}.Ability(),
+	}
+	if !scheduleDelayedTrigger(g, obj, def) || g.DelayedTriggers[0].CapturedCardID != card.ID {
+		t.Fatal("the actual graveyard source incarnation was not captured")
+	}
+	stale := *obj
+	stale.SourceZoneVersion--
+	if !scheduleDelayedTrigger(g, &stale, def) || g.DelayedTriggers[1].CapturedCardID != 0 {
+		t.Fatal("an unavailable graveyard source was replaced by current card identity")
+	}
+	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
+	returned, ok := findPermanentByCardID(g, card.ID)
+	if !ok || returned.Controller != game.Player2 {
+		t.Fatal("the actual captured graveyard source did not return under its owner's control")
+	}
+}

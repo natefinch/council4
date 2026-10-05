@@ -115,6 +115,9 @@ func lowerFixedPhaseSubject(
 		object = game.SourcePermanentReference()
 		if subject.CardIdentity || subject.CardZone != zone.None {
 			card, fromZone = true, subject.CardZone
+			if effect.FromZone == zone.Graveyard || effect.FromZone == zone.Exile {
+				object = game.SourceCardPermanentReference()
+			}
 		}
 	case parser.DelayedSubjectEvent:
 		object = game.EventPermanentReference()

@@ -1820,6 +1820,10 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 	}
 	consumed := ctx
 	consumed.content.References = nil
+	if group {
+		consumed.content.Effects = slices.Clone(consumed.content.Effects)
+		consumed.content.Effects[0].CreatedTokensReference = false
+	}
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}

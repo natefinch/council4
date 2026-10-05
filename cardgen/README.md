@@ -98,6 +98,13 @@ publications explicitly clear before gates or optional choices, without clearing
 persistent CR 607 links. Later source activations, copies, and zone reentry cannot
 redirect an earlier capture.
 
+Battlefield source effects retain the original permanent ID, rather than resolving
+the source card to a later incarnation. A source already in a graveyard or exile
+captures only its exact stack `SourceZone`/`SourceZoneVersion`. Captured returns
+reuse existing entry-counter and type-effect adapters. The established optional
+immediate-return/fallback flow still owns its original exiled card; it must not
+adopt the unavailable permanent product of a declined return.
+
 Resolving conditions gate scheduling; future body conditions execute at the
 printed delayed phase and require an available captured subject before negation.
 Parser-owned optional timing distinguishes choosing to schedule an action

@@ -36,9 +36,10 @@ func delayedSelfBlinkInstructions(t *testing.T, mode game.Mode) (game.MovePerman
 	if !ok {
 		t.Fatalf("delayed content = %#v, want put on battlefield", inner[0].Primitive)
 	}
-	key, linked := put.Source.LinkedKey()
-	if !linked || key != exile.PublishLinked {
-		t.Fatalf("put source = %#v, want linked source %q", put.Source, exile.PublishLinked)
+	card, captured := put.Source.CardRef()
+	if !captured || card != game.CapturedCardReference() ||
+		delayed.Trigger.CapturedCard.Val != game.LinkedObjectReference(string(exile.PublishLinked)) {
+		t.Fatalf("put source = %#v, want actual captured card from %q", put.Source, exile.PublishLinked)
 	}
 	return exile, put
 }
@@ -152,7 +153,7 @@ func TestLowerDelayedSelfBlinkStandaloneSelfExileIsPlainExile(t *testing.T) {
 	if exile.PublishLinked != "" {
 		t.Fatalf("exile = %#v, want no linked key (not a blink)", exile)
 	}
-	if exile.Object != game.SourceCardPermanentReference() {
+	if exile.Object != game.SourcePermanentReference() {
 		t.Fatalf("exile = %#v, want source-permanent exile", exile)
 	}
 }

@@ -1035,7 +1035,7 @@ func (v *cardDefValidator) validateInstructionSequence(
 					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed CapturedCard requires fixed-phase timing")
 				}
 				switch delayed.Trigger.CapturedCard.Val.Kind() {
-				case ObjectReferenceLinkedObject, ObjectReferenceSourcePermanent, ObjectReferenceEventPermanent:
+				case ObjectReferenceLinkedObject, ObjectReferenceSourcePermanent, ObjectReferenceSourceCard, ObjectReferenceEventPermanent:
 				default:
 					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed CapturedCard has an incompatible reference domain")
 				}

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -58,6 +57,18 @@ func emitDelayedSubjects(sentences []Sentence, references []Reference, condition
 	}
 	for i, effect := range effects {
 		if effect.DelayedTiming == DelayedTimingNone {
+			continue
+		}
+		// The established optional-return fallback retains the original exiled
+		// card, not the unavailable permanent result of the declined return.
+		if i > 0 && effect.Kind == EffectReturn && effect.ToZone == zone.Battlefield &&
+			effects[i-1].Optional && effects[i-1].Kind == EffectReturn &&
+			slices.ContainsFunc(conditions, func(condition ConditionSegment) bool {
+				return !condition.Ownership.DelayedBody &&
+					condition.Ownership.ResultProducerClauseID == effects[i-1].ClauseID &&
+					slices.Contains(condition.Ownership.ClauseIDs, effect.ClauseID) &&
+					strings.EqualFold(strings.TrimSpace(condition.Text), "If you don't")
+			}) {
 			continue
 		}
 		immediate := *effect
@@ -118,6 +129,10 @@ func emitDelayedSubjects(sentences []Sentence, references []Reference, condition
 		if effect.CreatedTokensReference && len(subject.ReferenceNodeIDs) == 0 {
 			subject = delayedProductSubject(effects[:i])
 		}
+		if subject.Kind == DelayedSubjectSource && (effect.FromZone == zone.Graveyard || effect.FromZone == zone.Exile) {
+			subject.CardIdentity = true
+			subject.CardZone = effect.FromZone
+		}
 		if trigger != nil && trigger.TriggerEvent != nil &&
 			(trigger.TriggerEvent.ZoneChange.Kind == TriggerEventZoneChangeDied || trigger.TriggerEvent.Kind == TriggerEventKindSacrificed) &&
 			(subject.Kind == DelayedSubjectEvent ||
@@ -174,7 +189,9 @@ func delayedConditionOwnsReference(conditions []ConditionSegment, nodeID int) bo
 }
 
 func exactDelayedPluralDisposal(effect *EffectSyntax) bool {
-	if effect.CreatedTokensReference {
+	if effect.CreatedTokensReference || slices.ContainsFunc(effect.References, func(reference Reference) bool {
+		return reference.Kind == ReferencePronoun && (reference.Pronoun == PronounThose || reference.Pronoun == PronounThem)
+	}) {
 		var verb string
 		switch effect.Kind {
 		case EffectExile:
@@ -259,10 +276,10 @@ func exactReferencedZoneMove(effect *EffectSyntax) bool {
 		text += " under its owner's control"
 	}
 	if effect.CounterKnown {
-		if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value != 1 {
+		if !effect.CounterKind.Valid() || !effect.Amount.Known || effect.Amount.Value != 1 {
 			return false
 		}
-		text += " with a +1/+1 counter on it"
+		text += " with a " + effect.CounterKind.String() + " counter on it"
 	}
 	return strings.EqualFold(exactEffectClauseText(effect), text+".")
 }

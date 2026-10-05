@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -260,7 +261,7 @@ func capturedCard(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerD
 	if reference.Kind() != game.ObjectReferenceLinkedObject {
 		var cardReference game.CardReference
 		switch reference.Kind() {
-		case game.ObjectReferenceSourcePermanent:
+		case game.ObjectReferenceSourcePermanent, game.ObjectReferenceSourceCard:
 			cardReference.Kind = game.CardReferenceSource
 		case game.ObjectReferenceEventPermanent:
 			cardReference.Kind = game.CardReferenceEvent
@@ -273,6 +274,10 @@ func capturedCard(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerD
 		}
 		card, ok := g.GetCardInstance(cardID)
 		if !ok || card.ZoneVersion == 0 {
+			return 0, 0
+		}
+		if reference.Kind() == game.ObjectReferenceSourceCard &&
+			(obj.SourceZone == zone.None || card.ZoneVersion != obj.SourceZoneVersion) {
 			return 0, 0
 		}
 		if reference.Kind() == game.ObjectReferenceSourcePermanent {
