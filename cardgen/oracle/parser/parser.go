@@ -226,6 +226,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripConditionalModalHeaderSemantics(document.Abilities)
 	emitDelayedTriggerEffects(document.Abilities, context.CardName, context.Legendary, context.InstantOrSorcery)
 	emitAbilityConditionOwnership(document.Abilities)
+	emitRemovedCounterQuantityOwnership(document.Abilities)
 	emitPaidCostSubjectBindings(document.Abilities)
 	return document, diagnostics
 }

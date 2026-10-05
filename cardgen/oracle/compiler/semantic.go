@@ -2940,7 +2940,8 @@ type CompiledEffect struct {
 	// form of an EffectRemoveCounter effect through to lowering, which removes
 	// every counter on the object regardless of kind. It is false for a fixed or
 	// kind-specific removal, whose count is in Amount and kind in CounterKind.
-	RemoveCountersAll bool
+	RemoveCountersAll       bool
+	RemoveCountersAllOfKind bool
 	// RemoveThoseCounters carries the parser's back-referencing "remove those
 	// counters" form of an EffectRemoveCounter effect through to lowering. "Those
 	// counters" names the counters a preceding same-sequence clause placed on the
@@ -4526,6 +4527,7 @@ const (
 	// of those cards"). The amount's reference NodeID binds it to that producer.
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountReferencedCardsTotalManaValue
+	DynamicAmountRemovedCounterCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -4556,10 +4558,11 @@ type CompiledAmount struct {
 	// parser.EffectAmountSyntax.AnyNumber. It is the only positive signal for
 	// that form, since "all", "the", and a bare plural noun share the same empty
 	// amount shape.
-	AnyNumber   bool
-	DynamicKind DynamicAmountKind
-	DynamicForm DynamicAmountForm
-	Multiplier  int
+	AnyNumber        bool
+	DynamicKind      DynamicAmountKind
+	DynamicForm      DynamicAmountForm
+	Multiplier       int
+	ProducerClauseID int
 	// RoundUp records that a half-library mill amount rounds up rather than down
 	// (DynamicAmountHalfPlayerLibrary). It is false for every other amount.
 	RoundUp       bool

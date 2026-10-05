@@ -207,17 +207,22 @@ func TestLowerRemoveCounterSelfActivated(t *testing.T) {
 	}
 }
 
-// TestLowerRemoveCounterSelfUnsupportedAll proves the "remove all" self form
-// ("remove all +1/+1 counters from this creature.", Blood Hound) fails closed:
-// its byte-exact reconstruction never matches the "all" wording.
-func TestLowerRemoveCounterSelfUnsupportedAll(t *testing.T) {
+func TestLowerRemoveCounterSelfAllOfKind(t *testing.T) {
 	t.Parallel()
-	lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	face := lowerSingleFace(t, &ScryfallCard{
 		Name:       "Test Blood Hound",
 		Layout:     "normal",
 		TypeLine:   "Creature — Elemental Dog",
 		OracleText: "{2}{R}: Remove all +1/+1 counters from this creature.",
 	})
+	remove := removeCounterFromSelfMode(t, face.ActivatedAbilities[0].Content)
+	dynamic := remove.Amount.DynamicAmount()
+	if remove.AllKinds || remove.CounterKind != counter.PlusOnePlusOne || !dynamic.Exists ||
+		dynamic.Val.Kind != game.DynamicAmountObjectCounters ||
+		dynamic.Val.CounterKind != counter.PlusOnePlusOne ||
+		dynamic.Val.Object != game.SourcePermanentReference() {
+		t.Fatalf("remove = %#v", remove)
+	}
 }
 
 // TestLowerRemoveAllCountersTargetSpell proves the kind-agnostic mass form

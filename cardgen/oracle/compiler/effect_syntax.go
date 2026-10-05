@@ -785,23 +785,24 @@ func compileDelayedTiming(timing parser.DelayedTimingKind) game.DelayedTriggerTi
 
 func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 	compiled := CompiledAmount{
-		Value:           amount.Value,
-		Known:           amount.Known,
-		RangeKnown:      amount.RangeKnown,
-		Minimum:         amount.Minimum,
-		Maximum:         amount.Maximum,
-		VariableX:       amount.VariableX,
-		AnyNumber:       amount.AnyNumber,
-		DynamicKind:     compileDynamicAmountKind(amount.DynamicKind),
-		DynamicForm:     compileDynamicAmountForm(amount.DynamicForm),
-		Multiplier:      amount.Multiplier,
-		ReferenceSpan:   amount.ReferenceSpan,
-		ReferenceNodeID: amount.ReferenceNodeID,
-		Addend:          amount.Addend,
-		CounterKind:     amount.CounterKind,
-		Text:            amount.Text,
-		Colors:          compileAmountColors(amount.Colors),
-		RoundUp:         amount.RoundUp,
+		Value:            amount.Value,
+		Known:            amount.Known,
+		RangeKnown:       amount.RangeKnown,
+		Minimum:          amount.Minimum,
+		Maximum:          amount.Maximum,
+		VariableX:        amount.VariableX,
+		AnyNumber:        amount.AnyNumber,
+		DynamicKind:      compileDynamicAmountKind(amount.DynamicKind),
+		DynamicForm:      compileDynamicAmountForm(amount.DynamicForm),
+		Multiplier:       amount.Multiplier,
+		ProducerClauseID: amount.ProducerClauseID,
+		ReferenceSpan:    amount.ReferenceSpan,
+		ReferenceNodeID:  amount.ReferenceNodeID,
+		Addend:           amount.Addend,
+		CounterKind:      amount.CounterKind,
+		Text:             amount.Text,
+		Colors:           compileAmountColors(amount.Colors),
+		RoundUp:          amount.RoundUp,
 	}
 	if amount.Selection != nil {
 		selection := compileTypedSelection(*amount.Selection)
@@ -819,6 +820,8 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 
 func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmountKind {
 	switch kind {
+	case parser.EffectDynamicAmountRemovedCounterCount:
+		return DynamicAmountRemovedCounterCount
 	case parser.EffectDynamicAmountCount:
 		return DynamicAmountCount
 	case parser.EffectDynamicAmountControllerLife:

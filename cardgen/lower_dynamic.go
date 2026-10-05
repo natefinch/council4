@@ -268,6 +268,12 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 	case compiler.DynamicAmountDieRollResult:
 		dynamic.Kind = game.DynamicAmountPreviousEffectResult
 		dynamic.ResultKey = dieRollResultKey
+	case compiler.DynamicAmountRemovedCounterCount:
+		if amount.ProducerClauseID <= 0 {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountPreviousEffectResult
+		dynamic.ResultKey = removedCounterQuantityKey(amount.ProducerClauseID)
 	case compiler.DynamicAmountDamageDealtThisWay:
 		dynamic.Kind = game.DynamicAmountPreviousEffectResult
 		dynamic.ResultKey = damageDealtThisWayKey
