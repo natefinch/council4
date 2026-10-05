@@ -115,11 +115,11 @@ func TestOptionalLinkedPublicationAvailability(t *testing.T) {
 		},
 		Optional: true, PublishOptionalDecision: "choice",
 	}
-	rider := game.Instruction{Primitive: game.ApplyContinuous{
+	apply := game.ApplyContinuous{
 		Object: opt.Val(game.LinkedObjectReference("entered")),
-	}}
+	}
+	rider := game.Instruction{Primitive: apply}
 	alias := rider
-	apply := alias.Primitive.(game.ApplyContinuous)
 	apply.PublishLinked = "shim"
 	alias.Primitive = apply
 	persistentProducer := producer

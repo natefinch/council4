@@ -24,8 +24,8 @@ func TestOptionalGroupCopiedResolutionMakesOwnDecision(t *testing.T) {
 		game.CopyStackObject{Object: game.TargetStackObjectReference(0)},
 		[]game.Target{game.StackObjectTarget(original.ID)})
 	engine.resolveTopOfStack(g, &TurnLog{})
-	copy, ok := g.Stack.Peek()
-	if !ok || !copy.Copy || copy.ID == original.ID || copy.SourceID != original.SourceID {
+	copied, ok := g.Stack.Peek()
+	if !ok || !copied.Copy || copied.ID == original.ID || copied.SourceID != original.SourceID {
 		t.Fatal("did not produce an independent copy of the ability")
 	}
 	agent := &scopedMayAgent{accept: []bool{true, false}}

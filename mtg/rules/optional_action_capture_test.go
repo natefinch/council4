@@ -61,6 +61,8 @@ func TestOptionalCaptureOriginalProductAvailability(t *testing.T) {
 						}
 						reentered = current.ObjectID
 						agent.accept[1] = true
+					default:
+						t.Fatalf("unknown reason %q", reason)
 					}
 					engine.resolveInstructionSequence(g, obj, sequence, agents, &TurnLog{})
 					if len(g.DelayedTriggers) != 2 || g.DelayedTriggers[1].CapturedObjectID != 0 ||
