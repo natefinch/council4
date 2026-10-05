@@ -17,6 +17,7 @@
             End: 3
       Effects: 
         [0]: 
+          ClauseID: 1
           Kind: 15
           Context: EffectContextController
           Text: Destroy target creature.

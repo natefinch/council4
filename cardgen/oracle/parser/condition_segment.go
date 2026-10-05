@@ -8,6 +8,7 @@ import "github.com/natefinch/council4/cardgen/oracle/shared"
 // mechanically instead of scanning Oracle tokens for clause boundaries or
 // rebuilding display text.
 type ConditionSegment struct {
+	Ownership ConditionOwnership `json:",omitzero"`
 	// Kind is the grammatical introducer that opens the clause.
 	Kind ConditionIntroKind `json:",omitempty"`
 	// Span is the source span of the segmented clause.

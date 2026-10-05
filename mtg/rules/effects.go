@@ -78,9 +78,7 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 		return
 	}
 	if !content.IsModal() {
-		for i := range content.Modes[0].Sequence {
-			e.resolveInstructionWithChoices(g, obj, &content.Modes[0].Sequence[i], agents, log)
-		}
+		e.resolveInstructionSequence(g, obj, content.Modes[0].Sequence, agents, log)
 		return
 	}
 	allTargets := obj.Targets
@@ -92,9 +90,7 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 			continue
 		}
 		obj.Targets = targetsForChosenMode(content, obj, allTargets, chosenIndex)
-		for i := range content.Modes[modeIndex].Sequence {
-			e.resolveInstructionWithChoices(g, obj, &content.Modes[modeIndex].Sequence[i], agents, log)
-		}
+		e.resolveInstructionSequence(g, obj, content.Modes[modeIndex].Sequence, agents, log)
 	}
 }
 
@@ -202,16 +198,24 @@ func (e *Engine) resolveInstructionWithChoices(g *game.Game, obj *game.StackObje
 	newEffectResolver(e, g, obj, agents, log).resolveInstruction(instr)
 }
 
+func (e *Engine) resolveInstructionSequence(g *game.Game, obj *game.StackObject, sequence []game.Instruction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	resolver := newEffectResolver(e, g, obj, agents, log)
+	for i := range sequence {
+		resolver.resolveInstruction(&sequence[i])
+	}
+}
+
 // effectResolver bundles the per-resolution context so the resolution body
 // can be a method rather than a free function with five repeated parameters.
 type effectResolver struct {
-	resultObjects      []game.ObjectSnapshot
-	engine             *Engine
-	game               *game.Game
-	obj                *game.StackObject
-	agents             [game.NumPlayers]PlayerAgent
-	log                *TurnLog
-	currentInstruction *game.Instruction
+	conditionEvaluations map[game.ConditionKey]bool
+	resultObjects        []game.ObjectSnapshot
+	engine               *Engine
+	game                 *game.Game
+	obj                  *game.StackObject
+	agents               [game.NumPlayers]PlayerAgent
+	log                  *TurnLog
+	currentInstruction   *game.Instruction
 
 	// groupOfferMember, when set, names the player currently being offered an
 	// OptionalActorGroup instruction. It resolves PlayerReferenceGroupOfferMember
@@ -267,7 +271,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 		return
 	}
 	// Envelope: evaluate conditions first.
-	if !effectConditionSatisfied(r.game, r.obj, instr.Condition) {
+	if !r.instructionConditionSatisfied(instr) {
 		return
 	}
 	if !cardConditionSatisfied(r.game, r.obj, instr.CardCondition) {

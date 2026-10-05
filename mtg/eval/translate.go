@@ -85,6 +85,7 @@ func scorableModeIndices(content game.AbilityContent, chosenModes []int) []int {
 // instruction the controller may decline.
 func instructionUncertain(instruction game.Instruction) bool {
 	return instruction.Condition.Exists ||
+		instruction.ConditionGate != "" ||
 		instruction.CardCondition.Exists ||
 		instruction.ResultGate.Exists ||
 		instruction.Optional

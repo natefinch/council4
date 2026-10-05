@@ -47,7 +47,7 @@ func TestLowerOtherwiseBranchKeyedOnEventPower(t *testing.T) {
 	if add.CounterKind != counter.PlusOnePlusOne || add.Amount != game.Fixed(2) {
 		t.Fatalf("counter = %+v, want two +1/+1", add)
 	}
-	assertEventPowerGate(t, mode.Sequence[1].Condition, 3, true)
+	assertConditionConsumer(t, mode.Sequence[0], mode.Sequence[1], true)
 }
 
 func assertEventPowerGate(t *testing.T, gate opt.V[game.EffectCondition], value int, negated bool) {

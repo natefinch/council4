@@ -2,7 +2,6 @@ package cardgen
 
 import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
-	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -39,20 +38,4 @@ func matchSequenceEffectConditions(
 	conditions []compiler.CompiledCondition,
 ) (map[int]game.EffectCondition, string, bool) {
 	return matchEffectConditions(effects, conditions, false)
-}
-
-func matchOrderedSequenceEffectConditions(
-	effects []compiler.CompiledEffect,
-	conditions []compiler.CompiledCondition,
-) (map[int]game.EffectCondition, string, bool) {
-	return matchEffectConditions(effects, conditions, true)
-}
-
-func effectHasUnlessGate(effect compiler.CompiledEffect, conditions []compiler.CompiledCondition) bool {
-	for _, condition := range conditions {
-		if condition.Kind == compiler.ConditionUnless && spanCovered(condition.Span, []shared.Span{effect.Span}) {
-			return true
-		}
-	}
-	return false
 }

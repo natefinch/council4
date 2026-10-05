@@ -148,6 +148,15 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("Condition: opt.Val(%s),", condition))
 	}
+	if instruction.PublishCondition != "" {
+		fields = append(fields, fmt.Sprintf("PublishCondition: %q,", instruction.PublishCondition))
+	}
+	if instruction.ConditionGate != "" {
+		fields = append(fields, fmt.Sprintf("ConditionGate: %q,", instruction.ConditionGate))
+	}
+	if instruction.ConditionGateNegate {
+		fields = append(fields, "ConditionGateNegate: true,")
+	}
 	if instruction.CardCondition.Exists {
 		condition, err := r.renderCardSelection(ctx, instruction.CardCondition.Val)
 		if err != nil {

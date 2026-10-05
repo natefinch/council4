@@ -104,14 +104,31 @@ Vanguard cards are excluded with explicit report reasons.
    effect-gate context. Resolving `unless` gates admit only the already recognized
    controller-controls, controller-graveyard-card-count, and
    controller-graveyard-distinct-mana-value-count predicates, using the shared
-   Selection/aggregate adapters and `Condition.Negate`. Each must belong to one
-   effect proven by the ordered-sequence matcher; specialized group lowerers do
-   not acquire `unless` support. Source-in-graveyard and source-excluding
-   qualifications, gated mana-ability bodies, multi-instruction expansions, and
-   `Otherwise`/replacement branch derivations remain unsupported. Shared mutable
-   multi-effect groups, payment/choice outcomes, result antecedents, unrecognized
-   predicates, and unconsumed source remain fail-closed
-   as boolean gates. Existing clause-owned payment lowering is unchanged.
+   Selection/aggregate adapters and `Condition.Negate`. The parser assigns
+   clause identities and typed condition/reference ownership; the generic
+   sequence planner consumes those identities, not source-span containment.
+   Leading group conditions and clauses expanding into several Instructions
+   evaluate once at the first governed instruction. `PublishCondition` records
+   that boolean independently of primitive success, and `ConditionGate`
+   consumes it within the same sequence resolution. Independent clause
+   conditions still evaluate separately; false and unavailable evaluations both
+   suppress ordinary consumers. Cast-time target gates retain the captured condition's
+   gift/kicker/bargain branch. Specialized matchers do not acquire `unless`
+   support. Ambiguous trailing group scope, overlapping conditions,
+   source-in-graveyard/source-excluding qualifications, gated mana-ability
+   bodies, and `Otherwise`/replacement derivations for `unless` remain
+   unsupported. Payment/choice outcomes, result antecedents, unrecognized
+   predicates, and unconsumed source remain fail-closed as boolean gates.
+   Existing clause-owned payment lowering and actual-result gates are distinct
+   from boolean condition evaluation.
+   Existing state-gated `Otherwise` and `instead` branches consume the same
+   captured decision (or its complement); they do not re-test state after the
+   preceding action. Missing publications fail closed even for complements.
+   Activated non-mana bodies use the same typed ownership to keep resolving
+   conditions out of activation restrictions. Specialized mana-body routing
+   and genuine `Activate only if` restrictions retain their existing boundaries.
+   Activated resolution-ordinal conditions remain unsupported: the runtime
+   currently counts only triggered-ability resolutions.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
    prior-instruction results. Ordered lowering also supports the exact linked

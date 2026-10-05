@@ -44,6 +44,9 @@ func TestLowerTombOfHorrorsAdventurerConditionalCopies(t *testing.T) {
 			!copyEffect.MayChooseNewTargets {
 			t.Fatalf("copy instruction %d = %#v", i, sequence[i])
 		}
+		if i != 0 {
+			continue
+		}
 		if !sequence[i].Condition.Exists || !sequence[i].Condition.Val.Condition.Exists {
 			t.Fatalf("copy instruction %d missing dungeon gate", i)
 		}
@@ -51,5 +54,6 @@ func TestLowerTombOfHorrorsAdventurerConditionalCopies(t *testing.T) {
 		if !condition.ControllerCompletedADungeon || condition.Negate != (i == 0) {
 			t.Fatalf("copy instruction %d condition = %#v", i, condition)
 		}
+		assertConditionConsumer(t, sequence[0], sequence[1], true)
 	}
 }

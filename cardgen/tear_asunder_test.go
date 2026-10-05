@@ -47,11 +47,12 @@ func TestLowerTearAsunder(t *testing.T) {
 		if !ok || exile.Object != want {
 			t.Fatalf("sequence[%d] = %#v, want exile of target %d", i, mode.Sequence[i].Primitive, i)
 		}
-		if !mode.Sequence[i].Condition.Exists ||
+		if i == 0 && (!mode.Sequence[i].Condition.Exists ||
 			!mode.Sequence[i].Condition.Val.Condition.Exists ||
 			!mode.Sequence[i].Condition.Val.Condition.Val.SpellWasKicked ||
-			mode.Sequence[i].Condition.Val.Condition.Val.Negate != (i == 0) {
+			!mode.Sequence[i].Condition.Val.Condition.Val.Negate) {
 			t.Fatalf("sequence[%d] condition = %#v", i, mode.Sequence[i].Condition)
 		}
+		assertConditionConsumer(t, mode.Sequence[0], mode.Sequence[1], true)
 	}
 }

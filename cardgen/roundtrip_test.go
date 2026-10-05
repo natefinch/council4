@@ -37,6 +37,14 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "RT Bolt deals 3 damage to any target.",
 	},
 	{
+		Name: "RT Condition Group", Layout: "normal", TypeLine: "Instant",
+		OracleText: "If you have no cards in hand, draw a card, then draw a card.",
+	},
+	{
+		Name: "RT Condition Ability", Layout: "normal", TypeLine: "Enchantment",
+		OracleText: "{1}: If you have no cards in hand, draw a card, then draw a card.",
+	},
+	{
 		Name:       "RT Bog",
 		Layout:     "normal",
 		TypeLine:   "Land",
@@ -224,6 +232,25 @@ func TestRTBoltSemantic(t *testing.T) {
 	}
 	if damage.Amount.Value() != 3 {
 		t.Fatalf("damage amount = %%d", damage.Amount.Value())
+	}
+}
+
+func TestRTConditionGroupSemantic(t *testing.T) {
+	seq := RTConditionGroup().SpellAbility.Val.Modes[0].Sequence
+	if len(seq) != 2 || !seq[0].Condition.Exists ||
+		!seq[0].Condition.Val.Condition.Val.ControllerHandEmpty ||
+		seq[0].PublishCondition == "" ||
+		seq[1].Condition.Exists || seq[1].ConditionGate != seq[0].PublishCondition {
+		t.Fatal("scoped condition evaluation did not round-trip")
+	}
+}
+
+func TestRTConditionAbilitySemantic(t *testing.T) {
+	seq := RTConditionAbility().ActivatedAbilities[0].Content.Modes[0].Sequence
+	if len(seq) != 2 || !seq[0].Condition.Exists ||
+		seq[0].PublishCondition == "" ||
+		seq[1].Condition.Exists || seq[1].ConditionGate != seq[0].PublishCondition {
+		t.Fatal("nested scoped condition evaluation did not round-trip")
 	}
 }
 `, pkgName)

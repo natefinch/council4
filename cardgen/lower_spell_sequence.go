@@ -11,7 +11,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -370,7 +369,7 @@ func lowerOrderedEffectSequence(
 		// too. Otherwise a kicked-condition's "this spell" object survives as a
 		// phantom subject reference and the per-effect lowerer fails closed.
 		effectAbility.content.Effects[0].References = slices.Clone(clauseRefs)
-		effectAbility.content.Effects[0].SubjectReferences = referencesOutsideConditionSpans(
+		effectAbility.content.Effects[0].SubjectReferences = referencesOutsideOwnedConditions(
 			effectAbility.content.Effects[0].SubjectReferences, ctx.content.Conditions,
 		)
 		var inheritedTargets []compiler.CompiledTarget
@@ -515,9 +514,6 @@ func lowerOrderedEffectSequence(
 			continue
 		}
 		mode := content.Modes[0]
-		if effectHasUnlessGate(*effect, gateConditions) && len(mode.Sequence) != 1 {
-			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — Unless effect expands to multiple instructions")
-		}
 		// An inherited target that no prior clause owned (a bare "Choose target
 		// ..." sentence with no effect of its own) is first materialized here, so
 		// this clause consumes it. Inherited targets already recorded in
@@ -595,7 +591,8 @@ func lowerOrderedEffectSequence(
 	// against external conditions to match the clause-reference stripping above, so an
 	// optional-flow gate's own anaphor ("that player" in "If that player does")
 	// is credited rather than reported as an unconsumed reference.
-	consumedReferences += conditionReferenceCount(ctx.content.References, conditionPlan.externalConditions)
+	consumedReferences += len(ctx.content.References) -
+		len(referencesOutsideOwnedConditions(ctx.content.References, conditionPlan.externalConditions))
 	// A punisher clause ("each opponent loses N life unless they discard a card")
 	// carries a subject pronoun ("they" / "that player") that the parser folds
 	// into the EffectPunisherLoseLife effect, so it never lands in the effect's own
@@ -624,7 +621,9 @@ func lowerOrderedEffectSequence(
 		// modeled (linked object).
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — payoff amount references a non-target permanent")
 	}
-	captureSelfInvalidatingCounterThresholdGate(sequence)
+	if !conditionPlan.captureEvaluations(ctx.content.Effects, effectInstructionRanges, sequence, insteadGates, otherwiseGates) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, conditionEvaluationCategory)
+	}
 	// A later "another target" clause requires a target distinct from the
 	// spell's earlier targets (CR 601.2c); mark it before gating so both passes
 	// see the corrected spec list.
@@ -3152,91 +3151,6 @@ func lowerDrawHandDiscardSequence(ctx contentCtx) (game.AbilityContent, bool) {
 			}},
 		},
 	}.Ability(), true
-}
-
-// captureSelfInvalidatingCounterThresholdGate rewrites a shared group gate that
-// a grouped instruction's own effect invalidates. When a gated RemoveCounter
-// clears (or reduces) the very counters its threshold gate tests on the same
-// object, the per-instruction gate re-evaluation would see the post-removal
-// count and wrongly skip the instructions that shared the gate (Prize Pig:
-// "Then if there are three or more ribbon counters on this creature, remove
-// those counters and untap it." must untap whenever it removed). Because the
-// printed condition is a single check at resolution, the removal publishes its
-// result and the following instructions that shared the identical gate chain on
-// that success instead of re-testing the now-false condition.
-func captureSelfInvalidatingCounterThresholdGate(sequence []game.Instruction) {
-	for i := range sequence {
-		instr := &sequence[i]
-		if instr.PublishResult != "" || !gatedRemoveInvalidatesOwnCounterThreshold(*instr) {
-			continue
-		}
-		followers := make([]int, 0, len(sequence))
-		for j := i + 1; j < len(sequence); j++ {
-			if sequence[j].ResultGate.Exists ||
-				!sameSourceCounterThresholdGate(sequence[j].Condition, instr.Condition) {
-				break
-			}
-			followers = append(followers, j)
-		}
-		if len(followers) == 0 {
-			continue
-		}
-		key := game.ResultKey("counter-threshold-cleared")
-		instr.PublishResult = key
-		for _, j := range followers {
-			sequence[j].Condition = opt.V[game.EffectCondition]{}
-			sequence[j].ResultGate = opt.Val(game.InstructionResultGate{
-				Key:       key,
-				Succeeded: game.TriTrue,
-			})
-		}
-	}
-}
-
-// gatedRemoveInvalidatesOwnCounterThreshold reports whether an instruction's gate
-// tests a counter threshold on an object that the instruction's own RemoveCounter
-// primitive then clears or reduces on that same object, making the gate false for
-// any following instruction that re-evaluates it.
-func gatedRemoveInvalidatesOwnCounterThreshold(instr game.Instruction) bool {
-	kind, object, ok := sourceCounterThresholdGate(instr.Condition)
-	if !ok {
-		return false
-	}
-	remove, ok := instr.Primitive.(game.RemoveCounter)
-	if !ok || remove.Object != object {
-		return false
-	}
-	return remove.AllKinds || remove.CounterKind == kind
-}
-
-// sourceCounterThresholdGate reports the tested counter kind and object when the
-// effect condition is a counter-count threshold on a single referenced object
-// ("if there are N or more <kind> counters on <object>").
-func sourceCounterThresholdGate(gate opt.V[game.EffectCondition]) (counter.Kind, game.ObjectReference, bool) {
-	if !gate.Exists || !gate.Val.Condition.Exists {
-		return 0, game.ObjectReference{}, false
-	}
-	condition := gate.Val.Condition.Val
-	if !condition.Object.Exists || !condition.ObjectMatches.Exists {
-		return 0, game.ObjectReference{}, false
-	}
-	selection := condition.ObjectMatches.Val
-	if !selection.RequiredCounterCount.Exists {
-		return 0, game.ObjectReference{}, false
-	}
-	return selection.RequiredCounter, condition.Object.Val, true
-}
-
-// sameSourceCounterThresholdGate reports whether two effect conditions are the
-// same source counter-threshold gate (same object, kind, and count comparison).
-func sameSourceCounterThresholdGate(a, b opt.V[game.EffectCondition]) bool {
-	kindA, objectA, okA := sourceCounterThresholdGate(a)
-	kindB, objectB, okB := sourceCounterThresholdGate(b)
-	if !okA || !okB || kindA != kindB || objectA != objectB {
-		return false
-	}
-	return a.Val.Condition.Val.ObjectMatches.Val.RequiredCounterCount ==
-		b.Val.Condition.Val.ObjectMatches.Val.RequiredCounterCount
 }
 
 // applyEffectConditionGate attaches an effect-gate condition to every

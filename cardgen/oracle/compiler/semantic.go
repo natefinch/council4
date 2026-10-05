@@ -1405,6 +1405,7 @@ type ConditionAttributeComparison struct {
 
 // CompiledCondition is a closed, source-spanned semantic condition.
 type CompiledCondition struct {
+	Ownership     parser.ConditionOwnership
 	Kind          ConditionKind
 	Span          shared.Span
 	Text          string
@@ -2548,8 +2549,9 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
-	Kind    EffectKind
-	Context parser.EffectContextKind
+	ClauseID int
+	Kind     EffectKind
+	Context  parser.EffectContextKind
 	// CombatDamageSourceName carries the required creature name when Context is
 	// EffectContextEachOpponentDealtCombatDamageByNamed ("each opponent dealt
 	// combat damage this game by a creature named Gollum, Obsessed Stalker

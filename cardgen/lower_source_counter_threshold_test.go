@@ -91,12 +91,12 @@ func TestLowerPrizePigSourceCounterThresholdSequence(t *testing.T) {
 		t.Fatalf("remove amount source = %#v, want source ribbon count", removeDyn.Val)
 	}
 	assertRibbonThresholdGate(t, seq[1], source)
-	if seq[1].PublishResult != game.ResultKey("counter-threshold-cleared") {
-		t.Fatalf("remove publishes %q, want counter-threshold-cleared (single-eval capture)", seq[1].PublishResult)
+	if seq[1].PublishCondition == "" || seq[1].PublishResult != "" {
+		t.Fatalf("remove must publish its condition, not its action result: %#v", seq[1])
 	}
 
 	// Instruction 2: untap the source. The threshold is checked once at
-	// resolution, so the untap chains on the removal's published success rather
+	// resolution, so the untap chains on the published condition rather
 	// than re-evaluating the (now-cleared) counter threshold.
 	untap, ok := seq[2].Primitive.(game.Untap)
 	if !ok {
@@ -108,12 +108,8 @@ func TestLowerPrizePigSourceCounterThresholdSequence(t *testing.T) {
 	if seq[2].Condition.Exists {
 		t.Fatalf("sequence[2] re-evaluates the threshold, want it gated on the removal result: %#v", seq[2].Condition)
 	}
-	if !seq[2].ResultGate.Exists {
-		t.Fatal("untap is not result-gated, want it chained on the removal result")
-	}
-	gate := seq[2].ResultGate.Val
-	if gate.Key != game.ResultKey("counter-threshold-cleared") || gate.Succeeded != game.TriTrue {
-		t.Fatalf("untap result gate = %#v, want key counter-threshold-cleared succeeded=true", gate)
+	if seq[2].ConditionGate != seq[1].PublishCondition || seq[2].ResultGate.Exists {
+		t.Fatalf("untap must consume the original condition evaluation: %#v", seq[2])
 	}
 }
 

@@ -65,10 +65,9 @@ func TestLowerReckonerBankbuster(t *testing.T) {
 	if _, ok := sequence[0].Primitive.(game.Draw); !ok {
 		t.Fatalf("sequence[0] = %T, want game.Draw", sequence[0].Primitive)
 	}
-	for i := 1; i < 3; i++ {
-		if !sequence[i].Condition.Exists {
-			t.Fatalf("sequence[%d] has no zero-charge-counter gate", i)
-		}
+	if !sequence[1].Condition.Exists || sequence[1].PublishCondition == "" ||
+		sequence[2].Condition.Exists || sequence[2].ConditionGate != sequence[1].PublishCondition {
+		t.Fatal("token creates must share one zero-charge-counter evaluation")
 	}
 
 	treasure := multiTokenDef(t, bankbusterCreateToken(t, sequence[1]))

@@ -42,10 +42,7 @@ func TestLowerClingToDustCardTypeNoun(t *testing.T) {
 	if _, ok := draw.Primitive.(game.Draw); !ok {
 		t.Fatalf("instruction[2] = %T, want game.Draw", draw.Primitive)
 	}
-	drawGate := effectConditionMatch(t, draw)
-	if !drawGate.Negate {
-		t.Fatalf("otherwise-branch draw gate = %#v, want the negated branch", drawGate)
-	}
+	assertConditionConsumer(t, gainLife, draw, true)
 }
 
 // TestLowerActivatedAbilityCardTypeNounBindsTarget guards the

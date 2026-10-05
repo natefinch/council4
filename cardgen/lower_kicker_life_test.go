@@ -68,7 +68,7 @@ func TestLowerKickedConditionalGainOrLoseLife(t *testing.T) {
 	if !ok {
 		t.Fatalf("seq2 = %T, want game.LoseLife", mode.Sequence[2].Primitive)
 	}
-	assertSpellKickedGate(t, mode.Sequence[2], true)
+	assertConditionConsumer(t, mode.Sequence[1], mode.Sequence[2], true)
 	assertMoveResultGate(t, mode.Sequence[2])
 	if lose.Amount != gain.Amount {
 		t.Fatalf("lose amount = %+v, want identical to gain amount %+v", lose.Amount, gain.Amount)

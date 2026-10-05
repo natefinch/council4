@@ -556,7 +556,7 @@ func lowerContentDispatch(
 		if len(ctx.content.Conditions) != 0 && !ctx.sequenceClause {
 			gatedCtx := ctx
 			if !effectOwnsCounterTax(ctx.content.Effects[0]) {
-				gatedCtx.content = contentWithoutConditionSpannedReferences(ctx.content)
+				gatedCtx.content = contentWithoutOwnedConditionReferences(ctx.content)
 			}
 			if content, diagnostic := lowerOrderedEffectSequence(cardName, gatedCtx, syntax); diagnostic == nil {
 				return content, nil

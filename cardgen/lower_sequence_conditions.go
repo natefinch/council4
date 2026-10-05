@@ -100,12 +100,12 @@ func counterTaxConditionMatches(payment compiler.CompiledEffectPayment, conditio
 }
 
 func (plan sequenceConditionPlan) referencesForClause(content compiler.AbilityContent, ei int) []compiler.CompiledReference {
-	references := referencesOutsideConditionSpans(content.Effects[ei].References, plan.externalConditions)
+	references := referencesOutsideOwnedConditions(content.Effects[ei].References, plan.externalConditions)
 	// The compiler may attribute a trailing payment's references only to the
 	// content. Restore them to its NodeID-selected owner exactly once.
 	for _, condition := range plan.clauseConditions[ei] {
 		for _, reference := range content.References {
-			if !condition.Order.Contains(reference.Order) {
+			if !conditionOwnsReference(condition, reference.NodeID) {
 				continue
 			}
 			alreadyOwned := false

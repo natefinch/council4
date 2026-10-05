@@ -143,6 +143,13 @@ func lowerActivatedAbilityKind(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if activatedBodyHasUnmodeledResolutionCount(ability.Content) {
+		return abilityLowering{}, executableDiagnostic(
+			ability,
+			"unsupported activated resolution-count condition",
+			"resolution ordinals are modeled only for triggered abilities",
+		)
+	}
 	if isSemanticManaAbility(ability) {
 		manaAbility, diagnostic := lowerManaAbility(cardName, ability, syntax)
 		if diagnostic != nil {
@@ -878,10 +885,11 @@ func conditionIsBodyResolvingGate(condition compiler.CompiledCondition) bool {
 		condition.Predicate == compiler.ConditionPredicatePriorInstructionNotAccepted
 }
 
-// activationConditionOwnedByBody reports whether an activated ability's single
+// activationConditionOwnedByBody reports whether an activated ability's
 // condition is a body-level gate that the ordered-sequence lowerer (or the
 // mana-ability lowerer, via isSemanticManaAbility's own call to this function)
 // consumes directly, rather than an activation gate. Recognized forms:
+//   - typed ordinary If/Unless clause or group owners in non-mana bodies
 //   - "unless its controller pays" tax (counter-unless-pays)
 //   - recognized pure-state "unless" gates contained in the resolving body
 //   - "If <source object matches>, <effect>" conditional body rider (e.g.
@@ -892,6 +900,9 @@ func conditionIsBodyResolvingGate(condition compiler.CompiledCondition) bool {
 //     Target creature can't be blocked this turn. If that creature is a
 //     Snake, it gets +2/+2 until end of turn.", Kaseto, Orochi Archmage)
 func activationConditionOwnedByBody(content compiler.AbilityContent) bool {
+	if conditionsOwnedByResolvingBody(content) {
+		return true
+	}
 	if len(content.Conditions) != 1 {
 		return false
 	}
