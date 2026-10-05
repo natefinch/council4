@@ -337,6 +337,9 @@ func referencePronounKind(tokens []shared.Token, index int, atoms Atoms) Pronoun
 		equalWord(tokens[index], "it's") &&
 		(equalWord(tokens[index-1], "if") || equalWord(tokens[index-1], "unless")) &&
 		(equalWord(tokens[index+1], "a") || equalWord(tokens[index+1], "an")) {
+		if entersAsCopyCounterRiderConditionAt(tokens, index-1) {
+			return PronounUnknown
+		}
 		end := conditionClauseEnd(tokens, index-1)
 		noun := tokens[index+2 : end]
 		if selection, ok := parseConditionSelection(noun, atoms); ok &&

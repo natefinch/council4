@@ -61,6 +61,10 @@ Conditions read the new permanent's current effective characteristics, or that
 new object's own departure LKI if it subsequently leaves. A skipped, failed, or
 replacement-diverted return publishes no permanent; stale card zone versions
 and missing permanent identities never substitute a later incarnation.
+Postfix characteristic gates retain their own parser subject occurrences.
+Conditional copiable counter riders are excluded only when the shared
+enter-with-counter grammar owns them; ordinary counter placement must keep
+its creature or planeswalker gate and consume the actual target or product.
 Optional/plural producers, competing antecedents, resolution-chosen reveal/look
 subjects, and permanent/card union selection retain fail-closed boundaries.
 Immediate referenced-permanent consequences use the same exact product context
