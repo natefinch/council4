@@ -13,7 +13,8 @@ func optionalLinkedPublicationsModeled(sequence []game.Instruction) bool {
 			continue
 		}
 		if instruction.PublishOptionalDecision != "" || instruction.OptionalDecisionGate != "" {
-			if !sequencePublisherInvalidatesBeforeGates(instruction.Primitive) {
+			if !sequencePublisherInvalidatesBeforeGates(instruction.Primitive) &&
+				!(instruction.ClearLinkedBeforeGate && captureMovePublisher(instruction.Primitive)) {
 				return false
 			}
 			optionalProducts[key] = true

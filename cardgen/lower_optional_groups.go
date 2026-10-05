@@ -27,6 +27,10 @@ func planOptionalActionGroups(effects []compiler.CompiledEffect, indices map[int
 		if effect.ClauseID <= 0 || len(effect.OptionalActionClauseIDs) == 0 {
 			return groups, "structural — optional action has no typed group identity"
 		}
+		if effect.DelayedSubject.OptionalAtDelayedTime && len(effect.OptionalActionClauseIDs) == 1 &&
+			effect.OptionalActionClauseIDs[0] == effect.ClauseID && fixedPhaseSubjectEffectModeled(effect) {
+			continue
+		}
 		for offset, id := range effect.OptionalActionClauseIDs {
 			member, exists := indices[id]
 			if !exists || member != ei+offset {
@@ -36,7 +40,8 @@ func planOptionalActionGroups(effects []compiler.CompiledEffect, indices map[int
 				offset > 0 && effects[member].Optional {
 				return groups, "structural — overlapping optional action decisions not modeled"
 			}
-			if effects[member].DelayedTiming != 0 ||
+			if effects[member].DelayedTiming != 0 &&
+				(len(effect.OptionalActionClauseIDs) != 1 || !fixedPhaseSubjectEffectModeled(effects[member])) ||
 				effects[member].Payment.Form != parser.EffectPaymentFormUnknown {
 				return groups, "structural — optional action group contains delay or payment"
 			}

@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -126,6 +127,11 @@ func TestOptionalLinkedPublicationAvailability(t *testing.T) {
 	persistentProducer.PublishOptionalDecision = ""
 	gatedAlias := alias
 	gatedAlias.OptionalDecisionGate = "choice"
+	move := game.Instruction{Primitive: game.MovePermanent{
+		Object: game.TargetPermanentReference(0), Destination: zone.Exile, PublishLinked: "exiled",
+	}, OptionalDecisionGate: "choice", ClearLinkedBeforeGate: true}
+	persistentMove := move
+	persistentMove.ClearLinkedBeforeGate = false
 	for _, tt := range []struct {
 		name     string
 		sequence []game.Instruction
@@ -135,6 +141,8 @@ func TestOptionalLinkedPublicationAvailability(t *testing.T) {
 		{"unproven chained publication", []game.Instruction{producer, alias}, false},
 		{"unproven gated shim", []game.Instruction{producer, gatedAlias}, false},
 		{"existing persistent publication untouched", []game.Instruction{persistentProducer, alias}, true},
+		{"capture-owned transient move", []game.Instruction{move}, true},
+		{"persistent move has no transient contract", []game.Instruction{persistentMove}, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := optionalLinkedPublicationsModeled(tt.sequence); got != tt.modeled {

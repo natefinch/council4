@@ -130,13 +130,6 @@ func TestOptionalEnteredObjectUsesTypedProducer(t *testing.T) {
 	}
 }
 
-func TestOptionalGroupCaptureRequiresAvailablePublication(t *testing.T) {
-	assertCardUnsupported(t, &ScryfallCard{
-		Name: "Optional Capture Near Miss", Layout: "normal", TypeLine: "Sorcery",
-		OracleText: "You may gain 1 life and return target creature card from your graveyard to the battlefield. It gains haste until end of turn. Exile it at the beginning of the next end step.",
-	}, "optional linked-object publication has no skipped-availability contract")
-}
-
 func TestOptionalGroupIdentityIsTyped(t *testing.T) {
 	document, diagnostics := parser.Parse("You may draw a card and gain 2 life. Scry 1.", parser.Context{InstantOrSorcery: true})
 	if len(diagnostics) != 0 {

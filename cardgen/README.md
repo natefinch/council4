@@ -273,9 +273,14 @@ Vanguard cards are excluded with explicit report reasons.
    the existing per-effect Instruction ranges and canonical product publication.
    If no adapter can supply the entered incarnation, an
    original target-card reference is not substituted for that permanent.
-   Chained linked-object publications without a skipped-availability contract
-   remain refused rather than clearing persistent links or recapturing stale
-   objects after a declined group.
+   Fixed-phase captures freeze the parser-owned original product through the
+   shared capture publication adapter, not a mandatory haste or P/T shim.
+   Capture-owned exile moves opt into transient pre-gate invalidation; persistent
+   CR607 links remain untouched. A declined, skipped, or failed producer can
+   schedule an empty capture but cannot reuse an earlier incarnation. Optional
+   fixed-phase actions retain their typed schedule-time versus fire-time choice.
+   Unproven chained publications and delayed compound optional groups still
+   refuse rather than approximating availability or timing.
    Positive exact and at-least result counts
    count matching actual members, not the requested amount. Active `you` result
    grammar requires modeled controller action ownership. Costs, opaque verbs,
