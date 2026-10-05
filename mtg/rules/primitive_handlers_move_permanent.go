@@ -53,7 +53,10 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 				r.rememberResultObject(permanentObjectBindingRef(result.permanent))
 			}
 			moved = append(moved, result.permanent)
-			if ref, ok := refs[result.permanent]; ok && prim.PublishLinked != "" {
+			if ref, ok := refs[result.permanent]; ok && prim.PublishLinked != "" && result.destination == prim.Destination {
+				if card, ok := r.game.GetCardInstance(ref.CardID); ok {
+					ref.CardZoneVersion = card.ZoneVersion
+				}
 				rememberLinkedObject(r.game, linkedKey, ref)
 			}
 		}
@@ -64,11 +67,23 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 	if targets.resolved {
 		permanent := targets.permanents[0]
 		linkedObjectRef := permanentLinkedObjectRef(permanent)
-		res.succeeded = r.moveResultPermanents(targets.permanents, prim.Destination)
+		reached := false
+		for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, targets.permanents, prim.Destination) {
+			if result.moved {
+				res.succeeded = true
+				if result.destination == prim.Destination {
+					reached = true
+					r.rememberResultObject(permanentObjectBindingRef(result.permanent))
+				}
+			}
+		}
 		if res.succeeded {
 			r.placeMovedOnLibraryBottom(prim, targets.permanents)
 		}
-		if prim.PublishLinked != "" {
+		if prim.PublishLinked != "" && reached {
+			if card, ok := r.game.GetCardInstance(linkedObjectRef.CardID); ok {
+				linkedObjectRef.CardZoneVersion = card.ZoneVersion
+			}
 			// The source may itself have changed object identity during the
 			// move (a permanent exiling itself), so re-derive the key and clear
 			// the new one before publishing under it.

@@ -92,8 +92,8 @@ func TestGenerateUltraMagnusTacticianFront(t *testing.T) {
 	if !ok {
 		t.Fatalf("delayed primitive = %T, want game.Transform", inner.Sequence[0].Primitive)
 	}
-	if transform.Object != game.SourceCardPermanentReference() {
-		t.Fatalf("delayed transform object = %#v, want SourceCardPermanentReference()", transform.Object)
+	if transform.Object != game.CapturedObjectReference() {
+		t.Fatalf("delayed transform object = %#v, want captured original incarnation", transform.Object)
 	}
 	gate := convert.ResultGate
 	if !gate.Exists {

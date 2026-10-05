@@ -107,17 +107,16 @@ func TestLowerActivatedAbilitySequenceWithDelayedTargetSacrifice(t *testing.T) {
 		t.Fatalf("mode = %#v, want one target and two instructions", mode)
 	}
 	apply, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
-	if !ok || apply.PublishLinked == "" {
-		t.Fatalf("apply = %#v, want published linked target", mode.Sequence[0].Primitive)
+	if !ok || apply.PublishLinked != "" {
+		t.Fatalf("apply = %#v, want ordinary target grant", mode.Sequence[0].Primitive)
 	}
 	delayed, ok := mode.Sequence[1].Primitive.(game.CreateDelayedTrigger)
 	if !ok || delayed.Trigger.Timing != game.DelayedAtBeginningOfNextEndStep {
 		t.Fatalf("second primitive = %#v, want delayed end-step trigger", mode.Sequence[1].Primitive)
 	}
 	if !delayed.Trigger.CapturedObject.Exists ||
-		delayed.Trigger.CapturedObject.Val.Kind() != game.ObjectReferenceLinkedObject ||
-		delayed.Trigger.CapturedObject.Val.LinkID() != string(apply.PublishLinked) {
-		t.Fatalf("delayed trigger CapturedObject = %#v, want linked-object capture of %q", delayed.Trigger.CapturedObject, apply.PublishLinked)
+		delayed.Trigger.CapturedObject.Val != game.TargetPermanentReference(0) {
+		t.Fatalf("delayed trigger CapturedObject = %#v, want exact target capture", delayed.Trigger.CapturedObject)
 	}
 	sacrifice, ok := delayed.Trigger.Content.Modes[0].Sequence[0].Primitive.(game.Sacrifice)
 	if !ok || sacrifice.Object.Kind() != game.ObjectReferenceCapturedObject {

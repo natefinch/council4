@@ -336,6 +336,7 @@ func lowerOrderedEffectSequence(
 		// Embedded payment conditions belong to the clause lowerer; ordinary
 		// conditions belong to the sequence envelope.
 		effectAbility.content.Conditions = conditionPlan.clauseConditions[i]
+		effectAbility.content.Conditions = append(slices.Clone(effectAbility.content.Conditions), conditionPlan.delayedConditions[i]...)
 		clauseTargets := effect.Targets
 		// A leading condition that shares its effect's sentence (e.g. "If this
 		// spell was kicked, draw a card.") contributes its own references (the
@@ -488,6 +489,10 @@ func lowerOrderedEffectSequence(
 		publisherGated := i > 0 && sequenceClauseInstructionGated(i-1, effectConditions, insteadGates, otherwiseGates)
 		if effect.PlayHideawayExiledCard {
 			content, diagnostic = lowerHideawayPlayEffect(effectAbility)
+		} else if delayed, delayedDiagnostic, handled := lowerFixedPhaseSubject(
+			cardName, effectAbility, &clauseAbility, sequence, effectInstructionRanges[:i], ctx.content.Effects,
+		); handled {
+			content, diagnostic = delayed, delayedDiagnostic
 		} else if delayed := lowerDelayedSequenceClause(
 			ctx.content.Effects,
 			i,
