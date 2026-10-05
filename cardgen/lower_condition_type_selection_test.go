@@ -105,14 +105,16 @@ func TestConditionExpandedTypesNeedExecutableBindings(t *testing.T) {
 		if text[0] != 'W' {
 			card.TypeLine = "Instant"
 		}
-		assertCardUnsupported(t, card)
+		assertCardPaths(t, card, "Object.Val.kind = game.ObjectReferenceTargetCard", "ObjectMatches.Exists = true")
 	}
 	card := &ScryfallCard{
 		Name: "Lion Sash", Layout: "normal", TypeLine: "Artifact Creature — Equipment Cat",
 		ManaCost: "{1}{W}", Power: new("1"), Toughness: new("1"),
 		OracleText: "{W}: Exile target card from a graveyard. If it was a permanent card, put a +1/+1 counter on this creature.\nEquipped creature gets +1/+1 for each +1/+1 counter on Lion Sash.\nReconfigure {2}",
 	}
-	assertCardUnsupported(t, card)
+	assertCardPaths(t, card,
+		"ActivatedAbilities[0].Content.Modes[0].Sequence[1].Condition.Val.Condition.Val.Object.Val.kind = game.ObjectReferenceTargetCard",
+		"ActivatedAbilities[0].Content.Modes[0].Sequence[1].Condition.Val.Condition.Val.ObjectMatches.Val.RequiredTypesAny[0] = types.Artifact")
 }
 
 func TestConditionTypeSelectionDoesNotConsumeCommaQualifierPrefix(t *testing.T) {

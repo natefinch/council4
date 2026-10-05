@@ -187,6 +187,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if conditionParametersNegative(&cond) {
 		return false
 	}
+	if !objectConditionInformationAvailable(g, ctx, &cond) {
+		return false
+	}
 	matches := true
 	if cond.ControlsMatching.Exists {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
@@ -972,6 +975,20 @@ func conditionObjectMatches(g *game.Game, ctx conditionContext, cond *game.Condi
 	if obj == nil {
 		return false
 	}
+	if ref.Kind() == game.ObjectReferenceTargetCard && !conditionTargetCardAvailable(g, obj, cond) {
+		return false
+	}
+	if ref.Kind() == game.ObjectReferenceEventStackObject && cond.ObjectMatches.Exists {
+		return eventSpellMatchesConditionSelection(g, obj, ctx, &cond.ObjectMatches.Val)
+	}
+	if cond.UseCounteredSpellManaValue {
+		if !counteredSpellConditionTargetMatchesCapture(g, obj, cond) {
+			return false
+		}
+		if counteredSpellMatchesConditionSelection(g, obj, cond) {
+			return true
+		}
+	}
 	resolved, ok := resolveObjectReference(g, obj, ref)
 	if !ok {
 		return false
@@ -1013,15 +1030,17 @@ func resolvedObjectMatchesConditionSelection(
 		return matchSelection(&subject, selection)
 	}
 	if resolved.stack != nil {
-		colors, ok := stackObjectColors(g, resolved.stack)
-		if !ok {
-			return false
-		}
 		subject := selectionSubject{
 			kind:   subjectCastSpell,
 			g:      g,
-			event:  game.Event{Colors: colors},
 			viewer: ctx.controller,
+		}
+		if len(selection.ColorsAny) != 0 || selection.Colorless || selection.Multicolored {
+			colors, ok := stackObjectColors(g, resolved.stack)
+			if !ok {
+				return false
+			}
+			subject.event.Colors = colors
 		}
 		if manaValue, known := stackObjectManaValue(g, resolved.stack); known {
 			subject.event.ManaValue = opt.Val(manaValue)
@@ -1042,11 +1061,15 @@ func resolvedObjectMatchesConditionSelection(
 		return matchSelection(&subject, selection)
 	}
 	subject := selectionSubject{
-		kind:             subjectEventPermanent,
-		g:                g,
-		event:            game.Event{PermanentID: resolved.snapshot.ObjectID},
+		kind: subjectEventPermanent,
+		g:    g,
+		event: game.Event{
+			PermanentID: resolved.snapshot.ObjectID, CardID: resolved.snapshot.CardID,
+			TokenDef: resolved.snapshot.TokenDef, Face: resolved.snapshot.Face,
+		},
 		viewer:           ctx.controller,
 		snapshotObjectID: resolved.snapshot.ObjectID,
+		snapshot:         &resolved.snapshot,
 	}
 	if selection.Controller != game.ControllerAny {
 		subject.controller = resolved.snapshot.Controller

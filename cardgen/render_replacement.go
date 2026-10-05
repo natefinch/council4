@@ -1487,6 +1487,12 @@ func (r Renderer) renderConditionObjectFields(
 		ctx.need(importOpt)
 		fields = append(fields, fmt.Sprintf("ObjectMatches: opt.Val(%s),", selection))
 	}
+	if cond.UseCounteredSpellManaValue {
+		fields = append(fields, "UseCounteredSpellManaValue: true,")
+	}
+	if cond.TargetCardResultKey != "" {
+		fields = append(fields, fmt.Sprintf("TargetCardResultKey: game.ResultKey(%q),", string(cond.TargetCardResultKey)))
+	}
 	if cond.ObjectAttackedThisTurn {
 		if !cond.Object.Exists {
 			return nil, false, fmt.Errorf("render: %s ObjectAttackedThisTurn condition has no Object reference", context)

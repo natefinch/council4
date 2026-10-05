@@ -255,7 +255,8 @@ func bindReferences(
 			!trigger.Pattern.OneOrMore &&
 			triggerEventBindsStackObject(trigger.Pattern.Event) &&
 			(reference.Kind == ReferenceThatObject ||
-				(reference.Kind == ReferencePronoun && reference.Pronoun == ReferencePronounIt)) {
+				(reference.Kind == ReferencePronoun &&
+					(reference.Pronoun == ReferencePronounIt || reference.Pronoun == ReferencePronounIts))) {
 			reference.Binding = ReferenceBindingEventStackObject
 			continue
 		}

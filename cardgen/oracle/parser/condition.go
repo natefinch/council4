@@ -482,6 +482,8 @@ type ConditionClause struct {
 	// instead of comparing the reference span to the subject span.
 	SubjectRefID int               `json:"-"`
 	SubjectTypes []TriggerCardType `json:",omitempty"`
+	SubjectSpell bool              `json:",omitempty"`
+	SubjectPast  bool              `json:",omitempty"`
 
 	// ControlComparison carries the typed cross-player control-count comparison
 	// for ConditionPredicateControlComparison ("an opponent controls more lands
@@ -941,7 +943,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,
-		recognizeTargetAttributeCompareCondition,
+		recognizeContextualAttributeCompareCondition,
 		recognizeObjectAttackedThisTurnCondition,
 		recognizeEventSubjectCondition,
 		recognizeSourceSaddledCondition,
@@ -1654,9 +1656,6 @@ func recognizeEventSubjectCondition(body []shared.Token, atoms Atoms) (Condition
 	if clause, ok := recognizeEventSubjectCounterCondition(body, atoms); ok {
 		return clause, true
 	}
-	if clause, ok := recognizeEventSubjectPowerState(body); ok {
-		return clause, true
-	}
 	if clause, ok := recognizeEventSubjectGreatestPowerCondition(body); ok {
 		return clause, true
 	}
@@ -1791,34 +1790,6 @@ func recognizeEnteredOrCastFromGraveyardCondition(body []shared.Token) (Conditio
 		}
 	}
 	return ConditionClause{}, false
-}
-
-// recognizeEventSubjectPowerState handles the triggering object's own power
-// threshold "its power is <n> or greater" ("Whenever a creature you control
-// enters, draw a card if its power is 3 or greater.") and the past-tense dies
-// form "its power was <n> or greater" (Deathknell Berserker). The possessive
-// "its" binds the event permanent, so the recognized clause carries a
-// power-at-least selection matched against that object; for the dying creature
-// the runtime reads its power from last-known information (CR 603.10).
-func recognizeEventSubjectPowerState(body []shared.Token) (ConditionClause, bool) {
-	rest, ok := cutTokenPrefix(body, "its", "power", "is")
-	if !ok {
-		if rest, ok = cutTokenPrefix(body, "its", "power", "was"); !ok {
-			return ConditionClause{}, false
-		}
-	}
-	if len(rest) != 3 {
-		return ConditionClause{}, false
-	}
-	value, ok := conditionNumberValue(rest[0])
-	if !ok || !equalWord(rest[1], "or") || !equalWord(rest[2], "greater") {
-		return ConditionClause{}, false
-	}
-	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingEventPermanent,
-		Selection:     ConditionSelection{PowerAtLeast: value, MatchPowerAtLeast: true},
-	}, true
 }
 
 // recognizeEventSubjectGreatestPowerCondition handles the triggering object's
@@ -2170,110 +2141,9 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 	}, true
 }
 
-// recognizeTargetAttributeCompareCondition matches the resolving per-effect
-// gate that compares a numeric attribute (mana value, power, or toughness) of
-// the clause's own target against a threshold: "that <permanent-noun>'s
-// <attribute> is/was <n> or less/greater" (Carnivorous Canopy: "Destroy target
-// artifact, enchantment, or creature with flying. If that permanent's mana
-// value was 3 or less, ..."). The named possessive binds the condition's
-// object to the clause's own target (CR 608.2b), exactly as
-// recognizeTargetObjectMatchCondition's "it's a <type>" does; the possessive
-// noun itself is not re-validated against the target's actual type, mirroring
-// that recognizer's treatment of a redundant type-restating subject.
-//
-// The bare possessive "its <attribute> is/was <n> or less/greater" (also used
-// by real cards for this same target-bound shape, e.g. Containment Breach's
-// "Destroy target artifact or enchantment. If its mana value is 2 or less,
-// ...") is deliberately NOT accepted here, even though it is the more common
-// wording: "its" is also how a triggered ability's intervening body refers
-// back to the *triggering event's* permanent, not a target, for the exact
-// same attributes (Emperor Apatzec Intli IV: "Whenever another creature
-// enters under your control, that creature perpetually gains haste if its
-// power is 4 or greater. If its toughness is 4 or greater, you gain 4 life.
-// If its mana value is 4 or greater, seek a creature card." -- no target
-// anywhere in the ability) and a pre-existing recognizer
-// (recognizeEventSubjectPowerState) already binds "its power is/was <n> or
-// greater" to the event permanent for exactly this trigger shape (Tribute to
-// the World Tree). Accepting bare "its" here as well would have to either
-// shadow that recognizer (breaking already-shipped cards depending on the
-// event-permanent binding) or lose to it in dispatch order (silently binding
-// every other "its <attribute>" wording -- toughness, mana value, and "power
-// ... or less", none of which recognizeEventSubjectPowerState covers -- to
-// the wrong object whenever they appear in a trigger body with no target,
-// since the parser has no way to tell from the wording alone which object
-// "its" names). The named possessive has no such collision: every real
-// corpus card using "that <permanent-noun>'s <attribute> is/was <n> or
-// less/greater" binds a clause's own target, never a triggering event's
-// permanent (which conditions instead name via "that creature's power is
-// greater than X's power"-style strict comparisons, a different grammatical
-// shape entirely, or never use the possessive-noun form for this purpose at
-// all).
-//
-// The named-possessive form only accepts a permanent-type noun (permanent,
-// creature, artifact, enchantment, land, planeswalker, battle) and rejects
-// "spell" (and any other noun), even though real cards do use "that spell's"
-// for a targeted spell (Reject Imperfection: "Counter target spell. If that
-// spell's mana value was 3 or less, ..."): lowerObjectReference's Target case
-// always produces a TargetPermanentReference for ConditionObjectBindingTarget,
-// with no path to a TargetStackObjectReference, so binding a spell target this
-// way would silently resolve the wrong reference kind rather than fail closed.
-// This is a real, separate gap (documented on #1148 as a follow-up), not
-// exercised by this recognizer.
-//
-// It fails closed on any comparator other than "or less"/"or greater", on any
-// attribute other than mana value, power, or toughness, and on a possessive
-// antecedent that names a triggering event's spell rather than the clause's
-// own target ("Whenever you cast or copy an instant or sorcery spell... If
-// that spell's mana value is 5 or greater...", Zaffai, Thunder Conductor):
-// that shape is rejected right here by the "spell" noun exclusion above (the
-// same exclusion Reject Imperfection hits), since the recognizer has no way
-// to bind a triggering event's spell in the first place. A possessive
-// antecedent that names a permanent-type noun but still has no real target in
-// scope (a hypothetical trigger using "that creature's <attribute>..." with
-// no target anywhere) parses successfully here but is separately rejected
-// downstream by the compiler's existing target-reference-binding validation
-// (bindConditionReferences), which rejects ConditionObjectBindingTarget when
-// no actual target reference exists.
-func recognizeTargetAttributeCompareCondition(body []shared.Token, _ Atoms) (ConditionClause, bool) {
-	if len(body) < 3 || !equalWord(body[0], "that") || !strings.HasSuffix(body[1].Text, "'s") ||
-		!conditionAttributeComparePermanentNoun(strings.TrimSuffix(body[1].Text, "'s")) {
-		return ConditionClause{}, false
-	}
-	rest := body[2:]
-	attribute, rest, ok := cutConditionAttributeWord(rest)
-	if !ok {
-		return ConditionClause{}, false
-	}
-	if len(rest) != 4 || (!equalWord(rest[0], "is") && !equalWord(rest[0], "was")) {
-		return ConditionClause{}, false
-	}
-	value, ok := conditionNumberValue(rest[1])
-	if !ok || !equalWord(rest[2], "or") {
-		return ConditionClause{}, false
-	}
-	var op compare.Op
-	switch {
-	case equalWord(rest[3], "less"):
-		op = compare.LessOrEqual
-	case equalWord(rest[3], "greater"):
-		op = compare.GreaterOrEqual
-	default:
-		return ConditionClause{}, false
-	}
-	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingTarget,
-		Selection: ConditionSelection{
-			AttributeCompare: ConditionAttributeComparison{Attribute: attribute, Op: op, Value: value},
-		},
-	}, true
-}
-
 // conditionAttributeComparePermanentNoun reports whether noun is one of the
 // permanent-type words recognizeTargetAttributeCompareCondition accepts as a
 // named-possessive antecedent ("that permanent's", "that creature's", ...).
-// It deliberately excludes "spell" and any other noun -- see that function's
-// doc comment for why a spell antecedent is not safe to accept here.
 func conditionAttributeComparePermanentNoun(noun string) bool {
 	switch strings.ToLower(noun) {
 	case "permanent", "creature", "artifact", "enchantment", "land", "planeswalker", "battle":

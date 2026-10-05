@@ -20,6 +20,18 @@ func bindContextualObjectCondition(
 		if subject.NodeID != condition.SubjectRefID {
 			continue
 		}
+		if condition.SubjectSpell && subject.Kind == ReferenceThatObject &&
+			(subject.Binding == ReferenceBindingSource ||
+				subject.Binding == ReferenceBindingTarget && subject.Occurrence >= 0 &&
+					subject.Occurrence < len(targets) && targets[subject.Occurrence].Selector.Kind != SelectorSpell) && trigger != nil &&
+			!trigger.Pattern.OneOrMore && triggerEventBindsStackObject(trigger.Pattern.Event) {
+			for _, target := range targets {
+				if target.Order.Start < subject.Order.Start && target.Selector.Kind == SelectorSpell {
+					return false
+				}
+			}
+			subject.Binding = ReferenceBindingEventStackObject
+		}
 		wasSource := subject.Binding == ReferenceBindingSource
 		sourceOrder := -1
 		if wasSource && subject.Kind == ReferencePronoun {
@@ -43,11 +55,11 @@ func bindContextualObjectCondition(
 			}
 		}
 		returned, hasReturn := priorReturnedPermanentAntecedent(subject, effects)
-		if hasReturn && (!wasSource || subject.Kind == ReferencePronoun && effects[returned].Order.End > sourceOrder) {
+		if !condition.SubjectSpell && hasReturn && (!wasSource || subject.Kind == ReferencePronoun && effects[returned].Order.End > sourceOrder) {
 			subject.Binding = ReferenceBindingPriorInstructionResult
 			subject.PriorInstruction = returned
 		}
-		if !hasReturn && (!wasSource || subject.Kind == ReferencePronoun) {
+		if !condition.SubjectSpell && !hasReturn && (!wasSource || subject.Kind == ReferencePronoun) {
 			for i, owner := range effects {
 				if !owner.Order.Contains(subject.Order) || subject.Order.Start >= owner.VerbOrder.Start {
 					continue
@@ -70,6 +82,9 @@ func bindContextualObjectCondition(
 			}
 		}
 		if subject.Binding == ReferenceBindingPriorInstructionResult {
+			if condition.SubjectSpell {
+				return false
+			}
 			prior := subject.PriorInstruction
 			if prior < 0 || prior >= len(effects) {
 				return false
@@ -117,6 +132,7 @@ func bindContextualObjectCondition(
 			}
 			subject.Binding = ReferenceBindingTarget
 			subject.Occurrence = occurrence
+			condition.TargetCardProducerClauseID = producer.ClauseID
 		}
 		if subject.Binding == ReferenceBindingTarget && len(condition.SubjectTypes) > 0 {
 			if subject.Occurrence < 0 || subject.Occurrence >= len(targets) {
@@ -135,6 +151,11 @@ func bindContextualObjectCondition(
 				}
 				subject.Binding = ReferenceBindingEventPermanent
 			}
+		}
+		if condition.SubjectSpell && subject.Binding != ReferenceBindingEventStackObject &&
+			(subject.Binding != ReferenceBindingTarget || subject.Occurrence < 0 ||
+				subject.Occurrence >= len(targets) || targets[subject.Occurrence].Selector.Kind != SelectorSpell) {
+			return false
 		}
 		switch subject.Binding {
 		case ReferenceBindingTarget:
@@ -164,6 +185,10 @@ func bindContextualObjectCondition(
 		case ReferenceBindingEventPermanent:
 			if trigger == nil || trigger.Pattern.OneOrMore ||
 				!triggerEventBindsPermanent(trigger.Pattern.Event) {
+				return false
+			}
+		case ReferenceBindingEventStackObject:
+			if trigger == nil || trigger.Pattern.OneOrMore || !triggerEventBindsStackObject(trigger.Pattern.Event) {
 				return false
 			}
 		case ReferenceBindingSource:

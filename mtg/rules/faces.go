@@ -8,6 +8,9 @@ import (
 )
 
 func cardFaceDef(card *game.CardInstance, face game.FaceIndex) (*game.CardDef, bool) {
+	if card == nil || card.Def == nil {
+		return nil, false
+	}
 	return card.Def.FaceDefView(face)
 }
 
@@ -156,7 +159,7 @@ func stackObjectColors(g *game.Game, obj *game.StackObject) ([]color.Color, bool
 		return spellColors(def), true
 	}
 	if obj.SourceID != 0 {
-		if card, ok := g.GetCardInstance(obj.SourceID); ok {
+		if card, ok := g.GetCardInstance(obj.SourceID); ok && card.Def != nil {
 			if def, ok := card.Def.FaceDef(obj.Face); ok {
 				return spellColors(def), true
 			}

@@ -74,6 +74,13 @@ type Condition struct {
 	// object. An empty ObjectMatches Selection is a wildcard existence check.
 	Object        opt.V[ObjectReference]
 	ObjectMatches opt.V[Selection]
+	// UseCounteredSpellManaValue permits a past-tense numeric test to read the
+	// exact target spell's information captured by an earlier counter instruction.
+	// It never makes an unavailable live target or a nonspell's value known.
+	UseCounteredSpellManaValue bool
+	// TargetCardResultKey names the successful move that published the exact
+	// reached incarnation of the selected card, rather than its stale target.
+	TargetCardResultKey ResultKey
 	// ObjectAttackedThisTurn requires the exact object identity named by Object
 	// to appear in an attacker-declared event during the current turn.
 	ObjectAttackedThisTurn                                       bool
@@ -433,6 +440,8 @@ func (c *Condition) Empty() bool {
 		!c.ControlComparison.Exists &&
 		!c.Object.Exists &&
 		!c.ObjectMatches.Exists &&
+		!c.UseCounteredSpellManaValue &&
+		c.TargetCardResultKey == "" &&
 		!c.ObjectAttackedThisTurn &&
 		len(c.Types) == 0 &&
 		!c.EventPermanentNameUniqueAmongControlledAndGraveyardCreatures &&

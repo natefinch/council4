@@ -1452,6 +1452,11 @@ type CompiledCondition struct {
 	SubjectSpan         shared.Span
 	HasSubjectReference bool
 	SubjectTypes        []types.Card
+	SubjectSpell        bool
+	SubjectPast         bool
+	// TargetCardProducerClauseID identifies the actual targeted-card move whose
+	// reached incarnation supplies this condition, or zero for a live target.
+	TargetCardProducerClauseID int
 
 	// SubjectRefID is the parser-assigned NodeID of the reference that fills the
 	// subject span for source-death or contextual object predicates, or -1 when

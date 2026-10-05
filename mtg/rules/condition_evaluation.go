@@ -11,7 +11,17 @@ func (r *effectResolver) instructionConditionSatisfied(instr *game.Instruction) 
 		if r.conditionEvaluations == nil {
 			r.conditionEvaluations = make(map[game.ConditionKey]bool)
 		}
-		r.conditionEvaluations[instr.PublishCondition] = satisfied
+		available := true
+		if instr.Condition.Val.Condition.Exists {
+			available = objectConditionInformationAvailable(r.game, conditionContext{
+				controller: stackObjectController(r.obj), sourceObjectID: r.obj.SourceID, obj: r.obj,
+			}, &instr.Condition.Val.Condition.Val)
+		}
+		if available {
+			r.conditionEvaluations[instr.PublishCondition] = satisfied
+		} else {
+			delete(r.conditionEvaluations, instr.PublishCondition)
+		}
 	}
 	if instr.ConditionGate != "" {
 		value, published := r.conditionEvaluations[instr.ConditionGate]
