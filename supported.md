@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,481 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,490 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4510,6 +4510,7 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Eaten Alive
 - Eaten by Piranhas
 - Eater of Hope
+- Eater of the Dead
 - Ebon Dragon
 - Ebon Drake
 - Ebon Stronghold
@@ -5355,6 +5356,7 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Fencing Ace
 - Feral Abomination
 - Feral Animist
+- Feral Appetite
 - Feral Deathgorger // Dusk Sight
 - Feral Ferocity
 - Feral Incarnation
@@ -7747,6 +7749,7 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Icy Manalith
 - Icy Manipulator
 - Ideas Unbound
+- Idle Thoughts
 - Idol of Oblivion
 - Idolized
 - Idyllic Beachfront
@@ -12780,6 +12783,7 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Riveteers Overlook
 - Rix Maadi, Dungeon Palace
 - RMS Titanic
+- Roadside Reliquary
 - Roaming Ghostlight
 - Roaming Throne
 - Roar of Endless Song
@@ -13177,6 +13181,7 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Sapphire Drake
 - Sapphire Leech
 - Sapphire Medallion
+- Saprazzan Breaker
 - Saprazzan Heir
 - Saprazzan Outrigger
 - Saprazzan Skerry
@@ -13408,6 +13413,8 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Screeching Soulbreaker
 - Scribe of the Mindful
 - Scrivener
+- Scroll of Avacyn
+- Scroll of Griselbrand
 - Scroll of the Masters
 - Scroll Thief
 - Scrollshift
@@ -15950,6 +15957,7 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Tezzeret's Ambition
 - Tezzeret's Gambit
 - Tezzeret's Gatebreaker
+- Tezzeret's Simulacrum
 - Tezzeret's Strider
 - Tezzeret, Artifice Master
 - Thalakos Deceiver
@@ -18421,6 +18429,7 @@ Council4 currently supports **18,481 of 33,013 cards eligible for paper support 
 - Zhur-Taa Swine
 - Ziatora's Proving Ground
 - Ziatora, the Incinerator
+- Zimone, Quandrix Prodigy
 - Zo-Zu the Punisher
 - Zoanthrope
 - Zodiac Dog
