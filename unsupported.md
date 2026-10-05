@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,490 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,492 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -4165,7 +4165,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Fatehold Charm** — unsupported draw spell: mode 1: the executable source backend supports only exact fixed card draw
 - **Fatespinner** — unsupported draw spell: the executable source backend supports only exact fixed card draw
 - **Fathom Feeder** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Ingest (Whenever this creature deals combat damage to a player, that player exiles the top card of their library.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
-- **Fathom Fleet Boarder** — unsupported life spell: the executable source backend supports only exact fixed life changes
 - **Fathom Fleet Captain** — unsupported triggered ability: the executable source backend supports only recognized semantic self triggers with supported effects
 - **Fathom Fleet Swordjack** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Encore {5}{R} ({5}{R}, Exile this card from your graveyard: For each opponent, create a token copy that attacks that opponent this turn if able. They gain haste. Sacrifice them at the beginning of the next end step. Activate only as a sorcery.); unsupported damage spell: the executable source backend supports only exact fixed, X, or source-power damage to the attacked player or planeswalker; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Fathom Seer** — unsupported ability word: the executable source backend does not yet lower the "Morph" ability word
@@ -9827,7 +9826,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Reaping the Rewards** — unsupported ability word: the executable source backend does not yet lower the "Buyback" ability word
 - **Reason // Believe** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Aftermath (Cast this spell only from your graveyard. Then exile it.); unsupported ability content: the executable source backend does not yet lower this ability content; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — per-effect condition unrecognized: if it's a creature card
 - **Reasonable Doubt** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Suspect up to one target creature. (A suspected creature has menace and can't block.); unsupported ability content: the executable source backend does not yet lower this ability content
-- **Reaver Drone** — unsupported life spell: the executable source backend supports only exact fixed life changes
 - **Reaver Titan** — unsupported Protection ability: the executable source backend supports only exact fixed-predicate protection
 - **Rebbec, Architect of Ascension** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
 - **Rebel Informer** — unsupported Oracle construct: the compiler preserved but did not confidently lower: This creature can't be the target of white spells or abilities from white sources.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported library placement: the executable source backend supports only exact target graveyard-to-library placement

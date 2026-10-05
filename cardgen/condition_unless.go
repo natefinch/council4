@@ -10,7 +10,7 @@ import (
 // Payment outcomes, result antecedents and object bindings are not state gates.
 func resolvingStateUnless(condition compiler.CompiledCondition) bool {
 	if condition.Kind != compiler.ConditionUnless || !condition.Negated ||
-		condition.Intervening || condition.SourceInGraveyard || condition.Selection.ExcludeSource ||
+		condition.Intervening || condition.SourceInGraveyard ||
 		condition.Threshold < 0 {
 		return false
 	}
