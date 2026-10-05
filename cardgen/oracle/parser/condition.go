@@ -859,7 +859,8 @@ func precedingOptionalMayClause(tokens []shared.Token, index int) bool {
 
 func conditionClauseEnd(tokens []shared.Token, start int) int {
 	for i := start; i < len(tokens); i++ {
-		if tokens[i].Kind == shared.Period || i > start && tokens[i].Kind == shared.Comma {
+		if tokens[i].Kind == shared.Period || i > start && tokens[i].Kind == shared.Comma &&
+			!conditionSubtypeListContinues(tokens, i) {
 			return i
 		}
 	}
@@ -2180,9 +2181,12 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingTarget,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingTarget,
+		Selection:      selection,
+		SubjectSpan:    body[0].Span,
+		HasSubjectSpan: true,
+		SubjectRefID:   atoms.ReferenceIDAt(body[0].Span),
 	}, true
 }
 

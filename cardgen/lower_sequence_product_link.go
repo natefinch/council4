@@ -7,21 +7,10 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 )
 
-// This file generalizes the linking half of CR 607 ("Linked Abilities") for
-// ordered sequences: when one clause's Oracle text causes an object to be
-// created, exiled, milled, sacrificed, or otherwise produced, and a later
-// clause refers back to "it"/"that <noun>"/"them" naming that same object, the
-// two clauses are linked regardless of which verbs are involved. The compiler
-// already recognizes this structurally (ReferenceBindingPriorInstructionResult
-// + PriorInstruction), so the remaining gap was that every producer/consumer
-// verb pair needed its own hand-written function to publish and re-resolve the
-// link (createdTokenLinkKey, milledCardsLinkKey, sacrificedCreatureLinkKey, ...
-// each with a matching bespoke sequence lowerer). sequencePriorInstructionLink
-// closes that gap for the single-instruction case: it publishes the antecedent
-// instruction's result under a canonical per-effect key and hands the
-// consuming clause the same key through contentCtx, so any single-effect
-// lowerer that already resolves its object through lowerObjectReference/
-// lowerCardReference gains this capability for free.
+// Ordered sequence consumers share a canonical object publication with the
+// exact producer identified by the compiler. Currently the supported producers
+// are CreateToken and single-source PutOnBattlefield; other primitive kinds need
+// their own actual-result publication proof before participating.
 
 // sequencePriorInstructionLink reports the antecedent effect index and link key
 // a clause's own references need to resolve a ReferenceBindingPriorInstructionResult
@@ -30,13 +19,8 @@ import (
 // instruction span within sequence, recorded as each clause lowers in effect
 // order; sequence holds the instructions lowered so far.
 //
-// It only handles a single-instruction antecedent (the common case: a create,
-// exile, mill, or sacrifice clause that produces exactly one instruction). A
-// multi-instruction antecedent (for example a multi-target clause) is left
-// unlinked — callers still fail closed exactly as before, so this is strictly
-// additive. It also fails closed rather than overwrite an antecedent
-// instruction that already publishes a different key, so it never conflicts
-// with an existing hand-written linking path.
+// Optional, multi-instruction and competing antecedents fail closed. An
+// incompatible existing publication is never overwritten.
 func sequencePriorInstructionLink(
 	references []compiler.CompiledReference,
 	sequence []game.Instruction,
@@ -58,7 +42,12 @@ func sequencePriorInstructionLink(
 		if instructionIndex < 0 || instructionIndex >= len(sequence) {
 			return 0, "", false
 		}
-		candidateKey := game.LinkedKey(fmt.Sprintf("sequence-effect-%d-product", j))
+		for _, other := range references {
+			if other.Binding == compiler.ReferenceBindingPriorInstructionResult && other.PriorInstruction != j {
+				return 0, "", false
+			}
+		}
+		candidateKey := sequenceProductKey(j)
 		linked, published := trySetInstructionPublishLinked(&sequence[instructionIndex], candidateKey)
 		if !published {
 			return 0, "", false
@@ -66,6 +55,10 @@ func sequencePriorInstructionLink(
 		return j, linked, true
 	}
 	return 0, "", false
+}
+
+func sequenceProductKey(index int) game.LinkedKey {
+	return game.LinkedKey(fmt.Sprintf("sequence-effect-%d-product", index))
 }
 
 // trySetInstructionPublishLinked sets instr's PublishLinked field to key,
@@ -76,12 +69,34 @@ func sequencePriorInstructionLink(
 // antecedent), failing when it names something else (an existing hand-written
 // linking path already claimed this instruction for a different key).
 //
-// Add a case here whenever a new producing primitive needs to participate in
-// generic prior-instruction linking; every game.* primitive with a
-// PublishLinked field is a candidate.
+// A PublishLinked field alone is not proof that a primitive publishes the
+// correct actual result.
 func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey) (game.LinkedKey, bool) {
-	switch primitive := instr.Primitive.(type) {
-	case game.CreateToken:
+	if instr.Optional || instr.Primitive == nil {
+		return "", false
+	}
+	switch instr.Primitive.Kind() {
+	case game.PrimitiveCreateToken:
+		primitive, ok := instr.Primitive.(game.CreateToken)
+		if !ok {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitivePutOnBattlefield:
+		primitive, ok := instr.Primitive.(game.PutOnBattlefield)
+		if !ok || len(primitive.Sources) != 0 {
+			return "", false
+		}
+		if _, card := primitive.Source.CardRef(); !card {
+			if _, linked := primitive.Source.LinkedKey(); !linked {
+				return "", false
+			}
+		}
 		if primitive.PublishLinked != "" {
 			return primitive.PublishLinked, primitive.PublishLinked == key
 		}

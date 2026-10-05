@@ -40,10 +40,22 @@ closed, as do optional preceding target slots. Typed demonstrative nouns also
 constrain the antecedent: an event's "that land" is not a later creature target.
 Supported compound card-noun contractions use the same selection grammar as
 their uncontracted forms; missing contextual ownership never selects the event
-as a default. Blink-result incarnations, resolution-chosen cards, and permanent/card
-union selection remain separate capabilities. Existing subtype-only contracted
-target gates retain their legacy lowering; this tranche does not rewrite their
-linked return/blink behavior.
+as a default.
+
+Singular return/blink conditions preserve the parser-owned subject and exact
+producer index. Shared sequence assembly publishes the actual entered permanent
+under a per-effect product key; compatible consequences consume that same key,
+including across an unconditional intervening clause. Blink's input link names
+the departed object and its reached card incarnation, not the new permanent.
+Conditions read the new permanent's current effective characteristics, or that
+new object's own departure LKI if it subsequently leaves. A skipped, failed, or
+replacement-diverted return publishes no permanent; stale card zone versions
+and missing permanent identities never substitute a later incarnation.
+Optional/plural producers, competing antecedents, resolution-chosen reveal/look
+subjects, and permanent/card union selection retain fail-closed boundaries.
+Immediate referenced-permanent consequences use the same exact product context
+in modal and non-modal bodies. A delayed product consumer without an explicit
+captured reference refuses rather than rereading a later publication.
 
 Condition type selections share the selection atom vocabulary: adjacent types
 are conjunctive (`artifact creature`), `or`/`and/or` joins alternatives,

@@ -42,7 +42,12 @@ func bindContextualObjectCondition(
 				}
 			}
 		}
-		if !wasSource || subject.Kind == ReferencePronoun {
+		returned, hasReturn := priorReturnedPermanentAntecedent(subject, effects)
+		if hasReturn && (!wasSource || subject.Kind == ReferencePronoun && effects[returned].Order.End > sourceOrder) {
+			subject.Binding = ReferenceBindingPriorInstructionResult
+			subject.PriorInstruction = returned
+		}
+		if !hasReturn && (!wasSource || subject.Kind == ReferencePronoun) {
 			for i, owner := range effects {
 				if !owner.Order.Contains(subject.Order) || subject.Order.Start >= owner.VerbOrder.Start {
 					continue
@@ -70,6 +75,33 @@ func bindContextualObjectCondition(
 				return false
 			}
 			producer := effects[prior]
+			if producer.Kind == EffectReturn || producer.Kind == EffectPut {
+				if !singularReturnedPermanentProducer(effects, prior) {
+					return false
+				}
+				if len(condition.SubjectTypes) > 0 {
+					candidates := producer.Targets
+					if len(candidates) == 0 && prior > 0 {
+						candidates = effects[prior-1].Targets
+					}
+					if len(candidates) != 1 || !conditionSubjectMatchesTarget(condition.SubjectTypes, candidates[0]) {
+						if trigger == nil || trigger.Pattern.OneOrMore ||
+							!triggerEventBindsPermanent(trigger.Pattern.Event) ||
+							!conditionSubjectTypesContained(condition.SubjectTypes, trigger.Pattern.SubjectSelection.RequiredTypes) {
+							return false
+						}
+						for _, target := range targets {
+							if target.Order.Start < subject.Order.Start && conditionSubjectMatchesTarget(condition.SubjectTypes, target) {
+								return false
+							}
+						}
+						subject.Binding = ReferenceBindingEventPermanent
+					}
+				}
+				condition.ObjectBinding = subject.Binding
+				condition.ObjectReference = &subject
+				return true
+			}
 			// A targeted non-battlefield card remains readable by card identity
 			// after exile. Do not extend this to a new battlefield incarnation
 			// (blink), or to cards chosen/revealed during resolution.

@@ -1563,6 +1563,11 @@ func lowerDelayedSingleEffectSpell(
 	if content, ok := lowerDelayedCapturedCombatDisposal(ctx, effect.DelayedTiming); ok {
 		return content, nil
 	}
+	for _, reference := range ctx.content.References {
+		if reference.Binding == compiler.ReferenceBindingPriorInstructionResult {
+			return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported delayed object capture", "a prior-instruction object requires a captured delayed reference")
+		}
+	}
 
 	var content game.AbilityContent
 	if primitive, ok := lowerDelayedSelfPrimitive(ctx); ok {
@@ -1752,6 +1757,7 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		if ref.Binding != compiler.ReferenceBindingEventPermanent &&
 			ref.Binding != compiler.ReferenceBindingEventRelatedPermanent &&
 			ref.Binding != compiler.ReferenceBindingTarget &&
+			ref.Binding != compiler.ReferenceBindingPriorInstructionResult &&
 			ref.Binding != compiler.ReferenceBindingSource {
 			return game.AbilityContent{}, false
 		}
@@ -1791,9 +1797,11 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		return game.AbilityContent{}, false
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		AllowEvent:  true,
-		AllowSource: true,
-		AllowTarget: true,
+		AllowEvent:       true,
+		AllowSource:      true,
+		AllowTarget:      true,
+		PriorInstruction: ctx.priorInstruction,
+		PriorLinkedKey:   ctx.priorLinkedKey,
 	})
 	if !ok {
 		return game.AbilityContent{}, false

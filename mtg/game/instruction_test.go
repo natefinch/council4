@@ -89,7 +89,7 @@ func TestValidateInstructionSequenceAcceptsPublishedReanimatedPermanent(t *testi
 	}
 }
 
-func TestValidateInstructionSequenceRejectsRepublishingLinkedBattlefieldSource(t *testing.T) {
+func TestValidateInstructionSequenceAcceptsDistinctLinkedBattlefieldResult(t *testing.T) {
 	seq := []Instruction{
 		{Primitive: Reveal{
 			Amount:        Fixed(1),
@@ -102,9 +102,14 @@ func TestValidateInstructionSequenceRejectsRepublishingLinkedBattlefieldSource(t
 		}},
 	}
 
-	err := ValidateInstructionSequence(seq)
-	if err == nil || !strings.Contains(err.Error(), "can publish only a referenced card") {
-		t.Fatalf("ValidateInstructionSequence() error = %v", err)
+	if err := ValidateInstructionSequence(seq); err != nil {
+		t.Fatalf("ValidateInstructionSequence() error = %v, want nil", err)
+	}
+	seq[1].Primitive = PutOnBattlefield{
+		Source: LinkedBattlefieldSource("revealed-card"), PublishLinked: "revealed-card",
+	}
+	if err := ValidateInstructionSequence(seq); err == nil || !strings.Contains(err.Error(), "must be distinct") {
+		t.Fatalf("aliased input/output validation = %v", err)
 	}
 }
 
