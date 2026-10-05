@@ -38,9 +38,9 @@ increments once, before any chosen mode or Instruction evaluates its gate.
 Target-bearing ordinary activated bodies compose fixed controller mana outputs
 through shared Ability Content with resolving If/Unless/ordinal gates. Repeated
 single-color optional outputs form one AddMana quantity and one resolving choice,
-not one choice per symbol. Mixed-color expanded optional actions require a modeled
-group and remain unsupported. Activation restrictions and untargeted mana-shell
-ordinals retain their separate, fail-closed boundaries.
+not one choice per symbol. Mixed-color expanded optional actions share one modeled
+controller decision through the optional-action envelope. Activation restrictions
+and untargeted mana-shell ordinals retain their separate, fail-closed boundaries.
 
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
@@ -196,6 +196,15 @@ Vanguard cards are excluded with explicit report reasons.
    resolutions do not inherit a prior sequence's decision. Whole-group `If you do`
    outcomes, compound optional costs, and unmodeled actor ownership remain refused;
    neither the first nor last primitive's success stands in for group success.
+   Entered-object riders use actual fresh permanent publications, invalidated
+   before producer gates, including across independent or expanded intervening
+   actions. The typed target occurrence identifies the earlier producer through
+   the existing per-effect Instruction ranges and canonical product publication.
+   If no adapter can supply the entered incarnation, an
+   original target-card reference is not substituted for that permanent.
+   Chained linked-object publications without a skipped-availability contract
+   remain refused rather than clearing persistent links or recapturing stale
+   objects after a declined group.
    Positive exact and at-least result counts
    count matching actual members, not the requested amount. Active `you` result
    grammar requires modeled controller action ownership. Costs, opaque verbs,

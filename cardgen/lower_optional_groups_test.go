@@ -83,8 +83,8 @@ func TestOptionalActionGroupCardPaths(t *testing.T) {
 			name: "actual entered object rider",
 			text: "You may gain 1 life and return target creature card from your graveyard to the battlefield. It gains haste until end of turn.",
 			paths: []string{
-				"Sequence[1].Primitive.(game.PutOnBattlefield).PublishLinked = \"gain-keyword-2\"",
-				"Sequence[2].Primitive.(game.ApplyContinuous).Object.Val.linkID = \"gain-keyword-2\"",
+				"Sequence[1].Primitive.(game.PutOnBattlefield).PublishLinked = \"sequence-effect-1-product\"",
+				"Sequence[2].Primitive.(game.ApplyContinuous).Object.Val.linkID = \"sequence-effect-1-product\"",
 			},
 			absent: []string{"Sequence[2].Optional = true", "Sequence[2].OptionalDecisionGate"},
 		},
@@ -110,6 +110,31 @@ func TestOptionalActionGroupCompatibleShells(t *testing.T) {
 			assertCardPathsAbsent(t, card, tt.path+"[1].Optional = true")
 		})
 	}
+}
+
+func TestOptionalEnteredObjectUsesTypedProducer(t *testing.T) {
+	for _, tt := range []struct{ name, text, producer, rider, key string }{
+		{"nonadjacent", "You may return target creature card from your graveyard to the battlefield and gain 1 life. It gains haste until end of turn.", "Sequence[0]", "Sequence[2]", "sequence-effect-0-product"},
+		{"expanded intervener", "You may return target creature card from your graveyard to the battlefield and add {R}{G}. It gains haste until end of turn.", "Sequence[0]", "Sequence[3]", "sequence-effect-0-product"},
+		{"unconditional intervener", "You may gain 1 life and return target creature card from your graveyard to the battlefield. You gain 2 life. It gains haste until end of turn.", "Sequence[1]", "Sequence[3]", "sequence-effect-1-product"},
+		{"nonzero target", "Tap target artifact. You may gain 1 life and return target creature card from your graveyard to the battlefield. It gains haste until end of turn.", "Sequence[2]", "Sequence[3]", "sequence-effect-2-product"},
+		{"permanent keyword", "You may return target creature card from your graveyard to the battlefield and gain 1 life. It gains haste.", "Sequence[0]", "Sequence[2]", "sequence-effect-0-product"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			card := &ScryfallCard{Name: "Optional Entered Subject", Layout: "normal", TypeLine: "Sorcery", OracleText: tt.text}
+			assertCardPaths(t, card,
+				tt.producer+".Primitive.(game.PutOnBattlefield).PublishLinked = \""+tt.key+"\"",
+				tt.rider+".Primitive.(game.ApplyContinuous).Object.Val.linkID = \""+tt.key+"\"")
+			assertCardPathsAbsent(t, card, tt.rider+".Optional = true", tt.rider+".OptionalDecisionGate")
+		})
+	}
+}
+
+func TestOptionalGroupCaptureRequiresAvailablePublication(t *testing.T) {
+	assertCardUnsupported(t, &ScryfallCard{
+		Name: "Optional Capture Near Miss", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "You may gain 1 life and return target creature card from your graveyard to the battlefield. It gains haste until end of turn. Exile it at the beginning of the next end step.",
+	}, "optional linked-object publication has no skipped-availability contract")
 }
 
 func TestOptionalGroupIdentityIsTyped(t *testing.T) {
