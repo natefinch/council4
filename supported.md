@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,546 of 33,013 cards eligible for paper support (56.2%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,570 of 33,013 cards eligible for paper support (56.3%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -360,6 +360,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Almost Perfect
 - Alms of the Vein
 - Along the Crooked Way
+- Alora, Merry Thief
 - Alpha Authority
 - Alpha Kavu
 - Alpha Myr
@@ -962,6 +963,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Avacyn's Collar
 - Avacyn's Pilgrim
 - Avacyn, Angel of Hope
+- Avacyn, Angel of Horror
 - Avacynian Priest
 - Avalanche Riders
 - Avarax
@@ -1436,6 +1438,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Binding Mummy
 - Binding the Old Gods
 - Biogenic Ooze
+- Biolume Egg // Biolume Serpent
 - Biomass Mutation
 - Biomathematician
 - Biomechan Engineer
@@ -3488,6 +3491,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Daraja Griffin
 - Darba
 - Daredevil's Billy Club
+- Daretti, Scrap Savant
 - Darien, King of Kjeldor
 - Darigaaz's Attendant
 - Darigaaz's Caldera
@@ -5976,6 +5980,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Frostpeak Yeti
 - Frostveil Ambush
 - Frostwalla
+- Frostweb Spider
 - Frostwind Invoker
 - Frozen Aether
 - Frozen Shade
@@ -6156,6 +6161,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Gearsmith Prodigy
 - Geier Reach Sanitarium
 - Geist of Saint Thalia
+- Geist of Saint Traft
 - Geist of the Archives
 - Geist of the Moors
 - Geist Snatch
@@ -6235,6 +6241,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Ghor-Clan Rampager
 - Ghor-Clan Savage
 - Ghor-Clan Wrecker
+- Ghost Council of Orzhova
 - Ghost Hounds
 - Ghost Lantern // Bind Spirit
 - Ghost Quarter
@@ -6265,6 +6272,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Ghoulcaller's Bell
 - Ghoulcaller's Chant
 - Ghoulflesh
+- Ghoulish Impetus
 - Ghoulish Procession
 - Ghoulsteed
 - Ghoultree
@@ -6828,6 +6836,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Grazing Gladehart
 - Grazing Kelpie
 - Grazing Whiptail
+- Greasefang, Okiba Boss
 - Great Arashin City
 - Great Defender
 - Great Desert Prospector
@@ -7426,6 +7435,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Highway Robbery
 - Higure, the Still Wind
 - Hijack
+- Hikari, Twilight Guardian
 - Hildibrand Manderville // Gentleman's Rise
 - Hill Giant
 - Hill Giant Herdgorger
@@ -7548,6 +7558,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Horned Troll
 - Horned Turtle
 - Hornet
+- Hornet Cannon
 - Hornet Cobra
 - Hornet Harasser
 - Hornet Nest
@@ -8107,6 +8118,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Invisible Stalker
 - Invisible Woman
 - Invisible Woman, Sue Storm
+- Invocation of Saint Traft
 - Invoke the Divine
 - Invoke the Firemind
 - Invoke the Winds
@@ -8460,6 +8472,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Kathari Bomber
 - Kathari Remnant
 - Kathari Screecher
+- Kavaron Harrier
 - Kavaron Turbodrone
 - Kavu
 - Kavu Aggressor
@@ -9057,6 +9070,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Lich Lord of Unx
 - Lich's Caress
 - Liege of the Axe
+- Liesa, Forgotten Archangel
 - Liesa, Shroud of Dusk
 - Lieutenant Kirtar
 - Life Burst
@@ -9323,6 +9337,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Loxodon Warhammer
 - Loxodon Wayfarer
 - Loyal Apprentice
+- Loyal Cathar // Unhallowed Cathar
 - Loyal Drake
 - Loyal Gryff
 - Loyal Guardian
@@ -10041,6 +10056,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Mirrodin's Core
 - Mirror Entity
 - Mirror Image
+- Mirror Mockery
 - Mirror of Galadriel
 - Mirror Sheen
 - Mirror Wall
@@ -10619,6 +10635,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - News Helicopter
 - Nexus Wardens
 - Neyith of the Dire Hunt
+- Nezahal, Primal Tide
 - Nezumi Bladeblesser
 - Nezumi Bone-Reader
 - Nezumi Cutthroat
@@ -12171,6 +12188,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Raised by Wolves
 - Raiyuu, Storm's Edge
 - Raka Disciple
+- Rakalite
 - Rakdos Cackler
 - Rakdos Carnarium
 - Rakdos Charm
@@ -12711,6 +12729,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Ridgetop Raptor
 - Riding Red Hare
 - Rielle, the Everwise
+- Rienne, Angel of Rebirth
 - Riftburst Hellion
 - Rig for War
 - Rigging Runner
@@ -13427,6 +13446,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Scrap Trawler
 - Scrapheap
 - Scrapper Champion
+- Scrappy Bruiser
 - Scrapskin Drake
 - Scrapwork Cohort
 - Scrapwork Mutt
@@ -14062,6 +14082,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Sigurd, Jarl of Ravensthorpe
 - Silence
 - Silent Artisan
+- Silent Assassin
 - Silent Attendant
 - Silent Clearing
 - Silent Dart
@@ -14613,6 +14634,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Sorin's Vengeance
 - Sorin, Imperious Bloodlord
 - Sosuke's Summons
+- Sosuke, Son of Seshiro
 - Soul Bleed
 - Soul Channeling
 - Soul Collector
@@ -15234,6 +15256,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Stone Golem
 - Stone Haven Medic
 - Stone Haven Pilgrim
+- Stone Idol Trap
 - Stone Kavu
 - Stone of Erech
 - Stone Quarry
@@ -18022,6 +18045,7 @@ Council4 currently supports **18,546 of 33,013 cards eligible for paper support 
 - Wicked Reward
 - Wicked Visitor
 - Wicked Wolf
+- Wicker Warcrawler
 - Wicker Witch
 - Wickerbough Elder
 - Wickersmith's Tools
