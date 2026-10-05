@@ -1489,6 +1489,7 @@ func elseGateConditionIndex(content compiler.AbilityContent, effectIndex int) in
 // binds the nearest preceding matching producer, which need not be adjacent.
 func isResolvingSuccessGate(predicate compiler.ConditionPredicate) bool {
 	return predicate == compiler.ConditionPredicatePriorInstructionAccepted ||
+		predicate == compiler.ConditionPredicateCounterSucceeded ||
 		predicate == compiler.ConditionPredicateResultThisWay
 }
 
@@ -1503,6 +1504,9 @@ func isResolvingSuccessGate(predicate compiler.ConditionPredicate) bool {
 // recognizer no longer statically prevents once more than one outcome kind is
 // possible) failing closed instead of silently binding to the wrong producer.
 func resultThisWayMatchesEffect(condition compiler.CompiledCondition, effect compiler.CompiledEffect) bool {
+	if condition.Predicate == compiler.ConditionPredicateCounterSucceeded {
+		return effect.Kind == compiler.EffectCounter
+	}
 	if condition.Predicate != compiler.ConditionPredicateResultThisWay {
 		return true
 	}

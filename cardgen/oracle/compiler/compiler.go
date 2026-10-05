@@ -239,6 +239,7 @@ func compileAbility(
 		)
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
+	bindCounterResultReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Content.Targets, compiled.Content.Effects)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Content.Targets, compiled.Content.Effects, compiled.Trigger)
 	bindReturnedConditionConsequences(&compiled.Content)
 	applyEffectReferenceBindings(compiled.Content.Effects, compiled.Content.References)
@@ -658,6 +659,7 @@ func compileMode(
 	resolveChosenPermanentSearchNames(effects)
 	resolvePaymentSourceSacrifices(effects, trigger != nil && trigger.Pattern.Source == TriggerSourceSelf)
 	conditions := compileConditions(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions)
+	bindCounterResultReferences(conditions, references, targets, effects)
 	bindConditionReferences(conditions, references, targets, effects, trigger)
 	bindReturnedConditionReferences(conditions, references, targets, effects)
 	applyEffectReferenceBindings(effects, references)

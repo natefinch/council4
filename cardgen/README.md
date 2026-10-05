@@ -290,6 +290,18 @@ Vanguard cards are excluded with explicit report reasons.
    with colliding, potentially skipped result publications requires a shared
    namespace and is refused. This includes repeat bodies and bonus mode choices;
    guaranteed publishers may overwrite a key before their own local consumers.
+   A specific "that spell is countered this way" condition owns a counter
+   producer ClauseID, subject reference identity and target occurrence. The
+   compiler preserves that exact binding ahead of generic product heuristics,
+   including when an independent exile precedes the counter. Ordinary consequences test
+   that CounterObject's actual success, including when a resolving tax skips
+   the counter. Intrinsic exile/library-top/hand replacement clauses instead
+   modify the same counter operation before its zone mutation; they never lower
+   to a subsequent card move. These modifiers compose with supported conditions,
+   taxes, targets and independent riders through shared ordered assembly.
+   Unproven or ambiguous spell occurrences, multiple aliased tax payments,
+   library-bottom/top-or-bottom-choice destinations and unavailable target filters
+   remain refused. A failed counter cannot change a spell's later destination.
    Existing state-gated `Otherwise` and `instead` branches consume the same
    captured decision (or its complement); they do not re-test state after the
    preceding action. Missing publications fail closed even for complements.

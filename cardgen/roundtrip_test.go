@@ -133,6 +133,26 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: Discard three cards. If two land cards were discarded this way, draw a card.",
 	},
 	{
+		Name: "RT Counter Outcome", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Counter target spell unless its controller pays {3}. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life. You gain 1 life.",
+	},
+	{
+		Name: "RT Counter Activated", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: Counter target spell. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life.",
+	},
+	{
+		Name: "RT Counter Triggered", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "When this artifact enters, counter target spell. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life.",
+	},
+	{
+		Name: "RT Counter Modal", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Choose one \u2014\n\u2022 Counter target spell. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life.\n\u2022 Draw a card.",
+	},
+	{
 		Name: "RT Ordinal Mana", Layout: "normal", TypeLine: "Artifact",
 		OracleText: flamekinBody,
 	},
@@ -383,6 +403,35 @@ func TestRTLandSemantic(t *testing.T) {
 	}
 	if add.ManaColor != mana.G {
 		t.Fatalf("mana color = %%q", add.ManaColor)
+	}
+}
+
+func TestRTCounterOutcomeSemantic(t *testing.T) {
+	sequences := [][]game.Instruction{
+		RTCounterOutcome().SpellAbility.Val.Modes[0].Sequence,
+		RTCounterActivated().ActivatedAbilities[0].Content.Modes[0].Sequence,
+		RTCounterTriggered().TriggeredAbilities[0].Content.Modes[0].Sequence,
+		RTCounterModal().SpellAbility.Val.Modes[0].Sequence,
+	}
+	for i, sequence := range sequences {
+		index := 0
+		if i == 0 {
+			index = 1
+			if _, ok := sequence[0].Primitive.(game.Pay); !ok ||
+				!sequence[1].ResultGate.Exists ||
+				sequence[1].ResultGate.Val.Key != sequence[0].PublishResult {
+				t.Fatalf("counter tax wiring = %%#v", sequence)
+			}
+		}
+		counter, ok := sequence[index].Primitive.(game.CounterObject)
+		if !ok || !counter.ExileInstead || sequence[index].PublishResult == "" ||
+			!sequence[index+1].ResultGate.Exists ||
+			sequence[index+1].ResultGate.Val.Key != sequence[index].PublishResult {
+			t.Fatalf("counter outcome round trip = %%#v", sequence)
+		}
+	}
+	if sequences[0][3].ResultGate.Exists {
+		t.Fatal("independent counter rider became success-gated")
 	}
 }
 
