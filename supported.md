@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,570 of 33,013 cards eligible for paper support (56.3%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,574 of 33,013 cards eligible for paper support (56.3%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -10748,6 +10748,7 @@ Council4 currently supports **18,570 of 33,013 cards eligible for paper support 
 - Nivix Guildmage
 - No Escape
 - No Mercy
+- No More Lies
 - No Way Out
 - No-Dachi
 - Nobilis of War
@@ -12514,6 +12515,7 @@ Council4 currently supports **18,570 of 33,013 cards eligible for paper support 
 - Reinforcements
 - Reito Lantern
 - Reito Sentinel
+- Reject
 - Reject Imperfection
 - Rejuvenate
 - Rejuvenating Springs
@@ -14767,6 +14769,7 @@ Council4 currently supports **18,570 of 33,013 cards eligible for paper support 
 - Spectral Steel
 - Spell Pierce
 - Spell Satchel
+- Spell Shrivel
 - Spell Snare
 - Spell Snip
 - Spell Snuff
@@ -15710,6 +15713,7 @@ Council4 currently supports **18,570 of 33,013 cards eligible for paper support 
 - Synapse Necromage
 - Synapse Sliver
 - Synchronous Sliver
+- Syncopate
 - Syndic of Tithes
 - Syndicate Enforcer
 - Syndicate Guildmage

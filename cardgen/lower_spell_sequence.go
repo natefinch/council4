@@ -45,6 +45,11 @@ func lowerLinkedCounterTokenSequence(
 		ctx.content.Effects[1].Kind != compiler.EffectCreate {
 		return game.AbilityContent{}, nil, false
 	}
+	if slices.ContainsFunc(ctx.content.Conditions, func(condition compiler.CompiledCondition) bool {
+		return condition.Predicate == compiler.ConditionPredicateCounterSucceeded
+	}) {
+		return game.AbilityContent{}, nil, false
+	}
 	if content, ok := lowerCounterThenTargetControllerTokenSequence(ctx); ok {
 		return content, nil, true
 	}
@@ -109,12 +114,6 @@ func lowerOrderedSequenceSpecialCase(
 	}
 	if content, diagnostic, handled := lowerLinkedCounterTokenSequence(ctx); handled {
 		return content, diagnostic, true
-	}
-	if content, ok := lowerCounterThenExileInstead(ctx); ok {
-		return content, nil, true
-	}
-	if content, ok := lowerCounterThenAlternateDestination(ctx); ok {
-		return content, nil, true
 	}
 	if content, ok := lowerSelfBlinkSequence(ctx); ok {
 		return content, nil, true
@@ -270,17 +269,22 @@ func lowerOrderedEffectSequence(
 	// the optional effect's instruction Optional + PublishResult and gating the
 	// "if you do" effect on that result. planOptionalFlow fails closed unless the
 	// optionality forms exactly one supported pair.
-	optionalFlow, ok := planOptionalFlow(ctx.content)
+	counterDestinations, planningContent, counterReason := planCounterDestinations(ctx.content)
+	if counterReason != "" {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterReason)
+	}
+	optionalFlow, ok := planOptionalFlow(planningContent)
 	if !ok {
 		if optionalFlow.failureCategory != "" {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, optionalFlow.failureCategory)
 		}
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported resolving optionality")
 	}
-	conditionPlan, matchReason, ok := planSequenceConditions(ctx.content, optionalFlow)
+	conditionPlan, matchReason, ok := planSequenceConditions(planningContent, optionalFlow)
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, matchReason)
 	}
+	conditionPlan.externalConditions = append(conditionPlan.externalConditions, counterDestinations.conditions...)
 	effectConditions := conditionPlan.gates
 	gateConditions := conditionPlan.gateConditions
 	// Planning assigns every condition once; clause-owned conditions must
@@ -330,6 +334,13 @@ func lowerOrderedEffectSequence(
 	effectInstructionRanges := make([][2]int, len(ctx.content.Effects))
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
+		if counterDestinations.absorbed[i] {
+			consumedReferences += len(conditionPlan.referencesForClause(ctx.content, i))
+			if len(keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)) != 0 {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterDestinationCategory)
+			}
+			continue
+		}
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
 		effectAbility.singleAction = optionalFlow.marksOptional(i)
@@ -529,6 +540,9 @@ func lowerOrderedEffectSequence(
 			continue
 		}
 		mode := content.Modes[0]
+		if !counterDestinations.apply(i, mode.Sequence) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterDestinationCategory)
+		}
 		// An inherited target that no prior clause owned (a bare "Choose target
 		// ..." sentence with no effect of its own) is first materialized here, so
 		// this clause consumes it. Inherited targets already recorded in

@@ -738,6 +738,8 @@ const (
 	// optional instruction was performed ("if you do"). It is the affirmative
 	// complement of ConditionPredicatePriorInstructionNotAccepted.
 	ConditionPredicatePriorInstructionAccepted
+	// ConditionPredicateCounterSucceeded tests the owned counter's actual result.
+	ConditionPredicateCounterSucceeded
 	// ConditionPredicateResultThisWay is satisfied when an object matching
 	// ThisWayOutcome's card/permanent noun was affected by the prior effect of
 	// that same kind ("if a creature is destroyed this way", "if a Saproling was

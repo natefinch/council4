@@ -87,10 +87,6 @@ func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex i
 	if !ok {
 		return false
 	}
-	if exileInstead {
-		target.ExileOnResolution = true
-	}
-	target.CounteredDestination = destination
 	if obj.TargetControllerLKI == nil {
 		obj.TargetControllerLKI = make(map[int]game.PlayerID)
 	}
@@ -113,7 +109,7 @@ func counterTargetStackObject(g *game.Game, obj *game.StackObject, targetIndex i
 		}
 		obj.TargetNameLKI[targetIndex] = name
 	}
-	return counterStackObject(g, stackObjectID)
+	return counterStackObjectWithDestination(g, stackObjectID, exileInstead, destination)
 }
 
 // stackSpellName returns the name of a spell's cast face — the face the spell was

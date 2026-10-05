@@ -57,6 +57,7 @@ const (
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
 	ConditionPredicateResultThisWay                                    ConditionPredicateKind = "ConditionPredicateResultThisWay"
+	ConditionPredicateCounterSucceeded                                 ConditionPredicateKind = "ConditionPredicateCounterSucceeded"
 	ConditionPredicateDiesThisWay                                      ConditionPredicateKind = "ConditionPredicateDiesThisWay"
 	ConditionPredicateNoLifeLostThisWay                                ConditionPredicateKind = "ConditionPredicateNoLifeLostThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
@@ -939,6 +940,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsGreatestToughnessCondition,
 		recognizeControlsGreatestManaValueCondition,
 		recognizeResultThisWayCondition,
+		recognizeCounterSucceededCondition,
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,

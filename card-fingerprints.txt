@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18570 supported cards
+# 18574 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -10754,6 +10754,7 @@ e7f7831b2160004d  Nivix Barrier
 9ce895dda5bfb12f  Nivix Guildmage
 53305cd460b13088  No Escape
 f6886c350ed772ec  No Mercy
+9590ca384520a72f  No More Lies
 a926ba499efb5bb9  No Way Out
 e0375b5f60c4bb03  No-Dachi
 26aff3ecb277bb5e  Nobilis of War
@@ -12520,6 +12521,7 @@ dcaa9719aca4311a  Reinforced Bulwark
 d40e924a71147f60  Reinforcements
 fd189bd3a36a044b  Reito Lantern
 22635c5ec0f79ce9  Reito Sentinel
+16562a038bf85256  Reject
 2192236b28bfc1ab  Reject Imperfection
 4ba2ec0a9c9b09cc  Rejuvenate
 51b17d77648a3cab  Rejuvenating Springs
@@ -14773,6 +14775,7 @@ b76de5bcef38d4e9  Spectral Shepherd
 2c4d72da4fbf9b7d  Spectral Steel
 3c08837a7e985ad2  Spell Pierce
 06a9120eb11d7d2f  Spell Satchel
+7e30177094c9a761  Spell Shrivel
 209c1d622c54b7f4  Spell Snare
 eec1ef623af0b9ec  Spell Snip
 8438c36d5caea777  Spell Snuff
@@ -15716,6 +15719,7 @@ f208161e49fc7761  Symbol of Unsummoning
 ed69c72620161c11  Synapse Necromage
 3a8e2bd4f0e97725  Synapse Sliver
 c10a73435adb5fab  Synchronous Sliver
+af7a5a07fc3dda07  Syncopate
 f1eab037c3155e1e  Syndic of Tithes
 00873a2bfa2e8329  Syndicate Enforcer
 a73ff711e3da44c8  Syndicate Guildmage

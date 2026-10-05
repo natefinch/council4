@@ -118,6 +118,12 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			return plan, false, true
 		}
 		effect := content.Effects[producer]
+		if condition.Predicate == compiler.ConditionPredicateCounterSucceeded {
+			if owned, ok := counterOutcomeProducer(content, condition); !ok || owned != producer {
+				plan.failureCategory = counterOwnershipCategory
+				return plan, false, true
+			}
+		}
 		if effect.Negated || effect.DelayedTiming != 0 {
 			plan.failureCategory = "structural — actual-result producer is negated or delayed"
 			return plan, false, true
@@ -270,15 +276,22 @@ func resultProducerActsForController(effect compiler.CompiledEffect) bool {
 func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string, bool) {
 	key, publishes := flow.publishers[ei]
 	if publishes || flow.optional[ei] {
-		if len(sequence) != 1 || sequence[0].Optional || sequence[0].PublishResult != "" {
+		index := 0
+		counterIndex, isCounter := counterActionInstruction(sequence)
+		if publishes && !flow.optional[ei] && isCounter {
+			index = counterIndex
+		} else if len(sequence) != 1 {
 			return "structural — result producer or optional effect requires one instruction", false
 		}
-		if publishes && sequence[0].ResultGate.Exists {
+		if sequence[index].Optional || sequence[index].PublishResult != "" {
+			return "structural — result producer or optional effect requires one instruction", false
+		}
+		if publishes && sequence[index].ResultGate.Exists && !isCounter {
 			return "structural — result publication conflicts with clause result wiring", false
 		}
-		sequence[0].Optional = flow.optional[ei]
+		sequence[index].Optional = flow.optional[ei]
 		if publishes {
-			sequence[0].PublishResult = key
+			sequence[index].PublishResult = key
 		}
 	}
 	if gate, exists := flow.gates[ei]; exists {
