@@ -52,6 +52,7 @@ func lowerFixedPhaseSubject(
 		return refuse("fixed-phase body has no unique compatible typed subject")
 	}
 	var object game.ObjectReference
+	var schedulingTargets []game.TargetSpec
 	group := false
 	card := false
 	fromZone := zone.None
@@ -98,23 +99,26 @@ func lowerFixedPhaseSubject(
 			return refuse("fixed-phase target subject has no exact local occurrence")
 		}
 		target := ctx.content.Targets[index]
-		_, permanent := permanentTargetSpecWithCardinality(target)
+		spec, permanent := permanentTargetSpecWithCardinality(target)
 		if target.Cardinality.Min < 0 || target.Cardinality.Min > 1 || target.Cardinality.Max != 1 ||
 			!permanent || (target.Selector.Zone != zone.None && target.Selector.Zone != zone.Battlefield) {
 			return refuse("fixed-phase subject is not one battlefield target")
 		}
 		object = game.TargetPermanentReference(index)
+		if subject.DirectTarget {
+			schedulingTargets = []game.TargetSpec{spec}
+		}
 	case parser.DelayedSubjectSource:
 		if ctx.enclosingKind == compiler.AbilitySpell && subject.CardZone == zone.None {
 			return refuse("a resolving spell is not a battlefield source subject")
 		}
 		object = game.SourcePermanentReference()
-		if subject.CardZone != zone.None {
+		if subject.CardIdentity || subject.CardZone != zone.None {
 			card, fromZone = true, subject.CardZone
 		}
 	case parser.DelayedSubjectEvent:
 		object = game.EventPermanentReference()
-		if subject.CardZone != zone.None {
+		if subject.CardIdentity || subject.CardZone != zone.None {
 			card, fromZone = true, subject.CardZone
 		}
 	case parser.DelayedSubjectEventRelated:
@@ -127,7 +131,7 @@ func lowerFixedPhaseSubject(
 	}
 	// Delayed quantities may not read the creating stack object's X, event or
 	// prior scalar result at a later phase without a modeled quantity capture.
-	if effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+	if effect.Amount.VariableX || effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
 		effect.PowerDelta.VariableX || effect.ToughnessDelta.VariableX {
 		return refuse("fixed-phase body requires an unavailable delayed quantity capture")
 	}
@@ -187,7 +191,7 @@ func lowerFixedPhaseSubject(
 		trigger.CapturedObject = opt.Val(object)
 	}
 
-	return game.Mode{Sequence: []game.Instruction{{
+	return game.Mode{Targets: schedulingTargets, Sequence: []game.Instruction{{
 		Primitive: game.CreateDelayedTrigger{Trigger: trigger},
 	}}}.Ability(), nil, true
 }

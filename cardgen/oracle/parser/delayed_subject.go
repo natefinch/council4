@@ -29,6 +29,7 @@ type DelayedSubjectOwnership struct {
 	ProducerClauseID      int                `json:",omitempty"`
 	TargetOccurrence      int                `json:",omitempty"`
 	CardZone              zone.Type          `json:",omitempty"`
+	CardIdentity          bool               `json:",omitempty"`
 	DirectTarget          bool               `json:",omitempty"`
 	OptionalAtDelayedTime bool               `json:",omitempty"`
 }
@@ -129,6 +130,19 @@ func emitDelayedSubjects(sentences []Sentence, references []Reference, condition
 				return reference.Kind == ReferenceThisObject && strings.EqualFold(joinedEffectText(reference.Tokens), "this card")
 			}) {
 			subject.CardZone = zone.Graveyard
+		}
+		if trigger != nil && trigger.TriggerEvent != nil &&
+			trigger.TriggerEvent.Kind == TriggerEventKindZoneChange &&
+			trigger.TriggerEvent.Zone.MatchFromZone && trigger.TriggerEvent.Zone.FromZone.Kind == TriggerEventZoneBattlefield &&
+			(subject.Kind == DelayedSubjectEvent ||
+				subject.Kind == DelayedSubjectSource && trigger.TriggerEvent.Subject.Kind == TriggerEventSubjectSelf) &&
+			(effect.Kind == EffectReturn && effect.ToZone == zone.Battlefield ||
+				slices.ContainsFunc(effect.References, func(reference Reference) bool {
+					return slices.ContainsFunc(reference.Tokens, func(token shared.Token) bool {
+						return strings.EqualFold(token.Text, "card")
+					})
+				})) {
+			subject.CardIdentity = true
 		}
 		effect.DelayedSubject = subject
 		if effect.Optional {
@@ -293,6 +307,8 @@ func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targe
 			subject = DelayedSubjectOwnership{Kind: DelayedSubjectTarget, TargetOccurrence: occurrence}
 		}
 	}
+	productFloor := bestOrder
+	products := 0
 	for _, effect := range effects {
 		if effect.Order.End <= bestOrder || !delayedReferenceMatchesProduct(reference, effect) {
 			continue
@@ -305,6 +321,12 @@ func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targe
 			}
 		default:
 			continue
+		}
+		if effect.Order.End > productFloor {
+			products++
+			if products > 1 && delayedReferencePlural(reference) {
+				return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
+			}
 		}
 		bestOrder = effect.Order.End
 		subject = DelayedSubjectOwnership{Kind: DelayedSubjectProduct, ProducerClauseID: effect.ClauseID}
@@ -350,6 +372,14 @@ func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targe
 		return DelayedSubjectOwnership{Kind: DelayedSubjectEvent}
 	}
 	return DelayedSubjectOwnership{Kind: DelayedSubjectUnsupported}
+}
+
+func delayedReferencePlural(reference Reference) bool {
+	return reference.Pronoun == PronounThem || reference.Pronoun == PronounThose ||
+		slices.ContainsFunc(reference.Tokens, func(token shared.Token) bool {
+			return strings.EqualFold(token.Text, "tokens") || strings.EqualFold(token.Text, "creatures") ||
+				strings.EqualFold(token.Text, "cards")
+		})
 }
 
 func delayedReferenceMatchesSource(reference, source Reference) bool {

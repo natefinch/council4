@@ -3293,8 +3293,10 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		if p.Trigger.EventPattern.Exists {
 			return errors.New("delayed trigger CapturedCard requires a fixed-phase timing")
 		}
-		if p.Trigger.CapturedCard.Val.Kind() != ObjectReferenceLinkedObject {
-			return errors.New("delayed trigger CapturedCard requires a linked-object reference")
+		switch p.Trigger.CapturedCard.Val.Kind() {
+		case ObjectReferenceLinkedObject, ObjectReferenceSourcePermanent, ObjectReferenceEventPermanent:
+		default:
+			return errors.New("delayed trigger CapturedCard has an incompatible reference domain")
 		}
 		if err := validateObjectReference(p.Trigger.CapturedCard.Val, targets, checkTargets); err != nil {
 			return err

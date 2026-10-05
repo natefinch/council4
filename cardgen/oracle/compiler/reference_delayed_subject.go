@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func bindDelayedSubjectReference(reference *CompiledReference, effects []CompiledEffect) bool {
@@ -12,6 +13,7 @@ func bindDelayedSubjectReference(reference *CompiledReference, effects []Compile
 		if !slices.Contains(subject.ReferenceNodeIDs, reference.NodeID) {
 			continue
 		}
+		reference.CardIdentity = reference.CardIdentity || subject.CardIdentity || subject.CardZone != zone.None
 		switch subject.Kind {
 		case parser.DelayedSubjectSource:
 			reference.Binding = ReferenceBindingSource

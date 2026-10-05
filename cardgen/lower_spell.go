@@ -2088,6 +2088,11 @@ func lowerImmediateSingleEffectSpell(
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported captured card action",
 			"the immediate card action or its parameters have no captured-reference adapter")
 	}
+	if ctx.capturedSubject != nil && ctx.content.Effects[0].Kind == compiler.EffectReturn &&
+		ctx.content.Effects[0].ToZone == zone.Battlefield {
+		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported captured subject domain",
+			"battlefield reanimation requires an actual captured card incarnation")
+	}
 	if content, ok := lowerReferencedPermanentEffect(ctx); ok {
 		return content, nil
 	}

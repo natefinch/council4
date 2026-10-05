@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
@@ -19,6 +20,13 @@ func lowerContentCardReference(ctx contentCtx, reference compiler.CompiledRefere
 		return game.CapturedCardReference(), true
 	}
 	return lowerCardReference(reference, bindings)
+}
+
+func returnedCardEnchantmentEffects(asEnchantment bool) []game.ContinuousEffect {
+	if !asEnchantment {
+		return nil
+	}
+	return []game.ContinuousEffect{{Layer: game.LayerType, SetTypes: []types.Card{types.Enchantment}}}
 }
 
 func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
@@ -46,7 +54,8 @@ func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
 		}
 		from = ctx.capturedSubject.fromZone
 	}
-	if from != zone.Exile && from != zone.Graveyard {
+	if from != zone.Exile && from != zone.Graveyard &&
+		!(from == zone.None && destination == zone.Battlefield && ctx.capturedSubject != nil && ctx.capturedSubject.card) {
 		return game.AbilityContent{}, false
 	}
 	if effect.Amount.Known && (!effect.CounterKindKnown || effect.Amount.Value != 1 ||
@@ -72,6 +81,7 @@ func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
 	if destination == zone.Battlefield {
 		put := game.PutOnBattlefield{
 			Source: game.CardBattlefieldSource(card), EntryTapped: effect.EntersTapped, EntryTransformed: effect.EntersTransformed,
+			ContinuousEffects: returnedCardEnchantmentEffects(effect.ReturnAsEnchantment),
 		}
 		if effect.UnderYourControl {
 			put.Recipient = opt.Val(game.ControllerReference())
@@ -84,7 +94,7 @@ func lowerReferencedCardMove(ctx contentCtx) (game.AbilityContent, bool) {
 		}
 		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
 	}
-	if effect.EntersTapped || effect.EntersTransformed || effect.UnderYourControl || effect.CounterKindKnown {
+	if effect.EntersTapped || effect.EntersTransformed || effect.UnderYourControl || effect.CounterKindKnown || effect.ReturnAsEnchantment {
 		return game.AbilityContent{}, false
 	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
