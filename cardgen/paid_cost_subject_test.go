@@ -79,3 +79,32 @@ func TestPaidCostSubjectRefusals(t *testing.T) {
 		})
 	}
 }
+
+func TestPaidCostDiscardThisWayIsNotResolvingResult(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{
+		Name: "Paid Discard This Way", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{T}, Discard a card: If a land card was discarded this way, draw a card.",
+	}
+	face := lowerSingleFace(t, card)
+	ability := face.ActivatedAbilities[0]
+	if len(ability.AdditionalCosts) != 2 || ability.AdditionalCosts[0].SubjectKey != "" {
+		t.Fatalf("tap and discard cost components: %#v", ability.AdditionalCosts)
+	}
+	key := ability.AdditionalCosts[1].SubjectKey
+	match := effectConditionMatch(t, ability.Content.Modes[0].Sequence[0])
+	ref := match.Object.Val
+	if key == "" || ref.Kind() != game.ObjectReferencePaidCost || ref.CostKey() != key || ref.CostKind() != game.PaidCostDiscard {
+		t.Fatalf("cost key %q, reference %#v", key, ref)
+	}
+	assertCardPaths(t, card, "SubjectKey = "+`"`+key+`"`, "RequiredTypes[0] = types.Land")
+	assertCardPathsAbsent(t, card, "ActivationCondition.Exists = true", "PublishResult", "ResultGate")
+	for _, text := range []string{
+		"{T}, Discard two cards: If a land card was discarded this way, draw a card.",
+		"{T}: If a land card was discarded this way, draw a card.",
+	} {
+		assertCardUnsupported(t, &ScryfallCard{
+			Name: "Unbound Discard This Way", Layout: "normal", TypeLine: "Artifact", OracleText: text,
+		})
+	}
+}

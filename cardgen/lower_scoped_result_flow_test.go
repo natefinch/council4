@@ -156,13 +156,8 @@ func TestQuantifiedResultCardPathsAndNearMisses(t *testing.T) {
 		{"Draw a card and gain 2 life. If you do, scry 1.", "no unique earlier typed producer"},
 		{"You may have target player discard a card and draw a card. If you do, scry 1.", "action group acceptance not modeled"},
 		{"You may draw a card and gain 2 life. If you do, scry 1.", "action group acceptance not modeled"},
-		{"{T}, Discard a card: If a land card was discarded this way, draw a card.", "unsupported draw spell"},
 	} {
-		typ := "Sorcery"
-		if tt.text[0] == '{' {
-			typ = "Artifact"
-		}
-		assertCardUnsupported(t, &ScryfallCard{Name: "Result Refusal", Layout: "normal", TypeLine: typ, OracleText: tt.text}, tt.reason)
+		assertCardUnsupported(t, &ScryfallCard{Name: "Result Refusal", Layout: "normal", TypeLine: "Sorcery", OracleText: tt.text}, tt.reason)
 	}
 }
 
