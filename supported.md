@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,493 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,492 of 33,013 cards eligible for paper support (56.0%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -14901,6 +14901,7 @@ Council4 currently supports **18,493 of 33,013 cards eligible for paper support 
 - Spitting Spider
 - Splash Lasher
 - Splash Lasher
+- Splash Portal
 - Splatter Goblin
 - Splatter Technique
 - Splatter Thug
@@ -15952,8 +15953,6 @@ Council4 currently supports **18,493 of 33,013 cards eligible for paper support 
 - Teval's Judgment
 - Teval, the Balanced Scale
 - Teyo's Lightshield
-- Teyo, Diamondblade Mage
-- Teyo, Lightshield Expert
 - Teyo, the Shieldmage
 - Teysa, Envoy of Ghosts
 - Teysa, Orzhov Scion
