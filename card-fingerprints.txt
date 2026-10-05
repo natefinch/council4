@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18526 supported cards
+# 18535 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -410,6 +410,7 @@ d9c442b647d161b3  Ambush Krotiq
 7e943b0f9d804699  Ambush Viper
 c11bd132b8511e79  Ambush Wolf
 a22c1785e79961ec  Amethyst Dragon // Explosive Crystal
+eae6ff8f3c5525dd  Ammit Eternal
 42f51c6ef5451f1d  Amok
 450cfb0abd695127  Amonkhet Raceway
 3da7c51aab9aee05  Amorphous Axe
@@ -571,6 +572,7 @@ b4f4acfb1546d985  Ant-Man's Army
 c75e1bf898930623  Ant-Man, Scott Lang
 9143d64354de54f4  Antagonize
 d57f7c293b2329a3  Anthem of Champions
+9529012713541022  Anthroplasm
 1f36a463477dea56  Anticipate
 1c159486e803e061  Anurid Barkripper
 941b668cc376ddb0  Anurid Brushhopper
@@ -847,6 +849,7 @@ b5898a56b779d294  Ashenmoor Liege
 235c555a181b3c38  Ashiok's Reaper
 ba686ac9db60ffd0  Ashiok's Skulker
 365ef0d2c3b84a7a  Ashiok, Sculptor of Fears
+cc07fd9067a781dd  Ashling the Pilgrim
 23dcd885aaaf9a7c  Ashmouth Hound
 17a78250ab93e045  Ashnod's Altar
 30cdbddf1dae0a90  Ashnod's Harvester
@@ -1642,6 +1645,7 @@ eb076180214ee9c7  Blood Feud
 48c06b33c1e9a6ac  Blood Frenzy
 64074ab08119f2da  Blood Glutton
 42886c519578ed16  Blood Host
+37cb2dc6fc8cf4ba  Blood Hound
 e877373e5d7ce6ab  Blood Hustler
 f93a97121a4dc94f  Blood Hypnotist
 cbb3882b1e4ee529  Blood Knight
@@ -3706,6 +3710,7 @@ c2e20819fe830da3  Deceive the Messenger
 2706667a02dcd5e5  Deceptive Frostkite
 113d7b058c28f161  Deceptive Landscape
 efa9c4d5c91a8e37  Decimate
+03c88e529c9daee9  Decimator Beetle
 eccdfc162bf99344  Decision Paralysis
 075a433d8897a7cb  Decisive Denial
 a8259ac2c06f820e  Decoction Module
@@ -6358,6 +6363,7 @@ db6002f304a8ac6f  Gitaxian Anatomist
 ab4831c975e0cf7d  Gitaxian Probe
 9d16be351cf8cc78  Gitaxian Raptor
 ca9ee24027c76b9c  Githzerai Monk
+6ce892830aad1df9  Give // Take
 9b7434c407456eeb  Give In to Violence
 5c2a722b12b262ee  Gix's Caress
 c6fac1d33d8e0680  Gixian Infiltrator
@@ -7108,6 +7114,7 @@ df0a535f9f585e98  Hanged Executioner
 aa54e270f3b99f75  Hanweir Garrison
 0c9a616ec87b82f5  Hanweir Militia Captain // Westvale Cult Leader
 abb24884668dd668  Hanweir, the Writhing Township
+2c479361c6ac9add  Hapatra's Mark
 1cf569c5fbf74137  Hapatra, Vizier of Poisons
 1fefe564be442e79  Hapless Researcher
 6f4c2f48c162778d  Happy Hogan, Dauntless Driver
@@ -18174,6 +18181,7 @@ f6d366f3addf4093  Witherbloom Charm
 10dfbf936c9d04b1  Withered Wretch
 ae1d93968b890c57  Withering Boon
 b22dbc188e9a5247  Withering Torment
+4b39f31a1e0cf801  Witherscale Wurm
 6de5dac132804ff9  Without Weakness
 33ffca08e0aeb5f9  Withstand
 9d069963bc9b73d2  Withstand Death
@@ -18194,6 +18202,7 @@ a3b828c6d27440f7  Wizards of Thay
 53773520abb9b7c5  Wizened Cenn
 51a2771a1b0217dc  Wizened Mentor
 a6906e40547a7d76  Woebearer
+5831c0d7aacd3c78  Woeleecher
 9bda2db8ba99b9f6  Wojek Bodyguard
 02ff3af1d1032723  Wojek Halberdiers
 4754e578c655e077  Wolf

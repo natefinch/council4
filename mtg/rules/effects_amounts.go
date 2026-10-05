@@ -1400,6 +1400,11 @@ func instructionResultGateSatisfied(g *game.Game, obj *game.StackObject, gate ga
 	if !ok {
 		return false
 	}
+	if gate.AmountAvailable {
+		if _, available := obj.ResolvedAmounts[string(gate.Key)]; !available {
+			return false
+		}
+	}
 	matches := (gate.Accepted == game.TriAny || (gate.Accepted == game.TriTrue) == result.Accepted) &&
 		(gate.Succeeded == game.TriAny || (gate.Succeeded == game.TriTrue) == result.Succeeded) &&
 		(gate.SearchedLibrary == game.TriAny || (gate.SearchedLibrary == game.TriTrue) == result.SearchedLibrary) &&

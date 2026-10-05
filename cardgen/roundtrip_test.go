@@ -13,6 +13,18 @@ import (
 // ability categories through the full typed pipeline.
 var roundTripCards = []*ScryfallCard{
 	{
+		Name: "Ashling", Layout: "normal", TypeLine: "Legendary Creature - Elemental Shaman",
+		OracleText: ashlingRemovedCounterText, Power: new("1"), Toughness: new("1"),
+	},
+	{
+		Name: "RT Counter Quantity", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: Remove all charge counters from this artifact. Draw that many cards.",
+	},
+	{
+		Name: "RT Counter Quantity Spell", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Remove all +1/+1 counters from target creature. Draw that many cards.",
+	},
+	{
 		Name: "RT Reached Target Card", Layout: "normal", TypeLine: "Creature",
 		OracleText: "{1}: Exile target card from a graveyard. If it was a permanent card, put a +1/+1 counter on this creature.",
 		Power:      new("2"), Toughness: new("2"),
@@ -241,8 +253,47 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
+
+func TestRTRemovedCounterQuantitySemantic(t *testing.T) {
+	seq := RTCounterQuantity().ActivatedAbilities[0].Content.Modes[0].Sequence
+	remove := seq[0].Primitive.(game.RemoveCounter)
+	draw := seq[1].Primitive.(game.Draw)
+	if remove.AllKinds || remove.CounterKind != counter.Charge ||
+		remove.Amount.DynamicAmount().Val.Kind != game.DynamicAmountObjectCounters ||
+		seq[0].PublishResult == "" || !seq[1].ResultGate.Val.AmountAvailable ||
+		draw.Amount.DynamicAmount().Val.ResultKey != seq[0].PublishResult {
+		t.Fatal("named-kind actual quantity publication did not round-trip")
+	}
+	seq = RTCounterQuantitySpell().SpellAbility.Val.Modes[0].Sequence
+	remove = seq[0].Primitive.(game.RemoveCounter)
+	draw = seq[1].Primitive.(game.Draw)
+	if remove.AllKinds || remove.CounterKind != counter.PlusOnePlusOne ||
+		!seq[1].ResultGate.Val.AmountAvailable ||
+		draw.Amount.DynamicAmount().Val.ResultKey != seq[0].PublishResult {
+		t.Fatal("spell scalar availability did not round-trip")
+	}
+	ability := Ashling().ActivatedAbilities[0]
+	seq = ability.Content.Modes[0].Sequence
+	remove = seq[1].Primitive.(game.RemoveCounter)
+	if !ability.CountsResolutionsThisTurn || len(seq) != 4 ||
+		remove.AllKinds || remove.CounterKind != counter.PlusOnePlusOne ||
+		seq[1].Condition.Val.Condition.Val.SourceAbilityResolutionOrdinalThisTurn != 3 ||
+		seq[1].PublishCondition == "" {
+		t.Fatal("ordinal named-kind removal did not round-trip")
+	}
+	for _, instruction := range seq[2:] {
+		damage := instruction.Primitive.(game.Damage)
+		if instruction.ConditionGate != seq[1].PublishCondition ||
+			!instruction.ResultGate.Val.AmountAvailable ||
+			instruction.ResultGate.Val.Key != seq[1].PublishResult ||
+			damage.Amount.DynamicAmount().Val.ResultKey != seq[1].PublishResult {
+			t.Fatal("expanded damage scalar and condition identities did not round-trip")
+		}
+	}
+}
 
 func TestRTNumericConditionSemantic(t *testing.T) {
 	past := RTCounteredSpellCondition().SpellAbility.Val.Modes[0].Sequence[1].Condition.Val.Condition.Val

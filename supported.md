@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,526 of 33,013 cards eligible for paper support (56.1%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,535 of 33,013 cards eligible for paper support (56.1%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -404,6 +404,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Ambush Viper
 - Ambush Wolf
 - Amethyst Dragon // Explosive Crystal
+- Ammit Eternal
 - Amok
 - Amonkhet Raceway
 - Amorphous Axe
@@ -565,6 +566,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Ant-Man, Scott Lang
 - Antagonize
 - Anthem of Champions
+- Anthroplasm
 - Anticipate
 - Anurid Barkripper
 - Anurid Brushhopper
@@ -841,6 +843,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Ashiok's Reaper
 - Ashiok's Skulker
 - Ashiok, Sculptor of Fears
+- Ashling the Pilgrim
 - Ashmouth Hound
 - Ashnod's Altar
 - Ashnod's Harvester
@@ -1636,6 +1639,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Blood Frenzy
 - Blood Glutton
 - Blood Host
+- Blood Hound
 - Blood Hustler
 - Blood Hypnotist
 - Blood Knight
@@ -3700,6 +3704,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Deceptive Frostkite
 - Deceptive Landscape
 - Decimate
+- Decimator Beetle
 - Decision Paralysis
 - Decisive Denial
 - Decoction Module
@@ -6352,6 +6357,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Gitaxian Probe
 - Gitaxian Raptor
 - Githzerai Monk
+- Give // Take
 - Give In to Violence
 - Gix's Caress
 - Gixian Infiltrator
@@ -7102,6 +7108,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Hanweir Garrison
 - Hanweir Militia Captain // Westvale Cult Leader
 - Hanweir, the Writhing Township
+- Hapatra's Mark
 - Hapatra, Vizier of Poisons
 - Hapless Researcher
 - Happy Hogan, Dauntless Driver
@@ -18168,6 +18175,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Withered Wretch
 - Withering Boon
 - Withering Torment
+- Witherscale Wurm
 - Without Weakness
 - Withstand
 - Withstand Death
@@ -18188,6 +18196,7 @@ Council4 currently supports **18,526 of 33,013 cards eligible for paper support 
 - Wizened Cenn
 - Wizened Mentor
 - Woebearer
+- Woeleecher
 - Wojek Bodyguard
 - Wojek Halberdiers
 - Wolf

@@ -452,6 +452,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				MoveCountersAll:               syntax.MoveCountersAll,
 				MoveCountersAllOfKind:         syntax.MoveCountersAllOfKind,
 				RemoveCountersAll:             syntax.RemoveCountersAll,
+				RemoveCountersAllOfKind:       syntax.RemoveCountersAllOfKind,
 				RemoveThoseCounters:           syntax.RemoveThoseCounters,
 				MoveCountersDistribute:        syntax.MoveCountersDistribute,
 				MoveThoseCounters:             syntax.MoveThoseCounters,

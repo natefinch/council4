@@ -252,7 +252,8 @@ func groupWideDynamicAmountKind(kind compiler.DynamicAmountKind) bool {
 		compiler.DynamicAmountTotalPower,
 		compiler.DynamicAmountTotalToughness,
 		compiler.DynamicAmountTotalManaValue,
-		compiler.DynamicAmountColorCount:
+		compiler.DynamicAmountColorCount,
+		compiler.DynamicAmountRemovedCounterCount:
 		return true
 	default:
 		return false
