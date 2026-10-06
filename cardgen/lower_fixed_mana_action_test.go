@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestFixedManaChannelBoundary(t *testing.T) {
@@ -89,13 +90,85 @@ func TestFixedOrdinaryManaCompositions(t *testing.T) {
 	}
 }
 
+func TestFixedOrdinaryOptionalMixedManaCondition(t *testing.T) {
+	t.Parallel()
+	card := &ScryfallCard{Name: "Test Mana", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: Target creature gains trample until end of turn. If you have no cards in hand, you may add {R}{G}."}
+	assertCardPaths(t, card,
+		"ActivatedAbilities[0].Content.Modes[0].Targets[0].Constraint = \"target creature\"",
+		"Sequence[1].Condition.Val.Condition.Val.ControllerHandEmpty = true",
+		"Sequence[1].Optional = true",
+		"Sequence[1].PublishCondition",
+		"Sequence[1].PublishOptionalDecision",
+		"Sequence[2].ConditionGate",
+		"Sequence[2].OptionalDecisionGate")
+	assertCardPathsAbsent(t, card,
+		"ActivatedAbilities[1]", "ManaAbilities[", "ActivationCondition.Exists = true",
+		"Sequence[3]", "Sequence[0].Condition", "Sequence[0].PublishCondition", "Sequence[0].ConditionGate",
+		"Sequence[0].Optional = true", "Sequence[0].PublishOptionalDecision", "Sequence[0].OptionalDecisionGate",
+		"Sequence[2].Condition.Val.", "Sequence[2].PublishCondition", "Sequence[2].Optional = true",
+		"Sequence[2].PublishOptionalDecision", "ResultGate.Exists = true", "PublishResult")
+
+	defs, diagnostics, err := CompileCardDefs(card)
+	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
+		t.Fatalf("compile: err=%v diagnostics=%v defs=%d", err, diagnostics, len(defs))
+	}
+	def := defs[0]
+	if len(def.ActivatedAbilities) != 1 || len(def.ManaAbilities) != 0 || def.ActivatedAbilities[0].ActivationCondition.Exists {
+		t.Fatal("resolving mana condition became a mana ability or activation restriction")
+	}
+	content := def.ActivatedAbilities[0].Content
+	if len(content.Modes) != 1 || len(content.Modes[0].Targets) != 1 || len(content.Modes[0].Sequence) != 3 {
+		t.Fatal("ordinary activated body must retain one creature target and exactly three instructions")
+	}
+	mode := content.Modes[0]
+	target := mode.Targets[0]
+	if target.Constraint != "target creature" || target.MinTargets != 1 || target.MaxTargets != 1 ||
+		target.Allow != game.TargetAllowPermanent || !target.Selection.Exists ||
+		len(target.Selection.Val.RequiredTypesAny) != 1 || target.Selection.Val.RequiredTypesAny[0] != types.Creature {
+		t.Fatalf("original target constraint changed: %+v", target)
+	}
+	trample, ok := mode.Sequence[0].Primitive.(game.ApplyContinuous)
+	if !ok || !trample.Object.Exists || trample.Object.Val != game.TargetPermanentReference(0) ||
+		trample.Duration != game.DurationUntilEndOfTurn || len(trample.ContinuousEffects) != 1 {
+		t.Fatalf("independent trample instruction lost its target or duration: %+v", mode.Sequence[0])
+	}
+	effect := trample.ContinuousEffects[0]
+	if effect.Layer != game.LayerAbility || len(effect.AddKeywords) != 1 || effect.AddKeywords[0] != game.Trample {
+		t.Fatalf("independent target keyword changed: %+v", effect)
+	}
+	for i, color := range []mana.Color{mana.R, mana.G} {
+		add, ok := mode.Sequence[i+1].Primitive.(game.AddMana)
+		if !ok || add.Amount.IsDynamic() || add.Amount.Value() != 1 || add.ManaColor != color || add.Player.Exists {
+			t.Fatalf("output %d must add one fixed %v mana to the resolving controller: %+v", i+1, color, mode.Sequence[i+1])
+		}
+	}
+	first, second := mode.Sequence[1], mode.Sequence[2]
+	if !first.Condition.Exists || !first.Condition.Val.Condition.Exists ||
+		!first.Condition.Val.Condition.Val.ControllerHandEmpty || first.Condition.Val.Condition.Val.Negate ||
+		first.PublishCondition == "" || first.ConditionGate != "" || first.ConditionGateNegate ||
+		second.Condition.Exists || second.PublishCondition != "" ||
+		second.ConditionGate != first.PublishCondition || second.ConditionGateNegate {
+		t.Fatal("printed hand-empty condition must be evaluated once at the first mana output")
+	}
+	if !first.Optional || first.PublishOptionalDecision == "" || first.OptionalDecisionGate != "" ||
+		second.Optional || second.PublishOptionalDecision != "" ||
+		second.OptionalDecisionGate != first.PublishOptionalDecision {
+		t.Fatal("both mana outputs must share exactly one acceptance decision")
+	}
+	for i, instruction := range mode.Sequence {
+		if instruction.ResultGate.Exists || instruction.PublishResult != "" {
+			t.Fatalf("instruction %d invented a primitive-success gate for condition or acceptance", i)
+		}
+	}
+}
+
 func TestFixedOrdinaryManaRefusals(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
 		"{T}: You may add {R}{R}.",
 		"{1}: If this is the third time this ability has resolved this turn, add {R}{R}.",
 		"{1}: Draw a card. If this is the third time this ability has resolved this turn, add {R}{R}.",
-		"{1}: Target creature gains trample until end of turn. If you have no cards in hand, you may add {R}{G}.",
 		"{1}: Target creature gains trample until end of turn. If you have no cards in hand, add {R}{X}.",
 		"{1}: Target creature gains trample until end of turn. If you have no cards in hand, target opponent adds {R}{R}.",
 		"{1}: Target creature gains trample until end of turn. If you have no cards in hand, add {R}{R} instead.",

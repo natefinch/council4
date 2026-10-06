@@ -56,6 +56,13 @@ func TestModeResultScopeKeysAndNestedPublications(t *testing.T) {
 			}, false,
 		},
 		{
+			"decision-gated later publisher",
+			[]game.Mode{
+				{Sequence: []game.Instruction{{PublishResult: "same"}}},
+				{Sequence: []game.Instruction{{PublishResult: "same", OptionalDecisionGate: "decision"}}},
+			}, false,
+		},
+		{
 			"skipped earlier publisher",
 			[]game.Mode{
 				{Sequence: []game.Instruction{{PublishResult: "same", ConditionGate: "condition"}}},

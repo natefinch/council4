@@ -28,7 +28,8 @@ const (
 	// ReferenceThatObject because it never names a target creature; it always
 	// binds to the event permanent, so the compiler must not treat it as a
 	// target antecedent the way it does for "that creature".
-	ReferenceDiedCreature ReferenceKind = "ReferenceDiedCreature"
+	ReferenceDiedCreature    ReferenceKind = "ReferenceDiedCreature"
+	ReferencePaidCostSubject ReferenceKind = "ReferencePaidCostSubject"
 )
 
 // PronounKind identifies the exact grammatical pronoun carried by a reference.
@@ -49,11 +50,12 @@ const (
 // matched source slice; Text is the parser-rendered display spelling so
 // downstream stages consume exact text without reconstructing it from tokens.
 type Reference struct {
-	Kind    ReferenceKind  `json:",omitempty"`
-	Pronoun PronounKind    `json:",omitempty"`
-	Span    shared.Span    `json:"-"`
-	Tokens  []shared.Token `json:"-"`
-	Text    string         `json:",omitempty"`
+	PaidCost *PaidCostBinding `json:",omitempty"`
+	Kind     ReferenceKind    `json:",omitempty"`
+	Pronoun  PronounKind      `json:",omitempty"`
+	Span     shared.Span      `json:"-"`
+	Tokens   []shared.Token   `json:"-"`
+	Text     string           `json:",omitempty"`
 	// CardIdentity records that an explicit noun reference names a card
 	// ("return this card to its owner's hand") rather than a
 	// battlefield permanent ("return this Aura to its owner's hand"). The card
@@ -157,6 +159,15 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 		}
 	}
 	for i := 0; i < len(tokens); i++ {
+		if width, domain, ok := paidCostSubjectAt(tokens, i); ok {
+			phrase := tokens[i : i+width]
+			references = append(references, Reference{
+				Kind: ReferencePaidCostSubject, Span: shared.SpanOf(phrase), Tokens: phrase, Text: joinTokens(phrase),
+				PaidCost: &PaidCostBinding{Domain: domain},
+			})
+			i += width - 1
+			continue
+		}
 		switch {
 		case i+2 < len(tokens) && equalWord(tokens[i], "the") &&
 			(equalWord(tokens[i+1], "revealed") || equalWord(tokens[i+1], "looked-at")) &&

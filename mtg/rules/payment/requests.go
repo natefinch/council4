@@ -138,6 +138,7 @@ type SpellOptionSummary struct {
 // the payment plan.
 type SpellPaymentResult struct {
 	AdditionalCostsPaid []string
+	PaidCostSubjects    []game.PaidCostSubject
 	// SacrificedIDs are the object IDs of permanents sacrificed to pay the
 	// spell's additional costs, in plan order, so a resolution effect can read a
 	// sacrificed permanent's last-known information ("the sacrificed creature's

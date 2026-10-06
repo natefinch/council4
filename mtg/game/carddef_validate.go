@@ -973,6 +973,15 @@ func (v *cardDefValidator) validateInstructionSequence(
 			}
 		}
 		effectCondition := seq[i].Condition
+		if seq[i].ClearLinkedBeforeGate {
+			primitive := seq[i].Primitive
+			if PublishedLinkedKey(primitive) == "" ||
+				primitive.Kind() != PrimitiveCreateToken && primitive.Kind() != PrimitivePutOnBattlefield &&
+					primitive.Kind() != PrimitiveMovePermanent && primitive.Kind() != PrimitiveMoveTopOfLibrary &&
+					primitive.Kind() != PrimitiveMoveCard {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "transient publication clearing requires a supported linked publisher")
+			}
+		}
 		if effectCondition.Exists && effectCondition.Val.Condition.Exists {
 			condition := effectCondition.Val.Condition.Val
 			v.validateCondition(
@@ -1020,6 +1029,23 @@ func (v *cardDefValidator) validateInstructionSequence(
 				if err := firstProblem(delayed.Trigger.CapturedObjectGroup.Val.Validate()); err != nil {
 					v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.CapturedObjectGroup"), CardDefIssueInvalidAbilityBody, err.Error())
 				}
+			}
+			if delayed.Trigger.CapturedCard.Exists {
+				if delayed.Trigger.EventPattern.Exists || delayed.Trigger.Timing == 0 {
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed CapturedCard requires fixed-phase timing")
+				}
+				switch delayed.Trigger.CapturedCard.Val.Kind() {
+				case ObjectReferenceLinkedObject, ObjectReferenceSourcePermanent, ObjectReferenceSourceCard, ObjectReferenceEventPermanent:
+				default:
+					v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed CapturedCard has an incompatible reference domain")
+				}
+				if err := firstProblem(delayed.Trigger.CapturedCard.Val.Validate()); err != nil {
+					v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.CapturedCard"), CardDefIssueInvalidAbilityBody, err.Error())
+				}
+			}
+			if delayed.Trigger.CapturedObject.Exists && (delayed.Trigger.CapturedObjectGroup.Exists || delayed.Trigger.CapturedCard.Exists) ||
+				delayed.Trigger.CapturedObjectGroup.Exists && delayed.Trigger.CapturedCard.Exists {
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger has conflicting captured subject domains")
 			}
 			v.validateAbilityContentWithLinked(
 				faceName,
@@ -2140,6 +2166,11 @@ func (v *cardDefValidator) validateCondition(faceName, path string, condition *C
 		}
 		if condition.ObjectMatches.Val.Player != PlayerAny {
 			v.add(faceName, appendPath(path, "ObjectMatches.Player"), CardDefIssueInvalidSelection, "object Selection cannot use a player relation")
+		}
+		if condition.Object.Exists && condition.Object.Val.Kind() == ObjectReferencePaidCost &&
+			!PaidCostSelectionSupported(condition.ObjectMatches.Val) {
+			v.add(faceName, appendPath(path, "ObjectMatches"), CardDefIssueInvalidSelection,
+				"paid-cost Selection requires captured characteristic predicates")
 		}
 	}
 	if condition.EventHistory.Exists {

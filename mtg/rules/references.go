@@ -99,6 +99,7 @@ func (r referenceResolver) resolvingController() game.PlayerID {
 }
 
 type resolvedObjectReference struct {
+	frozen               bool
 	permanent            *game.Permanent
 	snapshot             game.ObjectSnapshot
 	stack                *game.StackObject
@@ -156,6 +157,8 @@ func (r *resolvedObjectReference) owner(g *game.Game) (game.PlayerID, bool) {
 // snapshot.
 func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectReference, bool) {
 	switch ref.Kind() {
+	case game.ObjectReferencePaidCost:
+		return resolvePaidCostSubject(r.obj, ref)
 	case game.ObjectReferenceTargetPermanent:
 		objectID, ok := targetPermanentObjectID(r.g, r.obj, ref.TargetIndex())
 		if !ok {

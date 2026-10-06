@@ -22,7 +22,8 @@ func sequenceLocalProductKey(key game.LinkedKey) bool {
 func collectModeLocalProductPublications(sequence []game.Instruction, inheritedConditional bool, publications map[game.LinkedKey]bool) {
 	for _, instruction := range sequence {
 		conditional := inheritedConditional || instruction.Condition.Exists ||
-			instruction.ConditionGate != "" || instruction.ResultGate.Exists
+			instruction.ConditionGate != "" || instruction.ResultGate.Exists ||
+			instruction.OptionalDecisionGate != ""
 		if instruction.Primitive == nil {
 			continue
 		}

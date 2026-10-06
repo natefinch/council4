@@ -156,6 +156,7 @@ func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
 	references := make([]CompiledReference, 0, len(recognized))
 	for _, reference := range recognized {
 		references = append(references, CompiledReference{
+			PaidCost:         reference.PaidCost,
 			Kind:             compileReferenceKind(reference.Kind),
 			Pronoun:          compileReferencePronoun(reference.Pronoun),
 			Span:             reference.Span,
@@ -204,6 +205,8 @@ func compileReferenceKind(kind parser.ReferenceKind) ReferenceKind {
 		return ReferenceChosenCards
 	case parser.ReferenceDiedCreature:
 		return ReferenceDiedCreature
+	case parser.ReferencePaidCostSubject:
+		return ReferencePaidCostSubject
 	default:
 		return ReferenceUnknown
 	}

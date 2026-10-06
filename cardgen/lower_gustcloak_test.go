@@ -21,12 +21,16 @@ func TestLowerGustcloakOptionalUntapAndRemoveFromCombat(t *testing.T) {
 		t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
 	}
 	ability := face.TriggeredAbilities[0]
-	if !ability.Optional {
-		t.Fatal("triggered ability is not optional")
+	if ability.Optional {
+		t.Fatal("body-owned choice became shell optionality")
 	}
 	sequence := ability.Content.Modes[0].Sequence
 	if len(sequence) != 2 {
 		t.Fatalf("sequence length = %d, want 2", len(sequence))
+	}
+	if !sequence[0].Optional || sequence[0].PublishOptionalDecision == "" ||
+		sequence[1].Optional || sequence[1].OptionalDecisionGate != sequence[0].PublishOptionalDecision {
+		t.Fatalf("shared optional action envelope = %#v", sequence)
 	}
 	untap, ok := sequence[0].Primitive.(game.Untap)
 	if !ok || untap.Object != game.EventPermanentReference() {

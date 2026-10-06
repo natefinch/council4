@@ -190,6 +190,13 @@ type stateAbilityQueries interface {
 
 //nolint:interfacebloat // Payment plans need one adapter surface for all atomic game-state mutations.
 type stateMutations interface {
+	// PaySacrificeSubject and PayDiscardSubject perform the same actual payment
+	// as their unbound counterparts, capturing characteristics immediately before
+	// the move. PayRandomDiscardSubjects captures the actual random selection.
+	PaySacrificeSubject(p *game.Permanent, key string) (game.PaidCostSubject, bool)
+	PayDiscardSubject(playerID game.PlayerID, cardID id.ID, key string) (game.PaidCostSubject, bool)
+	PayRandomDiscardSubjects(playerID game.PlayerID, keys []string) ([]game.PaidCostSubject, bool)
+
 	// SetTapped sets the tapped state of a permanent and emits the appropriate
 	// tapped/untapped event.
 	SetTapped(p *game.Permanent, tapped bool)

@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -16,6 +17,7 @@ type scopedResultFlow struct {
 	otherwise    map[int]bool
 	clearNegated map[int]bool
 	conditions   map[int]bool
+	actions      optionalActionGroups
 }
 
 func (p optionalFlowPlan) singleOptionalTail(effectCount int) bool {
@@ -97,11 +99,13 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			return plan, false, true
 		}
 		indices[effect.ClauseID] = ei
-		flow.optional[ei] = effect.Optional
-		if effect.Optional && len(effect.OptionalActionClauseIDs) != 1 {
-			plan.failureCategory = "structural — optional action group acceptance not modeled"
-			return plan, false, true
-		}
+		flow.optional[ei] = effect.Optional && !effect.DelayedSubject.OptionalAtDelayedTime
+	}
+	var actionReason string
+	flow.actions, actionReason = planOptionalActionGroups(content.Effects, indices)
+	if actionReason != "" {
+		plan.failureCategory = actionReason
+		return plan, false, true
 	}
 	for ci, condition := range content.Conditions {
 		if !isResolvingSuccessGate(condition.Predicate) &&
@@ -117,6 +121,16 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			return plan, false, true
 		}
 		effect := content.Effects[producer]
+		if condition.Predicate != compiler.ConditionPredicateResultThisWay && flow.actions.isCompound(producer) {
+			plan.failureCategory = "structural — whole optional action outcome not modeled"
+			return plan, false, true
+		}
+		if condition.Predicate == compiler.ConditionPredicateCounterSucceeded {
+			if owned, ok := counterOutcomeProducer(content, condition); !ok || owned != producer {
+				plan.failureCategory = counterOwnershipCategory
+				return plan, false, true
+			}
+		}
 		if effect.Negated || effect.DelayedTiming != 0 {
 			plan.failureCategory = "structural — actual-result producer is negated or delayed"
 			return plan, false, true
@@ -179,7 +193,10 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 		for _, optional := range flow.optional {
 			hasOptional = hasOptional || optional
 		}
-		if !hasOptional {
+		hasDelayedOptional := slices.ContainsFunc(content.Effects, func(effect compiler.CompiledEffect) bool {
+			return effect.Optional && effect.DelayedSubject.OptionalAtDelayedTime && fixedPhaseSubjectEffectModeled(effect)
+		})
+		if !hasOptional && !hasDelayedOptional {
 			return optionalFlowPlan{}, false, false
 		}
 	}
@@ -202,10 +219,10 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 	}
 	for ei, effect := range content.Effects {
 		if effect.Negated && !flow.clearNegated[ei] ||
-			effect.Optional && effect.DelayedTiming != 0 {
+			effect.Optional && effect.DelayedTiming != 0 && !fixedPhaseSubjectEffectModeled(effect) {
 			return plan, false, true
 		}
-		if flow.gates[ei].Key == "" && optionalAntecedentUnmodeled(content, ei) {
+		if flow.gates[ei].Key == "" && !flow.actions.ownsOptionalAntecedents(content, ei) && optionalAntecedentUnmodeled(content, ei) {
 			plan.failureCategory = "structural — optional published-subject antecedent not modeled"
 			return plan, false, true
 		}
@@ -223,6 +240,10 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 }
 
 func optionalAntecedentUnmodeled(content compiler.AbilityContent, ei int) bool {
+	if fixedPhaseSubjectEffectModeled(content.Effects[ei]) &&
+		content.Effects[ei].DelayedSubject.Kind == parser.DelayedSubjectProduct {
+		return false
+	}
 	amount := content.Effects[ei].Amount
 	if ei > 0 && content.Effects[ei-1].Optional &&
 		(amount.DynamicKind == compiler.DynamicAmountSourceManaValue ||
@@ -270,19 +291,22 @@ func resultProducerActsForController(effect compiler.CompiledEffect) bool {
 
 func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string, bool) {
 	key, publishes := flow.publishers[ei]
-	if publishes || flow.optional[ei] {
-		if len(sequence) != 1 || sequence[0].Optional || sequence[0].PublishResult != "" {
+	if publishes {
+		index := 0
+		counterIndex, isCounter := counterActionInstruction(sequence)
+		if !flow.optional[ei] && isCounter {
+			index = counterIndex
+		} else if len(sequence) != 1 {
 			return "structural — result producer or optional effect requires one instruction", false
 		}
-		if publishes && sequence[0].ResultGate.Exists {
+		if sequence[index].Optional || sequence[index].PublishResult != "" {
+			return "structural — result producer or optional effect requires one instruction", false
+		}
+		if sequence[index].ResultGate.Exists && !isCounter {
 			return "structural — result publication conflicts with clause result wiring", false
 		}
-		// Pay owns its affordability check and its single payment decision.
-		sequence[0].Optional = flow.optional[ei] && sequence[0].Primitive.Kind() != game.PrimitivePay
-		if publishes {
-			sequence[0].PublishResult = key
-			sequence[0].LocalProducts.Results = append(sequence[0].LocalProducts.Results, key)
-		}
+		sequence[index].PublishResult = key
+		sequence[index].LocalProducts.Results = append(sequence[index].LocalProducts.Results, key)
 	}
 	if gate, exists := flow.gates[ei]; exists {
 		gated, ok := appendResultGatedBranch(nil, gate, sequence)
@@ -290,6 +314,9 @@ func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string
 			return "structural — overlapping actual-result gates not modeled", false
 		}
 		copy(sequence, gated)
+	}
+	if reason := flow.actions.apply(ei, sequence); reason != "" {
+		return reason, false
 	}
 	return "", true
 }

@@ -367,6 +367,19 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		return value, ok
 	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
+		for _, reference := range []*opt.V[game.ObjectReference]{
+			&value.Trigger.CapturedObject, &value.Trigger.CapturedObjectGroup, &value.Trigger.CapturedCard,
+			&value.Trigger.DamageSourceObject, &value.Trigger.CapturedAttackerObject, &value.Trigger.CapturedDyingObject,
+		} {
+			if !reference.Exists {
+				continue
+			}
+			object, ok := transformObjectReference(reference.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			*reference = opt.Val(object)
+		}
 		if value.Trigger.EventPlayer.Exists {
 			player, ok := transformPlayerReference(value.Trigger.EventPlayer.Val, transform)
 			if !ok {
@@ -856,6 +869,9 @@ func unsupportedEffectSequenceDiagnostic(ctx contentCtx, category string) *share
 // unsupported, otherwise the structural shape limitation.
 func sequenceClauseCategory(diagnostic *shared.Diagnostic) string {
 	if diagnostic != nil {
+		if diagnostic.Summary == "unsupported delayed object capture" {
+			return "sub-effect — " + diagnostic.Summary + ": " + diagnostic.Detail
+		}
 		return "sub-effect — " + diagnostic.Summary
 	}
 	return "structural — clause produced modal/shared/multi-mode content"

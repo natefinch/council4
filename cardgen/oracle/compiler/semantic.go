@@ -534,12 +534,13 @@ type CompiledCost struct {
 
 // CostComponent is one comma-separated cost operation.
 type CostComponent struct {
-	Kind   CostKind
-	Span   shared.Span
-	Text   string
-	Symbol string
-	Amount string
-	Object string
+	PaidSubject *parser.PaidCostProducer
+	Kind        CostKind
+	Span        shared.Span
+	Text        string
+	Symbol      string
+	Amount      string
+	Object      string
 
 	AmountValue int
 	AmountKnown bool
@@ -737,6 +738,8 @@ const (
 	// optional instruction was performed ("if you do"). It is the affirmative
 	// complement of ConditionPredicatePriorInstructionNotAccepted.
 	ConditionPredicatePriorInstructionAccepted
+	// ConditionPredicateCounterSucceeded tests the owned counter's actual result.
+	ConditionPredicateCounterSucceeded
 	// ConditionPredicateResultThisWay is satisfied when an object matching
 	// ThisWayOutcome's card/permanent noun was affected by the prior effect of
 	// that same kind ("if a creature is destroyed this way", "if a Saproling was
@@ -2557,6 +2560,7 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
+	DelayedSubject          parser.DelayedSubjectOwnership
 	ClauseID                int
 	ResultElseOfClauseID    int
 	OptionalActionClauseIDs []int
@@ -4694,6 +4698,7 @@ const (
 	// ReferenceThatObject it never names a target, so bindReferences binds it
 	// straight to the event permanent rather than a target antecedent.
 	ReferenceDiedCreature
+	ReferencePaidCostSubject
 )
 
 // ReferenceBinding identifies the intended referent of a reference occurrence.
@@ -4736,6 +4741,7 @@ const (
 	// this through the event's RelatedPermanentID, which the block and
 	// became-blocked events populate with the opposing combatant.
 	ReferenceBindingEventRelatedPermanent
+	ReferenceBindingPaidCost
 	// ReferenceBindingLibraryOwner names the player whose library produced the
 	// exact observed card, not the card object or the consequence actor.
 	ReferenceBindingLibraryOwner
@@ -4743,11 +4749,12 @@ const (
 
 // CompiledReference records a source-spanned reference and its bound referent.
 type CompiledReference struct {
-	Kind    ReferenceKind
-	Pronoun ReferencePronounKind
-	Span    shared.Span
-	Text    string
-	Binding ReferenceBinding
+	PaidCost *parser.PaidCostBinding
+	Kind     ReferenceKind
+	Pronoun  ReferencePronounKind
+	Span     shared.Span
+	Text     string
+	Binding  ReferenceBinding
 	// CardIdentity mirrors the parser's card-identity self-reference marker: a
 	// "this card" self reference (card identity, tracked into its current zone)
 	// as opposed to "this Aura"/"this creature" (a battlefield object). Lowering

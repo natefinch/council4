@@ -644,7 +644,7 @@ func lowerSourcePermanentExile(ctx contentCtx) (game.AbilityContent, bool) {
 	}
 	object, ok := lowerObjectReference(reference, referenceLoweringContext{
 		AllowSource:      true,
-		SourceCardObject: true,
+		SourceCardObject: reference.CardIdentity || effect.FromZone != zone.None && effect.FromZone != zone.Battlefield,
 		AllowEvent:       true,
 	})
 	if !ok {

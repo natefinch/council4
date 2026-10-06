@@ -616,6 +616,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		}
 	}
 	res := effectResolved{accepted: true, amount: amount}
+	if prim.PublishLinked != "" {
+		clearLinkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)))
+	}
 	if prim.AttackEachOtherOpponent {
 		return r.createTokensAttackingEachOtherOpponent(prim)
 	}
@@ -649,11 +652,6 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	}
 	if spec, ok := prim.Source.TokenCopy(); ok && spec.Source == game.TokenCopySourceChosenFromGroup {
 		return r.createCopyTokenFromChosenGroup(prim, spec, recipient, res.amount)
-	}
-	if prim.PublishLinked != "" {
-		// Clear before creation so a zero-token resolution captures an empty
-		// batch instead of objects published by a prior resolution.
-		clearLinkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked)))
 	}
 	if prim.PublishCountGroup != "" {
 		r.publishCountGroup(prim)
@@ -701,12 +699,7 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if prim.AttackSameAsObject.Exists {
 		r.declareTokensAttackingSameAsObject(created, prim.AttackSameAsObject.Val)
 	}
-	if prim.PublishLinked != "" {
-		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-		for _, permanent := range created {
-			rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
-		}
-	}
+	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	res.succeeded = res.amount > 0
 	return res
 }
@@ -756,7 +749,10 @@ func (r *effectResolver) populate(prim game.CreateToken, spec game.TokenCopySpec
 	if !ok {
 		return res
 	}
-	_, ok = createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+	if ok {
+		r.publishEnteredPermanents(prim.PublishLinked, created...)
+	}
 	res.succeeded = ok
 	return res
 }
@@ -772,11 +768,6 @@ func (r *effectResolver) createCopyTokenFromChosenGroup(
 	amount int,
 ) effectResolved {
 	res := effectResolved{accepted: true}
-	var publishKey game.LinkedObjectKey
-	if prim.PublishLinked != "" {
-		publishKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-		clearLinkedObjects(r.game, publishKey)
-	}
 	if spec.Group == nil {
 		return res
 	}
@@ -821,14 +812,7 @@ func (r *effectResolver) createCopyTokenFromChosenGroup(
 		r.declareTokensAttackingSameAsObject(created, prim.AttackSameAsObject.Val)
 	default:
 	}
-	if prim.PublishLinked != "" {
-		for _, permanent := range created {
-			rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{
-				ObjectID: permanent.ObjectID,
-				CardID:   permanent.CardInstanceID,
-			})
-		}
-	}
+	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	res.amount = len(created)
 	res.succeeded = len(created) > 0
 	return res
@@ -875,13 +859,7 @@ func (r *effectResolver) createTokensAttackingEachOtherOpponent(prim game.Create
 		created = append(created, tokens...)
 		res.amount += len(tokens)
 	}
-	if prim.PublishLinked != "" {
-		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-		clearLinkedObjects(r.game, key)
-		for _, permanent := range created {
-			rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
-		}
-	}
+	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	res.succeeded = res.amount > 0
 	return res
 }
@@ -999,18 +977,7 @@ func (r *effectResolver) createTokenForGroup(prim game.CreateToken, amount int) 
 		res.amount += len(tokens)
 		res.succeeded = true
 	}
-	if prim.PublishLinked != "" {
-		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
-		// Clear any tokens a prior resolution published under this
-		// source-and-link-scoped key before remembering this resolution's set, so
-		// a paired "the tokens" back-reference binds exactly the tokens created
-		// now (each opponent's copy of Life of the Party) rather than a stale
-		// entry, mirroring the single-recipient and myriad publish sites.
-		clearLinkedObjects(r.game, key)
-		for _, permanent := range created {
-			rememberLinkedObject(r.game, key, game.LinkedObjectRef{ObjectID: permanent.ObjectID, CardID: permanent.CardInstanceID})
-		}
-	}
+	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	return res
 }
 
@@ -1042,6 +1009,7 @@ func (r *effectResolver) createCopyTokensForEach(prim game.CreateToken, spec gam
 		if prim.EntryAttacking {
 			declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 		}
+		r.publishEnteredPermanents(prim.PublishLinked, created...)
 		res.amount++
 		res.succeeded = true
 	}
@@ -1076,6 +1044,7 @@ func (r *effectResolver) createCopyTokenFromTriggerBatch(prim game.CreateToken, 
 	if prim.EntryAttacking {
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
 	}
+	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	res.amount = 1
 	res.succeeded = true
 	return res
@@ -2449,15 +2418,7 @@ func handleCounterObject(r *effectResolver, prim game.CounterObject) effectResol
 		if !ok {
 			return effectResolved{accepted: true}
 		}
-		target, ok := stackObjectByID(r.game, stackObjectID)
-		if !ok {
-			return effectResolved{accepted: true}
-		}
-		if prim.ExileInstead {
-			target.ExileOnResolution = true
-		}
-		target.CounteredDestination = prim.Destination
-		return effectResolved{accepted: true, succeeded: counterStackObject(r.game, stackObjectID)}
+		return effectResolved{accepted: true, succeeded: counterStackObjectWithDestination(r.game, stackObjectID, prim.ExileInstead, prim.Destination)}
 	default:
 		return effectResolved{accepted: true}
 	}

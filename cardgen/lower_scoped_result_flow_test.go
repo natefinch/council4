@@ -147,22 +147,16 @@ func TestQuantifiedResultCardPathsAndNearMisses(t *testing.T) {
 		)
 	}
 	for _, tt := range []struct{ text, reason string }{
-		{"Repeat the following process two times. You may draw a card and gain 2 life.", "action group acceptance not modeled"},
 		{"You may discard a card. When you do, draw a card. You may sacrifice a creature. If you do, you gain 2 life.", "mixed reflexive actual-result flow not modeled"},
 		{"You may discard a card. When you do, draw a card. If you do, you gain 2 life.", "mixed reflexive actual-result flow not modeled"},
 		{"Target player discards a card. If you discarded a land card this way, draw a card.", "actor ownership not modeled"},
 		{"If a land card was discarded this way, draw a card. Discard a card.", "no unique earlier typed producer"},
 		{"Put a +1/+1 counter on each of up to two target creatures. If you do, draw a card.", "requires one instruction"},
 		{"Draw a card and gain 2 life. If you do, scry 1.", "no unique earlier typed producer"},
-		{"You may have target player discard a card and draw a card. If you do, scry 1.", "action group acceptance not modeled"},
-		{"You may draw a card and gain 2 life. If you do, scry 1.", "action group acceptance not modeled"},
-		{"{T}, Discard a card: If a land card was discarded this way, draw a card.", "unsupported draw spell"},
+		{"You may have target player discard a card and draw a card. If you do, scry 1.", "no unique earlier typed producer"},
+		{"You may draw a card and gain 2 life. If you do, scry 1.", "no unique earlier typed producer"},
 	} {
-		typ := "Sorcery"
-		if tt.text[0] == '{' {
-			typ = "Artifact"
-		}
-		assertCardUnsupported(t, &ScryfallCard{Name: "Result Refusal", Layout: "normal", TypeLine: typ, OracleText: tt.text}, tt.reason)
+		assertCardUnsupported(t, &ScryfallCard{Name: "Result Refusal", Layout: "normal", TypeLine: "Sorcery", OracleText: tt.text}, tt.reason)
 	}
 }
 

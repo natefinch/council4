@@ -190,6 +190,15 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if !objectConditionInformationAvailable(g, ctx, &cond) {
 		return false
 	}
+	if cond.Object.Exists && cond.Object.Val.Kind() == game.ObjectReferenceCapturedObject {
+		if ctx.obj == nil {
+			return false
+		}
+		permanent, ok := permanentByObjectID(g, ctx.obj.CapturedObjectID)
+		if !ok || permanent.PhasedOut {
+			return false
+		}
+	}
 	matches := true
 	if cond.ControlsMatching.Exists {
 		matches = matches && controllerControlsMatchingSelection(g, ctx, cond.ControlsMatching.Val)
@@ -1013,6 +1022,14 @@ func resolvedObjectMatchesConditionSelection(
 ) bool {
 	if resolved == nil || selection == nil {
 		return false
+	}
+	if resolved.frozen {
+		subject := selectionSubject{
+			kind: subjectEventPermanent, g: g, snapshot: &resolved.snapshot,
+			viewer: ctx.controller, controller: resolved.snapshot.Controller,
+			sourceObjectID: conditionSourceObjectID(ctx),
+		}
+		return matchSelection(&subject, selection)
 	}
 	if resolved.permanent != nil {
 		values := permanentValuesForCondition(g, resolved.permanent, ctx)

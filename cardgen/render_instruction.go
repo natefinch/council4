@@ -176,6 +176,12 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 	if instruction.Optional {
 		fields = append(fields, "Optional: true,")
 	}
+	if instruction.PublishOptionalDecision != "" {
+		fields = append(fields, fmt.Sprintf("PublishOptionalDecision: %q,", instruction.PublishOptionalDecision))
+	}
+	if instruction.OptionalDecisionGate != "" {
+		fields = append(fields, fmt.Sprintf("OptionalDecisionGate: %q,", instruction.OptionalDecisionGate))
+	}
 	if instruction.OptionalActor.Exists {
 		actor, err := r.renderPlayerReference(instruction.OptionalActor.Val)
 		if err != nil {
@@ -223,6 +229,9 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 			return "", err
 		}
 		fields = append(fields, "LocalProducts: "+local+",")
+	}
+	if instruction.ClearLinkedBeforeGate {
+		fields = append(fields, "ClearLinkedBeforeGate: true,")
 	}
 	if instruction.Description != "" {
 		fields = append(fields, fmt.Sprintf("Description: %q,", instruction.Description))

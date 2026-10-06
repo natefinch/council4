@@ -108,9 +108,10 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 		return SpellPaymentResult{}, false
 	}
 	applyPaymentPlan(s, req.PlayerID, plan.mana)
-	applyAdditionalCostPlan(s, plan.additional)
+	subjects := applyAdditionalCostPlan(s, plan.additional)
 	return SpellPaymentResult{
 		AdditionalCostsPaid: plan.additional.paid,
+		PaidCostSubjects:    subjects,
 		SacrificedIDs:       sacrificedPermanentIDs(plan.additional),
 		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
 		CastPermission:      plan.option.castPermission,
@@ -292,10 +293,11 @@ func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
 // IDs of permanents sacrificed as a cost, and the card-instance IDs of cards
 // exiled as a cost so the caller can record them on the resolving stack object.
 type AbilityCostPayment struct {
-	PoolSpend     map[mana.Unit]int
-	SacrificedIDs []id.ID
-	TappedIDs     []id.ID
-	ExiledIDs     []id.ID
+	PoolSpend        map[mana.Unit]int
+	PaidCostSubjects []game.PaidCostSubject
+	SacrificedIDs    []id.ID
+	TappedIDs        []id.ID
+	ExiledIDs        []id.ID
 }
 
 func payAbilityCosts(s State, req AbilityRequest) (AbilityCostPayment, bool) {
@@ -311,12 +313,13 @@ func payAbilityCosts(s State, req AbilityRequest) (AbilityCostPayment, bool) {
 	if plan.tapSource && !tapForAbility(s, req.Source, req.ForMana) {
 		panic("ability source became untappable after prevalidation")
 	}
-	applyAdditionalCostPlan(s, plan.additional)
+	subjects := applyAdditionalCostPlan(s, plan.additional)
 	return AbilityCostPayment{
-		PoolSpend:     clonePoolSpend(plan.mana.poolSpend),
-		SacrificedIDs: sacrificedPermanentIDs(plan.additional),
-		TappedIDs:     tappedPermanentIDs(plan.additional),
-		ExiledIDs:     exiledCardIDs(plan.additional),
+		PoolSpend:        clonePoolSpend(plan.mana.poolSpend),
+		PaidCostSubjects: subjects,
+		SacrificedIDs:    sacrificedPermanentIDs(plan.additional),
+		TappedIDs:        tappedPermanentIDs(plan.additional),
+		ExiledIDs:        exiledCardIDs(plan.additional),
 	}, true
 }
 

@@ -18,10 +18,21 @@ func bindReferences(
 	bound := append([]CompiledReference(nil), references...)
 	for i := range bound {
 		reference := &bound[i]
+		if bindDelayedSubjectReference(reference, effects) {
+			continue
+		}
 		if bindLibraryCardReference(reference, effects) {
 			continue
 		}
 		switch reference.Kind {
+		case ReferencePaidCostSubject:
+			if reference.PaidCost != nil && reference.PaidCost.Known &&
+				reference.PaidCost.ConsumerNodeID == reference.NodeID {
+				reference.Binding = ReferenceBindingPaidCost
+			} else {
+				reference.Binding = ReferenceBindingUnsupported
+			}
+			continue
 		case ReferenceSelfName, ReferenceThisObject:
 			reference.Binding = ReferenceBindingSource
 			continue
@@ -352,7 +363,8 @@ func priorInstructionAntecedent(reference CompiledReference, effects []CompiledE
 	current := -1
 	for i := range effects {
 		effect := &effects[i]
-		if effect.VerbOrder.Start >= reference.Order.Start {
+		if effect.VerbOrder.Start >= reference.Order.Start ||
+			effect.CounteredSpellExileReplacement || effect.CounteredSpellDestinationReplacement {
 			continue
 		}
 		if current < 0 || effect.VerbOrder.Start > effects[current].VerbOrder.Start {
@@ -389,7 +401,8 @@ func priorInstructionAntecedentAt(reference CompiledReference, effects []Compile
 	prior := -1
 	for i := range effects {
 		effect := &effects[i]
-		if effect.VerbOrder.Start >= effects[current].VerbOrder.Start {
+		if effect.VerbOrder.Start >= effects[current].VerbOrder.Start ||
+			effect.CounteredSpellExileReplacement || effect.CounteredSpellDestinationReplacement {
 			continue
 		}
 		if prior < 0 || effect.VerbOrder.Start > effects[prior].VerbOrder.Start {

@@ -57,6 +57,7 @@ const (
 	ConditionPredicatePriorInstructionNotAccepted                      ConditionPredicateKind = "ConditionPredicatePriorInstructionNotAccepted"
 	ConditionPredicatePriorInstructionAccepted                         ConditionPredicateKind = "ConditionPredicatePriorInstructionAccepted"
 	ConditionPredicateResultThisWay                                    ConditionPredicateKind = "ConditionPredicateResultThisWay"
+	ConditionPredicateCounterSucceeded                                 ConditionPredicateKind = "ConditionPredicateCounterSucceeded"
 	ConditionPredicateDiesThisWay                                      ConditionPredicateKind = "ConditionPredicateDiesThisWay"
 	ConditionPredicateNoLifeLostThisWay                                ConditionPredicateKind = "ConditionPredicateNoLifeLostThisWay"
 	ConditionPredicateEventPlayerDoesNotPay                            ConditionPredicateKind = "ConditionPredicateEventPlayerDoesNotPay"
@@ -931,6 +932,7 @@ func parseConditionClause(
 
 func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionClause, bool) {
 	for _, recognize := range []func([]shared.Token, Atoms) (ConditionClause, bool){
+		recognizePaidCostSubjectCondition,
 		recognizePriorInstructionCondition,
 		recognizeControlsCommanderCondition,
 		recognizeLandEnteredOrControlsBasicCondition,
@@ -938,6 +940,7 @@ func recognizeConditionPredicate(body []shared.Token, atoms Atoms) (ConditionCla
 		recognizeControlsGreatestToughnessCondition,
 		recognizeControlsGreatestManaValueCondition,
 		recognizeResultThisWayCondition,
+		recognizeCounterSucceededCondition,
 		recognizeDiesThisWayCondition,
 		recognizeNoLifeLostThisWayCondition,
 		recognizeTargetObjectMatchCondition,

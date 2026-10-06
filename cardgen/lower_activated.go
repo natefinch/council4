@@ -532,6 +532,15 @@ func lowerModalContent(
 	if len(ctx.content.Modes) != len(syntax.Modal.Options) {
 		return unsupported("semantic mode count does not match syntax mode count")
 	}
+	if maxModes > 1 || bonus.AdditionalMaxModes > 0 || bonus.MaxModes > 1 {
+		for _, mode := range ctx.content.Modes {
+			for _, effect := range mode.Content.Effects {
+				if effect.DelayedSubject.Kind == parser.DelayedSubjectProduct {
+					return unsupported("multiple selected modes require distinct actual-product publication scopes for delayed capture")
+				}
+			}
+		}
+	}
 
 	modes := make([]game.Mode, 0, len(ctx.content.Modes))
 	// modeReasons collects every mode that fails to lower. Modes are independent,

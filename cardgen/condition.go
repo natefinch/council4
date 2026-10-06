@@ -178,6 +178,9 @@ func lowerConditionWithReferences(condition compiler.CompiledCondition, ctx cond
 		if !ok || selection.Empty() {
 			return game.Condition{}, false
 		}
+		if object.Kind() == game.ObjectReferencePaidCost && !game.PaidCostSelectionSupported(selection) {
+			return game.Condition{}, false
+		}
 		result.Object = opt.Val(object)
 		result.ObjectMatches = opt.Val(selection)
 		if condition.TargetCardProducerClauseID > 0 {
@@ -337,6 +340,12 @@ func lowerObjectMatchReferenceWithContext(condition compiler.CompiledCondition, 
 			return game.ObjectReference{}, false
 		}
 		return lowerObjectReference(reference, references)
+	}
+	if reference.Binding == compiler.ReferenceBindingPaidCost {
+		if ctx != conditionContextEffectGate || !condition.HasSubjectReference {
+			return game.ObjectReference{}, false
+		}
+		return lowerPaidCostReference(reference, condition.SubjectTypes)
 	}
 	if reference.Binding == compiler.ReferenceBindingTarget {
 		if ctx != conditionContextEffectGate || condition.ObjectTarget == nil || reference.Occurrence < 0 {

@@ -4,6 +4,7 @@ import "slices"
 
 func resultConditionPredicate(predicate ConditionPredicateKind) bool {
 	return predicate == ConditionPredicateResultThisWay ||
+		predicate == ConditionPredicateCounterSucceeded ||
 		predicate == ConditionPredicatePriorInstructionAccepted ||
 		predicate == ConditionPredicatePriorInstructionNotAccepted
 }
@@ -29,11 +30,16 @@ func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegm
 			continue
 		}
 		producer := first - 1
-		if clause.Predicate == ConditionPredicateResultThisWay {
+		switch {
+		case clause.Predicate == ConditionPredicateCounterSucceeded:
+			producer = slices.IndexFunc(effects, func(effect *EffectSyntax) bool {
+				return effect.ClauseID == segment.Ownership.ResultProducerClauseID
+			})
+		case clause.Predicate == ConditionPredicateResultThisWay:
 			for producer >= 0 && effects[producer].Kind != clause.ThisWayOutcome {
 				producer--
 			}
-		} else if clause.Predicate == ConditionPredicatePriorInstructionNotAccepted && !effects[producer].Optional {
+		case clause.Predicate == ConditionPredicatePriorInstructionNotAccepted && !effects[producer].Optional:
 			// "If you don't" complements the action, not an intervening
 			// filtered predicate or its consequence.
 			if previous, exists := resultOwner[effects[producer].ClauseID]; exists {
@@ -41,6 +47,7 @@ func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegm
 					return effect.ClauseID == segments[previous].Ownership.ResultProducerClauseID
 				})
 			}
+		default:
 		}
 		if producer < 0 {
 			continue
@@ -118,7 +125,8 @@ func emitOptionalEffectGroups(effects []EffectSyntax, segments []ConditionSegmen
 			consequence := &effects[next]
 			if consequence.Span != effect.Span || consequence.Optional ||
 				slices.ContainsFunc(segments, func(segment ConditionSegment) bool {
-					return slices.Contains(segment.Ownership.ClauseIDs, consequence.ClauseID)
+					return slices.Contains(segment.Ownership.ClauseIDs, consequence.ClauseID) &&
+						!slices.Contains(segment.Ownership.ClauseIDs, effect.ClauseID)
 				}) {
 				break
 			}

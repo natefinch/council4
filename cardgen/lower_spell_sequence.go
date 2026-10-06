@@ -45,6 +45,11 @@ func lowerLinkedCounterTokenSequence(
 		ctx.content.Effects[1].Kind != compiler.EffectCreate {
 		return game.AbilityContent{}, nil, false
 	}
+	if slices.ContainsFunc(ctx.content.Conditions, func(condition compiler.CompiledCondition) bool {
+		return condition.Predicate == compiler.ConditionPredicateCounterSucceeded
+	}) {
+		return game.AbilityContent{}, nil, false
+	}
 	if content, ok := lowerCounterThenTargetControllerTokenSequence(ctx); ok {
 		return content, nil, true
 	}
@@ -109,12 +114,6 @@ func lowerOrderedSequenceSpecialCase(
 	}
 	if content, diagnostic, handled := lowerLinkedCounterTokenSequence(ctx); handled {
 		return content, diagnostic, true
-	}
-	if content, ok := lowerCounterThenExileInstead(ctx); ok {
-		return content, nil, true
-	}
-	if content, ok := lowerCounterThenAlternateDestination(ctx); ok {
-		return content, nil, true
 	}
 	if content, ok := lowerSelfBlinkSequence(ctx); ok {
 		return content, nil, true
@@ -275,17 +274,22 @@ func lowerOrderedEffectSequence(
 	// the optional effect's instruction Optional + PublishResult and gating the
 	// "if you do" effect on that result. planOptionalFlow fails closed unless the
 	// optionality forms exactly one supported pair.
-	optionalFlow, ok := planOptionalFlow(ctx.content)
+	counterDestinations, planningContent, counterReason := planCounterDestinations(ctx.content)
+	if counterReason != "" {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterReason)
+	}
+	optionalFlow, ok := planOptionalFlow(planningContent)
 	if !ok {
 		if optionalFlow.failureCategory != "" {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, optionalFlow.failureCategory)
 		}
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unsupported resolving optionality")
 	}
-	conditionPlan, matchReason, ok := planSequenceConditions(ctx.content, optionalFlow)
+	conditionPlan, matchReason, ok := planSequenceConditions(planningContent, optionalFlow)
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, matchReason)
 	}
+	conditionPlan.externalConditions = append(conditionPlan.externalConditions, counterDestinations.conditions...)
 	effectConditions := conditionPlan.gates
 	gateConditions := conditionPlan.gateConditions
 	// Planning assigns every condition once; clause-owned conditions must
@@ -335,6 +339,13 @@ func lowerOrderedEffectSequence(
 	effectInstructionRanges := make([][2]int, len(ctx.content.Effects))
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
+		if counterDestinations.absorbed[i] {
+			consumedReferences += len(conditionPlan.referencesForClause(ctx.content, i))
+			if len(keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)) != 0 {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterDestinationCategory)
+			}
+			continue
+		}
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
 		effectAbility.singleAction = optionalFlow.marksOptional(i)
@@ -342,6 +353,7 @@ func lowerOrderedEffectSequence(
 		// Embedded payment conditions belong to the clause lowerer; ordinary
 		// conditions belong to the sequence envelope.
 		effectAbility.content.Conditions = conditionPlan.clauseConditions[i]
+		effectAbility.content.Conditions = append(slices.Clone(effectAbility.content.Conditions), conditionPlan.delayedConditions[i]...)
 		clauseTargets := effect.Targets
 		// A leading condition that shares its effect's sentence (e.g. "If this
 		// spell was kicked, draw a card.") contributes its own references (the
@@ -493,6 +505,9 @@ func lowerOrderedEffectSequence(
 			}
 			effectAbility.observedCharacteristicKey = key
 		}
+		if reason := bindOptionalEnteredObjectReference(&effectAbility, sequence, effectInstructionRanges[:i], oracleSpanToGameIdx, targets); reason != "" {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
+		}
 		// Lower the effect through the shared lowerAbilityContent entry point.
 		// allSharedTargets: try with inherited targets; if that fails, retry
 		//   with targets cleared (e.g. "then proliferate" rejects any target).
@@ -514,8 +529,16 @@ func lowerOrderedEffectSequence(
 		// the grant fails closed instead of chaining off a publisher it cannot
 		// rely on.
 		publisherGated := i > 0 && sequenceClauseInstructionGated(i-1, effectConditions, insteadGates, otherwiseGates)
+		if len(sequence) > 0 {
+			prior := sequence[len(sequence)-1]
+			publisherGated = publisherGated || prior.Optional || prior.OptionalDecisionGate != ""
+		}
 		if effect.PlayHideawayExiledCard {
 			content, diagnostic = lowerHideawayPlayEffect(effectAbility)
+		} else if delayed, delayedDiagnostic, handled := lowerFixedPhaseSubject(
+			cardName, effectAbility, &clauseAbility, sequence, effectInstructionRanges[:i], ctx.content.Effects,
+		); handled {
+			content, diagnostic = delayed, delayedDiagnostic
 		} else if delayed := lowerDelayedSequenceClause(
 			ctx.content.Effects,
 			i,
@@ -552,6 +575,9 @@ func lowerOrderedEffectSequence(
 			continue
 		}
 		mode := content.Modes[0]
+		if !counterDestinations.apply(i, mode.Sequence) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterDestinationCategory)
+		}
 		// An inherited target that no prior clause owned (a bare "Choose target
 		// ..." sentence with no effect of its own) is first materialized here, so
 		// this clause consumes it. Inherited targets already recorded in
@@ -624,6 +650,9 @@ func lowerOrderedEffectSequence(
 	// which assume a fully-consumed sequence.
 	if len(clauseReasons) > 0 {
 		return game.AbilityContent{}, combineReasons(clauseReasons)
+	}
+	if !optionalLinkedPublicationsModeled(sequence) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — optional linked-object publication has no skipped-availability contract")
 	}
 	// A condition's own object pronoun ("its power" in "draw a card if its power
 	// is 3 or greater") sits outside every effect clause span, so it is consumed
@@ -4825,11 +4854,9 @@ func sequentialReferencedKeywordGrantDuration(duration compiler.DurationKind) (g
 // with. Declining routes the clause through normal reference lowering, which for
 // a plain targeted subject binds the target permanent directly (correct — the
 // same permanent the linked key would have captured) and otherwise fails the
-// clause closed. Only a created/reanimated subject ("it" naming a freshly made
-// object that a plain target reference cannot denote) would bind the wrong
-// permanent through the fallback; no such created-object subject appears in a
-// two-branch publisher-gated shape in the corpus, so every generated card that
-// reaches this decline binds correctly.
+// clause closed. Entered-object publishers are the exception: their actual
+// publication is invalidated before gates, so a skipped or failed entry leaves
+// no object for the mandatory rider rather than exposing a stale incarnation.
 func lowerSequentialReferencedKeywordGrant(
 	effectIndex int,
 	ctx contentCtx,
@@ -4844,8 +4871,9 @@ func lowerSequentialReferencedKeywordGrant(
 		panic(fmt.Sprintf("lowerSequentialReferencedKeywordGrant: expected a single effect, got %d", len(ctx.content.Effects)))
 	}
 	if effectIndex == 0 ||
-		publisherGated ||
-		len(sequence) != effectIndex ||
+		len(sequence) == 0 ||
+		publisherGated && !sequencePublisherInvalidatesBeforeGates(sequence[len(sequence)-1].Primitive) ||
+		len(sequence) != effectIndex && !sequencePublisherInvalidatesBeforeGates(sequence[len(sequence)-1].Primitive) ||
 		ctx.optional ||
 		len(ctx.content.Keywords) == 0 ||
 		!isSequentialReferencedKeywordGrantEffect(&ctx.content.Effects[0]) {
@@ -4860,7 +4888,7 @@ func lowerSequentialReferencedKeywordGrant(
 		return nil, game.AbilityContent{}, false
 	}
 	key := game.LinkedKey(fmt.Sprintf("gain-keyword-%d", effectIndex))
-	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	publisher, ok := publishLinkedTargetPermanent(sequence[len(sequence)-1].Primitive, key)
 	if !ok {
 		return nil, game.AbilityContent{}, false
 	}

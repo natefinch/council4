@@ -88,7 +88,7 @@ func continuousSubjectMode(
 		return continuousObjectMode(game.SourceAttachedPermanentReference(), continuousEffects, duration), nil
 	}
 	if opts.AllowReferenceObject && len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1 {
-		object, ok := continuousReferenceObject(ctx.content.References[0], effect, opts.SourceAsCard, ctx.enclosingKind == compiler.AbilitySpell)
+		object, ok := continuousInstructionReferenceObject(ctx, ctx.content.References[0], effect, opts.SourceAsCard)
 		if !ok {
 			return unsupported()
 		}

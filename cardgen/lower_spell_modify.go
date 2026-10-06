@@ -2274,11 +2274,11 @@ func doublePTObjectMode(
 		object = game.SourceAttachedPermanentReference()
 	case len(ctx.content.Targets) == 0 && len(ctx.content.References) == 1:
 		var ok bool
-		object, ok = continuousReferenceObject(
+		object, ok = continuousInstructionReferenceObject(
+			ctx,
 			ctx.content.References[0],
 			effect,
 			false,
-			ctx.enclosingKind == compiler.AbilitySpell,
 		)
 		if !ok {
 			return unsupported()
@@ -2802,7 +2802,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if targetSubject || inheritedTargetSubject {
 		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
-	object, ok := continuousReferenceObject(ctx.content.References[0], &effect, true, ctx.enclosingKind == compiler.AbilitySpell)
+	object, ok := continuousInstructionReferenceObject(ctx, ctx.content.References[0], &effect, true)
 	if !ok {
 		return unsupported()
 	}

@@ -43,6 +43,7 @@ func createStormCopies(g *game.Game, original *game.StackObject, spell *game.Car
 			Copy:                true,
 			SourceZone:          original.SourceZone,
 			AdditionalCostsPaid: append([]string(nil), original.AdditionalCostsPaid...),
+			PaidCostSubjects:    game.ClonePaidCostSubjects(original.PaidCostSubjects),
 		}
 		g.Stack.Push(copyObj)
 		emitSpellCopiedEvent(g, copyObj, spell)

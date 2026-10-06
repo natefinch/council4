@@ -16,6 +16,10 @@ type ResultKey string
 // independent of an effect's acceptance or success.
 type ConditionKey string
 
+// OptionalDecisionKey names a single player's optional decision within one
+// instruction sequence, independently of any primitive's actual result.
+type OptionalDecisionKey string
+
 // ChoiceKey is a key published by a Choose primitive.
 // It is consumed by AddMana.ChoiceFrom and similar choice-consuming fields.
 type ChoiceKey string
@@ -77,6 +81,11 @@ type Instruction struct {
 	// Primitive is the data-only effect building block.
 	Primitive Primitive
 
+	// ClearLinkedBeforeGate clears this instruction's transient actual-product
+	// publication even when a gate or optional choice skips the primitive.
+	// Persistent CR 607 links must not opt in.
+	ClearLinkedBeforeGate bool
+
 	// Condition is an additional condition evaluated against the resolving stack object.
 	// Source-excluding permanent selections compare the original SourceID, not
 	// SourceCardID or a new permanent created when that card returns.
@@ -102,6 +111,14 @@ type Instruction struct {
 	// Optional causes the engine to ask the controller whether to apply this instruction.
 	// The result is published via PublishResult if set.
 	Optional bool
+
+	// PublishOptionalDecision records the answer to Optional before the primitive
+	// runs. Skipped instructions publish nothing; acceptance does not mean success.
+	PublishOptionalDecision OptionalDecisionKey
+
+	// OptionalDecisionGate requires a prior accepted decision in this sequence.
+	// A declined or unavailable decision fails closed.
+	OptionalDecisionGate OptionalDecisionKey
 
 	// OptionalActor names the player who decides an Optional instruction when the
 	// choice belongs to a player other than the spell or ability controller — the
@@ -247,6 +264,9 @@ func validateInstructionSequenceWithLinked(
 	siblingLinked map[LinkedKey]int,
 ) error {
 	if err := validateConditionEvaluations(seq); err != nil {
+		return err
+	}
+	if err := validateOptionalDecisions(seq); err != nil {
 		return err
 	}
 	publishedResults := map[ResultKey]int{}

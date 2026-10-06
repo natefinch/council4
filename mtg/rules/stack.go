@@ -374,6 +374,10 @@ func stackObjectByID(g *game.Game, objectID id.ID) (*game.StackObject, bool) {
 // effect is left on the stack instead. A countered ability or a spell copy
 // simply ceases to exist, with no card to move.
 func counterStackObject(g *game.Game, objectID id.ID) bool {
+	return counterStackObjectWithDestination(g, objectID, false, game.CounteredSpellGraveyard)
+}
+
+func counterStackObjectWithDestination(g *game.Game, objectID id.ID, exileInstead bool, destination game.CounteredSpellDestination) bool {
 	obj, ok := stackObjectByID(g, objectID)
 	if !ok {
 		return false
@@ -391,6 +395,10 @@ func counterStackObject(g *game.Game, objectID id.ID) bool {
 	if !ok {
 		return false
 	}
+	if exileInstead {
+		obj.ExileOnResolution = true
+	}
+	obj.CounteredDestination = destination
 	// A countered dungeon room ability still completes the dungeon as it leaves
 	// the stack (CR 309.7): completion is tied to the ability leaving the stack,
 	// not to its resolution.

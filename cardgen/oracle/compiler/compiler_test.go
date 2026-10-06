@@ -322,7 +322,7 @@ func TestCompileReferencesBindsConservativeAntecedents(t *testing.T) {
 		{"prior instruction result", "Exile target creature. Return it to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingPriorInstructionResult, ReferenceBindingPriorInstructionResult}},
 		{"reanimated card result", "Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.", []ReferenceBinding{ReferenceBindingPriorInstructionResult}},
 		{"delayed source", "When this creature enters, exile it at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingSource}},
-		{"delayed non-self event card", "When enchanted creature dies, return that card to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingEventCard, ReferenceBindingEventCard}},
+		{"unavailable delayed related-event card", "When enchanted creature dies, return that card to the battlefield under its owner's control at the beginning of the next end step.", []ReferenceBinding{ReferenceBindingUnsupported, ReferenceBindingUnsupported}},
 		{"activation cost source", "Remove a counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingSource}},
 		{"activation cost prior object", "Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingAmbiguous}},
 		{"activation cost prior source and object", "Remove a charge counter from this artifact, Tap an untapped creature you control, Remove a +1/+1 counter from it: Draw a card.", []ReferenceBinding{ReferenceBindingSource, ReferenceBindingAmbiguous}},

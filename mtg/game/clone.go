@@ -258,6 +258,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	})
 	clone.AdditionalCostsPaid = cloneSlice(o.AdditionalCostsPaid)
 	clone.SacrificedAsCostIDs = cloneSlice(o.SacrificedAsCostIDs)
+	clone.PaidCostSubjects = ClonePaidCostSubjects(o.PaidCostSubjects)
 	clone.TappedAsCostIDs = cloneSlice(o.TappedAsCostIDs)
 	clone.ExiledAsCostIDs = cloneSlice(o.ExiledAsCostIDs)
 	clone.CapturedObjectIDs = cloneSlice(o.CapturedObjectIDs)

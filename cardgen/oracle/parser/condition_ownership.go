@@ -16,22 +16,28 @@ const (
 
 // ConditionOwnership names grammatical owners, not instruction positions.
 type ConditionOwnership struct {
+	DelayedBody      bool           `json:",omitempty"`
 	Scope            ConditionScope `json:",omitempty"`
 	ClauseIDs        []int          `json:",omitempty"`
 	ReferenceNodeIDs []int          `json:",omitempty"`
 	// ResultProducerClauseID names an earlier resolving action, never a cost.
 	ResultProducerClauseID int `json:",omitempty"`
+	// ResultSubjectReferenceNodeID identifies the specific countered spell.
+	ResultSubjectReferenceNodeID  int `json:",omitempty"`
+	ResultSubjectTargetOccurrence int `json:",omitempty"`
 }
 
 func emitAbilityConditionOwnership(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
 		emitConditionOwnership(ability.Sentences, ability.ConditionSegments, ability.SemanticReferences)
+		emitCounterResultOwnership(ability.Sentences, ability.ConditionSegments, ability.ConditionClauses, ability.SemanticReferences)
 		emitResultConditionOwnership(ability.Sentences, ability.ConditionSegments, ability.ConditionClauses)
 		if ability.Modal != nil {
 			for j := range ability.Modal.Options {
 				mode := &ability.Modal.Options[j]
 				emitConditionOwnership(mode.Sentences, mode.ConditionSegments, mode.SemanticReferences)
+				emitCounterResultOwnership(mode.Sentences, mode.ConditionSegments, mode.ConditionClauses, mode.SemanticReferences)
 				emitResultConditionOwnership(mode.Sentences, mode.ConditionSegments, mode.ConditionClauses)
 			}
 		}
@@ -62,6 +68,7 @@ func emitConditionOwnership(sentences []Sentence, segments []ConditionSegment, r
 		case 1:
 			segment.Ownership.Scope = ConditionScopeClause
 			segment.Ownership.ClauseIDs = []int{owners[0].ClauseID}
+			segment.Ownership.DelayedBody = delayedConditionEvaluation(owners[0], segment, sentences)
 		default:
 			segment.Ownership.Scope = ConditionScopeGroup
 			for _, effect := range owners {

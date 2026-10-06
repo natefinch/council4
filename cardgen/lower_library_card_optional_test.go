@@ -38,7 +38,7 @@ func TestLibraryCardOptionalRevealAndMoveIsOneChoice(t *testing.T) {
 				"ActivatedAbilities[0].Content.Modes[0].Sequence[2].OptionalDecisionGate",
 				"ActivatedAbilities[0].Content.Modes[0].Sequence[2].Primitive.(game.MoveCard).Destination = zone.Hand",
 			)
-			assertCardPathsAbsent(t, card, "ActivatedAbilities[0].Content.Modes[0].Sequence[2].Optional")
+			assertCardPathsAbsent(t, card, "ActivatedAbilities[0].Content.Modes[0].Sequence[2].Optional = true")
 		})
 	}
 }

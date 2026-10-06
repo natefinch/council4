@@ -16,6 +16,7 @@ type sequenceConditionPlan struct {
 	clauseConditions   map[int][]compiler.CompiledCondition
 	gateConditions     []compiler.CompiledCondition
 	externalConditions []compiler.CompiledCondition
+	delayedConditions  map[int][]compiler.CompiledCondition
 }
 
 func planSequenceConditions(
@@ -23,7 +24,8 @@ func planSequenceConditions(
 	optionalFlow optionalFlowPlan,
 ) (sequenceConditionPlan, string, bool) {
 	plan := sequenceConditionPlan{
-		clauseConditions: make(map[int][]compiler.CompiledCondition),
+		clauseConditions:  make(map[int][]compiler.CompiledCondition),
+		delayedConditions: make(map[int][]compiler.CompiledCondition),
 	}
 	owners := make(map[int]int)
 	for ei := range content.Effects {
@@ -47,6 +49,15 @@ func planSequenceConditions(
 	}
 	for ci := range content.Conditions {
 		condition := content.Conditions[ci]
+		if condition.Ownership.DelayedBody {
+			indices, reason := conditionClauseIndices(content.Effects, condition)
+			if reason != "" || len(indices) != 1 || content.Effects[indices[0]].DelayedTiming == 0 {
+				return sequenceConditionPlan{}, "structural — delayed condition has no unique fixed-phase body", false
+			}
+			plan.delayedConditions[indices[0]] = append(plan.delayedConditions[indices[0]], condition)
+			plan.externalConditions = append(plan.externalConditions, condition)
+			continue
+		}
 		ei, owned := owners[condition.NodeID]
 		if !owned {
 			if condition.Predicate == compiler.ConditionPredicateTargetControllerDoesNotPay {
@@ -72,12 +83,12 @@ func planSequenceConditions(
 	if optionalFlow.enabled {
 		if optionalFlow.scoped != nil {
 			for producer := range optionalFlow.scoped.publishers {
-				if _, owned := plan.clauseConditions[producer]; owned {
+				if _, owned := plan.clauseConditions[producer]; owned && !counterHasActualSuccessCondition(content, producer) {
 					return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 				}
 			}
 		}
-		if _, owned := plan.clauseConditions[optionalFlow.optionalIndex]; owned {
+		if _, owned := plan.clauseConditions[optionalFlow.optionalIndex]; owned && !counterHasActualSuccessCondition(content, optionalFlow.optionalIndex) {
 			return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 		}
 	}

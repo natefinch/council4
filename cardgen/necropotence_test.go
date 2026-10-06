@@ -40,11 +40,11 @@ func TestGenerateNecropotence(t *testing.T) {
 		"game.EventCardDiscarded",
 		"game.MoveTopOfLibrary{",
 		"Destination: zone.Exile,",
-		`PublishLinked: game.LinkedKey("delayed-top-card-1")`,
+		`PublishLinked: game.LinkedKey("sequence-effect-0-product")`,
 		"FaceDown:      true,",
 		"game.CreateDelayedTrigger{",
 		"game.DelayedAtBeginningOfYourNextEndStep",
-		`CapturedCard: opt.Val(game.LinkedObjectReference("delayed-top-card-1"))`,
+		`CapturedCard: opt.Val(game.LinkedObjectReference("sequence-effect-0-product"))`,
 		// Struct fields are now emitted multi-line; containsNormalized handles
 		// whitespace/comma differences.
 		"game.CardReference{Kind: game.CardReferenceCaptured}",
@@ -132,8 +132,8 @@ func TestLowerNecropotencePayLifeExileDelayedReturn(t *testing.T) {
 	if exile.Amount != game.Fixed(1) {
 		t.Fatalf("exile amount = %v, want exactly one top card", exile.Amount)
 	}
-	if exile.PublishLinked != game.LinkedKey("delayed-top-card-1") {
-		t.Fatalf("exile publish key = %q, want delayed-top-card-1", exile.PublishLinked)
+	if exile.PublishLinked != game.LinkedKey("sequence-effect-0-product") {
+		t.Fatalf("exile publish key = %q, want canonical product key", exile.PublishLinked)
 	}
 
 	delayed, ok := seq[1].Primitive.(game.CreateDelayedTrigger)
@@ -147,8 +147,8 @@ func TestLowerNecropotencePayLifeExileDelayedReturn(t *testing.T) {
 		t.Fatal("delayed trigger must capture the exiled card")
 	}
 	if delayed.Trigger.CapturedCard.Val.Kind() != game.ObjectReferenceLinkedObject ||
-		delayed.Trigger.CapturedCard.Val.LinkID() != "delayed-top-card-1" {
-		t.Fatalf("captured card reference = %#v, want linked object delayed-top-card-1", delayed.Trigger.CapturedCard.Val)
+		delayed.Trigger.CapturedCard.Val.LinkID() != string(exile.PublishLinked) {
+		t.Fatalf("captured card reference = %#v, want exact published result", delayed.Trigger.CapturedCard.Val)
 	}
 	returnSeq := delayed.Trigger.Content.Modes[0].Sequence
 	if len(returnSeq) != 1 {
@@ -199,33 +199,13 @@ func TestLowerNecropotenceDiscardExileRejectsTargetForm(t *testing.T) {
 	}
 }
 
-// TestNecropotenceNearMissesFailClosed proves the strict near-misses around each
-// new construct fail closed (report diagnostics and lower no ability) rather than
-// being coerced into Necropotence's shape. Each case is Necropotence's own wording
-// with a single deviation that must break the match.
+// Unsupported parameters must not be coerced into Necropotence's shape.
 func TestNecropotenceNearMissesFailClosed(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name       string
 		oracleText string
 	}{
-		{
-			// Face-up: the hidden-information return requires the card be exiled
-			// face down, so the face-up predecessor cannot be linked.
-			name:       "exile top card face up",
-			oracleText: "Pay 1 life: Exile the top card of your library. Put that card into your hand at the beginning of your next end step.",
-		},
-		{
-			// Non-controller-keyed "the next end step" is a different timing than
-			// the controller-keyed "your next end step".
-			name:       "shared next end step timing",
-			oracleText: "Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of the next end step.",
-		},
-		{
-			// Next upkeep is a different delayed timing entirely.
-			name:       "next upkeep timing",
-			oracleText: "Pay 1 life: Exile the top card of your library face down. Put that card into your hand at the beginning of the next turn's upkeep.",
-		},
 		{
 			// A different destination zone is not the "into your hand" return.
 			name:       "return to graveyard",

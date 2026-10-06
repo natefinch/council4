@@ -34,8 +34,8 @@ type contentCtx struct {
 	// EventPermanent binding, which always denotes the triggering permanent.
 	sequenceClause      bool
 	sequenceEffectIndex int
-	// singleAction preserves the envelope's one-choice/publication contract
-	// when a fixed mana output can otherwise expand into one instruction per pip.
+	// singleAction preserves existing homogeneous optional mana output as one
+	// primitive; mixed-color output uses the shared expanded-action envelope.
 	singleAction bool
 	// allowEventPronoun re-permits an EventPermanent "it"/"that creature"
 	// reference inside a sequence clause that is a mutually-exclusive branch
@@ -118,6 +118,7 @@ type contentCtx struct {
 	priorInstruction          int
 	priorLinkedKey            game.LinkedKey
 	observedCharacteristicKey game.ResultKey
+	capturedSubject           *capturedContentSubject
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -211,6 +212,7 @@ func lowerSequenceClauseContent(
 		priorInstruction:           parent.priorInstruction,
 		priorLinkedKey:             parent.priorLinkedKey,
 		observedCharacteristicKey:  parent.observedCharacteristicKey,
+		capturedSubject:            parent.capturedSubject,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
 }
@@ -660,15 +662,27 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalWheelDiscardDraw(ctx); ok {
 		return content, nil
 	}
-	if content, ok := lowerOptionalUntapRemoveFromCombat(ctx); ok {
+	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
 		return content, nil
+	}
+	var optionalGroupReason *shared.Diagnostic
+	if len(ctx.content.Modes) == 0 && len(ctx.content.Effects) == 1 &&
+		fixedPhaseSubjectEffectModeled(ctx.content.Effects[0]) {
+		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Modes) == 0 &&
 		len(ctx.content.Effects) > 1 &&
 		ctx.content.Effects[0].Kind != compiler.EffectSearch &&
 		!typedManifestDreadSequence(ctx.content) {
-		if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
+		content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax)
+		if diagnostic == nil {
 			return content, nil
+		}
+		for _, effect := range ctx.content.Effects {
+			if effect.Optional && len(effect.OptionalActionClauseIDs) > 1 {
+				optionalGroupReason = diagnostic
+				break
+			}
 		}
 	}
 	if content, ok := lowerOptionalDigReveal(ctx); ok {
@@ -710,14 +724,14 @@ func lowerOptionalContent(
 	if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
 		return content, nil
 	}
-	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
-		return content, nil
-	}
 	optionalReason := contentDiagnostic(
 		ctx,
 		"unsupported optional effect",
 		"the executable source backend does not yet lower optional resolving effects",
 	)
+	if optionalGroupReason != nil {
+		optionalReason.Additional = append(optionalReason.Additional, *optionalGroupReason)
+	}
 	if plan, ok, handled := planScopedResultFlow(ctx.content); handled && !ok && plan.failureCategory != "" {
 		optionalReason.Additional = append(optionalReason.Additional,
 			*unsupportedEffectSequenceDiagnostic(ctx, plan.failureCategory))
@@ -1571,6 +1585,9 @@ func lowerDelayedSingleEffectSpell(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, diagnostic, handled := lowerFixedPhaseSubject(cardName, ctx, syntax, nil, nil, nil); handled {
+		return content, diagnostic
+	}
 	effect := ctx.content.Effects[0]
 	ctx.content.Effects[0].DelayedTiming = 0
 
@@ -1753,6 +1770,9 @@ func unsupportedDelayedEffectDiagnostic(ctx contentCtx) *shared.Diagnostic {
 // trailing unrecognized conjunct ("untap it and all Samurai you control"); such a
 // tap/untap stays unsupported rather than silently dropping the conjunct.
 func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) {
+	group := ctx.capturedSubject != nil && ctx.capturedSubject.group
+	hasDirectObject := group && ctx.content.Effects[0].CreatedTokensReference ||
+		ctx.capturedSubject != nil && ctx.capturedSubject.direct
 	exact := ctx.content.Effects[0].Exact
 	if (ctx.content.Effects[0].Kind == compiler.EffectUntap ||
 		ctx.content.Effects[0].Kind == compiler.EffectTap) &&
@@ -1760,7 +1780,7 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		exact = true
 	}
 	if len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) == 0 ||
+		(len(ctx.content.References) == 0 && !hasDirectObject) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
@@ -1769,7 +1789,6 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 		ctx.content.Effects[0].Context != parser.EffectContextController {
 		return game.AbilityContent{}, false
 	}
-	hasDirectObject := false
 	for _, ref := range ctx.content.References {
 		if ref.Binding != compiler.ReferenceBindingEventPermanent &&
 			ref.Binding != compiler.ReferenceBindingEventRelatedPermanent &&
@@ -1784,17 +1803,19 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 			// qualifies a destination ("its owner's hand"), so a body with only
 			// "its" carries no direct object and is rejected below.
 			if ref.Pronoun != compiler.ReferencePronounIt &&
-				ref.Pronoun != compiler.ReferencePronounIts {
+				ref.Pronoun != compiler.ReferencePronounIts &&
+				(!group || ref.Pronoun != compiler.ReferencePronounThem && ref.Pronoun != compiler.ReferencePronounThose) {
 				return game.AbilityContent{}, false
 			}
-			hasDirectObject = hasDirectObject || ref.Pronoun == compiler.ReferencePronounIt
+			hasDirectObject = hasDirectObject || ref.Pronoun == compiler.ReferencePronounIt ||
+				ref.Pronoun == compiler.ReferencePronounThem || ref.Pronoun == compiler.ReferencePronounThose
 		case compiler.ReferenceThatObject:
 			hasDirectObject = true
 		case compiler.ReferenceThisObject, compiler.ReferenceSelfName:
 			if ref.Binding != compiler.ReferenceBindingSource {
 				return game.AbilityContent{}, false
 			}
-			if ctx.content.Effects[0].Kind != compiler.EffectTap &&
+			if ctx.capturedSubject == nil && ctx.content.Effects[0].Kind != compiler.EffectTap &&
 				ctx.content.Effects[0].Kind != compiler.EffectUntap &&
 				ctx.content.Effects[0].Kind != compiler.EffectRemoveFromCombat &&
 				ctx.content.Effects[0].Kind != compiler.EffectTransform {
@@ -1810,24 +1831,34 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 	}
 	consumed := ctx
 	consumed.content.References = nil
+	if group {
+		consumed.content.Effects = slices.Clone(consumed.content.Effects)
+		consumed.content.Effects[0].CreatedTokensReference = false
+	}
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}
-	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		AllowEvent:       true,
-		AllowSource:      true,
-		AllowTarget:      true,
-		PriorInstruction: ctx.priorInstruction,
-		PriorLinkedKey:   ctx.priorLinkedKey,
-	})
-	if !ok {
-		return game.AbilityContent{}, false
+	var object game.ObjectReference
+	if ctx.capturedSubject != nil && ctx.capturedSubject.direct {
+		object = game.CapturedObjectReference()
+	} else if !group {
+		var ok bool
+		object, ok = lowerContentObjectReference(ctx, ctx.content.References[0], referenceLoweringContext{
+			AllowEvent:       true,
+			AllowSource:      true,
+			AllowTarget:      true,
+			PriorInstruction: ctx.priorInstruction,
+			PriorLinkedKey:   ctx.priorLinkedKey,
+		})
+		if !ok {
+			return game.AbilityContent{}, false
+		}
 	}
 	var primitive game.Primitive
 	effect := ctx.content.Effects[0]
 	switch effect.Kind {
 	case compiler.EffectDestroy:
-		primitive = game.Destroy{Object: object}
+		primitive = game.Destroy{Object: object, PreventRegeneration: effect.PreventRegeneration}
 	case compiler.EffectExile:
 		primitive = game.MovePermanent{Object: object, Destination: zone.Exile}
 	case compiler.EffectTap:
@@ -1847,8 +1878,31 @@ func lowerReferencedPermanentEffect(ctx contentCtx) (game.AbilityContent, bool) 
 			return game.AbilityContent{}, false
 		}
 		primitive = game.MovePermanent{Object: object, Destination: zone.Hand}
+	case compiler.EffectPut:
+		if effect.ToZone != zone.Library ||
+			(effect.Destination != parser.EffectDestinationTop && effect.Destination != parser.EffectDestinationBottom) {
+			return game.AbilityContent{}, false
+		}
+		primitive = game.MovePermanent{
+			Object: object, Destination: zone.Library, LibraryBottom: effect.Destination == parser.EffectDestinationBottom,
+		}
 	default:
 		return game.AbilityContent{}, false
+	}
+	if group {
+		captured := game.CapturedObjectsGroup()
+		switch effect.Kind {
+		case compiler.EffectSacrifice:
+			primitive = game.Sacrifice{Group: captured}
+		case compiler.EffectExile:
+			primitive = game.MovePermanent{Group: captured, Destination: zone.Exile}
+		case compiler.EffectReturn:
+			primitive = game.MovePermanent{Group: captured, Destination: zone.Hand}
+		case compiler.EffectDestroy:
+			primitive = game.Destroy{Group: captured, PreventRegeneration: effect.PreventRegeneration}
+		default:
+			return game.AbilityContent{}, false
+		}
 	}
 	return game.Mode{Sequence: []game.Instruction{{Primitive: primitive}}}.Ability(), true
 }
@@ -2045,6 +2099,18 @@ func lowerImmediateSingleEffectSpell(
 	// Route no-target EventPermanent pronoun bodies through the shared path
 	// before individual effect dispatch so all compatible trigger shells
 	// benefit from the same lowering.
+	if content, ok := lowerReferencedCardMove(ctx); ok {
+		return content, nil
+	}
+	if ctx.capturedSubject != nil && ctx.capturedSubject.card {
+		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported captured card action",
+			"the immediate card action or its parameters have no captured-reference adapter")
+	}
+	if ctx.capturedSubject != nil && ctx.content.Effects[0].Kind == compiler.EffectReturn &&
+		ctx.content.Effects[0].ToZone == zone.Battlefield {
+		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported captured subject domain",
+			"battlefield reanimation requires an actual captured card incarnation")
+	}
 	if content, ok := lowerReferencedPermanentEffect(ctx); ok {
 		return content, nil
 	}
@@ -2445,7 +2511,8 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 	}
 	referencedObject := len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		(ctx.content.References[0].Binding == compiler.ReferenceBindingTarget ||
+			ctx.content.References[0].Binding == compiler.ReferenceBindingPriorInstructionResult) &&
 		effect.Context == parser.EffectContextReferencedObject
 	targetSubject := len(ctx.content.Targets) == 1 &&
 		len(ctx.content.References) == 0 &&
@@ -2476,7 +2543,9 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 		target = opt.Val(spec)
 		object = game.TargetPermanentReference(0)
 	default:
-		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowTarget: true, PriorInstruction: ctx.priorInstruction, PriorLinkedKey: ctx.priorLinkedKey,
+		})
 		if !ok {
 			return unsupported()
 		}

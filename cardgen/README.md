@@ -38,9 +38,9 @@ increments once, before any chosen mode or Instruction evaluates its gate.
 Target-bearing ordinary activated bodies compose fixed controller mana outputs
 through shared Ability Content with resolving If/Unless/ordinal gates. Repeated
 single-color optional outputs form one AddMana quantity and one resolving choice,
-not one choice per symbol. Mixed-color expanded optional actions require a modeled
-group and remain unsupported. Activation restrictions and untargeted mana-shell
-ordinals retain their separate, fail-closed boundaries.
+not one choice per symbol. Mixed-color expanded optional actions share one modeled
+controller decision through the optional-action envelope. Activation restrictions
+and untargeted mana-shell ordinals retain their separate, fail-closed boundaries.
 
 Actual removed-counter quantities retain the parser-owned producing ClauseID
 within an Ability Content body. Ordinary damage, life, and draw consumers share
@@ -132,6 +132,39 @@ before the frame exits. Persistent CR 607 links and paid-cost facts do not enter
 these frames; condition booleans remain resolver-local. Legacy undeclared,
 colliding conditional publications retain their fail-closed boundary.
 
+Fixed-phase delayed bodies use that same shared sequence interface. Parser-owned
+NodeID, producer ClauseID, target occurrence, subject domain, and condition timing
+select the subject without compiler text or positional guesses. At scheduling,
+the existing delayed-trigger capture freezes the exact permanent, the complete
+actual token batch (including replacement-created copies), or the reached card
+incarnation. Unconditional intervening effects do not change the antecedent;
+expanded producers require exactly one proven publisher. Capture-owned card-move
+publications explicitly clear before gates or optional choices, without clearing
+persistent CR 607 links. Later source activations, copies, and zone reentry cannot
+redirect an earlier capture.
+
+Every token-creation route publishes its actual entered batch through the same
+collector, including per-object copies, trigger-batch choices, and populate.
+Per-object creation accumulates all successful outputs instead of overwriting an
+earlier member's publication; an empty or prevented batch stays empty.
+
+Battlefield source effects retain the original permanent ID, rather than resolving
+the source card to a later incarnation. A source already in a graveyard or exile
+captures only its exact stack `SourceZone`/`SourceZoneVersion`. Captured returns
+reuse existing entry-counter and type-effect adapters. The established optional
+immediate-return/fallback flow still owns its original exiled card; it must not
+adopt the unavailable permanent product of a declined return.
+
+Resolving conditions gate scheduling; future body conditions execute at the
+printed delayed phase and require an available captured subject before negation.
+Parser-owned optional timing distinguishes choosing to schedule an action
+(`you may ... at the next step`) from choosing when the delayed body resolves
+(`at the next step, you may ...`). A current actual-result gate controls
+scheduling, not an unavailable result at the later phase.
+Unavailable subject domains, future quantities, multiple future conditions, and
+multi-selected-mode product namespaces retain precise whole-card refusals.
+Event-based delayed triggers retain their separate event-matching interface.
+
 Condition type selections share the selection atom vocabulary: adjacent types
 are conjunctive (`artifact creature`), `or`/`and/or` joins alternatives,
 and `noncreature`/`nonland` exclude types. A `permanent card` condition is
@@ -162,6 +195,32 @@ Ordinary live comparisons still fail after removal. Unknown numeric information
 fails closed even under negation or a cached group condition's complement.
 Unavailable captured evaluations do not publish a false value. Dynamic thresholds and unresolved actual
 producer subjects remain unsupported.
+
+Paid-cost subject references are separate from resolving-action products. The
+parser binds a past-cost predicate to one singular sacrifice/discard component
+by cost clause, component, and consumer identity. Only a recognized predicate
+consumer promotes a cost noun into this reference domain, before effect syntax
+is assembled; existing sacrificed-characteristic amounts retain their legacy
+scalar contract and other typed operands keep their exact reference identities.
+Payment captures the actual
+selected permanent or discarded card before its move; stack copies retain that
+immutable snapshot, including effective permanent characteristics and a known
+original card version (zero is valid). A resolving condition reads these facts,
+not the nominal cost, a target, a later graveyard incarnation, or an effect's
+success key. The cost remains paid when the predicate is false. Random discard
+records the existing payment operation's actual choice, without replaying it.
+Ambiguous components, plural subjects, unsupported branches, and competing
+resolving sacrifice/discard producers refuse instead of choosing the first
+member. This includes earlier resolving spell paragraphs and co-selectable
+modal bodies, plus same-domain alternative payments anywhere on the face.
+Optional alternatives do not become required cost publishers. Separate
+activated and triggered abilities retain their own ownership scope.
+Unavailable characteristics cannot enable a negated predicate.
+Fixed past-tense mana-value, power, and toughness bounds reuse the shared
+attribute-comparison grammar and information-availability preflight, including
+cached Instead complements. Current-tense cost subjects, relative thresholds,
+and state/relationship predicates not projected from the snapshot refuse; they
+never read the object's later incarnation or treat an unknown number as zero.
 
 Trigger recognition belongs to the Oracle parser. Its composable grammar emits
 source-spanned typed syntax for permanent zone-change, spell/ability, combat,
@@ -239,8 +298,35 @@ Vanguard cards are excluded with explicit report reasons.
    local result keys. Literal `If you don't` tests action failure, whereas
    `Otherwise` complements the complete preceding filtered predicate. Both refuse
    unavailable publications. Bare optional actions can coexist with mandatory
-   independent clauses; an expanded optional action needs modeled group acceptance,
-   not separate choices per Instruction. Positive exact and at-least result counts
+   independent clauses. Parser-owned `OptionalActionClauseIDs` model a single
+   controller decision governing several supported clauses, or one clause that
+   expands into several Instructions. The first governed Instruction asks once
+   and publishes `PublishOptionalDecision`; the rest consume
+   `OptionalDecisionGate`. This sequence-local acceptance is independent of
+   actual-result/object/scalar publications and their gates: an ineffective first
+   action does not suppress the accepted bare group's remaining actions.
+   Conditional groups ask only after their printed predicate is true; independent
+   riders and separately printed optional groups retain their own envelopes.
+   Skipped publishers and unavailable deciders publish no decision, while an actual
+   decline publishes false. Repeat iterations, selected modes, and copied
+   resolutions do not inherit a prior sequence's decision. Whole-group `If you do`
+   outcomes, compound optional costs, and unmodeled actor ownership remain refused;
+   neither the first nor last primitive's success stands in for group success.
+   Entered-object riders use actual fresh permanent publications, invalidated
+   before producer gates, including across independent or expanded intervening
+   actions. The typed target occurrence identifies the earlier producer through
+   the existing per-effect Instruction ranges and canonical product publication.
+   If no adapter can supply the entered incarnation, an
+   original target-card reference is not substituted for that permanent.
+   Fixed-phase captures freeze the parser-owned original product through the
+   shared capture publication adapter, not a mandatory haste or P/T shim.
+   Capture-owned exile moves opt into transient pre-gate invalidation; persistent
+   CR607 links remain untouched. A declined, skipped, or failed producer can
+   schedule an empty capture but cannot reuse an earlier incarnation. Optional
+   fixed-phase actions retain their typed schedule-time versus fire-time choice.
+   Unproven chained publications and delayed compound optional groups still
+   refuse rather than approximating availability or timing.
+   Positive exact and at-least result counts
    count matching actual members, not the requested amount. Active `you` result
    grammar requires modeled controller action ownership. Costs, opaque verbs,
    shared-characteristic relationships, expanded producers without an aggregate,
@@ -250,6 +336,18 @@ Vanguard cards are excluded with explicit report reasons.
    and bonus mode choices. Undeclared legacy conditional publications with
    colliding keys remain refused; guaranteed legacy publishers may overwrite a
    key before their own consumers.
+   A specific "that spell is countered this way" condition owns a counter
+   producer ClauseID, subject reference identity and target occurrence. The
+   compiler preserves that exact binding ahead of generic product heuristics,
+   including when an independent exile precedes the counter. Ordinary consequences test
+   that CounterObject's actual success, including when a resolving tax skips
+   the counter. Intrinsic exile/library-top/hand replacement clauses instead
+   modify the same counter operation before its zone mutation; they never lower
+   to a subsequent card move. These modifiers compose with supported conditions,
+   taxes, targets and independent riders through shared ordered assembly.
+   Unproven or ambiguous spell occurrences, multiple aliased tax payments,
+   library-bottom/top-or-bottom-choice destinations and unavailable target filters
+   remain refused. A failed counter cannot change a spell's later destination.
    Existing state-gated `Otherwise` and `instead` branches consume the same
    captured decision (or its complement); they do not re-test state after the
    preceding action. Missing publications fail closed even for complements.

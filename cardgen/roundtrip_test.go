@@ -81,8 +81,36 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: If you have no cards in hand, draw a card, then draw a card.",
 	},
 	{
+		Name: "RT Optional Group", Layout: "normal", TypeLine: "Instant",
+		OracleText: "If you have no cards in hand, you may draw a card and gain 2 life. You gain 1 life.",
+	},
+	{
+		Name: "RT Expanded Optional", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: You may put a +1/+1 counter on each of up to two target creatures.",
+	},
+	{
 		Name: "RT Returned Subject", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Return target creature card from your graveyard to the battlefield. If it's an Elf, put a +1/+1 counter on it.",
+	},
+	{
+		Name: "RT Captured Product", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Create a 1/1 green Insect creature token. You gain 1 life. Sacrifice it at the beginning of the next end step.",
+	},
+	{
+		Name: "RT Captured Card", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Exile target creature card from your graveyard. You gain 1 life. Return that card to the battlefield at the beginning of the next end step.",
+	},
+	{
+		Name: "RT Captured Target", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Tap target creature. Untap target creature. You gain 1 life. Exile it at the beginning of the next end step.",
+	},
+	{
+		Name: "RT Captured Future", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Tap target creature. At the beginning of the next end step, if it's an Elf, destroy it.",
+	},
+	{
+		Name: "RT Captured Future Choice", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "Tap target creature. At the beginning of the next end step, you may exile it.",
 	},
 	{
 		Name: "RT Blinked Subject", Layout: "normal", TypeLine: "Instant",
@@ -105,12 +133,44 @@ var roundTripCards = []*ScryfallCard{
 		OracleText: "{1}: Discard three cards. If two land cards were discarded this way, draw a card.",
 	},
 	{
+		Name: "RT Counter Outcome", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Counter target spell unless its controller pays {3}. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life. You gain 1 life.",
+	},
+	{
+		Name: "RT Counter Activated", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{1}: Counter target spell. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life.",
+	},
+	{
+		Name: "RT Counter Triggered", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "When this artifact enters, counter target spell. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life.",
+	},
+	{
+		Name: "RT Counter Modal", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Choose one \u2014\n\u2022 Counter target spell. " + counterExileReplacement +
+			" If that spell is countered this way, you gain 2 life.\n\u2022 Draw a card.",
+	},
+	{
 		Name: "RT Ordinal Mana", Layout: "normal", TypeLine: "Artifact",
 		OracleText: flamekinBody,
 	},
 	{
 		Name: "RT Gated Mana", Layout: "normal", TypeLine: "Instant",
 		OracleText: "If you have no cards in hand, draw a card, then add {R}{G}.",
+	},
+	{
+		Name: "RT Sacrifice Cost Subject", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "Sacrifice a creature: You gain 1 life. If the sacrificed creature was red, draw a card.",
+	},
+	{
+		Name: "RT Discard Cost Subject", Layout: "normal", TypeLine: "Sorcery",
+		OracleText: "As an additional cost to cast this spell, discard a card.\nDraw a card. If the discarded card wasn't a land card, you gain 2 life.",
+	},
+	{
+		Name: "RT Numeric Cost Subject", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{T}, Sacrifice a creature: Create a Food token. If the sacrificed creature had toughness 4 or greater, create two Food tokens instead.",
 	},
 	{
 		Name:       "RT Bog",
@@ -259,6 +319,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestRTRemovedCounterQuantitySemantic(t *testing.T) {
@@ -346,6 +407,69 @@ func TestRTLandSemantic(t *testing.T) {
 	}
 	if add.ManaColor != mana.G {
 		t.Fatalf("mana color = %%q", add.ManaColor)
+	}
+}
+
+func TestRTCounterOutcomeSemantic(t *testing.T) {
+	sequences := [][]game.Instruction{
+		RTCounterOutcome().SpellAbility.Val.Modes[0].Sequence,
+		RTCounterActivated().ActivatedAbilities[0].Content.Modes[0].Sequence,
+		RTCounterTriggered().TriggeredAbilities[0].Content.Modes[0].Sequence,
+		RTCounterModal().SpellAbility.Val.Modes[0].Sequence,
+	}
+	for i, sequence := range sequences {
+		index := 0
+		if i == 0 {
+			index = 1
+			if _, ok := sequence[0].Primitive.(game.Pay); !ok ||
+				!sequence[1].ResultGate.Exists ||
+				sequence[1].ResultGate.Val.Key != sequence[0].PublishResult {
+				t.Fatalf("counter tax wiring = %%#v", sequence)
+			}
+		}
+		counter, ok := sequence[index].Primitive.(game.CounterObject)
+		if !ok || !counter.ExileInstead || sequence[index].PublishResult == "" ||
+			!sequence[index+1].ResultGate.Exists ||
+			sequence[index+1].ResultGate.Val.Key != sequence[index].PublishResult {
+			t.Fatalf("counter outcome round trip = %%#v", sequence)
+		}
+	}
+	if sequences[0][3].ResultGate.Exists {
+		t.Fatal("independent counter rider became success-gated")
+	}
+}
+
+func TestRTFixedPhaseSubjectSemantic(t *testing.T) {
+	product := RTCapturedProduct().SpellAbility.Val.Modes[0].Sequence
+	create := product[0].Primitive.(game.CreateToken)
+	trigger := product[2].Primitive.(game.CreateDelayedTrigger).Trigger
+	if create.PublishLinked == "" || !trigger.CapturedObjectGroup.Exists ||
+		trigger.CapturedObjectGroup.Val != game.LinkedObjectReference(string(create.PublishLinked)) {
+		t.Fatal("actual product group did not round-trip")
+	}
+	card := RTCapturedCard().SpellAbility.Val.Modes[0].Sequence
+	move := card[0].Primitive.(game.MoveCard)
+	trigger = card[2].Primitive.(game.CreateDelayedTrigger).Trigger
+	if !card[0].ClearLinkedBeforeGate || !move.ReplacePublishedLinked || move.PublishLinked == "" ||
+		!trigger.CapturedCard.Exists || trigger.CapturedCard.Val != game.LinkedObjectReference(string(move.PublishLinked)) {
+		t.Fatal("transient card publication/capture did not round-trip")
+	}
+	target := RTCapturedTarget().SpellAbility.Val.Modes[0].Sequence
+	trigger = target[3].Primitive.(game.CreateDelayedTrigger).Trigger
+	if !trigger.CapturedObject.Exists || trigger.CapturedObject.Val != game.TargetPermanentReference(1) {
+		t.Fatal("nonzero captured target occurrence did not round-trip")
+	}
+	future := RTCapturedFuture().SpellAbility.Val.Modes[0].Sequence
+	trigger = future[1].Primitive.(game.CreateDelayedTrigger).Trigger
+	condition := trigger.Content.Modes[0].Sequence[0].Condition
+	if future[1].Condition.Exists || !condition.Exists ||
+		condition.Val.Condition.Val.Object.Val != game.CapturedObjectReference() {
+		t.Fatal("future captured-subject condition evaluated at the wrong time")
+	}
+	choice := RTCapturedFutureChoice().SpellAbility.Val.Modes[0].Sequence
+	trigger = choice[1].Primitive.(game.CreateDelayedTrigger).Trigger
+	if choice[1].Optional || !trigger.Optional || !trigger.CapturedObject.Exists {
+		t.Fatal("future captured-subject choice did not round-trip")
 	}
 }
 
@@ -457,6 +581,22 @@ func TestRTResultCountSemantic(t *testing.T) {
 	}
 }
 
+func TestRTOptionalGroupSemantic(t *testing.T) {
+	group := RTOptionalGroup().SpellAbility.Val.Modes[0].Sequence
+	expanded := RTExpandedOptional().ActivatedAbilities[0].Content.Modes[0].Sequence
+	for _, seq := range [][]game.Instruction{group, expanded} {
+		if !seq[0].Optional || seq[0].PublishOptionalDecision == "" ||
+			seq[1].Optional || seq[1].OptionalDecisionGate != seq[0].PublishOptionalDecision ||
+			seq[0].PublishResult != "" || seq[1].ResultGate.Exists {
+			t.Fatal("single decision independent of actual results did not round-trip")
+		}
+	}
+	if group[0].PublishCondition == "" || group[1].ConditionGate != group[0].PublishCondition ||
+		group[2].Optional || group[2].OptionalDecisionGate != "" || group[2].ConditionGate != "" {
+		t.Fatal("conditional optional group swallowed the independent rider")
+	}
+}
+
 func TestRTOrdinaryManaSemantic(t *testing.T) {
 	ability := RTOrdinalMana().ActivatedAbilities[0]
 	seq := ability.Content.Modes[0].Sequence
@@ -479,6 +619,31 @@ func TestRTOrdinaryManaSemantic(t *testing.T) {
 		if !ok || add.Amount.Value() != 1 || add.ManaColor != color {
 			t.Fatal("fixed-mana color or amount did not round-trip")
 		}
+	}
+}
+
+func TestRTPaidCostSubjectSemantic(t *testing.T) {
+	ability := RTSacrificeCostSubject().ActivatedAbilities[0]
+	key := ability.AdditionalCosts[0].SubjectKey
+	ref := ability.Content.Modes[0].Sequence[1].Condition.Val.Condition.Val.Object.Val
+	if key == "" || ref != game.PaidCostReference(key, game.PaidCostSacrifice, types.Creature) {
+		t.Fatal("sacrifice component identity, domain and noun did not round-trip")
+	}
+	card := RTDiscardCostSubject()
+	key = card.AdditionalCosts[0].SubjectKey
+	condition := card.SpellAbility.Val.Modes[0].Sequence[1].Condition.Val.Condition.Val
+	if key == "" || condition.Object.Val != game.PaidCostReference(key, game.PaidCostDiscard, "") || !condition.Negate {
+		t.Fatalf("discard cost key=%%q reference key=%%q negated=%%v", key, condition.Object.Val.CostKey(), condition.Negate)
+	}
+	numeric := RTNumericCostSubject().ActivatedAbilities[0]
+	key = numeric.AdditionalCosts[1].SubjectKey
+	sequence := numeric.Content.Modes[0].Sequence
+	condition = sequence[0].Condition.Val.Condition.Val
+	if key == "" || condition.Object.Val != game.PaidCostReference(key, game.PaidCostSacrifice, types.Creature) ||
+		condition.ObjectMatches.Val.Toughness.Val != (compare.Int{Op: compare.GreaterOrEqual, Value: 4}) ||
+		!condition.Negate || sequence[0].PublishCondition == "" ||
+		sequence[1].ConditionGate != sequence[0].PublishCondition || !sequence[1].ConditionGateNegate {
+		t.Fatal("numeric paid-cost predicate and exclusive replacement envelope did not round-trip")
 	}
 }
 `, pkgName)
