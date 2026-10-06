@@ -29,6 +29,7 @@ func compileAbility(
 ) (CompiledAbility, []shared.Diagnostic) {
 	var diagnostics []shared.Diagnostic
 	kind := compileAbilityKind(ability.Kind)
+	context.sourceKind = kind
 	compiled := CompiledAbility{
 		Kind: kind,
 		Span: ability.Span,
@@ -249,6 +250,11 @@ func compileAbility(
 		compiled.Trigger != nil && compiled.Trigger.Pattern.Source == TriggerSourceSelf,
 	)
 	recognizeActivationZone(&compiled)
+	sourceZone := zone.Battlefield
+	if kind == AbilityActivated || kind == AbilityLoyalty {
+		sourceZone = compiled.ActivationZone
+	}
+	finalizeReferenceSubjects(&compiled.Content, referenceSourceContext(kind, sourceZone, compiled.Trigger))
 	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
 		for i := range compiled.Content.Conditions {
 			if compiled.Content.Conditions[i].NodeID == compiled.Trigger.Condition.NodeID {
@@ -675,6 +681,7 @@ func compileMode(
 			References: references,
 		},
 	}
+	finalizeReferenceSubjects(&compiled.Content, referenceSourceContext(context.sourceKind, zone.Battlefield, trigger))
 	if mode.SpreeCost != nil {
 		compiled.SpreeCost = slices.Clone(mode.SpreeCost.Cost)
 	}

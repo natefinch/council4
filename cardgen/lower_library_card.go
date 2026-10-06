@@ -20,6 +20,12 @@ func lowerLibraryCardClause(ctx contentCtx) (game.AbilityContent, *shared.Diagno
 	unsupported := func(detail string) (game.AbilityContent, *shared.Diagnostic, bool) {
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported observed library card", detail), true
 	}
+	if effect.CardSource == parser.EffectCardSourcePriorInstructionResult && effect.FromZone == zone.Battlefield {
+		if content, ok := lowerReferencedCardMove(ctx); ok {
+			return content, nil, true
+		}
+		return unsupported("the reached card has no exact entered-object movement adapter")
+	}
 	if !effect.Exact || effect.Negated || effect.DelayedTiming != 0 ||
 		effect.Optional || ctx.optional || len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 || len(ctx.content.Modes) != 0 {

@@ -642,10 +642,25 @@ func lowerSourcePermanentExile(ctx contentCtx) (game.AbilityContent, bool) {
 	if !selfReference {
 		return game.AbilityContent{}, false
 	}
+	if reference.SubjectDomain() == compiler.ReferenceSubjectCard {
+		card, ok := lowerCardReference(reference, referenceLoweringContext{AllowSource: true, AllowEvent: true})
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		from := effect.FromZone
+		if reference.Binding == compiler.ReferenceBindingEventCard {
+			from = zone.Graveyard
+		}
+		if from == zone.None || from == zone.Battlefield {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
+			Card: card, FromZone: from, Destination: zone.Exile,
+		}}}}.Ability(), true
+	}
 	object, ok := lowerObjectReference(reference, referenceLoweringContext{
-		AllowSource:      true,
-		SourceCardObject: reference.CardIdentity || effect.FromZone != zone.None && effect.FromZone != zone.Battlefield,
-		AllowEvent:       true,
+		AllowSource: true,
+		AllowEvent:  true,
 	})
 	if !ok {
 		return game.AbilityContent{}, false

@@ -47,7 +47,7 @@ func lowerAnimateSelfContent(ctx contentCtx) (game.AbilityContent, *shared.Diagn
 	if !ok {
 		return unsupported("unsupported animated color or keyword")
 	}
-	return continuousSourceMode(continuousEffects, game.DurationUntilEndOfTurn), nil
+	return continuousSourceMode(ctx, continuousEffects, game.DurationUntilEndOfTurn)
 }
 
 // animationContinuousEffects builds the layered continuous effects shared by the

@@ -41,7 +41,7 @@ func bindContextualObjectCondition(
 			}
 			subject.Binding = ReferenceBindingEventStackObject
 		}
-		if bindLibraryCardReference(&subject, effects) {
+		if bindOwnedProducerReference(&subject, effects) {
 			if subject.Binding != ReferenceBindingPriorInstructionResult {
 				return false
 			}

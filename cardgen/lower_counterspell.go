@@ -751,9 +751,8 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		len(ctx.content.Modes) == 0 &&
 		!effect.Negated {
 		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-			AllowSource:      true,
-			SourceCardObject: true,
-			AllowEvent:       true,
+			AllowSource: true,
+			AllowEvent:  true,
 		})
 		if ok {
 			return game.Mode{Sequence: []game.Instruction{{

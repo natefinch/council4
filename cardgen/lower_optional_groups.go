@@ -9,16 +9,18 @@ import (
 )
 
 type optionalActionGroups struct {
-	owners          map[int]int
-	keys            map[int]game.OptionalDecisionKey
-	compound        map[int]bool
-	controllerActor map[int]bool
+	owners           map[int]int
+	keys             map[int]game.OptionalDecisionKey
+	compound         map[int]bool
+	controllerActor  map[int]bool
+	requiredReceipts map[int]bool
 }
 
 func planOptionalActionGroups(effects []compiler.CompiledEffect, indices map[int]int) (optionalActionGroups, string) {
 	groups := optionalActionGroups{
 		owners: make(map[int]int), keys: make(map[int]game.OptionalDecisionKey), compound: make(map[int]bool),
-		controllerActor: make(map[int]bool),
+		controllerActor:  make(map[int]bool),
+		requiredReceipts: make(map[int]bool),
 	}
 	for ei, effect := range effects {
 		if !effect.Optional {
@@ -97,7 +99,7 @@ func (groups optionalActionGroups) apply(ei int, sequence []game.Instruction) st
 			sequence[0].Primitive != nil && sequence[0].Primitive.Kind() == game.PrimitivePay {
 			return ""
 		}
-		return markOptionalAction(sequence, groups.keys[owner], groups.compound[owner])
+		return markOptionalAction(sequence, groups.keys[owner], groups.compound[owner] || groups.requiredReceipts[owner])
 	}
 	for i := range sequence {
 		if sequence[i].Optional || sequence[i].OptionalActor.Exists || sequence[i].OptionalActorGroup.Exists ||

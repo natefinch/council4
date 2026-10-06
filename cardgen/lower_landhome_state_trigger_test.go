@@ -68,8 +68,8 @@ func TestLowerLandhomeStateTrigger(t *testing.T) {
 				t.Fatalf("sequence length = %d, want 1", len(sequence))
 			}
 			sacrifice, ok := sequence[0].Primitive.(game.Sacrifice)
-			if !ok || sacrifice.Object != game.SourceCardPermanentReference() {
-				t.Fatalf("primitive = %#v, want source-card sacrifice", sequence[0].Primitive)
+			if !ok || sacrifice.Object != game.SourcePermanentReference() {
+				t.Fatalf("primitive = %#v, want original source sacrifice", sequence[0].Primitive)
 			}
 		})
 	}

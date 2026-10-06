@@ -2278,7 +2278,6 @@ func doublePTObjectMode(
 			ctx,
 			ctx.content.References[0],
 			effect,
-			false,
 		)
 		if !ok {
 			return unsupported()
@@ -2515,7 +2514,8 @@ func doubleCountersObjectReference(ctx contentCtx, effect *compiler.CompiledEffe
 	if len(ctx.content.References) != 0 {
 		return game.ObjectReference{}, opt.V[game.TargetSpec]{}, false
 	}
-	return game.SourcePermanentReference(), opt.V[game.TargetSpec]{}, true
+	object, ok := lowerIntrinsicSourceObject(ctx)
+	return object, opt.V[game.TargetSpec]{}, ok
 }
 
 func lowerFixedGroupModifyPTSpell(
@@ -2564,13 +2564,17 @@ func lowerFixedGroupModifyPTSpell(
 		if ctx.content.References[0].Binding != compiler.ReferenceBindingSource {
 			return unsupported()
 		}
-		power, toughness, ok := referencedModifyPTQuantities(effect, game.SourcePermanentReference())
+		object, ok := lowerContentObjectReference(ctx, ctx.content.References[0], referenceLoweringContext{AllowSource: true})
+		if !ok {
+			return unsupported()
+		}
+		power, toughness, ok := referencedModifyPTQuantities(effect, object)
 		if !ok {
 			return unsupported()
 		}
 		sequence = append(sequence, game.Instruction{
 			Primitive: game.ModifyPT{
-				Object:         game.SourcePermanentReference(),
+				Object:         object,
 				PowerDelta:     power,
 				ToughnessDelta: toughness,
 				Duration:       game.DurationUntilEndOfTurn,
@@ -2802,7 +2806,7 @@ func lowerTemporaryKeywordSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if targetSubject || inheritedTargetSubject {
 		return continuousTargetMode(ctx.content.Targets[0], continuousEffects, duration, unsupported)
 	}
-	object, ok := continuousInstructionReferenceObject(ctx, ctx.content.References[0], &effect, true)
+	object, ok := continuousInstructionReferenceObject(ctx, ctx.content.References[0], &effect)
 	if !ok {
 		return unsupported()
 	}
@@ -3001,7 +3005,6 @@ func lowerTemporaryKeywordLossSpell(ctx contentCtx) (game.AbilityContent, *share
 			AllowGroup:           true,
 			AllowTarget:          true,
 			AllowReferenceObject: true,
-			SourceAsCard:         true,
 		},
 		unsupported,
 	)

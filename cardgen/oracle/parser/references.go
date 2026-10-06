@@ -63,7 +63,8 @@ type Reference struct {
 	// occupies (normally the graveyard after a leaves-the-battlefield trigger),
 	// so downstream lowering returns it from that zone by card identity instead
 	// of bouncing a battlefield object.
-	CardIdentity bool `json:",omitempty"`
+	CardIdentity bool       `json:",omitempty"`
+	SubjectNoun  ObjectNoun `json:",omitempty"`
 	// NodeID is a stable typed identifier the parser assigns to every reference
 	// in an ability's (or mode's) single authoritative reference set. Every copy
 	// of the reference distributed into effects, conditions, and the semantic
@@ -73,6 +74,9 @@ type Reference struct {
 	// ProducerClauseID identifies an observed library card's grammatical
 	// antecedent. Zero leaves other reference domains to their existing binder.
 	ProducerClauseID int `json:",omitempty"`
+	// ReachedCardProducerClauseID preserves the action's exact card lineage for
+	// a later card predicate without changing its original observation owner.
+	ReachedCardProducerClauseID int `json:",omitempty"`
 	// LibraryCardObservation keeps an unproven observation in its own domain;
 	// it cannot fall back to an event permanent when its producer is missing.
 	LibraryCardObservation bool `json:",omitempty"`
@@ -271,6 +275,7 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 				Tokens:       phrase,
 				Text:         joinTokens(phrase),
 				CardIdentity: noun == ObjectNounCard,
+				SubjectNoun:  noun,
 			})
 			i++
 		case i+3 < len(tokens) && equalWord(tokens[i], "that") &&
@@ -343,6 +348,7 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 			references = append(references, Reference{
 				Kind: kind, Span: shared.SpanOf(phrase), Tokens: phrase, Text: joinTokens(phrase),
 				CardIdentity: noun == ObjectNounCard,
+				SubjectNoun:  noun,
 			})
 			i++
 		case referencePronounKind(tokens, i, atoms) != PronounUnknown:

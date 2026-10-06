@@ -15,7 +15,9 @@ import (
 )
 
 // Context supplies card facts needed during semantic compilation.
-type Context struct{}
+type Context struct {
+	sourceKind AbilityKind
+}
 
 // AbilityKind is the semantic category of a compiled ability.
 type AbilityKind uint8
@@ -399,13 +401,15 @@ const (
 // option). It owns the ordered targets, conditions, effects, keywords,
 // references, and nested modes that form an ability's instruction content.
 type AbilityContent struct {
-	Span       shared.Span
-	Modes      []CompiledMode
-	Targets    []CompiledTarget
-	Conditions []CompiledCondition
-	Effects    []CompiledEffect
-	Keywords   []CompiledKeyword
-	References []CompiledReference
+	subjectScope *referenceSubjectScope
+	Source       ReferenceSourceContext
+	Span         shared.Span
+	Modes        []CompiledMode
+	Targets      []CompiledTarget
+	Conditions   []CompiledCondition
+	Effects      []CompiledEffect
+	Keywords     []CompiledKeyword
+	References   []CompiledReference
 }
 
 // ModeChoiceBonusCondition identifies a cast-time modal range condition.
@@ -1573,12 +1577,13 @@ type TargetCardinality struct {
 // CompiledTarget is one occurrence of the word "target" and its local noun
 // phrase.
 type CompiledTarget struct {
-	Span        shared.Span
-	ChoiceSpan  shared.Span
-	Text        string
-	Cardinality TargetCardinality
-	Selector    CompiledSelector
-	Exact       bool
+	subjectScope *referenceSubjectScope
+	Span         shared.Span
+	ChoiceSpan   shared.Span
+	Text         string
+	Cardinality  TargetCardinality
+	Selector     CompiledSelector
+	Exact        bool
 	// KickerScaledCount marks a target whose chosen count is one plus the number
 	// of times the spell was kicked ("Choose any target, then choose another
 	// target for each time this spell was kicked.", Comet Storm; CR 702.32). It
@@ -2560,6 +2565,7 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
+	subjectScope            *referenceSubjectScope
 	OptionalPostfixElse     parser.OptionalPostfixElseOwnership
 	LibraryOwnerClauseID    int
 	DelayedSubject          parser.DelayedSubjectOwnership
@@ -4758,15 +4764,17 @@ type CompiledReference struct {
 	Text     string
 	Binding  ReferenceBinding
 	// CardIdentity mirrors the parser's card-identity self-reference marker: a
-	// "this card" self reference (card identity, tracked into its current zone)
+	// "this card" self reference (card domain, requiring an exact incarnation)
 	// as opposed to "this Aura"/"this creature" (a battlefield object). Lowering
-	// uses it to return a leaves-the-battlefield source from the graveyard by
-	// card identity instead of bouncing a battlefield object.
-	CardIdentity           bool
-	Occurrence             int
-	PriorInstruction       int
-	ProducerClauseID       int
-	LibraryCardObservation bool
+	// consumes Subject proof rather than interpreting this grammar flag.
+	CardIdentity                bool
+	SubjectNoun                 parser.ObjectNoun
+	Subject                     ReferenceSubjectProof
+	Occurrence                  int
+	PriorInstruction            int
+	ProducerClauseID            int
+	ReachedCardProducerClauseID int
+	LibraryCardObservation      bool
 	// NodeID is the parser-assigned stable identity of this reference within its
 	// ability or mode. Distinct copies of the same source reference share a
 	// NodeID, so the compiler matches references by identity instead of span

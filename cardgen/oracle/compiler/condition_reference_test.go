@@ -56,7 +56,7 @@ func TestContextualObjectConditionSubject(t *testing.T) {
 		{"resolution choice supersedes earlier source", "When this creature enters, sacrifice this creature. Reveal the top card of your library. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 1, SelectorUnknown},
 		{"nonadjacent choice supersedes earlier source", "When this creature enters, sacrifice this creature. Reveal the top card of your library. You gain 1 life. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 1, SelectorUnknown},
 		{"choice supersedes newer target and older source", "When this creature enters, sacrifice this creature. Exile target card from a graveyard. Reveal the top card of your library. You gain 1 life. If it was a creature card, draw a card.", ReferenceBindingPriorInstructionResult, 2, SelectorUnknown},
-		{"blink incarnation is published", "When this creature enters, exile target creature. Return it to the battlefield under its owner's control. If that creature was a Human, draw a card.", ReferenceBindingPriorInstructionResult, 0, SelectorUnknown},
+		{"blink incarnation is published", "When this creature enters, exile target creature. Return it to the battlefield under its owner's control. If that creature was a Human, draw a card.", ReferenceBindingPriorInstructionResult, 1, SelectorUnknown},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

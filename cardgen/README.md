@@ -411,7 +411,41 @@ Vanguard cards are excluded with explicit report reasons.
    remain outside that accounting path.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
-   prior-instruction results. Ordered lowering also supports the exact linked
+   prior-instruction results. The compiler's reference-binding Module owns the
+   small `ReferenceSubjectProof` Interface: validated domain, parser reference
+   identity, exact target/producer occurrence, enclosing source shell, and
+   permitted lifetime. Proof is finalized after condition and returned-subject
+   rewrites and shared by canonical, effect, subject, and condition copies.
+   Identical ClauseIDs in another ability or mode are not the same producer.
+   The mechanical Adapter may choose a supported operation, but cannot select
+   noun meaning or lifetime through source-as-card flags. Intrinsic source,
+   attachment, target, and delayed subjects use explicit compiler constructors;
+   a missing proof is never repaired by a lowerer-created reference NodeID.
+
+   Live self mutation uses the original source ObjectID, even if its card leaves
+   and reenters. Source/event LKI reads and exact self-death card moves are
+   separate contracts. A post-entry permanent noun consumes the actual entered
+   product; accepting an optional action does not publish a permanent. Explicit
+   card predicates may retain the original observed card and its proven entered
+   incarnation as disjoint, version-checked alternatives. Each group's predicate
+   is frozen once; a later independent clause evaluates at its printed point.
+   Reached battlefield-to-hand/exile moves consume the actual entered object,
+   not the old library observation. Unavailable, stale, ambiguous, incompatible,
+   foreign-body, or unpublished subjects refuse the complete CardDef.
+
+   An entered-product consumer may demand the existing optional action owner's
+   decision receipt even for a singleton action. This does not create another
+   owner, choice, success signal, or alias key; unrelated singleton optionals
+   remain unchanged. Overlapping card-lineage conditions and unsupported
+   optional/result/capture envelopes fail closed.
+
+   Deletion test: removing one effect Adapter does not remove subject semantics;
+   removing the reference-binding Module removes their single authority.
+   Locality puts domain and lifetime decisions at that Seam. Leverage lets P/T,
+   keyword, movement, condition, and delayed-capture Implementations reuse the
+   same proof without per-card templates, a universal IR, or a parallel model.
+   The existing runtime References and renderer need no schema expansion.
+   Ordered lowering also supports the exact linked
    shuffle/reveal/permanent-hit sequence: shuffle one targeted permanent into its
    owner's library, reveal that owner's top card, then put the same linked card
    onto the battlefield under that owner's control only when it is a permanent

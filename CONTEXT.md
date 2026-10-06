@@ -112,6 +112,14 @@ _Avoid_: Manual ability hook, special action
 The concrete target chosen while casting a spell or activating an ability. In code, `game.Target` is separate from `game.TargetSpec`, which only describes what may be targeted.
 _Avoid_: Target spec, raw target ID
 
+**Reference Subject Proof**:
+A compiler-owned, body-local proof of an Oracle reference's domain, occurrence,
+and lifetime. Card references retain an exact card incarnation; permanent
+references retain the original ObjectID or the actual entered product. Parser
+nouns and producer ClauseIDs are facts used by binding, not choices left to
+lowering. The proof is translator metadata, not another public Card Model.
+_Avoid_: Source-as-card flag, nearest-object guess, current-card fallback
+
 **Selection**:
 Pure, valence-agnostic data describing WHICH game objects share a characteristic predicate — required/excluded types, supertypes, any-of subtypes/colors, controller/player relation, tapped/combat state, keywords, mana value, and power/toughness. It describes WHAT matches, never where candidates come from; counting and candidate-domain concerns stay outside it. In code, `game.Selection` is interpreted by a single matcher in `mtg/rules` that subsumes the legacy `TargetPredicate`, `TriggerPattern` filters, and `EffectSelector` characteristic logic.
 _Avoid_: Predicate, filter, selector, matcher (for the data itself)

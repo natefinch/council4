@@ -156,16 +156,18 @@ func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
 	references := make([]CompiledReference, 0, len(recognized))
 	for _, reference := range recognized {
 		references = append(references, CompiledReference{
-			PaidCost:               reference.PaidCost,
-			Kind:                   compileReferenceKind(reference.Kind),
-			Pronoun:                compileReferencePronoun(reference.Pronoun),
-			Span:                   reference.Span,
-			Text:                   reference.Text,
-			CardIdentity:           reference.CardIdentity,
-			NodeID:                 reference.NodeID,
-			ProducerClauseID:       reference.ProducerClauseID,
-			LibraryCardObservation: reference.LibraryCardObservation,
-			Order:                  reference.Order,
+			PaidCost:                    reference.PaidCost,
+			Kind:                        compileReferenceKind(reference.Kind),
+			Pronoun:                     compileReferencePronoun(reference.Pronoun),
+			Span:                        reference.Span,
+			Text:                        reference.Text,
+			CardIdentity:                reference.CardIdentity,
+			SubjectNoun:                 reference.SubjectNoun,
+			NodeID:                      reference.NodeID,
+			ProducerClauseID:            reference.ProducerClauseID,
+			LibraryCardObservation:      reference.LibraryCardObservation,
+			ReachedCardProducerClauseID: reference.ReachedCardProducerClauseID,
+			Order:                       reference.Order,
 		})
 	}
 	return references

@@ -21,7 +21,7 @@ func bindReferences(
 		if bindDelayedSubjectReference(reference, effects) {
 			continue
 		}
-		if bindLibraryCardReference(reference, effects) {
+		if bindOwnedProducerReference(reference, effects) {
 			continue
 		}
 		switch reference.Kind {

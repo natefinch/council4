@@ -1,88 +1,67 @@
 package cardgen
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
-	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 )
 
+// The compiler already chose the entered subject. This adapter checks its
+// concrete optional publisher and target mapping without rebinding the noun.
 func bindOptionalEnteredObjectReference(
 	ctx *contentCtx,
 	sequence []game.Instruction,
 	ranges [][2]int,
 	targetIndices map[shared.Span]int,
 	targets []game.TargetSpec,
+	producerTargets []compiler.CompiledTarget,
 ) string {
-	if len(ctx.content.Effects) != 1 || len(ctx.content.References) != 1 {
-		return ""
-	}
-	effect := &ctx.content.Effects[0]
-	if effect.Context != parser.EffectContextReferencedObject && effect.Context != parser.EffectContextPriorSubject {
+	if len(ctx.content.References) != 1 {
 		return ""
 	}
 	reference := ctx.content.References[0]
-	if reference.Binding != compiler.ReferenceBindingTarget ||
-		reference.Occurrence < 0 || reference.Occurrence >= len(ctx.content.Targets) {
+	if reference.Binding != compiler.ReferenceBindingPriorInstructionResult {
 		return ""
 	}
-	target := ctx.content.Targets[reference.Occurrence]
-	if _, permanent := permanentTargetSpec(target); permanent {
+	occurrence, fromTarget := reference.ProducerTargetOccurrence()
+	if !fromTarget {
 		return ""
 	}
+	index := reference.PriorInstruction
+	if index < 0 || index >= len(ranges) {
+		return "structural — entered-object producer range is unavailable"
+	}
+	span := ranges[index]
+	if span[0] < 0 || span[1] > len(sequence) || span[1]-span[0] != 1 {
+		return "structural — entered-object producer has no singular instruction"
+	}
+	instruction := sequence[span[0]]
+	if instruction.PublishOptionalDecision == "" && instruction.OptionalDecisionGate == "" {
+		return ""
+	}
+	if occurrence < 0 || occurrence >= len(producerTargets) ||
+		!reference.ProducerTargetMatches(producerTargets[occurrence]) {
+		return "structural — entered-object producer target occurrence is unavailable"
+	}
+	put, entered := instruction.Primitive.(game.PutOnBattlefield)
+	if !entered {
+		return "structural — entered-object subject has no actual entry publisher"
+	}
+	card, cardSource := put.Source.CardRef()
+	target := producerTargets[occurrence]
 	targetIndex, mapped := targetIndices[target.Span]
-	if !mapped {
-		for _, instruction := range sequence {
-			if (instruction.PublishOptionalDecision != "" || instruction.OptionalDecisionGate != "") &&
-				instruction.Primitive != nil && instruction.Primitive.Kind() == game.PrimitivePutOnBattlefield {
-				return "structural — optional entered-object target is not mapped"
-			}
-		}
-		return ""
+	if !mapped || targetIndex < 0 || targetIndex >= len(targets) ||
+		targets[targetIndex].Allow&game.TargetAllowCard == 0 ||
+		!cardSource || card.Kind != game.CardReferenceTarget ||
+		card.TargetIndex != cardTargetSpecsBefore(targets, targetIndex) {
+		return "structural — optional entered-object target is not mapped"
 	}
-	if targetIndex < 0 || targetIndex >= len(targets) || targets[targetIndex].Allow&game.TargetAllowCard == 0 {
-		return ""
+	producer, key, published := sequencePriorInstructionLink([]compiler.CompiledReference{reference}, sequence, ranges)
+	if !published || ctx.priorLinkedKey != "" &&
+		(ctx.priorInstruction != producer || ctx.priorLinkedKey != key) {
+		return "structural — optional entered-object subject has no actual publication"
 	}
-	cardIndex := cardTargetSpecsBefore(targets, targetIndex)
-	for ei := len(ranges) - 1; ei >= 0; ei-- {
-		span := ranges[ei]
-		for ii := span[1] - 1; ii >= span[0]; ii-- {
-			if ii < 0 || ii >= len(sequence) {
-				return "structural — optional entered-object producer range is unavailable"
-			}
-			instruction := &sequence[ii]
-			if instruction.PublishOptionalDecision == "" && instruction.OptionalDecisionGate == "" {
-				continue
-			}
-			put, ok := instruction.Primitive.(game.PutOnBattlefield)
-			if !ok {
-				continue
-			}
-			card, ok := put.Source.CardRef()
-			if !ok || card.Kind != game.CardReferenceTarget || card.TargetIndex != cardIndex {
-				continue
-			}
-			reference.Binding = compiler.ReferenceBindingPriorInstructionResult
-			reference.PriorInstruction = ei
-			producer, key, published := sequencePriorInstructionLink(
-				[]compiler.CompiledReference{reference}, sequence, ranges,
-			)
-			if !published || ctx.priorLinkedKey != "" &&
-				(ctx.priorInstruction != producer || ctx.priorLinkedKey != key) {
-				return "structural — optional entered-object subject has no actual publication"
-			}
-			ctx.priorInstruction, ctx.priorLinkedKey = producer, key
-			ctx.content.References = []compiler.CompiledReference{reference}
-			effect.References = slices.Clone(ctx.content.References)
-			if len(effect.SubjectReferences) == 1 &&
-				effect.SubjectReferences[0].Binding == compiler.ReferenceBindingTarget {
-				effect.SubjectReferences = slices.Clone(ctx.content.References)
-			}
-			ctx.content.Targets = nil
-			return ""
-		}
-	}
+	ctx.priorInstruction, ctx.priorLinkedKey = producer, key
+	ctx.content.Targets = nil
 	return ""
 }

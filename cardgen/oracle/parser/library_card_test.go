@@ -185,12 +185,12 @@ func TestLibraryCardOwnershipDoesNotHijackNewBattlefieldSubject(t *testing.T) {
 		text string
 		want []int
 	}{
-		{"Look at the top card of your library. Put it onto the battlefield. It gains haste until end of turn.", []int{1, 0}},
-		{"Reveal the top card of your library. If it's a creature card, put it onto the battlefield. It gains haste until end of turn.", []int{1, 1, 0}},
-		{"Reveal the top card of your library. If it's a creature card, put it onto the battlefield, and it gains haste until end of turn.", []int{1, 1, 0}},
+		{"Look at the top card of your library. Put it onto the battlefield. It gains haste until end of turn.", []int{1, 2}},
+		{"Reveal the top card of your library. If it's a creature card, put it onto the battlefield. It gains haste until end of turn.", []int{1, 1, 2}},
+		{"Reveal the top card of your library. If it's a creature card, put it onto the battlefield, and it gains haste until end of turn.", []int{1, 1, 2}},
 		{"Reveal the top card of your library. If it's a land card, put it onto the battlefield. Otherwise, put it into your hand.", []int{1, 1, 1}},
 		{"Reveal the top card of your library. If it's a land card, put it onto the battlefield. If it's a snow card, you gain 2 life.", []int{1, 1, 1}},
-		{"Look at the top card of your library. Put it onto the battlefield. Put it into your hand.", []int{1, 0}},
+		{"Look at the top card of your library. Put it onto the battlefield. Put it into your hand.", []int{1, 2}},
 	} {
 		t.Run(tc.text, func(t *testing.T) {
 			t.Parallel()
@@ -205,6 +205,12 @@ func TestLibraryCardOwnershipDoesNotHijackNewBattlefieldSubject(t *testing.T) {
 			for i, reference := range references {
 				if reference.ProducerClauseID != tc.want[i] {
 					t.Errorf("reference %d %q has producer %d, want %d", reference.NodeID, reference.Text, reference.ProducerClauseID, tc.want[i])
+				}
+				if tc.want[i] == 2 && reference.LibraryCardObservation {
+					t.Errorf("post-entry permanent reference %d still observes the library card", reference.NodeID)
+				}
+				if tc.want[i] == 1 && !reference.LibraryCardObservation {
+					t.Errorf("input/predicate reference %d lost its exact observation domain", reference.NodeID)
 				}
 			}
 		})

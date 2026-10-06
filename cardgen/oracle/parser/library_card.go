@@ -172,6 +172,9 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 		reference.LibraryCardObservation = explicitLibraryCardObservation(*reference) != EffectUnknown
 		cardNoun := libraryReferenceHasCardNoun(*reference, effects, references, conditions)
 		latest := 0
+		cardObservation := 0
+		cardEntry := 0
+		reached := false
 		observations := make(map[EffectKind]int)
 		for _, effect := range effects {
 			if effect.VerbSpan.End.Offset > reference.Span.Start.Offset ||
@@ -184,6 +187,8 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 				effect.Exact && effect.CardSource == EffectCardSourceTopOfPlayerLibrary &&
 				(effect.Kind == EffectReveal || effect.Kind == EffectLookAtLibraryTop) {
 				latest = effect.ClauseID
+				cardObservation, cardEntry = latest, 0
+				reached = false
 				observations[effect.Kind] = latest
 				continue
 			}
@@ -194,23 +199,47 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 				continue
 			}
 			action := *effect
-			if action.Kind == EffectPut && recognizeLibraryCardAction(&action) && action.ToZone == zone.Battlefield &&
-				!libraryReferenceNamesCard(*reference, conditions) &&
+			if latest > 0 && action.Kind == EffectPut && recognizeLibraryCardAction(&action) && action.ToZone == zone.Battlefield &&
 				!libraryReferenceConsumesObservationElse(*reference, effect,
 					libraryCardAntecedent(*reference, latest, observations), effects, references, conditions) {
-				latest = 0
+				latest = effect.ClauseID
+				cardEntry = latest
+				reached = true
 				clear(observations)
 			}
 			if len(effect.Targets) != 0 || effect.Kind == EffectCreate && !cardNoun ||
 				effect.Kind == EffectSearch || effect.Kind == EffectChoosePermanent ||
 				effect.Kind == EffectExile || effect.Kind == EffectManifestDread {
 				latest = 0
+				cardObservation, cardEntry = 0, 0
+				reached = false
 				clear(observations)
 			}
 		}
 		producer := libraryCardAntecedent(*reference, latest, observations)
+		if cardObservation > 0 && cardEntry > 0 && libraryReferenceNamesCard(*reference, conditions) &&
+			slices.ContainsFunc(conditions, func(condition ConditionSegment) bool {
+				return parserSpanContains(condition.Span, reference.Span)
+			}) {
+			producer, reached = cardObservation, false
+			reference.ReachedCardProducerClauseID = cardEntry
+		}
 		if producer == 0 {
 			continue
+		}
+		if !reached && reference.SubjectNoun != ObjectNounUnknown &&
+			reference.SubjectNoun != ObjectNounCard {
+			continue
+		}
+		if reached {
+			for _, effect := range effects {
+				if !parserSpanContains(effect.ClauseSpan, reference.Span) ||
+					effect.Kind != EffectPut || !recognizeLibraryCardAction(effect) ||
+					effect.ToZone == zone.Battlefield {
+					continue
+				}
+				reference.CardIdentity = true
+			}
 		}
 		for _, candidate := range references {
 			if candidate.Span.Start.Offset >= reference.Span.Start.Offset {
@@ -226,8 +255,9 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 			}
 		}
 		reference.ProducerClauseID = producer
-		reference.LibraryCardObservation = reference.LibraryCardObservation || producer > 0
+		reference.LibraryCardObservation = !reached && (reference.LibraryCardObservation || producer > 0)
 	}
+	bindEnteredTargetReferences(effects, references, conditions)
 	bindLibraryOwnerDestinationReferences(effects, references)
 	for _, effect := range effects {
 		observedSubject := false
@@ -237,12 +267,18 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 					if list[i].NodeID == reference.NodeID {
 						list[i].ProducerClauseID = reference.ProducerClauseID
 						list[i].LibraryCardObservation = reference.LibraryCardObservation
+						list[i].CardIdentity = reference.CardIdentity
+						list[i].ReachedCardProducerClauseID = reference.ReachedCardProducerClauseID
 						observedSubject = observedSubject || reference.ProducerClauseID > 0
 						break
 					}
 				}
 				if observedSubject && recognizeLibraryCardAction(effect) {
 					effect.Exact = true
+					if list[i].ProducerClauseID > 0 && !list[i].LibraryCardObservation &&
+						list[i].CardIdentity && effect.Kind == EffectPut && effect.ToZone != zone.Battlefield {
+						effect.FromZone = zone.Battlefield
+					}
 				}
 			}
 		}
@@ -284,7 +320,7 @@ func libraryReferenceHasCardNoun(reference Reference, effects []*EffectSyntax, r
 }
 
 func libraryReferenceNamesCard(reference Reference, conditions []ConditionSegment) bool {
-	if reference.Kind == ReferenceThatObject {
+	if reference.CardIdentity {
 		return true
 	}
 	for _, condition := range conditions {
@@ -330,6 +366,9 @@ func libraryCardReference(reference Reference) bool {
 	}
 	if reference.Kind != ReferenceThatObject {
 		return false
+	}
+	if reference.SubjectNoun != ObjectNounUnknown {
+		return true
 	}
 	for _, noun := range []string{"that card", "that card's", "the revealed card", "the looked-at card"} {
 		if strings.EqualFold(reference.Text, noun) {

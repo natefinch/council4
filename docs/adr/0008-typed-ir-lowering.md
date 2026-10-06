@@ -87,6 +87,17 @@ correct layer:
    bound references to typed runtime object and card references. Triggering
    event permanents resolve live objects or last-known information; prior
    instruction results use validated linked keys.
+   The existing compiler reference-binding Module also owns a private,
+   body-local subject proof of domain, occurrence, and lifetime. This Interface
+   is finalized after all condition/returned-reference rewrites. Lowering's
+   reference Adapter mechanically projects it onto existing runtime References;
+   it cannot choose permanent versus card identity through a boolean flag.
+   Intrinsic subjects require explicit constructors from typed source, effect,
+   target, or scheduling facts. Live source mutation retains the original
+   ObjectID; card movement and captured LKI retain their separate exact-lifetime
+   contracts. Actual entered products cannot be replaced with optional
+   acceptance, an old observation, or a later incarnation of the source card.
+   This strengthens the existing Seam without changing the public card model.
    <br><br>
    Static wording follows the same boundary without becoming ability body
    Instructions. `cardgen/oracle` recognizes supported static wording into one

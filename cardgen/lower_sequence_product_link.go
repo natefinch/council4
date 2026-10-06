@@ -125,6 +125,17 @@ func sequenceLibraryCardReference(reference compiler.CompiledReference, effects 
 		compiler.SingularLibraryCardProducer(effects[index])
 }
 
+func sequenceEnteredSubjectReference(reference compiler.CompiledReference, effects []compiler.CompiledEffect) bool {
+	index := reference.PriorInstruction
+	if index < 0 || index >= len(effects) || !reference.SubjectProducerMatches(effects[index]) ||
+		reference.SubjectLifetime() != compiler.ReferenceLifetimeActualProduct {
+		return false
+	}
+	return reference.EnteredSubjectSupported() &&
+		(effects[index].Kind == compiler.EffectPut || effects[index].Kind == compiler.EffectReturn) &&
+		effects[index].ToZone == zone.Battlefield
+}
+
 // These actual entered-object publishers invalidate their links before envelope
 // gates, so a skipped publication cannot leave an older incarnation available.
 func sequencePublisherInvalidatesBeforeGates(primitive game.Primitive) bool {

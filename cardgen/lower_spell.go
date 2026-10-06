@@ -1653,16 +1653,11 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	if consumed.content.Unconsumed() {
 		return nil, false
 	}
-	sourcePermanent := game.SourceCardPermanentReference()
-	if selfBound {
-		var ok bool
-		sourcePermanent, ok = lowerObjectReference(references[0], referenceLoweringContext{
-			AllowSource:      true,
-			SourceCardObject: true,
-		})
-		if !ok {
-			return nil, false
-		}
+	sourcePermanent, ok := lowerObjectReference(references[0], referenceLoweringContext{
+		AllowSource: true, AllowEvent: true,
+	})
+	if !ok {
+		return nil, false
 	}
 	effect := ctx.content.Effects[0]
 	switch effect.Kind {
@@ -1678,23 +1673,9 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 		if effect.ToZone != zone.Hand {
 			return nil, false
 		}
-		// "Return it to its owner's hand" means different zones depending on
-		// where the source rests when the delayed trigger fires. After an
-		// attack/block trigger the creature is still on the battlefield at end
-		// of combat, so it bounces; after a dies trigger it rests in the
-		// graveyard, so it reanimates to hand.
-		if selfTriggerSourceOnBattlefield(ctx.triggerEvent) {
-			return game.MovePermanent{Object: sourcePermanent, Destination: zone.Hand}, true
-		}
-		sourceCard, ok := lowerCardReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
-		if !ok {
-			return nil, false
-		}
-		return game.MoveCard{
-			Card:        sourceCard,
-			FromZone:    zone.Graveyard,
-			Destination: zone.Hand,
-		}, true
+		// Card-domain schedules use the shared fixed-phase capture Adapter.
+		// This fallback has already proved an original permanent subject.
+		return game.MovePermanent{Object: sourcePermanent, Destination: zone.Hand}, true
 	case compiler.EffectPut:
 		if effect.ToZone != zone.Library {
 			return nil, false
@@ -1712,16 +1693,6 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	default:
 		return nil, false
 	}
-}
-
-// selfTriggerSourceOnBattlefield reports whether a self trigger leaves its source
-// permanent on the battlefield when its delayed body resolves. Attack and block
-// declarations fire while the creature is on the battlefield, and the matching
-// end-of-combat disposal resolves before the creature leaves, so "return it to
-// its owner's hand" bounces the permanent rather than reanimating a card.
-func selfTriggerSourceOnBattlefield(triggerEvent game.EventKind) bool {
-	return triggerEvent == game.EventAttackerDeclared ||
-		triggerEvent == game.EventBlockerDeclared
 }
 
 // referencesDenoteSelf reports whether every reference names the source

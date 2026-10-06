@@ -104,6 +104,9 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 	}
 	var actionReason string
 	flow.actions, actionReason = planOptionalActionGroups(content.Effects, indices)
+	if actionReason == "" {
+		actionReason = flow.actions.requireEnteredSubjectReceipts(content)
+	}
 	if actionReason != "" {
 		plan.failureCategory = actionReason
 		return plan, false, true
@@ -261,7 +264,8 @@ func optionalAntecedentUnmodeled(content compiler.AbilityContent, ei int) bool {
 		if reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
 			reference.PriorInstruction >= 0 && reference.PriorInstruction < ei &&
 			content.Effects[reference.PriorInstruction].Optional &&
-			!sequenceLibraryCardReference(reference, content.Effects) {
+			!sequenceLibraryCardReference(reference, content.Effects) &&
+			!sequenceEnteredSubjectReference(reference, content.Effects) {
 			return true
 		}
 	}
@@ -269,7 +273,8 @@ func optionalAntecedentUnmodeled(content compiler.AbilityContent, ei int) bool {
 		(content.Effects[ei].Context == parser.EffectContextReferencedObject ||
 			content.Effects[ei].Context == parser.EffectContextPriorSubject) {
 		for _, reference := range content.Effects[ei].References {
-			if reference.PriorInstruction == ei-1 && sequenceLibraryCardReference(reference, content.Effects) {
+			if sequenceEnteredSubjectReference(reference, content.Effects) ||
+				reference.PriorInstruction == ei-1 && sequenceLibraryCardReference(reference, content.Effects) {
 				return false
 			}
 		}

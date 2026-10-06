@@ -485,6 +485,9 @@ func lowerOrderedEffectSequence(
 		// publishes a different key — so this only ever adds capability and never
 		// changes an outcome that succeeded before.
 		conditionReferences := conditionPlan.resultReferencesForClause(ctx.content.Effects, i)
+		if !conditionPlan.publishCardLineageForClause(i, sequence, effectInstructionRanges[:i]) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, cardLineageConditionCategory)
+		}
 		productReferences := append(slices.Clone(effectAbility.content.References), conditionReferences...)
 		if antecedent, key, ok := sequencePriorInstructionLink(
 			productReferences, sequence, effectInstructionRanges[:i],
@@ -505,7 +508,7 @@ func lowerOrderedEffectSequence(
 			}
 			effectAbility.observedCharacteristicKey = key
 		}
-		if reason := bindOptionalEnteredObjectReference(&effectAbility, sequence, effectInstructionRanges[:i], oracleSpanToGameIdx, targets); reason != "" {
+		if reason := bindOptionalEnteredObjectReference(&effectAbility, sequence, effectInstructionRanges[:i], oracleSpanToGameIdx, targets, ctx.content.Targets); reason != "" {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
 		}
 		// Lower the effect through the shared lowerAbilityContent entry point.
@@ -703,6 +706,10 @@ func lowerOrderedEffectSequence(
 	sequence, ok = optionalFlow.scoped.appendPostfixElseBranches(effectInstructionRanges, sequence)
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — optional postfix Otherwise envelope conflicts")
+	}
+	sequence, ok = conditionPlan.expandCardLineageConditions(sequence, effectInstructionRanges)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, cardLineageConditionCategory)
 	}
 	// A later "another target" clause requires a target distinct from the
 	// spell's earlier targets (CR 601.2c); mark it before gating so both passes
@@ -3618,7 +3625,11 @@ func localizeTargetReferences(
 		if local < 0 {
 			return nil, false
 		}
-		localized[i].Occurrence = local
+		reference, ok := localized[i].LocalizeSubjectOccurrence(localTargets[local], local)
+		if !ok {
+			return nil, false
+		}
+		localized[i] = reference
 	}
 	return localized, true
 }
@@ -5517,7 +5528,11 @@ func lowerSelfBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	key := game.LinkedKey("self-blink")
-	exile := game.MovePermanent{Object: game.SourcePermanentReference(), PublishLinked: key, Destination: zone.Exile}
+	object, known := lowerIntrinsicSourceObject(ctx)
+	if !known {
+		return game.AbilityContent{}, false
+	}
+	exile := game.MovePermanent{Object: object, PublishLinked: key, Destination: zone.Exile}
 	put := selfBlinkPutOnBattlefield(key, returnEffect, entryCounters)
 	return game.Mode{Sequence: []game.Instruction{
 		{Primitive: exile},
