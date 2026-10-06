@@ -33,8 +33,8 @@ type contentCtx struct {
 	// would place counters on the wrong object. Standalone effects keep the
 	// EventPermanent binding, which always denotes the triggering permanent.
 	sequenceClause bool
-	// singleAction preserves the envelope's one-choice/publication contract
-	// when a fixed mana output can otherwise expand into one instruction per pip.
+	// singleAction preserves existing homogeneous optional mana output as one
+	// primitive; mixed-color output uses the shared expanded-action envelope.
 	singleAction bool
 	// allowEventPronoun re-permits an EventPermanent "it"/"that creature"
 	// reference inside a sequence clause that is a mutually-exclusive branch
@@ -658,9 +658,10 @@ func lowerOptionalContent(
 	if content, ok := lowerOptionalWheelDiscardDraw(ctx); ok {
 		return content, nil
 	}
-	if content, ok := lowerOptionalUntapRemoveFromCombat(ctx); ok {
+	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
 		return content, nil
 	}
+	var optionalGroupReason *shared.Diagnostic
 	if len(ctx.content.Modes) == 0 && len(ctx.content.Effects) == 1 &&
 		fixedPhaseSubjectEffectModeled(ctx.content.Effects[0]) {
 		return lowerOrderedEffectSequence(cardName, ctx, syntax)
@@ -669,8 +670,15 @@ func lowerOptionalContent(
 		len(ctx.content.Effects) > 1 &&
 		ctx.content.Effects[0].Kind != compiler.EffectSearch &&
 		!typedManifestDreadSequence(ctx.content) {
-		if content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax); diagnostic == nil {
+		content, diagnostic := lowerOrderedEffectSequence(cardName, ctx, syntax)
+		if diagnostic == nil {
 			return content, nil
+		}
+		for _, effect := range ctx.content.Effects {
+			if effect.Optional && len(effect.OptionalActionClauseIDs) > 1 {
+				optionalGroupReason = diagnostic
+				break
+			}
 		}
 	}
 	if content, ok := lowerOptionalDigReveal(ctx); ok {
@@ -712,14 +720,14 @@ func lowerOptionalContent(
 	if content, ok := lowerRemovalThenControllerSearch(cardName, ctx, syntax); ok {
 		return content, nil
 	}
-	if content, ok := lowerOptionalBlinkReturn(cardName, ctx, syntax); ok {
-		return content, nil
-	}
 	optionalReason := contentDiagnostic(
 		ctx,
 		"unsupported optional effect",
 		"the executable source backend does not yet lower optional resolving effects",
 	)
+	if optionalGroupReason != nil {
+		optionalReason.Additional = append(optionalReason.Additional, *optionalGroupReason)
+	}
 	if plan, ok, handled := planScopedResultFlow(ctx.content); handled && !ok && plan.failureCategory != "" {
 		optionalReason.Additional = append(optionalReason.Additional,
 			*unsupportedEffectSequenceDiagnostic(ctx, plan.failureCategory))
@@ -2496,7 +2504,8 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 	}
 	referencedObject := len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
+		(ctx.content.References[0].Binding == compiler.ReferenceBindingTarget ||
+			ctx.content.References[0].Binding == compiler.ReferenceBindingPriorInstructionResult) &&
 		effect.Context == parser.EffectContextReferencedObject
 	targetSubject := len(ctx.content.Targets) == 1 &&
 		len(ctx.content.References) == 0 &&
@@ -2527,7 +2536,9 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 		target = opt.Val(spec)
 		object = game.TargetPermanentReference(0)
 	default:
-		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{AllowTarget: true})
+		object, ok = lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
+			AllowTarget: true, PriorInstruction: ctx.priorInstruction, PriorLinkedKey: ctx.priorLinkedKey,
+		})
 		if !ok {
 			return unsupported()
 		}

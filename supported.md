@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,574 of 33,013 cards eligible for paper support (56.3%)**. The Scryfall Oracle Cards corpus contains 5,685 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,577 of 33,013 cards eligible for paper support (56.3%)**. The Scryfall Oracle Cards corpus contains 5,687 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2057,6 +2057,7 @@ Council4 currently supports **18,574 of 33,013 cards eligible for paper support 
 - Bringer of the Black Dawn
 - Bringer of the Blue Dawn
 - Bringer of the Green Dawn
+- Bringer of the Red Dawn
 - Bringer of the White Dawn
 - Brink of Madness
 - Brion Stoutarm
@@ -7034,6 +7035,7 @@ Council4 currently supports **18,574 of 33,013 cards eligible for paper support 
 - Gush
 - Gust of Wind
 - Gust-Skimmer
+- Gustcloak Cavalier
 - Gustcloak Harrier
 - Gustcloak Runner
 - Gustcloak Savior
@@ -10767,6 +10769,7 @@ Council4 currently supports **18,574 of 33,013 cards eligible for paper support 
 - Nocturnal Raid
 - Noggle Bandit
 - Noggle Bridgebreaker
+- Noggle Hedge-Mage
 - Noggle Ransacker
 - Noggle Robber
 - Noggle the Mind

@@ -882,6 +882,8 @@ func isZeroGameInstruction(v game.Instruction) bool {
 		!(v.CardCondition.Exists) &&
 		!(v.ResultGate.Exists) &&
 		!(v.Optional) &&
+		!(v.PublishOptionalDecision != "") &&
+		!(v.OptionalDecisionGate != "") &&
 		!(v.OptionalActor.Exists) &&
 		!(v.OptionalActorGroup.Exists) &&
 		!(v.ForEachPlayerGroup.Exists) &&
@@ -7036,61 +7038,71 @@ func (r Renderer) renderGameInstruction(ctx *renderCtx, v game.Instruction) (str
 		lit16 := strconv.FormatBool(bool(v.Optional))
 		fields = append(fields, "Optional: "+lit16+",")
 	}
+	if v.PublishOptionalDecision != "" {
+		lit17 := "game.OptionalDecisionKey(" + strconv.Quote(string(v.PublishOptionalDecision)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "PublishOptionalDecision: "+lit17+",")
+	}
+	if v.OptionalDecisionGate != "" {
+		lit18 := "game.OptionalDecisionKey(" + strconv.Quote(string(v.OptionalDecisionGate)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "OptionalDecisionGate: "+lit18+",")
+	}
 	if v.OptionalActor.Exists {
-		lit18, err19 := r.renderPlayerReference(v.OptionalActor.Val)
-		if err19 != nil {
-			return "", fmt.Errorf("game.Instruction.OptionalActor: %w", err19)
+		lit20, err21 := r.renderPlayerReference(v.OptionalActor.Val)
+		if err21 != nil {
+			return "", fmt.Errorf("game.Instruction.OptionalActor: %w", err21)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit17 := "opt.Val(" + lit18 + ")"
-		fields = append(fields, "OptionalActor: "+lit17+",")
+		lit19 := "opt.Val(" + lit20 + ")"
+		fields = append(fields, "OptionalActor: "+lit19+",")
 	}
 	if v.OptionalActorGroup.Exists {
-		lit21, err22 := r.renderPlayerGroupReferenceWithContext(ctx, v.OptionalActorGroup.Val)
-		if err22 != nil {
-			return "", fmt.Errorf("game.Instruction.OptionalActorGroup: %w", err22)
+		lit23, err24 := r.renderPlayerGroupReferenceWithContext(ctx, v.OptionalActorGroup.Val)
+		if err24 != nil {
+			return "", fmt.Errorf("game.Instruction.OptionalActorGroup: %w", err24)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit20 := "opt.Val(" + lit21 + ")"
-		fields = append(fields, "OptionalActorGroup: "+lit20+",")
+		lit22 := "opt.Val(" + lit23 + ")"
+		fields = append(fields, "OptionalActorGroup: "+lit22+",")
 	}
 	if v.ForEachPlayerGroup.Exists {
-		lit24, err25 := r.renderPlayerGroupReferenceWithContext(ctx, v.ForEachPlayerGroup.Val)
-		if err25 != nil {
-			return "", fmt.Errorf("game.Instruction.ForEachPlayerGroup: %w", err25)
+		lit26, err27 := r.renderPlayerGroupReferenceWithContext(ctx, v.ForEachPlayerGroup.Val)
+		if err27 != nil {
+			return "", fmt.Errorf("game.Instruction.ForEachPlayerGroup: %w", err27)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit23 := "opt.Val(" + lit24 + ")"
-		fields = append(fields, "ForEachPlayerGroup: "+lit23+",")
+		lit25 := "opt.Val(" + lit26 + ")"
+		fields = append(fields, "ForEachPlayerGroup: "+lit25+",")
 	}
 	if v.TemptingOffer {
-		lit26 := strconv.FormatBool(bool(v.TemptingOffer))
-		fields = append(fields, "TemptingOffer: "+lit26+",")
+		lit28 := strconv.FormatBool(bool(v.TemptingOffer))
+		fields = append(fields, "TemptingOffer: "+lit28+",")
 	}
 	if len(v.TemptingOfferBody) > 0 {
-		var items28 []string
-		for _, item29 := range v.TemptingOfferBody {
-			lit30, err31 := r.renderGameInstruction(ctx, item29)
-			if err31 != nil {
-				return "", fmt.Errorf("game.Instruction.TemptingOfferBody[]: %w", err31)
+		var items30 []string
+		for _, item31 := range v.TemptingOfferBody {
+			lit32, err33 := r.renderGameInstruction(ctx, item31)
+			if err33 != nil {
+				return "", fmt.Errorf("game.Instruction.TemptingOfferBody[]: %w", err33)
 			}
 			ctx.need(importGame)
-			items28 = append(items28, lit30+",")
+			items30 = append(items30, lit32+",")
 		}
-		lit27 := namedSliceLit("", "game.Instruction", items28)
-		fields = append(fields, "TemptingOfferBody: "+lit27+",")
+		lit29 := namedSliceLit("", "game.Instruction", items30)
+		fields = append(fields, "TemptingOfferBody: "+lit29+",")
 	}
 	if v.PublishResult != "" {
-		lit32 := "game.ResultKey(" + strconv.Quote(string(v.PublishResult)) + ")"
+		lit34 := "game.ResultKey(" + strconv.Quote(string(v.PublishResult)) + ")"
 		ctx.need(importGame)
-		fields = append(fields, "PublishResult: "+lit32+",")
+		fields = append(fields, "PublishResult: "+lit34+",")
 	}
 	if v.Description != "" {
-		lit33 := strconv.Quote(string(v.Description))
-		fields = append(fields, "Description: "+lit33+",")
+		lit35 := strconv.Quote(string(v.Description))
+		fields = append(fields, "Description: "+lit35+",")
 	}
 	return structLit("game.Instruction", fields), nil
 }

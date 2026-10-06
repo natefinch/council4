@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18574 supported cards
+# 18577 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -2063,6 +2063,7 @@ e91a43e88f200a06  Brine Shaman
 594b91074154af15  Bringer of the Black Dawn
 f16d0513f81b8fa7  Bringer of the Blue Dawn
 0bc30426d39fc018  Bringer of the Green Dawn
+6cfb332dd4951b1b  Bringer of the Red Dawn
 287e7c9e63559351  Bringer of the White Dawn
 6e403c1cf43da0c2  Brink of Madness
 d163595a58ccc2bf  Brion Stoutarm
@@ -7040,11 +7041,12 @@ d3a2d7618028e121  Gurmag Swiftwing
 8459bb9f71d758b9  Gush
 5c9be7c8951a874c  Gust of Wind
 6714d6ab063bc78b  Gust-Skimmer
-a680f7438e622ab5  Gustcloak Harrier
-0e5ca05e87711ea1  Gustcloak Runner
-ebcff3ccc4157da1  Gustcloak Savior
-ae12085fa16a12d3  Gustcloak Sentinel
-b676f0dc7b59fa2d  Gustcloak Skirmisher
+9ad7d8a239ca11cf  Gustcloak Cavalier
+a87690efb3d2a014  Gustcloak Harrier
+ca87b372478964d4  Gustcloak Runner
+5a7c7efc4adaaf6f  Gustcloak Savior
+3328b94cef16f624  Gustcloak Sentinel
+47de9eae6fc01ef0  Gustcloak Skirmisher
 4f887dc6fe1c6f39  Gustrider Exuberant
 44d6449f18ce91fd  Gut Shot
 7417ead3e33a20f4  Gutless Ghoul
@@ -10773,6 +10775,7 @@ af1108622cb19de9  Noble Purpose
 fa81df5243d76a79  Nocturnal Raid
 ffa165f88669d1d2  Noggle Bandit
 df7f09193baf730b  Noggle Bridgebreaker
+30dd6c241c74c3c2  Noggle Hedge-Mage
 27088ec4e2c543f5  Noggle Ransacker
 bdf25e22765f3182  Noggle Robber
 bf3cfc5e4c2eee5a  Noggle the Mind

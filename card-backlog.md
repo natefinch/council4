@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33013
-- Supported (generated): 18574
+- Supported (generated): 18577
 - Parser-complete: 22811
-- **Lowering backlog** (parser-complete, not generated): 4993
+- **Lowering backlog** (parser-complete, not generated): 4990
 - **Parser backlog** (not parser-complete, not generated): 9446
 
-Partition check: 18574 supported + 4993 lowering-backlog + 9446 parser-backlog = 33013 eligible. ✓
+Partition check: 18577 supported + 4990 lowering-backlog + 9446 parser-backlog = 33013 eligible. ✓
 
 756 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18574 supported + 4993 lowering-backlog + 9446 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18574
-- Independent per-card recompile generated: 18574
+- Authoritative generated (compilecards report): 18577
+- Independent per-card recompile generated: 18577
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1771 | 1156 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 534 | 3 | Dazzling Sphinx; Planebound Accomplice; Mindclaw Shaman; Remembrance; Park Bleater |
+| 1 | unsupported ordered effect sequence | 1752 | 1156 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 530 | 2 | Dazzling Sphinx; Planebound Accomplice; Mindclaw Shaman; Remembrance; Park Bleater |
 | 3 | unsupported static declaration operation | 281 | 237 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 276 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 210 | 121 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |

@@ -589,17 +589,9 @@ func instructionBenefitsController(kind compiler.EffectKind, primitive game.Prim
 // lowerSingleOptionalEffect lowers a one-effect body whose sole effect carries
 // resolving optionality ("You may draw a card.", "You may sacrifice a
 // creature."). It strips the leading "you may", lowers the now-mandatory effect
-// through the normal single-effect path, then marks the produced instruction
-// Optional so the engine asks the controller whether to perform it (the runtime
-// declines by skipping the instruction; see effectResolver.resolveInstruction).
-//
-// It returns ok=false (so the caller fails closed with the generic unsupported
-// diagnostic) unless the body is exactly one optional effect that lowers to a
-// single non-modal, no-shared-target, single-instruction sequence with no
-// existing optional/result-gate/publish envelope. Anything else — an
-// ability-level "you may", modes, a delayed or negated optional, or a multi-
-// instruction lowering — is left unsupported rather than lowered to a
-// silently-wrong sequence.
+// through the normal single-effect path, then applies the shared typed optional
+// action envelope. A supported expansion asks once, not once per Instruction.
+// Modal, delayed, negated, or conflicting decision envelopes fail closed.
 func lowerSingleOptionalEffect(
 	cardName string,
 	ctx contentCtx,
@@ -631,7 +623,14 @@ func lowerSingleOptionalEffect(
 	if diagnostic != nil {
 		return game.AbilityContent{}, false
 	}
-	if !markSingleInstructionOptional(&content) {
+	plan, ok := planOptionalFlow(ctx.content)
+	if !ok {
+		return game.AbilityContent{}, false
+	}
+	if content.IsModal() || len(content.SharedTargets) != 0 || len(content.Modes) != 1 {
+		return game.AbilityContent{}, false
+	}
+	if _, ok := applyOptionalFlowEnvelope(plan, 0, content.Modes[0].Sequence); !ok {
 		return game.AbilityContent{}, false
 	}
 	return content, true

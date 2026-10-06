@@ -8,11 +8,11 @@ A sole blocker is the card's only distinct diagnostic summary. The most common c
 
 | Rank | Reason | Affected cards | Sole blockers | Sole blocker % | Most common co-blocker |
 | ---: | --- | ---: | ---: | ---: | --- |
-| 1 | unsupported ordered effect sequence | 4,135 | 2,504 | 60.6% | unsupported optional effect |
+| 1 | unsupported ordered effect sequence | 4,100 | 2,504 | 61.1% | unsupported optional effect |
 | 2 | unsupported Oracle construct | 2,748 | 0 | 0.0% | unsupported static ability |
 | 3 | unsupported static ability | 1,985 | 379 | 19.1% | unsupported Oracle construct |
 | 4 | unsupported triggered ability | 1,213 | 762 | 62.8% | unsupported Oracle construct |
-| 5 | unsupported optional effect | 1,167 | 3 | 0.3% | unsupported ordered effect sequence |
+| 5 | unsupported optional effect | 1,163 | 2 | 0.2% | unsupported ordered effect sequence |
 | 6 | unsupported ability content | 1,027 | 110 | 10.7% | unsupported Oracle construct |
 | 7 | unsupported counter placement | 454 | 217 | 47.8% | unsupported Oracle construct |
 | 8 | unsupported static declaration operation | 451 | 317 | 70.3% | unsupported Oracle construct |
@@ -115,9 +115,9 @@ A fully unlockable card has every distinct diagnostic summary in one capability 
 
 | Capability | Affected cards | Fully unlockable cards | Constituent diagnostic summaries |
 | --- | ---: | ---: | --- |
-| shared-ability-content | 8,085 | 5,057 | unsupported ability content; unsupported ability modes; unsupported counter placement; unsupported counter spell; unsupported damage spell; unsupported delayed effect; unsupported destroy spell; unsupported discard spell; unsupported draw spell; unsupported draw/discard trigger effect; unsupported exile spell; unsupported explore spell; unsupported fight spell; unsupported gain-control spell; unsupported group power/toughness spell; unsupported investigate spell; unsupported keyword or ability grant; unsupported keyword or ability loss; unsupported library placement; unsupported life spell; unsupported mana effect; unsupported mana symbol; unsupported manifest spell; unsupported mill spell; unsupported multiple spell abilities; unsupported ordered effect sequence; unsupported phase/step trigger phrase effect; unsupported power/toughness spell; unsupported proliferate spell; unsupported regenerate spell; unsupported return spell; unsupported scry spell; unsupported search effect; unsupported tap spell; unsupported temporary keyword spell; unsupported triggered ability effect; unsupported untap spell |
+| shared-ability-content | 8,082 | 5,058 | unsupported ability content; unsupported ability modes; unsupported counter placement; unsupported counter spell; unsupported damage spell; unsupported delayed effect; unsupported destroy spell; unsupported discard spell; unsupported draw spell; unsupported draw/discard trigger effect; unsupported exile spell; unsupported explore spell; unsupported fight spell; unsupported gain-control spell; unsupported group power/toughness spell; unsupported investigate spell; unsupported keyword or ability grant; unsupported keyword or ability loss; unsupported library placement; unsupported life spell; unsupported mana effect; unsupported mana symbol; unsupported manifest spell; unsupported mill spell; unsupported multiple spell abilities; unsupported ordered effect sequence; unsupported phase/step trigger phrase effect; unsupported power/toughness spell; unsupported proliferate spell; unsupported regenerate spell; unsupported return spell; unsupported scry spell; unsupported search effect; unsupported tap spell; unsupported temporary keyword spell; unsupported triggered ability effect; unsupported untap spell |
 | static-declaration | 3,272 | 1,355 | unsupported Enchant ability; unsupported Protection ability; unsupported Read ahead ability; unsupported keyword ability; unsupported mixed keyword ability; unsupported parameterized keyword; unsupported static ability; unsupported static declaration condition; unsupported static declaration duration; unsupported static declaration group; unsupported static declaration operation; unsupported static declaration shell |
-| other | 2,732 | 1,023 | incomplete executable lowering; unsupported Bestow ability; unsupported Bloodthirst ability; unsupported Channel ability; unsupported Class level ability; unsupported Crew ability; unsupported Cumulative upkeep ability; unsupported Dash ability; unsupported Embalm ability; unsupported Evoke ability; unsupported Flanking ability; unsupported Flashback ability; unsupported Foretell ability; unsupported Level up ability; unsupported Max speed ability; unsupported Myriad ability; unsupported Offspring ability; unsupported Persist ability; unsupported Plot ability; unsupported Spectacle ability; unsupported Tempting offer; unsupported Undying ability; unsupported Unearth ability; unsupported activation restriction; unsupported adapt spell; unsupported alternative effects; unsupported alternative spell cost; unsupported amass spell; unsupported attach effect; unsupported become-a-copy effect; unsupported bolster spell; unsupported can't-attack effect; unsupported can't-attack-or-block effect; unsupported can't-be-blocked effect; unsupported can't-block effect; unsupported can-attack-as-though-defender effect; unsupported card layout; unsupported cast effect; unsupported choose effect; unsupported color-change effect; unsupported condition type-selection binding; unsupported connive effect; unsupported copy effect; unsupported damage prevention replacement; unsupported delayed object capture; unsupported delayed trigger; unsupported discard-then-draw spell; unsupported discover spell; unsupported divided damage spell; unsupported double counters spell; unsupported double effect; unsupported draw-doubling replacement; unsupported draw-from-empty-library win replacement; unsupported emblem ability; unsupported emblem effect; unsupported enters-as-copy replacement; unsupported entry-choice replacement; unsupported forced-attack effect; unsupported gain player counter spell; unsupported goad spell; unsupported graveyard-redirect replacement; unsupported historical untap; unsupported impulse exile effect; unsupported incubate spell; unsupported keep-one-per-type sacrifice; unsupported life action duration; unsupported life-gain replacement; unsupported linked X spell cost; unsupported look-at-hand spell; unsupported look-at-library spell; unsupported lose-game effect; unsupported monstrosity spell; unsupported optional effect; unsupported optional replacement effect; unsupported overload effect; unsupported permanent choice; unsupported permanent zone-change trigger; unsupported permanent zone-change trigger effect; unsupported phase out effect; unsupported phase out spell; unsupported polymorph effect; unsupported populate spell; unsupported prevent-damage effect; unsupported retarget effect; unsupported ring tempts effect; unsupported sacrifice spell; unsupported set base power/toughness effect; unsupported shuffle effect; unsupported source-spell cost reduction; unsupported surveil spell; unsupported tap or untap spell; unsupported target-animation effect; unsupported token creation; unsupported transform effect; unsupported type line; unsupported win-game effect; validation failed: invalid-ability-body; validation failed: invalid-rule-effect; validation failed: invalid-selection; validation failed: oracle-without-abilities |
+| other | 2,728 | 1,022 | incomplete executable lowering; unsupported Bestow ability; unsupported Bloodthirst ability; unsupported Channel ability; unsupported Class level ability; unsupported Crew ability; unsupported Cumulative upkeep ability; unsupported Dash ability; unsupported Embalm ability; unsupported Evoke ability; unsupported Flanking ability; unsupported Flashback ability; unsupported Foretell ability; unsupported Level up ability; unsupported Max speed ability; unsupported Myriad ability; unsupported Offspring ability; unsupported Persist ability; unsupported Plot ability; unsupported Spectacle ability; unsupported Tempting offer; unsupported Undying ability; unsupported Unearth ability; unsupported activation restriction; unsupported adapt spell; unsupported alternative effects; unsupported alternative spell cost; unsupported amass spell; unsupported attach effect; unsupported become-a-copy effect; unsupported bolster spell; unsupported can't-attack effect; unsupported can't-attack-or-block effect; unsupported can't-be-blocked effect; unsupported can't-block effect; unsupported can-attack-as-though-defender effect; unsupported card layout; unsupported cast effect; unsupported choose effect; unsupported color-change effect; unsupported condition type-selection binding; unsupported connive effect; unsupported copy effect; unsupported damage prevention replacement; unsupported delayed object capture; unsupported delayed trigger; unsupported discard-then-draw spell; unsupported discover spell; unsupported divided damage spell; unsupported double counters spell; unsupported double effect; unsupported draw-doubling replacement; unsupported draw-from-empty-library win replacement; unsupported emblem ability; unsupported emblem effect; unsupported enters-as-copy replacement; unsupported entry-choice replacement; unsupported forced-attack effect; unsupported gain player counter spell; unsupported goad spell; unsupported graveyard-redirect replacement; unsupported historical untap; unsupported impulse exile effect; unsupported incubate spell; unsupported keep-one-per-type sacrifice; unsupported life action duration; unsupported life-gain replacement; unsupported linked X spell cost; unsupported look-at-hand spell; unsupported look-at-library spell; unsupported lose-game effect; unsupported monstrosity spell; unsupported optional effect; unsupported optional replacement effect; unsupported overload effect; unsupported permanent choice; unsupported permanent zone-change trigger; unsupported permanent zone-change trigger effect; unsupported phase out effect; unsupported phase out spell; unsupported polymorph effect; unsupported populate spell; unsupported prevent-damage effect; unsupported retarget effect; unsupported ring tempts effect; unsupported sacrifice spell; unsupported set base power/toughness effect; unsupported shuffle effect; unsupported source-spell cost reduction; unsupported surveil spell; unsupported tap or untap spell; unsupported target-animation effect; unsupported token creation; unsupported transform effect; unsupported type line; unsupported win-game effect; validation failed: invalid-ability-body; validation failed: invalid-rule-effect; validation failed: invalid-selection; validation failed: oracle-without-abilities |
 | trigger-pattern | 1,503 | 982 | unsupported draw/discard trigger; unsupported phase/step trigger phrase; unsupported triggered ability |
 | activation | 1,072 | 675 | unsupported Cycling ability; unsupported Equip ability; unsupported Mutate ability; unsupported Ninjutsu ability; unsupported activation ability word; unsupported activation condition; unsupported activation cost; unsupported activation modes; unsupported activation references; unsupported activation timing; unsupported activation zone; unsupported cost; unsupported loyalty ability |
 | replacement | 544 | 268 | unsupported conditional enters-tapped replacement; unsupported damage replacement; unsupported enters-tapped replacement; unsupported enters-with-counters replacement; unsupported self zone-destination replacement; unsupported token-creation replacement |
@@ -130,35 +130,35 @@ Greedy set-cover priority: each step fixes the reason that — given the reasons
 | Step | Fix this reason | Capability | Newly unblocked | Cumulative | Sample cards |
 | ---: | --- | --- | ---: | ---: | --- |
 | 1 | unsupported ordered effect sequence | shared-ability-content | 2,504 | 2,504 | Abdel Adrian, Gorion's Ward, Aberrant Manawurm, Abigale, Eloquent First-Year, Abnormal Endurance, Abstergo Entertainment |
-| 2 | unsupported optional effect | other | 806 | 3,310 | Absorb Identity, Abstract Performance, Abstruse Appropriation, Abstruse Archaic, Academy Loremaster |
-| 3 | unsupported triggered ability | trigger-pattern | 811 | 4,121 | A Good Day to Pie, Aang and Katara, Aboleth Spawn, Abomination, Abomination, Irradiated Brute |
-| 4 | unsupported static ability | static-declaration | 457 | 4,578 | Absorbing Man and Titania, Abyssal Persecutor, Aerial Modification, Ahn-Crop Champion, Ahn-Crop Crasher |
-| 5 | unsupported Oracle construct | recognition-fallback | 995 | 5,573 | "Name Sticker" Goblin, Abigale, Poet Laureate // Heroic Stanza, Abominable Treefolk, Abomination of Llanowar, Abomination, World Ravager |
-| 6 | unsupported ability content | shared-ability-content | 834 | 6,407 | A Little Chat, About Face, Absorbing Man, Abuna's Chant, Academic Ascent |
-| 7 | unsupported static declaration operation | static-declaration | 363 | 6,770 | Aboshan's Desire, Abzan Runemark, Acidic Sliver, Acolyte of Bahamut, Adelbert Steiner |
-| 8 | unsupported damage spell | shared-ability-content | 356 | 7,126 | Acidic Soil, Acolyte's Reward, Advanced Reconstruction, Aether Flash, Ajani Unrelenting |
-| 9 | unsupported enters-tapped replacement | replacement | 344 | 7,470 | Aberrant Return, Aether Refinery, Aether Revolt, Alhammarret, High Arbiter, Ali from Cairo |
-| 10 | unsupported counter placement | shared-ability-content | 323 | 7,793 | Academy Researchers, Acrobatic Cheerleader, Adder-Staff Boggart, Aether Gust, Aether Vial |
-| 11 | unsupported ability word | recognition-fallback | 313 | 8,106 | Abaddon the Despoiler, Aboroth, Aeon Chronicler, Alisaie Leveilleur, Alliance of Arms |
-| 12 | unsupported static declaration condition | static-declaration | 281 | 8,387 | Aang, A Lot to Learn, Ace's Baseball Bat, Alirios, Enraptured, Angelic Voices, Animus of Predation |
-| 13 | unsupported static declaration group | static-declaration | 279 | 8,666 | A Tale for the Ages, Adventurers' Guildhouse, Aetherflame Wall, Aminatou, Veil Piercer, Angel of Jubilation |
-| 14 | unsupported phase/step trigger phrase | trigger-pattern | 272 | 8,938 | Afflicted Deserter // Werewolf Ransacker, Agent of Treachery, Air Nomad Student, Akuta, Born of Ash, Arachnus Web |
-| 15 | unsupported return spell | shared-ability-content | 272 | 9,210 | Accursed Witch // Infectious Curse, Adarkar Valkyrie, Alchemist's Retrieval, Alesha, Who Laughs at Fate, Alexi, Zephyr Mage |
-| 16 | unsupported search effect | shared-ability-content | 255 | 9,465 | Aang's Journey, Acquire, Aether Searcher, Agency Outfitter, Alpine Houndmaster |
-| 17 | unsupported token creation | other | 254 | 9,719 | Aatchik, Emerald Radian, Abby, Merciless Soldier, Aerid Konstrari, Ajani Goldmane, Ajani Resolute |
-| 18 | unsupported activation cost | activation | 246 | 9,965 | A Killer Among Us, Abandon Hope, Aether Tide, Alms, Altar of Bhaal // Bone Offering |
-| 19 | unsupported destroy spell | shared-ability-content | 243 | 10,208 | Abu Ja'far, Aether Storm, Age of Ultron, Ajani Vengeant, Alaborn Zealot |
-| 20 | unsupported permanent zone-change trigger effect | other | 198 | 10,406 | "Lifetime" Pass Holder, Aberrant Mind Sorcerer, Aerie Auxiliary, Airbender Ascension, Anafenza, Unyielding Lineage |
-| 21 | unsupported power/toughness spell | shared-ability-content | 197 | 10,603 | Acquired Mutation, Aethertide Whale, Alistair, the Brigadier, All-Seeing Arbiter, Allied Assault |
-| 22 | unsupported exile spell | shared-ability-content | 196 | 10,799 | Admonition Angel, Agrus Kos, Spirit of Justice, Aligned Hedron Network, All Hallow's Eve, Angel of Condemnation |
-| 23 | unsupported cast effect | other | 171 | 10,970 | Abeyance, Academic Probation, Aisha of Sparks and Smoke, Aleatory, Angelic Favor |
-| 24 | unsupported activation ability word | activation | 170 | 11,140 | Abomination, Terrifying Titan, Adorned Crocodile, Adric, Mathematical Genius, Aerial Doombot, Afterburner Expert |
-| 25 | unsupported activation condition | activation | 171 | 11,311 | Aclazotz, Deepest Betrayal // Temple of the Dead, Alluring Siren, Altar of the Pantheon, Amulet of Quoz, Animal Attendant |
-| 26 | unsupported activation references | activation | 166 | 11,477 | Aegis of Honor, Akiri, Fearless Voyager, Aladdin's Lamp, Allosaurus Shepherd, Aphelia, Viper Whisperer |
-| 27 | unsupported mixed keyword ability | static-declaration | 162 | 11,639 | A Mysterious Creature, Animate Wall, Aragorn, Hornburg Hero, Arcades, the Strategist, Archetype of Aggression |
-| 28 | unsupported cost | activation | 157 | 11,796 | Aang's Iceberg, Adagia, Windswept Bastion, Aetherflux Conduit, Aethersquall Ancient, Aethertorch Renegade |
-| 29 | unsupported permanent zone-change trigger | other | 155 | 11,951 | Aang, Airbending Master, Aang, Swift Savior // Aang and La, Ocean's Fury, Aang, the Last Airbender, Acererak the Archlich, Alex Wilder, Runaway |
-| 30 | unsupported temporary keyword spell | shared-ability-content | 142 | 12,093 | Akroma's Blessing, Aphotic Wisps, Apostle's Blessing, Arm with Aether, Arrester's Zeal |
+| 2 | unsupported optional effect | other | 803 | 3,307 | Absorb Identity, Abstract Performance, Abstruse Appropriation, Abstruse Archaic, Academy Loremaster |
+| 3 | unsupported triggered ability | trigger-pattern | 811 | 4,118 | A Good Day to Pie, Aang and Katara, Aboleth Spawn, Abomination, Abomination, Irradiated Brute |
+| 4 | unsupported static ability | static-declaration | 457 | 4,575 | Absorbing Man and Titania, Abyssal Persecutor, Aerial Modification, Ahn-Crop Champion, Ahn-Crop Crasher |
+| 5 | unsupported Oracle construct | recognition-fallback | 995 | 5,570 | "Name Sticker" Goblin, Abigale, Poet Laureate // Heroic Stanza, Abominable Treefolk, Abomination of Llanowar, Abomination, World Ravager |
+| 6 | unsupported ability content | shared-ability-content | 834 | 6,404 | A Little Chat, About Face, Absorbing Man, Abuna's Chant, Academic Ascent |
+| 7 | unsupported static declaration operation | static-declaration | 363 | 6,767 | Aboshan's Desire, Abzan Runemark, Acidic Sliver, Acolyte of Bahamut, Adelbert Steiner |
+| 8 | unsupported damage spell | shared-ability-content | 356 | 7,123 | Acidic Soil, Acolyte's Reward, Advanced Reconstruction, Aether Flash, Ajani Unrelenting |
+| 9 | unsupported enters-tapped replacement | replacement | 344 | 7,467 | Aberrant Return, Aether Refinery, Aether Revolt, Alhammarret, High Arbiter, Ali from Cairo |
+| 10 | unsupported counter placement | shared-ability-content | 323 | 7,790 | Academy Researchers, Acrobatic Cheerleader, Adder-Staff Boggart, Aether Gust, Aether Vial |
+| 11 | unsupported ability word | recognition-fallback | 313 | 8,103 | Abaddon the Despoiler, Aboroth, Aeon Chronicler, Alisaie Leveilleur, Alliance of Arms |
+| 12 | unsupported static declaration condition | static-declaration | 281 | 8,384 | Aang, A Lot to Learn, Ace's Baseball Bat, Alirios, Enraptured, Angelic Voices, Animus of Predation |
+| 13 | unsupported static declaration group | static-declaration | 279 | 8,663 | A Tale for the Ages, Adventurers' Guildhouse, Aetherflame Wall, Aminatou, Veil Piercer, Angel of Jubilation |
+| 14 | unsupported phase/step trigger phrase | trigger-pattern | 272 | 8,935 | Afflicted Deserter // Werewolf Ransacker, Agent of Treachery, Air Nomad Student, Akuta, Born of Ash, Arachnus Web |
+| 15 | unsupported return spell | shared-ability-content | 272 | 9,207 | Accursed Witch // Infectious Curse, Adarkar Valkyrie, Alchemist's Retrieval, Alesha, Who Laughs at Fate, Alexi, Zephyr Mage |
+| 16 | unsupported search effect | shared-ability-content | 255 | 9,462 | Aang's Journey, Acquire, Aether Searcher, Agency Outfitter, Alpine Houndmaster |
+| 17 | unsupported token creation | other | 254 | 9,716 | Aatchik, Emerald Radian, Abby, Merciless Soldier, Aerid Konstrari, Ajani Goldmane, Ajani Resolute |
+| 18 | unsupported activation cost | activation | 246 | 9,962 | A Killer Among Us, Abandon Hope, Aether Tide, Alms, Altar of Bhaal // Bone Offering |
+| 19 | unsupported destroy spell | shared-ability-content | 243 | 10,205 | Abu Ja'far, Aether Storm, Age of Ultron, Ajani Vengeant, Alaborn Zealot |
+| 20 | unsupported permanent zone-change trigger effect | other | 198 | 10,403 | "Lifetime" Pass Holder, Aberrant Mind Sorcerer, Aerie Auxiliary, Airbender Ascension, Anafenza, Unyielding Lineage |
+| 21 | unsupported power/toughness spell | shared-ability-content | 197 | 10,600 | Acquired Mutation, Aethertide Whale, Alistair, the Brigadier, All-Seeing Arbiter, Allied Assault |
+| 22 | unsupported exile spell | shared-ability-content | 196 | 10,796 | Admonition Angel, Agrus Kos, Spirit of Justice, Aligned Hedron Network, All Hallow's Eve, Angel of Condemnation |
+| 23 | unsupported cast effect | other | 171 | 10,967 | Abeyance, Academic Probation, Aisha of Sparks and Smoke, Aleatory, Angelic Favor |
+| 24 | unsupported activation ability word | activation | 170 | 11,137 | Abomination, Terrifying Titan, Adorned Crocodile, Adric, Mathematical Genius, Aerial Doombot, Afterburner Expert |
+| 25 | unsupported activation condition | activation | 171 | 11,308 | Aclazotz, Deepest Betrayal // Temple of the Dead, Alluring Siren, Altar of the Pantheon, Amulet of Quoz, Animal Attendant |
+| 26 | unsupported activation references | activation | 166 | 11,474 | Aegis of Honor, Akiri, Fearless Voyager, Aladdin's Lamp, Allosaurus Shepherd, Aphelia, Viper Whisperer |
+| 27 | unsupported mixed keyword ability | static-declaration | 162 | 11,636 | A Mysterious Creature, Animate Wall, Aragorn, Hornburg Hero, Arcades, the Strategist, Archetype of Aggression |
+| 28 | unsupported cost | activation | 157 | 11,793 | Aang's Iceberg, Adagia, Windswept Bastion, Aetherflux Conduit, Aethersquall Ancient, Aethertorch Renegade |
+| 29 | unsupported permanent zone-change trigger | other | 155 | 11,948 | Aang, Airbending Master, Aang, Swift Savior // Aang and La, Ocean's Fury, Aang, the Last Airbender, Acererak the Archlich, Alex Wilder, Runaway |
+| 30 | unsupported temporary keyword spell | shared-ability-content | 142 | 12,090 | Akroma's Blessing, Aphotic Wisps, Apostle's Blessing, Arm with Aether, Arrester's Zeal |
 
 ## Ordered effect sequence sub-categories
 
@@ -167,7 +167,7 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | Category | Affected cards | Sole blockers |
 | --- | ---: | ---: |
 | sub-effect — unsupported counter placement | 757 | 400 |
-| structural — per-effect condition unrecognized | 537 | 341 |
+| structural — per-effect condition unrecognized | 538 | 341 |
 | sub-effect — unsupported ability content | 634 | 331 |
 | sub-effect — unsupported exile spell | 365 | 164 |
 | sub-effect — unsupported damage spell | 226 | 163 |
@@ -176,8 +176,8 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | sub-effect — unsupported return spell | 195 | 135 |
 | sub-effect — unsupported power/toughness spell | 181 | 134 |
 | structural — per-effect condition spans multiple clauses | 237 | 129 |
-| sub-effect — unsupported temporary keyword spell | 167 | 125 |
 | sub-effect — unsupported life spell | 182 | 124 |
+| sub-effect — unsupported temporary keyword spell | 165 | 124 |
 | sub-effect — unsupported draw spell | 175 | 105 |
 | sub-effect — unsupported discard spell | 136 | 91 |
 | sub-effect — unsupported shuffle effect | 156 | 90 |
@@ -193,16 +193,16 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | sub-effect — unsupported search effect | 62 | 33 |
 | structural — per-effect condition kind not gateable | 39 | 30 |
 | structural — multi-effect body not lowered as a sequence | 37 | 28 |
-| structural — actual-result condition has no unique earlier typed producer | 107 | 22 |
+| structural — actual-result condition has no unique earlier typed producer | 113 | 22 |
 | structural — per-effect condition has no containing clause | 26 | 22 |
 | structural — coin flip branch not lowered | 22 | 20 |
 | sub-effect — unsupported attach effect | 38 | 19 |
-| sub-effect — unsupported gain-control spell | 23 | 15 |
 | structural — instead replacement not gatable | 17 | 15 |
 | structural — inherited target not remappable | 24 | 14 |
+| sub-effect — unsupported gain-control spell | 22 | 14 |
+| structural — unconsumed targets/references/keywords | 15 | 13 |
 | sub-effect — unsupported group power/toughness spell | 15 | 13 |
 | sub-effect — unsupported gain player counter spell | 16 | 12 |
-| structural — unconsumed targets/references/keywords | 14 | 12 |
 | sub-effect — unsupported mill spell | 17 | 11 |
 | sub-effect — unsupported can't-block effect | 14 | 11 |
 | sub-effect — unsupported mana symbol | 16 | 10 |
@@ -296,11 +296,14 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | sub-effect — unsupported double power/toughness spell | 1 | 1 |
 | sub-effect — unsupported phase out effect | 1 | 1 |
 | sub-effect — unsupported prevent-damage effect | 1 | 1 |
-| structural — optional action group acceptance not modeled | 235 | 0 |
-| structural — optional published-subject antecedent not modeled | 75 | 0 |
+| structural — optional published-subject antecedent not modeled | 66 | 0 |
+| structural — optional action group actor not modeled | 49 | 0 |
 | sub-effect — unsupported retarget effect | 42 | 0 |
+| structural — whole optional action outcome not modeled | 8 | 0 |
+| structural — optional action group contains delay or payment | 3 | 0 |
 | sub-effect — unsupported delayed object capture: the captured subject's immediate body primitive or parameter is not modeled: unsupported return spell | 3 | 0 |
 | structural — clause produced modal/shared/multi-mode content | 2 | 0 |
+| structural — optional action has no typed group identity | 2 | 0 |
 | sub-effect — unsupported life action duration | 2 | 0 |
 | mode 1: sub-effect — unsupported counter placement | 1 | 0 |
 | mode 1: sub-effect — unsupported manifest spell | 1 | 0 |
@@ -650,6 +653,7 @@ Distinct `if <condition>` wordings inside ordered sequences whose predicate the 
 | If that creature was a token | 1 | 0 |
 | If that enchantment is an Aura | 1 | 0 |
 | If that permanent is destroyed this way | 1 | 0 |
+| If that permanent or card has a time counter on it | 1 | 0 |
 | If that token is a Squirrel | 1 | 0 |
 | If the copy is a permanent spell | 1 | 0 |
 | If the creature had power 4 or greater | 1 | 0 |

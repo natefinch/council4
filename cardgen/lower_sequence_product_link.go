@@ -21,7 +21,8 @@ import (
 // instruction span within sequence, recorded as each clause lowers in effect
 // order; sequence holds the instructions lowered so far.
 //
-// Optional, multi-instruction and competing antecedents fail closed. An
+// Unmodeled optional, multi-instruction and competing antecedents fail closed.
+// A scoped optional entered-object publisher invalidates before its gates. An
 // incompatible existing publication is never overwritten.
 func sequencePriorInstructionLink(
 	references []compiler.CompiledReference,
@@ -110,6 +111,13 @@ func sequenceProductKey(index int) game.LinkedKey {
 	return game.LinkedKey(fmt.Sprintf("sequence-effect-%d-product", index))
 }
 
+// These actual entered-object publishers invalidate their links before envelope
+// gates, so a skipped publication cannot leave an older incarnation available.
+func sequencePublisherInvalidatesBeforeGates(primitive game.Primitive) bool {
+	return primitive != nil &&
+		(primitive.Kind() == game.PrimitivePutOnBattlefield || primitive.Kind() == game.PrimitiveCreateToken)
+}
+
 func captureExpansionInstructionCompatible(primitive game.Primitive) bool {
 	if primitive == nil {
 		return false
@@ -140,7 +148,8 @@ func captureMovePublisher(primitive game.Primitive) bool {
 // A PublishLinked field alone is not proof that a primitive publishes the
 // correct actual result.
 func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey) (game.LinkedKey, bool) {
-	if instr.Optional || instr.Primitive == nil {
+	if instr.Primitive == nil ||
+		instr.Optional && (instr.PublishOptionalDecision == "" || !sequencePublisherInvalidatesBeforeGates(instr.Primitive)) {
 		return "", false
 	}
 	switch instr.Primitive.Kind() {

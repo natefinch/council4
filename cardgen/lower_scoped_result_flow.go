@@ -17,6 +17,7 @@ type scopedResultFlow struct {
 	otherwise    map[int]bool
 	clearNegated map[int]bool
 	conditions   map[int]bool
+	actions      optionalActionGroups
 }
 
 func (p optionalFlowPlan) singleOptionalTail(effectCount int) bool {
@@ -99,10 +100,12 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 		}
 		indices[effect.ClauseID] = ei
 		flow.optional[ei] = effect.Optional && !effect.DelayedSubject.OptionalAtDelayedTime
-		if effect.Optional && len(effect.OptionalActionClauseIDs) != 1 {
-			plan.failureCategory = "structural — optional action group acceptance not modeled"
-			return plan, false, true
-		}
+	}
+	var actionReason string
+	flow.actions, actionReason = planOptionalActionGroups(content.Effects, indices)
+	if actionReason != "" {
+		plan.failureCategory = actionReason
+		return plan, false, true
 	}
 	for ci, condition := range content.Conditions {
 		if !isResolvingSuccessGate(condition.Predicate) &&
@@ -118,6 +121,10 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			return plan, false, true
 		}
 		effect := content.Effects[producer]
+		if condition.Predicate != compiler.ConditionPredicateResultThisWay && flow.actions.isCompound(producer) {
+			plan.failureCategory = "structural — whole optional action outcome not modeled"
+			return plan, false, true
+		}
 		if condition.Predicate == compiler.ConditionPredicateCounterSucceeded {
 			if owned, ok := counterOutcomeProducer(content, condition); !ok || owned != producer {
 				plan.failureCategory = counterOwnershipCategory
@@ -215,7 +222,7 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			effect.Optional && effect.DelayedTiming != 0 && !fixedPhaseSubjectEffectModeled(effect) {
 			return plan, false, true
 		}
-		if flow.gates[ei].Key == "" && optionalAntecedentUnmodeled(content, ei) {
+		if flow.gates[ei].Key == "" && !flow.actions.ownsOptionalAntecedents(content, ei) && optionalAntecedentUnmodeled(content, ei) {
 			plan.failureCategory = "structural — optional published-subject antecedent not modeled"
 			return plan, false, true
 		}
@@ -275,10 +282,10 @@ func resultProducerActsForController(effect compiler.CompiledEffect) bool {
 
 func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string, bool) {
 	key, publishes := flow.publishers[ei]
-	if publishes || flow.optional[ei] {
+	if publishes {
 		index := 0
 		counterIndex, isCounter := counterActionInstruction(sequence)
-		if publishes && !flow.optional[ei] && isCounter {
+		if !flow.optional[ei] && isCounter {
 			index = counterIndex
 		} else if len(sequence) != 1 {
 			return "structural — result producer or optional effect requires one instruction", false
@@ -286,13 +293,10 @@ func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string
 		if sequence[index].Optional || sequence[index].PublishResult != "" {
 			return "structural — result producer or optional effect requires one instruction", false
 		}
-		if publishes && sequence[index].ResultGate.Exists && !isCounter {
+		if sequence[index].ResultGate.Exists && !isCounter {
 			return "structural — result publication conflicts with clause result wiring", false
 		}
-		sequence[index].Optional = flow.optional[ei]
-		if publishes {
-			sequence[index].PublishResult = key
-		}
+		sequence[index].PublishResult = key
 	}
 	if gate, exists := flow.gates[ei]; exists {
 		gated, ok := appendResultGatedBranch(nil, gate, sequence)
@@ -300,6 +304,9 @@ func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string
 			return "structural — overlapping actual-result gates not modeled", false
 		}
 		copy(sequence, gated)
+	}
+	if reason := flow.actions.apply(ei, sequence); reason != "" {
+		return reason, false
 	}
 	return "", true
 }

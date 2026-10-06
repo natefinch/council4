@@ -176,6 +176,12 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 	if instruction.Optional {
 		fields = append(fields, "Optional: true,")
 	}
+	if instruction.PublishOptionalDecision != "" {
+		fields = append(fields, fmt.Sprintf("PublishOptionalDecision: %q,", instruction.PublishOptionalDecision))
+	}
+	if instruction.OptionalDecisionGate != "" {
+		fields = append(fields, fmt.Sprintf("OptionalDecisionGate: %q,", instruction.OptionalDecisionGate))
+	}
 	if instruction.OptionalActor.Exists {
 		actor, err := r.renderPlayerReference(instruction.OptionalActor.Val)
 		if err != nil {

@@ -477,6 +477,9 @@ func lowerOrderedEffectSequence(
 		} else if len(conditionReferences) > 0 {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — condition subject producer not publishable")
 		}
+		if reason := bindOptionalEnteredObjectReference(&effectAbility, sequence, effectInstructionRanges[:i], oracleSpanToGameIdx, targets); reason != "" {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
+		}
 		// Lower the effect through the shared lowerAbilityContent entry point.
 		// allSharedTargets: try with inherited targets; if that fails, retry
 		//   with targets cleared (e.g. "then proliferate" rejects any target).
@@ -498,6 +501,10 @@ func lowerOrderedEffectSequence(
 		// the grant fails closed instead of chaining off a publisher it cannot
 		// rely on.
 		publisherGated := i > 0 && sequenceClauseInstructionGated(i-1, effectConditions, insteadGates, otherwiseGates)
+		if len(sequence) > 0 {
+			prior := sequence[len(sequence)-1]
+			publisherGated = publisherGated || prior.Optional || prior.OptionalDecisionGate != ""
+		}
 		if effect.PlayHideawayExiledCard {
 			content, diagnostic = lowerHideawayPlayEffect(effectAbility)
 		} else if delayed, delayedDiagnostic, handled := lowerFixedPhaseSubject(
@@ -612,6 +619,9 @@ func lowerOrderedEffectSequence(
 	// which assume a fully-consumed sequence.
 	if len(clauseReasons) > 0 {
 		return game.AbilityContent{}, combineReasons(clauseReasons)
+	}
+	if !optionalLinkedPublicationsModeled(sequence) {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — optional linked-object publication has no skipped-availability contract")
 	}
 	// A condition's own object pronoun ("its power" in "draw a card if its power
 	// is 3 or greater") sits outside every effect clause span, so it is consumed
@@ -4813,11 +4823,9 @@ func sequentialReferencedKeywordGrantDuration(duration compiler.DurationKind) (g
 // with. Declining routes the clause through normal reference lowering, which for
 // a plain targeted subject binds the target permanent directly (correct — the
 // same permanent the linked key would have captured) and otherwise fails the
-// clause closed. Only a created/reanimated subject ("it" naming a freshly made
-// object that a plain target reference cannot denote) would bind the wrong
-// permanent through the fallback; no such created-object subject appears in a
-// two-branch publisher-gated shape in the corpus, so every generated card that
-// reaches this decline binds correctly.
+// clause closed. Entered-object publishers are the exception: their actual
+// publication is invalidated before gates, so a skipped or failed entry leaves
+// no object for the mandatory rider rather than exposing a stale incarnation.
 func lowerSequentialReferencedKeywordGrant(
 	effectIndex int,
 	ctx contentCtx,
@@ -4832,8 +4840,9 @@ func lowerSequentialReferencedKeywordGrant(
 		panic(fmt.Sprintf("lowerSequentialReferencedKeywordGrant: expected a single effect, got %d", len(ctx.content.Effects)))
 	}
 	if effectIndex == 0 ||
-		publisherGated ||
-		len(sequence) != effectIndex ||
+		len(sequence) == 0 ||
+		publisherGated && !sequencePublisherInvalidatesBeforeGates(sequence[len(sequence)-1].Primitive) ||
+		len(sequence) != effectIndex && !sequencePublisherInvalidatesBeforeGates(sequence[len(sequence)-1].Primitive) ||
 		ctx.optional ||
 		len(ctx.content.Keywords) == 0 ||
 		!isSequentialReferencedKeywordGrantEffect(&ctx.content.Effects[0]) {
@@ -4848,7 +4857,7 @@ func lowerSequentialReferencedKeywordGrant(
 		return nil, game.AbilityContent{}, false
 	}
 	key := game.LinkedKey(fmt.Sprintf("gain-keyword-%d", effectIndex))
-	publisher, ok := publishLinkedTargetPermanent(sequence[effectIndex-1].Primitive, key)
+	publisher, ok := publishLinkedTargetPermanent(sequence[len(sequence)-1].Primitive, key)
 	if !ok {
 		return nil, game.AbilityContent{}, false
 	}
