@@ -95,7 +95,11 @@ func (e *Engine) resolveAbilityContentReceipt(g *game.Game, obj *game.StackObjec
 			continue
 		}
 		obj.Targets = targetsForChosenMode(content, obj, allTargets, chosenIndex)
-		receipt, available = e.resolveInstructionSequenceReceipt(g, obj, content.Modes[modeIndex].Sequence, agents, log, key)
+		sequence := content.Modes[modeIndex].Sequence
+		modeReceipt, modeAvailable := e.resolveInstructionSequenceReceipt(g, obj, sequence, agents, log, key)
+		if sequencePublishesResult(sequence, key) {
+			receipt, available = modeReceipt, modeAvailable
+		}
 	}
 	return receipt, available
 }
@@ -211,13 +215,19 @@ func (e *Engine) resolveInstructionSequence(g *game.Game, obj *game.StackObject,
 }
 
 func (e *Engine) resolveInstructionSequenceReceipt(g *game.Game, obj *game.StackObject, sequence []game.Instruction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, key game.ResultKey) (game.InstructionResolutionResult, bool) {
+	ownsReceipt := sequencePublishesResult(sequence, key)
+	if ownsReceipt && obj != nil {
+		// Receipt queries isolate even legacy publishers without local declarations.
+		restoreReceipt := isolateResultProducts(obj, string(key))
+		defer restoreReceipt()
+	}
 	restoreProducts := enterLocalProductFrame(g, obj, sequence)
 	defer restoreProducts()
 	resolver := newEffectResolver(e, g, obj, agents, log)
 	for i := range sequence {
 		resolver.resolveInstruction(&sequence[i])
 	}
-	if obj == nil || key == "" {
+	if obj == nil || !ownsReceipt {
 		return game.InstructionResolutionResult{}, false
 	}
 	receipt, available := obj.ResolutionResults[string(key)]

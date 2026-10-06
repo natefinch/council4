@@ -847,6 +847,9 @@ func prepareTriggerBody(
 			switch {
 			case fixedPhaseSubjectEffectModeled(effect) && effect.DelayedSubject.OptionalAtDelayedTime:
 				triggerOptional = false
+			case effect.LifePayment == parser.EffectLifePaymentOptional:
+				// Pay owns the affordability-sensitive choice at resolution.
+				triggerOptional = false
 			case hasInterveningCondition:
 				body.Optional = true
 				body.OptionalSpan = ability.OptionalSpan

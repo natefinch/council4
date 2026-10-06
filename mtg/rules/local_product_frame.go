@@ -15,12 +15,7 @@ func enterLocalProductFrame(g *game.Game, obj *game.StackObject, sequence []game
 			return
 		}
 		keys[key] = true
-		restore = append(restore,
-			isolateProductCell(&obj.ResolutionResults, key),
-			isolateProductCell(&obj.ResolutionResultObjects, key),
-			isolateProductCell(&obj.ResolvedAmounts, key),
-			isolateProductCell(&obj.ResolvedExcessDamage, key),
-		)
+		restore = append(restore, isolateResultProducts(obj, key))
 	}
 	for _, instruction := range sequence {
 		for _, key := range instruction.LocalProducts.Results {

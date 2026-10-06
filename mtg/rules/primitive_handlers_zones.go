@@ -2285,26 +2285,16 @@ const maxConditionalRepeatIterations = 10000
 
 // handleRepeatProcess resolves bounded and result-driven processes. A
 // ContinueResult process executes at least once and repeats only while the body
-// freshly publishes a successful result under that key. Clearing the key before
-// each iteration prevents a skipped payoff from inheriting the prior iteration's
-// success, and the hard ceiling protects the engine from malformed non-progressing
-// bodies.
+// freshly publishes a successful result under that key. Invocation-owned receipt
+// queries preserve enclosing products; the hard ceiling protects the engine from
+// malformed non-progressing bodies.
 func handleRepeatProcess(r *effectResolver, prim game.RepeatProcess) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ContinueResult != "" {
-		localContinuation := false
-		for _, mode := range prim.Body.Modes {
-			for _, instruction := range mode.Sequence {
-				localContinuation = localContinuation || instruction.LocalProducts.HasResult(prim.ContinueResult)
-			}
-		}
 		for range maxConditionalRepeatIterations {
 			controller, ok := playerByID(r.game, r.obj.Controller)
 			if !ok || controller.Eliminated {
 				break
-			}
-			if r.obj.ResolutionResults != nil && !localContinuation {
-				delete(r.obj.ResolutionResults, string(prim.ContinueResult))
 			}
 			result, ok := r.engine.resolveAbilityContentReceipt(r.game, r.obj, prim.Body, r.agents, r.log, prim.ContinueResult)
 			res.succeeded = true

@@ -112,12 +112,21 @@ the observation's success or card count. Scalars survive a subsequent draw or
 move, while later independent card predicates still require the live captured
 incarnation. Overlapping unmodeled result gates fail closed.
 
+Explicit "the looked-at card" and "the revealed card" nouns bind to compatible
+parser-owned producers, even across independent observations. Generic card nouns
+retain their modeled recency. A linked reveal of an already observed card keeps
+that original top-card producer identity rather than claiming a new observation
+of the library's current top card. Competing unmodeled subjects remain refused.
+
 An observed-card move into "that player's" zone carries separate parser-owned
 library-owner provenance matching the card's producer. The observed player and
 card owner do not become the consequence actor. Optional fixed life payments
 lower to the existing `Pay` cost primitive, which checks affordability and asks
 once; the following move requires actual payment success, not choice acceptance.
-Ordinary optional life loss remains a nonpayment primitive.
+Singleton payment triggers leave that sole choice with `Pay`, rather than adding
+an outer optional-trigger prompt. Ordinary optional triggers and independent
+optional riders retain their own decisions; optional life loss remains a
+nonpayment primitive.
 
 Optional observations do not make their condition consumers or unrelated riders
 optional: those consumers read actual product availability. Positively owned
@@ -131,6 +140,14 @@ survive frame cleanup, and conditional repeat control reads its current receipt
 before the frame exits. Persistent CR 607 links and paid-cost facts do not enter
 these frames; condition booleans remain resolver-local. Legacy undeclared,
 colliding conditional publications retain their fail-closed boundary.
+
+Continuation receipts belong to the currently invoked sequence, not merely to a
+same-key cell visible from its parent. Nonpublishing selected modes do not return
+inherited success or replace a publishing mode's receipt; an actually skipped
+publisher makes its receipt unavailable. A receipt query isolates its positively
+owned result even for a legacy publisher without a local declaration, then
+restores the enclosing receipt, objects, amount, and excess. This does not expand
+nested result-gate validation or the compiler's publication contracts.
 
 Fixed-phase delayed bodies use that same shared sequence interface. Parser-owned
 NodeID, producer ClauseID, target occurrence, subject domain, and condition timing

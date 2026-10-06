@@ -168,7 +168,8 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 			continue
 		}
 		cardNoun := libraryReferenceHasCardNoun(*reference, effects, references, conditions)
-		producer := 0
+		latest := 0
+		observations := make(map[EffectKind]int)
 		for _, effect := range effects {
 			if effect.VerbSpan.End.Offset > reference.Span.Start.Offset ||
 				parserSpanContains(effect.ClauseSpan, reference.Span) {
@@ -177,21 +178,32 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 			_, _, observation := singleLibraryCardProducerOwner(effect.Kind, exactEffectClauseText(effect))
 			if observation && effect.Exact && effect.CardSource == EffectCardSourceTopOfPlayerLibrary &&
 				(effect.Kind == EffectReveal || effect.Kind == EffectLookAtLibraryTop) {
-				producer = effect.ClauseID
+				latest = effect.ClauseID
+				observations[effect.Kind] = latest
+				continue
+			}
+			if producer := linkedLibraryCardRevealProducer(*effect, latest, observations); producer != 0 {
+				// Revealing an observed card preserves its original top-card identity.
+				latest = producer
+				observations[EffectReveal] = producer
 				continue
 			}
 			action := *effect
 			if action.Kind == EffectPut && recognizeLibraryCardAction(&action) && action.ToZone == zone.Battlefield &&
 				!libraryReferenceNamesCard(*reference, conditions) &&
-				!libraryReferenceConsumesObservationElse(*reference, effect, producer, effects, references, conditions) {
-				producer = 0
+				!libraryReferenceConsumesObservationElse(*reference, effect,
+					libraryCardAntecedent(*reference, latest, observations), effects, references, conditions) {
+				latest = 0
+				clear(observations)
 			}
 			if len(effect.Targets) != 0 || effect.Kind == EffectCreate && !cardNoun ||
 				effect.Kind == EffectSearch || effect.Kind == EffectChoosePermanent ||
 				effect.Kind == EffectExile || effect.Kind == EffectManifestDread {
-				producer = 0
+				latest = 0
+				clear(observations)
 			}
 		}
+		producer := libraryCardAntecedent(*reference, latest, observations)
 		if producer == 0 {
 			continue
 		}
