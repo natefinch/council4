@@ -29,6 +29,7 @@ func recognizeShuffleRevealPermanentSequence(sentences []Sentence) {
 
 	reveal.Player = EffectPlayerTargetOwner
 	reveal.CardSource = EffectCardSourceTopOfPlayerLibrary
+	reveal.Amount = EffectAmountSyntax{Known: true, Value: 1}
 	reveal.Exact = true
 
 	put.Player = EffectPlayerTargetOwner

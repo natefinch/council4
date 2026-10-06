@@ -18,6 +18,7 @@ type scopedResultFlow struct {
 	clearNegated map[int]bool
 	conditions   map[int]bool
 	actions      optionalActionGroups
+	postfixElse  map[int]int
 }
 
 func (p optionalFlowPlan) singleOptionalTail(effectCount int) bool {
@@ -105,6 +106,10 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 	flow.actions, actionReason = planOptionalActionGroups(content.Effects, indices)
 	if actionReason != "" {
 		plan.failureCategory = actionReason
+		return plan, false, true
+	}
+	if reason := flow.planPostfixElse(content, indices); reason != "" {
+		plan.failureCategory = reason
 		return plan, false, true
 	}
 	for ci, condition := range content.Conditions {

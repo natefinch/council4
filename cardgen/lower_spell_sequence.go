@@ -700,6 +700,10 @@ func lowerOrderedEffectSequence(
 	if !publishConditionTargetCards(ctx.content, effectInstructionRanges, sequence) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — targeted-card condition producer not modeled")
 	}
+	sequence, ok = optionalFlow.scoped.appendPostfixElseBranches(effectInstructionRanges, sequence)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — optional postfix Otherwise envelope conflicts")
+	}
 	// A later "another target" clause requires a target distinct from the
 	// spell's earlier targets (CR 601.2c); mark it before gating so both passes
 	// see the corrected spec list.
@@ -1852,7 +1856,8 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 		len(ctx.content.Conditions) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 5 {
+		len(ctx.content.References) != 6 ||
+		len(referencesOutsideOwnedConditions(ctx.content.References, ctx.content.Conditions)) != 5 {
 		return game.AbilityContent{}, false
 	}
 	shuffle := ctx.content.Effects[0]
@@ -1903,6 +1908,12 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 	condition := ctx.content.Conditions[0]
 	if condition.Kind != compiler.ConditionIf ||
 		!shuffleRevealPermanentCondition(condition) ||
+		!condition.HasSubjectReference || condition.ObjectReference == nil ||
+		condition.SubjectRefID != condition.ObjectReference.NodeID ||
+		condition.ObjectReference.Binding != compiler.ReferenceBindingPriorInstructionResult ||
+		condition.ObjectReference.ProducerClauseID != reveal.ClauseID ||
+		condition.ObjectReference.PriorInstruction != 1 ||
+		reveal.LibraryOwnerClauseID != shuffle.ClauseID ||
 		!spanCovered(condition.Span, []shared.Span{put.ClauseSpan}) {
 		return game.AbilityContent{}, false
 	}

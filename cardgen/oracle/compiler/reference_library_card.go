@@ -3,21 +3,28 @@ package compiler
 import "github.com/natefinch/council4/cardgen/oracle/parser"
 
 func bindLibraryCardReference(reference *CompiledReference, effects []CompiledEffect) bool {
-	if reference.ProducerClauseID <= 0 {
+	if reference.ProducerClauseID <= 0 && !reference.LibraryCardObservation {
 		return false
 	}
 	if reference.Binding != ReferenceBindingUnsupported &&
 		reference.Binding != ReferenceBindingPriorInstructionResult &&
 		reference.Binding != ReferenceBindingLibraryOwner {
+		if reference.LibraryCardObservation {
+			reference.Binding = ReferenceBindingUnsupported
+			return true
+		}
 		return false
 	}
 	reference.Binding = ReferenceBindingUnsupported
+	if reference.ProducerClauseID <= 0 {
+		return true
+	}
 	prior := -1
 	for i, effect := range effects {
 		if effect.ClauseID != reference.ProducerClauseID {
 			continue
 		}
-		if prior >= 0 || !SingularLibraryCardProducer(effect) {
+		if prior >= 0 || !exactLibraryCardReferenceProducer(effect, effects) {
 			return true
 		}
 		prior = i

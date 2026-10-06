@@ -143,7 +143,28 @@ optional riders retain their own decisions; optional life loss remains a
 nonpayment primitive.
 
 Optional observations do not make their condition consumers or unrelated riders
-optional: those consumers read actual product availability. Positively owned
+optional: those consumers read actual product availability. Qualified
+card predicates retain exact reference identity, including permanent
+type unions; an unproven observation reference cannot fall back to a death-event
+permanent. An action's own postfix predicate reads its earlier observation,
+before that action can replace the subject's domain.
+
+The parser distinguishes `You may A if P. Otherwise B` from predicate-leading
+`If P, you may A. Otherwise B`. The former uses one frozen predicate and an
+actual optional-action receipt: B runs for false P or true P plus decline.
+Acceptance is not effectiveness, so an accepted replacement-diverted placement
+does not become a decline. Unavailable predicates or skipped publishers do not
+borrow enclosing receipts. The shared planner assembles two disjoint B branches
+with existing condition/result gates; no public instruction schema is added.
+Compound or ambiguous postfix action/Otherwise scopes remain refused.
+
+The existing owner-of-shuffled-permanent reveal adapter carries an exact
+library-owner ClauseID and singular observation amount. Its contextual predicate
+names that observed product, not the shuffled target. The adapter consumes this
+typed subject proof while retaining its existing three-instruction CardDef;
+missing, plural, or incompatible owner/producer provenance is refused.
+
+Positively owned
 publishers declare typed `LocalProducts` with one instruction-sequence invocation
 as their lifetime. Selected modes and repeat iterations receive fresh product
 frames, including scalar, excess, receipt, and result-object cells. Read-only

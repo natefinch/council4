@@ -3,15 +3,22 @@ package parser
 import "strings"
 
 func libraryCardAntecedent(reference Reference, latest int, observations map[EffectKind]int) int {
-	if reference.Kind == ReferenceThatObject {
-		if strings.EqualFold(reference.Text, "the looked-at card") {
-			return observations[EffectLookAtLibraryTop]
-		}
-		if strings.EqualFold(reference.Text, "the revealed card") {
-			return observations[EffectReveal]
-		}
+	if kind := explicitLibraryCardObservation(reference); kind != EffectUnknown {
+		return observations[kind]
 	}
 	return latest
+}
+
+func explicitLibraryCardObservation(reference Reference) EffectKind {
+	if reference.Kind == ReferenceThatObject {
+		if strings.EqualFold(reference.Text, "the looked-at card") {
+			return EffectLookAtLibraryTop
+		}
+		if strings.EqualFold(reference.Text, "the revealed card") {
+			return EffectReveal
+		}
+	}
+	return EffectUnknown
 }
 
 func linkedLibraryCardRevealProducer(effect EffectSyntax, latest int, observations map[EffectKind]int) int {

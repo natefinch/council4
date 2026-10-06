@@ -2560,6 +2560,8 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
+	OptionalPostfixElse     parser.OptionalPostfixElseOwnership
+	LibraryOwnerClauseID    int
 	DelayedSubject          parser.DelayedSubjectOwnership
 	ClauseID                int
 	ResultElseOfClauseID    int
@@ -4760,10 +4762,11 @@ type CompiledReference struct {
 	// as opposed to "this Aura"/"this creature" (a battlefield object). Lowering
 	// uses it to return a leaves-the-battlefield source from the graveyard by
 	// card identity instead of bouncing a battlefield object.
-	CardIdentity     bool
-	Occurrence       int
-	PriorInstruction int
-	ProducerClauseID int
+	CardIdentity           bool
+	Occurrence             int
+	PriorInstruction       int
+	ProducerClauseID       int
+	LibraryCardObservation bool
 	// NodeID is the parser-assigned stable identity of this reference within its
 	// ability or mode. Distinct copies of the same source reference share a
 	// NodeID, so the compiler matches references by identity instead of span

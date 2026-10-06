@@ -1919,8 +1919,7 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 		return ConditionClause{}, false
 	}
 	subjectID := atoms.ReferenceIDAt(body[0].Span)
-	contextualCardNoun := (len(selection.RequiredTypes) > 0 || len(selection.Supertypes) > 0 ||
-		len(selection.ColorsAny) > 0 || selection.Colorless || selection.Multicolored) &&
+	contextualCardNoun := conditionSelectionHasObjectDomain(selection) &&
 		slices.ContainsFunc(rest, func(token shared.Token) bool {
 			return equalWord(token, "card") || equalWord(token, "cards")
 		})

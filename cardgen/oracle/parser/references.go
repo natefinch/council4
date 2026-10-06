@@ -73,6 +73,9 @@ type Reference struct {
 	// ProducerClauseID identifies an observed library card's grammatical
 	// antecedent. Zero leaves other reference domains to their existing binder.
 	ProducerClauseID int `json:",omitempty"`
+	// LibraryCardObservation keeps an unproven observation in its own domain;
+	// it cannot fall back to an event permanent when its producer is missing.
+	LibraryCardObservation bool `json:",omitempty"`
 	// Order is the reference's dense source-order rank within its ability or
 	// mode. Downstream stages compare these ranks to decide antecedent ordering
 	// and containment instead of inspecting byte offsets.
@@ -378,7 +381,7 @@ func referencePronounKind(tokens []shared.Token, index int, atoms Atoms) Pronoun
 		}
 		noun := tokens[start:end]
 		if selection, ok := parseConditionSelection(noun, atoms); ok &&
-			(len(selection.RequiredTypes) > 0 || len(selection.SubtypesAny) > 0 || len(selection.Supertypes) > 0 ||
+			(conditionSelectionHasObjectDomain(selection) ||
 				(tokenSuffixWord(noun, "card") || tokenSuffixWord(noun, "cards")) && libraryCardObservationBefore(tokens, index)) {
 			return PronounIt
 		}

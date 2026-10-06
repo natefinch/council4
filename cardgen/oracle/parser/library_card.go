@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -162,21 +163,25 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 			effects = append(effects, &sentences[si].Effects[ei])
 		}
 	}
+	emitTargetOwnerLibraryProducerClauses(effects)
 	for ri := range references {
 		reference := &references[ri]
 		if !libraryCardReference(*reference) {
 			continue
 		}
+		reference.LibraryCardObservation = explicitLibraryCardObservation(*reference) != EffectUnknown
 		cardNoun := libraryReferenceHasCardNoun(*reference, effects, references, conditions)
 		latest := 0
 		observations := make(map[EffectKind]int)
 		for _, effect := range effects {
 			if effect.VerbSpan.End.Offset > reference.Span.Start.Offset ||
-				parserSpanContains(effect.ClauseSpan, reference.Span) {
+				parserSpanContains(effect.ClauseSpan, reference.Span) ||
+				libraryReferenceIsOwnActionCondition(*reference, effect.ClauseID, conditions) {
 				continue
 			}
 			_, _, observation := singleLibraryCardProducerOwner(effect.Kind, exactEffectClauseText(effect))
-			if observation && effect.Exact && effect.CardSource == EffectCardSourceTopOfPlayerLibrary &&
+			if (observation || effect.LibraryOwnerClauseID > 0) &&
+				effect.Exact && effect.CardSource == EffectCardSourceTopOfPlayerLibrary &&
 				(effect.Kind == EffectReveal || effect.Kind == EffectLookAtLibraryTop) {
 				latest = effect.ClauseID
 				observations[effect.Kind] = latest
@@ -221,6 +226,7 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 			}
 		}
 		reference.ProducerClauseID = producer
+		reference.LibraryCardObservation = reference.LibraryCardObservation || producer > 0
 	}
 	bindLibraryOwnerDestinationReferences(effects, references)
 	for _, effect := range effects {
@@ -230,6 +236,7 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 				for _, reference := range references {
 					if list[i].NodeID == reference.NodeID {
 						list[i].ProducerClauseID = reference.ProducerClauseID
+						list[i].LibraryCardObservation = reference.LibraryCardObservation
 						observedSubject = observedSubject || reference.ProducerClauseID > 0
 						break
 					}
@@ -240,6 +247,16 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 			}
 		}
 	}
+}
+
+func libraryReferenceIsOwnActionCondition(reference Reference, clauseID int, conditions []ConditionSegment) bool {
+	for _, condition := range conditions {
+		if slices.Contains(condition.Ownership.ClauseIDs, clauseID) &&
+			slices.Contains(condition.Ownership.ReferenceNodeIDs, reference.NodeID) {
+			return true
+		}
+	}
+	return false
 }
 
 func libraryReferenceHasCardNoun(reference Reference, effects []*EffectSyntax, references []Reference, conditions []ConditionSegment) bool {

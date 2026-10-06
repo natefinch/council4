@@ -333,6 +333,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 		for syntaxIndex := range sentence.Effects {
 			syntax := &sentence.Effects[syntaxIndex]
 			effects = append(effects, CompiledEffect{
+				OptionalPostfixElse:            syntax.OptionalPostfixElse,
+				LibraryOwnerClauseID:           syntax.LibraryOwnerClauseID,
 				ResultElseOfClauseID:           syntax.ResultElseOfClauseID,
 				OptionalActionClauseIDs:        syntax.OptionalActionClauseIDs,
 				ClauseID:                       syntax.ClauseID,

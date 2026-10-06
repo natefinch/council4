@@ -16,6 +16,15 @@ func bindContextualObjectCondition(
 	effects []CompiledEffect,
 	trigger *CompiledTrigger,
 ) bool {
+	matches := 0
+	for _, subject := range references {
+		if subject.NodeID == condition.SubjectRefID {
+			matches++
+		}
+	}
+	if matches != 1 {
+		return false
+	}
 	for _, subject := range references {
 		if subject.NodeID != condition.SubjectRefID {
 			continue
