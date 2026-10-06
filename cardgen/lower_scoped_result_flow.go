@@ -248,7 +248,8 @@ func optionalAntecedentUnmodeled(content compiler.AbilityContent, ei int) bool {
 	if ei > 0 && content.Effects[ei-1].Optional &&
 		(amount.DynamicKind == compiler.DynamicAmountSourceManaValue ||
 			amount.DynamicKind == compiler.DynamicAmountSourcePower ||
-			amount.DynamicKind == compiler.DynamicAmountSourceToughness) {
+			amount.DynamicKind == compiler.DynamicAmountSourceToughness) &&
+		!libraryCardCharacteristicConsumer(content.Effects[ei], content.Effects) {
 		return true
 	}
 	for _, reference := range content.Effects[ei].References {

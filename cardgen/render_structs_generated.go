@@ -7414,6 +7414,11 @@ func (r Renderer) renderGameLibraryCardCharacteristics(ctx *renderCtx, v game.Li
 		ctx.need(importGame)
 		fields = append(fields, "Toughness: "+lit2+",")
 	}
+	if v.ManaValue != "" {
+		lit3 := "game.ResultKey(" + strconv.Quote(string(v.ManaValue)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "ManaValue: "+lit3+",")
+	}
 	return structLit("game.LibraryCardCharacteristics", fields), nil
 }
 

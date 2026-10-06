@@ -2022,20 +2022,19 @@ func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent
 		return game.AbilityContent{}, false
 	}
 
-	key := game.LinkedKey("revealed-card-1")
-	linked := game.LinkedObjectReference(string(key))
-	manaValue, ok := objectCharacteristicAmount(compiler.DynamicAmountSourceManaValue, linked)
-	if !ok {
-		return game.AbilityContent{}, false
-	}
+	key := sequenceProductKey(0)
+	scalar := game.ResultKey("sequence-effect-0-mana-value")
+	manaValue := game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, ResultKey: scalar, Multiplier: 1}
 
 	return game.Mode{
 		Sequence: []game.Instruction{
-			{Primitive: game.Reveal{
-				Amount:        game.Fixed(1),
-				Player:        game.ControllerReference(),
-				PublishLinked: key,
-			}},
+			{
+				Primitive: game.Reveal{
+					Amount: game.Fixed(1), Player: game.ControllerReference(), PublishLinked: key,
+					PublishCharacteristics: game.LibraryCardCharacteristics{ManaValue: scalar},
+				},
+				LocalProducts: game.LocalProducts{Links: []game.LinkedKey{key}, Results: []game.ResultKey{scalar}},
+			},
 			{Primitive: game.MoveCard{
 				Card: game.CardReference{
 					Kind:   game.CardReferenceLinked,
@@ -2050,6 +2049,9 @@ func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent
 					Amount: game.Dynamic(manaValue),
 				},
 				Condition: opt.Val(selfGate),
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key: scalar, AmountAvailable: true,
+				}),
 			},
 			{
 				Primitive: game.LoseLife{
@@ -2057,6 +2059,9 @@ func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent
 					Amount:      game.Dynamic(manaValue),
 				},
 				Condition: opt.Val(opponentsGate),
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key: scalar, AmountAvailable: true,
+				}),
 			},
 		},
 	}.Ability(), true

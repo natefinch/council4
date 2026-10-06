@@ -23,7 +23,7 @@ func (r *effectResolver) clearLibraryCardScalars(outputs game.LibraryCardCharact
 	if r.obj == nil {
 		return
 	}
-	for _, key := range []game.ResultKey{outputs.Power, outputs.Toughness} {
+	for _, key := range []game.ResultKey{outputs.Power, outputs.Toughness, outputs.ManaValue} {
 		if key == "" {
 			continue
 		}
@@ -35,7 +35,7 @@ func (r *effectResolver) clearLibraryCardScalars(outputs game.LibraryCardCharact
 }
 
 func (r *effectResolver) publishLibraryCardScalars(link game.LinkedKey, outputs game.LibraryCardCharacteristics) {
-	if outputs.Power == "" && outputs.Toughness == "" {
+	if outputs.Power == "" && outputs.Toughness == "" && outputs.ManaValue == "" {
 		return
 	}
 	observed := linkedObjects(r.game, linkedObjectSourceKey(r.game, r.obj, string(link)))
@@ -56,4 +56,7 @@ func (r *effectResolver) publishLibraryCardScalars(link game.LinkedKey, outputs 
 	}
 	publish(outputs.Power, power, powerKnown)
 	publish(outputs.Toughness, toughness, toughnessKnown)
+	subject := selectionSubject{kind: subjectCard, card: card}
+	manaValue, manaValueKnown := subject.manaValue()
+	publish(outputs.ManaValue, manaValue, manaValueKnown)
 }

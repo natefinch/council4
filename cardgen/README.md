@@ -111,6 +111,20 @@ consumers read those exact frozen scalars through `AmountAvailable`, not through
 the observation's success or card count. Scalars survive a subsequent draw or
 move, while later independent card predicates still require the live captured
 incarnation. Overlapping unmodeled result gates fail closed.
+Exact optional LOOK/REVEAL power and toughness consumers use the same typed
+amount-NodeID/producer-ClauseID proof whether adjacent or separated by an
+independent clause. This does not admit optional source/permanent amounts or
+generic observed mana-value compositions.
+
+An existing reveal-to-hand mana-value consequence captures a separately
+available printed mana-value scalar at observation, before the move invalidates
+the library incarnation. Its consumers use `AmountAvailable`, independent of
+whether the requested hand move succeeds or is replaced. Known no-cost mana
+value zero remains available; an unavailable card never supplies a default zero.
+The scalar shares the observation's local lifetime without relaxing card identity.
+Resolving source-state conditions receive the live permanent identified by the
+stack object's exact source ObjectID, never a target or a later permanent made
+from the same card.
 
 Explicit "the looked-at card" and "the revealed card" nouns bind to compatible
 parser-owned producers, even across independent observations. Generic card nouns

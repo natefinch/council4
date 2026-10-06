@@ -1330,8 +1330,10 @@ func effectConditionSatisfied(g *game.Game, obj *game.StackObject, condition opt
 			return false
 		}
 	}
+	source, _ := permanentByObjectID(g, obj.SourceID)
 	if !conditionSatisfied(g, conditionContext{
 		controller:     stackObjectController(obj),
+		source:         source,
 		sourceObjectID: obj.SourceID,
 		obj:            obj,
 	}, cond.Condition) {

@@ -9,16 +9,29 @@ import (
 )
 
 func libraryCardCharacteristicConsumer(effect compiler.CompiledEffect, effects []compiler.CompiledEffect) bool {
-	if effect.Amount.DynamicKind != compiler.DynamicAmountSourcePower &&
-		effect.Amount.DynamicKind != compiler.DynamicAmountSourceToughness {
-		return false
+	_, ok := libraryCardCharacteristicReference(effect, effects)
+	return ok
+}
+
+func libraryCardCharacteristicReference(effect compiler.CompiledEffect, effects []compiler.CompiledEffect) (compiler.CompiledReference, bool) {
+	amount := effect.Amount
+	if amount.ReferenceNodeID < 0 || amount.Known || amount.Multiplier != 1 ||
+		amount.Addend != 0 || len(amount.Operands) != 0 || effect.Duration != compiler.DurationNone ||
+		amount.DynamicKind != compiler.DynamicAmountSourcePower && amount.DynamicKind != compiler.DynamicAmountSourceToughness {
+		return compiler.CompiledReference{}, false
 	}
+	var subject compiler.CompiledReference
+	found := false
 	for _, reference := range effect.References {
-		if reference.NodeID == effect.Amount.ReferenceNodeID && sequenceLibraryCardReference(reference, effects) {
-			return true
+		if reference.NodeID != amount.ReferenceNodeID {
+			continue
 		}
+		if found || !sequenceLibraryCardReference(reference, effects) {
+			return compiler.CompiledReference{}, false
+		}
+		subject, found = reference, true
 	}
-	return false
+	return subject, found
 }
 
 func observedLibraryCardAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
@@ -61,25 +74,8 @@ func sequenceLibraryCardCharacteristic(
 	sequence []game.Instruction,
 	ranges [][2]int,
 ) (game.ResultKey, bool) {
-	amount := effect.Amount
-	if amount.ReferenceNodeID < 0 || amount.Known || amount.Multiplier != 1 ||
-		amount.Addend != 0 || len(amount.Operands) != 0 ||
-		effect.Duration != compiler.DurationNone ||
-		amount.DynamicKind != compiler.DynamicAmountSourcePower && amount.DynamicKind != compiler.DynamicAmountSourceToughness {
-		return "", false
-	}
-	var subject *compiler.CompiledReference
-	for i := range effect.References {
-		reference := &effect.References[i]
-		if reference.NodeID != amount.ReferenceNodeID {
-			continue
-		}
-		if subject != nil || !sequenceLibraryCardReference(*reference, effects) {
-			return "", false
-		}
-		subject = reference
-	}
-	if subject == nil {
+	subject, ok := libraryCardCharacteristicReference(effect, effects)
+	if !ok {
 		return "", false
 	}
 	index := subject.PriorInstruction
@@ -109,7 +105,7 @@ func sequenceLibraryCardCharacteristic(
 	}
 	property := "power"
 	existing := outputs.Power
-	if amount.DynamicKind == compiler.DynamicAmountSourceToughness {
+	if effect.Amount.DynamicKind == compiler.DynamicAmountSourceToughness {
 		property, existing = "toughness", outputs.Toughness
 	}
 	key := game.ResultKey(fmt.Sprintf("sequence-effect-%d-%s", index, property))
