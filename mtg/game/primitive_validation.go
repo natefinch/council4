@@ -2423,8 +2423,8 @@ func (p MoveResolvingSpell) validatePrimitive([]TargetSpec, bool) error {
 	// destinations are reachable today. Reject the rest here rather than letting
 	// a lowering produce an instruction that silently resolves to the graveyard;
 	// widening this means giving StackObject a destination zone.
-	if p.Destination != zone.Exile && p.Destination != zone.Library {
-		return errors.New("move resolving spell supports only the exile and library destinations")
+	if p.Destination != zone.Exile && p.Destination != zone.Library && p.Destination != zone.Hand {
+		return errors.New("move resolving spell supports only the exile, library and hand destinations")
 	}
 	if p.Destination == zone.Library && !p.Shuffle {
 		return errors.New("move resolving spell to the library requires a shuffle")
@@ -2436,6 +2436,15 @@ func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 	hasCard := p.Card.Kind != CardReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
 	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	if len(p.PublishDepartureCharacteristics.keys()) != 0 {
+		if !hasCard || p.IncludeEventPermanentComponents ||
+			(p.FromZone != zone.Graveyard && p.FromZone != zone.Exile) || p.Destination != zone.Hand {
+			return errors.New("departure characteristics require one exact public-zone card moved to hand")
+		}
+		if err := p.PublishDepartureCharacteristics.validateKeys(p.PublishLinked); err != nil {
+			return err
+		}
+	}
 	set := 0
 	for _, present := range []bool{hasCard, hasPlayer, hasGroup} {
 		if present {

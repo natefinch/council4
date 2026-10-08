@@ -921,7 +921,7 @@ func (CreateReflexiveTrigger) instructionRefs() primitiveRefs { return primitive
 func (p CreateReplacement) instructionRefs() primitiveRefs    { return objectReferenceRefs(p.Object) }
 func (p PreventDamage) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
 func (p MoveCard) instructionRefs() primitiveRefs {
-	refs := primitiveRefs{publishesLinked: p.PublishLinked}
+	refs := primitiveRefs{publishesLinked: p.PublishLinked, publishesResults: p.PublishDepartureCharacteristics.keys()}
 	if p.Player.Kind() != PlayerReferenceNone {
 		return mergePrimitiveRefs(refs, quantityRefs(p.Amount))
 	}

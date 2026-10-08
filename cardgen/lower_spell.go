@@ -1959,6 +1959,22 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 }
 
 func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if len(ctx.content.Effects) == 1 && ctx.content.Effects[0].Exact &&
+		ctx.content.Effects[0].ToZone == zone.Hand && plainControllerBounceToHand(ctx) &&
+		len(ctx.content.Targets) == 0 && len(ctx.content.References) > 0 {
+		resolving := true
+		for _, reference := range ctx.content.References {
+			resolving = resolving && reference.SubjectSupported() &&
+				reference.Binding == compiler.ReferenceBindingSource &&
+				reference.SubjectLifetime() == compiler.ReferenceLifetimeStackOccurrence &&
+				reference.SupportsUse(compiler.ReferenceUseStackDisposition)
+		}
+		if resolving {
+			return game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.MoveResolvingSpell{Destination: zone.Hand},
+			}}}.Ability(), nil
+		}
+	}
 	if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
 		return content, nil
 	}

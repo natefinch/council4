@@ -1595,6 +1595,9 @@ type MoveCard struct {
 	// PublishLinkedObjectScoped keys PublishLinked by the source permanent's
 	// current object identity, so a re-entered source starts with a fresh pool.
 	PublishLinkedObjectScoped bool
+	// PublishDepartureCharacteristics captures this exact card immediately before
+	// its move, for a later printed-point read of its departure information.
+	PublishDepartureCharacteristics LibraryCardCharacteristics
 }
 
 // ReplaceLinkedExiledCard moves Card from FromZone to exile and, only when the

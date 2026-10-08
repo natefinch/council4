@@ -106,40 +106,46 @@ func TestCompiledReturnedCurrentCharacteristicsAndTargetSlot(t *testing.T) {
 				Targets:      []game.Target{game.PermanentTarget(prior.ObjectID), currentCardTarget(t, g, cardID)},
 			}
 			sequence := def.SpellAbility.Val.Modes[0].Sequence
-			engine := NewEngine(nil)
-			engine.resolveInstructionSequence(g, obj, sequence[:2], [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 			put, ok := sequence[1].Primitive.(game.PutOnBattlefield)
 			if !ok {
 				t.Fatal("return did not lower to a battlefield entry")
 			}
 			ref := game.LinkedObjectReference(string(put.PublishLinked))
-			returned, ok := resolveObjectReference(g, obj, ref)
-			if !ok || returned.permanent == nil || returned.permanent.CardInstanceID != cardID {
+			// One owning resolution: the returned object's characteristics change
+			// between its publication and the conditional consumer, and its owner
+			// and controller are read through the same published link.
+			resolved := append([]game.Instruction(nil), sequence[:2]...)
+			if addElf {
+				resolved = append(resolved, game.Instruction{Primitive: game.ApplyContinuous{
+					Object:            opt.Val(ref),
+					ContinuousEffects: []game.ContinuousEffect{{Layer: game.LayerType, AddSubtypes: []types.Sub{types.Elf}}},
+				}})
+			}
+			resolved = append(resolved,
+				game.Instruction{Primitive: game.GainLife{Player: game.ObjectOwnerReference(ref), Amount: game.Fixed(100)}},
+				game.Instruction{Primitive: game.GainLife{Player: game.ObjectControllerReference(ref), Amount: game.Fixed(1000)}},
+			)
+			resolved = append(resolved, sequence[2:]...)
+			NewEngine(nil).resolveInstructionSequence(g, obj, resolved, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			returned := permanentForCard(g, cardID)
+			if returned == nil {
 				t.Fatal("nonzero card target did not publish its entered object")
 			}
-			if addElf {
-				g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
-					ID: g.IDGen.Next(), AffectedObjectID: returned.permanent.ObjectID,
-					Layer: game.LayerType, AddSubtypes: []types.Sub{types.Elf},
-				})
-			}
-			engine.resolveInstructionSequence(g, obj, sequence[2:], [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 			want := 0
 			if addElf {
 				want = 1
 			}
-			if got := returned.permanent.Counters.Get(counter.PlusOnePlusOne); got != want || !prior.Tapped {
+			if got := returned.Counters.Get(counter.PlusOnePlusOne); got != want || !prior.Tapped {
 				t.Fatalf("current counter=%d want %d, prior tapped=%t", got, want, prior.Tapped)
 			}
-			resolver := newReferenceResolver(g, obj)
-			if owner, ok := resolver.player(game.ObjectOwnerReference(ref)); !ok || owner != game.Player2 {
-				t.Fatalf("owner=%v/%t, want Player2", owner, ok)
+			// Owner Player2 and controller Player1 were read from the entered object;
+			// the unconditional 1 life still reaches only the controller.
+			if g.Players[game.Player1].Life != 41+1000 || g.Players[game.Player2].Life != 40+100 {
+				t.Fatalf("owner/controller or player isolation changed: p1=%d p2=%d",
+					g.Players[game.Player1].Life, g.Players[game.Player2].Life)
 			}
-			if controller, ok := resolver.player(game.ObjectControllerReference(ref)); !ok || controller != game.Player1 {
-				t.Fatalf("controller=%v/%t, want Player1", controller, ok)
-			}
-			if g.Players[game.Player1].Life != 41 || g.Players[game.Player2].Life != 40 {
-				t.Fatal("intervening unconditional clause or player isolation changed")
+			if _, ok := resolveObjectReference(g, obj, ref); ok {
+				t.Fatal("local entered-object link leaked past its owning resolution")
 			}
 		})
 	}
@@ -205,7 +211,9 @@ func TestPublishedBlinkSourceAndFreshObjectLKI(t *testing.T) {
 		SourceID: old.ObjectID, SourceCardID: old.CardInstanceID, Controller: game.Player1}
 	engine := NewEngine(nil)
 	content := def.ActivatedAbilities[0].Content
-	engine.resolveAbilityContentWithChoices(g, obj, content, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	// Hold the same local-product frame resolveInstructionSequence uses open so
+	// the published link's identity and LKI are checked during its valid lifetime.
+	restore := resolveSequenceInOwningFrame(g, obj, content.Modes[0].Sequence)
 	put, ok := content.Modes[0].Sequence[1].Primitive.(game.PutOnBattlefield)
 	if !ok {
 		t.Fatal("source blink did not lower to a battlefield entry")
@@ -233,6 +241,22 @@ func TestPublishedBlinkSourceAndFreshObjectLKI(t *testing.T) {
 		!resolvedObjectHasType(g, &result, types.Artifact) {
 		t.Fatal("published returned object lost its own departure LKI or rebound to the later object")
 	}
+	restore()
+	if _, ok := resolveObjectReference(g, obj, ref); ok {
+		t.Fatal("local returned-object link leaked past its owning resolution")
+	}
+}
+
+// resolveSequenceInOwningFrame resolves sequence inside the runtime's own
+// local-product frame and leaves it open; the caller closes it with the
+// returned function after observing products during their valid lifetime.
+func resolveSequenceInOwningFrame(g *game.Game, obj *game.StackObject, sequence []game.Instruction) func() {
+	restore := enterLocalProductFrame(g, obj, sequence)
+	resolver := newEffectResolver(NewEngine(nil), g, obj, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	for i := range sequence {
+		resolver.resolveInstruction(&sequence[i])
+	}
+	return restore
 }
 
 func TestBlinkInputCardIncarnationCannotLeaveAndReenterExile(t *testing.T) {

@@ -508,6 +508,17 @@ func lowerOrderedEffectSequence(
 			}
 			effectAbility.observedCharacteristicKey = key
 		}
+		if _, _, departure := departureCardCharacteristicReference(effectAbility.content.Effects[0], ctx.content.Effects); departure {
+			if effect.Kind != compiler.EffectDraw && effect.Kind != compiler.EffectGain && effect.Kind != compiler.EffectLose {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — departure characteristic consumer primitive not modeled")
+			}
+			key, ok := sequenceDepartureCardCharacteristic(effectAbility.content.Effects[0], ctx.content.Effects,
+				sequence, effectInstructionRanges[:i])
+			if !ok {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — exact departure characteristic publisher unavailable")
+			}
+			effectAbility.observedCharacteristicKey = key
+		}
 		if reason := bindOptionalEnteredObjectReference(&effectAbility, sequence, effectInstructionRanges[:i], oracleSpanToGameIdx, targets, ctx.content.Targets); reason != "" {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
 		}
@@ -2663,7 +2674,8 @@ func lowerInheritedSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool)
 // that creature directly and the runtime denies its controller's next untap, so
 // the clause's possessive "its controller" reference is consumed without its own
 // instruction. It accepts only the parser-exact negated-untap clause that owns
-// no target and whose every reference binds to an event or source permanent;
+// no new target and whose every reference binds to the same event, source, or
+// compiler-proven enclosing spell target;
 // every other shape (an own target, a multi-step window, a duration, or a
 // reference needing its own instruction) fails closed so the target and inherited
 // stun paths are untouched.
@@ -2689,19 +2701,19 @@ func lowerEventSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
 		len(stun.SubjectReferences) != 1 {
 		return game.AbilityContent{}, false
 	}
-	referenceCtx := referenceLoweringContext{AllowEvent: true, AllowSource: true}
+	referenceCtx := referenceLoweringContext{AllowEvent: true, AllowSource: true, AllowTarget: true}
 	object, ok := lowerObjectReference(stun.SubjectReferences[0], referenceCtx)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
 	// Every clause reference is the subject anaphor or the possessive "its
-	// controller" pronoun; require each to resolve as an event or source object
+	// controller" pronoun; require each to resolve as the same object
 	// so no reference that would need its own instruction is silently dropped.
 	if len(ctx.content.References) == 0 {
 		return game.AbilityContent{}, false
 	}
 	for _, ref := range ctx.content.References {
-		if _, ok := lowerObjectReference(ref, referenceCtx); !ok {
+		if candidate, ok := lowerObjectReference(ref, referenceCtx); !ok || candidate != object {
 			return game.AbilityContent{}, false
 		}
 	}
@@ -3612,15 +3624,24 @@ func localizeTargetReferences(
 ) ([]compiler.CompiledReference, bool) {
 	localized := append([]compiler.CompiledReference(nil), references...)
 	for i := range localized {
+		if localized[i].SubjectDomain() == compiler.ReferenceSubjectPolicy &&
+			localized[i].SupportsUse(compiler.ReferenceUsePolicy) {
+			continue
+		}
 		if localized[i].Binding != compiler.ReferenceBindingTarget {
 			continue
+		}
+		if len(allTargets) == 0 && len(localTargets) == 0 {
+			if _, supported := localized[i].EnclosingSpellTargetOccurrence(); supported {
+				continue
+			}
 		}
 		if localized[i].Occurrence < 0 || localized[i].Occurrence >= len(allTargets) {
 			return nil, false
 		}
-		targetSpan := allTargets[localized[i].Occurrence].Span
+		targetOrder := allTargets[localized[i].Occurrence].Order
 		local := slices.IndexFunc(localTargets, func(target compiler.CompiledTarget) bool {
-			return target.Span == targetSpan
+			return target.Order == targetOrder
 		})
 		if local < 0 {
 			return nil, false
@@ -3641,6 +3662,10 @@ func appendReferenceAntecedentTargets(
 	clauseTargets []compiler.CompiledTarget,
 ) []compiler.CompiledTarget {
 	for _, reference := range references {
+		if reference.SubjectDomain() == compiler.ReferenceSubjectPolicy &&
+			reference.SupportsUse(compiler.ReferenceUsePolicy) {
+			continue
+		}
 		if reference.Binding != compiler.ReferenceBindingTarget ||
 			reference.Occurrence < 0 ||
 			reference.Occurrence >= len(allTargets) {
@@ -4008,7 +4033,9 @@ func lowerDelayedSequenceClause(
 		return delayedSequenceClauseResult{content: placement, handled: true}
 	}
 	if publisher, grant, ok := lowerSequentialReanimationTypeColorGrant(effectIndex, ctx, sequence); ok {
-		sequence[len(sequence)-1].Primitive = publisher
+		if publisher != nil {
+			sequence[len(sequence)-1].Primitive = publisher
+		}
 		return delayedSequenceClauseResult{content: grant, handled: true}
 	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
@@ -4026,7 +4053,7 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = exile
 		return delayedSequenceClauseResult{content: returnContent, handled: true}
 	}
-	if lowered, ok := lowerCharacteristicLifeRider(effects, effectIndex, ctx, sequence); ok {
+	if lowered, ok := lowerCharacteristicLifeRider(effects, effectIndex, ctx, sequence); ok && ctx.observedCharacteristicKey == "" {
 		if lowered.priorPrimitive != nil {
 			sequence[len(sequence)-1].Primitive = lowered.priorPrimitive
 		}

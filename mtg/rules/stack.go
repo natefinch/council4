@@ -588,6 +588,12 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 		}
 		return "library"
 	}
+	if obj.ReturnToHandOnResolution {
+		if !moveStackCardToZone(g, obj, card, zone.Hand, false) {
+			return "invalid owner"
+		}
+		return "hand"
+	}
 	if isAdventureAlternateFaceSpell(g, obj) {
 		if !moveAdventureSpellToExile(g, obj, card) {
 			return "invalid owner"

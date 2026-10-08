@@ -17,7 +17,8 @@ type referenceLoweringContext struct {
 }
 
 func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLoweringContext) (game.ObjectReference, bool) {
-	if !reference.SubjectSupported() {
+	if !reference.SubjectSupported() || reference.SubjectDomain() == compiler.ReferenceSubjectPolicy ||
+		reference.SubjectDomain() == compiler.ReferenceSubjectPlayerGroup {
 		return game.ObjectReference{}, false
 	}
 	var result game.ObjectReference
@@ -43,13 +44,15 @@ func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLow
 		case !ctx.AllowTarget || reference.Occurrence < 0:
 			return game.ObjectReference{}, false
 		default:
-			switch reference.SubjectDomain() {
+			switch reference.ObjectProjectionDomain() {
 			case compiler.ReferenceSubjectPermanent:
 				result = game.TargetPermanentReference(reference.Occurrence)
 			case compiler.ReferenceSubjectCard:
 				result = game.TargetCardReference(reference.Occurrence)
 			case compiler.ReferenceSubjectStackObject:
 				result = game.TargetStackObjectReference(reference.Occurrence)
+			case compiler.ReferenceSubjectTargetChoice:
+				result = game.TargetPermanentReference(reference.Occurrence)
 			default:
 				return game.ObjectReference{}, false
 			}

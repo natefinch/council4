@@ -14,6 +14,8 @@ func libraryCardCharacteristicOutputs(primitive game.Primitive) game.LibraryCard
 		return primitive.(game.LookAtLibraryTop).PublishCharacteristics
 	case game.PrimitiveReveal:
 		return primitive.(game.Reveal).PublishCharacteristics
+	case game.PrimitiveMoveCard:
+		return primitive.(game.MoveCard).PublishDepartureCharacteristics
 	default:
 		return game.LibraryCardCharacteristics{}
 	}
@@ -46,8 +48,17 @@ func (r *effectResolver) publishLibraryCardScalars(link game.LinkedKey, outputs 
 	if !available {
 		return
 	}
+	r.publishCardScalars(card, outputs, false)
+}
+
+func (r *effectResolver) publishCardScalars(card *game.CardInstance, outputs game.LibraryCardCharacteristics, departure bool) {
 	power, powerKnown := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
 	toughness, toughnessKnown := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+	if departure && card != nil && card.Def != nil {
+		face := card.Def.DefaultFace()
+		powerKnown = powerKnown || !face.Power.Exists
+		toughnessKnown = toughnessKnown || !face.Toughness.Exists
+	}
 	publish := func(key game.ResultKey, value int, known bool) {
 		if key != "" && known {
 			// Reading a known characteristic succeeds even when its value is zero.

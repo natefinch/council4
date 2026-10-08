@@ -31,6 +31,10 @@ func (p LibraryCardCharacteristics) validate(link LinkedKey) error {
 	if link == "" {
 		return errors.New("card characteristics require an exact linked observation")
 	}
+	return p.validateKeys(link)
+}
+
+func (p LibraryCardCharacteristics) validateKeys(link LinkedKey) error {
 	seen := make(map[ResultKey]bool)
 	for _, key := range p.keys() {
 		if seen[key] {

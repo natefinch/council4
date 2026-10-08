@@ -1532,6 +1532,7 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 		return r.placeObservedLibraryCard(card, prim.DestinationBottom)
 	}
 	originalZoneVersion := card.ZoneVersion
+	r.publishCardScalars(card, prim.PublishDepartureCharacteristics, true)
 	moved := moveCardBetweenZonesWithPlacement(r.game, card.Owner, cardID, fromZone, prim.Destination, prim.DestinationBottom)
 	destinationCards, destinationOK := destinationZone(r.game, card.Owner, prim.Destination)
 	reachedDestination := moved && destinationOK && destinationCards.Contains(cardID)
@@ -3084,6 +3085,11 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 		if !ok || !moveCardBetweenZonesInBatch(r.game, playerID, cardID, zone.Library, zone.Exile, false, simultaneousID) {
 			continue
 		}
+		card, ok := r.game.GetCardInstance(cardID)
+		if !ok || !r.game.Players[card.Owner].Exile.Contains(cardID) {
+			// A replacement diverted the card; it gains no exile permission or link.
+			continue
+		}
 		appendPlayFromExileGrant(r.game, r.obj, cardID, game.ImpulsePlayGrant{
 			Duration:              prim.Duration,
 			Cast:                  prim.Cast,
@@ -3091,7 +3097,7 @@ func handleImpulseExile(r *effectResolver, prim game.ImpulseExile) effectResolve
 			WithoutPayingManaCost: prim.WithoutPayingManaCost,
 		})
 		if prim.PublishLinked != "" {
-			rememberLinkedObject(r.game, linkKey, game.LinkedObjectRef{CardID: cardID})
+			rememberLinkedObject(r.game, linkKey, game.LinkedObjectRef{CardID: cardID, CardZoneVersion: card.ZoneVersion, CardZoneVersionSet: true})
 		}
 		res.succeeded = true
 	}

@@ -525,7 +525,10 @@ func lowerSingleControlSpell(
 			return unsupported()
 		}
 	case game.DurationForAsLongAsPlayerIsMonarch:
-		if !referencesTargetZero(ctx.content.References) {
+		if len(ctx.content.References) != 1 ||
+			ctx.content.Targets[0].Selector.Controller != compiler.ControllerThatPlayer ||
+			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPlayer ||
+			!ctx.content.References[0].SupportsUse(compiler.ReferenceUsePlayerProjection) {
 			return unsupported()
 		}
 	case game.DurationForAsLongAsSourceOnBattlefield, game.DurationForAsLongAsYouControlSource:

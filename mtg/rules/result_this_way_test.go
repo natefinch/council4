@@ -112,32 +112,36 @@ func TestResultThisWayProducerSelections(t *testing.T) {
 					if branch.decline {
 						agents[game.Player1] = &choiceOnlyAgent{choices: [][]int{{0}}}
 					}
-					NewEngine(nil).resolveAbilityContentWithChoices(g, obj, content, agents, &TurnLog{})
-					if got := g.Players[game.Player1].Life; got != branch.wantLife {
-						t.Fatalf("life = %d, want %d", got, branch.wantLife)
+					// Acceptance, success, published members, and the unfiltered
+					// success consumer are observed inside the owning resolution.
+					probes := []resultProbe{
+						{key: "if-you-do", accepted: game.TriTrue, life: 100},
+						{key: "if-you-do", life: 10_000, selection: opt.Val(game.Selection{})},
 					}
-					result := obj.ResolutionResults["if-you-do"]
-					if result.Accepted != !branch.decline {
-						t.Fatalf("accepted = %t, want %t", result.Accepted, !branch.decline)
+					if !branch.absent {
+						// Success is only specified when an actual candidate existed.
+						probes = append(probes, resultProbe{key: "if-you-do", succeeded: game.TriTrue, life: 1000})
 					}
-					if !branch.absent && !branch.decline && !result.Succeeded {
-						t.Fatal("noun mismatch must not change the producer's success")
+					visible := 0
+					if !branch.decline {
+						visible += 100
 					}
-					if branch.absent || branch.decline {
-						if len(obj.ResolutionResultObjects["if-you-do"]) != 0 {
-							t.Fatal("failed or declined producer published actual result members")
-						}
+					if !branch.absent && !branch.decline {
+						// Noun mismatch never changes the producer's success or members.
+						visible += 1000 + 10_000
 					}
+					NewEngine(nil).resolveAbilityContentWithChoices(g, obj, withResultProbes(content, probes), agents, &TurnLog{})
+					if got := g.Players[game.Player1].Life; got != branch.wantLife+visible {
+						t.Fatalf("life = %d, want %d plus in-resolution acceptance/success/members %d", got, branch.wantLife, visible)
+					}
+					assertResultKeysCleaned(t, obj, "if-you-do")
+					before := g.Players[game.Player1].Life
 					NewEngine(nil).resolveInstructionWithChoices(g, obj, &game.Instruction{
 						Primitive:  game.GainLife{Player: game.ControllerReference(), Amount: game.Fixed(1)},
 						ResultGate: opt.Val(game.InstructionResultGate{Key: "if-you-do", Succeeded: game.TriTrue}),
 					}, agents, &TurnLog{})
-					wantLife := branch.wantLife
-					if result.Succeeded {
-						wantLife++
-					}
-					if got := g.Players[game.Player1].Life; got != wantLife {
-						t.Fatalf("unfiltered result consumer life = %d, want %d", got, wantLife)
+					if got := g.Players[game.Player1].Life - before; got != 0 {
+						t.Fatal("a later invocation reused the finished resolution's receipt")
 					}
 				})
 			}

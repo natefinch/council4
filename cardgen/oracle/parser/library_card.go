@@ -25,7 +25,7 @@ func recognizeLibraryCardEffects(sentence *Sentence) {
 }
 
 func recognizeSingleLibraryCardProducer(effect *EffectSyntax) bool {
-	if effect.Kind != EffectLookAtLibraryTop && effect.Kind != EffectReveal ||
+	if effect.Kind != EffectLookAtLibraryTop && effect.Kind != EffectReveal && effect.Kind != EffectExile ||
 		effect.Negated || effect.DelayedTiming != DelayedTimingNone {
 		return false
 	}
@@ -55,6 +55,8 @@ func singleLibraryCardProducerOwner(kind EffectKind, clause string) (EffectConte
 	verb := "Reveal"
 	if kind == EffectLookAtLibraryTop {
 		verb = "Look at"
+	} else if kind == EffectExile {
+		verb = "Exile"
 	}
 	for _, owner := range []struct {
 		text       string
@@ -147,10 +149,12 @@ func emitLibraryCardReferenceOwnership(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
 		bindLibraryCardReferences(ability.Sentences, ability.SemanticReferences, ability.ConditionSegments)
+		bindTopExiledCardReferences(ability.Sentences, ability.SemanticReferences)
 		if ability.Modal != nil {
 			for j := range ability.Modal.Options {
 				mode := &ability.Modal.Options[j]
 				bindLibraryCardReferences(mode.Sentences, mode.SemanticReferences, mode.ConditionSegments)
+				bindTopExiledCardReferences(mode.Sentences, mode.SemanticReferences)
 			}
 		}
 	}

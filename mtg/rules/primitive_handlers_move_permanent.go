@@ -199,6 +199,11 @@ func handleMoveResolvingSpell(r *effectResolver, prim game.MoveResolvingSpell) e
 		r.obj.ExileOnResolution = true
 	case zone.Library:
 		r.obj.ShuffleIntoLibraryOnResolution = true
+	case zone.Hand:
+		if r.obj.Kind != game.StackSpell || r.obj.ID == 0 {
+			return res
+		}
+		r.obj.ReturnToHandOnResolution = true
 	default:
 		// Unreachable: validatePrimitive rejects every other destination.
 		return res

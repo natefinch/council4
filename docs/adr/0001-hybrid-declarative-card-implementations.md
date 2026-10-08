@@ -3,9 +3,10 @@
 Card implementations are declarative compositions of effect primitives (damage, destroy, draw, create token, etc.), not generated runtime mutation code. Card Generation parses Oracle text and compiles recognized semantics into validated declarative data. Cards too complex to express declaratively get hand-written Go implementations behind the same interface. We chose this because declarative data is cheaper to clone for future MCTS search, can be validated before source emission, and keeps priority, targeting, and state mutation inside the rules engine. The tradeoff is that cards with truly unique mechanics (Mindslaver, Hive Mind, etc.) need hand-written code, but the declarative system covers the common case.
 
 Compositional reference binding follows that same choice. One compiler Module
-proves subject domain, occurrence, and lifetime; lowering Adapters consume its
-small Interface to build the existing runtime References. Actual products,
-original permanent identity, and exact card incarnations remain distinct.
+proves subject domain, occurrence, lifetime, and intended use; lowering
+Adapters consume its small Interface to build the existing runtime References.
+Actual products, original permanent identity, exact card incarnations, and
+policy or player projections remain distinct.
 Missing or incompatible proof refuses a complete Card Definition rather than
 introducing a card-specific implementation or a second card model.
 

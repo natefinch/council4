@@ -28,8 +28,9 @@ The Oracle pipeline is a chain of progressively more abstract representations:
   Reference binding consumes parser-owned nouns, reference/producer identities,
   and before/after-action ownership to issue one validated subject proof.
   Enclosing shell context distinguishes an original permanent from a genuine
-  resolving spell card. Domain and lifetime are semantic facts, not interpretations
-  a lowering caller may repeat from noun text or choose through source-card flags.
+  resolving spell card. Domain, lifetime, and intended use are semantic facts,
+  not interpretations a lowering caller may repeat from noun text or choose
+  through source-card flags.
 - **cardgen lowering**: compiled semantics into `game.CardDef` — *the card,
   modeled*. Typed, declarative game structures describing what the card is and
   does, emitted as generated Go and consumed by the runtime.

@@ -35,7 +35,7 @@ func libraryCardCharacteristicReference(effect compiler.CompiledEffect, effects 
 }
 
 func observedLibraryCardAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.DynamicAmount, bool) {
-	if ctx.observedCharacteristicKey == "" || ctx.priorLinkedKey == "" ||
+	if ctx.observedCharacteristicKey == "" ||
 		amount.Known || amount.Multiplier != 1 || amount.Addend != 0 ||
 		len(amount.Operands) != 0 || len(ctx.content.References) != 1 ||
 		amount.DynamicKind != compiler.DynamicAmountSourcePower &&
@@ -43,9 +43,10 @@ func observedLibraryCardAmount(ctx contentCtx, amount compiler.CompiledAmount) (
 		return game.DynamicAmount{}, false
 	}
 	reference := ctx.content.References[0]
-	if reference.NodeID != amount.ReferenceNodeID || reference.ProducerClauseID <= 0 ||
-		reference.Binding != compiler.ReferenceBindingPriorInstructionResult ||
-		reference.PriorInstruction != ctx.priorInstruction {
+	if reference.NodeID != amount.ReferenceNodeID || !reference.SupportsUse(compiler.ReferenceUseCharacteristic) ||
+		(reference.Binding != compiler.ReferenceBindingTarget &&
+			(reference.ProducerClauseID <= 0 || reference.Binding != compiler.ReferenceBindingPriorInstructionResult ||
+				reference.PriorInstruction != ctx.priorInstruction || ctx.priorLinkedKey == "")) {
 		return game.DynamicAmount{}, false
 	}
 	return game.DynamicAmount{

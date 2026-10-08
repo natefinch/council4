@@ -206,6 +206,11 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectExile:
+		// The only modeled inexact exile component is a known counter rider; any
+		// other component, including a payment, refuses the whole card.
+		if !effect.Exact && (!effect.CounterKindKnown || effect.Payment.Form != parser.EffectPaymentFormUnknown) {
+			return game.AbilityContent{}, false
+		}
 	case compiler.EffectPut:
 		if effect.ToZone != zone.Battlefield || ctx.optional {
 			return game.AbilityContent{}, false

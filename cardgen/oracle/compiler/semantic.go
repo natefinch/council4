@@ -16,7 +16,9 @@ import (
 
 // Context supplies card facts needed during semantic compilation.
 type Context struct {
-	sourceKind AbilityKind
+	sourceKind            AbilityKind
+	spellParagraphTargets []CompiledTarget
+	spellParagraphModal   bool
 }
 
 // AbilityKind is the semantic category of a compiled ability.

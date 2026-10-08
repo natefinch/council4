@@ -405,11 +405,6 @@ func damageGroupRequiredType(kind compiler.SelectorKind) (cardType types.Card, h
 // amount identically.
 func lowerSingleTargetDamageAmount(ctx contentCtx, effect compiler.CompiledEffect) (game.Quantity, bool) {
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	var damageSource game.ObjectReference
-	var sourceBound bool
-	if len(ctx.content.References) > 0 {
-		damageSource, sourceBound = lowerDamageSourceReference(ctx.content.References[:1])
-	}
 	switch {
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
@@ -420,12 +415,13 @@ func lowerSingleTargetDamageAmount(ctx contentCtx, effect compiler.CompiledEffec
 		}
 		amount = game.Dynamic(dynamic)
 	case effect.Amount.DynamicKind != compiler.DynamicAmountNone:
-		amountObject := game.SourcePermanentReference()
-		if sourceBound {
-			amountObject = damageSource
-		}
+		var amountObject game.ObjectReference
 		if obj, ok := lowerDamageAmountObject(effect.Amount, ctx.content.References); ok {
 			amountObject = obj
+		} else if effect.Amount.DynamicKind == compiler.DynamicAmountSourcePower ||
+			effect.Amount.DynamicKind == compiler.DynamicAmountSourceToughness ||
+			effect.Amount.DynamicKind == compiler.DynamicAmountSourceManaValue {
+			return game.Quantity{}, false
 		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, amountObject)
 		if !ok {
@@ -1581,26 +1577,11 @@ func eachOfDamageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bo
 	}
 }
 
-// damageSourceIsSourcePermanent reports whether the damage subject is the source
-// permanent itself, referenced as "this <object>" (ReferenceThisObject) or "it"
-// (ReferencePronoun) bound to ReferenceBindingSource. Such damage must carry an
-// explicit game.SourcePermanentReference() so the runtime attributes the source
-// permanent's keywords (lifelink, deathtouch) via last-known information. The
-// card-name form (ReferenceSelfName) is excluded because an instant/sorcery
-// spell's source is the spell, not a permanent; its empty default is left
-// unchanged.
+// The compiler distinguishes original permanent attribution from a resolving
+// spell/card source independently of the printed reference spelling.
 func damageSourceIsSourcePermanent(references []compiler.CompiledReference) bool {
-	if len(references) == 0 || references[0].Binding != compiler.ReferenceBindingSource {
-		return false
-	}
-	switch references[0].Kind {
-	case compiler.ReferenceThisObject:
-		return true
-	case compiler.ReferencePronoun:
-		return references[0].Pronoun == compiler.ReferencePronounIt
-	default:
-		return false
-	}
+	return len(references) > 0 && references[0].Binding == compiler.ReferenceBindingSource &&
+		references[0].DamageAttribution() == compiler.DamageAttributionOriginalObject
 }
 
 // primaryDamageSource resolves the optional DamageSource attribution shared by
@@ -1621,8 +1602,10 @@ func primaryDamageSource(references []compiler.CompiledReference) opt.V[game.Obj
 			return opt.Val(source)
 		}
 	}
-	if damageSourceIsSourcePermanent(references) {
-		return opt.Val(game.SourcePermanentReference())
+	if len(references) > 0 {
+		if source, ok := lowerDamageSourceReference(references[:1]); ok && source.Kind() != game.ObjectReferenceNone {
+			return opt.Val(source)
+		}
 	}
 	return opt.V[game.ObjectReference]{}
 }
@@ -1926,7 +1909,10 @@ func lowerFixedModifyPTSpell(
 	if len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
 		(ctx.content.References[0].Binding == compiler.ReferenceBindingSource ||
-			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget) {
+			ctx.content.References[0].Binding == compiler.ReferenceBindingTarget ||
+			ctx.content.References[0].Binding == compiler.ReferenceBindingPriorInstructionResult &&
+				ctx.content.References[0].EnteredSubjectSupported() &&
+				ctx.content.References[0].SubjectDomain() == compiler.ReferenceSubjectPermanent) {
 		return lowerReferencedFixedModifyPT(ctx)
 	}
 	dynamicPT := effect.Amount.DynamicKind != compiler.DynamicAmountNone
@@ -2191,12 +2177,17 @@ func lowerReferencedFixedModifyPT(ctx contentCtx) (game.AbilityContent, *shared.
 	switch {
 	case binding == compiler.ReferenceBindingSource && effect.Context == parser.EffectContextSource:
 	case binding == compiler.ReferenceBindingTarget && effect.Context == parser.EffectContextReferencedObject:
+	case binding == compiler.ReferenceBindingPriorInstructionResult &&
+		ctx.content.References[0].EnteredSubjectSupported() && ctx.priorLinkedKey != "" &&
+		effect.Context == parser.EffectContextReferencedObject:
 	default:
 		return unsupported()
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		AllowSource: true,
-		AllowTarget: true,
+		AllowSource:      true,
+		AllowTarget:      true,
+		PriorInstruction: ctx.priorInstruction,
+		PriorLinkedKey:   ctx.priorLinkedKey,
 	})
 	if !ok {
 		return unsupported()

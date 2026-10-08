@@ -2279,9 +2279,12 @@ func recognizeSourcePronounStateCondition(body []shared.Token, atoms Atoms) (Con
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingSource,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingSource,
+		Selection:      selection,
+		SubjectSpan:    body[0].Span,
+		HasSubjectSpan: atoms.ReferenceIDAt(body[0].Span) >= 0,
+		SubjectRefID:   atoms.ReferenceIDAt(body[0].Span),
 	}, true
 }
 

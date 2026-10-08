@@ -2284,7 +2284,10 @@ func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		len(ctx.content.Targets) != 1 ||
 		len(ctx.content.References) != 1 ||
 		(ctx.content.References[0].Binding != compiler.ReferenceBindingSource &&
-			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent) ||
+			ctx.content.References[0].Binding != compiler.ReferenceBindingEventPermanent &&
+			!(ctx.content.References[0].Binding == compiler.ReferenceBindingPriorInstructionResult &&
+				ctx.content.References[0].EnteredSubjectSupported() &&
+				ctx.content.References[0].SubjectDomain() == compiler.ReferenceSubjectPermanent && ctx.priorLinkedKey != "")) ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 {
@@ -2299,8 +2302,10 @@ func lowerSourceFightSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnos
 		return game.AbilityContent{}, unsupported
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		AllowSource: true,
-		AllowEvent:  true,
+		AllowSource:      true,
+		AllowEvent:       true,
+		PriorInstruction: ctx.priorInstruction,
+		PriorLinkedKey:   ctx.priorLinkedKey,
 	})
 	if !ok {
 		return game.AbilityContent{}, unsupported

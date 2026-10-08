@@ -19,6 +19,10 @@ func Compile(document parser.Document, context Context) (Compilation, []shared.D
 		compiled, abilityDiagnostics := compileAbility(&document.Abilities[i], context)
 		compilation.Abilities = append(compilation.Abilities, compiled)
 		diagnostics = append(diagnostics, abilityDiagnostics...)
+		if compiled.Kind == AbilitySpell {
+			context.spellParagraphModal = context.spellParagraphModal || len(compiled.Content.Modes) > 0
+			context.spellParagraphTargets = append(context.spellParagraphTargets, compiled.Content.Targets...)
+		}
 	}
 	return compilation, diagnostics
 }
@@ -225,7 +229,7 @@ func compileAbility(
 			compiled.Content.References = compileTypedReferences(ability.SemanticReferences)
 			compiled.Content.References = bindReferences(
 				compiled.Content.References,
-				compiled.Content.Targets,
+				spellParagraphReferenceTargets(compiled.Content, context, kind),
 				compiled.Content.Effects,
 				compiled.Trigger,
 			)
@@ -240,8 +244,9 @@ func compileAbility(
 		)
 	}
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
-	bindCounterResultReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Content.Targets, compiled.Content.Effects)
-	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, compiled.Content.Targets, compiled.Content.Effects, compiled.Trigger)
+	referenceTargets := spellParagraphReferenceTargets(compiled.Content, context, kind)
+	bindCounterResultReferences(compiled.Content.Conditions, compiled.Content.References, referenceTargets, compiled.Content.Effects)
+	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, referenceTargets, compiled.Content.Effects, compiled.Trigger)
 	bindReturnedConditionConsequences(&compiled.Content)
 	applyEffectReferenceBindings(compiled.Content.Effects, compiled.Content.References)
 	resolveChosenPermanentSearchNames(compiled.Content.Effects)
@@ -251,10 +256,17 @@ func compileAbility(
 	)
 	recognizeActivationZone(&compiled)
 	sourceZone := zone.Battlefield
-	if kind == AbilityActivated || kind == AbilityLoyalty {
+	if kind == AbilityActivated {
 		sourceZone = compiled.ActivationZone
 	}
-	finalizeReferenceSubjects(&compiled.Content, referenceSourceContext(kind, sourceZone, compiled.Trigger))
+	source := referenceSourceContext(kind, sourceZone, compiled.Trigger)
+	if len(compiled.Content.Targets) == 0 && len(referenceTargets) == 1 {
+		source.enclosingSpellTarget = &referenceTargets[0]
+	}
+	if kind == AbilityActivated && sourceZone != zone.Battlefield {
+		source.cardCostAntecedent = activationCostUsesSourceFromZone(compiled, sourceZone)
+	}
+	finalizeReferenceSubjects(&compiled.Content, source)
 	if compiled.Trigger != nil && compiled.Trigger.Condition != nil {
 		for i := range compiled.Content.Conditions {
 			if compiled.Content.Conditions[i].NodeID == compiled.Trigger.Condition.NodeID {

@@ -444,7 +444,31 @@ Vanguard cards are excluded with explicit report reasons.
    Locality puts domain and lifetime decisions at that Seam. Leverage lets P/T,
    keyword, movement, condition, and delayed-capture Implementations reuse the
    same proof without per-card templates, a universal IR, or a parallel model.
-   The existing runtime References and renderer need no schema expansion.
+
+   The proof also records the intended consumer operation, derived from the
+   owning typed effect, amount, or condition, never selected by an Adapter:
+   live mutation, characteristic observation, damage attribution, card action,
+   player projection, stack disposition, or policy. Only a permanent subject can
+   carry live mutation. Resolving-spell damage is attributed to the stack
+   occurrence, not mutated as a permanent. Owner/controller readings project a
+   proved object without granting it mutation. A selected spell's casting cost,
+   a correlated per-opponent choice, a defending player's payment decision, and a
+   cast creature's entry replacement are policy subjects, not objects. Within one
+   ordinary spell, a later paragraph may name the earlier paragraph's single
+   exact permanent target without redeclaring it; plural or modal earlier
+   targets are never borrowed. A singular exiled top card names the actual exile
+   product; a singular pronoun cannot pick one member of a plural top-card
+   product. These uses are derived and tested across the retained originals, but
+   the generic object Adapter does not yet enforce each one at every caller.
+
+   Two narrow runtime contracts serve exact lifetimes. `MoveCard` may publish
+   the moving card's departure power/toughness, captured after exact reference
+   validation and before replacement, under existing scalar result keys:
+   known absent P/T is zero, while unknown, star, or stale identity is
+   unavailable. `MoveResolvingSpell` to Hand returns only the non-copy
+   resolving spell to its owner's hand through normal stack disposition. Impulse
+   exile publishes the card's reached exile version and publishes nothing for a
+   diverted card.
    Ordered lowering also supports the exact linked
    shuffle/reveal/permanent-hit sequence: shuffle one targeted permanent into its
    owner's library, reveal that owner's top card, then put the same linked card

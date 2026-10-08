@@ -18,7 +18,7 @@ func bindOwnedProducerReference(reference *CompiledReference, effects []Compiled
 		if effect.ClauseID != reference.ProducerClauseID {
 			continue
 		}
-		if index >= 0 || !singularEnteredSubjectProducer(effect, effects) {
+		if index >= 0 || !singularEnteredSubjectProducer(effect, effects) && !singularTopExiledCardProducer(effect) {
 			return true
 		}
 		index = i
@@ -28,6 +28,21 @@ func bindOwnedProducerReference(reference *CompiledReference, effects []Compiled
 		reference.PriorInstruction = index
 	}
 	return true
+}
+
+func singularTopExiledCardProducer(effect CompiledEffect) bool {
+	if effect.Kind != EffectExile || !effect.Exact || effect.Negated || effect.DelayedTiming != 0 ||
+		effect.CardSource != parser.EffectCardSourceTopOfPlayerLibrary ||
+		!effect.Amount.Known || effect.Amount.Value != 1 {
+		return false
+	}
+	if effect.Context == parser.EffectContextController {
+		return len(effect.Targets) == 0
+	}
+	return effect.Context == parser.EffectContextTarget && len(effect.Targets) == 1 &&
+		effect.Targets[0].Exact && effect.Targets[0].Cardinality.Min == 1 &&
+		effect.Targets[0].Cardinality.Max == 1 &&
+		targetSubjectDomain(effect.Targets[0]) == ReferenceSubjectPlayer
 }
 
 func singularEnteredSubjectProducer(effect CompiledEffect, effects []CompiledEffect) bool {

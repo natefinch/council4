@@ -114,10 +114,13 @@ _Avoid_: Target spec, raw target ID
 
 **Reference Subject Proof**:
 A compiler-owned, body-local proof of an Oracle reference's domain, occurrence,
-and lifetime. Card references retain an exact card incarnation; permanent
-references retain the original ObjectID or the actual entered product. Parser
-nouns and producer ClauseIDs are facts used by binding, not choices left to
-lowering. The proof is translator metadata, not another public Card Model.
+lifetime, and intended use. Card references retain an exact card incarnation;
+permanent references retain the original ObjectID or the actual entered product.
+Use distinguishes live mutation, characteristic observation, damage
+attribution, card action, player projection, stack disposition, and policy;
+only permanents may be mutated. Parser nouns and producer ClauseIDs are facts
+used by binding, not choices left to lowering. The proof is translator
+metadata, not another public Card Model.
 _Avoid_: Source-as-card flag, nearest-object guess, current-card fallback
 
 **Selection**:

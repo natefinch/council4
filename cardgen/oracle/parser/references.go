@@ -380,6 +380,10 @@ func referencePronounKind(tokens []shared.Token, index int, atoms Atoms) Pronoun
 		}
 		end := conditionClauseEnd(tokens, index-1)
 		start := index + 1
+		var state ConditionSelection
+		if applySourceState(tokens[start:end], atoms, &state) {
+			return PronounIt
+		}
 		if equalWord(tokens[start], "a") || equalWord(tokens[start], "an") {
 			start++
 		} else if !libraryCardObservationBefore(tokens, index) {

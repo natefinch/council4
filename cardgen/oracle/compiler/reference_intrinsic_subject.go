@@ -95,9 +95,19 @@ func (content AbilityContent) DelayedSubjectReference(effect CompiledEffect, eff
 			return CompiledReference{}, false
 		}
 	case parser.DelayedSubjectSource:
+		if effect.SubjectSourceAttached {
+			return content.Source.AttachedObjectSubject(effect)
+		}
 		if subject.CardZone != zone.None {
 			reference, capturedZone, ok := content.Source.CardSubject()
-			return reference, ok && capturedZone == subject.CardZone
+			if ok && capturedZone == subject.CardZone {
+				return reference, true
+			}
+			if selected != nil && selected.Binding == ReferenceBindingSource &&
+				selected.CardIdentity && selected.SubjectDomain() == ReferenceSubjectCard {
+				return *selected, true
+			}
+			return CompiledReference{}, false
 		}
 		if selected == nil {
 			return content.Source.OriginalObjectSubject()

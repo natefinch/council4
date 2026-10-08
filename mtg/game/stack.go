@@ -251,6 +251,7 @@ type StackObject struct {
 	// library instead of its normal graveyard destination after its remaining
 	// instructions resolve (Green Sun's Zenith, the Beacon cycle).
 	ShuffleIntoLibraryOnResolution bool
+	ReturnToHandOnResolution       bool
 
 	// Suspend is true if this spell was cast from exile by suspend.
 	Suspend bool
