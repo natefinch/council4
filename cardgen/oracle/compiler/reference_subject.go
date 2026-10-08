@@ -370,7 +370,8 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeStackOccurrence
 		case source.zone != zone.Battlefield:
 			if source.zone == zone.None || !reference.CardIdentity &&
-				!sourceCardAntecedent(*reference, effects) && !source.cardCostAntecedent {
+				!sourceCardAntecedent(*reference, effects) && !source.cardCostAntecedent &&
+				!recurringSourceCardReference(source, *reference, effects) {
 				return
 			}
 			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeCardIncarnation

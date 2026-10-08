@@ -17,6 +17,15 @@ import (
 
 func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 	text := exactEffectClauseText(effect)
+	if len(effect.Targets) == 0 && len(effect.References) == 1 &&
+		effect.References[0].Kind == ReferenceSelfName {
+		prefix := "Return " + effect.References[0].Text + " from your graveyard"
+		if strings.EqualFold(text, prefix+" to your hand.") ||
+			strings.EqualFold(text, prefix+" to the battlefield.") ||
+			strings.EqualFold(text, prefix+" to the battlefield tapped.") {
+			return true
+		}
+	}
 	if len(effect.Targets) == 0 {
 		switch {
 		case strings.EqualFold(text, "Return this card from your graveyard to your hand."),

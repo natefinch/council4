@@ -988,6 +988,7 @@ func lowerDamageAmountObject(amount compiler.CompiledAmount, references []compil
 		return lowerObjectReference(references[i], referenceLoweringContext{
 			AllowSource: true,
 			AllowEvent:  true,
+			AllowTarget: references[i].ExactDamageTargetCharacteristic(amount),
 		})
 	}
 	return game.ObjectReference{}, false

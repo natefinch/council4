@@ -42,8 +42,9 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
-		Source:   source,
-		CardName: context.CardName,
+		InstantOrSorcery: context.InstantOrSorcery,
+		Source:           source,
+		CardName:         context.CardName,
 		Span: shared.Span{
 			Start: shared.Position{Line: 1, Column: 1},
 			End:   eofPosition(tokens),

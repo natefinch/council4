@@ -16,6 +16,7 @@ import (
 
 // Context supplies card facts needed during semantic compilation.
 type Context struct {
+	sourceSpell           bool
 	sourceKind            AbilityKind
 	spellParagraphTargets []CompiledTarget
 	spellParagraphModal   bool

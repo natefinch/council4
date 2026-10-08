@@ -170,6 +170,8 @@ const (
 // until a player would receive priority, after the source has left the
 // battlefield or changed controller.
 type EventTriggeredAbility struct {
+	SourceZone                zone.Type
+	SourceZoneVersion         uint64
 	Controller                PlayerID
 	SourceID                  id.ID
 	SourceCardID              id.ID

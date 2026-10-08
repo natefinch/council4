@@ -162,6 +162,32 @@ func (reference CompiledReference) DamageAttribution() DamageAttribution {
 	return DamageAttributionUnsupported
 }
 
+// ExactDamageTargetCharacteristic proves the damage amount's own singular
+// original-permanent target, independently of the damage source.
+func (reference CompiledReference) ExactDamageTargetCharacteristic(amount CompiledAmount) bool {
+	if reference.Binding != ReferenceBindingTarget ||
+		!reference.SupportsUse(ReferenceUseCharacteristic) ||
+		reference.Subject.domain != ReferenceSubjectPermanent ||
+		reference.Subject.lifetime != ReferenceLifetimeOriginalObject ||
+		reference.Subject.scope == nil || reference.Subject.scope.owner == nil ||
+		reference.NodeID != amount.ReferenceNodeID ||
+		!damageAmountObservesCharacteristic(amount.DynamicKind) {
+		return false
+	}
+	content := reference.Subject.scope.owner
+	if !content.OwnsSubject(reference) || reference.Subject.targetMin != 1 || reference.Subject.targetMax != 1 {
+		return false
+	}
+	for _, effect := range content.Effects {
+		if effect.Kind == EffectDealDamage && effect.Exact && !effect.Negated &&
+			effect.Amount.ReferenceNodeID == reference.NodeID &&
+			effect.Amount.DynamicKind == amount.DynamicKind && effectOwnsReference(effect, reference) {
+			return true
+		}
+	}
+	return false
+}
+
 // ExcludesPriorPermanentTargets proves an "another" declaration excludes its earlier
 // declared permanent targets, not the resolving spell's nonexistent permanent.
 func (target CompiledTarget) ExcludesPriorPermanentTargets() bool {

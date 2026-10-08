@@ -123,13 +123,18 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		sourceObjectID = source.ObjectID
 	}
 	subjectController := event.Controller
-	if pattern.Subject == game.TriggerSubjectDamageSource && event.Kind == game.EventDamageDealt {
+	switch {
+	case event.Kind == game.EventBeginningOfStep:
+		subjectController = event.Player
+	case pattern.Subject == game.TriggerSubjectDamageSource && event.Kind == game.EventDamageDealt:
 		subjectController = event.Controller
-	} else if pattern.Subject != game.TriggerSubjectDefault || !eventCapturesSubjectController(event.Kind) {
+	case pattern.Subject != game.TriggerSubjectDefault || !eventCapturesSubjectController(event.Kind):
 		if permanent, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
 			subjectController = effectiveController(g, permanent)
 		}
+	default:
 	}
+
 	if !triggerControllerMatches(sourceController, pattern.Controller, subjectController) {
 		return false
 	}

@@ -63,10 +63,11 @@ type Context struct {
 
 // Document is a lossless syntax tree for one card face's Oracle text.
 type Document struct {
-	Source    string      `json:",omitempty"`
-	CardName  string      `json:",omitempty"`
-	Span      shared.Span `json:"-"`
-	Abilities []Ability   `json:",omitempty"`
+	InstantOrSorcery bool        `json:",omitempty"`
+	Source           string      `json:",omitempty"`
+	CardName         string      `json:",omitempty"`
+	Span             shared.Span `json:"-"`
+	Abilities        []Ability   `json:",omitempty"`
 }
 
 // LifeCharacteristicExchangeKind identifies the source characteristic exchanged

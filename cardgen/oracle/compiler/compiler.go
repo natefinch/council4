@@ -13,6 +13,7 @@ import (
 
 // Compile lowers a parsed syntax document into conservative semantic IR.
 func Compile(document parser.Document, context Context) (Compilation, []shared.Diagnostic) {
+	context.sourceSpell = document.InstantOrSorcery
 	compilation := Compilation{Syntax: document}
 	var diagnostics []shared.Diagnostic
 	for i := range document.Abilities {
@@ -34,6 +35,9 @@ func compileAbility(
 	var diagnostics []shared.Diagnostic
 	kind := compileAbilityKind(ability.Kind)
 	context.sourceKind = kind
+	if kind == AbilityReplacement && context.sourceSpell {
+		context.sourceKind = AbilitySpell
+	}
 	compiled := CompiledAbility{
 		Kind: kind,
 		Span: ability.Span,
@@ -265,10 +269,14 @@ func compileAbility(
 	)
 	recognizeActivationZone(&compiled)
 	sourceZone := zone.Battlefield
-	if kind == AbilityActivated {
+	switch kind {
+	case AbilityActivated:
 		sourceZone = compiled.ActivationZone
+	case AbilityTriggered:
+		sourceZone = recurringSourceCardFunctionZone(compiled)
+	default:
 	}
-	source := referenceSourceContext(kind, sourceZone, compiled.Trigger)
+	source := referenceSourceContext(context.sourceKind, sourceZone, compiled.Trigger)
 	if len(compiled.Content.Targets) == 0 && len(referenceTargets) == 1 {
 		source.enclosingSpellTarget = &referenceTargets[0]
 	}

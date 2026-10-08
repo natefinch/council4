@@ -196,6 +196,24 @@ comparison against a string literal, a switch on Oracle wording, `regexp`, or
 `shared.NormalizedWords`) to a value that flows from a `.Text`/`.Event` field. The
 compiler allowlist is empty.
 
+Reference proofs retain the parser's actual instant/sorcery face classification
+even when a replacement paragraph uses replacement syntax. Damage from that
+resolving spell therefore stays distinct from original-permanent damage
+attribution. A dynamic damage amount may observe an exact singular original
+target only through its own characteristic-use proof and parser node identity;
+the damage source is proved independently.
+
+Recurring upkeep, beginning-of-combat, and end-step self-card returns can carry
+an explicit graveyard function zone. The compiler requires an exact parser-owned
+return clause and finalized source/card-incarnation proofs. Lowering carries
+that metadata into `TriggeredAbility.ZoneOfFunction`; runtime never infers the
+zone from a consequence. Default battlefield and event-specific trigger routes
+retain the absent-zone representation. Graveyard step discovery uses the card's
+owner and snapshots its exact card ID, zone, and zone version at the event, so
+queued and copied abilities cannot move a returned incarnation or same-name
+card. Other trigger events do not acquire graveyard discovery through this
+contract.
+
 The compiler also performs no positional reasoning over source-span byte
 offsets: it never derives node identity, containment, or ordering from raw
 positions. The parser emits those as typed relationships that the compiler

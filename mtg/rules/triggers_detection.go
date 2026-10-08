@@ -19,6 +19,8 @@ type pendingTriggeredAbility struct {
 	controller                   game.PlayerID
 	sourceID                     id.ID
 	sourceCardID                 id.ID
+	sourceZone                   zone.Type
+	sourceZoneVersion            uint64
 	sourceToken                  *game.CardDef
 	face                         game.FaceIndex
 	abilityIndex                 int
@@ -126,6 +128,8 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			SourceID:                    trigger.sourceID,
 			Face:                        trigger.face,
 			SourceCardID:                trigger.sourceCardID,
+			SourceZone:                  trigger.sourceZone,
+			SourceZoneVersion:           trigger.sourceZoneVersion,
 			SourceTokenDef:              trigger.sourceToken,
 			AbilityIndex:                trigger.abilityIndex,
 			TriggerEvent:                trigger.event,
@@ -913,6 +917,7 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		pending = append(pending, cycledCardSelfTriggers(g, event)...)
+		pending = append(pending, graveyardStepSourceTriggers(g, event)...)
 		pending = append(pending, castSpellSelfTriggers(g, event)...)
 		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
@@ -954,6 +959,14 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 			})
 		}
 	}
+	for _, trigger := range graveyardStepSourceTriggers(g, event) {
+		captured = append(captured, game.EventTriggeredAbility{
+			Controller: trigger.controller, SourceID: trigger.sourceID, SourceCardID: trigger.sourceCardID,
+			SourceZone: trigger.sourceZone, SourceZoneVersion: trigger.sourceZoneVersion,
+			Face: trigger.face, AbilityIndex: trigger.abilityIndex, Ability: trigger.inline,
+			TriggerMultiplierCaptured: true,
+		})
+	}
 	return captured
 }
 
@@ -964,6 +977,8 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 			controller:                captured.Controller,
 			sourceID:                  captured.SourceID,
 			sourceCardID:              captured.SourceCardID,
+			sourceZone:                captured.SourceZone,
+			sourceZoneVersion:         captured.SourceZoneVersion,
 			sourceToken:               captured.SourceTokenDef,
 			face:                      captured.Face,
 			abilityIndex:              captured.AbilityIndex,
@@ -972,7 +987,7 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 			hasEvent:                  true,
 			additionalTriggers:        captured.AdditionalTriggers,
 			triggerMultiplierCaptured: captured.TriggerMultiplierCaptured,
-			ordinaryTrigger:           true,
+			ordinaryTrigger:           captured.SourceZone == zone.None,
 		})
 	}
 	return pending
@@ -1125,6 +1140,9 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 			continue
 		}
 		if triggered, ok := body.(*game.TriggeredAbility); ok {
+			if triggered.ZoneOfFunction != zone.None && triggered.ZoneOfFunction != zone.Battlefield {
+				continue
+			}
 			trigger := &triggered.Trigger
 			if !triggerMatchesEventForController(g, permanent, controller, &trigger.Pattern, event) ||
 				!triggerInterveningIf(g, permanent, controller, trigger, &event) {
