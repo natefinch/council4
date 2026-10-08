@@ -3,6 +3,7 @@
     Kind: spell
     Text: Draw three cards, then put two cards from your hand on top of your library in any order.
     Content: 
+      Source: 
       Effects: 
         [0]: 
           ClauseID: 1

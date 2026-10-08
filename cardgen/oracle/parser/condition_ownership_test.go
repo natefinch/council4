@@ -17,6 +17,10 @@ func TestParseConditionOwnership(t *testing.T) {
 		{"If you have no cards in hand, draw a card. If you have no cards in hand, draw a card.", []ConditionScope{ConditionScopeClause, ConditionScopeClause}, [][]int{{1}, {2}}},
 		{"If you have no cards in hand, draw a card, then draw a card. If you control a creature, draw a card, then discard a card.", []ConditionScope{ConditionScopeGroup, ConditionScopeGroup}, [][]int{{1, 2}, {3, 4}}},
 		{"Draw a card, then discard a card unless you control a Villain.", []ConditionScope{ConditionScopeUnsupported}, [][]int{nil}},
+		{"Target creature can't be blocked this turn if it's tapped.", []ConditionScope{ConditionScopeUnsupported}, [][]int{{1}}},
+		{"If target creature is tapped, it can't be blocked this turn.", []ConditionScope{ConditionScopeClause}, [][]int{{1}}},
+		{"If you control a creature, target creature can't be blocked this turn.", []ConditionScope{ConditionScopeClause}, [][]int{{1}}},
+		{"Draw a card if you control a creature.", []ConditionScope{ConditionScopeClause}, [][]int{{1}}},
 	} {
 		t.Run(tt.text, func(t *testing.T) {
 			t.Parallel()

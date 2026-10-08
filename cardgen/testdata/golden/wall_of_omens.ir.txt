@@ -13,6 +13,7 @@
       Order: 
         End: 3
     Content: 
+      Source: 
       Effects: 
         [0]: 
           ClauseID: 1
@@ -48,6 +49,8 @@
           Kind: 2
           Text: this creature
           Binding: 2
+          SubjectNoun: ObjectNounCreature
+          Subject: 
           Order: 
             Start: 1
             End: 2

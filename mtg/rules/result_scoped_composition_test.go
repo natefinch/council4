@@ -24,6 +24,15 @@ func compiledScopedResultContent(t *testing.T, text string) game.AbilityContent 
 func TestScopedIndependentActualResults(t *testing.T) {
 	content := compiledScopedResultContent(t,
 		"You may discard a card. If you do, you gain 3 life. You gain 2 life. You may sacrifice a creature. If you do, you gain 5 life.")
+	published := map[game.ResultKey]int{}
+	for _, instruction := range content.Modes[0].Sequence {
+		if instruction.PublishResult != "" {
+			published[instruction.PublishResult]++
+		}
+	}
+	if len(published) != 2 || published["result-clause-1"] != 1 || published["result-clause-4"] != 1 {
+		t.Fatalf("publications=%v, want exactly one publication for each independent producer", published)
+	}
 	// Each producer owns its own receipt; success of one never answers the other.
 	probes := []resultProbe{
 		{key: "result-clause-1", life: 100},

@@ -3,6 +3,7 @@
     Kind: spell
     Text: Destroy target artifact or enchantment.
     Content: 
+      Source: 
       Targets: 
         [0]: 
           Text: target artifact or enchantment

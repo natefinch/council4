@@ -21,8 +21,28 @@ func lowerContent(
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if !contentSubjectProofsOwned(ctx.content) {
-		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported reference subject",
+		diagnostic := contentDiagnostic(ctx, "unsupported reference subject",
 			"the body contains a missing, incompatible, or foreign subject proof")
+		// Keep independent content blockers visible without admitting an unproved body.
+		if _, inner := lowerContentDispatch(cardName, ctx, syntax); inner != nil {
+			diagnostic.Additional = append(diagnostic.Additional, *inner)
+		}
+		return game.AbilityContent{}, diagnostic
+	}
+	for _, condition := range ctx.content.Conditions {
+		if condition.Ownership.Scope != parser.ConditionScopeUnsupported {
+			continue
+		}
+		for _, effect := range ctx.content.Effects {
+			if effect.Kind == compiler.EffectCantBeBlocked {
+				for _, clauseID := range condition.Ownership.ClauseIDs {
+					if effect.ClauseID == clauseID {
+						return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported condition timing",
+							"the trailing can't-be-blocked restriction predicate is not proved to be evaluated only at resolution")
+					}
+				}
+			}
+		}
 	}
 	if modalRemovedCounterQuantities(ctx.content) {
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported scalar quantity scope",

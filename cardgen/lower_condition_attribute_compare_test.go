@@ -5,6 +5,10 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestLowerContextualNumericConditions(t *testing.T) {
@@ -84,22 +88,70 @@ func TestContextualNumericConditionsFailClosed(t *testing.T) {
 		"Destroy two target creatures. If its toughness is 3 or greater, draw a card.",
 		"Destroy target creature. If its power is X or greater, draw a card.",
 		"Destroy target creature. If its power is greater than this creature's power, draw a card.",
-		"Reveal the top card of your library. If it had mana value 3 or less, draw a card.",
+		"Reveal the top two cards of your library. If it had mana value 3 or less, draw a card.",
 		"Exile target creature. If it had mana value 3 or less, draw a card.",
 	} {
-		assertCardUnsupported(t, &ScryfallCard{Name: "Unavailable Numeric Subject", Layout: "normal",
-			TypeLine: "Creature", OracleText: "When this creature enters, " + text,
-			Power: new("2"), Toughness: new("2")})
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			assertCardUnsupported(t, &ScryfallCard{Name: "Unavailable Numeric Subject", Layout: "normal",
+				TypeLine: "Creature", OracleText: "When this creature enters, " + text,
+				Power: new("2"), Toughness: new("2")})
+		})
 	}
 
 	assertCardUnsupported(t, &ScryfallCard{Name: "Unbound Numeric Subject", Layout: "normal",
 		TypeLine: "Instant", OracleText: "If its power is 4 or greater, draw a card."})
 }
 
-func TestContextualTypeConditionActualLookSubjectStaysRefused(t *testing.T) {
+func TestContextualTypeConditionActualLookSubjectPayment(t *testing.T) {
 	t.Parallel()
-	assertCardUnsupported(t, &ScryfallCard{Name: "Wand of Denial", Layout: "normal", TypeLine: "Artifact",
+	face := lowerSingleFace(t, &ScryfallCard{Name: "Wand of Denial", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{T}: Look at the top card of target player's library. If it's a nonland card, you may pay 2 life. If you do, put it into that player's graveyard."})
+	mode := face.ActivatedAbilities[0].Content.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 3 {
+		t.Fatalf("observed payment = %+v, want one player target and three instructions", mode)
+	}
+	look, ok := mode.Sequence[0].Primitive.(game.LookAtLibraryTop)
+	if !ok || look.Player != game.TargetPlayerReference(0) || look.PublishLinked == "" {
+		t.Fatalf("observation = %+v, want exact selected player's published card", mode.Sequence[0])
+	}
+	pay, ok := mode.Sequence[1].Primitive.(game.Pay)
+	gate := effectConditionMatch(t, mode.Sequence[1])
+	if !ok || !pay.Payment.Payer.Exists || pay.Payment.Payer.Val != game.ControllerReference() ||
+		len(pay.Payment.AdditionalCosts) != 1 || pay.Payment.AdditionalCosts[0].Kind != cost.AdditionalPayLife ||
+		pay.Payment.AdditionalCosts[0].Amount != 2 || mode.Sequence[1].Optional ||
+		gate.Object.Val != game.LinkedObjectReference(string(look.PublishLinked)) ||
+		len(gate.ObjectMatches.Val.ExcludedTypes) != 1 || gate.ObjectMatches.Val.ExcludedTypes[0] != types.Land {
+		t.Fatalf("payment = %+v, want controller's exact payment gated on actual observed nonland", mode.Sequence[1])
+	}
+	move, ok := mode.Sequence[2].Primitive.(game.MoveCard)
+	result := mode.Sequence[2].ResultGate
+	if !ok || move.Card.Kind != game.CardReferenceLinked || move.Card.LinkID != string(look.PublishLinked) ||
+		move.FromZone != zone.Library || move.Destination != zone.Graveyard || !result.Exists ||
+		mode.Sequence[1].PublishResult == "" || result.Val.Key != mode.Sequence[1].PublishResult || result.Val.Succeeded != game.TriTrue {
+		t.Fatalf("movement = %+v, want same observed incarnation after successful payment", mode.Sequence[2])
+	}
+	assertCardUnsupported(t, &ScryfallCard{Name: "Ambiguous Observed Payment", Layout: "normal", TypeLine: "Artifact",
+		OracleText: "{T}: Reveal the top two cards of target player's library. If it's a nonland card, you may pay 2 life. If you do, put it into that player's graveyard."})
+}
+
+func TestContextualNumericConditionActualRevealSubject(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{Name: "Observed Mana Value", Layout: "normal", TypeLine: "Creature",
+		OracleText: "When this creature enters, reveal the top card of your library. If it had mana value 3 or less, draw a card."})
+	sequence := face.TriggeredAbilities[0].Content.Modes[0].Sequence
+	if len(sequence) != 2 {
+		t.Fatalf("sequence = %+v, want observation and numeric consumer", sequence)
+	}
+	reveal, ok := sequence[0].Primitive.(game.Reveal)
+	gate := effectConditionMatch(t, sequence[1])
+	draw, draws := sequence[1].Primitive.(game.Draw)
+	if !ok || reveal.PublishLinked == "" || reveal.Player != game.ControllerReference() || reveal.Amount != game.Fixed(1) ||
+		gate.Object.Val != game.LinkedObjectReference(string(reveal.PublishLinked)) ||
+		!gate.ObjectMatches.Val.ManaValue.Exists || gate.ObjectMatches.Val.ManaValue.Val.Op != compare.LessOrEqual ||
+		gate.ObjectMatches.Val.ManaValue.Val.Value != 3 || !draws || draw.Player != game.ControllerReference() || draw.Amount != game.Fixed(1) {
+		t.Fatalf("observation/consumer = %+v / %+v, want exact observed card and <=3 controller draw", sequence[0], sequence[1])
+	}
 }
 
 func TestLowerSplitskinDollUsesSharedUpperBound(t *testing.T) {

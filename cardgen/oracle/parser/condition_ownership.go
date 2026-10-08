@@ -69,6 +69,11 @@ func emitConditionOwnership(sentences []Sentence, segments []ConditionSegment, r
 			segment.Ownership.Scope = ConditionScopeClause
 			segment.Ownership.ClauseIDs = []int{owners[0].ClauseID}
 			segment.Ownership.DelayedBody = delayedConditionEvaluation(owners[0], segment, sentences)
+			if owners[0].Kind == EffectCantBeBlocked && owners[0].VerbSpan != (shared.Span{}) &&
+				segment.Span.Start.Offset > owners[0].VerbSpan.Start.Offset {
+				// A trailing restriction predicate is not proved to be a resolving grant.
+				segment.Ownership.Scope = ConditionScopeUnsupported
+			}
 		default:
 			segment.Ownership.Scope = ConditionScopeGroup
 			for _, effect := range owners {

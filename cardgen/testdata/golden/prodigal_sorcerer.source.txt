@@ -50,8 +50,9 @@ func newProdigalSorcerer() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:    game.Fixed(1),
-											Recipient: game.AnyTargetDamageRecipient(0),
+											Amount:       game.Fixed(1),
+											Recipient:    game.AnyTargetDamageRecipient(0),
+											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 									},
 								},

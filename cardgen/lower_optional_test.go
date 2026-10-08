@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -784,10 +785,8 @@ func TestLowerOptionalSacrificeAnotherIfYouDoDraw(t *testing.T) {
 }
 
 // TestLowerOptionalPayLifeIfYouDoDraw verifies that "You may pay N life. If you
-// do, draw a card." lowers the pay-life cost as an optional life loss whose
-// taken result gates the draw: paying N life is losing that much life
-// (CR 119.1b), so the controller's yes/no choice publishes a result the benefit
-// reads.
+// do, draw a card." lowers through the payment primitive, so affordability and
+// payment restrictions are checked before the successful payment gates the draw.
 func TestLowerOptionalPayLifeIfYouDoDraw(t *testing.T) {
 	t.Parallel()
 	sequence := lowerSpellSequence(t, "Pay Life Flow", "You may pay 2 life. If you do, draw a card.")
@@ -795,15 +794,18 @@ func TestLowerOptionalPayLifeIfYouDoDraw(t *testing.T) {
 		t.Fatalf("sequence = %#v, want two instructions", sequence)
 	}
 	pay := sequence[0]
-	lose, ok := pay.Primitive.(game.LoseLife)
+	payment, ok := pay.Primitive.(game.Pay)
 	if !ok {
-		t.Fatalf("instruction[0] = %T, want game.LoseLife", pay.Primitive)
+		t.Fatalf("instruction[0] = %T, want game.Pay", pay.Primitive)
 	}
-	if lose.Amount.Value() != 2 {
-		t.Fatalf("lose-life amount = %d, want 2", lose.Amount.Value())
+	if !payment.Payment.Payer.Exists || payment.Payment.Payer.Val != game.ControllerReference() ||
+		len(payment.Payment.AdditionalCosts) != 1 ||
+		payment.Payment.AdditionalCosts[0].Kind != cost.AdditionalPayLife ||
+		payment.Payment.AdditionalCosts[0].Amount != 2 {
+		t.Fatalf("payment = %+v, want controller paying exactly 2 life", payment)
 	}
-	if !pay.Optional {
-		t.Fatal("instruction[0].Optional = false, want optional")
+	if pay.Optional {
+		t.Fatal("Pay must own its optional choice, not prompt twice")
 	}
 	if pay.PublishResult != optionalIfYouDoResultKey {
 		t.Fatalf("instruction[0].PublishResult = %q, want %q", pay.PublishResult, optionalIfYouDoResultKey)

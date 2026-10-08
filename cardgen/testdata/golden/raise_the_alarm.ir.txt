@@ -3,6 +3,7 @@
     Kind: spell
     Text: Create two 1/1 white Soldier creature tokens.
     Content: 
+      Source: 
       Effects: 
         [0]: 
           ClauseID: 1

@@ -3,6 +3,7 @@
     Kind: spell
     Text: Lightning Bolt deals 3 damage to any target.
     Content: 
+      Source: 
       Targets: 
         [0]: 
           Text: any target
@@ -26,6 +27,7 @@
               Kind: 1
               Text: Lightning Bolt
               Binding: 2
+              Subject: 
               Order: 
                 End: 1
           SubjectReferences: 
@@ -33,6 +35,7 @@
               Kind: 1
               Text: Lightning Bolt
               Binding: 2
+              Subject: 
               Order: 
                 End: 1
           Targets: 
@@ -72,5 +75,6 @@
           Kind: 1
           Text: Lightning Bolt
           Binding: 2
+          Subject: 
           Order: 
             End: 1

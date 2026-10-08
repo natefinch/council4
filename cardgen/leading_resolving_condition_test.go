@@ -75,9 +75,8 @@ func TestLowerFinaleHeadlineRiderFailsClosed(t *testing.T) {
 // TestLowerSpellSourceBackReferenceKeywordGrantFailsClosed proves a resolving
 // spell whose keyword grant back-references a creature it cannot tie to its target
 // or group antecedent fails closed rather than granting the keyword to the spell
-// itself. Heroic Charge's "those creatures also gain trample" and Arrester's Zeal's
-// split "that creature gains flying" both fall back to the spell source, which the
-// lowering guard rejects.
+// itself. Group back-references and ambiguous split target references must not
+// fall back to the resolving spell's source.
 func TestLowerSpellSourceBackReferenceKeywordGrantFailsClosed(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -93,10 +92,10 @@ func TestLowerSpellSourceBackReferenceKeywordGrantFailsClosed(t *testing.T) {
 			oracle:   "Kicker {1}{R} (You may pay an additional {1}{R} as you cast this spell.)\nCreatures you control get +2/+1 until end of turn. If this spell was kicked, those creatures also gain trample until end of turn.",
 		},
 		{
-			name:     "split addendum target back-reference",
+			name:     "split addendum ambiguous target back-reference",
 			typeLine: "Instant",
 			cost:     "{W}",
-			oracle:   "Target creature gets +2/+2 until end of turn.\nAddendum — If you cast this spell during your main phase, that creature gains flying until end of turn.",
+			oracle:   "Two target creatures get +2/+2 until end of turn.\nAddendum — If you cast this spell during your main phase, that creature gains flying until end of turn.",
 		},
 	}
 	for _, tc := range cases {
@@ -114,6 +113,29 @@ func TestLowerSpellSourceBackReferenceKeywordGrantFailsClosed(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLowerSplitAddendumExactTargetReference(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{Name: "Split Addendum", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Target creature gets +2/+2 until end of turn.\nAddendum — If you cast this spell during your main phase, that creature gains flying until end of turn."})
+	mode := face.SpellAbility.Val.Modes[0]
+	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 || mode.Sequence[0].Condition.Exists {
+		t.Fatalf("split Addendum = %+v, want one shared target and an unconditional pump", mode)
+	}
+	pump, ok := mode.Sequence[0].Primitive.(game.ModifyPT)
+	if !ok || pump.Object != game.TargetPermanentReference(0) ||
+		pump.PowerDelta != game.Fixed(2) || pump.ToughnessDelta != game.Fixed(2) {
+		t.Fatalf("pump = %+v, want +2/+2 on exact target", mode.Sequence[0])
+	}
+	grant, ok := mode.Sequence[1].Primitive.(game.ApplyContinuous)
+	if !ok || !grant.Object.Exists || grant.Object.Val != pump.Object || len(grant.ContinuousEffects) != 1 ||
+		len(grant.ContinuousEffects[0].AddKeywords) != 1 || grant.ContinuousEffects[0].AddKeywords[0] != game.Flying {
+		t.Fatalf("grant = %+v, want flying on the same target", mode.Sequence[1])
+	}
+	requireCastDuringMainGate(t, &mode.Sequence[1], "split Addendum flying")
+	assertCardUnsupported(t, &ScryfallCard{Name: "Unbound Split Addendum", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Draw a card.\nAddendum — If you cast this spell during your main phase, that creature gains flying until end of turn."})
 }
 
 // TestLowerPermanentSourceKeywordGrantStillLowers proves the spell-only guard does

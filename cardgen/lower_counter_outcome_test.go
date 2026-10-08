@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
+	"github.com/natefinch/council4/mtg/game"
 )
 
 const counterExileReplacement = "If that spell is countered this way, exile it instead of putting it into its owner's graveyard."
@@ -143,10 +144,63 @@ func TestCounterCompositionShells(t *testing.T) {
 		Name: "Counter Token Result", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Counter target spell. If that spell is countered this way, create a Treasure token.",
 	}, "Sequence[1].Primitive.(game.CreateToken)", "Sequence[1].ResultGate.Val.Succeeded = game.TriTrue")
-	assertCardUnsupported(t, &ScryfallCard{
-		Name: "Counter Modes Refusal", Layout: "normal", TypeLine: "Instant",
-		OracleText: "Choose two \u2014\n\u2022 " + body + "\n\u2022 " + body,
-	}, "cross-mode conditional result publication requires scoped namespaces")
+	t.Run("mode-local counter results", func(t *testing.T) {
+		t.Parallel()
+		face := lowerSingleFace(t, &ScryfallCard{
+			Name: "Counter Modes", Layout: "normal", TypeLine: "Instant",
+			OracleText: "Choose two \u2014\n\u2022 " + body + "\n\u2022 " + body,
+		})
+		content := face.SpellAbility.Val
+		if content.MinModes != 2 || content.MaxModes != 2 || len(content.Modes) != 2 || len(content.SharedTargets) != 0 {
+			t.Fatalf("modal selection = %+v, want exactly two modes with independent targets", content)
+		}
+		for i, mode := range content.Modes {
+			if len(mode.Targets) != 1 || mode.Targets[0].MinTargets != 1 || mode.Targets[0].MaxTargets != 1 ||
+				len(mode.Sequence) != 4 {
+				t.Fatalf("mode %d = %+v, want one target and Pay/CounterObject/two life riders", i, mode)
+			}
+			sequence := mode.Sequence
+			pay, ok := sequence[0].Primitive.(game.Pay)
+			if !ok || !pay.Payment.Payer.Exists ||
+				pay.Payment.Payer.Val != game.ObjectControllerReference(game.TargetStackObjectReference(0)) ||
+				sequence[0].PublishResult != "unless-paid" || sequence[0].ResultGate.Exists ||
+				sequence[0].Condition.Exists || sequence[0].ConditionGate != "" {
+				t.Fatalf("mode %d payment = %+v, want unconditional publication for its target's controller", i, sequence[0])
+			}
+			counter, ok := sequence[1].Primitive.(game.CounterObject)
+			if !ok || counter.Object != game.TargetStackObjectReference(0) || !counter.ExileInstead ||
+				sequence[1].PublishResult != "if-you-do" || !sequence[1].LocalProducts.HasResult("if-you-do") ||
+				!sequence[1].ResultGate.Exists || sequence[1].ResultGate.Val.Key != "unless-paid" ||
+				sequence[1].ResultGate.Val.Succeeded != game.TriFalse {
+				t.Fatalf("mode %d counter = %+v, want locally published counter outcome gated by its own payment", i, sequence[1])
+			}
+			for j, amount := range []int{2, 1} {
+				instruction := sequence[j+2]
+				gain, ok := instruction.Primitive.(game.GainLife)
+				if !ok || gain.Player != game.ControllerReference() || gain.Amount != game.Fixed(amount) ||
+					instruction.ResultGate.Exists != (j == 0) {
+					t.Fatalf("mode %d life rider = %+v", i, instruction)
+				}
+				if j == 0 && (instruction.ResultGate.Val.Key != "if-you-do" ||
+					instruction.ResultGate.Val.Succeeded != game.TriTrue) {
+					t.Fatalf("mode %d success rider does not consume its own counter outcome", i)
+				}
+			}
+		}
+		unscoped := append([]game.Mode(nil), content.Modes...)
+		for i := range unscoped {
+			unscoped[i].Sequence = append([]game.Instruction(nil), unscoped[i].Sequence...)
+			unscoped[i].Sequence[1].LocalProducts = game.LocalProducts{}
+		}
+		if modeResultScopesCompatible(unscoped) {
+			t.Fatal("conditional counter publishers without local scopes were accepted")
+		}
+		assertCardUnsupported(t, &ScryfallCard{
+			Name: "Cross Mode Counter Result", Layout: "normal", TypeLine: "Instant",
+			OracleText: "Choose two \u2014\n\u2022 " + body +
+				"\n\u2022 If that spell is countered this way, you gain 2 life. You gain 1 life.",
+		})
+	})
 }
 
 func TestCounterDestinationPlannerTypedOwnersAndNearMisses(t *testing.T) {
