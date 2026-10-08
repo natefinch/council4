@@ -216,6 +216,15 @@ func compileAbility(
 			compiled.Content.Effects = compileEffects(ability.Sentences)
 			applyEffectPaymentsToConditions(compiled.Content.Effects, compiled.Content.Conditions)
 			compiled.Content.References = compileStaticRuleReferences(ability.Sentences)
+			typed := bindReferences(compileTypedReferences(ability.SemanticReferences), nil, compiled.Content.Effects, nil)
+			for _, reference := range typed {
+				for _, condition := range compiled.Content.Conditions {
+					if condition.HasSubjectReference && condition.SubjectRefID == reference.NodeID {
+						compiled.Content.References = append(compiled.Content.References, reference)
+						break
+					}
+				}
+			}
 		} else {
 			compiled.Content.Keywords = compileKeywords(ability.SemanticKeywords)
 			compiled.Content.Targets = compileTypedTargets(ability.Sentences)

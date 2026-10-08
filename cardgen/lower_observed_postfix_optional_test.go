@@ -36,6 +36,7 @@ func TestObservedPostfixOptionalGenericCompositions(t *testing.T) {
 					card := &ScryfallCard{Name: "Postfix Composition", Layout: "normal", TypeLine: "Sorcery", OracleText: body}
 					path := "SpellAbility.Val.Modes[0].Sequence"
 					switch shell {
+					case "spell":
 					case "trigger":
 						card.TypeLine, card.OracleText = "Artifact", "When this artifact enters, "+body
 						path = "TriggeredAbilities[0].Content.Modes[0].Sequence"
@@ -44,6 +45,8 @@ func TestObservedPostfixOptionalGenericCompositions(t *testing.T) {
 						path = "ActivatedAbilities[0].Content.Modes[0].Sequence"
 					case "mode":
 						card.OracleText = "Choose one \u2014\n\u2022 " + body + "\n\u2022 You gain 1 life."
+					default:
+						t.Fatalf("unknown ability shell %q", shell)
 					}
 					assertCardPaths(t, card,
 						path+`[2].Condition.Val.Condition.Val.Object.Val.linkID = "sequence-effect-0-product"`,

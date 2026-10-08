@@ -48,6 +48,7 @@ func (p LibraryCardCharacteristics) validateKeys(link LinkedKey) error {
 	return nil
 }
 
+// PublishedScalarKeys returns the characteristic result cells written by a primitive.
 func PublishedScalarKeys(primitive Primitive) []ResultKey {
 	if primitive == nil {
 		return nil

@@ -2,6 +2,7 @@ package compiler
 
 import "github.com/natefinch/council4/mtg/game/zone"
 
+// OriginalTargetOccurrence returns the occurrence bound by an exact target proof.
 func (reference CompiledReference) OriginalTargetOccurrence() (int, bool) {
 	return reference.Subject.targetOccurrence, reference.SubjectSupported() && reference.Binding == ReferenceBindingTarget
 }

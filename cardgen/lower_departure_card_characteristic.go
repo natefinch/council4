@@ -34,7 +34,10 @@ func sequenceDepartureCardCharacteristic(effect compiler.CompiledEffect, effects
 		sequence[instructionIndex].Primitive.Kind() != game.PrimitiveMoveCard {
 		return "", false
 	}
-	move := sequence[instructionIndex].Primitive.(game.MoveCard)
+	move, ok := sequence[instructionIndex].Primitive.(game.MoveCard)
+	if !ok {
+		return "", false
+	}
 	occurrence, proved := subject.OriginalTargetOccurrence()
 	if !proved || move.Card.Kind != game.CardReferenceTarget || move.Card.TargetIndex != occurrence {
 		return "", false

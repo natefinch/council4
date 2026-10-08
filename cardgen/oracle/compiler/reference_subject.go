@@ -9,8 +9,10 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+// ReferenceSubjectDomain identifies the kind of subject an owned proof permits.
 type ReferenceSubjectDomain uint8
 
+// Subject domains keep permanent, card, stack, player, and policy uses distinct.
 const (
 	ReferenceSubjectUnknown ReferenceSubjectDomain = iota
 	ReferenceSubjectPermanent
@@ -22,8 +24,10 @@ const (
 	ReferenceSubjectTargetChoice
 )
 
+// ReferenceSubjectLifetime identifies the incarnation or product a proof binds.
 type ReferenceSubjectLifetime uint8
 
+// Subject lifetimes distinguish original objects from later cards and products.
 const (
 	ReferenceLifetimeUnknown ReferenceSubjectLifetime = iota
 	ReferenceLifetimeOriginalObject
@@ -71,6 +75,7 @@ type ReferenceSubjectProof struct {
 	projectedDomain     ReferenceSubjectDomain
 }
 
+// SubjectSupported checks that the issued proof still matches the reference.
 func (reference CompiledReference) SubjectSupported() bool {
 	proof := reference.Subject
 	return proof.scope != nil && proof.domain != ReferenceSubjectUnknown && proof.lifetime != ReferenceLifetimeUnknown &&
@@ -82,6 +87,7 @@ func (reference CompiledReference) SubjectSupported() bool {
 		proof.noun == reference.SubjectNoun && proof.nodeID == reference.NodeID
 }
 
+// SubjectDomain returns the proven domain, or Unknown for an invalid proof.
 func (reference CompiledReference) SubjectDomain() ReferenceSubjectDomain {
 	if !reference.SubjectSupported() {
 		return ReferenceSubjectUnknown
@@ -89,6 +95,7 @@ func (reference CompiledReference) SubjectDomain() ReferenceSubjectDomain {
 	return reference.Subject.domain
 }
 
+// SubjectLifetime returns the proven lifetime, or Unknown for an invalid proof.
 func (reference CompiledReference) SubjectLifetime() ReferenceSubjectLifetime {
 	if !reference.SubjectSupported() {
 		return ReferenceLifetimeUnknown
@@ -96,6 +103,7 @@ func (reference CompiledReference) SubjectLifetime() ReferenceSubjectLifetime {
 	return reference.Subject.lifetime
 }
 
+// ProducerTargetOccurrence returns the exact target producing this subject.
 func (reference CompiledReference) ProducerTargetOccurrence() (int, bool) {
 	if !reference.SubjectSupported() || !reference.Subject.targetProduct {
 		return 0, false
@@ -103,6 +111,7 @@ func (reference CompiledReference) ProducerTargetOccurrence() (int, bool) {
 	return reference.Subject.producerTarget, true
 }
 
+// ProducerTargetMatches checks the producing target's identity and selection.
 func (reference CompiledReference) ProducerTargetMatches(target CompiledTarget) bool {
 	return reference.SubjectSupported() && reference.Subject.targetProduct &&
 		reference.Subject.scope == target.subjectScope &&
@@ -113,6 +122,7 @@ func (reference CompiledReference) ProducerTargetMatches(target CompiledTarget) 
 		reference.Subject.targetMax == target.Cardinality.Max
 }
 
+// ReferenceSourceContext carries the compiler-owned source shell and scope.
 type ReferenceSourceContext struct {
 	scope                *referenceSubjectScope
 	kind                 AbilityKind
@@ -135,6 +145,7 @@ func referenceSourceContext(kind AbilityKind, sourceZone zone.Type, trigger *Com
 	return source
 }
 
+// OriginalObjectSubject proves a battlefield source's original permanent.
 func (source ReferenceSourceContext) OriginalObjectSubject() (CompiledReference, bool) {
 	if source.scope == nil || !source.known || source.kind == AbilitySpell || source.zone != zone.Battlefield {
 		return CompiledReference{}, false
@@ -142,6 +153,7 @@ func (source ReferenceSourceContext) OriginalObjectSubject() (CompiledReference,
 	return issuedIntrinsicSubject(ReferenceBindingSource, ReferenceSubjectPermanent, ReferenceLifetimeOriginalObject, source.scope), true
 }
 
+// AttachedObjectSubject proves an attached object from a battlefield source.
 func (source ReferenceSourceContext) AttachedObjectSubject(effect CompiledEffect) (CompiledReference, bool) {
 	if !effect.SubjectSourceAttached {
 		return CompiledReference{}, false
@@ -152,6 +164,7 @@ func (source ReferenceSourceContext) AttachedObjectSubject(effect CompiledEffect
 	return issuedIntrinsicSubject(ReferenceBindingSourceAttached, ReferenceSubjectPermanent, ReferenceLifetimeOriginalObject, source.scope), true
 }
 
+// CardSubject proves an exact off-battlefield source or self-death event card.
 func (source ReferenceSourceContext) CardSubject() (CompiledReference, zone.Type, bool) {
 	if source.scope == nil || !source.known || source.kind == AbilitySpell {
 		return CompiledReference{}, zone.None, false
@@ -229,11 +242,12 @@ func finalizeReferenceSubjects(content *AbilityContent, source ReferenceSourceCo
 				return condition.HasSubjectReference && condition.SubjectRefID == reference.NodeID &&
 					candidate.NodeID == reference.NodeID
 			})
-			if found >= 0 {
+			switch {
+			case found >= 0:
 				reference = content.References[found]
-			} else if !condition.HasSubjectReference && reference.Kind == ReferenceUnknown {
+			case !condition.HasSubjectReference && reference.Kind == ReferenceUnknown:
 				issueReferenceSubject(&reference, bindingTargets, content.Effects, source)
-			} else {
+			default:
 				reference.Subject = ReferenceSubjectProof{}
 			}
 			condition.ObjectReference = &reference
@@ -317,25 +331,34 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 		reference.Subject.scope = source.scope
 		return
 	}
-	domain, lifetime := ReferenceSubjectUnknown, ReferenceLifetimeUnknown
+	var domain ReferenceSubjectDomain
+	var lifetime ReferenceSubjectLifetime
 	projectedDomain := ReferenceSubjectUnknown
 	switch reference.Binding {
 	case ReferenceBindingSource:
 		if !source.known {
 			return
 		}
-		if referenceIsOwnedCountPolicy(*reference, effects) {
+		// A recurring trigger cannot start with its source in the graveyard
+		// when discovery only proves a battlefield source.
+		if source.kind == AbilityTriggered && source.event == TriggerEventBeginningOfStep &&
+			source.zone == zone.Battlefield && len(effects) != 0 &&
+			effects[0].FromZone == zone.Graveyard && effectOwnsReference(effects[0], *reference) {
+			return
+		}
+		switch {
+		case referenceIsOwnedCountPolicy(*reference, effects):
 			domain, lifetime = ReferenceSubjectPolicy, ReferenceLifetimePolicy
-		} else if referenceIsOwnedGroupPlayer(*reference, effects) {
+		case referenceIsOwnedGroupPlayer(*reference, effects):
 			domain, lifetime = ReferenceSubjectPlayerGroup, ReferenceLifetimePlayer
-		} else if source.self && source.event == TriggerEventSpellCast &&
-			reference.SubjectNoun == parser.ObjectNounSpell {
+		case source.self && source.event == TriggerEventSpellCast &&
+			reference.SubjectNoun == parser.ObjectNounSpell:
 			domain, lifetime = ReferenceSubjectStackObject, ReferenceLifetimeStackOccurrence
-		} else if reference.CardIdentity && source.self &&
-			(source.event == TriggerEventPermanentDied || source.event == TriggerEventPermanentSacrificed) {
+		case reference.CardIdentity && source.self &&
+			(source.event == TriggerEventPermanentDied || source.event == TriggerEventPermanentSacrificed):
 			reference.Binding = ReferenceBindingEventCard
 			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeCardIncarnation
-		} else if source.kind == AbilitySpell {
+		case source.kind == AbilitySpell:
 			if reference.Kind != ReferenceSelfName && reference.Kind != ReferenceThisObject &&
 				!sourceCardAntecedent(*reference, effects) && !referenceIsResolvingDamageSubject(*reference, effects) {
 				return
@@ -345,25 +368,26 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 				return
 			}
 			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeStackOccurrence
-		} else if source.zone != zone.Battlefield {
+		case source.zone != zone.Battlefield:
 			if source.zone == zone.None || !reference.CardIdentity &&
 				!sourceCardAntecedent(*reference, effects) && !source.cardCostAntecedent {
 				return
 			}
 			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeCardIncarnation
-		} else if reference.CardIdentity {
+		case reference.CardIdentity:
 			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeCardIncarnation
-		} else {
+		default:
 			domain, lifetime = ReferenceSubjectPermanent, ReferenceLifetimeOriginalObject
 		}
 	case ReferenceBindingEventPermanent:
-		if reference.SubjectNoun == parser.ObjectNounPlayer && referenceIsEventPlayerProjection(*reference, source, effects) {
+		switch {
+		case reference.SubjectNoun == parser.ObjectNounPlayer && referenceIsEventPlayerProjection(*reference, source, effects):
 			projectedDomain = ReferenceSubjectPermanent
 			domain, lifetime = ReferenceSubjectPlayer, ReferenceLifetimePlayer
-		} else if reference.CardIdentity {
+		case reference.CardIdentity:
 			reference.Binding = ReferenceBindingEventCard
 			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeCardIncarnation
-		} else {
+		default:
 			domain, lifetime = ReferenceSubjectPermanent, ReferenceLifetimeOriginalObject
 		}
 	case ReferenceBindingSourceAttached, ReferenceBindingEventRelatedPermanent:
@@ -403,9 +427,7 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 			lifetime = ReferenceLifetimeStackOccurrence
 		case ReferenceSubjectPlayer:
 			lifetime = ReferenceLifetimePlayer
-		case ReferenceSubjectPermanent:
-			lifetime = ReferenceLifetimeOriginalObject
-		case ReferenceSubjectTargetChoice:
+		case ReferenceSubjectPermanent, ReferenceSubjectTargetChoice:
 			lifetime = ReferenceLifetimeOriginalObject
 		default:
 			return
@@ -436,19 +458,20 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 			return
 		}
 		reference.ProducerClauseID = producer.ClauseID
-		if reference.LibraryCardObservation {
+		switch {
+		case reference.LibraryCardObservation:
 			if !exactLibraryCardReferenceProducer(producer, effects) {
 				return
 			}
 			domain = ReferenceSubjectCard
-		} else if singularEnteredSubjectProducer(producer, effects) {
+		case singularEnteredSubjectProducer(producer, effects):
 			domain = ReferenceSubjectPermanent
 			if reference.CardIdentity {
 				domain = ReferenceSubjectCard
 			}
-		} else if searchedPermanentProduct(*reference, effects) {
+		case searchedPermanentProduct(*reference, effects):
 			domain = ReferenceSubjectPermanent
-		} else {
+		default:
 			switch producer.Kind {
 			case EffectCreate, EffectBolster, EffectChoosePermanent, EffectSacrifice, EffectDestroy:
 				domain = ReferenceSubjectPermanent
@@ -592,10 +615,12 @@ func targetSubjectDomain(target CompiledTarget) ReferenceSubjectDomain {
 		return ReferenceSubjectStackObject
 	case SelectorCard:
 		return ReferenceSubjectCard
+	default:
+		return ReferenceSubjectPermanent
 	}
-	return ReferenceSubjectPermanent
 }
 
+// SubjectProducerMatches checks a subject's exact producing clause and scope.
 func (reference CompiledReference) SubjectProducerMatches(effect CompiledEffect) bool {
 	return reference.SubjectSupported() &&
 		reference.Binding == ReferenceBindingPriorInstructionResult &&
@@ -633,6 +658,7 @@ func sourceCardAntecedent(reference CompiledReference, effects []CompiledEffect)
 	return false
 }
 
+// EnteredSubjectSupported reports whether the proof names an actual entered object.
 func (reference CompiledReference) EnteredSubjectSupported() bool {
 	return reference.SubjectSupported() && reference.Subject.enteredProduct &&
 		reference.Subject.lifetime == ReferenceLifetimeActualProduct
@@ -642,6 +668,7 @@ type referenceSubjectScope struct {
 	owner *AbilityContent
 }
 
+// OwnsSubject checks that the reference's proof belongs to this exact body.
 func (content AbilityContent) OwnsSubject(reference CompiledReference) bool {
 	return reference.SubjectSupported() && content.subjectScope != nil &&
 		reference.Subject.scope == content.subjectScope

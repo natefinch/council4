@@ -167,8 +167,8 @@ func referenceIsOwnedGroupPlayer(reference CompiledReference, effects []Compiled
 		if !effectOwnsReference(effect, reference) {
 			continue
 		}
-		switch effect.Context {
-		case parser.EffectContextEachPlayer, parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+		if effect.Context == parser.EffectContextEachPlayer || effect.Context == parser.EffectContextEachOpponent ||
+			effect.Context == parser.EffectContextEachOtherPlayer {
 			return true
 		}
 		if effect.Kind == EffectDealDamage {

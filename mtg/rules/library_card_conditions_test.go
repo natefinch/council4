@@ -144,10 +144,13 @@ func TestLibraryCardUnavailableSubjectDoesNotPublishOtherwise(t *testing.T) {
 				Player: game.ControllerReference(), Amount: game.Fixed(1), PublishLinked: "observed",
 			}})
 			switch outcome {
+			case "matching", "nonmatching", "empty":
 			case "missing definition":
 				g.CardInstances[cardID].Def = nil
 			case "reincarnated":
 				g.CardInstances[cardID].ZoneVersion++
+			default:
+				t.Fatalf("unknown observation outcome %q", outcome)
 			}
 			resolver.resolveInstruction(&game.Instruction{
 				Primitive: game.GainLife{Player: game.ControllerReference(), Amount: game.Fixed(2)},
@@ -162,10 +165,12 @@ func TestLibraryCardUnavailableSubjectDoesNotPublishOtherwise(t *testing.T) {
 				ConditionGate: "card-group", ConditionGateNegate: true,
 			})
 			want := 20
-			if outcome == "matching" {
+			switch outcome {
+			case "matching":
 				want = 22
-			} else if outcome == "nonmatching" {
+			case "nonmatching":
 				want = 24
+			default:
 			}
 			if got := g.Players[game.Player1].Life; got != want {
 				t.Fatalf("life=%d, want %d: unavailable subject is not a false observed predicate", got, want)

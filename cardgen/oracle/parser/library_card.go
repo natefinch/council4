@@ -53,10 +53,12 @@ func recognizeSingleLibraryCardProducer(effect *EffectSyntax) bool {
 
 func singleLibraryCardProducerOwner(kind EffectKind, clause string) (EffectContextKind, SelectionKind, bool) {
 	verb := "Reveal"
-	if kind == EffectLookAtLibraryTop {
+	switch kind {
+	case EffectLookAtLibraryTop:
 		verb = "Look at"
-	} else if kind == EffectExile {
+	case EffectExile:
 		verb = "Exile"
+	default:
 	}
 	for _, owner := range []struct {
 		text       string
@@ -76,7 +78,7 @@ func singleLibraryCardProducerOwner(kind EffectKind, clause string) (EffectConte
 }
 
 func libraryCardObservationBefore(tokens []shared.Token, index int) bool {
-	for start := 0; start < index; start++ {
+	for start := range index {
 		kind := EffectReveal
 		if equalWord(tokens[start], "look") {
 			kind = EffectLookAtLibraryTop

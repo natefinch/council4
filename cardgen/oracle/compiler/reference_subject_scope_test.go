@@ -50,17 +50,17 @@ func TestReferenceSubjectScopeAndImmutableFacts(t *testing.T) {
 		{"occurrence", func(r *CompiledReference) { r.Occurrence++ }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			copy := reference
-			tc.mutate(&copy)
-			if copy.SubjectSupported() || copy.SubjectProducerMatches(content.Effects[0]) {
+			changed := reference
+			tc.mutate(&changed)
+			if changed.SubjectSupported() || changed.SubjectProducerMatches(content.Effects[0]) {
 				t.Fatal("modified semantic fact retained a validated proof")
 			}
 		})
 	}
-	copy := reference
-	copy.Text = "opaque"
-	copy.PriorInstruction = 7
-	if !copy.SubjectSupported() || !copy.SubjectProducerMatches(content.Effects[0]) {
+	reindexed := reference
+	reindexed.Text = "opaque"
+	reindexed.PriorInstruction = 7
+	if !reindexed.SubjectSupported() || !reindexed.SubjectProducerMatches(content.Effects[0]) {
 		t.Fatal("mechanical instruction reindexing or display metadata changed referent identity")
 	}
 	target := content.Targets[0]

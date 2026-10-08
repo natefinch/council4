@@ -39,16 +39,16 @@ func TestOptionalEnteredSubjectReceiptUsesExistingOwner(t *testing.T) {
 		}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			copy := content
-			copy.References = append([]compiler.CompiledReference(nil), content.References...)
-			copy.Effects = append([]compiler.CompiledEffect(nil), content.Effects...)
-			tc.change(&copy)
-			groups, reason := planOptionalActionGroups(copy.Effects, map[int]int{1: 0, 2: 1, 3: 2})
+			changed := content
+			changed.References = append([]compiler.CompiledReference(nil), content.References...)
+			changed.Effects = append([]compiler.CompiledEffect(nil), content.Effects...)
+			tc.change(&changed)
+			groups, reason := planOptionalActionGroups(changed.Effects, map[int]int{1: 0, 2: 1, 3: 2})
 			if reason != "" {
 				t.Fatal(reason)
 			}
 			owner, key := groups.owners[1], groups.keys[1]
-			reason = groups.requireEnteredSubjectReceipts(copy)
+			reason = groups.requireEnteredSubjectReceipts(changed)
 			if (reason != "") != tc.refuse {
 				t.Fatalf("receipt demand reason=%q, refusal=%v", reason, tc.refuse)
 			}

@@ -66,8 +66,8 @@ func TestCompiledNamedDamageUsesOriginalPermanentAttribution(t *testing.T) {
 	}
 	spell := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Shock", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Shock deals 2 damage to any target."})
-	spellDamage := spell.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
-	if spellDamage.DamageSource.Exists {
+	spellDamage, ok := spell.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
+	if !ok || spellDamage.DamageSource.Exists {
 		t.Fatal("resolving spell acquired a permanent-source attribution")
 	}
 }

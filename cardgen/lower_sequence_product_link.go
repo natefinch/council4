@@ -181,7 +181,10 @@ func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey)
 	}
 	switch instr.Primitive.Kind() {
 	case game.PrimitiveLookAtLibraryTop:
-		primitive := instr.Primitive.(game.LookAtLibraryTop)
+		primitive, ok := instr.Primitive.(game.LookAtLibraryTop)
+		if !ok {
+			return "", false
+		}
 		if primitive.PublishLinked != "" {
 			return primitive.PublishLinked, primitive.PublishLinked == key
 		}
@@ -189,7 +192,10 @@ func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey)
 		instr.Primitive = primitive
 		return key, true
 	case game.PrimitiveReveal:
-		primitive := instr.Primitive.(game.Reveal)
+		primitive, ok := instr.Primitive.(game.Reveal)
+		if !ok {
+			return "", false
+		}
 		if primitive.Card.Kind == game.CardReferenceNone &&
 			(primitive.Amount.IsDynamic() || primitive.Amount.Value() != 1) {
 			return "", false

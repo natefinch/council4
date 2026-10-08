@@ -18,12 +18,15 @@ func TestLibraryCardCharacteristicPublicationDistinguishesKnownZeroAndUnavailabl
 					cardID := addCardToLibrary(g, game.Player1, vanillaCreature("Observed", 0, 3))
 					card := g.CardInstances[cardID]
 					switch outcome {
+					case "known zero", "skipped", "declined":
 					case "undefined power":
 						card.Def.Power = opt.V[game.PT]{}
 					case "star power":
 						card.Def.Power = opt.Val(game.PT{IsStar: true})
 					case "missing definition":
 						card.Def = nil
+					default:
+						t.Fatalf("unknown characteristic outcome %q", outcome)
 					}
 				}
 				outputs := game.LibraryCardCharacteristics{Power: "power", Toughness: "toughness"}

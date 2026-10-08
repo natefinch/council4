@@ -471,12 +471,12 @@ const (
 // consumption is checked separately by lowering code since effect count
 // drives dispatch. Lowerers that deliberately consume references must clear
 // them from the content before calling Unconsumed.
-func (c AbilityContent) Unconsumed() bool {
-	return len(c.Targets) != 0 ||
-		len(c.Conditions) != 0 ||
-		len(c.Keywords) != 0 ||
-		len(c.Modes) != 0 ||
-		len(c.References) != 0
+func (content AbilityContent) Unconsumed() bool {
+	return len(content.Targets) != 0 ||
+		len(content.Conditions) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.Modes) != 0 ||
+		len(content.References) != 0
 }
 
 // CompiledModeLabel identifies an exact typed mode label.

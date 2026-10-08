@@ -94,10 +94,14 @@ func sequenceLibraryCardCharacteristic(
 	var outputs game.LibraryCardCharacteristics
 	switch instruction.Primitive.Kind() {
 	case game.PrimitiveLookAtLibraryTop:
-		outputs = instruction.Primitive.(game.LookAtLibraryTop).PublishCharacteristics
+		look, ok := instruction.Primitive.(game.LookAtLibraryTop)
+		if !ok {
+			return "", false
+		}
+		outputs = look.PublishCharacteristics
 	case game.PrimitiveReveal:
-		reveal := instruction.Primitive.(game.Reveal)
-		if reveal.Card.Kind != game.CardReferenceNone || reveal.Amount.IsDynamic() || reveal.Amount.Value() != 1 {
+		reveal, ok := instruction.Primitive.(game.Reveal)
+		if !ok || reveal.Card.Kind != game.CardReferenceNone || reveal.Amount.IsDynamic() || reveal.Amount.Value() != 1 {
 			return "", false
 		}
 		outputs = reveal.PublishCharacteristics
@@ -123,13 +127,21 @@ func sequenceLibraryCardCharacteristic(
 	}
 	switch instruction.Primitive.Kind() {
 	case game.PrimitiveLookAtLibraryTop:
-		primitive := instruction.Primitive.(game.LookAtLibraryTop)
+		primitive, ok := instruction.Primitive.(game.LookAtLibraryTop)
+		if !ok {
+			return "", false
+		}
 		primitive.PublishCharacteristics = outputs
 		instruction.Primitive = primitive
 	case game.PrimitiveReveal:
-		primitive := instruction.Primitive.(game.Reveal)
+		primitive, ok := instruction.Primitive.(game.Reveal)
+		if !ok {
+			return "", false
+		}
 		primitive.PublishCharacteristics = outputs
 		instruction.Primitive = primitive
+	default:
+		return "", false
 	}
 	if !instruction.LocalProducts.HasLink(sequenceProductKey(index)) {
 		instruction.LocalProducts.Links = append(instruction.LocalProducts.Links, sequenceProductKey(index))

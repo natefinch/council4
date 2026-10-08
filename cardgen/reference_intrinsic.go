@@ -60,6 +60,8 @@ func lowerCapturedCardSubject(reference compiler.CompiledReference, bindings ref
 		}
 	case compiler.ReferenceBindingPriorInstructionResult:
 		return lowerObjectReference(reference, bindings)
+	default:
+		return game.ObjectReference{}, false
 	}
 	return game.ObjectReference{}, false
 }

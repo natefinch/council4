@@ -17,6 +17,7 @@ func TestLibraryOwnerDestinationRequiresMatchingDomains(t *testing.T) {
 					ProducerClauseID: 9, PriorInstruction: 2},
 			}
 			switch mutate {
+			case "none":
 			case "different producer":
 				references[1].ProducerClauseID = 8
 			case "different index":
@@ -29,6 +30,8 @@ func TestLibraryOwnerDestinationRequiresMatchingDomains(t *testing.T) {
 				references = references[:1]
 			case "unclaimed owner":
 				effect.LibraryOwnerDestination = false
+			default:
+				t.Fatalf("unknown mutation %q", mutate)
 			}
 			_, ok := libraryCardActionSubject(effect, references)
 			if ok != (mutate == "none") {

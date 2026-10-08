@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -34,13 +36,9 @@ func lowerContent(
 			continue
 		}
 		for _, effect := range ctx.content.Effects {
-			if effect.Kind == compiler.EffectCantBeBlocked {
-				for _, clauseID := range condition.Ownership.ClauseIDs {
-					if effect.ClauseID == clauseID {
-						return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported condition timing",
-							"the trailing can't-be-blocked restriction predicate is not proved to be evaluated only at resolution")
-					}
-				}
+			if effect.Kind == compiler.EffectCantBeBlocked && slices.Contains(condition.Ownership.ClauseIDs, effect.ClauseID) {
+				return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported condition timing",
+					"the trailing can't-be-blocked restriction predicate is not proved to be evaluated only at resolution")
 			}
 		}
 	}

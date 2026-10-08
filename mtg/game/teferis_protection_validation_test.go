@@ -18,6 +18,8 @@ func TestValidateTeferisProtectionPrimitives(t *testing.T) {
 		},
 		PhaseOut{Group: BattlefieldGroup(Selection{Controller: ControllerYou})},
 		MoveResolvingSpell{Destination: zone.Exile},
+		// Resolving spells may also return their exact stack card to hand.
+		MoveResolvingSpell{Destination: zone.Hand},
 	}
 	for _, primitive := range valid {
 		if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}); err != nil {
@@ -31,7 +33,7 @@ func TestValidateTeferisProtectionPrimitives(t *testing.T) {
 		// the object field is gone, so the equivalent malformed instruction is
 		// one whose destination the runtime cannot reach.
 		MoveResolvingSpell{},
-		MoveResolvingSpell{Destination: zone.Hand},
+		MoveResolvingSpell{Destination: zone.Battlefield},
 	}
 	for _, primitive := range invalid {
 		if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}); err == nil {

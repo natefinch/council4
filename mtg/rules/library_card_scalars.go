@@ -11,11 +11,23 @@ func libraryCardCharacteristicOutputs(primitive game.Primitive) game.LibraryCard
 	}
 	switch primitive.Kind() {
 	case game.PrimitiveLookAtLibraryTop:
-		return primitive.(game.LookAtLibraryTop).PublishCharacteristics
+		look, ok := primitive.(game.LookAtLibraryTop)
+		if !ok {
+			panic("LookAtLibraryTop kind has an incompatible primitive")
+		}
+		return look.PublishCharacteristics
 	case game.PrimitiveReveal:
-		return primitive.(game.Reveal).PublishCharacteristics
+		reveal, ok := primitive.(game.Reveal)
+		if !ok {
+			panic("Reveal kind has an incompatible primitive")
+		}
+		return reveal.PublishCharacteristics
 	case game.PrimitiveMoveCard:
-		return primitive.(game.MoveCard).PublishDepartureCharacteristics
+		move, ok := primitive.(game.MoveCard)
+		if !ok {
+			panic("MoveCard kind has an incompatible primitive")
+		}
+		return move.PublishDepartureCharacteristics
 	default:
 		return game.LibraryCardCharacteristics{}
 	}

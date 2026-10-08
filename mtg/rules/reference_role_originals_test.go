@@ -3,6 +3,7 @@ package rules
 import (
 	"encoding/json"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen"
@@ -53,7 +54,7 @@ func TestReferenceRoleOriginalSpellDamageAttribution(t *testing.T) {
 func TestReferenceRoleOriginalMirkwoodDeparturePower(t *testing.T) {
 	def := compiledReferenceRoleOriginal(t, "Mirkwood Elk")
 	for _, power := range []int{0, 4} {
-		t.Run(string(rune('0'+power)), func(t *testing.T) {
+		t.Run(strconv.Itoa(power), func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			source := addCombatPermanent(g, game.Player2, def)
 			elf := vanillaCreature("Departure Elf", power, 4)
@@ -238,10 +239,10 @@ func TestReferenceRoleOriginalResolvingSpellReturnHandControls(t *testing.T) {
 			target := addCombatPermanent(g, game.Player2, referenceSubjectCreature(t))
 			card := addCardToHand(g, game.Player1, def)
 			g.Players[game.Player1].Hand.Remove(card)
-			spell := func(copy bool) *game.StackObject {
+			spell := func(isCopy bool) *game.StackObject {
 				return &game.StackObject{
 					ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: card, SourceCardID: card,
-					Controller: game.Player2, Flashback: tc.flashback, Copy: copy,
+					Controller: game.Player2, Flashback: tc.flashback, Copy: isCopy,
 					Targets: []game.Target{game.PermanentTarget(target.ObjectID)},
 				}
 			}

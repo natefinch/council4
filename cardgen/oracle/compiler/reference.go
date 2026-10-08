@@ -93,6 +93,11 @@ func bindReferences(
 			reference.Binding = ReferenceBindingEventRelatedPermanent
 			continue
 		}
+		if trigger != nil && triggerPatternBindsThatCreature(&trigger.Pattern) &&
+			combatStunPossessiveBindsRelated(*reference, bound[:i], effects) {
+			reference.Binding = ReferenceBindingEventRelatedPermanent
+			continue
+		}
 		if prior, ok := priorSacrificeAntecedent(*reference, effects); ok {
 			reference.Binding = ReferenceBindingPriorInstructionResult
 			reference.PriorInstruction = prior

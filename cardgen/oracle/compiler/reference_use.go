@@ -2,8 +2,10 @@ package compiler
 
 import "github.com/natefinch/council4/cardgen/oracle/parser"
 
+// ReferenceUse identifies a typed consumer's operation on its subject.
 type ReferenceUse uint8
 
+// Reference uses are proved independently of the adapter requesting them.
 const (
 	ReferenceUseMutation ReferenceUse = iota + 1
 	ReferenceUseCharacteristic
@@ -14,8 +16,10 @@ const (
 	ReferenceUsePolicy
 )
 
+// DamageAttribution separates a resolving source from an original permanent.
 type DamageAttribution uint8
 
+// Damage attribution is unsupported unless its exact source use is proved.
 const (
 	DamageAttributionUnsupported DamageAttribution = iota
 	DamageAttributionResolvingSource
@@ -123,6 +127,7 @@ func damageAmountObservesCharacteristic(kind DynamicAmountKind) bool {
 	}
 }
 
+// SupportsUse checks the owned subject's permission for the requested operation.
 func (reference CompiledReference) SupportsUse(use ReferenceUse) bool {
 	return reference.SubjectSupported() && use >= ReferenceUseMutation &&
 		use <= ReferenceUsePolicy && reference.Subject.uses&(1<<(use-1)) != 0
@@ -140,6 +145,7 @@ func (reference CompiledReference) ObjectProjectionDomain() ReferenceSubjectDoma
 	return reference.Subject.domain
 }
 
+// DamageAttribution returns the proven damage-source role.
 func (reference CompiledReference) DamageAttribution() DamageAttribution {
 	if !reference.SupportsUse(ReferenceUseAttribution) {
 		return DamageAttributionUnsupported
@@ -156,7 +162,7 @@ func (reference CompiledReference) DamageAttribution() DamageAttribution {
 	return DamageAttributionUnsupported
 }
 
-// An "another" declaration in the same resolving spell excludes its earlier
+// ExcludesPriorPermanentTargets proves an "another" declaration excludes its earlier
 // declared permanent targets, not the resolving spell's nonexistent permanent.
 func (target CompiledTarget) ExcludesPriorPermanentTargets() bool {
 	if target.subjectScope == nil || target.subjectScope.owner == nil || !target.Exact ||
@@ -186,6 +192,7 @@ func (target CompiledTarget) ExcludesPriorPermanentTargets() bool {
 	return found == 1 && prior > 0
 }
 
+// EnclosingSpellTargetOccurrence returns the exact target shared by split bodies.
 func (reference CompiledReference) EnclosingSpellTargetOccurrence() (int, bool) {
 	if !reference.SubjectSupported() || reference.Binding != ReferenceBindingTarget ||
 		reference.Subject.domain != ReferenceSubjectPermanent || reference.Subject.targetOccurrence != 0 {

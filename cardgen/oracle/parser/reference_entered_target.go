@@ -41,12 +41,10 @@ func bindEnteredTargetReferences(effects []*EffectSyntax, references []Reference
 // A typed noun naming another kind of object ("that land" after a returned
 // creature card) is not the entered product.
 func enteredNounCompatible(noun ObjectNoun, target SelectionKind) bool {
-	switch noun {
-	case ObjectNounUnknown, ObjectNounCard, ObjectNounPermanent:
+	if noun == ObjectNounUnknown || noun == ObjectNounCard || noun == ObjectNounPermanent {
 		return true
 	}
-	switch target {
-	case SelectionUnknown, SelectionCard, SelectionPermanent:
+	if target == SelectionUnknown || target == SelectionCard || target == SelectionPermanent {
 		return true
 	}
 	return selectionKindForNoun(noun) == target

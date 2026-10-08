@@ -54,7 +54,10 @@ func visitReferenceSubjectContent(content game.AbilityContent, visit func(game.P
 		for _, instruction := range mode.Sequence {
 			visit(instruction.Primitive)
 			if instruction.Primitive.Kind() == game.PrimitiveCreateReflexiveTrigger {
-				trigger := instruction.Primitive.(game.CreateReflexiveTrigger)
+				trigger, ok := instruction.Primitive.(game.CreateReflexiveTrigger)
+				if !ok {
+					panic("CreateReflexiveTrigger kind has an incompatible primitive")
+				}
 				visitReferenceSubjectContent(trigger.Trigger.Content, visit)
 			}
 		}
@@ -68,7 +71,10 @@ func TestReferenceSubjectAllInheritedOriginalSourceRoutes(t *testing.T) {
 			found := 0
 			visit := func(primitive game.Primitive) {
 				if index < 5 && primitive.Kind() == game.PrimitiveApplyContinuous {
-					grant := primitive.(game.ApplyContinuous)
+					grant, ok := primitive.(game.ApplyContinuous)
+					if !ok {
+						t.Fatalf("unexpected continuous primitive %T", primitive)
+					}
 					if grant.Object.Exists {
 						if grant.Object.Val != game.SourcePermanentReference() {
 							t.Fatalf("self-keyword subject=%v, want original permanent", grant.Object.Val)
@@ -77,7 +83,10 @@ func TestReferenceSubjectAllInheritedOriginalSourceRoutes(t *testing.T) {
 					}
 				}
 				if index >= 5 && primitive.Kind() == game.PrimitiveSacrifice {
-					sacrifice := primitive.(game.Sacrifice)
+					sacrifice, ok := primitive.(game.Sacrifice)
+					if !ok {
+						t.Fatalf("unexpected sacrifice primitive %T", primitive)
+					}
 					if sacrifice.Object != game.SourcePermanentReference() {
 						t.Fatalf("self-sacrifice subject=%v, want original permanent", sacrifice.Object)
 					}

@@ -21,9 +21,19 @@ func TestLibraryCardCharacteristicConsumersUseSeparateAvailableScalars(t *testin
 			outputs := game.LibraryCardCharacteristics{}
 			switch sequence[0].Primitive.Kind() {
 			case game.PrimitiveReveal:
-				outputs = sequence[0].Primitive.(game.Reveal).PublishCharacteristics
+				reveal, ok := sequence[0].Primitive.(game.Reveal)
+				if !ok {
+					t.Fatalf("unexpected reveal primitive %T", sequence[0].Primitive)
+				}
+				outputs = reveal.PublishCharacteristics
 			case game.PrimitiveLookAtLibraryTop:
-				outputs = sequence[0].Primitive.(game.LookAtLibraryTop).PublishCharacteristics
+				look, ok := sequence[0].Primitive.(game.LookAtLibraryTop)
+				if !ok {
+					t.Fatalf("unexpected look primitive %T", sequence[0].Primitive)
+				}
+				outputs = look.PublishCharacteristics
+			default:
+				t.Fatalf("unmodeled publisher %T", sequence[0].Primitive)
 			}
 			if outputs.Power != "sequence-effect-0-power" || outputs.Toughness != "sequence-effect-0-toughness" {
 				t.Fatalf("scalar outputs=%#v", outputs)
@@ -32,11 +42,23 @@ func TestLibraryCardCharacteristicConsumersUseSeparateAvailableScalars(t *testin
 				var quantity game.Quantity
 				switch instruction.Primitive.Kind() {
 				case game.PrimitiveDraw:
-					quantity = instruction.Primitive.(game.Draw).Amount
+					draw, ok := instruction.Primitive.(game.Draw)
+					if !ok {
+						t.Fatalf("unexpected draw primitive %T", instruction.Primitive)
+					}
+					quantity = draw.Amount
 				case game.PrimitiveGainLife:
-					quantity = instruction.Primitive.(game.GainLife).Amount
+					gain, ok := instruction.Primitive.(game.GainLife)
+					if !ok {
+						t.Fatalf("unexpected gain-life primitive %T", instruction.Primitive)
+					}
+					quantity = gain.Amount
 				case game.PrimitiveLoseLife:
-					quantity = instruction.Primitive.(game.LoseLife).Amount
+					lose, ok := instruction.Primitive.(game.LoseLife)
+					if !ok {
+						t.Fatalf("unexpected lose-life primitive %T", instruction.Primitive)
+					}
+					quantity = lose.Amount
 				default:
 					t.Fatalf("unmodeled consumer %T", instruction.Primitive)
 				}

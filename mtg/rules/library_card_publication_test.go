@@ -78,6 +78,8 @@ func TestLibraryCardPublisherClearsOnlyItsOwnUnavailableProduct(t *testing.T) {
 					instr.Condition = opt.Val(game.EffectCondition{
 						Object: game.LinkedObjectReference("missing"), PermanentType: opt.Val(types.Creature),
 					})
+				default:
+					t.Fatalf("unknown publication failure %q", failure)
 				}
 				instr.Primitive = game.LookAtLibraryTop{Player: player, PublishLinked: "observation"}
 				if reveal {
@@ -211,12 +213,15 @@ func TestLibraryCardSameKeyRevealEnvelope(t *testing.T) {
 				PublishResult: "reveal-result",
 			}
 			switch outcome {
+			case "success":
 			case "declined":
 				instr.Optional = true
 			case "condition skipped":
 				instr.CardCondition.Val.Selection.RequiredTypes = []types.Card{types.Land}
 			case "result skipped":
 				instr.ResultGate = opt.Val(game.InstructionResultGate{Key: "missing", Succeeded: game.TriTrue})
+			default:
+				t.Fatalf("unknown reveal outcome %q", outcome)
 			}
 			var agents [game.NumPlayers]PlayerAgent
 			agents[game.Player1] = &declineChoiceAgent{}

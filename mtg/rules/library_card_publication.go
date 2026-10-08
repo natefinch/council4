@@ -11,9 +11,16 @@ func libraryCardPublication(instr *game.Instruction) (game.LinkedKey, bool) {
 	}
 	switch instr.Primitive.Kind() {
 	case game.PrimitiveLookAtLibraryTop:
-		return instr.Primitive.(game.LookAtLibraryTop).PublishLinked, false
+		look, ok := instr.Primitive.(game.LookAtLibraryTop)
+		if !ok {
+			panic("LookAtLibraryTop kind has an incompatible primitive")
+		}
+		return look.PublishLinked, false
 	case game.PrimitiveReveal:
-		primitive := instr.Primitive.(game.Reveal)
+		primitive, ok := instr.Primitive.(game.Reveal)
+		if !ok {
+			panic("Reveal kind has an incompatible primitive")
+		}
 		return primitive.PublishLinked, primitive.Card.Kind == game.CardReferenceLinked &&
 			primitive.Card.LinkID == string(primitive.PublishLinked)
 	default:

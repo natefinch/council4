@@ -10,6 +10,7 @@ import (
 
 type observedPostfixAgent struct {
 	libraryPaymentAgent
+
 	answers   []bool
 	afterScry func()
 }

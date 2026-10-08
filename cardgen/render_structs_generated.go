@@ -8144,6 +8144,14 @@ func (r Renderer) renderGameMoveCard(ctx *renderCtx, v game.MoveCard) (string, e
 		lit20 := strconv.FormatBool(bool(v.PublishLinkedObjectScoped))
 		fields = append(fields, "PublishLinkedObjectScoped: "+lit20+",")
 	}
+	if v.PublishDepartureCharacteristics != (game.LibraryCardCharacteristics{}) {
+		lit21, err22 := r.renderGameLibraryCardCharacteristics(ctx, v.PublishDepartureCharacteristics)
+		if err22 != nil {
+			return "", fmt.Errorf("game.MoveCard.PublishDepartureCharacteristics: %w", err22)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "PublishDepartureCharacteristics: "+lit21+",")
+	}
 	return structLit("game.MoveCard", fields), nil
 }
 

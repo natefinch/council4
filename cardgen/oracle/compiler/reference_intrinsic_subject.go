@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+// TargetSubject issues a subject proof for a target owned by this body.
 func (content AbilityContent) TargetSubject(index int) (CompiledReference, bool) {
 	if content.subjectScope == nil || index < 0 || index >= len(content.Targets) ||
 		content.Targets[index].subjectScope != content.subjectScope {
@@ -38,8 +39,8 @@ func (content AbilityContent) DelayedSubjectReference(effect CompiledEffect, eff
 				selected.Occurrence != reference.Occurrence || selected.SubjectDomain() != reference.SubjectDomain()) {
 			return CompiledReference{}, false
 		}
-		copy := reference
-		selected = &copy
+		selectedReference := reference
+		selected = &selectedReference
 	}
 	switch subject.Kind {
 	case parser.DelayedSubjectProduct:

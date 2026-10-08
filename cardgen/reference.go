@@ -45,14 +45,12 @@ func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLow
 			return game.ObjectReference{}, false
 		default:
 			switch reference.ObjectProjectionDomain() {
-			case compiler.ReferenceSubjectPermanent:
+			case compiler.ReferenceSubjectPermanent, compiler.ReferenceSubjectTargetChoice:
 				result = game.TargetPermanentReference(reference.Occurrence)
 			case compiler.ReferenceSubjectCard:
 				result = game.TargetCardReference(reference.Occurrence)
 			case compiler.ReferenceSubjectStackObject:
 				result = game.TargetStackObjectReference(reference.Occurrence)
-			case compiler.ReferenceSubjectTargetChoice:
-				result = game.TargetPermanentReference(reference.Occurrence)
 			default:
 				return game.ObjectReference{}, false
 			}
