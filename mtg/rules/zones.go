@@ -498,12 +498,12 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 	destinationCards, _ := destinationZone(g, removed.Owner, move.actualDestination)
 	if removed.Token {
 		destinationCards.Add(removed.ObjectID)
-		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
+		move.event = emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
 	} else {
 		destinationCards.Add(removed.CardInstanceID)
 		shuffleLibraryIfRequested(g, destinationCards, move.actualDestination, move.replacement.shuffleIntoLibrary)
 		placeRedirectExileCounter(g, removed.Owner, removed.CardInstanceID, move.replacement)
-		emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
+		move.event = emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
 	}
 	for _, component := range move.componentMoves {
 		if component.faceDown {
@@ -887,7 +887,7 @@ func shuffleLibraryIfRequested(g *game.Game, cards *zone.Zone, destination zone.
 	}
 }
 
-func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controller game.PlayerID, subjectGoaded, subjectGoadedKnown bool, destination zone.Type, simultaneousID id.ID, doublers *game.ControlledTriggerDoublerSnapshot) {
+func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controller game.PlayerID, subjectGoaded, subjectGoadedKnown bool, destination zone.Type, simultaneousID id.ID, doublers *game.ControlledTriggerDoublerSnapshot) game.Event {
 	event := game.Event{
 		Controller:                controller,
 		Player:                    permanent.Owner,
@@ -910,9 +910,11 @@ func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controlle
 	}
 	event = emitZoneChangeEvent(g, event)
 	if destination == zone.Graveyard {
-		event.Kind = game.EventPermanentDied
-		emitEvent(g, event)
+		death := event
+		death.Kind = game.EventPermanentDied
+		emitEvent(g, death)
 	}
+	return event
 }
 
 func destroyPermanent(g *game.Game, objectID id.ID) (*game.Permanent, bool) {

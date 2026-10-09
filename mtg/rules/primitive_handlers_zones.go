@@ -556,8 +556,8 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 				return res
 			}
 		}
-		ownerControl := card.Kind == game.CardReferenceEvent ||
-			(card.Kind == game.CardReferenceCaptured && !prim.Recipient.Exists)
+		ownerControl := !prim.Recipient.Exists &&
+			(card.Kind == game.CardReferenceEvent || card.Kind == game.CardReferenceCaptured)
 		permanent, succeeded := r.putReferencedCardOnBattlefieldValue(
 			card,
 			recipient,

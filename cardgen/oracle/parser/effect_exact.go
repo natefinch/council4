@@ -175,7 +175,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectGainPlayerCounter:
 		return exactGainPlayerCounterEffectSyntax(effect)
 	case EffectPut:
-		return exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
+		return exactEventCardBattlefieldMove(effect) ||
+			exactCounterPlacementEffectSyntax(effect) || exactGraveyardPutEffectSyntax(effect) ||
 			exactTargetPermanentLibraryPutEffectSyntax(effect) ||
 			exactDualReferencedCounterPlacementEffectSyntax(effect) ||
 			exactCounteredSpellDestinationSyntax(effect) ||
@@ -203,7 +204,8 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 	case EffectReorderLibraryTop:
 		return exactLibraryTopReorderEffectSyntax(effect)
 	case EffectReturn:
-		return exactBounceEffectSyntax(effect) ||
+		return exactEventCardBattlefieldMove(effect) ||
+			exactBounceEffectSyntax(effect) ||
 			exactMultiBounceEffectSyntax(effect) ||
 			exactDualBounceEffectSyntax(effect) ||
 			exactMassBounceEffectSyntax(effect) ||

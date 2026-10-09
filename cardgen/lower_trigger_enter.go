@@ -199,7 +199,7 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				return game.AbilityContent{}, false
 			}
 		case zone.Battlefield:
-			if ctx.optional {
+			if !effect.Exact || ctx.optional {
 				return game.AbilityContent{}, false
 			}
 		default:
@@ -212,7 +212,8 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectPut:
-		if effect.ToZone != zone.Battlefield || ctx.optional {
+		if !effect.Exact || effect.ToZone != zone.Battlefield || ctx.optional ||
+			effect.EntersTransformed || effect.CounterKindKnown {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectCast:
@@ -237,6 +238,9 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				Source:           game.CardBattlefieldSource(eventCard),
 				EntryTapped:      effect.EntersTapped,
 				EntryTransformed: effect.EntersTransformed,
+			}
+			if effect.UnderYourControl {
+				put.Recipient = opt.Val(game.ControllerReference())
 			}
 			if effect.CounterKindKnown {
 				// Only a fixed +1/+1 counter placement is representable as an
@@ -269,11 +273,15 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			},
 		}}}.Ability(), true
 	case compiler.EffectPut:
+		put := game.PutOnBattlefield{
+			Source:      game.CardBattlefieldSource(eventCard),
+			EntryTapped: effect.EntersTapped,
+		}
+		if effect.UnderYourControl {
+			put.Recipient = opt.Val(game.ControllerReference())
+		}
 		return game.Mode{Sequence: []game.Instruction{{
-			Primitive: game.PutOnBattlefield{
-				Source:      game.CardBattlefieldSource(eventCard),
-				EntryTapped: effect.EntersTapped,
-			},
+			Primitive: put,
 		}}}.Ability(), true
 	case compiler.EffectExile:
 		move := game.MoveCard{

@@ -43,6 +43,14 @@ cannot change compilation. Event-history conditions likewise arrive as typed
 parser event syntax and a typed turn window; condition compilation reuses the
 same mechanical trigger adapters.
 
+Event-card battlefield moves retain the parser's exact, clause-owned
+`UnderYourControl` recipient through compilation and lowering as an explicit
+controller reference. An omitted recipient, including the explicit owner's
+control spelling, retains the event card's owner default. A foreign or partial
+control rider cannot acquire the controller reference from a text substring:
+the complete battlefield-move clause and the compiler-owned event subject proof
+must both be valid.
+
 `condition.go` compiles the remaining conditions from typed parser
 `ConditionClause` nodes matched to each condition by the parser-resolved
 `ClauseIndex`/`EventHistoryIndex` rather than by comparing source spans. It maps the

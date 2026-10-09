@@ -38,6 +38,7 @@ func emitEvent(g *game.Game, event game.Event) {
 		event.Kind == game.EventCardDrawn ||
 		event.Kind == game.EventBeginningOfStep ||
 		event.Kind == game.EventAttackerDeclared ||
+		event.Kind == game.EventPermanentSacrificed ||
 		event.Kind == game.EventFight ||
 		event.Kind == game.EventCompletedDungeon {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
@@ -229,36 +230,36 @@ func sacrificePermanentsSimultaneously(g *game.Game, permanents []*game.Permanen
 		return false
 	}
 	simultaneousID := g.IDGen.Next()
-	events := make([]game.Event, 0, len(permanents))
-	for _, permanent := range permanents {
-		if permanent == nil {
+	moves := preparePermanentZoneMovesInBatch(g, permanents, zone.Graveyard, simultaneousID)
+	events := make([]game.Event, 0, len(moves))
+	for i := range moves {
+		move := &moves[i]
+		if !applyPreparedPermanentZoneMove(g, move) {
 			continue
 		}
+		completed := move.event
 		events = append(events, game.Event{
 			Kind:               game.EventPermanentSacrificed,
 			SimultaneousID:     simultaneousID,
-			Controller:         effectiveController(g, permanent),
-			Player:             effectiveController(g, permanent),
-			CardID:             permanent.CardInstanceID,
-			PermanentID:        permanent.ObjectID,
-			SubjectGoaded:      isGoadedNow(g, permanent),
-			SubjectGoadedKnown: true,
-			TokenName:          permanentTokenName(permanent),
-			TokenDef:           permanent.TokenDef,
+			Controller:         completed.Controller,
+			Player:             completed.Controller,
+			CardID:             completed.CardID,
+			CardZoneVersion:    completed.CardZoneVersion,
+			PermanentID:        completed.PermanentID,
+			Face:               completed.Face,
+			FaceDown:           completed.FaceDown,
+			FromZone:           completed.FromZone,
+			ToZone:             completed.ToZone,
+			SubjectGoaded:      completed.SubjectGoaded,
+			SubjectGoadedKnown: completed.SubjectGoadedKnown,
+			TokenName:          completed.TokenName,
+			TokenDef:           completed.TokenDef,
 		})
 	}
-	if !movePermanentsToZoneSimultaneously(g, permanents, zone.Graveyard) {
-		return false
-	}
-	succeeded := false
 	for _, event := range events {
-		if _, stillOnBattlefield := permanentByObjectID(g, event.PermanentID); stillOnBattlefield {
-			continue
-		}
 		emitEvent(g, event)
-		succeeded = true
 	}
-	return succeeded
+	return len(events) > 0
 }
 
 func setPermanentTapped(g *game.Game, permanent *game.Permanent, tapped bool) {

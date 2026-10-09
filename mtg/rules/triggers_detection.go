@@ -939,7 +939,15 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
 	var captured []game.EventTriggeredAbility
-	for _, permanent := range g.Battlefield {
+	sources := g.Battlefield
+	if event.Kind == game.EventPermanentSacrificed {
+		sources = slices.Clone(sources)
+		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
+			sources = append(sources, source)
+		}
+		sources = append(sources, simultaneousLeftBattlefieldTriggerSources(g, event, g.Events)...)
+	}
+	for _, permanent := range sources {
 		if !activeBattlefieldPermanent(permanent) {
 			continue
 		}
@@ -1518,7 +1526,7 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permane
 		return &game.Permanent{
 			ObjectID:       event.PermanentID,
 			CardInstanceID: event.CardID,
-			Owner:          event.Player,
+			Owner:          snapshot.Owner,
 			Controller:     event.Controller,
 			Face:           event.Face,
 			FaceDown:       snapshot.FaceDown,
@@ -1536,7 +1544,7 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permane
 	}
 	return &game.Permanent{
 		ObjectID:     event.PermanentID,
-		Owner:        event.Player,
+		Owner:        snapshot.Owner,
 		Controller:   event.Controller,
 		Face:         event.Face,
 		FaceDown:     snapshot.FaceDown,
