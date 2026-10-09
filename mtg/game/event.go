@@ -475,7 +475,8 @@ type Event struct {
 	// TriggeredAbilitiesCaptured distinguishes an event whose battlefield
 	// triggers were checked at event time, including when none matched.
 	TriggeredAbilitiesCaptured bool
-	TriggeredAbilities         []EventTriggeredAbility
+	// Exact event-card sources may be captured while the battlefield scan is deferred.
+	TriggeredAbilities []EventTriggeredAbility
 
 	// ChosenTypeTriggerDoublers snapshots the active chosen-creature-type
 	// trigger doublers at event emission, so ordinary triggered abilities this

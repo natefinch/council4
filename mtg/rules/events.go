@@ -33,6 +33,7 @@ func emitEvent(g *game.Game, event game.Event) {
 	if event.Kind == game.EventCycled && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCycled, event.Player)
 	}
+	event.TriggeredAbilities = append(event.TriggeredAbilities, captureLibraryGraveyardSourceTriggers(g, event)...)
 	if event.Kind == game.EventDamageDealt ||
 		event.Kind == game.EventCardDrawn ||
 		event.Kind == game.EventBeginningOfStep ||

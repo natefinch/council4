@@ -903,8 +903,8 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 	defer g.EndStaticSourceFrame()
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
+		pending = append(pending, pendingTriggeredAbilitiesFromEvent(event)...)
 		if event.TriggeredAbilitiesCaptured {
-			pending = append(pending, pendingTriggeredAbilitiesFromEvent(event)...)
 			continue
 		}
 		for _, permanent := range g.Battlefield {
@@ -1144,6 +1144,9 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 				continue
 			}
 			trigger := &triggered.Trigger
+			if libraryGraveyardSelfPattern(trigger.Pattern) {
+				continue
+			}
 			if !triggerMatchesEventForController(g, permanent, controller, &trigger.Pattern, event) ||
 				!triggerInterveningIf(g, permanent, controller, trigger, &event) {
 				continue

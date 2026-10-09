@@ -203,6 +203,15 @@ attribution. A dynamic damage amount may observe an exact singular original
 target only through its own characteristic-use proof and parser node identity;
 the damage source is proved independently.
 
+An exact self Library-to-Graveyard event proves the original source card, not a
+permanent. Its damage attribution survives an owned exile, while that exile
+still requires the event card's exact zone version and actual success. This
+does not change battlefield watchers of other cards or self-death permanent LKI
+and does not grant card subjects permanent mutation. The matching event captures
+that exact card's declared ability, owner, and post-event zone/version using the
+existing event-source snapshot. Other battlefield/watchers still use ordinary
+discovery; a later card incarnation cannot acquire or duplicate this capture.
+
 Recurring upkeep, beginning-of-combat, and end-step self-card returns can carry
 an explicit graveyard function zone. The compiler requires an exact parser-owned
 return clause and finalized source/card-incarnation proofs. Lowering carries

@@ -129,6 +129,7 @@ type ReferenceSourceContext struct {
 	zone                 zone.Type
 	event                TriggerEvent
 	self                 bool
+	eventCardSource      bool
 	known                bool
 	cardCostAntecedent   bool
 	eventTypes           []types.Card
@@ -139,6 +140,7 @@ func referenceSourceContext(kind AbilityKind, sourceZone zone.Type, trigger *Com
 	source := ReferenceSourceContext{kind: kind, zone: sourceZone, known: kind != AbilityUnknown}
 	if trigger != nil {
 		source.event, source.self = trigger.Pattern.Event, trigger.Pattern.Source == TriggerSourceSelf
+		source.eventCardSource = kind == AbilityTriggered && exactLibraryGraveyardSourceEvent(trigger.Pattern)
 		source.eventTypes = append(slices.Clone(trigger.Pattern.SubjectSelection.RequiredTypes),
 			trigger.Pattern.CardSelection.RequiredTypes...)
 	}
@@ -147,7 +149,7 @@ func referenceSourceContext(kind AbilityKind, sourceZone zone.Type, trigger *Com
 
 // OriginalObjectSubject proves a battlefield source's original permanent.
 func (source ReferenceSourceContext) OriginalObjectSubject() (CompiledReference, bool) {
-	if source.scope == nil || !source.known || source.kind == AbilitySpell || source.zone != zone.Battlefield {
+	if source.scope == nil || !source.known || source.kind == AbilitySpell || source.zone != zone.Battlefield || source.eventCardSource {
 		return CompiledReference{}, false
 	}
 	return issuedIntrinsicSubject(ReferenceBindingSource, ReferenceSubjectPermanent, ReferenceLifetimeOriginalObject, source.scope), true
@@ -168,6 +170,9 @@ func (source ReferenceSourceContext) AttachedObjectSubject(effect CompiledEffect
 func (source ReferenceSourceContext) CardSubject() (CompiledReference, zone.Type, bool) {
 	if source.scope == nil || !source.known || source.kind == AbilitySpell {
 		return CompiledReference{}, zone.None, false
+	}
+	if source.eventCardSource {
+		return issuedIntrinsicSubject(ReferenceBindingEventCard, ReferenceSubjectCard, ReferenceLifetimeCardIncarnation, source.scope), zone.Graveyard, true
 	}
 	if source.self && (source.event == TriggerEventPermanentDied || source.event == TriggerEventPermanentSacrificed) {
 		return issuedIntrinsicSubject(ReferenceBindingEventCard, ReferenceSubjectCard, ReferenceLifetimeCardIncarnation, source.scope), zone.Graveyard, true
@@ -351,6 +356,8 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 			domain, lifetime = ReferenceSubjectPolicy, ReferenceLifetimePolicy
 		case referenceIsOwnedGroupPlayer(*reference, effects):
 			domain, lifetime = ReferenceSubjectPlayerGroup, ReferenceLifetimePlayer
+		case source.eventCardSource:
+			domain, lifetime = ReferenceSubjectCard, ReferenceLifetimeCardIncarnation
 		case source.self && source.event == TriggerEventSpellCast &&
 			reference.SubjectNoun == parser.ObjectNounSpell:
 			domain, lifetime = ReferenceSubjectStackObject, ReferenceLifetimeStackOccurrence
