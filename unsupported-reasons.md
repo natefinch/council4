@@ -248,6 +248,7 @@ Breakdown of the `unsupported ordered effect sequence` reason by the specific bl
 | sub-effect — unsupported can't-attack effect | 2 | 2 |
 | sub-effect — unsupported color-change effect | 2 | 2 |
 | sub-effect — unsupported lose-game effect | 2 | 2 |
+| sub-effect — unsupported permanent choice | 2 | 2 |
 | sub-effect — unsupported proliferate spell | 2 | 2 |
 | sub-effect — unsupported surveil spell | 2 | 2 |
 | sub-effect — unsupported win-game effect | 2 | 2 |
