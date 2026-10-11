@@ -9,6 +9,17 @@ import (
 
 const maxVariableRemovalTargets = 20
 
+// Keyword, actor, optionality and amount acceptance remain primitive-owned.
+func plainTargetEffect(ctx contentCtx) bool {
+	return len(ctx.content.Effects) == 1 &&
+		ctx.content.Effects[0].Exact &&
+		!ctx.content.Effects[0].Negated &&
+		len(ctx.content.Targets) == 1 &&
+		len(ctx.content.References) == 0 &&
+		len(ctx.content.Conditions) == 0 &&
+		len(ctx.content.Modes) == 0
+}
+
 // targetCardinalitySpec is shared by permanent and card target projection.
 // A printed upper-bound X needs an explicit event contract; CountEqualsX cannot
 // enforce "up to X".

@@ -939,12 +939,7 @@ func lowerAttachedCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 // branch in lowerCounterPlacementSpell, not here.
 func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool) {
 	effect := ctx.content.Effects[0]
-	if len(ctx.content.Targets) != 1 ||
-		len(ctx.content.References) != 0 ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		!effect.Exact ||
-		effect.Negated ||
+	if !plainTargetEffect(ctx) ||
 		effect.Context != parser.EffectContextController ||
 		!effect.CounterKindKnown ||
 		!compiler.CounterKindPlacementSupported(effect.CounterKind) ||
@@ -963,22 +958,9 @@ func lowerMultiTargetCounterPlacement(ctx contentCtx) (game.AbilityContent, bool
 		(target.Cardinality.Min == 1 && target.Cardinality.Max == 1) {
 		return game.AbilityContent{}, false
 	}
-	spec, ok := permanentTargetSpecWithCardinality(target)
-	if !ok {
-		return game.AbilityContent{}, false
-	}
-	sequence := make([]game.Instruction, 0, spec.MaxTargets)
-	for i := range spec.MaxTargets {
-		sequence = append(sequence, game.Instruction{Primitive: game.AddCounter{
-			Amount:      amount,
-			Object:      game.TargetPermanentReference(i),
-			CounterKind: effect.CounterKind,
-		}})
-	}
-	return game.Mode{
-		Targets:  []game.TargetSpec{spec},
-		Sequence: sequence,
-	}.Ability(), true
+	return selectedGroupTargetMode(target, func(object game.ObjectReference) game.Primitive {
+		return game.AddCounter{Amount: amount, Object: object, CounterKind: effect.CounterKind}
+	}, false)
 }
 
 // multiTargetCounterAmount resolves the per-target count for a fan-out counter

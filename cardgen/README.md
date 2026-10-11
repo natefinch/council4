@@ -702,6 +702,12 @@ Vanguard cards are excluded with explicit report reasons.
    actual-card result quantities, and departed old-controller history counts
    retain distinct, unsupported operand boundaries; an untyped iterator never
    inherits a nominal single-token amount.
+   Fixed P/T, plural counter placement and continuous target effects use the
+   same finite object fan-out builder as ordinary permanent verbs. Common
+   one-effect/one-target exactness and reference/condition/mode consumption
+   checks are shared; each primitive still owns its actor, keyword, amount,
+   duration and optionality envelope. This consolidation does not admit a new
+   group domain or change per-slot resolution, target conditions or payloads.
    Exact single-target permanent removal, including commander-conditioned
    free creature exile, composes with independently lowered alternative and
    additional spell costs; unsupported target/effect variants reject the whole
