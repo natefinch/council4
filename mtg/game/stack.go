@@ -338,6 +338,8 @@ type StackObject struct {
 
 	// ResolutionResultObjects freezes the actual members of a named result at
 	// its producing mutation, independently of later moves or linked-key reuse.
+	// A present entry is a complete available batch, including known empty;
+	// an absent entry means unavailable, incomplete, or not an object publisher.
 	ResolutionResultObjects map[string][]ObjectSnapshot
 
 	// LocalLinkedProducts addresses resolution-local links independently of a

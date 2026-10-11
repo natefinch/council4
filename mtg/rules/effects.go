@@ -240,12 +240,16 @@ type effectResolver struct {
 	conditionEvaluations map[game.ConditionKey]bool
 	optionalDecisions    map[game.OptionalDecisionKey]bool
 	resultObjects        []game.ObjectSnapshot
-	engine               *Engine
-	game                 *game.Game
-	obj                  *game.StackObject
-	agents               [game.NumPlayers]PlayerAgent
-	log                  *TurnLog
-	currentInstruction   *game.Instruction
+	// Completion/explicit decline and batch completeness are independent of
+	// the actor-acceptance receipt. Both are scoped to this instruction.
+	resultObjectsKnown       bool
+	resultObjectsUnavailable bool
+	engine                   *Engine
+	game                     *game.Game
+	obj                      *game.StackObject
+	agents                   [game.NumPlayers]PlayerAgent
+	log                      *TurnLog
+	currentInstruction       *game.Instruction
 
 	// groupOfferMember, when set, names the player currently being offered an
 	// OptionalActorGroup instruction. It resolves PlayerReferenceGroupOfferMember
@@ -334,6 +338,14 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	if instr.OptionalDecisionGate != "" && !r.optionalDecisions[instr.OptionalDecisionGate] {
 		return
 	}
+	for _, key := range game.ConsumedCardResultKeys(instr.Primitive) {
+		if r.obj == nil {
+			return
+		}
+		if _, available := r.obj.ResolutionResultObjects[string(key)]; !available {
+			return
+		}
+	}
 	if instr.Primitive == nil {
 		// A Tempting offer with a multi-primitive shared body carries no
 		// top-level primitive; resolveTemptingOffer runs the body instead.
@@ -343,11 +355,17 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	}
 	prev := r.currentInstruction
 	prevObjects := r.resultObjects
+	prevObjectsKnown := r.resultObjectsKnown
+	prevObjectsUnavailable := r.resultObjectsUnavailable
 	r.currentInstruction = instr
 	r.resultObjects = nil
+	r.resultObjectsKnown = false
+	r.resultObjectsUnavailable = false
 	defer func() {
 		r.currentInstruction = prev
 		r.resultObjects = prevObjects
+		r.resultObjectsKnown = prevObjectsKnown
+		r.resultObjectsUnavailable = prevObjectsUnavailable
 	}()
 	if instr.Optional && instr.OptionalActorGroup.Exists {
 		if instr.TemptingOffer {
@@ -382,6 +400,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	}
 	r.publishOptionalDecision(instr, accepted)
 	if !accepted {
+		r.resultObjectsKnown = true
 		if instr.PublishResult != "" {
 			r.publishInstructionResult(instr, effectResolved{accepted: false})
 		}
@@ -391,6 +410,7 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	handler := globalPrimitiveRegistry().dispatch(kind)
 	publicationAttempted = true
 	res := handler(r, instr.Primitive)
+	r.resultObjectsKnown = true
 	r.publishInstructionResult(instr, res)
 }
 
@@ -428,6 +448,7 @@ func (r *effectResolver) resolveForEachPlayerGroup(instr *game.Instruction) {
 		acted = acted.With(member)
 	}
 	if instr.PublishResult != "" {
+		r.resultObjectsKnown = true
 		r.publishInstructionResult(instr, effectResolved{
 			accepted:       true,
 			succeeded:      anySucceeded,
@@ -474,6 +495,7 @@ func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 		}
 	}
 	if instr.PublishResult != "" {
+		r.resultObjectsKnown = true
 		r.publishInstructionResult(instr, effectResolved{
 			accepted:       anyAccepted,
 			succeeded:      anySucceeded,
@@ -530,6 +552,7 @@ func (r *effectResolver) resolveTemptingOffer(instr *game.Instruction) {
 		}
 	}
 	if instr.PublishResult != "" {
+		r.resultObjectsKnown = true
 		r.publishInstructionResult(instr, effectResolved{
 			accepted:       anyAccepted,
 			succeeded:      anySucceeded,

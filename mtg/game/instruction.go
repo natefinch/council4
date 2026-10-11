@@ -356,6 +356,11 @@ func validateInstructionSequenceWithLinked(
 			return err
 		}
 		refs := instr.Primitive.instructionRefs()
+		for _, key := range refs.consumesCardResults {
+			if err := validateActualCardQuantityReference(key, *instr, seq, publishedResults); err != nil {
+				return fmt.Errorf("instruction[%d]: %w", i, err)
+			}
+		}
 		for _, key := range refs.consumesResults {
 			if _, ok := publishedResults[key]; !ok {
 				return fmt.Errorf("instruction[%d]: primitive references result key %q not yet published", i, key)

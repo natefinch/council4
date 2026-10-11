@@ -337,6 +337,8 @@ type DynamicAmount struct {
 	Player    *PlayerReference
 	CardZone  zone.Type
 	Selection *Selection
+	// PreviousEffectResult with a Selection counts frozen actual card results;
+	// without one it retains the producer's scalar amount.
 	ResultKey ResultKey
 	// LinkedKey names the exact card batch consumed by linked-card aggregate
 	// amounts. It is empty for every other dynamic amount kind.

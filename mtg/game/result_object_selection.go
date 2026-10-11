@@ -3,9 +3,32 @@ package game
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 )
+
+// ConsumedResultKeys returns the result cells read by a primitive's quantities.
+func ConsumedResultKeys(primitive Primitive) []ResultKey {
+	if primitive == nil {
+		return nil
+	}
+	return slices.Clone(primitive.instructionRefs().consumesResults)
+}
+
+// ConsumedCardResultKeys returns the snapshot batches read by typed quantities.
+func ConsumedCardResultKeys(primitive Primitive) []ResultKey {
+	if primitive == nil {
+		return nil
+	}
+	return slices.Clone(primitive.instructionRefs().consumesCardResults)
+}
+
+// PublishesResultObjects reports whether the primitive supplies actual snapshots.
+func PublishesResultObjects(primitive Primitive) bool {
+	publisher, ok := primitive.(resultObjectPublisher)
+	return ok && publisher.publishesResultObjects()
+}
 
 type resultObjectPublisher interface {
 	publishesResultObjects() bool
@@ -58,6 +81,28 @@ func ValidateResultObjectSelection(selection Selection) []string {
 		problems = append(problems, "result object selection requires unsupported contextual predicates")
 	}
 	return problems
+}
+
+func validateActualCardQuantityReference(key ResultKey, consumer Instruction, sequence []Instruction, published map[ResultKey]int) error {
+	index, ok := published[key]
+	if !ok {
+		return fmt.Errorf("actual-card quantity references result %q not yet published", key)
+	}
+	publisher, ok := sequence[index].Primitive.(resultObjectPublisher)
+	if !ok || !publisher.publishesResultCards() || sequence[index].PublishResult != key {
+		return fmt.Errorf("actual-card quantity result %q does not publish card snapshots", key)
+	}
+	if sequence[index].TemptingOffer {
+		return fmt.Errorf("actual-card quantity result %q has offer-acceptance rather than producer-acceptance semantics", key)
+	}
+	if move, ok := sequence[index].Primitive.(MoveTopOfLibrary); ok && move.FaceDown {
+		return fmt.Errorf("actual-card quantity result %q has no face-up characteristic snapshot protocol", key)
+	}
+	if !consumer.ResultGate.Exists || consumer.ResultGate.Val.Key != key ||
+		consumer.ResultGate.Val.Accepted != TriTrue {
+		return fmt.Errorf("actual-card quantity result %q requires its accepted-result availability gate", key)
+	}
+	return nil
 }
 
 func validateResultObjectGate(gate InstructionResultGate, sequence []Instruction, published map[ResultKey]int) error {

@@ -4546,6 +4546,7 @@ const (
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountReferencedCardsTotalManaValue
 	DynamicAmountRemovedCounterCount
+	DynamicAmountActualCardResultCount
 )
 
 // DynamicAmountForm identifies the exact Oracle formula used for an amount.
@@ -4597,8 +4598,9 @@ type CompiledAmount struct {
 	Colors []color.Color
 	// Operands carries the sub-amounts of a DynamicAmountMaxOf combinator; empty
 	// otherwise.
-	Operands []CompiledAmount
-	selector *CompiledSelector
+	Operands         []CompiledAmount
+	selector         *CompiledSelector
+	actualCardResult *actualCardQuantityProof
 }
 
 // Selector returns the amount's dynamic count subject selector, when present.

@@ -1930,7 +1930,9 @@ func parseEffects(sentence Sentence, tokens []shared.Token, atoms Atoms) []Effec
 			amountClause = tokensBeforeOffset(clause, tokenPTDynamicSpan.Start.Offset)
 		}
 		amount := parseEffectAmount(kind, amountClause, atoms)
-		if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
+		if forEach, ok := parseLeadingActualCardQuantity(context, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
+			amount = forEach
+		} else if forEach, ok := parseCreateForEachAmount(kind, context, tokenPTKnown, tokens[ownershipStart:tokenIndex], amount, atoms); ok {
 			amount = forEach
 		}
 		// A variable "X/X" token whose size binds through a trailing "where X is

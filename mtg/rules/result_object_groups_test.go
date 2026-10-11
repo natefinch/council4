@@ -70,7 +70,7 @@ func TestResultObjectDestroyGroupIgnoresPreventedMemberAndKeepsToken(t *testing.
 	}
 }
 
-func TestResultObjectMillGroupExcludesRedirectedMembers(t *testing.T) {
+func TestResultObjectMillGroupIncludesPublicRedirectedMembers(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	graveyardRedirectPermanent(g, game.Player1, game.TriggerControllerAny, false, types.Land)
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Land}}})
@@ -81,10 +81,10 @@ func TestResultObjectMillGroupExcludesRedirectedMembers(t *testing.T) {
 		PublishResult: "mill",
 	}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	snapshots := obj.ResolutionResultObjects["mill"]
-	if g.Players[game.Player1].Exile.Size() != 1 || len(snapshots) != 1 {
+	if g.Players[game.Player1].Exile.Size() != 1 || len(snapshots) != 2 {
 		t.Fatalf("redirected setup or actual milled members = %#v", snapshots)
 	}
-	if resultObjectsMatchSelection(g, obj, snapshots, game.Selection{RequiredTypes: []types.Card{types.Land}}) {
-		t.Fatal("redirected land matched as an actual milled card")
+	if !resultObjectsMatchSelection(g, obj, snapshots, game.Selection{RequiredTypes: []types.Card{types.Land}}) {
+		t.Fatal("publicly redirected land was lost from the actual milled-card batch")
 	}
 }

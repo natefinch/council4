@@ -64,6 +64,14 @@ func lowerDynamicAmountKind(amount compiler.CompiledAmount, object game.ObjectRe
 	}
 	dynamic := game.DynamicAmount{Multiplier: amount.Multiplier}
 	switch amount.DynamicKind {
+	case compiler.DynamicAmountActualCardResultCount:
+		selection, ok := actualCardQuantitySelection(amount)
+		if !ok {
+			return game.DynamicAmount{}, false
+		}
+		dynamic.Kind = game.DynamicAmountPreviousEffectResult
+		dynamic.ResultKey = actualCardQuantityKey(amount.ProducerClauseID)
+		dynamic.Selection = &selection
 	case compiler.DynamicAmountCount:
 		if dynamic, ok := dynamicCardZoneAmount(amount.Selector(), amount.Multiplier); ok {
 			return dynamic, true

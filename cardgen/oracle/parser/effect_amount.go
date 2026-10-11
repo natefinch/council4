@@ -1029,6 +1029,14 @@ func parseDynamicTriggeringPlayerHandSizeSubject(tokens []shared.Token, start in
 // maintainability budget; the remaining inline switch handles the shorter
 // keyword-phrase forms.
 func parseDynamicAmountSubjectHelper(tokens []shared.Token, start int, atoms Atoms) (dynamicAmountSubject, bool) {
+	if equalWord(tokens[start], "card") || equalWord(tokens[start], "cards") {
+		if subject, ok := parseDynamicEventCardCountSubject(tokens, start); ok {
+			return subject, true
+		}
+	}
+	if subject, ok := parseActualCardResultSubject(tokens, start, atoms); ok {
+		return subject, true
+	}
 	if effectWordsAt(tokens, start, "counters", "removed", "this", "way") &&
 		dynamicAmountBoundary(tokens, start+4) {
 		return dynamicAmountSubject{
@@ -2282,9 +2290,16 @@ func parseDynamicEventCardCountSubject(tokens []shared.Token, start int) (dynami
 		return dynamicAmountSubject{}, false
 	}
 	end += 2
+	outcome := EffectDraw
+	if equalWord(tokens[start+1], "discarded") {
+		outcome = EffectDiscard
+	}
 	return dynamicAmountSubject{
-		amount: EffectAmountSyntax{DynamicKind: EffectDynamicAmountEventCardCount},
-		end:    end, count: true, plural: strings.EqualFold(tokens[start].Text, "cards"),
+		amount: EffectAmountSyntax{
+			DynamicKind:   EffectDynamicAmountEventCardCount,
+			ResultOutcome: outcome,
+		},
+		end: end, count: true, plural: strings.EqualFold(tokens[start].Text, "cards"),
 	}, true
 }
 

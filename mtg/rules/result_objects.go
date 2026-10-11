@@ -13,7 +13,8 @@ func (r *effectResolver) publishInstructionResult(instruction *game.Instruction,
 		return
 	}
 	recordResultKey(r.obj, instruction.PublishResult, result)
-	if r.obj == nil || len(r.resultObjects) == 0 {
+	if r.obj == nil || !r.resultObjectsKnown || r.resultObjectsUnavailable ||
+		!game.PublishesResultObjects(instruction.Primitive) {
 		return
 	}
 	if r.obj.ResolutionResultObjects == nil {
@@ -28,15 +29,24 @@ func (r *effectResolver) rememberResultObject(ref game.LinkedObjectRef) {
 	}
 	if ref.ObjectID != 0 {
 		if snapshot, ok := lastKnownObject(r.game, ref.ObjectID); ok {
+			r.resultObjectsKnown = true
 			r.resultObjects = append(r.resultObjects, resultCharacteristicSnapshot(snapshot))
+		} else {
+			r.resultObjectsUnavailable = true
 		}
 		return
 	}
 	card, ok := r.game.GetCardInstance(ref.CardID)
 	if !ok || card.Def == nil {
+		r.resultObjectsUnavailable = true
+		return
+	}
+	if r.game.Players[card.Owner].Exile.IsFaceDown(card.ID) {
+		r.resultObjectsUnavailable = true
 		return
 	}
 	face := card.Def.DefaultFace()
+	r.resultObjectsKnown = true
 	r.resultObjects = append(r.resultObjects, resultCharacteristicSnapshot(game.ObjectSnapshot{
 		CardID: card.ID, Name: face.Name, Owner: card.Owner, Controller: card.Owner,
 		ZoneCards: []game.ZoneCardSnapshot{{CardID: card.ID, ZoneVersion: card.ZoneVersion}},

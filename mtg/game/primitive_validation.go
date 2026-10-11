@@ -643,6 +643,14 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if dynamic.ResultKey == "" {
 			return errors.New("previous-result quantity requires a result key")
 		}
+		if dynamic.Selection != nil {
+			if dynamic.Kind != DynamicAmountPreviousEffectResult {
+				return errors.New("actual-card result selection requires a previous-result quantity")
+			}
+			if problems := ValidateResultObjectSelection(*dynamic.Selection); len(problems) != 0 {
+				return fmt.Errorf("actual-card result quantity: %s", problems[0])
+			}
+		}
 	case DynamicAmountChosenNumber:
 		if dynamic.ResultKey == "" {
 			return errors.New("chosen-number quantity requires a choice key")
