@@ -1724,8 +1724,9 @@ func TestParseColorSpellTargetExactness(t *testing.T) {
 		{"Counter target multicolored spell.", true},
 		// Monocolored spells have no canonical predicate yet and stay fail-closed.
 		{"Counter target monocolored spell.", false},
-		// A color combined with a card-type filter is not reconstructed.
-		{"Counter target blue creature spell.", false},
+		{"Counter target blue creature spell.", true},
+		// A color on a union can be branch-local, unlike a singleton type.
+		{"Counter target blue creature or enchantment spell.", false},
 		// Two colors are not reconstructed and must stay fail-closed.
 		{"Counter target blue and white spell.", false},
 	}

@@ -652,6 +652,13 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 			if i > 0 && equalWord(tokens[i-1], "from") {
 				continue
 			}
+			// The article in a controller atom ("an opponent controls") is
+			// part of the selector, not a one-object effect amount.
+			if i+3 <= len(tokens) {
+				if _, ok := atoms.ControllerIn(shared.SpanOf(tokens[i : i+3])); ok {
+					continue
+				}
+			}
 			// The determiner "another" denotes a single object other than the
 			// effect's source ("Sacrifice another creature."); its count is one,
 			// exactly like "a"/"an". The "another"/"other" exclusion itself rides

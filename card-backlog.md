@@ -10,14 +10,14 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33011
-- Supported (generated): 18655
-- Parser-complete: 22818
-- **Lowering backlog** (parser-complete, not generated): 4920
+- Supported (generated): 18664
+- Parser-complete: 22814
+- **Lowering backlog** (parser-complete, not generated): 4911
 - **Parser backlog** (not parser-complete, not generated): 9436
 
-Partition check: 18655 supported + 4920 lowering-backlog + 9436 parser-backlog = 33011 eligible. ✓
+Partition check: 18664 supported + 4911 lowering-backlog + 9436 parser-backlog = 33011 eligible. ✓
 
-757 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+761 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
@@ -74,8 +74,8 @@ Partition check: 18655 supported + 4920 lowering-backlog + 9436 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18655
-- Independent per-card recompile generated: 18655
+- Authoritative generated (compilecards report): 18664
+- Independent per-card recompile generated: 18664
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1721 | 1069 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 523 | 2 | Dazzling Sphinx; Planebound Accomplice; Puresight Merrow; Mindclaw Shaman; Remembrance |
+| 1 | unsupported ordered effect sequence | 1717 | 1069 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 519 | 2 | Dazzling Sphinx; Planebound Accomplice; Puresight Merrow; Mindclaw Shaman; Remembrance |
 | 3 | unsupported static declaration operation | 280 | 235 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 275 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 222 | 117 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
@@ -117,9 +117,9 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 31 | unsupported attach effect | 36 | 31 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
 | 32 | unsupported library placement | 36 | 23 | Misinformation; Murderous Rider // Swift End; Landscaper Colos; Drafna's Restoration; Blade of the Swarm |
 | 33 | unsupported mana effect | 33 | 27 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
-| 34 | unsupported counter spell | 31 | 25 | Spell Blast; Drown in the Loch; Unyaro Griffin; Hisoka's Defiance; Frontline Medic |
-| 35 | unsupported shuffle effect | 29 | 24 | Dwell on the Past; Life's Finale; Madblind Mountain; Perpetual Timepiece; Renewing Touch |
-| 36 | unsupported parameterized keyword | 28 | 23 | Goblin Barrage; Vexing Scuttler; Ulamog's Dreadsire; Garruk's Harbinger; Sporeweb Weaver |
+| 34 | unsupported shuffle effect | 29 | 24 | Dwell on the Past; Life's Finale; Madblind Mountain; Perpetual Timepiece; Renewing Touch |
+| 35 | unsupported parameterized keyword | 28 | 23 | Goblin Barrage; Vexing Scuttler; Ulamog's Dreadsire; Garruk's Harbinger; Sporeweb Weaver |
+| 36 | unsupported counter spell | 26 | 21 | Spell Blast; Drown in the Loch; Unyaro Griffin; Hisoka's Defiance; Frontline Medic |
 | 37 | unsupported mana symbol | 23 | 21 | Pit of Offerings; Blinkmoth Urn; Elemental Resonance; Inner Fire; Songs of the Damned |
 | 38 | unsupported activation timing | 23 | 20 | Vivi Ornitier; Ebon Praetor; Hall of Oracles; Tomb Tyrant; In the Trenches |
 | 39 | unsupported tap spell | 21 | 18 | Torrent Elemental; Dawnglare Invoker; Tectonic Instability; Arena of the Ancients; Naya Charm |
@@ -142,7 +142,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 56 | unsupported target count parameter | 11 | 10 | Rampaging War Mammoth; Aether Burst; Crackle with Power; Mogis's Marauder; Reap |
 | 57 | unsupported untap spell | 11 | 9 | Early Harvest; The Thirteenth Doctor; Jiang Yanggu, Never Alone; Urtet, Remnant of Memnarch; Merrow Commerce |
 | 58 | unsupported manifest spell | 11 | 8 | Orcish Spy; They Came from the Pipes; Smoke Teller; Omarthis, Ghostfire Initiate; Etrata, Deadly Fugitive |
-| 59 | unsupported overload effect | 11 | 5 | Mizzium Skin; Corporeal Projection; Mind Rake; Break the Ice; Weapon Surge |
+| 59 | unsupported overload effect | 11 | 6 | Mizzium Skin; Corporeal Projection; Mind Rake; Break the Ice; Weapon Surge |
 | 60 | validation failed: invalid-ability-body | 10 | 10 | Sachi, Daughter of Seshiro; Gift of Paradise; Forgotten Monument; Thranduil the Strategist; Find the Path |
 
 ## Parser queue

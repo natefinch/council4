@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,655 of 33,011 cards eligible for paper support (56.5%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,664 of 33,011 cards eligible for paper support (56.5%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -730,6 +730,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Ardoz, Cobbler of War
 - Arena Athlete
 - Arena Trickster
+- Arenson's Aura
 - Ares, God of War
 - Argent Mutation
 - Argent Sphinx
@@ -4186,6 +4187,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Draconic Muralists
 - Draconic Visitor
 - Dracosaur Auxiliary
+- Drafna, Founder of Lat-Nam
 - Drag Down
 - Drag the Canal
 - Drag to the Bottom
@@ -5094,6 +5096,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Exotic Orchard
 - Expanded Anatomy
 - Expanding Ooze
+- Expansion // Explosion
 - Expedite
 - Expedition Champion
 - Expedition Envoy
@@ -7078,6 +7081,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Gutless Ghoul
 - Gutter Skulk
 - Guttersnipe
+- Guttural Response
 - Guul Draz Assassin
 - Guul Draz Mucklord
 - Gwaihir, Greatest of the Eagles
@@ -8141,6 +8145,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Invasion of Segovia // Caetus, Sea Tyrant of Segovia
 - Invasion of Shandalar // Leyline Surge
 - Invasion of Tolvada // The Broken Sky
+- Invasion of Vryn // Overloaded Mage-Ring
 - Invasion of Xerex // Vertex Paladin
 - Invasion Reinforcements
 - Invasion Tactics
@@ -8251,6 +8256,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Izzet Chronarch
 - Izzet Cluestone
 - Izzet Guildgate
+- Izzet Guildmage
 - Izzet Locket
 - Izzet Signet
 - Jace
@@ -12748,6 +12754,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Reviving Dose
 - Reviving Melody
 - Revoke Existence
+- Revolutionary Rebuff
 - Revolutionist
 - Rewards of Diversity
 - Rewind
@@ -14460,6 +14467,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Slice and Dice
 - Slice in Twain
 - Slicer, Hired Muscle // Slicer, High-Speed Antagonist
+- Slick Imitator
 - Slickshot Show-Off
 - Slime Molding
 - Slimebind
@@ -15958,6 +15966,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Teeterpeak Ambusher
 - Teething Wurmlet
 - Teferi's Ageless Insight
+- Teferi's Care
 - Teferi's Honor Guard
 - Teferi's Protection
 - Teferi's Protege

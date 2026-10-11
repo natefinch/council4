@@ -461,6 +461,9 @@ func enumeratedTargetCardinality(tokens []shared.Token, i int) (int, TargetCardi
 }
 
 func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
+	if selection.Kind == SelectionSpell {
+		return exactStackSpellTargetSyntax(joinedEffectText(tokens), cardinality, selection)
+	}
 	if exactGraveyardCardInPhraseTargetSyntax(tokens, cardinality, selection) ||
 		exactGraveyardCardTargetSyntax(&TargetSyntax{
 			Text: joinedEffectText(tokens), Cardinality: cardinality, Selection: selection,
@@ -504,6 +507,9 @@ func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinali
 // set of single-target qualifiers; exactRuntimeTargetSyntax also reuses it for
 // the "up to one target <noun>" optional form after stripping the count words.
 func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bool {
+	if selection.Kind == SelectionSpell {
+		return exactStackSpellTargetSyntax(text, TargetCardinalitySyntax{Min: 1, Max: 1}, selection)
+	}
 	if len(selection.Alternatives) > 0 && exactKeywordUnionTargetSyntax(text, selection) {
 		return true
 	}
@@ -582,47 +588,6 @@ func exactSinglePermanentTargetSyntax(text string, selection SelectionSyntax) bo
 			selectionHasCounterAbilityQualifier(selection)
 	case SelectionTriggeredAbilityOrSpell:
 		return selectionHasCounterAbilityQualifier(selection)
-	case SelectionSpell:
-		base := strings.ToLower(text)
-		if len(selection.SpellTargetRestrictions) > 0 {
-			clause, ok := spellTargetRestrictionsClause(selection.SpellTargetRestrictions)
-			if !ok {
-				return false
-			}
-			trimmed, had := strings.CutSuffix(base, clause)
-			if !had {
-				return false
-			}
-			base = trimmed
-		}
-		if selection.MatchManaValue {
-			rider, ok := targetManaValueRider(selection.ManaValue)
-			if !ok {
-				return false
-			}
-			trimmed, had := strings.CutSuffix(base, rider)
-			if !had {
-				return false
-			}
-			base = trimmed
-		}
-		switch base {
-		case "target spell", "target instant spell", "target sorcery spell", "target creature spell",
-			"target artifact spell", "target noncreature spell":
-			return true
-		}
-		if len(selection.RequiredTypesAny) >= 2 {
-			return exactTypeUnionTargetSyntax(base, selection)
-		}
-		return exactSpellColorTargetSyntax(base, selection)
-	case SelectionCreature:
-		if strings.EqualFold(text, "target creature spell") {
-			return true
-		}
-	case SelectionArtifact:
-		if strings.EqualFold(text, "target artifact spell") {
-			return true
-		}
 	default:
 	}
 
@@ -699,6 +664,9 @@ func exactTargetChoiceSpan(
 // failing closed for every other qualifier so unsupported plural wordings keep
 // failing the byte-exact round-trip.
 func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
+	if selection.Kind == SelectionSpell {
+		return exactStackSpellTargetSyntax(text, cardinality, selection)
+	}
 	if selectionHasCounterQualifier(selection) {
 		base, ok := massCounterBasePhrase(&selection, text)
 		if !ok {
@@ -715,15 +683,6 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		cardinality.Min == 0 && cardinality.Max == 99) &&
 		selection.Kind != SelectionAny && selection.Kind != SelectionPlayer {
 		return exactCountedPermanentTargetSyntax(text, prefix, selection)
-	}
-
-	// A spell target ("any number of target spells", "up to two target instant
-	// spells") pluralizes a spell noun the permanent path below cannot
-	// reconstruct. Reconstruct it through the single-target spell rules so a
-	// plural spell target admits exactly the qualifiers the single-target form
-	// supports and no others.
-	if selection.Kind == SelectionSpell {
-		return exactMultiSpellTargetSyntax(text, prefix, plural, selection)
 	}
 
 	if selection.All || selection.Another ||
@@ -814,32 +773,6 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 		return false
 	}
 	return strings.EqualFold(text, expected)
-}
-
-// exactMultiSpellTargetSyntax reconstructs the canonical Oracle phrase for a
-// variable-count or plural spell target ("any number of target spells", "up to
-// two target instant spells", "two target blue spells") by singularizing the
-// plural head noun and delegating to the single-target spell reconstruction. A
-// plural spell target therefore admits exactly the qualifiers the single-target
-// form supports (bare type nouns, single color, type unions, mana-value riders,
-// and spell-target restrictions) and no others, so any wording the single form
-// rejects stays non-exact and lowering fails closed. The head noun is the first
-// "spells" token: every supported qualifier precedes it and every rider follows
-// it, so singularizing that one token reproduces the exact single-target phrase.
-func exactMultiSpellTargetSyntax(text, prefix string, plural bool, selection SelectionSyntax) bool {
-	if !strings.HasPrefix(strings.ToLower(text), strings.ToLower(prefix)) {
-		return false
-	}
-	remainder := text[len(prefix):]
-	if plural {
-		const pluralNoun = " spells"
-		idx := strings.Index(strings.ToLower(remainder), pluralNoun)
-		if idx < 0 {
-			return false
-		}
-		remainder = remainder[:idx] + " spell" + remainder[idx+len(pluralNoun):]
-	}
-	return exactSinglePermanentTargetSyntax(remainder, selection)
 }
 
 func selectionHasCounterQualifier(selection SelectionSyntax) bool {
@@ -977,58 +910,6 @@ func cardinalWord(n int) (string, bool) {
 	default:
 		return "", false
 	}
-}
-
-// exactSpellColorTargetSyntax reconstructs the canonical Oracle phrase for a
-// color-qualified spell target the executable backend can represent: a single
-// color ("target blue spell"), a single excluded color ("target nonblue spell"),
-// "target colorless spell", or "target multicolored spell". It fails closed for
-// any combination of color shapes, monocolored spells, type/subtype/supertype
-// filters, or controller and zone qualifiers, keeping unsupported wordings out of
-// the byte-exact round-trip.
-func exactSpellColorTargetSyntax(text string, selection SelectionSyntax) bool {
-	if selection.All || selection.Another || selection.Other ||
-		selection.Attacking || selection.Blocking || selection.Tapped || selection.Untapped ||
-		selection.Controller != SelectionControllerAny ||
-		selection.Keyword != KeywordUnknown || selection.Zone != zone.None ||
-		selection.MatchManaValue || selection.MatchPower || selection.MatchToughness ||
-		selection.PowerLessThanSource || selection.PowerGreaterThanSource ||
-		len(selection.RequiredTypesAny) != 0 || len(selection.ExcludedTypes) != 0 ||
-		len(selection.Supertypes) != 0 || len(selection.SubtypesAny) != 0 {
-		return false
-	}
-	colorShapes := len(selection.ColorsAny) + len(selection.ExcludedColors)
-	if selection.Colorless {
-		colorShapes++
-	}
-	if selection.Multicolored {
-		colorShapes++
-	}
-	if colorShapes != 1 {
-		return false
-	}
-	var qualifier string
-	switch {
-	case len(selection.ColorsAny) == 1:
-		word, ok := colorWord(selection.ColorsAny[0])
-		if !ok {
-			return false
-		}
-		qualifier = word
-	case len(selection.ExcludedColors) == 1:
-		word, ok := colorWord(selection.ExcludedColors[0])
-		if !ok {
-			return false
-		}
-		qualifier = "non" + word
-	case selection.Colorless:
-		qualifier = "colorless"
-	case selection.Multicolored:
-		qualifier = "multicolored"
-	default:
-		return false
-	}
-	return strings.EqualFold(text, "target "+qualifier+" spell")
 }
 
 // exactPermanentTargetText reconstructs the canonical Oracle phrase for a single
@@ -1512,14 +1393,7 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 		len(selection.SubtypesAny) != 0 || len(selection.SourceTypes) != 0 {
 		return false
 	}
-	spellUnion := selection.Kind == SelectionSpell
-	cardTypeNoun := permanentCardTypeNoun
-	if spellUnion {
-		if selection.MatchManaValue || len(selection.ExcludedTypes) != 0 {
-			return false
-		}
-		cardTypeNoun = cardTypeWord
-	} else if _, ok := permanentSelectionNoun(selection.Kind); !ok {
+	if _, ok := permanentSelectionNoun(selection.Kind); !ok {
 		return false
 	}
 	// A single excluded card type renders as a "non<type>" qualifier on the type
@@ -1545,7 +1419,7 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 			return false
 		}
 		seen[cardType] = true
-		noun, ok := cardTypeNoun(cardType)
+		noun, ok := permanentCardTypeNoun(cardType)
 		if !ok {
 			return false
 		}
@@ -1560,7 +1434,7 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 		unions = []string{excludedPrefix + joinUnionNouns(nouns), joinUnionNouns(prefixed)}
 	}
 	for _, union := range unions {
-		expected, ok := typeUnionTargetExpected(union, spellUnion, selection)
+		expected, ok := typeUnionTargetExpected(union, selection)
 		if ok && strings.EqualFold(text, expected) {
 			return true
 		}
@@ -1568,7 +1442,7 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 	return false
 }
 
-// typeUnionTargetExpected appends the spell, controller, and mana-value suffixes
+// typeUnionTargetExpected appends the controller and mana-value suffixes
 // shared by every type-union target rendering to a reconstructed union noun
 // phrase. A trailing "with mana value N or less/greater" qualifies the whole
 // union ("target creature or planeswalker with mana value 3 or less"); every
@@ -1577,19 +1451,13 @@ func exactTypeUnionTargetSyntax(text string, selection SelectionSyntax) bool {
 // creatures and would silently drop the non-creature members. Only the
 // controller-free wording carries a mana-value qualifier, so a union mixing one
 // with a controller clause fails the round-trip closed.
-func typeUnionTargetExpected(union string, spellUnion bool, selection SelectionSyntax) (string, bool) {
+func typeUnionTargetExpected(union string, selection SelectionSyntax) (string, bool) {
 	expected := "target " + union
 	if selection.Another {
 		// "another target creature, planeswalker, or battle" (Cosmic Hunger): the
 		// "another" self-exclusion determiner replaces "target". It applies only
 		// to permanent unions; lowering maps Another to an ExcludeSource filter.
-		if spellUnion {
-			return "", false
-		}
 		expected = "another target " + union
-	}
-	if spellUnion {
-		expected += " spell"
 	}
 	switch selection.Controller {
 	case SelectionControllerAny:

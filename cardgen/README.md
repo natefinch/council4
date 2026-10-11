@@ -27,6 +27,17 @@ unsupported with parser-owned parameter diagnostics.
 Placement as an "If/When you do" resolving cost also refuses: best-effort movement
 cannot model all-or-nothing payment, including successful zero-card payment.
 
+Stack-spell targets share one parser-owned, fully consumed selector grammar for
+single and plural counts. Existing card-type atoms, pure type unions, controller
+relations, fixed mana-value bounds, and one color qualifier compose through the
+same target-spec projection for counter, tax, stack exile, copy, control, and
+retarget effects. Colors and excluded types may qualify a single required type;
+they do not qualify type unions because flattened atoms lose branch-local scope.
+Multi-color alternatives, subtype/supertype/keyword/combat riders, ownership,
+zones, and dynamic mana-value bounds remain unsupported. Verbs retain their
+own target-count, reference, payment, and payload policies; recognizing a plural
+selector does not grant a single-target verb a group effect.
+
 Ordinary life, draw, and card-count actions share one typed player-recipient
 adapter and single/group mode builder. Parser-owned actor context, reference
 binding and target occurrence determine the recipient; inherited permanent and
