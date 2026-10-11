@@ -2029,21 +2029,15 @@ func lowerFixedModifyPTSpell(
 // non-creature selector) so callers fall back to the dynamic single-creature
 // path and the fail-closed diagnostic.
 func lowerFixedModifyPTTargets(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Targets) != 1 ||
-		len(ctx.content.References) != 0 ||
-		ctx.optional {
+	if !plainTargetEffect(ctx) || ctx.optional {
 		return game.AbilityContent{}, false
 	}
 	effect := &ctx.content.Effects[0]
-	if !effect.Exact ||
-		effect.Negated ||
-		effect.Duration != compiler.DurationUntilEndOfTurn ||
+	if effect.Duration != compiler.DurationUntilEndOfTurn ||
 		effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
 		!modifyPTSideResolved(effect.PowerDelta) ||
 		!modifyPTSideResolved(effect.ToughnessDelta) ||
-		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
 		!validModifyPTAmount(effect, len(ctx.content.References)) {
 		return game.AbilityContent{}, false
 	}
@@ -2051,27 +2045,14 @@ func lowerFixedModifyPTTargets(ctx contentCtx) (game.AbilityContent, bool) {
 	if !pumpTargetSelector(target.Selector) {
 		return game.AbilityContent{}, false
 	}
-	targetSpec, ok := permanentTargetSpecWithCardinality(target)
-	if !ok || targetSpec.MaxTargets < 1 {
-		return game.AbilityContent{}, false
-	}
 	powerDelta := modifyPTSideQuantity(effect.PowerDelta)
 	toughnessDelta := modifyPTSideQuantity(effect.ToughnessDelta)
-	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
-	for i := range targetSpec.MaxTargets {
-		sequence = append(sequence, game.Instruction{
-			Primitive: game.ModifyPT{
-				Object:         game.TargetPermanentReference(i),
-				PowerDelta:     powerDelta,
-				ToughnessDelta: toughnessDelta,
-				Duration:       game.DurationUntilEndOfTurn,
-			},
-		})
-	}
-	return game.Mode{
-		Targets:  []game.TargetSpec{targetSpec},
-		Sequence: sequence,
-	}.Ability(), true
+	return selectedGroupTargetMode(target, func(object game.ObjectReference) game.Primitive {
+		return game.ModifyPT{
+			Object: object, PowerDelta: powerDelta, ToughnessDelta: toughnessDelta,
+			Duration: game.DurationUntilEndOfTurn,
+		}
+	}, false)
 }
 
 // modifyPTSideResolved reports whether one power/toughness delta side of a

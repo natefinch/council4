@@ -236,22 +236,13 @@ func continuousTargetMode(
 	duration game.EffectDuration,
 	unsupported func() (game.AbilityContent, *shared.Diagnostic),
 ) (game.AbilityContent, *shared.Diagnostic) {
-	spec, ok := permanentTargetSpecWithCardinality(target)
-	if !ok || spec.MaxTargets < 1 {
+	content, ok := selectedGroupTargetMode(target, func(object game.ObjectReference) game.Primitive {
+		return game.ApplyContinuous{
+			Object: opt.Val(object), ContinuousEffects: continuousEffects, Duration: duration,
+		}
+	}, false)
+	if !ok {
 		return unsupported()
 	}
-	sequence := make([]game.Instruction, 0, spec.MaxTargets)
-	for i := range spec.MaxTargets {
-		sequence = append(sequence, game.Instruction{
-			Primitive: game.ApplyContinuous{
-				Object:            opt.Val(game.TargetPermanentReference(i)),
-				ContinuousEffects: continuousEffects,
-				Duration:          duration,
-			},
-		})
-	}
-	return game.Mode{
-		Targets:  []game.TargetSpec{spec},
-		Sequence: sequence,
-	}.Ability(), nil
+	return content, nil
 }

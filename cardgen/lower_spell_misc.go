@@ -1885,20 +1885,15 @@ func lowerMultiTargetPermanentSpell(
 	primitiveFactory func(object game.ObjectReference) game.Primitive,
 	acceptsSelectedGroup bool,
 ) (game.AbilityContent, bool) {
-	if len(ctx.content.Targets) != 1 {
+	if !plainTargetEffect(ctx) {
 		return game.AbilityContent{}, false
 	}
 	target := ctx.content.Targets[0]
 	if targetCardinalityIsOne(target) ||
-		ctx.content.Effects[0].Negated ||
 		ctx.content.Effects[0].Optional ||
-		!ctx.content.Effects[0].Exact ||
 		ctx.optional ||
 		ctx.content.Effects[0].Context != parser.EffectContextController ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+		len(ctx.content.Keywords) != 0 {
 		return game.AbilityContent{}, false
 	}
 	return selectedGroupTargetMode(target, primitiveFactory, acceptsSelectedGroup)
