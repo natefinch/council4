@@ -2312,7 +2312,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Contraband Livestock** — unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported token creation
 - **Contract** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: if it's attacking one of your opponents
 - **Contract from Below** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Remove this card from your deck before playing if you're not playing for ante.; unsupported ability content: the executable source backend does not yet lower this ability content; unsupported ordered effect sequence: sub-effect — unsupported discard spell
-- **Contractual Safeguard** — unsupported ordered effect sequence: sub-effect — unsupported counter placement
+- **Contractual Safeguard** — unsupported ordered effect sequence: sub-effect — unsupported permanent choice; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Controlled Instincts** — unsupported Enchant ability: the executable source backend supports only exact Enchant with a supported target kind
 - **Controvert** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Recover {2}{U}{U} (When a creature is put into your graveyard from the battlefield, you may pay {2}{U}{U}. If you do, return this card from your graveyard to your hand. Otherwise, exile this card.); unsupported ability content: the executable source backend does not yet lower this ability content
 - **Conundrum Sphinx** — unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
@@ -7631,7 +7631,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Metamorphosis Fanatic** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Miracle {1}{B} (You may cast this card for its miracle cost when you draw it if it's the first card you drew this turn.); unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Metathran Aerostat** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Metathran Elite** — unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition
-- **Meteor Crater** — unsupported ordered effect sequence: sub-effect — unsupported mana symbol
+- **Meteor Crater** — unsupported ordered effect sequence: sub-effect — unsupported permanent choice; unsupported ordered effect sequence: sub-effect — unsupported mana symbol
 - **Meteor Shower** — unsupported divided damage spell: the executable source backend supports only an exact fixed or X total divided among one supported multi-target spec
 - **Meteor Swarm** — unsupported divided damage spell: the executable source backend supports only an exact fixed or X total divided among one supported multi-target spec
 - **Meticulous Excavation** — unsupported Unearth ability: the executable source backend supports only exact Unearth with a mana cost

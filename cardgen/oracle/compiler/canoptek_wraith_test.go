@@ -37,29 +37,20 @@ func TestCompileCanoptekWraithBindsChoiceAndSourcePayment(t *testing.T) {
 
 func TestChosenPermanentSearchBindingIsTextAndPositionBlind(t *testing.T) {
 	t.Parallel()
-	effects := []CompiledEffect{
-		{Kind: EffectChoosePermanent, Text: "unrelated"},
-		{
-			Kind:                         EffectSearch,
-			Text:                         "not oracle text",
-			SearchSameNameAsChosenObject: true,
-			References: []CompiledReference{{
-				Kind:             ReferenceThatObject,
-				Binding:          ReferenceBindingPriorInstructionResult,
-				PriorInstruction: 0,
-			}},
-		},
+	content := compileChosenNameBody(t, "Choose a land you control. "+chosenLandSearch)
+	for i := range content.Effects {
+		content.Effects[i].Text = "opaque"
+		content.Effects[i].Span = shared.Span{}
+		content.Effects[i].VerbSpan = shared.Span{}
+	}
+	resolveChosenPermanentSearchNames(&content)
+	if !content.Effects[1].SearchNameFromChosenPermanent || content.Effects[1].UnsupportedDetail != "" {
+		t.Fatalf("bound = %v, unsupported = %q", content.Effects[1].SearchNameFromChosenPermanent, content.Effects[1].UnsupportedDetail)
 	}
 
-	resolveChosenPermanentSearchNames(effects)
-	if !effects[1].SearchNameFromChosenPermanent || effects[1].UnsupportedDetail != "" {
-		t.Fatalf("bound = %v, unsupported = %q", effects[1].SearchNameFromChosenPermanent, effects[1].UnsupportedDetail)
-	}
-
-	effects[0].Kind = EffectDraw
-	effects[1].SearchNameFromChosenPermanent = false
-	resolveChosenPermanentSearchNames(effects)
-	if effects[1].UnsupportedDetail == "" {
+	content.Effects[0].Kind = EffectDraw
+	resolveChosenPermanentSearchNames(&content)
+	if content.Effects[1].UnsupportedDetail == "" || content.Effects[1].SearchNameFromChosenPermanent {
 		t.Fatal("non-choice antecedent was accepted")
 	}
 }

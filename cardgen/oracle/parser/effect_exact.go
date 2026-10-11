@@ -268,9 +268,13 @@ func exactChoosePermanentEffectSyntax(effect *EffectSyntax) bool {
 		effect.Selection.Kind == SelectionUnknown {
 		return false
 	}
+	phrase, ok := exactControlledBounceSelectionText(effect.Selection)
 	text := exactEffectClauseText(effect)
-	return strings.HasPrefix(strings.ToLower(text), "choose a ") ||
-		strings.HasPrefix(strings.ToLower(text), "choose an ")
+	if ok && strings.EqualFold(text, "Choose "+phrase+".") {
+		return true
+	}
+	phrase, ok = selectionPhrase(effect.Selection, selectionPhraseOptions{Number: numberSingular})
+	return ok && strings.EqualFold(text, "Choose "+indefiniteArticle(phrase)+" "+phrase+".")
 }
 
 // exactDelayedCreatedTokensExileEffectSyntax recognizes a delayed exile whose

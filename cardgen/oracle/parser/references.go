@@ -74,6 +74,10 @@ type Reference struct {
 	// ProducerClauseID identifies an observed library card's grammatical
 	// antecedent. Zero leaves other reference domains to their existing binder.
 	ProducerClauseID int `json:",omitempty"`
+	// ChoiceClauseID names the unique original singular permanent choice used
+	// by a same-name Search operand. It is not library observation, entered-card,
+	// or target-declaration provenance; zero is unproven in this domain.
+	ChoiceClauseID int `json:",omitempty"`
 	// ReachedCardProducerClauseID preserves the action's exact card lineage for
 	// a later card predicate without changing its original observation owner.
 	ReachedCardProducerClauseID int `json:",omitempty"`

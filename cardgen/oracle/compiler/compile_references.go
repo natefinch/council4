@@ -165,6 +165,7 @@ func compileTypedReferences(recognized []parser.Reference) []CompiledReference {
 			SubjectNoun:                 reference.SubjectNoun,
 			NodeID:                      reference.NodeID,
 			ProducerClauseID:            reference.ProducerClauseID,
+			ChoiceClauseID:              reference.ChoiceClauseID,
 			LibraryCardObservation:      reference.LibraryCardObservation,
 			ReachedCardProducerClauseID: reference.ReachedCardProducerClauseID,
 			Order:                       reference.Order,
