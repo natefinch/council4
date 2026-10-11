@@ -233,6 +233,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitLibraryCardReferenceOwnership(document.Abilities)
 	emitObservedCardResultOwnership(document.Abilities)
 	emitRemovedCounterQuantityOwnership(document.Abilities)
+	emitActualCardQuantityOwnership(document.Abilities)
 	emitPaidCostSubjectBindings(document.Abilities)
 	emitDelayedSubjectOwnership(document.Abilities)
 	return document, diagnostics

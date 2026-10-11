@@ -1088,6 +1088,7 @@ const (
 	// Quartzwood Crasher).
 	EffectDynamicAmountTriggeringEventTotalCombatDamage EffectDynamicAmountKind = "EffectDynamicAmountTriggeringEventTotalCombatDamage"
 	EffectDynamicAmountRemovedCounterCount              EffectDynamicAmountKind = "EffectDynamicAmountRemovedCounterCount"
+	EffectDynamicAmountActualCardResultCount            EffectDynamicAmountKind = "EffectDynamicAmountActualCardResultCount"
 )
 
 // EffectDynamicAmountForm identifies how a dynamic amount is introduced.
@@ -1132,7 +1133,8 @@ type EffectAmountSyntax struct {
 	Multiplier  int                     `json:",omitempty"`
 	// ProducerClauseID names the exact scalar producer within this ability body.
 	// Zero means that the antecedent is unavailable or ambiguous.
-	ProducerClauseID int `json:",omitempty"`
+	ProducerClauseID int        `json:",omitempty"`
+	ResultOutcome    EffectKind `json:",omitempty"`
 	// RoundUp records that a halving amount rounds up rather than down ("rounded
 	// up" versus "rounded down"). It is meaningful only for the half-library mill
 	// amount (EffectDynamicAmountHalfPlayerLibrary) and is false otherwise.
@@ -1157,7 +1159,8 @@ type EffectAmountSyntax struct {
 	// Operands carries the sub-amounts of a EffectDynamicAmountMaxOf combinator
 	// ("<A> or <B>, whichever is greater"). It is empty for every other amount
 	// kind.
-	Operands []EffectAmountSyntax `json:",omitempty"`
+	Operands               []EffectAmountSyntax `json:",omitempty"`
+	actualCardPerIteration *EffectAmountSyntax
 }
 
 // EffectReplacementKind identifies how an instruction replaces an event.

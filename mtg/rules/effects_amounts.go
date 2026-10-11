@@ -129,7 +129,11 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 	case game.DynamicAmountPreviousEffectResult:
 		key := dynamicResultKey(dynamic)
 		if obj.Exists && key != "" {
-			amount = obj.Val.ResolvedAmounts[key]
+			if dynamic.Selection != nil {
+				amount = countResultObjectsMatching(g, obj.Val, obj.Val.ResolutionResultObjects[key], *dynamic.Selection, true)
+			} else {
+				amount = obj.Val.ResolvedAmounts[key]
+			}
 		}
 	case game.DynamicAmountPreviousEffectExcessDamage:
 		key := dynamicResultKey(dynamic)
@@ -1401,6 +1405,11 @@ func instructionResultGateSatisfied(g *game.Game, obj *game.StackObject, gate ga
 	result, ok := obj.ResolutionResults[string(gate.Key)]
 	if !ok {
 		return false
+	}
+	if gate.ObjectSelection.Exists {
+		if _, available := obj.ResolutionResultObjects[string(gate.Key)]; !available {
+			return false
+		}
 	}
 	if gate.AmountAvailable {
 		if _, available := obj.ResolvedAmounts[string(gate.Key)]; !available {

@@ -2776,15 +2776,24 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 // now publishes too, at either destination — a rider the split Mill primitive
 // could never carry for its group form.
 func handleMoveTopOfLibrary(r *effectResolver, prim game.MoveTopOfLibrary) effectResolved {
-	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	requested := r.quantity(prim.Amount)
+	res := effectResolved{accepted: true, amount: requested}
+	if prim.Destination == zone.Graveyard {
+		res.amount, res.amountKnown = 0, true
+	}
 	var key game.LinkedObjectKey
 	if prim.PublishLinked != "" {
 		key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		clearLinkedObjects(r.game, key)
 	}
 	publish := func(cardIDs []id.ID) {
-		for _, cardID := range cardIDs {
-			r.rememberResultCard(cardID)
+		if prim.Destination == zone.Exile {
+			if prim.FaceDown && len(cardIDs) > 0 {
+				r.resultObjectsUnavailable = true
+			}
+			for _, cardID := range cardIDs {
+				r.rememberResultCard(cardID)
+			}
 		}
 		if prim.PublishLinked == "" {
 			return
@@ -2802,13 +2811,21 @@ func handleMoveTopOfLibrary(r *effectResolver, prim game.MoveTopOfLibrary) effec
 	}
 	moveTop := func(playerID game.PlayerID) {
 		var cards []id.ID
-		var moved bool
 		if prim.Destination == zone.Exile {
-			cards, moved = exileTopOfLibraryCardsWithResult(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
+			var moved bool
+			cards, moved = exileTopOfLibraryCardsWithResult(r.game, playerID, requested, prim.Counter, r.obj.Controller, prim.FaceDown)
+			res.succeeded = res.succeeded || moved
 		} else {
-			cards, moved = millCardsWithResult(r.game, playerID, res.amount)
+			cards = millCardsWithResults(r.game, playerID, requested, func(cardID id.ID, destination zone.Type) {
+				res.amount++
+				res.succeeded = true
+				if destination.IsPublic() {
+					r.rememberResultCard(cardID)
+				} else {
+					r.resultObjectsUnavailable = true
+				}
+			})
 		}
-		res.succeeded = res.succeeded || moved
 		publish(cards)
 	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {

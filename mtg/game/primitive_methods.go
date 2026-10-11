@@ -999,6 +999,9 @@ func quantityRefs(quantity Quantity) primitiveRefs {
 	case DynamicAmountPreviousEffectResult, DynamicAmountPreviousEffectExcessDamage:
 		if dynamic.ResultKey != "" {
 			refs.consumesResults = append(refs.consumesResults, dynamic.ResultKey)
+			if dynamic.Kind == DynamicAmountPreviousEffectResult && dynamic.Selection != nil {
+				refs.consumesCardResults = append(refs.consumesCardResults, dynamic.ResultKey)
+			}
 		}
 	case DynamicAmountChosenNumber:
 		if dynamic.ResultKey != "" {
@@ -1019,6 +1022,7 @@ func quantityRefs(quantity Quantity) primitiveRefs {
 
 func mergePrimitiveRefs(left, right primitiveRefs) primitiveRefs {
 	left.consumesResults = append(left.consumesResults, right.consumesResults...)
+	left.consumesCardResults = append(left.consumesCardResults, right.consumesCardResults...)
 	left.consumesChoices = append(left.consumesChoices, right.consumesChoices...)
 	left.consumesLinked = append(left.consumesLinked, right.consumesLinked...)
 	return left

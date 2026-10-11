@@ -810,6 +810,9 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 		selection := compileTypedSelection(*amount.Selection)
 		compiled.selector = &selection
 	}
+	if amount.DynamicKind == parser.EffectDynamicAmountActualCardResultCount {
+		compiled.actualCardResult = &actualCardQuantityProof{outcome: compileEffectKind(amount.ResultOutcome)}
+	}
 	if len(amount.Operands) != 0 {
 		operands := make([]CompiledAmount, len(amount.Operands))
 		for i := range amount.Operands {
@@ -822,6 +825,8 @@ func compileTypedAmount(amount parser.EffectAmountSyntax) CompiledAmount {
 
 func compileDynamicAmountKind(kind parser.EffectDynamicAmountKind) DynamicAmountKind {
 	switch kind {
+	case parser.EffectDynamicAmountActualCardResultCount:
+		return DynamicAmountActualCardResultCount
 	case parser.EffectDynamicAmountRemovedCounterCount:
 		return DynamicAmountRemovedCounterCount
 	case parser.EffectDynamicAmountCount:

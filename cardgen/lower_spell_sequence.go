@@ -748,6 +748,9 @@ func lowerOrderedEffectSequence(
 	if reason := linkRemovedCounterQuantities(ctx.content.Effects, effectInstructionRanges, sequence); reason != "" {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
 	}
+	if reason := linkActualCardQuantities(ctx.content.Effects, effectInstructionRanges, sequence); reason != "" {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
+	}
 	if sequenceAmountReferencesPlayerSlotPermanent(sequence, targets) {
 		// A payoff amount that reads a permanent's characteristics ("gain life
 		// equal to that creature's toughness") but whose object resolves to a

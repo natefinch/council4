@@ -56,21 +56,24 @@ func TestMoveTopOfLibraryPublishesActualMovement(t *testing.T) {
 			if result.Succeeded != want {
 				t.Fatalf("Succeeded=%t want actual movement=%t", result.Succeeded, want)
 			}
-			if result.Amount != tc.requested {
-				t.Fatalf("requested Amount=%d want=%d", result.Amount, tc.requested)
-			}
-			snapshots := obj.ResolutionResultObjects["move"]
 			wantMembers := 0
-			if want && !tc.redirect {
+			if want {
 				wantMembers = min(tc.cards, tc.requested)
 			}
+			if result.Amount != wantMembers {
+				t.Fatalf("actual mill Amount=%d want=%d", result.Amount, wantMembers)
+			}
+			snapshots, available := obj.ResolutionResultObjects["move"]
+			if !available {
+				t.Fatal("complete acted mill batch lost known-empty or public member availability")
+			}
 			if len(snapshots) != wantMembers {
-				t.Fatalf("destination members=%d want=%d", len(snapshots), wantMembers)
+				t.Fatalf("public milled members=%d want=%d", len(snapshots), wantMembers)
 			}
 			if tc.redirect {
-				if !want || g.Players[game.Player2].Exile.Size() != 1 || len(snapshots) != 0 ||
-					resultObjectsMatchSelection(g, obj, snapshots, game.Selection{RequiredTypes: []types.Card{types.Creature}}) {
-					t.Fatal("successful redirected action invented a graveyard-filtered member")
+				if !want || g.Players[game.Player2].Exile.Size() != 1 || len(snapshots) != 1 ||
+					!resultObjectsMatchSelection(g, obj, snapshots, game.Selection{RequiredTypes: []types.Card{types.Creature}}) {
+					t.Fatal("successful mill omitted the creature moved to public exile")
 				}
 			}
 			if want {
@@ -111,13 +114,19 @@ func TestMoveTopOfLibraryExileAndLegacyMovementReceipts(t *testing.T) {
 				result := obj.ResolutionResults["move"]
 				wantMembers := 1
 				if commander {
-					wantMembers = 0
+					if destination == zone.Exile {
+						wantMembers = 0
+					}
 					if g.Players[game.Player2].CommandZone.Size() != 1 {
 						t.Fatal("commander did not reach replacement destination")
 					}
 				}
-				if !result.Succeeded || result.Amount != 3 || len(obj.ResolutionResultObjects["move"]) != wantMembers {
-					t.Fatal("actual movement, requested amount and destination-filtered members were conflated")
+				wantAmount := 3
+				if destination == zone.Graveyard {
+					wantAmount = 1
+				}
+				if !result.Succeeded || result.Amount != wantAmount || len(obj.ResolutionResultObjects["move"]) != wantMembers {
+					t.Fatal("actual mill receipt/public members or independent exile receipt/destination members changed")
 				}
 				engine.resolveInstructionWithChoices(g, obj, instruction, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 				if obj.ResolutionResults["move"].Succeeded {
@@ -129,7 +138,11 @@ func TestMoveTopOfLibraryExileAndLegacyMovementReceipts(t *testing.T) {
 					legacy = newGame()
 					cards = exileTopOfLibraryCards(legacy, game.Player2, 3, opt.V[counter.Kind]{}, game.Player1, false)
 				}
-				if len(cards) != wantMembers {
+				legacyMembers := 1
+				if commander {
+					legacyMembers = 0
+				}
+				if len(cards) != legacyMembers {
 					t.Fatal("legacy wrapper changed destination-filtered IDs")
 				}
 			})

@@ -65,29 +65,40 @@ func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 }
 
 func millCardsWithResult(g *game.Game, playerID game.PlayerID, amount int) ([]id.ID, bool) {
+	moved := false
+	cards := millCardsWithResults(g, playerID, amount, func(id.ID, zone.Type) {
+		moved = true
+	})
+	return cards, moved
+}
+
+// Legacy callers and links receive only graveyard entries. The observer sees
+// actual library departures, including CR 701.17c public-zone redirects.
+func millCardsWithResults(g *game.Game, playerID game.PlayerID, amount int, moved func(id.ID, zone.Type)) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
-		return nil, false
+		return nil
 	}
 	var milled []id.ID
-	moved := false
 	batchID := g.IDGen.Next()
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok {
-			return milled, moved
+			return milled
 		}
 		player.Library.Remove(cardID)
 		destination, ok := putLibraryCardIntoGraveyard(g, playerID, cardID, batchID)
 		if !ok {
-			return milled, moved
+			return milled
 		}
-		moved = moved || destination != zone.Library
+		if moved != nil && destination != zone.Library {
+			moved(cardID, destination)
+		}
 		if destination == zone.Graveyard {
 			milled = append(milled, cardID)
 		}
 	}
-	return milled, moved
+	return milled
 }
 
 // revealUntilCards reveals cards from the top of playerID's library one at a

@@ -739,6 +739,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 			})
 		}
 	}
+	bindActualCardQuantities(effects)
 	return effects
 }
 

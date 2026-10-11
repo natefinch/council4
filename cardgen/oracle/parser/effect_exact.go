@@ -14,6 +14,9 @@ import (
 )
 
 func exactEffectSyntax(effect *EffectSyntax) bool {
+	if exact, handled := exactLeadingActualCardQuantity(effect); handled {
+		return exact
+	}
 	switch effect.Kind {
 	case EffectAddMana:
 		return effect.Mana.ChosenColorDevotion || exactDynamicColorlessManaEffectSyntax(effect)
@@ -102,6 +105,7 @@ func exactEffectSyntax(effect *EffectSyntax) bool {
 			exactMassEffectSyntax(effect, "Exile all ") ||
 			exactMassEachEffectSyntax(effect, "Exile each ") ||
 			exactBackReferenceEffectSyntax(effect, "Exile") ||
+			exactChosenGraveyardExileEffectSyntax(effect) ||
 			exactGraveyardExileEffectSyntax(effect) ||
 			exactPlayerGraveyardExileEffectSyntax(effect)
 	case EffectFight:

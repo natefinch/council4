@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,666 of 33,011 cards eligible for paper support (56.5%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,677 of 33,011 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -2285,6 +2285,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Candy Trail
 - Cankerbloom
 - Canonized in Blood
+- Canoptek Scarab Swarm
 - Canoptek Tomb Sentinel
 - Canoptek Wraith
 - Canopy Baloth
@@ -2929,6 +2930,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Colorful Feiyi Sparrow
 - Colos Yearling
 - Colossadactyl
+- Colossal Badger // Dig Deep
 - Colossal Collision
 - Colossal Dreadmask
 - Colossal Dreadmaw
@@ -6239,6 +6241,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Gerrard's Battle Cry
 - Gerrard's Command
 - Gerrard's Irregulars
+- Gerrard's Verdict
 - Gerrard's Wisdom
 - Gert and Old Lace, Runaways
 - Get a Leg Up
@@ -6769,6 +6772,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Goremand
 - Goretusk Firebeast
 - Gorger Wurm
+- Gorging Vulture
 - Gorgon Flail
 - Gorgon Recluse
 - Gorgon's Head
@@ -6922,6 +6926,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Greta, Sweettooth Scourge
 - Gretchen Titchwillow
 - Grey Havens Navigator
+- Grey Host Reinforcements
 - Grey Knight Paragon
 - Gridlock
 - Grief Tyrant
@@ -9569,6 +9574,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Malamet Scythe
 - Malamet Veteran
 - Malamet War Scribe
+- Malanthrope
 - Malcator's Watcher
 - Malcator, Purity Overseer
 - Malcolm, the Eyes
@@ -10610,6 +10616,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Necromancer's Stockpile
 - Necromantic Thirst
 - Necron Deathmark
+- Necron Monolith
 - Necron Warrior
 - Necropanther
 - Necropede
@@ -12592,6 +12599,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Relearn
 - Release the Dogs
 - Release the Gremlins
+- Release to Memory
 - Relentless Advance
 - Relentless Assault
 - Relentless Hunter
@@ -13637,6 +13645,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Seasoned Consultant
 - Seasoned Hallowblade
 - Seasoned Marshal
+- Seasoned Pyromancer
 - Seasoned Warrenguard
 - Seat of the Synod
 - Secluded Courtyard
@@ -15806,6 +15815,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Syphon Essence
 - Syphon Fuel
 - Syphon Life
+- Syphon Mind
 - Syphon Sliver
 - Syr Alin, the Lion's Claw
 - Syr Elenora, the Discerning
@@ -16160,7 +16170,6 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - The Atropal
 - The Autonomous Furnace
 - The Battle of Bywater
-- The Binding of the Titans
 - The Birth of Meletis
 - The Black Breath
 - The Brothers' War
@@ -16545,6 +16554,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Titan's Strength
 - Titania's Boon
 - Titania's Chosen
+- Titania's Command
 - Titania, Protector of Argoth
 - Titanic Bulvox
 - Titanic Growth
@@ -16800,6 +16810,7 @@ Council4 currently supports **18,666 of 33,011 cards eligible for paper support 
 - Triangle of War
 - Triarch Praetorian
 - Tribal Flames
+- Tribune of Rot
 - Tributary Instructor
 - Tributary Vaulter
 - Tribute Mage

@@ -49,6 +49,46 @@ zones, and dynamic mana-value bounds remain unsupported. Verbs retain their
 own target-count, reference, payment, and payload policies; recognizing a plural
 selector does not grant a single-target verb a group effect.
 
+Actual-card quantities carry the parser-owned producing ClauseID and consumed
+card filter through the shared amount and ordered-sequence assembly. A leading
+`For each <card filter> exiled/milled/discarded this way, <action>` scales an
+ordinary supported amount consumer by frozen qualifying result snapshots, not
+the requested amount, X, chosen targets, or a current-zone recount. Executed
+accepted producers can publish an empty batch (available zero); skipped or
+declined producers are unavailable. Mill counts actual library departures whose
+cards can be found in a public destination, including face-up exile and command
+zone redirects (CR 701.17c); its legacy graveyard-only return and linked-card batch
+remain unchanged. Exile counts cards reaching exile, while discard counts the
+actual discard events, including redirected discards. Only single-instruction
+card-result publishers and pure snapshot characteristic filters are supported.
+The emitted quantity retains a nonnil empty selection for a bare-card count;
+omitting that pointer would change it into a scalar-result reader. A replacement
+branch is not a complete alternative-producer proof and remains refused.
+Expanded target-card moves,
+departing permanent snapshots, contextual/numeric filters, delayed quantities,
+coordinated multi-action iterators, face-down publications, and incompatible
+publication/result gates remain refused rather than guessed. A permanent-card
+noun retains its explicit permanent-card type union; it is not the wildcard
+used for a permanent-only battlefield universe.
+The mill receipt's scalar amount and success track actual library departures,
+including public redirects, rather than the requested count. A phrase explicitly
+naming cards put into a graveyard is not a milled-card referent; the unmodeled
+graveyard-this-way condition grammar remains refused.
+Snapshot batch availability is explicit in the existing result map: a present
+empty entry is a complete known-zero batch; an absent entry is unavailable or
+incomplete. Any hidden milled member makes the whole batch unavailable, without
+discarding its actual scalar/action receipt or changing graveyard-only links.
+Known completion comes from the provider's executed envelope or an explicit
+resolved decline, never from `Accepted=false` alone. Explicit ordinary declines
+publish a known-empty batch for filtered predicate complements, while an
+unresolvable actor remains unavailable. A Tempting offer's completed base can
+publish snapshots even when no opponent accepts; its offer-acceptance receipt
+cannot be used as producer acceptance for an actual-card quantity.
+Typed snapshot-quantity consumers skip unavailable batches before prompting or
+executing; filtered result gates cannot invert unavailable membership through
+negation. Unfiltered actor/payment gates and scalar-only readers retain their
+independent receipt semantics.
+
 Ordinary life, draw, and card-count actions share one typed player-recipient
 adapter and single/group mode builder. Parser-owned actor context, reference
 binding and target occurrence determine the recipient; inherited permanent and

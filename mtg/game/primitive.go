@@ -398,12 +398,13 @@ type Primitive interface {
 // primitiveRefs describes what keys a Primitive consumes and publishes
 // (distinct from the Instruction envelope's PublishResult).
 type primitiveRefs struct {
-	consumesResults  []ResultKey
-	publishesResults []ResultKey
-	consumesChoices  []ChoiceKey
-	consumesLinked   []LinkedKey
-	publishesChoice  ChoiceKey
-	publishesLinked  LinkedKey
+	consumesResults     []ResultKey
+	consumesCardResults []ResultKey
+	publishesResults    []ResultKey
+	consumesChoices     []ChoiceKey
+	consumesLinked      []LinkedKey
+	publishesChoice     ChoiceKey
+	publishesLinked     LinkedKey
 	// publishesLinkedGroup is a second linked key a primitive records under, used
 	// by a primitive that publishes two independent object-scoped linked groups
 	// in one resolution (CreateToken's created tokens and its counted-permanent
