@@ -105,6 +105,9 @@ func playerIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.Draw); ok {
 		return v.Player.TargetIndex(), true
 	}
+	if v, ok := p.(game.Search); ok {
+		return v.Player.TargetIndex(), true
+	}
 	if v, ok := p.(game.Discard); ok {
 		return v.Player.TargetIndex(), true
 	}
@@ -200,6 +203,7 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 		playerPrimitive("BecomeMonarch", func() game.Primitive { return game.BecomeMonarch{Player: plr()} }),
 		playerPrimitive("AddPlayerCounter", func() game.Primitive { return game.AddPlayerCounter{Player: plr()} }),
 		playerPrimitive("Draw", func() game.Primitive { return game.Draw{Player: plr()} }),
+		playerPrimitive("Search", func() game.Primitive { return game.Search{Player: plr(), Amount: game.Fixed(1)} }),
 		playerPrimitive("Discard", func() game.Primitive { return game.Discard{Player: plr()} }),
 		playerPrimitive("Mill", func() game.Primitive { return game.MoveTopOfLibrary{Destination: zone.Graveyard, Player: plr()} }),
 		playerPrimitive("ExileTopOfLibrary", func() game.Primitive { return game.MoveTopOfLibrary{Destination: zone.Exile, Player: plr()} }),

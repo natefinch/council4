@@ -72,9 +72,7 @@ func TestLowerSearchThenTrailingSequence(t *testing.T) {
 }
 
 // TestLowerSearchThenTrailingSequenceFailsClosed guards the conservative limits
-// of the trailing-search-sequence fallback: it must not pick up a search whose
-// trailing sentence refers back to the found card, an activated-ability land
-// search with a trailing effect, or a library-top tutor with a trailing effect.
+// of shared search assembly: library-top tutors retain their dedicated policy.
 func TestLowerSearchThenTrailingSequenceFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -82,16 +80,6 @@ func TestLowerSearchThenTrailingSequenceFailsClosed(t *testing.T) {
 		typeLine   string
 		oracleText string
 	}{
-		{
-			name:       "trailing reference to found card",
-			typeLine:   "Sorcery",
-			oracleText: "Search your library for a creature card, put it onto the battlefield, then shuffle. It gains haste until end of turn.",
-		},
-		{
-			name:       "activated land search with trailing effect",
-			typeLine:   "Land",
-			oracleText: "{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap target land.",
-		},
 		{
 			name:       "library-top tutor with trailing effect",
 			typeLine:   "Instant",

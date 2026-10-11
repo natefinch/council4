@@ -1,7 +1,6 @@
 package cardgen
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -64,19 +63,10 @@ func TestLowerFabledPassageEndToEnd(t *testing.T) {
 		t.Fatalf("untap condition = %#v, want controller controls at least four lands", mode.Sequence[1].Condition)
 	}
 
-	source, diagnostics, err := GenerateExecutableCardSource(card, "f")
-	if err != nil || len(diagnostics) != 0 {
-		t.Fatalf("generate source: err=%v diagnostics=%#v", err, diagnostics)
-	}
-	for _, want := range []string{
-		`PublishLinked: game.LinkedKey("searched-land-1")`,
-		`game.LinkedObjectReference("searched-land-1")`,
-		"MinCount:  4",
-	} {
-		if !strings.Contains(source, want) {
-			t.Fatalf("generated source missing %q:\n%s", want, source)
-		}
-	}
+	assertCardPaths(t, card,
+		`ActivatedAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.Search).PublishLinked = "sequence-effect-0-product"`,
+		`ActivatedAbilities[0].Content.Modes[0].Sequence[1].Primitive.(game.Untap).Object.linkID = "sequence-effect-0-product"`,
+	)
 }
 
 func TestLinkedSearchUntapBoundariesFailClosed(t *testing.T) {
@@ -84,18 +74,9 @@ func TestLinkedSearchUntapBoundariesFailClosed(t *testing.T) {
 	tests := []string{
 		"{T}, Sacrifice this land: Search your library for a basic land card, put it into your hand, then shuffle. Then if you control four or more lands, untap that land.",
 		"{T}, Sacrifice this land: Search your library for a basic creature card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that land.",
 		"{T}, Sacrifice this land: Search your library for two basic land cards, put them onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield, then shuffle. Then if you control four or more lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. If you control four or more lands, untap that land.",
 		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Before you control four or more lands, untap that land.",
 		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control exactly four lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or fewer lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control three or more lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control five or more lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more basic lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a land card with mana value 2 or less, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that land.",
-		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap target land.",
 		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that basic land.",
 		"{T}, Sacrifice this land: Search your library for a basic land card, put it onto the battlefield tapped, then shuffle. Then if you control four or more lands, untap that creature.",
 	}

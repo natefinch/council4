@@ -18,7 +18,8 @@ func bindOwnedProducerReference(reference *CompiledReference, effects []Compiled
 		if effect.ClauseID != reference.ProducerClauseID {
 			continue
 		}
-		if index >= 0 || !singularEnteredSubjectProducer(effect, effects) && !singularTopExiledCardProducer(effect) {
+		if index >= 0 || !singularEnteredSubjectProducer(effect, effects) && !singularTopExiledCardProducer(effect) &&
+			!singularSearchedPermanentProducer(effect, effects) {
 			return true
 		}
 		index = i

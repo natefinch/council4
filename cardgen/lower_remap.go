@@ -465,6 +465,24 @@ func transformPrimitiveTargetIndicesWithActorScope(primitive game.Primitive, tra
 // transformPrimitiveTargetIndices to keep that allowlist's maintainability index
 // within bounds.
 func transformZonePrimitiveTargetIndices(primitive game.Primitive, transform targetIndexTransform) (game.Primitive, bool) {
+	if value, ok := primitive.(game.Search); ok {
+		if searchSpecHasTargetBound(value.Spec) {
+			return nil, false
+		}
+		value.Player, ok = transformPlayerReference(value.Player, transform)
+		if !ok {
+			return nil, false
+		}
+		if value.Controller.Exists {
+			controller, ok := transformPlayerReference(value.Controller.Val, transform)
+			if !ok {
+				return nil, false
+			}
+			value.Controller = opt.Val(controller)
+		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.MoveCard); ok {
 		// The player-zone group form ("Exile target player's graveyard.") carries
 		// a target-bearing Player reference; transform it against the accumulated

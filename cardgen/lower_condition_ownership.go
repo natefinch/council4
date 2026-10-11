@@ -143,11 +143,19 @@ func (plan sequenceConditionPlan) captureEvaluations(
 			return false
 		}
 		var members []conditionEvaluationMember
+		physicalMembers := make(map[int]bool)
 		appendClause := func(ei int, negate bool) bool {
 			if ei < 0 || ei >= len(ranges) || ranges[ei][0] == ranges[ei][1] {
 				return false
 			}
 			for i := ranges[ei][0]; i < ranges[ei][1]; i++ {
+				if polarity, exists := physicalMembers[i]; exists {
+					if polarity != negate {
+						return false
+					}
+					continue
+				}
+				physicalMembers[i] = negate
 				members = append(members, conditionEvaluationMember{index: i, negate: negate})
 			}
 			return true

@@ -596,13 +596,7 @@ func priorSearchMoveAntecedent(current int, effects []CompiledEffect) (int, bool
 			return search, true
 		}
 	}
-	if current < 3 ||
-		effects[current-1].Kind != EffectShuffle ||
-		effects[current-2].Kind != EffectPut ||
-		effects[current-3].Kind != EffectSearch {
-		return 0, false
-	}
-	return current - 3, true
+	return 0, false
 }
 
 func targetAntecedent(reference CompiledReference, targets []CompiledTarget) (occurrence int, ok, ambiguous bool) {

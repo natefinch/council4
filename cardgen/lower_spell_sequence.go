@@ -164,9 +164,6 @@ func lowerOrderedSequenceSpecialCase(
 	if content, ok := lowerCombinedSequenceShapes(cardName, ctx, syntax); ok {
 		return content, nil, true
 	}
-	if content, ok := lowerLeadingSequenceThenSearch(cardName, ctx, syntax); ok {
-		return content, nil, true
-	}
 	if !legacyOrderedEffectSequenceExact(ctx.content.Effects) {
 		return game.AbilityContent{},
 			unsupportedEffectSequenceDiagnostic(ctx, "structural — non-exact legacy effect pair"),
@@ -277,6 +274,10 @@ func lowerOrderedEffectSequence(
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unavailable or ambiguous producer clause identity")
 	}
 	ctx.content = normalized
+	searchUnits, searchReason := planSearchSequenceUnits(ctx.content)
+	if searchReason != "" {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, searchReason)
+	}
 	// Resolve the counter kind for any "remove those counters" clause from the
 	// preceding same-source placement clause before per-effect lowering, so the
 	// removal names the kind the sequence just placed on the source.
@@ -357,6 +358,14 @@ func lowerOrderedEffectSequence(
 	effectInstructionRanges := make([][2]int, len(ctx.content.Effects))
 	for i := range ctx.content.Effects {
 		effect := &ctx.content.Effects[i]
+		if searchUnitAbsorbed(searchUnits, i) {
+			consumedReferences += len(conditionPlan.referencesForClause(ctx.content, i))
+			if len(keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)) != 0 {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, searchUnitCategory)
+			}
+			continue
+		}
+		searchUnit, isSearchUnit := searchUnits[i]
 		if counterDestinations.absorbed[i] {
 			consumedReferences += len(conditionPlan.referencesForClause(ctx.content, i))
 			if len(keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)) != 0 {
@@ -373,6 +382,9 @@ func lowerOrderedEffectSequence(
 		effectAbility.content.Conditions = conditionPlan.clauseConditions[i]
 		effectAbility.content.Conditions = append(slices.Clone(effectAbility.content.Conditions), conditionPlan.delayedConditions[i]...)
 		clauseTargets := effect.Targets
+		if isSearchUnit {
+			clauseTargets = searchUnit.targets
+		}
 		// A leading condition that shares its effect's sentence (e.g. "If this
 		// spell was kicked, draw a card.") contributes its own references (the
 		// "this spell" object) inside the effect's clause span, so the compiler
@@ -387,6 +399,9 @@ func lowerOrderedEffectSequence(
 		// and make the consequence's own "they" lowering fail closed.
 		clauseRefs := conditionPlan.referencesForClause(ctx.content, i)
 		ownedReferenceCount := len(clauseRefs)
+		if isSearchUnit {
+			clauseRefs = nil
+		}
 		// A group counter-placement clause whose group filter carries a "with a
 		// <kind> counter on it/them" qualifier introduces a pronoun naming each
 		// filtered group member, not the prior clause's target. Drop it before
@@ -482,6 +497,9 @@ func lowerOrderedEffectSequence(
 			}
 		}
 		effectKeywords := keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
+		if isSearchUnit && len(effectKeywords) != 0 {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, searchUnitCategory)
+		}
 		// A copy-token effect's "[That token] gains <keyword>." rider is a folded
 		// sibling sentence whose keyword and pronoun fall outside the create
 		// clause's span; attribute them here so the copy-token lowerer sees the
@@ -579,7 +597,9 @@ func lowerOrderedEffectSequence(
 			prior := sequence[len(sequence)-1]
 			publisherGated = publisherGated || prior.Optional || prior.OptionalDecisionGate != ""
 		}
-		if effect.PlayHideawayExiledCard {
+		if isSearchUnit {
+			content = searchUnit.mode.Ability()
+		} else if effect.PlayHideawayExiledCard {
 			content, diagnostic = lowerHideawayPlayEffect(effectAbility)
 		} else if delayed, delayedDiagnostic, handled := lowerFixedPhaseSubject(
 			cardName, effectAbility, &clauseAbility, sequence, effectInstructionRanges[:i], ctx.content.Effects,
@@ -593,10 +613,10 @@ func lowerOrderedEffectSequence(
 			publisherGated,
 			effectConditions[i],
 		); delayed.handled {
+			if delayed.failed && len(clauseReasons) > 0 {
+				continue
+			}
 			if delayed.failed {
-				if len(clauseReasons) > 0 {
-					continue
-				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — delayed-target sacrifice not linkable")
 			}
 			if delayed.consumedGate {
@@ -604,12 +624,7 @@ func lowerOrderedEffectSequence(
 			}
 			content = delayed.content
 		} else if allSharedTargets {
-			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
-			if diagnostic != nil {
-				effectAbilityNoTarget := effectAbility
-				effectAbilityNoTarget.content.Targets = nil
-				content, diagnostic = lowerSequenceClauseContent(cardName, effectAbilityNoTarget, effectAbilityNoTarget.content, effectAbilityNoTarget.optional, &clauseAbility, allowEventPronoun)
-			}
+			content, diagnostic = lowerSharedTargetSequenceClause(cardName, effectAbility, &clauseAbility, allowEventPronoun)
 		} else {
 			content, diagnostic = lowerSequenceClauseContent(cardName, effectAbility, effectAbility.content, effectAbility.optional, &clauseAbility, allowEventPronoun)
 		}
@@ -706,6 +721,11 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — effect produced no instructions")
 		}
 		effectInstructionRanges[i] = [2]int{len(sequence), len(sequence) + len(mode.Sequence)}
+		if isSearchUnit {
+			for member := i + 1; member < searchUnit.end; member++ {
+				effectInstructionRanges[member] = effectInstructionRanges[i]
+			}
+		}
 		sequence = append(sequence, mode.Sequence...)
 	}
 	// If any clause failed to lower, the sequence is unsupported. Report every
@@ -1089,155 +1109,6 @@ func sequenceCountsConsumed(
 		consumedKeywords == len(ctx.content.Keywords) &&
 		consumedReferences == len(ctx.content.References) &&
 		consumedConditions == len(ctx.content.Conditions)
-}
-
-func lowerLinkedSearchUntapSequence(ctx contentCtx) (game.AbilityContent, bool) {
-	effects := ctx.content.Effects
-	if ctx.optional ||
-		len(effects) != 4 ||
-		len(ctx.content.Conditions) != 1 ||
-		len(ctx.content.References) != 2 ||
-		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 {
-		return game.AbilityContent{}, false
-	}
-	searchEffects := effects[:3]
-	if effects[0].Context != parser.EffectContextController ||
-		effects[3].Kind != compiler.EffectUntap ||
-		effects[3].Context != parser.EffectContextController ||
-		effects[3].Connection != parser.EffectConnectionThen ||
-		!effects[3].Exact ||
-		!exactUnqualifiedLandSelector(effects[3].Selector) ||
-		len(effects[3].Targets) != 0 ||
-		len(effects[3].References) != 1 ||
-		len(effects[1].References) != 1 {
-		return game.AbilityContent{}, false
-	}
-	group, ok := searchGroupSpec(searchEffects)
-	if !ok ||
-		group.Length != len(searchEffects) ||
-		group.Amount != 1 ||
-		group.Spec.SourceZone != zone.Library ||
-		group.Spec.Destination != zone.Battlefield ||
-		!group.Spec.EntersTapped ||
-		group.Spec.SplitDestination.Exists ||
-		len(group.Spec.Filter.RequiredTypes) != 1 ||
-		group.Spec.Filter.RequiredTypes[0] != types.Land ||
-		group.Spec.Filter.RequirePermanentCard ||
-		len(group.Spec.Filter.SubtypesAny) != 0 ||
-		group.Spec.Filter.ManaValue.Exists ||
-		group.Spec.MaxManaValueFromX ||
-		group.Spec.Filter.Power.Exists ||
-		group.Spec.Filter.Toughness.Exists ||
-		group.Spec.Reveal ||
-		group.Spec.SharedSubtype ||
-		len(group.Spec.Filter.Supertypes) != 1 ||
-		group.Spec.Filter.Supertypes[0] != types.Basic {
-		return game.AbilityContent{}, false
-	}
-	putRef := effects[1].References[0]
-	if putRef.Kind != compiler.ReferencePronoun ||
-		putRef.Pronoun != compiler.ReferencePronounIt ||
-		putRef.Binding != compiler.ReferenceBindingPriorInstructionResult ||
-		putRef.PriorInstruction != 0 {
-		return game.AbilityContent{}, false
-	}
-	ref := effects[3].References[0]
-	if ref.Kind != compiler.ReferenceThatObject ||
-		ref.Binding != compiler.ReferenceBindingPriorInstructionResult ||
-		ref.PriorInstruction != 0 {
-		return game.AbilityContent{}, false
-	}
-	condition := ctx.content.Conditions[0]
-	if !exactControllerLandCountCondition(condition) ||
-		!spanCovered(condition.Span, []shared.Span{effects[3].Span}) {
-		return game.AbilityContent{}, false
-	}
-	loweredCondition, ok := lowerCondition(condition, conditionContextEffectGate)
-	if !ok {
-		return game.AbilityContent{}, false
-	}
-	key := game.LinkedKey("searched-land-1")
-	object, ok := lowerObjectReference(ref, referenceLoweringContext{
-		PriorInstruction: 0,
-		PriorLinkedKey:   key,
-	})
-	if !ok {
-		return game.AbilityContent{}, false
-	}
-	return game.Mode{Sequence: []game.Instruction{
-		{Primitive: game.Search{
-			Player:        game.ControllerReference(),
-			Spec:          group.Spec,
-			Amount:        game.Fixed(1),
-			PublishLinked: key,
-		}},
-		{
-			Primitive: game.Untap{Object: object},
-			Condition: opt.Val(game.EffectCondition{
-				Condition: opt.Val(loweredCondition),
-			}),
-		},
-	}}.Ability(), true
-}
-
-func exactControllerLandCountCondition(condition compiler.CompiledCondition) bool {
-	selection := condition.Selection
-	return condition.Kind == compiler.ConditionIf &&
-		condition.Resolving &&
-		condition.Predicate == compiler.ConditionPredicateControllerControls &&
-		!condition.Negated &&
-		condition.Threshold == 4 &&
-		len(selection.RequiredTypes) == 1 &&
-		selection.RequiredTypes[0] == types.Land &&
-		len(selection.RequiredTypesAny) == 0 &&
-		len(selection.ExcludedTypes) == 0 &&
-		len(selection.AnyOf) == 0 &&
-		len(selection.Supertypes) == 0 &&
-		len(selection.SubtypesAny) == 0 &&
-		len(selection.ColorsAny) == 0 &&
-		!selection.Colorless &&
-		!selection.Multicolored &&
-		!selection.TokenOnly &&
-		!selection.ExcludeSource &&
-		selection.Tapped == compiler.ConditionTriAny &&
-		selection.CombatState == compiler.ConditionCombatStateAny &&
-		selection.Keyword == parser.KeywordUnknown &&
-		!selection.MatchPowerAtLeast &&
-		!selection.MatchTotalPowerAtLeast
-}
-
-func exactUnqualifiedLandSelector(selector compiler.CompiledSelector) bool {
-	return selector.Kind == compiler.SelectorLand &&
-		selector.Controller == compiler.ControllerAny &&
-		!selector.All &&
-		!selector.Another &&
-		!selector.Other &&
-		!selector.Attacking &&
-		!selector.Blocking &&
-		!selector.Tapped &&
-		!selector.Untapped &&
-		selector.Keyword == parser.KeywordUnknown &&
-		selector.ExcludedKeyword == parser.KeywordUnknown &&
-		!selector.MatchManaValue &&
-		!selector.MatchPower &&
-		!selector.MatchToughness &&
-		!selector.Colorless &&
-		!selector.Multicolored &&
-		!selector.BasicLandType &&
-		!selector.PlayerOrPlaneswalker &&
-		selector.Zone == zone.None &&
-		(len(selector.RequiredTypesAny()) == 0 ||
-			slices.Equal(selector.RequiredTypesAny(), []types.Card{types.Land})) &&
-		len(selector.ExcludedTypes()) == 0 &&
-		len(selector.Supertypes()) == 0 &&
-		len(selector.ExcludedSupertypes()) == 0 &&
-		len(selector.ColorsAny()) == 0 &&
-		len(selector.ExcludedColors()) == 0 &&
-		len(selector.SubtypesAny()) == 0 &&
-		len(selector.SourceTypes()) == 0 &&
-		len(selector.Alternatives) == 0
 }
 
 // lowerCombinedSequenceShapes attempts the special-case combined-shape lowerers

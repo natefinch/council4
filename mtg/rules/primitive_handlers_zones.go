@@ -426,12 +426,16 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 		res.succeeded = r.engine.searchLibraryAndGraveyard(r.game, r.obj, r.agents, r.log, playerID, prim.Spec)
 		return res
 	}
+	limit := max(res.amount, 0)
+	if !prim.Amount.IsDynamic() && limit == 0 {
+		limit = 1
+	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		// "Each player searches their library ..." — every member searches their
 		// own library and any found permanent enters under that searcher's
 		// control (no Controller rider applies to a group search).
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			succeeded, _ := r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, playerID, prim.Spec, res.amount)
+			succeeded, _ := r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, playerID, prim.Spec, limit)
 			res.succeeded = succeeded || res.succeeded
 		}
 		return res
@@ -452,7 +456,7 @@ func handleSearch(r *effectResolver, prim game.Search) effectResolved {
 	}
 	if ok {
 		var permanent *game.Permanent
-		res.succeeded, permanent = r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, controllerID, prim.Spec, res.amount)
+		res.succeeded, permanent = r.engine.searchLibrary(r.game, r.obj, r.agents, r.log, playerID, controllerID, prim.Spec, limit)
 		if prim.PublishLinked != "" && permanent != nil {
 			rememberLinkedObject(r.game, key, permanentLinkedObjectRef(permanent))
 		}

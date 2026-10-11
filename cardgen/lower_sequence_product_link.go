@@ -180,6 +180,22 @@ func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey)
 		return "", false
 	}
 	switch instr.Primitive.Kind() {
+	case game.PrimitiveSearch:
+		primitive, ok := instr.Primitive.(game.Search)
+		if !ok || primitive.Amount.IsDynamic() || primitive.Amount.Value() != 1 ||
+			primitive.PlayerGroup.Kind != game.PlayerGroupReferenceNone ||
+			primitive.Spec.SourceZone != zone.Library || primitive.Spec.Destination != zone.Battlefield ||
+			primitive.Spec.SplitDestination.Exists || primitive.Spec.AnyNumber ||
+			primitive.Spec.AlsoGraveyard || primitive.Spec.RevealOnly || primitive.Spec.ExileFaceDown ||
+			len(primitive.Spec.SlotFilters) != 0 {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
 	case game.PrimitiveLookAtLibraryTop:
 		primitive, ok := instr.Primitive.(game.LookAtLibraryTop)
 		if !ok {

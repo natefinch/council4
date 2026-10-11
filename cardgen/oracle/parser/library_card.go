@@ -150,11 +150,13 @@ func recognizeLibraryCardAction(effect *EffectSyntax) bool {
 func emitLibraryCardReferenceOwnership(abilities []Ability) {
 	for i := range abilities {
 		ability := &abilities[i]
+		recognizeSearchUnits(ability.Sentences)
 		bindLibraryCardReferences(ability.Sentences, ability.SemanticReferences, ability.ConditionSegments)
 		bindTopExiledCardReferences(ability.Sentences, ability.SemanticReferences)
 		if ability.Modal != nil {
 			for j := range ability.Modal.Options {
 				mode := &ability.Modal.Options[j]
+				recognizeSearchUnits(mode.Sentences)
 				bindLibraryCardReferences(mode.Sentences, mode.SemanticReferences, mode.ConditionSegments)
 				bindTopExiledCardReferences(mode.Sentences, mode.SemanticReferences)
 			}
@@ -263,6 +265,7 @@ func bindLibraryCardReferences(sentences []Sentence, references []Reference, con
 		reference.ProducerClauseID = producer
 		reference.LibraryCardObservation = !reached && (reference.LibraryCardObservation || producer > 0)
 	}
+	bindSearchedPermanentReferences(effects, references, conditions)
 	bindEnteredTargetReferences(effects, references, conditions)
 	bindLibraryOwnerDestinationReferences(effects, references)
 	for _, effect := range effects {
