@@ -1208,6 +1208,12 @@ Vanguard cards are excluded with explicit report reasons.
    at the unresolved index. This deals the full amount to every chosen target
    (distinct from divided damage, which splits one total). Dynamic amounts,
    divided wording, and riders stay fail-closed.
+   Singleton destroy, exile, tap/untap, and regenerate actions share the exact
+   controller-action/cardinality checks, permanent target projection, and mode
+   assembly in `lowerSinglePermanentTargetSpell`. Their callers retain distinct
+   optional-envelope, condition, and reference acceptance policies: destroy
+   consumes only its strict event/attack-defender references and decorates the
+   shared frame with the existing defender predicate or resolving color gate.
    A destroy spell carrying a parser-folded regeneration rider ("It/They can't
    be regenerated.") lowers to a `game.Destroy` with `PreventRegeneration: true`,
    for the single-target, multi-target, and mass forms alike; the renderer emits

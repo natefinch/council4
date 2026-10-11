@@ -315,50 +315,34 @@ func lowerFixedDestroySpell(
 		references[0].Binding == compiler.ReferenceBindingEventPlayer {
 		references = nil
 	}
-	if len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
-		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		len(ctx.content.Conditions) != 0 && !hasColorGate ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(references) != 0 ||
-		ctx.content.Effects[0].Negated ||
-		!ctx.content.Effects[0].Exact ||
-		ctx.content.Effects[0].Context != parser.EffectContextController {
+	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported destroy spell",
 			"the executable source backend supports only exact destruction of one target permanent",
 		)
 	}
-	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
+	if len(ctx.content.Conditions) != 0 && !hasColorGate || len(references) != 0 {
+		return unsupported()
+	}
+	content, ok := lowerSinglePermanentTargetSpell(ctx, func(object game.ObjectReference) game.Primitive {
+		return game.Destroy{Object: object, PreventRegeneration: preventRegeneration}
+	})
 	if !ok {
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported destroy spell",
-			"the executable source backend supports only exact destruction of one target permanent",
-		)
+		return unsupported()
 	}
+	mode := &content.Modes[0]
 	if defendingPlayerTarget {
-		retargetControlledByDefendingPlayer(&targetSpec)
-	}
-	instruction := game.Instruction{
-		Primitive: game.Destroy{
-			Object:              game.TargetPermanentReference(0),
-			PreventRegeneration: preventRegeneration,
-		},
+		retargetControlledByDefendingPlayer(&mode.Targets[0])
 	}
 	if hasColorGate {
-		instruction.Condition = opt.Val(targetColorEffectCondition(
+		mode.Sequence[0].Condition = opt.Val(targetColorEffectCondition(
 			game.TargetPermanentReference(0),
 			colorGate,
 			ctx.content.Conditions[0].Text,
 		))
 	}
-	return game.Mode{
-		Targets:  []game.TargetSpec{targetSpec},
-		Sequence: []game.Instruction{instruction},
-	}.Ability(), nil
+	return content, nil
 }
 
 // retargetControlledByDefendingPlayer rewrites a destroy target's event-player
