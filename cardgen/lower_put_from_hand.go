@@ -12,9 +12,13 @@ import (
 
 // lowerPutEffectSpell dispatches a single EffectPut clause to its supported
 // shapes: a targeted graveyard return, a put-from-hand ramp effect, the source
-// permanent onto its owner's library, or counter placement. A put with any
+// permanent onto its owner's library, chosen hand cards onto the controller's
+// library, or counter placement. A put with any
 // other library destination is rejected as an unsupported library placement.
 func lowerPutEffectSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if content, diagnostic, handled := lowerHandLibraryPutClause(ctx); handled {
+		return content, diagnostic
+	}
 	if content, ok := lowerCommanderFromCommandZone(ctx); ok {
 		return content, nil
 	}

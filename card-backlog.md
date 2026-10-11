@@ -9,13 +9,13 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 
 ## Headline
 
-- Eligible cards: 33013
-- Supported (generated): 18577
-- Parser-complete: 22811
+- Eligible cards: 33011
+- Supported (generated): 18575
+- Parser-complete: 22809
 - **Lowering backlog** (parser-complete, not generated): 4990
 - **Parser backlog** (not parser-complete, not generated): 9446
 
-Partition check: 18577 supported + 4990 lowering-backlog + 9446 parser-backlog = 33013 eligible. ✓
+Partition check: 18575 supported + 4990 lowering-backlog + 9446 parser-backlog = 33011 eligible. ✓
 
 756 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18577 supported + 4990 lowering-backlog + 9446 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18577
-- Independent per-card recompile generated: 18577
+- Authoritative generated (compilecards report): 18575
+- Independent per-card recompile generated: 18575
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,8 +84,8 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1752 | 1156 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 530 | 2 | Dazzling Sphinx; Planebound Accomplice; Mindclaw Shaman; Remembrance; Park Bleater |
+| 1 | unsupported ordered effect sequence | 1748 | 1153 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 527 | 2 | Dazzling Sphinx; Planebound Accomplice; Mindclaw Shaman; Remembrance; Park Bleater |
 | 3 | unsupported static declaration operation | 281 | 237 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 276 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 210 | 121 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
@@ -111,10 +111,10 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 25 | unsupported temporary keyword spell | 55 | 47 | Order of the Golden Cricket; Pale Wayfarer; Violent Urge; Outmuscle; Gravity Negator |
 | 26 | unsupported static declaration condition | 50 | 40 | Desperate Castaways; Nadaar, Selfless Paladin; Veldt; Gloom Stalker; Hazy Homunculus |
 | 27 | unsupported draw spell | 45 | 37 | Theft of Dreams; Fatigue; Gregor, Shrewd Magistrate; Nessian Boar; Thought Sponge |
-| 28 | unsupported library placement | 39 | 33 | Misinformation; Chittering Rats; Murderous Rider // Swift End; Landscaper Colos; Drafna's Restoration |
-| 29 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
-| 30 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |
-| 31 | unsupported attach effect | 36 | 31 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
+| 28 | unsupported sacrifice spell | 38 | 32 | Yukora, the Prisoner; Demonic Taskmaster; Burning Sands; Papalymo Totolymo; Defiler of Souls |
+| 29 | unsupported mixed keyword ability | 38 | 31 | Chief Engineer; Sky Tether; Radiant Destiny; Mystic Decree; Wicker Picker |
+| 30 | unsupported attach effect | 36 | 31 | Crown of the Ages; Ronin Warclub; Illusory Gains; Beatrix, Loyal General; Prison Term |
+| 31 | unsupported library placement | 36 | 30 | Misinformation; Murderous Rider // Swift End; Landscaper Colos; Drafna's Restoration; Blade of the Swarm |
 | 32 | unsupported mana effect | 33 | 27 | Dictate of Karametra; Interplanar Beacon; Veldt; Market Festival; Skycloud Egg |
 | 33 | unsupported counter spell | 31 | 26 | Spell Blast; Drown in the Loch; Unyaro Griffin; Hisoka's Defiance; Frontline Medic |
 | 34 | unsupported shuffle effect | 28 | 26 | Dwell on the Past; Madblind Mountain; Perpetual Timepiece; Renewing Touch; Piper's Melody |

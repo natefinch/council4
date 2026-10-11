@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,577 of 33,013 cards eligible for paper support (56.3%)**. The Scryfall Oracle Cards corpus contains 5,687 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,575 of 33,011 cards eligible for paper support (56.3%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4687,7 +4687,6 @@ Council4 currently supports **18,577 of 33,013 cards eligible for paper support 
 - Elf Druid
 - Elf Knight
 - Elf Replica
-- Elf Warrior
 - Elf Warrior
 - Elfhame Palace
 - Elfhame Wurm
@@ -18534,7 +18533,6 @@ Council4 currently supports **18,577 of 33,013 cards eligible for paper support 
 - Zof Consumption // Zof Bloodbog
 - Zof Shade
 - Zog, Triceraton Castaway
-- Zombie
 - Zombie
 - Zombie
 - Zombie
