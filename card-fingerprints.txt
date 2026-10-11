@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18665 supported cards
+# 18666 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -8432,6 +8432,7 @@ c4d78cfa52677b84  Junk Winder
 689c11fc2f5eca31  Junktown
 2057cea0722c6bd3  Junktroller
 490ecd3464396f16  Junkyard Genius
+afc0c3a3e185da42  Junkyo Bell
 4041ca2e6d61980f  Juntu Stakes
 9d8b3f7254342e7a  Junún Efreet
 e71f6614aa261833  Juri, Master of the Revue
