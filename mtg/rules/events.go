@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -206,10 +207,14 @@ func emitPermanentUntappedEvent(g *game.Game, permanent *game.Permanent) {
 
 func setPermanentsTappedSimultaneously(g *game.Game, permanents []*game.Permanent, tapped bool) bool {
 	var changed []*game.Permanent
+	seen := make(map[*game.Permanent]bool, len(permanents))
 	for _, permanent := range permanents {
-		if permanent != nil && permanent.Tapped != tapped {
+		if seen[permanent] {
+			continue
+		}
+		seen[permanent] = true
+		if changePermanentTapped(permanent, tapped) {
 			changed = append(changed, permanent)
-			permanent.Tapped = tapped
 		}
 	}
 	if len(changed) == 0 {
@@ -265,16 +270,30 @@ func sacrificePermanentsSimultaneously(g *game.Game, permanents []*game.Permanen
 	return len(events) > 0
 }
 
-func setPermanentTapped(g *game.Game, permanent *game.Permanent, tapped bool) {
-	if permanent.Tapped == tapped {
-		return
+// changePermanentTapped reports only a physical tap/untap, not a replaced attempt.
+func changePermanentTapped(permanent *game.Permanent, tapped bool) bool {
+	if permanent == nil || permanent.Tapped == tapped {
+		return false
+	}
+	// One replacement effect, regardless of the number of stun counters (CR 122.1d).
+	if !tapped && permanent.Counters.Has(counter.Stun) {
+		permanent.Counters.Remove(counter.Stun, 1)
+		return false
 	}
 	permanent.Tapped = tapped
+	return true
+}
+
+func setPermanentTapped(g *game.Game, permanent *game.Permanent, tapped bool) bool {
+	if !changePermanentTapped(permanent, tapped) {
+		return false
+	}
 	if tapped {
 		emitPermanentTappedEvent(g, permanent)
-		return
+	} else {
+		emitPermanentUntappedEvent(g, permanent)
 	}
-	emitPermanentUntappedEvent(g, permanent)
+	return true
 }
 
 // setPermanentTappedForMana taps a permanent and records tapped-for-mana

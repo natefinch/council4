@@ -1024,8 +1024,8 @@ func handleTapOrUntap(r *effectResolver, prim game.TapOrUntap) effectResolved {
 		MaxChoices: 1,
 	}, r.log)
 	tap := len(selected) != 1 || selected[0] != 1
-	setPermanentTapped(r.game, permanent, tap)
-	res.succeeded = true
+	changed := setPermanentTapped(r.game, permanent, tap)
+	res.succeeded = tap || changed
 	return res
 }
 
@@ -1327,16 +1327,12 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.ChooseOne {
 		if permanent, ok := r.chooseOneGroupPermanent(prim.Group); ok {
-			setPermanentTapped(r.game, permanent, false)
-			res.succeeded = true
+			res.succeeded = setPermanentTapped(r.game, permanent, false)
 		}
 		return res
 	}
 	if prim.ChooseUpTo {
-		for _, permanent := range r.chooseUntapPermanents(prim) {
-			setPermanentTapped(r.game, permanent, false)
-			res.succeeded = true
-		}
+		res.succeeded = setPermanentsTappedSimultaneously(r.game, r.chooseUntapPermanents(prim), false)
 		return res
 	}
 	if prim.Group.Valid() {
@@ -1344,8 +1340,7 @@ func handleUntap(r *effectResolver, prim game.Untap) effectResolved {
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
-		setPermanentTapped(r.game, permanent, false)
-		res.succeeded = true
+		res.succeeded = setPermanentTapped(r.game, permanent, false)
 	}
 	return res
 }
