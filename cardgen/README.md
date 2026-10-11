@@ -15,6 +15,18 @@ Scryfall JSON
   -> deterministic Go source
 ```
 
+Own-hand-to-own-library placement is a single clause adapter, not a draw/put
+pair template. Positive literal card counts and bare chosen X share the existing
+quantity path; top/bottom placement and omitted or explicit "in any order"
+compose through ordinary ordered Ability Content. The resolving hand choice uses
+the current hand, including earlier draws, and moves as many as possible when
+fewer cards remain. X=0 makes no choice or move; literal zero is refused because
+fixed zero denotes a different whole-zone primitive contract. Foreign ownership,
+filtered cards, up-to/unknown/derived amounts, and random or preserved order remain
+unsupported with parser-owned parameter diagnostics.
+Placement as an "If/When you do" resolving cost also refuses: best-effort movement
+cannot model all-or-nothing payment, including successful zero-card payment.
+
 The compiler is fail-closed. It emits a card only when every face, ability,
 semantic element, and meaningful source token is supported. Trigger wording is
 recognized here into a source-spanned `oracle.TriggerPattern` with closed

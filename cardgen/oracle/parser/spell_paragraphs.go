@@ -29,7 +29,7 @@ func joinResolvingAlternativeParagraphs(source string, context Context, abilitie
 		if len(result) == 0 || !plainResolvingParagraph(result[len(result)-1]) ||
 			!plainResolvingParagraph(ability) ||
 			!conditionalInsteadParagraph(ability) &&
-				!(result[len(result)-1].paragraphSourceTokens != nil && leadingConditionalParagraph(ability)) {
+				(result[len(result)-1].paragraphSourceTokens == nil || !leadingConditionalParagraph(ability)) {
 			result = append(result, ability)
 			continue
 		}
