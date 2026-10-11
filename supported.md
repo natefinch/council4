@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,654 of 33,011 cards eligible for paper support (56.5%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,655 of 33,011 cards eligible for paper support (56.5%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -4136,6 +4136,7 @@ Council4 currently supports **18,654 of 33,011 cards eligible for paper support 
 - Domri's Ambush
 - Domri's Nodorog
 - Domri, City Smasher
+- Don't Make a Sound
 - Donate
 - Donatello, the Brains
 - Donatello, Turtle Techie
