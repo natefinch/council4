@@ -411,6 +411,20 @@ func lowerOrderedEffectSequence(
 			ctx.content.Targets,
 			clauseTargets,
 		)
+		if len(clauseTargets) == 0 && len(inheritedTargets) == 0 &&
+			effect.Replacement.Kind == parser.EffectReplacementInstead &&
+			fixedSingleTargetDamageEffect(effect) {
+			for _, replaced := range ctx.content.Effects[:i] {
+				if replaced.ClauseID == effect.Replacement.ReplacedClauseID() &&
+					fixedSingleTargetDamageEffect(&replaced) &&
+					len(replaced.Targets) == 1 &&
+					replaced.Targets[0].Cardinality.Min == 1 &&
+					replaced.Targets[0].Cardinality.Max == 1 {
+					inheritedTargets = replaced.Targets
+					break
+				}
+			}
+		}
 		// Three target-handling modes:
 		//   allSharedTargets: only inherited, no own — compound-mill "then draws".
 		//   mixedTargets:     inherited + own — "then fights target creature" where
@@ -3532,7 +3546,11 @@ func sequenceInsteadGates(
 		if effects[j].Replacement.Kind != parser.EffectReplacementInstead {
 			continue
 		}
-		if j == 0 {
+		replacedClauseID := effects[j].Replacement.ReplacedClauseID()
+		replaced := slices.IndexFunc(effects[:j], func(effect compiler.CompiledEffect) bool {
+			return replacedClauseID != 0 && effect.ClauseID == replacedClauseID
+		})
+		if replaced < 0 {
 			return nil, false
 		}
 		condition, gated := effectConditions[j]
@@ -3543,13 +3561,13 @@ func sequenceInsteadGates(
 		if !ok {
 			return nil, false
 		}
-		if _, exists := gates[j-1]; exists {
+		if _, exists := gates[replaced]; exists {
 			return nil, false
 		}
 		if gates == nil {
 			gates = make(map[int]game.EffectCondition)
 		}
-		gates[j-1] = negated
+		gates[replaced] = negated
 	}
 	return gates, true
 }

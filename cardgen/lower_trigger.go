@@ -749,11 +749,13 @@ func (lowering *abilityLowering) complete(
 		lowering.consumed.declarations != staticDeclarations {
 		return false
 	}
+	paragraphLabels := syntax.ParagraphLabelSpans()
 	for _, span := range syntax.CoverageSpans() {
 		if (syntax.AbilityWord != nil && rulesFreeAbilityWordLabel(ability.AbilityWord) &&
 			(span == syntax.AbilityWord.SeparatorSpan ||
 				spanCoveredByAbilityWord(span, syntax.AbilityWord))) ||
-			spanCovered(span, lowering.sourceSpans) {
+			spanCovered(span, lowering.sourceSpans) ||
+			spanCovered(span, paragraphLabels) {
 			continue
 		}
 		// A recognized coin flip re-parses each branch clause, so its compiled

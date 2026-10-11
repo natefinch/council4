@@ -97,13 +97,15 @@ type AttachmentChoicesSyntax struct {
 
 // Ability is one Oracle-text paragraph, or one modal header and its options.
 type Ability struct {
-	Kind        AbilityKind        `json:",omitempty"`
-	Span        shared.Span        `json:"-"`
-	Text        string             `json:",omitempty"`
-	Tokens      []shared.Token     `json:"-"`
-	AbilityWord *AbilityWordClause `json:",omitempty"`
-	Chapters    []int              `json:",omitempty"`
-	ChapterSpan shared.Span        `json:"-"`
+	paragraphSourceTokens []shared.Token
+	paragraphAbilityWords []AbilityWordClause
+	Kind                  AbilityKind        `json:",omitempty"`
+	Span                  shared.Span        `json:"-"`
+	Text                  string             `json:",omitempty"`
+	Tokens                []shared.Token     `json:"-"`
+	AbilityWord           *AbilityWordClause `json:",omitempty"`
+	Chapters              []int              `json:",omitempty"`
+	ChapterSpan           shared.Span        `json:"-"`
 	// ChapterFlavorSpan is the source span of a Saga chapter's flavor-name prefix
 	// (the first em dash and the Title-Case proper name set off before the
 	// effect, as in "I — Gungnir — Destroy ..."), or the zero span when the

@@ -3337,10 +3337,7 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 	if subject != "" {
 		prefix = subject + " " + verbText
 	}
-	text := joinedEffectText(effect.Tokens[subjectStart:])
-	if len(effect.Tokens) > 0 && effect.Tokens[len(effect.Tokens)-1].Kind != shared.Period {
-		text += "."
-	}
+	text := exactEffectClauseText(effect)
 	if effect.Divided {
 		return exactDividedDamageText(effect, prefix, text)
 	}
@@ -3387,6 +3384,13 @@ func exactDamageEffectSyntax(effect *EffectSyntax) bool {
 		}
 	}
 	if len(effect.Targets) == 0 {
+		if effect.Replacement.Kind == EffectReplacementInstead &&
+			effect.Amount.Known && effect.Amount.DynamicKind == EffectDynamicAmountNone &&
+			len(effect.DamageRecipient.Groups) == 0 &&
+			len(effect.DamageRiders) == 0 &&
+			text == fmt.Sprintf("%s %d damage.", prefix, effect.Amount.Value) {
+			return true
+		}
 		// A "where X is the number of ..." or "equal to ..." dynamic amount on
 		// a single-recipient group clause is reconstructed from the captured
 		// amount phrase, mirroring the single-target dynamic forms.

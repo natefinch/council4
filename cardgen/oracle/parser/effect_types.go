@@ -1188,10 +1188,11 @@ const (
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
 type EffectReplacementSyntax struct {
-	Kind            EffectReplacementKind `json:",omitempty"`
-	Span            shared.Span           `json:"-"`
-	Amount          int                   `json:",omitempty"`
-	EachCounterKind bool                  `json:",omitempty"`
+	replacedClauseID int
+	Kind             EffectReplacementKind `json:",omitempty"`
+	Span             shared.Span           `json:"-"`
+	Amount           int                   `json:",omitempty"`
+	EachCounterKind  bool                  `json:",omitempty"`
 }
 
 // EffectManaSyntax describes exact add-mana output.

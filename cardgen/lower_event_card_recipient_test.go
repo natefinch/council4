@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 func TestLowerEventCardRecipientOwnedClause(t *testing.T) {
@@ -87,10 +88,46 @@ func TestLowerEventCardRecipientRejectsUnmodeledControl(t *testing.T) {
 	}
 }
 
+func TestLowerEventCardEntryParametersAcrossVerbs(t *testing.T) {
+	for _, verb := range []string{"put that card onto", "return that card to"} {
+		for _, rider := range []struct {
+			text        string
+			transformed bool
+			counter     bool
+		}{
+			{" tapped under your control", false, false},
+			{" transformed under your control", true, false},
+			{" under your control with a +1/+1 counter on it", false, true},
+		} {
+			t.Run(verb+rider.text, func(t *testing.T) {
+				text := "Whenever an opponent sacrifices a nontoken permanent, " + verb + " the battlefield" + rider.text + "."
+				face := lowerSingleFace(t, &ScryfallCard{
+					Name: "Event Recipient", Layout: "normal", TypeLine: "Creature",
+					Power: new("1"), Toughness: new("1"),
+					OracleText: text,
+				})
+				put, ok := face.TriggeredAbilities[0].Content.Modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
+				if !ok || put.Source != game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceEvent}) ||
+					!put.Recipient.Exists || put.Recipient.Val != game.ControllerReference() ||
+					put.EntryTapped != (rider.text == " tapped under your control") ||
+					put.EntryTransformed != rider.transformed ||
+					(len(put.EntryCounters) == 1) != rider.counter {
+					t.Fatalf("entry parameters not consumed: %+v", put)
+				}
+				if rider.counter && (put.EntryCounters[0].Kind != counter.PlusOnePlusOne ||
+					put.EntryCounters[0].Amount != 1) {
+					t.Fatalf("entry counter kind/amount not preserved: %+v", put.EntryCounters)
+				}
+			})
+		}
+	}
+}
+
 func TestLowerEventCardPutRefusesUnrepresentedEntryRiders(t *testing.T) {
 	for _, rider := range []string{
-		" transformed under your control",
-		" under your control with a +1/+1 counter on it",
+		" face down under your control",
+		" under your control with a charge counter on it",
+		" transformed under your control (front face up)",
 	} {
 		t.Run(rider, func(t *testing.T) {
 			assertCardUnsupported(t, &ScryfallCard{

@@ -46,12 +46,11 @@ func TestLowerTragicSlipMorbidInsteadModifyPT(t *testing.T) {
 		if modify.Duration != game.DurationUntilEndOfTurn {
 			t.Fatalf("instruction[%d] duration = %v, want until end of turn", i, modify.Duration)
 		}
-		if !instr.Condition.Exists || !instr.Condition.Val.Condition.Exists {
-			t.Fatalf("instruction[%d] is ungated: %#v", i, instr)
-		}
-		if !instr.Condition.Val.Condition.Val.EventHistory.Exists {
-			t.Fatalf("instruction[%d] condition is not event-history gated: %#v", i, instr.Condition.Val)
-		}
+	}
+	assertConditionConsumer(t, seq[0], seq[1], true)
+	if !seq[0].Condition.Exists || !seq[0].Condition.Val.Condition.Exists ||
+		!seq[0].Condition.Val.Condition.Val.EventHistory.Exists {
+		t.Fatal("base must capture the creature-death predicate")
 	}
 	base, ok := seq[0].Primitive.(game.ModifyPT)
 	if !ok {
@@ -63,9 +62,6 @@ func TestLowerTragicSlipMorbidInsteadModifyPT(t *testing.T) {
 	}
 	if !seq[0].Condition.Val.Condition.Val.Negate {
 		t.Fatal("base modification must be gated on NOT(a creature died this turn)")
-	}
-	if seq[1].Condition.Val.Condition.Val.Negate {
-		t.Fatal("morbid modification must be gated on (a creature died this turn)")
 	}
 	if got := base.PowerDelta; got != game.Fixed(-1) {
 		t.Fatalf("base power delta = %#v, want -1", got)

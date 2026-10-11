@@ -52,6 +52,19 @@ func TestReferenceRoleCompleteOriginalLossCohort(t *testing.T) {
 			if !exists || card.ID != identity[0] || card.OracleID != identity[1] || card.Layout != identity[3] {
 				t.Fatal("complete original identity changed")
 			}
+			if card.Name == "Arrow Storm" {
+				defs, diagnostics, err := CompileCardDefs(&card)
+				if err != nil || len(defs) != 0 || len(diagnostics) != 1 ||
+					diagnostics[0].Summary != "unsupported ordered effect sequence" ||
+					diagnostics[0].Detail != "sub-effect — unsupported damage spell" {
+					t.Fatalf("unmodeled unpreventable damage rider must refuse: err=%v diagnostics=%+v defs=%d",
+						err, diagnostics, len(defs))
+				}
+				if !strings.Contains(card.OracleText, "and the damage can't be prevented") {
+					t.Fatal("accepted safety withdrawal lost its exact unmodeled rider")
+				}
+				return
+			}
 			defs, diagnostics, err := CompileCardDefs(&card)
 			if err != nil || len(diagnostics) != 0 || len(defs) == 0 {
 				logReferenceRoleProofs(t, card)
@@ -60,6 +73,20 @@ func TestReferenceRoleCompleteOriginalLossCohort(t *testing.T) {
 
 		})
 	}
+}
+
+func TestReferenceRoleOrdinaryRaidDamageAlternative(t *testing.T) {
+	card := referenceRoleOriginals(t)["Arrow Storm"]
+	card.OracleText = "Arrow Storm deals 4 damage to any target.\n" +
+		"Raid — If you attacked this turn, instead Arrow Storm deals 5 damage."
+	assertCardPaths(t, &card,
+		"SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage).Amount.fixed = 4",
+		"SpellAbility.Val.Modes[0].Sequence[1].Primitive.(game.Damage).Amount.fixed = 5",
+		"SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage).Recipient.object.kind = game.ObjectReferenceTargetPermanent",
+		"SpellAbility.Val.Modes[0].Sequence[1].Primitive.(game.Damage).Recipient.object.kind = game.ObjectReferenceTargetPermanent",
+		"SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage).Recipient.player.kind = game.PlayerReferenceTargetPlayer",
+		"SpellAbility.Val.Modes[0].Sequence[1].Primitive.(game.Damage).Recipient.player.kind = game.PlayerReferenceTargetPlayer",
+	)
 }
 
 func logReferenceRoleProofs(t *testing.T, card ScryfallCard) {

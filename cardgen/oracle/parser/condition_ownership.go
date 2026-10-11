@@ -48,6 +48,13 @@ func emitConditionOwnership(sentences []Sentence, segments []ConditionSegment, r
 	effects := conditionEffects(sentences)
 	for ei, effect := range effects {
 		effect.ClauseID = ei + 1
+		if ei > 0 && effect.Replacement.Kind == EffectReplacementInstead {
+			previous := effects[ei-1]
+			effect.Replacement.replacedClauseID = previous.ClauseID
+			if previous.Replacement.Kind == EffectReplacementInstead {
+				effect.Replacement.replacedClauseID = previous.Replacement.replacedClauseID
+			}
+		}
 	}
 	for ci := range segments {
 		segment := &segments[ci]

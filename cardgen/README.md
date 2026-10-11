@@ -54,6 +54,18 @@ publishers, named-all groups, conflicting result gates, and modal scalar
 namespaces remain fail-closed. Parser-owned group conditions capture their
 truth once before removal and retain it for every expanded consumer.
 
+Resolving conditional alternatives in compatible instant/sorcery paragraphs
+join in the parser before reference and condition proof finalization. Original
+rules-free ability-word labels retain explicit lexical coverage; unknown labels,
+modal paragraphs, future-event replacements, and competing alternatives refuse.
+The parser names the replaced ClauseID, and shared assembly captures its branch
+predicate before the base instruction mutates state. Expanded instructions share
+that captured truth; a later independent conditional paragraph evaluates again
+at its own clause. PT, damage, mana, counters, and counter-payment alternatives
+use ordinary adapters rather than whole-face alternative combiners. Unmodeled
+riders still refuse the whole card, including Arrow Storm's unpreventable damage
+rider tracked in #2256.
+
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
 can therefore remain the subject after exile without being confused with the

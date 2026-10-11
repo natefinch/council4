@@ -212,8 +212,7 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectPut:
-		if !effect.Exact || effect.ToZone != zone.Battlefield || ctx.optional ||
-			effect.EntersTransformed || effect.CounterKindKnown {
+		if !effect.Exact || effect.ToZone != zone.Battlefield || ctx.optional {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectCast:
@@ -231,31 +230,27 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}
+	if effect.ToZone == zone.Battlefield &&
+		(effect.Kind == compiler.EffectReturn || effect.Kind == compiler.EffectPut) {
+		put := game.PutOnBattlefield{
+			Source:           game.CardBattlefieldSource(eventCard),
+			EntryTapped:      effect.EntersTapped,
+			EntryTransformed: effect.EntersTransformed,
+		}
+		if effect.UnderYourControl {
+			put.Recipient = opt.Val(game.ControllerReference())
+		}
+		if effect.CounterKindKnown {
+			if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1 {
+				return game.AbilityContent{}, false
+			}
+			put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
+		}
+		put.ContinuousEffects = returnedCardEnchantmentEffects(effect.ReturnAsEnchantment)
+		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
+	}
 	switch effect.Kind {
 	case compiler.EffectReturn:
-		if effect.ToZone == zone.Battlefield {
-			put := game.PutOnBattlefield{
-				Source:           game.CardBattlefieldSource(eventCard),
-				EntryTapped:      effect.EntersTapped,
-				EntryTransformed: effect.EntersTransformed,
-			}
-			if effect.UnderYourControl {
-				put.Recipient = opt.Val(game.ControllerReference())
-			}
-			if effect.CounterKindKnown {
-				// Only a fixed +1/+1 counter placement is representable as an
-				// entry-counter rider. Fail closed on any other counter rider so
-				// the return is never emitted with the counter silently dropped.
-				if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1 {
-					return game.AbilityContent{}, false
-				}
-				put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
-			}
-			put.ContinuousEffects = returnedCardEnchantmentEffects(effect.ReturnAsEnchantment)
-			return game.Mode{Sequence: []game.Instruction{{
-				Primitive: put,
-			}}}.Ability(), true
-		}
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
 				Card:        eventCard,
@@ -271,17 +266,6 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				Face:     game.FaceAlternate,
 				Duration: game.DurationUntilEndOfYourNextTurn,
 			},
-		}}}.Ability(), true
-	case compiler.EffectPut:
-		put := game.PutOnBattlefield{
-			Source:      game.CardBattlefieldSource(eventCard),
-			EntryTapped: effect.EntersTapped,
-		}
-		if effect.UnderYourControl {
-			put.Recipient = opt.Val(game.ControllerReference())
-		}
-		return game.Mode{Sequence: []game.Instruction{{
-			Primitive: put,
 		}}}.Ability(), true
 	case compiler.EffectExile:
 		move := game.MoveCard{

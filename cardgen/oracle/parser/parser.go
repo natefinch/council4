@@ -150,6 +150,9 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		}
 		document.Abilities = append(document.Abilities, ability)
 	}
+	joined, joinDiagnostics := joinResolvingAlternativeParagraphs(source, context, document.Abilities)
+	document.Abilities = joined
+	diagnostics = append(diagnostics, joinDiagnostics...)
 	emitAtoms(document.Abilities, context.CardName, context.Legendary)
 	emitCanBeCommander(document.Abilities, context.CardName)
 	emitDeclareAttackersCastRestriction(document.Abilities)

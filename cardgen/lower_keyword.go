@@ -2443,52 +2443,7 @@ func lowerKeywordAbility(
 }
 
 func rulesFreeAbilityWordLabel(label string) bool {
-	switch label {
-	case "",
-		"Adamant",
-		"Addendum",
-		"Bloodrush",
-		"Celebration",
-		"Channel",
-		"Cohort",
-		"Converge",
-		"Corrupted",
-		"Coven",
-		"Crown of Madness",
-		"Delirium",
-		"Descend",
-		"Domain",
-		"Enrage",
-		"Fateful hour",
-		"Ferocious",
-		"Flurry",
-		"Formidable",
-		"Hellbent",
-		"History Teacher",
-		"Inspired",
-		"Kinship",
-		"Lieutenant",
-		"Magecraft",
-		"Metalcraft",
-		"Morbid",
-		"Opus",
-		"Parley",
-		"Raid",
-		"Revolt",
-		"Spell mastery",
-		"Survival",
-		"Teleport",
-		"Threshold",
-		"Those Who Came Before",
-		"Undergrowth",
-		"Unlock Ability",
-		"Vivid",
-		"Void",
-		"Will of the council":
-		return true
-	default:
-		return false
-	}
+	return parser.RulesFreeAbilityWord(label)
 }
 
 func syntaxWithoutAbilityWord(syntax *parser.Ability) parser.Ability {

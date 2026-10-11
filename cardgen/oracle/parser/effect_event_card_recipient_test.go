@@ -14,6 +14,11 @@ func TestReferencedBattlefieldDestinationExactControl(t *testing.T) {
 		{"Return it to the battlefield converted under its owner's control.", true, false, true},
 		{"Return it to the battlefield transformed under your control.", true, true, false},
 		{"Return it to the battlefield tapped and transformed under its owner's control.", true, false, true},
+		{"Return it to the battlefield tapped (front face up).", true, false, false},
+		{"Return it to the battlefield transformed (front face up).", false, false, false},
+		{"Return it to the battlefield (back face up).", false, false, false},
+		{"Return it to the battlefield face down (front face up).", false, false, false},
+		{"Return it to the battlefield under your control with a +1/+1 counter on it.", true, true, false},
 		{"Return the chosen card to the battlefield tapped.", false, false, false},
 		{"Put that card onto the battlefield under that player's control.", false, false, false},
 		{"Put that card onto the battlefield under target opponent's control.", false, false, false},
@@ -33,8 +38,9 @@ func TestReferencedBattlefieldDestinationExactControl(t *testing.T) {
 			effect := ability.Sentences[0].Effects[0]
 			if effect.Exact != test.exact || effect.UnderYourControl != test.controller ||
 				effect.UnderOwnersControl != test.owner {
-				t.Fatalf("exact/controller/owner=%v/%v/%v want=%v/%v/%v", effect.Exact,
-					effect.UnderYourControl, effect.UnderOwnersControl, test.exact, test.controller, test.owner)
+				t.Fatalf("exact/controller/owner=%v/%v/%v want=%v/%v/%v clause=%q counter=%v amount=%+v", effect.Exact,
+					effect.UnderYourControl, effect.UnderOwnersControl, test.exact, test.controller, test.owner,
+					exactEffectClauseText(&effect), effect.CounterKnown, effect.Amount)
 			}
 		})
 	}

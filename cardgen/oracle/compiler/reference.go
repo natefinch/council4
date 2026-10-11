@@ -804,7 +804,7 @@ func triggerReferenceBindsEventCard(
 	reference CompiledReference,
 	effects []CompiledEffect,
 ) bool {
-	if trigger.Event != TriggerEventPermanentDied &&
+	if trigger.Event != TriggerEventPermanentDied && trigger.Event != TriggerEventPermanentSacrificed &&
 		(trigger.Event != TriggerEventZoneChanged ||
 			!trigger.MatchToZone ||
 			(trigger.ToZone != TriggerZoneGraveyard && trigger.ToZone != TriggerZoneExile)) {
