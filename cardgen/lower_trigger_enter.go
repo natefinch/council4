@@ -199,15 +199,20 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				return game.AbilityContent{}, false
 			}
 		case zone.Battlefield:
-			if ctx.optional {
+			if !effect.Exact || ctx.optional {
 				return game.AbilityContent{}, false
 			}
 		default:
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectExile:
+		// The only modeled inexact exile component is a known counter rider; any
+		// other component, including a payment, refuses the whole card.
+		if !effect.Exact && (!effect.CounterKindKnown || effect.Payment.Form != parser.EffectPaymentFormUnknown) {
+			return game.AbilityContent{}, false
+		}
 	case compiler.EffectPut:
-		if effect.ToZone != zone.Battlefield || ctx.optional {
+		if !effect.Exact || effect.ToZone != zone.Battlefield || ctx.optional {
 			return game.AbilityContent{}, false
 		}
 	case compiler.EffectCast:
@@ -225,28 +230,27 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 	if consumed.content.Unconsumed() {
 		return game.AbilityContent{}, false
 	}
+	if effect.ToZone == zone.Battlefield &&
+		(effect.Kind == compiler.EffectReturn || effect.Kind == compiler.EffectPut) {
+		put := game.PutOnBattlefield{
+			Source:           game.CardBattlefieldSource(eventCard),
+			EntryTapped:      effect.EntersTapped,
+			EntryTransformed: effect.EntersTransformed,
+		}
+		if effect.UnderYourControl {
+			put.Recipient = opt.Val(game.ControllerReference())
+		}
+		if effect.CounterKindKnown {
+			if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1 {
+				return game.AbilityContent{}, false
+			}
+			put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
+		}
+		put.ContinuousEffects = returnedCardEnchantmentEffects(effect.ReturnAsEnchantment)
+		return game.Mode{Sequence: []game.Instruction{{Primitive: put}}}.Ability(), true
+	}
 	switch effect.Kind {
 	case compiler.EffectReturn:
-		if effect.ToZone == zone.Battlefield {
-			put := game.PutOnBattlefield{
-				Source:           game.CardBattlefieldSource(eventCard),
-				EntryTapped:      effect.EntersTapped,
-				EntryTransformed: effect.EntersTransformed,
-			}
-			if effect.CounterKindKnown {
-				// Only a fixed +1/+1 counter placement is representable as an
-				// entry-counter rider. Fail closed on any other counter rider so
-				// the return is never emitted with the counter silently dropped.
-				if effect.CounterKind != counter.PlusOnePlusOne || !effect.Amount.Known || effect.Amount.Value < 1 {
-					return game.AbilityContent{}, false
-				}
-				put.EntryCounters = []game.CounterPlacement{{Kind: counter.PlusOnePlusOne, Amount: effect.Amount.Value}}
-			}
-			put.ContinuousEffects = returnedCardEnchantmentEffects(effect.ReturnAsEnchantment)
-			return game.Mode{Sequence: []game.Instruction{{
-				Primitive: put,
-			}}}.Ability(), true
-		}
 		return game.Mode{Sequence: []game.Instruction{{
 			Primitive: game.MoveCard{
 				Card:        eventCard,
@@ -261,13 +265,6 @@ func lowerEventCardEffect(ctx contentCtx) (game.AbilityContent, bool) {
 				FromZone: zone.Graveyard,
 				Face:     game.FaceAlternate,
 				Duration: game.DurationUntilEndOfYourNextTurn,
-			},
-		}}}.Ability(), true
-	case compiler.EffectPut:
-		return game.Mode{Sequence: []game.Instruction{{
-			Primitive: game.PutOnBattlefield{
-				Source:      game.CardBattlefieldSource(eventCard),
-				EntryTapped: effect.EntersTapped,
 			},
 		}}}.Ability(), true
 	case compiler.EffectExile:
@@ -846,6 +843,9 @@ func prepareTriggerBody(
 			effect := body.Content.Effects[0]
 			switch {
 			case fixedPhaseSubjectEffectModeled(effect) && effect.DelayedSubject.OptionalAtDelayedTime:
+				triggerOptional = false
+			case effect.LifePayment == parser.EffectLifePaymentOptional:
+				// Pay owns the affordability-sensitive choice at resolution.
 				triggerOptional = false
 			case hasInterveningCondition:
 				body.Optional = true

@@ -714,6 +714,8 @@ func cloneAbilityContent(content AbilityContent) AbilityContent {
 		cloned.Modes[i].Sequence = make([]Instruction, len(content.Modes[i].Sequence))
 		for j := range content.Modes[i].Sequence {
 			cloned.Modes[i].Sequence[j] = content.Modes[i].Sequence[j]
+			cloned.Modes[i].Sequence[j].LocalProducts.Results = cloneSlice(content.Modes[i].Sequence[j].LocalProducts.Results)
+			cloned.Modes[i].Sequence[j].LocalProducts.Links = cloneSlice(content.Modes[i].Sequence[j].LocalProducts.Links)
 			cloned.Modes[i].Sequence[j].Primitive = clonePrimitive(content.Modes[i].Sequence[j].Primitive)
 		}
 	}

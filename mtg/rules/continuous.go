@@ -31,15 +31,17 @@ func dynamicValuePtr(v opt.V[game.DynamicValue]) *game.DynamicValue {
 }
 
 type permanentEffectiveValues struct {
-	name           string
-	oracleText     string
-	colors         []color.Color
-	supertypes     []types.Super
-	types          []types.Card
-	subtypes       []types.Sub
-	abilities      []game.Ability
-	resolutionUses map[int]game.ActivatedAbilityResolutionUse
-	controller     game.PlayerID
+	name                string
+	oracleText          string
+	colors              []color.Color
+	supertypes          []types.Super
+	types               []types.Card
+	subtypes            []types.Sub
+	abilities           []game.Ability
+	resolutionUses      map[int]game.ActivatedAbilityResolutionUse
+	triggerOrigins      map[int]game.TriggerOrigin
+	triggerGrantOrigins map[*game.Ability]game.TriggerOrigin
+	controller          game.PlayerID
 
 	power            int
 	powerOK          bool
@@ -300,6 +302,10 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 	values.abilities = make([]game.Ability, 0, card.AbilityCount())
 	for i := 0; i < card.AbilityCount(); i++ {
 		appendEffectiveAbility(&values, permanent, card.BodyAt(i), permanentAbilityOrigin(permanent))
+		setEffectiveTriggerOrigin(&values, game.TriggerOrigin{
+			RecipientID: permanent.ObjectID, OriginID: permanentAbilityOrigin(permanent).OriginID,
+			Face: permanent.Face, BodyIndex: i,
+		})
 	}
 	for _, component := range permanent.MergedCards {
 		if component.FaceDown {
@@ -317,6 +323,10 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 			for i := 0; i < componentDef.AbilityCount(); i++ {
 				appendEffectiveAbility(&values, permanent, componentDef.BodyAt(i),
 					game.ActivatedAbilityResolutionUse{OriginID: component.AbilityOriginID})
+				setEffectiveTriggerOrigin(&values, game.TriggerOrigin{
+					RecipientID: permanent.ObjectID, OriginID: component.AbilityOriginID,
+					Face: component.Face, BodyIndex: i,
+				})
 			}
 			continue
 		}
@@ -331,6 +341,10 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 		for i := 0; i < componentDef.AbilityCount(); i++ {
 			appendEffectiveAbility(&values, permanent, componentDef.BodyAt(i),
 				game.ActivatedAbilityResolutionUse{OriginID: component.CardInstanceID})
+			setEffectiveTriggerOrigin(&values, game.TriggerOrigin{
+				RecipientID: permanent.ObjectID, OriginID: component.CardInstanceID,
+				Face: component.Face, BodyIndex: i,
+			})
 		}
 	}
 	if card.Power.Exists {
@@ -465,8 +479,8 @@ func dynamicValueBase(
 			if ref.CardID == 0 {
 				continue
 			}
-			card, ok := g.GetCardInstance(ref.CardID)
-			if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion {
+			_, ok := linkedCardInstance(g, ref)
+			if !ok {
 				continue
 			}
 			for _, player := range g.Players {
@@ -801,6 +815,8 @@ type staticAbilitySource struct {
 	permanent  *game.Permanent
 	face       *game.CardFace
 	cardID     id.ID
+	originID   id.ID
+	faceIndex  game.FaceIndex
 	controller game.PlayerID
 	timestamp  game.Timestamp
 	// emblem marks a command-zone emblem source. Emblem abilities have no zone of
@@ -850,6 +866,8 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 				permanent:  permanent,
 				face:       component.face,
 				cardID:     component.cardID,
+				originID:   component.originID,
+				faceIndex:  component.faceIndex,
 				controller: permanent.Controller,
 				timestamp:  permanent.Timestamp(),
 			})
@@ -900,8 +918,10 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 const emblemTimestampBase = 1 << 30
 
 type permanentAbilityComponent struct {
-	face   *game.CardFace
-	cardID id.ID
+	face      *game.CardFace
+	cardID    id.ID
+	originID  id.ID
+	faceIndex game.FaceIndex
 }
 
 func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permanent, visit func(permanentAbilityComponent)) {
@@ -919,7 +939,7 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 		if merged.TokenDef != nil {
 			face, ok := merged.TokenDef.FaceView(merged.Face)
 			if ok && len(face.StaticAbilities) > 0 {
-				visit(permanentAbilityComponent{face: face})
+				visit(permanentAbilityComponent{face: face, originID: merged.AbilityOriginID, faceIndex: merged.Face})
 			}
 			continue
 		}
@@ -948,8 +968,8 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 		}, body.Condition) {
 			continue
 		}
-		for i := range body.ContinuousEffects {
-			template := &body.ContinuousEffects[i]
+		for effectIndex := range body.ContinuousEffects {
+			template := &body.ContinuousEffects[effectIndex]
 			if template.Layer != layer {
 				continue
 			}
@@ -961,6 +981,27 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			staticEffect.SourceCardID = source.cardID
 			staticEffect.Controller = source.controller
 			staticEffect.Timestamp = source.timestamp
+			originID := source.originID
+			face := source.faceIndex
+			if source.permanent != nil {
+				if originID == 0 {
+					originID = permanentAbilityOrigin(source.permanent).OriginID
+				}
+			}
+			if len(staticEffect.AddAbilities) > 0 {
+				// The fresh slice routes provenance through ordering without
+				// adding runtime state to the serialized effect definition.
+				// Its address is transport only; the captured identity is the
+				// exact source and immutable declaration coordinates below.
+				staticEffect.AddAbilities = slices.Clone(staticEffect.AddAbilities)
+				if values.triggerGrantOrigins == nil {
+					values.triggerGrantOrigins = make(map[*game.Ability]game.TriggerOrigin)
+				}
+				values.triggerGrantOrigins[&staticEffect.AddAbilities[0]] = game.TriggerOrigin{
+					SourceID: sourceObjectID(source), OriginID: originID, Face: face,
+					StaticIndex: i, EffectIndex: effectIndex, Granted: true,
+				}
+			}
 			rewriteChosenColorProtectionEffect(&staticEffect, source.permanent)
 			rewriteCommanderIdentityProtectionEffect(g, &staticEffect, source.controller)
 			if staticEffect.Layer == game.LayerControl && staticEffect.NewController.Exists {
@@ -1089,7 +1130,7 @@ func staticAbilityPermanentComponent(g *game.Game, permanent *game.Permanent) (p
 	if !ok {
 		return permanentAbilityComponent{}, false
 	}
-	component := permanentAbilityComponent{face: face}
+	component := permanentAbilityComponent{face: face, originID: permanentAbilityOrigin(permanent).OriginID, faceIndex: permanent.Face}
 	if !permanent.Token {
 		component.cardID = permanent.CardInstanceID
 	}
@@ -1101,7 +1142,7 @@ func staticAbilityCardInstanceComponent(card *game.CardInstance, face game.FaceI
 		return permanentAbilityComponent{}, false
 	}
 	faceDef, ok := card.Def.FaceView(face)
-	return permanentAbilityComponent{face: faceDef, cardID: card.ID}, ok
+	return permanentAbilityComponent{face: faceDef, cardID: card.ID, originID: card.ID, faceIndex: face}, ok
 }
 
 func staticAbilityHasEffectForLayer(body *game.StaticAbility, layer game.ContinuousLayer) bool {
@@ -1407,7 +1448,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	switch effect.Layer {
 	case game.LayerCopy:
 		if effect.CopyValues.Exists {
-			applyCopyValues(g, permanent, values, &effect.CopyValues.Val)
+			applyCopyValues(g, permanent, values, &effect.CopyValues.Val, effect.ID)
 		}
 	case game.LayerControl:
 		if effect.NewController.Exists {
@@ -1446,6 +1487,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		if effect.RemoveAllAbilities {
 			values.abilities = nil
 			values.resolutionUses = nil
+			values.triggerOrigins = nil
 			values.keywords.clear()
 		}
 		for i, body := range effect.AddAbilities {
@@ -1453,6 +1495,18 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 				OriginID: effect.SourceCardID, Granted: true, GrantID: effect.ID,
 				GrantSourceID: effect.SourceObjectID, Occurrence: i,
 			})
+			origin := values.triggerGrantOrigins[&effect.AddAbilities[0]]
+			if !origin.Granted {
+				origin = game.TriggerOrigin{
+					SourceID: effect.SourceObjectID, OriginID: effect.SourceCardID,
+					RuntimeID: effect.ID, Granted: true,
+				}
+				if origin.OriginID == 0 {
+					origin.OriginID = effect.ID
+				}
+			}
+			origin.RecipientID, origin.BodyIndex = permanent.ObjectID, i
+			setEffectiveTriggerOrigin(values, origin)
 			addBodyKeywords(&values.keywords, body)
 		}
 		for _, keyword := range effect.RemoveKeywords {
@@ -1518,7 +1572,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	}
 }
 
-func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, copyValues *game.CopyableValues) {
+func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, copyValues *game.CopyableValues, copyOrigin id.ID) {
 	if copyValues == nil {
 		return
 	}
@@ -1530,9 +1584,14 @@ func applyCopyValues(g *game.Game, permanent *game.Permanent, values *permanentE
 	values.subtypes = append([]types.Sub(nil), copyValues.Subtypes...)
 	values.abilities = nil
 	values.resolutionUses = nil
+	values.triggerOrigins = nil
 	for i, body := range copyValues.Abilities {
 		appendEffectiveAbility(values, permanent, body, game.ActivatedAbilityResolutionUse{
 			OriginID: permanent.ObjectID, Occurrence: i,
+		})
+		setEffectiveTriggerOrigin(values, game.TriggerOrigin{
+			RecipientID: permanent.ObjectID, OriginID: permanent.ObjectID,
+			Face: permanent.Face, BodyIndex: i, RuntimeID: copyOrigin,
 		})
 	}
 	values.powerPT = ptPtr(copyValues.Power)

@@ -24,6 +24,7 @@ const (
 // StackObject represents a spell or ability on the stack waiting to resolve.
 // The stack resolves last-in, first-out (LIFO).
 type StackObject struct {
+	triggerOrigin TriggerOrigin
 	// ID is the unique identifier for this stack object.
 	ID id.ID
 
@@ -251,6 +252,7 @@ type StackObject struct {
 	// library instead of its normal graveyard destination after its remaining
 	// instructions resolve (Green Sun's Zenith, the Beacon cycle).
 	ShuffleIntoLibraryOnResolution bool
+	ReturnToHandOnResolution       bool
 
 	// Suspend is true if this spell was cast from exile by suspend.
 	Suspend bool
@@ -337,6 +339,10 @@ type StackObject struct {
 	// ResolutionResultObjects freezes the actual members of a named result at
 	// its producing mutation, independently of later moves or linked-key reuse.
 	ResolutionResultObjects map[string][]ObjectSnapshot
+
+	// LocalLinkedProducts addresses resolution-local links independently of a
+	// source's changing card/object incarnation.
+	LocalLinkedProducts map[LinkedKey]LinkedObjectKey
 
 	// ResolutionChoices stores named values chosen while resolving this stack
 	// object, for later instructions such as "of the chosen color" (CR 608.2c).

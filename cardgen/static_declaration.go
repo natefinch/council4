@@ -74,6 +74,14 @@ func lowerStaticDeclarations(
 			)
 		}
 		if declaration.Condition != nil && conditionSpan == (shared.Span{}) {
+			if declaration.Condition.ObjectReference != nil &&
+				!ability.Content.OwnsSubject(*declaration.Condition.ObjectReference) {
+				return abilityLowering{}, true, staticDeclarationDiagnostic(
+					ability,
+					"unsupported static declaration condition",
+					"the condition requires a subject proof owned by this ability",
+				)
+			}
 			if declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerControls ||
 				declaration.Condition.Predicate == compiler.ConditionPredicateDefendingPlayerIsMonarch ||
 				declaration.Condition.Predicate == compiler.ConditionPredicateThatPlayerIsMonarch {

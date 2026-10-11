@@ -18,6 +18,7 @@ type scopedResultFlow struct {
 	clearNegated map[int]bool
 	conditions   map[int]bool
 	actions      optionalActionGroups
+	postfixElse  map[int]int
 }
 
 func (p optionalFlowPlan) singleOptionalTail(effectCount int) bool {
@@ -103,8 +104,15 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 	}
 	var actionReason string
 	flow.actions, actionReason = planOptionalActionGroups(content.Effects, indices)
+	if actionReason == "" {
+		actionReason = flow.actions.requireEnteredSubjectReceipts(content)
+	}
 	if actionReason != "" {
 		plan.failureCategory = actionReason
+		return plan, false, true
+	}
+	if reason := flow.planPostfixElse(content, indices); reason != "" {
+		plan.failureCategory = reason
 		return plan, false, true
 	}
 	for ci, condition := range content.Conditions {
@@ -248,19 +256,31 @@ func optionalAntecedentUnmodeled(content compiler.AbilityContent, ei int) bool {
 	if ei > 0 && content.Effects[ei-1].Optional &&
 		(amount.DynamicKind == compiler.DynamicAmountSourceManaValue ||
 			amount.DynamicKind == compiler.DynamicAmountSourcePower ||
-			amount.DynamicKind == compiler.DynamicAmountSourceToughness) {
+			amount.DynamicKind == compiler.DynamicAmountSourceToughness) &&
+		!libraryCardCharacteristicConsumer(content.Effects[ei], content.Effects) {
 		return true
 	}
 	for _, reference := range content.Effects[ei].References {
 		if reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
 			reference.PriorInstruction >= 0 && reference.PriorInstruction < ei &&
-			content.Effects[reference.PriorInstruction].Optional {
+			content.Effects[reference.PriorInstruction].Optional &&
+			!sequenceLibraryCardReference(reference, content.Effects) &&
+			!sequenceEnteredSubjectReference(reference, content.Effects) {
 			return true
 		}
 	}
-	return ei > 0 && content.Effects[ei-1].Optional &&
+	if ei > 0 && content.Effects[ei-1].Optional &&
 		(content.Effects[ei].Context == parser.EffectContextReferencedObject ||
-			content.Effects[ei].Context == parser.EffectContextPriorSubject)
+			content.Effects[ei].Context == parser.EffectContextPriorSubject) {
+		for _, reference := range content.Effects[ei].References {
+			if sequenceEnteredSubjectReference(reference, content.Effects) ||
+				reference.PriorInstruction == ei-1 && sequenceLibraryCardReference(reference, content.Effects) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
 }
 func resultProducerActsForController(effect compiler.CompiledEffect) bool {
 	if effect.Context == parser.EffectContextController {
@@ -297,6 +317,7 @@ func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string
 			return "structural — result publication conflicts with clause result wiring", false
 		}
 		sequence[index].PublishResult = key
+		sequence[index].LocalProducts.Results = append(sequence[index].LocalProducts.Results, key)
 	}
 	if gate, exists := flow.gates[ei]; exists {
 		gated, ok := appendResultGatedBranch(nil, gate, sequence)

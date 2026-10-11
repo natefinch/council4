@@ -22,6 +22,7 @@ func TestPublishedReturnConditionCompositions(t *testing.T) {
 		{"nonadjacent return", "Return target creature card from your graveyard to the battlefield. You gain 1 life. If it's an Elf, draw a card.", 0, 2},
 		{"second target", "Tap target creature. Return target creature card from your graveyard to the battlefield. If it's an Elf, put a +1/+1 counter on it.", 1, 2},
 		{"two returned subjects", "Return target creature card from your graveyard to the battlefield. If it's an Elf, draw a card. Return target creature card from your graveyard to the battlefield. If it's a Dragon, put a +1/+1 counter on it.", 2, 3},
+		{"optional return", "You may return target creature card from your graveyard to the battlefield. If it's an Elf, draw a card.", 0, 1},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -67,9 +68,8 @@ func TestPublishedReturnConditionCompositions(t *testing.T) {
 func TestPublishedReturnConditionRefusesUnavailableSubjects(t *testing.T) {
 	t.Parallel()
 	for _, text := range []string{
-		"You may return target creature card from your graveyard to the battlefield. If it's an Elf, draw a card.",
 		"Return two target creature cards from your graveyard to the battlefield. If it's an Elf, draw a card.",
-		"Return target creature card from your graveyard to the battlefield. Reveal the top card of your library. If it's an Elf, draw a card.",
+		"Return target creature card from your graveyard to the battlefield. Reveal the top two cards of your library. If it's an Elf, draw a card.",
 		"Return target creature card from your graveyard to the battlefield. If that land is an Island, draw a card.",
 		"Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Bird, Mystery, Otter, or Rat, draw a card.",
 		"Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Mystery, Frog, Otter, or Rat, draw a card.",
@@ -78,10 +78,26 @@ func TestPublishedReturnConditionRefusesUnavailableSubjects(t *testing.T) {
 		"Exile target creature you control, then return it to the battlefield under its owner's control. If that creature is a Bird, , Otter, or Rat, draw a card.",
 		"Return target creature card from your graveyard to the battlefield. Exile target creature. If it's an Elf, draw a card.",
 	} {
-		card := &ScryfallCard{Name: "Unavailable Subject", Layout: "normal", TypeLine: "Instant", OracleText: text}
-		_, diagnostics := lowerExecutableFaces(card)
-		if len(diagnostics) == 0 {
-			t.Fatalf("unavailable subject admitted: %s", text)
-		}
+		t.Run(text, func(t *testing.T) {
+			t.Parallel()
+			assertCardUnsupported(t, &ScryfallCard{Name: "Unavailable Subject", Layout: "normal", TypeLine: "Instant", OracleText: text})
+		})
+	}
+}
+
+func TestReturnThenObservationConditionUsesLatestSubject(t *testing.T) {
+	t.Parallel()
+	face := lowerSingleFace(t, &ScryfallCard{Name: "Latest Observed Elf", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Return target creature card from your graveyard to the battlefield. Reveal the top card of your library. If it's an Elf, draw a card."})
+	sequence := face.SpellAbility.Val.Modes[0].Sequence
+	if len(sequence) != 3 {
+		t.Fatalf("sequence = %+v, want return, reveal, and draw", sequence)
+	}
+	put, returned := sequence[0].Primitive.(game.PutOnBattlefield)
+	reveal, observed := sequence[1].Primitive.(game.Reveal)
+	gate := effectConditionMatch(t, sequence[2])
+	if !returned || !observed || put.PublishLinked != "" && put.PublishLinked == reveal.PublishLinked ||
+		reveal.PublishLinked == "" || gate.Object.Val != game.LinkedObjectReference(string(reveal.PublishLinked)) {
+		t.Fatalf("condition = %+v, want latest observed card rather than returned permanent", gate)
 	}
 }

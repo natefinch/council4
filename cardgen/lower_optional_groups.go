@@ -9,16 +9,18 @@ import (
 )
 
 type optionalActionGroups struct {
-	owners          map[int]int
-	keys            map[int]game.OptionalDecisionKey
-	compound        map[int]bool
-	controllerActor map[int]bool
+	owners           map[int]int
+	keys             map[int]game.OptionalDecisionKey
+	compound         map[int]bool
+	controllerActor  map[int]bool
+	requiredReceipts map[int]bool
 }
 
 func planOptionalActionGroups(effects []compiler.CompiledEffect, indices map[int]int) (optionalActionGroups, string) {
 	groups := optionalActionGroups{
 		owners: make(map[int]int), keys: make(map[int]game.OptionalDecisionKey), compound: make(map[int]bool),
-		controllerActor: make(map[int]bool),
+		controllerActor:  make(map[int]bool),
+		requiredReceipts: make(map[int]bool),
 	}
 	for ei, effect := range effects {
 		if !effect.Optional {
@@ -42,7 +44,8 @@ func planOptionalActionGroups(effects []compiler.CompiledEffect, indices map[int
 			}
 			if effects[member].DelayedTiming != 0 &&
 				(len(effect.OptionalActionClauseIDs) != 1 || !fixedPhaseSubjectEffectModeled(effects[member])) ||
-				effects[member].Payment.Form != parser.EffectPaymentFormUnknown {
+				effects[member].Payment.Form != parser.EffectPaymentFormUnknown ||
+				len(effect.OptionalActionClauseIDs) > 1 && effects[member].LifePayment != parser.EffectLifePaymentNone {
 				return groups, "structural — optional action group contains delay or payment"
 			}
 			groups.owners[member] = ei
@@ -91,7 +94,12 @@ func (groups optionalActionGroups) apply(ei int, sequence []game.Instruction) st
 		if len(sequence) > 1 && !groups.controllerActor[owner] {
 			return "structural — expanded optional action actor not modeled"
 		}
-		return markOptionalAction(sequence, groups.keys[owner], groups.compound[owner])
+		// Pay owns its affordability check and single payment choice.
+		if !groups.compound[owner] && len(sequence) == 1 &&
+			sequence[0].Primitive != nil && sequence[0].Primitive.Kind() == game.PrimitivePay {
+			return ""
+		}
+		return markOptionalAction(sequence, groups.keys[owner], groups.compound[owner] || groups.requiredReceipts[owner])
 	}
 	for i := range sequence {
 		if sequence[i].Optional || sequence[i].OptionalActor.Exists || sequence[i].OptionalActorGroup.Exists ||

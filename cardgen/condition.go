@@ -161,7 +161,7 @@ func lowerConditionWithReferences(condition compiler.CompiledCondition, ctx cond
 	case compiler.ConditionPredicateNoAttackerAttackedController:
 		result.Aggregates = append(result.Aggregates, game.AggregateComparison{Aggregate: game.AggregateAttackersInBatchAttackedController, Op: compare.LessOrEqual, Value: 0})
 	case compiler.ConditionPredicateObjectAttackedThisTurn:
-		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
+		object, ok := lowerConditionObjectReference(condition)
 		if !ok {
 			return game.Condition{}, false
 		}
@@ -202,7 +202,7 @@ func lowerConditionWithReferences(condition compiler.CompiledCondition, ctx cond
 			!conditionSelectionEmpty(condition.Selection) {
 			return game.Condition{}, false
 		}
-		object, ok := lowerConditionObjectReference(condition.ObjectBinding)
+		object, ok := lowerConditionObjectReference(condition)
 		if !ok {
 			return game.Condition{}, false
 		}
@@ -328,7 +328,7 @@ func lowerObjectMatchReferenceWithContext(condition compiler.CompiledCondition, 
 		if condition.HasSubjectReference {
 			return game.ObjectReference{}, false
 		}
-		return lowerConditionObjectReference(condition.ObjectBinding)
+		return lowerConditionObjectReference(condition)
 	}
 	reference := *condition.ObjectReference
 	if reference.Binding != condition.ObjectBinding ||
@@ -739,11 +739,11 @@ func lowerComparisonScope(scope compiler.ConditionComparisonScope) (game.Control
 	}
 }
 
-func lowerConditionObjectReference(binding compiler.ReferenceBinding) (game.ObjectReference, bool) {
-	if binding == compiler.ReferenceBindingCreatedToken {
-		return game.LinkedObjectReference(createdTokenLinkKey), true
+func lowerConditionObjectReference(condition compiler.CompiledCondition) (game.ObjectReference, bool) {
+	if condition.ObjectReference == nil || condition.ObjectReference.Binding != condition.ObjectBinding {
+		return game.ObjectReference{}, false
 	}
-	return lowerObjectReference(compiler.CompiledReference{Binding: binding}, referenceLoweringContext{
+	return lowerObjectReference(*condition.ObjectReference, referenceLoweringContext{
 		AllowSource: true,
 		AllowEvent:  true,
 		AllowTarget: true,

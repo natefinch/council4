@@ -13,6 +13,7 @@ func resultConditionPredicate(predicate ConditionPredicateKind) bool {
 func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegment, clauses []ConditionClause) {
 	effects := conditionEffects(sentences)
 	emitOptionalActionOwnership(sentences, segments)
+	emitOptionalPostfixElseOwnership(effects, segments)
 	resultOwner := make(map[int]int)
 	for ci := range segments {
 		segment := &segments[ci]

@@ -20,6 +20,9 @@ type capturedContentSubject struct {
 }
 
 func lowerContentObjectReference(ctx contentCtx, reference compiler.CompiledReference, bindings referenceLoweringContext) (game.ObjectReference, bool) {
+	if !ctx.content.OwnsSubject(reference) {
+		return game.ObjectReference{}, false
+	}
 	if ctx.capturedSubject != nil {
 		if ctx.capturedSubject.group || ctx.capturedSubject.card || !slices.Contains(ctx.capturedSubject.references, reference.NodeID) {
 			return game.ObjectReference{}, false
@@ -51,6 +54,10 @@ func lowerFixedPhaseSubject(
 	if subject.Kind == parser.DelayedSubjectUnsupported {
 		return refuse("fixed-phase body has no unique compatible typed subject")
 	}
+	reference, proven := ctx.content.DelayedSubjectReference(effect, effects)
+	if !proven {
+		return refuse("fixed-phase subject has no validated domain, occurrence, or lifetime")
+	}
 	var object game.ObjectReference
 	var schedulingTargets []game.TargetSpec
 	group := false
@@ -64,14 +71,14 @@ func lowerFixedPhaseSubject(
 		if producer < 0 || producer >= len(ranges) {
 			return refuse("fixed-phase subject producer is unavailable")
 		}
-		reference := compiler.CompiledReference{
-			Binding: compiler.ReferenceBindingPriorInstructionResult, PriorInstruction: producer,
-		}
 		_, key, ok := sequencePriorInstructionPublication([]compiler.CompiledReference{reference}, sequence, ranges, true)
 		if !ok {
 			return refuse("fixed-phase subject producer has no modeled actual-result publication")
 		}
-		object = game.LinkedObjectReference(string(key))
+		object, ok = lowerObjectReference(reference, referenceLoweringContext{PriorInstruction: producer, PriorLinkedKey: key})
+		if !ok {
+			return refuse("fixed-phase product has no compatible object capture adapter")
+		}
 		// A CreateToken's requested count does not bound its actual batch:
 		// replacement effects may multiply even a singular printed token.
 		group = effects[producer].Kind == compiler.EffectCreate
@@ -81,20 +88,7 @@ func lowerFixedPhaseSubject(
 		}
 		ctx.priorInstruction, ctx.priorLinkedKey = producer, key
 	case parser.DelayedSubjectTarget:
-		index := 0
-		if !subject.DirectTarget {
-			referenceIndex := slices.IndexFunc(ctx.content.References, func(reference compiler.CompiledReference) bool {
-				return slices.Contains(subject.ReferenceNodeIDs, reference.NodeID)
-			})
-			if referenceIndex < 0 {
-				return refuse("fixed-phase target subject reference is unavailable")
-			}
-			reference := ctx.content.References[referenceIndex]
-			if reference.Binding != compiler.ReferenceBindingTarget {
-				return refuse("fixed-phase target subject has no exact local occurrence")
-			}
-			index = reference.Occurrence
-		}
+		index := reference.Occurrence
 		if index < 0 || index >= len(ctx.content.Targets) {
 			return refuse("fixed-phase target subject has no exact local occurrence")
 		}
@@ -104,7 +98,11 @@ func lowerFixedPhaseSubject(
 			!permanent || (target.Selector.Zone != zone.None && target.Selector.Zone != zone.Battlefield) {
 			return refuse("fixed-phase subject is not one battlefield target")
 		}
-		object = game.TargetPermanentReference(index)
+		var ok bool
+		object, ok = lowerObjectReference(reference, referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return refuse("fixed-phase target has no validated object capture adapter")
+		}
 		if subject.DirectTarget {
 			schedulingTargets = []game.TargetSpec{spec}
 		}
@@ -112,20 +110,33 @@ func lowerFixedPhaseSubject(
 		if ctx.enclosingKind == compiler.AbilitySpell && subject.CardZone == zone.None {
 			return refuse("a resolving spell is not a battlefield source subject")
 		}
-		object = game.SourcePermanentReference()
-		if subject.CardIdentity || subject.CardZone != zone.None {
+		var ok bool
+		if reference.SubjectDomain() == compiler.ReferenceSubjectCard {
 			card, fromZone = true, subject.CardZone
-			if effect.FromZone == zone.Graveyard || effect.FromZone == zone.Exile {
-				object = game.SourceCardPermanentReference()
-			}
+			object, ok = lowerCapturedCardSubject(reference, referenceLoweringContext{AllowSource: true, AllowEvent: true})
+		} else {
+			object, ok = lowerObjectReference(reference, referenceLoweringContext{AllowSource: true})
+		}
+		if !ok {
+			return refuse("fixed-phase source has no validated capture identity")
 		}
 	case parser.DelayedSubjectEvent:
-		object = game.EventPermanentReference()
-		if subject.CardIdentity || subject.CardZone != zone.None {
+		var ok bool
+		if reference.SubjectDomain() == compiler.ReferenceSubjectCard {
 			card, fromZone = true, subject.CardZone
+			object, ok = lowerCapturedCardSubject(reference, referenceLoweringContext{AllowEvent: true})
+		} else {
+			object, ok = lowerObjectReference(reference, referenceLoweringContext{AllowEvent: true})
+		}
+		if !ok {
+			return refuse("fixed-phase event has no validated capture identity")
 		}
 	case parser.DelayedSubjectEventRelated:
-		object = game.EventRelatedPermanentReference()
+		var ok bool
+		object, ok = lowerObjectReference(reference, referenceLoweringContext{AllowEvent: true})
+		if !ok {
+			return refuse("fixed-phase related event has no validated capture identity")
+		}
 	default:
 		return refuse("fixed-phase subject domain is not modeled")
 	}

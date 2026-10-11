@@ -333,6 +333,8 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 		for syntaxIndex := range sentence.Effects {
 			syntax := &sentence.Effects[syntaxIndex]
 			effects = append(effects, CompiledEffect{
+				OptionalPostfixElse:            syntax.OptionalPostfixElse,
+				LibraryOwnerClauseID:           syntax.LibraryOwnerClauseID,
 				ResultElseOfClauseID:           syntax.ResultElseOfClauseID,
 				OptionalActionClauseIDs:        syntax.OptionalActionClauseIDs,
 				ClauseID:                       syntax.ClauseID,
@@ -347,6 +349,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				VerbSpan:                       syntax.VerbSpan,
 				Player:                         syntax.Player,
 				CardSource:                     syntax.CardSource,
+				LibraryOwnerDestination:        syntax.LibraryOwnerDestination,
 				FaceDown:                       syntax.FaceDown,
 				RequirePermanentCard:           syntax.RequirePermanentCard,
 				ExileDieSubjectDamagedCreature: syntax.ExileDieSubjectDamagedCreature,
@@ -552,6 +555,7 @@ func compileEffects(sentences []parser.Sentence) []CompiledEffect {
 				DistributeCounters:             syntax.DistributeCounters,
 				OptionalSpan:                   syntax.OptionalSpan,
 				LifeObject:                     syntax.LifeObject,
+				LifePayment:                    syntax.LifePayment,
 				Mana: CompiledEffectMana{
 					Span:                     syntax.Mana.Span,
 					Symbols:                  slices.Clone(syntax.Mana.Symbols),

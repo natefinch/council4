@@ -11,7 +11,7 @@ import (
 // <condition>, it deals B damage instead." (Shivan Fire, Burst Lightning, Roil
 // Eruption, Magma Burst, Frost Bite, Invasive Maneuvers, Cinder Strike,
 // Lithomantic Barrage, Firebending Lesson, ...). Unlike the two-paragraph
-// conditional-boost cycle handled by lowerInsteadDamageSpellAbilities, both
+// resolving conditional alternatives handled by shared ordered assembly, both
 // halves live in one ability whose content carries two deal-damage effects, one
 // chosen target, and one gating condition. The "instead" clause restates the
 // damage with the pronoun "it" (the spell) and the same target ("it"/"that

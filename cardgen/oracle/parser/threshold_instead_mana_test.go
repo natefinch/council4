@@ -14,8 +14,8 @@ func TestParseThresholdInsteadMana(t *testing.T) {
 	if len(diagnostics) != 0 {
 		t.Fatalf("diagnostics = %#v", diagnostics)
 	}
-	if len(document.Abilities) != 2 {
-		t.Fatalf("abilities = %d, want 2", len(document.Abilities))
+	if len(document.Abilities) != 1 {
+		t.Fatalf("abilities = %d, want one resolving paragraph group", len(document.Abilities))
 	}
 	base := findAddManaEffect(t, &document.Abilities[0])
 	if base.Mana.Instead {
@@ -24,7 +24,11 @@ func TestParseThresholdInsteadMana(t *testing.T) {
 	if len(base.Mana.Symbols) != 3 {
 		t.Fatalf("base symbols = %#v, want 3", base.Mana.Symbols)
 	}
-	alternative := findAddManaEffect(t, &document.Abilities[1])
+	effects := conditionEffects(document.Abilities[0].Sentences)
+	if len(effects) != 2 {
+		t.Fatalf("effects = %d, want base and alternative", len(effects))
+	}
+	alternative := effects[1]
 	if !alternative.Mana.Instead {
 		t.Fatalf("alternative not marked Instead: %#v", alternative.Mana)
 	}

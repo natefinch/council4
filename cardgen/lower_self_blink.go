@@ -119,7 +119,11 @@ func lowerDelayedSelfBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	key := game.LinkedKey("delayed-self-blink")
-	exile := game.MovePermanent{Object: game.SourcePermanentReference(), PublishLinked: key, Destination: zone.Exile}
+	object, known := lowerIntrinsicSourceObject(ctx)
+	if !known {
+		return game.AbilityContent{}, false
+	}
+	exile := game.MovePermanent{Object: object, PublishLinked: key, Destination: zone.Exile}
 	put := selfBlinkPutOnBattlefield(key, returnEffect, entryCounters)
 	put.Source = game.CardBattlefieldSource(game.CapturedCardReference())
 	delayed := game.CreateDelayedTrigger{Trigger: game.DelayedTriggerDef{
@@ -219,7 +223,7 @@ func lowerImmediateSelfBlinkReturn(
 	exile, ok := movePermanentTo(sequence[effectIndex-1].Primitive, zone.Exile)
 	if !ok ||
 		exile.Group.Valid() ||
-		(exile.Object != game.SourcePermanentReference() && exile.Object != game.SourceCardPermanentReference()) ||
+		exile.Object != game.SourcePermanentReference() ||
 		exile.PublishLinked != "" {
 		return game.MovePermanent{Destination: zone.Exile}, game.AbilityContent{}, false
 	}

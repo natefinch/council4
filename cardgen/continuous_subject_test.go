@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // These tests exercise the shared continuous-effect composition helpers directly,
@@ -47,7 +48,11 @@ func sampleContinuousEffects() []game.ContinuousEffect {
 // TestContinuousSourceMode covers the source recipient: the effects bind to the
 // source permanent and carry no static group.
 func TestContinuousSourceMode(t *testing.T) {
-	content := continuousSourceMode(sampleContinuousEffects(), game.DurationUntilEndOfTurn)
+	ctx := contentCtx{content: referenceSubjectFixture(t, "{1}: This creature gains flying until end of turn.", false)}
+	content, diagnostic := continuousSourceMode(ctx, sampleContinuousEffects(), game.DurationUntilEndOfTurn)
+	if diagnostic != nil {
+		t.Fatal(diagnostic)
+	}
 	apply := applyContinuousOf(t, content)
 	if !apply.Object.Exists || !reflect.DeepEqual(apply.Object.Val, game.SourcePermanentReference()) {
 		t.Fatalf("Object = %#v, want source permanent reference", apply.Object)
@@ -109,7 +114,8 @@ func TestContinuousSubjectModeRoutesRecipients(t *testing.T) {
 	emptyCtx := contentCtx{content: compiler.AbilityContent{}}
 
 	t.Run("source", func(t *testing.T) {
-		content, diag := continuousSubjectMode(emptyCtx, &compiler.CompiledEffect{}, sampleContinuousEffects(),
+		ctx := contentCtx{content: referenceSubjectFixture(t, "{1}: This creature gains flying until end of turn.", false)}
+		content, diag := continuousSubjectMode(ctx, &compiler.CompiledEffect{}, sampleContinuousEffects(),
 			game.DurationUntilEndOfTurn, continuousSubjectOptions{SourceForm: true}, unsupported)
 		if diag != nil {
 			t.Fatalf("unexpected diagnostic: %v", diag)
@@ -182,6 +188,8 @@ func targetCreatureFixture() compiler.CompiledTarget {
 func TestContinuousReferenceObject(t *testing.T) {
 	cases := []struct {
 		name      string
+		text      string
+		spell     bool
 		reference compiler.CompiledReference
 		effect    compiler.CompiledEffect
 		want      game.ObjectReference
@@ -189,24 +197,29 @@ func TestContinuousReferenceObject(t *testing.T) {
 	}{
 		{
 			name:      "source",
+			text:      "{1}: This creature gains flying until end of turn.",
 			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingSource},
 			want:      game.SourcePermanentReference(),
 			wantOK:    true,
 		},
 		{
 			name:      "source attached",
+			text:      "{1}: Double equipped creature's power until end of turn.",
 			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingSourceAttached},
 			want:      game.SourceAttachedPermanentReference(),
 			wantOK:    true,
 		},
 		{
 			name:      "event permanent",
+			text:      "Whenever another creature enters, that creature gains flying until end of turn.",
 			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingEventPermanent},
 			want:      game.EventPermanentReference(),
 			wantOK:    true,
 		},
 		{
 			name:      "target back-reference with referenced-object context",
+			text:      "Tap target creature. That creature gains flying until end of turn.",
+			spell:     true,
 			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingTarget, Occurrence: 0},
 			effect:    compiler.CompiledEffect{Context: parser.EffectContextReferencedObject},
 			want:      game.TargetPermanentReference(0),
@@ -214,19 +227,23 @@ func TestContinuousReferenceObject(t *testing.T) {
 		},
 		{
 			name:      "target back-reference without referenced-object context fails closed",
+			text:      "Tap target creature. That creature gains flying until end of turn.",
+			spell:     true,
 			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingTarget, Occurrence: 0},
 			effect:    compiler.CompiledEffect{Context: parser.EffectContextController},
 			wantOK:    false,
 		},
 		{
 			name:      "player binding fails closed",
+			text:      "Whenever this creature deals combat damage to a player, that player draws a card.",
 			reference: compiler.CompiledReference{Binding: compiler.ReferenceBindingEventPlayer},
 			wantOK:    false,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			object, ok := continuousReferenceObject(tc.reference, &tc.effect, false, false)
+			reference := referenceSubjectFixtureBinding(t, tc.text, tc.spell, tc.reference.Binding)
+			object, ok := continuousReferenceObject(reference, &tc.effect)
 			if ok != tc.wantOK {
 				t.Fatalf("ok = %v, want %v", ok, tc.wantOK)
 			}
@@ -237,53 +254,76 @@ func TestContinuousReferenceObject(t *testing.T) {
 	}
 }
 
-// TestContinuousReferenceObjectSpellSourceBackReference proves the spell-only
-// fail-closed guard: inside a resolving spell (enclosingSpell=true), a source
-// binding whose effect context is not EffectContextSource is a cross-clause
-// back-reference ("that creature"/"those creatures") the compiler could not tie
-// to its antecedent and fell back to the source; granting a spell's continuous
-// effect to that source would silently miss every intended creature, so it fails
-// closed. A genuine EffectContextSource self-reference still resolves, and the
-// same non-source-context binding resolves for a permanent ability
-// (enclosingSpell=false), whose source is a real battlefield permanent.
+// Unproven source back-references cannot become subjects; genuine resolving
+// spell cards and original permanent sources use distinct compiler proofs.
 func TestContinuousReferenceObjectSpellSourceBackReference(t *testing.T) {
 	source := compiler.CompiledReference{Binding: compiler.ReferenceBindingSource}
 
 	backReference := &compiler.CompiledEffect{Context: parser.EffectContextReferencedObject}
-	if _, ok := continuousReferenceObject(source, backReference, true, true); ok {
+	if _, ok := continuousReferenceObject(source, backReference); ok {
 		t.Fatal("spell source back-reference resolved, want fail closed")
 	}
 
 	selfReference := &compiler.CompiledEffect{Context: parser.EffectContextSource}
-	object, ok := continuousReferenceObject(source, selfReference, true, true)
-	if !ok {
-		t.Fatal("spell source self-reference did not resolve")
+	if _, ok := continuousReferenceObject(source, selfReference); ok {
+		t.Fatal("unproven handmade self-reference resolved")
 	}
-	if !reflect.DeepEqual(object, game.SourceCardPermanentReference()) {
-		t.Fatalf("self-reference object = %#v, want source card permanent reference", object)
+	face := lowerSingleFace(t, &ScryfallCard{
+		Name: "Self Exile", Layout: "normal", TypeLine: "Instant", OracleText: "Exile this spell.",
+	})
+	move, ok := face.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.MoveResolvingSpell)
+	if !ok || move.Destination != zone.Exile {
+		t.Fatal("normally compiled self spell did not use its resolving card")
 	}
-
-	object, ok = continuousReferenceObject(source, backReference, true, false)
+	permanent := referenceSubjectFixtureBinding(t, "{1}: This creature gains flying until end of turn.", false, compiler.ReferenceBindingSource)
+	object, ok := continuousReferenceObject(permanent, backReference)
 	if !ok {
 		t.Fatal("permanent-ability source reference did not resolve")
 	}
-	if !reflect.DeepEqual(object, game.SourceCardPermanentReference()) {
-		t.Fatalf("permanent-ability object = %#v, want source card permanent reference", object)
+	if !reflect.DeepEqual(object, game.SourcePermanentReference()) {
+		t.Fatalf("permanent-ability object = %#v, want original source permanent reference", object)
 	}
 }
 
-// TestContinuousReferenceObjectSourceAsCard confirms sourceAsCard switches a
-// source-binding subject from the stack object's source permanent to the source
-// card's battlefield permanent. This exercises the non-spell resolution path
-// (enclosingSpell=false); the spell-only fail-closed guard is covered by
-// TestContinuousReferenceObjectSpellSourceBackReference.
+// Retain this historical test name while removing its unsafe caller-selected
+// card-following expectation: live mutation names the original source object.
 func TestContinuousReferenceObjectSourceAsCard(t *testing.T) {
-	reference := compiler.CompiledReference{Binding: compiler.ReferenceBindingSource}
-	object, ok := continuousReferenceObject(reference, &compiler.CompiledEffect{}, true, false)
+	reference := referenceSubjectFixtureBinding(t, "{1}: This creature gains flying until end of turn.", false, compiler.ReferenceBindingSource)
+	object, ok := continuousReferenceObject(reference, &compiler.CompiledEffect{})
 	if !ok {
 		t.Fatal("source-as-card reference did not resolve")
 	}
-	if !reflect.DeepEqual(object, game.SourceCardPermanentReference()) {
-		t.Fatalf("object = %#v, want source card permanent reference", object)
+	if !reflect.DeepEqual(object, game.SourcePermanentReference()) {
+		t.Fatalf("object = %#v, want original source permanent reference", object)
 	}
+}
+
+func referenceSubjectFixture(t *testing.T, text string, spell bool) compiler.AbilityContent {
+	t.Helper()
+	document, diagnostics := parser.Parse(text, parser.Context{CardName: "Subject Fixture", InstantOrSorcery: spell})
+	if len(diagnostics) != 0 {
+		t.Fatal(diagnostics)
+	}
+	compilation, diagnostics := compiler.Compile(document, compiler.Context{})
+	if len(diagnostics) != 0 || len(compilation.Abilities) != 1 {
+		t.Fatalf("normal subject compilation: %v", diagnostics)
+	}
+	return compilation.Abilities[0].Content
+}
+
+func referenceSubjectFixtureBinding(t *testing.T, text string, spell bool, binding compiler.ReferenceBinding) compiler.CompiledReference {
+	t.Helper()
+	content := referenceSubjectFixture(t, text, spell)
+	if binding == compiler.ReferenceBindingSourceAttached && len(content.Effects) == 1 {
+		if reference, ok := content.Source.AttachedObjectSubject(content.Effects[0]); ok {
+			return reference
+		}
+	}
+	for _, reference := range content.References {
+		if reference.Binding == binding && reference.SubjectSupported() {
+			return reference
+		}
+	}
+	t.Fatalf("normal compilation has no validated subject binding %v: %s", binding, text)
+	return compiler.CompiledReference{}
 }

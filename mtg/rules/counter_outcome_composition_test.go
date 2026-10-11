@@ -13,6 +13,104 @@ import (
 
 const counterOutcomeExile = "If that spell is countered this way, exile it instead of putting it into its owner's graveyard."
 
+func TestCompiledModalCounterOutcomesUseLocalScopes(t *testing.T) {
+	t.Parallel()
+	body := "Counter target spell unless its controller pays {3}. " + counterOutcomeExile +
+		" If that spell is countered this way, you gain 2 life. You gain 1 life."
+	def := compileCounterTaxCard(t, "Modal Counter Probe",
+		"Choose two \u2014\n\u2022 "+body+"\n\u2022 "+body, "Instant")
+	def.SpellAbility = opt.Val(withResultProbes(def.SpellAbility.Val, []resultProbe{
+		{key: "if-you-do", life: 100},
+		{key: "if-you-do", succeeded: game.TriTrue, life: 1000},
+	}))
+	for _, tt := range []struct {
+		name                            string
+		firstPays, secondPays           bool
+		firstProtected, secondProtected bool
+		sameTarget                      bool
+		firstSuccess, secondSuccess     bool
+	}{
+		{name: "both countered", firstSuccess: true, secondSuccess: true},
+		{name: "first countered second pays", secondPays: true, firstSuccess: true},
+		{name: "first pays second countered", firstPays: true, secondSuccess: true},
+		{name: "both pay", firstPays: true, secondPays: true},
+		{name: "first countered second protected", secondProtected: true, firstSuccess: true},
+		{name: "first protected second countered", firstProtected: true, secondSuccess: true},
+		{name: "both protected", firstProtected: true, secondProtected: true},
+		{name: "second target already countered", sameTarget: true, firstSuccess: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			first := addStackSpell(g, game.Player2, "First", []types.Card{types.Sorcery})
+			second := first
+			if !tt.sameTarget {
+				second = addStackSpell(g, game.Player3, "Second", []types.Card{types.Sorcery})
+			}
+			for _, target := range []struct {
+				obj       *game.StackObject
+				pays      bool
+				protected bool
+			}{{first, tt.firstPays, tt.firstProtected}, {second, tt.secondPays, tt.secondProtected}} {
+				g.CardInstances[target.obj.SourceID].Owner = game.Player4
+				if target.pays {
+					g.Players[target.obj.Controller].ManaPool.Add(mana.C, 3)
+				}
+				if target.protected {
+					g.CardInstances[target.obj.SourceID].Def.StaticAbilities = []game.StaticAbility{game.CantBeCounteredStaticBody}
+				}
+			}
+			resolving := pushCounterTaxSpell(g, def, first)
+			resolving.ChosenModes = []int{0, 1}
+			resolving.Targets = []game.Target{game.StackObjectTarget(first.ID), game.StackObjectTarget(second.ID)}
+			resolving.TargetCounts = []int{1, 1}
+			outer := game.InstructionResolutionResult{Succeeded: true, Amount: 99}
+			resolving.ResolutionResults = map[string]game.InstructionResolutionResult{
+				"unless-paid": outer, "if-you-do": outer,
+			}
+			NewEngine(nil).resolveTopOfStack(g, &TurnLog{})
+			wantLife := 42
+			for _, succeeded := range []bool{tt.firstSuccess, tt.secondSuccess} {
+				if succeeded {
+					wantLife += 2 + 1000
+				}
+			}
+			for _, paid := range []bool{tt.firstPays, tt.secondPays} {
+				if !paid {
+					wantLife += 100
+				}
+			}
+			if g.Players[game.Player1].Life != wantLife {
+				t.Fatalf("life = %d, want %d from each mode's own counter outcome", g.Players[game.Player1].Life, wantLife)
+			}
+			for _, player := range []game.PlayerID{game.Player2, game.Player3, game.Player4} {
+				if g.Players[player].Life != 40 || g.Players[player].ManaPool.Total() != 0 {
+					t.Fatalf("player %d life/mana = %d/%d, want 40/0", player, g.Players[player].Life, g.Players[player].ManaPool.Total())
+				}
+			}
+			for i, target := range []*game.StackObject{first, second} {
+				succeeded := tt.firstSuccess
+				if i == 1 {
+					succeeded = tt.secondSuccess || tt.sameTarget && tt.firstSuccess
+				}
+				_, remains := stackObjectByID(g, target.ID)
+				if remains == succeeded || g.Players[game.Player4].Exile.Contains(target.SourceID) != succeeded {
+					t.Fatalf("mode %d target remains/exiled = %v/%v, want %v/%v", i, remains,
+						g.Players[game.Player4].Exile.Contains(target.SourceID), !succeeded, succeeded)
+				}
+			}
+			if len(resolving.ResolutionResults) != 2 ||
+				resolving.ResolutionResults["if-you-do"] != outer {
+				t.Fatalf("mode-local counter receipt did not restore the outer frame: %v", resolving.ResolutionResults)
+			}
+			if receipt := resolving.ResolutionResults["unless-paid"]; receipt.Succeeded != tt.secondPays ||
+				receipt.Accepted != tt.secondPays || receipt.Amount != 0 {
+				t.Fatalf("unconditional payment receipt = %+v, want the second mode's payment", receipt)
+			}
+		})
+	}
+}
+
 func TestCompiledCounterDestinationAndActualOutcome(t *testing.T) {
 	t.Parallel()
 	for _, destination := range []struct {

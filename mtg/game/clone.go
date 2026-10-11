@@ -75,6 +75,9 @@ func (g *Game) Clone() *Game {
 		ResolvedTriggeredAbilitiesThisTurn: cloneComparableMap(g.ResolvedTriggeredAbilitiesThisTurn),
 		ResolvedActivatedAbilitiesThisTurn: cloneComparableMap(g.ResolvedActivatedAbilitiesThisTurn),
 		ChosenModesThisTurn:                cloneComparableMap(g.ChosenModesThisTurn),
+		attachedDeathDepartures:            cloneComparableMap(g.attachedDeathDepartures),
+		triggerOriginUses:                  cloneComparableMap(g.triggerOriginUses),
+		triggerOriginTurn:                  g.triggerOriginTurn,
 	}
 	clone.IDGen.Restore(g.IDGen.Current())
 
@@ -266,6 +269,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)
 	clone.ResolutionResults = cloneComparableMap(o.ResolutionResults)
+	clone.LocalLinkedProducts = cloneComparableMap(o.LocalLinkedProducts)
 	clone.ResolutionResultObjects = cloneMapFunc(o.ResolutionResultObjects, func(objects []ObjectSnapshot) []ObjectSnapshot {
 		return cloneSliceFunc(objects, cloneObjectSnapshot)
 	})

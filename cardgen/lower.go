@@ -448,17 +448,15 @@ func convertAscendKeywordToSpell(result *loweredFaceAbilities) {
 // sibling diagnostics so a card's report lists every independent reason it is
 // unsupported, not just the first. The primary diagnostic keeps its own
 // summary/detail; the copy's Additional slice is cleared so downstream consumers
-// (the report, the support analysis) see one flat list. Producers attach flat
-// Additional lists (a fan-out lowerer that carries forward a nested failure's
-// reasons appends that failure's primary and its Additional as flat entries), so a
-// single expansion pass suffices.
+// (the report, the support analysis) see one flat list, including blockers nested
+// beneath optional or reference-proof wrappers.
 func flattenAdditionalReasons(diagnostics []shared.Diagnostic) []shared.Diagnostic {
 	flattened := make([]shared.Diagnostic, 0, len(diagnostics))
 	for _, diagnostic := range diagnostics {
 		additional := diagnostic.Additional
 		diagnostic.Additional = nil
 		flattened = append(flattened, diagnostic)
-		flattened = append(flattened, additional...)
+		flattened = append(flattened, flattenAdditionalReasons(additional)...)
 	}
 	return flattened
 }

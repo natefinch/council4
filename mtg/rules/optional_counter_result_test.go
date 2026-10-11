@@ -6,7 +6,52 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
+
+// counterReceiptProbes observe the spell's "if-you-do" receipt while it resolves.
+var counterReceiptProbes = []resultProbe{
+	{key: "if-you-do", life: 100},
+	{key: "if-you-do", accepted: game.TriTrue, life: 1000},
+	{key: "if-you-do", succeeded: game.TriTrue, life: 10_000},
+}
+
+func counterReceiptVisibility(available, accepted, succeeded bool) int {
+	if !available {
+		return 0
+	}
+	visible := 100
+	if accepted {
+		visible += 1000
+	}
+	if succeeded {
+		visible += 10_000
+	}
+	return visible
+}
+
+func probedCounterDef(def *game.CardDef) *game.CardDef {
+	probed := *def
+	probed.SpellAbility = opt.Val(withResultProbes(def.SpellAbility.Val, counterReceiptProbes))
+	return &probed
+}
+
+// A repeated invocation whose producer is gated off must not see the previous
+// invocation's receipt.
+func assertCounterReceiptNotReused(t *testing.T, g *game.Game, resolving *game.StackObject, def *game.CardDef, creature *game.Permanent) {
+	t.Helper()
+	assertResultKeysCleaned(t, resolving, "if-you-do")
+	if creature != nil && !sacrificePermanent(g, creature) {
+		t.Fatal("could not remove the condition creature")
+	}
+	before := g.Players[game.Player1].Life
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &scopedMayAgent{}}
+	NewEngine(nil).resolveAbilityContentWithChoices(g, resolving, probedCounterDef(def).SpellAbility.Val, agents, &TurnLog{})
+	if got := g.Players[game.Player1].Life - before; got != 1 {
+		t.Fatalf("repeated invocation gained %d, want only its unconditional 1 life", got)
+	}
+	assertResultKeysCleaned(t, resolving, "if-you-do")
+}
 
 func TestCompiledOptionalCounterActualResult(t *testing.T) {
 	def := compileCounterTaxCard(t, "Optional Counter Boundary",
@@ -28,10 +73,11 @@ func TestCompiledOptionalCounterActualResult(t *testing.T) {
 			if tt.protected {
 				g.CardInstances[target.SourceID].Def.StaticAbilities = []game.StaticAbility{game.CantBeCounteredStaticBody}
 			}
+			var creature *game.Permanent
 			if tt.creature {
-				addCreaturePermanent(g, game.Player1)
+				creature = addCreaturePermanent(g, game.Player1)
 			}
-			resolving := pushCounterTaxSpell(g, def, target)
+			resolving := pushCounterTaxSpell(g, probedCounterDef(def), target)
 			agent := &scopedMayAgent{accept: []bool{tt.accept}}
 			agents := [game.NumPlayers]PlayerAgent{}
 			agents[game.Player1] = agent
@@ -40,14 +86,17 @@ func TestCompiledOptionalCounterActualResult(t *testing.T) {
 			if tt.succeeds {
 				wantLife += 2
 			}
-			result, available := resolving.ResolutionResults["if-you-do"]
-			if g.Players[game.Player1].Life != wantLife || agent.next != tt.choices ||
-				available != tt.creature || available && (result.Accepted != tt.accept || result.Succeeded != tt.succeeds) {
-				t.Fatalf("life=%d choices=%d result=%#v available=%v", g.Players[game.Player1].Life, agent.next, result, available)
+			// The receipt is available exactly when the creature gate admitted the
+			// optional action, distinguishing acceptance from actual success.
+			visible := counterReceiptVisibility(tt.creature, tt.accept, tt.succeeds)
+			if g.Players[game.Player1].Life != wantLife+visible || agent.next != tt.choices {
+				t.Fatalf("life=%d choices=%d, want life %d plus in-resolution receipt %d",
+					g.Players[game.Player1].Life, agent.next, wantLife, visible)
 			}
 			if _, remains := stackObjectByID(g, target.ID); remains == tt.succeeds {
 				t.Fatal("optional answer was mistaken for actual counter success")
 			}
+			assertCounterReceiptNotReused(t, g, resolving, def, creature)
 		})
 	}
 }
@@ -76,11 +125,12 @@ func TestCompiledCounterResultAndIndependentOptionalGroups(t *testing.T) {
 			if tt.protected {
 				g.CardInstances[target.SourceID].Def.StaticAbilities = []game.StaticAbility{game.CantBeCounteredStaticBody}
 			}
+			var creature *game.Permanent
 			if tt.creature {
-				addCreaturePermanent(g, game.Player1)
+				creature = addCreaturePermanent(g, game.Player1)
 			}
 			g.Players[game.Player2].ManaPool.Add(mana.C, tt.mana)
-			resolving := pushCounterTaxSpell(g, def, target)
+			resolving := pushCounterTaxSpell(g, probedCounterDef(def), target)
 			agent := &scopedMayAgent{accept: []bool{tt.first, tt.last}}
 			agents := [game.NumPlayers]PlayerAgent{}
 			agents[game.Player1] = agent
@@ -98,16 +148,18 @@ func TestCompiledCounterResultAndIndependentOptionalGroups(t *testing.T) {
 			if tt.succeeded {
 				wantLife += 2
 			}
-			result, available := resolving.ResolutionResults["if-you-do"]
-			if g.Players[game.Player1].Life != wantLife || g.Players[game.Player1].Hand.Size() != 0 ||
-				agent.next != 2 || g.Players[game.Player2].ManaPool.Total() != tt.mana-tt.spent ||
-				available != tt.resultAvailable || available && (!result.Accepted || result.Succeeded != tt.succeeded) {
-				t.Fatalf("life=%d choices=%d mana=%d result=%#v available=%v; want life=%d",
-					g.Players[game.Player1].Life, agent.next, g.Players[game.Player2].ManaPool.Total(), result, available, wantLife)
+			// A mandatory counter receipt is always accepted when available; the
+			// independent optional groups never publish or alter it.
+			visible := counterReceiptVisibility(tt.resultAvailable, true, tt.succeeded)
+			if g.Players[game.Player1].Life != wantLife+visible || g.Players[game.Player1].Hand.Size() != 0 ||
+				agent.next != 2 || g.Players[game.Player2].ManaPool.Total() != tt.mana-tt.spent {
+				t.Fatalf("life=%d choices=%d mana=%d; want life=%d plus in-resolution receipt %d",
+					g.Players[game.Player1].Life, agent.next, g.Players[game.Player2].ManaPool.Total(), wantLife, visible)
 			}
 			if _, remains := stackObjectByID(g, target.ID); remains == tt.succeeded {
 				t.Fatal("independent optional group redirected the actual counter outcome")
 			}
+			assertCounterReceiptNotReused(t, g, resolving, def, creature)
 		})
 	}
 }

@@ -17,6 +17,7 @@ type sequenceConditionPlan struct {
 	gateConditions     []compiler.CompiledCondition
 	externalConditions []compiler.CompiledCondition
 	delayedConditions  map[int][]compiler.CompiledCondition
+	cardLineages       []sequenceCardLineageCondition
 }
 
 func planSequenceConditions(
@@ -94,6 +95,9 @@ func planSequenceConditions(
 	}
 	gates, reason, ok := matchOrderedSequenceEffectConditions(content.Effects, plan.gateConditions)
 	plan.gates = gates
+	if ok {
+		plan.cardLineages, reason, ok = planSequenceCardLineageConditions(content, plan.gateConditions)
+	}
 	return plan, reason, ok
 }
 

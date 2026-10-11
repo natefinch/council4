@@ -45,13 +45,15 @@ func newProdigalSorcerer() *game.CardDef {
 										MaxTargets: 1,
 										Constraint: "any target",
 										Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker, types.Battle}}),
 									},
 								},
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:    game.Fixed(1),
-											Recipient: game.AnyTargetDamageRecipient(0),
+											Amount:       game.Fixed(1),
+											Recipient:    game.AnyTargetDamageRecipient(0),
+											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 									},
 								},

@@ -11,24 +11,27 @@ type referenceLoweringContext struct {
 	AllowSource      bool
 	AllowTarget      bool
 	AllowEvent       bool
-	SourceCardObject bool
 	PriorInstruction int
 	PriorLinkedKey   game.LinkedKey
 	TargetLinkedKey  game.LinkedKey
 }
 
 func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLoweringContext) (game.ObjectReference, bool) {
+	if !reference.SubjectSupported() || reference.SubjectDomain() == compiler.ReferenceSubjectPolicy ||
+		reference.SubjectDomain() == compiler.ReferenceSubjectPlayerGroup {
+		return game.ObjectReference{}, false
+	}
 	var result game.ObjectReference
 	switch reference.Binding {
 	case compiler.ReferenceBindingSource:
 		if !ctx.AllowSource {
 			return game.ObjectReference{}, false
 		}
-		if ctx.SourceCardObject {
-			result = game.SourceCardPermanentReference()
-		} else {
-			result = game.SourcePermanentReference()
+		if reference.SubjectDomain() != compiler.ReferenceSubjectPermanent ||
+			reference.SubjectLifetime() != compiler.ReferenceLifetimeOriginalObject {
+			return game.ObjectReference{}, false
 		}
+		result = game.SourcePermanentReference()
 	case compiler.ReferenceBindingSourceAttached:
 		if !ctx.AllowSource {
 			return game.ObjectReference{}, false
@@ -41,7 +44,16 @@ func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLow
 		case !ctx.AllowTarget || reference.Occurrence < 0:
 			return game.ObjectReference{}, false
 		default:
-			result = game.TargetPermanentReference(reference.Occurrence)
+			switch reference.ObjectProjectionDomain() {
+			case compiler.ReferenceSubjectPermanent, compiler.ReferenceSubjectTargetChoice:
+				result = game.TargetPermanentReference(reference.Occurrence)
+			case compiler.ReferenceSubjectCard:
+				result = game.TargetCardReference(reference.Occurrence)
+			case compiler.ReferenceSubjectStackObject:
+				result = game.TargetStackObjectReference(reference.Occurrence)
+			default:
+				return game.ObjectReference{}, false
+			}
 		}
 	case compiler.ReferenceBindingEventPermanent:
 		if !ctx.AllowEvent {
@@ -58,6 +70,12 @@ func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLow
 			return game.ObjectReference{}, false
 		}
 		result = game.EventStackObjectReference()
+	case compiler.ReferenceBindingCreatedToken:
+		if reference.SubjectDomain() != compiler.ReferenceSubjectPermanent ||
+			reference.SubjectLifetime() != compiler.ReferenceLifetimeActualProduct {
+			return game.ObjectReference{}, false
+		}
+		result = game.LinkedObjectReference(createdTokenLinkKey)
 	case compiler.ReferenceBindingPriorInstructionResult:
 		if ctx.PriorLinkedKey == "" || reference.PriorInstruction != ctx.PriorInstruction {
 			return game.ObjectReference{}, false
@@ -70,6 +88,9 @@ func lowerObjectReference(reference compiler.CompiledReference, ctx referenceLow
 }
 
 func lowerCardReference(reference compiler.CompiledReference, ctx referenceLoweringContext) (game.CardReference, bool) {
+	if !reference.SubjectSupported() || reference.SubjectDomain() != compiler.ReferenceSubjectCard {
+		return game.CardReference{}, false
+	}
 	switch reference.Binding {
 	case compiler.ReferenceBindingSource:
 		if !ctx.AllowSource {
@@ -103,6 +124,9 @@ func lowerCardReference(reference compiler.CompiledReference, ctx referenceLower
 // It handles EventPlayer → EventPlayerReference() and Source → ControllerReference()
 // bindings. AllowEvent must be set for EventPlayer; AllowSource for Source.
 func lowerPlayerReference(reference compiler.CompiledReference, ctx referenceLoweringContext) (game.PlayerReference, bool) {
+	if !reference.SubjectSupported() || reference.SubjectDomain() != compiler.ReferenceSubjectPlayer {
+		return game.PlayerReference{}, false
+	}
 	switch reference.Binding {
 	case compiler.ReferenceBindingEventPlayer:
 		if !ctx.AllowEvent {

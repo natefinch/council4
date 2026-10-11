@@ -874,7 +874,7 @@ func precedingOptionalMayClause(tokens []shared.Token, index int) bool {
 func conditionClauseEnd(tokens []shared.Token, start int) int {
 	for i := start; i < len(tokens); i++ {
 		if tokens[i].Kind == shared.Period || i > start && tokens[i].Kind == shared.Comma &&
-			!conditionSubtypeListContinues(tokens, i) {
+			!conditionSubtypeListContinues(tokens, i) && !conditionCardTypeQualifierContinues(tokens, i) {
 			return i
 		}
 	}
@@ -1919,9 +1919,10 @@ func recognizeEventSubjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 		return ConditionClause{}, false
 	}
 	subjectID := atoms.ReferenceIDAt(body[0].Span)
-	contextualCardNoun := len(selection.RequiredTypes) > 0 && slices.ContainsFunc(rest, func(token shared.Token) bool {
-		return equalWord(token, "card") || equalWord(token, "cards")
-	})
+	contextualCardNoun := conditionSelectionHasObjectDomain(selection) &&
+		slices.ContainsFunc(rest, func(token shared.Token) bool {
+			return equalWord(token, "card") || equalWord(token, "cards")
+		})
 	return ConditionClause{
 		Predicate:      ConditionPredicateObjectMatches,
 		ObjectBinding:  ConditionObjectBindingEventPermanent,
@@ -2114,11 +2115,17 @@ func recognizeTargetObjectMatchCondition(body []shared.Token, atoms Atoms) (Cond
 				}
 				supertypes = append(supertypes, st)
 			}
-			return ConditionClause{
+			clause := ConditionClause{
 				Predicate:     ConditionPredicateObjectMatches,
 				ObjectBinding: ConditionObjectBindingTarget,
 				Selection:     ConditionSelection{Supertypes: supertypes},
-			}, true
+			}
+			if id := atoms.ReferenceIDAt(body[0].Span); id >= 0 {
+				clause.SubjectSpan = body[0].Span
+				clause.HasSubjectSpan = true
+				clause.SubjectRefID = id
+			}
+			return clause, true
 		}
 	}
 	selection, ok := parseConditionSelection(rest, atoms)
@@ -2272,9 +2279,12 @@ func recognizeSourcePronounStateCondition(body []shared.Token, atoms Atoms) (Con
 		return ConditionClause{}, false
 	}
 	return ConditionClause{
-		Predicate:     ConditionPredicateObjectMatches,
-		ObjectBinding: ConditionObjectBindingSource,
-		Selection:     selection,
+		Predicate:      ConditionPredicateObjectMatches,
+		ObjectBinding:  ConditionObjectBindingSource,
+		Selection:      selection,
+		SubjectSpan:    body[0].Span,
+		HasSubjectSpan: atoms.ReferenceIDAt(body[0].Span) >= 0,
+		SubjectRefID:   atoms.ReferenceIDAt(body[0].Span),
 	}, true
 }
 

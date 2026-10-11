@@ -21,6 +21,9 @@ func bindReferences(
 		if bindDelayedSubjectReference(reference, effects) {
 			continue
 		}
+		if bindOwnedProducerReference(reference, effects) {
+			continue
+		}
 		switch reference.Kind {
 		case ReferencePaidCostSubject:
 			if reference.PaidCost != nil && reference.PaidCost.Known &&
@@ -90,6 +93,11 @@ func bindReferences(
 			reference.Binding = ReferenceBindingEventRelatedPermanent
 			continue
 		}
+		if trigger != nil && triggerPatternBindsThatCreature(&trigger.Pattern) &&
+			combatStunPossessiveBindsRelated(*reference, bound[:i], effects) {
+			reference.Binding = ReferenceBindingEventRelatedPermanent
+			continue
+		}
 		if prior, ok := priorSacrificeAntecedent(*reference, effects); ok {
 			reference.Binding = ReferenceBindingPriorInstructionResult
 			reference.PriorInstruction = prior
@@ -151,6 +159,13 @@ func bindReferences(
 			}
 		}
 		if prior, ok := priorInstructionAntecedent(*reference, effects); ok {
+			if trigger != nil && reference.Kind == ReferenceThatObject &&
+				reference.SubjectNoun == parser.ObjectNounCreature && !trigger.Pattern.OneOrMore &&
+				triggerEventBindsPermanent(trigger.Pattern.Event) && effects[prior].Kind == EffectDig &&
+				effects[prior].Amount.Known && effects[prior].Amount.Value > 1 {
+				reference.Binding = ReferenceBindingEventPermanent
+				continue
+			}
 			if precedingSourceReferenceAfter(
 				bound[:i],
 				reference.Order,
@@ -183,7 +198,8 @@ func bindReferences(
 		// event bindings are untouched.
 		if trigger == nil &&
 			reference.Kind == ReferencePronoun &&
-			reference.Pronoun == ReferencePronounIt {
+			(reference.Pronoun == ReferencePronounIt ||
+				reference.Pronoun == ReferencePronounIts && !referenceIsDamageRecipientPossessive(*reference, effects)) {
 			if start, ok := closestPrecedingTargetStart(*reference, targets); ok &&
 				precedingSourceReferenceAfter(bound[:i], reference.Order, start) {
 				reference.Binding = ReferenceBindingSource
@@ -411,6 +427,9 @@ func priorInstructionAntecedentAt(reference CompiledReference, effects []Compile
 	}
 	if search, ok := priorSearchMoveAntecedent(current, effects); ok {
 		return search, true
+	}
+	if SingularLibraryCardProducer(effects[prior]) && effects[current].Kind == EffectRemoveFromCombat {
+		return 0, false
 	}
 	switch effects[prior].Kind {
 	case EffectChoosePermanent, EffectDig, EffectExile, EffectManifestDread, EffectReveal, EffectSearch:
@@ -732,7 +751,8 @@ func precedingSourceReferenceAfter(references []CompiledReference, order shared.
 	for _, reference := range references {
 		if reference.Order.Start >= after &&
 			reference.Order.Start < order.Start &&
-			reference.Binding == ReferenceBindingSource {
+			reference.Binding == ReferenceBindingSource &&
+			reference.SubjectNoun != parser.ObjectNounSpell {
 			return true
 		}
 	}
@@ -784,7 +804,7 @@ func triggerReferenceBindsEventCard(
 	reference CompiledReference,
 	effects []CompiledEffect,
 ) bool {
-	if trigger.Event != TriggerEventPermanentDied &&
+	if trigger.Event != TriggerEventPermanentDied && trigger.Event != TriggerEventPermanentSacrificed &&
 		(trigger.Event != TriggerEventZoneChanged ||
 			!trigger.MatchToZone ||
 			(trigger.ToZone != TriggerZoneGraveyard && trigger.ToZone != TriggerZoneExile)) {
@@ -850,7 +870,8 @@ func triggerEventBindsPlayer(event TriggerEvent) bool {
 		TriggerEventSurveil,
 		TriggerEventLifeGained,
 		TriggerEventLifeLost,
-		TriggerEventLibrarySearched:
+		TriggerEventLibrarySearched,
+		TriggerEventBecameMonarch:
 		return true
 	default:
 		return false
@@ -926,4 +947,21 @@ func triggerPatternBindsThatCreature(pattern *TriggerPattern) bool {
 func triggerEventIsCombatBlock(event TriggerEvent) bool {
 	return event == TriggerEventBlockerDeclared ||
 		event == TriggerEventAttackerBecameBlocked
+}
+
+// "deals damage to its controller" names the recipient through an earlier
+// object, not the damage source that precedes the possessive.
+func referenceIsDamageRecipientPossessive(reference CompiledReference, effects []CompiledEffect) bool {
+	for _, effect := range effects {
+		if effect.Kind != EffectDealDamage || effect.DamageRecipient.Reference == parser.DamageRecipientReferenceNone ||
+			effect.Amount.ReferenceNodeID == reference.NodeID {
+			continue
+		}
+		for _, candidate := range effect.References {
+			if candidate.NodeID == reference.NodeID {
+				return true
+			}
+		}
+	}
+	return false
 }

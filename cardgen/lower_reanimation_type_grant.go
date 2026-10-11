@@ -2,6 +2,7 @@ package cardgen
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
@@ -30,7 +31,11 @@ func isSequentialReanimationTypeColorGrantEffect(effect *compiler.CompiledEffect
 		(len(effect.BecomeTypeAddTypes) != 0 ||
 			len(effect.BecomeTypeAddSubtypes) != 0 ||
 			len(effect.BecomeTypeAddColors) != 0) &&
-		referencesBindTo(effect.References, compiler.ReferenceBindingTarget, 0)
+		len(effect.References) > 0 &&
+		slices.ContainsFunc(effect.References, func(reference compiler.CompiledReference) bool {
+			return reference.EnteredSubjectSupported() &&
+				reference.SubjectDomain() == compiler.ReferenceSubjectPermanent
+		})
 }
 
 // lowerSequentialReanimationTypeColorGrant lowers a permanent "That creature is
@@ -62,7 +67,6 @@ func lowerSequentialReanimationTypeColorGrant(
 			len(ctx.content.Effects)))
 	}
 	if effectIndex == 0 ||
-		len(sequence) != effectIndex ||
 		ctx.optional ||
 		!isSequentialReanimationTypeColorGrantEffect(&ctx.content.Effects[0]) {
 		return nil, game.AbilityContent{}, false
@@ -74,12 +78,12 @@ func lowerSequentialReanimationTypeColorGrant(
 	if consumed.content.Unconsumed() {
 		return nil, game.AbilityContent{}, false
 	}
-	key, publisher, ok := reuseOrPublishLinkedPermanent(effectIndex, sequence)
-	if !ok {
+	if ctx.priorLinkedKey == "" {
 		return nil, game.AbilityContent{}, false
 	}
 	object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-		TargetLinkedKey: key,
+		PriorInstruction: ctx.priorInstruction,
+		PriorLinkedKey:   ctx.priorLinkedKey,
 	})
 	if !ok {
 		return nil, game.AbilityContent{}, false
@@ -103,5 +107,5 @@ func lowerSequentialReanimationTypeColorGrant(
 		ContinuousEffects: continuousEffects,
 		Duration:          game.DurationPermanent,
 	}
-	return publisher, game.Mode{Sequence: []game.Instruction{{Primitive: grant}}}.Ability(), true
+	return nil, game.Mode{Sequence: []game.Instruction{{Primitive: grant}}}.Ability(), true
 }

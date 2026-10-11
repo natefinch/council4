@@ -157,12 +157,18 @@ func lowerAtTrigger(
 		)
 	}
 	body, bodySyntax, triggerOptional := prepared.body, prepared.syntax, prepared.optional
+	functionZone, zoneOK := ability.Content.TriggerFunctionZone()
+	if !zoneOK {
+		return game.TriggeredAbility{}, executableDiagnostic(ability,
+			"unsupported trigger source zone", "the recurring trigger lacks an owned source function-zone proof")
+	}
 	content, diagnostic := lowerAbilityContent(cardName, compiler.AbilityTriggered, body.Content, body.Optional, &bodySyntax)
 	if diagnostic != nil {
 		return game.TriggeredAbility{}, diagnostic
 	}
 	return game.TriggeredAbility{
-		Text: ability.Text,
+		ZoneOfFunction: functionZone,
+		Text:           ability.Text,
 		Trigger: game.TriggerCondition{
 			Type:                 game.TriggerAt,
 			Pattern:              pattern,
@@ -743,11 +749,13 @@ func (lowering *abilityLowering) complete(
 		lowering.consumed.declarations != staticDeclarations {
 		return false
 	}
+	paragraphLabels := syntax.ParagraphLabelSpans()
 	for _, span := range syntax.CoverageSpans() {
 		if (syntax.AbilityWord != nil && rulesFreeAbilityWordLabel(ability.AbilityWord) &&
 			(span == syntax.AbilityWord.SeparatorSpan ||
 				spanCoveredByAbilityWord(span, syntax.AbilityWord))) ||
-			spanCovered(span, lowering.sourceSpans) {
+			spanCovered(span, lowering.sourceSpans) ||
+			spanCovered(span, paragraphLabels) {
 			continue
 		}
 		// A recognized coin flip re-parses each branch clause, so its compiled

@@ -51,11 +51,21 @@ func parseConditionTypeNoun(tokens []shared.Token, atoms Atoms, selection Condit
 		tokens = tokens[:len(tokens)-1]
 	}
 	if len(tokens) == 0 && !permanentNoun {
+		if cardNoun && len(selection.Supertypes) > 0 {
+			return selection, true
+		}
 		return ConditionSelection{}, false
 	}
 	required := make([]TriggerCardType, 0, len(tokens))
 	excluded := make([]TriggerCardType, 0, len(tokens))
-	for _, token := range tokens {
+	for i, token := range tokens {
+		if token.Kind == shared.Comma && i > 0 && i+1 < len(tokens) {
+			_, before := atoms.ExcludedCardTypeAt(tokens[i-1].Span)
+			_, after := atoms.ExcludedCardTypeAt(tokens[i+1].Span)
+			if before && after {
+				continue
+			}
+		}
 		if cardType, ok := atoms.CardTypeAt(token.Span); ok {
 			mapped := triggerCardTypeFromAtom(cardType)
 			if mapped == TriggerCardTypeUnknown || slices.Contains(required, mapped) {

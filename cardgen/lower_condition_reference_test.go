@@ -104,10 +104,13 @@ func TestContextualObjectConditionAmbiguousTargetLayouts(t *testing.T) {
 		"Put a +1/+1 counter on up to one target creature. Exile target card from a graveyard. If it was a creature card, draw a card.",
 		"Exile target card from a graveyard and target card from another graveyard. If it was a creature card, draw a card.",
 	} {
-		assertCardUnsupported(t, &ScryfallCard{
-			Name: "Ambiguous Subject", Layout: "normal", TypeLine: "Creature",
-			OracleText: "When this creature enters, " + body,
-		}, "per-effect condition unrecognized")
+		t.Run(body, func(t *testing.T) {
+			t.Parallel()
+			assertCardUnsupported(t, &ScryfallCard{
+				Name: "Ambiguous Subject", Layout: "normal", TypeLine: "Creature",
+				OracleText: "When this creature enters, " + body,
+			})
+		})
 	}
 }
 

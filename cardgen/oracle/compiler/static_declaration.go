@@ -1830,10 +1830,11 @@ func recognizeTypedStaticRuleDeclarations(ability CompiledAbility, syntax *parse
 	if !ok {
 		return nil, false
 	}
+	references := staticFreeReferences(ability)
 	if len(ability.Content.Effects) != 1 ||
 		staticRuleForEffect(ability.Content.Effects[0].Kind) != rule ||
-		len(ability.Content.References) != 1 ||
-		ability.Content.References[0].Binding != ReferenceBindingSource {
+		len(references) != 1 ||
+		references[0].Binding != ReferenceBindingSource {
 		return nil, false
 	}
 	return []StaticDeclaration{staticRuleDeclaration(node.Span, node.Subject.Span, node.Operation.Span, rule, zone, group, staticBlockerRestrictionForSyntax(*node), condition)}, true

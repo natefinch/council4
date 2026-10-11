@@ -323,6 +323,10 @@ type Game struct {
 	// running agent-driven turn and is never deep copied (Clone starts without
 	// it). See choice_context.go.
 	choiceCtx any
+
+	attachedDeathDepartures map[attachedDeathDepartureKey]attachedDeathDeparture
+	triggerOriginUses       map[TriggerOrigin]int
+	triggerOriginTurn       int
 }
 
 // RunMode identifies the rules engine's player topology.

@@ -214,8 +214,7 @@ func TestDannyPinkCounterDrawResetsNextTurn(t *testing.T) {
 		t.Fatalf("hand size after first turn = %d, want 1", got)
 	}
 
-	// The turn boundary resets the per-turn trigger ledger.
-	g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
+	engine.advanceToNextTurn(g)
 
 	addCountersToPermanent(g, creature, counter.PlusOnePlusOne, 1)
 	if !engine.putTriggeredAbilitiesOnStack(g) {

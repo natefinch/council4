@@ -16,6 +16,15 @@ func bindContextualObjectCondition(
 	effects []CompiledEffect,
 	trigger *CompiledTrigger,
 ) bool {
+	matches := 0
+	for _, subject := range references {
+		if subject.NodeID == condition.SubjectRefID {
+			matches++
+		}
+	}
+	if matches != 1 {
+		return false
+	}
 	for _, subject := range references {
 		if subject.NodeID != condition.SubjectRefID {
 			continue
@@ -31,6 +40,15 @@ func bindContextualObjectCondition(
 				}
 			}
 			subject.Binding = ReferenceBindingEventStackObject
+		}
+		if bindOwnedProducerReference(&subject, effects) {
+			if subject.Binding != ReferenceBindingPriorInstructionResult {
+				return false
+			}
+			condition.ObjectBinding = subject.Binding
+			condition.ObjectReference = &subject
+			return true
+
 		}
 		wasSource := subject.Binding == ReferenceBindingSource
 		if subject.Binding == ReferenceBindingPaidCost {

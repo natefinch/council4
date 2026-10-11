@@ -132,6 +132,9 @@ type LoyaltyAbility struct {
 
 // TriggeredAbility is an ability that triggers from a game event or state.
 type TriggeredAbility struct {
+	// ZoneOfFunction is an explicit off-battlefield source zone. None preserves
+	// ordinary battlefield and event-specific discovery.
+	ZoneOfFunction     zone.Type
 	Text               string
 	Trigger            TriggerCondition
 	Optional           bool

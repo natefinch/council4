@@ -15,6 +15,7 @@
       Order: 
         End: 1
     Content: 
+      Source: 
       Targets: 
         [0]: 
           Text: any target
@@ -38,6 +39,7 @@
               Kind: 1
               Text: Prodigal Sorcerer
               Binding: 2
+              Subject: 
               Order: 
                 Start: 2
                 End: 3
@@ -46,6 +48,7 @@
               Kind: 1
               Text: Prodigal Sorcerer
               Binding: 2
+              Subject: 
               Order: 
                 Start: 2
                 End: 3
@@ -87,6 +90,7 @@
           Kind: 1
           Text: Prodigal Sorcerer
           Binding: 2
+          Subject: 
           Order: 
             Start: 2
             End: 3

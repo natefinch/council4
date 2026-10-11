@@ -3,6 +3,7 @@
     Kind: spell
     Text: Target creature gets +3/+3 until end of turn.
     Content: 
+      Source: 
       Targets: 
         [0]: 
           Text: Target creature

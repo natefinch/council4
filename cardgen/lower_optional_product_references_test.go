@@ -45,10 +45,10 @@ func TestOptionalEnteredObjectReferenceUsesTypedOccurrence(t *testing.T) {
 				targetIndices[content.Targets[0].Span] = 1
 			}
 			reason := bindOptionalEnteredObjectReference(&ctx, sequence, [][2]int{{0, 1}, {1, 3}}, targetIndices,
-				[]game.TargetSpec{{Allow: game.TargetAllowPermanent}, {Allow: game.TargetAllowCard}})
+				[]game.TargetSpec{{Allow: game.TargetAllowPermanent}, {Allow: game.TargetAllowCard}}, content.Targets)
 			if !mapped {
 				if reason == "" || game.PublishedLinkedKey(sequence[0].Primitive) != "" ||
-					ctx.content.References[0].Binding != compiler.ReferenceBindingTarget {
+					ctx.content.References[0].Binding != compiler.ReferenceBindingPriorInstructionResult {
 					t.Fatal("missing target mapping was accepted or changed the original publication/reference")
 				}
 				return
@@ -98,9 +98,9 @@ func TestOptionalEnteredObjectPublicationRefusals(t *testing.T) {
 			}
 			reason := bindOptionalEnteredObjectReference(&ctx, sequence, [][2]int{tt.span, {1, 2}},
 				map[shared.Span]int{content.Targets[0].Span: 0},
-				[]game.TargetSpec{{Allow: game.TargetAllowCard, MinTargets: 1, MaxTargets: 1}})
+				[]game.TargetSpec{{Allow: game.TargetAllowCard, MinTargets: 1, MaxTargets: 1}}, content.Targets)
 			if reason == "" || game.PublishedLinkedKey(sequence[0].Primitive) != tt.key ||
-				ctx.content.References[0].Binding != compiler.ReferenceBindingTarget {
+				ctx.content.References[0].Binding != compiler.ReferenceBindingPriorInstructionResult {
 				t.Fatal("unproven publication was accepted or an existing link was changed")
 			}
 		})

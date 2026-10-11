@@ -54,6 +54,15 @@ func lowerCourtOfLocthwainUpkeep(ctx contentCtx) (game.AbilityContent, bool) {
 		!locthwainMonarchFreeCast(content.Effects[2]) {
 		return game.AbilityContent{}, false
 	}
+	for _, reference := range content.Effects[1].References {
+		if !content.OwnsSubject(reference) ||
+			reference.SubjectDomain() != compiler.ReferenceSubjectCard ||
+			reference.SubjectLifetime() != compiler.ReferenceLifetimeActualProduct ||
+			reference.ProducerClauseID != content.Effects[0].ClauseID ||
+			reference.PriorInstruction != 0 {
+			return game.AbilityContent{}, false
+		}
+	}
 	monarch := opt.Val(game.EffectCondition{
 		Condition: opt.Val(game.Condition{ControllerIsMonarch: true}),
 	})
@@ -89,14 +98,16 @@ func lowerCourtOfLocthwainUpkeep(ctx contentCtx) (game.AbilityContent, bool) {
 }
 
 // locthwainExileTopOfTargetLibrary reports whether the effect is Court of
-// Locthwain's controller-context exile of the single target opponent's top
+// Locthwain's target-context exile of the single target opponent's top
 // library card. The library owner is the ability's lone player target, carried
 // as the effect's sole target rather than a reference.
 func locthwainExileTopOfTargetLibrary(effect compiler.CompiledEffect) bool {
 	return effect.Kind == compiler.EffectExile &&
 		!effect.Negated &&
 		!effect.Optional &&
-		effect.Context == parser.EffectContextController &&
+		effect.Context == parser.EffectContextTarget &&
+		effect.CardSource == parser.EffectCardSourceTopOfPlayerLibrary &&
+		effect.Exact &&
 		effect.Selector.Kind == compiler.SelectorCard &&
 		len(effect.Targets) == 1 &&
 		effect.Targets[0].Cardinality.Min == 1 &&
@@ -107,7 +118,7 @@ func locthwainExileTopOfTargetLibrary(effect compiler.CompiledEffect) bool {
 // locthwainPlayFromExilePermission reports whether the effect is the impulse-
 // style permission to play the just-exiled card ("You may play that card for as
 // long as it remains exiled, and mana of any type can be spent to cast it."). Its
-// references are the target-bound "that card"/"it" and the prior-result "it"; it
+// references all name the compiler-proven actual exiled card product; it
 // takes no target and carries no effect context of its own.
 func locthwainPlayFromExilePermission(effect compiler.CompiledEffect) bool {
 	return effect.Kind == compiler.EffectCast &&
@@ -117,18 +128,22 @@ func locthwainPlayFromExilePermission(effect compiler.CompiledEffect) bool {
 		len(effect.Targets) == 0 &&
 		len(effect.References) == 3 &&
 		effect.References[0].Kind == compiler.ReferenceThatObject &&
-		effect.References[0].Binding == compiler.ReferenceBindingTarget &&
+		effect.References[0].Binding == compiler.ReferenceBindingPriorInstructionResult &&
+		effect.References[0].SubjectSupported() &&
 		effect.References[1].Kind == compiler.ReferencePronoun &&
-		effect.References[1].Binding == compiler.ReferenceBindingTarget &&
+		effect.References[1].Binding == compiler.ReferenceBindingPriorInstructionResult &&
+		effect.References[1].SubjectSupported() &&
 		effect.References[2].Kind == compiler.ReferencePronoun &&
-		effect.References[2].Binding == compiler.ReferenceBindingPriorInstructionResult
+		effect.References[2].Binding == compiler.ReferenceBindingPriorInstructionResult &&
+		effect.References[2].SubjectSupported()
 }
 
 // locthwainMonarchFreeCast reports whether the effect is the monarch-gated,
 // until-end-of-turn optional free cast of a spell from among the cards this
 // enchantment exiled ("If you're the monarch, until end of turn, you may cast a
 // spell from among cards exiled with this enchantment without paying its mana
-// cost."). Its references are the source-bound "this enchantment" and "its".
+// cost."). Its references name the source enchantment and the selected spell's
+// casting-cost policy, not the most recently exiled card.
 func locthwainMonarchFreeCast(effect compiler.CompiledEffect) bool {
 	return effect.Kind == compiler.EffectCast &&
 		effect.Optional &&
@@ -142,5 +157,6 @@ func locthwainMonarchFreeCast(effect compiler.CompiledEffect) bool {
 		effect.References[0].Kind == compiler.ReferenceThisObject &&
 		effect.References[0].Binding == compiler.ReferenceBindingSource &&
 		effect.References[1].Kind == compiler.ReferencePronoun &&
-		effect.References[1].Binding == compiler.ReferenceBindingSource
+		effect.References[1].SupportsUse(compiler.ReferenceUsePolicy) &&
+		effect.References[1].SubjectDomain() == compiler.ReferenceSubjectPolicy
 }

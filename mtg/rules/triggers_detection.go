@@ -16,9 +16,12 @@ import (
 // player and source needed to build the StackObject, the triggering event, and
 // the mode/target choices made during preparation (CR 603.3c-d).
 type pendingTriggeredAbility struct {
+	triggerOrigin                game.TriggerOrigin
 	controller                   game.PlayerID
 	sourceID                     id.ID
 	sourceCardID                 id.ID
+	sourceZone                   zone.Type
+	sourceZoneVersion            uint64
 	sourceToken                  *game.CardDef
 	face                         game.FaceIndex
 	abilityIndex                 int
@@ -94,6 +97,11 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 		pending = append(pending, drainReadyReflexiveTriggers(g)...)
 		pending = append(pending, drainReadyRoomAbilities(g)...)
 	}()
+	for _, event := range events {
+		if event.Kind == game.EventPermanentDied {
+			g.ForgetAttachedDeathDepartures(event.PermanentID)
+		}
+	}
 	if len(pending) == 0 {
 		return false
 	}
@@ -126,6 +134,8 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			SourceID:                    trigger.sourceID,
 			Face:                        trigger.face,
 			SourceCardID:                trigger.sourceCardID,
+			SourceZone:                  trigger.sourceZone,
+			SourceZoneVersion:           trigger.sourceZoneVersion,
 			SourceTokenDef:              trigger.sourceToken,
 			AbilityIndex:                trigger.abilityIndex,
 			TriggerEvent:                trigger.event,
@@ -146,6 +156,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			CapturedCardZoneVersion:     trigger.capturedCardZoneVersion,
 			DungeonRoom:                 trigger.dungeonRoom,
 		}
+		obj.SetTriggerOrigin(trigger.triggerOrigin)
 		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
 			seedEntryChoices(obj, source)
 		}
@@ -899,8 +910,12 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 	defer g.EndStaticSourceFrame()
 	var pending []pendingTriggeredAbility
 	for _, event := range events {
+		captured := pendingTriggeredAbilitiesFromEvent(event)
+		for i := range captured {
+			bindAttachedDeathDeparture(g, &captured[i])
+		}
+		pending = append(pending, captured...)
 		if event.TriggeredAbilitiesCaptured {
-			pending = append(pending, pendingTriggeredAbilitiesFromEvent(event)...)
 			continue
 		}
 		for _, permanent := range g.Battlefield {
@@ -913,6 +928,7 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		pending = append(pending, cycledCardSelfTriggers(g, event)...)
+		pending = append(pending, graveyardStepSourceTriggers(g, event)...)
 		pending = append(pending, castSpellSelfTriggers(g, event)...)
 		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
@@ -934,14 +950,22 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
 	var captured []game.EventTriggeredAbility
-	for _, permanent := range g.Battlefield {
+	sources := g.Battlefield
+	if event.Kind == game.EventPermanentSacrificed || event.Kind == game.EventPermanentDied {
+		sources = slices.Clone(sources)
+		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
+			sources = append(sources, source)
+		}
+		sources = append(sources, simultaneousLeftBattlefieldTriggerSources(g, event, g.Events)...)
+	}
+	for _, permanent := range sources {
 		if !activeBattlefieldPermanent(permanent) {
 			continue
 		}
 		triggers := detectTriggeredAbilitiesFromPermanent(g, permanent, event)
 		for i := range triggers {
 			trigger := &triggers[i]
-			captured = append(captured, game.EventTriggeredAbility{
+			body := game.EventTriggeredAbility{
 				Controller:                trigger.controller,
 				SourceID:                  trigger.sourceID,
 				SourceCardID:              trigger.sourceCardID,
@@ -951,8 +975,18 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 				Ability:                   trigger.inline,
 				AdditionalTriggers:        liveChosenCreatureTypeAdditionalTriggerCount(g, trigger),
 				TriggerMultiplierCaptured: true,
-			})
+			}
+			body.SetTriggerOrigin(trigger.triggerOrigin)
+			captured = append(captured, body)
 		}
+	}
+	for _, trigger := range graveyardStepSourceTriggers(g, event) {
+		captured = append(captured, game.EventTriggeredAbility{
+			Controller: trigger.controller, SourceID: trigger.sourceID, SourceCardID: trigger.sourceCardID,
+			SourceZone: trigger.sourceZone, SourceZoneVersion: trigger.sourceZoneVersion,
+			Face: trigger.face, AbilityIndex: trigger.abilityIndex, Ability: trigger.inline,
+			TriggerMultiplierCaptured: true,
+		})
 	}
 	return captured
 }
@@ -960,19 +994,28 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbility {
 	pending := make([]pendingTriggeredAbility, 0, len(event.TriggeredAbilities))
 	for _, captured := range event.TriggeredAbilities {
+		var wardTargetID id.ID
+		if event.Kind == game.EventObjectBecameTarget && captured.Ability != nil &&
+			game.BodyHasKeyword(captured.Ability, game.Ward) {
+			wardTargetID = event.StackObjectID
+		}
 		pending = append(pending, pendingTriggeredAbility{
+			triggerOrigin:             captured.TriggerOrigin(),
 			controller:                captured.Controller,
 			sourceID:                  captured.SourceID,
 			sourceCardID:              captured.SourceCardID,
+			sourceZone:                captured.SourceZone,
+			sourceZoneVersion:         captured.SourceZoneVersion,
 			sourceToken:               captured.SourceTokenDef,
 			face:                      captured.Face,
 			abilityIndex:              captured.AbilityIndex,
 			inline:                    captured.Ability,
 			event:                     event,
 			hasEvent:                  true,
+			wardTargetID:              wardTargetID,
 			additionalTriggers:        captured.AdditionalTriggers,
 			triggerMultiplierCaptured: captured.TriggerMultiplierCaptured,
-			ordinaryTrigger:           true,
+			ordinaryTrigger:           captured.SourceZone == zone.None,
 		})
 	}
 	return pending
@@ -1065,6 +1108,17 @@ func limitPendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredAbil
 		}
 		if ability.MaxTriggersPerTurn > 0 {
 			key := game.TriggeredAbilityUse{SourceID: trigger.sourceID, AbilityIndex: trigger.abilityIndex}
+			if trigger.triggerOrigin.RecipientID != 0 {
+				if !g.ConsumeTriggerUse(trigger.triggerOrigin, ability.MaxTriggersPerTurn) {
+					continue
+				}
+				if g.TriggeredAbilitiesThisTurn == nil {
+					g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
+				}
+				g.TriggeredAbilitiesThisTurn[key]++
+				filtered = append(filtered, *trigger)
+				continue
+			}
 			if g.TriggeredAbilitiesThisTurn == nil {
 				g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 			}
@@ -1094,7 +1148,8 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 	if captured, ok := controlledTriggerSnapshotSourceController(&event, permanent.ObjectID); ok {
 		controller = captured
 	}
-	for i, body := range permanentEffectiveAbilities(g, permanent) {
+	values := effectivePermanentValues(g, permanent)
+	for i, body := range values.abilities {
 		if chapter, ok := body.(*game.ChapterAbility); ok {
 			if event.Kind != game.EventCountersAdded ||
 				event.PermanentID != permanent.ObjectID ||
@@ -1125,12 +1180,19 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 			continue
 		}
 		if triggered, ok := body.(*game.TriggeredAbility); ok {
+			if triggered.ZoneOfFunction != zone.None && triggered.ZoneOfFunction != zone.Battlefield {
+				continue
+			}
 			trigger := &triggered.Trigger
+			if libraryGraveyardSelfPattern(trigger.Pattern) {
+				continue
+			}
 			if !triggerMatchesEventForController(g, permanent, controller, &trigger.Pattern, event) ||
 				!triggerInterveningIf(g, permanent, controller, trigger, &event) {
 				continue
 			}
 			pending = append(pending, pendingTriggeredAbility{
+				triggerOrigin:   values.triggerOrigins[i],
 				controller:      controller,
 				sourceID:        permanent.ObjectID,
 				sourceCardID:    permanent.CardInstanceID,
@@ -1497,7 +1559,7 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permane
 		return &game.Permanent{
 			ObjectID:       event.PermanentID,
 			CardInstanceID: event.CardID,
-			Owner:          event.Player,
+			Owner:          snapshot.Owner,
 			Controller:     event.Controller,
 			Face:           event.Face,
 			FaceDown:       snapshot.FaceDown,
@@ -1515,7 +1577,7 @@ func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permane
 	}
 	return &game.Permanent{
 		ObjectID:     event.PermanentID,
-		Owner:        event.Player,
+		Owner:        snapshot.Owner,
 		Controller:   event.Controller,
 		Face:         event.Face,
 		FaceDown:     snapshot.FaceDown,

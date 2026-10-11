@@ -3,6 +3,7 @@
     Kind: spell
     Text: Destroy target creature.
     Content: 
+      Source: 
       Targets: 
         [0]: 
           Text: target creature

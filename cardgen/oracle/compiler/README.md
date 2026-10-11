@@ -43,6 +43,14 @@ cannot change compilation. Event-history conditions likewise arrive as typed
 parser event syntax and a typed turn window; condition compilation reuses the
 same mechanical trigger adapters.
 
+Event-card battlefield moves retain the parser's exact, clause-owned
+`UnderYourControl` recipient through compilation and lowering as an explicit
+controller reference. An omitted recipient, including the explicit owner's
+control spelling, retains the event card's owner default. A foreign or partial
+control rider cannot acquire the controller reference from a text substring:
+the complete battlefield-move clause and the compiler-owned event subject proof
+must both be valid.
+
 `condition.go` compiles the remaining conditions from typed parser
 `ConditionClause` nodes matched to each condition by the parser-resolved
 `ClauseIndex`/`EventHistoryIndex` rather than by comparing source spans. It maps the
@@ -195,6 +203,33 @@ applies a string-inspection operation (a `strings` predicate/search/split call, 
 comparison against a string literal, a switch on Oracle wording, `regexp`, or
 `shared.NormalizedWords`) to a value that flows from a `.Text`/`.Event` field. The
 compiler allowlist is empty.
+
+Reference proofs retain the parser's actual instant/sorcery face classification
+even when a replacement paragraph uses replacement syntax. Damage from that
+resolving spell therefore stays distinct from original-permanent damage
+attribution. A dynamic damage amount may observe an exact singular original
+target only through its own characteristic-use proof and parser node identity;
+the damage source is proved independently.
+
+An exact self Library-to-Graveyard event proves the original source card, not a
+permanent. Its damage attribution survives an owned exile, while that exile
+still requires the event card's exact zone version and actual success. This
+does not change battlefield watchers of other cards or self-death permanent LKI
+and does not grant card subjects permanent mutation. The matching event captures
+that exact card's declared ability, owner, and post-event zone/version using the
+existing event-source snapshot. Other battlefield/watchers still use ordinary
+discovery; a later card incarnation cannot acquire or duplicate this capture.
+
+Recurring upkeep, beginning-of-combat, and end-step self-card returns can carry
+an explicit graveyard function zone. The compiler requires an exact parser-owned
+return clause and finalized source/card-incarnation proofs. Lowering carries
+that metadata into `TriggeredAbility.ZoneOfFunction`; runtime never infers the
+zone from a consequence. Default battlefield and event-specific trigger routes
+retain the absent-zone representation. Graveyard step discovery uses the card's
+owner and snapshots its exact card ID, zone, and zone version at the event, so
+queued and copied abilities cannot move a returned incarnation or same-name
+card. Other trigger events do not acquire graveyard discovery through this
+contract.
 
 The compiler also performs no positional reasoning over source-span byte
 offsets: it never derives node identity, containment, or ordering from raw

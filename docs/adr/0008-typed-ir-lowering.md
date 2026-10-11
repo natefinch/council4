@@ -87,6 +87,22 @@ correct layer:
    bound references to typed runtime object and card references. Triggering
    event permanents resolve live objects or last-known information; prior
    instruction results use validated linked keys.
+   The existing compiler reference-binding Module also owns a private,
+   body-local subject proof of domain, occurrence, and lifetime. This Interface
+   is finalized after all condition/returned-reference rewrites. Lowering's
+   reference Adapter mechanically projects it onto existing runtime References;
+   it cannot choose permanent versus card identity through a boolean flag.
+   Intrinsic subjects require explicit constructors from typed source, effect,
+   target, or scheduling facts. Live source mutation retains the original
+   ObjectID; card movement and captured LKI retain their separate exact-lifetime
+   contracts. Actual entered products cannot be replaced with optional
+   acceptance, an old observation, or a later incarnation of the source card.
+   The proof also derives each reference's intended use from its owning typed
+   consumer: only a permanent can be mutated, resolving-spell damage is
+   attributed rather than mutated, and player or policy subjects never become
+   objects. A move may capture its card's departure characteristics, and a
+   resolving spell may return itself to hand; these are the only two runtime
+   contracts added for this Seam.
    <br><br>
    Static wording follows the same boundary without becoming ability body
    Instructions. `cardgen/oracle` recognizes supported static wording into one

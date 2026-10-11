@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -22,6 +24,26 @@ func lowerContent(
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if blocker := targetCountContentBlocker(ctx); blocker != nil {
 		return game.AbilityContent{}, blocker
+	}
+	if !contentSubjectProofsOwned(ctx.content) {
+		diagnostic := contentDiagnostic(ctx, "unsupported reference subject",
+			"the body contains a missing, incompatible, or foreign subject proof")
+		// Keep independent content blockers visible without admitting an unproved body.
+		if _, inner := lowerContentDispatch(cardName, ctx, syntax); inner != nil {
+			diagnostic.Additional = append(diagnostic.Additional, *inner)
+		}
+		return game.AbilityContent{}, diagnostic
+	}
+	for _, condition := range ctx.content.Conditions {
+		if condition.Ownership.Scope != parser.ConditionScopeUnsupported {
+			continue
+		}
+		for _, effect := range ctx.content.Effects {
+			if effect.Kind == compiler.EffectCantBeBlocked && slices.Contains(condition.Ownership.ClauseIDs, effect.ClauseID) {
+				return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported condition timing",
+					"the trailing can't-be-blocked restriction predicate is not proved to be evaluated only at resolution")
+			}
+		}
 	}
 	if diagnostic := handLibraryResolvingCostDiagnostic(ctx.content); diagnostic != nil {
 		return game.AbilityContent{}, diagnostic

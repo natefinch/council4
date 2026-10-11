@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -1098,27 +1099,35 @@ func TestLowerCardNameSelfSubject(t *testing.T) {
 
 func TestLowerTemporarySelfKeywordAbility(t *testing.T) {
 	t.Parallel()
-	for _, oracleText := range []string{
-		"{W}: This creature gains flying until end of turn.",
-		"{G}: This creature gains trample and haste until end of turn.",
+	for _, tc := range []struct {
+		text     string
+		mana     cost.Mana
+		keywords []game.Keyword
+	}{
+		{"{W}: This creature gains flying until end of turn.", cost.Mana{cost.W}, []game.Keyword{game.Flying}},
+		{"{G}: This creature gains trample and haste until end of turn.", cost.Mana{cost.G}, []game.Keyword{game.Trample, game.Haste}},
 	} {
-		source, diagnostics, err := GenerateExecutableCardSource(&ScryfallCard{
+		face := lowerSingleFace(t, &ScryfallCard{
 			Name:       "Test Skyfish",
 			Layout:     "normal",
 			TypeLine:   "Creature — Fish",
 			Power:      new("2"),
 			Toughness:  new("2"),
-			OracleText: oracleText,
-		}, "t")
-		if err != nil {
-			t.Fatal(err)
+			OracleText: tc.text,
+		})
+		if len(face.ActivatedAbilities) != 1 {
+			t.Fatal("complete activated fixture lost its ability")
 		}
-		if len(diagnostics) != 0 {
-			t.Fatalf("self-gain %q unexpectedly failed: %v", oracleText, diagnostics)
+		ability := face.ActivatedAbilities[0]
+		if !ability.ManaCost.Exists || !reflect.DeepEqual(ability.ManaCost.Val, tc.mana) {
+			t.Fatalf("self-gain cost = %v, want %v", ability.ManaCost, tc.mana)
 		}
-		if !strings.Contains(source, "game.ApplyContinuous") ||
-			!strings.Contains(source, "game.SourceCardPermanentReference()") {
-			t.Fatalf("self-gain %q did not lower to a source ApplyContinuous:\n%s", oracleText, source)
+		apply := applyContinuousOf(t, ability.Content)
+		if !apply.Object.Exists || apply.Object.Val != game.SourcePermanentReference() ||
+			apply.Duration != game.DurationUntilEndOfTurn ||
+			len(apply.ContinuousEffects) != 1 ||
+			!reflect.DeepEqual(apply.ContinuousEffects[0].AddKeywords, tc.keywords) {
+			t.Fatal("complete self-keyword fixture lost original identity, duration, or keyword set")
 		}
 	}
 }

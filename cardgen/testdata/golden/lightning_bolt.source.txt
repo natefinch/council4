@@ -27,6 +27,7 @@ func newLightningBolt() *game.CardDef {
 						MaxTargets: 1,
 						Constraint: "any target",
 						Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker, types.Battle}}),
 					},
 				},
 				Sequence: []game.Instruction{

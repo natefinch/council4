@@ -280,6 +280,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		return false
 	}
 	g.Stack.Push(obj)
+	targetEvents := prepareTargetEvents(g, obj)
 	request := payment.SpellRequest{
 		PlayerID:        controllerID,
 		CardID:          card.ID,
@@ -329,7 +330,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	stormCopies := stormCopyCount(g, spellDef)
-	emitSpellCastEvents(g, obj, game.Event{
+	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     card.ID,
 		StackObjectID:                obj.ID,
 		Controller:                   controllerID,
@@ -345,7 +346,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		KickerPaid:                   cast.KickerPaid,
 		FromZone:                     cast.SourceZone,
 		ToZone:                       zone.Stack,
-	})
+	}, targetEvents)
 	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)

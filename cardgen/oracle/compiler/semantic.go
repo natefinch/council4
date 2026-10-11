@@ -15,7 +15,12 @@ import (
 )
 
 // Context supplies card facts needed during semantic compilation.
-type Context struct{}
+type Context struct {
+	sourceSpell           bool
+	sourceKind            AbilityKind
+	spellParagraphTargets []CompiledTarget
+	spellParagraphModal   bool
+}
 
 // AbilityKind is the semantic category of a compiled ability.
 type AbilityKind uint8
@@ -399,13 +404,15 @@ const (
 // option). It owns the ordered targets, conditions, effects, keywords,
 // references, and nested modes that form an ability's instruction content.
 type AbilityContent struct {
-	Span       shared.Span
-	Modes      []CompiledMode
-	Targets    []CompiledTarget
-	Conditions []CompiledCondition
-	Effects    []CompiledEffect
-	Keywords   []CompiledKeyword
-	References []CompiledReference
+	subjectScope *referenceSubjectScope
+	Source       ReferenceSourceContext
+	Span         shared.Span
+	Modes        []CompiledMode
+	Targets      []CompiledTarget
+	Conditions   []CompiledCondition
+	Effects      []CompiledEffect
+	Keywords     []CompiledKeyword
+	References   []CompiledReference
 }
 
 // ModeChoiceBonusCondition identifies a cast-time modal range condition.
@@ -465,12 +472,12 @@ const (
 // consumption is checked separately by lowering code since effect count
 // drives dispatch. Lowerers that deliberately consume references must clear
 // them from the content before calling Unconsumed.
-func (c AbilityContent) Unconsumed() bool {
-	return len(c.Targets) != 0 ||
-		len(c.Conditions) != 0 ||
-		len(c.Keywords) != 0 ||
-		len(c.Modes) != 0 ||
-		len(c.References) != 0
+func (content AbilityContent) Unconsumed() bool {
+	return len(content.Targets) != 0 ||
+		len(content.Conditions) != 0 ||
+		len(content.Keywords) != 0 ||
+		len(content.Modes) != 0 ||
+		len(content.References) != 0
 }
 
 // CompiledModeLabel identifies an exact typed mode label.
@@ -1574,13 +1581,14 @@ type TargetCardinality struct {
 // CompiledTarget is one occurrence of the word "target" and its local noun
 // phrase.
 type CompiledTarget struct {
-	Span        shared.Span
-	CountSpan   shared.Span
-	ChoiceSpan  shared.Span
-	Text        string
-	Cardinality TargetCardinality
-	Selector    CompiledSelector
-	Exact       bool
+	subjectScope *referenceSubjectScope
+	Span         shared.Span
+	CountSpan    shared.Span
+	ChoiceSpan   shared.Span
+	Text         string
+	Cardinality  TargetCardinality
+	Selector     CompiledSelector
+	Exact        bool
 	// KickerScaledCount marks a target whose chosen count is one plus the number
 	// of times the spell was kicked ("Choose any target, then choose another
 	// target for each time this spell was kicked.", Comet Storm; CR 702.32). It
@@ -2562,6 +2570,9 @@ type CompiledGroupEntryModification struct {
 // it. Multiple effects may refer to the same sentence when instructions are
 // coordinated.
 type CompiledEffect struct {
+	subjectScope            *referenceSubjectScope
+	OptionalPostfixElse     parser.OptionalPostfixElseOwnership
+	LibraryOwnerClauseID    int
 	DelayedSubject          parser.DelayedSubjectOwnership
 	ClauseID                int
 	ResultElseOfClauseID    int
@@ -2574,15 +2585,16 @@ type CompiledEffect struct {
 	// loses ..."). Lowering routes the life change to the opponents dealt combat
 	// damage this game by a creature with that name. It is empty for every other
 	// context.
-	CombatDamageSourceName string
-	Connection             parser.EffectConnectionKind
-	ConnectionSpan         shared.Span
-	Span                   shared.Span
-	ClauseSpan             shared.Span
-	Text                   string
-	VerbSpan               shared.Span
-	Player                 parser.EffectPlayerKind
-	CardSource             parser.EffectCardSourceKind
+	CombatDamageSourceName  string
+	Connection              parser.EffectConnectionKind
+	ConnectionSpan          shared.Span
+	Span                    shared.Span
+	ClauseSpan              shared.Span
+	Text                    string
+	VerbSpan                shared.Span
+	Player                  parser.EffectPlayerKind
+	CardSource              parser.EffectCardSourceKind
+	LibraryOwnerDestination bool
 	// FaceDown mirrors EffectSyntax.FaceDown: a top-of-library exile card source
 	// that exiles its cards face down. Lowering threads it onto the
 	// ExileTopOfLibrary primitive; it is false for every face-up exile.
@@ -3341,7 +3353,8 @@ type CompiledEffect struct {
 	// LifeObject reports that a gain/lose effect's object is the player's life
 	// rather than a keyword or quoted ability. Consumers route only true life
 	// changes to the life lowerer.
-	LifeObject bool
+	LifeObject  bool
+	LifePayment parser.EffectLifePaymentKind
 	// PreventRegeneration reports a destroy effect carrying a "can't be
 	// regenerated" rider. RegenerationRiderSpan covers the rider sentence so
 	// lowering can credit its tokens toward source coverage.
@@ -4742,6 +4755,9 @@ const (
 	// became-blocked events populate with the opposing combatant.
 	ReferenceBindingEventRelatedPermanent
 	ReferenceBindingPaidCost
+	// ReferenceBindingLibraryOwner names the player whose library produced the
+	// exact observed card, not the card object or the consequence actor.
+	ReferenceBindingLibraryOwner
 )
 
 // CompiledReference records a source-spanned reference and its bound referent.
@@ -4753,13 +4769,17 @@ type CompiledReference struct {
 	Text     string
 	Binding  ReferenceBinding
 	// CardIdentity mirrors the parser's card-identity self-reference marker: a
-	// "this card" self reference (card identity, tracked into its current zone)
+	// "this card" self reference (card domain, requiring an exact incarnation)
 	// as opposed to "this Aura"/"this creature" (a battlefield object). Lowering
-	// uses it to return a leaves-the-battlefield source from the graveyard by
-	// card identity instead of bouncing a battlefield object.
-	CardIdentity     bool
-	Occurrence       int
-	PriorInstruction int
+	// consumes Subject proof rather than interpreting this grammar flag.
+	CardIdentity                bool
+	SubjectNoun                 parser.ObjectNoun
+	Subject                     ReferenceSubjectProof
+	Occurrence                  int
+	PriorInstruction            int
+	ProducerClauseID            int
+	ReachedCardProducerClauseID int
+	LibraryCardObservation      bool
 	// NodeID is the parser-assigned stable identity of this reference within its
 	// ability or mode. Distinct copies of the same source reference share a
 	// NodeID, so the compiler matches references by identity instead of span

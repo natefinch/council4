@@ -261,6 +261,11 @@ func lowerOrderedEffectSequence(
 	// gate source. Sequences that do not open with this causative shape are
 	// returned unchanged.
 	ctx.content.Effects = collapseCausativeHavePairs(ctx.content.Effects, ctx.content.Keywords)
+	normalized, normalizedOK := normalizeSequenceProductReferences(ctx.content)
+	if !normalizedOK {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unavailable or ambiguous producer clause identity")
+	}
+	ctx.content = normalized
 	// Resolve the counter kind for any "remove those counters" clause from the
 	// preceding same-source placement clause before per-effect lowering, so the
 	// removal names the kind the sequence just placed on the source.
@@ -307,6 +312,13 @@ func lowerOrderedEffectSequence(
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — otherwise branch not gatable")
 	}
+	for i, effect := range ctx.content.Effects {
+		if effect.Kind == compiler.EffectDealDamage && effect.Divided &&
+			sequenceClauseInstructionGated(i, effectConditions, insteadGates, otherwiseGates) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx,
+				"timing — conditional divided damage requires an announced allocation receipt retained across branch target selection")
+		}
+	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
@@ -344,6 +356,7 @@ func lowerOrderedEffectSequence(
 		resolvedEffect, clauseAbility := prepareSequenceClause(ctx, optionalFlow, clauseSyntaxes, i)
 		effectAbility := contextForEffect(ctx, &resolvedEffect)
 		effectAbility.singleAction = optionalFlow.marksOptional(i)
+		effectAbility.sequenceEffectIndex = i
 		// Embedded payment conditions belong to the clause lowerer; ordinary
 		// conditions belong to the sequence envelope.
 		effectAbility.content.Conditions = conditionPlan.clauseConditions[i]
@@ -391,7 +404,11 @@ func lowerOrderedEffectSequence(
 			effectAbility.content.Effects[0].SubjectReferences, ctx.content.Conditions,
 		)
 		var inheritedTargets []compiler.CompiledTarget
-		if effect.Context == parser.EffectContextPriorSubject {
+		conditionOnlyProductSubject := len(clauseRefs) == 0 &&
+			len(conditionPlan.resultReferencesForClause(ctx.content.Effects, i)) > 0
+		if effect.Context == parser.EffectContextPriorSubject &&
+			!conditionOnlyProductSubject &&
+			(len(effect.SubjectReferences) == 0 || len(effectAbility.content.Effects[0].SubjectReferences) > 0) {
 			inheritedTargets = priorSubjectTargets(ctx.content.Effects, i)
 			clauseRefs = append(clauseRefs, priorSubjectReferences(ctx.content.Effects, i)...)
 		}
@@ -401,6 +418,20 @@ func lowerOrderedEffectSequence(
 			ctx.content.Targets,
 			clauseTargets,
 		)
+		if len(clauseTargets) == 0 && len(inheritedTargets) == 0 &&
+			effect.Replacement.Kind == parser.EffectReplacementInstead &&
+			fixedSingleTargetDamageEffect(effect) {
+			for _, replaced := range ctx.content.Effects[:i] {
+				if replaced.ClauseID == effect.Replacement.ReplacedClauseID() &&
+					fixedSingleTargetDamageEffect(&replaced) &&
+					len(replaced.Targets) == 1 &&
+					replaced.Targets[0].Cardinality.Min == 1 &&
+					replaced.Targets[0].Cardinality.Max == 1 {
+					inheritedTargets = replaced.Targets
+					break
+				}
+			}
+		}
 		// Three target-handling modes:
 		//   allSharedTargets: only inherited, no own — compound-mill "then draws".
 		//   mixedTargets:     inherited + own — "then fights target creature" where
@@ -432,6 +463,13 @@ func lowerOrderedEffectSequence(
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — clause reference not localizable")
 		}
 		effectAbility.content.References = localReferences
+		if effect.Kind == compiler.EffectRemoveFromCombat {
+			for _, reference := range localReferences {
+				if sequenceLibraryCardReference(reference, ctx.content.Effects) {
+					return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — a library card is not a combat permanent")
+				}
+			}
+		}
 		effectKeywords := keywordsWithinSpan(ctx.content.Keywords, effect.ClauseSpan)
 		// A copy-token effect's "[That token] gains <keyword>." rider is a folded
 		// sibling sentence whose keyword and pronoun fall outside the create
@@ -468,6 +506,9 @@ func lowerOrderedEffectSequence(
 		// publishes a different key — so this only ever adds capability and never
 		// changes an outcome that succeeded before.
 		conditionReferences := conditionPlan.resultReferencesForClause(ctx.content.Effects, i)
+		if !conditionPlan.publishCardLineageForClause(i, sequence, effectInstructionRanges[:i]) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, cardLineageConditionCategory)
+		}
 		productReferences := append(slices.Clone(effectAbility.content.References), conditionReferences...)
 		if antecedent, key, ok := sequencePriorInstructionLink(
 			productReferences, sequence, effectInstructionRanges[:i],
@@ -477,7 +518,29 @@ func lowerOrderedEffectSequence(
 		} else if len(conditionReferences) > 0 {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — condition subject producer not publishable")
 		}
-		if reason := bindOptionalEnteredObjectReference(&effectAbility, sequence, effectInstructionRanges[:i], oracleSpanToGameIdx, targets); reason != "" {
+		if libraryCardCharacteristicConsumer(effectAbility.content.Effects[0], ctx.content.Effects) {
+			if effect.Kind != compiler.EffectDraw && effect.Kind != compiler.EffectGain && effect.Kind != compiler.EffectLose {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — observed characteristic consumer primitive not modeled")
+			}
+			key, ok := sequenceLibraryCardCharacteristic(effectAbility.content.Effects[0],
+				ctx.content.Effects, sequence, effectInstructionRanges[:i])
+			if !ok {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — observed characteristic producer unavailable or unmodeled")
+			}
+			effectAbility.observedCharacteristicKey = key
+		}
+		if _, _, departure := departureCardCharacteristicReference(effectAbility.content.Effects[0], ctx.content.Effects); departure {
+			if effect.Kind != compiler.EffectDraw && effect.Kind != compiler.EffectGain && effect.Kind != compiler.EffectLose {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — departure characteristic consumer primitive not modeled")
+			}
+			key, ok := sequenceDepartureCardCharacteristic(effectAbility.content.Effects[0], ctx.content.Effects,
+				sequence, effectInstructionRanges[:i])
+			if !ok {
+				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — exact departure characteristic publisher unavailable")
+			}
+			effectAbility.observedCharacteristicKey = key
+		}
+		if reason := bindOptionalEnteredObjectReference(&effectAbility, sequence, effectInstructionRanges[:i], oracleSpanToGameIdx, targets, ctx.content.Targets); reason != "" {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, reason)
 		}
 		// Lower the effect through the shared lowerAbilityContent entry point.
@@ -599,6 +662,9 @@ func lowerOrderedEffectSequence(
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}
 		}
+		if !applyLibraryCardCharacteristicGate(mode.Sequence, effectAbility.observedCharacteristicKey) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — observed characteristic availability overlaps another result gate")
+		}
 		// A clause must contribute at least one instruction; an empty lowering
 		// would silently drop the effect. Earlier code required exactly one
 		// instruction per effect (len(sequence) == len(effects)), but a single
@@ -672,6 +738,14 @@ func lowerOrderedEffectSequence(
 	}
 	if !publishConditionTargetCards(ctx.content, effectInstructionRanges, sequence) {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — targeted-card condition producer not modeled")
+	}
+	sequence, ok = optionalFlow.scoped.appendPostfixElseBranches(effectInstructionRanges, sequence)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — optional postfix Otherwise envelope conflicts")
+	}
+	sequence, ok = conditionPlan.expandCardLineageConditions(sequence, effectInstructionRanges)
+	if !ok {
+		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, cardLineageConditionCategory)
 	}
 	// A later "another target" clause requires a target distinct from the
 	// spell's earlier targets (CR 601.2c); mark it before gating so both passes
@@ -1822,7 +1896,8 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 		len(ctx.content.Conditions) != 1 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 5 {
+		len(ctx.content.References) != 6 ||
+		len(referencesOutsideOwnedConditions(ctx.content.References, ctx.content.Conditions)) != 5 {
 		return game.AbilityContent{}, false
 	}
 	shuffle := ctx.content.Effects[0]
@@ -1873,6 +1948,12 @@ func lowerShuffleRevealPermanentSequence(ctx contentCtx) (game.AbilityContent, b
 	condition := ctx.content.Conditions[0]
 	if condition.Kind != compiler.ConditionIf ||
 		!shuffleRevealPermanentCondition(condition) ||
+		!condition.HasSubjectReference || condition.ObjectReference == nil ||
+		condition.SubjectRefID != condition.ObjectReference.NodeID ||
+		condition.ObjectReference.Binding != compiler.ReferenceBindingPriorInstructionResult ||
+		condition.ObjectReference.ProducerClauseID != reveal.ClauseID ||
+		condition.ObjectReference.PriorInstruction != 1 ||
+		reveal.LibraryOwnerClauseID != shuffle.ClauseID ||
 		!spanCovered(condition.Span, []shared.Span{put.ClauseSpan}) {
 		return game.AbilityContent{}, false
 	}
@@ -1992,20 +2073,19 @@ func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent
 		return game.AbilityContent{}, false
 	}
 
-	key := game.LinkedKey("revealed-card-1")
-	linked := game.LinkedObjectReference(string(key))
-	manaValue, ok := objectCharacteristicAmount(compiler.DynamicAmountSourceManaValue, linked)
-	if !ok {
-		return game.AbilityContent{}, false
-	}
+	key := sequenceProductKey(0)
+	scalar := game.ResultKey("sequence-effect-0-mana-value")
+	manaValue := game.DynamicAmount{Kind: game.DynamicAmountPreviousEffectResult, ResultKey: scalar, Multiplier: 1}
 
 	return game.Mode{
 		Sequence: []game.Instruction{
-			{Primitive: game.Reveal{
-				Amount:        game.Fixed(1),
-				Player:        game.ControllerReference(),
-				PublishLinked: key,
-			}},
+			{
+				Primitive: game.Reveal{
+					Amount: game.Fixed(1), Player: game.ControllerReference(), PublishLinked: key,
+					PublishCharacteristics: game.LibraryCardCharacteristics{ManaValue: scalar},
+				},
+				LocalProducts: game.LocalProducts{Links: []game.LinkedKey{key}, Results: []game.ResultKey{scalar}},
+			},
 			{Primitive: game.MoveCard{
 				Card: game.CardReference{
 					Kind:   game.CardReferenceLinked,
@@ -2020,6 +2100,9 @@ func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent
 					Amount: game.Dynamic(manaValue),
 				},
 				Condition: opt.Val(selfGate),
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key: scalar, AmountAvailable: true,
+				}),
 			},
 			{
 				Primitive: game.LoseLife{
@@ -2027,6 +2110,9 @@ func lowerRevealHandLifeLossSaddledSequence(ctx contentCtx) (game.AbilityContent
 					Amount:      game.Dynamic(manaValue),
 				},
 				Condition: opt.Val(opponentsGate),
+				ResultGate: opt.Val(game.InstructionResultGate{
+					Key: scalar, AmountAvailable: true,
+				}),
 			},
 		},
 	}.Ability(), true
@@ -2610,7 +2696,8 @@ func lowerInheritedSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool)
 // that creature directly and the runtime denies its controller's next untap, so
 // the clause's possessive "its controller" reference is consumed without its own
 // instruction. It accepts only the parser-exact negated-untap clause that owns
-// no target and whose every reference binds to an event or source permanent;
+// no new target and whose every reference binds to the same event, source, or
+// compiler-proven enclosing spell target;
 // every other shape (an own target, a multi-step window, a duration, or a
 // reference needing its own instruction) fails closed so the target and inherited
 // stun paths are untouched.
@@ -2636,19 +2723,19 @@ func lowerEventSubjectStunEffect(ctx contentCtx) (game.AbilityContent, bool) {
 		len(stun.SubjectReferences) != 1 {
 		return game.AbilityContent{}, false
 	}
-	referenceCtx := referenceLoweringContext{AllowEvent: true, AllowSource: true}
+	referenceCtx := referenceLoweringContext{AllowEvent: true, AllowSource: true, AllowTarget: true}
 	object, ok := lowerObjectReference(stun.SubjectReferences[0], referenceCtx)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
 	// Every clause reference is the subject anaphor or the possessive "its
-	// controller" pronoun; require each to resolve as an event or source object
+	// controller" pronoun; require each to resolve as the same object
 	// so no reference that would need its own instruction is silently dropped.
 	if len(ctx.content.References) == 0 {
 		return game.AbilityContent{}, false
 	}
 	for _, ref := range ctx.content.References {
-		if _, ok := lowerObjectReference(ref, referenceCtx); !ok {
+		if candidate, ok := lowerObjectReference(ref, referenceCtx); !ok || candidate != object {
 			return game.AbilityContent{}, false
 		}
 	}
@@ -3423,7 +3510,11 @@ func sequenceInsteadGates(
 		if effects[j].Replacement.Kind != parser.EffectReplacementInstead {
 			continue
 		}
-		if j == 0 {
+		replacedClauseID := effects[j].Replacement.ReplacedClauseID()
+		replaced := slices.IndexFunc(effects[:j], func(effect compiler.CompiledEffect) bool {
+			return replacedClauseID != 0 && effect.ClauseID == replacedClauseID
+		})
+		if replaced < 0 {
 			return nil, false
 		}
 		condition, gated := effectConditions[j]
@@ -3434,13 +3525,13 @@ func sequenceInsteadGates(
 		if !ok {
 			return nil, false
 		}
-		if _, exists := gates[j-1]; exists {
+		if _, exists := gates[replaced]; exists {
 			return nil, false
 		}
 		if gates == nil {
 			gates = make(map[int]game.EffectCondition)
 		}
-		gates[j-1] = negated
+		gates[replaced] = negated
 	}
 	return gates, true
 }
@@ -3515,20 +3606,33 @@ func localizeTargetReferences(
 ) ([]compiler.CompiledReference, bool) {
 	localized := append([]compiler.CompiledReference(nil), references...)
 	for i := range localized {
+		if localized[i].SubjectDomain() == compiler.ReferenceSubjectPolicy &&
+			localized[i].SupportsUse(compiler.ReferenceUsePolicy) {
+			continue
+		}
 		if localized[i].Binding != compiler.ReferenceBindingTarget {
 			continue
+		}
+		if len(allTargets) == 0 && len(localTargets) == 0 {
+			if _, supported := localized[i].EnclosingSpellTargetOccurrence(); supported {
+				continue
+			}
 		}
 		if localized[i].Occurrence < 0 || localized[i].Occurrence >= len(allTargets) {
 			return nil, false
 		}
-		targetSpan := allTargets[localized[i].Occurrence].Span
+		targetOrder := allTargets[localized[i].Occurrence].Order
 		local := slices.IndexFunc(localTargets, func(target compiler.CompiledTarget) bool {
-			return target.Span == targetSpan
+			return target.Order == targetOrder
 		})
 		if local < 0 {
 			return nil, false
 		}
-		localized[i].Occurrence = local
+		reference, ok := localized[i].LocalizeSubjectOccurrence(localTargets[local], local)
+		if !ok {
+			return nil, false
+		}
+		localized[i] = reference
 	}
 	return localized, true
 }
@@ -3540,6 +3644,10 @@ func appendReferenceAntecedentTargets(
 	clauseTargets []compiler.CompiledTarget,
 ) []compiler.CompiledTarget {
 	for _, reference := range references {
+		if reference.SubjectDomain() == compiler.ReferenceSubjectPolicy &&
+			reference.SupportsUse(compiler.ReferenceUsePolicy) {
+			continue
+		}
 		if reference.Binding != compiler.ReferenceBindingTarget ||
 			reference.Occurrence < 0 ||
 			reference.Occurrence >= len(allTargets) {
@@ -3907,7 +4015,9 @@ func lowerDelayedSequenceClause(
 		return delayedSequenceClauseResult{content: placement, handled: true}
 	}
 	if publisher, grant, ok := lowerSequentialReanimationTypeColorGrant(effectIndex, ctx, sequence); ok {
-		sequence[len(sequence)-1].Primitive = publisher
+		if publisher != nil {
+			sequence[len(sequence)-1].Primitive = publisher
+		}
 		return delayedSequenceClauseResult{content: grant, handled: true}
 	}
 	if exile, delayed, ok := lowerDelayedBlinkReturn(effects, effectIndex, ctx, sequence); ok {
@@ -3925,7 +4035,7 @@ func lowerDelayedSequenceClause(
 		sequence[len(sequence)-1].Primitive = exile
 		return delayedSequenceClauseResult{content: returnContent, handled: true}
 	}
-	if lowered, ok := lowerCharacteristicLifeRider(effects, effectIndex, ctx, sequence); ok {
+	if lowered, ok := lowerCharacteristicLifeRider(effects, effectIndex, ctx, sequence); ok && ctx.observedCharacteristicKey == "" {
 		if lowered.priorPrimitive != nil {
 			sequence[len(sequence)-1].Primitive = lowered.priorPrimitive
 		}
@@ -5427,7 +5537,11 @@ func lowerSelfBlinkSequence(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	key := game.LinkedKey("self-blink")
-	exile := game.MovePermanent{Object: game.SourcePermanentReference(), PublishLinked: key, Destination: zone.Exile}
+	object, known := lowerIntrinsicSourceObject(ctx)
+	if !known {
+		return game.AbilityContent{}, false
+	}
+	exile := game.MovePermanent{Object: object, PublishLinked: key, Destination: zone.Exile}
 	put := selfBlinkPutOnBattlefield(key, returnEffect, entryCounters)
 	return game.Mode{Sequence: []game.Instruction{
 		{Primitive: exile},

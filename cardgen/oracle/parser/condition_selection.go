@@ -46,19 +46,19 @@ func parseConditionSelection(tokens []shared.Token, atoms Atoms) (ConditionSelec
 		tokens = tokens[1:]
 	}
 	if len(tokens) == 0 {
-		return selection, false
+		return selection, len(selection.Supertypes) > 0
 	}
 	return parseConditionNoun(tokens, atoms, selection)
 }
 
 func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
+	if clause, ok := parseConditionTypeNoun(tokens, atoms, selection); ok {
+		return clause, true
+	}
 	for _, token := range tokens {
 		if token.Kind == shared.Comma {
 			return parseConditionSubtypeList(tokens, atoms, selection)
 		}
-	}
-	if clause, ok := parseConditionTypeNoun(tokens, atoms, selection); ok {
-		return clause, true
 	}
 	if leftEnd, rightStart, ok := conditionAlternativeConnector(tokens); ok {
 		return parseConditionAlternativeNoun(tokens[:leftEnd], tokens[rightStart:], atoms, selection)
@@ -81,6 +81,20 @@ func parseConditionNoun(tokens []shared.Token, atoms Atoms, selection ConditionS
 }
 
 func parseConditionSubtypeNoun(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
+	if len(tokens) >= 3 &&
+		(equalWord(tokens[len(tokens)-1], "card") || equalWord(tokens[len(tokens)-1], "cards")) &&
+		(equalWord(tokens[len(tokens)-2], "permanent") || equalWord(tokens[len(tokens)-2], "permanents")) {
+		subtype, subtypeOK := atoms.SubtypeAt(shared.SpanOf(tokens[:len(tokens)-2]))
+		qualified, qualifierOK := parseConditionTypeNoun(tokens[len(tokens)-2:], atoms, selection)
+		if subtypeOK && qualifierOK {
+			qualified.SubtypesAny = append(qualified.SubtypesAny, subtype)
+			return qualified, true
+		}
+		return ConditionSelection{}, false
+	}
+	if len(tokens) > 1 && (equalWord(tokens[len(tokens)-1], "card") || equalWord(tokens[len(tokens)-1], "cards")) {
+		tokens = tokens[:len(tokens)-1]
+	}
 	span := shared.SpanOf(tokens)
 	if subtype, ok := atoms.SubtypeAt(span); ok {
 		selection.SubtypesAny = append(selection.SubtypesAny, subtype)
@@ -162,19 +176,25 @@ func parseConditionAlternativeNoun(left, right []shared.Token, atoms Atoms, sele
 	return selection, true
 }
 
-// parseConditionColorQualified handles "<colors> creature(s)" and "<colors>
-// permanent(s)", where colors are one or more color atoms joined by "or", or the
-// "colorless"/"multicolored" qualifier.
+// parseConditionColorQualified handles a color-qualified creature, permanent,
+// or card noun, including "colorless" and "multicolored".
 func parseConditionColorQualified(tokens []shared.Token, atoms Atoms, selection ConditionSelection) (ConditionSelection, bool) {
 	if len(tokens) < 2 {
 		return ConditionSelection{}, false
 	}
 	last := tokens[len(tokens)-1]
 	colorTokens := tokens[:len(tokens)-1]
+	if (equalWord(last, "card") || equalWord(last, "cards")) && len(tokens) > 2 {
+		if cardType, ok := atoms.CardTypeAt(tokens[len(tokens)-2].Span); ok {
+			selection.RequiredTypes = append(selection.RequiredTypes, triggerCardTypeFromAtom(cardType))
+			colorTokens = tokens[:len(tokens)-2]
+		}
+	}
 	switch {
 	case equalWord(last, "creature"), equalWord(last, "creatures"):
 		selection.RequiredTypes = append(selection.RequiredTypes, TriggerCardTypeCreature)
-	case equalWord(last, "permanent"), equalWord(last, "permanents"):
+	case equalWord(last, "permanent"), equalWord(last, "permanents"),
+		equalWord(last, "card"), equalWord(last, "cards"):
 	default:
 		return ConditionSelection{}, false
 	}

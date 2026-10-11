@@ -56,9 +56,6 @@ func expandedConditionTypeSelection(selection compiler.ConditionSelection) bool 
 // The linked-reveal adapter already binds and checks its card independently of
 // the generic condition reference. Recognition must not disable that adapter.
 func shuffleRevealPermanentCondition(condition compiler.CompiledCondition) bool {
-	if condition.Predicate == compiler.ConditionPredicateUnsupported {
-		return true
-	}
 	if condition.Predicate != compiler.ConditionPredicateObjectMatches || condition.Negated {
 		return false
 	}
