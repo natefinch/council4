@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18630 supported cards
+# 18654 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -340,6 +340,7 @@ aa588be08be3b490  Alela, Artful Provocateur
 64cbcb3adfc5e7a6  Alesha's Legacy
 afe574b0da82c47f  Alesha's Vanguard
 b64678f7819e83dd  Alexi's Cloak
+485ce531a1c7ae1e  Alexi, Zephyr Mage
 a3eb2d350858613f  Algae Gharial
 ec819e72c193720c  Alhammarret's Archive
 b81c2ac09742b48c  Alharu, Solemn Ritualist
@@ -973,6 +974,7 @@ d3433a13204f5faf  Avacyn's Collar
 5b18717047fff45e  Avacyn, Angel of Hope
 a8b871950034a374  Avacyn, Angel of Horror
 62c3520a034552ba  Avacynian Priest
+b70517735c45c196  Avalanche
 39d41bc552d1aaec  Avalanche Riders
 70b7fa94cf013581  Avarax
 4d473175f1129ab5  Avarice Amulet
@@ -985,6 +987,7 @@ a8b871950034a374  Avacyn, Angel of Horror
 3d2b7cd3e221b44b  Avatar of Slaughter
 48196343c3946aed  Aveline de Grandpré
 23424bb5e94c8528  Aven Archer
+0127b06ead171f33  Aven Augur
 3ab1ba9e93fe01d5  Aven Battle Priest
 6a75016ee8e560c0  Aven Brigadier
 c1ff5a7e2f3dea01  Aven Cloudchaser
@@ -1732,6 +1735,7 @@ e23fdb4c59d4c035  Bloodthirsty Ogre
 7660ab25cf9c4c6f  Bloodthorn Taunter
 d912fc5d67eb85c2  Bloodthrone Vampire
 5c9ab1f02caadcaf  Bloodtithe Collector
+027aa4935484c42a  Bloodtithe Harvester
 d5d33eed046786b9  Bloodtracker
 f40cc5e4fd69430c  Bloodwater Entity
 d0b35d038482f01e  Bloody Betrayal
@@ -2193,6 +2197,7 @@ f7831194dbb9e092  Butcher's Cleaver
 a7ba3268ec1689c7  Buy Your Silence
 a70bf8c32d641910  Buzz Bots
 4c0f51b9ef6b55f8  Buzzard-Wasp Colony
+507fbaafd17f656d  By Force
 26a952ba5dfd7ccf  Bygone Bishop
 92210782aaadb7de  Bygone Marvels
 f2b4c65582117e93  Byrke, Long Ear of the Law
@@ -2230,7 +2235,7 @@ eb210cdfe589c6e6  Cactusfolk Sureshot
 4608a2b946105498  Cadaver Imp
 98f38a5bc4d7c40a  Cadaverous Knight
 af87d70fe091f0f2  Cadet
-2763a93bde455653  Cadira, Caller of the Small
+af7a8caaddfc8b94  Cadira, Caller of the Small
 eedd1e451e36fa18  Caelorna, Coral Tyrant
 c44d36caf6d8c9ca  Cage of Hands
 740e8194378ce9e4  Caged Sun
@@ -2276,6 +2281,7 @@ d3dad4341bdbc2b1  Campaign of Vengeance
 6f283f4270752061  Canal Courier
 cea9c2d380206f33  Canal Monitor
 4283d154ff966728  Cancel
+98aa4b79b88bc99f  Candelabra of Tawnos
 ccb60262e1d67553  Candlegrove Witch
 246aa74d8613c67e  Candlelight Vigil
 4079892a2c0edf66  Candlelit Cavalry
@@ -2284,7 +2290,6 @@ ccb60262e1d67553  Candlegrove Witch
 fa9575fe85305629  Candy Trail
 e1924c2b5b811025  Cankerbloom
 f281c6b9a6c87126  Canonized in Blood
-8fb6018e31eea051  Canoptek Scarab Swarm
 c766d10ed82946f0  Canoptek Tomb Sentinel
 51ebcb76e1e9094d  Canoptek Wraith
 7edc8d6637295f8f  Canopy Baloth
@@ -2314,7 +2319,6 @@ cbc340e0881a0766  Capashen Standard
 68e72472536ece77  Capricious Sliver
 81cf068299b98b81  Capricious Sorcerer
 78e5ee21ea809698  Captain America's Shield
-309c055b6ca6cccd  Captain America, Liberator
 eb28918980eb6b77  Captain America, Steve Rogers
 a1c0c1fa9b59fe44  Captain America, Unbowed
 66bfee7f8d7e01a3  Captain Howler, Sea Scourge
@@ -2564,7 +2568,7 @@ d06ac8c34d7b20af  Chameleon Colossus
 6b9f52bae3d3afcc  Champion of Arashin
 e885c5fd10beaa6f  Champion of Dusk
 266b81401d133925  Champion of Lambholt
-27cd3ab549ff2a8b  Champion of Stray Souls
+7191b19b1dd89d1e  Champion of Stray Souls
 6607f8471f987799  Champion of the Parish
 480a91fd774e6a4e  Champion of the Perished
 8f70e8296b072da9  Champion's Helm
@@ -3038,6 +3042,7 @@ a558a8551f0cd5cc  Conscripted Infantry
 831eb95437551ef4  Conservator
 acfe816a5f186bc4  Conservatory
 7d2d2e21cc224221  Consider
+88edcce285944a53  Consign to Dust
 a87c2ac6cf32f995  Consign to the Pit
 4b4ca887f3cae18a  Conspiracy Theorist
 34e02de58ca88390  Constable of the Realm
@@ -3423,7 +3428,7 @@ f7ff453ff96a163a  Curse of Chains
 cc01fcf4893d1fb0  Curse of Marit Lage
 f4f937947cd78e6b  Curse of Opulence
 c60c434c797771fb  Curse of the Bloody Tome
-a4066195172acb8b  Curse of the Swine
+883f1a7241a4fad5  Curse of the Swine
 0a8a10cc3429f60a  Curse of Verbosity
 661b3b8e0c266f49  Curse of Vitality
 ab7cbb2ac1954aa0  Curse of Wizardry
@@ -3667,7 +3672,7 @@ f3eb84a997695a5b  Deadshot Minotaur
 d09669918abfb54d  Deal Gone Bad
 c3f453ee6a13996e  Death Bomb
 ccd415cc134b180b  Death Cultist
-9a200a8433d21360  Death Denied
+086985b58be9b5b7  Death Denied
 833faade2c5d6905  Death Frenzy
 0b3a83c604d3553b  Death Grasp
 093cba11387c08a8  Death in the Family
@@ -4078,6 +4083,7 @@ eaf61cb619f439d8  Distant Melody
 de178386de726227  Distemper of the Blood
 87263c2914a8fe72  Distinguished Conjurer
 e4f347e234e689df  Distorted Curiosity
+6fbaebfc10fbc33d  Distorting Wake
 40fd1dcf8cbb9a2a  Distortion Strike
 9f5d4dbeac0a1f20  Distress
 50a15c12d5bac81b  District Guide
@@ -4324,6 +4330,7 @@ c72fc15feba8a5ad  Dreamcatcher
 abb5b482f6696fac  Dreg Mangler
 c04add3c30a63ef2  Dreg Reaver
 a476575ce0b8b6fd  Dreg Recycler
+46e8b71b58fa80ba  Dregs of Sorrow
 09fabe3bb2104508  Dregscape Zombie
 eb2965d08b044e55  Drelnoch
 4410320737853083  Drey Keeper
@@ -4712,6 +4719,7 @@ ec6336fede6ab95d  Elfhame Wurm
 adbceaf3dd2315fd  Elfsworn Giant
 a2d7e80ac3747c6b  Elgaud Inquisitor
 db2aeb5fd1fd076e  Eliminate
+59531a95da185d8c  Eliminate the Competition
 5348c83765339af3  Elite Archers
 c4f072dc286e57dd  Elite Arrester
 f63da2399ecf830c  Elite Cat Warrior
@@ -5722,6 +5730,7 @@ eb385e42d305ca90  Flooded Grove
 cc2ae1a6138773f8  Flooded Strand
 0db095ba9557ac1c  Floodfarm Verge
 4ec5d9b30f1b9e32  Floodhound
+788940ba3cffa9f5  Floodwater Dam
 fe0be30068d1a2ca  Floodwaters
 34a1b73f3cdebab8  Flora Colossus
 0765d7458d3fe317  Floral Evoker
@@ -6457,6 +6466,7 @@ b7bb3f8173e4096e  Glimmerpoint Stag
 4fdbce164ca8d87d  Glimpse of Nature
 6c81c5e16540c569  Glimpse the Core
 45985b5bc3717871  Glimpse the Future
+d0db4d2eb9400eaa  Glimpse the Sun God
 57a0bacd090dcc59  Glimpse the Unthinkable
 44d2cde411cc1f8f  Glint
 43f4667c489a0e65  Glint Hawk
@@ -6915,6 +6925,7 @@ f6aa89ecae7838e0  Grenzo, Havoc Raiser
 73c18962c2ebf07b  Gretchen Titchwillow
 9e6c70395fe41226  Grey Havens Navigator
 5659d62b53545ddc  Grey Knight Paragon
+b4fac565a21df344  Gridlock
 934c99422a91e01d  Grief Tyrant
 ff95310b339f7e6a  Griffin
 cdd30e571d0c776e  Griffin Aerie
@@ -7504,7 +7515,7 @@ e7cf996889b02d65  Hollow Dogs
 6c28ebddaf4f6ca4  Hollowborn Barghest
 801df4942a2f1a6c  Hollowhead Sliver
 1387b66b62486cca  Hollowhenge Beast
-98a0e3cf11976430  Hollowhenge Overlord
+e49f213e46021758  Hollowhenge Overlord
 2cb87822eb6b771e  Hollowhenge Scavenger
 3f34ba29b9aa106e  Hollowhenge Spirit
 36e1c13c2869540f  Hollowsage
@@ -7874,6 +7885,7 @@ dadd95030719bd22  Immaculate Magistrate
 621a5b8134608350  Immolating Gyre
 66838649594eb9ce  Immolating Souleater
 937eed5413b65e9c  Immolation
+da2f26634280e195  Immoral Bargain
 be36070cdf30b7f4  Immortal Phoenix
 0d22d40b1a229e2d  Imodane's Recruiter // Train Troops
 dbb9835f1a2d9e79  Imoen, Mystic Trickster
@@ -8408,6 +8420,7 @@ b9bf800286e0d947  Jungle Lion
 e0086726ad2498c9  Junk Diver
 be6fd90ecf8c16d3  Junk Golem
 0fab288cbd213cdd  Junk Jet
+c4d78cfa52677b84  Junk Winder
 689c11fc2f5eca31  Junktown
 2057cea0722c6bd3  Junktroller
 490ecd3464396f16  Junkyard Genius
@@ -8640,6 +8653,7 @@ b64f24eedd5dcd05  Kinsbaile Balloonist
 3f3da58e8761e94c  Kinsbaile Skirmisher
 791ac69a8cd26c75  Kiora of Fire and Ashes
 584291b4b77b7bbb  Kiora's Dambreaker
+0fed032a7da8da02  Kiora's Dismissal
 5b7b13ee65e23361  Kiora's Follower
 583de2d4ffb652ed  Kiora, Behemoth Beckoner
 21448255e9383982  Kira, Great Glass-Spinner
@@ -9512,6 +9526,7 @@ db45fa171bf81942  Magnifying Glass
 defd679b80e0388d  Magnigoth Sentry
 90351afacf50cc2b  Magus of the Bazaar
 52356d8f2dc4ad8b  Magus of the Bridge
+dcd07d53bb7e31cb  Magus of the Candelabra
 136729962124e30a  Magus of the Coffers
 07e9b72d347667e5  Magus of the Disk
 50aaa733b73e6325  Magus of the Future
@@ -9559,6 +9574,7 @@ d6e4b5289ca4a3f9  Malcator's Watcher
 1acf109eac069bbf  Malevolent Chandelier
 432c711aa1954c7f  Malevolent Whispers
 933b40dd14001640  Malfunction
+11bf3abc468efd76  Malicious Advice
 8f9a05dbbe4b62ff  Malicious Intent
 89968a87e7ecb0c3  Malleable Impostor
 dfadf48563cefab9  Mammoth Growth
@@ -9929,6 +9945,7 @@ e20fb2f161152760  Metalspinner's Puzzleknot
 5e0a9a669cd28a09  Metathran Soldier
 b9191cf4f94e66f8  Metathran Transport
 0fb776f964e70e54  Metathran Zombie
+2250f1a2d4ea16cd  Meteor Blast
 9690d35883537485  Meteor Golem
 ef9ad64e5fd9d151  Meteor Storm
 57c4318cc86697e6  Meteor Sword
@@ -10118,6 +10135,7 @@ efc2ad23288854d7  Misfortune's Gain
 2e7912c6599d9766  Mishra's Bauble
 2e6dc1d53d4161df  Mishra's Factory
 b0385bb1b883c360  Mishra's Foundry
+ed02794efd5a069b  Mishra's Helix
 663e125be11046fa  Mishra's Juggernaut
 6b04c97fc46cd5b8  Mishra's Onslaught
 d71b51c6150ec545  Mishra's Self-Replicator
@@ -10590,7 +10608,6 @@ cd8c65876b5d0a66  Necrogen Spellbomb
 5f3fd71af9d20207  Necromancer's Stockpile
 2742a9e2cd78ea12  Necromantic Thirst
 725505a2d2eee3d7  Necron Deathmark
-379b39914f3e7f4c  Necron Monolith
 f606bf8fe4210e27  Necron Warrior
 13c438e8d8982574  Necropanther
 56866d18c14b647f  Necropede
@@ -11132,6 +11149,7 @@ c108c3f09ae721c1  Orcish Hellraiser
 63022b742e226fb1  Orcish Lumberjack
 9aa137ecbc1654bd  Orcish Mechanics
 924e9d38936ef01b  Orcish Oriflamme
+5796849b39b3545d  Orcish Settlers
 c55a575522a94185  Orcish Siegemaster
 1d9a1c17be0fb04a  Orcish Vandal
 59d3429fd13580ea  Orcrist, Goblin-cleaver
@@ -12353,6 +12371,7 @@ c78debb77a5fa254  Rathi Dragon
 bdf98169f26f466a  Rathi Intimidator
 d6a2573b09f49aa4  Rathi Trapper
 292f7252f39d352d  Rats of Rath
+ca319cc813127079  Rats' Feast
 974978100f336c9c  Rattleback Apothecary
 1702f8ffaa237bd5  Rattlechains
 229bf8a35c2689f9  Rattleclaw Mystic
@@ -12439,6 +12458,7 @@ ba6e8af16292c392  Reality Anchor
 ca4df3376be5e221  Reality Hemorrhage
 baf8f88965f6bf26  Reality Ripple
 d2544a4b8c17f21d  Reality Shift
+38f7c734164a987d  Reality Spasm
 9c23b6b91ce2928d  Realm-Cloaked Giant // Cast Off
 b1cdcf3f80122856  Realm-Scorcher Hellkite
 f3d49aa41897ccdb  Realmbreaker's Grasp
@@ -12569,7 +12589,7 @@ fd189bd3a36a044b  Reito Lantern
 ebe6dd8844d14c2b  Reknit
 b7bf176cf48af1ee  Relearn
 d4a715cd8d20ba44  Release the Dogs
-8c0831308dfeeea0  Release to Memory
+95031df675e82986  Release the Gremlins
 a7a6c9bfbb0f5aeb  Relentless Advance
 7b937a43b65a6b70  Relentless Assault
 596f59b52960ca4e  Relentless Hunter
@@ -12704,7 +12724,7 @@ c4b092c4f5f579a2  Return to Dust
 5f482301dbb8bf34  Return to Nature
 0528b852bc023e11  Return to the Earth
 3ee26fc2eafc41bf  Return to the Light Realms
-0a3f7313f490a07b  Return to the Ranks
+6ae170b6e82a3d9d  Return to the Ranks
 5a64ac07db3094d2  Return Triumphant
 e94fe0b627be88a5  Return Upon the Tide
 7b37be998ecbbca2  Returned Centaur
@@ -13087,6 +13107,7 @@ b025d86e1858fff0  Rune-Cervin Rider
 9d8f1a61e3e876b2  Rune-Sealed Wall
 3065a7b618507b3f  Runeboggle
 f5e02d0060724fd2  Runeclaw Bear
+be43ae10e9f8d6db  Runed Arch
 407d864660e90d90  Runed Servitor
 37cd1531baea2bde  Runed Stalactite
 ba05de848a490837  Runehorn Hellkite
@@ -13396,6 +13417,7 @@ bba8d6d5d4d032fc  Scaled Hulk
 793c1d838f0d619b  Scalestorm Summoner
 0037571464d1102f  Scampering Scorcher
 ceb49538b0ca6101  Scampering Surveyor
+a4a7e2c0725d2cd8  Scapegoat
 a30f97e13dde41ef  Scar
 060142a5304de62e  Scarab Feast
 0f9af5a001c26ced  Scarblade Elite
@@ -13612,7 +13634,6 @@ fb9f8d333afd410c  Season of Renewal
 70ee9ffd3c97d9ab  Seasoned Consultant
 544d4b21fa414fe8  Seasoned Hallowblade
 87773f20d4a78a3a  Seasoned Marshal
-327c1e4ec8bd04c9  Seasoned Pyromancer
 4bc6336328f71312  Seasoned Warrenguard
 b09c17215c231403  Seat of the Synod
 3b77702bb2d1e6ec  Secluded Courtyard
@@ -13902,7 +13923,7 @@ d1804eb5fd65d397  Sharuum the Hegemon
 98389752ab28d253  Shatter the Source
 781b7b50c3a7a5cd  Shattered Acolyte
 6d5522c7e567cc37  Shattered Angel
-e25f67eaae1c1d9f  Shattered Crypt
+14ff2717ecf2933f  Shattered Crypt
 4437f8e57288470e  Shattered Dreams
 6d60300be50bdbf7  Shattered Landscape
 4de6733fe5ba8902  Shattered Perception
@@ -15775,6 +15796,7 @@ d7824a5a1ef909e5  Syndicate Heavy
 f2cfc9796408e0e0  Syndicate Infiltrator
 6dec4bdd79a0c730  Syndicate Messenger
 b4293bec83c7a04c  Syndicate Trafficker
+5af121a24dbe8bc6  Synod Artificer
 fd4fcac39902e446  Synod Centurion
 8919cb8ed6801763  Synth Infiltrator
 71cb3aa865c1d34f  Syphon Essence
@@ -16273,6 +16295,7 @@ b7c4263baa3cfe68  Thopter Foundry
 e8544e8b33483415  Thor, Asgard's Avenger
 61c9b8d5579f7a86  Thorin's Last Stand
 87283f8f2b12ec4b  Thorin, Company's Leader
+6596b1670573d14d  Thorin, King of Durin's Folk
 209927080a24d2c8  Thorn Elemental
 704ad439a65a500e  Thorn Lieutenant
 7d45241f4240b350  Thorn Mammoth
@@ -16367,6 +16390,7 @@ ecd26d72f00a6161  Thrill of the Hunt
 fbce8e05a45f9598  Thrill-Kill Assassin
 dd157d1cfa8d9585  Thrilling Discovery
 1c6e0ff3a95ed1b5  Thriss, Nantuko Primus
+43b58dbeac61a413  Thrive
 e27069643bc79427  Thriving Bluff
 7eaf1b47076077b2  Thriving Grove
 846b6bd688b32bec  Thriving Grubs
@@ -16529,7 +16553,6 @@ b43370a3cb6609ed  Tivadar's Crusade
 ac096090f9a7977a  To Arms!
 4df0f0120efea600  Toadstool Admirer
 bd8390202fc9b140  Tobias Andrion
-d455779867acdfd9  Tobias, Doomed Conqueror
 9ed76b301567d2a0  Tocasia's Dig Site
 3d74a985fa82148b  Tocasia's Onulet
 63bab87ec5b8ba1f  Tocasia's Welcome
@@ -16771,7 +16794,6 @@ a39a80b14892bd6f  Trial of Strength
 620b4452b134364a  Triangle of War
 d866856d2d792a74  Triarch Praetorian
 01669bdff293c782  Tribal Flames
-e76900bbf8c58473  Tribune of Rot
 e8f7a4f46a7bcc91  Tributary Instructor
 250d44757fc0c681  Tributary Vaulter
 f0215f14cabe1e91  Tribute Mage
@@ -17961,6 +17983,7 @@ dc582dce472f334a  Waterwhirl
 e00bf01981214cdf  Waterwind Scout
 5e65a4f7240ca905  Watery Grave
 69023ccb2a75a965  Wave Goodbye
+dc1c131a38297327  Wave of Indifference
 85f3a7b6c154d3ba  Wave of Reckoning
 0a9ea415e2728182  Wave-Wing Elemental
 e194a8625679cf07  Wavebreak Hippocamp
@@ -18142,7 +18165,7 @@ cdce8168eca56028  Wild-Field Scarecrow
 ae788cb107986902  Wilderland Scrounger
 10a813c8f1ca8baf  Wilderness Hypnotist
 c125a32aebdcc0b9  Wilderness Reclamation
-245ab5edaaaa0d3b  Wildest Dreams
+5a1012fe69ab2be0  Wildest Dreams
 8ff68eddfcf9ea27  Wildfield Borderpost
 ee451864a33bfe56  Wildfire
 6432ac77ce7a0a6b  Wildfire Awakener
@@ -18343,6 +18366,7 @@ c033f35680a7f70e  Woolly Loxodon
 f596d05e6ba9cbc1  Woolly Mammoths
 25db8441246543c4  Woolly Spider
 7559e29c86246bf8  Woolly Thoctar
+5c59c484d74d08dd  Word of Binding
 bbfa1fb0fba6c106  Word of Seizing
 8aa6e219e13b829d  Words of Wisdom
 89e7a21b05137cf8  Workhorse
