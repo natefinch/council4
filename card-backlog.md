@@ -10,14 +10,14 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33011
-- Supported (generated): 18666
-- Parser-complete: 22814
-- **Lowering backlog** (parser-complete, not generated): 4910
-- **Parser backlog** (not parser-complete, not generated): 9435
+- Supported (generated): 18677
+- Parser-complete: 22816
+- **Lowering backlog** (parser-complete, not generated): 4902
+- **Parser backlog** (not parser-complete, not generated): 9432
 
-Partition check: 18666 supported + 4910 lowering-backlog + 9435 parser-backlog = 33011 eligible. ✓
+Partition check: 18677 supported + 4902 lowering-backlog + 9432 parser-backlog = 33011 eligible. ✓
 
-762 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+763 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
@@ -74,8 +74,8 @@ Partition check: 18666 supported + 4910 lowering-backlog + 9435 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18666
-- Independent per-card recompile generated: 18666
+- Authoritative generated (compilecards report): 18677
+- Independent per-card recompile generated: 18677
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,14 +84,14 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1717 | 1068 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
-| 2 | unsupported optional effect | 519 | 2 | Dazzling Sphinx; Planebound Accomplice; Puresight Merrow; Mindclaw Shaman; Remembrance |
+| 1 | unsupported ordered effect sequence | 1710 | 1062 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 2 | unsupported optional effect | 518 | 2 | Dazzling Sphinx; Planebound Accomplice; Puresight Merrow; Mindclaw Shaman; Remembrance |
 | 3 | unsupported static declaration operation | 280 | 235 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 275 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 222 | 117 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
 | 6 | unsupported damage spell | 198 | 144 | Armed Response; Combo Attack; Huatli, Dinosaur Knight; Kill! Maim! Burn!; Call Forth the Tempest |
 | 7 | unsupported activation cost | 188 | 140 | Thunderherd Migration; Krovikan Sorcerer; Etchings of the Chosen; Tourach's Gate; City of Shadows |
-| 8 | unsupported reference subject | 169 | 0 | Planebound Accomplice; Venser's Diffusion; Pandemonium; Misleading Motes; Fatigue |
+| 8 | unsupported reference subject | 168 | 0 | Planebound Accomplice; Venser's Diffusion; Pandemonium; Misleading Motes; Fatigue |
 | 9 | unsupported static declaration group | 163 | 126 | Sedge Sliver; Freewind Equenaut; Rune of Sustenance; Indomitable Might; Cast Through Time |
 | 10 | unsupported return spell | 159 | 126 | Dragon Fangs; Dragon Scales; Venser's Diffusion; Kazandu Stomper; Shuri's Fabricator |
 | 11 | unsupported search effect | 122 | 72 | Remembrance; Kasmina, Enigma Sage; Avatar of Growth; Increasing Ambition; Quest for the Holy Relic |
@@ -139,11 +139,11 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 53 | unsupported can't-block effect | 11 | 11 | Blinding Flare; Temur Charm; Manacles of Decay; Goma Fada Vanguard; Mournwillow |
 | 54 | unsupported activation condition | 11 | 10 | Arch of Orazca; Orazca Relic; Ilysian Caryatid; Sarevok's Tome; Wall of Forgotten Pharaohs |
 | 55 | unsupported can't-be-blocked effect | 11 | 10 | Gingerbrute; Speed, Young Avenger; Leitmotif Composer; Secret Tunnel; Dread Charge |
-| 56 | unsupported target count parameter | 11 | 10 | Rampaging War Mammoth; Aether Burst; Crackle with Power; Mogis's Marauder; Reap |
-| 57 | unsupported untap spell | 11 | 9 | Early Harvest; The Thirteenth Doctor; Jiang Yanggu, Never Alone; Urtet, Remnant of Memnarch; Merrow Commerce |
-| 58 | unsupported manifest spell | 11 | 8 | Orcish Spy; They Came from the Pipes; Smoke Teller; Omarthis, Ghostfire Initiate; Etrata, Deadly Fugitive |
-| 59 | unsupported overload effect | 11 | 6 | Mizzium Skin; Corporeal Projection; Mind Rake; Break the Ice; Weapon Surge |
-| 60 | validation failed: invalid-ability-body | 10 | 10 | Sachi, Daughter of Seshiro; Gift of Paradise; Forgotten Monument; Thranduil the Strategist; Find the Path |
+| 56 | unsupported untap spell | 11 | 9 | Early Harvest; The Thirteenth Doctor; Jiang Yanggu, Never Alone; Urtet, Remnant of Memnarch; Merrow Commerce |
+| 57 | unsupported manifest spell | 11 | 8 | Orcish Spy; They Came from the Pipes; Smoke Teller; Omarthis, Ghostfire Initiate; Etrata, Deadly Fugitive |
+| 58 | validation failed: invalid-ability-body | 10 | 10 | Sachi, Daughter of Seshiro; Gift of Paradise; Forgotten Monument; Thranduil the Strategist; Find the Path |
+| 59 | unsupported target count parameter | 10 | 9 | Rampaging War Mammoth; Aether Burst; Crackle with Power; Mogis's Marauder; Reap |
+| 60 | unsupported overload effect | 10 | 6 | Mizzium Skin; Corporeal Projection; Mind Rake; Break the Ice; Weapon Surge |
 
 ## Parser queue
 
@@ -178,11 +178,11 @@ Cards that are not parser-complete (and do not lower), bucketed by owning compon
 | 25 | other | doctor's companion | 21 | Nyssa of Traken; Donna Noble; Bill Potts; Susan Foreman; Rose Tyler |
 | 26 | condition | if you lose the flip | 20 | Goblin Bomb; Ydwen Efreet; Ral, Monsoon Mage // Ral, Leyline Prodigy; Risky Move; Mogg Assassin |
 | 27 | effect | learn. | 20 | Professor of Symbology; Field Trip; Sparring Regimen; Igneous Inspiration; Enthusiastic Study |
-| 28 | effect | choose target creature. | 19 | Arcbond; Fatal Fissure; Spark of Creativity; Sewers of Estark; Erratic Mutation |
-| 29 | effect | open an attraction. | 19 | Complaints Clerk; Discourtesy Clerk; Myra the Magnificent; Soul Swindler; Coming Attraction |
-| 30 | trigger | when this creature exploits a creature | 19 | Fell Stinger; Rakshasa Gravecaller; Infernal Captor; Diver Skaab; Sidisi's Faithful |
-| 31 | condition | if you can't | 18 | Frankenstein's Monster; Ravenous Demon // Archdemon of Greed; Rust Elemental; Infernal Denizen; Out of the Tombs |
-| 32 | effect | choose a color. | 18 | Skrelv, Defector Mite; Radiant Lotus; Addle; Glory; Sungold Sentinel |
+| 28 | effect | open an attraction. | 19 | Complaints Clerk; Discourtesy Clerk; Myra the Magnificent; Soul Swindler; Coming Attraction |
+| 29 | trigger | when this creature exploits a creature | 19 | Fell Stinger; Rakshasa Gravecaller; Infernal Captor; Diver Skaab; Sidisi's Faithful |
+| 30 | condition | if you can't | 18 | Frankenstein's Monster; Ravenous Demon // Archdemon of Greed; Rust Elemental; Infernal Denizen; Out of the Tombs |
+| 31 | effect | choose a color. | 18 | Skrelv, Defector Mite; Radiant Lotus; Addle; Glory; Sungold Sentinel |
+| 32 | effect | choose target creature. | 18 | Arcbond; Fatal Fissure; Spark of Creativity; Sewers of Estark; Erratic Mutation |
 | 33 | condition | if you cast a spell this way | 17 | Eye of Duskmantle; Brainstealer Dragon; Noctis, Prince of Lucis; Xander's Pact; Outrageous Robbery |
 | 34 | effect | buyback{3}(you may pay an additional{3}as you cast this spell. if you do, put this card into your hand as it resolves.) | 17 | Spell Burst; Fanning the Flames; Invulnerability; Seething Anger; Reiterate |
 | 35 | effect | flip a coin. | 17 | Ydwen Efreet; Ral, Monsoon Mage // Ral, Leyline Prodigy; Risky Move; Plasma Caster; Mogg Assassin |

@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18666 supported cards
+# 18677 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -2291,6 +2291,7 @@ ccb60262e1d67553  Candlegrove Witch
 fa9575fe85305629  Candy Trail
 e1924c2b5b811025  Cankerbloom
 f281c6b9a6c87126  Canonized in Blood
+228fcb9ac0ecb8c4  Canoptek Scarab Swarm
 c766d10ed82946f0  Canoptek Tomb Sentinel
 51ebcb76e1e9094d  Canoptek Wraith
 7edc8d6637295f8f  Canopy Baloth
@@ -2935,6 +2936,7 @@ c7cf39e7079e25d6  Collision // Colossus
 36fbdde14e8b0ab6  Colorful Feiyi Sparrow
 e002e224a70af59f  Colos Yearling
 0ac50ad9fd8bfcb2  Colossadactyl
+0cd26915d5064cf9  Colossal Badger // Dig Deep
 705e99c42d956d07  Colossal Collision
 7729aa92e7d1ce3e  Colossal Dreadmask
 e5aec50fd7c0b855  Colossal Dreadmaw
@@ -6245,6 +6247,7 @@ f6016a81d5385a1b  Geralf's Mindcrusher
 458a24540ba7e1c0  Gerrard's Battle Cry
 d134f7ba017d972c  Gerrard's Command
 e596e1d86a89dce9  Gerrard's Irregulars
+ebc0077c89cc3dcc  Gerrard's Verdict
 945235d82ea8f387  Gerrard's Wisdom
 7508b6dce8766891  Gert and Old Lace, Runaways
 108b4b8a53809ab1  Get a Leg Up
@@ -6775,6 +6778,7 @@ c1cc4ed3745498ac  Gorehorn Minotaurs
 2c2bbc5d21a57e8a  Goremand
 57c08a9590ed0998  Goretusk Firebeast
 fd7860d5ccc8bc5b  Gorger Wurm
+8d69b4937975fb67  Gorging Vulture
 fec28e66f481fd3c  Gorgon Flail
 cf7300b6a4ae8094  Gorgon Recluse
 201e771044372c86  Gorgon's Head
@@ -6928,6 +6932,7 @@ f6aa89ecae7838e0  Grenzo, Havoc Raiser
 591d669cc8675c45  Greta, Sweettooth Scourge
 73c18962c2ebf07b  Gretchen Titchwillow
 9e6c70395fe41226  Grey Havens Navigator
+697c172db3b610f2  Grey Host Reinforcements
 5659d62b53545ddc  Grey Knight Paragon
 b4fac565a21df344  Gridlock
 934c99422a91e01d  Grief Tyrant
@@ -9575,6 +9580,7 @@ e05f67179d4f8a10  Malakir Soothsayer
 f47c8ceeab91e483  Malamet Scythe
 a3e6aa51d84a57ec  Malamet Veteran
 cf14c3e215f78bd9  Malamet War Scribe
+6c947c91fc66fc8a  Malanthrope
 d6e4b5289ca4a3f9  Malcator's Watcher
 71099b0da657d850  Malcator, Purity Overseer
 37a089b3fa77a03c  Malcolm, the Eyes
@@ -10616,6 +10622,7 @@ cd8c65876b5d0a66  Necrogen Spellbomb
 5f3fd71af9d20207  Necromancer's Stockpile
 2742a9e2cd78ea12  Necromantic Thirst
 725505a2d2eee3d7  Necron Deathmark
+10c1e397f6303672  Necron Monolith
 f606bf8fe4210e27  Necron Warrior
 13c438e8d8982574  Necropanther
 56866d18c14b647f  Necropede
@@ -12598,6 +12605,7 @@ ebe6dd8844d14c2b  Reknit
 b7bf176cf48af1ee  Relearn
 d4a715cd8d20ba44  Release the Dogs
 95031df675e82986  Release the Gremlins
+4e0526ef9b79c5e3  Release to Memory
 a7a6c9bfbb0f5aeb  Relentless Advance
 7b937a43b65a6b70  Relentless Assault
 596f59b52960ca4e  Relentless Hunter
@@ -13643,6 +13651,7 @@ fb9f8d333afd410c  Season of Renewal
 70ee9ffd3c97d9ab  Seasoned Consultant
 544d4b21fa414fe8  Seasoned Hallowblade
 87773f20d4a78a3a  Seasoned Marshal
+5c3a590e02647a61  Seasoned Pyromancer
 4bc6336328f71312  Seasoned Warrenguard
 b09c17215c231403  Seat of the Synod
 3b77702bb2d1e6ec  Secluded Courtyard
@@ -15812,6 +15821,7 @@ fd4fcac39902e446  Synod Centurion
 71cb3aa865c1d34f  Syphon Essence
 90bf04a16afb63a9  Syphon Fuel
 58bc0eb037cc99c7  Syphon Life
+f4b055bf04eefff0  Syphon Mind
 0be82640c738167a  Syphon Sliver
 0dd4eff73bc113a4  Syr Alin, the Lion's Claw
 6d7c55f97672c7fd  Syr Elenora, the Discerning
@@ -16166,7 +16176,6 @@ eb34eee2795db42b  The Arkenstone // Seek the Heart
 273226f7cf47ed72  The Atropal
 348aac26be282536  The Autonomous Furnace
 15e93d5e2e76fadd  The Battle of Bywater
-3ae68f49f3c38179  The Binding of the Titans
 286c89f566e803cf  The Birth of Meletis
 7b9bc22ea223c756  The Black Breath
 3283331718317559  The Brothers' War
@@ -16551,6 +16560,7 @@ b5c074b20edb2c73  Titan's Grave
 22aaa3294a5316fd  Titan's Strength
 e854b04333879e3a  Titania's Boon
 e7b39cf046a39e9c  Titania's Chosen
+cd32aba9e7a47580  Titania's Command
 971bc9c71581b08f  Titania, Protector of Argoth
 b7a2821c610c21ee  Titanic Bulvox
 746c2bcbc8f6c499  Titanic Growth
@@ -16806,6 +16816,7 @@ a39a80b14892bd6f  Trial of Strength
 620b4452b134364a  Triangle of War
 d866856d2d792a74  Triarch Praetorian
 01669bdff293c782  Tribal Flames
+86f976953fe2042e  Tribune of Rot
 e8f7a4f46a7bcc91  Tributary Instructor
 250d44757fc0c681  Tributary Vaulter
 f0215f14cabe1e91  Tribute Mage
