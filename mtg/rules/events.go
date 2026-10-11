@@ -34,13 +34,15 @@ func emitEvent(g *game.Game, event game.Event) {
 		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCycled, event.Player)
 	}
 	event.TriggeredAbilities = append(event.TriggeredAbilities, captureLibraryGraveyardSourceTriggers(g, event)...)
-	if event.Kind == game.EventDamageDealt ||
+	if !event.TriggeredAbilitiesCaptured && (event.Kind == game.EventDamageDealt ||
 		event.Kind == game.EventCardDrawn ||
 		event.Kind == game.EventBeginningOfStep ||
 		event.Kind == game.EventAttackerDeclared ||
 		event.Kind == game.EventPermanentSacrificed ||
+		event.Kind == game.EventPermanentDied ||
+		event.Kind == game.EventObjectBecameTarget ||
 		event.Kind == game.EventFight ||
-		event.Kind == game.EventCompletedDungeon {
+		event.Kind == game.EventCompletedDungeon) {
 		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
 		event.TriggeredAbilitiesCaptured = true
 	}
@@ -53,6 +55,7 @@ func emitEvent(g *game.Game, event game.Event) {
 		}
 	}
 	g.AppendEvent(event)
+	certifySimultaneousAttachedDeathDeparture(g, event)
 }
 
 func populateEventPermanentCharacteristics(g *game.Game, event *game.Event) {
@@ -421,7 +424,27 @@ func emitManaProducedEvent(g *game.Game, src manaProducedSource, recipient game.
 }
 
 func emitTargetEvents(g *game.Game, obj *game.StackObject) {
-	for _, target := range obj.Targets {
+	emitPreparedTargetEvents(g, obj, prepareTargetEvents(g, obj))
+}
+
+func prepareTargetEvents(g *game.Game, obj *game.StackObject) []game.Event {
+	targets := stackObjectAnnouncementTargets(obj)
+	if len(targets) == 0 {
+		return nil
+	}
+	if _, onStack := stackObjectByID(g, obj.ID); !onStack {
+		// Target predicates see the declared stack object, without publishing
+		// an action or a trigger before its payment succeeds.
+		g.Stack.Push(obj)
+		defer g.Stack.RemoveByID(obj.ID)
+	}
+	events := make([]game.Event, 0, len(targets))
+	var seen []game.Target
+	for _, target := range targets {
+		if slices.Contains(seen, target) {
+			continue
+		}
+		seen = append(seen, target)
 		event := game.Event{
 			Kind:          game.EventObjectBecameTarget,
 			StackObjectID: obj.ID,
@@ -436,17 +459,35 @@ func emitTargetEvents(g *game.Game, obj *game.StackObject) {
 			event.Player = target.PlayerID
 		default:
 		}
+		populateEventPermanentCharacteristics(g, &event)
+		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
+		event.TriggeredAbilitiesCaptured = true
+		events = append(events, event)
+	}
+	return events
+}
+
+func stackObjectAnnouncementTargets(obj *game.StackObject) []game.Target {
+	targets := slices.Clone(obj.Targets)
+	for _, spliced := range obj.SplicedTargets {
+		targets = append(targets, spliced...)
+	}
+	return targets
+}
+
+func emitPreparedTargetEvents(g *game.Game, obj *game.StackObject, events []game.Event) {
+	for _, event := range events {
 		emitEvent(g, event)
 	}
 	emitCrimeEvent(g, obj)
 }
 
 // emitCrimeEvent emits an EventCrimeCommitted when putting obj on the stack
-// constitutes committing a crime (CR 700.15). A crime is committed once per
-// spell or ability put on the stack, regardless of how many qualifying targets
+// constitutes committing a crime (CR 700.13). A crime is committed once per
+// original spell or ability announcement, regardless of how many qualifying targets
 // it has, so this fires at most one event per push.
 func emitCrimeEvent(g *game.Game, obj *game.StackObject) {
-	if !committedCrime(g, obj) {
+	if obj.Copy || !committedCrime(g, obj) {
 		return
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
@@ -462,7 +503,7 @@ func emitCrimeEvent(g *game.Game, obj *game.StackObject) {
 
 // committedCrime reports whether obj targets one or more opponents of its
 // controller, objects an opponent controls (permanents or spells/abilities on
-// the stack), or cards in an opponent's graveyard (CR 700.15a). Targets that no
+// the stack), or cards in an opponent's graveyard (CR 700.13). Targets that no
 // longer resolve to a known object are ignored.
 func committedCrime(g *game.Game, obj *game.StackObject) bool {
 	for _, target := range obj.Targets {

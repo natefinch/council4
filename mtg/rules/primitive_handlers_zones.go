@@ -2481,12 +2481,14 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		// player becomes the copy's controller so the copy's own iterative offer
 		// chains off the copier's new target rather than the original controller.
 		copyObj.Controller = chooser
-		r.game.Stack.Push(copyObj)
 		if prim.MayChooseNewTargets {
 			r.engine.mayRetargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
 		}
+		r.game.Stack.Push(copyObj)
 		if copyObj.Kind == game.StackSpell {
 			emitSpellCopiedEvent(r.game, copyObj, copyDef)
+		} else {
+			emitTargetEvents(r.game, copyObj)
 		}
 	}
 	if original.Kind == game.StackSpell {
@@ -2498,10 +2500,10 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 				continue
 			}
 			additional.Controller = chooser
-			r.game.Stack.Push(additional)
 			if mayChooseNewTargets {
 				r.engine.mayRetargetStackObjectChoice(r.game, chooser, additional, r.agents, r.log)
 			}
+			r.game.Stack.Push(additional)
 			emitSpellCopiedEvent(r.game, additional, copyDef)
 		}
 	}
@@ -2600,6 +2602,7 @@ func (e *Engine) mayRetargetStackObjectChoice(g *game.Game, chooser game.PlayerI
 }
 
 func (e *Engine) retargetStackObjectChoiceOptional(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, optional bool) bool {
+	previousTargets := stackObjectAnnouncementTargets(target)
 	specs, specsOK := stackObjectTargetSpecs(g, target)
 	hostRetargeted := false
 	if specsOK && len(specs.specs) > 0 {
@@ -2612,7 +2615,23 @@ func (e *Engine) retargetStackObjectChoiceOptional(g *game.Game, chooser game.Pl
 	if specsOK {
 		splicedRetargeted = e.retargetSplicedChoices(g, chooser, target, specs.def, agents, log, optional)
 	}
-	return hostRetargeted || splicedRetargeted
+	retargeted := hostRetargeted || splicedRetargeted
+	if retargeted {
+		if _, onStack := stackObjectByID(g, target.ID); onStack {
+			changed := *target
+			changed.Targets = nil
+			changed.SplicedTargets = nil
+			for _, next := range stackObjectAnnouncementTargets(target) {
+				if !slices.Contains(previousTargets, next) {
+					changed.Targets = append(changed.Targets, next)
+				}
+			}
+			for _, event := range prepareTargetEvents(g, &changed) {
+				emitEvent(g, event)
+			}
+		}
+	}
+	return retargeted
 }
 
 // applyHostRetargetChoice re-chooses and binds the host spell or ability's own
@@ -3393,6 +3412,7 @@ type preparedResolvedBattlefieldCard struct {
 	resolved    resolvedBattlefieldCard
 	event       game.Event
 	replacement zoneChangeReplacementResult
+	options     permanentCreationOptions
 }
 
 func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
@@ -3450,11 +3470,23 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 	continuousEffects []game.ContinuousEffect,
 	options permanentCreationOptions,
 ) []*game.Permanent {
-	if len(resolved) > 1 {
-		options.SimultaneousID = r.game.IDGen.Next()
-	}
 	moves := make([]preparedResolvedBattlefieldCard, 0, len(resolved))
 	for _, card := range resolved {
+		entryOptions, admitted := r.prepareAuraEffectEntry(card.card, card.controller, options)
+		if !admitted {
+			continue
+		}
+		moves = append(moves, preparedResolvedBattlefieldCard{
+			resolved: card,
+			options:  entryOptions,
+		})
+	}
+	if len(moves) > 1 {
+		options.SimultaneousID = r.game.IDGen.Next()
+	}
+	for i := range moves {
+		move := &moves[i]
+		card := move.resolved
 		event := game.Event{
 			Kind:           game.EventZoneChanged,
 			Controller:     card.controller,
@@ -3470,11 +3502,9 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 			card.card.ID,
 			replacement.destination,
 		)
-		moves = append(moves, preparedResolvedBattlefieldCard{
-			resolved:    card,
-			event:       event,
-			replacement: replacement,
-		})
+		move.event = event
+		move.replacement = replacement
+		move.options.SimultaneousID = options.SimultaneousID
 	}
 	entries := make([]preparedCardPermanentEntry, 0, len(moves))
 	for i := range moves {
@@ -3504,7 +3534,7 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 			card.fromZone,
 			game.FaceFront,
 			continuousEffects,
-			options,
+			move.options,
 			r.agents,
 			r.log,
 		)
@@ -3531,6 +3561,11 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 	continuousEffects []game.ContinuousEffect,
 	options permanentCreationOptions,
 ) (*game.Permanent, bool) {
+	var admitted bool
+	options, admitted = r.prepareAuraEffectEntry(card, controller, options)
+	if !admitted {
+		return nil, false
+	}
 	event := game.Event{
 		Kind:           game.EventZoneChanged,
 		Controller:     controller,
@@ -3577,65 +3612,7 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 		}
 		return nil, false
 	}
-	r.attachAuraEnteringFromEffect(permanent)
 	return permanent, permanent != nil
-}
-
-// attachAuraEnteringFromEffect implements CR 303.4f for an Aura put onto the
-// battlefield by an effect rather than resolving as an Aura spell. Its
-// controller chooses a legal object or player for it to enchant. If there is no
-// legal choice, it remains unattached and the normal state-based action moves it
-// to its owner's graveyard.
-func (r *effectResolver) attachAuraEnteringFromEffect(aura *game.Permanent) {
-	if aura == nil || !isAuraPermanent(r.game, aura) || aura.Bestowed {
-		return
-	}
-	spec, ok := enchantTargetSpecForPermanent(r.game, aura)
-	if !ok {
-		return
-	}
-	def, _ := permanentCardDef(r.game, aura)
-	result := targetChoicesForSpecs(
-		r.game,
-		effectiveController(r.game, aura),
-		def,
-		aura.ObjectID,
-		game.Event{},
-		[]game.TargetSpec{spec},
-	)
-	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
-		return
-	}
-	choiceIndex := 0
-	if len(result.choices) > 1 {
-		selected := r.engine.chooseChoice(
-			r.game,
-			r.agents,
-			targetChoiceRequest(effectiveController(r.game, aura), "Choose what the Aura enchants.", result.choices),
-			r.log,
-		)
-		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(result.choices) {
-			choiceIndex = selected[0]
-		}
-	}
-	targets := result.choices[choiceIndex]
-	if len(targets) != 1 {
-		return
-	}
-	target := targets[0]
-	switch target.Kind {
-	case game.TargetPermanent:
-		if permanent, ok := permanentByObjectID(r.game, target.PermanentID); ok {
-			attachPermanentWithChoices(r.game, aura, permanent, &replacementChoiceContext{
-				engine: r.engine,
-				agents: r.agents,
-				log:    r.log,
-			})
-		}
-	case game.TargetPlayer:
-		attachAuraToPlayer(r.game, aura, target.PlayerID)
-	default:
-	}
 }
 
 func (r *effectResolver) typedTokenDefinition(source game.TokenSource) (*game.CardDef, bool) {

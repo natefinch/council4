@@ -346,8 +346,20 @@ func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool,
 	for _, auraID := range illegalAuras {
 		aura, ok := permanentByObjectID(g, auraID)
 		replacedToCommand := ok && commanderReplacementDestination(g, aura.CardInstanceID, zone.Graveyard) == zone.Command
-		if !ok || !movePermanentToZoneInBatch(g, aura, zone.Graveyard, simultaneousID) {
+		if !ok {
 			continue
+		}
+		unattached := !aura.AttachedTo.Exists && !aura.AttachedToPlayer.Exists
+		move, prepared := preparePermanentZoneMove(g, aura, zone.Graveyard)
+		if !prepared {
+			continue
+		}
+		move.event.SimultaneousID = simultaneousID
+		if !applyPreparedPermanentZoneMove(g, &move) {
+			continue
+		}
+		if unattached {
+			certifyAttachedDeathDeparture(g, &move, true)
 		}
 		changed = true
 		if replacedToCommand {

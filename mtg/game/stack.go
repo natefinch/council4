@@ -24,6 +24,7 @@ const (
 // StackObject represents a spell or ability on the stack waiting to resolve.
 // The stack resolves last-in, first-out (LIFO).
 type StackObject struct {
+	triggerOrigin TriggerOrigin
 	// ID is the unique identifier for this stack object.
 	ID id.ID
 

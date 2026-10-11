@@ -724,6 +724,10 @@ func eventPermanentIsToken(g *game.Game, event game.Event) bool {
 }
 
 func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.PlayerID, trigger *game.TriggerCondition, event *game.Event) bool {
+	return triggerInterveningIfWithObject(g, source, controller, trigger, event, nil)
+}
+
+func triggerInterveningIfWithObject(g *game.Game, source *game.Permanent, controller game.PlayerID, trigger *game.TriggerCondition, event *game.Event, obj *game.StackObject) bool {
 	if trigger == nil {
 		return true
 	}
@@ -786,6 +790,7 @@ func triggerInterveningIf(g *game.Game, source *game.Permanent, controller game.
 		controller: controller,
 		source:     source,
 		event:      event,
+		obj:        obj,
 	}, trigger.InterveningCondition) {
 		return false
 	}

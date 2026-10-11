@@ -192,6 +192,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	g.Stack.Push(obj)
 
+	targetEvents := prepareTargetEvents(g, obj)
 	permissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	request := payment.SpellRequest{
@@ -266,7 +267,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// CR 601.2i: the costs are paid, so the spell becomes cast. The card is
 	// already on the stack; emit its zone-change and spell-cast events now so
 	// "when you cast" triggers fire after payment.
-	emitSpellCastEvents(g, obj, game.Event{
+	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     cast.CardID,
 		StackObjectID:                obj.ID,
 		Controller:                   playerID,
@@ -282,7 +283,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		KickerPaid:                   cast.KickerPaid,
 		FromZone:                     sourceZone,
 		ToZone:                       zone.Stack,
-	})
+	}, targetEvents)
 	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
@@ -325,6 +326,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	}
 	g.Stack.Push(obj)
 
+	targetEvents := prepareTargetEvents(g, obj)
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, game.FaceFront, spellDef, 0, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
@@ -347,7 +349,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
-	emitSpellCastEvents(g, obj, game.Event{
+	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     cast.CardID,
 		StackObjectID:                obj.ID,
 		Controller:                   playerID,
@@ -362,7 +364,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
 		FromZone:                     sourceZone,
 		ToZone:                       zone.Stack,
-	})
+	}, targetEvents)
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
@@ -506,6 +508,14 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	if !ok {
 		panic("validated prepared spell targets could not be segmented")
 	}
+	stackID := g.IDGen.Next()
+	targetEvents := prepareTargetEvents(g, &game.StackObject{
+		ID: stackID, Kind: game.StackSpell, Controller: playerID,
+		SourceID: sourceID, SourceCardID: permanent.CardInstanceID, SourceTokenDef: permanent.TokenDef,
+		Face: game.FaceAlternate, SourceZone: zone.Battlefield, Copy: true,
+		Targets: cast.Targets, TargetCounts: targetCounts,
+		ChosenModes: cast.ChosenModes, XValue: cast.XValue,
+	})
 	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, game.FaceAlternate, spellDef, cast.XValue, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
@@ -522,7 +532,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	}
 	permanent.Prepared = false
 	obj := &game.StackObject{
-		ID:                  g.IDGen.Next(),
+		ID:                  stackID,
 		Kind:                game.StackSpell,
 		SourceID:            sourceID,
 		Face:                game.FaceAlternate,
@@ -541,7 +551,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	g.Stack.Push(obj)
-	emitTargetEvents(g, obj)
+	emitPreparedTargetEvents(g, obj, targetEvents)
 	emitEvent(g, game.Event{
 		Kind:                         game.EventSpellCast,
 		SourceID:                     sourceID,

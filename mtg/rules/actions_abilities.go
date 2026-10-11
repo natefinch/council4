@@ -129,6 +129,28 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	sourceCardID := permanent.CardInstanceID
 	sourceTokenDef := permanent.TokenDef
 	resolutionUse := permanentActivatedResolutionUse(g, permanent, body, activate.AbilityIndex)
+	obj := &game.StackObject{
+		ID:                     g.IDGen.Next(),
+		Kind:                   game.StackActivatedAbility,
+		SourceID:               permanent.ObjectID,
+		Face:                   permanent.Face,
+		SourceCardID:           sourceCardID,
+		SourceTokenDef:         sourceTokenDef,
+		AbilityIndex:           activate.AbilityIndex,
+		Controller:             playerID,
+		Targets:                append([]game.Target(nil), activate.Targets...),
+		TargetCounts:           targetCounts,
+		ChosenModes:            append([]int(nil), activate.ChosenModes...),
+		XValue:                 activate.XValue,
+		ActivatedResolutionUse: resolutionUse,
+	}
+	if activatedOK {
+		obj.InlineActivated = activatedBody
+	}
+	if loyaltyOK {
+		obj.InlineLoyalty = loyaltyBody
+	}
+	targetEvents := prepareTargetEvents(g, obj)
 	manaCost := opt.V[cost.Mana]{}
 	var additionalCosts []cost.Additional
 	var alternativeCosts []cost.Alternative
@@ -160,32 +182,11 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if loyaltyOK {
 		applyLoyaltyCost(permanent, loyaltyBody.LoyaltyCost)
 	}
-	obj := &game.StackObject{
-		ID:                     g.IDGen.Next(),
-		Kind:                   game.StackActivatedAbility,
-		SourceID:               permanent.ObjectID,
-		Face:                   permanent.Face,
-		SourceCardID:           sourceCardID,
-		SourceTokenDef:         sourceTokenDef,
-		AbilityIndex:           activate.AbilityIndex,
-		Controller:             playerID,
-		Targets:                append([]game.Target(nil), activate.Targets...),
-		TargetCounts:           targetCounts,
-		ChosenModes:            append([]int(nil), activate.ChosenModes...),
-		XValue:                 activate.XValue,
-		SacrificedAsCostIDs:    costPaid.sacrificedIDs,
-		PaidCostSubjects:       costPaid.subjects,
-		TappedAsCostIDs:        costPaid.tappedIDs,
-		ExiledAsCostIDs:        costPaid.exiledIDs,
-		ActivatedResolutionUse: resolutionUse,
-	}
-	if activatedOK {
-		obj.InlineActivated = activatedBody
-	}
-	if loyaltyOK {
-		obj.InlineLoyalty = loyaltyBody
-	}
-	pushAbilityToStack(g, obj)
+	obj.SacrificedAsCostIDs = costPaid.sacrificedIDs
+	obj.PaidCostSubjects = costPaid.subjects
+	obj.TappedAsCostIDs = costPaid.tappedIDs
+	obj.ExiledAsCostIDs = costPaid.exiledIDs
+	pushAbilityToStackWithTargets(g, obj, targetEvents)
 	emitAbilityActivatedEvent(g, obj, permanent.ObjectID, false)
 	recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, timing)
 	if loyaltyOK {
@@ -219,6 +220,14 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	// mana here.
 	selfEntry := bodyPutsSourceCardOntoBattlefield(&ability)
 	discardSelf := !selfEntry && len(ability.AdditionalCosts) == 1 && abilityHasDiscardThisCardCost(ability.AdditionalCosts)
+	stackID := g.IDGen.Next()
+	targetEvents := prepareTargetEvents(g, &game.StackObject{
+		ID: stackID, Kind: game.StackActivatedAbility, Controller: playerID,
+		SourceID: card.ID, SourceCardID: card.ID, SourceZone: zone.Hand,
+		SourceZoneVersion: sourceZoneVersion, AbilityIndex: activate.AbilityIndex,
+		Targets: completedTargets, TargetCounts: targetCounts, ChosenModes: activate.ChosenModes,
+		XValue: activate.XValue, InlineActivated: &ability,
+	})
 	var additionalCostsPaid []string
 	var sacrificedAsCostIDs, tappedAsCostIDs, exiledAsCostIDs []id.ID
 	var paidCostSubjects []game.PaidCostSubject
@@ -265,7 +274,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		}
 	}
 	obj := &game.StackObject{
-		ID:                     g.IDGen.Next(),
+		ID:                     stackID,
 		Kind:                   game.StackActivatedAbility,
 		SourceID:               card.ID,
 		SourceCardID:           card.ID,
@@ -285,7 +294,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		InlineActivated:        &ability,
 		ActivatedResolutionUse: resolutionUse,
 	}
-	pushAbilityToStack(g, obj)
+	pushAbilityToStackWithTargets(g, obj, targetEvents)
 	emitAbilityActivatedEvent(g, obj, 0, false)
 	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
 	return true
@@ -343,6 +352,14 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		return false
 	}
 	prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
+	stackID := g.IDGen.Next()
+	targetEvents := prepareTargetEvents(g, &game.StackObject{
+		ID: stackID, Kind: game.StackActivatedAbility, Controller: playerID,
+		SourceID: card.ID, SourceCardID: card.ID, SourceZone: zone.Graveyard,
+		SourceZoneVersion: sourceZoneVersion, AbilityIndex: activate.AbilityIndex,
+		Targets: completedTargets, TargetCounts: targetCounts, ChosenModes: activate.ChosenModes,
+		XValue: activate.XValue, InlineActivated: &ability,
+	})
 	costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,
@@ -357,7 +374,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		return false
 	}
 	obj := &game.StackObject{
-		ID:                     g.IDGen.Next(),
+		ID:                     stackID,
 		Kind:                   game.StackActivatedAbility,
 		SourceID:               card.ID,
 		SourceCardID:           card.ID,
@@ -376,7 +393,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		InlineActivated:        &ability,
 		ActivatedResolutionUse: resolutionUse,
 	}
-	pushAbilityToStack(g, obj)
+	pushAbilityToStackWithTargets(g, obj, targetEvents)
 	emitAbilityActivatedEvent(g, obj, 0, false)
 	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
 	return true

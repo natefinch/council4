@@ -292,7 +292,7 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 		event = &obj.TriggerEvent
 	}
 	sourcePermanent, _ := permanentByObjectID(g, obj.SourceID)
-	if !triggerInterveningIf(g, sourcePermanent, obj.Controller, &body.Trigger, event) {
+	if !triggerInterveningIfWithObject(g, sourcePermanent, obj.Controller, &body.Trigger, event, obj) {
 		return "intervening if false"
 	}
 	if !bodyHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, body, obj) {

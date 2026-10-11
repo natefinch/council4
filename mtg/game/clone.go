@@ -75,6 +75,9 @@ func (g *Game) Clone() *Game {
 		ResolvedTriggeredAbilitiesThisTurn: cloneComparableMap(g.ResolvedTriggeredAbilitiesThisTurn),
 		ResolvedActivatedAbilitiesThisTurn: cloneComparableMap(g.ResolvedActivatedAbilitiesThisTurn),
 		ChosenModesThisTurn:                cloneComparableMap(g.ChosenModesThisTurn),
+		attachedDeathDepartures:            cloneComparableMap(g.attachedDeathDepartures),
+		triggerOriginUses:                  cloneComparableMap(g.triggerOriginUses),
+		triggerOriginTurn:                  g.triggerOriginTurn,
 	}
 	clone.IDGen.Restore(g.IDGen.Current())
 
