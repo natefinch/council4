@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18577 supported cards
+# 18575 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -4694,7 +4694,6 @@ b036eede1cb76afc  Elf Druid
 4012c6b5affa4e0a  Elf Knight
 380d42dcbde7266f  Elf Replica
 4a7da45aa9cbd0c9  Elf Warrior
-dbc67ecac7ec3fff  Elf Warrior
 b22ad22c3f47a324  Elfhame Palace
 ec6336fede6ab95d  Elfhame Wurm
 adbceaf3dd2315fd  Elfsworn Giant
@@ -18541,7 +18540,6 @@ aeacf877a7de2ab3  Zof Consumption // Zof Bloodbog
 974abf0f550414f3  Zof Shade
 25bb12742c4d46ac  Zog, Triceraton Castaway
 1ddab4beb6591268  Zombie
-53febe3b922f746b  Zombie
 6a922d004443565b  Zombie
 7ad2b6506c7ced59  Zombie
 c06450e1f8a226e1  Zombie
