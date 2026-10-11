@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18654 supported cards
+# 18655 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -4142,6 +4142,7 @@ a51b6f8e477ce31c  Dominus of Fealty
 cc3722b9f873ee63  Domri's Ambush
 59ba37d33c2c094f  Domri's Nodorog
 78b3cd0c6b40fb9a  Domri, City Smasher
+e853ca82d059e1b2  Don't Make a Sound
 d5888567e8ee140c  Donate
 47f44baaf5863a24  Donatello, the Brains
 235c34bc52fda827  Donatello, Turtle Techie

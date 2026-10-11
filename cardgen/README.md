@@ -430,7 +430,7 @@ Vanguard cards are excluded with explicit report reasons.
    modify the same counter operation before its zone mutation; they never lower
    to a subsequent card move. These modifiers compose with supported conditions,
    taxes, targets and independent riders through shared ordered assembly.
-   Unproven or ambiguous spell occurrences, multiple aliased tax payments,
+   Unproven or ambiguous spell occurrences, unowned tax payment results,
    library-bottom/top-or-bottom-choice destinations and unavailable target filters
    remain refused. A failed counter cannot change a spell's later destination.
    Existing state-gated `Otherwise` and `instead` branches consume the same
@@ -826,8 +826,17 @@ Vanguard cards are excluded with explicit report reasons.
    controller and counters only on payment failure; independent riders retain
    their own gates. A supported outer state condition gates both instructions
    without replacing the payment result gate. Fixed, `X`, and already-supported
-   mana multipliers compose this way; multiple embedded taxes and payment-outcome
-   callbacks remain fail-closed until their result provenance is modeled.
+   mana multipliers compose this way. Several embedded taxes use distinct
+   clause-owned, sequence-local payment results. An exact singular target-controller
+   `If they do` condition consumes its embedded Pay outcome, while `that spell is
+   countered this way` consumes CounterObject's separate actual outcome. Parser-owned
+   actor reference and target occurrence preserve that payment producer across an
+   independent `you` rider. A target declaration is not proof of a later action by
+   the same actor: intervening referenced-player actions, ambiguous/plural targets,
+   and missing, forward or foreign ownership remain refused. Skipped publishers
+   cannot reuse enclosing receipts; new local payment results are restored on exit
+   from a mode, repeat body or instruction sequence. Single ordinary taxes retain
+   their established definition when no new payment-result consumer needs a namespace.
    Exact fixed, `X`, and supported dynamic placement of recognized named
    counters lowers from supported spell, activated, loyalty, triggered,
    ordered-effect, and Saga chapter bodies into typed `game.AddCounter`

@@ -11,14 +11,15 @@ import (
 )
 
 type scopedResultFlow struct {
-	publishers   map[int]game.ResultKey
-	gates        map[int]game.InstructionResultGate
-	optional     map[int]bool
-	otherwise    map[int]bool
-	clearNegated map[int]bool
-	conditions   map[int]bool
-	actions      optionalActionGroups
-	postfixElse  map[int]int
+	publishers        map[int]game.ResultKey
+	paymentPublishers map[int]game.ResultKey
+	gates             map[int]game.InstructionResultGate
+	optional          map[int]bool
+	otherwise         map[int]bool
+	clearNegated      map[int]bool
+	conditions        map[int]bool
+	actions           optionalActionGroups
+	postfixElse       map[int]int
 }
 
 func (p optionalFlowPlan) singleOptionalTail(effectCount int) bool {
@@ -83,7 +84,8 @@ func resultConditionGate(condition compiler.CompiledCondition) (game.Instruction
 func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowPlan, valid, handled bool) {
 	flow := &scopedResultFlow{
 		publishers: make(map[int]game.ResultKey), gates: make(map[int]game.InstructionResultGate),
-		optional: make(map[int]bool), otherwise: make(map[int]bool),
+		paymentPublishers: make(map[int]game.ResultKey),
+		optional:          make(map[int]bool), otherwise: make(map[int]bool),
 		clearNegated: make(map[int]bool), conditions: make(map[int]bool),
 	}
 	plan := optionalFlowPlan{
@@ -129,6 +131,12 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			return plan, false, true
 		}
 		effect := content.Effects[producer]
+		paymentActor := effectOwnsCounterTax(effect) &&
+			condition.Predicate != compiler.ConditionPredicateCounterSucceeded
+		if paymentActor && !counterPaymentActorCondition(content, producer, condition) {
+			plan.failureCategory = "structural — payment outcome has no unique owned payer reference"
+			return plan, false, true
+		}
 		if condition.Predicate != compiler.ConditionPredicateResultThisWay && flow.actions.isCompound(producer) {
 			plan.failureCategory = "structural — whole optional action outcome not modeled"
 			return plan, false, true
@@ -147,13 +155,19 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			plan.failureCategory = "structural — actual-result actor ownership not modeled"
 			return plan, false, true
 		}
-		flow.publishers[producer] = game.ResultKey(fmt.Sprintf("result-clause-%d", effect.ClauseID))
+		key := game.ResultKey(fmt.Sprintf("result-clause-%d", effect.ClauseID))
+		if paymentActor {
+			key = sequencePaymentKey(effect.ClauseID)
+			flow.paymentPublishers[producer] = key
+		} else {
+			flow.publishers[producer] = key
+		}
 		gate, ok := resultConditionGate(condition)
 		if !ok {
 			plan.failureCategory = "structural — actual-result selection or count not modeled"
 			return plan, false, true
 		}
-		gate.Key = flow.publishers[producer]
+		gate.Key = key
 		for _, owner := range owners {
 			if _, exists := flow.gates[owner]; exists {
 				plan.failureCategory = "structural — overlapping actual-result predicates not modeled"
@@ -209,7 +223,7 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 		}
 	}
 	plan.enabled = true
-	if len(flow.publishers) == 1 {
+	if len(flow.publishers) == 1 && len(flow.paymentPublishers) == 0 {
 		// Preserve existing single-producer definitions; only independent
 		// publications need new scoped keys.
 		for producer := range flow.publishers {
@@ -301,6 +315,13 @@ func resultProducerActsForController(effect compiler.CompiledEffect) bool {
 }
 
 func (flow *scopedResultFlow) apply(ei int, sequence []game.Instruction) (string, bool) {
+	if key := flow.paymentPublishers[ei]; key != "" {
+		index, ok := counterActionInstruction(sequence)
+		if !ok || index != 1 || sequence[0].PublishResult != key ||
+			!slices.Contains(sequence[0].LocalProducts.Results, key) {
+			return sequencePaymentIdentityCategory, false
+		}
+	}
 	key, publishes := flow.publishers[ei]
 	if publishes {
 		index := 0
