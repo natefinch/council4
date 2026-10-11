@@ -16,6 +16,7 @@ func TestOwnedSearchNameChoice(t *testing.T) {
 	for _, text := range []string{
 		ownedChoiceSearch,
 		"You gain 2 life. " + ownedChoiceSearch + " Scry 1.",
+		"Choose a land you control. You gain 2 life. " + ownedNameSearch,
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()
@@ -78,7 +79,6 @@ func TestOwnedSearchNameChoiceRefusals(t *testing.T) {
 		ownedNameSearch + " Choose a land you control.",
 		"Choose two lands you control. " + ownedNameSearch,
 		"Choose a land an opponent controls. " + ownedNameSearch,
-		"Choose a land you control. You gain 2 life. " + ownedNameSearch,
 		"If you control a creature, choose a land you control. " + ownedNameSearch,
 		"Choose a land you control. Choose a land you control. " + ownedNameSearch,
 		"Choose a land you control. Search your library for a card with the same color as the chosen land, put it into your hand, then shuffle.",

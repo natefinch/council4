@@ -263,7 +263,6 @@ func compileAbility(
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, referenceTargets, compiled.Content.Effects, compiled.Trigger)
 	bindReturnedConditionConsequences(&compiled.Content)
 	applyEffectReferenceBindings(compiled.Content.Effects, compiled.Content.References)
-	resolveChosenPermanentSearchNames(compiled.Content.Effects)
 	resolvePaymentSourceSacrifices(
 		compiled.Content.Effects,
 		compiled.Trigger != nil && compiled.Trigger.Pattern.Source == TriggerSourceSelf,
@@ -698,7 +697,6 @@ func compileMode(
 	effects := compileEffects(mode.Sentences)
 	references := bindReferences(compileTypedReferences(mode.SemanticReferences), targets, effects, trigger)
 	applyEffectReferenceBindings(effects, references)
-	resolveChosenPermanentSearchNames(effects)
 	resolvePaymentSourceSacrifices(effects, trigger != nil && trigger.Pattern.Source == TriggerSourceSelf)
 	conditions := compileConditions(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions)
 	bindCounterResultReferences(conditions, references, targets, effects)

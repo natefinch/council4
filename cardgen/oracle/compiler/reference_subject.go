@@ -56,6 +56,8 @@ type ReferenceSubjectProof struct {
 	producerNegated     bool
 	nodeID              int
 	clauseID            int
+	choiceClauseID      int
+	chosenName          *chosenPermanentNameProof
 	reachedClauseID     int
 	reached             *CompiledReference
 	occurrence          int
@@ -85,7 +87,9 @@ func (reference CompiledReference) SubjectSupported() bool {
 		proof.kind == reference.Kind && proof.pronoun == reference.Pronoun &&
 		proof.libraryObservation == reference.LibraryCardObservation &&
 		proof.occurrence == reference.Occurrence && proof.cardIdentity == reference.CardIdentity &&
-		proof.noun == reference.SubjectNoun && proof.nodeID == reference.NodeID
+		proof.noun == reference.SubjectNoun && proof.nodeID == reference.NodeID &&
+		proof.choiceClauseID == reference.ChoiceClauseID &&
+		(reference.ChoiceClauseID == 0 || chosenPermanentNameSubjectValid(reference))
 }
 
 // SubjectDomain returns the proven domain, or Unknown for an invalid proof.
@@ -196,6 +200,7 @@ func subjectProof(reference CompiledReference, domain ReferenceSubjectDomain, li
 		domain: domain, lifetime: lifetime, binding: reference.Binding, nodeID: reference.NodeID,
 		kind: reference.Kind, pronoun: reference.Pronoun, libraryObservation: reference.LibraryCardObservation,
 		clauseID: reference.ProducerClauseID, occurrence: reference.Occurrence,
+		choiceClauseID:  reference.ChoiceClauseID,
 		reachedClauseID: reference.ReachedCardProducerClauseID,
 		cardIdentity:    reference.CardIdentity, noun: reference.SubjectNoun,
 	}
@@ -290,6 +295,7 @@ func finalizeReferenceSubjects(content *AbilityContent, source ReferenceSourceCo
 		}
 		finalizeReferenceSubjects(&content.Modes[i].Content, source)
 	}
+	resolveChosenPermanentSearchNames(content)
 }
 
 // Condition binding may refine an event/target antecedent after the initial
@@ -309,6 +315,7 @@ func reconcileConditionSubjects(content *AbilityContent) {
 				subject.SubjectNoun != reference.SubjectNoun ||
 				subject.LibraryCardObservation != reference.LibraryCardObservation ||
 				subject.ReachedCardProducerClauseID != reference.ReachedCardProducerClauseID ||
+				subject.ChoiceClauseID != reference.ChoiceClauseID ||
 				reference.ProducerClauseID > 0 && subject.ProducerClauseID != reference.ProducerClauseID ||
 				resolved != nil && (resolved.Binding != subject.Binding ||
 					resolved.Occurrence != subject.Occurrence || resolved.PriorInstruction != subject.PriorInstruction) {
@@ -326,6 +333,10 @@ func reconcileConditionSubjects(content *AbilityContent) {
 
 func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarget, effects []CompiledEffect, source ReferenceSourceContext) {
 	reference.Subject = ReferenceSubjectProof{}
+	if reference.ChoiceClauseID > 0 {
+		issueChosenPermanentNameSubject(reference, source)
+		return
+	}
 	if source.kind == AbilitySpell && source.scope != nil && source.scope.owner != nil &&
 		referenceIsOwnedSpellDamageSubject(*reference, *source.scope.owner) {
 		reference.Binding = ReferenceBindingSource
@@ -636,6 +647,9 @@ func targetSubjectDomain(target CompiledTarget) ReferenceSubjectDomain {
 
 // SubjectProducerMatches checks a subject's exact producing clause and scope.
 func (reference CompiledReference) SubjectProducerMatches(effect CompiledEffect) bool {
+	if reference.ChoiceClauseID > 0 {
+		return chosenPermanentNameProducerMatches(reference, effect)
+	}
 	return reference.SubjectSupported() &&
 		reference.Binding == ReferenceBindingPriorInstructionResult &&
 		reference.ProducerClauseID > 0 &&

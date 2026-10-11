@@ -341,6 +341,26 @@ names that observed product, not the shuffled target. The adapter consumes this
 typed subject proof while retaining its existing three-instruction CardDef;
 missing, plural, or incompatible owner/producer provenance is refused.
 
+Same-name Search operands retain a parser-owned `ChoiceClauseID` identifying
+the original singular permanent choice, independently of intervening controller
+riders. This identity is distinct from library observation, entered-card, and
+target-declaration provenance. Semantic compilation issues the existing private
+body-owned permanent subject proof only for a unique, earlier compatible choice;
+the proof revalidates canonical reference identity, typed order, selection, and
+condition/payment scope. Missing, foreign, duplicate, forward, competing, or
+independently skipped choices refuse rather than selecting the latest effect.
+The single exact explicit choice opens a fresh frame after unrelated implicit
+Manifest, Bolster, or creature-type products. Those earlier products cannot
+supply its name, and an implicit subject after the declaration remains a barrier;
+multiple explicit permanent declarations are still ambiguous across the body.
+The existing `ResolutionChosenPermanentChoiceKey` and captured effective-name
+runtime protocol are unchanged. Prefix, intervening, suffix, and multiple-consumer
+Search compositions use shared assembly. A folded controller payment remains
+part of the immutable canonical proof, including its cost and typed condition
+order; its mechanically empty product view is accepted only after the original
+sole `MayPayThenIfDo` scope is revalidated. The existing paid-body adapter still
+emits one Pay and gates every consequence on its actual outcome.
+
 Positively owned
 publishers declare typed `LocalProducts` with one instruction-sequence invocation
 as their lifetime. Selected modes and repeat iterations receive fresh product

@@ -4780,6 +4780,7 @@ type CompiledReference struct {
 	Occurrence                  int
 	PriorInstruction            int
 	ProducerClauseID            int
+	ChoiceClauseID              int
 	ReachedCardProducerClauseID int
 	LibraryCardObservation      bool
 	// NodeID is the parser-assigned stable identity of this reference within its

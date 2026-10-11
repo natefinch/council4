@@ -19,6 +19,9 @@ func bindReferences(
 	bound := append([]CompiledReference(nil), references...)
 	for i := range bound {
 		reference := &bound[i]
+		if bindChosenPermanentNameReference(reference, effects) {
+			continue
+		}
 		if bindDelayedSubjectReference(reference, effects) {
 			continue
 		}
@@ -509,35 +512,6 @@ func referencedCardsTotalManaValueReference(reference CompiledReference, effects
 		}
 	}
 	return false
-}
-
-// resolveChosenPermanentSearchNames turns parser-recognized same-name wording
-// into an executable link only when typed reference binding proves that the
-// chosen-object phrase names an earlier permanent-choice effect.
-func resolveChosenPermanentSearchNames(effects []CompiledEffect) {
-	for i := range effects {
-		effect := &effects[i]
-		if effect.Kind != EffectSearch || !effect.SearchSameNameAsChosenObject {
-			continue
-		}
-		bound := false
-		for _, reference := range effect.References {
-			prior := reference.PriorInstruction
-			if reference.Kind == ReferenceThatObject &&
-				reference.Binding == ReferenceBindingPriorInstructionResult &&
-				prior >= 0 &&
-				prior < len(effects) &&
-				effects[prior].Kind == EffectChoosePermanent {
-				bound = true
-				break
-			}
-		}
-		if bound {
-			effect.SearchNameFromChosenPermanent = true
-			continue
-		}
-		effect.UnsupportedDetail = "same-name search reference does not bind to a prior permanent choice"
-	}
 }
 
 // resolvePaymentSourceSacrifices binds a folded "sacrifice it" payment component
