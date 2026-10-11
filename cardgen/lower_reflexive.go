@@ -23,6 +23,9 @@ func lowerContent(
 	if blocker := targetCountContentBlocker(ctx); blocker != nil {
 		return game.AbilityContent{}, blocker
 	}
+	if diagnostic := handLibraryResolvingCostDiagnostic(ctx.content); diagnostic != nil {
+		return game.AbilityContent{}, diagnostic
+	}
 	if modalRemovedCounterQuantities(ctx.content) {
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported scalar quantity scope",
 			"removed-counter quantities require an independent body-local publication namespace for modes")

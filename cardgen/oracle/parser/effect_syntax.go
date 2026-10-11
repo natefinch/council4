@@ -6499,32 +6499,6 @@ func additionalLandCountWord(token shared.Token) (int, bool) {
 	}
 }
 
-func parseHandLibraryPut(effect *EffectSyntax) HandLibraryPutSyntax {
-	if effect.Kind != EffectPut ||
-		effect.Context != EffectContextController ||
-		!effect.Amount.Known || effect.Amount.Value < 1 ||
-		effect.FromZone != zone.Hand ||
-		effect.ToZone != zone.Library ||
-		len(effect.Targets) != 0 {
-		return HandLibraryPutSyntax{}
-	}
-	var bottom bool
-	switch effect.Destination {
-	case EffectDestinationTop:
-		bottom = false
-	case EffectDestinationBottom:
-		bottom = true
-	default:
-		return HandLibraryPutSyntax{}
-	}
-	// The trailing "in any order" qualifier (or its complete omission — see
-	// HandLibraryPutSyntax's doc comment) is not checked structurally here;
-	// exactHandLibraryPutEffectSyntax's literal string match is the actual
-	// arbiter of which trailing wording is accepted, rejecting a genuinely
-	// different ordering rule ("in a random order", "in the same order").
-	return HandLibraryPutSyntax{Present: true, Bottom: bottom}
-}
-
 // parseDigPut recognizes the impulse put clause "Put N <of them|of those cards>
 // into your hand and the <rest|other> <into your graveyard|on the bottom of your
 // library [in any order|in a random order]>." that follows an EffectDig look
