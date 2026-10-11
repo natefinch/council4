@@ -827,44 +827,28 @@ func referencedDamageRecipientPlayer(
 // failing closed for any shape outside that exact template (a non-"you"
 // recipient, a dynamic count amount, any target, condition, keyword, or mode).
 func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	effect := ctx.content.Effects[0]
-	assertUndividedRecipientDamageDispatch(ctx, parser.DamageRecipientReferenceYou)
-	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported damage spell",
-			"the executable source backend supports only exact fixed or X damage to you",
-		)
-	}
-	if !effect.Exact ||
-		effect.Negated ||
-		len(ctx.content.Targets) != 0 ||
-		len(effect.DamageRecipient.GroupSelectors) != 0 ||
-		len(ctx.content.Conditions) != 0 ||
-		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
-		len(ctx.content.Modes) != 0 {
-		return unsupported()
-	}
-	if (effect.Amount.Known && effect.Amount.Value < 1) ||
-		(!effect.Amount.Known && !effect.Amount.VariableX) ||
-		effect.Amount.DynamicKind != compiler.DynamicAmountNone {
-		return unsupported()
-	}
-	if !exactDamageSourceSyntax(ctx.content.References) {
-		return unsupported()
-	}
-	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
-	if effect.Amount.Known {
-		amount = game.Fixed(effect.Amount.Value)
-	}
-	damage := game.Damage{
-		Amount:       amount,
-		Recipient:    game.PlayerDamageRecipient(game.ControllerReference()),
-		DamageSource: primaryDamageSource(ctx.content.References),
-	}
-	return game.Mode{
-		Sequence: []game.Instruction{{Primitive: damage}},
-	}.Ability(), nil
+	return lowerRecipientDamageSpell(
+		ctx,
+		parser.DamageRecipientReferenceYou,
+		"the executable source backend supports only exact fixed or X damage to you",
+		func(effect compiler.CompiledEffect, references []compiler.CompiledReference) (game.Damage, bool) {
+			if (effect.Amount.Known && effect.Amount.Value < 1) ||
+				(!effect.Amount.Known && !effect.Amount.VariableX) ||
+				effect.Amount.DynamicKind != compiler.DynamicAmountNone ||
+				!exactDamageSourceSyntax(references) {
+				return game.Damage{}, false
+			}
+			amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+			if effect.Amount.Known {
+				amount = game.Fixed(effect.Amount.Value)
+			}
+			return game.Damage{
+				Amount:       amount,
+				Recipient:    game.PlayerDamageRecipient(game.ControllerReference()),
+				DamageSource: primaryDamageSource(references),
+			}, true
+		},
+	)
 }
 
 // lowerEventPlayerDamageSpell lowers a "deals N damage to that player" effect
@@ -879,62 +863,43 @@ func lowerControllerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 // recipient that is not the event-bound "that player", an unresolvable amount,
 // any target, recipient selector, condition, keyword, or mode).
 func lowerEventPlayerDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	effect := ctx.content.Effects[0]
-	assertUndividedRecipientDamageDispatch(ctx, parser.DamageRecipientReferenceThatPlayer)
-	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported damage spell",
-			"the executable source backend supports only exact fixed, X, or source-power damage to that player",
-		)
-	}
-	if !effect.Exact ||
-		effect.Negated ||
-		len(ctx.content.Targets) != 0 ||
-		len(effect.DamageRecipient.GroupSelectors) != 0 ||
-		len(ctx.content.Conditions) != 0 ||
-		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
-		len(ctx.content.Modes) != 0 {
-		return unsupported()
-	}
-	// The event-player recipient ("that player") contributes its own reference;
-	// exclude it so the damage-source and amount exactness checks see only the
-	// source clause's references (the damage subject and the amount referent).
-	sourceReferences := make([]compiler.CompiledReference, 0, len(ctx.content.References))
-	for _, reference := range ctx.content.References {
-		if reference.Kind == compiler.ReferenceThatPlayer &&
-			reference.Binding == compiler.ReferenceBindingEventPlayer {
-			continue
-		}
-		// The event-player hand-size amount ("... equal to the number of cards in
-		// their hand") reads the triggering player directly; its "their"/"they"
-		// pronoun reference is part of the amount, not a source reference, so it is
-		// excluded from the source-clause exactness check below.
-		if effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringPlayerHandSize &&
-			reference.Kind == compiler.ReferencePronoun &&
-			(reference.Pronoun == compiler.ReferencePronounTheir ||
-				reference.Pronoun == compiler.ReferencePronounThey) {
-			continue
-		}
-		sourceReferences = append(sourceReferences, reference)
-	}
-	if !damageReferencesEventPlayer(ctx.content.References) ||
-		len(sourceReferences) == 0 ||
-		!exactDamageSourceSyntax(sourceReferences[:1]) {
-		return unsupported()
-	}
-	amount, ok := eventPlayerDamageAmount(effect, sourceReferences)
-	if !ok {
-		return unsupported()
-	}
-	damage := game.Damage{
-		Amount:       amount,
-		Recipient:    game.PlayerDamageRecipient(game.EventPlayerReference()),
-		DamageSource: primaryDamageSource(sourceReferences[:1]),
-	}
-	return game.Mode{
-		Sequence: []game.Instruction{{Primitive: damage}},
-	}.Ability(), nil
+	return lowerRecipientDamageSpell(
+		ctx,
+		parser.DamageRecipientReferenceThatPlayer,
+		"the executable source backend supports only exact fixed, X, or source-power damage to that player",
+		func(effect compiler.CompiledEffect, references []compiler.CompiledReference) (game.Damage, bool) {
+			// The event-player recipient and hand-size amount references are not
+			// part of the source clause's reference policy.
+			sourceReferences := make([]compiler.CompiledReference, 0, len(references))
+			for _, reference := range references {
+				if reference.Kind == compiler.ReferenceThatPlayer &&
+					reference.Binding == compiler.ReferenceBindingEventPlayer {
+					continue
+				}
+				if effect.Amount.DynamicKind == compiler.DynamicAmountTriggeringPlayerHandSize &&
+					reference.Kind == compiler.ReferencePronoun &&
+					(reference.Pronoun == compiler.ReferencePronounTheir ||
+						reference.Pronoun == compiler.ReferencePronounThey) {
+					continue
+				}
+				sourceReferences = append(sourceReferences, reference)
+			}
+			if !damageReferencesEventPlayer(references) ||
+				len(sourceReferences) == 0 ||
+				!exactDamageSourceSyntax(sourceReferences[:1]) {
+				return game.Damage{}, false
+			}
+			amount, ok := eventPlayerDamageAmount(effect, sourceReferences)
+			if !ok {
+				return game.Damage{}, false
+			}
+			return game.Damage{
+				Amount:       amount,
+				Recipient:    game.PlayerDamageRecipient(game.EventPlayerReference()),
+				DamageSource: primaryDamageSource(sourceReferences[:1]),
+			}, true
+		},
+	)
 }
 
 // eventPlayerDamageAmount resolves the quantity an event-player damage effect
@@ -1002,52 +967,36 @@ func damageReferencesEventPlayer(references []compiler.CompiledReference) bool {
 // an unresolvable amount, any target, recipient selector, condition, keyword, or
 // mode).
 func lowerEventRelatedPermanentDamageSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
-	effect := ctx.content.Effects[0]
-	assertUndividedRecipientDamageDispatch(ctx, parser.DamageRecipientReferenceThatCreature)
-	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported damage spell",
-			"the executable source backend supports only exact fixed, X, or source-power damage to that creature",
-		)
-	}
-	if !effect.Exact ||
-		effect.Negated ||
-		len(ctx.content.Targets) != 0 ||
-		len(effect.DamageRecipient.GroupSelectors) != 0 ||
-		len(ctx.content.Conditions) != 0 ||
-		len(abilityKeywordsExcludingSelectorPredicates(ctx.content)) != 0 ||
-		len(ctx.content.Modes) != 0 {
-		return unsupported()
-	}
-	// The related-permanent recipient ("that creature") contributes its own
-	// reference; exclude it so the damage-source and amount exactness checks see
-	// only the source clause's references (the damage subject and amount referent).
-	sourceReferences := make([]compiler.CompiledReference, 0, len(ctx.content.References))
-	for _, reference := range ctx.content.References {
-		if reference.Kind == compiler.ReferenceThatObject &&
-			reference.Binding == compiler.ReferenceBindingEventRelatedPermanent {
-			continue
-		}
-		sourceReferences = append(sourceReferences, reference)
-	}
-	if !damageReferencesEventRelatedPermanent(ctx.content.References) ||
-		len(sourceReferences) == 0 ||
-		!exactDamageSourceSyntax(sourceReferences[:1]) {
-		return unsupported()
-	}
-	amount, ok := eventPlayerDamageAmount(effect, sourceReferences)
-	if !ok {
-		return unsupported()
-	}
-	damage := game.Damage{
-		Amount:       amount,
-		Recipient:    game.ObjectDamageRecipient(game.EventRelatedPermanentReference()),
-		DamageSource: primaryDamageSource(sourceReferences[:1]),
-	}
-	return game.Mode{
-		Sequence: []game.Instruction{{Primitive: damage}},
-	}.Ability(), nil
+	return lowerRecipientDamageSpell(
+		ctx,
+		parser.DamageRecipientReferenceThatCreature,
+		"the executable source backend supports only exact fixed, X, or source-power damage to that creature",
+		func(effect compiler.CompiledEffect, references []compiler.CompiledReference) (game.Damage, bool) {
+			// Only the event-related recipient reference is consumed here.
+			sourceReferences := make([]compiler.CompiledReference, 0, len(references))
+			for _, reference := range references {
+				if reference.Kind == compiler.ReferenceThatObject &&
+					reference.Binding == compiler.ReferenceBindingEventRelatedPermanent {
+					continue
+				}
+				sourceReferences = append(sourceReferences, reference)
+			}
+			if !damageReferencesEventRelatedPermanent(references) ||
+				len(sourceReferences) == 0 ||
+				!exactDamageSourceSyntax(sourceReferences[:1]) {
+				return game.Damage{}, false
+			}
+			amount, ok := eventPlayerDamageAmount(effect, sourceReferences)
+			if !ok {
+				return game.Damage{}, false
+			}
+			return game.Damage{
+				Amount:       amount,
+				Recipient:    game.ObjectDamageRecipient(game.EventRelatedPermanentReference()),
+				DamageSource: primaryDamageSource(sourceReferences[:1]),
+			}, true
+		},
+	)
 }
 
 // damageReferencesEventRelatedPermanent reports whether the references carry the

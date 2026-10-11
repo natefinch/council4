@@ -134,6 +134,10 @@ rider tracked in #2256.
 Single, divided, and kicker-scaled damage target adapters explicitly select
 creatures, planeswalkers, and battles while retaining player targets separately;
 target-constraint prose does not determine damageable permanent membership.
+Untargeted controller, event-player, and event-related-permanent damage share
+one exact, undivided adapter frame and one-instruction assembly. Their factories
+retain distinct reference consumption, quantity, recipient, and damage-source
+policies; the common frame does not widen any accepted operand or attribution.
 Conditional divided-damage clauses refuse because declaration-time allocations
 are not retained on the stack (#3236). Existing single-spec divided handlers
 choose allocations at resolution, so their tests do not certify announcement
