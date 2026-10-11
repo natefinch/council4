@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18677 supported cards
+# 18681 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -70,6 +70,7 @@ dd6e80e4d2b920da  Abzan Skycaptain
 e2960d7790ea4f22  Academy Journeymage
 4a77e2b56786a480  Academy Manufactor
 85970f8e992eb1fa  Academy Raider
+8f3b6d165d41511f  Academy Rector
 d2f6d729124def90  Academy Ruins
 a94e80b4001ef2ff  Academy Wall
 5a9dac09ab61b6b5  Accelerate
@@ -735,6 +736,7 @@ d9d64452bce665af  Ardenvale Paladin
 ac56e45212152fb1  Ardenvale Tactician // Dizzying Swoop
 6148199882c6defb  Ardoz, Cobbler of War
 24a3db6571661bd2  Arena Athlete
+43f5836af2d3d71a  Arena Rector
 7be3216c310703d6  Arena Trickster
 fa5ad0060bd796af  Arenson's Aura
 a245edf27818b6a7  Ares, God of War
@@ -5177,7 +5179,7 @@ cf2a287ab7c09088  Ezrim, Agency Chief
 5d02c596641cfb55  Ezuri's Predation
 b01701465677f00f  Ezuri, Renegade Leader
 2d873be16b0d84d1  Fable of Wolf and Owl
-f237025d567806f6  Fabled Passage
+c8386d60ee45b69a  Fabled Passage
 ad16f31c1b6f22c7  Fabricate
 d9b56e82a65f2f7b  Face of Fear
 a5ac1b35050c468b  Faceless Butcher
@@ -5442,6 +5444,7 @@ f9d6c10e2e8d9ad5  Ferrous Lake
 4b0cbe59164bce82  Ferrovore
 d99e4b4dfcb24946  Fertile Ground
 ed72bd473276f3b0  Fertilid
+7c47a5ef8641f4a9  Fertilid's Favor
 ec202caa73cb1455  Fervent Cathar
 449876ebadaca98c  Fervent Charge
 a64722dd8f554a00  Fervent Denial
@@ -6362,6 +6365,7 @@ eec706456611ec6a  Gibbering Kami
 89647047b86e8ab2  Gideon's Reproach
 8802e7161156ec75  Gideon's Resolve
 5ef64736ff205a24  Gift of Compleation
+c1e858fc73a6e736  Gift of Estates
 a9428957624b51d3  Gift of Granite
 1cb4693b769f21ea  Gift of Growth
 bfaccc50f80cae6c  Gift of Orzhova

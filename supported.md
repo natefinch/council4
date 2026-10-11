@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,677 of 33,011 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,681 of 33,011 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -64,6 +64,7 @@ Council4 currently supports **18,677 of 33,011 cards eligible for paper support 
 - Academy Journeymage
 - Academy Manufactor
 - Academy Raider
+- Academy Rector
 - Academy Ruins
 - Academy Wall
 - Accelerate
@@ -729,6 +730,7 @@ Council4 currently supports **18,677 of 33,011 cards eligible for paper support 
 - Ardenvale Tactician // Dizzying Swoop
 - Ardoz, Cobbler of War
 - Arena Athlete
+- Arena Rector
 - Arena Trickster
 - Arenson's Aura
 - Ares, God of War
@@ -5436,6 +5438,7 @@ Council4 currently supports **18,677 of 33,011 cards eligible for paper support 
 - Ferrovore
 - Fertile Ground
 - Fertilid
+- Fertilid's Favor
 - Fervent Cathar
 - Fervent Charge
 - Fervent Denial
@@ -6356,6 +6359,7 @@ Council4 currently supports **18,677 of 33,011 cards eligible for paper support 
 - Gideon's Reproach
 - Gideon's Resolve
 - Gift of Compleation
+- Gift of Estates
 - Gift of Granite
 - Gift of Growth
 - Gift of Orzhova
