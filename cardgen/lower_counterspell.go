@@ -483,8 +483,8 @@ func counteredSpellRedirectDestination(effect *compiler.CompiledEffect) (game.Co
 // targets for target spell or ability." to a single ChooseNewTargets primitive
 // over a stack-object target. The optional "You may" wrapper rides on the
 // instruction's Optional flag so the resolving controller decides whether to
-// re-choose targets. Any rider (a copy clause, a condition, extra effects)
-// leaves the body unrecognized so it fails closed.
+// re-choose targets. Shared assembly supplies inherited target subjects and
+// composes independent riders; this adapter consumes only its own action.
 func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -493,14 +493,7 @@ func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 			"the executable source backend supports only exact retargeting of one target spell or ability",
 		)
 	}
-	if len(ctx.content.Effects) != 1 ||
-		len(ctx.content.Targets) != 1 ||
-		ctx.content.Targets[0].Cardinality.Min != 1 ||
-		ctx.content.Targets[0].Cardinality.Max != 1 ||
-		len(ctx.content.Conditions) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.References) != 0 {
+	if len(ctx.content.Effects) != 1 {
 		return unsupported()
 	}
 	effect := ctx.content.Effects[0]
@@ -511,25 +504,16 @@ func lowerChooseNewTargetsSpell(ctx contentCtx) (game.AbilityContent, *shared.Di
 	if effect.Kind != compiler.EffectChooseNewTargets {
 		panic(fmt.Sprintf("lowerChooseNewTargetsSpell: dispatched with effect kind %v, want EffectChooseNewTargets", effect.Kind))
 	}
-	if !effect.Exact ||
-		effect.Negated ||
-		effect.Context != parser.EffectContextController ||
-		effect.Amount.Known ||
-		effect.DelayedTiming != 0 ||
-		effect.Duration != compiler.DurationNone {
-		return unsupported()
-	}
-	targetSpec, ok := counterTargetSpec(ctx.content.Targets[0])
+	content, ok := lowerFixedStackTargetAction(ctx, counterTargetSpec, func(object game.ObjectReference) game.Instruction {
+		return game.Instruction{
+			Primitive: game.ChooseNewTargets{Object: object},
+			Optional:  effect.Optional || ctx.optional,
+		}
+	})
 	if !ok {
 		return unsupported()
 	}
-	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
-		Sequence: []game.Instruction{{
-			Primitive: game.ChooseNewTargets{Object: game.TargetStackObjectReference(0)},
-			Optional:  effect.Optional || ctx.optional,
-		}},
-	}.Ability(), nil
+	return content, nil
 }
 
 // lowerOptionalChooseNewTargets routes a one-effect optional retarget body

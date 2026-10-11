@@ -27,6 +27,17 @@ unsupported with parser-owned parameter diagnostics.
 Placement as an "If/When you do" resolving cost also refuses: best-effort movement
 cannot model all-or-nothing payment, including successful zero-card payment.
 
+Singleton stack controller changes and retarget actions share a typed target
+subject and Instruction-factory adapter, not a control/retarget pair template.
+An inherited subject must match the canonical body-owned reference, owning
+ClauseID, typed source order, and exact localized target occurrence. Ordinary
+ordered assembly composes the actions across independent controller riders and
+preceding player, card, or stack targets. Controller changes retain spell-only,
+no-duration policy; retarget retains its spell-or-ability and optional-choice
+policy. Permanent control still uses LayerControl, while counter payment,
+event-stack subjects, and self/copy protocols retain their distinct adapters.
+Missing, foreign, forward, ambiguous, or plural subjects fail closed.
+
 Stack-spell targets share one parser-owned, fully consumed selector grammar for
 single and plural counts. Existing card-type atoms, pure type unions, controller
 relations, fixed mana-value bounds, and one color qualifier compose through the

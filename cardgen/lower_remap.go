@@ -267,6 +267,14 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
 	}
+	if value, ok := primitive.(game.ChangeStackObjectController); ok {
+		value.Object, ok = transformObjectReference(value.Object, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Controller, ok = transformPlayerReference(value.Controller, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.Regenerate); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
 		return value, ok
