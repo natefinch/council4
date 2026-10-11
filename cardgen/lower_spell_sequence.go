@@ -614,6 +614,9 @@ func lowerOrderedEffectSequence(
 			continue
 		}
 		mode := content.Modes[0]
+		if !conditionPlan.bindPaymentResult(ctx.content, optionalFlow, i, mode.Sequence) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, sequencePaymentIdentityCategory)
+		}
 		if !counterDestinations.apply(i, mode.Sequence) {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterDestinationCategory)
 		}

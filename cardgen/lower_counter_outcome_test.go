@@ -52,12 +52,26 @@ func TestCounterDestinationComposition(t *testing.T) {
 				"SpellAbility.Val.Modes[0].Sequence[0].PublishCondition = \"condition-0\"",
 				"SpellAbility.Val.Modes[0].Sequence[1].Primitive.(game.CounterObject).ExileInstead = true",
 			}},
+		{"independent taxes destination ownership", "Counter target spell unless its controller pays {3}. Counter target spell unless its controller pays {4}. " + counterExileReplacement,
+			[]string{
+				"SpellAbility.Val.Modes[0].Sequence[0].PublishResult = \"payment-clause-1\"",
+				"SpellAbility.Val.Modes[0].Sequence[1].ResultGate.Val.Key = \"payment-clause-1\"",
+				"SpellAbility.Val.Modes[0].Sequence[2].PublishResult = \"payment-clause-2\"",
+				"SpellAbility.Val.Modes[0].Sequence[3].ResultGate.Val.Key = \"payment-clause-2\"",
+				"SpellAbility.Val.Modes[0].Sequence[3].Primitive.(game.CounterObject).Object.targetIndex = 1",
+				"SpellAbility.Val.Modes[0].Sequence[3].Primitive.(game.CounterObject).ExileInstead = true",
+			}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			assertCardPaths(t, &ScryfallCard{
 				Name: "Counter Probe", Layout: "normal", TypeLine: "Instant", OracleText: tt.text,
 			}, tt.paths...)
+			if tt.name == "independent taxes destination ownership" {
+				assertCardPathsAbsent(t, &ScryfallCard{
+					Name: "Counter Probe", Layout: "normal", TypeLine: "Instant", OracleText: tt.text,
+				}, "SpellAbility.Val.Modes[0].Sequence[1].Primitive.(game.CounterObject).ExileInstead = true")
+			}
 		})
 	}
 }
@@ -104,7 +118,6 @@ func TestCounterCompositionRefusals(t *testing.T) {
 		"Counter target spell. If you control a creature, exile it instead of putting it into its owner's graveyard.",
 		"Counter target spell. " + counterExileReplacement + " " + counterExileReplacement,
 		"Counter target spell unless its controller pays {3}. If you do, draw a card.",
-		"Counter target spell unless its controller pays {3}. Counter target spell unless its controller pays {4}. " + counterExileReplacement,
 	} {
 		t.Run(text, func(t *testing.T) {
 			t.Parallel()

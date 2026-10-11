@@ -22,7 +22,7 @@ type ConditionOwnership struct {
 	ReferenceNodeIDs []int          `json:",omitempty"`
 	// ResultProducerClauseID names an earlier resolving action, never a cost.
 	ResultProducerClauseID int `json:",omitempty"`
-	// ResultSubjectReferenceNodeID identifies the specific countered spell.
+	// ResultSubjectReferenceNodeID identifies the exact result subject or actor.
 	ResultSubjectReferenceNodeID  int `json:",omitempty"`
 	ResultSubjectTargetOccurrence int `json:",omitempty"`
 }
@@ -32,13 +32,13 @@ func emitAbilityConditionOwnership(abilities []Ability) {
 		ability := &abilities[i]
 		emitConditionOwnership(ability.Sentences, ability.ConditionSegments, ability.SemanticReferences)
 		emitCounterResultOwnership(ability.Sentences, ability.ConditionSegments, ability.ConditionClauses, ability.SemanticReferences)
-		emitResultConditionOwnership(ability.Sentences, ability.ConditionSegments, ability.ConditionClauses)
+		emitResultConditionOwnership(ability.Sentences, ability.ConditionSegments, ability.ConditionClauses, ability.SemanticReferences)
 		if ability.Modal != nil {
 			for j := range ability.Modal.Options {
 				mode := &ability.Modal.Options[j]
 				emitConditionOwnership(mode.Sentences, mode.ConditionSegments, mode.SemanticReferences)
 				emitCounterResultOwnership(mode.Sentences, mode.ConditionSegments, mode.ConditionClauses, mode.SemanticReferences)
-				emitResultConditionOwnership(mode.Sentences, mode.ConditionSegments, mode.ConditionClauses)
+				emitResultConditionOwnership(mode.Sentences, mode.ConditionSegments, mode.ConditionClauses, mode.SemanticReferences)
 			}
 		}
 	}

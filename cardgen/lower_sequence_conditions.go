@@ -7,8 +7,7 @@ import (
 )
 
 const (
-	sequenceTaxOwnerCategory      = "structural — counter payment condition has no unique typed owner"
-	sequenceMultipleTaxesCategory = "structural — multiple embedded counter payments not modeled"
+	sequenceTaxOwnerCategory = "structural — counter payment condition has no unique typed owner"
 )
 
 type sequenceConditionPlan struct {
@@ -29,6 +28,7 @@ func planSequenceConditions(
 		delayedConditions: make(map[int][]compiler.CompiledCondition),
 	}
 	owners := make(map[int]int)
+	clauseOwners := make(map[int]bool)
 	for ei := range content.Effects {
 		effect := &content.Effects[ei]
 		if !effectOwnsCounterTax(*effect) {
@@ -42,11 +42,10 @@ func planSequenceConditions(
 			return sequenceConditionPlan{}, sequenceTaxOwnerCategory, false
 		}
 		owners[nodeID] = ei
-	}
-	// The existing clause lowerer uses one fixed result key. Until payment
-	// results have scoped identities, composing two would alias their outcomes.
-	if len(owners) > 1 {
-		return sequenceConditionPlan{}, sequenceMultipleTaxesCategory, false
+		if effect.ClauseID <= 0 || clauseOwners[effect.ClauseID] {
+			return sequenceConditionPlan{}, sequencePaymentIdentityCategory, false
+		}
+		clauseOwners[effect.ClauseID] = true
 	}
 	for ci := range content.Conditions {
 		condition := content.Conditions[ci]
@@ -74,6 +73,10 @@ func planSequenceConditions(
 			len(plan.clauseConditions[ei]) != 0 {
 			return sequenceConditionPlan{}, sequenceTaxOwnerCategory, false
 		}
+		indices, reason := conditionClauseIndices(content.Effects, condition)
+		if reason != "" || len(indices) != 1 || indices[0] != ei {
+			return sequenceConditionPlan{}, sequenceTaxOwnerCategory, false
+		}
 		plan.clauseConditions[ei] = []compiler.CompiledCondition{condition}
 	}
 	if len(plan.clauseConditions) != len(owners) {
@@ -84,12 +87,13 @@ func planSequenceConditions(
 	if optionalFlow.enabled {
 		if optionalFlow.scoped != nil {
 			for producer := range optionalFlow.scoped.publishers {
-				if _, owned := plan.clauseConditions[producer]; owned && !counterHasActualSuccessCondition(content, producer) {
+				if _, owned := plan.clauseConditions[producer]; owned && !counterHasActualSuccessCondition(content, producer) && optionalFlow.scoped.paymentPublishers[producer] == "" {
 					return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 				}
 			}
 		}
-		if _, owned := plan.clauseConditions[optionalFlow.optionalIndex]; owned && !counterHasActualSuccessCondition(content, optionalFlow.optionalIndex) {
+		if _, owned := plan.clauseConditions[optionalFlow.optionalIndex]; owned && !counterHasActualSuccessCondition(content, optionalFlow.optionalIndex) &&
+			(optionalFlow.scoped == nil || optionalFlow.scoped.paymentPublishers[optionalFlow.optionalIndex] == "") {
 			return sequenceConditionPlan{}, "structural — counter payment outcome flow not modeled", false
 		}
 	}

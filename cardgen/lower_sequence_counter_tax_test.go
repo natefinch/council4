@@ -64,7 +64,6 @@ func TestSequenceCounterTaxRefusals(t *testing.T) {
 		"Counter target spell unless you pay {3}. You gain 2 life.",
 		"Counter target spell unless its controller pays {X}, where X is this creature's power. You gain 2 life.",
 		"Counter target spell unless its controller pays {3} and 2 life. You gain 2 life.",
-		"Counter target spell unless its controller pays {3}. If they do, draw a card.",
 		"Counter target spell unless its controller pays {3}. Counter another target spell unless its controller pays {2}.",
 		"Counter target spell unless its controller pays {3}. If you win, draw a card.",
 		"Counter target spell unless its controller pays {3}. You gain 2 life and jump over the moon.",

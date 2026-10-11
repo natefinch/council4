@@ -10,7 +10,7 @@ func resultConditionPredicate(predicate ConditionPredicateKind) bool {
 }
 
 // Resolve result grammar once, while the parser still owns sentence structure.
-func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegment, clauses []ConditionClause) {
+func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegment, clauses []ConditionClause, references []Reference) {
 	effects := conditionEffects(sentences)
 	emitOptionalActionOwnership(sentences, segments)
 	emitOptionalPostfixElseOwnership(effects, segments)
@@ -31,6 +31,11 @@ func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegm
 			continue
 		}
 		producer := first - 1
+		if clause.Predicate == ConditionPredicatePriorInstructionAccepted {
+			if actorProducer, handled := resultActorProducer(effects, sentences, references, segment, first); handled {
+				producer = actorProducer
+			}
+		}
 		switch {
 		case clause.Predicate == ConditionPredicateCounterSucceeded:
 			producer = slices.IndexFunc(effects, func(effect *EffectSyntax) bool {
