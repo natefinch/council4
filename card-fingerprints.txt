@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18664 supported cards
+# 18665 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -8292,6 +8292,7 @@ b723b21aba496ba1  Jade Leech
 1862311d52acd584  Jade Mage
 a5c117b6cf13e7bd  Jade-Cast Sentinel
 66bdcdee821678d8  Jadecraft Artisan
+ff3780b1ad82f9af  Jadelight Spelunker
 aee2efa2c6c55847  Jadzi, Steward of Fate // Oracle's Gift
 d84c5aeecef3fc15  Jagged Barrens
 7916ca2de6bcc29d  Jagged Lightning

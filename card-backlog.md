@@ -10,12 +10,12 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33011
-- Supported (generated): 18664
+- Supported (generated): 18665
 - Parser-complete: 22814
-- **Lowering backlog** (parser-complete, not generated): 4911
+- **Lowering backlog** (parser-complete, not generated): 4910
 - **Parser backlog** (not parser-complete, not generated): 9436
 
-Partition check: 18664 supported + 4911 lowering-backlog + 9436 parser-backlog = 33011 eligible. ✓
+Partition check: 18665 supported + 4910 lowering-backlog + 9436 parser-backlog = 33011 eligible. ✓
 
 761 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
@@ -74,8 +74,8 @@ Partition check: 18664 supported + 4911 lowering-backlog + 9436 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18664
-- Independent per-card recompile generated: 18664
+- Authoritative generated (compilecards report): 18665
+- Independent per-card recompile generated: 18665
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
