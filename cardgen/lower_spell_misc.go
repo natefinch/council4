@@ -46,9 +46,11 @@ func lowerFixedLifeSpell(
 		)
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
+	recipientReferences := ctx.content.References
 	halfLife := effect.Amount.DynamicKind == compiler.DynamicAmountHalfPlayerLife
 	switch {
 	case halfLife:
+		recipientReferences = halfPlayerAmountRecipientReferences(ctx, effect)
 		// The amount is half the losing player's life, so it reads the recipient
 		// resolved below; leave a placeholder and rebuild it once playerRef is set.
 	case effect.Amount.Known:
@@ -82,6 +84,10 @@ func lowerFixedLifeSpell(
 				)
 			}
 			amount = game.Dynamic(dynamic)
+			if effect.Context != parser.EffectContextReferencedObjectController &&
+				effect.Context != parser.EffectContextReferencedObjectOwner {
+				recipientReferences = nil
+			}
 			break
 		}
 		if referencedPlayerLifeChangedKind(effect.Amount.DynamicKind) {
@@ -94,6 +100,7 @@ func lowerFixedLifeSpell(
 				)
 			}
 			amount = game.Dynamic(dynamic)
+			recipientReferences = nil
 			break
 		}
 		dynamic, ok := lowerDynamicAmount(effect.Amount, game.SourcePermanentReference())
@@ -113,6 +120,7 @@ func lowerFixedLifeSpell(
 			)
 		}
 		amount = game.Dynamic(dynamic)
+		recipientReferences = nil
 	case len(ctx.content.References) != 0:
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -129,123 +137,18 @@ func lowerFixedLifeSpell(
 			"the executable source backend supports only exact fixed life changes",
 		)
 	}
-	if !halfLife && len(ctx.content.Targets) == 0 {
-		switch effect.Context {
-		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
-				}},
-			}.Ability(), nil
-		case parser.EffectContextEachPlayer:
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
-				}},
-			}.Ability(), nil
-		case parser.EffectContextEachOpponentDealtCombatDamageByNamed:
-			if effect.CombatDamageSourceName == "" {
-				return game.AbilityContent{}, contentDiagnostic(
-					ctx,
-					"unsupported life spell",
-					"the executable source backend requires a creature name for the combat-damage recipient group",
-				)
-			}
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: groupPrimitiveFactory(
-						amount,
-						game.OpponentsDealtCombatDamageThisGameByNamedReference(effect.CombatDamageSourceName),
-					),
-				}},
-			}.Ability(), nil
-		default:
-			// Non-"each player/opponent" contexts fall through to the
-			// single-recipient handling below.
-		}
+	recipient, ok := resolvePlayerRecipient(ctx, recipientReferences)
+	if !ok {
+		recipient, ok = lifeEventPlayerRecipient(ctx, recipientReferences)
 	}
-	playerRef := game.ControllerReference()
-	var targets []game.TargetSpec
-	switch {
-	case len(ctx.content.Targets) == 0 &&
-		effect.Context == parser.EffectContextController:
-	case len(ctx.content.Targets) == 0 &&
-		effect.Context == parser.EffectContextDefendingPlayer:
-		playerRef = game.DefendingPlayerReference()
-	case len(ctx.content.Targets) == 0 &&
-		len(ctx.content.References) == 1 &&
-		(effect.Context == parser.EffectContextEventPlayer &&
-			ctx.content.References[0].Kind == compiler.ReferencePronoun &&
-			ctx.content.References[0].Pronoun == compiler.ReferencePronounThey ||
-			effect.Context == parser.EffectContextReferencedPlayer &&
-				ctx.content.References[0].Kind == compiler.ReferenceThatPlayer &&
-				ctx.content.References[0].Binding != compiler.ReferenceBindingTarget):
-		playerRef = game.EventPlayerReference()
-	case len(ctx.content.Targets) == 0 &&
-		effect.Context == parser.EffectContextReferencedObjectController:
-		ref, ok := eventReferencedObjectControllerPlayer(ctx.content.References)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported life spell",
-				"the executable source backend supports only exact fixed life changes",
-			)
-		}
-		playerRef = ref
-	case len(ctx.content.Targets) == 1 &&
-		effect.Context == parser.EffectContextReferencedObjectController:
-		ref, ok := referencedControllerPlayerRef(ctx)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported life spell",
-				"the executable source backend supports only exact fixed life changes",
-			)
-		}
-		playerRef = ref
-	case len(ctx.content.Targets) == 1 &&
-		effect.Context == parser.EffectContextReferencedObjectOwner:
-		ref, ok := referencedOwnerPlayerRef(ctx)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported life spell",
-				"the executable source backend supports only exact fixed life changes",
-			)
-		}
-		playerRef = ref
-	case len(ctx.content.Targets) == 1 &&
-		effect.Context == parser.EffectContextReferencedPlayer &&
-		hasThatPlayerTargetReference(ctx.content.References):
-		ref, ok := referencedThatPlayerRef(ctx.content.Targets[0])
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported life spell",
-				"the executable source backend supports only exact fixed life changes",
-			)
-		}
-		playerRef = ref
-	case len(ctx.content.Targets) == 1 &&
-		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
-		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported life spell",
-				"the executable source backend supports only exact fixed life changes",
-			)
-		}
-
-		targets = []game.TargetSpec{targetSpec}
-		playerRef = game.TargetPlayerReference(0)
-	default:
+	if !ok || halfLife && recipient.group != (game.PlayerGroupReference{}) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported life spell",
 			"the executable source backend supports only exact fixed life changes",
 		)
 	}
+	playerRef := recipient.player
 	if halfLife {
 		// Rebuild the amount now that the losing player is resolved: half that
 		// player's life, rounded per the printed "rounded up"/"rounded down".
@@ -260,23 +163,18 @@ func lowerFixedLifeSpell(
 	if effect.Amount.Selector().Controller == compiler.ControllerThatPlayer {
 		amount = rebindRecipientControlledGroupAmount(amount, playerRef)
 	}
-	sequence := []game.Instruction{{
-		Primitive: primitiveFactory(amount, playerRef),
-	}}
+	mode := recipient.mode(amount, primitiveFactory, groupPrimitiveFactory)
 	if reflexiveRider {
 		// "Each opponent attacking that player does the same." The controller's
 		// life gain stays first; append an identical gain whose recipients are
 		// the distinct opponents of the controller attacking the enchanted
 		// player. The controller is excluded from that group, so the two
 		// instructions never double-gain for the same player.
-		sequence = append(sequence, game.Instruction{
+		mode.Sequence = append(mode.Sequence, game.Instruction{
 			Primitive: groupPrimitiveFactory(amount, reflexiveAttackingGroupReference()),
 		})
 	}
-	return game.Mode{
-		Targets:  targets,
-		Sequence: sequence,
-	}.Ability(), nil
+	return mode.Ability(), nil
 }
 
 func targetPlayerControlledGroupReferences(references []compiler.CompiledReference, amount compiler.CompiledAmount) bool {
@@ -2661,13 +2559,6 @@ func lowerFixedDrawSpell(
 	if effect.Context == parser.EffectContextControllerAndReferencedPlayer {
 		return lowerControllerAndReferencedPlayerDraw(ctx, effect)
 	}
-	// Allow a single EventPlayer reference for "They draw N card(s)." bodies;
-	// reject all other non-zero-reference forms.
-	hasEventPlayerRef := len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
-	hasReferencedControllerRef := len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
-		effect.Context == parser.EffectContextReferencedObjectController
 	hasSourceCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 		singleSelfReference(ctx.content.References)
 	observedAmount, hasObservedAmount := observedLibraryCardAmount(ctx, effect.Amount)
@@ -2701,8 +2592,7 @@ func lowerFixedDrawSpell(
 		ctx.optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef && !hasCountCounterRef && !hasEventCounterRef && !hasObservedAmount) {
+		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
@@ -2741,177 +2631,62 @@ func lowerFixedDrawSpell(
 		amount = game.Dynamic(dynamic)
 	default:
 	}
-	playerRef := game.ControllerReference()
-	var targets []game.TargetSpec
-	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 {
-		switch effect.Context {
-		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: game.Draw{Amount: amount, PlayerGroup: game.OpponentsReference()},
-				}},
-			}.Ability(), nil
-		case parser.EffectContextEachPlayer:
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: game.Draw{Amount: amount, PlayerGroup: game.AllPlayersReference()},
-				}},
-			}.Ability(), nil
-		default:
-			// Non-"each player/opponent" contexts fall through to the
-			// single-recipient handling below.
-		}
-	}
-	switch {
-	case effect.Context == parser.EffectContextControllerAndTarget &&
-		len(ctx.content.Targets) == 1 && effect.Amount.Known:
+	if effect.Context == parser.EffectContextControllerAndTarget &&
+		len(ctx.content.Targets) == 1 && effect.Amount.Known && len(ctx.content.References) == 0 {
 		return lowerControllerAndTargetDraw(ctx, amount)
-	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
-		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer) &&
-		effect.Amount.Known:
-		playerRef = game.EventPlayerReference()
-	case len(ctx.content.Targets) == 0 &&
-		!hasEventPlayerRef &&
-		effect.Context == parser.EffectContextController:
-	case hasReferencedControllerRef && len(ctx.content.Targets) == 1 && effect.Amount.Known:
-		ref, ok := referencedControllerPlayerRef(ctx)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported draw spell", "the executable source backend supports only exact fixed card draw")
-		}
-		playerRef = ref
-	case len(ctx.content.Targets) == 1 &&
-		!hasEventPlayerRef &&
-		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
-		target, ok := playerTargetSpec(ctx.content.Targets[0])
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported draw spell",
-				"the executable source backend supports only exact fixed card draw",
-			)
-		}
-		playerRef = game.TargetPlayerReference(0)
-		target.Constraint = "target player"
-		targets = []game.TargetSpec{target}
+	}
+	acceptedRecipient := false
+	switch effect.Context {
+	case parser.EffectContextController, parser.EffectContextTarget, parser.EffectContextPriorSubject:
+		acceptedRecipient = true
+	case parser.EffectContextEachPlayer, parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+		acceptedRecipient = len(ctx.content.References) == 0
+	case parser.EffectContextEventPlayer:
+		acceptedRecipient = effect.Amount.Known
+	case parser.EffectContextReferencedPlayer:
+		acceptedRecipient = effect.Amount.Known && len(ctx.content.Targets) == 0
+	case parser.EffectContextReferencedObjectController:
+		acceptedRecipient = effect.Amount.Known && len(ctx.content.Targets) == 1
 	default:
+	}
+	recipientReferences := ctx.content.References
+	if hasSourceCounterRef || hasCountCounterRef || hasEventCounterRef || hasObservedAmount {
+		recipientReferences = nil
+	}
+	recipient, ok := resolvePlayerRecipient(ctx, recipientReferences)
+	if !acceptedRecipient || !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
 			"the executable source backend supports only exact fixed card draw",
 		)
 	}
-	sequence := []game.Instruction{{
-		Primitive: game.Draw{
-			Amount: amount,
-			Player: playerRef,
+	// Draw's historical target constraint is deliberately independent of the
+	// selection filter; keep emitted definitions unchanged.
+	if len(recipient.targets) == 1 {
+		recipient.targets[0].Constraint = "target player"
+	}
+	mode := recipient.mode(amount,
+		func(amount game.Quantity, player game.PlayerReference) game.Primitive {
+			return game.Draw{Amount: amount, Player: player}
 		},
-	}}
+		func(amount game.Quantity, group game.PlayerGroupReference) game.Primitive {
+			return game.Draw{Amount: amount, PlayerGroup: group}
+		})
 	if reflexiveRider {
 		// "Each opponent attacking that player does the same." The controller's
 		// draw stays first; append an identical draw whose recipients are the
 		// distinct opponents of the controller attacking the enchanted player.
 		// The controller is excluded from that group, so the two instructions
 		// never double-draw for the same player.
-		sequence = append(sequence, game.Instruction{
+		mode.Sequence = append(mode.Sequence, game.Instruction{
 			Primitive: game.Draw{
 				Amount:      amount,
 				PlayerGroup: reflexiveAttackingGroupReference(),
 			},
 		})
 	}
-	return game.Mode{
-		Targets:  targets,
-		Sequence: sequence,
-	}.Ability(), nil
-}
-
-// referencedControllerPlayerRef resolves the recipient player for an "Its
-// controller <effect>" body whose subject is the controller of the inherited
-// antecedent target in an ordered sequence. The antecedent target's selector
-// drives the object reference kind: a permanent target (including bare subtype
-// and compound type leads) yields a permanent reference, a spell on the stack
-// yields a stack-object reference (so a counterspell's "its controller" resolves
-// the countered spell's controller). It returns false (fail closed) for any
-// other shape or antecedent kind. The embedded clause-local target index is
-// rebased by the sequence machinery.
-func referencedControllerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) {
-	if len(ctx.content.Effects) == 0 ||
-		ctx.content.Effects[0].Context != parser.EffectContextReferencedObjectController ||
-		len(ctx.content.References) != 1 ||
-		ctx.content.References[0].Binding != compiler.ReferenceBindingTarget ||
-		ctx.content.References[0].Occurrence < 0 ||
-		len(ctx.content.Targets) != 1 {
-		return game.PlayerReference{}, false
-	}
-	occ := ctx.content.References[0].Occurrence
-	object, ok := inheritedRemovalTargetObjectRef(ctx.content.Targets[0], occ)
-	if !ok {
-		return game.PlayerReference{}, false
-	}
-	return game.ObjectControllerReference(object), true
-}
-
-// referencedOwnerPlayerRef resolves the recipient player for an "Its owner
-// <effect>" body whose subject is the owner of the inherited antecedent target
-// in an ordered sequence. It mirrors referencedControllerPlayerRef but binds the
-// destroyed permanent's owner rather than its last controller, the recipient
-// "Destroy target creature. Its owner gains 4 life." (Misfortune's Gain, Path of
-// Peace) names. It returns false (fail closed) for any other antecedent kind.
-func referencedOwnerPlayerRef(ctx contentCtx) (game.PlayerReference, bool) {
-	if len(ctx.content.Effects) == 0 ||
-		ctx.content.Effects[0].Context != parser.EffectContextReferencedObjectOwner ||
-		len(ctx.content.References) != 1 ||
-		ctx.content.References[0].Binding != compiler.ReferenceBindingTarget ||
-		ctx.content.References[0].Occurrence < 0 ||
-		len(ctx.content.Targets) != 1 {
-		return game.PlayerReference{}, false
-	}
-	occ := ctx.content.References[0].Occurrence
-	object, ok := inheritedRemovalTargetObjectRef(ctx.content.Targets[0], occ)
-	if !ok {
-		return game.PlayerReference{}, false
-	}
-	return game.ObjectOwnerReference(object), true
-}
-
-// player" reference bound to an inherited antecedent target, the typed shape an
-// ordered-sequence life clause takes when its subject ("That player loses N
-// life.") is the player established by the preceding clause's target.
-func hasThatPlayerTargetReference(references []compiler.CompiledReference) bool {
-	for _, reference := range references {
-		if reference.Kind == compiler.ReferenceThatPlayer &&
-			reference.Binding == compiler.ReferenceBindingTarget {
-			return true
-		}
-	}
-	return false
-}
-
-// referencedThatPlayerRef resolves the recipient player for a "That player
-// <gains/loses> N life" body whose subject is the inherited antecedent target of
-// an ordered sequence. A player target ("Target opponent ... That player loses N
-// life.") denotes that player directly; a permanent target ("Destroy target
-// creature an opponent controls. That player loses N life.", including bare
-// subtype and compound type leads) denotes its controller. It returns false
-// (fail closed) for any other antecedent kind. The single inherited target sits
-// at clause-local index 0.
-func referencedThatPlayerRef(target compiler.CompiledTarget) (game.PlayerReference, bool) {
-	if target.Selector.Kind == compiler.SelectorCard &&
-		target.Selector.Zone == zone.Graveyard &&
-		target.Selector.Controller == compiler.ControllerOpponent {
-		return game.ObjectOwnerReference(game.TargetCardReference(0)), true
-	}
-	switch target.Selector.Kind {
-	case compiler.SelectorPlayer, compiler.SelectorOpponent:
-		return game.TargetPlayerReference(0), true
-	default:
-		// Non-player selectors resolve to the target object's controller below.
-	}
-	object, ok := inheritedRemovalTargetObjectRef(target, 0)
-	if !ok {
-		return game.PlayerReference{}, false
-	}
-	return game.ObjectControllerReference(object), true
+	return mode.Ability(), nil
 }
 
 // grantSpellKeywordContentKeywordsOnly reports whether every keyword the ability

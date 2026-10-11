@@ -27,6 +27,37 @@ unsupported with parser-owned parameter diagnostics.
 Placement as an "If/When you do" resolving cost also refuses: best-effort movement
 cannot model all-or-nothing payment, including successful zero-card payment.
 
+Ordinary life, draw, and card-count actions share one typed player-recipient
+adapter and single/group mode builder. Parser-owned actor context, reference
+binding and target occurrence determine the recipient; inherited permanent and
+stack controllers, physical owners, event players, and defending players remain
+distinct. Amount-reference consumption and each verb's accepted amount/actor
+domains remain explicit at the verb boundary. Half-life/library amounts still
+require a singular recipient; draw-only multi-recipient behavior, optional
+decision actors, token payloads and sacrifice choices retain their own contracts.
+An inherited object is not permission to default an ordinary action to its
+controller. This consolidation adds no reference kinds or quantity semantics;
+the existing event-player resolver also covers the captured causing controller
+of a targeting event.
+An effect-owned player pronoun bound to an already announced exact player target
+uses that target, not an unavailable triggering event. The compiler preserves
+that nearer player actor ahead of an unrelated older card/object result using
+the existing reference NodeID, typed source order, and owning clause. NodeID zero
+is a valid first-reference identity only with that explicit ownership proof;
+default/unowned reference tuples cannot establish an actor.
+Qualified singular entry/death player anaphors read the event permanent's
+controller, including departure LKI, not the card's physical owner. Monarch
+events retain Event.Player; targeting events retain the captured causing
+spell/ability controller even after its stack departure. The unmodeled
+no-combat-damage assignment rider remains refused; ordinary life loss must not
+silently substitute for assignment suppression (tracked in #3240).
+Half-life/library possessives retain their parser-owned reference token and
+NodeID. Only the same singular recipient's compiler-issued amount proof consumes
+that operand; an inherited recipient still reads its current life/library after
+earlier actions. Unknown, foreign, plural and per-group half quantities remain
+refused. Controller `your` amounts cannot be redirected to a different player's
+`their` amount.
+
 The compiler is fail-closed. It emits a card only when every face, ability,
 semantic element, and meaningful source token is supported. Trigger wording is
 recognized here into a source-spanned `oracle.TriggerPattern` with closed

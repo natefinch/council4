@@ -395,13 +395,19 @@ func applyEffectReferenceBindings(effects []CompiledEffect, references []Compile
 
 func applyReferenceBindings(ownedReferences, references []CompiledReference) {
 	for referenceIndex, owned := range ownedReferences {
-		for _, reference := range references {
-			if reference.NodeID == owned.NodeID {
-				ownedReferences[referenceIndex] = reference
-				break
-			}
+		if reference, ok := referenceForNodeID(references, owned.NodeID); ok {
+			ownedReferences[referenceIndex] = reference
 		}
 	}
+}
+
+func referenceForNodeID(references []CompiledReference, nodeID int) (CompiledReference, bool) {
+	for _, reference := range references {
+		if reference.NodeID == nodeID {
+			return reference, true
+		}
+	}
+	return CompiledReference{}, false
 }
 
 func compileAbilityKind(kind parser.AbilityKind) AbilityKind {

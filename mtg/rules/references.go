@@ -417,7 +417,7 @@ func triggerEventPermanentID(obj *game.StackObject) (id.ID, bool) {
 func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 	switch event.Kind {
 	case game.EventSpellCast, game.EventSpellCopied, game.EventPermanentTapped,
-		game.EventAttackerDeclared:
+		game.EventAttackerDeclared, game.EventObjectBecameTarget:
 		// EventAttackerDeclared records the attacking player in Controller and the
 		// defending player in Player, so "that player" on an attack trigger
 		// ("Whenever an opponent attacks you, ~ deals damage to that player.",

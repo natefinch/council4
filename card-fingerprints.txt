@@ -878,7 +878,7 @@ c7aece44dd32e30d  Assassin Initiate
 1b3f1ac26c6bcc11  Assassinate
 e9fdac2aae74f484  Assault // Battery
 f806e1ec04eddfd8  Assault Griffin
-81b0373bc78dfe63  Assault Intercessor
+39eb6366101b9e28  Assault Intercessor
 11ca680b69867d99  Assault Strobe
 35acfc0a1a7d9533  Assault Zeppelid
 c60708234b16b60e  Assemble the Entmoot
@@ -1666,7 +1666,7 @@ e6666601f3be8f2d  Blood Pet
 89e9c8e9c9412a9c  Blood Reckoning
 abf79abe27bed720  Blood Researcher
 af10e2d3a782bfc5  Blood Rites
-ccb070e6e61146e2  Blood Seeker
+9c684642c6a2c0f2  Blood Seeker
 3dad547bc3d23705  Blood Servitor
 5be23d9ad1f01249  Blood Speaker
 6e82da5948317219  Blood Tithe
@@ -8558,7 +8558,6 @@ a1cd656142307c64  Keeper of Kookus
 5690d166aa0d580e  Keeper of the Accord
 94eb022454cb1fc4  Keeper of the Cadence
 05b880524b52f35d  Keeper of the Nine Gales
-0def6fd65864d455  Keeper of Tresserhorn
 b04e479557112f1a  Keepers of the Faith
 ce8f94b1aaa0ef75  Keepsake Gorgon
 ac3f604e0b295eda  Kefnet's Monument
@@ -9749,7 +9748,7 @@ c878103c73a5af4c  Mass Hysteria
 5badb9a3dce8161c  Mass of Ghouls
 6268fe377973188c  Mass Production
 faf1cf23b90644ed  Massacre Girl
-a01dec637d1f691b  Massacre Wurm
+43fcd49dc00180ba  Massacre Wurm
 d49ff98554c4b969  Massive Might
 e5d3fc781405c281  Massive Raid
 78c66652353e4d91  Master Apothecary
@@ -10742,7 +10741,7 @@ b0b111aef6a48b1a  Nightscape Apprentice
 6c6ecea34bd7b43a  Nightscape Familiar
 6c4492fe29b36b21  Nightscape Master
 1e29d8eec6af87a3  Nightshade Dryad
-6e93fd32cfa51b18  Nightshade Harvester
+05ea0c20383caa74  Nightshade Harvester
 f595f7da01594261  Nightshade Schemers
 a3649bc77e7fbc18  Nightshade Stinger
 983680e7cfe0c13a  Nightsoil Kami
@@ -11754,7 +11753,7 @@ a31a6b510ed43d43  Poisoner's Apprentice
 a7f29479f0baedd7  Pol Jamaar, Illusionist
 74876741f40a3869  Pollenbright Druid
 1b1aa8b2a877112e  Pollenbright Wings
-a489628eaa5c35d8  Polluted Bonds
+282b3674950c3d30  Polluted Bonds
 35e00f7e659dd58d  Polluted Dead
 1e33bda15f4dc44b  Polluted Delta
 08ccb529113adf39  Polluted Mire
@@ -13726,7 +13725,7 @@ da06aedff577bfe5  Select for Inspection
 3937fde3786f5715  Selesnya Sentry
 94eed4936f9dd5a9  Selesnya Signet
 36f5c058c0c28b5f  Self-Assembler
-7b3e8beb04d6e24f  Self-Inflicted Wound
+5fe688cc027697a8  Self-Inflicted Wound
 b58b393e532c86c3  Self-Reflection
 9cd742ac62933e4f  Selfcraft Mechan
 96b83e1caa0cbe99  Selfless Cathar
@@ -15700,7 +15699,7 @@ c3f6b098af73ad6c  Suspicious Shambler
 af3de3aa69ed36fb  Sustainer of the Realm
 1419bd90ca8a8e54  Sustenance
 48dc8e0bb5d45718  Sutina, Speaker of the Tajuru
-cc8f86ec534c4d7b  Suture Priest
+64444657c1ffdeee  Suture Priest
 9e0ad789aa48db88  Suture Spirit
 0a4ef3573ca955cf  Svyelunite Priest
 884b4eab2cea0857  Svyelunite Temple
@@ -16433,6 +16432,7 @@ f8fd37de1e91fd63  Thunder Wall
 f95134e9533f57e6  Thunder-Thrash Elder
 b5e6d5ebf682ba71  Thunderblust
 97048ab2bf14921f  Thunderbolt
+fdbf62d44946e480  Thunderbreak Regent
 f116a19bc2c0909b  Thunderclap
 0ca52a40be9c6380  Thunderclap Wyvern
 841217ad704221dc  Thundercloud Elemental

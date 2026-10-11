@@ -15,6 +15,7 @@ func bindReferences(
 	effects []CompiledEffect,
 	trigger *CompiledTrigger,
 ) []CompiledReference {
+	projectPlayerActorReferenceOrders(effects, references)
 	bound := append([]CompiledReference(nil), references...)
 	for i := range bound {
 		reference := &bound[i]
@@ -166,7 +167,10 @@ func bindReferences(
 				reference.Binding = ReferenceBindingEventPermanent
 				continue
 			}
-			if precedingSourceReferenceAfter(
+			if occurrence, ok := playerActorTargetAntecedent(*reference, targets, effects, prior); ok {
+				reference.Binding = ReferenceBindingTarget
+				reference.Occurrence = occurrence
+			} else if precedingSourceReferenceAfter(
 				bound[:i],
 				reference.Order,
 				effects[prior].VerbOrder.Start,
@@ -902,6 +906,10 @@ func triggerPatternBindsThatPlayer(pattern *TriggerPattern) bool {
 		// that player adds an additional {U}", High Tide; "whenever an opponent
 		// taps a Mountain for mana, ...", Sanctimony) resolves "that player" to
 		// the player who received the produced mana through EventPlayerReference.
+		return true
+	}
+	if pattern.Event == TriggerEventObjectBecameTarget &&
+		pattern.CauseController != ControllerAny {
 		return true
 	}
 	if pattern.Event == TriggerEventAttackerDeclared &&

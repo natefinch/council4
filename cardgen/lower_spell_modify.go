@@ -4085,42 +4085,9 @@ func lowerFixedCardCountPlayerSpell(
 				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
 			)
 		}
-		return game.Mode{
-			Targets: targets,
-			Sequence: []game.Instruction{{
-				Primitive: groupPrimitiveFactory(amount, game.TargetedPlayersReference()),
-			}},
-		}.Ability(), nil
+		recipient := playerRecipient{group: game.TargetedPlayersReference(), targets: targets}
+		return recipient.mode(amount, primitiveFactory, groupPrimitiveFactory).Ability(), nil
 	}
-	// Allow a single EventPlayer reference for "They {verb} N card(s)." bodies;
-	// reject all other non-zero-reference forms.
-	hasEventPlayerRef := len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPlayer
-	hasReferencedControllerRef := len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingTarget &&
-		effect.Context == parser.EffectContextReferencedObjectController
-	// "That permanent's controller mills N." / "Its controller mills N." on a
-	// triggered ability binds the recipient to the controller of the triggering
-	// event permanent (Mesmeric Orb, Chronic Flooding, Riddlekeeper).
-	hasEventPermanentControllerRef := len(ctx.content.References) == 1 &&
-		ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent &&
-		effect.Context == parser.EffectContextReferencedObjectController
-	// "Defending player mills N." on a combat trigger binds the recipient to the
-	// attacked player carried by the triggering attack/blocked event (Flint
-	// Golem, Nemesis of Reason). The triggering source is implicit, so the
-	// content carries no reference; the defending player is named by context.
-	hasDefendingPlayerContext := len(ctx.content.References) == 0 &&
-		effect.Context == parser.EffectContextDefendingPlayer
-	// "That player discards/mills N." after an ordered-sequence clause that
-	// targeted a player or permanent inherits its subject from that antecedent
-	// target: a player target denotes that player directly, a permanent target
-	// denotes its controller. This mirrors the life-then "That player loses N
-	// life." shape (Ozai's Cruelty, Immersturm Skullcairn, Recoil, Dinrova
-	// Horror). The single "that player" reference is bound to the inherited
-	// target.
-	hasThatPlayerRef := len(ctx.content.References) == 1 &&
-		effect.Context == parser.EffectContextReferencedPlayer &&
-		hasThatPlayerTargetReference(ctx.content.References)
 	// "Target player mills X cards, where X is the number of charge counters on
 	// this artifact." (Grindclock, Font of Progress) counts a counter kind on the
 	// ability's own source. The self-counter amount carries a lone source
@@ -4137,9 +4104,7 @@ func lowerFixedCardCountPlayerSpell(
 		ctx.optional ||
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef &&
-			!hasEventPermanentControllerRef && !hasThatPlayerRef && !hasSourceCounterRef) {
+		len(ctx.content.Modes) != 0 {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+controllerVerb+" spell",
@@ -4165,78 +4130,37 @@ func lowerFixedCardCountPlayerSpell(
 		}
 		amount = resolved
 	}
-	playerRef := game.ControllerReference()
-	var targets []game.TargetSpec
-	if len(ctx.content.Targets) == 0 && len(ctx.content.References) == 0 && !halfLibrary {
-		switch effect.Context {
-		case parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: groupPrimitiveFactory(amount, game.OpponentsReference()),
-				}},
-			}.Ability(), nil
-		case parser.EffectContextEachPlayer:
-			return game.Mode{
-				Sequence: []game.Instruction{{
-					Primitive: groupPrimitiveFactory(amount, game.AllPlayersReference()),
-				}},
-			}.Ability(), nil
-		default:
-			// Non-"each player/opponent" contexts fall through to the
-			// single-recipient handling below.
+	acceptedRecipient := true
+	switch effect.Context {
+	case parser.EffectContextReferencedObjectOwner, parser.EffectContextEachOpponentDealtCombatDamageByNamed:
+		acceptedRecipient = false
+	case parser.EffectContextReferencedObjectController:
+		if len(ctx.content.Targets) == 1 {
+			acceptedRecipient = effect.Amount.Known
+		} else {
+			acceptedRecipient = len(ctx.content.References) == 1 &&
+				ctx.content.References[0].Binding == compiler.ReferenceBindingEventPermanent
 		}
-	}
-	switch {
-	case hasEventPlayerRef && len(ctx.content.Targets) == 0 &&
-		(effect.Context == parser.EffectContextEventPlayer || effect.Context == parser.EffectContextReferencedPlayer):
-		playerRef = game.EventPlayerReference()
-	case len(ctx.content.Targets) == 0 &&
-		!hasEventPlayerRef &&
-		effect.Context == parser.EffectContextController:
-	case hasReferencedControllerRef && len(ctx.content.Targets) == 1 && effect.Amount.Known:
-		ref, ok := referencedControllerPlayerRef(ctx)
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported "+controllerVerb+" spell",
-				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
-			)
-		}
-		playerRef = ref
-	case hasEventPermanentControllerRef && len(ctx.content.Targets) == 0:
-		playerRef = game.ObjectControllerReference(game.EventPermanentReference())
-	case hasThatPlayerRef && len(ctx.content.Targets) == 1:
-		ref, ok := referencedThatPlayerRef(ctx.content.Targets[0])
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported "+controllerVerb+" spell",
-				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
-			)
-		}
-		playerRef = ref
-	case hasDefendingPlayerContext && len(ctx.content.Targets) == 0:
-		playerRef = game.DefendingPlayerReference()
-	case len(ctx.content.Targets) == 1 &&
-		!hasEventPlayerRef &&
-		(effect.Context == parser.EffectContextTarget || effect.Context == parser.EffectContextPriorSubject):
-		targetSpec, ok := playerTargetSpec(ctx.content.Targets[0])
-		if !ok {
-			return game.AbilityContent{}, contentDiagnostic(
-				ctx,
-				"unsupported "+controllerVerb+" spell",
-				"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
-			)
-		}
-		playerRef = game.TargetPlayerReference(0)
-		targets = []game.TargetSpec{targetSpec}
+	case parser.EffectContextEachPlayer, parser.EffectContextEachOpponent, parser.EffectContextEachOtherPlayer:
+		acceptedRecipient = !halfLibrary && len(ctx.content.References) == 0
 	default:
+	}
+	recipientReferences := ctx.content.References
+	if hasSourceCounterRef {
+		recipientReferences = nil
+	}
+	if halfLibrary {
+		recipientReferences = halfPlayerAmountRecipientReferences(ctx, effect)
+	}
+	recipient, ok := resolvePlayerRecipient(ctx, recipientReferences)
+	if !acceptedRecipient || !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported "+controllerVerb+" spell",
 			"the executable source backend supports only exact fixed "+controllerVerb+" by one player",
 		)
 	}
+	playerRef := recipient.player
 	if halfLibrary {
 		// Count the resolved recipient's library and halve it as the effect
 		// resolves, rounding up or down per the recognized "rounded up"/"rounded
@@ -4252,14 +4176,7 @@ func lowerFixedCardCountPlayerSpell(
 			RoundUp:   effect.Amount.RoundUp,
 		})
 	}
-	return game.Mode{
-		Targets: targets,
-		Sequence: []game.Instruction{
-			{
-				Primitive: primitiveFactory(amount, playerRef),
-			},
-		},
-	}.Ability(), nil
+	return recipient.mode(amount, primitiveFactory, groupPrimitiveFactory).Ability(), nil
 }
 
 // targetedPlayersEachSpec recognizes the two clause shapes of a "target players
