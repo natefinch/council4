@@ -240,6 +240,18 @@ func exactReferencedCardHandMove(effect *EffectSyntax) bool {
 	return strings.EqualFold(exactEffectClauseText(effect), "Put that card into your hand.")
 }
 
+func exactEventCardBattlefieldMove(effect *EffectSyntax) bool {
+	if effect.ToZone != zone.Battlefield || len(effect.References) == 0 {
+		return false
+	}
+	reference := effect.References[0]
+	if reference.Kind == ReferenceThatObject && !strings.EqualFold(joinedEffectText(reference.Tokens), "that card") ||
+		reference.Kind == ReferencePronoun && reference.Pronoun != PronounIt {
+		return false
+	}
+	return exactReferencedZoneMove(effect)
+}
+
 func exactReferencedZoneMove(effect *EffectSyntax) bool {
 	if len(effect.References) == 0 {
 		return false
@@ -265,10 +277,14 @@ func exactReferencedZoneMove(effect *EffectSyntax) bool {
 		}
 		return position != "" && strings.EqualFold(exactEffectClauseText(effect), "Put "+subject+" on "+position+" of its owner's library.")
 	}
-	if effect.Kind != EffectReturn || effect.ToZone != zone.Battlefield {
+	if (effect.Kind != EffectReturn && effect.Kind != EffectPut) || effect.ToZone != zone.Battlefield ||
+		effect.UnderYourControl && effect.UnderOwnersControl {
 		return false
 	}
 	text := "Return " + subject + " to the battlefield"
+	if effect.Kind == EffectPut {
+		text = "Put " + subject + " onto the battlefield"
+	}
 	if effect.EntersTapped {
 		text += " tapped"
 	}
@@ -286,7 +302,29 @@ func exactReferencedZoneMove(effect *EffectSyntax) bool {
 		}
 		text += " with a " + effect.CounterKind.String() + " counter on it"
 	}
-	return strings.EqualFold(exactEffectClauseText(effect), text+".")
+	clause := exactEffectClauseText(effect)
+	if !effect.EntersTransformed && len(effect.Tokens) >= 2 {
+		last := effect.Tokens[len(effect.Tokens)-1]
+		previous := effect.Tokens[len(effect.Tokens)-2]
+		start := previous.Span.End.Offset - effect.Span.Start.Offset
+		end := last.Span.Start.Offset - effect.Span.Start.Offset
+		// Parenthetical tokens are excluded as reminders. Only this exact
+		// redundant front-entry annotation may bridge the resulting token gap.
+		if last.Kind == shared.Period && start >= 0 && end <= len(effect.Text) && start < end &&
+			strings.EqualFold(effect.Text[start:end], " (front face up)") {
+			normalized := *effect
+			normalized.Tokens = append([]shared.Token(nil), effect.Tokens...)
+			normalized.Tokens[len(normalized.Tokens)-1].Span.Start = previous.Span.End
+			clause = exactEffectClauseText(&normalized)
+		}
+	}
+	for _, candidate := range []string{text, strings.Replace(text, "tapped transformed", "tapped and transformed", 1)} {
+		if strings.EqualFold(clause, candidate+".") ||
+			effect.EntersTransformed && strings.EqualFold(clause, strings.Replace(candidate, " transformed", " converted", 1)+".") {
+			return true
+		}
+	}
+	return false
 }
 
 func delayedReferenceSubject(reference Reference, effects []*EffectSyntax, targets []TargetSyntax, references []Reference, trigger *TriggerClause) DelayedSubjectOwnership {

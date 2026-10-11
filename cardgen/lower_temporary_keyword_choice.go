@@ -110,7 +110,7 @@ func lowerTemporaryKeywordChoiceGrant(
 			randomModes,
 		)
 	}
-	object, ok := continuousInstructionReferenceObject(ctx, ctx.content.References[0], effect, true)
+	object, ok := continuousInstructionReferenceObject(ctx, ctx.content.References[0], effect)
 	if !ok {
 		return unsupported()
 	}

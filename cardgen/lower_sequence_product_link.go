@@ -11,8 +11,8 @@ import (
 // Ordered sequence consumers share a canonical object publication with the
 // exact producer identified by the compiler. Resolving permanent consumers use
 // CreateToken and single-source PutOnBattlefield; fixed-phase capture additionally
-// admits proven single-card exile publishers. A publication field alone is not
-// an actual-result proof.
+// admits proven single-card exile publishers. Singular library observations
+// publish actual card identities. A publication field alone is not an actual-result proof.
 
 // sequencePriorInstructionLink reports the antecedent effect index and link key
 // a clause's own references need to resolve a ReferenceBindingPriorInstructionResult
@@ -22,7 +22,8 @@ import (
 // order; sequence holds the instructions lowered so far.
 //
 // Unmodeled optional, multi-instruction and competing antecedents fail closed.
-// A scoped optional entered-object publisher invalidates before its gates. An
+// Scoped optional entered-object publishers invalidate before their gates;
+// optional observations publish only actual accepted cards. An
 // incompatible existing publication is never overwritten.
 func sequencePriorInstructionLink(
 	references []compiler.CompiledReference,
@@ -39,7 +40,8 @@ func sequencePriorInstructionPublication(
 	capture bool,
 ) (priorEffect int, key game.LinkedKey, ok bool) {
 	for _, reference := range references {
-		if reference.Binding != compiler.ReferenceBindingPriorInstructionResult {
+		if reference.Binding != compiler.ReferenceBindingPriorInstructionResult &&
+			reference.Binding != compiler.ReferenceBindingLibraryOwner {
 			continue
 		}
 		j := reference.PriorInstruction
@@ -52,7 +54,8 @@ func sequencePriorInstructionPublication(
 			return 0, "", false
 		}
 		for _, other := range references {
-			if other.Binding == compiler.ReferenceBindingPriorInstructionResult && other.PriorInstruction != j {
+			if (other.Binding == compiler.ReferenceBindingPriorInstructionResult ||
+				other.Binding == compiler.ReferenceBindingLibraryOwner) && other.PriorInstruction != j {
 				return 0, "", false
 			}
 		}
@@ -102,6 +105,9 @@ func sequencePriorInstructionPublication(
 		if capture && captureMovePublisher(candidate.Primitive) {
 			sequence[instructionIndex].ClearLinkedBeforeGate = true
 		}
+		if reference.ProducerClauseID > 0 && !sequence[instructionIndex].LocalProducts.HasLink(linked) {
+			sequence[instructionIndex].LocalProducts.Links = append(sequence[instructionIndex].LocalProducts.Links, linked)
+		}
 		return j, linked, true
 	}
 	return 0, "", false
@@ -109,6 +115,25 @@ func sequencePriorInstructionPublication(
 
 func sequenceProductKey(index int) game.LinkedKey {
 	return game.LinkedKey(fmt.Sprintf("sequence-effect-%d-product", index))
+}
+
+func sequenceLibraryCardReference(reference compiler.CompiledReference, effects []compiler.CompiledEffect) bool {
+	index := reference.PriorInstruction
+	return reference.Binding == compiler.ReferenceBindingPriorInstructionResult &&
+		reference.ProducerClauseID > 0 && index >= 0 && index < len(effects) &&
+		effects[index].ClauseID == reference.ProducerClauseID &&
+		compiler.SingularLibraryCardProducer(effects[index])
+}
+
+func sequenceEnteredSubjectReference(reference compiler.CompiledReference, effects []compiler.CompiledEffect) bool {
+	index := reference.PriorInstruction
+	if index < 0 || index >= len(effects) || !reference.SubjectProducerMatches(effects[index]) ||
+		reference.SubjectLifetime() != compiler.ReferenceLifetimeActualProduct {
+		return false
+	}
+	return reference.EnteredSubjectSupported() &&
+		(effects[index].Kind == compiler.EffectPut || effects[index].Kind == compiler.EffectReturn) &&
+		effects[index].ToZone == zone.Battlefield
 }
 
 // These actual entered-object publishers invalidate their links before envelope
@@ -149,10 +174,38 @@ func captureMovePublisher(primitive game.Primitive) bool {
 // correct actual result.
 func trySetInstructionPublishLinked(instr *game.Instruction, key game.LinkedKey) (game.LinkedKey, bool) {
 	if instr.Primitive == nil ||
-		instr.Optional && (instr.PublishOptionalDecision == "" || !sequencePublisherInvalidatesBeforeGates(instr.Primitive)) {
+		instr.Optional && instr.Primitive.Kind() != game.PrimitiveLookAtLibraryTop &&
+			instr.Primitive.Kind() != game.PrimitiveReveal &&
+			(instr.PublishOptionalDecision == "" || !sequencePublisherInvalidatesBeforeGates(instr.Primitive)) {
 		return "", false
 	}
 	switch instr.Primitive.Kind() {
+	case game.PrimitiveLookAtLibraryTop:
+		primitive, ok := instr.Primitive.(game.LookAtLibraryTop)
+		if !ok {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
+	case game.PrimitiveReveal:
+		primitive, ok := instr.Primitive.(game.Reveal)
+		if !ok {
+			return "", false
+		}
+		if primitive.Card.Kind == game.CardReferenceNone &&
+			(primitive.Amount.IsDynamic() || primitive.Amount.Value() != 1) {
+			return "", false
+		}
+		if primitive.PublishLinked != "" {
+			return primitive.PublishLinked, primitive.PublishLinked == key
+		}
+		primitive.PublishLinked = key
+		instr.Primitive = primitive
+		return key, true
 	case game.PrimitiveCreateToken:
 		primitive, ok := instr.Primitive.(game.CreateToken)
 		if !ok {

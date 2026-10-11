@@ -375,7 +375,6 @@ func TestLowerDynamicNamedCounterPlacement(t *testing.T) {
 	}{
 		{"Put X charge counters on target artifact.", game.DynamicAmountX},
 		{"Put X poison counters on target player, where X is the number of lands you control.", game.DynamicAmountCountSelector},
-		{"Put X energy counters on target player, where X is Test Counter's power.", game.DynamicAmountObjectPower},
 	}
 	for _, test := range tests {
 		face := lowerSingleFace(t, &ScryfallCard{
@@ -393,12 +392,55 @@ func TestLowerDynamicNamedCounterPlacement(t *testing.T) {
 		if !dynamic.Exists || dynamic.Val.Kind != test.kind {
 			t.Fatalf("%q amount = %+v", test.text, dynamic)
 		}
-		if test.kind == game.DynamicAmountObjectPower &&
-			dynamic.Val.Object != game.SourcePermanentReference() {
-			t.Fatalf("%q source reference = %+v", test.text, dynamic.Val.Object)
-		}
 	}
 
+	const sourcePower = "Put X energy counters on target player, where X is Test Counter's power."
+	for _, test := range []struct {
+		name, prefix string
+		triggered    bool
+	}{
+		{"activated source power", "{T}: ", false},
+		{"triggered source power", "When this creature enters, ", true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Test Counter",
+				Layout:     "normal",
+				TypeLine:   "Creature",
+				OracleText: test.prefix + sourcePower,
+				Power:      new("3"),
+				Toughness:  new("3"),
+			})
+			var content game.AbilityContent
+			if test.triggered {
+				if len(face.TriggeredAbilities) != 1 {
+					t.Fatalf("triggered abilities = %d, want 1", len(face.TriggeredAbilities))
+				}
+				content = face.TriggeredAbilities[0].Content
+			} else {
+				if len(face.ActivatedAbilities) != 1 {
+					t.Fatalf("activated abilities = %d, want 1", len(face.ActivatedAbilities))
+				}
+				content = face.ActivatedAbilities[0].Content
+			}
+			add, ok := content.Modes[0].Sequence[0].Primitive.(game.AddPlayerCounter)
+			if !ok || add.CounterKind != counter.Energy || add.Player != game.TargetPlayerReference(0) {
+				t.Fatalf("primitive = %+v, want energy counters on target player", content.Modes[0].Sequence[0].Primitive)
+			}
+			dynamic := add.Amount.DynamicAmount()
+			if !dynamic.Exists || dynamic.Val.Kind != game.DynamicAmountObjectPower ||
+				dynamic.Val.Object != game.SourcePermanentReference() || dynamic.Val.Multiplier != 1 {
+				t.Fatalf("amount = %+v, want source permanent power", dynamic)
+			}
+		})
+	}
+	t.Run("resolving spell is not a source permanent", func(t *testing.T) {
+		t.Parallel()
+		assertCardUnsupported(t, &ScryfallCard{
+			Name: "Test Counter", Layout: "normal", TypeLine: "Sorcery", OracleText: sourcePower,
+		}, "unsupported counter placement")
+	})
 }
 
 func TestRebaseAddPlayerCounterTargetReference(t *testing.T) {

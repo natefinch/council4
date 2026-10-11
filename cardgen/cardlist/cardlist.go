@@ -87,7 +87,7 @@ func scan(dir string) (cards []Entry, eager []string, err error) {
 					continue
 				}
 				name := value.Names[0].Name
-				if name == "" || name[0] < 'A' || name[0] > 'Z' {
+				if !ast.IsExported(name) {
 					continue // token defs co-located in card files are unexported
 				}
 				if body := cardBody(value.Values[0], builders); body != nil {

@@ -223,6 +223,13 @@ func (r Renderer) renderInstruction(ctx *renderCtx, instruction *game.Instructio
 	if instruction.PublishResult != "" {
 		fields = append(fields, fmt.Sprintf("PublishResult: game.ResultKey(%q),", string(instruction.PublishResult)))
 	}
+	if !isZeroGameLocalProducts(instruction.LocalProducts) {
+		local, err := r.renderGameLocalProducts(ctx, instruction.LocalProducts)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, "LocalProducts: "+local+",")
+	}
 	if instruction.ClearLinkedBeforeGate {
 		fields = append(fields, "ClearLinkedBeforeGate: true,")
 	}

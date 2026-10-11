@@ -1190,10 +1190,11 @@ const (
 
 // EffectReplacementSyntax is a source-spanned replacement modifier.
 type EffectReplacementSyntax struct {
-	Kind            EffectReplacementKind `json:",omitempty"`
-	Span            shared.Span           `json:"-"`
-	Amount          int                   `json:",omitempty"`
-	EachCounterKind bool                  `json:",omitempty"`
+	replacedClauseID int
+	Kind             EffectReplacementKind `json:",omitempty"`
+	Span             shared.Span           `json:"-"`
+	Amount           int                   `json:",omitempty"`
+	EachCounterKind  bool                  `json:",omitempty"`
 }
 
 // EffectManaSyntax describes exact add-mana output.
@@ -2115,8 +2116,10 @@ type EntersAsCopyConditionalCounter struct {
 // EffectSyntax is one typed resolving instruction. Text and Tokens remain
 // lossless metadata; all meaning consumed downstream is carried by typed fields.
 type EffectSyntax struct {
-	DelayedSubject          DelayedSubjectOwnership `json:",omitzero"`
-	OptionalActionClauseIDs []int                   `json:",omitempty"`
+	OptionalPostfixElse     OptionalPostfixElseOwnership `json:",omitzero"`
+	LibraryOwnerClauseID    int                          `json:",omitempty"`
+	DelayedSubject          DelayedSubjectOwnership      `json:",omitzero"`
+	OptionalActionClauseIDs []int                        `json:",omitempty"`
 	// ResultElseOfClauseID identifies the affirmative result clause complemented
 	// by this Otherwise branch. Zero leaves other branch families unchanged.
 	ResultElseOfClauseID int               `json:",omitempty"`
@@ -2144,6 +2147,7 @@ type EffectSyntax struct {
 	Tokens                     []shared.Token       `json:"-"`
 	Player                     EffectPlayerKind     `json:",omitempty"`
 	CardSource                 EffectCardSourceKind `json:",omitempty"`
+	LibraryOwnerDestination    bool                 `json:",omitempty"`
 	// FaceDown marks a card-source effect that exiles its cards face down
 	// ("exile that many cards from the top of your library face down.", Flamewar,
 	// Streetwise Operative). It is meaningful only for a top-of-library exile card
@@ -3346,6 +3350,9 @@ type EffectSyntax struct {
 	// black"). It lets consumers route only true life changes to the life
 	// lowerer rather than misclassifying keyword/ability grants and losses.
 	LifeObject bool `json:",omitempty"`
+	// LifePayment preserves payment identity after optional clause envelopes
+	// are separated from their primitive body.
+	LifePayment EffectLifePaymentKind `json:",omitempty"`
 	// PreventRegeneration reports that a destroy effect is followed by a
 	// regeneration rider ("It/They can't be regenerated."). The rider is a
 	// separate zero-effect sentence whose pronoun refers to the destroyed

@@ -49,19 +49,13 @@ func TestLowerBrimstoneVolleyMorbidInsteadDamage(t *testing.T) {
 	if got := morbid.Amount; got != game.Fixed(5) {
 		t.Fatalf("morbid amount = %#v, want 5", got)
 	}
-	for i, instr := range seq {
-		if !instr.Condition.Exists || !instr.Condition.Val.Condition.Exists {
-			t.Fatalf("instruction[%d] is ungated: %#v", i, instr)
-		}
-		if !instr.Condition.Val.Condition.Val.EventHistory.Exists {
-			t.Fatalf("instruction[%d] is not event-history gated: %#v", i, instr.Condition.Val)
-		}
+	if !seq[0].Condition.Exists || !seq[0].Condition.Val.Condition.Exists ||
+		!seq[0].Condition.Val.Condition.Val.EventHistory.Exists {
+		t.Fatal("base must capture the creature-death predicate")
 	}
+	assertConditionConsumer(t, seq[0], seq[1], true)
 	if !seq[0].Condition.Val.Condition.Val.Negate {
 		t.Fatal("base damage must be gated on NOT(a creature died this turn)")
-	}
-	if seq[1].Condition.Val.Condition.Val.Negate {
-		t.Fatal("morbid damage must be gated on (a creature died this turn)")
 	}
 }
 
@@ -90,7 +84,5 @@ func TestLowerThermalBlastThresholdInsteadDamage(t *testing.T) {
 	if !seq[0].Condition.Val.Condition.Val.Negate {
 		t.Fatal("base damage must be gated on NOT(threshold)")
 	}
-	if seq[1].Condition.Val.Condition.Val.Negate {
-		t.Fatal("threshold damage must be gated on threshold")
-	}
+	assertConditionConsumer(t, seq[0], seq[1], true)
 }

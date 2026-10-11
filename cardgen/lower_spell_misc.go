@@ -297,6 +297,9 @@ func targetPlayerControlledGroupReferences(references []compiler.CompiledReferen
 // source or event object so the form stays exact and fails closed on any foreign
 // referent.
 func lifeSourcePowerAmount(ctx contentCtx, effect compiler.CompiledEffect) (game.DynamicAmount, bool) {
+	if ctx.observedCharacteristicKey != "" {
+		return observedLibraryCardAmount(ctx, effect.Amount)
+	}
 	object, ok := referencedSourceOrEventPowerObject(effect.Amount, ctx.content.References)
 	if !ok {
 		return game.DynamicAmount{}, false
@@ -639,10 +642,25 @@ func lowerSourcePermanentExile(ctx contentCtx) (game.AbilityContent, bool) {
 	if !selfReference {
 		return game.AbilityContent{}, false
 	}
+	if reference.SubjectDomain() == compiler.ReferenceSubjectCard {
+		card, ok := lowerCardReference(reference, referenceLoweringContext{AllowSource: true, AllowEvent: true})
+		if !ok {
+			return game.AbilityContent{}, false
+		}
+		from := effect.FromZone
+		if reference.Binding == compiler.ReferenceBindingEventCard {
+			from = zone.Graveyard
+		}
+		if from == zone.None || from == zone.Battlefield {
+			return game.AbilityContent{}, false
+		}
+		return game.Mode{Sequence: []game.Instruction{{Primitive: game.MoveCard{
+			Card: card, FromZone: from, Destination: zone.Exile,
+		}}}}.Ability(), true
+	}
 	object, ok := lowerObjectReference(reference, referenceLoweringContext{
-		AllowSource:      true,
-		SourceCardObject: reference.CardIdentity || effect.FromZone != zone.None && effect.FromZone != zone.Battlefield,
-		AllowEvent:       true,
+		AllowSource: true,
+		AllowEvent:  true,
 	})
 	if !ok {
 		return game.AbilityContent{}, false
@@ -2672,6 +2690,7 @@ func lowerFixedDrawSpell(
 		effect.Context == parser.EffectContextReferencedObjectController
 	hasSourceCounterRef := effect.Amount.DynamicKind == compiler.DynamicAmountSourceCounterCount &&
 		singleSelfReference(ctx.content.References)
+	observedAmount, hasObservedAmount := observedLibraryCardAmount(ctx, effect.Amount)
 	// "When this creature leaves the battlefield, draw a card for each +1/+1
 	// counter on it." (Bloodtracker) counts the +1/+1 counters on the triggering
 	// permanent. In a zone-change/dies trigger the "it"/"them" of the counter
@@ -2703,7 +2722,7 @@ func lowerFixedDrawSpell(
 		len(ctx.content.Conditions) != 0 ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
-		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef && !hasCountCounterRef && !hasEventCounterRef) {
+		(len(ctx.content.References) != 0 && !hasEventPlayerRef && !hasReferencedControllerRef && !hasSourceCounterRef && !hasCountCounterRef && !hasEventCounterRef && !hasObservedAmount) {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
 			"unsupported draw spell",
@@ -2712,6 +2731,8 @@ func lowerFixedDrawSpell(
 	}
 	amount := game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX})
 	switch {
+	case hasObservedAmount:
+		amount = game.Dynamic(observedAmount)
 	case effect.Amount.Known:
 		amount = game.Fixed(effect.Amount.Value)
 	case triggeringEventQuantityKind(effect.Amount.DynamicKind):

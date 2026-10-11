@@ -74,8 +74,27 @@ func TestOptionalProbeSurfacesInnerBlocker(t *testing.T) {
 	if !hasDiagnosticSummary(diagnostics, "unsupported optional effect") {
 		t.Errorf("expected the optional blocker to be reported; got %#v", diagnostics)
 	}
+
 	if !hasDiagnosticSummary(diagnostics, "unsupported ordered effect sequence") {
 		t.Errorf("expected the inner ordered-sequence blocker to be reported alongside the optional blocker; got %#v", diagnostics)
+	}
+}
+
+func TestFlattenAdditionalReasonsExpandsNestedBlockers(t *testing.T) {
+	got := flattenAdditionalReasons([]shared.Diagnostic{{
+		Summary: "proof",
+		Additional: []shared.Diagnostic{{
+			Summary:    "optional",
+			Additional: []shared.Diagnostic{{Summary: "sequence"}},
+		}},
+	}})
+	if len(got) != 3 {
+		t.Fatalf("nested blockers = %+v, want three flat diagnostics", got)
+	}
+	for i, summary := range []string{"proof", "optional", "sequence"} {
+		if got[i].Summary != summary || got[i].Additional != nil {
+			t.Fatalf("blocker %d = %+v, want flat %q", i, got[i], summary)
+		}
 	}
 }
 

@@ -81,8 +81,8 @@ func linkedExiledCard(g *game.Game, ref game.LinkedObjectRef) (*game.CardInstanc
 			return nil, false
 		}
 	}
-	card, ok := g.GetCardInstance(ref.CardID)
-	if !ok || ref.CardZoneVersion != 0 && card.ZoneVersion != ref.CardZoneVersion {
+	card, ok := linkedCardInstance(g, ref)
+	if !ok {
 		return nil, false
 	}
 	owner, ok := playerByID(g, card.Owner)

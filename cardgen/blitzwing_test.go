@@ -131,8 +131,8 @@ func TestGenerateBlitzwingAdaptiveAssailantBack(t *testing.T) {
 		if !ok {
 			t.Fatalf("mode[%d] primitive = %T, want game.ApplyContinuous", i, mode.Sequence[0].Primitive)
 		}
-		if !apply.Object.Exists || apply.Object.Val != game.SourceCardPermanentReference() {
-			t.Fatalf("mode[%d] object = %#v, want SourceCardPermanentReference()", i, apply.Object)
+		if !apply.Object.Exists || apply.Object.Val != game.SourcePermanentReference() {
+			t.Fatalf("mode[%d] object = %#v, want SourcePermanentReference()", i, apply.Object)
 		}
 		if apply.Duration != game.DurationUntilEndOfTurn {
 			t.Fatalf("mode[%d] duration = %v, want DurationUntilEndOfTurn", i, apply.Duration)

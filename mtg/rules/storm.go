@@ -55,6 +55,7 @@ func createStormCopies(g *game.Game, original *game.StackObject, spell *game.Car
 // "cast or copy" (magecraft) triggers can match copies, but uses a distinct
 // event kind so cast-only triggers and cast counts ignore it.
 func emitSpellCopiedEvent(g *game.Game, copyObj *game.StackObject, spell *game.CardDef) {
+	emitTargetEvents(g, copyObj)
 	event := game.Event{
 		Kind:          game.EventSpellCopied,
 		SourceID:      copyObj.SourceID,

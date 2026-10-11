@@ -298,7 +298,7 @@ func (a *Ability) computeContentSpan() shared.Span {
 // ability-word/chapter separator span) so that an ability with un-recognized
 // reminder or separator text still fails closed.
 func (a *Ability) CoverageSpans() []shared.Span {
-	return coverageSpans(a.Tokens)
+	return coverageSpans(a.originalParagraphTokens())
 }
 
 // CoverageSpans returns the modal option's must-cover token spans, with the same

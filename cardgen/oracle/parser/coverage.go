@@ -197,6 +197,7 @@ func abilityRecognizedSpans(a *Ability) []shared.Span {
 		add(a.AbilityWord.Span)
 		add(a.AbilityWord.SeparatorSpan)
 	}
+	spans = append(spans, a.ParagraphLabelSpans()...)
 	add(a.BodySeparatorSpan)
 	if a.Optional {
 		add(a.OptionalSpan)

@@ -42,14 +42,19 @@ func TestLowerCabalRitualThresholdMana(t *testing.T) {
 		if add.ManaColor != mana.B {
 			t.Fatalf("instruction[%d] color = %v, want black", i, add.ManaColor)
 		}
-		if !instr.Condition.Exists || !instr.Condition.Val.Condition.Exists {
-			t.Fatalf("instruction[%d] is ungated: %#v", i, instr)
+		if i == 0 {
+			if !instr.Condition.Exists || !instr.Condition.Val.Condition.Exists {
+				t.Fatal("base must capture threshold")
+			}
+			cond := instr.Condition.Val.Condition.Val
+			if len(cond.Aggregates) != 1 || cond.Aggregates[0].Aggregate != game.AggregateControllerGraveyardCardCount ||
+				cond.Aggregates[0].Value != 7 || !cond.Negate {
+				t.Fatalf("base capture=%+v, want NOT(graveyard-card-count >= 7)", cond)
+			}
+		} else {
+			assertConditionConsumer(t, seq[0], instr, i >= 3)
 		}
-		cond := instr.Condition.Val.Condition.Val
-		if len(cond.Aggregates) != 1 || cond.Aggregates[0].Aggregate != game.AggregateControllerGraveyardCardCount || cond.Aggregates[0].Value != 7 {
-			t.Fatalf("instruction[%d] aggregates = %+v, want graveyard-card-count >= 7", i, cond.Aggregates)
-		}
-		if cond.Negate {
+		if i < 3 {
 			baseCount++
 		} else {
 			thresholdCount++

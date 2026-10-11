@@ -189,44 +189,49 @@ func TestLowerDivineOfferingManaValueLifeRider(t *testing.T) {
 
 func TestLowerReanimateManaValueLifeRider(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFace(t, &ScryfallCard{
-		Name:       "Reanimate",
-		Layout:     "normal",
-		TypeLine:   "Sorcery",
-		OracleText: "Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.",
-	})
-	mode := face.SpellAbility.Val.Modes[0]
-	if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
-		t.Fatalf("mode = %+v, want one target and two instructions", mode)
-	}
-	put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
-	if !ok {
-		t.Fatalf("first primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
-	}
-	card, ok := put.Source.CardRef()
-	if !ok || card.Kind != game.CardReferenceTarget || card.TargetIndex != 0 {
-		t.Fatalf("put source = %+v, want target card 0", put.Source)
-	}
-	if !put.Recipient.Exists || put.Recipient.Val != game.ControllerReference() {
-		t.Fatalf("put recipient = %+v, want controller", put.Recipient)
-	}
-	if put.PublishLinked == "" || mode.Sequence[0].PublishResult == "" {
-		t.Fatalf("put instruction = %+v, want linked permanent and result publication", mode.Sequence[0])
-	}
-	lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
-	if !ok {
-		t.Fatalf("second primitive = %T, want game.LoseLife", mode.Sequence[1].Primitive)
-	}
-	dyn := lifeRiderDynamic(t, lose.Amount)
-	if dyn.Kind != game.DynamicAmountObjectManaValue ||
-		dyn.Object != game.LinkedObjectReference(string(put.PublishLinked)) {
-		t.Fatalf("dynamic = %+v, want mana value of linked permanent", dyn)
-	}
-	gate := mode.Sequence[1].ResultGate
-	if !gate.Exists ||
-		gate.Val.Key != mode.Sequence[0].PublishResult ||
-		gate.Val.Succeeded != game.TriTrue {
-		t.Fatalf("life rider gate = %+v, want successful-move gate", gate)
+	for _, referent := range []string{"that card's", "its"} {
+		t.Run(referent, func(t *testing.T) {
+			t.Parallel()
+			face := lowerSingleFace(t, &ScryfallCard{
+				Name:       "Reanimate",
+				Layout:     "normal",
+				TypeLine:   "Sorcery",
+				OracleText: "Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to " + referent + " mana value.",
+			})
+			mode := face.SpellAbility.Val.Modes[0]
+			if len(mode.Targets) != 1 || len(mode.Sequence) != 2 {
+				t.Fatalf("mode = %+v, want one target and two instructions", mode)
+			}
+			put, ok := mode.Sequence[0].Primitive.(game.PutOnBattlefield)
+			if !ok {
+				t.Fatalf("first primitive = %T, want game.PutOnBattlefield", mode.Sequence[0].Primitive)
+			}
+			card, ok := put.Source.CardRef()
+			if !ok || card.Kind != game.CardReferenceTarget || card.TargetIndex != 0 {
+				t.Fatalf("put source = %+v, want target card 0", put.Source)
+			}
+			if !put.Recipient.Exists || put.Recipient.Val != game.ControllerReference() {
+				t.Fatalf("put recipient = %+v, want controller", put.Recipient)
+			}
+			if put.PublishLinked == "" || mode.Sequence[0].PublishResult == "" {
+				t.Fatalf("put instruction = %+v, want linked permanent and result publication", mode.Sequence[0])
+			}
+			lose, ok := mode.Sequence[1].Primitive.(game.LoseLife)
+			if !ok {
+				t.Fatalf("second primitive = %T, want game.LoseLife", mode.Sequence[1].Primitive)
+			}
+			dyn := lifeRiderDynamic(t, lose.Amount)
+			if dyn.Kind != game.DynamicAmountObjectManaValue ||
+				dyn.Object != game.LinkedObjectReference(string(put.PublishLinked)) {
+				t.Fatalf("dynamic = %+v, want mana value of linked permanent", dyn)
+			}
+			gate := mode.Sequence[1].ResultGate
+			if !gate.Exists ||
+				gate.Val.Key != mode.Sequence[0].PublishResult ||
+				gate.Val.Succeeded != game.TriTrue {
+				t.Fatalf("life rider gate = %+v, want successful-move gate", gate)
+			}
+		})
 	}
 }
 
@@ -314,9 +319,8 @@ func TestLifeRiderFailsClosed(t *testing.T) {
 		// Mana value is only modeled when a prior clause destroys the target
 		// permanent; exile cannot prove the battlefield referent the same way.
 		"Exile target creature. Its controller gains life equal to its mana value.",
-		// "Its" binds directly to a target, but the target is a card rather than
-		// a battlefield object; only the exact prior-result wording is supported.
-		"Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to its mana value.",
+		// A singular amount cannot select one of multiple returned creatures.
+		"Put two target creature cards from a graveyard onto the battlefield under your control. You lose life equal to its mana value.",
 		"Put target artifact card from a graveyard onto the battlefield under your control. You lose life equal to that card's mana value.",
 		"Put up to two target creature cards from graveyards onto the battlefield under your control. You lose life equal to that card's mana value.",
 		"Put target creature card from a graveyard into its owner's hand. You lose life equal to that card's mana value.",

@@ -491,7 +491,8 @@ func isZeroGameLoyaltyAbility(v game.LoyaltyAbility) bool {
 
 // isZeroGameTriggeredAbility reports whether every field of a game.TriggeredAbility holds its zero value.
 func isZeroGameTriggeredAbility(v game.TriggeredAbility) bool {
-	return !(v.Text != "") &&
+	return !(v.ZoneOfFunction != 0) &&
+		!(v.Text != "") &&
 		!(!isZeroGameTriggerCondition(v.Trigger)) &&
 		!(v.Optional) &&
 		!(v.MaxTriggersPerTurn != 0) &&
@@ -890,7 +891,14 @@ func isZeroGameInstruction(v game.Instruction) bool {
 		!(v.TemptingOffer) &&
 		!(len(v.TemptingOfferBody) > 0) &&
 		!(v.PublishResult != "") &&
+		!(!isZeroGameLocalProducts(v.LocalProducts)) &&
 		!(v.Description != "")
+}
+
+// isZeroGameLocalProducts reports whether every field of a game.LocalProducts holds its zero value.
+func isZeroGameLocalProducts(v game.LocalProducts) bool {
+	return !(len(v.Results) > 0) &&
+		!(len(v.Links) > 0)
 }
 
 // isZeroGameResolutionPayment reports whether every field of a game.ResolutionPayment holds its zero value.
@@ -7100,9 +7108,17 @@ func (r Renderer) renderGameInstruction(ctx *renderCtx, v game.Instruction) (str
 		ctx.need(importGame)
 		fields = append(fields, "PublishResult: "+lit34+",")
 	}
+	if !isZeroGameLocalProducts(v.LocalProducts) {
+		lit35, err36 := r.renderGameLocalProducts(ctx, v.LocalProducts)
+		if err36 != nil {
+			return "", fmt.Errorf("game.Instruction.LocalProducts: %w", err36)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "LocalProducts: "+lit35+",")
+	}
 	if v.Description != "" {
-		lit35 := strconv.Quote(string(v.Description))
-		fields = append(fields, "Description: "+lit35+",")
+		lit37 := strconv.Quote(string(v.Description))
+		fields = append(fields, "Description: "+lit37+",")
 	}
 	return structLit("game.Instruction", fields), nil
 }
@@ -7386,6 +7402,53 @@ func (r Renderer) renderGameLandwalkKeyword(ctx *renderCtx, v game.LandwalkKeywo
 	return structLit("game.LandwalkKeyword", fields), nil
 }
 
+// renderGameLibraryCardCharacteristics renders a game.LibraryCardCharacteristics value as a Go composite literal.
+func (r Renderer) renderGameLibraryCardCharacteristics(ctx *renderCtx, v game.LibraryCardCharacteristics) (string, error) {
+	var fields []string
+	if v.Power != "" {
+		lit1 := "game.ResultKey(" + strconv.Quote(string(v.Power)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "Power: "+lit1+",")
+	}
+	if v.Toughness != "" {
+		lit2 := "game.ResultKey(" + strconv.Quote(string(v.Toughness)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "Toughness: "+lit2+",")
+	}
+	if v.ManaValue != "" {
+		lit3 := "game.ResultKey(" + strconv.Quote(string(v.ManaValue)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "ManaValue: "+lit3+",")
+	}
+	return structLit("game.LibraryCardCharacteristics", fields), nil
+}
+
+// renderGameLocalProducts renders a game.LocalProducts value as a Go composite literal.
+func (r Renderer) renderGameLocalProducts(ctx *renderCtx, v game.LocalProducts) (string, error) {
+	var fields []string
+	if len(v.Results) > 0 {
+		var items2 []string
+		for _, item3 := range v.Results {
+			lit4 := "game.ResultKey(" + strconv.Quote(string(item3)) + ")"
+			ctx.need(importGame)
+			items2 = append(items2, lit4)
+		}
+		lit1 := compactNamedSliceLit("", "game.ResultKey", items2)
+		fields = append(fields, "Results: "+lit1+",")
+	}
+	if len(v.Links) > 0 {
+		var items6 []string
+		for _, item7 := range v.Links {
+			lit8 := "game.LinkedKey(" + strconv.Quote(string(item7)) + ")"
+			ctx.need(importGame)
+			items6 = append(items6, lit8)
+		}
+		lit5 := compactNamedSliceLit("", "game.LinkedKey", items6)
+		fields = append(fields, "Links: "+lit5+",")
+	}
+	return structLit("game.LocalProducts", fields), nil
+}
+
 // renderGameLookAtHand renders a game.LookAtHand value as a Go composite literal.
 func (r Renderer) renderGameLookAtHand(ctx *renderCtx, v game.LookAtHand) (string, error) {
 	var fields []string
@@ -7415,6 +7478,14 @@ func (r Renderer) renderGameLookAtLibraryTop(ctx *renderCtx, v game.LookAtLibrar
 		lit3 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
 		ctx.need(importGame)
 		fields = append(fields, "PublishLinked: "+lit3+",")
+	}
+	if v.PublishCharacteristics != (game.LibraryCardCharacteristics{}) {
+		lit4, err5 := r.renderGameLibraryCardCharacteristics(ctx, v.PublishCharacteristics)
+		if err5 != nil {
+			return "", fmt.Errorf("game.LookAtLibraryTop.PublishCharacteristics: %w", err5)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "PublishCharacteristics: "+lit4+",")
 	}
 	return structLit("game.LookAtLibraryTop", fields), nil
 }
@@ -8073,6 +8144,14 @@ func (r Renderer) renderGameMoveCard(ctx *renderCtx, v game.MoveCard) (string, e
 	if v.PublishLinkedObjectScoped {
 		lit20 := strconv.FormatBool(bool(v.PublishLinkedObjectScoped))
 		fields = append(fields, "PublishLinkedObjectScoped: "+lit20+",")
+	}
+	if v.PublishDepartureCharacteristics != (game.LibraryCardCharacteristics{}) {
+		lit21, err22 := r.renderGameLibraryCardCharacteristics(ctx, v.PublishDepartureCharacteristics)
+		if err22 != nil {
+			return "", fmt.Errorf("game.MoveCard.PublishDepartureCharacteristics: %w", err22)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "PublishDepartureCharacteristics: "+lit21+",")
 	}
 	return structLit("game.MoveCard", fields), nil
 }
@@ -10464,6 +10543,14 @@ func (r Renderer) renderGameReveal(ctx *renderCtx, v game.Reveal) (string, error
 		}
 		ctx.need(importGame)
 		fields = append(fields, "Card: "+lit9+",")
+	}
+	if v.PublishCharacteristics != (game.LibraryCardCharacteristics{}) {
+		lit11, err12 := r.renderGameLibraryCardCharacteristics(ctx, v.PublishCharacteristics)
+		if err12 != nil {
+			return "", fmt.Errorf("game.Reveal.PublishCharacteristics: %w", err12)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "PublishCharacteristics: "+lit11+",")
 	}
 	return structLit("game.Reveal", fields), nil
 }
@@ -13538,50 +13625,58 @@ func (r Renderer) renderGameTriggeredAbilityPointer(ctx *renderCtx, v game.Trigg
 // renderGameTriggeredAbilityLiteral renders a game.TriggeredAbility value as a Go composite literal.
 func (r Renderer) renderGameTriggeredAbilityLiteral(ctx *renderCtx, v game.TriggeredAbility) (string, error) {
 	var fields []string
+	if v.ZoneOfFunction != 0 {
+		lit1, err2 := enumLiteral(zoneTypeLiterals, "zone.Type", v.ZoneOfFunction)
+		if err2 != nil {
+			return "", fmt.Errorf("game.TriggeredAbility.ZoneOfFunction: %w", err2)
+		}
+		ctx.need(importZone)
+		fields = append(fields, "ZoneOfFunction: "+lit1+",")
+	}
 	if v.Text != "" {
-		lit1 := strconv.Quote(string(v.Text))
-		fields = append(fields, "Text: "+lit1+",")
+		lit3 := strconv.Quote(string(v.Text))
+		fields = append(fields, "Text: "+lit3+",")
 	}
 	if !isZeroGameTriggerCondition(v.Trigger) {
-		lit2, err3 := r.renderGameTriggerCondition(ctx, v.Trigger)
-		if err3 != nil {
-			return "", fmt.Errorf("game.TriggeredAbility.Trigger: %w", err3)
+		lit4, err5 := r.renderGameTriggerCondition(ctx, v.Trigger)
+		if err5 != nil {
+			return "", fmt.Errorf("game.TriggeredAbility.Trigger: %w", err5)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "Trigger: "+lit2+",")
+		fields = append(fields, "Trigger: "+lit4+",")
 	}
 	if v.Optional {
-		lit4 := strconv.FormatBool(bool(v.Optional))
-		fields = append(fields, "Optional: "+lit4+",")
+		lit6 := strconv.FormatBool(bool(v.Optional))
+		fields = append(fields, "Optional: "+lit6+",")
 	}
 	if v.MaxTriggersPerTurn != 0 {
-		lit5 := strconv.FormatInt(int64(v.MaxTriggersPerTurn), 10)
-		fields = append(fields, "MaxTriggersPerTurn: "+lit5+",")
+		lit7 := strconv.FormatInt(int64(v.MaxTriggersPerTurn), 10)
+		fields = append(fields, "MaxTriggersPerTurn: "+lit7+",")
 	}
 	if v.CountsResolutionsThisTurn {
-		lit6 := strconv.FormatBool(bool(v.CountsResolutionsThisTurn))
-		fields = append(fields, "CountsResolutionsThisTurn: "+lit6+",")
+		lit8 := strconv.FormatBool(bool(v.CountsResolutionsThisTurn))
+		fields = append(fields, "CountsResolutionsThisTurn: "+lit8+",")
 	}
 	if len(v.KeywordAbilities) > 0 {
-		var items8 []string
-		for _, item9 := range v.KeywordAbilities {
-			lit10, err11 := r.renderGameKeywordAbilityValue(ctx, item9)
-			if err11 != nil {
-				return "", fmt.Errorf("game.TriggeredAbility.KeywordAbilities[]: %w", err11)
+		var items10 []string
+		for _, item11 := range v.KeywordAbilities {
+			lit12, err13 := r.renderGameKeywordAbilityValue(ctx, item11)
+			if err13 != nil {
+				return "", fmt.Errorf("game.TriggeredAbility.KeywordAbilities[]: %w", err13)
 			}
 			ctx.need(importGame)
-			items8 = append(items8, lit10+",")
+			items10 = append(items10, lit12+",")
 		}
-		lit7 := namedSliceLit("", "game.KeywordAbility", items8)
-		fields = append(fields, "KeywordAbilities: "+lit7+",")
+		lit9 := namedSliceLit("", "game.KeywordAbility", items10)
+		fields = append(fields, "KeywordAbilities: "+lit9+",")
 	}
 	if !isZeroGameAbilityContent(v.Content) {
-		lit12, err13 := r.renderGameAbilityContent(ctx, v.Content)
-		if err13 != nil {
-			return "", fmt.Errorf("game.TriggeredAbility.Content: %w", err13)
+		lit14, err15 := r.renderGameAbilityContent(ctx, v.Content)
+		if err15 != nil {
+			return "", fmt.Errorf("game.TriggeredAbility.Content: %w", err15)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "Content: "+lit12+",")
+		fields = append(fields, "Content: "+lit14+",")
 	}
 	return structLit("game.TriggeredAbility", fields), nil
 }

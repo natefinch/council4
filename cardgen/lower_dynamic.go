@@ -968,7 +968,7 @@ func exactDamageAmountReferences(amount compiler.CompiledAmount, references []co
 	// power, toughness, or counter count. Each must lower independently, but they
 	// need not share a binding.
 	_, sourceOK := lowerDamageSourceReference(references[:1])
-	_, amountOK := lowerDamageSourceReference(references[1:])
+	_, amountOK := lowerDamageAmountObject(amount, references[1:])
 	return sourceOK && amountOK
 }
 
@@ -988,6 +988,7 @@ func lowerDamageAmountObject(amount compiler.CompiledAmount, references []compil
 		return lowerObjectReference(references[i], referenceLoweringContext{
 			AllowSource: true,
 			AllowEvent:  true,
+			AllowTarget: references[i].ExactDamageTargetCharacteristic(amount),
 		})
 	}
 	return game.ObjectReference{}, false
@@ -997,10 +998,17 @@ func lowerDamageSourceReference(references []compiler.CompiledReference) (game.O
 	if len(references) != 1 {
 		return game.ObjectReference{}, false
 	}
-	return lowerObjectReference(references[0], referenceLoweringContext{
-		AllowSource: true,
-		AllowEvent:  true,
-	})
+	switch references[0].DamageAttribution() {
+	case compiler.DamageAttributionResolvingSource:
+		return game.ObjectReference{}, true
+	case compiler.DamageAttributionOriginalObject:
+		return lowerObjectReference(references[0], referenceLoweringContext{
+			AllowSource: true,
+			AllowEvent:  true,
+		})
+	default:
+		return game.ObjectReference{}, false
+	}
 }
 
 func validModifyPTAmount(effect *compiler.CompiledEffect, referenceCount int) bool {
@@ -1177,6 +1185,7 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
+		spec.Selection = opt.Val(damageableSelection())
 	case compiler.SelectorCreature, compiler.SelectorPlaneswalker, compiler.SelectorBattle:
 		permanent, ok := permanentTargetSpecWithCardinality(target)
 		if !ok {
@@ -1386,7 +1395,11 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 		selection.Toughness = opt.Val(target.Selector.Toughness)
 	}
 	if target.Selector.Another || target.Selector.Other {
-		selection.ExcludeSource = true
+		if target.ExcludesPriorPermanentTargets() {
+			spec.DistinctFromPriorTargets = true
+		} else {
+			selection.ExcludeSource = true
+		}
 	}
 	if target.Selector.TokenOnly {
 		selection.TokenOnly = true

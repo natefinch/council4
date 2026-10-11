@@ -599,7 +599,7 @@ func (p ReorderLibraryTop) instructionRefs() primitiveRefs {
 	return quantityRefs(p.Amount)
 }
 func (p LookAtLibraryTop) instructionRefs() primitiveRefs {
-	return primitiveRefs{publishesLinked: p.PublishLinked}
+	return primitiveRefs{publishesLinked: p.PublishLinked, publishesResults: p.PublishCharacteristics.keys()}
 }
 func (ShuffleLibrary) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (ShuffleGraveyardIntoLibrary) instructionRefs() primitiveRefs {
@@ -716,6 +716,7 @@ func (p Reveal) instructionRefs() primitiveRefs {
 	}
 	refs := quantityRefs(p.Amount)
 	refs.publishesLinked = p.PublishLinked
+	refs.publishesResults = p.PublishCharacteristics.keys()
 	return refs
 }
 
@@ -920,7 +921,7 @@ func (CreateReflexiveTrigger) instructionRefs() primitiveRefs { return primitive
 func (p CreateReplacement) instructionRefs() primitiveRefs    { return objectReferenceRefs(p.Object) }
 func (p PreventDamage) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
 func (p MoveCard) instructionRefs() primitiveRefs {
-	refs := primitiveRefs{publishesLinked: p.PublishLinked}
+	refs := primitiveRefs{publishesLinked: p.PublishLinked, publishesResults: p.PublishDepartureCharacteristics.keys()}
 	if p.Player.Kind() != PlayerReferenceNone {
 		return mergePrimitiveRefs(refs, quantityRefs(p.Amount))
 	}

@@ -30,10 +30,14 @@ func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event)
 // the stack first (CR 601.2a), pay its costs (CR 601.2f-h), and only then become
 // cast; obj must already be on the stack when this is called.
 func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Event) {
+	emitSpellCastEventsWithTargets(g, obj, castEvent, prepareTargetEvents(g, obj))
+}
+
+func emitSpellCastEventsWithTargets(g *game.Game, obj *game.StackObject, castEvent game.Event, targets []game.Event) {
 	consumeNextSpellCantBeCounteredEffects(g, obj)
 	consumeNextSpellAsThoughFlashEffects(g, obj)
 	consumeNextSpellKeywordGrantEffects(g, obj)
-	emitTargetEvents(g, obj)
+	emitPreparedTargetEvents(g, obj, targets)
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID
 	castPlayer := castEvent.Controller
@@ -148,6 +152,11 @@ func spellDefForStackObject(g *game.Game, obj *game.StackObject) (*game.CardDef,
 func pushAbilityToStack(g *game.Game, obj *game.StackObject) {
 	g.Stack.Push(obj)
 	emitTargetEvents(g, obj)
+}
+
+func pushAbilityToStackWithTargets(g *game.Game, obj *game.StackObject, targets []game.Event) {
+	g.Stack.Push(obj)
+	emitPreparedTargetEvents(g, obj, targets)
 }
 
 // cardInstanceFaceDef looks up a CardInstance and its face definition in one

@@ -66,6 +66,27 @@ publishers, named-all groups, conflicting result gates, and modal scalar
 namespaces remain fail-closed. Parser-owned group conditions capture their
 truth once before removal and retain it for every expanded consumer.
 
+Resolving conditional alternatives in compatible instant/sorcery paragraphs
+join in the parser before reference and condition proof finalization. Original
+rules-free ability-word labels retain explicit lexical coverage; unknown labels,
+modal paragraphs, future-event replacements, and competing alternatives refuse.
+The parser names the replaced ClauseID, and shared assembly captures its branch
+predicate before the base instruction mutates state. Expanded instructions share
+that captured truth; a later independent conditional paragraph evaluates again
+at its own clause. PT, damage, mana, counters, and counter-payment alternatives
+use ordinary adapters rather than whole-face alternative combiners. Unmodeled
+riders still refuse the whole card, including Arrow Storm's unpreventable damage
+rider tracked in #2256.
+
+Single, divided, and kicker-scaled damage target adapters explicitly select
+creatures, planeswalkers, and battles while retaining player targets separately;
+target-constraint prose does not determine damageable permanent membership.
+Conditional divided-damage clauses refuse because declaration-time allocations
+are not retained on the stack (#3236). Existing single-spec divided handlers
+choose allocations at resolution, so their tests do not certify announcement
+timing. Represented deferred permanent/player slots retain their lost share
+without restoring target identity or legality.
+
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
 can therefore remain the subject after exile without being confused with the
@@ -93,11 +114,108 @@ Postfix characteristic gates retain their own parser subject occurrences.
 Conditional copiable counter riders are excluded only when the shared
 enter-with-counter grammar owns them; ordinary counter placement must keep
 its creature or planeswalker gate and consume the actual target or product.
-Optional/plural producers, competing antecedents, resolution-chosen reveal/look
-subjects, and permanent/card union selection retain fail-closed boundaries.
+Optional/plural battlefield producers, competing antecedents, and permanent/card
+union selection retain fail-closed boundaries.
 Immediate referenced-permanent consequences use the same exact product context
 in modal and non-modal bodies. A delayed product consumer without an explicit
 captured reference refuses rather than rereading a later publication.
+
+Singular top-library LOOK and REVEAL clauses use the shared ordered-clause
+lowerer. The parser owns the exact library owner and each card reference's
+producer ClauseID; the compiler binds that typed identity and the sequence
+planner publishes a canonical product key. Intervening independent clauses do
+not change the observed subject. Sequence clipping and folding reindex these
+references by ClauseID, never by Oracle text.
+
+Observations publish the actual CardID and captured zone incarnation, including
+known version zero. Empty, declined, skipped, or unavailable observations clear
+only their own publication. LOOK is private to the ability controller; REVEAL
+emits the actual owner's public event. Card predicates consume that observation,
+not a later top card or a battlefield incarnation. Unavailable subjects do not
+publish a false predicate for `Otherwise`. A grouped predicate is evaluated once;
+independent predicates reevaluate at their own printpoint. Supported card moves
+preserve ownership, and placing the same observed card at its library's top or
+bottom does not create a new zone incarnation.
+
+Observed power and toughness amounts publish separate characteristic scalar
+keys, after proving the actual card and its captured incarnation. Literal zero
+is available; absent or star characteristics are unavailable. Draw and life
+consumers read those exact frozen scalars through `AmountAvailable`, not through
+the observation's success or card count. Scalars survive a subsequent draw or
+move, while later independent card predicates still require the live captured
+incarnation. Overlapping unmodeled result gates fail closed.
+Exact optional LOOK/REVEAL power and toughness consumers use the same typed
+amount-NodeID/producer-ClauseID proof whether adjacent or separated by an
+independent clause. This does not admit optional source/permanent amounts or
+generic observed mana-value compositions.
+
+An existing reveal-to-hand mana-value consequence captures a separately
+available printed mana-value scalar at observation, before the move invalidates
+the library incarnation. Its consumers use `AmountAvailable`, independent of
+whether the requested hand move succeeds or is replaced. Known no-cost mana
+value zero remains available; an unavailable card never supplies a default zero.
+The scalar shares the observation's local lifetime without relaxing card identity.
+Resolving source-state conditions receive the live permanent identified by the
+stack object's exact source ObjectID, never a target or a later permanent made
+from the same card.
+
+Explicit "the looked-at card" and "the revealed card" nouns bind to compatible
+parser-owned producers, even across independent observations. Generic card nouns
+retain their modeled recency. A linked reveal of an already observed card keeps
+that original top-card producer identity rather than claiming a new observation
+of the library's current top card. Competing unmodeled subjects remain refused.
+
+An observed-card move into "that player's" zone carries separate parser-owned
+library-owner provenance matching the card's producer. The observed player and
+card owner do not become the consequence actor. Optional fixed life payments
+lower to the existing `Pay` cost primitive, which checks affordability and asks
+once; the following move requires actual payment success, not choice acceptance.
+Singleton payment triggers leave that sole choice with `Pay`, rather than adding
+an outer optional-trigger prompt. Ordinary optional triggers and independent
+optional riders retain their own decisions; optional life loss remains a
+nonpayment primitive.
+
+Optional observations do not make their condition consumers or unrelated riders
+optional: those consumers read actual product availability. Qualified
+card predicates retain exact reference identity, including permanent
+type unions; an unproven observation reference cannot fall back to a death-event
+permanent. An action's own postfix predicate reads its earlier observation,
+before that action can replace the subject's domain.
+
+The parser distinguishes `You may A if P. Otherwise B` from predicate-leading
+`If P, you may A. Otherwise B`. The former uses one frozen predicate and an
+actual optional-action receipt: B runs for false P or true P plus decline.
+Acceptance is not effectiveness, so an accepted replacement-diverted placement
+does not become a decline. Unavailable predicates or skipped publishers do not
+borrow enclosing receipts. The shared planner assembles two disjoint B branches
+with existing condition/result gates; no public instruction schema is added.
+Compound or ambiguous postfix action/Otherwise scopes remain refused.
+
+The existing owner-of-shuffled-permanent reveal adapter carries an exact
+library-owner ClauseID and singular observation amount. Its contextual predicate
+names that observed product, not the shuffled target. The adapter consumes this
+typed subject proof while retaining its existing three-instruction CardDef;
+missing, plural, or incompatible owner/producer provenance is refused.
+
+Positively owned
+publishers declare typed `LocalProducts` with one instruction-sequence invocation
+as their lifetime. Selected modes and repeat iterations receive fresh product
+frames, including scalar, excess, receipt, and result-object cells. Read-only
+nested bodies see intended parent products; a nested same-key publisher hides
+and then restores them. Local linked objects have unique resolution addresses,
+independent of a source leaving and returning. Schedule-time frozen captures
+survive frame cleanup, and conditional repeat control reads its current receipt
+before the frame exits. Persistent CR 607 links and paid-cost facts do not enter
+these frames; condition booleans remain resolver-local. Legacy undeclared,
+colliding conditional publications retain their fail-closed boundary.
+
+Continuation receipts belong to the currently invoked sequence, not merely to a
+same-key cell visible from its parent. Nonpublishing selected modes do not return
+inherited success or replace a publishing mode's receipt; an actually skipped
+publisher makes its receipt unavailable. A receipt query isolates its positively
+owned result even for a legacy publisher without a local declaration, then
+restores the enclosing receipt, objects, amount, and excess. This does not expand
+nested result-gate validation or the compiler's publication contracts.
 
 Fixed-phase delayed bodies use that same shared sequence interface. Parser-owned
 NodeID, producer ClauseID, target occurrence, subject domain, and condition timing
@@ -298,10 +416,11 @@ Vanguard cards are excluded with explicit report reasons.
    grammar requires modeled controller action ownership. Costs, opaque verbs,
    shared-characteristic relationships, expanded producers without an aggregate,
    overlapping result predicates, and mixed reflexive/ordinary result flows
-   remain fail-closed. Clause IDs are local to a mode; selecting multiple modes
-   with colliding, potentially skipped result publications requires a shared
-   namespace and is refused. This includes repeat bodies and bonus mode choices;
-   guaranteed publishers may overwrite a key before their own local consumers.
+   remain fail-closed. Clause IDs are local to a mode; positively owned result
+   publications use lexical product frames for multiple modes, repeat bodies,
+   and bonus mode choices. Undeclared legacy conditional publications with
+   colliding keys remain refused; guaranteed legacy publishers may overwrite a
+   key before their own consumers.
    A specific "that spell is countered this way" condition owns a counter
    producer ClauseID, subject reference identity and target occurrence. The
    compiler preserves that exact binding ahead of generic product heuristics,
@@ -325,7 +444,65 @@ Vanguard cards are excluded with explicit report reasons.
    remain outside that accounting path.
    `reference.go` is the single adapter from bound semantic references to typed
    runtime object and card references, including event-permanent LKI and linked
-   prior-instruction results. Ordered lowering also supports the exact linked
+   prior-instruction results. The compiler's reference-binding Module owns the
+   small `ReferenceSubjectProof` Interface: validated domain, parser reference
+   identity, exact target/producer occurrence, enclosing source shell, and
+   permitted lifetime. Proof is finalized after condition and returned-subject
+   rewrites and shared by canonical, effect, subject, and condition copies.
+   Identical ClauseIDs in another ability or mode are not the same producer.
+   The mechanical Adapter may choose a supported operation, but cannot select
+   noun meaning or lifetime through source-as-card flags. Intrinsic source,
+   attachment, target, and delayed subjects use explicit compiler constructors;
+   a missing proof is never repaired by a lowerer-created reference NodeID.
+
+   Live self mutation uses the original source ObjectID, even if its card leaves
+   and reenters. Source/event LKI reads and exact self-death card moves are
+   separate contracts. A post-entry permanent noun consumes the actual entered
+   product; accepting an optional action does not publish a permanent. Explicit
+   card predicates may retain the original observed card and its proven entered
+   incarnation as disjoint, version-checked alternatives. Each group's predicate
+   is frozen once; a later independent clause evaluates at its printed point.
+   Reached battlefield-to-hand/exile moves consume the actual entered object,
+   not the old library observation. Unavailable, stale, ambiguous, incompatible,
+   foreign-body, or unpublished subjects refuse the complete CardDef.
+
+   An entered-product consumer may demand the existing optional action owner's
+   decision receipt even for a singleton action. This does not create another
+   owner, choice, success signal, or alias key; unrelated singleton optionals
+   remain unchanged. Overlapping card-lineage conditions and unsupported
+   optional/result/capture envelopes fail closed.
+
+   Deletion test: removing one effect Adapter does not remove subject semantics;
+   removing the reference-binding Module removes their single authority.
+   Locality puts domain and lifetime decisions at that Seam. Leverage lets P/T,
+   keyword, movement, condition, and delayed-capture Implementations reuse the
+   same proof without per-card templates, a universal IR, or a parallel model.
+
+   The proof also records the intended consumer operation, derived from the
+   owning typed effect, amount, or condition, never selected by an Adapter:
+   live mutation, characteristic observation, damage attribution, card action,
+   player projection, stack disposition, or policy. Only a permanent subject can
+   carry live mutation. Resolving-spell damage is attributed to the stack
+   occurrence, not mutated as a permanent. Owner/controller readings project a
+   proved object without granting it mutation. A selected spell's casting cost,
+   a correlated per-opponent choice, a defending player's payment decision, and a
+   cast creature's entry replacement are policy subjects, not objects. Within one
+   ordinary spell, a later paragraph may name the earlier paragraph's single
+   exact permanent target without redeclaring it; plural or modal earlier
+   targets are never borrowed. A singular exiled top card names the actual exile
+   product; a singular pronoun cannot pick one member of a plural top-card
+   product. These uses are derived and tested across the retained originals, but
+   the generic object Adapter does not yet enforce each one at every caller.
+
+   Two narrow runtime contracts serve exact lifetimes. `MoveCard` may publish
+   the moving card's departure power/toughness, captured after exact reference
+   validation and before replacement, under existing scalar result keys:
+   known absent P/T is zero, while unknown, star, or stale identity is
+   unavailable. `MoveResolvingSpell` to Hand returns only the non-copy
+   resolving spell to its owner's hand through normal stack disposition. Impulse
+   exile publishes the card's reached exile version and publishes nothing for a
+   diverted card.
+   Ordered lowering also supports the exact linked
    shuffle/reveal/permanent-hit sequence: shuffle one targeted permanent into its
    owner's library, reveal that owner's top card, then put the same linked card
    onto the battlefield under that owner's control only when it is a permanent

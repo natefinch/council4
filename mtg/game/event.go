@@ -170,6 +170,9 @@ const (
 // until a player would receive priority, after the source has left the
 // battlefield or changed controller.
 type EventTriggeredAbility struct {
+	triggerOrigin             TriggerOrigin
+	SourceZone                zone.Type
+	SourceZoneVersion         uint64
 	Controller                PlayerID
 	SourceID                  id.ID
 	SourceCardID              id.ID
@@ -473,7 +476,8 @@ type Event struct {
 	// TriggeredAbilitiesCaptured distinguishes an event whose battlefield
 	// triggers were checked at event time, including when none matched.
 	TriggeredAbilitiesCaptured bool
-	TriggeredAbilities         []EventTriggeredAbility
+	// Exact event-card sources may be captured while the battlefield scan is deferred.
+	TriggeredAbilities []EventTriggeredAbility
 
 	// ChosenTypeTriggerDoublers snapshots the active chosen-creature-type
 	// trigger doublers at event emission, so ordinary triggered abilities this

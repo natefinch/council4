@@ -42,8 +42,9 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	tokens, diagnostics := lexAll(source)
 	lines := splitLines(tokens)
 	document := Document{
-		Source:   source,
-		CardName: context.CardName,
+		InstantOrSorcery: context.InstantOrSorcery,
+		Source:           source,
+		CardName:         context.CardName,
 		Span: shared.Span{
 			Start: shared.Position{Line: 1, Column: 1},
 			End:   eofPosition(tokens),
@@ -149,6 +150,9 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 		}
 		document.Abilities = append(document.Abilities, ability)
 	}
+	joined, joinDiagnostics := joinResolvingAlternativeParagraphs(source, context, document.Abilities)
+	document.Abilities = joined
+	diagnostics = append(diagnostics, joinDiagnostics...)
 	emitAtoms(document.Abilities, context.CardName, context.Legendary)
 	emitCanBeCommander(document.Abilities, context.CardName)
 	emitDeclareAttackersCastRestriction(document.Abilities)
@@ -226,6 +230,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	stripConditionalModalHeaderSemantics(document.Abilities)
 	emitDelayedTriggerEffects(document.Abilities, context.CardName, context.Legendary, context.InstantOrSorcery)
 	emitAbilityConditionOwnership(document.Abilities)
+	emitLibraryCardReferenceOwnership(document.Abilities)
 	emitRemovedCounterQuantityOwnership(document.Abilities)
 	emitPaidCostSubjectBindings(document.Abilities)
 	emitDelayedSubjectOwnership(document.Abilities)

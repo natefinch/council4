@@ -41,12 +41,16 @@ func TestResultThisWayBlinkKeepsDepartureCharacteristics(t *testing.T) {
 				}
 			}
 			sequence := defs[0].SpellAbility.Val.Modes[0].Sequence
-			engine.resolveInstructionWithChoices(g, obj, &sequence[0], agents, log)
+			// Resolve the spell's instructions inside its own local-product frame,
+			// observing and mutating state between them during that lifetime.
+			restore := enterLocalProductFrame(g, obj, sequence)
+			resolver := newEffectResolver(engine, g, obj, agents, log)
+			resolver.resolveInstruction(&sequence[0])
 			saved := obj.ResolutionResultObjects["if-you-do"]
 			if len(saved) != 1 || slices.Contains(saved[0].Subtypes, types.Pirate) != pirate {
 				t.Fatalf("departure snapshots = %#v", saved)
 			}
-			engine.resolveInstructionWithChoices(g, obj, &sequence[1], agents, log)
+			resolver.resolveInstruction(&sequence[1])
 			if len(g.Battlefield) != 1 || g.Battlefield[0].ObjectID == permanent.ObjectID {
 				t.Fatal("linked return did not produce a new permanent")
 			}
@@ -60,7 +64,7 @@ func TestResultThisWayBlinkKeepsDepartureCharacteristics(t *testing.T) {
 				lki.Subtypes[0] = "Elf"
 			}
 			g.LastKnownInformation[permanent.ObjectID] = lki
-			engine.resolveInstructionWithChoices(g, obj, &sequence[2], agents, log)
+			resolver.resolveInstruction(&sequence[2])
 			want := 0
 			if pirate {
 				want = 1
@@ -68,6 +72,8 @@ func TestResultThisWayBlinkKeepsDepartureCharacteristics(t *testing.T) {
 			if got := g.Players[game.Player1].Hand.Size(); got != want {
 				t.Fatalf("drawn = %d, want %d", got, want)
 			}
+			restore()
+			assertResultKeysCleaned(t, obj, "if-you-do")
 		})
 	}
 }

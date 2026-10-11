@@ -76,6 +76,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		return false
 	}
 	g.Stack.Push(obj)
+	targetEvents := prepareTargetEvents(g, obj)
 	prefs := e.paymentPreferencesForSpellFromZone(g, controllerID, cardID, fromZone, game.FaceFront, spellDef, 0, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, controllerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
@@ -105,7 +106,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	// stormCopyCount must be read before the spell-cast event is emitted, since
 	// that event increments the storm count for later spells this turn.
 	stormCopies := stormCopyCount(g, spellDef)
-	emitSpellCastEvents(g, obj, game.Event{
+	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     cardID,
 		StackObjectID:                obj.ID,
 		Controller:                   controllerID,
@@ -120,7 +121,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
 		FromZone:                     fromZone,
 		ToZone:                       zone.Stack,
-	})
+	}, targetEvents)
 	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	e.resolveCascadeForCast(g, obj, spellDef, agents, log)

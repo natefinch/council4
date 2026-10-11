@@ -423,7 +423,9 @@ func lowerCounterSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic)
 // enclosing became-target trigger and needs no target.
 func counterStackObjectReference(ctx contentCtx) (game.ObjectReference, []game.TargetSpec, bool) {
 	switch {
-	case len(ctx.content.Targets) == 1 && len(ctx.content.References) == 0:
+	case len(ctx.content.Targets) == 1 &&
+		(len(ctx.content.References) == 0 ||
+			referencesBindTo(ctx.content.References, compiler.ReferenceBindingTarget, 0)):
 		target := ctx.content.Targets[0]
 		if target.Cardinality.Min != 1 || target.Cardinality.Max != 1 {
 			return game.ObjectReference{}, nil, false
@@ -751,9 +753,8 @@ func lowerSacrificeSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnosti
 		len(ctx.content.Modes) == 0 &&
 		!effect.Negated {
 		object, ok := lowerObjectReference(ctx.content.References[0], referenceLoweringContext{
-			AllowSource:      true,
-			SourceCardObject: true,
-			AllowEvent:       true,
+			AllowSource: true,
+			AllowEvent:  true,
 		})
 		if ok {
 			return game.Mode{Sequence: []game.Instruction{{

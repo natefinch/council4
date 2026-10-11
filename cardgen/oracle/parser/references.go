@@ -56,20 +56,30 @@ type Reference struct {
 	Span     shared.Span      `json:"-"`
 	Tokens   []shared.Token   `json:"-"`
 	Text     string           `json:",omitempty"`
-	// CardIdentity records that a self "this <noun>" reference named the source
-	// as a card ("return this card to its owner's hand") rather than as a
+	// CardIdentity records that an explicit noun reference names a card
+	// ("return this card to its owner's hand") rather than a
 	// battlefield permanent ("return this Aura to its owner's hand"). The card
 	// wording tracks the object's card identity into whatever zone it now
 	// occupies (normally the graveyard after a leaves-the-battlefield trigger),
 	// so downstream lowering returns it from that zone by card identity instead
 	// of bouncing a battlefield object.
-	CardIdentity bool `json:",omitempty"`
+	CardIdentity bool       `json:",omitempty"`
+	SubjectNoun  ObjectNoun `json:",omitempty"`
 	// NodeID is a stable typed identifier the parser assigns to every reference
 	// in an ability's (or mode's) single authoritative reference set. Every copy
 	// of the reference distributed into effects, conditions, and the semantic
 	// reference list carries the same NodeID, so downstream stages match "the
 	// same reference" by identity instead of comparing source spans.
 	NodeID int `json:"-"`
+	// ProducerClauseID identifies an observed library card's grammatical
+	// antecedent. Zero leaves other reference domains to their existing binder.
+	ProducerClauseID int `json:",omitempty"`
+	// ReachedCardProducerClauseID preserves the action's exact card lineage for
+	// a later card predicate without changing its original observation owner.
+	ReachedCardProducerClauseID int `json:",omitempty"`
+	// LibraryCardObservation keeps an unproven observation in its own domain;
+	// it cannot fall back to an event permanent when its producer is missing.
+	LibraryCardObservation bool `json:",omitempty"`
 	// Order is the reference's dense source-order rank within its ability or
 	// mode. Downstream stages compare these ranks to decide antecedent ordering
 	// and containment instead of inspecting byte offsets.
@@ -166,6 +176,14 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 			continue
 		}
 		switch {
+		case i+2 < len(tokens) && equalWord(tokens[i], "the") &&
+			(equalWord(tokens[i+1], "revealed") || equalWord(tokens[i+1], "looked-at")) &&
+			equalWord(tokens[i+2], "card"):
+			phrase := tokens[i : i+3]
+			references = append(references, Reference{
+				Kind: ReferenceThatObject, Span: shared.SpanOf(phrase), Tokens: phrase, Text: joinTokens(phrase),
+			})
+			i += 2
 		case i+3 < len(tokens) &&
 			equalWord(tokens[i], "the") && equalWord(tokens[i+1], "creature") &&
 			equalWord(tokens[i+2], "that") && equalWord(tokens[i+3], "died") &&
@@ -257,6 +275,7 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 				Tokens:       phrase,
 				Text:         joinTokens(phrase),
 				CardIdentity: noun == ObjectNounCard,
+				SubjectNoun:  noun,
 			})
 			i++
 		case i+3 < len(tokens) && equalWord(tokens[i], "that") &&
@@ -313,17 +332,23 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 				Text:   joinTokens(phrase),
 			})
 			i++
+		case libraryOwnerPossessiveAt(tokens, i):
+			phrase := tokens[i : i+2]
+			references = append(references, Reference{
+				Kind: ReferenceThatPlayer, Span: shared.SpanOf(phrase), Tokens: phrase, Text: joinTokens(phrase),
+			})
+			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "that") && referenceObjectNoun(tokens[i+1]):
 			phrase := tokens[i : i+2]
 			kind := ReferenceThatObject
+			noun, _ := recognizeObjectNoun(tokens[i+1])
 			if equalWord(tokens[i+1], "player") {
 				kind = ReferenceThatPlayer
 			}
 			references = append(references, Reference{
-				Kind:   kind,
-				Span:   shared.SpanOf(phrase),
-				Tokens: phrase,
-				Text:   joinTokens(phrase),
+				Kind: kind, Span: shared.SpanOf(phrase), Tokens: phrase, Text: joinTokens(phrase),
+				CardIdentity: noun == ObjectNounCard,
+				SubjectNoun:  noun,
 			})
 			i++
 		case referencePronounKind(tokens, i, atoms) != PronounUnknown:
@@ -347,17 +372,27 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 // contracted verb "is" in conditional object matches and the fixed-P/T
 // characteristic grammar consumed by parseReferencedBecomeCharacteristicsEffect.
 func referencePronounKind(tokens []shared.Token, index int, atoms Atoms) PronounKind {
-	if index > 0 && index+2 < len(tokens) &&
+	if index > 0 && index+1 < len(tokens) &&
 		equalWord(tokens[index], "it's") &&
-		(equalWord(tokens[index-1], "if") || equalWord(tokens[index-1], "unless")) &&
-		(equalWord(tokens[index+1], "a") || equalWord(tokens[index+1], "an")) {
+		(equalWord(tokens[index-1], "if") || equalWord(tokens[index-1], "unless")) {
 		if entersAsCopyCounterRiderConditionAt(tokens, index-1) {
 			return PronounUnknown
 		}
 		end := conditionClauseEnd(tokens, index-1)
-		noun := tokens[index+2 : end]
+		start := index + 1
+		var state ConditionSelection
+		if applySourceState(tokens[start:end], atoms, &state) {
+			return PronounIt
+		}
+		if equalWord(tokens[start], "a") || equalWord(tokens[start], "an") {
+			start++
+		} else if !libraryCardObservationBefore(tokens, index) {
+			return PronounUnknown
+		}
+		noun := tokens[start:end]
 		if selection, ok := parseConditionSelection(noun, atoms); ok &&
-			(len(selection.RequiredTypes) > 0 || len(selection.SubtypesAny) > 0 || len(selection.Supertypes) > 0) {
+			(conditionSelectionHasObjectDomain(selection) ||
+				(tokenSuffixWord(noun, "card") || tokenSuffixWord(noun, "cards")) && libraryCardObservationBefore(tokens, index)) {
 			return PronounIt
 		}
 	}

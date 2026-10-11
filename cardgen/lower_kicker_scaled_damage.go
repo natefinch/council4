@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
 )
 
 // maxKickerScaledTargets bounds the target slots a Multikicker "another target
@@ -96,6 +97,7 @@ func kickerScaledDamageTargetSpec(target compiler.CompiledTarget) (game.TargetSp
 		MaxTargets:               maxKickerScaledTargets,
 		Constraint:               target.Text,
 		Allow:                    game.TargetAllowPermanent | game.TargetAllowPlayer,
+		Selection:                opt.Val(damageableSelection()),
 		CountEqualsKickerPlusOne: true,
 	}, true
 }

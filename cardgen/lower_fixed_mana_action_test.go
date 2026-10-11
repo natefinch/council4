@@ -16,7 +16,7 @@ func TestFixedManaChannelBoundary(t *testing.T) {
 		"unsupported life action duration")
 	text := "Until end of turn, any time you could activate a mana ability, you may pay 1 life. If you do, add {C}."
 	assertCardUnsupported(t, &ScryfallCard{Name: "Channel", Layout: "normal", TypeLine: "Sorcery", OracleText: text},
-		"unsupported life action duration")
+		"unsupported life payment")
 }
 
 func TestFixedManaActivationRestrictions(t *testing.T) {

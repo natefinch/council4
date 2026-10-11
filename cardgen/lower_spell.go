@@ -32,7 +32,8 @@ type contentCtx struct {
 	// (e.g. a created token) to the triggering event permanent, so accepting it
 	// would place counters on the wrong object. Standalone effects keep the
 	// EventPermanent binding, which always denotes the triggering permanent.
-	sequenceClause bool
+	sequenceClause      bool
+	sequenceEffectIndex int
 	// singleAction preserves existing homogeneous optional mana output as one
 	// primitive; mixed-color output uses the shared expanded-action envelope.
 	singleAction bool
@@ -114,9 +115,10 @@ type contentCtx struct {
 	// available" — so a single-effect lowerer needs no other change to accept a
 	// prior-instruction-result object once it threads these two fields into its
 	// own referenceLoweringContext.
-	priorInstruction int
-	priorLinkedKey   game.LinkedKey
-	capturedSubject  *capturedContentSubject
+	priorInstruction          int
+	priorLinkedKey            game.LinkedKey
+	observedCharacteristicKey game.ResultKey
+	capturedSubject           *capturedContentSubject
 }
 
 // contentDiagnostic creates a content-level diagnostic attributed to ctx.span.
@@ -195,6 +197,7 @@ func lowerSequenceClauseContent(
 		enclosingKind:           parent.enclosingKind,
 		sequenceClause:          true,
 		singleAction:            parent.singleAction,
+		sequenceEffectIndex:     parent.sequenceEffectIndex,
 		allowEventPronoun:       allowEventPronoun,
 		triggerCardCountEvent:   parent.triggerCardCountEvent,
 		triggerEvent:            parent.triggerEvent,
@@ -208,6 +211,7 @@ func lowerSequenceClauseContent(
 		spellTargetPattern:         parent.spellTargetPattern,
 		priorInstruction:           parent.priorInstruction,
 		priorLinkedKey:             parent.priorLinkedKey,
+		observedCharacteristicKey:  parent.observedCharacteristicKey,
 		capturedSubject:            parent.capturedSubject,
 	}
 	return lowerContent(cardName, ctx, bodySyntax)
@@ -1649,16 +1653,11 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	if consumed.content.Unconsumed() {
 		return nil, false
 	}
-	sourcePermanent := game.SourceCardPermanentReference()
-	if selfBound {
-		var ok bool
-		sourcePermanent, ok = lowerObjectReference(references[0], referenceLoweringContext{
-			AllowSource:      true,
-			SourceCardObject: true,
-		})
-		if !ok {
-			return nil, false
-		}
+	sourcePermanent, ok := lowerObjectReference(references[0], referenceLoweringContext{
+		AllowSource: true, AllowEvent: true,
+	})
+	if !ok {
+		return nil, false
 	}
 	effect := ctx.content.Effects[0]
 	switch effect.Kind {
@@ -1674,23 +1673,9 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 		if effect.ToZone != zone.Hand {
 			return nil, false
 		}
-		// "Return it to its owner's hand" means different zones depending on
-		// where the source rests when the delayed trigger fires. After an
-		// attack/block trigger the creature is still on the battlefield at end
-		// of combat, so it bounces; after a dies trigger it rests in the
-		// graveyard, so it reanimates to hand.
-		if selfTriggerSourceOnBattlefield(ctx.triggerEvent) {
-			return game.MovePermanent{Object: sourcePermanent, Destination: zone.Hand}, true
-		}
-		sourceCard, ok := lowerCardReference(ctx.content.References[0], referenceLoweringContext{AllowSource: true})
-		if !ok {
-			return nil, false
-		}
-		return game.MoveCard{
-			Card:        sourceCard,
-			FromZone:    zone.Graveyard,
-			Destination: zone.Hand,
-		}, true
+		// Card-domain schedules use the shared fixed-phase capture Adapter.
+		// This fallback has already proved an original permanent subject.
+		return game.MovePermanent{Object: sourcePermanent, Destination: zone.Hand}, true
 	case compiler.EffectPut:
 		if effect.ToZone != zone.Library {
 			return nil, false
@@ -1708,16 +1693,6 @@ func lowerDelayedSelfPrimitive(ctx contentCtx) (game.Primitive, bool) {
 	default:
 		return nil, false
 	}
-}
-
-// selfTriggerSourceOnBattlefield reports whether a self trigger leaves its source
-// permanent on the battlefield when its delayed body resolves. Attack and block
-// declarations fire while the creature is on the battlefield, and the matching
-// end-of-combat disposal resolves before the creature leaves, so "return it to
-// its owner's hand" bounces the permanent rather than reanimating a card.
-func selfTriggerSourceOnBattlefield(triggerEvent game.EventKind) bool {
-	return triggerEvent == game.EventAttackerDeclared ||
-		triggerEvent == game.EventBlockerDeclared
 }
 
 // referencesDenoteSelf reports whether every reference names the source
@@ -1984,6 +1959,22 @@ func lowerDealDamageSpell(cardName string, ctx contentCtx) (game.AbilityContent,
 }
 
 func lowerReturnSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if len(ctx.content.Effects) == 1 && ctx.content.Effects[0].Exact &&
+		ctx.content.Effects[0].ToZone == zone.Hand && plainControllerBounceToHand(ctx) &&
+		len(ctx.content.Targets) == 0 && len(ctx.content.References) > 0 {
+		resolving := true
+		for _, reference := range ctx.content.References {
+			resolving = resolving && reference.SubjectSupported() &&
+				reference.Binding == compiler.ReferenceBindingSource &&
+				reference.SubjectLifetime() == compiler.ReferenceLifetimeStackOccurrence &&
+				reference.SupportsUse(compiler.ReferenceUseStackDisposition)
+		}
+		if resolving {
+			return game.Mode{Sequence: []game.Instruction{{
+				Primitive: game.MoveResolvingSpell{Destination: zone.Hand},
+			}}}.Ability(), nil
+		}
+	}
 	if content, ok := lowerSelfCardGraveyardReturn(ctx); ok {
 		return content, nil
 	}
@@ -2082,6 +2073,9 @@ func lowerImmediateSingleEffectSpell(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if content, diagnostic, handled := lowerLibraryCardClause(ctx); handled {
+		return content, diagnostic
+	}
 	ctx.text = textWithoutDelimited(ctx.text, ctx.span, syntax.Reminders)
 	syntax.Tokens = slices.DeleteFunc(
 		append([]shared.Token(nil), syntax.Tokens...),
@@ -2571,6 +2565,9 @@ func lowerPermanentKeywordGrantSpell(ctx contentCtx) (game.AbilityContent, *shar
 // lowerLoseSpellEffect lowers an EffectLose body: either a temporary keyword
 // loss, a life-loss effect, or an unsupported keyword/ability loss.
 func lowerLoseSpellEffect(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	if ctx.content.Effects[0].LifePayment != parser.EffectLifePaymentNone {
+		return lowerLifePaymentClause(ctx)
+	}
 	if (len(ctx.content.Keywords) != 0 || ctx.content.Effects[0].LoseAllAbilities) &&
 		temporaryKeywordDuration(ctx.content.Effects[0].Duration) {
 		return lowerTemporaryKeywordLossSpell(ctx)
