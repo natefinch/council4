@@ -75,6 +75,9 @@ func objectIndex(p game.Primitive) (int, bool) {
 	if v, ok := p.(game.ChooseNewTargets); ok {
 		return v.Object.TargetIndex(), true
 	}
+	if v, ok := p.(game.ChangeStackObjectController); ok {
+		return v.Object.TargetIndex(), true
+	}
 	if v, ok := p.(game.Regenerate); ok {
 		return v.Object.TargetIndex(), true
 	}
@@ -170,6 +173,11 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 		}),
 		objectPrimitive("ChooseNewTargets", func() game.Primitive {
 			return game.ChooseNewTargets{Object: game.TargetStackObjectReference(0)}
+		}),
+		objectPrimitive("ChangeStackObjectController", func() game.Primitive {
+			return game.ChangeStackObjectController{
+				Object: game.TargetStackObjectReference(0), Controller: game.ControllerReference(),
+			}
 		}),
 		objectPrimitive("Regenerate", func() game.Primitive { return game.Regenerate{Object: obj()} }),
 		objectPrimitive("Attach", func() game.Primitive {

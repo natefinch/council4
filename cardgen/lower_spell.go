@@ -411,8 +411,10 @@ func lowerContentDispatch(
 			isManaSpendRider(&ctx.content.Effects[1]) {
 			return lowerManaSpendRiderContent(ctx)
 		}
-		if content, ok := lowerGainControlStackSpellSequence(ctx); ok {
-			return content, nil
+		if ctx.content.Effects[0].Kind == compiler.EffectGainControl &&
+			len(ctx.content.Effects[0].Targets) == 1 &&
+			ctx.content.Effects[0].Targets[0].Selector.Kind == compiler.SelectorSpell {
+			return lowerOrderedEffectSequence(cardName, ctx, syntax)
 		}
 		if ctx.content.Effects[0].Kind == compiler.EffectGainControl ||
 			(ctx.content.Effects[0].Kind == compiler.EffectUntap &&
@@ -628,9 +630,6 @@ func lowerOptionalContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	if content, ok := lowerGainControlStackSpellSequence(ctx); ok {
-		return content, nil
-	}
 	if content, ok := lowerConditionalDestinationPlace(ctx); ok {
 		return content, nil
 	}
