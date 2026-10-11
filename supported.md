@@ -8552,7 +8552,6 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Keeper of the Accord
 - Keeper of the Cadence
 - Keeper of the Nine Gales
-- Keeper of Tresserhorn
 - Keepers of the Faith
 - Keepsake Gorgon
 - Kefnet's Monument
@@ -16427,6 +16426,7 @@ Council4 currently supports **18,655 of 33,011 cards eligible for paper support 
 - Thunder-Thrash Elder
 - Thunderblust
 - Thunderbolt
+- Thunderbreak Regent
 - Thunderclap
 - Thunderclap Wyvern
 - Thundercloud Elemental
