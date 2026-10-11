@@ -101,6 +101,17 @@ func rebaseTargetedPrimitive(primitive game.Primitive, offset, cardOffset int) (
 // omit transform support. Keep it as an explicit allowlist so an unhandled
 // target-bearing primitive fails closed rather than retain a clause-local index.
 func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetIndexTransform) (game.Primitive, bool) {
+	return transformPrimitiveTargetIndicesWithActorScope(primitive, transform, nil)
+}
+
+func transformPrimitiveTargetIndicesWithActorScope(primitive game.Primitive, transform targetIndexTransform, actor *targetedPlayerActorProjection) (game.Primitive, bool) {
+	if value, ok := primitive.(game.RepeatProcess); ok {
+		return transformRepeatProcessTargets(value, transform)
+	}
+	if value, ok := primitive.(game.Explore); ok {
+		value.Creature, ok = transformObjectReference(value.Creature, transform)
+		return value, ok
+	}
 	if value, ok := primitive.(game.Damage); ok {
 		recipient, ok := transformDamageRecipient(value.Recipient, transform)
 		if !ok {
@@ -149,7 +160,7 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		return value, ok
 	}
 	if value, ok := primitive.(game.AddPlayerCounter); ok {
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformPlayerQuantityTargets(&value.Player, &value.Amount, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.MoveCounters); ok {
@@ -178,6 +189,14 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 	}
 	if value, ok := primitive.(game.ModifyPT); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
+		if !ok {
+			return nil, false
+		}
+		value.PowerDelta, ok = transformQuantity(value.PowerDelta, transform)
+		if !ok {
+			return nil, false
+		}
+		value.ToughnessDelta, ok = transformQuantity(value.ToughnessDelta, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Fight); ok {
@@ -213,6 +232,10 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 			return nil, false
 		}
 		value.Object, ok = transformObjectReference(value.Object, transform)
+		if !ok {
+			return nil, false
+		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.RemoveFromCombat); ok {
@@ -261,7 +284,8 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 			}
 			value.Chooser = opt.Val(chooser)
 		}
-		return value, true
+		value.DynamicCount, ok = transformQuantity(value.DynamicCount, transform)
+		return value, ok
 	}
 	if value, ok := primitive.(game.ChooseNewTargets); ok {
 		value.Object, ok = transformObjectReference(value.Object, transform)
@@ -294,27 +318,18 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		return value, ok
 	}
 	if value, ok := primitive.(game.Draw); ok {
-		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-			return value, true
-		}
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformGroupActorQuantityTargets(&value.Player, value.PlayerGroup, &value.Amount, transform, actor)
 		return value, ok
 	}
 	if value, ok := primitive.(game.Discard); ok {
-		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-			return value, true
-		}
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformGroupActorQuantityTargets(&value.Player, value.PlayerGroup, &value.Amount, transform, actor)
 		return value, ok
 	}
 	if value, ok := primitive.(game.MoveTopOfLibrary); ok {
 		// The player remap is identical for every destination, so this stays
 		// destination-generic: both the graveyard (mill) and exile forms remap
 		// their single-player referent the same way.
-		if value.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-			return value, true
-		}
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformGroupActorQuantityTargets(&value.Player, value.PlayerGroup, &value.Amount, transform, actor)
 		return value, ok
 	}
 	if value, ok := primitive.(game.RevealUntil); ok {
@@ -343,7 +358,7 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		return value, ok
 	}
 	if value, ok := primitive.(game.RevealTopPartition); ok {
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformPlayerQuantityTargets(&value.Player, &value.Amount, transform)
 		return value, ok
 	}
 	if value, ok := primitive.(game.IterativeLibraryProcess); ok {
@@ -356,11 +371,11 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		return value, ok
 	}
 	if value, ok := primitive.(game.GainLife); ok {
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformGroupActorQuantityTargets(&value.Player, value.PlayerGroup, &value.Amount, transform, actor)
 		return value, ok
 	}
 	if value, ok := primitive.(game.LoseLife); ok {
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformGroupActorQuantityTargets(&value.Player, value.PlayerGroup, &value.Amount, transform, actor)
 		return value, ok
 	}
 	if value, ok := primitive.(game.SacrificePermanents); ok {
@@ -368,10 +383,7 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 		// clause-local target index; only the single-player form ("Target player
 		// sacrifices ...") does, so transform that and leave the group form
 		// unchanged. Selection is a permanent filter and carries no target index.
-		if value.Player.Kind() == game.PlayerReferenceNone {
-			return value, true
-		}
-		value.Player, ok = transformPlayerReference(value.Player, transform)
+		ok = transformGroupActorQuantityTargets(&value.Player, value.PlayerGroup, &value.Amount, transform, actor)
 		return value, ok
 	}
 	if value, ok := primitive.(game.CreateDelayedTrigger); ok {
@@ -405,7 +417,12 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 			}
 			value.Object = opt.Val(transformed)
 		}
-		return value, true
+		value.ChooseFrom, ok = transformQuantityGroup(value.ChooseFrom, transform)
+		if !ok {
+			return nil, false
+		}
+		value.ChooseUpTo, ok = transformQuantity(value.ChooseUpTo, transform)
+		return value, ok
 	}
 	if value, ok := primitive.(game.ApplyRule); ok {
 		if value.Object.Exists {
@@ -425,6 +442,19 @@ func transformPrimitiveTargetIndices(primitive game.Primitive, transform targetI
 			}
 			value.Recipient = opt.Val(transformed)
 		}
+		value.Amount, ok = transformQuantity(value.Amount, transform)
+		if !ok {
+			return nil, false
+		}
+		for _, amount := range []*opt.V[game.Quantity]{&value.Power, &value.Toughness} {
+			if amount.Exists {
+				quantity, ok := transformQuantity(amount.Val, transform)
+				if !ok {
+					return nil, false
+				}
+				*amount = opt.Val(quantity)
+			}
+		}
 		return value, true
 	}
 	return transformZonePrimitiveTargetIndices(primitive, transform)
@@ -440,6 +470,10 @@ func transformZonePrimitiveTargetIndices(primitive game.Primitive, transform tar
 		// a target-bearing Player reference; transform it against the accumulated
 		// target list and fail closed if it cannot be expressed. The single-card
 		// form leaves Player unset and transforms its Card slot instead.
+		value.Amount, ok = transformQuantity(value.Amount, transform)
+		if !ok {
+			return nil, false
+		}
 		if value.Player.Kind() != game.PlayerReferenceNone {
 			transformed, ok := transformPlayerReference(value.Player, transform)
 			if !ok {
@@ -505,10 +539,14 @@ func transformZonePrimitiveTargetIndices(primitive game.Primitive, transform tar
 // only one is set, so transform whichever the primitive carries. A global shield
 // carries no target index and passes through.
 func transformPreventDamage(value game.PreventDamage, transform targetIndexTransform) (game.Primitive, bool) {
+	amount, ok := transformQuantity(value.Amount, transform)
+	if !ok {
+		return nil, false
+	}
+	value.Amount = amount
 	if value.Global {
 		return value, true
 	}
-	var ok bool
 	if _, anyTarget := value.AnyTarget.AnyTargetObjectReference(); anyTarget {
 		value.AnyTarget, ok = transformDamageRecipient(value.AnyTarget, transform)
 		return value, ok
@@ -564,23 +602,6 @@ func objectReferenceCarriesTargetIndex(reference game.ObjectReference) bool {
 	}
 }
 
-// transformQuantity transforms a Quantity whose dynamic formula reads a target's
-// value (e.g. DynamicAmountObjectPower for "equal to its power"). Fixed amounts
-// and dynamic formulas that do not reference a target are returned unchanged.
-func transformQuantity(amount game.Quantity, transform targetIndexTransform) (game.Quantity, bool) {
-	dynamic := amount.DynamicAmount()
-	if !dynamic.Exists || !objectReferenceCarriesTargetIndex(dynamic.Val.Object) {
-		return amount, true
-	}
-	object, ok := transformObjectReference(dynamic.Val.Object, transform)
-	if !ok {
-		return game.Quantity{}, false
-	}
-	value := dynamic.Val
-	value.Object = object
-	return game.Dynamic(value), true
-}
-
 func transformObjectReference(reference game.ObjectReference, transform targetIndexTransform) (game.ObjectReference, bool) {
 	switch reference.Kind() {
 	case game.ObjectReferenceTargetCard:
@@ -632,6 +653,12 @@ func transformPlayerReference(reference game.PlayerReference, transform targetIn
 			return game.PlayerReference{}, false
 		}
 		return game.TargetPlayerReference(idx), true
+	case game.PlayerReferenceAffectedTargetController:
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
+			return game.PlayerReference{}, false
+		}
+		return game.AffectedTargetControllerReference(idx), true
 	case game.PlayerReferenceObjectController, game.PlayerReferenceObjectOwner:
 		object, ok := reference.Object()
 		if !ok {
@@ -689,7 +716,10 @@ func transformBattlefieldSource(source game.BattlefieldSource, transform targetI
 // group's player anchor moves with the remapped player target slot. It fails
 // closed for any other group domain.
 func transformGroupReference(group game.GroupReference, transform targetIndexTransform) (game.GroupReference, bool) {
-	selection := group.Selection()
+	selection, ok := transformSelectionTargetIndices(group.Selection(), transform)
+	if !ok {
+		return game.GroupReference{}, false
+	}
 	var anchor opt.V[game.ObjectReference]
 	if a, ok := group.Anchor(); ok {
 		transformed, valid := transformObjectReference(a, transform)

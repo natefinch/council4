@@ -32,27 +32,10 @@ func transformPaymentAmount(amount opt.V[*game.DynamicAmount], transform targetI
 	if amount.Val == nil {
 		return opt.V[*game.DynamicAmount]{}, false
 	}
-	value := *amount.Val
-	if objectReferenceCarriesTargetIndex(value.Object) {
-		object, ok := transformObjectReference(value.Object, transform)
-		if !ok {
-			return opt.V[*game.DynamicAmount]{}, false
-		}
-		value.Object = object
+	projected, ok := transformQuantity(game.Dynamic(*amount.Val), transform)
+	if !ok {
+		return opt.V[*game.DynamicAmount]{}, false
 	}
-	if value.Player != nil {
-		player, ok := transformPlayerReference(*value.Player, transform)
-		if !ok {
-			return opt.V[*game.DynamicAmount]{}, false
-		}
-		value.Player = &player
-	}
-	if value.Group.Valid() {
-		group, ok := transformGroupReference(value.Group, transform)
-		if !ok {
-			return opt.V[*game.DynamicAmount]{}, false
-		}
-		value.Group = group
-	}
+	value := projected.DynamicAmount().Val
 	return opt.Val(&value), true
 }

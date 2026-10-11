@@ -2876,6 +2876,27 @@ func conniveReferencesBenign(references []compiler.CompiledReference) bool {
 }
 
 func lowerExploreSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
+	body, diagnostic := lowerExploreSubject(ctx)
+	if diagnostic != nil {
+		return game.AbilityContent{}, diagnostic
+	}
+	amount := ctx.content.Effects[0].Amount
+	if !amount.Known && !amount.VariableX && amount.DynamicKind == compiler.DynamicAmountNone &&
+		!amount.RangeKnown && !amount.AnyNumber && amount.DynamicForm == compiler.DynamicAmountFormNone &&
+		amount.Multiplier == 0 && amount.Addend == 0 {
+		return body, nil
+	}
+	times, ok := repeatProcessQuantity(amount)
+	if ok {
+		if content, ok := repeatProcessContent(times, body); ok {
+			return content, nil
+		}
+	}
+	return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported explore repeat amount",
+		"explore repetition requires a nonnegative literal, bare X, or an available modeled quantity")
+}
+
+func lowerExploreSubject(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 	unsupportedExplore := contentDiagnostic(
 		ctx,
 		"unsupported explore spell",

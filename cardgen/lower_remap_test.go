@@ -30,6 +30,12 @@ type targetBearingPrimitive struct {
 // objectIndex pulls the single object target index out of an object-targeting
 // primitive via assertion chains (the codebase avoids type switches).
 func objectIndex(p game.Primitive) (int, bool) {
+	if v, ok := p.(game.Explore); ok {
+		return v.Creature.TargetIndex(), true
+	}
+	if v, ok := p.(game.RepeatProcess); ok && len(v.Body.Modes) == 1 && len(v.Body.Modes[0].Sequence) == 1 {
+		return objectIndex(v.Body.Modes[0].Sequence[0].Primitive)
+	}
 	if v, ok := p.(game.Destroy); ok {
 		return v.Object.TargetIndex(), true
 	}
@@ -147,6 +153,12 @@ func targetBearingPrimitives() []targetBearingPrimitive {
 	obj := func() game.ObjectReference { return game.TargetPermanentReference(0) }
 	plr := func() game.PlayerReference { return game.TargetPlayerReference(0) }
 	cards := []targetBearingPrimitive{
+		objectPrimitive("Explore", func() game.Primitive { return game.Explore{Creature: obj()} }),
+		objectPrimitive("RepeatProcess", func() game.Primitive {
+			return game.RepeatProcess{Times: game.Fixed(2), Body: game.Mode{
+				Sequence: []game.Instruction{{Primitive: game.Explore{Creature: obj()}}},
+			}.Ability()}
+		}),
 		objectPrimitive("Destroy", func() game.Primitive { return game.Destroy{Object: obj()} }),
 		objectPrimitive("AddCounter", func() game.Primitive { return game.AddCounter{Object: obj()} }),
 		objectPrimitive("RemoveCounter", func() game.Primitive { return game.RemoveCounter{Object: obj(), Amount: game.Fixed(2)} }),

@@ -73,6 +73,7 @@ type ReferenceSubjectProof struct {
 	targetOccurrence    int
 	uses                uint8
 	projectedDomain     ReferenceSubjectDomain
+	targetedPlayerActor bool
 }
 
 // SubjectSupported checks that the issued proof still matches the reference.
@@ -238,6 +239,7 @@ func finalizeReferenceSubjects(content *AbilityContent, source ReferenceSourceCo
 		reference.Subject.uses = referenceUses(*reference, *content)
 		applyEffectReferenceBindings(content.Effects, []CompiledReference{*reference})
 	}
+	issueTargetedPlayerActorSubjects(content)
 	applyEffectReferenceBindings(content.Effects, content.References)
 	for i := range content.Conditions {
 		condition := &content.Conditions[i]

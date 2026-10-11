@@ -93,6 +93,32 @@ diagnostics and exact source consumption. Unsupported cards
 receive source-spanned diagnostics; `cardgen` never emits TODOs, partial ability
 data, or guessed behavior.
 
+Singular Explore uses the shared bounded-repeat count grammar and `RepeatProcess`
+envelope for literal, bare-X, and already modeled where-X quantities. Bare Explore
+keeps its existing primitive. Targets are announced once outside the repeat body;
+each iteration resolves the original source, triggering permanent, or target
+ObjectID and observes the library after the previous iteration. Fixed zero and
+X=0 execute no Explore. Group and crew-restricted Explore remain unsupported
+(#1698); simultaneous multiple Manifest entries are not sequential repetition.
+Existing targeted primitives project every direct quantity operand through the
+same object/player/group/recursive-operand helper, including nested repeat
+bodies, optional token sizes, and modeled payment amounts. Repeat envelopes also
+retain condition and optional-actor target identities; copied definitions are
+not mutated by projection. Implicit legacy target amounts and unscoped whole-target
+groups remain refused rather than mixing flat target slots with target-spec indices.
+Selection alternatives and their bound groups are projected recursively without
+mutating shared definitions. This does not widen selection evaluation: dynamic
+mana-value bounds still use the existing controller-relative, stackless context,
+so a target-dependent bound is not certified by structural validation or projection.
+An unindexed targeted-player actor projects only with a compiler-owned whole-body
+target-set proof: one canonical player-group declaration, its producing clause,
+and an owned group-only readback. Other player declarations and implicit fragments
+refuse rather than borrowing neighboring targets. Ordinary actor membership is
+distinct from a whole-target group quantity, which remains unsupported. The
+historical fixed group-action factory owns its shape independently of the bare
+verb's `Exact` flag; the target declaration itself must remain exact. A prior-card
+readback without a distinct typed player-group role stays refused.
+
 Resolution-ordinal body conditions ("if this is the second/third time this
 ability has resolved this turn") opt ordinary activated and triggered shells
 into real resolution accounting. Activated shells capture the immutable body

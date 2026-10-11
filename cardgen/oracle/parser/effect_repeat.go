@@ -1,10 +1,62 @@
 package parser
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 )
+
+func exactRepeatedActionSyntax(effect *EffectSyntax, action string) bool {
+	text := exactEffectClauseText(effect)
+	amount := effect.Amount
+	if amount.DynamicKind != EffectDynamicAmountNone {
+		return amount.DynamicForm == EffectDynamicAmountFormWhereX &&
+			strings.EqualFold(text, fmt.Sprintf("%s X times, %s.", action, amount.Text))
+	}
+	if amount.VariableX {
+		return strings.EqualFold(text, action+" X times.")
+	}
+	if !amount.Known || amount.Value < 0 {
+		return false
+	}
+	count := effectAmountSourceText(effect)
+	if strings.EqualFold(count, "once") || strings.EqualFold(count, "twice") {
+		return strings.EqualFold(text, action+" "+count+".")
+	}
+	return strings.EqualFold(text, action+" "+count+" times.")
+}
+
+// matchRepeatedActionCount owns the shared bounded-repeat suffix, independently
+// of the action and its subject. Callers decide whether fixed zero is legal.
+func matchRepeatedActionCount(text string) (EffectAmountSyntax, bool) {
+	count := strings.TrimSuffix(strings.TrimSpace(text), ".")
+	switch {
+	case strings.EqualFold(count, "once"):
+		return EffectAmountSyntax{Value: 1, Known: true}, true
+	case strings.EqualFold(count, "twice"):
+		return EffectAmountSyntax{Value: 2, Known: true}, true
+	}
+	const suffix = " times"
+	if len(count) <= len(suffix) || !strings.EqualFold(count[len(count)-len(suffix):], suffix) {
+		return EffectAmountSyntax{}, false
+	}
+	count = strings.TrimSpace(count[:len(count)-len(suffix)])
+	if strings.EqualFold(count, "X") {
+		return EffectAmountSyntax{VariableX: true}, true
+	}
+	if strings.EqualFold(count, "zero") {
+		return EffectAmountSyntax{Known: true}, true
+	}
+	value, ok := CardinalWordValue(count)
+	if !ok {
+		var err error
+		value, err = strconv.Atoi(count)
+		ok = err == nil
+	}
+	return EffectAmountSyntax{Value: value, Known: ok}, ok && value >= 0
+}
 
 // recognizeRepeatProcessSequence folds bounded repeat wording and the open-ended
 // optional process "<action>. If you do, <payoff> and repeat this process." into
@@ -25,10 +77,6 @@ func recognizeRepeatProcessSequence(sentences []Sentence, atoms Atoms) bool {
 	}
 	tokens := semanticEffectTokens(sentences[1].Tokens)
 	sentences[1].Targets = parseTargets(tokens, atoms)
-	if len(sentences[1].Targets) != 0 {
-		sentences[1].Targets = nil
-		return false
-	}
 	sentences[1].Effects = parseEffects(sentences[1], tokens, atoms)
 	recognizeTargetOpponentHandManaSentence(&sentences[1])
 	collapseManaSpendRiderSentence(&sentences[1], tokens)
@@ -36,8 +84,10 @@ func recognizeRepeatProcessSequence(sentences []Sentence, atoms Atoms) bool {
 	if len(body) == 0 {
 		return false
 	}
+	targets := sentences[1].Targets
 	sentences[1].Effects = nil
 	sentences[1].Targets = nil
+	sentences[0].Targets = targets
 	span := shared.Span{Start: sentences[0].Span.Start, End: sentences[1].Span.End}
 	sentences[0].Effects = []EffectSyntax{{
 		Kind:       EffectRepeatProcess,
@@ -47,6 +97,7 @@ func recognizeRepeatProcessSequence(sentences []Sentence, atoms Atoms) bool {
 		Text:       sentences[0].Text + " " + sentences[1].Text,
 		Tokens:     append(append([]shared.Token(nil), sentences[0].Tokens...), sentences[1].Tokens...),
 		Amount:     amount,
+		Targets:    targets,
 		RepeatBody: body,
 		Exact:      true,
 	}}
@@ -187,19 +238,8 @@ func matchTrailingRepeatProcessClause(text string) (int, bool) {
 	if len(text) <= len(prefix) || !strings.EqualFold(text[:len(prefix)], prefix) {
 		return 0, false
 	}
-	count := strings.TrimSuffix(strings.TrimSpace(text[len(prefix):]), ".")
-	switch {
-	case strings.EqualFold(count, "once"):
-		return 1, true
-	case strings.EqualFold(count, "twice"):
-		return 2, true
-	}
-	const suffix = " times"
-	if len(count) <= len(suffix) || !strings.EqualFold(count[len(count)-len(suffix):], suffix) {
-		return 0, false
-	}
-	value, ok := CardinalWordValue(strings.TrimSpace(count[:len(count)-len(suffix)]))
-	return value, ok && value >= 1
+	amount, ok := matchRepeatedActionCount(text[len(prefix):])
+	return amount.Value, ok && amount.Known && amount.Value >= 1
 }
 
 func joinSentenceText(sentences []Sentence) string {
@@ -233,12 +273,9 @@ func matchRepeatProcessClause(text string) (EffectAmountSyntax, bool) {
 			!strings.EqualFold(text[len(text)-len(suffix):], suffix) {
 			continue
 		}
-		count := strings.TrimSpace(text[len(prefix) : len(text)-len(suffix)])
-		if strings.EqualFold(count, "X") {
-			return EffectAmountSyntax{VariableX: true}, true
-		}
-		if value, ok := CardinalWordValue(count); ok && value >= 1 {
-			return EffectAmountSyntax{Value: value, Known: true}, true
+		if amount, ok := matchRepeatedActionCount(text[len(prefix):]); ok &&
+			(amount.VariableX || amount.Value >= 1) {
+			return amount, true
 		}
 	}
 	return EffectAmountSyntax{}, false

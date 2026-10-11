@@ -486,6 +486,21 @@ func parseEffectAmount(kind EffectKind, tokens []shared.Token, atoms Atoms) Effe
 		}
 		return EffectAmountSyntax{}
 	}
+	if kind == EffectExplore {
+		amount, ok := matchRepeatedActionCount(joinedEffectText(tokens))
+		if !ok {
+			return EffectAmountSyntax{}
+		}
+		end := len(tokens)
+		if end > 0 && tokens[end-1].Kind == shared.Period {
+			end--
+		}
+		if end > 0 && equalWord(tokens[end-1], "times") {
+			end--
+		}
+		amount.Span = shared.SpanOf(tokens[:end])
+		return amount
+	}
 	if kind == EffectEnterTapped {
 		for i, token := range tokens {
 			if equalWord(token, "with") && i+1 < len(tokens) && equalWord(tokens[i+1], "X") {

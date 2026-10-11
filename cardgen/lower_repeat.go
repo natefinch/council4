@@ -1,6 +1,8 @@
 package cardgen
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -13,9 +15,8 @@ const repeatProcessContinueResultKey = game.ResultKey("repeat-process-continue")
 // <body>" loop (EffectRepeatProcess) to a single RepeatProcess instruction whose
 // Times is the repeat count (a fixed cardinal or the spell's variable X) and
 // whose Body is the recursively lowered ordered process executed each iteration. It
-// fails closed for any targets, conditions, keywords, or modes on the loop
-// itself, for an unsupported count, an empty body, or when the body itself does
-// not lower.
+// Targets belong to the body but are announced once by the enclosing mode.
+// Conditions, keywords, modes, unsupported counts, and bodies fail closed.
 func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Ability) (game.AbilityContent, *shared.Diagnostic) {
 	unsupported := func() (game.AbilityContent, *shared.Diagnostic) {
 		return game.AbilityContent{}, contentDiagnostic(
@@ -25,8 +26,8 @@ func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Abi
 		)
 	}
 	effect := ctx.content.Effects[0]
-	if !effect.Exact ||
-		len(ctx.content.Targets) != 0 ||
+	if !effect.Exact || effect.Negated ||
+		effect.Context != parser.EffectContextController ||
 		len(ctx.content.Keywords) != 0 ||
 		len(ctx.content.Modes) != 0 ||
 		len(effect.RepeatBody) == 0 {
@@ -38,7 +39,7 @@ func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Abi
 	if len(ctx.content.Conditions) != 0 {
 		return unsupported()
 	}
-	times, ok := createTokenAmount(ctx, &effect, game.ObjectReference{})
+	times, ok := repeatProcessQuantity(effect.Amount)
 	if !ok {
 		return unsupported()
 	}
@@ -50,7 +51,65 @@ func lowerRepeatProcessSpell(cardName string, ctx contentCtx, syntax *parser.Abi
 	if diagnostic != nil {
 		return game.AbilityContent{}, diagnostic
 	}
-	return game.Mode{Sequence: []game.Instruction{{Primitive: game.RepeatProcess{Times: times, Body: body}}}}.Ability(), nil
+	content, ok := repeatProcessContent(times, body)
+	if !ok {
+		return unsupported()
+	}
+	return content, nil
+}
+
+func repeatProcessQuantity(amount compiler.CompiledAmount) (game.Quantity, bool) {
+	if amount.RangeKnown || amount.AnyNumber ||
+		amount.Known && (amount.VariableX || amount.DynamicKind != compiler.DynamicAmountNone) ||
+		amount.VariableX && amount.DynamicKind != compiler.DynamicAmountNone {
+		return game.Quantity{}, false
+	}
+	if amount.Known || amount.VariableX {
+		if amount.DynamicForm != compiler.DynamicAmountFormNone ||
+			amount.Multiplier != 0 || amount.Addend != 0 {
+			return game.Quantity{}, false
+		}
+		if amount.Known && amount.Value == 0 {
+			return game.Fixed(0), true
+		}
+	}
+	return positiveQuantity(amount, true)
+}
+
+func repeatProcessContent(times game.Quantity, body game.AbilityContent) (game.AbilityContent, bool) {
+	if body.IsModal() || len(body.SharedTargets) != 0 || len(body.Modes) != 1 {
+		return game.AbilityContent{}, false
+	}
+	targets := body.Modes[0].Targets
+	body.Modes = slices.Clone(body.Modes)
+	body.Modes[0].Targets = nil
+	return game.Mode{
+		Targets: targets,
+		Sequence: []game.Instruction{{
+			Primitive: game.RepeatProcess{Times: times, Body: body},
+		}},
+	}.Ability(), true
+}
+
+func transformRepeatProcessTargets(value game.RepeatProcess, transform targetIndexTransform) (game.Primitive, bool) {
+	if value.Body.IsModal() || len(value.Body.SharedTargets) != 0 || len(value.Body.Modes) != 1 ||
+		len(value.Body.Modes[0].Targets) != 0 {
+		return nil, false
+	}
+	times, ok := transformQuantity(value.Times, transform)
+	if !ok {
+		return nil, false
+	}
+	value.Times = times
+	value.Body.Modes = slices.Clone(value.Body.Modes)
+	value.Body.Modes[0].Sequence = slices.Clone(value.Body.Modes[0].Sequence)
+	if !transformTargetedSequence(value.Body.Modes[0].Sequence, transform) {
+		return nil, false
+	}
+	if !transformRepeatEnvelopes(value.Body.Modes[0].Sequence, transform) {
+		return nil, false
+	}
+	return value, true
 }
 
 func lowerRepeatUntilFailure(
