@@ -4,7 +4,6 @@ import (
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/opt"
 )
 
 // Condition references arrive in ability-wide Oracle occurrence coordinates,
@@ -17,30 +16,20 @@ func remapSequenceConditionTargets(
 	indices map[shared.Span]int,
 ) bool {
 	gate, ok := gates[i]
-	if !ok || !gate.Condition.Exists || !gate.Condition.Val.Object.Exists {
+	if !ok {
 		return true
 	}
-	condition := gate.Condition.Val
-	object := condition.Object.Val
-	kind := object.Kind()
-	if kind != game.ObjectReferenceTargetPermanent && kind != game.ObjectReferenceTargetCard {
-		return true
+	transform := func(kind targetIndexKind, occurrence int) (int, bool) {
+		if kind != targetIndexObject || occurrence < 0 || occurrence >= len(targets) {
+			return 0, false
+		}
+		index, ok := indices[targets[occurrence].Span]
+		return index, ok
 	}
-	occurrence := object.TargetIndex()
-	if occurrence < 0 || occurrence >= len(targets) {
-		return false
-	}
-	index, ok := indices[targets[occurrence].Span]
+	gate, ok = transformEffectConditionTargetIndices(gate, transform)
 	if !ok {
 		return false
 	}
-	if kind == game.ObjectReferenceTargetCard {
-		object = game.TargetCardReference(index)
-	} else {
-		object = game.TargetPermanentReference(index)
-	}
-	condition.Object = opt.Val(object)
-	gate.Condition = opt.Val(condition)
 	gates[i] = gate
 	return true
 }

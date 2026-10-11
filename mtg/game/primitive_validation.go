@@ -2369,7 +2369,15 @@ func (p RepeatProcess) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if len(p.Body.Modes) == 0 {
 		return errors.New("RepeatProcess requires a body")
 	}
-	if err := validateNestedAbilityContent(p.Body, nil, targets, checkTargets, nil); err != nil {
+	// A bounded repeat reuses the enclosing stack object's announced targets;
+	// its nonmodal body does not announce a separate set on every iteration.
+	body := p.Body
+	if !body.IsModal() && len(body.SharedTargets) == 0 && len(body.Modes) == 1 &&
+		len(body.Modes[0].Targets) == 0 {
+		body.Modes = slices.Clone(body.Modes)
+		body.Modes[0].Targets = targets
+	}
+	if err := validateNestedAbilityContent(body, nil, targets, checkTargets, nil); err != nil {
 		return err
 	}
 	if p.ContinueResult != "" && !abilityContentPublishesResult(p.Body, p.ContinueResult) {

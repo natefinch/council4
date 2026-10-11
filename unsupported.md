@@ -1,6 +1,6 @@
 # Unsupported Cards
 
-Council4 currently supports **18,664 of 33,011 cards eligible for paper support (56.5%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,665 of 33,011 cards eligible for paper support (56.5%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 These cards are eligible for paper support but cardgen cannot yet generate them. Cards excluded by the corpus policy are not listed.
 
@@ -6247,7 +6247,6 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Jaded Response** — unsupported counter spell: the executable source backend supports only exact counter of one target spell
 - **Jaded Sell-Sword** — unsupported permanent zone-change trigger: the executable source backend does not support this semantic permanent zone-change trigger condition
 - **Jadelight Ranger** — unsupported ordered effect sequence: sub-effect — unsupported explore spell
-- **Jadelight Spelunker** — unsupported explore spell: the executable source backend supports only the source permanent patterns "it explores" and "this creature explores" and a single target creature
 - **Jadzi, Oracle of Arcavios // Journey to the Oracle** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported cast effect
 - **Jagged Poppet** — unsupported discard spell: the executable source backend supports only exact fixed discard by one player; unsupported discard spell: the executable source backend supports only exact fixed discard by one player
 - **Jaheira's Respite** — unsupported search effect: the executable source backend supports only exact unconditional library-search sequences
@@ -8721,7 +8720,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Outrage Shaman** — unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
 - **Outrageous Robbery** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: structural — optional published-subject antecedent not modeled; unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses; unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
 - **Outrider en-Kor** — unsupported Oracle construct: the compiler preserved but did not confidently lower: {0}: The next 1 damage that would be dealt to this creature this turn is dealt to target creature you control instead.; unsupported ability content: the executable source backend does not yet lower this ability content
-- **Over the Edge** — unsupported ordered effect sequence: mode 2: structural — inherited target not remappable
+- **Over the Edge** — unsupported ordered effect sequence: mode 2: sub-effect — unsupported explore spell
 - **Over the Top** — unsupported ordered effect sequence: sub-effect — unsupported ability content; unsupported ordered effect sequence: sub-effect — unsupported counter placement
 - **Overabundance** — unsupported ordered effect sequence: sub-effect — unsupported mana effect; unsupported ordered effect sequence: sub-effect — unsupported damage spell
 - **Overblaze** — unsupported enters-tapped replacement: the executable source backend supports only exact unconditional self enters-tapped replacements

@@ -614,6 +614,12 @@ func lowerOrderedEffectSequence(
 			continue
 		}
 		mode := content.Modes[0]
+		actorScope := targetedPlayerActorScope(ctx.content, effectAbility.content.Effects[0])
+		if actorScope == nil && slices.ContainsFunc(mode.Sequence, func(instruction game.Instruction) bool {
+			return targetedPlayerActor(instruction.Primitive)
+		}) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "actor target-set scope — the player actor does not own the complete announced player set")
+		}
 		if !conditionPlan.bindPaymentResult(ctx.content, optionalFlow, i, mode.Sequence) {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, sequencePaymentIdentityCategory)
 		}
@@ -635,6 +641,7 @@ func lowerOrderedEffectSequence(
 			mode, allSharedTargets, mixedTargets,
 			inheritedTargets, clauseTargets,
 			targets, oracleSpanToGameIdx,
+			actorScope,
 		)
 		if !ok {
 			if len(clauseReasons) > 0 {
@@ -4233,9 +4240,7 @@ func lowerCharacteristicLifeRider(
 	}
 	localEffect := *effect
 	localEffect.References = ctx.content.References
-	// Amounts bind already-lowered antecedents in accumulated target space.
-	// Life remapping rewrites Player, so only the recipient is clause-local.
-	_, subjectRefs, ok := sourcePowerReferences(&localEffect)
+	localAmountRef, subjectRefs, ok := sourcePowerReferences(&localEffect)
 	if !ok {
 		return characteristicLifeRiderLowering{}, false
 	}
@@ -4260,7 +4265,16 @@ func lowerCharacteristicLifeRider(
 			return characteristicLifeRiderLowering{}, false
 		}
 	}
-	dynamic, ok := objectCharacteristicAmount(effect.Amount.DynamicKind, amountLowering.object)
+	// Prior-effect checks use accumulated targets; the emitted operands are
+	// clause-local and are projected together by the shared target walker.
+	amountObject := amountLowering.object
+	if objectReferenceCarriesTargetIndex(amountObject) {
+		amountObject, ok = lowerObjectReference(localAmountRef, referenceLoweringContext{AllowTarget: true})
+		if !ok {
+			return characteristicLifeRiderLowering{}, false
+		}
+	}
+	dynamic, ok := objectCharacteristicAmount(effect.Amount.DynamicKind, amountObject)
 	if !ok {
 		return characteristicLifeRiderLowering{}, false
 	}
@@ -5723,12 +5737,13 @@ func applyTargetRemapping(
 	inherited, owned []compiler.CompiledTarget,
 	accum []game.TargetSpec,
 	spanToIdx map[shared.Span]int,
+	actor *targetedPlayerActorProjection,
 ) ([]game.TargetSpec, bool) {
 	m := mode
 	switch {
 	case len(m.Targets) > 0 && allSharedTargets:
 		if rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx); ok {
-			if !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
+			if !transformTargetedActorSequence(m.Sequence, rebaseTransform(rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)), actor) {
 				return nil, false
 			}
 			break
@@ -5744,7 +5759,7 @@ func applyTargetRemapping(
 			return nil, false
 		}
 		gameStartIdx := len(accum)
-		if !rebaseTargetedSequence(m.Sequence, gameStartIdx, cardTargetSpecsBefore(accum, gameStartIdx)) {
+		if !transformTargetedActorSequence(m.Sequence, rebaseTransform(gameStartIdx, cardTargetSpecsBefore(accum, gameStartIdx)), actor) {
 			return nil, false
 		}
 		for j, t := range inherited {
@@ -5760,7 +5775,7 @@ func applyTargetRemapping(
 		// 0. When the offset is zero (antecedent is the first game target),
 		// existing shared clauses are left exactly as-is.
 		if rebaseOffset, ok := sharedTargetRebaseOffset(inherited, spanToIdx); ok && rebaseOffset != 0 {
-			if !rebaseTargetedSequence(m.Sequence, rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)) {
+			if !transformTargetedActorSequence(m.Sequence, rebaseTransform(rebaseOffset, cardTargetSpecsBefore(accum, rebaseOffset)), actor) {
 				return nil, false
 			}
 		}
@@ -5781,13 +5796,18 @@ func applyTargetRemapping(
 			localToGame[len(inherited)+j] = gameStartForOwn + j
 			spanToIdx[ot.Span] = gameStartForOwn + j
 		}
-		if !remapTargetedSequence(m.Sequence, localToGame) {
+		if !transformTargetedActorSequence(m.Sequence, func(kind targetIndexKind, old int) (int, bool) {
+			if kind != targetIndexObject || old < 0 || old >= len(localToGame) {
+				return 0, false
+			}
+			return localToGame[old], true
+		}, actor) {
 			return nil, false
 		}
 		accum = append(accum, m.Targets[len(inherited):]...)
 	case len(m.Targets) > 0:
 		gameStartIdx := len(accum)
-		if !rebaseTargetedSequence(m.Sequence, gameStartIdx, cardTargetSpecsBefore(accum, gameStartIdx)) {
+		if !transformTargetedActorSequence(m.Sequence, rebaseTransform(gameStartIdx, cardTargetSpecsBefore(accum, gameStartIdx)), actor) {
 			return nil, false
 		}
 		for j, ot := range owned {
