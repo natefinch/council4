@@ -16,8 +16,8 @@ func TestPaymentActorResultOwnsCompatibleProducerAcrossIndependentClauses(t *tes
 		{"plural", "Counter up to two target spells unless their controller pays {3}. If they do, draw a card.", 0},
 		{"missing actor target", "You gain 1 life. If they do, draw a card.", 0},
 		{"forward actor target", "You gain 1 life. If they do, draw a card. Counter target spell unless its controller pays {3}.", 0},
-		{"intervening same actor", "Target player gains 1 life. That player discards a card. If that player does, you gain 2 life.", 0},
-		{"intervening payer action", "Counter target spell unless its controller pays {3}. They discard a card. If they do, draw a card.", 0},
+		{"intervening same actor", "Target player gains 1 life. That player discards a card. If that player does, you gain 2 life.", 2},
+		{"intervening payer action", "Counter target spell unless its controller pays {3}. They discard a card. If they do, draw a card.", 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			doc, diagnostics := Parse(tc.text, Context{InstantOrSorcery: true})

@@ -82,6 +82,10 @@ func resultConditionGate(condition compiler.CompiledCondition) (game.Instruction
 }
 
 func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowPlan, valid, handled bool) {
+	return planScopedResultFlowWithControllerActions(content, nil)
+}
+
+func planScopedResultFlowWithControllerActions(content compiler.AbilityContent, controllerActions map[int]bool) (result optionalFlowPlan, valid, handled bool) {
 	flow := &scopedResultFlow{
 		publishers: make(map[int]game.ResultKey), gates: make(map[int]game.InstructionResultGate),
 		paymentPublishers: make(map[int]game.ResultKey),
@@ -135,6 +139,13 @@ func planScopedResultFlow(content compiler.AbilityContent) (result optionalFlowP
 			condition.Predicate != compiler.ConditionPredicateCounterSucceeded
 		if paymentActor && !counterPaymentActorCondition(content, producer, condition) {
 			plan.failureCategory = "structural — payment outcome has no unique owned payer reference"
+			return plan, false, true
+		}
+		if !paymentActor &&
+			(condition.Predicate == compiler.ConditionPredicatePriorInstructionAccepted ||
+				condition.Predicate == compiler.ConditionPredicatePriorInstructionNotAccepted) &&
+			!resultActorCondition(content, producer, condition, controllerActions[effect.ClauseID]) {
+			plan.failureCategory = "structural — actual-result actor has no compatible owned action"
 			return plan, false, true
 		}
 		if condition.Predicate != compiler.ConditionPredicateResultThisWay && flow.actions.isCompound(producer) {

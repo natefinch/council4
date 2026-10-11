@@ -10,14 +10,14 @@ This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
 ## Headline
 
 - Eligible cards: 33011
-- Supported (generated): 18665
+- Supported (generated): 18666
 - Parser-complete: 22814
 - **Lowering backlog** (parser-complete, not generated): 4910
-- **Parser backlog** (not parser-complete, not generated): 9436
+- **Parser backlog** (not parser-complete, not generated): 9435
 
-Partition check: 18665 supported + 4910 lowering-backlog + 9436 parser-backlog = 33011 eligible. ✓
+Partition check: 18666 supported + 4910 lowering-backlog + 9435 parser-backlog = 33011 eligible. ✓
 
-761 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
+762 generated cards are not parser-complete. The lowerer fully generates them, but the parser-coverage harness does not span all their must-cover tokens (the residue tracked in `parser-coverage.md`). They are counted as **supported**, not routed to either backlog queue:
 
 - Veil of Summer
 - Harald, King of Skemfar
@@ -74,8 +74,8 @@ Partition check: 18665 supported + 4910 lowering-backlog + 9436 parser-backlog =
 
 Generated membership is read from compilecards' canonical report. An independent per-card recompile cross-checks it; the run fails if they diverge.
 
-- Authoritative generated (compilecards report): 18665
-- Independent per-card recompile generated: 18665
+- Authoritative generated (compilecards report): 18666
+- Independent per-card recompile generated: 18666
 - Divergences: 0 — the two pipelines agree. ✓
 
 ## Lowering queue
@@ -84,14 +84,14 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1717 | 1069 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 1 | unsupported ordered effect sequence | 1717 | 1068 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
 | 2 | unsupported optional effect | 519 | 2 | Dazzling Sphinx; Planebound Accomplice; Puresight Merrow; Mindclaw Shaman; Remembrance |
 | 3 | unsupported static declaration operation | 280 | 235 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
 | 4 | unsupported static ability | 275 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 222 | 117 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
 | 6 | unsupported damage spell | 198 | 144 | Armed Response; Combo Attack; Huatli, Dinosaur Knight; Kill! Maim! Burn!; Call Forth the Tempest |
 | 7 | unsupported activation cost | 188 | 140 | Thunderherd Migration; Krovikan Sorcerer; Etchings of the Chosen; Tourach's Gate; City of Shadows |
-| 8 | unsupported reference subject | 168 | 0 | Planebound Accomplice; Venser's Diffusion; Pandemonium; Misleading Motes; Fatigue |
+| 8 | unsupported reference subject | 169 | 0 | Planebound Accomplice; Venser's Diffusion; Pandemonium; Misleading Motes; Fatigue |
 | 9 | unsupported static declaration group | 163 | 126 | Sedge Sliver; Freewind Equenaut; Rune of Sustenance; Indomitable Might; Cast Through Time |
 | 10 | unsupported return spell | 159 | 126 | Dragon Fangs; Dragon Scales; Venser's Diffusion; Kazandu Stomper; Shuri's Fabricator |
 | 11 | unsupported search effect | 122 | 72 | Remembrance; Kasmina, Enigma Sage; Avatar of Growth; Increasing Ambition; Quest for the Holy Relic |

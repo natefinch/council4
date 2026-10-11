@@ -764,6 +764,8 @@ func recognizeEventPlayerOptionalPaymentSequence(ability *Ability) {
 	}
 	effect.Tokens = cloneTokens(consequence)
 	effect.ClauseSpan = shared.SpanOf(consequence)
+	effect.References = referencesWithinSpan(effect.References, effect.ClauseSpan)
+	effect.SubjectReferences = referencesWithinSpan(effect.SubjectReferences, effect.ClauseSpan)
 	effect.Negated = false
 	effect.HasUnrecognizedSibling = false
 	effect.Payment = EffectPaymentSyntax{

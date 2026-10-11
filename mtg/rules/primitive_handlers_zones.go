@@ -2800,23 +2800,26 @@ func handleMoveTopOfLibrary(r *effectResolver, prim game.MoveTopOfLibrary) effec
 			})
 		}
 	}
-	moveTop := func(playerID game.PlayerID) []id.ID {
+	moveTop := func(playerID game.PlayerID) {
+		var cards []id.ID
+		var moved bool
 		if prim.Destination == zone.Exile {
-			return exileTopOfLibraryCards(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
+			cards, moved = exileTopOfLibraryCardsWithResult(r.game, playerID, res.amount, prim.Counter, r.obj.Controller, prim.FaceDown)
+		} else {
+			cards, moved = millCardsWithResult(r.game, playerID, res.amount)
 		}
-		return millCards(r.game, playerID, res.amount)
+		res.succeeded = res.succeeded || moved
+		publish(cards)
 	}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			publish(moveTop(playerID))
+			moveTop(playerID)
 		}
-		res.succeeded = res.amount > 0
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		publish(moveTop(playerID))
-		res.succeeded = res.amount > 0
+		moveTop(playerID)
 	}
 	return res
 }

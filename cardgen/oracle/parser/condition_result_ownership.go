@@ -31,10 +31,14 @@ func emitResultConditionOwnership(sentences []Sentence, segments []ConditionSegm
 			continue
 		}
 		producer := first - 1
-		if clause.Predicate == ConditionPredicatePriorInstructionAccepted {
+		if clause.Predicate == ConditionPredicatePriorInstructionAccepted ||
+			clause.Predicate == ConditionPredicatePriorInstructionNotAccepted {
 			if actorProducer, handled := resultActorProducer(effects, sentences, references, segment, first); handled {
 				producer = actorProducer
 			}
+		}
+		if producer < 0 {
+			continue
 		}
 		switch {
 		case clause.Predicate == ConditionPredicateCounterSucceeded:

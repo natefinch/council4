@@ -60,27 +60,34 @@ func putLibraryCardIntoGraveyard(g *game.Game, playerID game.PlayerID, cardID, s
 }
 
 func millCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
+	cards, _ := millCardsWithResult(g, playerID, amount)
+	return cards
+}
+
+func millCardsWithResult(g *game.Game, playerID game.PlayerID, amount int) ([]id.ID, bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
-		return nil
+		return nil, false
 	}
 	var milled []id.ID
+	moved := false
 	batchID := g.IDGen.Next()
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok {
-			return milled
+			return milled, moved
 		}
 		player.Library.Remove(cardID)
 		destination, ok := putLibraryCardIntoGraveyard(g, playerID, cardID, batchID)
 		if !ok {
-			return milled
+			return milled, moved
 		}
+		moved = moved || destination != zone.Library
 		if destination == zone.Graveyard {
 			milled = append(milled, cardID)
 		}
 	}
-	return milled
+	return milled, moved
 }
 
 // revealUntilCards reveals cards from the top of playerID's library one at a
@@ -182,11 +189,17 @@ func revealedCardMatches(g *game.Game, playerID game.PlayerID, cardID id.ID, unt
 }
 
 func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, counterKind opt.V[counter.Kind], exiledBy game.PlayerID, faceDown bool) []id.ID {
+	cards, _ := exileTopOfLibraryCardsWithResult(g, playerID, amount, counterKind, exiledBy, faceDown)
+	return cards
+}
+
+func exileTopOfLibraryCardsWithResult(g *game.Game, playerID game.PlayerID, amount int, counterKind opt.V[counter.Kind], exiledBy game.PlayerID, faceDown bool) ([]id.ID, bool) {
 	player, ok := playerByID(g, playerID)
 	if !ok || amount <= 0 {
-		return nil
+		return nil, false
 	}
 	exiled := make([]id.ID, 0, amount)
+	moved := false
 	for range amount {
 		cardID, ok := player.Library.Top()
 		if !ok {
@@ -203,6 +216,7 @@ func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, co
 			break
 		}
 		destinationCards.Add(cardID)
+		moved = moved || destination != zone.Library
 		if destination == zone.Exile {
 			exiled = append(exiled, cardID)
 		}
@@ -230,7 +244,7 @@ func exileTopOfLibraryCards(g *game.Game, playerID game.PlayerID, amount int, co
 			Amount:   1,
 		})
 	}
-	return exiled
+	return exiled, moved
 }
 
 func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, amount int) {

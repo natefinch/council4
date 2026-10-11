@@ -109,8 +109,6 @@ func TestLowerUpkeepTriggerEventPlayerMayPaySuccessUntapsAttached(t *testing.T) 
 func TestLowerEventPlayerMayPaySuccessRejectsUnsafeForms(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		// Non-mana cost.
-		"Whenever a player casts a spell, that player may pay 2 life. If the player does, they draw a card.",
 		// Variable mana cost.
 		"Whenever a player casts a spell, that player may pay {X}. If the player does, they draw a card.",
 		// Unrecognized consequence body.
@@ -285,16 +283,16 @@ func TestLowerDrawTriggerEventPlayerMayPayFailureCreatesTreasure(t *testing.T) {
 
 // TestLowerDrawTriggerEventPlayerMayPayFailureRejectsUnsafeForms confirms the
 // event-player payment-failure gate stays fail-closed for forms the payment path
-// cannot faithfully model (life payments, variable {X}, wrong consequence
+// cannot faithfully model (variable {X}, wrong consequence
 // recipient, compound or "instead" consequences, once-per-turn riders). The
 // sacrifice-edict form ("that player may sacrifice a creature. If the player
 // doesn't, ...") is intentionally absent: it is a non-controller optional edict
 // the negative resolving gate (Rakdos, Patron of Chaos) now lowers correctly, so
-// it is exercised there rather than rejected here.
+// it is exercised there rather than rejected here. Exact fixed-life payment by
+// the singular event player is covered by owned-actor compile and runtime tables.
 func TestLowerDrawTriggerEventPlayerMayPayFailureRejectsUnsafeForms(t *testing.T) {
 	t.Parallel()
 	for _, oracle := range []string{
-		"Whenever an opponent draws a card, that player may pay 2 life. If the player doesn't, you create a Treasure token.",
 		"Whenever an opponent draws a card, you may pay {2}. If you don't, you create a Treasure token.",
 		"Whenever an opponent draws a card, that player may pay {X}. If the player doesn't, you create a Treasure token.",
 		"Whenever an opponent draws a card, that player may pay {2}. If the player doesn't, target player creates a Treasure token.",
