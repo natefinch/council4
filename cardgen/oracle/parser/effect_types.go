@@ -578,7 +578,7 @@ type DigSyntax struct {
 }
 
 // HandLibraryPutSyntax marks the exact clause "Put N cards from your hand on
-// top of (or the bottom of) your library[ in any order]." The fixed amount
+// top of (or the bottom of) your library[ in any order]." The fixed or bare-X amount
 // remains in EffectSyntax; Present carries the player-chosen ordering
 // semantics downstream without requiring consumers to inspect Oracle text.
 // Bottom records which library position was named.
@@ -595,11 +595,13 @@ type DigSyntax struct {
 // genuinely different ordering rule -- "in a random order" (Discover,
 // Hideaway, Cascade's game-randomized order, CR 701.57a et al.) or "in the
 // same order" (an explicit preserved-order rule) -- is a different mechanic
-// this syntax does not model; exactHandLibraryPutEffectSyntax's literal
-// string match rejects both, since neither matches either accepted template.
+// this syntax does not model. UnsupportedParameter and ParameterSpan retain
+// the parser-owned refusal for that parameter instead of a sentence-level guess.
 type HandLibraryPutSyntax struct {
-	Present bool `json:",omitempty"`
-	Bottom  bool `json:",omitempty"`
+	Present              bool        `json:",omitempty"`
+	Bottom               bool        `json:",omitempty"`
+	UnsupportedParameter string      `json:",omitempty"`
+	ParameterSpan        shared.Span `json:"-"`
 }
 
 // DigRouteSlotSyntax is one ordered destination of a recognized look-and-route

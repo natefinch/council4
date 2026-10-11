@@ -543,7 +543,11 @@ func lowerOrderedEffectSequence(
 			len(content.SharedTargets) != 0 ||
 			content.IsModal() ||
 			len(content.Modes) != 1 {
-			clauseReasons = appendClauseReason(clauseReasons, ctx, diagnostic)
+			if diagnostic != nil && effect.HandLibraryPut.UnsupportedParameter != "" {
+				clauseReasons = append(clauseReasons, *diagnostic)
+			} else {
+				clauseReasons = appendClauseReason(clauseReasons, ctx, diagnostic)
+			}
 			continue
 		}
 		mode := content.Modes[0]
@@ -1227,9 +1231,6 @@ func lowerCombinedSequenceShapes(cardName string, ctx contentCtx, syntax *parser
 		return content, true
 	}
 	if content, ok := lowerDigSequence(ctx); ok {
-		return content, true
-	}
-	if content, ok := lowerDrawHandLibrarySequence(ctx); ok {
 		return content, true
 	}
 	if content, ok := lowerDrawHandDiscardSequence(ctx); ok {
@@ -3113,50 +3114,6 @@ func digRemainder(remainder parser.DigRemainderKind) game.DigRemainder {
 	default:
 		return game.DigRemainderGraveyard
 	}
-}
-
-// lowerDrawHandLibrarySequence lowers "Draw N cards, then put M cards from your
-// hand on top of (or the bottom of) your library[ in any order]." The runtime
-// MoveCard choice sees the post-draw hand and preserves the selected option
-// order as library order (CR 401.4's default player-chosen order for multiple
-// cards placed in the same library position at once, whether or not the
-// clause spells out "in any order").
-func lowerDrawHandLibrarySequence(ctx contentCtx) (game.AbilityContent, bool) {
-	if len(ctx.content.Effects) != 2 || ctx.optional ||
-		len(ctx.content.Targets) != 0 ||
-		len(ctx.content.References) != 0 ||
-		len(ctx.content.Keywords) != 0 ||
-		len(ctx.content.Modes) != 0 ||
-		len(ctx.content.Conditions) != 0 {
-		return game.AbilityContent{}, false
-	}
-	draw := ctx.content.Effects[0]
-	put := ctx.content.Effects[1]
-	if draw.Kind != compiler.EffectDraw || !draw.Exact || draw.Optional || draw.Negated ||
-		draw.Context != parser.EffectContextController ||
-		!draw.Amount.Known || draw.Amount.Value < 1 ||
-		put.Kind != compiler.EffectPut || !put.Exact || !put.HandLibraryPut.Present ||
-		put.Optional || put.Negated ||
-		put.Context != parser.EffectContextController ||
-		put.Connection != parser.EffectConnectionThen ||
-		!put.Amount.Known || put.Amount.Value < 1 {
-		return game.AbilityContent{}, false
-	}
-	return game.Mode{
-		Sequence: []game.Instruction{
-			{Primitive: game.Draw{
-				Player: game.ControllerReference(),
-				Amount: game.Fixed(draw.Amount.Value),
-			}},
-			{Primitive: game.MoveCard{
-				Player:            game.ControllerReference(),
-				Amount:            game.Fixed(put.Amount.Value),
-				FromZone:          zone.Hand,
-				Destination:       zone.Library,
-				DestinationBottom: put.HandLibraryPut.Bottom,
-			}},
-		},
-	}.Ability(), true
 }
 
 // lowerDrawHandDiscardSequence lowers the exact controller sequence "Draw N
