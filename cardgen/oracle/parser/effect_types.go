@@ -2033,14 +2033,16 @@ type SpellTargetRestriction struct {
 
 // TargetCardinalitySyntax is an inclusive target-count range.
 type TargetCardinalitySyntax struct {
-	Min       int  `json:",omitempty"`
-	Max       int  `json:",omitempty"`
-	MaxEventX bool `json:",omitempty"`
+	Min          int  `json:",omitempty"`
+	Max          int  `json:",omitempty"`
+	CountEqualsX bool `json:",omitempty"`
+	MaxX         bool `json:",omitempty"`
 }
 
 // TargetSyntax is one typed target production.
 type TargetSyntax struct {
-	Span shared.Span `json:"-"`
+	Span      shared.Span `json:"-"`
+	CountSpan shared.Span `json:"-"`
 	// ChoiceSpan is the exact leading "Choose" verb for target declarations
 	// whose selection occurs before resolution.
 	ChoiceSpan  shared.Span             `json:"-"`

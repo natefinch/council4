@@ -22,6 +22,9 @@ func lowerContent(
 	ctx contentCtx,
 	syntax *parser.Ability,
 ) (game.AbilityContent, *shared.Diagnostic) {
+	if blocker := targetCountContentBlocker(ctx); blocker != nil {
+		return game.AbilityContent{}, blocker
+	}
 	if !contentSubjectProofsOwned(ctx.content) {
 		diagnostic := contentDiagnostic(ctx, "unsupported reference subject",
 			"the body contains a missing, incompatible, or foreign subject proof")

@@ -3374,7 +3374,7 @@ func TestParseResolvingEffectCompositionOwnership(t *testing.T) {
 	if target := document.Abilities[5].Sentences[0].Targets[0]; target.Selection.Kind != SelectionUnknown {
 		t.Fatalf("relative-clause target = %#v, want unknown selection", target)
 	}
-	if target := document.Abilities[6].Sentences[0].Targets[0]; target.Cardinality != (TargetCardinalitySyntax{Min: 0, Max: 99, MaxEventX: true}) {
+	if target := document.Abilities[6].Sentences[0].Targets[0]; target.Cardinality != (TargetCardinalitySyntax{Min: 0, Max: 99, MaxX: true}) {
 		t.Fatalf("variable target cardinality = %#v, want event-X bound", target.Cardinality)
 	}
 	if target := document.Abilities[7].Sentences[0].Targets[0]; target.Selection.Kind != SelectionCreature ||
@@ -3525,7 +3525,7 @@ func TestParseMultiTargetExileExactness(t *testing.T) {
 		{"Exile target creature.", true, 1, 1},
 		// Fail-closed for the permanent multi-target path: a graveyard card target
 		// is made exact through the graveyard-card reconstruction, not here.
-		{"Exile up to two target cards from a single graveyard.", false, 0, 2},
+		{"Exile up to two target cards from a single graveyard.", true, 0, 2},
 		// Fail-closed: subtype and tapped qualifiers are not reconstructed here.
 		{"Exile up to two target Goblin creatures.", false, 0, 2},
 		{"Exile two target tapped creatures.", false, 2, 2},

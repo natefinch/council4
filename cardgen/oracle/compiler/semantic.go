@@ -1572,9 +1572,10 @@ type CompiledCondition struct {
 
 // TargetCardinality is an inclusive target count range.
 type TargetCardinality struct {
-	Min       int
-	Max       int
-	MaxEventX bool
+	Min          int
+	Max          int
+	CountEqualsX bool
+	MaxX         bool
 }
 
 // CompiledTarget is one occurrence of the word "target" and its local noun
@@ -1582,6 +1583,7 @@ type TargetCardinality struct {
 type CompiledTarget struct {
 	subjectScope *referenceSubjectScope
 	Span         shared.Span
+	CountSpan    shared.Span
 	ChoiceSpan   shared.Span
 	Text         string
 	Cardinality  TargetCardinality

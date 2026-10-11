@@ -587,6 +587,12 @@ func transformObjectReference(reference game.ObjectReference, transform targetIn
 			return game.ObjectReference{}, false
 		}
 		return game.TargetPermanentReference(idx), true
+	case game.ObjectReferenceAllTargetPermanents:
+		idx, ok := transform(targetIndexObject, reference.TargetIndex())
+		if !ok {
+			return game.ObjectReference{}, false
+		}
+		return game.AllTargetPermanentsReference(idx), true
 	case game.ObjectReferenceTargetStackObject:
 		idx, ok := transform(targetIndexObject, reference.TargetIndex())
 		if !ok {

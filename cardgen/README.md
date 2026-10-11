@@ -635,9 +635,32 @@ Vanguard cards are excluded with explicit report reasons.
    typed syntax. Target lowering builds runtime predicates from typed selectors
    rather than target wording; retained text is display metadata and diagnostic
    context. Replacement and add-mana lowering likewise consume typed fields rather
-   than effect wording. Single-object lowerers require exact one-target
-   cardinality, and replacement lowerers reject typed qualifiers they cannot
-   represent. Exact single-target permanent removal, including commander-conditioned
+   than effect wording. Shared target-count projection consumes parser-owned
+   exact-X, upper-bound-X, fixed/optional, and any-number declarations, retaining
+   the count's source span for parameter diagnostics. Exact-X uses the existing
+   `CountEqualsX` contract and finite legal-X bound: verified selected-group
+   primitives consume the whole spec, while single-object primitives reuse the
+   bounded per-slot path. Ordinary activated legality shares the cast count
+   invariant and validates chosen X before costs and announcement, including
+   hand/graveyard and selected-mode bodies. Upper-bound-X is not exactly-X and
+   remains refused outside the existing trigger-event-X contract. Variable or
+   plural specs preceding later targets, derived-X counts, and incompatible
+   co-selected target modes remain fail-closed where target-spec identity is
+   unavailable. Scalar quantity conversion is shared; triggering-event anaphors
+   retain their explicit contextual binding and source-power refusals.
+   Leading token iterators must have a typed amount or their own recognized
+   distributive/copy payload. Token-only counts preserve their Selection filter;
+   an unmodeled actual-card iterator is not replaced by X or selected-target
+   count. Replacement lowerers reject typed qualifiers they cannot represent.
+   Live count selections also accept an explicit relative subtype disjunction
+   (`creature you control that's a Wolf or a Werewolf`) through the same
+   battlefield Selection and quantity path, preserving OR, card type and actor.
+   A named token count retains its token-only predicate instead of matching
+   every permanent with that subtype. Inverse attachment counts, filtered
+   actual-card result quantities, and departed old-controller history counts
+   retain distinct, unsupported operand boundaries; an untyped iterator never
+   inherits a nominal single-token amount.
+   Exact single-target permanent removal, including commander-conditioned
    free creature exile, composes with independently lowered alternative and
    additional spell costs; unsupported target/effect variants reject the whole
    card rather than preserving only the cost. Source-relative keyword grants gated by controlling supported permanent

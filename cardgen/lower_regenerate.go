@@ -43,7 +43,7 @@ func lowerRegenerateSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnost
 	if len(ctx.content.Targets) > 0 {
 		return lowerFixedPermanentTargetSpell(ctx, "Regenerate", func(object game.ObjectReference) game.Primitive {
 			return game.Regenerate{Object: object}
-		})
+		}, false)
 	}
 	if object, ok := lowerSourceRegenerateObject(ctx); ok {
 		return game.Mode{

@@ -76,7 +76,7 @@ func lowerMassReanimationFromEachGraveyardSequence(ctx contentCtx) (game.Ability
 			mill.Amount.Value < 1 {
 			return unsupported("structural — unsupported mass reanimation mill")
 		}
-		millAmount, ok := cardCountQuantity(mill.Amount, false)
+		millAmount, ok := positiveQuantity(mill.Amount, false)
 		if !ok {
 			return unsupported("structural — unsupported mass reanimation mill amount")
 		}

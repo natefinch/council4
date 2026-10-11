@@ -63,7 +63,7 @@ func lowerMillThenOptionalAmongToHandSequence(ctx contentCtx) (game.AbilityConte
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	millAmount, ok := cardCountQuantity(mill.Amount, false)
+	millAmount, ok := positiveQuantity(mill.Amount, false)
 	if !ok {
 		return game.AbilityContent{}, false
 	}

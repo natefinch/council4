@@ -371,7 +371,8 @@ func dynamicAmountSelection(selector compiler.CompiledSelector) (game.Selection,
 
 // dynamicAmountSelectionMask drops the canonical dimensions a battlefield count
 // group never carries: the kind-agnostic counter, "aren't of the chosen type"
-// exclusion, conjunctive type set, and per-object token state. It honors the
+// exclusion, conjunctive type set, and non-token state. It honors the token-only
+// selection used by a counted token noun and the
 // excluded supertype ("the number of nonbasic lands that player controls",
 // Anathemancer), which the engine's battlefield count applies through
 // Selection.ExcludedSupertype. It fails closed on a source-relative power
@@ -383,7 +384,6 @@ var dynamicAmountSelectionMask = SelectionMask{}.Ignoring(
 	DimSubtypeChoiceExcluded,
 	DimConjunctiveTypes,
 	DimNonToken,
-	DimTokenOnly,
 ).Rejecting(
 	DimPowerVsSource,
 	DimRequiredName,
@@ -1249,12 +1249,11 @@ func permanentTargetSpecAllowingUnbounded(target compiler.CompiledTarget, allowU
 	if !allowUnbounded && targetCardinalityIsUnbounded(target) {
 		return game.TargetSpec{}, false
 	}
-	spec := game.TargetSpec{
-		MinTargets:                  target.Cardinality.Min,
-		MaxTargets:                  target.Cardinality.Max,
-		MaxTargetsFromTriggerEventX: target.Cardinality.MaxEventX,
-		Allow:                       game.TargetAllowPermanent,
+	spec, ok := targetCardinalitySpec(target.Cardinality)
+	if !ok {
+		return game.TargetSpec{}, false
 	}
+	spec.Allow = game.TargetAllowPermanent
 	if len(target.Selector.Alternatives) > 0 {
 		if keywordUnion, ok := keywordAlternativePermanentTargetSpec(target, spec); ok {
 			return keywordUnion, true

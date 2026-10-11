@@ -43,9 +43,6 @@ func exactGraveyardReturnEffectSyntax(effect *EffectSyntax) bool {
 	if len(effect.Targets) != 1 {
 		return false
 	}
-	if effect.Amount.VariableX {
-		return exactVariableXGraveyardReturnEffectSyntax(effect, text)
-	}
 	if !exactGraveyardCardTargetSyntax(&effect.Targets[0]) {
 		return false
 	}
@@ -125,58 +122,6 @@ func matchesGraveyardReturnDestination(text, prefix string) bool {
 // fixed targeted return does. It fails closed for every qualifier those shared
 // reconstructors reject, so an unrepresentable variable-count return keeps
 // failing rather than lowering to a wrong predicate.
-func exactVariableXGraveyardReturnEffectSyntax(effect *EffectSyntax, text string) bool {
-	targetText, ok := exactVariableXGraveyardTargetText(&effect.Targets[0])
-	if !ok {
-		return false
-	}
-	return matchesGraveyardReturnDestination(text, "Return X "+targetText)
-}
-
-// exactVariableXGraveyardTargetText reconstructs the canonical plural target noun
-// phrase of a variable-count graveyard-card return ("target creature cards from
-// your graveyard") from the target's typed selection and reports whether it
-// matches target.Text. It accepts the same graveyard noun filters as
-// exactGraveyardCardTargetSyntax (a card-type, a union of card types, a permanent
-// card, a single color, a colorless or multicolored card, a single subtype, a
-// single supertype, or the plain "card" noun, with an optional power, toughness,
-// or "with mana value N or less" qualifier) and fails closed for every other
-// shape, including any multi-target or "up to N" cardinality, whose count words
-// the variable-count "X target " prefix replaces.
-func exactVariableXGraveyardTargetText(target *TargetSyntax) (string, bool) {
-	sel := target.Selection
-	if sel.Zone != zone.Graveyard || sel.Other {
-		return "", false
-	}
-	if target.Cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) || sel.Another {
-		return "", false
-	}
-	if sel.All || sel.Attacking || sel.Blocking || sel.Tapped || sel.Untapped ||
-		sel.Keyword != KeywordUnknown ||
-		len(sel.SourceTypes) != 0 ||
-		len(sel.ExcludedSupertypes) != 0 || len(sel.ExcludedColors) != 0 {
-		return "", false
-	}
-	owner, ok := graveyardOwnerSuffix(sel.Controller, false, "from")
-	if !ok {
-		return "", false
-	}
-	noun, ok := graveyardCardNoun(sel, true)
-	if !ok {
-		return "", false
-	}
-	noun += "s"
-	qualifier, ok := graveyardNumericQualifier(sel)
-	if !ok {
-		return "", false
-	}
-	reconstructed := "target " + noun + qualifier + " " + owner
-	if !strings.EqualFold(target.Text, reconstructed) {
-		return "", false
-	}
-	return reconstructed, true
-}
-
 // exactChosenGraveyardReturnEffectSyntax recognizes the non-target "Return a
 // <filter> card from your graveyard to your hand." recursion wording and the
 // reanimation form "Return a <filter> card from your graveyard to the

@@ -533,6 +533,19 @@ func lowerModalContent(
 		return unsupported("semantic mode count does not match syntax mode count")
 	}
 	if maxModes > 1 || bonus.AdditionalMaxModes > 0 || bonus.MaxModes > 1 {
+		hasCount, targetedModes := false, 0
+		for _, mode := range ctx.content.Modes {
+			if len(mode.Content.Targets) > 0 {
+				targetedModes++
+			}
+			for _, target := range mode.Content.Targets {
+				hasCount = hasCount || target.Cardinality.CountEqualsX || target.Cardinality.MaxX ||
+					targetCardinalityIsUnbounded(target)
+			}
+		}
+		if hasCount && targetedModes > 1 {
+			return unsupported("multiple targeted modes with a variable-count spec require target-spec identity")
+		}
 		for _, mode := range ctx.content.Modes {
 			for _, effect := range mode.Content.Effects {
 				if effect.DelayedSubject.Kind == parser.DelayedSubjectProduct {

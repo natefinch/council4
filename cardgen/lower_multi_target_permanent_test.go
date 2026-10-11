@@ -213,7 +213,7 @@ func TestLowerMultiTargetPermanentFailClosed(t *testing.T) {
 	}{
 		{"destroy subtype qualifier", "Destroy up to two target Goblin creatures."},
 		{"destroy tapped qualifier", "Destroy two target tapped creatures."},
-		{"destroy unbounded any number", "Destroy any number of target creatures."},
+		{"destroy upper-bound X", "Destroy up to X target creatures."},
 		{"tap attacking qualifier", "Tap two target attacking creatures."},
 		{"bounce subtype qualifier", "Return up to two target Goblin creatures to their owners' hands."},
 	}

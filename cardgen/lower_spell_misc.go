@@ -382,7 +382,7 @@ func lowerFixedDestroySpell(
 	}
 	if content, ok := lowerMultiTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
 		return game.Destroy{Object: object, PreventRegeneration: preventRegeneration}
-	}); ok {
+	}, true); ok {
 		return content, nil
 	}
 	if content, ok := lowerMultiDistinctTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
@@ -579,7 +579,7 @@ func lowerFixedExileSpell(
 	}
 	return lowerFixedPermanentTargetSpell(ctx, "Exile", func(object game.ObjectReference) game.Primitive {
 		return game.MovePermanent{Object: object, Destination: zone.Exile}
-	})
+	}, true)
 }
 
 func lowerSourceSpellExile(ctx contentCtx) (game.AbilityContent, bool) {
@@ -1922,7 +1922,7 @@ func lowerControllerGraveyardChoiceExile(ctx contentCtx) (game.AbilityContent, b
 func lowerMultiTargetExileSpell(ctx contentCtx) (game.AbilityContent, bool) {
 	return lowerMultiTargetPermanentSpell(ctx, func(object game.ObjectReference) game.Primitive {
 		return game.MovePermanent{Object: object, Destination: zone.Exile}
-	})
+	}, true)
 }
 
 // lowerMultiDistinctTargetPermanentSpell lowers a single permanent verb (destroy,
@@ -1985,6 +1985,7 @@ func lowerMultiDistinctTargetPermanentSpell(
 func lowerMultiTargetPermanentSpell(
 	ctx contentCtx,
 	primitiveFactory func(object game.ObjectReference) game.Primitive,
+	acceptsSelectedGroup bool,
 ) (game.AbilityContent, bool) {
 	if len(ctx.content.Targets) != 1 {
 		return game.AbilityContent{}, false
@@ -2002,31 +2003,7 @@ func lowerMultiTargetPermanentSpell(
 		len(ctx.content.References) != 0 {
 		return game.AbilityContent{}, false
 	}
-	return multiTargetPermanentMode(target, primitiveFactory)
-}
-
-// multiTargetPermanentMode builds the one-spec/one-primitive-per-slot multi-
-// target mode shared by the multi-target permanent verbs. It returns ok=false
-// when the target is not an exact multi-target permanent the executable backend
-// can represent.
-func multiTargetPermanentMode(
-	target compiler.CompiledTarget,
-	primitiveFactory func(object game.ObjectReference) game.Primitive,
-) (game.AbilityContent, bool) {
-	targetSpec, ok := permanentTargetSpecWithCardinality(target)
-	if !ok || targetSpec.MaxTargets < 1 {
-		return game.AbilityContent{}, false
-	}
-	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
-	for i := range targetSpec.MaxTargets {
-		sequence = append(sequence, game.Instruction{
-			Primitive: primitiveFactory(game.TargetPermanentReference(i)),
-		})
-	}
-	return game.Mode{
-		Targets:  []game.TargetSpec{targetSpec},
-		Sequence: sequence,
-	}.Ability(), true
+	return selectedGroupTargetMode(target, primitiveFactory, acceptsSelectedGroup)
 }
 
 func exactMassDestroyGroup(ctx contentCtx) (game.GroupReference, bool) {
@@ -2055,6 +2032,7 @@ func lowerMassOrSinglePermanentSpell(
 	verb string,
 	groupPrimitive func(group game.GroupReference) game.Primitive,
 	objectPrimitive func(object game.ObjectReference) game.Primitive,
+	acceptsSelectedGroup bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
 	if group, ok := exactMassGroup(ctx); ok {
 		return game.Mode{
@@ -2074,7 +2052,7 @@ func lowerMassOrSinglePermanentSpell(
 	if content, ok := lowerEventXTargetPermanentSpell(ctx, objectPrimitive); ok {
 		return content, nil
 	}
-	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive)
+	return lowerFixedPermanentTargetSpell(ctx, verb, objectPrimitive, acceptsSelectedGroup)
 }
 
 func lowerEventXTargetPermanentSpell(
@@ -2086,7 +2064,7 @@ func lowerEventXTargetPermanentSpell(
 	}
 	target := ctx.content.Targets[0]
 	if ctx.triggerEvent != game.EventPermanentBecameMonstrous ||
-		!target.Cardinality.MaxEventX ||
+		!target.Cardinality.MaxX ||
 		target.Cardinality.Min != 0 {
 		return game.AbilityContent{}, false
 	}
@@ -2102,10 +2080,12 @@ func lowerEventXTargetPermanentSpell(
 		len(ctx.content.References) != 0 {
 		return game.AbilityContent{}, false
 	}
+	target.Cardinality.MaxX = false
 	targetSpec, ok := permanentTargetSpecAllowingUnbounded(target, true)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
+	targetSpec.MaxTargetsFromTriggerEventX = true
 	return game.Mode{
 		Targets: []game.TargetSpec{targetSpec},
 		Sequence: []game.Instruction{{
@@ -2183,7 +2163,7 @@ func lowerPhaseOutSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic
 		}
 		return lowerFixedPermanentTargetSpell(ctx, "Phase out", func(object game.ObjectReference) game.Primitive {
 			return game.PhaseOut{Object: object}
-		})
+		}, false)
 	}
 	if object, ok := lowerSourcePhaseOutObject(ctx); ok {
 		return game.Mode{
@@ -2341,7 +2321,7 @@ func lowerUntapSpell(ctx contentCtx) (game.AbilityContent, *shared.Diagnostic) {
 		return game.Untap{Group: group}
 	}, func(object game.ObjectReference) game.Primitive {
 		return game.Untap{Object: object}
-	})
+	}, false)
 }
 
 // exactMassBounceGroup mirrors exactMassGroup for the mass return-to-hand

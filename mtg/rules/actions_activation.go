@@ -614,6 +614,7 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) ||
+		!bodyTargetCountsMatchX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) ||
 		!bodyTargetsSatisfyManaValueX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
 		return false
 	}
@@ -687,7 +688,8 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 	}
 	def := cardFaceOrDefault(card, game.FaceFront)
 	if !modesValidForBody(body, chosenModes) ||
-		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) {
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) ||
+		!bodyTargetCountsMatchX(g, playerID, def, 0, body, chosenModes, targets, xValue) {
 		return false
 	}
 	if selfEntry {
@@ -727,7 +729,8 @@ func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, 
 	}
 	def := cardFaceOrDefault(card, game.FaceFront)
 	if !modesValidForBody(body, chosenModes) ||
-		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) {
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) ||
+		!bodyTargetCountsMatchX(g, playerID, def, 0, body, chosenModes, targets, xValue) {
 		return false
 	}
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{

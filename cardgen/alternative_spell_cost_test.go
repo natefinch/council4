@@ -568,7 +568,7 @@ func TestCommanderAlternativeCostDoesNotHideUnsupportedBody(t *testing.T) {
 		body string
 	}{
 		{name: "unsupported exile player graveyard", body: "Target player exiles a card from their graveyard."},
-		{name: "subtype unbounded exile", body: "Exile any number of target Goblin creatures."},
+		{name: "subtype upper-bound X exile", body: "Exile up to X target Goblin creatures."},
 		{name: "nonpermanent exile", body: "Exile target spell."},
 	} {
 		t.Run(test.name, func(t *testing.T) {

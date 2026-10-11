@@ -18,11 +18,6 @@ const removedTargetsForTokenKey = game.LinkedKey("removed-targets-for-token")
 // than a small fixed plural, so the variable-removal lowering keys on it.
 const anyNumberTargetCardinalityMax = 99
 
-// maxVariableRemovalTargets bounds the "X target creatures" form's resolving
-// target count at the engine's maximum legal X (maxLegalXValue), so target
-// announcement enumerates a finite range while still covering every castable X.
-const maxVariableRemovalTargets = 20
-
 // lowerRemovalVariableTargetsForEachTokenContent lowers the variable-target
 // removal-token family "Destroy any number of target creatures. For each creature
 // destroyed this way, its controller creates a <token>." (Descent of the Dragons)
@@ -83,7 +78,12 @@ func lowerRemovalVariableTargetsForEachTokenContent(ctx contentCtx) (game.Abilit
 	if !referencesAllPronoun(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
-	spec, ok := variableRemovalTargetSpec(ctx.content.Targets[0], removeEffect)
+	target := ctx.content.Targets[0]
+	if !removeEffect.Exact || !target.Exact ||
+		!target.Cardinality.CountEqualsX && !targetCardinalityIsUnbounded(target) {
+		return game.AbilityContent{}, false
+	}
+	spec, ok := permanentTargetSpecAllowingUnbounded(target, true)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
@@ -108,37 +108,6 @@ func lowerRemovalVariableTargetsForEachTokenContent(ctx contentCtx) (game.Abilit
 			},
 		},
 	}.Ability(), true
-}
-
-// variableRemovalTargetSpec projects the spell's lone creature target into a
-// resolving multi-target spec. The "X target creatures" form (removeEffect carries
-// the variable X on its amount) overrides the parser's single-target cardinality
-// with a 0..maxVariableRemovalTargets range and sets CountEqualsX so casting is
-// legal only when the chosen target count equals X. The "any number of target
-// creatures" form keeps the parser's 0..anyNumberTargetCardinalityMax range. Any
-// other cardinality is not a recognized variable-removal target.
-func variableRemovalTargetSpec(target compiler.CompiledTarget, removeEffect compiler.CompiledEffect) (game.TargetSpec, bool) {
-	countEqualsX := removeEffect.Amount.VariableX
-	switch {
-	case countEqualsX:
-		target.Cardinality.Min = 0
-		target.Cardinality.Max = maxVariableRemovalTargets
-	case target.Cardinality.Min == 0 && target.Cardinality.Max == anyNumberTargetCardinalityMax:
-	default:
-		return game.TargetSpec{}, false
-	}
-	target.Exact = true
-	// This lowering models the whole chosen group with one RemoveTargetsForToken
-	// instruction, so it opts into the unbounded "any number of" cardinality the
-	// shared builder otherwise rejects for the per-slot unroll callers.
-	spec, ok := permanentTargetSpecAllowingUnbounded(target, true)
-	if !ok {
-		return game.TargetSpec{}, false
-	}
-	if countEqualsX {
-		spec.CountEqualsX = true
-	}
-	return spec, true
 }
 
 // referencesAllPronoun reports whether every reference is the per-controller "its"

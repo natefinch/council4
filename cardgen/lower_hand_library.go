@@ -40,7 +40,7 @@ func lowerHandLibraryPutClause(ctx contentCtx) (game.AbilityContent, *shared.Dia
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported hand-library amount",
 			"hand-to-library placement requires a positive literal or bare X card count"), true
 	}
-	amount, ok := controllerActionQuantity(count, true)
+	amount, ok := positiveQuantity(count, true)
 	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(ctx, "unsupported hand-library amount",
 			"hand-to-library placement requires a positive literal or bare X card count"), true

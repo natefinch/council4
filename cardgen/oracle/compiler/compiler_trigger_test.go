@@ -928,7 +928,7 @@ func TestCompileBecomesMonstrousEventXTargets(t *testing.T) {
 		t.Fatalf("targets = %#v", ability.Content.Targets)
 	}
 	target := ability.Content.Targets[0]
-	if target.Cardinality != (TargetCardinality{Min: 0, Max: 99, MaxEventX: true}) ||
+	if target.Cardinality != (TargetCardinality{Min: 0, Max: 99, MaxX: true}) ||
 		target.Selector.Kind != SelectorCreature ||
 		target.Selector.Controller != ControllerOpponent {
 		t.Fatalf("target = %#v", target)

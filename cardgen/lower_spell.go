@@ -2229,23 +2229,23 @@ func lowerImmediateSingleEffectSpell(
 			return game.Tap{Group: group}
 		}, func(object game.ObjectReference) game.Primitive {
 			return game.Tap{Object: object}
-		})
+		}, true)
 	case compiler.EffectTapOrUntap:
 		return lowerFixedPermanentTargetSpell(ctx, "Tap or untap", func(object game.ObjectReference) game.Primitive {
 			return game.TapOrUntap{Object: object}
-		})
+		}, false)
 	case compiler.EffectUntap:
 		return lowerUntapSpell(ctx)
 	case compiler.EffectRemoveFromCombat:
 		return lowerFixedPermanentTargetSpell(ctx, "remove from combat", func(object game.ObjectReference) game.Primitive {
 			return game.RemoveFromCombat{Object: object}
-		})
+		}, false)
 	case compiler.EffectGoad:
 		return lowerMassOrSinglePermanentSpell(ctx, "goad", func(group game.GroupReference) game.Primitive {
 			return game.Goad{Group: group}
 		}, func(object game.ObjectReference) game.Primitive {
 			return game.Goad{Object: object}
-		})
+		}, false)
 	case compiler.EffectExile:
 		if len(ctx.content.Effects) == 1 &&
 			ctx.content.Effects[0].CardSource == parser.EffectCardSourceTopOfPlayerLibrary {

@@ -73,7 +73,7 @@ func lowerMillThenPaidReturnSequence(cardName string, ctx contentCtx) (game.Abil
 	if !ok {
 		return game.AbilityContent{}, false
 	}
-	millAmount, ok := cardCountQuantity(mill.Amount, false)
+	millAmount, ok := positiveQuantity(mill.Amount, false)
 	if !ok {
 		return game.AbilityContent{}, false
 	}
