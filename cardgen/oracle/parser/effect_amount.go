@@ -2707,7 +2707,7 @@ func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 	if noun, ok := atoms.ObjectNounAt(token.Span); ok {
 		return slices.Contains([]ObjectNoun{
 			ObjectNounArtifact, ObjectNounCreature, ObjectNounEnchantment,
-			ObjectNounLand, ObjectNounPermanent, ObjectNounCard,
+			ObjectNounLand, ObjectNounPermanent, ObjectNounCard, ObjectNounToken,
 		}, noun)
 	}
 	if _, ok := atoms.CardTypeAt(token.Span); ok {
@@ -2742,6 +2742,9 @@ func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 
 func buildDynamicCountSelection(tokens []shared.Token, start, end int, atoms Atoms) SelectionSyntax {
 	selection := parseSelection(tokens[start:end], atoms)
+	if selection.Kind == SelectionUnknown && selectionIsBareTokenTarget(selection) {
+		selection.Kind = SelectionPermanent
+	}
 	for i := start; i < end; i++ {
 		qualifier, ok := atoms.ColorQualifierAt(tokens[i].Span)
 		if !ok {

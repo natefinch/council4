@@ -1502,6 +1502,15 @@ func lowerEachOfTargetsDamageSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		return game.AbilityContent{}, false
 	}
 	damageSourceRef := primaryDamageSource(ctx.content.References)
+	if ctx.content.Targets[0].Cardinality.CountEqualsX {
+		return game.Mode{
+			Targets: []game.TargetSpec{spec},
+			Sequence: []game.Instruction{{Primitive: game.Damage{
+				Amount: amount, Recipient: game.AnyTargetDamageRecipient(0),
+				DamageSource: damageSourceRef, EachTarget: true,
+			}}},
+		}.Ability(), true
+	}
 	sequence := make([]game.Instruction, 0, spec.MaxTargets)
 	for i := range spec.MaxTargets {
 		sequence = append(sequence, game.Instruction{Primitive: game.Damage{
@@ -1563,14 +1572,20 @@ func eachOfDamageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bo
 			len(target.Selector.Supertypes()) != 0 {
 			return game.TargetSpec{}, false
 		}
-		return game.TargetSpec{
-			MinTargets: target.Cardinality.Min,
-			MaxTargets: target.Cardinality.Max,
-			Constraint: target.Text,
-			Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
-		}, true
+		spec, ok := targetCardinalitySpec(target.Cardinality)
+		if !ok {
+			return game.TargetSpec{}, false
+		}
+		spec.Constraint = target.Text
+		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
+		if target.Cardinality.CountEqualsX {
+			spec.Selection = opt.Val(game.Selection{
+				RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker, types.Battle},
+			})
+		}
+		return spec, true
 	case compiler.SelectorCreature:
-		spec, ok := permanentTargetSpecWithCardinality(target)
+		spec, ok := permanentTargetSpecAllowingUnbounded(target, target.Cardinality.CountEqualsX)
 		if !ok {
 			return game.TargetSpec{}, false
 		}
@@ -3502,9 +3517,9 @@ func lowerMultiTargetBounceSpell(ctx contentCtx) (game.AbilityContent, bool) {
 		!bounceDestinationPronounReferencesOnly(ctx.content.References) {
 		return game.AbilityContent{}, false
 	}
-	return multiTargetPermanentMode(target, func(object game.ObjectReference) game.Primitive {
+	return selectedGroupTargetMode(target, func(object game.ObjectReference) game.Primitive {
 		return game.MovePermanent{Object: object, Destination: zone.Hand}
-	})
+	}, true)
 }
 
 // lowerDualTargetBounceSpell lowers the dual-target battlefield bounce "Return
@@ -3761,8 +3776,9 @@ func lowerFixedPermanentTargetSpell(
 	ctx contentCtx,
 	verb string,
 	primitiveFactory func(object game.ObjectReference) game.Primitive,
+	acceptsSelectedGroup bool,
 ) (game.AbilityContent, *shared.Diagnostic) {
-	if content, ok := lowerMultiTargetPermanentSpell(ctx, primitiveFactory); ok {
+	if content, ok := lowerMultiTargetPermanentSpell(ctx, primitiveFactory, acceptsSelectedGroup); ok {
 		return content, nil
 	}
 	if !matchesExactSinglePermanentTargetSpell(ctx) {
@@ -4310,7 +4326,8 @@ func targetedPlayersEachSpec(ctx contentCtx, effect compiler.CompiledEffect) ([]
 // distributeCountersTargetSpec's cardinality handling: "any number of"/"up to N"
 // allow zero targets (CR 601.2d).
 func targetPlayersGroupSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if target.Cardinality.Max <= 1 || target.Cardinality.Min < 0 {
+	if target.Cardinality.Max <= 1 || target.Cardinality.Min < 0 ||
+		target.Cardinality.CountEqualsX || target.Cardinality.MaxX {
 		return game.TargetSpec{}, false
 	}
 	spec := game.TargetSpec{
@@ -4526,7 +4543,7 @@ func lowerFixedControllerSpell(
 			"the executable source backend supports only exact fixed controller "+verb,
 		)
 	}
-	amount, ok := controllerActionQuantity(effect.Amount, allowDynamic)
+	amount, ok := positiveQuantity(effect.Amount, allowDynamic)
 	if !ok {
 		return game.AbilityContent{}, contentDiagnostic(
 			ctx,
@@ -4558,24 +4575,7 @@ func cardCountQuantityForContext(ctx contentCtx, amount compiler.CompiledAmount,
 		}
 		return game.Dynamic(dynamic), true
 	}
-	return cardCountQuantity(amount, allowDynamic)
-}
-
-func cardCountQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
-	if amount.Known {
-		return game.Fixed(amount.Value), amount.Value > 0
-	}
-	if !allowDynamic {
-		return game.Quantity{}, false
-	}
-	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), amount.VariableX
-	}
-	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
-	if !ok || amount.DynamicKind == compiler.DynamicAmountSourcePower {
-		return game.Quantity{}, false
-	}
-	return game.Dynamic(dynamic), true
+	return positiveQuantity(amount, allowDynamic)
 }
 
 func controllerActionContext(context parser.EffectContextKind) bool {
@@ -4585,21 +4585,4 @@ func controllerActionContext(context parser.EffectContextKind) bool {
 	default:
 		return false
 	}
-}
-
-func controllerActionQuantity(amount compiler.CompiledAmount, allowDynamic bool) (game.Quantity, bool) {
-	if amount.Known {
-		return game.Fixed(amount.Value), amount.Value > 0
-	}
-	if !allowDynamic {
-		return game.Quantity{}, false
-	}
-	if amount.DynamicKind == compiler.DynamicAmountNone {
-		return game.Dynamic(game.DynamicAmount{Kind: game.DynamicAmountX}), amount.VariableX
-	}
-	dynamic, ok := lowerDynamicAmount(amount, game.SourcePermanentReference())
-	if !ok || amount.DynamicKind == compiler.DynamicAmountSourcePower {
-		return game.Quantity{}, false
-	}
-	return game.Dynamic(dynamic), true
 }

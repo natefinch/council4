@@ -1853,7 +1853,7 @@ func TestParseBecomesMonstrousTriggerEvent(t *testing.T) {
 		t.Fatalf("trigger event = %#v", clause)
 	}
 	target := document.Abilities[0].Sentences[0].Targets[0]
-	if target.Cardinality != (TargetCardinalitySyntax{Min: 0, Max: 99, MaxEventX: true}) ||
+	if target.Cardinality != (TargetCardinalitySyntax{Min: 0, Max: 99, MaxX: true}) ||
 		target.Selection.Kind != SelectionCreature ||
 		target.Selection.Controller != SelectionControllerOpponent ||
 		!target.Exact {

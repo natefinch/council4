@@ -226,7 +226,7 @@ func putAmongCountForm(amount compiler.CompiledAmount) (anyNumber bool, ok bool)
 // combat-damage trigger context and so fails closed elsewhere.
 func millAmongAmount(ctx contentCtx, amount compiler.CompiledAmount) (game.Quantity, bool) {
 	if amount.Known {
-		return cardCountQuantity(amount, false)
+		return positiveQuantity(amount, false)
 	}
 	dynamic, ok := lowerEventCombatDamageAmount(ctx, amount)
 	if !ok {

@@ -29,7 +29,8 @@ func targetCardinalityIsOneOrUpToOne(target compiler.CompiledTarget) bool {
 // cannot be unrolled into a fixed instruction per slot; only lowerers that model
 // the whole group with one instruction may accept it.
 func targetCardinalityIsUnbounded(target compiler.CompiledTarget) bool {
-	return target.Cardinality.Min == 0 && target.Cardinality.Max == 99
+	return target.Cardinality.Min == 0 && target.Cardinality.Max == 99 &&
+		!target.Cardinality.CountEqualsX && !target.Cardinality.MaxX
 }
 
 func signedAmountText(amount compiler.CompiledSignedAmount) string {

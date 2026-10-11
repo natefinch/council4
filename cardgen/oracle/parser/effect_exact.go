@@ -3430,6 +3430,10 @@ func tokenAttackClause(sel SelectionSyntax, noun string, defender AttackDefender
 }
 
 func exactCreateTokenEffectSyntax(effect *EffectSyntax) bool {
+	if createHasLeadingIterator(effect) &&
+		effect.Amount.DynamicForm != EffectDynamicAmountFormForEach {
+		return false
+	}
 	targetRecipient, ok := exactCreateTokenRecipientContext(effect)
 	if !ok || (!effect.TokenPTKnown && !effect.TokenPTVariableX &&
 		effect.TokenPTDynamic == EffectDynamicAmountNone) || effect.Negated {

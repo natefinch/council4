@@ -85,26 +85,11 @@ func spellTargetCounts(g *game.Game, controller game.PlayerID, card *game.CardDe
 // Spells without a CountEqualsX spec are unaffected.
 func spellTargetCountsMatchX(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue int, branch game.CastBranch) bool {
 	specs := spellTargetSpecs(card, chosenModes, branch)
-	requiresMatch := false
-	for i := range specs {
-		if specs[i].CountEqualsX {
-			requiresMatch = true
-			break
-		}
-	}
-	if !requiresMatch {
+	if !specsBindTargetCountsToX(specs) {
 		return true
 	}
 	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets, branch)
-	if !ok {
-		return false
-	}
-	for i := range specs {
-		if specs[i].CountEqualsX && (i >= len(counts) || counts[i] != xValue) {
-			return false
-		}
-	}
-	return true
+	return ok && targetCountsMatchX(specs, counts, xValue)
 }
 
 // spellTargetCountsMatchKicker reports whether every CountEqualsKickerPlusOne

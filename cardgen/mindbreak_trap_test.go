@@ -66,29 +66,20 @@ func TestLowerMindbreakTrap(t *testing.T) {
 	}
 }
 
-// TestLowerAnyNumberTargetCreaturesExileFailsClosed proves the new any-number
-// spell-target exile path is discriminating and does not broaden permanent
-// exile: swapping "spells" for "creatures" is not captured by the stack-spell
-// path and remains unsupported (the fixed permanent exile still handles only one
-// exact target), so it fails closed with a diagnostic rather than mis-lowering.
-func TestLowerAnyNumberTargetCreaturesExileFailsClosed(t *testing.T) {
+func TestLowerAnyNumberPermanentExileUsesPermanentPrimitive(t *testing.T) {
 	t.Parallel()
-	face := lowerSingleFaceExpectingUnsupported(t, &ScryfallCard{
+	card := &ScryfallCard{
 		Name:       "Not Mindbreak",
 		Layout:     "normal",
 		TypeLine:   "Instant",
 		ManaCost:   "{2}{U}",
 		OracleText: "Exile any number of target creatures.",
-	})
-	if face.SpellAbility.Exists {
-		for _, mode := range face.SpellAbility.Val.Modes {
-			for _, instr := range mode.Sequence {
-				if _, ok := instr.Primitive.(game.ExileTargetSpells); ok {
-					t.Fatal("permanent exile wrongly lowered to ExileTargetSpells (spell-only path leaked)")
-				}
-			}
-		}
 	}
+	assertCardPaths(t, card,
+		"Modes[0].Sequence[0].Primitive.(game.MovePermanent).Object.kind = game.ObjectReferenceAllTargetPermanents",
+		"Modes[0].Sequence[0].Primitive.(game.MovePermanent).Destination = zone.Exile",
+	)
+	assertCardPathsAbsent(t, card, "Primitive.(game.ExileTargetSpells)")
 }
 
 // TestLowerBoundedTargetSpellsExileFailsClosed proves the any-number exile path

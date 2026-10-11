@@ -122,7 +122,7 @@ func TestLowerMultiTargetExileFailClosed(t *testing.T) {
 	}{
 		{name: "subtype qualifier", oracleText: "Exile up to two target Goblin creatures."},
 		{name: "tapped qualifier", oracleText: "Exile two target tapped creatures."},
-		{name: "unbounded any number", oracleText: "Exile any number of target creatures."},
+		{name: "upper-bound X", oracleText: "Exile up to X target creatures."},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

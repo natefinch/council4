@@ -52,15 +52,10 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 			case i >= 3 && effectWordsAt(tokens, i-3, "up", "to"):
 				start = i - 3
 				cardinality.Min = 0
-				if equalWord(tokens[i-1], "X") {
-					cardinality.Max = 99
-					cardinality.MaxEventX = true
-				} else {
-					var ok bool
-					cardinality.Max, ok = effectNumber(tokens[i-1], atoms)
-					if !ok || cardinality.Max < 1 {
-						cardinality = TargetCardinalitySyntax{}
-					}
+				var ok bool
+				cardinality.Max, ok = effectNumber(tokens[i-1], atoms)
+				if !ok || cardinality.Max < 1 {
+					cardinality = TargetCardinalitySyntax{}
 				}
 			case i >= 2 && equalWord(tokens[i-1], "other") &&
 				func() bool { c, ok := effectNumber(tokens[i-2], atoms); return ok && c > 1 }():
@@ -87,6 +82,10 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 				}
 			default:
 			}
+		}
+		if countStart, count, ok := variableTargetCardinality(tokens, i); ok {
+			start = countStart
+			cardinality = count
 		}
 		// A bare plural "targets" with no recognized preceding cardinality is not
 		// a target production; only "<cardinality> targets" (e.g. "any number of
@@ -115,8 +114,11 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		end := targetSyntaxEnd(tokens, atoms, i+1)
 		selectionTokens := append([]shared.Token(nil), tokens[start:i]...)
 		selectionTokens = append(selectionTokens, tokens[i+1:end]...)
-		if cardinality.MaxEventX && start == i-3 {
+		if cardinality.CountEqualsX || cardinality.MaxX {
 			selectionTokens = append([]shared.Token(nil), tokens[i+1:end]...)
+			if i > start && (equalWord(tokens[i-1], "other") || equalWord(tokens[i-1], "another")) {
+				selectionTokens = append([]shared.Token{tokens[i-1]}, selectionTokens...)
+			}
 		}
 		nameUnique := false
 		if head, ok := splitSelectionNameUniqueTail(selectionTokens); ok {
@@ -217,8 +219,17 @@ func parseTargets(tokens []shared.Token, atoms Atoms) []TargetSyntax {
 		if possessivePTTarget {
 			exact = true
 		}
+		var countSpan shared.Span
+		if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) && start < i {
+			countEnd := i
+			if equalWord(tokens[i-1], "other") || equalWord(tokens[i-1], "another") {
+				countEnd--
+			}
+			countSpan = shared.SpanOf(tokens[start:countEnd])
+		}
 		targets = append(targets, TargetSyntax{
 			Span:        shared.SpanOf(tokens[start:end]),
+			CountSpan:   countSpan,
 			ChoiceSpan:  exactTargetChoiceSpan(tokens, start, targetTokens, cardinality, selection),
 			Text:        joinedEffectText(tokens[start:end]),
 			Cardinality: cardinality,
@@ -450,7 +461,10 @@ func enumeratedTargetCardinality(tokens []shared.Token, i int) (int, TargetCardi
 }
 
 func exactRuntimeTargetSyntax(tokens []shared.Token, cardinality TargetCardinalitySyntax, selection SelectionSyntax) bool {
-	if exactGraveyardCardInPhraseTargetSyntax(tokens, cardinality, selection) {
+	if exactGraveyardCardInPhraseTargetSyntax(tokens, cardinality, selection) ||
+		exactGraveyardCardTargetSyntax(&TargetSyntax{
+			Text: joinedEffectText(tokens), Cardinality: cardinality, Selection: selection,
+		}) {
 		return true
 	}
 	if cardinality != (TargetCardinalitySyntax{Min: 1, Max: 1}) {
@@ -697,6 +711,11 @@ func exactMultiPermanentTargetSyntax(text string, cardinality TargetCardinalityS
 	if !ok {
 		return false
 	}
+	if (cardinality.CountEqualsX || cardinality.MaxX ||
+		cardinality.Min == 0 && cardinality.Max == 99) &&
+		selection.Kind != SelectionAny && selection.Kind != SelectionPlayer {
+		return exactCountedPermanentTargetSyntax(text, prefix, selection)
+	}
 
 	// A spell target ("any number of target spells", "up to two target instant
 	// spells") pluralizes a spell noun the permanent path below cannot
@@ -886,6 +905,15 @@ func exactMultiPermanentUnionTargetSyntax(text, prefix string, plural bool, sele
 // count, and fails closed for wider ranges and counts without a small-cardinal
 // word.
 func multiTargetCardinalityPrefix(c TargetCardinalitySyntax) (prefix string, plural, ok bool) {
+	if c.CountEqualsX || c.MaxX {
+		if c.Min != 0 || c.Max != 99 || c.CountEqualsX && c.MaxX {
+			return "", false, false
+		}
+		if c.CountEqualsX {
+			return "X ", true, true
+		}
+		return "up to X ", true, true
+	}
 	if c.Min == 0 && c.Max == 1 {
 		return "up to one ", false, true
 	}

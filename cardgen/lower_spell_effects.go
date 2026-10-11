@@ -500,19 +500,6 @@ func lowerTargetedGraveyardReturn(ctx contentCtx) (game.AbilityContent, bool) {
 	default:
 		return game.AbilityContent{}, false
 	}
-	if effect.Amount.VariableX {
-		// "Return X target <noun> cards from your graveyard ...": the spell's
-		// chosen X fixes how many graveyard cards are returned. Bind the
-		// resolving target count to X with CountEqualsX and unroll one per-index
-		// return instruction for every legal X up to the engine's maximum,
-		// mirroring the variable-removal target spec's count binding and the
-		// per-slot unroll the fixed multi-target return already uses (unchosen
-		// indices above the chosen X no-op, exactly as an "up to N" return's
-		// unfilled slots do).
-		targetSpec.MinTargets = 0
-		targetSpec.MaxTargets = maxVariableRemovalTargets
-		targetSpec.CountEqualsX = true
-	}
 	sequence := make([]game.Instruction, 0, targetSpec.MaxTargets)
 	for i := range targetSpec.MaxTargets {
 		instruction, ok := graveyardReturnInstruction(
@@ -543,15 +530,16 @@ func cardInZoneTargetSpec(target compiler.CompiledTarget, targetZone zone.Type) 
 	if !ok {
 		return game.TargetSpec{}, false
 	}
-	return game.TargetSpec{
-		MinTargets:    target.Cardinality.Min,
-		MaxTargets:    target.Cardinality.Max,
-		Constraint:    lowerFirst(target.Text),
-		Allow:         game.TargetAllowCard,
-		TargetZone:    targetZone,
-		Selection:     opt.Val(selection),
-		SameGraveyard: target.Selector.SingleGraveyard,
-	}, true
+	spec, ok := targetCardinalitySpec(target.Cardinality)
+	if !ok || target.Cardinality.CountEqualsX && !target.Exact {
+		return game.TargetSpec{}, false
+	}
+	spec.Constraint = lowerFirst(target.Text)
+	spec.Allow = game.TargetAllowCard
+	spec.TargetZone = targetZone
+	spec.Selection = opt.Val(selection)
+	spec.SameGraveyard = target.Selector.SingleGraveyard
+	return spec, true
 }
 
 // lowerManaValueDynamicBound maps a compiled dynamic mana-value bound kind to a

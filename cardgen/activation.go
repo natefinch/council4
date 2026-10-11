@@ -363,9 +363,13 @@ func activationReferencesSupported(content compiler.AbilityContent) bool {
 		}
 	}
 	for _, reference := range content.References {
+		if returnHandDestinationInternalReference(content.Effects, reference) {
+			continue
+		}
 		if reorderInternalReference(content.Effects, reference) {
 			continue
 		}
+
 		if returnExiledCardsWithCounterInternalReference(content.Effects, reference) {
 			continue
 		}
@@ -380,6 +384,25 @@ func activationReferencesSupported(content compiler.AbilityContent) bool {
 		}
 	}
 	return true
+}
+
+// A plural return owns its destination possessive, not an external object
+// reference. Exact clause reconstruction and parser-owned order prove that use.
+func returnHandDestinationInternalReference(effects []compiler.CompiledEffect, reference compiler.CompiledReference) bool {
+	for _, effect := range effects {
+		if effect.Kind != compiler.EffectReturn || !effect.Exact ||
+			effect.Context != parser.EffectContextController || effect.ToZone != zone.Hand ||
+			effect.FromZone != zone.None || len(effect.Targets) != 1 ||
+			!effect.Targets[0].Exact || !bounceDestinationPronounReferencesOnly(effect.References) {
+			continue
+		}
+		if slices.ContainsFunc(effect.References, func(owned compiler.CompiledReference) bool {
+			return owned.Order == reference.Order && owned.Kind == reference.Kind && owned.Pronoun == reference.Pronoun
+		}) {
+			return true
+		}
+	}
+	return false
 }
 
 // reorderInternalReference reports whether reference is the "them" pronoun

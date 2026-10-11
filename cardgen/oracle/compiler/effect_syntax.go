@@ -74,12 +74,14 @@ func compileTypedTargetList(syntaxes []parser.TargetSyntax) []CompiledTarget {
 		syntax := &syntaxes[i]
 		targets = append(targets, CompiledTarget{
 			Span:       syntax.Span,
+			CountSpan:  syntax.CountSpan,
 			ChoiceSpan: syntax.ChoiceSpan,
 			Text:       syntax.Text,
 			Cardinality: TargetCardinality{
-				Min:       syntax.Cardinality.Min,
-				Max:       syntax.Cardinality.Max,
-				MaxEventX: syntax.Cardinality.MaxEventX,
+				Min:          syntax.Cardinality.Min,
+				Max:          syntax.Cardinality.Max,
+				CountEqualsX: syntax.Cardinality.CountEqualsX,
+				MaxX:         syntax.Cardinality.MaxX,
 			},
 			Selector:          compileTypedSelection(syntax.Selection),
 			Exact:             syntax.Exact,
