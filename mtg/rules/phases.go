@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 const maximumHandSize = 7
@@ -187,15 +186,6 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 			permanent.SummoningSick = false
 			continue
 		}
-		// A stun counter replaces the permanent's untapping: instead of
-		// untapping, remove one stun counter from it (CR 122.6f). The counter is
-		// only consumed when the permanent would actually untap, so an already
-		// untapped permanent keeps its stun counters.
-		if permanent.Tapped && permanent.Counters.Has(counter.Stun) {
-			permanent.Counters.Remove(counter.Stun, 1)
-			permanent.SummoningSick = false
-			continue
-		}
 		setPermanentTapped(g, permanent, false)
 		permanent.SummoningSick = false
 	}
@@ -280,6 +270,7 @@ func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent
 // (it is spent only on the controller's own untap step).
 func untapDuringOtherPlayersUntapStep(g *game.Game) {
 	effects := activeRuleEffects(g)
+	seen := make(map[*game.Permanent]bool)
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind != game.RuleEffectUntapDuringOtherPlayersUntapStep ||
@@ -287,16 +278,18 @@ func untapDuringOtherPlayersUntapStep(g *game.Game) {
 			continue
 		}
 		if effect.AffectedSource {
-			if permanent, ok := permanentByObjectID(g, effect.AffectedObjectID); ok {
+			if permanent, ok := permanentByObjectID(g, effect.AffectedObjectID); ok && !seen[permanent] {
+				seen[permanent] = true
 				untapForOtherPlayersStep(g, permanent)
 			}
 			continue
 		}
 		for _, permanent := range g.Battlefield {
 			if !activeBattlefieldPermanent(permanent) ||
-				!ruleEffectMatchesPermanent(g, effect, permanent) {
+				!ruleEffectMatchesPermanent(g, effect, permanent) || seen[permanent] {
 				continue
 			}
+			seen[permanent] = true
 			untapForOtherPlayersStep(g, permanent)
 		}
 	}
@@ -307,10 +300,6 @@ func untapDuringOtherPlayersUntapStep(g *game.Game) {
 // active player's own untap applies.
 func untapForOtherPlayersStep(g *game.Game, permanent *game.Permanent) {
 	if ruleEffectPreventsUntap(g, permanent) {
-		return
-	}
-	if permanent.Tapped && permanent.Counters.Has(counter.Stun) {
-		permanent.Counters.Remove(counter.Stun, 1)
 		return
 	}
 	setPermanentTapped(g, permanent, false)

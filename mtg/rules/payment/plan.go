@@ -267,6 +267,7 @@ func additionalManaRestrictions(base map[id.ID]bool, additional additionalCostPl
 			restrictions.excluded[permanent.ObjectID] = true
 		}
 	}
+	reserveStunForAdditionalCosts(&restrictions, additional)
 	return restrictions
 }
 
@@ -724,7 +725,8 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 // contract and panic on any inconsistency, so a clean failure here leaves game
 // state byte-for-byte unchanged.
 func paymentApplicationReady(s State, player *game.Player, manaPlan paymentPlan, additionalPlan additionalCostPlan) bool {
-	if !additionalCostPlanStillValid(s, player, additionalPlan) || !paymentPlanStillValid(s, player, manaPlan) {
+	if !additionalCostPlanStillValid(s, player, additionalPlan) || !paymentPlanStillValid(s, player, manaPlan) ||
+		!stunCounterPaymentsCompatible(manaPlan, additionalPlan) {
 		return false
 	}
 	totalLife := manaPlan.lifePayment + additionalPlan.lifePaid

@@ -126,13 +126,14 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 			panic("additional cost plan life payment was not prevalidated before application")
 		}
 	}
-	if plan.untapSource != nil {
-		s.SetTapped(plan.untapSource, false)
-	}
 	for _, removal := range plan.counterRemovals {
 		if !s.RemoveCounters(removal.source, removal.kind, removal.amount) {
 			panic("additional cost plan became invalid while removing counters")
 		}
+	}
+	// Pay reserved counter removals before stun can replace the untap (CR 601.2h).
+	if plan.untapSource != nil {
+		s.SetTapped(plan.untapSource, false)
 	}
 	if plan.exertSource != nil && !s.ExertPermanent(plan.exertSource) {
 		panic("additional cost plan became invalid while exerting source")

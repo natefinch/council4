@@ -852,7 +852,8 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			applyEntersBecomesCharacteristic(g, permanent, replacement)
 		}
 		if entersUntapped {
-			setPermanentTapped(g, permanent, false)
+			// Entry state is not an untap event (CR 614.12).
+			permanent.Tapped = false
 		}
 	}
 	if hasKeyword(g, permanent, game.Riot) {
