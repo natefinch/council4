@@ -2325,10 +2325,10 @@ func finalizeParsedEffect(effect *EffectSyntax, sentence Sentence, atoms Atoms) 
 	if recognizeColorsAmongControlledMana(effect, atoms) {
 		effect.Exact = true
 	}
-	if recognizeMillHalfLibrary(effect) {
+	if recognizeMillHalfLibrary(effect, atoms) {
 		effect.Exact = exactEffectSyntax(effect)
 	}
-	if recognizeLoseHalfLife(effect) {
+	if recognizeLoseHalfLife(effect, atoms) {
 		effect.Exact = exactEffectSyntax(effect)
 	}
 	if recognizeEachColorAmongControlledMana(effect, atoms) {
@@ -4018,14 +4018,12 @@ func recognizeDamageTargetThatPlayerControlsSentence(sentence *Sentence) {
 // amount on a mill effect (Traumatize, Fleet Swallower, Cut Your Losses). The
 // amount is half the milling player's library, counted as the effect resolves
 // and rounded up or down per the trailing "rounded up"/"rounded down" word
-// (CR 107.4). The milling player is the effect's own subject, so the possessive
-// "their"/"your" names no free referent; the recognizer leaves no reference of
-// its own and the semantic reference scan drops the possessive's span (see
-// computeSemanticReferences), so downstream stages see a referent-free
-// single-player mill. It matches only the exact six-token "half <their|your>
+// (CR 107.4). The possessive is retained as an amount operand with its canonical
+// reference identity so the compiler can prove it names the milling player.
+// It matches only the exact six-token "half <their|your>
 // library , rounded <up|down>" run on a mill effect; every other mill amount is
 // left untouched.
-func recognizeMillHalfLibrary(effect *EffectSyntax) bool {
+func recognizeMillHalfLibrary(effect *EffectSyntax, atoms Atoms) bool {
 	if effect.Kind != EffectMill {
 		return false
 	}
@@ -4038,14 +4036,20 @@ func recognizeMillHalfLibrary(effect *EffectSyntax) bool {
 			(!equalWord(effect.Tokens[i+5], "down") && !equalWord(effect.Tokens[i+5], "up")) {
 			continue
 		}
+		if equalWord(effect.Tokens[i+1], "your") && effect.Context != EffectContextController ||
+			equalWord(effect.Tokens[i+1], "their") && effect.Context == EffectContextController {
+			return false
+		}
 		matched := effect.Tokens[i : i+6]
 		span := shared.SpanOf(matched)
 		effect.Amount = EffectAmountSyntax{
-			Span:        span,
-			Text:        joinedEffectText(matched),
-			DynamicKind: EffectDynamicAmountHalfPlayerLibrary,
-			DynamicForm: EffectDynamicAmountFormHalfLibrary,
-			RoundUp:     equalWord(effect.Tokens[i+5], "up"),
+			Span:            span,
+			Text:            joinedEffectText(matched),
+			ReferenceSpan:   effect.Tokens[i+1].Span,
+			ReferenceNodeID: atoms.ReferenceIDAt(effect.Tokens[i+1].Span),
+			DynamicKind:     EffectDynamicAmountHalfPlayerLibrary,
+			DynamicForm:     EffectDynamicAmountFormHalfLibrary,
+			RoundUp:         equalWord(effect.Tokens[i+5], "up"),
 		}
 		effect.Selection = SelectionSyntax{Kind: SelectionCard, Text: effect.Selection.Text}
 		return true
@@ -4058,11 +4062,11 @@ func recognizeMillHalfLibrary(effect *EffectSyntax) bool {
 // Radioactive Man). The amount is half the losing player's life, counted as the
 // effect resolves and rounded up or down per the trailing "rounded up"/"rounded
 // down" word (CR 107.4). The losing player is the effect's own subject, so the
-// possessive "their"/"your" names no free referent, mirroring
+// possessive "their"/"your" is an owned amount operand, mirroring
 // recognizeMillHalfLibrary. It matches only the exact six-token "half
 // <their|your> life , rounded <up|down>" run on a life-loss effect; every other
 // life amount is left untouched.
-func recognizeLoseHalfLife(effect *EffectSyntax) bool {
+func recognizeLoseHalfLife(effect *EffectSyntax, atoms Atoms) bool {
 	if effect.Kind != EffectLose {
 		return false
 	}
@@ -4075,13 +4079,19 @@ func recognizeLoseHalfLife(effect *EffectSyntax) bool {
 			(!equalWord(effect.Tokens[i+5], "down") && !equalWord(effect.Tokens[i+5], "up")) {
 			continue
 		}
+		if equalWord(effect.Tokens[i+1], "your") && effect.Context != EffectContextController ||
+			equalWord(effect.Tokens[i+1], "their") && effect.Context == EffectContextController {
+			return false
+		}
 		matched := effect.Tokens[i : i+6]
 		effect.Amount = EffectAmountSyntax{
-			Span:        shared.SpanOf(matched),
-			Text:        joinedEffectText(matched),
-			DynamicKind: EffectDynamicAmountHalfPlayerLife,
-			DynamicForm: EffectDynamicAmountFormHalfLife,
-			RoundUp:     equalWord(effect.Tokens[i+5], "up"),
+			Span:            shared.SpanOf(matched),
+			Text:            joinedEffectText(matched),
+			ReferenceSpan:   effect.Tokens[i+1].Span,
+			ReferenceNodeID: atoms.ReferenceIDAt(effect.Tokens[i+1].Span),
+			DynamicKind:     EffectDynamicAmountHalfPlayerLife,
+			DynamicForm:     EffectDynamicAmountFormHalfLife,
+			RoundUp:         equalWord(effect.Tokens[i+5], "up"),
 		}
 		return true
 	}

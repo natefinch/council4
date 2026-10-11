@@ -52,6 +52,7 @@ func lowerModalTriggerBody(
 		enclosingKind:           compiler.AbilityTriggered,
 		triggerCardCountEvent:   pattern.Event,
 		triggerEvent:            pattern.Event,
+		triggerPattern:          &pattern,
 		triggerSubjectSelection: pattern.SubjectSelection,
 	}
 	return lowerModalContent(cardName, ctx, syntax)

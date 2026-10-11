@@ -52,6 +52,9 @@ type contentCtx struct {
 	// outside a triggered ability. It lets typed event-player references lower
 	// only where the resolving stack object retains an authoritative event.
 	triggerEvent game.EventKind
+	// triggerPattern preserves the typed event actor qualifiers when a legacy
+	// player anaphor denotes a permanent's controller rather than Event.Player.
+	triggerPattern *game.TriggerPattern
 	// triggerSubjectSelection is the enclosing trigger's event-subject filter.
 	// Triggering-event quantities use it to count only the members of a coalesced
 	// event batch that caused the trigger, such as the Dinosaurs in "Whenever one
@@ -201,6 +204,7 @@ func lowerSequenceClauseContent(
 		allowEventPronoun:       allowEventPronoun,
 		triggerCardCountEvent:   parent.triggerCardCountEvent,
 		triggerEvent:            parent.triggerEvent,
+		triggerPattern:          parent.triggerPattern,
 		triggerSubjectSelection: parent.triggerSubjectSelection,
 		triggerOneOrMore:        parent.triggerOneOrMore,
 		triggerToZone:           parent.triggerToZone,
@@ -236,6 +240,7 @@ func lowerTriggerBodyContent(
 		enclosingKind:                  compiler.AbilityTriggered,
 		triggerCardCountEvent:          pattern.Event,
 		triggerEvent:                   pattern.Event,
+		triggerPattern:                 &pattern,
 		triggerSubjectSelection:        pattern.SubjectSelection,
 		triggerOneOrMore:               pattern.OneOrMore,
 		triggerToZone:                  triggerPatternToZone(pattern),

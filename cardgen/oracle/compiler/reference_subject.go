@@ -328,7 +328,8 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 		referenceIsOwnedSpellDamageSubject(*reference, *source.scope.owner) {
 		reference.Binding = ReferenceBindingSource
 	}
-	if referenceIsOwnedCastCostPolicy(*reference, effects) ||
+	if defendingHalfPlayerAmountPolicy(*reference, effects, source) ||
+		referenceIsOwnedCastCostPolicy(*reference, effects) ||
 		referenceIsCorrelatedPlayerPolicy(*reference, effects) ||
 		source.scope != nil && source.scope.owner != nil &&
 			referenceIsOwnedPaymentDecision(*reference, *source.scope.owner, source) {

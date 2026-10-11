@@ -2622,7 +2622,7 @@ func gainPlayerCounterRecipient(
 		return game.TargetPlayerReference(0), []game.TargetSpec{targetSpec}, true
 	case len(ctx.content.Targets) == 1 &&
 		effect.Context == parser.EffectContextReferencedObjectController:
-		ref, ok := referencedControllerPlayerRef(ctx)
+		ref, ok := referencedObjectPlayerRef(ctx)
 		return ref, nil, ok
 	case len(ctx.content.Targets) == 0 &&
 		len(ctx.content.References) == 1 &&
