@@ -244,6 +244,11 @@ func (r *effectResolver) dividedTargets(specIndex int) []dividedDamageTarget {
 			legal = found && activeBattlefieldPermanent(permanent)
 		case game.TargetPlayer:
 			legal = isPlayerAlive(r.game, target.PlayerID)
+		case game.TargetDeferred:
+			if !target.DeferredKindSet ||
+				(target.DeferredKind != game.TargetPermanent && target.DeferredKind != game.TargetPlayer) {
+				continue
+			}
 		default:
 			// Only permanents and players are valid divided-damage recipients;
 			// any other chosen-target kind is excluded from the division.

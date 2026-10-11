@@ -78,6 +78,15 @@ use ordinary adapters rather than whole-face alternative combiners. Unmodeled
 riders still refuse the whole card, including Arrow Storm's unpreventable damage
 rider tracked in #2256.
 
+Single, divided, and kicker-scaled damage target adapters explicitly select
+creatures, planeswalkers, and battles while retaining player targets separately;
+target-constraint prose does not determine damageable permanent membership.
+Conditional divided-damage clauses refuse because declaration-time allocations
+are not retained on the stack (#3236). Existing single-spec divided handlers
+choose allocations at resolution, so their tests do not certify announcement
+timing. Represented deferred permanent/player slots retain their lost share
+without restoring target identity or legality.
+
 Resolving object-match conditions retain the parser-owned subject reference,
 its target occurrence, and its target domain. A prior targeted graveyard card
 can therefore remain the subject after exile without being confused with the

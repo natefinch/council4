@@ -1185,6 +1185,7 @@ func damageTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
 			return game.TargetSpec{}, false
 		}
 		spec.Allow = game.TargetAllowPermanent | game.TargetAllowPlayer
+		spec.Selection = opt.Val(damageableSelection())
 	case compiler.SelectorCreature, compiler.SelectorPlaneswalker, compiler.SelectorBattle:
 		permanent, ok := permanentTargetSpecWithCardinality(target)
 		if !ok {

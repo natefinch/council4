@@ -162,8 +162,7 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 	// enumerated forms require at least one. Derive the minimum from the wording
 	// rather than forcing at least one target.
 	minTargets := min(target.Cardinality.Min, maxTargets)
-	// "Any target" admits both permanents and players, a combination the
-	// permanent selection does not model, so build it directly.
+	// Allow carries player membership; Selection narrows permanent membership.
 	if target.Selector.Kind == compiler.SelectorAny {
 		if selectorHasCounterQualifier(target.Selector) ||
 			selectorHasAttachmentQualifier(target.Selector) {
@@ -174,6 +173,7 @@ func dividedDamageTargetSpec(target compiler.CompiledTarget, capTotal int) (game
 			MaxTargets: maxTargets,
 			Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
 			Constraint: target.Text,
+			Selection:  opt.Val(damageableSelection()),
 		}, true
 	}
 	selection, ok := dividedDamagePermanentSelection(target.Selector)

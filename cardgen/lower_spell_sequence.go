@@ -312,6 +312,13 @@ func lowerOrderedEffectSequence(
 	if !ok {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — otherwise branch not gatable")
 	}
+	for i, effect := range ctx.content.Effects {
+		if effect.Kind == compiler.EffectDealDamage && effect.Divided &&
+			sequenceClauseInstructionGated(i, effectConditions, insteadGates, otherwiseGates) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx,
+				"timing — conditional divided damage requires an announced allocation receipt retained across branch target selection")
+		}
+	}
 	var targets []game.TargetSpec
 	var sequence []game.Instruction
 	consumedTargets := 0
