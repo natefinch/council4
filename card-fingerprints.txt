@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18655 supported cards
+# 18664 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -736,6 +736,7 @@ ac56e45212152fb1  Ardenvale Tactician // Dizzying Swoop
 6148199882c6defb  Ardoz, Cobbler of War
 24a3db6571661bd2  Arena Athlete
 7be3216c310703d6  Arena Trickster
+fa5ad0060bd796af  Arenson's Aura
 a245edf27818b6a7  Ares, God of War
 c982656ddfe2ee29  Argent Mutation
 9d83fd2847d41248  Argent Sphinx
@@ -4192,6 +4193,7 @@ cc3d58a95c7007bd  Draconic Disciple
 3b3e787bce678dd1  Draconic Muralists
 fe0036d7e8eebe99  Draconic Visitor
 8db7b64b3775475f  Dracosaur Auxiliary
+a313b3957f0d5eec  Drafna, Founder of Lat-Nam
 a66eecab302981ab  Drag Down
 6560daaac145bdc8  Drag the Canal
 746811192515ea9c  Drag to the Bottom
@@ -5100,6 +5102,7 @@ d973e9e95aa7de00  Exhibition Magician
 3a9c377779cad5f3  Exotic Orchard
 7522552506fd9d15  Expanded Anatomy
 6507fc1c563a4a44  Expanding Ooze
+300f39923d9e4da0  Expansion // Explosion
 1bf6abb25a5e1bbc  Expedite
 116cad51cee10f23  Expedition Champion
 ce0a014a898b491a  Expedition Envoy
@@ -7084,6 +7087,7 @@ d1857b5bdd6a38b3  Gut Shot
 7417ead3e33a20f4  Gutless Ghoul
 d5c6c4dbdc740c01  Gutter Skulk
 9e4f80e356155a8e  Guttersnipe
+16bb6a31f9721807  Guttural Response
 a521ec4d8e322de4  Guul Draz Assassin
 442e57384d161ffe  Guul Draz Mucklord
 4ffefdc47b9b4c06  Gwaihir, Greatest of the Eagles
@@ -7683,7 +7687,7 @@ fed06b3c0d8d37f5  Hulking Bugbear
 f91d9984774503a5  Hulking Ogre
 56dd64b777762471  Hulking Raptor
 0334eeb26fd85712  Hull Breach
-0468e4cf714321ea  Hullbreaker Horror
+fcab532b4933689c  Hullbreaker Horror
 e6723617f5dc1aa9  Hullcarver
 3b03ace9a9f307c2  Hulldrifter
 30566099f634f33c  Human
@@ -8147,6 +8151,7 @@ db7a4006716f253f  Invasion of Moag // Bloomwielder Dryads
 9509f1a269fe0abf  Invasion of Segovia // Caetus, Sea Tyrant of Segovia
 1b44174f1aaad864  Invasion of Shandalar // Leyline Surge
 2f0fc303b1729f16  Invasion of Tolvada // The Broken Sky
+fd2e8bd0655787d8  Invasion of Vryn // Overloaded Mage-Ring
 1b6d78d0f5ffabac  Invasion of Xerex // Vertex Paladin
 8a381ae8fd778dc6  Invasion Reinforcements
 3fc4687101dff384  Invasion Tactics
@@ -8257,6 +8262,7 @@ e607fd2f02bfe242  Izzet Boilerworks
 c77b1ad68df22884  Izzet Chronarch
 1921f08dc80b084e  Izzet Cluestone
 160ccf5faac177a7  Izzet Guildgate
+7661527c137054fb  Izzet Guildmage
 c61d3b57e96a13b6  Izzet Locket
 3db3acde42c239bf  Izzet Signet
 70c5617a4dcbf7e7  Jace
@@ -12754,6 +12760,7 @@ ea1e8a4c45270c8c  Revive the Shire
 364affea55df55ee  Reviving Dose
 c3c7a38b2cab9c9f  Reviving Melody
 b2377eb1a80495b6  Revoke Existence
+73d46660673809c3  Revolutionary Rebuff
 4d8d4c07c076bd8f  Revolutionist
 a6bf762249b2e381  Rewards of Diversity
 e7be042e519ea823  Rewind
@@ -14466,6 +14473,7 @@ e1854093e5082255  Sleight of Hand
 3d133a41747df364  Slice and Dice
 f022496e32fa7bd2  Slice in Twain
 b7e3a294e958a266  Slicer, Hired Muscle // Slicer, High-Speed Antagonist
+2e9a5bb87b100617  Slick Imitator
 2e5151e3ccaae522  Slickshot Show-Off
 c2296aedb4811c34  Slime Molding
 94068ca8ddabaf87  Slimebind
@@ -15964,6 +15972,7 @@ e625e7b9fe0d2156  Teddy Bear
 46591ce2a29d1d92  Teeterpeak Ambusher
 3380f86f1d884a2b  Teething Wurmlet
 a18d6fbcfc5f2b6c  Teferi's Ageless Insight
+93757fcfbdae594a  Teferi's Care
 5c65e49619d48bf8  Teferi's Honor Guard
 96ca0f2e152648a7  Teferi's Protection
 467a2a14621d19bb  Teferi's Protege
