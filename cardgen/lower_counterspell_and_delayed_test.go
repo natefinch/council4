@@ -828,7 +828,7 @@ func TestLowerCounterSpellRejectsUnsupportedForms(t *testing.T) {
 	t.Parallel()
 	for _, oracleText := range []string{
 		"Counter target monocolored spell.",
-		"Counter target blue creature spell.",
+		"Counter target blue creature or enchantment spell.",
 		"Counter target activated ability unless its controller pays {1}.",
 		"Counter target activated ability. Draw a card.",
 		"Counter target spell or ability that targets a creature.",

@@ -26,6 +26,7 @@ func TestExactCounterSpellTypeUnion(t *testing.T) {
 		"Counter target artifact or enchantment spell.",
 		"Counter target enchantment, instant, or sorcery spell.",
 		"Counter target enchantment, instant, or sorcery spell an opponent controls.",
+		"Counter target enchantment, instant, or sorcery spell with mana value 3 or less.",
 	} {
 		if !counterEffectExact(t, source) {
 			t.Errorf("counterEffectExact(%q) = false, want true", source)
@@ -75,7 +76,7 @@ func TestExactCounterSpellTypeUnionFailsClosed(t *testing.T) {
 	t.Parallel()
 	for _, source := range []string{
 		"Counter target blue enchantment, instant, or sorcery spell.",
-		"Counter target enchantment, instant, or sorcery spell with mana value 3 or less.",
+		"Counter target enchantment, instant, or sorcery spell with mana value X or less.",
 		"Counter target enchantment, enchantment, or sorcery spell.",
 		"Counter target enchantment and instant spell.",
 	} {
