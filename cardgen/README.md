@@ -475,6 +475,14 @@ Vanguard cards are excluded with explicit report reasons.
    distributive/copy payload. Token-only counts preserve their Selection filter;
    an unmodeled actual-card iterator is not replaced by X or selected-target
    count. Replacement lowerers reject typed qualifiers they cannot represent.
+   Live count selections also accept an explicit relative subtype disjunction
+   (`creature you control that's a Wolf or a Werewolf`) through the same
+   battlefield Selection and quantity path, preserving OR, card type and actor.
+   A named token count retains its token-only predicate instead of matching
+   every permanent with that subtype. Inverse attachment counts, filtered
+   actual-card result quantities, and departed old-controller history counts
+   retain distinct, unsupported operand boundaries; an untyped iterator never
+   inherits a nominal single-token amount.
    Exact single-target permanent removal, including commander-conditioned
    free creature exile, composes with independently lowered alternative and
    additional spell costs; unsupported target/effect variants reject the whole

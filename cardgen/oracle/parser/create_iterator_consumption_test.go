@@ -9,6 +9,10 @@ func TestLeadingCreateIteratorConsumption(t *testing.T) {
 	}{
 		{"For each opponent, create a 1/1 white Soldier creature token.", true},
 		{"For each creature you control, create a 1/1 white Soldier creature token.", true},
+		{"For each creature you control that's a Wolf or a Werewolf, create a 2/2 green Wolf creature token.", true},
+		{"For each creature you control that is a Wolf or a Werewolf, create a 2/2 green Wolf creature token.", true},
+		{"For each creature you control that's a Wolf and a Werewolf, create a 2/2 green Wolf creature token.", false},
+		{"For each creature you control that's a Wolf or a blue Werewolf, create a 2/2 green Wolf creature token.", false},
 		{"Whenever this creature attacks, for each token you control, create a 1/1 white Rabbit creature token.", true},
 		{"For each creature card exiled this way, create a 2/2 black Zombie creature token.", false},
 		{"Then for each creature card exiled this way, create a 2/2 black Zombie creature token.", false},

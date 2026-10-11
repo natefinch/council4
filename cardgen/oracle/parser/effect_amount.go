@@ -2434,6 +2434,9 @@ type dynamicCountSubjectQualifier struct {
 // returning how it extends the subject and selection spans. It fails closed when
 // no supported qualifier ends at a dynamic-amount boundary.
 func resolveDynamicCountSubjectQualifier(tokens []shared.Token, subjectEnd int, atoms Atoms) (dynamicCountSubjectQualifier, bool) {
+	if end, ok := dynamicCountSubtypeQualifierEnd(tokens, subjectEnd, atoms); ok {
+		return dynamicCountSubjectQualifier{subjectEnd: end, selectionEnd: end}, true
+	}
 	if match, ok := counterQualifierKind(tokens, subjectEnd); ok && dynamicAmountBoundary(tokens, match.End) {
 		return dynamicCountSubjectQualifier{subjectEnd: match.End, selectionEnd: match.End}, true
 	}
@@ -2742,10 +2745,10 @@ func isDynamicCountSelectionToken(token shared.Token, atoms Atoms) bool {
 
 func buildDynamicCountSelection(tokens []shared.Token, start, end int, atoms Atoms) SelectionSyntax {
 	selection := parseSelection(tokens[start:end], atoms)
-	if selection.Kind == SelectionUnknown && selectionIsBareTokenTarget(selection) {
-		selection.Kind = SelectionPermanent
-	}
 	for i := start; i < end; i++ {
+		if noun, ok := atoms.ObjectNounAt(tokens[i].Span); ok && noun == ObjectNounToken {
+			selection.TokenOnly = true
+		}
 		qualifier, ok := atoms.ColorQualifierAt(tokens[i].Span)
 		if !ok {
 			continue
@@ -2757,6 +2760,9 @@ func buildDynamicCountSelection(tokens []shared.Token, start, end int, atoms Ato
 			selection.Multicolored = true
 		default:
 		}
+	}
+	if selection.Kind == SelectionUnknown && selectionIsBareTokenTarget(selection) {
+		selection.Kind = SelectionPermanent
 	}
 	return selection
 }
