@@ -2335,10 +2335,18 @@ func exactLifeEffectSyntax(effect *EffectSyntax, controllerVerb, subjectVerb str
 			prefixes = []string{subjectVerb}
 		}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
-		prefixes = []string{"They " + controllerVerb, "That player " + subjectVerb}
+		if effect.Optional && controllerVerb == "pay" {
+			prefixes = []string{"They may pay", "That player may pay"}
+		} else {
+			prefixes = []string{"They " + controllerVerb, "That player " + subjectVerb}
+		}
 	case EffectContextReferencedObjectController, EffectContextReferencedObjectOwner:
 		if subject := referencedControllerSubjectText(effect); subject != "" {
-			prefixes = []string{subject + " " + subjectVerb}
+			if effect.Optional && controllerVerb == "pay" {
+				prefixes = []string{strings.TrimSuffix(subject, " may") + " may pay"}
+			} else {
+				prefixes = []string{subject + " " + subjectVerb}
+			}
 		}
 	default:
 	}
@@ -4586,6 +4594,10 @@ func cardCountSubjectPrefixes(effect *EffectSyntax, controllerVerb, subjectVerb 
 		}
 		return []string{controllerVerb, subjectVerb}
 	case EffectContextEventPlayer, EffectContextReferencedPlayer:
+		if effect.Optional {
+			verb := strings.TrimSuffix(subjectVerb, "s")
+			return []string{"They may " + verb, "That player may " + verb}
+		}
 		return []string{"They " + strings.TrimSuffix(subjectVerb, "s"), "That player " + subjectVerb}
 	case EffectContextReferencedObjectController:
 		if subject := referencedControllerSubjectText(effect); subject != "" {

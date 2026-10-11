@@ -52,24 +52,82 @@ func referenceIsCorrelatedPlayerPolicy(reference CompiledReference, effects []Co
 }
 
 func referenceIsOwnedPaymentDecision(reference CompiledReference, content AbilityContent, source ReferenceSourceContext) bool {
-	if reference.Kind != ReferenceThatPlayer || source.kind != AbilityTriggered ||
-		source.event != TriggerEventAttackerDeclared {
+	if reference.Kind != ReferenceThatPlayer {
+		return false
+	}
+	canonical := 0
+	for _, candidate := range content.References {
+		if candidate.NodeID == reference.NodeID {
+			if candidate.Kind != reference.Kind || candidate.Binding != reference.Binding ||
+				candidate.Order != reference.Order || candidate.Occurrence != reference.Occurrence {
+				return false
+			}
+			canonical++
+		}
+	}
+	if canonical != 1 {
 		return false
 	}
 	matches := 0
 	for _, condition := range content.Conditions {
-		if condition.Predicate != ConditionPredicateDefendingPlayerDoesNotPay ||
-			!slices.Contains(condition.Ownership.ReferenceNodeIDs, reference.NodeID) ||
-			len(condition.Ownership.ClauseIDs) != 1 {
+		if len(condition.Ownership.ReferenceNodeIDs) != 1 ||
+			condition.Ownership.ReferenceNodeIDs[0] != reference.NodeID ||
+			len(condition.Ownership.ClauseIDs) != 1 ||
+			!condition.Order.Contains(reference.Order) {
 			continue
 		}
 		for _, effect := range content.Effects {
-			if effect.ClauseID == condition.Ownership.ClauseIDs[0] && effect.Exact &&
-				!effect.Negated && effect.Payment.Payer == parser.EffectPaymentPayerDefendingPlayer &&
-				effect.Payment.Form == parser.EffectPaymentFormMayPayThenIfDoesNot &&
-				len(effect.Payment.ManaCost) > 0 && effect.Payment.AdditionalCost == nil {
+			payment := effect.Payment
+			if effect.ClauseID != condition.Ownership.ClauseIDs[0] || effect.Negated ||
+				payment.Order.End <= payment.Order.Start || payment.Order.End > condition.Order.Start {
+				continue
+			}
+			defending := effect.Exact && source.kind == AbilityTriggered && source.event == TriggerEventAttackerDeclared &&
+				condition.Predicate == ConditionPredicateDefendingPlayerDoesNotPay &&
+				payment.Payer == parser.EffectPaymentPayerDefendingPlayer &&
+				payment.Form == parser.EffectPaymentFormMayPayThenIfDoesNot &&
+				len(payment.ManaCost) > 0 && payment.AdditionalCost == nil
+			affirmative := condition.Predicate == ConditionPredicatePriorInstructionAccepted &&
+				payment.Form == parser.EffectPaymentFormMayPayThenIfDo &&
+				payment.SuccessConditionNodeID == condition.NodeID
+			negative := condition.Predicate == ConditionPredicateEventPlayerDoesNotPay &&
+				payment.Form == parser.EffectPaymentFormMayPayThenIfDoesNot &&
+				payment.FailureConditionNodeID == condition.NodeID
+			event := effect.Exact && source.kind == AbilityTriggered && source.event != TriggerEventUnknown &&
+				reference.Binding == ReferenceBindingEventPlayer &&
+				payment.Payer == parser.EffectPaymentPayerEventPlayer &&
+				(affirmative || negative) && len(payment.ManaCost) > 0 && payment.AdditionalCost == nil
+			target := source.kind == AbilitySpell && affirmative &&
+				payment.Payer == parser.EffectPaymentPayerAffectedTargetController &&
+				effect.Kind == EffectCopyStackObject && effect.CopyMayChooseNewTargets &&
+				reference.Binding == ReferenceBindingTarget && reference.Occurrence == 0 &&
+				len(content.Targets) == 1 && content.Targets[0].Cardinality.Min == 1 &&
+				content.Targets[0].Cardinality.Max == 1 &&
+				((len(payment.ManaCost) > 0) != (payment.AdditionalCost != nil)) &&
+				ownedResolvingCopySource(effect, content.References)
+			if defending || event || target {
 				matches++
 			}
+		}
+	}
+	return matches == 1
+}
+
+// OwnsPaymentDecision checks the body's canonical folded-payment policy proof,
+// including its payer, owning clause, gate identity and typed source order.
+func (content AbilityContent) OwnsPaymentDecision(reference CompiledReference) bool {
+	return content.OwnsSubject(reference) && reference.SubjectDomain() == ReferenceSubjectPolicy &&
+		referenceIsOwnedPaymentDecision(reference, content, content.Source)
+}
+
+func ownedResolvingCopySource(effect CompiledEffect, references []CompiledReference) bool {
+	matches := 0
+	for _, reference := range references {
+		if effectOwnsReference(effect, reference) && effect.Order.Contains(reference.Order) &&
+			reference.Binding == ReferenceBindingSource &&
+			(reference.Kind == ReferenceThisObject || reference.Kind == ReferenceSelfName) &&
+			reference.SubjectNoun == parser.ObjectNounSpell {
+			matches++
 		}
 	}
 	return matches == 1
@@ -185,6 +243,12 @@ func referenceIsOwnedGroupPlayer(reference CompiledReference, effects []Compiled
 func referenceIsEventPlayerProjection(reference CompiledReference, source ReferenceSourceContext, effects []CompiledEffect) bool {
 	if source.event == TriggerEventUnknown {
 		return false
+	}
+	if source.scope != nil && source.scope.owner != nil {
+		if producer, ok := resultReferencedActorProducer(*source.scope.owner, reference); ok &&
+			producer.Context == parser.EffectContextReferencedObjectController {
+			return true
+		}
 	}
 	for _, effect := range effects {
 		if effectOwnsReference(effect, reference) &&

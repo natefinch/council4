@@ -48,7 +48,6 @@ func TestSequencePaymentActorProofRefusals(t *testing.T) {
 	for _, text := range []string{
 		"Counter target spell unless its controller pays {3}. If you do, draw a card.",
 		"Counter target spell. You gain 1 life. If they do, draw a card.",
-		"Target player gains 1 life. That player discards a card. If that player does, you gain 2 life.",
 		"Counter target spell unless its controller pays {3}. They discard a card. If they do, draw a card.",
 		"Counter up to two target spells unless their controller pays {3}. If they do, draw a card.",
 		"Counter target spell unless its controller pays {3}. Counter another target spell unless its controller pays {2}.",

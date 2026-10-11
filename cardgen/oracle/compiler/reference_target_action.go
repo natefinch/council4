@@ -1,6 +1,9 @@
 package compiler
 
-import "github.com/natefinch/council4/cardgen/oracle/shared"
+import (
+	"github.com/natefinch/council4/cardgen/oracle/parser"
+	"github.com/natefinch/council4/cardgen/oracle/shared"
+)
 
 // TargetActionSubject resolves one clause's declared or inherited target without
 // changing its canonical subject identity when assembly localizes target slots.
@@ -64,4 +67,40 @@ func (content AbilityContent) TargetActionSubject(effect CompiledEffect) (Compil
 		return CompiledReference{}, false
 	}
 	return reference, true
+}
+
+// ControllerObservesTargetLibraryTop checks a canonical single-card observation
+// whose player target owns the library, not the looking or deciding action.
+func (content AbilityContent) ControllerObservesTargetLibraryTop(effect CompiledEffect) bool {
+	if !controllerTopLibraryObservation(effect) {
+		return false
+	}
+	clause := content
+	clause.Targets, clause.References = effect.Targets, effect.References
+	subject, ok := clause.TargetActionSubject(effect)
+	if !ok || !clause.OwnsSubject(subject) || subject.SubjectDomain() != ReferenceSubjectPlayer {
+		return false
+	}
+	for _, canonical := range content.subjectScope.owner.Effects {
+		if canonical.ClauseID == effect.ClauseID {
+			return controllerTopLibraryObservation(canonical)
+		}
+	}
+	return false
+}
+
+func controllerTopLibraryObservation(effect CompiledEffect) bool {
+	amount := effect.Amount
+	return effect.Kind == EffectLookAtLibraryTop && effect.Exact && !effect.Negated &&
+		effect.Context == parser.EffectContextTarget && effect.Player == parser.EffectPlayerNone &&
+		effect.CardSource == parser.EffectCardSourceTopOfPlayerLibrary &&
+		effect.Duration == 0 && effect.DelayedTiming == 0 &&
+		effect.Payment.Form == parser.EffectPaymentFormUnknown &&
+		len(effect.References) == 0 && len(effect.SubjectReferences) == 0 &&
+		len(effect.SubjectTargets) == 0 && len(effect.Targets) == 1 &&
+		amount.Known && amount.Value == 1 && !amount.RangeKnown &&
+		!amount.VariableX && !amount.AnyNumber && !amount.RoundUp &&
+		amount.DynamicKind == DynamicAmountNone && amount.DynamicForm == DynamicAmountFormNone &&
+		amount.Multiplier == 0 && amount.Addend == 0 && amount.ProducerClauseID == 0 &&
+		amount.selector == nil && len(amount.Colors) == 0 && len(amount.Operands) == 0
 }

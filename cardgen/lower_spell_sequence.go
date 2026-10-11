@@ -191,10 +191,16 @@ func lowerOrderedSequenceSpecialCase(
 func collapseCausativeHavePairs(
 	effects []compiler.CompiledEffect,
 	keywords []compiler.CompiledKeyword,
-) []compiler.CompiledEffect {
+) ([]compiler.CompiledEffect, map[int]bool) {
 	collapsed := make([]compiler.CompiledEffect, 0, len(effects))
+	controllerActions := make(map[int]bool)
 	for i := 0; i < len(effects); i++ {
-		if i+1 < len(effects) && causativeHaveMarker(effects[i], effects[i+1], keywords) {
+		if i+1 < len(effects) && causativeHaveMarker(effects[i], effects[i+1], keywords) &&
+			effects[i].ClauseID > 0 && effects[i+1].ClauseID > 0 &&
+			effects[i].ClauseID != effects[i+1].ClauseID &&
+			len(effects[i].OptionalActionClauseIDs) >= 2 &&
+			effects[i].OptionalActionClauseIDs[0] == effects[i].ClauseID &&
+			effects[i].OptionalActionClauseIDs[1] == effects[i+1].ClauseID {
 			action := effects[i+1]
 			action.Optional = true
 			action.OptionalSpan = effects[i].OptionalSpan
@@ -204,13 +210,17 @@ func collapseCausativeHavePairs(
 			// had the structural "have" sibling; as the folded optional effect it
 			// lowers through the ordinary single-effect clause path.
 			action.RequiresOrderedLowering = false
+			if !action.Exact && causativeActionForcibleExact(&action, keywords) {
+				action.Exact = true
+			}
 			collapsed = append(collapsed, action)
+			controllerActions[action.ClauseID] = true
 			i++
 			continue
 		}
 		collapsed = append(collapsed, effects[i])
 	}
-	return collapsed
+	return collapsed, controllerActions
 }
 
 // causativeHaveMarker reports whether have is the purely structural causative
@@ -260,7 +270,8 @@ func lowerOrderedEffectSequence(
 	// so the action (not the structural "have" marker) is the sequence's optional
 	// gate source. Sequences that do not open with this causative shape are
 	// returned unchanged.
-	ctx.content.Effects = collapseCausativeHavePairs(ctx.content.Effects, ctx.content.Keywords)
+	var controllerActions map[int]bool
+	ctx.content.Effects, controllerActions = collapseCausativeHavePairs(ctx.content.Effects, ctx.content.Keywords)
 	normalized, normalizedOK := normalizeSequenceProductReferences(ctx.content)
 	if !normalizedOK {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — unavailable or ambiguous producer clause identity")
@@ -278,7 +289,7 @@ func lowerOrderedEffectSequence(
 	if counterReason != "" {
 		return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, counterReason)
 	}
-	optionalFlow, ok := planOptionalFlow(planningContent)
+	optionalFlow, ok := planOptionalFlowWithControllerActions(planningContent, controllerActions)
 	if !ok {
 		if optionalFlow.failureCategory != "" {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, optionalFlow.failureCategory)
@@ -671,6 +682,10 @@ func lowerOrderedEffectSequence(
 				}
 				return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, category)
 			}
+		}
+		if !controllerActions[effect.ClauseID] &&
+			!bindSequenceOptionalActor(ctx.content, i, mode.Sequence, oracleSpanToGameIdx) {
+			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — optional action has no unique owned deciding player")
 		}
 		if !applyLibraryCardCharacteristicGate(mode.Sequence, effectAbility.observedCharacteristicKey) {
 			return game.AbilityContent{}, unsupportedEffectSequenceDiagnostic(ctx, "structural — observed characteristic availability overlaps another result gate")

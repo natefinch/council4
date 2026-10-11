@@ -920,9 +920,33 @@ Vanguard cards are excluded with explicit report reasons.
    `If they do` condition consumes its embedded Pay outcome, while `that spell is
    countered this way` consumes CounterObject's separate actual outcome. Parser-owned
    actor reference and target occurrence preserve that payment producer across an
-   independent `you` rider. A target declaration is not proof of a later action by
-   the same actor: intervening referenced-player actions, ambiguous/plural targets,
-   and missing, forward or foreign ownership remain refused. Skipped publishers
+   independent `you` rider. Actor identity and action identity are separate:
+   a later discard or mill by that same singular player owns its own actual-result
+   receipt, not the earlier target declaration or life gain. Canonical reference
+   NodeIDs and source order select the action; compiler-owned player proofs verify
+   its target/event identity. Resolving `if the player does/doesn't` gates use the
+   same canonical player reference and owned action for positive and negative
+   results; a fixed event-player life cost is not a mana payment or a life-loss
+   request. Already-folded payments keep their exact gate NodeID and payer as a
+   compiler-owned decision policy; that condition actor is not an object or
+   recipient reference in the consequence body. Singular event-controller results preserve the
+   original event object behind the player projection, including a fixed life
+   payment and its payer's consequence; a generic zone-event player projection
+   does not establish that controller/result proof. Optional player actions ask
+   that player, not the source controller. A folded controller-caused `may have`
+   action instead retains its original optional-group chooser separately from
+   the affected player's identity and publishes the caused action's actual
+   result. A canonical single-card top-library observation belongs to the
+   controller for both its optional decision and actual-result gate; its player
+   target remains the library owner, not the observer. The later linked-card
+   move retains its own controller decision and exact observed identity.
+   When an unconditional rider intervenes, the parser uses the consumer's
+   canonical observed-card producer to own the implicit controller-result
+   condition; the rider cannot substitute its receipt.
+   Library-move success follows actual completed moves,
+   while destination-filtered result members exclude redirected cards; empty or
+   unchanged-zone moves do not succeed. Ambiguous/plural actors and missing,
+   forward or foreign ownership remain refused. Skipped publishers
    cannot reuse enclosing receipts; new local payment results are restored on exit
    from a mode, repeat body or instruction sequence. Single ordinary taxes retain
    their established definition when no new payment-result consumer needs a namespace.

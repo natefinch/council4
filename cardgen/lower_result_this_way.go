@@ -7,7 +7,11 @@ import (
 )
 
 func planOptionalFlow(content compiler.AbilityContent) (optionalFlowPlan, bool) {
-	if plan, ok, handled := planScopedResultFlow(content); handled {
+	return planOptionalFlowWithControllerActions(content, nil)
+}
+
+func planOptionalFlowWithControllerActions(content compiler.AbilityContent, controllerActions map[int]bool) (optionalFlowPlan, bool) {
+	if plan, ok, handled := planScopedResultFlowWithControllerActions(content, controllerActions); handled {
 		return plan, ok
 	}
 	plan, ok := planOptionalFlowBase(content)

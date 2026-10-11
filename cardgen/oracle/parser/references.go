@@ -338,6 +338,15 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 				Kind: ReferenceThatPlayer, Span: shared.SpanOf(phrase), Tokens: phrase, Text: joinTokens(phrase),
 			})
 			i++
+		case i > 0 && i+2 < len(tokens) && equalWord(tokens[i-1], "if") &&
+			equalWord(tokens[i], "the") && equalWord(tokens[i+1], "player") &&
+			(equalWord(tokens[i+2], "does") || equalWord(tokens[i+2], "doesn't")):
+			phrase := tokens[i : i+2]
+			references = append(references, Reference{
+				Kind: ReferenceThatPlayer, Span: shared.SpanOf(phrase), Tokens: phrase,
+				Text: joinTokens(phrase), SubjectNoun: ObjectNounPlayer,
+			})
+			i++
 		case i+1 < len(tokens) && equalWord(tokens[i], "that") && referenceObjectNoun(tokens[i+1]):
 			phrase := tokens[i : i+2]
 			kind := ReferenceThatObject

@@ -93,6 +93,9 @@ func resolvePlayerRecipient(ctx contentCtx, references []compiler.CompiledRefere
 		}
 		ref := references[0]
 		if len(targets) == 0 {
+			if projectedEventControllerPlayer(ctx) && ctx.content.OwnsSubject(ref) {
+				return playerRecipient{player: game.ObjectControllerReference(game.EventPermanentReference())}, true
+			}
 			player, ok := lowerPlayerReference(ref, referenceLoweringContext{AllowEvent: true})
 			return playerRecipient{player: player}, ok
 		}

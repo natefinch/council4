@@ -259,6 +259,7 @@ func compileAbility(
 	compiled.Content.References = bindActivationCostReferences(compiled.Kind, compiled.Cost, compiled.Content.References)
 	referenceTargets := spellParagraphReferenceTargets(compiled.Content, context, kind)
 	bindCounterResultReferences(compiled.Content.Conditions, compiled.Content.References, referenceTargets, compiled.Content.Effects)
+	bindResultActorReferences(&compiled.Content, compiled.Trigger)
 	bindConditionReferences(compiled.Content.Conditions, compiled.Content.References, referenceTargets, compiled.Content.Effects, compiled.Trigger)
 	bindReturnedConditionConsequences(&compiled.Content)
 	applyEffectReferenceBindings(compiled.Content.Effects, compiled.Content.References)
@@ -701,6 +702,8 @@ func compileMode(
 	resolvePaymentSourceSacrifices(effects, trigger != nil && trigger.Pattern.Source == TriggerSourceSelf)
 	conditions := compileConditions(mode.ConditionSegments, mode.ConditionClauses, mode.EventHistoryConditions)
 	bindCounterResultReferences(conditions, references, targets, effects)
+	actorContent := AbilityContent{References: references, Effects: effects, Conditions: conditions, Targets: targets}
+	bindResultActorReferences(&actorContent, trigger)
 	bindConditionReferences(conditions, references, targets, effects, trigger)
 	bindReturnedConditionReferences(conditions, references, targets, effects)
 	applyEffectReferenceBindings(effects, references)

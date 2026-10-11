@@ -294,7 +294,11 @@ func lowerEventPlayerTaxedControllerBenefit(
 	effect := ctx.content.Effects[0]
 	payment := effect.Payment
 	condition := ctx.content.Conditions[0]
-	eventPlayerReference, referencesOK := eventPlayerPaymentReferences(ctx.content.References, payment)
+	paymentReferences, referencesOK := foldedPaymentBodyReferences(ctx.content)
+	if !referencesOK {
+		return game.AbilityContent{}, false
+	}
+	eventPlayerReference, referencesOK := eventPlayerPaymentReferences(paymentReferences, payment)
 	if !effect.Exact ||
 		effect.Negated ||
 		effect.DelayedTiming != 0 ||
@@ -439,8 +443,12 @@ func lowerEventPlayerPaidBenefit(
 	// span; keep every other reference (the benefit's recipient pronoun) for the
 	// consequence lowering. Any reference straddling the payment boundary is
 	// unexpected and fails closed.
-	bodyReferences := make([]compiler.CompiledReference, 0, len(ctx.content.References))
-	for _, reference := range ctx.content.References {
+	paymentReferences, referencesOK := foldedPaymentBodyReferences(ctx.content)
+	if !referencesOK {
+		return game.AbilityContent{}, false
+	}
+	bodyReferences := make([]compiler.CompiledReference, 0, len(paymentReferences))
+	for _, reference := range paymentReferences {
 		if reference.Span.End.Offset <= payment.Span.End.Offset {
 			if reference.Span.Start.Offset < payment.Span.Start.Offset {
 				return game.AbilityContent{}, false
@@ -491,6 +499,27 @@ func lowerEventPlayerPaidBenefit(
 	})
 	sequence = append(sequence, consequence...)
 	return game.Mode{Sequence: sequence}.Ability(), true
+}
+
+func foldedPaymentBodyReferences(content compiler.AbilityContent) ([]compiler.CompiledReference, bool) {
+	if len(content.Conditions) != 1 {
+		return nil, false
+	}
+	condition := content.Conditions[0]
+	if condition.Kind == compiler.ConditionUnless {
+		return content.References, true
+	}
+	references := make([]compiler.CompiledReference, 0, len(content.References))
+	for _, reference := range content.References {
+		if slices.Contains(condition.Ownership.ReferenceNodeIDs, reference.NodeID) {
+			if !content.OwnsPaymentDecision(reference) {
+				return nil, false
+			}
+			continue
+		}
+		references = append(references, reference)
+	}
+	return references, true
 }
 
 func eventPlayerPaymentCostSupported(payment compiler.CompiledEffectPayment) bool {
