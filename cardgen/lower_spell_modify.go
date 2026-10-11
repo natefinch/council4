@@ -1,8 +1,6 @@
 package cardgen
 
 import (
-	"strings"
-
 	"github.com/natefinch/council4/cardgen/oracle/compiler"
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 	"github.com/natefinch/council4/cardgen/oracle/shared"
@@ -3696,40 +3694,6 @@ func bounceDestinationPronounReferencesOnly(references []compiler.CompiledRefere
 	return true
 }
 
-func lowerFixedPermanentTargetSpell(
-	ctx contentCtx,
-	verb string,
-	primitiveFactory func(object game.ObjectReference) game.Primitive,
-	acceptsSelectedGroup bool,
-) (game.AbilityContent, *shared.Diagnostic) {
-	if content, ok := lowerMultiTargetPermanentSpell(ctx, primitiveFactory, acceptsSelectedGroup); ok {
-		return content, nil
-	}
-	if !matchesExactSinglePermanentTargetSpell(ctx) {
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported "+strings.ToLower(verb)+" spell",
-			"the executable source backend supports only exact "+strings.ToLower(verb)+" of one target permanent",
-		)
-	}
-	targetSpec, ok := permanentTargetSpec(ctx.content.Targets[0])
-	if !ok {
-		return game.AbilityContent{}, contentDiagnostic(
-			ctx,
-			"unsupported "+strings.ToLower(verb)+" spell",
-			"the executable source backend supports only exact "+strings.ToLower(verb)+" of one target permanent",
-		)
-	}
-	return game.Mode{
-		Targets: []game.TargetSpec{targetSpec},
-		Sequence: []game.Instruction{
-			{
-				Primitive: primitiveFactory(game.TargetPermanentReference(0)),
-			},
-		},
-	}.Ability(), nil
-}
-
 // lowerBecomeCopyContent lowers an activated/resolving become-a-copy effect
 // ("This land becomes a copy of target land, except it has this ability.",
 // Thespian's Stage; "... until end of turn.", Mirage Mirror) into a BecomeCopy
@@ -3906,35 +3870,6 @@ func becomeCopyTargetSpec(target compiler.CompiledTarget) (becomeCopyTarget, boo
 		return becomeCopyTarget{spec: spec, object: game.TargetPermanentReference(0)}, true
 	}
 	return becomeCopyTarget{}, false
-}
-
-func matchesExactSinglePermanentTargetSpell(ctx contentCtx) bool {
-	return hasExactSinglePermanentTarget(ctx.content) &&
-		hasExactControllerEffect(ctx.content) &&
-		hasNoFixedPermanentSpellModifiers(ctx)
-}
-
-func hasExactSinglePermanentTarget(content compiler.AbilityContent) bool {
-	return len(content.Targets) == 1 && targetCardinalityIsOne(content.Targets[0])
-}
-
-func hasExactControllerEffect(content compiler.AbilityContent) bool {
-	if len(content.Effects) != 1 {
-		return false
-	}
-	effect := content.Effects[0]
-	return !effect.Negated &&
-		!effect.Optional &&
-		effect.Exact &&
-		effect.Context == parser.EffectContextController
-}
-
-func hasNoFixedPermanentSpellModifiers(ctx contentCtx) bool {
-	return !ctx.optional &&
-		len(ctx.content.Conditions) == 0 &&
-		len(ctx.content.Keywords) == 0 &&
-		len(ctx.content.Modes) == 0 &&
-		referencesAreRedundantSoleTargetBackReferences(ctx.content.References, ctx.content.Targets)
 }
 
 // referencesAreRedundantSoleTargetBackReferences reports whether every reference
