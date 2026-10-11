@@ -294,9 +294,6 @@ func searchDestinationSupported(destination game.SearchDestination) bool {
 }
 
 func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID, controllerID game.PlayerID, spec game.SearchSpec, amount int) (bool, *game.Permanent) {
-	if amount <= 0 {
-		amount = 1
-	}
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return false, nil

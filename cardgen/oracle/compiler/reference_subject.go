@@ -469,6 +469,9 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 			return
 		}
 		reference.ProducerClauseID = producer.ClauseID
+		if producer.Kind == EffectSearch && !searchReferenceNounCompatible(*reference, producer) {
+			return
+		}
 		switch {
 		case reference.LibraryCardObservation:
 			if !exactLibraryCardReferenceProducer(producer, effects) {

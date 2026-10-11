@@ -60,6 +60,11 @@ func TestLowerLeadingSequenceThenSearch(t *testing.T) {
 			typeLine:   "Sorcery",
 			oracleText: "You gain 3 life. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
 		},
+		{
+			name:       "leading conditional gate",
+			typeLine:   "Sorcery",
+			oracleText: "If you control a Forest, you gain 3 life. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -71,9 +76,7 @@ func TestLowerLeadingSequenceThenSearch(t *testing.T) {
 
 // TestLowerLeadingSequenceThenSearchFailsClosed guards the conservative limits
 // of the leading-sequence-then-search fallback: it must not pick up a trailing
-// search whose shape is unsupported (a multi-card battlefield tutor), a body
-// gated by a leading condition, or a library-top tutor trailing a leading
-// effect.
+// library-top tutor trailing a leading effect.
 func TestLowerLeadingSequenceThenSearchFailsClosed(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -81,11 +84,6 @@ func TestLowerLeadingSequenceThenSearchFailsClosed(t *testing.T) {
 		typeLine   string
 		oracleText string
 	}{
-		{
-			name:       "leading conditional gate",
-			typeLine:   "Sorcery",
-			oracleText: "If you control a Forest, you gain 3 life. Search your library for a basic land card, put it onto the battlefield tapped, then shuffle.",
-		},
 		{
 			name:       "library-top tutor after leading effect",
 			typeLine:   "Instant",

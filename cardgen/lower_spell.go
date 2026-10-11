@@ -377,9 +377,6 @@ func lowerContentDispatch(
 	if typedManifestDreadSequence(ctx.content) {
 		return manifestDreadAbility(), nil
 	}
-	if content, ok := lowerLinkedSearchUntapSequence(ctx); ok {
-		return content, nil
-	}
 	if len(ctx.content.Effects) > 0 && ctx.content.Effects[0].Kind == compiler.EffectSearch {
 		if content, ok := lowerConditionalInsteadSearchSequence(ctx); ok {
 			return content, nil
@@ -394,10 +391,10 @@ func lowerContentDispatch(
 		if multizone, ok := lowerMultiZoneSearchToBattlefieldSequence(ctx); ok {
 			return multizone, nil
 		}
-		if trailing, ok := lowerSearchThenTrailingSequence(cardName, ctx, syntax); ok {
-			return trailing, nil
+		if _, reason := planSearchSequenceUnits(ctx.content); reason != "" {
+			return content, diagnostic
 		}
-		return content, diagnostic
+		return lowerOrderedEffectSequence(cardName, ctx, syntax)
 	}
 	if len(ctx.content.Effects) > 1 {
 		if content, ok := lowerTurnFaceDownCharacteristicsContent(ctx); ok {

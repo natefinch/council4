@@ -27,6 +27,27 @@ unsupported with parser-owned parameter diagnostics.
 Placement as an "If/When you do" resolving cost also refuses: best-effort movement
 cannot model all-or-nothing payment, including successful zero-card payment.
 
+Contiguous typed Search/[Reveal]/Put/Shuffle groups project to one owned Search
+unit in ordinary ordered assembly, regardless of their position among independent
+clauses. Original ClauseIDs, canonical reference identities, and logical effect
+indices remain intact; only the group's physical instruction ranges coincide.
+Whole-group conditions run once at the search's printpoint, while later
+independent conditions reevaluate. Singular battlefield consumers use the actual
+arrived permanent under the Search producer's scoped product key, including after
+independent riders; missing, declined, skipped, redirected, and reentered subjects
+never substitute a neighboring target or a later incarnation.
+Existing fixed-count, supported rules-derived, and any-number payload policies
+are reused. Unmodeled formulas, branch-local group guards, internal riders, ambiguous/plural
+arrived consumers, and unsupported destinations remain refused. Searcher and
+entry-controller target slots project independently, without changing the
+searcher/library-owner protocol. Target-dependent dynamic mana-value filter
+bounds remain refused recursively because their evaluator has no stack context.
+Rules-derived counts resolve at the Search instruction, after preceding state
+changes. A dynamic nonpositive limit finds no cards but still searches and
+shuffles; fixed/default nonpositive runtime payloads retain the legacy one-card
+default without changing their scalar receipt. Literal fixed zero remains
+unsupported in lowering, and dynamic searches cannot publish a singular arrival.
+
 Singleton stack controller changes and retarget actions share a typed target
 subject and Instruction-factory adapter, not a control/retarget pair template.
 An inherited subject must match the canonical body-owned reference, owning
