@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,681 of 33,011 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,703 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,686 of 33,016 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,728 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -473,6 +473,7 @@ Council4 currently supports **18,681 of 33,011 cards eligible for paper support 
 - Ancient Ziggurat
 - Andradite Leech
 - Andúril, Narsil Reforged
+- Angel
 - Angel
 - Angel
 - Angel
@@ -4715,6 +4716,7 @@ Council4 currently supports **18,681 of 33,011 cards eligible for paper support 
 - Elf Knight
 - Elf Replica
 - Elf Warrior
+- Elf Warrior
 - Elfhame Palace
 - Elfhame Wurm
 - Elfsworn Giant
@@ -6314,6 +6316,7 @@ Council4 currently supports **18,681 of 33,011 cards eligible for paper support 
 - Ghoulish Procession
 - Ghoulsteed
 - Ghoultree
+- Giant
 - Giant
 - Giant
 - Giant Adephage
@@ -10054,6 +10057,7 @@ Council4 currently supports **18,681 of 33,011 cards eligible for paper support 
 - Mindful Biomancer
 - Mindless Automaton
 - Mindless Conscription
+- Mindless-One
 - Mindmelter
 - Mindscour Dragon
 - Mindslicer
@@ -18638,6 +18642,7 @@ Council4 currently supports **18,681 of 33,011 cards eligible for paper support 
 - Zof Consumption // Zof Bloodbog
 - Zof Shade
 - Zog, Triceraton Castaway
+- Zombie
 - Zombie
 - Zombie
 - Zombie
