@@ -6,7 +6,7 @@
 # The diff is the point: it shows which cards a change actually altered.
 # An empty diff proves a refactor preserved behavior corpus-wide.
 #
-# 18686 supported cards
+# 18700 supported cards
 
 5056236018a1133e  +2 Mace
 2c19356f0fd21ecf  A Realm Reborn
@@ -182,7 +182,6 @@ a3d1971ff65d4382  Aether Poisoner
 ee42b0ffce000983  Aether Spellbomb
 22d5d910a0910eac  Aether Sting
 d0d5e591fea67071  Aether Swooper
-70ae5f07e9cf7137  Aether Syphon
 4f65bece2fba35b0  Aether Theorist
 89cccb8df3c290f0  Aether Tradewinds
 5b8f4dc8c709e223  Aether Tunnel
@@ -1951,6 +1950,7 @@ a0e5255746607b78  Bottle Golems
 c86a02b1c47b6392  Boulder Dash
 b3b3b80643d4f221  Boulderborn Dragon
 014986b0903f50b0  Boulderfall
+f94a2c778241e4c5  Bounce Off
 f11be0ad201b7e2e  Bound in Silence
 3a44ae5f2129df97  Boundary Lands Ranger
 f7b9a0764b2550ad  Bounding Krasis
@@ -3525,6 +3525,7 @@ e6ee7aec3e1d3e72  Darigaaz's Attendant
 ef20c861aa75c413  Darigaaz's Charm
 3443f58d9ef92210  Daring Apprentice
 3ea330d1e946deb5  Daring Archaeologist
+c9e4526feee8a25d  Daring Demolition
 cdba2d69e563bb73  Daring Discovery
 724431e1c2243324  Daring Escape
 da51d9f6975fbf3b  Daring Fiendbonder
@@ -4809,7 +4810,6 @@ de89a7b63f9d295b  Elvish Visionary
 c1ad5c1f232362df  Elvish Warmaster
 57a973d1a18da8cb  Elvish Warrior
 5357013e30113d1e  Emancipation Angel
-b3bd02754b8d2ad4  Embalmed Ascendant
 acfc21075a097efb  Embargo
 dbaae391fbe57c6a  Ember Beast
 83b181fb89d886c6  Ember Hauler
@@ -4834,6 +4834,7 @@ c7816844d23052a8  Emberwilde Caliph
 3203dd13d2093031  Embodiment of Spring
 0c200830a6c0b3c9  Embraal Bruiser
 171a39066c159796  Embraal Gear-Smasher
+cc21e7eb299046b5  Embrace Oblivion
 5da8e846536361ca  Embrace the Paradox
 a2c11b5dcf763f2d  Embrace the Unknown
 caa7f18a75c85cd2  Emerald Charm
@@ -4886,7 +4887,6 @@ ad73e4a64d2b2bc2  Endless One
 0523a1f6b65f3b45  Endless Ranks of HYDRA
 23c2e1558ae11b4b  Endless Wurm
 a928f19ca212aa3d  Endrider Catalyzer
-6a1e8b7043c4e408  Endrider Spikespitter
 049bd107b9a29252  Enduring Courage
 232f66b62a5d0e41  Enduring Curiosity
 3508732cd8c210eb  Enduring Innocence
@@ -5364,6 +5364,7 @@ b08333cd3eebf499  Fearless Halberdier
 17519f9c6cc2d3da  Fearless Pup
 32b486d7f67c4e7a  Fearsome Awakening
 6bed735c821c7c0d  Fearsome Goblin Pair
+54d0cc975f4b771c  Feast of Dreams
 91cda53fa1d59b75  Feast of Sanity
 41aca9ba518be851  Feast of Succession
 4505e7885c2666c5  Feast of the Unicorn
@@ -6876,6 +6877,7 @@ f2d62a01b9d6a776  Graveyard Marshal
 b05f5d86bfb37071  Gravitational Shift
 725b550d610e1ece  Gravitic Punch
 83cf3e64d4f3b43c  Gravity Well
+0f68709b04012f0a  Gravkill
 5231e6861febc4e0  Gravpack Monoist
 a208228fe6bfa115  Gray Merchant of Asphodel
 335c9f5cab4ef0ed  Gray Ogre
@@ -7366,6 +7368,7 @@ b474666a4859ba23  Hell-Bent Raider
 b8177e3955d59c01  Hellion
 46f0e134bd1aa950  Hellion Crucible
 e61c293627e7b5ca  Hellion Eruption
+d4fce42fb4ea027f  Hellish Sideswipe
 0e7df8bc62123281  Hellkite Igniter
 9806d7f2d60aa884  Hellkite Overlord
 0916c4ba294db524  Hellkite Punisher
@@ -8515,6 +8518,7 @@ ea619150dd26c766  Karametra, God of Harvests
 db9f78bc81452a88  Kargan Dragonlord
 35c62b71ce801e7e  Kargan Dragonrider
 42822bfad05c884b  Kargan Warleader
+43053327612a54c9  Kari Zev's Expertise
 629235b8ce7cade1  Karlov of the Ghost Council
 a70d64ed7ad39eba  Karmic Guide
 930ac16c3e827cad  Karn's Bastion
@@ -9384,6 +9388,7 @@ a05c69e657885d0f  Lotus Guardian
 c972ca6076addd21  Lotus Path Djinn
 443635436d312315  Lotus Petal
 4d0717c53ee2d37d  Lotus-Eye Mystics
+3faa5f3928ce023d  Lotusguard Disciple
 5e5c6746179886ef  Lounge
 77fb63c8e4c4ec2e  Love Song of Night and Day
 1ee93aa761ca23ce  Lowland Basilisk
@@ -9734,6 +9739,7 @@ c7390051bd97af63  Marsh Flitter
 608c16fdcd056323  Marshal of the Lost
 22ea1345bdf23b38  Marshal of Zhalfir
 e01aff4aa3ed72ba  Marshaling Cry
+9ab050bac4c59986  Marshdrinker Giant
 1eb10aa1fb6aa059  Marshmist Titan
 edd94b52129ed068  Martha Jones
 5b3b54a0c8c56f7f  Martial Coup
@@ -9873,7 +9879,6 @@ caeb8f2d484758f3  Memory Erosion
 493de6d090d0ad43  Memory Trap
 14a6eb0f8c18413c  Memory Worm
 ac777ce0cf76ebfc  Menagerie Liberator
-4724354696288923  Mendicant Core, Guidelight
 b7d874ce7a97a215  Mending Hands
 06a29e6ecac394fe  Mending Touch
 1b7f3fbc70156395  Meng Huo's Horde
@@ -10923,6 +10928,7 @@ a597682950f71b3d  Nylea's Forerunner
 5b25c42561a1754a  Nylea, God of the Hunt
 29df19dcec4428fb  Nylea, Keen-Eyed
 76f9b9e2bfdddfdb  Nymris, Oona's Trickster
+85d91cb701a5bfb0  Nyx Herald
 bcb56d8d4277cf61  Nyx Lotus
 bbb1ca81095f284b  Nyx Weaver
 917ab0e022b6d847  Nyx-Fleece Ram
@@ -12058,6 +12064,7 @@ f5dec25f1c837119  Punk Frogs
 a7367f15b875b42e  Puppeteer Clique
 7884c543b8402888  Puresteel Paladin
 21a88ec2b86ca2c7  Purestrain Genestealer
+9f2f24012446d98f  Purge
 e20e9f3ae4da87aa  Purge the Profane
 a229d6d363c10ecb  Purging Stormbrood // Absorb Essence
 b82a73ff0ebea281  Purify
@@ -12209,7 +12216,9 @@ d8353d04bbf8b5df  Radha, Coalition Warlord
 7e681e412c837d23  Radiant Essence
 0ee5a9b220b27d71  Radiant Fountain
 2da85166521fe447  Radiant Grove
+61576cd1ded352a0  Radiant Purge
 829dbef22f043c50  Radiant Solar
+0d6a3cce5ffe118c  Radiant Strike
 fc1702aeed9c5bac  Radiant Summit
 3b338ef11bdb867e  Radiant's Dragoons
 ca5af89e6023288b  Radiant's Judgment
@@ -12888,7 +12897,6 @@ cfe1b0397ea83424  Rise of the Ants
 f5ccd3df39541f9e  Rise of the Varmints
 2ba2b9cff6b960b0  Rise to Glory
 72bcc7b685d030b9  Rise to the Challenge
-24b647e2d655ba8b  Risen Necroregent
 5198ec99eaa469f1  Risen Reef
 6cc41b46c0d9f52c  Risen Riptide
 e70f2b86cc239df0  Risen Sanctuary
@@ -13369,6 +13377,7 @@ ff855f2a5060d3ba  Saruli Caretaker
 a993066243a4f5bf  Saruman the White
 e2358779cddd7644  Saruman's Trickery
 5d76e0ead6a610d8  Saryth, the Viper's Fang
+73cde6492b59ed92  Satsuki, the Living Lore
 b3f224d5457d03f2  Satyr
 bfa13728892d73e6  Satyr
 e60b0510414fb7c7  Satyr
@@ -13540,6 +13549,7 @@ fb2eecb81595e6a6  Scouting Hawk
 d52493ba051f6f3e  Scragnoth
 410772a40397e807  Scrap
 59a64c3c76639b30  Scrap
+026742e43f47d7c0  Scrap Compactor
 d31e288bd27a0c1e  Scrap Mastery
 2973e5bc1ffbe21f  Scrap Trawler
 9fe246b8537ce298  Scrapheap
@@ -13861,6 +13871,7 @@ ba07a245506ab3fc  Seton, Krosan Protector
 02c12796e81e075b  Settle the Score
 8067a391a30b2db2  Settlement
 b29a4801e568733f  Settlement Blacksmith
+3d6f8b4946720f0c  Seven-Tail Mentor
 ac4a5e303d48aee8  Sever Soul
 d4768960d687c71f  Severed Legion
 90b4010cc94298dd  Severed Strands
@@ -14966,6 +14977,7 @@ dd05b32f6220bf73  Spike Worker
 e3aace5a35c779ce  Spiketail Drakeling
 74c5c56ee32cbed9  Spiketail Hatchling
 c87dd594354d6db3  Spikewheel Acrobat
+cddb8861e7807c90  Spin Out
 bab45ed716d4e1ca  Spinal Centipede
 847ea8984f678b61  Spinal Villain
 785c051703049d28  Spincrusher
@@ -15180,6 +15192,7 @@ e59de4bb8f842efe  Stalactite Stalker
 3f7f6bc0054ef825  Stalking Drone
 ba0a0b6395491dbb  Stalking Tiger
 bf9e60a6392a58d4  Stalking Vengeance
+99d469a89999bac9  Stall Out
 79f65aabe87caea7  Stallion of Ashmouth
 13e2ec41c978fe7e  Stalwart Aven
 deef74136b4394be  Stalwart Pathlighter
@@ -15888,6 +15901,7 @@ e2cf0ae5d2583234  Talas Scout
 db1558b5abb29dad  Talas Warrior
 e0e88023f6ffdfeb  Tale of Tinúviel
 4df8a195b588e8cb  Tale's End
+4437669177a03b5e  Tales of Master Seshiro // Seshiro's Living Legacy
 fcea8a4f3c37b3b1  Talisman of Conviction
 61f93c4afa811f15  Talisman of Creativity
 24ecbaf943e383ed  Talisman of Curiosity
@@ -17237,6 +17251,7 @@ fcae171f103a1293  Urborg Uprising
 75260454f9f80c39  Urborg, Tomb of Yawgmoth
 d49c42f171e5de41  Ureni of the Unwritten
 004ba251744a9db3  Ureni, the Song Unending
+504f6dc098e4307b  Urgent Exorcism
 e9fc8a9479843fe3  Urn of Godfire
 86165a0a62b73192  Ursapine
 bd56aaa717da4073  Ursine Fylgja
@@ -18577,7 +18592,6 @@ dc1ea63067d67733  Yuan Shao's Infantry
 6b83e2f018b47e54  Zagoth Crystal
 c66459eb9318a8a3  Zagoth Mamba
 72e6ae9cfd57674e  Zagoth Triome
-a182a50640b6b3ad  Zahur, Glory's Past
 ef0c5d065a1bfbaa  Zalto, Fire Giant Duke
 57e11e10871783e1  Zanarkand, Ancient Metropolis // Lasting Fayth
 656a5804b93266dd  Zanikev Locust
