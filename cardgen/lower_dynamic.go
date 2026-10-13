@@ -1545,33 +1545,6 @@ func alternativePermanentTargetSpec(target *compiler.CompiledTarget, spec *game.
 	return *spec, true
 }
 
-// permanentUnionTargetSpec builds a single-permanent TargetSpec for a bare
-// "<type> or <subtype>" disjunction target the runtime models as a
-// Selection.AnyOf ("target creature or Vehicle", Nakia, Wakandan Operative). A
-// simple top-level "or" disjunction leaves the outer selector kind unknown
-// (disjunctiveSelectionAlternatives), unlike the Oxford-comma
-// qualified-disjunction production that sets the SelectorPermanent kind the
-// general alternativePermanentTargetSpec path requires. Only the
-// counter-placement lowering calls this, and only after its effect-level
-// exactness gate (exactCounterUnionTargetSyntax) has already proven the union
-// round-trips; the shared target.Exact stays false so the other single-object
-// verbs keep the mixed type+subtype union fail-closed. It fails closed for a
-// non-single cardinality or an outer selector that is not a bare disjunction,
-// and alternativePermanentTargetSpec validates each alternative in turn.
-func permanentUnionTargetSpec(target compiler.CompiledTarget) (game.TargetSpec, bool) {
-	if !targetCardinalityIsOne(target) ||
-		target.Selector.Kind != compiler.SelectorUnknown ||
-		len(target.Selector.Alternatives) == 0 {
-		return game.TargetSpec{}, false
-	}
-	spec := game.TargetSpec{
-		MinTargets: target.Cardinality.Min,
-		MaxTargets: target.Cardinality.Max,
-		Allow:      game.TargetAllowPermanent,
-	}
-	return alternativePermanentTargetSpec(&target, &spec, true)
-}
-
 // selectorHasUnsupportedPermanentFilters reports whether a permanent target
 // selector carries a characteristic the runtime Selection cannot represent
 // exactly. Subtypes, supertypes, colors, excluded colors, the colorless and

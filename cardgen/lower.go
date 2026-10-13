@@ -939,6 +939,14 @@ func lowerExecutableAbility(
 	ability compiler.CompiledAbility,
 	syntax *parser.Ability,
 ) (abilityLowering, *shared.Diagnostic) {
+	if ability.Kind == compiler.AbilityTriggered && isMaxSpeedAbilityWord(ability.AbilityWord) {
+		diagnostic := executableDiagnostic(ability, "unsupported Max speed triggered ability",
+			"conditional triggered availability requires copied static ability sources (issue #3263)")
+		if syntax.AbilityWord != nil {
+			diagnostic.Span = syntax.AbilityWord.Span
+		}
+		return abilityLowering{}, diagnostic
+	}
 	if ability.SkipExtraTurnsScope != "" {
 		affected := game.PlayerAny
 		if ability.SkipExtraTurnsScope == parser.TriggerPlayerSelectorOpponent {

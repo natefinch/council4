@@ -110,6 +110,49 @@ executing; filtered result gates cannot invert unavailable membership through
 negation. Unfiltered actor/payment gates and scalar-only readers retain their
 independent receipt semantics.
 
+Single permanent OR targets have a parser-owned union proof. Each type/subtype
+branch must fully reconstruct with the existing permanent qualifier grammar
+before the parser assigns the homogeneous permanent domain. Branch-local
+filters remain in `Selection.AnyOf`; a canonical trailing controller relation
+qualifies the whole union. Already exact ordinary type/subtype unions and
+artifact-creature conjunctions retain their existing projections. Return, tap,
+untap, destroy, exile, and counter placement reuse the common permanent target
+projector, including body-owned owner/controller references and target offsets.
+There is no counter-only union bypass. Mixed zones, ambiguous controller scope,
+unconsumed riders, branch-X mana value, and optional/plural/unbounded mixed unions
+remain unsupported; target exactness does not grant a verb new payload or
+cardinality behavior.
+Independent reconstruction does not certify noun ellipsis or an unproven shared
+leading adjective. A bare subtype paired with a typed subtype of the same
+family (`Merfolk or Kithkin creature`), or a leading state/token/color-state/
+supertype qualifier without a second explicit qualifier, remains inexact with
+a parser-owned scope diagnostic. Repeat the complete predicates to prove
+independent scope. Branch-local literal colors and second-branch qualifiers
+retain their original meaning, as do already exact ordinary subtype unions.
+Trailing `with`/`without` restrictions (keyword, excluded keyword, mana value,
+power, toughness, or source-relative power) need whole-union scope proof or a
+complete restriction in that dimension on both branches. A leading `N/M`
+power/toughness prefix is not a trailing numeric restriction; it cannot prove
+ownership of a trailing bound on the other branch.
+An exact same-clause Return owner operand cannot be captured by an unrelated
+earlier exiled-card result. The compiler reconciles that operand only after
+canonical body scope, unique ClauseID/NodeID, typed order, and the matching
+single permanent declaration agree, before issuing original-object lifetime
+proof. It does not reorder the general antecedent binder. Targetless readbacks,
+explicit card producers, and later actor clauses without a declared-target
+ownership proof keep their existing binding; this correction does not invent
+post-clause ownership.
+
+The exact `Max speed` qualifier on a triggered ability remains fail-closed.
+CR 702.178 grants the ability only while the controller has speed 4; an
+intervening-if or resolving-instruction condition is not equivalent. Existing
+conditional self ability grants work on ordinary permanents, but copied static
+continuous abilities are not discovered as sources after a LayerCopy effect
+(#3263). Until that runtime contract is complete, the entire CardDef is refused
+with a qualifier-localized diagnostic rather than emitting an always-present
+trigger. Existing Max speed static/activated support and decorative, rules-free
+ability-word labels retain their prior behavior.
+
 Ordinary life, draw, and card-count actions share one typed player-recipient
 adapter and single/group mode builder. Parser-owned actor context, reference
 binding and target occurrence determine the recipient; inherited permanent and

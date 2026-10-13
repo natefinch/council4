@@ -716,15 +716,14 @@ func TestExactSubtypeUnionAccepts(t *testing.T) {
 	}
 }
 
-// TestExactOxfordUnionFailsClosed keeps unions the runtime predicate cannot
-// faithfully reconstruct outside the exact envelope: a union that mixes a card
-// type with a subtype. A per-member keyword or power qualifier on an
-// Oxford-comma list is a distinct, supported shape handled by the qualified
-// disjunctive permanent target.
-func TestExactOxfordUnionFailsClosed(t *testing.T) {
+func TestExactPermanentUnionTargetConsumption(t *testing.T) {
 	t.Parallel()
+	if !exileEffectExact(t, "Exile target creature or Spacecraft.") {
+		t.Fatal("fully consumed type/subtype union is not exact")
+	}
 	rejected := []string{
-		"Exile target creature or Spacecraft.",
+		"Exile target creature or Spacecraft card.",
+		"Exile target creature or Spacecraft with an additional rider.",
 	}
 	for _, source := range rejected {
 		if exileEffectExact(t, source) {

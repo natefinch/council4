@@ -1,6 +1,6 @@
 # Supported Cards
 
-Council4 currently supports **18,686 of 33,016 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,728 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
+Council4 currently supports **18,700 of 33,016 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,728 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total.
 
 - +2 Mace
 - A Realm Reborn
@@ -176,7 +176,6 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Aether Spellbomb
 - Aether Sting
 - Aether Swooper
-- Aether Syphon
 - Aether Theorist
 - Aether Tradewinds
 - Aether Tunnel
@@ -1945,6 +1944,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Boulder Dash
 - Boulderborn Dragon
 - Boulderfall
+- Bounce Off
 - Bound in Silence
 - Boundary Lands Ranger
 - Bounding Krasis
@@ -3519,6 +3519,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Darigaaz's Charm
 - Daring Apprentice
 - Daring Archaeologist
+- Daring Demolition
 - Daring Discovery
 - Daring Escape
 - Daring Fiendbonder
@@ -4803,7 +4804,6 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Elvish Warmaster
 - Elvish Warrior
 - Emancipation Angel
-- Embalmed Ascendant
 - Embargo
 - Ember Beast
 - Ember Hauler
@@ -4828,6 +4828,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Embodiment of Spring
 - Embraal Bruiser
 - Embraal Gear-Smasher
+- Embrace Oblivion
 - Embrace the Paradox
 - Embrace the Unknown
 - Emerald Charm
@@ -4880,7 +4881,6 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Endless Ranks of HYDRA
 - Endless Wurm
 - Endrider Catalyzer
-- Endrider Spikespitter
 - Enduring Courage
 - Enduring Curiosity
 - Enduring Innocence
@@ -5358,6 +5358,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Fearless Pup
 - Fearsome Awakening
 - Fearsome Goblin Pair
+- Feast of Dreams
 - Feast of Sanity
 - Feast of Succession
 - Feast of the Unicorn
@@ -6870,6 +6871,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Gravitational Shift
 - Gravitic Punch
 - Gravity Well
+- Gravkill
 - Gravpack Monoist
 - Gray Merchant of Asphodel
 - Gray Ogre
@@ -7360,6 +7362,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Hellion
 - Hellion Crucible
 - Hellion Eruption
+- Hellish Sideswipe
 - Hellkite Igniter
 - Hellkite Overlord
 - Hellkite Punisher
@@ -8509,6 +8512,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Kargan Dragonlord
 - Kargan Dragonrider
 - Kargan Warleader
+- Kari Zev's Expertise
 - Karlov of the Ghost Council
 - Karmic Guide
 - Karn's Bastion
@@ -9378,6 +9382,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Lotus Path Djinn
 - Lotus Petal
 - Lotus-Eye Mystics
+- Lotusguard Disciple
 - Lounge
 - Love Song of Night and Day
 - Lowland Basilisk
@@ -9728,6 +9733,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Marshal of the Lost
 - Marshal of Zhalfir
 - Marshaling Cry
+- Marshdrinker Giant
 - Marshmist Titan
 - Martha Jones
 - Martial Coup
@@ -9867,7 +9873,6 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Memory Trap
 - Memory Worm
 - Menagerie Liberator
-- Mendicant Core, Guidelight
 - Mending Hands
 - Mending Touch
 - Meng Huo's Horde
@@ -10917,6 +10922,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Nylea, God of the Hunt
 - Nylea, Keen-Eyed
 - Nymris, Oona's Trickster
+- Nyx Herald
 - Nyx Lotus
 - Nyx Weaver
 - Nyx-Fleece Ram
@@ -12052,6 +12058,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Puppeteer Clique
 - Puresteel Paladin
 - Purestrain Genestealer
+- Purge
 - Purge the Profane
 - Purging Stormbrood // Absorb Essence
 - Purify
@@ -12203,7 +12210,9 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Radiant Essence
 - Radiant Fountain
 - Radiant Grove
+- Radiant Purge
 - Radiant Solar
+- Radiant Strike
 - Radiant Summit
 - Radiant's Dragoons
 - Radiant's Judgment
@@ -12882,7 +12891,6 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Rise of the Varmints
 - Rise to Glory
 - Rise to the Challenge
-- Risen Necroregent
 - Risen Reef
 - Risen Riptide
 - Risen Sanctuary
@@ -13363,6 +13371,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Saruman the White
 - Saruman's Trickery
 - Saryth, the Viper's Fang
+- Satsuki, the Living Lore
 - Satyr
 - Satyr
 - Satyr
@@ -13534,6 +13543,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Scragnoth
 - Scrap
 - Scrap
+- Scrap Compactor
 - Scrap Mastery
 - Scrap Trawler
 - Scrapheap
@@ -13855,6 +13865,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Settle the Score
 - Settlement
 - Settlement Blacksmith
+- Seven-Tail Mentor
 - Sever Soul
 - Severed Legion
 - Severed Strands
@@ -14960,6 +14971,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Spiketail Drakeling
 - Spiketail Hatchling
 - Spikewheel Acrobat
+- Spin Out
 - Spinal Centipede
 - Spinal Villain
 - Spincrusher
@@ -15174,6 +15186,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Stalking Drone
 - Stalking Tiger
 - Stalking Vengeance
+- Stall Out
 - Stallion of Ashmouth
 - Stalwart Aven
 - Stalwart Pathlighter
@@ -15882,6 +15895,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Talas Warrior
 - Tale of Tinúviel
 - Tale's End
+- Tales of Master Seshiro // Seshiro's Living Legacy
 - Talisman of Conviction
 - Talisman of Creativity
 - Talisman of Curiosity
@@ -17231,6 +17245,7 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Urborg, Tomb of Yawgmoth
 - Ureni of the Unwritten
 - Ureni, the Song Unending
+- Urgent Exorcism
 - Urn of Godfire
 - Ursapine
 - Ursine Fylgja
@@ -18571,7 +18586,6 @@ Council4 currently supports **18,686 of 33,016 cards eligible for paper support 
 - Zagoth Crystal
 - Zagoth Mamba
 - Zagoth Triome
-- Zahur, Glory's Past
 - Zalto, Fire Giant Duke
 - Zanarkand, Ancient Metropolis // Lasting Fayth
 - Zanikev Locust

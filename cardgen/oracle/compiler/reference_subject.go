@@ -222,6 +222,7 @@ func finalizeReferenceSubjects(content *AbilityContent, source ReferenceSourceCo
 		}
 	}
 	content.Source = source
+	bindDeclaredTargetOwnerReferences(content)
 	bindingTargets := content.Targets
 	if source.kind == AbilitySpell && len(bindingTargets) == 0 && len(content.Modes) == 0 &&
 		source.enclosingSpellTarget != nil {
