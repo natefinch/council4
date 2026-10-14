@@ -84,14 +84,14 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 
 | Rank | Reason | Affected (parser-complete) cards | Sole blockers | Example cards |
 | --- | --- | --- | --- | --- |
-| 1 | unsupported ordered effect sequence | 1708 | 1063 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
+| 1 | unsupported ordered effect sequence | 1708 | 1060 | Wasp, Shrinking Savior; Strength of Night; Mind Extraction; Coalition Relic; Fear of Falling |
 | 2 | unsupported optional effect | 516 | 2 | Dazzling Sphinx; Planebound Accomplice; Puresight Merrow; Mindclaw Shaman; Remembrance |
 | 3 | unsupported static declaration operation | 280 | 235 | Food Fight; Magma Sliver; Sedge Sliver; Wingrattle Scarecrow; Pompous Gadabout |
-| 4 | unsupported static ability | 275 | 191 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
+| 4 | unsupported static ability | 275 | 190 | Nissa, Worldsoul Speaker; Static Orb; Stenn, Paranoid Partisan; Beluna Grandsquall // Seek Thrills; Avatar of Growth |
 | 5 | unsupported counter placement | 220 | 115 | Toluz, Clever Conductor; Sword-Swallowing Seraph; Greater Werewolf; Ent-Draught Basin; Park Bleater |
 | 6 | unsupported damage spell | 198 | 144 | Armed Response; Combo Attack; Huatli, Dinosaur Knight; Kill! Maim! Burn!; Call Forth the Tempest |
 | 7 | unsupported activation cost | 188 | 141 | Thunderherd Migration; Krovikan Sorcerer; Etchings of the Chosen; Tourach's Gate; City of Shadows |
-| 8 | unsupported reference subject | 168 | 0 | Planebound Accomplice; Venser's Diffusion; Pandemonium; Misleading Motes; Fatigue |
+| 8 | unsupported reference subject | 172 | 0 | Planebound Accomplice; Venser's Diffusion; Nicol Bolas, Planeswalker; Pandemonium; Misleading Motes |
 | 9 | unsupported static declaration group | 163 | 126 | Sedge Sliver; Freewind Equenaut; Rune of Sustenance; Indomitable Might; Cast Through Time |
 | 10 | unsupported return spell | 157 | 125 | Dragon Fangs; Dragon Scales; Venser's Diffusion; Kazandu Stomper; Shuri's Fabricator |
 | 11 | unsupported token creation | 119 | 91 | Witch's Mark; Goblin Gathering; Kwia Vigorbloom; Sorin, Grim Nemesis; Nesting Dragon |
@@ -107,7 +107,7 @@ Parser-complete cards that do not yet lower, bucketed by distinct lowering diagn
 | 21 | unsupported enters-with-counters replacement | 65 | 47 | Flycatcher Giraffid; Malefic Scythe; Callous Sell-Sword // Burn Together; Bone Devourer; Faerie Squadron |
 | 22 | unsupported cast effect | 65 | 32 | Oracle of Bones; Founding the Third Path; Forger's Foundry; Spell Queller; Xantid Swarm |
 | 23 | unsupported type line | 61 | 60 | Playable Delusionary Hydra; Notorious Sliver War; City's Blessing // Elemental; Demonic Tourist Laser; Night Brushwagg Ringmaster |
-| 24 | unsupported life spell | 56 | 50 | Guiltfeeder; Wall of Reverence; Angrath, the Flame-Chained; Revered Unicorn; Atarka's Command |
+| 24 | unsupported life spell | 57 | 50 | Guiltfeeder; Wall of Reverence; Angrath, the Flame-Chained; Revered Unicorn; Atarka's Command |
 | 25 | unsupported temporary keyword spell | 50 | 43 | Order of the Golden Cricket; Pale Wayfarer; Outmuscle; Gravity Negator; Kitsune Ace |
 | 26 | unsupported static declaration condition | 49 | 39 | Desperate Castaways; Nadaar, Selfless Paladin; Veldt; Gloom Stalker; Hazy Homunculus |
 | 27 | unsupported ability content | 46 | 32 | Vihaan, Goldwaker; Heated Debate; Renegade Doppelganger; Shifting Loyalties; Symmetry Sage |

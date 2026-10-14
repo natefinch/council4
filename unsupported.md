@@ -1209,7 +1209,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Blight Titan** — unsupported ordered effect sequence: sub-effect — unsupported incubate spell
 - **Blightbeetle** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Blighted Blackthorn** — unsupported permanent zone-change trigger effect: the executable source backend does not support this permanent zone-change trigger body
-- **Blightning** — unsupported ordered effect sequence: sub-effect — unsupported discard spell
+- **Blightning** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: structural — clause reference not localizable
 - **Blightreaper Thallid // Blightsower Thallid** — unsupported triggered ability: the runtime events exist, but this trigger requires a missing event-or-subject-union semantic slot
 - **Blightwing Bandit** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: sub-effect — unsupported look-at-library spell; unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported reference subject; unsupported cast effect: only cast-without-paying-mana-cost spells are supported
 - **Blim, Comedic Genius** — unsupported gain-control spell: the executable source backend supports only exact gain-control sequences targeting one permanent
@@ -1334,7 +1334,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Bone Picker** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Bone Shaman** — unsupported keyword or ability grant: the executable source backend does not yet lower spells that grant a keyword or quoted ability
 - **Bonecache Overseer** — unsupported activation condition: the executable source backend cannot lower every activation condition
-- **Bonecrusher Giant // Stomp** — unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
+- **Bonecrusher Giant // Stomp** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported damage spell: the executable source backend does not support this group recipient; unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
 - **Bonehoard** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
 - **Bonehoard Dracosaur** — unsupported ordered effect sequence: structural — actual-result condition has no unique earlier typed producer
 - **Boneshard Slasher** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable
@@ -4314,7 +4314,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Flameskull** — unsupported ordered effect sequence: structural — unconsumed targets/references/keywords
 - **Flamestick Courier** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported power/toughness spell: the executable source backend supports only exact supported target-creature power/toughness changes until end of turn
 - **Flamewright** — unsupported activation cost: the executable source backend cannot lower every typed activation cost component
-- **Flaming Gambit** — unsupported ordered effect sequence: structural — instead replacement not gatable; unsupported Flashback ability: the executable source backend supports only exact Flashback with a fixed mana cost
+- **Flaming Gambit** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: structural — instead replacement not gatable; unsupported Flashback ability: the executable source backend supports only exact Flashback with a fixed mana cost
 - **Flare of Malice** — unsupported sacrifice spell: the executable source backend does not yet lower this sacrifice effect
 - **Flaring Flame-Kin** — unsupported static declaration group: the static declaration affected group is unsupported or ambiguous
 - **Flaring Pain** — unsupported Oracle construct: the compiler preserved but did not confidently lower: Damage can't be prevented this turn.; unsupported ability content: the executable source backend does not yet lower this ability content
@@ -4441,7 +4441,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Form of the Dragon** — unsupported Oracle construct: the compiler preserved but did not confidently lower: At the beginning of each end step, your life total becomes 5.; unsupported Oracle construct: the compiler preserved but did not confidently lower: Creatures without flying can't attack you.; unsupported phase/step trigger phrase effect: the executable source backend does not support this phase/step trigger body; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Formation Breaker** — unsupported static declaration condition: the static declaration has an unsupported or ambiguously scoped condition
 - **Formless Nurturing** — unsupported ordered effect sequence: sub-effect — unsupported counter placement
-- **Forsaken Wastes** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
+- **Forsaken Wastes** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported life spell: the executable source backend supports only exact fixed life changes
 - **Forsworn Paladin** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: If mana from a Treasure was spent to activate this ability
 - **Fortified Beachhead** — unsupported optional replacement effect: the executable source backend does not yet lower optional replacement effects
 - **Fortress Kin-Guard** — unsupported Oracle construct: the compiler preserved but did not confidently lower: When this creature enters, it endures 1. (Put a +1/+1 counter on it or create a 1/1 white Spirit creature token.); unsupported permanent zone-change trigger effect: the executable source backend does not support this permanent zone-change trigger body
@@ -8280,7 +8280,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Nicol Bolas** — unsupported discard spell: the executable source backend supports only exact fixed discard by one player
 - **Nicol Bolas, Dragon-God** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable; unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported lose-game effect: the executable source backend supports only the exact controller, referenced, or target "loses the game" effect
 - **Nicol Bolas, God-Pharaoh** — unsupported optional effect: the executable source backend does not yet lower optional resolving effects; unsupported ordered effect sequence: sub-effect — unsupported exile spell; unsupported ordered effect sequence: sub-effect — unsupported cast effect; unsupported ordered effect sequence: sub-effect — unsupported cast effect; unsupported exile spell: the executable source backend supports only exact exile of one target permanent; unsupported damage spell: the executable source backend supports only exact supported damage amounts to one target
-- **Nicol Bolas, Planeswalker** — unsupported ordered effect sequence: sub-effect — unsupported discard spell; unsupported ordered effect sequence: sub-effect — unsupported sacrifice spell
+- **Nicol Bolas, Planeswalker** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: structural — clause reference not localizable
 - **Nicol Bolas, the Ravager // Nicol Bolas, the Arisen** — unsupported ordered effect sequence: sub-effect — unsupported return spell; unsupported exile spell: the executable source backend supports only exact exile of one target permanent
 - **Night // Day** — unsupported power/toughness spell: the executable source backend supports only exact supported target-creature power/toughness changes until end of turn
 - **Night Brushwagg Ringmaster** — unsupported type line: type line "Stickers" has no supported card type
@@ -9363,7 +9363,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Pulse of Llanowar** — unsupported Oracle construct: the compiler preserved but did not confidently lower: If a basic land you control is tapped for mana, it produces mana of a color of your choice instead of any other type.; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Pulse of the Dross** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: if that player has more cards in hand than you
 - **Pulse of the Fields** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: if an opponent has more life than you
-- **Pulse of the Forge** — unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
+- **Pulse of the Forge** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: structural — per-effect condition spans multiple clauses
 - **Pulse of the Grid** — unsupported ordered effect sequence: structural — per-effect condition unrecognized: if an opponent has more cards in hand than you
 - **Pulsemage Advocate** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Pumpkin Bombs** — unsupported ordered effect sequence: sub-effect — unsupported counter placement; unsupported ordered effect sequence: sub-effect — unsupported gain-control spell
@@ -9439,7 +9439,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Quash** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: search unit — unsupported contiguous search/filter/destination parameters
 - **Queen Kayla bin-Kroog** — unsupported activation references: the executable source backend cannot lower every bound reference in this activated ability
 - **Queen's Bay Paladin** — unsupported ordered effect sequence: sub-effect — unsupported return spell; unsupported ordered effect sequence: sub-effect — unsupported life spell
-- **Quenchable Fire** — unsupported ordered effect sequence: structural — per-effect condition kind not gateable
+- **Quenchable Fire** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: structural — per-effect condition kind not gateable
 - **Quest for Pure Flame** — unsupported triggered ability: the runtime event exists, but this combat, phase, or step relation requires a missing runtime capability; unsupported activation condition: the executable source backend cannot lower every activation condition
 - **Quest for the Holy Relic** — unsupported search effect: unexpected non-result reference in search effect
 - **Quest for the Necropolis** — unsupported counter placement: the executable source backend supports exact recognized counter placement on one valid target
@@ -9533,7 +9533,7 @@ These cards are eligible for paper support but cardgen cannot yet generate them.
 - **Rakdos Ickspitter** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: sub-effect — unsupported damage spell
 - **Rakdos Riteknife** — unsupported static declaration operation: the static declaration operation or its exact syntax is not representable; unsupported sacrifice spell: the executable source backend does not yet lower this sacrifice effect
 - **Rakdos the Defiler** — unsupported sacrifice spell: the executable source backend does not yet lower this sacrifice effect; unsupported sacrifice spell: the executable source backend does not yet lower this sacrifice effect
-- **Rakdos's Return** — unsupported ordered effect sequence: sub-effect — unsupported discard spell
+- **Rakdos's Return** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: structural — clause reference not localizable
 - **Rakdos, Lord of Riots** — unsupported static ability: the executable source backend does not yet lower non-keyword static rules text; unsupported static ability: the executable source backend does not yet lower non-keyword static rules text
 - **Rakdos, the Muscle** — unsupported reference subject: the body contains a missing, incompatible, or foreign subject proof; unsupported ordered effect sequence: sub-effect — unsupported exile spell
 - **Rakdos, the Showstopper** — unsupported destroy spell: the executable source backend supports only exact destruction of one target permanent
