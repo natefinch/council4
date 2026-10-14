@@ -69,11 +69,54 @@ func (e *Engine) validateLoadedPrograms(g *game.Game) {
 	if err := e.ValidatePrograms(configs); err != nil {
 		panic(UnsupportedError{Reason: err.Error()})
 	}
+	e.validatePendingPrograms(g)
+}
+
+func (e *Engine) validateProgramReferences(references []game.ProgramReference) error {
+	for _, reference := range references {
+		if _, err := e.programs.Lookup(reference); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (e *Engine) validatePendingPrograms(g *game.Game) {
+	var references []game.ProgramReference
+	for _, pending := range g.DelayedTriggers {
+		references = append(references, pending.Ability.ProgramReferences()...)
+	}
+	for _, pending := range g.PendingReflexiveTriggers {
+		references = append(references, pending.Ability.ProgramReferences()...)
+	}
+	for _, obj := range g.Stack.Objects() {
+		if obj.InlineTrigger != nil {
+			references = append(references, obj.InlineTrigger.ProgramReferences()...)
+		}
+		if obj.InlineActivated != nil {
+			references = append(references, obj.InlineActivated.ProgramReferences()...)
+		}
+		if obj.InlineLoyalty != nil {
+			references = append(references, obj.InlineLoyalty.ProgramReferences()...)
+		}
+		for _, content := range obj.SplicedContent {
+			references = append(references, content.ProgramReferences()...)
+		}
+		if obj.SourceTokenDef != nil {
+			references = append(references, obj.SourceTokenDef.ProgramReferences()...)
+		}
+	}
+	if err := e.validateProgramReferences(references); err != nil {
+		panic(UnsupportedError{Reason: "pending ability: " + err.Error()})
+	}
 }
 
 func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.Mode, shared []game.TargetSpec, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	if g == nil || obj == nil || log == nil {
-		panic(UnsupportedError{Reason: "authored program requires game, stack object and resolution log"})
+	if g == nil || obj == nil {
+		panic(UnsupportedError{Reason: "authored program requires game and stack object"})
+	}
+	if log == nil {
+		log = &TurnLog{}
 	}
 	cardID, objectID := damageSourceIDs(g, obj)
 	ctx := &programContext{
@@ -127,6 +170,13 @@ func (c *programContext) Execute(primitive game.Primitive) (cardprogram.Outcome,
 	}
 	if err := game.ValidateLinkedProducerOperation(primitive, c.obj.ResolvingLinkedProducers); err != nil {
 		return cardprogram.Outcome{}, err
+	}
+	if provider, ok := primitive.(interface {
+		ProgramReferences() []game.ProgramReference
+	}); ok {
+		if err := c.engine.validateProgramReferences(provider.ProgramReferences()); err != nil {
+			return cardprogram.Outcome{}, err
+		}
 	}
 	// This key is implementation-local, never a variable name card authors need
 	// to manage. Each call restores the enclosing declarative receipt/products.

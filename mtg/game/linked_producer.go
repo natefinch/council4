@@ -21,15 +21,17 @@ func (key LinkedProducerKey) valid() bool {
 
 // PublishedLinkedProducer reports the opt-in original-source publisher.
 func PublishedLinkedProducer(primitive Primitive) LinkedProducerKey {
-	switch p := primitive.(type) {
-	case MovePermanent:
-		return p.PublishLinkedProducer
-	case MoveCard:
-		return p.PublishLinkedProducer
-	default:
-		return ""
+	if publisher, ok := primitive.(interface{ LinkedProducerPublication() LinkedProducerKey }); ok {
+		return publisher.LinkedProducerPublication()
 	}
+	return ""
 }
+
+// LinkedProducerPublication reports the declared exile channel.
+func (p MovePermanent) LinkedProducerPublication() LinkedProducerKey { return p.PublishLinkedProducer }
+
+// LinkedProducerPublication reports the declared exile channel.
+func (p MoveCard) LinkedProducerPublication() LinkedProducerKey { return p.PublishLinkedProducer }
 
 // ValidateLinkedProducerOperation enforces ownership for authored operations and
 // declarative instructions alike. A key on another body grants no publication rights.
@@ -53,10 +55,14 @@ func validateProducerPublication(producer LinkedProducerKey, legacy LinkedKey, d
 }
 
 func consumedLinkedProducers(primitive Primitive) []LinkedProducerKey {
-	p, ok := primitive.(PutOnBattlefield)
-	if !ok {
-		return nil
+	if consumer, ok := primitive.(interface{ LinkedProducerConsumption() []LinkedProducerKey }); ok {
+		return consumer.LinkedProducerConsumption()
 	}
+	return nil
+}
+
+// LinkedProducerConsumption reports the selected original-source channels.
+func (p PutOnBattlefield) LinkedProducerConsumption() []LinkedProducerKey {
 	sources := p.Sources
 	if p.Source.Valid() {
 		sources = []BattlefieldSource{p.Source}
@@ -70,20 +76,29 @@ func consumedLinkedProducers(primitive Primitive) []LinkedProducerKey {
 	return producers
 }
 
+// NestedAbilityContents exposes resolving bodies without knowing concrete primitives.
+func (p RepeatProcess) NestedAbilityContents() []AbilityContent { return []AbilityContent{p.Body} }
+
+// NestedAbilityContents exposes the scheduled body.
+func (p CreateDelayedTrigger) NestedAbilityContents() []AbilityContent {
+	return []AbilityContent{p.Trigger.Content}
+}
+
+// NestedAbilityContents exposes the reflexive body.
+func (p CreateReflexiveTrigger) NestedAbilityContents() []AbilityContent {
+	return []AbilityContent{p.Trigger.Content}
+}
+
 func walkLinkedProducerContent(content AbilityContent, visit func(AbilityContent)) {
 	visit(content)
 	var sequence func([]Instruction)
 	sequence = func(instructions []Instruction) {
 		for _, instruction := range instructions {
 			sequence(instruction.TemptingOfferBody)
-			switch p := instruction.Primitive.(type) {
-			case RepeatProcess:
-				walkLinkedProducerContent(p.Body, visit)
-			case CreateDelayedTrigger:
-				walkLinkedProducerContent(p.Trigger.Content, visit)
-			case CreateReflexiveTrigger:
-				walkLinkedProducerContent(p.Trigger.Content, visit)
-			default:
+			if nested, ok := instruction.Primitive.(interface{ NestedAbilityContents() []AbilityContent }); ok {
+				for _, body := range nested.NestedAbilityContents() {
+					walkLinkedProducerContent(body, visit)
+				}
 			}
 		}
 	}

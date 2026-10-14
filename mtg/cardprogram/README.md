@@ -104,13 +104,60 @@ of independently completed removals. Terastodon is the first production example
 of correlated batch outcomes; a real graveyard arrival qualifies even if the
 commander later moves to command as an SBA (CR 903.9a). Hand/library command-zone
 handling remains an optional replacement, not that SBA (CR 903.9b).
-Following epic slices deepen links, replacement programs and policy extensions.
+Following epic slices deepen replacement programs and policy extensions.
 
 Hive Mind, Gifts Ungiven and Gilded Drake are the next production compositions.
 Gilded Drake's `ResolveWithIllegalTargets` declaration is inspectable rule data:
 illegal slots are still rescreened, but the sacrifice consequence can resolve
 when all targets became illegal. Other triggered abilities retain normal
 all-illegal resolution rules.
+
+## Linked and delayed lifetimes
+
+Worldgorger Dragon and Nim Deathmantle are complete production registrations,
+not compiler admissions. Their costs, Flying/Trample, Equipment statics, Equip
+and trigger filters are ordinary declarations. Oracle input is the pinned corpus
+in `testdata/card-preservation/corpus.json`; lifetime scenarios use the official
+Comprehensive Rules effective 2026-09-25 (400.7, 607 and 610.3).
+
+- Worldgorger's entry body owns an implementation-qualified
+  `AbilityContent.LinkedProducers` channel. `MovePermanent.PublishLinkedProducer`
+  accumulates actual exile incarnations under the original permanent ObjectID;
+  `OriginalSourceLinkedBattlefieldSource` returns only those exact incarnations
+  still in exile, simultaneously and under their owners' control. Copies of the
+  same trigger accumulate; a new permanent occurrence owns a different namespace.
+  Explicit source-reference exclusion still works after the source leaves and
+  does not exclude a later reentry of the same physical card.
+- These are CR 607 linked abilities, **not** CR 610.3 "until" effects. If the
+  leave trigger resolves before the entry trigger, the latter still exiles.
+  Tokens cease to exist at SBA and cannot return as cards. Replaced exiles do
+  not publish intended arrivals; replaced returns and moved exiled cards cannot
+  be reclaimed through their physical CardIDs.
+- Nim's `Execute(Pay)` uses the Engine's optional resolution payment planner;
+  only actual successful payment enables return. The death event freezes the
+  public graveyard incarnation (400.7e). A normal `PutOnBattlefield` publishes the
+  actual arrived permanent into an Engine-owned link; attachment follows that
+  ObjectID, never a later physical-card reentry. A missing/blinked Equipment
+  cannot attach its new occurrence through the old trigger. The black Zombie
+  effect replaces creature subtypes without removing other subtype families.
+  Engine attachment legality enforces protection against the Equipment's
+  effective characteristics; failure to attach does not undo payment or return.
+- `Program.Dependencies` declares handlers created by opaque Go resolution.
+  Catalog construction checks exact versions and copies dependency slices.
+  `Execute` preflights nested handlers before scheduling; loaded games and
+  Simulator mutation seams also validate pending delayed, reflexive and inline
+  stack bodies. Missing entries fail explicitly.
+- Existing `CreateDelayedTrigger` stores stable program bindings and typed
+  captured CardIDs/zone versions, object IDs and historical values in Game state.
+  The registered delayed linked-return fixture uses named, noncapturing functions,
+  survives source departure and multiple same-turn activations, and proves clone
+  independence both before scheduling and with scheduled/on-stack handlers.
+  No closure, coroutine, VM or live stack pointer is retained.
+
+The production Worldgorger plus declarative reanimation-fixture test stops at
+stable priority seams after several recurrences; it is not an Animate Dead
+certification or a runtime iteration cap. No Worldgorger trigger is dropped,
+no card-specific cap is installed and no timeout is reported as a rules draw.
 
 ## Consumers, errors and portability
 

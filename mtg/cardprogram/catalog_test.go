@@ -78,3 +78,34 @@ func TestCatalogRejectsDuplicatesAndMalformedPrograms(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestCatalogScheduledDependenciesAreVersionedAndCopied(t *testing.T) {
+	t.Parallel()
+	ref := game.ProgramReference{ID: "creator", Version: "1"}
+	delayed := game.ProgramReference{ID: "delayed", Version: "1"}
+	dependencies := []game.ProgramReference{delayed}
+	parent := Program{Reference: ref, Resolve: resolveNoop, Dependencies: dependencies}
+	child := Program{Reference: delayed, Resolve: resolveNoop}
+	if _, err := NewCatalog([]Program{parent}); err == nil {
+		t.Fatal("omitted scheduled handler was admitted")
+	}
+	wrong := child
+	wrong.Reference.Version = "2"
+	if _, err := NewCatalog([]Program{parent, wrong}); err == nil {
+		t.Fatal("wrong scheduled handler version was admitted")
+	}
+	catalog, err := NewCatalog([]Program{parent, child})
+	if err != nil {
+		t.Fatal(err)
+	}
+	dependencies[0].Version = "changed"
+	lookedUp, err := catalog.Lookup(ref)
+	if err != nil || lookedUp.Dependencies[0] != delayed {
+		t.Fatal("catalog aliased declaration dependencies")
+	}
+	lookedUp.Dependencies[0].Version = "changed"
+	again, err := catalog.Lookup(ref)
+	if err != nil || again.Dependencies[0] != delayed {
+		t.Fatal("Lookup exposed mutable catalog dependencies")
+	}
+}

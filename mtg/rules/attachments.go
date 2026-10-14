@@ -144,7 +144,8 @@ func canAttachPermanent(g *game.Game, attachment, target *game.Permanent) bool {
 		return auraCanAttachToPermanent(g, attachment, target)
 	}
 	if isEquipmentPermanent(g, attachment) {
-		return permanentHasType(g, target, types.Creature)
+		return permanentHasType(g, target, types.Creature) &&
+			!permanentProtectedFromPermanentEffective(g, target, attachment)
 	}
 	return false
 }

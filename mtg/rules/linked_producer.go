@@ -85,14 +85,5 @@ func (r *effectResolver) returnOriginalProducerCards(prim game.PutOnBattlefield)
 	// CR 607 links are not one-shot CR 610.3 captures: an inadmissible Aura
 	// remains linked in exile for a later resolving copy. Exact incarnations
 	// make successful or redirected moves unavailable without consuming others.
-	// Publish only actual arrivals, never the intended cards of replaced or
-	// inadmissible entries.
-	for _, permanent := range returned {
-		if r.currentInstruction != nil && r.currentInstruction.PublishResult != "" {
-			r.resultObjectsKnown = true
-			snapshot := snapshotPermanent(r.game, permanent, zone.Battlefield)
-			r.resultObjects = append(r.resultObjects, resultCharacteristicSnapshot(snapshot))
-		}
-	}
 	return returned
 }

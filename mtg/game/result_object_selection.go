@@ -40,12 +40,10 @@ func (Destroy) publishesResultObjects() bool             { return true }
 func (Sacrifice) publishesResultObjects() bool           { return true }
 func (SacrificePermanents) publishesResultObjects() bool { return true }
 func (MovePermanent) publishesResultObjects() bool       { return true }
-func (p PutOnBattlefield) publishesResultObjects() bool {
-	return len(consumedLinkedProducers(p)) > 0
-}
-func (PutOnBattlefield) publishesResultCards() bool   { return false }
-func (MoveTopOfLibrary) publishesResultObjects() bool { return true }
-func (p MoveCard) publishesResultObjects() bool       { return p.Destination != zone.Battlefield }
+func (PutOnBattlefield) publishesResultObjects() bool    { return true }
+func (PutOnBattlefield) publishesResultCards() bool      { return false }
+func (MoveTopOfLibrary) publishesResultObjects() bool    { return true }
+func (p MoveCard) publishesResultObjects() bool          { return p.Destination != zone.Battlefield }
 func (p ChooseFromZone) publishesResultObjects() bool {
 	return p.Destination.Zone != zone.Battlefield &&
 		(!p.SplitSecondary.Exists || p.SplitSecondary.Val.Destination.Zone != zone.Battlefield)

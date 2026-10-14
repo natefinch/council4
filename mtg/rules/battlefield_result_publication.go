@@ -27,6 +27,7 @@ func (r *effectResolver) clearPermanentResultPublication(instruction *game.Instr
 }
 
 func (r *effectResolver) publishEnteredPermanents(key game.LinkedKey, permanents ...*game.Permanent) {
+	r.rememberEnteredResultPermanents(permanents...)
 	if key == "" {
 		return
 	}
@@ -36,6 +37,17 @@ func (r *effectResolver) publishEnteredPermanents(key game.LinkedKey, permanents
 			ref.CardZoneVersion = card.ZoneVersion
 		}
 		rememberLinkedObject(r.game, linkedObjectSourceKey(r.game, r.obj, string(key)), ref)
+	}
+}
+
+func (r *effectResolver) rememberEnteredResultPermanents(permanents ...*game.Permanent) {
+	if r.currentInstruction == nil || r.currentInstruction.PublishResult == "" ||
+		!game.PublishesResultObjects(r.currentInstruction.Primitive) {
+		return
+	}
+	r.resultObjectsKnown = true
+	for _, permanent := range permanents {
+		r.resultObjects = append(r.resultObjects, resultCharacteristicSnapshot(currentProgramSnapshot(r.game, permanent)))
 	}
 }
 

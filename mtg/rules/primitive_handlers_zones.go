@@ -3516,7 +3516,9 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldValue(
 	continuousEffects []game.ContinuousEffect,
 	options permanentCreationOptions,
 ) bool {
-	return len(r.putResolvedCardsOnBattlefieldCollecting(resolved, continuousEffects, options)) > 0
+	returned := r.putResolvedCardsOnBattlefieldCollecting(resolved, continuousEffects, options)
+	r.rememberEnteredResultPermanents(returned...)
+	return len(returned) > 0
 }
 
 // putResolvedCardsOnBattlefieldCollecting is the collecting form of

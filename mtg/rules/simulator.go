@@ -53,6 +53,7 @@ func (s Simulator) LegalActions(g *game.Game, playerID game.PlayerID) []action.A
 // let the object resolve and opponents respond, then evaluate the resulting
 // position.
 func (s Simulator) Apply(g *game.Game, playerID game.PlayerID, act action.Action, policies [game.NumPlayers]PlayerAgent) (*game.Game, bool) {
+	s.engine.validatePendingPrograms(g)
 	if !containsAction(s.engine.legalActions(g, playerID), act) {
 		return nil, false
 	}
@@ -78,6 +79,7 @@ func (s Simulator) Apply(g *game.Game, playerID game.PlayerID, act action.Action
 // later steps or phases (rolling a whole turn or game forward from an arbitrary
 // mid-turn point is a separate capability built on top of this one).
 func (s Simulator) ResolvePriority(g *game.Game, policies [game.NumPlayers]PlayerAgent) *game.Game {
+	s.engine.validatePendingPrograms(g)
 	clone := g.Clone()
 	s.engine.runPriorityLoop(clone, policies, &TurnLog{})
 	return clone
@@ -99,6 +101,7 @@ func (s Simulator) ResolvePriority(g *game.Game, policies [game.NumPlayers]Playe
 // lethal — using the engine's authoritative combat sequence rather than a
 // heuristic estimate.
 func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.PlayerID, attackers action.DeclareAttackersAction, policies [game.NumPlayers]PlayerAgent) (*game.Game, bool) {
+	s.engine.validatePendingPrograms(g)
 	if g.Combat == nil || g.Turn.Step != game.StepDeclareAttackers {
 		return nil, false
 	}
@@ -129,6 +132,7 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 // steps (draw, blockers, damage) that must not be skipped, and callers evaluate
 // those decisions without looking ahead.
 func (s Simulator) PlayForward(g *game.Game, policies [game.NumPlayers]PlayerAgent, turns int) *game.Game {
+	s.engine.validatePendingPrograms(g)
 	clone := g.Clone()
 	s.engine.finishCurrentTurn(clone, policies)
 	for i := 0; i < turns && !clone.IsGameOver(); i++ {

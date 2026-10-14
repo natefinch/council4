@@ -5,6 +5,7 @@ package cardprogram
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 )
@@ -14,6 +15,9 @@ import (
 type Program struct {
 	Reference game.ProgramReference
 	Resolve   func(Context) error
+	// Dependencies declares handlers scheduled or introduced by Go resolution,
+	// whose bodies cannot be discovered by inspecting the Card Definition.
+	Dependencies []game.ProgramReference
 }
 
 // Catalog is immutable after construction and safe to share between Engines.
@@ -35,7 +39,15 @@ func NewCatalog(programs []Program) (Catalog, error) {
 		if _, exists := catalog.programs[program.Reference.ID]; exists {
 			return Catalog{}, fmt.Errorf("duplicate program ID %s", program.Reference.ID)
 		}
+		program.Dependencies = slices.Clone(program.Dependencies)
 		catalog.programs[program.Reference.ID] = program
+	}
+	for _, program := range programs {
+		for _, dependency := range program.Dependencies {
+			if _, err := catalog.Lookup(dependency); err != nil {
+				return Catalog{}, fmt.Errorf("program %s dependency: %w", program.Reference.ID, err)
+			}
+		}
 	}
 	return catalog, nil
 }
@@ -53,6 +65,7 @@ func (c Catalog) Lookup(reference game.ProgramReference) (Program, error) {
 		return Program{}, fmt.Errorf("program %s version %s is not installed (have %s)",
 			reference.ID, reference.Version, program.Reference.Version)
 	}
+	program.Dependencies = slices.Clone(program.Dependencies)
 	return program, nil
 }
 
