@@ -15,6 +15,17 @@ type Ability interface {
 	isAbility()
 }
 
+// StaticRuleEffectProvider exposes immutable declarations on effective
+// abilities without requiring rules consumers to dispatch ability variants.
+type StaticRuleEffectProvider interface {
+	StaticRuleEffectDeclarations() (zone.Type, opt.V[Condition], []RuleEffect)
+}
+
+// StaticRuleEffectDeclarations returns read-only static declarations.
+func (a *StaticAbility) StaticRuleEffectDeclarations() (zone.Type, opt.V[Condition], []RuleEffect) {
+	return a.ZoneOfFunction, a.Condition, a.RuleEffects
+}
+
 // AbilityContent is an ability's target and instruction content. Ordinary
 // non-modal abilities contain one required mode; modal abilities contain a
 // choice among multiple modes or use a mode range other than exactly one.

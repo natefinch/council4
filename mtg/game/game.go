@@ -277,6 +277,10 @@ type Game struct {
 	// under it consumes the one shared per-turn use. It is reset each turn.
 	ExilePlayPermissionUsedThisTurn map[id.ID]bool
 
+	// PermanentTypePlayUsesThisTurn records successful plays/casts, not proposals
+	// or spell copies. Source object identity makes blink a new allowance.
+	PermanentTypePlayUsesThisTurn map[PlayPermissionUse]bool
+
 	// TriggeredAbilitiesThisTurn records triggered ability trigger counts during
 	// the current turn for abilities with MaxTriggersPerTurn.
 	TriggeredAbilitiesThisTurn map[TriggeredAbilityUse]int

@@ -1551,6 +1551,14 @@ func canCastFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id
 }
 
 func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) []payment.SpellCastPermission {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return independentCastPermissionsForZone(g, playerID, cardID, sourceZone, face)
+	}
+	return castPermissionsForSpell(g, playerID, cardID, sourceZone, face, cardFaceOrDefault(card, face))
+}
+
+func independentCastPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) []payment.SpellCastPermission {
 	if sourceZone != zone.Graveyard {
 		return []payment.SpellCastPermission{payment.SpellCastPermissionDefault}
 	}
@@ -1765,7 +1773,20 @@ func recordExilePlayPermissionUse(g *game.Game, effect game.RuleEffect) {
 
 func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
 	_, ok := matchingPlayLandFromZoneEffect(g, playerID, cardID, sourceZone)
-	return ok
+	if ok {
+		return true
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	for _, face := range card.Def.FaceIndexes() {
+		def := cardFaceOrDefault(card, face)
+		if def.HasType(types.Land) && len(permanentTypePlayPermissions(g, playerID, sourceZone, def)) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // matchingPlayLandFromZoneEffect returns the first continuous play-from-zone

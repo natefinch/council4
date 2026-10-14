@@ -695,6 +695,10 @@ const (
 	// affected player from the legend rule. Static sources set Controller live
 	// from their current controller, so control changes move the exemption.
 	RuleEffectLegendRuleDoesNotApply
+	// RuleEffectPlayFromGraveyardPerPermanentType permits one land play and
+	// one cast of each other permanent type during the controller's turn.
+	// PermissionKey names a shared allowance on the source's current object.
+	RuleEffectPlayFromGraveyardPerPermanentType
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -768,7 +772,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectAdditionalTriggerForRoomAbility,
 		RuleEffectControlOpponentSearches,
 		RuleEffectExileOpponentSearchFinds,
-		RuleEffectLegendRuleDoesNotApply:
+		RuleEffectLegendRuleDoesNotApply,
+		RuleEffectPlayFromGraveyardPerPermanentType:
 		return true
 	default:
 		return false
@@ -1191,6 +1196,8 @@ type RuleEffect struct {
 	TriggerCausePermanentFilters []CharacteristicFilter
 	TriggerCausePermanentEnters  bool
 	TriggerCausePermanentLeaves  bool
+	// PermissionKey identifies a source-scoped per-permanent-type allowance.
+	PermissionKey LinkedKey
 }
 
 // CharacteristicFilter is one reusable branch of an object-characteristic

@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
@@ -78,7 +79,7 @@ func faceDownKindsForCard(card *game.CardDef) []game.FaceDownKind {
 }
 
 func (e *Engine) legalFaceDownCastActions(g *game.Game, playerID game.PlayerID) []action.Action {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || !isSorcerySpeed(g, playerID) || splitSecondOnStack(g) {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || splitSecondOnStack(g) {
 		return nil
 	}
 	player, ok := playerByID(g, playerID)
@@ -100,7 +101,57 @@ func (e *Engine) legalFaceDownCastActions(g *game.Game, playerID game.PlayerID) 
 			}
 		}
 	}
+	for _, cardID := range player.Graveyard.All() {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok {
+			continue
+		}
+		for _, face := range legalFaceDownFaces(card.Def) {
+			for _, kind := range faceDownKindsForCard(cardFaceOrDefault(card, face)) {
+				for _, permission := range permanentTypePlayPermissions(g, playerID, zone.Graveyard, faceDownSpellDef()) {
+					if canCastGraveyardFaceDown(g, playerID, cardID, face, kind, permission) {
+						actions = append(actions, action.CastFaceDownFromZone(cardID, zone.Graveyard, face, kind).WithPlayPermission(permission))
+					}
+				}
+			}
+		}
+	}
 	return actions
+}
+
+func faceDownSpellDef() *game.CardDef {
+	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Creature}}}
+}
+
+func faceDownSpellRequest(player game.PlayerID, cardID id.ID) payment.SpellRequest {
+	return payment.SpellRequest{
+		PlayerID: player, CardID: cardID, SourceZone: zone.Graveyard, Card: faceDownSpellDef(),
+		Alternative:     opt.Val(cost.Alternative{Label: "Face down", ManaCost: opt.Val(faceDownCastCost)}),
+		CastPermissions: []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect},
+	}
+}
+
+func canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind, permission game.PlayPermission) bool {
+	if !canAct(g, player) || player != g.Turn.PriorityPlayer || !canCastAtCurrentTiming(g, player, faceDownSpellDef()) || splitSecondOnStack(g) {
+		return false
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || !g.Players[player].Graveyard.Contains(cardID) || (kind != game.FaceDownMorph && kind != game.FaceDownDisguise) {
+		return false
+	}
+	def, ok := cardFaceDef(card, face)
+	if !ok {
+		return false
+	}
+	if _, ok := faceDownCostForCard(def, kind); !ok {
+		return false
+	}
+	if !slices.Contains(permanentTypePlayPermissions(g, player, zone.Graveyard, faceDownSpellDef()), permission) ||
+		castFromZoneProhibited(g, player, zone.Graveyard) ||
+		spellCastProhibited(g, player, faceDownSpellDef()) || spellCastLimitReached(g, player, faceDownSpellDef()) {
+		return false
+	}
+	return paymentOrch.canPaySpellCosts(g, faceDownSpellRequest(player, cardID))
 }
 
 func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
@@ -136,6 +187,12 @@ func (*Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.I
 }
 
 func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if cast.SourceZone == zone.Graveyard {
+		return e.applyGraveyardFaceDown(g, playerID, cast, agents, log)
+	}
+	if cast.SourceZone != zone.None && cast.SourceZone != zone.Hand || cast.Permission != (game.PlayPermission{}) {
+		return false
+	}
 	if !e.canCastFaceDown(g, playerID, cast.CardID, cast.Face, cast.FaceDownKind) {
 		return false
 	}
@@ -175,6 +232,47 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 		FromZone:                     zone.Hand,
 		ToZone:                       zone.Stack,
 	})
+	return true
+}
+
+func (e *Engine) applyGraveyardFaceDown(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	var ok bool
+	cast.Permission, ok = e.selectPermanentTypePlay(g, player, cast.Permission, zone.Graveyard, faceDownSpellDef(), false, agents, log)
+	if !ok {
+		return false
+	}
+	if !canCastGraveyardFaceDown(g, player, cast.CardID, cast.Face, cast.FaceDownKind, cast.Permission) {
+		return false
+	}
+	obj := &game.StackObject{
+		ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: cast.CardID, Controller: player,
+		Face: cast.Face, FaceDown: true, FaceDownFace: cast.Face, FaceDownKind: cast.FaceDownKind,
+		SourceZone: zone.Graveyard,
+	}
+	if !g.Players[player].Graveyard.Remove(cast.CardID) {
+		return false
+	}
+	g.Stack.Push(obj)
+	request := faceDownSpellRequest(player, cast.CardID)
+	request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, player)
+	result, ok := paymentOrch.paySpellCosts(g, request)
+	if !ok {
+		g.Stack.RemoveByID(obj.ID)
+		restoreCastSourceCard(g.Players[player], cast.CardID, zone.Graveyard)
+		return false
+	}
+	recordPermanentTypePlay(g, player, cast.Permission)
+	obj.ManaSpentToCast = totalManaSpent(result.PoolSpend)
+	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(result.PoolSpend)
+	emitSpellCastEventsWithTargets(g, obj, game.Event{
+		SourceID: cast.CardID, StackObjectID: obj.ID, CardID: cast.CardID, Controller: player,
+		Face: cast.Face, CardTypes: []types.Card{types.Creature}, ManaValue: opt.Val(0),
+		ManaSpentToCast:              opt.Val(obj.ManaSpentToCast),
+		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(result.PoolSpend)),
+		FromZone:                     zone.Graveyard, ToZone: zone.Stack,
+	}, nil)
+	resolveSpellCastManaSpendRiders(g, player, riderSnapshot, result.PoolSpend, request.Card, obj)
 	return true
 }
 

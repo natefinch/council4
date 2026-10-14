@@ -24,7 +24,7 @@ func (e *Engine) applyPlayLandFaceWithChoices(g *game.Game, playerID game.Player
 	return e.applyPlayLandFaceFromZoneWithChoices(g, playerID, cardID, zone.Hand, face, agents, log)
 }
 
-func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog, announced ...game.PlayPermission) bool {
 	if !canPlayAnyLand(g, playerID) {
 		return false
 	}
@@ -36,12 +36,21 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 		return false
 	}
 	var landPermission game.RuleEffect
+	var permission game.PlayPermission
+	if len(announced) > 0 {
+		permission = announced[0]
+	}
 	if sourceZone != zone.Hand {
-		permission, ok := matchingPlayLandFromZoneEffect(g, playerID, cardID, sourceZone)
+		effect, independent := matchingPlayLandFromZoneEffect(g, playerID, cardID, sourceZone)
+		permission, ok = e.selectPermanentTypePlay(g, playerID, permission, sourceZone, cardFaceOrDefault(card, face), independent, agents, log)
 		if !ok {
 			return false
 		}
-		landPermission = permission
+		if permission == (game.PlayPermission{}) {
+			landPermission = effect
+		}
+	} else if permission != (game.PlayPermission{}) {
+		return false
 	}
 	source, ok := playerCardsInZone(sourcePlayer, sourceZone)
 	if !ok || !source.Remove(cardID) {
@@ -49,9 +58,11 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 	}
 
 	if _, ok := createCardPermanentFaceWithChoices(e, g, card, playerID, sourceZone, face, agents, log); !ok {
+		restoreCastSourceCard(sourcePlayer, cardID, sourceZone)
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
+	recordPermanentTypePlay(g, playerID, permission)
 	if sourceZone != zone.Hand {
 		recordExilePlayPermissionUse(g, landPermission)
 	}
@@ -70,11 +81,18 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	sourceZone := normalizedCastSourceZone(cast)
 	if sourceZone == zone.Battlefield {
+		if cast.Permission != (game.PlayPermission{}) {
+			return false
+		}
 		return e.applyPreparedCopyWithChoices(g, playerID, cast, agents, log)
 	}
 
 	branch := castBranchForCast(cast)
-	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring) {
+	var validationPermission []game.PlayPermission
+	if cast.Permission != (game.PlayPermission{}) {
+		validationPermission = []game.PlayPermission{cast.Permission}
+	}
+	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, validationPermission...) {
 		return false
 	}
 
@@ -89,10 +107,18 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		announcementDef = overloadSpellDef(spellDef)
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring) {
+	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, validationPermission...) {
 		return false
 	}
 	cast.Targets = completedTargets
+	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
+	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, castSelectionFace(spellDef, cast.Bestowed), len(permissions) > 0, agents, log)
+	if !ok {
+		return false
+	}
+	if cast.Permission != (game.PlayPermission{}) {
+		permissions = []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect}
+	}
 	targetCounts, ok := spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, branch)
 	if !ok {
 		panic("validated spell targets could not be segmented")
@@ -193,7 +219,6 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	g.Stack.Push(obj)
 
 	targetEvents := prepareTargetEvents(g, obj)
-	permissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	request := payment.SpellRequest{
 		PlayerID:        playerID,
@@ -248,6 +273,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		consumeCastLinkedExileForFreePermission(g, freeLinkedExilePermissionID)
 	}
 	recordExilePlayPermissionUse(g, exilePlayPermission)
+	recordPermanentTypePlay(g, playerID, cast.Permission)
 	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
 	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
 	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
@@ -292,7 +318,11 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 
 func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	sourceZone := normalizedCastSourceZone(cast)
-	if !canCastMutateSpell(g, playerID, cast.CardID, sourceZone, cast.MutateTargetID) {
+	var validationPermission []game.PlayPermission
+	if cast.Permission != (game.PlayPermission{}) {
+		validationPermission = []game.PlayPermission{cast.Permission}
+	}
+	if !canCastMutateSpell(g, playerID, cast.CardID, sourceZone, cast.MutateTargetID, validationPermission...) {
 		return false
 	}
 	player := g.Players[playerID]
@@ -301,6 +331,14 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, game.FaceFront)
+	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, spellDef, len(permissions) > 0, agents, log)
+	if !ok {
+		return false
+	}
+	if cast.Permission != (game.PlayPermission{}) {
+		permissions = []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect}
+	}
 	mutateCost, ok := spellDef.MutateCost()
 	if !ok {
 		return false
@@ -327,16 +365,17 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	g.Stack.Push(obj)
 
 	targetEvents := prepareTargetEvents(g, obj)
-	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, card.ID, sourceZone, game.FaceFront, spellDef, 0, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
-		PlayerID:    playerID,
-		CardID:      card.ID,
-		SourceZone:  sourceZone,
-		Card:        spellDef,
-		Alternative: opt.Val(alternative),
-		Prefs:       prefs,
-	})
+	request := payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          card.ID,
+		SourceZone:      sourceZone,
+		Card:            spellDef,
+		Alternative:     opt.Val(alternative),
+		CastPermissions: permissions,
+	}
+	request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
+	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
 		// CR 728: undo the proposal when costs can't be paid.
 		g.Stack.RemoveByID(obj.ID)
@@ -346,6 +385,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	if sourceZone == zone.Command {
 		recordCommanderCast(g, playerID, cast.CardID)
 	}
+	recordPermanentTypePlay(g, playerID, cast.Permission)
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
@@ -373,7 +413,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	return true
 }
 
-func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, targetID id.ID) bool {
+func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, targetID id.ID, announced ...game.PlayPermission) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -392,10 +432,19 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 		if !g.AdventureCards[cardID] {
 			return false
 		}
+	case zone.Graveyard:
+		if len(castPermissionsForZone(g, playerID, cardID, sourceZone, game.FaceFront)) == 0 {
+			return false
+		}
 	default:
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
+	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, game.FaceFront, spellDef, announced)
+	if !valid || castFromZoneProhibited(g, playerID, sourceZone) ||
+		spellCastProhibited(g, playerID, spellDef) || spellCastLimitReached(g, playerID, spellDef) {
+		return false
+	}
 	mutateCost, ok := spellDef.MutateCost()
 	if !ok ||
 		!spellDef.HasType(types.Creature) ||
@@ -405,11 +454,12 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 		return false
 	}
 	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
-		PlayerID:    playerID,
-		CardID:      cardID,
-		SourceZone:  sourceZone,
-		Card:        spellDef,
-		Alternative: opt.Val(mutateAlternativeCost(mutateCost)),
+		PlayerID:        playerID,
+		CardID:          cardID,
+		SourceZone:      sourceZone,
+		Card:            spellDef,
+		Alternative:     opt.Val(mutateAlternativeCost(mutateCost)),
+		CastPermissions: permissions,
 	})
 }
 
@@ -688,7 +738,7 @@ func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, pla
 	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false, false, false, false)
 }
 
-func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool) bool {
+func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool, announced ...game.PlayPermission) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -709,6 +759,10 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if !ok || !card.Def.CanChooseCastFace(face) {
 		return false
 	}
+	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(spellDef, bestowed), announced)
+	if !valid {
+		return false
+	}
 	if castFromZoneProhibited(g, playerID, sourceZone) {
 		return false
 	}
@@ -721,7 +775,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		}
 	case zone.Hand:
 	case zone.Graveyard:
-		if !canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) {
+		if len(permissions) == 0 {
 			return false
 		}
 	case zone.Exile:
@@ -777,7 +831,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if plotted && !isSorcerySpeed(g, playerID) {
 		return false
 	}
-	if spellCastProhibited(g, playerID, spellDef) {
+	if spellCastProhibited(g, playerID, castSelectionFace(spellDef, bestowed)) {
 		return false
 	}
 	if spellCastLimitReached(g, playerID, spellDef) {
@@ -809,7 +863,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		Bargained:       bargained,
 		Offspring:       offspring,
 		ChosenModes:     chosenModes,
-		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
+		CastPermissions: permissions,
 		Targets:         targets,
 		Bestowed:        bestowed,
 	}

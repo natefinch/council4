@@ -89,7 +89,7 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 	actions = append(actions, e.legalForetellActions(g, playerID)...)
 	actions = append(actions, e.legalTurnFaceUpActions(g, playerID)...)
 	actions = append(actions, actionBuild.pass())
-	return actions
+	return e.expandPermanentTypePlayActions(g, playerID, actions)
 }
 
 func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Action {
@@ -238,7 +238,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			}
 			for _, face := range legalCastFacesForZone(g, playerID, card, sourceZone) {
 				spellDef := cardFaceOrDefault(card, face)
-				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile) {
+				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile || sourceZone == zone.Graveyard) {
 					if _, ok := spellDef.MutateCost(); ok {
 						for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
 							if canCastMutateSpell(g, playerID, cardID, sourceZone, target.ObjectID) {
@@ -471,7 +471,7 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 		return true
 	case action.ActionPlayLand:
 		playLand, ok := act.PlayLandPayload()
-		return ok && e.applyPlayLandFaceFromZoneWithChoices(g, playerID, playLand.CardID, playLand.SourceZone, playLand.Face, agents, log)
+		return ok && e.applyPlayLandFaceFromZoneWithChoices(g, playerID, playLand.CardID, playLand.SourceZone, playLand.Face, agents, log, playLand.Permission)
 	case action.ActionCastSpell:
 		cast, ok := act.CastSpellPayload()
 		return ok && e.applyCastSpellWithChoices(g, playerID, cast, agents, log)

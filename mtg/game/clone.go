@@ -72,6 +72,7 @@ func (g *Game) Clone() *Game {
 		ActivatedAbilitiesThisTurn:         cloneComparableMap(g.ActivatedAbilitiesThisTurn),
 		AbilityActivationsThisTurn:         cloneComparableMap(g.AbilityActivationsThisTurn),
 		ExilePlayPermissionUsedThisTurn:    cloneComparableMap(g.ExilePlayPermissionUsedThisTurn),
+		PermanentTypePlayUsesThisTurn:      cloneComparableMap(g.PermanentTypePlayUsesThisTurn),
 		TriggeredAbilitiesThisTurn:         cloneComparableMap(g.TriggeredAbilitiesThisTurn),
 		ResolvedTriggeredAbilitiesThisTurn: cloneComparableMap(g.ResolvedTriggeredAbilitiesThisTurn),
 		ResolvedActivatedAbilitiesThisTurn: cloneComparableMap(g.ResolvedActivatedAbilitiesThisTurn),

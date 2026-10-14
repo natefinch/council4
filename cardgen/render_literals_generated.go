@@ -1000,6 +1000,7 @@ var gameRuleEffectKindLiterals = map[game.RuleEffectKind]string{
 	game.RuleEffectControlOpponentSearches:                 "game.RuleEffectControlOpponentSearches",
 	game.RuleEffectExileOpponentSearchFinds:                "game.RuleEffectExileOpponentSearchFinds",
 	game.RuleEffectLegendRuleDoesNotApply:                  "game.RuleEffectLegendRuleDoesNotApply",
+	game.RuleEffectPlayFromGraveyardPerPermanentType:       "game.RuleEffectPlayFromGraveyardPerPermanentType",
 }
 
 // gameSacrificeFallbackKindLiterals maps each exported game.SacrificeFallbackKind constant to the Go

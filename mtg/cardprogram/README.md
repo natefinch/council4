@@ -225,3 +225,33 @@ implementation. Existing legacy cards and APIs remain available.
 
 Validate through actual stack/choice/clone/parallel/replay scenarios. Metadata,
 Go compilation and preservation fingerprints are not rules certification.
+
+## Source-scoped graveyard play permissions
+
+Muldrotha, the Gravetide is a complete authored production entry using
+`RuleEffectPlayFromGraveyardPerPermanentType`, not a resolving program or
+card-name exception. Its inspectable `PermissionKey` names an allowance on the
+source's current battlefield object. Permission discovery uses effective
+abilities, including copied/granted statics and ability removal.
+
+Legal land and cast actions carry a `game.PlayPermission` with source object,
+key and the **one** permanent type the player chooses. A multi-type card offers
+separate branches; Bestow and face-down casting use the announced spell types,
+not the printed types. Agents/Simulator can inspect and select these payloads.
+Direct Engine callers use the ordinary choice callback when a selection is
+needed. Independent permissions are offered separately without spending this
+allowance. Copies of spells are not casts.
+
+`Game.PermanentTypePlayUsesThisTurn` owns successful-use records per source,
+player and type; Clone isolates them and every new turn (including extra turns)
+resets them. Blink creates a fresh source object, but losing/regaining control
+or removing/restoring an ability does not erase the same player's prior usage.
+Announcement, costs, timing, cast prohibitions, land-play limits and payment
+rollback remain Engine responsibilities. Usage is captured before costs (the
+source can leave while paying), committed only after success, and retained if
+the spell is countered. Morph/disguise graveyard casts use the existing spell
+payment planner, with normal taxes and the announced creature characteristics.
+
+Scenarios use `.cardwork/corpus/oracle-cards.json` and the official rules
+effective 2026-09-25 (CR 601, 305, 400.7, 702.37 and 708); registry admission is
+not inferred from Oracle compiler recognition.

@@ -429,6 +429,7 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.ActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityUse]bool)
 	g.AbilityActivationsThisTurn = make(map[game.ActivatedAbilityUse]int)
 	g.ExilePlayPermissionUsedThisTurn = make(map[game.ObjectID]bool)
+	g.PermanentTypePlayUsesThisTurn = make(map[game.PlayPermissionUse]bool)
 	g.TriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 	g.ResolvedTriggeredAbilitiesThisTurn = make(map[game.TriggeredAbilityUse]int)
 	g.ResolvedActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityResolutionUse]int)

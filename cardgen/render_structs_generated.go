@@ -410,7 +410,8 @@ func isZeroGameRuleEffect(v game.RuleEffect) bool {
 		!(v.TriggerCauseCastOrCopyInstantSorcery) &&
 		!(len(v.TriggerCausePermanentFilters) > 0) &&
 		!(v.TriggerCausePermanentEnters) &&
-		!(v.TriggerCausePermanentLeaves)
+		!(v.TriggerCausePermanentLeaves) &&
+		!(v.PermissionKey != "")
 }
 
 // isZeroGameCardFace reports whether every field of a game.CardFace holds its zero value.
@@ -11337,6 +11338,11 @@ func (r Renderer) renderGameRuleEffect(ctx *renderCtx, v game.RuleEffect) (strin
 	if v.TriggerCausePermanentLeaves {
 		lit138 := strconv.FormatBool(bool(v.TriggerCausePermanentLeaves))
 		fields = append(fields, "TriggerCausePermanentLeaves: "+lit138+",")
+	}
+	if v.PermissionKey != "" {
+		lit139 := "game.LinkedKey(" + strconv.Quote(string(v.PermissionKey)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "PermissionKey: "+lit139+",")
 	}
 	return structLit("game.RuleEffect", fields), nil
 }

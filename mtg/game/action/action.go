@@ -51,10 +51,12 @@ type PlayLandAction struct {
 	CardID     id.ID
 	SourceZone zone.Type
 	Face       game.FaceIndex
+	Permission game.PlayPermission
 }
 
 // CastSpellAction is the payload for casting a spell.
 type CastSpellAction struct {
+	Permission  game.PlayPermission
 	CardID      id.ID
 	SourceZone  zone.Type
 	Face        game.FaceIndex
@@ -83,6 +85,21 @@ type CastSpellAction struct {
 	GiftPromised bool
 	// GiftRecipient is the opponent promised the gift when GiftPromised is set.
 	GiftRecipient game.PlayerID
+}
+
+// WithPlayPermission announces the source and the single permanent type used
+// for this play/cast. Other action kinds are unchanged.
+func (a Action) WithPlayPermission(permission game.PlayPermission) Action {
+	if a.Kind == ActionPlayLand {
+		a.playLand.Permission = permission
+	}
+	if a.Kind == ActionCastSpell {
+		a.castSpell.Permission = permission
+	}
+	if a.Kind == ActionCastFaceDown {
+		a.castFaceDown.Permission = permission
+	}
+	return a
 }
 
 // ActivateAbilityAction is the payload for activating an ability.
@@ -120,6 +137,8 @@ type CastFaceDownAction struct {
 	CardID       id.ID
 	Face         game.FaceIndex
 	FaceDownKind game.FaceDownKind
+	SourceZone   zone.Type
+	Permission   game.PlayPermission
 }
 
 // TurnFaceUpAction is the payload for turning a face-down permanent face up.
@@ -380,6 +399,13 @@ func CastFaceDown(cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) Act
 			FaceDownKind: kind,
 		},
 	}
+}
+
+// CastFaceDownFromZone proposes a morph/disguise cast from an authorized zone.
+func CastFaceDownFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceIndex, kind game.FaceDownKind) Action {
+	act := CastFaceDown(cardID, face, kind)
+	act.castFaceDown.SourceZone = sourceZone
+	return act
 }
 
 // TurnFaceUp creates an action to turn a face-down permanent face up.
@@ -660,11 +686,12 @@ func (a Action) validatePayloadIsolation() error {
 }
 
 func playLandActionEmpty(a PlayLandAction) bool {
-	return a.CardID == 0 && a.SourceZone == zone.None && a.Face == 0
+	return a.CardID == 0 && a.SourceZone == zone.None && a.Face == 0 && a.Permission == (game.PlayPermission{})
 }
 
 func castSpellActionEmpty(a CastSpellAction) bool {
 	return a.CardID == 0 &&
+		a.Permission == (game.PlayPermission{}) &&
 		a.SourceZone == zone.None &&
 		a.Face == 0 &&
 		len(a.Targets) == 0 &&
@@ -703,7 +730,8 @@ func foretellCardActionEmpty(a ForetellCardAction) bool {
 }
 
 func castFaceDownActionEmpty(a CastFaceDownAction) bool {
-	return a.CardID == 0 && a.Face == 0 && a.FaceDownKind == game.FaceDownNone
+	return a.CardID == 0 && a.Face == 0 && a.FaceDownKind == game.FaceDownNone &&
+		a.SourceZone == zone.None && a.Permission == (game.PlayPermission{})
 }
 
 func turnFaceUpActionEmpty(a TurnFaceUpAction) bool {

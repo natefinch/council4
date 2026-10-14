@@ -1230,6 +1230,8 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 			return errors.New("rule effect has an unsupported kind")
 		}
 		switch effect.Kind {
+		case RuleEffectPlayFromGraveyardPerPermanentType:
+			return errors.New("permanent-type graveyard permission requires an effective battlefield static ability")
 		case RuleEffectLifeTotalCantChange, RuleEffectNoMaximumHandSize, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectLegendRuleDoesNotApply:
 			if effect.AffectedPlayer == PlayerAny {
 				return errors.New("player rule effect requires an affected player")

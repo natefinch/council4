@@ -294,6 +294,7 @@ func actionsEqual(a, b action.Action) bool {
 		aPayload, aOK := a.CastSpellPayload()
 		bPayload, bOK := b.CastSpellPayload()
 		return aOK && bOK &&
+			aPayload.Permission == bPayload.Permission &&
 			aPayload.CardID == bPayload.CardID &&
 			aPayload.SourceZone == bPayload.SourceZone &&
 			aPayload.Face == bPayload.Face &&
@@ -330,6 +331,10 @@ func actionsEqual(a, b action.Action) bool {
 	case action.ActionForetellCard:
 		aPayload, aOK := a.ForetellCardPayload()
 		bPayload, bOK := b.ForetellCardPayload()
+		return aOK && bOK && aPayload == bPayload
+	case action.ActionCastFaceDown:
+		aPayload, aOK := a.CastFaceDownPayload()
+		bPayload, bOK := b.CastFaceDownPayload()
 		return aOK && bOK && aPayload == bPayload
 	case action.ActionDeclareAttackers:
 		aPayload, aOK := a.DeclareAttackersPayload()
