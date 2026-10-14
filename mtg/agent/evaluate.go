@@ -2,8 +2,10 @@ package agent
 
 import (
 	"math"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 )
 
@@ -30,6 +32,20 @@ const (
 	// 4.0) is what makes one-ply search deploy its hand and develop a board instead
 	// of hoarding cards and passing every turn (which stalls games to a draw).
 	evalCardInHand = 2.0
+	// evalHoldUp rewards the searching seat for ending its turn able to answer a
+	// threat — instant-speed interaction in hand plus untapped mana to cast it —
+	// instead of tapping out. The value of a held answer is realized on an
+	// opponent's turn, which one-ply own-turn search never simulates, so this
+	// approximates it: casting a creature that leaves mana up keeps the bonus,
+	// while the same creature paid for by tapping out loses it, tipping the agent
+	// toward playing around interaction like a real player. It is small and capped
+	// (evalHoldUpCap) so it never overrides a real development play or makes the
+	// agent hoard removal it should just cast (a resolved answer removes an
+	// opponent's threat, which the core "minus the strongest opponent" term values
+	// well above this hold-up option). Measured (search vs generic, real-deck
+	// mirror, 120s per game): voja 34.8% -> 40.9%, betor 44.8% -> 54.8%.
+	evalHoldUp    = 1.0
+	evalHoldUpCap = 2
 	// evalLifeAtFull and evalStartingLife anchor a CONCAVE life curve (lifeValue):
 	// life is worth evalLifeAtFull at the Commander starting total of
 	// evalStartingLife, and its marginal value rises as a player drops toward 0.
@@ -196,10 +212,44 @@ func playerPower(obs rules.PlayerObservation, playerID game.PlayerID) float64 {
 	}
 	power += float64(view.HandSize) * evalCardInHand
 	power += lifeValue(view.Life)
+	power += reactivePotential(obs, playerID)
 	if commanderOnBattlefield(obs, view) {
 		power += evalCommanderOnBoard
 	}
 	return power
+}
+
+// reactivePotential values the searching seat's ability to answer a threat on an
+// opponent's turn: holding instant-speed interaction with the untapped mana to
+// cast it. The bonus is capped by the fewer of the two — you can only hold up as
+// many answers as you have mana for — and by evalHoldUpCap, so it tips the agent
+// toward keeping mana up over tapping out without dominating development. It
+// applies only to obs.Player, whose hand the search may legitimately read;
+// opponents' hands are hidden (fog of war), so their hold-up is not modeled.
+func reactivePotential(obs rules.PlayerObservation, playerID game.PlayerID) float64 {
+	if playerID != obs.Player {
+		return 0
+	}
+	instants := 0
+	for _, card := range obs.Hand() {
+		if slices.Contains(card.Types, types.Instant) {
+			instants++
+		}
+	}
+	if instants == 0 {
+		return 0
+	}
+	untappedMana := 0
+	battlefield := obs.Battlefield()
+	for i := range battlefield {
+		permanent := battlefield[i]
+		if permanent.Controller == playerID && !permanent.Tapped &&
+			!permanent.PhasedOut && permanent.ProducesMana {
+			untappedMana++
+		}
+	}
+	holdable := min(instants, untappedMana, evalHoldUpCap)
+	return evalHoldUp * float64(holdable)
 }
 
 // lifeValue is the concave value of a life total: evalLifeAtFull at the starting
