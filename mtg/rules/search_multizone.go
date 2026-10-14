@@ -30,8 +30,12 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 		spec.Filter.ManaValue = opt.Val(compare.Int{Op: compare.LessOrEqual, Value: obj.XValue})
 		spec.MaxManaValueFromX = false
 	}
-	searchLibrary, searchGraveyard := e.chooseSearchZones(g, agents, log, control.decisionMaker)
+	// The searcher chooses whether to search the library before Opposition
+	// Agent takes control. A graveyard-only search is never controlled by it.
+	searchLibrary, searchGraveyard := e.chooseSearchZones(g, agents, log, playerID)
 	if searchLibrary {
+		endSearch := beginSearchControl(g, control)
+		defer endSearch()
 		// Searching the library fires the search event once (CR 701.19a); the
 		// closing shuffle is a separate instruction gated on the reported result.
 		emitEvent(g, game.Event{
@@ -70,7 +74,7 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 	for i := range candidates {
 		candidateIDs[i] = candidates[i].cardID
 	}
-	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidateIDs, 1, minChoices)
+	found := e.chooseSearchMatches(g, agents, log, playerID, candidateIDs, 1, minChoices)
 	if len(found) == 0 {
 		return false, searchLibrary
 	}
@@ -93,15 +97,18 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 		}
 	}
 	dest := game.SearchDestination{Zone: spec.Destination, EntersTapped: spec.EntersTapped}
+	if !searchLibrary {
+		control = searchControl{searcher: playerID, decisionMaker: playerID}
+	}
 	_, placed = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, fromZone, control)
 	return placed, searchLibrary
 }
 
 // chooseSearchZones asks the deciding player which of the searcher's library and
 // graveyard to search for the "search your library and/or graveyard" form. The
-// decider is the searcher normally, or the opponent controlling the search
-// (Opposition Agent). At least one zone must be chosen; the deterministic
-// fallback searches both.
+// actor is the searcher; ordinary turn control can redirect that decision.
+// Opposition Agent applies only after a library search is actually chosen.
+// At least one zone must be chosen; the deterministic fallback searches both.
 func (e *Engine) chooseSearchZones(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID) (searchLibrary, searchGraveyard bool) {
 	const (
 		libraryOption   = 0

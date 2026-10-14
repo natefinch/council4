@@ -302,7 +302,8 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	// finds (Opposition Agent); resolve once so the deciding player and any
 	// exile redirect stay consistent across every card placed by this search.
 	control := resolveSearchControl(g, playerID)
-	agents = searchChoiceAgents(g, agents, control)
+	endSearch := beginSearchControl(g, control)
+	defer endSearch()
 	// A player searches their library when this runs regardless of whether a
 	// matching card is found (CR 701.19a), so the search event fires once here
 	// for "whenever a player searches their library" triggers.
@@ -355,15 +356,15 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	var found []id.ID
 	switch {
 	case spec.SharedSubtype:
-		found = e.chooseCorrelatedSearchMatches(g, agents, log, control.decisionMaker, candidates, amount)
+		found = e.chooseCorrelatedSearchMatches(g, agents, log, control.searcher, candidates, amount)
 	case spec.DifferentNames:
-		found = e.chooseDifferentNameSearchMatches(g, agents, log, control.decisionMaker, candidates, amount)
+		found = e.chooseDifferentNameSearchMatches(g, agents, log, control.searcher, candidates, amount)
 	default:
 		minChoices := 0
 		if searchMustFindIfAvailable(spec, amount) {
 			minChoices = 1
 		}
-		found = e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, amount, minChoices)
+		found = e.chooseSearchMatches(g, agents, log, control.searcher, candidates, amount, minChoices)
 	}
 	if spec.SplitDestination.Exists {
 		return e.placeSplitSearch(g, obj, agents, log, playerID, controllerID, player, spec, found, control), nil
@@ -425,7 +426,8 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 		return false
 	}
 	control := resolveSearchControl(g, playerID)
-	agents = searchChoiceAgents(g, agents, control)
+	endSearch := beginSearchControl(g, control)
+	defer endSearch()
 	// Searching the library fires the search event once (CR 701.19a) and forces
 	// the closing shuffle, both of which always apply because the library is
 	// among the searched zones.
@@ -460,7 +462,7 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 	}
 	// The tutor is optional ("you may search"), so the player may always decline
 	// to find a card (minimum of zero chosen).
-	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidateIDs, 1, 0)
+	found := e.chooseSearchMatches(g, agents, log, control.searcher, candidateIDs, 1, 0)
 	if len(found) == 0 {
 		return false
 	}
@@ -532,7 +534,8 @@ func (e *Engine) searchLibraryRevealOnlyCards(g *game.Game, obj *game.StackObjec
 		return nil
 	}
 	control := resolveSearchControl(g, playerID)
-	agents = searchChoiceAgents(g, agents, control)
+	endSearch := beginSearchControl(g, control)
+	defer endSearch()
 	emitEvent(g, game.Event{
 		Kind:       game.EventLibrarySearched,
 		Controller: playerID,
@@ -550,9 +553,9 @@ func (e *Engine) searchLibraryRevealOnlyCards(g *game.Game, obj *game.StackObjec
 	}
 	var found []id.ID
 	if spec.DifferentNames {
-		found = e.chooseDifferentNameSearchMatches(g, agents, log, control.decisionMaker, candidates, amount)
+		found = e.chooseDifferentNameSearchMatches(g, agents, log, control.searcher, candidates, amount)
 	} else {
-		found = e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, amount, minChoices)
+		found = e.chooseSearchMatches(g, agents, log, control.searcher, candidates, amount, minChoices)
 	}
 	var revealed []id.ID
 	for _, cardID := range found {
@@ -596,7 +599,7 @@ func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents 
 				candidates = append(candidates, cardID)
 			}
 		}
-		picked := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, 1, 0)
+		picked := e.chooseSearchMatches(g, agents, log, control.searcher, candidates, 1, 0)
 		if len(picked) == 1 {
 			taken[picked[0]] = true
 			found = append(found, picked[0])
@@ -708,14 +711,14 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 		return false
 	case 1:
 		dest := primary
-		if e.chooseSplitSearchSlot(g, agents, log, control.decisionMaker, primary, secondary) == 1 {
+		if e.chooseSplitSearchSlot(g, agents, log, control.searcher, primary, secondary) == 1 {
 			dest = secondary
 		}
 		if player.Library.Remove(found[0]) {
 			_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, found[0], dest, zone.Library, control)
 		}
 	default:
-		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, control.decisionMaker, primary, found)]
+		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, control.searcher, primary, found)]
 		for _, cardID := range found {
 			dest := secondary
 			if cardID == primaryCard {

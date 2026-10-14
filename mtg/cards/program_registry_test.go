@@ -16,7 +16,7 @@ import (
 func TestDefaultRegistryAdmitsCompletedChoiceProgramsByExactIdentity(t *testing.T) {
 	t.Parallel()
 	registry := cards.NewDefaultRegistry()
-	for _, entry := range []cardset.Entry{authoredcards.HiveMind, authoredcards.GiftsUngiven, authoredcards.GildedDrake} {
+	for _, entry := range []cardset.Entry{authoredcards.HiveMind, authoredcards.GiftsUngiven, authoredcards.GildedDrake, authoredcards.Mindslaver} {
 		def, err := registry.LookupOracleID(entry.OracleID)
 		if err != nil || def == nil || def.Name != entry.Name {
 			t.Fatalf("exact production identity %s: %v", entry.OracleID, err)

@@ -180,7 +180,9 @@ func TestCombatPhaseSkipsFirstStrikeStepWithoutFirstOrDoubleStrike(t *testing.T)
 
 func TestCleanupStepClearsMarkedDamageOnSurvivors(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	survivor := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
+	// Deathtouch damage is lethal at end-step priority; this creature must be
+	// indestructible to survive until cleanup clears it.
+	survivor := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Indestructible)
 	survivor.MarkedDamage = 2
 	survivor.MarkedDeathtouchDamage = true
 	engine := NewEngine(nil)

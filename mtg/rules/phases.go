@@ -7,6 +7,7 @@ import (
 const maximumHandSize = 7
 
 func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log TurnLog) {
+	g.BeginPlayerControlTurn()
 	log = TurnLog{
 		TurnNumber:   g.Turn.TurnNumber,
 		ActivePlayer: g.Turn.ActivePlayer,
@@ -347,17 +348,34 @@ func (e *Engine) runEndingPhaseWithLog(g *game.Game, agents [game.NumPlayers]Pla
 	if monarch, ok := playerByID(g, g.Turn.ActivePlayer); ok && monarch.IsMonarch {
 		e.drawCards(g, g.Turn.ActivePlayer, 1, agents, log)
 	}
-	if e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) || !g.Stack.IsEmpty() {
+	e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log)
+	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
+	e.runPriorityLoop(g, agents, log)
+	if g.IsGameOver() {
+		return
+	}
+
+	for {
+		applied := e.runCleanupStep(g, agents, log)
+		triggered := e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log)
+		if g.IsGameOver() || (!applied && !triggered) {
+			return
+		}
+		// CR 514.3a: cleanup SBAs or triggers open priority; after everyone
+		// passes on an empty stack, begin another cleanup step. Turn control
+		// remains active through every such step until the next turn begins.
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, log)
 		if g.IsGameOver() {
 			return
 		}
 	}
+}
 
+func (e *Engine) runCleanupStep(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	g.Turn.Step = game.StepCleanup
 	log.addStep(game.StepCleanup)
-	discardToMaximumHandSize(g, g.Turn.ActivePlayer)
+	e.discardToMaximumHandSizeWithChoices(g, g.Turn.ActivePlayer, agents, log)
 	for _, permanent := range g.Battlefield {
 		if activeBattlefieldPermanent(permanent) {
 			permanent.MarkedDamage = 0
@@ -374,10 +392,11 @@ func (e *Engine) runEndingPhaseWithLog(g *game.Game, agents [game.NumPlayers]Pla
 	expirePreventionShields(g)
 	expireReplacementEffects(g)
 	expireRuleEffects(g)
-	e.applyStateBasedActionsWithLog(g, log)
+	_, applied := e.applyStateBasedActionsWithLogResult(g, log)
 	clearPersistentMana(g)
 	emptyManaPools(g)
 	g.Combat = nil
+	return applied
 }
 
 func emitBeginningOfStepEvent(g *game.Game, step game.Step) {
@@ -405,11 +424,32 @@ func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
 	}
 }
 
-func (*Engine) advanceToNextTurn(g *game.Game) {
-	next, ok := popExtraTurn(g)
-	if !ok {
-		next = g.TurnOrder.NextActivePlayer(g.Turn.ActivePlayer)
+func (e *Engine) discardToMaximumHandSizeWithChoices(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	player, ok := playerByID(g, playerID)
+	if !ok || player.Eliminated || player.Hand.Size() <= maximumHandSize || playerHasNoMaximumHandSize(g, playerID) {
+		return
 	}
+	cards := player.Hand.All()
+	count := len(cards) - maximumHandSize
+	options := make([]game.ChoiceOption, len(cards))
+	for i, card := range cards {
+		options[i] = game.ChoiceOption{Index: i, Card: cardChoiceInfo(g, card)}
+	}
+	defaults := make([]int, count)
+	for i := range defaults {
+		defaults[i] = len(cards) - 1 - i
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind: game.ChoiceZoneSelection, Player: playerID, Prompt: "Discard to maximum hand size.",
+		Options: options, MinChoices: count, MaxChoices: count, DefaultSelection: defaults,
+	}, log)
+	for _, index := range selected {
+		discardCardFromHand(g, playerID, cards[index])
+	}
+}
+
+func (*Engine) advanceToNextTurn(g *game.Game) {
+	next := nextActualTurn(g)
 
 	g.Turn.TurnNumber++
 	g.Turn.ActivePlayer = next
@@ -435,7 +475,24 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.ResolvedActivatedAbilitiesThisTurn = make(map[game.ActivatedAbilityResolutionUse]int)
 	g.ChosenModesThisTurn = make(map[game.TriggeredAbilityUse]uint64)
 	g.Combat = nil
+	g.BeginPlayerControlTurn()
 	markCurrentTurnEventStart(g)
+}
+
+func nextActualTurn(g *game.Game) game.PlayerID {
+	regular := g.Turn.ActivePlayer
+	for {
+		next, extra := popExtraTurn(g)
+		if !extra {
+			next = g.TurnOrder.NextActivePlayer(regular)
+			regular = next
+		}
+		if g.SkippedTurns[next] > 0 {
+			g.SkippedTurns[next]--
+			continue
+		}
+		return next
+	}
 }
 
 func popExtraTurn(g *game.Game) (game.PlayerID, bool) {

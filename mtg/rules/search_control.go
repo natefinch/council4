@@ -22,30 +22,16 @@ type searchControl struct {
 	sourceObjectID id.ID
 }
 
-// A controlled search is decided by the controller using the searcher's
-// information permissions, not the controller's private hand (CR 723.4).
-func searchChoiceAgents(g *game.Game, agents [game.NumPlayers]PlayerAgent, control searchControl) [game.NumPlayers]PlayerAgent {
-	if control.decisionMaker == control.searcher {
-		return agents
-	}
-	agent := agentFor(agents, control.decisionMaker)
-	if chooser, ok := agent.(ChoiceAgent); ok {
-		agents[control.decisionMaker] = controlledSearchChooser{
-			PlayerAgent: agent, chooser: chooser, observation: observe(g, control.searcher),
-		}
-	}
-	return agents
-}
-
-type controlledSearchChooser struct {
-	PlayerAgent
-
-	chooser     ChoiceAgent
-	observation PlayerObservation
-}
-
-func (c controlledSearchChooser) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
-	return c.chooser.ChooseChoice(c.observation, request)
+// Search control is a scoped override of the common decision policy, not an
+// agent wrapper with a captured live observation. Ordinary searches still share
+// the searcher's library visibility with their turn controller.
+func beginSearchControl(g *game.Game, control searchControl) func() {
+	depth := len(g.SearchControlScopes)
+	g.SearchControlScopes = append(g.SearchControlScopes, game.SearchControlScope{
+		Player: control.searcher, Controller: control.decisionMaker,
+		Override: control.searcher != control.decisionMaker,
+	})
+	return func() { g.SearchControlScopes = g.SearchControlScopes[:depth] }
 }
 
 // resolveSearchControl inspects the active rule effects for an opponent of

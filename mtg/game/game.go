@@ -148,6 +148,13 @@ type Game struct {
 	// SkippedSteps records upcoming turn steps a player should skip.
 	SkippedSteps map[PlayerID]map[Step]int
 
+	// PlayerControlEffects schedule and retain next-turn decision control.
+	PlayerControlEffects []PlayerControlEffect
+	// SearchControlScopes are synchronous, scoped player-control permissions.
+	SearchControlScopes []SearchControlScope
+	// SkippedTurns counts one-shot "skip your next turn" replacements.
+	SkippedTurns map[PlayerID]int
+
 	// CostModifiers are runtime generic cost increases/reductions/taxes.
 	CostModifiers []CostModifier
 

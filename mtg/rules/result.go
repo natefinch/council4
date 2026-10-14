@@ -199,6 +199,7 @@ type LossLog struct {
 // ActionLog records a player action that occurred during a game.
 type ActionLog struct {
 	Player              game.PlayerID
+	DecisionMaker       game.PlayerID
 	Action              action.Action
 	PermanentSources    map[id.ID]id.ID
 	PermanentTokenNames map[id.ID]string

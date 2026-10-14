@@ -8,13 +8,14 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // PlayerObservation is the fog-of-war filtered view a player has of the game.
 //
 // It is a read-only window over the live *game.Game plus the observing player's
-// ID, not a deep copy. Accessor methods expose only information the observing
-// player is allowed to see: their own hand, all public zones, life totals,
+// ID, not a deep copy. Accessor methods expose only information the viewing
+// player is allowed to see: their own and controlled players' hands, public zones, life totals,
 // commander state, and the effective characteristics of battlefield
 // permanents. Opponents' hand contents, library order, and face-down identities
 // are hidden; the controller of a face-down permanent receives its private card
@@ -25,7 +26,10 @@ import (
 type PlayerObservation struct {
 	g      *game.Game
 	Player game.PlayerID
-	Turn   TurnObservation
+	// DecisionMaker is the viewer's seat. Player remains the decision's actor.
+	DecisionMaker game.PlayerID
+	viewer        game.PlayerID
+	Turn          TurnObservation
 }
 
 // TurnObservation describes the public turn state relevant to action choice.
@@ -145,8 +149,10 @@ func (v PermanentView) HasKeyword(keyword game.Keyword) bool {
 // observation for a given player and game.
 func NewObservation(g *game.Game, playerID game.PlayerID) PlayerObservation {
 	return PlayerObservation{
-		g:      g,
-		Player: playerID,
+		g:             g,
+		Player:        playerID,
+		DecisionMaker: playerID,
+		viewer:        playerID,
 		Turn: TurnObservation{
 			TurnNumber:     g.Turn.TurnNumber,
 			ActivePlayer:   g.Turn.ActivePlayer,
@@ -166,7 +172,10 @@ type StackObjectView struct {
 	Controller game.PlayerID
 	Name       string
 	FaceDown   bool
-	Targets    []game.Target
+	// FaceDownCard is private information for the spell's controller and any
+	// controller of that player. Public Name/Types remain face-down values.
+	FaceDownCard opt.V[CardView]
+	Targets      []game.Target
 	// ManaValue, Types, and Colors describe a spell on the stack so an agent can
 	// decide whether it is worth countering. They are unset for face-down spells
 	// (hidden identity) and for non-spell stack objects (abilities).
@@ -197,10 +206,28 @@ func (o PlayerObservation) Life(playerID game.PlayerID) int {
 	return o.g.Players[playerID].Life
 }
 
-// Hand returns the observing player's own hand. Opponents' hands are never
-// revealed; use PlayerState(p).HandSize for an opponent's hand count.
+// Hand returns the decision actor's hand, if visible to the viewer. HandOf also
+// exposes other hands the viewer may see; unrelated hands remain private.
 func (o PlayerObservation) Hand() []CardView {
-	return o.cardViews(&o.g.Players[o.Player].Hand)
+	return o.HandOf(o.Player)
+}
+
+// HandOf exposes only a hand the viewer may see, including controlled players.
+// A controlled player never gains reciprocal access to their controller's hand.
+func (o PlayerObservation) HandOf(player game.PlayerID) []CardView {
+	if !o.g.CanSeePlayerInformation(o.viewer, player) {
+		return nil
+	}
+	return o.cardViews(&o.g.Players[player].Hand)
+}
+
+// LibraryLookable exposes a library only during an actual library search.
+// Turn control alone does not make the library's contents or order visible.
+func (o PlayerObservation) LibraryLookable(player game.PlayerID) []CardView {
+	if !o.g.LookingAtLibrary(o.viewer, player) {
+		return nil
+	}
+	return o.cardViews(&o.g.Players[player].Library)
 }
 
 // Graveyard returns a player's graveyard, which is public.
@@ -230,13 +257,12 @@ func (o PlayerObservation) LibraryTopRevealed(playerID game.PlayerID) (CardView,
 	return o.libraryTopView(playerID)
 }
 
-// LibraryTopLookable returns the top card of the observing player's own library
+// LibraryTopLookable returns the top card of a visible player's library
 // when they may privately look at it at any time ("You may look at the top card
-// of your library any time.", Bolas's Citadel). It reports false for any other
-// player or when the observer has no such effect, since the permission is
-// private to its controller.
+// of your library any time.", Bolas's Citadel). Turn control shares this private
+// permission with the controller, but never with uninvolved players.
 func (o PlayerObservation) LibraryTopLookable(playerID game.PlayerID) (CardView, bool) {
-	if o.Player != playerID || !playerCanLookAtTopCardAnyTime(o.g, playerID) {
+	if !o.g.CanSeePlayerInformation(o.viewer, playerID) || !playerCanLookAtTopCardAnyTime(o.g, playerID) {
 		return CardView{}, false
 	}
 	return o.libraryTopView(playerID)
@@ -322,11 +348,11 @@ func (o PlayerObservation) cardViews(z *zone.Zone) []CardView {
 	views := make([]CardView, 0, z.Size())
 	for _, cardID := range z.All() {
 		view := CardView{CardInstanceID: cardID}
-		if z.IsFaceDown(cardID) {
+		card, ok := o.g.GetCardInstance(cardID)
+		if z.IsFaceDown(cardID) && !o.canLookAtFaceDownExile(z, card) {
 			views = append(views, view)
 			continue
 		}
-		card, ok := o.g.GetCardInstance(cardID)
 		if !ok {
 			views = append(views, view)
 			continue
@@ -384,7 +410,7 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 }
 
 func (o PlayerObservation) faceDownCardViews(permanent *game.Permanent) []CardView {
-	if effectiveController(o.g, permanent) != o.Player {
+	if !o.g.CanSeePlayerInformation(o.viewer, effectiveController(o.g, permanent)) {
 		return nil
 	}
 	var views []CardView
@@ -444,6 +470,15 @@ func (o PlayerObservation) cardViewForDef(cardID id.ID, owner game.PlayerID, def
 	}
 }
 
+func (o PlayerObservation) canLookAtFaceDownExile(z *zone.Zone, card *game.CardInstance) bool {
+	if z.Type != zone.Exile || card == nil || !o.g.CanSeePlayerInformation(o.viewer, card.Owner) {
+		return false
+	}
+	// Foretell explicitly grants its owner permission to look (CR 702.143).
+	_, foretold := o.g.ForetoldCards[card.ID]
+	return foretold
+}
+
 func permanentCommanderInstanceIDs(g *game.Game, permanent *game.Permanent) []id.ID {
 	var ids []id.ID
 	if isCommanderCardID(g, permanent.CardInstanceID) {
@@ -465,6 +500,11 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 		Name:       o.stackObjectName(obj),
 		FaceDown:   obj.FaceDown,
 		Targets:    append([]game.Target(nil), obj.Targets...),
+	}
+	if obj.FaceDown && o.g.CanSeePlayerInformation(o.viewer, obj.Controller) {
+		if card, exists := o.g.GetCardInstance(obj.SourceID); exists {
+			view.FaceDownCard = opt.Val(o.cardViewForDef(card.ID, card.Owner, card.Def))
+		}
 	}
 	if obj.FaceDown || obj.Kind != game.StackSpell {
 		return view

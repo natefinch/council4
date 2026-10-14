@@ -106,4 +106,6 @@ type Context interface {
 	Exchange(game.ObjectReference, game.ObjectReference) (Exchange, error)
 	Search(game.Search) (SearchResult, error)
 	MoveCards(...CardPlacement) ([]FoundCard, error)
+	// ControlNextTurn schedules control using captured identities, not agents.
+	ControlNextTurn(game.PlayerReference) (bool, error)
 }

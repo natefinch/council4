@@ -43,8 +43,12 @@ type PlayerAgent interface {
 The interface lives here because `rules.Engine` consumes it. Concrete agents live in `mtg/agent` later.
 
 Agents may also implement `ChoiceAgent` to answer bounded non-action choices such as triggered-ability target selection, ordering simultaneous triggers, or optional "you may" decisions. If an agent does not implement it, the engine records and uses deterministic fallback choices.
-Resolution choices over a player's hidden hand are sent only to that player with
-their own fog-of-war observation; opponents never receive the card options.
+Resolution choices over a player's hidden hand go to their rules decision maker,
+using that player's permitted information. Mindslaver redirects decisions without
+changing the actor/payer or object control; Opposition Agent temporarily overrides
+that policy during a library search. Uninvolved players never receive private
+card options. Personal/concession decisions are never redirected. See
+[the authored program protocol](../cardprogram/README.md#next-turn-player-decision-control).
 
 ### PlayerObservation
 
@@ -67,6 +71,10 @@ Implemented now:
 - Opening hand setup and card drawing.
 - Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn, including Saga lore advancement after the draw step and Read ahead entry-chapter choices. Phased-out permanents remain stored for identity, attachments, and last-known-information paths but are excluded from ordinary battlefield matching, effects, triggers, and state-based actions; the untap step phases in all scheduled permanents before evaluating untap restrictions. Cleanup-step discard-to-maximum-hand-size is suppressed for a player affected by a `RuleEffectNoMaximumHandSize` rule effect ("You have no maximum hand size.").
 - Extra turn handling in LIFO order, skipping eliminated players.
+- Game-owned next-turn decision control, skipped-turn retention, clone-safe
+  scoped search control and directed information permissions. End-step priority
+  is offered even on an empty stack, and cleanup choices/triggers use the same
+  agents until the next actual turn begins.
 - Priority loop with multiplayer pass-around-table behavior and stack-aware all-pass handling.
 - State-based actions for player elimination from 0 life, lethal poison, lethal commander damage, and failed draws.
 - Conservative Commander deck legality validation for 99-card decks plus commander, singleton nonbasic names, simple legendary-creature commanders, and trusted color identity data.

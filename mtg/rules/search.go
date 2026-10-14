@@ -13,8 +13,8 @@ import (
 // directly. When the engine detects it, at a priority decision it calls
 // ChooseActionBySearch with a SearchContext — a forward model of the current
 // decision — instead of ChooseAction. An agent that does not implement it is
-// unaffected. Combat declarations and non-action choices still go through the
-// ordinary PlayerAgent / ChoiceAgent path.
+// unaffected. Combat declarations use the same action dispatch; non-action
+// choices still go through ChoiceAgent.
 type SearchAgent interface {
 	// ChooseActionBySearch returns the action to take from legal, having looked
 	// ahead with ctx. It must return one of the legal actions; the engine
@@ -28,16 +28,20 @@ type SearchAgent interface {
 // forward with Simulator, and evaluates the results; it never mutates the live
 // game.
 type SearchContext struct {
-	engine *Engine
-	game   *game.Game
-	player game.PlayerID
-	rng    *rand.Rand
+	engine        *Engine
+	game          *game.Game
+	player        game.PlayerID
+	decisionMaker game.PlayerID
+	rng           *rand.Rand
 }
 
 // Player returns the seat the search is deciding for.
 func (c SearchContext) Player() game.PlayerID {
 	return c.player
 }
+
+// DecisionMaker identifies the agent's seat, which may differ from the actor.
+func (c SearchContext) DecisionMaker() game.PlayerID { return c.decisionMaker }
 
 // Determinize returns a full, self-consistent game state the search agent may
 // read and simulate on. It re-samples the information hidden from the searching
@@ -48,7 +52,7 @@ func (c SearchContext) Player() game.PlayerID {
 // several determinizations (PIMC).
 func (c SearchContext) Determinize() *game.Game {
 	clone := c.game.Clone()
-	determinize(clone, c.player, c.rng)
+	determinize(clone, c.decisionMaker, c.rng)
 	return clone
 }
 
@@ -69,7 +73,8 @@ func (c SearchContext) Simulator() Simulator {
 }
 
 func (e *Engine) newSearchContext(g *game.Game, playerID game.PlayerID) SearchContext {
-	return SearchContext{engine: e, game: g, player: playerID, rng: e.searchRNG}
+	return SearchContext{engine: e, game: g, player: playerID,
+		decisionMaker: g.DecisionMaker(playerID, game.DecisionRules), rng: e.searchRNG}
 }
 
 // decideAction asks the agent for its action at a priority or combat decision,
@@ -85,5 +90,5 @@ func (e *Engine) decideAction(g *game.Game, agent PlayerAgent, playerID game.Pla
 	}
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
-	return agent.ChooseAction(observe(g, playerID), legal)
+	return agent.ChooseAction(decisionObservation(g, playerID, game.DecisionRules), legal)
 }

@@ -29,14 +29,19 @@ func (e *Engine) applyStateBasedActions(g *game.Game) []LossLog {
 }
 
 func (e *Engine) applyStateBasedActionsWithLog(g *game.Game, log *TurnLog) []LossLog {
-	losses, deaths := e.applyStateBasedActionsWithDeaths(g)
+	losses, _ := e.applyStateBasedActionsWithLogResult(g, log)
+	return losses
+}
+
+func (e *Engine) applyStateBasedActionsWithLogResult(g *game.Game, log *TurnLog) ([]LossLog, bool) {
+	losses, deaths, applied := e.applyStateBasedActionsWithOutcome(g)
 	for _, loss := range losses {
 		log.addLoss(loss)
 	}
 	for _, death := range deaths {
 		log.addDeath(death)
 	}
-	return losses
+	return losses, applied
 }
 
 // applyStateBasedActionsWithDeaths performs all applicable state-based actions
@@ -52,8 +57,14 @@ func (e *Engine) applyStateBasedActionsWithLog(g *game.Game, log *TurnLog) []Los
 // information from the game state before any of that pass's actions were
 // performed, which is why each check snapshots a permanent before moving it.
 func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []PermanentDeathLog) {
+	losses, deaths, _ := e.applyStateBasedActionsWithOutcome(g)
+	return losses, deaths
+}
+
+func (e *Engine) applyStateBasedActionsWithOutcome(g *game.Game) ([]LossLog, []PermanentDeathLog, bool) {
 	var losses []LossLog
 	var deaths []PermanentDeathLog
+	applied := false
 	for range maxStateBasedActionPasses {
 		batchID := newPassBatchID(g)
 		commanders := pendingCommanderZoneActions(g)
@@ -73,8 +84,9 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 		deaths = append(deaths, legendaryDeaths...)
 		deaths = append(deaths, roleDeaths...)
 		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !rolesChanged && !countersChanged && !tokensChanged && !durationsChanged && !blessingChanged && !commandersChanged {
-			return losses, deaths
+			return losses, deaths, applied
 		}
+		applied = true
 	}
 	panic("state-based actions did not converge")
 }
@@ -723,6 +735,7 @@ func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 // permanents they controlled but did not own reverts to the owner. Permanents
 // that leave the battlefield this way are removed from combat (CR 506.4).
 func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
+	g.EndPlayerControls(playerID)
 	g.Stack.RemoveControlledBy(playerID)
 	before := make(map[id.ID]game.PlayerID, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {

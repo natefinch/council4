@@ -203,6 +203,9 @@ func (c *programContext) Ask(request game.ChoiceRequest) ([]int, error) {
 	if err := c.valid(); err != nil {
 		return nil, err
 	}
+	if request.DecisionKind != game.DecisionRules {
+		return nil, errors.New("authored choices must be rules decisions, not personal decisions")
+	}
 	if !isPlayerAlive(c.game, request.Player) || request.MinChoices < 0 ||
 		request.MaxChoices < request.MinChoices {
 		return nil, errors.New("authored choice has an invalid player or cardinality")

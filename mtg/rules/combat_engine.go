@@ -156,15 +156,10 @@ func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]Pl
 		return
 	}
 
-	chosen := legal[len(legal)-1]
-	if agent := agentFor(agents, playerID); agent != nil {
-		chosen = ce.e.decideAction(g, agent, playerID, legal)
-	}
-	if !containsAction(legal, chosen) {
-		chosen = legal[len(legal)-1]
-	}
+	chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1])
 
 	actionLog := combatActionLog(g, playerID, chosen)
+	actionLog.DecisionMaker = g.DecisionMaker(playerID, game.DecisionRules)
 	log.addAction(&actionLog)
 
 	attackers, ok := chosen.DeclareAttackersPayload()
@@ -188,15 +183,10 @@ func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]Pla
 			continue
 		}
 
-		chosen := legal[len(legal)-1]
-		if agent := agentFor(agents, playerID); agent != nil {
-			chosen = agent.ChooseAction(observe(g, playerID), legal)
-		}
-		if !containsAction(legal, chosen) {
-			chosen = legal[len(legal)-1]
-		}
+		chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1])
 
 		actionLog := combatActionLog(g, playerID, chosen)
+		actionLog.DecisionMaker = g.DecisionMaker(playerID, game.DecisionRules)
 		log.addAction(&actionLog)
 
 		blockers, ok := chosen.DeclareBlockersPayload()

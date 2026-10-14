@@ -57,6 +57,8 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 		return 0, false
 	}
 	control := resolveSearchControl(g, playerID)
+	endSearch := beginSearchControl(g, control)
+	defer endSearch()
 	// The player searches their library when this runs regardless of whether a
 	// matching card is found (CR 701.19a), so the search event fires once here.
 	emitEvent(g, game.Event{
@@ -74,7 +76,7 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 	if searchMustFindIfAvailable(spec, amount) {
 		minChoices = 1
 	}
-	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, 1, minChoices)
+	found := e.chooseSearchMatches(g, agents, log, control.searcher, candidates, 1, minChoices)
 	if len(found) == 0 {
 		player.Library.Shuffle(e.rng)
 		return 0, false

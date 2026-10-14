@@ -255,3 +255,50 @@ payment planner, with normal taxes and the announced creature characteristics.
 Scenarios use `.cardwork/corpus/oracle-cards.json` and the official rules
 effective 2026-09-25 (CR 601, 305, 400.7, 702.37 and 708); registry admission is
 not inferred from Oracle compiler recognition.
+
+## Next-turn player decision control
+
+Mindslaver is a complete production entry with its ordinary six-mana casting
+cost, four-mana/tap/sacrifice activation, and one player target. The Go body
+calls `ControlNextTurn(PlayerReference)`. The Engine captures the resolving
+ability's controller and source card/object IDs into a data-only
+`game.PlayerControlEffect`, independent of source departure. No player agents,
+observations, Game pointers, seat swaps or object-control changes are captured.
+
+The next **actual** turn consumes pending control, including extra turns.
+Skipped turns leave it pending; competing pending effects overwrite by creation,
+not source-entry timestamp. Control lasts through every cleanup/cleanup-priority
+step until the next turn begins. A departing controller or target removes it
+without reviving overwritten effects. Clone copies both pending/active records
+and scoped search permissions; the Simulator uses the same common dispatch.
+
+`Game.DecisionMaker` is the shared policy for priority, attackers/blockers and
+all engine `ChoiceAgent` callbacks (modes, targets, payments, replacement order
+and resolving choices). The action actor, payer and object controllers are
+unchanged. `PlayerObservation.Player` / `ChoiceRequest.Player` identify the actor;
+`PlayerObservation.DecisionMaker`, `ActionLog.DecisionMaker` and
+`ChoiceDecision.DecisionMaker` identify the deciding seat. `Hand()` is the actor's
+hand, while permission-filtered `HandOf` also exposes the deciding player's own
+hand and any players they control. Private top, face-down permanent/spell and
+foretell permissions are shared directionally under CR 723.4, never with
+uninvolved seats.
+
+Opposition Agent remains a distinct **search-only** override. It can replace
+Mindslaver's decision maker during the search, retains its own exile/play
+beneficiary, and cannot leak control or library visibility afterward.
+`LibraryLookable` exposes the entire searched library, not just matching cards,
+only during a real search. Turn control alone grants no library visibility.
+SearchContext keeps actor and decision maker separate; determinizations preserve
+known hands/top cards and sample unrelated hidden hands/face-down identities.
+Publicly designated commander identities are never reassigned.
+
+Concession remains the affected seat's personal action (`Engine.Concede`),
+never a controlling agent's legal action. Personal/tournament decisions use
+`DecisionPersonal` and are not redirected or used to expose outside-game cards.
+The Engine has no outside-game card selection operation.
+
+Acceptance scenarios use `.cardwork/corpus/oracle-cards.json`, current Oracle
+rulings retrieved from Scryfall, and official Comprehensive Rules effective
+2026-09-25 (CR 723, 800.4a, 614.10 and 513–514). Scripted production activation,
+resolution, actual turns/combat/payments/replacements/observers and search/clone
+tests, not winning-game smoke results, certify this admission.

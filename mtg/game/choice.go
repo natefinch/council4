@@ -120,13 +120,14 @@ type ChoiceOption struct {
 // ChoiceRequest describes a bounded decision the rules engine needs from a
 // player while resolving rules procedures such as triggered abilities.
 type ChoiceRequest struct {
-	ID         int
-	Kind       ChoiceKind
-	Player     PlayerID
-	Prompt     string
-	Options    []ChoiceOption
-	MinChoices int
-	MaxChoices int
+	ID           int
+	Kind         ChoiceKind
+	Player       PlayerID
+	DecisionKind DecisionKind
+	Prompt       string
+	Options      []ChoiceOption
+	MinChoices   int
+	MaxChoices   int
 
 	// DefaultSelection is used by the rules engine when no agent supplies a
 	// valid answer. It must contain option indices valid for this request.
@@ -146,7 +147,8 @@ type ChoiceRequest struct {
 
 // ChoiceDecision records the selected option indices for a ChoiceRequest.
 type ChoiceDecision struct {
-	Request      ChoiceRequest
-	Selected     []int
-	UsedFallback bool
+	Request       ChoiceRequest
+	DecisionMaker PlayerID
+	Selected      []int
+	UsedFallback  bool
 }

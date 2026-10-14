@@ -65,17 +65,12 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			legal = []action.Action{actionBuild.pass()}
 		}
 
-		chosen := actionBuild.pass()
-		if agent := agentFor(agents, playerID); agent != nil {
-			chosen = e.decideAction(g, agent, playerID, legal)
-		}
-		if !containsAction(legal, chosen) {
-			chosen = actionBuild.pass()
-		}
+		chosen := e.chooseAction(g, agents, playerID, legal, actionBuild.pass())
 
 		actionLog := &ActionLog{
-			Player: playerID,
-			Action: chosen,
+			Player:        playerID,
+			DecisionMaker: g.DecisionMaker(playerID, game.DecisionRules),
+			Action:        chosen,
 		}
 		recordActionSource(g, playerID, actionLog, chosen)
 		log.addAction(actionLog)

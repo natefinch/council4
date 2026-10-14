@@ -73,15 +73,16 @@ func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]
 	}
 	selected = append([]int(nil), selected...)
 	log.addChoice(game.ChoiceDecision{
-		Request:      cloneChoiceRequest(request),
-		Selected:     selected,
-		UsedFallback: usedFallback,
+		Request:       cloneChoiceRequest(request),
+		DecisionMaker: g.DecisionMaker(request.Player, request.DecisionKind),
+		Selected:      selected,
+		UsedFallback:  usedFallback,
 	})
 	return selected, usedFallback
 }
 
 func (*Engine) agentChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest) ([]int, bool) {
-	agent := agentFor(agents, request.Player)
+	agent := agentFor(agents, g.DecisionMaker(request.Player, request.DecisionKind))
 	if agent == nil {
 		return fallbackChoice(request), true
 	}
@@ -89,7 +90,7 @@ func (*Engine) agentChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, re
 	if !ok {
 		return fallbackChoice(request), true
 	}
-	return choiceAgent.ChooseChoice(observe(g, request.Player), cloneChoiceRequest(request)), false
+	return choiceAgent.ChooseChoice(decisionObservation(g, request.Player, request.DecisionKind), cloneChoiceRequest(request)), false
 }
 
 func nextChoiceID(log *TurnLog) int {

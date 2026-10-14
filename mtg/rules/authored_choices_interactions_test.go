@@ -148,7 +148,8 @@ func TestAuthoredGiftsUngivenOppositionAgentPrivateViewAndPermissions(t *testing
 		return nil
 	}}
 	policies[game.Player3] = authoredChoicePolicy{choose: func(obs PlayerObservation, request game.ChoiceRequest) []int {
-		if request.Player != game.Player3 || request.Kind != game.ChoiceSearch || obs.Player != game.Player1 ||
+		if request.Player != game.Player1 || obs.DecisionMaker != game.Player3 ||
+			request.Kind != game.ChoiceSearch || obs.Player != game.Player1 ||
 			len(obs.Hand()) != 1 || obs.Hand()[0].Name != "Searcher's private hand" ||
 			!request.Options[0].Card.Exists || request.Options[0].Card.Val.Name == "" {
 			t.Fatal("controlled search did not separate decision maker from the searcher's private information view")
