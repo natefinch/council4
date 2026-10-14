@@ -25,6 +25,9 @@ const (
 // The stack resolves last-in, first-out (LIFO).
 type StackObject struct {
 	triggerOrigin TriggerOrigin
+	// ResolvingLinkedProducers is the current body's immutable ownership scope.
+	// It is installed only while resolving content, never inferred from a slot.
+	ResolvingLinkedProducers []LinkedProducerKey
 	// ID is the unique identifier for this stack object.
 	ID id.ID
 

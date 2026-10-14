@@ -173,7 +173,8 @@ func isZeroGameCondition(v game.Condition) bool {
 
 // isZeroGameAbilityContent reports whether every field of a game.AbilityContent holds its zero value.
 func isZeroGameAbilityContent(v game.AbilityContent) bool {
-	return !(len(v.SharedTargets) > 0) &&
+	return !(len(v.LinkedProducers) > 0) &&
+		!(len(v.SharedTargets) > 0) &&
 		!(len(v.Modes) > 0) &&
 		!(v.MinModes != 0) &&
 		!(v.MaxModes != 0) &&
@@ -1896,74 +1897,84 @@ func (r Renderer) renderCostSymbol(ctx *renderCtx, v cost.Symbol) (string, error
 // renderGameAbilityContent renders a game.AbilityContent value as a Go composite literal.
 func (r Renderer) renderGameAbilityContent(ctx *renderCtx, v game.AbilityContent) (string, error) {
 	var fields []string
-	if len(v.SharedTargets) > 0 {
+	if len(v.LinkedProducers) > 0 {
 		var items2 []string
-		for _, item3 := range v.SharedTargets {
-			lit4, err5 := r.renderGameTargetSpec(ctx, item3)
-			if err5 != nil {
-				return "", fmt.Errorf("game.AbilityContent.SharedTargets[]: %w", err5)
+		for _, item3 := range v.LinkedProducers {
+			lit4 := "game.LinkedProducerKey(" + strconv.Quote(string(item3)) + ")"
+			ctx.need(importGame)
+			items2 = append(items2, lit4)
+		}
+		lit1 := compactNamedSliceLit("", "game.LinkedProducerKey", items2)
+		fields = append(fields, "LinkedProducers: "+lit1+",")
+	}
+	if len(v.SharedTargets) > 0 {
+		var items6 []string
+		for _, item7 := range v.SharedTargets {
+			lit8, err9 := r.renderGameTargetSpec(ctx, item7)
+			if err9 != nil {
+				return "", fmt.Errorf("game.AbilityContent.SharedTargets[]: %w", err9)
 			}
 			ctx.need(importGame)
-			items2 = append(items2, lit4+",")
+			items6 = append(items6, lit8+",")
 		}
-		lit1 := namedSliceLit("", "game.TargetSpec", items2)
-		fields = append(fields, "SharedTargets: "+lit1+",")
+		lit5 := namedSliceLit("", "game.TargetSpec", items6)
+		fields = append(fields, "SharedTargets: "+lit5+",")
 	}
 	if len(v.Modes) > 0 {
-		var items7 []string
-		for _, item8 := range v.Modes {
-			lit9, err10 := r.renderGameMode(ctx, item8)
-			if err10 != nil {
-				return "", fmt.Errorf("game.AbilityContent.Modes[]: %w", err10)
+		var items11 []string
+		for _, item12 := range v.Modes {
+			lit13, err14 := r.renderGameMode(ctx, item12)
+			if err14 != nil {
+				return "", fmt.Errorf("game.AbilityContent.Modes[]: %w", err14)
 			}
 			ctx.need(importGame)
-			items7 = append(items7, lit9+",")
+			items11 = append(items11, lit13+",")
 		}
-		lit6 := namedSliceLit("", "game.Mode", items7)
-		fields = append(fields, "Modes: "+lit6+",")
+		lit10 := namedSliceLit("", "game.Mode", items11)
+		fields = append(fields, "Modes: "+lit10+",")
 	}
 	if v.MinModes != 0 {
-		lit11 := strconv.FormatInt(int64(v.MinModes), 10)
-		fields = append(fields, "MinModes: "+lit11+",")
+		lit15 := strconv.FormatInt(int64(v.MinModes), 10)
+		fields = append(fields, "MinModes: "+lit15+",")
 	}
 	if v.MaxModes != 0 {
-		lit12 := strconv.FormatInt(int64(v.MaxModes), 10)
-		fields = append(fields, "MaxModes: "+lit12+",")
+		lit16 := strconv.FormatInt(int64(v.MaxModes), 10)
+		fields = append(fields, "MaxModes: "+lit16+",")
 	}
 	if v.ModeChoiceBonus != (game.ModeChoiceBonus{}) {
-		lit13, err14 := r.renderGameModeChoiceBonus(ctx, v.ModeChoiceBonus)
-		if err14 != nil {
-			return "", fmt.Errorf("game.AbilityContent.ModeChoiceBonus: %w", err14)
+		lit17, err18 := r.renderGameModeChoiceBonus(ctx, v.ModeChoiceBonus)
+		if err18 != nil {
+			return "", fmt.Errorf("game.AbilityContent.ModeChoiceBonus: %w", err18)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "ModeChoiceBonus: "+lit13+",")
+		fields = append(fields, "ModeChoiceBonus: "+lit17+",")
 	}
 	if v.AllowDuplicateModes {
-		lit15 := strconv.FormatBool(bool(v.AllowDuplicateModes))
-		fields = append(fields, "AllowDuplicateModes: "+lit15+",")
+		lit19 := strconv.FormatBool(bool(v.AllowDuplicateModes))
+		fields = append(fields, "AllowDuplicateModes: "+lit19+",")
 	}
 	if v.ModesUniquePerTurn {
-		lit16 := strconv.FormatBool(bool(v.ModesUniquePerTurn))
-		fields = append(fields, "ModesUniquePerTurn: "+lit16+",")
+		lit20 := strconv.FormatBool(bool(v.ModesUniquePerTurn))
+		fields = append(fields, "ModesUniquePerTurn: "+lit20+",")
 	}
 	if v.RandomModes {
-		lit17 := strconv.FormatBool(bool(v.RandomModes))
-		fields = append(fields, "RandomModes: "+lit17+",")
+		lit21 := strconv.FormatBool(bool(v.RandomModes))
+		fields = append(fields, "RandomModes: "+lit21+",")
 	}
 	if v.EscalateCost.Exists {
-		var items20 []string
-		for _, item21 := range v.EscalateCost.Val {
-			lit22, err23 := renderManaSymbol(ctx, item21)
-			if err23 != nil {
-				return "", fmt.Errorf("game.AbilityContent.EscalateCost[]: %w", err23)
+		var items24 []string
+		for _, item25 := range v.EscalateCost.Val {
+			lit26, err27 := renderManaSymbol(ctx, item25)
+			if err27 != nil {
+				return "", fmt.Errorf("game.AbilityContent.EscalateCost[]: %w", err27)
 			}
 			ctx.need(importCost)
-			items20 = append(items20, lit22+",")
+			items24 = append(items24, lit26+",")
 		}
-		lit19 := namedSliceLit("cost.Mana", "cost.Symbol", items20)
+		lit23 := namedSliceLit("cost.Mana", "cost.Symbol", items24)
 		ctx.need(importOpt)
-		lit18 := "opt.Val(" + lit19 + ")"
-		fields = append(fields, "EscalateCost: "+lit18+",")
+		lit22 := "opt.Val(" + lit23 + ")"
+		fields = append(fields, "EscalateCost: "+lit22+",")
 	}
 	return structLit("game.AbilityContent", fields), nil
 }
@@ -8155,13 +8166,18 @@ func (r Renderer) renderGameMoveCard(ctx *renderCtx, v game.MoveCard) (string, e
 		lit20 := strconv.FormatBool(bool(v.PublishLinkedObjectScoped))
 		fields = append(fields, "PublishLinkedObjectScoped: "+lit20+",")
 	}
+	if v.PublishLinkedProducer != "" {
+		lit21 := "game.LinkedProducerKey(" + strconv.Quote(string(v.PublishLinkedProducer)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "PublishLinkedProducer: "+lit21+",")
+	}
 	if v.PublishDepartureCharacteristics != (game.LibraryCardCharacteristics{}) {
-		lit21, err22 := r.renderGameLibraryCardCharacteristics(ctx, v.PublishDepartureCharacteristics)
-		if err22 != nil {
-			return "", fmt.Errorf("game.MoveCard.PublishDepartureCharacteristics: %w", err22)
+		lit22, err23 := r.renderGameLibraryCardCharacteristics(ctx, v.PublishDepartureCharacteristics)
+		if err23 != nil {
+			return "", fmt.Errorf("game.MoveCard.PublishDepartureCharacteristics: %w", err23)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "PublishDepartureCharacteristics: "+lit21+",")
+		fields = append(fields, "PublishDepartureCharacteristics: "+lit22+",")
 	}
 	return structLit("game.MoveCard", fields), nil
 }
@@ -8294,6 +8310,11 @@ func (r Renderer) renderGameMovePermanent(ctx *renderCtx, v game.MovePermanent) 
 		lit11 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
 		ctx.need(importGame)
 		fields = append(fields, "PublishLinked: "+lit11+",")
+	}
+	if v.PublishLinkedProducer != "" {
+		lit12 := "game.LinkedProducerKey(" + strconv.Quote(string(v.PublishLinkedProducer)) + ")"
+		ctx.need(importGame)
+		fields = append(fields, "PublishLinkedProducer: "+lit12+",")
 	}
 	return structLit("game.MovePermanent", fields), nil
 }

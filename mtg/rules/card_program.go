@@ -125,6 +125,9 @@ func (c *programContext) Execute(primitive game.Primitive) (cardprogram.Outcome,
 	if err := game.ValidatePrimitive(primitive, c.specs); err != nil {
 		return cardprogram.Outcome{}, fmt.Errorf("invalid authored operation: %w", err)
 	}
+	if err := game.ValidateLinkedProducerOperation(primitive, c.obj.ResolvingLinkedProducers); err != nil {
+		return cardprogram.Outcome{}, err
+	}
 	// This key is implementation-local, never a variable name card authors need
 	// to manage. Each call restores the enclosing declarative receipt/products.
 	const resultKey = game.ResultKey("@authored-operation")

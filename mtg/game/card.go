@@ -706,6 +706,7 @@ func cloneOptionalAbilityContent(content opt.V[AbilityContent]) opt.V[AbilityCon
 
 func cloneAbilityContent(content AbilityContent) AbilityContent {
 	cloned := content
+	cloned.LinkedProducers = slices.Clone(content.LinkedProducers)
 	cloned.SharedTargets = cloneTargetSpecs(content.SharedTargets)
 	cloned.Modes = make([]Mode, len(content.Modes))
 	for i := range content.Modes {

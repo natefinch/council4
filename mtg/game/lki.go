@@ -75,6 +75,9 @@ type LinkedObjectKey struct {
 	SourceID        id.ID
 	LinkID          string
 	ResolutionScope id.ID
+	// Producer selects the declared original-source namespace, separate from
+	// legacy card-scoped, imprint and resolution-local links.
+	Producer LinkedProducerKey
 }
 
 // LinkedObjectRef records an object/card pair or a card-only reference tracked

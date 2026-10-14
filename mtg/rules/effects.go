@@ -78,6 +78,11 @@ func (e *Engine) resolveAbilityContentWithChoices(g *game.Game, obj *game.StackO
 }
 
 func (e *Engine) resolveAbilityContentReceipt(g *game.Game, obj *game.StackObject, content game.AbilityContent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, key game.ResultKey) (game.InstructionResolutionResult, bool) {
+	if obj != nil {
+		previous := obj.ResolvingLinkedProducers
+		obj.ResolvingLinkedProducers = content.LinkedProducers
+		defer func() { obj.ResolvingLinkedProducers = previous }()
+	}
 	if len(content.Modes) == 0 {
 		return game.InstructionResolutionResult{}, false
 	}
@@ -312,6 +317,9 @@ func recordResultKey(obj *game.StackObject, key game.ResultKey, res effectResolv
 func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	if instr == nil {
 		return
+	}
+	if producer := game.PublishedLinkedProducer(instr.Primitive); producer != "" {
+		r.originalProducerPublicationKey(producer)
 	}
 	r.clearCounterQuantityPublication(instr)
 	r.clearPermanentResultPublication(instr)

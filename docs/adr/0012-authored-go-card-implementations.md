@@ -75,3 +75,32 @@ Keep generated definitions, tests, merged improvements and unmerged work.
 Freeze compiler coverage expansion; allow explicitly assigned correctness fixes
 and regeneration. Preserve genuine runtime bugs when parking a compiler-only
 approach. Do not turn this migration into wholesale card regeneration.
+
+### Original-source linked exile channels (#3232)
+
+`AbilityContent.LinkedProducers` declares stable `game.LinkedProducerKey`
+identities owned by that immutable body. `MoveCard.PublishLinkedProducer` and
+`MovePermanent.PublishLinkedProducer` opt into an accumulating channel keyed by
+that producer **and the original permanent ObjectID**, not its physical CardID,
+current effective ability slot, or resolving stack-copy ID. Publication requires
+the resolving body's declaration and an original battlefield source. Only
+actual exile arrivals publish exact card incarnations. Separate producers use
+separate keys; a consumer explicitly names the intended producer(s).
+
+`PutOnBattlefield` with `OriginalSourceLinkedBattlefieldSource(producer)` reads
+that same namespace after source departure, in queued/copy bodies and Game
+clones. Multiple such `Sources` return their union as one Engine-owned entry
+batch, each under its owner's control unless `Recipient` overrides it. Exact
+zone versions prevent reclaiming captives that departed and reentered exile.
+Movement replacements and non-targeting Aura admission use the existing entry
+path; linked arrival publications and authored outcomes contain only actual
+entered permanents.
+
+These are CR 607 links, not CR 610.3 “until” one-shot effects: a failed Aura
+admission leaves its unchanged exile incarnation linked for another resolving
+copy. Successful/redirected movements invalidate that incarnation naturally.
+Legacy `PublishLinked`, imprint and resolution-local frames keep their existing
+namespaces and consumer lifetimes. No source-disable lifecycle policy or broad
+linked-runtime rewrite is introduced. The pinned Helvault topology is tested
+as a shared-operation fixture; Helvault, Trove Warden and Underworld Sentinel
+remain refused by the legacy compiler, not newly deployed cards.

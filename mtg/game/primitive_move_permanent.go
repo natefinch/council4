@@ -54,6 +54,10 @@ type MovePermanent struct {
 	// exactly that set (blink and exile-until-leaves). The link is captured
 	// before the move so it survives the permanent leaving the battlefield.
 	PublishLinked LinkedKey
+	// PublishLinkedProducer accumulates successful exiles in this body's declared
+	// channel, scoped to the original source permanent ObjectID (CR 607).
+	// It is mutually exclusive with the legacy PublishLinked channel.
+	PublishLinkedProducer LinkedProducerKey
 }
 
 // MoveResolvingSpell moves the spell currently resolving to Destination instead

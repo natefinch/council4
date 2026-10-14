@@ -77,6 +77,7 @@ func (v *cardDefValidator) validate() {
 	if strings.TrimSpace(v.card.Name) == "" {
 		v.add("", "", CardDefIssueMissingName, "card definition has no name")
 	}
+	v.validateDeclaredLinkedProducers()
 	v.validateFace(v.card.Name, "", &v.card.CardFace)
 	if v.card.Back.Exists {
 		face := v.card.Back.Val

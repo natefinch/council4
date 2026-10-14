@@ -842,7 +842,10 @@ type Reveal struct {
 // Sources must be set.
 // PublishLinked retains the fresh permanent created by a successful move.
 type PutOnBattlefield struct {
-	Source            BattlefieldSource
+	Source BattlefieldSource
+	// Sources selects a simultaneous batch of referenced cards or exclusively
+	// original-source producer channels. The latter return their exact exile
+	// union under each card's owner's control unless Recipient overrides it.
 	Sources           []BattlefieldSource
 	Recipient         opt.V[PlayerReference]
 	ContinuousEffects []ContinuousEffect
@@ -1596,6 +1599,9 @@ type MoveCard struct {
 	// PublishLinkedObjectScoped keys PublishLinked by the source permanent's
 	// current object identity, so a re-entered source starts with a fresh pool.
 	PublishLinkedObjectScoped bool
+	// PublishLinkedProducer accumulates exact successful exiles under a declared
+	// producer and the original source permanent ObjectID, including after departure.
+	PublishLinkedProducer LinkedProducerKey
 	// PublishDepartureCharacteristics captures this exact card immediately before
 	// its move, for a later printed-point read of its departure information.
 	PublishDepartureCharacteristics LibraryCardCharacteristics

@@ -534,6 +534,18 @@ func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 
 func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effectResolved {
 	res := effectResolved{accepted: true}
+	producerSources := prim.Sources
+	if prim.Source.Valid() {
+		producerSources = []game.BattlefieldSource{prim.Source}
+	}
+	if len(producerSources) > 0 {
+		if _, originalProducer := producerSources[0].LinkedProducer(); originalProducer {
+			returned := r.returnOriginalProducerCards(prim)
+			res.succeeded = len(returned) > 0
+			r.publishEnteredPermanents(prim.PublishLinked, returned...)
+			return res
+		}
+	}
 	var recipient game.PlayerReference
 	if prim.Recipient.Exists {
 		recipient = prim.Recipient.Val
@@ -1513,6 +1525,9 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 	}
 	res := effectResolved{accepted: true}
 	var publishKey game.LinkedObjectKey
+	if prim.PublishLinkedProducer != "" {
+		publishKey = r.originalProducerPublicationKey(prim.PublishLinkedProducer)
+	}
 	if prim.PublishLinked != "" {
 		publishKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		if prim.PublishLinkedObjectScoped {
@@ -1556,7 +1571,7 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 	if reachedDestination && prim.Counter.Exists && r.game.Players[card.Owner].Exile.Contains(cardID) {
 		r.game.AddExileCounter(cardID, prim.Counter.Val, 1)
 	}
-	if reachedDestination && prim.PublishLinked != "" && r.game.Players[card.Owner].Exile.Contains(cardID) {
+	if reachedDestination && (prim.PublishLinked != "" || prim.PublishLinkedProducer != "") && r.game.Players[card.Owner].Exile.Contains(cardID) {
 		var objectID id.ID
 		if prim.Card.Kind == game.CardReferenceEvent &&
 			r.obj != nil && r.obj.HasTriggerEvent &&
@@ -1566,7 +1581,7 @@ func handleMoveCard(r *effectResolver, prim game.MoveCard) effectResolved {
 		rememberLinkedObject(
 			r.game,
 			publishKey,
-			game.LinkedObjectRef{ObjectID: objectID, CardID: cardID, CardZoneVersion: card.ZoneVersion},
+			game.LinkedObjectRef{ObjectID: objectID, CardID: cardID, CardZoneVersion: card.ZoneVersion, CardZoneVersionSet: prim.PublishLinkedProducer != ""},
 		)
 	}
 	return res
@@ -1620,11 +1635,12 @@ func handleMoveEventPermanentCards(
 		if prim.Counter.Exists && prim.Destination == zone.Exile {
 			r.game.AddExileCounter(card.ID, prim.Counter.Val, 1)
 		}
-		if prim.PublishLinked != "" && prim.Destination == zone.Exile {
+		if (prim.PublishLinked != "" || prim.PublishLinkedProducer != "") && prim.Destination == zone.Exile {
 			rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{
-				ObjectID:        snapshot.ObjectID,
-				CardID:          card.ID,
-				CardZoneVersion: card.ZoneVersion,
+				ObjectID:           snapshot.ObjectID,
+				CardID:             card.ID,
+				CardZoneVersion:    card.ZoneVersion,
+				CardZoneVersionSet: prim.PublishLinkedProducer != "",
 			})
 		}
 	}

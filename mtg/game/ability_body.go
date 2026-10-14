@@ -19,6 +19,9 @@ type Ability interface {
 // non-modal abilities contain one required mode; modal abilities contain a
 // choice among multiple modes or use a mode range other than exactly one.
 type AbilityContent struct {
+	// LinkedProducers declares the original-source channels owned by this body.
+	// Keys identify immutable producer abilities, not effective ability indices.
+	LinkedProducers     []LinkedProducerKey
 	SharedTargets       []TargetSpec
 	Modes               []Mode
 	MinModes            int

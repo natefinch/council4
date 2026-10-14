@@ -1953,13 +1953,21 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	if p.Source.Valid() {
 		sources = []BattlefieldSource{p.Source}
 	}
+	if producers := consumedLinkedProducers(p); len(producers) > 0 {
+		if len(p.Sources) > 0 && len(producers) != len(p.Sources) {
+			return errors.New("original-source linked returns cannot mix source namespaces")
+		}
+		if len(p.LinkedReturnZones) > 0 || len(p.ContinuousEffects) > 0 {
+			return errors.New("original-source linked returns support only exiled cards without continuous grants")
+		}
+	}
 	for _, source := range sources {
 		if !source.Valid() {
 			return errors.New("put on battlefield requires valid sources")
 		}
 		ref, ok := source.CardRef()
 		if !ok {
-			if len(p.Sources) > 0 {
+			if _, producer := source.LinkedProducer(); len(p.Sources) > 0 && !producer {
 				return errors.New("simultaneous put on battlefield requires referenced-card sources")
 			}
 			continue
@@ -1971,7 +1979,7 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 			return err
 		}
 	}
-	if len(p.Sources) > 0 && p.PublishLinked != "" {
+	if len(p.Sources) > 0 && p.PublishLinked != "" && len(consumedLinkedProducers(p)) == 0 {
 		return errors.New("simultaneous put on battlefield cannot publish one linked permanent")
 	}
 	if len(p.Sources) > 0 && len(p.LinkedReturnZones) > 0 {
@@ -2423,6 +2431,9 @@ func abilityContentPublishesResult(content AbilityContent, key ResultKey) bool {
 }
 
 func (p MovePermanent) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateProducerPublication(p.PublishLinkedProducer, p.PublishLinked, p.Destination); err != nil {
+		return err
+	}
 	if p.Destination == zone.None {
 		return errors.New("move permanent requires a destination zone")
 	}
@@ -2466,9 +2477,15 @@ func (p MoveResolvingSpell) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p MoveCard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateProducerPublication(p.PublishLinkedProducer, p.PublishLinked, p.Destination); err != nil {
+		return err
+	}
 	hasCard := p.Card.Kind != CardReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
 	hasGroup := p.PlayerGroup.Kind != PlayerGroupReferenceNone
+	if p.PublishLinkedProducer != "" && (!hasCard || p.PublishLinkedObjectScoped || p.ReplacePublishedLinked) {
+		return errors.New("original-source move-card publication requires one card and accumulating producer ownership")
+	}
 	if len(p.PublishDepartureCharacteristics.keys()) != 0 {
 		if !hasCard || p.IncludeEventPermanentComponents ||
 			(p.FromZone != zone.Graveyard && p.FromZone != zone.Exile) || p.Destination != zone.Hand {

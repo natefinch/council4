@@ -16,6 +16,9 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 	res := effectResolved{accepted: true}
 
 	var linkedKey game.LinkedObjectKey
+	if prim.PublishLinkedProducer != "" {
+		linkedKey = r.originalProducerPublicationKey(prim.PublishLinkedProducer)
+	}
 	if prim.PublishLinked != "" {
 		linkedKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		clearLinkedObjects(r.game, linkedKey)
@@ -23,7 +26,17 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 
 	if prim.ControlledChoice {
 		chosen := r.chooseControlledMovePermanents(prim)
-		res.succeeded = r.moveResultPermanents(chosen, prim.Destination)
+		for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, chosen, prim.Destination) {
+			if result.moved {
+				res.succeeded = true
+				if result.destination == prim.Destination {
+					r.rememberResultObject(permanentObjectBindingRef(result.permanent))
+					if prim.PublishLinkedProducer != "" {
+						r.publishProducerPermanent(linkedKey, result.permanent)
+					}
+				}
+			}
+		}
 		if res.succeeded {
 			r.placeMovedOnLibraryBottom(prim, chosen)
 		}
@@ -53,6 +66,9 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 				r.rememberResultObject(permanentObjectBindingRef(result.permanent))
 			}
 			moved = append(moved, result.permanent)
+			if prim.PublishLinkedProducer != "" && result.destination == prim.Destination {
+				r.publishProducerPermanent(linkedKey, result.permanent)
+			}
 			if ref, ok := refs[result.permanent]; ok && prim.PublishLinked != "" && result.destination == prim.Destination {
 				if card, ok := r.game.GetCardInstance(ref.CardID); ok {
 					ref.CardZoneVersion = card.ZoneVersion
@@ -74,6 +90,9 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 				if result.destination == prim.Destination {
 					reached = true
 					r.rememberResultObject(permanentObjectBindingRef(result.permanent))
+					if prim.PublishLinkedProducer != "" {
+						r.publishProducerPermanent(linkedKey, result.permanent)
+					}
 				}
 			}
 		}

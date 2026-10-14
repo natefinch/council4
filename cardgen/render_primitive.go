@@ -9,6 +9,9 @@ import (
 )
 
 func renderBattlefieldSource(source game.BattlefieldSource) (string, error) {
+	if producer, ok := source.LinkedProducer(); ok {
+		return fmt.Sprintf("game.OriginalSourceLinkedBattlefieldSource(game.LinkedProducerKey(%q))", producer), nil
+	}
 	if ref, ok := source.CardRef(); ok {
 		rendered, err := renderCardReference(ref)
 		if err != nil {

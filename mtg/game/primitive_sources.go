@@ -208,15 +208,18 @@ type battlefieldSourceKind int
 const (
 	battlefieldSourceCard battlefieldSourceKind = iota
 	battlefieldSourceLinked
+	battlefieldSourceOriginalProducer
 )
 
 // BattlefieldSource identifies what card or object to put on the battlefield.
-// Use CardBattlefieldSource or LinkedBattlefieldSource to construct.
+// Use CardBattlefieldSource, LinkedBattlefieldSource or
+// OriginalSourceLinkedBattlefieldSource to construct.
 type BattlefieldSource struct {
-	set    bool
-	kind   battlefieldSourceKind
-	card   CardReference
-	linked LinkedKey
+	set      bool
+	kind     battlefieldSourceKind
+	card     CardReference
+	linked   LinkedKey
+	producer LinkedProducerKey
 }
 
 // CardBattlefieldSource creates a source referencing a specific card.
@@ -229,6 +232,18 @@ func LinkedBattlefieldSource(key LinkedKey) BattlefieldSource {
 	return BattlefieldSource{set: true, kind: battlefieldSourceLinked, linked: key}
 }
 
+// OriginalSourceLinkedBattlefieldSource returns the exact exiled cards published
+// by a declared producer on the original source permanent occurrence. Multiple
+// such Sources in PutOnBattlefield return their union simultaneously.
+func OriginalSourceLinkedBattlefieldSource(producer LinkedProducerKey) BattlefieldSource {
+	return BattlefieldSource{set: true, kind: battlefieldSourceOriginalProducer, producer: producer}
+}
+
+// LinkedProducer returns the original-source producer channel, when selected.
+func (s BattlefieldSource) LinkedProducer() (LinkedProducerKey, bool) {
+	return s.producer, s.set && s.kind == battlefieldSourceOriginalProducer && s.producer.valid()
+}
+
 // Valid reports whether the source identifies a concrete card or linked object.
 func (s BattlefieldSource) Valid() bool {
 	if !s.set {
@@ -239,6 +254,8 @@ func (s BattlefieldSource) Valid() bool {
 		return s.card.Kind != CardReferenceNone
 	case battlefieldSourceLinked:
 		return s.linked != ""
+	case battlefieldSourceOriginalProducer:
+		return s.producer.valid()
 	default:
 		return false
 	}
