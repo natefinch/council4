@@ -2,21 +2,52 @@
 
 Council4 is a Go playtesting engine for Magic: The Gathering Commander decks. The goal is to run many automated 4-player games with AI-controlled agents and produce analytics about deck performance.
 
+## Development direction
+
+New card support uses **authored Go over shared Engine operations**, not expansion
+of the Oracle compiler. Preserve existing generated cards and behavioral tests;
+keep costs, targets and declarations inspectable, and rules mutation engine-owned.
+See [ADR 0012](./docs/adr/0012-authored-go-card-implementations.md) and the ordered
+[migration epic](https://github.com/natefinch/council4/issues/3269).
+
+The full authoring interface is not implemented yet: #3272 builds it after the
+baseline/CI step #3270. Today's spell-only escape hatch is not a substitute for
+those prerequisites. Do not expand parser/lowering or invent a parallel runtime
+while waiting for them.
+
+For authorized issue work, the default is implement, test/lint, inspect and
+commit directly to main, with one writer and no mandatory PR. Push permission
+remains separate. The [repository instructions](./.github/copilot-instructions.md)
+and [impl-loop](./.agents/skills/impl-loop/SKILL.md) describe the execution rules.
+
 ## Card support
 
 <!-- card-support:start -->
 Council4 currently supports **18,700 of 33,016 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,728 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total. See [`supported.md`](./supported.md) and [`unsupported.md`](./unsupported.md) for the complete lists, and [`unsupported-reasons.md`](./unsupported-reasons.md) for capability-aware blocker planning.
 <!-- card-support:end -->
 
-Run `go run github.com/magefile/mage@v1.15.0 cardSupport` after card-support changes. The target reuses the Scryfall Oracle Cards corpus cached outside the repository, runs cardgen in ignored `.cardwork` scratch space, and updates the support documentation. Set `COUNCIL4_ORACLE_CARDS` to use a specific local corpus file; remove the cached file printed by the target to download the latest corpus. To generate only the compiled card tree in another repository, use `go run github.com/magefile/mage@v1.15.0 cardTree /path/to/cards`; the compile report remains at `.cardwork/current-report.json`.
+The summary above and generated support files currently measure legacy compiler
+coverage, not all runtime-loadable or behavior-verified implementations. The mixed
+catalog/reporting work in #3278 will distinguish these states. Compiler diagnostic
+rankings are maintenance evidence, not the default new-card work queue.
 
-To refresh only the documentation above without rewriting the generated card tree, run `go run github.com/magefile/mage@v1.15.0 supportDocs`. CI runs that target on every pull request and commits the result, so these files stay current even when a change forgets them.
+For an explicitly requested legacy corpus refresh, run
+`go run github.com/magefile/mage@v1.15.0 cardSupport`. It uses ignored `.cardwork`
+space and updates compiler support documentation. Set `COUNCIL4_ORACLE_CARDS` to
+a specific corpus when comparing revisions; use the same input for both.
+`cardTree /path/to/cards` emits a compiled tree for another consumer, and
+`supportDocs` refreshes only compiler documentation. None is an every-issue gate.
+
+The existing PR workflow still auto-commits support docs; #3270 replaces that
+behavior and makes CI proportional. This workflow reset does not change CI or
+claim that an authored card is already included in those reports.
 
 ## Parser coverage
 
-[`parser-coverage.md`](./parser-coverage.md) tracks how completely the Oracle parser represents each eligible card's text as typed syntax, measured without running the compiler or lowering. It reports the parser-complete card percentage and exact-effect percentage, plus a ranked work queue of the uncovered grammar that the parser does not yet represent. Run `go run github.com/magefile/mage@v1.15.0 parserCoverage` to regenerate it.
-
-The current implementation is an early rules-engine slice: land-only games still run, spell-mode games can cast simple creatures, draw/life spells, and player-damage spells through the stack, and combat-mode games can attack players with simple creatures.
+[`parser-coverage.md`](./parser-coverage.md) records legacy Oracle parser coverage.
+Regenerate it with `go run github.com/magefile/mage@v1.15.0 parserCoverage` only
+for relevant maintenance. Parser completeness is not an acceptance requirement
+for an authored Go card.
 
 ## Run the CLI
 
@@ -56,8 +87,12 @@ Battlefield permanents: 4
 
 ```bash
 go test ./...
-go vet ./...
+go run github.com/magefile/mage@v1.15.0 lint
 ```
+
+Run focused package tests while editing code, then the suite/linter once before
+committing. Add relevant build, race or platform checks when needed. Docs and
+comment-only changes use link/instruction checks and `git diff --check`.
 
 The module root is the repository root:
 
@@ -87,36 +122,17 @@ github.com/natefinch/council4
 
 Every Go package directory has its own `README.md` describing that package and how to use it.
 
-## Current engine capabilities
+## Engine coverage
 
-Implemented:
-
-- 4-player Commander game state.
-- Deterministic game setup via seeded RNG.
-- Opening hands and card drawing.
-- Turn progression through beginning, main, combat, ending, and cleanup.
-- Multiplayer priority passing.
-- Legal actions for playing lands, casting simple spells, and passing.
-- Auto-tap payment for normal colored and generic costs using basic lands.
-- Stack resolution for creature, instant, and sorcery spells.
-- Effect primitives for draw, gain life, lose life, and player damage.
-- Runtime player targets for simple targeted spells.
-- Combat steps, compact attacker and blocker declarations, combat damage to players and creatures, and lethal creature damage cleanup.
-- State-based player elimination for 0 life, poison, commander damage, and failed draws.
-- Loss logs with reasons for player eliminations.
-- Simple `agent.FirstLegal` and `agent.SimpleCaster` agents for deterministic test games.
-
-Not implemented yet:
-
-- Decklist parsing.
-- Card registry and generated card definitions.
-- Explicit mana ability actions and advanced costs.
-- Advanced combat mechanics such as multi-blocking, evasion, first strike, double strike, trample, deathtouch, indestructible, and prevention.
-- Reports and analytics output.
+Use [`docs/playtest-rule-coverage.md`](./docs/playtest-rule-coverage.md) and the
+owning package documentation for current behavior and limitations. The
+[`ROADMAP.md`](./ROADMAP.md) preserves earlier implementation milestones; its
+historical compiler-expansion checklists are not the migration execution queue.
 
 ## Documentation
 
 - [`CONTEXT.md`](./CONTEXT.md) defines project vocabulary.
+- [`ADR 0012`](./docs/adr/0012-authored-go-card-implementations.md) defines the authored-Go direction and direct-to-main workflow.
 - [`docs/playtest-rule-coverage.md`](./docs/playtest-rule-coverage.md) summarizes supported rule coverage and known limitations for the playtest path.
 - [`docs/adr/`](./docs/adr/) records architectural decisions.
 - Package-level READMEs document implementation details and usage for each package.

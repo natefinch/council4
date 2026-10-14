@@ -4,9 +4,9 @@
 //
 // # Adding a card
 //
-// Use the Oracle compiler to generate supported card definitions:
-//
-//	go run ./cardgen/oracle/cmd/compilecards -in oracle-cards.json -out mtg/cards
+// New support uses authored Go over shared Engine operations, not Oracle
+// compiler expansion. See docs/adr/0012-authored-go-card-implementations.md and
+// mtg/cards/README.md for the migration prerequisites and legacy regeneration.
 //
 // After adding or editing cards manually, run go generate to update the
 // sub-package card lists:

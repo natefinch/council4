@@ -1,11 +1,18 @@
 # Oracle text
 
+**Legacy compiler maintenance only.** New card support uses authored Go and does
+not require Oracle recognition. See
+[ADR 0012](../../docs/adr/0012-authored-go-card-implementations.md) and
+[epic #3269](https://github.com/natefinch/council4/issues/3269).
+
 This directory contains the deterministic front end for turning Scryfall
 `oracle_text` into council4's typed `game.CardFace` ability data. There is no
 root `oracle` Go package: callers import the pipeline stage they consume so
 ownership and dependency direction stay visible.
 
-**Cards supported: 4,790 / 31,838**
+The former package-local count is historical. The canonical dated compiler
+baseline is in [`supported.md`](../../supported.md); neither count certifies
+runtime-loadable or behavior-verified authored support.
 
 The pipeline is:
 

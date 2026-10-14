@@ -1,81 +1,42 @@
 ---
 name: card-support-todo
-description: Quickly file a traceable GitHub issue labeled "To Be Triaged" and "Card Support TODO" when card implementation or compiler work discovers known work that is intentionally deferred. Use when the user says "file a card support TODO", "track this card limitation", "create an issue for this deferred work", or whenever card support work deliberately leaves a known gap behind.
+description: Reuse or file one precise shared blocker for proven deferred card behavior. Use when asked to track a card limitation or when authored-card work encounters a missing Engine capability.
 ---
 
 # Card Support TODO
 
-Quickly preserve deferred card-support work without interrupting implementation.
+Keep complete cards supported and incomplete cards explicitly blocked.
+Follow `.github/copilot-instructions.md`; new support is authored Go, not
+Oracle compiler expansion.
 
-## Process
+1. Capture the demonstrated missing behavior, representative card(s), owning
+   rule/operation if known, originating issue and observable completion condition.
+2. Briefly search existing issues. Reuse the canonical capability issue even
+   when several cards need it; link the affected work's blocking dependency.
+3. If distinct work is proven, create one concise issue using the available
+   issue-creation tool with `To Be Triaged` and `Card Support TODO`.
+   Use `Legacy Compiler` for an explicitly requested compiler maintenance defect.
+4. Leave the affected card unsupported whole; remove stale readiness and
+   explain its blocker once. Resume other eligible assigned work.
 
-1. Capture only the minimum useful context:
-   - what card, wording family, mechanic, or compiler limitation was found;
-   - why it is being deferred;
-   - the obvious completion condition, if known;
-   - the active issue where the deferred work was discovered;
-   - the active epic, if the issue is an epic child.
-2. Search briefly for an existing issue with the same specific scope:
+Do not enumerate speculative neighboring wording, create one issue per
+unexamined card, perform lengthy solution research just to file a blocker, or
+mirror the same note into an epic's future-work subsections. Add an epic link
+only when it changes execution/dependencies. Follow the user's scope rather than
+adding discovered work to the current implementation automatically.
 
-   ```bash
-   gh issue list --state all --search '"<specific key terms>"' \
-     --limit 10 --json number,title,url
-   ```
+## Minimal body
 
-3. If no matching issue exists, create one immediately:
+```markdown
+## Missing behavior
+<actual limitation and representative card>
 
-   ```bash
-   gh issue create \
-     --title "<short actionable title>" \
-     --label "Card Support TODO" \
-     --label "To Be Triaged" \
-     --body $'## Deferred work\n<one or two sentences>\n\n## Discovered while working on\n- #<active-issue-number>\n\n## Done when\n<one sentence>'
-   ```
+## Discovered while
+<link to the active issue>
 
-4. If the active issue is an epic child, add the new issue link to the active
-   child's subsection under `## Future Work Discovered` in the epic body. Do not
-   make the new issue an epic child.
-5. Return the issue URL and resume the original work. Do not turn issue filing
-   into a research task.
+## Done when
+<observable behavior and relevant rules scenario>
+```
 
-## Speed Rules
-
-- Spend no more than a couple of minutes filing the issue.
-- Prefer the short required body sections over a comprehensive design.
-- Include file names, card examples, or counts only when already known.
-- Do not investigate solutions merely to improve the issue description.
-- Do not block current work after the issue URL is available.
-
-## Boundaries
-
-**Will:**
-
-- Use the current repository through `gh`.
-- Apply the exact `To Be Triaged` and `Card Support TODO` labels.
-- File intentionally deferred card-support work.
-- Reuse an obvious existing issue instead of duplicating it.
-- Link new issues to the issue where the work was discovered.
-- Record new issues in the active epic without making them epic children.
-
-**Will not:**
-
-- File speculative ideas with no known work attached.
-- create long plans, implementation designs, or exhaustive card inventories;
-- silently defer discovered work without either fixing it or filing an issue.
-
-## Error Handling
-
-- If either label is missing, create it once:
-
-  ```bash
-  gh label create "Card Support TODO" \
-    --description "Known work that still needs to be done to support a corpus of cards." \
-    --color "BCEA7A"
-  gh label create "To Be Triaged" \
-    --description "Newly discovered work awaiting triage." \
-    --color "FBCA04"
-  ```
-
-- If `gh` is unauthenticated or issue creation fails, report the command error
-  and continue the original implementation without pretending the TODO was
-  filed.
+Report failures explicitly. Never pretend a blocker was filed or that an
+unsupported card is usable when the issue operation or implementation failed.

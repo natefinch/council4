@@ -2,7 +2,15 @@
 
 Council4's product goal is to accept four Commander decklists, run repeated AI-controlled test games with those decks, and produce a report about the individual deck being tested: win rate, finishing position, game length, card performance, mana development, tempo, and common failure modes.
 
-Use this file as the project-level feature checklist. Check items off as they land, and keep package READMEs plus `CONTEXT.md` vocabulary in sync when implementation names or domain terms change.
+The active card-support plan is [epic #3269](https://github.com/natefinch/council4/issues/3269):
+authored Go, preserved legacy support and a lean direct-to-main workflow.
+[ADR 0012](docs/adr/0012-authored-go-card-implementations.md) supersedes
+compiler-first expansion. Use the epic's earliest unblocked child and canonical
+runtime prerequisites, not the historical phases below, to select migration work.
+
+This file preserves product milestones and earlier checklists. Keep genuinely
+applicable runtime/product follow-ups, but do not resume an old compiler rollout
+or take a historical completion checkbox as proof of current rules fidelity.
 
 ## Current foundation
 

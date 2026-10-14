@@ -1,9 +1,8 @@
 # Card Support TODO
 
-Quickly files intentionally deferred card-support work as a traceable GitHub issue
-labeled `To Be Triaged` and `Card Support TODO`.
+Preserves a proven missing behavior as one shared capability blocker labeled
+`To Be Triaged` and `Card Support TODO`, or reuses an existing issue.
 
-Use this skill while implementing cards or expanding the Oracle compiler when a
-known gap should be preserved without interrupting the current work for a long
-investigation. New issues link to the active issue and are recorded in the active
-epic's `Future Work Discovered` section without becoming epic children.
+Authored-card work does not require speculative wording issues or duplicated
+epic notes. A blocked card stays unsupported whole; other eligible work can
+continue within the assigned scope. See [SKILL.md](SKILL.md).

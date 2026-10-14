@@ -1,21 +1,15 @@
-# Example: Refine the Entire Backlog
+# Example: Prepare the next migration step
 
-## User Request
+## User request
 
-> Run the ready-for-dev loop.
+> Prepare the next unblocked issue in #3269.
 
 ## Result
 
-The agent lists all open, non-epic issues without `Ready For Dev`, chooses a
-batch of up to five, and investigates each issue against the repository.
+The agent checks native dependencies and current completion evidence. After the
+workflow reset, it refines #3270 and marks it ready if its prerequisite is met.
+It leaves later children blocked instead of promoting the whole epic.
 
-For each actionable issue, it preserves the original body and adds an
-`Implementation guidance` section containing the current limitation, suggested
-approach, relevant files, acceptance criteria, validation commands, and
-non-goals. It applies `Ready For Dev` only after that handoff is complete.
-
-Duplicates, obsolete issues, and already implemented work are closed with
-evidence. Broad coordination issues are decomposed into implementation-sized
-children. The agent refreshes the issue inventory after every batch and continues
-until no eligible issue remains unrefined.
-
+Real runtime prerequisites such as #3232 and #3263 remain discoverable.
+Compiler-only expansion retains its history but is parked. Card handoffs target
+authored Go and actual runtime scenarios, not disappearing compiler diagnostics.

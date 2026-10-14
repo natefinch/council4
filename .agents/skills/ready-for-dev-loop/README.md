@@ -1,13 +1,9 @@
 # Ready For Dev Loop
 
-Autonomously refines the open issue backlog into implementation-ready work.
+Refines actionable issues in the selected epic or requested workstream.
+`Ready For Dev` requires a concrete handoff and satisfied prerequisites.
 
-The skill investigates every open, non-epic issue lacking the exact
-`Ready For Dev` label, adds repository-specific implementation guidance and
-acceptance criteria to its body, and then applies the label. Duplicate, obsolete,
-already implemented, or oversized issues are closed or decomposed instead of
-being rubber-stamped.
-
-It continues in batches until no eligible open issue remains without
-`Ready For Dev`.
-
+The skill preserves runtime work while excluding parked, superseded and
+compiler-expansion tasks from the default authored-card queue. It does not aim
+to label every open issue, implement changes or create speculative follow-ups.
+See [SKILL.md](SKILL.md).

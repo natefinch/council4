@@ -1,5 +1,11 @@
 # Magic: The Gathering — Card Text Parsing Deep Dive
 
+This is historical rules/Oracle research, not a compiler-expansion work queue.
+Use current Oracle text/rulings and the current Comprehensive Rules when authoring
+Go cards; verify old rule numbers before relying on them. The active direction is
+[ADR 0012](../adr/0012-authored-go-card-implementations.md) and
+[epic #3269](https://github.com/natefinch/council4/issues/3269).
+
 > An AI-agent-oriented guide for converting the printed text of any Magic card
 > into a precise model of its in-game effect.
 >

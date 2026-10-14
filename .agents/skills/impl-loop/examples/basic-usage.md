@@ -1,20 +1,18 @@
-# Example: Autonomous Ready-for-Development Loop
+# Example: Work through the migration
 
-## User Request
+## User request
 
-> Run impl-loop and keep expanding card support.
+> Run impl-loop on #3269. Make local commits directly on main; do not push.
 
 ## Result
 
-The agent inventories open `Ready For Dev` issues, removes issues already
-referenced by an epic, and chooses a cohesive high-impact batch of up to five.
-It creates an `Epic` issue listing those children, marks it `In Progress`, and
-asks the user to select individual, stacked, or combined pull requests before
-changing code.
+The agent reads the epic's live prerequisites and takes the first unblocked
+child, preserving existing assignments. It does not create another epic or ask
+for a PR strategy. After #3271, the next migration child is #3270, not the
+largest unsupported compiler diagnostic.
 
-For each child, the agent marks it `In Progress`, follows the selected branch and
-pull request strategy, implements and validates the issue, runs the `cardSupport`
-Mage target, audits the resulting generated cards and support-documentation
-changes, files and records any newly discovered deferred card work, and runs one
-independent review plus at most one full follow-up review. It updates and closes
-the epic, then repeats with another eligible batch until none remain.
+For code, it runs focused tests during development and the test suite/linter
+once before committing. Docs-only changes use documentation checks instead.
+It stages intended files, records the local commit and advances only when the
+child's acceptance criteria are met. It does not claim that local commits are
+published or that blocked work is complete.

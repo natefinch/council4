@@ -1,5 +1,11 @@
 # A hard text-interpretation boundary at the executable card model
 
+**Partially superseded by [ADR 0012](0012-authored-go-card-implementations.md).**
+Keep text-blind runtime behavior and legacy translator discipline. Authored
+programs mean a serializable CardDef alone need not contain all behavior; program
+identities require an installed immutable catalog. The original decision remains
+historical context, not an instruction to expand the compiler.
+
 Oracle card text is interpreted in exactly one place — the parser — and the
 result flows through the translation pipeline into a single well-known,
 serializable, behavioral data structure, the executable **card model**

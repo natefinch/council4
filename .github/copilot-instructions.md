@@ -1,177 +1,113 @@
-# Repository Work Methodology
+# Working in Council4
 
-These repository-wide rules are always active. Follow them together with any
-applicable skill or user instruction. When multiple instructions request the same
-review or workflow action, perform it once rather than duplicating it. When a
-narrower skill conflicts with this methodology, this methodology takes precedence.
+Council4 builds a Go Magic library for reproducible Commander playtests.
+New card support is **authored Go using shared Engine operations**, not Oracle
+compiler expansion. [ADR 0012](../docs/adr/0012-authored-go-card-implementations.md)
+records this decision; [epic #3269](https://github.com/natefinch/council4/issues/3269)
+is the dependency-ordered migration.
 
-## Route Work Through Issues
+## Choose the next work
 
-Before changing the repository for work that is not already tied to an issue or
-epic, ask the user whether an issue exists for the work.
+- Follow the user's selected issue or epic. Read its current requirements,
+  relevant comments and actual blocking dependencies, not every historical plan.
+- For an epic, implement the earliest unblocked child. Complete/reuse its
+  canonical runtime prerequisites before starting a dependent child. Do not
+  create another epic to reserve work already assigned to one.
+- `Ready For Dev` means actionable and prerequisites satisfied. Do not promote
+  parked, superseded, dependency-blocked or compiler-expansion work by default.
+  A closed epic reference is not a permanent reservation.
+- Mark an issue `In Progress` only while working on it. Check existing ownership
+  before taking over active work; preserve unmerged changes and handoff evidence.
+- For a direct user request without an issue, do the requested work; do not
+  require an issue-filing conversation as an implementation prerequisite.
 
-- If the user provides an issue, use it.
-- If the user is unsure or says no issue exists, search for an existing issue that
-  covers the work. If a likely match exists, show it to the user and ask whether it
-  applies.
-- If no matching issue exists, ask whether the user wants a new issue created.
-  Do not create one without the user's approval.
+## Direct-to-main workflow
 
-Read the active issue's body and relevant comments before implementation. When an
-issue becomes active, including a child issue of an epic, add the exact
-`In Progress` label.
+The default for an authorized issue/epic implementation is one coherent local
+commit per completed change on `main`, without mandatory branches, PRs, approvals
+or merge choreography. Respect the current run's commit/push permissions; this
+policy does not authorize unsolicited commits or pushes for arbitrary edits.
 
-## Start Work From `origin/main`
+1. Inspect the checkout, existing edits and HEAD. With a clean `main`, fetch
+   `origin` and fast-forward only (`git merge --ff-only origin/main`). Do not
+   reset, stash, rebase or switch the user's checkout to enforce this default.
+   Stop if divergent history or conflicting work needs a decision.
+2. Keep **one writer to main**. Parallel research is fine; independent code
+   work needs isolated workspaces and serialized integration. `In Progress`
+   labels help coordination but are not an atomic writer lock.
+3. Implement a bounded change, run the relevant checks below, and inspect the
+   diff. Stage only intended files, not all tracked or untracked modifications.
+4. Commit when authorized, recording the issue and required commit trailers.
+   Push normally only when authorized; never force-push or bypass protections.
+   If a protection requires a PR, report it rather than disabling it.
+5. Record completion once, with the commit and meaningful behavior/blockers.
+   A local commit is not a pushed or deployed change. Continue only within the
+   user's assigned scope. PRs remain available when explicitly requested.
 
-Fetch `origin` before starting a new task, then create its working branch from the
-current `origin/main`, never from a stale local `main` or an unrelated branch.
+## Author cards, not another compiler
 
-When starting an epic, use the pull request strategy selected for that epic:
+- Read current Oracle text/rulings and the relevant Comprehensive Rules. Keep
+  costs, targets, modes, triggers and static/replacement declarations inspectable.
+  Use ordinary Go control flow where it is simpler than declarative Instructions.
+- Reuse engine-owned operations for mutation, batch semantics, payment,
+  replacement order, targeting, priority and events. Card code must not access
+  raw mutable Game state or approximate a missing rule.
+- Keep programs immutable and per-game references, links, usage and delayed
+  state game-owned and clone-safe. Preserve reproducibility and fog of war.
+- Preserve existing generated cards, useful Instructions and behavioral tests.
+  Both old and authored cards use one Engine; no wholesale rewrite or new DSL.
+- The full authoring interface is being built in #3272. Today's
+  `CardImplementation.ResolveSpell` is only a narrow spell escape hatch, not
+  general support for custom triggers, static abilities or replacements. If
+  infrastructure is missing, reuse its migration prerequisite; do not invent
+  a parallel implementation or expand the parser to avoid the blocker.
+- `cardgen` is retained for legacy correctness/compatibility maintenance and
+  explicit regeneration, not the default route to new coverage. Parser-complete
+  and compiler-supported counts do not certify gameplay or deployed availability.
 
-- **Individual pull requests:** create each child issue's branch from the current
-  `origin/main`.
-- **Stacked pull requests:** create the first branch from `origin/main`, then create
-  each subsequent branch from the preceding branch in the stack and target each
-  pull request at its correct parent branch.
-- **One pull request:** create one epic branch from `origin/main` and implement all
-  child issues on that branch.
+## Verify proportionally
 
-## Start an Epic
+- During development, run the smallest tests covering the change.
+- For code changes, run `go test ./...` and
+  `go run github.com/magefile/mage@v1.15.0 lint` once as the final local gate.
+  Add relevant build, race or cross-platform checks when their behavior is
+  affected. Do not repeat the same gates solely because a skill also requests them.
+- Documentation/comment-only changes need link/instruction checks and
+  `git diff --check`, not the full game suite, linter or corpus regeneration.
+- Run pinned, same-input corpus comparisons only for relevant legacy compiler
+  changes or an explicit corpus refresh. Never run `cardSupport` after every
+  issue. Keep existing CI until #3270 changes it; do not claim its PR-only
+  support-doc auto-commits have already been removed.
+- Test actual card interactions as well as shared operations. Named-card
+  scenarios are welcome; structural CardDef assertions test translation, not
+  executed Go or rules behavior. Source fingerprints are review signals, not a
+  substitute for runtime regression coverage.
+- Inspect every diff yourself. Routine changes need no mandatory independent
+  review; substantial shared-rule changes warrant focused independent review
+  (identity, replacements, cloning, timing, hidden information). Fix substantive
+  findings without restarting broad architectural review after every edit.
+- Do not hide a failing check, partial card or incomplete game behind a success
+  result. Distinguish rules draws from budget exhaustion and unsupported behavior.
 
-When the user asks to work on an epic:
+## Keep the work small
 
-1. Add the exact `In Progress` label to the epic.
-2. Determine whether the user already specified individual pull requests, stacked
-   pull requests, or one pull request for all child issues.
-3. If no strategy was specified, ask the user to choose among those three options
-   before implementation.
-4. Add the exact `In Progress` label to each child issue only when work on that
-   child starts.
+Prefer existing helpers, type-safe Go and focused edits. Use code intelligence
+and ranged reads to navigate. Do not split files to meet an arbitrary line count,
+fan out agents per file, build wrappers for hypothetical variation, or refactor
+unrelated code during review. The thermo-nuclear review skill is opt-in only.
 
-Do not ask again when the user's request already states the pull request strategy.
+For a concrete missing capability, briefly search for an existing issue and link
+it as the blocker. One shared blocker may cover many cards. File new work only
+when its scope and completion condition are known; do not enumerate speculative
+neighboring wording or mirror routine notes across epics. Park affected cards
+whole and continue other eligible work when the assigned scope allows it.
 
-## Record Decisions
+## Agent startup
 
-Record important implementation or scope decisions as comments on the active
-issue. State the decision and why it was made, including the relevant tradeoff or
-rejected alternative when useful. Do not create comments for routine implementation
-details that do not represent a meaningful decision.
-
-## Track Future Work Discovered
-
-When implementation reveals concrete work outside the active issue's scope, such
-as a bug, optimization, or intentionally deferred work:
-
-1. Search existing issues before creating a new one. Reuse an issue that already
-   covers the work.
-2. If no issue covers it, create a focused issue and add the exact `To Be Triaged`
-   label. Add any applicable specialized labels as well.
-3. In the new issue body, link the issue that was active when the work was
-   discovered and explain the discovery context.
-4. If the active issue is a child of an epic, update the epic body so it contains
-   a `## Future Work Discovered` section with one `###` subsection per epic child
-   that discovered future work. Add the new issue as a link under the active
-   child's subsection.
-5. Do not make the newly created issue a child of the active epic or add it to the
-   epic's implementation checklist.
-
-Do not file speculative ideas, duplicates, or work that belongs in the active
-issue.
-
-## Review Completed Issue Work
-
-Give every completed issue a thorough independent review. A user request, skill,
-or other instruction that also requests review does not increase the number of
-reviews.
-
-Fix review findings when practical. Minor nitpicks may be fixed without another
-review. If the first review finds substantive problems and they are fixed, run at
-most one full second review. Do not enter a review-and-fix loop. If significant
-problems remain after the second review, bring them to the user's attention before
-proceeding.
-
-## Work Efficiently in This Codebase
-
-These practices keep work fast and reviewable. They matter because the slowest
-part of most changes is processing a large working context repeatedly, not running
-the build or tests.
-
-### Navigate with code intelligence, not whole-file reads
-
-Prefer code-intelligence tools over reading entire files when locating or
-understanding code. If a Go language server (gopls) is available, use it:
-
-- Use document-symbol to learn a file's structure and pick exact edit locations
-  instead of reading the whole file.
-- Use go-to-definition, find-references, and incoming-calls to trace behavior
-  across the parser, compiler, and lowering layers instead of grepping and reading
-  several large files.
-- Use hover for a symbol's type, signature, and doc instead of opening its file.
-- Reserve full or ranged file reads for the specific span you are about to edit.
-
-If no Go language server is configured, you can set one up (for example, gopls via
-the `lsp-setup` skill). Until then, prefer ranged reads and symbol search over
-whole-file reads.
-
-### Keep Go files focused
-
-Keep Go source and test files focused, generally under about 1,000 lines. The
-repository has no Go file over 1,000 lines; do not reintroduce one. When a file
-grows past that, split it into focused files within the same package by moving
-whole declarations verbatim (no behavior change). When adding substantial new code,
-start a new focused file rather than appending to an already-large one.
-
-### Decompose large independent work into narrowly scoped sub-agents
-
-For mechanical or naturally independent multi-file work, delegate one small,
-self-contained scope per sub-agent (for example, one file or one cohesive concern)
-running in isolated worktrees, rather than one agent carrying the whole task. Small
-scope means small context per turn, which is dramatically faster. Give each
-sub-agent a precise file-and-symbol inventory up front so it does not spend turns
-rediscovering the surface.
-
-### Validate proportionally; reserve the corpus check for Oracle changes
-
-Match validation to the change. For most changes, `go build ./...`,
-`go vet ./...`, the affected package's `go test`, and `mage lint` are enough; a
-purely mechanical move also wants `gofmt`/`git diff --check`.
-
-For fast iteration, prefer `go test -short ./...`: it skips the slow full-game
-simulation tests in `cmd/council4` (and the `cardgen` source round-trips), which
-otherwise re-run on every change to `mtg/game`/`mtg/rules`. Run the full
-`go test ./...` (which includes those simulations) once as the final gate before
-committing, alongside `go vet ./...` and `mage lint`.
-
-For changes to the Oracle compiler or cardgen lowering, the strongest
-behavior-preserving check is the corpus comparison: compile the full card corpus
-with `cardgen/oracle/cmd/compilecards` on the merge base and on the branch, then
-`diff -rq` the two generated trees and compare the JSON reports. A byte-identical
-result proves zero behavioral change across every supported card, and the whole
-check takes only a few seconds. Use it for refactors that must not change output;
-for intentional behavior changes, confirm the diff is exactly the intended cards
-and explain every difference.
-
-### Test card support at the CardDef, not at the rendered source
-
-When adding card support, assert on the compiled `game.CardDef` with
-`assertCardPaths` / `assertCardPathsAbsent` / `assertCardUnsupported` rather than
-matching substrings of the renderer's Go output. A source match tests the
-renderer, but what a card-support change adds is lowering; it is also imprecise,
-because a substring matches anywhere in the file and happily passes against a
-different ability than the one under test. Keep a source assertion only when the
-property really is about the emitted text: that it parses, a constructor
-spelling, or a zero-valued enum held open by the generator's `alwaysEmitEnums`
-table.
-
-Test the capability, not the card: a table-driven test in the lowering or
-primitive's own file, covering the qualifying case and the near-miss that must
-fail closed, is what still catches a bug on the tenth card that uses it. Add a
-named-card test only when a card composes capabilities in a combination nothing
-else does. Do not ship a 400-line per-card `CardDef` literal.
-
-`card-fingerprints.txt` is the corpus-wide regression net: CI regenerates and
-commits a digest per supported card on every pull request, so the diff already
-shows exactly which cards a change altered. Read it instead of writing defensive
-assertions, and expect it to change only the cards the change claims to affect.
-
-See `cardgen/README.md` ("Testing convention") for the full rationale.
+> Read the selected epic and first unblocked child. Author Go card behavior using
+> shared Engine operations; Oracle recognition is not a prerequisite. Preserve
+> existing cards and runtime scenarios. Do not expand parser/lowering to add
+> cards, invent a DSL or mutate raw Game state. Reuse a precise blocker when a
+> shared capability is missing. Implement, test/lint, inspect, and commit directly
+> to main when authorized; push only with permission. Keep one main writer and
+> continue only within the assigned work.

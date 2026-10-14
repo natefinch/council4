@@ -23,8 +23,21 @@ The immutable printed data of a Magic card — name, mana cost, types, oracle te
 _Avoid_: Card data, card template
 
 **Card Implementation**:
-The declarative behavior description that tells the engine what a card does at runtime — a composition of effect primitives, with hand-written code for cards too complex to express declaratively.
+The behavior that tells the Engine what a card does at runtime. Existing
+implementations compose declarative Effect Primitives; new implementations use
+authored Go over shared Engine operations, with costs, targets, triggers and
+static/replacement declarations kept inspectable. Oracle recognition is not a
+prerequisite. The general authoring interface is being built under #3269; today's
+`CardImplementation.ResolveSpell` escape hatch is only spell-resolution support.
+See [ADR 0012](docs/adr/0012-authored-go-card-implementations.md).
 _Avoid_: Card logic, card script, card handler
+
+**Card Program**:
+An immutable authored Go resolution implementation identified by a stable binding
+in the planned shared catalog. Its execution context exposes Engine operations,
+not raw mutable Game state. Per-game links, usage and delayed captures are stored
+in the Game, not mutable closures. The general program interface is planned in
+#3272, not yet a public type.
 
 **Effect Primitive**:
 A composable building-block game action — deal damage, destroy permanent, draw cards, create token, etc. Card implementations are composed from these.
@@ -195,14 +208,23 @@ A lookup table (`cards.Registry`) mapping card names to `CardDef` values. Pure d
 _Avoid_: Card database, card store, card catalog
 
 **Card Generation (cardgen)**:
-Isolated tooling that turns Scryfall bulk data and Oracle text into executable `CardDef` Go source. It is a three-stage compiler: **recognition** (Oracle text → conservative semantic IR in `cardgen/oracle`), **lowering** (semantic IR → typed `game.*` ability values and an assembled `game.CardDef` validated by `game.ValidateCardDef`), and **rendering** (typed `CardDef` → deterministic Go source). It emits no partial definitions or TODO scaffolds. `mtg/game` owns typed data and validity; `mtg/rules` owns behavior; `cardgen` owns recognition, lowering, and rendering. Cards it cannot fully recognize are reported as unsupported; exceptional cards may independently use the hand-written **Card Implementation** escape hatch via `ImplementationID`. See [ADR 0008](docs/adr/0008-typed-ir-lowering.md).
+Retained legacy tooling that turns Scryfall bulk data and Oracle text into
+executable `CardDef` Go source. Recognition produces conservative semantic IR;
+lowering assembles typed `game.*` values validated by `game.ValidateCardDef`;
+rendering emits deterministic Go. It emits no partial definitions. `mtg/game`
+owns typed data and validity; `mtg/rules` owns behavior; `cardgen` owns translation.
+Maintain correctness and explicit regeneration, but do not expand coverage as the
+default route to new cards. Compiler refusal is not a global unsupported verdict
+for an independently authored implementation. See [ADR 0008](docs/adr/0008-typed-ir-lowering.md)
+for the preserved pipeline and [ADR 0012](docs/adr/0012-authored-go-card-implementations.md)
+for the superseding authoring decision.
 _Avoid_: Card compiler (the package is tooling, not part of the runtime engine)
 
 ## Relationships
 
 - A **Game** has exactly 4 **Agents**, each piloting a **Decklist**
 - A **Decklist** references **Card Definitions**, each backed by a **Card Implementation**
-- A **Card Implementation** composes one or more **Effect Primitives**
+- A **Card Implementation** uses shared Engine operations, through existing **Effect Primitives** or an authored **Card Program**
 - An **Agent** uses a **Strategy** to evaluate **Actions** presented in its **Player Observation**
 - An **Activated Ability** is represented as an **Action** and usually becomes a **Stack Object** before its **Effect Primitives** resolve
 - The **Engine** emits **Game Events** while applying rules; **Trigger Patterns** consume those events to put triggered abilities on the stack
@@ -218,7 +240,7 @@ _Avoid_: Card compiler (the package is tooling, not part of the runtime engine)
 > **Domain expert:** "No — it only sees its **Observation**, which hides opponents' hands and library order. The engine enforces this boundary."
 
 > **Dev:** "What if a card does something weird that the declarative system can't express?"
-> **Domain expert:** "The **Card Implementation** falls back to hand-written Go code. Most cards are just **Effect Primitives** composed together, but the escape hatch exists for the ~5% that need custom logic."
+> **Domain expert:** "Use authored Go for the Card Implementation, reusing Engine-owned operations and inspectable declarations. If a shared rules capability is missing, track that prerequisite and keep the whole card unsupported; do not approximate the rule or extend the English compiler to bypass it."
 
 ## Reference Documents
 

@@ -1,5 +1,10 @@
 # Typed intermediate representation for executable card lowering
 
+**Legacy compiler decision; authoring defaults superseded by
+[ADR 0012](0012-authored-go-card-implementations.md).** The validation/rendering
+pipeline remains valid for retained compiler maintenance. It is not a prerequisite
+for an authored Go Card Implementation.
+
 The `cardgen` executable backend lowers Oracle text into a typed intermediate
 representation (IR) of `game.*` ability values, assembles and validates a
 `game.CardDef` with `game.ValidateCardDef`, and only then renders deterministic

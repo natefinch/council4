@@ -1,5 +1,10 @@
 # Hybrid declarative card implementations with code escape hatch
 
+**Partially superseded by [ADR 0012](0012-authored-go-card-implementations.md).**
+Keep existing declarative implementations and engine-owned rules, but new support
+uses authored Go rather than compiler-first generation or Go only for outliers.
+The original decision below is retained as history.
+
 Card implementations are declarative compositions of effect primitives (damage, destroy, draw, create token, etc.), not generated runtime mutation code. Card Generation parses Oracle text and compiles recognized semantics into validated declarative data. Cards too complex to express declaratively get hand-written Go implementations behind the same interface. We chose this because declarative data is cheaper to clone for future MCTS search, can be validated before source emission, and keeps priority, targeting, and state mutation inside the rules engine. The tradeoff is that cards with truly unique mechanics (Mindslaver, Hive Mind, etc.) need hand-written code, but the declarative system covers the common case.
 
 Compositional reference binding follows that same choice. One compiler Module

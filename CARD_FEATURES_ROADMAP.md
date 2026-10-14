@@ -1,6 +1,10 @@
 # Card Features Roadmap
 
-This roadmap tracks card-text features needed by generated `CardDef` implementations beyond the current mechanical Scryfall import. It complements `docs/research/CARD-TEXT-PARSING.md` by mapping common oracle-text patterns to concrete engine/model work.
+**Historical compiler-first feature inventory, not an execution queue.**
+New card support follows [epic #3269](https://github.com/natefinch/council4/issues/3269)
+and [ADR 0012](docs/adr/0012-authored-go-card-implementations.md): authored Go
+over shared Engine operations. Retain this record and its useful runtime
+capabilities, but do not expand Oracle recognition merely to check off a row.
 
 ## Recently covered
 

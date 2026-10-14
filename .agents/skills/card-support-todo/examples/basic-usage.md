@@ -1,12 +1,12 @@
-# Example: Deferred Oracle Wording
+# Example: Reuse a linked-state blocker
 
-## User Request
+## User request
 
-> File this unsupported intervening-if trigger for later and keep going.
+> Track the missing linked-state behavior and keep working on eligible cards.
 
 ## Result
 
-The agent briefly checks for a duplicate, creates a concise issue labeled
-`To Be Triaged` and `Card Support TODO`, links it to the active issue, records it
-in the active epic without making it a child, reports its URL, and resumes the
-current implementation.
+The agent finds the original-source ObjectID namespace issue #3232, links the
+affected authored-card work to it, and leaves that card blocked whole. It does
+not create another wording issue, duplicate the note across epics or expand
+Oracle recognition. It moves to another eligible assigned card.

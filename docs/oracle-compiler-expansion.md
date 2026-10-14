@@ -1,10 +1,18 @@
 # Oracle Compiler Expansion
 
-This document is both the rollout checklist and the execution guide for
-expanding executable Oracle-text compilation. An agent should be able to resume
-from this file without relying on conversation history.
+**Historical rollout; superseded by
+[epic #3269](https://github.com/natefinch/council4/issues/3269) and
+[ADR 0012](adr/0012-authored-go-card-implementations.md).** Do not resume this
+checklist as an agent's default work. New cards use authored Go over shared
+Engine operations. The compiler remains for explicitly assigned legacy
+correctness/compatibility maintenance and regeneration.
 
-**Current eligible-corpus support: 2,216 / 31,834 cards**
+The procedures and counts below are preserved historical evidence, not current
+readiness, validation policy or support guarantees. Use the active repository
+instructions for proportional checks and the canonical root support reports for
+the dated compiler baseline. Retain meaningful tests and merged work.
+
+**Historical eligible-corpus support: 2,216 / 31,834 cards**
 
 The expansion plan was established in `7e65c8e` (`compiler expansion plan`).
 Expansion steps 1–10 are complete.

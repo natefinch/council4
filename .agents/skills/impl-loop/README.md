@@ -1,13 +1,12 @@
 # Implementation Loop
 
-Runs the repository's issue-to-merge workflow on autopilot.
+Implements a selected epic's earliest unblocked child, or an eligible
+`Ready For Dev` issue within the user's assigned scope. New card work uses
+authored Go over shared Engine operations, not compiler diagnostic rankings.
 
-Use this skill to select high-impact issues labeled `Ready For Dev`, reserve
-cohesive batches in a new issue carrying the exact `Epic` label, and implement
-each child using the user's selected individual, stacked, or combined pull request
-strategy. It skips issues already referenced by an epic and files focused,
-traceable `To Be Triaged` and `Card Support TODO` issues for newly discovered
-deferred card work.
+The default is implement, test/lint, inspect and commit directly to main when
+authorized, with one writer and no mandatory PR, nested epic or independent
+review for routine changes. Push permission remains explicit.
 
-The loop continues until no open, unreserved `Ready For Dev` issues remain or an
-external blocker requires user input.
+Blocked, parked and superseded issues stay out of the queue. Existing runtime
+prerequisites and unmerged work are preserved. See [SKILL.md](SKILL.md).

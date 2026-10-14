@@ -5,7 +5,15 @@ Scryfall bulk data and Oracle text into executable `game.CardDef` Go source for
 the Card Registry. Runtime game, rules, registry, and simulation behavior live
 outside this directory.
 
-There is one generation path:
+**Retained legacy compiler, not the default route to new card support.**
+[ADR 0012](../docs/adr/0012-authored-go-card-implementations.md) supersedes
+compiler-first authoring. Preserve existing generated definitions, safety checks
+and useful tests. Make explicitly assigned correctness/compatibility fixes here;
+do not expand parser/lowering just to admit an authored card. General authored
+program support is being implemented under
+[epic #3269](https://github.com/natefinch/council4/issues/3269).
+
+The retained compiler has one generation path:
 
 ```text
 Scryfall JSON
@@ -1775,7 +1783,8 @@ synthetic violating and clean sources.
 
 ## Usage
 
-Compile the Scryfall Oracle Cards corpus into a temporary Card Registry tree:
+For explicitly assigned legacy maintenance, compile the Scryfall Oracle Cards
+corpus into a temporary Card Registry tree:
 
 ```bash
 go run ./cardgen/oracle/cmd/compilecards \
@@ -1788,32 +1797,32 @@ After inspecting and validating the temporary tree, use `-out mtg/cards` only
 when intentionally updating repository card definitions. The command
 regenerates affected letter-package `cards.go` files.
 
-Cards outside compiler coverage remain unsupported by Card Generation. Truly
-exceptional mechanics may still use a hand-written **Card Implementation** with
-an `ImplementationID`; that escape hatch is independent of this compiler.
+Compiler refusals remain refusals for Card Generation, but do not determine
+whether an independently authored implementation is supported. Today's
+`ImplementationID` escape hatch is only spell resolution; #3272 establishes the
+general safe authoring interface. Do not use this compiler to bypass that work.
 
 ## Testing convention
 
-Card-support work has three distinct things to test, and they belong in three
-distinct places. Putting them in the wrong place is what made a card pull
-request cost 300-600 lines of test code.
+These conventions apply to legacy translator maintenance. New authored-card
+work needs runtime interaction scenarios and shared-operation tests, not a
+compiler delta or a rendered-source assertion. Named-card tests are useful even
+when some individual operations have existing coverage.
 
 ### 1. Behaviour of a capability: table-driven, in the capability's own test file
 
-A pull request that adds a capability is adding a *capability*, not a card. The
-card is the occasion. Test the capability once, table-driven, in the test file
-for the lowering or primitive it belongs to, covering the boundaries that
-matter: the qualifying case, the near-miss that must fail closed, and each
-distinct wording that should reach it.
+Test a changed translator capability through its owning interface, table-driven
+where useful, covering supported semantics and near-misses that must fail closed.
+Retain existing scenarios; do not manufacture extra assertions or remove useful
+named-card evidence solely to conform to a file/test shape.
 
 That is the test that pays off, because it is the one that still fails when the
 tenth card using the same capability lowers wrongly.
 
 ### 2. Composition of a specific card: `assertCardPaths`
 
-A named card deserves a test when it composes capabilities in a combination
-nothing else does. Assert on the compiled `game.CardDef`, not on rendered Go
-source:
+For translation assertions, use the compiled `game.CardDef`, not rendered Go.
+Named-card translation tests are welcome when they clarify the contract:
 
 ```go
 func TestKodamaOfTheEastTreeCompilesBothNewCapabilities(t *testing.T) {
@@ -1873,27 +1882,25 @@ each entry keeps one pinning assertion (see `ojer_taq_test.go` and
 
 ### Runtime behaviour: `mtg/rules`
 
-Engine behaviour belongs in `mtg/rules`, and it should be table-driven over the
-primitive, not written per card. The existing per-card files there are retained
-as a regression net; new work should extend a primitive's table instead of
-adding another 400-line card file.
+Engine behavior belongs in runtime scenarios. Test shared operations and
+named-card interactions through their public execution interfaces, using small
+fixtures or tables where they clarify behavior. Preserve useful existing
+per-card tests. Structural CardDef assertions do not execute a card program.
 
-### The corpus is the regression net
+### Corpus fingerprints are one regression signal
 
-`card-fingerprints.txt` records a digest of every supported card's generated
-source, and CI regenerates and commits it on every pull request. The diff shows
-exactly which cards a change altered, so a change no longer needs a defensive
-hand-written assertion for every card it might have disturbed. An empty diff is
-proof that a refactor preserved behaviour across all of them.
+`card-fingerprints.txt` records generated-source digests for a corpus snapshot.
+Compare the same input across revisions for relevant compiler maintenance.
+Unchanged output establishes unchanged generated structure, not unchanged Engine
+behavior or executable Go semantics. Keep runtime regression coverage.
 
-Read it as a review signal: a card pull request should change the fingerprints
-of the cards it claims to add, plus any it deliberately fixes, and nothing else.
+Review unexpected changed identities rather than automatically requiring a
+whole-corpus refresh after every authored card or documentation change.
 
-One caveat: the file is keyed to a Scryfall snapshot, so CI also adds and removes
-lines when Wizards prints new cards. Added or removed lines can be data drift;
-*changed* digests are always a code change. To rule data drift out entirely, run
-`compilecards` on the merge base and on the branch against the same
-`oracle-cards.json` and diff the two outputs.
+Corpus changes, including Oracle errata, may alter existing identities as well as
+add/remove cards. Pin the same corpus for baseline/candidate comparison. The
+current PR workflow still regenerates and commits compiler documentation; #3270
+replaces that workflow. It is not the new acceptance policy.
 
 ## Golden snapshot harness
 
@@ -2077,6 +2084,7 @@ Prepare layouts use `CardFace.EntersPrepared` on the creature face and
 `CardDef.Alternate` for the spell face. The generator accepts them only when
 both faces and the exact enters-prepared ability are fully lowerable.
 
-Current executable mechanic coverage and the corpus support count live in
-[`oracle/README.md`](oracle/README.md). The numbered expansion checklist lives
-in [`../docs/oracle-compiler-expansion.md`](../docs/oracle-compiler-expansion.md).
+Legacy mechanic documentation lives in [`oracle/README.md`](oracle/README.md);
+canonical dated compiler counts live in [`../supported.md`](../supported.md).
+The [old expansion checklist](../docs/oracle-compiler-expansion.md) is retained
+as historical evidence, not the next-work queue. Follow #3269 for the migration.
