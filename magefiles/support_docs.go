@@ -3,32 +3,23 @@ package magefiles
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 )
 
 // SupportDocs regenerates the committed card-support documentation set
 // (supported.md, unsupported.md, unsupported-reasons.md, the README summary, and
-// card-backlog.md) from the current Oracle corpus without rewriting the
+// card-backlog.md) from the pinned Oracle corpus without rewriting the
 // generated card tree.
 //
-// Card-support changes are expected to refresh this documentation, but that step
-// is easy to forget; CI runs this target on every pull request and commits the
-// result so the docs always reflect what the engine actually supports. In
-// particular unsupported-reasons.md carries the greedy unblock roadmap that ranks
-// which capability gaps block the most cards, and card-backlog.md routes each of
-// those cards to the parser or lowering layer that blocks it — both are only
-// useful to whoever is choosing the next card-support task if they are current.
+// This is an explicit legacy-maintenance command, not an every-issue or CI
+// write-back gate. These reports measure compiler coverage, not authored behavior.
 //
 // The generated card sources are written to a throwaway directory — only the
 // documentation is updated in place.
 func SupportDocs(ctx context.Context) error {
-	corpusPath, err := oracleCardsCachePath()
+	corpusPath, err := pinnedOracleCards(ctx)
 	if err != nil {
-		return err
-	}
-	if err := ensureOracleCards(ctx, http.DefaultClient, scryfallOracleCardsMetadataURL, corpusPath); err != nil {
 		return err
 	}
 	scratch, err := os.MkdirTemp("", "support-docs")

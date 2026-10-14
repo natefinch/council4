@@ -3,8 +3,8 @@ name: CI
 on:
   pull_request:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,66 +14,191 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.plan.outputs.code }}
+      compiler: ${{ steps.plan.outputs.compiler }}
+      preservation: ${{ steps.plan.outputs.preservation }}
+      slow: ${{ steps.plan.outputs.slow }}
+      corpus_upgrade: ${{ steps.plan.outputs.corpus_upgrade }}
+      base: ${{ steps.base.outputs.sha }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
-      - name: Run Mage lint
+      - id: base
+        env:
+          EVENT_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          echo "sha=$EVENT_BASE" >> "$GITHUB_OUTPUT"
+      - id: plan
+        env:
+          BASE: ${{ steps.base.outputs.sha }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then
+            go run ./cmd/ciplan -all
+          else
+            go run ./cmd/ciplan -base "$BASE" -head HEAD
+          fi
+
+  lint:
+    name: Lint
+    needs: changes
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a valid validation plan
+        if: needs.changes.result != 'success'
+        run: exit 1
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        if: needs.changes.outputs.code == 'true'
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Run existing linter
+        if: needs.changes.outputs.code == 'true'
         run: go run github.com/magefile/mage@v1.15.0 lint
+      - name: Documentation-only check
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code changes; linter not required."
+
+  tests:
+    name: Tests
+    needs: changes
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require a valid validation plan
+        if: needs.changes.result != 'success'
+        run: exit 1
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        if: needs.changes.outputs.code == 'true'
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Relevant full suite, including slow scenarios
+        if: needs.changes.outputs.slow == 'true'
+        run: go test ./...
+      - name: Short suite for isolated card changes
+        if: needs.changes.outputs.code == 'true' && needs.changes.outputs.slow != 'true'
+        run: go test -short ./...
+      - name: Documentation-only check
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code changes; game suite not required."
 
   race:
     name: Race Tests
+    needs: changes
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Require a valid validation plan
+        if: needs.changes.result != 'success'
+        run: exit 1
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        if: needs.changes.outputs.code == 'true'
         with:
           go-version-file: go.mod
           cache: true
-      - name: Run race tests
-        run: go test -race ./...
+      - name: Race-check without duplicating slow simulations
+        if: needs.changes.outputs.code == 'true'
+        run: go test -race -short ./...
+      - name: Documentation-only check
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code changes; race suite not required."
 
   vet:
     name: Vet
+    needs: changes
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Require a valid validation plan
+        if: needs.changes.result != 'success'
+        run: exit 1
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.code == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        if: needs.changes.outputs.code == 'true'
         with:
           go-version-file: go.mod
           cache: true
-      - name: Run go vet
-        run: go vet ./...
+      - name: Build and vet production packages
+        if: needs.changes.outputs.code == 'true'
+        run: |
+          go build ./...
+          go vet ./...
+      - name: Documentation-only check
+        if: needs.changes.outputs.code != 'true'
+        run: echo "No code changes; build/vet not required."
 
   cards:
     name: Generated cards compile
+    needs: changes
+    if: always()
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Require a valid validation plan
+        if: needs.changes.result != 'success'
+        run: exit 1
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.preservation == 'true'
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        if: needs.changes.outputs.preservation == 'true'
         with:
           go-version-file: go.mod
           cache: true
-      - name: Select Scryfall cache date
-        id: scryfall-cache
-        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-      - name: Cache daily Scryfall Oracle corpus
-        uses: actions/cache@v4
+      - name: Preserve the base inventory against baseline-only rewrites
+        if: needs.changes.outputs.preservation == 'true'
+        env:
+          BASE: ${{ needs.changes.outputs.base }}
+          CORPUS_UPGRADE: ${{ needs.changes.outputs.corpus_upgrade }}
+        run: |
+          mkdir -p .cardwork/preservation
+          if [ "$CORPUS_UPGRADE" != true ] && [ -n "$BASE" ] && git cat-file -e "$BASE:testdata/card-preservation/baseline.json" 2>/dev/null; then
+            git show "$BASE:testdata/card-preservation/baseline.json" > .cardwork/preservation/base.json
+          else
+            cp testdata/card-preservation/baseline.json .cardwork/preservation/base.json
+            echo "Explicit corpus-only upgrade or initial baseline; verifying the pinned artifact."
+          fi
+          echo "COUNCIL4_PRESERVATION_BASELINE=.cardwork/preservation/base.json" >> "$GITHUB_ENV"
+      - name: Check pinned compiler output and build generated packages
+        if: needs.changes.outputs.compiler == 'true'
+        run: go run github.com/magefile/mage@v1.15.0 preserveCards
+      - name: Check actual registry without downloading the corpus
+        if: needs.changes.outputs.preservation == 'true' && needs.changes.outputs.compiler != 'true'
+        run: go run github.com/magefile/mage@v1.15.0 preserveRegistry
+      - name: Publish comparison evidence even on failure
+        if: always() && needs.changes.outputs.preservation == 'true'
+        uses: actions/upload-artifact@v4
         with:
-          path: ~/.cache/council4/oracle-cards.json
-          key: scryfall-oracle-${{ runner.os }}-${{ steps.scryfall-cache.outputs.date }}
-      - name: Compile the full generated card corpus
-        run: go run github.com/magefile/mage@v1.15.0 compileCheck
+          name: card-preservation-delta
+          path: .cardwork/preservation/*.json
+          if-no-files-found: warn
+      - name: Documentation-only check
+        if: needs.changes.outputs.preservation != 'true'
+        run: echo "No relevant compiler/registry changes; corpus check not required."

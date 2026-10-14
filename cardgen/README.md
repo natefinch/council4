@@ -1899,8 +1899,9 @@ whole-corpus refresh after every authored card or documentation change.
 
 Corpus changes, including Oracle errata, may alter existing identities as well as
 add/remove cards. Pin the same corpus for baseline/candidate comparison. The
-current PR workflow still regenerates and commits compiler documentation; #3270
-replaces that workflow. It is not the new acceptance policy.
+read-only CI checks pinned preservation for relevant changes; it does not
+regenerate or commit support documentation on every change. See
+[the validation matrix](../testdata/card-preservation/README.md).
 
 ## Golden snapshot harness
 

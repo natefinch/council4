@@ -72,12 +72,15 @@ policy does not authorize unsolicited commits or pushes for arbitrary edits.
   `go run github.com/magefile/mage@v1.15.0 lint` once as the final local gate.
   Add relevant build, race or cross-platform checks when their behavior is
   affected. Do not repeat the same gates solely because a skill also requests them.
+  Run lint after cardgen round-trip tests finish; temporary generated packages
+  can otherwise produce spurious type-check failures.
 - Documentation/comment-only changes need link/instruction checks and
   `git diff --check`, not the full game suite, linter or corpus regeneration.
 - Run pinned, same-input corpus comparisons only for relevant legacy compiler
   changes or an explicit corpus refresh. Never run `cardSupport` after every
-  issue. Keep existing CI until #3270 changes it; do not claim its PR-only
-  support-doc auto-commits have already been removed.
+  issue. CI is read-only and path-sensitive on main pushes and optional PRs.
+  See `testdata/card-preservation/README.md` for pinned compiler checks versus
+  registry-only checks, explicit refreshes and traceable loss exceptions.
 - Test actual card interactions as well as shared operations. Named-card
   scenarios are welcome; structural CardDef assertions test translation, not
   executed Go or rules behavior. Source fingerprints are review signals, not a

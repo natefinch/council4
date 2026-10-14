@@ -76,9 +76,14 @@ Flags:
   update from the report counts.
 - `-workers`: compiler/source-generator worker count. Default
   `runtime.NumCPU()`.
+- `-inventory`: optional pinned preservation inventory, including compiler
+  identities/refusals and separately constructed registry definitions. Its input
+  must match `testdata/card-preservation/corpus.json`; it does not certify
+  gameplay. See the [preservation workflow](../../../../testdata/card-preservation/README.md).
 
-Use the repository `cardSupport` Mage target instead of setting the documentation
-flags manually when updating the canonical root support files.
+Use `preserveCards` for read-only pinned regression checks. `cardSupport` and
+`supportDocs` remain explicit legacy documentation refreshes, not every-issue
+gates. Neither CI workflow commits or pushes generated support files.
 
 ## Report diagnostics
 

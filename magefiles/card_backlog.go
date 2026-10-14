@@ -3,7 +3,6 @@ package magefiles
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
 )
@@ -14,11 +13,8 @@ import (
 // (CardSupport, SupportDocs) call regenerateCardBacklog directly instead, so the
 // corpus is not compiled twice in the same run.
 func CardBacklog(ctx context.Context) error {
-	corpusPath, err := oracleCardsCachePath()
+	corpusPath, err := pinnedOracleCards(ctx)
 	if err != nil {
-		return err
-	}
-	if err := ensureOracleCards(ctx, http.DefaultClient, scryfallOracleCardsMetadataURL, corpusPath); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(".cardwork", 0o750); err != nil {

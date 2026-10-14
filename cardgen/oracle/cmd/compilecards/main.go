@@ -24,6 +24,7 @@ type config struct {
 	unsupportedReasonsPath string
 	readmePath             string
 	fingerprintsPath       string
+	inventoryPath          string
 	workers                int
 }
 
@@ -100,6 +101,7 @@ func parseFlags(args []string) (config, error) {
 	flags.StringVar(&cfg.unsupportedReasonsPath, "unsupported-reasons", "", "card-support planning Markdown path")
 	flags.StringVar(&cfg.readmePath, "readme", "", "README path whose card-support block should be updated")
 	flags.StringVar(&cfg.fingerprintsPath, "fingerprints", "", "corpus fingerprint manifest path")
+	flags.StringVar(&cfg.inventoryPath, "inventory", "", "pinned preservation inventory path")
 	flags.IntVar(&cfg.workers, "workers", runtime.NumCPU(), "number of compiler workers")
 	if err := flags.Parse(args); err != nil {
 		return config{}, err
@@ -133,6 +135,11 @@ func run(cfg config) error {
 	}
 	if err := writeSupportDocumentation(cfg, report, results); err != nil {
 		return err
+	}
+	if cfg.inventoryPath != "" {
+		if err := writeInventory(cfg.inventoryPath, cfg.inputPath, results); err != nil {
+			return err
+		}
 	}
 	return writeReport(cfg.reportPath, cfg.format, report)
 }

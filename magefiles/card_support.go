@@ -55,11 +55,8 @@ func CardTree(ctx context.Context, output string) error {
 // command the README and docs/oracle-compiler-expansion.md tell contributors to
 // run — failed with "Unknown target".
 func generateCards(ctx context.Context, output string) error {
-	corpusPath, err := oracleCardsCachePath()
+	corpusPath, err := pinnedOracleCards(ctx)
 	if err != nil {
-		return err
-	}
-	if err := ensureOracleCards(ctx, http.DefaultClient, scryfallOracleCardsMetadataURL, corpusPath); err != nil {
 		return err
 	}
 	generatedRoot, compiler, documentation := cardSupportSettings(output)
@@ -107,12 +104,8 @@ func cardSupportArgs(compiler, corpusPath, generatedRoot string, documentation b
 	return args
 }
 
-// documentationArgs lists the compilecards flags that write the committed
-// card-support documentation set. Every target that refreshes documentation
-// shares this one list: when it was split across CardSupport and SupportDocs,
-// only supported.md was wired into CI, so unsupported.md, unsupported-reasons.md
-// (which carries the unblock roadmap that prioritizes card-support work), and the
-// README summary silently went stale.
+// documentationArgs keeps explicit legacy refreshes consistent. Read-only CI
+// checks inventories separately and does not use these write-back flags.
 func documentationArgs() []string {
 	return []string{
 		"-supported", "supported.md",

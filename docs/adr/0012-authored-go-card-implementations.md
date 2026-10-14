@@ -65,8 +65,9 @@ CardDef fingerprint cannot prove runtime semantics.
 implementation and acceptance work. This decision does not claim that its future
 interfaces already exist. `rules.CardImplementation` currently supports only
 `ResolveSpell`; a general safe program catalog/context is step 03 (#3272).
-Step 02 (#3270) changes CI and support accounting. Existing compiler reports
-measure recognition, not all deployed or behavior-verified cards.
+Step 02 (#3270) supplies pinned compiler/registry preservation and read-only,
+proportional CI. Mixed support reporting is still step 12 (#3278). Existing
+compiler reports measure recognition, not all deployed or behavior-verified cards.
 
 Keep generated definitions, tests, merged improvements and unmerged work.
 Freeze compiler coverage expansion; allow explicitly assigned correctness fixes

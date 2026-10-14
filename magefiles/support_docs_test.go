@@ -18,8 +18,8 @@ func TestSupportDocsArgs(t *testing.T) {
 }
 
 // TestSupportDocsArgsMatchCardSupportDocumentation pins the invariant that broke
-// the documentation set: CI regenerates docs through SupportDocs while a local
-// mage cardSupport run regenerates them through CardSupport. When those two flag
+// the documentation set: explicit SupportDocs and CardSupport refreshes must
+// write the same documents. When those two flag
 // lists drifted, only supported.md stayed current and the unblock roadmap in
 // unsupported-reasons.md silently went stale for weeks.
 //

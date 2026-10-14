@@ -1,0 +1,8 @@
+{
+  "download_uri": "https://data.scryfall.io/oracle-cards/oracle-cards-20261013210201.jsonl.gz",
+  "download_sha256": "943eeea2cb8755b3e8422c6fbf4576132d30f6754efda779dbcccf364f64573f",
+  "json_sha256": "6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4",
+  "updated_at": "2026-10-13T21:02:01.387+00:00",
+  "rules_edition": "2026-09-25",
+  "baseline_revision": "69156a33a219a9ad9fb9edce779d2ff0fe5a9964"
+}

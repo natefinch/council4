@@ -33,14 +33,17 @@ rankings are maintenance evidence, not the default new-card work queue.
 
 For an explicitly requested legacy corpus refresh, run
 `go run github.com/magefile/mage@v1.15.0 cardSupport`. It uses ignored `.cardwork`
-space and updates compiler support documentation. Set `COUNCIL4_ORACLE_CARDS` to
-a specific corpus when comparing revisions; use the same input for both.
+space and updates compiler support documentation. `COUNCIL4_ORACLE_CARDS` may
+provide the exact bytes identified by the committed pin; mismatches fail.
 `cardTree /path/to/cards` emits a compiled tree for another consumer, and
 `supportDocs` refreshes only compiler documentation. None is an every-issue gate.
 
-The existing PR workflow still auto-commits support docs; #3270 replaces that
-behavior and makes CI proportional. This workflow reset does not change CI or
-claim that an authored card is already included in those reports.
+CI is read-only and proportional on main pushes and optional PRs. It does not
+commit support documentation. Shared runtime/card changes check the actual
+registry without downloading the corpus; relevant compiler changes also compare
+the pinned inventory and build generated packages. See
+[pinned preservation](./testdata/card-preservation/README.md) for the validation
+matrix, loss acknowledgments and explicit manual refresh.
 
 ## Parser coverage
 

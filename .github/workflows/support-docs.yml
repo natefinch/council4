@@ -1,100 +1,28 @@
-name: Keep card-support docs current
+name: Explicit pinned corpus refresh
 
-# Card-support changes are expected to refresh the committed card-support
-# documentation (supported.md, unsupported.md, unsupported-reasons.md, the README
-# summary, card-fingerprints.txt, and card-backlog.md), but that step is easy to
-# forget. On every pull request this regenerates them from the current Oracle
-# corpus and, when they differ, commits the refreshed docs back to the PR branch
-# so the page that reads them (and anyone browsing the repo) always sees
-# accurate data.
-#
-# card-backlog.md routes every unsupported card to the layer (parser or
-# lowering) that blocks it, ranked by how many cards each blocker affects — the
-# most actionable single artifact for choosing what to work on next. Before this
-# workflow covered it, nothing regenerated it automatically and it went stale for
-# months, the same invisible-roadmap failure mode unsupported-reasons.md already
-# had before this workflow existed.
-#
-# card-fingerprints.txt is the corpus-wide regression net: one digest per
-# supported card, so the committed diff shows a reviewer exactly which cards a
-# pull request changed. That is what lets a card pull request stop shipping a
-# defensive hand-written assertion for every card it might have disturbed.
-#
-# unsupported-reasons.md matters most here: it carries the greedy unblock roadmap
-# ranking which capability gaps block the most cards, so it is the input to
-# choosing the next card-support task. When only supported.md was regenerated it
-# went stale for weeks and the roadmap was effectively invisible.
-#
-# The refreshed commit is pushed with a fine-grained personal access token
-# (secrets.SUPPORTED_MD_TOKEN, contents: read/write) rather than the default
-# GITHUB_TOKEN. A commit pushed by the built-in github-actions[bot] leaves the
-# resulting pull_request runs (CI included) in the "action_required" state,
-# waiting for a maintainer to approve them, which blocks the PR. Pushing as a
-# real collaborator via the PAT makes those follow-up runs execute automatically.
 on:
-  pull_request:
+  workflow_dispatch:
 
-# The push itself is authenticated with SUPPORTED_MD_TOKEN below, so the default
-# token only needs read access.
 permissions:
   contents: read
 
-concurrency:
-  group: support-docs-${{ github.head_ref }}
-  cancel-in-progress: true
-
 jobs:
-  regenerate:
-    name: Regenerate card-support docs
-    # Pull requests from forks get a read-only token and cannot be pushed to, so
-    # only run for branches in this repository.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+  refresh:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out the pull request branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
-          # Persist this PAT (not the default GITHUB_TOKEN) as the push
-          # credential so the follow-up commit is attributed to a real
-          # collaborator and its CI runs are not held for manual approval.
-          token: ${{ secrets.SUPPORTED_MD_TOKEN }}
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
+          persist-credentials: false
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
-
-      - name: Select Scryfall cache date
-        id: scryfall-cache
-        run: echo "date=$(date -u +%F)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache daily Scryfall Oracle corpus
-        uses: actions/cache@v4
+      - name: Reproduce the committed pin and baseline
+        run: go run github.com/magefile/mage@v1.15.0 refreshPreservation
+      - name: Export candidate artifacts without committing or pushing
+        uses: actions/upload-artifact@v4
         with:
-          path: ~/.cache/council4/oracle-cards.json
-          key: scryfall-oracle-${{ runner.os }}-${{ steps.scryfall-cache.outputs.date }}
-
-      - name: Regenerate card-support docs
-        run: go run github.com/magefile/mage@v1.15.0 supportDocs
-
-      # Commit whatever the regeneration changed rather than a hardcoded file
-      # list. The list already drifted once: it lived in two places, only
-      # supported.md was wired into CI, and unsupported-reasons.md (which carries
-      # the roadmap that picks the next card-support task) went stale for weeks.
-      # A list here would be a third copy, so this stages tracked modifications
-      # instead. supportDocs writes the generated card tree to a temp directory
-      # outside the repository, so nothing else in the worktree can change.
-      - name: Commit card-support docs when they changed
-        run: |
-          if git diff --quiet; then
-            echo "Card-support docs are already up to date."
-            exit 0
-          fi
-          echo "Regenerated files:"
-          git diff --stat
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -a -m "Regenerate card-support docs"
-          git push origin "HEAD:${{ github.head_ref }}"
+          name: pinned-card-preservation
+          path: |
+            testdata/card-preservation/
+            .cardwork/preservation/refresh-report.json

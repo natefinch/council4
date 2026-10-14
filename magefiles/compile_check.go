@@ -3,7 +3,6 @@ package magefiles
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 )
 
@@ -21,11 +20,8 @@ const compileCheckOutput = ".cardwork/compile-check"
 // packages live under the module, so they build in-module without a replace
 // directive.
 func CompileCheck(ctx context.Context) error {
-	corpusPath, err := oracleCardsCachePath()
+	corpusPath, err := pinnedOracleCards(ctx)
 	if err != nil {
-		return err
-	}
-	if err := ensureOracleCards(ctx, http.DefaultClient, scryfallOracleCardsMetadataURL, corpusPath); err != nil {
 		return err
 	}
 	if err := os.RemoveAll(compileCheckOutput); err != nil {
