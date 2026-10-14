@@ -2069,6 +2069,9 @@ type RevealUntil struct {
 	// Destination and returns the other revealed cards to the library bottom in
 	// random order.
 	MatchToDestinationRestRandomBottom bool
+	// MatchToDestinationRestChosenBottom instead returns the other revealed
+	// cards in the affected player's chosen order. It does not draw the match.
+	MatchToDestinationRestChosenBottom bool
 }
 
 // PutHandOnLibraryThenDraw has Player put any number of cards from their hand on

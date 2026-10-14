@@ -34,6 +34,12 @@ func classLevelReplacementGate(condition opt.V[game.Condition]) (int, bool) {
 }
 
 func (r Renderer) renderReplacementAbility(ctx *renderCtx, ability *game.ReplacementAbility) (string, error) {
+	if ability.Replacement.Program != (game.ProgramReference{}) {
+		if err := ability.Replacement.ValidateProgram(); err != nil {
+			return "", err
+		}
+		return r.renderGameReplacementAbility(ctx, *ability)
+	}
 	if reflect.DeepEqual(*ability, game.RavenousEntersWithCountersReplacement()) {
 		return "game.RavenousEntersWithCountersReplacement()", nil
 	}

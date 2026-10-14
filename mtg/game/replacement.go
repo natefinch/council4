@@ -286,6 +286,15 @@ type ReplacementEffect struct {
 
 	MatchEvent EventKind
 
+	// Program supplies a synchronous replacement action, currently for individual
+	// draws. A successful invocation consumes the event even when it moves no card.
+	// Applicability and choices remain Engine-owned, not predicates in Go code.
+	Program ProgramReference
+	// Optional asks the affected player before invoking Program.
+	Optional bool
+	// SelfReplacement gives this effect CR 616.1a precedence.
+	SelfReplacement bool
+
 	ControllerFilter TriggerControllerFilter
 
 	MatchFromZone bool

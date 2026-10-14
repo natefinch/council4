@@ -83,6 +83,12 @@ func (e *Engine) validateProgramReferences(references []game.ProgramReference) e
 
 func (e *Engine) validatePendingPrograms(g *game.Game) {
 	var references []game.ProgramReference
+	for i := range g.ReplacementEffects {
+		if err := g.ReplacementEffects[i].ValidateProgram(); err != nil {
+			panic(UnsupportedError{Reason: "pending replacement: " + err.Error()})
+		}
+		references = append(references, g.ReplacementEffects[i].ProgramReferences()...)
+	}
 	for _, pending := range g.DelayedTriggers {
 		references = append(references, pending.Ability.ProgramReferences()...)
 	}

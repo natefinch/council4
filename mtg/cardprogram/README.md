@@ -104,7 +104,7 @@ of independently completed removals. Terastodon is the first production example
 of correlated batch outcomes; a real graveyard arrival qualifies even if the
 commander later moves to command as an SBA (CR 903.9a). Hand/library command-zone
 handling remains an optional replacement, not that SBA (CR 903.9b).
-Following epic slices deepen replacement programs and policy extensions.
+Following epic slices deepen policy extensions.
 
 Hive Mind, Gifts Ungiven and Gilded Drake are the next production compositions.
 Gilded Drake's `ResolveWithIllegalTargets` declaration is inspectable rule data:
@@ -158,6 +158,49 @@ The production Worldgorger plus declarative reanimation-fixture test stops at
 stable priority seams after several recurrences; it is not an Animate Dead
 certification or a runtime iteration cap. No Worldgorger trigger is dropped,
 no card-specific cap is installed and no timeout is reported as a rules draw.
+
+## Individual draw replacement programs
+
+Abundance is a complete production registration using
+`ReplacementEffect.Program`. This narrow seam currently accepts individual
+`EventCardDrawn` actions, not arbitrary event mutation policies. Printed
+`MatchEvent`, `ControllerFilter`, source-relative `Condition`, zone filters,
+`Optional`, `SelfReplacement` and duration remain inspectable data. Persistent
+source abilities are registered from active battlefield permanents and follow
+their current controller; phased/departed sources cannot apply.
+
+The Engine owns the pending draw and CR 616 selection/recomputation. Draw
+doublers, dig replacements, empty-library wins and dredge compete there;
+prohibitions on drawing apply before replacements. Self-replacements have
+CR 616.1a precedence. Applied effect identities follow each derived event
+(CR 614.5), but sibling events receive independent lineage. A declined optional
+action is skipped for the unchanged pending event, not falsely marked applied.
+Replacement-created draws still use the same Engine loop and inherited lineage,
+never a card-owned loop.
+First-draw exemptions are derived from actual draws since the current draw-step
+boundary, including separate later spells after Abundance replaced the turn-based
+draw. An extra draw step starts a fresh exemption.
+
+The installed immutable program uses the ordinary controlled context.
+`View().Source().EventPlayer` and `EventPlayerReference()` identify the affected
+player; the source controller remains the effect's controller, not the chooser.
+There is no real stack object for this invocation (`StackID` is zero).
+Returning without error consumes the pending draw even if no card was found:
+decline is decided by the Engine **before** invocation and is not the same result.
+Contexts, choices and nested draw lineage expire synchronously and are not
+retained by Game clones or immutable catalogs. Missing bindings/unsupported
+event categories/mixed legacy and program actions fail explicitly.
+
+Abundance chooses land/nonland only after accepting the replacement.
+`Execute(RevealUntil{MatchToDestinationRestChosenBottom: true})` reveals through
+the first match or exhaustion, moves only the match through ordinary zone
+replacement handling, and offers the shared exact-order choice for the remainder.
+Remainder cards stay in the library; reordering them is not a zone change.
+Putting the match into hand is not drawing (CR 121.5), so it neither triggers
+draw abilities nor causes a failed-draw loss on an empty/nonmatching library.
+Every individual draw finishes these operations before the next draw begins.
+The corpus pin remains `testdata/card-preservation/corpus.json`; these scenarios
+use CR 121, 614.5, 614.11 and 616 from the 2026-09-25 rules.
 
 ## Consumers, errors and portability
 

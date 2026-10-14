@@ -130,15 +130,24 @@ func (p CreateTokenForEachDestroyed) ProgramReferences() []ProgramReference {
 	return p.Source.ProgramReferences()
 }
 
-// ProgramReferences reports code granted by a copy-entry replacement.
+// ProgramReferences reports the action and code granted by a replacement.
+func (r *ReplacementEffect) ProgramReferences() []ProgramReference {
+	references := abilityPrograms(r.EntersAsCopyAddAbilities)
+	if r.Program != (ProgramReference{}) {
+		references = append(references, r.Program)
+	}
+	return references
+}
+
+// ProgramReferences reports code required by a replacement ability.
 func (a *ReplacementAbility) ProgramReferences() []ProgramReference {
-	return abilityPrograms(a.Replacement.EntersAsCopyAddAbilities)
+	return a.Replacement.ProgramReferences()
 }
 
 // ProgramReferences reports code in a resolving replacement declaration.
 func (p CreateReplacement) ProgramReferences() []ProgramReference {
 	if p.Replacement != nil {
-		return abilityPrograms(p.Replacement.EntersAsCopyAddAbilities)
+		return p.Replacement.ProgramReferences()
 	}
 	return nil
 }

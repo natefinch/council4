@@ -8,42 +8,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-// drawCardWithReplacements performs one "would draw a card" event for playerID,
-// applying the optional Dredge replacement (CR 702.52) before falling back to
-// the actual draw. When the player has an eligible Dredge card in their
-// graveyard they may instead mill that card's amount and return it to hand,
-// replacing the draw. firstInDrawStep exempts a declined draw-step draw from the
-// draw-doubling multiplier (CR 614). A continuous per-turn draw limit (Narset,
-// Parter of Veils) replaces any over-limit draw with drawing nothing. It reports
-// whether a card was actually drawn; a dredged or limit-replaced draw reports
-// false because no card was drawn.
-func (e *Engine) drawCardWithReplacements(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog, firstInDrawStep bool) bool {
-	if playerAtDrawLimit(g, playerID) {
-		return false
-	}
-	if e.tryDredge(g, playerID, agents, log) {
-		return false
-	}
-	if e.tryDrawCardDigReplacement(g, playerID, agents, log) {
-		return false
-	}
-	drew := false
-	count := drawCardMultiplier(g, playerID, firstInDrawStep)
-	for i := range count {
-		if playerAtDrawLimit(g, playerID) {
-			break
-		}
-		cardID, ok := e.drawCard(g, playerID, firstInDrawStep && i == 0)
-		drew = drew || ok
-		log.addDraw(DrawLog{
-			Player: playerID,
-			CardID: cardID,
-			Failed: !ok,
-		})
-	}
-	return drew
-}
-
 // dredgeCandidate is one Dredge card eligible to replace a draw.
 type dredgeCandidate struct {
 	cardID id.ID

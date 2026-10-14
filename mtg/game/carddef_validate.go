@@ -569,6 +569,7 @@ func (v *cardDefValidator) validateReplacementAbility(faceName, path string, abi
 	if ability.Replacement.Condition.Exists {
 		v.validateCondition(faceName, appendPath(path, "Replacement.Condition"), &ability.Replacement.Condition.Val, nil)
 	}
+	v.validateReplacementProgram(faceName, appendPath(path, "Replacement"), &ability.Replacement)
 	if ability.Replacement.EntersBecomesCharacteristic {
 		v.validateEntersBecomesReplacement(faceName, appendPath(path, "Replacement"), &ability.Replacement)
 	}
@@ -2249,12 +2250,20 @@ func (v *cardDefValidator) validateEventHistoryCondition(faceName, path string, 
 }
 
 func (v *cardDefValidator) validateReplacementEffect(faceName, path string, replacement *ReplacementEffect) {
+	v.validateReplacementProgram(faceName, path, replacement)
 	if replacement.Condition.Exists {
 		condition := replacement.Condition.Val
 		v.validateCondition(faceName, appendPath(path, "Condition"), &condition, nil)
 	}
+
 	if (replacement.AttachCardNameChoiceType == "") != (replacement.AttachSubtypeChoiceType == "") {
 		v.add(faceName, path, CardDefIssueInvalidReference, "attachment choices require both card-name and subtype card types")
+	}
+}
+
+func (v *cardDefValidator) validateReplacementProgram(faceName, path string, replacement *ReplacementEffect) {
+	if err := replacement.ValidateProgram(); err != nil {
+		v.add(faceName, path, CardDefIssueInvalidAbilityBody, err.Error())
 	}
 }
 

@@ -669,6 +669,9 @@ func isZeroGameReplacementEffect(v game.ReplacementEffect) bool {
 		!(v.Duration != 0) &&
 		!(v.CreatedTurn != 0) &&
 		!(v.MatchEvent != 0) &&
+		!(v.Program != (game.ProgramReference{})) &&
+		!(v.Optional) &&
+		!(v.SelfReplacement) &&
 		!(v.ControllerFilter != 0) &&
 		!(v.MatchFromZone) &&
 		!(v.FromZone != 0) &&
@@ -9592,677 +9595,693 @@ func (r Renderer) renderGameReplacementEffect(ctx *renderCtx, v game.Replacement
 		ctx.need(importGame)
 		fields = append(fields, "MatchEvent: "+lit10+",")
 	}
-	if v.ControllerFilter != 0 {
-		lit12, err13 := enumLiteral(gameTriggerControllerFilterLiterals, "game.TriggerControllerFilter", v.ControllerFilter)
+	if v.Program != (game.ProgramReference{}) {
+		lit12, err13 := r.renderGameProgramReference(ctx, v.Program)
 		if err13 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.ControllerFilter: %w", err13)
+			return "", fmt.Errorf("game.ReplacementEffect.Program: %w", err13)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "ControllerFilter: "+lit12+",")
+		fields = append(fields, "Program: "+lit12+",")
+	}
+	if v.Optional {
+		lit14 := strconv.FormatBool(bool(v.Optional))
+		fields = append(fields, "Optional: "+lit14+",")
+	}
+	if v.SelfReplacement {
+		lit15 := strconv.FormatBool(bool(v.SelfReplacement))
+		fields = append(fields, "SelfReplacement: "+lit15+",")
+	}
+	if v.ControllerFilter != 0 {
+		lit16, err17 := enumLiteral(gameTriggerControllerFilterLiterals, "game.TriggerControllerFilter", v.ControllerFilter)
+		if err17 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.ControllerFilter: %w", err17)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "ControllerFilter: "+lit16+",")
 	}
 	if v.MatchFromZone {
-		lit14 := strconv.FormatBool(bool(v.MatchFromZone))
-		fields = append(fields, "MatchFromZone: "+lit14+",")
+		lit18 := strconv.FormatBool(bool(v.MatchFromZone))
+		fields = append(fields, "MatchFromZone: "+lit18+",")
 	}
 	if v.FromZone != 0 {
-		lit15, err16 := enumLiteral(zoneTypeLiterals, "zone.Type", v.FromZone)
-		if err16 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.FromZone: %w", err16)
+		lit19, err20 := enumLiteral(zoneTypeLiterals, "zone.Type", v.FromZone)
+		if err20 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.FromZone: %w", err20)
 		}
 		ctx.need(importZone)
-		fields = append(fields, "FromZone: "+lit15+",")
+		fields = append(fields, "FromZone: "+lit19+",")
 	}
 	if v.MatchToZone {
-		lit17 := strconv.FormatBool(bool(v.MatchToZone))
-		fields = append(fields, "MatchToZone: "+lit17+",")
+		lit21 := strconv.FormatBool(bool(v.MatchToZone))
+		fields = append(fields, "MatchToZone: "+lit21+",")
 	}
 	if v.ToZone != 0 {
-		lit18, err19 := enumLiteral(zoneTypeLiterals, "zone.Type", v.ToZone)
-		if err19 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.ToZone: %w", err19)
+		lit22, err23 := enumLiteral(zoneTypeLiterals, "zone.Type", v.ToZone)
+		if err23 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.ToZone: %w", err23)
 		}
 		ctx.need(importZone)
-		fields = append(fields, "ToZone: "+lit18+",")
+		fields = append(fields, "ToZone: "+lit22+",")
 	}
 	if v.Condition.Exists {
-		lit21, err22 := r.renderGameCondition(ctx, v.Condition.Val)
-		if err22 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.Condition: %w", err22)
+		lit25, err26 := r.renderGameCondition(ctx, v.Condition.Val)
+		if err26 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.Condition: %w", err26)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit20 := "opt.Val(" + lit21 + ")"
-		fields = append(fields, "Condition: "+lit20+",")
+		lit24 := "opt.Val(" + lit25 + ")"
+		fields = append(fields, "Condition: "+lit24+",")
 	}
 	if v.ReplaceToZone != 0 {
-		lit23, err24 := enumLiteral(zoneTypeLiterals, "zone.Type", v.ReplaceToZone)
-		if err24 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.ReplaceToZone: %w", err24)
+		lit27, err28 := enumLiteral(zoneTypeLiterals, "zone.Type", v.ReplaceToZone)
+		if err28 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.ReplaceToZone: %w", err28)
 		}
 		ctx.need(importZone)
-		fields = append(fields, "ReplaceToZone: "+lit23+",")
+		fields = append(fields, "ReplaceToZone: "+lit27+",")
 	}
 	if v.ShuffleIntoLibrary {
-		lit25 := strconv.FormatBool(bool(v.ShuffleIntoLibrary))
-		fields = append(fields, "ShuffleIntoLibrary: "+lit25+",")
+		lit29 := strconv.FormatBool(bool(v.ShuffleIntoLibrary))
+		fields = append(fields, "ShuffleIntoLibrary: "+lit29+",")
 	}
 	if v.RevealSource {
-		lit26 := strconv.FormatBool(bool(v.RevealSource))
-		fields = append(fields, "RevealSource: "+lit26+",")
+		lit30 := strconv.FormatBool(bool(v.RevealSource))
+		fields = append(fields, "RevealSource: "+lit30+",")
 	}
 	if v.TokenMultiplier != 0 {
-		lit27 := strconv.FormatInt(int64(v.TokenMultiplier), 10)
-		fields = append(fields, "TokenMultiplier: "+lit27+",")
+		lit31 := strconv.FormatInt(int64(v.TokenMultiplier), 10)
+		fields = append(fields, "TokenMultiplier: "+lit31+",")
 	}
 	if v.TokenAddend != 0 {
-		lit28 := strconv.FormatInt(int64(v.TokenAddend), 10)
-		fields = append(fields, "TokenAddend: "+lit28+",")
+		lit32 := strconv.FormatInt(int64(v.TokenAddend), 10)
+		fields = append(fields, "TokenAddend: "+lit32+",")
 	}
 	if len(v.TokenRequiredSubtypes) > 0 {
-		var items30 []string
-		for _, item31 := range v.TokenRequiredSubtypes {
-			lit32, err33 := enumLiteral(typesSubLiterals, "types.Sub", item31)
-			if err33 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.TokenRequiredSubtypes[]: %w", err33)
+		var items34 []string
+		for _, item35 := range v.TokenRequiredSubtypes {
+			lit36, err37 := enumLiteral(typesSubLiterals, "types.Sub", item35)
+			if err37 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.TokenRequiredSubtypes[]: %w", err37)
 			}
 			ctx.need(importTypes)
-			items30 = append(items30, lit32)
+			items34 = append(items34, lit36)
 		}
-		lit29 := compactNamedSliceLit("", "types.Sub", items30)
-		fields = append(fields, "TokenRequiredSubtypes: "+lit29+",")
+		lit33 := compactNamedSliceLit("", "types.Sub", items34)
+		fields = append(fields, "TokenRequiredSubtypes: "+lit33+",")
 	}
 	if len(v.TokenRequiredTypes) > 0 {
-		var items35 []string
-		for _, item36 := range v.TokenRequiredTypes {
-			lit37, err38 := enumLiteral(typesCardLiterals, "types.Card", item36)
-			if err38 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.TokenRequiredTypes[]: %w", err38)
+		var items39 []string
+		for _, item40 := range v.TokenRequiredTypes {
+			lit41, err42 := enumLiteral(typesCardLiterals, "types.Card", item40)
+			if err42 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.TokenRequiredTypes[]: %w", err42)
 			}
 			ctx.need(importTypes)
-			items35 = append(items35, lit37)
+			items39 = append(items39, lit41)
 		}
-		lit34 := compactNamedSliceLit("", "types.Card", items35)
-		fields = append(fields, "TokenRequiredTypes: "+lit34+",")
+		lit38 := compactNamedSliceLit("", "types.Card", items39)
+		fields = append(fields, "TokenRequiredTypes: "+lit38+",")
 	}
 	if v.TokenAddendDef != nil {
-		lit40, err41 := r.renderGameCardDef(ctx, *v.TokenAddendDef)
-		if err41 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.TokenAddendDef: %w", err41)
+		lit44, err45 := r.renderGameCardDef(ctx, *v.TokenAddendDef)
+		if err45 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.TokenAddendDef: %w", err45)
 		}
 		ctx.need(importGame)
-		lit39 := "&" + lit40
-		fields = append(fields, "TokenAddendDef: "+lit39+",")
+		lit43 := "&" + lit44
+		fields = append(fields, "TokenAddendDef: "+lit43+",")
 	}
 	if v.TokenReplaceDef != nil {
-		lit43, err44 := r.renderGameCardDef(ctx, *v.TokenReplaceDef)
-		if err44 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.TokenReplaceDef: %w", err44)
+		lit47, err48 := r.renderGameCardDef(ctx, *v.TokenReplaceDef)
+		if err48 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.TokenReplaceDef: %w", err48)
 		}
 		ctx.need(importGame)
-		lit42 := "&" + lit43
-		fields = append(fields, "TokenReplaceDef: "+lit42+",")
+		lit46 := "&" + lit47
+		fields = append(fields, "TokenReplaceDef: "+lit46+",")
 	}
 	if v.SpellCopyAddend != 0 {
-		lit45 := strconv.FormatInt(int64(v.SpellCopyAddend), 10)
-		fields = append(fields, "SpellCopyAddend: "+lit45+",")
+		lit49 := strconv.FormatInt(int64(v.SpellCopyAddend), 10)
+		fields = append(fields, "SpellCopyAddend: "+lit49+",")
 	}
 	if v.SpellCopyAdditionalMayChooseNewTargets {
-		lit46 := strconv.FormatBool(bool(v.SpellCopyAdditionalMayChooseNewTargets))
-		fields = append(fields, "SpellCopyAdditionalMayChooseNewTargets: "+lit46+",")
+		lit50 := strconv.FormatBool(bool(v.SpellCopyAdditionalMayChooseNewTargets))
+		fields = append(fields, "SpellCopyAdditionalMayChooseNewTargets: "+lit50+",")
 	}
 	if v.CounterMultiplier != 0 {
-		lit47 := strconv.FormatInt(int64(v.CounterMultiplier), 10)
-		fields = append(fields, "CounterMultiplier: "+lit47+",")
+		lit51 := strconv.FormatInt(int64(v.CounterMultiplier), 10)
+		fields = append(fields, "CounterMultiplier: "+lit51+",")
 	}
 	if v.CounterAddend != 0 {
-		lit48 := strconv.FormatInt(int64(v.CounterAddend), 10)
-		fields = append(fields, "CounterAddend: "+lit48+",")
+		lit52 := strconv.FormatInt(int64(v.CounterAddend), 10)
+		fields = append(fields, "CounterAddend: "+lit52+",")
 	}
 	if v.MatchCounterKind {
-		lit49 := strconv.FormatBool(bool(v.MatchCounterKind))
-		fields = append(fields, "MatchCounterKind: "+lit49+",")
+		lit53 := strconv.FormatBool(bool(v.MatchCounterKind))
+		fields = append(fields, "MatchCounterKind: "+lit53+",")
 	}
 	if v.CounterKindFilter != 0 {
-		lit50, err51 := enumLiteral(counterKindLiterals, "counter.Kind", v.CounterKindFilter)
-		if err51 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.CounterKindFilter: %w", err51)
+		lit54, err55 := enumLiteral(counterKindLiterals, "counter.Kind", v.CounterKindFilter)
+		if err55 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.CounterKindFilter: %w", err55)
 		}
 		ctx.need(importCounter)
-		fields = append(fields, "CounterKindFilter: "+lit50+",")
+		fields = append(fields, "CounterKindFilter: "+lit54+",")
 	}
 	if v.CounterRecipientSelection != nil {
-		lit53, err54 := r.renderGameSelection(ctx, *v.CounterRecipientSelection)
-		if err54 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.CounterRecipientSelection: %w", err54)
+		lit57, err58 := r.renderGameSelection(ctx, *v.CounterRecipientSelection)
+		if err58 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.CounterRecipientSelection: %w", err58)
 		}
 		ctx.need(importGame)
-		lit52 := "&" + lit53
-		fields = append(fields, "CounterRecipientSelection: "+lit52+",")
+		lit56 := "&" + lit57
+		fields = append(fields, "CounterRecipientSelection: "+lit56+",")
 	}
 	if v.CounterRecipientAnyPermanent {
-		lit55 := strconv.FormatBool(bool(v.CounterRecipientAnyPermanent))
-		fields = append(fields, "CounterRecipientAnyPermanent: "+lit55+",")
+		lit59 := strconv.FormatBool(bool(v.CounterRecipientAnyPermanent))
+		fields = append(fields, "CounterRecipientAnyPermanent: "+lit59+",")
 	}
 	if v.CounterUseRecipientController {
-		lit56 := strconv.FormatBool(bool(v.CounterUseRecipientController))
-		fields = append(fields, "CounterUseRecipientController: "+lit56+",")
+		lit60 := strconv.FormatBool(bool(v.CounterUseRecipientController))
+		fields = append(fields, "CounterUseRecipientController: "+lit60+",")
 	}
 	if v.CounterRecipientSelf {
-		lit57 := strconv.FormatBool(bool(v.CounterRecipientSelf))
-		fields = append(fields, "CounterRecipientSelf: "+lit57+",")
+		lit61 := strconv.FormatBool(bool(v.CounterRecipientSelf))
+		fields = append(fields, "CounterRecipientSelf: "+lit61+",")
 	}
 	if v.CounterRecipientControllerPlayer {
-		lit58 := strconv.FormatBool(bool(v.CounterRecipientControllerPlayer))
-		fields = append(fields, "CounterRecipientControllerPlayer: "+lit58+",")
+		lit62 := strconv.FormatBool(bool(v.CounterRecipientControllerPlayer))
+		fields = append(fields, "CounterRecipientControllerPlayer: "+lit62+",")
 	}
 	if v.DamageMultiplier != 0 {
-		lit59 := strconv.FormatInt(int64(v.DamageMultiplier), 10)
-		fields = append(fields, "DamageMultiplier: "+lit59+",")
+		lit63 := strconv.FormatInt(int64(v.DamageMultiplier), 10)
+		fields = append(fields, "DamageMultiplier: "+lit63+",")
 	}
 	if v.DamageAddend != 0 {
-		lit60 := strconv.FormatInt(int64(v.DamageAddend), 10)
-		fields = append(fields, "DamageAddend: "+lit60+",")
+		lit64 := strconv.FormatInt(int64(v.DamageAddend), 10)
+		fields = append(fields, "DamageAddend: "+lit64+",")
 	}
 	if len(v.DamageSourceColors) > 0 {
-		var items62 []string
-		for _, item63 := range v.DamageSourceColors {
-			lit64, err65 := enumLiteral(colorColorLiterals, "color.Color", item63)
-			if err65 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.DamageSourceColors[]: %w", err65)
+		var items66 []string
+		for _, item67 := range v.DamageSourceColors {
+			lit68, err69 := enumLiteral(colorColorLiterals, "color.Color", item67)
+			if err69 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.DamageSourceColors[]: %w", err69)
 			}
 			ctx.need(importColor)
-			items62 = append(items62, lit64)
+			items66 = append(items66, lit68)
 		}
-		lit61 := compactNamedSliceLit("", "color.Color", items62)
-		fields = append(fields, "DamageSourceColors: "+lit61+",")
+		lit65 := compactNamedSliceLit("", "color.Color", items66)
+		fields = append(fields, "DamageSourceColors: "+lit65+",")
 	}
 	if v.DamageExcludeSource {
-		lit66 := strconv.FormatBool(bool(v.DamageExcludeSource))
-		fields = append(fields, "DamageExcludeSource: "+lit66+",")
+		lit70 := strconv.FormatBool(bool(v.DamageExcludeSource))
+		fields = append(fields, "DamageExcludeSource: "+lit70+",")
 	}
 	if len(v.DamageSourceTypes) > 0 {
-		var items68 []string
-		for _, item69 := range v.DamageSourceTypes {
-			lit70, err71 := enumLiteral(typesCardLiterals, "types.Card", item69)
-			if err71 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.DamageSourceTypes[]: %w", err71)
+		var items72 []string
+		for _, item73 := range v.DamageSourceTypes {
+			lit74, err75 := enumLiteral(typesCardLiterals, "types.Card", item73)
+			if err75 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.DamageSourceTypes[]: %w", err75)
 			}
 			ctx.need(importTypes)
-			items68 = append(items68, lit70)
+			items72 = append(items72, lit74)
 		}
-		lit67 := compactNamedSliceLit("", "types.Card", items68)
-		fields = append(fields, "DamageSourceTypes: "+lit67+",")
+		lit71 := compactNamedSliceLit("", "types.Card", items72)
+		fields = append(fields, "DamageSourceTypes: "+lit71+",")
 	}
 	if v.DamageRecipientOpponent {
-		lit72 := strconv.FormatBool(bool(v.DamageRecipientOpponent))
-		fields = append(fields, "DamageRecipientOpponent: "+lit72+",")
+		lit76 := strconv.FormatBool(bool(v.DamageRecipientOpponent))
+		fields = append(fields, "DamageRecipientOpponent: "+lit76+",")
 	}
 	if v.DamageRecipientOpponentPlayerOnly {
-		lit73 := strconv.FormatBool(bool(v.DamageRecipientOpponentPlayerOnly))
-		fields = append(fields, "DamageRecipientOpponentPlayerOnly: "+lit73+",")
+		lit77 := strconv.FormatBool(bool(v.DamageRecipientOpponentPlayerOnly))
+		fields = append(fields, "DamageRecipientOpponentPlayerOnly: "+lit77+",")
 	}
 	if v.DamageNoncombatOnly {
-		lit74 := strconv.FormatBool(bool(v.DamageNoncombatOnly))
-		fields = append(fields, "DamageNoncombatOnly: "+lit74+",")
+		lit78 := strconv.FormatBool(bool(v.DamageNoncombatOnly))
+		fields = append(fields, "DamageNoncombatOnly: "+lit78+",")
 	}
 	if v.DamagePreventAmount != 0 {
-		lit75 := strconv.FormatInt(int64(v.DamagePreventAmount), 10)
-		fields = append(fields, "DamagePreventAmount: "+lit75+",")
+		lit79 := strconv.FormatInt(int64(v.DamagePreventAmount), 10)
+		fields = append(fields, "DamagePreventAmount: "+lit79+",")
 	}
 	if v.DamageRecipientController {
-		lit76 := strconv.FormatBool(bool(v.DamageRecipientController))
-		fields = append(fields, "DamageRecipientController: "+lit76+",")
+		lit80 := strconv.FormatBool(bool(v.DamageRecipientController))
+		fields = append(fields, "DamageRecipientController: "+lit80+",")
 	}
 	if v.DamageSourceControllerOpponent {
-		lit77 := strconv.FormatBool(bool(v.DamageSourceControllerOpponent))
-		fields = append(fields, "DamageSourceControllerOpponent: "+lit77+",")
+		lit81 := strconv.FormatBool(bool(v.DamageSourceControllerOpponent))
+		fields = append(fields, "DamageSourceControllerOpponent: "+lit81+",")
 	}
 	if v.DamagePreventAll {
-		lit78 := strconv.FormatBool(bool(v.DamagePreventAll))
-		fields = append(fields, "DamagePreventAll: "+lit78+",")
+		lit82 := strconv.FormatBool(bool(v.DamagePreventAll))
+		fields = append(fields, "DamagePreventAll: "+lit82+",")
 	}
 	if v.DamagePreventedBecomesPlusOneCounters {
-		lit79 := strconv.FormatBool(bool(v.DamagePreventedBecomesPlusOneCounters))
-		fields = append(fields, "DamagePreventedBecomesPlusOneCounters: "+lit79+",")
+		lit83 := strconv.FormatBool(bool(v.DamagePreventedBecomesPlusOneCounters))
+		fields = append(fields, "DamagePreventedBecomesPlusOneCounters: "+lit83+",")
 	}
 	if v.DamagePreventedRemovesPlusOneCounter {
-		lit80 := strconv.FormatBool(bool(v.DamagePreventedRemovesPlusOneCounter))
-		fields = append(fields, "DamagePreventedRemovesPlusOneCounter: "+lit80+",")
+		lit84 := strconv.FormatBool(bool(v.DamagePreventedRemovesPlusOneCounter))
+		fields = append(fields, "DamagePreventedRemovesPlusOneCounter: "+lit84+",")
 	}
 	if v.DamageRecipientSelf {
-		lit81 := strconv.FormatBool(bool(v.DamageRecipientSelf))
-		fields = append(fields, "DamageRecipientSelf: "+lit81+",")
+		lit85 := strconv.FormatBool(bool(v.DamageRecipientSelf))
+		fields = append(fields, "DamageRecipientSelf: "+lit85+",")
 	}
 	if v.DamageRecipientAttached {
-		lit82 := strconv.FormatBool(bool(v.DamageRecipientAttached))
-		fields = append(fields, "DamageRecipientAttached: "+lit82+",")
+		lit86 := strconv.FormatBool(bool(v.DamageRecipientAttached))
+		fields = append(fields, "DamageRecipientAttached: "+lit86+",")
 	}
 	if v.DamageCombatOnly {
-		lit83 := strconv.FormatBool(bool(v.DamageCombatOnly))
-		fields = append(fields, "DamageCombatOnly: "+lit83+",")
+		lit87 := strconv.FormatBool(bool(v.DamageCombatOnly))
+		fields = append(fields, "DamageCombatOnly: "+lit87+",")
 	}
 	if v.DamageRecipientSelection != nil {
-		lit85, err86 := r.renderGameSelection(ctx, *v.DamageRecipientSelection)
-		if err86 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.DamageRecipientSelection: %w", err86)
+		lit89, err90 := r.renderGameSelection(ctx, *v.DamageRecipientSelection)
+		if err90 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.DamageRecipientSelection: %w", err90)
 		}
 		ctx.need(importGame)
-		lit84 := "&" + lit85
-		fields = append(fields, "DamageRecipientSelection: "+lit84+",")
+		lit88 := "&" + lit89
+		fields = append(fields, "DamageRecipientSelection: "+lit88+",")
 	}
 	if v.LifeGainMultiplier != 0 {
-		lit87 := strconv.FormatInt(int64(v.LifeGainMultiplier), 10)
-		fields = append(fields, "LifeGainMultiplier: "+lit87+",")
+		lit91 := strconv.FormatInt(int64(v.LifeGainMultiplier), 10)
+		fields = append(fields, "LifeGainMultiplier: "+lit91+",")
 	}
 	if v.LifeGainAddend != 0 {
-		lit88 := strconv.FormatInt(int64(v.LifeGainAddend), 10)
-		fields = append(fields, "LifeGainAddend: "+lit88+",")
+		lit92 := strconv.FormatInt(int64(v.LifeGainAddend), 10)
+		fields = append(fields, "LifeGainAddend: "+lit92+",")
 	}
 	if v.LifeLossMultiplier != 0 {
-		lit89 := strconv.FormatInt(int64(v.LifeLossMultiplier), 10)
-		fields = append(fields, "LifeLossMultiplier: "+lit89+",")
+		lit93 := strconv.FormatInt(int64(v.LifeLossMultiplier), 10)
+		fields = append(fields, "LifeLossMultiplier: "+lit93+",")
 	}
 	if v.LifeLossAddend != 0 {
-		lit90 := strconv.FormatInt(int64(v.LifeLossAddend), 10)
-		fields = append(fields, "LifeLossAddend: "+lit90+",")
+		lit94 := strconv.FormatInt(int64(v.LifeLossAddend), 10)
+		fields = append(fields, "LifeLossAddend: "+lit94+",")
 	}
 	if v.LifeLossRecipientOpponent {
-		lit91 := strconv.FormatBool(bool(v.LifeLossRecipientOpponent))
-		fields = append(fields, "LifeLossRecipientOpponent: "+lit91+",")
+		lit95 := strconv.FormatBool(bool(v.LifeLossRecipientOpponent))
+		fields = append(fields, "LifeLossRecipientOpponent: "+lit95+",")
 	}
 	if v.LifeLossDuringControllerTurn {
-		lit92 := strconv.FormatBool(bool(v.LifeLossDuringControllerTurn))
-		fields = append(fields, "LifeLossDuringControllerTurn: "+lit92+",")
+		lit96 := strconv.FormatBool(bool(v.LifeLossDuringControllerTurn))
+		fields = append(fields, "LifeLossDuringControllerTurn: "+lit96+",")
 	}
 	if v.EntersTapped {
-		lit93 := strconv.FormatBool(bool(v.EntersTapped))
-		fields = append(fields, "EntersTapped: "+lit93+",")
+		lit97 := strconv.FormatBool(bool(v.EntersTapped))
+		fields = append(fields, "EntersTapped: "+lit97+",")
 	}
 	if len(v.EntersWithCounters) > 0 {
-		var items95 []string
-		for _, item96 := range v.EntersWithCounters {
-			lit97, err98 := r.renderGameCounterPlacement(ctx, item96)
-			if err98 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersWithCounters[]: %w", err98)
+		var items99 []string
+		for _, item100 := range v.EntersWithCounters {
+			lit101, err102 := r.renderGameCounterPlacement(ctx, item100)
+			if err102 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersWithCounters[]: %w", err102)
 			}
 			ctx.need(importGame)
-			items95 = append(items95, lit97+",")
+			items99 = append(items99, lit101+",")
 		}
-		lit94 := namedSliceLit("", "game.CounterPlacement", items95)
-		fields = append(fields, "EntersWithCounters: "+lit94+",")
+		lit98 := namedSliceLit("", "game.CounterPlacement", items99)
+		fields = append(fields, "EntersWithCounters: "+lit98+",")
 	}
 	if v.EntryColorChoice {
-		lit99 := strconv.FormatBool(bool(v.EntryColorChoice))
-		fields = append(fields, "EntryColorChoice: "+lit99+",")
+		lit103 := strconv.FormatBool(bool(v.EntryColorChoice))
+		fields = append(fields, "EntryColorChoice: "+lit103+",")
 	}
 	if v.EntryColorChoiceExclude != "" {
-		lit100, err101 := enumLiteral(manaColorLiterals, "mana.Color", v.EntryColorChoiceExclude)
-		if err101 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.EntryColorChoiceExclude: %w", err101)
+		lit104, err105 := enumLiteral(manaColorLiterals, "mana.Color", v.EntryColorChoiceExclude)
+		if err105 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.EntryColorChoiceExclude: %w", err105)
 		}
 		ctx.need(importMana)
-		fields = append(fields, "EntryColorChoiceExclude: "+lit100+",")
+		fields = append(fields, "EntryColorChoiceExclude: "+lit104+",")
 	}
 	if v.EntryTypeChoice {
-		lit102 := strconv.FormatBool(bool(v.EntryTypeChoice))
-		fields = append(fields, "EntryTypeChoice: "+lit102+",")
+		lit106 := strconv.FormatBool(bool(v.EntryTypeChoice))
+		fields = append(fields, "EntryTypeChoice: "+lit106+",")
 	}
 	if v.EntryCardTypeChoice {
-		lit103 := strconv.FormatBool(bool(v.EntryCardTypeChoice))
-		fields = append(fields, "EntryCardTypeChoice: "+lit103+",")
+		lit107 := strconv.FormatBool(bool(v.EntryCardTypeChoice))
+		fields = append(fields, "EntryCardTypeChoice: "+lit107+",")
 	}
 	if v.AttachCardNameChoiceType != "" {
-		lit104, err105 := enumLiteral(typesCardLiterals, "types.Card", v.AttachCardNameChoiceType)
-		if err105 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.AttachCardNameChoiceType: %w", err105)
+		lit108, err109 := enumLiteral(typesCardLiterals, "types.Card", v.AttachCardNameChoiceType)
+		if err109 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.AttachCardNameChoiceType: %w", err109)
 		}
 		ctx.need(importTypes)
-		fields = append(fields, "AttachCardNameChoiceType: "+lit104+",")
+		fields = append(fields, "AttachCardNameChoiceType: "+lit108+",")
 	}
 	if v.AttachSubtypeChoiceType != "" {
-		lit106, err107 := enumLiteral(typesCardLiterals, "types.Card", v.AttachSubtypeChoiceType)
-		if err107 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.AttachSubtypeChoiceType: %w", err107)
+		lit110, err111 := enumLiteral(typesCardLiterals, "types.Card", v.AttachSubtypeChoiceType)
+		if err111 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.AttachSubtypeChoiceType: %w", err111)
 		}
 		ctx.need(importTypes)
-		fields = append(fields, "AttachSubtypeChoiceType: "+lit106+",")
+		fields = append(fields, "AttachSubtypeChoiceType: "+lit110+",")
 	}
 	if v.EntryDevourMultiplier != 0 {
-		lit108 := strconv.FormatInt(int64(v.EntryDevourMultiplier), 10)
-		fields = append(fields, "EntryDevourMultiplier: "+lit108+",")
+		lit112 := strconv.FormatInt(int64(v.EntryDevourMultiplier), 10)
+		fields = append(fields, "EntryDevourMultiplier: "+lit112+",")
 	}
 	if v.EntryDevourType != "" {
-		lit109, err110 := enumLiteral(typesCardLiterals, "types.Card", v.EntryDevourType)
-		if err110 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.EntryDevourType: %w", err110)
+		lit113, err114 := enumLiteral(typesCardLiterals, "types.Card", v.EntryDevourType)
+		if err114 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.EntryDevourType: %w", err114)
 		}
 		ctx.need(importTypes)
-		fields = append(fields, "EntryDevourType: "+lit109+",")
+		fields = append(fields, "EntryDevourType: "+lit113+",")
 	}
 	if v.EntryDevourSubtype != "" {
-		lit111, err112 := enumLiteral(typesSubLiterals, "types.Sub", v.EntryDevourSubtype)
-		if err112 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.EntryDevourSubtype: %w", err112)
+		lit115, err116 := enumLiteral(typesSubLiterals, "types.Sub", v.EntryDevourSubtype)
+		if err116 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.EntryDevourSubtype: %w", err116)
 		}
 		ctx.need(importTypes)
-		fields = append(fields, "EntryDevourSubtype: "+lit111+",")
+		fields = append(fields, "EntryDevourSubtype: "+lit115+",")
 	}
 	if v.EntryTributeCount != 0 {
-		lit113 := strconv.FormatInt(int64(v.EntryTributeCount), 10)
-		fields = append(fields, "EntryTributeCount: "+lit113+",")
+		lit117 := strconv.FormatInt(int64(v.EntryTributeCount), 10)
+		fields = append(fields, "EntryTributeCount: "+lit117+",")
 	}
 	if v.EntersTappedOthers {
-		lit114 := strconv.FormatBool(bool(v.EntersTappedOthers))
-		fields = append(fields, "EntersTappedOthers: "+lit114+",")
+		lit118 := strconv.FormatBool(bool(v.EntersTappedOthers))
+		fields = append(fields, "EntersTappedOthers: "+lit118+",")
 	}
 	if v.EntersUntapped {
-		lit115 := strconv.FormatBool(bool(v.EntersUntapped))
-		fields = append(fields, "EntersUntapped: "+lit115+",")
+		lit119 := strconv.FormatBool(bool(v.EntersUntapped))
+		fields = append(fields, "EntersUntapped: "+lit119+",")
 	}
 	if v.EntersUntappedOthers {
-		lit116 := strconv.FormatBool(bool(v.EntersUntappedOthers))
-		fields = append(fields, "EntersUntappedOthers: "+lit116+",")
+		lit120 := strconv.FormatBool(bool(v.EntersUntappedOthers))
+		fields = append(fields, "EntersUntappedOthers: "+lit120+",")
 	}
 	if v.EntersTappedSelection != nil {
-		lit118, err119 := r.renderGameSelection(ctx, *v.EntersTappedSelection)
-		if err119 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.EntersTappedSelection: %w", err119)
-		}
-		ctx.need(importGame)
-		lit117 := "&" + lit118
-		fields = append(fields, "EntersTappedSelection: "+lit117+",")
-	}
-	if v.EntersWithCountersOthers {
-		lit120 := strconv.FormatBool(bool(v.EntersWithCountersOthers))
-		fields = append(fields, "EntersWithCountersOthers: "+lit120+",")
-	}
-	if v.EntersWithCountersRecipient != nil {
-		lit122, err123 := r.renderGameSelection(ctx, *v.EntersWithCountersRecipient)
+		lit122, err123 := r.renderGameSelection(ctx, *v.EntersTappedSelection)
 		if err123 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.EntersWithCountersRecipient: %w", err123)
+			return "", fmt.Errorf("game.ReplacementEffect.EntersTappedSelection: %w", err123)
 		}
 		ctx.need(importGame)
 		lit121 := "&" + lit122
-		fields = append(fields, "EntersWithCountersRecipient: "+lit121+",")
+		fields = append(fields, "EntersTappedSelection: "+lit121+",")
 	}
-	if v.EntersBecomesCharacteristic {
-		lit124 := strconv.FormatBool(bool(v.EntersBecomesCharacteristic))
-		fields = append(fields, "EntersBecomesCharacteristic: "+lit124+",")
+	if v.EntersWithCountersOthers {
+		lit124 := strconv.FormatBool(bool(v.EntersWithCountersOthers))
+		fields = append(fields, "EntersWithCountersOthers: "+lit124+",")
 	}
-	if v.EntersBecomesSelection != nil {
-		lit126, err127 := r.renderGameSelection(ctx, *v.EntersBecomesSelection)
+	if v.EntersWithCountersRecipient != nil {
+		lit126, err127 := r.renderGameSelection(ctx, *v.EntersWithCountersRecipient)
 		if err127 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesSelection: %w", err127)
+			return "", fmt.Errorf("game.ReplacementEffect.EntersWithCountersRecipient: %w", err127)
 		}
 		ctx.need(importGame)
 		lit125 := "&" + lit126
-		fields = append(fields, "EntersBecomesSelection: "+lit125+",")
+		fields = append(fields, "EntersWithCountersRecipient: "+lit125+",")
+	}
+	if v.EntersBecomesCharacteristic {
+		lit128 := strconv.FormatBool(bool(v.EntersBecomesCharacteristic))
+		fields = append(fields, "EntersBecomesCharacteristic: "+lit128+",")
+	}
+	if v.EntersBecomesSelection != nil {
+		lit130, err131 := r.renderGameSelection(ctx, *v.EntersBecomesSelection)
+		if err131 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesSelection: %w", err131)
+		}
+		ctx.need(importGame)
+		lit129 := "&" + lit130
+		fields = append(fields, "EntersBecomesSelection: "+lit129+",")
 	}
 	if len(v.EntersBecomesAddTypes) > 0 {
-		var items129 []string
-		for _, item130 := range v.EntersBecomesAddTypes {
-			lit131, err132 := enumLiteral(typesCardLiterals, "types.Card", item130)
-			if err132 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesAddTypes[]: %w", err132)
+		var items133 []string
+		for _, item134 := range v.EntersBecomesAddTypes {
+			lit135, err136 := enumLiteral(typesCardLiterals, "types.Card", item134)
+			if err136 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesAddTypes[]: %w", err136)
 			}
 			ctx.need(importTypes)
-			items129 = append(items129, lit131)
+			items133 = append(items133, lit135)
 		}
-		lit128 := compactNamedSliceLit("", "types.Card", items129)
-		fields = append(fields, "EntersBecomesAddTypes: "+lit128+",")
+		lit132 := compactNamedSliceLit("", "types.Card", items133)
+		fields = append(fields, "EntersBecomesAddTypes: "+lit132+",")
 	}
 	if len(v.EntersBecomesAddSubtypes) > 0 {
-		var items134 []string
-		for _, item135 := range v.EntersBecomesAddSubtypes {
-			lit136, err137 := enumLiteral(typesSubLiterals, "types.Sub", item135)
-			if err137 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesAddSubtypes[]: %w", err137)
+		var items138 []string
+		for _, item139 := range v.EntersBecomesAddSubtypes {
+			lit140, err141 := enumLiteral(typesSubLiterals, "types.Sub", item139)
+			if err141 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesAddSubtypes[]: %w", err141)
 			}
 			ctx.need(importTypes)
-			items134 = append(items134, lit136)
+			items138 = append(items138, lit140)
 		}
-		lit133 := compactNamedSliceLit("", "types.Sub", items134)
-		fields = append(fields, "EntersBecomesAddSubtypes: "+lit133+",")
+		lit137 := compactNamedSliceLit("", "types.Sub", items138)
+		fields = append(fields, "EntersBecomesAddSubtypes: "+lit137+",")
 	}
 	if len(v.EntersBecomesAddColors) > 0 {
-		var items139 []string
-		for _, item140 := range v.EntersBecomesAddColors {
-			lit141, err142 := enumLiteral(colorColorLiterals, "color.Color", item140)
-			if err142 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesAddColors[]: %w", err142)
+		var items143 []string
+		for _, item144 := range v.EntersBecomesAddColors {
+			lit145, err146 := enumLiteral(colorColorLiterals, "color.Color", item144)
+			if err146 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersBecomesAddColors[]: %w", err146)
 			}
 			ctx.need(importColor)
-			items139 = append(items139, lit141)
+			items143 = append(items143, lit145)
 		}
-		lit138 := compactNamedSliceLit("", "color.Color", items139)
-		fields = append(fields, "EntersBecomesAddColors: "+lit138+",")
+		lit142 := compactNamedSliceLit("", "color.Color", items143)
+		fields = append(fields, "EntersBecomesAddColors: "+lit142+",")
 	}
 	if v.EntersBecomesBasePower.Exists {
-		lit144 := strconv.FormatInt(int64(v.EntersBecomesBasePower.Val), 10)
+		lit148 := strconv.FormatInt(int64(v.EntersBecomesBasePower.Val), 10)
 		ctx.need(importOpt)
-		lit143 := "opt.Val(" + lit144 + ")"
-		fields = append(fields, "EntersBecomesBasePower: "+lit143+",")
+		lit147 := "opt.Val(" + lit148 + ")"
+		fields = append(fields, "EntersBecomesBasePower: "+lit147+",")
 	}
 	if v.EntersBecomesBaseToughness.Exists {
-		lit146 := strconv.FormatInt(int64(v.EntersBecomesBaseToughness.Val), 10)
+		lit150 := strconv.FormatInt(int64(v.EntersBecomesBaseToughness.Val), 10)
 		ctx.need(importOpt)
-		lit145 := "opt.Val(" + lit146 + ")"
-		fields = append(fields, "EntersBecomesBaseToughness: "+lit145+",")
+		lit149 := "opt.Val(" + lit150 + ")"
+		fields = append(fields, "EntersBecomesBaseToughness: "+lit149+",")
 	}
 	if len(v.CreateOneOfEachTokens) > 0 {
-		var items148 []string
-		for _, item149 := range v.CreateOneOfEachTokens {
-			lit151, err152 := r.renderGameCardDef(ctx, *item149)
-			if err152 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.CreateOneOfEachTokens[]: %w", err152)
+		var items152 []string
+		for _, item153 := range v.CreateOneOfEachTokens {
+			lit155, err156 := r.renderGameCardDef(ctx, *item153)
+			if err156 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.CreateOneOfEachTokens[]: %w", err156)
 			}
 			ctx.need(importGame)
-			lit150 := "&" + lit151
-			items148 = append(items148, lit150+",")
+			lit154 := "&" + lit155
+			items152 = append(items152, lit154+",")
 		}
-		lit147 := namedSliceLit("", "*game.CardDef", items148)
-		fields = append(fields, "CreateOneOfEachTokens: "+lit147+",")
+		lit151 := namedSliceLit("", "*game.CardDef", items152)
+		fields = append(fields, "CreateOneOfEachTokens: "+lit151+",")
 	}
 	if v.DrawFromEmptyLibraryWins {
-		lit153 := strconv.FormatBool(bool(v.DrawFromEmptyLibraryWins))
-		fields = append(fields, "DrawFromEmptyLibraryWins: "+lit153+",")
+		lit157 := strconv.FormatBool(bool(v.DrawFromEmptyLibraryWins))
+		fields = append(fields, "DrawFromEmptyLibraryWins: "+lit157+",")
 	}
 	if v.EntersAsCopy {
-		lit154 := strconv.FormatBool(bool(v.EntersAsCopy))
-		fields = append(fields, "EntersAsCopy: "+lit154+",")
+		lit158 := strconv.FormatBool(bool(v.EntersAsCopy))
+		fields = append(fields, "EntersAsCopy: "+lit158+",")
 	}
 	if v.EntersAsCopyOptional {
-		lit155 := strconv.FormatBool(bool(v.EntersAsCopyOptional))
-		fields = append(fields, "EntersAsCopyOptional: "+lit155+",")
+		lit159 := strconv.FormatBool(bool(v.EntersAsCopyOptional))
+		fields = append(fields, "EntersAsCopyOptional: "+lit159+",")
 	}
 	if v.EntersAsCopySelection != nil {
-		lit157, err158 := r.renderGameSelection(ctx, *v.EntersAsCopySelection)
-		if err158 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopySelection: %w", err158)
+		lit161, err162 := r.renderGameSelection(ctx, *v.EntersAsCopySelection)
+		if err162 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopySelection: %w", err162)
 		}
 		ctx.need(importGame)
-		lit156 := "&" + lit157
-		fields = append(fields, "EntersAsCopySelection: "+lit156+",")
+		lit160 := "&" + lit161
+		fields = append(fields, "EntersAsCopySelection: "+lit160+",")
 	}
 	if v.EntersAsCopyNotLegendary {
-		lit159 := strconv.FormatBool(bool(v.EntersAsCopyNotLegendary))
-		fields = append(fields, "EntersAsCopyNotLegendary: "+lit159+",")
+		lit163 := strconv.FormatBool(bool(v.EntersAsCopyNotLegendary))
+		fields = append(fields, "EntersAsCopyNotLegendary: "+lit163+",")
 	}
 	if v.EntersAsCopyRetainName {
-		lit160 := strconv.FormatBool(bool(v.EntersAsCopyRetainName))
-		fields = append(fields, "EntersAsCopyRetainName: "+lit160+",")
+		lit164 := strconv.FormatBool(bool(v.EntersAsCopyRetainName))
+		fields = append(fields, "EntersAsCopyRetainName: "+lit164+",")
 	}
 	if v.EntersAsCopyAddOtherAbilities {
-		lit161 := strconv.FormatBool(bool(v.EntersAsCopyAddOtherAbilities))
-		fields = append(fields, "EntersAsCopyAddOtherAbilities: "+lit161+",")
+		lit165 := strconv.FormatBool(bool(v.EntersAsCopyAddOtherAbilities))
+		fields = append(fields, "EntersAsCopyAddOtherAbilities: "+lit165+",")
 	}
 	if len(v.EntersAsCopyAddTypes) > 0 {
-		var items163 []string
-		for _, item164 := range v.EntersAsCopyAddTypes {
-			lit165, err166 := enumLiteral(typesCardLiterals, "types.Card", item164)
-			if err166 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddTypes[]: %w", err166)
+		var items167 []string
+		for _, item168 := range v.EntersAsCopyAddTypes {
+			lit169, err170 := enumLiteral(typesCardLiterals, "types.Card", item168)
+			if err170 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddTypes[]: %w", err170)
 			}
 			ctx.need(importTypes)
-			items163 = append(items163, lit165)
+			items167 = append(items167, lit169)
 		}
-		lit162 := compactNamedSliceLit("", "types.Card", items163)
-		fields = append(fields, "EntersAsCopyAddTypes: "+lit162+",")
+		lit166 := compactNamedSliceLit("", "types.Card", items167)
+		fields = append(fields, "EntersAsCopyAddTypes: "+lit166+",")
 	}
 	if len(v.EntersAsCopyAddSubtypes) > 0 {
-		var items168 []string
-		for _, item169 := range v.EntersAsCopyAddSubtypes {
-			lit170, err171 := enumLiteral(typesSubLiterals, "types.Sub", item169)
-			if err171 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddSubtypes[]: %w", err171)
+		var items172 []string
+		for _, item173 := range v.EntersAsCopyAddSubtypes {
+			lit174, err175 := enumLiteral(typesSubLiterals, "types.Sub", item173)
+			if err175 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddSubtypes[]: %w", err175)
 			}
 			ctx.need(importTypes)
-			items168 = append(items168, lit170)
+			items172 = append(items172, lit174)
 		}
-		lit167 := compactNamedSliceLit("", "types.Sub", items168)
-		fields = append(fields, "EntersAsCopyAddSubtypes: "+lit167+",")
+		lit171 := compactNamedSliceLit("", "types.Sub", items172)
+		fields = append(fields, "EntersAsCopyAddSubtypes: "+lit171+",")
 	}
 	if len(v.EntersAsCopyConditionalCounters) > 0 {
-		var items173 []string
-		for _, item174 := range v.EntersAsCopyConditionalCounters {
-			lit175, err176 := r.renderGameConditionalCounterPlacement(ctx, item174)
-			if err176 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyConditionalCounters[]: %w", err176)
+		var items177 []string
+		for _, item178 := range v.EntersAsCopyConditionalCounters {
+			lit179, err180 := r.renderGameConditionalCounterPlacement(ctx, item178)
+			if err180 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyConditionalCounters[]: %w", err180)
 			}
 			ctx.need(importGame)
-			items173 = append(items173, lit175+",")
+			items177 = append(items177, lit179+",")
 		}
-		lit172 := namedSliceLit("", "game.ConditionalCounterPlacement", items173)
-		fields = append(fields, "EntersAsCopyConditionalCounters: "+lit172+",")
+		lit176 := namedSliceLit("", "game.ConditionalCounterPlacement", items177)
+		fields = append(fields, "EntersAsCopyConditionalCounters: "+lit176+",")
 	}
 	if v.EntersAsCopyUntilEndOfTurn {
-		lit177 := strconv.FormatBool(bool(v.EntersAsCopyUntilEndOfTurn))
-		fields = append(fields, "EntersAsCopyUntilEndOfTurn: "+lit177+",")
+		lit181 := strconv.FormatBool(bool(v.EntersAsCopyUntilEndOfTurn))
+		fields = append(fields, "EntersAsCopyUntilEndOfTurn: "+lit181+",")
 	}
 	if len(v.EntersAsCopyAddKeywords) > 0 {
-		var items179 []string
-		for _, item180 := range v.EntersAsCopyAddKeywords {
-			lit181, err182 := enumLiteral(gameKeywordLiterals, "game.Keyword", item180)
-			if err182 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddKeywords[]: %w", err182)
+		var items183 []string
+		for _, item184 := range v.EntersAsCopyAddKeywords {
+			lit185, err186 := enumLiteral(gameKeywordLiterals, "game.Keyword", item184)
+			if err186 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddKeywords[]: %w", err186)
 			}
 			ctx.need(importGame)
-			items179 = append(items179, lit181)
+			items183 = append(items183, lit185)
 		}
-		lit178 := compactNamedSliceLit("", "game.Keyword", items179)
-		fields = append(fields, "EntersAsCopyAddKeywords: "+lit178+",")
+		lit182 := compactNamedSliceLit("", "game.Keyword", items183)
+		fields = append(fields, "EntersAsCopyAddKeywords: "+lit182+",")
 	}
 	if v.EntersAsCopyTapped {
-		lit183 := strconv.FormatBool(bool(v.EntersAsCopyTapped))
-		fields = append(fields, "EntersAsCopyTapped: "+lit183+",")
+		lit187 := strconv.FormatBool(bool(v.EntersAsCopyTapped))
+		fields = append(fields, "EntersAsCopyTapped: "+lit187+",")
 	}
 	if v.EntersAsCopyBasePower.Exists {
-		lit185 := strconv.FormatInt(int64(v.EntersAsCopyBasePower.Val), 10)
+		lit189 := strconv.FormatInt(int64(v.EntersAsCopyBasePower.Val), 10)
 		ctx.need(importOpt)
-		lit184 := "opt.Val(" + lit185 + ")"
-		fields = append(fields, "EntersAsCopyBasePower: "+lit184+",")
+		lit188 := "opt.Val(" + lit189 + ")"
+		fields = append(fields, "EntersAsCopyBasePower: "+lit188+",")
 	}
 	if v.EntersAsCopyBaseToughness.Exists {
-		lit187 := strconv.FormatInt(int64(v.EntersAsCopyBaseToughness.Val), 10)
+		lit191 := strconv.FormatInt(int64(v.EntersAsCopyBaseToughness.Val), 10)
 		ctx.need(importOpt)
-		lit186 := "opt.Val(" + lit187 + ")"
-		fields = append(fields, "EntersAsCopyBaseToughness: "+lit186+",")
+		lit190 := "opt.Val(" + lit191 + ")"
+		fields = append(fields, "EntersAsCopyBaseToughness: "+lit190+",")
 	}
 	if v.EntersAsCopyMaxManaValueFromManaSpent {
-		lit188 := strconv.FormatBool(bool(v.EntersAsCopyMaxManaValueFromManaSpent))
-		fields = append(fields, "EntersAsCopyMaxManaValueFromManaSpent: "+lit188+",")
+		lit192 := strconv.FormatBool(bool(v.EntersAsCopyMaxManaValueFromManaSpent))
+		fields = append(fields, "EntersAsCopyMaxManaValueFromManaSpent: "+lit192+",")
 	}
 	if len(v.EntersAsCopyAddAbilities) > 0 {
-		var items190 []string
-		for _, item191 := range v.EntersAsCopyAddAbilities {
-			lit192, err193 := r.renderGameAbilityValue(ctx, item191)
-			if err193 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddAbilities[]: %w", err193)
+		var items194 []string
+		for _, item195 := range v.EntersAsCopyAddAbilities {
+			lit196, err197 := r.renderGameAbilityValue(ctx, item195)
+			if err197 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.EntersAsCopyAddAbilities[]: %w", err197)
 			}
 			ctx.need(importGame)
-			items190 = append(items190, lit192+",")
+			items194 = append(items194, lit196+",")
 		}
-		lit189 := namedSliceLit("", "game.Ability", items190)
-		fields = append(fields, "EntersAsCopyAddAbilities: "+lit189+",")
+		lit193 := namedSliceLit("", "game.Ability", items194)
+		fields = append(fields, "EntersAsCopyAddAbilities: "+lit193+",")
 	}
 	if v.DrawCardMultiplier != 0 {
-		lit194 := strconv.FormatInt(int64(v.DrawCardMultiplier), 10)
-		fields = append(fields, "DrawCardMultiplier: "+lit194+",")
+		lit198 := strconv.FormatInt(int64(v.DrawCardMultiplier), 10)
+		fields = append(fields, "DrawCardMultiplier: "+lit198+",")
 	}
 	if v.DrawCardExceptFirstInDrawStep {
-		lit195 := strconv.FormatBool(bool(v.DrawCardExceptFirstInDrawStep))
-		fields = append(fields, "DrawCardExceptFirstInDrawStep: "+lit195+",")
+		lit199 := strconv.FormatBool(bool(v.DrawCardExceptFirstInDrawStep))
+		fields = append(fields, "DrawCardExceptFirstInDrawStep: "+lit199+",")
 	}
 	if v.DrawCardDigLook != 0 {
-		lit196 := strconv.FormatInt(int64(v.DrawCardDigLook), 10)
-		fields = append(fields, "DrawCardDigLook: "+lit196+",")
+		lit200 := strconv.FormatInt(int64(v.DrawCardDigLook), 10)
+		fields = append(fields, "DrawCardDigLook: "+lit200+",")
 	}
 	if v.DrawCardDigTake != 0 {
-		lit197 := strconv.FormatInt(int64(v.DrawCardDigTake), 10)
-		fields = append(fields, "DrawCardDigTake: "+lit197+",")
+		lit201 := strconv.FormatInt(int64(v.DrawCardDigTake), 10)
+		fields = append(fields, "DrawCardDigTake: "+lit201+",")
 	}
 	if v.DrawCardDigRemainder != 0 {
-		lit198, err199 := enumLiteral(gameDigRemainderLiterals, "game.DigRemainder", v.DrawCardDigRemainder)
-		if err199 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.DrawCardDigRemainder: %w", err199)
+		lit202, err203 := enumLiteral(gameDigRemainderLiterals, "game.DigRemainder", v.DrawCardDigRemainder)
+		if err203 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.DrawCardDigRemainder: %w", err203)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "DrawCardDigRemainder: "+lit198+",")
+		fields = append(fields, "DrawCardDigRemainder: "+lit202+",")
 	}
 	if v.ContinuousZoneRedirect {
-		lit200 := strconv.FormatBool(bool(v.ContinuousZoneRedirect))
-		fields = append(fields, "ContinuousZoneRedirect: "+lit200+",")
+		lit204 := strconv.FormatBool(bool(v.ContinuousZoneRedirect))
+		fields = append(fields, "ContinuousZoneRedirect: "+lit204+",")
 	}
 	if v.RedirectOwnerFilter != 0 {
-		lit201, err202 := enumLiteral(gameTriggerControllerFilterLiterals, "game.TriggerControllerFilter", v.RedirectOwnerFilter)
-		if err202 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.RedirectOwnerFilter: %w", err202)
+		lit205, err206 := enumLiteral(gameTriggerControllerFilterLiterals, "game.TriggerControllerFilter", v.RedirectOwnerFilter)
+		if err206 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.RedirectOwnerFilter: %w", err206)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "RedirectOwnerFilter: "+lit201+",")
+		fields = append(fields, "RedirectOwnerFilter: "+lit205+",")
 	}
 	if len(v.RedirectTypeFilter) > 0 {
-		var items204 []string
-		for _, item205 := range v.RedirectTypeFilter {
-			lit206, err207 := enumLiteral(typesCardLiterals, "types.Card", item205)
-			if err207 != nil {
-				return "", fmt.Errorf("game.ReplacementEffect.RedirectTypeFilter[]: %w", err207)
+		var items208 []string
+		for _, item209 := range v.RedirectTypeFilter {
+			lit210, err211 := enumLiteral(typesCardLiterals, "types.Card", item209)
+			if err211 != nil {
+				return "", fmt.Errorf("game.ReplacementEffect.RedirectTypeFilter[]: %w", err211)
 			}
 			ctx.need(importTypes)
-			items204 = append(items204, lit206)
+			items208 = append(items208, lit210)
 		}
-		lit203 := compactNamedSliceLit("", "types.Card", items204)
-		fields = append(fields, "RedirectTypeFilter: "+lit203+",")
+		lit207 := compactNamedSliceLit("", "types.Card", items208)
+		fields = append(fields, "RedirectTypeFilter: "+lit207+",")
 	}
 	if v.RedirectControlFilter != 0 {
-		lit208, err209 := enumLiteral(gameTriggerControllerFilterLiterals, "game.TriggerControllerFilter", v.RedirectControlFilter)
-		if err209 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.RedirectControlFilter: %w", err209)
+		lit212, err213 := enumLiteral(gameTriggerControllerFilterLiterals, "game.TriggerControllerFilter", v.RedirectControlFilter)
+		if err213 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.RedirectControlFilter: %w", err213)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "RedirectControlFilter: "+lit208+",")
+		fields = append(fields, "RedirectControlFilter: "+lit212+",")
 	}
 	if v.RedirectCounter.Exists {
-		lit211, err212 := enumLiteral(counterKindLiterals, "counter.Kind", v.RedirectCounter.Val)
-		if err212 != nil {
-			return "", fmt.Errorf("game.ReplacementEffect.RedirectCounter: %w", err212)
+		lit215, err216 := enumLiteral(counterKindLiterals, "counter.Kind", v.RedirectCounter.Val)
+		if err216 != nil {
+			return "", fmt.Errorf("game.ReplacementEffect.RedirectCounter: %w", err216)
 		}
 		ctx.need(importCounter)
 		ctx.need(importOpt)
-		lit210 := "opt.Val(" + lit211 + ")"
-		fields = append(fields, "RedirectCounter: "+lit210+",")
+		lit214 := "opt.Val(" + lit215 + ")"
+		fields = append(fields, "RedirectCounter: "+lit214+",")
 	}
 	if v.AffectedObjectID != 0 {
-		lit213 := "id.ID(" + strconv.FormatInt(int64(v.AffectedObjectID), 10) + ")"
-		fields = append(fields, "AffectedObjectID: "+lit213+",")
+		lit217 := "id.ID(" + strconv.FormatInt(int64(v.AffectedObjectID), 10) + ")"
+		fields = append(fields, "AffectedObjectID: "+lit217+",")
 	}
 	if v.AffectedObjectMustBeCreature {
-		lit214 := strconv.FormatBool(bool(v.AffectedObjectMustBeCreature))
-		fields = append(fields, "AffectedObjectMustBeCreature: "+lit214+",")
+		lit218 := strconv.FormatBool(bool(v.AffectedObjectMustBeCreature))
+		fields = append(fields, "AffectedObjectMustBeCreature: "+lit218+",")
 	}
 	if v.AffectedCardID != 0 {
-		lit215 := "id.ID(" + strconv.FormatInt(int64(v.AffectedCardID), 10) + ")"
-		fields = append(fields, "AffectedCardID: "+lit215+",")
+		lit219 := "id.ID(" + strconv.FormatInt(int64(v.AffectedCardID), 10) + ")"
+		fields = append(fields, "AffectedCardID: "+lit219+",")
 	}
 	return structLit("game.ReplacementEffect", fields), nil
 }
@@ -10758,6 +10777,10 @@ func (r Renderer) renderGameRevealUntil(ctx *renderCtx, v game.RevealUntil) (str
 	if v.MatchToDestinationRestRandomBottom {
 		lit9 := strconv.FormatBool(bool(v.MatchToDestinationRestRandomBottom))
 		fields = append(fields, "MatchToDestinationRestRandomBottom: "+lit9+",")
+	}
+	if v.MatchToDestinationRestChosenBottom {
+		lit10 := strconv.FormatBool(bool(v.MatchToDestinationRestChosenBottom))
+		fields = append(fields, "MatchToDestinationRestChosenBottom: "+lit10+",")
 	}
 	return structLit("game.RevealUntil", fields), nil
 }

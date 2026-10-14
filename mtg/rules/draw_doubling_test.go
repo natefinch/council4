@@ -59,11 +59,14 @@ func TestDrawCardMultiplierExemptsFirstDrawStepDraw(t *testing.T) {
 	}
 	drawDoublingPermanent(g, game.Player1, 2, true)
 
-	if got := drawCardMultiplier(g, game.Player1, true); got != 1 {
-		t.Fatalf("first draw-step multiplier = %d, want 1 (exempt)", got)
+	engine := NewEngine(nil)
+	engine.drawCardWithReplacements(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{}, true)
+	if got := g.Players[game.Player1].Hand.Size(); got != 1 {
+		t.Fatalf("first draw-step draws = %d, want 1 (exempt)", got)
 	}
-	if got := drawCardMultiplier(g, game.Player1, false); got != 2 {
-		t.Fatalf("non-draw-step multiplier = %d, want 2", got)
+	engine.drawCardWithReplacements(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{}, false)
+	if got := g.Players[game.Player1].Hand.Size(); got != 3 {
+		t.Fatalf("total draws = %d, want 3 (later draw doubled)", got)
 	}
 }
 
@@ -74,7 +77,8 @@ func TestDrawCardMultiplierPlainDoublesDrawStepDraw(t *testing.T) {
 	}
 	drawDoublingPermanent(g, game.Player1, 2, false)
 
-	if got := drawCardMultiplier(g, game.Player1, true); got != 2 {
-		t.Fatalf("first draw-step multiplier = %d, want 2 (plain doubler is not exempt)", got)
+	NewEngine(nil).drawCardWithReplacements(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{}, true)
+	if got := g.Players[game.Player1].Hand.Size(); got != 2 {
+		t.Fatalf("first draw-step draws = %d, want 2 (plain doubler is not exempt)", got)
 	}
 }

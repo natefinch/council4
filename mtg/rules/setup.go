@@ -27,10 +27,6 @@ func (*Engine) drawCard(g *game.Game, playerID game.PlayerID, firstInDrawStep bo
 
 	cardID, ok := player.Library.Top()
 	if !ok {
-		if drawFromEmptyLibraryWins(g, playerID) {
-			markPlayerWinsGame(g, playerID)
-			return 0, false
-		}
 		g.FailedDraws[playerID] = true
 		return 0, false
 	}

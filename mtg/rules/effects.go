@@ -789,6 +789,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			!replacement.EntersBecomesCharacteristic &&
 			replacement.DrawCardMultiplier <= 1 &&
 			replacement.DrawCardDigLook <= 0 &&
+			replacement.Program == (game.ProgramReference{}) &&
 			!replacement.DrawFromEmptyLibraryWins &&
 			!replacement.DamagePreventAll &&
 			!replacement.ContinuousZoneRedirect {

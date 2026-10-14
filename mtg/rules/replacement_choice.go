@@ -10,16 +10,21 @@ import "github.com/natefinch/council4/mtg/game"
 // stashes this context on the game for the duration of an agent-driven turn (see
 // runTurn) and retrieves it at the selection point.
 type replacementChoiceContext struct {
-	engine *Engine
-	agents [game.NumPlayers]PlayerAgent
-	log    *TurnLog
+	engine      *Engine
+	agents      [game.NumPlayers]PlayerAgent
+	log         *TurnLog
+	drawLineage *drawReplacementLineage
 }
 
 // setReplacementChoiceContext stashes the choice context on the game so the
 // replacement-selection chokepoint can prompt the affected player. The caller is
 // responsible for clearing it (g.ClearChoiceContext) when the turn ends.
 func (e *Engine) setReplacementChoiceContext(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	g.SetChoiceContext(&replacementChoiceContext{engine: e, agents: agents, log: log})
+	ctx := &replacementChoiceContext{engine: e, agents: agents, log: log}
+	if previous, ok := replacementChoiceContextFor(g); ok {
+		ctx.drawLineage = previous.drawLineage
+	}
+	g.SetChoiceContext(ctx)
 }
 
 func replacementChoiceContextFor(g *game.Game) (*replacementChoiceContext, bool) {

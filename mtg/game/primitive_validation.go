@@ -2975,8 +2975,11 @@ func (p RevealUntil) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if p.Destination != zone.Graveyard && p.Destination != zone.Hand {
 		return errors.New("RevealUntil requires a Graveyard or Hand Destination")
 	}
-	if p.MatchToDestinationRestRandomBottom && p.Destination != zone.Hand {
+	if (p.MatchToDestinationRestRandomBottom || p.MatchToDestinationRestChosenBottom) && p.Destination != zone.Hand {
 		return errors.New("RevealUntil matching-card partition requires a Hand Destination")
+	}
+	if p.MatchToDestinationRestRandomBottom && p.MatchToDestinationRestChosenBottom {
+		return errors.New("RevealUntil cannot use both random and chosen bottom order")
 	}
 	if err := firstProblem(p.Until.Validate()); err != nil {
 		return err
@@ -3391,6 +3394,12 @@ func (p CreateReplacement) validatePrimitive(targets []TargetSpec, checkTargets 
 	}
 	if p.Replacement.MatchEvent == EventUnknown {
 		return errors.New("create replacement requires an event")
+	}
+	if err := p.Replacement.ValidateProgram(); err != nil {
+		return err
+	}
+	if p.Replacement.Program != (ProgramReference{}) && p.Object.Kind() != ObjectReferenceNone {
+		return errors.New("draw replacement Program cannot be bound to an affected object")
 	}
 	if p.Object.Kind() != ObjectReferenceNone {
 		return validateObjectReference(p.Object, targets, checkTargets)

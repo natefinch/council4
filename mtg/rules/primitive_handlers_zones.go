@@ -2889,17 +2889,25 @@ func handleRevealUntil(r *effectResolver, prim game.RevealUntil) effectResolved 
 	res := effectResolved{accepted: true}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			revealUntilCards(r.game, playerID, prim)
+			r.revealUntilForPlayer(playerID, prim)
 		}
 		res.succeeded = true
 		return res
 	}
 	playerID, ok := r.resolvePlayer(prim.Player)
 	if ok {
-		revealUntilCards(r.game, playerID, prim)
+		r.revealUntilForPlayer(playerID, prim)
 		res.succeeded = true
 	}
 	return res
+}
+
+func (r *effectResolver) revealUntilForPlayer(playerID game.PlayerID, prim game.RevealUntil) {
+	if prim.MatchToDestinationRestChosenBottom {
+		r.engine.revealUntilChosenBottom(r.game, r.obj, playerID, prim, r.agents, r.log)
+		return
+	}
+	revealUntilCards(r.game, playerID, prim)
 }
 
 func handlePutHandOnLibraryThenDraw(r *effectResolver, prim game.PutHandOnLibraryThenDraw) effectResolved {

@@ -180,6 +180,39 @@ func revealUntilMatchAndBottomRest(g *game.Game, playerID game.PlayerID, prim ga
 	}
 }
 
+func (e *Engine) revealUntilChosenBottom(g *game.Game, obj *game.StackObject, playerID game.PlayerID, prim game.RevealUntil, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return
+	}
+	var remainder []id.ID
+	for _, cardID := range player.Library.All() {
+		emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+		if revealedCardMatches(g, playerID, cardID, prim.Until) {
+			moveCardBetweenZones(g, playerID, cardID, zone.Library, prim.Destination)
+			break
+		}
+		remainder = append(remainder, cardID)
+	}
+	options := make([]game.ChoiceOption, len(remainder))
+	for index, cardID := range remainder {
+		options[index] = game.ChoiceOption{Index: index, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)}
+	}
+	order := make([]int, len(remainder))
+	for index := range order {
+		order[index] = index
+	}
+	if len(order) > 1 {
+		order = e.chooseChoice(g, agents, orderChoiceRequest(playerID, "Order the revealed cards on the bottom of your library (first nearest the top).", options), log)
+	}
+	for _, cardID := range remainder {
+		player.Library.Remove(cardID)
+	}
+	for _, index := range order {
+		player.Library.AddToBottom(remainder[index])
+	}
+}
+
 // revealedCardMatches reports whether the card revealed from playerID's library
 // satisfies the reveal-until predicate. An empty predicate matches the first
 // revealed card.
