@@ -6,6 +6,10 @@ import (
 )
 
 func bindOwnedProducerReference(reference *CompiledReference, effects []CompiledEffect) bool {
+	if reference.DeclaredPermanent != nil {
+		reference.Binding = ReferenceBindingUnsupported
+		return true
+	}
 	if reference.LibraryCardObservation || reference.Kind == ReferenceThatPlayer {
 		return bindLibraryCardReference(reference, effects)
 	}

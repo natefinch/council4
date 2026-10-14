@@ -4783,6 +4783,7 @@ type CompiledReference struct {
 	ChoiceClauseID              int
 	ReachedCardProducerClauseID int
 	LibraryCardObservation      bool
+	DeclaredPermanent           *parser.DeclaredPermanentSubject
 	// NodeID is the parser-assigned stable identity of this reference within its
 	// ability or mode. Distinct copies of the same source reference share a
 	// NodeID, so the compiler matches references by identity instead of span

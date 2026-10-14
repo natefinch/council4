@@ -83,11 +83,19 @@ type Reference struct {
 	ReachedCardProducerClauseID int `json:",omitempty"`
 	// LibraryCardObservation keeps an unproven observation in its own domain;
 	// it cannot fall back to an event permanent when its producer is missing.
-	LibraryCardObservation bool `json:",omitempty"`
+	LibraryCardObservation bool                      `json:",omitempty"`
+	DeclaredPermanent      *DeclaredPermanentSubject `json:",omitempty"`
 	// Order is the reference's dense source-order rank within its ability or
 	// mode. Downstream stages compare these ranks to decide antecedent ordering
 	// and containment instead of inspecting byte offsets.
 	Order shared.SourceOrder `json:"-"`
+}
+
+// DeclaredPermanentSubject names the earlier clause that declared a singular
+// permanent, not its action result. A present zero ClauseID refuses an ambiguous
+// or unavailable declaration; nil leaves other subject domains unchanged.
+type DeclaredPermanentSubject struct {
+	ClauseID int `json:",omitempty"`
 }
 
 // collectReferences recognizes explicit self-name, this-object, that-object,
@@ -329,11 +337,10 @@ func collectReferences(tokens []shared.Token, cardName string, legendary bool, a
 			// controller/owner forms leaves unrelated possessives such as the
 			// convoke reminder "that creature's color" untouched.
 			phrase := tokens[i : i+2]
+			noun, _ := referencePossessiveNoun(tokens[i+1])
 			references = append(references, Reference{
-				Kind:   ReferenceThatObject,
-				Span:   shared.SpanOf(phrase),
-				Tokens: phrase,
-				Text:   joinTokens(phrase),
+				Kind: ReferenceThatObject, Span: shared.SpanOf(phrase), Tokens: phrase, Text: joinTokens(phrase),
+				SubjectNoun: noun, CardIdentity: noun == ObjectNounCard,
 			})
 			i++
 		case libraryOwnerPossessiveAt(tokens, i):
@@ -498,17 +505,7 @@ func referenceObjectNoun(token shared.Token) bool {
 // stripping the trailing "'s" and matching the bare noun. "player's" is excluded
 // because a player has no controller or owner.
 func referencePossessiveObjectNoun(token shared.Token) bool {
-	if token.Kind != shared.Word {
-		return false
-	}
-	base, ok := strings.CutSuffix(token.Text, "'s")
-	if !ok {
-		base, ok = strings.CutSuffix(token.Text, "\u2019s")
-	}
-	if !ok {
-		return false
-	}
-	noun, ok := recognizeObjectNoun(shared.Token{Kind: shared.Word, Text: base})
+	noun, ok := referencePossessiveNoun(token)
 	if !ok {
 		return false
 	}
@@ -520,6 +517,20 @@ func referencePossessiveObjectNoun(token shared.Token) bool {
 	default:
 		return false
 	}
+}
+
+func referencePossessiveNoun(token shared.Token) (ObjectNoun, bool) {
+	if token.Kind != shared.Word {
+		return ObjectNounUnknown, false
+	}
+	base, ok := strings.CutSuffix(token.Text, "'s")
+	if !ok {
+		base, ok = strings.CutSuffix(token.Text, "\u2019s")
+	}
+	if !ok {
+		return ObjectNounUnknown, false
+	}
+	return recognizeObjectNoun(shared.Token{Kind: shared.Word, Text: base})
 }
 
 func referencePossessiveNameAt(tokens []shared.Token, start int, nameWords []string) bool {

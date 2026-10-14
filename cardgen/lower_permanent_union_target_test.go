@@ -77,14 +77,34 @@ func TestClauseDeclaredTargetReturnAfterCardExile(t *testing.T) {
 	}
 }
 
-func TestClauseDeclaredTargetDoesNotInventFollowupOwnership(t *testing.T) {
+func TestClauseDeclaredTargetComposesFollowupOwnership(t *testing.T) {
 	for _, noun := range []string{"creature", "creature or Vehicle"} {
-		assertCardUnsupported(t, &ScryfallCard{
-			Name: "Unowned Followup", Layout: "normal", TypeLine: "Instant",
+		assertCardPaths(t, &ScryfallCard{
+			Name: "Owned Followup", Layout: "normal", TypeLine: "Instant",
 			OracleText: "Exile target card from a graveyard. Return target " + noun +
 				" to its owner's hand. Its controller loses 2 life. Its owner gains 3 life.",
-		})
+		}, "Modes[0].Sequence[0].Primitive.(game.MoveCard).Card.Kind = game.CardReferenceTarget",
+			"Modes[0].Sequence[0].Primitive.(game.MoveCard).FromZone = zone.Graveyard",
+			"Modes[0].Sequence[0].Primitive.(game.MoveCard).Destination = zone.Exile",
+			"Modes[0].Sequence[1].Primitive.(game.MovePermanent).Object.kind = game.ObjectReferenceTargetPermanent",
+			"Modes[0].Sequence[1].Primitive.(game.MovePermanent).Object.targetIndex = 1",
+			"Modes[0].Sequence[1].Primitive.(game.MovePermanent).Destination = zone.Hand",
+			"Modes[0].Sequence[2].Primitive.(game.LoseLife).Amount.fixed = 2",
+			"Modes[0].Sequence[2].Primitive.(game.LoseLife).Player.kind = game.PlayerReferenceObjectController",
+			"Modes[0].Sequence[2].Primitive.(game.LoseLife).Player.object.Val.kind = game.ObjectReferenceTargetPermanent",
+			"Modes[0].Sequence[2].Primitive.(game.LoseLife).Player.object.Val.targetIndex = 1",
+			"Modes[0].Sequence[3].Primitive.(game.GainLife).Amount.fixed = 3",
+			"Modes[0].Sequence[3].Primitive.(game.GainLife).Player.kind = game.PlayerReferenceObjectOwner",
+			"Modes[0].Sequence[3].Primitive.(game.GainLife).Player.object.Val.kind = game.ObjectReferenceTargetPermanent",
+			"Modes[0].Sequence[3].Primitive.(game.GainLife).Player.object.Val.targetIndex = 1")
 	}
+}
+
+func TestClauseDeclaredTargetDoesNotInventAmbiguousFollowupOwnership(t *testing.T) {
+	assertCardUnsupported(t, &ScryfallCard{
+		Name: "Ambiguous Followup", Layout: "normal", TypeLine: "Instant",
+		OracleText: "Exile target card from a graveyard. Tap target creature. Tap target artifact. Its owner gains 3 life.",
+	})
 }
 
 func TestPermanentUnionTargetFilters(t *testing.T) {
