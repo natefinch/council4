@@ -31,6 +31,8 @@ import (
 // original's.
 func (g *Game) Clone() *Game {
 	clone := &Game{
+		Execution:                          g.Execution,
+		DrawParticipants:                   g.DrawParticipants,
 		Battlefield:                        cloneSliceFunc(g.Battlefield, clonePermanent),
 		CardInstances:                      clonePtrMap(g.CardInstances, cloneCardInstance),
 		CardNameCatalog:                    cloneSliceMap(g.CardNameCatalog),

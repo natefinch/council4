@@ -5,11 +5,14 @@
 // needs to know the primitive surface.
 //
 // The summary is a deliberately coarse heuristic aid: it captures the
-// value-dominant majority of effects and degrades to a neutral classification
-// for anything it does not yet model, never guessing a wrong value sign.
+// value-dominant modeled effects and marks unknown consequences explicitly, never
+// interpreting missing knowledge as proof of a neutral effect.
 package eval
 
-import "github.com/natefinch/council4/mtg/game/cost"
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
+)
 
 // EffectKind classifies what one consequence of an effect does in value terms,
 // collapsing the engine's resolution primitives into a small vocabulary.
@@ -47,6 +50,9 @@ const (
 	// Growth, Cultivate), increasing available mana — ramp, distinct from a tutor
 	// to hand.
 	EffectLandRamp
+	// EffectUnknown has no trustworthy static valuation. It is not neutral.
+	// Search still executes the actual body through the shared Simulator.
+	EffectUnknown
 )
 
 // Affected identifies who or what a consequence affects, which carries its value
@@ -71,7 +77,10 @@ const (
 
 // EffectAtom is one value-relevant consequence of an effect.
 type EffectAtom struct {
-	Kind EffectKind
+	Program game.ProgramReference
+	// Intent is descriptive only, never a second executable semantic language.
+	Intent string
+	Kind   EffectKind
 	// Amount is the magnitude (cards, damage, mana, life, counters). It is 0 when
 	// IsDynamic is true or the kind carries no amount.
 	Amount int
@@ -88,4 +97,24 @@ type EffectAtom struct {
 type ScorableAbility struct {
 	Costs  []cost.Additional
 	Effect []EffectAtom
+}
+
+// HasUnknownEffect reports missing heuristic knowledge, not neutral value.
+func (s ScorableAbility) HasUnknownEffect() bool {
+	for _, atom := range s.Effect {
+		if atom.Kind == EffectUnknown {
+			return true
+		}
+	}
+	return false
+}
+
+// HasUnknownProgram reports effects that require executing an authored body.
+func (s ScorableAbility) HasUnknownProgram() bool {
+	for _, atom := range s.Effect {
+		if atom.Kind == EffectUnknown && !atom.Program.IsZero() {
+			return true
+		}
+	}
+	return false
 }

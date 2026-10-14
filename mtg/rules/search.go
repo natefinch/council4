@@ -22,6 +22,10 @@ type SearchAgent interface {
 	ChooseActionBySearch(ctx SearchContext, legal []action.Action) action.Action
 }
 
+// DefaultSearchDecisionLimit bounds hypothetical per-branch decisions, separate
+// from live work and Searcher's candidate-width/lookahead policy.
+const DefaultSearchDecisionLimit = 10000
+
 // SearchContext gives a SearchAgent a forward model of the current decision
 // without exposing the live game. It is created by the engine and passed to
 // ChooseActionBySearch. The agent branches on states from Determinize, rolls them
@@ -52,6 +56,7 @@ func (c SearchContext) DecisionMaker() game.PlayerID { return c.decisionMaker }
 // several determinizations (PIMC).
 func (c SearchContext) Determinize() *game.Game {
 	clone := c.game.Clone()
+	clone.Execution = game.ExecutionDiagnostics{}
 	determinize(clone, c.decisionMaker, c.rng)
 	return clone
 }
@@ -68,6 +73,7 @@ func (c SearchContext) Simulator() Simulator {
 		searchRNG:           rand.New(rand.NewPCG(seed^searchSeedHi, seed)),
 		cardImplementations: c.engine.cardImplementations,
 		programs:            c.engine.programs,
+		DecisionLimit:       DefaultSearchDecisionLimit,
 	}
 	return Simulator{engine: simEngine}
 }
@@ -86,9 +92,27 @@ func (e *Engine) newSearchContext(g *game.Game, playerID game.PlayerID) SearchCo
 // the live game.
 func (e *Engine) decideAction(g *game.Game, agent PlayerAgent, playerID game.PlayerID, legal []action.Action) action.Action {
 	if searcher, ok := agent.(SearchAgent); ok {
-		return searcher.ChooseActionBySearch(e.newSearchContext(g, playerID), legal)
+		return e.searchDecision(g, searcher, playerID, legal)
 	}
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
 	return agent.ChooseAction(decisionObservation(g, playerID, game.DecisionRules), legal)
+}
+
+func (e *Engine) searchDecision(g *game.Game, searcher SearchAgent, playerID game.PlayerID, legal []action.Action) (chosen action.Action) {
+	defer func() {
+		if failure := recover(); failure != nil {
+			if _, exhausted := failure.(WorkBudgetError); !exhausted {
+				panic(failure)
+			}
+			// A hypothetical nonterminating branch is not live-game exhaustion.
+			g.Execution.SearchBudgetStops++
+			g.Execution.ActionFallbacks++
+			chosen = legal[0]
+			if containsAction(legal, action.Pass()) {
+				chosen = action.Pass()
+			}
+		}
+	}()
+	return searcher.ChooseActionBySearch(e.newSearchContext(g, playerID), legal)
 }

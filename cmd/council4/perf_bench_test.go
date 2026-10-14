@@ -41,7 +41,22 @@ func benchmarkPerfDeckGame(b *testing.B, factory sim.AgentFactory) {
 	cfg := sim.Config{Configs: configs, Games: 1, Seed: 20260619, NewAgents: factory}
 	b.ResetTimer()
 	for range b.N {
-		_ = sim.RunOne(cfg, 0)
+		result := sim.RunOne(cfg, 0)
+		decisions := 0
+		for _, turn := range result.Turns {
+			decisions += len(turn.Actions) + len(turn.Choices)
+		}
+		b.ReportMetric(float64(decisions), "logged-decisions/op")
+		b.ReportMetric(float64(result.TurnCount), "turns/op")
+		b.ReportMetric(1, "workers")
+		switch {
+		case result.HasWinner:
+			b.ReportMetric(1, "rules-wins/op")
+		case result.TurnLimitReached:
+			b.ReportMetric(1, "turn-budget/op")
+		default:
+			b.ReportMetric(1, "nonwinning-results/op")
+		}
 	}
 }
 

@@ -35,7 +35,7 @@ func TestSimulationResultAggregatesOutcomes(t *testing.T) {
 			{HasWinner: true, Winner: game.Player1},
 			{HasWinner: true, Winner: game.Player3},
 			{HasWinner: true, Winner: game.Player1},
-			{HasWinner: false}, // draw / turn-cap stop
+			{Termination: rules.TerminationDraw},
 		},
 		Failures: []GameFailure{{Index: 9, Seed: 123, Reason: "boom"}},
 	}

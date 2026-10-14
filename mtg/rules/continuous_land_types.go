@@ -40,9 +40,11 @@ func hasBasicLandTypeSet(g *game.Game, sources []staticAbilitySource) bool {
 		}
 	}
 	for _, source := range sources {
-		for _, body := range source.face.StaticAbilities {
-			for _, effect := range body.ContinuousEffects {
-				if len(effect.SetBasicLandTypes) > 0 && staticAbilityFunctionsFromSource(&body, source) {
+		for i := range source.face.StaticAbilities {
+			body := &source.face.StaticAbilities[i]
+			for j := range body.ContinuousEffects {
+				effect := &body.ContinuousEffects[j]
+				if len(effect.SetBasicLandTypes) > 0 && staticAbilityFunctionsFromSource(body, source) {
 					return true
 				}
 			}

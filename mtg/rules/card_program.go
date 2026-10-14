@@ -19,6 +19,11 @@ func NewEngineWithPrograms(rng *rand.Rand, programs cardprogram.Catalog) *Engine
 	return engine
 }
 
+// ProgramBindings exposes immutable source/version evidence for replay/reporting.
+func (e *Engine) ProgramBindings(references []game.ProgramReference) ([]cardprogram.Binding, error) {
+	return e.programs.Bindings(references)
+}
+
 // ValidatePrograms rejects missing/version-mismatched code before game setup.
 // Immutable CardDefs may be cached; copies/modifications must use fresh definitions.
 func (e *Engine) ValidatePrograms(configs [game.NumPlayers]game.PlayerConfig) error {

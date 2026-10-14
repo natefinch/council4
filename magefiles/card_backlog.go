@@ -13,6 +13,12 @@ import (
 // (CardSupport, SupportDocs) call regenerateCardBacklog directly instead, so the
 // corpus is not compiled twice in the same run.
 func CardBacklog(ctx context.Context) error {
+	return SupportInventory(ctx)
+}
+
+// CompilerBacklog explicitly refreshes the legacy diagnostic queues, then
+// overlays the production inventory. It is not the default authoring backlog.
+func CompilerBacklog(ctx context.Context) error {
 	corpusPath, err := pinnedOracleCards(ctx)
 	if err != nil {
 		return err
@@ -35,7 +41,10 @@ func CardBacklog(ctx context.Context) error {
 		return err
 	}
 
-	return regenerateCardBacklog(ctx, corpusPath, compileReportPath, filepath.FromSlash(".cardwork/card-backlog-report.json"))
+	if err := regenerateCardBacklog(ctx, corpusPath, compileReportPath, filepath.FromSlash(".cardwork/card-backlog-report.json")); err != nil {
+		return err
+	}
+	return refreshProductionInventory(ctx, corpusPath, compileReportPath)
 }
 
 // regenerateCardBacklog joins the lowering signal in an already-produced

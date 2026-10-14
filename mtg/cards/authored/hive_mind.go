@@ -32,7 +32,7 @@ func newHiveMind() *game.CardDef {
 					Event:         game.EventSpellCast,
 					CardSelection: game.Selection{RequiredTypesAny: []types.Card{types.Instant, types.Sorcery}},
 				}},
-				Content: game.Mode{Program: hiveMindCopyProgram}.Ability(),
+				Content: game.Mode{Text: "Other players copy the spell with optional new targets", Program: hiveMindCopyProgram}.Ability(),
 			}},
 		},
 	}

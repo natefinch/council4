@@ -82,6 +82,12 @@ func (c PlayerConfig) CommanderDefs() []*CardDef {
 // together all players, the shared battlefield, the stack, turn state,
 // and global game properties.
 type Game struct {
+	// Execution records policy decisions, not rules events. Value fields survive
+	// cloning without sharing mutable counters between search branches.
+	Execution ExecutionDiagnostics
+	// DrawParticipants identifies the last simultaneous loss set (CR 104.4a),
+	// not players who lost before the multiplayer game ended.
+	DrawParticipants [NumPlayers]bool
 	// Mode selects multiplayer Commander or a single-player goldfish run.
 	Mode RunMode
 

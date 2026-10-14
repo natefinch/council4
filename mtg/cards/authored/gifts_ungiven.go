@@ -29,6 +29,7 @@ func newGiftsUngiven() *game.CardDef {
 			Types: []types.Card{types.Instant}, Colors: []color.Color{color.Blue},
 			OracleText: "Search your library for up to four cards with different names and reveal them. Target opponent chooses two of those cards. Put the chosen cards into your graveyard and the rest into your hand. Then shuffle.",
 			SpellAbility: opt.Val(game.Mode{
+				Text:    "Reveal a different-name search; opponent partitions hand and graveyard",
 				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPlayer, Constraint: "opponent"}},
 				Program: giftsUngivenSearchProgram,
 			}.Ability()),

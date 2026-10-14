@@ -145,6 +145,11 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 			delete(g.MarkedToLoseGame, player.ID)
 		}
 	}
+	if g.Mode != game.RunModeGoldfish && len(losses) > 0 && g.TurnOrder.ActivePlayerCount() == 0 {
+		for _, loss := range losses {
+			g.DrawParticipants[loss.Player] = true
+		}
+	}
 	return changed, losses
 }
 

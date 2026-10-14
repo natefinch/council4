@@ -27,7 +27,7 @@ var WorldgorgerDragon = cardset.Entry{
 }
 
 func newWorldgorgerDragon() *game.CardDef {
-	enter := game.Mode{Program: worldgorgerEnter}.Ability()
+	enter := game.Mode{Text: "Exile other controlled permanents linked to this incarnation", Program: worldgorgerEnter}.Ability()
 	enter.LinkedProducers = []game.LinkedProducerKey{worldgorgerExiles}
 	return &game.CardDef{
 		ColorIdentity: color.NewIdentity(color.Red),
@@ -44,7 +44,7 @@ func newWorldgorgerDragon() *game.CardDef {
 				{Trigger: game.TriggerCondition{Pattern: game.TriggerPattern{
 					Event: game.EventZoneChanged, Source: game.TriggerSourceSelf,
 					MatchFromZone: true, FromZone: zone.Battlefield,
-				}}, Content: game.Mode{Program: worldgorgerLeave}.Ability()},
+				}}, Content: game.Mode{Text: "Return linked exiled cards under owner control", Program: worldgorgerLeave}.Ability()},
 			},
 		},
 	}

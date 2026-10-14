@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -10,14 +12,20 @@ import (
 // GameResult is the structured output of a completed game. It folds in the final
 // event stream and end-state so consumers (such as the report package) can work
 // purely from a GameResult, never from a live *game.Game.
+//
+//nolint:recvcheck // Public snapshot queries work on values; private construction helpers append to a live result.
 type GameResult struct {
+	Termination      Termination
+	DrawParticipants [game.NumPlayers]bool
+	Execution        game.ExecutionDiagnostics
+	Limitations      []Limitation
 	Winner           game.PlayerID
 	HasWinner        bool
 	EliminationOrder []game.PlayerID
 	Losses           []LossLog
 	TurnCount        int
 	Turns            []TurnLog
-	// TurnLimitReached reports that a goldfish run completed its requested turns.
+	// TurnLimitReached reports multiplayer or goldfish turn-budget exhaustion.
 	TurnLimitReached bool
 
 	// Events is the game's full event stream, copied from the game at the end of
@@ -34,6 +42,41 @@ type GameResult struct {
 	// after the opening hands are drawn, in hand order, so a report can show the
 	// hand the game started from.
 	OpeningHand []id.ID
+}
+
+// Outcome classifies old winner-bearing results without interpreting an empty
+// or aborted result as a draw. A rules draw must be explicitly recorded.
+func (r GameResult) Outcome() Termination {
+	if r.Termination != "" {
+		return r.Termination
+	}
+	if r.HasWinner {
+		return TerminationWin
+	}
+	if r.TurnLimitReached {
+		return TerminationTurnBudget
+	}
+	return TerminationUnknown
+}
+
+// Completed counts only rules results, not budget exhaustion or failures.
+func (r GameResult) Completed() bool {
+	return r.Outcome() == TerminationWin || r.Outcome() == TerminationDraw || r.Outcome() == TerminationLoss
+}
+
+// Drew includes terminal simultaneous losses, but not an earlier eliminated
+// seat. Older explicitly drawn fixtures can identify their remaining survivors.
+func (r GameResult) Drew(player game.PlayerID) bool {
+	if r.Outcome() != TerminationDraw {
+		return false
+	}
+	if r.DrawParticipants != [game.NumPlayers]bool{} {
+		return r.DrawParticipants[player]
+	}
+	if r.EndState.Players[player].Eliminated {
+		return false
+	}
+	return !slices.Contains(r.EliminationOrder, player)
 }
 
 // CardInfo is the public identity of a card instance used by reports.

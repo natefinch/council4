@@ -80,7 +80,7 @@ func BenchmarkRealisticGame(b *testing.B) {
 	for range b.N {
 		engine := NewEngine(nil)
 		g := engine.NewGame(configs)
-		engine.RunGame(g, allFirstLegalAgents())
+		reportGameBenchmark(b, engine.RunGame(g, allFirstLegalAgents()))
 	}
 }
 
@@ -112,6 +112,19 @@ func BenchmarkRealForestGame(b *testing.B) {
 	for range b.N {
 		engine := NewEngine(nil)
 		g := engine.NewGame(configs)
-		engine.RunGame(g, allFirstLegalAgents())
+		reportGameBenchmark(b, engine.RunGame(g, allFirstLegalAgents()))
+	}
+}
+
+func reportGameBenchmark(b *testing.B, result *GameResult) {
+	decisions := 0
+	for _, turn := range result.Turns {
+		decisions += len(turn.Actions) + len(turn.Choices)
+	}
+	b.ReportMetric(float64(decisions), "logged-decisions/op")
+	b.ReportMetric(float64(result.TurnCount), "turns/op")
+	b.ReportMetric(1, "workers")
+	if result.HasWinner {
+		b.ReportMetric(1, "rules-wins/op")
 	}
 }

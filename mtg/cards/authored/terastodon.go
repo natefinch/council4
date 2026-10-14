@@ -36,6 +36,7 @@ func newTerastodon() *game.CardDef {
 					Event: game.EventPermanentEnteredBattlefield, Source: game.TriggerSourceSelf,
 				}},
 				Content: game.Mode{
+					Text: "Optional destruction with tokens only for actual graveyard arrivals",
 					Targets: []game.TargetSpec{{
 						MinTargets: 0, MaxTargets: 3, Allow: game.TargetAllowPermanent,
 						Selection: opt.Val(game.Selection{ExcludedTypes: []types.Card{types.Creature}}),

@@ -48,6 +48,8 @@ type Config struct {
 	// bound a game that would otherwise durdle toward the engine's 1000-turn
 	// safety cap and exhaust memory. Zero (the default) uses that safety cap.
 	TurnLimit int
+	// DecisionLimit is independent of turn limits and Agent search budgets.
+	DecisionLimit int
 	// Programs overrides the immutable production catalog for custom cards.
 	// Nil installs the same catalog used by default registry consumers.
 	Programs *cardprogram.Catalog
@@ -109,7 +111,7 @@ func Run(cfg Config) SimulationResult {
 func runGameSafely(cfg Config, index int) (result rules.GameResult, failure *GameFailure) {
 	defer func() {
 		if r := recover(); r != nil {
-			result = rules.GameResult{}
+			result = rules.GameResult{Termination: rules.TerminationInvalid, Limitations: rules.ActionGenerationLimitations()}
 			failure = &GameFailure{
 				Index: index,
 				Seed:  GameSeed(cfg.Seed, index),
@@ -118,6 +120,11 @@ func runGameSafely(cfg Config, index int) (result rules.GameResult, failure *Gam
 			if u, ok := r.(rules.UnsupportedError); ok {
 				failure.Reason = u.Error()
 				failure.Unsupported = true
+				result.Termination = rules.TerminationUnsupported
+			} else if budget, ok := r.(rules.WorkBudgetError); ok {
+				result.Termination = rules.TerminationWorkBudget
+				result.Execution = budget.Execution
+				failure.Reason = budget.Error()
 			} else {
 				failure.Reason = fmt.Sprintf("%v", r)
 			}
@@ -155,6 +162,7 @@ func workerCount(cfg Config) int {
 func RunOne(cfg Config, index int) rules.GameResult {
 	gameSeed := GameSeed(cfg.Seed, index)
 	engine := engineFor(gameSeed, cfg.Programs)
+	engine.DecisionLimit = cfg.DecisionLimit
 	g := engine.NewGame(cfg.Configs)
 	agents := newAgents(cfg)(gameSeed)
 	return *engine.RunGameWithTurnLimit(g, agents, cfg.TurnLimit)

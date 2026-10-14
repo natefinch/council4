@@ -1,4 +1,17 @@
 {
+  "terminations": {
+    "rules-draw": 1,
+    "rules-win": 3,
+    "unsupported-execution": 1
+  },
+  "decisions": {
+    "Decisions": 0,
+    "ActionFallbacks": 0,
+    "ChoiceFallbacks": 0,
+    "InvalidActions": 0,
+    "InvalidChoices": 0,
+    "SearchBudgetStops": 0
+  },
   "games": 5,
   "masterSeed": 7,
   "testedSeat": 0,
@@ -13,7 +26,8 @@
   "outcome": {
     "completed": 4,
     "wins": 2,
-    "losses": 2,
+    "losses": 1,
+    "draws": 1,
     "winRate": 0.5,
     "averageFinish": 1.75,
     "finishCounts": [
@@ -45,12 +59,11 @@
       }
     },
     "turnsToLoss": {
-      "count": 2,
+      "count": 1,
       "min": 6,
-      "max": 1000,
-      "average": 503,
+      "max": 6,
+      "average": 6,
       "histogram": {
-        "1000": 1,
         "6": 1
       }
     }
@@ -134,7 +147,8 @@
     {
       "index": 4,
       "seed": 55,
-      "reason": "unsupported card: Mystery Card"
+      "reason": "unsupported card: Mystery Card",
+      "unsupported": true
     }
   ]
 }

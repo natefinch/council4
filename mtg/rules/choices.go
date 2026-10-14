@@ -60,11 +60,13 @@ func (e *Engine) chooseChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 // to use a deterministic fallback (no agent, no ChoiceAgent, or an invalid agent
 // answer), so callers that record their own decision can mirror that flag.
 func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest, log *TurnLog) ([]int, bool) {
+	e.countDecision(g)
 	if request.ID == 0 {
 		request.ID = nextChoiceID(log)
 	}
 	selected, usedFallback := e.agentChoice(g, agents, request)
 	if !choiceSelectionValid(request, selected) {
+		g.Execution.InvalidChoices++
 		selected = fallbackChoice(request)
 		usedFallback = true
 	}
@@ -72,6 +74,9 @@ func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]
 		panic("invalid fallback choice")
 	}
 	selected = append([]int(nil), selected...)
+	if usedFallback {
+		g.Execution.ChoiceFallbacks++
+	}
 	log.addChoice(game.ChoiceDecision{
 		Request:       cloneChoiceRequest(request),
 		DecisionMaker: g.DecisionMaker(request.Player, request.DecisionKind),

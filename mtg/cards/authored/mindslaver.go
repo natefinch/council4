@@ -32,6 +32,7 @@ func newMindslaver() *game.CardDef {
 				{Kind: cost.AdditionalTap}, {Kind: cost.AdditionalSacrificeSource},
 			},
 			Content: game.Mode{
+				Text:    "Control target player's next actual turn",
 				Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPlayer}},
 				Program: mindslaverControl,
 			}.Ability(),

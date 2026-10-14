@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/mtg/sim"
 )
 
@@ -29,51 +30,68 @@ type Options struct {
 // it with outcome, per-card, mana, and interaction metrics; this is the stable
 // envelope they populate, plus the text and JSON rendering.
 type Report struct {
-	Games       int                `json:"games"`
-	MasterSeed  uint64             `json:"masterSeed"`
-	TestedSeat  int                `json:"testedSeat"`
-	TestedDeck  string             `json:"testedDeck"`
-	DeckNames   []string           `json:"deckNames"`
-	Completed   int                `json:"completed"`
-	Outcome     OutcomeMetrics     `json:"outcome"`
-	Cards       []CardMetrics      `json:"cards"`
-	ManaCurve   ManaCurveMetrics   `json:"manaCurve"`
-	Tempo       TempoMetrics       `json:"tempo"`
-	Commander   CommanderMetrics   `json:"commander"`
-	Interaction InteractionMetrics `json:"interaction"`
-	Failures    []Failure          `json:"failures,omitempty"`
+	Terminations map[rules.Termination]int `json:"terminations"`
+	Limitations  []rules.Limitation        `json:"limitations,omitempty"`
+	Decisions    game.ExecutionDiagnostics `json:"decisions"`
+	Games        int                       `json:"games"`
+	MasterSeed   uint64                    `json:"masterSeed"`
+	TestedSeat   int                       `json:"testedSeat"`
+	TestedDeck   string                    `json:"testedDeck"`
+	DeckNames    []string                  `json:"deckNames"`
+	Completed    int                       `json:"completed"`
+	Outcome      OutcomeMetrics            `json:"outcome"`
+	Cards        []CardMetrics             `json:"cards"`
+	ManaCurve    ManaCurveMetrics          `json:"manaCurve"`
+	Tempo        TempoMetrics              `json:"tempo"`
+	Commander    CommanderMetrics          `json:"commander"`
+	Interaction  InteractionMetrics        `json:"interaction"`
+	Failures     []Failure                 `json:"failures,omitempty"`
 }
 
 // Failure attributes a game that could not complete to its index, seed, and
 // reason.
 type Failure struct {
-	Index  int    `json:"index"`
-	Seed   uint64 `json:"seed"`
-	Reason string `json:"reason"`
+	Index       int    `json:"index"`
+	Seed        uint64 `json:"seed"`
+	Reason      string `json:"reason"`
+	Unsupported bool   `json:"unsupported"`
 }
 
 // Generate builds a Report from a finished simulation and the reporting options.
 // It reads only GameResult-derived data, never a live game.
 func Generate(result sim.SimulationResult, opts Options) Report {
 	report := Report{
-		Games:      result.GameCount,
-		MasterSeed: result.MasterSeed,
-		TestedSeat: int(opts.TestedSeat),
-		TestedDeck: opts.DeckNames[opts.TestedSeat],
-		DeckNames:  opts.DeckNames[:],
-		Completed:  result.GameCount - result.FailureCount(),
-		Outcome:    computeOutcome(result, opts.TestedSeat),
-		Cards:      computeCardMetrics(result, opts.TestedSeat),
+		Games:        result.GameCount,
+		MasterSeed:   result.MasterSeed,
+		TestedSeat:   int(opts.TestedSeat),
+		TestedDeck:   opts.DeckNames[opts.TestedSeat],
+		DeckNames:    opts.DeckNames[:],
+		Completed:    result.CompletedCount(),
+		Terminations: result.OutcomeCounts(),
+		Outcome:      computeOutcome(result, opts.TestedSeat),
+		Cards:        computeCardMetrics(result, opts.TestedSeat),
 	}
 	report.ManaCurve = computeManaCurve(result, opts.TestedSeat, report.Cards)
 	report.Tempo = computeTempo(result, opts.TestedSeat)
 	report.Commander = computeCommander(result, opts.TestedSeat)
 	report.Interaction = computeInteraction(result, opts.TestedSeat)
+	for _, played := range result.Games {
+		report.Decisions.Decisions += played.Execution.Decisions
+		report.Decisions.ActionFallbacks += played.Execution.ActionFallbacks
+		report.Decisions.ChoiceFallbacks += played.Execution.ChoiceFallbacks
+		report.Decisions.InvalidActions += played.Execution.InvalidActions
+		report.Decisions.InvalidChoices += played.Execution.InvalidChoices
+		report.Decisions.SearchBudgetStops += played.Execution.SearchBudgetStops
+		if len(report.Limitations) == 0 {
+			report.Limitations = played.Limitations
+		}
+	}
 	for _, failure := range result.Failures {
 		report.Failures = append(report.Failures, Failure{
-			Index:  failure.Index,
-			Seed:   failure.Seed,
-			Reason: failure.Reason,
+			Index:       failure.Index,
+			Seed:        failure.Seed,
+			Reason:      failure.Reason,
+			Unsupported: failure.Unsupported,
 		})
 	}
 	return report
@@ -86,6 +104,12 @@ func (r Report) WriteText(w io.Writer) error {
 	_, _ = fmt.Fprintf(&b, "Deck under test: %s (seat %d)\n", r.TestedDeck, r.TestedSeat+1)
 	_, _ = fmt.Fprintf(&b, "Games: %d (%d completed, %d failed)\n", r.Games, r.Completed, len(r.Failures))
 	_, _ = fmt.Fprintf(&b, "Master seed: %d\n", r.MasterSeed)
+	if len(r.Limitations) != 0 || r.Completed != r.Games {
+		_, _ = fmt.Fprintf(&b, "Terminations: %v\nDecisions: %+v\n", r.Terminations, r.Decisions)
+		for _, limit := range r.Limitations {
+			_, _ = fmt.Fprintf(&b, "Limitation %s: %s %s\n", limit.ID, limit.Detail, limit.Blocker)
+		}
+	}
 	writeOutcome(&b, r.Outcome)
 	writeManaCurve(&b, r.ManaCurve)
 	writeTempo(&b, r.Tempo, r.Commander, r.Interaction)

@@ -6,13 +6,14 @@ import (
 
 	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/mtg/sim"
 )
 
 // defaultMatchupTurnLimit caps each matchup game's length. A weak agent can drag
 // a four-player game toward the engine's 1000-turn safety cap, which would make a
 // measurement run take far too long, so games are stopped after this many turns
-// and counted as draws. A real game with functioning win conditions ends well
+// and counted as budget stops, never draws. A real game with functioning win conditions ends well
 // before this; the cap only bounds pathological durdling.
 const defaultMatchupTurnLimit = 60
 
@@ -71,10 +72,16 @@ func printMatchupSummary(w io.Writer, result sim.MatchupResult, paths []string, 
 	_, _ = fmt.Fprintf(w, "Baseline wins: %d\n", result.BaselineWins)
 	_, _ = fmt.Fprintf(w, "Draws:         %d\n", result.Draws)
 	_, _ = fmt.Fprintf(w, "Failures:      %d\n", result.Failures)
+	_, _ = fmt.Fprintf(w, "Budget stops:  %d (not draws)\n", result.BudgetStops)
+	for _, limit := range rules.ActionGenerationLimitations() {
+		_, _ = fmt.Fprintf(w, "Limitation %s: %s %s\n", limit.ID, limit.Detail, limit.Blocker)
+	}
 
 	rate := result.TestedWinRate()
 	_, _ = fmt.Fprintf(w, "\nTested win rate: %.1f%% (break-even is %.1f%%)\n", rate*100, breakEven*100)
 	switch {
+	case result.TestedWins+result.BaselineWins+result.Draws == 0:
+		_, _ = fmt.Fprintln(w, "=> no completed rules results; no strength inference")
 	case rate > breakEven:
 		_, _ = fmt.Fprintf(w, "=> the tested agent is stronger than the baseline (+%.1f points)\n", (rate-breakEven)*100)
 	case rate < breakEven:

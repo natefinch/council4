@@ -13,11 +13,21 @@ import (
 // Program associates a stable binding with synchronous Go resolution.
 // Resolve must not capture mutable per-game state; use the supplied Context.
 type Program struct {
-	Reference game.ProgramReference
-	Resolve   func(Context) error
+	Reference      game.ProgramReference
+	SourceRevision string
+	RulesRevision  string
+	Resolve        func(Context) error
 	// Dependencies declares handlers scheduled or introduced by Go resolution,
 	// whose bodies cannot be discovered by inspecting the Card Definition.
 	Dependencies []game.ProgramReference
+}
+
+// Binding identifies installed executable code and its shared-rule dependency.
+// Empty revisions on custom fixtures mean unbound source, not verified fidelity.
+type Binding struct {
+	Reference      game.ProgramReference `json:"reference"`
+	SourceRevision string                `json:"source_revision"`
+	RulesRevision  string                `json:"rules_revision"`
 }
 
 // Catalog is immutable after construction and safe to share between Engines.
@@ -50,6 +60,45 @@ func NewCatalog(programs []Program) (Catalog, error) {
 		}
 	}
 	return catalog, nil
+}
+
+// Bindings includes transitive Go-only dependencies in deterministic order.
+func (c Catalog) Bindings(references []game.ProgramReference) ([]Binding, error) {
+	var out []Binding
+	seen := make(map[game.ProgramReference]bool)
+	var visit func(game.ProgramReference) error
+	visit = func(ref game.ProgramReference) error {
+		if seen[ref] {
+			return nil
+		}
+		seen[ref] = true
+		p, err := c.Lookup(ref)
+		if err != nil {
+			return err
+		}
+		out = append(out, Binding{Reference: ref, SourceRevision: p.SourceRevision, RulesRevision: p.RulesRevision})
+		for _, dependency := range p.Dependencies {
+			if err := visit(dependency); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, ref := range references {
+		if err := visit(ref); err != nil {
+			return nil, err
+		}
+	}
+	slices.SortFunc(out, func(a, b Binding) int {
+		if a.Reference.ID < b.Reference.ID {
+			return -1
+		}
+		if a.Reference.ID > b.Reference.ID {
+			return 1
+		}
+		return 0
+	})
+	return out, nil
 }
 
 // Lookup checks the exact declared version rather than choosing a nearby handler.

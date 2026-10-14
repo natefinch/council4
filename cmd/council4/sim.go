@@ -175,10 +175,8 @@ func reportSimulation(w io.Writer, result sim.SimulationResult, paths []string, 
 
 func printSimSummary(w io.Writer, result sim.SimulationResult, paths []string, tested int, profile string) {
 	wins := result.WinCounts()
-	completed := result.GameCount - result.FailureCount()
-	// A failed game keeps a zero (winner-less) result in Games, so DrawCount
-	// includes failures; report genuine draws separately from failures.
-	draws := result.DrawCount() - result.FailureCount()
+	completed := result.CompletedCount()
+	draws := result.DrawCount()
 	low, high, avg := gameLengthStats(result)
 
 	_, _ = fmt.Fprintf(w, "Simulation: %d games, agent %q, master seed %d\n",
@@ -191,15 +189,27 @@ func printSimSummary(w io.Writer, result sim.SimulationResult, paths []string, t
 			marker = "* "
 		}
 		_, _ = fmt.Fprintf(w, "%s%s: %d wins (%.1f%%)\n",
-			marker, deckName(paths[seat]), wins[seat], percent(wins[seat], result.GameCount))
+			marker, deckName(paths[seat]), wins[seat], percent(wins[seat], completed))
 	}
 	_, _ = fmt.Fprintf(w, "\nDraws: %d   Failures: %d\n", draws, result.FailureCount())
+	_, _ = fmt.Fprintf(w, "Completed rules results: %d; terminations: %v\n", completed, result.OutcomeCounts())
+	for i, played := range result.Games {
+		_, _ = fmt.Fprintf(w, "Game %d policy decisions/fallbacks: %+v\n", i, played.Execution)
+	}
+	for _, played := range result.Games {
+		if len(played.Limitations) != 0 {
+			for _, limit := range played.Limitations {
+				_, _ = fmt.Fprintf(w, "Limitation %s: %s %s\n", limit.ID, limit.Detail, limit.Blocker)
+			}
+			break
+		}
+	}
 	if completed > 0 {
 		_, _ = fmt.Fprintf(w, "Game length (turns): min %d, avg %.1f, max %d\n", low, avg, high)
 	}
 	testedWins := wins[tested-1]
 	_, _ = fmt.Fprintf(w, "\nDeck under test win rate: %.1f%% (%d/%d)\n",
-		percent(testedWins, result.GameCount), testedWins, result.GameCount)
+		percent(testedWins, completed), testedWins, completed)
 	for _, failure := range result.Failures {
 		_, _ = fmt.Fprintf(w, "  failed game %d (seed %d): %s\n", failure.Index, failure.Seed, failure.Reason)
 	}
@@ -208,17 +218,21 @@ func printSimSummary(w io.Writer, result sim.SimulationResult, paths []string, t
 // simReport is the JSON report written for a simulation. It summarises the
 // deck-under-test perspective rather than dumping every game log.
 type simReport struct {
-	Games       int           `json:"games"`
-	MasterSeed  uint64        `json:"masterSeed"`
-	Agent       string        `json:"agent"`
-	TestedIndex int           `json:"testedIndex"`
-	TestedDeck  string        `json:"testedDeck"`
-	Decks       []string      `json:"decks"`
-	WinsBySeat  []int         `json:"winsBySeat"`
-	TestedWins  int           `json:"testedWins"`
-	Draws       int           `json:"draws"`
-	GameLength  lengthSummary `json:"gameLength"`
-	Failures    []failureJSON `json:"failures,omitempty"`
+	Completed    int                         `json:"completed"`
+	Terminations map[rules.Termination]int   `json:"terminations"`
+	Limitations  []rules.Limitation          `json:"limitations,omitempty"`
+	Decisions    []game.ExecutionDiagnostics `json:"decisions"`
+	Games        int                         `json:"games"`
+	MasterSeed   uint64                      `json:"masterSeed"`
+	Agent        string                      `json:"agent"`
+	TestedIndex  int                         `json:"testedIndex"`
+	TestedDeck   string                      `json:"testedDeck"`
+	Decks        []string                    `json:"decks"`
+	WinsBySeat   []int                       `json:"winsBySeat"`
+	TestedWins   int                         `json:"testedWins"`
+	Draws        int                         `json:"draws"`
+	GameLength   lengthSummary               `json:"gameLength"`
+	Failures     []failureJSON               `json:"failures,omitempty"`
 }
 
 type lengthSummary struct {
@@ -237,19 +251,27 @@ func writeSimReport(path string, result sim.SimulationResult, paths []string, te
 	wins := result.WinCounts()
 	low, high, avg := gameLengthStats(result)
 	report := simReport{
-		Games:       result.GameCount,
-		MasterSeed:  result.MasterSeed,
-		Agent:       profileName(profile),
-		TestedIndex: tested,
-		TestedDeck:  deckName(paths[tested-1]),
-		Decks:       deckNames(paths),
-		WinsBySeat:  wins[:],
-		TestedWins:  wins[tested-1],
-		Draws:       result.DrawCount() - result.FailureCount(),
-		GameLength:  lengthSummary{Min: low, Max: high, Average: avg},
+		Games:        result.GameCount,
+		Completed:    result.CompletedCount(),
+		Terminations: result.OutcomeCounts(),
+		MasterSeed:   result.MasterSeed,
+		Agent:        profileName(profile),
+		TestedIndex:  tested,
+		TestedDeck:   deckName(paths[tested-1]),
+		Decks:        deckNames(paths),
+		WinsBySeat:   wins[:],
+		TestedWins:   wins[tested-1],
+		Draws:        result.DrawCount(),
+		GameLength:   lengthSummary{Min: low, Max: high, Average: avg},
 	}
 	for _, failure := range result.Failures {
 		report.Failures = append(report.Failures, failureJSON{Index: failure.Index, Seed: failure.Seed, Reason: failure.Reason})
+	}
+	for _, played := range result.Games {
+		report.Decisions = append(report.Decisions, played.Execution)
+		if len(report.Limitations) == 0 {
+			report.Limitations = played.Limitations
+		}
 	}
 	data, err := json.MarshalIndent(report, "", "  ")
 	if err != nil {
@@ -270,7 +292,7 @@ func gameLengthStats(result sim.SimulationResult) (low, high int, avg float64) {
 	}
 	total, completed := 0, 0
 	for i := range result.Games {
-		if failed[i] {
+		if failed[i] || !result.Completed(i) {
 			continue
 		}
 		turns := result.Games[i].TurnCount

@@ -24,20 +24,24 @@ and [impl-loop](./.agents/skills/impl-loop/SKILL.md) describe the execution rule
 ## Card support
 
 <!-- card-support:start -->
-Council4 currently supports **18,700 of 33,016 cards eligible for paper support (56.6%)**. The Scryfall Oracle Cards corpus contains 5,728 additional digital, special-format, memorabilia, or non-sanctioned-paper records that are excluded from that total. See [`supported.md`](./supported.md) and [`unsupported.md`](./unsupported.md) for the complete lists, and [`unsupported-reasons.md`](./unsupported-reasons.md) for capability-aware blocker planning.
+Production registry: **2790 entries, 2790 loadable, 11 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+
+See [production identity/status inventory](support-inventory.md), [installed and compiler lists](supported.md), and [compiler maintenance diagnostics](unsupported-reasons.md).
 <!-- card-support:end -->
 
-The summary above and generated support files currently measure legacy compiler
-coverage, not all runtime-loadable or behavior-verified implementations. The mixed
-catalog/reporting work in #3278 will distinguish these states. Compiler diagnostic
-rankings are maintenance evidence, not the default new-card work queue.
+The inventory separates installed code, behavior evidence and frozen compiler
+coverage. Neither compiler acceptance nor loadability certifies a complete,
+exact game. Compiler diagnostic rankings are maintenance evidence, not the
+default new-card work queue.
 
 For an explicitly requested legacy corpus refresh, run
 `go run github.com/magefile/mage@v1.15.0 cardSupport`. It uses ignored `.cardwork`
 space and updates compiler support documentation. `COUNCIL4_ORACLE_CARDS` may
 provide the exact bytes identified by the committed pin; mismatches fail.
 `cardTree /path/to/cards` emits a compiled tree for another consumer, and
-`supportDocs` refreshes only compiler documentation. None is an every-issue gate.
+`supportDocs` explicitly refreshes compiler evidence and overlays production
+status. `supportInventory` and `cardBacklog` reuse existing same-input compiler
+evidence without compilation. None is an every-issue gate.
 
 CI is read-only and proportional on main pushes and optional PRs. It does not
 commit support documentation. Shared runtime/card changes check the actual

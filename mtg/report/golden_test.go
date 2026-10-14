@@ -102,19 +102,20 @@ func goldenFixture() sim.SimulationResult {
 	secondWin.EndState.Players[game.Player1] = rules.PlayerEndState{Life: 30, LibrarySize: 15, CommanderCasts: 2}
 
 	draw := rules.GameResult{
-		HasWinner: false, TurnCount: 1000, Cards: cards,
+		Termination: rules.TerminationDraw,
+		HasWinner:   false, TurnCount: 1000, Cards: cards,
 		EliminationOrder: []game.PlayerID{game.Player2, game.Player3},
 	}
 	draw.EndState.Players[game.Player1] = rules.PlayerEndState{Life: 12, LibrarySize: 0, CommanderCasts: 0}
 
-	failed := rules.GameResult{}
+	failed := rules.GameResult{Termination: rules.TerminationUnsupported}
 
 	return sim.SimulationResult{
 		Games:      []rules.GameResult{win, loss, secondWin, draw, failed},
 		Seeds:      []uint64{11, 22, 33, 44, 55},
 		GameCount:  5,
 		MasterSeed: 7,
-		Failures:   []sim.GameFailure{{Index: 4, Seed: 55, Reason: "unsupported card: Mystery Card"}},
+		Failures:   []sim.GameFailure{{Index: 4, Seed: 55, Reason: "unsupported card: Mystery Card", Unsupported: true}},
 	}
 }
 

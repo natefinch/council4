@@ -16,6 +16,7 @@ type OutcomeMetrics struct {
 	Completed     int     `json:"completed"`
 	Wins          int     `json:"wins"`
 	Losses        int     `json:"losses"`
+	Draws         int     `json:"draws"`
 	WinRate       float64 `json:"winRate"`
 	AverageFinish float64 `json:"averageFinish"`
 	// FinishCounts[i] is how many games the deck finished in position i+1 (index
@@ -44,10 +45,10 @@ func computeOutcome(result sim.SimulationResult, seat game.PlayerID) OutcomeMetr
 	failed := failedIndices(result)
 	finishCounts := make([]int, game.NumPlayers)
 	var lengths, winTurns, lossTurns []int
-	wins, completed, finishSum := 0, 0, 0
+	wins, completed, finishSum, draws := 0, 0, 0, 0
 
 	for i := range result.Games {
-		if failed[i] {
+		if failed[i] || !result.Completed(i) {
 			continue
 		}
 		gameResult := result.Games[i]
@@ -58,10 +59,13 @@ func computeOutcome(result sim.SimulationResult, seat game.PlayerID) OutcomeMetr
 			finishCounts[position-1]++
 		}
 		finishSum += position
-		if gameResult.HasWinner && gameResult.Winner == seat {
+		switch {
+		case gameResult.HasWinner && gameResult.Winner == seat:
 			wins++
 			winTurns = append(winTurns, gameResult.TurnCount)
-		} else {
+		case gameResult.Drew(seat):
+			draws++
+		default:
 			lossTurns = append(lossTurns, gameResult.TurnCount)
 		}
 	}
@@ -69,7 +73,8 @@ func computeOutcome(result sim.SimulationResult, seat game.PlayerID) OutcomeMetr
 	metrics := OutcomeMetrics{
 		Completed:    completed,
 		Wins:         wins,
-		Losses:       completed - wins,
+		Losses:       completed - wins - draws,
+		Draws:        draws,
 		FinishCounts: finishCounts,
 		GameLength:   lengthStatsFrom(lengths),
 		TurnsToWin:   lengthStatsFrom(winTurns),
@@ -102,6 +107,9 @@ func finishingPosition(result rules.GameResult, seat game.PlayerID) int {
 }
 
 func placesAhead(result rules.GameResult, a, b game.PlayerID) bool {
+	if result.Drew(a) || result.Drew(b) {
+		return result.Drew(a) && !result.Drew(b)
+	}
 	if result.HasWinner {
 		if a == result.Winner {
 			return true
@@ -159,6 +167,11 @@ func failedIndices(result sim.SimulationResult) map[int]bool {
 	failed := make(map[int]bool, len(result.Failures))
 	for _, failure := range result.Failures {
 		failed[failure.Index] = true
+	}
+	for i := range result.Games {
+		if !result.Completed(i) {
+			failed[i] = true
+		}
 	}
 	return failed
 }

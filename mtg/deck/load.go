@@ -23,6 +23,9 @@ type UnresolvedCard struct {
 
 // LoadResult is the outcome of loading four decklists into game configs.
 type LoadResult struct {
+	// Support is the production inventory evidence for each resolved name.
+	// It does not turn legacy name lookup into certified Oracle identity.
+	Support []cards.Support
 	// Configs are the assembled player configs, ready for rules.Engine.NewGame.
 	Configs [game.NumPlayers]game.PlayerConfig
 
@@ -55,6 +58,12 @@ func Load(inputs [game.NumPlayers]PlayerInput, underTest game.PlayerID, reg *car
 		config, unresolved := buildConfig(game.PlayerID(i), &inputs[i], reg)
 		result.Configs[i] = config
 		result.Unresolved = append(result.Unresolved, unresolved...)
+		if inputs[i].Decklist != nil {
+			entries := append(append([]Entry(nil), inputs[i].Decklist.Commander...), inputs[i].Decklist.Cards...)
+			for _, entry := range entries {
+				result.Support = append(result.Support, reg.SupportFor(entry.Name)...)
+			}
+		}
 	}
 	result.Legality = rules.ValidateCommanderConfigs(result.Configs)
 	return result

@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -72,7 +73,8 @@ func TestMissingProgramFailsBeforeARealGameIsReported(t *testing.T) {
 		t.Fatal("missing code was admitted or hidden")
 	}
 	for _, played := range result.Games {
-		if played.TurnCount != 0 || len(played.Events) != 0 || played.HasWinner {
+		if played.TurnCount != 0 || len(played.Events) != 0 || played.HasWinner ||
+			played.Outcome() != rules.TerminationUnsupported || played.Completed() {
 			t.Fatal("preflight failure was reported as an executed game")
 		}
 	}

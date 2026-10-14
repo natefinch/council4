@@ -37,7 +37,7 @@ func TestAccumulateRotationAttributesOutcomes(t *testing.T) {
 		Games: []rules.GameResult{
 			{HasWinner: true, Winner: game.Player3}, // tested seat wins
 			{HasWinner: true, Winner: game.Player1}, // a baseline seat wins
-			{HasWinner: false},                      // draw
+			{Termination: rules.TerminationDraw},
 		},
 	}
 	var result MatchupResult
@@ -57,6 +57,7 @@ func TestAccumulateRotationCountsFailuresNotDraws(t *testing.T) {
 		Games:    []rules.GameResult{{}, {HasWinner: true, Winner: game.Player1}},
 		Failures: []GameFailure{{Index: 0}},
 	}
+
 	var result MatchupResult
 	accumulateRotation(&result, rotation, game.Player1)
 
@@ -68,6 +69,22 @@ func TestAccumulateRotationCountsFailuresNotDraws(t *testing.T) {
 	}
 	if result.TestedWins != 1 {
 		t.Fatalf("TestedWins = %d, want 1", result.TestedWins)
+	}
+}
+
+func TestAccumulateRotationSeparatesWorkBudgetFromExecutionFailures(t *testing.T) {
+	rotation := SimulationResult{
+		Games: []rules.GameResult{
+			{Termination: rules.TerminationWorkBudget},
+			{Termination: rules.TerminationUnsupported},
+			{Termination: rules.TerminationTurnBudget, TurnLimitReached: true},
+		},
+		Failures: []GameFailure{{Index: 0}, {Index: 1, Unsupported: true}},
+	}
+	var result MatchupResult
+	accumulateRotation(&result, rotation, game.Player1)
+	if result.BudgetStops != 2 || result.Failures != 1 || result.Draws != 0 {
+		t.Fatalf("budget/failure classifications: %+v", result)
 	}
 }
 
@@ -104,7 +121,7 @@ func TestRunMatchupAccountingIsComplete(t *testing.T) {
 	if result.TotalGames != game.NumPlayers*3 {
 		t.Fatalf("TotalGames = %d, want %d", result.TotalGames, game.NumPlayers*3)
 	}
-	sum := result.TestedWins + result.BaselineWins + result.Draws + result.Failures
+	sum := result.TestedWins + result.BaselineWins + result.Draws + result.Failures + result.BudgetStops
 	if sum != result.TotalGames {
 		t.Fatalf("outcomes sum to %d, want TotalGames %d", sum, result.TotalGames)
 	}

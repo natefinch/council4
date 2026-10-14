@@ -35,6 +35,7 @@ func newGildedDrake() *game.CardDef {
 				}},
 				ResolveWithIllegalTargets: true,
 				Content: game.Mode{
+					Text: "Exchange control; sacrifice on unsuccessful exchange",
 					Targets: []game.TargetSpec{{
 						MinTargets: 0, MaxTargets: 1, Allow: game.TargetAllowPermanent,
 						Selection: opt.Val(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerOpponent}),

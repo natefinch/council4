@@ -40,7 +40,7 @@ func newNimDeathmantle() *game.CardDef {
 				MatchFromZone: true, FromZone: zone.Battlefield, MatchToZone: true, ToZone: zone.Graveyard,
 				RequirePermanentTypes: []types.Card{types.Creature}, RequireNonToken: true,
 			}},
-			Content: game.Mode{Program: nimDeathmantleReturn}.Ability(),
+			Content: game.Mode{Text: "Optional payment to return and attach to the exact departed creature", Program: nimDeathmantleReturn}.Ability(),
 		}},
 	}}
 }

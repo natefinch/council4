@@ -84,9 +84,9 @@ func TestScorableEffectFlagsDynamicAmount(t *testing.T) {
 	}
 }
 
-func TestScorableEffectIgnoresUnmodeledPrimitive(t *testing.T) {
-	if atoms := ScorableEffect(contentOf(game.Scry{})); len(atoms) != 0 {
-		t.Fatalf("unmodeled primitive produced atoms %#v, want none", atoms)
+func TestScorableEffectExposesUnmodeledPrimitive(t *testing.T) {
+	if atoms := ScorableEffect(contentOf(game.Scry{})); len(atoms) != 1 || atoms[0].Kind != EffectUnknown {
+		t.Fatalf("unmodeled primitive = %#v, want explicit unknown atom", atoms)
 	}
 }
 

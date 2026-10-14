@@ -53,6 +53,7 @@ type MatchupResult struct {
 	BaselineWins int
 	Draws        int
 	Failures     int
+	BudgetStops  int
 
 	// TestedWinsBySeat[s] is how many games the tested agent won while seated in
 	// seat s, so per-seat (turn-order) effects are visible.
@@ -63,7 +64,7 @@ type MatchupResult struct {
 // won. Compare it against 1/NumPlayers (0.25 in a four-player game): above that
 // the tested agent is stronger than the baseline, below it weaker.
 func (r MatchupResult) TestedWinRate() float64 {
-	completed := r.TotalGames - r.Failures
+	completed := r.TotalGames - r.Failures - r.BudgetStops
 	if completed <= 0 {
 		return 0
 	}
@@ -120,11 +121,15 @@ func runMatchupRotation(m Matchup, testedSeat game.PlayerID) SimulationResult {
 func accumulateRotation(result *MatchupResult, rotation SimulationResult, testedSeat game.PlayerID) {
 	failed := failedGameIndices(rotation)
 	for i := range rotation.Games {
-		if failed[i] {
+		gameResult := rotation.Games[i]
+		if gameResult.Outcome() == rules.TerminationTurnBudget || gameResult.Outcome() == rules.TerminationWorkBudget {
+			result.BudgetStops++
+			continue
+		}
+		if failed[i] || !gameResult.Completed() {
 			result.Failures++
 			continue
 		}
-		gameResult := rotation.Games[i]
 		if !gameResult.HasWinner {
 			result.Draws++
 			continue

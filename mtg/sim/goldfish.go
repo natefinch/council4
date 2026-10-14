@@ -12,11 +12,12 @@ type GoldfishAgentFactory func(seed uint64) rules.PlayerAgent
 
 // GoldfishConfig describes one single-player, turn-limited simulation.
 type GoldfishConfig struct {
-	Player   game.PlayerConfig
-	Seed     uint64
-	MaxTurns int
-	NewAgent GoldfishAgentFactory
-	Programs *cardprogram.Catalog
+	Player        game.PlayerConfig
+	Seed          uint64
+	MaxTurns      int
+	NewAgent      GoldfishAgentFactory
+	Programs      *cardprogram.Catalog
+	DecisionLimit int
 }
 
 // RunGoldfish plays one deck alone and returns its structured turn log and end
@@ -26,6 +27,7 @@ func RunGoldfish(cfg GoldfishConfig) rules.GameResult {
 		panic("goldfish max turns must be positive")
 	}
 	engine := engineFor(cfg.Seed, cfg.Programs)
+	engine.DecisionLimit = cfg.DecisionLimit
 	g := engine.NewGoldfishGame(cfg.Player)
 	playerAgent := rules.PlayerAgent(agent.Agent{Strategy: agent.GenericStrategy{}})
 	if cfg.NewAgent != nil {

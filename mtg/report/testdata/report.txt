@@ -2,6 +2,8 @@ Deck performance report
 Deck under test: Tested Deck (seat 1)
 Games: 5 (4 completed, 1 failed)
 Master seed: 7
+Terminations: map[rules-draw:1 rules-win:3 unsupported-execution:1]
+Decisions: {Decisions:0 ActionFallbacks:0 ChoiceFallbacks:0 InvalidActions:0 InvalidChoices:0 SearchBudgetStops:0}
 
 Outcome (over 4 completed games):
   Win rate: 50.0% (2/4)
@@ -9,7 +11,7 @@ Outcome (over 4 completed games):
   Finishes: 1st×3 2nd×0 3rd×0 4th×1
   Game length (turns): min 3, avg 253.5, max 1000
   Turns to win (turns): min 3, avg 4.0, max 5
-  Turns to loss (turns): min 6, avg 503.0, max 1000
+  Turns to loss (turns): min 6, avg 6.0, max 6
 
 Mana & curve:
   Lands per turn: 0.50

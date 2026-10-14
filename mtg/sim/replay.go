@@ -5,6 +5,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/cardprogram"
+	"github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/rules"
@@ -19,9 +20,14 @@ import (
 // coin flip) and scripts each seat's agent to repeat its recorded decisions, which
 // reproduces the original GameResult exactly.
 type ReplayRecord struct {
-	Seed     uint64                      `json:"seed"`
-	Seats    [game.NumPlayers]SeatScript `json:"seats"`
-	Programs []game.ProgramReference     `json:"programs,omitempty"`
+	Seed           uint64                      `json:"seed"`
+	Seats          [game.NumPlayers]SeatScript `json:"seats"`
+	Programs       []game.ProgramReference     `json:"programs,omitempty"`
+	Bindings       []cardprogram.Binding       `json:"bindings,omitempty"`
+	TurnLimit      int                         `json:"turn_limit,omitempty"`
+	DecisionLimit  int                         `json:"decision_limit,omitempty"`
+	SourceRevision string                      `json:"production_source_revision"`
+	RulesRevision  string                      `json:"shared_rules_revision"`
 }
 
 // SeatScript is one seat's recorded decisions, in the order the engine asked for
@@ -43,7 +49,7 @@ type SeatScript struct {
 // without the original agents.
 func RecordGame(cfg Config, index int) (rules.GameResult, ReplayRecord) {
 	seed := GameSeed(cfg.Seed, index)
-	return recordedRunWithPrograms(cfg.Configs, seed, newAgents(cfg)(seed), cfg.Programs)
+	return recordedRunWithLimits(cfg.Configs, seed, newAgents(cfg)(seed), cfg.Programs, cfg.TurnLimit, cfg.DecisionLimit)
 }
 
 func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [game.NumPlayers]rules.PlayerAgent) (rules.GameResult, ReplayRecord) {
@@ -51,6 +57,10 @@ func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [
 }
 
 func recordedRunWithPrograms(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [game.NumPlayers]rules.PlayerAgent, programs *cardprogram.Catalog) (rules.GameResult, ReplayRecord) {
+	return recordedRunWithLimits(configs, seed, base, programs, 0, 0)
+}
+
+func recordedRunWithLimits(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [game.NumPlayers]rules.PlayerAgent, programs *cardprogram.Catalog, turnLimit, decisionLimit int) (rules.GameResult, ReplayRecord) {
 	var recorders [game.NumPlayers]seatRecorder
 	var agents [game.NumPlayers]rules.PlayerAgent
 	var choiceCapable [game.NumPlayers]bool
@@ -59,10 +69,18 @@ func recordedRunWithPrograms(configs [game.NumPlayers]game.PlayerConfig, seed ui
 		agents[i] = wrapForRecording(base[i], &recorders[i])
 	}
 	engine := engineFor(seed, programs)
+	engine.DecisionLimit = decisionLimit
 	g := engine.NewGame(configs)
-	result := *engine.RunGame(g, agents)
+	result := *engine.RunGameWithTurnLimit(g, agents, turnLimit)
 
-	record := ReplayRecord{Seed: seed, Programs: configProgramReferences(configs)}
+	record := ReplayRecord{Seed: seed, Programs: configProgramReferences(configs), TurnLimit: turnLimit, DecisionLimit: decisionLimit}
+	record.SourceRevision = authored.SourceRevision
+	record.RulesRevision = cardprogram.SharedRulesRevision
+	bindings, err := engine.ProgramBindings(record.Programs)
+	if err != nil {
+		panic(rules.UnsupportedError{Reason: err.Error()})
+	}
+	record.Bindings = bindings
 	for i := range recorders {
 		record.Seats[i] = SeatScript{
 			Actions:       recorders[i].actions,
@@ -76,7 +94,8 @@ func recordedRunWithPrograms(configs [game.NumPlayers]game.PlayerConfig, seed ui
 // Replay reconstructs the game described by record over configs and returns its
 // result, which equals the originally recorded GameResult.
 func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord, catalogs ...cardprogram.Catalog) rules.GameResult {
-	if len(catalogs) > 1 || !slices.Equal(record.Programs, configProgramReferences(configs)) {
+	if len(catalogs) > 1 || !slices.Equal(record.Programs, configProgramReferences(configs)) ||
+		record.SourceRevision != authored.SourceRevision || record.RulesRevision != cardprogram.SharedRulesRevision {
 		panic(rules.UnsupportedError{Reason: "replay program bindings do not match the recorded definitions"})
 	}
 	var catalog *cardprogram.Catalog
@@ -99,8 +118,13 @@ func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord, cat
 		}
 	}
 	engine := engineFor(record.Seed, catalog)
+	bindings, err := engine.ProgramBindings(record.Programs)
+	if err != nil || !slices.Equal(record.Bindings, bindings) {
+		panic(rules.UnsupportedError{Reason: "replay executable source/shared-rules bindings do not match"})
+	}
+	engine.DecisionLimit = record.DecisionLimit
 	g := engine.NewGame(configs)
-	return *engine.RunGame(g, agents)
+	return *engine.RunGameWithTurnLimit(g, agents, record.TurnLimit)
 }
 
 func configProgramReferences(configs [game.NumPlayers]game.PlayerConfig) []game.ProgramReference {
@@ -191,7 +215,9 @@ func (a *scriptedActionAgent) ChooseAction(_ rules.PlayerObservation, legal []ac
 	if index >= 0 && index < len(legal) {
 		return legal[index]
 	}
-	return action.Pass()
+	// An invalid recorded answer must take the engine's fallback path again,
+	// preserving invalid/fallback counters rather than returning a valid pass.
+	return action.Action{Kind: action.Kind(-1)}
 }
 
 // scriptedChoiceAgent replays a seat whose base agent answered choices. It

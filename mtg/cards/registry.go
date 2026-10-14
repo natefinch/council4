@@ -54,6 +54,7 @@ type Registry struct {
 	programs      cardprogram.Catalog
 	oracleNames   map[string]string
 	oracleIndices map[string]int
+	identities    map[string][]cardset.Entry
 }
 
 func emptyRegistry() *Registry {
@@ -62,6 +63,7 @@ func emptyRegistry() *Registry {
 		cache:         make(map[string][]*game.CardDef),
 		oracleNames:   make(map[string]string),
 		oracleIndices: make(map[string]int),
+		identities:    make(map[string][]cardset.Entry),
 	}
 }
 
@@ -74,6 +76,7 @@ func NewRegistry(cardSets ...[]*game.CardDef) *Registry {
 	for _, set := range cardSets {
 		for _, card := range set {
 			r.entries[card.Name] = append(r.entries[card.Name], func() *game.CardDef { return card })
+			r.identities[card.Name] = append(r.identities[card.Name], cardset.Entry{Name: card.Name})
 			r.count++
 		}
 	}
@@ -137,6 +140,7 @@ func NewProgramRegistry(entrySets ...[]cardset.Entry) (*Registry, error) {
 					}
 					r.count -= len(existing)
 					delete(r.entries, entry.Name)
+					delete(r.identities, entry.Name)
 				}
 			} else if entry.ReplaceLegacy {
 				return nil, fmt.Errorf("authored %s requests a nonexistent legacy replacement", entry.Name)
@@ -147,6 +151,8 @@ func NewProgramRegistry(entrySets ...[]cardset.Entry) (*Registry, error) {
 			return nil, fmt.Errorf("authored entry %s requires an explicit Oracle identity", entry.Name)
 		}
 		r.entries[entry.Name] = append(r.entries[entry.Name], entry.New)
+		entry.Programs = slices.Clone(entry.Programs)
+		r.identities[entry.Name] = append(r.identities[entry.Name], entry)
 		programs = append(programs, entry.Programs...)
 		r.count++
 	}

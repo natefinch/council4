@@ -62,6 +62,11 @@ func scoreActivateAbility(obs rules.PlayerObservation, act action.Action, person
 	if !ok {
 		return scoreActivate
 	}
+	if ability.HasUnknownProgram() {
+		// Explicit policy prior, not an assertion that the effect is worthless.
+		// Search evaluates the real program and reports its heuristic limits.
+		return scoreActivate
+	}
 	targets := activationTargets(act)
 	dynamicEstimate := dynamicEstimateFor(activationXValue(act))
 	value := activationEffectValue(obs, targets, ability.Effect, personality, dynamicEstimate) -

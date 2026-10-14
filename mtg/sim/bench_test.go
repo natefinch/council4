@@ -20,7 +20,17 @@ func BenchmarkRunOneGame(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for range b.N {
-		_ = RunOne(cfg, 0)
+		result := RunOne(cfg, 0)
+		decisions := 0
+		for _, turn := range result.Turns {
+			decisions += len(turn.Actions) + len(turn.Choices)
+		}
+		b.ReportMetric(float64(decisions), "logged-decisions/op")
+		b.ReportMetric(float64(result.TurnCount), "turns/op")
+		b.ReportMetric(1, "workers")
+		if result.HasWinner {
+			b.ReportMetric(1, "rules-wins/op")
+		}
 	}
 }
 

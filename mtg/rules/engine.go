@@ -14,6 +14,9 @@ const maxGameTurns = 1000
 
 // Engine owns rule execution and game-loop configuration.
 type Engine struct {
+	// DecisionLimit bounds per-game action/choice work, not legal Magic turns.
+	// Zero uses DefaultDecisionLimit. Exhaustion is an abort, never a rules draw.
+	DecisionLimit int
 	// rng is consumed sequentially by setup and runtime rules. Use one Engine
 	// per independently reproducible game stream.
 	rng *rand.Rand
@@ -108,6 +111,7 @@ func (e *Engine) RunGameWithTurnLimit(g *game.Game, agents [game.NumPlayers]Play
 		result.Winner = winner.ID
 		result.HasWinner = true
 	}
+	result.TurnLimitReached = !g.IsGameOver() && len(result.Turns) == turnLimit
 	foldFinalState(g, result)
 	return result
 }
@@ -143,6 +147,21 @@ func (e *Engine) RunGoldfish(g *game.Game, agent PlayerAgent, turnLimit int) *Ga
 // foldFinalState copies the final event stream, end-state, and card identities
 // from the game into the result, so consumers never need the live *game.Game.
 func foldFinalState(g *game.Game, result *GameResult) {
+	result.Execution = g.Execution
+	result.DrawParticipants = g.DrawParticipants
+	result.Limitations = ActionGenerationLimitations()
+	switch {
+	case result.HasWinner:
+		result.Termination = TerminationWin
+	case result.TurnLimitReached:
+		result.Termination = TerminationTurnBudget
+	case g.IsGameOver() && g.Mode == game.RunModeGoldfish:
+		result.Termination = TerminationLoss
+	case g.IsGameOver():
+		result.Termination = TerminationDraw
+	default:
+		result.Termination = TerminationUnknown
+	}
 	result.Events = append([]game.Event(nil), g.Events...)
 
 	result.Cards = make(map[id.ID]CardInfo, len(g.CardInstances))

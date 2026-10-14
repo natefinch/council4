@@ -1,5 +1,10 @@
 # Card-Support Backlog
 
+<!-- production-inventory:start -->
+**Legacy compiler maintenance only, not the authored-card roadmap.** Production registry: **2790 entries, 2790 loadable, 11 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Working authored identities are excluded from production unsupported status. See [support-inventory.md](support-inventory.md); diagnostic counts and historical routing below remain frozen compiler evidence, not loadability or behavioral claims.
+<!-- production-inventory:end -->
+
 Every eligible Scryfall corpus card is evaluated with two signals and routed to the layer that blocks it:
 
 - **Parser signal** (parser-only): `cardgen.ParseCardFaces` + `parser.DocumentCoverage` — is the card parser-complete, and which uncovered components remain?

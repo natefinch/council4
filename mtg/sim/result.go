@@ -53,7 +53,7 @@ type GameFailure struct {
 func (r SimulationResult) WinCounts() [game.NumPlayers]int {
 	var counts [game.NumPlayers]int
 	for i := range r.Games {
-		if r.Games[i].HasWinner {
+		if r.Completed(i) && r.Games[i].HasWinner {
 			counts[r.Games[i].Winner]++
 		}
 	}
@@ -64,11 +64,54 @@ func (r SimulationResult) WinCounts() [game.NumPlayers]int {
 func (r SimulationResult) DrawCount() int {
 	draws := 0
 	for i := range r.Games {
-		if !r.Games[i].HasWinner {
+		if r.Completed(i) && r.Games[i].Outcome() == rules.TerminationDraw {
 			draws++
 		}
+
 	}
 	return draws
+}
+
+// Completed excludes failed slots even if a caller supplied stale winner data.
+func (r SimulationResult) Completed(index int) bool {
+	for _, failure := range r.Failures {
+		if failure.Index == index {
+			return false
+		}
+	}
+	return r.Games[index].Completed()
+}
+
+// CompletedCount counts attempted slots ending in a rules result.
+func (r SimulationResult) CompletedCount() int {
+	count := 0
+	for i := range r.Games {
+		if r.Completed(i) {
+			count++
+		}
+	}
+	return count
+}
+
+// OutcomeCounts retains every attempted slot, including failures and caps.
+func (r SimulationResult) OutcomeCounts() map[rules.Termination]int {
+	counts := make(map[rules.Termination]int)
+	for i := range r.Games {
+		outcome := r.Games[i].Outcome()
+		for _, failure := range r.Failures {
+			if failure.Index != i || outcome != rules.TerminationWin && outcome != rules.TerminationDraw &&
+				outcome != rules.TerminationLoss && outcome != rules.TerminationUnknown {
+				continue
+			}
+			outcome = rules.TerminationInvalid
+			if failure.Unsupported {
+				outcome = rules.TerminationUnsupported
+			}
+			break
+		}
+		counts[outcome]++
+	}
+	return counts
 }
 
 // FailureCount is the number of games that could not complete normally.

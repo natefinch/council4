@@ -103,8 +103,8 @@ func TestReportExcludesFailuresFromDraws(t *testing.T) {
 		Games: []rules.GameResult{
 			{HasWinner: true, Winner: game.Player1, TurnCount: 10},
 			{HasWinner: true, Winner: game.Player1, TurnCount: 12},
-			{HasWinner: false, TurnCount: 1000}, // genuine draw / turn-cap stop
-			{},                                  // failed game: zero, winner-less
+			{Termination: rules.TerminationDraw, HasWinner: false, TurnCount: 1000},
+			{}, // failed game: zero, winner-less
 		},
 		Seeds:      []uint64{1, 2, 3, 4},
 		GameCount:  4,

@@ -33,6 +33,11 @@ func Describe(ability ScorableAbility) string {
 // (neutral) consequence so Describe omits it rather than emitting filler.
 func describeEffect(atom EffectAtom) string {
 	switch atom.Kind {
+	case EffectUnknown:
+		if atom.Intent != "" {
+			return atom.Intent + " (evaluation unknown)"
+		}
+		return "effect valuation unknown"
 	case EffectCardsDrawn:
 		return audience(atom.Affected, "draw", "draws") + " " + countNoun(atom, "card")
 	case EffectCardsLost:

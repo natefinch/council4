@@ -22,7 +22,10 @@ func SupportDocs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	scratch, err := os.MkdirTemp("", "support-docs")
+	if err := os.MkdirAll(".cardwork", 0o750); err != nil {
+		return err
+	}
+	scratch, err := os.MkdirTemp(".cardwork", "support-docs")
 	if err != nil {
 		return fmt.Errorf("creating support-docs scratch directory: %w", err)
 	}
@@ -31,7 +34,29 @@ func SupportDocs(ctx context.Context) error {
 	if err := runCommand(ctx, "go", supportDocsArgs(corpusPath, scratch, compileReportPath)...); err != nil {
 		return err
 	}
-	return regenerateCardBacklog(ctx, corpusPath, compileReportPath, os.DevNull)
+	if err := regenerateCardBacklog(ctx, corpusPath, compileReportPath, os.DevNull); err != nil {
+		return err
+	}
+	return refreshProductionInventory(ctx, corpusPath, compileReportPath)
+}
+
+// SupportInventory refreshes production status against existing compiler
+// evidence, without running the frozen compiler or parser.
+func SupportInventory(ctx context.Context) error {
+	corpusPath, err := pinnedOracleCards(ctx)
+	if err != nil {
+		return err
+	}
+	report := os.Getenv("COUNCIL4_COMPILER_REPORT")
+	if report == "" {
+		report = ".cardwork/preservation/compile-report.json"
+	}
+	return refreshProductionInventory(ctx, corpusPath, report)
+}
+
+func refreshProductionInventory(ctx context.Context, corpusPath, compilerPath string) error {
+	return runCommand(ctx, "go", "run", "./cmd/supportinventory",
+		"-corpus", corpusPath, "-compiler-report", compilerPath, "-docs")
 }
 
 // supportDocsArgs builds the compilecards invocation that regenerates the

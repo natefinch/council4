@@ -41,4 +41,7 @@ func TestRunGameWithTurnLimitStopsAtLimit(t *testing.T) {
 	if result.HasWinner {
 		t.Fatal("a no-win game should reach the turn limit with no winner")
 	}
+	if !result.TurnLimitReached || result.Outcome() != TerminationTurnBudget || result.Completed() || result.Exact() {
+		t.Fatalf("turn cap misclassified: %+v", result)
+	}
 }

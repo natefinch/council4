@@ -45,6 +45,9 @@ func ScorableEffectModes(content game.AbilityContent, chosenModes []int) []Effec
 	var atoms []EffectAtom
 	for _, m := range scorableModeIndices(content, chosenModes) {
 		mode := content.Modes[m]
+		if !mode.Program.IsZero() {
+			atoms = append(atoms, EffectAtom{Kind: EffectUnknown, IsDynamic: true, Program: mode.Program, Intent: mode.Text})
+		}
 		for i := range mode.Sequence {
 			instruction := mode.Sequence[i]
 			before := len(atoms)
@@ -205,7 +208,7 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		// face-down characteristics, so it has no stable standalone atom.
 		return atoms
 	default:
-		return atoms
+		return append(atoms, EffectAtom{Kind: EffectUnknown, IsDynamic: true})
 	}
 }
 

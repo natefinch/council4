@@ -25,8 +25,8 @@ func outcomeFixture() sim.SimulationResult {
 			// Player1 eliminated second -> 3rd place.
 			{HasWinner: true, Winner: game.Player3, TurnCount: 10,
 				EliminationOrder: []game.PlayerID{game.Player4, game.Player1, game.Player2}},
-			// Draw at the turn cap; Player1 and Player4 survive -> tie for 1st.
-			{HasWinner: false, TurnCount: 1000,
+			// Actual rules draw; a turn cap is tested separately below.
+			{Termination: rules.TerminationDraw, HasWinner: false, TurnCount: 1000,
 				EliminationOrder: []game.PlayerID{game.Player2, game.Player3}},
 			// Failed game (zero result), excluded from all metrics.
 			{},
@@ -48,8 +48,8 @@ func TestComputeOutcomeMetrics(t *testing.T) {
 	if outcome.Completed != 4 {
 		t.Errorf("Completed = %d, want 4", outcome.Completed)
 	}
-	if outcome.Wins != 1 || outcome.Losses != 3 {
-		t.Errorf("Wins/Losses = %d/%d, want 1/3", outcome.Wins, outcome.Losses)
+	if outcome.Wins != 1 || outcome.Losses != 2 || outcome.Draws != 1 {
+		t.Errorf("Wins/Losses/Draws = %d/%d/%d, want 1/2/1", outcome.Wins, outcome.Losses, outcome.Draws)
 	}
 	if !approxEqual(outcome.WinRate, 0.25) {
 		t.Errorf("WinRate = %v, want 0.25", outcome.WinRate)
@@ -73,11 +73,45 @@ func TestComputeOutcomeMetrics(t *testing.T) {
 	if outcome.TurnsToWin.Count != 1 || outcome.TurnsToWin.Min != 8 || outcome.TurnsToWin.Max != 8 {
 		t.Errorf("TurnsToWin = %+v, want a single 8", outcome.TurnsToWin)
 	}
-	if outcome.TurnsToLoss.Count != 3 || outcome.TurnsToLoss.Min != 10 || outcome.TurnsToLoss.Max != 1000 {
-		t.Errorf("TurnsToLoss = %+v, want min 10 max 1000 over 3", outcome.TurnsToLoss)
+	if outcome.TurnsToLoss.Count != 2 || outcome.TurnsToLoss.Min != 10 || outcome.TurnsToLoss.Max != 12 {
+		t.Errorf("TurnsToLoss = %+v, want min 10 max 12 over 2", outcome.TurnsToLoss)
 	}
-	if !approxEqual(outcome.TurnsToLoss.Average, 1022.0/3.0) {
-		t.Errorf("TurnsToLoss.Average = %v, want %v", outcome.TurnsToLoss.Average, 1022.0/3.0)
+	if !approxEqual(outcome.TurnsToLoss.Average, 11) {
+		t.Errorf("TurnsToLoss.Average = %v, want 11", outcome.TurnsToLoss.Average)
+	}
+}
+
+func TestBudgetAndUnsupportedSlotsAreNotCompletedDraws(t *testing.T) {
+	result := outcomeFixture()
+	result.Games[3] = rules.GameResult{Termination: rules.TerminationTurnBudget, TurnLimitReached: true, TurnCount: 1000}
+	result.Games[4].Termination = rules.TerminationUnsupported
+	got := Generate(result, Options{})
+	if got.Completed != 3 || got.Outcome.Completed != 3 || got.Outcome.Draws != 0 ||
+		got.Terminations[rules.TerminationTurnBudget] != 1 || got.Terminations[rules.TerminationUnsupported] != 1 {
+		t.Fatalf("budget/failure counted as a rules result: %+v", got)
+	}
+
+}
+
+func TestPreviouslyEliminatedSeatLosesWhenSurvivorsDraw(t *testing.T) {
+	result := outcomeFixture()
+	got := computeOutcome(result, game.Player2)
+	if got.Draws != 0 || got.Losses != 3 || got.Wins != 1 {
+		t.Fatalf("previous loss was awarded a survivor's draw: %+v", got)
+	}
+}
+
+func TestActualTerminalSimultaneousLossesReportDrawsAndTiedFinishes(t *testing.T) {
+	engine := rules.NewEngine(nil)
+	g := engine.NewGame([game.NumPlayers]game.PlayerConfig{})
+	played := engine.RunGame(g, [game.NumPlayers]rules.PlayerAgent{})
+	result := sim.SimulationResult{Games: []rules.GameResult{*played}, GameCount: 1}
+	for player := range game.NumPlayers {
+		outcome := computeOutcome(result, game.PlayerID(player))
+		if outcome.Draws != 1 || outcome.Losses != 0 || outcome.TurnsToLoss.Count != 0 ||
+			outcome.AverageFinish != 1 {
+			t.Fatalf("terminal simultaneous loss not a draw/tie: %+v", outcome)
+		}
 	}
 }
 

@@ -45,11 +45,15 @@ type TurnObservation struct {
 // the observing player's own hand or any player's graveyard, exile, or command
 // zone.
 type CardView struct {
-	CardInstanceID id.ID
-	Name           string
-	Owner          game.PlayerID
-	Types          []types.Card
-	ManaValue      int
+	// EvaluationUnknown means authored resolving effects require runtime search,
+	// not a trustworthy static zero. Identity remains visible only via normal
+	// CardView permissions; this flag never reveals another player's hidden hand.
+	EvaluationUnknown bool
+	CardInstanceID    id.ID
+	Name              string
+	Owner             game.PlayerID
+	Types             []types.Card
+	ManaValue         int
 	// Colors is the card's colors (CR 105). Empty for colorless cards.
 	Colors []color.Color
 	// ProducesColors lists the colors of mana this card's mana abilities can
@@ -291,6 +295,12 @@ func (o PlayerObservation) Stack() []StackObjectView {
 	return views
 }
 
+// FidelityLimitations is public policy/evaluation metadata, never a hidden-card
+// census. It is invariant across seats and hypothetical library/hand samples.
+func (PlayerObservation) FidelityLimitations() []Limitation {
+	return ActionGenerationLimitations()
+}
+
 // libraryTopView returns a view of the top card of playerID's library, or false
 // when the library is empty. Callers gate it on the appropriate visibility
 // permission.
@@ -358,6 +368,7 @@ func (o PlayerObservation) cardViews(z *zone.Zone) []CardView {
 			continue
 		}
 		view.Name = card.Def.Name
+		view.EvaluationUnknown = len(card.Def.ProgramReferences()) != 0
 		view.Owner = card.Owner
 		view.Types = append([]types.Card(nil), card.Def.Types...)
 		view.ManaValue = card.Def.ManaValue()
@@ -457,16 +468,17 @@ func physicalPermanentFaceDef(g *game.Game, permanent *game.Permanent, face game
 
 func (o PlayerObservation) cardViewForDef(cardID id.ID, owner game.PlayerID, def *game.CardDef) CardView {
 	return CardView{
-		CardInstanceID: cardID,
-		Name:           def.Name,
-		Owner:          owner,
-		Types:          append([]types.Card(nil), def.Types...),
-		ManaValue:      def.ManaValue(),
-		Colors:         append([]color.Color(nil), def.Colors...),
-		ProducesColors: cardFaceManaColors(&def.CardFace, commanderIdentityColors(o.g, owner)),
-		ProducesMana:   len(def.ManaAbilities) > 0,
-		RampsLand:      cardFaceRampsLand(&def.CardFace),
-		EntersTapped:   cardFaceEntersTapped(&def.CardFace),
+		EvaluationUnknown: len(def.ProgramReferences()) != 0,
+		CardInstanceID:    cardID,
+		Name:              def.Name,
+		Owner:             owner,
+		Types:             append([]types.Card(nil), def.Types...),
+		ManaValue:         def.ManaValue(),
+		Colors:            append([]color.Color(nil), def.Colors...),
+		ProducesColors:    cardFaceManaColors(&def.CardFace, commanderIdentityColors(o.g, owner)),
+		ProducesMana:      len(def.ManaAbilities) > 0,
+		RampsLand:         cardFaceRampsLand(&def.CardFace),
+		EntersTapped:      cardFaceEntersTapped(&def.CardFace),
 	}
 }
 

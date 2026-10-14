@@ -77,7 +77,10 @@ func generateCards(ctx context.Context, output string) error {
 	// implies the repository-generation compiler, whose args always include
 	// -report CardSupportReportPath below), so reuse it instead of compiling the
 	// corpus again solely to refresh card-backlog.md.
-	return regenerateCardBacklog(ctx, corpusPath, CardSupportReportPath, os.DevNull)
+	if err := regenerateCardBacklog(ctx, corpusPath, CardSupportReportPath, os.DevNull); err != nil {
+		return err
+	}
+	return refreshProductionInventory(ctx, corpusPath, CardSupportReportPath)
 }
 
 func cardSupportSettings(output string) (generatedRoot, compiler string, documentation bool) {
