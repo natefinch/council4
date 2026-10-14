@@ -238,6 +238,7 @@ func Parse(source string, context Context) (Document, []shared.Diagnostic) {
 	emitActualCardQuantityOwnership(document.Abilities)
 	emitPaidCostSubjectBindings(document.Abilities)
 	emitDelayedSubjectOwnership(document.Abilities)
+	emitDeclaredPermanentSubjects(document.Abilities)
 	return document, diagnostics
 }
 

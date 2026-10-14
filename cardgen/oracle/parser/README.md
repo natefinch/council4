@@ -13,6 +13,18 @@ static-rule syntax, resolving-effect syntax, and selection syntax. Unrecognized
 or ambiguous grammar preserves source metadata and fails closed rather than
 inventing typed syntax.
 
+Later owner/controller actor projections can carry `DeclaredPermanent`, naming
+the earlier clause's singular original permanent declaration rather than an
+action product. The same canonical reference identity is copied to its consumer.
+A present zero clause refuses ambiguity or unavailable singleton width; nil
+does not claim this contract. Library observations, entered products, conditions,
+mutation subjects keep their separate ownership paths; same-clause Return-owner
+operands use the landed canonical declared-target binding.
+Return-to-hand, Destroy, Tap/Untap and ordinary permanent modifications share this
+grammatical contract across independent controller riders. Existing legacy
+multi-target/optional-width readbacks are not expanded; ambiguous declarations
+after an independent card-result prefix cannot acquire a borrowed card result.
+
 ## Serializable representation
 
 A `Document` is trivially serializable to human-readable indented JSON. The

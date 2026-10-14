@@ -7,6 +7,16 @@ top-level `parser.Parse` or `parser.ParseSentences` entry points. Compiler
 `Context` is currently empty; card-name, source-reference, and resolving-effect
 recognition belong to parser syntax.
 
+`DeclaredPermanent` actor subjects retain the parser's exact original declaration
+ClauseID separately from published-result `ProducerClauseID`. The existing
+private body scope issues and revalidates one canonical reference, projection
+consumer, declaration and singular permanent target using typed identities and
+order. Adapter localization changes only the runtime target slot, not that
+original declaration. Owner/controller projections use the existing permanent
+object references, including departure LKI; they are not action-success gates,
+card-incarnation readbacks or entered-object subjects. Same-clause Return-owner
+operands use the landed canonical declared-target binding.
+
 The package owns compiled abilities and content, semantic trigger patterns,
 conditions, references, selectors, static declarations, costs, effects, and
 fail-closed semantic diagnostics. Typed parser paths—resolving effects, targets and selections, amounts, durations,

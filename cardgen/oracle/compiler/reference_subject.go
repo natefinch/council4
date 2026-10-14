@@ -41,41 +41,46 @@ const (
 // ReferenceSubjectProof is issued by binding, never inferred by a runtime adapter.
 // Effect indices may change; parser producer ClauseIDs and reference identities may not.
 type ReferenceSubjectProof struct {
-	scope               *referenceSubjectScope
-	domain              ReferenceSubjectDomain
-	lifetime            ReferenceSubjectLifetime
-	binding             ReferenceBinding
-	kind                ReferenceKind
-	pronoun             ReferencePronounKind
-	libraryObservation  bool
-	producerKind        EffectKind
-	producerFromZone    zone.Type
-	producerToZone      zone.Type
-	producerCardSource  parser.EffectCardSourceKind
-	producerExact       bool
-	producerNegated     bool
-	nodeID              int
-	clauseID            int
-	choiceClauseID      int
-	chosenName          *chosenPermanentNameProof
-	reachedClauseID     int
-	reached             *CompiledReference
-	occurrence          int
-	cardIdentity        bool
-	noun                parser.ObjectNoun
-	targetProduct       bool
-	enteredProduct      bool
-	producerTarget      int
-	producerTargetOrder shared.SourceOrder
-	targetOrder         shared.SourceOrder
-	targetSelector      SelectorKind
-	targetZone          zone.Type
-	targetMin           int
-	targetMax           int
-	targetOccurrence    int
-	uses                uint8
-	projectedDomain     ReferenceSubjectDomain
-	targetedPlayerActor bool
+	scope                     *referenceSubjectScope
+	domain                    ReferenceSubjectDomain
+	lifetime                  ReferenceSubjectLifetime
+	binding                   ReferenceBinding
+	kind                      ReferenceKind
+	pronoun                   ReferencePronounKind
+	libraryObservation        bool
+	producerKind              EffectKind
+	producerFromZone          zone.Type
+	producerToZone            zone.Type
+	producerCardSource        parser.EffectCardSourceKind
+	producerExact             bool
+	producerNegated           bool
+	nodeID                    int
+	clauseID                  int
+	choiceClauseID            int
+	chosenName                *chosenPermanentNameProof
+	reachedClauseID           int
+	reached                   *CompiledReference
+	occurrence                int
+	cardIdentity              bool
+	noun                      parser.ObjectNoun
+	targetProduct             bool
+	enteredProduct            bool
+	producerTarget            int
+	producerTargetOrder       shared.SourceOrder
+	targetOrder               shared.SourceOrder
+	targetSelector            SelectorKind
+	targetZone                zone.Type
+	targetMin                 int
+	targetMax                 int
+	targetOccurrence          int
+	uses                      uint8
+	projectedDomain           ReferenceSubjectDomain
+	targetedPlayerActor       bool
+	declaredPermanentClauseID int
+	declaredPermanentOrder    shared.SourceOrder
+	declaredConsumerClauseID  int
+	declaredConsumerOrder     shared.SourceOrder
+	declaredConsumerContext   parser.EffectContextKind
 }
 
 // SubjectSupported checks that the issued proof still matches the reference.
@@ -89,7 +94,8 @@ func (reference CompiledReference) SubjectSupported() bool {
 		proof.occurrence == reference.Occurrence && proof.cardIdentity == reference.CardIdentity &&
 		proof.noun == reference.SubjectNoun && proof.nodeID == reference.NodeID &&
 		proof.choiceClauseID == reference.ChoiceClauseID &&
-		(reference.ChoiceClauseID == 0 || chosenPermanentNameSubjectValid(reference))
+		(reference.ChoiceClauseID == 0 || chosenPermanentNameSubjectValid(reference)) &&
+		declaredPermanentProofMatches(reference)
 }
 
 // SubjectDomain returns the proven domain, or Unknown for an invalid proof.
@@ -338,6 +344,9 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 		issueChosenPermanentNameSubject(reference, source)
 		return
 	}
+	if reference.DeclaredPermanent != nil && !bindDeclaredPermanentSubject(reference, targets, effects, source) {
+		return
+	}
 	if source.kind == AbilitySpell && source.scope != nil && source.scope.owner != nil &&
 		referenceIsOwnedSpellDamageSubject(*reference, *source.scope.owner) {
 		reference.Binding = ReferenceBindingSource
@@ -554,6 +563,20 @@ func issueReferenceSubject(reference *CompiledReference, targets []CompiledTarge
 	if reference.Binding == ReferenceBindingTarget {
 		stampSubjectTarget(&reference.Subject, targets[reference.Occurrence])
 		reference.Subject.targetOccurrence = reference.Occurrence
+	}
+	if reference.DeclaredPermanent != nil {
+		reference.Subject.declaredPermanentClauseID = reference.DeclaredPermanent.ClauseID
+		for _, effect := range effects {
+			if effect.ClauseID == reference.DeclaredPermanent.ClauseID {
+				stampSubjectProducer(&reference.Subject, effect)
+				reference.Subject.declaredPermanentOrder = effect.Order
+			}
+			if effectOwnsReference(effect, *reference) && effect.Order.Contains(reference.Order) {
+				reference.Subject.declaredConsumerClauseID = effect.ClauseID
+				reference.Subject.declaredConsumerOrder = effect.Order
+				reference.Subject.declaredConsumerContext = effect.Context
+			}
+		}
 	}
 	if reference.ReachedCardProducerClauseID > 0 && !issueCardLineageSubject(reference, effects) {
 		reference.Subject = ReferenceSubjectProof{}
