@@ -172,6 +172,13 @@ func (c *programContext) Source() cardprogram.Source { return c.source }
 
 func (c *programContext) Targets() []game.Target { return slices.Clone(c.targets) }
 
+func (c *programContext) ActivePlayer() (game.PlayerID, error) {
+	if err := c.valid(); err != nil {
+		return 0, err
+	}
+	return c.game.Turn.ActivePlayer, nil
+}
+
 func (c *programContext) Execute(primitive game.Primitive) (cardprogram.Outcome, error) {
 	if err := c.valid(); err != nil {
 		return cardprogram.Outcome{}, err

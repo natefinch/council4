@@ -174,6 +174,9 @@ func (r Renderer) renderContinuousEffect(ctx *renderCtx, effect *game.Continuous
 // validateContinuousEffectLayerFields fails closed when an effect carries fields
 // that do not belong to its layer, keeping rendering layer-faithful.
 func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
+	if (effect.SetPowerToManaValue || effect.SetToughnessToManaValue) && effect.Layer != game.LayerPowerToughnessSet {
+		return errors.New("render: mana-value base characteristics require the set layer")
+	}
 	hasPTDelta := effect.PowerDelta != 0 ||
 		effect.ToughnessDelta != 0 ||
 		effect.PowerDeltaDynamic.Exists ||
@@ -208,15 +211,17 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 		if hasPTDelta {
 			return errors.New("render: power/toughness delta fields require the modify layer")
 		}
-		setsPower := effect.SetPower.Exists || effect.SetPowerDynamic.Exists
-		setsToughness := effect.SetToughness.Exists || effect.SetToughnessDynamic.Exists
+		setsPower := effect.SetPower.Exists || effect.SetPowerDynamic.Exists || effect.SetPowerToManaValue
+		setsToughness := effect.SetToughness.Exists || effect.SetToughnessDynamic.Exists || effect.SetToughnessToManaValue
 		if !setsPower || !setsToughness {
 			return errors.New("render: base power/toughness layer requires set power and toughness")
 		}
-		if effect.SetPower.Exists && effect.SetPowerDynamic.Exists {
+		if effect.SetPower.Exists && effect.SetPowerDynamic.Exists ||
+			effect.SetPowerToManaValue && (effect.SetPower.Exists || effect.SetPowerDynamic.Exists) {
 			return errors.New("render: base power layer cannot set both a fixed and dynamic power")
 		}
-		if effect.SetToughness.Exists && effect.SetToughnessDynamic.Exists {
+		if effect.SetToughness.Exists && effect.SetToughnessDynamic.Exists ||
+			effect.SetToughnessToManaValue && (effect.SetToughness.Exists || effect.SetToughnessDynamic.Exists) {
 			return errors.New("render: base toughness layer cannot set both a fixed and dynamic toughness")
 		}
 	case game.LayerColor:

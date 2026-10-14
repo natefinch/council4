@@ -1,6 +1,6 @@
 # Supported Cards
 
-Production registry: **2790 entries, 2790 loadable, 11 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **2804 entries, 2804 loadable, 25 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `f8f1f1447e8b56484b40ab91f86bd5d3e427b71991a03b3926e64972c1b78601`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -354,6 +354,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Butcher's Cleaver — legacy name-only
 - Cabaretti Courtyard — legacy name-only
 - Cached Defenses — legacy name-only
+- Cackling Counterpart — authored exact Oracle/front; behavior verified
 - Cactarantula — legacy name-only
 - Cactusfolk Sureshot — legacy name-only
 - Caged Sun — legacy name-only
@@ -403,6 +404,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Cerulean Drake — legacy name-only
 - Chained to the Rocks — legacy name-only
 - Chains of Custody — legacy name-only
+- Chains of Mephistopheles — authored exact Oracle/front; behavior verified
 - Champion of Stray Souls — legacy name-only
 - Champions of Minas Tirith — legacy name-only
 - Chandra's Firemaw — legacy name-only
@@ -709,6 +711,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Dromoka Captain — legacy name-only
 - Dromoka's Gift — legacy name-only
 - Dromoka, the Eternal — legacy name-only
+- Dualcaster Mage — authored exact Oracle/front; behavior verified
 - Duchess, Wayward Tavernkeep — legacy name-only
 - Dusk Charger — legacy name-only
 - Dusk Feaster — legacy name-only
@@ -835,6 +838,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Farmstead — legacy name-only
 - Farseek — legacy name-only
 - Fatal Blow — legacy name-only
+- Fated Infatuation — authored exact Oracle/front; behavior verified
 - Fathom Fleet Cutthroat — legacy name-only
 - Favor of Jukai — legacy name-only
 - Favor of the Overbeing — legacy name-only
@@ -959,6 +963,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Gempalm Avenger — legacy name-only
 - Gempalm Strider — legacy name-only
 - General Leo Cristophe — legacy name-only
+- Generous Gift — authored exact Oracle/front; behavior verified
 - Geralf's Mindcrusher — legacy name-only
 - Geth's Verdict — legacy name-only
 - Ghalta, Stampede Tyrant — legacy name-only
@@ -1181,6 +1186,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Huatli, the Sun's Heart — legacy name-only
 - Humble — legacy name-only
 - Humble Defector — legacy name-only
+- Humility — authored exact Oracle/front; behavior verified
 - Hunt the Hunter — legacy name-only
 - Hunt the Weak — legacy name-only
 - Hunter of Eyeblights — legacy name-only
@@ -1249,6 +1255,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Into the Fray — legacy name-only
 - Into the Wilds — legacy name-only
 - Intrepid Rabbit — legacy name-only
+- Intuition — authored exact Oracle/front; behavior verified
 - Invasion of Ixalan — legacy name-only
 - Invasion of Kylem — legacy name-only
 - Invasion of Segovia — legacy name-only
@@ -1729,6 +1736,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Onyx Talisman — legacy name-only
 - Oona's Blackguard — legacy name-only
 - Ooze Spill — legacy name-only
+- Opalescence — authored exact Oracle/front; behavior verified
 - Opera Love Song — legacy name-only
 - Opportunist — legacy name-only
 - Opposition Agent — legacy name-only
@@ -1816,6 +1824,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Point the Way — legacy name-only
 - Pollenbright Druid — legacy name-only
 - Polygoyf — legacy name-only
+- Pongify — authored exact Oracle/front; behavior verified
 - Ponyback Brigade — legacy name-only
 - Popular Entertainer — legacy name-only
 - Portal to Phyrexia — legacy name-only
@@ -1911,6 +1920,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Rancorous Archaic — legacy name-only
 - Rank and File — legacy name-only
 - Rapid Decay — legacy name-only
+- Rapid Hybridization — authored exact Oracle/front; behavior verified
 - Rasaad yn Bashir — legacy name-only
 - Ratadrabik of Urborg — legacy name-only
 - Ratchet, Field Medic — legacy name-only
@@ -1928,6 +1938,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Realm-Cloaked Giant — legacy name-only
 - Realm-Scorcher Hellkite — legacy name-only
 - Realmbreaker's Grasp — legacy name-only
+- Realms Uncharted — authored exact Oracle/front; behavior verified
 - Reaper from the Abyss — legacy name-only
 - Reaping Willow — legacy name-only
 - Rebuff the Wicked — legacy name-only
@@ -1956,6 +1967,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Renegade Rallier — legacy name-only
 - Renowned Weaponsmith — legacy name-only
 - Requisition Raid — legacy name-only
+- Resculpt — authored exact Oracle/front; behavior verified
 - Resounding Scream — legacy name-only
 - Respite — legacy name-only
 - Resplendent Griffin — legacy name-only
@@ -1966,6 +1978,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Reveillark — legacy name-only
 - Revel Ruiner — legacy name-only
 - Revenge of Ravens — legacy name-only
+- Reverberate — authored exact Oracle/front; behavior verified
 - Revered Elder — legacy name-only
 - Reverent Hunter — legacy name-only
 - Revival of the Ancestors — legacy name-only
@@ -2565,6 +2578,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Turn Aside — legacy name-only
 - Turn into a Pumpkin — legacy name-only
 - Twin Blades — legacy name-only
+- Twincast — authored exact Oracle/front; behavior verified
 - Twinflame Travelers — legacy name-only
 - Twisted Embrace — legacy name-only
 - Two-Headed Dragon — legacy name-only

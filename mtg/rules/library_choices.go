@@ -292,12 +292,59 @@ func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, lo
 	if !ok || amount <= 0 {
 		return
 	}
-	// TODO: replace sequential prompts with one partition+ordering choice.
-	for _, cardID := range peekLibrary(player, amount) {
+	cards := peekLibrary(player, amount)
+	if len(cards) == 1 {
+		cardID := cards[0]
 		request := libraryChoiceRequest(game.ChoiceScry, playerID, "Scry: choose where to put card.", []string{"top", "bottom"})
 		request.Subject = cardChoiceInfo(g, cardID)
 		selected := e.chooseChoice(g, agents, request, log)
 		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
+			player.Library.AddToBottom(cardID)
+		}
+	} else if len(cards) > 1 {
+		options := make([]game.ChoiceOption, len(cards))
+		for index, cardID := range cards {
+			options[index] = game.ChoiceOption{Index: index, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)}
+		}
+		selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+			Kind: game.ChoiceScry, Player: playerID,
+			Prompt:  "Scry: choose cards to put on the bottom of your library.",
+			Options: options, MinChoices: 0, MaxChoices: len(cards),
+		}, log)
+		var top, bottom []id.ID
+		for index, cardID := range cards {
+			if slices.Contains(selected, index) {
+				bottom = append(bottom, cardID)
+			} else {
+				top = append(top, cardID)
+			}
+		}
+		for _, group := range []struct {
+			cards  []id.ID
+			prompt string
+		}{
+			{top, "Order the cards on top of your library (first nearest the top)."},
+			{bottom, "Order the cards on the bottom of your library (first nearest the top)."},
+		} {
+			if len(group.cards) < 2 {
+				continue
+			}
+			orderOptions := make([]game.ChoiceOption, len(group.cards))
+			for index, cardID := range group.cards {
+				orderOptions[index] = game.ChoiceOption{Index: index, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)}
+			}
+			order := e.chooseChoice(g, agents, orderChoiceRequest(playerID, group.prompt, orderOptions), log)
+			original := slices.Clone(group.cards)
+			for index, chosen := range order {
+				group.cards[index] = original[chosen]
+			}
+		}
+		// Reordering within the library is not a zone change (CR 400.7).
+		for _, cardID := range bottom {
+			player.Library.Remove(cardID)
+		}
+		reorderLibraryTop(player, top)
+		for _, cardID := range bottom {
 			player.Library.AddToBottom(cardID)
 		}
 	}
@@ -727,7 +774,7 @@ func manifestDreadChoiceRequest(g *game.Game, playerID game.PlayerID, cards []id
 // opponent controlling the search (Opposition Agent) when one applies; either way
 // the candidate card names are offered as visible choice labels, so the decider
 // sees the otherwise-hidden library. minChoices is zero for qualified or "up to"
-// searches and one for an unrestricted exact-card search with a nonempty library,
+// searches and the required count for an unrestricted exact-card search,
 // computed from the spec independently of who decides so fail-to-find stays
 // correct.
 func (e *Engine) chooseSearchMatches(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, decider game.PlayerID, candidates []id.ID, amount, minChoices int) []id.ID {

@@ -88,6 +88,7 @@ type CardPlacement struct {
 type View interface {
 	Source() Source
 	Targets() []game.Target
+	ActivePlayer() (game.PlayerID, error)
 	Player(game.PlayerReference) (game.PlayerID, bool, error)
 	Players(game.PlayerGroupReference) ([]game.PlayerID, error)
 }

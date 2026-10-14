@@ -50,8 +50,8 @@ func TestRiotIntrinsicCounterChoice(t *testing.T) {
 	}
 }
 
-// TestRiotIntrinsicHasteChoice verifies that the haste mode clears summoning
-// sickness and adds no counter.
+// TestRiotIntrinsicHasteChoice verifies that haste bypasses summoning sickness
+// without erasing control history, and adds no counter.
 func TestRiotIntrinsicHasteChoice(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -60,8 +60,8 @@ func TestRiotIntrinsicHasteChoice(t *testing.T) {
 	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 0 {
 		t.Fatalf("riot haste choice: +1/+1 counters = %d, want 0", got)
 	}
-	if permanent.SummoningSick {
-		t.Fatal("riot haste choice must clear summoning sickness")
+	if !permanent.SummoningSick || !hasKeyword(g, permanent, game.Haste) || !canAttackWith(g, permanent, game.Player1) {
+		t.Fatal("riot haste choice must grant haste without clearing control history")
 	}
 }
 

@@ -157,7 +157,7 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 		switch {
 		case resolved.permanent != nil:
 			var ok bool
-			source, ok = permanentCopyDef(g, resolved.permanent)
+			source, ok = permanentTokenCopyDef(g, resolved.permanent)
 			if !ok {
 				return nil, false
 			}
@@ -195,7 +195,17 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 // single-source copy path and the per-each group copy path, which both copy a
 // resolved source CardDef before applying the same overrides.
 func applyTokenCopyOverrides(source *game.CardDef, spec game.TokenCopySpec) (*game.CardDef, bool) {
+	if source == nil {
+		return nil, false
+	}
 	token := copyCardDef(source)
+	if source.Back.Exists {
+		back, ok := applyTokenCopyOverrides(&game.CardDef{CardFace: source.Back.Val}, spec)
+		if !ok {
+			return nil, false
+		}
+		token.Back = opt.Val(back.CardFace)
+	}
 	if spec.SetName != "" {
 		token.Name = spec.SetName
 	}
@@ -246,6 +256,30 @@ func applyTokenCopyOverrides(source *game.CardDef, spec game.TokenCopySpec) (*ga
 		token.StaticAbilities = append(token.StaticAbilities, body)
 	}
 	return token, true
+}
+
+// CR 707.8a copies both faces, with layer-1 changes applied to each face.
+func permanentTokenCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, bool) {
+	visible, ok := permanentCopyDef(g, permanent)
+	if !ok || permanent.FaceDown {
+		return visible, ok
+	}
+	physical, ok := physicalPermanentDef(g, permanent)
+	if !ok || !physical.Back.Exists || physical.Layout == game.LayoutMeld {
+		return visible, true
+	}
+	frontSource, backSource := *permanent, *permanent
+	frontSource.Face, backSource.Face = game.FaceFront, game.FaceBack
+	front, frontOK := permanentCopyDef(g, &frontSource)
+	back, backOK := permanentCopyDef(g, &backSource)
+	if !frontOK || !backOK {
+		return nil, false
+	}
+	result := copyCardDef(physical)
+	result.CardFace = front.CardFace
+	result.Back = opt.Val(back.CardFace)
+	result.Layout = game.LayoutDoubleFacedToken
+	return result, true
 }
 
 func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, bool) {
@@ -310,6 +344,13 @@ func faceDownCopyDef(permanent *game.Permanent) *game.CardDef {
 }
 
 func effectivePermanentManaValue(g *game.Game, permanent *game.Permanent) (int, bool) {
+	// CR 202.3b / 712.8e: real transforming permanents and full double-faced
+	// tokens use their front mana cost. An individual-face copy does not.
+	if permanent.Face == game.FaceBack && !permanent.FaceDown && !permanentHasCopyLayer(g, permanent) {
+		if physical, ok := physicalPermanentDef(g, permanent); ok && physical.IsTransformingDoubleFaced() {
+			return physical.ManaValue(), true
+		}
+	}
 	def, ok := permanentCopyDef(g, permanent)
 	if !ok {
 		return 0, false
@@ -324,6 +365,12 @@ func applyPermanentCopyLayer(g *game.Game, permanent *game.Permanent, copied *ga
 	if g == nil || permanent == nil || copied == nil {
 		return
 	}
+	for _, effect := range permanentCopyEffects(g, permanent) {
+		applyCopyValuesToCardDef(copied, &effect.CopyValues.Val)
+	}
+}
+
+func permanentCopyEffects(g *game.Game, permanent *game.Permanent) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
 	for i := range g.ContinuousEffects {
 		effect := &g.ContinuousEffects[i]
@@ -334,9 +381,7 @@ func applyPermanentCopyLayer(g *game.Game, permanent *game.Permanent, copied *ga
 		}
 		effects = append(effects, *effect)
 	}
-	for _, effect := range orderContinuousEffects(effects) {
-		applyCopyValuesToCardDef(copied, &effect.CopyValues.Val)
-	}
+	return orderContinuousEffects(effects)
 }
 
 func permanentHasCopyLayer(g *game.Game, permanent *game.Permanent) bool {
@@ -483,35 +528,50 @@ func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.P
 // createTokenPermanentsWithChoices and is the variant callers use when they must
 // act on the freshly created tokens (for example, to put them onto the
 // battlefield attacking).
-func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
-	return createTokenPermanentsCollectingWithEntryChoices(e, g, controller, token, amount, tapped, nil, agents, log)
+func createTokenPermanentsCollectingWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) ([]*game.Permanent, bool) {
+	return createTokenPermanentsCollectingWithEntryChoices(e, g, controller, token, amount, tapped, nil, agents, log, faces...)
 }
 
-func createTokenPermanentsCollectingAttachedWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
+func createTokenPermanentsCollectingAttachedWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) ([]*game.Permanent, bool) {
 	if attachedTo == nil {
 		return nil, false
 	}
-	return createTokenPermanentsCollectingWithEntryChoices(e, g, controller, token, amount, tapped, attachedTo, agents, log)
+	return createTokenPermanentsCollectingWithEntryChoices(e, g, controller, token, amount, tapped, attachedTo, agents, log, faces...)
 }
 
-func createTokenPermanentsCollectingWithEntryChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
-	defs := replacementTokenCreationTypes(g, controller, token)
-	amount = replacementTokenCreationAmount(g, controller, token, amount)
+func createTokenPermanentsCollectingWithEntryChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) ([]*game.Permanent, bool) {
+	if token == nil {
+		return nil, false
+	}
+	face := game.FaceFront
+	if len(faces) > 0 {
+		face = faces[0]
+	}
+	visible, ok := token.FaceDefView(face)
+	if !ok {
+		return nil, false
+	}
+	defs := replacementTokenCreationTypes(g, controller, visible)
+	amount = replacementTokenCreationAmount(g, controller, visible, amount)
 	if amount <= 0 {
 		return nil, false
 	}
 	simultaneousID := tokenCreationSimultaneousID(g, amount*len(defs))
 	created := make([]*game.Permanent, 0, amount*len(defs))
 	for _, def := range defs {
+		entryDef, entryFace := def, game.FaceFront
+		if def == visible {
+			entryDef, entryFace = token, face
+		}
 		for range amount {
-			permanent, ok := createTokenPermanentWithEntryChoicesInBatch(e, g, controller, def, simultaneousID, tapped, attachedTo, agents, log)
+			permanent, ok := createTokenPermanentWithEntryChoicesInBatch(e, g, controller, entryDef, simultaneousID, tapped, attachedTo, agents, log, entryFace)
 			if !ok {
 				return nil, false
 			}
 			created = append(created, permanent)
 		}
 	}
-	createTokenCreationCrossTypeAddends(e, g, controller, token, tapped, agents, log)
+	createTokenCreationCrossTypeAddends(e, g, controller, visible, tapped, agents, log)
 	return created, true
 }
 
@@ -586,8 +646,16 @@ func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller 
 	return createTokenPermanentWithEntryChoicesInBatch(e, g, controller, token, simultaneousID, tapped, nil, agents, log)
 }
 
-func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (*game.Permanent, bool) {
 	if token == nil {
+		return nil, false
+	}
+	face := game.FaceFront
+	if len(faces) > 0 {
+		face = faces[0]
+	}
+	visible, ok := token.FaceDefView(face)
+	if !ok {
 		return nil, false
 	}
 	objectID := g.IDGen.Next()
@@ -595,12 +663,14 @@ func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, contro
 		ObjectID:      objectID,
 		Owner:         controller,
 		Controller:    controller,
-		SummoningSick: entersSummoningSick(token),
-		Prepared:      token.EntersPrepared,
+		SummoningSick: true,
+		Prepared:      visible.EntersPrepared,
 		Token:         true,
 		TokenDef:      token,
+		Face:          face,
+		Transformed:   face == game.FaceBack,
 	}
-	initializePermanentCounters(permanent, token)
+	initializePermanentCounters(permanent, visible)
 	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
@@ -622,7 +692,7 @@ func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, contro
 		Controller:     controller,
 		Player:         controller,
 		PermanentID:    objectID,
-		TokenName:      token.Name,
+		TokenName:      visible.Name,
 		TokenDef:       token,
 		FromZone:       zone.None,
 		ToZone:         zone.Battlefield,

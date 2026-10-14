@@ -986,7 +986,8 @@ func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
 	if permanent.Tapped {
 		return false
 	}
-	return !permanentHasType(g, permanent, types.Creature) || !permanent.SummoningSick
+	return !permanentHasType(g, permanent, types.Creature) || !permanent.SummoningSick ||
+		hasKeyword(g, permanent, game.Haste) || suspendHasteApplies(g, permanent)
 }
 
 func tapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
@@ -1083,10 +1084,6 @@ func landCardInstanceFaceFromZone(g *game.Game, player *game.Player, cardID id.I
 		return nil, false
 	}
 	return card, true
-}
-
-func entersSummoningSick(card *game.CardDef) bool {
-	return !card.HasKeyword(game.Haste)
 }
 
 func isSupportedSpell(card *game.CardDef) bool {

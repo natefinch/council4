@@ -52,6 +52,8 @@ card is added only after its entire behavior and relevant scenarios are complete
   It does not expose a live permanent or Game pointer.
 - `View().Targets()` returns a copy of the declared runtime targets. Rules operations
   still revalidate references; do not use plain Go writes as targeting/mutation.
+- `View().ActivePlayer()` returns the current turn's player identity without
+  exposing turn state; like other queries it fails after the context expires.
 - `View().Player(reference)` resolves a currently available player;
   `View().Players(group)` returns living members in APNAP order.
 - `Execute(primitive)` validates the operation's target scope and dispatches
@@ -86,8 +88,13 @@ card is added only after its entire behavior and relevant scenarios are complete
   incarnation handles. Search options disclose the library only to the authorized
   chooser; controlled searches use the searcher's information permissions.
   Distinct-name searches use the existing staged choices and permit fail-to-find.
+  Reveal-only searches with `SearchMustFindIfAvailable` require a fixed positive,
+  unrestricted quantity; the minimum is the full count, clamped to availability
+  (CR 701.23d), rather than merely one card.
 - `MoveCards(placements...)` assigns found handles to hand/graveyard in one
   simultaneous placement, applying zone replacements before committing the moves.
+  After replacements, each owner orders their actual simultaneous graveyard
+  arrivals under CR 404.3; redirected cards participate only in their real zone.
   Replacement shuffles wait until the full placement finishes. Handles cannot be
   forged, reused across invocations, or followed through a zone change or a later
   shuffle. Clone preserves the library's shuffle-correlation epoch.
@@ -105,6 +112,24 @@ of correlated batch outcomes; a real graveyard arrival qualifies even if the
 commander later moves to command as an SBA (CR 903.9a). Hand/library command-zone
 handling remains an optional replacement, not that SBA (CR 903.9b).
 Following epic slices deepen policy extensions.
+
+Generous Gift, Pongify, Rapid Hybridization and Resculpt are complete authored
+spell registrations. Their single targets and printed costs are ordinary
+declarations. Unlike Terastodon, the three destruction spells create a token
+for a legal target even when it does not move: they use `Destroy`'s frozen
+controller for a departed target without requiring a graveyard arrival. A
+surviving target uses its current controller after replacements (CR 608.2h),
+including umbra armor destroying a control-changing Aura. Pongify and Rapid
+Hybridization set `PreventRegeneration`; shields and umbra armor still apply.
+Resculpt captures the target's controller with
+`View().Player(ObjectControllerReference(...))` before executing `MovePermanent`
+to exile, then uses `CreateTokens` regardless of a replacement's destination.
+All four retain normal all-illegal-target rules, token/entry replacements and
+CR 111.4 token names. `mtg/rules/removal_token_spells_test.go` covers real casts,
+target-type changes, retargeted copies/clones, protection, controller snapshots,
+zone/token replacements and commander/token SBAs using the pinned Oracle corpus
+and official CR effective 2026-09-25. Each entry preserves its explicit
+`Verification` references when registered.
 
 Hive Mind, Gifts Ungiven and Gilded Drake are the next production compositions.
 Gilded Drake's `ResolveWithIllegalTargets` declaration is inspectable rule data:

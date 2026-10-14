@@ -90,6 +90,35 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 			prepared = append(prepared, preparedMove{member: member, owner: card.Owner, event: event, replacement: replacement})
 		}
 	}
+	// CR 404.3: order the actual graveyard arrivals after destination replacements.
+	for _, player := range triggerAPNAPPlayers(c.game) {
+		var indices []int
+		var options []game.ChoiceOption
+		for index, move := range prepared {
+			if move.owner == player && move.replacement.destination == zone.Graveyard {
+				indices = append(indices, index)
+				options = append(options, game.ChoiceOption{
+					Index: len(options), Label: move.member.Info.Name, Card: cardChoiceInfo(c.game, move.member.Identity.CardID),
+				})
+			}
+		}
+		if len(indices) < 2 {
+			continue
+		}
+		request := orderChoiceRequest(player, "Order the cards entering your graveyard (first nearest the top).", options)
+		for index := len(options) - 1; index >= 0; index-- {
+			request.DefaultSelection = append(request.DefaultSelection, index)
+		}
+		selected, err := c.Ask(request)
+		if err != nil {
+			return nil, err
+		}
+		original := slices.Clone(prepared)
+		// Zone.Add prepends, so commit the chosen order from bottom to top.
+		for index, position := range indices {
+			prepared[position] = original[indices[selected[len(selected)-1-index]]]
+		}
+	}
 	// Replacement shuffles occur only after the entire simultaneous placement.
 	// They must not hide or invalidate other members of this same event.
 	shuffle := make(map[game.PlayerID]bool)

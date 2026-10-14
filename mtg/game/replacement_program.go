@@ -29,6 +29,7 @@ func (r *ReplacementEffect) ValidateProgram() error {
 	residue.MatchEvent, residue.ControllerFilter = 0, 0
 	residue.Program = ProgramReference{}
 	residue.Optional, residue.SelfReplacement = false, false
+	residue.DrawCardExceptFirstInDrawStep = false
 	residue.FromSourceAbility = false
 	residue.Condition = opt.V[Condition]{}
 	residue.MatchFromZone, residue.MatchToZone = false, false

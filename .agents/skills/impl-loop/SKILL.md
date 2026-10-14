@@ -8,6 +8,9 @@ description: Implement a selected epic's unblocked children or eligible Ready Fo
 Follow `.github/copilot-instructions.md`. Default to authored Go card behavior,
 one main writer, proportional checks and direct commits when authorized.
 Compiler expansion is not the work-selection strategy.
+For card implementation, route to [card-authoring](../card-authoring/SKILL.md)
+and its [canonical guide](../../../docs/card-authoring.md), including the
+executable scaffold and bounded rules-review/promotion gate.
 
 ## Select work
 

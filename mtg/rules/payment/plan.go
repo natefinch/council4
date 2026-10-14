@@ -993,11 +993,17 @@ func canUntapForAbility(s State, p *game.Permanent) bool {
 // summoningSicknessAllowsAbilityCost reports whether a permanent may pay a {T} or
 // {Q} cost in one of its own activated abilities. A creature normally can't while
 // it has been under its controller's control for less than a full turn (CR
-// 302.6), modeled by the summoning-sickness flag, but an active
-// RuleEffectActivateAbilitiesAsThoughHaste its controller controls lifts that
-// restriction (CR 702.10c, Thousand-Year Elixir).
+// 302.6), modeled by the summoning-sickness flag. Current haste or an active
+// RuleEffectActivateAbilitiesAsThoughHaste lifts that restriction
+// (CR 702.10c, Thousand-Year Elixir).
 func summoningSicknessAllowsAbilityCost(s State, p *game.Permanent) bool {
 	if !s.PermanentHasType(p, types.Creature) || !p.SummoningSick {
+		return true
+	}
+	if s.PermanentHasKeyword(p, game.Haste) {
+		return true
+	}
+	if p.SuspendHasteController.Exists && p.SuspendHasteController.Val == s.EffectiveController(p) {
 		return true
 	}
 	return s.ActivateAbilitiesAsThoughHaste(s.EffectiveController(p))

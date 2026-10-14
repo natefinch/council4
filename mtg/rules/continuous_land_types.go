@@ -44,7 +44,9 @@ func hasBasicLandTypeSet(g *game.Game, sources []staticAbilitySource) bool {
 			body := &source.face.StaticAbilities[i]
 			for j := range body.ContinuousEffects {
 				effect := &body.ContinuousEffects[j]
-				if len(effect.SetBasicLandTypes) > 0 && staticAbilityFunctionsFromSource(body, source) {
+				if (len(effect.SetBasicLandTypes) > 0 ||
+					effect.Layer == game.LayerType && firstStaticLayer(body) == game.LayerType && len(body.ContinuousEffects) > 1) &&
+					staticAbilityFunctionsFromSource(body, source) {
 					return true
 				}
 			}
@@ -54,6 +56,7 @@ func hasBasicLandTypeSet(g *game.Game, sources []staticAbilitySource) bool {
 }
 
 // A type SET can erase another type effect's source (CR 305.7, 613.8a).
+// Multi-layer type effects also need their complete recipient set (CR 613.6).
 // Evaluate this bounded layer across the board, not separately per recipient:
 // otherwise an unaffected basic land would incorrectly see Urborg's effect.
 // Other boards retain the existing direct layer path.
@@ -251,13 +254,16 @@ func firstStaticLayer(body *game.StaticAbility) game.ContinuousLayer {
 }
 
 func landTypeStaticBodyApplies(g *game.Game, source staticAbilitySource, index int, body *game.StaticAbility, recipient *game.Permanent, layer game.ContinuousLayer, sources []staticAbilitySource) bool {
-	if source.permanent == nil || layer <= game.LayerType || !hasBasicLandTypeSet(g, sources) {
+	if source.permanent == nil || layer <= game.LayerType {
 		return true
 	}
 
 	first := firstStaticLayer(body)
-	if first == game.LayerType {
+	if first == game.LayerType && hasBasicLandTypeSet(g, sources) {
 		return basicLandTypeLayer(g, recipient, sources).started[sourceBodyKey(source, index)][recipient.ObjectID]
+	}
+	if first == game.LayerAbility && layer > first && hasAbilityLoss(g, sources) {
+		return abilityLossLayer(g, recipient, sources).started[sourceBodyKey(source, index)][recipient.ObjectID]
 	}
 	// CR 613.6: an effect begun before type-layer ability loss continues.
 	// Effects beginning later require an ability still present at that boundary.
@@ -266,7 +272,17 @@ func landTypeStaticBodyApplies(g *game.Game, source staticAbilitySource, index i
 }
 
 func landTypeBodyContinues(g *game.Game, source staticAbilitySource, index int, body *game.StaticAbility, recipient *game.Permanent, layer game.ContinuousLayer, sources []staticAbilitySource) bool {
-	return source.permanent != nil && layer > game.LayerType && firstStaticLayer(body) == game.LayerType &&
-		hasBasicLandTypeSet(g, sources) &&
-		basicLandTypeLayer(g, recipient, sources).started[sourceBodyKey(source, index)][recipient.ObjectID]
+	if source.permanent == nil {
+		return false
+	}
+	switch firstStaticLayer(body) {
+	case game.LayerType:
+		return layer > game.LayerType && hasBasicLandTypeSet(g, sources) &&
+			basicLandTypeLayer(g, recipient, sources).started[sourceBodyKey(source, index)][recipient.ObjectID]
+	case game.LayerAbility:
+		return layer > game.LayerAbility && hasAbilityLoss(g, sources) &&
+			abilityLossLayer(g, recipient, sources).started[sourceBodyKey(source, index)][recipient.ObjectID]
+	default:
+		return false
+	}
 }

@@ -93,7 +93,8 @@ type Permanent struct {
 	// SummoningSick is true if this permanent has not been under its
 	// controller's control since the start of that player's most recent turn.
 	// It only restricts creatures from attacking and activating abilities with
-	// {T} or {Q} in the cost (CR 302.6).
+	// {T} or {Q} in the cost (CR 302.6). Haste bypasses those restrictions
+	// without clearing this control-history flag.
 	SummoningSick bool
 
 	// PhasedOut is true if this permanent is phased out. Phased-out
@@ -140,6 +141,9 @@ type Permanent struct {
 
 	// Counters tracks all counters on this permanent.
 	Counters counter.Set
+	// CounterTimestamps records the latest placement of each kind (CR 613.7c).
+	// Removing counters does not refresh their timestamp.
+	CounterTimestamps map[counter.Kind]Timestamp
 
 	// SagaEntryChapter is the chapter chosen as this Saga entered with read
 	// ahead. Chapters below this number remain skipped if lore counters are

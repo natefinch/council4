@@ -177,6 +177,7 @@ type frameCache struct {
 	ruleEffects      []game.RuleEffect
 	ruleEffectsBuilt bool
 	landTypes        *landTypeLayerResult
+	abilityLoss      *landTypeLayerResult
 }
 
 // beforeLayerKey identifies a permanentValuesBeforeLayer result: a permanent and
@@ -266,9 +267,6 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 
 	values := basePermanentValues(g, permanent)
 	applyContinuousLayers(g, permanent, &values)
-	for _, keyword := range keywordCounters(permanent) {
-		values.keywords.set(keyword, true)
-	}
 	if fc != nil {
 		if fc.values == nil {
 			fc.values = make(map[id.ID]permanentEffectiveValues)
@@ -677,6 +675,9 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 		if layer == game.LayerType && applyBasicLandTypeLayer(g, permanent, values, sources) {
 			continue
 		}
+		if layer == game.LayerAbility && applyAbilityLossLayer(g, permanent, values, sources) {
+			continue
+		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
 		if layer == game.LayerPowerToughnessModify && hasCounterEffect {
 			effects = append(effects, counterEffect)
@@ -764,6 +765,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		if layer == game.LayerType && applyBasicLandTypeLayer(g, permanent, &values, sources) {
 			continue
 		}
+		if layer == game.LayerAbility && applyAbilityLossLayer(g, permanent, &values, sources) {
+			continue
+		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
@@ -811,6 +815,9 @@ func continuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *
 		}
 	}
 	effects = append(effects, staticAbilityContinuousEffectsForLayer(g, permanent, values, layer, sources)...)
+	if layer == game.LayerAbility {
+		effects = append(effects, keywordCounterEffects(permanent)...)
+	}
 	return effects
 }
 
@@ -872,7 +879,7 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 				originID:   component.originID,
 				faceIndex:  component.faceIndex,
 				controller: permanent.Controller,
-				timestamp:  permanent.Timestamp(),
+				timestamp:  max(permanent.Timestamp(), component.timestamp),
 			})
 		})
 	}
@@ -925,6 +932,7 @@ type permanentAbilityComponent struct {
 	cardID    id.ID
 	originID  id.ID
 	faceIndex game.FaceIndex
+	timestamp game.Timestamp
 }
 
 func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permanent, visit func(permanentAbilityComponent)) {
@@ -943,6 +951,11 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 			face: &def.CardFace, originID: permanentAbilityOrigin(permanent).OriginID,
 			faceIndex: permanent.Face,
 		}
+		// The last applied copy effect created these immutable ability bodies.
+		// Its timestamp belongs to the ability, not the blueprint or physical
+		// source identity (CR 613.7a).
+		effects := permanentCopyEffects(g, permanent)
+		component.timestamp = effects[len(effects)-1].Timestamp
 		if !permanent.Token {
 			component.cardID = permanent.CardInstanceID
 		}
@@ -1516,6 +1529,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		values.colors = appendUniqueColors(values.colors, effect.AddColors...)
 	case game.LayerAbility:
 		if effect.RemoveAllAbilities {
+			values.intrinsicAbilitiesRemoved = true
 			values.abilities = nil
 			values.resolutionUses = nil
 			values.triggerOrigins = nil
@@ -1549,25 +1563,39 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerPowerToughnessSet:
 		// Layer 7b: effects that set power and/or toughness to a specific value
 		// (CR 613.4b).
-		if effect.SetPower.Exists {
+		switch {
+		case effect.SetPower.Exists:
 			values.powerPT = ptPtr(effect.SetPower)
 			values.dynamicPower = nil
 			values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, nil)
-		} else if effect.SetPowerDynamic.Exists {
+		case effect.SetPowerToManaValue:
+			set, ok := effectivePermanentManaValue(g, permanent)
+			values.powerPT = &game.PT{Value: set}
+			values.dynamicPower = nil
+			values.power, values.powerOK = set, ok
+		case effect.SetPowerDynamic.Exists:
 			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetPowerDynamic.Val, effect.Layer)}
 			values.powerPT = &set
 			values.dynamicPower = nil
 			values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, nil)
+		default:
 		}
-		if effect.SetToughness.Exists {
+		switch {
+		case effect.SetToughness.Exists:
 			values.toughnessPT = ptPtr(effect.SetToughness)
 			values.dynamicToughness = nil
 			values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, nil)
-		} else if effect.SetToughnessDynamic.Exists {
+		case effect.SetToughnessToManaValue:
+			set, ok := effectivePermanentManaValue(g, permanent)
+			values.toughnessPT = &game.PT{Value: set}
+			values.dynamicToughness = nil
+			values.toughness, values.toughnessOK = set, ok
+		case effect.SetToughnessDynamic.Exists:
 			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetToughnessDynamic.Val, effect.Layer)}
 			values.toughnessPT = &set
 			values.dynamicToughness = nil
 			values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, nil)
+		default:
 		}
 	case game.LayerPowerToughnessModify:
 		// Layer 7c: effects that modify (but don't set) power and/or toughness,
@@ -1843,6 +1871,22 @@ func keywordCounters(permanent *game.Permanent) []game.Keyword {
 		}
 	}
 	return keywords
+}
+
+func keywordCounterEffects(permanent *game.Permanent) []game.ContinuousEffect {
+	var effects []game.ContinuousEffect
+	for _, keyword := range keywordCounters(permanent) {
+		kind, _ := keywordCounterKind(keyword)
+		timestamp, exists := permanent.CounterTimestamps[kind]
+		if !exists {
+			timestamp = permanent.Timestamp()
+		}
+		effects = append(effects, game.ContinuousEffect{
+			Layer: game.LayerAbility, AffectedObjectID: permanent.ObjectID,
+			Timestamp: timestamp, AddKeywords: []game.Keyword{keyword},
+		})
+	}
+	return effects
 }
 
 func removeColors(colors, remove []color.Color) []color.Color {

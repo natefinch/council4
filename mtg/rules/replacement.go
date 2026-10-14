@@ -918,9 +918,7 @@ func applyEntryUnleashChoice(ctx enterBattlefieldContext, g *game.Game, permanen
 
 // applyEntryRiotChoice resolves the riot keyword for an entering permanent
 // (CR 702.137): its controller chooses for it to enter with a +1/+1 counter or
-// to gain haste. The haste choice clears summoning sickness, which is equivalent
-// to granting haste for a permanent that is entering now and uniformly enables
-// both attacking and activating tap abilities this turn.
+// to gain haste. Haste does not change how long it has been controlled.
 func applyEntryRiotChoice(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent) {
 	engine := ctx.engine
 	if engine == nil {
@@ -941,7 +939,12 @@ func applyEntryRiotChoice(ctx enterBattlefieldContext, g *game.Game, permanent *
 	}
 	selected := engine.chooseChoice(g, ctx.agents, request, ctx.log)
 	if len(selected) == 1 && selected[0] == 1 {
-		permanent.SummoningSick = false
+		effectID := g.IDGen.Next()
+		g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+			ID: effectID, Timestamp: game.Timestamp(effectID), Controller: controller,
+			AffectedObjectID: permanent.ObjectID, Layer: game.LayerAbility,
+			AddKeywords: []game.Keyword{game.Haste},
+		})
 		return
 	}
 	addCountersToPermanent(g, permanent, counter.PlusOnePlusOne, 1)
@@ -2303,7 +2306,7 @@ func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect
 	}
 	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
 	return ok && activeBattlefieldPermanent(source) &&
-		(!replacement.FromSourceAbility || !permanentValuesBeforeLayer(g, source, game.LayerAbility).intrinsicAbilitiesRemoved)
+		(!replacement.FromSourceAbility || !effectivePermanentValues(g, source).intrinsicAbilitiesRemoved)
 }
 
 // replacementEventPlayer returns the player who chooses among several applicable

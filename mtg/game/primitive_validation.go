@@ -1563,8 +1563,12 @@ func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool
 	}
 	switch p.Spec.FailToFindPolicy {
 	case SearchFailToFindDefault, SearchMayFailToFind:
+	case SearchMustFindIfAvailable:
+		if p.Amount.Value() < 1 || !p.Spec.IsUnrestricted() {
+			return errors.New("required reveal-only search must find a positive quantity of unrestricted cards")
+		}
 	default:
-		return errors.New("reveal-only search supports only the default or may-fail-to-find policy")
+		return errors.New("reveal-only search has unsupported fail-to-find policy")
 	}
 	if len(p.Spec.Filter.RequiredTypes) != 0 && len(p.Spec.Filter.RequiredTypesAny) != 0 {
 		return errors.New("search cannot combine one required card type with a card-type union")

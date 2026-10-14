@@ -549,7 +549,7 @@ func (e *Engine) searchLibraryRevealOnlyCards(g *game.Game, obj *game.StackObjec
 	}
 	minChoices := 0
 	if searchMustFindIfAvailable(spec, amount) {
-		minChoices = 1
+		minChoices = amount
 	}
 	var found []id.ID
 	if spec.DifferentNames {

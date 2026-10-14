@@ -46,7 +46,7 @@ func availablePlayerMana(g *game.Game, playerID game.PlayerID) (int, []string) {
 		if permanent.Controller != playerID || !permanent.ProducesMana || permanent.PhasedOut {
 			continue
 		}
-		if permanent.SummoningSick && slices.Contains(permanent.Types, types.Creature) {
+		if permanent.SummoningSick && slices.Contains(permanent.Types, types.Creature) && !permanent.HasKeyword(game.Haste) {
 			continue
 		}
 		total++

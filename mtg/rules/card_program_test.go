@@ -66,6 +66,9 @@ func TestAuthoredBodiesUseTheSharedAbilityPath(t *testing.T) {
 		Reference: reference,
 		Resolve: func(ctx cardprogram.Context) error {
 			retained = ctx
+			if player, err := ctx.View().ActivePlayer(); err != nil || player != game.Player1 {
+				t.Fatalf("active-player query = %v, %v", player, err)
+			}
 			_, err := ctx.Execute(game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()})
 			return err
 		},
@@ -85,6 +88,9 @@ func TestAuthoredBodiesUseTheSharedAbilityPath(t *testing.T) {
 		}
 		if _, err := retained.Execute(game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()}); err == nil {
 			t.Fatal("retained execution context remained active")
+		}
+		if _, err := retained.View().ActivePlayer(); err == nil {
+			t.Fatal("retained active-player query remained active")
 		}
 	}
 }

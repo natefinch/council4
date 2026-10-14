@@ -3,6 +3,7 @@ package rules
 import (
 	"math/rand/v2"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/cards"
@@ -177,6 +178,25 @@ func TestEveryProvingCardLoadsIntoLiveAndSearchEngines(t *testing.T) {
 			}
 			g, engine, policies, _ := mixedProductionGame(registry)
 			addCombatPermanent(g, game.Player2, registry.Lookup("Birds of Paradise"))
+			// Supply legal creature-copy subjects without changing spell timing.
+			addCombatPermanent(g, game.Player1, registry.Lookup("Birds of Paradise"))
+			if def.SpellAbility.Exists {
+				for _, mode := range def.SpellAbility.Val.Modes {
+					if !slices.ContainsFunc(mode.Targets, func(spec game.TargetSpec) bool {
+						return spec.Allow&game.TargetAllowStackObject != 0
+					}) {
+						continue
+					}
+					subject := addCardToHand(g, game.Player2, registry.Lookup("Lightning Bolt"))
+					g.Players[game.Player2].ManaPool.Add(mana.R, 1)
+					g.Turn.PriorityPlayer = game.Player2
+					if !engine.applyAction(g, game.Player2, action.CastSpell(subject, []game.Target{game.PlayerTarget(game.Player3)}, 0, nil)) {
+						t.Fatal("production copy subject was not castable")
+					}
+					g.Turn.PriorityPlayer = game.Player1
+					break
+				}
+			}
 			cardID := addCardToHand(g, game.Player1, def)
 			for _, color := range []mana.Color{mana.C, mana.W, mana.U, mana.B, mana.R, mana.G} {
 				g.Players[game.Player1].ManaPool.Add(color, 10)

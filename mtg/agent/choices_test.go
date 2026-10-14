@@ -1,13 +1,75 @@
 package agent
 
 import (
+	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards"
+	"github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/opt"
 )
+
+type scryGenericPolicy struct{}
+
+func (scryGenericPolicy) ChooseAction(rules.PlayerObservation, []action.Action) action.Action {
+	return action.Pass()
+}
+
+func (scryGenericPolicy) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceRequest) []int {
+	return (GenericStrategy{}).ChooseChoice(obs, request)
+}
+
+func TestFatedInfatuationScryWithProductionGenericStrategy(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.ActivePlayer, g.Turn.PriorityPlayer = game.Player1, game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	for range 3 {
+		addObservedPermanent(g, game.Player1, forest())
+	}
+	target := addObservedPermanent(g, game.Player1, creatureCardDef("Copy target", 2, 2))
+	cheap := addObservedHandCard(g, game.Player1, creatureWithCost("Cheap", 2, 2, 2))
+	expensive := addObservedHandCard(g, game.Player1, creatureWithCost("Expensive", 8, 8, 8))
+	filler := addObservedHandCard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Filler", Types: []types.Card{types.Instant}, ManaCost: opt.Val(cost.Mana{cost.O(3)}),
+	}})
+	for _, card := range []game.ObjectID{filler, expensive, cheap} {
+		g.Players[game.Player1].Hand.Remove(card)
+		g.Players[game.Player1].Library.Add(card)
+	}
+	addStackSpell(g, game.Player1, authored.FatedInfatuation.New())
+	obj, _ := g.Stack.Peek()
+	obj.Targets = []game.Target{game.PermanentTarget(target.ObjectID)}
+	obj.TargetCounts = []int{1}
+	engine := rules.NewEngineWithPrograms(nil, cards.NewDefaultRegistry().Programs())
+	branch := engine.Simulator().ResolvePriority(g, [game.NumPlayers]rules.PlayerAgent{
+		scryGenericPolicy{}, scryGenericPolicy{}, scryGenericPolicy{}, scryGenericPolicy{},
+	})
+	if got := branch.Players[game.Player1].Library.All(); !slices.Equal(got, []game.ObjectID{cheap, filler, expensive}) {
+		t.Fatalf("production scry order = %v", got)
+	}
+	if !slices.Equal(g.Players[game.Player1].Library.All(), []game.ObjectID{cheap, expensive, filler}) {
+		t.Fatal("Simulator scry changed its original")
+	}
+}
+
+func TestScryPartitionEvaluatesEachDisclosedCard(t *testing.T) {
+	request := game.ChoiceRequest{
+		Kind: game.ChoiceScry, MinChoices: 0, MaxChoices: 3,
+		Options: []game.ChoiceOption{
+			{Index: 0, Card: cardInfo("Bear", 2, types.Creature)},
+			{Index: 1, Card: cardInfo("Dragon", 8, types.Creature)},
+			{Index: 2},
+		},
+	}
+	if got := (GenericStrategy{}).ChooseChoice(observationWithLands(t, 3), request); !slices.Equal(got, []int{1}) {
+		t.Fatalf("bottom selection = %v, want only the uncastable card", got)
+	}
+}
 
 func cardInfo(name string, manaValue int, cardTypes ...types.Card) opt.V[game.ChoiceCardInfo] {
 	return opt.Val(game.ChoiceCardInfo{Name: name, ManaValue: manaValue, Types: cardTypes})

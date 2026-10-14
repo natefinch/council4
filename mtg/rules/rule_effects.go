@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"reflect"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/color"
@@ -113,39 +114,53 @@ func staticRuleEffects(g *game.Game) []game.RuleEffect {
 
 func appendStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.RuleEffect {
 	for _, source := range g.Battlefield {
-		if source.PhasedOut {
+		if !activeBattlefieldPermanent(source) {
 			continue
 		}
+		var components []permanentAbilityComponent
 		visitPermanentStaticAbilityComponents(g, source, func(component permanentAbilityComponent) {
-			for i := range component.face.StaticAbilities {
-				body := &component.face.StaticAbilities[i]
-				if len(body.RuleEffects) == 0 || !bodyFunctionsOnBattlefield(body) {
-					continue
-				}
-				controller := effectiveController(g, source)
-				if !conditionSatisfied(g, conditionContext{
-					controller: controller,
-					source:     source,
-				}, body.Condition) {
-					continue
-				}
-				for j := range body.RuleEffects {
-					ruleEffect := body.RuleEffects[j]
-					ruleEffect.Controller = controller
-					ruleEffect.SourceObjectID = source.ObjectID
-					ruleEffect.SourceCardID = component.cardID
-					if ruleEffect.AffectedSource {
-						ruleEffect.AffectedObjectID = source.ObjectID
-					} else if ruleEffect.AffectedAttached {
-						if !source.AttachedTo.Exists {
-							continue
-						}
-						ruleEffect.AffectedObjectID = source.AttachedTo.Val
-					}
-					effects = append(effects, ruleEffect)
+			components = append(components, component)
+		})
+		// Rule-changing effects apply after the characteristic layers (CR 613.11).
+		// Use surviving abilities, including later external grants, rather than
+		// suppressing an entire source whose earlier-layer effects may continue.
+		values := permanentValuesBeforeLayer(g, source, game.LayerPowerToughnessCDA)
+		for _, ability := range values.abilities {
+			body, ok := ability.(*game.StaticAbility)
+			if !ok || len(body.RuleEffects) == 0 || !bodyFunctionsOnBattlefield(body) {
+				continue
+			}
+			cardID := source.CardInstanceID
+			for _, component := range components {
+				if slices.ContainsFunc(component.face.StaticAbilities, func(static game.StaticAbility) bool {
+					return reflect.DeepEqual(&static, body)
+				}) {
+					cardID = component.cardID
+					break
 				}
 			}
-		})
+			controller := effectiveController(g, source)
+			if !conditionSatisfied(g, conditionContext{
+				controller: controller,
+				source:     source,
+			}, body.Condition) {
+				continue
+			}
+			for _, ruleEffect := range body.RuleEffects {
+				ruleEffect.Controller = controller
+				ruleEffect.SourceObjectID = source.ObjectID
+				ruleEffect.SourceCardID = cardID
+				if ruleEffect.AffectedSource {
+					ruleEffect.AffectedObjectID = source.ObjectID
+				} else if ruleEffect.AffectedAttached {
+					if !source.AttachedTo.Exists {
+						continue
+					}
+					ruleEffect.AffectedObjectID = source.AttachedTo.Val
+				}
+				effects = append(effects, ruleEffect)
+			}
+		}
 	}
 	return effects
 }

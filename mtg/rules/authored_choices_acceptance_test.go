@@ -299,6 +299,9 @@ func TestAuthoredGiftsUngivenRealCastHiddenChoicesAndSimulator(t *testing.T) {
 	beforeShuffle := g.Players[game.Player1].Library.ReorderVersion()
 	policies := simPassPolicies()
 	policies[game.Player1] = authoredChoicePolicy{choose: func(obs PlayerObservation, req game.ChoiceRequest) []int {
+		if req.Kind == game.ChoiceOrder {
+			return req.DefaultSelection
+		}
 		if obs.Player != game.Player1 || req.Player != game.Player1 || req.Kind != game.ChoiceSearch ||
 			len(obs.Hand()) != 1 || obs.Hand()[0].Name != "Searcher's secret" || req.MinChoices != 0 || req.MaxChoices != 1 {
 			t.Fatal("library search used the wrong information view or decision bounds")
@@ -337,7 +340,7 @@ func TestAuthoredGiftsUngivenRealCastHiddenChoicesAndSimulator(t *testing.T) {
 	}
 	log := TurnLog{}
 	engine.runPriorityLoop(g, policies, &log)
-	if !reflect.DeepEqual(branch.Events, g.Events) || len(log.Choices) != 5 {
+	if !reflect.DeepEqual(branch.Events, g.Events) || len(log.Choices) != 6 {
 		t.Fatal("scripted production body and Simulator did not agree")
 	}
 	for _, decision := range log.Choices {

@@ -1736,12 +1736,13 @@ func handleBecomeCopy(r *effectResolver, prim game.BecomeCopy) effectResolved {
 	if prim.UntilEndOfTurn {
 		duration = game.DurationUntilEndOfTurn
 	}
+	effectID := g.IDGen.Next()
 	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
-		ID:               g.IDGen.Next(),
+		ID:               effectID,
 		SourceObjectID:   source.ObjectID,
 		SourceCardID:     source.CardInstanceID,
 		Controller:       controller,
-		Timestamp:        source.Timestamp(),
+		Timestamp:        game.Timestamp(effectID),
 		Duration:         duration,
 		CreatedTurn:      g.Turn.TurnNumber,
 		AffectedObjectID: source.ObjectID,

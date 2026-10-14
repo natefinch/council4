@@ -98,6 +98,10 @@ func (s *rulesPaymentState) IsCommanderPermanent(p *game.Permanent) bool {
 	return len(sourceCommanderIDs(s.g, p)) > 0
 }
 
+func (s *rulesPaymentState) PermanentHasKeyword(p *game.Permanent, keyword game.Keyword) bool {
+	return hasKeyword(s.g, p, keyword)
+}
+
 func (s *rulesPaymentState) PermanentEffectiveAbilities(p *game.Permanent) []game.Ability {
 	return permanentEffectiveAbilitiesView(s.g, p)
 }

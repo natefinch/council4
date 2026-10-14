@@ -3,6 +3,8 @@ package agent
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards/authored"
+	cardc "github.com/natefinch/council4/mtg/cards/c"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -13,6 +15,23 @@ import (
 	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/opt"
 )
+
+func TestAvailableManaUsesCurrentHasteWithoutErasingSickness(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cormela := addObservedPermanent(g, game.Player1, cardc.CormelaGlamourThief())
+	cormela.SummoningSick = true
+	if availableMana(rules.NewObservation(g, game.Player1)).total != 1 {
+		t.Fatal("printed haste mana source was excluded solely for control history")
+	}
+	humility := addObservedPermanent(g, game.Player1, authored.Humility.New())
+	if availableMana(rules.NewObservation(g, game.Player1)).total != 0 {
+		t.Fatal("Humility's removed mana ability remained available")
+	}
+	humility.PhasedOut = true
+	if availableMana(rules.NewObservation(g, game.Player1)).total != 1 || !cormela.SummoningSick {
+		t.Fatal("restoring haste lost the source or erased its control history")
+	}
+}
 
 func landCardDef(name string, produces mana.Color) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{

@@ -1,0 +1,109 @@
+{
+  "issue": 3283,
+  "frozen_at": "2026-10-14",
+  "baseline_head": "95c38b2ee1c93d1378c1bdde9d61b0c4278d9775",
+  "corpus_sha256": "6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4",
+  "rules_effective": "2026-09-25",
+  "rules_sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca",
+  "baseline_inventory": "go run ./cmd/supportinventory; 2790 production entries, 11 exact authored identities",
+  "selection": "12 absent from mixed production inventory across four exercised families; eight fixed held-out challenges also absent. No substitutions. Compiler acceptance was not used as support.",
+  "effort": "No per-card duration measurements collected.",
+  "fresh_workers": "Four bounded initial execution assignments (removal, copies, search, draw/layers), then one narrow correction assignment. Workers saw new entry instructions, assigned cards/rules and current relevant code, not session histories. Main writes were serialized; parent owned integration.",
+  "routing": "A separate fresh read-only 'Add support for Generous Gift' request, with no skill/guide paths supplied, followed copilot-instructions -> card-authoring SKILL.md -> canonical guide. It executed the existing minimal real Engine scenario and exact registry identity subtest, both passing, and made no duplicate admission.",
+  "integration": {
+    "implemented": 14,
+    "blocked": 6,
+    "new_neighbor_families": ["destruction", "stack-copy", "search-choice", "token-copy"],
+    "challenge_capabilities": ["draw-replacement", "continuous-layers"],
+    "production_entries": 2804,
+    "exact_authored_entries": 25,
+    "compiler_accepted_unchanged": "18700/33016",
+    "cleanup": "Removed obsolete entersSummoningSick printed-haste adapter after replacing all usages with real control history/current keyword queries. No competing scaffold/checklist or per-card renderer added; legacy generated cards/compiler retained.",
+    "shared_registration_files": ["mtg/cards/authored/cards.go", "mtg/cards/authored/source_revision.go", "mtg/cardprogram/source_revision.go", "mtg/cards/card_authoring_pilot_test.go"],
+    "entry_files": [".agents/skills/card-authoring/SKILL.md", "docs/card-authoring.md", "cmd/cardauthor/main.go", "cmd/cardauthor/main_test.go", ".github/copilot-instructions.md", ".agents/skills/impl-loop/SKILL.md", ".agents/skills/card-support-todo/SKILL.md", ".agents/skills/ready-for-dev-loop/SKILL.md"]
+  },
+  "gates": {
+    "full_tests": {"command":"TMPDIR=$PWD/.cardwork/pilot-tmp go test ./...","status":"passed","note":"One full repository run. Subsequent lint-only naming/switch/default/formatting changes passed scoped affected tests and final race/WASM execution; no repeated full gate."},
+    "lint": {"command":"TMPDIR=$PWD/.cardwork/pilot-tmp go run github.com/magefile/mage@v1.15.0 lint","status":"passed","note":"Initial 45 style/false-positive diagnostics corrected; six switch-default followups corrected; final 0 issues. Oracle-token credential false positive is narrowly documented."},
+    "race": {"command":"go test -race ./mtg/cards ./mtg/cards/authored ./mtg/cardprogram ./mtg/game ./mtg/agent ./mtg/rules ./mtg/rules/payment -run 'TestAuthored|TestChains|TestHumility|TestOpalescence|TestCopiedOpalescence|TestCurrentHaste|TestFatedInfatuationScryWithProduction|TestCardAuthoring|TestExecutableSourceBindings|TestManaValueBase' -count=1","status":"passed","note":"Named behavior/clone/keyword/source-binding execution; cardprogram and payment compiled with no separately matched tests, their adapters execute through rules scenarios."},
+    "wasm": {"command":"GOOS=js GOARCH=wasm go test -exec=$(go env GOROOT)/lib/wasm/go_js_wasm_exec ./mtg/rules -run 'TestAuthoredGenerousGiftScenario|TestAuthoredRemovalTokensSurviving|TestAuthoredSpellCopiesChoicesAndCasting|TestAuthoredCreatureCopyDoubleFacedTokens|TestAuthoredCacklingCounterpartFlashback|TestAuthoredFatedInfatuationScry|TestAuthoredIntuitionForced|TestAuthoredRealmsUnchartedDifferent|TestAuthoredSearchPartitionGraveyardOrder|TestChains|TestHumility|TestOpalescence|TestCopiedOpalescence|TestCurrentHaste' -count=1","status":"passed","note":"Actual Node-backed WebAssembly execution, not build-only."},
+    "registry_preservation": {"command":"go run github.com/magefile/mage@v1.15.0 preserveRegistry","status":"passed","losses":0,"waivers":0,"changes":3370,"admissions_since_preservation_baseline":25,"note":"Registry-only pinned baseline comparison; 14 admissions belong to this pilot. Fingerprint changes reflect shared declarations/bindings, not claimed gameplay certification. No full corpus compilation."},
+    "support_inventory": {"command":"go run github.com/magefile/mage@v1.15.0 supportInventory","status":"passed"},
+    "identity_and_links": {"command":"Verify all20 Oracle IDs/printing revisions/text SHA256 against pinned JSON; resolve local guide/skill links; git diff --check","status":"passed"}
+  },
+  "review": "One independent focused rules review per initial batch. Findings corrected: surviving-target controller, scry strategy request semantics, double-faced token copies, actual graveyard order, rule-ability loss, transformed mana value, copied-static timestamp, control history/haste. A narrow correction review identified final keyword versus body-list haste payment; corrected and exercised for riot, removed haste, tap/untap and automatic payment.",
+  "batches": {
+    "removal": {
+      "reused_operations": ["Context.Destroy", "Destroy.PreventRegeneration", "View.Player(ObjectControllerReference)", "Execute(MovePermanent)", "CreateTokens"],
+      "shared_code": [],
+      "changed_files": ["mtg/cards/authored/removal_token_spells.go", "mtg/rules/removal_token_spells_test.go", "mtg/cards/removal_token_registry_test.go"],
+      "scenarios": ["TestAuthoredGenerousGiftScenario", "TestAuthoredRemovalTokensCastAndTargetTypes", "TestAuthoredRemovalTokensProtectedTargets", "TestAuthoredRemovalTokensAllIllegalTargets", "TestAuthoredRemovalTokensChangedTypesAndCopies", "TestAuthoredRemovalTokensSurvivingTargetUsesCurrentController", "TestAuthoredRemovalTokensZoneAndTokenReplacements", "TestAuthoredRemovalTokensTargetedTokensAndCommanderSBA"],
+      "rulings": "Retrieved 2026-10-14; Gift 2019-06-14, Pongify 2021-03-19, Hybridization 2013-01-24/2013-07-01; Resculpt has none."
+    },
+    "copy": {
+      "reused_operations": ["Context.Copy(CopyStackObject)", "Execute(CreateToken(TokenCopyOf))", "FlashStaticBody", "FlashbackKeyword", "Execute(Scry)"],
+      "shared_code": ["Read-only View.ActivePlayer", "Complete shared scry partition/order and GenericStrategy semantics", "CR 707.8a two-face token-copy snapshots and entry orientation"],
+      "changed_files": ["mtg/cards/authored/copy_spells.go", "mtg/rules/authored_copy_spells_test.go", "mtg/rules/authored_copy_double_faces_test.go", "mtg/cards/copy_spells_registry_test.go", "mtg/cardprogram/context.go", "mtg/rules/card_program.go", "mtg/rules/library_choices.go", "mtg/rules/effects_cards.go", "mtg/rules/primitive_handlers_zones.go", "mtg/agent/choices.go", "mtg/agent/choices_test.go"],
+      "scenarios": ["TestAuthoredSpellCopiesChoicesAndCasting", "TestAuthoredSpellCopiesIllegalTarget", "TestAuthoredSpellCopiesUntargeted", "TestAuthoredSpellCopiesTargetKinds", "TestAuthoredDualcasterMageFlashAndSourceDeparture", "TestAuthoredCreatureCopyTokens", "TestAuthoredCreatureCopyTargetLegality", "TestAuthoredCreatureCopyRetargetedSpellAndClone", "TestAuthoredCacklingCounterpartFlashback", "TestAuthoredFatedInfatuationScry", "TestAuthoredCreatureCopyDoubleFacedTokens", "TestFatedInfatuationScryWithProductionGenericStrategy"],
+      "rulings": "Retrieved 2026-10-14; Twincast/Reiterate 2021-03-19, Reverberate 2010-08-15, Dualcaster 2016-06-08, Cackling 2024-11-08/2025-01-24, Fated 2013-09-15/2014-02-01."
+    },
+    "search": {
+      "reused_operations": ["Context.Search", "Context.Ask", "Context.MoveCards", "Execute(ShuffleLibrary)", "View.Players"],
+      "shared_code": ["Mandatory unrestricted reveal-search cardinality/validation", "Owner ordering of actual post-replacement simultaneous graveyard arrivals"],
+      "changed_files": ["mtg/cards/authored/search_partition_spells.go", "mtg/rules/search_partition_spells_test.go", "mtg/rules/search_partition_order_test.go", "mtg/cards/search_partition_registry_test.go", "mtg/game/primitive_validation.go", "mtg/game/reveal_search_quantity_test.go", "mtg/rules/keyword_actions.go", "mtg/rules/card_program_search.go", "mtg/rules/authored_choices_program_test.go", "mtg/rules/authored_choices_acceptance_test.go"],
+      "scenarios": ["TestAuthoredIntuitionForcedSearchQuantity", "TestAuthoredIntuitionCastAndTargetLegality", "TestAuthoredIntuitionRetargetedCopySearchesCopiersLibrary", "TestAuthoredRealmsUnchartedDifferentNamesAndFewerFinds", "TestAuthoredRealmsUnchartedLibraryExhaustionAndLivingOpponent", "TestAuthoredSearchPartitionOppositionAgent", "TestAuthoredSearchPartitionZoneReplacementsAndDeferredShuffle", "TestAuthoredSearchPartitionGraveyardOrderAfterReplacements"],
+      "rulings": "Retrieved 2026-10-14; Intuition 2006-07-15, Realms Uncharted 2010-06-15."
+    },
+    "draw-layers": {
+      "reused_operations": ["Individual draw ReplacementEffect.Program", "Execute(Discard/Draw/MoveTopOfLibrary)", "StaticAbility.ContinuousEffects", "LayerType/LayerAbility/LayerPowerToughnessSet", "BattlefieldGroup"],
+      "shared_code": ["Program first-actual-draw applicability validation", "Global layer-6 dependencies and CR 613.6 cross-layer recipient continuation", "Generic mana-value base-characteristic setters and typed renderer preservation", "Layered keyword-counter timestamps and cloning", "Surviving rule/replacement abilities", "Rules-defined transformed mana value", "Copy-effect and copied-static timestamps", "Control-history independent of current haste, including payment final keyword query"],
+      "changed_files": ["mtg/cards/authored/chains_of_mephistopheles.go", "mtg/cards/authored/humility_opalescence.go", "mtg/rules/chains_of_mephistopheles_test.go", "mtg/rules/humility_opalescence_test.go", "mtg/rules/challenge_followup_test.go", "mtg/cards/challenge_layers_registry_test.go", "mtg/game/continuous.go", "mtg/game/continuous_mana_value_test.go", "mtg/game/replacement_program.go", "mtg/game/carddef_validate.go", "mtg/game/permanent.go", "mtg/game/clone.go", "mtg/rules/continuous.go", "mtg/rules/continuous_ability_loss.go", "mtg/rules/continuous_land_types.go", "mtg/rules/rule_effects.go", "mtg/rules/replacement.go", "mtg/rules/saga.go", "mtg/rules/effects_cards.go", "mtg/rules/primitive_handlers.go", "mtg/rules/zones.go", "mtg/rules/actions_activation.go", "mtg/rules/payment/plan.go", "mtg/rules/payment/state.go", "mtg/rules/payment/sources.go", "mtg/rules/payment_state.go", "mtg/rules/mana_available.go", "mtg/agent/mana.go", "cardgen/render_static.go", "cardgen/render_structs_generated.go", "cardgen/render_mana_value_static_test.go"],
+      "scenarios": ["TestChainsDiscardSuccessEmptyHandAndReplacementDestination", "TestChainsMultipleCopiesAndNestedDrawLineage", "TestChainsAbundanceAndDredgeCompeteAtEachDerivedDraw", "TestChainsFirstActualDrawExemptionEachOwnDrawStep", "TestChainsOpponentDrawSourceDepartureCloneAndEmptyLibrary", "TestHumilityOpalescenceAllTimestampOrders", "TestHumilityAbilityLayerDependenciesAndLaterExternalGrant", "TestHumilityKeywordCounterTimestampRefreshRemovalAndClone", "TestHumilityAnimatedChainsAndAbundanceLoseReplacementAbilities", "mtg/rules/challenge_followup_test.go", "TestCurrentHasteKeywordGovernsRiotAndRemovedHastePayments"],
+      "rulings": "Retrieved 2026-10-14; Chains 2004-10-04, Humility/Opalescence 2006-02-01/2009-10-01; official CR 2026-09-25."
+    }
+  },
+  "outcomes": {
+    "Generous Gift": {"status":"implemented","evidence":"removal"},
+    "Pongify": {"status":"implemented","evidence":"removal"},
+    "Rapid Hybridization": {"status":"implemented","evidence":"removal"},
+    "Resculpt": {"status":"implemented","evidence":"removal"},
+    "Twincast": {"status":"implemented","evidence":"copy"},
+    "Reverberate": {"status":"implemented","evidence":"copy"},
+    "Dualcaster Mage": {"status":"implemented","evidence":"copy"},
+    "Reiterate": {"status":"blocked","blocker":170,"reason":"Missing inspectable optional buyback announcement/payment and successful-resolution-only paid hand replacement; stack-copy operations themselves work. CR 702.27; canonical runtime handoff on #170."},
+    "Intuition": {"status":"implemented","evidence":"search"},
+    "Realms Uncharted": {"status":"implemented","evidence":"search"},
+    "Cackling Counterpart": {"status":"implemented","evidence":"copy"},
+    "Fated Infatuation": {"status":"implemented","evidence":"copy"},
+    "Necromancy": {"status":"blocked","blocker":3285,"reason":"Missing chosen own-as-though-flash cast provenance/next-cleanup consequence and plain-enchantment-to-linked-Aura ETB transition. Existing flash and inline Animate Dead do not supply this; copied enchant restrictions separately #3227. WotC 2022-12-08/2008-04-01/2005-08-01; CR 601/603.7/514/400.7."},
+    "Chains of Mephistopheles": {"status":"implemented","evidence":"draw-layers","capability":"draw-replacement"},
+    "Humility": {"status":"implemented","evidence":"draw-layers","capability":"continuous-layers"},
+    "Opalescence": {"status":"implemented","evidence":"draw-layers","capability":"continuous-layers"},
+    "Possibility Storm": {"status":"blocked","blocker":3287,"reason":"Existing iterative exile stops are name/nonland-based, not captured spell-type overlap; no exact original+processed exile incarnation library-bottom placement. Free casting alone is insufficient. WotC 2013-04-15; CR 400.7/601/603."},
+    "Doomsday": {"status":"blocked","blocker":2161,"reason":"No mandatory combined library+graveyard search with five retained exact handles, exile of unchosen cards and ordered retained library placement. Independent per-zone searches change choice/visibility. Existing half-life loss reusable; canonical runtime handoff on #2161. WotC 2018-03-16; CR 701.23/400.7."},
+    "Panglacial Wurm": {"status":"blocked","blocker":3286,"reason":"No paid library cast window inside own search before finds, with normal mana ability/payment and search resumption. Top-library/priority/free-cast permission is not equivalent. WotC 2006-07-15; CR 601/701.23/117."},
+    "Warp World": {"status":"blocked","blocker":3288,"reason":"No revealed handles plus two cross-player simultaneous battlefield-placement stages/APNAP Aura attachment against pre-entry board and ordered library remainder; serial per-player placement gives wrong triggers/replacements. Owned tokens and redirected permanents count. WotC 2009-10-01/2019-05-03; CR 101.4/303.4/400.7/603/614."}
+  },
+  "frozen_cards": [
+    {"name":"Generous Gift","oracle_id":"fae37e28-e137-4177-b973-fa8b4dd8f409","revision":"c3f9b454-97e9-4c77-b37a-e974221ae385","oracle_text_sha256":"b3b0d82bf123bf7739aabb940f5eac21cd926ce683c02878b1db3552a8323d4d","family":"destruction","baseline":"unsupported","status":"pending"},
+    {"name":"Pongify","oracle_id":"05849bd6-8f38-4031-be2b-e2aa03beb8cc","revision":"4131fa63-5afc-4b63-a4b4-f47b4bced87f","oracle_text_sha256":"a876460742318bc7d84de8481f481f49390c35a3b56b4f84dd188023b6e5fd10","family":"destruction","baseline":"unsupported","status":"pending"},
+    {"name":"Rapid Hybridization","oracle_id":"06692cd9-ac2f-4a32-8fd1-043ba3c0fe71","revision":"ccda5bda-5afd-4548-bd48-12c780bfa68b","oracle_text_sha256":"879dcc10da8f35bd8860a9272df669d019ea7aced40caa6ec4aad4db4829e837","family":"destruction","baseline":"unsupported","status":"pending"},
+    {"name":"Resculpt","oracle_id":"814e321d-16fd-4f7b-a8d8-2b089be76f2c","revision":"5443f46d-03f9-468e-a78d-a059529b1151","oracle_text_sha256":"2fdb04017160773a83374e2a25130bad5798888f03798f1cce52e5ac55ac975f","family":"destruction","baseline":"unsupported","status":"pending"},
+    {"name":"Twincast","oracle_id":"8f878efc-850f-43d2-a6fe-5ea8d1dd5afb","revision":"f38eec33-a40e-4739-ad2c-2f57008cef4e","oracle_text_sha256":"ca9a1d032a97c6511cab7dbf3a570b0b50f5035fe29d817d4c871ef7a4d04bf5","family":"stack-copy","baseline":"unsupported","status":"pending"},
+    {"name":"Reverberate","oracle_id":"a1f55890-31c5-4ed4-a2cd-7a4a9f05f8ca","revision":"5996feb4-02ac-45e8-a7f2-966cf74391dc","oracle_text_sha256":"ca9a1d032a97c6511cab7dbf3a570b0b50f5035fe29d817d4c871ef7a4d04bf5","family":"stack-copy","baseline":"unsupported","status":"pending"},
+    {"name":"Dualcaster Mage","oracle_id":"8eb7c0a5-6190-40de-b473-2d1daa3bbe28","revision":"defcc4a3-40e0-4f5d-b23c-6cd6a614abc1","oracle_text_sha256":"a7e193cb6b04235f593bb0ee263a888ef662312d16d009f97aeed7737aa9841d","family":"stack-copy","baseline":"unsupported","status":"pending"},
+    {"name":"Reiterate","oracle_id":"38394ee3-6726-4f91-bc25-36bce0c6aab9","revision":"99302c41-434f-41ff-a61a-2c3681a0c135","oracle_text_sha256":"d3770caf39a9493ba336c30a906cd13abd83176c4cb886158501096f59d1cc41","family":"stack-copy","baseline":"unsupported","status":"pending"},
+    {"name":"Intuition","oracle_id":"3c9faba7-f2d3-4978-be94-020dc8003dc0","revision":"b13e73a5-067d-4dbd-9c98-34a0db6140de","oracle_text_sha256":"2754bcc3cbec936a1bf1f7c0881b1d87c5d4d13980e7c1485fee563af95ba032","family":"search-choice","baseline":"unsupported","status":"pending"},
+    {"name":"Realms Uncharted","oracle_id":"e21c8fc6-d4ef-42b6-b11e-d9c931da1387","revision":"8967ceff-9e25-46da-926b-e05f4ee98325","oracle_text_sha256":"018d9d9cff9121e2a71998cc7dccfbfbcb162993d427c460b4368ae2e4eccbb7","family":"search-choice","baseline":"unsupported","status":"pending"},
+    {"name":"Cackling Counterpart","oracle_id":"9e2adca5-f39c-4a09-bcce-8238ebac2c4a","revision":"a865fdc5-955a-4c4a-90c0-342c15fd7bbc","oracle_text_sha256":"49f17b32243618a909d1488143578b42ff84163c57d7682d09eefeb9607044a2","family":"token-copy","baseline":"unsupported","status":"pending"},
+    {"name":"Fated Infatuation","oracle_id":"ae771e78-1d29-4b8c-8511-9da196a78dcf","revision":"9e5ba99d-d95d-4a3b-b6b6-a5e2589d538e","oracle_text_sha256":"2e0f806df099bf0f84b1b339f6aebd16903470e5ccf8ac5822cba449ce486dca","family":"token-copy","baseline":"unsupported","status":"pending"},
+    {"name":"Necromancy","oracle_id":"699b192c-f3f2-4ac5-9ca9-e35bcf08ad8a","revision":"3dd34a1a-e76b-46ee-be8d-5f7f4a092648","oracle_text_sha256":"a28f0f691f532b7b6d3ff0d7fa962b639a04b7da67fd761ccc6cf355d5fd6777","family":"challenge","baseline":"unsupported","status":"pending"},
+    {"name":"Chains of Mephistopheles","oracle_id":"eae87919-6322-4bd2-ae9c-b1ce25d686da","revision":"f2edb3a6-8506-4885-b332-eca381940ce8","oracle_text_sha256":"401c53dd9c5a70634fa913a620058b73b932b67fe666da5471b2ecd1316ea1db","family":"challenge","baseline":"unsupported","status":"pending"},
+    {"name":"Humility","oracle_id":"ed7bdb3e-5c51-4547-9266-76a791e0b2b0","revision":"55ad6a45-a840-45ba-89ad-066e20e983f3","oracle_text_sha256":"bee4b269512f82aaa34b5fe9f4a5101879d35a9f016d30048fd3f7e7247319b3","family":"challenge","baseline":"unsupported","status":"pending"},
+    {"name":"Opalescence","oracle_id":"59489b46-9d02-4f3c-bcd0-884e7605e9a5","revision":"3c0071fb-afa5-47b5-b266-2b10a4f5a98a","oracle_text_sha256":"8d6ed82c6708c5278ed0594dc2b0c50b19ba1de4963a916eff9c1864fcf83428","family":"challenge","baseline":"unsupported","status":"pending"},
+    {"name":"Possibility Storm","oracle_id":"8586169f-cb8c-4424-ba64-a7c1cc00680e","revision":"858aa831-b491-4f1e-bb56-33eeca14771d","oracle_text_sha256":"2e75ef44ce80c87a682b73bf775b1d623cec6d43e4456de68aa2fa8c4afc263d","family":"challenge","baseline":"unsupported","status":"pending"},
+    {"name":"Doomsday","oracle_id":"721eb5a2-d7cf-4db0-8013-ef3f596c52a5","revision":"72cd296e-e550-46bf-9378-586a24c9b2a7","oracle_text_sha256":"c2eb1dea2ca91b278fa7e7241b4489d8f59afcae022e77a4fe64584895f4a206","family":"challenge","baseline":"unsupported","status":"pending"},
+    {"name":"Panglacial Wurm","oracle_id":"49d4aef7-d2d1-4f66-bc2a-79ec8cc96565","revision":"063bb28b-5e32-4f31-a208-16b653edf413","oracle_text_sha256":"296ce6511cbc7303f935edcdcf7edfd013a7a39f0fea103f5af41cc6baab8e66","family":"challenge","baseline":"unsupported","status":"pending"},
+    {"name":"Warp World","oracle_id":"50a228a2-c8b6-4416-b0ab-417926a9b9b6","revision":"aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e","oracle_text_sha256":"9a8973319e3e96c7f3233f5108c7cb5c910ae96ff43a8f127600418db6af9161","family":"challenge","baseline":"unsupported","status":"pending"}
+  ]
+}

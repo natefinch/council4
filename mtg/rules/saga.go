@@ -65,6 +65,12 @@ func addCountersToPermanentControlledByAmount(g *game.Game, placementController 
 }
 
 func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, kind counter.Kind, previous, amount int) {
+	if amount > 0 {
+		if permanent.CounterTimestamps == nil {
+			permanent.CounterTimestamps = make(map[counter.Kind]game.Timestamp)
+		}
+		permanent.CounterTimestamps[kind] = game.Timestamp(g.IDGen.Next())
+	}
 	emitEvent(g, game.Event{
 		Kind:                  game.EventCountersAdded,
 		SourceID:              permanent.CardInstanceID,

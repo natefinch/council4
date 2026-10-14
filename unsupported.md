@@ -1,6 +1,6 @@
 # Cards without exact authored production support
 
-Production registry: **2790 entries, 2790 loadable, 11 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **2804 entries, 2804 loadable, 25 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `f8f1f1447e8b56484b40ab91f86bd5d3e427b71991a03b3926e64972c1b78601`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -1859,7 +1859,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Chainer, Dementia Master** (`cb905eb0-bb20-41c0-9695-0f5c71972561`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Chainer, Nightmare Adept** (`14f6fcb0-bed4-4a38-b7df-1e438d81bedb`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Chainflail Centipede** (`e77a1809-d21a-4bb6-88a6-35eb13771b1d`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Chains of Mephistopheles** (`eae87919-6322-4bd2-ae9c-b1ce25d686da`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Chainsaw** (`3db40361-5f55-417e-a7cd-7e360cc91b4d`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Chainweb Aracnir** (`c45423ad-1920-46f7-bcc1-ecade5880821`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Chakra Meditation** (`12c57ebe-35a7-4cb3-936b-99c148a3cfed`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -5728,7 +5727,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Human Torch** (`d55cb52d-b35c-4602-a518-cd51f155a2d1`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Human Torch, Johnny Storm** (`5b6f2770-e774-4a77-801f-a3fda093c3dd`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Humiliate** (`cf18a1ca-1fb5-4c90-b20a-6ae2fb54a9bb`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Humility** (`ed7bdb3e-5c51-4547-9266-76a791e0b2b0`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Hundred-Battle Veteran** (`9ed6aa5b-4369-42f7-9853-aae1ac9b17e2`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Hundred-Handed One** (`954aaaa7-c3c1-4696-9ace-bcb5359b1709`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Hundred-Talon Strike** (`fbfaf009-8276-4687-a3db-5a71dc13f174`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -6058,7 +6056,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Intrepid Stablemaster** (`a825bdea-3ea2-46b2-93b9-21586643aab0`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Intrude on the Mind** (`eedb1527-548a-435a-a3e1-8ad7d9d6d8a9`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Intrusive Packbeast** (`85a59833-b661-4599-a5d1-042dee033617`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Intuition** (`3c9faba7-f2d3-4978-be94-020dc8003dc0`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Invade the City** (`583a4744-89fb-4bd6-8d4c-c3d845e2e19c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Invader Parasite** (`fe4c0dc1-f6a9-4828-9c19-4239c4f955a7`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Invasion Plans** (`db9c0d94-9fa5-4f07-be48-23e19d2f3d68`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -8580,7 +8577,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Opal Palace** (`aa6723a2-75da-49f5-a1ba-cbfa82c55301`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Opal Titan** (`ce06fe83-a8c5-46b7-b30c-b8189d217741`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Opal-Eye, Konda's Yojimbo** (`e4acac65-112b-48fc-bea3-44747c1389a3`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Opalescence** (`59489b46-9d02-4f3c-bcd0-884e7605e9a5`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Opaline Bracers** (`a4d6cb66-698d-4b76-b922-f799ad9d8805`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Opaline Sliver** (`a871b03e-0218-4c15-8ad8-c8284b5be45f`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Open into Wonder** (`d9688f6e-7163-408b-b32b-b9645aed1f8c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -9655,7 +9651,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Realm Seekers** (`ccb66cdc-909a-42c1-a10f-3886e9ed1936`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Realm of Koh** (`bb9ce416-eef1-49e8-89a0-2b6837505070`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Realmbreaker, the Invasion Tree** (`77398866-eebb-4091-b566-7726f8194a59`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Realms Uncharted** (`e21c8fc6-d4ef-42b6-b11e-d9c931da1387`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Realmwright** (`bad869dd-e844-46ca-be53-73c4bc19d09c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Reap** (`7fcb8472-1e77-4dcd-b18f-8abf8806da08`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Reap Intellect** (`aa97eb3d-8b8d-418b-8615-839812d60fe0`) — compiler rejected; legacy candidate entries: 0; exact production identity not established

@@ -228,6 +228,7 @@ func clonePermanent(p *Permanent) *Permanent {
 	clone := *p
 	clone.MergedCards = cloneSlice(p.MergedCards)
 	clone.Counters = p.Counters.Clone()
+	clone.CounterTimestamps = maps.Clone(p.CounterTimestamps)
 	clone.Attachments = cloneSlice(p.Attachments)
 	clone.SaddleContributorIDs = cloneSlice(p.SaddleContributorIDs)
 	clone.Goaded = cloneComparableMap(p.Goaded)

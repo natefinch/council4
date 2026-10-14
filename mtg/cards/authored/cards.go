@@ -15,9 +15,11 @@ import (
 var Cards = verifiedEntries()
 
 func verifiedEntries() []cardset.Entry {
-	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver}
+	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver, GenerousGift, Pongify, RapidHybridization, Resculpt, Twincast, Reverberate, DualcasterMage, CacklingCounterpart, FatedInfatuation, Intuition, RealmsUncharted, ChainsOfMephistopheles, Humility, Opalescence}
 	for i := range entries {
-		entries[i].Verification = "mtg/rules named-card scenarios; mixed production acceptance (#3278)"
+		if entries[i].Verification == "" {
+			entries[i].Verification = "mtg/rules named-card scenarios; mixed production acceptance (#3278)"
+		}
 		entries[i].SourceRevision = SourceRevision
 		entries[i].RulesRevision = RulesRevision
 		entries[i].Programs = slices.Clone(entries[i].Programs)

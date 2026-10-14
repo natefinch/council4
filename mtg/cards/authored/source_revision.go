@@ -2,5 +2,5 @@
 
 package authored
 
-const SourceRevision = "sha256:92fff125ef534095ef187ebecfdfb5bbd6fefd3952f6244bfd50c2cb8bf8bc4b"
-const RulesRevision = "sha256:86064a3c9b9336e183c5d90f9d698a934025514aa4d0b20c3a002a239ba0f091"
+const SourceRevision = "sha256:33c668440fb0b29292e9c10a4c7887dc8678670ce6f969c36eba95915735863a"
+const RulesRevision = "sha256:b3746c7721de701e3de7564ffb9bf189c75943e076975974ee6aebf6367e02c9"

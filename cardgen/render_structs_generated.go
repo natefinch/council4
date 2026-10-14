@@ -328,6 +328,8 @@ func isZeroGameContinuousEffect(v game.ContinuousEffect) bool {
 		!(v.RemoveAllAbilities) &&
 		!(v.SetPower.Exists) &&
 		!(v.SetToughness.Exists) &&
+		!(v.SetPowerToManaValue) &&
+		!(v.SetToughnessToManaValue) &&
 		!(v.SetPowerDynamic.Exists) &&
 		!(v.SetToughnessDynamic.Exists) &&
 		!(v.PowerDelta != 0) &&
@@ -4601,78 +4603,86 @@ func (r Renderer) renderGameContinuousEffect(ctx *renderCtx, v game.ContinuousEf
 		lit133 := "opt.Val(" + lit134 + ")"
 		fields = append(fields, "SetToughness: "+lit133+",")
 	}
+	if v.SetPowerToManaValue {
+		lit136 := strconv.FormatBool(bool(v.SetPowerToManaValue))
+		fields = append(fields, "SetPowerToManaValue: "+lit136+",")
+	}
+	if v.SetToughnessToManaValue {
+		lit137 := strconv.FormatBool(bool(v.SetToughnessToManaValue))
+		fields = append(fields, "SetToughnessToManaValue: "+lit137+",")
+	}
 	if v.SetPowerDynamic.Exists {
-		lit137, err138 := r.renderGameDynamicAmount(ctx, v.SetPowerDynamic.Val)
-		if err138 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetPowerDynamic: %w", err138)
+		lit139, err140 := r.renderGameDynamicAmount(ctx, v.SetPowerDynamic.Val)
+		if err140 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.SetPowerDynamic: %w", err140)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit136 := "opt.Val(" + lit137 + ")"
-		fields = append(fields, "SetPowerDynamic: "+lit136+",")
+		lit138 := "opt.Val(" + lit139 + ")"
+		fields = append(fields, "SetPowerDynamic: "+lit138+",")
 	}
 	if v.SetToughnessDynamic.Exists {
-		lit140, err141 := r.renderGameDynamicAmount(ctx, v.SetToughnessDynamic.Val)
-		if err141 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetToughnessDynamic: %w", err141)
+		lit142, err143 := r.renderGameDynamicAmount(ctx, v.SetToughnessDynamic.Val)
+		if err143 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.SetToughnessDynamic: %w", err143)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit139 := "opt.Val(" + lit140 + ")"
-		fields = append(fields, "SetToughnessDynamic: "+lit139+",")
+		lit141 := "opt.Val(" + lit142 + ")"
+		fields = append(fields, "SetToughnessDynamic: "+lit141+",")
 	}
 	if v.PowerDelta != 0 {
-		lit142 := strconv.FormatInt(int64(v.PowerDelta), 10)
-		fields = append(fields, "PowerDelta: "+lit142+",")
+		lit144 := strconv.FormatInt(int64(v.PowerDelta), 10)
+		fields = append(fields, "PowerDelta: "+lit144+",")
 	}
 	if v.ToughnessDelta != 0 {
-		lit143 := strconv.FormatInt(int64(v.ToughnessDelta), 10)
-		fields = append(fields, "ToughnessDelta: "+lit143+",")
+		lit145 := strconv.FormatInt(int64(v.ToughnessDelta), 10)
+		fields = append(fields, "ToughnessDelta: "+lit145+",")
 	}
 	if v.PowerDeltaDynamic.Exists {
-		lit145, err146 := r.renderGameDynamicAmount(ctx, v.PowerDeltaDynamic.Val)
-		if err146 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.PowerDeltaDynamic: %w", err146)
+		lit147, err148 := r.renderGameDynamicAmount(ctx, v.PowerDeltaDynamic.Val)
+		if err148 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.PowerDeltaDynamic: %w", err148)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit144 := "opt.Val(" + lit145 + ")"
-		fields = append(fields, "PowerDeltaDynamic: "+lit144+",")
+		lit146 := "opt.Val(" + lit147 + ")"
+		fields = append(fields, "PowerDeltaDynamic: "+lit146+",")
 	}
 	if v.ToughnessDeltaDynamic.Exists {
-		lit148, err149 := r.renderGameDynamicAmount(ctx, v.ToughnessDeltaDynamic.Val)
-		if err149 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.ToughnessDeltaDynamic: %w", err149)
+		lit150, err151 := r.renderGameDynamicAmount(ctx, v.ToughnessDeltaDynamic.Val)
+		if err151 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.ToughnessDeltaDynamic: %w", err151)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit147 := "opt.Val(" + lit148 + ")"
-		fields = append(fields, "ToughnessDeltaDynamic: "+lit147+",")
+		lit149 := "opt.Val(" + lit150 + ")"
+		fields = append(fields, "ToughnessDeltaDynamic: "+lit149+",")
 	}
 	if v.DoublePower {
-		lit150 := strconv.FormatBool(bool(v.DoublePower))
-		fields = append(fields, "DoublePower: "+lit150+",")
+		lit152 := strconv.FormatBool(bool(v.DoublePower))
+		fields = append(fields, "DoublePower: "+lit152+",")
 	}
 	if v.DoubleToughness {
-		lit151 := strconv.FormatBool(bool(v.DoubleToughness))
-		fields = append(fields, "DoubleToughness: "+lit151+",")
+		lit153 := strconv.FormatBool(bool(v.DoubleToughness))
+		fields = append(fields, "DoubleToughness: "+lit153+",")
 	}
 	if v.CardZone != 0 {
-		lit152, err153 := enumLiteral(zoneTypeLiterals, "zone.Type", v.CardZone)
-		if err153 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.CardZone: %w", err153)
+		lit154, err155 := enumLiteral(zoneTypeLiterals, "zone.Type", v.CardZone)
+		if err155 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.CardZone: %w", err155)
 		}
 		ctx.need(importZone)
-		fields = append(fields, "CardZone: "+lit152+",")
+		fields = append(fields, "CardZone: "+lit154+",")
 	}
 	if v.CardSelection != nil {
-		lit155, err156 := r.renderGameSelection(ctx, *v.CardSelection)
-		if err156 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.CardSelection: %w", err156)
+		lit157, err158 := r.renderGameSelection(ctx, *v.CardSelection)
+		if err158 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.CardSelection: %w", err158)
 		}
 		ctx.need(importGame)
-		lit154 := "&" + lit155
-		fields = append(fields, "CardSelection: "+lit154+",")
+		lit156 := "&" + lit157
+		fields = append(fields, "CardSelection: "+lit156+",")
 	}
 	return structLit("game.ContinuousEffect", fields), nil
 }

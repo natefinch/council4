@@ -29,7 +29,18 @@ const (
 // ordering, and similar).
 func (GenericStrategy) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceRequest) []int {
 	switch request.Kind {
-	case game.ChoiceScry, game.ChoiceSurveil:
+	case game.ChoiceScry:
+		if request.MinChoices == 0 {
+			var bottom []int
+			for _, option := range request.Options {
+				if !keepOnTop(obs, option.Card) {
+					bottom = append(bottom, option.Index)
+				}
+			}
+			return bottom
+		}
+		return placementChoice(obs, request)
+	case game.ChoiceSurveil:
 		return placementChoice(obs, request)
 	case game.ChoicePayment:
 		if selection, ok := loseLeastValuable(request); ok {

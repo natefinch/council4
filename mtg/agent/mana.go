@@ -3,6 +3,7 @@ package agent
 import (
 	"slices"
 
+	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -57,7 +58,7 @@ func availableMana(obs rules.PlayerObservation) manaAvailability {
 		if permanent.Tapped || permanent.PhasedOut {
 			continue
 		}
-		if permanent.SummoningSick && isCreaturePermanent(permanent) {
+		if permanent.SummoningSick && isCreaturePermanent(permanent) && !permanent.HasKeyword(game.Haste) {
 			continue
 		}
 		avail.total++

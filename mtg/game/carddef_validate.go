@@ -1345,6 +1345,13 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 }
 
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
+	if continuous.SetPowerToManaValue || continuous.SetToughnessToManaValue {
+		if continuous.Layer != LayerPowerToughnessSet ||
+			continuous.SetPowerToManaValue && (continuous.SetPower.Exists || continuous.SetPowerDynamic.Exists) ||
+			continuous.SetToughnessToManaValue && (continuous.SetToughness.Exists || continuous.SetToughnessDynamic.Exists) {
+			v.add(faceName, path, CardDefIssueInvalidAbilityBody, "mana-value base characteristics require layer 7b and no competing setter")
+		}
+	}
 	if continuous.CardZone != zone.None {
 		if continuous.CardZone < zone.Library || continuous.CardZone > zone.Command ||
 			continuous.CardZone == zone.Battlefield || continuous.Layer != LayerAbility ||

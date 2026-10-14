@@ -140,7 +140,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		CastXValue:      castXValue,
 		Face:            face,
 		Transformed:     enteringTransformed,
-		SummoningSick:   entersSummoningSick(faceDef),
+		SummoningSick:   true,
 		Prepared:        faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
@@ -254,7 +254,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		EnteredFromCast: options.WasCast,
 		CastXValue:      castXValue,
 		Face:            face,
-		SummoningSick:   entersSummoningSick(faceDef),
+		SummoningSick:   true,
 		Prepared:        faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)

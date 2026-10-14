@@ -46,6 +46,11 @@ policy does not authorize unsolicited commits or pushes for arbitrary edits.
 
 ## Author cards, not another compiler
 
+For a new card request or production batch, use the repo-owned
+[card-authoring skill](../.agents/skills/card-authoring/SKILL.md) and
+[canonical guide/scaffold](../docs/card-authoring.md). They are the entry route;
+do not create another authoring checklist.
+
 - Read current Oracle text/rulings and the relevant Comprehensive Rules. Keep
   costs, targets, modes, triggers and static/replacement declarations inspectable.
   Use ordinary Go control flow where it is simpler than declarative Instructions.

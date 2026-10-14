@@ -678,6 +678,16 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if !ok {
 		return res
 	}
+	entryFace := game.FaceFront
+	if spec, copied := prim.Source.TokenCopy(); copied && spec.Source == game.TokenCopySourceObject && token.Back.Exists {
+		if source, available := resolveObjectReference(r.game, r.obj, spec.Object); available {
+			if source.permanent != nil {
+				entryFace = source.permanent.Face
+			} else {
+				entryFace = source.snapshot.Face
+			}
+		}
+	}
 	var attachedTo *game.Permanent
 	if prim.EntryAttachedTo.Exists {
 		resolved, resolvedOK := resolveObjectReference(r.game, r.obj, prim.EntryAttachedTo.Val)
@@ -695,9 +705,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	}
 	var created []*game.Permanent
 	if attachedTo != nil {
-		created, ok = createTokenPermanentsCollectingAttachedWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, attachedTo, r.agents, r.log)
+		created, ok = createTokenPermanentsCollectingAttachedWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, attachedTo, r.agents, r.log, entryFace)
 	} else {
-		created, ok = createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, r.agents, r.log)
+		created, ok = createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, token, res.amount, prim.EntryTapped, r.agents, r.log, entryFace)
 	}
 	if !ok {
 		return res

@@ -115,7 +115,8 @@ func TestAuthoredGiftsUngivenFoundCardsAndOpponentPartition(t *testing.T) {
 		!g.Players[game.Player1].Hand.Contains(foundIDs[0]) || !g.Players[game.Player1].Hand.Contains(foundIDs[2]) {
 		t.Fatal("opponent's exact partition was not applied")
 	}
-	if len(log.Choices) != 5 || log.Choices[4].Request.Player != game.Player2 || log.Choices[4].UsedFallback {
+	if len(log.Choices) != 6 || log.Choices[4].Request.Player != game.Player2 || log.Choices[4].UsedFallback ||
+		log.Choices[5].Request.Kind != game.ChoiceOrder || log.Choices[5].Request.Player != game.Player1 {
 		t.Fatal("partition did not use the targeted opponent's recorded choice")
 	}
 }

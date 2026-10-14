@@ -132,6 +132,9 @@ type stateQueries interface {
 }
 
 type statePermanentQueries interface {
+	// PermanentHasKeyword reads the final keyword state after all layers.
+	PermanentHasKeyword(p *game.Permanent, keyword game.Keyword) bool
+
 	// PermanentHasType reports whether the permanent currently has the given
 	// card type, accounting for continuous type-changing effects.
 	PermanentHasType(p *game.Permanent, t types.Card) bool

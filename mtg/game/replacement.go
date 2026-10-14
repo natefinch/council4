@@ -699,11 +699,11 @@ type ReplacementEffect struct {
 	// the battlefield.
 	DrawCardMultiplier int
 
-	// DrawCardExceptFirstInDrawStep exempts the controller's first draw in each
-	// of their own draw steps from DrawCardMultiplier ("If you would draw a card
+	// DrawCardExceptFirstInDrawStep exempts the affected player's first draw in each
+	// of their own draw steps from a draw replacement ("If you would draw a card
 	// except the first one you draw in each of your draw steps, draw two cards
-	// instead.", Teferi's Ageless Insight). It is only meaningful when
-	// DrawCardMultiplier is greater than one.
+	// instead.", Teferi's Ageless Insight). It applies to multipliers and
+	// authored replacement Programs.
 	DrawCardExceptFirstInDrawStep bool
 
 	// DrawCardDigLook replaces a single "draw a card" event by the controller

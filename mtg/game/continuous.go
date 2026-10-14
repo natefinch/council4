@@ -227,6 +227,11 @@ type ContinuousEffect struct {
 
 	SetPower     opt.V[PT]
 	SetToughness opt.V[PT]
+	// SetPowerToManaValue and SetToughnessToManaValue read each affected
+	// permanent's layer-1 mana value, not the generating source's mana value.
+	// These are base-characteristic setters in layer 7b.
+	SetPowerToManaValue     bool
+	SetToughnessToManaValue bool
 	// SetPowerDynamic and SetToughnessDynamic set base power/toughness to a
 	// rules-derived amount evaluated as the effect resolves at
 	// LayerPowerToughnessSet (CR 613.4b, CR 608.2c). They back the one-shot

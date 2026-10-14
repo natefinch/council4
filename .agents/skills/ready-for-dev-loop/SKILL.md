@@ -7,6 +7,9 @@ description: Refine actionable issues in the selected epic or requested scope, r
 
 Prepare work; do not implement it. Follow `.github/copilot-instructions.md`.
 The goal is an executable queue, not making every open issue `Ready For Dev`.
+For authored-card handoffs, use the [card-authoring entry](../card-authoring/SKILL.md)
+and [canonical guide](../../../docs/card-authoring.md), rather than another
+compiler-oriented checklist.
 
 ## Scope and eligibility
 

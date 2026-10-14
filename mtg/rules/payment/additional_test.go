@@ -278,6 +278,15 @@ func (fakePaymentState) CardMatchesSelection(*game.CardDef, game.Selection) bool
 func (fakePaymentState) GraveyardCastGrantedAlternatives(game.PlayerID, *game.CardDef) []cost.Alternative {
 	return nil
 }
+func (s fakePaymentState) PermanentHasKeyword(p *game.Permanent, keyword game.Keyword) bool {
+	for _, ability := range s.PermanentEffectiveAbilities(p) {
+		if game.BodyHasKeyword(ability, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s fakePaymentState) PermanentEffectiveAbilities(p *game.Permanent) []game.Ability {
 	contribution, ok := s.contributionPower[p.ObjectID]
 	if !ok {
