@@ -19,6 +19,7 @@ import (
 // Callers that produce storm copies must compute the copy count before calling
 // this helper, because EventSpellCast is emitted inside.
 func pushSpellToStack(g *game.Game, obj *game.StackObject, castEvent game.Event) {
+	finalizeCardCounterTransition(g, castEvent)
 	g.Stack.Push(obj)
 	emitSpellCastEvents(g, obj, castEvent)
 }
@@ -41,7 +42,7 @@ func emitSpellCastEventsWithTargets(g *game.Game, obj *game.StackObject, castEve
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID
 	castPlayer := castEvent.Controller
-	castEvent = emitZoneChangeEvent(g, castEvent)
+	castEvent = emitZoneChangeEventAfterCounterTransition(g, castEvent)
 	castEvent.Kind = game.EventSpellCast
 	castEvent.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, castEvent.Controller)
 	emitEvent(g, castEvent)

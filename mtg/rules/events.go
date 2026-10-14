@@ -136,6 +136,11 @@ func nextSpellCastOrdinalThisTurn(g *game.Game, controller game.PlayerID) int {
 }
 
 func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
+	finalizeCardCounterTransition(g, event)
+	return emitZoneChangeEventAfterCounterTransition(g, event)
+}
+
+func emitZoneChangeEventAfterCounterTransition(g *game.Game, event game.Event) game.Event {
 	if event.CardID != 0 && event.CardZoneVersion == 0 {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
 			card.ZoneVersion++
@@ -147,7 +152,6 @@ func emitZoneChangeEvent(g *game.Game, event game.Event) game.Event {
 		delete(g.SuspendedCards, event.CardID)
 		delete(g.PlottedCards, event.CardID)
 		delete(g.ForetoldCards, event.CardID)
-		delete(g.ExileCounters, event.CardID)
 		delete(g.ExileCounterExiledBy, event.CardID)
 	}
 	if event.CardID != 0 && event.FromZone != event.ToZone {

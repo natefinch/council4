@@ -14,7 +14,7 @@ import (
 //
 // The two old primitives overlapped heavily: both carried Amount, a player or
 // player-group referent, and PublishLinked. ExileTopOfLibrary additionally owned
-// Counter and FaceDown, but those are exile-only runtime state (Game.ExileCounters
+// Counter and FaceDown, but those are exile runtime state (Game.CardCounters
 // holds only cards in exile, and only the exile zone records face-down status),
 // so validation still gates them to the exile destination — collapsing the types
 // does not make them honorable at the graveyard.

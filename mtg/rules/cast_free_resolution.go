@@ -276,9 +276,11 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		SplicedTargetCounts:           splice.targetCounts,
 		CastDuringControllerMainPhase: controllerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
+	counterTransition := prepareCastCounterTransition(g, card, cast.SourceZone)
 	if !removeCastSourceCard(g, sourcePlayer, card.ID, cast.SourceZone) {
 		return false
 	}
+	counterTransition.apply(g)
 	g.Stack.Push(obj)
 	targetEvents := prepareTargetEvents(g, obj)
 	request := payment.SpellRequest{
@@ -300,6 +302,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
+		counterTransition.undo(g)
 		return false
 	}
 	prefs := e.paymentPreferencesForCostFromSource(
@@ -320,6 +323,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
+		counterTransition.undo(g)
 		return false
 	}
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid

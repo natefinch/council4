@@ -206,6 +206,7 @@ type StaticAbility struct {
 	KeywordAbilities        []KeywordAbility
 	ContinuousEffects       []ContinuousEffect
 	RuleEffects             []RuleEffect
+	ZoneTransitionPolicy    ZoneTransitionPolicy
 }
 
 // ReplacementAbility is a replacement/prevention ability on a printed face.

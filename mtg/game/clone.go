@@ -52,7 +52,7 @@ func (g *Game) Clone() *Game {
 		AdventureCards:                     cloneComparableMap(g.AdventureCards),
 		PlottedCards:                       cloneComparableMap(g.PlottedCards),
 		ForetoldCards:                      cloneComparableMap(g.ForetoldCards),
-		ExileCounters:                      cloneMapFunc(g.ExileCounters, cloneCounterSet),
+		CardCounters:                       cloneMapFunc(g.CardCounters, cloneCounterSet),
 		ExileCounterExiledBy:               cloneComparableMap(g.ExileCounterExiledBy),
 		LastKnownInformation:               cloneMapFunc(g.LastKnownInformation, cloneObjectSnapshot),
 		LinkedObjects:                      cloneLinkedObjects(g.LinkedObjects),
@@ -329,7 +329,7 @@ func fixupContinuousEffect(e *ContinuousEffect) {
 	e.AddKeywords = cloneSlice(e.AddKeywords)
 	e.RemoveKeywords = cloneSlice(e.RemoveKeywords)
 	// AddAbilities holds immutable Ability values; a fresh backing array is
-	// enough. Group, CopyValues, and the dynamic deltas are immutable rules
+	// enough. Group, CardSelection, CopyValues, and the dynamic deltas are immutable rules
 	// configuration and are copied by value with the surrounding struct.
 	e.AddAbilities = cloneSlice(e.AddAbilities)
 }

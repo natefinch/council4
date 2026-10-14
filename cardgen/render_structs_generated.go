@@ -335,7 +335,9 @@ func isZeroGameContinuousEffect(v game.ContinuousEffect) bool {
 		!(v.PowerDeltaDynamic.Exists) &&
 		!(v.ToughnessDeltaDynamic.Exists) &&
 		!(v.DoublePower) &&
-		!(v.DoubleToughness)
+		!(v.DoubleToughness) &&
+		!(v.CardZone != 0) &&
+		!(v.CardSelection != nil)
 }
 
 // isZeroGameRuleEffect reports whether every field of a game.RuleEffect holds its zero value.
@@ -531,7 +533,8 @@ func isZeroGameStaticAbility(v game.StaticAbility) bool {
 		!(v.ZoneOfFunction != 0) &&
 		!(len(v.KeywordAbilities) > 0) &&
 		!(len(v.ContinuousEffects) > 0) &&
-		!(len(v.RuleEffects) > 0)
+		!(len(v.RuleEffects) > 0) &&
+		!(v.ZoneTransitionPolicy != 0)
 }
 
 // isZeroGameResolutionChoice reports whether every field of a game.ResolutionChoice holds its zero value.
@@ -4653,6 +4656,23 @@ func (r Renderer) renderGameContinuousEffect(ctx *renderCtx, v game.ContinuousEf
 	if v.DoubleToughness {
 		lit151 := strconv.FormatBool(bool(v.DoubleToughness))
 		fields = append(fields, "DoubleToughness: "+lit151+",")
+	}
+	if v.CardZone != 0 {
+		lit152, err153 := enumLiteral(zoneTypeLiterals, "zone.Type", v.CardZone)
+		if err153 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.CardZone: %w", err153)
+		}
+		ctx.need(importZone)
+		fields = append(fields, "CardZone: "+lit152+",")
+	}
+	if v.CardSelection != nil {
+		lit155, err156 := r.renderGameSelection(ctx, *v.CardSelection)
+		if err156 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.CardSelection: %w", err156)
+		}
+		ctx.need(importGame)
+		lit154 := "&" + lit155
+		fields = append(fields, "CardSelection: "+lit154+",")
 	}
 	return structLit("game.ContinuousEffect", fields), nil
 }
@@ -12504,6 +12524,14 @@ func (r Renderer) renderGameStaticAbilityLiteral(ctx *renderCtx, v game.StaticAb
 		}
 		lit21 := namedSliceLit("", "game.RuleEffect", items22)
 		fields = append(fields, "RuleEffects: "+lit21+",")
+	}
+	if v.ZoneTransitionPolicy != 0 {
+		lit26, err27 := enumLiteral(gameZoneTransitionPolicyLiterals, "game.ZoneTransitionPolicy", v.ZoneTransitionPolicy)
+		if err27 != nil {
+			return "", fmt.Errorf("game.StaticAbility.ZoneTransitionPolicy: %w", err27)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "ZoneTransitionPolicy: "+lit26+",")
 	}
 	return structLit("game.StaticAbility", fields), nil
 }

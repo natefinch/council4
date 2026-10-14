@@ -1196,6 +1196,13 @@ var gameTriggerTypeLiterals = map[game.TriggerType]string{
 	game.TriggerState:    "game.TriggerState",
 }
 
+// gameZoneTransitionPolicyLiterals maps each exported game.ZoneTransitionPolicy constant to the Go
+// expression that names it in generated card source.
+var gameZoneTransitionPolicyLiterals = map[game.ZoneTransitionPolicy]string{
+	game.ZoneTransitionOrdinary:                        "game.ZoneTransitionOrdinary",
+	game.ZoneTransitionRetainCountersExceptHandLibrary: "game.ZoneTransitionRetainCountersExceptHandLibrary",
+}
+
 // manaColorLiterals maps each exported mana.Color constant to the Go
 // expression that names it in generated card source.
 var manaColorLiterals = map[mana.Color]string{
@@ -2022,6 +2029,9 @@ func enumSpelling(v any) (string, bool) {
 		return name, ok
 	case game.TriggerType:
 		name, ok := gameTriggerTypeLiterals[value]
+		return name, ok
+	case game.ZoneTransitionPolicy:
+		name, ok := gameZoneTransitionPolicyLiterals[value]
 		return name, ok
 	case mana.Color:
 		name, ok := manaColorLiterals[value]

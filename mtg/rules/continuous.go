@@ -1229,6 +1229,9 @@ func sourceObjectID(source staticAbilitySource) id.ID {
 }
 
 func continuousEffectApplies(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, effect *game.ContinuousEffect) bool {
+	if effect.CardZone != zone.None {
+		return false
+	}
 	if effect.AffectedObjectID != 0 {
 		return effect.AffectedObjectID == permanent.ObjectID
 	}

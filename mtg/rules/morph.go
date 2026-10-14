@@ -249,9 +249,12 @@ func (e *Engine) applyGraveyardFaceDown(g *game.Game, player game.PlayerID, cast
 		Face: cast.Face, FaceDown: true, FaceDownFace: cast.Face, FaceDownKind: cast.FaceDownKind,
 		SourceZone: zone.Graveyard,
 	}
+	card, _ := g.GetCardInstance(cast.CardID)
+	counterTransition := prepareCastCounterTransition(g, card, zone.Graveyard)
 	if !g.Players[player].Graveyard.Remove(cast.CardID) {
 		return false
 	}
+	counterTransition.apply(g)
 	g.Stack.Push(obj)
 	request := faceDownSpellRequest(player, cast.CardID)
 	request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
@@ -260,6 +263,7 @@ func (e *Engine) applyGraveyardFaceDown(g *game.Game, player game.PlayerID, cast
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(g.Players[player], cast.CardID, zone.Graveyard)
+		counterTransition.undo(g)
 		return false
 	}
 	recordPermanentTypePlay(g, player, cast.Permission)

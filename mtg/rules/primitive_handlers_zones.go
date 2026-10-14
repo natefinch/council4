@@ -3555,6 +3555,7 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 	for i := range moves {
 		move := &moves[i]
 		card := move.resolved
+		move.options.SourceFaceDown = cardFaceDownInZone(r.game, card.card, card.fromZone)
 		event := game.Event{
 			Kind:           game.EventZoneChanged,
 			Controller:     card.controller,
@@ -3609,6 +3610,7 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 		if !ok {
 			if cards, zoneOK := destinationZone(r.game, card.card.Owner, card.fromZone); zoneOK {
 				cards.Add(card.card.ID)
+				cards.SetFaceDown(card.card.ID, move.options.SourceFaceDown)
 			}
 			continue
 		}
@@ -3658,6 +3660,7 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 		)
 		return nil, false
 	}
+	options.SourceFaceDown = cardFaceDownInZone(r.game, card, fromZone)
 	if !removeCardFromZone(r.game, card.Owner, card.ID, fromZone) {
 		return nil, false
 	}
@@ -3677,6 +3680,7 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 		destinationCards, zoneOK := destinationZone(r.game, card.Owner, fromZone)
 		if zoneOK {
 			destinationCards.Add(card.ID)
+			destinationCards.SetFaceDown(card.ID, options.SourceFaceDown)
 		}
 		return nil, false
 	}

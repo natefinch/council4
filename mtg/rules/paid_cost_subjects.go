@@ -47,8 +47,8 @@ func captureDiscardCostSubject(g *game.Game, playerID game.PlayerID, cardID id.I
 	subject.Snapshot.Subtypes = slices.Clone(face.Subtypes)
 	subject.Snapshot.Colors = spellColors(card.Def)
 	subject.Snapshot.ManaValue = opt.Val(card.Def.ManaValue())
-	subject.Snapshot.Power = optionalInt(cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Power }))
-	subject.Snapshot.Toughness = optionalInt(cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness }))
+	subject.Snapshot.Power = optionalInt(cardPower(g, card))
+	subject.Snapshot.Toughness = optionalInt(cardToughness(g, card))
 	return subject
 }
 

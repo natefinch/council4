@@ -36,7 +36,7 @@ func TestExileTopOfLibraryControllerExilesTopCard(t *testing.T) {
 
 // TestExileTopOfLibraryGroupPlacesNamedCounter proves the Counter field places
 // one named marker counter on each exiled card across every player's library,
-// recorded in Game.ExileCounters (Evelyn, the Covetous collection counters).
+// recorded in Game.CardCounters (Evelyn, the Covetous collection counters).
 func TestExileTopOfLibraryGroupPlacesNamedCounter(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

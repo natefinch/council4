@@ -52,6 +52,18 @@ authored sources in `mtg/cards/authored`; never point corpus regeneration at
 them. Test shared operations and
 actual named-card interactions, then validate production registration.
 
+Skullbriar's haste and combat-damage trigger are ordinary declarations using
+shared Engine operations. Its static `ZoneTransitionPolicy` is a typed
+counter-retention exception, evaluated from the departing object's applicable
+abilities and the **actual** destination after replacements (CR 113.6c, 122.2).
+Off-battlefield counters, including existing exile-marker mechanics, share
+`Game.CardCounters`; battlefield counters live only on the permanent. Retention
+neither places counters again nor preserves object identity, temporary copy
+effects, targets or links. Casting evaluates retention before costs can change
+ability sources, and failed proposals restore the prior counter container.
+The acceptance scenarios use the pinned Oracle corpus and the official
+2026-09-25 CR with Skullbriar's 2011-09-22 Oracle rulings.
+
 ## Legacy regeneration
 
 For explicitly assigned compiler correctness or corpus refresh work, compile

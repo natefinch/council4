@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -248,4 +249,9 @@ type ContinuousEffect struct {
 	// fixed and dynamic deltas above and apply after them.
 	DoublePower     bool
 	DoubleToughness bool
+	// CardZone and CardSelection scope an ability-layer effect to cards in a
+	// non-battlefield zone (e.g. Yixlid Jailer). None keeps permanent targeting;
+	// a nil immutable selection matches all cards in the specified zone.
+	CardZone      zone.Type
+	CardSelection *Selection
 }

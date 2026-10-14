@@ -179,15 +179,12 @@ type Game struct {
 	// leaves exile.
 	ForetoldCards map[id.ID]int
 
-	// ExileCounters tracks the named marker counters resting on cards in exile,
-	// keyed by card instance ID. Counters normally live on battlefield
-	// permanents, but a family of cards exiles cards with an arbitrarily named
-	// counter (CR 122) and later plays, casts, or returns "cards ... in exile
-	// with <name> counters on them" (Grolnok, the Omnivore; Dauthi Voidwalker;
-	// Flamewar). The counters are a label linking the exiled set to the source's
-	// paired ability. An entry is removed when the card leaves exile, because the
-	// card becomes a new object with no counters (CR 400.7).
-	ExileCounters map[id.ID]counter.Set
+	// CardCounters is the canonical counter store for cards off the battlefield,
+	// including exile marker mechanics and counters retained by a zone-transition
+	// policy. Keys identify physical cards, not incarnations; every transition
+	// reevaluates the departing object's abilities (CR 400.7, 122.2).
+	// Battlefield counters live only on Permanent.Counters.
+	CardCounters map[id.ID]counter.Set
 
 	// ExileCounterExiledBy records, for each card that carries a named exile
 	// marker counter, the player who controlled the ability that exiled it. It
@@ -195,7 +192,7 @@ type Game struct {
 	// ability you controlled" (Evelyn, the Covetous), which matters in multiplayer
 	// where the same counter kind can be placed by different players' abilities
 	// (collection counters: Evelyn, Charitable Levy). The entry is set alongside
-	// the ExileCounters entry and removed when the card leaves exile.
+	// the CardCounters entry and removed when the card leaves exile.
 	ExileCounterExiledBy map[id.ID]PlayerID
 
 	// LastKnownInformation stores snapshots for objects that have moved zones.
@@ -393,7 +390,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		AdventureCards:                     make(map[id.ID]bool),
 		PlottedCards:                       make(map[id.ID]int),
 		ForetoldCards:                      make(map[id.ID]int),
-		ExileCounters:                      make(map[id.ID]counter.Set),
+		CardCounters:                       make(map[id.ID]counter.Set),
 		ExileCounterExiledBy:               make(map[id.ID]PlayerID),
 		LastKnownInformation:               make(map[id.ID]ObjectSnapshot),
 		LinkedObjects:                      make(map[LinkedObjectKey][]LinkedObjectRef),
@@ -500,17 +497,17 @@ func (g *Game) GetCardInstance(cardID id.ID) (*CardInstance, bool) {
 // identified by cardID (CR 122). It is used by the exile-with-named-counter
 // family of effects, whose paired play/cast/return abilities later select
 // "cards ... in exile with <name> counters on them". The entry is cleared when
-// the card leaves exile.
+// the card leaves exile, unless a zone-transition policy retains its counters.
 func (g *Game) AddExileCounter(cardID id.ID, kind counter.Kind, n int) {
 	if n <= 0 {
 		return
 	}
-	if g.ExileCounters == nil {
-		g.ExileCounters = make(map[id.ID]counter.Set)
+	if g.CardCounters == nil {
+		g.CardCounters = make(map[id.ID]counter.Set)
 	}
-	set := g.ExileCounters[cardID]
+	set := g.CardCounters[cardID]
 	set.Add(kind, n)
-	g.ExileCounters[cardID] = set
+	g.CardCounters[cardID] = set
 }
 
 // AddExileCounterFromController places n counters of the given named kind on the
@@ -540,7 +537,7 @@ func (g *Game) ExileCounterExiledByController(cardID id.ID, controller PlayerID)
 // ExileCounterCount returns how many counters of the given kind rest on the
 // exiled card identified by cardID.
 func (g *Game) ExileCounterCount(cardID id.ID, kind counter.Kind) int {
-	set := g.ExileCounters[cardID]
+	set := g.CardCounters[cardID]
 	return set.Get(kind)
 }
 

@@ -121,6 +121,7 @@ func (r *effectResolver) returnExiledCostCardToBattlefield(cardID id.ID, control
 		return false
 	}
 	owner, ok := playerByID(r.game, card.Owner)
+	options.SourceFaceDown = cardFaceDownInZone(r.game, card, zone.Exile)
 	if !ok || !owner.Exile.Remove(cardID) {
 		return false
 	}
@@ -128,5 +129,6 @@ func (r *effectResolver) returnExiledCostCardToBattlefield(cardID id.ID, control
 		return true
 	}
 	owner.Exile.Add(cardID)
+	owner.Exile.SetFaceDown(cardID, options.SourceFaceDown)
 	return false
 }

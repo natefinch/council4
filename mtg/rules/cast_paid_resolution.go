@@ -72,9 +72,11 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		ChosenModes:  append([]int(nil), modes...),
 		SourceZone:   fromZone,
 	}
+	counterTransition := prepareCastCounterTransition(g, card, fromZone)
 	if !removeCastSourceCard(g, sourcePlayer, cardID, fromZone) {
 		return false
 	}
+	counterTransition.apply(g)
 	g.Stack.Push(obj)
 	targetEvents := prepareTargetEvents(g, obj)
 	prefs := e.paymentPreferencesForSpellFromZone(g, controllerID, cardID, fromZone, game.FaceFront, spellDef, 0, agents, log)
@@ -94,6 +96,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		// paid, so the proposal is undone.
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(sourcePlayer, cardID, fromZone)
+		counterTransition.undo(g)
 		return false
 	}
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid

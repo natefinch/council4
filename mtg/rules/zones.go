@@ -65,8 +65,10 @@ type permanentCreationOptions struct {
 	HasCastController bool
 	CastFromZone      zone.Type
 	Counters          []game.CounterPlacement
-	SimultaneousID    id.ID
-	XValue            int
+	// SourceFaceDown survives the source zone's removal of face-down metadata.
+	SourceFaceDown bool
+	SimultaneousID id.ID
+	XValue         int
 	// EntersTransformed makes a transforming double-faced card enter the
 	// battlefield converted (as its back face), backing the Transformers "More
 	// Than Meets the Eye" alternative cast and "return it to the battlefield
@@ -177,9 +179,11 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	if !commitAuraEffectAttachment(g, permanent, options) {
 		return nil, false
 	}
+	retained := retainedEntryCounters(g, card, fromZone, face, options.SourceFaceDown)
+	addRetainedCounters(permanent, retained)
 	g.Battlefield = append(g.Battlefield, permanent)
-	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
-		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
+	if lore := permanent.Counters.Get(counter.Lore) - retained.Get(counter.Lore); lore > 0 {
+		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, retained.Get(counter.Lore), lore)
 	}
 	event := game.Event{
 		SourceID:                card.ID,
@@ -216,6 +220,7 @@ type preparedCardPermanentEntry struct {
 	fromZone   zone.Type
 	continuous []game.ContinuousEffect
 	options    permanentCreationOptions
+	retained   counter.Set
 }
 
 func prepareCardPermanentFaceForSimultaneousEntry(
@@ -286,6 +291,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		fromZone:   fromZone,
 		continuous: continuous,
 		options:    options,
+		retained:   retainedEntryCounters(g, card, fromZone, face, options.SourceFaceDown),
 	}, true
 }
 
@@ -296,13 +302,14 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 		registerPermanentReplacementEffects(g, entry.permanent)
 	}
 	for i := range entries {
+		addRetainedCounters(entries[i].permanent, entries[i].retained)
 		g.Battlefield = append(g.Battlefield, entries[i].permanent)
 	}
 	for i := range entries {
 		entry := &entries[i]
 		permanent := entry.permanent
-		if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
-			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
+		if lore := permanent.Counters.Get(counter.Lore) - entry.retained.Get(counter.Lore); lore > 0 {
+			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, entry.retained.Get(counter.Lore), lore)
 		}
 		event := game.Event{
 			SourceID:                entry.card.ID,
@@ -377,6 +384,7 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		hasCastController: wasCast,
 		castFromZone:      fromZone,
 	}, g, permanent, fromZone)
+	addRetainedCounters(permanent, retainedEntryCounters(g, card, fromZone, face, fromZone == zone.Stack))
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.Event{
 		SourceID:               card.ID,
@@ -432,6 +440,7 @@ type preparedPermanentZoneMove struct {
 	replacement       zoneChangeReplacementResult
 	actualDestination zone.Type
 	componentMoves    []mergedCardZoneMove
+	retained          counter.Set
 }
 
 // preparePermanentZoneMove computes everything needed to move a permanent off the
@@ -475,6 +484,17 @@ func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destinati
 	if _, ok := destinationZone(g, permanent.Owner, actualDestination); !ok {
 		return preparedPermanentZoneMove{}, false
 	}
+	var retained counter.Set
+	if !permanent.Counters.IsEmpty() && retainsCounters(g, permanentEffectiveAbilitiesView(g, permanent),
+		conditionContext{controller: event.Controller, source: permanent}, zone.Battlefield, actualDestination) {
+		retained = cloneCounters(permanent.Counters)
+	}
+	for i := range componentMoves {
+		if !permanent.Counters.IsEmpty() && retainsCounters(g, permanentEffectiveAbilitiesView(g, permanent),
+			conditionContext{controller: event.Controller, source: permanent}, zone.Battlefield, componentMoves[i].destination) {
+			componentMoves[i].retained = cloneCounters(permanent.Counters)
+		}
+	}
 	return preparedPermanentZoneMove{
 		permanent:         permanent,
 		snapshot:          snapshot,
@@ -482,6 +502,7 @@ func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destinati
 		replacement:       replacement,
 		actualDestination: actualDestination,
 		componentMoves:    componentMoves,
+		retained:          retained,
 	}, true
 }
 
@@ -506,9 +527,11 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 	}
 	destinationCards, _ := destinationZone(g, removed.Owner, move.actualDestination)
 	if removed.Token {
+		storeDepartingCounters(g, removed.ObjectID, move.retained)
 		destinationCards.Add(removed.ObjectID)
 		move.event = emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
 	} else {
+		storeDepartingCounters(g, removed.CardInstanceID, move.retained)
 		destinationCards.Add(removed.CardInstanceID)
 		shuffleLibraryIfRequested(g, destinationCards, move.actualDestination, move.replacement.shuffleIntoLibrary)
 		placeRedirectExileCounter(g, removed.Owner, removed.CardInstanceID, move.replacement)
@@ -544,6 +567,7 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 			panic("validated merged-card destination disappeared")
 		}
 		cards.Add(component.cardID)
+		storeDepartingCounters(g, component.cardID, component.retained)
 		emitZoneChangeEvent(g, game.Event{
 			Controller:     move.event.Controller,
 			Player:         component.owner,
@@ -673,6 +697,7 @@ type mergedCardZoneMove struct {
 	owner        game.PlayerID
 	destination  zone.Type
 	tokenDef     *game.CardDef
+	retained     counter.Set
 }
 
 func mergedComponentZoneMoves(g *game.Game, permanent *game.Permanent, destination zone.Type) ([]mergedCardZoneMove, bool) {
@@ -767,7 +792,11 @@ func moveCardBetweenZonesAfterReplacement(
 ) bool {
 	destination := replacement.destination
 	from, ok := destinationZone(g, playerID, fromZone)
-	if !ok || !from.Remove(cardID) {
+	if !ok {
+		return false
+	}
+	sourceFaceDown := event.FaceDown || from.IsFaceDown(cardID)
+	if !from.Remove(cardID) {
 		return false
 	}
 	zoneOwner := playerID
@@ -779,6 +808,7 @@ func moveCardBetweenZonesAfterReplacement(
 	to, ok := destinationZone(g, zoneOwner, destination)
 	if !ok {
 		from.Add(cardID)
+		from.SetFaceDown(cardID, sourceFaceDown)
 		return false
 	}
 	revealZoneReplacementSource(g, event, replacement.revealSource)
@@ -788,14 +818,15 @@ func moveCardBetweenZonesAfterReplacement(
 		to.Add(cardID)
 	}
 	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
-	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	emitZoneChangeEvent(g, game.Event{
 		Player:         playerID,
 		CardID:         cardID,
+		FaceDown:       sourceFaceDown,
 		FromZone:       fromZone,
 		ToZone:         destination,
 		SimultaneousID: simultaneousID,
 	})
+	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	return true
 }
 
@@ -885,7 +916,6 @@ func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, si
 	revealZoneReplacementSource(g, event, revealSource)
 	destinationCards.Add(cardID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, shuffleIntoLibrary)
-	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	event = game.Event{
 		Player:         playerID,
 		CardID:         cardID,
@@ -895,6 +925,7 @@ func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, si
 		SimultaneousID: simultaneousID,
 	}
 	event = emitZoneChangeEvent(g, event)
+	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	// A command-zone replacement changes the destination, but the discard still happened.
 	event.Kind = game.EventCardDiscarded
 	emitEvent(g, event)

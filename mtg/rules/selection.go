@@ -669,11 +669,11 @@ func (s *selectionSubject) tapped() bool {
 	return s.kind == subjectPermanent && s.permanent != nil && s.permanent.Tapped
 }
 
-// hasCounter reports whether the subject permanent carries at least one counter
-// of the given kind. Counters live only on battlefield permanents, so a card or
-// cast-spell subject never matches; an event permanent reads its live or
-// last-known counters.
+// hasCounter reads live card/permanent counters or an event's last-known counters.
 func (s *selectionSubject) hasCounter(kind counter.Kind) bool {
+	if s.kind == subjectCard {
+		return s.counterCount(kind) > 0
+	}
 	if s.kind == subjectPermanent {
 		return s.permanent != nil && s.permanent.Counters.Has(kind)
 	}
@@ -689,6 +689,10 @@ func (s *selectionSubject) hasCounter(kind counter.Kind) bool {
 }
 
 func (s *selectionSubject) counterCount(kind counter.Kind) int {
+	if s.kind == subjectCard && s.card != nil && s.g != nil {
+		set := s.g.CardCounters[s.card.ID]
+		return set.Get(kind)
+	}
 	if s.kind == subjectPermanent {
 		if s.permanent == nil {
 			return 0
@@ -707,6 +711,10 @@ func (s *selectionSubject) counterCount(kind counter.Kind) int {
 }
 
 func (s *selectionSubject) hasAnyCounter() bool {
+	if s.kind == subjectCard && s.card != nil && s.g != nil {
+		set := s.g.CardCounters[s.card.ID]
+		return !set.IsEmpty()
+	}
 	if s.kind == subjectPermanent {
 		return s.permanent != nil && !s.permanent.Counters.IsEmpty()
 	}
@@ -1053,7 +1061,7 @@ func (s *selectionSubject) power() (int, bool) {
 		return values.power, ok && values.powerOK
 	}
 	if s.kind == subjectCard {
-		return cardFacePT(s.card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
+		return cardPower(s.g, s.card)
 	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
@@ -1126,7 +1134,7 @@ func (s *selectionSubject) toughness() (int, bool) {
 		return values.toughness, ok && values.toughnessOK
 	}
 	if s.kind == subjectCard {
-		return cardFacePT(s.card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+		return cardToughness(s.g, s.card)
 	}
 	if s.kind != subjectPermanent || s.useBase {
 		return 0, false
@@ -1148,6 +1156,26 @@ func cardFacePT(card *game.CardInstance, pick func(game.CardFace) opt.V[game.PT]
 		return 0, false
 	}
 	return pt.Val.Value, true
+}
+
+func cardPower(g *game.Game, card *game.CardInstance) (int, bool) {
+	value, ok := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
+	if ok && g != nil {
+		set := g.CardCounters[card.ID]
+		power, _ := set.PowerToughnessDelta()
+		value += power
+	}
+	return value, ok
+}
+
+func cardToughness(g *game.Game, card *game.CardInstance) (int, bool) {
+	value, ok := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+	if ok && g != nil {
+		set := g.CardCounters[card.ID]
+		_, toughness := set.PowerToughnessDelta()
+		value += toughness
+	}
+	return value, ok
 }
 
 func (s *selectionSubject) eventPermanentValues() (permanentEffectiveValues, bool) {

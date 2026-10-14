@@ -47,7 +47,6 @@ func putLibraryCardIntoGraveyard(g *game.Game, playerID game.PlayerID, cardID, s
 	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(cardID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
-	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	emitZoneChangeEvent(g, game.Event{
 		Player:         playerID,
 		CardID:         cardID,
@@ -56,6 +55,7 @@ func putLibraryCardIntoGraveyard(g *game.Game, playerID game.PlayerID, cardID, s
 		Amount:         1,
 		SimultaneousID: simultaneousID,
 	})
+	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	return destination, true
 }
 
@@ -264,15 +264,6 @@ func exileTopOfLibraryCardsWithResult(g *game.Game, playerID game.PlayerID, amou
 		if destination == zone.Exile {
 			exiled = append(exiled, cardID)
 		}
-		// Place the named exile counter only when the card actually landed in
-		// exile: a CR 614/903.9 replacement or commander redirect can divert the
-		// move to the command zone, and gating on the intended destination would
-		// orphan a counter on a card that never reached exile. Record the exiling
-		// controller alongside the counter so a paired play/cast-from-exile
-		// permission can filter to cards "exiled by an ability you controlled".
-		if counterKind.Exists && destination == zone.Exile {
-			g.AddExileCounterFromController(cardID, counterKind.Val, 1, exiledBy)
-		}
 		// A face-down exile hides the card's identity from every observer. The
 		// zone records the face-down state (cleared automatically when the card
 		// leaves the zone); the command-zone redirect never applies here because
@@ -287,6 +278,11 @@ func exileTopOfLibraryCardsWithResult(g *game.Game, playerID game.PlayerID, amou
 			ToZone:   destination,
 			Amount:   1,
 		})
+		// Counters placed on the new exile incarnation follow the zone change;
+		// they must not be mistaken for counters on the departing library card.
+		if counterKind.Exists && destination == zone.Exile {
+			g.AddExileCounterFromController(cardID, counterKind.Val, 1, exiledBy)
+		}
 	}
 	return exiled, moved
 }

@@ -1331,7 +1331,7 @@ type ReturnExiledCardsToHand struct {
 // zone bearing at least one Counter-kind named marker counter to Player's hand
 // ("Put all exiled cards you own with intel counters on them into your hand.",
 // Flamewar, Brash Veteran). It is the return companion to the exile-with-named-
-// counter substrate: the counters recorded in Game.ExileCounters when the cards
+// counter substrate: the counters recorded in Game.CardCounters when the cards
 // were exiled select exactly which cards return, so any card that uses a named
 // marker counter (croak, intel, void, collection, ...) benefits without the
 // primitive naming a specific counter. Cards without the counter, and cards
@@ -1578,7 +1578,7 @@ type MoveCard struct {
 	DestinationBottom bool
 	// Counter names a named marker counter placed on the moved card when
 	// Destination is the exile zone ("exile it with a croak counter on it.",
-	// Grolnok, the Omnivore). The counter is recorded in Game.ExileCounters so
+	// Grolnok, the Omnivore). The counter is recorded in Game.CardCounters so
 	// the source's paired play/cast/return ability can later select "cards ... in
 	// exile with <name> counters on them". It is unset for every move that places
 	// no counter, and meaningful only for the single-card exile form.

@@ -2924,7 +2924,7 @@ func (p MoveTopOfLibrary) validatePrimitive(targets []TargetSpec, checkTargets b
 		return errors.New("MoveTopOfLibrary supports only the graveyard and exile destinations")
 	}
 	// Counter and FaceDown are exile-only state. A named marker counter is
-	// recorded in Game.ExileCounters, which holds only cards in exile, and
+	// recorded in Game.CardCounters for cards in exile, and
 	// face-down state is tracked solely by the exile zone. Honoring either at the
 	// graveyard would need the graveyard zone to record that state, so reject the
 	// combination instead of letting handleMoveTopOfLibrary silently drop it.

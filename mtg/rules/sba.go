@@ -591,6 +591,7 @@ func removeTokensFromNonBattlefieldZones(g *game.Game) bool {
 					continue
 				}
 				if cards.Remove(cardID) {
+					delete(g.CardCounters, cardID)
 					changed = true
 				}
 			}

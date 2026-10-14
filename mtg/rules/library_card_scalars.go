@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/opt"
 )
 
 func libraryCardCharacteristicOutputs(primitive game.Primitive) game.LibraryCardCharacteristics {
@@ -64,8 +63,8 @@ func (r *effectResolver) publishLibraryCardScalars(link game.LinkedKey, outputs 
 }
 
 func (r *effectResolver) publishCardScalars(card *game.CardInstance, outputs game.LibraryCardCharacteristics, departure bool) {
-	power, powerKnown := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
-	toughness, toughnessKnown := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+	power, powerKnown := cardPower(r.game, card)
+	toughness, toughnessKnown := cardToughness(r.game, card)
 	if departure && card != nil && card.Def != nil {
 		face := card.Def.DefaultFace()
 		powerKnown = powerKnown || !face.Power.Exists

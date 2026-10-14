@@ -140,6 +140,14 @@ func snapshotStackSpell(g *game.Game, obj *game.StackObject) game.ObjectSnapshot
 		snapshot.Colors = spellColors(def)
 		snapshot.Types = append([]types.Card(nil), def.Types...)
 		snapshot.Subtypes = append([]types.Sub(nil), def.Subtypes...)
+		power, powerOK := cardFacePT(&game.CardInstance{Def: def}, func(face game.CardFace) opt.V[game.PT] { return face.Power })
+		toughness, toughnessOK := cardFacePT(&game.CardInstance{Def: def}, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+		if !obj.Copy {
+			snapshot.Counters = cloneCounters(g.CardCounters[obj.SourceID])
+		}
+		powerDelta, toughnessDelta := snapshot.Counters.PowerToughnessDelta()
+		snapshot.Power = optionalInt(power+powerDelta, powerOK)
+		snapshot.Toughness = optionalInt(toughness+toughnessDelta, toughnessOK)
 	}
 	return snapshot
 }

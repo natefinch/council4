@@ -45,7 +45,7 @@ type MoveTopOfLibrary struct {
 	// Counter names a named marker counter placed on each card once it reaches
 	// exile ("exile the top card of each player's library with a collection
 	// counter on it.", Evelyn, the Covetous). The counter is recorded in
-	// Game.ExileCounters, which exists only for cards in exile, so validation
+	// Game.CardCounters for cards in exile, so validation
 	// rejects a Counter with any non-exile Destination. It is unset for every
 	// move that places no counter.
 	Counter opt.V[counter.Kind]

@@ -213,9 +213,11 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		SplicedTargetCounts:           splice.targetCounts,
 		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
+	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
 	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
 		return false
 	}
+	counterTransition.apply(g)
 	g.Stack.Push(obj)
 
 	targetEvents := prepareTargetEvents(g, obj)
@@ -264,6 +266,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		// return the card to the zone it was cast from.
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
+		counterTransition.undo(g)
 		return false
 	}
 	if sourceZone == zone.Command {
@@ -359,9 +362,11 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		MutateTargetID: cast.MutateTargetID,
 		SourceZone:     sourceZone,
 	}
+	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
 	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
 		return false
 	}
+	counterTransition.apply(g)
 	g.Stack.Push(obj)
 
 	targetEvents := prepareTargetEvents(g, obj)
@@ -380,6 +385,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		// CR 728: undo the proposal when costs can't be paid.
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
+		counterTransition.undo(g)
 		return false
 	}
 	if sourceZone == zone.Command {

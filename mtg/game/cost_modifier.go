@@ -1132,7 +1132,7 @@ type RuleEffect struct {
 	// to cards carrying the named marker counter it holds ("... from among cards
 	// you own in exile with croak counters on them.", Grolnok, the Omnivore). The
 	// rules layer only permits playing or casting an exiled card that has at least
-	// one such counter recorded in Game.ExileCounters. It is unset for every
+	// one such counter recorded in Game.CardCounters. It is unset for every
 	// permission with no exile-counter filter.
 	ExileCounterFilter opt.V[counter.Kind]
 

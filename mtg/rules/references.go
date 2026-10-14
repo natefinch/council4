@@ -295,10 +295,11 @@ func resolveLinkedObjectRef(g *game.Game, linked game.LinkedObjectRef) (resolved
 	// instance.
 	if linked.ObjectID == 0 && linked.CardID != 0 {
 		if card, ok := linkedCardInstance(g, linked); ok && card.Def != nil {
-			power, powerOK := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Power })
-			toughness, toughnessOK := cardFacePT(card, func(face game.CardFace) opt.V[game.PT] { return face.Toughness })
+			power, powerOK := cardPower(g, card)
+			toughness, toughnessOK := cardToughness(g, card)
 			return resolvedObjectReference{snapshot: game.ObjectSnapshot{
 				CardID: linked.CardID, Power: optionalInt(power, powerOK), Toughness: optionalInt(toughness, toughnessOK),
+				Counters: cloneCounters(g.CardCounters[card.ID]),
 			}}, true
 		}
 		return resolvedObjectReference{}, false

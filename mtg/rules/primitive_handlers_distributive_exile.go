@@ -23,10 +23,11 @@ func handleReturnLinkedExiledCardsToBattlefield(r *effectResolver, prim game.Ret
 	returnedSet := make(map[*game.CardInstance]bool, len(returned))
 	for _, card := range returned {
 		owner, ok := playerByID(r.game, card.Owner)
+		options := permanentCreationOptions{SourceFaceDown: cardFaceDownInZone(r.game, card, zone.Exile)}
 		if !ok || !owner.Exile.Remove(card.ID) {
 			continue
 		}
-		if _, ok := createCardPermanentFaceWithOptions(r.engine, r.game, card, card.Owner, zone.Exile, game.FaceFront, nil, permanentCreationOptions{}, r.agents, r.log); ok {
+		if _, ok := createCardPermanentFaceWithOptions(r.engine, r.game, card, card.Owner, zone.Exile, game.FaceFront, nil, options, r.agents, r.log); ok {
 			returnedSet[card] = true
 			res.succeeded = true
 		}

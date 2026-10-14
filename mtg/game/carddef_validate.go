@@ -534,6 +534,10 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 	case *ChapterAbility:
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 	case *StaticAbility:
+		if abilityBody.ZoneTransitionPolicy < ZoneTransitionOrdinary ||
+			abilityBody.ZoneTransitionPolicy > ZoneTransitionRetainCountersExceptHandLibrary {
+			v.add(faceName, appendPath(path, "ZoneTransitionPolicy"), CardDefIssueInvalidAbilityBody, "unknown zone-transition policy")
+		}
 		if abilityBody.Condition.Exists {
 			v.validateCondition(faceName, appendPath(path, "Condition"), &abilityBody.Condition.Val, targets)
 		}
@@ -1341,6 +1345,19 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 }
 
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
+	if continuous.CardZone != zone.None {
+		if continuous.CardZone < zone.Library || continuous.CardZone > zone.Command ||
+			continuous.CardZone == zone.Battlefield || continuous.Layer != LayerAbility ||
+			continuous.AffectedSource || continuous.AffectedObjectID != 0 || !continuous.Group.Empty() {
+			v.add(faceName, appendPath(path, "CardZone"), CardDefIssueInvalidAbilityBody, "card-zone effects require the ability layer and no permanent target")
+		}
+		if continuous.CardSelection != nil {
+			v.validateSelection(faceName, appendPath(path, "CardSelection"), *continuous.CardSelection)
+			if handCardSelectionHasUnsupportedPredicates(*continuous.CardSelection) {
+				v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "card-zone ability effects support printed card characteristics")
+			}
+		}
+	}
 	if len(continuous.SetBasicLandTypes) > 0 {
 		if continuous.Layer != LayerType {
 			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "setting basic land types requires the type layer")
