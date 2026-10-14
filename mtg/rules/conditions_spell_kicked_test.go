@@ -42,7 +42,7 @@ func TestEffectConditionSpellWasKickedGatesResolution(t *testing.T) {
 	if got := resolve(false, false); got != 0 {
 		t.Fatalf("unkicked draw: hand size = %d, want 0", got)
 	}
-	if got := resolve(true, true); got != 0 {
-		t.Fatalf("copied kicked spell: hand size = %d, want 0 (copies are never kicked)", got)
+	if got := resolve(true, true); got != 1 {
+		t.Fatalf("copied kicked spell: hand size = %d, want 1 (copies inherit additional-cost decisions, CR 707.10)", got)
 	}
 }

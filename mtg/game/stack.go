@@ -154,9 +154,7 @@ type StackObject struct {
 
 	// Bargained is true if this spell's Bargain additional cost was paid as it
 	// was cast (CR 702.166b): its controller sacrificed an artifact, enchantment,
-	// or token. It gates the spell's "if this spell was bargained" clauses. Like
-	// KickerPaid it is an as-cast choice, so a copy of a bargained spell was not
-	// itself bargained (CR 707.10) and this stays false for copies.
+	// or token. Copies inherit this additional-cost decision (CR 707.10).
 	Bargained bool
 
 	// OffspringPaid is true if this spell's Offspring additional mana cost was
@@ -278,6 +276,10 @@ type StackObject struct {
 	// Copy is true if this stack object is a copy of a spell rather than the
 	// physical source card.
 	Copy bool
+
+	// CopyOwner is fixed when a spell copy is put onto the stack (CR 112.2).
+	// It does not follow later changes of control.
+	CopyOwner opt.V[PlayerID]
 
 	// CopyValues snapshots the copiable characteristics of a spell copy,
 	// including modifications made by the copy effect itself. They are applied

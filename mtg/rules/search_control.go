@@ -22,6 +22,32 @@ type searchControl struct {
 	sourceObjectID id.ID
 }
 
+// A controlled search is decided by the controller using the searcher's
+// information permissions, not the controller's private hand (CR 723.4).
+func searchChoiceAgents(g *game.Game, agents [game.NumPlayers]PlayerAgent, control searchControl) [game.NumPlayers]PlayerAgent {
+	if control.decisionMaker == control.searcher {
+		return agents
+	}
+	agent := agentFor(agents, control.decisionMaker)
+	if chooser, ok := agent.(ChoiceAgent); ok {
+		agents[control.decisionMaker] = controlledSearchChooser{
+			PlayerAgent: agent, chooser: chooser, observation: observe(g, control.searcher),
+		}
+	}
+	return agents
+}
+
+type controlledSearchChooser struct {
+	PlayerAgent
+
+	chooser     ChoiceAgent
+	observation PlayerObservation
+}
+
+func (c controlledSearchChooser) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
+	return c.chooser.ChooseChoice(c.observation, request)
+}
+
 // resolveSearchControl inspects the active rule effects for an opponent of
 // searcher who controls searcher's library searches
 // (RuleEffectControlOpponentSearches) or exiles what searcher finds

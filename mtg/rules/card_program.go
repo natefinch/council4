@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
 )
 
 // NewEngineWithPrograms installs an immutable catalog before any game is loaded.
@@ -83,6 +84,11 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 			CardID: cardID, ObjectID: objectID, StackID: obj.ID, Controller: obj.Controller, X: obj.XValue,
 		},
 	}
+	if obj.HasTriggerEvent {
+		if player, known := triggeringEventPlayer(obj.TriggerEvent); known {
+			ctx.source.EventPlayer = opt.Val(player)
+		}
+	}
 	defer func() { ctx.active = false }()
 	previous, _ := g.ChoiceContext()
 	e.setReplacementChoiceContext(g, agents, log)
@@ -93,16 +99,20 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 }
 
 type programContext struct {
-	engine  *Engine
-	game    *game.Game
-	obj     *game.StackObject
-	agents  [game.NumPlayers]PlayerAgent
-	log     *TurnLog
-	active  bool
-	source  cardprogram.Source
-	targets []game.Target
-	specs   []game.TargetSpec
+	engine       *Engine
+	game         *game.Game
+	obj          *game.StackObject
+	agents       [game.NumPlayers]PlayerAgent
+	log          *TurnLog
+	active       bool
+	source       cardprogram.Source
+	targets      []game.Target
+	specs        []game.TargetSpec
+	found        map[game.ObjectID]game.ZoneCardSnapshot
+	libraryEpoch map[game.ObjectID]uint64
 }
+
+func (c *programContext) View() cardprogram.View { return c }
 
 func (c *programContext) Source() cardprogram.Source { return c.source }
 

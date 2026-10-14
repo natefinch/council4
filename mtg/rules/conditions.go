@@ -294,10 +294,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.CastDuringControllerMainPhase
 	}
 	if cond.SpellWasKicked {
-		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.KickerPaid
+		matches = matches && ctx.obj != nil && ctx.obj.KickerPaid
 	}
 	if cond.SpellWasBargained {
-		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.Bargained
+		matches = matches && ctx.obj != nil && ctx.obj.Bargained
 	}
 	if cond.SpellWasOffspring {
 		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.OffspringPaid

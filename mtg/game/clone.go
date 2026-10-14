@@ -243,6 +243,9 @@ func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
 	clone := cloneStackObject(o)
 	clone.ID = newID
 	clone.Copy = true
+	if clone.Kind == StackSpell {
+		clone.CopyOwner = opt.Val(o.Controller)
+	}
 	clone.ResolutionOrdinalThisTurn = 0
 	return clone
 }
@@ -256,6 +259,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.SplicedTargets = cloneSliceFunc(o.SplicedTargets, cloneSlice[Target])
 	clone.SplicedTargetCounts = cloneSliceFunc(o.SplicedTargetCounts, cloneSlice[int])
 	clone.ChosenModes = cloneSlice(o.ChosenModes)
+	clone.ManaSpentByColorToCast = cloneComparableMap(o.ManaSpentByColorToCast)
 	clone.RuleEffects = cloneSliceFunc(o.RuleEffects, func(effect RuleEffect) RuleEffect {
 		fixupRuleEffect(&effect)
 		return effect

@@ -244,8 +244,8 @@ func TestUnbargainedCastSkipsGatedEffect(t *testing.T) {
 
 // TestBargainedEffectGatingByStackState exercises the "if this spell was
 // bargained" resolution condition directly: the gated draw runs only when the
-// resolving stack object recorded a bargained cast, and never for a copy (copies
-// are never bargained, CR 707.10c / 702.166).
+// resolving stack object recorded the additional cost, including copies that
+// inherit the original spell's additional-cost decisions (CR 707.10).
 func TestBargainedEffectGatingByStackState(t *testing.T) {
 	gatedDraw := func() *game.Instruction {
 		return &game.Instruction{
@@ -276,7 +276,7 @@ func TestBargainedEffectGatingByStackState(t *testing.T) {
 	if got := resolve(false, false); got != 0 {
 		t.Fatalf("unbargained draw: hand size = %d, want 0", got)
 	}
-	if got := resolve(true, true); got != 0 {
-		t.Fatalf("copied bargained spell: hand size = %d, want 0 (copies are never bargained)", got)
+	if got := resolve(true, true); got != 1 {
+		t.Fatalf("copied bargained spell: hand size = %d, want 1 (copies inherit additional-cost decisions)", got)
 	}
 }

@@ -475,14 +475,16 @@ func handleSearchRevealOnly(r *effectResolver, prim game.Search) effectResolved 
 		key = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
 		clearLinkedObjects(r.game, key)
 	}
-	cardID, found := r.engine.searchLibraryRevealOnly(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
-	if !found {
+	found := r.engine.searchLibraryRevealOnlyCards(r.game, r.obj, r.agents, r.log, playerID, prim.Spec, res.amount)
+	if len(found) == 0 {
 		return res
 	}
 	res.succeeded = true
-	res.amount = 1
+	res.amount = len(found)
 	if prim.PublishLinked != "" {
-		rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+		for _, cardID := range found {
+			rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: cardID})
+		}
 	}
 	return res
 }
@@ -2466,6 +2468,12 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		}
 		chooser = resolved
 	}
+	result, _ := copyStackObjectForPlayer(r, prim, original, chooser)
+	return result
+}
+
+func copyStackObjectForPlayer(r *effectResolver, prim game.CopyStackObject, original *game.StackObject, chooser game.PlayerID) (effectResolved, []id.ID) {
+	var copied []id.ID
 	count := prim.Count
 	if prim.DynamicCount.IsDynamic() {
 		count = r.quantity(prim.DynamicCount)
@@ -2473,7 +2481,7 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		count = 1
 	}
 	if count <= 0 {
-		return effectResolved{accepted: true}
+		return effectResolved{accepted: true}, nil
 	}
 	for range count {
 		copyObj := game.NewStackObjectCopy(original, r.game.IDGen.Next())
@@ -2481,14 +2489,18 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 		if original.Kind == game.StackSpell && !copyOK {
 			continue
 		}
-		// The copier controls the copy (CR 707.10a): the "may copy this spell"
+		// The copier controls and owns the spell copy (CR 707.10): the "may copy this spell"
 		// player becomes the copy's controller so the copy's own iterative offer
 		// chains off the copier's new target rather than the original controller.
 		copyObj.Controller = chooser
+		if copyObj.Kind == game.StackSpell {
+			copyObj.CopyOwner = opt.Val(chooser)
+		}
 		if prim.MayChooseNewTargets {
 			r.engine.mayRetargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
 		}
 		r.game.Stack.Push(copyObj)
+		copied = append(copied, copyObj.ID)
 		if copyObj.Kind == game.StackSpell {
 			emitSpellCopiedEvent(r.game, copyObj, copyDef)
 		} else {
@@ -2504,15 +2516,17 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 				continue
 			}
 			additional.Controller = chooser
+			additional.CopyOwner = opt.Val(chooser)
 			if mayChooseNewTargets {
 				r.engine.mayRetargetStackObjectChoice(r.game, chooser, additional, r.agents, r.log)
 			}
 			r.game.Stack.Push(additional)
+			copied = append(copied, additional.ID)
 			emitSpellCopiedEvent(r.game, additional, copyDef)
 		}
 	}
 
-	return effectResolved{accepted: true, succeeded: count > 0}
+	return effectResolved{accepted: true, succeeded: len(copied) > 0}, copied
 }
 
 // prepareStackSpellCopy snapshots a spell's current copiable values onto its new
@@ -2650,7 +2664,7 @@ func (e *Engine) applyHostRetargetChoice(g *game.Game, chooser game.PlayerID, ta
 	if target.HasTriggerEvent {
 		retargetEvent = target.TriggerEvent
 	}
-	result := targetChoicesForSpecs(g, target.Controller, specs.def, specs.sourceObjectID, retargetEvent, specs.specs)
+	result := retargetChoices(g, target.Controller, specs, retargetEvent, target.Targets, target.TargetCounts, target.XValue, optional)
 	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
 		return false
 	}
@@ -2663,7 +2677,7 @@ func (e *Engine) applyHostRetargetChoice(g *game.Game, chooser game.PlayerID, ta
 	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
 		return false
 	}
-	bound, ok := bindCardTargetZoneVersions(g, result.choices[selected[0]])
+	bound, ok := bindRetargetZoneVersions(g, result.choices[selected[0]], target.Targets)
 	if !ok {
 		return false
 	}
@@ -2688,7 +2702,11 @@ func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, tar
 		if len(specs) == 0 {
 			continue
 		}
-		result := targetChoicesForSpecs(g, target.Controller, hostDef, 0, game.Event{}, specs)
+		if i >= len(target.SplicedTargets) || i >= len(target.SplicedTargetCounts) {
+			continue
+		}
+		result := retargetChoices(g, target.Controller, stackObjectSpecs{def: hostDef, specs: specs},
+			game.Event{}, target.SplicedTargets[i], target.SplicedTargetCounts[i], target.XValue, optional)
 		if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
 			continue
 		}
@@ -2701,7 +2719,7 @@ func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, tar
 		if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
 			continue
 		}
-		bound, ok := bindCardTargetZoneVersions(g, result.choices[selected[0]])
+		bound, ok := bindRetargetZoneVersions(g, result.choices[selected[0]], target.SplicedTargets[i])
 		if !ok {
 			continue
 		}

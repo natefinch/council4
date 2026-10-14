@@ -115,9 +115,15 @@ func validateObjectReference(ref ObjectReference, targets []TargetSpec, checkTar
 	return validateObjectReferenceTargetBounds(ref, targets, checkTargets)
 }
 
-// validateObjectReferenceTargetBounds performs the contextual target-slot bounds
-// check for the target-derived object reference kinds. Structural consistency is
-// owned by ObjectReference.Validate.
+// ValidateScopedObjectReference checks a reference against declared targets.
+func ValidateScopedObjectReference(ref ObjectReference, targets []TargetSpec) error {
+	if err := firstProblem(ref.Validate()); err != nil {
+		return err
+	}
+	return validateObjectReferenceTargetBounds(ref, targets, true)
+}
+
+// validateObjectReferenceTargetBounds checks contextual target-slot bounds.
 func validateObjectReferenceTargetBounds(ref ObjectReference, targets []TargetSpec, checkTargets bool) error {
 	switch ref.Kind() {
 	case ObjectReferenceTargetPermanent, ObjectReferenceTargetStackObject, ObjectReferenceTargetAttachedPermanent, ObjectReferenceTargetObject:
@@ -158,6 +164,11 @@ func validateTargetSpecAllows(specIndex int, allow TargetAllow, targets []Target
 		return errors.New("target specification allows an incompatible target kind")
 	}
 	return nil
+}
+
+// ValidateScopedPlayerReference checks a reference against declared targets.
+func ValidateScopedPlayerReference(ref PlayerReference, targets []TargetSpec) error {
+	return validatePlayerReference(ref, targets, true)
 }
 
 func validatePlayerReference(ref PlayerReference, targets []TargetSpec, checkTargets bool) error {
@@ -1511,9 +1522,8 @@ func validSearchDestination(destination SearchDestination) bool {
 }
 
 // validateRevealOnlySearch validates the search-and-reveal-only slice that leaves
-// the found card in the library for a following ConditionalDestinationPlace to
-// route. It requires a single searching player, a library source, no destination,
-// a reveal, exactly one found card, and none of the placement riders.
+// found cards in the library for later placement. It requires a single searching
+// player, a library source, no destination, a reveal and no placement riders.
 func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool) error {
 	if p.Spec.SourceZone != zone.Library {
 		return errors.New("reveal-only search must source from the library")
@@ -1524,17 +1534,24 @@ func (p Search) validateRevealOnlySearch(targets []TargetSpec, checkTargets bool
 	if !p.Spec.Reveal {
 		return errors.New("reveal-only search must reveal the found card")
 	}
-	if p.Amount.IsDynamic() || p.Amount.Value() != 1 {
-		return errors.New("reveal-only search must find exactly one card")
+	if p.Amount.IsDynamic() || p.Amount.Value() < 0 {
+		return errors.New("reveal-only search requires a fixed nonnegative maximum")
 	}
 	if p.Spec.SplitDestination.Exists ||
 		p.Spec.EntersTapped ||
 		p.Spec.MaxManaValueFromX ||
 		p.Spec.MaxManaValueFromSacrificedCost.Exists ||
 		p.Spec.SharedSubtype ||
-		p.Spec.DifferentNames ||
+		p.Spec.AlsoGraveyard ||
+		p.Spec.ConditionalShuffle ||
+		p.Spec.ExileFaceDown ||
+		p.Spec.AnyNumber ||
+		len(p.Spec.SlotFilters) != 0 ||
 		p.Spec.DestinationPosition != SearchPositionUnspecified {
-		return errors.New("reveal-only search does not support split destination, tapped entry, X bound, shared-subtype, or library-position riders")
+		return errors.New("reveal-only search does not support placement, multi-zone, unbounded, slot, X-bound, or shared-subtype riders")
+	}
+	if p.PublishLinked != "" && p.Amount.Value() != 1 {
+		return errors.New("linked reveal-only search must find at most one card")
 	}
 	if p.Controller.Exists {
 		return errors.New("reveal-only search does not support a controller rider")

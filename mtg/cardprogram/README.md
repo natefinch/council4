@@ -47,10 +47,13 @@ card is added only after its entire behavior and relevant scenarios are complete
 
 ## Execution and ownership
 
-- `Source()` returns captured card/object/stack IDs, controller and X. It does
-  not expose a live permanent or Game pointer.
-- `Targets()` returns a copy of the declared runtime targets. Rules operations
+- `View().Source()` returns captured card/object/stack IDs, controller, X and the
+  triggering event's historical player identity (even after that player leaves).
+  It does not expose a live permanent or Game pointer.
+- `View().Targets()` returns a copy of the declared runtime targets. Rules operations
   still revalidate references; do not use plain Go writes as targeting/mutation.
+- `View().Player(reference)` resolves a currently available player;
+  `View().Players(group)` returns living members in APNAP order.
 - `Execute(primitive)` validates the operation's target scope and dispatches
   the existing Effect Resolver. Its `Outcome` distinguishes unavailable from
   executed-but-ineffective, with copied public result snapshots. It does not
@@ -68,6 +71,26 @@ card is added only after its entire behavior and relevant scenarios are complete
   the declared `TokenRecipient{Player, Count}` quantities, using token/entry replacements
   and returns copied snapshots of the tokens actually created. Invalid inputs
   fail; a valid effect for a departed player produces no tokens (CR 800.4).
+- `Copy(operation, copier)` reuses stack copying and optional retargeting, returning
+  the IDs actually created. Each copier has its own recorded choice, inherits modes,
+  X and additional-cost/payment subjects, and owns its spell copies independently
+  of later control changes. Copies produce copy events, never cast events.
+  Retargeting preserves target counts and may keep illegal targets unchanged
+  while selecting legal replacements for other slots (CR 707.10c).
+- `Exchange(first, second)` atomically exchanges both live permanents' current
+  layer-2 controllers, with copied before/after snapshots and a typed `Exchanged`
+  outcome. A missing/phased object, identical object, same controller or departed
+  recipient produces no partial change. Successful changes reset sickness and
+  remove both permanents from combat.
+- `Search(operation)` performs a reveal-only search and returns local `FoundCard`
+  incarnation handles. Search options disclose the library only to the authorized
+  chooser; controlled searches use the searcher's information permissions.
+  Distinct-name searches use the existing staged choices and permit fail-to-find.
+- `MoveCards(placements...)` assigns found handles to hand/graveyard in one
+  simultaneous placement, applying zone replacements before committing the moves.
+  Replacement shuffles wait until the full placement finishes. Handles cannot be
+  forged, reused across invocations, or followed through a zone change or a later
+  shuffle. Clone preserves the library's shuffle-correlation epoch.
 
 Contexts expire when the synchronous handler returns. Never retain them,
 live pointers or mutable per-game state in a closure/global. Named pure
@@ -82,6 +105,12 @@ of correlated batch outcomes; a real graveyard arrival qualifies even if the
 commander later moves to command as an SBA (CR 903.9a). Hand/library command-zone
 handling remains an optional replacement, not that SBA (CR 903.9b).
 Following epic slices deepen links, replacement programs and policy extensions.
+
+Hive Mind, Gifts Ungiven and Gilded Drake are the next production compositions.
+Gilded Drake's `ResolveWithIllegalTargets` declaration is inspectable rule data:
+illegal slots are still rescreened, but the sacrifice consequence can resolve
+when all targets became illegal. Other triggered abilities retain normal
+all-illegal resolution rules.
 
 ## Consumers, errors and portability
 

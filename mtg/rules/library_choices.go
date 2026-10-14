@@ -836,7 +836,7 @@ func (e *Engine) chooseCorrelatedSearchCard(g *game.Game, agents [game.NumPlayer
 		if card, ok := g.GetCardInstance(cardID); ok {
 			label = cardFaceOrDefault(card, game.FaceFront).Name
 		}
-		options = append(options, game.ChoiceOption{Index: i, Label: label})
+		options = append(options, game.ChoiceOption{Index: i, Label: label, Card: cardChoiceInfo(g, cardID)})
 	}
 	request := game.ChoiceRequest{
 		Kind:             game.ChoiceSearch,

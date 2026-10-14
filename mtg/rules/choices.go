@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -99,9 +100,22 @@ func nextChoiceID(log *TurnLog) int {
 }
 
 func cloneChoiceRequest(request game.ChoiceRequest) game.ChoiceRequest {
-	request.Options = append([]game.ChoiceOption(nil), request.Options...)
-	request.DefaultSelection = append([]int(nil), request.DefaultSelection...)
+	request.Options = slices.Clone(request.Options)
+	for i := range request.Options {
+		request.Options[i].Targets = slices.Clone(request.Options[i].Targets)
+		request.Options[i].Card = cloneChoiceCardInfo(request.Options[i].Card)
+	}
+	request.Subject = cloneChoiceCardInfo(request.Subject)
+	request.DefaultSelection = slices.Clone(request.DefaultSelection)
 	return request
+}
+
+func cloneChoiceCardInfo(info opt.V[game.ChoiceCardInfo]) opt.V[game.ChoiceCardInfo] {
+	if info.Exists {
+		info.Val.Types = slices.Clone(info.Val.Types)
+		info.Val.Colors = slices.Clone(info.Val.Colors)
+	}
+	return info
 }
 
 func fallbackChoice(request game.ChoiceRequest) []int {

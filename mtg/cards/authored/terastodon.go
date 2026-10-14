@@ -49,7 +49,7 @@ func newTerastodon() *game.CardDef {
 
 func resolveTerastodonEntry(ctx cardprogram.Context) error {
 	selected, err := ctx.Ask(game.ChoiceRequest{
-		Kind: game.ChoiceMay, Player: ctx.Source().Controller,
+		Kind: game.ChoiceMay, Player: ctx.View().Source().Controller,
 		Prompt:     "Destroy the chosen noncreature permanents?",
 		Options:    []game.ChoiceOption{{Index: 0, Label: "No"}, {Index: 1, Label: "Yes"}},
 		MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{1},

@@ -27,7 +27,7 @@ func TestProgramActivatedTriggeredAndChapterResolveOnStack(t *testing.T) {
 			catalog, err := cardprogram.NewCatalog([]cardprogram.Program{{
 				Reference: ref,
 				Resolve: func(ctx cardprogram.Context) error {
-					info := ctx.Source()
+					info := ctx.View().Source()
 					if info.CardID != source.CardInstanceID || info.ObjectID != source.ObjectID || info.Controller != game.Player1 {
 						t.Fatal("program source identity/controller changed")
 					}

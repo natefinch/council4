@@ -723,7 +723,25 @@ func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 // that leave the battlefield this way are removed from combat (CR 506.4).
 func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	g.Stack.RemoveControlledBy(playerID)
+	before := make(map[id.ID]game.PlayerID, len(g.Battlefield))
+	for _, permanent := range g.Battlefield {
+		before[permanent.ObjectID] = effectiveController(g, permanent)
+	}
+	kept := g.ContinuousEffects[:0]
+	for _, effect := range g.ContinuousEffects {
+		if effect.Layer == game.LayerControl && effect.NewController.Exists && effect.NewController.Val == playerID {
+			continue
+		}
+		kept = append(kept, effect)
+	}
+	g.ContinuousEffects = kept
 	cleanupEliminatedPlayerPermanents(g, playerID)
+	for _, permanent := range g.Battlefield {
+		if before[permanent.ObjectID] != effectiveController(g, permanent) {
+			permanent.SummoningSick = true
+			removePermanentFromCombat(g, permanent.ObjectID)
+		}
+	}
 	if g.Combat == nil {
 		return
 	}

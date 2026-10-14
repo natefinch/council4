@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func stormCopyCount(g *game.Game, spell *game.CardDef) int {
@@ -41,6 +42,7 @@ func createStormCopies(g *game.Game, original *game.StackObject, spell *game.Car
 			MutateTargetID:      original.MutateTargetID,
 			Bestowed:            original.Bestowed,
 			Copy:                true,
+			CopyOwner:           opt.Val(original.Controller),
 			SourceZone:          original.SourceZone,
 			AdditionalCostsPaid: append([]string(nil), original.AdditionalCostsPaid...),
 			PaidCostSubjects:    game.ClonePaidCostSubjects(original.PaidCostSubjects),

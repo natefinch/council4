@@ -302,6 +302,7 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 	// finds (Opposition Agent); resolve once so the deciding player and any
 	// exile redirect stay consistent across every card placed by this search.
 	control := resolveSearchControl(g, playerID)
+	agents = searchChoiceAgents(g, agents, control)
 	// A player searches their library when this runs regardless of whether a
 	// matching card is found (CR 701.19a), so the search event fires once here
 	// for "whenever a player searches their library" triggers.
@@ -424,6 +425,7 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 		return false
 	}
 	control := resolveSearchControl(g, playerID)
+	agents = searchChoiceAgents(g, agents, control)
 	// Searching the library fires the search event once (CR 701.19a) and forces
 	// the closing shuffle, both of which always apply because the library is
 	// among the searched zones.
@@ -516,25 +518,21 @@ func searchMustFindIfAvailable(spec game.SearchSpec, amount int) bool {
 	}
 }
 
-// searchLibraryRevealOnly searches a player's library for a single matching card,
-// reveals it, and leaves it in the library, returning the chosen card. It backs a
-// RevealOnly search whose found card a following ConditionalDestinationPlace will
+// searchLibraryRevealOnlyCards reveals matching cards while leaving them in the
+// library. It backs a RevealOnly search whose found cards later placement will
 // route and whose closing shuffle is a separate instruction, so it neither moves
 // the card nor shuffles. The searching player may decline to find a card unless
 // the spec requires finding one. When an opponent's Opposition Agent controls the
 // search, its controller makes the choice, the found card is removed and exiled
 // face up to its owner with lasting play permission for the controller, and no
-// card is returned so the following placement finds nothing to route (a safe
-// no-op): the card is already gone from the library it would have moved from.
-func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) (id.ID, bool) {
-	if amount <= 0 {
-		amount = 1
-	}
+// card is returned: it is already gone from the library it would have moved from.
+func (e *Engine) searchLibraryRevealOnlyCards(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, playerID game.PlayerID, spec game.SearchSpec, amount int) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok {
-		return 0, false
+		return nil
 	}
 	control := resolveSearchControl(g, playerID)
+	agents = searchChoiceAgents(g, agents, control)
 	emitEvent(g, game.Event{
 		Kind:       game.EventLibrarySearched,
 		Controller: playerID,
@@ -550,22 +548,26 @@ func (e *Engine) searchLibraryRevealOnly(g *game.Game, obj *game.StackObject, ag
 	if searchMustFindIfAvailable(spec, amount) {
 		minChoices = 1
 	}
-	found := e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, 1, minChoices)
-	if len(found) == 0 {
-		return 0, false
+	var found []id.ID
+	if spec.DifferentNames {
+		found = e.chooseDifferentNameSearchMatches(g, agents, log, control.decisionMaker, candidates, amount)
+	} else {
+		found = e.chooseSearchMatches(g, agents, log, control.decisionMaker, candidates, amount, minChoices)
 	}
-	cardID := found[0]
-	if control.exileFinds {
-		if !player.Library.Remove(cardID) {
-			return 0, false
+	var revealed []id.ID
+	for _, cardID := range found {
+		if control.exileFinds {
+			if player.Library.Remove(cardID) {
+				exileFoundCard(g, obj, control, player, playerID, cardID, zone.Library)
+			}
+			continue
 		}
-		exileFoundCard(g, obj, control, player, playerID, cardID, zone.Library)
-		return 0, false
+		if spec.Reveal {
+			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+		}
+		revealed = append(revealed, cardID)
 	}
-	if spec.Reveal {
-		emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
-	}
-	return cardID, true
+	return revealed
 }
 
 // searchLibrarySlots resolves a heterogeneous multi-slot library search whose

@@ -476,13 +476,17 @@ func stackObjectTriggerEvent(obj *game.StackObject) game.Event {
 }
 
 func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.Ability, obj *game.StackObject) bool {
+	return bodyTargetResolutionAllowed(g, source, sourceObjectID, body, obj, false)
+}
+
+func bodyTargetResolutionAllowed(g *game.Game, source *game.CardDef, sourceObjectID id.ID, body game.Ability, obj *game.StackObject, allowIllegal bool) bool {
 	if body == nil {
 		return len(obj.Targets) == 0
 	}
 	if !modesValidForBody(body, obj.ChosenModes) {
 		return false
 	}
-	return stackObjectHasAnyLegalTargetsForSpecs(g, source, sourceObjectID, bodyTargetSpecs(body, obj.ChosenModes), obj)
+	return stackObjectTargetResolutionAllowed(g, source, sourceObjectID, bodyTargetSpecs(body, obj.ChosenModes), obj, allowIllegal)
 }
 
 // stackObjectHasAnyLegalTargetsForSpecs rechecks the legality of a resolving
@@ -493,6 +497,10 @@ func bodyHasAnyLegalTargetsFromSourceObject(g *game.Game, source *game.CardDef, 
 // the caller does not resolve it (CR 608.2b: it is removed from the stack and, if
 // a spell, put into its owner's graveyard).
 func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, obj *game.StackObject) bool {
+	return stackObjectTargetResolutionAllowed(g, source, sourceObjectID, specs, obj, false)
+}
+
+func stackObjectTargetResolutionAllowed(g *game.Game, source *game.CardDef, sourceObjectID id.ID, specs []game.TargetSpec, obj *game.StackObject, allowIllegal bool) bool {
 	recheck := rescreenTargetsAtResolution(g, obj.Controller, source, sourceObjectID, stackObjectTriggerEvent(obj), obj.XValue, specs, obj.Targets, obj.TargetCounts)
 	if !recheck.valid {
 		return false
@@ -501,7 +509,7 @@ func stackObjectHasAnyLegalTargetsForSpecs(g *game.Game, source *game.CardDef, s
 	if !recheck.hadTargets {
 		return true
 	}
-	return recheck.anyLegal
+	return recheck.anyLegal || allowIllegal
 }
 
 // resolutionTargetRecheck carries the outcome of rechecking one target set at

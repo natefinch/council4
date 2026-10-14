@@ -137,6 +137,9 @@ func (r *resolvedObjectReference) owner(g *game.Game) (game.PlayerID, bool) {
 		return 0, false
 	}
 	if r.stack != nil {
+		if r.stack.Kind == game.StackSpell && r.stack.Copy && r.stack.CopyOwner.Exists {
+			return r.stack.CopyOwner.Val, true
+		}
 		if r.stack.Kind != game.StackSpell || r.stack.Copy {
 			return r.stack.Controller, true
 		}

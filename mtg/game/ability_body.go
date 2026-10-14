@@ -134,11 +134,14 @@ type LoyaltyAbility struct {
 type TriggeredAbility struct {
 	// ZoneOfFunction is an explicit off-battlefield source zone. None preserves
 	// ordinary battlefield and event-specific discovery.
-	ZoneOfFunction     zone.Type
-	Text               string
-	Trigger            TriggerCondition
-	Optional           bool
-	MaxTriggersPerTurn int
+	ZoneOfFunction zone.Type
+	Text           string
+	Trigger        TriggerCondition
+	Optional       bool
+	// ResolveWithIllegalTargets preserves resolution after every chosen target
+	// becomes illegal, while still rescreening those targets (Gilded Drake).
+	ResolveWithIllegalTargets bool
+	MaxTriggersPerTurn        int
 	// CountsResolutionsThisTurn marks a triggered ability that tallies its own
 	// per-turn resolution count so a consequence can gate on it ("if this is the
 	// second time this ability has resolved this turn"; Prowl, Pursuit Vehicle).

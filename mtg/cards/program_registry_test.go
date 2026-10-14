@@ -6,11 +6,29 @@ import (
 
 	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/cards"
+	authoredcards "github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/cards/cardset"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
+
+func TestDefaultRegistryAdmitsCompletedChoiceProgramsByExactIdentity(t *testing.T) {
+	t.Parallel()
+	registry := cards.NewDefaultRegistry()
+	for _, entry := range []cardset.Entry{authoredcards.HiveMind, authoredcards.GiftsUngiven, authoredcards.GildedDrake} {
+		def, err := registry.LookupOracleID(entry.OracleID)
+		if err != nil || def == nil || def.Name != entry.Name {
+			t.Fatalf("exact production identity %s: %v", entry.OracleID, err)
+		}
+		if len(registry.LookupAll(entry.Name)) != 1 || len(def.ProgramReferences()) != 1 {
+			t.Fatal("authored admission duplicated a name or lost its binding")
+		}
+		if err := registry.Programs().ValidateCard(def); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
 
 func TestAuthoredRegistryLoadsOnlyExactInstalledPrograms(t *testing.T) {
 	t.Parallel()

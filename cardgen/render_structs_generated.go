@@ -496,6 +496,7 @@ func isZeroGameTriggeredAbility(v game.TriggeredAbility) bool {
 		!(v.Text != "") &&
 		!(!isZeroGameTriggerCondition(v.Trigger)) &&
 		!(v.Optional) &&
+		!(v.ResolveWithIllegalTargets) &&
 		!(v.MaxTriggersPerTurn != 0) &&
 		!(v.CountsResolutionsThisTurn) &&
 		!(len(v.KeywordAbilities) > 0) &&
@@ -13672,34 +13673,38 @@ func (r Renderer) renderGameTriggeredAbilityLiteral(ctx *renderCtx, v game.Trigg
 		lit6 := strconv.FormatBool(bool(v.Optional))
 		fields = append(fields, "Optional: "+lit6+",")
 	}
+	if v.ResolveWithIllegalTargets {
+		lit7 := strconv.FormatBool(bool(v.ResolveWithIllegalTargets))
+		fields = append(fields, "ResolveWithIllegalTargets: "+lit7+",")
+	}
 	if v.MaxTriggersPerTurn != 0 {
-		lit7 := strconv.FormatInt(int64(v.MaxTriggersPerTurn), 10)
-		fields = append(fields, "MaxTriggersPerTurn: "+lit7+",")
+		lit8 := strconv.FormatInt(int64(v.MaxTriggersPerTurn), 10)
+		fields = append(fields, "MaxTriggersPerTurn: "+lit8+",")
 	}
 	if v.CountsResolutionsThisTurn {
-		lit8 := strconv.FormatBool(bool(v.CountsResolutionsThisTurn))
-		fields = append(fields, "CountsResolutionsThisTurn: "+lit8+",")
+		lit9 := strconv.FormatBool(bool(v.CountsResolutionsThisTurn))
+		fields = append(fields, "CountsResolutionsThisTurn: "+lit9+",")
 	}
 	if len(v.KeywordAbilities) > 0 {
-		var items10 []string
-		for _, item11 := range v.KeywordAbilities {
-			lit12, err13 := r.renderGameKeywordAbilityValue(ctx, item11)
-			if err13 != nil {
-				return "", fmt.Errorf("game.TriggeredAbility.KeywordAbilities[]: %w", err13)
+		var items11 []string
+		for _, item12 := range v.KeywordAbilities {
+			lit13, err14 := r.renderGameKeywordAbilityValue(ctx, item12)
+			if err14 != nil {
+				return "", fmt.Errorf("game.TriggeredAbility.KeywordAbilities[]: %w", err14)
 			}
 			ctx.need(importGame)
-			items10 = append(items10, lit12+",")
+			items11 = append(items11, lit13+",")
 		}
-		lit9 := namedSliceLit("", "game.KeywordAbility", items10)
-		fields = append(fields, "KeywordAbilities: "+lit9+",")
+		lit10 := namedSliceLit("", "game.KeywordAbility", items11)
+		fields = append(fields, "KeywordAbilities: "+lit10+",")
 	}
 	if !isZeroGameAbilityContent(v.Content) {
-		lit14, err15 := r.renderGameAbilityContent(ctx, v.Content)
-		if err15 != nil {
-			return "", fmt.Errorf("game.TriggeredAbility.Content: %w", err15)
+		lit15, err16 := r.renderGameAbilityContent(ctx, v.Content)
+		if err16 != nil {
+			return "", fmt.Errorf("game.TriggeredAbility.Content: %w", err16)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "Content: "+lit14+",")
+		fields = append(fields, "Content: "+lit15+",")
 	}
 	return structLit("game.TriggeredAbility", fields), nil
 }

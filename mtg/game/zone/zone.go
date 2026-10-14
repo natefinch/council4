@@ -87,7 +87,8 @@ type Zone struct {
 	cards []id.ID
 
 	// faceDown tracks which cards in this zone are face-down.
-	faceDown map[id.ID]bool
+	faceDown       map[id.ID]bool
+	reorderVersion uint64
 }
 
 // New creates an empty zone of the given type.
@@ -101,7 +102,7 @@ func New(t Type) Zone {
 // Clone returns a deep copy of the zone. The returned zone shares no slice or
 // map state with the receiver, so mutating one does not affect the other.
 func (z *Zone) Clone() Zone {
-	clone := Zone{Type: z.Type}
+	clone := Zone{Type: z.Type, reorderVersion: z.reorderVersion}
 	if z.cards != nil {
 		clone.cards = slices.Clone(z.cards)
 	}
@@ -154,10 +155,14 @@ func (z *Zone) Shuffle(rng *rand.Rand) {
 	if rng == nil {
 		panic("nil rng")
 	}
+	z.reorderVersion++
 	rng.Shuffle(len(z.cards), func(i, j int) {
 		z.cards[i], z.cards[j] = z.cards[j], z.cards[i]
 	})
 }
+
+// ReorderVersion invalidates revealed-library correlations after a shuffle.
+func (z *Zone) ReorderVersion() uint64 { return z.reorderVersion }
 
 // Size returns the number of cards in the zone.
 func (z *Zone) Size() int {

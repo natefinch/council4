@@ -295,7 +295,7 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	if !triggerInterveningIfWithObject(g, sourcePermanent, obj.Controller, &body.Trigger, event, obj) {
 		return "intervening if false"
 	}
-	if !bodyHasAnyLegalTargetsFromSourceObject(g, source, obj.SourceID, body, obj) {
+	if !bodyTargetResolutionAllowed(g, source, obj.SourceID, body, obj, body.ResolveWithIllegalTargets) {
 		return "countered by rules"
 	}
 	if body.Optional && !e.chooseMay(g, agents, obj.Controller, "Apply optional triggered ability?", log) {
