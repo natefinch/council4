@@ -694,6 +694,14 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 	for i := range content.Modes {
 		mode := &content.Modes[i]
 		modePath := appendPath(path, fmt.Sprintf("Modes[%d]", i))
+		if !mode.Program.IsZero() {
+			if err := mode.Program.Validate(); err != nil {
+				v.add(faceName, appendPath(modePath, "Program"), CardDefIssueInvalidAbilityBody, err.Error())
+			}
+			if len(mode.Sequence) != 0 {
+				v.add(faceName, appendPath(modePath, "Program"), CardDefIssueInvalidAbilityBody, "mode must use either a Go program or an instruction sequence")
+			}
+		}
 		for j := range mode.Targets {
 			v.validateTargetSpec(faceName, appendPath(modePath, fmt.Sprintf("Targets[%d]", j)), &mode.Targets[j])
 		}

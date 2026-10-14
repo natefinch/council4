@@ -2,6 +2,7 @@ package sim
 
 import (
 	"github.com/natefinch/council4/mtg/agent"
+	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/rules"
 )
@@ -15,6 +16,7 @@ type GoldfishConfig struct {
 	Seed     uint64
 	MaxTurns int
 	NewAgent GoldfishAgentFactory
+	Programs *cardprogram.Catalog
 }
 
 // RunGoldfish plays one deck alone and returns its structured turn log and end
@@ -23,7 +25,7 @@ func RunGoldfish(cfg GoldfishConfig) rules.GameResult {
 	if cfg.MaxTurns < 1 {
 		panic("goldfish max turns must be positive")
 	}
-	engine := rules.NewEngine(NewRand(cfg.Seed))
+	engine := engineFor(cfg.Seed, cfg.Programs)
 	g := engine.NewGoldfishGame(cfg.Player)
 	playerAgent := rules.PlayerAgent(agent.Agent{Strategy: agent.GenericStrategy{}})
 	if cfg.NewAgent != nil {

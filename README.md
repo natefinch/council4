@@ -10,10 +10,11 @@ keep costs, targets and declarations inspectable, and rules mutation engine-owne
 See [ADR 0012](./docs/adr/0012-authored-go-card-implementations.md) and the ordered
 [migration epic](https://github.com/natefinch/council4/issues/3269).
 
-The full authoring interface is not implemented yet: #3272 builds it after the
-baseline/CI step #3270. Today's spell-only escape hatch is not a substitute for
-those prerequisites. Do not expand parser/lowering or invent a parallel runtime
-while waiting for them.
+The [program interface](./mtg/cardprogram/README.md) supplies versioned synchronous
+Go bodies through the existing Engine. Later migration slices deepen batch
+outcomes, linked state and exceptional rules. Keep a card unsupported until its
+whole behavior is implemented; do not expand parser/lowering or invent a parallel
+runtime to avoid a missing shared capability.
 
 For authorized issue work, the default is implement, test/lint, inspect and
 commit directly to main, with one writer and no mandatory PR. Push permission

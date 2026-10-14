@@ -12,6 +12,8 @@ import (
 	"sync"
 
 	"github.com/natefinch/council4/mtg/agent"
+	"github.com/natefinch/council4/mtg/cardprogram"
+	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/rules"
 )
@@ -46,6 +48,9 @@ type Config struct {
 	// bound a game that would otherwise durdle toward the engine's 1000-turn
 	// safety cap and exhaust memory. Zero (the default) uses that safety cap.
 	TurnLimit int
+	// Programs overrides the immutable production catalog for custom cards.
+	// Nil installs the same catalog used by default registry consumers.
+	Programs *cardprogram.Catalog
 }
 
 // Run plays cfg.Games games over the four configs and returns a SimulationResult
@@ -149,10 +154,21 @@ func workerCount(cfg Config) int {
 // the per-game seed, so RunOne(cfg, i) always reproduces the same game.
 func RunOne(cfg Config, index int) rules.GameResult {
 	gameSeed := GameSeed(cfg.Seed, index)
-	engine := rules.NewEngine(NewRand(gameSeed))
+	engine := engineFor(gameSeed, cfg.Programs)
 	g := engine.NewGame(cfg.Configs)
 	agents := newAgents(cfg)(gameSeed)
 	return *engine.RunGameWithTurnLimit(g, agents, cfg.TurnLimit)
+}
+
+func engineFor(seed uint64, programs *cardprogram.Catalog) *rules.Engine {
+	if programs != nil {
+		return rules.NewEngineWithPrograms(NewRand(seed), *programs)
+	}
+	catalog, err := cards.DefaultPrograms()
+	if err != nil {
+		panic(rules.UnsupportedError{Reason: err.Error()})
+	}
+	return rules.NewEngineWithPrograms(NewRand(seed), catalog)
 }
 
 // GameSeed derives the seed for the index-th game from a master seed. Successive

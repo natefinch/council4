@@ -43,6 +43,7 @@ func runMatchup(w io.Writer, paths []string, gamesPerSeat, workers int, seed uin
 		return fmt.Errorf("-baseline: %w", err)
 	}
 
+	programs := registry.Programs()
 	result := sim.RunMatchup(sim.Matchup{
 		Configs:      configs,
 		GamesPerSeat: gamesPerSeat,
@@ -51,6 +52,7 @@ func runMatchup(w io.Writer, paths []string, gamesPerSeat, workers int, seed uin
 		TurnLimit:    defaultMatchupTurnLimit,
 		Tested:       tested,
 		Baseline:     baseline,
+		Programs:     &programs,
 	})
 	printMatchupSummary(w, result, paths, testedProfile, baselineProfile)
 	return nil

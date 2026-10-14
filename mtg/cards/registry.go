@@ -26,8 +26,12 @@ package cards
 //go:generate go run github.com/natefinch/council4/cardgen/cmd/genregistry
 
 import (
+	"fmt"
+	"slices"
 	"sync"
 
+	"github.com/natefinch/council4/mtg/cardprogram"
+	"github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/cards/cardset"
 	"github.com/natefinch/council4/mtg/game"
 )
@@ -46,13 +50,18 @@ type Registry struct {
 	mu    sync.Mutex
 	cache map[string][]*game.CardDef
 
-	count int
+	count         int
+	programs      cardprogram.Catalog
+	oracleNames   map[string]string
+	oracleIndices map[string]int
 }
 
 func emptyRegistry() *Registry {
 	return &Registry{
-		entries: make(map[string][]func() *game.CardDef),
-		cache:   make(map[string][]*game.CardDef),
+		entries:       make(map[string][]func() *game.CardDef),
+		cache:         make(map[string][]*game.CardDef),
+		oracleNames:   make(map[string]string),
+		oracleIndices: make(map[string]int),
 	}
 }
 
@@ -78,14 +87,75 @@ func NewRegistry(cardSets ...[]*game.CardDef) *Registry {
 // ever used (the client-side WebAssembly playtester relies on this to stay within
 // the browser's memory ceiling). Distinct definitions may share a printed name.
 func NewLazyRegistry(entrySets ...[]cardset.Entry) *Registry {
-	r := emptyRegistry()
-	for _, set := range entrySets {
-		for _, entry := range set {
-			r.entries[entry.Name] = append(r.entries[entry.Name], entry.New)
-			r.count++
-		}
+	registry, err := NewProgramRegistry(entrySets...)
+	if err != nil {
+		panic(err)
 	}
-	return r
+	return registry
+}
+
+// NewProgramRegistry combines legacy definitions and explicit authored identities.
+// It constructs code catalogs eagerly but leaves CardDefs lazy.
+func NewProgramRegistry(entrySets ...[]cardset.Entry) (*Registry, error) {
+	r := emptyRegistry()
+	var programs []cardprogram.Program
+	var entries []cardset.Entry
+	for _, set := range entrySets {
+		entries = append(entries, set...)
+	}
+	// Identity selection is independent of which set the caller supplies first:
+	// establish legacy names, then apply only explicit authored replacements.
+	slices.SortStableFunc(entries, func(a, b cardset.Entry) int {
+		if a.OracleID == "" && b.OracleID != "" {
+			return -1
+		}
+		if a.OracleID != "" && b.OracleID == "" {
+			return 1
+		}
+		return 0
+	})
+	for _, entry := range entries {
+		if entry.Name == "" || entry.New == nil {
+			return nil, fmt.Errorf("registry entry %q has no name or constructor", entry.Name)
+		}
+		if entry.OracleID != "" {
+			if old, exists := r.oracleNames[entry.OracleID]; exists {
+				return nil, fmt.Errorf("duplicate Oracle identity %s (%s, %s)", entry.OracleID, old, entry.Name)
+			}
+			if existing := r.entries[entry.Name]; len(existing) > 0 {
+				knownAuthored := false
+				for _, name := range r.oracleNames {
+					knownAuthored = knownAuthored || name == entry.Name
+				}
+				if knownAuthored {
+					if entry.ReplaceLegacy {
+						return nil, fmt.Errorf("%s cannot replace an already authored identity as legacy", entry.Name)
+					}
+				} else {
+					if !entry.ReplaceLegacy || len(existing) != 1 {
+						return nil, fmt.Errorf("authored %s collides with an existing name; explicit unique legacy replacement required", entry.Name)
+					}
+					r.count -= len(existing)
+					delete(r.entries, entry.Name)
+				}
+			} else if entry.ReplaceLegacy {
+				return nil, fmt.Errorf("authored %s requests a nonexistent legacy replacement", entry.Name)
+			}
+			r.oracleNames[entry.OracleID] = entry.Name
+			r.oracleIndices[entry.OracleID] = len(r.entries[entry.Name])
+		} else if len(entry.Programs) != 0 || entry.ReplaceLegacy {
+			return nil, fmt.Errorf("authored entry %s requires an explicit Oracle identity", entry.Name)
+		}
+		r.entries[entry.Name] = append(r.entries[entry.Name], entry.New)
+		programs = append(programs, entry.Programs...)
+		r.count++
+	}
+	var err error
+	r.programs, err = cardprogram.NewCatalog(programs)
+	if err != nil {
+		return nil, err
+	}
+	return r, nil
 }
 
 // NewDefaultRegistry returns a Registry over the full committed card corpus —
@@ -96,13 +166,42 @@ func NewLazyRegistry(entrySets ...[]cardset.Entry) *Registry {
 // The aggregated set is maintained by genregistry (see registry_sets.go); run
 // go generate ./mtg/cards/... after adding a new letter sub-package.
 func NewDefaultRegistry() *Registry {
-	return NewLazyRegistry(defaultCardSets()...)
+	return NewLazyRegistry(DefaultCardSets()...)
 }
 
 // DefaultCardSets returns the Cards entries from every committed letter
 // sub-package. It is the data backing NewDefaultRegistry.
 func DefaultCardSets() [][]cardset.Entry {
-	return defaultCardSets()
+	return append(defaultCardSets(), authored.Cards)
+}
+
+// Programs returns the immutable catalog installed with the definitions.
+func (r *Registry) Programs() cardprogram.Catalog { return r.programs }
+
+var defaultPrograms = sync.OnceValues(func() (cardprogram.Catalog, error) {
+	registry, err := NewProgramRegistry(DefaultCardSets()...)
+	if err != nil {
+		return cardprogram.Catalog{}, err
+	}
+	return registry.Programs(), nil
+})
+
+// DefaultPrograms builds the immutable production catalog once without retaining
+// per-game state. Custom registries supply their own Programs explicitly.
+func DefaultPrograms() (cardprogram.Catalog, error) { return defaultPrograms() }
+
+// LookupOracleID chooses an exact authored identity even when names are shared.
+// Legacy name-only entries remain available by name, not a guessed Oracle ID.
+func (r *Registry) LookupOracleID(oracleID string) (*game.CardDef, error) {
+	name, exists := r.oracleNames[oracleID]
+	if !exists {
+		return nil, fmt.Errorf("oracle identity %s is not registered", oracleID)
+	}
+	built, err := r.LookupAllChecked(name)
+	if err != nil {
+		return nil, err
+	}
+	return built[r.oracleIndices[oracleID]], nil
 }
 
 // Lookup returns the first CardDef for the given card name, or nil if not found,
@@ -119,21 +218,42 @@ func (r *Registry) Lookup(name string) *game.CardDef {
 // and caching them on first use. The returned slice is a fresh copy the caller
 // may retain; the CardDefs themselves are shared, immutable templates.
 func (r *Registry) LookupAll(name string) []*game.CardDef {
+	built, err := r.LookupAllChecked(name)
+	if err != nil {
+		panic(err)
+	}
+	return built
+}
+
+// LookupChecked reports a missing/version-mismatched program during deck loading.
+func (r *Registry) LookupChecked(name string) (*game.CardDef, error) {
+	built, err := r.LookupAllChecked(name)
+	if err != nil || len(built) == 0 {
+		return nil, err
+	}
+	return built[0], nil
+}
+
+// LookupAllChecked constructs definitions once and verifies their code bindings.
+func (r *Registry) LookupAllChecked(name string) ([]*game.CardDef, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if built, ok := r.cache[name]; ok {
-		return append([]*game.CardDef(nil), built...)
+		return append([]*game.CardDef(nil), built...), nil
 	}
 	constructors, ok := r.entries[name]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	built := make([]*game.CardDef, len(constructors))
 	for i, construct := range constructors {
 		built[i] = construct()
+		if err := r.programs.ValidateCard(built[i]); err != nil {
+			return nil, err
+		}
 	}
 	r.cache[name] = built
-	return append([]*game.CardDef(nil), built...)
+	return append([]*game.CardDef(nil), built...), nil
 }
 
 // All returns all registered card names. It does not construct any CardDef.

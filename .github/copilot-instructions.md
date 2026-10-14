@@ -56,11 +56,11 @@ policy does not authorize unsolicited commits or pushes for arbitrary edits.
   state game-owned and clone-safe. Preserve reproducibility and fog of war.
 - Preserve existing generated cards, useful Instructions and behavioral tests.
   Both old and authored cards use one Engine; no wholesale rewrite or new DSL.
-- The full authoring interface is being built in #3272. Today's
-  `CardImplementation.ResolveSpell` is only a narrow spell escape hatch, not
-  general support for custom triggers, static abilities or replacements. If
-  infrastructure is missing, reuse its migration prerequisite; do not invent
-  a parallel implementation or expand the parser to avoid the blocker.
+- Use the versioned `game.Mode.Program` and `mtg/cardprogram` context/catalog for
+  Go resolving bodies. The old `CardImplementation.ResolveSpell` is retained for
+  compatibility, not a slot for arbitrary static/replacement rules. Later
+  migration slices supply deeper operations and policy seams. If one is missing,
+  reuse its prerequisite rather than inventing another runtime or parser route.
 - `cardgen` is retained for legacy correctness/compatibility maintenance and
   explicit regeneration, not the default route to new coverage. Parser-complete
   and compiler-supported counts do not certify gameplay or deployed availability.

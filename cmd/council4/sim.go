@@ -147,12 +147,14 @@ func runDeckSimulation(w io.Writer, paths []string, tested, games, workers int, 
 	if err != nil {
 		return err
 	}
+	programs := registry.Programs()
 	result := sim.Run(sim.Config{
 		Configs:   configs,
 		Games:     games,
 		Seed:      seed,
 		Workers:   workers,
 		NewAgents: factory,
+		Programs:  &programs,
 	})
 	return reportSimulation(w, result, paths, tested, profile, outPath)
 }

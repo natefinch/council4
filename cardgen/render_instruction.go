@@ -97,6 +97,13 @@ func (r Renderer) renderModalAbilityContent(ctx *renderCtx, content game.Ability
 
 func (r Renderer) renderMode(ctx *renderCtx, mode game.Mode) (string, error) {
 	var fields []string
+	if !mode.Program.IsZero() {
+		binding, err := r.renderGameProgramReference(ctx, mode.Program)
+		if err != nil {
+			return "", err
+		}
+		fields = append(fields, "Program: "+binding+",")
+	}
 	if mode.Text != "" {
 		fields = append(fields, fmt.Sprintf("Text: %q,", mode.Text))
 	}

@@ -2,7 +2,9 @@ package sim
 
 import (
 	"reflect"
+	"slices"
 
+	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/rules"
@@ -17,8 +19,9 @@ import (
 // coin flip) and scripts each seat's agent to repeat its recorded decisions, which
 // reproduces the original GameResult exactly.
 type ReplayRecord struct {
-	Seed  uint64                      `json:"seed"`
-	Seats [game.NumPlayers]SeatScript `json:"seats"`
+	Seed     uint64                      `json:"seed"`
+	Seats    [game.NumPlayers]SeatScript `json:"seats"`
+	Programs []game.ProgramReference     `json:"programs,omitempty"`
 }
 
 // SeatScript is one seat's recorded decisions, in the order the engine asked for
@@ -40,10 +43,14 @@ type SeatScript struct {
 // without the original agents.
 func RecordGame(cfg Config, index int) (rules.GameResult, ReplayRecord) {
 	seed := GameSeed(cfg.Seed, index)
-	return recordedRun(cfg.Configs, seed, newAgents(cfg)(seed))
+	return recordedRunWithPrograms(cfg.Configs, seed, newAgents(cfg)(seed), cfg.Programs)
 }
 
 func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [game.NumPlayers]rules.PlayerAgent) (rules.GameResult, ReplayRecord) {
+	return recordedRunWithPrograms(configs, seed, base, nil)
+}
+
+func recordedRunWithPrograms(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [game.NumPlayers]rules.PlayerAgent, programs *cardprogram.Catalog) (rules.GameResult, ReplayRecord) {
 	var recorders [game.NumPlayers]seatRecorder
 	var agents [game.NumPlayers]rules.PlayerAgent
 	var choiceCapable [game.NumPlayers]bool
@@ -51,11 +58,11 @@ func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [
 		_, choiceCapable[i] = base[i].(rules.ChoiceAgent)
 		agents[i] = wrapForRecording(base[i], &recorders[i])
 	}
-	engine := rules.NewEngine(NewRand(seed))
+	engine := engineFor(seed, programs)
 	g := engine.NewGame(configs)
 	result := *engine.RunGame(g, agents)
 
-	record := ReplayRecord{Seed: seed}
+	record := ReplayRecord{Seed: seed, Programs: configProgramReferences(configs)}
 	for i := range recorders {
 		record.Seats[i] = SeatScript{
 			Actions:       recorders[i].actions,
@@ -68,7 +75,14 @@ func recordedRun(configs [game.NumPlayers]game.PlayerConfig, seed uint64, base [
 
 // Replay reconstructs the game described by record over configs and returns its
 // result, which equals the originally recorded GameResult.
-func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord) rules.GameResult {
+func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord, catalogs ...cardprogram.Catalog) rules.GameResult {
+	if len(catalogs) > 1 || !slices.Equal(record.Programs, configProgramReferences(configs)) {
+		panic(rules.UnsupportedError{Reason: "replay program bindings do not match the recorded definitions"})
+	}
+	var catalog *cardprogram.Catalog
+	if len(catalogs) == 1 {
+		catalog = &catalogs[0]
+	}
 	var agents [game.NumPlayers]rules.PlayerAgent
 	for i := range record.Seats {
 		actionAgent := &scriptedActionAgent{actions: record.Seats[i].Actions}
@@ -84,9 +98,37 @@ func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord) rul
 			agents[i] = actionAgent
 		}
 	}
-	engine := rules.NewEngine(NewRand(record.Seed))
+	engine := engineFor(record.Seed, catalog)
 	g := engine.NewGame(configs)
 	return *engine.RunGame(g, agents)
+}
+
+func configProgramReferences(configs [game.NumPlayers]game.PlayerConfig) []game.ProgramReference {
+	var references []game.ProgramReference
+	seen := make(map[game.ProgramReference]bool)
+	for _, config := range configs {
+		for _, def := range append(slices.Clone(config.CommanderDefs()), config.Deck...) {
+			if def == nil {
+				continue
+			}
+			for _, reference := range def.ProgramReferences() {
+				if !seen[reference] {
+					references = append(references, reference)
+					seen[reference] = true
+				}
+			}
+		}
+	}
+	slices.SortFunc(references, func(a, b game.ProgramReference) int {
+		if a.ID < b.ID || a.ID == b.ID && a.Version < b.Version {
+			return -1
+		}
+		if a == b {
+			return 0
+		}
+		return 1
+	})
+	return references
 }
 
 // seatRecorder accumulates one seat's decisions during a recorded game.

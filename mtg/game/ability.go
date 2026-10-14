@@ -2064,6 +2064,10 @@ type Mode struct {
 	// Sequence is the typed instruction sequence this mode produces.
 	Sequence []Instruction
 
+	// Program binds an authored Go body instead of Sequence. Targets and modal
+	// costs remain declarative and are announced/revalidated by the Engine.
+	Program ProgramReference
+
 	// Cost is the additional mana cost paid to choose this mode when casting a
 	// Spree spell (CR 702.171). It is set only on Spree spell modes; choosing a
 	// mode adds its Cost to the spell's total cost. An empty value means the mode

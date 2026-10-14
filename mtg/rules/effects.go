@@ -82,6 +82,10 @@ func (e *Engine) resolveAbilityContentReceipt(g *game.Game, obj *game.StackObjec
 		return game.InstructionResolutionResult{}, false
 	}
 	if !content.IsModal() {
+		if !content.Modes[0].Program.IsZero() {
+			e.resolveProgram(g, obj, content.Modes[0], content.SharedTargets, agents, log)
+			return game.InstructionResolutionResult{}, false
+		}
 		return e.resolveInstructionSequenceReceipt(g, obj, content.Modes[0].Sequence, agents, log, key)
 	}
 	var receipt game.InstructionResolutionResult
@@ -95,6 +99,10 @@ func (e *Engine) resolveAbilityContentReceipt(g *game.Game, obj *game.StackObjec
 			continue
 		}
 		obj.Targets = targetsForChosenMode(content, obj, allTargets, chosenIndex)
+		if !content.Modes[modeIndex].Program.IsZero() {
+			e.resolveProgram(g, obj, content.Modes[modeIndex], content.SharedTargets, agents, log)
+			continue
+		}
 		sequence := content.Modes[modeIndex].Sequence
 		modeReceipt, modeAvailable := e.resolveInstructionSequenceReceipt(g, obj, sequence, agents, log, key)
 		if sequencePublishesResult(sequence, key) {

@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/rules"
 )
@@ -29,6 +30,7 @@ type Matchup struct {
 	Seed         uint64
 	Workers      int
 	TurnLimit    int
+	Programs     *cardprogram.Catalog
 
 	// Tested and Baseline build a seat's agent. Tested occupies one rotating
 	// seat each game; Baseline fills the others.
@@ -96,6 +98,7 @@ func runMatchupRotation(m Matchup, testedSeat game.PlayerID) SimulationResult {
 		Seed:      matchupRotationSeed(m.Seed, testedSeat),
 		Workers:   m.Workers,
 		TurnLimit: m.TurnLimit,
+		Programs:  m.Programs,
 		NewAgents: func(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent {
 			var agents [game.NumPlayers]rules.PlayerAgent
 			for seat := range agents {

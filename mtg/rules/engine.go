@@ -4,6 +4,7 @@ package rules
 import (
 	"math/rand/v2"
 
+	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -24,6 +25,8 @@ type Engine struct {
 	searchRNG *rand.Rand
 
 	cardImplementations map[string]CardImplementation
+	programs            cardprogram.Catalog
+	checkedProgramDefs  map[*game.CardDef]bool
 }
 
 // searchSeed is the fixed seed for every engine's search RNG stream. Fixed (not
@@ -49,11 +52,19 @@ func NewEngine(rng *rand.Rand) *Engine {
 
 // NewGame creates a game using the engine's RNG for deterministic setup.
 func (e *Engine) NewGame(configs [game.NumPlayers]game.PlayerConfig) *game.Game {
+	if err := e.ValidatePrograms(configs); err != nil {
+		panic(UnsupportedError{Reason: err.Error()})
+	}
 	return game.NewGameWithRand(configs, e.rng)
 }
 
 // NewGoldfishGame creates a single-player game using the engine's RNG.
 func (e *Engine) NewGoldfishGame(config game.PlayerConfig) *game.Game {
+	var configs [game.NumPlayers]game.PlayerConfig
+	configs[0] = config
+	if err := e.ValidatePrograms(configs); err != nil {
+		panic(UnsupportedError{Reason: err.Error()})
+	}
 	return game.NewGoldfishGameWithRand(config, e.rng)
 }
 
@@ -69,6 +80,7 @@ func (e *Engine) RunGame(g *game.Game, agents [game.NumPlayers]PlayerAgent) *Gam
 // turnLimit of zero or less, or above maxGameTurns, uses the maxGameTurns safety
 // cap. When the limit is reached with no winner the result has HasWinner false.
 func (e *Engine) RunGameWithTurnLimit(g *game.Game, agents [game.NumPlayers]PlayerAgent, turnLimit int) *GameResult {
+	e.validateLoadedPrograms(g)
 	if turnLimit <= 0 || turnLimit > maxGameTurns {
 		turnLimit = maxGameTurns
 	}
@@ -102,6 +114,7 @@ func (e *Engine) RunGameWithTurnLimit(g *game.Game, agents [game.NumPlayers]Play
 
 // RunGoldfish plays one deck alone for at most turnLimit complete turns.
 func (e *Engine) RunGoldfish(g *game.Game, agent PlayerAgent, turnLimit int) *GameResult {
+	e.validateLoadedPrograms(g)
 	if g.Mode != game.RunModeGoldfish {
 		panic("RunGoldfish requires a goldfish game")
 	}

@@ -1,0 +1,159 @@
+package rules
+
+import (
+	"errors"
+	"fmt"
+	"math/rand/v2"
+	"slices"
+
+	"github.com/natefinch/council4/mtg/cardprogram"
+	"github.com/natefinch/council4/mtg/game"
+)
+
+// NewEngineWithPrograms installs an immutable catalog before any game is loaded.
+// Search Engines share that same catalog, not mutable per-game execution contexts.
+func NewEngineWithPrograms(rng *rand.Rand, programs cardprogram.Catalog) *Engine {
+	engine := NewEngine(rng)
+	engine.programs = programs
+	return engine
+}
+
+// ValidatePrograms rejects missing/version-mismatched code before game setup.
+// Immutable CardDefs may be cached; copies/modifications must use fresh definitions.
+func (e *Engine) ValidatePrograms(configs [game.NumPlayers]game.PlayerConfig) error {
+	for _, config := range configs {
+		defs := append(slices.Clone(config.CommanderDefs()), config.Deck...)
+		for _, def := range defs {
+			if def == nil {
+				return errors.New("deck contains a nil Card Definition")
+			}
+			if e.checkedProgramDefs[def] {
+				continue
+			}
+			if err := e.programs.ValidateCard(def); err != nil {
+				return err
+			}
+			for _, face := range []*game.CardFace{&def.CardFace, programFace(def.Back.Exists, &def.Back.Val), programFace(def.Alternate.Exists, &def.Alternate.Val)} {
+				if face != nil && face.ImplementationID != "" {
+					if _, installed := e.cardImplementations[face.ImplementationID]; !installed {
+						return fmt.Errorf("%s: legacy implementation %s is not installed", def.Name, face.ImplementationID)
+					}
+				}
+			}
+			if e.checkedProgramDefs == nil {
+				e.checkedProgramDefs = make(map[*game.CardDef]bool)
+			}
+
+			e.checkedProgramDefs[def] = true
+		}
+	}
+	return nil
+}
+
+func programFace(exists bool, face *game.CardFace) *game.CardFace {
+	if exists {
+		return face
+	}
+	return nil
+}
+
+func (e *Engine) validateLoadedPrograms(g *game.Game) {
+	if g == nil {
+		panic(UnsupportedError{Reason: "cannot load a nil game"})
+	}
+	var configs [game.NumPlayers]game.PlayerConfig
+	for _, instance := range g.CardInstances {
+		configs[0].Deck = append(configs[0].Deck, instance.Def)
+	}
+	if err := e.ValidatePrograms(configs); err != nil {
+		panic(UnsupportedError{Reason: err.Error()})
+	}
+}
+
+func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.Mode, shared []game.TargetSpec, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	if g == nil || obj == nil || log == nil {
+		panic(UnsupportedError{Reason: "authored program requires game, stack object and resolution log"})
+	}
+	cardID, objectID := damageSourceIDs(g, obj)
+	ctx := &programContext{
+		engine: e, game: g, obj: obj, agents: agents, log: log, active: true,
+		targets: slices.Clone(obj.Targets),
+		specs:   append(slices.Clone(shared), mode.Targets...),
+		source: cardprogram.Source{
+			CardID: cardID, ObjectID: objectID, StackID: obj.ID, Controller: obj.Controller, X: obj.XValue,
+		},
+	}
+	defer func() { ctx.active = false }()
+	if err := e.programs.Run(mode.Program, ctx); err != nil {
+		panic(UnsupportedError{Reason: err.Error()})
+	}
+}
+
+type programContext struct {
+	engine  *Engine
+	game    *game.Game
+	obj     *game.StackObject
+	agents  [game.NumPlayers]PlayerAgent
+	log     *TurnLog
+	active  bool
+	source  cardprogram.Source
+	targets []game.Target
+	specs   []game.TargetSpec
+}
+
+func (c *programContext) Source() cardprogram.Source { return c.source }
+
+func (c *programContext) Targets() []game.Target { return slices.Clone(c.targets) }
+
+func (c *programContext) Execute(primitive game.Primitive) (cardprogram.Outcome, error) {
+	if err := c.valid(); err != nil {
+		return cardprogram.Outcome{}, err
+	}
+	if err := game.ValidatePrimitive(primitive, c.specs); err != nil {
+		return cardprogram.Outcome{}, fmt.Errorf("invalid authored operation: %w", err)
+	}
+	// This key is implementation-local, never a variable name card authors need
+	// to manage. Each call restores the enclosing declarative receipt/products.
+	const resultKey = game.ResultKey("@authored-operation")
+	restore := isolateResultProducts(c.obj, string(resultKey))
+	defer restore()
+	resolver := newEffectResolver(c.engine, c.game, c.obj, c.agents, c.log)
+	resolver.resolveInstruction(&game.Instruction{Primitive: primitive, PublishResult: resultKey})
+	receipt, exists := c.obj.ResolutionResults[string(resultKey)]
+	outcome := cardprogram.Outcome{Available: exists, Succeeded: receipt.Succeeded}
+	for _, snapshot := range c.obj.ResolutionResultObjects[string(resultKey)] {
+		outcome.Objects = append(outcome.Objects, resultCharacteristicSnapshot(snapshot))
+	}
+	return outcome, nil
+}
+
+func (c *programContext) Ask(request game.ChoiceRequest) ([]int, error) {
+	if err := c.valid(); err != nil {
+		return nil, err
+	}
+	if !isPlayerAlive(c.game, request.Player) || request.MinChoices < 0 ||
+		request.MaxChoices < request.MinChoices {
+		return nil, errors.New("authored choice has an invalid player or cardinality")
+	}
+	repeats := request.Kind == game.ChoiceDamageAllocation || request.Kind == game.ChoiceCounterAllocation ||
+		request.Kind == game.ChoiceManaCombination
+	if (!repeats && request.MaxChoices > len(request.Options)) ||
+		(repeats && request.MinChoices > 0 && len(request.Options) == 0) {
+		return nil, errors.New("authored choice exceeds available distinct options")
+	}
+	seen := make(map[int]bool, len(request.Options))
+	for _, option := range request.Options {
+		if option.Index < 0 || seen[option.Index] {
+			return nil, errors.New("authored choice has ambiguous option indices")
+		}
+		seen[option.Index] = true
+	}
+	return c.engine.chooseChoice(c.game, c.agents, request, c.log), nil
+}
+
+func (c *programContext) valid() error {
+	if c == nil || !c.active || c.engine == nil || c.game == nil || c.obj == nil || c.log == nil {
+		return errors.New("authored execution context is missing or no longer active")
+	}
+	return nil
+}

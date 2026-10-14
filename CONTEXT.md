@@ -27,17 +27,18 @@ The behavior that tells the Engine what a card does at runtime. Existing
 implementations compose declarative Effect Primitives; new implementations use
 authored Go over shared Engine operations, with costs, targets, triggers and
 static/replacement declarations kept inspectable. Oracle recognition is not a
-prerequisite. The general authoring interface is being built under #3269; today's
-`CardImplementation.ResolveSpell` escape hatch is only spell-resolution support.
+prerequisite. Versioned resolving bodies use `game.Mode.Program` and the
+`mtg/cardprogram` context/catalog. The old `CardImplementation.ResolveSpell`
+escape hatch remains spell-only compatibility support.
 See [ADR 0012](docs/adr/0012-authored-go-card-implementations.md).
 _Avoid_: Card logic, card script, card handler
 
 **Card Program**:
 An immutable authored Go resolution implementation identified by a stable binding
-in the planned shared catalog. Its execution context exposes Engine operations,
+in the shared `mtg/cardprogram.Catalog`. Its execution context exposes Engine operations,
 not raw mutable Game state. Per-game links, usage and delayed captures are stored
-in the Game, not mutable closures. The general program interface is planned in
-#3272, not yet a public type.
+in the Game, not mutable closures. `game.ProgramReference` is portable data;
+installed Go functions are not.
 
 **Effect Primitive**:
 A composable building-block game action — deal damage, destroy permanent, draw cards, create token, etc. Card implementations are composed from these.

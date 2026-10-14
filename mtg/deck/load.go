@@ -17,6 +17,8 @@ type PlayerInput struct {
 type UnresolvedCard struct {
 	Player game.PlayerID
 	Name   string
+	// Reason distinguishes absent names from invalid/missing authored code.
+	Reason string
 }
 
 // LoadResult is the outcome of loading four decklists into game configs.
@@ -69,9 +71,13 @@ func buildConfig(playerID game.PlayerID, input *PlayerInput, reg *cards.Registry
 	var unresolved []UnresolvedCard
 	for i := range input.Decklist.Commander {
 		entry := &input.Decklist.Commander[i]
-		def := reg.Lookup(entry.Name)
-		if def == nil {
-			unresolved = append(unresolved, UnresolvedCard{Player: playerID, Name: entry.Name})
+		def, err := reg.LookupChecked(entry.Name)
+		if err != nil || def == nil {
+			reason := ""
+			if err != nil {
+				reason = err.Error()
+			}
+			unresolved = append(unresolved, UnresolvedCard{Player: playerID, Name: entry.Name, Reason: reason})
 			continue
 		}
 		for range entry.Quantity {
@@ -84,9 +90,13 @@ func buildConfig(playerID game.PlayerID, input *PlayerInput, reg *cards.Registry
 
 	for i := range input.Decklist.Cards {
 		entry := &input.Decklist.Cards[i]
-		def := reg.Lookup(entry.Name)
-		if def == nil {
-			unresolved = append(unresolved, UnresolvedCard{Player: playerID, Name: entry.Name})
+		def, err := reg.LookupChecked(entry.Name)
+		if err != nil || def == nil {
+			reason := ""
+			if err != nil {
+				reason = err.Error()
+			}
+			unresolved = append(unresolved, UnresolvedCard{Player: playerID, Name: entry.Name, Reason: reason})
 			continue
 		}
 		for range entry.Quantity {

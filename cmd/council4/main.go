@@ -75,7 +75,12 @@ func main() {
 		os.Exit(2)
 	}
 
-	engine := rules.NewEngine(rand.New(rand.NewPCG(*seed, *seed^0x9e3779b97f4a7c15)))
+	programs, err := cards.DefaultPrograms()
+	if err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+	engine := rules.NewEngineWithPrograms(rand.New(rand.NewPCG(*seed, *seed^0x9e3779b97f4a7c15)), programs)
 	gameState := engine.NewGame(configs)
 
 	result := engine.RunGame(gameState, agents)
@@ -104,7 +109,10 @@ func runDeckGame(w io.Writer, paths []string, tested int, seed uint64, verbose, 
 		return err
 	}
 
-	engine := rules.NewEngine(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
+	engine := rules.NewEngineWithPrograms(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)), registry.Programs())
+	if err := engine.ValidatePrograms(configs); err != nil {
+		return err
+	}
 	gameState := engine.NewGame(configs)
 	result := engine.RunGame(gameState, agents(agent.FirstLegal{}))
 
@@ -120,7 +128,11 @@ func loadProblems(loaded *deck.LoadResult) error {
 	var b strings.Builder
 	_, _ = b.WriteString("decklist problems:")
 	for _, unresolved := range loaded.Unresolved {
-		_, _ = fmt.Fprintf(&b, "\n  %s: unknown card %q", playerName(unresolved.Player), unresolved.Name)
+		if unresolved.Reason != "" {
+			_, _ = fmt.Fprintf(&b, "\n  %s: unavailable card %q: %s", playerName(unresolved.Player), unresolved.Name, unresolved.Reason)
+		} else {
+			_, _ = fmt.Fprintf(&b, "\n  %s: unknown card %q", playerName(unresolved.Player), unresolved.Name)
+		}
 	}
 	for _, legality := range loaded.Legality {
 		_, _ = fmt.Fprintf(&b, "\n  %s: %s", playerName(legality.Player), legality.Reason)

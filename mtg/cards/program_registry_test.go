@@ -1,0 +1,73 @@
+package cards_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/natefinch/council4/mtg/cardprogram"
+	"github.com/natefinch/council4/mtg/cards"
+	"github.com/natefinch/council4/mtg/cards/cardset"
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+func TestAuthoredRegistryLoadsOnlyExactInstalledPrograms(t *testing.T) {
+	t.Parallel()
+	ref := game.ProgramReference{ID: "test/card", Version: "1"}
+	entry := cardset.Entry{
+		Name: "Authored", OracleID: "oracle-identity",
+		Programs: []cardprogram.Program{{Reference: ref, Resolve: func(cardprogram.Context) error { return nil }}},
+		New: func() *game.CardDef {
+			return &game.CardDef{CardFace: game.CardFace{Name: "Authored", Types: []types.Card{types.Sorcery},
+				SpellAbility: opt.Val(game.Mode{Program: ref}.Ability())}}
+		},
+	}
+	registry, err := cards.NewProgramRegistry([]cardset.Entry{entry})
+	if err != nil {
+		t.Fatal(err)
+	}
+	def, err := registry.LookupOracleID(entry.OracleID)
+	if err != nil || def == nil {
+		t.Fatalf("exact lookup: %v", err)
+	}
+	if _, err := registry.Programs().Lookup(ref); err != nil {
+		t.Fatal(err)
+	}
+	entry.Programs = nil
+	registry, err = cards.NewProgramRegistry([]cardset.Entry{entry})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := registry.LookupChecked(entry.Name); err == nil {
+		t.Fatal("a missing program was admitted during loading")
+	}
+}
+
+func TestOracleCollisionsAndExplicitLegacyReplacement(t *testing.T) {
+	t.Parallel()
+	construct := func() *game.CardDef { return &game.CardDef{CardFace: game.CardFace{Name: "Card"}} }
+	legacy := cardset.Entry{Name: "Card", New: construct}
+	authored := cardset.Entry{Name: "Card", OracleID: "oracle-identity", New: construct}
+	if _, err := cards.NewProgramRegistry([]cardset.Entry{legacy, authored}); err == nil {
+		t.Fatal("name collision silently chose an implementation")
+	}
+	if _, err := cards.NewProgramRegistry([]cardset.Entry{authored, legacy}); err == nil {
+		t.Fatal("reverse insertion silently chose an implementation")
+	}
+	authored.ReplaceLegacy = true
+	registry, err := cards.NewProgramRegistry([]cardset.Entry{legacy, authored})
+	if err != nil || registry.Len() != 1 {
+		t.Fatalf("explicit replacement = %v", err)
+	}
+	if registry, err := cards.NewProgramRegistry([]cardset.Entry{authored, legacy}); err != nil || registry.Len() != 1 {
+		t.Fatalf("reverse explicit replacement = %v", err)
+	}
+	if _, err := cards.NewProgramRegistry([]cardset.Entry{legacy, legacy, authored}); err == nil {
+		t.Fatal("ambiguous legacy identities were replaced by guessing")
+	}
+	authored.ReplaceLegacy = false
+	if _, err := cards.NewProgramRegistry([]cardset.Entry{authored, authored}); err == nil || !strings.Contains(err.Error(), "duplicate Oracle") {
+		t.Fatal("duplicate Oracle identity was accepted")
+	}
+}

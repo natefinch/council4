@@ -63,6 +63,7 @@ func (c SearchContext) Simulator() Simulator {
 		rng:                 rand.New(rand.NewPCG(seed, seed^searchSeedLo)),
 		searchRNG:           rand.New(rand.NewPCG(seed^searchSeedHi, seed)),
 		cardImplementations: c.engine.cardImplementations,
+		programs:            c.engine.programs,
 	}
 	return Simulator{engine: simEngine}
 }

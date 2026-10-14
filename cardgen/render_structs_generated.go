@@ -46,6 +46,7 @@ func isZeroGameMode(v game.Mode) bool {
 	return !(v.Text != "") &&
 		!(len(v.Targets) > 0) &&
 		!(len(v.Sequence) > 0) &&
+		!(v.Program != (game.ProgramReference{})) &&
 		!(v.Cost.Exists)
 }
 
@@ -7931,20 +7932,28 @@ func (r Renderer) renderGameMode(ctx *renderCtx, v game.Mode) (string, error) {
 		lit7 := namedSliceLit("", "game.Instruction", items8)
 		fields = append(fields, "Sequence: "+lit7+",")
 	}
+	if v.Program != (game.ProgramReference{}) {
+		lit12, err13 := r.renderGameProgramReference(ctx, v.Program)
+		if err13 != nil {
+			return "", fmt.Errorf("game.Mode.Program: %w", err13)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Program: "+lit12+",")
+	}
 	if v.Cost.Exists {
-		var items14 []string
-		for _, item15 := range v.Cost.Val {
-			lit16, err17 := renderManaSymbol(ctx, item15)
-			if err17 != nil {
-				return "", fmt.Errorf("game.Mode.Cost[]: %w", err17)
+		var items16 []string
+		for _, item17 := range v.Cost.Val {
+			lit18, err19 := renderManaSymbol(ctx, item17)
+			if err19 != nil {
+				return "", fmt.Errorf("game.Mode.Cost[]: %w", err19)
 			}
 			ctx.need(importCost)
-			items14 = append(items14, lit16+",")
+			items16 = append(items16, lit18+",")
 		}
-		lit13 := namedSliceLit("cost.Mana", "cost.Symbol", items14)
+		lit15 := namedSliceLit("cost.Mana", "cost.Symbol", items16)
 		ctx.need(importOpt)
-		lit12 := "opt.Val(" + lit13 + ")"
-		fields = append(fields, "Cost: "+lit12+",")
+		lit14 := "opt.Val(" + lit15 + ")"
+		fields = append(fields, "Cost: "+lit14+",")
 	}
 	return structLit("game.Mode", fields), nil
 }
@@ -8936,6 +8945,20 @@ func (r Renderer) renderGamePreventDamage(ctx *renderCtx, v game.PreventDamage) 
 		fields = append(fields, "RedirectPreventedToSourceController: "+lit19+",")
 	}
 	return structLit("game.PreventDamage", fields), nil
+}
+
+// renderGameProgramReference renders a game.ProgramReference value as a Go composite literal.
+func (r Renderer) renderGameProgramReference(ctx *renderCtx, v game.ProgramReference) (string, error) {
+	var fields []string
+	if v.ID != "" {
+		lit1 := strconv.Quote(string(v.ID))
+		fields = append(fields, "ID: "+lit1+",")
+	}
+	if v.Version != "" {
+		lit2 := strconv.Quote(string(v.Version))
+		fields = append(fields, "Version: "+lit2+",")
+	}
+	return structLit("game.ProgramReference", fields), nil
 }
 
 // renderGameProliferate renders a game.Proliferate value as a Go composite literal.

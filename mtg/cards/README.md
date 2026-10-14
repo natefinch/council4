@@ -41,15 +41,15 @@ recognition is not required; do not edit parser/lowering to add a card.
 See [ADR 0012](../../docs/adr/0012-authored-go-card-implementations.md) and
 [epic #3269](https://github.com/natefinch/council4/issues/3269).
 
-The general safe authoring context/catalog is a prerequisite in #3272.
-`rules.CardImplementation.ResolveSpell` currently handles only custom spell
-resolution; it is not a general implementation slot for static, activated,
-triggered or replacement behavior. Follow the migration dependencies instead of
-inventing another context or mutating Game state directly.
+The [versioned program context/catalog](../cardprogram/README.md) handles
+synchronous Go resolving bodies for spells, activations, triggers and chapters.
+Static/replacement applicability remains declarative; later migration slices
+deepen those seams. The spell-only legacy escape hatch is kept for compatibility,
+not a bypass for missing operations or policies.
 
 Keep existing generated definitions and their runtime tests. Place future
-authored sources in the non-generated location established by that catalog
-work; never point corpus regeneration at them. Test shared operations and
+authored sources in `mtg/cards/authored`; never point corpus regeneration at
+them. Test shared operations and
 actual named-card interactions, then validate production registration.
 
 ## Legacy regeneration

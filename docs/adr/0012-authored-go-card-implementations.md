@@ -63,8 +63,10 @@ CardDef fingerprint cannot prove runtime semantics.
 
 [Epic #3269](https://github.com/natefinch/council4/issues/3269) defines ordered
 implementation and acceptance work. This decision does not claim that its future
-interfaces already exist. `rules.CardImplementation` currently supports only
-`ResolveSpell`; a general safe program catalog/context is step 03 (#3272).
+interfaces beyond the completed slices already exist. Step 03 (#3272) supplies
+versioned resolving bodies in `game.Mode.Program` and the shared
+`mtg/cardprogram` catalog/context. `rules.CardImplementation.ResolveSpell` remains
+the narrow legacy compatibility route.
 Step 02 (#3270) supplies pinned compiler/registry preservation and read-only,
 proportional CI. Mixed support reporting is still step 12 (#3278). Existing
 compiler reports measure recognition, not all deployed or behavior-verified cards.
