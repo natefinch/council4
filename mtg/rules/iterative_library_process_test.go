@@ -236,10 +236,7 @@ func TestTaintedPactHistoryIsPerResolution(t *testing.T) {
 	}
 }
 
-// TestTaintedPactCommanderExileRedirects proves the per-iteration exile honors
-// the commander-zone replacement (CR 903.9): a commander exiled this way goes to
-// the command zone instead of exile (replacement effects).
-func TestTaintedPactCommanderExileRedirects(t *testing.T) {
+func TestTaintedPactCommanderArrivesBeforeCommandZoneSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	commander := addCardToLibraryNamed(g, game.Player1, "General")
 	if g.CommanderIDs == nil {
@@ -250,6 +247,10 @@ func TestTaintedPactCommanderExileRedirects(t *testing.T) {
 	resolveIterativeLibrary(g, taintedPactPrimitive(), &iterativeLibraryAgent{mayAnswers: []bool{false}})
 
 	p := g.Players[game.Player1]
+	if !p.Exile.Contains(commander) {
+		t.Fatal("commander did not arrive in exile during the library process")
+	}
+	NewEngine(nil).applyStateBasedActions(g)
 	if !p.CommandZone.Contains(commander) {
 		t.Fatal("commander not redirected to the command zone")
 	}

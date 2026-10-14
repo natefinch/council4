@@ -56,6 +56,7 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 	var deaths []PermanentDeathLog
 	for range maxStateBasedActionPasses {
 		batchID := newPassBatchID(g)
+		commanders := pendingCommanderZoneActions(g)
 		durationsChanged := expireConditionalControlDurations(g)
 		changed, passLosses := e.checkStateBasedActions(g)
 		permanentsChanged, passDeaths := e.checkPermanentStateBasedActions(g, batchID)
@@ -65,12 +66,13 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 		countersChanged := checkCounterStateBasedActions(g)
 		tokensChanged := removeTokensFromNonBattlefieldZones(g)
 		blessingChanged := checkAscendCityBlessing(g)
+		commandersChanged := checkCommanderZoneStateBasedActions(g, commanders, batchID)
 		losses = append(losses, passLosses...)
 		deaths = append(deaths, passDeaths...)
 		deaths = append(deaths, attachmentDeaths...)
 		deaths = append(deaths, legendaryDeaths...)
 		deaths = append(deaths, roleDeaths...)
-		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !rolesChanged && !countersChanged && !tokensChanged && !durationsChanged && !blessingChanged {
+		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !rolesChanged && !countersChanged && !tokensChanged && !durationsChanged && !blessingChanged && !commandersChanged {
 			return losses, deaths
 		}
 	}

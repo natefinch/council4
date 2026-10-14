@@ -242,6 +242,10 @@ type Game struct {
 	// inspect for triggered ability detection.
 	TriggerEventCursor int
 
+	// CommanderEventCursor separates newly arrived graveyard/exile incarnations
+	// from those whose owner already declined the command-zone SBA (CR 903.9a).
+	CommanderEventCursor int
+
 	// StateTriggerLatches prevents state triggers from repeatedly triggering
 	// while their condition remains true (CR 603.8).
 	StateTriggerLatches map[StateTriggerKey]bool

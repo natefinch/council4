@@ -47,7 +47,7 @@ func TestValidateCommanderConfigAcceptsPlaneswalkerWithPermission(t *testing.T) 
 	}
 }
 
-func TestPlaneswalkerCommanderUsesCastTaxAndZoneReplacement(t *testing.T) {
+func TestPlaneswalkerCommanderUsesCastTaxAndCommandZoneSBA(t *testing.T) {
 	g := newCommanderCastGame(minscBooTimelessHeroesDef())
 	engine := NewEngine(nil)
 	addBasicLandPermanent(g, game.Player1, types.Mountain)
@@ -73,8 +73,12 @@ func TestPlaneswalkerCommanderUsesCastTaxAndZoneReplacement(t *testing.T) {
 		t.Fatal("planeswalker commander did not resolve to the battlefield")
 	}
 	movePermanentToZone(g, permanent, zone.Graveyard)
+	if !player.Graveyard.Contains(commanderID) {
+		t.Fatal("commander must enter the graveyard before its command-zone SBA")
+	}
+	engine.applyStateBasedActions(g)
 	if !player.CommandZone.Contains(commanderID) || player.Graveyard.Contains(commanderID) {
-		t.Fatal("planeswalker commander did not use command-zone replacement")
+		t.Fatal("planeswalker commander did not return through its command-zone SBA")
 	}
 }
 
@@ -138,14 +142,15 @@ func TestMultipleCommanderColorIdentityUsesUnion(t *testing.T) {
 	}
 }
 
-func TestCommanderPermanentZoneChangesUseCommandZoneReplacement(t *testing.T) {
+func TestCommanderPermanentZoneChangesRespectSBATiming(t *testing.T) {
 	tests := []struct {
-		name string
-		move func(*game.Game, *game.Permanent)
+		name        string
+		move        func(*game.Game, *game.Permanent)
+		destination zone.Type
 	}{
-		{name: "destroy", move: func(g *game.Game, permanent *game.Permanent) { destroyPermanent(g, permanent.ObjectID) }},
-		{name: "exile", move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, zone.Exile) }},
-		{name: "bounce", move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, zone.Hand) }},
+		{name: "destroy", destination: zone.Graveyard, move: func(g *game.Game, permanent *game.Permanent) { destroyPermanent(g, permanent.ObjectID) }},
+		{name: "exile", destination: zone.Exile, move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, zone.Exile) }},
+		{name: "bounce", destination: zone.Command, move: func(g *game.Game, permanent *game.Permanent) { movePermanentToZone(g, permanent, zone.Hand) }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -153,6 +158,11 @@ func TestCommanderPermanentZoneChangesUseCommandZoneReplacement(t *testing.T) {
 			commander := addCommanderPermanent(g, game.Player1)
 
 			tt.move(g, commander)
+			destination, _ := destinationZone(g, commander.Owner, tt.destination)
+			if !destination.Contains(commander.CardInstanceID) {
+				t.Fatal("commander did not arrive in the correct initial destination")
+			}
+			NewEngine(nil).applyStateBasedActions(g)
 
 			if !g.Players[game.Player1].CommandZone.Contains(commander.CardInstanceID) {
 				t.Fatalf("commander was not moved to command zone for %s", tt.name)
@@ -163,16 +173,18 @@ func TestCommanderPermanentZoneChangesUseCommandZoneReplacement(t *testing.T) {
 				t.Fatal("commander also appeared in a replaced destination zone")
 			}
 			assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
-				return event.CardID == commander.CardInstanceID && event.FromZone == zone.Battlefield && event.ToZone == zone.Command
+				return event.CardID == commander.CardInstanceID && event.FromZone == zone.Battlefield && event.ToZone == tt.destination
 			})
-			assertNoEvent(t, g.Events, game.EventPermanentDied, func(event game.Event) bool {
-				return event.CardID == commander.CardInstanceID
-			})
+			if tt.destination == zone.Graveyard {
+				assertEvent(t, g.Events, game.EventPermanentDied, func(event game.Event) bool {
+					return event.CardID == commander.CardInstanceID
+				})
+			}
 		})
 	}
 }
 
-func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
+func TestCommanderCardZoneChangesArriveBeforeCommandZoneSBA(t *testing.T) {
 	t.Run("discard", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		commanderID := addCommanderCardToHand(g, game.Player1)
@@ -180,11 +192,15 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 		if !discardCardFromHand(g, game.Player1, commanderID) {
 			t.Fatal("discardCardFromHand() = false, want true")
 		}
+		if !g.Players[game.Player1].Graveyard.Contains(commanderID) {
+			t.Fatal("discarded commander did not enter graveyard")
+		}
+		NewEngine(nil).applyStateBasedActions(g)
 		if !g.Players[game.Player1].CommandZone.Contains(commanderID) || g.Players[game.Player1].Graveyard.Contains(commanderID) {
-			t.Fatal("discarded commander did not use command-zone replacement")
+			t.Fatal("discarded commander did not return through its command-zone SBA")
 		}
 		assertEvent(t, g.Events, game.EventCardDiscarded, func(event game.Event) bool {
-			return event.CardID == commanderID && event.ToZone == zone.Command
+			return event.CardID == commanderID && event.ToZone == zone.Graveyard
 		})
 	})
 	t.Run("mill", func(t *testing.T) {
@@ -192,9 +208,13 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 		commanderID := addCommanderCardToLibrary(g, game.Player1)
 
 		millCards(g, game.Player1, 1)
+		if !g.Players[game.Player1].Graveyard.Contains(commanderID) {
+			t.Fatal("milled commander did not enter graveyard")
+		}
+		NewEngine(nil).applyStateBasedActions(g)
 
 		if !g.Players[game.Player1].CommandZone.Contains(commanderID) || g.Players[game.Player1].Graveyard.Contains(commanderID) {
-			t.Fatal("milled commander did not use command-zone replacement")
+			t.Fatal("milled commander did not return through its command-zone SBA")
 		}
 	})
 	t.Run("surveil", func(t *testing.T) {
@@ -204,9 +224,13 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 		agents := [game.NumPlayers]PlayerAgent{game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}}}
 
 		engine.surveilCards(g, agents, &TurnLog{}, game.Player1, 1)
+		if !g.Players[game.Player1].Graveyard.Contains(commanderID) {
+			t.Fatal("surveilled commander did not enter graveyard")
+		}
+		engine.applyStateBasedActions(g)
 
 		if !g.Players[game.Player1].CommandZone.Contains(commanderID) || g.Players[game.Player1].Graveyard.Contains(commanderID) {
-			t.Fatal("surveilled commander did not use command-zone replacement")
+			t.Fatal("surveilled commander did not return through its command-zone SBA")
 		}
 	})
 	t.Run("stack", func(t *testing.T) {
@@ -226,8 +250,12 @@ func TestCommanderCardZoneChangesUseCommandZoneReplacement(t *testing.T) {
 		if !moveStackCardToGraveyard(g, obj, card) {
 			t.Fatal("moveStackCardToGraveyard() = false, want true")
 		}
+		if !g.Players[game.Player1].Graveyard.Contains(commanderID) {
+			t.Fatal("countered commander did not enter graveyard")
+		}
+		NewEngine(nil).applyStateBasedActions(g)
 		if !g.Players[game.Player1].CommandZone.Contains(commanderID) || g.Players[game.Player1].Graveyard.Contains(commanderID) {
-			t.Fatal("countered commander spell did not use command-zone replacement")
+			t.Fatal("countered commander spell did not return through its command-zone SBA")
 		}
 	})
 }
@@ -424,7 +452,7 @@ func TestFailedCommanderTaxCastDoesNotMutate(t *testing.T) {
 	}
 }
 
-func TestCommanderZeroToughnessReplacementDoesNotLogDeath(t *testing.T) {
+func TestCommanderZeroToughnessLogsDeathBeforeCommandZoneSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	commander := addCommanderPermanent(g, game.Player1)
@@ -438,8 +466,8 @@ func TestCommanderZeroToughnessReplacementDoesNotLogDeath(t *testing.T) {
 
 	_, deaths := engine.applyStateBasedActionsWithDeaths(g)
 
-	if len(deaths) != 0 {
-		t.Fatalf("deaths = %+v, want command-zone replacement to avoid death log", deaths)
+	if len(deaths) != 1 {
+		t.Fatalf("deaths = %+v, want commander graveyard-arrival death log", deaths)
 	}
 	if !g.Players[game.Player1].CommandZone.Contains(commander.CardInstanceID) {
 		t.Fatal("zero-toughness commander did not move to command zone")

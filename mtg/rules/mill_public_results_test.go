@@ -77,7 +77,7 @@ func TestMillPublicResultSnapshotsAndLegacyLinks(t *testing.T) {
 					Name: fmt.Sprintf("Member %d", len(members)), Types: []types.Card{cardType},
 				}})
 				members = append(members, cardID)
-				if !tc.commander && !slices.Contains(tc.redirect, cardType) {
+				if !slices.Contains(tc.redirect, cardType) {
 					graveyardMembers = append(graveyardMembers, cardID)
 				}
 			}

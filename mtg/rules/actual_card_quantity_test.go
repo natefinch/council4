@@ -103,7 +103,7 @@ func TestCompiledActualCardQuantitySingleTargetIncarnation(t *testing.T) {
 	}
 }
 
-func TestActualCardQuantityExileCommanderRedirect(t *testing.T) {
+func TestActualCardQuantityCountsCommanderBeforeCommandZoneSBA(t *testing.T) {
 	def := compileUnlessCard(t, cardgen.ScryfallCard{
 		Name: "Exile destination", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Exile target player's graveyard. For each creature card exiled this way, create a 2/2 black Zombie creature token.",
@@ -114,8 +114,12 @@ func TestActualCardQuantityExileCommanderRedirect(t *testing.T) {
 	g.Players[game.Player2].CommanderInstanceID = cardID
 	obj := &game.StackObject{Controller: game.Player1, Targets: []game.Target{game.PlayerTarget(game.Player2)}}
 	NewEngine(nil).resolveAbilityContentWithChoices(g, obj, def.SpellAbility.Val, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-	if !g.Players[game.Player2].CommandZone.Contains(cardID) || len(g.Battlefield) != 0 {
-		t.Fatal("redirected exile-bound commander counted as an actual exiled card")
+	if !g.Players[game.Player2].Exile.Contains(cardID) || len(g.Battlefield) != 1 {
+		t.Fatal("commander's real exile arrival did not count for its payoff")
+	}
+	NewEngine(nil).applyStateBasedActions(g)
+	if !g.Players[game.Player2].CommandZone.Contains(cardID) {
+		t.Fatal("commander did not move to the command zone at the later SBA")
 	}
 }
 

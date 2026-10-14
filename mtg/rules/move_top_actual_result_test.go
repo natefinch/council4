@@ -114,9 +114,10 @@ func TestMoveTopOfLibraryExileAndLegacyMovementReceipts(t *testing.T) {
 				result := obj.ResolutionResults["move"]
 				wantMembers := 1
 				if commander {
-					if destination == zone.Exile {
-						wantMembers = 0
+					if cards, _ := destinationZone(g, game.Player2, destination); !cards.Contains(g.Players[game.Player2].CommanderInstanceID) {
+						t.Fatal("commander did not arrive before its SBA")
 					}
+					engine.applyStateBasedActions(g)
 					if g.Players[game.Player2].CommandZone.Size() != 1 {
 						t.Fatal("commander did not reach replacement destination")
 					}
@@ -139,9 +140,6 @@ func TestMoveTopOfLibraryExileAndLegacyMovementReceipts(t *testing.T) {
 					cards = exileTopOfLibraryCards(legacy, game.Player2, 3, opt.V[counter.Kind]{}, game.Player1, false)
 				}
 				legacyMembers := 1
-				if commander {
-					legacyMembers = 0
-				}
 				if len(cards) != legacyMembers {
 					t.Fatal("legacy wrapper changed destination-filtered IDs")
 				}

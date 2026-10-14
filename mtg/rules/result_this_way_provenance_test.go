@@ -120,7 +120,7 @@ func TestResultObjectDestroyPreventionAndInvalidTarget(t *testing.T) {
 	}
 }
 
-func TestResultObjectExileRequiresActualDestination(t *testing.T) {
+func TestResultObjectExileCommanderArrivalSurvivesLaterSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{
 		game.Player1: {Commander: &game.CardDef{CardFace: game.CardFace{
 			Name: "Pirate Commander", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Pirate},
@@ -138,13 +138,17 @@ func TestResultObjectExileRequiresActualDestination(t *testing.T) {
 	engine.resolveInstructionWithChoices(g, obj, &game.Instruction{
 		Primitive: game.MovePermanent{Object: game.TargetPermanentReference(0), Destination: zone.Exile}, PublishResult: "exile",
 	}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-	if !g.Players[game.Player1].CommandZone.Contains(cardID) {
-		t.Fatal("setup did not redirect commander to command zone")
+	if !g.Players[game.Player1].Exile.Contains(cardID) {
+		t.Fatal("commander did not arrive in exile")
 	}
-	if len(obj.ResolutionResultObjects["exile"]) != 0 {
-		t.Fatal("redirected exile published an exiled Pirate")
+	if len(obj.ResolutionResultObjects["exile"]) != 1 {
+		t.Fatal("actual commander exile arrival was omitted")
 	}
 	if !obj.ResolutionResults["exile"].Succeeded {
 		t.Fatal("result filtering changed generic move success")
+	}
+	engine.applyStateBasedActions(g)
+	if !g.Players[game.Player1].CommandZone.Contains(cardID) || len(obj.ResolutionResultObjects["exile"]) != 1 {
+		t.Fatal("later command-zone SBA erased the frozen actual outcome")
 	}
 }

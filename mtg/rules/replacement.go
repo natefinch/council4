@@ -298,6 +298,7 @@ type destroyBatch struct {
 	game           *game.Game
 	simultaneousID id.ID
 	queued         []id.ID
+	planned        map[id.ID]bool
 	changed        bool
 }
 
@@ -305,6 +306,15 @@ func (b *destroyBatch) applyQueued() {
 	for len(b.queued) > 0 {
 		objectID := b.queued[0]
 		b.queued = b.queued[1:]
+		// A replacement may destroy an Aura already in the original batch.
+		// Its planned action must supply the one correlated departure.
+		if b.planned[objectID] {
+			continue
+		}
+		if b.planned == nil {
+			b.planned = make(map[id.ID]bool)
+		}
+		b.planned[objectID] = true
 		_, _, changed := destroyPermanentInBatchResultWithBatch(b.game, objectID, b.simultaneousID, false, b)
 		b.changed = b.changed || changed
 	}
@@ -402,18 +412,31 @@ func planDestroyPermanents(g *game.Game, permanents []*game.Permanent, preventRe
 }
 
 func applyPlannedDestroyBatch(g *game.Game, destroyed []*game.Permanent, replacements []plannedDestroyReplacement, batch *destroyBatch) bool {
-	moves := preparePermanentZoneMovesInBatch(g, destroyed, zone.Graveyard, batch.simultaneousID)
-	for _, planned := range replacements {
-		batch.changed = applyDestroyReplacement(g, planned.permanent, planned.replacement, batch) || batch.changed
-	}
-	batch.applyQueued()
-	results := applyPreparedPermanentZoneMoves(g, moves)
+	results := applyPlannedDestroyBatchResults(g, destroyed, replacements, batch)
 	for _, result := range results {
 		if result.moved {
 			return true
 		}
 	}
 	return false
+}
+
+func applyPlannedDestroyBatchResults(g *game.Game, destroyed []*game.Permanent, replacements []plannedDestroyReplacement, batch *destroyBatch) []permanentZoneMoveResult {
+	moves := preparePermanentZoneMovesInBatch(g, destroyed, zone.Graveyard, batch.simultaneousID)
+	for _, planned := range replacements {
+		batch.changed = applyDestroyReplacement(g, planned.permanent, planned.replacement, batch) || batch.changed
+	}
+	if len(batch.queued) > 0 {
+		batch.planned = make(map[id.ID]bool, len(destroyed)+len(replacements))
+		for _, permanent := range destroyed {
+			batch.planned[permanent.ObjectID] = true
+		}
+		for _, planned := range replacements {
+			batch.planned[planned.permanent.ObjectID] = true
+		}
+	}
+	batch.applyQueued()
+	return applyPreparedPermanentZoneMoves(g, moves)
 }
 
 func umbraArmorAttachments(g *game.Game, permanent *game.Permanent) []*game.Permanent {

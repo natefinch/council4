@@ -109,7 +109,7 @@ func TestRemoveTargetsForTokenExilesAllTargetsUnderLink(t *testing.T) {
 	}
 }
 
-func TestRemoveTargetsForTokenDoesNotLinkCommanderRedirectedFromExile(t *testing.T) {
+func TestRemoveTargetsForTokenLinksCommanderBeforeCommandZoneSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	commander := addCommanderPermanent(g, game.Player2)
@@ -126,11 +126,15 @@ func TestRemoveTargetsForTokenDoesNotLinkCommanderRedirectedFromExile(t *testing
 		LinkedKey: game.LinkedKey("removed-targets-for-token"),
 	}}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
-	if !g.Players[game.Player2].CommandZone.Contains(commander.CardInstanceID) {
-		t.Fatal("commander was not redirected to the command zone")
+	if !g.Players[game.Player2].Exile.Contains(commander.CardInstanceID) {
+		t.Fatal("commander did not arrive in exile")
 	}
-	if got := namedTokenCount(g, game.Player2, "Sphinx"); got != 1 {
-		t.Fatalf("Sphinx tokens = %d, want 1 only for the creature exiled this way", got)
+	if got := namedTokenCount(g, game.Player2, "Sphinx"); got != 2 {
+		t.Fatalf("Sphinx tokens = %d, want 2 for both creatures actually exiled", got)
+	}
+	engine.applyStateBasedActions(g)
+	if !g.Players[game.Player2].CommandZone.Contains(commander.CardInstanceID) {
+		t.Fatal("commander did not move to command zone at SBA")
 	}
 }
 

@@ -23,6 +23,9 @@ import (
 // stack resolves and the active player receives priority again (CR 117.3b), or,
 // if the stack is empty, the step or phase ends and the loop returns.
 func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	previous, _ := g.ChoiceContext()
+	e.setReplacementChoiceContext(g, agents, log)
+	defer g.SetChoiceContext(previous)
 	consecutivePasses := 0
 
 	for {

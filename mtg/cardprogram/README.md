@@ -57,6 +57,17 @@ card is added only after its entire behavior and relevant scenarios are complete
   promise that every legacy scalar is an actual mutation count.
 - `Ask(request)` uses normal ChoiceAgent observations, validation, logging and
   recorded fallbacks. It does not choose a strategic answer inside card code.
+- `Destroy(operation)` performs one simultaneous batch through the shared
+  destruction, replacement and zone-change machinery. Each member preserves
+  its pre-action incarnation, characteristics and controller, whether it moved,
+  its actual destination, and its arrived card incarnations. Protected members
+  remain correlated but have no arrival; an unavailable single reference is
+  distinct from an available empty group. `Before.ZoneCards` uses the actual
+  pre-move versions, not LKI's predicted destination versions.
+- `CreateTokens(definition, recipients...)` creates one simultaneous event across
+  the declared `TokenRecipient{Player, Count}` quantities, using token/entry replacements
+  and returns copied snapshots of the tokens actually created. Invalid inputs
+  fail; a valid effect for a departed player produces no tokens (CR 800.4).
 
 Contexts expire when the synchronous handler returns. Never retain them,
 live pointers or mutable per-game state in a closure/global. Named pure
@@ -66,8 +77,11 @@ belongs in game-owned records, not the Go stack.
 
 Target choices, payments and replacements are not ad-hoc card callbacks.
 Simultaneous operations must use a batch-capable Engine operation, not a loop
-of independently completed removals. The following epic slices deepen actual
-batch outcomes, links, replacement programs and policy extensions.
+of independently completed removals. Terastodon is the first production example
+of correlated batch outcomes; a real graveyard arrival qualifies even if the
+commander later moves to command as an SBA (CR 903.9a). Hand/library command-zone
+handling remains an optional replacement, not that SBA (CR 903.9b).
+Following epic slices deepen links, replacement programs and policy extensions.
 
 ## Consumers, errors and portability
 

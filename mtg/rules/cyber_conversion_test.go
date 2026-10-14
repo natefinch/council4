@@ -363,6 +363,10 @@ func TestCyberConversionObservationCommanderAndZoneChange(t *testing.T) {
 	if !revealed[permanent.CardInstanceID] || !revealed[lowerCommanderID] {
 		t.Fatalf("revealed cards = %v, want top and merged components", revealed)
 	}
+	if !g.Players[game.Player2].Graveyard.Contains(lowerCommanderID) {
+		t.Fatal("merged commander component must enter graveyard before its SBA")
+	}
+	NewEngine(nil).applyStateBasedActions(g)
 	if len(g.Battlefield) != 0 ||
 		!g.Players[game.Player3].Graveyard.Contains(permanent.CardInstanceID) ||
 		!g.Players[game.Player2].CommandZone.Contains(lowerCommanderID) {

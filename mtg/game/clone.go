@@ -66,6 +66,7 @@ func (g *Game) Clone() *Game {
 		Events:                             cloneEvents(g.Events),
 		EventTurnStarts:                    cloneSlice(g.EventTurnStarts),
 		TriggerEventCursor:                 g.TriggerEventCursor,
+		CommanderEventCursor:               g.CommanderEventCursor,
 		StateTriggerLatches:                cloneComparableMap(g.StateTriggerLatches),
 		FiredManaSpendRiders:               cloneSlice(g.FiredManaSpendRiders),
 		ActivatedAbilitiesThisTurn:         cloneComparableMap(g.ActivatedAbilitiesThisTurn),

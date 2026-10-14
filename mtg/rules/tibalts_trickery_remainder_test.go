@@ -259,11 +259,7 @@ func TestTibaltsTrickeryLeavesUnrelatedExileUntouched(t *testing.T) {
 	}
 }
 
-// TestTibaltsTrickeryCommanderDivertedFromRemainder confirms the commander-zone
-// replacement applies: when the different-named nonland that stops the process is
-// a commander, its owner may put it in the command zone, so it is never cast and
-// never part of the random-bottom remainder.
-func TestTibaltsTrickeryCommanderDivertedFromRemainder(t *testing.T) {
+func TestTibaltsTrickeryCanCastCommanderBeforeCommandZoneSBA(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(tibaltSeedForMillCount(t, 1))
 
@@ -282,14 +278,14 @@ func TestTibaltsTrickeryCommanderDivertedFromRemainder(t *testing.T) {
 	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
 
 	p := g.Players[game.Player2]
-	if !p.CommandZone.Contains(commander) {
-		t.Fatal("commander that stopped the process was not diverted to the command zone")
+	if p.CommandZone.Contains(commander) {
+		t.Fatal("a command-zone SBA happened during library-process resolution")
 	}
 	if p.Exile.Contains(commander) || p.Library.Contains(commander) {
-		t.Fatal("diverted commander must not stay exiled or be bottomed")
+		t.Fatal("cast commander must not stay exiled or be bottomed")
 	}
-	if _, ok := tibaltCastSpell(g, commander); ok {
-		t.Fatal("a commander diverted to the command zone cannot be cast from exile")
+	if _, ok := tibaltCastSpell(g, commander); !ok {
+		t.Fatal("a commander actually exiled this way was not offered its free cast")
 	}
 	// The land and same-named nonland exiled before the commander are still the
 	// whole remainder.

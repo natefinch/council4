@@ -174,6 +174,7 @@ func TestNightmareShepherdRequiresExactCardToReachExile(t *testing.T) {
 			name: "commander redirect",
 			before: func(g *game.Game, cardID game.ObjectID) {
 				g.CommanderIDs[cardID] = true
+				NewEngine(nil).applyStateBasedActions(g)
 			},
 		},
 		{

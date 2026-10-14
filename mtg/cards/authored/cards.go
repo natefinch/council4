@@ -6,4 +6,4 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 
 // Cards is extended by completed, behavior-verified authored card slices.
 // The program infrastructure itself does not promote a synthetic parity fixture.
-var Cards = []cardset.Entry{}
+var Cards = []cardset.Entry{Terastodon}

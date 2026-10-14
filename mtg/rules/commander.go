@@ -238,13 +238,64 @@ func commanderPermanent(g *game.Game, commanderID id.ID) (*game.Permanent, bool)
 }
 
 func commanderReplacementDestination(g *game.Game, cardID id.ID, destination zone.Type) zone.Type {
-	if !isCommanderCardID(g, cardID) {
+	if !isCommanderCardID(g, cardID) || (destination != zone.Hand && destination != zone.Library) {
 		return destination
 	}
-	switch destination {
-	case zone.Graveyard, zone.Exile, zone.Hand, zone.Library:
+	if chooseCommanderCommandZone(g, cardID) {
 		return zone.Command
-	default:
-		return destination
 	}
+	return destination
+}
+
+func chooseCommanderCommandZone(g *game.Game, cardID id.ID) bool {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || !isPlayerAlive(g, card.Owner) {
+		return false
+	}
+	if ctx, ok := replacementChoiceContextFor(g); ok {
+		selected := ctx.engine.chooseChoice(g, ctx.agents, game.ChoiceRequest{
+			Kind: game.ChoiceMay, Player: card.Owner,
+			Prompt:  "Put your commander into the command zone?",
+			Subject: cardChoiceInfo(g, cardID),
+			Options: []game.ChoiceOption{
+				{Index: 0, Label: "Leave " + card.Def.Name + " in the destination zone"},
+				{Index: 1, Label: "Put " + card.Def.Name + " into the command zone"},
+			},
+			MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{1},
+		}, ctx.log)
+		return selected[0] == 1
+	}
+	return true
+}
+
+func pendingCommanderZoneActions(g *game.Game) []game.Event {
+	end := len(g.Events)
+	var pending []game.Event
+	for _, event := range g.Events[g.CommanderEventCursor:end] {
+		if event.Kind != game.EventZoneChanged ||
+			(event.ToZone != zone.Graveyard && event.ToZone != zone.Exile) ||
+			!isCommanderCardID(g, event.CardID) {
+			continue
+		}
+		card, ok := g.GetCardInstance(event.CardID)
+		if ok && card.ZoneVersion == event.CardZoneVersion {
+			pending = append(pending, event)
+		}
+	}
+	g.CommanderEventCursor = end
+	return pending
+}
+
+func checkCommanderZoneStateBasedActions(g *game.Game, pending []game.Event, batchID func() id.ID) bool {
+	changed := false
+	for _, owner := range triggerAPNAPPlayers(g) {
+		for _, event := range pending {
+			card, ok := g.GetCardInstance(event.CardID)
+			if !ok || card.Owner != owner || card.ZoneVersion != event.CardZoneVersion || !chooseCommanderCommandZone(g, card.ID) {
+				continue
+			}
+			changed = moveCardBetweenZonesInBatch(g, card.Owner, card.ID, event.ToZone, zone.Command, false, batchID()) || changed
+		}
+	}
+	return changed
 }

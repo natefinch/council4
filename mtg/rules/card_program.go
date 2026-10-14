@@ -84,6 +84,9 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 		},
 	}
 	defer func() { ctx.active = false }()
+	previous, _ := g.ChoiceContext()
+	e.setReplacementChoiceContext(g, agents, log)
+	defer g.SetChoiceContext(previous)
 	if err := e.programs.Run(mode.Program, ctx); err != nil {
 		panic(UnsupportedError{Reason: err.Error()})
 	}

@@ -238,6 +238,10 @@ func TestMutatedPermanentMovesEveryCardWithCommanderReplacement(t *testing.T) {
 	if !fixture.game.Players[game.Player1].Graveyard.Contains(fixture.mutatorID) {
 		t.Fatal("top card did not move to graveyard")
 	}
+	if !fixture.game.Players[game.Player1].Graveyard.Contains(commanderID) {
+		t.Fatal("merged commander did not enter graveyard with the other component")
+	}
+	fixture.engine.applyStateBasedActions(fixture.game)
 	if !fixture.game.Players[game.Player1].CommandZone.Contains(commanderID) {
 		t.Fatal("lower commander card did not move to command zone")
 	}

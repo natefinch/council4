@@ -608,6 +608,7 @@ type permanentZoneMoveResult struct {
 	permanent   *game.Permanent
 	destination zone.Type
 	moved       bool
+	arrivals    []game.ZoneCardSnapshot
 }
 
 // movePermanentsToZoneSimultaneouslyWithResults is the result-bearing form of
@@ -645,11 +646,21 @@ func preparePermanentZoneMovesInBatch(g *game.Game, permanents []*game.Permanent
 func applyPreparedPermanentZoneMoves(g *game.Game, moves []preparedPermanentZoneMove) []permanentZoneMoveResult {
 	results := make([]permanentZoneMoveResult, 0, len(moves))
 	for i := range moves {
-		results = append(results, permanentZoneMoveResult{
+		result := permanentZoneMoveResult{
 			permanent:   moves[i].permanent,
 			destination: moves[i].actualDestination,
 			moved:       applyPreparedPermanentZoneMove(g, &moves[i]),
-		})
+		}
+		if result.moved {
+			for _, component := range moves[i].snapshot.ZoneCards {
+				if card, ok := g.GetCardInstance(component.CardID); ok {
+					result.arrivals = append(result.arrivals, game.ZoneCardSnapshot{
+						CardID: card.ID, ZoneVersion: card.ZoneVersion,
+					})
+				}
+			}
+		}
+		results = append(results, result)
 	}
 	return results
 }
@@ -965,10 +976,6 @@ func destroyPermanentInBatchResultWithBatch(g *game.Game, objectID, simultaneous
 		if replaced {
 			return nil, false, applyDestroyReplacement(g, permanent, replacement, batch)
 		}
-	}
-	if commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command {
-		moved := movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID)
-		return nil, false, moved
 	}
 	if !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
 		return nil, false, false

@@ -57,7 +57,10 @@ func (s Simulator) Apply(g *game.Game, playerID game.PlayerID, act action.Action
 		return nil, false
 	}
 	clone := g.Clone()
-	if !s.engine.applyActionWithChoices(clone, playerID, act, policies, &TurnLog{}) {
+	log := &TurnLog{}
+	s.engine.setReplacementChoiceContext(clone, policies, log)
+	defer clone.ClearChoiceContext()
+	if !s.engine.applyActionWithChoices(clone, playerID, act, policies, log) {
 		return nil, false
 	}
 	return clone, true
@@ -104,7 +107,10 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 	if !ce.applyAttackers(clone, playerID, attackers) {
 		return nil, false
 	}
-	ce.resolveCombatAfterAttackers(clone, policies, &TurnLog{})
+	log := &TurnLog{}
+	s.engine.setReplacementChoiceContext(clone, policies, log)
+	defer clone.ClearChoiceContext()
+	ce.resolveCombatAfterAttackers(clone, policies, log)
 	return clone, true
 }
 

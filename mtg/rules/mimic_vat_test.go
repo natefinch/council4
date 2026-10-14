@@ -155,10 +155,14 @@ func TestMimicVatImprintReplacesOnlyAfterSuccessfulExile(t *testing.T) {
 
 	commanderID, commanderEvent := mimicDiedCard(g, game.Player2, mimicCreature("Commander Corpse", 4))
 	g.CommanderIDs[commanderID] = true
+	arrival := commanderEvent
+	arrival.Kind = game.EventZoneChanged
+	emitEvent(g, arrival)
+	engine.applyStateBasedActions(g)
 	resolveMimicImprint(g, engine, vat, commanderEvent, [game.NumPlayers]PlayerAgent{})
 	if !g.Players[game.Player2].CommandZone.Contains(commanderID) ||
 		!g.Players[game.Player2].Exile.Contains(oldID) {
-		t.Fatal("commander replacement did not preserve the prior imprint")
+		t.Fatal("a commander that left at SBA replaced the prior imprint")
 	}
 
 	newID, newEvent := mimicDiedCard(g, game.Player3, mimicCreature("New Corpse", 5))

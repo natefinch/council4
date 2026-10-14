@@ -321,10 +321,7 @@ func TestMindbreakTrapExilesSpellCopyWithoutCard(t *testing.T) {
 	}
 }
 
-// TestMindbreakTrapExilesCommanderToCommandZone proves exile is an ordinary
-// zone change that honors replacements: a commander spell exiled by Mindbreak
-// is redirected to its owner's command zone (CR 903.9a), not the exile zone.
-func TestMindbreakTrapExilesCommanderToCommandZone(t *testing.T) {
+func TestMindbreakTrapCommanderArrivesInExileBeforeCommandZoneSBA(t *testing.T) {
 	configs := [game.NumPlayers]game.PlayerConfig{
 		game.Player2: {Commander: commanderDef("Exiled General", color.Green)},
 	}
@@ -334,6 +331,7 @@ func TestMindbreakTrapExilesCommanderToCommandZone(t *testing.T) {
 	if commanderID == 0 {
 		t.Fatal("player2 has no commander instance")
 	}
+	g.Players[game.Player2].CommandZone.Remove(commanderID)
 	commanderSpell := &game.StackObject{
 		ID:         g.IDGen.Next(),
 		Kind:       game.StackSpell,
@@ -348,9 +346,10 @@ func TestMindbreakTrapExilesCommanderToCommandZone(t *testing.T) {
 	if stackContainsObject(g, commanderSpell.ID) {
 		t.Fatal("commander spell remained on the stack")
 	}
-	if g.Players[game.Player2].Exile.Contains(commanderID) {
-		t.Fatal("commander went to exile instead of the command zone")
+	if !g.Players[game.Player2].Exile.Contains(commanderID) {
+		t.Fatal("commander did not enter exile")
 	}
+	engine.applyStateBasedActions(g)
 	if !g.Players[game.Player2].CommandZone.Contains(commanderID) {
 		t.Fatal("exiled commander was not redirected to the command zone")
 	}
