@@ -796,6 +796,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 			continue
 		}
 		replacement.ID = g.IDGen.Next()
+		replacement.FromSourceAbility = true
 		replacement.SourceObjectID = permanent.ObjectID
 		replacement.SourceCardID = permanent.CardInstanceID
 		replacement.Controller = effectiveController(g, permanent)

@@ -181,6 +181,11 @@ type ContinuousEffect struct {
 	SetSubtypes    []types.Sub
 	AddSubtypes    []types.Sub
 	RemoveSubtypes []types.Sub
+	// SetBasicLandTypes implements CR 305.7 at LayerType: replace only land
+	// subtypes, remove intrinsic/copiable abilities, and supply the new intrinsic
+	// mana abilities. Other card types, subtypes, and supertypes are preserved.
+	// AddSubtypes instead retains existing land types and abilities.
+	SetBasicLandTypes []types.Sub
 	// AddEveryCreatureType adds every creature subtype to the affected object at
 	// LayerType ("[group/this creature] is/are every creature type", Maskwood
 	// Nexus, Mistform Ultimus). It mirrors the Changeling keyword's type-layer

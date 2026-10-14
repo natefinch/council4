@@ -1341,6 +1341,17 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 }
 
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
+	if len(continuous.SetBasicLandTypes) > 0 {
+		if continuous.Layer != LayerType {
+			v.add(faceName, appendPath(path, "Layer"), CardDefIssueInvalidAbilityBody, "setting basic land types requires the type layer")
+		}
+		for _, subtype := range continuous.SetBasicLandTypes {
+			if subtype != types.Plains && subtype != types.Island && subtype != types.Swamp &&
+				subtype != types.Mountain && subtype != types.Forest {
+				v.add(faceName, appendPath(path, "SetBasicLandTypes"), CardDefIssueInvalidAbilityBody, "setting basic land types requires basic land subtypes")
+			}
+		}
+	}
 	for i := range continuous.AddAbilities {
 		abilityPath := appendPath(path, fmt.Sprintf("AddAbilities[%d]", i))
 		v.validateAbilityBody(faceName, abilityPath, continuous.AddAbilities[i], nil)

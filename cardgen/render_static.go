@@ -237,7 +237,7 @@ func validateContinuousEffectLayerFields(effect *game.ContinuousEffect) error {
 			return keywordOnAbility
 		}
 		if len(effect.AddTypes) == 0 && len(effect.AddSubtypes) == 0 &&
-			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 &&
+			len(effect.SetTypes) == 0 && len(effect.SetSubtypes) == 0 && len(effect.SetBasicLandTypes) == 0 &&
 			len(effect.AddSupertypes) == 0 && len(effect.SetSupertypes) == 0 &&
 			len(effect.RemoveTypes) == 0 && len(effect.RemoveSubtypes) == 0 &&
 			len(effect.RemoveSupertypes) == 0 &&

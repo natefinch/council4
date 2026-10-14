@@ -801,7 +801,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			def = nil
 		}
 		if def != nil {
-			staticMatches = staticETBReplacementEffects(ctx, g, permanent, def, event)
+			staticMatches = staticETBReplacementEffects(ctx, g, permanent, event)
 		}
 	}
 	matches := matchingETBReplacementEffects(g, permanent, event)
@@ -1429,10 +1429,13 @@ func colorWordForMana(c mana.Color) (string, bool) {
 	}
 }
 
-func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, def *game.CardDef, event game.Event) []game.ReplacementEffect {
+func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, event game.Event) []game.ReplacementEffect {
 	var replacements []game.ReplacementEffect
-	for i := range def.ReplacementAbilities {
-		ability := &def.ReplacementAbilities[i]
+	for _, body := range permanentEffectiveAbilitiesView(g, permanent) {
+		ability, ok := body.(*game.ReplacementAbility)
+		if !ok {
+			continue
+		}
 		// Optional entry-to-zone replacements (Mox Diamond) are resolved before
 		// entry by optionalEntryReplacementDeclined; skip them here so the
 		// payment is not prompted twice.
@@ -1485,8 +1488,11 @@ func optionalEntryReplacementDeclined(ctx enterBattlefieldContext, g *game.Game,
 	if def == nil || card == nil || permanent.FaceDown {
 		return false
 	}
-	for i := range def.ReplacementAbilities {
-		ability := &def.ReplacementAbilities[i]
+	for _, body := range permanentEffectiveAbilitiesView(g, permanent) {
+		ability, ok := body.(*game.ReplacementAbility)
+		if !ok {
+			continue
+		}
 		if !ability.UnlessPaid.Exists || ability.Replacement.ReplaceToZone == zone.None {
 			continue
 		}
@@ -2296,7 +2302,8 @@ func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect
 		return true
 	}
 	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
-	return ok && activeBattlefieldPermanent(source)
+	return ok && activeBattlefieldPermanent(source) &&
+		(!replacement.FromSourceAbility || !permanentValuesBeforeLayer(g, source, game.LayerAbility).intrinsicAbilitiesRemoved)
 }
 
 // replacementEventPlayer returns the player who chooses among several applicable

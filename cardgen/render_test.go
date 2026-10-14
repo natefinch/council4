@@ -83,6 +83,7 @@ func TestRenderContinuousDynamicPT(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	for _, want := range []string{
 		"PowerDeltaDynamic: opt.Val(game.DynamicAmount{",
 		"ToughnessDeltaDynamic: opt.Val(game.DynamicAmount{",
@@ -91,6 +92,23 @@ func TestRenderContinuousDynamicPT(t *testing.T) {
 	} {
 		if !strings.Contains(rendered, want) {
 			t.Fatalf("rendered continuous effect missing %q:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRenderContinuousBasicLandTypeSet(t *testing.T) {
+	rendered, err := (Renderer{}).renderContinuousEffect(newRenderCtx(), &game.ContinuousEffect{
+		Layer: game.LayerType, SetBasicLandTypes: []types.Sub{types.Mountain},
+		Group: game.BattlefieldGroup(game.Selection{
+			RequiredTypes: []types.Card{types.Land}, ExcludedSupertype: types.Basic,
+		}),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"game.LayerType", "SetBasicLandTypes: []types.Sub{types.Mountain}", "ExcludedSupertype: types.Basic"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("missing %q from typed rendering: %s", want, rendered)
 		}
 	}
 }

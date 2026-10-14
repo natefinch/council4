@@ -31,17 +31,18 @@ func dynamicValuePtr(v opt.V[game.DynamicValue]) *game.DynamicValue {
 }
 
 type permanentEffectiveValues struct {
-	name                string
-	oracleText          string
-	colors              []color.Color
-	supertypes          []types.Super
-	types               []types.Card
-	subtypes            []types.Sub
-	abilities           []game.Ability
-	resolutionUses      map[int]game.ActivatedAbilityResolutionUse
-	triggerOrigins      map[int]game.TriggerOrigin
-	triggerGrantOrigins map[*game.Ability]game.TriggerOrigin
-	controller          game.PlayerID
+	name                      string
+	oracleText                string
+	colors                    []color.Color
+	supertypes                []types.Super
+	types                     []types.Card
+	subtypes                  []types.Sub
+	abilities                 []game.Ability
+	resolutionUses            map[int]game.ActivatedAbilityResolutionUse
+	triggerOrigins            map[int]game.TriggerOrigin
+	triggerGrantOrigins       map[*game.Ability]game.TriggerOrigin
+	controller                game.PlayerID
+	intrinsicAbilitiesRemoved bool
 
 	power            int
 	powerOK          bool
@@ -175,6 +176,7 @@ type frameCache struct {
 	// callers otherwise treat it read-only.
 	ruleEffects      []game.RuleEffect
 	ruleEffectsBuilt bool
+	landTypes        *landTypeLayerResult
 }
 
 // beforeLayerKey identifies a permanentValuesBeforeLayer result: a permanent and
@@ -263,12 +265,7 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 	defer g.EndCharacteristicComputation(permanent.ObjectID)
 
 	values := basePermanentValues(g, permanent)
-	baseSubtypes := append([]types.Sub(nil), values.subtypes...)
-	if permanent.FaceDown {
-		baseSubtypes = nil
-	}
 	applyContinuousLayers(g, permanent, &values)
-	applyAddedBasicLandManaAbilities(&values, baseSubtypes)
 	for _, keyword := range keywordCounters(permanent) {
 		values.keywords.set(keyword, true)
 	}
@@ -677,6 +674,9 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 		if layer == game.LayerType && values.keywords.has(game.Changeling) {
 			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
+		if layer == game.LayerType && applyBasicLandTypeLayer(g, permanent, values, sources) {
+			continue
+		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
 		if layer == game.LayerPowerToughnessModify && hasCounterEffect {
 			effects = append(effects, counterEffect)
@@ -761,6 +761,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		if layer == game.LayerType && values.keywords.has(game.Changeling) {
 			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
+		if layer == game.LayerType && applyBasicLandTypeLayer(g, permanent, &values, sources) {
+			continue
+		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
@@ -835,7 +838,7 @@ func staticAbilityContinuousEffectsForLayer(g *game.Game, permanent *game.Perman
 		if source.permanent != nil && layer != game.LayerControl {
 			source.controller = effectiveController(g, source.permanent)
 		}
-		effects = append(effects, staticAbilitySourceContinuousEffects(g, source, permanent, values, layer)...)
+		effects = append(effects, staticAbilitySourceContinuousEffects(g, source, permanent, values, layer, sources)...)
 	}
 	return effects
 }
@@ -975,14 +978,18 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 	}
 }
 
-func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer) []game.ContinuousEffect {
+func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
 	var effects []game.ContinuousEffect
 	for i := range source.face.StaticAbilities {
 		body := &source.face.StaticAbilities[i]
 		if !staticAbilityFunctionsFromSource(body, source) || !staticAbilityHasEffectForLayer(body, layer) {
 			continue
 		}
-		if !conditionSatisfied(g, conditionContext{
+		if !landTypeStaticBodyApplies(g, source, i, body, permanent, layer, sources) {
+			continue
+		}
+		continued := landTypeBodyContinues(g, source, i, body, permanent, layer, sources)
+		if !continued && !conditionSatisfied(g, conditionContext{
 			controller:            source.controller,
 			source:                source.permanent,
 			characteristicsBefore: layer,
@@ -1034,7 +1041,7 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 				}
 				staticEffect.AffectedObjectID = source.permanent.ObjectID
 			}
-			if continuousEffectApplies(g, permanent, values, &staticEffect) {
+			if continued || continuousEffectApplies(g, permanent, values, &staticEffect) {
 				effects = append(effects, staticEffect)
 			}
 		}
@@ -1638,6 +1645,7 @@ func recalculateDynamicPT(g *game.Game, permanent *game.Permanent, values *perma
 }
 
 func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game.ContinuousEffect) {
+	oldSubtypes := slices.Clone(values.subtypes)
 	if effect.SetSupertypes != nil {
 		values.supertypes = append([]types.Super(nil), effect.SetSupertypes...)
 	}
@@ -1680,6 +1688,20 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 		}
 		values.subtypes = appendUniqueSubtypes(filtered, choice.Subtype)
 	}
+	if len(effect.SetBasicLandTypes) > 0 && slices.Contains(values.types, types.Land) {
+		landTypes := types.SubtypesForType(types.Land)
+		values.subtypes = slices.DeleteFunc(values.subtypes, func(subtype types.Sub) bool {
+			return slices.Contains(landTypes, subtype)
+		})
+		values.subtypes = appendUniqueSubtypes(values.subtypes, effect.SetBasicLandTypes...)
+		values.abilities = nil
+		values.resolutionUses = nil
+		values.triggerOrigins = nil
+		values.keywords.clear()
+		values.intrinsicAbilitiesRemoved = true
+		oldSubtypes = nil
+	}
+	applyAddedBasicLandManaAbilities(values, oldSubtypes)
 }
 
 func sourceEntryChoice(g *game.Game, effect *game.ContinuousEffect, key game.ChoiceKey) (game.ResolutionChoiceResult, bool) {
@@ -1708,6 +1730,9 @@ var basicLandSubtypes = [...]types.Sub{types.Plains, types.Island, types.Swamp, 
 // lands that already have the granted type while letting any other land tap for
 // the new color.
 func applyAddedBasicLandManaAbilities(values *permanentEffectiveValues, baseSubtypes []types.Sub) {
+	if !slices.Contains(values.types, types.Land) {
+		return
+	}
 	for _, subtype := range values.subtypes {
 		manaColor, ok := basicLandSubtypeManaColor(subtype)
 		if !ok || slices.Contains(baseSubtypes, subtype) {

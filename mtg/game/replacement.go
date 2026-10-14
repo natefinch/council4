@@ -798,6 +798,10 @@ type ReplacementEffect struct {
 	// counter on it." — Summon: Fenrir chapter II). It is zero for every
 	// replacement that is not bound to one specific card instance.
 	AffectedCardID id.ID
+	// FromSourceAbility marks a registered intrinsic replacement declaration,
+	// rather than an effect created by a resolving spell or ability. CR 305.7
+	// can erase the former; it does not end the latter's stated duration.
+	FromSourceAbility bool
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

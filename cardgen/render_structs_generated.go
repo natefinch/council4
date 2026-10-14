@@ -312,6 +312,7 @@ func isZeroGameContinuousEffect(v game.ContinuousEffect) bool {
 		!(len(v.SetSubtypes) > 0) &&
 		!(len(v.AddSubtypes) > 0) &&
 		!(len(v.RemoveSubtypes) > 0) &&
+		!(len(v.SetBasicLandTypes) > 0) &&
 		!(v.AddEveryCreatureType) &&
 		!(v.AddEveryBasicLandType) &&
 		!(v.AddSubtypeFromEntryChoice != "") &&
@@ -777,7 +778,8 @@ func isZeroGameReplacementEffect(v game.ReplacementEffect) bool {
 		!(v.RedirectCounter.Exists) &&
 		!(v.AffectedObjectID != 0) &&
 		!(v.AffectedObjectMustBeCreature) &&
-		!(v.AffectedCardID != 0)
+		!(v.AffectedCardID != 0) &&
+		!(v.FromSourceAbility)
 }
 
 // isZeroGameTriggerPattern reports whether every field of a game.TriggerPattern holds its zero value.
@@ -4444,199 +4446,212 @@ func (r Renderer) renderGameContinuousEffect(ctx *renderCtx, v game.ContinuousEf
 		lit80 := compactNamedSliceLit("", "types.Sub", items81)
 		fields = append(fields, "RemoveSubtypes: "+lit80+",")
 	}
+	if len(v.SetBasicLandTypes) > 0 {
+		var items86 []string
+		for _, item87 := range v.SetBasicLandTypes {
+			lit88, err89 := enumLiteral(typesSubLiterals, "types.Sub", item87)
+			if err89 != nil {
+				return "", fmt.Errorf("game.ContinuousEffect.SetBasicLandTypes[]: %w", err89)
+			}
+			ctx.need(importTypes)
+			items86 = append(items86, lit88)
+		}
+		lit85 := compactNamedSliceLit("", "types.Sub", items86)
+		fields = append(fields, "SetBasicLandTypes: "+lit85+",")
+	}
 	if v.AddEveryCreatureType {
-		lit85 := strconv.FormatBool(bool(v.AddEveryCreatureType))
-		fields = append(fields, "AddEveryCreatureType: "+lit85+",")
+		lit90 := strconv.FormatBool(bool(v.AddEveryCreatureType))
+		fields = append(fields, "AddEveryCreatureType: "+lit90+",")
 	}
 	if v.AddEveryBasicLandType {
-		lit86 := strconv.FormatBool(bool(v.AddEveryBasicLandType))
-		fields = append(fields, "AddEveryBasicLandType: "+lit86+",")
+		lit91 := strconv.FormatBool(bool(v.AddEveryBasicLandType))
+		fields = append(fields, "AddEveryBasicLandType: "+lit91+",")
 	}
 	if v.AddSubtypeFromEntryChoice != "" {
-		lit87, err88 := openStringLiteral(gameChoiceKeyLiterals, "game.ChoiceKey", v.AddSubtypeFromEntryChoice)
-		if err88 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.AddSubtypeFromEntryChoice: %w", err88)
+		lit92, err93 := openStringLiteral(gameChoiceKeyLiterals, "game.ChoiceKey", v.AddSubtypeFromEntryChoice)
+		if err93 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.AddSubtypeFromEntryChoice: %w", err93)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "AddSubtypeFromEntryChoice: "+lit87+",")
+		fields = append(fields, "AddSubtypeFromEntryChoice: "+lit92+",")
 	}
 	if v.SetSubtypeFromSourceChoice != "" {
-		lit89, err90 := openStringLiteral(gameChoiceKeyLiterals, "game.ChoiceKey", v.SetSubtypeFromSourceChoice)
-		if err90 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetSubtypeFromSourceChoice: %w", err90)
+		lit94, err95 := openStringLiteral(gameChoiceKeyLiterals, "game.ChoiceKey", v.SetSubtypeFromSourceChoice)
+		if err95 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.SetSubtypeFromSourceChoice: %w", err95)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "SetSubtypeFromSourceChoice: "+lit89+",")
+		fields = append(fields, "SetSubtypeFromSourceChoice: "+lit94+",")
 	}
 	if v.SetSubtypeChoiceType != "" {
-		lit91, err92 := enumLiteral(typesCardLiterals, "types.Card", v.SetSubtypeChoiceType)
-		if err92 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetSubtypeChoiceType: %w", err92)
+		lit96, err97 := enumLiteral(typesCardLiterals, "types.Card", v.SetSubtypeChoiceType)
+		if err97 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.SetSubtypeChoiceType: %w", err97)
 		}
 		ctx.need(importTypes)
-		fields = append(fields, "SetSubtypeChoiceType: "+lit91+",")
+		fields = append(fields, "SetSubtypeChoiceType: "+lit96+",")
 	}
 	if len(v.SetColors) > 0 {
-		var items94 []string
-		for _, item95 := range v.SetColors {
-			lit96, err97 := enumLiteral(colorColorLiterals, "color.Color", item95)
-			if err97 != nil {
-				return "", fmt.Errorf("game.ContinuousEffect.SetColors[]: %w", err97)
-			}
-			ctx.need(importColor)
-			items94 = append(items94, lit96)
-		}
-		lit93 := compactNamedSliceLit("", "color.Color", items94)
-		fields = append(fields, "SetColors: "+lit93+",")
-	}
-	if len(v.AddColors) > 0 {
 		var items99 []string
-		for _, item100 := range v.AddColors {
+		for _, item100 := range v.SetColors {
 			lit101, err102 := enumLiteral(colorColorLiterals, "color.Color", item100)
 			if err102 != nil {
-				return "", fmt.Errorf("game.ContinuousEffect.AddColors[]: %w", err102)
+				return "", fmt.Errorf("game.ContinuousEffect.SetColors[]: %w", err102)
 			}
 			ctx.need(importColor)
 			items99 = append(items99, lit101)
 		}
 		lit98 := compactNamedSliceLit("", "color.Color", items99)
-		fields = append(fields, "AddColors: "+lit98+",")
+		fields = append(fields, "SetColors: "+lit98+",")
 	}
-	if len(v.RemoveColors) > 0 {
+	if len(v.AddColors) > 0 {
 		var items104 []string
-		for _, item105 := range v.RemoveColors {
+		for _, item105 := range v.AddColors {
 			lit106, err107 := enumLiteral(colorColorLiterals, "color.Color", item105)
 			if err107 != nil {
-				return "", fmt.Errorf("game.ContinuousEffect.RemoveColors[]: %w", err107)
+				return "", fmt.Errorf("game.ContinuousEffect.AddColors[]: %w", err107)
 			}
 			ctx.need(importColor)
 			items104 = append(items104, lit106)
 		}
 		lit103 := compactNamedSliceLit("", "color.Color", items104)
-		fields = append(fields, "RemoveColors: "+lit103+",")
+		fields = append(fields, "AddColors: "+lit103+",")
+	}
+	if len(v.RemoveColors) > 0 {
+		var items109 []string
+		for _, item110 := range v.RemoveColors {
+			lit111, err112 := enumLiteral(colorColorLiterals, "color.Color", item110)
+			if err112 != nil {
+				return "", fmt.Errorf("game.ContinuousEffect.RemoveColors[]: %w", err112)
+			}
+			ctx.need(importColor)
+			items109 = append(items109, lit111)
+		}
+		lit108 := compactNamedSliceLit("", "color.Color", items109)
+		fields = append(fields, "RemoveColors: "+lit108+",")
 	}
 	if v.SetColorless {
-		lit108 := strconv.FormatBool(bool(v.SetColorless))
-		fields = append(fields, "SetColorless: "+lit108+",")
+		lit113 := strconv.FormatBool(bool(v.SetColorless))
+		fields = append(fields, "SetColorless: "+lit113+",")
 	}
 	if len(v.AddKeywords) > 0 {
-		var items110 []string
-		for _, item111 := range v.AddKeywords {
-			lit112, err113 := enumLiteral(gameKeywordLiterals, "game.Keyword", item111)
-			if err113 != nil {
-				return "", fmt.Errorf("game.ContinuousEffect.AddKeywords[]: %w", err113)
-			}
-			ctx.need(importGame)
-			items110 = append(items110, lit112)
-		}
-		lit109 := compactNamedSliceLit("", "game.Keyword", items110)
-		fields = append(fields, "AddKeywords: "+lit109+",")
-	}
-	if len(v.RemoveKeywords) > 0 {
 		var items115 []string
-		for _, item116 := range v.RemoveKeywords {
+		for _, item116 := range v.AddKeywords {
 			lit117, err118 := enumLiteral(gameKeywordLiterals, "game.Keyword", item116)
 			if err118 != nil {
-				return "", fmt.Errorf("game.ContinuousEffect.RemoveKeywords[]: %w", err118)
+				return "", fmt.Errorf("game.ContinuousEffect.AddKeywords[]: %w", err118)
 			}
 			ctx.need(importGame)
 			items115 = append(items115, lit117)
 		}
 		lit114 := compactNamedSliceLit("", "game.Keyword", items115)
-		fields = append(fields, "RemoveKeywords: "+lit114+",")
+		fields = append(fields, "AddKeywords: "+lit114+",")
 	}
-	if len(v.AddAbilities) > 0 {
+	if len(v.RemoveKeywords) > 0 {
 		var items120 []string
-		for _, item121 := range v.AddAbilities {
-			lit122, err123 := r.renderGameAbilityValue(ctx, item121)
+		for _, item121 := range v.RemoveKeywords {
+			lit122, err123 := enumLiteral(gameKeywordLiterals, "game.Keyword", item121)
 			if err123 != nil {
-				return "", fmt.Errorf("game.ContinuousEffect.AddAbilities[]: %w", err123)
+				return "", fmt.Errorf("game.ContinuousEffect.RemoveKeywords[]: %w", err123)
 			}
 			ctx.need(importGame)
-			items120 = append(items120, lit122+",")
+			items120 = append(items120, lit122)
 		}
-		lit119 := namedSliceLit("", "game.Ability", items120)
-		fields = append(fields, "AddAbilities: "+lit119+",")
+		lit119 := compactNamedSliceLit("", "game.Keyword", items120)
+		fields = append(fields, "RemoveKeywords: "+lit119+",")
+	}
+	if len(v.AddAbilities) > 0 {
+		var items125 []string
+		for _, item126 := range v.AddAbilities {
+			lit127, err128 := r.renderGameAbilityValue(ctx, item126)
+			if err128 != nil {
+				return "", fmt.Errorf("game.ContinuousEffect.AddAbilities[]: %w", err128)
+			}
+			ctx.need(importGame)
+			items125 = append(items125, lit127+",")
+		}
+		lit124 := namedSliceLit("", "game.Ability", items125)
+		fields = append(fields, "AddAbilities: "+lit124+",")
 	}
 	if v.RemoveAllAbilities {
-		lit124 := strconv.FormatBool(bool(v.RemoveAllAbilities))
-		fields = append(fields, "RemoveAllAbilities: "+lit124+",")
+		lit129 := strconv.FormatBool(bool(v.RemoveAllAbilities))
+		fields = append(fields, "RemoveAllAbilities: "+lit129+",")
 	}
 	if v.SetPower.Exists {
-		lit126, err127 := r.renderGamePT(ctx, v.SetPower.Val)
-		if err127 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetPower: %w", err127)
+		lit131, err132 := r.renderGamePT(ctx, v.SetPower.Val)
+		if err132 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.SetPower: %w", err132)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit125 := "opt.Val(" + lit126 + ")"
-		fields = append(fields, "SetPower: "+lit125+",")
+		lit130 := "opt.Val(" + lit131 + ")"
+		fields = append(fields, "SetPower: "+lit130+",")
 	}
 	if v.SetToughness.Exists {
-		lit129, err130 := r.renderGamePT(ctx, v.SetToughness.Val)
-		if err130 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetToughness: %w", err130)
+		lit134, err135 := r.renderGamePT(ctx, v.SetToughness.Val)
+		if err135 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.SetToughness: %w", err135)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit128 := "opt.Val(" + lit129 + ")"
-		fields = append(fields, "SetToughness: "+lit128+",")
+		lit133 := "opt.Val(" + lit134 + ")"
+		fields = append(fields, "SetToughness: "+lit133+",")
 	}
 	if v.SetPowerDynamic.Exists {
-		lit132, err133 := r.renderGameDynamicAmount(ctx, v.SetPowerDynamic.Val)
-		if err133 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetPowerDynamic: %w", err133)
+		lit137, err138 := r.renderGameDynamicAmount(ctx, v.SetPowerDynamic.Val)
+		if err138 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.SetPowerDynamic: %w", err138)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit131 := "opt.Val(" + lit132 + ")"
-		fields = append(fields, "SetPowerDynamic: "+lit131+",")
+		lit136 := "opt.Val(" + lit137 + ")"
+		fields = append(fields, "SetPowerDynamic: "+lit136+",")
 	}
 	if v.SetToughnessDynamic.Exists {
-		lit135, err136 := r.renderGameDynamicAmount(ctx, v.SetToughnessDynamic.Val)
-		if err136 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.SetToughnessDynamic: %w", err136)
-		}
-		ctx.need(importGame)
-		ctx.need(importOpt)
-		lit134 := "opt.Val(" + lit135 + ")"
-		fields = append(fields, "SetToughnessDynamic: "+lit134+",")
-	}
-	if v.PowerDelta != 0 {
-		lit137 := strconv.FormatInt(int64(v.PowerDelta), 10)
-		fields = append(fields, "PowerDelta: "+lit137+",")
-	}
-	if v.ToughnessDelta != 0 {
-		lit138 := strconv.FormatInt(int64(v.ToughnessDelta), 10)
-		fields = append(fields, "ToughnessDelta: "+lit138+",")
-	}
-	if v.PowerDeltaDynamic.Exists {
-		lit140, err141 := r.renderGameDynamicAmount(ctx, v.PowerDeltaDynamic.Val)
+		lit140, err141 := r.renderGameDynamicAmount(ctx, v.SetToughnessDynamic.Val)
 		if err141 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.PowerDeltaDynamic: %w", err141)
+			return "", fmt.Errorf("game.ContinuousEffect.SetToughnessDynamic: %w", err141)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
 		lit139 := "opt.Val(" + lit140 + ")"
-		fields = append(fields, "PowerDeltaDynamic: "+lit139+",")
+		fields = append(fields, "SetToughnessDynamic: "+lit139+",")
 	}
-	if v.ToughnessDeltaDynamic.Exists {
-		lit143, err144 := r.renderGameDynamicAmount(ctx, v.ToughnessDeltaDynamic.Val)
-		if err144 != nil {
-			return "", fmt.Errorf("game.ContinuousEffect.ToughnessDeltaDynamic: %w", err144)
+	if v.PowerDelta != 0 {
+		lit142 := strconv.FormatInt(int64(v.PowerDelta), 10)
+		fields = append(fields, "PowerDelta: "+lit142+",")
+	}
+	if v.ToughnessDelta != 0 {
+		lit143 := strconv.FormatInt(int64(v.ToughnessDelta), 10)
+		fields = append(fields, "ToughnessDelta: "+lit143+",")
+	}
+	if v.PowerDeltaDynamic.Exists {
+		lit145, err146 := r.renderGameDynamicAmount(ctx, v.PowerDeltaDynamic.Val)
+		if err146 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.PowerDeltaDynamic: %w", err146)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit142 := "opt.Val(" + lit143 + ")"
-		fields = append(fields, "ToughnessDeltaDynamic: "+lit142+",")
+		lit144 := "opt.Val(" + lit145 + ")"
+		fields = append(fields, "PowerDeltaDynamic: "+lit144+",")
+	}
+	if v.ToughnessDeltaDynamic.Exists {
+		lit148, err149 := r.renderGameDynamicAmount(ctx, v.ToughnessDeltaDynamic.Val)
+		if err149 != nil {
+			return "", fmt.Errorf("game.ContinuousEffect.ToughnessDeltaDynamic: %w", err149)
+		}
+		ctx.need(importGame)
+		ctx.need(importOpt)
+		lit147 := "opt.Val(" + lit148 + ")"
+		fields = append(fields, "ToughnessDeltaDynamic: "+lit147+",")
 	}
 	if v.DoublePower {
-		lit145 := strconv.FormatBool(bool(v.DoublePower))
-		fields = append(fields, "DoublePower: "+lit145+",")
+		lit150 := strconv.FormatBool(bool(v.DoublePower))
+		fields = append(fields, "DoublePower: "+lit150+",")
 	}
 	if v.DoubleToughness {
-		lit146 := strconv.FormatBool(bool(v.DoubleToughness))
-		fields = append(fields, "DoubleToughness: "+lit146+",")
+		lit151 := strconv.FormatBool(bool(v.DoubleToughness))
+		fields = append(fields, "DoubleToughness: "+lit151+",")
 	}
 	return structLit("game.ContinuousEffect", fields), nil
 }
@@ -10282,6 +10297,10 @@ func (r Renderer) renderGameReplacementEffect(ctx *renderCtx, v game.Replacement
 	if v.AffectedCardID != 0 {
 		lit219 := "id.ID(" + strconv.FormatInt(int64(v.AffectedCardID), 10) + ")"
 		fields = append(fields, "AffectedCardID: "+lit219+",")
+	}
+	if v.FromSourceAbility {
+		lit220 := strconv.FormatBool(bool(v.FromSourceAbility))
+		fields = append(fields, "FromSourceAbility: "+lit220+",")
 	}
 	return structLit("game.ReplacementEffect", fields), nil
 }
