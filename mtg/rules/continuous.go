@@ -925,6 +925,27 @@ type permanentAbilityComponent struct {
 }
 
 func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permanent, visit func(permanentAbilityComponent)) {
+	if permanent.FaceDown {
+		return
+	}
+	if permanentHasCopyLayer(g, permanent) {
+		// Layer 1 replaces all intrinsic abilities, including merged components.
+		// Read only copiable values here: full effective values would recursively
+		// discover static sources. The blueprint supplies bodies, never identity.
+		def, ok := permanentCopyDef(g, permanent)
+		if !ok || len(def.StaticAbilities) == 0 {
+			return
+		}
+		component := permanentAbilityComponent{
+			face: &def.CardFace, originID: permanentAbilityOrigin(permanent).OriginID,
+			faceIndex: permanent.Face,
+		}
+		if !permanent.Token {
+			component.cardID = permanent.CardInstanceID
+		}
+		visit(component)
+		return
+	}
 	component, ok := staticAbilityPermanentComponent(g, permanent)
 	if !ok {
 		return
