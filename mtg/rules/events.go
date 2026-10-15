@@ -63,6 +63,7 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 			event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
 		}
 	}
+	event.TriggeredAbilities = append(event.TriggeredAbilities, captureInherentMonarchTriggers(g, event)...)
 	return event
 }
 

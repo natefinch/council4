@@ -284,6 +284,22 @@ Global prevention preserves each affected player's ordering choices; a
 single-source one-shot shield prevents only its selected source's instance,
 not every simultaneous source's damage.
 
+The monarch's inherent end-step draw and creature combat-damage transfer are
+source-less triggered abilities (CR 725.2). Events capture their controller as
+the trigger-time monarch and preserve the draw player or damage source's exact
+ObjectID independently. Transfer reads the creature's current controller or LKI
+at resolution (CR 608.2h). Their inline bodies use ordinary
+pending/APNAP placement, responses, counters, copies and resolution without a
+synthetic permanent or source ID. Every qualifying simultaneous damage source
+creates an occurrence, including repeated beneficiaries. Changing the crown
+does not suppress an existing trigger; changing the ability's controller does
+not change which creature its transfer refers to.
+
+`setMonarch` and direct BecomeMonarch instructions remain immediate resolving
+operations and enforce cannot-become restrictions at that point. Captured
+abilities controlled by a departed player are not placed, and a departed
+beneficiary cannot become monarch or draw.
+
 State-based actions destroy creatures with lethal marked damage or 0 effective toughness. Indestructible prevents destroy effects and lethal/deathtouch-damage destruction, but not 0-toughness death; marked damage remains until cleanup. Shield counters prevent damage and replace destruction by removing one shield counter before the permanent moves zones. Effective power and toughness currently include base numeric P/T, +1/+1 and -1/-1 counters, simple until-end-of-turn P/T modifiers, and initial static P/T continuous effects from battlefield permanents. Runtime permanent state also tracks class level and whether a permanent is monstrous; player state tracks Speed and the once-per-turn speed increase guard for Start Your Engines. Card-backed permanents move to their owner's graveyard; tokens move through the destination zone and then cease to exist as an SBA.
 
 This slice intentionally omits conditional, planeswalker-inclusive, and non-mana attack-cost variants.

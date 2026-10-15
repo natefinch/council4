@@ -75,10 +75,10 @@ const (
 	// such targets it has. Controller and Player identify the player who
 	// committed the crime, and StackObjectID identifies the spell or ability.
 	EventCrimeCommitted
-	// EventBecameMonarch marks a player becoming the monarch (CR 720.2). It is
+	// EventBecameMonarch marks a player becoming the monarch (CR 725.3). It is
 	// emitted once each time a player who was not already the monarch takes the
-	// crown, whether by a "become the monarch" effect or by dealing combat damage
-	// to the monarch, so "whenever you/an opponent become(s) the monarch"
+	// crown as a BecomeMonarch instruction resolves, including the inherent
+	// combat-damage trigger, so "whenever you/an opponent become(s) the monarch"
 	// triggers fire. Controller and Player identify the new monarch.
 	EventBecameMonarch
 	// EventCardPlayedFromExile marks a player playing a card (casting it as a

@@ -421,7 +421,6 @@ type preparedDamageResult struct {
 	lifelink    bool
 	commanders  []id.ID
 	toxic       int
-	monarch     bool
 	initiative  bool
 	ring        bool
 }
@@ -469,7 +468,6 @@ func prepareDamageResult(g *game.Game, member pendingDamage, combat bool) prepar
 			if result.toxic > 0 {
 				result.toxic = replacementPlayerCounterPlacementAmount(g, event.controller, event.player, counter.Poison, result.toxic)
 			}
-			result.monarch = g.Players[event.player].IsMonarch && event.player != event.controller
 			result.initiative = g.Players[event.player].HasInitiative && event.player != event.controller
 			result.ring = g.Players[event.controller].RingLevel >= ringMaxLevel && isRingBearer(g, source)
 		}
@@ -589,9 +587,6 @@ func resolveDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 	}
 	batch.finish()
 	for _, result := range results {
-		if result.monarch {
-			setMonarch(g, result.damage.event.controller)
-		}
 		if result.initiative {
 			setInitiative(g, result.damage.event.controller)
 		}

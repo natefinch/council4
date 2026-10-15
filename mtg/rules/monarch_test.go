@@ -84,8 +84,8 @@ func TestMonarchDrawsAtEndStep(t *testing.T) {
 	}
 }
 
-// TestCombatDamageStealsMonarch covers CR 720.6: when a creature deals combat
-// damage to the monarch, that creature's controller becomes the monarch.
+// TestCombatDamageStealsMonarch covers the source-less CR 725.2 ability:
+// combat damage queues the transfer, which takes effect on resolution.
 func TestCombatDamageStealsMonarch(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -99,6 +99,14 @@ func TestCombatDamageStealsMonarch(t *testing.T) {
 
 	markPlayerCombatDamage(g, source, game.Player2, 2, &TurnLog{})
 
+	if !g.Players[game.Player2].IsMonarch {
+		t.Fatal("combat damage changed monarchy before its inherent trigger resolved")
+	}
+	engine := NewEngine(nil)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("combat damage did not put the inherent trigger on the stack")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
 	if !g.Players[game.Player1].IsMonarch {
 		t.Fatal("attacking creature's controller did not become the monarch")
 	}

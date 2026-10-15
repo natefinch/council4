@@ -2,11 +2,12 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
 // currentMonarch returns the player who currently holds the monarch designation
-// (CR 720), or an unset value when no player is the monarch. At most one player
+// (CR 725), or an unset value when no player is the monarch. At most one player
 // is the monarch at a time.
 func currentMonarch(g *game.Game) opt.V[game.PlayerID] {
 	for i := range g.Players {
@@ -30,12 +31,12 @@ func livingMonarch(g *game.Game) opt.V[game.PlayerID] {
 	return opt.V[game.PlayerID]{}
 }
 
-// setMonarch makes playerID the monarch (CR 720.2). At most one player is the
+// setMonarch makes playerID the monarch (CR 725.3). At most one player is the
 // monarch at a time, so any prior monarch loses the designation. It reports
 // whether playerID is an active player able to take the crown. A player who was
 // not already the monarch emits EventBecameMonarch so "whenever you/an opponent
-// become(s) the monarch" triggers fire (CR 720.2); a player who is already the
-// monarch keeps the crown without re-triggering (CR 720.5).
+// become(s) the monarch" triggers fire; a player who is already the monarch
+// keeps the crown without re-triggering.
 func setMonarch(g *game.Game, playerID game.PlayerID) bool {
 	if playerID < 0 || playerID >= game.NumPlayers {
 		return false
@@ -59,19 +60,37 @@ func setMonarch(g *game.Game, playerID game.PlayerID) bool {
 	return true
 }
 
-// stealMonarchByCombatDamage applies the monarch's combat-damage trigger (CR
-// 720.6): whenever a creature deals combat damage to the monarch, that
-// creature's controller becomes the monarch. A creature dealing damage to its
-// own controller, or to a non-monarch player, leaves the monarchy unchanged.
-func stealMonarchByCombatDamage(g *game.Game, sourceController, defendingPlayer game.PlayerID) {
-	if sourceController == defendingPlayer {
-		return
+func captureInherentMonarchTriggers(g *game.Game, event game.Event) []game.EventTriggeredAbility {
+	monarch := livingMonarch(g)
+	if !monarch.Exists || event.Player != monarch.Val {
+		return nil
 	}
-	defender, ok := playerByID(g, defendingPlayer)
-	if !ok || !defender.IsMonarch {
-		return
+	var instruction game.Primitive
+	text := ""
+	switch event.Kind {
+	case game.EventBeginningOfStep:
+		if event.Step != game.StepEnd {
+			return nil
+		}
+		instruction = game.Draw{Amount: game.Fixed(1), Player: game.EventPlayerReference()}
+		text = "At the beginning of the monarch's end step, that player draws a card."
+	case game.EventDamageDealt:
+		if !event.CombatDamage || event.DamageRecipient != game.DamageRecipientPlayer || event.Amount <= 0 ||
+			!damageSourceHasAllTypes(g, damageEvent{sourceID: event.SourceID, sourceObjectID: event.SourceObjectID}, []types.Card{types.Creature}) {
+			return nil
+		}
+		instruction = game.BecomeMonarch{Player: game.ObjectControllerReference(game.EventPermanentReference())}
+		text = "Whenever a creature deals combat damage to the monarch, its controller becomes the monarch."
+	default:
+		return nil
 	}
-	setMonarch(g, sourceController)
+	return []game.EventTriggeredAbility{{
+		Controller: monarch.Val,
+		Ability: &game.TriggeredAbility{
+			Text:    text,
+			Content: game.Mode{Sequence: []game.Instruction{{Primitive: instruction}}}.Ability(),
+		},
+	}}
 }
 
 // handleBecomeMonarch resolves the BecomeMonarch primitive, making the
