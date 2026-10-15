@@ -1,0 +1,43 @@
+package s
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// SegovianLeviathan is the card definition for Segovian Leviathan.
+//
+// Type: Creature — Leviathan
+// Cost: {4}{U}
+//
+// Oracle text:
+//
+//	Islandwalk (This creature can't be blocked as long as defending player controls an Island.)
+var SegovianLeviathan = newSegovianLeviathan
+
+func newSegovianLeviathan() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Segovian Leviathan",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(4),
+				cost.U,
+			}),
+			Colors:    []color.Color{color.Blue},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Leviathan},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.IslandwalkStaticBody,
+			},
+			OracleText: `
+			Islandwalk (This creature can't be blocked as long as defending player controls an Island.)
+		`,
+		},
+	}
+}

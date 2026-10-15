@@ -19,7 +19,7 @@ import (
 //	Double strike
 //	Éomer enters with a +1/+1 counter on it for each other Human you control.
 //	When Éomer enters, target player becomes the monarch. Éomer deals damage equal to its power to any target.
-var ÉomerKingOfRohan = newÉomerKingOfRohan()
+var ÉomerKingOfRohan = newÉomerKingOfRohan
 
 func newÉomerKingOfRohan() *game.CardDef {
 	return &game.CardDef{

@@ -1,0 +1,146 @@
+package e
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// ExsanguinatorCavalry is the card definition for Exsanguinator Cavalry.
+//
+// Type: Creature — Vampire Knight
+// Cost: {2}{B}
+//
+// Oracle text:
+//
+//	Menace, lifelink
+//	Whenever a Knight you control deals combat damage to a player, put a +1/+1 counter on that creature and create a Blood token. (It's an artifact with "{1}, {T}, Discard a card, Sacrifice this token: Draw a card.")
+var ExsanguinatorCavalry = newExsanguinatorCavalry
+
+func newExsanguinatorCavalry() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Exsanguinator Cavalry",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.B,
+			}),
+			Colors:    []color.Color{color.Black},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Vampire, types.Knight},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.MenaceStaticBody,
+				game.LifelinkStaticBody,
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever a Knight you control deals combat damage to a player, put a +1/+1 counter on that creature and create a Blood token. (It's an artifact with \"{1}, {T}, Discard a card, Sacrifice this token: Draw a card.\")",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:                 game.EventDamageDealt,
+							Controller:            game.TriggerControllerYou,
+							Subject:               game.TriggerSubjectDamageSource,
+							StackObjectKind:       game.StackSpell,
+							DamageRecipient:       game.DamageRecipientPlayer,
+							DamageSourceSelection: game.Selection{SubtypesAny: []types.Sub{types.Knight}},
+							RequireCombatDamage:   true,
+							CounterKind:           counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.AddCounter{
+											Amount:      game.Fixed(1),
+											Object:      game.EventPermanentReference(),
+											CounterKind: counter.PlusOnePlusOne,
+										},
+									},
+									game.Instruction{
+										Primitive: game.CreateToken{
+											Amount: game.Fixed(1),
+											Source: game.TokenDef(exsanguinatorCavalryToken),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Menace, lifelink
+			Whenever a Knight you control deals combat damage to a player, put a +1/+1 counter on that creature and create a Blood token. (It's an artifact with "{1}, {T}, Discard a card, Sacrifice this token: Draw a card.")
+		`,
+		},
+	}
+}
+
+var exsanguinatorCavalryToken = newExsanguinatorCavalryToken()
+
+func newExsanguinatorCavalryToken() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:     "Blood",
+			Types:    []types.Card{types.Artifact},
+			Subtypes: []types.Sub{types.Blood},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					Text: "{1}, {T}, Discard a card, Sacrifice this artifact: Draw a card.",
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(1),
+					}),
+					AdditionalCosts: []cost.Additional{
+						cost.Additional{
+							Kind:        cost.AdditionalTap,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+						cost.Additional{
+							Kind:        cost.AdditionalDiscard,
+							Text:        "Discard a card",
+							Amount:      1,
+							Source:      zone.Hand,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+						cost.Additional{
+							Kind:               cost.AdditionalSacrificeSource,
+							Text:               "Sacrifice this artifact",
+							Amount:             1,
+							MatchPermanentType: true,
+							PermanentType:      types.Artifact,
+							CounterKind:        counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Draw{
+											Amount: game.Fixed(1),
+											Player: game.ControllerReference(),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+		},
+	}
+}

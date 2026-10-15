@@ -1,0 +1,53 @@
+package w
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// WeirdedVampire is the card definition for Weirded Vampire.
+//
+// Type: Creature — Vampire Horror
+// Cost: {3}{B}
+//
+// Oracle text:
+//
+//	Madness {2}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)
+var WeirdedVampire = newWeirdedVampire
+
+func newWeirdedVampire() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Weirded Vampire",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.B,
+			}),
+			Colors:    []color.Color{color.Black},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Vampire, types.Horror},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.StaticAbility{
+					Text: "Madness {2}{B}",
+					KeywordAbilities: []game.KeywordAbility{
+						game.MadnessKeyword{
+							Cost: cost.Mana{
+								cost.O(2),
+								cost.B,
+							},
+						},
+					},
+				},
+			},
+			OracleText: `
+			Madness {2}{B} (If you discard this card, discard it into exile. When you do, cast it for its madness cost or put it into your graveyard.)
+		`,
+		},
+	}
+}

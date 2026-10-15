@@ -1,0 +1,76 @@
+package r
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// RishadanPort is the card definition for Rishadan Port.
+//
+// Type: Land
+//
+// Oracle text:
+//
+//	{T}: Add {C}.
+//	{1}, {T}: Tap target land.
+var RishadanPort = newRishadanPort
+
+func newRishadanPort() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:  "Rishadan Port",
+			Types: []types.Card{types.Land},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					Text: "{1}, {T}: Tap target land.",
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(1),
+					}),
+					AdditionalCosts: []cost.Additional{
+						cost.Additional{
+							Kind:        cost.AdditionalTap,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					},
+					ZoneOfFunction: zone.Battlefield,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MinTargets: 1,
+										MaxTargets: 1,
+										Constraint: "target land",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Land}}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Tap{
+											Object: game.TargetPermanentReference(0),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			ManaAbilities: []game.ManaAbility{
+				game.TapManaAbility(mana.C),
+			},
+			OracleText: `
+			{T}: Add {C}.
+			{1}, {T}: Tap target land.
+		`,
+		},
+	}
+}

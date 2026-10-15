@@ -1,6 +1,6 @@
 # Cards without exact authored production support
 
-Production registry: **2819 entries, 2819 loadable, 40 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17969 entries, 17969 loadable, 40 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `f8f1f1447e8b56484b40ab91f86bd5d3e427b71991a03b3926e64972c1b78601`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -2928,6 +2928,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Demonic Taskmaster** (`162e45f5-edb8-4a13-acdc-8980ce5ba8ac`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonic Torment** (`2172b724-9004-488e-88d3-a5fc48c50e41`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonic Tourist Laser** (`13d9822f-0398-4915-818b-b9fbaf63b93c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Demonic Tutor** (`82004860-e589-4e38-8d61-8c0210e4ea39`) — generated source checked in; excluded from playable registry pending [runtime blocker](https://github.com/natefinch/council4/issues/3289)
 - **Demonlord Belzenlok** (`667ece0e-a474-4e11-8ac4-6c8fc354457c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonlord of Ashmouth** (`049777d0-910d-46d2-9ca1-10277b2fb845`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonmail Hauberk** (`dac85722-d741-4584-8b98-8ac220958a38`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -3027,6 +3028,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Dewdrop Cure** (`07634620-a83a-4ca0-8a60-2a21368a2661`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diabolic Revelation** (`dcf438a7-adc4-4658-b75a-2dd633f595a7`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diabolic Servitude** (`e275cbfb-3d25-4189-84f0-3162eadc7d65`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Diabolic Tutor** (`14589b6b-1814-46f9-a364-83cc15dacac2`) — generated source checked in; excluded from playable registry pending [runtime blocker](https://github.com/natefinch/council4/issues/3289)
 - **Diabolic Vision** (`6b7b1a71-812d-4ff5-b38b-94d1cf634143`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diamond Faerie** (`7a25ccf3-0fe1-447c-bdf4-57ec31b19a0f`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diamond Weapon** (`3beba02f-4d50-4a93-a13b-78d4595bfbfc`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -3070,7 +3072,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Dire-Strain Rampage** (`55281479-9d30-4f3e-afd0-66b0df5de68c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diregraf Escort** (`f28a67d8-05ec-4d72-aa17-670ce1136f5c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diregraf Rebirth** (`1920254f-0f65-4426-aabc-f3807476b67b`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Dirgur Focusmage // Braingeyser** (`655ee0db-1913-464f-bd06-072c6bf446bd`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Dirgur Focusmage // Braingeyser** (`655ee0db-1913-464f-bd06-072c6bf446bd`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Dirgur Nemesis** (`c08b444b-6617-4199-b9da-5d4e81cd7597`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Disappear** (`039e2e39-8f7f-43f2-8448-de35ef7b8dc1`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Disarm** (`44d54814-2eeb-4df8-b8d3-789f0bcb307a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -3533,7 +3535,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Eidolon of Astral Winds** (`4c9b8b82-7f61-4dc0-aeac-fba5dc115e91`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Eidolon of Countless Battles** (`441b51b0-ecd0-466d-9ca8-e754eb563aec`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Eidolon of Obstruction** (`15d38195-b661-42c1-82c9-1af2a3ba2ea5`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Eiganjo Dynastorian // Replenish** (`09b7ea91-2620-4c45-af3c-60bbeab89966`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Eiganjo Dynastorian // Replenish** (`09b7ea91-2620-4c45-af3c-60bbeab89966`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Eiganjo Uprising** (`fe2fe9f2-908b-49a9-9648-b01e0417a364`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Eight-and-a-Half-Tails** (`01c8d29f-4924-4d55-80bc-0c0c06bcb733`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Eirdu, Carrier of Dawn // Isilu, Carrier of Twilight** (`36af3c2c-49d7-46ea-ab02-c254b332448e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -3657,10 +3659,10 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Emergent Woodwurm** (`a74e41b4-6284-453c-a586-d575735dca65`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Emeria Shepherd** (`473da1b6-232b-4428-a66d-30262246b47a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Emeria's Call // Emeria, Shattered Skyclave** (`6ec2a242-9068-4ee2-8ac8-8341cc570f56`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Emeritus of Abundance // Regrowth** (`e5152e8d-9f55-493d-a0fc-753cc72ee299`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Emeritus of Abundance // Regrowth** (`e5152e8d-9f55-493d-a0fc-753cc72ee299`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Emeritus of Conflict // Lightning Bolt** (`5963eef1-1022-42b1-8a0c-fc9850bfc2a3`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
-- **Emeritus of Ideation // Ancestral Recall** (`24a29be4-5bc2-469b-b2ce-2fb305c3facb`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Emeritus of Truce // Swords to Plowshares** (`e6c41473-2398-4888-9f0c-467dce7c39a4`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Emeritus of Ideation // Ancestral Recall** (`24a29be4-5bc2-469b-b2ce-2fb305c3facb`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
+- **Emeritus of Truce // Swords to Plowshares** (`e6c41473-2398-4888-9f0c-467dce7c39a4`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Emeritus of Woe // Demonic Tutor** (`93056597-b964-421f-be2f-e92abef1c2a4`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Emet-Selch of the Third Seat** (`634475d9-a1d7-4146-9a37-645d3d162af1`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Emet-Selch, Unsundered // Hades, Sorcerer of Eld** (`3b102ccc-7629-457c-aba6-e9b00fd50c85`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -3696,7 +3698,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Enchanter's Bane** (`1f0548f8-5dec-44b5-b5a9-e55fa4366e08`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Enchantment Alteration** (`c80935bf-c17f-4940-ad9f-3f4e3e8f71bc`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Encircling Fissure** (`39d7569e-62b0-4f37-813a-0985632c66c9`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Encouraging Aviator // Jump** (`d6accaed-ff35-4324-b31b-35e6837bc079`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Encouraging Aviator // Jump** (`d6accaed-ff35-4324-b31b-35e6837bc079`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Encrust** (`2e056743-78ff-45b6-80df-7486d52d5df6`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Encumbered Reejerey** (`7668f7bc-9a43-4024-87c3-995aa0a65aaa`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **End Hostilities** (`7b2e2c4b-b8fd-440c-8a79-de6532022745`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -5073,7 +5075,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Grave Birthing** (`b25962ab-21b5-47f9-bdef-35b911b45671`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Grave Consequences** (`435c8d98-9fa3-40d8-9b7c-32474099e08e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Grave Endeavor** (`917dc5a0-071d-4658-ab58-29ac841260f7`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Grave Researcher // Reanimate** (`6cb8b8c4-0674-4f14-9d89-010969fbb80e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Grave Researcher // Reanimate** (`6cb8b8c4-0674-4f14-9d89-010969fbb80e`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Grave Scrabbler** (`b1afaf1c-2311-4fdc-b78c-98bf1892d1de`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Grave Servitude** (`6f54e7ea-bb87-4ce0-96b6-4fc82605ed2a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Grave Sifter** (`07a26388-773e-4614-a3de-f133c6694d59`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -5354,7 +5356,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Harmonic Convergence** (`400adeec-11b4-4a9c-9466-dcab524d87ea`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Harmonic Sliver** (`1c06c093-18ab-49e6-a82d-38e826d25016`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Harmonious Emergence** (`ad8fd4e9-f6ae-4f24-b806-4509c8f4ee47`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Harmonized Trio // Brainstorm** (`f6036065-7196-44d4-8a27-2199f0e1a03c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Harmonized Trio // Brainstorm** (`f6036065-7196-44d4-8a27-2199f0e1a03c`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Harmony of Nature** (`6c943c9d-090b-41c1-9003-24c91601e589`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Harness Infinity** (`efd31076-2bbe-4c65-9166-19ec0e832b57`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Harness by Force** (`8c7e2596-6c21-4ce0-95dc-5b4dccb4090a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -6305,7 +6307,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Join Forces** (`6f8bf849-890e-4fc7-981f-37ff4b4fb844`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Join Shields** (`1102524d-7287-496f-a18a-5fdae6d4c271`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Join the Maestros** (`849a7ae8-2b4e-4fa5-9607-2bfc961fee40`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Joined Researchers // Secret Rendezvous** (`ec744a2d-4a33-4807-bce0-d95cd5277b1f`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Joined Researchers // Secret Rendezvous** (`ec744a2d-4a33-4807-bce0-d95cd5277b1f`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Joint Assault** (`0f719e56-5203-4138-bbe9-6a37b8ac2512`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Jokulmorder** (`fbf074b2-d650-43b2-b8b8-d7a778dfd27e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Jolene, Plundering Pugilist** (`fb8efd6e-b8f8-4da8-ac65-5b745c02d2bb`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -8111,7 +8113,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Najeela, the Blade-Blossom** (`09619943-6aec-4080-ace5-a0c6ebb23f1c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Nakaya Shade** (`ce969713-fdaa-4c31-b164-76a9b0b9ff81`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Naked Singularity** (`fb5ec55d-4a35-432a-be6e-c295f1b2e603`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Naktamun Lorespinner // Wheel of Fortune** (`c78783e5-868d-4a8b-a4f8-95a92853cf0a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Naktamun Lorespinner // Wheel of Fortune** (`c78783e5-868d-4a8b-a4f8-95a92853cf0a`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Nalathni Dragon** (`0887dc95-3e75-4f72-bf05-4067d3785376`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Nalfeshnee** (`97a85a3e-258e-49b7-8ebe-7efee808da7a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Nalia de'Arnise** (`1bf6248c-658c-4540-8bee-81af79d349be`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -8280,8 +8282,8 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Nighthawk Scavenger** (`379ed4ec-8f2e-448b-9ed2-a3181e2f877e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Nighthowler** (`57b3f7fc-1812-4134-a645-6cef48a8aa71`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Nightkin Ambusher** (`2808d652-907d-4071-b386-814507a1549e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Nightmare** (`bf637a60-738f-4206-82f5-49366d0b6e8e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Nightmare** (`c0c02361-9f45-48f6-83c5-aac57694ee2a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Nightmare** (`bf637a60-738f-4206-82f5-49366d0b6e8e`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
+- **Nightmare** (`c0c02361-9f45-48f6-83c5-aac57694ee2a`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Nightmare Incursion** (`3e734759-d43a-4bbe-baff-26d866ff0923`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Nightmare Lash** (`414f1c42-6b0e-49ce-8b44-17a75b996b68`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Nightmare Unmaking** (`285fecb7-f872-454d-ac2f-bc5615c70cd8`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -10502,7 +10504,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Schema Thief** (`9495b2b4-21bf-488b-a64e-74592bb277d9`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Scheming Aspirant** (`cf4a3b1a-4b87-473e-be1f-3aa3da45c28e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Scheming Fence** (`cef87a98-61a0-4a88-950f-867144f685e3`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Scheming Silvertongue // Sign in Blood** (`44443716-8356-40cd-a879-35264b29108c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Scheming Silvertongue // Sign in Blood** (`44443716-8356-40cd-a879-35264b29108c`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Scheming Symmetry** (`6dfb50d7-359b-4644-90e3-7ecdacee7c12`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Scholar of Combustion** (`ebae61bf-6e8c-4cc9-8071-b63e781f6530`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Scholar of the Lost Trove** (`5f1e9098-f554-4505-974b-cef4b4b7b23d`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -11646,7 +11648,7 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Stench of Evil** (`14062abe-14df-4dbe-ad7b-530e5f6c4988`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Stenn, Paranoid Partisan** (`03d2d7dd-54b6-469e-8b1c-c48db8cc0925`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Stensia Uprising** (`a881bf6e-6247-4adb-9f9c-e4b928692573`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Stensian Sanguinist // Exsanguinate** (`25877c41-39a4-4cc3-ac4b-8f3dd06d579b`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
+- **Stensian Sanguinist // Exsanguinate** (`25877c41-39a4-4cc3-ac4b-8f3dd06d579b`) — compiler rejected; legacy candidate entries: 1; exact production identity not established
 - **Step Between Worlds** (`48b43d53-9a8a-47a2-8610-a54d276d7be7`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Step Right Up** (`aaf6b3ed-2396-46d7-a32d-7d24cc2eb449`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Step Through** (`c4fa89c7-f00d-42ef-bd67-407a288cd054`) — compiler rejected; legacy candidate entries: 0; exact production identity not established

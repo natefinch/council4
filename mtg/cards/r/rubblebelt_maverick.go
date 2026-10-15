@@ -1,0 +1,118 @@
+package r
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// RubblebeltMaverick is the card definition for Rubblebelt Maverick.
+//
+// Type: Creature — Human Detective
+// Cost: {G}
+//
+// Oracle text:
+//
+//	When this creature enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
+//	{G}, Exile this card from your graveyard: Put a +1/+1 counter on target creature. Activate only as a sorcery.
+var RubblebeltMaverick = newRubblebeltMaverick
+
+func newRubblebeltMaverick() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Rubblebelt Maverick",
+			ManaCost: opt.Val(cost.Mana{
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Human, types.Detective},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					Text: "{G}, Exile this card from your graveyard: Put a +1/+1 counter on target creature. Activate only as a sorcery.",
+					ManaCost: opt.Val(cost.Mana{
+						cost.G,
+					}),
+					AdditionalCosts: []cost.Additional{
+						cost.Additional{
+							Kind:        cost.AdditionalExileSource,
+							Text:        "Exile this card from your graveyard",
+							Amount:      1,
+							Source:      zone.Graveyard,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					},
+					ZoneOfFunction: zone.Graveyard,
+					Timing:         game.SorceryOnly,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MinTargets: 1,
+										MaxTargets: 1,
+										Constraint: "target creature",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.AddCounter{
+											Amount:      game.Fixed(1),
+											Object:      game.TargetPermanentReference(0),
+											CounterKind: counter.PlusOnePlusOne,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When this creature enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Surveil{
+											Amount: game.Fixed(2),
+											Player: game.ControllerReference(),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			When this creature enters, surveil 2. (Look at the top two cards of your library, then put any number of them into your graveyard and the rest on top of your library in any order.)
+			{G}, Exile this card from your graveyard: Put a +1/+1 counter on target creature. Activate only as a sorcery.
+		`,
+		},
+	}
+}

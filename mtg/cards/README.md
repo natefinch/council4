@@ -66,6 +66,21 @@ The acceptance scenarios use the pinned Oracle corpus and the official
 
 ## Legacy regeneration
 
+The complete pinned compiler-accepted corpus is checked in: **17,946 card
+definitions and 754 token definitions** (18,700 total). Existing definitions
+are preserved rather than overwritten by the additive import; the exact
+installed paths/digests are recorded in
+[`installed-compiler.json`](../../testdata/card-preservation/installed-compiler.json).
+No generation or Oracle download is needed to use a fresh checkout.
+The [installer](../../cmd/installcompiled/README.md) reproduces this operation.
+
+Authored implementations take precedence over their 24 overlapping compiler
+definitions. The generated copies remain available in the letter packages.
+The generated Demonic Tutor and Diabolic Tutor definitions are also present,
+but the default playable registry excludes them until the proven private-search
+placement defect [#3289](https://github.com/natefinch/council4/issues/3289) is fixed.
+Compiler acceptance and source presence are not runtime certification.
+
 For explicitly assigned compiler correctness or corpus refresh work, compile
 to a temporary tree and inspect it before intentionally updating generated
 definitions. Keep the same corpus input for baseline/candidate comparisons.

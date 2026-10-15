@@ -20,6 +20,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, AnOfferYouCantRefuse, Counterspell, Negate, EssenceScatter, Disallow)
 	entries = append(entries, EladamrisCall, SteelshapersGift, Fabricate, IdyllicTutor, SylvanScrying)
 	for i := range entries {
+		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
 		if entries[i].Verification == "" {
 			entries[i].Verification = "mtg/rules named-card scenarios; mixed production acceptance (#3278)"
 		}
@@ -32,4 +33,20 @@ func verifiedEntries() []cardset.Entry {
 		}
 	}
 	return entries
+}
+
+func replacesCompiledEntry(name string) bool {
+	// These exact authored identities intentionally supersede their newly
+	// installed compiler definitions; the generated sources remain available.
+	switch name {
+	case "An Offer You Can't Refuse", "Bedevil", "Cackling Counterpart",
+		"Counterspell", "Disallow", "Disenchant", "Dualcaster Mage", "Eladamri's Call",
+		"Essence Scatter", "Fabricate", "Fated Infatuation", "Generous Gift",
+		"Idyllic Tutor", "Naturalize", "Negate", "Pongify", "Rapid Hybridization",
+		"Resculpt", "Reverberate", "Steelshaper's Gift", "Sylvan Scrying", "Terminate",
+		"Twincast", "Vindicate":
+		return true
+	default:
+		return false
+	}
 }

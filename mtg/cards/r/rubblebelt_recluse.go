@@ -1,0 +1,43 @@
+package r
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// RubblebeltRecluse is the card definition for Rubblebelt Recluse.
+//
+// Type: Creature — Ogre Berserker
+// Cost: {4}{R}
+//
+// Oracle text:
+//
+//	This creature attacks each combat if able.
+var RubblebeltRecluse = newRubblebeltRecluse
+
+func newRubblebeltRecluse() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Rubblebelt Recluse",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(4),
+				cost.R,
+			}),
+			Colors:    []color.Color{color.Red},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Ogre, types.Berserker},
+			Power:     opt.Val(game.PT{Value: 6}),
+			Toughness: opt.Val(game.PT{Value: 5}),
+			StaticAbilities: []game.StaticAbility{
+				game.MustAttackStaticBody,
+			},
+			OracleText: `
+			This creature attacks each combat if able.
+		`,
+		},
+	}
+}

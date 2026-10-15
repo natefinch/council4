@@ -1,0 +1,47 @@
+package d
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Divination is the card definition for Divination.
+//
+// Type: Sorcery
+// Cost: {2}{U}
+//
+// Oracle text:
+//
+//	Draw two cards.
+var Divination = newDivination
+
+func newDivination() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Divination",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.U,
+			}),
+			Colors: []color.Color{color.Blue},
+			Types:  []types.Card{types.Sorcery},
+			SpellAbility: opt.Val(game.Mode{
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Draw{
+							Amount: game.Fixed(2),
+							Player: game.ControllerReference(),
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			Draw two cards.
+		`,
+		},
+	}
+}

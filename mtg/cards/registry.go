@@ -178,7 +178,7 @@ func NewDefaultRegistry() *Registry {
 // DefaultCardSets returns the Cards entries from every committed letter
 // sub-package. It is the data backing NewDefaultRegistry.
 func DefaultCardSets() [][]cardset.Entry {
-	return append(defaultCardSets(), authored.Cards)
+	return append(installedCardSets(), authored.Cards)
 }
 
 // Programs returns the immutable catalog installed with the definitions.

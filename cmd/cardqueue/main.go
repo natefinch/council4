@@ -56,11 +56,12 @@ type manifest struct {
 	Batches          []batch         `json:"batches"`
 	Records          []record        `json:"records"`
 	// Baseline contains associations, not invented exact legacy registrations.
-	BaselineProduction []record `json:"baseline_production"`
+	BaselineProduction    []record `json:"baseline_production"`
+	CorrectedAssociations []record `json:"corrected_name_only_associations,omitempty"`
 }
 
 func main() {
-	operation := flag.String("operation", "check", "init, check, next, claim, verify, release, block, format")
+	operation := flag.String("operation", "check", "init, check, next, claim, verify, release, block, format, reconcile-compiled")
 	path := flag.String("manifest", "testdata/card-authoring/production.json", "saved queue")
 	plan := flag.String("plan", ".cardwork/production-plan.json", "init seed: reviewed batches, blockers and evidence")
 	corpus := flag.String("corpus", ".cardwork/corpus/oracle-cards.json", "pinned Oracle corpus")
@@ -114,6 +115,11 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 			return err
 		}
 	}
+	if operation == "reconcile-compiled" {
+		if err := reconcileCompiled(&queue, inventory); err != nil {
+			return err
+		}
+	}
 	if err := validate(queue, corpus, inventory); err != nil {
 		return err
 	}
@@ -141,7 +147,7 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 			Batch *batch   `json:"batch"`
 			Cards []record `json:"cards"`
 		}{next, selected})
-	case "init":
+	case "init", "reconcile-compiled":
 	case "format":
 		slices.SortFunc(queue.Records, compareRecords)
 	case "claim", "verify", "release", "block":

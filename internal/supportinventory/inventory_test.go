@@ -39,3 +39,28 @@ func TestMismatchedCorpusEvidenceFails(t *testing.T) {
 		t.Fatal("different compiler/corpus inputs were silently merged")
 	}
 }
+
+func TestInstalledSpellDoesNotPromotePreparedCardOrSameNameToken(t *testing.T) {
+	corpus := []OracleCard{
+		{OracleID: "spell", Name: "Recall", Layout: "normal"},
+		{OracleID: "prepared", Name: "Scholar // Recall", Layout: "prepare", Faces: []OracleFace{{Name: "Scholar"}, {Name: "Recall"}}},
+		{OracleID: "token", Name: "Recall", Layout: "token"},
+		{OracleID: "multiface", Name: "Front // Back", Layout: "modal_dfc", Faces: []OracleFace{{Name: "Front"}, {Name: "Back"}}},
+	}
+	production := []cards.Support{
+		{Key: "legacy-name:Recall/0", Name: "Recall", Loadable: true, Faces: []string{"Recall"}},
+		{Key: "legacy-name:Front/0", Name: "Front", Loadable: true, Faces: []string{"Front", "Back"}},
+	}
+	inventory, err := Merge(corpus, CompilerReport{Eligible: 4, Generated: 4}, production, "corpus", "compiler")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(inventory.Backlog) != 2 {
+		t.Fatalf("partial face or same-name token was mistaken for a loadable whole card: %+v", inventory.Backlog)
+	}
+	for _, record := range inventory.Backlog {
+		if record.OracleID != "prepared" && record.OracleID != "token" {
+			t.Fatalf("complete installed definition was lost: %+v", record)
+		}
+	}
+}

@@ -43,6 +43,20 @@ func TestProductionManifestAdmissionsAndQueue(t *testing.T) {
 		len(queue.Records)+len(queue.Baseline) != 38744 {
 		t.Fatal("pinned population changed without explicit reconciliation")
 	}
+	compiledData, err := os.ReadFile("../../testdata/card-preservation/installed-compiler.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var compiled struct {
+		Cards []workRecord
+	}
+	if err := json.Unmarshal(compiledData, &compiled); err != nil {
+		t.Fatal(err)
+	}
+	compiledIDs := make(map[string]bool)
+	for _, card := range compiled.Cards {
+		compiledIDs[card.OracleID] = true
+	}
 	hashes := make(map[string]string)
 	for _, evidence := range queue.RulesEvidence.Cards {
 		hashes[evidence.OracleID] = evidence.TextHash
@@ -77,6 +91,10 @@ func TestProductionManifestAdmissionsAndQueue(t *testing.T) {
 			}
 			if _, err := registry.LookupOracleID(r.OracleID); err == nil {
 				t.Fatalf("whole blocked card was partially registered: %s", r.Name)
+			}
+		case "installed-compiled":
+			if !compiledIDs[r.OracleID] || r.Evidence != "testdata/card-preservation/installed-compiler.json" {
+				t.Fatalf("compiler installation lacks checked-in source evidence: %s", r.Name)
 			}
 		case "unclaimed", "excluded", "":
 		default:

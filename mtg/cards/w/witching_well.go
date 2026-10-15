@@ -1,0 +1,104 @@
+package w
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// WitchingWell is the card definition for Witching Well.
+//
+// Type: Artifact
+// Cost: {U}
+//
+// Oracle text:
+//
+//	When this artifact enters, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
+//	{3}{U}, Sacrifice this artifact: Draw two cards.
+var WitchingWell = newWitchingWell
+
+func newWitchingWell() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Witching Well",
+			ManaCost: opt.Val(cost.Mana{
+				cost.U,
+			}),
+			Colors: []color.Color{color.Blue},
+			Types:  []types.Card{types.Artifact},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					Text: "{3}{U}, Sacrifice this artifact: Draw two cards.",
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(3),
+						cost.U,
+					}),
+					AdditionalCosts: []cost.Additional{
+						cost.Additional{
+							Kind:        cost.AdditionalSacrificeSource,
+							Text:        "Sacrifice this artifact",
+							Amount:      1,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					},
+					ZoneOfFunction: zone.Battlefield,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Draw{
+											Amount: game.Fixed(2),
+											Player: game.ControllerReference(),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When this artifact enters, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Scry{
+											Amount: game.Fixed(2),
+											Player: game.ControllerReference(),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			When this artifact enters, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
+			{3}{U}, Sacrifice this artifact: Draw two cards.
+		`,
+		},
+	}
+}

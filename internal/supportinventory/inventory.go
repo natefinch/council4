@@ -22,6 +22,7 @@ type OracleFace struct {
 type OracleCard struct {
 	OracleID string       `json:"oracle_id"`
 	Name     string       `json:"name"`
+	Layout   string       `json:"layout,omitempty"`
 	Faces    []OracleFace `json:"card_faces"`
 }
 
@@ -49,6 +50,7 @@ type Record struct {
 	Production       *cards.Support  `json:"exact_production,omitempty"`
 	LegacyCandidates []string        `json:"legacy_candidates,omitempty"`
 	Diagnostics      json.RawMessage `json:"compiler_diagnostics,omitempty"`
+	Blocker          string          `json:"gameplay_blocker,omitempty"`
 }
 
 // Inventory keeps production registrations and exact corpus evidence separate.
@@ -90,8 +92,12 @@ func Merge(corpus []OracleCard, compiler CompilerReport, production []cards.Supp
 	excluded := make(map[string]bool)
 	rejected := make(map[string]DiagnosticCard)
 	byName := make(map[string][]string)
-	loadableLegacy := make(map[string]bool)
+	loadableLegacy := make(map[string]cards.Support)
 	exact := make(map[string]cards.Support)
+	quarantined := make(map[string]string)
+	for _, exclusion := range cards.CompilerExclusions() {
+		quarantined[exclusion.OracleID] = exclusion.Blocker
+	}
 	for _, card := range compiler.Excluded {
 		excluded[card.OracleID] = true
 	}
@@ -103,7 +109,7 @@ func Merge(corpus []OracleCard, compiler CompilerReport, production []cards.Supp
 			exact[support.OracleID] = support
 		} else {
 			byName[support.Name] = append(byName[support.Name], support.Key)
-			loadableLegacy[support.Key] = support.Loadable
+			loadableLegacy[support.Key] = support
 		}
 	}
 	seen := make(map[string]bool)
@@ -120,7 +126,8 @@ func Merge(corpus []OracleCard, compiler CompilerReport, production []cards.Supp
 			continue
 		}
 		diagnostic, rejected := rejected[card.OracleID]
-		record := Record{OracleID: card.OracleID, Name: card.Name, CompilerAccepted: !rejected, Diagnostics: diagnostic.Diagnostics}
+		record := Record{OracleID: card.OracleID, Name: card.Name, CompilerAccepted: !rejected,
+			Diagnostics: diagnostic.Diagnostics, Blocker: quarantined[card.OracleID]}
 		if record.CompilerAccepted {
 			accepted++
 		}
@@ -140,7 +147,18 @@ func Merge(corpus []OracleCard, compiler CompilerReport, production []cards.Supp
 			}
 		}
 		out.Corpus = append(out.Corpus, record)
-		legacyLoadable := slices.ContainsFunc(record.LegacyCandidates, func(key string) bool { return loadableLegacy[key] })
+		legacyLoadable := slices.ContainsFunc(record.LegacyCandidates, func(key string) bool {
+			support := loadableLegacy[key]
+			if !support.Loadable || card.Layout == "token" || card.Layout == "double_faced_token" {
+				return false
+			}
+			if card.Name == support.Name {
+				return true
+			}
+			return len(card.Faces) > 1 && !slices.ContainsFunc(card.Faces, func(face OracleFace) bool {
+				return !slices.Contains(support.Faces, face.Name)
+			})
+		})
 		if (record.Production == nil || !record.Production.Loadable) && !legacyLoadable {
 			out.Backlog = append(out.Backlog, record)
 		}

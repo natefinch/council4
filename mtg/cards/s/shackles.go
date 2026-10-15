@@ -1,0 +1,87 @@
+package s
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// Shackles is the card definition for Shackles.
+//
+// Type: Enchantment — Aura
+// Cost: {2}{W}
+//
+// Oracle text:
+//
+//	Enchant creature
+//	Enchanted creature doesn't untap during its controller's untap step.
+//	{W}: Return this Aura to its owner's hand.
+var Shackles = newShackles
+
+func newShackles() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White),
+		CardFace: game.CardFace{
+			Name: "Shackles",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.W,
+			}),
+			Colors:   []color.Color{color.White},
+			Types:    []types.Card{types.Enchantment},
+			Subtypes: []types.Sub{types.Aura},
+			StaticAbilities: []game.StaticAbility{
+				game.EnchantStaticAbility(&game.TargetSpec{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Constraint: "creature",
+					Allow:      game.TargetAllowPermanent,
+					Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+				}),
+				game.StaticAbility{
+					Text: "Enchanted creature doesn't untap during its controller's untap step.",
+					RuleEffects: []game.RuleEffect{
+						game.RuleEffect{
+							Kind:             game.RuleEffectDoesntUntap,
+							AffectedAttached: true,
+							Duration:         game.DurationPermanent,
+						},
+					},
+				},
+			},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					Text: "{W}: Return this Aura to its owner's hand.",
+					ManaCost: opt.Val(cost.Mana{
+						cost.W,
+					}),
+					ZoneOfFunction: zone.Battlefield,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.MovePermanent{
+											Object:      game.SourcePermanentReference(),
+											Destination: zone.Hand,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Enchant creature
+			Enchanted creature doesn't untap during its controller's untap step.
+			{W}: Return this Aura to its owner's hand.
+		`,
+		},
+	}
+}

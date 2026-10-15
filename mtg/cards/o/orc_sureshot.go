@@ -1,0 +1,84 @@
+package o
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// OrcSureshot is the card definition for Orc Sureshot.
+//
+// Type: Creature — Orc Archer
+// Cost: {3}{B}
+//
+// Oracle text:
+//
+//	Whenever another creature you control enters, target creature an opponent controls gets -1/-1 until end of turn.
+var OrcSureshot = newOrcSureshot
+
+func newOrcSureshot() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Orc Sureshot",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.B,
+			}),
+			Colors:    []color.Color{color.Black},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Orc, types.Archer},
+			Power:     opt.Val(game.PT{Value: 4}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever another creature you control enters, target creature an opponent controls gets -1/-1 until end of turn.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:            game.EventPermanentEnteredBattlefield,
+							Controller:       game.TriggerControllerYou,
+							ExcludeSelf:      true,
+							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							StackObjectKind:  game.StackSpell,
+							CounterKind:      counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MinTargets: 1,
+										MaxTargets: 1,
+										Constraint: "target creature an opponent controls",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}, Controller: game.ControllerOpponent}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ModifyPT{
+											Object:         game.TargetPermanentReference(0),
+											PowerDelta:     game.Fixed(-1),
+											ToughnessDelta: game.Fixed(-1),
+											Duration:       game.DurationUntilEndOfTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Whenever another creature you control enters, target creature an opponent controls gets -1/-1 until end of turn.
+		`,
+		},
+	}
+}

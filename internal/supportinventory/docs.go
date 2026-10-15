@@ -44,15 +44,24 @@ func (inv Inventory) WriteDocs(root string) error {
 			s := record.Production
 			_, _ = fmt.Fprintf(&inventory, "| %s | `%s/front` | %t | %t | %s | `%v` |\n", escape(s.Name), s.OracleID, record.CompilerAccepted, s.Loadable, s.Verification, s.Programs)
 		}
+		if record.Blocker != "" {
+			_, _ = fmt.Fprintf(&unsupported, "- **%s** (`%s`) — generated source checked in; excluded from playable registry pending [runtime blocker](%s)\n",
+				escape(record.Name), record.OracleID, record.Blocker)
+			continue
+		}
 		if record.CompilerAccepted || record.Production != nil && record.Production.Loadable {
 			continue
 		}
 		_, _ = fmt.Fprintf(&unsupported, "- **%s** (`%s`) — compiler rejected; legacy candidate entries: %d; exact production identity not established\n", escape(record.Name), record.OracleID, len(record.LegacyCandidates))
 	}
-	_, _ = fmt.Fprint(&supported, "\n## Compiler-accepted Oracle records (not production certification)\n\nRetained independently of installed registry names, including multi-face/name ambiguities.\n\n")
+	_, _ = fmt.Fprint(&supported, "\n## Compiler-accepted Oracle records (not gameplay certification)\n\nAll 18,700 accepted source definitions are checked in: 17,946 cards and 754 separate tokens. See [installation coverage](testdata/card-preservation/installed-compiler.json). Authored overrides remain preferred; proven runtime blocks stay excluded from deck lookup. Source presence and name-based loading do not establish behavior verification.\n\n")
 	for _, record := range inv.Corpus {
 		if record.CompilerAccepted {
-			_, _ = fmt.Fprintf(&supported, "- %s (`%s`) — compiler accepted only\n", escape(record.Name), record.OracleID)
+			label := "compiler accepted; checked-in definition"
+			if record.Blocker != "" {
+				label += "; playable admission blocked: " + record.Blocker
+			}
+			_, _ = fmt.Fprintf(&supported, "- %s (`%s`) — %s\n", escape(record.Name), record.OracleID, label)
 		}
 	}
 	for _, support := range inv.Production {

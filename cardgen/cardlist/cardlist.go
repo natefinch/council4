@@ -45,6 +45,9 @@ func Generate(dir, pkgName, generator string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(cards) > 0 && len(eager) > 0 {
+		return nil, fmt.Errorf("%s mixes lazy card constructors and eager token definitions", dir)
+	}
 	if len(eager) > 0 {
 		return renderEager(pkgName, generator, eager)
 	}

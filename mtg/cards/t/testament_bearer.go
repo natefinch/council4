@@ -1,0 +1,73 @@
+package t
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// TestamentBearer is the card definition for Testament Bearer.
+//
+// Type: Creature — Phyrexian Warrior
+// Cost: {3}{B}
+//
+// Oracle text:
+//
+//	When this creature dies, look at the top three cards of your library. Put one of them into your hand and the rest into your graveyard.
+var TestamentBearer = newTestamentBearer
+
+func newTestamentBearer() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Testament Bearer",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.B,
+			}),
+			Colors:    []color.Color{color.Black},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Phyrexian, types.Warrior},
+			Power:     opt.Val(game.PT{Value: 4}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When this creature dies, look at the top three cards of your library. Put one of them into your hand and the rest into your graveyard.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:            game.EventPermanentDied,
+							Source:           game.TriggerSourceSelf,
+							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							StackObjectKind:  game.StackSpell,
+							CounterKind:      counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Dig{
+											Player: game.ControllerReference(),
+											Look:   game.Fixed(3),
+											Take:   game.Fixed(1),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			When this creature dies, look at the top three cards of your library. Put one of them into your hand and the rest into your graveyard.
+		`,
+		},
+	}
+}

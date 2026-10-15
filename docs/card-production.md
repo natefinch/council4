@@ -1,5 +1,28 @@
 # Bounded authored production queue (#3282)
 
+## Current compiler installation
+
+The subsequently requested full compiler import checks in all 18,700 accepted
+definitions (17,946 cards and 754 tokens), while preserving the authored
+implementations and prior legacy sources. The saved queue is reconciled with
+the expanded production inventory: `installed-compiled` is distinct from the
+fifteen behavior-verified batch admissions below. Newly installed members of
+the three saved continuation batches no longer need authored generation; `next`
+skips them rather than duplicating their sources. The eight known whole-card
+blocks remain unchanged, including the private tutors excluded from the default
+playable registry. The historical population, batch measurements and evidence
+below describe the completed migration checkpoint, not the current import.
+Use `cardqueue -operation check` and `support-inventory.md` for current counts.
+
+Current accounting: **15,903 installed-compiled**, 14,285 unclaimed, eight
+blocked, fifteen batch-verified and 5,728 excluded, plus 2,805 retained baseline
+associations. There are no active claims. The import also corrects 23 historical
+name-only associations: a token sharing an ordinary card's name is not that card,
+and an installed standalone spell does not implement a prepared creature with
+that spell as its alternate face. Their former candidate keys remain in
+`corrected_name_only_associations`; their actual work records are retained, not
+dropped. These corrections do not remove any existing production definition.
+
 The [saved manifest](../testdata/card-authoring/production.json) is the work
 accounting source, not an Oracle compiler roadmap. Continue with the installed
 [card-authoring skill](../.agents/skills/card-authoring/SKILL.md) and

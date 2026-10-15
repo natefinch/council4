@@ -1,0 +1,62 @@
+package r
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// RaiseTheAlarm is the card definition for Raise the Alarm.
+//
+// Type: Instant
+// Cost: {1}{W}
+//
+// Oracle text:
+//
+//	Create two 1/1 white Soldier creature tokens.
+var RaiseTheAlarm = newRaiseTheAlarm
+
+func newRaiseTheAlarm() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White),
+		CardFace: game.CardFace{
+			Name: "Raise the Alarm",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.W,
+			}),
+			Colors: []color.Color{color.White},
+			Types:  []types.Card{types.Instant},
+			SpellAbility: opt.Val(game.Mode{
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.CreateToken{
+							Amount: game.Fixed(2),
+							Source: game.TokenDef(raiseTheAlarmToken),
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			Create two 1/1 white Soldier creature tokens.
+		`,
+		},
+	}
+}
+
+var raiseTheAlarmToken = newRaiseTheAlarmToken()
+
+func newRaiseTheAlarmToken() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      "Soldier",
+			Colors:    []color.Color{color.White},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Soldier},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+		},
+	}
+}

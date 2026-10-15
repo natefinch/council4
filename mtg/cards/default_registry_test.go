@@ -24,7 +24,11 @@ func TestNewDefaultRegistryResolvesKnownCard(t *testing.T) {
 func TestDefaultCardSetsCountMatchesRegistry(t *testing.T) {
 	total := 0
 	for _, set := range cards.DefaultCardSets() {
-		total += len(set)
+		for _, entry := range set {
+			if !entry.ReplaceLegacy {
+				total++
+			}
+		}
 	}
 	if got := cards.NewDefaultRegistry().Len(); got != total {
 		t.Errorf("registry Len() = %d, want %d (sum of DefaultCardSets)", got, total)

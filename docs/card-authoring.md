@@ -56,6 +56,13 @@ record the completed first three batches, the next three exact identity lists,
 live issue reconciliation, measurements and stopping conditions. Keep this guide's
 ordinary authoring/scaffold/gates; the queue is work accounting, not another DSL.
 
+The later explicit compiler import marks newly loadable records
+`installed-compiled`, not `implemented-verified`. These records need no duplicate
+source generation and are skipped by the saved authored batches. Known runtime
+blocks remain blocked even when their generated sources exist. After another
+intentional import, use `cardqueue -operation reconcile-compiled`; it refuses
+active claims and does not manufacture behavior evidence.
+
 ## Executable draft scaffold
 
 ```sh

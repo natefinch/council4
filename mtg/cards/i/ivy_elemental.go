@@ -1,0 +1,44 @@
+package i
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// IvyElemental is the card definition for Ivy Elemental.
+//
+// Type: Creature — Elemental
+// Cost: {X}{G}
+//
+// Oracle text:
+//
+//	This creature enters with X +1/+1 counters on it.
+var IvyElemental = newIvyElemental
+
+func newIvyElemental() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Ivy Elemental",
+			ManaCost: opt.Val(cost.Mana{
+				cost.X,
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Elemental},
+			Power:     opt.Val(game.PT{Value: 0}),
+			Toughness: opt.Val(game.PT{Value: 0}),
+			ReplacementAbilities: []game.ReplacementAbility{
+				game.EntersWithCountersReplacement("This creature enters with X +1/+1 counters on it.", game.CounterPlacement{Kind: counter.PlusOnePlusOne, AmountFromX: true}),
+			},
+			OracleText: `
+			This creature enters with X +1/+1 counters on it.
+		`,
+		},
+	}
+}

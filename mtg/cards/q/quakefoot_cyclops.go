@@ -1,0 +1,148 @@
+package q
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// QuakefootCyclops is the card definition for Quakefoot Cyclops.
+//
+// Type: Creature — Cyclops
+// Cost: {4}{R}
+//
+// Oracle text:
+//
+//	When this creature enters, up to two target creatures can't block this turn.
+//	Cycling {1}{R} ({1}{R}, Discard this card: Draw a card.)
+//	When you cycle this card, target creature can't block this turn.
+var QuakefootCyclops = newQuakefootCyclops
+
+func newQuakefootCyclops() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Quakefoot Cyclops",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(4),
+				cost.R,
+			}),
+			Colors:    []color.Color{color.Red},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Cyclops},
+			Power:     opt.Val(game.PT{Value: 4}),
+			Toughness: opt.Val(game.PT{Value: 4}),
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.CyclingActivatedAbility(cost.Mana{cost.O(1), cost.R}),
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When this creature enters, up to two target creatures can't block this turn.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MaxTargets: 2,
+										Constraint: "up to two target creatures",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ApplyRule{
+											Object: opt.Val(game.TargetPermanentReference(0)),
+											RuleEffects: []game.RuleEffect{
+												game.RuleEffect{
+													Kind:     game.RuleEffectCantBlock,
+													Duration: game.DurationPermanent,
+												},
+											},
+											Duration: game.DurationThisTurn,
+										},
+									},
+									game.Instruction{
+										Primitive: game.ApplyRule{
+											Object: opt.Val(game.TargetPermanentReference(1)),
+											RuleEffects: []game.RuleEffect{
+												game.RuleEffect{
+													Kind:     game.RuleEffectCantBlock,
+													Duration: game.DurationPermanent,
+												},
+											},
+											Duration: game.DurationThisTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+				game.TriggeredAbility{
+					Text: "When you cycle this card, target creature can't block this turn.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventCycled,
+							Source:          game.TriggerSourceSelf,
+							Player:          game.TriggerPlayerYou,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MinTargets: 1,
+										MaxTargets: 1,
+										Constraint: "target creature",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ApplyRule{
+											Object: opt.Val(game.TargetPermanentReference(0)),
+											RuleEffects: []game.RuleEffect{
+												game.RuleEffect{
+													Kind:     game.RuleEffectCantBlock,
+													Duration: game.DurationPermanent,
+												},
+											},
+											Duration: game.DurationThisTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			When this creature enters, up to two target creatures can't block this turn.
+			Cycling {1}{R} ({1}{R}, Discard this card: Draw a card.)
+			When you cycle this card, target creature can't block this turn.
+		`,
+		},
+	}
+}

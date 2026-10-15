@@ -1,0 +1,95 @@
+package m
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// MischievousMystic is the card definition for Mischievous Mystic.
+//
+// Type: Creature — Human Wizard
+// Cost: {1}{U}
+//
+// Oracle text:
+//
+//	Flying
+//	Whenever you draw your second card each turn, create a 1/1 blue Faerie creature token with flying.
+var MischievousMystic = newMischievousMystic
+
+func newMischievousMystic() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Mischievous Mystic",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.U,
+			}),
+			Colors:    []color.Color{color.Blue},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Human, types.Wizard},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			StaticAbilities: []game.StaticAbility{
+				game.FlyingStaticBody,
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever you draw your second card each turn, create a 1/1 blue Faerie creature token with flying.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:                      game.EventCardDrawn,
+							Player:                     game.TriggerPlayerYou,
+							StackObjectKind:            game.StackSpell,
+							PlayerEventOrdinalThisTurn: 2,
+							CounterKind:                counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.CreateToken{
+											Amount: game.Fixed(1),
+											Source: game.TokenDef(mischievousMysticToken),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Flying
+			Whenever you draw your second card each turn, create a 1/1 blue Faerie creature token with flying.
+		`,
+		},
+	}
+}
+
+var mischievousMysticToken = newMischievousMysticToken()
+
+func newMischievousMysticToken() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      "Faerie",
+			Colors:    []color.Color{color.Blue},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Faerie},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			StaticAbilities: []game.StaticAbility{
+				game.FlyingStaticBody,
+			},
+		},
+	}
+}

@@ -21,6 +21,7 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 		byID[card.OracleID] = card
 	}
 	backlog := make(map[string]bool)
+	compiled := make(map[string]bool)
 	verified := make(map[string]bool)
 	loadable := make(map[string]bool)
 	associations := make(map[string][]string)
@@ -28,6 +29,7 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 		backlog[r.OracleID] = true
 	}
 	for _, r := range inventory.Corpus {
+		compiled[r.OracleID] = r.CompilerAccepted
 		associations[r.OracleID] = slices.Clone(r.LegacyCandidates)
 		if r.Production != nil {
 			associations[r.OracleID] = append(associations[r.OracleID], r.Production.Key)
@@ -88,6 +90,11 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 		case "implemented-verified":
 			if !verified[r.OracleID] || r.Evidence == "" || r.Batch == "" {
 				return fmt.Errorf("unverified admission %s", r.OracleID)
+			}
+		case "installed-compiled":
+			token := card.Layout == "token" || card.Layout == "double_faced_token"
+			if (backlog[r.OracleID] && !token) || !compiled[r.OracleID] || r.Evidence != compiledInstallationPath {
+				return fmt.Errorf("unbacked compiler installation %s", r.OracleID)
 			}
 		case "blocked":
 			if r.Blocker <= 0 || r.Reason == "" || !backlog[r.OracleID] {

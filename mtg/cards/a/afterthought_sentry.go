@@ -1,0 +1,114 @@
+package a
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// AfterthoughtSentry is the card definition for Afterthought Sentry.
+//
+// Type: Artifact Creature — Gargoyle
+// Cost: {2}
+//
+// Oracle text:
+//
+//	{2}: This creature gains flying until end of turn.
+//	Whenever this creature attacks, exile up to one target card from a graveyard.
+var AfterthoughtSentry = newAfterthoughtSentry
+
+func newAfterthoughtSentry() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name: "Afterthought Sentry",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+			}),
+			Types:     []types.Card{types.Artifact, types.Creature},
+			Subtypes:  []types.Sub{types.Gargoyle},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					Text: "{2}: This creature gains flying until end of turn.",
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(2),
+					}),
+					ZoneOfFunction: zone.Battlefield,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											Object: opt.Val(game.SourcePermanentReference()),
+											ContinuousEffects: []game.ContinuousEffect{
+												game.ContinuousEffect{
+													Duration:    game.DurationPermanent,
+													Layer:       game.LayerAbility,
+													AddKeywords: []game.Keyword{game.Flying},
+												},
+											},
+											Duration: game.DurationUntilEndOfTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever this creature attacks, exile up to one target card from a graveyard.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventAttackerDeclared,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MaxTargets: 1,
+										Constraint: "up to one target card from a graveyard",
+										Allow:      game.TargetAllowCard,
+										Selection:  opt.Val(game.Selection{}),
+										TargetZone: zone.Graveyard,
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.MoveCard{
+											Card: game.CardReference{
+												Kind: game.CardReferenceTarget,
+											},
+											FromZone:    zone.Graveyard,
+											Destination: zone.Exile,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			{2}: This creature gains flying until end of turn.
+			Whenever this creature attacks, exile up to one target card from a graveyard.
+		`,
+		},
+	}
+}

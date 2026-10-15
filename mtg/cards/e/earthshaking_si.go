@@ -1,0 +1,43 @@
+package e
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// EarthshakingSi is the card definition for Earthshaking Si.
+//
+// Type: Creature — Beast
+// Cost: {5}{G}
+//
+// Oracle text:
+//
+//	Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)
+var EarthshakingSi = newEarthshakingSi
+
+func newEarthshakingSi() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Earthshaking Si",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(5),
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Beast},
+			Power:     opt.Val(game.PT{Value: 5}),
+			Toughness: opt.Val(game.PT{Value: 5}),
+			StaticAbilities: []game.StaticAbility{
+				game.TrampleStaticBody,
+			},
+			OracleText: `
+			Trample (This creature can deal excess combat damage to the player or planeswalker it's attacking.)
+		`,
+		},
+	}
+}

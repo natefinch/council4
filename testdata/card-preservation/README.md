@@ -78,3 +78,17 @@ commit or push step. The retained `cardSupport`, `supportDocs`, `cardBacklog`,
 `compileCheck` and `parserCoverage` commands also use the verified pin, but remain
 explicit maintenance operations. Parser-subset checking uses the legacy compiler
 inventory, not the mixed authored-card support list.
+
+## Checked-in compiler corpus
+
+`installed-compiler.json` covers all **18,700** accepted identities from the pin:
+17,946 ordinary/multiface cards and 754 separately registered tokens. It is an
+installation manifest, not a replacement for the original preservation baseline
+or a gameplay waiver. Its paths and digests cover the actual retained or added
+source files. `TestCompletePinnedCompilerSourcesAreInstalled` verifies complete
+coverage and default registry/token catalog availability, with explicit
+`cards.CompilerExclusions()` for known runtime blockers. Authored entries
+intentionally supersede matching compiler definitions without deleting them.
+
+Use the [additive installer](../../cmd/installcompiled/README.md) for another
+intentional import; never point bulk generation at authored sources.

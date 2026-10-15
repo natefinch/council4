@@ -1,0 +1,103 @@
+package t
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// ThopterEngineer is the card definition for Thopter Engineer.
+//
+// Type: Creature — Human Artificer
+// Cost: {2}{R}
+//
+// Oracle text:
+//
+//	When this creature enters, create a 1/1 colorless Thopter artifact creature token with flying.
+//	Artifact creatures you control have haste. (They can attack and {T} as soon as they come under your control.)
+var ThopterEngineer = newThopterEngineer
+
+func newThopterEngineer() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Thopter Engineer",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.R,
+			}),
+			Colors:    []color.Color{color.Red},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Human, types.Artificer},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.StaticAbility{
+					Text: "Artifact creatures you control have haste. (They can attack and {T} as soon as they come under your control.)",
+					ContinuousEffects: []game.ContinuousEffect{
+						game.ContinuousEffect{
+							Duration:    game.DurationPermanent,
+							Group:       game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Artifact, types.Creature}}),
+							Layer:       game.LayerAbility,
+							AddKeywords: []game.Keyword{game.Haste},
+						},
+					},
+				},
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When this creature enters, create a 1/1 colorless Thopter artifact creature token with flying.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.CreateToken{
+											Amount: game.Fixed(1),
+											Source: game.TokenDef(thopterEngineerToken),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			When this creature enters, create a 1/1 colorless Thopter artifact creature token with flying.
+			Artifact creatures you control have haste. (They can attack and {T} as soon as they come under your control.)
+		`,
+		},
+	}
+}
+
+var thopterEngineerToken = newThopterEngineerToken()
+
+func newThopterEngineerToken() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:      "Thopter",
+			Types:     []types.Card{types.Artifact, types.Creature},
+			Subtypes:  []types.Sub{types.Thopter},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			StaticAbilities: []game.StaticAbility{
+				game.FlyingStaticBody,
+			},
+		},
+	}
+}

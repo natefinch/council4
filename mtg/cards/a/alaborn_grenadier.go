@@ -1,0 +1,43 @@
+package a
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// AlabornGrenadier is the card definition for Alaborn Grenadier.
+//
+// Type: Creature — Human Soldier
+// Cost: {W}{W}
+//
+// Oracle text:
+//
+//	Vigilance
+var AlabornGrenadier = newAlabornGrenadier
+
+func newAlabornGrenadier() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White),
+		CardFace: game.CardFace{
+			Name: "Alaborn Grenadier",
+			ManaCost: opt.Val(cost.Mana{
+				cost.W,
+				cost.W,
+			}),
+			Colors:    []color.Color{color.White},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Human, types.Soldier},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 2}),
+			StaticAbilities: []game.StaticAbility{
+				game.VigilanceStaticBody,
+			},
+			OracleText: `
+			Vigilance
+		`,
+		},
+	}
+}

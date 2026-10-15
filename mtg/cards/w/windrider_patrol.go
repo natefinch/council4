@@ -1,0 +1,80 @@
+package w
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// WindriderPatrol is the card definition for Windrider Patrol.
+//
+// Type: Creature — Merfolk Wizard
+// Cost: {3}{U}{U}
+//
+// Oracle text:
+//
+//	Flying
+//	Whenever this creature deals combat damage to a player, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
+var WindriderPatrol = newWindriderPatrol
+
+func newWindriderPatrol() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Windrider Patrol",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(3),
+				cost.U,
+				cost.U,
+			}),
+			Colors:    []color.Color{color.Blue},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Merfolk, types.Wizard},
+			Power:     opt.Val(game.PT{Value: 4}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.FlyingStaticBody,
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever this creature deals combat damage to a player, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:               game.EventDamageDealt,
+							Source:              game.TriggerSourceSelf,
+							Subject:             game.TriggerSubjectDamageSource,
+							StackObjectKind:     game.StackSpell,
+							DamageRecipient:     game.DamageRecipientPlayer,
+							RequireCombatDamage: true,
+							CounterKind:         counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Scry{
+											Amount: game.Fixed(2),
+											Player: game.ControllerReference(),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Flying
+			Whenever this creature deals combat damage to a player, scry 2. (Look at the top two cards of your library, then put any number of them on the bottom and the rest on top in any order.)
+		`,
+		},
+	}
+}

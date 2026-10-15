@@ -10,6 +10,22 @@ import (
 	"testing"
 )
 
+func TestGenerateRejectsMixedRegistrationKinds(t *testing.T) {
+	dir := t.TempDir()
+	source := `package cards
+import "github.com/natefinch/council4/mtg/game"
+var Lazy = newCard
+var Eager = newCard()
+func newCard() *game.CardDef { return &game.CardDef{CardFace: game.CardFace{Name: "Card"}} }
+`
+	if err := os.WriteFile(filepath.Join(dir, "definitions.go"), []byte(source), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Generate(dir, "cards", "test"); err == nil {
+		t.Fatal("mixed package silently dropped its lazy registrations")
+	}
+}
+
 func TestGenerateUsesGoExportedIdentifiers(t *testing.T) {
 	for _, tc := range []struct {
 		name   string

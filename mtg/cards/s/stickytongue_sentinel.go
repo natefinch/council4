@@ -1,0 +1,85 @@
+package s
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// StickytongueSentinel is the card definition for Stickytongue Sentinel.
+//
+// Type: Creature — Frog Warrior
+// Cost: {2}{G}
+//
+// Oracle text:
+//
+//	Reach
+//	When this creature enters, return up to one other target permanent you control to its owner's hand.
+var StickytongueSentinel = newStickytongueSentinel
+
+func newStickytongueSentinel() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Green),
+		CardFace: game.CardFace{
+			Name: "Stickytongue Sentinel",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.G,
+			}),
+			Colors:    []color.Color{color.Green},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Frog, types.Warrior},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.ReachStaticBody,
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When this creature enters, return up to one other target permanent you control to its owner's hand.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MaxTargets: 1,
+										Constraint: "up to one other target permanent you control",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{ExcludeSource: true, Controller: game.ControllerYou}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.MovePermanent{
+											Object:      game.TargetPermanentReference(0),
+											Destination: zone.Hand,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Reach
+			When this creature enters, return up to one other target permanent you control to its owner's hand.
+		`,
+		},
+	}
+}

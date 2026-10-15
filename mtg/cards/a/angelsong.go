@@ -1,0 +1,53 @@
+package a
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// Angelsong is the card definition for Angelsong.
+//
+// Type: Instant
+// Cost: {1}{W}
+//
+// Oracle text:
+//
+//	Prevent all combat damage that would be dealt this turn.
+//	Cycling {2} ({2}, Discard this card: Draw a card.)
+var Angelsong = newAngelsong
+
+func newAngelsong() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White),
+		CardFace: game.CardFace{
+			Name: "Angelsong",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.W,
+			}),
+			Colors: []color.Color{color.White},
+			Types:  []types.Card{types.Instant},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.CyclingActivatedAbility(cost.Mana{cost.O(2)}),
+			},
+			SpellAbility: opt.Val(game.Mode{
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.PreventDamage{
+							All:        true,
+							CombatOnly: true,
+							Global:     true,
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			Prevent all combat damage that would be dealt this turn.
+			Cycling {2} ({2}, Discard this card: Draw a card.)
+		`,
+		},
+	}
+}

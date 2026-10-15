@@ -1,0 +1,46 @@
+package e
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// EclipsedSteppe is the card definition for Eclipsed Steppe.
+//
+// Type: Land — Plains Swamp
+//
+// Oracle text:
+//
+//	({T}: Add {W} or {B}.)
+//	This land enters tapped unless you control two or more basic lands.
+var EclipsedSteppe = newEclipsedSteppe
+
+func newEclipsedSteppe() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White, color.Black),
+		CardFace: game.CardFace{
+			Name:     "Eclipsed Steppe",
+			Types:    []types.Card{types.Land},
+			Subtypes: []types.Sub{types.Plains, types.Swamp},
+			ManaAbilities: []game.ManaAbility{
+				game.TapManaChoiceAbility(mana.W, mana.B),
+			},
+			ReplacementAbilities: []game.ReplacementAbility{
+				game.EntersTappedIfReplacement("This land enters tapped unless you control two or more basic lands.", &game.Condition{
+					Negate: true,
+					ControlsMatching: opt.Val(game.SelectionCount{
+						Selection: game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}},
+						MinCount:  2,
+					}),
+				}),
+			},
+			OracleText: `
+			({T}: Add {W} or {B}.)
+			This land enters tapped unless you control two or more basic lands.
+		`,
+		},
+	}
+}

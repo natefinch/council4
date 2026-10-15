@@ -1,0 +1,120 @@
+package u
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// UndulatingWitness is the card definition for Undulating Witness.
+//
+// Type: Creature — Serpent
+// Cost: {4}{U}
+//
+// Oracle text:
+//
+//	Flying
+//	{2}: This creature gets +1/-1 until end of turn.
+//	Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
+var UndulatingWitness = newUndulatingWitness
+
+func newUndulatingWitness() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Undulating Witness",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(4),
+				cost.U,
+			}),
+			Colors:    []color.Color{color.Blue},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Serpent},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 5}),
+			StaticAbilities: []game.StaticAbility{
+				game.FlyingStaticBody,
+			},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					Text: "{2}: This creature gets +1/-1 until end of turn.",
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(2),
+					}),
+					ZoneOfFunction: zone.Battlefield,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ModifyPT{
+											Object:         game.SourcePermanentReference(),
+											PowerDelta:     game.Fixed(1),
+											ToughnessDelta: game.Fixed(-1),
+											Duration:       game.DurationUntilEndOfTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+				game.ActivatedAbility{
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(2),
+					}),
+					AdditionalCosts: []cost.Additional{
+						cost.Additional{
+							Kind:        cost.AdditionalDiscard,
+							Text:        "Discard this card",
+							Amount:      1,
+							Source:      zone.Hand,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					},
+					ZoneOfFunction: zone.Hand,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Search{
+											Player: game.ControllerReference(),
+											Spec: game.SearchSpec{
+												SourceZone:  zone.Library,
+												Destination: zone.Hand,
+												Filter:      game.Selection{RequiredTypes: []types.Card{types.Land}, Supertypes: []types.Super{types.Basic}},
+												Reveal:      true,
+											},
+											Amount: game.Fixed(1),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+					KeywordAbilities: []game.KeywordAbility{
+						game.CyclingKeyword{
+							Cost: cost.Mana{
+								cost.O(2),
+							},
+						},
+					},
+				},
+			},
+			OracleText: `
+			Flying
+			{2}: This creature gets +1/-1 until end of turn.
+			Basic landcycling {2} ({2}, Discard this card: Search your library for a basic land card, reveal it, put it into your hand, then shuffle.)
+		`,
+		},
+	}
+}

@@ -1,0 +1,77 @@
+package n
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// NinthBridgePatrol is the card definition for Ninth Bridge Patrol.
+//
+// Type: Creature — Dwarf Soldier
+// Cost: {1}{W}
+//
+// Oracle text:
+//
+//	Whenever another creature you control leaves the battlefield, put a +1/+1 counter on this creature.
+var NinthBridgePatrol = newNinthBridgePatrol
+
+func newNinthBridgePatrol() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White),
+		CardFace: game.CardFace{
+			Name: "Ninth Bridge Patrol",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.W,
+			}),
+			Colors:    []color.Color{color.White},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Dwarf, types.Soldier},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever another creature you control leaves the battlefield, put a +1/+1 counter on this creature.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:            game.EventZoneChanged,
+							Controller:       game.TriggerControllerYou,
+							ExcludeSelf:      true,
+							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							MatchFromZone:    true,
+							FromZone:         zone.Battlefield,
+							StackObjectKind:  game.StackSpell,
+							CounterKind:      counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.AddCounter{
+											Amount:      game.Fixed(1),
+											Object:      game.SourcePermanentReference(),
+											CounterKind: counter.PlusOnePlusOne,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Whenever another creature you control leaves the battlefield, put a +1/+1 counter on this creature.
+		`,
+		},
+	}
+}

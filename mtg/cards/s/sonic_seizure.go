@@ -1,0 +1,67 @@
+package s
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// SonicSeizure is the card definition for Sonic Seizure.
+//
+// Type: Instant
+// Cost: {R}
+//
+// Oracle text:
+//
+//	As an additional cost to cast this spell, discard a card at random.
+//	Sonic Seizure deals 3 damage to any target.
+var SonicSeizure = newSonicSeizure
+
+func newSonicSeizure() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Sonic Seizure",
+			ManaCost: opt.Val(cost.Mana{
+				cost.R,
+			}),
+			Colors: []color.Color{color.Red},
+			Types:  []types.Card{types.Instant},
+			AdditionalCosts: []cost.Additional{
+				{
+					Kind:   cost.AdditionalDiscard,
+					Text:   "discard a card at random",
+					Amount: 1,
+					Source: zone.Hand,
+					Random: true,
+				},
+			},
+			SpellAbility: opt.Val(game.Mode{
+				Targets: []game.TargetSpec{
+					game.TargetSpec{
+						MinTargets: 1,
+						MaxTargets: 1,
+						Constraint: "any target",
+						Allow:      game.TargetAllowPermanent | game.TargetAllowPlayer,
+						Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker, types.Battle}}),
+					},
+				},
+				Sequence: []game.Instruction{
+					{
+						Primitive: game.Damage{
+							Amount:    game.Fixed(3),
+							Recipient: game.AnyTargetDamageRecipient(0),
+						},
+					},
+				},
+			}.Ability()),
+			OracleText: `
+			As an additional cost to cast this spell, discard a card at random.
+			Sonic Seizure deals 3 damage to any target.
+		`,
+		},
+	}
+}

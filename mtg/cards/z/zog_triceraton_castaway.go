@@ -1,0 +1,142 @@
+package z
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// ZogTriceratonCastaway is the card definition for Zog, Triceraton Castaway.
+//
+// Type: Legendary Creature — Dinosaur Soldier
+// Cost: {4}{R}
+//
+// Oracle text:
+//
+//	Reach, trample
+//	When Zog enters, target creature can't block this turn.
+//	Mountaincycling {2} ({2}, Discard this card: Search your library for a Mountain card, reveal it, put it into your hand, then shuffle.)
+var ZogTriceratonCastaway = newZogTriceratonCastaway
+
+func newZogTriceratonCastaway() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Zog, Triceraton Castaway",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(4),
+				cost.R,
+			}),
+			Colors:     []color.Color{color.Red},
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Creature},
+			Subtypes:   []types.Sub{types.Dinosaur, types.Soldier},
+			Power:      opt.Val(game.PT{Value: 5}),
+			Toughness:  opt.Val(game.PT{Value: 4}),
+			StaticAbilities: []game.StaticAbility{
+				game.ReachStaticBody,
+				game.TrampleStaticBody,
+			},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(2),
+					}),
+					AdditionalCosts: []cost.Additional{
+						cost.Additional{
+							Kind:        cost.AdditionalDiscard,
+							Text:        "Discard this card",
+							Amount:      1,
+							Source:      zone.Hand,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					},
+					ZoneOfFunction: zone.Hand,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Search{
+											Player: game.ControllerReference(),
+											Spec: game.SearchSpec{
+												SourceZone:  zone.Library,
+												Destination: zone.Hand,
+												Filter:      game.Selection{SubtypesAny: []types.Sub{types.Mountain}},
+												Reveal:      true,
+											},
+											Amount: game.Fixed(1),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+					KeywordAbilities: []game.KeywordAbility{
+						game.CyclingKeyword{
+							Cost: cost.Mana{
+								cost.O(2),
+							},
+						},
+					},
+				},
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When Zog enters, target creature can't block this turn.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MinTargets: 1,
+										MaxTargets: 1,
+										Constraint: "target creature",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ApplyRule{
+											Object: opt.Val(game.TargetPermanentReference(0)),
+											RuleEffects: []game.RuleEffect{
+												game.RuleEffect{
+													Kind:     game.RuleEffectCantBlock,
+													Duration: game.DurationPermanent,
+												},
+											},
+											Duration: game.DurationThisTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Reach, trample
+			When Zog enters, target creature can't block this turn.
+			Mountaincycling {2} ({2}, Discard this card: Search your library for a Mountain card, reveal it, put it into your hand, then shuffle.)
+		`,
+		},
+	}
+}

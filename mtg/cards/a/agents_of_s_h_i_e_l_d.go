@@ -1,0 +1,75 @@
+package a
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// AgentsOfSHIELD is the card definition for Agents of S.H.I.E.L.D..
+//
+// Type: Creature — Human Spy Hero
+// Cost: {2}{W}
+//
+// Oracle text:
+//
+//	Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.
+var AgentsOfSHIELD = newAgentsOfSHIELD
+
+func newAgentsOfSHIELD() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White),
+		CardFace: game.CardFace{
+			Name: "Agents of S.H.I.E.L.D.",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(2),
+				cost.W,
+			}),
+			Colors:    []color.Color{color.White},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Human, types.Sub("Spy"), types.Hero},
+			Power:     opt.Val(game.PT{Value: 2}),
+			Toughness: opt.Val(game.PT{Value: 4}),
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:            game.EventAttackerDeclared,
+							Controller:       game.TriggerControllerYou,
+							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							StackObjectKind:  game.StackSpell,
+							AttackAlone:      true,
+							CounterKind:      counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ModifyPT{
+											Object:         game.EventPermanentReference(),
+											PowerDelta:     game.Fixed(1),
+											ToughnessDelta: game.Fixed(1),
+											Duration:       game.DurationUntilEndOfTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Whenever a creature you control attacks alone, that creature gets +1/+1 until end of turn.
+		`,
+		},
+	}
+}

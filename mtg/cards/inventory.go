@@ -14,6 +14,7 @@ type Support struct {
 	Name             string                  `json:"name"`
 	OracleID         string                  `json:"oracle_id,omitempty"`
 	Face             game.FaceIndex          `json:"face"`
+	Faces            []string                `json:"printed_faces,omitempty"`
 	Identity         string                  `json:"identity"`
 	Implementation   string                  `json:"implementation"`
 	Loadable         bool                    `json:"loadable"`
@@ -51,6 +52,11 @@ func (r *Registry) SupportFor(name string) []Support {
 		if err != nil {
 			support.Failure = err.Error()
 		} else if i < len(defs) {
+			for _, faceIndex := range defs[i].FaceIndexes() {
+				if face, exists := defs[i].Face(faceIndex); exists {
+					support.Faces = append(support.Faces, face.Name)
+				}
+			}
 			support.Programs = defs[i].ProgramReferences()
 			for _, program := range entry.Programs {
 				if !slices.Contains(support.Programs, program.Reference) {

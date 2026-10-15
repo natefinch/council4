@@ -1,0 +1,51 @@
+package f
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// FlowstoneSurge is the card definition for Flowstone Surge.
+//
+// Type: Enchantment
+// Cost: {1}{R}
+//
+// Oracle text:
+//
+//	Creatures you control get +1/-1.
+var FlowstoneSurge = newFlowstoneSurge
+
+func newFlowstoneSurge() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Red),
+		CardFace: game.CardFace{
+			Name: "Flowstone Surge",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(1),
+				cost.R,
+			}),
+			Colors: []color.Color{color.Red},
+			Types:  []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{
+				game.StaticAbility{
+					Text: "Creatures you control get +1/-1.",
+					ContinuousEffects: []game.ContinuousEffect{
+						game.ContinuousEffect{
+							Duration:       game.DurationPermanent,
+							Group:          game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+							Layer:          game.LayerPowerToughnessModify,
+							PowerDelta:     1,
+							ToughnessDelta: -1,
+						},
+					},
+				},
+			},
+			OracleText: `
+			Creatures you control get +1/-1.
+		`,
+		},
+	}
+}

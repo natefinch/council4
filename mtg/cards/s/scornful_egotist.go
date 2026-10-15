@@ -1,0 +1,52 @@
+package s
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
+)
+
+// ScornfulEgotist is the card definition for Scornful Egotist.
+//
+// Type: Creature — Human Wizard
+// Cost: {7}{U}
+//
+// Oracle text:
+//
+//	Morph {U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
+var ScornfulEgotist = newScornfulEgotist
+
+func newScornfulEgotist() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Blue),
+		CardFace: game.CardFace{
+			Name: "Scornful Egotist",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(7),
+				cost.U,
+			}),
+			Colors:    []color.Color{color.Blue},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Human, types.Wizard},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+			StaticAbilities: []game.StaticAbility{
+				game.StaticAbility{
+					Text: "Morph {U}",
+					KeywordAbilities: []game.KeywordAbility{
+						game.MorphKeyword{
+							Cost: cost.Mana{
+								cost.U,
+							},
+						},
+					},
+				},
+			},
+			OracleText: `
+			Morph {U} (You may cast this card face down as a 2/2 creature for {3}. Turn it face up any time for its morph cost.)
+		`,
+		},
+	}
+}

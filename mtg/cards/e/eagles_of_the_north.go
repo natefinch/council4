@@ -1,0 +1,138 @@
+package e
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// EaglesOfTheNorth is the card definition for Eagles of the North.
+//
+// Type: Creature — Bird Soldier
+// Cost: {5}{W}
+//
+// Oracle text:
+//
+//	Flying
+//	When this creature enters, creatures you control get +1/+0 and gain first strike until end of turn.
+//	Plainscycling {1} ({1}, Discard this card: Search your library for a Plains card, reveal it, put it into your hand, then shuffle.)
+var EaglesOfTheNorth = newEaglesOfTheNorth
+
+func newEaglesOfTheNorth() *game.CardDef {
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.White),
+		CardFace: game.CardFace{
+			Name: "Eagles of the North",
+			ManaCost: opt.Val(cost.Mana{
+				cost.O(5),
+				cost.W,
+			}),
+			Colors:    []color.Color{color.White},
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{types.Bird, types.Soldier},
+			Power:     opt.Val(game.PT{Value: 3}),
+			Toughness: opt.Val(game.PT{Value: 3}),
+			StaticAbilities: []game.StaticAbility{
+				game.FlyingStaticBody,
+			},
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
+					ManaCost: opt.Val(cost.Mana{
+						cost.O(1),
+					}),
+					AdditionalCosts: []cost.Additional{
+						cost.Additional{
+							Kind:        cost.AdditionalDiscard,
+							Text:        "Discard this card",
+							Amount:      1,
+							Source:      zone.Hand,
+							CounterKind: counter.PlusOnePlusOne,
+						},
+					},
+					ZoneOfFunction: zone.Hand,
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.Search{
+											Player: game.ControllerReference(),
+											Spec: game.SearchSpec{
+												SourceZone:  zone.Library,
+												Destination: zone.Hand,
+												Filter:      game.Selection{SubtypesAny: []types.Sub{types.Plains}},
+												Reveal:      true,
+											},
+											Amount: game.Fixed(1),
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+					KeywordAbilities: []game.KeywordAbility{
+						game.CyclingKeyword{
+							Cost: cost.Mana{
+								cost.O(1),
+							},
+						},
+					},
+				},
+			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "When this creature enters, creatures you control get +1/+0 and gain first strike until end of turn.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhen,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventPermanentEnteredBattlefield,
+							Source:          game.TriggerSourceSelf,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+						},
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											ContinuousEffects: []game.ContinuousEffect{
+												game.ContinuousEffect{
+													Duration:   game.DurationPermanent,
+													Group:      game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+													Layer:      game.LayerPowerToughnessModify,
+													PowerDelta: 1,
+												},
+												game.ContinuousEffect{
+													Duration:    game.DurationPermanent,
+													Group:       game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou}),
+													Layer:       game.LayerAbility,
+													AddKeywords: []game.Keyword{game.FirstStrike},
+												},
+											},
+											Duration: game.DurationUntilEndOfTurn,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Flying
+			When this creature enters, creatures you control get +1/+0 and gain first strike until end of turn.
+			Plainscycling {1} ({1}, Discard this card: Search your library for a Plains card, reveal it, put it into your hand, then shuffle.)
+		`,
+		},
+	}
+}

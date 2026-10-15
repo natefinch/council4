@@ -8,7 +8,16 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 // constructor so the registry can build them lazily.
 var Cards = []cardset.Entry{
 	{Name: "X-23, Deadly Weapon", New: X23DeadlyWeapon},
+	{Name: "Xander's Lounge", New: XanderSLounge},
+	{Name: "Xathrid Necromancer", New: XathridNecromancer},
+	{Name: "Xathrid Slyblade", New: XathridSlyblade},
+	{Name: "Xenagos, God of Revels", New: XenagosGodOfRevels},
+	{Name: "Xenagos, the Reveler", New: XenagosTheReveler},
+	{Name: "Xenograft", New: Xenograft},
 	{Name: "Xerex Strobe-Knight", New: XerexStrobeKnight},
 	{Name: "Xiahou Dun, the One-Eyed", New: XiahouDunTheOneEyed},
+	{Name: "Xira Arien", New: XiraArien},
+	{Name: "Xorn", New: Xorn},
 	{Name: "Xun Yu, Wei Advisor", New: XunYuWeiAdvisor},
+	{Name: "Xyris, the Writhing Storm", New: XyrisTheWrithingStorm},
 }
