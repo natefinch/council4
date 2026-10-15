@@ -421,6 +421,7 @@ type preparedDamageResult struct {
 	lifelink    bool
 	commanders  []id.ID
 	toxic       int
+	poison      int
 	initiative  bool
 	ring        bool
 }
@@ -433,7 +434,8 @@ func prepareDamageResult(g *game.Game, member pendingDamage, combat bool) prepar
 	}
 	result.event = damageReplacementEvent(g, event)
 	result.event.SimultaneousID = event.simultaneousID
-	if event.permanent != nil {
+	switch {
+	case event.permanent != nil:
 		result.event.Player = effectiveController(g, event.permanent)
 		result.deathtouch = damageSourceHasDeathtouch(g, event.sourceObjectID)
 		switch {
@@ -448,8 +450,11 @@ func prepareDamageResult(g *game.Game, member pendingDamage, combat bool) prepar
 			result.counters = event.amount
 		default:
 		}
-	} else if !playerRuleEffectActive(g, event.player, game.RuleEffectDamageDoesntCauseLifeLoss) {
+	case damageSourceHasKeyword(g, event.sourceID, event.sourceObjectID, game.Infect):
+		result.poison = replacementPlayerCounterPlacementAmount(g, event.controller, event.player, counter.Poison, event.amount)
+	case !playerRuleEffectActive(g, event.player, game.RuleEffectDamageDoesntCauseLifeLoss):
 		result.lifeLoss = prepareLifeLoss(g, event.player, event.amount)
+	default:
 	}
 	result.event = prepareEvent(g, result.event)
 	if combat {
@@ -543,6 +548,13 @@ func resolveDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 				event.permanent.MarkedDeathtouchDamage = true
 			}
 		} else {
+			if result.poison > 0 {
+				added, ok := placePlayerCounters(g.Players[event.player], event.controller, counter.Poison, result.poison, simultaneousID)
+				if !ok {
+					panic("prepared Infect poison placement failed")
+				}
+				facts = append(facts, damageFact{event: added})
+			}
 			if result.lifeLoss > 0 {
 				facts = append(facts, damageFact{event: commitLifeLoss(g, event.player, result.lifeLoss, simultaneousID)})
 			}

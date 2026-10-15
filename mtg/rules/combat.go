@@ -228,6 +228,24 @@ func damageSourceUsesMinusOneCounters(g *game.Game, sourceObjectID id.ID) bool {
 	return false
 }
 
+func damageSourceHasKeyword(g *game.Game, sourceID, sourceObjectID id.ID, keyword game.Keyword) bool {
+	if sourceObjectID != 0 {
+		if source, present := permanentByObjectID(g, sourceObjectID); present {
+			return hasKeyword(g, source, keyword)
+		}
+		if source, present := stackObjectByID(g, sourceObjectID); present {
+			def, found := stackObjectSpellDef(g, source)
+			return found && def.HasKeyword(keyword)
+		}
+		if snapshot, present := lastKnownObject(g, sourceObjectID); present {
+			return slices.Contains(snapshot.Keywords, keyword)
+		}
+		return false
+	}
+	def, found := damageSourceDef(g, sourceID, 0)
+	return found && def.HasKeyword(keyword)
+}
+
 func applyLifelink(g *game.Game, source *game.Permanent, damage int) {
 	if damage <= 0 || !hasKeyword(g, source, game.Lifelink) {
 		return

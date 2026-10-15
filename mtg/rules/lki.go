@@ -137,6 +137,13 @@ func snapshotStackSpell(g *game.Game, obj *game.StackObject) game.ObjectSnapshot
 		Controller: obj.Controller,
 	}
 	if def, ok := stackObjectSpellDef(g, obj); ok {
+		var keywords keywordSet
+		for index := range def.AbilityCount() {
+			addBodyKeywords(&keywords, def.BodyAt(index))
+		}
+		keywords.each(func(keyword game.Keyword) {
+			snapshot.Keywords = append(snapshot.Keywords, keyword)
+		})
 		snapshot.Colors = spellColors(def)
 		snapshot.Types = append([]types.Card(nil), def.Types...)
 		snapshot.Subtypes = append([]types.Sub(nil), def.Subtypes...)

@@ -41,6 +41,9 @@ The playtest path supports, among others:
   first/double strike, Trample, Deathtouch, Lifelink, Toxic, Wither/Infect,
   commander combat damage, and lethal permanent cleanup. Combat is kept in the
   rules package per [ADR 0007](./adr/0007-keep-combat-in-rules.md).
+- **Player Infect damage** — actual damage gives replacement-aware poison rather
+  than life loss, preserving prevention/redirection, source live/LKI identity,
+  lifelink, Toxic and commander damage. Poison loss uses the existing SBA.
 - **Continuous effects** — effective characteristics through the standard
   layer system (copy/control/text/type/color/ability/P-T), with timestamps and
   dependencies, counters, and temporary modifiers.

@@ -10,10 +10,20 @@ import (
 func (r *effectResolver) damageSource(source game.ObjectReference) (effectDamageSource, bool) {
 	if source.Kind() == game.ObjectReferenceNone {
 		sourceID, sourceObjectID := damageSourceIDs(r.game, r.obj)
+		controller := r.obj.Controller
+		permanent, present := permanentByObjectID(r.game, sourceObjectID)
+		if present {
+			controller = effectiveController(r.game, permanent)
+		} else if snapshot, known := lastKnownObject(r.game, sourceObjectID); known {
+			controller = snapshot.Controller
+		}
 		return effectDamageSource{
 			sourceID:       sourceID,
 			sourceObjectID: sourceObjectID,
-			controller:     r.obj.Controller,
+			controller:     controller,
+			permanent:      permanent,
+			deathtouch:     damageSourceHasKeyword(r.game, sourceID, sourceObjectID, game.Deathtouch),
+			lifelink:       damageSourceHasKeyword(r.game, sourceID, sourceObjectID, game.Lifelink),
 		}, true
 	}
 	resolved, ok := resolveObjectReference(r.game, r.obj, source)
@@ -96,10 +106,10 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		total := 0
 		for _, playerID := range r.playerGroupMembers(group) {
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, perRecipient, false)
-			applyDamageSourceLifelink(r.game, source, dealt)
 			total += dealt
 			res.succeeded = dealt > 0 || res.succeeded
 		}
+		applyDamageSourceLifelink(r.game, source, total)
 		// Publish the total damage dealt across the whole group so a follow-on
 		// "...equal to the damage dealt this way." life gain (Creeping
 		// Bloodsucker) reads the sum, not just one recipient's share.
@@ -140,6 +150,7 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 	}
 	allocations := r.allocateDividedDamage(res.amount, targets)
 	dealtAny := false
+	total := 0
 	for i, entry := range targets {
 		amount := allocations[i]
 		// An illegal target keeps its share of the division but is dealt no
@@ -154,16 +165,18 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 				continue
 			}
 			dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, amount, false)
-			applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
+			applyDamageSourceDeathtouch(source, permanent, dealt)
+			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		case game.TargetPlayer:
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, entry.target.PlayerID, amount, false)
-			applyDamageSourceLifelink(r.game, source, dealt)
+			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		default:
 			continue
 		}
 	}
+	applyDamageSourceLifelink(r.game, source, total)
 	res.amount = typedDamageResultAmount(prim.ResultAmountKind, res.amount, 0)
 	res.succeeded = dealtAny
 	return res
@@ -187,6 +200,7 @@ func (r *effectResolver) damageEachTarget(res effectResolved, source effectDamag
 	}
 	amount := res.amount
 	dealtAny := false
+	total := 0
 	for _, entry := range targets {
 		if !entry.legal {
 			continue
@@ -198,16 +212,18 @@ func (r *effectResolver) damageEachTarget(res effectResolved, source effectDamag
 				continue
 			}
 			dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, amount, false)
-			applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
+			applyDamageSourceDeathtouch(source, permanent, dealt)
+			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		case game.TargetPlayer:
 			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, entry.target.PlayerID, amount, false)
-			applyDamageSourceLifelink(r.game, source, dealt)
+			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		default:
 			continue
 		}
 	}
+	applyDamageSourceLifelink(r.game, source, total)
 	res.amount = typedDamageResultAmount(prim.ResultAmountKind, amount, 0)
 	res.succeeded = dealtAny
 	return res
@@ -390,15 +406,15 @@ func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, so
 	dealtToPermanent := 0
 	if creatureAmount > 0 {
 		dealtToPermanent = dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, creatureAmount, false)
-		applyDamageSourceKeywordEffects(r.game, source, permanent, dealtToPermanent)
+		applyDamageSourceDeathtouch(source, permanent, dealtToPermanent)
 	}
 	dealtToPlayer := 0
 	if excessAmount > 0 {
 		if playerID, playerOK := r.resolvePlayer(excessPlayer); playerOK {
 			dealtToPlayer = dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, excessAmount, false)
-			applyDamageSourceLifelink(r.game, source, dealtToPlayer)
 		}
 	}
+	applyDamageSourceLifelink(r.game, source, dealtToPermanent+dealtToPlayer)
 	res.excessDamage = excessAmount
 	res.amount = typedDamageResultAmount(prim.ResultAmountKind, dealtToPermanent+dealtToPlayer, excessAmount)
 	res.succeeded = dealtToPermanent > 0 || dealtToPlayer > 0
@@ -406,11 +422,14 @@ func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, so
 }
 
 func (r *effectResolver) damageSelectedPermanents(res effectResolved, source effectDamageSource, group game.GroupReference) effectResolved {
+	total := 0
 	for _, permanent := range r.groupPermanentsWithSource(group, source.permanent) {
 		dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
-		applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
+		applyDamageSourceDeathtouch(source, permanent, dealt)
+		total += dealt
 		res.succeeded = dealt > 0 || res.succeeded
 	}
+	applyDamageSourceLifelink(r.game, source, total)
 	return res
 }
 

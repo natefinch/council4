@@ -743,13 +743,17 @@ type effectDamageSource struct {
 }
 
 func applyDamageSourceKeywordEffects(g *game.Game, source effectDamageSource, damaged *game.Permanent, damage int) {
+	applyDamageSourceDeathtouch(source, damaged, damage)
+	applyDamageSourceLifelink(g, source, damage)
+}
+
+func applyDamageSourceDeathtouch(source effectDamageSource, damaged *game.Permanent, damage int) {
 	if damage <= 0 {
 		return
 	}
 	if source.deathtouch {
 		damaged.MarkedDeathtouchDamage = true
 	}
-	applyDamageSourceLifelink(g, source, damage)
 }
 
 func applyDamageSourceLifelink(g *game.Game, source effectDamageSource, damage int) {

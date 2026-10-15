@@ -271,6 +271,18 @@ passes, and independent spell damage calls, remain distinct events. Lifelink
 produces one life-gain event per source, even when its damage has several
 recipients. Live combat and Simulator use this same operation.
 
+Player-directed Infect damage gives replacement-aware poison counters instead
+of life loss after damage modification, prevention and redirection
+(CR 120.3b, 702.90). Infect and lifelink are damage results, not extra replacement
+ordering choices. Actual damage still counts for lifelink, commander damage and
+independent Toxic poison. A life-loss prohibition does not prevent Infect poison;
+Wither alone still causes ordinary player life loss. Source keywords and controller
+come from the exact live object or its LKI, including the resolving spell's
+selected-face/copy snapshot, never a later incarnation of the same physical card.
+One simultaneous noncombat damage instruction aggregates its source's actual
+dealt amounts before applying lifelink once, including grouped, divided,
+each-target and split-excess recipients.
+
 Before the first combat-damage assignment, `CombatState` captures first/double
 strike eligibility by the original ObjectID. Second-step assignment belongs to
 remaining combatants that originally had neither keyword, plus those that
