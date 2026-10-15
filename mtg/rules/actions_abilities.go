@@ -113,7 +113,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 	activate.Targets = completedTargets
-	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, card, permanent.ObjectID, body, activate.ChosenModes, activate.TargetCounts, activate.Targets)
+	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, card, permanent.ObjectID, body, activate.ChosenModes, activate.TargetCounts, activate.Targets, activate.XValue)
 	if !ok {
 		return false
 	}
@@ -152,12 +152,16 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	}
 	targetEvents := prepareTargetEvents(g, obj)
 	manaCost := opt.V[cost.Mana]{}
+	paymentManaCost := opt.V[cost.Mana]{}
+	var costModifiers []game.CostModifier
 	var additionalCosts []cost.Additional
 	var alternativeCosts []cost.Alternative
 	timing := game.NoTimingRestriction
 	if activatedOK {
 		sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
 		manaCost = effectiveActivatedAbilityCost(g, playerID, sourceCard, activatedBody)
+		paymentManaCost = activatedBody.ManaCost
+		costModifiers = activatedAbilityCostModifiers(g, playerID, sourceCard, activatedBody)
 		additionalCosts = abilityAdditionalCosts(activatedBody.AdditionalCosts)
 		alternativeCosts = append([]cost.Alternative(nil), activatedBody.AlternativeCosts...)
 		timing = activatedBody.Timing
@@ -170,7 +174,8 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
-		ManaCost:         manaCost,
+		ManaCost:         paymentManaCost,
+		CostModifiers:    costModifiers,
 		AdditionalCosts:  additionalCosts,
 		AlternativeCosts: alternativeCosts,
 		XValue:           activate.XValue,
@@ -207,7 +212,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
 		return false
 	}
-	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets)
+	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets, activate.XValue)
 	if !ok {
 		return false
 	}
@@ -347,7 +352,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
 		return false
 	}
-	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets)
+	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets, activate.XValue)
 	if !ok {
 		return false
 	}

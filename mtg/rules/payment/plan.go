@@ -170,6 +170,21 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.ManaCost)) && !additionalCostsUseX(req.AdditionalCosts) {
 		return plan, false
 	}
+	baseCost := manaCostPtr(req.ManaCost)
+	for index := range req.CostModifiers {
+		if req.CostModifiers[index].SetManaCost.Exists {
+			baseCost = &req.CostModifiers[index].SetManaCost.Val
+		}
+	}
+	resolved, ok := resolveManaCostX(baseCost, req.XValue)
+	if !ok {
+		return plan, false
+	}
+	resolved = applyManaCostModifiers(resolved, req.CostModifiers)
+	req.ManaCost = opt.V[cost.Mana]{}
+	if resolved != nil {
+		req.ManaCost = opt.Val(*resolved)
+	}
 	tapSource := hasTapCostOf(req.AdditionalCosts)
 	if tapSource && (req.Source == nil || !canTapForAbility(s, req.Source)) {
 		return plan, false
@@ -444,12 +459,18 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 }
 
 func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, targets []game.Target, bestowed bool, prefs *Preferences) (spellCostPlan, bool) {
-	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, bargained: option.bargained, bestowed: bestowed, option: option})
 	plan := spellCostPlan{option: option}
 	if xValue < 0 ||
 		xValue != 0 && !costHasVariableMana(option.manaCost) && !additionalCostsUseX(option.additionalCosts) {
 		return plan, false
 	}
+	resolved, ok := resolveManaCostX(option.manaCost, xValue)
+	if !ok {
+		return plan, false
+	}
+	option.manaCost = resolved
+	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, bargained: option.bargained, bestowed: bestowed, option: option})
+	plan.option = option
 	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, clonePreferences(prefs), nil, cardID, sourceZone, cardID)
 	if !ok {
 		return plan, false

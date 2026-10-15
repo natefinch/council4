@@ -62,6 +62,9 @@ card is added only after its entire behavior and relevant scenarios are complete
   promise that every legacy scalar is an actual mutation count.
 - `Ask(request)` uses normal ChoiceAgent observations, validation, logging and
   recorded fallbacks. It does not choose a strategic answer inside card code.
+  `ChoiceNumber` uses `NumberRange`, empty `Options`, and one returned scalar
+  rather than an option index. An unset maximum does not enumerate possible
+  values; the enclosing operation still validates its exact costs and targets.
 - `Destroy(operation)` performs one simultaneous batch through the shared
   destruction, replacement and zone-change machinery. Each member preserves
   its pre-action incarnation, characteristics and controller, whether it moved,
@@ -96,13 +99,18 @@ card is added only after its entire behavior and relevant scenarios are complete
   Reveal-only searches with `SearchMustFindIfAvailable` require a fixed positive,
   unrestricted quantity; the minimum is the full count, clamped to availability
   (CR 701.23d), rather than merely one card.
-- `MoveCards(placements...)` assigns found handles to hand/graveyard in one
+- `View().TargetCards()` mints exact invocation-local handles for the still-legal
+  announced cards in public graveyards or face-up exile. Illegal targets and
+  departed incarnations are omitted; hidden-zone cards are not disclosed.
+- `MoveCards(placements...)` assigns search/target handles to hand/graveyard/exile in one
   simultaneous placement, applying zone replacements before committing the moves.
   After replacements, each owner orders their actual simultaneous graveyard
   arrivals under CR 404.3; redirected cards participate only in their real zone.
   Replacement shuffles wait until the full placement finishes. Handles cannot be
   forged, reused across invocations, or followed through a zone change or a later
-  shuffle. Clone preserves the library's shuffle-correlation epoch.
+  shuffle. Target handles also retain their actual source zones. Clone preserves
+  the library's shuffle-correlation epoch. For simultaneous battlefield entry,
+  programs use the existing `Execute(PutOnBattlefield{Sources: ...})` operation.
 
 Contexts expire when the synchronous handler returns. Never retain them,
 live pointers or mutable per-game state in a closure/global. Named pure

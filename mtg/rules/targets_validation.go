@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, branch game.CastBranch) bool {
@@ -22,14 +23,14 @@ func targetsValidForBodyFromSourceObject(g *game.Game, controller game.PlayerID,
 	return targetsValidForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, body, nil, targets)
 }
 
-func targetsValidForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target) bool {
+func targetsValidForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target, xValue ...int) bool {
 	if body == nil {
 		return len(targets) == 0
 	}
 	if !modesValidForBody(body, chosenModes) {
 		return false
 	}
-	return targetsValidForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes), targets)
+	return targetsValidForSpecs(g, controller, source, sourceObjectID, bodyTargetSpecs(body, chosenModes, xValue...), targets)
 }
 
 // targetsValidForSpecs reports whether a set of chosen targets is a legal
@@ -156,7 +157,7 @@ func bodyTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, source
 	if !specsBindTargetsToManaValueX(specs) {
 		return true
 	}
-	counts, ok := bodyTargetCountsWithModes(g, controller, source, sourceObjectID, game.Event{}, body, chosenModes, targets)
+	counts, ok := bodyTargetCountsWithModes(g, controller, source, sourceObjectID, game.Event{}, body, chosenModes, targets, xValue)
 	if !ok {
 		return false
 	}
@@ -181,27 +182,27 @@ func specsBindTargetsToManaValueX(specs []game.TargetSpec) bool {
 // constraint. It is shared by the spell and activated-ability announcement
 // checks so both enforce the bound identically.
 func targetsSatisfyManaValueXForSpecs(g *game.Game, specs []game.TargetSpec, counts []int, targets []game.Target, xValue int) bool {
+	if len(counts) != len(specs) {
+		return false
+	}
 	targetIndex := 0
-	for i := range specs {
-		count := 0
-		if i < len(counts) {
-			count = counts[i]
-		}
-		if targetIndex+count > len(targets) {
+	for index, spec := range specs {
+		count := counts[index]
+		if count < 0 || count > len(targets)-targetIndex {
 			return false
 		}
 		slice := targets[targetIndex : targetIndex+count]
 		targetIndex += count
-		for j := range slice {
-			if specs[i].ManaValueAtMostX && !targetManaValueAtMost(g, slice[j], xValue) {
+		for _, target := range slice {
+			if spec.ManaValueAtMostX && !targetManaValueAtMost(g, target, xValue) {
 				return false
 			}
-			if specs[i].ManaValueEqualsX && !targetManaValueEquals(g, slice[j], xValue) {
+			if spec.ManaValueEqualsX && !targetManaValueEquals(g, target, xValue) {
 				return false
 			}
 		}
 	}
-	return true
+	return targetIndex == len(targets)
 }
 
 // targetManaValueAtMost reports whether a permanent target's mana value is at
@@ -250,24 +251,24 @@ func bodyTargetCounts(g *game.Game, controller game.PlayerID, source *game.CardD
 	return bodyTargetCountsWithModes(g, controller, source, sourceObjectID, game.Event{}, body, nil, targets)
 }
 
-func bodyTargetCountsWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, body game.Ability, chosenModes []int, targets []game.Target) ([]int, bool) {
+func bodyTargetCountsWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, body game.Ability, chosenModes []int, targets []game.Target, xValue ...int) ([]int, bool) {
 	if body == nil {
 		return nil, len(targets) == 0
 	}
 	if !modesValidForBody(body, chosenModes) {
 		return nil, false
 	}
-	return targetCountsForSpecs(g, controller, source, sourceObjectID, triggerEvent, bodyTargetSpecs(body, chosenModes), targets)
+	return targetCountsForSpecs(g, controller, source, sourceObjectID, triggerEvent, bodyTargetSpecs(body, chosenModes, xValue...), targets)
 }
 
-func bodyTargetCountsWithModesAndRecorded(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes, recorded []int, targets []game.Target) ([]int, bool) {
+func bodyTargetCountsWithModesAndRecorded(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes, recorded []int, targets []game.Target, xValue ...int) ([]int, bool) {
 	if body == nil {
 		return nil, len(recorded) == 0 && len(targets) == 0
 	}
 	if !modesValidForBody(body, chosenModes) {
 		return nil, false
 	}
-	specs := bodyTargetSpecs(body, chosenModes)
+	specs := bodyTargetSpecs(body, chosenModes, xValue...)
 	if len(recorded) > 0 {
 		if !recordedTargetCountsValidForSpecs(g, controller, source, sourceObjectID, specs, recorded, targets) {
 			return nil, false
@@ -486,7 +487,7 @@ func bodyTargetResolutionAllowed(g *game.Game, source *game.CardDef, sourceObjec
 	if !modesValidForBody(body, obj.ChosenModes) {
 		return false
 	}
-	return stackObjectTargetResolutionAllowed(g, source, sourceObjectID, bodyTargetSpecs(body, obj.ChosenModes), obj, allowIllegal)
+	return stackObjectTargetResolutionAllowed(g, source, sourceObjectID, bodyTargetSpecs(body, obj.ChosenModes, obj.XValue), obj, allowIllegal)
 }
 
 // stackObjectHasAnyLegalTargetsForSpecs rechecks the legality of a resolving
@@ -679,7 +680,15 @@ func spellBaseTargetSpecsRaw(card *game.CardDef, chosenModes []int) []game.Targe
 	return game.BodyTargets(ability)
 }
 
-func bodyTargetSpecs(body game.Ability, chosenModes []int) []game.TargetSpec {
+func bodyTargetSpecs(body game.Ability, chosenModes []int, xValue ...int) []game.TargetSpec {
+	specs := bodyTargetSpecsRaw(body, chosenModes)
+	if len(xValue) == 0 {
+		return specs
+	}
+	return applyTargetNumbersToSpecs(specs, game.CastBranch{XValue: opt.Val(xValue[0])})
+}
+
+func bodyTargetSpecsRaw(body game.Ability, chosenModes []int) []game.TargetSpec {
 	if body == nil {
 		return nil
 	}

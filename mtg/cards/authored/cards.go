@@ -19,6 +19,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize)
 	entries = append(entries, AnOfferYouCantRefuse, Counterspell, Negate, EssenceScatter, Disallow)
 	entries = append(entries, EladamrisCall, SteelshapersGift, Fabricate, IdyllicTutor, SylvanScrying, DemonicTutor, DiabolicTutor)
+	entries = append(entries, DeathDenied, WildestDreams, RatsFeast, ShatteredCrypt, ReturnToTheRanks, ChampionOfStraySouls)
 	for i := range entries {
 		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
 		if entries[i].Verification == "" {
@@ -40,11 +41,11 @@ func replacesCompiledEntry(name string) bool {
 	// installed compiler definitions; the generated sources remain available.
 	switch name {
 	case "An Offer You Can't Refuse", "Bedevil", "Cackling Counterpart",
-		"Counterspell", "Demonic Tutor", "Diabolic Tutor", "Disallow", "Disenchant", "Dualcaster Mage", "Eladamri's Call",
+		"Champion of Stray Souls", "Counterspell", "Death Denied", "Demonic Tutor", "Diabolic Tutor", "Disallow", "Disenchant", "Dualcaster Mage", "Eladamri's Call",
 		"Essence Scatter", "Fabricate", "Fated Infatuation", "Generous Gift",
 		"Idyllic Tutor", "Naturalize", "Negate", "Pongify", "Rapid Hybridization",
-		"Resculpt", "Reverberate", "Steelshaper's Gift", "Sylvan Scrying", "Terminate",
-		"Twincast", "Vindicate":
+		"Rats' Feast", "Resculpt", "Return to the Ranks", "Reverberate", "Shattered Crypt", "Steelshaper's Gift", "Sylvan Scrying", "Terminate",
+		"Twincast", "Vindicate", "Wildest Dreams":
 		return true
 	default:
 		return false

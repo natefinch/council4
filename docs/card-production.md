@@ -171,9 +171,18 @@ third-batch selection history and frozen pilot evidence remain unchanged.
 The original six frozen pilot blockers remain authoritative: #170 Reiterate,
 #2161 Doomsday, #3285 Necromancy, #3286 Panglacial Wurm, #3287 Possibility Storm,
 #3288 Warp World. The pilot's frozen pending fields and fourteen/six outcomes
-were not rewritten. Global gameplay fidelity blockers #3284 (X/multikicker)
-and #3126 (combat assignment completeness) remain explicit; budget stops never
-become rules draws. Worldgorger's prior finite recurrence scopes are unchanged.
+were not rewritten. The #3284 follow-up separates exact X/multikicker legality
+from policy samples. A production X=21 scenario also proved that six existing
+compiler-loaded definitions truncated counted targets at twenty. Their complete
+authored replacements now execute exact target batches: Death Denied, Wildest
+Dreams, Rats' Feast, Shattered Crypt, Return to the Ranks and Champion of Stray
+Souls. This is repair of existing loaded cards, not another production batch.
+Generated definitions and the pinned corpus are retained; public target handles,
+replacement-aware moves and the existing simultaneous battlefield-source batch
+are shared Engine operations. Current registry associations point to the exact
+replacements. #3126 (combat assignment completeness) remains explicit; budget
+stops never become rules draws. Worldgorger's prior finite recurrence scopes are
+unchanged.
 
 ## Live backlog reconciliation
 

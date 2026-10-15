@@ -23,12 +23,7 @@ func (*Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card
 	var options []freeCastOption
 	for _, face := range card.Def.LegalCastFaces() {
 		spellDef := cardFaceOrDefault(card, face)
-		if !freeCastFaceMatchesSelection(g, card, spellDef, selection, playerID) ||
-			maxManaValue.Exists && stackManaValue(spellDef, 0) > maxManaValue.Val ||
-			!cardCastRestrictionsSatisfied(g, playerID, spellDef) ||
-			spellCastProhibited(g, playerID, spellDef) ||
-			spellCastLimitReached(g, playerID, spellDef) ||
-			!isSupportedSpell(spellDef) {
+		if !freeCastFaceAvailable(g, playerID, card, spellDef, selection, maxManaValue) {
 			continue
 		}
 		for _, cast := range freeCastBranchOptions(g, playerID, card.ID, fromZone, face, spellDef) {
@@ -52,6 +47,13 @@ func (*Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card
 	return options
 }
 
+func freeCastFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
+	return freeCastFaceMatchesSelection(g, card, def, selection, player) &&
+		(!maxManaValue.Exists || stackManaValue(def, 0) <= maxManaValue.Val) &&
+		cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, def) &&
+		!spellCastLimitReached(g, player, def) && isSupportedSpell(def)
+}
+
 func freeCastFaceMatchesSelection(g *game.Game, card *game.CardInstance, spellDef *game.CardDef, selection game.Selection, viewer game.PlayerID) bool {
 	faceCard := *card
 	faceCard.Def = spellDef
@@ -64,22 +66,13 @@ func freeCastBranchOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, f
 		SourceZone: fromZone,
 		Face:       face,
 	}}
-	if spellHasMultikicker(spellDef) {
-		for count := 1; count <= maxLegalMultikickCount; count++ {
-			base = append(base, action.CastSpellAction{
-				CardID:      cardID,
-				SourceZone:  fromZone,
-				Face:        face,
-				KickerPaid:  true,
-				KickerCount: count,
-			})
-		}
-	} else if spellHasKicker(spellDef) {
+	if spellHasKicker(spellDef) {
 		base = append(base, action.CastSpellAction{
-			CardID:     cardID,
-			SourceZone: fromZone,
-			Face:       face,
-			KickerPaid: true,
+			CardID:      cardID,
+			SourceZone:  fromZone,
+			Face:        face,
+			KickerPaid:  true,
+			KickerCount: 1,
 		})
 	}
 	base = expandFreeCastBooleanBranch(base, spellHasBargain(spellDef), func(cast *action.CastSpellAction) {
@@ -117,12 +110,16 @@ func expandFreeCastBooleanBranch(base []action.CastSpellAction, enabled bool, ap
 }
 
 func freeCastOptionLegal(g *game.Game, playerID game.PlayerID, spellDef *game.CardDef, cast action.CastSpellAction) bool {
+	if cast.XValue < 0 || cast.KickerCount < 0 ||
+		cast.XValue != 0 && costHasVariableMana(manaCostPtr(spellDef.ManaCost)) {
+		return false
+	}
 	branch := castBranchForCast(cast)
 	if !modesValidForSpellAtBranch(g, playerID, spellDef, cast.ChosenModes, branch) ||
 		!targetsValidForSpell(g, playerID, spellDef, cast.ChosenModes, cast.Targets, branch) ||
-		!spellTargetCountsMatchX(g, playerID, spellDef, cast.ChosenModes, cast.Targets, 0, branch) ||
+		!spellTargetCountsMatchX(g, playerID, spellDef, cast.ChosenModes, cast.Targets, cast.XValue, branch) ||
 		!spellTargetCountsMatchKicker(g, playerID, spellDef, cast.ChosenModes, cast.Targets, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), branch) ||
-		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, cast.ChosenModes, cast.Targets, 0, branch) {
+		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, cast.ChosenModes, cast.Targets, cast.XValue, branch) {
 		return false
 	}
 	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
@@ -130,7 +127,7 @@ func freeCastOptionLegal(g *game.Game, playerID game.PlayerID, spellDef *game.Ca
 		CardID:          cast.CardID,
 		SourceZone:      cast.SourceZone,
 		Card:            spellDef,
-		XValue:          0,
+		XValue:          cast.XValue,
 		KickerPaid:      cast.KickerPaid,
 		KickerCount:     cast.KickerCount,
 		Bargained:       cast.Bargained,
@@ -143,7 +140,7 @@ func freeCastOptionLegal(g *game.Game, playerID game.PlayerID, spellDef *game.Ca
 }
 
 func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) {
+	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) || castFromZoneProhibited(g, controllerID, fromZone) {
 		return false
 	}
 	card, ok := g.GetCardInstance(cardID)
@@ -151,6 +148,17 @@ func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *ga
 		return false
 	}
 	options := e.freeCastOptionsForCard(g, controllerID, card, fromZone, selection, maxManaValue)
+	if len(options) == 0 {
+		for _, face := range card.Def.LegalCastFaces() {
+			def := cardFaceOrDefault(card, face)
+			if freeCastFaceAvailable(g, controllerID, card, def, selection, maxManaValue) &&
+				(spellHasMultikicker(def) || !costHasVariableMana(manaCostPtr(def.ManaCost)) && additionalCostsUseX(def.AdditionalCosts)) {
+				options = append(options, freeCastOption{cardID: card.ID, cast: action.CastSpellAction{
+					CardID: card.ID, SourceZone: fromZone, Face: face,
+				}})
+			}
+		}
+	}
 	if len(options) == 0 {
 		return false
 	}
@@ -172,11 +180,19 @@ func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *ga
 		MinChoices:       1,
 		MaxChoices:       1,
 		DefaultSelection: firstChoiceIndices(1),
+		Private:          fromZone == zone.Hand || fromZone == zone.Library,
 	}, log)
 	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(options) {
 		return false
 	}
-	return e.castFreeOption(g, sourcePlayer, controllerID, card, options[selected[0]].cast, exileOnResolution, agents, log)
+	cast := options[selected[0]].cast
+	spellDef := cardFaceOrDefault(card, cast.Face)
+	cast, ok = e.chooseCastNumbers(g, controllerID, spellDef, cast, true, agents, log)
+	if !ok || !freeCastOptionLegal(g, controllerID, spellDef, cast) {
+		g.Execution.InvalidChoices++
+		return false
+	}
+	return e.castFreeOption(g, sourcePlayer, controllerID, card, cast, exileOnResolution, agents, log)
 }
 
 func freeCastOptionLabel(spellDef *game.CardDef, cast action.CastSpellAction) string {
@@ -204,7 +220,7 @@ func freeCastOptionLabel(spellDef *game.CardDef, cast action.CastSpellAction) st
 	return label
 }
 
-func (e *Engine) chooseFreeCastPaymentOption(g *game.Game, controllerID game.PlayerID, request payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.SpellOptionSummary, bool) {
+func (e *Engine) chooseCastPaymentOption(g *game.Game, controllerID game.PlayerID, request payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.SpellOptionSummary, bool) {
 	options := paymentOrch.planner(g).PayableSpellOptions(request)
 	if len(options) == 0 {
 		return payment.SpellOptionSummary{}, false
@@ -236,6 +252,9 @@ func (e *Engine) chooseFreeCastPaymentOption(g *game.Game, controllerID game.Pla
 }
 
 func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if castFromZoneProhibited(g, controllerID, cast.SourceZone) {
+		return false
+	}
 	spellDef := cardFaceOrDefault(card, cast.Face)
 	branch := castBranchForCast(cast)
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, controllerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
@@ -263,6 +282,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		Targets:                       append([]game.Target(nil), cast.Targets...),
 		TargetCounts:                  targetCounts,
 		ChosenModes:                   append([]int(nil), cast.ChosenModes...),
+		XValue:                        cast.XValue,
 		KickerPaid:                    cast.KickerPaid,
 		KickerCount:                   cast.KickerCount,
 		GiftPromised:                  cast.GiftPromised,
@@ -288,6 +308,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		CardID:          card.ID,
 		SourceZone:      cast.SourceZone,
 		Card:            spellDef,
+		XValue:          cast.XValue,
 		KickerPaid:      cast.KickerPaid,
 		KickerCount:     cast.KickerCount,
 		Bargained:       cast.Bargained,
@@ -298,7 +319,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		SpliceManaCosts: splice.manaCosts,
 		Alternative:     opt.Val(freeCastAlternativeCost()),
 	}
-	paymentOption, ok := e.chooseFreeCastPaymentOption(g, controllerID, request, agents, log)
+	paymentOption, ok := e.chooseCastPaymentOption(g, controllerID, request, agents, log)
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
@@ -310,7 +331,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		controllerID,
 		paymentOption.ManaCost,
 		paymentOption.AdditionalCosts,
-		0,
+		cast.XValue,
 		card.ID,
 		cast.SourceZone,
 		agents,

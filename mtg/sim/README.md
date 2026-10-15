@@ -116,10 +116,10 @@ winner.
 
 For debugging a specific game, `RecordGame(cfg, i)` plays game `i` with recording
 agents and returns both its `rules.GameResult` and a `ReplayRecord`. The record
-stores the per-game seed and, per seat, the agent's decisions as plain integers:
-the index (within each call's legal-action list) of the action it took, and the
-option selection it returned for each engine-mediated choice. Because it is just
-ints, a `ReplayRecord` round-trips through JSON.
+stores the per-game seed and, per seat, sampled action indices and exact typed
+cast/activation announcements outside those samples. Choice selections retain
+their indices or, for `ChoiceNumber`, the actual chosen integer. These data
+round-trip through JSON without clamping X or multikicker to policy widths.
 
 `Replay(configs, record)` reconstructs the game: it re-runs the recorded seed (so
 the engine RNG reproduces every shuffle) and scripts each seat to repeat its

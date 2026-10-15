@@ -19,6 +19,38 @@ type costModificationContext struct {
 	option     spellCostOption
 }
 
+func resolveManaCostX(manaCost *cost.Mana, xValue int) (*cost.Mana, bool) {
+	if xValue < 0 {
+		return nil, false
+	}
+	if manaCost == nil {
+		return nil, true
+	}
+	resolved := *manaCost
+	variable := costHasVariableMana(manaCost)
+	if variable {
+		resolved = append(cost.Mana(nil), resolved...)
+	}
+	generic := 0
+	maximum := int(^uint(0) >> 1)
+	for index, symbol := range resolved {
+		if symbol.Kind == cost.VariableSymbol {
+			resolved[index] = cost.O(xValue)
+			symbol = resolved[index]
+		}
+		if symbol.Kind == cost.GenericSymbol {
+			if symbol.Generic < 0 || symbol.Generic > maximum-generic {
+				return nil, false
+			}
+			generic += symbol.Generic
+		}
+	}
+	if variable {
+		return &resolved, true
+	}
+	return manaCost, true
+}
+
 func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
 	modifiers := s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone, ctx.targets, ctx.bargained, ctx.bestowed)
 	ctx.option.manaCost = applyManaCostModifiers(ctx.option.manaCost, modifiers)

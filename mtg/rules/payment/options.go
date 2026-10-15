@@ -17,8 +17,6 @@ const flashbackAlternativeLabel = "Flashback"
 // escapeAlternativeLabel is the canonical label for escape alternative costs.
 const escapeAlternativeLabel = "Escape"
 
-const maxKickerPaymentCount = 20
-
 // spellCostOption describes one payable cost option for a spell.
 type spellCostOption struct {
 	index           int
@@ -36,7 +34,7 @@ type spellCostOption struct {
 // option so the cast is legal only when the caster can sacrifice an artifact,
 // enchantment, or token.
 func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *game.CardDef, sourceZone zone.Type, kickerPaid bool, kickerCount int, bargained bool, permissions []SpellCastPermission) []spellCostOption {
-	if card == nil || kickerCount < 0 || kickerCount > maxKickerPaymentCount {
+	if card == nil || kickerCount < 0 {
 		return nil
 	}
 	kicker, kickerOK := spellKicker(card)
@@ -82,11 +80,15 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		if !ok {
 			return nil
 		}
+		manaCost, ok := spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid, kickerCount)
+		if !ok {
+			return nil
+		}
 		options = append(options, spellCostOption{
 			index:           0,
 			label:           "Normal cost",
 			card:            card,
-			manaCost:        spellManaCostWithKicker(manaCostPtr(card.ManaCost), kicker, kickerOK, kickerPaid, kickerCount),
+			manaCost:        manaCost,
 			additionalCosts: additional,
 			castPermission:  normalPermission,
 			bargained:       bargained,
@@ -119,6 +121,10 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		if !ok {
 			return nil
 		}
+		manaCost, ok := spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid, kickerCount)
+		if !ok {
+			return nil
+		}
 		label := alternative.Label
 		if label == "" {
 			label = "Alternative cost"
@@ -127,7 +133,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			index:           i + 1,
 			label:           label,
 			card:            card,
-			manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, kickerPaid, kickerCount),
+			manaCost:        manaCost,
 			additionalCosts: additional,
 			castPermission:  permission,
 			bargained:       bargained,
@@ -249,7 +255,7 @@ func addSpliceCosts(options []spellCostOption, spliceManaCosts []cost.Mana) {
 }
 
 func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCostOption {
-	if req.KickerCount < 0 || req.KickerCount > maxKickerPaymentCount {
+	if req.KickerCount < 0 {
 		return nil
 	}
 	if !req.Alternative.Exists {
@@ -281,6 +287,10 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 	if !ok {
 		return nil
 	}
+	manaCost, ok := spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid, req.KickerCount)
+	if !ok {
+		return nil
+	}
 	if req.Bargained {
 		additional = append(additional, BargainSacrificeCost())
 	}
@@ -292,7 +302,7 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		index:           0,
 		label:           label,
 		card:            req.Card,
-		manaCost:        spellManaCostWithKicker(manaCostPtr(alternative.ManaCost), kicker, kickerOK, req.KickerPaid, req.KickerCount),
+		manaCost:        manaCost,
 		additionalCosts: additional,
 		castPermission:  castPermission,
 		bargained:       req.Bargained,
@@ -470,19 +480,36 @@ func isEscapeAlternative(alternative cost.Alternative) bool {
 	return alternative.Mechanic == cost.AlternativeMechanicEscape
 }
 
-func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerOK, kickerPaid bool, kickerCount int) *cost.Mana {
+func spellManaCostWithKicker(base *cost.Mana, kicker game.KickerKeyword, kickerOK, kickerPaid bool, kickerCount int) (*cost.Mana, bool) {
 	if !kickerPaid || !kickerOK {
-		return base
+		return base, true
 	}
 	times := max(kickerCount, 1)
 	combined := cost.Mana{}
 	if base != nil {
 		combined = append(combined, (*base)...)
 	}
+	if !slices.ContainsFunc(kicker.Cost, func(symbol cost.Symbol) bool { return symbol.Kind != cost.GenericSymbol }) {
+		generic := 0
+		maximum := int(^uint(0) >> 1)
+		for _, symbol := range kicker.Cost {
+			if symbol.Generic < 0 || symbol.Generic > maximum-generic {
+				return nil, false
+			}
+			generic += symbol.Generic
+		}
+		if generic > 0 {
+			if times > maximum/generic {
+				return nil, false
+			}
+			combined = append(combined, cost.O(generic*times))
+		}
+		return &combined, true
+	}
 	for range times {
 		combined = append(combined, kicker.Cost...)
 	}
-	return &combined
+	return &combined, true
 }
 
 func appendKickerAdditionalCosts(
@@ -497,9 +524,6 @@ func appendKickerAdditionalCosts(
 	}
 	if kickerCount <= 0 {
 		kickerCount = 1
-	}
-	if kickerCount > maxKickerPaymentCount {
-		return nil, false
 	}
 	for range kickerCount {
 		var ok bool

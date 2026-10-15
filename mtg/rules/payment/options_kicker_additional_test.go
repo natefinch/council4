@@ -111,7 +111,22 @@ func TestAlternativeRequestIncludesCompleteKickerCost(t *testing.T) {
 	}
 }
 
-func TestKickerPaymentCountIsBounded(t *testing.T) {
+func TestGenericKickerScalingIsCompactAndOverflowChecked(t *testing.T) {
+	base := cost.Mana{cost.O(1)}
+	for _, amount := range []int{0, 2} {
+		costs, ok := spellManaCostWithKicker(&base, game.KickerKeyword{Cost: cost.Mana{cost.O(amount)}, Multi: true},
+			true, true, 1_000_000)
+		if !ok || len(*costs) > 2 || costs.ManaValue() != 1+amount*1_000_000 {
+			t.Fatal("a selected generic count was expanded into count-sized mana symbols")
+		}
+	}
+	if _, ok := spellManaCostWithKicker(&base, game.KickerKeyword{Cost: cost.Mana{cost.O(2)}, Multi: true},
+		true, true, int(^uint(0)>>1)); ok {
+		t.Fatal("overflowing kicker multiplication wrapped into a payable cost")
+	}
+}
+
+func TestKickerPaymentCountIsNotAPolicyBound(t *testing.T) {
 	t.Parallel()
 	card := &game.CardDef{CardFace: game.CardFace{
 		StaticAbilities: []game.StaticAbility{{
@@ -127,11 +142,11 @@ func TestKickerPaymentCountIsBounded(t *testing.T) {
 		card,
 		zone.Hand,
 		true,
-		maxKickerPaymentCount+1,
+		21,
 		false,
 		nil,
-	); len(options) != 0 {
-		t.Fatalf("options = %#v, want excessive Multikicker count rejected", options)
+	); len(options) != 1 || len(options[0].additionalCosts) != 21 {
+		t.Fatalf("options = %#v, want all 21 additional costs preserved", options)
 	}
 	if options := spellCostOptionsForZoneAndKicker(
 		manaAlternativeState{},

@@ -51,12 +51,15 @@ func TestCastPayXLifeSpellChoicesAndPayment(t *testing.T) {
 	setSorcerySpeedTurn(g, game.Player1)
 
 	legal := engine.legalActions(g, game.Player1)
+	if len(legal) > maxSampledXValue+5 {
+		t.Fatal("life-based X choices exceeded the independent numeric policy budget")
+	}
 	for _, x := range []int{0, 39, 40} {
-		if !containsAction(legal, action.CastSpell(spellID, nil, x, nil)) {
+		if !engine.announcementLegal(g, game.Player1, action.CastSpell(spellID, nil, x, nil)) {
 			t.Fatalf("pay-X-life spell was not legal for X=%d at 40 life", x)
 		}
 	}
-	if containsAction(legal, action.CastSpell(spellID, nil, 41, nil)) {
+	if engine.announcementLegal(g, game.Player1, action.CastSpell(spellID, nil, 41, nil)) {
 		t.Fatal("pay-X-life spell was legal for X=41 at 40 life")
 	}
 

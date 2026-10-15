@@ -140,6 +140,11 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 		return append([]int(nil), request.DefaultSelection...)
 	}
 	switch request.Kind {
+	case game.ChoiceNumber:
+		if !request.NumberRange.Exists {
+			return nil
+		}
+		return []int{request.NumberRange.Val.Minimum}
 	case game.ChoiceOrder:
 		selected := make([]int, 0, len(request.Options))
 		for _, option := range request.Options {
@@ -181,6 +186,14 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 		return false
 	}
 	switch request.Kind {
+	case game.ChoiceNumber:
+		if !request.NumberRange.Exists || len(request.Options) != 0 ||
+			request.MinChoices != 1 || request.MaxChoices != 1 || len(selected) != 1 {
+			return false
+		}
+		domain := request.NumberRange.Val
+		return selected[0] >= domain.Minimum &&
+			(!domain.Maximum.Exists || domain.Maximum.Val >= domain.Minimum && selected[0] <= domain.Maximum.Val)
 	case game.ChoiceOrder:
 		return orderSelectionValid(request, selected)
 	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:

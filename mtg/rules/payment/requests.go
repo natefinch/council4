@@ -72,6 +72,7 @@ type AbilityRequest struct {
 	SourceCardID     id.ID
 	SourceZone       zone.Type
 	ManaCost         opt.V[cost.Mana]
+	CostModifiers    []game.CostModifier
 	AdditionalCosts  []cost.Additional
 	AlternativeCosts []cost.Alternative
 	XValue           int

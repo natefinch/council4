@@ -56,6 +56,10 @@ The playtest path supports, among others:
 - **Cost modifiers** — colored/generic/colorless/X payment via pool mana and
   auto-tapped sources, generic cost increases, sacrifice and turn-face-up costs,
   and attack taxes.
+- **Exact numeric announcements** — chosen X and multikicker counts are validated
+  independently of bounded policy samples, including non-hand/alternate faces,
+  resolution-time casting, exact target counts, modifiers and replay. Free mana
+  costs still require printed-mana X=0; additional costs remain payable.
 - **Triggered and activated abilities** — event-driven trigger detection over a
   typed `game.Event` stream (see
   [ADR 0005](./adr/0005-event-centered-ability-architecture.md)), APNAP stack

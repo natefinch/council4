@@ -2821,7 +2821,7 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 		if body == nil {
 			return stackObjectSpecs{}, false
 		}
-		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes)}, true
+		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes, obj.XValue)}, true
 	case game.StackTriggeredAbility:
 		var body game.Ability
 		if obj.InlineTrigger != nil {
@@ -2832,7 +2832,7 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 		if body == nil {
 			return stackObjectSpecs{}, false
 		}
-		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes)}, true
+		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes, obj.XValue)}, true
 	default:
 		return stackObjectSpecs{}, false
 	}

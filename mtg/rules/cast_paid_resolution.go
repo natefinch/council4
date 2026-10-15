@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
@@ -47,16 +48,30 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	// cast restrictions, cast prohibitions, and per-turn cast limits (CR 601.3e).
 	if !cardCastRestrictionsSatisfied(g, controllerID, spellDef) ||
 		spellCastProhibited(g, controllerID, spellDef) ||
-		spellCastLimitReached(g, controllerID, spellDef) {
+		spellCastLimitReached(g, controllerID, spellDef) || !isSupportedSpell(spellDef) {
 		return false
 	}
-	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
+	cast, ok := e.chooseCastNumbers(g, controllerID, spellDef, action.CastSpellAction{
+		CardID: cardID, SourceZone: fromZone, Face: game.FaceFront,
+	}, false, agents, log)
 	if !ok {
+		g.Execution.InvalidChoices++
 		return false
 	}
-	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, modes, targets, game.CastBranch{})
+	modes, targets := cast.ChosenModes, cast.Targets
+	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, modes, targets, castBranchForCast(cast))
 	if !ok {
 		panic("validated paid-cast spell targets could not be segmented")
+	}
+	request := payment.SpellRequest{
+		PlayerID: controllerID, CardID: cardID, SourceZone: fromZone, Card: spellDef,
+		XValue: cast.XValue, KickerPaid: cast.KickerPaid, KickerCount: cast.KickerCount,
+		ChosenModes: modes, Targets: targets,
+		CastPermissions: castPermissionsForZone(g, controllerID, cardID, fromZone, game.FaceFront),
+	}
+	if !paymentOrch.canPaySpellCosts(g, request) {
+		g.Execution.InvalidChoices++
+		return false
 	}
 	// CR 601.2a: proposing the cast moves the card to the stack before its costs
 	// are determined and paid, so a cost paid from the source zone can never
@@ -70,6 +85,9 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		Targets:      append([]game.Target(nil), targets...),
 		TargetCounts: targetCounts,
 		ChosenModes:  append([]int(nil), modes...),
+		XValue:       cast.XValue,
+		KickerPaid:   cast.KickerPaid,
+		KickerCount:  cast.KickerCount,
 		SourceZone:   fromZone,
 	}
 	counterTransition := prepareCastCounterTransition(g, card, fromZone)
@@ -79,18 +97,19 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	counterTransition.apply(g)
 	g.Stack.Push(obj)
 	targetEvents := prepareTargetEvents(g, obj)
-	prefs := e.paymentPreferencesForSpellFromZone(g, controllerID, cardID, fromZone, game.FaceFront, spellDef, 0, agents, log)
+	paymentOption, ok := e.chooseCastPaymentOption(g, controllerID, request, agents, log)
+	if !ok {
+		g.Stack.RemoveByID(obj.ID)
+		restoreCastSourceCard(sourcePlayer, cardID, fromZone)
+		counterTransition.undo(g)
+		return false
+	}
+	prefs := e.paymentPreferencesForCostFromSource(g, controllerID, paymentOption.ManaCost,
+		paymentOption.AdditionalCosts, cast.XValue, cardID, fromZone, agents, log)
+	prefs.AlternativeIndex = paymentOption.Index
+	request.Prefs = prefs
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, controllerID)
-	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
-		PlayerID:        controllerID,
-		CardID:          cardID,
-		SourceZone:      fromZone,
-		Card:            spellDef,
-		ChosenModes:     modes,
-		CastPermissions: castPermissionsForZone(g, controllerID, cardID, fromZone, game.FaceFront),
-		Targets:         targets,
-		Prefs:           prefs,
-	})
+	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
 		// CR 728: the proposed cast is illegal because its costs can't or won't be
 		// paid, so the proposal is undone.

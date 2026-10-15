@@ -13,8 +13,8 @@ import (
 
 // ReplayRecord captures everything needed to reconstruct one game deterministically
 // from its seed: the per-game seed and, per seat, the agent decisions made during
-// the game. Decisions are stored as indices and option selections, so a record is
-// plain data that round-trips through JSON.
+// the game. Decisions are stored as sampled indices, exact typed announcements
+// and option/numeric selections, all plain data that round-trips through JSON.
 //
 // Replay re-runs the same seed (so the engine RNG reproduces every shuffle and
 // coin flip) and scripts each seat's agent to repeat its recorded decisions, which
@@ -36,11 +36,19 @@ type ReplayRecord struct {
 // selection the seat returned on its k-th engine-mediated choice. ChoiceCapable
 // records whether the seat's agent answered choices itself; a seat that left
 // choices to the engine's fallback must replay the same way, so its scripted
-// agent must not answer choices either.
+// agent must not answer choices either. Announcements retains full proposals at
+// action positions whose values were not among the sampled candidates.
 type SeatScript struct {
-	Actions       []int   `json:"actions"`
-	Choices       [][]int `json:"choices"`
-	ChoiceCapable bool    `json:"choiceCapable"`
+	Actions       []int                        `json:"actions"`
+	Choices       [][]int                      `json:"choices"`
+	ChoiceCapable bool                         `json:"choiceCapable"`
+	Announcements map[int]RecordedAnnouncement `json:"announcements,omitempty"`
+}
+
+// RecordedAnnouncement preserves a complete proposal outside the sampled list.
+type RecordedAnnouncement struct {
+	Cast       *action.CastSpellAction       `json:"cast,omitempty"`
+	Activation *action.ActivateAbilityAction `json:"activation,omitempty"`
 }
 
 // RecordGame plays game index from cfg with recording agents and returns both its
@@ -86,6 +94,7 @@ func recordedRunWithLimits(configs [game.NumPlayers]game.PlayerConfig, seed uint
 			Actions:       recorders[i].actions,
 			Choices:       recorders[i].choices,
 			ChoiceCapable: choiceCapable[i],
+			Announcements: recorders[i].announcements,
 		}
 	}
 	return result, record
@@ -104,7 +113,7 @@ func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord, cat
 	}
 	var agents [game.NumPlayers]rules.PlayerAgent
 	for i := range record.Seats {
-		actionAgent := &scriptedActionAgent{actions: record.Seats[i].Actions}
+		actionAgent := &scriptedActionAgent{actions: record.Seats[i].Actions, announcements: record.Seats[i].Announcements}
 		if record.Seats[i].ChoiceCapable {
 			// The seat answered choices itself, so replay answers them from the
 			// recording. A correctly reproduced game asks the same number of
@@ -157,8 +166,9 @@ func configProgramReferences(configs [game.NumPlayers]game.PlayerConfig) []game.
 
 // seatRecorder accumulates one seat's decisions during a recorded game.
 type seatRecorder struct {
-	actions []int
-	choices [][]int
+	actions       []int
+	choices       [][]int
+	announcements map[int]RecordedAnnouncement
 }
 
 func wrapForRecording(base rules.PlayerAgent, rec *seatRecorder) rules.PlayerAgent {
@@ -170,7 +180,7 @@ func wrapForRecording(base rules.PlayerAgent, rec *seatRecorder) rules.PlayerAge
 }
 
 // recordingAgent wraps a base agent and records, for each priority decision, the
-// index of the chosen action within the legal list it was offered.
+// sampled index or exact typed proposal chosen by the base agent.
 type recordingAgent struct {
 	base rules.PlayerAgent
 	rec  *seatRecorder
@@ -178,7 +188,24 @@ type recordingAgent struct {
 
 func (a *recordingAgent) ChooseAction(obs rules.PlayerObservation, legal []action.Action) action.Action {
 	chosen := a.base.ChooseAction(obs, legal)
-	a.rec.actions = append(a.rec.actions, indexOfAction(legal, chosen))
+	index := indexOfAction(legal, chosen)
+	position := len(a.rec.actions)
+	a.rec.actions = append(a.rec.actions, index)
+	if index < 0 && chosen.Validate() == nil {
+		var announcement RecordedAnnouncement
+		if cast, ok := chosen.CastSpellPayload(); ok {
+			announcement.Cast = &cast
+		}
+		if activation, ok := chosen.ActivateAbilityPayload(); ok {
+			announcement.Activation = &activation
+		}
+		if announcement.Cast != nil || announcement.Activation != nil {
+			if a.rec.announcements == nil {
+				a.rec.announcements = make(map[int]RecordedAnnouncement)
+			}
+			a.rec.announcements[position] = announcement
+		}
+	}
 	return chosen
 }
 
@@ -202,15 +229,26 @@ func (a *recordingChoiceAgent) ChooseChoice(obs rules.PlayerObservation, request
 // a ChoiceAgent, so the engine answers any choices with its deterministic
 // fallback — matching a recording seat whose base did not answer choices.
 type scriptedActionAgent struct {
-	actions []int
-	cursor  int
+	actions       []int
+	cursor        int
+	announcements map[int]RecordedAnnouncement
 }
 
 func (a *scriptedActionAgent) ChooseAction(_ rules.PlayerObservation, legal []action.Action) action.Action {
 	index := -1
 	if a.cursor < len(a.actions) {
 		index = a.actions[a.cursor]
+		announcement, announced := a.announcements[a.cursor]
 		a.cursor++
+		if announced {
+			if announcement.Cast != nil && announcement.Activation == nil {
+				return action.AnnounceSpell(*announcement.Cast)
+			}
+			if announcement.Activation != nil && announcement.Cast == nil {
+				return action.AnnounceAbility(*announcement.Activation)
+			}
+			return action.Action{Kind: action.Kind(-1)}
+		}
 	}
 	if index >= 0 && index < len(legal) {
 		return legal[index]
@@ -240,8 +278,8 @@ func (a *scriptedChoiceAgent) ChooseChoice(_ rules.PlayerObservation, _ game.Cho
 }
 
 // indexOfAction returns the index of chosen within legal, comparing by value so
-// targets and payloads are matched. It returns -1 when chosen is not a legal
-// action, which a well-behaved agent never returns.
+// targets and payloads are matched. It returns -1 for proposals outside the
+// sampled list; syntactically valid declarations are recorded separately.
 func indexOfAction(legal []action.Action, chosen action.Action) int {
 	for i := range legal {
 		if reflect.DeepEqual(legal[i], chosen) {

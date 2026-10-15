@@ -2,9 +2,12 @@ package rules
 
 import (
 	"fmt"
+	"iter"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 // targetChoiceKind distinguishes the four outcomes of target enumeration so
@@ -36,6 +39,11 @@ type targetChoiceResult struct {
 	err error
 }
 
+type targetChoiceOptions struct {
+	limit  int
+	xValue opt.V[int]
+}
+
 func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, branch game.CastBranch) targetChoiceResult {
 	kickerCount := 0
 	if branch.Kicked {
@@ -54,7 +62,12 @@ func targetChoicesForSpellWithKickerCount(g *game.Game, controller game.PlayerID
 		specs[i].MinTargets = count
 		specs[i].MaxTargets = count
 	}
-	return targetChoicesForSpecs(g, controller, card, 0, game.Event{}, specs)
+	var choices targetChoiceOptions
+	if card != nil && (costHasVariableMana(manaCostPtr(card.ManaCost)) || additionalCostsUseX(card.AdditionalCosts) || spellHasMultikicker(card)) {
+		choices.limit = maxSampledNumericTargetChoices
+	}
+	choices.xValue = branch.XValue
+	return targetChoicesForSpecs(g, controller, card, 0, game.Event{}, specs, choices)
 }
 
 func targetChoicesForBody(g *game.Game, controller game.PlayerID, body game.Ability) targetChoiceResult {
@@ -69,7 +82,7 @@ func targetChoicesForBodyFromSourceObject(g *game.Game, controller game.PlayerID
 	return targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, game.Event{}, body, nil)
 }
 
-func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, body game.Ability, chosenModes []int) targetChoiceResult {
+func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, body game.Ability, chosenModes []int, xValue ...int) targetChoiceResult {
 	if body == nil {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}, targetCounts: [][]int{nil}}
 	}
@@ -79,7 +92,14 @@ func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game
 			err:  fmt.Errorf("ability has invalid mode selection %v", chosenModes),
 		}
 	}
-	return targetChoicesForSpecs(g, controller, source, sourceObjectID, triggerEvent, bodyTargetSpecs(body, chosenModes))
+	var choices targetChoiceOptions
+	if activated, ok := body.(*game.ActivatedAbility); ok && abilityCanAnnounceX(activated) {
+		choices.limit = maxSampledNumericTargetChoices
+	}
+	if len(xValue) != 0 {
+		choices.xValue = opt.Val(xValue[0])
+	}
+	return targetChoicesForSpecs(g, controller, source, sourceObjectID, triggerEvent, bodyTargetSpecs(body, chosenModes, xValue...), choices)
 }
 
 // targetChoicesForSpecs enumerates every legal target combination for specs.
@@ -97,7 +117,7 @@ func targetChoicesForBodyFromSourceObjectWithModes(g *game.Game, controller game
 // per instance of "target" (CR 115.3); "another target" specs additionally exclude
 // the earlier targets of the same spell or ability, enforcing the card's "another"
 // criterion.
-func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec) targetChoiceResult {
+func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, options ...targetChoiceOptions) targetChoiceResult {
 	if len(specs) == 0 {
 		return targetChoiceResult{kind: targetNoTargetsRequired, choices: [][]game.Target{nil}, targetCounts: [][]int{nil}}
 	}
@@ -113,7 +133,11 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 	}
 	var result [][]game.Target
 	var targetCounts [][]int
-	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, 0, nil, nil, &result, &targetCounts)
+	var choices targetChoiceOptions
+	if len(options) != 0 {
+		choices = options[0]
+	}
+	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, 0, nil, nil, &result, &targetCounts, choices)
 	if len(result) == 0 {
 		return targetChoiceResult{kind: targetNoLegalChoices}
 	}
@@ -125,7 +149,10 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 	return targetChoiceResult{kind: targetLegalChoicesFound, choices: result, targetCounts: targetCounts}
 }
 
-func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, specIndex int, prefix []game.Target, countPrefix []int, result *[][]game.Target, targetCounts *[][]int) {
+func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, specIndex int, prefix []game.Target, countPrefix []int, result *[][]game.Target, targetCounts *[][]int, choices targetChoiceOptions) {
+	if choices.limit > 0 && len(*result) >= choices.limit {
+		return
+	}
 	if specIndex >= len(specs) {
 		*result = append(*result, append([]game.Target(nil), prefix...))
 		*targetCounts = append(*targetCounts, append([]int(nil), countPrefix...))
@@ -141,22 +168,26 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 		}
 		next := append(append([]game.Target(nil), prefix...), game.DeferredTarget())
 		nextCounts := append(append([]int(nil), countPrefix...), 1)
-		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts)
+		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts, choices)
 		return
 	}
 	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, triggerEvent, &spec)
+	candidates = filterAnnouncedManaValueTargets(g, spec, candidates, choices.xValue)
 	if spec.DistinctFromPriorTargets {
 		candidates = filterTargetsDistinctFrom(candidates, prefix)
 	}
 	maxTargets := min(spec.MaxTargets, len(candidates))
 	for _, count := range targetCountsForChoices(spec.MinTargets, maxTargets) {
-		for _, combination := range targetCombinations(candidates, count) {
+		for combination := range targetCombinations(candidates, count) {
 			if !targetsSatisfySameGraveyard(g, &spec, combination) {
 				continue
 			}
 			next := append(append([]game.Target(nil), prefix...), combination...)
 			nextCounts := append(append([]int(nil), countPrefix...), count)
-			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts)
+			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts, choices)
+			if choices.limit > 0 && len(*result) >= choices.limit {
+				return
+			}
 		}
 	}
 }
@@ -282,7 +313,13 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 		}
 	}
 	if targetSpecAllowsCards(spec) {
-		for _, card := range g.CardInstances {
+		cardIDs := make([]id.ID, 0, len(g.CardInstances))
+		for cardID := range g.CardInstances {
+			cardIDs = append(cardIDs, cardID)
+		}
+		slices.Sort(cardIDs)
+		for _, cardID := range cardIDs {
+			card := g.CardInstances[cardID]
 			target := game.CardTargetWithZoneVersion(card.ID, card.ZoneVersion)
 			if targetMatchesSpec(g, predicatePlayer, sourceObjectID, triggerEvent, spec, target) {
 				candidates = append(candidates, target)
@@ -292,27 +329,39 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	return candidates
 }
 
-func targetCombinations(candidates []game.Target, count int) [][]game.Target {
-	if count == 0 {
-		return [][]game.Target{nil}
+func filterAnnouncedManaValueTargets(g *game.Game, spec game.TargetSpec, candidates []game.Target, xValue opt.V[int]) []game.Target {
+	if !xValue.Exists || !spec.ManaValueAtMostX && !spec.ManaValueEqualsX {
+		return candidates
 	}
-	if count > len(candidates) {
-		return nil
+	var matched []game.Target
+	for _, candidate := range candidates {
+		if targetsSatisfyManaValueXForSpecs(g, []game.TargetSpec{spec}, []int{1}, []game.Target{candidate}, xValue.Val) {
+			matched = append(matched, candidate)
+		}
 	}
-	var result [][]game.Target
-	var walk func(start int, chosen []game.Target)
-	walk = func(start int, chosen []game.Target) {
-		if len(chosen) == count {
-			result = append(result, append([]game.Target(nil), chosen...))
+	return matched
+}
+
+func targetCombinations(candidates []game.Target, count int) iter.Seq[[]game.Target] {
+	return func(yield func([]game.Target) bool) {
+		if count < 0 || count > len(candidates) {
 			return
 		}
-		need := count - len(chosen)
-		for i := start; i <= len(candidates)-need; i++ {
-			walk(i+1, append(chosen, candidates[i]))
+		var walk func(start int, chosen []game.Target) bool
+		walk = func(start int, chosen []game.Target) bool {
+			if len(chosen) == count {
+				return yield(append([]game.Target(nil), chosen...))
+			}
+			need := count - len(chosen)
+			for index := start; index <= len(candidates)-need; index++ {
+				if !walk(index+1, append(chosen, candidates[index])) {
+					return false
+				}
+			}
+			return true
 		}
+		walk(0, nil)
 	}
-	walk(0, nil)
-	return result
 }
 
 func (e *Engine) completeSpellAnnouncementTargets(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog, branch game.CastBranch) ([]game.Target, bool) {

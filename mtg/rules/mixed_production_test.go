@@ -234,6 +234,12 @@ func TestEveryProvingCardLoadsIntoLiveAndSearchEngines(t *testing.T) {
 			if !branch.Stack.IsEmpty() || !live.Stack.IsEmpty() {
 				t.Fatal("live/search catalogs failed to reach stable priority")
 			}
+			if entry.OracleID == authored.WildestDreams.OracleID {
+				if !live.Players[game.Player1].Exile.Contains(cardID) || !branch.Players[game.Player1].Exile.Contains(cardID) {
+					t.Fatal("Wildest Dreams did not exile itself in both production engines")
+				}
+				return
+			}
 			if !live.Players[game.Player1].Graveyard.Contains(cardID) && permanentByCardID(live, cardID) == nil {
 				// Gilded Drake can be sacrificed by its actual unsuccessful exchange.
 				t.Fatal("proving card vanished after production resolution")

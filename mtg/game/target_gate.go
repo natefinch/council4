@@ -1,5 +1,7 @@
 package game
 
+import "github.com/natefinch/council4/opt"
+
 // TargetGate names the cast-time branch a target spec depends on. A spell may
 // have a target only if a condition is met, and that target is chosen only if
 // the condition is met (CR 601.2c). A gated spec participates in target
@@ -75,6 +77,10 @@ type CastBranch struct {
 	// Offspring reports that the spell's Offspring additional mana cost was paid
 	// as it was cast (CR 702.171b).
 	Offspring bool
+	// XValue and KickerCount bind exact announcement cardinalities, including zero.
+	// Unset values are used only while producing policy candidates.
+	XValue      opt.V[int]
+	KickerCount opt.V[int]
 }
 
 // ActiveIn reports whether a spec carrying this gate participates in targeting on

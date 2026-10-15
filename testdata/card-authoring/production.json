@@ -194,6 +194,15 @@
     "ruling_dates": []
    },
    {
+    "oracle_id": "327c5ca2-4eeb-49cb-84fb-f6a4b06b24bc",
+    "revision": "b243ce02-4fff-444c-acc4-e1a199621a53",
+    "oracle_text_sha256": "3f41c1f7bb17de513a3abc1958899b17eb00056b35fcde1c48c7812901444625",
+    "rulings_uri": "https://api.scryfall.com/cards/b243ce02-4fff-444c-acc4-e1a199621a53/rulings",
+    "retrieved": "2026-10-15",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "ruling_dates": []
+   },
+   {
     "oracle_id": "422e1869-134f-463d-9fa1-86b66a998b3e",
     "revision": "44e49332-b1e1-4b88-b508-516b55c67a1d",
     "oracle_text_sha256": "89935eef7baef80c6f616448109b71332a1c105f50715fcc8db587a0e3ca2dda",
@@ -91809,9 +91818,9 @@
    "oracle_id": "327c5ca2-4eeb-49cb-84fb-f6a4b06b24bc",
    "revision": "b243ce02-4fff-444c-acc4-e1a199621a53",
    "name": "Rats' Feast",
-   "status": "installed-compiled",
+   "status": "implemented-verified",
    "family": "unreviewed/normal",
-   "evidence": "testdata/card-preservation/installed-compiler.json"
+   "evidence": "mtg/rules/numeric_target_cards_test.go; existing compiler-loaded definition repaired with an exact authored override for #3284, generated source retained"
   },
   {
    "oracle_id": "327d9679-0049-4401-8dab-e0fb362306bd",
@@ -275262,7 +275271,7 @@
    "revision": "9fedd63c-22e4-4c36-8a7a-a167a070678f",
    "name": "Wildest Dreams",
    "registration_keys": [
-    "legacy-name:Wildest Dreams/0"
+    "0a25a72e-5603-4b50-ac20-36b286cc1a2b/front"
    ]
   },
   {
@@ -275630,7 +275639,7 @@
    "revision": "9fccce64-abac-4b90-bbe5-dbba8434b3b4",
    "name": "Return to the Ranks",
    "registration_keys": [
-    "legacy-name:Return to the Ranks/0"
+    "0d4ee553-f206-4e70-a7b2-a3670440aee7/front"
    ]
   },
   {
@@ -281262,7 +281271,7 @@
    "revision": "f0efbddb-c076-4552-b417-3608e0696a77",
    "name": "Champion of Stray Souls",
    "registration_keys": [
-    "legacy-name:Champion of Stray Souls/0"
+    "4edbaac4-dcb3-40b4-abd7-ff2683bd366d/front"
    ]
   },
   {
@@ -284606,7 +284615,7 @@
    "revision": "117df45d-4500-459b-96b5-ca41952580c1",
    "name": "Shattered Crypt",
    "registration_keys": [
-    "legacy-name:Shattered Crypt/0"
+    "77bef290-7229-420a-a5c6-8c1b6fea63df/front"
    ]
   },
   {
@@ -287222,7 +287231,7 @@
    "revision": "73d0a239-4d45-4762-968a-d4b9479346d9",
    "name": "Death Denied",
    "registration_keys": [
-    "legacy-name:Death Denied/0"
+    "94f23a93-cd98-4ee7-9e62-9b7b49ace6fd/front"
    ]
   },
   {

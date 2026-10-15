@@ -30,6 +30,6 @@ func bodyTargetCountsMatchX(g *game.Game, controller game.PlayerID, source *game
 	}
 	// Unlike ordinary fixed targets, an ambiguous packed layout cannot prove
 	// which target spec is bound to X.
-	counts, ok := bodyTargetCountsWithModesAndRecorded(g, controller, source, sourceObjectID, body, chosenModes, nil, targets)
+	counts, ok := bodyTargetCountsWithModesAndRecorded(g, controller, source, sourceObjectID, body, chosenModes, nil, targets, xValue)
 	return ok && targetCountsMatchX(specs, counts, xValue)
 }

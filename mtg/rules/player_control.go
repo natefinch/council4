@@ -30,7 +30,7 @@ func (e *Engine) chooseAction(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	decider := g.DecisionMaker(actor, game.DecisionRules)
 	if agent := agentFor(agents, decider); agent != nil {
 		chosen := e.decideAction(g, agent, actor, legal)
-		if containsAction(legal, chosen) {
+		if chosen.Validate() == nil && (containsAction(legal, chosen) || e.announcementLegal(g, actor, chosen)) {
 			return chosen
 		}
 		g.Execution.InvalidActions++

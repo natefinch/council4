@@ -257,10 +257,8 @@ func TestIndexedCardTargetReferencesMoveMultipleTargetCards(t *testing.T) {
 // graveyard-return sequence whose instruction count exceeds the number of chosen
 // targets safely no-ops every instruction past the last chosen target, moving
 // only the cards that were actually targeted. This is the resolution invariant the
-// variable-count "Return X target creature cards" form relies on: it unrolls one
-// return instruction for every legal X up to the engine maximum, and a cast with a
-// smaller X leaves the higher per-index slots empty (CountEqualsX enforces the
-// chosen count at cast time).
+// variable-count legacy template relies on: a captured smaller X leaves the
+// higher per-index slots empty (CountEqualsX enforces the chosen count).
 func TestIndexedCardTargetReferencesNoOpBeyondChosenTargets(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -297,6 +295,8 @@ func TestIndexedCardTargetReferencesNoOpBeyondChosenTargets(t *testing.T) {
 		TargetZone:   zone.Graveyard,
 		CountEqualsX: true,
 	}}
+	obj, _ := g.Stack.Peek()
+	obj.XValue = 2
 
 	engine.resolveTopOfStack(g, &TurnLog{})
 

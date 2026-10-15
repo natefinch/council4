@@ -34,10 +34,9 @@ func (e *Engine) Simulator() Simulator {
 	return Simulator{engine: e}
 }
 
-// LegalActions returns the actions playerID may legally take in g at the current
-// decision point, exactly as the engine offers them when granting priority
-// (productive actions before Pass). It is a pure read and does not mutate g, so a
-// search agent can enumerate a node's branches without cloning first.
+// LegalActions returns bounded policy candidates at the current decision point
+// (productive actions before Pass). It is a pure read. A numeric announcement
+// need not occur in these samples: Apply validates its complete typed payload.
 func (s Simulator) LegalActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	return s.engine.legalActions(g, playerID)
 }
@@ -54,7 +53,7 @@ func (s Simulator) LegalActions(g *game.Game, playerID game.PlayerID) []action.A
 // position.
 func (s Simulator) Apply(g *game.Game, playerID game.PlayerID, act action.Action, policies [game.NumPlayers]PlayerAgent) (*game.Game, bool) {
 	s.engine.validatePendingPrograms(g)
-	if !containsAction(s.engine.legalActions(g, playerID), act) {
+	if act.Validate() != nil || (!s.engine.announcementLegal(g, playerID, act) && !containsAction(s.engine.legalActions(g, playerID), act)) {
 		return nil, false
 	}
 	clone := g.Clone()

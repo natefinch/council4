@@ -1,6 +1,6 @@
 # Supported Cards
 
-Production registry: **17971 entries, 17971 loadable, 42 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17971 entries, 17971 loadable, 48 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `44917919cfe3d26ec77159b31b19be9500ae39cc432f06a7207ee7fb65666338`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -2473,7 +2473,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Champion of Arashin — legacy name-only
 - Champion of Dusk — legacy name-only
 - Champion of Lambholt — legacy name-only
-- Champion of Stray Souls — legacy name-only
+- Champion of Stray Souls — authored exact Oracle/front; behavior verified
 - Champion of the Parish — legacy name-only
 - Champion of the Perished — legacy name-only
 - Champion's Helm — legacy name-only
@@ -3556,7 +3556,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Deal Gone Bad — legacy name-only
 - Death Bomb — legacy name-only
 - Death Cultist — legacy name-only
-- Death Denied — legacy name-only
+- Death Denied — authored exact Oracle/front; behavior verified
 - Death Frenzy — legacy name-only
 - Death Grasp — legacy name-only
 - Death Kiss — legacy name-only
@@ -11924,7 +11924,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Rathi Intimidator — legacy name-only
 - Rathi Trapper — legacy name-only
 - Rats of Rath — legacy name-only
-- Rats' Feast — legacy name-only
+- Rats' Feast — authored exact Oracle/front; behavior verified
 - Rattleback Apothecary — legacy name-only
 - Rattlechains — legacy name-only
 - Rattleclaw Mystic — legacy name-only
@@ -12274,7 +12274,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Return to Nature — legacy name-only
 - Return to the Earth — legacy name-only
 - Return to the Light Realms — legacy name-only
-- Return to the Ranks — legacy name-only
+- Return to the Ranks — authored exact Oracle/front; behavior verified
 - Returned Centaur — legacy name-only
 - Returned Phalanx — legacy name-only
 - Returned Reveler — legacy name-only
@@ -13431,7 +13431,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Shatter the Source — legacy name-only
 - Shattered Acolyte — legacy name-only
 - Shattered Angel — legacy name-only
-- Shattered Crypt — legacy name-only
+- Shattered Crypt — authored exact Oracle/front; behavior verified
 - Shattered Dreams — legacy name-only
 - Shattered Landscape — legacy name-only
 - Shattered Perception — legacy name-only
@@ -17520,7 +17520,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Wilderland Scrounger — legacy name-only
 - Wilderness Hypnotist — legacy name-only
 - Wilderness Reclamation — legacy name-only
-- Wildest Dreams — legacy name-only
+- Wildest Dreams — authored exact Oracle/front; behavior verified
 - Wildfield Borderpost — legacy name-only
 - Wildfire — legacy name-only
 - Wildfire Awakener — legacy name-only

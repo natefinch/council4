@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -133,7 +134,7 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 	ctx := &programContext{
 		engine: e, game: g, obj: obj, agents: agents, log: log, active: true,
 		targets: slices.Clone(obj.Targets),
-		specs:   append(slices.Clone(shared), mode.Targets...),
+		specs:   applyCastBranchToSpecs(append(slices.Clone(shared), mode.Targets...), castBranchForObject(obj)),
 		source: cardprogram.Source{
 			CardID: cardID, ObjectID: objectID, StackID: obj.ID, Controller: obj.Controller, X: obj.XValue,
 		},
@@ -163,6 +164,7 @@ type programContext struct {
 	targets      []game.Target
 	specs        []game.TargetSpec
 	found        map[game.ObjectID]game.ZoneCardSnapshot
+	foundZones   map[game.ObjectID]zone.Type
 	libraryEpoch map[game.ObjectID]uint64
 }
 
@@ -222,9 +224,12 @@ func (c *programContext) Ask(request game.ChoiceRequest) ([]int, error) {
 		request.MaxChoices < request.MinChoices {
 		return nil, errors.New("authored choice has an invalid player or cardinality")
 	}
+	if request.Kind == game.ChoiceNumber && !choiceSelectionValid(request, []int{request.NumberRange.Val.Minimum}) {
+		return nil, errors.New("authored numeric choice has an invalid range")
+	}
 	repeats := request.Kind == game.ChoiceDamageAllocation || request.Kind == game.ChoiceCounterAllocation ||
 		request.Kind == game.ChoiceManaCombination
-	if (!repeats && request.MaxChoices > len(request.Options)) ||
+	if (!repeats && request.Kind != game.ChoiceNumber && request.MaxChoices > len(request.Options)) ||
 		(repeats && request.MinChoices > 0 && len(request.Options) == 0) {
 		return nil, errors.New("authored choice exceeds available distinct options")
 	}

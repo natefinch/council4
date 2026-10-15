@@ -76,6 +76,9 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 }
 
 func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if !castGiftRecipientValid(g, playerID, cast) {
+		return false
+	}
 	if cast.Mutate {
 		return e.applyMutateCastWithChoices(g, playerID, cast, agents, log)
 	}
@@ -519,13 +522,14 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
+	branch := game.CastBranch{XValue: opt.Val(xValue), KickerCount: opt.Val(0)}
 	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
-		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets, game.CastBranch{}) ||
-		!spellTargetCountsMatchX(g, playerID, spellDef, chosenModes, targets, xValue, game.CastBranch{}) ||
-		!spellTargetCountsMatchKicker(g, playerID, spellDef, chosenModes, targets, 0, game.CastBranch{}) ||
-		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, chosenModes, targets, xValue, game.CastBranch{}) ||
+		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets, branch) ||
+		!spellTargetCountsMatchX(g, playerID, spellDef, chosenModes, targets, xValue, branch) ||
+		!spellTargetCountsMatchKicker(g, playerID, spellDef, chosenModes, targets, 0, branch) ||
+		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, chosenModes, targets, xValue, branch) ||
 		!canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
@@ -555,12 +559,13 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	if !ok {
 		return false
 	}
-	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, game.CastBranch{})
+	branch := castBranchForCast(cast)
+	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
 	if !ok || !canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
 		return false
 	}
 	cast.Targets = completedTargets
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets, game.CastBranch{})
+	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets, branch)
 	if !ok {
 		panic("validated prepared spell targets could not be segmented")
 	}
@@ -748,11 +753,14 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
-	if kickerCount < 0 || kickerCount > maxLegalMultikickCount {
+	if kickerCount < 0 {
 		return false
 	}
 	kickerPaid := kickerCount > 0
-	branch := game.CastBranch{GiftPromised: giftPromised, Kicked: kickerPaid, Bargained: bargained, Bestowed: bestowed, Offspring: offspring}
+	branch := game.CastBranch{
+		GiftPromised: giftPromised, Kicked: kickerPaid, Bargained: bargained, Bestowed: bestowed, Offspring: offspring,
+		XValue: opt.Val(xValue), KickerCount: opt.Val(kickerCount),
+	}
 	if xValue < 0 {
 		return false
 	}
@@ -892,6 +900,10 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		request.Alternative = opt.Val(anyManaAlternativeCost(spellDef))
 	default:
 		// No alternative cost; the spell is cast for its normal mana cost.
+	}
+	if xValue != 0 && costHasVariableMana(manaCostPtr(spellDef.ManaCost)) && request.Alternative.Exists &&
+		!costHasVariableMana(manaCostPtr(request.Alternative.Val.ManaCost)) {
+		return false
 	}
 	return paymentOrch.canPaySpellCosts(g, request)
 }

@@ -184,6 +184,13 @@ func PlayLandFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceInde
 	}
 }
 
+// AnnounceSpell proposes a complete typed cast, independent of policy samples.
+func AnnounceSpell(cast CastSpellAction) Action {
+	cast.Targets = append([]game.Target(nil), cast.Targets...)
+	cast.ChosenModes = append([]int(nil), cast.ChosenModes...)
+	return Action{Kind: ActionCastSpell, castSpell: cast}
+}
+
 // CastSpell creates an action to cast a spell.
 func CastSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
 	return CastSpellFromZone(cardID, zone.Hand, targets, xValue, chosenModes)
@@ -336,6 +343,14 @@ func CastMutateSpellFromZone(cardID id.ID, sourceZone zone.Type, targetID id.ID)
 // CastCommanderSpell creates an action to cast a commander from the command zone.
 func CastCommanderSpell(cardID id.ID, targets []game.Target, xValue int, chosenModes []int) Action {
 	return CastSpellFromZone(cardID, zone.Command, targets, xValue, chosenModes)
+}
+
+// AnnounceAbility proposes a complete typed activation, independent of policy samples.
+func AnnounceAbility(activate ActivateAbilityAction) Action {
+	activate.Targets = append([]game.Target(nil), activate.Targets...)
+	activate.TargetCounts = append([]int(nil), activate.TargetCounts...)
+	activate.ChosenModes = append([]int(nil), activate.ChosenModes...)
+	return Action{Kind: ActionActivateAbility, activateAbility: activate}
 }
 
 // ActivateAbility creates an action to activate an ability.
@@ -576,6 +591,9 @@ func (a Action) Validate() error {
 		}
 		if a.castSpell.XValue < 0 {
 			return errors.New("cast spell action has negative X value")
+		}
+		if a.castSpell.KickerCount < 0 || a.castSpell.KickerCount > 0 && !a.castSpell.KickerPaid {
+			return errors.New("cast spell action has invalid kicker count")
 		}
 		if a.castSpell.Mutate && a.castSpell.MutateTargetID == 0 {
 			return errors.New("mutate cast action missing target permanent ID")

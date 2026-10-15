@@ -43,6 +43,17 @@ type PlayerAgent interface {
 The interface lives here because `rules.Engine` consumes it. Concrete agents live in `mtg/agent` later.
 
 Agents may also implement `ChoiceAgent` to answer bounded non-action choices such as triggered-ability target selection, ordering simultaneous triggers, or optional "you may" decisions. If an agent does not implement it, the engine records and uses deterministic fallback choices.
+
+The action list contains bounded policy samples, not every numeric announcement.
+An agent can return `action.AnnounceSpell` or `action.AnnounceAbility` with exact
+X, multikicker count, modes and targets; live priority and `Simulator.Apply`
+validate that complete proposal through the same timing, target and payment
+operations. Rejection does not partially pay a cost. During resolution,
+`ChoiceNumber` carries an exact scalar domain with no enumerated options; its
+one returned integer is the value, not an option index. Count-dependent targets
+are bound to that value, including zero, rather than legacy sample-width hints.
+Replay records out-of-sample typed proposals and exact scalar choices.
+
 Resolution choices over a player's hidden hand go to their rules decision maker,
 using that player's permitted information. Mindslaver redirects decisions without
 changing the actor/payer or object control; Opposition Agent temporarily overrides

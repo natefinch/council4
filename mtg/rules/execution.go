@@ -58,8 +58,6 @@ type Limitation struct {
 // from Searcher.Budget/Lookahead and the simulation turn/work limits.
 func ActionGenerationLimitations() []Limitation {
 	return []Limitation{
-		{ID: "x-enumeration", Detail: "Cast and activation X enumeration is capped at 20 (variable loyalty has a life-based upper bound). Higher legal X is not exhaustively offered.", Blocker: "https://github.com/natefinch/council4/issues/3284"},
-		{ID: "multikicker-enumeration", Detail: "Paid multikicker casts are enumerated and accepted only through count 20.", Blocker: "https://github.com/natefinch/council4/issues/3284"},
 		{ID: "combat-enumeration", Detail: "Attack and block declarations offer representative assignments, not every legal subset, defender assignment, blocker assignment or order.", Blocker: "https://github.com/natefinch/council4/issues/3126"},
 		{ID: "evaluation-knowledge", Detail: "Heuristic scoring is incomplete; authored bodies execute in Simulator but their consequences and static/replacement/policy value are not completely modeled. Unknown atoms are explicit."},
 	}

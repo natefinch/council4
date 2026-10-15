@@ -3,6 +3,7 @@ package rules
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/opt"
 )
 
 // castBranchForCast derives the cast branch a spell is being cast on from its
@@ -16,6 +17,8 @@ func castBranchForCast(cast action.CastSpellAction) game.CastBranch {
 		Bargained:    cast.Bargained,
 		Bestowed:     cast.Bestowed,
 		Offspring:    cast.Offspring,
+		XValue:       opt.Val(cast.XValue),
+		KickerCount:  opt.Val(effectiveKickerCount(cast.KickerPaid, cast.KickerCount)),
 	}
 }
 
@@ -32,6 +35,8 @@ func castBranchForObject(obj *game.StackObject) game.CastBranch {
 		Bargained:    obj.Bargained,
 		Bestowed:     obj.Bestowed,
 		Offspring:    obj.OffspringPaid,
+		XValue:       opt.Val(obj.XValue),
+		KickerCount:  opt.Val(effectiveKickerCount(obj.KickerPaid, obj.KickerCount)),
 	}
 }
 
@@ -52,11 +57,11 @@ func specsHaveGate(specs []game.TargetSpec) bool {
 // for the branch is replaced by an empty spec that reserves its ordinal slot but
 // requires no target: enumeration offers it zero targets, counting records zero
 // for it, and its chosen-target slot is skipped. A spec whose gate is active, or
-// that has no gate, is returned unchanged. Ungated spell lists are returned as-is
-// so every existing card enumerates and validates byte-identically.
+// that has no gate, retains its constraints. Exact announced numbers bind dynamic
+// cardinalities; lists without gates or numeric bindings are returned as-is.
 func applyCastBranchToSpecs(specs []game.TargetSpec, branch game.CastBranch) []game.TargetSpec {
 	if !specsHaveGate(specs) {
-		return specs
+		return applyTargetNumbersToSpecs(specs, branch)
 	}
 	out := make([]game.TargetSpec, len(specs))
 	for i := range specs {
@@ -66,7 +71,30 @@ func applyCastBranchToSpecs(specs []game.TargetSpec, branch game.CastBranch) []g
 		}
 		out[i] = game.TargetSpec{Gate: specs[i].Gate}
 	}
-	return out
+	return applyTargetNumbersToSpecs(out, branch)
+}
+
+func applyTargetNumbersToSpecs(specs []game.TargetSpec, branch game.CastBranch) []game.TargetSpec {
+	var out []game.TargetSpec
+	for index, spec := range specs {
+		count := 0
+		switch {
+		case spec.CountEqualsX && branch.XValue.Exists:
+			count = branch.XValue.Val
+		case spec.CountEqualsKickerPlusOne && branch.KickerCount.Exists:
+			count = branch.KickerCount.Val + 1
+		default:
+			continue
+		}
+		if out == nil {
+			out = append([]game.TargetSpec(nil), specs...)
+		}
+		out[index].MinTargets, out[index].MaxTargets = count, count
+	}
+	if out != nil {
+		return out
+	}
+	return specs
 }
 
 // gatedTargetSlot maps a compile-time target-slot index to the position of that

@@ -65,7 +65,8 @@ type Exchange struct {
 	After     []game.ObjectSnapshot
 }
 
-// FoundCard is a revealed card incarnation that a program may subsequently move.
+// FoundCard is an invocation-local card incarnation from a revealed search or
+// an announced public-zone target.
 type FoundCard struct {
 	Identity     game.ZoneCardSnapshot
 	Info         game.ChoiceCardInfo
@@ -78,7 +79,7 @@ type SearchResult struct {
 	Cards     []FoundCard
 }
 
-// CardPlacement assigns revealed cards to one destination in a simultaneous move.
+// CardPlacement assigns minted card handles to a simultaneous destination.
 type CardPlacement struct {
 	Cards       []FoundCard
 	Destination zone.Type
@@ -88,6 +89,7 @@ type CardPlacement struct {
 type View interface {
 	Source() Source
 	Targets() []game.Target
+	TargetCards() ([]FoundCard, error)
 	ActivePlayer() (game.PlayerID, error)
 	Player(game.PlayerReference) (game.PlayerID, bool, error)
 	Players(game.PlayerGroupReference) ([]game.PlayerID, error)

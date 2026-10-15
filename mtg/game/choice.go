@@ -87,7 +87,15 @@ const (
 	// ChoicePreventionAllocation selects a source for one-shot prevention or
 	// assigns one point of finite prevention (CR 615.7-8).
 	ChoicePreventionAllocation
+	// ChoiceNumber returns one exact integer, not an index into Options.
+	ChoiceNumber
 )
+
+// NumberRange describes a compact integer choice without enumerating its values.
+type NumberRange struct {
+	Minimum int
+	Maximum opt.V[int]
+}
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that
 // a ChoiceOption or ChoiceRequest refers to, so an agent can make a card-aware
@@ -149,6 +157,8 @@ type ChoiceRequest struct {
 
 	// Private keeps option identities out of logs, not the deciding agent's request.
 	Private bool
+	// NumberRange is required for ChoiceNumber; Options must be empty.
+	NumberRange opt.V[NumberRange]
 }
 
 // ChoiceDecision records the selected option indices for a ChoiceRequest.

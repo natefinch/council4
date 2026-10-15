@@ -30,6 +30,14 @@ func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, card *g
 	if body == nil {
 		return opt.V[cost.Mana]{}
 	}
+	effective := applyAbilityCostModifiers(manaCostPtr(body.ManaCost), activatedAbilityCostModifiers(g, playerID, card, body))
+	if effective == nil {
+		return opt.V[cost.Mana]{}
+	}
+	return opt.Val(*effective)
+}
+
+func activatedAbilityCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) []game.CostModifier {
 	modifiers := cyclingCostModifiers(g, playerID, card, body)
 	for _, modifier := range body.CostModifiers {
 		if !costModifierAppliesToAbility(g, modifier, playerID, card, body) {
@@ -43,11 +51,7 @@ func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, card *g
 		}
 		modifiers = append(modifiers, modifier)
 	}
-	effective := applyAbilityCostModifiers(manaCostPtr(body.ManaCost), modifiers)
-	if effective == nil {
-		return opt.V[cost.Mana]{}
-	}
-	return opt.Val(*effective)
+	return modifiers
 }
 
 func cyclingCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) []game.CostModifier {
@@ -272,7 +276,7 @@ func legalXValuesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Ma
 		return []int{0}
 	}
 	var values []int
-	for x := 0; x <= maxLegalXValue; x++ {
+	for x := 0; x <= maxSampledXValue; x++ {
 		if !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x}) {
 			break
 		}
@@ -285,7 +289,7 @@ func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, mana
 	if !additionalCostsUseX(additionalCosts) {
 		return legalXValuesForCost(g, playerID, manaCost)
 	}
-	upperBound := maxLegalXValue
+	upperBound := maxSampledXValue
 	for _, additional := range additionalCosts {
 		if additional.Kind != cost.AdditionalPayLife || !additional.AmountFromX {
 			continue
@@ -294,7 +298,7 @@ func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, mana
 		if !ok {
 			return nil
 		}
-		upperBound = player.Life
+		upperBound = min(upperBound, player.Life)
 		break
 	}
 	var values []int
@@ -581,7 +585,7 @@ func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, perm
 	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
-		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) {
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
 		return false
 	}
 	if len(targets) != 1 || targets[0].Kind != game.TargetPermanent {
@@ -603,6 +607,9 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 }
 
 func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	if xValue < 0 || xValue != 0 && !abilityCanAnnounceX(body) {
+		return false
+	}
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
@@ -620,7 +627,7 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
-		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) ||
 		!bodyTargetCountsMatchX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) ||
 		!bodyTargetsSatisfyManaValueX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
 		return false
@@ -629,7 +636,8 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
-		ManaCost:         effectiveActivatedAbilityCost(g, playerID, sourceCard, body),
+		ManaCost:         body.ManaCost,
+		CostModifiers:    activatedAbilityCostModifiers(g, playerID, sourceCard, body),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
@@ -662,6 +670,9 @@ func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id
 }
 
 func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	if xValue < 0 || xValue != 0 && !abilityCanAnnounceX(body) {
+		return false
+	}
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -695,7 +706,7 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 	}
 	def := cardFaceOrDefault(card, game.FaceFront)
 	if !modesValidForBody(body, chosenModes) ||
-		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets, xValue) ||
 		!bodyTargetCountsMatchX(g, playerID, def, 0, body, chosenModes, targets, xValue) {
 		return false
 	}
@@ -718,6 +729,9 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 }
 
 func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	if xValue < 0 || xValue != 0 && !abilityCanAnnounceX(body) {
+		return false
+	}
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -736,7 +750,7 @@ func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, 
 	}
 	def := cardFaceOrDefault(card, game.FaceFront)
 	if !modesValidForBody(body, chosenModes) ||
-		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets) ||
+		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets, xValue) ||
 		!bodyTargetCountsMatchX(g, playerID, def, 0, body, chosenModes, targets, xValue) {
 		return false
 	}

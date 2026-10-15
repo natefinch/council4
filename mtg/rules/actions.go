@@ -10,21 +10,22 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
-const maxLegalXValue = 20
+const maxSampledXValue = 20
 
-// maxLegalMultikickCount bounds the number of times a Multikicker cost may be
-// enumerated as paid (CR 702.32), matching the X-value enumeration cap so the
-// action space stays finite.
-const maxLegalMultikickCount = 20
+// Numeric samples bound policy candidates, never an exact announcement's legality.
+const maxSampledMultikickCount = 20
+
+const maxSampledNumericTargetChoices = 64
 
 // appendMultikickedCastActions enumerates Multikicker casts that pay the kicker
 // cost one or more times. Target choices are generated for each concrete count
 // so kicker-scaled target specs offer exactly the legal cardinality.
 func (e *Engine) appendMultikickedCastActions(g *game.Game, playerID game.PlayerID, actions []action.Action, actionBuild actionBuilderType, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef, xValue int, modes []int) []action.Action {
-	for count := 1; count <= maxLegalMultikickCount; count++ {
-		result := targetChoicesForSpellWithKickerCount(g, playerID, spellDef, modes, game.CastBranch{Kicked: true}, count)
+	for count := 1; count <= maxSampledMultikickCount; count++ {
+		result := targetChoicesForSpellWithKickerCount(g, playerID, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)}, count)
 		if result.kind == targetInvalidSpec || result.kind == targetNoLegalChoices {
 			break
 		}
@@ -111,7 +112,7 @@ func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Ac
 		}
 		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
+				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 				if targetResult.kind == targetInvalidSpec {
 					continue
 				}
@@ -249,7 +250,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 				}
 				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 					for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-						plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
+						plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 						if plainResult.kind != targetInvalidSpec {
 							for _, targets := range plainResult.choices {
 								if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
@@ -258,7 +259,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasGift(spellDef) {
-							giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true})
+							giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true, XValue: opt.Val(xValue)})
 							if giftResult.kind != targetInvalidSpec {
 								for _, targets := range giftResult.choices {
 									if e.canCastGiftSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -270,7 +271,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasBargain(spellDef) {
-							bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true})
+							bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true, XValue: opt.Val(xValue)})
 							if bargainResult.kind != targetInvalidSpec {
 								for _, targets := range bargainResult.choices {
 									if e.canCastBargainedSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -280,7 +281,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasOffspring(spellDef) {
-							offspringResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Offspring: true})
+							offspringResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Offspring: true, XValue: opt.Val(xValue)})
 							if offspringResult.kind != targetInvalidSpec {
 								for _, targets := range offspringResult.choices {
 									if e.canCastOffspringSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -290,7 +291,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasBestow(spellDef) {
-							bestowResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bestowed: true})
+							bestowResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bestowed: true, XValue: opt.Val(xValue)})
 							if bestowResult.kind != targetInvalidSpec {
 								for _, targets := range bestowResult.choices {
 									if e.canCastBestowSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -306,7 +307,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 						}
 					} else if spellHasKicker(spellDef) {
 						for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
-							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
+							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)})
 							if kickedResult.kind != targetInvalidSpec {
 								for _, targets := range kickedResult.choices {
 									if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
@@ -378,7 +379,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 		}
 		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-				plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
+				plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 				if plainResult.kind != targetInvalidSpec {
 					for _, targets := range plainResult.choices {
 						if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, false) {
@@ -387,7 +388,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 					}
 				}
 				if spellHasGift(spellDef) {
-					giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true})
+					giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true, XValue: opt.Val(xValue)})
 					if giftResult.kind != targetInvalidSpec {
 						for _, targets := range giftResult.choices {
 							if e.canCastGiftSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
@@ -399,7 +400,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 					}
 				}
 				if spellHasBargain(spellDef) {
-					bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true})
+					bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true, XValue: opt.Val(xValue)})
 					if bargainResult.kind != targetInvalidSpec {
 						for _, targets := range bargainResult.choices {
 							if e.canCastBargainedSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
@@ -409,7 +410,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 					}
 				}
 				if spellHasOffspring(spellDef) {
-					offspringResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Offspring: true})
+					offspringResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Offspring: true, XValue: opt.Val(xValue)})
 					if offspringResult.kind != targetInvalidSpec {
 						for _, targets := range offspringResult.choices {
 							if e.canCastOffspringSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
@@ -425,7 +426,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 				}
 			} else if spellHasKicker(spellDef) {
 				for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
-					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true})
+					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)})
 					if kickedResult.kind != targetInvalidSpec {
 						for _, targets := range kickedResult.choices {
 							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, true) {
@@ -544,7 +545,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				effectiveCost := effectiveActivatedAbilityCost(g, playerID, sourceCard, body)
 				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(effectiveCost), body.AdditionalCosts) {
 					for _, modes := range modeChoicesForBody(body) {
-						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, game.Event{}, body, modes)
+						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, game.Event{}, body, modes, xValue)
 						if targetResult.kind == targetInvalidSpec {
 							continue
 						}
@@ -597,7 +598,7 @@ func (*Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.Playe
 			body := &indexed.body
 			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 				for _, modes := range modeChoicesForBody(body) {
-					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes)
+					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes, xValue)
 					if targetResult.kind == targetInvalidSpec {
 						continue
 					}
@@ -630,7 +631,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 			idx := def.ActivatedAbilityIndex(i)
 			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
 				for _, modes := range modeChoicesForBody(body) {
-					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes)
+					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes, xValue)
 					if targetResult.kind == targetInvalidSpec {
 						continue
 					}

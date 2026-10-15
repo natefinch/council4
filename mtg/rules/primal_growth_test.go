@@ -190,11 +190,11 @@ func TestPrimalGrowthFailedKickerPaymentRollsBack(t *testing.T) {
 	}
 }
 
-func TestDirectCastRejectsExcessiveMultikickerCount(t *testing.T) {
+func TestDirectCastAcceptsZeroCostMultikickerBeyondPolicySamples(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spellID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
-		Name:         "Bounded Multikicker",
+		Name:         "Zero-cost Multikicker",
 		ManaCost:     opt.Val(cost.Mana{cost.O(0)}),
 		Types:        []types.Card{types.Sorcery},
 		SpellAbility: opt.Val(game.AbilityContent{}),
@@ -216,14 +216,8 @@ func TestDirectCastRejectsExcessiveMultikickerCount(t *testing.T) {
 		nil,
 		0,
 		nil,
-		maxLegalMultikickCount+1,
+		21,
 	)
-	if engine.applyAction(g, game.Player1, act) {
-		t.Fatal("direct cast accepted excessive Multikicker count")
-	}
-	if !g.Players[game.Player1].Hand.Contains(spellID) || g.Stack.Size() != 0 {
-		t.Fatal("rejected excessive Multikicker cast mutated the proposal")
-	}
 	negative := action.CastMultikickedSpellFaceFromZone(
 		spellID,
 		zone.Hand,
@@ -235,5 +229,15 @@ func TestDirectCastRejectsExcessiveMultikickerCount(t *testing.T) {
 	)
 	if engine.applyAction(g, game.Player1, negative) {
 		t.Fatal("direct cast accepted negative Multikicker count")
+	}
+	if !g.Players[game.Player1].Hand.Contains(spellID) || g.Stack.Size() != 0 {
+		t.Fatal("rejected negative Multikicker cast mutated the proposal")
+	}
+	if !engine.applyAction(g, game.Player1, act) {
+		t.Fatal("direct cast rejected a finite zero-cost Multikicker count")
+	}
+	obj, present := g.Stack.Peek()
+	if !present || obj.KickerCount != 21 {
+		t.Fatal("the zero-cost announcement was clamped")
 	}
 }

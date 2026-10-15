@@ -9,6 +9,40 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+func (c *programContext) TargetCards() ([]cardprogram.FoundCard, error) {
+	if err := c.valid(); err != nil {
+		return nil, err
+	}
+	var targets []cardprogram.FoundCard
+	seen := make(map[game.ObjectID]bool)
+	for _, target := range c.obj.Targets {
+		if target.Kind != game.TargetCard || seen[target.CardID] {
+			continue
+		}
+		card, exists := c.game.GetCardInstance(target.CardID)
+		from, located := cardZone(c.game, target.CardID)
+		if !exists || !located || !target.CardZoneVersionSet || card.ZoneVersion != target.CardZoneVersion {
+			continue
+		}
+		if from != zone.Graveyard && from != zone.Exile ||
+			from == zone.Exile && c.game.Players[card.Owner].Exile.IsFaceDown(card.ID) {
+			return nil, errors.New("authored target handles require public graveyard or face-up exile cards")
+		}
+		seen[card.ID] = true
+		if c.found == nil {
+			c.found = make(map[game.ObjectID]game.ZoneCardSnapshot)
+		}
+		if c.foundZones == nil {
+			c.foundZones = make(map[game.ObjectID]zone.Type)
+		}
+		identity := game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion}
+		c.found[card.ID], c.foundZones[card.ID] = identity, from
+		delete(c.libraryEpoch, card.ID)
+		targets = append(targets, cardprogram.FoundCard{Identity: identity, Info: cardChoiceInfo(c.game, card.ID).Val})
+	}
+	return targets, nil
+}
+
 func (c *programContext) Search(operation game.Search) (cardprogram.SearchResult, error) {
 	if err := c.valid(); err != nil {
 		return cardprogram.SearchResult{}, err
@@ -35,6 +69,7 @@ func (c *programContext) Search(operation game.Search) (cardprogram.SearchResult
 			c.found = make(map[game.ObjectID]game.ZoneCardSnapshot)
 		}
 		c.found[cardID] = identity
+		delete(c.foundZones, cardID)
 		c.libraryEpoch[cardID] = c.game.Players[player].Library.ReorderVersion()
 		outcome.Cards = append(outcome.Cards, cardprogram.FoundCard{
 			Identity: identity, Info: cardChoiceInfo(c.game, cardID).Val, LibraryEpoch: c.libraryEpoch[cardID],
@@ -49,8 +84,8 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 	}
 	seen := make(map[game.ObjectID]bool)
 	for _, placement := range placements {
-		if placement.Destination != zone.Graveyard && placement.Destination != zone.Hand {
-			return nil, errors.New("authored found-card placement requires hand or graveyard")
+		if placement.Destination != zone.Graveyard && placement.Destination != zone.Hand && placement.Destination != zone.Exile {
+			return nil, errors.New("authored found-card placement requires hand, graveyard or exile")
 		}
 		for _, member := range placement.Cards {
 			minted, available := c.found[member.Identity.CardID]
@@ -64,6 +99,7 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 	type preparedMove struct {
 		member      cardprogram.FoundCard
 		owner       game.PlayerID
+		fromZone    zone.Type
 		event       game.Event
 		replacement zoneChangeReplacementResult
 	}
@@ -76,18 +112,26 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 	for _, placement := range placements {
 		for _, member := range placement.Cards {
 			card, exists := c.game.GetCardInstance(member.Identity.CardID)
-			if !exists || card.ZoneVersion != member.Identity.ZoneVersion ||
-				!c.game.Players[card.Owner].Library.Contains(card.ID) ||
-				c.game.Players[card.Owner].Library.ReorderVersion() != c.libraryEpoch[card.ID] {
+			fromZone := zone.Library
+			if from, recorded := c.foundZones[member.Identity.CardID]; recorded {
+				fromZone = from
+			}
+			if !exists || card.ZoneVersion != member.Identity.ZoneVersion {
+				continue
+			}
+			source, located := destinationZone(c.game, card.Owner, fromZone)
+			if !located || !source.Contains(card.ID) ||
+				fromZone == zone.Library && c.game.Players[card.Owner].Library.ReorderVersion() != c.libraryEpoch[card.ID] {
 				continue
 			}
 			event := game.Event{
-				Kind: game.EventZoneChanged, Controller: card.Owner, Player: card.Owner,
-				CardID: card.ID, FromZone: zone.Library, ToZone: placement.Destination, SimultaneousID: batch,
+				Kind: game.EventZoneChanged, Controller: c.obj.Controller, Player: card.Owner,
+				SourceID: c.source.CardID, SourceObjectID: c.source.ObjectID, StackObjectID: c.source.StackID,
+				CardID: card.ID, FromZone: fromZone, ToZone: placement.Destination, SimultaneousID: batch,
 			}
 			replacement := replacementZoneChange(c.game, event)
 			replacement.destination = commanderReplacementDestination(c.game, card.ID, replacement.destination)
-			prepared = append(prepared, preparedMove{member: member, owner: card.Owner, event: event, replacement: replacement})
+			prepared = append(prepared, preparedMove{member: member, owner: card.Owner, fromZone: fromZone, event: event, replacement: replacement})
 		}
 	}
 	// CR 404.3: order the actual graveyard arrivals after destination replacements.
@@ -126,7 +170,7 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 		replacement := move.replacement
 		replacement.shuffleIntoLibrary = false
 		if moveCardBetweenZonesAfterReplacement(c.game, move.owner, move.member.Identity.CardID,
-			zone.Library, replacement, move.event, false, batch) {
+			move.fromZone, replacement, move.event, false, batch) {
 			if move.replacement.shuffleIntoLibrary && replacement.destination == zone.Library {
 				shuffle[move.owner] = true
 			}
