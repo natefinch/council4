@@ -495,26 +495,19 @@ func clearCardFaceAbilities(face *game.CardFace) {
 }
 
 func createTokenPermanent(g *game.Game, controller game.PlayerID, token *game.CardDef) (*game.Permanent, bool) {
-	defs := replacementTokenCreationTypes(g, controller, token)
-	amount := replacementTokenCreationAmount(g, controller, token, 1)
-	if amount <= 0 {
+	var engine *Engine
+	var agents [game.NumPlayers]PlayerAgent
+	var log *TurnLog
+	if context, available := replacementChoiceContextFor(g); available {
+		engine, agents, log = context.engine, context.agents, context.log
+	} else {
+		engine = NewEngine(nil)
+	}
+	created, ok := createTokenPermanentsCollectingWithChoices(engine, g, controller, token, 1, false, agents, log)
+	if !ok || len(created) == 0 {
 		return nil, false
 	}
-	simultaneousID := tokenCreationSimultaneousID(g, amount*len(defs))
-	var first *game.Permanent
-	for _, def := range defs {
-		for range amount {
-			permanent, ok := createTokenPermanentWithChoicesInBatch(NewEngine(nil), g, controller, def, simultaneousID, false, [game.NumPlayers]PlayerAgent{}, nil)
-			if !ok {
-				return nil, false
-			}
-			if first == nil {
-				first = permanent
-			}
-		}
-	}
-	createTokenCreationCrossTypeAddends(NewEngine(nil), g, controller, token, false, [game.NumPlayers]PlayerAgent{}, nil)
-	return first, first != nil
+	return created[0], true
 }
 
 func createTokenPermanentsWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -540,6 +533,9 @@ func createTokenPermanentsCollectingAttachedWithChoices(e *Engine, g *game.Game,
 }
 
 func createTokenPermanentsCollectingWithEntryChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, amount int, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) ([]*game.Permanent, bool) {
+	previous, _ := g.ChoiceContext()
+	e.setReplacementChoiceContext(g, agents, log)
+	defer g.SetChoiceContext(previous)
 	if token == nil {
 		return nil, false
 	}
@@ -547,88 +543,30 @@ func createTokenPermanentsCollectingWithEntryChoices(e *Engine, g *game.Game, co
 	if len(faces) > 0 {
 		face = faces[0]
 	}
-	visible, ok := token.FaceDefView(face)
-	if !ok {
+	plans := planTokenCreation(g, controller, token, amount, face)
+	total := 0
+	for _, plan := range plans {
+		total += plan.count
+	}
+	if total <= 0 {
 		return nil, false
 	}
-	defs := replacementTokenCreationTypes(g, controller, visible)
-	amount = replacementTokenCreationAmount(g, controller, visible, amount)
-	if amount <= 0 {
-		return nil, false
-	}
-	simultaneousID := tokenCreationSimultaneousID(g, amount*len(defs))
-	created := make([]*game.Permanent, 0, amount*len(defs))
-	for _, def := range defs {
-		entryDef, entryFace := def, game.FaceFront
-		if def == visible {
-			entryDef, entryFace = token, face
-		}
-		for range amount {
-			permanent, ok := createTokenPermanentWithEntryChoicesInBatch(e, g, controller, entryDef, simultaneousID, tapped, attachedTo, agents, log, entryFace)
+	simultaneousID := tokenCreationSimultaneousID(g, total)
+	return createPlannedTokenEntries(e, g, plans, simultaneousID, tapped, attachedTo, agents, log)
+}
+
+func createPlannedTokenEntries(e *Engine, g *game.Game, plans []tokenCreationPlan, simultaneousID id.ID, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
+	var entries []preparedTokenEntry
+	for _, plan := range plans {
+		for range plan.count {
+			entry, ok := prepareTokenEntry(e, g, plan.controller, plan.def, tapped, attachedTo, agents, log, plan.face)
 			if !ok {
 				return nil, false
 			}
-			created = append(created, permanent)
+			entries = append(entries, entry)
 		}
 	}
-	createTokenCreationCrossTypeAddends(e, g, controller, visible, tapped, agents, log)
-	return created, true
-}
-
-type tokenCreationPlan struct {
-	controller game.PlayerID
-	def        *game.CardDef
-	count      int
-}
-
-func planTokenCreation(g *game.Game, controller game.PlayerID, token *game.CardDef, amount int) []tokenCreationPlan {
-	defs := replacementTokenCreationTypes(g, controller, token)
-	amount = replacementTokenCreationAmount(g, controller, token, amount)
-	if amount <= 0 {
-		return nil
-	}
-	plans := make([]tokenCreationPlan, 0, len(defs))
-	for _, def := range defs {
-		plans = append(plans, tokenCreationPlan{controller: controller, def: def, count: amount})
-	}
-	return append(plans, tokenCreationCrossTypeAddends(g, controller, token)...)
-}
-
-// Cross-type addends are created directly, without recursively replacing them.
-func createTokenCreationCrossTypeAddends(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	for _, plan := range tokenCreationCrossTypeAddends(g, controller, token) {
-		simultaneousID := tokenCreationSimultaneousID(g, plan.count)
-		for range plan.count {
-			createTokenPermanentWithChoicesInBatch(e, g, plan.controller, plan.def, simultaneousID, tapped, agents, log)
-		}
-	}
-}
-
-func tokenCreationCrossTypeAddends(g *game.Game, controller game.PlayerID, token *game.CardDef) []tokenCreationPlan {
-	event := game.Event{
-		Kind:       game.EventTokenCreated,
-		Controller: controller,
-		Player:     controller,
-		Amount:     1,
-	}
-	var plans []tokenCreationPlan
-	for i := range g.ReplacementEffects {
-		replacement := &g.ReplacementEffects[i]
-		if replacement.TokenAddendDef == nil || replacement.TokenAddend <= 0 {
-			continue
-		}
-		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
-			continue
-		}
-		if !tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
-			continue
-		}
-		if !replacementEffectMatchesEvent(g, replacement, event) {
-			continue
-		}
-		plans = append(plans, tokenCreationPlan{controller: controller, def: replacement.TokenAddendDef, count: replacement.TokenAddend})
-	}
-	return plans
+	return commitTokenEntries(g, entries, simultaneousID), true
 }
 
 func createTokenPermanentWithChoices(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
@@ -647,8 +585,25 @@ func createTokenPermanentWithChoicesInBatch(e *Engine, g *game.Game, controller 
 }
 
 func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, simultaneousID id.ID, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (*game.Permanent, bool) {
-	if token == nil {
+	entry, ok := prepareTokenEntry(e, g, controller, token, tapped, attachedTo, agents, log, faces...)
+	if !ok {
 		return nil, false
+	}
+	created := commitTokenEntries(g, []preparedTokenEntry{entry}, simultaneousID)
+	return created[0], true
+}
+
+type preparedTokenEntry struct {
+	permanent  *game.Permanent
+	controller game.PlayerID
+	visible    *game.CardDef
+	token      *game.CardDef
+	attachedTo *game.Permanent
+}
+
+func prepareTokenEntry(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
+	if token == nil {
+		return preparedTokenEntry{}, false
 	}
 	face := game.FaceFront
 	if len(faces) > 0 {
@@ -656,7 +611,7 @@ func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, contro
 	}
 	visible, ok := token.FaceDefView(face)
 	if !ok {
-		return nil, false
+		return preparedTokenEntry{}, false
 	}
 	objectID := g.IDGen.Next()
 	permanent := &game.Permanent{
@@ -671,7 +626,6 @@ func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, contro
 		Transformed:   face == game.FaceBack,
 	}
 	initializePermanentCounters(permanent, visible)
-	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,
@@ -681,27 +635,38 @@ func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, contro
 	if tapped {
 		permanent.Tapped = true
 	}
-	g.Battlefield = append(g.Battlefield, permanent)
-	if attachedTo != nil {
-		attachPermanent(g, permanent, attachedTo)
+	return preparedTokenEntry{
+		permanent: permanent, controller: controller, visible: visible, token: token, attachedTo: attachedTo,
+	}, true
+}
+
+func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneousID id.ID) []*game.Permanent {
+	created := make([]*game.Permanent, 0, len(entries))
+	for _, entry := range entries {
+		registerPermanentReplacementEffects(g, entry.permanent)
 	}
-	if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
-		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
+	for _, entry := range entries {
+		g.Battlefield = append(g.Battlefield, entry.permanent)
+		created = append(created, entry.permanent)
 	}
-	event := game.Event{
-		Controller:     controller,
-		Player:         controller,
-		PermanentID:    objectID,
-		TokenName:      visible.Name,
-		TokenDef:       token,
-		FromZone:       zone.None,
-		ToZone:         zone.Battlefield,
-		SimultaneousID: simultaneousID,
+	for _, entry := range entries {
+		permanent := entry.permanent
+		if entry.attachedTo != nil {
+			attachPermanent(g, permanent, entry.attachedTo)
+		}
+		if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
+			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
+		}
+		event := game.Event{
+			Controller: entry.controller, Player: entry.controller,
+			PermanentID: permanent.ObjectID, TokenName: entry.visible.Name, TokenDef: entry.token,
+			FromZone: zone.None, ToZone: zone.Battlefield, SimultaneousID: simultaneousID,
+		}
+		emitZoneChangeEvent(g, event)
+		event.Kind = game.EventPermanentEnteredBattlefield
+		emitEvent(g, event)
+		event.Kind = game.EventTokenCreated
+		emitEvent(g, event)
 	}
-	emitZoneChangeEvent(g, event)
-	event.Kind = game.EventPermanentEnteredBattlefield
-	emitEvent(g, event)
-	event.Kind = game.EventTokenCreated
-	emitEvent(g, event)
-	return permanent, true
+	return created
 }

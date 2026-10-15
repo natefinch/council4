@@ -420,53 +420,6 @@ func placeRedirectExileCounter(g *game.Game, ownerID game.PlayerID, cardID id.ID
 	g.AddExileCounter(cardID, result.exileCounter.Val, 1)
 }
 
-// replacementTokenCreationTypes applies token-type replacement effects (Academy
-// Manufactor: "If you would create a Clue, Food, or Treasure token, instead
-// create one of each.") to a single token the controller would create. It
-// returns the token definitions to create instead, which is just the original
-// token when no replacement matches. The substitute tokens are created directly
-// by callers without re-entering this function, so a matched replacement cannot
-// recursively re-trigger itself.
-func replacementTokenCreationTypes(g *game.Game, controller game.PlayerID, token *game.CardDef) []*game.CardDef {
-	if token == nil {
-		return nil
-	}
-	event := game.Event{
-		Kind:       game.EventTokenCreated,
-		Controller: controller,
-		Player:     controller,
-		Amount:     1,
-	}
-	for i := range g.ReplacementEffects {
-		replacement := &g.ReplacementEffects[i]
-		if replacement.TokenReplaceDef != nil {
-			if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) ||
-				!tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
-				continue
-			}
-			if !replacementEffectMatchesEvent(g, replacement, event) {
-				continue
-			}
-			// The identity substitution replaces the matched token with one copy
-			// of the spelled-out substitute (Divine Visitation: a 4/4 Angel for
-			// each creature token), so the substitute itself is created without
-			// re-entering this matched replacement.
-			return []*game.CardDef{replacement.TokenReplaceDef}
-		}
-		if len(replacement.CreateOneOfEachTokens) == 0 {
-			continue
-		}
-		if !replacementEffectMatchesEvent(g, replacement, event) {
-			continue
-		}
-		if !tokenNameInSet(token, replacement.CreateOneOfEachTokens) {
-			continue
-		}
-		return replacement.CreateOneOfEachTokens
-	}
-	return []*game.CardDef{token}
-}
-
 // tokenNameInSet reports whether token shares a name with any definition in set,
 // the trigger condition for a one-of-each token-type replacement.
 func tokenNameInSet(token *game.CardDef, set []*game.CardDef) bool {
@@ -476,42 +429,6 @@ func tokenNameInSet(token *game.CardDef, set []*game.CardDef) bool {
 		}
 	}
 	return false
-}
-
-// replacementTokenCreationAmount applies replacement effects that change how many
-// tokens are created (CR 614.16, effects that apply when an effect would create
-// one or more tokens; e.g. doubling the number created). Each effect applies to
-// the event at most once (CR 614.5); when several apply, the creating player
-// chooses one (CR 616.1, falling back to the first match when no agent is
-// available).
-func replacementTokenCreationAmount(g *game.Game, controller game.PlayerID, token *game.CardDef, amount int) int {
-	if amount <= 0 {
-		return amount
-	}
-	event := game.Event{
-		Kind:       game.EventTokenCreated,
-		Controller: controller,
-		Player:     controller,
-		Amount:     amount,
-	}
-	applied := make(map[id.ID]bool)
-	for {
-		event.Amount = amount
-		matches := matchingTokenCreationReplacementEffects(g, event, token, applied)
-		if len(matches) == 0 {
-			return amount
-		}
-		replacement := matches[0]
-		if len(matches) > 1 {
-			decision := chooseReplacementDecision(g, controller, replacementEffectLabels(matches))
-			replacement = selectedReplacementEffect(matches, decision)
-		}
-		applied[replacement.ID] = true
-		if replacement.TokenMultiplier > 1 {
-			amount *= replacement.TokenMultiplier
-		}
-		amount += replacement.TokenAddend
-	}
 }
 
 // replacementPermanentCounterPlacementAmount applies replacement effects that
@@ -1541,31 +1458,19 @@ func entersWithCountersGroupMatches(g *game.Game, replacement *game.ReplacementE
 	return resolver.permanentMatchesGroupSelection(replacement.EntersWithCountersRecipient, sourcePermanent, permanent)
 }
 
-func matchingTokenCreationReplacementEffects(g *game.Game, event game.Event, token *game.CardDef, applied map[id.ID]bool) []game.ReplacementEffect {
-	var matches []game.ReplacementEffect
-	for i := range g.ReplacementEffects {
-		replacement := &g.ReplacementEffects[i]
-		if replacement.TokenMultiplier <= 1 && replacement.TokenAddend == 0 {
-			continue
-		}
-		// Cross-type addends create a different predefined token (Tippy-Toe's Food)
-		// rather than more of the matched token, so they are handled separately and
-		// must not inflate the matched-token count here.
-		if replacement.TokenAddendDef != nil {
-			continue
-		}
-		if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) {
-			continue
-		}
-		if !tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
-			continue
-		}
-		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, event) {
-			continue
-		}
-		matches = append(matches, *replacement)
+func tokenCreationReplacementMatches(g *game.Game, replacement *game.ReplacementEffect, event game.Event, token *game.CardDef) bool {
+	if replacement.TokenMultiplier <= 1 && replacement.TokenAddend == 0 &&
+		replacement.TokenReplaceDef == nil && len(replacement.CreateOneOfEachTokens) == 0 {
+		return false
 	}
-	return matches
+	if !tokenHasAllSubtypes(token, replacement.TokenRequiredSubtypes) ||
+		!tokenHasAllTypes(token, replacement.TokenRequiredTypes) {
+		return false
+	}
+	if len(replacement.CreateOneOfEachTokens) > 0 && !tokenNameInSet(token, replacement.CreateOneOfEachTokens) {
+		return false
+	}
+	return replacementEffectMatchesEvent(g, replacement, event)
 }
 
 // tokenHasAllSubtypes reports whether the created token carries every subtype in

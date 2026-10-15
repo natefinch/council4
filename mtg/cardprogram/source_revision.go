@@ -2,4 +2,4 @@
 
 package cardprogram
 
-const SharedRulesRevision = "sha256:1a765d62a38f2242821c4f05c89bd1c98d77e25a28c4d50eaf92e62d9ec0d2c3"
+const SharedRulesRevision = "sha256:87595c39108f37aec441f37567c87a8a6b55230a92c9cef0557686e2f18699ba"

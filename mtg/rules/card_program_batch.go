@@ -58,6 +58,9 @@ func (c *programContext) CreateTokens(def *game.CardDef, recipients ...cardprogr
 	if err := c.valid(); err != nil {
 		return nil, err
 	}
+	previous, _ := c.game.ChoiceContext()
+	c.engine.setReplacementChoiceContext(c.game, c.agents, c.log)
+	defer c.game.SetChoiceContext(previous)
 	if def == nil {
 		return nil, errors.New("token creation requires a definition")
 	}
@@ -85,15 +88,13 @@ func (c *programContext) CreateTokens(def *game.CardDef, recipients ...cardprogr
 		total += plan.count
 	}
 	batchID := tokenCreationSimultaneousID(c.game, total)
+	created, ok := createPlannedTokenEntries(c.engine, c.game, plans, batchID, false, nil, c.agents, c.log)
+	if !ok {
+		return nil, errors.New("validated token creation failed")
+	}
 	result := make([]game.ObjectSnapshot, 0, total)
-	for _, plan := range plans {
-		for range plan.count {
-			permanent, ok := createTokenPermanentWithChoicesInBatch(c.engine, c.game, plan.controller, plan.def, batchID, false, c.agents, c.log)
-			if !ok {
-				return nil, errors.New("validated token creation failed")
-			}
-			result = append(result, currentProgramSnapshot(c.game, permanent))
-		}
+	for _, permanent := range created {
+		result = append(result, currentProgramSnapshot(c.game, permanent))
 	}
 	return result, nil
 }

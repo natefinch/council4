@@ -728,6 +728,7 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 		r.declareTokensAttackingSameAsObject(created, prim.AttackSameAsObject.Val)
 	}
 	r.publishEnteredPermanents(prim.PublishLinked, created...)
+	res.amount = len(created)
 	res.succeeded = res.amount > 0
 	return res
 }
@@ -992,19 +993,35 @@ func (r *effectResolver) createTokenForGroup(prim game.CreateToken, amount int) 
 		token = &sized
 	}
 	members := playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.RecipientGroup))
-	var created []*game.Permanent
+	var plans []tokenCreationPlan
+	total := 0
 	for _, member := range members {
-		tokens, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, member, token, amount, prim.EntryTapped, r.agents, r.log)
-		if !ok {
-			continue
+		for _, plan := range planTokenCreation(r.game, member, token, amount) {
+			plans = append(plans, plan)
+			total += plan.count
 		}
+	}
+	if total == 0 {
+		return res
+	}
+	created, ok := createPlannedTokenEntries(r.engine, r.game, plans, tokenCreationSimultaneousID(r.game, total),
+		prim.EntryTapped, nil, r.agents, r.log)
+	if !ok {
+		return res
+	}
+	for _, member := range members {
 		if prim.EntryAttacking {
+			var tokens []*game.Permanent
+			for _, permanent := range created {
+				if permanent.Owner == member {
+					tokens = append(tokens, permanent)
+				}
+			}
 			declareCreatedTokensAttacking(r.engine, r.game, member, tokens, r.agents, r.log)
 		}
-		created = append(created, tokens...)
-		res.amount += len(tokens)
-		res.succeeded = true
 	}
+	res.amount = len(created)
+	res.succeeded = res.amount > 0
 	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	return res
 }

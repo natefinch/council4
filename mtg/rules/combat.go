@@ -1302,7 +1302,7 @@ func declareCreatedTokensAttacking(e *Engine, g *game.Game, controller game.Play
 		return
 	}
 	for _, token := range tokens {
-		if token == nil {
+		if token == nil || !permanentHasType(g, token, types.Creature) {
 			continue
 		}
 		defender, ok := chooseEntryAttackDefender(e, g, controller, agents, log)
@@ -1369,7 +1369,7 @@ func chooseEntryAttackDefender(e *Engine, g *game.Game, controller game.PlayerID
 // attacks" abilities do not trigger for it. A defender that is no longer alive is
 // skipped, leaving the token on the battlefield without attacking.
 func declareTokenAttackingDefender(g *game.Game, controller game.PlayerID, token *game.Permanent, defender game.PlayerID) {
-	if g.Combat == nil || g.Turn.ActivePlayer != controller || token == nil {
+	if g.Combat == nil || g.Turn.ActivePlayer != controller || token == nil || !permanentHasType(g, token, types.Creature) {
 		return
 	}
 	if !isPlayerAlive(g, defender) {
@@ -1394,7 +1394,7 @@ func declareTokenAttackingDefender(g *game.Game, controller game.PlayerID, token
 // trigger for it. A target whose defending player is no longer alive is skipped,
 // leaving the token on the battlefield without attacking.
 func declareTokenAttackingTarget(g *game.Game, controller game.PlayerID, token *game.Permanent, target game.AttackTarget) {
-	if g.Combat == nil || g.Turn.ActivePlayer != controller || token == nil {
+	if g.Combat == nil || g.Turn.ActivePlayer != controller || token == nil || !permanentHasType(g, token, types.Creature) {
 		return
 	}
 	if !isPlayerAlive(g, target.Player) {

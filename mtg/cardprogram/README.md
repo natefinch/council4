@@ -73,6 +73,11 @@ card is added only after its entire behavior and relevant scenarios are complete
   the declared `TokenRecipient{Player, Count}` quantities, using token/entry replacements
   and returns copied snapshots of the tokens actually created. Invalid inputs
   fail; a valid effect for a departed player produces no tokens (CR 800.4).
+  Identity, quantity and cross-type additions modify one evolving creation
+  event; applicability is recomputed after each chosen replacement and inherited
+  applied-effect identities prevent self-recursion. Entry choices for every
+  resulting token precede all arrivals, so newly entering replacement sources
+  cannot affect other members of their own simultaneous entry.
 - `Copy(operation, copier)` reuses stack copying and optional retargeting, returning
   the IDs actually created. Each copier has its own recorded choice, inherits modes,
   X and additional-cost/payment subjects, and owns its spell copies independently
