@@ -215,6 +215,23 @@ The current combat implementation supports single-attacker, all-attacker, and no
 
 Unblocked attackers deal effective numeric power as combat damage to their attack target: the defending player, a planeswalker, or a battle. Blocked attackers assign lethal damage through blocker order, with non-trample excess assigned to the last blocker. Trample assigns only lethal damage to blockers and sends the remainder to the attack target; Deathtouch makes 1 damage lethal for assignment, and Deathtouch plus Trample combines accordingly. First Strike and Double Strike use a first-strike combat damage step only when at least one attacker or blocker has First Strike or Double Strike. Lifelink gains life as combat damage is dealt, Wither and Infect sources put -1/-1 counters on creatures instead of marking damage, commander combat damage is tracked for actual commander card instances, and prevented damage does not grant lifelink, mark deathtouch damage, or count as commander damage.
 
+Each damage pass collects all assignments before processing replacement and
+prevention choices, then prepares and commits their actual results as one
+simultaneous event (CR 510.1-2, 120.4). Wither counters or lifelink from one source
+cannot change another source's assignments or damage characteristics. Damage
+and prevention facts carry the event's identity when emitted; identifiers are
+not assigned retroactively to sequential damage. Finite prevention permits
+affected-player source allocation (CR 615.7), and replacement choices use APNAP.
+One shield protects against all applicable simultaneous damage to its permanent.
+Prevention's additional effects follow the damage event (CR 615.5), including
+shield removal even for unpreventable damage (CR 615.12). First-strike and normal
+passes, and independent spell damage calls, remain distinct events. Lifelink
+produces one life-gain event per source, even when its damage has several
+recipients. Live combat and Simulator use this same operation.
+Global prevention preserves each affected player's ordering choices; a
+single-source one-shot shield prevents only its selected source's instance,
+not every simultaneous source's damage.
+
 State-based actions destroy creatures with lethal marked damage or 0 effective toughness. Indestructible prevents destroy effects and lethal/deathtouch-damage destruction, but not 0-toughness death; marked damage remains until cleanup. Shield counters prevent damage and replace destruction by removing one shield counter before the permanent moves zones. Effective power and toughness currently include base numeric P/T, +1/+1 and -1/-1 counters, simple until-end-of-turn P/T modifiers, and initial static P/T continuous effects from battlefield permanents. Runtime permanent state also tracks class level and whether a permanent is monstrous; player state tracks Speed and the once-per-turn speed increase guard for Start Your Engines. Card-backed permanents move to their owner's graveyard; tokens move through the destination zone and then cease to exist as an SBA.
 
 This slice intentionally omits conditional, planeswalker-inclusive, and non-mana attack-cost variants.

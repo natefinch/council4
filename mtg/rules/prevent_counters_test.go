@@ -91,9 +91,7 @@ func TestDamagePreventionRemovesCounterPhantom(t *testing.T) {
 // TestDamagePreventionRemovesCounterPhantomGangBlock proves that when a Phantom
 // is dealt combat damage by multiple sources in the same combat damage step
 // (gang-blocking), all of the damage is prevented but only one +1/+1 counter is
-// removed total. The per-step latch is combat-only and reset each pass, so a
-// later pass (double strike) and any noncombat source each remove another
-// counter.
+// removed total. Separate damage events each remove another counter.
 func TestDamagePreventionRemovesCounterPhantomGangBlock(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	def := &game.CardDef{CardFace: game.CardFace{
@@ -109,20 +107,18 @@ func TestDamagePreventionRemovesCounterPhantomGangBlock(t *testing.T) {
 
 	// Two simultaneous combat sources in one step: both prevented, one counter
 	// removed total.
-	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, target, 3, true); dealt != 0 {
-		t.Fatalf("dealt from first blocker = %d, want 0 (prevented)", dealt)
-	}
-	target.MarkedDamage = 0
-	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, target, 2, true); dealt != 0 {
-		t.Fatalf("dealt from second blocker = %d, want 0 (prevented)", dealt)
+	results := resolveDamageBatch(g, []damageEvent{
+		{sourceID: sourceID, controller: game.Player2, permanent: target, amount: 3, combatDamage: true},
+		{sourceID: sourceID, controller: game.Player2, permanent: target, amount: 2, combatDamage: true},
+	}, g.IDGen.Next(), false, nil)
+	if results[0].amount != 0 || results[1].amount != 0 {
+		t.Fatalf("batch dealt = %d/%d, want 0/0", results[0].amount, results[1].amount)
 	}
 	if got := target.Counters.Get(counter.PlusOnePlusOne); got != 2 {
 		t.Fatalf("+1/+1 counters after gang block = %d, want 2 (one removed total)", got)
 	}
 
-	// A new combat damage pass resets the latch (e.g. double strike), removing
-	// another counter.
-	target.DamagePreventionCounterRemovedThisStep = false
+	// A new damage event (e.g. the next combat damage step) removes another counter.
 	target.MarkedDamage = 0
 	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, target, 4, true); dealt != 0 {
 		t.Fatalf("dealt in second pass = %d, want 0 (prevented)", dealt)
@@ -131,7 +127,7 @@ func TestDamagePreventionRemovesCounterPhantomGangBlock(t *testing.T) {
 		t.Fatalf("+1/+1 counters after second pass = %d, want 1", got)
 	}
 
-	// Noncombat damage is never latched and always removes a counter.
+	// A subsequent noncombat damage event removes another counter.
 	target.MarkedDamage = 0
 	if dealt := dealPermanentDamage(g, sourceID, 0, game.Player2, target, 1, false); dealt != 0 {
 		t.Fatalf("noncombat dealt = %d, want 0 (prevented)", dealt)
@@ -144,9 +140,7 @@ func TestDamagePreventionRemovesCounterPhantomGangBlock(t *testing.T) {
 // TestDamagePreventionRemovesCounterPhantomGangBlockEndToEnd drives a real
 // gang-block through the combat damage step: a Phantom attacker blocked by two
 // creatures has all combat damage prevented and loses exactly one +1/+1 counter.
-// The latch is pre-set to true so the assertion also guards the per-pass reset in
-// resolveDamagePass: without the reset the stale latch would suppress the removal
-// (leaving 3), and without the dedup both blockers would remove one (leaving 1).
+// The whole damage event consumes one counter, regardless of its source count.
 func TestDamagePreventionRemovesCounterPhantomGangBlockEndToEnd(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	pt := game.PT{Value: 1}
@@ -161,8 +155,6 @@ func TestDamagePreventionRemovesCounterPhantomGangBlockEndToEnd(t *testing.T) {
 	}}
 	attacker := addCombatPermanent(g, game.Player1, def)
 	attacker.Counters.Add(counter.PlusOnePlusOne, 3)
-	// A stale latch from a prior step must be cleared before this pass.
-	attacker.DamagePreventionCounterRemovedThisStep = true
 	registerPermanentReplacementEffects(g, attacker)
 	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
 	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
@@ -186,7 +178,7 @@ func TestDamagePreventionRemovesCounterPhantomGangBlockEndToEnd(t *testing.T) {
 		t.Fatalf("Phantom marked damage = %d, want 0 (all prevented)", attacker.MarkedDamage)
 	}
 	if got := attacker.Counters.Get(counter.PlusOnePlusOne); got != 2 {
-		t.Fatalf("+1/+1 counters after gang block = %d, want 2 (one removed total, stale latch reset)", got)
+		t.Fatalf("+1/+1 counters after gang block = %d, want 2 (one removed total)", got)
 	}
 }
 

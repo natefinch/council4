@@ -675,6 +675,14 @@ func cardDefHasAnyType(def *game.CardDef, cardTypes []types.Card) bool {
 }
 
 func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
+	amount = prepareLifeGain(g, playerID, amount)
+	if amount > 0 {
+		emitEvent(g, commitLifeGain(g, playerID, amount, 0))
+	}
+	return amount
+}
+
+func prepareLifeGain(g *game.Game, playerID game.PlayerID, amount int) int {
 	if amount <= 0 || !canGainLife(g, playerID) ||
 		playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
 		return 0
@@ -687,17 +695,23 @@ func gainLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	if !ok || player.Eliminated {
 		return 0
 	}
-	player.Life += amount
-	emitEvent(g, game.Event{
-		Kind:                       game.EventLifeGained,
-		Player:                     playerID,
-		Amount:                     amount,
-		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventLifeGained, playerID),
-	})
 	return amount
 }
 
+func commitLifeGain(g *game.Game, playerID game.PlayerID, amount int, simultaneousID id.ID) game.Event {
+	g.Players[playerID].Life += amount
+	return game.Event{Kind: game.EventLifeGained, Player: playerID, Amount: amount, SimultaneousID: simultaneousID}
+}
+
 func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
+	amount = prepareLifeLoss(g, playerID, amount)
+	if amount > 0 {
+		emitEvent(g, commitLifeLoss(g, playerID, amount, 0))
+	}
+	return amount
+}
+
+func prepareLifeLoss(g *game.Game, playerID game.PlayerID, amount int) int {
 	if amount <= 0 || playerRuleEffectActive(g, playerID, game.RuleEffectLifeTotalCantChange) {
 		return 0
 	}
@@ -709,15 +723,13 @@ func loseLife(g *game.Game, playerID game.PlayerID, amount int) int {
 	if !ok || player.Eliminated {
 		return 0
 	}
-	player.Life -= amount
-	increaseActivePlayerSpeedForOpponentLifeLoss(g, playerID)
-	emitEvent(g, game.Event{
-		Kind:                       game.EventLifeLost,
-		Player:                     playerID,
-		Amount:                     amount,
-		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventLifeLost, playerID),
-	})
 	return amount
+}
+
+func commitLifeLoss(g *game.Game, playerID game.PlayerID, amount int, simultaneousID id.ID) game.Event {
+	g.Players[playerID].Life -= amount
+	increaseActivePlayerSpeedForOpponentLifeLoss(g, playerID)
+	return game.Event{Kind: game.EventLifeLost, Player: playerID, Amount: amount, SimultaneousID: simultaneousID}
 }
 
 func startEngines(g *game.Game, playerID game.PlayerID) bool {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -65,13 +66,17 @@ func addCountersToPermanentControlledByAmount(g *game.Game, placementController 
 }
 
 func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, kind counter.Kind, previous, amount int) {
+	emitEvent(g, counterAddedEvent(g, permanent, controller, kind, previous, amount, 0))
+}
+
+func counterAddedEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, kind counter.Kind, previous, amount int, simultaneousID id.ID) game.Event {
 	if amount > 0 {
 		if permanent.CounterTimestamps == nil {
 			permanent.CounterTimestamps = make(map[counter.Kind]game.Timestamp)
 		}
 		permanent.CounterTimestamps[kind] = game.Timestamp(g.IDGen.Next())
 	}
-	emitEvent(g, game.Event{
+	return game.Event{
 		Kind:                  game.EventCountersAdded,
 		SourceID:              permanent.CardInstanceID,
 		SourceObjectID:        permanent.ObjectID,
@@ -81,7 +86,8 @@ func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, controller g
 		CounterKind:           kind,
 		PreviousCounterAmount: previous,
 		Amount:                amount,
-	})
+		SimultaneousID:        simultaneousID,
+	}
 }
 
 func addCountersToPlayer(g *game.Game, player *game.Player, kind counter.Kind, amount int) bool {
@@ -97,6 +103,14 @@ func addCountersToPlayerControlledBy(g *game.Game, placementController game.Play
 		return false
 	}
 	amount = replacementPlayerCounterPlacementAmount(g, placementController, player.ID, kind, amount)
+	event, ok := placePlayerCounters(player, placementController, kind, amount, 0)
+	if ok {
+		emitEvent(g, event)
+	}
+	return ok
+}
+
+func placePlayerCounters(player *game.Player, placementController game.PlayerID, kind counter.Kind, amount int, simultaneousID id.ID) (game.Event, bool) {
 	previous := 0
 	switch kind {
 	case counter.Poison:
@@ -109,17 +123,17 @@ func addCountersToPlayerControlledBy(g *game.Game, placementController game.Play
 		previous = player.ExperienceCounters
 		player.ExperienceCounters += amount
 	default:
-		return false
+		return game.Event{}, false
 	}
-	emitEvent(g, game.Event{
+	return game.Event{
 		Kind:                  game.EventCountersAdded,
 		Controller:            placementController,
 		Player:                player.ID,
 		CounterKind:           kind,
 		PreviousCounterAmount: previous,
 		Amount:                amount,
-	})
-	return true
+		SimultaneousID:        simultaneousID,
+	}, true
 }
 
 func advanceSagas(g *game.Game, controller game.PlayerID) {

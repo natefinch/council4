@@ -84,6 +84,9 @@ const (
 	// are all legal splits of three mana among {R} and {G}), so every unit is
 	// distributed but no color is guaranteed a share.
 	ChoiceManaCombination
+	// ChoicePreventionAllocation selects a source for one-shot prevention or
+	// assigns one point of finite prevention (CR 615.7-8).
+	ChoicePreventionAllocation
 )
 
 // ChoiceCardInfo carries the public characteristics of a card or permanent that

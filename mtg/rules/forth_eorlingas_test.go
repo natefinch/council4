@@ -28,7 +28,7 @@ func scheduleForthEorlingas(t *testing.T, g *game.Game, engine *Engine) {
 // TestForthEorlingasFiresOncePerSimultaneousCombatDamageBatch proves the
 // OneOrMore batch coalescing in drainReadyEventDelayedTriggers: when two
 // creatures Player1 controls deal combat damage to a player in the same
-// simultaneous batch (shared SimultaneousID, as batchCombatDamageEvents assigns),
+// simultaneous batch (shared SimultaneousID assigned before damage),
 // Forth Eorlingas' "whenever one or more creatures ... this turn" delayed trigger
 // fires exactly once (CR 603.3e), not once per event. Without the coalesce it
 // would put two become-monarch abilities on the stack.
@@ -52,13 +52,11 @@ func TestForthEorlingasFiresOncePerSimultaneousCombatDamageBatch(t *testing.T) {
 		engine.resolveTopOfStackWithChoices(g, agents, &log)
 	}
 
-	// Two of Player1's creatures connect at the same time. batchCombatDamageEvents
-	// stamps both EventDamageDealt events with a shared SimultaneousID, which is
-	// what makes them a single "one or more creatures" batch.
-	eventStart := len(g.Events)
-	dealPlayerDamage(g, attacker1.ObjectID, attacker1.ObjectID, game.Player1, game.Player2, 2, true)
-	dealPlayerDamage(g, attacker2.ObjectID, attacker2.ObjectID, game.Player1, game.Player2, 2, true)
-	batchCombatDamageEvents(g, eventStart)
+	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{
+		{Attacker: attacker1.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+		{Attacker: attacker2.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+	}}
+	engine.resolveCombatDamage(g, &log)
 
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &log) {
 		t.Fatal("Forth Eorlingas delayed trigger did not fire when creatures dealt combat damage")

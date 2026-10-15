@@ -42,6 +42,7 @@ type damageEvent struct {
 	permanent      *game.Permanent
 	amount         int
 	combatDamage   bool
+	simultaneousID id.ID
 }
 
 type damageModificationResult struct {
@@ -50,181 +51,18 @@ type damageModificationResult struct {
 	redirected bool
 }
 
-// applyDamageModifications applies the replacement and prevention effects that
-// modify a damage event and returns the amount of damage actually dealt. It
-// interleaves damage replacement effects (CR 614) with prevention shields and
-// shield counters (CR 615) in a single CR 616.1 selection loop: while more than
-// one modifying effect applies, the affected object's controller or the affected
-// player chooses which to apply next, the chosen effect is applied (consuming a
-// finite shield's amount or a shield counter), and the applicable set is then
-// recomputed (CR 616.1f). Each replacement effect affects the event at most once
-// (CR 614.5). Protection from the source participates as a prevention candidate
-// (CR 702.16e), since applying a redirection replacement first can change whether
-// protection still applies. Each prevention reports the amount it prevented via
-// a damage-prevented event.
+// applyDamageModifications models a standalone pending damage event. Actual
+// damage callers use resolveDamageBatch so prevention's additional consequences
+// follow the damage results rather than running before them.
 func applyDamageModifications(g *game.Game, event damageEvent) int {
 	return applyDamageEventModifications(g, event).amount
 }
 
 func applyDamageEventModifications(g *game.Game, event damageEvent) damageModificationResult {
-	if event.amount <= 0 {
-		return damageModificationResult{event: event}
-	}
-	appliedReplacements := make(map[id.ID]bool)
-	amount := event.amount
-	var redirects []preventionRedirect
-	redirected := false
-	for amount > 0 {
-		event.amount = amount
-		preventionAllowed := !damageEventCantBePrevented(g, event)
-		protected := preventionAllowed && damageEventProtected(g, event)
-		var shieldIndices []int
-		hasShieldCounter := false
-		if preventionAllowed {
-			shieldIndices = applicablePreventionShieldIndices(g, event)
-			hasShieldCounter = event.permanent != nil && event.permanent.Counters.Get(counter.Shield) > 0
-		}
-		replacements := matchingDamageReplacementEffects(g, event, appliedReplacements, preventionAllowed)
-		var redirectPermanent *game.Permanent
-		canRedirect := false
-		if event.permanent == nil {
-			redirectPermanent, canRedirect = playerDamageRedirectPermanent(g, event.player)
-		}
-
-		// Candidates are listed prevention-first so the deterministic fallback
-		// (no agent) prevents before replacing, but an agent may choose any
-		// applicable effect, including a replacement before a prevention.
-		labels := make([]string, 0, len(shieldIndices)+3+len(replacements))
-		if protected {
-			labels = append(labels, "protection")
-		}
-		for range shieldIndices {
-			labels = append(labels, "prevention shield")
-		}
-		if hasShieldCounter {
-			labels = append(labels, "shield counter")
-		}
-		if canRedirect {
-			labels = append(labels, "damage redirection")
-		}
-		labels = append(labels, replacementEffectLabels(replacements)...)
-		if len(labels) == 0 {
-			break
-		}
-
-		chosen := 0
-		if len(labels) > 1 {
-			decision := chooseReplacementDecision(g, replacementDecisionPlayer(g, event), labels)
-			chosen = decision.Selected[0]
-		}
-
-		shieldsStart := 0
-		if protected {
-			shieldsStart = 1
-		}
-		shieldCounterIndex := shieldsStart + len(shieldIndices)
-		replacementsStart := shieldCounterIndex
-		if hasShieldCounter {
-			replacementsStart++
-		}
-		redirectIndex := replacementsStart
-		if canRedirect {
-			replacementsStart++
-		}
-		switch {
-		case protected && chosen == 0:
-			emitDamagePreventedEvent(g, event, amount)
-			amount = 0
-		case chosen >= shieldsStart && chosen < shieldCounterIndex:
-			shield := &g.PreventionShields[shieldIndices[chosen-shieldsStart]]
-			prevented := amount
-			if !shield.All {
-				prevented = min(amount, shield.Amount)
-				shield.Amount -= prevented
-			} else if shield.OneShot {
-				// A one-shot shield prevents this single event in full and then
-				// expires (CR 615.6): drop its capacity so compaction removes it.
-				shield.All = false
-				shield.Amount = 0
-			}
-			amount -= prevented
-			// Tally what this shield prevented so a "for each 1 damage prevented
-			// this way" payoff (Inkshield) can read the running total. Recorded
-			// before compaction so the value travels with the retained shield.
-			if prevented > 0 {
-				shield.Prevented += prevented
-			}
-			if prevented > 0 && shield.RedirectToSourceController {
-				// Defer the redirect until this event's prevention is fully
-				// resolved: the shield deals the prevented amount back to the
-				// prevented source's controller as a new damage event.
-				redirects = append(redirects, preventionRedirect{
-					sourceID:   shield.RedirectSourceID,
-					controller: shield.Controller,
-					player:     event.controller,
-					amount:     prevented,
-				})
-			}
-			g.PreventionShields = compactPreventionShields(g.PreventionShields)
-			if prevented > 0 {
-				emitDamagePreventedEvent(g, event, prevented)
-			}
-		case hasShieldCounter && chosen == shieldCounterIndex:
-			// A shield counter prevents all of the remaining damage to its
-			// permanent and is removed (CR 122.1c).
-			event.permanent.Counters.Remove(counter.Shield, 1)
-			emitDamagePreventedEvent(g, event, amount)
-			amount = 0
-		case canRedirect && chosen == redirectIndex:
-			event.player = 0
-			event.permanent = redirectPermanent
-			redirected = true
-		default:
-			replacement := replacements[chosen-replacementsStart]
-			appliedReplacements[replacement.ID] = true
-			if replacement.DamagePreventAll {
-				prevented := amount
-				amount = 0
-				if prevented > 0 {
-					emitDamagePreventedEvent(g, event, prevented)
-					if replacement.DamagePreventedBecomesPlusOneCounters && event.permanent != nil {
-						addCountersToPermanentControlledBy(g, replacement.Controller, event.permanent, counter.PlusOnePlusOne, prevented)
-					}
-					if replacement.DamagePreventedRemovesPlusOneCounter && event.permanent != nil {
-						removePreventionPlusOneCounter(event.permanent, event.combatDamage)
-					}
-				}
-				continue
-			}
-			if replacement.DamagePreventAmount > 0 {
-				prevented := min(amount, replacement.DamagePreventAmount)
-				amount -= prevented
-				if prevented > 0 {
-					emitDamagePreventedEvent(g, event, prevented)
-				}
-				continue
-			}
-			if replacement.DamageMultiplier > 1 {
-				amount *= replacement.DamageMultiplier
-			}
-			amount += replacement.DamageAddend
-			if amount < 0 {
-				amount = 0
-			}
-		}
-	}
-	// Deal any deferred redirects (Deflecting Palm) after the prevented event is
-	// fully resolved. Each redirect is a new damage event dealt as the shield's
-	// source to the prevented source's controller, so it can itself be modified
-	// by that player's own prevention and replacement effects.
-	for _, redirect := range redirects {
-		dealPlayerDamage(g, redirect.sourceID, 0, redirect.controller, redirect.player, redirect.amount, false)
-	}
-	return damageModificationResult{
-		event:      event,
-		amount:     amount,
-		redirected: redirected,
-	}
+	batch := prepareDamageBatch(g, []damageEvent{event}, 0)
+	member := batch.members[0]
+	batch.finish()
+	return damageModificationResult{event: member.event, amount: member.event.amount, redirected: member.redirected}
 }
 
 // preventionRedirect records a pending Deflecting Palm redirect: after a
@@ -236,25 +74,6 @@ type preventionRedirect struct {
 	controller game.PlayerID
 	player     game.PlayerID
 	amount     int
-}
-
-// removePreventionPlusOneCounter removes a single +1/+1 counter from a permanent
-// whose damage was prevented by a DamagePreventedRemovesPlusOneCounter
-// replacement (the Phantom mechanic). Combat damage from multiple sources is
-// dealt simultaneously (CR 510.2), so a Phantom that is gang-blocked has all of
-// that damage prevented but loses only one counter total: the first combat-damage
-// event of a step removes a counter and latches DamagePreventionCounterRemovedThisStep
-// (reset at the start of each combat damage pass), and later combat events in the
-// same step remove nothing. Each noncombat damage source is a separate event, so
-// it always removes a counter.
-func removePreventionPlusOneCounter(permanent *game.Permanent, combatDamage bool) {
-	if combatDamage {
-		if permanent.DamagePreventionCounterRemovedThisStep {
-			return
-		}
-		permanent.DamagePreventionCounterRemovedThisStep = true
-	}
-	permanent.Counters.Remove(counter.PlusOnePlusOne, 1)
 }
 
 // from the source, which prevents all of the damage (CR 702.16e).
@@ -2503,6 +2322,7 @@ func emitDamagePreventedEvent(g *game.Game, event damageEvent, prevented int) {
 		Amount:          prevented,
 		DamageRecipient: game.DamageRecipientPlayer,
 		CombatDamage:    event.combatDamage,
+		SimultaneousID:  event.simultaneousID,
 	}
 	if event.permanent != nil {
 		preventedEvent.Player = event.permanent.Owner

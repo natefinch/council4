@@ -786,20 +786,12 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 // given damage pass (first-strike or normal), implementing the combat damage step
 // (CR 510). Combat damage is assigned per CR 510.1 (unblocked creatures to the
 // player/planeswalker/battle they attack, blocked creatures to their blockers)
-// and then all of it is dealt simultaneously (CR 510.2); the events are batched
-// so they share one simultaneous timestamp and trigger together.
+// and then all of it is dealt simultaneously (CR 510.2).
 func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *TurnLog) {
 	if g.Combat == nil {
 		return
 	}
-	eventStart := len(g.Events)
-	// Combat damage in this pass is dealt simultaneously (CR 510.2). Reset the
-	// per-step Phantom counter-removal latch so a gang-blocked Phantom loses at
-	// most one +1/+1 counter this pass (each pass is a separate step, so a
-	// double-strike attacker can still cost two counters across both passes).
-	for _, permanent := range g.Battlefield {
-		permanent.DamagePreventionCounterRemovedThisStep = false
-	}
+	var assignments []damageEvent
 	blockerMap := blockersByAttacker(g)
 	blockerDamage := blockerCombatDamageAssignments(g, blockerMap, pass)
 	for _, declaration := range g.Combat.Attackers {
@@ -809,32 +801,20 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 		}
 		blockers := blockerMap[declaration.Attacker]
 		if attackerWasBlocked(g, declaration.Attacker) {
-			resolveBlockedCombatDamage(g, attacker, blockers, declaration.Target, pass, blockerDamageForAttacker(blockerDamage, declaration.Attacker), log)
+			assignments = append(assignments, blockedCombatDamageEvents(g, attacker, blockers, declaration.Target, pass, blockerDamageForAttacker(blockerDamage, declaration.Attacker))...)
 			continue
 		}
 		if !isLegalAttackTarget(g, effectiveController(g, attacker), declaration.Target) {
 			continue
 		}
-		resolveUnblockedCombatDamage(g, attacker, declaration.Target, pass, log)
-	}
-	batchCombatDamageEvents(g, eventStart)
-}
-
-func batchCombatDamageEvents(g *game.Game, eventStart int) {
-	damageEvents := 0
-	for i := eventStart; i < len(g.Events); i++ {
-		if g.Events[i].Kind == game.EventDamageDealt && g.Events[i].CombatDamage {
-			damageEvents++
+		if dealsCombatDamageInPass(g, attacker, pass) {
+			if event, ok := attackTargetCombatDamageEvent(g, attacker, declaration.Target, combatDamageAssignedBy(g, attacker)); ok {
+				assignments = append(assignments, event)
+			}
 		}
 	}
-	if damageEvents < 2 {
-		return
-	}
-	simultaneousID := g.IDGen.Next()
-	for i := eventStart; i < len(g.Events); i++ {
-		if g.Events[i].Kind == game.EventDamageDealt && g.Events[i].CombatDamage {
-			g.Events[i].SimultaneousID = simultaneousID
-		}
+	if len(assignments) > 0 {
+		resolveDamageBatch(g, assignments, g.IDGen.Next(), true, log)
 	}
 }
 

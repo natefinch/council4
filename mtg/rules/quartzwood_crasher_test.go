@@ -86,15 +86,14 @@ type combatDeal struct {
 	combat bool
 }
 
-// dealBatchedCombatDamage deals each source's damage to its player and then
-// assigns the shared SimultaneousID the real combat engine would, so all combat
-// events from one pass coalesce like a single combat-damage step.
+// dealBatchedCombatDamage uses the same simultaneous damage operation as combat.
 func dealBatchedCombatDamage(g *game.Game, deals ...combatDeal) {
-	eventStart := len(g.Events)
+	var events []damageEvent
 	for _, d := range deals {
-		dealPlayerDamage(g, d.source.CardInstanceID, d.source.ObjectID, d.source.Controller, d.player, d.amount, d.combat)
+		events = append(events, damageEvent{sourceID: d.source.CardInstanceID, sourceObjectID: d.source.ObjectID,
+			controller: d.source.Controller, player: d.player, amount: d.amount, combatDamage: d.combat})
 	}
-	batchCombatDamageEvents(g, eventStart)
+	resolveDamageBatch(g, events, g.IDGen.Next(), false, nil)
 }
 
 // resolveAllTriggers puts every pending triggered ability on the stack and

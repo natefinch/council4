@@ -80,21 +80,7 @@ func (e *Engine) resolveCombatDamagePass(g *game.Game, pass combatDamagePass, lo
 	combatEngine{e}.resolveDamagePass(g, pass, log)
 }
 
-// resolveUnblockedCombatDamage assigns an unblocked attacker's combat damage to
-// the player, planeswalker, or battle it is attacking (CR 510.1b). The damage
-// equals the attacker's power (CR 510.1a).
-func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target game.AttackTarget, pass combatDamagePass, log *TurnLog) {
-	if !dealsCombatDamageInPass(g, attacker, pass) {
-		return
-	}
-	damage := combatDamageAssignedBy(g, attacker)
-	if damage <= 0 {
-		return
-	}
-	markAttackTargetCombatDamage(g, attacker, target, damage, log)
-}
-
-// resolveBlockedCombatDamage assigns combat damage between a blocked attacker and
+// blockedCombatDamageEvents assigns combat damage between a blocked attacker and
 // its blockers (CR 510.1c-d): the attacker assigns its power among the blockers
 // (and any trample excess to the attack target), and each blocker assigns its
 // power to the attacker. All of these assignments are marked in the same pass and
@@ -102,162 +88,74 @@ func resolveUnblockedCombatDamage(g *game.Game, attacker *game.Permanent, target
 // assigns no combat damage (CR 510.1c) unless it has trample, which then assigns
 // its damage to the attack target as though all blockers had lethal damage
 // (CR 702.19d).
-func resolveBlockedCombatDamage(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, blockerDamageToAttacker map[id.ID]int, log *TurnLog) {
-	if ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker) {
-		resolveCombatDamageAsThoughUnblocked(g, attacker, blockers, target, pass, blockerDamageToAttacker, log)
-		return
-	}
-	if len(blockers) == 0 && (!dealsCombatDamageInPass(g, attacker, pass) || !hasKeyword(g, attacker, game.Trample)) {
-		return
+func blockedCombatDamageEvents(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, blockerDamageToAttacker map[id.ID]int) []damageEvent {
+	var events []damageEvent
+	asUnblocked := ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker)
+	if !asUnblocked && len(blockers) == 0 && (!dealsCombatDamageInPass(g, attacker, pass) || !hasKeyword(g, attacker, game.Trample)) {
+		return nil
 	}
 	if dealsCombatDamageInPass(g, attacker, pass) {
-		assignments, tramplingDamage := assignAttackerCombatDamage(g, attacker, blockers)
-		for _, assignment := range assignments {
-			markCreatureCombatDamage(g, attacker, assignment.permanent, assignment.damage, log)
+		var tramplingDamage int
+		if asUnblocked {
+			tramplingDamage = combatDamageAssignedBy(g, attacker)
+		} else {
+			var assignments []creatureDamageAssignment
+			assignments, tramplingDamage = assignAttackerCombatDamage(g, attacker, blockers)
+			for _, assignment := range assignments {
+				event := combatDamageEvent(g, attacker, assignment.damage)
+				event.permanent = assignment.permanent
+				events = append(events, event)
+			}
 		}
-		markAttackTargetCombatDamage(g, attacker, target, tramplingDamage, log)
-	}
-	for _, blocker := range blockers {
-		if damage := blockerDamageToAttacker[blocker.ObjectID]; damage > 0 {
-			markCreatureCombatDamage(g, blocker, attacker, damage, log)
-		}
-	}
-}
-
-// resolveCombatDamageAsThoughUnblocked assigns a blocked attacker's combat damage
-// to the player, planeswalker, or battle it is attacking as though it weren't
-// blocked (Lone Wolf, Thorn Elemental). The attacker still receives its blockers'
-// combat damage; it simply deals its own damage to its attack target rather than
-// to the blocking creatures. The controller's optional "you may have" choice is
-// modeled as always taken because the ability is purely beneficial and the
-// combat-damage step has no agent decision point.
-func resolveCombatDamageAsThoughUnblocked(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, pass combatDamagePass, blockerDamageToAttacker map[id.ID]int, log *TurnLog) {
-	if dealsCombatDamageInPass(g, attacker, pass) {
-		if damage := combatDamageAssignedBy(g, attacker); damage > 0 && isLegalAttackTarget(g, effectiveController(g, attacker), target) {
-			markAttackTargetCombatDamage(g, attacker, target, damage, log)
+		if event, ok := attackTargetCombatDamageEvent(g, attacker, target, tramplingDamage); ok {
+			events = append(events, event)
 		}
 	}
 	for _, blocker := range blockers {
 		if damage := blockerDamageToAttacker[blocker.ObjectID]; damage > 0 {
-			markCreatureCombatDamage(g, blocker, attacker, damage, log)
+			event := combatDamageEvent(g, blocker, damage)
+			event.permanent = attacker
+			events = append(events, event)
 		}
 	}
+	return events
 }
 
-func markAttackTargetCombatDamage(g *game.Game, source *game.Permanent, target game.AttackTarget, damage int, log *TurnLog) {
+func combatDamageEvent(g *game.Game, source *game.Permanent, damage int) damageEvent {
+	return damageEvent{sourceID: source.CardInstanceID, sourceObjectID: source.ObjectID,
+		controller: effectiveController(g, source), amount: damage, combatDamage: true}
+}
+
+func attackTargetCombatDamageEvent(g *game.Game, source *game.Permanent, target game.AttackTarget, damage int) (damageEvent, bool) {
+	event := combatDamageEvent(g, source, damage)
+	if damage <= 0 || !isLegalAttackTarget(g, event.controller, target) {
+		return event, false
+	}
 	if target.IsPlayerAttack() {
-		markPlayerCombatDamage(g, source, target.Player, damage, log)
-		return
+		event.player = target.Player
+		return event, isPlayerAlive(g, target.Player)
 	}
 	permanent, ok := attackTargetPermanent(g, target)
-	if !ok || damage <= 0 {
-		return
-	}
-	sourceController := effectiveController(g, source)
-	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, sourceController, permanent, damage, true)
-	applyLifelink(g, source, dealt)
-	if dealt <= 0 {
-		return
-	}
-	log.addCreatureDamage(CreatureDamageLog{
-		SourcePermanent:   source.ObjectID,
-		SourceID:          source.CardInstanceID,
-		Controller:        sourceController,
-		DamagedPermanent:  permanent.ObjectID,
-		DamagedSourceID:   permanent.CardInstanceID,
-		DamagedController: effectiveController(g, permanent),
-		Damage:            dealt,
-	})
+	event.permanent = permanent
+	return event, ok
 }
 
 func markCreatureCombatDamage(g *game.Game, source, damaged *game.Permanent, damage int, log *TurnLog) {
 	if damage <= 0 {
 		return
 	}
-	sourceController := effectiveController(g, source)
-	dealt := dealPermanentDamage(g, source.CardInstanceID, source.ObjectID, sourceController, damaged, damage, true)
-	if dealt > 0 && hasKeyword(g, source, game.Deathtouch) {
-		damaged.MarkedDeathtouchDamage = true
-	}
-	applyLifelink(g, source, dealt)
-	if dealt <= 0 {
-		return
-	}
-	log.addCreatureDamage(CreatureDamageLog{
-		SourcePermanent:   source.ObjectID,
-		SourceID:          source.CardInstanceID,
-		Controller:        sourceController,
-		DamagedPermanent:  damaged.ObjectID,
-		DamagedSourceID:   damaged.CardInstanceID,
-		DamagedController: effectiveController(g, damaged),
-		Damage:            dealt,
-	})
+	event := combatDamageEvent(g, source, damage)
+	event.permanent = damaged
+	resolveDamageBatch(g, []damageEvent{event}, 0, true, log)
 }
 
 func markPlayerCombatDamage(g *game.Game, source *game.Permanent, defendingPlayer game.PlayerID, damage int, log *TurnLog) {
 	if damage <= 0 || !isPlayerAlive(g, defendingPlayer) {
 		return
 	}
-	defender := g.Players[defendingPlayer]
-	sourceController := effectiveController(g, source)
-	dealt, redirected := dealPlayerDamageMaybeRedirect(g, source.CardInstanceID, source.ObjectID, sourceController, defendingPlayer, damage, true)
-	// Lifelink applies to all damage the source deals, including damage redirected
-	// to another permanent, so it reads the full dealt amount.
-	applyLifelink(g, source, dealt)
-	if redirected || dealt <= 0 {
-		// Redirected combat damage never reaches the defending player, so the
-		// player-only combat consequences (commander damage, poison, the
-		// monarch-by-combat-damage transfer, ring-bearer life loss, and the
-		// combat-damage-to-player log) do not apply.
-		return
-	}
-	for _, commanderID := range sourceCommanderIDs(g, source) {
-		defender.CommanderDamage[commanderID] += dealt
-	}
-	applyToxic(g, source, defendingPlayer, dealt)
-	log.addCombatDamage(CombatDamageLog{
-		Attacker:        source.ObjectID,
-		SourceID:        source.CardInstanceID,
-		Controller:      sourceController,
-		DefendingPlayer: defendingPlayer,
-		Damage:          dealt,
-	})
-	stealMonarchByCombatDamage(g, sourceController, defendingPlayer)
-	takeInitiativeByCombatDamage(g, sourceController, defendingPlayer)
-	applyRingBearerCombatDamageToPlayer(g, source)
-}
-
-func applyToxic(g *game.Game, source *game.Permanent, defendingPlayer game.PlayerID, dealt int) {
-	if dealt <= 0 {
-		return
-	}
-	total := 0
-	for _, body := range permanentEffectiveAbilities(g, source) {
-		amount, ok := game.BodyToxicAmount(body)
-		if !ok {
-			continue
-		}
-		total += amount
-	}
-	if total > 0 {
-		addCountersToPlayerControlledBy(g, effectiveController(g, source), g.Players[defendingPlayer], counter.Poison, total)
-	}
-}
-
-func markPermanentDamage(g *game.Game, placementController game.PlayerID, permanent *game.Permanent, damage int, minusOneCounters bool) {
-	if damage <= 0 {
-		return
-	}
-	switch {
-	case minusOneCounters && permanentHasType(g, permanent, types.Creature):
-		addCountersToPermanentControlledBy(g, placementController, permanent, counter.MinusOneMinusOne, damage)
-	case permanentHasType(g, permanent, types.Planeswalker):
-		permanent.Counters.Remove(counter.Loyalty, damage)
-	case permanentHasType(g, permanent, types.Battle):
-		permanent.Counters.Remove(counter.Defense, damage)
-	default:
-		permanent.MarkedDamage += damage
-	}
+	event := combatDamageEvent(g, source, damage)
+	event.player = defendingPlayer
+	resolveDamageBatch(g, []damageEvent{event}, 0, true, log)
 }
 
 func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, playerID game.PlayerID, damage int, combatDamage bool) int {
@@ -284,47 +182,8 @@ func dealPlayerDamageMaybeRedirect(g *game.Game, sourceID, sourceObjectID id.ID,
 		amount:         damage,
 		combatDamage:   combatDamage,
 	}
-	result := applyDamageEventModifications(g, event)
-	dealt := result.amount
-	if dealt <= 0 {
-		return 0, result.redirected
-	}
-	if result.event.permanent != nil {
-		redirect := result.event.permanent
-		markPermanentDamage(g, controller, redirect, dealt, damageSourceUsesMinusOneCounters(g, sourceObjectID))
-		if damageSourceHasDeathtouch(g, sourceObjectID) {
-			redirect.MarkedDeathtouchDamage = true
-		}
-		emitEvent(g, game.Event{
-			Kind:            game.EventDamageDealt,
-			SourceID:        sourceID,
-			SourceObjectID:  sourceObjectID,
-			Controller:      controller,
-			Player:          effectiveController(g, redirect),
-			PermanentID:     redirect.ObjectID,
-			CardID:          redirect.CardInstanceID,
-			TokenName:       permanentTokenName(redirect),
-			TokenDef:        redirect.TokenDef,
-			Amount:          dealt,
-			DamageRecipient: game.DamageRecipientPermanent,
-			CombatDamage:    combatDamage,
-		})
-		return dealt, true
-	}
-	if !playerRuleEffectActive(g, playerID, game.RuleEffectDamageDoesntCauseLifeLoss) {
-		loseLife(g, playerID, dealt)
-	}
-	emitEvent(g, game.Event{
-		Kind:            game.EventDamageDealt,
-		SourceID:        sourceID,
-		SourceObjectID:  sourceObjectID,
-		Controller:      controller,
-		Player:          playerID,
-		Amount:          dealt,
-		DamageRecipient: game.DamageRecipientPlayer,
-		CombatDamage:    combatDamage,
-	})
-	return dealt, false
+	result := resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0]
+	return result.amount, result.redirected
 }
 
 // damageSourceHasDeathtouch reports whether the permanent identified by
@@ -350,26 +209,7 @@ func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controlle
 		amount:         damage,
 		combatDamage:   combatDamage,
 	}
-	dealt := applyDamageModifications(g, event)
-	if dealt <= 0 {
-		return 0
-	}
-	markPermanentDamage(g, controller, permanent, dealt, damageSourceUsesMinusOneCounters(g, sourceObjectID))
-	emitEvent(g, game.Event{
-		Kind:            game.EventDamageDealt,
-		SourceID:        sourceID,
-		SourceObjectID:  sourceObjectID,
-		Controller:      controller,
-		Player:          effectiveController(g, permanent),
-		PermanentID:     permanent.ObjectID,
-		CardID:          permanent.CardInstanceID,
-		TokenName:       permanentTokenName(permanent),
-		TokenDef:        permanent.TokenDef,
-		Amount:          dealt,
-		DamageRecipient: game.DamageRecipientPermanent,
-		CombatDamage:    combatDamage,
-	})
-	return dealt
+	return resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0].amount
 }
 
 func damageSourceUsesMinusOneCounters(g *game.Game, sourceObjectID id.ID) bool {

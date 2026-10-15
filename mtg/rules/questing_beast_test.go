@@ -142,7 +142,7 @@ func TestQuestingBeastCombatDamageCantBePreventedButCanBeReplaced(t *testing.T) 
 	}
 }
 
-func TestQuestingBeastUnpreventableCombatDamageDoesNotConsumeShieldCounter(t *testing.T) {
+func TestQuestingBeastUnpreventableCombatDamageStillRemovesShieldCounter(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addCombatPermanent(g, game.Player1, questingBeastRulesDef())
 	source := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
@@ -153,8 +153,8 @@ func TestQuestingBeastUnpreventableCombatDamageDoesNotConsumeShieldCounter(t *te
 		t.Fatalf("combat damage = %d, want 3", dealt)
 	}
 
-	if target.Counters.Get(counter.Shield) != 1 {
-		t.Fatalf("shield counters = %d, want 1", target.Counters.Get(counter.Shield))
+	if target.Counters.Get(counter.Shield) != 0 {
+		t.Fatalf("shield counters = %d, want 0 (CR 615.12)", target.Counters.Get(counter.Shield))
 	}
 	if target.MarkedDamage != 3 {
 		t.Fatalf("marked damage = %d, want 3", target.MarkedDamage)

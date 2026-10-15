@@ -12,7 +12,14 @@ import (
 )
 
 func emitEvent(g *game.Game, event game.Event) {
+	emitPreparedEvent(g, prepareEvent(g, event))
+}
+
+func prepareEvent(g *game.Game, event game.Event) game.Event {
 	populateEventPermanentCharacteristics(g, &event)
+	if (event.Kind == game.EventLifeGained || event.Kind == game.EventLifeLost) && event.PlayerEventOrdinalThisTurn == 0 {
+		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, event.Kind, event.Player)
+	}
 	if event.Kind == game.EventDamageDealt && event.DamageSourceName == "" {
 		event.DamageSourceName = damageEventSourceName(g, &event)
 	}
@@ -54,6 +61,13 @@ func emitEvent(g *game.Game, event game.Event) {
 		if event.ControlledTriggerDoublers == nil && eventPermanentEnteredOrLeft(&event) {
 			event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
 		}
+	}
+	return event
+}
+
+func emitPreparedEvent(g *game.Game, event game.Event) {
+	if (event.Kind == game.EventLifeGained || event.Kind == game.EventLifeLost) && event.PlayerEventOrdinalThisTurn == 0 {
+		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, event.Kind, event.Player)
 	}
 	g.AppendEvent(event)
 	certifySimultaneousAttachedDeathDeparture(g, event)
