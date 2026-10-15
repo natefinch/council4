@@ -18,6 +18,7 @@ func TestAddExtraPhasesQueuesAndRunsExtraCombat(t *testing.T) {
 	engine := NewEngine(nil)
 	addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 	g.Turn.Phase = game.PhasePostcombatMain
+	g.Turn.MainPhasesThisTurn = 2
 	addEffectSpellToStack(g, game.Player1, game.AddExtraPhases{Combat: true, Main: true}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 

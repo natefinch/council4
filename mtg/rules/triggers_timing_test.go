@@ -243,9 +243,16 @@ func TestBeginningOfMainPhaseTriggerResolvesAtCorrectBoundary(t *testing.T) {
 
 			recorder := &mainPhaseStepRecorder{}
 			agents := [game.NumPlayers]PlayerAgent{game.Player1: recorder}
-			engine.runMainPhase(g, agents, test.wrongPhase, &TurnLog{})
-			if got := g.Players[game.Player1].Hand.Size(); got != 0 {
+			wrong := g.Clone()
+			if test.wrongPhase == game.PhasePostcombatMain {
+				wrong.Turn.MainPhasesThisTurn = 1
+			}
+			engine.runMainPhase(wrong, agents, test.wrongPhase, &TurnLog{})
+			if got := wrong.Players[game.Player1].Hand.Size(); got != 0 {
 				t.Fatalf("hand size at wrong boundary = %d, want 0", got)
+			}
+			if test.phase == game.PhasePostcombatMain {
+				g.Turn.MainPhasesThisTurn = 1
 			}
 			engine.runMainPhase(g, agents, test.phase, &TurnLog{})
 

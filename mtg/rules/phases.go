@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
 )
 
 const maximumHandSize = 7
@@ -53,6 +54,10 @@ func (e *Engine) runTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) (log
 // upkeep, draw), is only ever run by runTurn itself, so `from` is always a main
 // phase or later.
 func (e *Engine) runTurnFromPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, from game.Phase) {
+	if from > game.PhasePrecombatMain {
+		g.Turn.MainPhasesThisTurn = max(1, g.Turn.MainPhasesThisTurn)
+	}
+	g.Turn.MainPhaseContinuation = opt.Val(from)
 	// Extra phases queued by the phase immediately before `from` run before the
 	// next regular phase (CR 500.8). For a whole turn that preceding phase is the
 	// beginning phase; for a resumed search rollout it is the main phase whose
@@ -77,6 +82,7 @@ func (e *Engine) runTurnFromPhase(g *game.Game, agents [game.NumPlayers]PlayerAg
 		if g.IsGameOver() {
 			return
 		}
+		g.Turn.MainPhaseContinuation = opt.Val(game.PhasePostcombatMain)
 		e.runExtraPhases(g, agents, log)
 		if g.IsGameOver() {
 			return
@@ -116,7 +122,11 @@ func (e *Engine) finishCurrentTurn(g *game.Game, agents [game.NumPlayers]PlayerA
 	defer g.ClearChoiceContext()
 	completeTurnBoundary(g)
 	// The current phase's priority and exit obligations have completed.
-	e.runTurnFromPhase(g, agents, &log, g.Turn.Phase+1)
+	next := g.Turn.Phase + 1
+	if g.Turn.MainPhaseContinuation.Exists {
+		next = g.Turn.MainPhaseContinuation.Val
+	}
+	e.runTurnFromPhase(g, agents, &log, next)
 }
 
 // runExtraPhases drains the additional phases queued onto the turn by
@@ -142,7 +152,11 @@ func (e *Engine) runExtraPhases(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		case game.PhaseCombat:
 			e.runCombatPhase(g, agents, log)
 		case game.PhasePrecombatMain, game.PhasePostcombatMain:
-			e.runMainPhase(g, agents, phase, log)
+			next := g.Turn.Phase + 1
+			if g.Turn.MainPhaseContinuation.Exists {
+				next = g.Turn.MainPhaseContinuation.Val
+			}
+			e.runMainPhaseWithContinuation(g, agents, phase, next, log)
 		default:
 		}
 		if g.IsGameOver() {
@@ -233,7 +247,6 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		log.addStep(game.StepDraw)
 		emitBeginningOfStepEvent(g, game.StepDraw)
 		e.drawCardWithReplacements(g, g.Turn.ActivePlayer, agents, log, true)
-		advanceSagas(g, g.Turn.ActivePlayer)
 		g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 		e.runPriorityLoop(g, agents, log)
 		if g.IsGameOver() {
@@ -319,6 +332,19 @@ func untapForOtherPlayersStep(g *game.Game, permanent *game.Permanent) {
 }
 
 func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, phase game.Phase, log *TurnLog) {
+	e.runMainPhaseWithContinuation(g, agents, phase, phase+1, log)
+}
+
+func (e *Engine) runMainPhaseWithContinuation(g *game.Game, agents [game.NumPlayers]PlayerAgent, phase, next game.Phase, log *TurnLog) {
+	if phase != game.PhasePrecombatMain && phase != game.PhasePostcombatMain {
+		panic("main-phase entry requested for a non-main phase")
+	}
+	g.Turn.MainPhaseContinuation = opt.Val(next)
+	phase = game.PhasePostcombatMain
+	if g.Turn.MainPhasesThisTurn == 0 {
+		phase = game.PhasePrecombatMain
+	}
+	g.Turn.MainPhasesThisTurn++
 	g.Turn.Phase = phase
 	log.addPhase(phase)
 	step := game.StepNone
@@ -332,6 +358,9 @@ func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	if step != game.StepNone {
 		g.Turn.Step = step
 		emitBeginningOfStepEvent(g, step)
+	}
+	if phase == game.PhasePrecombatMain {
+		advanceSagas(g, g.Turn.ActivePlayer)
 	}
 	// Main phases have no steps. Reset the synthetic trigger boundary before
 	// priority so sorcery-speed actions remain legal.
@@ -468,6 +497,8 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	g.Turn.Step = game.StepUntap
 	g.Turn.LandsPlayedThisTurn = 0
 	g.Turn.LandsAllowedThisTurn = 1
+	g.Turn.MainPhasesThisTurn = 0
+	g.Turn.MainPhaseContinuation = opt.V[game.Phase]{}
 	g.Turn.ExtraPhases = nil
 	g.Turn.CombatPhasesThisTurn = 0
 	g.Turn.UpkeepStepsThisTurn = 0

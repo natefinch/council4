@@ -141,7 +141,8 @@ func advanceSagas(g *game.Game, controller game.PlayerID) {
 		if !activeBattlefieldPermanent(permanent) || effectiveController(g, permanent) != controller {
 			continue
 		}
-		if !permanentHasSubtype(g, permanent, types.Saga) {
+		if !permanentHasType(g, permanent, types.Enchantment) ||
+			!permanentHasSubtype(g, permanent, types.Saga) || finalSagaChapter(g, permanent) == 0 {
 			continue
 		}
 		addCountersToPermanent(g, permanent, counter.Lore, 1)

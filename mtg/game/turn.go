@@ -111,6 +111,12 @@ func (s Step) String() string {
 // TurnState tracks the current position within the turn structure
 // and turn-level game state.
 type TurnState struct {
+	// MainPhasesThisTurn counts actual main-phase entries. Only the first is
+	// precombat, including when effects insert phases before the regular main.
+	MainPhasesThisTurn int
+	// MainPhaseContinuation is the next regular phase after a main phase,
+	// independent of its rules classification or pending inserted phases.
+	MainPhaseContinuation opt.V[Phase]
 	// TurnNumber is the current turn number (1-indexed).
 	TurnNumber int
 

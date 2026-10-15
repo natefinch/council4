@@ -253,7 +253,14 @@ func turnIsBeforeCombatDamageStep(g *game.Game) bool {
 	if g.Turn.Phase == game.PhasePrecombatMain {
 		return true
 	}
+	if g.Turn.Phase == game.PhasePostcombatMain && turnHasUnreachedRegularCombat(g.Turn) {
+		return true
+	}
 	return turnHasQueuedCombatPhase(g)
+}
+
+func turnHasUnreachedRegularCombat(turn game.TurnState) bool {
+	return turn.MainPhaseContinuation.Exists && turn.MainPhaseContinuation.Val <= game.PhaseCombat
 }
 
 func turnHasQueuedCombatPhase(g *game.Game) bool {
@@ -1029,6 +1036,8 @@ func turnBeforeAttackersDeclared(turn game.TurnState) bool {
 		return true
 	case game.PhaseCombat:
 		return turn.Step == game.StepBeginningOfCombat
+	case game.PhasePostcombatMain:
+		return turnHasUnreachedRegularCombat(turn)
 	default:
 		return false
 	}

@@ -69,7 +69,7 @@ Implemented now:
 - `PlayerAgent`, `PlayerObservation`, and result/log data types.
 - `ChoiceAgent` support for non-action decisions with deterministic fallback and per-turn choice logging, including trigger targets/order, optional effects, payment choices, resolution/proliferate choices, commander-color mana choices, and scry/surveil decisions.
 - Opening hand setup and card drawing.
-- Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn, including Saga lore advancement after the draw step and Read ahead entry-chapter choices. Phased-out permanents remain stored for identity, attachments, and last-known-information paths but are excluded from ordinary battlefield matching, effects, triggers, and state-based actions; the untap step phases in all scheduled permanents before evaluating untap restrictions. Cleanup-step discard-to-maximum-hand-size is suppressed for a player affected by a `RuleEffectNoMaximumHandSize` rule effect ("You have no maximum hand size.").
+- Phase helpers for beginning, main, combat, ending, cleanup, and advancing to the next turn, including Saga lore advancement at precombat-main entry and Read ahead entry-chapter choices. Phased-out permanents remain stored for identity, attachments, and last-known-information paths but are excluded from ordinary battlefield matching, effects, triggers, and state-based actions; the untap step phases in all scheduled permanents before evaluating untap restrictions. Cleanup-step discard-to-maximum-hand-size is suppressed for a player affected by a `RuleEffectNoMaximumHandSize` rule effect ("You have no maximum hand size.").
 - Extra turn handling in LIFO order, skipping eliminated players.
 - Game-owned next-turn decision control, skipped-turn retention, clone-safe
   scoped search control and directed information permissions. End-step priority
@@ -209,6 +209,20 @@ Retained units keep only their own backed spend riders across boundaries; an
 ordinary same-color rider cannot migrate onto them. Cleanup ends turn-long
 retention but does not discard the mana before cleanup priority. Payments still
 record the exact units spent and do not reset their spent totals at boundaries.
+
+Saga lore is a turn-based action at the first actual main-phase entry, after
+beginning-of-main triggers fire but before priority (CR 505.4, 714.3c). Chapter
+and main-entry triggers use ordinary pending/APNAP placement together. Skipping
+draw does not skip lore, and changes during draw priority affect which controlled
+Saga enchantments still have effective chapters when the main phase begins.
+Entry lore/read ahead remain separate operations.
+
+`MainPhasesThisTurn` classifies only the first actual main as precombat; later
+inserted mains are postcombat regardless of their requested scheduling enum.
+`MainPhaseContinuation` separately retains the next regular schedule position
+for clone/Simulator continuation. Chronological cast/activation windows consult
+that continuation rather than assuming a postcombat-classified main must follow
+combat. Resuming an already-entered main never repeats its lore action.
 
 ## Payment planner
 
