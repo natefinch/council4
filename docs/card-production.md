@@ -143,10 +143,10 @@ The third family initially claimed Demonic/Diabolic Tutor plus three qualified
 tutors. Actual destination-replacement scenarios failed: ordinary private
 `Execute(Search)` directly adds to hand/graveyard and bypasses replacements.
 The revealed-handle API is not a legal workaround for a private find.
-Both whole private tutors remain unregistered, linked to precise canonical
+Both whole private tutors were initially left unregistered, linked to canonical
 [#3289](https://github.com/natefinch/council4/issues/3289). The expected-correct
-`TestProductionPrivateTutorPlacementBlocker` is explicitly skipped until that
-shared prerequisite is fixed; this is **not** a passing card or gameplay waiver.
+`TestProductionPrivateTutorPlacementBlocker` was retained as a skipped regression,
+not a passing card or gameplay waiver.
 The claimed attempt was released and the same bounded family substituted
 Eladamri's Call/Steelshaper's Gift. Qualified tutors use existing
 `Search` + `MoveCards` + `ShuffleLibrary`, so replacements actually execute.
@@ -157,6 +157,16 @@ edited during the released replan before their exact identities were reclaimed.
 Reclaim preceded verification/registration and there was only one writer. This
 does not change the verified count; future work must claim substitutes before
 any draft edit, as the canonical guide requires.
+
+The #3289 follow-up fixes ordinary private placement through the existing
+replacement-aware zone movement, without using revealed handles. The retained
+regression now executes, and complete authored Demonic Tutor and Diabolic Tutor
+implementations supersede their unique compiled definitions. Named scenarios
+cover mandatory/empty/private finds, printed payment and timing, actual redirected
+arrivals and zone versions, search/turn control, Opposition Agent permissions,
+copies, independent Simulator branches and mixed production execution. Search
+choice logs retain replay indices but not private option identities. The original
+third-batch selection history and frozen pilot evidence remain unchanged.
 
 The original six frozen pilot blockers remain authoritative: #170 Reiterate,
 #2161 Doomsday, #3285 Necromancy, #3286 Panglacial Wurm, #3287 Possibility Storm,
@@ -291,7 +301,8 @@ successful-resolution-only hand return, preserving ordinary destinations when
 countered. Reiterate is the already-reviewed representative. There are **39**
 remaining records with the corpus Buyback keyword; this is an observed candidate
 family size, **not** a claim that all 39 will be unlocked or lack other abilities.
-Private search #3289 is separately actionable with its retained regression.
+Private search #3289 is implemented by the two-card follow-up described above;
+it does not expand the saved production queue or the original five-card batch.
 
 ## Continuation command and stopping
 

@@ -17,10 +17,7 @@ type CompilerExclusion struct {
 // CompilerExclusions is separate from generated sources and Engine behavior.
 // Remove an exclusion only after its owning runtime regression passes.
 func CompilerExclusions() []CompilerExclusion {
-	return []CompilerExclusion{
-		{OracleID: "82004860-e589-4e38-8d61-8c0210e4ea39", Name: "Demonic Tutor", Blocker: "https://github.com/natefinch/council4/issues/3289"},
-		{OracleID: "14589b6b-1814-46f9-a364-83cc15dacac2", Name: "Diabolic Tutor", Blocker: "https://github.com/natefinch/council4/issues/3289"},
-	}
+	return nil
 }
 
 func installedCardSets() [][]cardset.Entry {

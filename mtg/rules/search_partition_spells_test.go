@@ -518,14 +518,29 @@ func TestAuthoredSearchPartitionZoneReplacementsAndDeferredShuffle(t *testing.T)
 				if len(found) != wantFound || g.Players[game.Player1].Hand.Size() != wantHand {
 					t.Fatal("replacement shuffle invalidated other simultaneous hand placements")
 				}
+				var arrived []game.ObjectID
 				for _, card := range found {
 					if g.Players[game.Player1].Hand.Contains(card) {
+						arrived = append(arrived, card)
 						continue
 					}
 					if destination == zone.Library && !g.Players[game.Player1].Library.Contains(card) ||
 						destination == zone.Exile && !g.Players[game.Player1].Exile.Contains(card) ||
 						g.Players[game.Player1].Graveyard.Contains(card) {
 						t.Fatal("placement ignored a destination replacement")
+					}
+					if destination == zone.Exile {
+						arrived = append(arrived, card)
+					} else {
+						instance, _ := g.GetCardInstance(card)
+						if instance.ZoneVersion != 0 {
+							t.Fatal("a replacement shuffle within the original library invented an incarnation")
+						}
+						for _, event := range g.Events {
+							if event.Kind == game.EventZoneChanged && event.CardID == card {
+								t.Fatal("a replacement shuffle within the original library invented a zone change")
+							}
+						}
 					}
 				}
 				wantEpoch := epoch + 1
@@ -535,7 +550,7 @@ func TestAuthoredSearchPartitionZoneReplacementsAndDeferredShuffle(t *testing.T)
 				if g.Players[game.Player1].Library.ReorderVersion() != wantEpoch {
 					t.Fatalf("replacement shuffles were not deferred: epoch=%d want=%d", g.Players[game.Player1].Library.ReorderVersion(), wantEpoch)
 				}
-				assertSearchPartitionBatch(t, g, found)
+				assertSearchPartitionBatch(t, g, arrived)
 				for _, card := range library {
 					locations := 0
 					for _, container := range []zone.Zone{g.Players[game.Player1].Library, g.Players[game.Player1].Hand, g.Players[game.Player1].Exile} {

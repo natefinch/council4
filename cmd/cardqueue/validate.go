@@ -88,7 +88,7 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 			}
 			activeBatch, activeOwner = r.Batch, r.Owner
 		case "implemented-verified":
-			if !verified[r.OracleID] || r.Evidence == "" || r.Batch == "" {
+			if !verified[r.OracleID] || r.Evidence == "" {
 				return fmt.Errorf("unverified admission %s", r.OracleID)
 			}
 		case "installed-compiled":

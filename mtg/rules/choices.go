@@ -77,8 +77,19 @@ func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]
 	if usedFallback {
 		g.Execution.ChoiceFallbacks++
 	}
+	loggedRequest := cloneChoiceRequest(request)
+	if request.Kind == game.ChoiceSearch || request.Private {
+		// Replay needs indices, not private library identities.
+		loggedRequest.Subject = opt.V[game.ChoiceCardInfo]{}
+		if request.Private {
+			loggedRequest.Prompt = "Private decision"
+		}
+		for index := range loggedRequest.Options {
+			loggedRequest.Options[index] = game.ChoiceOption{Index: loggedRequest.Options[index].Index, Label: "Private option"}
+		}
+	}
 	log.addChoice(game.ChoiceDecision{
-		Request:       cloneChoiceRequest(request),
+		Request:       loggedRequest,
 		DecisionMaker: g.DecisionMaker(request.Player, request.DecisionKind),
 		Selected:      selected,
 		UsedFallback:  usedFallback,

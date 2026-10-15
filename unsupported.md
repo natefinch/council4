@@ -1,8 +1,8 @@
 # Cards without exact authored production support
 
-Production registry: **17969 entries, 17969 loadable, 40 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17971 entries, 17971 loadable, 42 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
-Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `f8f1f1447e8b56484b40ab91f86bd5d3e427b71991a03b3926e64972c1b78601`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
+Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `44917919cfe3d26ec77159b31b19be9500ae39cc432f06a7207ee7fb65666338`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
 Compiler rejection is maintenance evidence, not a gameplay verdict. The list below excludes working exact authored identities; legacy candidates (if any) retain only name-based evidence. Accepted compiler records without exact production identity are also not certified gameplay.
 
@@ -2928,7 +2928,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Demonic Taskmaster** (`162e45f5-edb8-4a13-acdc-8980ce5ba8ac`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonic Torment** (`2172b724-9004-488e-88d3-a5fc48c50e41`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonic Tourist Laser** (`13d9822f-0398-4915-818b-b9fbaf63b93c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Demonic Tutor** (`82004860-e589-4e38-8d61-8c0210e4ea39`) — generated source checked in; excluded from playable registry pending [runtime blocker](https://github.com/natefinch/council4/issues/3289)
 - **Demonlord Belzenlok** (`667ece0e-a474-4e11-8ac4-6c8fc354457c`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonlord of Ashmouth** (`049777d0-910d-46d2-9ca1-10277b2fb845`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Demonmail Hauberk** (`dac85722-d741-4584-8b98-8ac220958a38`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
@@ -3028,7 +3027,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Dewdrop Cure** (`07634620-a83a-4ca0-8a60-2a21368a2661`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diabolic Revelation** (`dcf438a7-adc4-4658-b75a-2dd633f595a7`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diabolic Servitude** (`e275cbfb-3d25-4189-84f0-3162eadc7d65`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Diabolic Tutor** (`14589b6b-1814-46f9-a364-83cc15dacac2`) — generated source checked in; excluded from playable registry pending [runtime blocker](https://github.com/natefinch/council4/issues/3289)
 - **Diabolic Vision** (`6b7b1a71-812d-4ff5-b38b-94d1cf634143`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diamond Faerie** (`7a25ccf3-0fe1-447c-bdf4-57ec31b19a0f`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Diamond Weapon** (`3beba02f-4d50-4a93-a13b-78d4595bfbfc`) — compiler rejected; legacy candidate entries: 0; exact production identity not established

@@ -33,7 +33,7 @@ func productionBatchScenarios() []productionBatchScenario {
 		}
 		result = append(result, productionBatchScenario{tc.entry, "stack-interaction", counterpart})
 	}
-	for _, tc := range productionTutorCases() {
+	for _, tc := range append(productionTutorCases(), productionPrivateTutorCases()...) {
 		counterpart := "Basilisk Collar"
 		switch tc.quality {
 		case types.Creature:

@@ -50,6 +50,14 @@ that policy during a library search. Uninvolved players never receive private
 card options. Personal/concession decisions are never redirected. See
 [the authored program protocol](../cardprogram/README.md#next-turn-player-decision-control).
 
+Private tutor placements keep the found card in its real source zone while
+replacement choices are made, then use authoritative movement to the actual
+destination and a new zone incarnation. Opposition Agent grants play permission
+only for an actual exile arrival. Search option names are available to the
+entitled decision maker, not persisted in choice logs; replay retains indices.
+Unrestricted searches require a find from nonempty libraries, qualified searches
+may fail to find, and private searches do not reveal merely to obtain a handle.
+
 ### PlayerObservation
 
 `PlayerObservation` is the fog-of-war-safe view passed to an agent. It starts minimal and should grow only as agents need more information.
@@ -59,6 +67,9 @@ Do not pass `*game.Game` directly to agents; agents should not see hidden inform
 ### GameResult
 
 `GameResult` is the structured output from a completed game. It records the winner, elimination order, loss reasons, turn count, turn-limit completion, and per-turn draw/loss/action/choice/resolve/combat-damage/creature-damage/permanent-death logs. `TurnLog.Entries` preserves those per-turn facts in chronological order while the category-specific slices remain available for analytics and tests. The `report` package will consume `[]GameResult` to produce deck analytics.
+
+Its full authoritative event stream and card-name table support postgame
+analytics; they are not live public observations and must not be passed to agents.
 
 ## Current implementation status
 

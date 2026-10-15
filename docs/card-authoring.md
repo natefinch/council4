@@ -63,6 +63,11 @@ blocks remain blocked even when their generated sources exist. After another
 intentional import, use `cardqueue -operation reconcile-compiled`; it refuses
 active claims and does not manufacture behavior evidence.
 
+Named issue follow-ups can record `implemented-verified` admissions without
+inventing or resizing a saved queue batch. Exact loadable, behavior-verified
+registry identity and scenario evidence are still required; existing batch
+membership and claim validation remain unchanged.
+
 ## Executable draft scaffold
 
 ```sh

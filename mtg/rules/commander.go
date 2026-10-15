@@ -257,6 +257,7 @@ func chooseCommanderCommandZone(g *game.Game, cardID id.ID) bool {
 			Kind: game.ChoiceMay, Player: card.Owner,
 			Prompt:  "Put your commander into the command zone?",
 			Subject: cardChoiceInfo(g, cardID),
+			Private: g.Players[card.Owner].Library.Contains(cardID) || g.Players[card.Owner].Hand.Contains(cardID),
 			Options: []game.ChoiceOption{
 				{Index: 0, Label: "Leave " + card.Def.Name + " in the destination zone"},
 				{Index: 1, Label: "Put " + card.Def.Name + " into the command zone"},

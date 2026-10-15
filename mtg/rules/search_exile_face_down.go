@@ -82,12 +82,12 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 		return 0, false
 	}
 	cardID := found[0]
-	if !player.Library.Remove(cardID) {
+	if control.exileFinds {
+		exileFoundCard(g, obj, control, playerID, cardID, zone.Library)
 		player.Library.Shuffle(e.rng)
 		return 0, false
 	}
-	if control.exileFinds {
-		exileFoundCard(g, obj, control, player, playerID, cardID, zone.Library)
+	if !player.Library.Remove(cardID) {
 		player.Library.Shuffle(e.rng)
 		return 0, false
 	}

@@ -513,6 +513,7 @@ func revealZoneReplacementSource(g *game.Game, event game.Event, reveal bool) {
 		Controller:  event.Controller,
 		Player:      event.Player,
 		CardID:      event.CardID,
+		FromZone:    event.FromZone,
 		Face:        event.Face,
 		PermanentID: event.PermanentID,
 		TokenName:   event.TokenName,
@@ -2056,7 +2057,11 @@ func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect
 // controller in event.Controller; a card in another zone has only its owner
 // (event.Player).
 func replacementEventPlayer(event game.Event) game.PlayerID {
-	if (event.PermanentID != 0 || event.StackObjectID != 0) && event.Controller >= 0 && event.Controller < game.NumPlayers {
+	controlled := event.PermanentID != 0 || event.StackObjectID != 0
+	if event.Kind == game.EventZoneChanged {
+		controlled = event.FromZone == zone.Battlefield || event.FromZone == zone.Stack
+	}
+	if controlled && event.Controller >= 0 && event.Controller < game.NumPlayers {
 		return event.Controller
 	}
 	if event.Player >= 0 && event.Player < game.NumPlayers {

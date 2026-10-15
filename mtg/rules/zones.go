@@ -801,8 +801,13 @@ func moveCardBetweenZonesAfterReplacement(
 ) bool {
 	destination := replacement.destination
 	from, ok := destinationZone(g, playerID, fromZone)
-	if !ok {
+	if !ok || !from.Contains(cardID) {
 		return false
+	}
+	if destination == fromZone && destination != zone.Exile {
+		revealZoneReplacementSource(g, event, replacement.revealSource)
+		shuffleLibraryIfRequested(g, from, destination, replacement.shuffleIntoLibrary)
+		return true
 	}
 	sourceFaceDown := event.FaceDown || from.IsFaceDown(cardID)
 	if !from.Remove(cardID) {
@@ -827,14 +832,13 @@ func moveCardBetweenZonesAfterReplacement(
 		to.Add(cardID)
 	}
 	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
-	emitZoneChangeEvent(g, game.Event{
-		Player:         playerID,
-		CardID:         cardID,
-		FaceDown:       sourceFaceDown,
-		FromZone:       fromZone,
-		ToZone:         destination,
-		SimultaneousID: simultaneousID,
-	})
+	event.Player = playerID
+	event.CardID = cardID
+	event.FaceDown = sourceFaceDown
+	event.FromZone = fromZone
+	event.ToZone = destination
+	event.SimultaneousID = simultaneousID
+	emitZoneChangeEvent(g, event)
 	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
 	return true
 }

@@ -18,7 +18,7 @@ func verifiedEntries() []cardset.Entry {
 	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver, GenerousGift, Pongify, RapidHybridization, Resculpt, Twincast, Reverberate, DualcasterMage, CacklingCounterpart, FatedInfatuation, Intuition, RealmsUncharted, ChainsOfMephistopheles, Humility, Opalescence}
 	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize)
 	entries = append(entries, AnOfferYouCantRefuse, Counterspell, Negate, EssenceScatter, Disallow)
-	entries = append(entries, EladamrisCall, SteelshapersGift, Fabricate, IdyllicTutor, SylvanScrying)
+	entries = append(entries, EladamrisCall, SteelshapersGift, Fabricate, IdyllicTutor, SylvanScrying, DemonicTutor, DiabolicTutor)
 	for i := range entries {
 		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
 		if entries[i].Verification == "" {
@@ -40,7 +40,7 @@ func replacesCompiledEntry(name string) bool {
 	// installed compiler definitions; the generated sources remain available.
 	switch name {
 	case "An Offer You Can't Refuse", "Bedevil", "Cackling Counterpart",
-		"Counterspell", "Disallow", "Disenchant", "Dualcaster Mage", "Eladamri's Call",
+		"Counterspell", "Demonic Tutor", "Diabolic Tutor", "Disallow", "Disenchant", "Dualcaster Mage", "Eladamri's Call",
 		"Essence Scatter", "Fabricate", "Fated Infatuation", "Generous Gift",
 		"Idyllic Tutor", "Naturalize", "Negate", "Pongify", "Rapid Hybridization",
 		"Resculpt", "Reverberate", "Steelshaper's Gift", "Sylvan Scrying", "Terminate",

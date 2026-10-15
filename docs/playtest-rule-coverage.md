@@ -33,6 +33,9 @@ The playtest path supports, among others:
 - **Priority** — multiplayer pass-around-the-table priority with stack-aware
   all-pass handling. Empty priority passes are skipped per
   [ADR 0002](./adr/0002-smart-priority-skips-empty-passes.md).
+- **Private tutors** — replacement-aware private placement without revealing
+  finds, mandatory unrestricted searches, controlled searches and actual-exile
+  permissions. Complete authored Demonic Tutor and Diabolic Tutor use this path.
 - **The stack** — casting supported spells from hand, graveyard, command zone,
   and prepared battlefield permanents; modal spells; copies; and resolution of
   creature, instant/sorcery, Mutate, Cycling, Ninjutsu, Kicker, and activated

@@ -86,16 +86,6 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 			break
 		}
 	}
-	switch fromZone {
-	case zone.Graveyard:
-		if !player.Graveyard.Remove(cardID) {
-			return false, searchLibrary
-		}
-	default:
-		if !player.Library.Remove(cardID) {
-			return false, searchLibrary
-		}
-	}
 	dest := game.SearchDestination{Zone: spec.Destination, EntersTapped: spec.EntersTapped}
 	if !searchLibrary {
 		control = searchControl{searcher: playerID, decisionMaker: playerID}

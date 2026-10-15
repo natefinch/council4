@@ -11,6 +11,30 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+func TestAuthoredSearchSameLibraryReplacementHasNoArrivalReceipt(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	cardID := addCardToLibrary(g, game.Player1, selfLibraryReplacementCardDef())
+	card, _ := g.GetCardInstance(cardID)
+	version := card.ZoneVersion
+	epoch := g.Players[game.Player1].Library.ReorderVersion()
+	ctx := &programContext{
+		engine: NewEngine(nil), game: g, obj: &game.StackObject{Controller: game.Player1},
+		active: true, log: &TurnLog{},
+	}
+	found, err := ctx.Search(game.Search{
+		Player: game.ControllerReference(), Amount: game.Fixed(1),
+		Spec: game.SearchSpec{SourceZone: zone.Library, RevealOnly: true, Reveal: true},
+	})
+	if err != nil || len(found.Cards) != 1 {
+		t.Fatalf("revealed search: %+v, %v", found, err)
+	}
+	arrivals, err := ctx.MoveCards(cardprogram.CardPlacement{Cards: found.Cards, Destination: zone.Graveyard})
+	if err != nil || len(arrivals) != 0 || !g.Players[game.Player1].Library.Contains(cardID) ||
+		card.ZoneVersion != version || g.Players[game.Player1].Library.ReorderVersion() != epoch+1 {
+		t.Fatalf("same-library replacement invented an arrival or missed its shuffle: %+v, %v", arrivals, err)
+	}
+}
+
 func TestAuthoredDestroyCorrelatesFrozenBeforeAndActualArrivals(t *testing.T) {
 	t.Parallel()
 	g, engine, targets := terastodonStack(t, 2)

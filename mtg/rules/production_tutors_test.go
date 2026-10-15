@@ -108,7 +108,7 @@ func TestProductionTutorsSearchChoicesAndVisibility(t *testing.T) {
 
 func TestProductionTutorsCastTimingAndPayment(t *testing.T) {
 	t.Parallel()
-	for _, tc := range productionTutorCases() {
+	for _, tc := range append(productionTutorCases(), productionPrivateTutorCases()...) {
 		t.Run(tc.entry.Name, func(t *testing.T) {
 			t.Parallel()
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -149,7 +149,6 @@ func TestProductionTutorsCastTimingAndPayment(t *testing.T) {
 }
 
 func TestProductionPrivateTutorPlacementBlocker(t *testing.T) {
-	t.Skip("canonical #3289: ordinary private library search bypasses zone replacements; whole tutors remain unregistered")
 	for _, name := range []string{"Demonic Tutor", "Diabolic Tutor"} {
 		t.Run(name, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -175,7 +174,7 @@ func TestProductionPrivateTutorPlacementBlocker(t *testing.T) {
 
 func TestProductionTutorsReplacementAndSearchControl(t *testing.T) {
 	t.Parallel()
-	for _, tc := range productionTutorCases() {
+	for _, tc := range append(productionTutorCases(), productionPrivateTutorCases()...) {
 		t.Run(tc.entry.Name, func(t *testing.T) {
 			t.Parallel()
 			for _, opposition := range []bool{false, true} {
@@ -226,7 +225,7 @@ func TestProductionTutorsReplacementAndSearchControl(t *testing.T) {
 
 func TestProductionTutorsCopyAndClone(t *testing.T) {
 	t.Parallel()
-	for _, tc := range productionTutorCases() {
+	for _, tc := range append(productionTutorCases(), productionPrivateTutorCases()...) {
 		t.Run(tc.entry.Name, func(t *testing.T) {
 			t.Parallel()
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

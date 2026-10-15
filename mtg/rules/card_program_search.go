@@ -131,6 +131,9 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 				shuffle[move.owner] = true
 			}
 			card, _ := c.game.GetCardInstance(move.member.Identity.CardID)
+			if card.ZoneVersion == move.member.Identity.ZoneVersion {
+				continue
+			}
 			identity := game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion}
 			moved = append(moved, cardprogram.FoundCard{
 				Identity: identity, Info: game.ChoiceCardInfo{

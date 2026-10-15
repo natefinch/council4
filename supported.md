@@ -1,8 +1,8 @@
 # Supported Cards
 
-Production registry: **17969 entries, 17969 loadable, 40 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17971 entries, 17971 loadable, 42 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
-Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `f8f1f1447e8b56484b40ab91f86bd5d3e427b71991a03b3926e64972c1b78601`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
+Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `44917919cfe3d26ec77159b31b19be9500ae39cc432f06a7207ee7fb65666338`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
 ## Installed production registrations
 
@@ -3714,6 +3714,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Demonic Dread — legacy name-only
 - Demonic Lore — legacy name-only
 - Demonic Ruckus — legacy name-only
+- Demonic Tutor — authored exact Oracle/front; behavior verified
 - Demonic Vigor — legacy name-only
 - Demoralize — legacy name-only
 - Demystify — legacy name-only
@@ -3816,6 +3817,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Diabolic Edict — legacy name-only
 - Diabolic Intent — legacy name-only
 - Diabolic Machine — legacy name-only
+- Diabolic Tutor — authored exact Oracle/front; behavior verified
 - Diamond City — legacy name-only
 - Diamond Kaleidoscope — legacy name-only
 - Diamond Knight — legacy name-only
@@ -21816,7 +21818,7 @@ All 18,700 accepted source definitions are checked in: 17,946 cards and 754 sepa
 - Demonic Dread (`b090f1e5-1f7e-4492-9928-c5911a8ef95b`) — compiler accepted; checked-in definition
 - Demonic Lore (`47a9df32-7588-4430-a40e-56a9041e0360`) — compiler accepted; checked-in definition
 - Demonic Ruckus (`a861ee41-a2c6-4530-9974-82f55ce712b1`) — compiler accepted; checked-in definition
-- Demonic Tutor (`82004860-e589-4e38-8d61-8c0210e4ea39`) — compiler accepted; checked-in definition; playable admission blocked: https://github.com/natefinch/council4/issues/3289
+- Demonic Tutor (`82004860-e589-4e38-8d61-8c0210e4ea39`) — compiler accepted; checked-in definition
 - Demonic Vigor (`00cb93a8-5d33-4c6a-9e2a-4b3560f76f3f`) — compiler accepted; checked-in definition
 - Demoralize (`d0741810-0772-47f3-a709-4739fbf85576`) — compiler accepted; checked-in definition
 - Demystify (`fd591199-9f7a-4147-a150-13279dbb4498`) — compiler accepted; checked-in definition
@@ -21921,7 +21923,7 @@ All 18,700 accepted source definitions are checked in: 17,946 cards and 754 sepa
 - Diabolic Edict (`058917c1-21ab-488a-9f9c-591c55f3c596`) — compiler accepted; checked-in definition
 - Diabolic Intent (`038519b9-bca8-4b27-b5ac-2409595469d0`) — compiler accepted; checked-in definition
 - Diabolic Machine (`afd9b232-3f46-40c5-b1cf-2a7e8c955eba`) — compiler accepted; checked-in definition
-- Diabolic Tutor (`14589b6b-1814-46f9-a364-83cc15dacac2`) — compiler accepted; checked-in definition; playable admission blocked: https://github.com/natefinch/council4/issues/3289
+- Diabolic Tutor (`14589b6b-1814-46f9-a364-83cc15dacac2`) — compiler accepted; checked-in definition
 - Diamond City (`88e29d50-1680-495d-be84-b92b4c9e636f`) — compiler accepted; checked-in definition
 - Diamond Kaleidoscope (`bffa9256-aff4-476f-86f4-4f4c9e57fa69`) — compiler accepted; checked-in definition
 - Diamond Knight (`29ae4471-c28f-4e43-8afb-fee5023e4d08`) — compiler accepted; checked-in definition

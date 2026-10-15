@@ -383,34 +383,36 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 			return false, nil
 		}
 		cardID := found[0]
-		if !player.Library.Remove(cardID) {
-			return false, nil
-		}
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		player.Library.Shuffle(e.rng)
-		_, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library, control)
-		return placed, nil
-	}
-	var foundPermanent *game.Permanent
-	for _, cardID := range found {
-		if !player.Library.Remove(cardID) {
-			return len(found) > 0, foundPermanent
+		if control.exileFinds {
+			placed := exileFoundCard(g, obj, control, playerID, cardID, zone.Library)
+			player.Library.Shuffle(e.rng)
+			return placed, nil
 		}
+		if !player.Library.Remove(cardID) {
+			player.Library.Shuffle(e.rng)
+			return false, nil
+		}
+		player.Library.Shuffle(e.rng)
+		player.Library.Add(cardID)
+		return true, nil
+	}
+	defer player.Library.Shuffle(e.rng)
+	var foundPermanent *game.Permanent
+	placedAny := false
+	for _, cardID := range found {
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
 		permanent, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, primary, zone.Library, control)
-		if !placed {
-			return len(found) > 0, foundPermanent
-		}
+		placedAny = placedAny || placed
 		if permanent != nil {
 			foundPermanent = permanent
 		}
 	}
-	player.Library.Shuffle(e.rng)
-	return len(found) > 0, foundPermanent
+	return placedAny, foundPermanent
 }
 
 // searchLibraryAndGraveyard resolves a "search your library and/or graveyard for
@@ -474,33 +476,9 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 			break
 		}
 	}
-	switch fromZone {
-	case zone.Graveyard:
-		if !player.Graveyard.Remove(cardID) {
-			return false
-		}
-	default:
-		if !player.Library.Remove(cardID) {
-			return false
-		}
-	}
 	emitCardRevealEvent(g, obj, playerID, cardID, fromZone)
-	if control.exileFinds {
-		exileFoundCard(g, obj, control, player, playerID, cardID, fromZone)
-		return true
-	}
-	player.Hand.Add(cardID)
-	emitZoneChangeEvent(g, game.Event{
-		SourceID:      stackObjectSourceID(obj),
-		StackObjectID: stackObjectID(obj),
-		Controller:    stackObjectController(obj),
-		Player:        playerID,
-		CardID:        cardID,
-		FromZone:      fromZone,
-		ToZone:        zone.Hand,
-		Amount:        1,
-	})
-	return true
+	_, placed := e.placeFoundCard(g, obj, playerID, playerID, player, cardID, game.SearchDestination{Zone: zone.Hand}, fromZone, control)
+	return placed
 }
 
 func searchMustFindIfAvailable(spec game.SearchSpec, amount int) bool {
@@ -560,9 +538,7 @@ func (e *Engine) searchLibraryRevealOnlyCards(g *game.Game, obj *game.StackObjec
 	var revealed []id.ID
 	for _, cardID := range found {
 		if control.exileFinds {
-			if player.Library.Remove(cardID) {
-				exileFoundCard(g, obj, control, player, playerID, cardID, zone.Library)
-			}
+			exileFoundCard(g, obj, control, playerID, cardID, zone.Library)
 			continue
 		}
 		if spec.Reveal {
@@ -605,17 +581,16 @@ func (e *Engine) searchLibrarySlots(g *game.Game, obj *game.StackObject, agents 
 			found = append(found, picked[0])
 		}
 	}
+	placedAny := false
 	for _, cardID := range found {
-		if !player.Library.Remove(cardID) {
-			continue
-		}
 		if spec.Reveal {
 			emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
 		}
-		_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library, control)
+		_, placed := e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library, control)
+		placedAny = placedAny || placed
 	}
 	player.Library.Shuffle(e.rng)
-	return len(found) > 0
+	return placedAny
 }
 
 // searchSlotMatches reports whether a library card satisfies one slot filter of
@@ -629,8 +604,8 @@ func searchSlotMatches(g *game.Game, obj *game.StackObject, cardID id.ID, filter
 }
 
 // placeFoundCard moves a found library card into a single-card search
-// destination slot, emitting the library-to-zone change event. The card must
-// already be removed from the library. A found card put onto the battlefield
+// destination slot. The card must still be in its source zone so replacements
+// see its actual incarnation before movement. A found card put onto the battlefield
 // enters under controllerID's control (which equals playerID unless a search
 // names a different controller, e.g. "under target player's control"); other
 // destinations always go to the searching player. fromZone is the zone the found
@@ -643,39 +618,15 @@ func searchSlotMatches(g *game.Game, obj *game.StackObject, cardID id.ID, filter
 // destination and false if placement fails.
 func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, controllerID game.PlayerID, player *game.Player, cardID id.ID, dest game.SearchDestination, fromZone zone.Type, control searchControl) (*game.Permanent, bool) {
 	if control.exileFinds {
-		exileFoundCard(g, obj, control, player, playerID, cardID, fromZone)
-		return nil, true
+		return nil, exileFoundCard(g, obj, control, playerID, cardID, fromZone)
 	}
 	switch dest.Zone {
-	case zone.Hand:
-		player.Hand.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			SourceID:      stackObjectSourceID(obj),
-			StackObjectID: stackObjectID(obj),
-			Controller:    stackObjectController(obj),
-			Player:        playerID,
-			CardID:        cardID,
-			FromZone:      fromZone,
-			ToZone:        zone.Hand,
-			Amount:        1,
-		})
-		return nil, true
-	case zone.Graveyard:
-		player.Graveyard.Add(cardID)
-		emitZoneChangeEvent(g, game.Event{
-			SourceID:      stackObjectSourceID(obj),
-			StackObjectID: stackObjectID(obj),
-			Controller:    stackObjectController(obj),
-			Player:        playerID,
-			CardID:        cardID,
-			FromZone:      fromZone,
-			ToZone:        zone.Graveyard,
-			Amount:        1,
-		})
-		return nil, true
+	case zone.Hand, zone.Graveyard:
+		_, placed := moveSearchCard(g, obj, playerID, cardID, fromZone, dest.Zone)
+		return nil, placed
 	case zone.Battlefield:
 		card, ok := g.GetCardInstance(cardID)
-		if !ok {
+		if !ok || !removeCardFromZone(g, playerID, cardID, fromZone) {
 			return nil, false
 		}
 		return createCardPermanentFaceWithOptions(e, g, card, controllerID, fromZone, game.FaceFront, nil, permanentCreationOptions{ForceTapped: dest.EntersTapped}, [game.NumPlayers]PlayerAgent{}, nil)
@@ -683,11 +634,37 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, c
 		if dest.Position != game.SearchPositionTop {
 			return nil, false
 		}
+		if !removeCardFromZone(g, playerID, cardID, fromZone) {
+			return nil, false
+		}
 		player.Library.Add(cardID)
 		return nil, true
 	default:
 		return nil, false
 	}
+}
+
+func moveSearchCard(g *game.Game, obj *game.StackObject, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type) (zone.Type, bool) {
+	card, ok := g.GetCardInstance(cardID)
+	from, validZone := destinationZone(g, playerID, fromZone)
+	if !ok || !validZone || !from.Contains(cardID) {
+		return zone.None, false
+	}
+	version := card.ZoneVersion
+	event := game.Event{
+		Kind: game.EventZoneChanged, SourceID: stackObjectSourceID(obj),
+		StackObjectID: stackObjectID(obj), Controller: stackObjectController(obj),
+		Player: playerID, CardID: cardID, FromZone: fromZone, ToZone: toZone, Amount: 1,
+	}
+	replacement := replacementZoneChange(g, event)
+	replacement.destination = commanderReplacementDestination(g, cardID, replacement.destination)
+	if card.ZoneVersion != version || !from.Contains(cardID) {
+		return zone.None, false
+	}
+	if !moveCardBetweenZonesAfterReplacement(g, playerID, cardID, fromZone, replacement, event, false, 0) {
+		return zone.None, false
+	}
+	return replacement.destination, true
 }
 
 // placeSplitSearch resolves a split-destination library search (Cultivate,
@@ -714,9 +691,7 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 		if e.chooseSplitSearchSlot(g, agents, log, control.searcher, primary, secondary) == 1 {
 			dest = secondary
 		}
-		if player.Library.Remove(found[0]) {
-			_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, found[0], dest, zone.Library, control)
-		}
+		_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, found[0], dest, zone.Library, control)
 	default:
 		primaryCard := found[e.chooseSplitSearchPrimaryCard(g, agents, log, control.searcher, primary, found)]
 		for _, cardID := range found {
@@ -724,9 +699,7 @@ func (e *Engine) placeSplitSearch(g *game.Game, obj *game.StackObject, agents [g
 			if cardID == primaryCard {
 				dest = primary
 			}
-			if player.Library.Remove(cardID) {
-				_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library, control)
-			}
+			_, _ = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, zone.Library, control)
 		}
 	}
 	player.Library.Shuffle(e.rng)

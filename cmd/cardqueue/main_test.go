@@ -134,6 +134,34 @@ func TestQueueRejectsUnaccountedWork(t *testing.T) {
 	}
 }
 
+func TestQueueIssueScopedAdmissionWithoutChangingSavedBatches(t *testing.T) {
+	for _, scenario := range []string{"verified", "unloadable", "unverified", "no evidence"} {
+		t.Run(scenario, func(t *testing.T) {
+			q, corpus, inventory := queueFixture(t)
+			q.Batches = nil
+			for index := range q.Records {
+				q.Records[index].Batch = ""
+			}
+			index := slices.IndexFunc(q.Records, func(r record) bool { return r.OracleID == "a" })
+			q.Records[index].Status = "implemented-verified"
+			q.Records[index].Evidence = "mtg/rules named issue scenario"
+			if scenario == "no evidence" {
+				q.Records[index].Evidence = ""
+			}
+			inventory.Backlog = slices.DeleteFunc(inventory.Backlog, func(r supportinventory.Record) bool {
+				return r.OracleID == "a"
+			})
+			inventory.Production = append(inventory.Production, cards.Support{
+				OracleID: "a", Loadable: scenario != "unloadable", BehaviorVerified: scenario != "unverified",
+			})
+			err := validate(q, corpus, inventory)
+			if (err == nil) != (scenario == "verified") {
+				t.Fatalf("admission validation: %v", err)
+			}
+		})
+	}
+}
+
 func TestQueueDeterministicPriorityAndRoundtrip(t *testing.T) {
 	q, corpus, inventory := queueFixture(t)
 	q.Records[3].Decks = 2

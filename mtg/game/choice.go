@@ -146,6 +146,9 @@ type ChoiceRequest struct {
 	// or surveil prompt. It is unset for choices that are not about one specific
 	// card.
 	Subject opt.V[ChoiceCardInfo]
+
+	// Private keeps option identities out of logs, not the deciding agent's request.
+	Private bool
 }
 
 // ChoiceDecision records the selected option indices for a ChoiceRequest.

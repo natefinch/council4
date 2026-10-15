@@ -47460,10 +47460,9 @@
    "oracle_id": "14589b6b-1814-46f9-a364-83cc15dacac2",
    "revision": "d650dd8c-edd8-44e4-ae95-aaaf84557a72",
    "name": "Diabolic Tutor",
-   "status": "blocked",
+   "status": "implemented-verified",
    "family": "library-search",
-   "blocker": 3289,
-   "reason": "Private ordinary-search hand placement bypasses zone replacements; revealed-handle workaround would reveal a private find. Preserve whole card unregistered until canonical #3289."
+   "evidence": "mtg/rules/production_private_tutors_test.go; TestProductionPrivateTutorPlacementBlocker; TestProductionTutorsCastTimingAndPayment; TestProductionTutorsReplacementAndSearchControl; TestProductionTutorsCopyAndClone; TestProductionBatchLiveAndSimulator; #3289"
   },
   {
    "oracle_id": "422e1869-134f-463d-9fa1-86b66a998b3e",
@@ -47496,10 +47495,9 @@
    "oracle_id": "82004860-e589-4e38-8d61-8c0210e4ea39",
    "revision": "a24b4cb6-cebb-428b-8654-74347a6a8d63",
    "name": "Demonic Tutor",
-   "status": "blocked",
+   "status": "implemented-verified",
    "family": "library-search",
-   "blocker": 3289,
-   "reason": "Private ordinary-search hand placement bypasses zone replacements; revealed-handle workaround would reveal a private find. Preserve whole card unregistered until canonical #3289."
+   "evidence": "mtg/rules/production_private_tutors_test.go; TestProductionPrivateTutorPlacementBlocker; TestProductionTutorsCastTimingAndPayment; TestProductionTutorsReplacementAndSearchControl; TestProductionTutorsCopyAndClone; TestProductionBatchLiveAndSimulator; #3289"
   },
   {
    "oracle_id": "d9abda7e-6ca2-42ea-ab24-c542e57014f1",

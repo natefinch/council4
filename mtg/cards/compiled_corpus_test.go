@@ -107,7 +107,7 @@ func TestAuthoredImplementationsSupersedeTheirGeneratedCopies(t *testing.T) {
 			t.Fatalf("generated copy replaced authored evidence for %s", entry.Name)
 		}
 	}
-	if replacements != 24 {
-		t.Fatalf("authored/compiler overlap = %d, want 24", replacements)
+	if replacements != 26 {
+		t.Fatalf("authored/compiler overlap = %d, want 26", replacements)
 	}
 }

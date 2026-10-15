@@ -89,23 +89,17 @@ func resolveSearchControl(g *game.Game, searcher game.PlayerID) searchControl {
 // exileFoundCard redirects a found library card to its owner's exile instead of
 // the search's normal destination and grants the controlling beneficiary the
 // lasting permission to play it, backing Opposition Agent's "they exile each card
-// they find. You may play those cards ...". The card has already been removed
-// from its owner's library; owner is the searching player, who owns every card in
-// their own library, so the redirected card lands in the searching player's exile
-// bucket.
-func exileFoundCard(g *game.Game, obj *game.StackObject, control searchControl, owner *game.Player, ownerID game.PlayerID, cardID id.ID, fromZone zone.Type) {
-	owner.Exile.Add(cardID)
-	emitZoneChangeEvent(g, game.Event{
-		SourceID:      stackObjectSourceID(obj),
-		StackObjectID: stackObjectID(obj),
-		Controller:    stackObjectController(obj),
-		Player:        ownerID,
-		CardID:        cardID,
-		FromZone:      fromZone,
-		ToZone:        zone.Exile,
-		Amount:        1,
-	})
-	grantSearchExilePlayPermission(g, control, cardID)
+// they find. You may play those cards ...". Only an actual exile arrival receives
+// the play permission.
+func exileFoundCard(g *game.Game, obj *game.StackObject, control searchControl, ownerID game.PlayerID, cardID id.ID, fromZone zone.Type) bool {
+	destination, placed := moveSearchCard(g, obj, ownerID, cardID, fromZone, zone.Exile)
+	if !placed {
+		return false
+	}
+	if destination == zone.Exile {
+		grantSearchExilePlayPermission(g, control, cardID)
+	}
+	return true
 }
 
 // grantSearchExilePlayPermission registers the lasting per-card permission that

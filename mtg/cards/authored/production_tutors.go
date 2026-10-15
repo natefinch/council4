@@ -17,7 +17,57 @@ var (
 	fabricateProgram        = game.ProgramReference{ID: "422e1869-134f-463d-9fa1-86b66a998b3e/spell/0", Version: "1"}
 	idyllicTutorProgram     = game.ProgramReference{ID: "57c9ff89-dd30-467b-bb3e-499eeea8cb94/spell/0", Version: "1"}
 	sylvanScryingProgram    = game.ProgramReference{ID: "ee24bf27-484d-4e1c-998e-6a74e3d3f6c4/spell/0", Version: "1"}
+	demonicTutorProgram     = game.ProgramReference{ID: "82004860-e589-4e38-8d61-8c0210e4ea39/spell/0", Version: "1"}
+	diabolicTutorProgram    = game.ProgramReference{ID: "14589b6b-1814-46f9-a364-83cc15dacac2/spell/0", Version: "1"}
 )
+
+// DemonicTutor finds a mandatory private card without drawing or revealing it.
+var DemonicTutor = cardset.Entry{
+	OracleID: "82004860-e589-4e38-8d61-8c0210e4ea39", Name: "Demonic Tutor", New: newDemonicTutor,
+	Programs:     []cardprogram.Program{{Reference: demonicTutorProgram, Resolve: resolvePrivateHandTutor}},
+	Verification: "mtg/rules/production_private_tutors_test.go; TestProductionPrivateTutorPlacementBlocker; WotC 2004-10-04; CR 2026-09-25 400.7, 614/616, 701.23d/e",
+}
+
+// DiabolicTutor uses the same private search with its printed four-mana cost.
+var DiabolicTutor = cardset.Entry{
+	OracleID: "14589b6b-1814-46f9-a364-83cc15dacac2", Name: "Diabolic Tutor", New: newDiabolicTutor,
+	Programs:     []cardprogram.Program{{Reference: diabolicTutorProgram, Resolve: resolvePrivateHandTutor}},
+	Verification: "mtg/rules/production_private_tutors_test.go; TestProductionPrivateTutorPlacementBlocker; CR 2026-09-25 400.7, 614/616, 701.23d/e",
+}
+
+func newDemonicTutor() *game.CardDef {
+	const text = "Search your library for a card, put that card into your hand, then shuffle."
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Demonic Tutor", OracleText: text, ManaCost: opt.Val(cost.Mana{cost.O(1), cost.B}),
+			Types: []types.Card{types.Sorcery}, Colors: []color.Color{color.Black},
+			SpellAbility: opt.Val(game.Mode{Text: text, Program: demonicTutorProgram}.Ability()),
+		},
+	}
+}
+
+func newDiabolicTutor() *game.CardDef {
+	const text = "Search your library for a card, put that card into your hand, then shuffle."
+	return &game.CardDef{
+		ColorIdentity: color.NewIdentity(color.Black),
+		CardFace: game.CardFace{
+			Name: "Diabolic Tutor", OracleText: text, ManaCost: opt.Val(cost.Mana{cost.O(2), cost.B, cost.B}),
+			Types: []types.Card{types.Sorcery}, Colors: []color.Color{color.Black},
+			SpellAbility: opt.Val(game.Mode{Text: text, Program: diabolicTutorProgram}.Ability()),
+		},
+	}
+}
+
+func resolvePrivateHandTutor(ctx cardprogram.Context) error {
+	_, err := ctx.Execute(game.Search{
+		Player: game.ControllerReference(), Amount: game.Fixed(1),
+		Spec: game.SearchSpec{
+			SourceZone: zone.Library, Destination: zone.Hand, FailToFindPolicy: game.SearchMustFindIfAvailable,
+		},
+	})
+	return err
+}
 
 // EladamrisCall is an instant-speed qualified search with optional fail-to-find.
 var EladamrisCall = cardset.Entry{
