@@ -317,7 +317,8 @@ func tapAndSacrificeSourceCosts(costs []cost.Additional) bool {
 				MatchPermanentType: true,
 				PermanentType:      types.Artifact,
 			}
-			if sacrifice || sacrificeCost != want {
+			self := cost.Additional{Kind: cost.AdditionalSacrificeSource, Amount: 1}
+			if sacrifice || sacrificeCost != want && sacrificeCost != self {
 				return false
 			}
 			sacrifice = true
