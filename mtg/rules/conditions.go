@@ -21,6 +21,7 @@ type conditionContext struct {
 	obj                    *game.StackObject
 	useBaseCharacteristics bool
 	characteristicsBefore  game.ContinuousLayer
+	layerValues            map[id.ID]permanentEffectiveValues
 }
 
 // conditionParametersNegative reports whether any numeric condition parameter is
@@ -950,6 +951,10 @@ func resolvedSubjectCreatureValues(g *game.Game, resolved *resolvedObjectReferen
 }
 
 func permanentValuesForCondition(g *game.Game, permanent *game.Permanent, ctx conditionContext) permanentEffectiveValues {
+	if values, available := ctx.layerValues[permanent.ObjectID]; available {
+		applyCounterAndTemporaryValues(permanent, &values)
+		return values
+	}
 	switch {
 	case ctx.useBaseCharacteristics:
 		return basePermanentValues(g, permanent)
@@ -1119,11 +1124,11 @@ func controllerControlsNamed(g *game.Game, ctx conditionContext, names []string)
 		}
 		found := false
 		for _, permanent := range g.Battlefield {
-			if !activeBattlefieldPermanent(permanent) ||
-				effectiveController(g, permanent) != ctx.controller {
+			if !activeBattlefieldPermanent(permanent) {
 				continue
 			}
-			if normalizeControlledName(permanentEffectiveName(g, permanent)) == want {
+			values := permanentValuesForCondition(g, permanent, ctx)
+			if values.controller == ctx.controller && normalizeControlledName(values.name) == want {
 				found = true
 				break
 			}

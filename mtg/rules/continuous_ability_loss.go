@@ -5,11 +5,13 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func hasAbilityLoss(g *game.Game, sources []staticAbilitySource) bool {
-	for _, effect := range g.ContinuousEffects {
-		if effect.Layer == game.LayerAbility && effect.RemoveAllAbilities {
+func needsAbilityLayerEvaluation(g *game.Game, sources []staticAbilitySource) bool {
+	for index := range g.ContinuousEffects {
+		effect := &g.ContinuousEffects[index]
+		if effect.Layer == game.LayerAbility && abilityEffectMayDepend(effect) {
 			return true
 		}
 	}
@@ -19,8 +21,10 @@ func hasAbilityLoss(g *game.Game, sources []staticAbilitySource) bool {
 			if !staticAbilityFunctionsFromSource(body, source) {
 				continue
 			}
-			for _, effect := range body.ContinuousEffects {
-				if effect.Layer == game.LayerAbility && effect.RemoveAllAbilities {
+			for index := range body.ContinuousEffects {
+				effect := &body.ContinuousEffects[index]
+				if effect.Layer == game.LayerAbility &&
+					(abilityEffectMayDepend(effect) || body.Condition.Exists) {
 					return true
 				}
 			}
@@ -29,8 +33,65 @@ func hasAbilityLoss(g *game.Game, sources []staticAbilitySource) bool {
 	return false
 }
 
+func abilityEffectMayDepend(effect *game.ContinuousEffect) bool {
+	return effect.RemoveAllAbilities || len(effect.DependsOn) > 0 || selectionReadsKeywords(effect.Group.Selection())
+}
+
+func selectionReadsKeywords(selection game.Selection) bool {
+	if selection.Keyword != game.KeywordNone || selection.ExcludedKeyword != game.KeywordNone {
+		return true
+	}
+	return slices.ContainsFunc(selection.AnyOf, selectionReadsKeywords)
+}
+
+func needsColorLayerEvaluation(g *game.Game, sources []staticAbilitySource) bool {
+	needed := false
+	for index := range g.ContinuousEffects {
+		effect := &g.ContinuousEffects[index]
+		if effect.Layer == game.LayerColor && (len(effect.DependsOn) > 0 || selectionReadsColors(effect.Group.Selection())) {
+			needed = true
+			break
+		}
+	}
+	if !needed {
+		for _, source := range sources {
+			for index := range source.face.StaticAbilities {
+				body := &source.face.StaticAbilities[index]
+				if !staticAbilityFunctionsFromSource(body, source) {
+					continue
+				}
+				for index := range body.ContinuousEffects {
+					effect := &body.ContinuousEffects[index]
+					if effect.Layer == game.LayerColor &&
+						(body.Condition.Exists || len(effect.DependsOn) > 0 || selectionReadsColors(effect.Group.Selection())) {
+						needed = true
+						break
+					}
+				}
+			}
+		}
+	}
+	return needed
+}
+
+func applyDependentColorLayer(g *game.Game, recipient *game.Permanent, values *permanentEffectiveValues, sources []staticAbilitySource) bool {
+	if !needsColorLayerEvaluation(g, sources) {
+		return false
+	}
+	*values = cloneTypeLayerValues(continuousBoardLayer(g, recipient, sources, game.LayerColor).values[recipient.ObjectID])
+	return true
+}
+
+func selectionReadsColors(selection game.Selection) bool {
+	if len(selection.ColorsAny) > 0 || len(selection.ExcludedColors) > 0 ||
+		selection.Colorless || selection.Colored || selection.Multicolored || selection.ColorChoice != game.ColorChoiceNone {
+		return true
+	}
+	return slices.ContainsFunc(selection.AnyOf, selectionReadsColors)
+}
+
 func applyAbilityLossLayer(g *game.Game, recipient *game.Permanent, values *permanentEffectiveValues, sources []staticAbilitySource) bool {
-	if !hasAbilityLoss(g, sources) {
+	if !needsAbilityLayerEvaluation(g, sources) {
 		return false
 	}
 	*values = cloneTypeLayerValues(abilityLossLayer(g, recipient, sources).values[recipient.ObjectID])
@@ -46,10 +107,14 @@ type abilityLayerEffect struct {
 // Ability removal can erase an unapplied generator anywhere on the battlefield.
 // Resolve this layer globally, retaining begun effects' recipients for CR 613.6.
 func abilityLossLayer(g *game.Game, recipient *game.Permanent, sources []staticAbilitySource) *landTypeLayerResult {
+	return continuousBoardLayer(g, recipient, sources, game.LayerAbility)
+}
+
+func continuousBoardLayer(g *game.Game, recipient *game.Permanent, sources []staticAbilitySource, layer game.ContinuousLayer) *landTypeLayerResult {
 	fc := frameCacheFor(g)
-	if fc != nil && fc.abilityLoss != nil {
-		if _, ok := fc.abilityLoss.values[recipient.ObjectID]; ok {
-			return fc.abilityLoss
+	if fc != nil && fc.layerBoards[layer] != nil {
+		if _, ok := fc.layerBoards[layer].values[recipient.ObjectID]; ok {
+			return fc.layerBoards[layer]
 		}
 	}
 	var permanents []*game.Permanent
@@ -68,12 +133,18 @@ func abilityLossLayer(g *game.Game, recipient *game.Permanent, sources []staticA
 		started: make(map[staticBodyKey]map[id.ID]bool),
 	}
 	for _, permanent := range permanents {
-		result.values[permanent.ObjectID] = cloneTypeLayerValues(permanentValuesBeforeLayer(g, permanent, game.LayerAbility))
+		values := cloneTypeLayerValues(permanentValuesBeforeLayer(g, permanent, layer))
+		if layer == game.LayerType && values.keywords.has(game.Changeling) {
+			values.subtypes = appendUniqueSubtypes(values.subtypes, types.SubtypesForType(types.Creature)...)
+		}
+		result.values[permanent.ObjectID] = values
 	}
-	remaining := abilityLossEffects(g, sources)
-	for _, permanent := range permanents {
-		for _, effect := range keywordCounterEffects(permanent) {
-			remaining = append(remaining, abilityLayerEffect{landTypeEffect: landTypeEffect{effect: effect}})
+	remaining := continuousLayerCandidates(g, sources, layer)
+	if layer == game.LayerAbility {
+		for _, permanent := range permanents {
+			for _, effect := range keywordCounterEffects(permanent) {
+				remaining = append(remaining, abilityLayerEffect{landTypeEffect: landTypeEffect{effect: effect}})
+			}
 		}
 	}
 	slices.SortStableFunc(remaining, func(a, b abilityLayerEffect) int {
@@ -136,20 +207,23 @@ func abilityLossLayer(g *game.Game, recipient *game.Permanent, sources []staticA
 		remaining = slices.Delete(remaining, next, next+1)
 	}
 	if fc != nil && found {
-		fc.abilityLoss = result
+		if fc.layerBoards == nil {
+			fc.layerBoards = make(map[game.ContinuousLayer]*landTypeLayerResult)
+		}
+		fc.layerBoards[layer] = result
 	}
 	return result
 }
 
-func abilityLossEffects(g *game.Game, sources []staticAbilitySource) []abilityLayerEffect {
+func continuousLayerCandidates(g *game.Game, sources []staticAbilitySource, layer game.ContinuousLayer) []abilityLayerEffect {
 	var effects []abilityLayerEffect
 	for _, effect := range g.ContinuousEffects {
-		if effect.Layer == game.LayerAbility {
+		if effect.Layer == layer {
 			effects = append(effects, abilityLayerEffect{landTypeEffect: landTypeEffect{effect: effect}})
 		}
 	}
 	for _, source := range sources {
-		if source.permanent != nil {
+		if source.permanent != nil && layer != game.LayerControl {
 			source.controller = effectiveController(g, source.permanent)
 		}
 		for i := range source.face.StaticAbilities {
@@ -158,7 +232,7 @@ func abilityLossEffects(g *game.Game, sources []staticAbilitySource) []abilityLa
 				continue
 			}
 			for j, template := range body.ContinuousEffects {
-				if template.Layer != game.LayerAbility || template.AffectedSource && !template.Group.Empty() {
+				if template.Layer != layer || template.AffectedSource && !template.Group.Empty() {
 					continue
 				}
 				effect := template
@@ -172,6 +246,9 @@ func abilityLossEffects(g *game.Game, sources []staticAbilitySource) []abilityLa
 				}
 				rewriteChosenColorProtectionEffect(&effect, source.permanent)
 				rewriteCommanderIdentityProtectionEffect(g, &effect, source.controller)
+				if layer == game.LayerControl && effect.NewController.Exists {
+					effect.NewController.Val = source.controller
+				}
 				effects = append(effects, abilityLayerEffect{
 					landTypeEffect: landTypeEffect{effect: effect, source: source, body: body, key: sourceBodyKey(source, i)},
 					effectIndex:    j,
@@ -183,21 +260,22 @@ func abilityLossEffects(g *game.Game, sources []staticAbilitySource) []abilityLa
 }
 
 func abilityLossEffectApplies(g *game.Game, candidate abilityLayerEffect, recipient *game.Permanent, board map[id.ID]permanentEffectiveValues, sources []staticAbilitySource) bool {
+	layer := candidate.effect.Layer
 	if candidate.body != nil {
 		first := firstStaticLayer(candidate.body)
-		if first == game.LayerAbility && candidate.source.permanent != nil &&
+		if first == layer && candidate.source.permanent != nil &&
 			!valuesHaveStaticBody(board[sourceObjectID(candidate.source)], candidate.body) {
 			return false
 		}
-		if !landTypeStaticBodyApplies(g, candidate.source, candidate.key.index, candidate.body, recipient, game.LayerAbility, sources) {
+		if !landTypeStaticBodyApplies(g, candidate.source, candidate.key.index, candidate.body, recipient, layer, sources) {
 			return false
 		}
-		if landTypeBodyContinues(g, candidate.source, candidate.key.index, candidate.body, recipient, game.LayerAbility, sources) {
+		if landTypeBodyContinues(g, candidate.source, candidate.key.index, candidate.body, recipient, layer, sources) {
 			return true
 		}
 		if !conditionSatisfied(g, conditionContext{
 			controller: candidate.source.controller, source: candidate.source.permanent,
-			characteristicsBefore: game.LayerAbility,
+			characteristicsBefore: layer, layerValues: board,
 		}, candidate.body.Condition) {
 			return false
 		}

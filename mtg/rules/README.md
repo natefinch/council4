@@ -103,6 +103,18 @@ Implemented now:
 - Flash timing for non-instant cards with the Flash keyword, and typed fixed-mana `FlashbackKeyword` graveyard casting with forced flashback payment, stack marking, and exile whenever the spell leaves the stack. Legacy explicit `Flashback` alternative costs remain compatible.
 - Combat step structure, summoning-sickness clearing, single/all attacker choices, multi-blocks, goad and source-scoped must-attack requirements, attack taxes, Flying/Reach/Menace block legality, static attack/block prohibitions, planeswalker and battle attack targets, first strike/double strike damage passes, Trample/Deathtouch combat damage assignment including validated attacker-provided assignments, Lifelink, Toxic, Wither and Infect creature-damage counters, and commander combat damage, Indestructible/regeneration survival from destroy/lethal damage, phasing checks, combat damage to players and permanents, and lethal permanent cleanup.
 - Effective characteristic calculation through runtime continuous effects: copy/control/text/type/color/ability/P-T layers, timestamps/dependencies, face-down baseline values, dynamic star P/T, counters, temporary modifiers, static `EffectModifyPT` effects from battlefield permanents, and Mutate's top-component characteristics plus all-component abilities.
+- Dependency-sensitive type, color and ability layers retain candidates before
+  matching, evaluate the whole battlefield from the preceding layer, and
+  rediscover dependencies after each application (CR 613.8). This includes
+  newly matching keyword/color/type selections, conditional statics reading the
+  current or hypothetical board, and source ability removal. Strongly connected
+  dependency loops use timestamp fallback; independent fixed grants keep the
+  direct path. Effects begun in these layers retain their original recipients
+  in later layers (CR 613.6). Board results belong only to unchanged-state
+  static-source frames, including cloned and prospective-entry queries. This
+  does not introduce a text interpreter or claim universal dependency discovery
+  for every other layer or dynamic numeric operation; their existing typed
+  operations, CDA handling and explicit dependencies remain authoritative.
 - Permanent static-source discovery shares the authoritative layer-1 copiable
   values used by copy chains and token copies, replacing overwritten intrinsic
   and merged abilities while retaining the physical source identity and live

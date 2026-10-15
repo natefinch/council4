@@ -176,8 +176,7 @@ type frameCache struct {
 	// callers otherwise treat it read-only.
 	ruleEffects      []game.RuleEffect
 	ruleEffectsBuilt bool
-	landTypes        *landTypeLayerResult
-	abilityLoss      *landTypeLayerResult
+	layerBoards      map[game.ContinuousLayer]*landTypeLayerResult
 }
 
 // beforeLayerKey identifies a permanentValuesBeforeLayer result: a permanent and
@@ -678,6 +677,9 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 		if layer == game.LayerAbility && applyAbilityLossLayer(g, permanent, values, sources) {
 			continue
 		}
+		if layer == game.LayerColor && applyDependentColorLayer(g, permanent, values, sources) {
+			continue
+		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
 		if layer == game.LayerPowerToughnessModify && hasCounterEffect {
 			effects = append(effects, counterEffect)
@@ -766,6 +768,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 			continue
 		}
 		if layer == game.LayerAbility && applyAbilityLossLayer(g, permanent, &values, sources) {
+			continue
+		}
+		if layer == game.LayerColor && applyDependentColorLayer(g, permanent, &values, sources) {
 			continue
 		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
