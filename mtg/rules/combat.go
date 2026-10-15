@@ -825,7 +825,11 @@ func attackDeclarationsSatisfyAloneRestriction(
 // block alone may be declared only when at least two creatures block (CR
 // 509.1a). With two or more blockers the restriction is satisfied for all.
 func blockDeclarationsSatisfyAloneRestriction(g *game.Game, declarations []game.BlockDeclaration) bool {
-	if len(declarations) >= 2 {
+	distinct := make(map[id.ID]bool)
+	for _, declaration := range declarations {
+		distinct[declaration.Blocker] = true
+	}
+	if len(distinct) >= 2 {
 		return true
 	}
 	for _, declaration := range declarations {
@@ -859,6 +863,8 @@ func (e *Engine) applyDeclareBlockers(g *game.Game, playerID game.PlayerID, decl
 
 func canDeclareBlockers(g *game.Game, playerID game.PlayerID) bool {
 	return g.Combat != nil &&
+		len(attacksAgainstPlayer(g, playerID)) > 0 &&
+		!g.Combat.BlockDeclarationsComplete[playerID] &&
 		g.Turn.Phase == game.PhaseCombat &&
 		g.Turn.Step == game.StepDeclareBlockers &&
 		isPlayerAlive(g, playerID)
@@ -951,6 +957,7 @@ func (e *Engine) applyDeclareAttackers(g *game.Game, playerID game.PlayerID, dec
 
 func canDeclareAttackers(g *game.Game, playerID game.PlayerID) bool {
 	return g.Combat != nil &&
+		!g.Combat.AttackDeclarationComplete &&
 		g.Turn.Phase == game.PhaseCombat &&
 		g.Turn.Step == game.StepDeclareAttackers &&
 		playerID == g.Turn.ActivePlayer &&
@@ -981,29 +988,7 @@ func isLegalAttackTarget(g *game.Game, attackerController game.PlayerID, target 
 }
 
 func (combatEngine) declareAttackersSatisfiesRequirements(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, eligibleByID map[id.ID]*game.Permanent) bool {
-	declared := make(map[id.ID]game.AttackTarget, len(declarations))
-	for _, declaration := range declarations {
-		declared[declaration.Attacker] = declaration.Target
-	}
-	for _, attacker := range eligibleByID {
-		target, isAttacking := declared[attacker.ObjectID]
-		if !attackerMustAttack(g, attacker) {
-			continue
-		}
-		if !isAttacking {
-			if requiredAttackerCanAttackWithoutTax(g, playerID, attacker) {
-				return false
-			}
-			continue
-		}
-		if !goadAllowsAttackTarget(g, playerID, attacker, target) {
-			return false
-		}
-		if !directedAttackAllowsTarget(g, playerID, attacker, target) {
-			return false
-		}
-	}
-	return true
+	return attackRequirementsSatisfied(g, playerID, declarations)
 }
 
 func requiredAttackerCanAttackWithoutTax(g *game.Game, playerID game.PlayerID, attacker *game.Permanent) bool {

@@ -446,7 +446,7 @@ func TestShadowBlockLegalityRequiresMatchingShadow(t *testing.T) {
 		t.Fatal("a shadow creature blocked a non-shadow attacker")
 	}
 	// A shadow creature can block a shadow attacker.
-	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+	if !engine.applyDeclareBlockers(g.Clone(), game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: shadow.ObjectID, Blocking: shadowAttacker.ObjectID},
 	}))) {
 		t.Fatal("shadow blocker could not block a shadow attacker")
@@ -484,7 +484,7 @@ func TestSkulkBlockLegalityRejectsGreaterPowerBlockers(t *testing.T) {
 		t.Fatal("a creature with greater power blocked a skulk attacker")
 	}
 	// A creature with equal power may block a skulk attacker.
-	if !engine.applyDeclareBlockers(g, game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
+	if !engine.applyDeclareBlockers(g.Clone(), game.Player2, mustDeclareBlockersPayload(t, action.DeclareBlockers([]game.BlockDeclaration{
 		{Blocker: equal.ObjectID, Blocking: attacker.ObjectID},
 	}))) {
 		t.Fatal("an equal-power creature could not block a skulk attacker")

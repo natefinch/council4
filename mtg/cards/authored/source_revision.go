@@ -3,4 +3,4 @@
 package authored
 
 const SourceRevision = "sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2"
-const RulesRevision = "sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b"
+const RulesRevision = "sha256:0e70ddb1afb81b9f67ddb798d4232e77122bdc25d8a83a61f0a1ba343d912c78"

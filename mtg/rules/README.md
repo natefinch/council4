@@ -342,6 +342,29 @@ This slice intentionally omits conditional, planeswalker-inclusive, and non-mana
 
 Combat behavior is concentrated in `combatEngine` (`combat_engine.go`), an in-place module following the same seam pattern as `effectResolver` and `paymentOrchestratorType`. `Engine.runCombatPhase` is a one-liner that constructs `combatEngine{e}` and calls `runPhase`; all combat logic lives on `combatEngine`.
 
+Complete `action.DeclareAttackers` and `action.DeclareBlockers` proposals are
+validated independently of policy samples, including arbitrary subsets, mixed
+player/planeswalker/battle defenders and alternate blocker permutations. Agents
+can instead select `action.ChooseAttackers()` or `action.ChooseBlockers()` from
+the declaration window. The Engine asks `ChoiceCombatDeclaration` questions:
+one stay-back/defender choice per eligible attacker, or one yes/no decision per
+legal blocker-attacker edge. `CombatAttacker`, `CombatBlocker` and the option's
+typed `Attack`/`Block` describe each decision without parsing labels. Only
+prefixes with a legal globally maximum-requirement completion are offered.
+Attack taxes remain voluntary, but paying one creature's tax does not waive
+another creature's freely satisfiable attack requirement. Joint blocker
+feasibility includes lure, menace, maximum-one, additional capacity and distinct
+creature alone restrictions. Ordinary must-block assignments use residual
+bipartite b-matching rather than factorial enumeration.
+
+Live play and `Simulator.Apply` use the same completion and application paths,
+including controlled-player routing, actor-owned payment, explicit invalid
+choice fallback and clone-independent declaration-window completion. Exact
+out-of-sample proposals and staged choices round-trip through JSON game replay.
+Policy samples remain bounded and do not define rules legality; unusual
+constraint combinations may require exact backtracking rather than the common
+matching fast path. No policy work budget lowers the required maximum.
+
 `combatEngine` methods and their responsibilities:
 
 - `runPhase` — full combat-phase sequence: step setup, priority windows, attacker/blocker declaration, first-strike and normal damage passes, mana-pool draining.

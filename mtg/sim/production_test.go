@@ -89,7 +89,7 @@ func TestProductionOutcomeCapsAndInvalidFallbackAreVisible(t *testing.T) {
 	result := Run(cfg)
 	if result.CompletedCount() != 0 || result.DrawCount() != 0 || !result.Games[0].TurnLimitReached ||
 		result.Games[0].Execution.InvalidActions == 0 || result.Games[0].Execution.ActionFallbacks == 0 ||
-		result.Games[0].Exact() || len(result.Games[0].Limitations) < 2 {
+		result.Games[0].Exact() || len(result.Games[0].Limitations) == 0 {
 		t.Fatalf("cap/fallback/coverage misreported: %+v", result.Games[0])
 	}
 	cfg.DecisionLimit = 1

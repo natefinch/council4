@@ -47,8 +47,10 @@ type SeatScript struct {
 
 // RecordedAnnouncement preserves a complete proposal outside the sampled list.
 type RecordedAnnouncement struct {
-	Cast       *action.CastSpellAction       `json:"cast,omitempty"`
-	Activation *action.ActivateAbilityAction `json:"activation,omitempty"`
+	Cast       *action.CastSpellAction        `json:"cast,omitempty"`
+	Activation *action.ActivateAbilityAction  `json:"activation,omitempty"`
+	Attack     *action.DeclareAttackersAction `json:"attack,omitempty"`
+	Block      *action.DeclareBlockersAction  `json:"block,omitempty"`
 }
 
 // RecordGame plays game index from cfg with recording agents and returns both its
@@ -199,7 +201,13 @@ func (a *recordingAgent) ChooseAction(obs rules.PlayerObservation, legal []actio
 		if activation, ok := chosen.ActivateAbilityPayload(); ok {
 			announcement.Activation = &activation
 		}
-		if announcement.Cast != nil || announcement.Activation != nil {
+		if attack, ok := chosen.DeclareAttackersPayload(); ok {
+			announcement.Attack = &attack
+		}
+		if block, ok := chosen.DeclareBlockersPayload(); ok {
+			announcement.Block = &block
+		}
+		if announcement.Cast != nil || announcement.Activation != nil || announcement.Attack != nil || announcement.Block != nil {
 			if a.rec.announcements == nil {
 				a.rec.announcements = make(map[int]RecordedAnnouncement)
 			}
@@ -241,11 +249,32 @@ func (a *scriptedActionAgent) ChooseAction(_ rules.PlayerObservation, legal []ac
 		announcement, announced := a.announcements[a.cursor]
 		a.cursor++
 		if announced {
+			count := 0
+			for _, present := range []bool{announcement.Cast != nil, announcement.Activation != nil, announcement.Attack != nil, announcement.Block != nil} {
+				if present {
+					count++
+				}
+			}
+			if count != 1 {
+				return action.Action{Kind: action.Kind(-1)}
+			}
 			if announcement.Cast != nil && announcement.Activation == nil {
 				return action.AnnounceSpell(*announcement.Cast)
 			}
 			if announcement.Activation != nil && announcement.Cast == nil {
 				return action.AnnounceAbility(*announcement.Activation)
+			}
+			if announcement.Attack != nil {
+				if announcement.Attack.Staged {
+					return action.ChooseAttackers()
+				}
+				return action.DeclareAttackers(announcement.Attack.Attackers)
+			}
+			if announcement.Block != nil {
+				if announcement.Block.Staged {
+					return action.ChooseBlockers()
+				}
+				return action.DeclareBlockers(announcement.Block.Blockers)
 			}
 			return action.Action{Kind: action.Kind(-1)}
 		}

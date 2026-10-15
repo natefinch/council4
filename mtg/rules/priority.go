@@ -335,11 +335,11 @@ func actionsEqual(a, b action.Action) bool {
 	case action.ActionDeclareAttackers:
 		aPayload, aOK := a.DeclareAttackersPayload()
 		bPayload, bOK := b.DeclareAttackersPayload()
-		return aOK && bOK && slices.Equal(aPayload.Attackers, bPayload.Attackers)
+		return aOK && bOK && aPayload.Staged == bPayload.Staged && slices.Equal(aPayload.Attackers, bPayload.Attackers)
 	case action.ActionDeclareBlockers:
 		aPayload, aOK := a.DeclareBlockersPayload()
 		bPayload, bOK := b.DeclareBlockersPayload()
-		return aOK && bOK && slices.Equal(aPayload.Blockers, bPayload.Blockers)
+		return aOK && bOK && aPayload.Staged == bPayload.Staged && slices.Equal(aPayload.Blockers, bPayload.Blockers)
 	default:
 		return false
 	}

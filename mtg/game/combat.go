@@ -53,6 +53,10 @@ type BlockDeclaration struct {
 // damage assignment order. It exists only during the combat phase
 // and is nil otherwise.
 type CombatState struct {
+	// Completion is separate from positive attack history (CR 508.8), including
+	// an empty declaration. These windows do not reopen during priority.
+	AttackDeclarationComplete bool
+	BlockDeclarationsComplete [NumPlayers]bool
 	// FirstStrikeDamageStarted distinguishes a two-step combat from one with
 	// only ordinary damage. Eligibility is captured before the first assignment.
 	FirstStrikeDamageStarted bool

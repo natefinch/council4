@@ -58,7 +58,6 @@ type Limitation struct {
 // from Searcher.Budget/Lookahead and the simulation turn/work limits.
 func ActionGenerationLimitations() []Limitation {
 	return []Limitation{
-		{ID: "combat-enumeration", Detail: "Attack and block declarations offer representative assignments, not every legal subset, defender assignment, blocker assignment or order.", Blocker: "https://github.com/natefinch/council4/issues/3126"},
 		{ID: "evaluation-knowledge", Detail: "Heuristic scoring is incomplete; authored bodies execute in Simulator but their consequences and static/replacement/policy value are not completely modeled. Unknown atoms are explicit."},
 	}
 }

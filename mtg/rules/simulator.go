@@ -35,9 +35,19 @@ func (e *Engine) Simulator() Simulator {
 }
 
 // LegalActions returns bounded policy candidates at the current decision point
-// (productive actions before Pass). It is a pure read. A numeric announcement
-// need not occur in these samples: Apply validates its complete typed payload.
+// (productive actions before Pass). It is a pure read. Complete numeric or
+// combat declarations need not occur in these samples: Apply validates their
+// typed payloads. Pending combat windows also offer compact staged choices.
 func (s Simulator) LegalActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	if canDeclareAttackers(g, playerID) {
+		return withStagedDeclaration((combatEngine{s.engine}).legalAttackers(g, playerID), action.ActionDeclareAttackers)
+	}
+	if canDeclareBlockers(g, playerID) {
+		return withStagedDeclaration((combatEngine{s.engine}).legalBlockers(g, playerID), action.ActionDeclareBlockers)
+	}
+	if combatDeclarationPending(g) {
+		return nil
+	}
 	return s.engine.legalActions(g, playerID)
 }
 
@@ -53,15 +63,34 @@ func (s Simulator) LegalActions(g *game.Game, playerID game.PlayerID) []action.A
 // position.
 func (s Simulator) Apply(g *game.Game, playerID game.PlayerID, act action.Action, policies [game.NumPlayers]PlayerAgent) (*game.Game, bool) {
 	s.engine.validatePendingPrograms(g)
-	if act.Validate() != nil || (!s.engine.announcementLegal(g, playerID, act) && !containsAction(s.engine.legalActions(g, playerID), act)) {
+	combat := act.Kind == action.ActionDeclareAttackers || act.Kind == action.ActionDeclareBlockers
+	valid := false
+	if combat {
+		valid = (combatEngine{s.engine}).declarationLegal(g, playerID, act)
+	} else if !combatDeclarationPending(g) {
+		valid = s.engine.announcementLegal(g, playerID, act) || containsAction(s.engine.legalActions(g, playerID), act)
+	}
+	if act.Validate() != nil || !valid {
 		return nil, false
 	}
 	clone := g.Clone()
 	log := &TurnLog{}
 	s.engine.setReplacementChoiceContext(clone, policies, log)
 	defer clone.ClearChoiceContext()
+	if combat {
+		act = (combatEngine{s.engine}).completeDeclaration(clone, playerID, act, policies, log)
+	}
 	if !s.engine.applyActionWithChoices(clone, playerID, act, policies, log) {
 		return nil, false
+	}
+	if act.Kind == action.ActionDeclareBlockers {
+		finished := true
+		for _, defender := range defendingPlayersInOrder(clone) {
+			finished = finished && clone.Combat.BlockDeclarationsComplete[defender]
+		}
+		if finished {
+			emitUnblockedAttackerEvents(clone)
+		}
 	}
 	return clone, true
 }
@@ -106,12 +135,24 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 	}
 	clone := g.Clone()
 	ce := combatEngine{s.engine}
-	if !ce.applyAttackers(clone, playerID, attackers) {
-		return nil, false
-	}
 	log := &TurnLog{}
 	s.engine.setReplacementChoiceContext(clone, policies, log)
 	defer clone.ClearChoiceContext()
+	proposal := action.DeclareAttackers(attackers.Attackers)
+	if attackers.Staged {
+		if len(attackers.Attackers) != 0 {
+			return nil, false
+		}
+		proposal = action.ChooseAttackers()
+	}
+	if !ce.declarationLegal(clone, playerID, proposal) {
+		return nil, false
+	}
+	proposal = ce.completeDeclaration(clone, playerID, proposal, policies, log)
+	complete, _ := proposal.DeclareAttackersPayload()
+	if !ce.applyAttackers(clone, playerID, complete) {
+		return nil, false
+	}
 	defer ce.completePhase(clone)
 	ce.resolveCombatAfterAttackers(clone, policies, log)
 	return clone, true

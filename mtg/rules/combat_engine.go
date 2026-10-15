@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"iter"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -159,7 +161,8 @@ func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]Pl
 		return
 	}
 
-	chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1])
+	chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1], action.ActionDeclareAttackers)
+	chosen = ce.completeDeclaration(g, playerID, chosen, agents, log)
 
 	actionLog := combatActionLog(g, playerID, chosen)
 	actionLog.DecisionMaker = g.DecisionMaker(playerID, game.DecisionRules)
@@ -186,7 +189,8 @@ func (ce combatEngine) declareBlockers(g *game.Game, agents [game.NumPlayers]Pla
 			continue
 		}
 
-		chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1])
+		chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1], action.ActionDeclareBlockers)
+		chosen = ce.completeDeclaration(g, playerID, chosen, agents, log)
 
 		actionLog := combatActionLog(g, playerID, chosen)
 		actionLog.DecisionMaker = g.DecisionMaker(playerID, game.DecisionRules)
@@ -248,10 +252,11 @@ func emitUnblockedAttackerEvents(g *game.Game) {
 	}
 }
 
-// legalAttackers returns the legal declare-attackers actions for playerID.
-// The last element is always the no-attack action (or the only action when
-// goad forces that result).
+// legalAttackers returns bounded complete policy samples, not the legal envelope.
+// The final sample is also the deterministic fallback.
 func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []action.Action {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
 	if !canDeclareAttackers(g, playerID) {
 		return nil
 	}
@@ -299,22 +304,30 @@ func (ce combatEngine) legalAttackers(g *game.Game, playerID game.PlayerID) []ac
 			}
 		}
 	}
+	problem := newAttackDeclarationProblem(g, playerID)
+	if preferred, found := problem.complete(nil, problem.maximum(), true); found {
+		candidate := actionBuild.declareAttackers(preferred)
+		if !containsAction(actions, candidate) {
+			actions = append(actions, candidate)
+		}
+	}
 	return actions
 }
 
-// legalBlockers returns the legal declare-blockers actions for playerID.
-// The last element is always the no-block action.
+// legalBlockers returns bounded complete policy samples, not the legal envelope.
+// The final sample is also the deterministic fallback.
 func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action.Action {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
 	if !canDeclareBlockers(g, playerID) {
 		return nil
 	}
 
 	attackers := attacksAgainstPlayer(g, playerID)
 	blockers := eligibleBlockers(g, playerID)
+	problem := newBlockDeclarationProblem(g, playerID)
+	maximum, preferred := problem.maximum()
 	required := mustBlockRequirements(g, attackers)
-	maxRequired, preferredRequired := maximumSatisfiedMustBlockRequirements(g, required, blockers)
-	lures := trueLureAttackers(g, attackers, blockers)
-	lureForcesBlock := lureForcesAnyBlocker(g, lures, blockers)
 	actions := make([]action.Action, 0, len(attackers)*len(blockers)+1)
 	for _, attacker := range attackers {
 		var allBlockers []game.BlockDeclaration
@@ -333,50 +346,53 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 			allBlockers = append(allBlockers, block)
 			if !attackerRequiresMultipleBlockers(g, attackingPermanent) {
 				declaration := []game.BlockDeclaration{block}
-				if blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, declaration) &&
-					blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
-					blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
+				if problem.score(declaration) == maximum && problem.restricted(declaration) {
 					actions = append(actions, actionBuild.declareBlockers(declaration))
 				}
 			}
 		}
 		if len(allBlockers) > 1 && !ruleEffectLimitsBlockersToOne(g, attackingPermanent) {
-			if blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, allBlockers) &&
-				blockDeclarationsSatisfyLures(g, lures, blockers, allBlockers) &&
-				blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, allBlockers)) {
+			if problem.score(allBlockers) == maximum && problem.restricted(allBlockers) {
 				actions = append(actions, actionBuild.declareBlockers(allBlockers))
 			}
 		}
 	}
-	actions = append(actions, multiAttackerBlockActions(g, attackers, blockers, required, maxRequired, lures)...)
-	requiredDeclarations := [][]game.BlockDeclaration{preferredRequired}
-	if unitMustBlockRequirements(required) {
-		requiredDeclarations = maximumUnitMustBlockDeclarations(g, required, blockers, maxRequired)
+	actions = append(actions, multiAttackerBlockActions(g, attackers, blockers, problem, maximum)...)
+	requiredDeclarations := [][]game.BlockDeclaration{preferred}
+	if problem.unit && unitMustBlockRequirements(required) {
+		requiredDeclarations = maximumUnitMustBlockDeclarations(g, required, blockers, maximum)
 	}
 	for _, declaration := range requiredDeclarations {
-		if len(declaration) > 1 &&
-			blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
-			blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
+		if len(declaration) > 1 && problem.score(declaration) == maximum && problem.restricted(declaration) {
 			actions = append(actions, actionBuild.declareBlockers(declaration))
 		}
 	}
-	if maxRequired == 0 && !lureForcesBlock {
+	if maximum == 0 {
 		actions = append(actions, actionBuild.declareBlockers(nil))
 	}
-	return actions
+	actions = append(actions, actionBuild.declareBlockers(preferred))
+	var valid []action.Action
+	for _, candidate := range actions {
+		declaration, present := candidate.DeclareBlockersPayload()
+		if present && (combatEngine{}).blockersLegal(g, playerID, declaration) && !containsAction(valid, candidate) {
+			valid = append(valid, candidate)
+		}
+	}
+	return valid
 }
 
 // multiAttackerBlockActions enumerates declare-blockers actions in which a single
 // creature that can block more than one attacker ("can block an additional
 // creature", blockerBlockLimit > 1) blocks a subset of the attackers it can
-// legally block. It offers one such declaration per capable blocker per legal
-// attacker subset (size two up to the blocker's limit), so the added capability
-// is reachable through the action interface. Menace attackers (which need at
+// legally block. Sampling is bounded independently of exact legality and staged
+// choices. Menace attackers (which need at
 // least two blockers) are excluded because a lone blocker can't satisfy them, and
 // every declaration is validated against the same must-block, lure, and alone
 // restrictions as the single-attacker declarations.
-func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent, required map[id.ID]int, maxRequired int, lures map[id.ID]bool) []action.Action {
+func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent, problem *blockDeclarationProblem, maximum int) []action.Action {
 	var actions []action.Action
+	const sampledSubsetBudget = 64
+	examined := 0
 	for _, blocker := range blockers {
 		limit := blockerBlockLimit(g, blocker)
 		if limit < 2 {
@@ -395,7 +411,11 @@ func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration,
 		if len(blockable) < 2 {
 			continue
 		}
-		for _, subset := range attackerSubsets(blockable, 2, min(limit, len(blockable))) {
+		for subset := range attackerSubsets(blockable, 2, min(limit, len(blockable))) {
+			if examined == sampledSubsetBudget {
+				return actions
+			}
+			examined++
 			declaration := make([]game.BlockDeclaration, 0, len(subset))
 			for _, attacker := range subset {
 				declaration = append(declaration, game.BlockDeclaration{
@@ -403,9 +423,7 @@ func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration,
 					Blocking: attacker.Attacker,
 				})
 			}
-			if blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, declaration) &&
-				blockDeclarationsSatisfyLures(g, lures, blockers, declaration) &&
-				blockDeclarationsSatisfyAloneRestriction(g, appendCombatBlockers(g, declaration)) {
+			if problem.score(declaration) == maximum && problem.restricted(declaration) {
 				actions = append(actions, actionBuild.declareBlockers(declaration))
 			}
 		}
@@ -416,27 +434,25 @@ func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration,
 // attackerSubsets returns every subset of items whose size is between minSize and
 // maxSize inclusive, preserving the input (attacker declaration) order within each
 // subset so the generated block declarations are deterministic.
-func attackerSubsets(items []game.AttackDeclaration, minSize, maxSize int) [][]game.AttackDeclaration {
-	var subsets [][]game.AttackDeclaration
-	var build func(start int, current []game.AttackDeclaration)
-	build = func(start int, current []game.AttackDeclaration) {
-		if len(current) >= minSize {
-			subset := make([]game.AttackDeclaration, len(current))
-			copy(subset, current)
-			subsets = append(subsets, subset)
+func attackerSubsets(items []game.AttackDeclaration, minSize, maxSize int) iter.Seq[[]game.AttackDeclaration] {
+	return func(yield func([]game.AttackDeclaration) bool) {
+		var build func(int, []game.AttackDeclaration) bool
+		build = func(start int, current []game.AttackDeclaration) bool {
+			if len(current) >= minSize && !yield(append([]game.AttackDeclaration(nil), current...)) {
+				return false
+			}
+			if len(current) == maxSize {
+				return true
+			}
+			for index := start; index < len(items); index++ {
+				if !build(index+1, append(current, items[index])) {
+					return false
+				}
+			}
+			return true
 		}
-		if len(current) == maxSize {
-			return
-		}
-		for i := start; i < len(items); i++ {
-			next := make([]game.AttackDeclaration, len(current)+1)
-			copy(next, current)
-			next[len(current)] = items[i]
-			build(i+1, next)
-		}
+		build(0, nil)
 	}
-	build(0, nil)
-	return subsets
 }
 
 // trueLureAttackers returns the set of attacker object IDs whose true-lure
@@ -579,10 +595,11 @@ func blockDeclarationsSatisfyMustBlockRequirements(required map[id.ID]int, maxim
 	return satisfied == maximum
 }
 
-// applyAttackers validates and applies the declare-attackers action for
-// playerID. It pays any attack tax and emits attacker-declared events.
-func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction) bool {
-	if !canDeclareAttackers(g, playerID) {
+// attackersLegal is a pure validator for a complete declaration.
+func (ce combatEngine) attackersLegal(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction) bool {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
+	if declare.Staged || !canDeclareAttackers(g, playerID) {
 		return false
 	}
 
@@ -614,6 +631,15 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	if !attackDeclarationsSatisfyAloneRestriction(g, declare.Attackers, eligibleByID) {
 		return false
 	}
+	return ce.canPayAttackTax(g, playerID, declare.Attackers)
+}
+
+// applyAttackers validates, pays attack taxes, taps and emits declaration events.
+func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction) bool {
+	if !ce.attackersLegal(g, playerID, declare) {
+		return false
+	}
+	eligibleByID := permanentMapByObjectID(eligibleAttackers(g, playerID))
 	if tax, ok := ce.attackTaxCost(g, declare.Attackers); ok {
 		if !ce.payAttackTax(g, playerID, declare.Attackers, tax) {
 			return false
@@ -621,6 +647,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	}
 
 	g.Combat.Attackers = append([]game.AttackDeclaration(nil), declare.Attackers...)
+	g.Combat.AttackDeclarationComplete = true
 	if len(declare.Attackers) > 0 {
 		// CR 508.8: record that creatures attacked so the declare blockers and
 		// combat damage steps run even if those attackers later leave combat.
@@ -658,10 +685,11 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	return true
 }
 
-// applyBlockers validates and applies the declare-blockers action for
-// playerID. It emits blocker-declared events.
-func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare action.DeclareBlockersAction) bool {
-	if !canDeclareBlockers(g, playerID) {
+// blockersLegal is a pure validator for a complete declaration.
+func (combatEngine) blockersLegal(g *game.Game, playerID game.PlayerID, declare action.DeclareBlockersAction) bool {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
+	if declare.Staged || !canDeclareBlockers(g, playerID) {
 		return false
 	}
 
@@ -721,20 +749,21 @@ func (combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare 
 	}
 	allBlockers := append([]game.BlockDeclaration(nil), g.Combat.Blockers...)
 	allBlockers = append(allBlockers, declare.Blockers...)
-	attackers := attacksAgainstPlayer(g, playerID)
-	eligible := eligibleBlockers(g, playerID)
 	if !blockDeclarationsSatisfyAloneRestriction(g, allBlockers) {
 		return false
 	}
-	required := mustBlockRequirements(g, attackers)
-	maxRequired, _ := maximumSatisfiedMustBlockRequirements(g, required, eligible)
-	if !blockDeclarationsSatisfyMustBlockRequirements(required, maxRequired, allBlockers) {
+	if !blockRequirementsSatisfied(g, playerID, allBlockers) {
 		return false
 	}
-	if !blockDeclarationsSatisfyLures(g, trueLureAttackers(g, attackers, eligible), eligible, allBlockers) {
-		return false
-	}
+	return true
+}
 
+func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, declare action.DeclareBlockersAction) bool {
+	if !ce.blockersLegal(g, playerID, declare) {
+		return false
+	}
+	eligibleByID := permanentMapByObjectID(eligibleBlockers(g, playerID))
+	g.Combat.BlockDeclarationsComplete[playerID] = true
 	g.Combat.Blockers = append(g.Combat.Blockers, declare.Blockers...)
 	if len(declare.Blockers) > 0 && g.Combat.BlockedAttackers == nil {
 		g.Combat.BlockedAttackers = make(map[id.ID]bool)

@@ -89,6 +89,8 @@ const (
 	ChoicePreventionAllocation
 	// ChoiceNumber returns one exact integer, not an index into Options.
 	ChoiceNumber
+	// ChoiceCombatDeclaration selects one extendable attack choice or block edge.
+	ChoiceCombatDeclaration
 )
 
 // NumberRange describes a compact integer choice without enumerating its values.
@@ -126,6 +128,10 @@ type ChoiceOption struct {
 	// removal at the biggest threat — instead of taking the first option. It is
 	// empty for non-targeting options.
 	Targets []Target
+
+	// Attack and Block identify a proposed declaration, not a rules target.
+	Attack opt.V[AttackDeclaration]
+	Block  opt.V[BlockDeclaration]
 }
 
 // ChoiceRequest describes a bounded decision the rules engine needs from a
@@ -159,6 +165,10 @@ type ChoiceRequest struct {
 	Private bool
 	// NumberRange is required for ChoiceNumber; Options must be empty.
 	NumberRange opt.V[NumberRange]
+	// CombatAttacker and CombatBlocker identify the current staged decision.
+	// CombatBlocker is zero for an attack decision.
+	CombatAttacker id.ID
+	CombatBlocker  id.ID
 }
 
 // ChoiceDecision records the selected option indices for a ChoiceRequest.

@@ -22,15 +22,24 @@ func (c *programContext) ControlNextTurn(reference game.PlayerReference) (bool, 
 
 // chooseAction is the common priority/combat dispatch. Legality and payment
 // always belong to actor; only the agent and information permissions change.
-func (e *Engine) chooseAction(g *game.Game, agents [game.NumPlayers]PlayerAgent, actor game.PlayerID, legal []action.Action, fallback action.Action) action.Action {
+func (e *Engine) chooseAction(g *game.Game, agents [game.NumPlayers]PlayerAgent, actor game.PlayerID, legal []action.Action, fallback action.Action, declaring ...action.Kind) action.Action {
 	if departedPlayer(g, actor) {
 		return fallback
 	}
 	e.countDecision(g)
+	if len(declaring) == 1 {
+		legal = withStagedDeclaration(legal, declaring[0])
+	}
 	decider := g.DecisionMaker(actor, game.DecisionRules)
 	if agent := agentFor(agents, decider); agent != nil {
 		chosen := e.decideAction(g, agent, actor, legal)
-		if chosen.Validate() == nil && (containsAction(legal, chosen) || e.announcementLegal(g, actor, chosen)) {
+		var valid bool
+		if len(declaring) == 1 {
+			valid = chosen.Kind == declaring[0] && (combatEngine{e}).declarationLegal(g, actor, chosen)
+		} else {
+			valid = containsAction(legal, chosen) || e.announcementLegal(g, actor, chosen)
+		}
+		if chosen.Validate() == nil && valid {
 			return chosen
 		}
 		g.Execution.InvalidActions++

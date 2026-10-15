@@ -149,11 +149,14 @@ type TurnFaceUpAction struct {
 // DeclareAttackersAction is the payload for declaring attackers.
 type DeclareAttackersAction struct {
 	Attackers []game.AttackDeclaration
+	// Staged requests completion-safe Engine choices instead of a full proposal.
+	Staged bool
 }
 
 // DeclareBlockersAction is the payload for declaring blockers.
 type DeclareBlockersAction struct {
 	Blockers []game.BlockDeclaration
+	Staged   bool
 }
 
 // Pass creates a pass-priority action.
@@ -451,6 +454,16 @@ func DeclareBlockers(blockers []game.BlockDeclaration) Action {
 	}
 }
 
+// ChooseAttackers requests compact, completion-safe attacker choices.
+func ChooseAttackers() Action {
+	return Action{Kind: ActionDeclareAttackers, declareAttackers: DeclareAttackersAction{Staged: true}}
+}
+
+// ChooseBlockers requests compact, completion-safe blocker choices.
+func ChooseBlockers() Action {
+	return Action{Kind: ActionDeclareBlockers, declareBlockers: DeclareBlockersAction{Staged: true}}
+}
+
 // PlayLandPayload returns the play-land payload when this action plays a land.
 func (a Action) PlayLandPayload() (PlayLandAction, bool) {
 	if a.Kind != ActionPlayLand {
@@ -652,12 +665,18 @@ func (a Action) Validate() error {
 			return errors.New("turn face-up action missing permanent ID")
 		}
 	case ActionDeclareAttackers:
+		if a.declareAttackers.Staged && len(a.declareAttackers.Attackers) != 0 {
+			return errors.New("staged attackers action includes a complete declaration")
+		}
 		for _, attacker := range a.declareAttackers.Attackers {
 			if attacker.Attacker == 0 {
 				return errors.New("declare attackers action has attacker with zero object ID")
 			}
 		}
 	case ActionDeclareBlockers:
+		if a.declareBlockers.Staged && len(a.declareBlockers.Blockers) != 0 {
+			return errors.New("staged blockers action includes a complete declaration")
+		}
 		for _, blocker := range a.declareBlockers.Blockers {
 			if blocker.Blocker == 0 || blocker.Blocking == 0 {
 				return errors.New("declare blockers action has blocker or blocking object with zero ID")
@@ -757,11 +776,11 @@ func turnFaceUpActionEmpty(a TurnFaceUpAction) bool {
 }
 
 func declareAttackersActionEmpty(a DeclareAttackersAction) bool {
-	return len(a.Attackers) == 0
+	return !a.Staged && len(a.Attackers) == 0
 }
 
 func declareBlockersActionEmpty(a DeclareBlockersAction) bool {
-	return len(a.Blockers) == 0
+	return !a.Staged && len(a.Blockers) == 0
 }
 
 func copyTargets(targets []game.Target) []game.Target {

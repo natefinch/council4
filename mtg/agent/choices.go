@@ -1,9 +1,11 @@
 package agent
 
 import (
+	"math"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/opt"
@@ -27,8 +29,27 @@ const (
 // permanent-loss payments), and falls back to the BaselineStrategy for choices
 // that do not expose enough information to decide well (mode selection, trigger
 // ordering, and similar).
-func (GenericStrategy) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceRequest) []int {
+func (s GenericStrategy) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceRequest) []int {
 	switch request.Kind {
+	case game.ChoiceCombatDeclaration:
+		best, score := 0, math.Inf(-1)
+		for _, option := range request.Options {
+			proposal := action.DeclareAttackers(nil)
+			if request.CombatBlocker != 0 {
+				proposal = action.DeclareBlockers(nil)
+			}
+			if option.Attack.Exists {
+				proposal = action.DeclareAttackers([]game.AttackDeclaration{option.Attack.Val})
+			}
+			if option.Block.Exists {
+				proposal = action.DeclareBlockers([]game.BlockDeclaration{option.Block.Val})
+			}
+			value := s.baseScore(obs, proposal)
+			if value > score {
+				best, score = option.Index, value
+			}
+		}
+		return []int{best}
 	case game.ChoiceScry:
 		if request.MinChoices == 0 {
 			var bottom []int
