@@ -24,7 +24,7 @@ and [impl-loop](./.agents/skills/impl-loop/SKILL.md) describe the execution rule
 ## Card support
 
 <!-- card-support:start -->
-Production registry: **2804 entries, 2804 loadable, 25 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **2819 entries, 2819 loadable, 40 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 See [production identity/status inventory](support-inventory.md), [installed and compiler lists](supported.md), and [compiler maintenance diagnostics](unsupported-reasons.md).
 <!-- card-support:end -->

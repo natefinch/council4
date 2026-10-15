@@ -43,6 +43,19 @@ Continue a production queue only when assigned. Never turn budget exhaustion,
 unsupported behavior or partial cards into success. No automatic schedules,
 mandatory PRs, full corpus reruns, per-file agents or per-card engine frameworks.
 
+## Saved production queue
+
+The [production manifest](../testdata/card-authoring/production.json) retains the
+entire pinned remaining population, policy exclusions, name-only baseline
+associations, claims, verified admissions and precise blockers. Use
+`go run ./cmd/cardqueue -operation next -owner YOUR_SESSION_ID` to resume a saved
+claim or show the next reviewed batch, then `-operation claim -batch BATCH_ID
+-owner YOUR_SESSION_ID` **before editing**. This command does not execute cards
+or enable automation. The [production evidence and continuation](card-production.md)
+record the completed first three batches, the next three exact identity lists,
+live issue reconciliation, measurements and stopping conditions. Keep this guide's
+ordinary authoring/scaffold/gates; the queue is work accounting, not another DSL.
+
 ## Executable draft scaffold
 
 ```sh

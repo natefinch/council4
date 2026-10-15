@@ -11,6 +11,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 // The same fixture/seed/policy is copied unchanged into the step-11 baseline.
@@ -178,6 +179,7 @@ func TestEveryProvingCardLoadsIntoLiveAndSearchEngines(t *testing.T) {
 			}
 			g, engine, policies, _ := mixedProductionGame(registry)
 			addCombatPermanent(g, game.Player2, registry.Lookup("Birds of Paradise"))
+			addCombatPermanent(g, game.Player2, registry.Lookup("Basilisk Collar"))
 			// Supply legal creature-copy subjects without changing spell timing.
 			addCombatPermanent(g, game.Player1, registry.Lookup("Birds of Paradise"))
 			if def.SpellAbility.Exists {
@@ -187,13 +189,22 @@ func TestEveryProvingCardLoadsIntoLiveAndSearchEngines(t *testing.T) {
 					}) {
 						continue
 					}
-					subject := addCardToHand(g, game.Player2, registry.Lookup("Lightning Bolt"))
+					subjectDef := registry.Lookup("Lightning Bolt")
+					subjectTargets := []game.Target{game.PlayerTarget(game.Player3)}
+					if slices.ContainsFunc(mode.Targets, func(spec game.TargetSpec) bool {
+						return slices.Contains(spec.Predicate.SpellCardTypes, types.Creature)
+					}) {
+						subjectDef = registry.Lookup("Birds of Paradise")
+						subjectTargets = nil
+					}
+					subject := addCardToHand(g, game.Player2, subjectDef)
 					g.Players[game.Player2].ManaPool.Add(mana.R, 1)
-					g.Turn.PriorityPlayer = game.Player2
-					if !engine.applyAction(g, game.Player2, action.CastSpell(subject, []game.Target{game.PlayerTarget(game.Player3)}, 0, nil)) {
+					g.Players[game.Player2].ManaPool.Add(mana.G, 1)
+					setMainPhasePriority(g, game.Player2)
+					if !engine.applyAction(g, game.Player2, action.CastSpell(subject, subjectTargets, 0, nil)) {
 						t.Fatal("production copy subject was not castable")
 					}
-					g.Turn.PriorityPlayer = game.Player1
+					setMainPhasePriority(g, game.Player1)
 					break
 				}
 			}

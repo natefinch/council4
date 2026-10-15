@@ -1,6 +1,6 @@
 # Supported Cards
 
-Production registry: **2804 entries, 2804 loadable, 25 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **2819 entries, 2819 loadable, 40 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `f8f1f1447e8b56484b40ab91f86bd5d3e427b71991a03b3926e64972c1b78601`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -73,6 +73,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Amazing Acrobatics — legacy name-only
 - Ambuscade Shaman — legacy name-only
 - Amulet of Kroog — legacy name-only
+- An Offer You Can't Refuse — authored exact Oracle/front; behavior verified
 - Anaba Spirit Crafter — legacy name-only
 - Anafenza, Kin-Tree Spirit — legacy name-only
 - Anathemancer — legacy name-only
@@ -224,6 +225,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Beast Within — legacy name-only
 - Beastbreaker of Bala Ged — legacy name-only
 - Beastrider Vanguard — legacy name-only
+- Bedevil — authored exact Oracle/front; behavior verified
 - Belbe's Percher — legacy name-only
 - Belligerent Brontodon — legacy name-only
 - Belligerent Hatchling — legacy name-only
@@ -517,6 +519,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Cosmic Spider-Man — legacy name-only
 - Cosmotronic Wave — legacy name-only
 - Counterintelligence — legacy name-only
+- Counterspell — authored exact Oracle/front; behavior verified
 - Countless Gears Renegade — legacy name-only
 - Courage in Crisis — legacy name-only
 - Courageous Goblin — legacy name-only
@@ -658,8 +661,10 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Dirtcowl Wurm — legacy name-only
 - Dirty Wererat — legacy name-only
 - Disa the Restless — legacy name-only
+- Disallow — authored exact Oracle/front; behavior verified
 - Disembowel — legacy name-only
 - Disempower — legacy name-only
+- Disenchant — authored exact Oracle/front; behavior verified
 - Disruption Protocol — legacy name-only
 - Disruptive Pitmage — legacy name-only
 - Disruptive Student — legacy name-only
@@ -744,6 +749,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Efreet Flamepainter — legacy name-only
 - Efreet Weaponmaster — legacy name-only
 - Eiganjo Castle — legacy name-only
+- Eladamri's Call — authored exact Oracle/front; behavior verified
 - Elder Pine of Jukai — legacy name-only
 - Eldritch Evolution — legacy name-only
 - Elegant Entourage — legacy name-only
@@ -790,6 +796,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Erebos, Bleak-Hearted — legacy name-only
 - Esper Battlemage — legacy name-only
 - Essence Flare — legacy name-only
+- Essence Scatter — authored exact Oracle/front; behavior verified
 - Etali, Primal Storm — legacy name-only
 - Eternal Isolation — legacy name-only
 - Eternal Scourge — legacy name-only
@@ -817,6 +824,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Eyeblight Massacre — legacy name-only
 - Eyeblight's Ending — legacy name-only
 - Ezrim, Agency Chief — legacy name-only
+- Fabricate — authored exact Oracle/front; behavior verified
 - Fact or Fiction — legacy name-only
 - Fae Flight — legacy name-only
 - Faerie Impostor — legacy name-only
@@ -1211,6 +1219,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Ichor Synthesizer — legacy name-only
 - Ichor Wellspring — legacy name-only
 - Icon of Ancestry — legacy name-only
+- Idyllic Tutor — authored exact Oracle/front; behavior verified
 - Ignition Team — legacy name-only
 - Ignoble Hierarch — legacy name-only
 - Iizuka the Ruthless — legacy name-only
@@ -1648,6 +1657,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Narset's Rebuke — legacy name-only
 - Narset's Reversal — legacy name-only
 - Narset, Parter of Veils — legacy name-only
+- Naturalize — authored exact Oracle/front; behavior verified
 - Nature's Cloak — legacy name-only
 - Nature's Lore — legacy name-only
 - Nature's Will — legacy name-only
@@ -1656,6 +1666,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Necroskitter — legacy name-only
 - Necrotic Wound — legacy name-only
 - Needlebite Trap — legacy name-only
+- Negate — authored exact Oracle/front; behavior verified
 - Nemata, Grove Guardian — legacy name-only
 - Nemesis of Reason — legacy name-only
 - Neonate's Rush — legacy name-only
@@ -2336,6 +2347,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Steampath Charger — legacy name-only
 - Steelburr Champion — legacy name-only
 - Steelclad Spirit — legacy name-only
+- Steelshaper's Gift — authored exact Oracle/front; behavior verified
 - Steelswarm Operator — legacy name-only
 - Steely Resolve — legacy name-only
 - Stella Lee, Wild Card — legacy name-only
@@ -2399,6 +2411,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Sylvan Basilisk — legacy name-only
 - Sylvan Library — legacy name-only
 - Sylvan Messenger — legacy name-only
+- Sylvan Scrying — authored exact Oracle/front; behavior verified
 - Synapse Sliver — legacy name-only
 - Syndicate Infiltrator — legacy name-only
 - Synod Centurion — legacy name-only
@@ -2447,6 +2460,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Tenured Oilcaster — legacy name-only
 - Terastodon — authored exact Oracle/front; behavior verified
 - Terisian Mindbreaker — legacy name-only
+- Terminate — authored exact Oracle/front; behavior verified
 - Terra, Herald of Hope — legacy name-only
 - Terrarion — legacy name-only
 - Territorial Witchstalker — legacy name-only
@@ -2672,6 +2686,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - View from Above — legacy name-only
 - Vigean Graftmage — legacy name-only
 - Vigilant Martyr — legacy name-only
+- Vindicate — authored exact Oracle/front; behavior verified
 - Vineshaper Prodigy — legacy name-only
 - Visage of Bolas — legacy name-only
 - Vision of Love — legacy name-only
