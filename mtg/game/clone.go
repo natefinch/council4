@@ -48,6 +48,7 @@ func (g *Game) Clone() *Game {
 		ReplacementEffects:                 cloneSlicePtr(g.ReplacementEffects, fixupReplacementEffect),
 		SkippedSteps:                       cloneSkippedSteps(g.SkippedSteps),
 		PlayerControlEffects:               cloneSlice(g.PlayerControlEffects),
+		ControlGrantsEnded:                 g.ControlGrantsEnded,
 		SearchControlScopes:                cloneSlice(g.SearchControlScopes),
 		SkippedTurns:                       cloneComparableMap(g.SkippedTurns),
 		CostModifiers:                      cloneSlice(g.CostModifiers),
@@ -250,9 +251,8 @@ func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
 	clone := cloneStackObject(o)
 	clone.ID = newID
 	clone.Copy = true
-	if clone.Kind == StackSpell {
-		clone.CopyOwner = opt.Val(o.Controller)
-	}
+	clone.CopyOwner = opt.Val(o.Controller)
+	clone.AbilityOwner = opt.V[PlayerID]{}
 	clone.ResolutionOrdinalThisTurn = 0
 	return clone
 }

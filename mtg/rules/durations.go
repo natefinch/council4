@@ -42,6 +42,7 @@ func expireTurnStartDurations(g *game.Game) {
 			effect.CreatedTurn < g.Turn.TurnNumber
 	})
 	if len(g.RuleEffects) == 0 {
+		settleDepartedControl(g)
 		return
 	}
 	kept := g.RuleEffects[:0]
@@ -55,12 +56,34 @@ func expireTurnStartDurations(g *game.Game) {
 		kept = append(kept, *effect)
 	}
 	g.RuleEffects = kept
+	settleDepartedControl(g)
 }
 
 func expireCleanupDurations(g *game.Game) {
 	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
 		return effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn
 	})
+	expireEventDelayedTriggers(g)
+	expirePreventionShields(g)
+	expireReplacementEffects(g)
+	expireRuleEffects(g)
+	settleDepartedControl(g)
+}
+
+// CR 800.4m ends even an end-of-next-turn duration when a departed player's
+// next turn would have begun, without creating that turn or its priority windows.
+func expireDepartedNextTurnDurations(g *game.Game, player game.PlayerID) {
+	expires := func(duration game.EffectDuration) bool {
+		return duration == game.DurationUntilYourNextTurn ||
+			duration == game.DurationUntilEndOfYourNextTurn || duration == game.DurationUntilYourNextEndStep
+	}
+	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
+		return effect.ExpiresFor == player && expires(effect.Duration)
+	})
+	g.RuleEffects = slices.DeleteFunc(g.RuleEffects, func(effect game.RuleEffect) bool {
+		return effect.ExpiresFor == player && expires(effect.Duration)
+	})
+	settleDepartedControl(g)
 }
 
 // expireConditionalControlDurations removes continuous effects whose duration
@@ -70,6 +93,11 @@ func expireCleanupDurations(g *game.Game) {
 // cadence so that stale effects are removed before legality and selector
 // decisions are made.  Returns true when at least one effect was removed.
 func expireConditionalControlDurations(g *game.Game) bool {
+	changed := removeExpiredConditionalControlDurations(g)
+	return settleDepartedControl(g) || changed
+}
+
+func removeExpiredConditionalControlDurations(g *game.Game) bool {
 	expired := func(effect *game.ContinuousEffect) bool {
 		switch effect.Duration {
 		case game.DurationForAsLongAsSourceOnBattlefield:

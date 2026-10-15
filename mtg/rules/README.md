@@ -420,6 +420,24 @@ destruction by an effect, not lethal-damage SBA destruction (CR 122.1c).
 Priority and cleanup converge through the same pass operation before granting
 priority or resolving triggers.
 
+Player departure is an immediate consequence, not another SBA pass (CR 800.4).
+Owned live objects leave the game without ordinary zone replacements or exile
+facts; a phased-in departing permanent can still trigger LTB abilities through
+`EventObjectLeftGame`. Card definitions remain in the historical registry for
+surviving abilities and LKI, but their live zones and incarnations are cleared.
+After control grants to the departing player end, non-card stack objects cease
+and remaining controlled card spells/permanents use normal replacement-aware
+exile. Spell/ability copies and abilities retain their fixed owner across
+control changes. `Permanent.Controller` remains the default controller, not an ownership
+fallback. Losing the last surviving control effect over a departed-default
+object also exiles it at the movement/expiry seam (CR 800.4c).
+
+A departed active player's turn still completes, without decisions from that
+player. Next-turn durations bound to a departed seat end when that seat's next
+regular or queued extra turn would have begun, without beginning that turn
+(CR 800.4j-m). Search-control overrides are disabled in place so nested search
+scopes retain their valid unwind boundaries.
+
 ## Action builder
 
 All `action.Action` values produced inside the `rules` package must be constructed through the package-local `actionBuild` singleton (`actionBuilderType`). `actionBuild` is the only place in the package that calls `mtg/game/action` constructors directly.

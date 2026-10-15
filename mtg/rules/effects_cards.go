@@ -536,7 +536,7 @@ func createTokenPermanentsCollectingWithEntryChoices(e *Engine, g *game.Game, co
 	previous, _ := g.ChoiceContext()
 	e.setReplacementChoiceContext(g, agents, log)
 	defer g.SetChoiceContext(previous)
-	if token == nil {
+	if token == nil || departedPlayer(g, controller) {
 		return nil, false
 	}
 	face := game.FaceFront
@@ -558,6 +558,9 @@ func createTokenPermanentsCollectingWithEntryChoices(e *Engine, g *game.Game, co
 func createPlannedTokenEntries(e *Engine, g *game.Game, plans []tokenCreationPlan, simultaneousID id.ID, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]*game.Permanent, bool) {
 	var entries []preparedTokenEntry
 	for _, plan := range plans {
+		if departedPlayer(g, plan.controller) {
+			continue
+		}
 		for range plan.count {
 			entry, ok := prepareTokenEntry(e, g, plan.controller, plan.def, tapped, attachedTo, agents, log, plan.face)
 			if !ok {
@@ -602,7 +605,7 @@ type preparedTokenEntry struct {
 }
 
 func prepareTokenEntry(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
-	if token == nil {
+	if token == nil || departedPlayer(g, controller) {
 		return preparedTokenEntry{}, false
 	}
 	face := game.FaceFront

@@ -2490,6 +2490,14 @@ func handleChangeStackObjectController(r *effectResolver, prim game.ChangeStackO
 	if !ok {
 		return effectResolved{accepted: true}
 	}
+	if departedPlayer(r.game, controller) {
+		return effectResolved{accepted: true}
+	}
+	if target.Copy && !target.CopyOwner.Exists {
+		target.CopyOwner = opt.Val(target.Controller)
+	} else if target.Kind != game.StackSpell && !target.Copy && !target.AbilityOwner.Exists {
+		target.AbilityOwner = opt.Val(target.Controller)
+	}
 	target.Controller = controller
 	return effectResolved{accepted: true, succeeded: true}
 }
@@ -2516,6 +2524,9 @@ func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectR
 }
 
 func copyStackObjectForPlayer(r *effectResolver, prim game.CopyStackObject, original *game.StackObject, chooser game.PlayerID) (effectResolved, []id.ID) {
+	if departedPlayer(r.game, chooser) {
+		return effectResolved{accepted: true}, nil
+	}
 	var copied []id.ID
 	count := prim.Count
 	if prim.DynamicCount.IsDynamic() {
@@ -2536,9 +2547,7 @@ func copyStackObjectForPlayer(r *effectResolver, prim game.CopyStackObject, orig
 		// player becomes the copy's controller so the copy's own iterative offer
 		// chains off the copier's new target rather than the original controller.
 		copyObj.Controller = chooser
-		if copyObj.Kind == game.StackSpell {
-			copyObj.CopyOwner = opt.Val(chooser)
-		}
+		copyObj.CopyOwner = opt.Val(chooser)
 		if prim.MayChooseNewTargets {
 			r.engine.mayRetargetStackObjectChoice(r.game, chooser, copyObj, r.agents, r.log)
 		}
@@ -3567,6 +3576,9 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 ) []*game.Permanent {
 	moves := make([]preparedResolvedBattlefieldCard, 0, len(resolved))
 	for _, card := range resolved {
+		if departedPlayer(r.game, card.controller) || departedPlayer(r.game, card.card.Owner) {
+			continue
+		}
 		entryOptions, admitted := r.prepareAuraEffectEntry(card.card, card.controller, options)
 		if !admitted {
 			continue
@@ -3658,6 +3670,9 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 	continuousEffects []game.ContinuousEffect,
 	options permanentCreationOptions,
 ) (*game.Permanent, bool) {
+	if departedPlayer(r.game, controller) || departedPlayer(r.game, card.Owner) {
+		return nil, false
+	}
 	var admitted bool
 	options, admitted = r.prepareAuraEffectEntry(card, controller, options)
 	if !admitted {

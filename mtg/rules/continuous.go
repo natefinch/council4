@@ -218,7 +218,7 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 	effects := orderContinuousEffects(continuousEffectsForLayer(g, permanent, &values, game.LayerControl, sources))
 	for i := range effects {
 		effect := &effects[i]
-		if effect.NewController.Exists {
+		if effect.NewController.Exists && !g.ControlGrantsEnded[effect.NewController.Val] {
 			values.controller = effect.NewController.Val
 		}
 		if effect.NewControllerIsMonarch {
@@ -1500,7 +1500,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			applyCopyValues(g, permanent, values, &effect.CopyValues.Val, effect.ID)
 		}
 	case game.LayerControl:
-		if effect.NewController.Exists {
+		if effect.NewController.Exists && !g.ControlGrantsEnded[effect.NewController.Val] {
 			values.controller = effect.NewController.Val
 			recalculateDynamicPT(g, permanent, values)
 		}

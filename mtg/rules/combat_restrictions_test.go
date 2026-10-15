@@ -302,11 +302,11 @@ func TestEliminatedPlayerCleanupRemovesCombatAndStackObjects(t *testing.T) {
 	if g.Stack.Size() != 0 {
 		t.Fatalf("stack size after elimination = %d, want 0", g.Stack.Size())
 	}
-	if _, ok := permanentByObjectID(g, owned.ObjectID); ok || !g.Players[game.Player2].Exile.Contains(owned.CardInstanceID) {
-		t.Fatal("eliminated player's owned permanent did not leave battlefield")
+	if _, ok := permanentByObjectID(g, owned.ObjectID); ok || g.Players[game.Player2].Exile.Contains(owned.CardInstanceID) {
+		t.Fatal("eliminated player's owned permanent did not leave the game without exile")
 	}
-	if _, ok := permanentByObjectID(g, controlled.ObjectID); !ok || controlled.Controller != game.Player1 {
-		t.Fatalf("controlled permanent after elimination = %+v, want returned to owner control", controlled)
+	if _, ok := permanentByObjectID(g, controlled.ObjectID); ok || !g.Players[game.Player1].Exile.Contains(controlled.CardInstanceID) {
+		t.Fatal("nonowned permanent with departed default controller was not exiled")
 	}
 }
 

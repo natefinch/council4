@@ -151,6 +151,12 @@ func (g *Game) BeginPlayerControlTurn() {
 
 // EndPlayerControls removes effects involving a player who leaves (CR 800.4a).
 func (g *Game) EndPlayerControls(player PlayerID) {
+	for i := range g.SearchControlScopes {
+		scope := &g.SearchControlScopes[i]
+		if scope.Player == player || scope.Controller == player {
+			scope.Override = false
+		}
+	}
 	kept := g.PlayerControlEffects[:0]
 	for _, effect := range g.PlayerControlEffects {
 		if effect.Player != player && effect.Controller != player {

@@ -90,6 +90,9 @@ type StackObject struct {
 
 	// Controller is the player who controls this spell or ability.
 	Controller PlayerID
+	// AbilityOwner preserves the original controller of a non-copy ability
+	// before a control change. Without a control change, Controller is its owner.
+	AbilityOwner opt.V[PlayerID]
 
 	// Targets are the chosen runtime targets (permanents, players, etc.).
 	// Targets are locked in when the spell/ability is put on the stack
@@ -280,7 +283,7 @@ type StackObject struct {
 	// physical source card.
 	Copy bool
 
-	// CopyOwner is fixed when a spell copy is put onto the stack (CR 112.2).
+	// CopyOwner is fixed when a spell or ability copy is put onto the stack.
 	// It does not follow later changes of control.
 	CopyOwner opt.V[PlayerID]
 

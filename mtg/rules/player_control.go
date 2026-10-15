@@ -23,6 +23,9 @@ func (c *programContext) ControlNextTurn(reference game.PlayerReference) (bool, 
 // chooseAction is the common priority/combat dispatch. Legality and payment
 // always belong to actor; only the agent and information permissions change.
 func (e *Engine) chooseAction(g *game.Game, agents [game.NumPlayers]PlayerAgent, actor game.PlayerID, legal []action.Action, fallback action.Action) action.Action {
+	if departedPlayer(g, actor) {
+		return fallback
+	}
 	e.countDecision(g)
 	decider := g.DecisionMaker(actor, game.DecisionRules)
 	if agent := agentFor(agents, decider); agent != nil {

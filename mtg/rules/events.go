@@ -48,6 +48,7 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 		event.Kind == game.EventAttackerDeclared ||
 		event.Kind == game.EventPermanentSacrificed ||
 		event.Kind == game.EventPermanentDied ||
+		event.Kind == game.EventObjectLeftGame ||
 		event.Kind == game.EventObjectBecameTarget ||
 		event.Kind == game.EventFight ||
 		event.Kind == game.EventCompletedDungeon) {
@@ -285,6 +286,7 @@ func sacrificePermanentsSimultaneously(g *game.Game, permanents []*game.Permanen
 	for _, event := range events {
 		emitEvent(g, event)
 	}
+	settleDepartedControl(g)
 	return len(events) > 0
 }
 

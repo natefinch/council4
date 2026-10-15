@@ -112,6 +112,9 @@ type permanentCreationOptions struct {
 // exists, and the entering event then lets "when/whenever this enters" abilities
 // trigger (CR 603.6a).
 func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, continuous []game.ContinuousEffect, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	if departedPlayer(g, controller) || card != nil && departedPlayer(g, card.Owner) {
+		return nil, false
+	}
 	enteringTransformed := false
 	if options.EntersTransformed && face == game.FaceFront &&
 		card != nil && card.Def != nil &&
@@ -235,6 +238,9 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	agents [game.NumPlayers]PlayerAgent,
 	log *TurnLog,
 ) (preparedCardPermanentEntry, bool) {
+	if departedPlayer(g, controller) || card != nil && departedPlayer(g, card.Owner) {
+		return preparedCardPermanentEntry{}, false
+	}
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {
 		return preparedCardPermanentEntry{}, false
@@ -604,7 +610,9 @@ func movePermanentToZoneInBatchWithControlledTriggerSnapshot(
 	if triggerSnapshot != nil {
 		move.event.ControlledTriggerDoublers = triggerSnapshot
 	}
-	return applyPreparedPermanentZoneMove(g, &move)
+	moved := applyPreparedPermanentZoneMove(g, &move)
+	settleDepartedControl(g)
+	return moved
 }
 
 // movePermanentsToZoneSimultaneously moves several permanents to the same zone as
@@ -686,6 +694,7 @@ func applyPreparedPermanentZoneMoves(g *game.Game, moves []preparedPermanentZone
 		}
 		results = append(results, result)
 	}
+	settleDepartedControl(g)
 	return results
 }
 

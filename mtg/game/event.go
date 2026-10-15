@@ -147,12 +147,15 @@ const (
 	// controller at event time, XValue is the announced value of X, and Amount is
 	// the actual number of +1/+1 counters placed after replacements.
 	EventPermanentBecameMonstrous
+	// EventObjectLeftGame is not a zone change. A phased-in permanent leaving
+	// with its owner can still trigger leaves-the-battlefield abilities.
+	EventObjectLeftGame
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventPermanentBecameMonstrous) + 1
+const EventKindCount = int(EventObjectLeftGame) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.

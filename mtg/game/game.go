@@ -156,6 +156,9 @@ type Game struct {
 
 	// PlayerControlEffects schedule and retain next-turn decision control.
 	PlayerControlEffects []PlayerControlEffect
+	// ControlGrantsEnded is set after a departing player's owned objects leave.
+	// Object-control grants to that player, including statics, cannot apply again.
+	ControlGrantsEnded [NumPlayers]bool
 	// SearchControlScopes are synchronous, scoped player-control permissions.
 	SearchControlScopes []SearchControlScope
 	// SkippedTurns counts one-shot "skip your next turn" replacements.

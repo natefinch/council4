@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -388,10 +390,6 @@ func (e *Engine) runCleanupStep(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		permanent.SaddleContributorIDs = nil
 	}
 	expireCleanupDurations(g)
-	expireEventDelayedTriggers(g)
-	expirePreventionShields(g)
-	expireReplacementEffects(g)
-	expireRuleEffects(g)
 	_, applied := e.applyStateBasedActionsWithLogResult(g, log)
 	clearPersistentMana(g)
 	emptyManaPools(g)
@@ -484,7 +482,7 @@ func nextActualTurn(g *game.Game) game.PlayerID {
 	for {
 		next, extra := popExtraTurn(g)
 		if !extra {
-			next = g.TurnOrder.NextActivePlayer(regular)
+			next = nextRegularTurn(g, regular)
 			regular = next
 		}
 		if g.SkippedTurns[next] > 0 {
@@ -500,11 +498,27 @@ func popExtraTurn(g *game.Game) (game.PlayerID, bool) {
 		last := len(g.Turn.ExtraTurns) - 1
 		next := g.Turn.ExtraTurns[last]
 		g.Turn.ExtraTurns = g.Turn.ExtraTurns[:last]
+		if departedPlayer(g, next) {
+			expireDepartedNextTurnDurations(g, next)
+		}
 		if !g.TurnOrder.IsEliminated(next) && !playerSkipsExtraTurns(g, next) {
 			return next, true
 		}
 	}
 	return 0, false
+}
+
+func nextRegularTurn(g *game.Game, current game.PlayerID) game.PlayerID {
+	index := slices.Index(g.TurnOrder.Order[:], current)
+	for offset := 1; offset <= game.NumPlayers; offset++ {
+		next := g.TurnOrder.Order[(index+offset)%game.NumPlayers]
+		if departedPlayer(g, next) {
+			expireDepartedNextTurnDurations(g, next)
+			continue
+		}
+		return next
+	}
+	return current
 }
 
 func playerSkipsExtraTurns(g *game.Game, player game.PlayerID) bool {

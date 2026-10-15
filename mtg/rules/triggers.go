@@ -17,6 +17,9 @@ import (
 // stack is last-in-first-out, the last player's triggers resolve first. Triggers
 // with no identifiable controller are appended last.
 func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []pendingTriggeredAbility {
+	triggers = slices.DeleteFunc(triggers, func(trigger pendingTriggeredAbility) bool {
+		return departedPlayer(g, trigger.controller)
+	})
 	if len(triggers) == 0 {
 		return triggers
 	}
@@ -48,6 +51,9 @@ func (e *Engine) orderTriggeredAbilitiesAPNAP(g *game.Game, triggers []pendingTr
 // (e.g. no legal mode or no legal target), in which case it is removed from the stack
 // (CR 603.3c, CR 603.3d).
 func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if departedPlayer(g, trigger.controller) {
+		return false
+	}
 	source, _ := pendingTriggerSourceDef(g, trigger)
 	ability, ok := pendingTriggerAbilityFromDef(source, trigger)
 	if !ok {

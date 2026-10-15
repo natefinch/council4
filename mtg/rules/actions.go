@@ -463,6 +463,9 @@ func (e *Engine) applyAction(g *game.Game, playerID game.PlayerID, act action.Ac
 }
 
 func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if player, ok := playerByID(g, playerID); !ok || player.Eliminated {
+		return false
+	}
 	if err := act.Validate(); err != nil {
 		return false
 	}

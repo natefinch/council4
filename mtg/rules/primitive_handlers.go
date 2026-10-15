@@ -1989,6 +1989,9 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 			runtimeEffect.NewController = opt.Val(newController)
 			runtimeEffect.NewControllerRef = opt.V[game.PlayerReference]{}
 		}
+		if runtimeEffect.NewController.Exists && departedPlayer(g, runtimeEffect.NewController.Val) {
+			continue
+		}
 		if runtimeEffect.Group.Valid() {
 			members := newReferenceResolver(g, obj).groupMembers(runtimeEffect.Group)
 			runtimeEffect.Group = game.GroupReference{}
@@ -2011,6 +2014,7 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		g.ContinuousEffects = append(g.ContinuousEffects, runtimeEffect)
 		applied = true
 	}
+	settleDepartedControl(g)
 	return applied
 }
 

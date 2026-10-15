@@ -224,16 +224,21 @@ func propDuplicatedCards(g *game.Game) []id.ID {
 	return dup
 }
 
-// propMissingCards returns the IDs of real cards that occupy no place at all.
-func propMissingCards(g *game.Game) []id.ID {
-	var missing []id.ID
+// A living owner's cards occupy exactly one live zone; a departed owner's
+// cards occupy none (CR 800.4a). Their registry entries remain historical data.
+func propIncorrectCardCounts(g *game.Game) []id.ID {
+	var incorrect []id.ID
 	for cardID, count := range propCountLocations(g) {
-		if count == 0 {
-			missing = append(missing, cardID)
+		expected := 1
+		if card, ok := g.GetCardInstance(cardID); ok && g.Players[card.Owner].Eliminated {
+			expected = 0
+		}
+		if count != expected {
+			incorrect = append(incorrect, cardID)
 		}
 	}
-	slices.Sort(missing)
-	return missing
+	slices.Sort(incorrect)
+	return incorrect
 }
 
 // propCardPlaces returns the human-readable places a single card occupies. It
@@ -305,10 +310,8 @@ func propRandomAgents(seed uint64, g *game.Game, sink *propViolationSink) [game.
 }
 
 // TestPropZoneMovesConserveCards exercises property 1 over land-only games.
-// Land-only decks never use the stack or abilities, so eliminating a player
-// can never orphan a card off the stack. That makes the full conservation
-// invariant — no duplicates AND no vanishing — provable at game end over
-// every seed.
+// Land-only decks make exact live-zone counts provable at game end, including
+// owned objects leaving the game when their owner departs.
 func TestPropZoneMovesConserveCards(t *testing.T) {
 	const iterations = 120
 	configs := landOnlyConfigs(8)
@@ -323,8 +326,8 @@ func TestPropZoneMovesConserveCards(t *testing.T) {
 		if dup := propDuplicatedCards(g); len(dup) > 0 {
 			t.Fatalf("seed %d: cards in two places at game end:%s", seed, propLocationReport(g, dup))
 		}
-		if missing := propMissingCards(g); len(missing) > 0 {
-			t.Fatalf("seed %d: cards vanished by game end:%s", seed, propLocationReport(g, missing))
+		if incorrect := propIncorrectCardCounts(g); len(incorrect) > 0 {
+			t.Fatalf("seed %d: incorrect live-zone counts by game end:%s", seed, propLocationReport(g, incorrect))
 		}
 	}
 }
@@ -336,10 +339,9 @@ func TestPropZoneMovesConserveCards(t *testing.T) {
 // game terminating with a winner inside maxGameTurns demonstrates the priority
 // loop converges (property 3).
 //
-// We do NOT assert "no vanishing" here: eliminating a player who has a spell
-// on the stack legitimately removes that card from the game (CR 800.4a), which
-// is correct behavior, not a leak. The duplication half of conservation has no
-// such caveat and is asserted throughout and at game end.
+// We do NOT assert "no vanishing" here: eliminating a player legitimately
+// removes their owned cards from every zone (CR 800.4a). The duplication half of
+// conservation has no such caveat and is asserted throughout and at game end.
 func TestPropRandomGamesPreserveInvariants(t *testing.T) {
 	const iterations = 80
 	configs := propMixedConfigs()

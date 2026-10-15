@@ -608,6 +608,7 @@ var gameEventKindLiterals = map[game.EventKind]string{
 	game.EventCompletedDungeon:            "game.EventCompletedDungeon",
 	game.EventTookInitiative:              "game.EventTookInitiative",
 	game.EventPermanentBecameMonstrous:    "game.EventPermanentBecameMonstrous",
+	game.EventObjectLeftGame:              "game.EventObjectLeftGame",
 }
 
 // gameFaceDownKindLiterals maps each exported game.FaceDownKind constant to the Go

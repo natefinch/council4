@@ -66,6 +66,9 @@ func (ctx *replacementChoiceContext) chooseReplacement(g *game.Game, chooser gam
 // to the first option deterministically. The decision is recorded for the turn
 // log either way, including whether a deterministic fallback was used.
 func chooseReplacementDecision(g *game.Game, chooser game.PlayerID, options []string) game.ReplacementDecision {
+	if departedPlayer(g, chooser) && len(g.AlivePlayers()) > 0 {
+		chooser = g.TurnOrder.NextActivePlayer(chooser)
+	}
 	chosen := 0
 	usedFallback := true
 	if ctx, ok := replacementChoiceContextFor(g); ok && len(options) > 1 {

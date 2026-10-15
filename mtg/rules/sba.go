@@ -5,7 +5,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 const maxStateBasedActionPasses = 1000
@@ -458,31 +457,41 @@ func markPlayerEliminated(g *game.Game, playerID game.PlayerID) bool {
 // cleanupEliminatedPlayer applies the consequences of a player leaving the game.
 // CR 800.4a: all objects owned by the departing player leave the game, effects
 // granting them control of objects end, their stack objects not represented by
-// cards cease to exist, and any objects they still control are exiled. Here
-// their stack objects are removed, their permanents exiled, and control of
-// permanents they controlled but did not own reverts to the owner. Permanents
-// that leave the battlefield this way are removed from combat (CR 506.4).
+// cards cease to exist, and any objects they still control are exiled.
 func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
-	g.EndPlayerControls(playerID)
-	g.Stack.RemoveControlledBy(playerID)
 	before := make(map[id.ID]game.PlayerID, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {
 		before[permanent.ObjectID] = effectiveController(g, permanent)
 	}
+	leaveDepartedOwnedObjects(g)
+	for _, player := range g.Players {
+		if player.Eliminated {
+			g.EndPlayerControls(player.ID)
+			g.ControlGrantsEnded[player.ID] = true
+		}
+	}
 	kept := g.ContinuousEffects[:0]
 	for _, effect := range g.ContinuousEffects {
-		if effect.Layer == game.LayerControl && effect.NewController.Exists && effect.NewController.Val == playerID {
+		if effect.Layer == game.LayerControl && effect.NewController.Exists && departedPlayer(g, effect.NewController.Val) {
 			continue
 		}
 		kept = append(kept, effect)
 	}
 	g.ContinuousEffects = kept
-	cleanupEliminatedPlayerPermanents(g, playerID)
+	for _, player := range g.Players {
+		if player.Eliminated {
+			cleanupDepartedStackObjects(g, player.ID)
+		}
+	}
+	settleDepartedControl(g)
 	for _, permanent := range g.Battlefield {
 		if before[permanent.ObjectID] != effectiveController(g, permanent) {
 			permanent.SummoningSick = true
 			removePermanentFromCombat(g, permanent.ObjectID)
 		}
+	}
+	if g.Turn.PriorityPlayer == playerID && len(g.AlivePlayers()) > 0 {
+		g.Turn.PriorityPlayer = g.TurnOrder.NextActivePlayer(playerID)
 	}
 	if g.Combat == nil {
 		return
@@ -503,25 +512,6 @@ func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	}
 	for _, objectID := range removeFromCombat {
 		removePermanentFromCombat(g, objectID)
-	}
-}
-
-func cleanupEliminatedPlayerPermanents(g *game.Game, playerID game.PlayerID) {
-	for {
-		var owned *game.Permanent
-		for _, permanent := range g.Battlefield {
-			if permanent.Owner == playerID {
-				owned = permanent
-				break
-			}
-			if effectiveController(g, permanent) == playerID {
-				permanent.Controller = permanent.Owner
-			}
-		}
-		if owned == nil {
-			return
-		}
-		movePermanentToZone(g, owned, zone.Exile)
 	}
 }
 

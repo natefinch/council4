@@ -342,6 +342,11 @@ func filteredSpellCastOrdinalThisTurn(g *game.Game, event game.Event, selection 
 // EventSpellCopied so "cast or copy" (magecraft) triggers fire on spell copies
 // without widening ordinary cast-only triggers.
 func patternMatchesEventKind(pattern *game.TriggerPattern, kind game.EventKind) bool {
+	if kind == game.EventObjectLeftGame {
+		return pattern.Event == kind ||
+			pattern.Event == game.EventZoneChanged && pattern.MatchFromZone &&
+				pattern.FromZone == zone.Battlefield && !pattern.MatchToZone
+	}
 	if pattern.Event == kind {
 		return true
 	}
