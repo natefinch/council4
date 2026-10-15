@@ -287,15 +287,7 @@ func pendingCommanderZoneActions(g *game.Game) []game.Event {
 }
 
 func checkCommanderZoneStateBasedActions(g *game.Game, pending []game.Event, batchID func() id.ID) bool {
-	changed := false
-	for _, owner := range triggerAPNAPPlayers(g) {
-		for _, event := range pending {
-			card, ok := g.GetCardInstance(event.CardID)
-			if !ok || card.Owner != owner || card.ZoneVersion != event.CardZoneVersion || !chooseCommanderCommandZone(g, card.ID) {
-				continue
-			}
-			changed = moveCardBetweenZonesInBatch(g, card.Owner, card.ID, event.ToZone, zone.Command, false, batchID()) || changed
-		}
-	}
+	pass := stateBasedActionPass{commanders: prepareCommanderStateBasedActions(g, pending)}
+	changed, _ := pass.apply(g, batchID)
 	return changed
 }

@@ -33,8 +33,16 @@ func grantCityBlessing(g *game.Game, playerID game.PlayerID) bool {
 // it runs as part of the state-based-action loop. It reports whether any player
 // newly gained the city's blessing.
 func checkAscendCityBlessing(g *game.Game) bool {
-	var granted [game.NumPlayers]bool
 	changed := false
+	for _, player := range ascendCityBlessingCandidates(g) {
+		changed = grantCityBlessing(g, player) || changed
+	}
+	return changed
+}
+
+func ascendCityBlessingCandidates(g *game.Game) []game.PlayerID {
+	var granted [game.NumPlayers]bool
+	var pending []game.PlayerID
 	for _, effect := range activeRuleEffects(g) {
 		if effect.Kind != game.RuleEffectAscend {
 			continue
@@ -51,12 +59,10 @@ func checkAscendCityBlessing(g *game.Game) bool {
 		if countControlledPermanents(g, controller) < 10 {
 			continue
 		}
-		if grantCityBlessing(g, controller) {
-			changed = true
-		}
+		pending = append(pending, controller)
 		granted[controller] = true
 	}
-	return changed
+	return pending
 }
 
 // countControlledPermanents counts the permanents the given player controls

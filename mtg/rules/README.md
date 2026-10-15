@@ -396,6 +396,18 @@ This hook currently covers instant and sorcery spell-effect resolution after nor
 
 Permanent SBAs handle lethal and deathtouch-marked creature damage, 0 toughness, 0 loyalty planeswalkers, 0 defense battles, illegal Auras, illegal non-Aura attachments, legendary-rule duplicates, +1/+1 and -1/-1 counter cancellation, and tokens ceasing to exist outside the battlefield. Every permanent that dies in one state-based-action pass is moved with one shared simultaneous event ID, so "another creature dies" triggers on a departed source and "one or more creatures die" coalescing see the simultaneous death batch. Permanent death logs record the permanent object ID, source card ID when present, token name when needed, owner/controller, and death reason.
 
+Each pass selects all applicable categories from one pre-pass state before any
+mutation, including legend choices and commander-zone decisions. Movement and
+destruction replacements are prepared before commitment; duplicate movements
+share one actual operation. Newly created conditions belong to the next pass:
+an Aura made unattached by its host's death leaves in a later batch. Departure
+LKI retains pre-pass characteristics and counters, while simultaneous counter
+cancellation affects the counters a counter-retaining card actually carries.
+Completed Sagas emit an actual sacrifice fact. Shield counters replace
+destruction by an effect, not lethal-damage SBA destruction (CR 122.1c).
+Priority and cleanup converge through the same pass operation before granting
+priority or resolving triggers.
+
 ## Action builder
 
 All `action.Action` values produced inside the `rules` package must be constructed through the package-local `actionBuild` singleton (`actionBuilderType`). `actionBuild` is the only place in the package that calls `mtg/game/action` constructors directly.

@@ -61,7 +61,7 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 	return losses, deaths
 }
 
-func (e *Engine) applyStateBasedActionsWithOutcome(g *game.Game) ([]LossLog, []PermanentDeathLog, bool) {
+func (*Engine) applyStateBasedActionsWithOutcome(g *game.Game) ([]LossLog, []PermanentDeathLog, bool) {
 	var losses []LossLog
 	var deaths []PermanentDeathLog
 	applied := false
@@ -69,21 +69,12 @@ func (e *Engine) applyStateBasedActionsWithOutcome(g *game.Game) ([]LossLog, []P
 		batchID := newPassBatchID(g)
 		commanders := pendingCommanderZoneActions(g)
 		durationsChanged := expireConditionalControlDurations(g)
-		changed, passLosses := e.checkStateBasedActions(g)
-		permanentsChanged, passDeaths := e.checkPermanentStateBasedActions(g, batchID)
-		attachmentsChanged, attachmentDeaths := checkAttachmentStateBasedActions(g, batchID)
-		legendaryChanged, legendaryDeaths := checkLegendaryRuleStateBasedActions(g, batchID)
-		rolesChanged, roleDeaths := checkRoleRuleStateBasedActions(g, batchID)
-		countersChanged := checkCounterStateBasedActions(g)
-		tokensChanged := removeTokensFromNonBattlefieldZones(g)
 		blessingChanged := checkAscendCityBlessing(g)
-		commandersChanged := checkCommanderZoneStateBasedActions(g, commanders, batchID)
-		losses = append(losses, passLosses...)
+		pass := prepareStateBasedActionPass(g, commanders)
+		changed, passDeaths := pass.apply(g, batchID)
+		losses = append(losses, pass.losses...)
 		deaths = append(deaths, passDeaths...)
-		deaths = append(deaths, attachmentDeaths...)
-		deaths = append(deaths, legendaryDeaths...)
-		deaths = append(deaths, roleDeaths...)
-		if !changed && !permanentsChanged && !attachmentsChanged && !legendaryChanged && !rolesChanged && !countersChanged && !tokensChanged && !durationsChanged && !blessingChanged && !commandersChanged {
+		if !changed && !durationsChanged && !blessingChanged {
 			return losses, deaths, applied
 		}
 		applied = true
@@ -119,38 +110,10 @@ func newPassBatchID(g *game.Game) func() id.ID {
 // MarkedToLoseGame covers effects that directly state a player loses the game.
 // CR 104.5: a player who loses the game leaves it; eliminatePlayer applies the
 // CR 800.4 departure cleanup.
-func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
-	changed := false
-	var losses []LossLog
-	for _, player := range g.Players {
-		if player.Eliminated {
-			delete(g.FailedDraws, player.ID)
-			delete(g.MarkedToLoseGame, player.ID)
-			continue
-		}
-		if player.Life <= 0 ||
-			player.HasLethalPoison() ||
-			player.HasLethalCommanderDamage() ||
-			g.FailedDraws[player.ID] ||
-			g.MarkedToLoseGame[player.ID] {
-			reason := lossReason(g, player)
-			if e.eliminatePlayer(g, player.ID) {
-				changed = true
-				losses = append(losses, LossLog{
-					Player: player.ID,
-					Reason: reason,
-				})
-			}
-			delete(g.FailedDraws, player.ID)
-			delete(g.MarkedToLoseGame, player.ID)
-		}
-	}
-	if g.Mode != game.RunModeGoldfish && len(losses) > 0 && g.TurnOrder.ActivePlayerCount() == 0 {
-		for _, loss := range losses {
-			g.DrawParticipants[loss.Player] = true
-		}
-	}
-	return changed, losses
+func (*Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
+	pass := stateBasedActionPass{losses: playerStateBasedLosses(g)}
+	changed, _ := pass.apply(g, newPassBatchID(g))
+	return changed, pass.losses
 }
 
 // checkPermanentStateBasedActions destroys or moves the battlefield permanents
@@ -161,122 +124,8 @@ func (e *Engine) checkStateBasedActions(g *game.Game) (bool, []LossLog) {
 // snapshotted before any move so its last known information reflects the board
 // before this pass's actions.
 func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
-	type pendingDeath struct {
-		objectID id.ID
-		reason   PermanentDeathReason
-		snapshot game.ObjectSnapshot
-	}
-	var pending []pendingDeath
-	// The death-reason scan is a pure read over every permanent; frame it so the
-	// static-ability source set is built once, and close the frame before the
-	// mutation phase below so the cache never spans a state change.
-	func() {
-		g.BeginStaticSourceFrame()
-		defer g.EndStaticSourceFrame()
-		for _, permanent := range g.Battlefield {
-			if !activeBattlefieldPermanent(permanent) {
-				continue
-			}
-			reason, ok := permanentDeathReason(g, permanent)
-			if ok {
-				pending = append(pending, pendingDeath{
-					objectID: permanent.ObjectID,
-					reason:   reason,
-					snapshot: snapshotPermanent(g, permanent, zone.Battlefield),
-				})
-			}
-		}
-	}()
-	if len(pending) == 0 {
-		return false, nil
-	}
-
-	simultaneousID := batchID()
-	type plannedDestruction struct {
-		permanent      *game.Permanent
-		indestructible bool
-		replacement    destroyReplacement
-		replaced       bool
-	}
-	destructionPlans := make(map[id.ID]plannedDestruction, len(pending))
-	for _, death := range pending {
-		if permanentDeathBypassesDestroy(death.reason) {
-			continue
-		}
-		permanent, ok := permanentByObjectID(g, death.objectID)
-		if !ok {
-			continue
-		}
-		plan := plannedDestruction{permanent: permanent}
-		if hasKeyword(g, permanent, game.Indestructible) {
-			plan.indestructible = true
-		} else {
-			plan.replacement, plan.replaced = planDestroyPermanentReplacement(g, permanent, false, simultaneousID)
-		}
-		destructionPlans[death.objectID] = plan
-	}
-	destroyBatch := &destroyBatch{game: g, simultaneousID: simultaneousID}
-	for _, death := range pending {
-		if permanentDeathBypassesDestroy(death.reason) {
-			continue
-		}
-		plan, ok := destructionPlans[death.objectID]
-		if !ok || plan.indestructible || !plan.replaced {
-			continue
-		}
-		destroyBatch.changed = applyDestroyReplacement(g, plan.permanent, plan.replacement, destroyBatch) || destroyBatch.changed
-	}
-	destroyBatch.applyQueued()
-	var deaths []PermanentDeathLog
-	permanentsChanged := destroyBatch.changed
-	triggerSnapshot := captureControlledTriggerDoublerSnapshot(g)
-	for _, death := range pending {
-		var permanent *game.Permanent
-		if permanentDeathBypassesDestroy(death.reason) {
-			var ok bool
-			permanent, ok = permanentByObjectID(g, death.objectID)
-			replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
-			if !ok || !movePermanentToZoneInBatchWithControlledTriggerSnapshot(
-				g, permanent, zone.Graveyard, simultaneousID, triggerSnapshot,
-			) {
-				continue
-			}
-			permanentsChanged = true
-			rememberLastKnown(g, &death.snapshot)
-			if replacedToCommand {
-				continue
-			}
-		} else {
-			plan, ok := destructionPlans[death.objectID]
-			if !ok || plan.indestructible {
-				continue
-			}
-			permanent = plan.permanent
-			if plan.replaced {
-				continue
-			}
-			replacedToCommand := commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
-			if !movePermanentToZoneInBatchWithControlledTriggerSnapshot(
-				g, permanent, zone.Graveyard, simultaneousID, triggerSnapshot,
-			) {
-				continue
-			}
-			permanentsChanged = true
-			rememberLastKnown(g, &death.snapshot)
-			if replacedToCommand {
-				continue
-			}
-		}
-		deaths = append(deaths, PermanentDeathLog{
-			Permanent:  permanent.ObjectID,
-			SourceID:   permanent.CardInstanceID,
-			TokenName:  permanentTokenName(permanent),
-			Owner:      permanent.Owner,
-			Controller: permanent.Controller,
-			Reason:     death.reason,
-		})
-	}
-	return permanentsChanged, deaths
+	pass := stateBasedActionPass{departures: permanentStateBasedDepartures(g)}
+	return pass.apply(g, batchID)
 }
 
 // checkAttachmentStateBasedActions handles the attachment state-based actions.
@@ -288,112 +137,9 @@ func (*Engine) checkPermanentStateBasedActions(g *game.Game, batchID func() id.I
 // becomes unattached and remains. detachPermanent covers the 704.5n/704.5p
 // cases; illegal Auras are collected and moved to the graveyard.
 func checkAttachmentStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
-	var illegalAuras []id.ID
-	changed := false
-	// Most permanents are not attachments, but identifying them still requires
-	// effective characteristics. Reuse those values across the battlefield scan,
-	// closing and reopening the frame around the uncommon detach mutation so the
-	// cache never outlives the state it describes.
-	func() {
-		g.BeginStaticSourceFrame()
-		defer g.EndStaticSourceFrame()
-		for _, permanent := range g.Battlefield {
-			if permanent.PhasedOut {
-				continue
-			}
-			if permanent.AttachedToPlayer.Exists {
-				// CR 704.5m: an Aura attached to a player stays on the
-				// battlefield only while its Enchant restriction still allows
-				// that player (the player is in the game and, for "Enchant
-				// opponent", still an opponent of the Aura's controller). A
-				// player attachment never applies to Equipment or a bestowed
-				// creature, so an illegal one is always a 704.5m illegal Aura
-				// bound for its owner's graveyard.
-				if auraCanAttachToPlayer(g, permanent, permanent.AttachedToPlayer.Val) {
-					continue
-				}
-				illegalAuras = append(illegalAuras, permanent.ObjectID)
-				continue
-			}
-			if !permanent.AttachedTo.Exists {
-				if permanent.Bestowed {
-					// CR 702.103f: a bestowed Aura that is unattached stops being
-					// a bestowed Aura and stays on the battlefield as a creature,
-					// so it is exempt from the 704.5m illegal-Aura graveyard rule.
-					g.EndStaticSourceFrame()
-					permanent.Bestowed = false
-					changed = true
-					g.BeginStaticSourceFrame()
-					continue
-				}
-				if isAuraPermanent(g, permanent) {
-					illegalAuras = append(illegalAuras, permanent.ObjectID)
-				}
-				continue
-			}
-			target, ok := permanentByObjectID(g, permanent.AttachedTo.Val)
-			if ok && canAttachPermanent(g, permanent, target) {
-				continue
-			}
-			if permanent.Bestowed {
-				// CR 702.103f: a bestowed Aura attached to an illegal object
-				// becomes unattached, stops being a bestowed Aura, and stays on
-				// the battlefield as a creature rather than being put into the
-				// graveyard as an illegal Aura.
-				g.EndStaticSourceFrame()
-				permanent.Bestowed = false
-				detachPermanent(g, permanent)
-				changed = true
-				g.BeginStaticSourceFrame()
-				continue
-			}
-			if isAuraPermanent(g, permanent) {
-				illegalAuras = append(illegalAuras, permanent.ObjectID)
-				continue
-			}
-			g.EndStaticSourceFrame()
-			detachPermanent(g, permanent)
-			changed = true
-			g.BeginStaticSourceFrame()
-		}
-	}()
-	if len(illegalAuras) == 0 {
-		return changed, nil
-	}
-	var deaths []PermanentDeathLog
-	simultaneousID := batchID()
-	for _, auraID := range illegalAuras {
-		aura, ok := permanentByObjectID(g, auraID)
-		replacedToCommand := ok && commanderReplacementDestination(g, aura.CardInstanceID, zone.Graveyard) == zone.Command
-		if !ok {
-			continue
-		}
-		unattached := !aura.AttachedTo.Exists && !aura.AttachedToPlayer.Exists
-		move, prepared := preparePermanentZoneMove(g, aura, zone.Graveyard)
-		if !prepared {
-			continue
-		}
-		move.event.SimultaneousID = simultaneousID
-		if !applyPreparedPermanentZoneMove(g, &move) {
-			continue
-		}
-		if unattached {
-			certifyAttachedDeathDeparture(g, &move, true)
-		}
-		changed = true
-		if replacedToCommand {
-			continue
-		}
-		deaths = append(deaths, PermanentDeathLog{
-			Permanent:  aura.ObjectID,
-			SourceID:   aura.CardInstanceID,
-			TokenName:  permanentTokenName(aura),
-			Owner:      aura.Owner,
-			Controller: aura.Controller,
-			Reason:     PermanentDeathReasonIllegalAura,
-		})
-	}
-	return changed, deaths
+	departures, changes := attachmentStateBasedActions(g)
+	pass := stateBasedActionPass{departures: departures, attachments: changes}
+	return pass.apply(g, batchID)
 }
 
 type legendaryKey struct {
@@ -404,78 +150,86 @@ type legendaryKey struct {
 // checkLegendaryRuleStateBasedActions enforces the legend rule. CR 704.5j: if a
 // player controls two or more legendary permanents with the same name, they
 // choose one to keep and the rest are put into their owners' graveyards. The
-// keeper here is chosen deterministically (oldest timestamp) rather than by a
-// player choice, which is a simplification of the "that player chooses" wording
-// but yields a legal resulting board.
+// keeper is chosen through the existing choice protocol, with the oldest
+// timestamp as the deterministic fallback.
 func checkLegendaryRuleStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
-	pending := legendaryRuleStateBasedActionCandidates(g)
-	if len(pending) == 0 {
-		return false, nil
-	}
-
-	var deaths []PermanentDeathLog
-	simultaneousID := batchID()
-	for _, objectID := range pending {
-		permanent, ok := permanentByObjectID(g, objectID)
-		replacedToCommand := ok && commanderReplacementDestination(g, permanent.CardInstanceID, zone.Graveyard) == zone.Command
-		if !ok || !movePermanentToZoneInBatch(g, permanent, zone.Graveyard, simultaneousID) {
-			continue
-		}
-		if replacedToCommand {
-			continue
-		}
-		deaths = append(deaths, PermanentDeathLog{
-			Permanent:  permanent.ObjectID,
-			SourceID:   permanent.CardInstanceID,
-			TokenName:  permanentTokenName(permanent),
-			Owner:      permanent.Owner,
-			Controller: permanent.Controller,
-			Reason:     PermanentDeathReasonLegendaryRule,
-		})
-	}
-	return len(deaths) > 0, deaths
+	pass := stateBasedActionPass{departures: stateBasedDeparturesForIDs(g,
+		legendaryRuleStateBasedActionCandidates(g), PermanentDeathReasonLegendaryRule)}
+	return pass.apply(g, batchID)
 }
 
 func legendaryRuleStateBasedActionCandidates(g *game.Game) []id.ID {
-	// Both passes are pure reads over the same battlefield. One frame lets every
-	// effective-name, supertype, and controller query share its derived values;
-	// the caller closes this frame before moving any duplicate permanents.
+	groups := legendaryRuleStateBasedActionGroups(g)
+	var pending []id.ID
+	for _, player := range triggerAPNAPPlayers(g) {
+		pending = append(pending, chooseLegendaryRuleStateBasedActions(g, groups, player)...)
+	}
+	return pending
+}
+
+type legendaryRuleGroup struct {
+	controller game.PlayerID
+	members    []*game.Permanent
+	keeper     int
+}
+
+func legendaryRuleStateBasedActionGroups(g *game.Game) []legendaryRuleGroup {
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
-
 	exempt := make(map[game.PlayerID]bool, game.NumPlayers)
 	for player := range game.PlayerID(game.NumPlayers) {
 		exempt[player] = playerRuleEffectActive(g, player, game.RuleEffectLegendRuleDoesNotApply)
 	}
-	keepers := make(map[legendaryKey]*game.Permanent)
-	counts := make(map[legendaryKey]int)
+	indices := make(map[legendaryKey]int)
+	var groups []legendaryRuleGroup
 	for _, permanent := range g.Battlefield {
 		if !activeBattlefieldPermanent(permanent) {
 			continue
 		}
 		key, ok := permanentLegendaryKey(g, permanent)
-		if !ok {
+		if !ok || exempt[key.controller] {
 			continue
 		}
-		if exempt[key.controller] {
-			continue
+		index, exists := indices[key]
+		if !exists {
+			index = len(groups)
+			indices[key] = index
+			groups = append(groups, legendaryRuleGroup{controller: key.controller})
 		}
-		counts[key]++
-		if current := keepers[key]; current == nil || permanentOlderThan(permanent, current) {
-			keepers[key] = permanent
+		group := &groups[index]
+		if len(group.members) > 0 && permanentOlderThan(permanent, group.members[group.keeper]) {
+			group.keeper = len(group.members)
 		}
+		group.members = append(group.members, permanent)
 	}
+	return groups
+}
 
+func chooseLegendaryRuleStateBasedActions(g *game.Game, groups []legendaryRuleGroup, player game.PlayerID) []id.ID {
 	var pending []id.ID
-	for _, permanent := range g.Battlefield {
-		if !activeBattlefieldPermanent(permanent) {
+	for _, group := range groups {
+		if group.controller != player || len(group.members) < 2 {
 			continue
 		}
-		key, ok := permanentLegendaryKey(g, permanent)
-		if !ok || exempt[key.controller] || counts[key] <= 1 || keepers[key] == permanent {
-			continue
+		options := make([]game.ChoiceOption, len(group.members))
+		for index, permanent := range group.members {
+			options[index] = game.ChoiceOption{
+				Index: index, Label: permanentEffectiveName(g, permanent),
+				Card: permanentChoiceInfo(g, permanent), Targets: []game.Target{game.PermanentTarget(permanent.ObjectID)},
+			}
 		}
-		pending = append(pending, permanent.ObjectID)
+		selected := group.keeper
+		if ctx, exists := replacementChoiceContextFor(g); exists {
+			selected = ctx.engine.chooseChoice(g, ctx.agents, game.ChoiceRequest{
+				Kind: game.ChoiceResolution, Player: player, Prompt: "Choose one legendary permanent to keep.",
+				Options: options, MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{group.keeper},
+			}, ctx.log)[0]
+		}
+		for index, permanent := range group.members {
+			if index != selected {
+				pending = append(pending, permanent.ObjectID)
+			}
+		}
 	}
 	return pending
 }
@@ -509,33 +263,9 @@ type roleRuleKey struct {
 // permanent, only that player's Role Aura with the newest timestamp remains
 // attached; Roles controlled by different players are independent and coexist.
 func checkRoleRuleStateBasedActions(g *game.Game, batchID func() id.ID) (bool, []PermanentDeathLog) {
-	pending := roleRuleStateBasedActionCandidates(g)
-	if len(pending) == 0 {
-		return false, nil
-	}
-	simultaneousID := batchID()
-	var deaths []PermanentDeathLog
-	changed := false
-	for _, objectID := range pending {
-		role, ok := permanentByObjectID(g, objectID)
-		replacedToCommand := ok && commanderReplacementDestination(g, role.CardInstanceID, zone.Graveyard) == zone.Command
-		if !ok || !movePermanentToZoneInBatch(g, role, zone.Graveyard, simultaneousID) {
-			continue
-		}
-		changed = true
-		if replacedToCommand {
-			continue
-		}
-		deaths = append(deaths, PermanentDeathLog{
-			Permanent:  role.ObjectID,
-			SourceID:   role.CardInstanceID,
-			TokenName:  permanentTokenName(role),
-			Owner:      role.Owner,
-			Controller: role.Controller,
-			Reason:     PermanentDeathReasonRoleRule,
-		})
-	}
-	return changed, deaths
+	pass := stateBasedActionPass{departures: stateBasedDeparturesForIDs(g,
+		roleRuleStateBasedActionCandidates(g), PermanentDeathReasonRoleRule)}
+	return pass.apply(g, batchID)
 }
 
 func roleRuleStateBasedActionCandidates(g *game.Game) []id.ID {
@@ -582,15 +312,8 @@ func permanentRoleRuleKey(g *game.Game, permanent *game.Permanent) (roleRuleKey,
 // CR 704.5q: if a permanent has both a +1/+1 and a -1/-1 counter, N of each are
 // removed, where N is the smaller of the two counts (CancelOpposites).
 func checkCounterStateBasedActions(g *game.Game) bool {
-	changed := false
-	for _, permanent := range g.Battlefield {
-		if !activeBattlefieldPermanent(permanent) {
-			continue
-		}
-		if permanent.Counters.CancelOpposites() > 0 {
-			changed = true
-		}
-	}
+	pass := stateBasedActionPass{counters: counterStateBasedActions(g)}
+	changed, _ := pass.apply(g, newPassBatchID(g))
 	return changed
 }
 
@@ -600,20 +323,8 @@ func checkCounterStateBasedActions(g *game.Game) bool {
 // dangling card ID in its new zone with no backing CardInstance, so any such ID
 // in a non-battlefield zone is removed here.
 func removeTokensFromNonBattlefieldZones(g *game.Game) bool {
-	changed := false
-	for _, player := range g.Players {
-		for _, cards := range []*zone.Zone{&player.Library, &player.Hand, &player.Graveyard, &player.Exile, &player.CommandZone} {
-			for _, cardID := range cards.All() {
-				if g.CardInstances[cardID] != nil {
-					continue
-				}
-				if cards.Remove(cardID) {
-					delete(g.CardCounters, cardID)
-					changed = true
-				}
-			}
-		}
-	}
+	pass := stateBasedActionPass{tokens: tokenStateBasedActions(g)}
+	changed, _ := pass.apply(g, newPassBatchID(g))
 	return changed
 }
 
@@ -648,7 +359,8 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 		final := finalSagaChapter(g, permanent)
 		if final > 0 &&
 			permanent.Counters.Get(counter.Lore) >= final &&
-			!sagaAwaitingChapterAbility(g, permanent, final) {
+			!sagaAwaitingChapterAbility(g, permanent, final) &&
+			!permanentCantBeSacrificed(g, permanent) {
 			return PermanentDeathReasonSagaComplete, true
 		}
 	}
@@ -715,6 +427,19 @@ func permanentDeathBypassesDestroy(reason PermanentDeathReason) bool {
 }
 
 func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
+	return eliminatePlayer(g, playerID)
+}
+
+func eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
+	if !markPlayerEliminated(g, playerID) {
+		return false
+	}
+	passInitiativeOnElimination(g, playerID)
+	cleanupEliminatedPlayer(g, playerID)
+	return true
+}
+
+func markPlayerEliminated(g *game.Game, playerID game.PlayerID) bool {
 	if playerID < 0 || int(playerID) >= len(g.Players) {
 		return false
 	}
@@ -727,8 +452,6 @@ func (*Engine) eliminatePlayer(g *game.Game, playerID game.PlayerID) bool {
 
 	player.Eliminated = true
 	g.TurnOrder.Eliminate(playerID)
-	passInitiativeOnElimination(g, playerID)
-	cleanupEliminatedPlayer(g, playerID)
 	return true
 }
 

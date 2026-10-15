@@ -1003,7 +1003,7 @@ func destroyPermanentInBatchResultWithBatch(g *game.Game, objectID, simultaneous
 			return nil, false, changed
 		}
 	} else {
-		replacement, replaced := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID)
+		replacement, replaced := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID, destructionFromEffect)
 		if replaced {
 			return nil, false, applyDestroyReplacement(g, permanent, replacement, batch)
 		}

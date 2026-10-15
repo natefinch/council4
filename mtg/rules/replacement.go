@@ -102,10 +102,26 @@ func applicablePreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	return indices
 }
 
+type destructionCause uint8
+
+const (
+	destructionFromEffect destructionCause = iota
+	destructionFromStateBasedAction
+)
+
+type destroyReplacementKind uint8
+
+const (
+	destroyShieldCounter destroyReplacementKind = iota
+	destroyRegeneration
+	destroyUmbraArmor
+)
+
 type destroyReplacement struct {
-	label         string
-	emitsOwnEvent bool
-	apply         func(*destroyBatch) bool
+	label          string
+	kind           destroyReplacementKind
+	auraID         id.ID
+	simultaneousID id.ID
 }
 
 type plannedDestroyReplacement struct {
@@ -139,44 +155,25 @@ func (b *destroyBatch) applyQueued() {
 	}
 }
 
-func planDestroyPermanentReplacement(g *game.Game, permanent *game.Permanent, preventRegeneration bool, simultaneousID id.ID) (destroyReplacement, bool) {
+func planDestroyPermanentReplacement(g *game.Game, permanent *game.Permanent, preventRegeneration bool, simultaneousID id.ID, cause destructionCause) (destroyReplacement, bool) {
 	if permanent == nil {
 		return destroyReplacement{}, false
 	}
 	var replacements []destroyReplacement
-	if permanent.Counters.Get(counter.Shield) > 0 {
+	if cause == destructionFromEffect && permanent.Counters.Get(counter.Shield) > 0 {
 		replacements = append(replacements, destroyReplacement{
-			label: "shield counter",
-			apply: func(*destroyBatch) bool {
-				permanent.Counters.Remove(counter.Shield, 1)
-				return true
-			},
+			label: "shield counter", kind: destroyShieldCounter,
 		})
 	}
 	if permanent.RegenerationShields > 0 && !preventRegeneration {
 		replacements = append(replacements, destroyReplacement{
-			label:         "regeneration shield",
-			emitsOwnEvent: true,
-			apply: func(*destroyBatch) bool {
-				replaceDestroyWithRegeneration(g, permanent)
-				return true
-			},
+			label: "regeneration shield", kind: destroyRegeneration,
 		})
 	}
 	for _, aura := range umbraArmorAttachments(g, permanent) {
 		replacements = append(replacements, destroyReplacement{
 			label: fmt.Sprintf("umbra armor (%s)", permanentEffectiveName(g, aura)),
-			apply: func(batch *destroyBatch) bool {
-				changed := permanent.MarkedDamage != 0 || permanent.MarkedDeathtouchDamage
-				permanent.MarkedDamage = 0
-				permanent.MarkedDeathtouchDamage = false
-				if batch != nil {
-					batch.queued = append(batch.queued, aura.ObjectID)
-					return changed
-				}
-				_, _, auraChanged := destroyPermanentInBatchResult(g, aura.ObjectID, simultaneousID, false)
-				return changed || auraChanged
-			},
+			kind:  destroyUmbraArmor, auraID: aura.ObjectID, simultaneousID: simultaneousID,
 		})
 	}
 	if len(replacements) == 0 {
@@ -191,8 +188,27 @@ func planDestroyPermanentReplacement(g *game.Game, permanent *game.Permanent, pr
 }
 
 func applyDestroyReplacement(g *game.Game, permanent *game.Permanent, replacement destroyReplacement, batch *destroyBatch) bool {
-	changed := replacement.apply(batch)
-	if !replacement.emitsOwnEvent {
+	changed := false
+	switch replacement.kind {
+	case destroyShieldCounter:
+		permanent.Counters.Remove(counter.Shield, 1)
+		changed = true
+	case destroyRegeneration:
+		changed = replaceDestroyWithRegeneration(g, permanent)
+	case destroyUmbraArmor:
+		changed = permanent.MarkedDamage != 0 || permanent.MarkedDeathtouchDamage
+		permanent.MarkedDamage = 0
+		permanent.MarkedDeathtouchDamage = false
+		if batch != nil {
+			batch.queued = append(batch.queued, replacement.auraID)
+		} else {
+			_, _, auraChanged := destroyPermanentInBatchResult(g, replacement.auraID, replacement.simultaneousID, false)
+			changed = changed || auraChanged
+		}
+	default:
+		panic("unknown destruction replacement")
+	}
+	if replacement.kind != destroyRegeneration {
 		emitDestroyReplacedEvent(g, permanent)
 	}
 	return changed
@@ -202,7 +218,7 @@ func applyDestroyReplacement(g *game.Game, permanent *game.Permanent, replacemen
 // replacements to one destruction event. The affected permanent's controller
 // chooses exactly one applicable effect (CR 616.1).
 func replaceDestroyPermanent(g *game.Game, permanent *game.Permanent, preventRegeneration bool, simultaneousID id.ID) (replaced, changed bool) {
-	replacement, ok := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID)
+	replacement, ok := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID, destructionFromEffect)
 	if !ok {
 		return false, false
 	}
@@ -217,7 +233,7 @@ func planDestroyPermanents(g *game.Game, permanents []*game.Permanent, preventRe
 		if hasKeyword(g, permanent, game.Indestructible) {
 			continue
 		}
-		replacement, replaced := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID)
+		replacement, replaced := planDestroyPermanentReplacement(g, permanent, preventRegeneration, simultaneousID, destructionFromEffect)
 		if replaced {
 			replacements = append(replacements, plannedDestroyReplacement{
 				permanent:   permanent,
