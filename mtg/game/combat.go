@@ -53,6 +53,12 @@ type BlockDeclaration struct {
 // damage assignment order. It exists only during the combat phase
 // and is nil otherwise.
 type CombatState struct {
+	// FirstStrikeDamageStarted distinguishes a two-step combat from one with
+	// only ordinary damage. Eligibility is captured before the first assignment.
+	FirstStrikeDamageStarted bool
+	// FirstStrikeEligible records the original ObjectIDs that had first or
+	// double strike as the first damage step began (CR 510.4).
+	FirstStrikeEligible map[id.ID]bool
 	// Attackers lists all declared attackers and their targets.
 	Attackers []AttackDeclaration
 

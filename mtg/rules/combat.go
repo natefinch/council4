@@ -291,9 +291,31 @@ func dealsCombatDamageInPass(g *game.Game, permanent *game.Permanent, pass comba
 	case firstStrikeCombatDamage:
 		return hasFirst || hasDouble
 	case normalCombatDamage:
-		return !hasFirst || hasDouble
+		if g.Combat == nil || !g.Combat.FirstStrikeDamageStarted {
+			return true
+		}
+		return !g.Combat.FirstStrikeEligible[permanent.ObjectID] || hasDouble
 	default:
 		return false
+	}
+}
+
+func captureFirstStrikeEligibility(g *game.Game) {
+	if g.Combat.FirstStrikeDamageStarted {
+		return
+	}
+	g.Combat.FirstStrikeDamageStarted = true
+	g.Combat.FirstStrikeEligible = make(map[id.ID]bool)
+	record := func(objectID id.ID) {
+		if permanent, present := permanentByObjectID(g, objectID); present && !permanent.PhasedOut {
+			g.Combat.FirstStrikeEligible[objectID] = hasFirstOrDoubleStrike(g, permanent)
+		}
+	}
+	for _, declaration := range g.Combat.Attackers {
+		record(declaration.Attacker)
+	}
+	for _, declaration := range g.Combat.Blockers {
+		record(declaration.Blocker)
 	}
 }
 

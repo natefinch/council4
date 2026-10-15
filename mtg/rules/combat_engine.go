@@ -794,6 +794,9 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 	if g.Combat == nil {
 		return
 	}
+	if pass == firstStrikeCombatDamage {
+		captureFirstStrikeEligibility(g)
+	}
 	var assignments []damageEvent
 	blockerMap := blockersByAttacker(g)
 	blockerDamage := blockerCombatDamageAssignments(g, blockerMap, pass)

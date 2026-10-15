@@ -256,6 +256,16 @@ shield removal even for unpreventable damage (CR 615.12). First-strike and norma
 passes, and independent spell damage calls, remain distinct events. Lifelink
 produces one life-gain event per source, even when its damage has several
 recipients. Live combat and Simulator use this same operation.
+
+Before the first combat-damage assignment, `CombatState` captures first/double
+strike eligibility by the original ObjectID. Second-step assignment belongs to
+remaining combatants that originally had neither keyword, plus those that
+currently have double strike (CR 510.4). Losing a strike keyword cannot create
+another assignment; gaining first strike cannot remove an ordinary participant's
+second-step assignment. Zero or prevented damage does not erase eligibility.
+This history is independently cloned and resets with each new combat; a reentered
+object does not inherit its previous incarnation's entry.
+
 Global prevention preserves each affected player's ordering choices; a
 single-source one-shot shield prevents only its selected source's instance,
 not every simultaneous source's damage.
