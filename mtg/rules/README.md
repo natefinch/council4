@@ -192,7 +192,23 @@ Spell cost payment supports typed additional costs, payment choices through the 
 
 Cost modifiers run after normal/alternative/kicker cost selection and before additional/mana payment planning. Current modifiers cover generic increases, reductions, set values, and minimum generic rules for spells. Source-scoped per-object reductions on spells and activated abilities use the source's own `CostModifier`: `PerObjectReduction` and `CountSelection` count matching battlefield permanents at cost time, and the resolved reduction applies only to that source's cost. Generic reductions floor at zero and never touch colored requirements. Ghostly Prison-style costs are independent `RuleEffectAttackTax` values rather than cost modifiers.
 
-Mana pools empty at phase and step boundaries before later priority windows can use stale mana; emptying a pool also discards its tagged mana-spend riders, so leftover Path of Ancestry mana never fires a later scry.
+Ordinary mana pools empty at phase and step boundaries before later priority
+windows can use stale mana. Discarded units also lose their spend riders, so
+leftover ordinary Path of Ancestry mana never fires a later scry.
+
+Live steps/phases and Simulator main-phase continuation share
+`completeTurnBoundary`. Upkeep and each extra upkeep complete before the next
+step, even when draw is skipped. `ResolvePriority` remains inside its current
+window; `PlayForward` completes an already-resolved main phase before running
+queued phases and explicitly rejects unsupported resume positions. Live and
+Simulator combat use the same phase teardown. Cleanup mana empties after any
+exceptional cleanup priority, before another cleanup begins.
+
+Mana units retain exact snow, creature-source and turn-long-retention identity.
+Retained units keep only their own backed spend riders across boundaries; an
+ordinary same-color rider cannot migrate onto them. Cleanup ends turn-long
+retention but does not discard the mana before cleanup priority. Payments still
+record the exact units spent and do not reset their spent totals at boundaries.
 
 ## Payment planner
 

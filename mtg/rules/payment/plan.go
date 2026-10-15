@@ -707,7 +707,7 @@ func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool 
 			return false
 		}
 	}
-	for _, unit := range paymentUnitOrder() {
+	for _, unit := range paymentUnits {
 		if player.ManaPool.Units()[unit]+tappedMana[unit] < plan.poolSpend[unit] {
 			return false
 		}

@@ -55,7 +55,7 @@ func applyPaymentPlan(s State, playerID game.PlayerID, plan paymentPlan) {
 			ToZone:   zone.Exile,
 		})
 	}
-	for _, unit := range paymentUnitOrder() {
+	for _, unit := range paymentUnits {
 		amount := plan.poolSpend[unit]
 		if amount > 0 && !player.ManaPool.SpendMatching(amount, func(candidate mana.Unit) bool { return candidate == unit }) {
 			panic("payment plan became invalid while spending mana")
@@ -301,11 +301,17 @@ func spendUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int, unit mana.
 	// and snowness regardless of provenance, preferring non-creature mana so
 	// creature provenance is preserved for counting when either would do, and
 	// record the actual provenance spent in poolSpend.
-	variants := [2]mana.Unit{
+	variants := [4]mana.Unit{
 		{Color: unit.Color, Snow: unit.Snow, FromCreature: false},
 		{Color: unit.Color, Snow: unit.Snow, FromCreature: true},
+		{Color: unit.Color, Snow: unit.Snow, FromCreature: false, Persistent: true},
+		{Color: unit.Color, Snow: unit.Snow, FromCreature: true, Persistent: true},
 	}
-	if pool[variants[0]]+pool[variants[1]] < amount {
+	total := 0
+	for _, key := range variants {
+		total += pool[key]
+	}
+	if total < amount {
 		return false
 	}
 	remaining := amount
@@ -322,7 +328,7 @@ func spendUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int, unit mana.
 }
 
 func spendAnyUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int) bool {
-	for _, unit := range paymentUnitOrder() {
+	for _, unit := range paymentUnits {
 		if spendUnitFromSnapshot(plan, pool, unit, 1) {
 			return true
 		}
@@ -331,7 +337,7 @@ func spendAnyUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int) bool {
 }
 
 func spendAnySnowUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int) bool {
-	for _, unit := range paymentUnitOrder() {
+	for _, unit := range paymentUnits {
 		if !unit.Snow {
 			continue
 		}
@@ -342,17 +348,19 @@ func spendAnySnowUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int) boo
 	return false
 }
 
-func paymentUnitOrder() []mana.Unit {
+var paymentUnits = func() []mana.Unit {
 	var units []mana.Unit
-	for _, fromCreature := range []bool{false, true} {
-		for _, snow := range []bool{false, true} {
-			for _, color := range paymentColors {
-				units = append(units, mana.Unit{Color: color, Snow: snow, FromCreature: fromCreature})
+	for _, persistent := range []bool{false, true} {
+		for _, fromCreature := range []bool{false, true} {
+			for _, snow := range []bool{false, true} {
+				for _, color := range paymentColors {
+					units = append(units, mana.Unit{Color: color, Snow: snow, FromCreature: fromCreature, Persistent: persistent})
+				}
 			}
 		}
 	}
 	return units
-}
+}()
 
 func trySymbolPayment(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, pay func(*paymentPlan, map[mana.Unit]int, map[mana.Color][]manaSource) bool) bool {
 	trialPlan := clonePaymentPlan(*plan)

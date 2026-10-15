@@ -336,7 +336,11 @@ func ruleEffectSourceIsActive(g *game.Game, effect *game.RuleEffect) bool {
 // of combat (DurationUntilEndOfCombat, "this combat" — Canal Courier). It is
 // called as the combat phase is torn down, before the following phases.
 func expireEndOfCombatRuleEffects(g *game.Game) {
+	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
+		return effect.Duration == game.DurationUntilEndOfCombat
+	})
 	if len(g.RuleEffects) == 0 {
+		settleDepartedControl(g)
 		return
 	}
 	kept := g.RuleEffects[:0]
@@ -347,6 +351,7 @@ func expireEndOfCombatRuleEffects(g *game.Game) {
 		kept = append(kept, g.RuleEffects[i])
 	}
 	g.RuleEffects = kept
+	settleDepartedControl(g)
 }
 
 func expireRuleEffects(g *game.Game) {

@@ -42,10 +42,7 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	log.addPhase(game.PhaseCombat)
 	g.Turn.CombatPhasesThisTurn++
 	g.Combat = &game.CombatState{}
-	defer func() {
-		expireEndOfCombatRuleEffects(g)
-		g.Combat = nil
-	}()
+	defer ce.completePhase(g)
 
 	if !ce.runPriorityStep(g, agents, log, game.StepBeginningOfCombat) {
 		return
@@ -55,6 +52,12 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	log.addStep(game.StepDeclareAttackers)
 	ce.declareAttackers(g, agents, log)
 	ce.resolveCombatAfterAttackers(g, agents, log)
+}
+
+func (combatEngine) completePhase(g *game.Game) {
+	expireEndOfCombatRuleEffects(g)
+	completeTurnBoundary(g)
+	g.Combat = nil
 }
 
 // resolveCombatAfterAttackers runs the combat phase from the post-declare-
@@ -73,7 +76,7 @@ func (ce combatEngine) resolveCombatAfterAttackers(g *game.Game, agents [game.Nu
 	if !ce.runPriority(g, agents, log) {
 		return
 	}
-	emptyManaPools(g)
+	completeTurnBoundary(g)
 
 	// CR 508.8: skip the declare blockers and combat damage steps if no creature
 	// is attacking (none declared and none put onto the battlefield attacking).
@@ -86,7 +89,7 @@ func (ce combatEngine) resolveCombatAfterAttackers(g *game.Game, agents [game.Nu
 		if !ce.runPriority(g, agents, log) {
 			return
 		}
-		emptyManaPools(g)
+		completeTurnBoundary(g)
 
 		if combatHasFirstStrikeDamage(g) {
 			g.Turn.Step = game.StepFirstStrikeDamage
@@ -99,7 +102,7 @@ func (ce combatEngine) resolveCombatAfterAttackers(g *game.Game, agents [game.Nu
 			if !ce.runPriority(g, agents, log) {
 				return
 			}
-			emptyManaPools(g)
+			completeTurnBoundary(g)
 		}
 
 		g.Turn.Step = game.StepCombatDamage
@@ -112,7 +115,7 @@ func (ce combatEngine) resolveCombatAfterAttackers(g *game.Game, agents [game.Nu
 		if !ce.runPriority(g, agents, log) {
 			return
 		}
-		emptyManaPools(g)
+		completeTurnBoundary(g)
 	}
 
 	ce.runPriorityStep(g, agents, log, game.StepEndOfCombat)
@@ -128,7 +131,7 @@ func (ce combatEngine) runPriorityStep(g *game.Game, agents [game.NumPlayers]Pla
 	if !ce.runPriority(g, agents, log) {
 		return false
 	}
-	emptyManaPools(g)
+	completeTurnBoundary(g)
 	return true
 }
 

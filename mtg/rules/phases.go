@@ -105,10 +105,17 @@ func (e *Engine) runTurnFromPhase(g *game.Game, agents [game.NumPlayers]PlayerAg
 // interrupted a turn at a main phase to evaluate a candidate action; the agents
 // drive any choices the tail of the turn requires (blockers, discards, triggers).
 func (e *Engine) finishCurrentTurn(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
+	if !g.Turn.IsMainPhase() || g.Turn.Step != game.StepNone {
+		panic("cannot resume a turn outside a resolved main-phase priority window")
+	}
+	if g.IsGameOver() {
+		return
+	}
 	log := TurnLog{TurnNumber: g.Turn.TurnNumber, ActivePlayer: g.Turn.ActivePlayer}
 	e.setReplacementChoiceContext(g, agents, &log)
 	defer g.ClearChoiceContext()
-	// The current phase's priority has resolved, so resume from the next phase.
+	completeTurnBoundary(g)
+	// The current phase's priority and exit obligations have completed.
 	e.runTurnFromPhase(g, agents, &log, g.Turn.Phase+1)
 }
 
@@ -193,6 +200,7 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		permanent.SummoningSick = false
 	}
 	untapDuringOtherPlayersUntapStep(g)
+	completeTurnBoundary(g)
 
 	e.runUpkeepStep(g, agents, log)
 	if g.IsGameOver() {
@@ -231,9 +239,10 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 		if g.IsGameOver() {
 			return
 		}
+		completeTurnBoundary(g)
 	}
 	e.applyStateBasedActionsWithLog(g, log)
-	emptyManaPools(g)
+	completeTurnBoundary(g)
 }
 
 // runUpkeepStep runs a single upkeep step of the active player's beginning phase:
@@ -262,6 +271,7 @@ func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent
 	e.processReboundUpkeep(g, g.Turn.ActivePlayer, agents, log)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
+	completeTurnBoundary(g)
 }
 
 // untapDuringOtherPlayersUntapStep grants the extra untap that Seedborn
@@ -328,7 +338,7 @@ func (e *Engine) runMainPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	g.Turn.Step = game.StepNone
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
-	emptyManaPools(g)
+	completeTurnBoundary(g)
 }
 
 func (e *Engine) runEndingPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
@@ -356,11 +366,13 @@ func (e *Engine) runEndingPhaseWithLog(g *game.Game, agents [game.NumPlayers]Pla
 	if g.IsGameOver() {
 		return
 	}
+	completeTurnBoundary(g)
 
 	for {
 		applied := e.runCleanupStep(g, agents, log)
 		triggered := e.putTriggeredAbilitiesOnStackWithChoices(g, agents, log)
 		if g.IsGameOver() || (!applied && !triggered) {
+			completeTurnBoundary(g)
 			return
 		}
 		// CR 514.3a: cleanup SBAs or triggers open priority; after everyone
@@ -371,6 +383,7 @@ func (e *Engine) runEndingPhaseWithLog(g *game.Game, agents [game.NumPlayers]Pla
 		if g.IsGameOver() {
 			return
 		}
+		completeTurnBoundary(g)
 	}
 }
 
@@ -392,7 +405,6 @@ func (e *Engine) runCleanupStep(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	expireCleanupDurations(g)
 	_, applied := e.applyStateBasedActionsWithLogResult(g, log)
 	clearPersistentMana(g)
-	emptyManaPools(g)
 	g.Combat = nil
 	return applied
 }
@@ -531,21 +543,35 @@ func playerSkipsExtraTurns(g *game.Game, player game.PlayerID) bool {
 	return false
 }
 
-// emptyManaPools empties every player's mana pool. Each player's mana pool empties
-// at the end of each step and phase, and any unspent mana is lost (CR 106.4); the
-// engine calls this at those boundaries.
+// completeTurnBoundary finishes a step or phase without advancing or repeating
+// its entry actions. Live execution and main-phase Simulator resumes share it.
+func completeTurnBoundary(g *game.Game) {
+	emptyManaPools(g)
+}
+
 func emptyManaPools(g *game.Game) {
 	for _, player := range g.Players {
 		player.ManaPool.Empty()
-		player.ManaRiders = nil
+		if len(player.ManaRiders) == 0 {
+			continue
+		}
+		remaining := player.ManaPool.Units()
+		kept := player.ManaRiders[:0]
+		for _, rider := range player.ManaRiders {
+			if remaining[rider.Unit] > 0 {
+				kept = append(kept, rider)
+				remaining[rider.Unit]--
+			}
+		}
+		player.ManaRiders = kept
 	}
 }
 
 // clearPersistentMana releases every player's until-end-of-turn mana reservation
 // (Pool.AddPersistent) at end-of-turn cleanup, so the reserved mana empties like
 // any other mana as the following step or phase ends (CR 500.4 exception ending,
-// CR 514.2). It is called during the cleanup step immediately before
-// emptyManaPools; for pools that never received persistent mana it is a no-op.
+// CR 514.2). It is called during the cleanup turn-based action; remaining mana
+// is spendable in exceptional cleanup priority and empties when the step ends.
 func clearPersistentMana(g *game.Game) {
 	for _, player := range g.Players {
 		player.ManaPool.ClearPersistent()

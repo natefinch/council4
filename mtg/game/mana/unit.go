@@ -10,4 +10,7 @@ type Unit struct {
 	Color        Color
 	Snow         bool
 	FromCreature bool
+	// Persistent distinguishes mana produced with turn-long retention from
+	// ordinary mana of the same color/provenance. The pool owns its expiry.
+	Persistent bool
 }

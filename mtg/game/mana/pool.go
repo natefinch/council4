@@ -10,7 +10,7 @@ import (
 type Pool struct {
 	mana map[Unit]int
 	// persist records the subset of mana that does not empty as steps and phases
-	// end (the CR 500.4 exception used by "Until end of turn, you don't lose this
+	// end (the CR 500.5 exception used by "Until end of turn, you don't lose this
 	// mana as steps and phases end", Grand Warlord Radha). Empty restores the
 	// pool to this reserved mana instead of clearing it; spending reconciles it so
 	// spent persistent mana does not reappear on the next Empty; ClearPersistent
@@ -64,13 +64,13 @@ func (p *Pool) AddUnit(unit Unit, amount int) {
 }
 
 // AddPersistent adds mana of the given color that does not empty as steps and
-// phases end (CR 500.4 exception). See Pool.persist.
+// phases end (CR 500.5 exception). See Pool.persist.
 func (p *Pool) AddPersistent(c Color, amount int) {
 	p.AddPersistentUnit(Unit{Color: c}, amount)
 }
 
 // AddPersistentSnow adds snow mana of the given color that does not empty as
-// steps and phases end (CR 500.4 exception). See Pool.persist.
+// steps and phases end (CR 500.5 exception). See Pool.persist.
 func (p *Pool) AddPersistentSnow(c Color, amount int) {
 	p.AddPersistentUnit(Unit{Color: c, Snow: true}, amount)
 }
@@ -82,6 +82,7 @@ func (p *Pool) AddPersistentUnit(unit Unit, amount int) {
 	if amount <= 0 {
 		return
 	}
+	unit.Persistent = true
 	p.AddUnit(unit, amount)
 	if p.persist == nil {
 		p.persist = make(map[Unit]int)
@@ -166,7 +167,7 @@ func (p *Pool) CanSpendMatching(amount int, matches func(Unit) bool) bool {
 		return false
 	}
 	total := 0
-	for _, unit := range spendOrder() {
+	for _, unit := range orderedSpendUnits {
 		if !matches(unit) {
 			continue
 		}
@@ -186,7 +187,7 @@ func (p *Pool) SpendMatching(amount int, matches func(Unit) bool) bool {
 		return false
 	}
 	remaining := amount
-	for _, unit := range spendOrder() {
+	for _, unit := range orderedSpendUnits {
 		if remaining == 0 {
 			break
 		}
@@ -248,20 +249,22 @@ func (p *Pool) IsEmpty() bool {
 	return p.Total() == 0
 }
 
-// spendOrder enumerates every mana unit in the deterministic order the pool
-// spends them. Non-creature mana is spent before creature mana, and within each
-// of those non-snow before snow, so simple payments preserve creature and snow
+// orderedSpendUnits is the immutable deterministic order the pool uses.
+// Ordinary mana is spent before retained mana, then non-creature before creature,
+// and non-snow before snow, so simple payments preserve creature and snow
 // provenance when possible and pools that never received creature mana keep
 // their previous spend behavior byte-for-byte.
-func spendOrder() []Unit {
+var orderedSpendUnits = func() []Unit {
 	colors := []Color{W, U, B, R, G, C}
-	order := make([]Unit, 0, len(colors)*4)
-	for _, fromCreature := range []bool{false, true} {
-		for _, snow := range []bool{false, true} {
-			for _, c := range colors {
-				order = append(order, Unit{Color: c, Snow: snow, FromCreature: fromCreature})
+	order := make([]Unit, 0, len(colors)*8)
+	for _, persistent := range []bool{false, true} {
+		for _, fromCreature := range []bool{false, true} {
+			for _, snow := range []bool{false, true} {
+				for _, c := range colors {
+					order = append(order, Unit{Color: c, Snow: snow, FromCreature: fromCreature, Persistent: persistent})
+				}
 			}
 		}
 	}
 	return order
-}
+}()

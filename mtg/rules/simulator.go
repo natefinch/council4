@@ -113,6 +113,7 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 	log := &TurnLog{}
 	s.engine.setReplacementChoiceContext(clone, policies, log)
 	defer clone.ClearChoiceContext()
+	defer ce.completePhase(clone)
 	ce.resolveCombatAfterAttackers(clone, policies, log)
 	return clone, true
 }
@@ -127,10 +128,11 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 // original g is never modified.
 //
 // g must be at a main phase (precombat or postcombat main): those are the only
-// phases whose priority resolving leaves nothing of the phase left to replay, so
-// resuming from the next phase is exact. A beginning or combat phase has further
+// phases whose resolved priority can be followed by shared phase completion.
+// A beginning or combat phase has further
 // steps (draw, blockers, damage) that must not be skipped, and callers evaluate
-// those decisions without looking ahead.
+// those decisions without looking ahead. Unsupported resume positions panic
+// rather than silently skipping their remaining steps.
 func (s Simulator) PlayForward(g *game.Game, policies [game.NumPlayers]PlayerAgent, turns int) *game.Game {
 	s.engine.validatePendingPrograms(g)
 	clone := g.Clone()

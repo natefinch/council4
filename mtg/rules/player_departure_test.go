@@ -306,6 +306,7 @@ func TestPlayerDepartureActiveTurnFinishesWithoutDepartedDecisions(t *testing.T)
 	engine := NewEngine(nil)
 	g.Turn.ActivePlayer = game.Player2
 	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
 	addTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
 		Event: game.EventBeginningOfStep, Step: game.StepEnd,
 	}, []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(2), Player: game.ControllerReference()}}}, nil)
