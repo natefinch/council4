@@ -675,6 +675,11 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		if obj.Copy {
 			return "invalid copy"
 		}
+		if card != nil {
+			if _, moved := cardZone(g, card.ID); moved {
+				return "entry replaced"
+			}
+		}
 		return "invalid permanent"
 	}
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {

@@ -317,27 +317,6 @@ func replacementDecisionPlayer(g *game.Game, event damageEvent) game.PlayerID {
 	return event.player
 }
 
-// recordReplacementDecision records a deterministic replacement choice point for
-// the turn log without prompting. It is used where the order among several
-// applicable effects does not change the outcome (prevention shields, which
-// reduce damage commutatively, and the independent entering-the-battlefield entry
-// modifications, which all apply). Order-sensitive selections instead use
-// chooseReplacementDecision, which makes a real CR 616.1 choice.
-func recordReplacementDecision(g *game.Game, player game.PlayerID, options []string) game.ReplacementDecision {
-	selected := make([]int, len(options))
-	for i := range options {
-		selected[i] = i
-	}
-	decision := game.ReplacementDecision{
-		Player:       player,
-		Options:      append([]string(nil), options...),
-		Selected:     selected,
-		UsedFallback: true,
-	}
-	g.ReplacementDecisions = append(g.ReplacementDecisions, decision)
-	return decision
-}
-
 func selectedReplacementEffect(matches []game.ReplacementEffect, decision game.ReplacementDecision) game.ReplacementEffect {
 	for _, selected := range decision.Selected {
 		if selected >= 0 && selected < len(matches) {
@@ -526,11 +505,16 @@ func revealZoneReplacementSource(g *game.Game, event game.Event, reveal bool) {
 // enters" / "enters as" effects (CR 614.1c) and "enters tapped"-style continuous
 // effects (CR 614.1d). These include entering tapped, with counters, as a copy,
 // and the keyword entry choices (unleash, riot, devour, tribute); required
-// choices are made before the permanent enters (CR 614.12a). These entry
-// modifications are independent and all apply, so the engine applies them all in a
-// deterministic order rather than making the CR 616.1 one-at-a-time choice (the
-// order does not change the result); the choice point is recorded for the log.
-func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) {
+// choices are made before the permanent enters (CR 614.12a). Applicability is
+// recomputed after each replacement, with copy replacements taking precedence
+// over ordinary entry replacements (CR 616.1c, 616.1f).
+func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, fromZone zone.Type) zone.Type {
+	if ctx.engine == nil {
+		ctx.engine = NewEngine(nil)
+	}
+	previous, _ := g.ChoiceContext()
+	ctx.engine.setReplacementChoiceContext(g, ctx.agents, ctx.log)
+	defer g.SetChoiceContext(previous)
 	event := game.Event{
 		Kind:                   game.EventPermanentEnteredBattlefield,
 		Controller:             effectiveController(g, permanent),
@@ -547,29 +531,69 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		FromZone:               fromZone,
 		ToZone:                 zone.Battlefield,
 	}
-	var staticMatches []game.ReplacementEffect
-	if !permanent.FaceDown {
-		def, ok := permanentCardDef(g, permanent)
-		if !ok {
-			def = nil
+	applied := make(map[entryReplacementKey]bool)
+	var copyRider *entryCopyRider
+	for {
+		event.Controller = effectiveController(g, permanent)
+		matches := staticETBReplacementEffects(ctx, g, permanent, event)
+		for _, replacement := range matchingETBReplacementEffects(g, permanent, event) {
+			matches = append(matches, entryReplacement{
+				key: entryReplacementKey{effectID: replacement.ID}, effect: replacement,
+			})
 		}
-		if def != nil {
-			staticMatches = staticETBReplacementEffects(ctx, g, permanent, event)
+		matches = slices.DeleteFunc(matches, func(match entryReplacement) bool {
+			return applied[match.key]
+		})
+		if len(matches) == 0 {
+			if copyRider != nil {
+				copyRider.apply(g, permanent)
+			}
+			return zone.Battlefield
 		}
-	}
-	matches := matchingETBReplacementEffects(g, permanent, event)
-	matches = append(matches, staticMatches...)
-	if len(matches) > 1 {
-		recordReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
-	}
-	entersUntapped := false
-	for i := range matches {
-		replacement := &matches[i]
+		precedence := matches[0].precedence()
+		for _, match := range matches[1:] {
+			precedence = min(precedence, match.precedence())
+		}
+		if precedence > 1 && copyRider != nil {
+			copyRider.apply(g, permanent)
+			copyRider = nil
+			continue
+		}
+		matches = slices.DeleteFunc(matches, func(match entryReplacement) bool {
+			return match.precedence() != precedence
+		})
+		selected := 0
+		if len(matches) > 1 {
+			effects := make([]game.ReplacementEffect, len(matches))
+			for i, match := range matches {
+				effects[i] = match.effect
+			}
+			decision := chooseReplacementDecision(g, event.Controller, replacementEffectLabels(effects))
+			selected = decision.Selected[0]
+		}
+		match := matches[selected]
+		applied[match.key] = true
+		if match.ability != nil && match.ability.UnlessPaid.Exists &&
+			enterBattlefieldPaymentPaid(ctx, g, event.Controller, permanent, match.ability.UnlessPaid.Val) {
+			continue
+		}
+		if match.effect.ReplaceToZone != zone.None {
+			return match.effect.ReplaceToZone
+		}
+		if match.key.keyword == game.Riot {
+			applyEntryRiotChoice(ctx, g, permanent)
+			continue
+		}
+		if match.key.keyword == game.Unleash {
+			applyEntryUnleashChoice(ctx, g, permanent)
+			continue
+		}
+		replacement := &match.effect
 		if replacement.EntersTapped {
-			setPermanentTapped(g, permanent, true)
+			permanent.Tapped = true
 		}
 		if replacement.EntersUntapped {
-			entersUntapped = true
+			permanent.Tapped = false
 		}
 		for _, placement := range replacement.EntersWithCounters {
 			amount := placement.Amount
@@ -622,22 +646,40 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			applyEntryTribute(ctx, g, permanent, replacement.Controller, replacement.EntryTributeCount)
 		}
 		if replacement.EntersAsCopy {
-			applyEntersAsCopy(ctx, g, permanent, replacement)
+			if values, copied := applyEntryCopyValues(ctx, g, permanent, replacement); copied {
+				copyRider = &entryCopyRider{replacement: *replacement, values: values}
+			}
 		}
 		if replacement.EntersBecomesCharacteristic {
 			applyEntersBecomesCharacteristic(g, permanent, replacement)
 		}
-		if entersUntapped {
-			// Entry state is not an untap event (CR 614.12).
-			permanent.Tapped = false
-		}
 	}
-	if hasKeyword(g, permanent, game.Riot) {
-		applyEntryRiotChoice(ctx, g, permanent)
+}
+
+// Declaration pointers are immutable across characteristic recomputation.
+// Occurrences distinguish multiple instances of the same body; copying acquires
+// new bodies, rather than confusing them with an already handled ability.
+type entryReplacementKey struct {
+	effectID   id.ID
+	body       game.Ability
+	occurrence int
+	keyword    game.Keyword
+}
+
+type entryReplacement struct {
+	key     entryReplacementKey
+	effect  game.ReplacementEffect
+	ability *game.ReplacementAbility
+}
+
+func (r entryReplacement) precedence() int {
+	if r.effect.SelfReplacement {
+		return 0
 	}
-	if hasKeyword(g, permanent, game.Unleash) {
-		applyEntryUnleashChoice(ctx, g, permanent)
+	if r.effect.EntersAsCopy {
+		return 1
 	}
+	return 2
 }
 
 // applyEntryUnleashChoice resolves the unleash keyword for an entering permanent
@@ -927,8 +969,14 @@ func applyEntryTribute(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 // riders ("isn't legendary", "is an <type> in addition to its other types")
 // baked into the copied values.
 func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, replacement *game.ReplacementEffect) {
+	if values, copied := applyEntryCopyValues(ctx, g, permanent, replacement); copied {
+		entryCopyRider{replacement: *replacement, values: values}.apply(g, permanent)
+	}
+}
+
+func applyEntryCopyValues(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, replacement *game.ReplacementEffect) (game.CopyableValues, bool) {
 	if replacement.EntersAsCopySelection == nil {
-		return
+		return game.CopyableValues{}, false
 	}
 	engine := ctx.engine
 	if engine == nil {
@@ -954,12 +1002,12 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		candidates = append(candidates, candidate)
 	}
 	if len(candidates) == 0 {
-		return
+		return game.CopyableValues{}, false
 	}
 	if replacement.EntersAsCopyOptional {
 		selected := engine.chooseChoice(g, ctx.agents, mayChoiceRequest(controller, "Have this permanent enter as a copy?"), ctx.log)
 		if len(selected) != 1 || selected[0] != 1 {
-			return
+			return game.CopyableValues{}, false
 		}
 	}
 	chosen := candidates[0]
@@ -984,7 +1032,7 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 	}
 	def, ok := permanentCopyDef(g, chosen)
 	if !ok {
-		return
+		return game.CopyableValues{}, false
 	}
 	values := copyableValuesFromDef(def)
 	sourceDef, sourceOK := permanentCardDef(g, permanent)
@@ -1050,16 +1098,27 @@ func applyEntersAsCopy(ctx enterBattlefieldContext, g *game.Game, permanent *gam
 		Layer:            game.LayerCopy,
 		CopyValues:       opt.Val(values),
 	})
-	for _, placement := range replacement.EntersAsCopyConditionalCounters {
+	return values, true
+}
+
+// Additional copy-entry effects survive only the last applied copy effect
+// (CR 707.9e); declining a later optional copy does not discard them.
+type entryCopyRider struct {
+	replacement game.ReplacementEffect
+	values      game.CopyableValues
+}
+
+func (r entryCopyRider) apply(g *game.Game, permanent *game.Permanent) {
+	for _, placement := range r.replacement.EntersAsCopyConditionalCounters {
 		if placement.Amount <= 0 {
 			continue
 		}
-		if slices.Contains(values.Types, placement.IfType) {
+		if slices.Contains(r.values.Types, placement.IfType) {
 			addCountersToPermanent(g, permanent, placement.Kind, placement.Amount)
 		}
 	}
-	if replacement.EntersAsCopyTapped {
-		setPermanentTapped(g, permanent, true)
+	if r.replacement.EntersAsCopyTapped {
+		permanent.Tapped = true
 	}
 }
 
@@ -1185,17 +1244,18 @@ func colorWordForMana(c mana.Color) (string, bool) {
 	}
 }
 
-func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, event game.Event) []game.ReplacementEffect {
-	var replacements []game.ReplacementEffect
-	for _, body := range permanentEffectiveAbilitiesView(g, permanent) {
+func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent, event game.Event) []entryReplacement {
+	var replacements []entryReplacement
+	occurrences := make(map[game.Ability]int)
+	values := effectivePermanentValues(g, permanent)
+	for _, body := range values.abilities {
+		occurrence := occurrences[body]
+		occurrences[body]++
 		ability, ok := body.(*game.ReplacementAbility)
 		if !ok {
 			continue
 		}
-		// Optional entry-to-zone replacements (Mox Diamond) are resolved before
-		// entry by optionalEntryReplacementDeclined; skip them here so the
-		// payment is not prompted twice.
-		if ability.Replacement.ReplaceToZone != zone.None {
+		if ability.Replacement.ReplaceToZone != zone.None && !ability.UnlessPaid.Exists {
 			continue
 		}
 		replacement := ability.Replacement
@@ -1211,9 +1271,6 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 		if replacement.Description == "" {
 			replacement.Description = ability.Text
 		}
-		if ability.UnlessPaid.Exists && enterBattlefieldPaymentPaid(ctx, g, event.Controller, permanent, ability.UnlessPaid.Val) {
-			continue
-		}
 		// A self enters-with-counters replacement may carry an Adamant condition
 		// ("if at least three <color> mana was spent to cast this spell"), which
 		// reads the resolving spell's per-color mana spend. The cast-time tallies
@@ -1226,48 +1283,24 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 			KickerCount:             ctx.kickCount,
 		}
 		if replacementEffectMatchesEventWithSource(g, &replacement, event, permanent, obj) {
-			replacements = append(replacements, replacement)
+			replacements = append(replacements, entryReplacement{
+				key: entryReplacementKey{body: body, occurrence: occurrence}, effect: replacement, ability: ability,
+			})
 		}
+	}
+	for _, keyword := range []game.Keyword{game.Riot, game.Unleash} {
+		if !values.keywords.has(keyword) {
+			continue
+		}
+		label := "Riot"
+		if keyword == game.Unleash {
+			label = "Unleash"
+		}
+		replacements = append(replacements, entryReplacement{
+			key: entryReplacementKey{keyword: keyword}, effect: game.ReplacementEffect{Description: label},
+		})
 	}
 	return replacements
-}
-
-// optionalEntryReplacementDeclined resolves an optional self enters-the-
-// battlefield replacement that lets the controller pay an alternative cost to
-// keep the permanent on the battlefield, or sends it to another zone if the
-// cost is not paid (Mox Diamond). It returns true when the permanent must not
-// enter because the controller declined or could not pay; the card has then
-// been moved from fromZone to the replacement zone.
-func optionalEntryReplacementDeclined(ctx enterBattlefieldContext, g *game.Game, card *game.CardInstance, permanent *game.Permanent, def *game.CardDef, fromZone zone.Type) bool {
-	if def == nil || card == nil || permanent.FaceDown {
-		return false
-	}
-	destination := optionalEntryReplacementDestination(ctx, g, permanent)
-	if !destination.Exists {
-		return false
-	}
-	moveCardBetweenZones(g, card.Owner, card.ID, fromZone, destination.Val)
-	return true
-}
-
-func optionalEntryReplacementDestination(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent) opt.V[zone.Type] {
-	if permanent == nil || permanent.FaceDown {
-		return opt.V[zone.Type]{}
-	}
-	for _, body := range permanentEffectiveAbilitiesView(g, permanent) {
-		ability, ok := body.(*game.ReplacementAbility)
-		if !ok {
-			continue
-		}
-		if !ability.UnlessPaid.Exists || ability.Replacement.ReplaceToZone == zone.None {
-			continue
-		}
-		if enterBattlefieldPaymentPaid(ctx, g, permanent.Controller, permanent, ability.UnlessPaid.Val) {
-			return opt.V[zone.Type]{}
-		}
-		return opt.Val(ability.Replacement.ReplaceToZone)
-	}
-	return opt.V[zone.Type]{}
 }
 
 func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, source *game.Permanent, res game.ResolutionPayment) bool {
@@ -1355,7 +1388,7 @@ func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, ap
 			continue
 		}
 		// Optional entry-to-zone replacements are handled by the entry-payment
-		// path (optionalEntryReplacementDeclined); they must not redirect a
+		// pending-entry path; they must not redirect a
 		// generic zone change without prompting for their cost.
 		if ability.UnlessPaid.Exists {
 			continue
@@ -1384,7 +1417,8 @@ func matchingETBReplacementEffects(g *game.Game, permanent *game.Permanent, even
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
 		if !replacement.EntersTapped && !replacement.EntersUntapped &&
-			len(replacement.EntersWithCounters) == 0 && !replacement.EntersBecomesCharacteristic {
+			len(replacement.EntersWithCounters) == 0 && !replacement.EntersBecomesCharacteristic &&
+			!replacement.EntersAsCopy {
 			continue
 		}
 		if replacement.EntersTappedOthers || replacement.EntersUntappedOthers {

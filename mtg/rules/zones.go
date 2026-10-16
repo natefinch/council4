@@ -151,17 +151,10 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	applyInitialContinuousEffects(g, permanent, continuous)
 	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
-	if optionalEntryReplacementDeclined(enterBattlefieldContext{
-		engine: e,
-		agents: agents,
-		log:    log,
-	}, g, card, permanent, faceDef, fromZone) {
-		return nil, false
-	}
 	if options.ForceTapped {
 		permanent.Tapped = true
 	}
-	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine:            e,
 		agents:            agents,
 		log:               log,
@@ -176,6 +169,10 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 		manaSpentToCast:   options.ManaSpentToCast,
 	}, g, permanent, fromZone)
+	if destination != zone.Battlefield {
+		redirectPendingCardEntry(g, card, permanent, fromZone, destination, options)
+		return nil, false
+	}
 	for _, placement := range options.Counters {
 		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}
@@ -217,14 +214,15 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 }
 
 type preparedCardPermanentEntry struct {
-	card       *game.CardInstance
-	permanent  *game.Permanent
-	controller game.PlayerID
-	fromZone   zone.Type
-	continuous []game.ContinuousEffect
-	options    permanentCreationOptions
-	retained   counter.Set
-	auraHost   *game.Permanent
+	card        *game.CardInstance
+	permanent   *game.Permanent
+	controller  game.PlayerID
+	fromZone    zone.Type
+	continuous  []game.ContinuousEffect
+	options     permanentCreationOptions
+	retained    counter.Set
+	auraHost    *game.Permanent
+	destination zone.Type
 }
 
 func prepareCardPermanentFaceForSimultaneousEntry(
@@ -270,7 +268,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	if options.ForceTapped {
 		permanent.Tapped = true
 	}
-	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine:            e,
 		agents:            agents,
 		log:               log,
@@ -285,6 +283,9 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		manaSpentByColor:  options.ManaSpentByColorToCast,
 		manaSpentToCast:   options.ManaSpentToCast,
 	}, g, permanent, fromZone)
+	if destination != zone.Battlefield {
+		return preparedCardPermanentEntry{card: card, permanent: permanent, destination: destination}, true
+	}
 	for _, placement := range options.Counters {
 		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}
@@ -296,14 +297,15 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		auraHost, _ = permanentByObjectID(g, permanent.AttachedTo.Val)
 	}
 	return preparedCardPermanentEntry{
-		card:       card,
-		permanent:  permanent,
-		controller: controller,
-		fromZone:   fromZone,
-		continuous: continuous,
-		options:    options,
-		retained:   retainedEntryCounters(g, card, fromZone, face, options.SourceFaceDown),
-		auraHost:   auraHost,
+		card:        card,
+		permanent:   permanent,
+		controller:  controller,
+		fromZone:    fromZone,
+		continuous:  continuous,
+		options:     options,
+		retained:    retainedEntryCounters(g, card, fromZone, face, options.SourceFaceDown),
+		auraHost:    auraHost,
+		destination: destination,
 	}, true
 }
 
@@ -392,7 +394,7 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		FaceDownKind:   kind,
 		SummoningSick:  true,
 	}
-	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine:            e,
 		agents:            agents,
 		log:               log,
@@ -401,6 +403,10 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		hasCastController: wasCast,
 		castFromZone:      fromZone,
 	}, g, permanent, fromZone)
+	if destination != zone.Battlefield {
+		redirectPendingCardEntry(g, card, permanent, fromZone, destination, permanentCreationOptions{SourceFaceDown: true})
+		return nil, false
+	}
 	addRetainedCounters(permanent, retainedEntryCounters(g, card, fromZone, face, fromZone == zone.Stack))
 	g.Battlefield = append(g.Battlefield, permanent)
 	event := game.Event{
@@ -824,6 +830,46 @@ func moveCardBetweenZonesAfterReplacement(
 	if !from.Remove(cardID) {
 		return false
 	}
+	if !placeMovedCardAfterReplacement(g, playerID, cardID, fromZone, replacement, event, sourceFaceDown, bottom, simultaneousID) {
+		from.Add(cardID)
+		from.SetFaceDown(cardID, sourceFaceDown)
+		return false
+	}
+	return true
+}
+
+// Entry callers may already have removed the resolving or moving card from its
+// source zone. Complete that pending move without publishing it back to a zone.
+func redirectPendingCardEntry(g *game.Game, card *game.CardInstance, permanent *game.Permanent, fromZone, destination zone.Type, options permanentCreationOptions) {
+	event := game.Event{
+		Kind: game.EventZoneChanged, Controller: effectiveController(g, permanent), Player: card.Owner,
+		CardID: card.ID, Face: permanent.Face, FaceDown: options.SourceFaceDown,
+		FromZone: fromZone, ToZone: destination, SimultaneousID: options.SimultaneousID,
+	}
+	replacement := replacementZoneChange(g, event)
+	replacement.destination = commanderReplacementDestination(g, card.ID, replacement.destination)
+	if from, ok := destinationZone(g, card.Owner, fromZone); ok && from.Contains(card.ID) {
+		if !moveCardBetweenZonesAfterReplacement(g, card.Owner, card.ID, fromZone, replacement, event, false, options.SimultaneousID) {
+			panic(UnsupportedError{Reason: "cannot complete replaced battlefield entry"})
+		}
+		return
+	}
+	if !placeMovedCardAfterReplacement(g, card.Owner, card.ID, fromZone, replacement, event, options.SourceFaceDown, false, options.SimultaneousID) {
+		panic(UnsupportedError{Reason: "cannot complete replaced battlefield entry"})
+	}
+}
+
+func placeMovedCardAfterReplacement(
+	g *game.Game,
+	playerID game.PlayerID,
+	cardID id.ID,
+	fromZone zone.Type,
+	replacement zoneChangeReplacementResult,
+	event game.Event,
+	sourceFaceDown, bottom bool,
+	simultaneousID id.ID,
+) bool {
+	destination := replacement.destination
 	zoneOwner := playerID
 	if destination == zone.Command {
 		if card, ok := g.GetCardInstance(cardID); ok {
@@ -832,8 +878,6 @@ func moveCardBetweenZonesAfterReplacement(
 	}
 	to, ok := destinationZone(g, zoneOwner, destination)
 	if !ok {
-		from.Add(cardID)
-		from.SetFaceDown(cardID, sourceFaceDown)
 		return false
 	}
 	revealZoneReplacementSource(g, event, replacement.revealSource)

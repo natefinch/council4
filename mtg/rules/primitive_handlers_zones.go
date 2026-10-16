@@ -3597,25 +3597,13 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 		move := &moves[i]
 		card := move.resolved
 		move.options.SourceFaceDown = cardFaceDownInZone(r.game, card.card, card.fromZone)
-		prototype := &game.Permanent{
-			ObjectID: card.card.ID, CardInstanceID: card.card.ID, Owner: card.card.Owner,
-			Controller: card.controller, FaceDown: move.options.SourceFaceDown,
-			EnteredFromCast: options.WasCast, CastXValue: options.XValue,
-		}
-		initializePermanentCounters(prototype, card.card.Def)
-		destination := zone.Battlefield
-		if alternative := optionalEntryReplacementDestination(enterBattlefieldContext{
-			engine: r.engine, agents: r.agents, log: r.log,
-		}, r.game, prototype); alternative.Exists {
-			destination = alternative.Val
-		}
 		event := game.Event{
 			Kind:           game.EventZoneChanged,
 			Controller:     card.controller,
 			Player:         card.card.Owner,
 			CardID:         card.card.ID,
 			FromZone:       card.fromZone,
-			ToZone:         destination,
+			ToZone:         zone.Battlefield,
 			SimultaneousID: options.SimultaneousID,
 		}
 		replacement := replacementZoneChange(r.game, event)
@@ -3665,6 +3653,10 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 				cards.Add(card.card.ID)
 				cards.SetFaceDown(card.card.ID, move.options.SourceFaceDown)
 			}
+			continue
+		}
+		if entry.destination != zone.Battlefield {
+			redirectPendingCardEntry(r.game, card.card, entry.permanent, card.fromZone, entry.destination, move.options)
 			continue
 		}
 		entries = append(entries, entry)
@@ -3720,6 +3712,7 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 	if !removeCardFromZone(r.game, card.Owner, card.ID, fromZone) {
 		return nil, false
 	}
+	version := card.ZoneVersion
 	permanent, ok := createCardPermanentFaceWithOptions(
 		r.engine,
 		r.game,
@@ -3733,6 +3726,9 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 		r.log,
 	)
 	if !ok {
+		if card.ZoneVersion != version {
+			return nil, false
+		}
 		destinationCards, zoneOK := destinationZone(r.game, card.Owner, fromZone)
 		if zoneOK {
 			destinationCards.Add(card.ID)

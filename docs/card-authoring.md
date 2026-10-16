@@ -4,6 +4,16 @@ This is the canonical new-card workflow. Legacy compiler maintenance is separate
 The entry skill is [card-authoring](../.agents/skills/card-authoring/SKILL.md).
 Programs and declarations share the production Engine and registry.
 
+Battlefield-entry declarations are evaluated against the pending permanent's
+current would-be battlefield characteristics. The Engine recomputes applicability
+after each replacement, applies self-replacement/copy precedence where represented,
+and records the affected controller's choice among competing effects. Copied
+entry abilities participate in the same process; lost abilities do not survive
+on a frozen list. Entry payments are offered only when their replacement is
+selected; an unpaid entry-to-zone replacement prevents battlefield publication.
+Entry choices run before publication of the permanent or its
+simultaneous cohort, and entering tapped/untapped is not a tap/untap event.
+
 ## A bounded worker loop
 
 1. Read the selected live issue and real prerequisites. Claim a small eligible

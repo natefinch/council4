@@ -593,15 +593,19 @@ func createTokenPermanentWithEntryChoicesInBatch(e *Engine, g *game.Game, contro
 		return nil, false
 	}
 	created := commitTokenEntries(g, []preparedTokenEntry{entry}, simultaneousID)
+	if len(created) == 0 {
+		return nil, false
+	}
 	return created[0], true
 }
 
 type preparedTokenEntry struct {
-	permanent  *game.Permanent
-	controller game.PlayerID
-	visible    *game.CardDef
-	token      *game.CardDef
-	attachedTo *game.Permanent
+	permanent   *game.Permanent
+	controller  game.PlayerID
+	visible     *game.CardDef
+	token       *game.CardDef
+	attachedTo  *game.Permanent
+	destination zone.Type
 }
 
 func prepareTokenEntry(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
@@ -630,44 +634,48 @@ func prepareTokenEntry(e *Engine, g *game.Game, controller game.PlayerID, token 
 	}
 	initializePermanentCounters(permanent, visible)
 	initializeReadAhead(e, g, permanent, agents, log)
-	applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
+	permanent.Tapped = tapped
+	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine: e,
 		agents: agents,
 		log:    log,
 	}, g, permanent, zone.None)
-	if tapped {
-		permanent.Tapped = true
-	}
 	return preparedTokenEntry{
-		permanent: permanent, controller: controller, visible: visible, token: token, attachedTo: attachedTo,
+		permanent: permanent, controller: controller, visible: visible, token: token, attachedTo: attachedTo, destination: destination,
 	}, true
 }
 
 func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneousID id.ID) []*game.Permanent {
 	created := make([]*game.Permanent, 0, len(entries))
 	for _, entry := range entries {
-		registerPermanentReplacementEffects(g, entry.permanent)
+		if entry.destination == zone.Battlefield {
+			registerPermanentReplacementEffects(g, entry.permanent)
+		}
 	}
 	for _, entry := range entries {
-		g.Battlefield = append(g.Battlefield, entry.permanent)
-		created = append(created, entry.permanent)
+		if entry.destination == zone.Battlefield {
+			g.Battlefield = append(g.Battlefield, entry.permanent)
+			created = append(created, entry.permanent)
+		}
 	}
 	for _, entry := range entries {
 		permanent := entry.permanent
-		if entry.attachedTo != nil {
+		if entry.destination == zone.Battlefield && entry.attachedTo != nil {
 			attachPermanent(g, permanent, entry.attachedTo)
 		}
-		if lore := permanent.Counters.Get(counter.Lore); lore > 0 {
+		if lore := permanent.Counters.Get(counter.Lore); entry.destination == zone.Battlefield && lore > 0 {
 			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 		}
 		event := game.Event{
 			Controller: entry.controller, Player: entry.controller,
 			PermanentID: permanent.ObjectID, TokenName: entry.visible.Name, TokenDef: entry.token,
-			FromZone: zone.None, ToZone: zone.Battlefield, SimultaneousID: simultaneousID,
+			FromZone: zone.None, ToZone: entry.destination, SimultaneousID: simultaneousID,
 		}
 		emitZoneChangeEvent(g, event)
-		event.Kind = game.EventPermanentEnteredBattlefield
-		emitEvent(g, event)
+		if entry.destination == zone.Battlefield {
+			event.Kind = game.EventPermanentEnteredBattlefield
+			emitEvent(g, event)
+		}
 		event.Kind = game.EventTokenCreated
 		emitEvent(g, event)
 	}
