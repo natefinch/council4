@@ -1,6 +1,6 @@
 # Cards without exact authored production support
 
-Production registry: **17972 entries, 17972 loadable, 49 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17973 entries, 17973 loadable, 50 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `44917919cfe3d26ec77159b31b19be9500ae39cc432f06a7207ee7fb65666338`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -8773,7 +8773,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Pallimud** (`cad0f865-62e0-47ba-84ae-8e97cb52bbd1`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Panacea** (`08ee7879-3c9d-43c6-a44e-f81180f938fd`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Pandemonium** (`073551ca-2e84-4d49-8484-9890718cc483`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Panglacial Wurm** (`49d4aef7-d2d1-4f66-bc2a-79ec8cc96565`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Panic** (`e98429a7-a83f-4b69-afad-9eb68b09e38e`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Panoptic Mirror** (`505cb78d-b292-4d16-b3f2-110164b4cc93`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Panoptic Projektor** (`1e1a787a-2294-472d-908d-d4d72821a7cc`) — compiler rejected; legacy candidate entries: 0; exact production identity not established

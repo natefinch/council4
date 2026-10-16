@@ -62,6 +62,9 @@ func stackManaValue(card *game.CardDef, xValue int) int {
 }
 
 func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	if synchronousSearchOrPayment(g) {
+		return nil
+	}
 	// Generating legal actions is a pure read that repeatedly evaluates every
 	// permanent, so a static-source frame lets the rules layer scan the
 	// battlefield for static-ability sources once instead of per permanent.
@@ -464,6 +467,9 @@ func (e *Engine) applyAction(g *game.Game, playerID game.PlayerID, act action.Ac
 }
 
 func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if synchronousSearchOrPayment(g) {
+		return false
+	}
 	if player, ok := playerByID(g, playerID); !ok || player.Eliminated {
 		return false
 	}
@@ -648,7 +654,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 }
 
 func (e *Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer && !g.ManaPaymentAllowed(playerID) {
 		return nil
 	}
 	var actions []action.Action
@@ -677,7 +683,7 @@ func (e *Engine) legalManaAbilityActions(g *game.Game, playerID game.PlayerID) [
 // Guide). Such abilities are activated for mana like any other mana ability but
 // function from the hand rather than the battlefield.
 func (*Engine) legalHandManaAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer && !g.ManaPaymentAllowed(playerID) {
 		return nil
 	}
 	player, ok := playerByID(g, playerID)

@@ -161,6 +161,8 @@ type Game struct {
 	ControlGrantsEnded [NumPlayers]bool
 	// SearchControlScopes are synchronous, scoped player-control permissions.
 	SearchControlScopes []SearchControlScope
+	// ManaPaymentScopes grant mana activation, never ordinary priority.
+	ManaPaymentScopes []PlayerID
 	// SkippedTurns counts one-shot "skip your next turn" replacements.
 	SkippedTurns map[PlayerID]int
 

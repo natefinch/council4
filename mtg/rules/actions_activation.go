@@ -449,7 +449,7 @@ func abilityHasExileThisCardFromHandCost(costs []cost.Additional) bool {
 // permanent to seed entry choices, so the only producible content is fixed
 // add-mana output.
 func canActivateHandManaAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ManaAbility, abilityIndex int) bool {
-	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer && !g.ManaPaymentAllowed(playerID) {
 		return false
 	}
 	if game.BodyFunctionZone(body) != zone.Hand ||
@@ -773,7 +773,7 @@ func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, 
 // activation condition, and the player being able to pay its own cost (CR 602.2,
 // CR 118.3).
 func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility, abilityIndex int) bool {
-	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
+	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer && !g.ManaPaymentAllowed(playerID) || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
 	if !bodyFunctionsOnBattlefield(body) {
@@ -829,6 +829,11 @@ func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
 			case game.PrimitiveGainLife:
 				gain, ok := sequence[i].Primitive.(game.GainLife)
 				if !ok || !isSelfControllerGainLifeRider(gain) {
+					return false
+				}
+			case game.PrimitiveDraw:
+				draw, ok := sequence[i].Primitive.(game.Draw)
+				if !ok || draw.Player.Kind() != game.PlayerReferenceController || draw.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 					return false
 				}
 			default:

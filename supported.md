@@ -1,6 +1,6 @@
 # Supported Cards
 
-Production registry: **17972 entries, 17972 loadable, 49 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17973 entries, 17973 loadable, 50 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `44917919cfe3d26ec77159b31b19be9500ae39cc432f06a7207ee7fb65666338`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -10908,6 +10908,7 @@ Legacy entries are name-only and loadable, not individually behavior-certified. 
 - Palliation Accord — legacy name-only
 - Pallid Mycoderm — legacy name-only
 - Pang Tong, "Young Phoenix" — legacy name-only
+- Panglacial Wurm — authored exact Oracle/front; behavior verified
 - Pangosaur — legacy name-only
 - Panharmonicon — legacy name-only
 - Panic Attack — legacy name-only

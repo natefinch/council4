@@ -460,16 +460,18 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 
 func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, targets []game.Target, bestowed bool, prefs *Preferences) (spellCostPlan, bool) {
 	plan := spellCostPlan{option: option}
-	if xValue < 0 ||
+	if xValue < 0 || !option.locked &&
 		xValue != 0 && !costHasVariableMana(option.manaCost) && !additionalCostsUseX(option.additionalCosts) {
 		return plan, false
 	}
-	resolved, ok := resolveManaCostX(option.manaCost, xValue)
-	if !ok {
-		return plan, false
+	if !option.locked {
+		resolved, ok := resolveManaCostX(option.manaCost, xValue)
+		if !ok {
+			return plan, false
+		}
+		option.manaCost = resolved
+		option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, bargained: option.bargained, bestowed: bestowed, option: option})
 	}
-	option.manaCost = resolved
-	option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, bargained: option.bargained, bestowed: bestowed, option: option})
 	plan.option = option
 	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, clonePreferences(prefs), nil, cardID, sourceZone, cardID)
 	if !ok {

@@ -48,6 +48,8 @@ type SpellRequest struct {
 	Alternative     opt.V[cost.Alternative]
 	CastPermissions []SpellCastPermission
 	Prefs           *Preferences
+	// PreparedCost retains the total determined before mana abilities (601.2f).
+	PreparedCost *PreparedSpellCost
 	// Bestowed marks a cast made for the spell's Bestow alternative cost
 	// (CR 702.103b). While bestowed the spell is an Aura spell and not a creature
 	// spell, so cost modifiers that filter by card type or subtype match it on the
@@ -133,6 +135,13 @@ type SpellOptionSummary struct {
 	ManaCost        *cost.Mana
 	AdditionalCosts []cost.Additional
 	CastPermission  SpellCastPermission
+}
+
+// PreparedSpellCost is an invocation-local immutable total, not a payment plan.
+// Resources are selected and checked against live state when it is paid.
+type PreparedSpellCost struct {
+	Summary SpellOptionSummary
+	option  spellCostOption
 }
 
 // SpellPaymentResult records the paid costs and casting permission selected by

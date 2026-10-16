@@ -39,6 +39,9 @@ func (e *Engine) Simulator() Simulator {
 // combat declarations need not occur in these samples: Apply validates their
 // typed payloads. Pending combat windows also offer compact staged choices.
 func (s Simulator) LegalActions(g *game.Game, playerID game.PlayerID) []action.Action {
+	if synchronousSearchOrPayment(g) {
+		return nil
+	}
 	if canDeclareAttackers(g, playerID) {
 		return withStagedDeclaration((combatEngine{s.engine}).legalAttackers(g, playerID), action.ActionDeclareAttackers)
 	}
@@ -62,6 +65,9 @@ func (s Simulator) LegalActions(g *game.Game, playerID game.PlayerID) []action.A
 // let the object resolve and opponents respond, then evaluate the resulting
 // position.
 func (s Simulator) Apply(g *game.Game, playerID game.PlayerID, act action.Action, policies [game.NumPlayers]PlayerAgent) (*game.Game, bool) {
+	if synchronousSearchOrPayment(g) {
+		return nil, false
+	}
 	s.engine.validatePendingPrograms(g)
 	combat := act.Kind == action.ActionDeclareAttackers || act.Kind == action.ActionDeclareBlockers
 	valid := false
@@ -107,6 +113,9 @@ func (s Simulator) Apply(g *game.Game, playerID game.PlayerID, act action.Action
 // later steps or phases (rolling a whole turn or game forward from an arbitrary
 // mid-turn point is a separate capability built on top of this one).
 func (s Simulator) ResolvePriority(g *game.Game, policies [game.NumPlayers]PlayerAgent) *game.Game {
+	if synchronousSearchOrPayment(g) {
+		panic(UnsupportedError{Reason: "cannot resume a synchronous library search or mana payment as a priority window"})
+	}
 	s.engine.validatePendingPrograms(g)
 	clone := g.Clone()
 	s.engine.runPriorityLoop(clone, policies, &TurnLog{})
@@ -129,6 +138,9 @@ func (s Simulator) ResolvePriority(g *game.Game, policies [game.NumPlayers]Playe
 // lethal — using the engine's authoritative combat sequence rather than a
 // heuristic estimate.
 func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.PlayerID, attackers action.DeclareAttackersAction, policies [game.NumPlayers]PlayerAgent) (*game.Game, bool) {
+	if synchronousSearchOrPayment(g) {
+		return nil, false
+	}
 	s.engine.validatePendingPrograms(g)
 	if g.Combat == nil || g.Turn.Step != game.StepDeclareAttackers {
 		return nil, false
@@ -174,6 +186,9 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 // those decisions without looking ahead. Unsupported resume positions panic
 // rather than silently skipping their remaining steps.
 func (s Simulator) PlayForward(g *game.Game, policies [game.NumPlayers]PlayerAgent, turns int) *game.Game {
+	if synchronousSearchOrPayment(g) {
+		panic(UnsupportedError{Reason: "cannot resume a synchronous library search or mana payment as a turn boundary"})
+	}
 	s.engine.validatePendingPrograms(g)
 	clone := g.Clone()
 	s.engine.finishCurrentTurn(clone, policies)

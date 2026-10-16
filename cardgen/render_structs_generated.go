@@ -531,6 +531,7 @@ func isZeroGameStaticAbility(v game.StaticAbility) bool {
 		!(v.CastOnlyAfterAttackedThisStep) &&
 		!(v.CastOnlyBeforeCombatDamageStep) &&
 		!(v.BeginsGameOnBattlefield) &&
+		!(v.CastWhileSearchingOwnLibrary) &&
 		!(v.Condition.Exists) &&
 		!(v.ZoneOfFunction != 0) &&
 		!(len(v.KeywordAbilities) > 0) &&
@@ -12478,70 +12479,74 @@ func (r Renderer) renderGameStaticAbilityLiteral(ctx *renderCtx, v game.StaticAb
 		lit5 := strconv.FormatBool(bool(v.BeginsGameOnBattlefield))
 		fields = append(fields, "BeginsGameOnBattlefield: "+lit5+",")
 	}
+	if v.CastWhileSearchingOwnLibrary {
+		lit6 := strconv.FormatBool(bool(v.CastWhileSearchingOwnLibrary))
+		fields = append(fields, "CastWhileSearchingOwnLibrary: "+lit6+",")
+	}
 	if v.Condition.Exists {
-		lit7, err8 := r.renderGameCondition(ctx, v.Condition.Val)
-		if err8 != nil {
-			return "", fmt.Errorf("game.StaticAbility.Condition: %w", err8)
+		lit8, err9 := r.renderGameCondition(ctx, v.Condition.Val)
+		if err9 != nil {
+			return "", fmt.Errorf("game.StaticAbility.Condition: %w", err9)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit6 := "opt.Val(" + lit7 + ")"
-		fields = append(fields, "Condition: "+lit6+",")
+		lit7 := "opt.Val(" + lit8 + ")"
+		fields = append(fields, "Condition: "+lit7+",")
 	}
 	if v.ZoneOfFunction != 0 {
-		lit9, err10 := enumLiteral(zoneTypeLiterals, "zone.Type", v.ZoneOfFunction)
-		if err10 != nil {
-			return "", fmt.Errorf("game.StaticAbility.ZoneOfFunction: %w", err10)
+		lit10, err11 := enumLiteral(zoneTypeLiterals, "zone.Type", v.ZoneOfFunction)
+		if err11 != nil {
+			return "", fmt.Errorf("game.StaticAbility.ZoneOfFunction: %w", err11)
 		}
 		ctx.need(importZone)
-		fields = append(fields, "ZoneOfFunction: "+lit9+",")
+		fields = append(fields, "ZoneOfFunction: "+lit10+",")
 	}
 	if len(v.KeywordAbilities) > 0 {
-		var items12 []string
-		for _, item13 := range v.KeywordAbilities {
-			lit14, err15 := r.renderGameKeywordAbilityValue(ctx, item13)
-			if err15 != nil {
-				return "", fmt.Errorf("game.StaticAbility.KeywordAbilities[]: %w", err15)
+		var items13 []string
+		for _, item14 := range v.KeywordAbilities {
+			lit15, err16 := r.renderGameKeywordAbilityValue(ctx, item14)
+			if err16 != nil {
+				return "", fmt.Errorf("game.StaticAbility.KeywordAbilities[]: %w", err16)
 			}
 			ctx.need(importGame)
-			items12 = append(items12, lit14+",")
+			items13 = append(items13, lit15+",")
 		}
-		lit11 := namedSliceLit("", "game.KeywordAbility", items12)
-		fields = append(fields, "KeywordAbilities: "+lit11+",")
+		lit12 := namedSliceLit("", "game.KeywordAbility", items13)
+		fields = append(fields, "KeywordAbilities: "+lit12+",")
 	}
 	if len(v.ContinuousEffects) > 0 {
-		var items17 []string
-		for _, item18 := range v.ContinuousEffects {
-			lit19, err20 := r.renderGameContinuousEffect(ctx, item18)
-			if err20 != nil {
-				return "", fmt.Errorf("game.StaticAbility.ContinuousEffects[]: %w", err20)
+		var items18 []string
+		for _, item19 := range v.ContinuousEffects {
+			lit20, err21 := r.renderGameContinuousEffect(ctx, item19)
+			if err21 != nil {
+				return "", fmt.Errorf("game.StaticAbility.ContinuousEffects[]: %w", err21)
 			}
 			ctx.need(importGame)
-			items17 = append(items17, lit19+",")
+			items18 = append(items18, lit20+",")
 		}
-		lit16 := namedSliceLit("", "game.ContinuousEffect", items17)
-		fields = append(fields, "ContinuousEffects: "+lit16+",")
+		lit17 := namedSliceLit("", "game.ContinuousEffect", items18)
+		fields = append(fields, "ContinuousEffects: "+lit17+",")
 	}
 	if len(v.RuleEffects) > 0 {
-		var items22 []string
-		for _, item23 := range v.RuleEffects {
-			lit24, err25 := r.renderGameRuleEffect(ctx, item23)
-			if err25 != nil {
-				return "", fmt.Errorf("game.StaticAbility.RuleEffects[]: %w", err25)
+		var items23 []string
+		for _, item24 := range v.RuleEffects {
+			lit25, err26 := r.renderGameRuleEffect(ctx, item24)
+			if err26 != nil {
+				return "", fmt.Errorf("game.StaticAbility.RuleEffects[]: %w", err26)
 			}
 			ctx.need(importGame)
-			items22 = append(items22, lit24+",")
+			items23 = append(items23, lit25+",")
 		}
-		lit21 := namedSliceLit("", "game.RuleEffect", items22)
-		fields = append(fields, "RuleEffects: "+lit21+",")
+		lit22 := namedSliceLit("", "game.RuleEffect", items23)
+		fields = append(fields, "RuleEffects: "+lit22+",")
 	}
 	if v.ZoneTransitionPolicy != 0 {
-		lit26, err27 := enumLiteral(gameZoneTransitionPolicyLiterals, "game.ZoneTransitionPolicy", v.ZoneTransitionPolicy)
-		if err27 != nil {
-			return "", fmt.Errorf("game.StaticAbility.ZoneTransitionPolicy: %w", err27)
+		lit27, err28 := enumLiteral(gameZoneTransitionPolicyLiterals, "game.ZoneTransitionPolicy", v.ZoneTransitionPolicy)
+		if err28 != nil {
+			return "", fmt.Errorf("game.StaticAbility.ZoneTransitionPolicy: %w", err28)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "ZoneTransitionPolicy: "+lit26+",")
+		fields = append(fields, "ZoneTransitionPolicy: "+lit27+",")
 	}
 	return structLit("game.StaticAbility", fields), nil
 }

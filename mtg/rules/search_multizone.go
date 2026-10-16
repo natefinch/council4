@@ -43,6 +43,7 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 			Controller: playerID,
 			Player:     playerID,
 		})
+		e.offerSearchCasts(g, playerID, agents, log)
 	}
 	type multiZoneCandidate struct {
 		cardID   id.ID

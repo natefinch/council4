@@ -332,8 +332,10 @@ func (e *Engine) searchLibrary(g *game.Game, obj *game.StackObject, agents [game
 		spec.MaxManaValueFromSacrificedCost = opt.V[int]{}
 	}
 	if len(spec.SlotFilters) != 0 {
+		e.offerSearchCasts(g, playerID, agents, log)
 		return e.searchLibrarySlots(g, obj, agents, log, playerID, controllerID, player, spec, control), nil
 	}
+	e.offerSearchCasts(g, playerID, agents, log)
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
 		if searchSpecMatches(g, obj, cardID, spec) {
@@ -440,6 +442,7 @@ func (e *Engine) searchLibraryAndGraveyard(g *game.Game, obj *game.StackObject, 
 	})
 	defer player.Library.Shuffle(e.rng)
 
+	e.offerSearchCasts(g, playerID, agents, log)
 	type tutorCandidate struct {
 		cardID   id.ID
 		fromZone zone.Type
@@ -519,6 +522,7 @@ func (e *Engine) searchLibraryRevealOnlyCards(g *game.Game, obj *game.StackObjec
 		Controller: playerID,
 		Player:     playerID,
 	})
+	e.offerSearchCasts(g, playerID, agents, log)
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
 		if searchSpecMatches(g, obj, cardID, spec) {

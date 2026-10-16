@@ -201,12 +201,15 @@ type StaticAbility struct {
 	// where the card starts the game, not how it enters during play, and it has no
 	// effect once the game has begun.
 	BeginsGameOnBattlefield bool
-	Condition               opt.V[Condition]
-	ZoneOfFunction          zone.Type
-	KeywordAbilities        []KeywordAbility
-	ContinuousEffects       []ContinuousEffect
-	RuleEffects             []RuleEffect
-	ZoneTransitionPolicy    ZoneTransitionPolicy
+	// CastWhileSearchingOwnLibrary grants this card's library-only timing
+	// permission before its owner finds any cards in a real library search.
+	CastWhileSearchingOwnLibrary bool
+	Condition                    opt.V[Condition]
+	ZoneOfFunction               zone.Type
+	KeywordAbilities             []KeywordAbility
+	ContinuousEffects            []ContinuousEffect
+	RuleEffects                  []RuleEffect
+	ZoneTransitionPolicy         ZoneTransitionPolicy
 }
 
 // ReplacementAbility is a replacement/prevention ability on a printed face.

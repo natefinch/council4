@@ -534,6 +534,10 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 	case *ChapterAbility:
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 	case *StaticAbility:
+		if abilityBody.CastWhileSearchingOwnLibrary && abilityBody.ZoneOfFunction != zone.Library {
+			v.add(faceName, appendPath(path, "ZoneOfFunction"), CardDefIssueInvalidAbilityBody,
+				"search-time casting permission must function from the library")
+		}
 		if abilityBody.ZoneTransitionPolicy < ZoneTransitionOrdinary ||
 			abilityBody.ZoneTransitionPolicy > ZoneTransitionRetainCountersExceptHandLibrary {
 			v.add(faceName, appendPath(path, "ZoneTransitionPolicy"), CardDefIssueInvalidAbilityBody, "unknown zone-transition policy")

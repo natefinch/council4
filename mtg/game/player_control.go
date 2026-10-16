@@ -32,6 +32,22 @@ type SearchControlScope struct {
 	Player     PlayerID
 	Controller PlayerID
 	Override   bool
+	BeforeFind bool
+}
+
+// SearchCastingAllowed reports a real own-library search's before-find window.
+func (g *Game) SearchCastingAllowed(player PlayerID) bool {
+	for i := len(g.SearchControlScopes) - 1; i >= 0; i-- {
+		if scope := g.SearchControlScopes[i]; scope.Player == player {
+			return scope.BeforeFind && g.controlPlayerAlive(player)
+		}
+	}
+	return false
+}
+
+// ManaPaymentAllowed permits only the actor currently paying a mana cost.
+func (g *Game) ManaPaymentAllowed(player PlayerID) bool {
+	return len(g.ManaPaymentScopes) > 0 && g.ManaPaymentScopes[len(g.ManaPaymentScopes)-1] == player
 }
 
 // SchedulePlayerControlEffect overwrites older pending effects for the same next

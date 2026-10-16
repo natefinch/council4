@@ -1,7 +1,7 @@
 # Card-Support Planning Report
 
 <!-- production-inventory:start -->
-**Legacy compiler maintenance only, not the authored-card roadmap.** Production registry: **17972 entries, 17972 loadable, 49 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+**Legacy compiler maintenance only, not the authored-card roadmap.** Production registry: **17973 entries, 17973 loadable, 50 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 Working authored identities are excluded from production unsupported status. See [support-inventory.md](support-inventory.md); diagnostic counts and historical routing below remain frozen compiler evidence, not loadability or behavioral claims.
 <!-- production-inventory:end -->
 

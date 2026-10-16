@@ -50,6 +50,7 @@ func (g *Game) Clone() *Game {
 		PlayerControlEffects:               cloneSlice(g.PlayerControlEffects),
 		ControlGrantsEnded:                 g.ControlGrantsEnded,
 		SearchControlScopes:                cloneSlice(g.SearchControlScopes),
+		ManaPaymentScopes:                  cloneSlice(g.ManaPaymentScopes),
 		SkippedTurns:                       cloneComparableMap(g.SkippedTurns),
 		CostModifiers:                      cloneSlice(g.CostModifiers),
 		RuleEffects:                        cloneSlicePtr(g.RuleEffects, fixupRuleEffect),
@@ -97,6 +98,67 @@ func (g *Game) Clone() *Game {
 	clone.RNG = rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15))
 
 	return clone
+}
+
+// RestoreReversibleManaPayment consumes a payment checkpoint after the Engine
+// has excluded CR 733.1's irreversible actions and repaired live object pointers.
+// Diagnostics, scopes, ID issuance, RNG and transient Engine contexts continue;
+// this does not resume or clone a synchronous resolving call stack.
+func (g *Game) RestoreReversibleManaPayment(before *Game) {
+	g.DrawParticipants = before.DrawParticipants
+	g.Players = before.Players
+	g.Battlefield = before.Battlefield
+	g.CardInstances = before.CardInstances
+	g.CardNameCatalog = before.CardNameCatalog
+	g.CommanderIDs = before.CommanderIDs
+	g.Stack = before.Stack
+	g.ContinuousEffects = before.ContinuousEffects
+	g.DelayedTriggers = before.DelayedTriggers
+	g.PendingReflexiveTriggers = before.PendingReflexiveTriggers
+	g.PendingRoomAbilities = before.PendingRoomAbilities
+	g.PendingInitiativeVentures = before.PendingInitiativeVentures
+	g.PreventionShields = before.PreventionShields
+	g.ReplacementDecisions = before.ReplacementDecisions
+	g.ReplacementEffects = before.ReplacementEffects
+	g.SkippedSteps = before.SkippedSteps
+	g.PlayerControlEffects = before.PlayerControlEffects
+	g.ControlGrantsEnded = before.ControlGrantsEnded
+	g.SkippedTurns = before.SkippedTurns
+	g.CostModifiers = before.CostModifiers
+	g.RuleEffects = before.RuleEffects
+	g.SuspendedCards = before.SuspendedCards
+	g.ReboundCards = before.ReboundCards
+	g.AdventureCards = before.AdventureCards
+	g.PlottedCards = before.PlottedCards
+	g.ForetoldCards = before.ForetoldCards
+	g.CardCounters = before.CardCounters
+	g.ExileCounterExiledBy = before.ExileCounterExiledBy
+	g.LastKnownInformation = before.LastKnownInformation
+	g.LinkedObjects = before.LinkedObjects
+	g.Turn = before.Turn
+	g.TurnOrder = before.TurnOrder
+	g.FailedDraws = before.FailedDraws
+	g.MarkedToLoseGame = before.MarkedToLoseGame
+	g.Combat = before.Combat
+	g.Emblems = before.Emblems
+	g.DayNight = before.DayNight
+	g.Events = before.Events
+	g.EventTurnStarts = before.EventTurnStarts
+	g.TriggerEventCursor = before.TriggerEventCursor
+	g.CommanderEventCursor = before.CommanderEventCursor
+	g.StateTriggerLatches = before.StateTriggerLatches
+	g.FiredManaSpendRiders = before.FiredManaSpendRiders
+	g.ActivatedAbilitiesThisTurn = before.ActivatedAbilitiesThisTurn
+	g.AbilityActivationsThisTurn = before.AbilityActivationsThisTurn
+	g.ExilePlayPermissionUsedThisTurn = before.ExilePlayPermissionUsedThisTurn
+	g.PermanentTypePlayUsesThisTurn = before.PermanentTypePlayUsesThisTurn
+	g.TriggeredAbilitiesThisTurn = before.TriggeredAbilitiesThisTurn
+	g.ResolvedTriggeredAbilitiesThisTurn = before.ResolvedTriggeredAbilitiesThisTurn
+	g.ResolvedActivatedAbilitiesThisTurn = before.ResolvedActivatedAbilitiesThisTurn
+	g.ChosenModesThisTurn = before.ChosenModesThisTurn
+	g.attachedDeathDepartures = before.attachedDeathDepartures
+	g.triggerOriginUses = before.triggerOriginUses
+	g.triggerOriginTurn = before.triggerOriginTurn
 }
 
 func cloneSliceMap[K comparable, V any](source map[K][]V) map[K][]V {

@@ -1,6 +1,9 @@
 package payment
 
 import (
+	"slices"
+
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
 
@@ -31,6 +34,45 @@ func (p Planner) PaySpellCosts(req SpellRequest) (SpellPaymentResult, bool) {
 // with enough detail for the Engine's choice layer to present and track them.
 func (p Planner) PayableSpellOptions(req SpellRequest) []SpellOptionSummary {
 	return payableSpellOptionsFromState(p.s, req)
+}
+
+// PrepareSpellCosts locks each available total before mana abilities change
+// cost-modifying sources. Unlike PayableSpellOptions, it includes costs that
+// may become payable by activating a manual mana ability.
+func (p Planner) PrepareSpellCosts(req SpellRequest) []PreparedSpellCost {
+	var result []PreparedSpellCost
+	for _, option := range spellCostOptionsForRequest(p.s, req) {
+		resolved, ok := resolveManaCostX(option.manaCost, req.XValue)
+		if !ok {
+			continue
+		}
+		option.manaCost = resolved
+		option = applyCostModifiers(p.s, costModificationContext{
+			player: req.PlayerID, card: option.card, cardID: req.CardID, sourceZone: req.SourceZone,
+			targets: req.Targets, bargained: option.bargained, bestowed: req.Bestowed, option: option,
+		})
+		option.additionalCosts = slices.Clone(option.additionalCosts)
+		lockedCosts := option.additionalCosts[:0]
+		for _, additional := range option.additionalCosts {
+			if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
+				additional.Amount = p.s.AdditionalDynamicAmountValue(req.PlayerID, additional.AmountDynamic)
+				additional.AmountDynamic = cost.AdditionalDynamicAmountNone
+				additional.AmountFromX = false
+				if additional.Amount == 0 {
+					continue
+				}
+			}
+			lockedCosts = append(lockedCosts, additional)
+		}
+		option.additionalCosts = lockedCosts
+		option.locked = true
+		result = append(result, PreparedSpellCost{
+			Summary: SpellOptionSummary{Index: option.index, Label: option.label,
+				ManaCost: option.manaCost, AdditionalCosts: option.additionalCosts, CastPermission: option.castPermission},
+			option: option,
+		})
+	}
+	return result
 }
 
 // BuildAbilityCostPlan reports whether a payment plan can be built for the

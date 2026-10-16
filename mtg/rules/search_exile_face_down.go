@@ -66,6 +66,7 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 		Controller: playerID,
 		Player:     playerID,
 	})
+	e.offerSearchCasts(g, playerID, agents, log)
 	var candidates []id.ID
 	for _, cardID := range player.Library.All() {
 		if searchSpecMatches(g, obj, cardID, spec) {

@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -31,22 +33,26 @@ func (e *Engine) castPaidTargetedSpell(g *game.Game, controllerID game.PlayerID,
 // controllerID during resolution, paying its normal mana and additional costs
 // and pushing the spell to the stack under controllerID's control. It mirrors
 // castFreeSpellFromSource but runs the spell-cost payment step (CR 601.2f-h)
-// with the standard rollback on an unpaid or declined cost (CR 728): the spell
+// with the standard rollback on an unpaid or declined cost (CR 733): the spell
 // is taken back off the stack and the card returned to its source zone. The
 // source player and controller differ only for a targeted cast from another
 // player's zone.
 func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) {
+	if sourcePlayer == nil {
 		return false
 	}
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
 		return false
 	}
+	searchCast := fromZone == zone.Library && sourcePlayer == g.Players[controllerID] && searchCastCardAllowed(g, controllerID, card)
+	if !searchCast && !castSourceContains(sourcePlayer, cardID, fromZone) {
+		return false
+	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	// The cast ignores priority and sorcery-speed timing but still obeys printed
 	// cast restrictions, cast prohibitions, and per-turn cast limits (CR 601.3e).
-	if !cardCastRestrictionsSatisfied(g, controllerID, spellDef) ||
+	if castFromZoneProhibited(g, controllerID, fromZone) || !cardCastRestrictionsSatisfied(g, controllerID, spellDef) ||
 		spellCastProhibited(g, controllerID, spellDef) ||
 		spellCastLimitReached(g, controllerID, spellDef) || !isSupportedSpell(spellDef) {
 		return false
@@ -69,8 +75,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		ChosenModes: modes, Targets: targets,
 		CastPermissions: castPermissionsForZone(g, controllerID, cardID, fromZone, game.FaceFront),
 	}
-	if !paymentOrch.canPaySpellCosts(g, request) {
-		g.Execution.InvalidChoices++
+	if !paymentOrch.canPaySpellCosts(g, request) && !e.hasManualPaymentManaAbility(g, controllerID) {
 		return false
 	}
 	// CR 601.2a: proposing the cast moves the card to the stack before its costs
@@ -91,19 +96,38 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		SourceZone:   fromZone,
 	}
 	counterTransition := prepareCastCounterTransition(g, card, fromZone)
+	libraryBefore := sourcePlayer.Library.All()
+	restoreSource := func() {
+		if fromZone != zone.Library {
+			restoreCastSourceCard(sourcePlayer, cardID, fromZone)
+			return
+		}
+		// Costs can remove other cards from the library. Restore before the next
+		// surviving original neighbour rather than moving the proposal to the top.
+		for _, next := range libraryBefore[slices.Index(libraryBefore, cardID)+1:] {
+			if index := slices.Index(sourcePlayer.Library.All(), next); index >= 0 {
+				sourcePlayer.Library.InsertAt(index, cardID)
+				return
+			}
+		}
+		sourcePlayer.Library.AddToBottom(cardID)
+	}
 	if !removeCastSourceCard(g, sourcePlayer, cardID, fromZone) {
 		return false
 	}
 	counterTransition.apply(g)
 	g.Stack.Push(obj)
 	targetEvents := prepareTargetEvents(g, obj)
-	paymentOption, ok := e.chooseCastPaymentOption(g, controllerID, request, agents, log)
+	prepared, ok := e.choosePreparedSpellCost(g, request, agents, log)
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(sourcePlayer, cardID, fromZone)
+		restoreSource()
 		counterTransition.undo(g)
 		return false
 	}
+	request.PreparedCost = &prepared
+	paymentOption := prepared.Summary
+	undoMana := e.activateManualPaymentManaAbilities(g, controllerID, agents, log)
 	prefs := e.paymentPreferencesForCostFromSource(g, controllerID, paymentOption.ManaCost,
 		paymentOption.AdditionalCosts, cast.XValue, cardID, fromZone, agents, log)
 	prefs.AlternativeIndex = paymentOption.Index
@@ -111,10 +135,11 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, controllerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
-		// CR 728: the proposed cast is illegal because its costs can't or won't be
+		// CR 733: the proposed cast is illegal because its costs can't or won't be
 		// paid, so the proposal is undone.
+		undoMana()
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(sourcePlayer, cardID, fromZone)
+		restoreSource()
 		counterTransition.undo(g)
 		return false
 	}

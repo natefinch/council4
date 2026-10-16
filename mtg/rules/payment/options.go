@@ -26,6 +26,7 @@ type spellCostOption struct {
 	additionalCosts []cost.Additional
 	castPermission  SpellCastPermission
 	bargained       bool
+	locked          bool
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
@@ -143,6 +144,9 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 }
 
 func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
+	if req.PreparedCost != nil {
+		return []spellCostOption{req.PreparedCost.option}
+	}
 	options := spellCostOptionsForRequestWithoutModes(s, req)
 	options = applyAdditionalCostChoices(options, req.Card)
 	addSpreeModeCosts(options, req.Card, req.ChosenModes)

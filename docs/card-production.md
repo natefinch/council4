@@ -178,6 +178,13 @@ cross-player simultaneous stages, Aura decisions use the pre-stage board in
 APNAP order, and owners order the remaining revealed cards on the library bottom.
 Shared entry replacements and event-time trigger snapshots preserve stage
 boundaries without placing triggers on the stack during resolution.
+The #3286 follow-up supplies Panglacial Wurm's inspectable library-only static
+permission during an actual own-library search, before finding. Shared paid
+announcement and mana abilities preserve the original actor/payer under search
+or turn control, fix total costs before mana activations, and resume against live
+library candidates. Failed proposals preserve order and reverse reversible mana
+payments, while CR 733.1 forbids undoing an actual draw, library move, reveal or
+shuffle. Named Engine/Simulator and JSON replay scenarios cover these boundaries.
 The #3284 follow-up separates exact X/multikicker legality
 from policy samples. A production X=21 scenario also proved that six existing
 compiler-loaded definitions truncated counted targets at twenty. Their complete

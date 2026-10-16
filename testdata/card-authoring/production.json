@@ -40,18 +40,33 @@
  "rules_evidence": {
   "rules_sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca",
   "comprehensive_rules": [
+   "117.2e",
    "111.10a",
    "400.7",
    "601.2c",
+   "601.2f-h",
+   "605.3",
    "608.2b/h",
    "614/616",
    "700.7",
    "701.6",
    "701.8",
    "701.23",
-   "702.12/19"
+   "702.12/19",
+   "733.1"
   ],
   "cards": [
+   {
+    "oracle_id": "49d4aef7-d2d1-4f66-bc2a-79ec8cc96565",
+    "revision": "063bb28b-5e32-4f31-a208-16b653edf413",
+    "oracle_text_sha256": "296ce6511cbc7303f935edcdcf7edfd013a7a39f0fea103f5af41cc6baab8e66",
+    "rulings_uri": "https://api.scryfall.com/cards/063bb28b-5e32-4f31-a208-16b653edf413/rulings",
+    "retrieved": "2026-10-15",
+    "response_sha256": "87059e0c0aeece44012e962cdb4cbfe258596837e477ef97e912747b6b69764b",
+    "ruling_dates": [
+     "2006-07-15"
+    ]
+   },
    {
     "oracle_id": "50a228a2-c8b6-4416-b0ab-417926a9b9b6",
     "revision": "aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e",
@@ -47552,10 +47567,9 @@
    "oracle_id": "49d4aef7-d2d1-4f66-bc2a-79ec8cc96565",
    "revision": "063bb28b-5e32-4f31-a208-16b653edf413",
    "name": "Panglacial Wurm",
-   "status": "blocked",
-   "family": "reviewed-blocker",
-   "blocker": 3286,
-   "reason": "No paid library cast window inside own search before finds, with normal mana ability/payment and search resumption. Top-library/priority/free-cast permission is not equivalent. WotC 2006-07-15; CR 601/701.23/117."
+   "status": "implemented-verified",
+   "family": "search-time-casting",
+   "evidence": "mtg/rules/panglacial_wurm_test.go; mtg/game/search_casting_test.go; mtg/sim/panglacial_wurm_replay_test.go; before-find own-library paid casts, locked costs/manual mana, live search candidates, control/private visibility, exact order/rollback and CR733.1 irreversible exceptions, deferred stack/triggers, Simulator/clone boundaries and JSON replay; #3286"
   },
   {
    "oracle_id": "50a228a2-c8b6-4416-b0ab-417926a9b9b6",

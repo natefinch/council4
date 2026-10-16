@@ -107,6 +107,24 @@ card is added only after its entire behavior and relevant scenarios are complete
   Reveal-only searches with `SearchMustFindIfAvailable` require a fixed positive,
   unrestricted quantity; the minimum is the full count, clamped to availability
   (CR 701.23d), rather than merely one card.
+  Every real library-search path opens the same Engine-owned before-find
+  opportunity for `StaticAbility{ZoneOfFunction: zone.Library,
+  CastWhileSearchingOwnLibrary: true}`. Panglacial Wurm uses this inspectable
+  static permission and trample, with no dummy resolving program. A look at the
+  top, another player's search, ordinary priority, or an already closed search
+  grants no permission. Cast cards leave the library before payment and cannot
+  be found; candidates are rebuilt after mana abilities change the library.
+  The searching actor pays ordinary announced costs, even when another player
+  controls the decisions. Total costs are fixed before manual mana activations;
+  only that payer receives mana-ability choices, not ordinary priority.
+  Unpaid proposals restore the original library position and reverse reversible
+  mana activations. CR 733.1's irreversible draws/library moves/reveals/shuffles
+  are retained, including mana consumed by those activations. Cast spells and
+  their triggers wait for the enclosing search's normal completion boundary.
+  Scope metadata clones by value for observations and supported outer simulation
+  boundaries; a mid-search/payment clone is not a saved Go call stack.
+  Ordinary actions are rejected there, and attempts to resume priority/turn
+  execution report unsupported continuation explicitly.
 - `View().TargetCards()` mints exact invocation-local handles for the still-legal
   announced cards in public graveyards or face-up exile. Illegal targets and
   departed incarnations are omitted; hidden-zone cards are not disclosed.

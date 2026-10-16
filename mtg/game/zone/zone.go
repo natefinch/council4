@@ -122,6 +122,11 @@ func (z *Zone) AddToBottom(cardID id.ID) {
 	z.cards = append(z.cards, cardID)
 }
 
+// InsertAt restores a removed card without reordering the remaining cards.
+func (z *Zone) InsertAt(index int, cardID id.ID) {
+	z.cards = slices.Insert(z.cards, index, cardID)
+}
+
 // Remove removes a card from the zone. It reports whether the card was found.
 func (z *Zone) Remove(cardID id.ID) bool {
 	for i, card := range z.cards {
