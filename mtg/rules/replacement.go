@@ -1199,11 +1199,9 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 			continue
 		}
 		replacement := ability.Replacement
-		// Group enters-with-counters replacements ("Each other creature you
-		// control enters ...") apply to OTHER entering permanents through the
-		// registered global matching path, not to the source itself; skip them
-		// here so the source does not gain its own group counters on entry.
-		if replacement.EntersWithCountersOthers {
+		// Group entry replacements apply from sources already on the battlefield,
+		// not from the entering source's own printed group ability (CR 614.12).
+		if replacement.EntersWithCountersOthers || replacement.EntersTappedOthers || replacement.EntersUntappedOthers {
 			continue
 		}
 		replacement.Controller = event.Controller
@@ -1244,6 +1242,18 @@ func optionalEntryReplacementDeclined(ctx enterBattlefieldContext, g *game.Game,
 	if def == nil || card == nil || permanent.FaceDown {
 		return false
 	}
+	destination := optionalEntryReplacementDestination(ctx, g, permanent)
+	if !destination.Exists {
+		return false
+	}
+	moveCardBetweenZones(g, card.Owner, card.ID, fromZone, destination.Val)
+	return true
+}
+
+func optionalEntryReplacementDestination(ctx enterBattlefieldContext, g *game.Game, permanent *game.Permanent) opt.V[zone.Type] {
+	if permanent == nil || permanent.FaceDown {
+		return opt.V[zone.Type]{}
+	}
 	for _, body := range permanentEffectiveAbilitiesView(g, permanent) {
 		ability, ok := body.(*game.ReplacementAbility)
 		if !ok {
@@ -1253,12 +1263,11 @@ func optionalEntryReplacementDeclined(ctx enterBattlefieldContext, g *game.Game,
 			continue
 		}
 		if enterBattlefieldPaymentPaid(ctx, g, permanent.Controller, permanent, ability.UnlessPaid.Val) {
-			return false
+			return opt.V[zone.Type]{}
 		}
-		moveCardBetweenZones(g, card.Owner, card.ID, fromZone, ability.Replacement.ReplaceToZone)
-		return true
+		return opt.Val(ability.Replacement.ReplaceToZone)
 	}
-	return false
+	return opt.V[zone.Type]{}
 }
 
 func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, playerID game.PlayerID, source *game.Permanent, res game.ResolutionPayment) bool {

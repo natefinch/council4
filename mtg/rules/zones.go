@@ -224,6 +224,7 @@ type preparedCardPermanentEntry struct {
 	continuous []game.ContinuousEffect
 	options    permanentCreationOptions
 	retained   counter.Set
+	auraHost   *game.Permanent
 }
 
 func prepareCardPermanentFaceForSimultaneousEntry(
@@ -287,8 +288,12 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	for _, placement := range options.Counters {
 		permanent.Counters.Add(placement.Kind, placement.Amount)
 	}
-	if !commitAuraEffectAttachment(g, permanent, options) {
+	if !prepareAuraEffectAttachment(g, permanent, options) {
 		return preparedCardPermanentEntry{}, false
+	}
+	var auraHost *game.Permanent
+	if permanent.AttachedTo.Exists {
+		auraHost, _ = permanentByObjectID(g, permanent.AttachedTo.Val)
 	}
 	return preparedCardPermanentEntry{
 		card:       card,
@@ -298,10 +303,16 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		continuous: continuous,
 		options:    options,
 		retained:   retainedEntryCounters(g, card, fromZone, face, options.SourceFaceDown),
+		auraHost:   auraHost,
 	}, true
 }
 
 func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCardPermanentEntry) {
+	for i := range entries {
+		if host := entries[i].auraHost; host != nil {
+			host.Attachments = append(host.Attachments, entries[i].permanent.ObjectID)
+		}
+	}
 	for i := range entries {
 		entry := &entries[i]
 		applyInitialContinuousEffects(g, entry.permanent, entry.continuous)

@@ -42,7 +42,12 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCycled, event.Player)
 	}
 	event.TriggeredAbilities = append(event.TriggeredAbilities, captureLibraryGraveyardSourceTriggers(g, event)...)
+	if event.ControlledTriggerDoublers == nil && eventPermanentEnteredOrLeft(&event) {
+		event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
+	}
 	if !event.TriggeredAbilitiesCaptured && (event.Kind == game.EventDamageDealt ||
+		event.Kind == game.EventPermanentEnteredBattlefield ||
+		event.Kind == game.EventZoneChanged ||
 		event.Kind == game.EventCardDrawn ||
 		event.Kind == game.EventBeginningOfStep ||
 		event.Kind == game.EventAttackerDeclared ||
@@ -52,15 +57,12 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 		event.Kind == game.EventObjectBecameTarget ||
 		event.Kind == game.EventFight ||
 		event.Kind == game.EventCompletedDungeon) {
-		event.TriggeredAbilities = captureEventTriggeredAbilities(g, event)
+		event.TriggeredAbilities = append(event.TriggeredAbilities, captureEventTriggeredAbilities(g, event)...)
 		event.TriggeredAbilitiesCaptured = true
 	}
 	if !event.TriggeredAbilitiesCaptured {
 		if doublers := captureChosenTypeTriggerDoublers(g); len(doublers) > 0 {
 			event.ChosenTypeTriggerDoublers = &game.ChosenTypeTriggerDoublerSnapshot{Doublers: doublers}
-		}
-		if event.ControlledTriggerDoublers == nil && eventPermanentEnteredOrLeft(&event) {
-			event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
 		}
 	}
 	event.TriggeredAbilities = append(event.TriggeredAbilities, captureInherentMonarchTriggers(g, event)...)

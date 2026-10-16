@@ -64,11 +64,17 @@ func TestNakiaCommanderEntersBecomeMonarch(t *testing.T) {
 	engine := NewEngine(nil)
 	addCombatPermanent(g, game.Player1, nakiaMonarchTriggerDef())
 
-	commander := enterBattlefieldFromHand(t, engine, g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+	commanderID := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name:  "Test Commander",
 		Types: []types.Card{types.Creature},
 	}})
-	g.CommanderIDs[commander.CardInstanceID] = true
+	g.CommanderIDs[commanderID] = true
+	card, _ := g.GetCardInstance(commanderID)
+	g.Players[game.Player1].Hand.Remove(commanderID)
+	if _, entered := createCardPermanentFaceWithOptions(engine, g, card, game.Player1, zone.Hand, game.FaceFront, nil,
+		permanentCreationOptions{}, [game.NumPlayers]PlayerAgent{}, nil); !entered {
+		t.Fatal("commander did not enter the battlefield")
+	}
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("commander-enters trigger was not put on the stack")

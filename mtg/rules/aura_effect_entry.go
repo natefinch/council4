@@ -68,6 +68,17 @@ func auraEffectAttachmentLegal(g *game.Game, aura *game.Permanent, target game.T
 }
 
 func commitAuraEffectAttachment(g *game.Game, aura *game.Permanent, options permanentCreationOptions) bool {
+	if !prepareAuraEffectAttachment(g, aura, options) {
+		return false
+	}
+	if aura.AttachedTo.Exists {
+		host, _ := permanentByObjectID(g, aura.AttachedTo.Val)
+		host.Attachments = append(host.Attachments, aura.ObjectID)
+	}
+	return true
+}
+
+func prepareAuraEffectAttachment(g *game.Game, aura *game.Permanent, options permanentCreationOptions) bool {
 	if !options.auraAttachment.Exists {
 		return true
 	}
@@ -76,9 +87,7 @@ func commitAuraEffectAttachment(g *game.Game, aura *game.Permanent, options perm
 		return false
 	}
 	if target.Kind == game.TargetPermanent {
-		host, _ := permanentByObjectID(g, target.PermanentID)
-		aura.AttachedTo = opt.Val(host.ObjectID)
-		host.Attachments = append(host.Attachments, aura.ObjectID)
+		aura.AttachedTo = opt.Val(target.PermanentID)
 	} else {
 		aura.AttachedToPlayer = opt.Val(target.PlayerID)
 	}

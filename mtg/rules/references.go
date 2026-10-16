@@ -343,6 +343,8 @@ func (r referenceResolver) player(ref game.PlayerReference) (game.PlayerID, bool
 	var playerID game.PlayerID
 	var ok bool
 	switch ref.Kind() {
+	case game.PlayerReferenceCaptured:
+		playerID, ok = ref.CapturedPlayer()
 	case game.PlayerReferenceController:
 		playerID, ok = r.resolvingController(), true
 	case game.PlayerReferenceTargetPlayer:

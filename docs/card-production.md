@@ -168,10 +168,17 @@ copies, independent Simulator branches and mixed production execution. Search
 choice logs retain replay indices but not private option identities. The original
 third-batch selection history and frozen pilot evidence remain unchanged.
 
-The original six frozen pilot blockers remain authoritative: #170 Reiterate,
+The original six frozen pilot blockers record that run's outcomes: #170 Reiterate,
 #2161 Doomsday, #3285 Necromancy, #3286 Panglacial Wurm, #3287 Possibility Storm,
 #3288 Warp World. The pilot's frozen pending fields and fourteen/six outcomes
-were not rewritten. The #3284 follow-up separates exact X/multikicker legality
+were not rewritten; later exact admissions use current production evidence.
+The #3288 follow-up now admits complete authored Warp World: pre-move ownership
+counts include tokens and diverted commanders, revealed cards enter in two
+cross-player simultaneous stages, Aura decisions use the pre-stage board in
+APNAP order, and owners order the remaining revealed cards on the library bottom.
+Shared entry replacements and event-time trigger snapshots preserve stage
+boundaries without placing triggers on the stack during resolution.
+The #3284 follow-up separates exact X/multikicker legality
 from policy samples. A production X=21 scenario also proved that six existing
 compiler-loaded definitions truncated counted targets at twenty. Their complete
 authored replacements now execute exact target batches: Death Denied, Wildest
@@ -180,9 +187,11 @@ Souls. This is repair of existing loaded cards, not another production batch.
 Generated definitions and the pinned corpus are retained; public target handles,
 replacement-aware moves and the existing simultaneous battlefield-source batch
 are shared Engine operations. Current registry associations point to the exact
-replacements. #3126 (combat assignment completeness) remains explicit; budget
-stops never become rules draws. Worldgorger's prior finite recurrence scopes are
-unchanged.
+replacements. The #3126 follow-up separates complete typed/staged combat
+declaration legality from bounded policy samples, including joint blocking
+requirements and mixed defenders. Policy budgets and incomplete evaluation
+knowledge remain explicit; budget stops never become rules draws. Worldgorger's
+prior finite recurrence scopes are unchanged.
 
 ## Live backlog reconciliation
 

@@ -1,6 +1,6 @@
 # Cards without exact authored production support
 
-Production registry: **17971 entries, 17971 loadable, 48 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17972 entries, 17972 loadable, 49 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `44917919cfe3d26ec77159b31b19be9500ae39cc432f06a7207ee7fb65666338`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -13740,7 +13740,6 @@ Compiler rejection is maintenance evidence, not a gameplay verdict. The list bel
 - **Warmonger** (`bae92332-1a0b-476b-8719-190e8d8cc03a`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Warmonger's Chariot** (`90f4ec87-d33d-46c1-8cc7-3e7ad3f8ad70`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Warning** (`c5ba0f0f-65c5-4ffa-987a-f320b401ec8f`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
-- **Warp World** (`50a228a2-c8b6-4416-b0ab-417926a9b9b6`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Warpath** (`413520c7-5227-406f-8861-e844c153e5b0`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Warped Devotion** (`22c49415-e8d2-4b4c-b021-57ee54670f86`) — compiler rejected; legacy candidate entries: 0; exact production identity not established
 - **Warped Tusker** (`0a994401-d37c-4e30-9410-422e7ae5a715`) — compiler rejected; legacy candidate entries: 0; exact production identity not established

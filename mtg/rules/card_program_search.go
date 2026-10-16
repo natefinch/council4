@@ -9,6 +9,28 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
+func (c *programContext) mintFoundCard(card *game.CardInstance, from zone.Type) cardprogram.FoundCard {
+	if c.found == nil {
+		c.found = make(map[game.ObjectID]game.ZoneCardSnapshot)
+	}
+	if c.foundZones == nil {
+		c.foundZones = make(map[game.ObjectID]zone.Type)
+	}
+	identity := game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion}
+	c.found[card.ID], c.foundZones[card.ID] = identity, from
+	handle := cardprogram.FoundCard{Identity: identity, Info: cardChoiceInfo(c.game, card.ID).Val}
+	if from == zone.Library {
+		if c.libraryEpoch == nil {
+			c.libraryEpoch = make(map[game.ObjectID]uint64)
+		}
+		handle.LibraryEpoch = c.game.Players[card.Owner].Library.ReorderVersion()
+		c.libraryEpoch[card.ID] = handle.LibraryEpoch
+	} else {
+		delete(c.libraryEpoch, card.ID)
+	}
+	return handle
+}
+
 func (c *programContext) TargetCards() ([]cardprogram.FoundCard, error) {
 	if err := c.valid(); err != nil {
 		return nil, err
@@ -29,16 +51,7 @@ func (c *programContext) TargetCards() ([]cardprogram.FoundCard, error) {
 			return nil, errors.New("authored target handles require public graveyard or face-up exile cards")
 		}
 		seen[card.ID] = true
-		if c.found == nil {
-			c.found = make(map[game.ObjectID]game.ZoneCardSnapshot)
-		}
-		if c.foundZones == nil {
-			c.foundZones = make(map[game.ObjectID]zone.Type)
-		}
-		identity := game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion}
-		c.found[card.ID], c.foundZones[card.ID] = identity, from
-		delete(c.libraryEpoch, card.ID)
-		targets = append(targets, cardprogram.FoundCard{Identity: identity, Info: cardChoiceInfo(c.game, card.ID).Val})
+		targets = append(targets, c.mintFoundCard(card, from))
 	}
 	return targets, nil
 }
@@ -59,21 +72,9 @@ func (c *programContext) Search(operation game.Search) (cardprogram.SearchResult
 		return outcome, nil
 	}
 	found := c.engine.searchLibraryRevealOnlyCards(c.game, c.obj, c.agents, c.log, player, operation.Spec, operation.Amount.Value())
-	if c.libraryEpoch == nil {
-		c.libraryEpoch = make(map[game.ObjectID]uint64)
-	}
 	for _, cardID := range found {
 		card, _ := c.game.GetCardInstance(cardID)
-		identity := game.ZoneCardSnapshot{CardID: cardID, ZoneVersion: card.ZoneVersion}
-		if c.found == nil {
-			c.found = make(map[game.ObjectID]game.ZoneCardSnapshot)
-		}
-		c.found[cardID] = identity
-		delete(c.foundZones, cardID)
-		c.libraryEpoch[cardID] = c.game.Players[player].Library.ReorderVersion()
-		outcome.Cards = append(outcome.Cards, cardprogram.FoundCard{
-			Identity: identity, Info: cardChoiceInfo(c.game, cardID).Val, LibraryEpoch: c.libraryEpoch[cardID],
-		})
+		outcome.Cards = append(outcome.Cards, c.mintFoundCard(card, zone.Library))
 	}
 	return outcome, nil
 }
@@ -83,9 +84,21 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 		return nil, err
 	}
 	seen := make(map[game.ObjectID]bool)
+	entry, bottom, ordinary := false, false, false
 	for _, placement := range placements {
-		if placement.Destination != zone.Graveyard && placement.Destination != zone.Hand && placement.Destination != zone.Exile {
-			return nil, errors.New("authored found-card placement requires hand, graveyard or exile")
+		if placement.LibraryBottom && placement.Destination != zone.Library ||
+			placement.Destination == zone.Library && !placement.LibraryBottom {
+			return nil, errors.New("authored library placement requires an explicit bottom position")
+		}
+		switch placement.Destination {
+		case zone.Battlefield:
+			entry = true
+		case zone.Library:
+			bottom = true
+		case zone.Graveyard, zone.Hand, zone.Exile:
+			ordinary = true
+		default:
+			return nil, errors.New("authored found-card placement has an unsupported destination")
 		}
 		for _, member := range placement.Cards {
 			minted, available := c.found[member.Identity.CardID]
@@ -95,6 +108,15 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 			}
 			seen[member.Identity.CardID] = true
 		}
+	}
+	if entry && (bottom || ordinary) || bottom && ordinary {
+		return nil, errors.New("battlefield entry and library reordering require their own simultaneous placement")
+	}
+	if entry {
+		return c.putFoundCardsOnBattlefield(placements)
+	}
+	if bottom {
+		return c.putFoundCardsOnLibraryBottom(placements)
 	}
 	type preparedMove struct {
 		member      cardprogram.FoundCard
@@ -111,17 +133,8 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 	}
 	for _, placement := range placements {
 		for _, member := range placement.Cards {
-			card, exists := c.game.GetCardInstance(member.Identity.CardID)
-			fromZone := zone.Library
-			if from, recorded := c.foundZones[member.Identity.CardID]; recorded {
-				fromZone = from
-			}
-			if !exists || card.ZoneVersion != member.Identity.ZoneVersion {
-				continue
-			}
-			source, located := destinationZone(c.game, card.Owner, fromZone)
-			if !located || !source.Contains(card.ID) ||
-				fromZone == zone.Library && c.game.Players[card.Owner].Library.ReorderVersion() != c.libraryEpoch[card.ID] {
+			card, fromZone, available := c.availableFoundCard(member)
+			if !available {
 				continue
 			}
 			event := game.Event{

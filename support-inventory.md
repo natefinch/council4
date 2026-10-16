@@ -1,6 +1,6 @@
 # Production support inventory
 
-Production registry: **17971 entries, 17971 loadable, 48 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
+Production registry: **17972 entries, 17972 loadable, 49 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 
 Pinned corpus SHA256 `6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`; compiler evidence SHA256 `44917919cfe3d26ec77159b31b19be9500ae39cc432f06a7207ee7fb65666338`; Comprehensive Rules 2026-09-25. Reproduce with `mage supportInventory` (no corpus compilation).
 
@@ -56,109 +56,112 @@ Source revisions bind authored Go (all handlers and dependency declarations), no
 | Terminate | `6257c2fd-005f-41e3-8a72-af76df1eb134/front` | true | true | mtg/rules/production_destruction_test.go: TestProductionDestructionCastAndTypes/Terminate, TestProductionDestructionProtectionAndReplacements/Terminate, TestProductionDestructionIdentityAndCopies/Terminate; TestProductionBatchLiveAndSimulator; CR 2026-09-25 608.2b, 701.8, 701.19 | `[{6257c2fd-005f-41e3-8a72-af76df1eb134/spell/0 1}]` |
 | Twincast | `8f878efc-850f-43d2-a6fe-5ea8d1dd5afb/front` | true | true | mtg/rules/authored_copy_spells_test.go: TestAuthoredSpellCopiesChoicesAndCasting/Twincast; TestAuthoredSpellCopiesIllegalTarget/Twincast; TestAuthoredSpellCopiesUntargeted/Twincast | `[{8f878efc-850f-43d2-a6fe-5ea8d1dd5afb/spell/0 1}]` |
 | Vindicate | `63c1ac21-e3d8-40c2-8c09-3f31c52992ef/front` | true | true | mtg/rules/production_destruction_test.go: TestProductionDestructionCastAndTypes/Vindicate, TestProductionDestructionProtectionAndReplacements/Vindicate, TestProductionDestructionIdentityAndCopies/Vindicate; TestProductionBatchLiveAndSimulator; CR 2026-09-25 307, 608.2b, 701.8 | `[{63c1ac21-e3d8-40c2-8c09-3f31c52992ef/spell/0 1}]` |
+| Warp World | `50a228a2-c8b6-4416-b0ab-417926a9b9b6/front` | false | true | mtg/rules/warp_world_test.go; WotC 2006-10-15, 2009-10-01, 2019-05-03; CR 2026-09-25 101.4, 303.4, 400.7, 603.3, 614.12, 701.24; #3288 | `[{50a228a2-c8b6-4416-b0ab-417926a9b9b6/spell/0 1}]` |
 | Wildest Dreams | `0a25a72e-5603-4b50-ac20-36b286cc1a2b/front` | true | true | mtg/rules/numeric_target_cards_test.go; WotC 2016-09-20; CR 2026-09-25 107.3, 601.2, 608.2; #3284 | `[{0a25a72e-5603-4b50-ac20-36b286cc1a2b/spell/0 1}]` |
 | Worldgorger Dragon | `a628186d-b7d9-40a5-9ae2-fbc9d2a14c7c/front` | false | true | mtg/rules named-card scenarios; mixed production acceptance (#3278) | `[{a628186d-b7d9-40a5-9ae2-fbc9d2a14c7c/enter/0 1} {a628186d-b7d9-40a5-9ae2-fbc9d2a14c7c/leave/0 1}]` |
 
-- Abundance: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Abundance: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- An Offer You Can't Refuse: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- An Offer You Can't Refuse: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Bedevil: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Bedevil: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Blood Moon: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Blood Moon: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Cackling Counterpart: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Cackling Counterpart: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Chains of Mephistopheles: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Chains of Mephistopheles: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Champion of Stray Souls: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Champion of Stray Souls: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Counterspell: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Counterspell: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Death Denied: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Death Denied: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Demonic Tutor: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Demonic Tutor: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Diabolic Tutor: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Diabolic Tutor: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Disallow: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Disallow: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Disenchant: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Disenchant: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Dualcaster Mage: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Dualcaster Mage: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Eladamri's Call: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Eladamri's Call: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Essence Scatter: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Essence Scatter: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Fabricate: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Fabricate: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Fated Infatuation: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Fated Infatuation: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Generous Gift: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Generous Gift: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Gifts Ungiven: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Gifts Ungiven: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Gilded Drake: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Gilded Drake: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Hive Mind: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Hive Mind: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Humility: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Humility: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Idyllic Tutor: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Idyllic Tutor: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Intuition: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Intuition: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Mindslaver: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Mindslaver: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Muldrotha, the Gravetide: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Muldrotha, the Gravetide: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Naturalize: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Naturalize: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Negate: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Negate: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Nim Deathmantle: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Nim Deathmantle: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Opalescence: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Opalescence: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Pongify: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Pongify: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Rapid Hybridization: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Rapid Hybridization: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Rats' Feast: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Rats' Feast: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Realms Uncharted: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Realms Uncharted: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Resculpt: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Resculpt: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Return to the Ranks: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Return to the Ranks: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Reverberate: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Reverberate: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Shattered Crypt: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Shattered Crypt: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Skullbriar, the Walking Grave: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Skullbriar, the Walking Grave: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Steelshaper's Gift: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Steelshaper's Gift: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Sylvan Scrying: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Sylvan Scrying: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Terastodon: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Terastodon: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Terminate: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Terminate: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Twincast: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Twincast: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Vindicate: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Vindicate: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Wildest Dreams: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Warp World: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
-- Worldgorger Dragon: authored `sha256:dc31e60367e7a347c7d73bd695e670b4d5ead9d789692a44103a95d329fe50f2`; shared rules `sha256:ab7d05af3bee00dbd87ad8c49d1897432b34c079c970b4b6150bde9e5212720b`.
+- Wildest Dreams: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
+
+- Worldgorger Dragon: authored `sha256:06a18721868958c6103af0305e93774408a923df3b6a9c8ce248629b296846e3`; shared rules `sha256:3db15e0b3b5f3938e90e9966ae441b566e6e0421fa1f6334f7eaab1edf17f0a3`.
 
 ## Fidelity and consumers
 
 `cards.Registry.Inventory/SupportFor` is authoritative for installed entries; deck loading returns the same evidence. JSON inventory output joins corpus IDs without guessing legacy identity. Engine, Simulator, CLI and WASM share the installed catalog. A deliberately absent handler fails checked loading or produces `unsupported-execution`, never a rules draw.
 
-Rules wins/draws, turn budgets, work budgets, unsupported and invalid execution are distinct. Action/choice fallbacks and invalid answers are counted separately. `GameResult.Exact()` rejects declared restrictions and policy fallbacks. Limits include representative combat declarations ([#3126](https://github.com/natefinch/council4/issues/3126)) and incomplete evaluation knowledge. Exact X/multikicker announcements are validated independently of bounded numeric policy samples ([#3284](https://github.com/natefinch/council4/issues/3284)). Search action width, determinization count, lookahead and deep width are policy budgets, not rules. Unknown authored/effect valuation is explicit; search executes real programs, not metadata.
+Rules wins/draws, turn budgets, work budgets, unsupported and invalid execution are distinct. Action/choice fallbacks and invalid answers are counted separately. `GameResult.Exact()` rejects declared restrictions and policy fallbacks. Complete typed/staged combat declarations are validated independently of bounded combat policy samples ([#3126](https://github.com/natefinch/council4/issues/3126)); incomplete evaluation knowledge remains explicit. Exact X/multikicker announcements are validated independently of bounded numeric policy samples ([#3284](https://github.com/natefinch/council4/issues/3284)). Search action width, determinization count, lookahead and deep width are policy budgets, not rules. Unknown authored/effect valuation is explicit; search executes real programs, not metadata.
 
 See [mixed production validation](docs/perf/mixed-production.md) for executed scenarios and measurements. CI runs code/scenario checks and registry preservation for authored edits, not frozen-corpus regeneration. Legacy compiler diagnostics remain in `unsupported-reasons.md` and `card-backlog.md`; they are not the automatic authoring roadmap.

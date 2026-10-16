@@ -53,6 +53,19 @@
   ],
   "cards": [
    {
+    "oracle_id": "50a228a2-c8b6-4416-b0ab-417926a9b9b6",
+    "revision": "aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e",
+    "oracle_text_sha256": "9a8973319e3e96c7f3233f5108c7cb5c910ae96ff43a8f127600418db6af9161",
+    "rulings_uri": "https://api.scryfall.com/cards/aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e/rulings",
+    "retrieved": "2026-10-15",
+    "response_sha256": "c6315a0bd10cb0b264e464ac3aa3bc5fd365b9636c1c869ada71701314af2bd9",
+    "ruling_dates": [
+     "2006-10-15",
+     "2009-10-01",
+     "2019-05-03"
+    ]
+   },
+   {
     "oracle_id": "4acb6612-54e8-428d-acb6-c7259a5ad6a8",
     "revision": "ea751fe2-b64a-4265-8885-a9016b29b5b3",
     "oracle_text_sha256": "4d76ce03e1640e3bba64c450048373c4cdf1e8411debc18db2d32c72d74e7544",
@@ -47548,10 +47561,9 @@
    "oracle_id": "50a228a2-c8b6-4416-b0ab-417926a9b9b6",
    "revision": "aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e",
    "name": "Warp World",
-   "status": "blocked",
-   "family": "reviewed-blocker",
-   "blocker": 3288,
-   "reason": "No revealed handles plus two cross-player simultaneous battlefield-placement stages/APNAP Aura attachment against pre-entry board and ordered library remainder; serial per-player placement gives wrong triggers/replacements. Owned tokens and redirected permanents count. WotC 2009-10-01/2019-05-03; CR 101.4/303.4/400.7/603/614."
+   "status": "implemented-verified",
+   "family": "staged-reveal",
+   "evidence": "mtg/rules/warp_world_test.go; mtg/sim/warp_world_replay_test.go; exact owner snapshots, two cross-player entry batches, APNAP Aura admission, ordered remainder, replacements/commander/token counts, source-time ETB/LTB, cloned printed payment and JSON replay; #3288"
   },
   {
    "oracle_id": "721eb5a2-d7cf-4db0-8013-ef3f596c52a5",

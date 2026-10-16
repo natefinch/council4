@@ -1,7 +1,9 @@
 package cards_test
 
 import (
+	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"os"
 	"slices"
 	"strings"
@@ -36,6 +38,11 @@ type cardAuthoringPilot struct {
 	Batches  map[string]pilotBatchEvidence
 }
 
+type laterProductionAdmission struct {
+	OracleID         string `json:"oracle_id"`
+	Status, Evidence string
+}
+
 func TestCardAuthoringFrozenPilotAdmissionsAndBlockers(t *testing.T) {
 	t.Parallel()
 	data, err := os.ReadFile("../../testdata/card-authoring/pilot.json")
@@ -49,6 +56,20 @@ func TestCardAuthoringFrozenPilotAdmissionsAndBlockers(t *testing.T) {
 	if pilot.Corpus != "6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4" ||
 		len(pilot.Frozen) != 20 || len(pilot.Outcomes) != 20 {
 		t.Fatal("pilot pin or frozen population changed")
+	}
+	productionData, err := os.ReadFile("../../testdata/card-authoring/production.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var production struct {
+		Records []laterProductionAdmission
+	}
+	if err := json.Unmarshal(productionData, &production); err != nil {
+		t.Fatal(err)
+	}
+	laterAdmissions := make(map[string]bool)
+	for _, record := range production.Records {
+		laterAdmissions[record.OracleID] = record.Status == "implemented-verified" && strings.Contains(record.Evidence, "mtg/rules/")
 	}
 	challenges := []string{"Necromancy", "Chains of Mephistopheles", "Humility", "Opalescence", "Possibility Storm", "Doomsday", "Panglacial Wurm", "Warp World"}
 	registry := cards.NewDefaultRegistry()
@@ -95,8 +116,21 @@ func TestCardAuthoringFrozenPilotAdmissionsAndBlockers(t *testing.T) {
 				t.Fatalf("incomplete batch evidence: %s", card.Name)
 			}
 		case "blocked":
-			if lookupErr == nil || len(registry.LookupAll(card.Name)) != 0 || outcome.Blocker == 0 || outcome.Reason == "" {
+			if outcome.Blocker == 0 || outcome.Reason == "" {
 				t.Fatalf("partial promotion or imprecise blocker: %s", card.Name)
+			}
+			// Historical pilot outcomes remain frozen; subsequent exact admissions
+			// require current production evidence rather than rewriting that pilot.
+			if lookupErr == nil {
+				if !laterAdmissions[card.OracleID] || def == nil || def.Name != card.Name ||
+					fmt.Sprintf("%x", sha256.Sum256([]byte(def.OracleText))) != card.TextHash {
+					t.Fatalf("unverified post-pilot admission: %s", card.Name)
+				}
+				if err := registry.Programs().ValidateCard(def); err != nil {
+					t.Fatal(err)
+				}
+			} else if len(registry.LookupAll(card.Name)) != 0 {
+				t.Fatalf("partial promotion of historical blocker: %s", card.Name)
 			}
 		default:
 			t.Fatalf("unclassified card %s: %q", card.Name, outcome.Status)

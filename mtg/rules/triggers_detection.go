@@ -951,7 +951,8 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 	defer g.EndStaticSourceFrame()
 	var captured []game.EventTriggeredAbility
 	sources := g.Battlefield
-	if event.Kind == game.EventPermanentSacrificed || event.Kind == game.EventPermanentDied {
+	if event.Kind == game.EventPermanentSacrificed || event.Kind == game.EventPermanentDied ||
+		event.Kind == game.EventZoneChanged && event.FromZone == zone.Battlefield {
 		sources = slices.Clone(sources)
 		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
 			sources = append(sources, source)

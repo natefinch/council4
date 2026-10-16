@@ -891,6 +891,7 @@ var gamePlayerReferenceKindLiterals = map[game.PlayerReferenceKind]string{
 	game.PlayerReferenceGroupOfferMember:         "game.PlayerReferenceGroupOfferMember",
 	game.PlayerReferenceAffectedTargetController: "game.PlayerReferenceAffectedTargetController",
 	game.PlayerReferenceGiftRecipient:            "game.PlayerReferenceGiftRecipient",
+	game.PlayerReferenceCaptured:                 "game.PlayerReferenceCaptured",
 }
 
 // gamePlayerRelationLiterals maps each exported game.PlayerRelation constant to the Go

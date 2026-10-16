@@ -56,10 +56,18 @@ card is added only after its entire behavior and relevant scenarios are complete
   exposing turn state; like other queries it fails after the context expires.
 - `View().Player(reference)` resolves a currently available player;
   `View().Players(group)` returns living members in APNAP order.
+- `View().Permanents(group)` returns immutable current public snapshots,
+  including ownership and token identity, before a later operation changes them.
+  Native bodies can use `CapturedPlayerReference` for a resolved seat; it retains
+  that seat rather than substituting its controller/decision maker, and becomes
+  unavailable when that player leaves.
 - `Execute(primitive)` validates the operation's target scope and dispatches
   the existing Effect Resolver. Its `Outcome` distinguishes unavailable from
   executed-but-ineffective, with copied public result snapshots. It does not
   promise that every legacy scalar is an actual mutation count.
+  `Execute(Reveal)` also returns `Outcome.Cards`: minted, exact invocation-local
+  handles for the actual revealed library cards, including explicit-card reveals.
+  Departed tokens awaiting SBA do not consume a revealed-card count.
 - `Ask(request)` uses normal ChoiceAgent observations, validation, logging and
   recorded fallbacks. It does not choose a strategic answer inside card code.
   `ChoiceNumber` uses `NumberRange`, empty `Options`, and one returned scalar
@@ -102,7 +110,7 @@ card is added only after its entire behavior and relevant scenarios are complete
 - `View().TargetCards()` mints exact invocation-local handles for the still-legal
   announced cards in public graveyards or face-up exile. Illegal targets and
   departed incarnations are omitted; hidden-zone cards are not disclosed.
-- `MoveCards(placements...)` assigns search/target handles to hand/graveyard/exile in one
+- `MoveCards(placements...)` assigns search/target/revealed handles to hand/graveyard/exile in one
   simultaneous placement, applying zone replacements before committing the moves.
   After replacements, each owner orders their actual simultaneous graveyard
   arrivals under CR 404.3; redirected cards participate only in their real zone.
@@ -111,6 +119,26 @@ card is added only after its entire behavior and relevant scenarios are complete
   shuffle. Target handles also retain their actual source zones. Clone preserves
   the library's shuffle-correlation epoch. For simultaneous battlefield entry,
   programs use the existing `Execute(PutOnBattlefield{Sources: ...})` operation.
+
+`MoveCards` also accepts a battlefield-only placement across owners, using the
+same shared simultaneous entry pipeline. Aura admission/attachment choices are
+APNAP and non-targeting, against the pre-entry board; host attachment links are
+not published during another cohort member's entry replacement. Optional
+entry-to-zone replacements make their payment decisions before the cohort
+moves, and only actual battlefield arrivals are returned. A library-only
+`CardPlacement{Destination: zone.Library, LibraryBottom: true}` instead reorders
+still-current revealed library cards in their owners' chosen bottom order,
+without inventing a zone change or a new incarnation. Battlefield entry and
+bottom reordering each require their own placement, rather than approximating a
+mixed-destination batch.
+
+Warp World composes these operations in ordinary Go: snapshot per-owner counts,
+move all permanents simultaneously and shuffle, reveal exact cards, enter all
+artifact/creature/land cards together, then all remaining enchantments together,
+then bottom the remainder. Multi-type cards participate in only the first
+applicable stage. Event-time ETB and zone-change source capture prevents
+later-stage witnesses from observing earlier events while retaining original
+LKI sources and trigger multipliers; triggers still wait for normal priority.
 
 Contexts expire when the synchronous handler returns. Never retain them,
 live pointers or mutable per-game state in a closure/global. Named pure

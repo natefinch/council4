@@ -396,6 +396,8 @@ const (
 	// gift delivery effect and resolves to the resolving stack object's captured
 	// GiftRecipient when GiftPromised is set.
 	PlayerReferenceGiftRecipient
+	// PlayerReferenceCaptured retains a concrete seat identity, not its controller.
+	PlayerReferenceCaptured
 )
 
 // PlayerReference describes how a rules effect finds a player at resolution.
@@ -407,7 +409,8 @@ type PlayerReference struct {
 	targetIndex int
 
 	// object binds controller/owner lookups to a reusable object reference.
-	object opt.V[ObjectReference]
+	object   opt.V[ObjectReference]
+	captured opt.V[PlayerID]
 }
 
 // Kind reports the reference kind.
@@ -419,6 +422,16 @@ func (r PlayerReference) TargetIndex() int { return r.targetIndex }
 // Object reports the nested object reference for controller/owner lookups.
 func (r PlayerReference) Object() (ObjectReference, bool) {
 	return r.object.Val, r.object.Exists
+}
+
+// CapturedPlayer reports the concrete seat retained by a captured reference.
+func (r PlayerReference) CapturedPlayer() (PlayerID, bool) {
+	return r.captured.Val, r.captured.Exists
+}
+
+// CapturedPlayerReference references an already resolved player identity.
+func CapturedPlayerReference(player PlayerID) PlayerReference {
+	return PlayerReference{kind: PlayerReferenceCaptured, captured: opt.Val(player)}
 }
 
 // ControllerReference references the controller of the resolving stack object.
@@ -492,7 +505,14 @@ func GiftRecipientReference() PlayerReference {
 // structure of any nested object reference; target-index bounds depend on the
 // surrounding TargetSpec list and are checked by ValidateCardDef.
 func (r PlayerReference) Validate() []string {
+	if r.kind != PlayerReferenceCaptured && r.captured.Exists {
+		return []string{"only a captured player reference may set CapturedPlayer"}
+	}
 	switch r.kind {
+	case PlayerReferenceCaptured:
+		if !r.captured.Exists || r.captured.Val < 0 || int(r.captured.Val) >= NumPlayers || r.targetIndex != 0 || r.object.Exists {
+			return []string{"captured player reference requires a valid seat and no TargetIndex or Object"}
+		}
 	case PlayerReferenceController:
 		if r.targetIndex != 0 || r.object.Exists {
 			return []string{"controller reference must not set TargetIndex or Object"}

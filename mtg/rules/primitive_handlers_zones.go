@@ -505,6 +505,7 @@ func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 		if !r.publishObservedCard(prim.PublishLinked, cardID) {
 			return res
 		}
+		r.rememberResultCard(cardID)
 		r.publishLibraryCardScalars(prim.PublishLinked, prim.PublishCharacteristics)
 		res.amount = 1
 		res.succeeded = true
@@ -523,6 +524,7 @@ func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 	for _, cardID := range revealed {
 		if r.publishObservedCard(prim.PublishLinked, cardID) {
 			res.amount++
+			r.rememberResultCard(cardID)
 		}
 	}
 	res.succeeded = res.amount > 0
@@ -3595,13 +3597,25 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 		move := &moves[i]
 		card := move.resolved
 		move.options.SourceFaceDown = cardFaceDownInZone(r.game, card.card, card.fromZone)
+		prototype := &game.Permanent{
+			ObjectID: card.card.ID, CardInstanceID: card.card.ID, Owner: card.card.Owner,
+			Controller: card.controller, FaceDown: move.options.SourceFaceDown,
+			EnteredFromCast: options.WasCast, CastXValue: options.XValue,
+		}
+		initializePermanentCounters(prototype, card.card.Def)
+		destination := zone.Battlefield
+		if alternative := optionalEntryReplacementDestination(enterBattlefieldContext{
+			engine: r.engine, agents: r.agents, log: r.log,
+		}, r.game, prototype); alternative.Exists {
+			destination = alternative.Val
+		}
 		event := game.Event{
 			Kind:           game.EventZoneChanged,
 			Controller:     card.controller,
 			Player:         card.card.Owner,
 			CardID:         card.card.ID,
 			FromZone:       card.fromZone,
-			ToZone:         zone.Battlefield,
+			ToZone:         destination,
 			SimultaneousID: options.SimultaneousID,
 		}
 		replacement := replacementZoneChange(r.game, event)

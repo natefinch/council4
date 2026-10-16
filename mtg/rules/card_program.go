@@ -181,6 +181,22 @@ func (c *programContext) ActivePlayer() (game.PlayerID, error) {
 	return c.game.Turn.ActivePlayer, nil
 }
 
+func (c *programContext) Permanents(group game.GroupReference) ([]game.ObjectSnapshot, error) {
+	if err := c.valid(); err != nil {
+		return nil, err
+	}
+	if err := game.ValidatePrimitive(game.MovePermanent{Group: group, Destination: zone.Library}, c.specs); err != nil {
+		return nil, err
+	}
+	resolver := newEffectResolver(c.engine, c.game, c.obj, c.agents, c.log)
+	permanents := resolver.groupPermanents(group)
+	snapshots := make([]game.ObjectSnapshot, 0, len(permanents))
+	for _, permanent := range permanents {
+		snapshots = append(snapshots, currentProgramSnapshot(c.game, permanent))
+	}
+	return snapshots, nil
+}
+
 func (c *programContext) Execute(primitive game.Primitive) (cardprogram.Outcome, error) {
 	if err := c.valid(); err != nil {
 		return cardprogram.Outcome{}, err
@@ -209,6 +225,14 @@ func (c *programContext) Execute(primitive game.Primitive) (cardprogram.Outcome,
 	outcome := cardprogram.Outcome{Available: exists, Succeeded: receipt.Succeeded}
 	for _, snapshot := range c.obj.ResolutionResultObjects[string(resultKey)] {
 		outcome.Objects = append(outcome.Objects, resultCharacteristicSnapshot(snapshot))
+		if primitive.Kind() == game.PrimitiveReveal {
+			for _, identity := range snapshot.ZoneCards {
+				card, available := c.game.GetCardInstance(identity.CardID)
+				if available && card.ZoneVersion == identity.ZoneVersion && c.game.Players[card.Owner].Library.Contains(card.ID) {
+					outcome.Cards = append(outcome.Cards, c.mintFoundCard(card, zone.Library))
+				}
+			}
+		}
 	}
 	return outcome, nil
 }

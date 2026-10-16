@@ -128,6 +128,12 @@ func (Renderer) renderObjectReference(reference game.ObjectReference) (string, e
 
 func (r Renderer) renderPlayerReference(reference game.PlayerReference) (string, error) {
 	switch reference.Kind() {
+	case game.PlayerReferenceCaptured:
+		player, captured := reference.CapturedPlayer()
+		if !captured {
+			return "", errors.New("render: captured player reference has no identity")
+		}
+		return fmt.Sprintf("game.CapturedPlayerReference(game.PlayerID(%d))", player), nil
 	case game.PlayerReferenceController:
 		return "game.ControllerReference()", nil
 	case game.PlayerReferenceTargetPlayer:

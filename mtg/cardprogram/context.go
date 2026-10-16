@@ -25,6 +25,8 @@ type Outcome struct {
 	Available bool
 	Succeeded bool
 	Objects   []game.ObjectSnapshot
+	// Cards contains exact local handles for cards observed by Reveal.
+	Cards []FoundCard
 }
 
 // Departure is one attempted destruction's correlated, frozen outcome.
@@ -81,8 +83,9 @@ type SearchResult struct {
 
 // CardPlacement assigns minted card handles to a simultaneous destination.
 type CardPlacement struct {
-	Cards       []FoundCard
-	Destination zone.Type
+	Cards         []FoundCard
+	Destination   zone.Type
+	LibraryBottom bool
 }
 
 // View resolves invocation metadata and read-only references.
@@ -93,6 +96,7 @@ type View interface {
 	ActivePlayer() (game.PlayerID, error)
 	Player(game.PlayerReference) (game.PlayerID, bool, error)
 	Players(game.PlayerGroupReference) ([]game.PlayerID, error)
+	Permanents(game.GroupReference) ([]game.ObjectSnapshot, error)
 }
 
 // Context is the small authoring seam implemented by the Engine.

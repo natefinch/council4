@@ -42,6 +42,8 @@ func (SacrificePermanents) publishesResultObjects() bool { return true }
 func (MovePermanent) publishesResultObjects() bool       { return true }
 func (PutOnBattlefield) publishesResultObjects() bool    { return true }
 func (PutOnBattlefield) publishesResultCards() bool      { return false }
+func (Reveal) publishesResultObjects() bool              { return true }
+func (Reveal) publishesResultCards() bool                { return true }
 func (MoveTopOfLibrary) publishesResultObjects() bool    { return true }
 func (p MoveCard) publishesResultObjects() bool          { return p.Destination != zone.Battlefield }
 func (p ChooseFromZone) publishesResultObjects() bool {

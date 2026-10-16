@@ -795,9 +795,13 @@ func revealCardIDs(g *game.Game, obj *game.StackObject, playerID game.PlayerID, 
 		return nil
 	}
 	var revealed []id.ID
-	for i, cardID := range player.Library.All() {
-		if i >= amount {
+	for _, cardID := range player.Library.All() {
+		if len(revealed) >= amount {
 			break
+		}
+		// Departed tokens remain in their zone until the next SBA, but are not cards.
+		if _, card := g.GetCardInstance(cardID); !card {
+			continue
 		}
 		emitCardRevealEvent(g, obj, playerID, cardID, zoneType)
 		revealed = append(revealed, cardID)
