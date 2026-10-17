@@ -425,6 +425,8 @@ board (including a simultaneous entering cohort). A later suppressor cannot eras
 an existing trigger, and removing a suppressor cannot resurrect a prevented one.
 Suppression precedes multiplication; only uncaptured synthetic events use live
 compatibility filtering at placement.
+Both the explicit permanent-entered event and the legacy battlefield zone-change
+event use this same suppression and ETB-multiplier policy.
 
 The capture policy covers every emitted event kind, not an ETB/damage-only
 allowlist. Previously late-detected families include cast/resolved/copied spells,

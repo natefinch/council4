@@ -657,9 +657,9 @@ func snapshotMatchesTriggerSourceFilter(selection *game.Selection, snapshot *gam
 }
 
 func eventEntersBattlefield(event *game.Event) bool {
-	return event.Kind == game.EventZoneChanged &&
-		event.ToZone == zone.Battlefield &&
-		event.PermanentID != 0
+	return event != nil && event.PermanentID != 0 &&
+		(event.Kind == game.EventPermanentEnteredBattlefield ||
+			event.Kind == game.EventZoneChanged && event.ToZone == zone.Battlefield)
 }
 
 // enteringPermanentMatchesFilter reports whether the permanent that entered in
