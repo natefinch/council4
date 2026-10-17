@@ -38,9 +38,11 @@ executable scaffold and bounded rules-review/promotion gate.
    canonical prerequisite instead of creating a second one.
 3. Implement the bounded change and behavioral scenarios. Run scoped tests
    during iteration; new card support does not require parser/lowering work.
-4. Use the repository validation matrix: final test suite and linter once for
+4. Use the repository validation matrix: final test suite once for
    code, documentation checks for docs-only work, and additional affected
-   platform/race checks when justified. No unconditional `cardSupport` or
+   platform/race checks when justified. Do not run linters or lint autofixes
+   unless the user explicitly asks; lint is not a local commit/completion gate.
+   No unconditional `cardSupport` or
    full-corpus regeneration. Inspect the diff yourself; focused independent
    review is for substantial shared-rule changes, not a gate on every issue.
 5. Commit only intended changes directly to main when authorized. No mandatory

@@ -32,6 +32,11 @@ CI. The preservation hashes are not substitutes for those scenarios.
 
 ## Validation matrix
 
+This table describes automated CI, not mandatory local agent commands. Agents
+run linters only when the user explicitly asks; lint is not a local
+commit/completion gate. Follow the
+[repository instructions](../../.github/copilot-instructions.md) for local checks.
+
 | Change | CI |
 | --- | --- |
 | Docs/instructions only | Stable successful job names; no game/lint/corpus work |

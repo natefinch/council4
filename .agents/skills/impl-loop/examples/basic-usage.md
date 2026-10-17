@@ -11,8 +11,9 @@ child, preserving existing assignments. It does not create another epic or ask
 for a PR strategy. After #3271, the next migration child is #3270, not the
 largest unsupported compiler diagnostic.
 
-For code, it runs focused tests during development and the test suite/linter
+For code, it runs focused tests during development and the test suite
 once before committing. Docs-only changes use documentation checks instead.
+It does not run linters unless the user explicitly asks.
 It stages intended files, records the local commit and advances only when the
 child's acceptance criteria are met. It does not claim that local commits are
 published or that blocked work is complete.

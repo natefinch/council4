@@ -24,9 +24,11 @@ seams, not by copying an ordinary Go call stack.
 The repository is a one-maintainer project. Authorized issue implementations
 normally produce small direct commits to main, with one writer, rather than
 mandatory branches, PRs, approvals and merges. Run scoped checks during
-development, the existing suite/linter once before landing code, and inspect the
-diff. Docs-only changes use documentation checks. Push permission is separate;
-never overwrite unrelated work, force-push or bypass protections.
+development, the existing suite once before landing code, and inspect the diff.
+Agents run linters only when the user explicitly asks, not as a local
+commit/completion gate. Docs-only changes use documentation checks. Push
+permission is separate; never overwrite unrelated work, force-push or bypass
+protections.
 Independent review is focused on substantial shared-rule changes, not required
 for every routine issue. Deep architectural review is explicitly opt-in.
 
