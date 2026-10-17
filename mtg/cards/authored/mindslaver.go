@@ -16,7 +16,8 @@ var mindslaverControl = game.ProgramReference{ID: mindslaverOracleID + "/activat
 // Mindslaver redirects decisions without changing seats or object control.
 var Mindslaver = cardset.Entry{
 	OracleID: mindslaverOracleID, Name: "Mindslaver", New: newMindslaver,
-	Programs: []cardprogram.Program{{Reference: mindslaverControl, Resolve: resolveMindslaver}},
+	Verification: "mtg/rules/mindslaver_test.go: TestMindslaverCastingActivationCostsTargetsSourceAndCounter; TestMindslaverWholeTurnActionsModesTargetsAndResolvingChoices",
+	Programs:     []cardprogram.Program{{Reference: mindslaverControl, Resolve: resolveMindslaver}},
 }
 
 func newMindslaver() *game.CardDef {

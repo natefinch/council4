@@ -101,8 +101,9 @@ func TestManaProgramAdmissionRejectsBeforeGameplay(t *testing.T) {
 			}
 			registry, err := cards.NewProgramRegistry([]cardset.Entry{{
 				Name: def.Name, OracleID: "test-mana-admission",
-				New:      func() *game.CardDef { return def },
-				Programs: []cardprogram.Program{{Reference: rejectedManaProgram, Resolve: func(cardprogram.Context) error { return nil }}},
+				Verification: "mtg/rules/mana_program_admission_test.go: rejected mana program fixture",
+				New:          func() *game.CardDef { return def },
+				Programs:     []cardprogram.Program{{Reference: rejectedManaProgram, Resolve: func(cardprogram.Context) error { return nil }}},
 			}})
 			if err != nil {
 				t.Fatal(err)

@@ -28,6 +28,7 @@ package cards
 import (
 	"fmt"
 	"slices"
+	"strings"
 	"sync"
 
 	"github.com/natefinch/council4/mtg/cardprogram"
@@ -98,6 +99,8 @@ func NewLazyRegistry(entrySets ...[]cardset.Entry) *Registry {
 }
 
 // NewProgramRegistry combines legacy definitions and explicit authored identities.
+// Authored entries require explicit card-specific verification references; these
+// are recorded evidence, not tests executed or correctness proven by admission.
 // It constructs code catalogs eagerly but leaves CardDefs lazy.
 func NewProgramRegistry(entrySets ...[]cardset.Entry) (*Registry, error) {
 	r := emptyRegistry()
@@ -122,6 +125,10 @@ func NewProgramRegistry(entrySets ...[]cardset.Entry) (*Registry, error) {
 			return nil, fmt.Errorf("registry entry %q has no name or constructor", entry.Name)
 		}
 		if entry.OracleID != "" {
+			verification := strings.TrimSpace(entry.Verification)
+			if verification == "" || verification == "mtg/rules named-card scenarios; mixed production acceptance (#3278)" {
+				return nil, fmt.Errorf("authored %s requires explicit card-specific verification evidence", entry.Name)
+			}
 			if old, exists := r.oracleNames[entry.OracleID]; exists {
 				return nil, fmt.Errorf("duplicate Oracle identity %s (%s, %s)", entry.OracleID, old, entry.Name)
 			}

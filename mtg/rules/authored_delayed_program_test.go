@@ -46,6 +46,7 @@ func resolveDelayedReturnFixture(ctx cardprogram.Context) error {
 func delayedProgramEntry() cardset.Entry {
 	return cardset.Entry{
 		OracleID: "fixture/delayed", Name: "Delayed linked return fixture",
+		Verification: "mtg/rules/authored_delayed_program_test.go: delayed program fixture",
 		New: func() *game.CardDef {
 			return &game.CardDef{CardFace: game.CardFace{
 				Name: "Delayed linked return fixture", Types: []types.Card{types.Artifact},

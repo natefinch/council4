@@ -35,7 +35,8 @@ func TestAuthoredRegistryLoadsOnlyExactInstalledPrograms(t *testing.T) {
 	ref := game.ProgramReference{ID: "test/card", Version: "1"}
 	entry := cardset.Entry{
 		Name: "Authored", OracleID: "oracle-identity",
-		Programs: []cardprogram.Program{{Reference: ref, Resolve: func(cardprogram.Context) error { return nil }}},
+		Verification: "mtg/cards/program_registry_test.go: TestAuthoredRegistryLoadsOnlyExactInstalledPrograms (test fixture)",
+		Programs:     []cardprogram.Program{{Reference: ref, Resolve: func(cardprogram.Context) error { return nil }}},
 		New: func() *game.CardDef {
 			return &game.CardDef{CardFace: game.CardFace{Name: "Authored", Types: []types.Card{types.Sorcery},
 				SpellAbility: opt.Val(game.Mode{Program: ref}.Ability())}}
@@ -57,8 +58,8 @@ func TestAuthoredRegistryLoadsOnlyExactInstalledPrograms(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := registry.LookupChecked(entry.Name); err == nil {
-		t.Fatal("a missing program was admitted during loading")
+	if _, err := registry.LookupChecked(entry.Name); err == nil || !strings.Contains(err.Error(), ref.ID) {
+		t.Fatalf("missing program diagnostic = %v", err)
 	}
 }
 
@@ -66,12 +67,14 @@ func TestOracleCollisionsAndExplicitLegacyReplacement(t *testing.T) {
 	t.Parallel()
 	construct := func() *game.CardDef { return &game.CardDef{CardFace: game.CardFace{Name: "Card"}} }
 	legacy := cardset.Entry{Name: "Card", New: construct}
-	authored := cardset.Entry{Name: "Card", OracleID: "oracle-identity", New: construct}
-	if _, err := cards.NewProgramRegistry([]cardset.Entry{legacy, authored}); err == nil {
-		t.Fatal("name collision silently chose an implementation")
+	authored := cardset.Entry{
+		Name: "Card", OracleID: "oracle-identity", New: construct,
+		Verification: "mtg/cards/program_registry_test.go: TestOracleCollisionsAndExplicitLegacyReplacement (test fixture)",
 	}
-	if _, err := cards.NewProgramRegistry([]cardset.Entry{authored, legacy}); err == nil {
-		t.Fatal("reverse insertion silently chose an implementation")
+	for _, entries := range [][]cardset.Entry{{legacy, authored}, {authored, legacy}} {
+		if _, err := cards.NewProgramRegistry(entries); err == nil || !strings.Contains(err.Error(), "collides with an existing name") {
+			t.Fatalf("name collision diagnostic = %v", err)
+		}
 	}
 	authored.ReplaceLegacy = true
 	registry, err := cards.NewProgramRegistry([]cardset.Entry{legacy, authored})
@@ -81,8 +84,8 @@ func TestOracleCollisionsAndExplicitLegacyReplacement(t *testing.T) {
 	if registry, err := cards.NewProgramRegistry([]cardset.Entry{authored, legacy}); err != nil || registry.Len() != 1 {
 		t.Fatalf("reverse explicit replacement = %v", err)
 	}
-	if _, err := cards.NewProgramRegistry([]cardset.Entry{legacy, legacy, authored}); err == nil {
-		t.Fatal("ambiguous legacy identities were replaced by guessing")
+	if _, err := cards.NewProgramRegistry([]cardset.Entry{legacy, legacy, authored}); err == nil || !strings.Contains(err.Error(), "explicit unique legacy replacement required") {
+		t.Fatalf("ambiguous legacy replacement diagnostic = %v", err)
 	}
 	authored.ReplaceLegacy = false
 	if _, err := cards.NewProgramRegistry([]cardset.Entry{authored, authored}); err == nil || !strings.Contains(err.Error(), "duplicate Oracle") {

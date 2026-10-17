@@ -22,13 +22,8 @@ func TestProductionInventoryPreservesLegacyAndAuthoredEvidence(t *testing.T) {
 	}
 	unverified := authored.Cards[0]
 	unverified.Verification = ""
-	unverifiedRegistry, err := cards.NewProgramRegistry([]cardset.Entry{unverified})
-	if err != nil {
-		t.Fatal(err)
-	}
-	evidence := unverifiedRegistry.SupportFor(unverified.Name)
-	if len(evidence) != 1 || !evidence[0].Loadable || evidence[0].BehaviorVerified {
-		t.Fatal("loadable card without scenario evidence was marked behavior-verified")
+	if _, err := cards.NewProgramRegistry([]cardset.Entry{unverified}); err == nil {
+		t.Fatal("authored card without scenario evidence was admitted")
 	}
 	forest := registry.SupportFor("Forest")
 	if len(forest) != 1 || forest[0].OracleID != "" || forest[0].BehaviorVerified || !forest[0].Loadable {
@@ -40,7 +35,7 @@ func TestProductionInventoryPreservesLegacyAndAuthoredEvidence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	evidence = broken.SupportFor(entry.Name)
+	evidence := broken.SupportFor(entry.Name)
 	if len(evidence) != 1 || evidence[0].Loadable || evidence[0].BehaviorVerified || evidence[0].Failure == "" {
 		t.Fatal("deliberately missing handler produced successful-looking support")
 	}

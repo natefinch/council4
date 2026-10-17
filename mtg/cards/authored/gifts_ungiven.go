@@ -18,7 +18,8 @@ var giftsUngivenSearchProgram = game.ProgramReference{ID: giftsUngivenOracleID +
 // GiftsUngiven keeps the search and opponent's partition as separate Go decisions.
 var GiftsUngiven = cardset.Entry{
 	OracleID: giftsUngivenOracleID, Name: "Gifts Ungiven", New: newGiftsUngiven,
-	Programs: []cardprogram.Program{{Reference: giftsUngivenSearchProgram, Resolve: resolveGiftsUngivenSearch}},
+	Verification: "mtg/rules/authored_choices_program_test.go: TestAuthoredGiftsUngivenFoundCardsAndOpponentPartition",
+	Programs:     []cardprogram.Program{{Reference: giftsUngivenSearchProgram, Resolve: resolveGiftsUngivenSearch}},
 }
 
 func newGiftsUngiven() *game.CardDef {

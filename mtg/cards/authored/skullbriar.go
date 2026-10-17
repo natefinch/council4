@@ -13,6 +13,7 @@ import (
 // Skullbriar uses ordinary shared operations and a typed zone-transition policy.
 var Skullbriar = cardset.Entry{
 	OracleID: "088ac883-6f44-4046-bf19-81c7fd952e55", Name: "Skullbriar, the Walking Grave", New: newSkullbriar,
+	Verification: "mtg/rules/skullbriar_test.go: TestSkullbriarProductionCombatTriggerAndSimulator",
 }
 
 func newSkullbriar() *game.CardDef {

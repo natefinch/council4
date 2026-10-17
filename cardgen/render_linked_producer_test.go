@@ -20,7 +20,11 @@ func TestRendererPreservesLinkedProducerContract(t *testing.T) {
 		TriggeredAbilities: []game.TriggeredAbility{{
 			Trigger: game.TriggerCondition{Pattern: game.TriggerPattern{Event: game.EventPermanentDied, Source: game.TriggerSourceSelf}},
 			Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.PutOnBattlefield{
-				Source: game.OriginalSourceLinkedBattlefieldSource(producer),
+				Source:    game.OriginalSourceLinkedBattlefieldSource(producer),
+				Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer: game.LayerType, AddSubtypes: []types.Sub{types.Spirit}, Duration: game.DurationPermanent,
+				}},
 			}}}}.Ability(),
 		}},
 	}}
@@ -34,6 +38,8 @@ func TestRendererPreservesLinkedProducerContract(t *testing.T) {
 		`LinkedProducers: []game.LinkedProducerKey{game.LinkedProducerKey("test/exile")}`,
 		`PublishLinkedProducer: game.LinkedProducerKey("test/exile")`,
 		`game.OriginalSourceLinkedBattlefieldSource(game.LinkedProducerKey("test/exile"))`,
+		`Selection: game.Selection{RequiredTypes: []types.Card{types.Creature}}`,
+		`AddSubtypes: []types.Sub{types.Spirit}`,
 	} {
 		if !strings.Contains(source, fragment) {
 			t.Fatalf("linked binding %q lost:\n%s", fragment, source)

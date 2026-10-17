@@ -13,6 +13,7 @@ import (
 // Muldrotha declares a shared Engine permission; its usage is game-owned.
 var Muldrotha = cardset.Entry{
 	OracleID: "e4625704-1d52-44e4-804f-2f45644d76ac", Name: "Muldrotha, the Gravetide", New: newMuldrotha,
+	Verification: "mtg/rules/muldrotha_test.go: TestMuldrothaProductionCastingChoicesSimulatorAndAllTypes",
 }
 
 func newMuldrotha() *game.CardDef {

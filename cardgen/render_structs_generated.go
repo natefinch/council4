@@ -9237,57 +9237,65 @@ func (r Renderer) renderGamePutOnBattlefield(ctx *renderCtx, v game.PutOnBattlef
 		lit8 := "opt.Val(" + lit9 + ")"
 		fields = append(fields, "Recipient: "+lit8+",")
 	}
+	if !isZeroGameSelection(v.Selection) {
+		lit11, err12 := r.renderGameSelection(ctx, v.Selection)
+		if err12 != nil {
+			return "", fmt.Errorf("game.PutOnBattlefield.Selection: %w", err12)
+		}
+		ctx.need(importGame)
+		fields = append(fields, "Selection: "+lit11+",")
+	}
 	if len(v.ContinuousEffects) > 0 {
-		var items12 []string
-		for _, item13 := range v.ContinuousEffects {
-			lit14, err15 := r.renderGameContinuousEffect(ctx, item13)
-			if err15 != nil {
-				return "", fmt.Errorf("game.PutOnBattlefield.ContinuousEffects[]: %w", err15)
+		var items14 []string
+		for _, item15 := range v.ContinuousEffects {
+			lit16, err17 := r.renderGameContinuousEffect(ctx, item15)
+			if err17 != nil {
+				return "", fmt.Errorf("game.PutOnBattlefield.ContinuousEffects[]: %w", err17)
 			}
 			ctx.need(importGame)
-			items12 = append(items12, lit14+",")
+			items14 = append(items14, lit16+",")
 		}
-		lit11 := namedSliceLit("", "game.ContinuousEffect", items12)
-		fields = append(fields, "ContinuousEffects: "+lit11+",")
+		lit13 := namedSliceLit("", "game.ContinuousEffect", items14)
+		fields = append(fields, "ContinuousEffects: "+lit13+",")
 	}
 	if v.EntryTapped {
-		lit16 := strconv.FormatBool(bool(v.EntryTapped))
-		fields = append(fields, "EntryTapped: "+lit16+",")
+		lit18 := strconv.FormatBool(bool(v.EntryTapped))
+		fields = append(fields, "EntryTapped: "+lit18+",")
 	}
 	if v.EntryTransformed {
-		lit17 := strconv.FormatBool(bool(v.EntryTransformed))
-		fields = append(fields, "EntryTransformed: "+lit17+",")
+		lit19 := strconv.FormatBool(bool(v.EntryTransformed))
+		fields = append(fields, "EntryTransformed: "+lit19+",")
 	}
 	if len(v.EntryCounters) > 0 {
-		var items19 []string
-		for _, item20 := range v.EntryCounters {
-			lit21, err22 := r.renderGameCounterPlacement(ctx, item20)
-			if err22 != nil {
-				return "", fmt.Errorf("game.PutOnBattlefield.EntryCounters[]: %w", err22)
+		var items21 []string
+		for _, item22 := range v.EntryCounters {
+			lit23, err24 := r.renderGameCounterPlacement(ctx, item22)
+			if err24 != nil {
+				return "", fmt.Errorf("game.PutOnBattlefield.EntryCounters[]: %w", err24)
 			}
 			ctx.need(importGame)
-			items19 = append(items19, lit21+",")
+			items21 = append(items21, lit23+",")
 		}
-		lit18 := namedSliceLit("", "game.CounterPlacement", items19)
-		fields = append(fields, "EntryCounters: "+lit18+",")
+		lit20 := namedSliceLit("", "game.CounterPlacement", items21)
+		fields = append(fields, "EntryCounters: "+lit20+",")
 	}
 	if v.PublishLinked != "" {
-		lit23 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
+		lit25 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
 		ctx.need(importGame)
-		fields = append(fields, "PublishLinked: "+lit23+",")
+		fields = append(fields, "PublishLinked: "+lit25+",")
 	}
 	if len(v.LinkedReturnZones) > 0 {
-		var items25 []string
-		for _, item26 := range v.LinkedReturnZones {
-			lit27, err28 := enumLiteral(zoneTypeLiterals, "zone.Type", item26)
-			if err28 != nil {
-				return "", fmt.Errorf("game.PutOnBattlefield.LinkedReturnZones[]: %w", err28)
+		var items27 []string
+		for _, item28 := range v.LinkedReturnZones {
+			lit29, err30 := enumLiteral(zoneTypeLiterals, "zone.Type", item28)
+			if err30 != nil {
+				return "", fmt.Errorf("game.PutOnBattlefield.LinkedReturnZones[]: %w", err30)
 			}
 			ctx.need(importZone)
-			items25 = append(items25, lit27)
+			items27 = append(items27, lit29)
 		}
-		lit24 := compactNamedSliceLit("", "zone.Type", items25)
-		fields = append(fields, "LinkedReturnZones: "+lit24+",")
+		lit26 := compactNamedSliceLit("", "zone.Type", items27)
+		fields = append(fields, "LinkedReturnZones: "+lit26+",")
 	}
 	return structLit("game.PutOnBattlefield", fields), nil
 }

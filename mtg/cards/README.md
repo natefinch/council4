@@ -43,6 +43,10 @@ See [ADR 0012](../../docs/adr/0012-authored-go-card-implementations.md) and
 
 The [versioned program context/catalog](../cardprogram/README.md) handles
 synchronous Go resolving bodies for spells, activations, triggers and chapters.
+Its [capability lookup](../cardprogram/README.md#capability-lookup) maps rules
+concepts to both inspectable declarations and resolving operations, with real
+examples, tests and important boundaries. Checked authored registrations require
+explicit card-specific `Verification`; name-only legacy entries are unchanged.
 Static/replacement applicability remains declarative; later migration slices
 deepen those seams. The spell-only legacy escape hatch is kept for compatibility,
 not a bypass for missing operations or policies.

@@ -13,10 +13,12 @@ import (
 
 func TestMissingProgramIsADeckLoadingProblem(t *testing.T) {
 	t.Parallel()
-	entry := cardset.Entry{Name: "Missing", OracleID: "oracle-id", New: func() *game.CardDef {
-		return &game.CardDef{CardFace: game.CardFace{Name: "Missing", Types: []types.Card{types.Sorcery},
-			SpellAbility: opt.Val(game.Mode{Program: game.ProgramReference{ID: "missing", Version: "1"}}.Ability())}}
-	}}
+	entry := cardset.Entry{Name: "Missing", OracleID: "oracle-id",
+		Verification: "mtg/deck/program_load_test.go: missing-program test fixture",
+		New: func() *game.CardDef {
+			return &game.CardDef{CardFace: game.CardFace{Name: "Missing", Types: []types.Card{types.Sorcery},
+				SpellAbility: opt.Val(game.Mode{Program: game.ProgramReference{ID: "missing", Version: "1"}}.Ability())}}
+		}}
 	registry, err := cards.NewProgramRegistry([]cardset.Entry{entry})
 	if err != nil {
 		t.Fatal(err)

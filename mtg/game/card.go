@@ -817,7 +817,11 @@ func clonePrimitive(primitive Primitive) Primitive {
 		return value
 	case PutOnBattlefield:
 		value.Sources = slices.Clone(value.Sources)
+		value.Selection = cloneSelection(value.Selection)
 		value.ContinuousEffects = slices.Clone(value.ContinuousEffects)
+		for i := range value.ContinuousEffects {
+			fixupContinuousEffect(&value.ContinuousEffects[i])
+		}
 		value.EntryCounters = slices.Clone(value.EntryCounters)
 		return value
 	case CreateToken:

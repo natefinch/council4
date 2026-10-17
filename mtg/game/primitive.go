@@ -846,8 +846,12 @@ type PutOnBattlefield struct {
 	// Sources selects a simultaneous batch of referenced cards or exclusively
 	// original-source producer channels. The latter return their exact exile
 	// union under each card's owner's control unless Recipient overrides it.
-	Sources           []BattlefieldSource
-	Recipient         opt.V[PlayerReference]
+	Sources   []BattlefieldSource
+	Recipient opt.V[PlayerReference]
+	// Selection filters each original-source producer candidate in exile before
+	// entry. It supports the noncontextual characteristics accepted by
+	// ValidateResultObjectSelection; other source namespaces must leave it unset.
+	Selection         Selection
 	ContinuousEffects []ContinuousEffect
 	EntryTapped       bool
 	// EntryTransformed makes a transforming double-faced card enter the

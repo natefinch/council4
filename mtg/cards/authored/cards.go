@@ -17,9 +17,6 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, WarpWorld, PanglacialWurm)
 	for i := range entries {
 		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
-		if entries[i].Verification == "" {
-			entries[i].Verification = "mtg/rules named-card scenarios; mixed production acceptance (#3278)"
-		}
 	}
 	return entries
 }

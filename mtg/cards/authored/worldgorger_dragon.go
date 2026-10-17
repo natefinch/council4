@@ -20,6 +20,7 @@ var worldgorgerLeave = game.ProgramReference{ID: worldgorgerOracleID + "/leave/0
 // WorldgorgerDragon uses CR 607 links, not an exile-until duration.
 var WorldgorgerDragon = cardset.Entry{
 	OracleID: worldgorgerOracleID, Name: "Worldgorger Dragon", New: newWorldgorgerDragon,
+	Verification: "mtg/rules/authored_lifetime_test.go: TestWorldgorgerProductionSimultaneousExileOwnerReturnAndClone; TestWorldgorgerLeavesBeforeEnterIsNotAnUntilEffect",
 	Programs: []cardprogram.Program{
 		{Reference: worldgorgerEnter, Resolve: resolveWorldgorgerEnter},
 		{Reference: worldgorgerLeave, Resolve: resolveWorldgorgerLeave},

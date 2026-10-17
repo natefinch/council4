@@ -17,7 +17,8 @@ var gildedDrakeExchangeProgram = game.ProgramReference{ID: gildedDrakeOracleID +
 // GildedDrake declares its resolution exception rather than a resolver name check.
 var GildedDrake = cardset.Entry{
 	OracleID: gildedDrakeOracleID, Name: "Gilded Drake", New: newGildedDrake,
-	Programs: []cardprogram.Program{{Reference: gildedDrakeExchangeProgram, Resolve: resolveGildedDrakeExchange}},
+	Verification: "mtg/rules/authored_choices_program_test.go: TestAuthoredGildedDrakeExchangeAndIllegalTargetConsequence",
+	Programs:     []cardprogram.Program{{Reference: gildedDrakeExchangeProgram, Resolve: resolveGildedDrakeExchange}},
 }
 
 func newGildedDrake() *game.CardDef {

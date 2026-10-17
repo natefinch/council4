@@ -39,6 +39,9 @@ type Departure struct {
 	Moved       bool
 	Destination zone.Type
 	Arrivals    []game.ZoneCardSnapshot
+	// Cards authorizes further placements of actual public graveyard/exile
+	// arrivals in this invocation. Hidden-zone redirects do not mint handles.
+	Cards []FoundCard
 }
 
 // Destruction distinguishes a known empty batch from an unavailable referent.
@@ -67,8 +70,8 @@ type Exchange struct {
 	After     []game.ObjectSnapshot
 }
 
-// FoundCard is an invocation-local card incarnation from a revealed search or
-// an announced public-zone target.
+// FoundCard is an invocation-local card incarnation obtained through an Engine
+// operation: a revealed search, public target, or actual public arrival.
 type FoundCard struct {
 	Identity     game.ZoneCardSnapshot
 	Info         game.ChoiceCardInfo
@@ -86,6 +89,12 @@ type CardPlacement struct {
 	Cards         []FoundCard
 	Destination   zone.Type
 	LibraryBottom bool
+	// Battlefield options apply to one simultaneous placement of all Cards.
+	// Without Recipient, each card enters under its owner's control.
+	Recipient         opt.V[game.PlayerReference]
+	ContinuousEffects []game.ContinuousEffect
+	EntryCounters     []game.CounterPlacement
+	EntryTapped       bool
 }
 
 // View resolves invocation metadata and read-only references.

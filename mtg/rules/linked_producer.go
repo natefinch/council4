@@ -66,7 +66,7 @@ func (r *effectResolver) returnOriginalProducerCards(prim game.PutOnBattlefield)
 		for _, ref := range linkedObjects(r.game, key) {
 			card, ok := linkedCardInstance(r.game, ref)
 			if !ok || seen[card.ID] || !r.game.Players[card.Owner].Exile.Contains(card.ID) ||
-				!card.Def.IsPermanent() {
+				!card.Def.IsPermanent() || !cardMatchesSelection(r.game, r.obj, card, prim.Selection) {
 				continue
 			}
 			controller := card.Owner
@@ -81,7 +81,7 @@ func (r *effectResolver) returnOriginalProducerCards(prim game.PutOnBattlefield)
 			resolved = append(resolved, resolvedBattlefieldCard{card: card, fromZone: zone.Exile, controller: controller})
 		}
 	}
-	returned := r.putResolvedCardsOnBattlefieldCollecting(resolved, nil, battlefieldEntryOptions(prim))
+	returned := r.putResolvedCardsOnBattlefieldCollecting(resolved, prim.ContinuousEffects, battlefieldEntryOptions(prim))
 	// CR 607 links are not one-shot CR 610.3 captures: an inadmissible Aura
 	// remains linked in exile for a later resolving copy. Exact incarnations
 	// make successful or redirected moves unavailable without consuming others.

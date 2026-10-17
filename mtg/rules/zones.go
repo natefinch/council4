@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -174,7 +176,8 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		return nil, false
 	}
 	for _, placement := range options.Counters {
-		permanent.Counters.Add(placement.Kind, placement.Amount)
+		amount := replacementPermanentCounterPlacementAmount(g, controller, permanent, placement.Kind, placement.Amount)
+		permanent.Counters.Add(placement.Kind, amount)
 	}
 	if !commitAuraEffectAttachment(g, permanent, options) {
 		return nil, false
@@ -219,7 +222,6 @@ type preparedCardPermanentEntry struct {
 	permanent   *game.Permanent
 	controller  game.PlayerID
 	fromZone    zone.Type
-	continuous  []game.ContinuousEffect
 	options     permanentCreationOptions
 	retained    counter.Set
 	auraHost    *game.Permanent
@@ -266,18 +268,24 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
+	// CR 611.2e characteristics participate in the entry replacement check.
+	// The entrant itself remains outside the battlefield until the batch commits.
+	applyInitialContinuousEffects(g, permanent, continuous)
 	initializeReadAhead(e, g, permanent, agents, log)
 	if options.ForceTapped {
 		permanent.Tapped = true
 	}
 	destination := applyEnterBattlefieldReplacementEffects(options.entryContext(e, agents, log), g, permanent, fromZone)
 	if destination != zone.Battlefield {
+		discardPendingEntryContinuousEffects(g, permanent)
 		return preparedCardPermanentEntry{card: card, permanent: permanent, destination: destination}, true
 	}
 	for _, placement := range options.Counters {
-		permanent.Counters.Add(placement.Kind, placement.Amount)
+		amount := replacementPermanentCounterPlacementAmount(g, controller, permanent, placement.Kind, placement.Amount)
+		permanent.Counters.Add(placement.Kind, amount)
 	}
 	if !prepareAuraEffectAttachment(g, permanent, options) {
+		discardPendingEntryContinuousEffects(g, permanent)
 		return preparedCardPermanentEntry{}, false
 	}
 	var auraHost *game.Permanent
@@ -289,7 +297,6 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		permanent:   permanent,
 		controller:  controller,
 		fromZone:    fromZone,
-		continuous:  continuous,
 		options:     options,
 		retained:    retainedEntryCounters(g, card, fromZone, face, options.SourceFaceDown),
 		auraHost:    auraHost,
@@ -305,7 +312,6 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 	}
 	for i := range entries {
 		entry := &entries[i]
-		applyInitialContinuousEffects(g, entry.permanent, entry.continuous)
 		registerPermanentReplacementEffects(g, entry.permanent)
 	}
 	for i := range entries {
@@ -345,6 +351,12 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 		event.Kind = game.EventPermanentEnteredBattlefield
 		emitEvent(g, event)
 	}
+}
+
+func discardPendingEntryContinuousEffects(g *game.Game, permanent *game.Permanent) {
+	g.ContinuousEffects = slices.DeleteFunc(g.ContinuousEffects, func(effect game.ContinuousEffect) bool {
+		return effect.AffectedObjectID == permanent.ObjectID
+	})
 }
 
 func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, continuous []game.ContinuousEffect) {

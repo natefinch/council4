@@ -17,7 +17,8 @@ var hiveMindCopyProgram = game.ProgramReference{ID: hiveMindOracleID + "/cast/0"
 // HiveMind declares its trigger separately from its ordinary Go copying body.
 var HiveMind = cardset.Entry{
 	OracleID: hiveMindOracleID, Name: "Hive Mind", New: newHiveMind,
-	Programs: []cardprogram.Program{{Reference: hiveMindCopyProgram, Resolve: resolveHiveMindCopy}},
+	Verification: "mtg/rules/authored_choices_program_test.go: TestAuthoredHiveMindCopiesForOtherPlayersNotItsController",
+	Programs:     []cardprogram.Program{{Reference: hiveMindCopyProgram, Resolve: resolveHiveMindCopy}},
 }
 
 func newHiveMind() *game.CardDef {

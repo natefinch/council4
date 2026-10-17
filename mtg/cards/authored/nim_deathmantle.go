@@ -18,7 +18,8 @@ var nimDeathmantleReturn = game.ProgramReference{ID: nimDeathmantleOracleID + "/
 // NimDeathmantle keeps payment and attachment in the shared Engine.
 var NimDeathmantle = cardset.Entry{
 	OracleID: nimDeathmantleOracleID, Name: "Nim Deathmantle", New: newNimDeathmantle,
-	Programs: []cardprogram.Program{{Reference: nimDeathmantleReturn, Resolve: resolveNimDeathmantle}},
+	Verification: "mtg/rules/authored_lifetime_test.go: TestNimDeathmantlePaymentReturnAttachmentAndStatic",
+	Programs:     []cardprogram.Program{{Reference: nimDeathmantleReturn, Resolve: resolveNimDeathmantle}},
 }
 
 func newNimDeathmantle() *game.CardDef {

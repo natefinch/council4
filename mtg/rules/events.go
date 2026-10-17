@@ -533,7 +533,7 @@ func emitCrimeEvent(g *game.Game, obj *game.StackObject) {
 // the stack), or cards in an opponent's graveyard (CR 700.13). Targets that no
 // longer resolve to a known object are ignored.
 func committedCrime(g *game.Game, obj *game.StackObject) bool {
-	for _, target := range obj.Targets {
+	for _, target := range stackObjectAnnouncementTargets(obj) {
 		switch target.Kind {
 		case game.TargetPlayer:
 			if target.PlayerID != obj.Controller {

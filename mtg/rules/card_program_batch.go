@@ -47,6 +47,14 @@ func (c *programContext) Destroy(primitive game.Destroy) (cardprogram.Destructio
 			member.Moved, member.Destination = result.moved, result.destination
 			if result.moved {
 				member.Arrivals = slices.Clone(result.arrivals)
+				for _, arrival := range result.arrivals {
+					card, exists := c.game.GetCardInstance(arrival.CardID)
+					from, located := cardZone(c.game, arrival.CardID)
+					if exists && located && card.ZoneVersion == arrival.ZoneVersion &&
+						(from == zone.Graveyard || from == zone.Exile && !c.game.Players[card.Owner].Exile.IsFaceDown(card.ID)) {
+						member.Cards = append(member.Cards, c.mintFoundCard(card, from))
+					}
+				}
 			}
 			break
 		}

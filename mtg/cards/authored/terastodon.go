@@ -20,7 +20,8 @@ var terastodonEntryProgram = game.ProgramReference{
 // Terastodon is a complete authored registration; no Oracle compiler admission is required.
 var Terastodon = cardset.Entry{
 	OracleID: terastodonOracleID, Name: "Terastodon", New: newTerastodon,
-	Programs: []cardprogram.Program{{Reference: terastodonEntryProgram, Resolve: resolveTerastodonEntry}},
+	Verification: "mtg/rules/terastodon_program_test.go: TestTerastodonProgramTargetsAndActualDepartures; TestTerastodonDoesNotRewardProtectedOrIllegalTargets",
+	Programs:     []cardprogram.Program{{Reference: terastodonEntryProgram, Resolve: resolveTerastodonEntry}},
 }
 
 func newTerastodon() *game.CardDef {

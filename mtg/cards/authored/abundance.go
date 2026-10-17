@@ -19,7 +19,8 @@ var abundanceProgram = game.ProgramReference{ID: abundanceOracleID + "/replaceme
 // Abundance replaces individual draws through the Engine's CR 616 loop.
 var Abundance = cardset.Entry{
 	OracleID: abundanceOracleID, Name: "Abundance", New: newAbundance,
-	Programs: []cardprogram.Program{{Reference: abundanceProgram, Resolve: replaceAbundanceDraw}},
+	Verification: "mtg/rules/abundance_test.go: TestAbundanceIndividualDrawsDifferentKindsDeclineAndBottomOrder; TestAbundanceExhaustionEmptyAllMatchingAndDeclinedEmpty",
+	Programs:     []cardprogram.Program{{Reference: abundanceProgram, Resolve: replaceAbundanceDraw}},
 }
 
 func newAbundance() *game.CardDef {

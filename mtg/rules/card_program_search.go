@@ -86,6 +86,35 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 	seen := make(map[game.ObjectID]bool)
 	entry, bottom, ordinary := false, false, false
 	for _, placement := range placements {
+		modifiedEntry := placement.Recipient.Exists || len(placement.ContinuousEffects) > 0 ||
+			len(placement.EntryCounters) > 0 || placement.EntryTapped
+		if modifiedEntry {
+			if placement.Destination != zone.Battlefield || len(placements) != 1 {
+				return nil, errors.New("modified battlefield entry requires one battlefield placement")
+			}
+			if err := game.ValidatePrimitive(game.PutOnBattlefield{
+				Source:    game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceSource}),
+				Recipient: placement.Recipient, ContinuousEffects: placement.ContinuousEffects,
+				EntryCounters: placement.EntryCounters, EntryTapped: placement.EntryTapped,
+			}, c.specs); err != nil {
+				return nil, err
+			}
+			for _, counter := range placement.EntryCounters {
+				if !counter.Kind.Valid() || counter.Kind.PlayerOnly() {
+					return nil, errors.New("battlefield entry requires permanent counter kinds")
+				}
+			}
+			validation := &game.CardDef{CardFace: game.CardFace{
+				Name:            "authored battlefield entry",
+				StaticAbilities: []game.StaticAbility{{ContinuousEffects: placement.ContinuousEffects}},
+			}}
+			if issues := game.ValidateCardDef(validation); len(issues) > 0 {
+				return nil, errors.New("invalid battlefield entry effect: " + issues[0].Message)
+			}
+			if err := c.engine.programs.ValidateCard(validation); err != nil {
+				return nil, err
+			}
+		}
 		if placement.LibraryBottom && placement.Destination != zone.Library ||
 			placement.Destination == zone.Library && !placement.LibraryBottom {
 			return nil, errors.New("authored library placement requires an explicit bottom position")
@@ -112,6 +141,9 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 	if entry && (bottom || ordinary) || bottom && ordinary {
 		return nil, errors.New("battlefield entry and library reordering require their own simultaneous placement")
 	}
+	previous, _ := c.game.ChoiceContext()
+	c.engine.setReplacementChoiceContext(c.game, c.agents, c.log)
+	defer c.game.SetChoiceContext(previous)
 	if entry {
 		return c.putFoundCardsOnBattlefield(placements)
 	}
@@ -192,12 +224,12 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 				continue
 			}
 			identity := game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion}
-			moved = append(moved, cardprogram.FoundCard{
-				Identity: identity, Info: game.ChoiceCardInfo{
-					CardID: move.member.Info.CardID, Name: move.member.Info.Name, ManaValue: move.member.Info.ManaValue,
-					Types: slices.Clone(move.member.Info.Types), Colors: slices.Clone(move.member.Info.Colors),
-				},
-			})
+			if replacement.destination == zone.Graveyard || replacement.destination == zone.Exile &&
+				!c.game.Players[card.Owner].Exile.IsFaceDown(card.ID) {
+				moved = append(moved, c.mintFoundCard(card, replacement.destination))
+			} else {
+				moved = append(moved, cardprogram.FoundCard{Identity: identity, Info: move.member.Info})
+			}
 		}
 	}
 	for player := range game.NumPlayers {

@@ -26,19 +26,37 @@ func (c *programContext) availableFoundCard(handle cardprogram.FoundCard) (*game
 }
 
 func (c *programContext) putFoundCardsOnBattlefield(placements []cardprogram.CardPlacement) ([]cardprogram.FoundCard, error) {
+	var effects []game.ContinuousEffect
+	var options permanentCreationOptions
+	if len(placements) == 1 {
+		effects = placements[0].ContinuousEffects
+		options = permanentCreationOptions{ForceTapped: placements[0].EntryTapped, Counters: placements[0].EntryCounters}
+	}
 	var resolved []resolvedBattlefieldCard
 	for _, player := range triggerAPNAPPlayers(c.game) {
 		for _, placement := range placements {
 			for _, handle := range placement.Cards {
 				card, from, available := c.availableFoundCard(handle)
 				if available && card.Owner == player {
-					resolved = append(resolved, resolvedBattlefieldCard{card: card, fromZone: from, controller: player})
+					controller := player
+					if placement.Recipient.Exists {
+						var exists bool
+						var err error
+						controller, exists, err = c.Player(placement.Recipient.Val)
+						if err != nil {
+							return nil, err
+						}
+						if !exists {
+							continue
+						}
+					}
+					resolved = append(resolved, resolvedBattlefieldCard{card: card, fromZone: from, controller: controller})
 				}
 			}
 		}
 	}
 	resolver := newEffectResolver(c.engine, c.game, c.obj, c.agents, c.log)
-	permanents := resolver.putResolvedCardsOnBattlefieldCollecting(resolved, nil, permanentCreationOptions{})
+	permanents := resolver.putResolvedCardsOnBattlefieldCollecting(resolved, effects, options)
 	arrivals := make([]cardprogram.FoundCard, 0, len(permanents))
 	for _, permanent := range permanents {
 		card, _ := c.game.GetCardInstance(permanent.CardInstanceID)

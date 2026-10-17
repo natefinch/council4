@@ -1968,13 +1968,19 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	if p.Source.Valid() {
 		sources = []BattlefieldSource{p.Source}
 	}
-	if producers := consumedLinkedProducers(p); len(producers) > 0 {
+	producers := consumedLinkedProducers(p)
+	if len(producers) > 0 {
 		if len(p.Sources) > 0 && len(producers) != len(p.Sources) {
 			return errors.New("original-source linked returns cannot mix source namespaces")
 		}
-		if len(p.LinkedReturnZones) > 0 || len(p.ContinuousEffects) > 0 {
-			return errors.New("original-source linked returns support only exiled cards without continuous grants")
+		if len(p.LinkedReturnZones) > 0 {
+			return errors.New("original-source linked returns support only exiled cards")
 		}
+		if problems := ValidateResultObjectSelection(p.Selection); len(problems) > 0 {
+			return fmt.Errorf("original-source linked return filter: %s", problems[0])
+		}
+	} else if !p.Selection.Empty() {
+		return errors.New("put on battlefield selection requires original-source producer channels")
 	}
 	for _, source := range sources {
 		if !source.Valid() {
@@ -2000,7 +2006,7 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 	if len(p.Sources) > 0 && len(p.LinkedReturnZones) > 0 {
 		return errors.New("simultaneous put on battlefield cannot restrict return zones")
 	}
-	if len(p.Sources) > 0 && len(p.ContinuousEffects) > 0 {
+	if len(p.Sources) > 0 && len(p.ContinuousEffects) > 0 && len(producers) == 0 {
 		return errors.New("simultaneous put on battlefield does not support continuous effects")
 	}
 	if len(p.LinkedReturnZones) > 0 {

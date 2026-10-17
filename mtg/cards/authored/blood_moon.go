@@ -13,6 +13,7 @@ import (
 // BloodMoon uses the shared CR 305.7 type-layer operation, not a resolving program.
 var BloodMoon = cardset.Entry{
 	OracleID: "94fac5fe-97d5-4c12-a80c-8efff9d853ae", Name: "Blood Moon", New: newBloodMoon,
+	Verification: "mtg/rules/blood_moon_test.go: TestBloodMoonProductionCastingSimulatorObservationAndPayment",
 }
 
 func newBloodMoon() *game.CardDef {

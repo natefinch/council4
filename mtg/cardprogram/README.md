@@ -6,6 +6,48 @@ The Engine resolves the selected mode synchronously through an installed
 immutable `cardprogram.Catalog`, using the same rules as declarative cards.
 No parser, interpreter, coroutine or copied Go call stack is involved.
 
+## Capability lookup
+
+Start with the rules concept, then inspect the declaration and its behavioral
+test. This index includes **declarative** capabilities as well as native Go
+operations; needing no Go program is a valid implementation. Follow the
+[authoring workflow](../../docs/card-authoring.md) and read the relevant official
+rules before designing the card. A row is navigation, not a promise that every
+Oracle variant in that family is supported.
+
+| Rules concept / wording | Existing hook | Working example / behavioral evidence | Boundary to check |
+| --- | --- | --- | --- |
+| Printed costs, targets, modes, timing | [`AbilityContent`, `Mode`, `TargetSpec`](../game/ability.go), ordinary activated/static declarations | [copy spells](../cards/authored/copy_spells.go), [paid spell scenarios](../rules/authored_copy_spells_test.go) | Announcement and target revalidation belong to the Engine, not a resolving callback. |
+| "That player controls" on a trigger | [`Selection.ControlledByEventPlayer`](../game/selection.go) | [Garland scenarios](../rules/garland_royal_kidnapper_test.go), [damaged-player targeting](../rules/damaged_player_target_test.go) | Keep the ability controller as chooser; match and recheck the captured event player, not any opponent. |
+| "Defending player controls" | [`Selection.ControlledByDefendingPlayer`](../game/selection.go) | [Spear of Bashenga](../rules/the_spear_of_bashenga_test.go) | Attack events distinguish the attacker from the defending player. |
+| Intervening "if", distinct card types, event history | [`TriggerCondition.InterveningCondition`](../game/ability.go), [`Condition`](../game/condition.go) | [intervening-if tests](../rules/triggers_interveningif_test.go) | Conditions that govern triggering must also recheck on resolution. Inspect the complete aggregate/selection declarations. |
+| Resolve an event player or current target controller | [`EventPlayerReference`, `ObjectControllerReference`](../game/reference.go), `View().Player` | [Nim Deathmantle](../cards/authored/nim_deathmantle.go), [lifetime tests](../rules/authored_lifetime_test.go) | Historical identity, current controller, owner, payer and decision maker are different concepts. |
+| Optional resolving payment, including mana and life | [`Pay`, `ResolutionPayment`](../game/primitive.go) through `Execute` | [Nim Deathmantle](../cards/authored/nim_deathmantle.go), [resolving-payment tests](../rules/resolution_payment_energy_test.go) | Use one Engine payment for a combined cost; ask a choice only after legality/affordability is established. |
+| Destroy, then act on what actually moved | `Context.Destroy`, [`Departure.Cards`](context.go) | [Terastodon](../cards/authored/terastodon.go), [arrival composition](../rules/card_program_arrivals_test.go) | Use actual destination and minted public-arrival handles. Protected creatures, tokens and unrelated graveyard cards are not returns. |
+| "Choose a card put into a graveyard this way" | `Destroy` receipts, `Ask`, `MoveCards` | [paid destruction/choice/reanimation composition and clones](../rules/card_program_arrivals_test.go) | Choices use normal Engine requests; do not turn arbitrary snapshots into movement authority. |
+| Return actual cards with a controller/type/color/counter modification | [`CardPlacement`](context.go) with `Recipient`, `ContinuousEffects`, `EntryCounters`, `EntryTapped` | [modified simultaneous entry](../rules/card_program_arrivals_test.go) | One modified battlefield placement contains the entire simultaneous batch; all handles must belong to this invocation. Entry changes use the shared pre-entry path. |
+| Public graveyard/exile targets | `View().TargetCards()`, `MoveCards` | [numeric target spells](../cards/authored/numeric_targets.go), [real target scenarios](../rules/numeric_target_cards_test.go) | Handles are exact incarnations. A card that leaves and returns is not the old target. |
+| Revealed or private library search | `Context.Search` for revealed handles; declarative [`Search`](../game/primitive.go) for private placement | [qualified/private tutors](../cards/authored/production_tutors.go), [private-search scenarios](../rules/production_private_tutors_test.go) | Do not reveal a private find to obtain a handle. Unrestricted mandatory finds differ from qualified fail-to-find. |
+| Copy a spell/ability or choose new targets | `Context.Copy`, [`CopyStackObject`](../game/primitive.go) | [copy spells](../cards/authored/copy_spells.go), [copy scenarios](../rules/authored_copy_spells_test.go) | Copies are not casts; preserve modes, X, illegal targets that may be retained, and recorded choices. |
+| Create tokens together, including for multiple players | `CreateTokens` and [`CreateToken`](../game/primitive.go) | [removal/token spells](../cards/authored/removal_token_spells.go), [replacement scenarios](../rules/removal_token_spells_test.go) | Token/entry replacements and simultaneous cohorts are Engine-owned; do not loop independently completed batches. |
+| Exchange control | `Context.Exchange` | [Gilded Drake](../cards/authored/gilded_drake.go), [choice-program scenarios](../rules/authored_choices_program_test.go) | Exchange is all-or-nothing and uses current effective controllers. |
+| "Exiled with this" across different activations | [`MoveCard.PublishLinkedProducer`, `AbilityContent.LinkedProducers`](../game/primitive.go), original-source linked battlefield sources | [Worldgorger Dragon](../cards/authored/worldgorger_dragon.go), [linked-producer scenarios](../rules/linked_producer_test.go) | State is owned by the original source occurrence, not a mutable program closure or physical-card ID. |
+| Return only matching linked exiles with entry changes | [`PutOnBattlefield.Selection`](../game/primitive.go), original-source sources, existing `ContinuousEffects`/`Recipient`/`EntryCounters` | [Ghost Vacuum operation composition](../rules/linked_producer_ghost_vacuum_test.go) | Filter each current linked card; do not use a whole-instruction gate as a per-card filter. Only noncontextual card predicates are supported here; unreturned cards retain their exact link. |
+| "When it leaves" versus "until it leaves" | Existing [`LinkedKey`, `LinkedProducerKey`](../game/primitive.go), delayed declarations | [Worldgorger and Nim](../rules/authored_lifetime_test.go), [delayed programs](../rules/authored_delayed_program_test.go) | CR 607 linked triggers and CR 610.3 durations have different order/lifetime behavior. |
+| "Creatures lose abilities", base P/T, colors or types | [`StaticAbility`](../game/ability_body.go), [`ContinuousEffect`](../game/continuous.go), `ApplyContinuous` | [Humility/Opalescence](../cards/authored/humility_opalescence.go), [layer scenarios](../rules/humility_opalescence_test.go) | Static groups stay live; resolving characteristic effects snapshot their recipients. Check timestamps, dependencies and additive versus replacing fields. |
+| "Until your next turn", unblockability, goad | [`ApplyRule`, `Goad`](../game/primitive.go), [`EffectDuration`](../game/duration.go) | [goad attack tests](../rules/goaded_subject_attack_test.go) | Goad and can't-be-blocked are not ordinary granted abilities. Duration is tied to the creating effect's controller. |
+| Replace an individual draw | [`ReplacementEffect.Program`](../game/replacement.go) with inspectable applicability | [Abundance](../cards/authored/abundance.go), [draw replacement tests](../rules/draw_replacement_program_test.go) | This program seam is for individual draws, not arbitrary replacement categories; preserve lineage and first-actual-draw rules. |
+| Spell self-exile / return to hand / shuffle away | [`MoveResolvingSpell`](../game/primitive.go) | [stack resolution](../rules/stack.go), [self-shuffle scenarios](../rules/self_shuffle_into_library_test.go) | Use the resolving-spell operation, not `MoveCard` pretending a popped resolving spell is in a player zone. Copies have no physical card to move. |
+| Cast while searching / graveyard play permission | Inspectable static permissions | [Panglacial Wurm](../cards/authored/panglacial_wurm.go), [Muldrotha](../cards/authored/muldrotha.go), [search scenarios](../rules/panglacial_wurm_test.go) | Authorization, mana-payment windows and usage records are not ordinary priority or card-owned state. |
+| Commander choices, replacements, identity and simultaneous moves | [shared zone transition machinery](../rules/README.md#shared-zone-transitions) via Engine operations | [cross-operation movement contracts](../rules/zone_movement_contract_test.go), [lifecycle scenarios](../rules/zone_movement_lifecycle_test.go) | No card-specific commander logic or immediate SBA inside resolution. Library reorders are not zone changes. |
+| Explicit identity/program/evidence admission | [`cardset.Entry`](../cards/cardset/cardset.go), checked registry | [verification admission tests](../cards/verification_registry_test.go) | New authored identities need explicit card-specific `Verification`; a string alone does not prove rules correctness. |
+
+If a concept is not obvious here, use symbol lookup on the linked type, read its
+**complete** declaration, then follow the Engine implementation and tests.
+Do not infer absence from one truncated read or a guessed identifier. Before
+declaring a blocker, check for an existing canonical issue and establish the
+actual missing behavior as described in the authoring guide.
+
 ## An ordinary body
 
 ```go
@@ -91,6 +133,10 @@ card is added only after its entire behavior and relevant scenarios are complete
   remain correlated but have no arrival; an unavailable single reference is
   distinct from an available empty group. `Before.ZoneCards` uses the actual
   pre-move versions, not LKI's predicted destination versions.
+  Each member's `Cards` mints placement authority for its actual still-current
+  graveyard/face-up-exile arrivals. Filter by the actual `Destination`, then
+  compose recorded choices and `MoveCards`; never rebuild handles from raw
+  snapshot IDs. Hidden-zone redirects and departed tokens mint no such authority.
 - `CreateTokens(definition, recipients...)` creates one simultaneous event across
   the declared `TokenRecipient{Player, Count}` quantities, using token/entry replacements
   and returns copied snapshots of the tokens actually created. Invalid inputs
@@ -148,6 +194,9 @@ card is added only after its entire behavior and relevant scenarios are complete
   shuffle. Target handles also retain their actual source zones. Clone preserves
   the library's shuffle-correlation epoch. For simultaneous battlefield entry,
   programs use the existing `Execute(PutOnBattlefield{Sources: ...})` operation.
+  Actual public graveyard/exile arrival receipts are minted for another
+  placement in the same invocation, including replacement redirects. Old
+  handles cannot follow those cards through a later zone change.
 
 `MoveCards` also accepts a battlefield-only placement across owners, using the
 same shared simultaneous entry pipeline. Aura admission/attachment choices are
@@ -160,6 +209,14 @@ still-current revealed library cards in their owners' chosen bottom order,
 without inventing a zone change or a new incarnation. Battlefield entry and
 bottom reordering each require their own placement, rather than approximating a
 mixed-destination batch.
+
+A single battlefield `CardPlacement` may set `Recipient`, `ContinuousEffects`,
+`EntryCounters` and `EntryTapped` for its entire simultaneous batch. Without a
+recipient, the owners control their respective arrivals. These are ordinary
+shared-entry changes, not a callback after entry; modified entries cannot be
+split into multiple independent placement batches. Invalid non-battlefield
+options or malformed entry declarations fail before mutation. Returned
+battlefield snapshots describe arrivals, not reusable public-zone handles.
 
 Warp World composes these operations in ordinary Go: snapshot per-owner counts,
 move all permanents simultaneously and shuffle, reveal exact cards, enter all

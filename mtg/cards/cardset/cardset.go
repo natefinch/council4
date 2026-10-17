@@ -27,7 +27,11 @@ type Entry struct {
 	// ReplaceLegacy explicitly replaces one uniquely named legacy entry.
 	// Ambiguous name-only replacements and duplicate Oracle IDs are rejected.
 	ReplaceLegacy bool
-	// Verification names the production behavior evidence, not a compiler result.
+	// Verification names explicit card-specific behavior scenario references, not
+	// a compiler result or a generic acceptance claim. Checked registration
+	// requires it for every explicit OracleID, including synthetic test entries;
+	// name-only legacy entries need not supply it. Presence alone is not proof
+	// that the scenarios pass or the implementation is correct.
 	Verification string
 	// Name is the canonical printed card name, matching the Name of the CardDef
 	// that New returns (the front face for a multi-face card).
