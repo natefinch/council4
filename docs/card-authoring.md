@@ -12,8 +12,9 @@ Programs and declarations share the production Engine and registry.
 2. Resolve exact Oracle ID/face and current text from the
    [pinned corpus](../testdata/card-preservation/corpus.json). Read that printing's
    Scryfall `rulings_uri` and the applicable official Comprehensive Rules; record
-   revisions. Check **mixed production** support (`mage supportInventory`), not
-   compiler acceptance or a name match alone.
+   revisions. Check the relevant production registry entries and scenario evidence,
+   not compiler acceptance or a name match alone. The existing
+   [inventory](../support-inventory.md) is a report, not a required refresh.
 3. Inspect the nearest authored card and
    [shared operation API](../mtg/cardprogram/README.md). Draft normal Go:
    printed costs, targets, modes, triggers and static/replacement applicability
@@ -22,27 +23,23 @@ Programs and declarations share the production Engine and registry.
 4. Execute named-card scenarios through the real Engine. Exercise choices,
    target changes/all-illegal targets, source departure, relevant replacements
    and timing, not just CardDef shapes or a smoke game's winner.
-   Use scoped tests during iteration. Request one focused independent **rules**
-   review for a nontrivial batch; fix concrete findings, not unrelated redesigns.
+   Follow the [validation and review policy](../.github/copilot-instructions.md#verify-proportionally).
 5. Register only complete behavior-verified entries in
    `mtg/cards/authored/cards.go`, with exact Oracle identity and program versions.
-   Set specific `Verification` evidence. Refresh source bindings after bound
-   code changes: `go generate ./mtg/cards/authored`. Program-free static cards
-   are valid; do not add a dummy body. Explicit legacy replacement is permitted
+   Set specific `Verification` evidence and retain program dependencies.
+   Program-free static cards are valid; do not add a dummy body.
+   Explicit legacy replacement is permitted
    only for a verified unique identity, never to hide an ambiguous name.
-6. At integration, run `go test ./...` **once**. Do not run linters or lint
-   autofixes unless the user explicitly asks; lint is not a local
-   commit/completion gate.
-   Run affected race/platform execution and `mage preserveRegistry` where needed.
-   Refresh `mage supportInventory` without corpus recompilation. Inspect every
-   diff. Commit intended files to main only when authorized; push only with
+6. Complete the policy's affected checks and inspect the diff; no corpus,
+   fingerprint or global report refresh is needed. Commit intended files to main
+   only when authorized; push only with
    separate permission. Record meaningful behavior, blockers and commit once,
    explicitly distinguishing local from published support.
 
 Stop after the assigned batch, a genuine blocker, or the authorized budget.
 Continue a production queue only when assigned. Never turn budget exhaustion,
 unsupported behavior or partial cards into success. No automatic schedules,
-mandatory PRs, full corpus reruns, per-file agents or per-card engine frameworks.
+mandatory PRs, per-file agents or per-card engine frameworks.
 
 ## Saved production queue
 
@@ -57,12 +54,11 @@ record the completed first three batches, the next three exact identity lists,
 live issue reconciliation, measurements and stopping conditions. Keep this guide's
 ordinary authoring/scaffold/gates; the queue is work accounting, not another DSL.
 
-The later explicit compiler import marks newly loadable records
+The completed legacy compiler import marked newly loadable records
 `installed-compiled`, not `implemented-verified`. These records need no duplicate
 source generation and are skipped by the saved authored batches. Known runtime
-blocks remain blocked even when their generated sources exist. After another
-intentional import, use `cardqueue -operation reconcile-compiled`; it refuses
-active claims and does not manufacture behavior evidence.
+blocks remain blocked even when their generated sources exist. This historical
+import is not a step to repeat for new support.
 
 Named issue follow-ups can record `implemented-verified` admissions without
 inventing or resizing a saved queue batch. Exact loadable, behavior-verified
@@ -117,5 +113,5 @@ not a growing production backlog or an acceptance waiver.
 > behavior, including relevant replacements, target changes, source departure
 > and choices. If a required Engine capability is missing, link a precise shared
 > blocker and leave that whole card unsupported; continue other eligible cards.
-> Use scoped validation and the repository acceptance gate once. Keep changes
+> Follow the repository validation policy. Keep changes
 > reviewable and honor the run's commit/push permissions.

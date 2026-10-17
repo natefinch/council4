@@ -2,6 +2,9 @@ package supportinventory
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/cards"
@@ -62,5 +65,44 @@ func TestInstalledSpellDoesNotPromotePreparedCardOrSameNameToken(t *testing.T) {
 		if record.OracleID != "prepared" && record.OracleID != "token" {
 			t.Fatalf("complete installed definition was lost: %+v", record)
 		}
+	}
+}
+
+func TestReportsRetainScenarioEvidenceWithoutSourceHashes(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	for name, data := range map[string]string{
+		"README.md":              "# Project\n\n<!-- card-support:start -->\nold\n<!-- card-support:end -->\n",
+		"card-backlog.md":        "# Historical backlog\n\nSaved diagnostics.\n",
+		"unsupported-reasons.md": "# Historical reasons\n\nSaved diagnostics.\n",
+	} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(data), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	support := cards.Support{
+		Name: "Authored", OracleID: "authored", Loadable: true,
+		Implementation: "authored", BehaviorVerified: true,
+		Verification: "mtg/rules/example_test.go",
+	}
+	inventory := Inventory{
+		Production: []cards.Support{support},
+		Corpus:     []Record{{OracleID: support.OracleID, Name: support.Name, Production: &support}},
+	}
+	if err := inventory.WriteDocs(root); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(filepath.Join(root, "support-inventory.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if !strings.Contains(text, support.Verification) ||
+		!strings.Contains(text, ".github/copilot-instructions.md") ||
+		!strings.Contains(text, "explicit reporting maintenance") {
+		t.Fatal("report lost scenario evidence or the current validation policy")
+	}
+	if strings.Contains(text, "go generate") || strings.Contains(text, "sha256:") {
+		t.Fatal("report retained executable-source fingerprint bookkeeping")
 	}
 }

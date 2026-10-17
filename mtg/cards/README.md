@@ -48,9 +48,9 @@ deepen those seams. The spell-only legacy escape hatch is kept for compatibility
 not a bypass for missing operations or policies.
 
 Keep existing generated definitions and their runtime tests. Place future
-authored sources in `mtg/cards/authored`; never point corpus regeneration at
-them. Test shared operations and
-actual named-card interactions, then validate production registration.
+authored sources in `mtg/cards/authored`. Test shared operations and actual
+named-card interactions, then validate production registration following the
+[repository policy](../../.github/copilot-instructions.md#verify-proportionally).
 
 Skullbriar's haste and combat-damage trigger are ordinary declarations using
 shared Engine operations. Its static `ZoneTransitionPolicy` is a typed
@@ -64,15 +64,15 @@ ability sources, and failed proposals restore the prior counter container.
 The acceptance scenarios use the pinned Oracle corpus and the official
 2026-09-25 CR with Skullbriar's 2011-09-22 Oracle rulings.
 
-## Legacy regeneration
+## Retained legacy definitions
 
 The complete pinned compiler-accepted corpus is checked in: **17,946 card
 definitions and 754 token definitions** (18,700 total). Existing definitions
 are preserved rather than overwritten by the additive import; the exact
-installed paths/digests are recorded in
+installed identities and paths are recorded in
 [`installed-compiler.json`](../../testdata/card-preservation/installed-compiler.json).
 No generation or Oracle download is needed to use a fresh checkout.
-The [installer](../../cmd/installcompiled/README.md) reproduces this operation.
+The bulk compiler/import workflow is retired; do not repeat it for new support.
 
 Authored implementations take precedence over their 24 overlapping compiler
 definitions. The generated copies remain available in the letter packages.
@@ -81,11 +81,8 @@ but the default playable registry excludes them until the proven private-search
 placement defect [#3289](https://github.com/natefinch/council4/issues/3289) is fixed.
 Compiler acceptance and source presence are not runtime certification.
 
-For explicitly assigned compiler correctness or corpus refresh work, compile
-to a temporary tree and inspect it before intentionally updating generated
-definitions. Keep the same corpus input for baseline/candidate comparisons.
-See [`compilecards`](../../cardgen/oracle/cmd/compilecards/README.md).
-Regeneration is not an every-card gate or permission to overwrite authored files.
+Focused legacy correctness fixes use the existing code and behavioral tests,
+not corpus recompilation or fingerprint baselines.
 
 After an intentional change to existing constructor entries, maintain the lists:
 

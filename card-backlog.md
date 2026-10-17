@@ -1,5 +1,11 @@
 # Card-Support Backlog
 
+**Historical compiler-routing report.** Its producer is retired; do not
+recompile cards or regenerate this backlog. Current work follows the
+[authoring guide](docs/card-authoring.md) and
+[validation policy](.github/copilot-instructions.md#verify-proportionally).
+The signals, reconciliation and counts below describe the saved run.
+
 <!-- production-inventory:start -->
 **Legacy compiler maintenance only, not the authored-card roadmap.** Production registry: **17973 entries, 17973 loadable, 50 behavior-verified authored identities**. Frozen compiler: **18700/33016 eligible Oracle records accepted**. These are separate measurements; name-only legacy entries are not certified exact Oracle/face identities or behavior-verified games.
 Working authored identities are excluded from production unsupported status. See [support-inventory.md](support-inventory.md); diagnostic counts and historical routing below remain frozen compiler evidence, not loadability or behavioral claims.
@@ -10,7 +16,8 @@ Every eligible Scryfall corpus card is evaluated with two signals and routed to 
 - **Parser signal** (parser-only): `cardgen.ParseCardFaces` + `parser.DocumentCoverage` — is the card parser-complete, and which uncovered components remain?
 - **Lowering signal** (full compile): compilecards' canonical report — did the card generate, and if not, which distinct diagnostic summaries blocked lowering? compilecards is the authority; an independent per-card recompile reconciles against it.
 
-This produces two ranked, actionable queues. Regenerate with `mage cardBacklog`.
+This produced two ranked compiler-maintenance queues, not the active authored
+production queue.
 
 ## Headline
 
@@ -216,4 +223,3 @@ Cards that are not parser-complete (and do not lower), bucketed by owning compon
 | 58 | effect | choose target creature you control. | 13 | Heroic Sacrifice; Mandate of Abaddon; Loki, Lord of Misrule; Hall of Mirrors; Eidolon of Astral Winds |
 | 59 | effect | choose three. | 13 | Eldrazi Confluence; Verdant Confluence; Obscura Confluence; Fiery Confluence; Cosmium Confluence |
 | 60 | effect | draft this card face up. | 13 | Deal Broker; Agent of Acquisitions; Illusionary Informant; Archdemon of Paliano; Paliano Vanguard |
-

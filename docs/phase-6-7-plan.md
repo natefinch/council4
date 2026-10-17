@@ -1,5 +1,9 @@
 # Phase 6/7 Plan: Core Combat Completion and Permanent Interaction
 
+**Historical implementation plan.** Preserve its results and design context;
+do not resume its old validation checklist. Current checks follow the
+[repository policy](../.github/copilot-instructions.md#verify-proportionally).
+
 This plan covers the next two roadmap phases after the current minimal combat/death foundation.
 
 The product goal remains: accept four Commander decklists, run repeated AI-controlled games with those decks, and produce an analytics report for the individual deck being tested.

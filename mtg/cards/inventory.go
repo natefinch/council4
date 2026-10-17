@@ -21,8 +21,6 @@ type Support struct {
 	BehaviorVerified bool                    `json:"behavior_verified"`
 	Verification     string                  `json:"verification,omitempty"`
 	Failure          string                  `json:"failure,omitempty"`
-	SourceRevision   string                  `json:"source_revision,omitempty"`
-	RulesRevision    string                  `json:"rules_revision,omitempty"`
 	Programs         []game.ProgramReference `json:"programs,omitempty"`
 }
 
@@ -44,10 +42,7 @@ func (r *Registry) SupportFor(name string) []Support {
 			support.Identity = "exact-oracle-face"
 			support.Implementation = "authored"
 			support.Verification = entry.Verification
-			support.SourceRevision = entry.SourceRevision
-			support.RulesRevision = entry.RulesRevision
-			support.BehaviorVerified = err == nil && entry.Verification != "" &&
-				entry.SourceRevision != "" && entry.RulesRevision != ""
+			support.BehaviorVerified = err == nil && entry.Verification != ""
 		}
 		if err != nil {
 			support.Failure = err.Error()

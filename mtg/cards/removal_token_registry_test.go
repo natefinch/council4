@@ -30,9 +30,8 @@ func TestRemovalTokenCardsProductionIdentityAndVerification(t *testing.T) {
 				t.Fatal("verified entry is not registered")
 			}
 			verified := authored.Cards[index]
-			if entry.Verification == "" || verified.Verification != entry.Verification ||
-				verified.SourceRevision == "" || verified.RulesRevision == "" {
-				t.Fatal("explicit verification was lost or source/rules bindings were omitted")
+			if entry.Verification == "" || verified.Verification != entry.Verification {
+				t.Fatal("explicit scenario evidence was lost")
 			}
 		})
 	}

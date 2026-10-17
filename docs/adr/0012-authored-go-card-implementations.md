@@ -23,14 +23,10 @@ seams, not by copying an ordinary Go call stack.
 
 The repository is a one-maintainer project. Authorized issue implementations
 normally produce small direct commits to main, with one writer, rather than
-mandatory branches, PRs, approvals and merges. Run scoped checks during
-development, the existing suite once before landing code, and inspect the diff.
-Agents run linters only when the user explicitly asks, not as a local
-commit/completion gate. Docs-only changes use documentation checks. Push
-permission is separate; never overwrite unrelated work, force-push or bypass
+mandatory branches, PRs, approvals and merges. Checks and review follow the
+[repository validation policy](../../.github/copilot-instructions.md#verify-proportionally).
+Push permission is separate; never overwrite unrelated work, force-push or bypass
 protections.
-Independent review is focused on substantial shared-rule changes, not required
-for every routine issue. Deep architectural review is explicitly opt-in.
 
 ## Why
 
@@ -42,8 +38,8 @@ and per-issue review ceremony also distract from actual rules correctness.
 
 This changes the authoring and execution defaults, not the requirement to
 implement all a card's abilities. Partial cards remain unsupported. Named-card
-interaction scenarios and shared-operation tests are both useful; a source or
-CardDef fingerprint cannot prove runtime semantics.
+interaction scenarios and shared-operation tests are both useful; generated
+source, structural assertions and hashes cannot prove runtime semantics.
 
 ## Preserved and superseded decisions
 
@@ -69,13 +65,15 @@ interfaces beyond the completed slices already exist. Step 03 (#3272) supplies
 versioned resolving bodies in `game.Mode.Program` and the shared
 `mtg/cardprogram` catalog/context. `rules.CardImplementation.ResolveSpell` remains
 the narrow legacy compatibility route.
-Step 02 (#3270) supplies pinned compiler/registry preservation and read-only,
-proportional CI. Mixed support reporting is still step 12 (#3278). Existing
-compiler reports measure recognition, not all deployed or behavior-verified cards.
+Step 02 (#3270) originally supplied pinned compiler/registry preservation.
+That fingerprint/corpus workflow is retired; its retained data is historical
+evidence, not a completion gate. Step 12 (#3278) supplies mixed support reporting.
+Existing compiler reports measure recognition, not all deployed or
+behavior-verified cards.
 
 Keep generated definitions, tests, merged improvements and unmerged work.
-Freeze compiler coverage expansion; allow explicitly assigned correctness fixes
-and regeneration. Preserve genuine runtime bugs when parking a compiler-only
+Freeze compiler coverage expansion; allow focused correctness fixes without
+corpus recompilation. Preserve genuine runtime bugs when parking a compiler-only
 approach. Do not turn this migration into wholesale card regeneration.
 
 ### Original-source linked exile channels (#3232)

@@ -36,8 +36,8 @@ func TestSearchPartitionCardsProductionIdentityAndVerification(t *testing.T) {
 			}
 			verified := authored.Cards[index]
 			if !strings.Contains(entry.Verification, "mtg/rules/search_partition_spells_test.go") ||
-				verified.Verification != entry.Verification || verified.SourceRevision == "" || verified.RulesRevision == "" {
-				t.Fatal("specific scenario evidence or source/rules bindings were lost")
+				verified.Verification != entry.Verification {
+				t.Fatal("specific scenario evidence was lost")
 			}
 		})
 	}

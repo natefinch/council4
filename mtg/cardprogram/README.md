@@ -298,17 +298,21 @@ existing unsupported-game failure path, never a successful-looking fallback.
 The CLI passes the loaded registry's catalog. `sim.Config`, `GoldfishConfig`
 and `Matchup` accept an optional immutable catalog; nil uses the production
 catalog. Simulator/search Engines share code while retaining independent
-contexts and mutable game state. Replay records carry exact program versions;
-custom replays may provide a catalog as the third `Replay` argument.
+contexts and mutable game state. Replay records carry program IDs/versions,
+including transitive delayed-handler dependencies; missing IDs or wrong versions
+fail explicitly. Custom replays may provide a catalog as the third `Replay`
+argument. Exact replay requires the same code revision, inputs and configuration:
+these references are compatibility checks, not hashes of executable behavior.
 
-Bindings and authored declaration data round-trip through JSON. Installed Go
+Program references and authored declaration data round-trip through JSON. Installed Go
 functions do not: serializing a Catalog fails explicitly. A consumer needs the
 matching compiled catalog to load those references. Version changes must be
 intentional; do not reuse a version to pretend different code is the same
 implementation. Existing legacy cards and APIs remain available.
 
-Validate through actual stack/choice/clone/parallel/replay scenarios. Metadata,
-Go compilation and preservation fingerprints are not rules certification.
+Validate through actual stack/choice/clone/parallel/replay scenarios under the
+[repository policy](../../.github/copilot-instructions.md#verify-proportionally).
+Metadata and Go compilation are not rules certification.
 
 ## Source-scoped graveyard play permissions
 

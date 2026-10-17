@@ -1,38 +1,15 @@
-# Install a compiled corpus
+# Retired compiled-corpus installer
 
-This is an explicit, additive legacy-corpus import, not the new-card authoring
-workflow. It copies the pinned compiler output into the checked-in card tree,
-preserving existing implementations and alternate filenames with the same Go
-constructor. It never writes into `authored/` or deletes existing card sources.
+The bulk import workflow is retired. New support follows the
+[authored-Go guide](../../docs/card-authoring.md) and
+[repository validation policy](../../.github/copilot-instructions.md#verify-proportionally),
+not another compiler run or import.
 
-From the repository root:
+The completed additive import preserved existing implementations and authored
+sources. `installed-compiler.json` retains its identity/path
+evidence; it is a historical installation record, not a refresh task or behavior
+certificate. Existing generated cards and runtime tests remain.
 
-```sh
-go run ./cardgen/oracle/cmd/compilecards \
-  -in .cardwork/corpus/oracle-cards.json \
-  -out .cardwork/compiled-import \
-  -report .cardwork/compiled-import-report.json \
-  -inventory .cardwork/compiled-import-inventory.json
-go run ./cmd/installcompiled
-go generate ./mtg/cards/...
-go run ./cmd/cardqueue -operation reconcile-compiled
-COUNCIL4_COMPILER_REPORT=.cardwork/compiled-import-report.json \
-  go run github.com/magefile/mage@v1.15.0 supportInventory
-```
-
-Use a fresh compiler output directory. The compiler's `-inventory` verifies the
-input bytes against `testdata/card-preservation/corpus.json`; the installer
-requires the same pin, accepted source digests, and complete source coverage.
-The resulting `installed-compiler.json` records every accepted Oracle identity,
-its actual installed source path, constructor and source digest, including
-preserved implementations. Repeating the installation is idempotent.
-
-The default registry deliberately prefers the explicit authored replacements.
+The default registry prefers explicit authored replacements.
 `cards.CompilerExclusions()` keeps proven runtime blockers out of deck lookup
-without deleting their generated sources. New overlaps or exclusions require
-explicit review; the installer does not mark a card behavior-verified.
-
-Run the normal test gate, source coverage tests, registry preservation and
-affected platform checks. Run linters only when the user explicitly asks.
-This operation does not commit or push. Compilation and structural loading
-do not certify gameplay fidelity.
+without deleting their generated sources.

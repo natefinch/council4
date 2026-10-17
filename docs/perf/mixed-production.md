@@ -1,5 +1,11 @@
 # Mixed production acceptance (#3278)
 
+**Historical acceptance and performance evidence.** Measurements and passed
+checks below describe that checkpoint, not current validation requirements.
+Follow the [repository policy](../../.github/copilot-instructions.md#verify-proportionally)
+for new work and [replay documentation](../../mtg/sim/README.md#replay) for the
+current ID/version compatibility contract; source-hash bindings are retired.
+
 ## What was exercised
 
 All eleven proving identities are installed in the default registry: Terastodon,
@@ -23,10 +29,11 @@ fixtures, not claims of legal 100-card Commander construction. The committed
 performance decks below pass Commander deck validation.
 
 `mtg/sim/production_test.go` runs mixed decks with one and two workers, records
-and JSON-reloads replay scripts, and compares complete results. Replay binds
-authored executable source and shared rules, including static-only Blood Moon
-decks and transitive Go-only scheduled handlers. Changing a source/rules binding
-fails explicitly. Program declarations remain data, not serialized functions.
+and JSON-reloads replay scripts, and compares complete results. At this checkpoint
+replay bound authored executable source and shared rules, including static-only
+Blood Moon decks and transitive Go-only scheduled handlers. Changing a
+source/rules binding failed explicitly. Program declarations remain data, not
+serialized functions.
 The existing missing-handler tests reject loading/preflight and retain
 `unsupported-execution`, with no completed win or draw.
 
@@ -170,12 +177,10 @@ acceptance (18,700/33,016), loadable production entries (2,790) and named author
 behavior evidence (11 identities) remain separate, with no inferred exact Oracle
 identities for name-only legacy entries.
 
-CI's existing `TestValidationMatrix` selects registry preservation and code
-checks for authored edits, not corpus regeneration. This slice also changes
-support tooling, for which the matrix intentionally selects compiler-maintenance
-checks. Normal isolated authored-card edits do not acquire that maintenance gate.
+At this checkpoint `TestValidationMatrix` selected registry preservation and
+code checks for authored edits and compiler-maintenance checks for support
+tooling. That matrix and its corpus/fingerprint gates are retired.
 This slice's recorded local final validation used full tests followed by lint,
 focused race tests, actual WASM scenarios/builds, registry preservation and diff
 inspection. For current validation policy, follow the
-[repository instructions](../../.github/copilot-instructions.md); agents run
-linters only when the user explicitly asks.
+[repository instructions](../../.github/copilot-instructions.md#verify-proportionally).

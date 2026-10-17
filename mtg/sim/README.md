@@ -6,7 +6,8 @@ inspected one game at a time.
 
 ## Determinism
 
-A run is fully reproducible. Every game derives its own seed from the run's
+A run is reproducible with the same code revision, inputs and configuration.
+Every game derives its own seed from the run's
 master seed (`GameSeed`), and from that seed builds its own `*rand.Rand`,
 `rules.Engine`, and `game.Game`. Games never share mutable RNG or game state, so:
 
@@ -120,6 +121,10 @@ stores the per-game seed and, per seat, sampled action indices and exact typed
 cast/activation announcements outside those samples. Choice selections retain
 their indices or, for `ChoiceNumber`, the actual chosen integer. These data
 round-trip through JSON without clamping X or multikicker to policy widths.
+The record also retains program IDs/versions and transitive dependencies,
+including delayed handlers. Missing programs or wrong versions fail explicitly;
+source hashes are not recorded. Exact replay requires the same code revision,
+inputs and configuration, not merely matching program version numbers.
 
 `Replay(configs, record)` reconstructs the game: it re-runs the recorded seed (so
 the engine RNG reproduces every shuffle) and scripts each seat to repeat its
@@ -130,8 +135,8 @@ an action-only agent so the engine falls back the same way, which keeps games
 with non-choice agents (and choices where an empty selection is valid, such as a
 failed search) exactly reproducible.
 
-This is the heavier debug artifact; for ordinary reproduction, `RunOne(cfg, i)`
-already replays any game from the master seed alone.
+This is the heavier debug artifact; with the same code and configuration,
+`RunOne(cfg, i)` already reproduces a game from the master seed.
 
 ## Failure capture
 

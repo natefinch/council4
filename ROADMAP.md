@@ -11,6 +11,9 @@ runtime prerequisites, not the historical phases below, to select migration work
 This file preserves product milestones and earlier checklists. Keep genuinely
 applicable runtime/product follow-ups, but do not resume an old compiler rollout
 or take a historical completion checkbox as proof of current rules fidelity.
+Current checks follow the
+[repository validation policy](.github/copilot-instructions.md#verify-proportionally);
+old corpus-generation milestones are not workflows to resume.
 
 ## Current foundation
 

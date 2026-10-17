@@ -5,7 +5,8 @@ description: Refine actionable issues in the selected epic or requested scope, r
 
 # Ready For Dev Loop
 
-Prepare work; do not implement it. Follow `.github/copilot-instructions.md`.
+Prepare work; do not implement it. Follow the
+[repository policy](../../../.github/copilot-instructions.md).
 The goal is an executable queue, not making every open issue `Ready For Dev`.
 For authored-card handoffs, use the [card-authoring entry](../card-authoring/SKILL.md)
 and [canonical guide](../../../docs/card-authoring.md), rather than another
@@ -38,7 +39,7 @@ Do not write a second epic or a speculative universal abstraction.
 
 For cards, Oracle wording/rulings inform authored Go and runtime scenarios.
 Recognition is not a prerequisite. Do not require compiler delta, rendered-source
-inspection or full corpus regeneration for an authored card. A capability
+inspection or report regeneration for an authored card. A capability
 missing from the Engine gets one canonical blocker, not many wording issues.
 
 Apply `Ready For Dev` only after the handoff is actionable and prerequisites

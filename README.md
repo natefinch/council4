@@ -34,28 +34,15 @@ coverage. Neither compiler acceptance nor loadability certifies a complete,
 exact game. Compiler diagnostic rankings are maintenance evidence, not the
 default new-card work queue.
 
-For an explicitly requested legacy corpus refresh, run
-`go run github.com/magefile/mage@v1.15.0 cardSupport`. It uses ignored `.cardwork`
-space and updates compiler support documentation. `COUNCIL4_ORACLE_CARDS` may
-provide the exact bytes identified by the committed pin; mismatches fail.
-`cardTree /path/to/cards` emits a compiled tree for another consumer, and
-`supportDocs` explicitly refreshes compiler evidence and overlays production
-status. `supportInventory` and `cardBacklog` reuse existing same-input compiler
-evidence without compilation. None is an every-issue gate.
-
-CI is read-only and proportional on main pushes and optional PRs. It does not
-commit support documentation. Shared runtime/card changes check the actual
-registry without downloading the corpus; relevant compiler changes also compare
-the pinned inventory and build generated packages. See
-[pinned preservation](./testdata/card-preservation/README.md) for the validation
-matrix, loss acknowledgments and explicit manual refresh.
+`supportInventory` is an explicit reporting-maintenance command. It reads
+existing compiler evidence without compilation; do not run it before or after
+ordinary implementation work. Corpus recompilation, bulk imports and fingerprint
+refresh/baseline workflows are retired. Existing cards and behavioral tests stay.
 
 ## Parser coverage
 
-[`parser-coverage.md`](./parser-coverage.md) records legacy Oracle parser coverage.
-Regenerate it with `go run github.com/magefile/mage@v1.15.0 parserCoverage` only
-for relevant maintenance. Parser completeness is not an acceptance requirement
-for an authored Go card.
+[`parser-coverage.md`](./parser-coverage.md) preserves historical Oracle parser
+coverage. It is not a production queue or an authored-card acceptance requirement.
 
 ## Run the CLI
 
@@ -91,24 +78,10 @@ Winner: Player 4
 Battlefield permanents: 4
 ```
 
-## Build and test
+## Development checks
 
-```bash
-go test ./...
-```
-
-Run focused package tests while editing code, then the suite once before
-committing. Add relevant build, race or platform checks when needed. Docs and
-comment-only changes use link/instruction checks and `git diff --check`.
-
-Agents must not run linters or lint autofixes, even on a scoped package, unless
-the user explicitly asks. Linting is not a local check-in or completion gate;
-periodic cleanup runs are separate work. Automated CI is unchanged. For an
-explicitly requested lint run:
-
-```bash
-go run github.com/magefile/mage@v1.15.0 lint
-```
+Follow the [validation policy](./.github/copilot-instructions.md#verify-proportionally)
+for local checks, CI and review. Do not duplicate its gates in individual guides.
 
 The module root is the repository root:
 

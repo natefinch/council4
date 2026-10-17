@@ -5,6 +5,8 @@ New card support follows [epic #3269](https://github.com/natefinch/council4/issu
 and [ADR 0012](docs/adr/0012-authored-go-card-implementations.md): authored Go
 over shared Engine operations. Retain this record and its useful runtime
 capabilities, but do not expand Oracle recognition merely to check off a row.
+Current checks follow the
+[repository validation policy](.github/copilot-instructions.md#verify-proportionally).
 
 ## Recently covered
 

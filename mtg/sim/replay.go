@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/cardprogram"
-	"github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/rules"
@@ -18,16 +17,13 @@ import (
 //
 // Replay re-runs the same seed (so the engine RNG reproduces every shuffle and
 // coin flip) and scripts each seat's agent to repeat its recorded decisions, which
-// reproduces the original GameResult exactly.
+// reproduces the original GameResult with the same code revision.
 type ReplayRecord struct {
-	Seed           uint64                      `json:"seed"`
-	Seats          [game.NumPlayers]SeatScript `json:"seats"`
-	Programs       []game.ProgramReference     `json:"programs,omitempty"`
-	Bindings       []cardprogram.Binding       `json:"bindings,omitempty"`
-	TurnLimit      int                         `json:"turn_limit,omitempty"`
-	DecisionLimit  int                         `json:"decision_limit,omitempty"`
-	SourceRevision string                      `json:"production_source_revision"`
-	RulesRevision  string                      `json:"shared_rules_revision"`
+	Seed          uint64                      `json:"seed"`
+	Seats         [game.NumPlayers]SeatScript `json:"seats"`
+	Programs      []game.ProgramReference     `json:"programs,omitempty"`
+	TurnLimit     int                         `json:"turn_limit,omitempty"`
+	DecisionLimit int                         `json:"decision_limit,omitempty"`
 }
 
 // SeatScript is one seat's recorded decisions, in the order the engine asked for
@@ -83,14 +79,11 @@ func recordedRunWithLimits(configs [game.NumPlayers]game.PlayerConfig, seed uint
 	g := engine.NewGame(configs)
 	result := *engine.RunGameWithTurnLimit(g, agents, turnLimit)
 
-	record := ReplayRecord{Seed: seed, Programs: configProgramReferences(configs), TurnLimit: turnLimit, DecisionLimit: decisionLimit}
-	record.SourceRevision = authored.SourceRevision
-	record.RulesRevision = cardprogram.SharedRulesRevision
-	bindings, err := engine.ProgramBindings(record.Programs)
+	programReferences, err := engine.ProgramReferences(configProgramReferences(configs))
 	if err != nil {
 		panic(rules.UnsupportedError{Reason: err.Error()})
 	}
-	record.Bindings = bindings
+	record := ReplayRecord{Seed: seed, Programs: programReferences, TurnLimit: turnLimit, DecisionLimit: decisionLimit}
 	for i := range recorders {
 		record.Seats[i] = SeatScript{
 			Actions:       recorders[i].actions,
@@ -103,11 +96,11 @@ func recordedRunWithLimits(configs [game.NumPlayers]game.PlayerConfig, seed uint
 }
 
 // Replay reconstructs the game described by record over configs and returns its
-// result, which equals the originally recorded GameResult.
+// result. Exact reproduction requires the original code revision; program
+// references check installed versions, not arbitrary changes to Go source.
 func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord, catalogs ...cardprogram.Catalog) rules.GameResult {
-	if len(catalogs) > 1 || !slices.Equal(record.Programs, configProgramReferences(configs)) ||
-		record.SourceRevision != authored.SourceRevision || record.RulesRevision != cardprogram.SharedRulesRevision {
-		panic(rules.UnsupportedError{Reason: "replay program bindings do not match the recorded definitions"})
+	if len(catalogs) > 1 {
+		panic(rules.UnsupportedError{Reason: "replay accepts at most one program catalog"})
 	}
 	var catalog *cardprogram.Catalog
 	if len(catalogs) == 1 {
@@ -129,9 +122,12 @@ func Replay(configs [game.NumPlayers]game.PlayerConfig, record ReplayRecord, cat
 		}
 	}
 	engine := engineFor(record.Seed, catalog)
-	bindings, err := engine.ProgramBindings(record.Programs)
-	if err != nil || !slices.Equal(record.Bindings, bindings) {
-		panic(rules.UnsupportedError{Reason: "replay executable source/shared-rules bindings do not match"})
+	programReferences, err := engine.ProgramReferences(configProgramReferences(configs))
+	if err != nil {
+		panic(rules.UnsupportedError{Reason: "replay programs: " + err.Error()})
+	}
+	if !slices.Equal(record.Programs, programReferences) {
+		panic(rules.UnsupportedError{Reason: "replay program versions do not match the recorded definitions"})
 	}
 	engine.DecisionLimit = record.DecisionLimit
 	g := engine.NewGame(configs)

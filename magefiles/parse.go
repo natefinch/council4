@@ -7,10 +7,22 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/natefinch/council4/cardgen/oracle/parser"
 )
+
+func oracleCardsCachePath() (string, error) {
+	if path := os.Getenv("COUNCIL4_ORACLE_CARDS"); path != "" {
+		return path, nil
+	}
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return "", fmt.Errorf("locating user cache directory: %w", err)
+	}
+	return filepath.Join(cache, "council4", "oracle-cards.json"), nil
+}
 
 // Parse parses a single card's Oracle text with the oracle parser library and
 // prints the resulting parser.Document as indented JSON to stdout. The card is

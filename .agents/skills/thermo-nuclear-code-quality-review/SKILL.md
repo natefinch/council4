@@ -7,7 +7,8 @@ disable-model-invocation: true
 # Thermo-Nuclear Code Quality Review
 
 This is an **opt-in** review, not a default gate for issue completion.
-Follow `.github/copilot-instructions.md` and stay within the requested scope.
+Follow the [repository policy](../../../.github/copilot-instructions.md)
+and stay within the requested scope.
 A routine authored-card change does not need an architectural audit.
 
 ## Review
@@ -24,7 +25,7 @@ A routine authored-card change does not need an architectural audit.
   File size alone is not a defect; do not split declarations merely to satisfy
   a 1,000-line limit or require a new package/subagent per file.
 - Named-card behavior tests and shared-operation tests are complementary.
-  Do not replace runtime scenarios with structural/source fingerprints.
+  Do not replace runtime scenarios with structural assertions or hashes.
 - Existing tests and interfaces are evidence, not permission to broaden the
   assignment into unrelated cleanup.
 

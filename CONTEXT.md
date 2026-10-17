@@ -214,11 +214,13 @@ executable `CardDef` Go source. Recognition produces conservative semantic IR;
 lowering assembles typed `game.*` values validated by `game.ValidateCardDef`;
 rendering emits deterministic Go. It emits no partial definitions. `mtg/game`
 owns typed data and validity; `mtg/rules` owns behavior; `cardgen` owns translation.
-Maintain correctness and explicit regeneration, but do not expand coverage as the
-default route to new cards. Compiler refusal is not a global unsupported verdict
-for an independently authored implementation. See [ADR 0008](docs/adr/0008-typed-ir-lowering.md)
+Maintain focused correctness fixes and useful tests without bulk corpus
+regeneration or compiler-driven coverage expansion. Compiler refusal is not a
+global unsupported verdict for an independently authored implementation.
+See [ADR 0008](docs/adr/0008-typed-ir-lowering.md)
 for the preserved pipeline and [ADR 0012](docs/adr/0012-authored-go-card-implementations.md)
-for the superseding authoring decision.
+for the superseding authoring decision. Checks follow the
+[repository validation policy](.github/copilot-instructions.md#verify-proportionally).
 _Avoid_: Card compiler (the package is tooling, not part of the runtime engine)
 
 ## Relationships
