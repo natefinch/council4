@@ -184,7 +184,7 @@ func triggeredAbilityXValue(trigger *pendingTriggeredAbility) int {
 		!trigger.hasEvent ||
 		trigger.event.Kind != game.EventPermanentEnteredBattlefield ||
 		trigger.event.PermanentID != trigger.sourceID ||
-		!trigger.event.EnterWasCast {
+		!trigger.event.EnterWasCast && !trigger.event.EnterHasSpellAnnouncement {
 		return 0
 	}
 	return trigger.event.EnterXValue

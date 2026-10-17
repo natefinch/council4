@@ -45,8 +45,9 @@ type permanentCreationOptions struct {
 	// Offspring additional cost was paid as it was cast (CR 702.171b), feeding
 	// the linked "when this creature enters, if its offspring cost was paid" ETB
 	// trigger's intervening-if. It is false for every permanent that did not
-	// enter from an offspring cast, including token copies made by the trigger,
-	// so no further token copies are created recursively.
+	// enter from a spell with that cost paid, including ordinary token copies
+	// made by the trigger, so those tokens do not recurse. Spell copies inherit
+	// the announced additional cost.
 	OffspringPaid bool
 	Evoked        bool
 	// Dashed makes the entering permanent record that its spell was cast for its
@@ -59,12 +60,13 @@ type permanentCreationOptions struct {
 	// Bestow static ability changes it from a creature into an Aura and it stays
 	// attached to the creature it enchants. It is false for every permanent that
 	// did not enter from a bestowed cast.
-	Bestowed          bool
-	WasCast           bool
-	CastController    game.PlayerID
-	HasCastController bool
-	CastFromZone      zone.Type
-	Counters          []game.CounterPlacement
+	Bestowed             bool
+	WasCast              bool
+	HasSpellAnnouncement bool
+	CastController       game.PlayerID
+	HasCastController    bool
+	CastFromZone         zone.Type
+	Counters             []game.CounterPlacement
 	// SourceFaceDown survives the source zone's removal of face-down metadata.
 	SourceFaceDown bool
 	SimultaneousID id.ID
@@ -104,6 +106,17 @@ type permanentCreationOptions struct {
 	PutByAbilitySource id.ID
 }
 
+func (options permanentCreationOptions) entryContext(e *Engine, agents [game.NumPlayers]PlayerAgent, log *TurnLog) enterBattlefieldContext {
+	return enterBattlefieldContext{
+		engine: e, agents: agents, log: log,
+		xValue: options.XValue, hasSpellAnnouncement: options.WasCast || options.HasSpellAnnouncement,
+		kickCount: options.KickCount, kickerPaid: options.KickerPaid, bargained: options.Bargained,
+		wasCast: options.WasCast, castController: options.CastController, hasCastController: options.HasCastController,
+		castFromZone: options.CastFromZone, colorsOfManaSpent: options.ColorsOfManaSpentToCast,
+		manaSpentByColor: options.ManaSpentByColorToCast, manaSpentToCast: options.ManaSpentToCast,
+	}
+}
+
 // createCardPermanentFaceWithOptions puts a card onto the battlefield as a new
 // permanent (CR 400.7: it becomes a new object with no memory of its prior
 // existence), assigning it a fresh object ID and timestamp. It applies the
@@ -130,21 +143,22 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		return nil, false
 	}
 	castXValue := 0
-	if options.WasCast {
+	if options.WasCast || options.HasSpellAnnouncement {
 		castXValue = options.XValue
 	}
 	objectID := g.IDGen.Next()
 	permanent := &game.Permanent{
-		ObjectID:        objectID,
-		CardInstanceID:  card.ID,
-		Owner:           card.Owner,
-		Controller:      controller,
-		EnteredFromCast: options.WasCast,
-		CastXValue:      castXValue,
-		Face:            face,
-		Transformed:     enteringTransformed,
-		SummoningSick:   true,
-		Prepared:        faceDef.EntersPrepared,
+		ObjectID:             objectID,
+		CardInstanceID:       card.ID,
+		Owner:                card.Owner,
+		Controller:           controller,
+		EnteredFromCast:      options.WasCast,
+		CastXValue:           castXValue,
+		HasSpellAnnouncement: options.WasCast || options.HasSpellAnnouncement,
+		Face:                 face,
+		Transformed:          enteringTransformed,
+		SummoningSick:        true,
+		Prepared:             faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
@@ -154,21 +168,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	if options.ForceTapped {
 		permanent.Tapped = true
 	}
-	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
-		engine:            e,
-		agents:            agents,
-		log:               log,
-		xValue:            options.XValue,
-		kickCount:         options.KickCount,
-		kickerPaid:        options.KickerPaid,
-		wasCast:           options.WasCast,
-		castController:    options.CastController,
-		hasCastController: options.HasCastController,
-		castFromZone:      options.CastFromZone,
-		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
-		manaSpentByColor:  options.ManaSpentByColorToCast,
-		manaSpentToCast:   options.ManaSpentToCast,
-	}, g, permanent, fromZone)
+	destination := applyEnterBattlefieldReplacementEffects(options.entryContext(e, agents, log), g, permanent, fromZone)
 	if destination != zone.Battlefield {
 		redirectPendingCardEntry(g, card, permanent, fromZone, destination, options)
 		return nil, false
@@ -186,26 +186,27 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, retained.Get(counter.Lore), lore)
 	}
 	event := game.Event{
-		SourceID:                card.ID,
-		Controller:              controller,
-		Player:                  card.Owner,
-		CardID:                  card.ID,
-		Face:                    face,
-		KickerPaid:              options.KickerPaid,
-		Bargained:               options.Bargained,
-		OffspringPaid:           options.OffspringPaid,
-		EnterEvoked:             options.Evoked,
-		EnterDashed:             options.Dashed,
-		EnterWasCast:            options.WasCast,
-		EnterCastController:     options.CastController,
-		EnterHasCastController:  options.HasCastController,
-		EnterCastFromZone:       options.CastFromZone,
-		EnterXValue:             castXValue,
-		PermanentID:             objectID,
-		FromZone:                fromZone,
-		ToZone:                  zone.Battlefield,
-		SimultaneousID:          options.SimultaneousID,
-		EnterPutByAbilitySource: options.PutByAbilitySource,
+		SourceID:                  card.ID,
+		Controller:                controller,
+		Player:                    card.Owner,
+		CardID:                    card.ID,
+		Face:                      face,
+		KickerPaid:                options.KickerPaid,
+		Bargained:                 options.Bargained,
+		OffspringPaid:             options.OffspringPaid,
+		EnterEvoked:               options.Evoked,
+		EnterDashed:               options.Dashed,
+		EnterWasCast:              options.WasCast,
+		EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
+		EnterCastController:       options.CastController,
+		EnterHasCastController:    options.HasCastController,
+		EnterCastFromZone:         options.CastFromZone,
+		EnterXValue:               castXValue,
+		PermanentID:               objectID,
+		FromZone:                  fromZone,
+		ToZone:                    zone.Battlefield,
+		SimultaneousID:            options.SimultaneousID,
+		EnterPutByAbilitySource:   options.PutByAbilitySource,
 	}
 	event = emitZoneChangeEvent(g, event)
 	event.Kind = game.EventPermanentEnteredBattlefield
@@ -248,19 +249,20 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 		return preparedCardPermanentEntry{}, false
 	}
 	castXValue := 0
-	if options.WasCast {
+	if options.WasCast || options.HasSpellAnnouncement {
 		castXValue = options.XValue
 	}
 	permanent := &game.Permanent{
-		ObjectID:        g.IDGen.Next(),
-		CardInstanceID:  card.ID,
-		Owner:           card.Owner,
-		Controller:      controller,
-		EnteredFromCast: options.WasCast,
-		CastXValue:      castXValue,
-		Face:            face,
-		SummoningSick:   true,
-		Prepared:        faceDef.EntersPrepared,
+		ObjectID:             g.IDGen.Next(),
+		CardInstanceID:       card.ID,
+		Owner:                card.Owner,
+		Controller:           controller,
+		EnteredFromCast:      options.WasCast,
+		CastXValue:           castXValue,
+		HasSpellAnnouncement: options.WasCast || options.HasSpellAnnouncement,
+		Face:                 face,
+		SummoningSick:        true,
+		Prepared:             faceDef.EntersPrepared,
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
@@ -268,21 +270,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	if options.ForceTapped {
 		permanent.Tapped = true
 	}
-	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
-		engine:            e,
-		agents:            agents,
-		log:               log,
-		xValue:            options.XValue,
-		kickCount:         options.KickCount,
-		kickerPaid:        options.KickerPaid,
-		wasCast:           options.WasCast,
-		castController:    options.CastController,
-		hasCastController: options.HasCastController,
-		castFromZone:      options.CastFromZone,
-		colorsOfManaSpent: options.ColorsOfManaSpentToCast,
-		manaSpentByColor:  options.ManaSpentByColorToCast,
-		manaSpentToCast:   options.ManaSpentToCast,
-	}, g, permanent, fromZone)
+	destination := applyEnterBattlefieldReplacementEffects(options.entryContext(e, agents, log), g, permanent, fromZone)
 	if destination != zone.Battlefield {
 		return preparedCardPermanentEntry{card: card, permanent: permanent, destination: destination}, true
 	}
@@ -331,26 +319,27 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, entry.retained.Get(counter.Lore), lore)
 		}
 		event := game.Event{
-			SourceID:                entry.card.ID,
-			Controller:              entry.controller,
-			Player:                  entry.card.Owner,
-			CardID:                  entry.card.ID,
-			Face:                    permanent.Face,
-			KickerPaid:              entry.options.KickerPaid,
-			Bargained:               entry.options.Bargained,
-			OffspringPaid:           entry.options.OffspringPaid,
-			EnterEvoked:             entry.options.Evoked,
-			EnterDashed:             entry.options.Dashed,
-			EnterWasCast:            entry.options.WasCast,
-			EnterCastController:     entry.options.CastController,
-			EnterHasCastController:  entry.options.HasCastController,
-			EnterCastFromZone:       entry.options.CastFromZone,
-			EnterXValue:             permanent.CastXValue,
-			PermanentID:             permanent.ObjectID,
-			FromZone:                entry.fromZone,
-			ToZone:                  zone.Battlefield,
-			SimultaneousID:          entry.options.SimultaneousID,
-			EnterPutByAbilitySource: entry.options.PutByAbilitySource,
+			SourceID:                  entry.card.ID,
+			Controller:                entry.controller,
+			Player:                    entry.card.Owner,
+			CardID:                    entry.card.ID,
+			Face:                      permanent.Face,
+			KickerPaid:                entry.options.KickerPaid,
+			Bargained:                 entry.options.Bargained,
+			OffspringPaid:             entry.options.OffspringPaid,
+			EnterEvoked:               entry.options.Evoked,
+			EnterDashed:               entry.options.Dashed,
+			EnterWasCast:              entry.options.WasCast,
+			EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
+			EnterCastController:       entry.options.CastController,
+			EnterHasCastController:    entry.options.HasCastController,
+			EnterCastFromZone:         entry.options.CastFromZone,
+			EnterXValue:               permanent.CastXValue,
+			PermanentID:               permanent.ObjectID,
+			FromZone:                  entry.fromZone,
+			ToZone:                    zone.Battlefield,
+			SimultaneousID:            entry.options.SimultaneousID,
+			EnterPutByAbilitySource:   entry.options.PutByAbilitySource,
 		}
 		event = emitZoneChangeEvent(g, event)
 		event.Kind = game.EventPermanentEnteredBattlefield

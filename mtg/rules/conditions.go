@@ -106,7 +106,7 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 	case game.AggregateEventPermanentCastX:
 		if ctx.event == nil ||
 			ctx.event.Kind != game.EventPermanentEnteredBattlefield ||
-			!ctx.event.EnterWasCast {
+			!ctx.event.EnterWasCast && !ctx.event.EnterHasSpellAnnouncement {
 			return 0, false
 		}
 		return ctx.event.EnterXValue, true
@@ -301,7 +301,7 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		matches = matches && ctx.obj != nil && ctx.obj.Bargained
 	}
 	if cond.SpellWasOffspring {
-		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.OffspringPaid
+		matches = matches && ctx.obj != nil && ctx.obj.OffspringPaid
 	}
 	if cond.GiftPromised {
 		matches = matches && ctx.obj != nil && ctx.obj.GiftPromised

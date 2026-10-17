@@ -607,13 +607,14 @@ type preparedTokenEntry struct {
 	attachedTo  *game.Permanent
 	destination zone.Type
 	spellCopyID id.ID
+	options     permanentCreationOptions
 }
 
 func prepareTokenEntry(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
-	return prepareTokenEntryFromZone(e, g, controller, token, tapped, attachedTo, zone.None, agents, log, faces...)
+	return prepareTokenEntryWithOptions(e, g, controller, token, tapped, attachedTo, zone.None, permanentCreationOptions{}, agents, log, faces...)
 }
 
-func prepareTokenEntryFromZone(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
+func prepareTokenEntryWithOptions(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, fromZone zone.Type, options permanentCreationOptions, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
 	if token == nil || departedPlayer(g, controller) {
 		return preparedTokenEntry{}, false
 	}
@@ -627,26 +628,28 @@ func prepareTokenEntryFromZone(e *Engine, g *game.Game, controller game.PlayerID
 	}
 	objectID := g.IDGen.Next()
 	permanent := &game.Permanent{
-		ObjectID:      objectID,
-		Owner:         controller,
-		Controller:    controller,
-		SummoningSick: true,
-		Prepared:      visible.EntersPrepared,
-		Token:         true,
-		TokenDef:      token,
-		Face:          face,
-		Transformed:   face == game.FaceBack,
+		ObjectID:             objectID,
+		Owner:                controller,
+		Controller:           controller,
+		SummoningSick:        true,
+		Prepared:             visible.EntersPrepared,
+		Token:                true,
+		TokenDef:             token,
+		Face:                 face,
+		Transformed:          face == game.FaceBack,
+		Bestowed:             options.Bestowed,
+		EnteredFromCast:      options.WasCast,
+		HasSpellAnnouncement: options.WasCast || options.HasSpellAnnouncement,
+	}
+	if permanent.HasSpellAnnouncement {
+		permanent.CastXValue = options.XValue
 	}
 	initializePermanentCounters(permanent, visible)
 	initializeReadAhead(e, g, permanent, agents, log)
 	permanent.Tapped = tapped
-	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
-		engine: e,
-		agents: agents,
-		log:    log,
-	}, g, permanent, fromZone)
+	destination := applyEnterBattlefieldReplacementEffects(options.entryContext(e, agents, log), g, permanent, fromZone)
 	return preparedTokenEntry{
-		permanent: permanent, controller: controller, visible: visible, token: token, attachedTo: attachedTo, destination: destination,
+		permanent: permanent, controller: controller, visible: visible, token: token, attachedTo: attachedTo, destination: destination, options: options,
 	}, true
 }
 
@@ -675,6 +678,11 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 			Controller: entry.controller, Player: permanent.Owner,
 			PermanentID: permanent.ObjectID, TokenName: entry.visible.Name, TokenDef: entry.token,
 			FromZone: zone.None, ToZone: entry.destination, SimultaneousID: simultaneousID,
+			KickerPaid: entry.options.KickerPaid, Bargained: entry.options.Bargained, OffspringPaid: entry.options.OffspringPaid,
+			EnterEvoked: entry.options.Evoked, EnterDashed: entry.options.Dashed,
+			EnterWasCast: entry.options.WasCast, EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
+			EnterXValue: permanent.CastXValue, EnterCastController: entry.options.CastController,
+			EnterHasCastController: entry.options.HasCastController, EnterCastFromZone: entry.options.CastFromZone,
 		}
 		if entry.spellCopyID != 0 {
 			event.FromZone = zone.Stack
@@ -696,7 +704,7 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 // A resolving spell copy becomes one token; it is not token creation (CR 111.13).
 func (e *Engine) enterPermanentSpellCopy(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
 	token, face := permanentSpellCopyTokenDef(g, obj, spellDef)
-	entry, ok := prepareTokenEntryFromZone(e, g, obj.Controller, token, false, nil, zone.Stack, agents, log, face)
+	entry, ok := prepareTokenEntryWithOptions(e, g, obj.Controller, token, false, nil, zone.Stack, permanentSpellEntryOptions(obj), agents, log, face)
 	if !ok {
 		return nil, false
 	}

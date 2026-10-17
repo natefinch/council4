@@ -392,3 +392,8 @@ tests, not winning-game smoke results, certify this admission.
 Resolving a permanent-spell copy uses normal battlefield-entry replacements and
 ETB events, but is not token creation (CR 111.13): token quantity, identity and
 addition replacements do not apply, and no token-created event is emitted.
+Entry preserves announced X and copied additional/alternative cost decisions
+(including kicker) independently of actual casting. `HasSpellAnnouncement` and
+`EnterHasSpellAnnouncement` include spell copies; `EnteredFromCast`/`EnterWasCast`,
+cast origin and actual mana spending do not. Ordinary copies of battlefield
+permanents do not inherit historical X or paid-cost decisions.

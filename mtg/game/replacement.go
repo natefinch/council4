@@ -17,8 +17,8 @@ type CounterPlacement struct {
 	Amount int
 	// AmountFromX places a number of counters equal to the value of X chosen for
 	// the entering permanent's spell (CR 107.3, CR 614). Amount is ignored when
-	// it is set; a permanent that entered without a cast X (a copy or a
-	// put-onto-the-battlefield effect) enters with zero such counters. It backs
+	// it is set; a permanent that entered without announced spell X (an ordinary
+	// token or a put-onto-the-battlefield effect) enters with zero such counters. It backs
 	// "This creature enters with X +1/+1 counters on it." (Walking Ballista,
 	// Hangarback Walker, Endless One).
 	AmountFromX bool

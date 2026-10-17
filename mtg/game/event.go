@@ -294,7 +294,7 @@ type Event struct {
 
 	// OffspringPaid records whether a spell-cast or entering-permanent spell's
 	// Offspring additional mana cost was paid as it was cast (CR 702.171b). It is
-	// false for objects that were not cast with offspring paid. It feeds the
+	// false for objects without that paid spell decision; spell copies inherit it. It feeds the
 	// Offspring enter trigger's "if it was offspring" intervening-if.
 	OffspringPaid bool
 
@@ -311,6 +311,9 @@ type Event struct {
 	// EnterWasCast records whether a permanent entered from resolving a cast,
 	// non-copy spell.
 	EnterWasCast bool
+	// EnterHasSpellAnnouncement includes copied spell decisions without implying
+	// an actual cast or any mana spent.
+	EnterHasSpellAnnouncement bool
 	// EnterCastController is the player who cast the spell that became the
 	// entering permanent. EnterHasCastController distinguishes player zero from
 	// an entry that did not result from a cast.
@@ -323,9 +326,8 @@ type Event struct {
 	// condition (CR 603.4).
 	EnterCastFromZone zone.Type
 
-	// EnterXValue is the value of X chosen for the cast spell that became the
-	// entering permanent. It is zero for a cast with X=0 and for non-cast
-	// entries; EnterWasCast distinguishes those cases.
+	// EnterXValue is announced X for the spell (including a copy) that became
+	// the permanent. Ordinary token creation and non-spell entries have X=0.
 	EnterXValue int
 
 	// EnterPutByAbilitySource is the object identity of the ability source that

@@ -649,24 +649,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			zone.Stack,
 			obj.Face,
 			nil,
-			permanentCreationOptions{
-				KickerPaid:              obj.KickerPaid,
-				KickCount:               obj.KickerCount,
-				Bargained:               obj.Bargained,
-				OffspringPaid:           obj.OffspringPaid,
-				Evoked:                  obj.Evoked,
-				Dashed:                  obj.Dashed,
-				Bestowed:                obj.Bestowed,
-				EntersTransformed:       obj.Converted,
-				WasCast:                 true,
-				CastController:          obj.Controller,
-				HasCastController:       true,
-				CastFromZone:            obj.SourceZone,
-				XValue:                  obj.XValue,
-				ColorsOfManaSpentToCast: obj.ColorsOfManaSpentToCast,
-				ManaSpentByColorToCast:  obj.ManaSpentByColorToCast,
-				ManaSpentToCast:         obj.ManaSpentToCast,
-			},
+			permanentSpellEntryOptions(obj),
 			agents,
 			log,
 		)
@@ -714,6 +697,23 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	return "battlefield"
 }
 
+func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions {
+	options := permanentCreationOptions{
+		HasSpellAnnouncement: true, XValue: obj.XValue,
+		KickerPaid: obj.KickerPaid, KickCount: obj.KickerCount, Bargained: obj.Bargained,
+		OffspringPaid: obj.OffspringPaid, Evoked: obj.Evoked, Dashed: obj.Dashed,
+		Bestowed: obj.Bestowed, EntersTransformed: obj.Converted,
+	}
+	if !obj.Copy {
+		options.WasCast, options.HasCastController = true, true
+		options.CastController, options.CastFromZone = obj.Controller, obj.SourceZone
+		options.ColorsOfManaSpentToCast = obj.ColorsOfManaSpentToCast
+		options.ManaSpentByColorToCast = obj.ManaSpentByColorToCast
+		options.ManaSpentToCast = obj.ManaSpentToCast
+	}
+	return options
+}
+
 func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *game.CardInstance, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
 	if card == nil && !obj.Copy {
 		return "missing source"
@@ -737,12 +737,7 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 			zone.Stack,
 			obj.Face,
 			nil,
-			permanentCreationOptions{
-				WasCast:           true,
-				CastController:    obj.Controller,
-				HasCastController: true,
-				CastFromZone:      obj.SourceZone,
-			},
+			permanentSpellEntryOptions(obj),
 			agents,
 			log,
 		)

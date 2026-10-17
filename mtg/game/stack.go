@@ -165,8 +165,7 @@ type StackObject struct {
 
 	// OffspringPaid is true if this spell's Offspring additional mana cost was
 	// paid as it was cast (CR 702.171b). Like Bargained it is an as-cast choice,
-	// so a copy of an offspring-paid spell was not itself offspring (CR 707.10)
-	// and this stays false for copies. It is carried forward to the resulting
+	// so a copy inherits the paid cost decision (CR 707.10). It is carried to the resulting
 	// permanent's enter event to drive the Offspring enter trigger.
 	OffspringPaid bool
 

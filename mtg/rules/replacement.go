@@ -19,19 +19,21 @@ import (
 )
 
 type enterBattlefieldContext struct {
-	engine            *Engine
-	agents            [game.NumPlayers]PlayerAgent
-	log               *TurnLog
-	xValue            int
-	kickCount         int
-	kickerPaid        bool
-	wasCast           bool
-	castController    game.PlayerID
-	hasCastController bool
-	castFromZone      zone.Type
-	colorsOfManaSpent int
-	manaSpentByColor  map[color.Color]int
-	manaSpentToCast   int
+	engine               *Engine
+	agents               [game.NumPlayers]PlayerAgent
+	log                  *TurnLog
+	xValue               int
+	hasSpellAnnouncement bool
+	kickCount            int
+	kickerPaid           bool
+	bargained            bool
+	wasCast              bool
+	castController       game.PlayerID
+	hasCastController    bool
+	castFromZone         zone.Type
+	colorsOfManaSpent    int
+	manaSpentByColor     map[color.Color]int
+	manaSpentToCast      int
 }
 
 type damageEvent struct {
@@ -516,20 +518,23 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 	ctx.engine.setReplacementChoiceContext(g, ctx.agents, ctx.log)
 	defer g.SetChoiceContext(previous)
 	event := game.Event{
-		Kind:                   game.EventPermanentEnteredBattlefield,
-		Controller:             effectiveController(g, permanent),
-		Player:                 permanent.Owner,
-		CardID:                 permanent.CardInstanceID,
-		PermanentID:            permanent.ObjectID,
-		TokenName:              permanentTokenName(permanent),
-		TokenDef:               permanent.TokenDef,
-		KickerPaid:             ctx.kickerPaid,
-		EnterWasCast:           ctx.wasCast,
-		EnterCastController:    ctx.castController,
-		EnterHasCastController: ctx.hasCastController,
-		EnterCastFromZone:      ctx.castFromZone,
-		FromZone:               fromZone,
-		ToZone:                 zone.Battlefield,
+		Kind:                      game.EventPermanentEnteredBattlefield,
+		Controller:                effectiveController(g, permanent),
+		Player:                    permanent.Owner,
+		CardID:                    permanent.CardInstanceID,
+		PermanentID:               permanent.ObjectID,
+		TokenName:                 permanentTokenName(permanent),
+		TokenDef:                  permanent.TokenDef,
+		KickerPaid:                ctx.kickerPaid,
+		Bargained:                 ctx.bargained,
+		EnterHasSpellAnnouncement: ctx.wasCast || ctx.hasSpellAnnouncement,
+		EnterXValue:               ctx.xValue,
+		EnterWasCast:              ctx.wasCast,
+		EnterCastController:       ctx.castController,
+		EnterHasCastController:    ctx.hasCastController,
+		EnterCastFromZone:         ctx.castFromZone,
+		FromZone:                  fromZone,
+		ToZone:                    zone.Battlefield,
 	}
 	applied := make(map[entryReplacementKey]bool)
 	var copyRider *entryCopyRider
@@ -599,7 +604,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			amount := placement.Amount
 			if placement.AmountFromX {
 				amount = 0
-				if ctx.wasCast {
+				if ctx.wasCast || ctx.hasSpellAnnouncement {
 					amount = ctx.xValue
 				}
 			}
@@ -622,6 +627,9 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 					Controller:              replacement.Controller,
 					ColorsOfManaSpentToCast: ctx.colorsOfManaSpent,
 					KickerCount:             ctx.kickCount,
+					KickerPaid:              ctx.kickerPaid,
+					Bargained:               ctx.bargained,
+					Copy:                    !ctx.wasCast && ctx.hasSpellAnnouncement,
 				}
 				amount = dynamicAmountValue(g, obj, replacement.Controller, *placement.Dynamic.Val)
 			}
@@ -1281,6 +1289,8 @@ func staticETBReplacementEffects(ctx enterBattlefieldContext, g *game.Game, perm
 			ColorsOfManaSpentToCast: ctx.colorsOfManaSpent,
 			ManaSpentByColorToCast:  ctx.manaSpentByColor,
 			KickerCount:             ctx.kickCount,
+			KickerPaid:              ctx.kickerPaid, Bargained: ctx.bargained, XValue: ctx.xValue,
+			Copy: !ctx.wasCast && ctx.hasSpellAnnouncement,
 		}
 		if replacementEffectMatchesEventWithSource(g, &replacement, event, permanent, obj) {
 			replacements = append(replacements, entryReplacement{
