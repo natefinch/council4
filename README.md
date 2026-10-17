@@ -16,7 +16,7 @@ outcomes, linked state and exceptional rules. Keep a card unsupported until its
 whole behavior is implemented; do not expand parser/lowering or invent a parallel
 runtime to avoid a missing shared capability.
 
-For authorized issue work, the default is implement, test/lint, inspect and
+For authorized issue work, the default is implement, test, inspect and
 commit directly to main, with one writer and no mandatory PR. Push permission
 remains separate. The [repository instructions](./.github/copilot-instructions.md)
 and [impl-loop](./.agents/skills/impl-loop/SKILL.md) describe the execution rules.
@@ -95,12 +95,20 @@ Battlefield permanents: 4
 
 ```bash
 go test ./...
-go run github.com/magefile/mage@v1.15.0 lint
 ```
 
-Run focused package tests while editing code, then the suite/linter once before
+Run focused package tests while editing code, then the suite once before
 committing. Add relevant build, race or platform checks when needed. Docs and
 comment-only changes use link/instruction checks and `git diff --check`.
+
+Agents must not run linters or lint autofixes, even on a scoped package, unless
+the user explicitly asks. Linting is not a local check-in or completion gate;
+periodic cleanup runs are separate work. Automated CI is unchanged. For an
+explicitly requested lint run:
+
+```bash
+go run github.com/magefile/mage@v1.15.0 lint
+```
 
 The module root is the repository root:
 

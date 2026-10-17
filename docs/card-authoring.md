@@ -40,8 +40,9 @@ simultaneous cohort, and entering tapped/untapped is not a tap/untap event.
    code changes: `go generate ./mtg/cards/authored`. Program-free static cards
    are valid; do not add a dummy body. Explicit legacy replacement is permitted
    only for a verified unique identity, never to hide an ambiguous name.
-6. At integration, run `go test ./...` then
-   `go run github.com/magefile/mage@v1.15.0 lint` **once**, sequentially.
+6. At integration, run `go test ./...` **once**. Do not run linters or lint
+   autofixes unless the user explicitly asks; lint is not a local
+   commit/completion gate.
    Run affected race/platform execution and `mage preserveRegistry` where needed.
    Refresh `mage supportInventory` without corpus recompilation. Inspect every
    diff. Commit intended files to main only when authorized; push only with

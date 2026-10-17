@@ -32,6 +32,7 @@ The default registry deliberately prefers the explicit authored replacements.
 without deleting their generated sources. New overlaps or exclusions require
 explicit review; the installer does not mark a card behavior-verified.
 
-Run the normal test/lint gate, source coverage tests, registry preservation and
-affected platform checks. This operation does not commit or push. Compilation
-and structural loading do not certify gameplay fidelity.
+Run the normal test gate, source coverage tests, registry preservation and
+affected platform checks. Run linters only when the user explicitly asks.
+This operation does not commit or push. Compilation and structural loading
+do not certify gameplay fidelity.

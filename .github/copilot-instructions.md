@@ -73,12 +73,16 @@ do not create another authoring checklist.
 ## Verify proportionally
 
 - During development, run the smallest tests covering the change.
-- For code changes, run `go test ./...` and
-  `go run github.com/magefile/mage@v1.15.0 lint` once as the final local gate.
+- For code changes, run `go test ./...` once as the final local gate.
   Add relevant build, race or cross-platform checks when their behavior is
   affected. Do not repeat the same gates solely because a skill also requests them.
-  Run lint after cardgen round-trip tests finish; temporary generated packages
-  can otherwise produce spurious type-check failures.
+- **Linting is opt-in for agents.** Do not run linters or lint autofixes, whether
+  repository-wide or scoped, unless the user explicitly asks. Linting is not a
+  local check-in or completion requirement; periodic lint cleanup is separate
+  work. Existing automated CI is unchanged and does not require a local lint run.
+  When explicitly requested, run
+  `go run github.com/magefile/mage@v1.15.0 lint` after cardgen round-trip tests
+  finish; temporary generated packages can otherwise cause type-check failures.
 - Documentation/comment-only changes need link/instruction checks and
   `git diff --check`, not the full game suite, linter or corpus regeneration.
 - Run pinned, same-input corpus comparisons only for relevant legacy compiler
@@ -116,6 +120,7 @@ whole and continue other eligible work when the assigned scope allows it.
 > shared Engine operations; Oracle recognition is not a prerequisite. Preserve
 > existing cards and runtime scenarios. Do not expand parser/lowering to add
 > cards, invent a DSL or mutate raw Game state. Reuse a precise blocker when a
-> shared capability is missing. Implement, test/lint, inspect, and commit directly
-> to main when authorized; push only with permission. Keep one main writer and
-> continue only within the assigned work.
+> shared capability is missing. Implement, test, inspect, and commit directly
+> to main when authorized; lint only when explicitly requested by the user.
+> Push only with permission. Keep one main writer and continue only within the
+> assigned work.

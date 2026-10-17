@@ -174,5 +174,8 @@ CI's existing `TestValidationMatrix` selects registry preservation and code
 checks for authored edits, not corpus regeneration. This slice also changes
 support tooling, for which the matrix intentionally selects compiler-maintenance
 checks. Normal isolated authored-card edits do not acquire that maintenance gate.
-Local final validation uses full tests followed by lint, focused race tests,
-actual WASM scenarios/builds, registry preservation and diff inspection.
+This slice's recorded local final validation used full tests followed by lint,
+focused race tests, actual WASM scenarios/builds, registry preservation and diff
+inspection. For current validation policy, follow the
+[repository instructions](../../.github/copilot-instructions.md); agents run
+linters only when the user explicitly asks.
