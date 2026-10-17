@@ -107,10 +107,6 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	if len(pending) == 0 {
 		return false
 	}
-	pending = suppressOpponentEnteringTriggers(g, pending)
-	if len(pending) == 0 {
-		return false
-	}
 	pending = multiplyAdditionalTriggers(g, pending)
 	pending = limitPendingTriggeredAbilities(g, pending)
 	if len(pending) == 0 {
@@ -194,7 +190,7 @@ func triggeredAbilityXValue(trigger *pendingTriggeredAbility) int {
 	return trigger.event.EnterXValue
 }
 
-// suppressOpponentEnteringTriggers drops the pending entering-caused triggered
+// suppressOpponentEnteringTriggers prevents entering-caused triggered
 // abilities of permanents controlled by an opponent of an active opponent-
 // entering-trigger suppressor's controller ("Permanents entering don't cause
 // abilities of permanents your opponents control to trigger.", Elesh Norn,
@@ -923,16 +919,17 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 		}
 		// Raw/synthetic events that bypass rules emission retain the compatibility
 		// scan. Production emitters always supply authoritative captured bodies.
-		pending = append(pending, eventTriggeredAbilities(g, event, events)...)
+		uncaptured := eventTriggeredAbilities(g, event, events)
 		if source, ok := damageSourceTriggerSource(g, event); ok {
-			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			uncaptured = append(uncaptured, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		if source, ok := damageRecipientTriggerSource(g, event); ok {
-			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			uncaptured = append(uncaptured, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
 		for _, source := range damageAttachedTriggerSources(g, event) {
-			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+			uncaptured = append(uncaptured, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
+		pending = append(pending, suppressOpponentEnteringTriggers(g, uncaptured)...)
 	}
 	return coalescePendingTriggeredAbilities(g, pending)
 }
@@ -961,7 +958,8 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
 	var captured []game.EventTriggeredAbility
-	for _, trigger := range eventTriggeredAbilities(g, event, g.Events) {
+	triggers := suppressOpponentEnteringTriggers(g, eventTriggeredAbilities(g, event, g.Events))
+	for _, trigger := range triggers {
 		body := game.EventTriggeredAbility{
 			Controller: trigger.controller, SourceID: trigger.sourceID, SourceCardID: trigger.sourceCardID,
 			SourceTokenDef: trigger.sourceToken, SourceZone: trigger.sourceZone, SourceZoneVersion: trigger.sourceZoneVersion,

@@ -405,6 +405,11 @@ controller, entry choices and applicable multipliers before later instructions c
 change the battlefield. Choices of modes/targets, APNAP ordering and stack
 placement still wait until priority; intervening-if conditions are checked at
 trigger time and again on resolution.
+ETB suppression is decided at that same capture boundary, using the post-event
+board (including a simultaneous entering cohort). A later suppressor cannot erase
+an existing trigger, and removing a suppressor cannot resurrect a prevented one.
+Suppression precedes multiplication; only uncaptured synthetic events use live
+compatibility filtering at placement.
 
 The capture policy covers every emitted event kind, not an ETB/damage-only
 allowlist. Previously late-detected families include cast/resolved/copied spells,
