@@ -30,22 +30,7 @@ func handleHideawayExile(r *effectResolver, prim game.HideawayExile) effectResol
 	if amount <= 0 {
 		return res
 	}
-	looked := make([]id.ID, 0, amount)
-	for range amount {
-		cardID, top := player.Library.Top()
-		if !top {
-			break
-		}
-		player.Library.Remove(cardID)
-		player.Exile.Add(cardID)
-		emitZoneChangeEvent(r.game, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   zone.Exile,
-		})
-		looked = append(looked, cardID)
-	}
+	looked := peekLibrary(player, amount)
 	if len(looked) == 0 {
 		return res
 	}
@@ -56,12 +41,28 @@ func handleHideawayExile(r *effectResolver, prim game.HideawayExile) effectResol
 			rest = append(rest, cardID)
 		}
 	}
-	player.Exile.SetFaceDown(chosen, true)
 	key := linkedObjectSourceKey(r.game, r.obj, hideawayLinkID)
 	clearLinkedObjects(r.game, key)
-	rememberLinkedObject(r.game, key, game.LinkedObjectRef{CardID: chosen})
-	bottomExiledCards(r.game, player, playerID, rest, r.engine.rng)
-	res.succeeded = true
+	destination, moved := moveCardBetweenZonesWithEvent(r.game, game.Event{
+		SourceID: stackObjectSourceID(r.obj), StackObjectID: stackObjectID(r.obj),
+		Controller: playerID, Player: playerID, CardID: chosen,
+		FromZone: zone.Library, ToZone: zone.Exile,
+	}, zoneMoveOptions{faceDownExile: true})
+	if moved && destination == zone.Exile {
+		card, _ := r.game.GetCardInstance(chosen)
+		rememberLinkedObject(r.game, key, game.LinkedObjectRef{
+			CardID: chosen, CardZoneVersion: card.ZoneVersion, CardZoneVersionSet: true,
+		})
+		res.succeeded = true
+	}
+	if r.engine.rng != nil && len(rest) > 1 {
+		r.engine.rng.Shuffle(len(rest), func(i, j int) { rest[i], rest[j] = rest[j], rest[i] })
+	}
+	for _, cardID := range rest {
+		if player.Library.Remove(cardID) {
+			player.Library.AddToBottom(cardID)
+		}
+	}
 	return res
 }
 
@@ -82,6 +83,7 @@ func (r *effectResolver) chooseHideawayCard(playerID game.PlayerID, cards []id.I
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           playerID,
+		Private:          true,
 		Prompt:           "Choose a card to exile face down",
 		Options:          options,
 		MinChoices:       1,
@@ -141,18 +143,10 @@ func handlePlayHideawayCard(r *effectResolver, _ game.PlayHideawayCard) effectRe
 // playHideawayLand puts the exiled hideaway land onto the battlefield under
 // playerID's control from exile.
 func (r *effectResolver) playHideawayLand(playerID game.PlayerID, cardID id.ID) bool {
-	player, ok := playerByID(r.game, playerID)
-	if !ok || !player.Exile.Remove(cardID) {
-		return false
-	}
 	card, ok := r.game.GetCardInstance(cardID)
 	if !ok {
-		player.Exile.Add(cardID)
 		return false
 	}
-	if _, ok := createCardPermanentFaceWithOptions(r.engine, r.game, card, playerID, zone.Exile, game.FaceFront, nil, permanentCreationOptions{}, r.agents, r.log); ok {
-		return true
-	}
-	player.Exile.Add(cardID)
-	return false
+	_, placed := r.putResolvedCardOnBattlefieldValue(card, zone.Exile, playerID, nil, permanentCreationOptions{})
+	return placed
 }

@@ -24,20 +24,15 @@ func (*Engine) reboundExileResolvingSpell(g *game.Game, obj *game.StackObject, c
 	if !ok {
 		return false
 	}
-	player.Exile.Add(card.ID)
-	if g.ReboundCards == nil {
-		g.ReboundCards = make(map[id.ID]game.ReboundCard)
+	if !moveStackCardToZone(g, obj, card, zone.Exile, false) {
+		return false
 	}
-	g.ReboundCards[card.ID] = game.ReboundCard{Owner: card.Owner, Controller: obj.Controller}
-	emitZoneChangeEvent(g, game.Event{
-		SourceID:      card.ID,
-		StackObjectID: obj.ID,
-		Controller:    obj.Controller,
-		Player:        card.Owner,
-		CardID:        card.ID,
-		FromZone:      zone.Stack,
-		ToZone:        zone.Exile,
-	})
+	if player.Exile.Contains(card.ID) {
+		if g.ReboundCards == nil {
+			g.ReboundCards = make(map[id.ID]game.ReboundCard)
+		}
+		g.ReboundCards[card.ID] = game.ReboundCard{Owner: card.Owner, Controller: obj.Controller}
+	}
 	return true
 }
 

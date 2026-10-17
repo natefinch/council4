@@ -88,13 +88,7 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 		player.Library.Shuffle(e.rng)
 		return 0, false
 	}
-	if !player.Library.Remove(cardID) {
-		player.Library.Shuffle(e.rng)
-		return 0, false
-	}
-	player.Exile.Add(cardID)
-	player.Exile.SetFaceDown(cardID, true)
-	emitZoneChangeEvent(g, game.Event{
+	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
 		SourceID:      stackObjectSourceID(obj),
 		StackObjectID: stackObjectID(obj),
 		Controller:    stackObjectController(obj),
@@ -103,7 +97,10 @@ func (e *Engine) searchLibraryExileFaceDown(g *game.Game, obj *game.StackObject,
 		FromZone:      zone.Library,
 		ToZone:        zone.Exile,
 		Amount:        1,
-	})
+	}, zoneMoveOptions{faceDownExile: true})
 	player.Library.Shuffle(e.rng)
+	if !moved || destination != zone.Exile {
+		return 0, false
+	}
 	return cardID, true
 }

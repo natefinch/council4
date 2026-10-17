@@ -46,7 +46,6 @@ func (e *Engine) applyPlotCard(g *game.Game, playerID game.PlayerID, cardID id.I
 	if !e.canPlotCard(g, playerID, cardID) {
 		return false
 	}
-	player := g.Players[playerID]
 	card, _ := g.GetCardInstance(cardID)
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	manaCost, _ := plotCostForCard(spellDef)
@@ -54,21 +53,19 @@ func (e *Engine) applyPlotCard(g *game.Game, playerID game.PlayerID, cardID id.I
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}
-	if !player.Hand.Remove(cardID) {
+	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+		Controller: playerID, Player: card.Owner, CardID: cardID,
+		FromZone: zone.Hand, ToZone: zone.Exile,
+	}, zoneMoveOptions{})
+	if !moved {
 		return false
 	}
-	player.Exile.Add(cardID)
-	if g.PlottedCards == nil {
-		g.PlottedCards = make(map[id.ID]int)
+	if destination == zone.Exile {
+		if g.PlottedCards == nil {
+			g.PlottedCards = make(map[id.ID]int)
+		}
+		g.PlottedCards[cardID] = g.Turn.TurnNumber
 	}
-	g.PlottedCards[cardID] = g.Turn.TurnNumber
-	emitZoneChangeEvent(g, game.Event{
-		Controller: playerID,
-		Player:     card.Owner,
-		CardID:     cardID,
-		FromZone:   zone.Hand,
-		ToZone:     zone.Exile,
-	})
 	return true
 }
 

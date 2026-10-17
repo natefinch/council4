@@ -95,9 +95,11 @@ func TestDigBottomsRestOfLibrary(t *testing.T) {
 	if player.Library.Contains(c2) {
 		t.Fatal("dig left the chosen card in the library")
 	}
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
-		return event.CardID == c1 && event.FromZone == zone.Library && event.ToZone == zone.Library
-	})
+	for _, event := range g.Events {
+		if event.Kind == game.EventZoneChanged && (event.CardID == c1 || event.CardID == c3) {
+			t.Fatal("reordering the remainder was incorrectly reported as a zone change")
+		}
+	}
 	// The card that was already on the bottom stays in the library.
 	if !player.Library.Contains(bottom) {
 		t.Fatal("dig disturbed the untouched bottom card")

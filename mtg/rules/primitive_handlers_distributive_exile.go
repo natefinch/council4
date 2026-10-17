@@ -22,12 +22,8 @@ func handleReturnLinkedExiledCardsToBattlefield(r *effectResolver, prim game.Ret
 	returned := r.engine.chooseLinkedExiledCardsToReturn(r.game, live, amount, r.obj.Controller, r.agents, r.log)
 	returnedSet := make(map[*game.CardInstance]bool, len(returned))
 	for _, card := range returned {
-		owner, ok := playerByID(r.game, card.Owner)
 		options := permanentCreationOptions{SourceFaceDown: cardFaceDownInZone(r.game, card, zone.Exile)}
-		if !ok || !owner.Exile.Remove(card.ID) {
-			continue
-		}
-		if _, ok := createCardPermanentFaceWithOptions(r.engine, r.game, card, card.Owner, zone.Exile, game.FaceFront, nil, options, r.agents, r.log); ok {
+		if _, ok := r.putResolvedCardOnBattlefieldValue(card, zone.Exile, card.Owner, nil, options); ok {
 			returnedSet[card] = true
 			res.succeeded = true
 		}
@@ -37,18 +33,8 @@ func handleReturnLinkedExiledCardsToBattlefield(r *effectResolver, prim game.Ret
 			if returnedSet[entry.card] {
 				continue
 			}
-			owner, ok := playerByID(r.game, entry.card.Owner)
-			if !ok || !owner.Exile.Remove(entry.card.ID) {
-				continue
-			}
-			owner.Library.AddToBottom(entry.card.ID)
-			emitZoneChangeEvent(r.game, game.Event{
-				Player:   entry.card.Owner,
-				CardID:   entry.card.ID,
-				FromZone: zone.Exile,
-				ToZone:   zone.Library,
-			})
-			res.succeeded = true
+			res.succeeded = moveCardBetweenZonesInBatch(r.game, entry.card.Owner, entry.card.ID,
+				zone.Exile, zone.Library, true, 0) || res.succeeded
 		}
 	}
 	clearLinkedObjects(r.game, key)

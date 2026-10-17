@@ -121,16 +121,5 @@ func firstLegalSpellCastChoice(g *game.Game, playerID game.PlayerID, spellDef *g
 }
 
 func moveExiledCardToGraveyard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
-	player, ok := playerByID(g, playerID)
-	if !ok || !player.Exile.Remove(cardID) {
-		return false
-	}
-	player.Graveyard.Add(cardID)
-	emitZoneChangeEvent(g, game.Event{
-		Player:   playerID,
-		CardID:   cardID,
-		FromZone: zone.Exile,
-		ToZone:   zone.Graveyard,
-	})
-	return true
+	return moveCardBetweenZonesInBatch(g, playerID, cardID, zone.Exile, zone.Graveyard, false, 0)
 }

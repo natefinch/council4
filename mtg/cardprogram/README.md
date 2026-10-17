@@ -181,6 +181,10 @@ of independently completed removals. Terastodon is the first production example
 of correlated batch outcomes; a real graveyard arrival qualifies even if the
 commander later moves to command as an SBA (CR 903.9a). Hand/library command-zone
 handling remains an optional replacement, not that SBA (CR 903.9b).
+Card programs do not implement these commander checks or invoke SBAs themselves;
+the shared movement/entry operations record actual arrivals and the Engine
+processes them at the proper checkpoint. See the
+[shared transition contract](../rules/README.md#shared-zone-transitions).
 Following epic slices deepen policy extensions.
 
 Generous Gift, Pongify, Rapid Hybridization and Resculpt are complete authored

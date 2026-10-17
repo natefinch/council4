@@ -183,7 +183,7 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 		replacement := move.replacement
 		replacement.shuffleIntoLibrary = false
 		if moveCardBetweenZonesAfterReplacement(c.game, move.owner, move.member.Identity.CardID,
-			move.fromZone, replacement, move.event, false, batch) {
+			move.fromZone, replacement, move.event, zoneMoveOptions{}, batch) {
 			if move.replacement.shuffleIntoLibrary && replacement.destination == zone.Library {
 				shuffle[move.owner] = true
 			}

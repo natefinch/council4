@@ -769,30 +769,42 @@ func moveCardBetweenZonesWithPlacement(g *game.Game, playerID game.PlayerID, car
 	return moveCardBetweenZonesInBatch(g, playerID, cardID, fromZone, toZone, bottom, 0)
 }
 
+type zoneMoveOptions struct {
+	bottom        bool
+	faceDownExile bool
+}
+
 // moveCardBetweenZonesInBatch moves a card from one zone to another, applying any
 // zone-change replacement effects to determine its real destination (CR 614) and
 // commander command-zone handling (the hand/library-to-command move is a
 // replacement effect, CR 903.9b; the graveyard/exile case is a state-based action,
 // CR 903.9a). The card becomes a new object in its new zone (CR 400.7).
 func moveCardBetweenZonesInBatch(g *game.Game, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type, bottom bool, simultaneousID id.ID) bool {
-	replacement := zoneChangeReplacementResult{destination: toZone}
-	card, cardOK := g.GetCardInstance(cardID)
-	event := game.Event{}
-	if cardOK {
-		event = game.Event{
-			Kind:       game.EventZoneChanged,
-			Controller: playerID,
-			Player:     playerID,
-			CardID:     cardID,
-			FromZone:   fromZone,
-			ToZone:     toZone,
-		}
-		replacement = replacementZoneChange(g, event)
-		destination := replacement.destination
-		destination = commanderReplacementDestination(g, card.ID, destination)
-		replacement.destination = destination
+	_, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+		Controller: playerID, Player: playerID, CardID: cardID,
+		FromZone: fromZone, ToZone: toZone, SimultaneousID: simultaneousID,
+	}, zoneMoveOptions{bottom: bottom})
+	return moved
+}
+
+// The source remains intact while replacements and the owner's choices run.
+// Graveyard/exile arrivals are recorded here, not processed as immediate SBAs.
+func moveCardBetweenZonesWithEvent(g *game.Game, event game.Event, options zoneMoveOptions) (zone.Type, bool) {
+	card, ok := g.GetCardInstance(event.CardID)
+	from, valid := destinationZone(g, event.Player, event.FromZone)
+	if !ok || !valid || !from.Contains(event.CardID) {
+		return zone.None, false
 	}
-	return moveCardBetweenZonesAfterReplacement(g, playerID, cardID, fromZone, replacement, event, bottom, simultaneousID)
+	version := card.ZoneVersion
+	event.Kind = game.EventZoneChanged
+	replacement := replacementZoneChange(g, event)
+	replacement.destination = commanderReplacementDestination(g, card.ID, replacement.destination)
+	if card.ZoneVersion != version || !from.Contains(card.ID) {
+		return zone.None, false
+	}
+	moved := moveCardBetweenZonesAfterReplacement(g, event.Player, card.ID, event.FromZone,
+		replacement, event, options, event.SimultaneousID)
+	return replacement.destination, moved
 }
 
 func moveCardBetweenZonesAfterReplacement(
@@ -802,7 +814,7 @@ func moveCardBetweenZonesAfterReplacement(
 	fromZone zone.Type,
 	replacement zoneChangeReplacementResult,
 	event game.Event,
-	bottom bool,
+	options zoneMoveOptions,
 	simultaneousID id.ID,
 ) bool {
 	destination := replacement.destination
@@ -819,7 +831,7 @@ func moveCardBetweenZonesAfterReplacement(
 	if !from.Remove(cardID) {
 		return false
 	}
-	if !placeMovedCardAfterReplacement(g, playerID, cardID, fromZone, replacement, event, sourceFaceDown, bottom, simultaneousID) {
+	if !placeMovedCardAfterReplacement(g, playerID, cardID, fromZone, replacement, event, sourceFaceDown, options, simultaneousID) {
 		from.Add(cardID)
 		from.SetFaceDown(cardID, sourceFaceDown)
 		return false
@@ -838,12 +850,12 @@ func redirectPendingCardEntry(g *game.Game, card *game.CardInstance, permanent *
 	replacement := replacementZoneChange(g, event)
 	replacement.destination = commanderReplacementDestination(g, card.ID, replacement.destination)
 	if from, ok := destinationZone(g, card.Owner, fromZone); ok && from.Contains(card.ID) {
-		if !moveCardBetweenZonesAfterReplacement(g, card.Owner, card.ID, fromZone, replacement, event, false, options.SimultaneousID) {
+		if !moveCardBetweenZonesAfterReplacement(g, card.Owner, card.ID, fromZone, replacement, event, zoneMoveOptions{}, options.SimultaneousID) {
 			panic(UnsupportedError{Reason: "cannot complete replaced battlefield entry"})
 		}
 		return
 	}
-	if !placeMovedCardAfterReplacement(g, card.Owner, card.ID, fromZone, replacement, event, options.SourceFaceDown, false, options.SimultaneousID) {
+	if !placeMovedCardAfterReplacement(g, card.Owner, card.ID, fromZone, replacement, event, options.SourceFaceDown, zoneMoveOptions{}, options.SimultaneousID) {
 		panic(UnsupportedError{Reason: "cannot complete replaced battlefield entry"})
 	}
 }
@@ -855,7 +867,8 @@ func placeMovedCardAfterReplacement(
 	fromZone zone.Type,
 	replacement zoneChangeReplacementResult,
 	event game.Event,
-	sourceFaceDown, bottom bool,
+	sourceFaceDown bool,
+	options zoneMoveOptions,
 	simultaneousID id.ID,
 ) bool {
 	destination := replacement.destination
@@ -870,15 +883,18 @@ func placeMovedCardAfterReplacement(
 		return false
 	}
 	revealZoneReplacementSource(g, event, replacement.revealSource)
-	if bottom && destination == zone.Library {
+	if options.bottom && destination == zone.Library {
 		to.AddToBottom(cardID)
 	} else {
 		to.Add(cardID)
 	}
+	if options.faceDownExile && destination == zone.Exile {
+		to.SetFaceDown(cardID, true)
+	}
 	shuffleLibraryIfRequested(g, to, destination, replacement.shuffleIntoLibrary)
 	event.Player = playerID
 	event.CardID = cardID
-	event.FaceDown = sourceFaceDown
+	event.FaceDown = sourceFaceDown || options.faceDownExile && destination == zone.Exile
 	event.FromZone = fromZone
 	event.ToZone = destination
 	event.SimultaneousID = simultaneousID

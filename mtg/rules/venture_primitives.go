@@ -182,21 +182,21 @@ func handleRevealToHandDrainManaValue(r *effectResolver, prim game.RevealToHandD
 	seen := peekLibrary(player, amount)
 	totalManaValue := 0
 	for _, cardID := range seen {
-		if !player.Library.Remove(cardID) {
+		if !player.Library.Contains(cardID) {
 			continue
 		}
 		if card, cardOK := r.game.GetCardInstance(cardID); cardOK {
 			emitCardRevealEvent(r.game, r.obj, playerID, cardID, zone.Library)
 			totalManaValue += cardFaceOrDefault(card, game.FaceFront).ManaValue()
 		}
-		player.Hand.Add(cardID)
-		emitZoneChangeEvent(r.game, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   zone.Hand,
-			Amount:   1,
-		})
+		moveCardBetweenZonesWithEvent(r.game, game.Event{
+			Controller: playerID,
+			Player:     playerID,
+			CardID:     cardID,
+			FromZone:   zone.Library,
+			ToZone:     zone.Hand,
+			Amount:     1,
+		}, zoneMoveOptions{})
 	}
 	res.succeeded = len(seen) > 0
 	if totalManaValue <= 0 {

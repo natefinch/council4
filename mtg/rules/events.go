@@ -149,14 +149,15 @@ func emitZoneChangeEventAfterCounterTransition(g *game.Game, event game.Event) g
 			event.CardZoneVersion = card.ZoneVersion
 		}
 	}
-	if event.FromZone == zone.Exile && event.ToZone != zone.Exile {
+	// Exile-to-exile moves also create a new object (CR 406.7).
+	if event.FromZone == zone.Exile {
 		delete(g.AdventureCards, event.CardID)
 		delete(g.SuspendedCards, event.CardID)
 		delete(g.PlottedCards, event.CardID)
 		delete(g.ForetoldCards, event.CardID)
 		delete(g.ExileCounterExiledBy, event.CardID)
 	}
-	if event.CardID != 0 && event.FromZone != event.ToZone {
+	if event.CardID != 0 && (event.FromZone != event.ToZone || event.FromZone == zone.Exile) {
 		clearCardCastPermissions(g, event.CardID, event.FromZone)
 	}
 	event.Kind = game.EventZoneChanged

@@ -51,7 +51,6 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 	if !e.canSuspendCard(g, playerID, cardID) {
 		return false
 	}
-	player := g.Players[playerID]
 	card, _ := g.GetCardInstance(cardID)
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	manaCost, counters, _ := suspendCostForCard(spellDef)
@@ -59,25 +58,21 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
 		return false
 	}
-	if !player.Hand.Remove(cardID) {
+	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+		Controller: playerID, Player: card.Owner, CardID: cardID,
+		FromZone: zone.Hand, ToZone: zone.Exile,
+	}, zoneMoveOptions{})
+	if !moved {
 		return false
 	}
-	player.Exile.Add(cardID)
-	if g.SuspendedCards == nil {
-		g.SuspendedCards = make(map[id.ID]game.SuspendedCard)
+	if destination == zone.Exile {
+		if g.SuspendedCards == nil {
+			g.SuspendedCards = make(map[id.ID]game.SuspendedCard)
+		}
+		g.SuspendedCards[cardID] = game.SuspendedCard{
+			Owner: card.Owner, Controller: playerID, TimeCounters: counters,
+		}
 	}
-	g.SuspendedCards[cardID] = game.SuspendedCard{
-		Owner:        card.Owner,
-		Controller:   playerID,
-		TimeCounters: counters,
-	}
-	emitZoneChangeEvent(g, game.Event{
-		Controller: playerID,
-		Player:     card.Owner,
-		CardID:     cardID,
-		FromZone:   zone.Hand,
-		ToZone:     zone.Exile,
-	})
 	return true
 }
 

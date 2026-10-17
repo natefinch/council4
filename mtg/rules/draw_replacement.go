@@ -79,7 +79,7 @@ func (e *Engine) replacePendingDraw(g *game.Game, playerID game.PlayerID, agents
 		}
 		if len(labels) == 0 {
 			cardID, drew := e.drawCard(g, playerID, firstInDrawStep)
-			log.addDraw(DrawLog{Player: playerID, CardID: cardID, Failed: !drew})
+			log.addDraw(DrawLog{Player: playerID, CardID: cardID, Failed: cardID == 0 && !drew})
 			return drew
 		}
 		chosen := 0

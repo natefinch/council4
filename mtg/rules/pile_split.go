@@ -123,37 +123,28 @@ func (e *Engine) choosePileKept(g *game.Game, agents [game.NumPlayers]PlayerAgen
 }
 
 // movePileSplitPile moves a pile of cards from controllerID's library to a
-// destination zone. The hand placement is direct; a library placement puts the
-// cards on the bottom; a graveyard placement routes through
-// putLibraryCardIntoGraveyard so it honors both the commander replacement
-// (CR 903.9a) and graveyard-redirect replacements (CR 614; e.g. an opponent's
-// Dauthi Voidwalker exiles the losing pile with void counters). The whole
+// destination zone. Cross-zone placements use the shared mover; library
+// placements only reorder cards already in that library. The whole
 // graveyard-bound pile shares one simultaneous ID, since its cards move at once.
 func movePileSplitPile(g *game.Game, controllerID game.PlayerID, player *game.Player, cards []id.ID, destination zone.Type) {
 	var graveyardBatchID id.ID
 	for _, cardID := range cards {
-		if !player.Library.Remove(cardID) {
+		if !player.Library.Contains(cardID) {
 			continue
 		}
 		switch destination {
 		case zone.Hand:
-			player.Hand.Add(cardID)
-			emitZoneChangeEvent(g, game.Event{
-				Player:   controllerID,
-				CardID:   cardID,
-				FromZone: zone.Library,
-				ToZone:   zone.Hand,
-				Amount:   1,
-			})
+			moveCardBetweenZonesWithEvent(g, game.Event{
+				Controller: controllerID,
+				Player:     controllerID,
+				CardID:     cardID,
+				FromZone:   zone.Library,
+				ToZone:     zone.Hand,
+				Amount:     1,
+			}, zoneMoveOptions{})
 		case zone.Library:
+			player.Library.Remove(cardID)
 			player.Library.AddToBottom(cardID)
-			emitZoneChangeEvent(g, game.Event{
-				Player:   controllerID,
-				CardID:   cardID,
-				FromZone: zone.Library,
-				ToZone:   zone.Library,
-				Amount:   1,
-			})
 		default:
 			if graveyardBatchID == 0 {
 				graveyardBatchID = g.IDGen.Next()

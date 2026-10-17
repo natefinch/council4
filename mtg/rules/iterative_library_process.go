@@ -64,6 +64,7 @@ func handleIterativeLibraryProcess(r *effectResolver, prim game.IterativeLibrary
 			break
 		}
 		name := searchCardName(r.game, cardID)
+		epoch := player.Library.ReorderVersion()
 		if prim.Reveal {
 			emitCardRevealEvent(r.game, r.obj, playerID, cardID, zone.Library)
 		}
@@ -83,6 +84,10 @@ func handleIterativeLibraryProcess(r *effectResolver, prim game.IterativeLibrary
 			// match a later duplicate.
 			dest := moveProcessedCard(r.game, playerID, cardID, zone.Library, zone.Exile)
 			res.succeeded = true
+			if dest != zone.Exile {
+				requireLibraryAdvance(player, cardID, epoch)
+				continue
+			}
 			if seenNames[name] {
 				// A duplicate name ends the process; the duplicate stays exiled.
 				return res
@@ -99,6 +104,7 @@ func handleIterativeLibraryProcess(r *effectResolver, prim game.IterativeLibrary
 			// an unexpected one ever reaches here.
 			return res
 		}
+		requireLibraryAdvance(player, cardID, epoch)
 	}
 	return res
 }
@@ -122,6 +128,7 @@ func (r *effectResolver) iterativeDifferentNameNonland(prim game.IterativeLibrar
 			break
 		}
 		name := searchCardName(r.game, cardID)
+		epoch := player.Library.ReorderVersion()
 		nonland := libraryCardIsNonland(r.game, cardID)
 		// Exile the card first: only an exiled card is "exiled this way" and part
 		// of the remainder. The commander-zone replacement may divert it instead.
@@ -129,7 +136,7 @@ func (r *effectResolver) iterativeDifferentNameNonland(prim game.IterativeLibrar
 		if dest == zone.Exile {
 			exiledThisWay = append(exiledThisWay, cardID)
 		}
-		if nonland && haveName && name != referenceName {
+		if dest == zone.Exile && nonland && haveName && name != referenceName {
 			// A different-named nonland ends the process. A commander diverted to
 			// the command zone can no longer be cast from exile, so only an
 			// actually-exiled card becomes the free-cast candidate.
@@ -139,6 +146,7 @@ func (r *effectResolver) iterativeDifferentNameNonland(prim game.IterativeLibrar
 			}
 			break
 		}
+		requireLibraryAdvance(player, cardID, epoch)
 	}
 	if prim.PublishLinked != "" {
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
@@ -203,37 +211,24 @@ func libraryCardIsNonland(g *game.Game, cardID id.ID) bool {
 }
 
 // moveProcessedCard moves a card from its current zone (from) into the intended
-// destination, applying the commander-zone replacement (CR 903.9) that lets a
-// commander's owner divert it to the command zone instead of exile, hand,
-// graveyard, or library. It removes the card from the source zone, adds it to
-// the actual destination zone, reports the zone change, and returns the zone the
-// card entered so a follow-up move (Tainted Pact's optional take-to-hand) starts
-// from the right place.
+// destination through the shared zone mover. The receipt keeps any follow-up
+// placement tied to the actual destination rather than the requested one.
 func moveProcessedCard(g *game.Game, playerID game.PlayerID, cardID id.ID, from, intended zone.Type) zone.Type {
 	sourceOwner := playerID
 	if card, ok := g.GetCardInstance(cardID); from == zone.Command && ok {
 		sourceOwner = card.Owner
 	}
-	if sourceCards, ok := destinationZone(g, sourceOwner, from); ok {
-		sourceCards.Remove(cardID)
+	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+		Controller: playerID,
+		Player:     sourceOwner,
+		CardID:     cardID,
+		FromZone:   from,
+		ToZone:     intended,
+		Amount:     1,
+	}, zoneMoveOptions{})
+	if !moved {
+		return zone.None
 	}
-	destination := commanderReplacementDestination(g, cardID, intended)
-	zoneOwner := playerID
-	if card, ok := g.GetCardInstance(cardID); destination == zone.Command && ok {
-		zoneOwner = card.Owner
-	}
-	destinationCards, ok := destinationZone(g, zoneOwner, destination)
-	if !ok {
-		return from
-	}
-	destinationCards.Add(cardID)
-	emitZoneChangeEvent(g, game.Event{
-		Player:   playerID,
-		CardID:   cardID,
-		FromZone: from,
-		ToZone:   destination,
-		Amount:   1,
-	})
 	return destination
 }
 

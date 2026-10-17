@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -19,7 +18,7 @@ func handlePutLinkedExiledCardsInLibrary(r *effectResolver, prim game.PutLinkedE
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
 	refs := linkedObjects(r.game, key)
 	if prim.RandomOrder {
-		cardsByOwner := make(map[game.PlayerID][]id.ID)
+		cardsByOwner := make(map[game.PlayerID][]game.ZoneCardSnapshot)
 		var owners []game.PlayerID
 		for _, ref := range refs {
 			card, ok := linkedExiledCard(r.game, ref)
@@ -29,16 +28,16 @@ func handlePutLinkedExiledCardsInLibrary(r *effectResolver, prim game.PutLinkedE
 			if _, seen := cardsByOwner[card.Owner]; !seen {
 				owners = append(owners, card.Owner)
 			}
-			cardsByOwner[card.Owner] = append(cardsByOwner[card.Owner], card.ID)
+			cardsByOwner[card.Owner] = append(cardsByOwner[card.Owner], game.ZoneCardSnapshot{
+				CardID: card.ID, ZoneVersion: card.ZoneVersion,
+			})
 		}
 		for _, ownerID := range owners {
 			owner, ok := playerByID(r.game, ownerID)
 			if !ok {
 				continue
 			}
-			before := owner.Library.Size()
-			bottomExiledCards(r.game, owner, ownerID, cardsByOwner[ownerID], r.engine.rng)
-			if owner.Library.Size() > before {
+			if bottomExiledCards(r.game, owner, ownerID, cardsByOwner[ownerID], r.engine.rng) {
 				res.succeeded = true
 			}
 		}
@@ -50,22 +49,8 @@ func handlePutLinkedExiledCardsInLibrary(r *effectResolver, prim game.PutLinkedE
 		if !ok {
 			continue
 		}
-		owner, ok := playerByID(r.game, card.Owner)
-		if !ok || !owner.Exile.Remove(ref.CardID) {
-			continue
-		}
-		if prim.Bottom {
-			owner.Library.AddToBottom(ref.CardID)
-		} else {
-			owner.Library.Add(ref.CardID)
-		}
-		emitZoneChangeEvent(r.game, game.Event{
-			Player:   card.Owner,
-			CardID:   ref.CardID,
-			FromZone: zone.Exile,
-			ToZone:   zone.Library,
-		})
-		res.succeeded = true
+		res.succeeded = moveCardBetweenZonesInBatch(r.game, card.Owner, ref.CardID,
+			zone.Exile, zone.Library, prim.Bottom, 0) || res.succeeded
 	}
 	clearLinkedObjects(r.game, key)
 	return res

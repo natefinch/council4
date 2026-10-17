@@ -80,9 +80,11 @@ func TestDigSlotsRouteExactLibraryByChoice(t *testing.T) {
 	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == c2 && event.FromZone == zone.Library && event.ToZone == zone.Hand
 	})
-	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
-		return event.CardID == c3 && event.FromZone == zone.Library && event.ToZone == zone.Library
-	})
+	for _, event := range g.Events {
+		if event.Kind == game.EventZoneChanged && event.CardID == c3 {
+			t.Fatal("the bottomed library card became a new zone incarnation")
+		}
+	}
 	assertEvent(t, g.Events, game.EventZoneChanged, func(event game.Event) bool {
 		return event.CardID == c1 && event.FromZone == zone.Library && event.ToZone == zone.Exile
 	})

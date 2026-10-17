@@ -20,31 +20,38 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 	if !ok {
 		return
 	}
-	var revealed []id.ID
+	var revealed []game.ZoneCardSnapshot
 	var found id.ID
 	for {
 		cardID, ok := player.Library.Top()
 		if !ok {
 			break
 		}
-		player.Library.Remove(cardID)
-		player.Exile.Add(cardID)
-		revealed = append(revealed, cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   obj.Controller,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   zone.Exile,
-		})
+		epoch := player.Library.ReorderVersion()
+		destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+			Controller: obj.Controller,
+			Player:     obj.Controller,
+			CardID:     cardID,
+			FromZone:   zone.Library,
+			ToZone:     zone.Exile,
+		}, zoneMoveOptions{})
+		if !moved {
+			break
+		}
+		if destination == zone.Exile {
+			card, _ := g.GetCardInstance(cardID)
+			revealed = append(revealed, game.ZoneCardSnapshot{CardID: cardID, ZoneVersion: card.ZoneVersion})
+		}
 		card, ok := g.GetCardInstance(cardID)
 		if !ok {
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
-		if !def.HasType(types.Land) && def.ManaValue() < spellDef.ManaValue() {
+		if destination == zone.Exile && !def.HasType(types.Land) && def.ManaValue() < spellDef.ManaValue() {
 			found = cardID
 			break
 		}
+		requireLibraryAdvance(player, cardID, epoch)
 	}
 	if found != 0 {
 		e.castFreeSpellFromExileWithMaxManaValue(g, obj.Controller, found, spellDef.ManaValue()-1, agents, log)
@@ -70,65 +77,61 @@ func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue 
 		bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
 		return true
 	}
-	if player.Exile.Remove(found) {
-		player.Hand.Add(found)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   obj.Controller,
-			CardID:   found,
-			FromZone: zone.Exile,
-			ToZone:   zone.Hand,
-		})
-	}
+	moveCardBetweenZonesInBatch(g, obj.Controller, found, zone.Exile, zone.Hand, false, 0)
 	bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
 	return true
 }
 
-func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.PlayerID, manaValue int) (revealed []id.ID, found id.ID) {
+func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.PlayerID, manaValue int) (revealed []game.ZoneCardSnapshot, found id.ID) {
 	for {
 		cardID, ok := player.Library.Top()
 		if !ok {
 			break
 		}
-		player.Library.Remove(cardID)
-		player.Exile.Add(cardID)
-		revealed = append(revealed, cardID)
-		emitZoneChangeEvent(g, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   zone.Exile,
-		})
+		epoch := player.Library.ReorderVersion()
+		destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+			Controller: playerID,
+			Player:     playerID,
+			CardID:     cardID,
+			FromZone:   zone.Library,
+			ToZone:     zone.Exile,
+		}, zoneMoveOptions{})
+		if !moved {
+			break
+		}
+		if destination == zone.Exile {
+			card, _ := g.GetCardInstance(cardID)
+			revealed = append(revealed, game.ZoneCardSnapshot{CardID: cardID, ZoneVersion: card.ZoneVersion})
+		}
 		card, ok := g.GetCardInstance(cardID)
 		if !ok {
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
-		if !def.HasType(types.Land) && def.ManaValue() <= manaValue {
+		if destination == zone.Exile && !def.HasType(types.Land) && def.ManaValue() <= manaValue {
 			found = cardID
 			break
 		}
+		requireLibraryAdvance(player, cardID, epoch)
 	}
 	return revealed, found
 }
 
-func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID, cardIDs []id.ID, rng *rand.Rand) {
-	cardIDs = append([]id.ID(nil), cardIDs...)
-	if rng != nil && len(cardIDs) > 1 {
-		rng.Shuffle(len(cardIDs), func(i, j int) {
-			cardIDs[i], cardIDs[j] = cardIDs[j], cardIDs[i]
+func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID, cards []game.ZoneCardSnapshot, rng *rand.Rand) bool {
+	cards = slices.Clone(cards)
+	if rng != nil && len(cards) > 1 {
+		rng.Shuffle(len(cards), func(i, j int) {
+			cards[i], cards[j] = cards[j], cards[i]
 		})
 	}
-	for _, cardID := range cardIDs {
-		if player.Exile.Remove(cardID) {
-			player.Library.AddToBottom(cardID)
-			emitZoneChangeEvent(g, game.Event{
-				Player:   playerID,
-				CardID:   cardID,
-				FromZone: zone.Exile,
-				ToZone:   zone.Library,
-			})
+	moved := false
+	for _, snapshot := range cards {
+		card, exists := g.GetCardInstance(snapshot.CardID)
+		if exists && card.ZoneVersion == snapshot.ZoneVersion && player.Exile.Contains(card.ID) {
+			moved = moveCardBetweenZonesInBatch(g, playerID, card.ID, zone.Exile, zone.Library, true, 0) || moved
 		}
 	}
+	return moved
 }
 
 func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {

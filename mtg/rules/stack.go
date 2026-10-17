@@ -28,6 +28,9 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 	if !ok {
 		return
 	}
+	previous, _ := g.ChoiceContext()
+	e.setReplacementChoiceContext(g, agents, log)
+	defer g.SetChoiceContext(previous)
 	// Snapshot the resolving spell's face characteristics into LKI before
 	// effects run so that protection checks against the source can find the
 	// correct face even after the object has been removed from the stack.

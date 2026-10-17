@@ -1864,7 +1864,7 @@ func moveCommanderToZone(g *game.Game, playerID game.PlayerID, cardID id.ID, des
 		ToZone:     destination,
 	}
 	replacement := replacementZoneChange(g, event)
-	return moveCardBetweenZonesAfterReplacement(g, playerID, cardID, zone.Command, replacement, event, false, simultaneousID)
+	return moveCardBetweenZonesAfterReplacement(g, playerID, cardID, zone.Command, replacement, event, zoneMoveOptions{}, simultaneousID)
 }
 
 func handleGrantCastPermission(r *effectResolver, prim game.GrantCastPermission) effectResolved {
@@ -3272,23 +3272,27 @@ func handleExileLibraryUntilNonlandCast(r *effectResolver, prim game.ExileLibrar
 		if !topOK {
 			break
 		}
-		player.Library.Remove(cardID)
-		player.Exile.Add(cardID)
-		emitZoneChangeEvent(r.game, game.Event{
-			Player:   playerID,
-			CardID:   cardID,
-			FromZone: zone.Library,
-			ToZone:   zone.Exile,
-		})
+		epoch := player.Library.ReorderVersion()
+		destination, moved := moveCardBetweenZonesWithEvent(r.game, game.Event{
+			Controller: playerID,
+			Player:     playerID,
+			CardID:     cardID,
+			FromZone:   zone.Library,
+			ToZone:     zone.Exile,
+		}, zoneMoveOptions{})
+		if !moved {
+			break
+		}
 		res.succeeded = true
 		card, cardOK := r.game.GetCardInstance(cardID)
 		if !cardOK {
 			continue
 		}
-		if !cardFaceOrDefault(card, game.FaceFront).HasType(types.Land) {
+		if destination == zone.Exile && !cardFaceOrDefault(card, game.FaceFront).HasType(types.Land) {
 			found = cardID
 			break
 		}
+		requireLibraryAdvance(player, cardID, epoch)
 	}
 	if found != 0 &&
 		r.engine.chooseMay(r.game, r.agents, playerID, "Cast that card without paying its mana cost?", r.log) {
@@ -3628,7 +3632,7 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 				card.fromZone,
 				move.replacement,
 				move.event,
-				false,
+				zoneMoveOptions{},
 				options.SimultaneousID,
 			)
 			continue
@@ -3703,7 +3707,7 @@ func (r *effectResolver) putResolvedCardOnBattlefieldValue(
 			fromZone,
 			replacement,
 			event,
-			false,
+			zoneMoveOptions{},
 			options.SimultaneousID,
 		)
 		return nil, false

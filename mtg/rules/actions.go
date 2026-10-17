@@ -476,6 +476,9 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 	if err := act.Validate(); err != nil {
 		return false
 	}
+	previous, _ := g.ChoiceContext()
+	e.setReplacementChoiceContext(g, agents, log)
+	defer g.SetChoiceContext(previous)
 	switch act.Kind {
 	case action.ActionPass:
 		return true

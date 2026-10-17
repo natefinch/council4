@@ -93,23 +93,7 @@ func (r *effectResolver) putExiledCardInLibrary(cardID id.ID, bottom bool) bool 
 	if !ok {
 		return false
 	}
-	owner, ok := playerByID(r.game, card.Owner)
-	if !ok || !owner.Exile.Remove(cardID) {
-		return false
-	}
-	if bottom {
-		owner.Library.AddToBottom(cardID)
-	} else {
-		owner.Library.Add(cardID)
-	}
-	emitZoneChangeEvent(r.game, game.Event{
-		Player:   card.Owner,
-		CardID:   cardID,
-		FromZone: zone.Exile,
-		ToZone:   zone.Library,
-		Amount:   1,
-	})
-	return true
+	return moveCardBetweenZonesInBatch(r.game, card.Owner, cardID, zone.Exile, zone.Library, bottom, 0)
 }
 
 // returnExiledCostCardToBattlefield moves a cost-exiled card from its owner's
@@ -120,15 +104,6 @@ func (r *effectResolver) returnExiledCostCardToBattlefield(cardID id.ID, control
 	if !ok {
 		return false
 	}
-	owner, ok := playerByID(r.game, card.Owner)
-	options.SourceFaceDown = cardFaceDownInZone(r.game, card, zone.Exile)
-	if !ok || !owner.Exile.Remove(cardID) {
-		return false
-	}
-	if _, ok := createCardPermanentFaceWithOptions(r.engine, r.game, card, controllerID, zone.Exile, game.FaceFront, nil, options, r.agents, r.log); ok {
-		return true
-	}
-	owner.Exile.Add(cardID)
-	owner.Exile.SetFaceDown(cardID, options.SourceFaceDown)
-	return false
+	_, placed := r.putResolvedCardOnBattlefieldValue(card, zone.Exile, controllerID, nil, options)
+	return placed
 }

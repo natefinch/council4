@@ -82,6 +82,36 @@ Do not pass `*game.Game` directly to agents; agents should not see hidden inform
 Its full authoritative event stream and card-name table support postgame
 analytics; they are not live public observations and must not be passed to agents.
 
+## Shared zone transitions
+
+Ordinary card placements use `moveCardBetweenZonesWithEvent` or its
+`moveCardBetweenZonesInBatch` convenience wrapper. Keep the card in its source
+zone until this operation applies replacements and the owner's choices, checks
+the source incarnation again, and commits the actual destination. Source event
+metadata, simultaneous batch IDs, bottom placement and face-down exile
+visibility stay in that shared path. Battlefield entry and resolving-stack
+transactions use the corresponding shared entry/pending-move machinery.
+
+Commander handling is Engine-owned. Hand/library destinations offer the owner's
+optional replacement before movement (CR 903.9b). Graveyard/exile arrivals
+record their exact zone incarnation for the next normal SBA checkpoint
+(CR 903.9a); neither card code nor an individual move runs that SBA in the
+middle of resolution. Declined and stale arrivals are not offered repeatedly,
+and pending eligibility is clone-safe. Exile-to-exile movement creates a new
+incarnation and invalidates the old permissions. Reordering within a library
+does neither.
+
+The zone-movement contract tests cover the shared operations and real compiled
+Dig cards. The raw-arrival architecture guard rejects new direct/local-aliased
+zone additions outside reviewed movement transactions, library reordering,
+setup, hidden-state projection and rollback. It is a source-level regression
+guard, not a whole-program proof; do not add an exception for a new card or
+effect instead of using shared movement.
+
+If a replacement prevents a mandatory iterative library operation from making
+progress, the Engine reports an unsupported continuation rather than hanging,
+claiming success or inventing a rules draw.
+
 ## Current implementation status
 
 Implemented now:

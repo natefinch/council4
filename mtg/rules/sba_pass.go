@@ -391,7 +391,7 @@ func (pass *stateBasedActionPass) apply(g *game.Game, batchID func() id.ID) (boo
 		card, exists := g.GetCardInstance(commander.card.CardID)
 		if exists && card.ZoneVersion == commander.card.ZoneVersion {
 			changed = moveCardBetweenZonesAfterReplacement(g, commander.owner, card.ID, commander.event.FromZone,
-				commander.replacement, commander.event, false, batchID()) || changed
+				commander.replacement, commander.event, zoneMoveOptions{}, batchID()) || changed
 		}
 	}
 	for _, token := range pass.tokens {

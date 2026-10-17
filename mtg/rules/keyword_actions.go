@@ -638,6 +638,10 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, c
 		if dest.Position != game.SearchPositionTop {
 			return nil, false
 		}
+		if fromZone != zone.Library {
+			_, placed := moveSearchCard(g, obj, playerID, cardID, fromZone, zone.Library)
+			return nil, placed
+		}
 		if !removeCardFromZone(g, playerID, cardID, fromZone) {
 			return nil, false
 		}
@@ -649,26 +653,11 @@ func (e *Engine) placeFoundCard(g *game.Game, obj *game.StackObject, playerID, c
 }
 
 func moveSearchCard(g *game.Game, obj *game.StackObject, playerID game.PlayerID, cardID id.ID, fromZone, toZone zone.Type) (zone.Type, bool) {
-	card, ok := g.GetCardInstance(cardID)
-	from, validZone := destinationZone(g, playerID, fromZone)
-	if !ok || !validZone || !from.Contains(cardID) {
-		return zone.None, false
-	}
-	version := card.ZoneVersion
-	event := game.Event{
+	return moveCardBetweenZonesWithEvent(g, game.Event{
 		Kind: game.EventZoneChanged, SourceID: stackObjectSourceID(obj),
 		StackObjectID: stackObjectID(obj), Controller: stackObjectController(obj),
 		Player: playerID, CardID: cardID, FromZone: fromZone, ToZone: toZone, Amount: 1,
-	}
-	replacement := replacementZoneChange(g, event)
-	replacement.destination = commanderReplacementDestination(g, cardID, replacement.destination)
-	if card.ZoneVersion != version || !from.Contains(cardID) {
-		return zone.None, false
-	}
-	if !moveCardBetweenZonesAfterReplacement(g, playerID, cardID, fromZone, replacement, event, false, 0) {
-		return zone.None, false
-	}
-	return replacement.destination, true
+	}, zoneMoveOptions{})
 }
 
 // placeSplitSearch resolves a split-destination library search (Cultivate,

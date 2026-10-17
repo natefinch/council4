@@ -55,28 +55,25 @@ func (e *Engine) applyForetellCard(g *game.Game, playerID game.PlayerID, cardID 
 	if !e.canForetellCard(g, playerID, cardID) {
 		return false
 	}
-	player := g.Players[playerID]
 	card, _ := g.GetCardInstance(cardID)
 	exileCost := foretellExileCost()
 	prefs := e.paymentPreferencesForCost(g, playerID, &exileCost, nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &exileCost, Prefs: prefs}) {
 		return false
 	}
-	if !player.Hand.Remove(cardID) {
+	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+		Controller: playerID, Player: card.Owner, CardID: cardID,
+		FromZone: zone.Hand, ToZone: zone.Exile,
+	}, zoneMoveOptions{faceDownExile: true})
+	if !moved {
 		return false
 	}
-	player.Exile.Add(cardID)
-	if g.ForetoldCards == nil {
-		g.ForetoldCards = make(map[id.ID]int)
+	if destination == zone.Exile {
+		if g.ForetoldCards == nil {
+			g.ForetoldCards = make(map[id.ID]int)
+		}
+		g.ForetoldCards[cardID] = g.Turn.TurnNumber
 	}
-	g.ForetoldCards[cardID] = g.Turn.TurnNumber
-	emitZoneChangeEvent(g, game.Event{
-		Controller: playerID,
-		Player:     card.Owner,
-		CardID:     cardID,
-		FromZone:   zone.Hand,
-		ToZone:     zone.Exile,
-	})
 	return true
 }
 

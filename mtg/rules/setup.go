@@ -31,16 +31,20 @@ func (*Engine) drawCard(g *game.Game, playerID game.PlayerID, firstInDrawStep bo
 		return 0, false
 	}
 
-	player.Library.Remove(cardID)
-	player.Hand.Add(cardID)
 	event := game.Event{
-		Player:   playerID,
-		CardID:   cardID,
-		FromZone: zone.Library,
-		ToZone:   zone.Hand,
-		Amount:   1,
+		Controller: playerID,
+		Player:     playerID,
+		CardID:     cardID,
+		FromZone:   zone.Library,
+		ToZone:     zone.Hand,
+		Amount:     1,
 	}
-	event = emitZoneChangeEvent(g, event)
+	destination, moved := moveCardBetweenZonesWithEvent(g, event, zoneMoveOptions{})
+	if !moved || destination != zone.Hand {
+		return cardID, false
+	}
+	card, _ := g.GetCardInstance(cardID)
+	event.CardZoneVersion = card.ZoneVersion
 	event.Kind = game.EventCardDrawn
 	event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCardDrawn, playerID)
 	event.FirstInDrawStep = firstInDrawStep
