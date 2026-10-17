@@ -14,6 +14,11 @@ selected; an unpaid entry-to-zone replacement prevents battlefield publication.
 Entry choices run before publication of the permanent or its
 simultaneous cohort, and entering tapped/untapped is not a tap/untap event.
 
+Mana abilities must use supported inspectable declarations and instruction
+sequences, not `Mode.Program`. Installing a program does not establish mana-ability
+classification; program-backed mana bodies are rejected at checked admission.
+Ordinary non-mana activations, triggers and resolving spells can use Go programs.
+
 ## A bounded worker loop
 
 1. Read the selected live issue and real prerequisites. Claim a small eligible

@@ -9,6 +9,9 @@ import (
 
 // ValidateProgram rejects unsupported or mixed authored replacement actions.
 func (r *ReplacementEffect) ValidateProgram() error {
+	if err := validateAbilityProgramDeclarations(r.EntersAsCopyAddAbilities); err != nil {
+		return err
+	}
 	if r.Program == (ProgramReference{}) {
 		if r.Optional {
 			return errors.New("optional replacement requires a Program")

@@ -507,6 +507,10 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 		}
 		v.validateAbilityContent(faceName, appendPath(path, "Content"), abilityBody.Content, targets)
 	case *ManaAbility:
+		if len(abilityBody.Content.ProgramReferences()) != 0 {
+			v.add(faceName, appendPath(path, "Content"), CardDefIssueInvalidAbilityBody,
+				"program-backed mana abilities are unsupported; use inspectable mana instruction sequences")
+		}
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}
@@ -1391,6 +1395,11 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 			!IsTapSacrificeAnyColorManaAbility(manaAbility) &&
 			!IsTapAnyColorCreatureSpellRestrictedManaAbility(manaAbility) {
 			v.add(faceName, abilityPath, CardDefIssueInvalidAbilityBody, "continuous effects support only the standard tap-for-one-mana-of-any-color granted mana ability, the bare tap-for-one-mana ability, the Treasure-style sacrifice mana ability, the count-1 sacrifice any-color mana ability, or the any-color mana ability restricted to casting creature spells")
+		}
+	}
+	if continuous.CopyValues.Exists {
+		for i, body := range continuous.CopyValues.Val.Abilities {
+			v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("CopyValues.Abilities[%d]", i)), body, nil)
 		}
 	}
 	if len(continuous.AddAbilities) > 0 && continuous.Layer != LayerAbility {

@@ -1177,6 +1177,9 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if len(p.ContinuousEffects) == 0 {
 		return errors.New("continuous effect instruction has no declarations")
 	}
+	if err := validateContinuousProgramDeclarations(p.ContinuousEffects, targets); err != nil {
+		return err
+	}
 	for i := range p.ContinuousEffects {
 		if err := validateContinuousEffectNewControllerRef(&p.ContinuousEffects[i], targets, checkTargets); err != nil {
 			return err
@@ -1833,6 +1836,9 @@ func (p OptionalCounterForEachPlayer) validatePrimitive(targets []TargetSpec, ch
 }
 
 func (p CreateTokenForEachDestroyed) validatePrimitive([]TargetSpec, bool) error {
+	if err := validateTokenProgramDeclarations(p.Source); err != nil {
+		return err
+	}
 	if p.LinkedKey == "" {
 		return errors.New("create token for each destroyed requires a linked key")
 	}
@@ -1946,6 +1952,9 @@ func (p MassReanimationExchange) validatePrimitive(targets []TargetSpec, checkTa
 }
 
 func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateContinuousProgramDeclarations(p.ContinuousEffects, targets); err != nil {
+		return err
+	}
 	if p.Source.Valid() == (len(p.Sources) > 0) {
 		return errors.New("put on battlefield requires a valid source")
 	}
@@ -2018,6 +2027,9 @@ func (p PutOnBattlefield) validatePrimitive(targets []TargetSpec, checkTargets b
 }
 
 func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validateTokenProgramDeclarations(p.Source); err != nil {
+		return err
+	}
 	if !p.Source.Valid() {
 		return errors.New("create token requires a valid source")
 	}
@@ -2149,6 +2161,9 @@ func (p CastLinkedCardForFree) validatePrimitive([]TargetSpec, bool) error {
 // validatePrimitive implements Primitive for RollDiceCreateTokens. It requires a
 // positive die count and side count and a valid token source.
 func (p RollDiceCreateTokens) validatePrimitive([]TargetSpec, bool) error {
+	if err := validateTokenProgramDeclarations(p.Source); err != nil {
+		return err
+	}
 	if p.Dice <= 0 || p.Sides <= 0 {
 		return errors.New("roll dice create tokens requires positive dice and sides")
 	}

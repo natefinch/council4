@@ -34,6 +34,17 @@ Declare the target in `game.Mode.Targets` and bind its `Program` instead of a
 activation, trigger or chapter as usual; declaration, costs, announcement,
 target revalidation and priority remain Engine responsibilities.
 
+**Mana abilities require inspectable declarative instructions.** A
+`ManaAbility.Content` containing a Go program is unsupported, even when the
+program is installed and would execute `AddMana`. Card-definition validation,
+checked registry lookup and Engine preflight reject that representation with an
+explicit diagnostic. This includes declared granted, copied, token and delayed
+ability templates; runtime token/grant operations validate introduced
+program-bearing declarations before mutation. Use the existing tap-for-mana
+helpers or supported `ManaAbility` instruction sequences instead. The Engine
+does not run opaque Go speculatively to classify mana abilities or put them on
+the stack as a workaround.
+
 Register a `cardset.Entry` with its exact `OracleID`, constructor, and
 `Programs: []cardprogram.Program{{Reference: drawThree, Resolve: resolveDrawThree}}`.
 Authored sources belong in `mtg/cards/authored`, not generated letter files.

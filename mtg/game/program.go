@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -97,6 +98,48 @@ func continuousPrograms(effects []ContinuousEffect) []ProgramReference {
 		}
 	}
 	return references
+}
+
+// Program-bearing declarations use the same structural checks when introduced
+// by an authored operation as they do during checked deck loading.
+func validateContinuousProgramDeclarations(effects []ContinuousEffect, targets []TargetSpec) error {
+	for i := range effects {
+		effect := &effects[i]
+		if len(continuousPrograms(effects[i:i+1])) == 0 {
+			continue
+		}
+		v := &cardDefValidator{}
+		v.validateContinuousEffect("", fmt.Sprintf("ContinuousEffects[%d]", i), effect, targets)
+		if len(v.issues) != 0 {
+			return errors.New(v.issues[0].Message)
+		}
+	}
+	return nil
+}
+
+func validateTokenProgramDeclarations(source TokenSource) error {
+	def, exists := source.TokenDefRef()
+	if !exists || len(def.ProgramReferences()) == 0 {
+		return nil
+	}
+	if issues := ValidateCardDef(def); len(issues) != 0 {
+		return fmt.Errorf("invalid token program declaration: %s", issues[0].Message)
+	}
+	return nil
+}
+
+func validateAbilityProgramDeclarations(abilities []Ability) error {
+	if len(abilityPrograms(abilities)) == 0 {
+		return nil
+	}
+	v := &cardDefValidator{}
+	for i, body := range abilities {
+		v.validateAbilityBody("", fmt.Sprintf("Abilities[%d]", i), body, nil)
+	}
+	if len(v.issues) != 0 {
+		return errors.New(v.issues[0].Message)
+	}
+	return nil
 }
 
 // ProgramReferences reports code introduced by a resolving ability grant.

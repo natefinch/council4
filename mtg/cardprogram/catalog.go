@@ -123,7 +123,8 @@ func (c Catalog) Run(reference game.ProgramReference, ctx Context) error {
 	return nil
 }
 
-// ValidateCard rejects missing/version-mismatched code before loading a deck.
+// ValidateCard rejects unsupported authored declarations and missing or
+// version-mismatched code before loading a deck.
 func (c Catalog) ValidateCard(def *game.CardDef) error {
 	if def == nil {
 		return errors.New("cannot validate programs for a nil card")
