@@ -606,9 +606,14 @@ type preparedTokenEntry struct {
 	token       *game.CardDef
 	attachedTo  *game.Permanent
 	destination zone.Type
+	spellCopyID id.ID
 }
 
 func prepareTokenEntry(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
+	return prepareTokenEntryFromZone(e, g, controller, token, tapped, attachedTo, zone.None, agents, log, faces...)
+}
+
+func prepareTokenEntryFromZone(e *Engine, g *game.Game, controller game.PlayerID, token *game.CardDef, tapped bool, attachedTo *game.Permanent, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, faces ...game.FaceIndex) (preparedTokenEntry, bool) {
 	if token == nil || departedPlayer(g, controller) {
 		return preparedTokenEntry{}, false
 	}
@@ -639,7 +644,7 @@ func prepareTokenEntry(e *Engine, g *game.Game, controller game.PlayerID, token 
 		engine: e,
 		agents: agents,
 		log:    log,
-	}, g, permanent, zone.None)
+	}, g, permanent, fromZone)
 	return preparedTokenEntry{
 		permanent: permanent, controller: controller, visible: visible, token: token, attachedTo: attachedTo, destination: destination,
 	}, true
@@ -667,17 +672,70 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
 		}
 		event := game.Event{
-			Controller: entry.controller, Player: entry.controller,
+			Controller: entry.controller, Player: permanent.Owner,
 			PermanentID: permanent.ObjectID, TokenName: entry.visible.Name, TokenDef: entry.token,
 			FromZone: zone.None, ToZone: entry.destination, SimultaneousID: simultaneousID,
+		}
+		if entry.spellCopyID != 0 {
+			event.FromZone = zone.Stack
+			event.StackObjectID = entry.spellCopyID
 		}
 		emitZoneChangeEvent(g, event)
 		if entry.destination == zone.Battlefield {
 			event.Kind = game.EventPermanentEnteredBattlefield
 			emitEvent(g, event)
 		}
-		event.Kind = game.EventTokenCreated
-		emitEvent(g, event)
+		if entry.spellCopyID == 0 {
+			event.Kind = game.EventTokenCreated
+			emitEvent(g, event)
+		}
 	}
 	return created
+}
+
+// A resolving spell copy becomes one token; it is not token creation (CR 111.13).
+func (e *Engine) enterPermanentSpellCopy(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	token, face := permanentSpellCopyTokenDef(g, obj, spellDef)
+	entry, ok := prepareTokenEntryFromZone(e, g, obj.Controller, token, false, nil, zone.Stack, agents, log, face)
+	if !ok {
+		return nil, false
+	}
+	entry.spellCopyID = obj.ID
+	if obj.CopyOwner.Exists {
+		entry.permanent.Owner = obj.CopyOwner.Val
+	}
+	created := commitTokenEntries(g, []preparedTokenEntry{entry}, 0)
+	if len(created) == 0 {
+		return nil, false
+	}
+	return created[0], true
+}
+
+func permanentSpellCopyTokenDef(g *game.Game, obj *game.StackObject, spellDef *game.CardDef) (*game.CardDef, game.FaceIndex) {
+	if obj.FaceDown {
+		return faceDownCopyDef(&game.Permanent{}), game.FaceFront
+	}
+	physical := obj.SourceTokenDef
+	if physical == nil {
+		if card, ok := g.GetCardInstance(obj.SourceID); ok {
+			physical = card.Def
+		}
+	}
+	if physical == nil || !physical.Back.Exists {
+		return copyCardDef(spellDef), game.FaceFront
+	}
+	token := copyCardDef(physical)
+	if physical.IsTransformingDoubleFaced() {
+		token.Layout = game.LayoutDoubleFacedToken
+	}
+	if obj.Face == game.FaceBack {
+		token.Back = opt.Val(copyCardFace(&spellDef.CardFace))
+	} else {
+		token.CardFace = copyCardFace(&spellDef.CardFace)
+	}
+	face := obj.Face
+	if obj.Converted {
+		face = game.FaceBack
+	}
+	return token, face
 }

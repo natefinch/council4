@@ -628,7 +628,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	} else if !spellHasAnyLegalTargets(g, spellDef, obj) {
 		return counteredSpellResolution(g, obj, card)
 	}
-	if obj.FaceDown {
+	if obj.FaceDown && !obj.Copy {
 		_, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy, agents, log)
 		if !ok {
 			return "invalid face-down"
@@ -639,7 +639,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	var permanent *game.Permanent
 	var ok bool
 	if obj.Copy {
-		permanent, ok = createTokenPermanent(g, obj.Controller, copyCardDef(spellDef))
+		permanent, ok = e.enterPermanentSpellCopy(g, obj, spellDef, agents, log)
 	} else {
 		permanent, ok = createCardPermanentFaceWithOptions(
 			e,
@@ -724,7 +724,7 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 	}
 	if !mutateTargetLegal(g, obj.Controller, owner, spellDef, obj.MutateTargetID) {
 		if obj.Copy {
-			if _, ok := createTokenPermanent(g, obj.Controller, copyCardDef(spellDef)); !ok {
+			if _, ok := e.enterPermanentSpellCopy(g, obj, spellDef, agents, log); !ok {
 				return "invalid copy"
 			}
 			return "battlefield"

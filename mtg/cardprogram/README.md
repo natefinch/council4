@@ -386,3 +386,9 @@ rulings retrieved from Scryfall, and official Comprehensive Rules effective
 2026-09-25 (CR 723, 800.4a, 614.10 and 513–514). Scripted production activation,
 resolution, actual turns/combat/payments/replacements/observers and search/clone
 tests, not winning-game smoke results, certify this admission.
+
+## Permanent-spell copies
+
+Resolving a permanent-spell copy uses normal battlefield-entry replacements and
+ETB events, but is not token creation (CR 111.13): token quantity, identity and
+addition replacements do not apply, and no token-created event is emitted.
