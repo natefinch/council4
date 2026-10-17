@@ -71,6 +71,12 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 // after the creating permanent has left the battlefield (CR 603.7e). An
 // out-of-range controller fails closed for "you"/"an opponent" filters.
 func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sourceController game.PlayerID, pattern *game.TriggerPattern, event game.Event) bool {
+	// Legacy tapped-for-a-color declarations observe actual production, when the
+	// color is known, not the earlier tap paid as an activation cost.
+	if pattern.Event == game.EventPermanentTapped && event.Kind == game.EventManaProduced && event.TappedForMana &&
+		(pattern.RequireProducedManaColor != "" || pattern.RequireProducedManaColorFromEntryChoice) {
+		event.Kind = game.EventPermanentTapped
+	}
 	if pattern.Event == game.EventUnknown || !patternMatchesEventKind(pattern, event.Kind) {
 		return false
 	}
@@ -317,22 +323,27 @@ func triggerCastDuringTurnMatches(
 
 func filteredSpellCastOrdinalThisTurn(g *game.Game, event game.Event, selection *game.Selection) int {
 	ordinal := 0
+	matches := func(candidate game.Event) bool {
+		subject := selectionSubject{
+			kind: subjectCastSpell, g: g, event: candidate,
+			cardTypes: eventSpellCardTypes(g, candidate),
+		}
+		return matchSelection(&subject, selection)
+	}
 	for _, candidate := range eventsThisTurnWindow(g) {
 		if candidate.Kind != game.EventSpellCast || candidate.Controller != event.Controller {
 			continue
 		}
-		subject := selectionSubject{
-			kind:      subjectCastSpell,
-			g:         g,
-			event:     candidate,
-			cardTypes: eventSpellCardTypes(g, candidate),
-		}
-		if matchSelection(&subject, selection) {
+		if matches(candidate) {
 			ordinal++
 		}
 		if candidate.PlayerEventOrdinalThisTurn == event.PlayerEventOrdinalThisTurn {
-			break
+			return ordinal
 		}
+	}
+	// At capture the event is complete but has not yet been appended to history.
+	if matches(event) {
+		ordinal++
 	}
 	return ordinal
 }

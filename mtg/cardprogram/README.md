@@ -397,3 +397,30 @@ Entry preserves announced X and copied additional/alternative cost decisions
 `EnterHasSpellAnnouncement` include spell copies; `EnteredFromCast`/`EnterWasCast`,
 cast origin and actual mana spending do not. Ordinary copies of battlefield
 permanents do not inherit historical X or paid-cost decisions.
+
+## Event-time trigger capture
+
+Rules-emitted events capture matching ordinary trigger bodies, source incarnation,
+controller, entry choices and applicable multipliers before later instructions can
+change the battlefield. Choices of modes/targets, APNAP ordering and stack
+placement still wait until priority; intervening-if conditions are checked at
+trigger time and again on resolution.
+
+The capture policy covers every emitted event kind, not an ETB/damage-only
+allowlist. Previously late-detected families include cast/resolved/copied spells,
+life changes, counters, tap/untap, discard/cycling/reveal/land and exile plays,
+blockers/blocked/unblocked attackers, scry/surveil, activation/mana production,
+prevention/destruction replacement, face-up/mutate/phasing/Class/monstrous,
+token creation/library search, and monarch/blessing/initiative/dungeon events.
+Color-dependent legacy tapped-for-mana declarations observe the completed mana
+production event, when its colors are known.
+
+Cycled-card and cast-spell self triggers, graveyard step sources and explicit
+leave/dies look-back exceptions use the shared source matcher. Damage captures
+active ability sources before damage consequences; source-characteristic LKI does
+not restore abilities that left before the damage. Library-to-graveyard
+self triggers and inherent monarch abilities retain their dedicated capture.
+Saga chapters preserve their classification. State, madness, delayed, reflexive,
+room and mana-spend-rider queues retain their separate priority-boundary handling.
+Raw synthetic events appended outside rules emission retain a compatibility scan;
+they are not a substitute for emitting real gameplay events.

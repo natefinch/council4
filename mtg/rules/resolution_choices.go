@@ -548,13 +548,20 @@ func linkedResolutionChoice(obj *game.StackObject, linkID string) (game.Resoluti
 // resolving stack object so instructions such as AddMana{EntryChoiceFrom:...}
 // can read them through the normal resolution-choice lookup (CR 614.12).
 func seedEntryChoices(obj *game.StackObject, permanent *game.Permanent) {
-	if obj == nil || permanent == nil || len(permanent.EntryChoices) == 0 {
+	if permanent == nil {
+		return
+	}
+	seedResolutionEntryChoices(obj, permanent.EntryChoices)
+}
+
+func seedResolutionEntryChoices(obj *game.StackObject, choices map[game.ChoiceKey]game.ResolutionChoiceResult) {
+	if obj == nil || len(choices) == 0 {
 		return
 	}
 	if obj.ResolutionChoices == nil {
-		obj.ResolutionChoices = make(map[string]game.ResolutionChoiceResult, len(permanent.EntryChoices))
+		obj.ResolutionChoices = make(map[string]game.ResolutionChoiceResult, len(choices))
 	}
-	for key, result := range permanent.EntryChoices {
+	for key, result := range choices {
 		obj.ResolutionChoices[string(key)] = result
 	}
 }

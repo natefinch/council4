@@ -45,25 +45,9 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 	if event.ControlledTriggerDoublers == nil && eventPermanentEnteredOrLeft(&event) {
 		event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
 	}
-	if !event.TriggeredAbilitiesCaptured && (event.Kind == game.EventDamageDealt ||
-		event.Kind == game.EventPermanentEnteredBattlefield ||
-		event.Kind == game.EventZoneChanged ||
-		event.Kind == game.EventCardDrawn ||
-		event.Kind == game.EventBeginningOfStep ||
-		event.Kind == game.EventAttackerDeclared ||
-		event.Kind == game.EventPermanentSacrificed ||
-		event.Kind == game.EventPermanentDied ||
-		event.Kind == game.EventObjectLeftGame ||
-		event.Kind == game.EventObjectBecameTarget ||
-		event.Kind == game.EventFight ||
-		event.Kind == game.EventCompletedDungeon) {
+	if !event.TriggeredAbilitiesCaptured {
 		event.TriggeredAbilities = append(event.TriggeredAbilities, captureEventTriggeredAbilities(g, event)...)
 		event.TriggeredAbilitiesCaptured = true
-	}
-	if !event.TriggeredAbilitiesCaptured {
-		if doublers := captureChosenTypeTriggerDoublers(g); len(doublers) > 0 {
-			event.ChosenTypeTriggerDoublers = &game.ChosenTypeTriggerDoublerSnapshot{Doublers: doublers}
-		}
 	}
 	event.TriggeredAbilities = append(event.TriggeredAbilities, captureInherentMonarchTriggers(g, event)...)
 	return event

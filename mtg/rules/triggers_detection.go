@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -31,6 +32,7 @@ type pendingTriggeredAbility struct {
 	event                        game.Event
 	hasEvent                     bool
 	inline                       *game.TriggeredAbility
+	entryChoices                 map[game.ChoiceKey]game.ResolutionChoiceResult
 	sagaChapter                  bool
 	wardTargetID                 id.ID
 	capturedTargetControllerLKI  map[int]game.PlayerID
@@ -157,7 +159,9 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			DungeonRoom:                 trigger.dungeonRoom,
 		}
 		obj.SetTriggerOrigin(trigger.triggerOrigin)
-		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
+		if trigger.hasEvent && trigger.event.TriggeredAbilitiesCaptured {
+			seedResolutionEntryChoices(obj, trigger.entryChoices)
+		} else if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
 			seedEntryChoices(obj, source)
 		}
 		ability, ok := pendingTriggerAbility(g, trigger)
@@ -251,9 +255,9 @@ func multiplyAdditionalTriggers(g *game.Game, pending []pendingTriggeredAbility)
 		additional := trigger.additionalTriggers
 		if !trigger.triggerMultiplierCaptured {
 			additional += capturedChosenCreatureTypeAdditionalTriggerCount(g, &trigger)
+			additional += enteringPermanentAdditionalTriggerCount(g, &trigger)
+			additional += controlledPermanentAdditionalTriggerCount(g, &trigger)
 		}
-		additional += enteringPermanentAdditionalTriggerCount(g, &trigger)
-		additional += controlledPermanentAdditionalTriggerCount(g, &trigger)
 		if !trigger.controlledMultiplierCaptured {
 			additional += capturedControlledTriggerAdditionalTriggerCount(g, &trigger)
 		}
@@ -270,9 +274,8 @@ func multiplyAdditionalTriggers(g *game.Game, pending []pendingTriggeredAbility)
 // doublers (Panharmonicon, Yarok, Ancient Greenwarden). It applies when the
 // trigger's own event is a permanent entering the battlefield whose card type
 // satisfies the doubler's filter and the doubler's controller controls the
-// triggered ability's source. The count is read from the live rule effects; a
-// doubler that leaves the battlefield before the triggers are placed does not
-// contribute.
+// triggered ability's source. Production events capture this live count when
+// triggering, before later source changes or stack placement.
 func enteringPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
 	if !trigger.ordinaryTrigger || !trigger.hasEvent || !eventEntersBattlefield(&trigger.event) {
 		return 0
@@ -302,12 +305,12 @@ func enteringPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTrigg
 // matches the doubler's source-permanent selection filter. A plain "a ... you
 // control" filter includes the doubler's own triggers; an "another ... you
 // control" filter (Twinflame Travelers, the Wizard branch of Harmonic Prodigy)
-// sets ExcludeSource so the doubler does not double its own triggers. The count
-// is read from the live rule effects; the source permanent's type, supertype,
+// sets ExcludeSource so the doubler does not double its own triggers. At capture
+// the count is read from the live rule effects; the source's type, supertype,
 // and subtype are taken from its current state, falling back to last-known
 // information once it
 // has left the battlefield (so a dying creature's leaves-the-battlefield trigger
-// still doubles).
+// still doubles). Captured counts are not recalculated at placement.
 func controlledPermanentAdditionalTriggerCount(g *game.Game, trigger *pendingTriggeredAbility) int {
 	if !trigger.ordinaryTrigger || !trigger.hasEvent {
 		return 0
@@ -918,21 +921,9 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 		if event.TriggeredAbilitiesCaptured {
 			continue
 		}
-		for _, permanent := range g.Battlefield {
-			if !activeBattlefieldPermanent(permanent) {
-				continue
-			}
-			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, permanent, event)...)
-		}
-		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
-			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
-		}
-		pending = append(pending, cycledCardSelfTriggers(g, event)...)
-		pending = append(pending, graveyardStepSourceTriggers(g, event)...)
-		pending = append(pending, castSpellSelfTriggers(g, event)...)
-		for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
-			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
-		}
+		// Raw/synthetic events that bypass rules emission retain the compatibility
+		// scan. Production emitters always supply authoritative captured bodies.
+		pending = append(pending, eventTriggeredAbilities(g, event, events)...)
 		if source, ok := damageSourceTriggerSource(g, event); ok {
 			pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
 		}
@@ -946,48 +937,45 @@ func (*Engine) detectTriggeredAbilities(g *game.Game, events []game.Event) []pen
 	return coalescePendingTriggeredAbilities(g, pending)
 }
 
+func eventTriggeredAbilities(g *game.Game, event game.Event, events []game.Event) []pendingTriggeredAbility {
+	var pending []pendingTriggeredAbility
+	for _, permanent := range g.Battlefield {
+		if !activeBattlefieldPermanent(permanent) {
+			continue
+		}
+		pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, permanent, event)...)
+	}
+	if source, ok := leftBattlefieldTriggerSource(g, event); ok {
+		pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+	}
+	pending = append(pending, cycledCardSelfTriggers(g, event)...)
+	pending = append(pending, graveyardStepSourceTriggers(g, event)...)
+	pending = append(pending, castSpellSelfTriggers(g, event)...)
+	for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
+		pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+	}
+	return pending
+}
+
 func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.EventTriggeredAbility {
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
 	var captured []game.EventTriggeredAbility
-	sources := g.Battlefield
-	if event.Kind == game.EventPermanentSacrificed || event.Kind == game.EventPermanentDied ||
-		event.Kind == game.EventZoneChanged && event.FromZone == zone.Battlefield {
-		sources = slices.Clone(sources)
-		if source, ok := leftBattlefieldTriggerSource(g, event); ok {
-			sources = append(sources, source)
-		}
-		sources = append(sources, simultaneousLeftBattlefieldTriggerSources(g, event, g.Events)...)
-	}
-	for _, permanent := range sources {
-		if !activeBattlefieldPermanent(permanent) {
-			continue
-		}
-		triggers := detectTriggeredAbilitiesFromPermanent(g, permanent, event)
-		for i := range triggers {
-			trigger := &triggers[i]
-			body := game.EventTriggeredAbility{
-				Controller:                trigger.controller,
-				SourceID:                  trigger.sourceID,
-				SourceCardID:              trigger.sourceCardID,
-				SourceTokenDef:            trigger.sourceToken,
-				Face:                      trigger.face,
-				AbilityIndex:              trigger.abilityIndex,
-				Ability:                   trigger.inline,
-				AdditionalTriggers:        liveChosenCreatureTypeAdditionalTriggerCount(g, trigger),
-				TriggerMultiplierCaptured: true,
-			}
-			body.SetTriggerOrigin(trigger.triggerOrigin)
-			captured = append(captured, body)
-		}
-	}
-	for _, trigger := range graveyardStepSourceTriggers(g, event) {
-		captured = append(captured, game.EventTriggeredAbility{
+	for _, trigger := range eventTriggeredAbilities(g, event, g.Events) {
+		body := game.EventTriggeredAbility{
 			Controller: trigger.controller, SourceID: trigger.sourceID, SourceCardID: trigger.sourceCardID,
-			SourceZone: trigger.sourceZone, SourceZoneVersion: trigger.sourceZoneVersion,
-			Face: trigger.face, AbilityIndex: trigger.abilityIndex, Ability: trigger.inline,
+			SourceTokenDef: trigger.sourceToken, SourceZone: trigger.sourceZone, SourceZoneVersion: trigger.sourceZoneVersion,
+			Face: trigger.face, AbilityIndex: trigger.abilityIndex, Ability: trigger.inline, SagaChapter: trigger.sagaChapter,
+			OrdinaryTrigger: trigger.ordinaryTrigger,
+			AdditionalTriggers: liveChosenCreatureTypeAdditionalTriggerCount(g, &trigger) +
+				enteringPermanentAdditionalTriggerCount(g, &trigger) + controlledPermanentAdditionalTriggerCount(g, &trigger),
 			TriggerMultiplierCaptured: true,
-		})
+		}
+		if source, ok := permanentByObjectID(g, trigger.sourceID); ok {
+			body.EntryChoices = maps.Clone(source.EntryChoices)
+		}
+		body.SetTriggerOrigin(trigger.triggerOrigin)
+		captured = append(captured, body)
 	}
 	return captured
 }
@@ -1011,12 +999,14 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 			face:                      captured.Face,
 			abilityIndex:              captured.AbilityIndex,
 			inline:                    captured.Ability,
+			entryChoices:              captured.EntryChoices,
+			sagaChapter:               captured.SagaChapter,
 			event:                     event,
 			hasEvent:                  true,
 			wardTargetID:              wardTargetID,
 			additionalTriggers:        captured.AdditionalTriggers,
 			triggerMultiplierCaptured: captured.TriggerMultiplierCaptured,
-			ordinaryTrigger:           captured.SourceZone == zone.None,
+			ordinaryTrigger:           captured.OrdinaryTrigger,
 		})
 	}
 	return pending

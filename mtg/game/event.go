@@ -185,6 +185,9 @@ type EventTriggeredAbility struct {
 	Ability                   *TriggeredAbility
 	AdditionalTriggers        int
 	TriggerMultiplierCaptured bool
+	OrdinaryTrigger           bool
+	SagaChapter               bool
+	EntryChoices              map[ChoiceKey]ResolutionChoiceResult
 }
 
 // ChosenTypeTriggerDoubler is the event-time snapshot of one active
@@ -553,6 +556,9 @@ func cloneEvent(event Event) Event {
 	event.Colors = append([]color.Color(nil), event.Colors...)
 	event.ProducedManaColors = append([]mana.Color(nil), event.ProducedManaColors...)
 	event.TriggeredAbilities = append([]EventTriggeredAbility(nil), event.TriggeredAbilities...)
+	for i := range event.TriggeredAbilities {
+		event.TriggeredAbilities[i].EntryChoices = cloneComparableMap(event.TriggeredAbilities[i].EntryChoices)
+	}
 	if event.ChosenTypeTriggerDoublers != nil {
 		snapshot := ChosenTypeTriggerDoublerSnapshot{
 			Doublers: append([]ChosenTypeTriggerDoubler(nil), event.ChosenTypeTriggerDoublers.Doublers...),
