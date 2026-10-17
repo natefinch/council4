@@ -29,10 +29,6 @@ type Entry struct {
 	ReplaceLegacy bool
 	// Verification names the production behavior evidence, not a compiler result.
 	Verification string
-	// SourceRevision binds executable Go (including delayed handlers).
-	SourceRevision string
-	// RulesRevision binds the shared engine operations used by that Go.
-	RulesRevision string
 	// Name is the canonical printed card name, matching the Name of the CardDef
 	// that New returns (the front face for a multi-face card).
 	Name string

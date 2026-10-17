@@ -1,11 +1,15 @@
 # Parser Coverage
 
+**Historical parser report, not a production queue or completion gate.**
+Preserve these measurements; current validation follows the
+[repository policy](.github/copilot-instructions.md#verify-proportionally).
+Optional parser-only reporting is documented separately in
+[parsercoverage](cardgen/oracle/cmd/parsercoverage/README.md).
+
 Parser-only coverage across the eligible Scryfall corpus, measured without running the compiler or lowering. Two distinct metrics are reported:
 
 - **Parser-complete (typed coverage):** every must-cover token of every ability is accounted for by a kind-recognized typed element. This is an upper bound on what the lowerer could consume — it does not require byte-exact reconstruction.
 - **Exact round-trip:** the parser reconstructs the original text byte-for-byte (`effect.Exact`). Strictly stronger than typed coverage.
-
-Regenerate with `mage parserCoverage`.
 
 ## Headline
 
@@ -76,4 +80,3 @@ Top uncovered span clusters (normalized), ranked by occurrence.
 | 38 | 35 | effect | affinity for artifacts (this spell costs{1}less to cast for each artifact you control.) | Refurbished Familiar; Into Thin Air; Assert Authority; Valkyrie Aerial Unit; Furnace Dragon |
 | 39 | 35 | effect | choose one. | Wail of the Forgotten; Jeska's Will; See Double; Inscription of Insight; Will of the Abzan |
 | 40 | 35 | condition | if you win the flip | Goblin Bomb; Goblin Lyre; Ral, Monsoon Mage // Ral, Leyline Prodigy; Krark, the Thumbless; Plasma Caster |
-

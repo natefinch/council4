@@ -6,13 +6,14 @@ description: Add or author complete Magic cards using native Go and shared Engin
 # Card authoring
 
 Use the [canonical guide](../../../docs/card-authoring.md). It owns the worker
-loop, scaffold command, rules review, promotion gate and stopping conditions;
+loop, scaffold command, behavioral evidence and stopping conditions;
 do not invent another checklist. Prerequisites: Go, `gh` for live issue/rulings
 coordination, and the pinned Oracle corpus. No credentials or service APIs are
 needed for gameplay or scaffolding.
 
-Read `.github/copilot-instructions.md`, then the assigned cards' current Oracle
-identities, text/rulings and applicable Comprehensive Rules. Use normal Go
+Follow the [repository policy](../../../.github/copilot-instructions.md),
+then read the assigned cards' current Oracle identities, text/rulings and
+applicable Comprehensive Rules. Use normal Go
 functions and inspectable declarations with the existing `cardprogram.Context`.
 Keep one writer. Do not expand the parser/lowerer, mutate raw Game state, create
 a DSL, or omit abilities to gain coverage.

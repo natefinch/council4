@@ -1,5 +1,12 @@
 # Bounded authored production queue (#3282)
 
+**Historical production checkpoint.** Counts, reviews, benchmarks and validation
+results below record completed work, not current completion requirements. The
+[repository validation policy](../.github/copilot-instructions.md#verify-proportionally)
+supersedes old full-suite/lint, fingerprint and report-refresh gates. For new work,
+use the [authoring guide](card-authoring.md) and live queue, not hard-coded
+continuation examples or superseded blocker statuses below.
+
 ## Current compiler installation
 
 The subsequently requested full compiler import checks in all 18,700 accepted
@@ -229,9 +236,10 @@ Scratch scaffolds are unregistered and never count as delivered cards.
 Final integrated gate results are recorded on #3282 and in local ignored
 `.cardwork/production-validation/`: full tests then lint sequentially, focused
 race tests, actual Node-backed WASM execution, registry preservation,
-support inventory and saved-manifest validation. Source bindings are generated
-after bound authored source changes. Registry preservation requires zero losses
-and zero waivers; fingerprints do not certify behavior.
+support inventory and saved-manifest validation. At that checkpoint source
+bindings were generated after bound authored source changes, and registry
+preservation required zero losses and zero waivers.
+Those retired mechanisms did not certify behavior.
 
 All gates **passed**. Full `go test ./...` passed at initial integration; a late
 Treasure self-reference declaration correction and its precise payment-adapter
@@ -287,7 +295,7 @@ GOMAXPROCS=4 go test ./mtg/rules -run '^$' -bench '^Benchmark(ProductionBatches|
 go run ./cmd/cardqueue -operation check
 ```
 
-## Next three executable batches — not implemented in this assignment
+## Historical next-batch examples — not implemented in this assignment
 
 All members remain **unclaimed**, with exact printing revisions/rulings in the
 manifest. Their shared prerequisites are closed; fresh work must verify relevant
@@ -329,42 +337,8 @@ family size, **not** a claim that all 39 will be unlocked or lack other abilitie
 Private search #3289 is implemented by the two-card follow-up described above;
 it does not expand the saved production queue or the original five-card batch.
 
-## Continuation command and stopping
+## Current continuation
 
-```sh
-go run ./cmd/cardqueue -operation check
-go run ./cmd/cardqueue -operation next -owner YOUR_SESSION_ID
-go run ./cmd/cardqueue -operation claim -batch 04-draw -owner YOUR_SESSION_ID
-# Run the canonical guide/scaffold, complete all abilities and scenarios.
-go run ./cmd/cardqueue -operation verify -batch 04-draw -owner YOUR_SESSION_ID
-```
-
-`next` resumes the same owner's saved claim first, refuses another active writer,
-and otherwise returns the next complete reviewed unclaimed 3–5-card batch with
-names, Oracle IDs, revisions and prerequisites. `verify` requires exact loadable
-behavior evidence in the canonical mixed catalog; it is **not a test runner**.
-Run the canonical integration gates and inspect before committing. The validator
-rejects missing/duplicate identities, revision drift, fabricated baseline keys,
-invalid statuses, dangling/partial claims and multiple active batches.
-
-> Continue the saved authored-card queue for **one** bounded 3–5-card batch.
-> Run check/next and resume or claim that batch with this session's identity
-> before edits. Confirm only its relevant live prerequisites/ownership. Use the
-> installed skill, exact Oracle revision/rulings and existing Engine operations;
-> preserve complete rules and legacy support. Run named production/Simulator
-> scenarios and the canonical final gate, inspect, and commit locally only when
-> authorized; never push without separate permission. If an actual shared
-> operation is absent, reuse/file one precise blocker, leave the whole card
-> unsupported, release the affected claim and select eligible members within
-> the same bounded budget. Do not invent an epic or re-triage all historical
-> issues. Stop after the assigned batch or authorized budget, or when all
-> available work is blocked/excluded; report one actionable blocker summary.
-
-If all **reviewed saved batches** are exhausted but unreviewed corpus records
-remain, stop for a new bounded selection authorization; do not pretend the
-corpus is completed or all blocked. `release` clears a claimed batch without
-promoting it; `block` parks a whole claimed capability batch on a precise issue.
-For a mixed batch with only some genuine blockers, release it, retain those
-whole-card blocked identities and explicitly reconcile the remaining identity
-list before reclaiming, as in batch 03's recorded substitution.
-No automation, branch, PR, push or unbounded continuation is enabled.
+The [canonical guide](card-authoring.md#saved-production-queue) owns queue
+selection, claims, behavioral evidence and stopping. Do not resume a historical
+batch by its ID here or repeat this checkpoint's retired validation checklist.

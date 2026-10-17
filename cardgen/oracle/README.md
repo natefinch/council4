@@ -433,22 +433,17 @@ tokens, reasons, and source spans. See
 check, including card-face type context for spell and loyalty classification.
 See [`cmd/checkparser/README.md`](cmd/checkparser/README.md).
 
-`cmd/compilecards` performs strict semantic compilation and bulk source
-generation. It emits only fully executable cards and reports every unsupported
-card without creating a partial definition. See
-[`cmd/compilecards/README.md`](cmd/compilecards/README.md).
-
-`cmd/corpusdelta` orchestrates expansion-corpus compilation, stable-ID report
-comparison, scratch support-list generation, generated-package validation, and
-review-manifest generation. See
-[`cmd/corpusdelta/README.md`](cmd/corpusdelta/README.md).
+Bulk compilation, import and corpus-delta workflows are retired. The existing
+generated cards remain available; new support follows the
+[authored-Go guide](../../docs/card-authoring.md).
 
 `cmd/parsercoverage` measures how completely the parser represents the eligible
 corpus as typed syntax, independently of the compiler and lowering, and ranks
 the unrepresented grammar. See
-[`cmd/parsercoverage/README.md`](cmd/parsercoverage/README.md).
+[`cmd/parsercoverage/README.md`](cmd/parsercoverage/README.md). This is optional
+parser-maintenance reporting, not an implementation gate or authoring queue.
+Validation follows the
+[repository policy](../../.github/copilot-instructions.md#verify-proportionally).
 
-`cmd/cardbacklog` joins the parser-coverage signal with the lowering/compile
-signal and routes every unsupported card to the layer that blocks it, emitting a
-lowering queue and a parser queue. See
-[`cmd/cardbacklog/README.md`](cmd/cardbacklog/README.md).
+The retired `cmd/cardbacklog` produced the historical compiler-routing queues;
+it is not a current reporting or authoring step.

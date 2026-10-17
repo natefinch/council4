@@ -1,4 +1,10 @@
-# compilecards
+# Retired compilecards workflow
+
+**Historical compiler reference.** Bulk corpus compilation and import are
+retired. Keep the existing generated cards and useful tests; do not recreate the
+corpus workflow. Use the [authored-Go guide](../../../../docs/card-authoring.md)
+and [validation policy](../../../../.github/copilot-instructions.md#verify-proportionally).
+The description and diagnostic vocabulary below document the old compiler.
 
 `compilecards` stream-decodes a Scryfall Oracle Cards bulk-data array, applies
 the repository corpus-eligibility policy, compiles eligible cards in parallel,
@@ -32,58 +38,6 @@ also writes package documentation. When targeting the repository's `mtg/cards`
 tree it writes a `tokens.Cards` aggregate; temporary output keeps independently
 buildable token letter packages. Tokens remain outside the ordinary card-name
 registry.
-
-For a safe full-corpus trial, target a temporary cards root:
-
-```bash
-go run ./cardgen/oracle/cmd/compilecards \
-  -in cardgen/oracle/oracle-cards-20260608090247.json \
-  -out .cardwork/generated-cards \
-  -report .cardwork/oracle-compile-report.json
-```
-
-During compiler expansion work, prefer
-[`corpusdelta`](../corpusdelta/README.md), which runs this command and
-automatically prepares the corpus delta, supported-card list, generated-package
-validation, and review manifest.
-
-To overwrite matching repository card files:
-
-```bash
-go run ./cardgen/oracle/cmd/compilecards \
-  -in cardgen/oracle/oracle-cards-20260608090247.json \
-  -out mtg/cards \
-  -report .cardwork/oracle-compile-report.json
-```
-
-Flags:
-
-- `-in`: required Scryfall Oracle Cards JSON array.
-- `-out`: cards package root. Default `mtg/cards`.
-- `-report`: unsupported report path, or `-` for standard output. Default `-`.
-- `-format`: `json` or `text`. Default `json`.
-- `-supported`: optional supported-card Markdown output path.
-- `-unsupported`: optional unsupported-card Markdown output path, including each
-  card's diagnostics as reasons.
-- `-unsupported-reasons`: optional Markdown output path for capability-aware planning
-  tables. The report ranks up to 100 diagnostic summaries by affected and
-  sole-blocker cards, identifies their most common co-blockers, and groups all
-  observed summaries into stable capability clusters with fully unlockable counts.
-  It also breaks the `unsupported ordered effect sequence` reason into per-blocker
-  sub-categories (`sub-effect — <reason>` and `structural — <reason>`) so the
-  largest sole-blocker bucket is actionable rather than opaque.
-- `-readme`: optional README path containing the card-support marker pair to
-  update from the report counts.
-- `-workers`: compiler/source-generator worker count. Default
-  `runtime.NumCPU()`.
-- `-inventory`: optional pinned preservation inventory, including compiler
-  identities/refusals and separately constructed registry definitions. Its input
-  must match `testdata/card-preservation/corpus.json`; it does not certify
-  gameplay. See the [preservation workflow](../../../../testdata/card-preservation/README.md).
-
-Use `preserveCards` for read-only pinned regression checks. `cardSupport` and
-`supportDocs` remain explicit legacy documentation refreshes, not every-issue
-gates. Neither CI workflow commits or pushes generated support files.
 
 ## Report diagnostics
 

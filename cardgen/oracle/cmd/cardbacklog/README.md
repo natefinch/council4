@@ -1,4 +1,11 @@
-# cardbacklog
+# Retired cardbacklog workflow
+
+**Historical compiler-routing reference, not an authoring queue.** This command
+recompiled individual corpus cards even when supplied a report; it is retired.
+Do not regenerate its backlog. New support uses the
+[authored-Go guide](../../../../docs/card-authoring.md), with checks from the
+[repository policy](../../../../.github/copilot-instructions.md#verify-proportionally).
+The following describes how the saved reports were produced.
 
 `cardbacklog` turns the parser-coverage data into an actionable, **routed** task
 backlog by joining it with the lowering/compile signal. For every eligible
@@ -91,38 +98,3 @@ into a queue.
 
 Each queue row lists a few example card names so it maps directly onto a
 capability-family child issue with objective before/after metrics.
-
-## Flags
-
-- `-in` — Scryfall Oracle Cards bulk-data JSON file (required).
-- `-compile-report` — compilecards JSON report providing the authoritative
-  generated/unsupported set (**required**; run `compilecards` first). The tool
-  refuses to run without it rather than fall back to an unsound self-contained
-  mode.
-- `-out` — card-backlog Markdown path (default `card-backlog.md`).
-- `-report` — JSON report path, or `-` for stdout (default `-`).
-- `-workers` — number of workers (0 selects `NumCPU`).
-
-## Usage
-
-```bash
-# 1. Produce the authoritative compile report.
-go run ./cardgen/oracle/cmd/compilecards \
-  -in cardgen/oracle/oracle-cards-20260608090247.json \
-  -out .cardwork/card-backlog-generated \
-  -report .cardwork/card-backlog-compile-report.json
-
-# 2. Join it with the parser signal and route the backlog.
-go run ./cardgen/oracle/cmd/cardbacklog \
-  -in cardgen/oracle/oracle-cards-20260608090247.json \
-  -out card-backlog.md \
-  -report .cardwork/card-backlog-report.json \
-  -compile-report .cardwork/card-backlog-compile-report.json
-```
-
-`mage cardBacklog` runs both steps in order and regenerates the committed report.
-This is also kept current automatically: CI runs it on every pull request (as
-part of `mage supportDocs`, alongside `supported.md`/`unsupported.md`/
-`unsupported-reasons.md`), and a local `mage cardSupport` refreshes it too —
-both reuse whichever compile report they already produced rather than
-compiling the corpus a second time.

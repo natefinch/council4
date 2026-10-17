@@ -12,11 +12,7 @@ import (
 )
 
 type plan struct {
-	Code          bool `json:"code"`
-	Compiler      bool `json:"compiler"`
-	Preservation  bool `json:"preservation"`
-	Slow          bool `json:"slow"`
-	CorpusUpgrade bool `json:"corpus_upgrade"`
+	Code bool `json:"code"`
 }
 
 func main() {
@@ -30,7 +26,7 @@ func run(args []string) error {
 	flags := flag.NewFlagSet("ciplan", flag.ContinueOnError)
 	base := flags.String("base", "", "base Git revision (empty/zero means initial push)")
 	head := flags.String("head", "HEAD", "head Git revision")
-	all := flags.Bool("all", false, "explicitly select all acceptance checks")
+	all := flags.Bool("all", false, "run the test suite even without code changes")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
@@ -44,7 +40,7 @@ func run(args []string) error {
 	}
 	selection := selectPlan(strings.Split(string(output), "\x00"))
 	if *all {
-		selection = plan{Code: true, Compiler: true, Preservation: true, Slow: true}
+		selection.Code = true
 	}
 	data, err := json.MarshalIndent(selection, "", "  ")
 	if err != nil {
@@ -58,8 +54,7 @@ func run(args []string) error {
 			return fmt.Errorf("opening GitHub outputs: %w", err)
 		}
 		defer file.Close()
-		if _, err := fmt.Fprintf(file, "code=%t\ncompiler=%t\npreservation=%t\nslow=%t\ncorpus_upgrade=%t\n",
-			selection.Code, selection.Compiler, selection.Preservation, selection.Slow, selection.CorpusUpgrade); err != nil {
+		if _, err := fmt.Fprintf(file, "code=%t\n", selection.Code); err != nil {
 			return fmt.Errorf("writing GitHub outputs: %w", err)
 		}
 	}
@@ -68,41 +63,12 @@ func run(args []string) error {
 
 func selectPlan(paths []string) plan {
 	var selection plan
-	pinChanged, baselineChanged, upgradeOnly := false, false, true
 	for _, path := range paths {
-		if path == "" {
-			continue
-		}
-		if path == "testdata/card-preservation/corpus.json" {
-			pinChanged = true
-		}
-		if path == "testdata/card-preservation/baseline.json" {
-			baselineChanged = true
-		}
-		if !strings.HasSuffix(path, ".md") &&
-			path != "testdata/card-preservation/corpus.json" &&
-			path != "testdata/card-preservation/baseline.json" {
-			upgradeOnly = false
-		}
-		if strings.HasSuffix(path, ".md") {
+		if path == "" || strings.HasSuffix(path, ".md") {
 			continue
 		}
 		selection.Code = true
-		if strings.HasSuffix(path, ".go") && !strings.HasPrefix(path, "mtg/cards/") {
-			selection.Preservation, selection.Slow = true, true
-		}
-		if strings.HasPrefix(path, "cardgen/") || strings.HasPrefix(path, "internal/preservation/") ||
-			strings.HasPrefix(path, "magefiles/") || strings.HasPrefix(path, "testdata/card-preservation/") ||
-			path == "go.mod" || path == "go.sum" || strings.HasPrefix(path, ".github/workflows/") {
-			selection.Compiler, selection.Preservation, selection.Slow = true, true, true
-		}
-		if strings.HasPrefix(path, "mtg/") || strings.HasPrefix(path, "cmd/") {
-			selection.Preservation = true
-			if !strings.HasPrefix(path, "mtg/cards/") {
-				selection.Slow = true
-			}
-		}
+		break
 	}
-	selection.CorpusUpgrade = pinChanged && baselineChanged && upgradeOnly
 	return selection
 }

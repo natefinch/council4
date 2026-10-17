@@ -66,38 +66,38 @@ do not create another authoring checklist.
   compatibility, not a slot for arbitrary static/replacement rules. Later
   migration slices supply deeper operations and policy seams. If one is missing,
   reuse its prerequisite rather than inventing another runtime or parser route.
-- `cardgen` is retained for legacy correctness/compatibility maintenance and
-  explicit regeneration, not the default route to new coverage. Parser-complete
-  and compiler-supported counts do not certify gameplay or deployed availability.
+- `cardgen` is retained for focused legacy correctness/compatibility maintenance,
+  not new coverage or bulk regeneration. Keep existing generated cards and tests.
+  Compiler acceptance and loadability do not certify gameplay.
 
 ## Verify proportionally
 
-- During development, run the smallest tests covering the change.
-- For code changes, run `go test ./...` once as the final local gate.
-  Add relevant build, race or cross-platform checks when their behavior is
-  affected. Do not repeat the same gates solely because a skill also requests them.
-- **Linting is opt-in for agents.** Do not run linters or lint autofixes, whether
-  repository-wide or scoped, unless the user explicitly asks. Linting is not a
-  local check-in or completion requirement; periodic lint cleanup is separate
-  work. Existing automated CI is unchanged and does not require a local lint run.
-  When explicitly requested, run
-  `go run github.com/magefile/mage@v1.15.0 lint` after cardgen round-trip tests
-  finish; temporary generated packages can otherwise cause type-check failures.
-- Documentation/comment-only changes need link/instruction checks and
-  `git diff --check`, not the full game suite, linter or corpus regeneration.
-- Run pinned, same-input corpus comparisons only for relevant legacy compiler
-  changes or an explicit corpus refresh. Never run `cardSupport` after every
-  issue. CI is read-only and path-sensitive on main pushes and optional PRs.
-  See `testdata/card-preservation/README.md` for pinned compiler checks versus
-  registry-only checks, explicit refreshes and traceable loss exceptions.
-- Test actual card interactions as well as shared operations. Named-card
-  scenarios are welcome; structural CardDef assertions test translation, not
-  executed Go or rules behavior. Source fingerprints are review signals, not a
-  substitute for runtime regression coverage.
-- Inspect every diff yourself. Routine changes need no mandatory independent
-  review; substantial shared-rule changes warrant focused independent review
-  (identity, replacements, cloning, timing, hidden information). Fix substantive
-  findings without restarting broad architectural review after every edit.
+This is the authoritative validation policy; skills and guides link here.
+
+- Ordinary code work: run affected-package behavioral tests. Shared rules also
+  need affected interaction/rules scenarios. Run `go test ./...` locally only for
+  broad changes or an explicit request; CI runs it once for code changes.
+- Documentation/comment-only work: check links/instructions and
+  `git diff --check`; no local game tests. CI skips code checks for Markdown-only
+  changes; other changes run the full suite.
+- Lint and lint autofixes require an explicit user request. The command is
+  `go run github.com/magefile/mage@v1.15.0 lint`; wait for any cardgen round-trip
+  tests to finish first. Standalone lint/race CI is manual maintenance, not a
+  default gate. Build, race and platform checks are needed only when affected
+  or explicitly requested. CI has one automatic Tests job and manual
+  `workflow_dispatch` maintenance choices `check=tests|lint|race`, with no
+  duplicated default build/vet jobs.
+- Never recompile the Oracle corpus. Source-fingerprint refresh and registry
+  fingerprint-baseline workflows are removed. Do not run global
+  `supportInventory` as an implementation gate; it is explicit reporting
+  maintenance using existing evidence, not pre/post card work.
+- Preserve exact card identities, program IDs/versions/dependencies and genuine
+  scenario evidence. Test actual card interactions and shared operations;
+  structural assertions, generated source and hashes are not behavior evidence.
+- Self-inspect every diff. Focused independent review is only for significant
+  shared identity, timing, replacement, cloning or hidden-information changes,
+  not every nontrivial batch. Fix substantive findings without restarting broad
+  architectural review after every edit.
 - Do not hide a failing check, partial card or incomplete game behind a success
   result. Distinguish rules draws from budget exhaustion and unsupported behavior.
 
@@ -113,14 +113,3 @@ it as the blocker. One shared blocker may cover many cards. File new work only
 when its scope and completion condition are known; do not enumerate speculative
 neighboring wording or mirror routine notes across epics. Park affected cards
 whole and continue other eligible work when the assigned scope allows it.
-
-## Agent startup
-
-> Read the selected epic and first unblocked child. Author Go card behavior using
-> shared Engine operations; Oracle recognition is not a prerequisite. Preserve
-> existing cards and runtime scenarios. Do not expand parser/lowering to add
-> cards, invent a DSL or mutate raw Game state. Reuse a precise blocker when a
-> shared capability is missing. Implement, test, inspect, and commit directly
-> to main when authorized; lint only when explicitly requested by the user.
-> Push only with permission. Keep one main writer and continue only within the
-> assigned work.

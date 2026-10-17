@@ -4,11 +4,8 @@ A pure Go data-structure scaffold for [Commander](https://mtgcommander.net/) (ED
 
 ## Quick Start
 
-```bash
-cd /path/to/council4
-go test ./...
-go vet ./...
-```
+For development checks, follow the
+[repository validation policy](../../.github/copilot-instructions.md#verify-proportionally).
 
 Requires **Go 1.25.1+**. No external dependencies.
 

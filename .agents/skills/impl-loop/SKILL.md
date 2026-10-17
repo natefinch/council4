@@ -5,12 +5,13 @@ description: Implement a selected epic's unblocked children or eligible Ready Fo
 
 # Implementation Loop
 
-Follow `.github/copilot-instructions.md`. Default to authored Go card behavior,
+Follow the [repository policy](../../../.github/copilot-instructions.md).
+Default to authored Go card behavior,
 one main writer, proportional checks and direct commits when authorized.
 Compiler expansion is not the work-selection strategy.
 For card implementation, route to [card-authoring](../card-authoring/SKILL.md)
 and its [canonical guide](../../../docs/card-authoring.md), including the
-executable scaffold and bounded rules-review/promotion gate.
+executable scaffold and behavioral evidence.
 
 ## Select work
 
@@ -38,13 +39,8 @@ executable scaffold and bounded rules-review/promotion gate.
    canonical prerequisite instead of creating a second one.
 3. Implement the bounded change and behavioral scenarios. Run scoped tests
    during iteration; new card support does not require parser/lowering work.
-4. Use the repository validation matrix: final test suite once for
-   code, documentation checks for docs-only work, and additional affected
-   platform/race checks when justified. Do not run linters or lint autofixes
-   unless the user explicitly asks; lint is not a local commit/completion gate.
-   No unconditional `cardSupport` or
-   full-corpus regeneration. Inspect the diff yourself; focused independent
-   review is for substantial shared-rule changes, not a gate on every issue.
+4. Follow the [validation and review policy](../../../.github/copilot-instructions.md#verify-proportionally).
+   Do not add per-issue gates or report refreshes.
 5. Commit only intended changes directly to main when authorized. No mandatory
    branch, PR, approval or merge. Push normally only when authorized; report
    protection/ownership conflicts rather than force-pushing or bypassing them.

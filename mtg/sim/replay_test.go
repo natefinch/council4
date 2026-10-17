@@ -3,9 +3,11 @@ package sim
 import (
 	"encoding/json"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/agent"
+	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -64,6 +66,48 @@ func TestReplayRecordRoundTripsThroughJSON(t *testing.T) {
 	if replayed := Replay(cfg.Configs, decoded); !reflect.DeepEqual(replayed, result) {
 		t.Error("replay from a JSON round-tripped record did not reproduce the result")
 	}
+}
+
+func TestReplayChecksTransitiveProgramVersions(t *testing.T) {
+	parent := game.ProgramReference{ID: "test/parent", Version: "1"}
+	child := game.ProgramReference{ID: "test/child", Version: "1"}
+	newCatalog := func(dependency game.ProgramReference) cardprogram.Catalog {
+		t.Helper()
+		noop := func(cardprogram.Context) error { return nil }
+		catalog, err := cardprogram.NewCatalog([]cardprogram.Program{
+			{Reference: parent, Resolve: noop, Dependencies: []game.ProgramReference{dependency}},
+			{Reference: dependency, Resolve: noop},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return catalog
+	}
+	catalog := newCatalog(child)
+	cfg := recordableConfig(20261016)
+	cfg.Programs, cfg.TurnLimit = &catalog, 1
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name: "Versioned Spell", Types: []types.Card{types.Sorcery},
+		SpellAbility: opt.Val(game.Mode{Program: parent}.Ability()),
+	}}
+	for player := range cfg.Configs {
+		cfg.Configs[player].Deck = append(cfg.Configs[player].Deck, def)
+	}
+	result, record := RecordGame(cfg, 0)
+	if !slices.Equal(record.Programs, []game.ProgramReference{child, parent}) {
+		t.Fatalf("record omitted or misordered dependencies: %v", record.Programs)
+	}
+	if replayed := Replay(cfg.Configs, record, catalog); !reflect.DeepEqual(replayed, result) {
+		t.Fatal("replay with matching dependencies changed the result")
+	}
+	child.Version = "2"
+	changed := newCatalog(child)
+	defer func() {
+		if _, ok := recover().(rules.UnsupportedError); !ok {
+			t.Fatal("replay accepted a changed dependency version")
+		}
+	}()
+	Replay(cfg.Configs, record, changed)
 }
 
 func TestRecordCapturesChoices(t *testing.T) {

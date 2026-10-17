@@ -27,9 +27,8 @@ func TestCopySpellsProductionIdentityAndVerification(t *testing.T) {
 				t.Fatal("verified entry is not registered")
 			}
 			verified := authored.Cards[index]
-			if entry.Verification == "" || verified.Verification != entry.Verification ||
-				verified.SourceRevision == "" || verified.RulesRevision == "" {
-				t.Fatal("specific verification or source/rules evidence was lost")
+			if entry.Verification == "" || verified.Verification != entry.Verification {
+				t.Fatal("specific scenario evidence was lost")
 			}
 		})
 	}

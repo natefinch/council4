@@ -3,6 +3,7 @@ package cardprogram
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -89,6 +90,7 @@ func TestCatalogScheduledDependenciesAreVersionedAndCopied(t *testing.T) {
 	if _, err := NewCatalog([]Program{parent}); err == nil {
 		t.Fatal("omitted scheduled handler was admitted")
 	}
+
 	wrong := child
 	wrong.Reference.Version = "2"
 	if _, err := NewCatalog([]Program{parent, wrong}); err == nil {
@@ -107,5 +109,42 @@ func TestCatalogScheduledDependenciesAreVersionedAndCopied(t *testing.T) {
 	again, err := catalog.Lookup(ref)
 	if err != nil || again.Dependencies[0] != delayed {
 		t.Fatal("Lookup exposed mutable catalog dependencies")
+	}
+}
+
+func TestReferencesIncludeTransitiveDependencies(t *testing.T) {
+	t.Parallel()
+	parent := game.ProgramReference{ID: "parent", Version: "1"}
+	child := game.ProgramReference{ID: "child", Version: "2"}
+	delayed := game.ProgramReference{ID: "delayed", Version: "3"}
+	catalog, err := NewCatalog([]Program{
+		{Reference: parent, Resolve: resolveNoop, Dependencies: []game.ProgramReference{child, delayed}},
+		{Reference: child, Resolve: resolveNoop, Dependencies: []game.ProgramReference{delayed}},
+		{Reference: delayed, Resolve: resolveNoop, Dependencies: []game.ProgramReference{parent}},
+		{Reference: game.ProgramReference{ID: "unrelated", Version: "1"}, Resolve: resolveNoop},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	references, err := catalog.References([]game.ProgramReference{parent, parent})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []game.ProgramReference{child, delayed, parent}
+	if !slices.Equal(references, want) {
+		t.Fatalf("references = %v, want %v", references, want)
+	}
+	references[0].Version = "changed"
+	again, err := catalog.References([]game.ProgramReference{parent})
+	if err != nil || !slices.Equal(again, want) {
+		t.Fatalf("references exposed mutable catalog state: %v (%v)", again, err)
+	}
+	for _, invalid := range []game.ProgramReference{
+		{ID: "missing", Version: "1"},
+		{ID: parent.ID, Version: "wrong"},
+	} {
+		if _, err := catalog.References([]game.ProgramReference{invalid}); err == nil {
+			t.Fatalf("accepted missing/mismatched reference %v", invalid)
+		}
 	}
 }

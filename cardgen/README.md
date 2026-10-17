@@ -1684,8 +1684,8 @@ Vanguard cards are excluded with explicit report reasons.
    (see [Generated rendering tables](#generated-rendering-tables)) rather than
    hand-written switches.
 
-The bulk compiler detects distinct Oracle cards that map to the same filename or
-Go identifier and appends a stable Scryfall-derived suffix to both generated
+The retired bulk compiler detected distinct Oracle cards mapping to the same
+filename or Go identifier and appended a stable Scryfall-derived suffix to both generated
 identities. Playable tokens always use `mtg/cards/tokens/<letter>` and include
 their complete normalized Oracle UUID in both filename and Go identifier.
 Printed `CardDef.Name` values remain unchanged.
@@ -1783,19 +1783,9 @@ synthetic violating and clean sources.
 
 ## Usage
 
-For explicitly assigned legacy maintenance, compile the Scryfall Oracle Cards
-corpus into a temporary Card Registry tree:
-
-```bash
-go run ./cardgen/oracle/cmd/compilecards \
-  -in cardgen/oracle/oracle-cards-20260608090247.json \
-  -out .cardwork/generated-cards \
-  -report .cardwork/oracle-compile-report.json
-```
-
-After inspecting and validating the temporary tree, use `-out mtg/cards` only
-when intentionally updating repository card definitions. The command
-regenerates affected letter-package `cards.go` files.
+Bulk corpus compilation/import and preservation fingerprint workflows are
+retired. Focused legacy correctness fixes use existing APIs and tests without
+recompiling the Oracle corpus. Existing generated definitions remain installed.
 
 Compiler refusals remain refusals for Card Generation, but do not determine
 whether an independently authored implementation is supported. Today's
@@ -1887,21 +1877,8 @@ named-card interactions through their public execution interfaces, using small
 fixtures or tables where they clarify behavior. Preserve useful existing
 per-card tests. Structural CardDef assertions do not execute a card program.
 
-### Corpus fingerprints are one regression signal
-
-`card-fingerprints.txt` records generated-source digests for a corpus snapshot.
-Compare the same input across revisions for relevant compiler maintenance.
-Unchanged output establishes unchanged generated structure, not unchanged Engine
-behavior or executable Go semantics. Keep runtime regression coverage.
-
-Review unexpected changed identities rather than automatically requiring a
-whole-corpus refresh after every authored card or documentation change.
-
-Corpus changes, including Oracle errata, may alter existing identities as well as
-add/remove cards. Pin the same corpus for baseline/candidate comparison. The
-read-only CI checks pinned preservation for relevant changes; it does not
-regenerate or commit support documentation on every change. See
-[the validation matrix](../testdata/card-preservation/README.md).
+Follow the [repository validation policy](../.github/copilot-instructions.md#verify-proportionally).
+No source/registry fingerprint or corpus refresh is an implementation gate.
 
 ## Golden snapshot harness
 
@@ -1942,8 +1919,8 @@ got/want diff.
 
 ## Tooling layout
 
-- `cardgen/oracle`: lexer, parser, semantic compiler, corpus checks, and bulk
-  compilation command.
+- `cardgen/oracle`: lexer, parser, semantic compiler and parser-maintenance checks.
+  Bulk corpus compilation commands are retired.
 - `cardgen`: typed lowering, Card Definition assembly, deterministic rendering,
   Scryfall data shapes, and source naming helpers.
 - `cardgen/cmd/gencardlist`: `go generate` helper that writes each

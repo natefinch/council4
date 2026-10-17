@@ -3,9 +3,9 @@
 `parsercoverage` measures how completely the Oracle parser
 (`cardgen/oracle/parser`) represents the eligible Scryfall corpus as typed
 syntax, **without** running the compiler or lowering. It is a parser-stage
-progress metric: the score rises as parser grammar improves, and the report
-ranks the grammar the parser cannot yet represent so that work can be
-prioritized.
+maintenance metric, not an authored-card work queue or gameplay certificate.
+It is optional reporting, not a local completion gate. Follow the
+[repository validation policy](../../../../.github/copilot-instructions.md#verify-proportionally).
 
 It stream-decodes a Scryfall Oracle Cards bulk-data array, applies the same
 corpus-eligibility policy as [`compilecards`](../compilecards/README.md), parses
@@ -43,9 +43,9 @@ exact round-trip when it is parser-complete **and** every resolving effect is
 exact.
 
 This mirrors the spans the lowering coverage consumers assert against, but is
-reconstructed purely from parser data. Because lowering is downstream of
-parsing, every card the lowerer can fully generate **must** be parser-complete;
-`parsercoverage` checks that invariant directly (see `-generated`).
+reconstructed purely from parser data. Because lowering is downstream of parsing,
+parser coverage describes one recognition boundary, not installed production
+support.
 
 ## Reported numbers
 
@@ -64,16 +64,6 @@ parsing, every card the lowerer can fully generate **must** be parser-complete;
 - `-in` — Scryfall Oracle Cards bulk-data JSON file (required).
 - `-report` — JSON report path, or `-` for stdout (default `-`).
 - `-out` — parser-coverage Markdown path (default `parser-coverage.md`).
-- `-generated` — optional supported-card Markdown (`supported.md`). When set,
-  the tool asserts that every generated card name is parser-complete and reports
-  any violations. A violation means the recognized-span union is too
-  strict and is a bug to fix by adding the missing recognized span, not a metric
-  to loosen. Constructs the parser recognizes semantically but whose typed
-  output stops short of all their tokens — coordinated trigger/condition lists,
-  "for each" iteration prefixes, and reflexive/delayed trigger preambles — emit a
-  span tightly bounded to that recognized grammar (see
-  `parser.appendConstructRecognizedSpans`), so the harness asserts zero
-  violations without over-crediting an adjacent unrepresented clause.
 - `-workers` — number of parser workers (0 selects `NumCPU`).
 
 ## Usage
@@ -82,8 +72,8 @@ parsing, every card the lowerer can fully generate **must** be parser-complete;
 go run ./cardgen/oracle/cmd/parsercoverage \
   -in cardgen/oracle/oracle-cards-20260608090247.json \
   -out parser-coverage.md \
-  -report .cardwork/parser-coverage-report.json \
-  -generated supported.md
+  -report .cardwork/parser-coverage-report.json
 ```
 
-Or regenerate the committed report with `mage parserCoverage`.
+`mage parserCoverage` is an explicit parser-only report using existing local
+input. It does not download or compile the corpus or check fingerprint baselines.

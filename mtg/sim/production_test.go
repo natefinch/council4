@@ -37,7 +37,7 @@ func productionConfig(t *testing.T) Config {
 	return cfg
 }
 
-func TestMixedProductionBatchReplayAndSerializedExecutableBindings(t *testing.T) {
+func TestMixedProductionBatchReplayAndSerializedPrograms(t *testing.T) {
 	cfg := productionConfig(t)
 	serial := Run(cfg)
 	cfg.Workers = 2
@@ -46,13 +46,8 @@ func TestMixedProductionBatchReplayAndSerializedExecutableBindings(t *testing.T)
 		t.Fatal("mixed production workers diverged or failed")
 	}
 	result, record := RecordGame(cfg, 0)
-	if !reflect.DeepEqual(result, serial.Games[0]) || record.TurnLimit != cfg.TurnLimit || len(record.Bindings) == 0 {
-		t.Fatal("recording changed configured work or lost executable bindings")
-	}
-	for _, binding := range record.Bindings {
-		if binding.SourceRevision == "" || binding.RulesRevision == "" {
-			t.Fatal("production program/referenced shared rules were not source-bound")
-		}
+	if !reflect.DeepEqual(result, serial.Games[0]) || record.TurnLimit != cfg.TurnLimit || len(record.Programs) == 0 {
+		t.Fatal("recording changed configured work or lost program versions")
 	}
 	data, err := json.Marshal(record)
 	if err != nil {
@@ -65,10 +60,10 @@ func TestMixedProductionBatchReplayAndSerializedExecutableBindings(t *testing.T)
 	if got := Replay(cfg.Configs, reload); !reflect.DeepEqual(got, result) {
 		t.Fatal("mixed production serialization/reload changed executed result")
 	}
-	reload.Bindings[0].SourceRevision = "deliberately-different-executable-source"
+	reload.Programs[0].Version = "different-version"
 	defer func() {
 		if _, ok := recover().(rules.UnsupportedError); !ok {
-			t.Fatal("changed executable code silently replayed as the same source version")
+			t.Fatal("changed program version was accepted for replay")
 		}
 	}()
 	Replay(cfg.Configs, reload)
@@ -119,7 +114,7 @@ func TestInvalidActionReplayRetainsFallbackDiagnostics(t *testing.T) {
 	}
 }
 
-func TestStaticOnlyReplayBindsExecutableAndSharedRules(t *testing.T) {
+func TestStaticOnlyReplayNeedsNoPrograms(t *testing.T) {
 	cfg := productionConfig(t)
 	registry := cards.NewDefaultRegistry()
 	for p := range cfg.Configs {
@@ -129,15 +124,11 @@ func TestStaticOnlyReplayBindsExecutableAndSharedRules(t *testing.T) {
 		}
 	}
 	cfg.TurnLimit = 1
-	_, record := RecordGame(cfg, 0)
-	if len(record.Programs) != 0 || record.SourceRevision == "" || record.RulesRevision == "" {
-		t.Fatal("static/permission/policy-only decks lost executable version binding")
+	result, record := RecordGame(cfg, 0)
+	if len(record.Programs) != 0 {
+		t.Fatal("static-only deck recorded a resolving program")
 	}
-	record.RulesRevision = "different-shared-rules"
-	defer func() {
-		if _, ok := recover().(rules.UnsupportedError); !ok {
-			t.Fatal("changed shared rules accepted for a program-free replay")
-		}
-	}()
-	Replay(cfg.Configs, record)
+	if replayed := Replay(cfg.Configs, record); !reflect.DeepEqual(replayed, result) {
+		t.Fatal("static-only replay changed the result")
+	}
 }

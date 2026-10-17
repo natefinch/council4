@@ -1,10 +1,8 @@
 package magefiles
 
 import (
-	"bytes"
-	"context"
-	"net/http"
-	"net/http/httptest"
+	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,67 +11,63 @@ import (
 	"github.com/natefinch/council4/internal/preservation"
 )
 
-func TestPinnedCorpusVerifiesDownloadAndConvertedBytes(t *testing.T) {
-	t.Parallel()
-	for _, scenario := range []struct {
-		name          string
-		wrongDownload bool
-		wrongJSON     bool
-	}{
-		{name: "verified"},
-		{name: "changed archive", wrongDownload: true},
-		{name: "changed converted bytes", wrongJSON: true},
-	} {
-		t.Run(scenario.name, func(t *testing.T) {
-			t.Parallel()
-			download := gzipJSONL(t, `{"name":"Bear"}`, `{"name":"Wolf"}`)
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				_, _ = w.Write(download)
-			}))
-			t.Cleanup(server.Close)
-			archiveHash, err := preservation.Digest(bytes.NewReader(download))
-			if err != nil {
-				t.Fatal(err)
-			}
-			jsonHash, err := preservation.Digest(strings.NewReader(`[{"name":"Bear"},{"name":"Wolf"}]`))
-			if err != nil {
-				t.Fatal(err)
-			}
-			pin := preservation.Pin{
-				DownloadURI: server.URL, DownloadSHA256: archiveHash, JSONSHA256: jsonHash,
-				UpdatedAt: "2026-10-13", RulesEdition: "2026-09-25", BaselineRevision: "baseline",
-			}
-			if scenario.wrongDownload {
-				pin.DownloadSHA256 = strings.Repeat("a", 64)
-			}
-			if scenario.wrongJSON {
-				pin.JSONSHA256 = strings.Repeat("b", 64)
-			}
-			path := filepath.Join(t.TempDir(), "pinned.json")
-			err = installPinnedCorpus(context.Background(), server.Client(), pin, path)
-			if scenario.wrongDownload || scenario.wrongJSON {
-				if err == nil {
-					t.Fatal("accepted mismatched bytes")
-				}
-				if _, err := os.Stat(path); !os.IsNotExist(err) {
-					t.Fatal("installed an unverified corpus")
-				}
-			} else if err != nil {
-				t.Fatal(err)
-			} else if err := pin.Verify(path); err != nil {
-				t.Fatal(err)
-			}
-		})
+func pinnedCorpusFixture(t *testing.T) string {
+	t.Helper()
+	t.Chdir(t.TempDir())
+	const input = `[{"name":"Bear"}]`
+	digest, err := preservation.Digest(strings.NewReader(input))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pin := preservation.Pin{
+		DownloadURI:    "https://example.invalid/oracle.jsonl.gz",
+		DownloadSHA256: strings.Repeat("a", 64), JSONSHA256: digest,
+		UpdatedAt: "2026-10-13", RulesEdition: "2026-09-25", BaselineRevision: "baseline",
+	}
+	if err := os.MkdirAll(filepath.Dir(corpusPinPath), 0o750); err != nil {
+		t.Fatal(err)
+	}
+	data, err := json.Marshal(pin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(corpusPinPath, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	path := "oracle.json"
+	if err := os.WriteFile(path, []byte(input), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("COUNCIL4_ORACLE_CARDS", path)
+	return path
+}
+
+func TestPinnedCorpusUsesVerifiedLocalInput(t *testing.T) {
+	path := pinnedCorpusFixture(t)
+	got, err := pinnedOracleCards()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != path {
+		t.Fatalf("corpus = %q, want %q", got, path)
+	}
+	if err := os.WriteFile(path, []byte("different bytes"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pinnedOracleCards(); err == nil {
+		t.Fatal("accepted modified local input")
 	}
 }
 
-func TestLegacyParserSubsetExcludesRefusedAndAuthoredOnlyEntries(t *testing.T) {
-	t.Parallel()
-	got := legacySupportedMarkdown([]preservation.Record{
-		{Name: "Legacy", DefinitionSHA256: "fingerprint"},
-		{Name: "Refused", Refusals: []string{"unsupported"}},
-	})
-	if got != "- Legacy\n" {
-		t.Fatalf("legacy parser subset = %q", got)
+func TestPinnedCorpusDoesNotDownloadMissingInput(t *testing.T) {
+	path := pinnedCorpusFixture(t)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pinnedOracleCards(); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("missing corpus error = %v", err)
+	}
+	if _, err := os.Stat(path); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("missing local input was created: %v", err)
 	}
 }

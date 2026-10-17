@@ -52,8 +52,8 @@ func TestChallengeLayersAndDrawProductionIdentityVerificationAndJSON(t *testing.
 			}
 			registered := authored.Cards[index]
 			if !strings.Contains(entry.Verification, "mtg/rules/") ||
-				registered.Verification != entry.Verification || registered.SourceRevision == "" || registered.RulesRevision == "" {
-				t.Fatal("specific verification or source/rules revision absent")
+				registered.Verification != entry.Verification {
+				t.Fatal("specific scenario evidence was lost")
 			}
 		})
 	}

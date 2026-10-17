@@ -6,8 +6,8 @@ description: Reuse or file one precise shared blocker for proven deferred card b
 # Card Support TODO
 
 Keep complete cards supported and incomplete cards explicitly blocked.
-Follow `.github/copilot-instructions.md`; new support is authored Go, not
-Oracle compiler expansion.
+Follow the [repository policy](../../../.github/copilot-instructions.md);
+new support is authored Go, not Oracle compiler expansion.
 Use the [card-authoring entry](../card-authoring/SKILL.md) and
 [canonical guide](../../../docs/card-authoring.md) to distinguish actual missing
 rules from a broken authoring seam or compiler rejection.
