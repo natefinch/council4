@@ -238,8 +238,11 @@ func TestEntryCopiedPaymentCanRedirectEveryEntryPath(t *testing.T) {
 							g.Players[game.Player1].Hand.Contains(cardID), g.Players[game.Player1].Graveyard.Contains(cardID))
 					}
 				}
-				arrivals, redirects, created := 0, 0, 0
+				arrivals, redirects, created, resolved := 0, 0, 0, 0
 				for _, event := range g.Events[start:] {
+					if event.Kind == game.EventSpellResolved && event.CardID == cardID {
+						resolved++
+					}
 					if event.CardID != cardID && (path != "token" || event.TokenDef != steel) {
 						continue
 					}
@@ -259,6 +262,9 @@ func TestEntryCopiedPaymentCanRedirectEveryEntryPath(t *testing.T) {
 				}
 				if arrivals != wantArrivals || redirects != wantRedirects || path == "token" && created != 1 {
 					t.Fatalf("arrival/redirect/created = %d/%d/%d", arrivals, redirects, created)
+				}
+				if path == "spell" && resolved != 1 {
+					t.Fatalf("spell resolved events = %d, want 1 even when entry is replaced (CR 608.3)", resolved)
 				}
 				if paid && !g.Players[game.Player1].Graveyard.Contains(paymentCard) {
 					t.Fatal("copied payment did not consume the land")

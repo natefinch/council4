@@ -702,11 +702,11 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 }
 
 // A resolving spell copy becomes one token; it is not token creation (CR 111.13).
-func (e *Engine) enterPermanentSpellCopy(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+func (e *Engine) enterPermanentSpellCopy(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, string) {
 	token, face := permanentSpellCopyTokenDef(g, obj, spellDef)
 	entry, ok := prepareTokenEntryWithOptions(e, g, obj.Controller, token, false, nil, zone.Stack, permanentSpellEntryOptions(obj), agents, log, face)
 	if !ok {
-		return nil, false
+		return nil, "invalid copy"
 	}
 	entry.spellCopyID = obj.ID
 	if obj.CopyOwner.Exists {
@@ -714,9 +714,9 @@ func (e *Engine) enterPermanentSpellCopy(g *game.Game, obj *game.StackObject, sp
 	}
 	created := commitTokenEntries(g, []preparedTokenEntry{entry}, 0)
 	if len(created) == 0 {
-		return nil, false
+		return nil, "entry replaced"
 	}
-	return created[0], true
+	return created[0], "battlefield"
 }
 
 func permanentSpellCopyTokenDef(g *game.Game, obj *game.StackObject, spellDef *game.CardDef) (*game.CardDef, game.FaceIndex) {

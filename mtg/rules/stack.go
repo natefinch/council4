@@ -123,7 +123,7 @@ func (e *Engine) resolveStackObjectWithChoices(g *game.Game, obj *game.StackObje
 
 func spellResolved(result string) bool {
 	switch result {
-	case "resolved", "battlefield", "graveyard", "exile", "adventure exile", "mutated":
+	case "resolved", "battlefield", "entry replaced", "graveyard", "exile", "adventure exile", "mutated":
 		return true
 	default:
 		return false
@@ -631,7 +631,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	if obj.FaceDown && !obj.Copy {
 		_, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy, agents, log)
 		if !ok {
-			return "invalid face-down"
+			return failedPermanentSpellEntry(g, card, "invalid face-down")
 		}
 		return "battlefield"
 	}
@@ -639,7 +639,12 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	var permanent *game.Permanent
 	var ok bool
 	if obj.Copy {
-		permanent, ok = e.enterPermanentSpellCopy(g, obj, spellDef, agents, log)
+		var result string
+		permanent, result = e.enterPermanentSpellCopy(g, obj, spellDef, agents, log)
+		if permanent == nil {
+			return result
+		}
+		ok = true
 	} else {
 		permanent, ok = createCardPermanentFaceWithOptions(
 			e,
@@ -655,15 +660,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		)
 	}
 	if !ok {
-		if obj.Copy {
-			return "invalid copy"
-		}
-		if card != nil {
-			if _, moved := cardZone(g, card.ID); moved {
-				return "entry replaced"
-			}
-		}
-		return "invalid permanent"
+		return failedPermanentSpellEntry(g, card, "invalid permanent")
 	}
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
@@ -697,6 +694,16 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	return "battlefield"
 }
 
+// A replaced battlefield entry still resolves the spell (CR 608.3, 614.12).
+func failedPermanentSpellEntry(g *game.Game, card *game.CardInstance, invalid string) string {
+	if card != nil {
+		if _, moved := cardZone(g, card.ID); moved {
+			return "entry replaced"
+		}
+	}
+	return invalid
+}
+
 func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions {
 	options := permanentCreationOptions{
 		HasSpellAnnouncement: true, XValue: obj.XValue,
@@ -724,10 +731,8 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 	}
 	if !mutateTargetLegal(g, obj.Controller, owner, spellDef, obj.MutateTargetID) {
 		if obj.Copy {
-			if _, ok := e.enterPermanentSpellCopy(g, obj, spellDef, agents, log); !ok {
-				return "invalid copy"
-			}
-			return "battlefield"
+			_, result := e.enterPermanentSpellCopy(g, obj, spellDef, agents, log)
+			return result
 		}
 		_, ok := createCardPermanentFaceWithOptions(
 			e,
@@ -742,7 +747,7 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 			log,
 		)
 		if !ok {
-			return "invalid owner"
+			return failedPermanentSpellEntry(g, card, "invalid owner")
 		}
 		return "battlefield"
 	}
