@@ -42,10 +42,9 @@ func regPlayerDamageEvent(player game.PlayerID, amount int) damageEvent {
 	}
 }
 
-// TestRegPreventionRunsBeforeReplacement asserts the engine applies prevention
-// shields first, then damage-increasing replacements, matching CR 616/615
-// ordering.
-func TestRegPreventionRunsBeforeReplacement(t *testing.T) {
+// With no choosing agent, the deterministic fallback picks prevention first.
+// CR 616.1 otherwise lets the affected player choose the competing effect.
+func TestRegDamageModifiersUsePreventionFirstFallback(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	sourceID := addColoredSourceCard(g, game.Player1, color.Red)
@@ -56,6 +55,10 @@ func TestRegPreventionRunsBeforeReplacement(t *testing.T) {
 	dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, 5, false)
 	if dealt != 6 {
 		t.Fatalf("dealt = %d, want prevention-then-double 6", dealt)
+	}
+	if len(g.ReplacementDecisions) != 1 || !g.ReplacementDecisions[0].UsedFallback ||
+		g.ReplacementDecisions[0].Player != game.Player2 || g.ReplacementDecisions[0].Selected[0] != 0 {
+		t.Fatalf("replacement decisions = %+v, want the affected player's first-option fallback", g.ReplacementDecisions)
 	}
 }
 
@@ -141,9 +144,9 @@ func TestRegPreventionShieldStackingProperty(t *testing.T) {
 	}
 }
 
-// TestRegPreventionThenDoublingProperty fuzzes random prevention and damage with
-// a fixed doubling replacement and asserts prevention always precedes doubling.
-func TestRegPreventionThenDoublingProperty(t *testing.T) {
+// TestRegPreventionFirstFallbackProperty checks the deterministic no-agent
+// policy, not a mandatory ordering of prevention and replacement effects.
+func TestRegPreventionFirstFallbackProperty(t *testing.T) {
 	t.Parallel()
 	rng := rand.New(rand.NewPCG(610, 4))
 	for iteration := range 300 {
@@ -160,6 +163,9 @@ func TestRegPreventionThenDoublingProperty(t *testing.T) {
 		startLife := g.Players[game.Player2].Life
 		dealt := dealPlayerDamage(g, sourceID, 0, game.Player1, game.Player2, damage, false)
 
+		if prevention > 0 && (len(g.ReplacementDecisions) != 1 || !g.ReplacementDecisions[0].UsedFallback) {
+			t.Fatalf("iteration %d: expected an explicit replacement fallback, got %+v", iteration, g.ReplacementDecisions)
+		}
 		afterPrevention := max(damage-prevention, 0)
 		want := afterPrevention * 2
 		if dealt != want {

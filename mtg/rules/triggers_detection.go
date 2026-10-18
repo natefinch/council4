@@ -1346,16 +1346,17 @@ func evolveTriggerForEvent(g *game.Game, permanent *game.Permanent, controller g
 }
 
 // evolveGreater reports whether the entered creature has greater power or
-// greater toughness than the evolve creature (CR 702.100b). Toughness counts
+// greater toughness than the evolve creature (CR 702.100a). Toughness counts
 // only when both creatures have a defined toughness, so an undefined "*"
 // toughness never satisfies the comparison on that axis.
 func evolveGreater(g *game.Game, entered, evolve *game.Permanent) bool {
-	if effectivePower(g, entered) > effectivePower(g, evolve) {
+	enteredValues := effectivePermanentValues(g, entered)
+	evolveValues := effectivePermanentValues(g, evolve)
+	if enteredValues.powerOK && evolveValues.powerOK && enteredValues.power > evolveValues.power {
 		return true
 	}
-	enteredToughness, enteredOK := effectiveToughness(g, entered)
-	evolveToughness, evolveOK := effectiveToughness(g, evolve)
-	return enteredOK && evolveOK && enteredToughness > evolveToughness
+	return enteredValues.toughnessOK && evolveValues.toughnessOK &&
+		enteredValues.toughness > evolveValues.toughness
 }
 
 func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbility {

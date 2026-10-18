@@ -199,9 +199,9 @@ func propCountLocations(g *game.Game) map[id.ID]int {
 
 	for _, obj := range g.Stack.Objects() {
 		// Only a card-backed spell carries its card on the stack. Abilities
-		// keep their source on the battlefield (counted above), and token
-		// spell copies have no CardInstance.
-		if obj.Kind != game.StackSpell || obj.SourceTokenDef != nil {
+		// keep their source on the battlefield (counted above). Spell copies
+		// retain provenance but never occupy their source's physical card.
+		if obj.Kind != game.StackSpell || obj.Copy || obj.SourceTokenDef != nil {
 			continue
 		}
 		mark(obj.SourceID)
@@ -275,7 +275,7 @@ func propCardPlaces(g *game.Game, cardID id.ID) []string {
 		}
 	}
 	for _, obj := range g.Stack.Objects() {
-		if obj.Kind == game.StackSpell && obj.SourceTokenDef == nil && obj.SourceID == cardID {
+		if obj.Kind == game.StackSpell && !obj.Copy && obj.SourceTokenDef == nil && obj.SourceID == cardID {
 			places = append(places, "Stack")
 		}
 	}
@@ -292,6 +292,95 @@ func propLocationReport(g *game.Game, cards []id.ID) string {
 		_, _ = fmt.Fprintf(&b, " [%v %q -> %v]", cardID, name, propCardPlaces(g, cardID))
 	}
 	return b.String()
+}
+
+func TestPropSpellCopyProvenanceIsNotAnotherCardLocation(t *testing.T) {
+	for _, counterOriginal := range []bool{false, true} {
+		name := "original on stack"
+		if counterOriginal {
+			name = "original countered while copy remains"
+		}
+		t.Run(name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := addImplementationSpellToStack(g, game.Player1, propPlayerBolt(), []game.Target{game.PlayerTarget(game.Player2)})
+			original, _ := g.Stack.Peek()
+			addEffectSpellToStack(g, game.Player1,
+				game.CopyStackObject{Object: game.TargetStackObjectReference(0)},
+				[]game.Target{game.StackObjectTarget(original.ID)})
+			engine.resolveTopOfStack(g, &TurnLog{})
+			copied, ok := g.Stack.Peek()
+			if !ok || !copied.Copy || copied.ID == original.ID || copied.SourceID != source {
+				t.Fatal("real copy did not retain distinct stack identity and source provenance")
+			}
+			wantPlaces := []string{"Stack"}
+			if counterOriginal {
+				addEffectSpellToStack(g, game.Player1,
+					game.CounterObject{Object: game.TargetStackObjectReference(0)},
+					[]game.Target{game.StackObjectTarget(original.ID)})
+				engine.resolveTopOfStack(g, &TurnLog{})
+				wantPlaces = []string{"P0.Graveyard"}
+			}
+			if incorrect := propIncorrectCardCounts(g); len(incorrect) != 0 {
+				t.Fatalf("copy changed physical-card conservation: %s", propLocationReport(g, incorrect))
+			}
+			if places := propCardPlaces(g, source); !slices.Equal(places, wantPlaces) {
+				t.Fatalf("physical source locations = %v, want %v", places, wantPlaces)
+			}
+			engine.resolveTopOfStack(g, &TurnLog{})
+			if g.Players[game.Player2].Life != 37 {
+				t.Fatal("spell copy did not independently deal its damage")
+			}
+			if !counterOriginal {
+				if g.Players[game.Player1].Graveyard.Contains(source) {
+					t.Fatal("resolving a copy moved the original physical spell")
+				}
+				engine.resolveTopOfStack(g, &TurnLog{})
+				if g.Players[game.Player2].Life != 34 {
+					t.Fatal("original spell did not resolve independently")
+				}
+			}
+			if incorrect := propIncorrectCardCounts(g); len(incorrect) != 0 ||
+				!g.Players[game.Player1].Graveyard.Contains(source) || !g.Stack.IsEmpty() {
+				t.Fatal("physical-card conservation failed after resolution")
+			}
+		})
+	}
+}
+
+func TestPropCopiesOfExiledCardsDoNotOccupyTheirSource(t *testing.T) {
+	for _, tokenDefinition := range []bool{false, true} {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		def := propPlayerBolt()
+		source := addCardInstance(g, game.Player1, def)
+		g.Players[game.Player1].Exile.Add(source)
+		copy := &game.StackObject{
+			ID: g.IDGen.Next(), Kind: game.StackSpell, Copy: true,
+			SourceID: source, SourceCardID: source, Controller: game.Player1,
+		}
+		if tokenDefinition {
+			copy.SourceTokenDef = def
+		}
+		g.Stack.Push(copy)
+		if incorrect := propIncorrectCardCounts(g); len(incorrect) != 0 {
+			t.Fatalf("exile copy changed physical-card count: %s", propLocationReport(g, incorrect))
+		}
+		if places := propCardPlaces(g, source); !slices.Equal(places, []string{"P0.Exile"}) {
+			t.Fatalf("exiled source locations = %v, want only exile", places)
+		}
+	}
+}
+
+func TestPropCardConservationStillRejectsPhysicalDuplication(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addImplementationSpellToStack(g, game.Player1, propPlayerBolt(), []game.Target{game.PlayerTarget(game.Player2)})
+	g.Players[game.Player1].Hand.Add(source)
+	if duplicates := propDuplicatedCards(g); !slices.Equal(duplicates, []id.ID{source}) {
+		t.Fatalf("duplicate physical card not reported: %v", duplicates)
+	}
+	if places := propCardPlaces(g, source); !slices.Equal(places, []string{"P0.Hand", "Stack"}) {
+		t.Fatalf("duplicate diagnostics = %v, want hand and stack", places)
+	}
 }
 
 // propRandomAgents builds one random agent per seat sharing the live game and

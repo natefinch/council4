@@ -228,7 +228,7 @@ func TestRegPowerToughnessSwitchLayerAfterModify(t *testing.T) {
 
 // TestRegLayeredEffectiveValuesProperty fuzzes random set/modify/counter
 // combinations against an independent reference implementation of the layer
-// pipeline, and asserts the floor-at-zero rule for effective power.
+// pipeline. Power and toughness characteristics retain negative values.
 func TestRegLayeredEffectiveValuesProperty(t *testing.T) {
 	t.Parallel()
 	rng := rand.New(rand.NewPCG(610, 1))
@@ -287,13 +287,32 @@ func TestRegLayeredEffectiveValuesProperty(t *testing.T) {
 
 		g.ContinuousEffects = effects
 
-		wantPower := max(0, power)
-		if got := effectivePower(g, creature); got != wantPower {
-			t.Fatalf("iteration %d: effective power = %d, want %d", iteration, got, wantPower)
+		values := effectivePermanentValues(g, creature)
+		if !values.powerOK || values.power != power {
+			t.Fatalf("iteration %d: signed power = %d (defined=%v), want %d", iteration, values.power, values.powerOK, power)
 		}
 		got, ok := effectiveToughness(g, creature)
 		if !ok || got != toughness {
 			t.Fatalf("iteration %d: effective toughness = %d ok=%v, want %d true", iteration, got, ok, toughness)
 		}
+	}
+}
+
+func TestNegativePowerCharacteristicDoesNotBecomeNegativeDamage(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	creature := addCombatPermanent(g, game.Player1, regContinuousCreature("Negative-power creature", -2, 4))
+	if values := effectivePermanentValues(g, creature); !values.powerOK || values.power != -2 {
+		t.Fatalf("signed power = %d (defined=%v), want -2", values.power, values.powerOK)
+	}
+	if amount := effectivePower(g, creature); amount != 0 {
+		t.Fatalf("nonnegative power-based amount = %d, want 0", amount)
+	}
+	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{{
+		Attacker: creature.ObjectID, Target: game.AttackTarget{Player: game.Player2},
+	}}}
+	before := g.Players[game.Player2].Life
+	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
+	if g.Players[game.Player2].Life != before {
+		t.Fatal("negative power dealt damage or increased the defending player's life")
 	}
 }

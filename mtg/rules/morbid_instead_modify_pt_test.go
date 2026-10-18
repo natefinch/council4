@@ -78,8 +78,8 @@ func TestMorbidInsteadModifyPTAppliesMorbidWhenCreatureDied(t *testing.T) {
 	)
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	if got := effectivePower(g, creature); got != 0 {
-		t.Fatalf("effective power = %d, want 0 (5 base - 13, clamped at 0)", got)
+	if values := effectivePermanentValues(g, creature); !values.powerOK || values.power != -8 {
+		t.Fatalf("signed power = %d (defined=%v), want -8 (5 base - 13)", values.power, values.powerOK)
 	}
 	if got, ok := effectiveToughness(g, creature); !ok || got != -8 {
 		t.Fatalf("effective toughness = %d (ok=%v), want -8 (5 base - 13)", got, ok)

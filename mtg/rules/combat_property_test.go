@@ -46,9 +46,9 @@ func regDeterministicAssignment(power int, toughnesses []int) []int {
 	return marks
 }
 
-// TestRegMultiBlockLethalBeforeMovingOn asserts a blocked attacker must assign
-// lethal damage to each blocker in order before assigning to the next.
-func TestRegMultiBlockLethalBeforeMovingOn(t *testing.T) {
+// The no-choice fallback assigns lethal in a stable blocker order. A player's
+// explicit damage division need not follow this policy (CR 510.1c).
+func TestRegMultiBlockFallbackUsesLethalInOrder(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 5)
@@ -66,10 +66,9 @@ func TestRegMultiBlockLethalBeforeMovingOn(t *testing.T) {
 	}
 }
 
-// TestRegMultiBlockAssignmentProperty fuzzes attacker power and blocker
-// toughnesses and asserts the engine assigns damage exactly as the
-// lethal-in-order reference model, never skipping ahead in the blocker order.
-func TestRegMultiBlockAssignmentProperty(t *testing.T) {
+// TestRegMultiBlockFallbackAssignmentProperty checks the no-choice assignment
+// against its deterministic reference policy, not the legality of other splits.
+func TestRegMultiBlockFallbackAssignmentProperty(t *testing.T) {
 	t.Parallel()
 	rng := rand.New(rand.NewPCG(610, 5))
 	for iteration := range 400 {
@@ -94,8 +93,8 @@ func TestRegMultiBlockAssignmentProperty(t *testing.T) {
 				t.Fatalf("iteration %d: blocker %d damage = %d, want %d (power %d toughnesses %v)",
 					iteration, i, blocker.MarkedDamage, want[i], power, toughnesses)
 			}
-			// Lethal-before-moving-on invariant: once a non-final blocker is
-			// assigned less than lethal, no later blocker may be assigned damage.
+			// This fallback stops assigning to later blockers when an earlier
+			// blocker consumed the remaining damage without receiving lethal.
 			if sawUnderfed && blocker.MarkedDamage != 0 {
 				t.Fatalf("iteration %d: blocker %d received %d after an earlier blocker was under-assigned",
 					iteration, i, blocker.MarkedDamage)

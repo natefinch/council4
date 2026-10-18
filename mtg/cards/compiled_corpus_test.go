@@ -8,8 +8,9 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/cards"
-	"github.com/natefinch/council4/mtg/cards/authored"
+	"github.com/natefinch/council4/mtg/cards/cardset"
 	"github.com/natefinch/council4/mtg/cards/tokens"
+	"github.com/natefinch/council4/mtg/game"
 )
 
 type installedCompilerCard struct {
@@ -85,22 +86,50 @@ func TestCompletePinnedCompilerSourcesAreInstalled(t *testing.T) {
 
 func TestAuthoredImplementationsSupersedeTheirGeneratedCopies(t *testing.T) {
 	registry := cards.NewDefaultRegistry()
-	replacements := 0
-	for _, entry := range authored.Cards {
-		if !entry.ReplaceLegacy {
-			continue
-		}
-		replacements++
-		def, err := registry.LookupOracleID(entry.OracleID)
-		if err != nil || def == nil || len(registry.LookupAll(entry.Name)) != 1 {
-			t.Fatalf("authored implementation lost precedence for %s: %v", entry.Name, err)
-		}
-		support := registry.SupportFor(entry.Name)
-		if len(support) != 1 || !support[0].BehaviorVerified || support[0].OracleID != entry.OracleID {
-			t.Fatalf("generated copy replaced authored evidence for %s", entry.Name)
+	checkAuthoredPrecedence(t, registry, cards.DefaultCardSets())
+}
+
+func checkAuthoredPrecedence(t *testing.T, registry *cards.Registry, sets [][]cardset.Entry) {
+	t.Helper()
+	legacyNames := make(map[string]bool)
+	for _, set := range sets {
+		for _, entry := range set {
+			if entry.OracleID == "" {
+				legacyNames[entry.Name] = true
+			}
 		}
 	}
-	if replacements != 32 {
-		t.Fatalf("authored/compiler overlap = %d, want 32", replacements)
+	for _, set := range sets {
+		for _, entry := range set {
+			if entry.OracleID == "" || !legacyNames[entry.Name] {
+				continue
+			}
+			if !entry.ReplaceLegacy {
+				t.Fatalf("authored/generated overlap lacks explicit replacement for %s", entry.Name)
+			}
+			def, err := registry.LookupOracleID(entry.OracleID)
+			if err != nil || def == nil || len(registry.LookupAll(entry.Name)) != 1 {
+				t.Fatalf("authored implementation lost precedence for %s: %v", entry.Name, err)
+			}
+			support := registry.SupportFor(entry.Name)
+			if len(support) != 1 || !support[0].BehaviorVerified || support[0].OracleID != entry.OracleID ||
+				support[0].Verification != entry.Verification {
+				t.Fatalf("generated copy replaced authored evidence for %s", entry.Name)
+			}
+		}
 	}
+}
+
+func TestAuthoredPrecedenceAllowsAdditionalReplacement(t *testing.T) {
+	production := cards.NewDefaultRegistry()
+	sets := append(cards.DefaultCardSets(), []cardset.Entry{{
+		Name: "Regrowth", OracleID: "e6e4a8bd-5c40-4654-8de1-0da9afed90fd", ReplaceLegacy: true,
+		New:          func() *game.CardDef { return production.Lookup("Regrowth") },
+		Verification: "registry-only fixture: an additional explicit legacy replacement",
+	}})
+	registry, err := cards.NewProgramRegistry(sets...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkAuthoredPrecedence(t, registry, sets)
 }

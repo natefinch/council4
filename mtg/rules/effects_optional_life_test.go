@@ -131,12 +131,8 @@ func TestOptionalIfYouDoMultiGateAcceptPerformsAllGatedEffects(t *testing.T) {
 }
 
 // reflexiveWhenYouDoInstructions builds the runtime shape produced by the
-// reflexive "you may X. When you do, Y" flow: an optional action publishes its
-// result and a single trailing effect is gated on that result having
-// succeeded. This is the same published/gated envelope the "If you do, Y" rider
-// lowers to, so the reflexive trigger gates correctly at runtime. The optional
-// gains 2 life; the gated effect draws a card, so both the life total and hand
-// reveal whether each step ran.
+// reflexive "you may X. When you do, Y" flow: the optional action's success
+// creates a separate triggered ability, not an inline conditional effect.
 func reflexiveWhenYouDoInstructions() []game.Instruction {
 	gate := opt.Val(game.InstructionResultGate{Key: game.ResultKey("if-you-do"), Succeeded: game.TriTrue})
 	return []game.Instruction{
@@ -146,7 +142,11 @@ func reflexiveWhenYouDoInstructions() []game.Instruction {
 			PublishResult: game.ResultKey("if-you-do"),
 		},
 		{
-			Primitive:  game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)},
+			Primitive: game.CreateReflexiveTrigger{Trigger: game.ReflexiveTriggerDef{
+				Content: game.Mode{Sequence: []game.Instruction{{
+					Primitive: game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)},
+				}}}.Ability(),
+			}},
 			ResultGate: gate,
 		},
 	}
@@ -171,12 +171,12 @@ func TestReflexiveWhenYouDoDeclineSkipsGatedEffect(t *testing.T) {
 	if g.Players[game.Player1].Hand.Contains(gatedDraw) {
 		t.Fatal("declining the optional must skip the gated draw")
 	}
+	if engine.putTriggeredAbilitiesOnStack(g) || !g.Stack.IsEmpty() || len(g.PendingReflexiveTriggers) != 0 {
+		t.Fatal("declining the enabling action created a reflexive trigger")
+	}
 }
 
-// TestReflexiveWhenYouDoAcceptPerformsGatedEffect verifies that accepting the
-// optional action of a reflexive "When you do" flow performs the gated trailing
-// effect: the controller gains life and draws the gated card.
-func TestReflexiveWhenYouDoAcceptPerformsGatedEffect(t *testing.T) {
+func TestReflexiveWhenYouDoAcceptQueuesSeparateEffect(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	before := g.Players[game.Player1].Life
@@ -189,8 +189,35 @@ func TestReflexiveWhenYouDoAcceptPerformsGatedEffect(t *testing.T) {
 	if got := g.Players[game.Player1].Life; got != before+2 {
 		t.Fatalf("life = %d, want %d (accepting must gain 2)", got, before+2)
 	}
-	if !g.Players[game.Player1].Hand.Contains(gatedDraw) {
-		t.Fatal("accepting the optional must perform the gated draw")
+	if g.Players[game.Player1].Hand.Contains(gatedDraw) || !g.Stack.IsEmpty() {
+		t.Fatal("reflexive draw resolved inline with the enabling action")
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) || g.Stack.Size() != 1 {
+		t.Fatal("reflexive trigger was not separately put on the stack")
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	if !g.Players[game.Player1].Hand.Contains(gatedDraw) || !g.Stack.IsEmpty() {
+		t.Fatal("separately resolving the reflexive trigger did not draw exactly once")
+	}
+}
+
+func TestReflexiveWhenYouDoConsequenceCanBeCountered(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	gatedDraw := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Gated Draw"}})
+	addInstructionSpellToStack(g, reflexiveWhenYouDoInstructions())
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{accept: true}}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	if !engine.putTriggeredAbilitiesOnStack(g) || g.Stack.Size() != 1 {
+		t.Fatal("reflexive trigger was not queued")
+	}
+	trigger, _ := g.Stack.Peek()
+	addEffectSpellToStack(g, game.Player2, game.CounterObject{Object: game.TargetStackObjectReference(0)},
+		[]game.Target{game.StackObjectTarget(trigger.ID)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if g.Players[game.Player1].Life != 42 || g.Players[game.Player1].Hand.Contains(gatedDraw) ||
+		!g.Players[game.Player1].Library.Contains(gatedDraw) || !g.Stack.IsEmpty() {
+		t.Fatal("countering the consequence changed the enabling action or performed the reflexive draw")
 	}
 }
 

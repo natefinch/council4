@@ -95,6 +95,8 @@ func addBodyKeywords(set *keywordSet, body game.Ability) {
 	}
 }
 
+// effectivePower returns a nonnegative power-based amount. Rules comparisons
+// must use the signed power characteristic from effectivePermanentValues.
 func effectivePower(g *game.Game, permanent *game.Permanent) int {
 	values := effectivePermanentValues(g, permanent)
 	if !values.powerOK {

@@ -8,10 +8,12 @@ import (
 
 	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/cards/authored"
+	"github.com/natefinch/council4/mtg/cards/cardset"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // The same fixture/seed/policy is copied unchanged into the step-11 baseline.
@@ -171,7 +173,177 @@ func BenchmarkMixedProduction(b *testing.B) {
 
 func TestEveryProvingCardLoadsIntoLiveAndSearchEngines(t *testing.T) {
 	registry := cards.NewDefaultRegistry()
-	for _, entry := range authored.Cards {
+	checkProvingCardCatalogs(t, registry, authored.Cards)
+}
+
+func checkProvingCardCatalogs(t *testing.T, registry *cards.Registry, entries []cardset.Entry) {
+	t.Helper()
+	engine := NewEngineWithPrograms(nil, registry.Programs())
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	search := engine.newSearchContext(g, game.Player1).Simulator()
+	for _, entry := range entries {
+		t.Run(entry.Name, func(t *testing.T) {
+			def, err := registry.LookupOracleID(entry.OracleID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if def.Name != entry.Name {
+				t.Fatalf("exact identity returned %q, want %q", def.Name, entry.Name)
+			}
+			if err := engine.programs.ValidateCard(def); err != nil {
+				t.Fatalf("live catalog: %v", err)
+			}
+			if err := search.engine.programs.ValidateCard(def); err != nil {
+				t.Fatalf("search catalog: %v", err)
+			}
+		})
+	}
+}
+
+func TestProvingCatalogAdmissionDoesNotRequireLegalCast(t *testing.T) {
+	production := cards.NewDefaultRegistry()
+	entries := []cardset.Entry{
+		{
+			Name: "Forest", OracleID: "b34bb2dc-c1af-4d77-b0b3-a0fb342a5fc6",
+			New:          func() *game.CardDef { return production.Lookup("Forest") },
+			Verification: "catalog-only fixture: a land is played, not cast",
+		},
+		{
+			Name: "Regrowth", OracleID: "e6e4a8bd-5c40-4654-8de1-0da9afed90fd",
+			New:          func() *game.CardDef { return production.Lookup("Regrowth") },
+			Verification: "catalog-only fixture: loading does not require a legal graveyard target",
+		},
+	}
+	registry, err := cards.NewProgramRegistry(entries)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkProvingCardCatalogs(t, registry, entries)
+}
+
+func TestProductionLandAndGraveyardTargetScenarios(t *testing.T) {
+	registry := cards.NewDefaultRegistry()
+	for _, test := range []struct {
+		name string
+		land bool
+	}{
+		{name: "land play", land: true},
+		{name: "required graveyard target"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g, engine, policies, _ := mixedProductionGame(registry)
+			cardID := addCardToHand(g, game.Player1, registry.Lookup("Forest"))
+			act := action.PlayLand(cardID)
+			var target game.ObjectID
+			if !test.land {
+				target = cardID
+				if !moveCardBetweenZones(g, game.Player1, target, zone.Hand, zone.Graveyard) {
+					t.Fatal("could not establish the graveyard target")
+				}
+				cardID = addCardToHand(g, game.Player1, registry.Lookup("Regrowth"))
+				g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+				g.Players[game.Player1].ManaPool.Add(mana.G, 1)
+				act = action.CastSpell(cardID, []game.Target{currentCardTarget(t, g, target)}, 0, nil)
+			}
+			if !slices.ContainsFunc(engine.Simulator().LegalActions(g, game.Player1), func(candidate action.Action) bool {
+				return actionsEqual(candidate, act)
+			}) {
+				t.Fatal("the scenario's legal action was not offered")
+			}
+			context := engine.newSearchContext(g, game.Player1)
+			world := context.Determinize()
+			search := context.Simulator()
+			branch, ok := search.Apply(world, game.Player1, act, policies)
+			if !ok {
+				t.Fatal("search rejected the legal action")
+			}
+			branch = search.ResolvePriority(branch, policies)
+			if !engine.applyActionWithChoices(g, game.Player1, act, policies, &TurnLog{}) {
+				t.Fatal("live engine rejected the legal action")
+			}
+			engine.runPriorityLoop(g, policies, &TurnLog{})
+			for _, state := range []*game.Game{g, branch} {
+				if !state.Stack.IsEmpty() {
+					t.Fatal("action did not reach stable priority")
+				}
+				if test.land {
+					if permanentByCardID(state, cardID) == nil || state.Players[game.Player1].Hand.Contains(cardID) {
+						t.Fatal("land play did not put the exact card onto the battlefield")
+					}
+				} else if !state.Players[game.Player1].Hand.Contains(target) ||
+					!state.Players[game.Player1].Graveyard.Contains(cardID) {
+					t.Fatal("Regrowth did not return the exact target and finish in the graveyard")
+				}
+			}
+		})
+	}
+}
+
+// These are explicit cast scenarios with known prerequisites and destinations,
+// not admission requirements imposed on every future authored card.
+func TestProvingCardCastScenariosReachLiveAndSearchPriority(t *testing.T) {
+	registry := cards.NewDefaultRegistry()
+	scenarios := []struct {
+		entry       cardset.Entry
+		destination zone.Type
+	}{
+		{authored.Terastodon, zone.Battlefield},
+		{authored.HiveMind, zone.Battlefield},
+		{authored.GiftsUngiven, zone.Graveyard},
+		{authored.GildedDrake, zone.Battlefield},
+		{authored.WorldgorgerDragon, zone.Battlefield},
+		{authored.NimDeathmantle, zone.Battlefield},
+		{authored.Abundance, zone.Battlefield},
+		{authored.BloodMoon, zone.Battlefield},
+		{authored.Muldrotha, zone.Battlefield},
+		{authored.Skullbriar, zone.Battlefield},
+		{authored.Mindslaver, zone.Battlefield},
+		{authored.GenerousGift, zone.Graveyard},
+		{authored.Pongify, zone.Graveyard},
+		{authored.RapidHybridization, zone.Graveyard},
+		{authored.Resculpt, zone.Graveyard},
+		{authored.Twincast, zone.Graveyard},
+		{authored.Reverberate, zone.Graveyard},
+		{authored.DualcasterMage, zone.Battlefield},
+		{authored.CacklingCounterpart, zone.Graveyard},
+		{authored.FatedInfatuation, zone.Graveyard},
+		{authored.Intuition, zone.Graveyard},
+		{authored.RealmsUncharted, zone.Graveyard},
+		{authored.ChainsOfMephistopheles, zone.Battlefield},
+		{authored.Humility, zone.Battlefield},
+		{authored.Opalescence, zone.Battlefield},
+		{authored.Bedevil, zone.Graveyard},
+		{authored.Terminate, zone.Graveyard},
+		{authored.Vindicate, zone.Graveyard},
+		{authored.Disenchant, zone.Graveyard},
+		{authored.Naturalize, zone.Graveyard},
+		{authored.AnOfferYouCantRefuse, zone.Graveyard},
+		{authored.Counterspell, zone.Graveyard},
+		{authored.Negate, zone.Graveyard},
+		{authored.EssenceScatter, zone.Graveyard},
+		{authored.Disallow, zone.Graveyard},
+		{authored.EladamrisCall, zone.Graveyard},
+		{authored.SteelshapersGift, zone.Graveyard},
+		{authored.Fabricate, zone.Graveyard},
+		{authored.IdyllicTutor, zone.Graveyard},
+		{authored.SylvanScrying, zone.Graveyard},
+		{authored.DemonicTutor, zone.Graveyard},
+		{authored.DiabolicTutor, zone.Graveyard},
+		{authored.DeathDenied, zone.Graveyard},
+		{authored.WildestDreams, zone.Exile},
+		{authored.RatsFeast, zone.Graveyard},
+		{authored.ShatteredCrypt, zone.Graveyard},
+		{authored.ReturnToTheRanks, zone.Graveyard},
+		{authored.ChampionOfStraySouls, zone.Battlefield},
+		{authored.WarpWorld, zone.Graveyard},
+		{authored.PanglacialWurm, zone.Battlefield},
+		{authored.GhostVacuum, zone.Battlefield},
+		{authored.NecromanticSelection, zone.Exile},
+		{authored.ToothCollector, zone.Battlefield},
+		{authored.MarchesaDealerOfDeath, zone.Battlefield},
+	}
+	for _, scenario := range scenarios {
+		entry := scenario.entry
 		t.Run(entry.Name, func(t *testing.T) {
 			def, err := registry.LookupOracleID(entry.OracleID)
 			if err != nil {
@@ -230,25 +402,22 @@ func TestEveryProvingCardLoadsIntoLiveAndSearchEngines(t *testing.T) {
 				t.Fatal("determinized production cast not accepted")
 			}
 			branch = search.ResolvePriority(branch, policies)
-			live := mixedResolve(t, engine, g, game.Player1, cast, policies)
+			live := g
+			if !engine.applyActionWithChoices(live, game.Player1, cast, policies, &TurnLog{}) {
+				t.Fatal("live production cast not accepted")
+			}
+			engine.runPriorityLoop(live, policies, &TurnLog{})
 			if !branch.Stack.IsEmpty() || !live.Stack.IsEmpty() {
 				t.Fatal("live/search catalogs failed to reach stable priority")
 			}
-			if entry.OracleID == authored.WildestDreams.OracleID {
-				if !live.Players[game.Player1].Exile.Contains(cardID) || !branch.Players[game.Player1].Exile.Contains(cardID) {
-					t.Fatal("Wildest Dreams did not exile itself in both production engines")
+			for _, state := range []*game.Game{live, branch} {
+				destination, found := cardZone(state, cardID)
+				if permanentByCardID(state, cardID) != nil {
+					destination, found = zone.Battlefield, true
 				}
-				return
-			}
-			if entry.OracleID == authored.NecromanticSelection.OracleID {
-				if !live.Players[game.Player1].Exile.Contains(cardID) || !branch.Players[game.Player1].Exile.Contains(cardID) {
-					t.Fatal("Necromantic Selection did not exile itself in both production engines")
+				if !found || destination != scenario.destination {
+					t.Fatalf("resolved card destination = %v (found=%v), want %v in both live/search", destination, found, scenario.destination)
 				}
-				return
-			}
-			if !live.Players[game.Player1].Graveyard.Contains(cardID) && permanentByCardID(live, cardID) == nil {
-				// Gilded Drake can be sacrificed by its actual unsuccessful exchange.
-				t.Fatal("proving card vanished after production resolution")
 			}
 		})
 	}

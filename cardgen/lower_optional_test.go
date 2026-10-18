@@ -133,7 +133,7 @@ func TestLowerOptionalIfYouDontElseBranch(t *testing.T) {
 
 // TestLowerReflexiveWhenYouDoGatesOnOptional verifies that a non-targeted
 // reflexive "When you do," following a "you may" optional action lowers to the
-// reflexive-trigger model (CR 603.11): the optional action publishes its result
+// reflexive-trigger model (CR 603.12): the optional action publishes its result
 // and the trailing effect is repackaged into a CreateReflexiveTrigger gated on
 // that action having been taken. The reflexive body carries the effect so it is
 // put on the stack after the enabling action resolves, rather than resolving

@@ -869,6 +869,41 @@ func TestEvolveDoesNotTriggerWhenSmallerCreatureEnters(t *testing.T) {
 	}
 }
 
+func TestEvolveComparesNegativePower(t *testing.T) {
+	for _, test := range []struct {
+		name          string
+		enteringPower int
+		wantTrigger   bool
+	}{
+		{name: "greater negative power", enteringPower: -1, wantTrigger: true},
+		{name: "equal negative power", enteringPower: -2},
+		{name: "smaller negative power", enteringPower: -3},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			def := vanillaCreature("Negative-power evolver", -2, 2)
+			def.StaticAbilities = []game.StaticAbility{game.EvolveStaticBody}
+			evolver := addCombatPermanent(g, game.Player1, def)
+			entering := addCombatPermanent(g, game.Player1, vanillaCreature("Negative-power entrant", test.enteringPower, 2))
+			emitEvent(g, game.Event{
+				Kind: game.EventPermanentEnteredBattlefield, Controller: game.Player1, PermanentID: entering.ObjectID,
+			})
+			if triggered := engine.putTriggeredAbilitiesOnStack(g); triggered != test.wantTrigger {
+				t.Fatalf("evolve triggered = %v for %d/2 entering beside -2/2, want %v", triggered, test.enteringPower, test.wantTrigger)
+			}
+			wantCounters := 0
+			if test.wantTrigger {
+				engine.resolveTopOfStack(g, &TurnLog{})
+				wantCounters = 1
+			}
+			if got := evolver.Counters.Get(counter.PlusOnePlusOne); got != wantCounters {
+				t.Fatalf("evolve counters = %d, want %d", got, wantCounters)
+			}
+		})
+	}
+}
+
 func TestAmassCreatesArmyTokenAndAddsCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
