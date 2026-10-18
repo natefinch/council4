@@ -67,7 +67,7 @@ func TestCommitCrimeCountsCompleteAnnouncementOnlyOnce(t *testing.T) {
 }
 
 // TestCommitCrimeEmittedForOpponentPlayerTarget covers the core "commit a crime"
-// event (CR 700.15): a spell that targets an opponent fires its controller's
+// event (CR 700.13): a spell that targets an opponent fires its controller's
 // "Whenever you commit a crime" trigger.
 func TestCommitCrimeEmittedForOpponentPlayerTarget(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

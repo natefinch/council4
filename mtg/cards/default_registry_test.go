@@ -6,6 +6,17 @@ import (
 	"github.com/natefinch/council4/mtg/cards"
 )
 
+func TestDefaultRegistryChecksToothCollectorOracleIdentity(t *testing.T) {
+	registry := cards.NewDefaultRegistry()
+	def, err := registry.LookupOracleID("b7c165a4-53a2-4117-a452-b9a8fe309c09")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if def.Name != "Tooth Collector" || len(def.TriggeredAbilities) != 2 {
+		t.Fatalf("registered Tooth Collector = %q with %d triggers, want exact identity with both abilities", def.Name, len(def.TriggeredAbilities))
+	}
+}
+
 func TestNewDefaultRegistryResolvesKnownCard(t *testing.T) {
 	registry := cards.NewDefaultRegistry()
 	if registry.Len() == 0 {

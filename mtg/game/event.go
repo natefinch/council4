@@ -68,7 +68,7 @@ const (
 	// identify the Class, Controller is its controller, and Amount is the new
 	// level reached.
 	EventClassLevelGained
-	// EventCrimeCommitted marks a player committing a crime (CR 700.15): they
+	// EventCrimeCommitted marks a player committing a crime (CR 700.13): they
 	// put a spell or ability on the stack that targets one or more opponents,
 	// objects an opponent controls, or cards in an opponent's graveyard. It is
 	// emitted once per spell or ability put on the stack, regardless of how many

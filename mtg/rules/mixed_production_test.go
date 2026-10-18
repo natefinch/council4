@@ -240,6 +240,12 @@ func TestEveryProvingCardLoadsIntoLiveAndSearchEngines(t *testing.T) {
 				}
 				return
 			}
+			if entry.OracleID == authored.NecromanticSelection.OracleID {
+				if !live.Players[game.Player1].Exile.Contains(cardID) || !branch.Players[game.Player1].Exile.Contains(cardID) {
+					t.Fatal("Necromantic Selection did not exile itself in both production engines")
+				}
+				return
+			}
 			if !live.Players[game.Player1].Graveyard.Contains(cardID) && permanentByCardID(live, cardID) == nil {
 				// Gilded Drake can be sacrificed by its actual unsuccessful exchange.
 				t.Fatal("proving card vanished after production resolution")

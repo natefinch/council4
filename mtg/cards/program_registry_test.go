@@ -30,6 +30,31 @@ func TestDefaultRegistryAdmitsCompletedChoiceProgramsByExactIdentity(t *testing.
 	}
 }
 
+func TestDefaultRegistryAdmitsGhostVacuumByExactIdentity(t *testing.T) {
+	t.Parallel()
+	registry := cards.NewDefaultRegistry()
+	entry := authoredcards.GhostVacuum
+	def, err := registry.LookupOracleID(entry.OracleID)
+	if err != nil || def == nil || def.Name != entry.Name {
+		t.Fatalf("exact Ghost Vacuum identity %s: %v", entry.OracleID, err)
+	}
+	if all := registry.LookupAll(entry.Name); len(all) != 1 || all[0] != def {
+		t.Fatalf("Ghost Vacuum registered names = %d, want one exact authored definition", len(all))
+	}
+	if len(def.ActivatedAbilities) != 2 || len(def.ProgramReferences()) != 2 {
+		t.Fatalf("Ghost Vacuum abilities/program references = %d/%d, want 2/2",
+			len(def.ActivatedAbilities), len(def.ProgramReferences()))
+	}
+	if err := registry.Programs().ValidateCard(def); err != nil {
+		t.Fatalf("Ghost Vacuum program bindings: %v", err)
+	}
+	evidence := registry.SupportFor(entry.Name)
+	if len(evidence) != 1 || !evidence[0].BehaviorVerified ||
+		evidence[0].OracleID != entry.OracleID || evidence[0].Verification != entry.Verification {
+		t.Fatalf("Ghost Vacuum checked admission evidence = %+v", evidence)
+	}
+}
+
 func TestAuthoredRegistryLoadsOnlyExactInstalledPrograms(t *testing.T) {
 	t.Parallel()
 	ref := game.ProgramReference{ID: "test/card", Version: "1"}
