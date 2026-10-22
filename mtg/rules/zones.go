@@ -468,13 +468,26 @@ type preparedPermanentZoneMove struct {
 }
 
 // preparePermanentZoneMove computes everything needed to move a permanent off the
-// battlefield without yet mutating game state: it snapshots the permanent's last
+// battlefield without yet moving any objects: it snapshots the permanent's last
 // known information (so leaves-the-battlefield abilities and other look-back
 // effects see its prior characteristics, CR 603.10, CR 608.2h), applies
 // zone-change replacement effects to find the real destination (CR 614), and
 // resolves merged-permanent component moves. The moved card becomes a new object
 // in its new zone (CR 400.7).
 func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destination zone.Type) (preparedPermanentZoneMove, bool) {
+	move, ok := preparePermanentZoneDeparture(g, permanent, destination)
+	if !ok {
+		return preparedPermanentZoneMove{}, false
+	}
+	moves := []preparedPermanentZoneMove{move}
+	replacePermanentZoneMoveDestinations(g, moves)
+	ok = finishPermanentZoneMove(g, &moves[0])
+	return moves[0], ok
+}
+
+// preparePermanentZoneDeparture captures the pre-move state without asking any
+// replacement questions. The whole batch's pending decisions are ordered APNAP.
+func preparePermanentZoneDeparture(g *game.Game, permanent *game.Permanent, destination zone.Type) (preparedPermanentZoneMove, bool) {
 	if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
 		return preparedPermanentZoneMove{}, false
 	}
@@ -495,39 +508,120 @@ func preparePermanentZoneMove(g *game.Game, permanent *game.Permanent, destinati
 		ToZone:             destination,
 	}
 	event.ControlledTriggerDoublers = captureControlledTriggerDoublerSnapshot(g)
-	replacement := replacementZoneChange(g, event)
-	replacedDestination := replacement.destination
-	actualDestination := replacedDestination
-	if !permanent.Token {
-		actualDestination = commanderReplacementDestination(g, permanent.CardInstanceID, actualDestination)
-	}
-	componentMoves, ok := mergedComponentZoneMoves(g, permanent, replacedDestination)
+	componentMoves, ok := mergedComponentZoneMoves(g, permanent, destination)
 	if !ok {
 		return preparedPermanentZoneMove{}, false
-	}
-	if _, ok := destinationZone(g, permanent.Owner, actualDestination); !ok {
-		return preparedPermanentZoneMove{}, false
-	}
-	var retained counter.Set
-	if !permanent.Counters.IsEmpty() && retainsCounters(g, permanentEffectiveAbilitiesView(g, permanent),
-		conditionContext{controller: event.Controller, source: permanent}, zone.Battlefield, actualDestination) {
-		retained = cloneCounters(permanent.Counters)
-	}
-	for i := range componentMoves {
-		if !permanent.Counters.IsEmpty() && retainsCounters(g, permanentEffectiveAbilitiesView(g, permanent),
-			conditionContext{controller: event.Controller, source: permanent}, zone.Battlefield, componentMoves[i].destination) {
-			componentMoves[i].retained = cloneCounters(permanent.Counters)
-		}
 	}
 	return preparedPermanentZoneMove{
 		permanent:         permanent,
 		snapshot:          snapshot,
 		event:             event,
-		replacement:       replacement,
-		actualDestination: actualDestination,
+		actualDestination: destination,
 		componentMoves:    componentMoves,
-		retained:          retained,
 	}, true
+}
+
+func replacePermanentZoneMoveDestinations(g *game.Game, moves []preparedPermanentZoneMove) {
+	type progress struct {
+		ordinary      zoneChangeReplacement
+		ordinaryDone  bool
+		commanderDone bool
+		componentDone []bool
+	}
+	type pendingChoice struct {
+		player  game.PlayerID
+		resolve func()
+	}
+	states := make([]progress, len(moves))
+	for i := range moves {
+		states[i].ordinary = newZoneChangeReplacement(moves[i].event)
+		states[i].componentDone = make([]bool, len(moves[i].componentMoves))
+	}
+	for {
+		var choices []pendingChoice
+		addCommanderChoice := func(cardID id.ID, destination *zone.Type, done *bool) {
+			if *done || !isCommanderCardID(g, cardID) || (*destination != zone.Hand && *destination != zone.Library) {
+				return
+			}
+			card, ok := g.GetCardInstance(cardID)
+			if !ok || !isPlayerAlive(g, card.Owner) {
+				return
+			}
+			choices = append(choices, pendingChoice{card.Owner, func() {
+				*destination = commanderReplacementDestination(g, cardID, *destination)
+				*done = true
+			}})
+		}
+		for i := range moves {
+			move := &moves[i]
+			state := &states[i]
+			if !state.ordinaryDone {
+				matches := state.ordinary.pendingChoices(g)
+				if len(matches) != 0 {
+					choices = append(choices, pendingChoice{replacementEventPlayer(move.event), func() {
+						decision := chooseReplacementDecision(g, replacementEventPlayer(move.event), replacementEffectLabels(matches))
+						state.ordinary.apply(selectedReplacementEffect(matches, decision))
+					}})
+					continue
+				}
+				state.ordinaryDone = true
+				move.replacement = state.ordinary.result
+				move.actualDestination = move.replacement.destination
+				for j := range move.componentMoves {
+					move.componentMoves[j].destination = move.replacement.destination
+				}
+			}
+			// Ordinary replacements use the controller (CR 616.1); the
+			// command-zone option remains the owner's decision (CR 903.9b).
+			if !move.permanent.Token {
+				addCommanderChoice(move.permanent.CardInstanceID, &move.actualDestination, &state.commanderDone)
+			}
+			for j := range move.componentMoves {
+				component := &move.componentMoves[j]
+				if component.tokenDef == nil {
+					addCommanderChoice(component.cardID, &component.destination, &state.componentDone[j])
+				}
+			}
+		}
+		if len(choices) == 0 {
+			return
+		}
+		next := choices[0]
+	findNext:
+		for _, player := range triggerAPNAPPlayers(g) {
+			for _, choice := range choices {
+				if choice.player == player {
+					next = choice
+					break findNext
+				}
+			}
+		}
+		next.resolve()
+		// A replacement may expose a new decision for an earlier player.
+		// Reconsider every outstanding choice from the active player (101.4d).
+	}
+}
+
+func finishPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMove) bool {
+	permanent := move.permanent
+	if _, ok := destinationZone(g, permanent.Owner, move.actualDestination); !ok {
+		return false
+	}
+	if !permanent.Counters.IsEmpty() && retainsCounters(g, permanentEffectiveAbilitiesView(g, permanent),
+		conditionContext{controller: move.event.Controller, source: permanent}, zone.Battlefield, move.actualDestination) {
+		move.retained = cloneCounters(permanent.Counters)
+	}
+	for i := range move.componentMoves {
+		component := &move.componentMoves[i]
+		if _, ok := destinationZone(g, component.owner, component.destination); !ok {
+			return false
+		}
+		if !permanent.Counters.IsEmpty() && retainsCounters(g, permanentEffectiveAbilitiesView(g, permanent),
+			conditionContext{controller: move.event.Controller, source: permanent}, zone.Battlefield, component.destination) {
+			component.retained = cloneCounters(permanent.Counters)
+		}
+	}
+	return true
 }
 
 // applyPreparedPermanentZoneMove commits a prepared permanent zone move: it
@@ -637,7 +731,9 @@ func movePermanentToZoneInBatchWithControlledTriggerSnapshot(
 // a single simultaneous event so look-back-in-time abilities see them all leaving
 // together (CR 603.10a) and so a single damage/zone-change batch is produced. All
 // moves are prepared (last known information snapshotted) before any is applied so
-// each one's replacement and trigger checks use the pre-move game state. CR 404.3
+// each one's replacement and trigger checks use the pre-move game state.
+// Replacement choices are staged together in APNAP order, without changing the
+// input order of committed moves or their correlated results. CR 404.3
 // lets the owner arrange cards put into the same graveyard at once; this engine
 // does not prompt for that order and adds them in processing order instead.
 func movePermanentsToZoneSimultaneously(g *game.Game, permanents []*game.Permanent, destination zone.Type) bool {
@@ -677,11 +773,19 @@ func movePermanentsToZoneSimultaneouslyWithResultsInBatch(g *game.Game, permanen
 func preparePermanentZoneMovesInBatch(g *game.Game, permanents []*game.Permanent, destination zone.Type, simultaneousID id.ID) []preparedPermanentZoneMove {
 	moves := make([]preparedPermanentZoneMove, 0, len(permanents))
 	for _, permanent := range permanents {
-		move, ok := preparePermanentZoneMove(g, permanent, destination)
+		move, ok := preparePermanentZoneDeparture(g, permanent, destination)
 		if ok {
 			moves = append(moves, move)
 		}
 	}
+	replacePermanentZoneMoveDestinations(g, moves)
+	prepared := moves[:0]
+	for i := range moves {
+		if finishPermanentZoneMove(g, &moves[i]) {
+			prepared = append(prepared, moves[i])
+		}
+	}
+	moves = prepared
 	if len(moves) > 0 {
 		if simultaneousID == 0 {
 			simultaneousID = g.IDGen.Next()
@@ -750,17 +854,13 @@ func mergedComponentZoneMoves(g *game.Game, permanent *game.Permanent, destinati
 		if !ok {
 			return nil, false
 		}
-		actualDestination := commanderReplacementDestination(g, card.ID, destination)
-		if _, ok := destinationZone(g, card.Owner, actualDestination); !ok {
-			return nil, false
-		}
 		moves = append(moves, mergedCardZoneMove{
 			cardID:       card.ID,
 			face:         component.Face,
 			faceDown:     faceDown,
 			faceDownFace: faceDownFace,
 			owner:        card.Owner,
-			destination:  actualDestination,
+			destination:  destination,
 		})
 	}
 	return moves, true
