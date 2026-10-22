@@ -54,6 +54,14 @@ executable scaffold and behavioral evidence.
    acceptance criteria are met, noting explicitly whether work is only local
    or has reached origin. Do not report a local commit as deployed support.
 
+When the user requests Dynamic Workflow execution, use the registered
+`council4-production` workflow and
+[operating guide](../../../docs/dynamic-card-production.md). Its production mode
+lands successful units on remote main with serialized validation/review and
+explicit task-type/stage/model/time/AIC accounting. Worker agents do not commit,
+push, mutate other workspaces or spawn extra agents; the workflow owns landing.
+Do not start a workflow merely because ordinary issue work could use one.
+
 ## Missing capabilities and next work
 
 Reuse a concrete blocker or file one concise `To Be Triaged` / `Card Support TODO`

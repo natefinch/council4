@@ -49,6 +49,13 @@ jobs:
       - name: Full test suite
         if: steps.plan.outputs.code == 'true'
         run: go test ./...
+      - uses: actions/setup-node@v4
+        if: steps.plan.outputs.code == 'true'
+        with:
+          node-version: '24'
+      - name: Production workflow tests
+        if: steps.plan.outputs.code == 'true'
+        run: node --test .github/extensions/council4-production/workflow.test.mjs
       - name: Documentation-only change
         if: steps.plan.outputs.code != 'true'
         run: echo "No code changes; test suite not required."

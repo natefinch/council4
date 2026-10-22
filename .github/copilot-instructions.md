@@ -44,6 +44,13 @@ policy does not authorize unsolicited commits or pushes for arbitrary edits.
    A local commit is not a pushed or deployed change. Continue only within the
    user's assigned scope. PRs remain available when explicitly requested.
 
+For the user-authorized continuous-production workflow, successful cards and
+their Engine prerequisites are delivered to **remote `main`**, not left as local
+commits. The [Dynamic Workflow](../docs/dynamic-card-production.md) serializes
+reviewed, validated landing from isolated worktrees and confirms remote ancestry.
+Never force-push, bypass branch protection, or count an unlanded unit as delivered.
+Preflight/reporting modes do not authorize implementation or publication.
+
 ## Author cards, not another compiler
 
 For a new card request or production batch, use the repo-owned

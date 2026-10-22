@@ -251,6 +251,14 @@ integration status and next action. No saved batch or a needed Engine update
 alone does not end broadly authorized production. Durable queue state does not
 authorize automation or promise unattended restart.
 
+For explicitly requested Dynamic Workflow execution, use the
+[observable production workflow](dynamic-card-production.md). Successful units
+are validated, reviewed according to risk and landed on remote `main`; local
+commits are not the final delivery condition. Separate card implementation,
+shared Engine work, reviews and review fixes in the workflow's measured stages.
+The repository workflow/policy can be tuned between runs without relabeling
+historical results or weakening the required source/behavior evidence.
+
 ## Executable draft scaffold
 
 ```sh
