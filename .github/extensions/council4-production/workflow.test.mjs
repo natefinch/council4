@@ -1,11 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile, mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
+import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
 import { assessChecks } from "./pull-request.mjs";
+import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
 import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
@@ -121,6 +122,24 @@ test("Unavailable billing stays incomplete rather than becoming zero-cost succes
   assert.equal(result.reconciliation, "incomplete");
 });
 
+test("Repeating the same card family in different units retains separate cost/time rows", () => {
+  const stages = [0, 2].map(unitIndex => ({
+    label: `card/batch/unit-${unitIndex}/implementation/0`, taskType: "card",
+    taskId: "batch", phase: "implementation", unitIndex,
+  }));
+  const agents = stages.map((stage, index) => ({
+    agentId: `agent-${index}`, label: stage.label, resolvedModel: "luna", activeMs: index + 10,
+  }));
+  const receipts = agents.map((agent, index) => ({
+    kind: "usage", key: String(index), agentId: agent.agentId, model: "luna", nanoAiu: 1e9,
+  }));
+  const report = summarize({ runId: "r", consumed: { nanoAiu: 2e9, activeMs: 30 }, agents }, stages, receipts);
+  assert.deepEqual(report.groups.map(group => group.unitIndex), [0, 2]);
+  assert.deepEqual(report.groups.map(group => group.observedAic), [1, 1]);
+  assert.deepEqual(report.groups.map(group => group.activeMs), [10, 11]);
+  assert.equal(report.reconciliation, "matched");
+});
+
 test("Admission accounting separates new cards from migration and refuses unfinished claims", () => {
   const before = { records: [
     { oracle_id: "new", name: "New", status: "unclaimed" },
@@ -132,6 +151,79 @@ test("Admission accounting separates new cards from migration and refuses unfini
   assert.deepEqual(result.existingSupportVerified, [{ oracleId: "old", name: "Old" }]);
   assert.throws(() => admissions(before, after, "engine"), /mixed in card admissions/);
   assert.throws(() => admissions(before, { records: [{ status: "claimed", owner: "writer" }] }, "card"), /active queue claim/);
+});
+
+async function queueFixture(t) {
+  const workPath = await mkdtemp(path.join(os.tmpdir(), "council4-claim-"));
+  t.after(() => rm(workPath, { recursive: true }));
+  const manifest = path.join(workPath, "testdata/card-authoring/production.json");
+  await mkdir(path.dirname(manifest), { recursive: true });
+  const queue = {
+    corpus_sha256: "pin",
+    batches: [{ id: "batch", oracle_ids: ["a", "b", "c"] }],
+    records: ["a", "b", "c"].map(id => ({
+      oracle_id: id, revision: `printing-${id}`, name: id, batch: "batch", status: "unclaimed",
+    })),
+  };
+  await writeFile(manifest, JSON.stringify(queue));
+  const calls = [];
+  const command = async (_cwd, _executable, args) => {
+    const operation = args[args.indexOf("-operation") + 1];
+    calls.push(operation);
+    const current = JSON.parse(await readFile(manifest, "utf8"));
+    if (operation === "next") {
+      if (current.records.some(card => card.owner && card.owner !== "run")) throw new Error("Another owner holds the claim");
+      return JSON.stringify({ batch: current.batches[0], cards: current.records });
+    }
+    if (operation === "claim") {
+      current.records.forEach(card => { card.status = "claimed"; card.owner = "run"; });
+    } else if (operation === "verify") {
+      current.records.forEach(card => { card.status = "implemented-verified"; card.owner = ""; card.evidence = "actual named scenario"; });
+    } else if (operation !== "check") throw new Error("Unexpected queue operation");
+    await writeFile(manifest, JSON.stringify(current));
+    return "";
+  };
+  const options = { workPath, task: { id: "batch", batchPlan: "" }, corpus: "/corpus",
+    owner: "run", planPath: path.join(workPath, ".cardwork/plan.json"), command };
+  return { options, manifest, calls };
+}
+
+test("Coordinator claims the saved batch before card work and owns verified admission", async t => {
+  const f = await queueFixture(t);
+  const claim = await prepareCardBatch(f.options);
+  assert.deepEqual(f.calls, ["next", "claim", "next"]);
+  assert.equal(claim.owner, "run");
+  assert.equal(claim.cards.length, 3);
+  assert.ok(JSON.parse(await readFile(f.manifest)).records.every(card => card.status === "claimed" && card.owner === "run"));
+  await verifyCardBatch({ ...f.options, batchId: claim.batchId });
+  assert.equal(f.calls.at(-1), "verify");
+  await verifyCardBatch({ ...f.options, batchId: claim.batchId });
+  assert.equal(f.calls.at(-1), "check");
+});
+
+test("Coordinator refuses foreign claims, invented batches, rewrites and partial worker promotion", async t => {
+  for (const failure of ["foreign owner", "unknown batch", "saved rewrite", "wrong plan", "partial"]) {
+    const f = await queueFixture(t);
+    const queue = JSON.parse(await readFile(f.manifest, "utf8"));
+    if (failure === "foreign owner") queue.records.forEach(card => { card.owner = "other"; card.status = "claimed"; });
+    if (failure === "unknown batch") f.options.task.id = "unknown";
+    if (failure === "saved rewrite") f.options.task.batchPlan = "{}";
+    if (failure === "wrong plan") {
+      f.options.task.id = "unknown";
+      f.options.task.batchPlan = JSON.stringify({ corpus_sha256: "stale", batches: [{ id: "unknown" }] });
+    }
+    if (failure === "partial") {
+      queue.records[0].status = "implemented-verified";
+      queue.records[1].status = "claimed";
+      queue.records[1].owner = "run";
+    }
+    await writeFile(f.manifest, JSON.stringify(queue));
+    const before = await readFile(f.manifest, "utf8");
+    if (failure === "partial") await assert.rejects(verifyCardBatch({ ...f.options, batchId: "batch" }), /partially promoted/);
+    else await assert.rejects(prepareCardBatch(f.options));
+    assert.equal(await readFile(f.manifest, "utf8"), before);
+    assert.ok(!f.calls.includes("claim") && !f.calls.includes("verify"));
+  }
 });
 
 async function repositoryFixture(t) {
@@ -243,6 +335,42 @@ test("Changed submission and unreviewed crash commits reject publication", async
   await git(f.work.path, ["add", "card.txt"]);
   await git(f.work.path, ["commit", "-m", "unreviewed\n\nCopilot-Session: session"]);
   await assert.rejects(land(f.repo, f.work, { title: "bad" }, f.expected, "session", undefined, services), /Unexpected task/);
+});
+
+test("Review fingerprints do not change when new, renamed, binary and executable files are staged", async t => {
+  const f = await repositoryFixture(t);
+  await writeFile(path.join(f.work.path, "new.txt"), "new card source\n");
+  await writeFile(path.join(f.work.path, "empty.txt"), "");
+  await writeFile(path.join(f.work.path, "binary.dat"), Buffer.from([0, 255, 0, 128]));
+  await writeFile(path.join(f.work.path, "tool.sh"), "#!/bin/sh\nexit 0\n");
+  await chmod(path.join(f.work.path, "tool.sh"), 0o755);
+  await rename(path.join(f.work.path, "card.txt"), path.join(f.work.path, "renamed.txt"));
+  const before = await changes(f.work.path);
+  await git(f.work.path, ["add", "--", ...before.files]);
+  assert.deepEqual(await changes(f.work.path), before);
+  await git(f.work.path, ["restore", "--staged", "--", ...before.files]);
+  assert.deepEqual(await changes(f.work.path), before);
+  await chmod(path.join(f.work.path, "tool.sh"), 0o644);
+  assert.notEqual((await changes(f.work.path)).digest, before.digest);
+  await chmod(path.join(f.work.path, "tool.sh"), 0o755);
+  assert.deepEqual(await changes(f.work.path), before);
+  await rm(path.join(f.work.path, "empty.txt"));
+  assert.notEqual((await changes(f.work.path)).digest, before.digest);
+  await writeFile(path.join(f.work.path, "empty.txt"), "");
+  assert.deepEqual(await changes(f.work.path), before);
+  await writeFile(path.join(f.work.path, "new.txt"), "different, unreviewed source\n");
+  assert.notEqual((await changes(f.work.path)).digest, before.digest);
+});
+
+test("A prepared new-file tree lands without losing its review fingerprint", async t => {
+  const f = await repositoryFixture(t);
+  await writeFile(path.join(f.work.path, "new-card.txt"), "real new card\n");
+  const expected = await changes(f.work.path);
+  await git(f.work.path, ["add", "--", ...expected.files]);
+  expected.tree = await git(f.work.path, ["write-tree"]);
+  const services = landingServices(f);
+  const result = await land(f.repo, f.work, { title: "new card" }, expected, "session", undefined, services);
+  assert.equal(result.published, true);
 });
 
 test("New main is merged locally and changed integration is reviewed and validated before PR", async t => {

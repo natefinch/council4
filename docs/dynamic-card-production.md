@@ -129,6 +129,14 @@ the exact gap and retained evidence and can choose an Engine unit. After the
 Engine unit lands, later selections reassess dependent cards on the new runtime.
 An exhausted saved batch is a reason to prepare the next bounded batch, not a
 reason to restart strategy research.
+For a card unit the selector returns the exact saved batch ID, or a bounded
+reviewed plan in the existing `add-reviewed-batch` format. The deterministic
+coordinator saves that plan if needed and claims the whole batch **before**
+launching the card worker. The worker receives confirmed owner/identity evidence
+and never waits for a separate claim message or edits the saved queue itself.
+After complete implementation, the coordinator runs checked registry/source
+admission through `cardqueue verify` before validation/review. Failed or partial
+admission cannot become a successful unit.
 Landing also rejects unfinished queue claims and separates newly verified
 uninstalled identities from verification/migration of existing installed support.
 Engine units cannot quietly include new card admissions in their cost account.
@@ -136,16 +144,21 @@ Engine units cannot quietly include new card admissions in their cost account.
 Each model call has a unique durable label:
 
 ```text
-card/08-scry-interaction/implementation/0
-card/08-scry-interaction/review/0
-card/08-scry-interaction/review_fix/1
-card/08-scry-interaction/re_review/1
-card/08-scry-interaction/ci_fix/1
-card/08-scry-interaction/ci_review/1
-card/08-scry-interaction/integration_review/1
-engine/3313/implementation/0
-engine/3313/review/0
+card/08-scry-interaction/unit-0/implementation/0
+card/08-scry-interaction/unit-0/review/0
+card/08-scry-interaction/unit-0/review_fix/1
+card/08-scry-interaction/unit-0/re_review/1
+card/08-scry-interaction/unit-0/ci_fix/1
+card/08-scry-interaction/unit-0/ci_review/1
+card/08-scry-interaction/unit-0/integration_review/1
+engine/3313/unit-1/implementation/0
+engine/3313/unit-1/review/0
 ```
+
+The unit index distinguishes retrying the same family after an Engine change
+from its earlier failed attempt. Policy versions before 1.2.0 did not record
+this dimension and can combine repeated task/stage rows; their native totals
+remain valid, but the missing unit attribution is not retroactively invented.
 
 `validation_fix` is distinct from `review_fix` and `ci_fix`. CI fixes have their
 own task-type model choice; CI and local-test elapsed time are deterministic
@@ -234,6 +247,13 @@ every run also records a hash of executable workflow code and policy. Tune betwe
 runs, validate with `node --test .github/extensions/council4-production/workflow.test.mjs`,
 review/commit the change, then reload the extension. No corpus rebuild or lint
 is required.
+
+Reviewed file fingerprints use framed paths, executable state and actual file
+bytes (or deletion), independent of staging and rename detection. Staging a
+new source/test file must not masquerade as a post-review content change.
+The final Git tree is checked separately before commit. Policy 1.2.0 includes
+regressions for this failure and deterministic claim/admission handoffs after
+the first production run exposed both.
 
 Resuming reuses completed durable steps and agent calls. **Changing code/policy
 does not retroactively change a paused run**: the workflow rejects a mismatched

@@ -78,9 +78,10 @@ export function summarize(detail, stages, receipts) {
     if (receipt.nanoAiu === null) missingBillingReceipts++;
     else observedNanoAiu += receipt.nanoAiu;
     if (!stage) continue;
-    const key = JSON.stringify([stage.taskType, stage.taskId, stage.phase, receipt.model ?? agent.resolvedModel ?? null]);
+    const key = JSON.stringify([stage.taskType, stage.taskId, stage.unitIndex ?? null, stage.phase, receipt.model ?? agent.resolvedModel ?? null]);
     const group = assigned.get(key) ?? {
       taskType: stage.taskType, taskId: stage.taskId, phase: stage.phase,
+      unitIndex: stage.unitIndex ?? null,
       model: receipt.model ?? agent.resolvedModel ?? null,
       observedNanoAiu: 0, calls: 0, missingBillingReceipts: 0,
     };
@@ -98,9 +99,10 @@ export function summarize(detail, stages, receipts) {
   for (const agent of agents) {
     const stage = agent.attribution;
     if (!stage) continue;
-    const key = JSON.stringify([stage.taskType, stage.taskId, stage.phase, agent.resolvedModel]);
+    const key = JSON.stringify([stage.taskType, stage.taskId, stage.unitIndex ?? null, stage.phase, agent.resolvedModel]);
     const group = assigned.get(key) ?? {
       taskType: stage.taskType, taskId: stage.taskId, phase: stage.phase, model: agent.resolvedModel,
+      unitIndex: stage.unitIndex ?? null,
       observedNanoAiu: 0, calls: 0, missingBillingReceipts: 0,
     };
     group.activeMs = (group.activeMs ?? 0) + agent.activeMs;
@@ -131,7 +133,7 @@ export function writeReport(directory, report) {
   const destination = `${directory}/report.json`;
   writeJSON(destination, report);
   const cells = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
-  const columns = ["taskType", "taskId", "phase", "model", "activeMs", "calls", "observedAic", "complete"];
+  const columns = ["unitIndex", "taskType", "taskId", "phase", "model", "activeMs", "calls", "observedAic", "complete"];
   const csv = [columns.join(","), ...report.groups.map(row => columns.map(k => cells(row[k])).join(","))];
   writeFileSync(`${directory}/costs.csv`, csv.join("\n") + "\n");
   const cell = value => String(value ?? "unknown").replaceAll("|", "\\|").replaceAll("\n", " ");
@@ -142,9 +144,9 @@ export function writeReport(directory, report) {
     "",
     `Native total: **${report.runtimeAic.toFixed(6)} AIC**. Accounting: **${report.reconciliation}**. Unallocated: **${(report.unallocatedNanoAiu / 1e9).toFixed(6)} AIC**.`,
     "",
-    "| Task type | Task | Stage | Actual model | Agent active seconds | Observed AIC | Complete accounting |",
-    "| --- | --- | --- | --- | ---: | ---: | --- |",
-    ...report.groups.map(row => `| ${[row.taskType, row.taskId, row.phase, row.model,
+    "| Unit | Task type | Task | Stage | Actual model | Agent active seconds | Observed AIC | Complete accounting |",
+    "| --- | --- | --- | --- | --- | ---: | ---: | --- |",
+    ...report.groups.map(row => `| ${[row.unitIndex ?? "unrecorded", row.taskType, row.taskId, row.phase, row.model,
       row.activeMs == null ? "unknown" : (row.activeMs / 1000).toFixed(2),
       row.observedAic.toFixed(6), row.complete ? "yes" : "no"].map(cell).join(" | ")} |`),
     "",

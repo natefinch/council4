@@ -65,21 +65,24 @@ export async function mainProtection(root, signal) {
 }
 
 export async function changes(cwd, signal) {
-  const tracked = await git(cwd, ["diff", "--name-only", "HEAD"], signal);
+  const tracked = await git(cwd, ["diff", "--no-renames", "--name-only", "HEAD"], signal);
   const untracked = await git(cwd, ["ls-files", "--others", "--exclude-standard"], signal);
   const files = [...new Set([...tracked.split("\n"), ...untracked.split("\n")].filter(Boolean))].sort();
   const hash = createHash("sha256");
-  hash.update(await git(cwd, ["diff", "--binary", "HEAD"], signal));
   for (const file of files) {
     if (path.isAbsolute(file) || file.split("/").includes("..") || !/^[a-zA-Z0-9_./-]+$/.test(file)) {
       throw new Error("Changed path requires manual integration");
     }
-    hash.update(file);
     try {
-      if ((await lstat(path.join(cwd, file))).isSymbolicLink()) throw new Error("Changed symlink requires manual integration");
-      hash.update(await readFile(path.join(cwd, file)));
+      const metadata = await lstat(path.join(cwd, file));
+      if (metadata.isSymbolicLink()) throw new Error("Changed symlink requires manual integration");
+      const content = await readFile(path.join(cwd, file));
+      // Index membership is bookkeeping, not reviewed content. Include framed
+      // path/mode/bytes so git add and rename detection cannot alter the hash.
+      hash.update(JSON.stringify([file, "file", Boolean(metadata.mode & 0o111), content.length]));
+      hash.update(content);
     }
-    catch (error) { if (error.code !== "ENOENT") throw error; hash.update("<deleted>"); }
+    catch (error) { if (error.code !== "ENOENT") throw error; hash.update(JSON.stringify([file, "deleted"])); }
   }
   return { files, digest: hash.digest("hex") };
 }
