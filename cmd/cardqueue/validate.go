@@ -43,10 +43,27 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 	}
 	batches := make(map[string]batch)
 	members := make(map[string]string)
+	retired := make(map[string]bool)
+	for _, b := range queue.RetiredBatches {
+		if retired[b.ID] {
+			return fmt.Errorf("duplicate retired batch %s", b.ID)
+		}
+		if err := validateBatch(b); err != nil {
+			return err
+		}
+		retired[b.ID] = true
+		for _, id := range b.OracleIDs {
+			if _, exists := byID[id]; !exists {
+				return fmt.Errorf("unknown retired batch identity %s", id)
+			}
+		}
+	}
 	for _, b := range queue.Batches {
-		if _, exists := batches[b.ID]; exists || b.ID == "" || b.Family == "" ||
-			len(b.OracleIDs) < 3 || len(b.OracleIDs) > 5 || len(b.Prerequisites) == 0 || len(b.Operations) == 0 {
-			return fmt.Errorf("invalid batch %s", b.ID)
+		if _, exists := batches[b.ID]; exists || retired[b.ID] {
+			return fmt.Errorf("duplicate batch %s", b.ID)
+		}
+		if err := validateBatch(b); err != nil {
+			return err
 		}
 		batches[b.ID] = b
 		for _, oracleID := range b.OracleIDs {
@@ -73,6 +90,11 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 		delete(members, r.OracleID)
 		if r.Status != "claimed" && r.Owner != "" {
 			return fmt.Errorf("dangling owner %s", r.OracleID)
+		}
+		for _, reassessment := range r.Reassessments {
+			if !validPrerequisiteEvidence(reassessment.prerequisiteEvidence) || reassessment.Reason == "" {
+				return fmt.Errorf("invalid blocker reassessment %s", r.OracleID)
+			}
 		}
 		switch r.Status {
 		case "unclaimed":

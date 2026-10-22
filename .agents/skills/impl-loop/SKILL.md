@@ -1,6 +1,6 @@
 ---
 name: impl-loop
-description: Implement a selected epic's unblocked children or eligible Ready For Dev issues using authored Go and a direct-to-main workflow. Use when asked to run impl-loop, work through an epic, or keep implementing issues. No automatic PR or merge ceremony.
+description: Implement a selected epic, eligible Ready For Dev issues, or authorized continuous card production using authored Go and shared Engine prerequisites. Use when asked to run impl-loop, work through an epic, or keep implementing cards/issues. No automatic PR or merge ceremony.
 ---
 
 # Implementation Loop
@@ -18,15 +18,21 @@ executable scaffold and behavioral evidence.
 1. Read the requested epic/issue and live blocking relationships. A selected
    epic takes precedence over general backlog selection; use its earliest
    unblocked child and existing runtime prerequisites.
-2. If no epic was selected, choose an actionable open `Ready For Dev` issue in
+2. For broadly authorized continuous card production, follow the canonical
+   guide's [saved queue and continuation scope](../../../docs/card-authoring.md#saved-production-queue).
+   Resume the same owner's claim first. If no reviewed batch is executable,
+   review and persist a small new family or implement its proven canonical
+   Engine prerequisite; no saved batch is not completion or a request for
+   another strategy prompt. The coordinator alone mutates the queue.
+3. Otherwise, if no epic was selected, choose an actionable open `Ready For Dev` issue in
    the requested scope. Check blocking issues, active ownership, open work and
    supersession notices before claiming it. Do not create an epic merely to
    run an already defined queue.
-3. A reference in a closed epic is not a reservation. An open active assignment
+4. A reference in a closed epic is not a reservation. An open active assignment
    still needs coordination; do not take over another writer's change.
-4. Exclude parked/superseded work and Oracle expansion tasks. Only select legacy
+5. Exclude parked/superseded work and Oracle expansion tasks. Only select legacy
    compiler maintenance when the assigned work explicitly requires it.
-5. Mark the issue `In Progress`. Promote the next child to `Ready For Dev` only
+6. Mark the issue `In Progress`. Promote the next child to `Ready For Dev` only
    after its prerequisites are complete and its requirements remain actionable.
 
 ## Implement and checkpoint
@@ -60,11 +66,24 @@ Keep partial cards unsupported. Leave blocked issues open, remove stale
 item only within the user's assigned scope. Do not clear meaningful active
 ownership until a handoff exists.
 
+When the run includes both remaining cards and their required Engine support,
+a proven blocker routes to a bounded canonical prerequisite, not an automatic
+stop. Check live ownership, retain the acceptance probe, implement and review
+the shared invariant, then explicitly reassess dependent exact identities
+against the actual runtime and remaining printed behavior. Issue closure alone
+does not make a batch ready or a card supported. Keep selected Engine work moving
+instead of indefinitely substituting easier batches. Independent ready-card
+work needs isolated workspaces and serial integration; it does not authorize
+concurrent queue writers.
+
 Refresh live status between items. Complete an epic only when all its required
 acceptance work is complete, not when no child can currently be selected.
 Stop with an actionable summary when the requested work is done, every remaining
-item is blocked/parked, an authorized budget ends, or an external decision is
-required. Never treat that stopping condition as completion of blocked work.
+item is outside scope or cannot safely proceed after bounded investigation and
+escalation, an authorized budget ends, required sources/access are unavailable,
+ownership or integration permissions conflict, or an external decision is
+required. A bounded issue/batch assignment does not silently expand into corpus
+work. Never treat a stopping condition as completion of blocked work.
 
 ## Prompt
 
@@ -73,3 +92,8 @@ required. Never treat that stopping condition as completion of blocked work.
 > existing behavior, validate proportionally, inspect the diff and commit directly
 > to main when authorized. Keep one writer; no mandatory PRs or new epics. Reuse
 > precise blockers and honor the run's scope, budget and push permissions.
+> For an authorized continuous-production assignment, replenish reviewed small
+> batches, work canonical Engine prerequisites, reassess dependents and resume
+> from saved ownership/evidence without another strategy prompt. Tune concrete
+> workflow friction while delivering; do not start another model tournament,
+> scheduler or worker fleet as a prerequisite.

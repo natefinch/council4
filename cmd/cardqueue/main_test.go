@@ -17,6 +17,12 @@ func queueFixture(t *testing.T) (manifest, []cardgen.ScryfallCard, supportinvent
 		{ID: "first", Family: "destruction", OracleIDs: []string{"a", "b", "c"}, Prerequisites: []int{3273}, Operations: []string{"Context.Destroy"}},
 		{ID: "second", Family: "search", OracleIDs: []string{"d", "e", "f"}, Prerequisites: []int{3274}, Operations: []string{"Context.Search"}},
 	}}
+	for i := range q.Batches {
+		q.Batches[i].PrerequisiteEvidence = []prerequisiteEvidence{{
+			Issue: q.Batches[i].Prerequisites[0], RuntimeRevision: "reviewed-runtime",
+			Evidence: "complete Engine path and executed behavioral scenario",
+		}}
+	}
 	var corpus []cardgen.ScryfallCard
 	var inventory supportinventory.Inventory
 	for _, oracleID := range []string{"a", "b", "c", "d", "e", "f", "existing"} {

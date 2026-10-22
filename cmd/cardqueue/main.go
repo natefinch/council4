@@ -17,26 +17,29 @@ import (
 )
 
 type record struct {
-	OracleID string   `json:"oracle_id"`
-	Revision string   `json:"revision"`
-	Name     string   `json:"name"`
-	Status   string   `json:"status,omitempty"`
-	Family   string   `json:"family,omitempty"`
-	Decks    int      `json:"deck_occurrences,omitempty"`
-	Batch    string   `json:"batch,omitempty"`
-	Owner    string   `json:"owner,omitempty"`
-	Blocker  int      `json:"blocker,omitempty"`
-	Reason   string   `json:"reason,omitempty"`
-	Evidence string   `json:"evidence,omitempty"`
-	Keys     []string `json:"registration_keys,omitempty"`
+	OracleID      string                `json:"oracle_id"`
+	Revision      string                `json:"revision"`
+	Name          string                `json:"name"`
+	Status        string                `json:"status,omitempty"`
+	Family        string                `json:"family,omitempty"`
+	Decks         int                   `json:"deck_occurrences,omitempty"`
+	Batch         string                `json:"batch,omitempty"`
+	Owner         string                `json:"owner,omitempty"`
+	Blocker       int                   `json:"blocker,omitempty"`
+	Reason        string                `json:"reason,omitempty"`
+	Evidence      string                `json:"evidence,omitempty"`
+	Keys          []string              `json:"registration_keys,omitempty"`
+	Reassessments []blockerReassessment `json:"reassessments,omitempty"`
 }
 
 type batch struct {
-	ID            string   `json:"id"`
-	Family        string   `json:"family"`
-	OracleIDs     []string `json:"oracle_ids"`
-	Prerequisites []int    `json:"prerequisites"`
-	Operations    []string `json:"operations"`
+	ID                   string                 `json:"id"`
+	Family               string                 `json:"family"`
+	OracleIDs            []string               `json:"oracle_ids"`
+	Prerequisites        []int                  `json:"prerequisites"`
+	Operations           []string               `json:"operations"`
+	Review               string                 `json:"review,omitempty"`
+	PrerequisiteEvidence []prerequisiteEvidence `json:"prerequisite_evidence,omitempty"`
 }
 
 type manifest struct {
@@ -54,6 +57,7 @@ type manifest struct {
 	SelectionChanges json.RawMessage `json:"selection_changes,omitempty"`
 	SharedChanges    json.RawMessage `json:"shared_prerequisite_changes,omitempty"`
 	Batches          []batch         `json:"batches"`
+	RetiredBatches   []batch         `json:"retired_batches,omitempty"`
 	Records          []record        `json:"records"`
 	// Baseline contains associations, not invented exact legacy registrations.
 	BaselineProduction    []record `json:"baseline_production"`
@@ -61,11 +65,11 @@ type manifest struct {
 }
 
 func main() {
-	operation := flag.String("operation", "check", "init, check, next, claim, verify, release, block, format, reconcile-compiled")
+	operation := flag.String("operation", "check", "init, check, next, add-reviewed-batch, record-prerequisites, retire-batch, reassess, claim, verify, release, block, format, reconcile-compiled")
 	path := flag.String("manifest", "testdata/card-authoring/production.json", "saved queue")
-	plan := flag.String("plan", ".cardwork/production-plan.json", "init seed: reviewed batches, blockers and evidence")
+	plan := flag.String("plan", ".cardwork/production-plan.json", "init seed or explicit reviewed continuation/evidence input")
 	corpus := flag.String("corpus", ".cardwork/corpus/oracle-cards.json", "pinned Oracle corpus")
-	compiler := flag.String("compiler-report", ".cardwork/preservation/compile-report.json", "frozen evidence; never compiled")
+	compiler := flag.String("compiler-report", ".cardwork/preservation/compile-report.json", "optional frozen report; absent uses the pinned installation and live registry, never compiles")
 	batchID := flag.String("batch", "", "explicit batch for mutation")
 	owner := flag.String("owner", "", "sole writer session identity")
 	blocker := flag.Int("blocker", 0, "precise open capability issue for block")
@@ -86,8 +90,9 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 	if err := json.Unmarshal(corpusData, &corpus); err != nil {
 		return err
 	}
+	hash := fmt.Sprintf("%x", sha256.Sum256(corpusData))
 	registry := cards.NewDefaultRegistry()
-	inventory, err := supportinventory.Load(corpusPath, compilerPath, registry)
+	inventory, err := loadQueueInventory(corpusPath, compilerPath, corpus, hash, registry)
 	if err != nil {
 		return err
 	}
@@ -102,11 +107,11 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 	if err != nil {
 		return err
 	}
+	originalData := data
 	var queue manifest
 	if err := json.Unmarshal(data, &queue); err != nil {
 		return err
 	}
-	hash := fmt.Sprintf("%x", sha256.Sum256(corpusData))
 	if queue.CorpusSHA256 != hash {
 		return errors.New("corpus revision changed: reconcile explicitly, never reset claims")
 	}
@@ -132,8 +137,12 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 			return err
 		}
 		if next == nil {
-			fmt.Println("No executable saved batch. Stop: review one concrete blocker or request a bounded new batch.")
-			return nil
+			return json.NewEncoder(os.Stdout).Encode(struct {
+				Batch      *batch                `json:"batch"`
+				Pending    []pendingPrerequisite `json:"pending_prerequisites,omitempty"`
+				Candidates []record              `json:"unreviewed_candidates,omitempty"`
+				Action     string                `json:"next_action"`
+			}{nil, pendingPrerequisites(queue), unreviewedCandidates(queue), "Within authorized continuous production: review and add a bounded batch, work a canonical pending prerequisite, or reassess blocked cards. Otherwise stop at the assigned scope."})
 		}
 		var selected []record
 		for _, oracleID := range next.OracleIDs {
@@ -144,12 +153,21 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 			}
 		}
 		return json.NewEncoder(os.Stdout).Encode(struct {
-			Batch *batch   `json:"batch"`
-			Cards []record `json:"cards"`
-		}{next, selected})
+			Batch   *batch                `json:"batch"`
+			Cards   []record              `json:"cards"`
+			Pending []pendingPrerequisite `json:"pending_prerequisites,omitempty"`
+		}{next, selected, pendingPrerequisites(queue)})
 	case "init", "reconcile-compiled":
 	case "format":
 		slices.SortFunc(queue.Records, compareRecords)
+	case "add-reviewed-batch", "record-prerequisites", "retire-batch", "reassess":
+		plan, err := loadReviewedPlan(planPath)
+		if err != nil {
+			return err
+		}
+		if err := continueQueue(&queue, operation, batchID, owner, plan); err != nil {
+			return err
+		}
 	case "claim", "verify", "release", "block":
 		if err := transition(&queue, operation, batchID, owner, blocker, reason, inventory); err != nil {
 			return err
@@ -174,7 +192,7 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 		closeErr := file.Close()
 		return errors.Join(writeErr, closeErr)
 	}
-	return os.WriteFile(path, append(data, '\n'), 0o600)
+	return saveManifest(path, append(data, '\n'), originalData)
 }
 
 func initialize(queue *manifest, corpus []cardgen.ScryfallCard, inventory supportinventory.Inventory) error {
@@ -255,6 +273,9 @@ func nextBatch(queue manifest, owner string) (*batch, error) {
 	}
 	for _, status := range []string{"claimed", "unclaimed"} {
 		for _, b := range queue.Batches {
+			if status == "unclaimed" && len(missingPrerequisites(b)) != 0 {
+				continue
+			}
 			count := 0
 			for _, r := range queue.Records {
 				if r.Batch == b.ID && r.Status == status {
@@ -270,8 +291,14 @@ func nextBatch(queue manifest, owner string) (*batch, error) {
 }
 
 func transition(queue *manifest, operation, batchID, owner string, blocker int, reason string, inventory supportinventory.Inventory) error {
-	if batchID == "" || owner == "" {
+	if batchID == "" || strings.TrimSpace(owner) == "" {
 		return errors.New("mutations require explicit -batch and -owner")
+	}
+	if operation != "claim" && operation != "verify" && operation != "release" && operation != "block" {
+		return errors.New("invalid transition")
+	}
+	if operation == "block" && (blocker <= 0 || strings.TrimSpace(reason) == "") {
+		return errors.New("blocking needs one precise open issue and observed missing behavior")
 	}
 	if operation == "claim" {
 		next, err := nextBatch(*queue, owner)
@@ -288,9 +315,10 @@ func transition(queue *manifest, operation, batchID, owner string, blocker int, 
 			verified[support.OracleID] = support.Verification
 		}
 	}
+	updated := slices.Clone(queue.Records)
 	count := 0
-	for i := range queue.Records {
-		r := &queue.Records[i]
+	for i := range updated {
+		r := &updated[i]
 		if r.Batch != batchID {
 			continue
 		}
@@ -312,17 +340,13 @@ func transition(queue *manifest, operation, batchID, owner string, blocker int, 
 		case "release":
 			r.Status, r.Owner = "unclaimed", ""
 		case "block":
-			if blocker <= 0 || reason == "" {
-				return errors.New("blocking needs one precise open issue and observed missing behavior")
-			}
 			r.Status, r.Owner, r.Blocker, r.Reason = "blocked", "", blocker, reason
-		default:
-			return errors.New("invalid transition")
 		}
 	}
 	if count < 3 || count > 5 {
 		return errors.New("batch must contain 3–5 records")
 	}
+	queue.Records = updated
 	return nil
 }
 

@@ -13,6 +13,7 @@ const compiledInstallationPath = "testdata/card-preservation/installed-compiler.
 
 type installedCompilerIdentity struct {
 	OracleID string `json:"oracle_id"`
+	Name     string `json:"name"`
 	Layout   string `json:"layout"`
 }
 

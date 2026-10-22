@@ -37,6 +37,17 @@ identity. Before declaring a rules operation absent, follow the canonical guide'
 capability investigation: read complete relevant declarations, trace the Engine
 implementation and inspect behavioral prior art rather than guessing API names.
 If a rules operation is absent, search for a precise shared blocker,
-leave the whole card unsupported and continue only other assigned eligible
-cards. Report failed checks, partial work and local/unpushed commits explicitly.
+leave the whole card unsupported and follow the guide's
+[continuation scope](../../../docs/card-authoring.md#continuation-scope).
+A bounded card assignment stops at its scope; broadly authorized continuous
+production replenishes reviewed batches and implements canonical Engine
+prerequisites before explicitly reassessing dependents. The coordinator alone
+mutates the saved queue; workers keep isolated implementation assignments.
+Report failed checks, partial work and local/unpushed commits explicitly.
 Do not auto-enable recurring work or create a nested epic.
+
+When reviewing authored cards, follow the guide's
+[independent reviewer contract](../../../docs/card-authoring.md#independent-reviewer-contract):
+verify primary sources, trace the actual runtime, retain independent behavioral
+probes, and resolve material source/rules gaps before approval. Rerunning the
+author's scenarios alone is not independent verification.

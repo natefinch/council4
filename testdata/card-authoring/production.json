@@ -6610,6 +6610,39 @@
     "TargetPredicate.SpellCardTypesAny",
     "TargetPredicate.SpellManaValue"
    ]
+  },
+  {
+   "id": "07-activated-utility",
+   "family": "activated-utility",
+   "oracle_ids": [
+    "3fb4161d-a5b9-411d-942c-2fdb039e7bde",
+    "8c2dd8dc-8623-4518-b3fd-dcb9f647fa98",
+    "00d11662-9d10-4915-b80c-c1ad54b4e71b"
+   ],
+   "prerequisites": [
+    3272,
+    3274
+   ],
+   "operations": [
+    "ActivatedAbility with inspectable costs and targets",
+    "Pay with combined mana/life ResolutionPayment",
+    "CounterObject",
+    "ApplyRule",
+    "Goad"
+   ],
+   "review": "#3311 source/capability packet: exact pinned printings, complete rulings (Mundungu/Monk empty; Sly seven), verified CR2026-09-25 personally read by assigned Luna author before design. Capability lookup and resolution_payment_energy_test.go, counter_tax_sequence_test.go, actions_activated_abilities_test.go, combat_cant_be_blocked_this_turn_test.go and goaded_subject_attack_test.go identify existing shared paths. This is readiness to author, not verification or a claim of complete card behavior.",
+   "prerequisite_evidence": [
+    {
+     "issue": 3272,
+     "runtime_revision": "fd324615ffb650de98c102927e831bae56b66cb0",
+     "evidence": "Closed canonical authored-program prerequisite; mtg/cardprogram.Context, production_counters.go and authored_copy_spells_test.go supply inspectable targets and Engine-owned resolving bodies."
+    },
+    {
+     "issue": 3274,
+     "runtime_revision": "fd324615ffb650de98c102927e831bae56b66cb0",
+     "evidence": "Closed canonical choices/transactional operations prerequisite; ResolutionPayment.Payer/AdditionalCosts, resolution_payment_energy_test.go and counter_tax_sequence_test.go supply shared optional combined payment; rule/goad scenarios cover controller-relative durations."
+    }
+   ]
   }
  ],
  "records": [
@@ -6751,9 +6784,10 @@
    "oracle_id": "37449c93-4d32-4f1a-982f-8f3416214368",
    "revision": "ee29b59c-d57c-4a03-bae7-e9dfa57d6bb1",
    "name": "Marchesa, Dealer of Death",
-   "status": "unclaimed",
+   "status": "implemented-verified",
    "family": "unreviewed/normal",
-   "deck_occurrences": 1
+   "deck_occurrences": 1,
+   "evidence": "db8f7aa68; mtg/rules/marchesa_dealer_of_death_test.go: TestMarchesaDealerOfDeathCrimeTriggerPaysAndResolvesAfterSourceLeaves, TestMarchesaDealerOfDeathDeclinesOrCannotPay, TestMarchesaDealerOfDeathOneCardLibrary, TestMarchesaDealerOfDeathDoesNotTriggerForCrimeAgainstSelf, TestMarchesaDealerOfDeathTriggersForActivatedAndTriggeredCrimes. Exact checked registry and named scenarios rechecked under #3311; existing support reconciliation, not new coverage."
   },
   {
    "oracle_id": "38a12bd7-4394-44a8-91a0-6a4ff7fa4f71",
@@ -6786,9 +6820,11 @@
    "oracle_id": "3fb4161d-a5b9-411d-942c-2fdb039e7bde",
    "revision": "d6e320ca-848b-4743-93f1-ec04ef1ce402",
    "name": "Mundungu",
-   "status": "unclaimed",
-   "family": "unreviewed/normal",
-   "deck_occurrences": 1
+   "status": "claimed",
+   "family": "activated-utility",
+   "deck_occurrences": 1,
+   "batch": "07-activated-utility",
+   "owner": "2d21805f-c9bb-4910-a872-eb7b8d5d9459"
   },
   {
    "oracle_id": "43f81514-e812-4e17-9b1a-704c136d8ffd",
@@ -6839,9 +6875,10 @@
    "oracle_id": "4ef583ab-e0a0-4e4b-bd65-af766038b1fd",
    "revision": "8ac39c01-127f-4471-bc74-11a90c48e306",
    "name": "Ghost Vacuum",
-   "status": "unclaimed",
+   "status": "implemented-verified",
    "family": "unreviewed/normal",
-   "deck_occurrences": 1
+   "deck_occurrences": 1,
+   "evidence": "db8f7aa68; mtg/rules/ghost_vacuum_test.go: TestGhostVacuumProductionFilteredReturnAndEntryReplacements, TestGhostVacuumProductionRejectsStaleGraveyardTarget, TestGhostVacuumProductionUsesSorceryTimingAndActivationCosts. Exact checked registry and named scenarios rechecked under #3311; existing support reconciliation, not new coverage."
   },
   {
    "oracle_id": "4f754f11-3b6d-4a4e-86d7-7495e475ef74",
@@ -7013,9 +7050,11 @@
    "oracle_id": "8c2dd8dc-8623-4518-b3fd-dcb9f647fa98",
    "revision": "c9ed183a-a78a-4934-9317-9f16b29e69a2",
    "name": "Sly Instigator",
-   "status": "unclaimed",
-   "family": "unreviewed/normal",
-   "deck_occurrences": 1
+   "status": "claimed",
+   "family": "activated-utility",
+   "deck_occurrences": 1,
+   "batch": "07-activated-utility",
+   "owner": "2d21805f-c9bb-4910-a872-eb7b8d5d9459"
   },
   {
    "oracle_id": "95560508-7ac9-4be9-8a3f-3c7d5b52807b",
@@ -7136,9 +7175,10 @@
    "oracle_id": "b7c165a4-53a2-4117-a452-b9a8fe309c09",
    "revision": "febc9f63-a225-438d-b835-07a561ba91f5",
    "name": "Tooth Collector",
-   "status": "unclaimed",
+   "status": "implemented-verified",
    "family": "unreviewed/normal",
-   "deck_occurrences": 1
+   "deck_occurrences": 1,
+   "evidence": "db8f7aa68; mtg/rules/tooth_collector_test.go: TestToothCollectorEnterTriggerAppliesMinusOneMinusOneToOpponentCreature, TestToothCollectorDeliriumRequiresFourDistinctCardTypes, TestToothCollectorDeliriumRechecksAtResolution, TestToothCollectorDeliriumTargetsEventPlayerAndResolvesAfterSourceLeaves, TestToothCollectorDeliriumTargetMustRemainControlledByEventPlayer, TestToothCollectorBothAbilitiesExpireAtCleanup. Exact checked registry and named scenarios rechecked under #3311; existing support reconciliation, not new coverage."
   },
   {
    "oracle_id": "b7d4b7dd-fbb1-4ca3-875f-ef13a95e66ad",
@@ -51358,8 +51398,10 @@
    "oracle_id": "00d11662-9d10-4915-b80c-c1ad54b4e71b",
    "revision": "f10f1687-fb20-4ad2-bad7-52e4470b35e4",
    "name": "Half-Elf Monk",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "claimed",
+   "family": "activated-utility",
+   "batch": "07-activated-utility",
+   "owner": "2d21805f-c9bb-4910-a872-eb7b8d5d9459"
   },
   {
    "oracle_id": "00d1596a-c3e2-4109-86da-388934a0c652",
@@ -106298,8 +106340,10 @@
    "oracle_id": "43923f24-7e95-4934-9a5c-8d9a5e06ddea",
    "revision": "56bfdd21-4d46-4ec2-ba25-f16b6993f1a8",
    "name": "Myr Custodian",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "blocked",
+   "family": "scry-privacy",
+   "blocker": 3312,
+   "reason": "Shared scry Subject, partition and ordering identities leak into returned logs; reproduced by TestProductionScryPrivateLogBoundary on fd324615. Issue-scoped Engine/card work reserved under #3311; no card admitted before the privacy repair."
   },
   {
    "oracle_id": "439537ca-53c1-47cb-9174-5872c3c46288",
@@ -199916,8 +199960,9 @@
    "oracle_id": "b48a149c-aead-43b2-a99e-c964d6d28aa0",
    "revision": "2002d779-9ea2-432b-8c15-d61995b8adda",
    "name": "Necromantic Selection",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "unreviewed/normal",
+   "evidence": "db8f7aa68; mtg/rules/necromantic_selection_test.go: TestNecromanticSelectionCheckedAdmissionAndChoices, TestNecromanticSelectionNoEligibleArrival, TestNecromanticSelectionExcludesRegeneratedCreatureAndKeepsEntryEffects. Exact checked registry and named scenarios rechecked under #3311; existing support reconciliation, not new coverage."
   },
   {
    "oracle_id": "b48befc5-a9f2-4a64-a16d-c883b034ea9c",

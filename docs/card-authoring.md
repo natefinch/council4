@@ -57,8 +57,9 @@ Ordinary non-mana activations, triggers and resolving spells can use Go programs
    separate permission. Record meaningful behavior, blockers and commit once,
    explicitly distinguishing local from published support.
 
-Stop after the assigned batch, a genuine blocker, or the authorized budget.
-Continue a production queue only when assigned. Never turn budget exhaustion,
+For a bounded assignment, stop after the assigned batch, a genuine out-of-scope
+blocker, or the authorized budget. Broad continuous production follows the
+[continuation scope below](#continuation-scope). Never turn budget exhaustion,
 unsupported behavior or partial cards into success. No automatic schedules,
 mandatory PRs, per-file agents or per-card engine frameworks.
 
@@ -85,6 +86,164 @@ Named issue follow-ups can record `implemented-verified` admissions without
 inventing or resizing a saved queue batch. Exact loadable, behavior-verified
 registry identity and scenario evidence are still required; existing batch
 membership and claim validation remain unchanged.
+
+### Reviewed continuation commands
+
+The coordinator is the **only queue writer**. Workers use isolated code
+workspaces and report evidence; they do not compete for manifest writes. Claims
+are durable work accounting, not an atomic Git lock. Finish/release the current
+claim before replanning; even its owner cannot replace it with a new plan.
+`next` resumes the same owner's claim and refuses another owner's takeover.
+Ordinary mutations write a complete temporary checkpoint and rename it into
+place, refusing an observed intervening edit; exclusive first creation remains
+separate. This protects against truncation, not concurrent-writer races.
+
+When no saved batch is executable, `next` returns `batch: null`, saved
+`pending_prerequisites`, up to five exact `unreviewed_candidates` in saved order,
+and `next_action`. Candidates are only a bounded discovery slice, not a
+capability/readiness verdict. Review actual deck priorities, primary sources,
+complete declarations, runtime paths and behavioral prior art before selection.
+No global inventory refresh or corpus compilation is needed.
+Pending output also retains canonical whole-card blockers and their
+`blocked_oracle_ids`, including cards outside a saved batch; checked prerequisite
+evidence never silently reopens these cards.
+
+Use `-operation add-reviewed-batch -plan PATH -batch NEW_ID -owner SESSION_ID`
+to append **one** reviewed three-to-five-card batch. The plan is a small JSON
+object, not a replacement manifest:
+
+```json
+{
+  "corpus_sha256": "EXACT_SAVED_CORPUS_HASH",
+  "batches": [{
+    "id": "NEW_ID",
+    "family": "reviewed-family",
+    "oracle_ids": ["ORACLE_ID_1", "ORACLE_ID_2", "ORACLE_ID_3"],
+    "prerequisites": [3273],
+    "operations": ["Context.Destroy"],
+    "review": "source/capability packet reference",
+    "prerequisite_evidence": [{
+      "issue": 3273,
+      "runtime_revision": "CHECKED_COMMIT",
+      "evidence": "actual Engine path and executed acceptance scenario/result references"
+    }]
+  }],
+  "records": [
+    {"oracle_id": "ORACLE_ID_1", "revision": "PRINTING_ID_1", "name": "Exact Name 1"},
+    {"oracle_id": "ORACLE_ID_2", "revision": "PRINTING_ID_2", "name": "Exact Name 2"},
+    {"oracle_id": "ORACLE_ID_3", "revision": "PRINTING_ID_3", "name": "Exact Name 3"}
+  ]
+}
+```
+
+The command rejects duplicate batch/member IDs, unknown or stale identities,
+non-unclaimed or already-assigned cards, missing review references and active
+claims. Existing batch order/history, exclusions, installed/verified states,
+baseline associations and record evidence are preserved. Follow with:
+
+```sh
+go run ./cmd/cardqueue -operation next -owner SESSION_ID
+go run ./cmd/cardqueue -operation claim -batch NEW_ID -owner SESSION_ID
+```
+
+`prerequisites` lists canonical issues, not an assumption that their closure
+establishes behavior. Each needs explicit `prerequisite_evidence` with the
+runtime revision and references to the actual checked path and executed
+behavioral evidence. Missing entries keep the saved batch pending and
+unclaimable; operation names alone never make it ready. Older batch JSON
+remains readable without this field, but a fresh claim needs explicit evidence.
+Existing same-owner claims remain resumable. Evidence fields are the
+coordinator's checked record, not automated proof of rules correctness.
+Recheck that saved evidence applies to the current runtime before using it.
+
+After completing a pending prerequisite, use `-operation record-prerequisites
+-plan PATH -batch BATCH_ID -owner SESSION_ID`. Supply the same saved batch
+definition in `batches`, only newly checked `prerequisite_evidence`, and no
+`records`. This appends evidence without changing batch membership or replacing
+earlier checks; duplicate/unknown issue evidence is rejected.
+
+Reopen blocked cards only with `-operation reassess -plan PATH -owner SESSION_ID`,
+no `-batch`, and a plan containing the corpus hash plus one-to-five exact
+`records`, each with:
+
+```json
+{
+  "oracle_id": "BLOCKED_ORACLE_ID",
+  "revision": "EXACT_PRINTING_ID",
+  "name": "Exact Name",
+  "reassessment": {
+    "issue": 999,
+    "runtime_revision": "FIXED_COMMIT",
+    "evidence": "canonical blocker acceptance probe passed; complete card behavior now expressible"
+  }
+}
+```
+
+The issue must match the card's saved canonical blocker. An assigned blocked
+batch must be reassessed as a whole, never silently resized; unbatched cards can
+then enter a new reviewed batch. Reassessment retains the original blocker and
+reason plus an appended `reassessments` trace. It changes only eligibility to
+`unclaimed`, never to supported/verified, and does not satisfy a saved batch's
+other prerequisites. A closed issue alone is insufficient.
+
+`block` is a **whole-batch** transition: use it only if the same observed blocker
+actually applies to every claimed member. For a gap affecting only some cards,
+do not falsely classify ready siblings or partially verify a claim. Instead:
+
+1. `-operation release -batch OLD_ID -owner SESSION_ID` releases the entire
+   claim without changing identities or history.
+2. `-operation retire-batch -batch OLD_ID -plan PATH -owner SESSION_ID` takes
+   the corpus hash and a `records` list containing **only** the affected exact
+   identities, with `blocker` (canonical issue number) and `reason` (observed
+   missing behavior), not `batches` or `reassessment`. It requires every old
+   member to be released/unclaimed, archives the original batch intact in
+   `retired_batches`, clears those released memberships and blocks only the
+   specified cards. Retired batch IDs cannot be reused.
+3. Review eligible siblings and additional unassigned candidates, then
+   `add-reviewed-batch` under a new ID with three-to-five exact identities and
+   checked prerequisites. Preserve any existing draft/scenario work; retirement
+   neither admits it nor discards it. Blocked members remain available for
+   explicit reassessment after their prerequisite, never automatic admission.
+
+All commands accept the existing `-manifest`, `-corpus` and `-compiler-report`
+paths. If the historical frozen compiler report is absent, the queue joins
+the pinned corpus, tracked
+`testdata/card-preservation/installed-compiler.json` and actual registry evidence.
+It checks the installation's corpus hash and exact identities; it neither
+compiles nor invents compiler results for the uninstalled tail. A supplied
+malformed report fails rather than silently falling back. Loadability and
+behavior verification still come from checked production registrations;
+untracked promotions remain errors requiring explicit evidence reconciliation.
+
+### Continuation scope
+
+Establish scope, integration destination, commit/push permissions and resource
+limits once per run. A request for a bounded issue or card batch does not
+authorize replenishment or unrelated Engine work. Under an explicit assignment
+to implement remaining cards **and their required Engine support**, finish and
+record a batch, replenish the next reviewed small family, and continue without
+another card-selection or strategy conversation.
+
+A demonstrated capability gap routes to its canonical executable prerequisite:
+check ownership, retain an expected-correct probe or a complete declaration/
+runtime boundary, define the shared invariant and one real proving card, then
+implement, validate and independently review the shared change proportionally.
+Keep the whole dependent card unsupported. Continue independent ready-card work
+only with isolated workspaces and serialized integration, and do not indefinitely
+replace an active Engine task with easier batches. After the change, explicitly
+reassess exact dependents and all remaining abilities, then return to card
+scenarios and production admission. Blocker discovery or an API alone is not
+delivered card support.
+
+Tune observed prompt/tooling/batching friction in bounded changes while
+delivering; another model comparison, scheduler, corpus census or new framework
+is not a prerequisite. Stop at completed scope, an explicit budget, inaccessible
+required sources/access, conflicting ownership/integration permissions, an
+external rules/product decision, or inability to proceed safely after bounded
+investigation/escalation. Preserve exact claims, blockers, evidence, actual
+integration status and next action. No saved batch or a needed Engine update
+alone does not end broadly authorized production. Durable queue state does not
+authorize automation or promise unattended restart.
 
 ## Executable draft scaffold
 
@@ -160,6 +319,63 @@ not a claimed passing verdict. Keep gameplay findings separate from evidence
 gaps, and rerun the finding's regression after a fix rather than certifying it
 from the author's explanation alone.
 
+### Independent reviewer contract
+
+Review the whole printed card against the pinned rules, not just the changed
+Go or the author's passing tests. The author's handoff is evidence to inspect,
+not an acceptance verdict. Record the baseline and exact patch reviewed, and
+keep your initial verdict separate from any later guided repair.
+For a delegated review, keep the assigned card and reviewer role: a quoted
+overall request is context, not authorization to choose or implement more cards.
+
+1. **Verify primary sources yourself.** Read the exact Oracle printing, its
+   full rulings response (including an empty list), and the relevant official
+   CR passages. A verified saved primary-source response is sufficient; a new
+   network fetch is not mandatory. Record source/edition, retrieval or snapshot
+   identity, passages actually read and the behavior they require. An author's
+   assertion, copied citation, search snippet or third-party summary is not this
+   verification. If a necessary source remains unavailable, say so and withhold
+   complete approval rather than substituting memory.
+2. **Trace the complete rules path.** Map each nontrivial printed clause to its
+   declaration and actual Engine branch: costs/timing, target choice and
+   revalidation, resolving choices, mutation and events, replacements, identity,
+   source lifetime, visibility and duration as applicable. Check reused helpers
+   on the route this card actually takes. Separate a wrong card body from a
+   shared runtime defect, false missing-capability report, or bad existing test.
+   Neither an API name nor a green suite establishes the rule.
+3. **Try to falsify the implementation independently.** Choose the card's
+   highest-risk interactions from the rules and runtime trace, not only from the
+   author's test list. Add and retain focused expected-correct behavioral
+   scenarios that address those risks through the real Engine and exact
+   checked card identity. Use faithful Engine-owned identity/creation fixtures
+   for tokens and copies, not impossible states manufactured by flipping flags
+   on card-backed objects. Establish positive controls for negative-legality
+   claims. Assert meaningful observable results, not just declarations, hashes,
+   loadability or the absence of a panic. For a nontrivial card, rerunning only
+   the author's scenarios is not independent behavioral verification.
+4. **Resolve material gaps before approval.** A gap is material when it could
+   change a printed ability, legality, payment, information exposure, relevant
+   replacement, identity or lifetime outcome. Investigate or execute a focused
+   probe rather than listing such a gap under an otherwise complete approval.
+   Exhaustive combinations are not required; explain why the chosen probes and
+   existing shared regressions address the relevant risks. A redundant network
+   fetch or an unrelated scenario is not an approval gate.
+5. **Deliver an evidence-backed verdict.** Use `approve` only when the assigned
+   review is complete with no known material gap, `changes needed` for
+   demonstrated defects or missing required verification, and `inconclusive`
+   when a blocker prevents a justified verdict. Distinguish gameplay, source,
+   test-contract and evidence findings; cite file/line, expected versus actual
+   behavior, primary basis and executable evidence. Report exact commands,
+   executed test names/results, your added scenarios and remaining nonmaterial
+   limits. A selector matching zero tests or a partial trace is not success.
+
+Respect the review assignment's editing boundary. In a blind trial, retain
+reviewer tests without modifying the author's implementation or original tests,
+contacting the author, or reading evaluator-only probes. A coordinator validates
+findings separately and records any prompted repair without rewriting the
+initial outcome. Do not silently lower assertions to accommodate a suspected
+bad test: establish the rules-correct counterexample first.
+
 ## Missing rules versus authoring friction
 
 An unfamiliar API is not a missing rule. Before declaring a blocker, read the
@@ -218,6 +434,9 @@ not a growing production backlog or an acceptance waiver.
 > Do not mutate raw Game state, fake results, or omit abilities. Test actual
 > behavior, including relevant replacements, target changes, source departure
 > and choices. If a required Engine capability is missing, link a precise shared
-> blocker and leave that whole card unsupported; continue other eligible cards.
+> blocker and leave that whole card unsupported. Honor the assigned scope:
+> a bounded worker does not expand its role; broad continuous production routes
+> the prerequisite, explicitly reassesses dependents and replenishes reviewed
+> batches through the coordinator-owned saved queue.
 > Follow the repository validation policy. Keep changes
 > reviewable and honor the run's commit/push permissions.
