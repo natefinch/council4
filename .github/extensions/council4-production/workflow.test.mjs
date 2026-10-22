@@ -4,7 +4,7 @@ import { readFile, mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction } from "./workflow.mjs";
-import { git, changes, land, checkProtection } from "./git.mjs";
+import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
 import { assessChecks } from "./pull-request.mjs";
 import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
 
@@ -227,6 +227,11 @@ test("Landing publishes only a PR branch and verifies CI before squash merge; re
   const pushes = services.calls.commands.filter(command => command[0] === "push");
   assert.ok(pushes.length);
   assert.ok(pushes.every(command => command.at(-1) === "HEAD:refs/heads/task"));
+  await checkCoordinator(f.work.path, first.head, first.main);
+  await writeFile(path.join(f.work.path, "unpublished.txt"), "unlanded work\n");
+  await git(f.work.path, ["add", "unpublished.txt"]);
+  await git(f.work.path, ["commit", "-m", "unpublished"]);
+  await assert.rejects(checkCoordinator(f.work.path, await git(f.work.path, ["rev-parse", "HEAD"]), first.main), /unlanded/);
 });
 
 test("Changed submission and unreviewed crash commits reject publication", async t => {

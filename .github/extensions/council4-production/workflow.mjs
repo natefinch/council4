@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, rmdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { git, command, changes, workspace, land, mainProtection } from "./git.mjs";
+import { git, command, changes, workspace, land, mainProtection, checkCoordinator } from "./git.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, writeJSON } from "./telemetry.mjs";
 
 export const meta = {
@@ -226,9 +226,7 @@ export async function runProduction(ctx) {
     await git(root, ["fetch", "origin", "main"], ctx.signal);
     const head = await git(root, ["rev-parse", "HEAD"], ctx.signal);
     const upstream = await git(root, ["rev-parse", "refs/remotes/origin/main"], ctx.signal);
-    if (await git(root, ["merge-base", head, upstream], ctx.signal) !== head) {
-      throw new Error("Coordinator has unlanded/divergent commits. Integrate them deliberately before starting production.");
-    }
+    await checkCoordinator(root, head, upstream, ctx.signal);
     const corpus = path.resolve(ctx.args.corpusPath);
     const corpusHash = createHash("sha256").update(await readFile(corpus)).digest("hex");
     const manifest = JSON.parse(await readFile(path.join(root, "testdata/card-authoring/production.json"), "utf8"));

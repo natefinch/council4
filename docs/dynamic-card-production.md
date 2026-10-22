@@ -64,7 +64,8 @@ protections or conflicts stop safely. Local/unmerged PR work is preserved and
 never counted as delivered. The user's main checkout is never read or changed.
 
 Start from a clean coordinator checkout whose HEAD is on the ancestry of
-`origin/main`. Unlanded setup commits must be deliberately integrated first.
+`origin/main`, or whose tree exactly matches main after a squash merge.
+Unlanded setup content must be deliberately integrated first.
 Each unit's worktree and failed drafts remain in
 `.cardwork/workflows/<run-id>/work/`; do not archive/delete unresolved work.
 After an abnormal process kill, inspect the lock's `owner.json` and the native

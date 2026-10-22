@@ -21,6 +21,15 @@ export async function command(cwd, executable, args, signal) {
 
 export const git = (cwd, args, signal) => command(cwd, "git", args, signal);
 
+export async function checkCoordinator(root, head, upstream, signal) {
+  if (await git(root, ["merge-base", head, upstream], signal) === head) return;
+  // A completed squash merge has a different commit identity but the same
+  // published tree; do not strand its original clean app worktree.
+  if (await git(root, ["rev-parse", `${head}^{tree}`], signal) ===
+      await git(root, ["rev-parse", `${upstream}^{tree}`], signal)) return;
+  throw new Error("Coordinator has unlanded/divergent content. Integrate it deliberately before production.");
+}
+
 export function checkProtection(classic, rules) {
   const blockingRules = rules.filter(rule => ![
     "non_fast_forward", "deletion", "required_linear_history", "required_status_checks", "pull_request",
