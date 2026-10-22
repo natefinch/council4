@@ -146,6 +146,12 @@ go run ./cmd/cardqueue -operation next -owner SESSION_ID
 go run ./cmd/cardqueue -operation claim -batch NEW_ID -owner SESSION_ID
 ```
 
+`verify` requires the existing exact loadable behavioral admission, then binds
+that batch's pinned Oracle ID, printing revision, name, text hash and rulings URI
+into `rules_evidence.cards`. It preserves full source records and other rules
+fields, rejects conflicting metadata, and never invents source retrieval,
+rules-reading or review claims. Record those separately from actual sources.
+
 `prerequisites` lists canonical issues, not an assumption that their closure
 establishes behavior. Each needs explicit `prerequisite_evidence` with the
 runtime revision and references to the actual checked path and executed

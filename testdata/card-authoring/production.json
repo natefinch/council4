@@ -38,7 +38,411 @@
   }
  ],
  "rules_evidence": {
-  "rules_sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca",
+  "cards": [
+   {
+    "oracle_id": "49d4aef7-d2d1-4f66-bc2a-79ec8cc96565",
+    "oracle_text_sha256": "296ce6511cbc7303f935edcdcf7edfd013a7a39f0fea103f5af41cc6baab8e66",
+    "response_sha256": "87059e0c0aeece44012e962cdb4cbfe258596837e477ef97e912747b6b69764b",
+    "retrieved": "2026-10-15",
+    "revision": "063bb28b-5e32-4f31-a208-16b653edf413",
+    "ruling_dates": [
+     "2006-07-15"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/063bb28b-5e32-4f31-a208-16b653edf413/rulings"
+   },
+   {
+    "oracle_id": "50a228a2-c8b6-4416-b0ab-417926a9b9b6",
+    "oracle_text_sha256": "9a8973319e3e96c7f3233f5108c7cb5c910ae96ff43a8f127600418db6af9161",
+    "response_sha256": "c6315a0bd10cb0b264e464ac3aa3bc5fd365b9636c1c869ada71701314af2bd9",
+    "retrieved": "2026-10-15",
+    "revision": "aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e",
+    "ruling_dates": [
+     "2006-10-15",
+     "2009-10-01",
+     "2019-05-03"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e/rulings"
+   },
+   {
+    "oracle_id": "4acb6612-54e8-428d-acb6-c7259a5ad6a8",
+    "oracle_text_sha256": "4d76ce03e1640e3bba64c450048373c4cdf1e8411debc18db2d32c72d74e7544",
+    "response_sha256": "2af364672ec9fff7e5dfb02042799f1ed99e33ee4d0e0f7c3411a945348dd42f",
+    "retrieved": "2026-10-14",
+    "revision": "ea751fe2-b64a-4265-8885-a9016b29b5b3",
+    "ruling_dates": [
+     "2004-10-04"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/ea751fe2-b64a-4265-8885-a9016b29b5b3/rulings"
+   },
+   {
+    "oracle_id": "d9abda7e-6ca2-42ea-ab24-c542e57014f1",
+    "oracle_text_sha256": "498873c5e70690e7559c8f4ff3f58840519199006981926bcd9ef159970417f3",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "55d61383-b739-4422-a76c-d8cbca13c5b2",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/55d61383-b739-4422-a76c-d8cbca13c5b2/rulings"
+   },
+   {
+    "oracle_id": "bceecc64-96f1-4e7b-8904-0aef90377764",
+    "oracle_text_sha256": "c61436e2b960021e9901d6541efdabebdae6d7cb0503e9549e4f48986625a9bc",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "985b9779-b8f6-4d7e-9490-5d2b91ee8db2",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/985b9779-b8f6-4d7e-9490-5d2b91ee8db2/rulings"
+   },
+   {
+    "oracle_id": "6257c2fd-005f-41e3-8a72-af76df1eb134",
+    "oracle_text_sha256": "21cd73015b875a9852cf967b2a0b94fe507124f7887056ca38d05a48d35e3368",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "379ffc67-4142-4ead-a871-0f851523745e",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/379ffc67-4142-4ead-a871-0f851523745e/rulings"
+   },
+   {
+    "oracle_id": "63c1ac21-e3d8-40c2-8c09-3f31c52992ef",
+    "oracle_text_sha256": "94e9760605d1dbf0015ca518027935e0ad359e55ed0d7b81289e5ab9c566fc84",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "683c4e13-525c-45c9-8832-bfe67965c34e",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/683c4e13-525c-45c9-8832-bfe67965c34e/rulings"
+   },
+   {
+    "oracle_id": "a7e97fa9-4b72-4548-b854-5be5f18a6f1a",
+    "oracle_text_sha256": "1c50bfdd31a28155b4cab0e9b74980c1307c66df9ec65f7c88afa3f9f87a8317",
+    "response_sha256": "d33c1bd9b8b34c5cf95a3a5bfccfa7ed73af9932db1ed14bf87efb24400c5da6",
+    "retrieved": "2026-10-14",
+    "revision": "7ac43e16-8b14-46f2-877a-600ea918766b",
+    "ruling_dates": [
+     "2004-10-04"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/7ac43e16-8b14-46f2-877a-600ea918766b/rulings"
+   },
+   {
+    "oracle_id": "bdb3ca68-ec1f-4e16-81cc-d23f8f52c728",
+    "oracle_text_sha256": "1c50bfdd31a28155b4cab0e9b74980c1307c66df9ec65f7c88afa3f9f87a8317",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "390c40ba-2464-44ae-8d67-93c72ab3c425",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/390c40ba-2464-44ae-8d67-93c72ab3c425/rulings"
+   },
+   {
+    "oracle_id": "234a734b-ba28-4f1b-9d01-3c3e7d516590",
+    "oracle_text_sha256": "c0bdfd6dc825e93cb90d8b39767a3ac42a96292e18134d508d013af907f0f223",
+    "response_sha256": "c48771a01856c9e7e3669b53d593835d891b719adffc90e2bfca98fb00dba34e",
+    "retrieved": "2026-10-14",
+    "revision": "a829747f-cf9b-4d81-ba66-9f0630ed4565",
+    "ruling_dates": [
+     "2022-04-29"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/a829747f-cf9b-4d81-ba66-9f0630ed4565/rulings"
+   },
+   {
+    "oracle_id": "cc187110-1148-4090-bbb8-e205694a39f5",
+    "oracle_text_sha256": "6e7e3fa9bb231a1c1910cd956dc7e5c91bb22e9705b39ed61a2ebd23201950e4",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "4f616706-ec97-4923-bb1e-11a69fbaa1f8",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/4f616706-ec97-4923-bb1e-11a69fbaa1f8/rulings"
+   },
+   {
+    "oracle_id": "3407fe41-fdd3-4119-8f70-4bc4590a379f",
+    "oracle_text_sha256": "36df929af71f70232a60fdc28fed53a4fbc27a97305ff744e4843c601e6a003a",
+    "response_sha256": "10023ac876e267a1b7137b1c2f2a7da704d42ed172a61c7a75f179aaff7d4d71",
+    "retrieved": "2026-10-14",
+    "revision": "52d58fe4-6070-4022-9cd7-c35a11b44525",
+    "ruling_dates": [
+     "2026-01-27"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/52d58fe4-6070-4022-9cd7-c35a11b44525/rulings"
+   },
+   {
+    "oracle_id": "46665089-aa3d-44c3-964d-6638dfbb5782",
+    "oracle_text_sha256": "610b3ff41023168008e4b70606e2006b047d2609505b546d3617a13af020cbf9",
+    "response_sha256": "0591ccd50e8d183402707148b263094a75b1dacd286b472e3bc189d4bde121ec",
+    "retrieved": "2026-10-14",
+    "revision": "32840097-0531-4c43-b6a8-e76c17420b04",
+    "ruling_dates": [
+     "2026-03-20"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/32840097-0531-4c43-b6a8-e76c17420b04/rulings"
+   },
+   {
+    "oracle_id": "88b51e15-6630-4e14-a6b8-db0aa12e34ef",
+    "oracle_text_sha256": "03579db96faef68d4759f1170d77b07f4c7551d3c15b6d3acc1b0afd32f6c498",
+    "response_sha256": "6856a575c7b4f8ab89c67b6d8d35f41af6d64782570d952ed4bf1c55fe9926a8",
+    "retrieved": "2026-10-14",
+    "revision": "25f05814-a5a5-460f-9d29-0ab03efecf4c",
+    "ruling_dates": [
+     "2017-02-09",
+     "2018-01-19"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/25f05814-a5a5-460f-9d29-0ab03efecf4c/rulings"
+   },
+   {
+    "oracle_id": "82004860-e589-4e38-8d61-8c0210e4ea39",
+    "oracle_text_sha256": "e759f75c52513ff4702fecc196ac14e3c579969a34c8470c7f44ded97a3560bd",
+    "response_sha256": "59b8bc50b51436a367cfa76a8bdd7dcc0b053109f34c36d3205e15e255e2496d",
+    "retrieved": "2026-10-14",
+    "revision": "a24b4cb6-cebb-428b-8654-74347a6a8d63",
+    "ruling_dates": [
+     "2004-10-04"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/a24b4cb6-cebb-428b-8654-74347a6a8d63/rulings"
+   },
+   {
+    "oracle_id": "14589b6b-1814-46f9-a364-83cc15dacac2",
+    "oracle_text_sha256": "e759f75c52513ff4702fecc196ac14e3c579969a34c8470c7f44ded97a3560bd",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "d650dd8c-edd8-44e4-ae95-aaaf84557a72",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/d650dd8c-edd8-44e4-ae95-aaaf84557a72/rulings"
+   },
+   {
+    "oracle_id": "327c5ca2-4eeb-49cb-84fb-f6a4b06b24bc",
+    "oracle_text_sha256": "3f41c1f7bb17de513a3abc1958899b17eb00056b35fcde1c48c7812901444625",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-15",
+    "revision": "b243ce02-4fff-444c-acc4-e1a199621a53",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/b243ce02-4fff-444c-acc4-e1a199621a53/rulings"
+   },
+   {
+    "oracle_id": "422e1869-134f-463d-9fa1-86b66a998b3e",
+    "oracle_text_sha256": "89935eef7baef80c6f616448109b71332a1c105f50715fcc8db587a0e3ca2dda",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "44e49332-b1e1-4b88-b508-516b55c67a1d",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/44e49332-b1e1-4b88-b508-516b55c67a1d/rulings"
+   },
+   {
+    "oracle_id": "57c9ff89-dd30-467b-bb3e-499eeea8cb94",
+    "oracle_text_sha256": "292ddc5052d9ed5d4e0b83508e71d56274baf77cd807caf28d07b94f8c19240f",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "f06edd53-f3ac-44b0-a087-5670ba8f0fa5",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/f06edd53-f3ac-44b0-a087-5670ba8f0fa5/rulings"
+   },
+   {
+    "oracle_id": "ee24bf27-484d-4e1c-998e-6a74e3d3f6c4",
+    "oracle_text_sha256": "f134548e082ade7613a939b4f470bf15b3e89336b883957261373a0af0e8e387",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "d1b93087-e6a0-4ba9-83ba-a0ed2e396dc7",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/d1b93087-e6a0-4ba9-83ba-a0ed2e396dc7/rulings"
+   },
+   {
+    "oracle_id": "273b339c-964b-4a18-8eb5-ceb8abcdfd9e",
+    "oracle_text_sha256": "6fad500ac8bcb7545b9c91657704f68beb07f6b12e264edff0d07f3de3be9f36",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "cb3b35b8-f321-46d8-a441-6b9a6efa9021",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/cb3b35b8-f321-46d8-a441-6b9a6efa9021/rulings"
+   },
+   {
+    "oracle_id": "a3d287ec-1a39-4f91-acf1-7c1d2c00ed89",
+    "oracle_text_sha256": "6ea8f033e803a4e83921c0924330565fabee293907e460719cb3ceb48c217552",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "5aca3338-30a6-4ce4-b74c-a18144b6efc9",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/5aca3338-30a6-4ce4-b74c-a18144b6efc9/rulings"
+   },
+   {
+    "oracle_id": "7eff84f1-f772-497a-b350-bbc93d0230f7",
+    "oracle_text_sha256": "6ea8f033e803a4e83921c0924330565fabee293907e460719cb3ceb48c217552",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "bd7138fb-6aa7-455e-b1f7-ca08d747277d",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/bd7138fb-6aa7-455e-b1f7-ca08d747277d/rulings"
+   },
+   {
+    "oracle_id": "7ffae8f8-3006-4969-a339-6d30678f87ea",
+    "oracle_text_sha256": "c7731acf386b76aed6ba1453567b1d31bb9670c3416f85bdb5d5294ea90d0d8f",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "e8399c2e-ecc8-41c9-a690-a0eeafb27f77",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/e8399c2e-ecc8-41c9-a690-a0eeafb27f77/rulings"
+   },
+   {
+    "oracle_id": "c6207f6a-a624-4754-88f5-dbe700c841ff",
+    "oracle_text_sha256": "3f5a30580f494fb753f6eaecf5459da71874af81c58a46fb77b74643aabc12c5",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "b89d9372-8682-4a61-a003-8bccfbb6cbb4",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/b89d9372-8682-4a61-a003-8bccfbb6cbb4/rulings"
+   },
+   {
+    "oracle_id": "59e7f2ae-4535-4191-98be-3e65b6b2befa",
+    "oracle_text_sha256": "40617ff36b22cc008888b92fb5328535a50cb9b2de37295992dedfb8d6e62234",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "5dcd0c4e-4047-47a2-8969-c62616d457c2",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/5dcd0c4e-4047-47a2-8969-c62616d457c2/rulings"
+   },
+   {
+    "oracle_id": "2f092562-9e17-43cd-aeb8-d0567f99363e",
+    "oracle_text_sha256": "a7e89cff45edd60bcb222798949ba5fe050df9d1fb033de09ab13b8fb6f416ff",
+    "response_sha256": "c1aa8215b1b7b1ee421c3630253d0d91e71105837cdf46276661bc09e0f0ddab",
+    "retrieved": "2026-10-14",
+    "revision": "5446e1ba-c745-45b2-ad05-b22abf04daec",
+    "ruling_dates": [
+     "2011-06-01",
+     "2022-10-14"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/5446e1ba-c745-45b2-ad05-b22abf04daec/rulings"
+   },
+   {
+    "oracle_id": "acdf9fb0-96eb-4520-bd4b-b6480c7c9b29",
+    "oracle_text_sha256": "02e1088e9efdc315f57bfc364b6250626869b6703e4cbca27d9853eb4d80ce1d",
+    "response_sha256": "abe753a567033eda7146a7e78c14966affd41f44b6dae620295ce4595b2e2326",
+    "retrieved": "2026-10-14",
+    "revision": "cf605c8e-e59f-4f49-bb55-1824e7eadec0",
+    "ruling_dates": [
+     "2010-03-01"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/cf605c8e-e59f-4f49-bb55-1824e7eadec0/rulings"
+   },
+   {
+    "oracle_id": "03df6a57-37c9-46d3-83b3-4a6240100714",
+    "oracle_text_sha256": "2c7b26f4124a864779aae83d4ac3ba28e01ccd382eb3e39fe3d4ed6716c69c97",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "ad2c01d9-8f54-46c0-9dc9-d4d4764ce1c9",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/ad2c01d9-8f54-46c0-9dc9-d4d4764ce1c9/rulings"
+   },
+   {
+    "oracle_id": "84d32e68-72b9-432d-a023-7bc6a26b8ad0",
+    "oracle_text_sha256": "0e70d1cb13e4dac4028d88de06de11273bfca593a52a7f1725299ba8c1516749",
+    "response_sha256": "0b3d6108951c247b74d677e8f0e3f1895f0b488514b1b608a42b42d7fd41d9d1",
+    "retrieved": "2026-10-14",
+    "revision": "929a41f7-f52d-4190-a80c-5ceb3e368a31",
+    "ruling_dates": [
+     "2004-10-04"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/929a41f7-f52d-4190-a80c-5ceb3e368a31/rulings"
+   },
+   {
+    "oracle_id": "7d00fb28-ea6c-49a9-b4af-ffb38860a9a7",
+    "oracle_text_sha256": "6e7e3fa9bb231a1c1910cd956dc7e5c91bb22e9705b39ed61a2ebd23201950e4",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "475bff39-220a-4490-9c2e-d311e306a6db",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/475bff39-220a-4490-9c2e-d311e306a6db/rulings"
+   },
+   {
+    "oracle_id": "11e02134-7b1a-46a4-a89e-7539dd1efada",
+    "oracle_text_sha256": "1bb148215e11596f35a118f9fb56bcb29e06fe0c42cf824ec69a6f040ee92194",
+    "response_sha256": "eb27ac3b5d587f119f527f50f83b8fc1f0a44c03af0a1c6237586a7f3d5988ee",
+    "retrieved": "2026-10-14",
+    "revision": "588c6217-c460-417e-98bf-de5475780baf",
+    "ruling_dates": [
+     "2021-02-05",
+     "2021-03-19"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/588c6217-c460-417e-98bf-de5475780baf/rulings"
+   },
+   {
+    "oracle_id": "b13c0f76-fbda-4911-9442-c3d7e97f1aac",
+    "oracle_text_sha256": "610b3ff41023168008e4b70606e2006b047d2609505b546d3617a13af020cbf9",
+    "response_sha256": "942e799ef362d3afe0498d73328ee3f1df3510978ab23683917d50c6dbad0ec9",
+    "retrieved": "2026-10-14",
+    "revision": "75c4b4d6-2230-4fb0-b127-b9e820d56048",
+    "ruling_dates": [
+     "2008-04-01"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/75c4b4d6-2230-4fb0-b127-b9e820d56048/rulings"
+   },
+   {
+    "oracle_id": "d08e9784-75f7-4164-ac48-d06160f8c56b",
+    "oracle_text_sha256": "ba5cdf27dc4c57546be37c81545440467aeae11c0f36b69bc1aeb7b824209cd9",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "4feeebea-aa55-4599-ab5a-4e41a54d0dfd",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/4feeebea-aa55-4599-ab5a-4e41a54d0dfd/rulings"
+   },
+   {
+    "oracle_id": "30062dd0-c049-4872-8011-8b4810a3fa26",
+    "oracle_text_sha256": "e38618d5da37ef7e1c3bc78a3b09846b3edfbce9e97814ae99d04b0cb811cef9",
+    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
+    "retrieved": "2026-10-14",
+    "revision": "e7ed250e-12d0-4ebc-9410-5711e71c6d1f",
+    "ruling_dates": [],
+    "rulings_uri": "https://api.scryfall.com/cards/e7ed250e-12d0-4ebc-9410-5711e71c6d1f/rulings"
+   },
+   {
+    "oracle_id": "37449c93-4d32-4f1a-982f-8f3416214368",
+    "oracle_text_sha256": "846b4dbd899a7324278f6cbe1f114bccc00743c52bd5296d153f77ff016db564",
+    "revision": "ee29b59c-d57c-4a03-bae7-e9dfa57d6bb1",
+    "rulings_uri": "https://api.scryfall.com/cards/ee29b59c-d57c-4a03-bae7-e9dfa57d6bb1/rulings"
+   },
+   {
+    "oracle_id": "4ef583ab-e0a0-4e4b-bd65-af766038b1fd",
+    "oracle_text_sha256": "578229152bdbbed14f2e05ca7b5a53204f2ff2a07ec42c5bbab592e51c2c4beb",
+    "revision": "8ac39c01-127f-4471-bc74-11a90c48e306",
+    "rulings_uri": "https://api.scryfall.com/cards/8ac39c01-127f-4471-bc74-11a90c48e306/rulings"
+   },
+   {
+    "oracle_id": "b7c165a4-53a2-4117-a452-b9a8fe309c09",
+    "oracle_text_sha256": "aa3992d9308a4772b51b83173d1751cb90302842b2f5cf63903d33a186abe622",
+    "revision": "febc9f63-a225-438d-b835-07a561ba91f5",
+    "rulings_uri": "https://api.scryfall.com/cards/febc9f63-a225-438d-b835-07a561ba91f5/rulings"
+   },
+   {
+    "oracle_id": "b48a149c-aead-43b2-a99e-c964d6d28aa0",
+    "oracle_text_sha256": "70d001f58c678e2b391c1bfcb380d3845b27a7f187947d22caedb6c565afeb5c",
+    "revision": "2002d779-9ea2-432b-8c15-d61995b8adda",
+    "rulings_uri": "https://api.scryfall.com/cards/2002d779-9ea2-432b-8c15-d61995b8adda/rulings"
+   },
+   {
+    "oracle_id": "43923f24-7e95-4934-9a5c-8d9a5e06ddea",
+    "oracle_text_sha256": "4c3b8c9635cb31144d0201890ef14302f5aae62a2c691309dadac5667b2e00d8",
+    "retrieved": "2026-10-22",
+    "revision": "56bfdd21-4d46-4ec2-ba25-f16b6993f1a8",
+    "ruling_dates": [
+     "2023-02-04"
+    ],
+    "rulings_uri": "https://api.scryfall.com/cards/56bfdd21-4d46-4ec2-ba25-f16b6993f1a8/rulings"
+   },
+   {
+    "name": "Mundungu",
+    "oracle_id": "3fb4161d-a5b9-411d-942c-2fdb039e7bde",
+    "oracle_text_sha256": "86891762b3663e790a5472b0fa42567ea22cc873ae1f8d985f8ba1e5a1fcffd9",
+    "revision": "d6e320ca-848b-4743-93f1-ec04ef1ce402",
+    "rulings_uri": "https://api.scryfall.com/cards/d6e320ca-848b-4743-93f1-ec04ef1ce402/rulings"
+   },
+   {
+    "name": "Sly Instigator",
+    "oracle_id": "8c2dd8dc-8623-4518-b3fd-dcb9f647fa98",
+    "oracle_text_sha256": "def89b949a8f9cacfd88817f73d220928a42390f3607301de4a256a0f49b40aa",
+    "revision": "c9ed183a-a78a-4934-9317-9f16b29e69a2",
+    "rulings_uri": "https://api.scryfall.com/cards/c9ed183a-a78a-4934-9317-9f16b29e69a2/rulings"
+   },
+   {
+    "name": "Half-Elf Monk",
+    "oracle_id": "00d11662-9d10-4915-b80c-c1ad54b4e71b",
+    "oracle_text_sha256": "ef80b5eb9fc8172fbe50f1224716d9b355c18a05ef9250109b36b08adf27e96c",
+    "revision": "f10f1687-fb20-4ad2-bad7-52e4470b35e4",
+    "rulings_uri": "https://api.scryfall.com/cards/f10f1687-fb20-4ad2-bad7-52e4470b35e4/rulings"
+   }
+  ],
   "comprehensive_rules": [
    "117.2e",
    "111.10a",
@@ -55,356 +459,7 @@
    "702.12/19",
    "733.1"
   ],
-  "cards": [
-   {
-    "oracle_id": "49d4aef7-d2d1-4f66-bc2a-79ec8cc96565",
-    "revision": "063bb28b-5e32-4f31-a208-16b653edf413",
-    "oracle_text_sha256": "296ce6511cbc7303f935edcdcf7edfd013a7a39f0fea103f5af41cc6baab8e66",
-    "rulings_uri": "https://api.scryfall.com/cards/063bb28b-5e32-4f31-a208-16b653edf413/rulings",
-    "retrieved": "2026-10-15",
-    "response_sha256": "87059e0c0aeece44012e962cdb4cbfe258596837e477ef97e912747b6b69764b",
-    "ruling_dates": [
-     "2006-07-15"
-    ]
-   },
-   {
-    "oracle_id": "50a228a2-c8b6-4416-b0ab-417926a9b9b6",
-    "revision": "aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e",
-    "oracle_text_sha256": "9a8973319e3e96c7f3233f5108c7cb5c910ae96ff43a8f127600418db6af9161",
-    "rulings_uri": "https://api.scryfall.com/cards/aa6e1fb5-a06b-4e10-8cc7-785e0f0b298e/rulings",
-    "retrieved": "2026-10-15",
-    "response_sha256": "c6315a0bd10cb0b264e464ac3aa3bc5fd365b9636c1c869ada71701314af2bd9",
-    "ruling_dates": [
-     "2006-10-15",
-     "2009-10-01",
-     "2019-05-03"
-    ]
-   },
-   {
-    "oracle_id": "4acb6612-54e8-428d-acb6-c7259a5ad6a8",
-    "revision": "ea751fe2-b64a-4265-8885-a9016b29b5b3",
-    "oracle_text_sha256": "4d76ce03e1640e3bba64c450048373c4cdf1e8411debc18db2d32c72d74e7544",
-    "rulings_uri": "https://api.scryfall.com/cards/ea751fe2-b64a-4265-8885-a9016b29b5b3/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "2af364672ec9fff7e5dfb02042799f1ed99e33ee4d0e0f7c3411a945348dd42f",
-    "ruling_dates": [
-     "2004-10-04"
-    ]
-   },
-   {
-    "oracle_id": "d9abda7e-6ca2-42ea-ab24-c542e57014f1",
-    "revision": "55d61383-b739-4422-a76c-d8cbca13c5b2",
-    "oracle_text_sha256": "498873c5e70690e7559c8f4ff3f58840519199006981926bcd9ef159970417f3",
-    "rulings_uri": "https://api.scryfall.com/cards/55d61383-b739-4422-a76c-d8cbca13c5b2/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "bceecc64-96f1-4e7b-8904-0aef90377764",
-    "revision": "985b9779-b8f6-4d7e-9490-5d2b91ee8db2",
-    "oracle_text_sha256": "c61436e2b960021e9901d6541efdabebdae6d7cb0503e9549e4f48986625a9bc",
-    "rulings_uri": "https://api.scryfall.com/cards/985b9779-b8f6-4d7e-9490-5d2b91ee8db2/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "6257c2fd-005f-41e3-8a72-af76df1eb134",
-    "revision": "379ffc67-4142-4ead-a871-0f851523745e",
-    "oracle_text_sha256": "21cd73015b875a9852cf967b2a0b94fe507124f7887056ca38d05a48d35e3368",
-    "rulings_uri": "https://api.scryfall.com/cards/379ffc67-4142-4ead-a871-0f851523745e/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "63c1ac21-e3d8-40c2-8c09-3f31c52992ef",
-    "revision": "683c4e13-525c-45c9-8832-bfe67965c34e",
-    "oracle_text_sha256": "94e9760605d1dbf0015ca518027935e0ad359e55ed0d7b81289e5ab9c566fc84",
-    "rulings_uri": "https://api.scryfall.com/cards/683c4e13-525c-45c9-8832-bfe67965c34e/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "a7e97fa9-4b72-4548-b854-5be5f18a6f1a",
-    "revision": "7ac43e16-8b14-46f2-877a-600ea918766b",
-    "oracle_text_sha256": "1c50bfdd31a28155b4cab0e9b74980c1307c66df9ec65f7c88afa3f9f87a8317",
-    "rulings_uri": "https://api.scryfall.com/cards/7ac43e16-8b14-46f2-877a-600ea918766b/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "d33c1bd9b8b34c5cf95a3a5bfccfa7ed73af9932db1ed14bf87efb24400c5da6",
-    "ruling_dates": [
-     "2004-10-04"
-    ]
-   },
-   {
-    "oracle_id": "bdb3ca68-ec1f-4e16-81cc-d23f8f52c728",
-    "revision": "390c40ba-2464-44ae-8d67-93c72ab3c425",
-    "oracle_text_sha256": "1c50bfdd31a28155b4cab0e9b74980c1307c66df9ec65f7c88afa3f9f87a8317",
-    "rulings_uri": "https://api.scryfall.com/cards/390c40ba-2464-44ae-8d67-93c72ab3c425/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "234a734b-ba28-4f1b-9d01-3c3e7d516590",
-    "revision": "a829747f-cf9b-4d81-ba66-9f0630ed4565",
-    "oracle_text_sha256": "c0bdfd6dc825e93cb90d8b39767a3ac42a96292e18134d508d013af907f0f223",
-    "rulings_uri": "https://api.scryfall.com/cards/a829747f-cf9b-4d81-ba66-9f0630ed4565/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "c48771a01856c9e7e3669b53d593835d891b719adffc90e2bfca98fb00dba34e",
-    "ruling_dates": [
-     "2022-04-29"
-    ]
-   },
-   {
-    "oracle_id": "cc187110-1148-4090-bbb8-e205694a39f5",
-    "revision": "4f616706-ec97-4923-bb1e-11a69fbaa1f8",
-    "oracle_text_sha256": "6e7e3fa9bb231a1c1910cd956dc7e5c91bb22e9705b39ed61a2ebd23201950e4",
-    "rulings_uri": "https://api.scryfall.com/cards/4f616706-ec97-4923-bb1e-11a69fbaa1f8/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "3407fe41-fdd3-4119-8f70-4bc4590a379f",
-    "revision": "52d58fe4-6070-4022-9cd7-c35a11b44525",
-    "oracle_text_sha256": "36df929af71f70232a60fdc28fed53a4fbc27a97305ff744e4843c601e6a003a",
-    "rulings_uri": "https://api.scryfall.com/cards/52d58fe4-6070-4022-9cd7-c35a11b44525/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "10023ac876e267a1b7137b1c2f2a7da704d42ed172a61c7a75f179aaff7d4d71",
-    "ruling_dates": [
-     "2026-01-27"
-    ]
-   },
-   {
-    "oracle_id": "46665089-aa3d-44c3-964d-6638dfbb5782",
-    "revision": "32840097-0531-4c43-b6a8-e76c17420b04",
-    "oracle_text_sha256": "610b3ff41023168008e4b70606e2006b047d2609505b546d3617a13af020cbf9",
-    "rulings_uri": "https://api.scryfall.com/cards/32840097-0531-4c43-b6a8-e76c17420b04/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "0591ccd50e8d183402707148b263094a75b1dacd286b472e3bc189d4bde121ec",
-    "ruling_dates": [
-     "2026-03-20"
-    ]
-   },
-   {
-    "oracle_id": "88b51e15-6630-4e14-a6b8-db0aa12e34ef",
-    "revision": "25f05814-a5a5-460f-9d29-0ab03efecf4c",
-    "oracle_text_sha256": "03579db96faef68d4759f1170d77b07f4c7551d3c15b6d3acc1b0afd32f6c498",
-    "rulings_uri": "https://api.scryfall.com/cards/25f05814-a5a5-460f-9d29-0ab03efecf4c/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6856a575c7b4f8ab89c67b6d8d35f41af6d64782570d952ed4bf1c55fe9926a8",
-    "ruling_dates": [
-     "2017-02-09",
-     "2018-01-19"
-    ]
-   },
-   {
-    "oracle_id": "82004860-e589-4e38-8d61-8c0210e4ea39",
-    "revision": "a24b4cb6-cebb-428b-8654-74347a6a8d63",
-    "oracle_text_sha256": "e759f75c52513ff4702fecc196ac14e3c579969a34c8470c7f44ded97a3560bd",
-    "rulings_uri": "https://api.scryfall.com/cards/a24b4cb6-cebb-428b-8654-74347a6a8d63/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "59b8bc50b51436a367cfa76a8bdd7dcc0b053109f34c36d3205e15e255e2496d",
-    "ruling_dates": [
-     "2004-10-04"
-    ]
-   },
-   {
-    "oracle_id": "14589b6b-1814-46f9-a364-83cc15dacac2",
-    "revision": "d650dd8c-edd8-44e4-ae95-aaaf84557a72",
-    "oracle_text_sha256": "e759f75c52513ff4702fecc196ac14e3c579969a34c8470c7f44ded97a3560bd",
-    "rulings_uri": "https://api.scryfall.com/cards/d650dd8c-edd8-44e4-ae95-aaaf84557a72/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "327c5ca2-4eeb-49cb-84fb-f6a4b06b24bc",
-    "revision": "b243ce02-4fff-444c-acc4-e1a199621a53",
-    "oracle_text_sha256": "3f41c1f7bb17de513a3abc1958899b17eb00056b35fcde1c48c7812901444625",
-    "rulings_uri": "https://api.scryfall.com/cards/b243ce02-4fff-444c-acc4-e1a199621a53/rulings",
-    "retrieved": "2026-10-15",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "422e1869-134f-463d-9fa1-86b66a998b3e",
-    "revision": "44e49332-b1e1-4b88-b508-516b55c67a1d",
-    "oracle_text_sha256": "89935eef7baef80c6f616448109b71332a1c105f50715fcc8db587a0e3ca2dda",
-    "rulings_uri": "https://api.scryfall.com/cards/44e49332-b1e1-4b88-b508-516b55c67a1d/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "57c9ff89-dd30-467b-bb3e-499eeea8cb94",
-    "revision": "f06edd53-f3ac-44b0-a087-5670ba8f0fa5",
-    "oracle_text_sha256": "292ddc5052d9ed5d4e0b83508e71d56274baf77cd807caf28d07b94f8c19240f",
-    "rulings_uri": "https://api.scryfall.com/cards/f06edd53-f3ac-44b0-a087-5670ba8f0fa5/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "ee24bf27-484d-4e1c-998e-6a74e3d3f6c4",
-    "revision": "d1b93087-e6a0-4ba9-83ba-a0ed2e396dc7",
-    "oracle_text_sha256": "f134548e082ade7613a939b4f470bf15b3e89336b883957261373a0af0e8e387",
-    "rulings_uri": "https://api.scryfall.com/cards/d1b93087-e6a0-4ba9-83ba-a0ed2e396dc7/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "273b339c-964b-4a18-8eb5-ceb8abcdfd9e",
-    "revision": "cb3b35b8-f321-46d8-a441-6b9a6efa9021",
-    "oracle_text_sha256": "6fad500ac8bcb7545b9c91657704f68beb07f6b12e264edff0d07f3de3be9f36",
-    "rulings_uri": "https://api.scryfall.com/cards/cb3b35b8-f321-46d8-a441-6b9a6efa9021/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "a3d287ec-1a39-4f91-acf1-7c1d2c00ed89",
-    "revision": "5aca3338-30a6-4ce4-b74c-a18144b6efc9",
-    "oracle_text_sha256": "6ea8f033e803a4e83921c0924330565fabee293907e460719cb3ceb48c217552",
-    "rulings_uri": "https://api.scryfall.com/cards/5aca3338-30a6-4ce4-b74c-a18144b6efc9/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "7eff84f1-f772-497a-b350-bbc93d0230f7",
-    "revision": "bd7138fb-6aa7-455e-b1f7-ca08d747277d",
-    "oracle_text_sha256": "6ea8f033e803a4e83921c0924330565fabee293907e460719cb3ceb48c217552",
-    "rulings_uri": "https://api.scryfall.com/cards/bd7138fb-6aa7-455e-b1f7-ca08d747277d/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "7ffae8f8-3006-4969-a339-6d30678f87ea",
-    "revision": "e8399c2e-ecc8-41c9-a690-a0eeafb27f77",
-    "oracle_text_sha256": "c7731acf386b76aed6ba1453567b1d31bb9670c3416f85bdb5d5294ea90d0d8f",
-    "rulings_uri": "https://api.scryfall.com/cards/e8399c2e-ecc8-41c9-a690-a0eeafb27f77/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "c6207f6a-a624-4754-88f5-dbe700c841ff",
-    "revision": "b89d9372-8682-4a61-a003-8bccfbb6cbb4",
-    "oracle_text_sha256": "3f5a30580f494fb753f6eaecf5459da71874af81c58a46fb77b74643aabc12c5",
-    "rulings_uri": "https://api.scryfall.com/cards/b89d9372-8682-4a61-a003-8bccfbb6cbb4/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "59e7f2ae-4535-4191-98be-3e65b6b2befa",
-    "revision": "5dcd0c4e-4047-47a2-8969-c62616d457c2",
-    "oracle_text_sha256": "40617ff36b22cc008888b92fb5328535a50cb9b2de37295992dedfb8d6e62234",
-    "rulings_uri": "https://api.scryfall.com/cards/5dcd0c4e-4047-47a2-8969-c62616d457c2/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "2f092562-9e17-43cd-aeb8-d0567f99363e",
-    "revision": "5446e1ba-c745-45b2-ad05-b22abf04daec",
-    "oracle_text_sha256": "a7e89cff45edd60bcb222798949ba5fe050df9d1fb033de09ab13b8fb6f416ff",
-    "rulings_uri": "https://api.scryfall.com/cards/5446e1ba-c745-45b2-ad05-b22abf04daec/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "c1aa8215b1b7b1ee421c3630253d0d91e71105837cdf46276661bc09e0f0ddab",
-    "ruling_dates": [
-     "2011-06-01",
-     "2022-10-14"
-    ]
-   },
-   {
-    "oracle_id": "acdf9fb0-96eb-4520-bd4b-b6480c7c9b29",
-    "revision": "cf605c8e-e59f-4f49-bb55-1824e7eadec0",
-    "oracle_text_sha256": "02e1088e9efdc315f57bfc364b6250626869b6703e4cbca27d9853eb4d80ce1d",
-    "rulings_uri": "https://api.scryfall.com/cards/cf605c8e-e59f-4f49-bb55-1824e7eadec0/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "abe753a567033eda7146a7e78c14966affd41f44b6dae620295ce4595b2e2326",
-    "ruling_dates": [
-     "2010-03-01"
-    ]
-   },
-   {
-    "oracle_id": "03df6a57-37c9-46d3-83b3-4a6240100714",
-    "revision": "ad2c01d9-8f54-46c0-9dc9-d4d4764ce1c9",
-    "oracle_text_sha256": "2c7b26f4124a864779aae83d4ac3ba28e01ccd382eb3e39fe3d4ed6716c69c97",
-    "rulings_uri": "https://api.scryfall.com/cards/ad2c01d9-8f54-46c0-9dc9-d4d4764ce1c9/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "84d32e68-72b9-432d-a023-7bc6a26b8ad0",
-    "revision": "929a41f7-f52d-4190-a80c-5ceb3e368a31",
-    "oracle_text_sha256": "0e70d1cb13e4dac4028d88de06de11273bfca593a52a7f1725299ba8c1516749",
-    "rulings_uri": "https://api.scryfall.com/cards/929a41f7-f52d-4190-a80c-5ceb3e368a31/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "0b3d6108951c247b74d677e8f0e3f1895f0b488514b1b608a42b42d7fd41d9d1",
-    "ruling_dates": [
-     "2004-10-04"
-    ]
-   },
-   {
-    "oracle_id": "7d00fb28-ea6c-49a9-b4af-ffb38860a9a7",
-    "revision": "475bff39-220a-4490-9c2e-d311e306a6db",
-    "oracle_text_sha256": "6e7e3fa9bb231a1c1910cd956dc7e5c91bb22e9705b39ed61a2ebd23201950e4",
-    "rulings_uri": "https://api.scryfall.com/cards/475bff39-220a-4490-9c2e-d311e306a6db/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "11e02134-7b1a-46a4-a89e-7539dd1efada",
-    "revision": "588c6217-c460-417e-98bf-de5475780baf",
-    "oracle_text_sha256": "1bb148215e11596f35a118f9fb56bcb29e06fe0c42cf824ec69a6f040ee92194",
-    "rulings_uri": "https://api.scryfall.com/cards/588c6217-c460-417e-98bf-de5475780baf/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "eb27ac3b5d587f119f527f50f83b8fc1f0a44c03af0a1c6237586a7f3d5988ee",
-    "ruling_dates": [
-     "2021-02-05",
-     "2021-03-19"
-    ]
-   },
-   {
-    "oracle_id": "b13c0f76-fbda-4911-9442-c3d7e97f1aac",
-    "revision": "75c4b4d6-2230-4fb0-b127-b9e820d56048",
-    "oracle_text_sha256": "610b3ff41023168008e4b70606e2006b047d2609505b546d3617a13af020cbf9",
-    "rulings_uri": "https://api.scryfall.com/cards/75c4b4d6-2230-4fb0-b127-b9e820d56048/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "942e799ef362d3afe0498d73328ee3f1df3510978ab23683917d50c6dbad0ec9",
-    "ruling_dates": [
-     "2008-04-01"
-    ]
-   },
-   {
-    "oracle_id": "d08e9784-75f7-4164-ac48-d06160f8c56b",
-    "revision": "4feeebea-aa55-4599-ab5a-4e41a54d0dfd",
-    "oracle_text_sha256": "ba5cdf27dc4c57546be37c81545440467aeae11c0f36b69bc1aeb7b824209cd9",
-    "rulings_uri": "https://api.scryfall.com/cards/4feeebea-aa55-4599-ab5a-4e41a54d0dfd/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   },
-   {
-    "oracle_id": "30062dd0-c049-4872-8011-8b4810a3fa26",
-    "revision": "e7ed250e-12d0-4ebc-9410-5711e71c6d1f",
-    "oracle_text_sha256": "e38618d5da37ef7e1c3bc78a3b09846b3edfbce9e97814ae99d04b0cb811cef9",
-    "rulings_uri": "https://api.scryfall.com/cards/e7ed250e-12d0-4ebc-9410-5711e71c6d1f/rulings",
-    "retrieved": "2026-10-14",
-    "response_sha256": "6959514f6cea4012b6cceb5fe573de3433c3927da3183236a64ab122bc02ef10",
-    "ruling_dates": []
-   }
-  ]
+  "rules_sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca"
  },
  "issue_reconciliation": {
   "retrieved": "2026-10-14",
@@ -6643,6 +6698,26 @@
      "evidence": "Closed canonical choices/transactional operations prerequisite; ResolutionPayment.Payer/AdditionalCosts, resolution_payment_energy_test.go and counter_tax_sequence_test.go supply shared optional combined payment; rule/goad scenarios cover controller-relative durations."
     }
    ]
+  },
+  {
+   "id": "08-scry-interaction",
+   "family": "scry-interaction",
+   "oracle_ids": [
+    "39363190-7f79-4fae-bcfc-b17ec4e07bfe",
+    "8ab71a49-ce81-44f7-b940-50e7aba64df9",
+    "92f8c8b1-1fd5-4e80-b8a9-51671937aaf2"
+   ],
+   "prerequisites": [
+    3312,
+    3313
+   ],
+   "operations": [
+    "Shared private scry",
+    "Shared staged simultaneous optional multiplayer scry",
+    "Inspectably targeted simultaneous return-to-owner-hand",
+    "Color/type union targeting and replacement-aware exile"
+   ],
+   "review": "#3311 next bounded family, not admission: parent read exact pinned Oracle printings and full printing-specific Scryfall rulings (Eager Construct one 2020-08-07, Sea God's Revenge six 2013-09-15, Devout Decree one 2019-07-12; saved production-eager-rulings.json, production-sea-god-rulings.json, production-devout-rulings.json). Verified CR2026-09-25 101.4, 307.1, 400.7, 601.2c, 608.2b-c, 701.22a-d require exact chosen target cardinality, zero-target scry versus all-illegal failure, current type/color/opponent revalidation, ordered effects and simultaneous private APNAP scry. Existing TargetSpec/Selection.ColorsAny and replacement-aware zone operations cover ordinary composition; actual card sources/runtime trace/tests remain required before verification. Do not claim until #3312 and #3313 have integrated runtime/scenario evidence."
   }
  ],
  "records": [
@@ -6820,11 +6895,11 @@
    "oracle_id": "3fb4161d-a5b9-411d-942c-2fdb039e7bde",
    "revision": "d6e320ca-848b-4743-93f1-ec04ef1ce402",
    "name": "Mundungu",
-   "status": "claimed",
+   "status": "implemented-verified",
    "family": "activated-utility",
    "deck_occurrences": 1,
    "batch": "07-activated-utility",
-   "owner": "2d21805f-c9bb-4910-a872-eb7b8d5d9459"
+   "evidence": "mtg/rules/activated_utility_family_test.go: TestMundunguTargetsOnlySpells, TestMundunguCurrentControllerPaysCombinedCostAndClone, TestMundunguFailedPaymentCounters, TestMundunguUncounterableAndDepartedTargets; printing d6e320ca-848b-4743-93f1-ec04ef1ce402; CR 2026-09-25 117.1b, 118.1-118.3c, 602.2-602.2b, 608.2b, 701.6a-b"
   },
   {
    "oracle_id": "43f81514-e812-4e17-9b1a-704c136d8ffd",
@@ -7050,11 +7125,11 @@
    "oracle_id": "8c2dd8dc-8623-4518-b3fd-dcb9f647fa98",
    "revision": "c9ed183a-a78a-4934-9317-9f16b29e69a2",
    "name": "Sly Instigator",
-   "status": "claimed",
+   "status": "implemented-verified",
    "family": "activated-utility",
    "deck_occurrences": 1,
    "batch": "07-activated-utility",
-   "owner": "2d21805f-c9bb-4910-a872-eb7b8d5d9459"
+   "evidence": "mtg/rules/activated_utility_family_test.go: TestSlyInstigatorSourceDepartureAndCopy, TestSlyInstigatorTargetRevalidation, TestSlyInstigatorDurationUsesAbilityController; printing c9ed183a-a78a-4934-9317-9f16b29e69a2; Scryfall rulings 2021-04-16 and 2023-06-30; CR 2026-09-25 602.2-602.2b, 608.2b, 611.2a-c, 701.15a-d"
   },
   {
    "oracle_id": "95560508-7ac9-4be9-8a3f-3c7d5b52807b",
@@ -51398,10 +51473,10 @@
    "oracle_id": "00d11662-9d10-4915-b80c-c1ad54b4e71b",
    "revision": "f10f1687-fb20-4ad2-bad7-52e4470b35e4",
    "name": "Half-Elf Monk",
-   "status": "claimed",
+   "status": "implemented-verified",
    "family": "activated-utility",
    "batch": "07-activated-utility",
-   "owner": "2d21805f-c9bb-4910-a872-eb7b8d5d9459"
+   "evidence": "mtg/rules/activated_utility_family_test.go: TestHalfElfMonkVigilance, TestHalfElfMonkActivationCostsAndTiming, TestHalfElfMonkTargetLoss; printing f10f1687-fb20-4ad2-bad7-52e4470b35e4; CR 2026-09-25 302.6, 509.1a-b, 602.2-602.2b, 608.2b"
   },
   {
    "oracle_id": "00d1596a-c3e2-4109-86da-388934a0c652",
@@ -97391,7 +97466,8 @@
    "revision": "5b23ca61-157b-4616-bbf4-0c1298ddbbb4",
    "name": "Eager Construct",
    "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "family": "scry-interaction",
+   "batch": "08-scry-interaction"
   },
   {
    "oracle_id": "39375b5d-f509-4482-8d34-797dae17d38b",
@@ -106340,10 +106416,25 @@
    "oracle_id": "43923f24-7e95-4934-9a5c-8d9a5e06ddea",
    "revision": "56bfdd21-4d46-4ec2-ba25-f16b6993f1a8",
    "name": "Myr Custodian",
-   "status": "blocked",
+   "status": "implemented-verified",
    "family": "scry-privacy",
    "blocker": 3312,
-   "reason": "Shared scry Subject, partition and ordering identities leak into returned logs; reproduced by TestProductionScryPrivateLogBoundary on fd324615. Issue-scoped Engine/card work reserved under #3311; no card admitted before the privacy repair."
+   "reason": "Shared scry Subject, partition and ordering identities leak into returned logs; reproduced by TestProductionScryPrivateLogBoundary on fd324615. Issue-scoped Engine/card work reserved under #3311; no card admitted before the privacy repair.",
+   "evidence": "mtg/rules/myr_custodian_test.go: TestMyrCustodianPaidCastAndPrivateScry, TestMyrCustodianControllerAndAPNAP, TestMyrCustodianSourceDepartureCopiedTriggerAndClone, TestMyrCustodianEmptyLibrariesAndDepartedOpponent; independent exact default-registry paid-cast/source-departure/controlled-player/APNAP/private-log/replay scenario TestProductionMyrCustodianPrivateStagedReplay in mtg/rules/production_scry_independent_test.go. Complete official ruling and CR2026-09-25 101.4/701.22; no raw card-side state or source-specific logging workaround.",
+   "reassessments": [
+    {
+     "issue": 3312,
+     "runtime_revision": "8d15f4697871345cf4b68ac7694bb0ffc77aa764 plus reviewed production-scry-integration.patch SHA256 292f1ac0f4a62970d8b165cccaed0f645acf6b2fe82bfadd1f2cf816b22bb772",
+     "evidence": "Original TestProductionScryPrivateLogBoundary fails on fd324615 and passes with the integrated private-scry repair; complete dependent card passed actual default production replay and affected rules suite.",
+     "reason": "Original private scry Subject/partition/order identities escaped into returned logs."
+    },
+    {
+     "issue": 3313,
+     "runtime_revision": "8d15f4697871345cf4b68ac7694bb0ffc77aa764 plus the same reviewed scry slice",
+     "evidence": "TestGroupScryStagesChoicesBeforeLibraryChanges and TestProductionMyrCustodianPrivateStagedReplay verify participation first, APNAP private decisions, prior public placement counts and simultaneous commit/events; complete Myr Custodian admitted only after both shared prerequisites.",
+     "reason": "Original single-player scry and sequential group offers could not express simultaneous opponent placements."
+    }
+   ]
   },
   {
    "oracle_id": "439537ca-53c1-47cb-9174-5872c3c46288",
@@ -165385,7 +165476,8 @@
    "revision": "5acdf4e4-5933-43dc-bf8b-25f89415db5b",
    "name": "Sea God's Revenge",
    "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "family": "scry-interaction",
+   "batch": "08-scry-interaction"
   },
   {
    "oracle_id": "8ab7358e-a0f5-4220-8769-25177237bcdf",
@@ -172422,7 +172514,8 @@
    "revision": "d174cb01-b1cf-444c-a893-cc61ddf88b8c",
    "name": "Devout Decree",
    "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "family": "scry-interaction",
+   "batch": "08-scry-interaction"
   },
   {
    "oracle_id": "930035c6-cde7-40ac-98ef-0840812037db",

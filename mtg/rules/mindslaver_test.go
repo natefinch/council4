@@ -201,6 +201,9 @@ func TestMindslaverWholeTurnActionsModesTargetsAndResolvingChoices(t *testing.T)
 			t.Fatal("resolving choice lost actor/decision maker separation")
 		}
 		if req.Kind == game.ChoiceScry {
+			if !req.Subject.Exists || req.Subject.Val.CardID != scry {
+				t.Fatal("controlling agent did not receive the private scry subject")
+			}
 			return []int{1}
 		}
 		return fallbackChoice(req)
@@ -217,7 +220,8 @@ func TestMindslaverWholeTurnActionsModesTargetsAndResolvingChoices(t *testing.T)
 		if choice.Request.Kind == game.ChoiceScry {
 			found = true
 			if choice.DecisionMaker != game.Player1 || choice.Request.Player != game.Player2 ||
-				choice.Request.Subject.Val.CardID != scry || choice.UsedFallback {
+				choice.Request.Subject.Exists || !choice.Request.Private || choice.UsedFallback ||
+				!slices.Equal(choice.Selected, []int{1}) {
 				t.Fatal("Scry resolving callback did not use the control protocol")
 			}
 		}

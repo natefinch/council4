@@ -225,14 +225,32 @@ func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, lo
 	if !ok || amount <= 0 {
 		return
 	}
-	cards := peekLibrary(player, amount)
+	placement := scryPlacement{player: playerID, amount: amount, top: peekLibrary(player, amount)}
+	e.chooseScryPlacement(g, agents, log, &placement, nil)
+	commitScryPlacement(g, placement)
+	emitScryEvent(g, placement, 0)
+}
+
+type scryPlacement struct {
+	player game.PlayerID
+	amount int
+	top    []id.ID
+	bottom []id.ID
+}
+
+func (e *Engine) chooseScryPlacement(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, placement *scryPlacement, decisions []game.ScryDecision) {
+	cards := placement.top
+	playerID := placement.player
 	if len(cards) == 1 {
 		cardID := cards[0]
 		request := libraryChoiceRequest(game.ChoiceScry, playerID, "Scry: choose where to put card.", []string{"top", "bottom"})
 		request.Subject = cardChoiceInfo(g, cardID)
+		request.Private = true
+		request.ScryDecisions = decisions
 		selected := e.chooseChoice(g, agents, request, log)
-		if len(selected) == 1 && selected[0] == 1 && player.Library.Remove(cardID) {
-			player.Library.AddToBottom(cardID)
+		if len(selected) == 1 && selected[0] == 1 {
+			placement.top = nil
+			placement.bottom = cards
 		}
 	} else if len(cards) > 1 {
 		options := make([]game.ChoiceOption, len(cards))
@@ -242,7 +260,8 @@ func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, lo
 		selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 			Kind: game.ChoiceScry, Player: playerID,
 			Prompt:  "Scry: choose cards to put on the bottom of your library.",
-			Options: options, MinChoices: 0, MaxChoices: len(cards),
+			Options: options, MinChoices: 0, MaxChoices: len(cards), Private: true,
+			ScryDecisions: decisions,
 		}, log)
 		var top, bottom []id.ID
 		for index, cardID := range cards {
@@ -266,27 +285,41 @@ func (e *Engine) scryCards(g *game.Game, agents [game.NumPlayers]PlayerAgent, lo
 			for index, cardID := range group.cards {
 				orderOptions[index] = game.ChoiceOption{Index: index, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)}
 			}
-			order := e.chooseChoice(g, agents, orderChoiceRequest(playerID, group.prompt, orderOptions), log)
+			request := orderChoiceRequest(playerID, group.prompt, orderOptions)
+			request.Private = true
+			request.ScryDecisions = decisions
+			order := e.chooseChoice(g, agents, request, log)
 			original := slices.Clone(group.cards)
 			for index, chosen := range order {
 				group.cards[index] = original[chosen]
 			}
 		}
-		// Reordering within the library is not a zone change (CR 400.7).
-		for _, cardID := range bottom {
-			player.Library.Remove(cardID)
-		}
-		reorderLibraryTop(player, top)
-		for _, cardID := range bottom {
-			player.Library.AddToBottom(cardID)
-		}
+		placement.top, placement.bottom = top, bottom
 	}
+}
+
+func commitScryPlacement(g *game.Game, placement scryPlacement) {
+	player := g.Players[placement.player]
+	// Reordering within the library is not a zone change (CR 400.7).
+	for _, cardID := range placement.bottom {
+		player.Library.Remove(cardID)
+	}
+	if len(placement.top)+len(placement.bottom) > 1 {
+		reorderLibraryTop(player, placement.top)
+	}
+	for _, cardID := range placement.bottom {
+		player.Library.AddToBottom(cardID)
+	}
+}
+
+func emitScryEvent(g *game.Game, placement scryPlacement, simultaneousID id.ID) {
 	emitEvent(g, game.Event{
 		Kind:                       game.EventScry,
-		Controller:                 playerID,
-		Player:                     playerID,
-		Amount:                     amount,
-		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventScry, playerID),
+		Controller:                 placement.player,
+		Player:                     placement.player,
+		Amount:                     placement.amount,
+		SimultaneousID:             simultaneousID,
+		PlayerEventOrdinalThisTurn: nextPlayerEventOrdinalThisTurn(g, game.EventScry, placement.player),
 	})
 }
 

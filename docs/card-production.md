@@ -7,7 +7,75 @@ supersedes old full-suite/lint, fingerprint and report-refresh gates. For new wo
 use the [authoring guide](card-authoring.md) and live queue, not hard-coded
 continuation examples or superseded blocker statuses below.
 
-## Current compiler installation
+## Continuous production (#3311)
+
+The production loop now replenishes reviewed batches, resumes an owner's exact
+claim, exposes pending Engine prerequisites, and explicitly reassesses blocked
+cards after runtime evidence. See the canonical
+[continuation commands](card-authoring.md#reviewed-continuation-commands).
+The coordinator is the only queue writer; workers implement isolated slices
+and integration is serialized. Exhausting saved batches is not completion of
+an authorized remaining-cards-and-Engine assignment.
+
+The first cycle adds **four genuinely new exact authored cards**, not legacy
+migrations:
+
+| Card | Oracle ID | Named Engine evidence |
+| --- | --- | --- |
+| Mundungu | `3fb4161d-a5b9-411d-942c-2fdb039e7bde` | `activated_utility_family_test.go`: spell-only targets, current-controller combined payment, failed payment, uncounterable/departed targets and clone |
+| Sly Instigator | `8c2dd8dc-8623-4518-b3fd-dcb9f647fa98` | Same file: opponent targeting/revalidation, source departure and real ability copy, actual block legality and non-Player1 expiry |
+| Half-Elf Monk | `00d11662-9d10-4915-b80c-c1ad54b4e71b` | Same file: vigilance attack, paid tap activation, sickness/timing and target departure |
+| Myr Custodian | `43923f24-7e95-4934-9a5c-8d9a5e06ddea` | `myr_custodian_test.go` and independent `production_scry_independent_test.go`: paid default-registry entry, source departure, APNAP private staged choices, public decisions, controlled-player replay and clone |
+
+Myr Custodian required two shared changes: #3312 sanitizes single/partition/order
+scry logs without removing private information from the deciding agent; #3313
+stages group-member scry participation and APNAP placement decisions before
+simultaneous library commits/events. The complete official ruling exposed the
+second requirement during implementation. A loop of immediately completed
+single-player scries was not accepted as a shortcut. Public revealed ordering
+remains public; this is not a general audit of every private-choice operation.
+
+The card authors verified the pinned Oracle ARRAY
+`6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4`
+and official CR effective 2026-09-25,
+`8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca`,
+before design. Exact printings and their Scryfall rulings endpoints are retained
+in the manifest. Complete responses were read on 2026-10-22: Mundungu and
+Half-Elf Monk have empty lists; Sly Instigator has seven rulings dated
+2021-04-16/2023-06-30; Myr Custodian has one dated 2023-02-04.
+The verified-copy source is the supplied official `high-review-rules.txt`;
+full source locations and the corresponding hashes are in the implementation
+handoffs and Myr's source comment.
+
+Rules 117.1b, 118.1-118.3c, 302.6, 601.2c, 602.2-602.2b, 608.2b,
+611.2a-c and 701.6/701.15 govern actual activation, complete mana/life payment,
+revalidation, countering, duration and goad. For Myr, 101.4/401.1-6/701.22a-d
+require private look information, APNAP decisions before simultaneous actions,
+and no scry event for zero versus a real positive scry of an empty library.
+113.7a/603.3/707.10 preserve independent source-departed and copied triggers
+with the actual ability controller.
+
+The loop was also retuned from real delivery failures: ordinary queue commands
+no longer require an unavailable historical compiler report; failed transitions
+are atomic; saved checkpoints use a temporary file and guarded rename; `verify`
+binds exact pinned Oracle metadata without fabricating source reads; and the
+production fixture accepts legitimate whole-batch durable claims while rejecting
+dangling/partial/multiowner claims. Four previously landed cards (Ghost Vacuum,
+Marchesa, Tooth Collector and Necromantic Selection) were explicitly reconciled
+with their existing scenarios and source metadata. They are **not** four more
+new cards in this cycle.
+
+Batch `07-activated-utility` contains the first three cards above. The saved
+follow-on `08-scry-interaction` contains Eager Construct, Sea God's Revenge and
+Devout Decree, with #3312/#3313 as explicit runtime prerequisites. Recording
+checked prerequisite evidence makes it selectable; closed issue numbers alone
+do not. Resume with `cardqueue -operation next -owner YOUR_SESSION_ID`, supplying
+`-corpus` when the verified array is not at the command's default path.
+Normal remaining-card production continues with that batch, not another model
+comparison. Resource accounting distinguishes queue setup, coordination/review,
+shared Engine/proving-card work, and card authoring; credits are not USD.
+
+## Retained compiler installation checkpoint
 
 The subsequently requested full compiler import checks in all 18,700 accepted
 definitions (17,946 cards and 754 tokens), while preserving the authored

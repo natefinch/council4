@@ -143,6 +143,8 @@ type Instruction struct {
 	// does" consequence gates on the group's collective decision. It is
 	// meaningful only when Optional is true and is mutually exclusive with
 	// OptionalActor (which names a single decider).
+	// Group-member Scry gathers all participation decisions first, then stages
+	// private APNAP placement choices before simultaneous library changes.
 	OptionalActorGroup opt.V[PlayerGroupReference]
 
 	// ForEachPlayerGroup runs this instruction's primitive once for every player
@@ -157,6 +159,7 @@ type Instruction struct {
 	// permanents they themselves control. It is mutually exclusive with Optional,
 	// OptionalActor, OptionalActorGroup, and TemptingOffer, which are the "may"
 	// offers, and requires a non-nil Primitive.
+	// Group-member Scry stages all APNAP choices before simultaneous placement.
 	ForEachPlayerGroup opt.V[PlayerGroupReference]
 
 	// TemptingOffer turns an Optional + OptionalActorGroup instruction into the

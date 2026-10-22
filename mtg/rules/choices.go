@@ -124,6 +124,7 @@ func cloneChoiceRequest(request game.ChoiceRequest) game.ChoiceRequest {
 	}
 	request.Subject = cloneChoiceCardInfo(request.Subject)
 	request.DefaultSelection = slices.Clone(request.DefaultSelection)
+	request.ScryDecisions = slices.Clone(request.ScryDecisions)
 	return request
 }
 

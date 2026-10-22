@@ -168,7 +168,11 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 		if err := continueQueue(&queue, operation, batchID, owner, plan); err != nil {
 			return err
 		}
-	case "claim", "verify", "release", "block":
+	case "verify":
+		if err := verifyBatch(&queue, batchID, owner, inventory, corpusData); err != nil {
+			return err
+		}
+	case "claim", "release", "block":
 		if err := transition(&queue, operation, batchID, owner, blocker, reason, inventory); err != nil {
 			return err
 		}

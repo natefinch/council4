@@ -134,6 +134,16 @@ type ChoiceOption struct {
 	Block  opt.V[BlockDeclaration]
 }
 
+// ScryDecision is public progress within one simultaneous scry, never card
+// identities or the private order of cards kept on top or put on the bottom.
+type ScryDecision struct {
+	Player          PlayerID
+	Accepted        bool
+	PlacementChosen bool
+	TopCount        int
+	BottomCount     int
+}
+
 // ChoiceRequest describes a bounded decision the rules engine needs from a
 // player while resolving rules procedures such as triggered abilities.
 type ChoiceRequest struct {
@@ -163,6 +173,9 @@ type ChoiceRequest struct {
 
 	// Private keeps option identities out of logs, not the deciding agent's request.
 	Private bool
+	// ScryDecisions exposes earlier public participation/placement decisions in
+	// the same simultaneous scry (CR 101.4b), before library changes commit.
+	ScryDecisions []ScryDecision
 	// NumberRange is required for ChoiceNumber; Options must be empty.
 	NumberRange opt.V[NumberRange]
 	// CombatAttacker and CombatBlocker identify the current staged decision.

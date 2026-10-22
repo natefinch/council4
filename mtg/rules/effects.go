@@ -444,6 +444,10 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 // reports the effect as accepted with the count and set of members acted on.
 func (r *effectResolver) resolveForEachPlayerGroup(instr *game.Instruction) {
 	members := playersInAPNAPOrder(r.game, newReferenceResolver(r.game, r.obj).playerGroup(instr.ForEachPlayerGroup.Val))
+	if scry, ok := instr.Primitive.(game.Scry); ok && scry.Player == game.GroupOfferMemberReference() {
+		r.resolveGroupScry(instr, scry, members)
+		return
+	}
 	kind := instr.Primitive.Kind()
 	handler := globalPrimitiveRegistry().dispatch(kind)
 	prev := r.currentInstruction
@@ -474,6 +478,65 @@ func (r *effectResolver) resolveForEachPlayerGroup(instr *game.Instruction) {
 	}
 }
 
+// A simultaneous scry gathers participation, then private placement choices,
+// then commits every library before publishing any scry event (CR 701.22c).
+func (r *effectResolver) resolveGroupScry(instr *game.Instruction, prim game.Scry, members []game.PlayerID) {
+	var decisions []game.ScryDecision
+	var accepted game.PlayerSet
+	for _, member := range members {
+		participates := true
+		if instr.Optional {
+			request := mayChoiceRequest(member, "Scry?")
+			request.ScryDecisions = decisions
+			participates = r.engine.chooseChoice(r.game, r.agents, request, r.log)[0] == 1
+		}
+		decisions = append(decisions, game.ScryDecision{Player: member, Accepted: participates})
+		if participates {
+			accepted = accepted.With(member)
+		}
+	}
+	prevMember := r.groupOfferMember
+	defer func() { r.groupOfferMember = prevMember }()
+	var placements []scryPlacement
+	for index, decision := range decisions {
+		if !decision.Accepted {
+			continue
+		}
+		r.groupOfferMember = opt.Val(decision.Player)
+		amount := r.quantity(prim.Amount)
+		if amount <= 0 {
+			continue
+		}
+		player, ok := playerByID(r.game, decision.Player)
+		if !ok {
+			continue
+		}
+		placement := scryPlacement{player: decision.Player, amount: amount, top: peekLibrary(player, amount)}
+		r.engine.chooseScryPlacement(r.game, r.agents, r.log, &placement, decisions)
+		decisions[index].PlacementChosen = true
+		decisions[index].TopCount = len(placement.top)
+		decisions[index].BottomCount = len(placement.bottom)
+		placements = append(placements, placement)
+	}
+	for _, placement := range placements {
+		commitScryPlacement(r.game, placement)
+	}
+	var simultaneousID id.ID
+	if len(placements) > 1 {
+		simultaneousID = r.game.IDGen.Next()
+	}
+	for _, placement := range placements {
+		emitScryEvent(r.game, placement, simultaneousID)
+	}
+	if instr.PublishResult != "" {
+		r.resultObjectsKnown = true
+		r.publishInstructionResult(instr, effectResolved{
+			accepted: !instr.Optional || accepted.Count() > 0, succeeded: len(placements) > 0,
+			amount: accepted.Count(), acceptedActors: accepted,
+		})
+	}
+}
+
 // resolveGroupOffer resolves an OptionalActorGroup instruction: every player in
 // the group is offered the effect in turn, and the primitive resolves once for
 // each accepting player, with GroupOfferMemberReference() bound to that player.
@@ -486,6 +549,10 @@ func (r *effectResolver) resolveForEachPlayerGroup(instr *game.Instruction) {
 // Devil).
 func (r *effectResolver) resolveGroupOffer(instr *game.Instruction) {
 	members := newReferenceResolver(r.game, r.obj).playerGroup(instr.OptionalActorGroup.Val)
+	if scry, ok := instr.Primitive.(game.Scry); ok && scry.Player == game.GroupOfferMemberReference() {
+		r.resolveGroupScry(instr, scry, playersInAPNAPOrder(r.game, members))
+		return
+	}
 	kind := instr.Primitive.Kind()
 	handler := globalPrimitiveRegistry().dispatch(kind)
 	prev := r.currentInstruction
