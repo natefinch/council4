@@ -353,35 +353,58 @@ func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type 
 // affected player chooses one (CR 616.1, falling back to the first match when no
 // agent is available).
 func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacementResult {
-	result := zoneChangeReplacementResult{destination: event.ToZone}
-	applied := make(map[id.ID]bool)
+	pending := newZoneChangeReplacement(event)
 	for {
-		event.ToZone = result.destination
-		matches := matchingZoneReplacementEffects(g, event, applied)
+		matches := pending.pendingChoices(g)
 		if len(matches) == 0 {
-			return result
+			return pending.result
 		}
-		replacement := matches[0]
-		if len(matches) > 1 {
-			decision := chooseReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
-			replacement = selectedReplacementEffect(matches, decision)
+		decision := chooseReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
+		pending.apply(selectedReplacementEffect(matches, decision))
+	}
+}
+
+// zoneChangeReplacement can pause before a player decision so simultaneous zone
+// moves can order all pending choices APNAP, not ordinary and commander choices
+// in separate passes. This state belongs only to the current preparation call.
+type zoneChangeReplacement struct {
+	event   game.Event
+	result  zoneChangeReplacementResult
+	applied map[id.ID]bool
+}
+
+func newZoneChangeReplacement(event game.Event) zoneChangeReplacement {
+	return zoneChangeReplacement{
+		event: event, result: zoneChangeReplacementResult{destination: event.ToZone},
+		applied: make(map[id.ID]bool),
+	}
+}
+
+func (pending *zoneChangeReplacement) pendingChoices(g *game.Game) []game.ReplacementEffect {
+	for {
+		pending.event.ToZone = pending.result.destination
+		matches := matchingZoneReplacementEffects(g, pending.event, pending.applied)
+		if len(matches) != 1 {
+			return matches
 		}
-		applied[replacement.ID] = true
-		// After a replacement changes the event, the replacement process checks
-		// the modified event again; the same effect cannot apply twice to one
-		// event (CR 614.5, CR 616.1e).
-		result.destination = replacement.ReplaceToZone
-		result.shuffleIntoLibrary = replacement.ShuffleIntoLibrary && result.destination == zone.Library
-		result.revealSource = result.revealSource || replacement.RevealSource
-		// A named-counter redirect ("instead exile it with a void counter on
-		// it.") places its counter only when the applied replacement actually
-		// exiles the card; a later replacement that diverts it elsewhere clears
-		// the pending counter, mirroring the shuffleIntoLibrary rider above.
-		if replacement.RedirectCounter.Exists && result.destination == zone.Exile {
-			result.exileCounter = replacement.RedirectCounter
-		} else {
-			result.exileCounter = opt.V[counter.Kind]{}
-		}
+		pending.apply(matches[0])
+	}
+}
+
+func (pending *zoneChangeReplacement) apply(replacement game.ReplacementEffect) {
+	pending.applied[replacement.ID] = true
+	// Recheck the modified event, applying each effect at most once
+	// (CR 614.5, CR 616.1f).
+	result := &pending.result
+	result.destination = replacement.ReplaceToZone
+	result.shuffleIntoLibrary = replacement.ShuffleIntoLibrary && result.destination == zone.Library
+	result.revealSource = result.revealSource || replacement.RevealSource
+	// A later redirect away from exile clears the pending counter, just as a
+	// redirect away from the library clears shuffleIntoLibrary.
+	if replacement.RedirectCounter.Exists && result.destination == zone.Exile {
+		result.exileCounter = replacement.RedirectCounter
+	} else {
+		result.exileCounter = opt.V[counter.Kind]{}
 	}
 }
 
