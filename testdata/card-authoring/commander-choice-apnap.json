@@ -1,0 +1,164 @@
+{
+  "task": "1906-simultaneous-commander-choice-apnap",
+  "canonical_issue": "https://github.com/natefinch/council4/issues/1906",
+  "run_owner": "eb682ba3-a3dd-49b9-b65a-371c6f5808d2",
+  "base_head": "9e6b947a814139ba1dd11f4c6fb6cdfa2308789d",
+  "source_review_date": "2026-10-22",
+  "ownership": {
+    "command": "gh issue view 1906 --repo natefinch/council4 --json number,title,state,assignees,labels,body,comments",
+    "observed_state": "CLOSED",
+    "observed_assignees": [],
+    "observed_labels": ["bug"],
+    "scope": "Repair only the demonstrated residual simultaneous commander-return choice ordering. Issue closure is not runtime evidence. No new blocker, assignment, issue closure or integration claim."
+  },
+  "rules": {
+    "edition_effective": "2026-09-25",
+    "official_index": "https://magic.wizards.com/en/rules",
+    "official_document": "https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt",
+    "retained_complete_download": ".cardwork/engine-1906/MagicCompRules-20260925.txt",
+    "download_sha256": "8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca",
+    "revision_source_recheck": "On 2026-10-22, personally reread 101.4 and subrules, 608.2f, 616.1 and subrules, and 903.9b before designing the mixed-choice repair. Downloaded the official document again to .cardwork/engine-1906/revision-current-rules.txt and confirmed byte equality and the recorded SHA-256. Rechecked complete current pinned-printing rulings at .cardwork/engine-1906/revision-current-rulings.json against the retained complete response and reread the supplied corpus identity/text; all matched.",
+    "personally_read_before_design": [
+      {
+        "sections": ["101.4", "101.4a", "101.4b", "101.4c", "101.4d", "101.4e"],
+        "requirement": "Multiple players make simultaneous choices in active-player, then turn/seating order; the actions happen simultaneously afterwards. Do not use target-list order as player decision order."
+      },
+      {
+        "sections": ["608.2f"],
+        "requirement": "An effect acting on multiple objects normally processes the action simultaneously. Sea God's Revenge's return is one batch, not sequential returns."
+      },
+      {
+        "sections": ["616.1", "616.1a", "616.1b", "616.1c", "616.1d", "616.1e", "616.1f", "616.1g"],
+        "requirement": "Ordinary competing replacements are selected by the affected object's controller (owner if there is no controller); repeat replacement checks for the modified event. Preserve that chooser identity and existing composition rather than treating all replacements as owner choices."
+      },
+      {
+        "sections": ["903.9", "903.9a", "903.9b", "903.9c"],
+        "requirement": "A commander moving to its owner's hand or library instead goes to command only if its owner chooses. Control changes do not transfer that choice. Graveyard/exile commander handling remains an SBA. A merged noncommander component keeps its appropriate destination."
+      }
+    ],
+    "additional_passages_personally_read": [
+      {
+        "sections": ["400.3", "400.7"],
+        "requirement": "Library/hand/graveyard destinations belong to the owner, and a zone change creates a new object incarnation."
+      },
+      {
+        "sections": ["603.10", "603.10a", "608.2h"],
+        "requirement": "Retain pre-move characteristics and look-back information for the whole batch."
+      },
+      {
+        "sections": ["614.5"],
+        "requirement": "Keep ordinary replacement application lineage; the bounded repair does not rewrite repeated-replacement rules."
+      },
+      {
+        "sections": ["701.22", "701.22a", "701.22b", "701.22c", "701.22d"],
+        "requirement": "Scry 1 is a private top-card placement decision that occurs after the printed return instruction, not between returns."
+      }
+    ]
+  },
+  "oracle": {
+    "oracle_id": "8ab71a49-ce81-44f7-b940-50e7aba64df9",
+    "printing_id": "5acdf4e4-5933-43dc-bf8b-25f89415db5b",
+    "name": "Sea God's Revenge",
+    "mana_cost": "{5}{U}",
+    "type_line": "Sorcery",
+    "oracle_text": "Return up to three target creatures your opponents control to their owners' hands. Scry 1. (Look at the top card of your library. You may put that card on the bottom.)",
+    "supplied_corpus": "/Users/natefinch/.copilot/session-state/2d21805f-c9bb-4910-a872-eb7b8d5d9459/files/oracle-cards.json",
+    "live_printing_uri": "https://api.scryfall.com/cards/5acdf4e4-5933-43dc-bf8b-25f89415db5b",
+    "retained_live_printing": ".cardwork/engine-1906/seagodsrevenge-printing.json",
+    "live_printing_download_sha256": "23e57cfb0bc76223cabdc97c83a611f10b226711101d54722d4acb267f2b28ee",
+    "live_matches_supplied_identity_and_text": true,
+    "rulings_uri": "https://api.scryfall.com/cards/5acdf4e4-5933-43dc-bf8b-25f89415db5b/rulings",
+    "retained_complete_rulings": ".cardwork/engine-1906/seagodsrevenge-rulings.json",
+    "rulings_download_sha256": "34505211fc774eee5d04c6e73302a86867e66e440e7a1e7a0cde53b8c9edb48b",
+    "rulings_response_has_more": false,
+    "complete_current_rulings_personally_read_before_fixture_design": [
+      {
+        "source": "wotc",
+        "published_at": "2013-09-15",
+        "comment": "You can cast Sea God's Revenge with no targets. If you do, you'll scry 1 when it resolves. If you choose at least one target, and all chosen targets are illegal when Sea God's Revenge tries to resolve, it won't resolve and none of its effects will happen."
+      },
+      {
+        "source": "wotc",
+        "published_at": "2013-09-15",
+        "comment": "In multiplayer games, the three target creatures can be controlled by different opponents."
+      },
+      {
+        "source": "wotc",
+        "published_at": "2013-09-15",
+        "comment": "When you scry, you may put all the cards you look at back on top of your library, you may put all of those cards on the bottom of your library, or you may put some of those cards on top and the rest of them on the bottom."
+      },
+      {
+        "source": "wotc",
+        "published_at": "2013-09-15",
+        "comment": "You choose how to order cards returned to your library after scrying no matter where you put them."
+      },
+      {
+        "source": "wotc",
+        "published_at": "2013-09-15",
+        "comment": "You perform the actions stated on a card in sequence. For some spells and abilities, that means you'll scry last. For others, that means you'll scry and then perform other actions."
+      },
+      {
+        "source": "wotc",
+        "published_at": "2013-09-15",
+        "comment": "Scry appears on some spells and abilities with one or more targets. If all of the spell or ability's targets are illegal when it tries to resolve, it won't resolve and none of its effects will happen. You won't scry."
+      }
+    ],
+    "fixture_only": true,
+    "fixture_program": {
+      "id": "fixture/1906/sea-gods-revenge",
+      "version": "1"
+    },
+    "admission": "None. No production definition, program registration or queue admission was added. Whole-card reassessment of batch 08-scry-interaction remains a subsequent coordinator-owned card unit."
+  },
+  "handoff": {
+    "implementation": "mtg/rules/zones.go snapshots the whole departure batch before replacement decisions. A call-local resumable zoneChangeReplacement in replacement.go advances deterministic ordinary replacements and pauses at controller decisions. Ordinary and commander-owner decisions are staged together, choosing the earliest pending player in APNAP order after each decision, including newly exposed earlier-owner choices (101.4d). Finalize destination-dependent counter retention and commit in original input order. Single-object and batch preparation reuse these helpers and existing replacement composition. No pending-choice state escapes into the Engine, catalog or Game.",
+    "preserved": [
+      "Pre-move snapshots, controlled-trigger snapshots and replacement-source presence",
+      "Ordinary replacement chooser identity and destination composition",
+      "Owner-relative destinations even under changed control",
+      "Original result/event correspondence and supplied or allocated simultaneous event identity",
+      "Physical merged-card arrivals and independent per-component commander destinations",
+      "Existing single-object, graveyard/exile SBA and counter-retention behavior"
+    ],
+    "baseline_probe": {
+      "command": "go test ./mtg/rules -run '^TestSimultaneousCommanderReplacementChoicesAPNAP$' -count=1 -v",
+      "retained_log": ".cardwork/engine-1906/baseline-probe.log",
+      "observed_on_unmodified_production_code": "Natural-order positive control passed; reversed targets failed with commander choices [3 1], want [1 3]. Probe was recreated locally, not copied from the earlier overlay."
+    },
+    "behavioral_tests": [
+      "TestSimultaneousCommanderReplacementChoicesAPNAP",
+      "TestSimultaneousCommanderReplacementReplayAndClone",
+      "TestSimultaneousCommanderReplacementComposesWithZoneReplacement",
+      "TestSimultaneousMixedZoneReplacementChoicesAPNAP",
+      "TestSimultaneousMixedZoneReplacementRestartsAPNAP",
+      "TestSimultaneousMixedZoneReplacementReplayAndClone",
+      "TestSimultaneousCommanderReplacementMergedComponent",
+      "TestSeaGodsRevengeCommanderChoicesBeforeSimultaneousReturnAndScry"
+    ],
+    "coverage": "128 commander batch cases cross natural/reversed target order, hand/library, all four accept/decline combinations, original/changed controllers, active-player rotation and custom seating. Added 64 mixed ordinary/commander choice cases with natural/reversed target order, hand/library destinations, accept/decline, changed controllers, rotated active player and custom seating; each asserts all choices share the pre-move battlefield, controller-versus-owner identity, result/event correspondence, owner-relative final zones and one simultaneous identity. Two restart cases assert newly exposed earlier-owner decisions precede later pending controller decisions. Mixed replay and a clone taken during an ordinary choice verify independent opposite decisions. Existing cases retain ordinary replacement sources during departure, merged components, recorded replay and mid-choice cloning. Sixteen paid unregistered Sea God's Revenge scenarios retain their replay/opposite branches and simultaneous returns before private scry.",
+    "validation_commands": [
+      "go test ./mtg/rules -run '^Test(SimultaneousCommanderReplacement|SeaGodsRevengeCommander)' -count=1 -v",
+      "go test ./mtg/rules -run 'Commander|Simultaneous|Replacement|Skullbriar|Mutat|ZoneChange|ZoneMove' -count=1 -v",
+      "go test ./mtg/rules -count=1",
+      "go test ./mtg/rules -count=1 -json",
+      "go test -overlay .cardwork/engine-1906/review-overlay.json ./mtg/rules -run '^TestReviewMixedZoneReplacementChoicesAPNAP$' -count=1 -v",
+      "go test -overlay .cardwork/engine-1906/review-overlay.json ./mtg/rules -run '^Test(Simultaneous(Commander|MixedZone)Replacement|SeaGodsRevengeCommander|ReviewMixedZoneReplacementChoicesAPNAP|ReviewDefaultSeaGodsRevengeIsUnregistered)' -count=1 -json",
+      "git diff --check"
+    ],
+    "validation_results": {
+      "status": "passed",
+      "rules_package_named_tests_and_subtests": 8964,
+      "interaction_root_tests": 394,
+      "final_package_log": ".cardwork/engine-1906/revision-rules.jsonl",
+      "revision_proving_tests_and_subtests": 228,
+      "revision_proving_log": ".cardwork/engine-1906/revision-proving.jsonl",
+      "interaction_log": ".cardwork/engine-1906/interaction-scenarios.log",
+      "initial_repaired_proving_scenarios_log": ".cardwork/engine-1906/proving-scenarios.log",
+      "execution_check": "Final rules-package JSON confirmed all eight named proving tests executed and passed: the original five, the 64 mixed-choice matrix cases, two APNAP restart cases and mixed-choice replay/clone isolation. The focused overlay run additionally passed the incoming independent regression in both target orders and confirmed Sea God's Revenge remains unregistered."
+    },
+    "queue_check": "go run ./cmd/cardqueue -operation check -owner eb682ba3-a3dd-49b9-b65a-371c6f5808d2 -corpus /Users/natefinch/.copilot/session-state/2d21805f-c9bb-4910-a872-eb7b8d5d9459/files/oracle-cards.json",
+    "queue_ownership": "Read-only check passed. No saved card claim, reassessment, verification, admission, queue or prior-unit reconciliation was changed; these remain coordinator-owned.",
+    "independent_review": "Incoming independent review identified a mixed-choice APNAP regression: ordinary replacements were all decided before commander choices. Personally reproduced both reversed and natural target-order failures, players=[3,1], in .cardwork/engine-1906/revision-baseline-mixed.log using the retained review-overlay.json. The unified pending-decision staging now passes that unchanged independent probe and new related scenarios. No nested agents were launched. The workflow coordinator must obtain independent re-review of this material shared timing/replacement revision before integration; no passing re-review is claimed.",
+    "delivery": "Uncommitted isolated-worktree implementation only. No push, PR action, CI result, merge, issue completion or main integration is claimed. Workflow must validate required exact-head CI, including Race Tests, before merging."
+  }
+}
