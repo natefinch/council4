@@ -60,6 +60,22 @@ jobs:
         if: steps.plan.outputs.code != 'true'
         run: echo "No code changes; test suite not required."
 
+  race:
+    name: Race Tests
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Race test suite
+        run: go test -race ./...
+
   maintenance:
     name: Manual ${{ inputs.check }}
     if: github.event_name == 'workflow_dispatch' && inputs.check != 'tests'

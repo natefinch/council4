@@ -7,8 +7,9 @@ Broadly authorized continuous production also replenishes small reviewed
 saved batches and works their canonical Engine prerequisites, then explicitly
 reassesses dependent cards; exhausted saved batches alone do not end that scope.
 
-The default is implement, test, inspect and commit directly to main when
-authorized, with one writer and no mandatory PR or nested epic. Checks and review
+The production path is implement, integrate latest main, test and inspect, then
+open a PR and merge only after all exact-head CI succeeds when authorized.
+Keep one integration writer and no duplicate epic. Checks and review
 follow the [repository policy](../../../.github/copilot-instructions.md#verify-proportionally).
 Push permission remains explicit.
 

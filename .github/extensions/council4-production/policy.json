@@ -1,23 +1,26 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "models": {
     "selection": null,
     "card": {
       "implementation": "gpt-6-luna",
       "review": null,
       "review_fix": "gpt-6-luna",
-      "validation_fix": "gpt-6-luna"
+      "validation_fix": "gpt-6-luna",
+      "ci_fix": "gpt-6-luna"
     },
     "engine": {
       "implementation": null,
       "review": null,
       "review_fix": null,
-      "validation_fix": null
+      "validation_fix": null,
+      "ci_fix": null
     }
   },
   "cardReview": "risk",
   "reviewFixRounds": 1,
   "validationFixRounds": 1,
+  "ciFixRounds": 1,
   "validationPackages": [
     "./cmd/cardqueue",
     "./mtg/game",

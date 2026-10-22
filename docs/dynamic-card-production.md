@@ -5,7 +5,8 @@ The repository extension
 registers two Copilot Dynamic Workflows:
 
 - **`council4-production`**: select, implement, validate, review when required,
-  repair/re-review, and publish accepted units to `origin/main`.
+  repair/re-review, open a PR, repair actual CI failures, and merge into `main`
+  only after CI succeeds.
 - **`council4-production-report`**: refresh a run's native telemetry and local
   task/stage breakdown without spawning agents or modifying Git.
 
@@ -25,22 +26,46 @@ not indefinitely on local work branches.** This is the user-directed update to
 the original #3311 plan. A production run authorizes this publication within its
 explicit scope; preflight, reporting and telemetry-smoke do not.
 
-The workflow creates one isolated worktree per unit from fetched `origin/main`.
-Only the orchestrator commits and publishes. It checks the actual diff, runs
-affected packages, applies the review policy, records the reviewed tree, and
-uses an ordinary fast-forward push to `refs/heads/main`. A fresh fetch verifies
-the commit is on the remote branch before a unit becomes `landed`. The user's
-main checkout is never read or changed.
+**User-directed landing policy:** use PRs and merge after CI, not direct main
+pushes. The remaining GitHub `Race Tests` protection stays enabled. CI now has a
+PR job named exactly `Race Tests`, running `go test -race ./...`; production
+agents themselves still run locally in Copilot, not in Actions.
 
-There is one shared-repository integration lock, plus serialized units. A claim
-is not a writer lock. Non-fast-forward races, repository protections, unexpected
-commits or changed reviewed content stop publication; no force push, automatic
-reset, bypass or unreviewed conflict resolution. A protection requiring a PR
-must be handled explicitly. Local work is preserved and is not counted as
-delivered.
+The workflow creates an isolated worktree per unit from fetched `origin/main`.
+Only the orchestrator commits and publishes. After local validation and the
+applicable independent review it commits the reviewed tree, fetches the latest
+main, and merges any new main changes into the unit branch. Changed integration
+receives independent review and the merged head runs affected local tests.
+Merge conflicts preserve the work and stop rather than being auto-resolved.
+
+The orchestrator pushes **only the task branch**, creates or reuses its PR, and
+watches CI. `Tests`, `Race Tests`, every other reported check and any additional
+repository-required checks must finish successfully for that exact PR head.
+The two named test checks must be actual GitHub Actions check runs, not manual
+status assertions. Required approvals are honored. Failed, missing, pending,
+skipped-required, stale-head, draft or unmergeable PRs do not merge.
+
+Actual CI failures can trigger bounded `ci_fix` work, local validation and an
+independent `ci_review`. Only then does the workflow commit/push the repair and
+wait for fresh CI on its new head. Missing checks or external approvals pause
+with the PR and resume checkpoint, not a manufactured success. If main advances,
+the workflow integrates it and repeats the affected checks/review before merging.
+
+A final fresh PR/check/protection read precedes ordinary
+`gh pr merge --squash --match-head-commit`. There is no `--admin`, direct
+`refs/heads/main` push, false check status, protection mutation or force push.
+The PR's returned squash commit must appear in fetched remote main before the
+unit becomes `landed`; the original branch commit is not incorrectly required
+to be an ancestor after squash.
+
+There is one shared-repository integration lock and serialized units. A claim
+is not a writer lock. Unexpected commits, changed reviewed content, unsupported
+protections or conflicts stop safely. Local/unmerged PR work is preserved and
+never counted as delivered. The user's main checkout is never read or changed.
 
 Start from a clean coordinator checkout whose HEAD is on the ancestry of
-`origin/main`. Unlanded setup commits must be deliberately integrated first.
+`origin/main`, or whose tree exactly matches main after a squash merge.
+Unlanded setup content must be deliberately integrated first.
 Each unit's worktree and failed drafts remain in
 `.cardwork/workflows/<run-id>/work/`; do not archive/delete unresolved work.
 After an abnormal process kill, inspect the lock's `owner.json` and the native
@@ -76,8 +101,10 @@ Two non-delivery checks are available:
 {"mode":"preflight"}
 ```
 
-This checks the registration/policy/repository without agents or Git publication.
-It does not certify write permissions, production tests or all production inputs.
+This checks registration/policy/repository and the supported protection policy
+without agents or Git publication. It does not certify write permissions,
+production tests or all production inputs. A protection failure is a real
+preflight blocker, not a passing production result.
 
 ```json
 {"mode":"telemetry-smoke"}
@@ -113,12 +140,16 @@ card/08-scry-interaction/implementation/0
 card/08-scry-interaction/review/0
 card/08-scry-interaction/review_fix/1
 card/08-scry-interaction/re_review/1
+card/08-scry-interaction/ci_fix/1
+card/08-scry-interaction/ci_review/1
+card/08-scry-interaction/integration_review/1
 engine/3313/implementation/0
 engine/3313/review/0
 ```
 
-`validation_fix` is distinct from fixes requested by a reviewer. Deterministic
-test commands and landing are not falsely attributed to a model call. A new
+`validation_fix` is distinct from `review_fix` and `ci_fix`. CI fixes have their
+own task-type model choice; CI and local-test elapsed time are deterministic
+stages, not falsely attributed as model active time or AIC. A new
 independent reviewer is used for re-review; repeated identical workflow calls
 are memoized by the runtime rather than spawning accidental duplicates.
 
@@ -141,7 +172,7 @@ requested/resolved model and aggregate AIC. The extension also writes:
 
 | File under `.cardwork/workflows/<run-id>/` | Purpose |
 | --- | --- |
-| `state.json` | Pinned code/policy revision, stage identities, task outcomes and landing commits |
+| `state.json` | Pinned code/policy revision, stage identities, task outcomes, PRs and verified merge commits |
 | `usage.jsonl` | Sanitized authoritative usage receipts keyed by source-session/sequence and agent ID; no prompts or model reasoning |
 | `report.json` | Per-task-type/task/stage/model AIC and agent time, outcomes, native totals and reconciliation |
 | `report.md` | Readable task/stage/model table and landed/blocked outcomes, suitable for the app's editor panel |
@@ -194,8 +225,8 @@ Edit [`policy.json`](../.github/extensions/council4-production/policy.json):
 - Engine, selection and reviewer defaults: `null`, meaning the session/runtime
   model preference is inherited; the actual model is measured, not assumed.
 - Independent model choices for each task type's implementation, review,
-  review fixes and validation fixes.
-- Risk-based versus always-on card review, bounded repair rounds, and affected
+  review fixes, validation fixes and CI fixes.
+- Risk-based versus always-on card review, bounded local/review/CI repair rounds, and affected
   package validation.
 
 Keep task/phase labels stable. Bump the policy version when changing policy;
@@ -209,7 +240,10 @@ does not retroactively change a paused run**: the workflow rejects a mismatched
 revision instead of silently replaying old results under new meanings. Restore
 the old revision to resume that run, or start a new one and reconcile preserved
 work first. Git publication is idempotent across a crash after commit/push:
-only the previously prepared reviewed tree may be recovered.
+only the previously prepared reviewed tree may be recovered. Integration merge
+and reviewed CI-commit intents are recorded before Git mutation; interruption
+recovery verifies their exact parents/tree before continuing. An existing PR is
+reused, never duplicated, and an already merged PR is checked against remote main.
 
 The definition is versioned in the repository and can improve alongside
 production. It is not another Oracle compiler or an autonomous guarantee of

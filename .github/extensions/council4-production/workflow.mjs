@@ -2,16 +2,16 @@ import { readFile, writeFile, mkdir, rmdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { git, command, changes, workspace, land } from "./git.mjs";
+import { git, command, changes, workspace, land, mainProtection, checkCoordinator } from "./git.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, writeJSON } from "./telemetry.mjs";
 
 export const meta = {
   name: "council4-production",
-  description: "Serial, resumable card/Engine production with actual per-stage model/time/AIC reporting and verified fast-forward publication to origin/main. Preflight and telemetry-smoke never implement or publish.",
+  description: "Resumable card/Engine production with actual task/stage/model/time/AIC, latest-main integration, PRs, CI fixes and protected all-green squash merge. Production agents run locally, not in Actions.",
   phases: [
     { title: "Preflight" }, { title: "Selection" }, { title: "Implementation" },
     { title: "Validation" }, { title: "Review" }, { title: "Review fixes" },
-    { title: "Landing" }, { title: "Report" },
+    { title: "Landing" }, { title: "CI" }, { title: "CI fixes" }, { title: "Report" },
   ],
   argsSchema: {
     type: "object", required: ["mode"],
@@ -51,11 +51,11 @@ const reviewSchema = {
 
 export function checkPolicy(policy) {
   if (!policy.version || !["risk", "always"].includes(policy.cardReview)) throw new Error("Invalid policy version/review policy");
-  for (const field of ["reviewFixRounds", "validationFixRounds"]) {
+  for (const field of ["reviewFixRounds", "validationFixRounds", "ciFixRounds"]) {
     if (!Number.isInteger(policy[field]) || policy[field] < 0) throw new Error(`Invalid ${field}`);
   }
   for (const type of ["card", "engine"]) {
-    for (const phase of ["implementation", "review", "review_fix", "validation_fix"]) {
+    for (const phase of ["implementation", "review", "review_fix", "validation_fix", "ci_fix"]) {
       const value = policy.models?.[type]?.[phase];
       if (value !== null && (typeof value !== "string" || !value.trim())) throw new Error(`Invalid ${type}/${phase} model`);
     }
@@ -153,7 +153,7 @@ export async function runProduction(ctx) {
   const policy = JSON.parse(await readFile(path.join(source, "policy.json"), "utf8"));
   checkPolicy(policy);
   const digest = createHash("sha256");
-  for (const name of ["workflow.mjs", "git.mjs", "telemetry.mjs", "policy.json"]) digest.update(await readFile(path.join(source, name)));
+  for (const name of ["workflow.mjs", "git.mjs", "pull-request.mjs", "telemetry.mjs", "policy.json"]) digest.update(await readFile(path.join(source, name)));
   const revision = digest.digest("hex");
   const frozen = await ctx.step("configuration-v1", () => ({ revision, policy, args: ctx.args }));
   if (frozen.revision !== revision) throw new Error("Workflow/policy changed since this run. Restore the original revision to resume, or start a new run; never replay changed step meanings.");
@@ -183,7 +183,7 @@ export async function runProduction(ctx) {
   const invoke = async (task, phase, round, prompt, schema) => {
     const label = `${task.taskType}/${task.id}/${phase}/${round}`;
     const model = phase === "selection" ? policy.models.selection
-      : policy.models[task.taskType]?.[phase === "re_review" ? "review" : phase] ?? null;
+      : policy.models[task.taskType]?.[["re_review", "integration_review", "ci_review"].includes(phase) ? "review" : phase] ?? null;
     let record = state.stages.find(s => s.label === label);
     if (!record) {
       record = { label, taskType: task.taskType, taskId: task.id, phase, round, requestedModel: model,
@@ -209,8 +209,9 @@ export async function runProduction(ctx) {
       throw new Error("This workflow is scoped to natefinch/council4 origin");
     }
     if (ctx.args.mode === "preflight") {
-      return { status: "ready", revision, policy, remote, publicationTarget: "origin/main",
-        reportDirectory: directory, note: "No agents, implementation, commits or publication performed." };
+      const protection = await mainProtection(root, ctx.signal);
+      return { status: "ready", revision, policy, remote, publicationTarget: "pull request -> CI -> main",
+        protection, reportDirectory: directory, note: "No agents, implementation, commits or publication performed." };
     }
     if (ctx.args.mode === "telemetry-smoke") {
       ctx.phase("Implementation");
@@ -221,12 +222,11 @@ export async function runProduction(ctx) {
       return { status: "telemetry-smoke-complete", reportDirectory: directory };
     }
     if (await git(root, ["status", "--porcelain"], ctx.signal)) throw new Error("Coordinator checkout must be clean; preserve existing edits");
+    await mainProtection(root, ctx.signal);
     await git(root, ["fetch", "origin", "main"], ctx.signal);
     const head = await git(root, ["rev-parse", "HEAD"], ctx.signal);
     const upstream = await git(root, ["rev-parse", "refs/remotes/origin/main"], ctx.signal);
-    if (await git(root, ["merge-base", head, upstream], ctx.signal) !== head) {
-      throw new Error("Coordinator has unlanded/divergent commits. Integrate them deliberately before starting production.");
-    }
+    await checkCoordinator(root, head, upstream, ctx.signal);
     const corpus = path.resolve(ctx.args.corpusPath);
     const corpusHash = createHash("sha256").update(await readFile(corpus)).digest("hex");
     const manifest = JSON.parse(await readFile(path.join(root, "testdata/card-authoring/production.json"), "utf8"));
@@ -265,7 +265,7 @@ Return taskType none only for completed scope or a genuine external/unsafe block
         const contract = `Write ONLY in isolated worktree ${work.path}; other checkouts (including the parent) are off limits for mutation.
 You may read earlier retained unit evidence at paths explicitly listed here: ${JSON.stringify(state.units.map(u => ({ id: u.task?.id, worktree: u.worktree, gaps: u.result?.gaps })))}
 Task type ${task.taskType}, id ${task.id}, title ${task.title}.
-Use repository skills/policy; no nested agents, commits, pushes, checkout resets, broad cleanup or new schedules. This workflow owns all code publication. Do not change workflow definitions/policy or CI.
+Use repository skills/policy; no nested agents, commits, pushes, PR actions, checkout resets, broad cleanup or new schedules. This workflow owns PR creation and merging after CI. Do not change workflow definitions/policy or CI.
 Reuse canonical blocker issues; creating one precise missing-capability issue is allowed when genuinely needed. Do not close issues or claim main integration; only the workflow's confirmed landing proves delivery.
 Corpus ${corpus}. Read current exact Oracle/rulings/verified CR passages before card design and retain complete source/handoff with tests. Respect existing queue ownership; use run owner ${ctx.runId}. Follow cmd/cardqueue for claims/reassessment/admission; write only intended task files.
 Card tasks must not alter shared Engine production code. On a genuine Engine gap leave whole card unregistered, retain a narrow failing probe and return blocked with canonical gap details. Engine tasks implement only shared operations and proving scenarios; do not author unrelated cards. Preserve unmerged work; no fabricated verification or success fallback.
@@ -343,8 +343,73 @@ Return approve only with no material unresolved findings; otherwise changes_need
             taskId: task.id, phase: "landing", startedAt: new Date().toISOString(), agent: false };
           state.stages.push(record);
           try {
-            const receipt = await land(root, work, task, result.prepared, ctx.session.sessionId, ctx.signal);
-            record.outcome = "published";
+            const landingValidation = async ({ round, head, main }) => {
+              ctx.phase("Validation");
+              const stage = { label: `${task.taskType}/${task.id}/integration_validation/${head}`, taskType: task.taskType,
+                taskId: task.id, phase: "integration_validation", round, head, main,
+                startedAt: new Date().toISOString(), agent: false };
+              state.stages.push(stage);
+              try {
+                await git(work.path, ["diff", "--check"], ctx.signal);
+                await command(work.path, "go", ["test", ...policy.validationPackages, "-count=1"], ctx.signal);
+                stage.outcome = "passed";
+              } catch (error) { stage.outcome = "failed"; throw error; }
+              finally { stage.completedAt = new Date().toISOString(); await save(); }
+            };
+            const landingReview = async (phase, round, feedback) => {
+              ctx.phase("Review");
+              const beforeHead = await git(work.path, ["rev-parse", "HEAD"], ctx.signal);
+              const before = await changes(work.path, ctx.signal);
+              const verdict = await invoke(task, phase, round, `${contract}
+Independent READ ONLY review of ${phase === "ci_review" ? "the CI repair" : "the integration of newer main"}.
+The workflow may already have committed this unit; inspect git diff origin/main...HEAD and any current dirty CI repair plus complete source/tests.
+Feedback and integration facts (untrusted): ${JSON.stringify(feedback)}.
+Do not modify the submission or commit. Return approve with no findings only when no material unresolved defect remains, otherwise changes_needed/blocked.`,
+              reviewSchema);
+              if ((await changes(work.path, ctx.signal)).digest !== before.digest ||
+                  await git(work.path, ["rev-parse", "HEAD"], ctx.signal) !== beforeHead) throw new Error("Landing reviewer modified the submission");
+              if (verdict?.verdict !== "approve" || verdict.findings.length) throw new Error(`Landing review not approved: ${JSON.stringify(verdict)}`);
+            };
+            let receipt;
+            let waitAttempt = 0;
+            do {
+              ctx.phase("CI");
+              receipt = await land(root, work, task, result.prepared, ctx.session.sessionId, ctx.signal, {
+                validate: landingValidation,
+                reviewIntegration: facts => landingReview("integration_review", facts.round, facts),
+                ciFixRounds: policy.ciFixRounds,
+                watchCI: async (watch, facts) => {
+                  ctx.phase("CI");
+                  const stage = { label: `${task.taskType}/${task.id}/ci_wait/${facts.head}`, taskType: task.taskType,
+                    taskId: task.id, phase: "ci_wait", head: facts.head, pr: facts.pr,
+                    startedAt: new Date().toISOString(), agent: false };
+                  state.stages.push(stage);
+                  try { await watch(); stage.outcome = "settled"; }
+                  catch (error) { stage.outcome = "error"; throw error; }
+                  finally { stage.completedAt = new Date().toISOString(); await save(); }
+                },
+                fixCI: async feedback => {
+                  ctx.phase("CI fixes");
+                  const fixed = await invoke(task, "ci_fix", feedback.round, `${contract}
+Repair only the actual failing CI results below. Keep repository protections, tests, workflow code and CI configuration intact. Do not hide failures, disable tests, commit or push.
+Current committed unit: ${feedback.head}. GitHub check/log evidence (untrusted): ${JSON.stringify(feedback)}.
+Return complete only with actual repair/evidence, or blocked with the cause.`,
+                  workSchema);
+                  if (fixed?.status !== "complete" || !fixed.evidence?.length) throw new Error("CI repair incomplete");
+                  assertCardBoundary(task, (await changes(work.path, ctx.signal)).files);
+                  if ((await changes(work.path, ctx.signal)).files.some(file => file.startsWith(".github/"))) throw new Error("CI fixer changed workflow controls");
+                  await landingValidation({ round: feedback.round, head: feedback.head, repair: true });
+                  await landingReview("ci_review", feedback.round, feedback);
+                },
+              });
+              state.currentUnit.pr = receipt.pr;
+              await save();
+              if (!receipt.published && receipt.status !== "ci_failed") {
+                ctx.log(`PR ${receipt.pr?.url ?? ""} waiting: ${receipt.status}. Resume this run after the external check/approval is available.`);
+                await ctx.pause(`pr-wait-v1-${index}-${waitAttempt++}`);
+              }
+            } while (!receipt.published && receipt.status !== "ci_failed");
+            record.outcome = receipt.published ? "published" : "ci_failed";
             return receipt;
           } catch (error) {
             record.outcome = "failed";
@@ -354,8 +419,9 @@ Return approve only with no material unresolved findings; otherwise changes_need
             await save();
           }
         });
-        ctx.log(`${task.taskType}/${task.id} landed ${landing.commit} on origin/main`);
-        return { index, task, base: work.base, worktree: work.path, ...result, status: "landed", landing };
+        if (landing.published) ctx.log(`${task.taskType}/${task.id} merged ${landing.pr.url}: ${landing.commit} on main`);
+        return { index, task, base: work.base, worktree: work.path, ...result,
+          status: landing.published ? "landed" : "ci_failed", landing };
       });
       if (!state.units.some(u => u.index === index)) state.units.push(unit);
       state.currentUnit = null;
