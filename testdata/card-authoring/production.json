@@ -6717,7 +6717,19 @@
     "Inspectably targeted simultaneous return-to-owner-hand",
     "Color/type union targeting and replacement-aware exile"
    ],
-   "review": "#3311 next bounded family, not admission: parent read exact pinned Oracle printings and full printing-specific Scryfall rulings (Eager Construct one 2020-08-07, Sea God's Revenge six 2013-09-15, Devout Decree one 2019-07-12; saved production-eager-rulings.json, production-sea-god-rulings.json, production-devout-rulings.json). Verified CR2026-09-25 101.4, 307.1, 400.7, 601.2c, 608.2b-c, 701.22a-d require exact chosen target cardinality, zero-target scry versus all-illegal failure, current type/color/opponent revalidation, ordered effects and simultaneous private APNAP scry. Existing TargetSpec/Selection.ColorsAny and replacement-aware zone operations cover ordinary composition; actual card sources/runtime trace/tests remain required before verification. Do not claim until #3312 and #3313 have integrated runtime/scenario evidence."
+   "review": "#3311 next bounded family, not admission: parent read exact pinned Oracle printings and full printing-specific Scryfall rulings (Eager Construct one 2020-08-07, Sea God's Revenge six 2013-09-15, Devout Decree one 2019-07-12; saved production-eager-rulings.json, production-sea-god-rulings.json, production-devout-rulings.json). Verified CR2026-09-25 101.4, 307.1, 400.7, 601.2c, 608.2b-c, 701.22a-d require exact chosen target cardinality, zero-target scry versus all-illegal failure, current type/color/opponent revalidation, ordered effects and simultaneous private APNAP scry. Existing TargetSpec/Selection.ColorsAny and replacement-aware zone operations cover ordinary composition; actual card sources/runtime trace/tests remain required before verification. Do not claim until #3312 and #3313 have integrated runtime/scenario evidence.",
+   "prerequisite_evidence": [
+    {
+     "issue": 3312,
+     "runtime_revision": "5d3e62fa391c9c4fa49bb7dfa6a573020d57c5f3",
+     "evidence": "mtg/rules/library_choices.go constructs private single/partition/order requests; TestScryPrivateChoicesAndReplay, TestScryPrivateFallbackAndControlledDecision, TestRevealedLibraryOrderRemainsPublic and independent TestProductionScryPrivateLogBoundary pass in the integrated runtime. Full affected package checks passed."
+    },
+    {
+     "issue": 3313,
+     "runtime_revision": "5d3e62fa391c9c4fa49bb7dfa6a573020d57c5f3",
+     "evidence": "Existing optional/mandatory group-member Scry routes stage APNAP decisions before commits/events; TestGroupScryStagesChoicesBeforeLibraryChanges, TestGroupScryPartitionsOrdersAndPublicCounts and actual default-registry TestProductionMyrCustodianPrivateStagedReplay pass. No card is admitted merely from issue closure."
+    }
+   ]
   }
  ],
  "records": [
