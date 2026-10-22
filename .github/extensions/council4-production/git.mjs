@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, readdir, stat, lstat } from "node:fs/promises";
 import path from "node:path";
+import { pullRequestAPI, landPullRequest } from "./pull-request.mjs";
 
 const execute = promisify(execFile);
 
@@ -21,15 +22,25 @@ export async function command(cwd, executable, args, signal) {
 export const git = (cwd, args, signal) => command(cwd, "git", args, signal);
 
 export function checkProtection(classic, rules) {
-  const blockingRules = rules.filter(rule => !["non_fast_forward", "deletion", "required_linear_history"].includes(rule.type));
+  const blockingRules = rules.filter(rule => ![
+    "non_fast_forward", "deletion", "required_linear_history", "required_status_checks", "pull_request",
+  ].includes(rule.type));
   const checks = [...new Set([
     ...(classic?.required_status_checks?.contexts ?? []),
     ...(classic?.required_status_checks?.checks ?? []).map(check => check.context),
   ])];
-  if (checks.length || classic?.required_pull_request_reviews || classic?.restrictions ||
+  if (classic?.restrictions ||
       classic?.lock_branch?.enabled || classic?.required_signatures?.enabled || blockingRules.length) {
-    throw new Error(`Main protection requires a checked integration path, not an administrator bypass. Required checks: ${checks.join(", ") || "see ruleset"}. No main push attempted.`);
+    throw new Error("Unsupported main protection requires explicit integration; never use administrator bypass.");
   }
+  for (const rule of rules.filter(rule => rule.type === "required_status_checks")) {
+    for (const check of rule.parameters?.required_status_checks ?? []) checks.push(check.context);
+  }
+  return {
+    checks: [...new Set(["Tests", "Race Tests", ...checks])],
+    reviewRequired: Boolean(classic?.required_pull_request_reviews?.required_approving_review_count) ||
+      rules.some(rule => rule.type === "pull_request" && rule.parameters?.required_approving_review_count > 0),
+  };
 }
 
 export async function mainProtection(root, signal) {
@@ -41,8 +52,7 @@ export async function mainProtection(root, signal) {
     // A missing/unreadable classic protection is not treated as unprotected.
     classic = JSON.parse(await command(root, "gh", ["api", `${repo}/branches/main/protection`], signal));
   }
-  checkProtection(classic, rules);
-  return { protected: branch.protected, rules: rules.map(rule => rule.type) };
+  return { protected: branch.protected, rules: rules.map(rule => rule.type), ...checkProtection(classic, rules) };
 }
 
 export async function changes(cwd, signal) {
@@ -78,35 +88,13 @@ export async function workspace(root, directory, runId, index, signal) {
   return { path: target, branch, base: await git(target, ["rev-parse", "HEAD"], signal) };
 }
 
-export async function land(root, work, task, expected, sessionId, signal, protection = mainProtection) {
-  let head = await git(work.path, ["rev-parse", "HEAD"], signal);
-  if (head === work.base) {
-    const current = await changes(work.path, signal);
-    if (current.digest !== expected.digest || !current.files.length) throw new Error("Reviewed content changed or is empty");
-    await git(work.path, ["add", "--", ...current.files], signal);
-    if (await git(work.path, ["write-tree"], signal) !== expected.tree) throw new Error("Prepared tree no longer matches reviewed content");
-    await git(work.path, ["commit", "-m", `${task.title}\n\nCo-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>\nCopilot-Session: ${sessionId}`], signal);
-    head = await git(work.path, ["rev-parse", "HEAD"], signal);
-  } else {
-    // Crash recovery may find the workflow's commit but no journaled landing.
-    if (await git(work.path, ["rev-parse", "HEAD^"], signal) !== work.base ||
-        !await git(work.path, ["log", "-1", "--format=%B"], signal).then(text => text.includes(`Copilot-Session: ${sessionId}`))) {
-      throw new Error("Unexpected task commits; refusing unreviewed publication");
-    }
-    if (await git(work.path, ["rev-parse", "HEAD^{tree}"], signal) !== expected.tree ||
-        await git(work.path, ["status", "--porcelain"], signal)) throw new Error("Task changed after its landing commit");
-  }
-  await git(root, ["fetch", "origin", "main"], signal);
-  const main = await git(root, ["rev-parse", "refs/remotes/origin/main"], signal);
-  const contains = await git(root, ["merge-base", main, head], signal);
-  if (contains === head) return { commit: head, main, published: true, recovered: true };
-  if (main !== work.base) throw new Error("origin/main advanced. Preserve work; rebase/integration requires new validation and review in a new run.");
-  await protection(root, signal);
-  await git(work.path, ["push", "origin", `${head}:refs/heads/main`], signal);
-  await git(root, ["fetch", "origin", "main"], signal);
-  const confirmed = await git(root, ["rev-parse", "refs/remotes/origin/main"], signal);
-  if (await git(root, ["merge-base", confirmed, head], signal) !== head) throw new Error("Remote main does not contain the landing commit");
-  return { commit: head, main: confirmed, published: true, recovered: false };
+export async function land(root, work, task, expected, sessionId, signal, options = {}) {
+  return landPullRequest({
+    root, work, task, expected, sessionId, signal, git, changes,
+    protection: mainProtection,
+    api: pullRequestAPI(command, signal),
+    ...options,
+  });
 }
 
 export async function collectReports(root) {

@@ -7,7 +7,7 @@ description: Implement a selected epic, eligible Ready For Dev issues, or author
 
 Follow the [repository policy](../../../.github/copilot-instructions.md).
 Default to authored Go card behavior,
-one main writer, proportional checks and direct commits when authorized.
+one integration writer, proportional checks and CI-checked PR merging when authorized.
 Compiler expansion is not the work-selection strategy.
 For card implementation, route to [card-authoring](../card-authoring/SKILL.md)
 and its [canonical guide](../../../docs/card-authoring.md), including the
@@ -47,9 +47,10 @@ executable scaffold and behavioral evidence.
    during iteration; new card support does not require parser/lowering work.
 4. Follow the [validation and review policy](../../../.github/copilot-instructions.md#verify-proportionally).
    Do not add per-issue gates or report refreshes.
-5. Commit only intended changes directly to main when authorized. No mandatory
-   branch, PR, approval or merge. Push normally only when authorized; report
-   protection/ownership conflicts rather than force-pushing or bypassing them.
+5. Commit only intended changes when authorized. Merge fetched main into the
+   task branch, validate the integrated code and review changed boundaries.
+   Open/reuse a PR and merge only after all checks, including `Race Tests`,
+   succeed on its exact head. No admin merge, direct-main push or protection bypass.
 6. Record the commit and meaningful outcome once. Close the issue after its
    acceptance criteria are met, noting explicitly whether work is only local
    or has reached origin. Do not report a local commit as deployed support.
@@ -57,7 +58,7 @@ executable scaffold and behavioral evidence.
 When the user requests Dynamic Workflow execution, use the registered
 `council4-production` workflow and
 [operating guide](../../../docs/dynamic-card-production.md). Its production mode
-lands successful units on remote main with serialized validation/review and
+lands successful units through CI-checked PRs on remote main with serialized validation/review and
 explicit task-type/stage/model/time/AIC accounting. Worker agents do not commit,
 push, mutate other workspaces or spawn extra agents; the workflow owns landing.
 Do not start a workflow merely because ordinary issue work could use one.
@@ -97,8 +98,8 @@ work. Never treat a stopping condition as completion of blocked work.
 
 > Work through the selected epic's unblocked children. Author Go using shared
 > Engine operations; do not expand Oracle recognition to add cards. Preserve
-> existing behavior, validate proportionally, inspect the diff and commit directly
-> to main when authorized. Keep one writer; no mandatory PRs or new epics. Reuse
+> existing behavior, validate proportionally, inspect the diff and land through
+> PRs after CI succeeds when authorized. Keep one integration writer; no new epics. Reuse
 > precise blockers and honor the run's scope, budget and push permissions.
 > For an authorized continuous-production assignment, replenish reviewed small
 > batches, work canonical Engine prerequisites, reassess dependents and resume

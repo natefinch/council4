@@ -256,6 +256,10 @@ For explicitly requested Dynamic Workflow execution, use the
 are validated, reviewed according to risk and landed on remote `main`; local
 commits are not the final delivery condition. Separate card implementation,
 shared Engine work, reviews and review fixes in the workflow's measured stages.
+Landing uses PRs: merge the latest main into the task branch, run local affected
+checks, wait for all exact-head CI (including required `Race Tests`), and merge
+without admin bypass. CI failures/fixes and integration reviews are measured
+separately from implementation and ordinary review repairs.
 The repository workflow/policy can be tuned between runs without relabeling
 historical results or weakening the required source/behavior evidence.
 

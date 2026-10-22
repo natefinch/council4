@@ -10,8 +10,9 @@ continuation examples or superseded blocker statuses below.
 ## Continuous production (#3311)
 
 **Publication update:** successful continuous-production cards and Engine
-prerequisites now land on remote `main` as part of the run, after validation and
-applicable review. The repository's
+prerequisites now land on remote `main` through PRs as part of the run, after
+integrating latest main, local validation, applicable review and all exact-head
+CI including required `Race Tests`. The repository's
 [Dynamic Workflow](dynamic-card-production.md) provides resumable execution,
 serialized landing and measured card/Engine implementation, review and repair
 stages. It does not start automatically.

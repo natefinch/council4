@@ -21,12 +21,13 @@ is the dependency-ordered migration.
 - For a direct user request without an issue, do the requested work; do not
   require an issue-filing conversation as an implementation prerequisite.
 
-## Direct-to-main workflow
+## Integration workflow
 
-The default for an authorized issue/epic implementation is one coherent local
-commit per completed change on `main`, without mandatory branches, PRs, approvals
-or merge choreography. Respect the current run's commit/push permissions; this
-policy does not authorize unsolicited commits or pushes for arbitrary edits.
+For authorized implementation, use one coherent change at a time and preserve
+the current run's commit/push permissions. The user-directed production workflow
+uses PRs, with the latest main merged into the task branch and local tests run
+before CI-driven merging. Do not treat authorization for code edits as blanket
+publication permission for unrelated work.
 
 1. Inspect the checkout, existing edits and HEAD. With a clean `main`, fetch
    `origin` and fast-forward only (`git merge --ff-only origin/main`). Do not
@@ -38,18 +39,20 @@ policy does not authorize unsolicited commits or pushes for arbitrary edits.
 3. Implement a bounded change, run the relevant checks below, and inspect the
    diff. Stage only intended files, not all tracked or untracked modifications.
 4. Commit when authorized, recording the issue and required commit trailers.
-   Push normally only when authorized; never force-push or bypass protections.
-   If a protection requires a PR, report it rather than disabling it.
+   Publish task branches and open PRs within scope; merge only after local
+   validation, applicable review, and all CI succeeds on the exact current head.
+   Never force-push, use admin merge, or bypass/disable protections.
 5. Record completion once, with the commit and meaningful behavior/blockers.
    A local commit is not a pushed or deployed change. Continue only within the
    user's assigned scope. PRs remain available when explicitly requested.
 
-For the user-authorized continuous-production workflow, successful cards and
-their Engine prerequisites are delivered to **remote `main`**, not left as local
-commits. The [Dynamic Workflow](../docs/dynamic-card-production.md) serializes
-reviewed, validated landing from isolated worktrees and confirms remote ancestry.
-Never force-push, bypass branch protection, or count an unlanded unit as delivered.
-Preflight/reporting modes do not authorize implementation or publication.
+Successful cards and Engine prerequisites are delivered to **remote `main`**
+through PRs, not left indefinitely as local commits. The
+[Dynamic Workflow](../docs/dynamic-card-production.md) serializes main integration,
+local validation, independent review where required, CI/review repairs and
+head-matched squash merging. It confirms the PR merge commit on remote main.
+`Race Tests` remains required on GitHub and is run automatically for PRs; agents
+run locally, not in Actions. Preflight/reporting do not authorize implementation.
 
 ## Author cards, not another compiler
 
@@ -89,11 +92,11 @@ This is the authoritative validation policy; skills and guides link here.
   changes; other changes run the full suite.
 - Lint and lint autofixes require an explicit user request. The command is
   `go run github.com/magefile/mage@v1.15.0 lint`; wait for any cardgen round-trip
-  tests to finish first. Standalone lint/race CI is manual maintenance, not a
-  default gate. Build, race and platform checks are needed only when affected
-  or explicitly requested. CI has one automatic Tests job and manual
-  `workflow_dispatch` maintenance choices `check=tests|lint|race`, with no
-  duplicated default build/vet jobs.
+  tests to finish first. Standalone lint CI is manual maintenance, not a
+  default gate. Build and platform checks are needed only when affected or
+  explicitly requested. By explicit user request, PR CI has `Tests` and required
+  `Race Tests` (`go test -race ./...`); race is not an extra local per-card gate.
+  Manual `workflow_dispatch` choices `check=tests|lint|race` remain available.
 - Never recompile the Oracle corpus. Source-fingerprint refresh and registry
   fingerprint-baseline workflows are removed. Do not run global
   `supportInventory` as an implementation gate; it is explicit reporting

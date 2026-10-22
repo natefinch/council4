@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, land, checkProtection } from "./git.mjs";
+import { assessChecks } from "./pull-request.mjs";
 import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
@@ -143,13 +144,14 @@ async function repositoryFixture(t) {
   await git(repo, ["init", "-b", "main"]);
   await git(repo, ["config", "user.name", "Workflow tests"]);
   await git(repo, ["config", "user.email", "workflow-tests@example.invalid"]);
+  await writeFile(path.join(repo, ".gitignore"), ".cardwork/\n");
   await writeFile(path.join(repo, "card.txt"), "baseline\n");
-  await git(repo, ["add", "card.txt"]);
+  await git(repo, ["add", "card.txt", ".gitignore"]);
   await git(repo, ["commit", "-m", "baseline"]);
   await git(repo, ["remote", "add", "origin", remote]);
   await git(repo, ["push", "-u", "origin", "main"]);
   const base = await git(repo, ["rev-parse", "HEAD"]);
-  const work = { path: path.join(directory, "task"), base };
+  const work = { path: path.join(directory, "task"), base, branch: "task" };
   await git(repo, ["worktree", "add", "-b", "task", work.path, base]);
   await writeFile(path.join(work.path, "card.txt"), "implemented\n");
   const expected = await changes(work.path);
@@ -159,34 +161,217 @@ async function repositoryFixture(t) {
 }
 
 const remoteHead = f => git(f.repo, ["ls-remote", "origin", "refs/heads/main"]).then(out => out.split(/\s+/)[0]);
-const noProtection = async () => {};
-
-test("Landing verifies reviewed tree and remote main; crash replay does not duplicate commits", async t => {
-  const f = await repositoryFixture(t);
-  const first = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session", undefined, noProtection);
-  assert.equal(first.published, true);
-  assert.equal(await remoteHead(f), first.commit);
-  const replay = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session", undefined, noProtection);
-  assert.equal(replay.commit, first.commit);
-  assert.equal(replay.recovered, true);
+const required = { checks: ["Tests", "Race Tests"], reviewRequired: false };
+const successfulChecks = head => ({
+  head, statuses: [],
+  runs: ["Tests", "Race Tests"].map((name, index) => ({
+    id: index + 1, name, status: "completed", conclusion: "success", app: { slug: "github-actions" },
+  })),
 });
 
-test("Changed submission, unreviewed crash commit and concurrent main reject publication", async t => {
+function landingServices(f) {
+  const calls = { created: 0, merged: 0, validation: 0, review: 0, commands: [] };
+  let pr = null;
+  const services = {
+    protection: async () => required,
+    validate: async () => { calls.validation++; },
+    reviewIntegration: async () => { calls.review++; },
+    api: {
+      find: async () => pr,
+      create: async () => {
+        calls.created++;
+        pr = { number: 1, url: "https://github.com/test/repo/pull/1", state: "OPEN", isDraft: false,
+          baseRefName: "main", mergeStateStatus: "CLEAN", reviewDecision: "" };
+        return services.api.view();
+      },
+      view: async () => {
+        if (!pr) throw new Error("PR does not exist");
+        return { ...pr, headRefOid: await git(f.work.path, ["rev-parse", "HEAD"]),
+          baseRefOid: await remoteHead(f) };
+      },
+      checks: async (_cwd, head) => successfulChecks(head),
+      watch: async () => {},
+      failedLogs: async (_cwd, checks) => ({ checks, logs: ["Actual failing check log"] }),
+      merge: async (_cwd, _number, expectedHead) => {
+        assert.equal(expectedHead, await git(f.work.path, ["rev-parse", "HEAD"]));
+        calls.merged++;
+        // Simulate GitHub's squash-merge server with a real temporary remote.
+        await git(f.repo, ["fetch", "origin", f.work.branch]);
+        await git(f.repo, ["merge", "--squash", expectedHead]);
+        await git(f.repo, ["commit", "-m", "GitHub squash merge"]);
+        await git(f.repo, ["push", "origin", "main"]);
+        pr = { ...pr, state: "MERGED", mergeCommit: { oid: await remoteHead(f) } };
+        return services.api.view();
+      },
+    },
+    git: async (...args) => {
+      calls.commands.push(args[1]);
+      return git(...args);
+    },
+    calls,
+  };
+  return services;
+}
+
+test("Landing publishes only a PR branch and verifies CI before squash merge; replay is idempotent", async t => {
   const f = await repositoryFixture(t);
+  const services = landingServices(f);
+  const first = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session", undefined, services);
+  assert.equal(first.published, true);
+  assert.equal(await remoteHead(f), first.commit);
+  const replay = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session", undefined, services);
+  assert.equal(replay.commit, first.commit);
+  assert.equal(services.calls.created, 1);
+  assert.equal(services.calls.merged, 1);
+  assert.equal(services.calls.validation, 1);
+  const pushes = services.calls.commands.filter(command => command[0] === "push");
+  assert.ok(pushes.length);
+  assert.ok(pushes.every(command => command.at(-1) === "HEAD:refs/heads/task"));
+});
+
+test("Changed submission and unreviewed crash commits reject publication", async t => {
+  const f = await repositoryFixture(t);
+  const services = landingServices(f);
   await writeFile(path.join(f.work.path, "card.txt"), "different\n");
-  await assert.rejects(land(f.repo, f.work, { title: "bad" }, f.expected, "session"), /Reviewed content/);
+  await assert.rejects(land(f.repo, f.work, { title: "bad" }, f.expected, "session", undefined, services), /Reviewed content/);
   assert.equal(await remoteHead(f), f.base);
   await git(f.work.path, ["add", "card.txt"]);
   await git(f.work.path, ["commit", "-m", "unreviewed\n\nCopilot-Session: session"]);
-  await assert.rejects(land(f.repo, f.work, { title: "bad" }, f.expected, "session"), /changed after/);
+  await assert.rejects(land(f.repo, f.work, { title: "bad" }, f.expected, "session", undefined, services), /Unexpected task/);
+});
+
+test("New main is merged locally and changed integration is reviewed and validated before PR", async t => {
   const race = await repositoryFixture(t);
+  const services = landingServices(race);
   await writeFile(path.join(race.repo, "other.txt"), "other writer\n");
   await git(race.repo, ["add", "other.txt"]);
   await git(race.repo, ["commit", "-m", "concurrent"]);
   await git(race.repo, ["push", "origin", "main"]);
   const main = await remoteHead(race);
-  await assert.rejects(land(race.repo, race.work, { title: "card" }, race.expected, "session"), /main advanced/);
-  assert.equal(await remoteHead(race), main);
+  const result = await land(race.repo, race.work, { title: "card" }, race.expected, "session", undefined, services);
+  assert.equal(result.published, true);
+  assert.equal(services.calls.review, 1);
+  assert.equal(services.calls.validation, 1);
+  assert.equal(await git(race.repo, ["merge-base", result.commit, main]), main);
+});
+
+test("CI fixes change the PR head, rerun validation and require fresh successful CI", async t => {
+  const f = await repositoryFixture(t);
+  const services = landingServices(f);
+  let initialHead;
+  let fixed = false;
+  services.api.checks = async (_cwd, head) => {
+    initialHead ??= head;
+    const checks = successfulChecks(head);
+    if (head === initialHead) checks.runs[1].conclusion = "failure";
+    return checks;
+  };
+  services.fixCI = async feedback => {
+    assert.equal(feedback.head, initialHead);
+    assert.ok(feedback.logs[0].includes("failing"));
+    await writeFile(path.join(f.work.path, "card.txt"), "fixed actual CI problem\n");
+    fixed = true;
+  };
+  const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.ok(fixed);
+  assert.equal(result.ciFixes, 1);
+  assert.notEqual(result.head, initialHead);
+  assert.equal(services.calls.validation, 2);
+  assert.equal(services.calls.created, 1);
+});
+
+test("Failed or missing CI, external review and nonmergeable PRs never merge", async t => {
+  for (const mode of ["failure", "missing", "pending", "approval", "conflict", "stale"]) {
+    const f = await repositoryFixture(t);
+    const services = landingServices(f);
+    if (mode === "failure") services.api.checks = async (_cwd, head) => {
+      const checks = successfulChecks(head);
+      checks.runs[1].conclusion = "failure";
+      return checks;
+    };
+    if (mode === "missing") services.api.checks = async (_cwd, head) => ({ head, runs: [], statuses: [] });
+    if (mode === "pending") services.api.checks = async (_cwd, head) => {
+      const checks = successfulChecks(head);
+      checks.runs[1].status = "in_progress";
+      return checks;
+    };
+    const view = services.api.view;
+    if (mode === "approval") services.api.view = async () => ({ ...await view(), reviewDecision: "CHANGES_REQUESTED" });
+    if (mode === "conflict") services.api.view = async () => ({ ...await view(), mergeStateStatus: "DIRTY" });
+    if (mode === "stale") services.api.checks = async () => successfulChecks("some-other-head");
+    if (mode === "stale") {
+      await assert.rejects(land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services), /stale commit/);
+    } else {
+      const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+      assert.equal(result.published, false);
+    }
+    assert.equal(services.calls.merged, 0);
+    assert.equal(await remoteHead(f), f.base);
+  }
+});
+
+test("Pending PR resume reuses its checkpoint without duplicate PR or validation", async t => {
+  const f = await repositoryFixture(t);
+  const services = landingServices(f);
+  services.api.checks = async (_cwd, head) => ({ head, runs: [], statuses: [] });
+  const first = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(first.status, "pending");
+  services.api.checks = async (_cwd, head) => successfulChecks(head);
+  const resumed = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(resumed.published, true);
+  assert.equal(services.calls.created, 1);
+  assert.equal(services.calls.validation, 1);
+});
+
+test("Interrupted merge and CI-fix commit resume only their exact journaled transition", async t => {
+  for (const mode of ["merge", "ci_commit"]) {
+    const f = await repositoryFixture(t);
+    const services = landingServices(f);
+    if (mode === "merge") {
+      await writeFile(path.join(f.repo, "other.txt"), "concurrent main\n");
+      await git(f.repo, ["add", "other.txt"]);
+      await git(f.repo, ["commit", "-m", "main progressed"]);
+      await git(f.repo, ["push", "origin", "main"]);
+    } else {
+      let firstHead;
+      services.api.checks = async (_cwd, head) => {
+        firstHead ??= head;
+        const checks = successfulChecks(head);
+        if (head === firstHead) checks.runs[1].conclusion = "failure";
+        return checks;
+      };
+      services.fixCI = async () => writeFile(path.join(f.work.path, "card.txt"), "reviewed repair\n");
+    }
+    const original = services.git;
+    let interrupted = false;
+    services.git = async (...args) => {
+      const result = await original(...args);
+      if (!interrupted && args[0] === f.work.path &&
+          (mode === "merge" && args[1][0] === "merge" ||
+           mode === "ci_commit" && args[1][0] === "commit" && args[1][2].startsWith("Fix CI:"))) {
+        interrupted = true;
+        throw new Error("interrupted after Git succeeded");
+      }
+      return result;
+    };
+    await assert.rejects(land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services), /interrupted after/);
+    const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+    assert.equal(result.published, true);
+    assert.equal(services.calls.created, 1);
+    assert.equal(services.calls.merged, 1);
+    if (mode === "merge") assert.equal(services.calls.review, 1);
+  }
+});
+
+test("Exact-head checks require real Actions tests and reject skipped required checks", () => {
+  const pr = { state: "OPEN", baseRefName: "main", headRefOid: "head", isDraft: false, mergeStateStatus: "CLEAN", reviewDecision: "" };
+  assert.equal(assessChecks(pr, successfulChecks("head"), required, "head").status, "ready");
+  const skipped = successfulChecks("head");
+  skipped.runs[1].conclusion = "skipped";
+  assert.equal(assessChecks(pr, skipped, required, "head").status, "failed");
+  const forged = successfulChecks("head");
+  forged.runs[1].app.slug = "not-actions";
+  assert.throws(() => assessChecks(pr, forged, required, "head"), /not a GitHub Actions/);
 });
 
 test("Configuration identity rejects changed workflow resume before execution", async () => {
@@ -212,14 +397,13 @@ test("Production refuses to run in GitHub Actions without launching agents", asy
 });
 
 test("Branch protection cannot silently use admin bypass privileges", async t => {
-  assert.throws(() => checkProtection({ required_status_checks: { contexts: ["Tests"] } }, []), /administrator bypass/);
-  assert.throws(() => checkProtection({ required_status_checks: { checks: [{ context: "Tests", app_id: 1 }] } }, []), /administrator bypass/);
-  assert.throws(() => checkProtection({ required_pull_request_reviews: {} }, []), /checked integration/);
-  assert.throws(() => checkProtection(null, [{ type: "pull_request" }]), /checked integration/);
-  assert.throws(() => checkProtection(null, [{ type: "required_signatures" }]), /checked integration/);
-  assert.doesNotThrow(() => checkProtection(null, []));
+  assert.deepEqual(checkProtection({ required_status_checks: { contexts: ["Race Tests"] } }, []).checks, ["Tests", "Race Tests"]);
+  assert.equal(checkProtection({ required_pull_request_reviews: { required_approving_review_count: 1 } }, []).reviewRequired, true);
+  assert.equal(checkProtection(null, [{ type: "pull_request", parameters: { required_approving_review_count: 1 } }]).reviewRequired, true);
+  assert.throws(() => checkProtection(null, [{ type: "required_signatures" }]), /explicit integration/);
   const f = await repositoryFixture(t);
-  await assert.rejects(land(f.repo, f.work, { title: "protected" }, f.expected, "session", undefined,
-    async () => { throw new Error("required checks missing"); }), /required checks missing/);
+  const services = landingServices(f);
+  services.protection = async () => { throw new Error("unsupported protection"); };
+  await assert.rejects(land(f.repo, f.work, { title: "protected" }, f.expected, "session", undefined, services), /unsupported protection/);
   assert.equal(await remoteHead(f), f.base);
 });
