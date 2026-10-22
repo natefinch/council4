@@ -39,6 +39,20 @@ reset, bypass or unreviewed conflict resolution. A protection requiring a PR
 must be handled explicitly. Local work is preserved and is not counted as
 delivered.
 
+The workflow inspects main's classic protection and rulesets before spending on
+production and again before pushing. Required CI checks, PR reviews, restricted
+writers, or other unsupported integration rules block direct publication even
+when the signed-in account has bypass privileges. This version does not create
+PRs or manufacture CI statuses to get around that block.
+
+**Current repository blocker (2026-10-22):** classic protection still requires
+`Lint`, `Race Tests`, `Vet`, and `Generated cards compile`, while current CI uses
+`Tests`. Those protections need an explicitly approved reconciliation and a
+checked integration path before automatic main landing can run. They have not
+been disabled or changed by this setup. The initial normal setup push succeeded
+but GitHub reported an account-level bypass of the four missing checks; this
+explicit preflight guard prevents repeating that behavior.
+
 Start from a clean coordinator checkout whose HEAD is on the ancestry of
 `origin/main`. Unlanded setup commits must be deliberately integrated first.
 Each unit's worktree and failed drafts remain in
@@ -76,8 +90,10 @@ Two non-delivery checks are available:
 {"mode":"preflight"}
 ```
 
-This checks the registration/policy/repository without agents or Git publication.
-It does not certify write permissions, production tests or all production inputs.
+This checks registration/policy/repository and the supported protection policy
+without agents or Git publication. It does not certify write permissions,
+production tests or all production inputs. A protection failure is a real
+preflight blocker, not a passing production result.
 
 ```json
 {"mode":"telemetry-smoke"}

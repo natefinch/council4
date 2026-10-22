@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, rmdir, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { git, command, changes, workspace, land } from "./git.mjs";
+import { git, command, changes, workspace, land, mainProtection } from "./git.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, writeJSON } from "./telemetry.mjs";
 
 export const meta = {
@@ -209,8 +209,9 @@ export async function runProduction(ctx) {
       throw new Error("This workflow is scoped to natefinch/council4 origin");
     }
     if (ctx.args.mode === "preflight") {
+      const protection = await mainProtection(root, ctx.signal);
       return { status: "ready", revision, policy, remote, publicationTarget: "origin/main",
-        reportDirectory: directory, note: "No agents, implementation, commits or publication performed." };
+        protection, reportDirectory: directory, note: "No agents, implementation, commits or publication performed." };
     }
     if (ctx.args.mode === "telemetry-smoke") {
       ctx.phase("Implementation");
@@ -221,6 +222,7 @@ export async function runProduction(ctx) {
       return { status: "telemetry-smoke-complete", reportDirectory: directory };
     }
     if (await git(root, ["status", "--porcelain"], ctx.signal)) throw new Error("Coordinator checkout must be clean; preserve existing edits");
+    await mainProtection(root, ctx.signal);
     await git(root, ["fetch", "origin", "main"], ctx.signal);
     const head = await git(root, ["rev-parse", "HEAD"], ctx.signal);
     const upstream = await git(root, ["rev-parse", "refs/remotes/origin/main"], ctx.signal);

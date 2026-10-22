@@ -20,6 +20,31 @@ export async function command(cwd, executable, args, signal) {
 
 export const git = (cwd, args, signal) => command(cwd, "git", args, signal);
 
+export function checkProtection(classic, rules) {
+  const blockingRules = rules.filter(rule => !["non_fast_forward", "deletion", "required_linear_history"].includes(rule.type));
+  const checks = [...new Set([
+    ...(classic?.required_status_checks?.contexts ?? []),
+    ...(classic?.required_status_checks?.checks ?? []).map(check => check.context),
+  ])];
+  if (checks.length || classic?.required_pull_request_reviews || classic?.restrictions ||
+      classic?.lock_branch?.enabled || classic?.required_signatures?.enabled || blockingRules.length) {
+    throw new Error(`Main protection requires a checked integration path, not an administrator bypass. Required checks: ${checks.join(", ") || "see ruleset"}. No main push attempted.`);
+  }
+}
+
+export async function mainProtection(root, signal) {
+  const repo = "repos/natefinch/council4";
+  const branch = JSON.parse(await command(root, "gh", ["api", `${repo}/branches/main`], signal));
+  const rules = JSON.parse(await command(root, "gh", ["api", `${repo}/rules/branches/main`], signal));
+  let classic = null;
+  if (branch.protected) {
+    // A missing/unreadable classic protection is not treated as unprotected.
+    classic = JSON.parse(await command(root, "gh", ["api", `${repo}/branches/main/protection`], signal));
+  }
+  checkProtection(classic, rules);
+  return { protected: branch.protected, rules: rules.map(rule => rule.type) };
+}
+
 export async function changes(cwd, signal) {
   const tracked = await git(cwd, ["diff", "--name-only", "HEAD"], signal);
   const untracked = await git(cwd, ["ls-files", "--others", "--exclude-standard"], signal);
@@ -53,7 +78,7 @@ export async function workspace(root, directory, runId, index, signal) {
   return { path: target, branch, base: await git(target, ["rev-parse", "HEAD"], signal) };
 }
 
-export async function land(root, work, task, expected, sessionId, signal) {
+export async function land(root, work, task, expected, sessionId, signal, protection = mainProtection) {
   let head = await git(work.path, ["rev-parse", "HEAD"], signal);
   if (head === work.base) {
     const current = await changes(work.path, signal);
@@ -76,6 +101,7 @@ export async function land(root, work, task, expected, sessionId, signal) {
   const contains = await git(root, ["merge-base", main, head], signal);
   if (contains === head) return { commit: head, main, published: true, recovered: true };
   if (main !== work.base) throw new Error("origin/main advanced. Preserve work; rebase/integration requires new validation and review in a new run.");
+  await protection(root, signal);
   await git(work.path, ["push", "origin", `${head}:refs/heads/main`], signal);
   await git(root, ["fetch", "origin", "main"], signal);
   const confirmed = await git(root, ["rev-parse", "refs/remotes/origin/main"], signal);

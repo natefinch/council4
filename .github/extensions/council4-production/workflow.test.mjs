@@ -4,7 +4,7 @@ import { readFile, mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction } from "./workflow.mjs";
-import { git, changes, land } from "./git.mjs";
+import { git, changes, land, checkProtection } from "./git.mjs";
 import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
@@ -159,13 +159,14 @@ async function repositoryFixture(t) {
 }
 
 const remoteHead = f => git(f.repo, ["ls-remote", "origin", "refs/heads/main"]).then(out => out.split(/\s+/)[0]);
+const noProtection = async () => {};
 
 test("Landing verifies reviewed tree and remote main; crash replay does not duplicate commits", async t => {
   const f = await repositoryFixture(t);
-  const first = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session");
+  const first = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session", undefined, noProtection);
   assert.equal(first.published, true);
   assert.equal(await remoteHead(f), first.commit);
-  const replay = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session");
+  const replay = await land(f.repo, f.work, { title: "Implement card" }, f.expected, "session", undefined, noProtection);
   assert.equal(replay.commit, first.commit);
   assert.equal(replay.recovered, true);
 });
@@ -208,4 +209,17 @@ test("Production refuses to run in GitHub Actions without launching agents", asy
     if (original === undefined) delete process.env.GITHUB_ACTIONS;
     else process.env.GITHUB_ACTIONS = original;
   }
+});
+
+test("Branch protection cannot silently use admin bypass privileges", async t => {
+  assert.throws(() => checkProtection({ required_status_checks: { contexts: ["Tests"] } }, []), /administrator bypass/);
+  assert.throws(() => checkProtection({ required_status_checks: { checks: [{ context: "Tests", app_id: 1 }] } }, []), /administrator bypass/);
+  assert.throws(() => checkProtection({ required_pull_request_reviews: {} }, []), /checked integration/);
+  assert.throws(() => checkProtection(null, [{ type: "pull_request" }]), /checked integration/);
+  assert.throws(() => checkProtection(null, [{ type: "required_signatures" }]), /checked integration/);
+  assert.doesNotThrow(() => checkProtection(null, []));
+  const f = await repositoryFixture(t);
+  await assert.rejects(land(f.repo, f.work, { title: "protected" }, f.expected, "session", undefined,
+    async () => { throw new Error("required checks missing"); }), /required checks missing/);
+  assert.equal(await remoteHead(f), f.base);
 });
