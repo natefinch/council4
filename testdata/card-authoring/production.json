@@ -441,6 +441,27 @@
     "oracle_text_sha256": "ef80b5eb9fc8172fbe50f1224716d9b355c18a05ef9250109b36b08adf27e96c",
     "revision": "f10f1687-fb20-4ad2-bad7-52e4470b35e4",
     "rulings_uri": "https://api.scryfall.com/cards/f10f1687-fb20-4ad2-bad7-52e4470b35e4/rulings"
+   },
+   {
+    "name": "Eager Construct",
+    "oracle_id": "39363190-7f79-4fae-bcfc-b17ec4e07bfe",
+    "oracle_text_sha256": "6eec5f7c6f37065875a393ef885781d3f0fc3cf100f50666da3a8e7a41440fe4",
+    "revision": "5b23ca61-157b-4616-bbf4-0c1298ddbbb4",
+    "rulings_uri": "https://api.scryfall.com/cards/5b23ca61-157b-4616-bbf4-0c1298ddbbb4/rulings"
+   },
+   {
+    "name": "Sea God's Revenge",
+    "oracle_id": "8ab71a49-ce81-44f7-b940-50e7aba64df9",
+    "oracle_text_sha256": "71b87b94adf34beac4aa2852c9910ba1aae4c0ebb2f9f556b403777ca86ade38",
+    "revision": "5acdf4e4-5933-43dc-bf8b-25f89415db5b",
+    "rulings_uri": "https://api.scryfall.com/cards/5acdf4e4-5933-43dc-bf8b-25f89415db5b/rulings"
+   },
+   {
+    "name": "Devout Decree",
+    "oracle_id": "92f8c8b1-1fd5-4e80-b8a9-51671937aaf2",
+    "oracle_text_sha256": "bcbf119491b02740f1e4476112d6b9694235cf95a1cd3f0e8d271820c66fae3f",
+    "revision": "d174cb01-b1cf-444c-a893-cc61ddf88b8c",
+    "rulings_uri": "https://api.scryfall.com/cards/d174cb01-b1cf-444c-a893-cc61ddf88b8c/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -97477,9 +97498,10 @@
    "oracle_id": "39363190-7f79-4fae-bcfc-b17ec4e07bfe",
    "revision": "5b23ca61-157b-4616-bbf4-0c1298ddbbb4",
    "name": "Eager Construct",
-   "status": "unclaimed",
+   "status": "implemented-verified",
    "family": "scry-interaction",
-   "batch": "08-scry-interaction"
+   "batch": "08-scry-interaction",
+   "evidence": "mtg/rules/scry_interaction_test.go: TestEagerConstructDefaultRegistryPaidCastAndAPNAP; TestEagerConstructEmptyLibrariesAndDepartedPlayers; TestEagerConstructSourceDepartureCopyCloneAndPrivateReplay. Sources: pinned oracle-cards.json SHA256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; 2XM 250 printing 5b23ca61-157b-4616-bbf4-0c1298ddbbb4; full https://api.scryfall.com/cards/5b23ca61-157b-4616-bbf4-0c1298ddbbb4/rulings retrieved 2026-10-22 and retained in the rules test source record. Official CR https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt, effective 2026-09-25, SHA256 8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca: 101.4a-c and 701.22a-d require APNAP choices, private same-time looks, and simultaneous placements; 401.2-4 preserve hidden identities and permit public counts; 603.2/3a and 113.7a keep the ETB trigger and its controller after source departure; 707.10 makes a copy independent without copying later choices."
   },
   {
    "oracle_id": "39375b5d-f509-4482-8d34-797dae17d38b",
@@ -165487,9 +165509,10 @@
    "oracle_id": "8ab71a49-ce81-44f7-b940-50e7aba64df9",
    "revision": "5acdf4e4-5933-43dc-bf8b-25f89415db5b",
    "name": "Sea God's Revenge",
-   "status": "unclaimed",
+   "status": "implemented-verified",
    "family": "scry-interaction",
-   "batch": "08-scry-interaction"
+   "batch": "08-scry-interaction",
+   "evidence": "mtg/rules/scry_interaction_test.go: TestSeaGodsRevengeDefaultRegistryPaidCastTimingAndTargetCounts; TestSeaGodsRevengeSimultaneousOwnerRelativeReturns; TestSeaGodsRevengeRevalidatesEachTargetAndSkipsScryWhenAllIllegal; TestSeaGodsRevengeZeroTargetsScry. mtg/rules/commander_sea_gods_revenge_test.go: TestSeaGodsRevengeCommanderChoicesBeforeSimultaneousReturnAndScry; mtg/rules/commander_simultaneous_choice_test.go: TestSimultaneousCommanderReplacementChoicesAPNAP; TestSimultaneousMixedZoneReplacementChoicesAPNAP. Sources: pinned oracle-cards.json SHA256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; THS 61 printing 5acdf4e4-5933-43dc-bf8b-25f89415db5b; complete six-ruling response at https://api.scryfall.com/cards/5acdf4e4-5933-43dc-bf8b-25f89415db5b/rulings retrieved 2026-10-22 and retained in the rules test source record. Official CR https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt, effective 2026-09-25, SHA256 8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca: 101.4 requires APNAP choices before simultaneous actions; 108.3, 400.7, and 903.9b make each creature return to its owner's hand unless that owner chooses the commander-to-command-zone replacement (distinct from the post-exile state-based action in 903.9a). 115.1a/601.2c enforce distinct chosen targets and their fixed count; 608.2b/c/f require current target revalidation, ordered instructions, and simultaneous movement; 701.22a-d governs the following scry."
   },
   {
    "oracle_id": "8ab7358e-a0f5-4220-8769-25177237bcdf",
@@ -172525,9 +172548,10 @@
    "oracle_id": "92f8c8b1-1fd5-4e80-b8a9-51671937aaf2",
    "revision": "d174cb01-b1cf-444c-a893-cc61ddf88b8c",
    "name": "Devout Decree",
-   "status": "unclaimed",
+   "status": "implemented-verified",
    "family": "scry-interaction",
-   "batch": "08-scry-interaction"
+   "batch": "08-scry-interaction",
+   "evidence": "mtg/rules/scry_interaction_test.go: TestDevoutDecreeDefaultRegistryPaidCastAndCharacteristicUnions; TestDevoutDecreeRevalidatesTargetAndExilesThenScries; TestDevoutDecreeIllegalTargetOmitsScry. Sources: pinned oracle-cards.json SHA256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; FDN 571 printing d174cb01-b1cf-444c-a893-cc61ddf88b8c; full https://api.scryfall.com/cards/d174cb01-b1cf-444c-a893-cc61ddf88b8c/rulings retrieved 2026-10-22 and retained in the rules test source record. Official CR https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt, effective 2026-09-25, SHA256 8d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca: 105.2/205.1 and 613.1b/d/e describe current colors, types, and control layers; 115.1a/601.2c and 608.2b require the type/color unions and current target legality; 608.2c/614.1 apply ordered, replacement-aware exile before scry; 903.9a allows the exiled commander to move to the command zone as a state-based action after the spell resolves, not by Sea God's hand-return replacement."
   },
   {
    "oracle_id": "930035c6-cde7-40ac-98ef-0840812037db",
