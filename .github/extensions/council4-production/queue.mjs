@@ -1,7 +1,9 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-export async function prepareCardBatch({ workPath, task, corpus, owner, planPath, command, signal }) {
+// prerequisiteEvidence maps a filled gap issue to {runtime_revision, evidence};
+// plan members still blocked on that issue are reassessed before batching.
+export async function prepareCardBatch({ workPath, task, corpus, owner, planPath, command, signal, prerequisiteEvidence = {} }) {
   const manifest = path.join(workPath, "testdata/card-authoring/production.json");
   const run = (operation, args = []) => command(workPath, "go", ["run", "./cmd/cardqueue",
     "-operation", operation, "-manifest", manifest, "-owner", owner, "-corpus", corpus, ...args], signal);
@@ -15,6 +17,20 @@ export async function prepareCardBatch({ workPath, task, corpus, owner, planPath
       throw new Error("New card selection has an invalid or mismatched reviewed batch plan");
     }
     await mkdir(path.dirname(planPath), { recursive: true });
+    const current = new Map(queue.records.map(record => [record.oracle_id, record]));
+    const blocked = (plan.records ?? []).map(record => current.get(record.oracle_id))
+      .filter(record => record?.status === "blocked");
+    if (blocked.length) {
+      const records = blocked.map(record => {
+        const evidence = prerequisiteEvidence[record.blocker];
+        if (!evidence) throw new Error(`${record.name} is still blocked by #${record.blocker}; that gap has not been filled`);
+        return { oracle_id: record.oracle_id, revision: record.revision, name: record.name,
+          reassessment: { issue: record.blocker, ...evidence } };
+      });
+      const reassessPath = planPath.replace(/\.json$/, "-reassess.json");
+      await writeFile(reassessPath, JSON.stringify({ corpus_sha256: queue.corpus_sha256, records }, null, 2) + "\n");
+      await run("reassess", ["-plan", reassessPath]);
+    }
     await writeFile(planPath, JSON.stringify(plan, null, 2) + "\n");
     // The existing CLI validates exact identity, prerequisites and ownership;
     // this helper never independently promotes a candidate as ready.
