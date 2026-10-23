@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
-import { assessChecks } from "./pull-request.mjs";
+import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
 import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
 
@@ -304,6 +304,87 @@ function landingServices(f) {
   };
   return services;
 }
+
+test("CI watch waits for required check registration even when unrelated checks appear first", async () => {
+  const waits = [];
+  const commands = [];
+  const api = pullRequestAPI(async (_cwd, executable, args) => {
+    commands.push([executable, ...args]);
+    return "";
+  }, undefined, async ms => { waits.push(ms); });
+  const head = "reviewed-head";
+  api.view = async () => ({ headRefOid: head, state: "OPEN", baseRefName: "main", mergeStateStatus: "CLEAN" });
+  const running = successfulChecks(head).runs.map(check => ({ ...check, status: "in_progress", conclusion: null }));
+  const manual = { id: 3, name: "Manual", status: "completed", conclusion: "skipped" };
+  const observations = [[], [manual], [manual, running[0]], running];
+  let reads = 0;
+  api.checks = async () => ({
+    head, runs: observations[reads++],
+    statuses: required.checks.map(context => ({ context, state: "success" })),
+  });
+  await api.watch("/repo", 42, head, required);
+  assert.equal(reads, 4);
+  assert.deepEqual(waits, [15000, 15000, 15000]);
+  assert.deepEqual(commands, [["gh", "pr", "checks", "42", "--repo", "natefinch/council4",
+    "--watch", "--fail-fast", "--interval", "15"]]);
+});
+
+test("CI registration wait is bounded and preserves missing checks as pending", async () => {
+  let waits = 0;
+  let reads = 0;
+  const api = pullRequestAPI(async () => { assert.fail("Must not watch nonexistent checks"); },
+    undefined, async () => { waits++; });
+  const head = "reviewed-head";
+  const pr = { headRefOid: head, state: "OPEN", baseRefName: "main", mergeStateStatus: "CLEAN" };
+  const checks = { head, statuses: [], runs: [] };
+  api.view = async () => pr;
+  api.checks = async () => { reads++; return checks; };
+  await api.watch("/repo", 42, head, required);
+  assert.equal(reads, 9);
+  assert.equal(waits, 8);
+  assert.equal(assessChecks(pr, checks, required, head).status, "pending");
+});
+
+test("CI registration wait propagates stale heads, read errors and cancellation", async () => {
+  for (const mode of ["head", "read", "cancel"]) {
+    const head = "reviewed-head";
+    const failure = new Error(mode);
+    const controller = new AbortController();
+    const api = pullRequestAPI(async () => { assert.fail("Must not start gh watch"); },
+      controller.signal);
+    api.view = async () => ({
+      headRefOid: mode === "head" ? "changed-head" : head,
+      state: "OPEN", baseRefName: "main", mergeStateStatus: "CLEAN",
+    });
+    api.checks = async () => {
+      if (mode === "read") throw failure;
+      if (mode === "cancel") controller.abort();
+      return { head, statuses: [], runs: [] };
+    };
+    await assert.rejects(api.watch("/repo", 42, head, required),
+      mode === "head" ? /expected open main-bound reviewed head/ :
+        mode === "cancel" ? { name: "AbortError" } : failure);
+  }
+});
+
+test("Landing watches initially absent CI and only merges after exact-head checks register", async t => {
+  const f = await repositoryFixture(t);
+  const services = landingServices(f);
+  let registered = false;
+  let watched = 0;
+  services.api.checks = async (_cwd, head) =>
+    registered ? successfulChecks(head) : { head, runs: [], statuses: [] };
+  services.api.watch = async (_cwd, _number, head, checksRequired) => {
+    assert.equal(head, await git(f.work.path, ["rev-parse", "HEAD"]));
+    assert.deepEqual(checksRequired, required);
+    watched++;
+    registered = true;
+  };
+  const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(watched, 1);
+  assert.equal(result.published, true);
+  assert.equal(services.calls.merged, 1);
+});
 
 test("Landing publishes only a PR branch and verifies CI before squash merge; replay is idempotent", async t => {
   const f = await repositoryFixture(t);

@@ -47,9 +47,14 @@ skipped-required, stale-head, draft or unmergeable PRs do not merge.
 
 Actual CI failures can trigger bounded `ci_fix` work, local validation and an
 independent `ci_review`. Only then does the workflow commit/push the repair and
-wait for fresh CI on its new head. Missing checks or external approvals pause
-with the PR and resume checkpoint, not a manufactured success. If main advances,
-the workflow integrates it and repeats the affected checks/review before merging.
+wait for fresh CI on its new head. The watcher first allows up to two minutes
+for required checks to register, polling the exact head every 15 seconds even
+when no checks (or only unrelated checks) exist yet. Registered checks use
+GitHub's normal CI watcher. Persistently missing checks or external approvals
+pause with the PR and resume checkpoint, not a manufactured success. A paused
+run does not wake automatically when CI later changes; inspect its current PR
+and resume the same run. If main advances, the workflow integrates it and
+repeats the affected checks/review before merging.
 
 A final fresh PR/check/protection read precedes ordinary
 `gh pr merge --squash --match-head-commit`. There is no `--admin`, direct
@@ -254,6 +259,13 @@ new source/test file must not masquerade as a post-review content change.
 The final Git tree is checked separately before commit. Policy 1.2.0 includes
 regressions for this failure and deterministic claim/admission handoffs after
 the first production run exposed both.
+
+Policy 1.3.0 adds the bounded check-registration wait so a newly opened PR
+does not immediately pause merely because GitHub has not registered its CI yet.
+This does not repair Copilot extension-provider disconnects. Avoid editing,
+reloading or enabling/disabling the owning extension during a live run.
+An interrupted provider is a stopped run, not background progress; preserve
+its journal, work, billing and lock ownership before choosing recovery.
 
 Resuming reuses completed durable steps and agent calls. **Changing code/policy
 does not retroactively change a paused run**: the workflow rejects a mismatched
