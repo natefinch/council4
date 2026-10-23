@@ -1491,23 +1491,30 @@ func cycledCardSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAb
 // detectTriggeredAbilities never sees them. Only the cast spell's self-source
 // spell-cast triggers are considered.
 func castSpellSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
-	if event.Kind != game.EventSpellCast || event.CardID == 0 {
-		return nil
-	}
-	card, ok := g.GetCardInstance(event.CardID)
-	if !ok {
-		return nil
-	}
-	def, ok := cardFaceDef(card, event.Face)
-	if !ok {
+	if event.Kind != game.EventSpellCast {
 		return nil
 	}
 	source := &game.Permanent{
 		ObjectID:       event.SourceID,
-		CardInstanceID: card.ID,
-		Owner:          card.Owner,
+		CardInstanceID: event.CardID,
 		Controller:     event.Controller,
 		Face:           event.Face,
+	}
+	var def *game.CardDef
+	var ok bool
+	if event.CardID == 0 && event.TokenDef != nil {
+		// A genuinely cast card copy has an immutable event definition, not a
+		// physical source card. Ordinary stack copies never emit EventSpellCast.
+		def, ok = event.TokenDef.FaceDef(event.Face)
+		source.ObjectID = event.StackObjectID
+		source.Owner = event.Controller
+		source.TokenDef = event.TokenDef
+	} else if card, exists := g.GetCardInstance(event.CardID); exists {
+		def, ok = cardFaceDef(card, event.Face)
+		source.Owner = card.Owner
+	}
+	if !ok {
+		return nil
 	}
 	var pending []pendingTriggeredAbility
 	for i := range def.TriggeredAbilities {
@@ -1521,8 +1528,9 @@ func castSpellSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbi
 		}
 		pending = append(pending, pendingTriggeredAbility{
 			controller:      event.Controller,
-			sourceID:        event.SourceID,
-			sourceCardID:    card.ID,
+			sourceID:        source.ObjectID,
+			sourceCardID:    source.CardInstanceID,
+			sourceToken:     source.TokenDef,
 			face:            event.Face,
 			abilityIndex:    i,
 			inline:          triggered,

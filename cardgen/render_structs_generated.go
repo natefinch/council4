@@ -1135,6 +1135,8 @@ func (r Renderer) renderGameKeywordAbilityValue(ctx *renderCtx, v game.KeywordAb
 	switch value := v.(type) {
 	case game.BestowKeyword:
 		return r.renderGameBestowKeyword(ctx, value)
+	case game.BuybackKeyword:
+		return r.renderGameBuybackKeyword(ctx, value)
 	case game.CrewKeyword:
 		return r.renderGameCrewKeyword(ctx, value)
 	case game.CumulativeUpkeepKeyword:
@@ -2715,6 +2717,38 @@ func (r Renderer) renderGameBolster(ctx *renderCtx, v game.Bolster) (string, err
 		fields = append(fields, "PublishLinked: "+lit3+",")
 	}
 	return structLit("game.Bolster", fields), nil
+}
+
+// renderGameBuybackKeyword renders a game.BuybackKeyword value as a Go composite literal.
+func (r Renderer) renderGameBuybackKeyword(ctx *renderCtx, v game.BuybackKeyword) (string, error) {
+	var fields []string
+	if len(v.Cost) > 0 {
+		var items2 []string
+		for _, item3 := range v.Cost {
+			lit4, err5 := renderManaSymbol(ctx, item3)
+			if err5 != nil {
+				return "", fmt.Errorf("game.BuybackKeyword.Cost[]: %w", err5)
+			}
+			ctx.need(importCost)
+			items2 = append(items2, lit4+",")
+		}
+		lit1 := namedSliceLit("cost.Mana", "cost.Symbol", items2)
+		fields = append(fields, "Cost: "+lit1+",")
+	}
+	if len(v.AdditionalCosts) > 0 {
+		var items7 []string
+		for _, item8 := range v.AdditionalCosts {
+			lit9, err10 := r.renderCostAdditional(ctx, item8)
+			if err10 != nil {
+				return "", fmt.Errorf("game.BuybackKeyword.AdditionalCosts[]: %w", err10)
+			}
+			ctx.need(importCost)
+			items7 = append(items7, lit9+",")
+		}
+		lit6 := namedSliceLit("", "cost.Additional", items7)
+		fields = append(fields, "AdditionalCosts: "+lit6+",")
+	}
+	return structLit("game.BuybackKeyword", fields), nil
 }
 
 // renderGameCantBecomeMonarch renders a game.CantBecomeMonarch value as a Go composite literal.

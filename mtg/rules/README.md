@@ -61,6 +61,35 @@ that policy during a library search. Uninvolved players never receive private
 card options. Personal/concession decisions are never redirected. See
 [the authored program protocol](../cardprogram/README.md#next-turn-player-decision-control).
 
+`BuybackKeyword` exposes an optional additional cost in the ordinary recorded
+spell-payment choice, not in the resolving card body. The planner combines that
+cost with the normal/alternative cost, kicker and mandatory costs before applying
+taxes or reductions; paid results retain the underlying alternative-cost identity.
+Only a successfully resolving instant/sorcery offers its paid buyback replacement
+for the final stack-to-graveyard move. Competing graveyard redirects use the
+spell controller's normal replacement choice, and the resulting card goes to its
+owner's zone. Countered/all-illegal spells never receive that replacement;
+Flashback still exiles any stack departure. Stack copies and game clones retain
+the paid announcement and payment subjects without paying again or moving the
+original physical card, including storm copies. Casting a copy of an exiled
+card is different: it uses the same
+free-cast payment path as a physical card, with fresh additional-cost choices
+and taxes, while preserving the exiled card's zone incarnation and permissions.
+That genuine cast also receives normal cascade handling; non-cast stack/storm
+copies do not enter the cast path or trigger cascade.
+Shared cast-event hooks also consume next-spell effects and capture cast-only,
+cast-or-copy and the spell's own cast triggers from the copied definition,
+without borrowing the physical exiled card's identity.
+Buyback's non-mana choice groups remain independent of mandatory and kicker cost
+components even when their local group numbers coincide.
+The [Reiterate fixture](buyback_test.go) and
+[retained independent probes](buyback_independent_test.go) prove this
+bounded Engine prerequisite without registering Reiterate or completing all of
+[#170](https://github.com/natefinch/council4/issues/170).
+Multiple Buyback instances and buyback-specific X announcements remain rejected;
+this does not add a parser, generalized cast-source policy, or new Rebound,
+Adventure or other mechanic-specific resolution policies.
+
 Private tutor placements keep the found card in its real source zone while
 replacement choices are made, then use authoritative movement to the actual
 destination and a new zone incarnation. Opposition Agent grants play permission

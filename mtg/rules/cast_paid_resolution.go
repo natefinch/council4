@@ -143,6 +143,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		counterTransition.undo(g)
 		return false
 	}
+	obj.BuybackPaid = paymentResult.BuybackPaid
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.PaidCostSubjects = paymentResult.PaidCostSubjects

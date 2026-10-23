@@ -759,6 +759,7 @@ var gameKeywordLiterals = map[game.Keyword]string{
 	game.HexproofFrom:      "game.HexproofFrom",
 	game.Ravenous:          "game.Ravenous",
 	game.UmbraArmor:        "game.UmbraArmor",
+	game.Buyback:           "game.Buyback",
 	game.KeywordCount:      "game.KeywordCount",
 }
 

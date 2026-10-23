@@ -152,6 +152,10 @@ type StackObject struct {
 	// KickerPaid is true if the kicker cost was paid.
 	KickerPaid bool
 
+	// BuybackPaid is an announced additional-cost decision (CR 702.27).
+	// Copies inherit it without paying again, but have no physical card to return.
+	BuybackPaid bool
+
 	// KickerCount is the number of times the kicker cost was paid as the spell
 	// was cast (CR 702.32). For Multikicker it can exceed one; for ordinary
 	// Kicker it is zero (KickerPaid carries the paid-once state). It scales

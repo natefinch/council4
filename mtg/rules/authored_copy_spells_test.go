@@ -23,8 +23,8 @@ import (
 // Reverberate (2010-08-15), Dualcaster Mage (2016-06-08),
 // Cackling Counterpart (2024-11-08, 2025-01-24), Fated Infatuation (2013-09-15, 2014-02-01).
 // Official CR 2026-09-25: 603.3/6a, 608.2b/h, 701.22, 702.8/27/34, 707.2/10.
-// Reiterate remains wholly unregistered: buyback's additional payment and
-// resolution-only hand replacement are missing, tracked by canonical #170.
+// Reiterate remains wholly unregistered. The later bounded #170 Engine
+// prerequisite is exercised independently in buyback_test.go.
 type authoredSpellCopyCase struct {
 	entry    cardset.Entry
 	color    mana.Color
