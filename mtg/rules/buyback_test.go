@@ -17,7 +17,8 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// Unregistered proving fixture, not production Reiterate support.
+// Minimal Engine proving fixture, not the production registry definition.
+// Named production Reiterate scenarios are in buyback_interaction_test.go.
 // Oracle ID 38394ee3-6726-4f91-bc25-36bce0c6aab9; printing
 // 99302c41-434f-41ff-a61a-2c3681a0c135; text SHA-256
 // d3770caf39a9493ba336c30a906cd13abd83176c4cb886158501096f59d1cc41.

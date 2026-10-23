@@ -82,10 +82,11 @@ cast-or-copy and the spell's own cast triggers from the copied definition,
 without borrowing the physical exiled card's identity.
 Buyback's non-mana choice groups remain independent of mandatory and kicker cost
 components even when their local group numbers coincide.
-The [Reiterate fixture](buyback_test.go) and
-[retained independent probes](buyback_independent_test.go) prove this
-bounded Engine prerequisite without registering Reiterate or completing all of
-[#170](https://github.com/natefinch/council4/issues/170).
+The [Engine proving fixture](buyback_test.go) and
+[retained independent probes](buyback_independent_test.go) cover the shared
+prerequisite; the production Reiterate, Allay, and Capsize registrations and
+their named-card scenarios are in [buyback_interaction_test.go](buyback_interaction_test.go).
+This does not add generalized recasting or compiler support.
 Multiple Buyback instances and buyback-specific X announcements remain rejected;
 this does not add a parser, generalized cast-source policy, or new Rebound,
 Adventure or other mechanic-specific resolution policies.

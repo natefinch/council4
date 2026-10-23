@@ -19,8 +19,9 @@ import (
 // 601.2, 608.2b/n, 702.27a, 707.10/12, 400.7, 614.15, 616.1,
 // 702.34a, 702.40, 118.8/9. Read pinned Reiterate printing
 // 99302c41-434f-41ff-a61a-2c3681a0c135 and its full seven WotC
-// 2021-03-19 rulings. Reuse the reviewed, unregistered Reiterate fixture;
-// cost/keyword variations below are Engine probes, not card admissions.
+// 2021-03-19 rulings. The minimal fixture here isolates Engine cost and copy
+// probes; production Reiterate behavior is exercised in
+// buyback_interaction_test.go.
 
 func independentBuybackAgent(t *testing.T, choose func(game.ChoiceRequest) string) [game.NumPlayers]PlayerAgent {
 	t.Helper()

@@ -32,7 +32,4 @@ func TestCopySpellsProductionIdentityAndVerification(t *testing.T) {
 			}
 		})
 	}
-	if registry.Lookup("Reiterate") != nil {
-		t.Fatal("buyback-blocked Reiterate was partially promoted")
-	}
 }
