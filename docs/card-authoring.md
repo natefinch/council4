@@ -411,7 +411,8 @@ low yield. When fixing an existing Engine operation, inspect every touched
 branch and preserve its other supported behavior, including choices, visibility,
 events and destination handling. Add a regression for the discovered bug and
 exercise the neighboring affected paths; the new card's passing scenarios alone
-do not establish that a shared change is safe.
+do not establish that a shared change is safe. For spell or cost state, use the
+[spell-route checklist](#spell-route-checklist-for-shared-engine-changes).
 
 For zone movement, keep cards in their actual source zone until the
 [shared transition machinery](../mtg/rules/README.md#shared-zone-transitions)
@@ -439,6 +440,29 @@ operations, meaningful shared changes, scenario references and changed files.
 Report observed effort only; omit guesses about time, popularity and coverage.
 The frozen [step-13 pilot](../testdata/card-authoring/pilot.json) is evidence,
 not a growing production backlog or an acceptance waiver.
+
+### Spell-route checklist for shared Engine changes
+
+When a shared change adds or alters state on a spell, its costs or its stack
+object, write scenarios for **every route that state travels**, in the first
+implementation. Each route below hid a real defect that passed the author's
+tests and was only found in independent review (buyback, PR #3318):
+
+- **Combined costs:** the new cost alongside other optional/additional costs and
+  choice groups (mana and nonmana together), plus decline and unaffordable paths.
+  A choice-group collision silently underpaid.
+- **Copies of the spell on the stack** (CR 707.10): a copy keeps choices made on
+  casting, such as modes and paid optional costs. Include storm copies, which
+  use a separate creation path and lost the paid state.
+- **Casting a copy of a card**, for example from exile: it is cast, so it must
+  pay costs and count as cast. It bypassed payment, then was missed by cascade.
+- **Cast-keyed triggers:** cascade, storm count and "whenever you cast" see
+  genuinely cast spells and copies, but not non-cast copies.
+- **Alternative routes:** casting from other zones, without paying the mana cost,
+  and resolution versus countering or fizzling for destination effects.
+- **Clone and replay:** recorded choices survive game cloning and replay.
+
+Skip routes that genuinely cannot carry the state, and say why in the handoff.
 
 ## Fresh worker prompt
 
