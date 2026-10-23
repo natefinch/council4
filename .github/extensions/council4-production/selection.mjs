@@ -79,7 +79,7 @@ export function gapTask(choice, names) {
     reviewRequired: true, batchPlan: "",
     instructions: `Known Engine gap #${gap.issue} (${issue.url}) blocks card work: ${cards.join(", ") || "see issue"}.
 Evidence sources: ${gap.sources.join("; ")}. Read the issue, its comments and retained blocked-card probes listed in earlier unit evidence.
-Implement the smallest coherent shared Engine capability that unblocks these cards, with proving rules scenarios. If the issue is broader, deliver a bounded slice that covers these cards and comment what remains. Do not admit cards; a later card unit does that.
+Implement the smallest coherent shared Engine capability that unblocks these cards, with proving rules scenarios. If it touches spell, cost or stack-object state, cover every applicable route in the spell-route checklist in docs/card-authoring.md from the start. If the issue is broader, deliver a bounded slice that covers these cards and comment what remains. Do not admit cards; a later card unit does that.
 If the gap cannot be closed in one bounded unit, return blocked with the precise missing design rather than a partial or approximate rule.`,
   };
 }
