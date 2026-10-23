@@ -271,6 +271,12 @@ This does not repair Copilot extension-provider disconnects. Avoid editing,
 reloading or enabling/disabling the owning extension during a live run.
 An interrupted provider is a stopped run, not background progress; preserve
 its journal, work, billing and lock ownership before choosing recovery.
+Engine units also validate `cardgen/cmd/genrender` during initial, repair and
+integrated-head checks. Runtime type/enum changes can stale its generated
+renderer tables even when gameplay packages pass. This is focused compatibility
+maintenance, not Oracle compilation or a new per-card gate; follow the
+[canonical validation policy](../.github/copilot-instructions.md#verify-proportionally)
+if the tables need regeneration.
 
 Resuming reuses completed durable steps and agent calls. **Changing code/policy
 does not retroactively change a paused run**: the workflow rejects a mismatched

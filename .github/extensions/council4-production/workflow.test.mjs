@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction } from "./workflow.mjs";
+import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
 import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -11,6 +11,16 @@ import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
 const complete = { status: "complete", reviewRequired: false, evidence: ["actual test"], gaps: [] };
+
+test("Engine validation includes renderer type drift without adding a card gate or mutating policy", () => {
+  const original = [...policy.validationPackages];
+  const renderer = "./cardgen/cmd/genrender";
+  assert.deepEqual(validationPackagesForTask(policy, "card"), original);
+  assert.deepEqual(validationPackagesForTask(policy, "engine"), [...original, renderer]);
+  assert.deepEqual(policy.validationPackages, original);
+  assert.deepEqual(validationPackagesForTask({ ...policy, validationPackages: [...original, renderer] }, "engine"),
+    [...original, renderer]);
+});
 
 function fixture(overrides = {}) {
   const calls = [];
