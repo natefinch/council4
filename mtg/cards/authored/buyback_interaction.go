@@ -1,6 +1,8 @@
 package authored
 
 import (
+	"strconv"
+
 	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/cards/cardset"
 	"github.com/natefinch/council4/mtg/game"
@@ -67,16 +69,20 @@ var Capsize = cardset.Entry{
 }
 
 func buybackStatic() game.StaticAbility {
+	return buybackStaticWithCost(3)
+}
+
+func buybackStaticWithCost(amount int) game.StaticAbility {
 	return game.StaticAbility{
-		Text:           "Buyback {3}",
+		Text:           "Buyback {" + strconv.Itoa(amount) + "}",
 		ZoneOfFunction: zone.Stack,
 		KeywordAbilities: []game.KeywordAbility{
-			game.BuybackKeyword{Cost: cost.Mana{cost.O(3)}},
+			game.BuybackKeyword{Cost: cost.Mana{cost.O(amount)}},
 		},
 	}
 }
 
-func instantBuybackFace(name string, oracleText string, manaCost cost.Mana, cardColor color.Color) game.CardFace {
+func instantBuybackFace(name string, oracleText string, manaCost cost.Mana, cardColor color.Color, buybackCost int) game.CardFace {
 	return game.CardFace{
 		Name:       name,
 		OracleText: oracleText,
@@ -84,7 +90,7 @@ func instantBuybackFace(name string, oracleText string, manaCost cost.Mana, card
 		Types:      []types.Card{types.Instant},
 		Colors:     []color.Color{cardColor},
 		StaticAbilities: []game.StaticAbility{
-			buybackStatic(),
+			buybackStaticWithCost(buybackCost),
 		},
 	}
 }
@@ -99,7 +105,7 @@ func newReiterate() *game.CardDef {
 			SpellCardTypesAny: []types.Card{types.Instant, types.Sorcery},
 		},
 	}
-	face := instantBuybackFace("Reiterate", reiterateOracleText, cost.Mana{cost.O(1), cost.R, cost.R}, color.Red)
+	face := instantBuybackFace("Reiterate", reiterateOracleText, cost.Mana{cost.O(1), cost.R, cost.R}, color.Red, 3)
 	face.SpellAbility = opt.Val(game.Mode{
 		Text:    "Copy target instant or sorcery spell. You may choose new targets for the copy.",
 		Targets: []game.TargetSpec{target},
@@ -118,7 +124,7 @@ func newAllay() *game.CardDef {
 		Allow:      game.TargetAllowPermanent,
 		Selection:  opt.Val(game.Selection{RequiredTypes: []types.Card{types.Enchantment}}),
 	}
-	face := instantBuybackFace("Allay", allayOracleText, cost.Mana{cost.O(1), cost.W}, color.White)
+	face := instantBuybackFace("Allay", allayOracleText, cost.Mana{cost.O(1), cost.W}, color.White, 3)
 	face.SpellAbility = opt.Val(game.Mode{
 		Text:    "Destroy target enchantment.",
 		Targets: []game.TargetSpec{target},
@@ -131,7 +137,7 @@ func newAllay() *game.CardDef {
 }
 
 func newCapsize() *game.CardDef {
-	face := instantBuybackFace("Capsize", capsizeOracleText, cost.Mana{cost.O(1), cost.U, cost.U}, color.Blue)
+	face := instantBuybackFace("Capsize", capsizeOracleText, cost.Mana{cost.O(1), cost.U, cost.U}, color.Blue, 3)
 	face.SpellAbility = opt.Val(game.Mode{
 		Text: "Return target permanent to its owner's hand.",
 		Targets: []game.TargetSpec{{

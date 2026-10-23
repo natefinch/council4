@@ -56,13 +56,21 @@ import (
 // shield counters and Commander return choices.
 
 type buybackInteractionCase struct {
-	entry      cardset.Entry
-	oracleID   string
-	oracleText string
-	manaCost   cost.Mana
-	color      color.Color
-	manaToPay  []mana.Color
-	baseMana   int
+	entry             cardset.Entry
+	oracleID          string
+	oracleText        string
+	manaCost          cost.Mana
+	color             color.Color
+	manaToPay         []mana.Color
+	baseMana          int
+	buybackCost       int
+	buybackStaticText string
+	cardTypes         []types.Card
+	targetCardType    types.Card
+	targetCard        bool
+	noTarget          bool
+	sorcery           bool
+	program           game.ProgramReference
 }
 
 func buybackInteractionCases() []buybackInteractionCase {
@@ -72,18 +80,53 @@ func buybackInteractionCases() []buybackInteractionCase {
 			oracleText: "Buyback {3} (You may pay an additional {3} as you cast this spell. If you do, put this card into your hand as it resolves.)\nCopy target instant or sorcery spell. You may choose new targets for the copy.",
 			manaCost:   cost.Mana{cost.O(1), cost.R, cost.R}, color: color.Red,
 			manaToPay: []mana.Color{mana.C, mana.R, mana.R}, baseMana: 3,
+			buybackCost: 3, buybackStaticText: "Buyback {3}", cardTypes: []types.Card{types.Instant},
+			program: game.ProgramReference{ID: "38394ee3-6726-4f91-bc25-36bce0c6aab9/spell/0", Version: "1"},
 		},
 		{
 			entry: authored.Allay, oracleID: "664d982a-5cd8-4289-afb8-fa2e083042c9",
 			oracleText: "Buyback {3} (You may pay an additional {3} as you cast this spell. If you do, put this card into your hand as it resolves.)\nDestroy target enchantment.",
 			manaCost:   cost.Mana{cost.O(1), cost.W}, color: color.White,
 			manaToPay: []mana.Color{mana.C, mana.W}, baseMana: 2,
+			buybackCost: 3, buybackStaticText: "Buyback {3}", cardTypes: []types.Card{types.Instant},
+			targetCardType: types.Enchantment,
+			program:        game.ProgramReference{ID: "664d982a-5cd8-4289-afb8-fa2e083042c9/spell/0", Version: "1"},
 		},
 		{
 			entry: authored.Capsize, oracleID: "77637eff-2963-4402-88f3-ca346f762fc8",
 			oracleText: "Buyback {3} (You may pay an additional {3} as you cast this spell. If you do, put this card into your hand as it resolves.)\nReturn target permanent to its owner's hand.",
 			manaCost:   cost.Mana{cost.O(1), cost.U, cost.U}, color: color.Blue,
 			manaToPay: []mana.Color{mana.C, mana.U, mana.U}, baseMana: 3,
+			buybackCost: 3, buybackStaticText: "Buyback {3}", cardTypes: []types.Card{types.Instant},
+			targetCardType: types.Enchantment,
+			program:        game.ProgramReference{ID: "77637eff-2963-4402-88f3-ca346f762fc8/spell/0", Version: "1"},
+		},
+		{
+			entry: authored.ShatteringPulse, oracleID: "77953b7a-813e-45f5-ad7f-ab72a79a0112",
+			oracleText: "Buyback {3} (You may pay an additional {3} as you cast this spell. If you do, put this card into your hand as it resolves.)\nDestroy target artifact.",
+			manaCost:   cost.Mana{cost.O(1), cost.R}, color: color.Red,
+			manaToPay: []mana.Color{mana.C, mana.R}, baseMana: 2,
+			buybackCost: 3, buybackStaticText: "Buyback {3}", cardTypes: []types.Card{types.Instant},
+			targetCardType: types.Artifact,
+			program:        game.ProgramReference{ID: "77953b7a-813e-45f5-ad7f-ab72a79a0112/spell/0", Version: "1"},
+		},
+		{
+			entry: authored.WhispersOfTheMuse, oracleID: "a4a8af4e-8686-45ba-94fd-ccf6cc8adaae",
+			oracleText: "Buyback {5} (You may pay an additional {5} as you cast this spell. If you do, put this card into your hand as it resolves.)\nDraw a card.",
+			manaCost:   cost.Mana{cost.U}, color: color.Blue,
+			manaToPay: []mana.Color{mana.U}, baseMana: 1,
+			buybackCost: 5, buybackStaticText: "Buyback {5}", cardTypes: []types.Card{types.Instant},
+			noTarget: true,
+			program:  game.ProgramReference{ID: "a4a8af4e-8686-45ba-94fd-ccf6cc8adaae/spell/0", Version: "1"},
+		},
+		{
+			entry: authored.DisturbedBurial, oracleID: "cdbaa21d-5896-4b8b-9a08-f0839ccfddfc",
+			oracleText: "Buyback {3} (You may pay an additional {3} as you cast this spell. If you do, put this card into your hand as it resolves.)\nReturn target creature card from your graveyard to your hand.",
+			manaCost:   cost.Mana{cost.O(1), cost.B}, color: color.Black,
+			manaToPay: []mana.Color{mana.C, mana.B}, baseMana: 2,
+			buybackCost: 3, buybackStaticText: "Buyback {3}", cardTypes: []types.Card{types.Sorcery},
+			targetCardType: types.Creature, targetCard: true, sorcery: true,
+			program: game.ProgramReference{ID: "cdbaa21d-5896-4b8b-9a08-f0839ccfddfc/spell/0", Version: "1"},
 		},
 	}
 }
@@ -137,7 +180,7 @@ func addBuybackInteractionMana(g *game.Game, tc buybackInteractionCase, buyback,
 		g.Players[game.Player1].ManaPool.Add(color, 1)
 	}
 	if buyback {
-		g.Players[game.Player1].ManaPool.Add(mana.C, 3)
+		g.Players[game.Player1].ManaPool.Add(mana.C, tc.buybackCost)
 	}
 }
 
@@ -168,9 +211,16 @@ func buybackInteractionTarget(t *testing.T, g *game.Game, engine *Engine, tc buy
 	if tc.entry.OracleID == authored.Reiterate.OracleID {
 		return game.StackObjectTarget(addReiterateSubjectSpell(t, g, engine).ID)
 	}
+	if tc.noTarget {
+		return game.Target{}
+	}
+	if tc.targetCard {
+		cardID := addCardToGraveyard(g, game.Player1, vanillaCreature(tc.entry.Name+" target", 2, 2))
+		return currentCardTarget(t, g, cardID)
+	}
 	target := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
 		Name:  tc.entry.Name + " target",
-		Types: []types.Card{types.Enchantment},
+		Types: []types.Card{tc.targetCardType},
 	}})
 	return game.PermanentTarget(target.ObjectID)
 }
@@ -182,12 +232,20 @@ func castProductionBuyback(t *testing.T, g *game.Game, engine *Engine, registry 
 	for _, manaColor := range manaColors {
 		g.Players[payer].ManaPool.Add(manaColor, 1)
 	}
-	setMainPhasePriority(g, g.Turn.ActivePlayer)
-	g.Turn.Phase, g.Turn.Step, g.Turn.PriorityPlayer =
-		game.PhaseCombat, game.StepDeclareBlockers, payer
+	if tc.sorcery {
+		setMainPhasePriority(g, payer)
+	} else {
+		setMainPhasePriority(g, g.Turn.ActivePlayer)
+		g.Turn.Phase, g.Turn.Step, g.Turn.PriorityPlayer =
+			game.PhaseCombat, game.StepDeclareBlockers, payer
+	}
 	agents := buybackInteractionChoiceAgent(t, payer, paid)
+	var targets []game.Target
+	if !tc.noTarget {
+		targets = []game.Target{target}
+	}
 	if !engine.applyActionWithChoices(g, payer,
-		action.CastSpell(cardID, []game.Target{target}, 0, nil), agents, &TurnLog{}) {
+		action.CastSpell(cardID, targets, 0, nil), agents, &TurnLog{}) {
 		t.Fatalf("%s real cast failed", tc.entry.Name)
 	}
 	spell, ok := g.Stack.Peek()
@@ -205,23 +263,53 @@ func TestBuybackInteractionRegistryIdentityAndCosts(t *testing.T) {
 			t.Parallel()
 			def := buybackInteractionDef(t, registry, tc)
 			if !def.ManaCost.Exists || !slices.Equal(def.ManaCost.Val, tc.manaCost) ||
-				!slices.Equal(def.Types, []types.Card{types.Instant}) ||
+				!slices.Equal(def.Types, tc.cardTypes) ||
 				!slices.Equal(def.Colors, []color.Color{tc.color}) ||
 				def.OracleText != tc.oracleText {
 				t.Fatalf("printed definition differs from exact Oracle text: %+v", def.CardFace)
 			}
 			keyword, ok := def.BuybackKeyword()
-			if !ok || !slices.Equal(keyword.Cost, cost.Mana{cost.O(3)}) ||
+			if !ok || !slices.Equal(keyword.Cost, cost.Mana{cost.O(tc.buybackCost)}) ||
 				!def.HasKeyword(game.Buyback) {
 				t.Fatal("buyback's printed additional cost is not inspectable")
 			}
 			if len(def.StaticAbilities) != 1 ||
 				def.StaticAbilities[0].ZoneOfFunction != zone.Stack ||
-				def.StaticAbilities[0].Text != "Buyback {3}" {
+				def.StaticAbilities[0].Text != tc.buybackStaticText {
 				t.Fatal("buyback is not declared as a stack static ability")
+			}
+			if len(tc.entry.Programs) != 1 || tc.entry.Programs[0].Reference != tc.program {
+				t.Fatal("program identity or version does not match the card's immutable spell reference")
 			}
 			if err := registry.Programs().ValidateCard(def); err != nil {
 				t.Fatalf("registered program validation: %v", err)
+			}
+			if tc.noTarget {
+				if len(def.SpellAbility.Val.Modes) != 1 || len(def.SpellAbility.Val.Modes[0].Targets) != 0 {
+					t.Fatal("targetless draw spell unexpectedly declares targets")
+				}
+			} else if len(def.SpellAbility.Val.Modes) != 1 || len(def.SpellAbility.Val.Modes[0].Targets) != 1 {
+				t.Fatal("card's exact single target is not inspectable")
+			}
+			if tc.targetCard {
+				target := def.SpellAbility.Val.Modes[0].Targets[0]
+				if target.Allow != game.TargetAllowCard || target.TargetZone != zone.Graveyard ||
+					target.MinTargets != 1 || target.MaxTargets != 1 || target.CountEqualsX {
+					t.Fatal("Disturbed Burial must have one non-X graveyard card target")
+				}
+				if !target.Selection.Exists ||
+					!slices.Equal(target.Selection.Val.RequiredTypes, []types.Card{types.Creature}) ||
+					target.Selection.Val.Controller != game.ControllerYou {
+					t.Fatal("Disturbed Burial must target a creature card in its controller's graveyard")
+				}
+			}
+			if tc.entry.OracleID == authored.ShatteringPulse.OracleID {
+				target := def.SpellAbility.Val.Modes[0].Targets[0]
+				if target.Allow != game.TargetAllowPermanent || target.MinTargets != 1 || target.MaxTargets != 1 ||
+					!target.Selection.Exists ||
+					!slices.Equal(target.Selection.Val.RequiredTypes, []types.Card{types.Artifact}) {
+					t.Fatal("Shattering Pulse must have exactly one artifact-permanent target")
+				}
 			}
 		})
 	}
@@ -238,7 +326,7 @@ func TestBuybackInteractionCastsPaymentsAndInstantTiming(t *testing.T) {
 			leftAfterBaseCost int
 		}{
 			{name: "paid", provideBuyback: true, paid: true, cast: true},
-			{name: "declined", provideBuyback: true, cast: true, leftAfterBaseCost: 3},
+			{name: "declined", provideBuyback: true, cast: true, leftAfterBaseCost: tc.buybackCost},
 			{name: "unaffordable optional cost", cast: true},
 			{name: "insufficient normal cost", cast: false},
 		} {
@@ -251,10 +339,11 @@ func TestBuybackInteractionCastsPaymentsAndInstantTiming(t *testing.T) {
 				} else if payment.cast {
 					addBuybackInteractionMana(g, tc, false, true)
 				} else {
-					for _, color := range tc.manaToPay {
-						if color != mana.C {
-							g.Players[game.Player1].ManaPool.Add(color, 1)
+					for index, color := range tc.manaToPay {
+						if index == 0 {
+							continue
 						}
+						g.Players[game.Player1].ManaPool.Add(color, 1)
 					}
 				}
 				if tc.entry.OracleID != authored.Reiterate.OracleID {
@@ -262,11 +351,21 @@ func TestBuybackInteractionCastsPaymentsAndInstantTiming(t *testing.T) {
 					g.Turn.Phase, g.Turn.Step, g.Turn.PriorityPlayer =
 						game.PhaseCombat, game.StepDeclareBlockers, game.Player1
 				}
+				if tc.sorcery {
+					setMainPhasePriority(g, game.Player1)
+				}
 				def := buybackInteractionDef(t, registry, tc)
 				cardID := addCardToHand(g, game.Player1, def)
+				if tc.entry.OracleID == authored.WhispersOfTheMuse.OracleID {
+					addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Whispers draw"}})
+				}
 				beforeMana := g.Players[game.Player1].ManaPool.Total()
 				agents := buybackInteractionChoiceAgent(t, game.Player1, payment.paid)
-				act := action.CastSpell(cardID, []game.Target{target}, 0, nil)
+				var targets []game.Target
+				if !tc.noTarget {
+					targets = []game.Target{target}
+				}
+				act := action.CastSpell(cardID, targets, 0, nil)
 				before := g.Clone()
 				cast := engine.applyActionWithChoices(g, game.Player1, act, agents, &TurnLog{})
 				if cast != payment.cast {
@@ -275,7 +374,9 @@ func TestBuybackInteractionCastsPaymentsAndInstantTiming(t *testing.T) {
 				if !cast {
 					if !g.Players[game.Player1].Hand.Contains(cardID) ||
 						g.Players[game.Player1].ManaPool.Total() != beforeMana ||
-						g.Stack.Size() != before.Stack.Size() {
+						g.Stack.Size() != before.Stack.Size() ||
+						g.CardInstances[cardID].ZoneVersion != before.CardInstances[cardID].ZoneVersion ||
+						len(g.Events) != len(before.Events) {
 						t.Fatal("failed payment was not atomic")
 					}
 					if branch, accepted := engine.Simulator().Apply(before, game.Player1, act, agents); accepted || branch != nil {
@@ -286,7 +387,7 @@ func TestBuybackInteractionCastsPaymentsAndInstantTiming(t *testing.T) {
 				spell, ok := g.Stack.Peek()
 				wantSpent := tc.baseMana
 				if payment.paid {
-					wantSpent += 3
+					wantSpent += tc.buybackCost
 				}
 				if !ok || spell.SourceID != cardID ||
 					spell.BuybackPaid != payment.paid ||
@@ -702,7 +803,9 @@ func TestBuybackInteractionTargetIncarnations(t *testing.T) {
 
 func (tc buybackInteractionCase) manaToPayWithBuyback() []mana.Color {
 	colors := slices.Clone(tc.manaToPay)
-	colors = append(colors, mana.C, mana.C, mana.C)
+	for range tc.buybackCost {
+		colors = append(colors, mana.C)
+	}
 	return colors
 }
 
