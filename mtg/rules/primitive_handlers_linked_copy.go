@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -28,7 +29,8 @@ func handleCopyCard(r *effectResolver, prim game.CopyCard) effectResolved {
 // (Isochron Scepter, Spellbinder): the linked card stays in exile and a spell
 // carrying its copiable values is put on the stack, ceasing to exist when it
 // leaves the stack. The cast chooses the first legal targets and modes with any
-// X treated as 0 and, with prim.WithoutPayingManaCost set, pays no mana cost. It
+// X treated as 0 and, with prim.WithoutPayingManaCost set, pays no mana cost.
+// Additional costs and taxes still use the ordinary free-cast payment path. It
 // is a legal no-op when the linked card no longer rests in exile (the source
 // left the battlefield since it imprinted, or the card moved) or has no legal
 // way to be cast.
@@ -90,57 +92,23 @@ func linkedExiledCardInExile(g *game.Game, obj *game.StackObject, linkID string)
 // The copy carries the card's copiable values through an embedded token
 // definition rather than the card instance, so the original card stays in exile
 // and the copy ceases to exist when it leaves the stack. It returns false
-// (casting nothing) when the card has no legal cast choice.
-func (*Engine) castFreeCopyOfCard(g *game.Game, controllerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// (casting nothing) when the card has no legal cast choice or its additional
+// costs cannot be paid.
+func (e *Engine) castFreeCopyOfCard(g *game.Game, controllerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	if !cardCastRestrictionsSatisfied(g, controllerID, spellDef) {
+	if !freeCastFaceAvailable(g, controllerID, card, spellDef, game.Selection{}, opt.V[int]{}) {
 		return false
 	}
 	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
 	if !ok {
 		return false
 	}
-	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, modes, targets, game.CastBranch{})
-	if !ok {
-		panic("validated free-copy spell targets could not be segmented")
-	}
-	obj := &game.StackObject{
-		ID:             g.IDGen.Next(),
-		Kind:           game.StackSpell,
-		SourceID:       cardID,
-		SourceCardID:   card.ID,
-		SourceTokenDef: copyCardDef(card.Def),
-		Face:           game.FaceFront,
-		Controller:     controllerID,
-		Targets:        append([]game.Target(nil), targets...),
-		TargetCounts:   targetCounts,
-		ChosenModes:    append([]int(nil), modes...),
-		Copy:           true,
-		SourceZone:     zone.Exile,
-	}
-	g.Stack.Push(obj)
-	emitTargetEvents(g, obj)
-	emitEvent(g, game.Event{
-		Kind:                         game.EventSpellCast,
-		SourceID:                     cardID,
-		StackObjectID:                obj.ID,
-		Controller:                   controllerID,
-		CardID:                       card.ID,
-		Face:                         game.FaceFront,
-		CardTypes:                    cardTypes(spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 cardSubtypes(spellDef),
-		Colors:                       spellColors(spellDef),
-		ManaValue:                    stackObjectKnownManaValue(g, obj),
-		ManaSpentToCast:              opt.Val(0),
-		ManaFromCreaturesSpentToCast: opt.Val(0),
-		FromZone:                     zone.Exile,
-		ToZone:                       zone.Stack,
-		PlayerEventOrdinalThisTurn:   nextSpellCastOrdinalThisTurn(g, controllerID),
-	})
-	return true
+	return e.castFreeOptionWithCopy(g, nil, controllerID, card, action.CastSpellAction{
+		CardID: cardID, SourceZone: zone.Exile, Face: game.FaceFront,
+		ChosenModes: modes, Targets: targets,
+	}, false, true, agents, log)
 }

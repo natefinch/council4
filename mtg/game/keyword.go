@@ -151,6 +151,14 @@ type KickerKeyword struct {
 	Multi bool
 }
 
+// BuybackKeyword declares the optional additional cost paid as a spell is cast
+// (CR 702.27). The Engine owns payment and the resolution-only hand replacement.
+// Buyback-specific X announcements and multiple instances remain unsupported.
+type BuybackKeyword struct {
+	Cost            cost.Mana
+	AdditionalCosts []cost.Additional
+}
+
 // MadnessKeyword parameterizes Madness alternative costs.
 type MadnessKeyword struct {
 	Cost cost.Mana
@@ -323,6 +331,7 @@ func (NinjutsuKeyword) isKeywordAbility()         {}
 func (OutlastKeyword) isKeywordAbility()          {}
 func (MutateKeyword) isKeywordAbility()           {}
 func (KickerKeyword) isKeywordAbility()           {}
+func (BuybackKeyword) isKeywordAbility()          {}
 func (GiftKeyword) isKeywordAbility()             {}
 func (MadnessKeyword) isKeywordAbility()          {}
 func (OffspringKeyword) isKeywordAbility()        {}
@@ -365,6 +374,7 @@ func (NinjutsuKeyword) keyword() Keyword   { return Ninjutsu }
 func (OutlastKeyword) keyword() Keyword    { return Outlast }
 func (MutateKeyword) keyword() Keyword     { return Mutate }
 func (KickerKeyword) keyword() Keyword     { return Kicker }
+func (BuybackKeyword) keyword() Keyword    { return Buyback }
 func (GiftKeyword) keyword() Keyword       { return Gift }
 func (MadnessKeyword) keyword() Keyword    { return Madness }
 func (OffspringKeyword) keyword() Keyword  { return Offspring }
@@ -443,6 +453,11 @@ func (ability KickerKeyword) cloneKeywordAbility() KeywordAbility {
 	ability.Cost = append(cost.Mana(nil), ability.Cost...)
 	ability.AdditionalCosts = slices.Clone(ability.AdditionalCosts)
 	ability.BonusContent = cloneAbilityContent(ability.BonusContent)
+	return ability
+}
+func (ability BuybackKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = slices.Clone(ability.Cost)
+	ability.AdditionalCosts = slices.Clone(ability.AdditionalCosts)
 	return ability
 }
 func (ability GiftKeyword) cloneKeywordAbility() KeywordAbility {

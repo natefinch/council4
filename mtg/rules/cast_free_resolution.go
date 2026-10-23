@@ -252,8 +252,19 @@ func (e *Engine) chooseCastPaymentOption(g *game.Game, controllerID game.PlayerI
 }
 
 func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.castFreeOptionWithCopy(g, sourcePlayer, controllerID, card, cast, exileOnResolution, false, agents, log)
+}
+
+func (e *Engine) castFreeOptionWithCopy(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, exileOnResolution, copyCard bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if castFromZoneProhibited(g, controllerID, cast.SourceZone) {
 		return false
+	}
+	// A cast copy has its own costs, not the identity of the card remaining in
+	// exile. Payment must not reserve or consume that card as the casting source.
+	paymentCardID := card.ID
+	if copyCard {
+		paymentCardID = 0
+		cast.CardID = 0
 	}
 	spellDef := cardFaceOrDefault(card, cast.Face)
 	branch := castBranchForCast(cast)
@@ -296,16 +307,31 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		SplicedTargetCounts:           splice.targetCounts,
 		CastDuringControllerMainPhase: controllerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
-	counterTransition := prepareCastCounterTransition(g, card, cast.SourceZone)
-	if !removeCastSourceCard(g, sourcePlayer, card.ID, cast.SourceZone) {
-		return false
+	var counterTransition castCounterTransition
+	if copyCard {
+		obj.Copy = true
+		obj.CopyOwner = opt.Val(controllerID)
+		obj.SourceCardID = card.ID
+		obj.SourceTokenDef = copyCardDef(card.Def)
+	} else {
+		counterTransition = prepareCastCounterTransition(g, card, cast.SourceZone)
+		if !removeCastSourceCard(g, sourcePlayer, card.ID, cast.SourceZone) {
+			return false
+		}
+		counterTransition.apply(g)
 	}
-	counterTransition.apply(g)
 	g.Stack.Push(obj)
+	rollback := func() {
+		g.Stack.RemoveByID(obj.ID)
+		if !copyCard {
+			restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
+			counterTransition.undo(g)
+		}
+	}
 	targetEvents := prepareTargetEvents(g, obj)
 	request := payment.SpellRequest{
 		PlayerID:        controllerID,
-		CardID:          card.ID,
+		CardID:          paymentCardID,
 		SourceZone:      cast.SourceZone,
 		Card:            spellDef,
 		XValue:          cast.XValue,
@@ -321,9 +347,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 	}
 	paymentOption, ok := e.chooseCastPaymentOption(g, controllerID, request, agents, log)
 	if !ok {
-		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
-		counterTransition.undo(g)
+		rollback()
 		return false
 	}
 	prefs := e.paymentPreferencesForCostFromSource(
@@ -332,7 +356,7 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		paymentOption.ManaCost,
 		paymentOption.AdditionalCosts,
 		cast.XValue,
-		card.ID,
+		paymentCardID,
 		cast.SourceZone,
 		agents,
 		log,
@@ -342,11 +366,10 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, controllerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
-		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
-		counterTransition.undo(g)
+		rollback()
 		return false
 	}
+	obj.BuybackPaid = paymentResult.BuybackPaid
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
@@ -359,7 +382,8 @@ func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, control
 		SourceID:                     card.ID,
 		StackObjectID:                obj.ID,
 		Controller:                   controllerID,
-		CardID:                       card.ID,
+		CardID:                       paymentCardID,
+		TokenDef:                     obj.SourceTokenDef,
 		Face:                         cast.Face,
 		CardTypes:                    stackObjectCardTypes(obj, spellDef),
 		CardSupertypes:               cardSupertypes(spellDef),

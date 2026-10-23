@@ -99,6 +99,20 @@ func (v *cardDefValidator) validate() {
 
 func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	v.faceLinked = collectFacePublishedLinkedKeys(face)
+	buybackCount := 0
+	for i := range face.AbilityCount() {
+		for _, keyword := range BodyKeywordAbilities(face.BodyAt(i)) {
+			if keyword != nil && KeywordAbilityKind(keyword) == Buyback {
+				buybackCount++
+			}
+		}
+	}
+	if buybackCount != 0 {
+		if _, ok := face.BuybackKeyword(); !ok || buybackCount != 1 || face.IsPermanent() ||
+			!face.HasType(types.Instant) && !face.HasType(types.Sorcery) {
+			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "buyback requires one parameterized static keyword without buyback-specific X on an instant or sorcery")
+		}
+	}
 	hasAbilities := face.SpellAbility.Exists ||
 		face.Overload.Exists ||
 		face.EntersPrepared ||
@@ -778,6 +792,10 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateKickerKeywordCost(faceName, path, keyword)
 		if len(keyword.BonusContent.Modes) > 0 {
 			v.validateAbilityContent(faceName, appendPath(path, "BonusContent"), keyword.BonusContent, targets)
+		}
+	case BuybackKeyword:
+		if len(keyword.Cost) == 0 && len(keyword.AdditionalCosts) == 0 {
+			v.add(faceName, appendPath(path, "Cost"), CardDefIssueInvalidKeywordAbility, "buyback cost must be explicit")
 		}
 	case GiftKeyword:
 		if len(keyword.Delivery.Modes) == 0 {

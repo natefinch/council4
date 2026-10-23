@@ -35,6 +35,7 @@ func createStormCopies(g *game.Game, original *game.StackObject, spell *game.Car
 			ChosenModes:         append([]int(nil), original.ChosenModes...),
 			XValue:              original.XValue,
 			KickerPaid:          original.KickerPaid,
+			BuybackPaid:         original.BuybackPaid,
 			Overloaded:          original.Overloaded,
 			Flashback:           original.Flashback,
 			Suspend:             original.Suspend,

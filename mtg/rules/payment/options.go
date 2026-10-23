@@ -19,14 +19,16 @@ const escapeAlternativeLabel = "Escape"
 
 // spellCostOption describes one payable cost option for a spell.
 type spellCostOption struct {
-	index           int
-	label           string
-	card            *game.CardDef
-	manaCost        *cost.Mana
-	additionalCosts []cost.Additional
-	castPermission  SpellCastPermission
-	bargained       bool
-	locked          bool
+	index            int
+	alternativeIndex int
+	label            string
+	card             *game.CardDef
+	manaCost         *cost.Mana
+	additionalCosts  []cost.Additional
+	castPermission   SpellCastPermission
+	bargained        bool
+	buybackPaid      bool
+	locked           bool
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
@@ -148,7 +150,11 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		return []spellCostOption{req.PreparedCost.option}
 	}
 	options := spellCostOptionsForRequestWithoutModes(s, req)
+	for i := range options {
+		options[i].alternativeIndex = options[i].index
+	}
 	options = applyAdditionalCostChoices(options, req.Card)
+	options = applyBuybackCost(options, req.Card)
 	addSpreeModeCosts(options, req.Card, req.ChosenModes)
 	addEscalateModeCosts(options, req.Card, req.ChosenModes)
 	addSpliceCosts(options, req.SpliceManaCosts)
@@ -156,6 +162,43 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		addOffspringCost(options, req.Card)
 	}
 	return options
+}
+
+func applyBuybackCost(options []spellCostOption, card *game.CardDef) []spellCostOption {
+	if card == nil {
+		return options
+	}
+	buyback, ok := card.BuybackKeyword()
+	if !ok {
+		if card.HasKeyword(game.Buyback) {
+			return nil
+		}
+		return options
+	}
+	if card.IsPermanent() || !card.HasType(types.Instant) && !card.HasType(types.Sorcery) {
+		return nil
+	}
+	expanded := make([]spellCostOption, 0, len(options)*2)
+	for _, option := range options {
+		expanded = append(expanded, option)
+		if option.manaCost == nil {
+			continue
+		}
+		paid := applyChoiceBranch(option, cost.AdditionalChoiceOption{
+			Label: "Buyback", Mana: buyback.Cost,
+		})
+		additional, ok := appendIndependentAdditionalCosts(slices.Clone(paid.additionalCosts), buyback.AdditionalCosts)
+		if !ok {
+			continue
+		}
+		paid.additionalCosts = additional
+		paid.buybackPaid = true
+		expanded = append(expanded, paid)
+	}
+	for i := range expanded {
+		expanded[i].index = i
+	}
+	return expanded
 }
 
 // applyAdditionalCostChoices expands each cost option across the cartesian

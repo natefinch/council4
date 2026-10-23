@@ -352,8 +352,9 @@ func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type 
 // (CR 616.1f); when several match at once the affected object's controller or the
 // affected player chooses one (CR 616.1, falling back to the first match when no
 // agent is available).
-func replacementZoneChange(g *game.Game, event game.Event) zoneChangeReplacementResult {
+func replacementZoneChange(g *game.Game, event game.Event, local ...game.ReplacementEffect) zoneChangeReplacementResult {
 	pending := newZoneChangeReplacement(event)
+	pending.local = local
 	for {
 		matches := pending.pendingChoices(g)
 		if len(matches) == 0 {
@@ -371,6 +372,7 @@ type zoneChangeReplacement struct {
 	event   game.Event
 	result  zoneChangeReplacementResult
 	applied map[id.ID]bool
+	local   []game.ReplacementEffect
 }
 
 func newZoneChangeReplacement(event game.Event) zoneChangeReplacement {
@@ -384,6 +386,12 @@ func (pending *zoneChangeReplacement) pendingChoices(g *game.Game) []game.Replac
 	for {
 		pending.event.ToZone = pending.result.destination
 		matches := matchingZoneReplacementEffects(g, pending.event, pending.applied)
+		for _, replacement := range pending.local {
+			if !pending.applied[replacement.ID] &&
+				replacementEffectMatchesEvent(g, &replacement, pending.event) {
+				matches = append(matches, replacement)
+			}
+		}
 		if len(matches) != 1 {
 			return matches
 		}
