@@ -79,6 +79,11 @@ export function checkArgs(args) {
   }
 }
 
+export function validationPackagesForTask(policy, taskType) {
+  if (taskType !== "engine") return policy.validationPackages;
+  return [...new Set([...policy.validationPackages, "./cardgen/cmd/genrender"])];
+}
+
 export function checkSelection(task) {
   if (!task || !["card", "engine", "none"].includes(task.taskType)) throw new Error("No valid selection returned");
   if (task.taskType !== "none" && (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(task.id) ||
@@ -272,6 +277,7 @@ Return taskType none only for completed scope or a genuine external/unsafe block
             planPath: path.join(directory, `reviewed-batch-${index}.json`), command, signal: ctx.signal,
           }))
           : null;
+        const validationPackages = validationPackagesForTask(policy, task.taskType);
         const contract = `Write ONLY in isolated worktree ${work.path}; other checkouts (including the parent) are off limits for mutation.
 You may read earlier retained unit evidence at paths explicitly listed here: ${JSON.stringify(state.units.map(u => ({ id: u.task?.id, worktree: u.worktree, gaps: u.result?.gaps })))}
 Task type ${task.taskType}, id ${task.id}, title ${task.title}.
@@ -311,7 +317,7 @@ Return status complete or blocked, concise summary, reviewRequired for material 
               if (claim) await verifyCardBatch({ workPath: work.path, batchId: claim.batchId,
                 corpus, owner: ctx.runId, command, signal: ctx.signal });
               await git(work.path, ["diff", "--check"], ctx.signal);
-              const output = await command(work.path, "go", ["test", ...policy.validationPackages, "-count=1"], ctx.signal);
+              const output = await command(work.path, "go", ["test", ...validationPackages, "-count=1"], ctx.signal);
               result = { ok: true, output };
             } catch (error) {
               if (ctx.signal.aborted) throw error;
@@ -364,7 +370,7 @@ Return approve only with no material unresolved findings; otherwise changes_need
               state.stages.push(stage);
               try {
                 await git(work.path, ["diff", "--check"], ctx.signal);
-                await command(work.path, "go", ["test", ...policy.validationPackages, "-count=1"], ctx.signal);
+                await command(work.path, "go", ["test", ...validationPackages, "-count=1"], ctx.signal);
                 stage.outcome = "passed";
               } catch (error) { stage.outcome = "failed"; throw error; }
               finally { stage.completedAt = new Date().toISOString(); await save(); }

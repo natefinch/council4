@@ -87,6 +87,9 @@ This is the authoritative validation policy; skills and guides link here.
 - Ordinary code work: run affected-package behavioral tests. Shared rules also
   need affected interaction/rules scenarios. Run `go test ./...` locally only for
   broad changes or an explicit request; CI runs it once for code changes.
+- New or changed Engine types/enums also affect `cardgen/cmd/genrender`; include
+  that package's tests. If its generated type tables are stale, run
+  `go generate ./cardgen/...` to refresh those tables, not the Oracle corpus.
 - Documentation/comment-only work: check links/instructions and
   `git diff --check`; no local game tests. CI skips code checks for Markdown-only
   changes; other changes run the full suite.

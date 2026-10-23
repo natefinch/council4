@@ -18,6 +18,10 @@ Copilot discovers `.github/extensions/*/extension.mjs` in a trusted repository.
 The SDK import is supplied by Copilot; no npm install is required. A new session
 or extension reload loads the repository definitions. Session-scoped registrations
 used while authoring are temporary entry points to the same repository code.
+Keep only one production definition active in a session. A disabled project
+provider can remain disabled in a new session; an empty workflow list is not
+a reason to add a duplicate session wrapper. Inspect readiness and restore
+the intended project provider between runs instead.
 
 ## Main is the delivery destination
 
@@ -47,9 +51,15 @@ skipped-required, stale-head, draft or unmergeable PRs do not merge.
 
 Actual CI failures can trigger bounded `ci_fix` work, local validation and an
 independent `ci_review`. Only then does the workflow commit/push the repair and
-wait for fresh CI on its new head. Missing checks or external approvals pause
-with the PR and resume checkpoint, not a manufactured success. If main advances,
-the workflow integrates it and repeats the affected checks/review before merging.
+wait for fresh CI on its new head. Before watching CI, the watcher makes up to
+nine exact-head registration reads with eight 15-second retry waits; API request
+time is additional. It does this even when no checks (or only unrelated checks)
+exist yet. Registered checks use GitHub's normal CI watcher.
+Persistently missing checks or external approvals
+pause with the PR and resume checkpoint, not a manufactured success. A paused
+run does not wake automatically when CI later changes; inspect its current PR
+and resume the same run. If main advances, the workflow integrates it and
+repeats the affected checks/review before merging.
 
 A final fresh PR/check/protection read precedes ordinary
 `gh pr merge --squash --match-head-commit`. There is no `--admin`, direct
@@ -254,6 +264,19 @@ new source/test file must not masquerade as a post-review content change.
 The final Git tree is checked separately before commit. Policy 1.2.0 includes
 regressions for this failure and deterministic claim/admission handoffs after
 the first production run exposed both.
+
+Policy 1.3.0 adds the bounded check-registration wait so a newly opened PR
+does not immediately pause merely because GitHub has not registered its CI yet.
+This does not repair Copilot extension-provider disconnects. Avoid editing,
+reloading or enabling/disabling the owning extension during a live run.
+An interrupted provider is a stopped run, not background progress; preserve
+its journal, work, billing and lock ownership before choosing recovery.
+Engine units also validate `cardgen/cmd/genrender` during initial, repair and
+integrated-head checks. Runtime type/enum changes can stale its generated
+renderer tables even when gameplay packages pass. This is focused compatibility
+maintenance, not Oracle compilation or a new per-card gate; follow the
+[canonical validation policy](../.github/copilot-instructions.md#verify-proportionally)
+if the tables need regeneration.
 
 Resuming reuses completed durable steps and agent calls. **Changing code/policy
 does not retroactively change a paused run**: the workflow rejects a mismatched

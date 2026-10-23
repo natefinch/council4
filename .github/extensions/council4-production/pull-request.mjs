@@ -1,4 +1,5 @@
 import { mkdir, readFile } from "node:fs/promises";
+import { setTimeout as delay } from "node:timers/promises";
 import path from "node:path";
 import { writeJSON } from "./telemetry.mjs";
 
@@ -40,7 +41,7 @@ export function assessChecks(pr, checks, required, expectedHead) {
   return { status: "ready" };
 }
 
-export function pullRequestAPI(command, signal) {
+export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined, { signal })) {
   const gh = (cwd, args) => command(cwd, "gh", args, signal);
   const fields = "number,url,state,isDraft,headRefOid,baseRefName,baseRefOid,mergeStateStatus,reviewDecision,mergeCommit";
   return {
@@ -70,7 +71,21 @@ export function pullRequestAPI(command, signal) {
       }
       return { head, runs: pages.flatMap(page => page.check_runs), statuses: [...byContext.values()] };
     },
-    async watch(cwd, number) {
+    async watch(cwd, number, expectedHead, required) {
+      // GitHub can publish the PR before registering its Actions checks.
+      for (let attempt = 0; ; attempt++) {
+        const pr = await this.view(cwd, number);
+        if (pr.state === "MERGED") return;
+        const checks = await this.checks(cwd, expectedHead);
+        if (assessChecks(pr, checks, required, expectedHead).status !== "pending") return;
+        const registered = required.checks.every(name =>
+          checks.runs.some(check => check.name === name) ||
+          (!["Tests", "Race Tests"].includes(name) &&
+            checks.statuses.some(check => check.context === name)));
+        if (registered) break;
+        if (attempt === 8) return;
+        await wait(15000);
+      }
       try {
         await gh(cwd, ["pr", "checks", String(number), "--repo", repository, "--watch", "--fail-fast", "--interval", "15"]);
       } catch (error) {
@@ -226,8 +241,8 @@ export async function landPullRequest({
     if (pr.state === "MERGED") return confirmMerged(pr);
     let checks = await api.checks(work.path, state.head);
     let assessed = assessChecks(pr, checks, required, state.head);
-    if (assessed.status === "pending" && (checks.runs.length || checks.statuses.length)) {
-      await watchCI(() => api.watch(work.path, pr.number), { pr: state.pr, head: state.head });
+    if (assessed.status === "pending") {
+      await watchCI(() => api.watch(work.path, pr.number, state.head, required), { pr: state.pr, head: state.head });
       pr = await api.view(work.path, pr.number);
       if (pr.state === "MERGED") return confirmMerged(pr);
       checks = await api.checks(work.path, state.head);
