@@ -147,6 +147,10 @@ type PreparedSpellCost struct {
 // SpellPaymentResult records the paid costs and casting permission selected by
 // the payment plan.
 type SpellPaymentResult struct {
+	// AlternativeIndex retains the original alternative-cost identity even when
+	// optional additional costs expand the presented payment option indices.
+	AlternativeIndex    int
+	BuybackPaid         bool
 	AdditionalCostsPaid []string
 	PaidCostSubjects    []game.PaidCostSubject
 	// SacrificedIDs are the object IDs of permanents sacrificed to pay the

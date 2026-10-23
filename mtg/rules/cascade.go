@@ -13,7 +13,9 @@ import (
 )
 
 func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	if obj.Copy || spellDef == nil || !spellDef.HasKeyword(game.Cascade) {
+	// Only completed casts call this helper. A card copy can be cast (CR 707.12);
+	// ordinary stack/storm copying never enters a cast path (CR 707.10).
+	if spellDef == nil || !spellDef.HasKeyword(game.Cascade) {
 		return
 	}
 	player, ok := playerByID(g, obj.Controller)

@@ -110,6 +110,8 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 	applyPaymentPlan(s, req.PlayerID, plan.mana)
 	subjects := applyAdditionalCostPlan(s, plan.additional)
 	return SpellPaymentResult{
+		AlternativeIndex:    plan.option.alternativeIndex,
+		BuybackPaid:         plan.option.buybackPaid,
 		AdditionalCostsPaid: plan.additional.paid,
 		PaidCostSubjects:    subjects,
 		SacrificedIDs:       sacrificedPermanentIDs(plan.additional),

@@ -462,6 +462,48 @@
     "oracle_text_sha256": "bcbf119491b02740f1e4476112d6b9694235cf95a1cd3f0e8d271820c66fae3f",
     "revision": "d174cb01-b1cf-444c-a893-cc61ddf88b8c",
     "rulings_uri": "https://api.scryfall.com/cards/d174cb01-b1cf-444c-a893-cc61ddf88b8c/rulings"
+   },
+   {
+    "name": "Reiterate",
+    "oracle_id": "38394ee3-6726-4f91-bc25-36bce0c6aab9",
+    "oracle_text_sha256": "d3770caf39a9493ba336c30a906cd13abd83176c4cb886158501096f59d1cc41",
+    "revision": "99302c41-434f-41ff-a61a-2c3681a0c135",
+    "rulings_uri": "https://api.scryfall.com/cards/99302c41-434f-41ff-a61a-2c3681a0c135/rulings"
+   },
+   {
+    "name": "Allay",
+    "oracle_id": "664d982a-5cd8-4289-afb8-fa2e083042c9",
+    "oracle_text_sha256": "3ff4b4c18e24f3b516afe4aafd2f8c7d0d737744cc04d59f02c94dcb40107cb7",
+    "revision": "f20a1c6d-ec6a-4bd6-b3b2-b997f71d41fc",
+    "rulings_uri": "https://api.scryfall.com/cards/f20a1c6d-ec6a-4bd6-b3b2-b997f71d41fc/rulings"
+   },
+   {
+    "name": "Capsize",
+    "oracle_id": "77637eff-2963-4402-88f3-ca346f762fc8",
+    "oracle_text_sha256": "47554abdf2e507f5b686f54bef84e46e0d10f29ca9d3c3342695c65f1d20f906",
+    "revision": "f36f6545-e4e0-4dc8-acea-e527e43f3e14",
+    "rulings_uri": "https://api.scryfall.com/cards/f36f6545-e4e0-4dc8-acea-e527e43f3e14/rulings"
+   },
+   {
+    "name": "Shattering Pulse",
+    "oracle_id": "77953b7a-813e-45f5-ad7f-ab72a79a0112",
+    "oracle_text_sha256": "5f26ae3276d508358f077d52406d0aa98feee591e122fea39c1e6866bc81ccdd",
+    "revision": "89d3b846-6071-4d65-86ba-da08c4bd0aa1",
+    "rulings_uri": "https://api.scryfall.com/cards/89d3b846-6071-4d65-86ba-da08c4bd0aa1/rulings"
+   },
+   {
+    "name": "Whispers of the Muse",
+    "oracle_id": "a4a8af4e-8686-45ba-94fd-ccf6cc8adaae",
+    "oracle_text_sha256": "08f35747860d5e6de6541248e9d564b2823e1a86396f18555b1b077bf27788a3",
+    "revision": "5852a174-eef6-4c06-abcd-fd90f4b8a188",
+    "rulings_uri": "https://api.scryfall.com/cards/5852a174-eef6-4c06-abcd-fd90f4b8a188/rulings"
+   },
+   {
+    "name": "Disturbed Burial",
+    "oracle_id": "cdbaa21d-5896-4b8b-9a08-f0839ccfddfc",
+    "oracle_text_sha256": "e64ad9c91c0ec3632d9aef6555089f2d4240c0fcb48882f982a7a3f4f5b7045a",
+    "revision": "06254b6c-eb22-4ec9-9420-74e9ee15e072",
+    "rulings_uri": "https://api.scryfall.com/cards/06254b6c-eb22-4ec9-9420-74e9ee15e072/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -6749,6 +6791,59 @@
      "issue": 3313,
      "runtime_revision": "5d3e62fa391c9c4fa49bb7dfa6a573020d57c5f3",
      "evidence": "Existing optional/mandatory group-member Scry routes stage APNAP decisions before commits/events; TestGroupScryStagesChoicesBeforeLibraryChanges, TestGroupScryPartitionsOrdersAndPublicCounts and actual default-registry TestProductionMyrCustodianPrivateStagedReplay pass. No card is admitted merely from issue closure."
+    }
+   ]
+  },
+  {
+   "id": "09-buyback-interaction",
+   "family": "buyback-interaction",
+   "oracle_ids": [
+    "38394ee3-6726-4f91-bc25-36bce0c6aab9",
+    "664d982a-5cd8-4289-afb8-fa2e083042c9",
+    "77637eff-2963-4402-88f3-ca346f762fc8"
+   ],
+   "prerequisites": [
+    170
+   ],
+   "operations": [
+    "game.BuybackKeyword",
+    "Context.Copy",
+    "Context.Destroy",
+    "Context.Execute(game.MovePermanent)"
+   ],
+   "review": "Coordinator read pinned exact Oracle identities/text and complete Scryfall rulings responses on 2026-10-23 (Reiterate seven WotC 2021-03-19 rulings; Allay/Capsize empty lists), retained under recovery session files/sources. Verified official CR effective 2026-09-25 SHA2568d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca; actually read 400.4-11,601.2,608.2,702.27a,707.10-12 and destruction701.8. Complete Context.Copy/Destroy and MovePermanent declaration/runtime traced, with existing authored copy_spells.go/production_destruction.go and actual owner-hand movement scenarios as prior art. New buyback runtime received independent review, retained failing probes, repairs and exact-head green CI before main admission. No compiler acceptance or issue closure used as behavior evidence.",
+   "prerequisite_evidence": [
+    {
+     "issue": 170,
+     "runtime_revision": "f29ccfaf3743da3fe06fbed3248ddb05e295e4ac",
+     "evidence": "Bounded buyback cost/return slice, not broader issue closure: game.BuybackKeyword; rules/payment/options.go applyBuybackCost; rules/stack.go successful-resolution replacement; existing Copy/Destroy/MovePermanent operations. Real TestReiterateBuybackOptionalPaymentAndResolution, CounterAndAllIllegal, CopiesClonesAndRecast, CopyOutlivesOriginalIncarnation, independent cost-group/copy/payment/replacement probes and shared cast-event/cascade negatives executed and passed locally; PR3318 exact head7d89037d14b081087349e6952eda972da55ed491 passed Tests and Race Tests before verified squash commit on remote main."
+    }
+   ]
+  },
+  {
+   "id": "10-buyback-value",
+   "family": "buyback-value",
+   "oracle_ids": [
+    "77953b7a-813e-45f5-ad7f-ab72a79a0112",
+    "a4a8af4e-8686-45ba-94fd-ccf6cc8adaae",
+    "cdbaa21d-5896-4b8b-9a08-f0839ccfddfc"
+   ],
+   "prerequisites": [
+    170
+   ],
+   "operations": [
+    "game.BuybackKeyword",
+    "Context.Destroy",
+    "Context.Execute(game.Draw)",
+    "Context.View().TargetCards",
+    "Context.MoveCards"
+   ],
+   "review": "Coordinator read exact pinned Oracle text/printings and all three complete printing-specific Scryfall rulings responses retrieved2026-10-23 (empty lists, retained files/sources/shattering-pulse-rulings.json,whispers-rulings.json,disturbed-burial-rulings.json). Verified official CR2026-09-25 SHA2568d860e451f20f38865b725b42d82feb714c725373dd8f3b32b8652b3eeb070ca; read118.8,121.1/2/4,307.1,400.7,601.2,608.2,701.8,702.27a and707.10. Read complete Destroy,Draw,TargetCards,CardPlacement declarations and actual Engine implementation paths; prior authored destruction and numeric target hand-return plus real replacement scenarios are reusable. Buyback shared prerequisite independently reviewed and landed PR3318; production interaction batch PR3319 independently approved and green-CI landed, not inferred from compiler acceptance. Disturbed Burial remains sorcery, targets exactly own graveyard creature incarnation and uses minted handles; no new Engine operation needed.",
+   "prerequisite_evidence": [
+    {
+     "issue": 170,
+     "runtime_revision": "f8978af4da2765535365a9c0c5825688018349a8",
+     "evidence": "PR3318 added bounded BuybackKeyword/payment/copy/success-only replacement operation; no broader issue-closure claim. PR3319 on this runtime exercised paid and normal exact production Reiterate/Allay/Capsize through live and Simulator, source-funded payment, copies/target changes, protections/redirects, independent clones and real token/commander behavior. Independent probes retained. Both PRs passed all exact-head Tests and Race Tests before squash commits verified on fetched origin/main. Current unchanged shared Destroy,Draw and public TargetCards/MoveCards paths inspected against existing production destruction/numeric scenarios."
     }
    ]
   }
@@ -47706,10 +47801,20 @@
    "oracle_id": "38394ee3-6726-4f91-bc25-36bce0c6aab9",
    "revision": "99302c41-434f-41ff-a61a-2c3681a0c135",
    "name": "Reiterate",
-   "status": "blocked",
-   "family": "reviewed-blocker",
+   "status": "implemented-verified",
+   "family": "buyback-interaction",
+   "batch": "09-buyback-interaction",
    "blocker": 170,
-   "reason": "Missing inspectable optional buyback announcement/payment and successful-resolution-only paid hand replacement; stack-copy operations themselves work. CR 702.27; canonical runtime handoff on #170."
+   "reason": "Missing inspectable optional buyback announcement/payment and successful-resolution-only paid hand replacement; stack-copy operations themselves work. CR 702.27; canonical runtime handoff on #170.",
+   "evidence": "mtg/rules/buyback_interaction_test.go: TestBuybackInteractionRegistryIdentityAndCosts; TestBuybackInteractionReiterateCopiesPaidSpellChoicesAndClone; TestBuybackInteractionReiteratePaidBuybackCopyHasNoPhysicalCard; TestBuybackInteractionReiterateRejectsAbilityTargets; TestBuybackInteractionReiterateAllIllegalTargetDoesNotBuyBack; TestBuybackInteractionCastsPaymentsAndInstantTiming",
+   "reassessments": [
+    {
+     "issue": 170,
+     "runtime_revision": "f29ccfaf3743da3fe06fbed3248ddb05e295e4ac",
+     "evidence": "Bounded buyback prerequisite landed via PR3318 after exact-head Tests/Race Tests. Actually executed mtg/rules/buyback_test.go TestReiterateBuybackOptionalPaymentAndResolution, TestReiterateBuybackCounterAndAllIllegal, TestReiterateBuybackCopiesClonesAndRecast, TestReiterateBuybackCopyOutlivesOriginalIncarnation and both retained independent probe files; seven affected packages and repaired-head nine-package local checks passed. Inspectable game.BuybackKeyword and ordinary Engine payment/copy/destination paths now express all printed Reiterate behavior. Context.Copy and instant/sorcery target declaration remain existing supported operations. Reassessment only reopens eligibility; the card remains unregistered until its own paid production scenarios and checked admission.",
+     "reason": "Missing inspectable optional buyback announcement/payment and successful-resolution-only paid hand replacement; stack-copy operations themselves work. CR 702.27; canonical runtime handoff on #170."
+    }
+   ]
   },
   {
    "oracle_id": "49d4aef7-d2d1-4f66-bc2a-79ec8cc96565",
@@ -134884,8 +134989,10 @@
    "oracle_id": "664d982a-5cd8-4289-afb8-fa2e083042c9",
    "revision": "f20a1c6d-ec6a-4bd6-b3b2-b997f71d41fc",
    "name": "Allay",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "buyback-interaction",
+   "batch": "09-buyback-interaction",
+   "evidence": "mtg/rules/buyback_interaction_test.go: TestBuybackInteractionRegistryIdentityAndCosts; TestBuybackInteractionAllayProtectionAndDestructionReplacement; TestBuybackInteractionAllayCountered; TestBuybackInteractionTargetIncarnations; TestBuybackInteractionCastsPaymentsAndInstantTiming"
   },
   {
    "oracle_id": "66553485-4e9d-4049-9e80-3ac903f8127a",
@@ -149327,8 +149434,10 @@
    "oracle_id": "77637eff-2963-4402-88f3-ca346f762fc8",
    "revision": "f36f6545-e4e0-4dc8-acea-e527e43f3e14",
    "name": "Capsize",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "buyback-interaction",
+   "batch": "09-buyback-interaction",
+   "evidence": "mtg/rules/buyback_interaction_test.go: TestBuybackInteractionRegistryIdentityAndCosts; TestBuybackInteractionCapsizePermanentTypesTokensAndOwner; TestBuybackInteractionCapsizeCommanderAndReplacement; TestBuybackInteractionTargetIncarnations; TestBuybackInteractionCapsizeSimulatorAndClone; TestBuybackInteractionCastsPaymentsAndInstantTiming"
   },
   {
    "oracle_id": "776aa036-08aa-4fa0-82bd-c09e6e3e2c5e",
@@ -149453,8 +149562,10 @@
    "oracle_id": "77953b7a-813e-45f5-ad7f-ab72a79a0112",
    "revision": "89d3b846-6071-4d65-86ba-da08c4bd0aa1",
    "name": "Shattering Pulse",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "buyback-value",
+   "batch": "10-buyback-value",
+   "evidence": "mtg/rules/buyback_interaction_test.go: TestBuybackInteractionRegistryIdentityAndCosts; TestBuybackInteractionCastsPaymentsAndInstantTiming; TestBuybackValueShatteringPulseResolutionAndReplacements; TestBuybackValueShatteringPulseCounteredAndIllegalTargets; TestBuybackValueShatteringPulseDeferredManaAndClone"
   },
   {
    "oracle_id": "7798a4d9-1c1d-48e6-b9a2-ecd6aec1efa7",
@@ -187070,8 +187181,10 @@
    "oracle_id": "a4a8af4e-8686-45ba-94fd-ccf6cc8adaae",
    "revision": "5852a174-eef6-4c06-abcd-fd90f4b8a188",
    "name": "Whispers of the Muse",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "buyback-value",
+   "batch": "10-buyback-value",
+   "evidence": "mtg/rules/buyback_interaction_test.go: TestBuybackInteractionRegistryIdentityAndCosts; TestBuybackInteractionCastsPaymentsAndInstantTiming; TestBuybackValueWhispersDrawControllerAndClone; TestBuybackValueWhispersReplacementAndEmptyLibrary"
   },
   {
    "oracle_id": "a4a9c2bb-e6d0-4665-8b2f-e90c78784303",
@@ -220568,8 +220681,10 @@
    "oracle_id": "cdbaa21d-5896-4b8b-9a08-f0839ccfddfc",
    "revision": "06254b6c-eb22-4ec9-9420-74e9ee15e072",
    "name": "Disturbed Burial",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "buyback-value",
+   "batch": "10-buyback-value",
+   "evidence": "mtg/rules/buyback_interaction_test.go: TestBuybackInteractionRegistryIdentityAndCosts; TestBuybackInteractionCastsPaymentsAndInstantTiming; TestBuybackValueDisturbedBurialOwnCreatureTargetsAndTiming; TestBuybackValueDisturbedBurialIncarnationsAndReplacement; TestBuybackValueDisturbedBurialCopyRetargetsForController"
   },
   {
    "oracle_id": "cdc0621a-5a88-46a0-90fa-87ba1e7e1eb2",

@@ -311,6 +311,9 @@ const (
 	// marked damage and destroying the Aura. The rules layer applies the
 	// attachment-sensitive replacement.
 	UmbraArmor
+	// Buyback offers an additional cost and replaces the paid spell's
+	// graveyard move only as it resolves (CR 702.27).
+	Buyback
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount

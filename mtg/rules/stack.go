@@ -609,6 +609,20 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 		}
 		return "rebound exile"
 	}
+	if obj.BuybackPaid {
+		// Buyback is a static replacement, not a resolving-body self-replacement.
+		// Competing graveyard redirects must remain choices under CR 616.1.
+		buyback := game.ReplacementEffect{
+			ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
+			Description: "Buyback", MatchEvent: game.EventZoneChanged,
+			MatchFromZone: true, FromZone: zone.Stack,
+			MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Hand,
+		}
+		if !moveStackCardToZone(g, obj, card, zone.Graveyard, false, buyback) {
+			return "invalid owner"
+		}
+		return "resolved"
+	}
 	if !moveStackCardToGraveyard(g, obj, card) {
 		return "invalid owner"
 	}
@@ -961,7 +975,7 @@ func moveStackCardToOwnersLibrary(g *game.Game, obj *game.StackObject, card *gam
 // forceShuffle is set and the card lands in a library, that library is shuffled
 // even without a replacement requesting it, backing the "shuffle this card into
 // its owner's library" resolution tail.
-func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type, forceShuffle bool) bool {
+func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type, forceShuffle bool, local ...game.ReplacementEffect) bool {
 	if _, ok := playerByID(g, card.Owner); !ok {
 		return false
 	}
@@ -994,7 +1008,7 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 		FromZone:      zone.Stack,
 		ToZone:        intendedDestination,
 	}
-	replacement := replacementZoneChange(g, event)
+	replacement := replacementZoneChange(g, event, local...)
 	destination := replacement.destination
 	destination = commanderReplacementDestination(g, card.ID, destination)
 	destinationCards, ok := destinationZone(g, card.Owner, destination)

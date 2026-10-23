@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -486,6 +487,42 @@ func (f *CardFace) KickerKeyword() (KickerKeyword, bool) {
 		}
 	}
 	return KickerKeyword{}, false
+}
+
+// BuybackKeyword returns the sole supported Buyback cost on this face.
+// Buyback-specific numeric announcements are not represented by this slice.
+func (f *CardFace) BuybackKeyword() (BuybackKeyword, bool) {
+	var found BuybackKeyword
+	count := 0
+	for i := range f.StaticAbilities {
+		for _, ka := range f.StaticAbilities[i].KeywordAbilities {
+			if ka != nil && ka.keyword() == Buyback {
+				if f.StaticAbilities[i].ZoneOfFunction != zone.None && f.StaticAbilities[i].ZoneOfFunction != zone.Stack {
+					return BuybackKeyword{}, false
+				}
+				buyback, ok := ka.(BuybackKeyword)
+				if !ok {
+					return BuybackKeyword{}, false
+				}
+				found = buyback
+				count++
+			}
+		}
+	}
+	if count != 1 || len(found.Cost) == 0 && len(found.AdditionalCosts) == 0 {
+		return BuybackKeyword{}, false
+	}
+	for _, symbol := range found.Cost {
+		if symbol.Kind == cost.VariableSymbol {
+			return BuybackKeyword{}, false
+		}
+	}
+	for _, additional := range found.AdditionalCosts {
+		if additional.AmountFromX {
+			return BuybackKeyword{}, false
+		}
+	}
+	return found, true
 }
 
 // OffspringKeyword returns the first Offspring keyword on any static ability of

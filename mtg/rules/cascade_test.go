@@ -133,6 +133,39 @@ func TestDiscoverDeclinePutsFoundCardIntoHand(t *testing.T) {
 	}
 }
 
+func TestCascadeDoesNotTriggerForNonCastStackCopy(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, cascadeSpell(3))
+	remaining := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("Not cascaded again", 1))
+	firstHit := addCardToLibrary(g, game.Player1, simpleGainLifeInstantWithManaValue("First cascade hit", 1))
+	g.Players[game.Player1].ManaPool.Add(mana.C, 3)
+	g.Turn.PriorityPlayer = game.Player1
+	if !engine.applyAction(g, game.Player1, action.CastSpell(cardID, nil, 0, nil)) {
+		t.Fatal("physical cascade cast failed")
+	}
+	original := g.Stack.Objects()[0]
+	if g.Stack.Size() != 2 || !stackContainsSource(g, firstHit) {
+		t.Fatal("original cast did not cascade once")
+	}
+	before := spellCastEventCount(g)
+	addEffectSpellToStack(g, game.Player1, game.CopyStackObject{
+		Object: game.TargetStackObjectReference(0),
+	}, []game.Target{game.StackObjectTarget(original.ID)})
+	engine.resolveTopOfStack(g, &TurnLog{})
+	copied, _ := g.Stack.Peek()
+	if !copied.Copy || g.Stack.Size() != 3 || spellCastEventCount(g) != before ||
+		!g.Players[game.Player1].Library.Contains(remaining) {
+		t.Fatal("copying the stack spell was incorrectly treated as another cascade cast")
+	}
+	for !g.Stack.IsEmpty() {
+		engine.resolveTopOfStack(g, &TurnLog{})
+	}
+	if spellCastEventCount(g) != before || !g.Players[game.Player1].Library.Contains(remaining) {
+		t.Fatal("resolving a non-cast copy triggered cascade")
+	}
+}
+
 func cascadeSpell(manaValue int) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Cascade Spell",
 		ManaCost:        opt.Val(cost.Mana{cost.O(manaValue)}),

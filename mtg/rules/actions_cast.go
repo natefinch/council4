@@ -280,10 +280,11 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	recordExilePlayPermissionUse(g, exilePlayPermission)
 	recordPermanentTypePlay(g, playerID, cast.Permission)
-	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
-	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
-	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, request.Prefs.AlternativeIndex)
+	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
+	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
+	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Bestowed = cast.Bestowed
+	obj.BuybackPaid = paymentResult.BuybackPaid
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
@@ -605,6 +606,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		ChosenModes:         append([]int(nil), cast.ChosenModes...),
 		XValue:              cast.XValue,
 		Copy:                true,
+		BuybackPaid:         paymentResult.BuybackPaid,
 		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
 		SacrificedAsCostIDs: paymentResult.SacrificedIDs,
 		PaidCostSubjects:    paymentResult.PaidCostSubjects,
