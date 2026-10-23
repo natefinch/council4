@@ -7,6 +7,8 @@ import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary
 import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
+import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
+import { gapEvidence, earlierUnits } from "./workflow.mjs";
 import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
@@ -233,6 +235,131 @@ test("Coordinator refuses foreign claims, invented batches, rewrites and partial
     else await assert.rejects(prepareCardBatch(f.options));
     assert.equal(await readFile(f.manifest, "utf8"), before);
     assert.ok(!f.calls.includes("claim") && !f.calls.includes("verify"));
+  }
+});
+
+const open = number => ({ number, state: "OPEN", title: `Gap ${number}`, url: `https://github.com/natefinch/council4/issues/${number}` });
+const readyBatch = { id: "11-ready", family: "draw", operations: ["draw"], prerequisites: [12] };
+const blockedCard = (issue, ids = ["x", "y", "z"]) => ({
+  status: "blocked", task: { taskType: "card", id: "new-family" },
+  claim: { cards: ids.map(oracleId => ({ oracleId })) },
+  result: { status: "blocked", gaps: [{ id: `#${issue}`, description: "missing operation" }] },
+});
+const landedGap = (issue, id = `gap-${issue}`) => ({
+  status: "landed", task: { taskType: "engine", id },
+  landing: { commit: `commit-${issue}`, pr: { url: `https://github.com/natefinch/council4/pull/${issue}0` } },
+});
+
+test("Gap references parse canonical issue forms only", () => {
+  for (const [value, issue] of [["#3285", 3285], ["3285", 3285], ["gap-3285", 3285], ["issue-12", 12],
+    ["https://github.com/natefinch/council4/issues/77", 77], ["08-scry-interaction-claim", null], ["#12-x", null], ["", null]]) {
+    assert.equal(issueNumber(value), issue, value);
+  }
+  assert.equal(engineIssue({ task: { taskType: "engine", id: "1906-simultaneous-choice" } }), 1906);
+  assert.equal(engineIssue({ task: { taskType: "card", id: "1906-cards" } }), null);
+  // Blocked results naming batch/claim problems are not schedulable Engine gaps.
+  assert.deepEqual(knownGaps({ units: [{ ...blockedCard(1), result: { gaps: [{ id: "08-scry-interaction-claim" }] } }] }), []);
+});
+
+test("Known open Engine gaps are selected before ready card batches, demonstrated gaps first", () => {
+  const next = { batch: readyBatch, cards: [{ name: "A" }], pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
+  const issues = { 3285: open(3285), 2161: open(2161) };
+  let choice = chooseWork({ next, units: [blockedCard(2161)], issues });
+  assert.equal(choice.kind, "engine");
+  assert.equal(choice.gap.issue, 2161);
+  assert.deepEqual(choice.gap.oracleIds, ["x", "y", "z"]);
+  choice = chooseWork({ next, issues });
+  assert.equal(choice.kind, "engine");
+  assert.equal(choice.gap.issue, 3285);
+  const task = gapTask(choice, { q: "Necromancy" });
+  assert.equal(task.id, "gap-3285");
+  assert.equal(task.taskType, "engine");
+  assert.equal(task.issue, 3285);
+  assert.match(task.instructions, /Necromancy \(q\)/);
+  assert.doesNotThrow(() => checkSelection(task));
+});
+
+test("Ready saved batches are selected deterministically when no open gap remains", () => {
+  const next = { batch: readyBatch, cards: [{ name: "A", oracle_id: "a", revision: "r" }],
+    pending_prerequisites: [{ issues: [3285] }, { issues: [999] }] };
+  // A filled gap, a closed issue and an unreadable reference never outrank ready work.
+  const choice = chooseWork({ next, units: [landedGap(3285)], issues: { 3285: open(3285), 999: { state: "CLOSED" } } });
+  assert.equal(choice.kind, "card");
+  const task = batchTask(choice);
+  assert.equal(task.id, "11-ready");
+  assert.equal(task.batchPlan, "");
+  assert.doesNotThrow(() => checkSelection(task));
+});
+
+test("A failed gap attempt is parked for this run and batch preparation avoids open gaps", () => {
+  const failed = { status: "blocked", task: { taskType: "engine", id: "gap-3285", issue: 3285 } };
+  const next = { batch: null, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }, { blocked_oracle_ids: ["n"], issues: [500] }] };
+  const choice = chooseWork({ next, units: [failed], priorUnits: [landedGap(500)], issues: { 3285: open(3285), 500: open(500) } });
+  assert.equal(choice.kind, "prepare");
+  assert.deepEqual(choice.parked.map(gap => gap.issue), [3285]);
+  assert.deepEqual(choice.avoid.map(gap => gap.issue), [3285]);
+  assert.deepEqual(choice.unblocked.map(gap => gap.issue), [500]);
+  // Earlier-run failures stay parked unless explicitly retried.
+  const earlier = { next: { batch: readyBatch, pending_prerequisites: [{ issues: [3285] }] }, priorUnits: [failed], issues: { 3285: open(3285) } };
+  assert.equal(chooseWork(earlier).kind, "card");
+  assert.equal(chooseWork({ ...earlier, retry: [3285] }).gap.issue, 3285);
+  assert.deepEqual(gapEvidence(choice.unblocked, [landedGap(500)], {}, "base"), {
+    500: { runtime_revision: "commit-500", evidence: "Engine unit gap-500 landed in https://github.com/natefinch/council4/pull/5000" },
+  });
+  assert.deepEqual(gapEvidence([{ issue: 7, oracleIds: ["c"] }], [], { 7: { state: "CLOSED" } }, "base"), {
+    7: { runtime_revision: "base", evidence: "Issue #7 closed; reassessed on runtime base" },
+  });
+});
+
+test("Earlier local runs carry blocked-card gaps and landed gap fixes forward", async t => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "council4-history-"));
+  t.after(() => rm(root, { recursive: true }));
+  for (const [run, units] of [["old", [blockedCard(41)]], ["fix", [landedGap(42)]], ["current", [blockedCard(43)]]]) {
+    await mkdir(path.join(root, ".cardwork/workflows", run), { recursive: true });
+    await writeFile(path.join(root, ".cardwork/workflows", run, "state.json"), JSON.stringify({ units }));
+  }
+  await mkdir(path.join(root, ".cardwork/workflows/empty"));
+  const priorUnits = await earlierUnits(root, "current");
+  assert.equal(priorUnits.length, 2);
+  const gaps = knownGaps({ next: { pending_prerequisites: [{ issues: [42], blocked_oracle_ids: ["w"] }] }, priorUnits });
+  assert.deepEqual(gaps.map(gap => gap.issue), [41, 42]);
+  const choice = chooseWork({ next: { batch: readyBatch, pending_prerequisites: [{ issues: [42], blocked_oracle_ids: ["w"] }] },
+    priorUnits, issues: { 41: open(41), 42: open(42) } });
+  assert.equal(choice.gap.issue, 41);
+  assert.deepEqual(await earlierUnits(path.join(root, "missing"), "x"), []);
+});
+
+test("Coordinator reassesses only filled-gap blocked plan members before batching", async t => {
+  const workPath = await mkdtemp(path.join(os.tmpdir(), "council4-reassess-"));
+  t.after(() => rm(workPath, { recursive: true }));
+  const manifest = path.join(workPath, "testdata/card-authoring/production.json");
+  await mkdir(path.dirname(manifest), { recursive: true });
+  const cards = ["a", "b", "c"].map(id => ({ oracle_id: id, revision: `r-${id}`, name: id, status: "unclaimed" }));
+  cards[0] = { ...cards[0], status: "blocked", blocker: 3285, reason: "missing" };
+  await writeFile(manifest, JSON.stringify({ corpus_sha256: "pin", batches: [], records: cards }));
+  const plan = { corpus_sha256: "pin", batches: [{ id: "new" }], records: cards.map(({ oracle_id, revision, name }) => ({ oracle_id, revision, name })) };
+  for (const evidence of [{}, { 3285: { runtime_revision: "commit", evidence: "landed" } }]) {
+    const calls = [];
+    const command = async (_cwd, _executable, args) => {
+      const operation = args[args.indexOf("-operation") + 1];
+      calls.push(operation);
+      if (operation === "reassess") {
+        const reassess = JSON.parse(await readFile(args[args.indexOf("-plan") + 1], "utf8"));
+        assert.deepEqual(reassess.records, [{ oracle_id: "a", revision: "r-a", name: "a",
+          reassessment: { issue: 3285, runtime_revision: "commit", evidence: "landed" } }]);
+      }
+      if (operation === "next") return JSON.stringify({ batch: { id: "new" }, cards: cards.map(card => ({ ...card, status: "claimed", owner: "run" })) });
+      return "";
+    };
+    const options = { workPath, task: { id: "new", batchPlan: JSON.stringify(plan) }, corpus: "/c", owner: "run",
+      planPath: path.join(workPath, ".cardwork/plan.json"), command, prerequisiteEvidence: evidence };
+    if (!evidence[3285]) {
+      await assert.rejects(prepareCardBatch(options), /still blocked by #3285/);
+      assert.deepEqual(calls, []);
+    } else {
+      await prepareCardBatch(options);
+      assert.deepEqual(calls, ["reassess", "add-reviewed-batch", "next", "claim", "next"]);
+    }
   }
 });
 

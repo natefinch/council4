@@ -125,8 +125,24 @@ exercise real usage attribution. It spends the response's actual AIC.
 
 ## Separate work types and stages
 
-Selection is a separately measured coordination agent. Each production unit has
-a stable ID and one task type:
+Each unit picks its own work; nobody chooses batches by hand. Since policy
+1.4.0 the coordinator selects deterministically, in this order:
+
+1. **Known open Engine gaps.** Gaps demonstrated by blocked card units (this
+   run, then earlier local runs under `.cardwork/workflows/`) and saved queue
+   prerequisites from `cardqueue next`. A gap counts while its GitHub issue is
+   open and no landed Engine unit has targeted it. The unit is an Engine task
+   `gap-<issue>`; card work never proceeds past a known gap.
+2. **A ready saved batch** from `cardqueue next`.
+3. **Batch preparation.** Only then does a measured selection agent review
+   queue candidates and return a new reviewed batch plan. It is told which open
+   gaps to avoid and which blocked cards are now unblocked.
+
+Steps 1 and 2 need no model and cost no AIC. An Engine gap whose unit fails is
+parked (in that run and later ones) rather than paid for again; its stage outcome
+and retained work show why. To retry deliberately, pass its issue number in the
+`retryGaps` argument, e.g. `"retryGaps": [3287]`. Each production unit has a
+stable ID and one task type:
 
 | Task type | Scope |
 | --- | --- |
@@ -134,13 +150,15 @@ a stable ID and one task type:
 | `engine` | A demonstrated shared rules gap, acceptance scenarios and capability evidence; dependent new-card admissions belong to a later card unit |
 
 A card agent may not silently include shared Engine production changes. When it
-finds a gap, its attempt is retained as blocked card work. The next selection sees
-the exact gap and retained evidence and can choose an Engine unit. After the
-Engine unit lands, later selections reassess dependent cards on the new runtime.
+finds a gap, it returns blocked with the canonical issue number as the gap ID,
+and its attempt (including the claimed cards) is retained. The next unit then
+selects that Engine gap. After the Engine unit lands, batch preparation can
+include the previously blocked cards; the coordinator reassesses queue-blocked
+members with the landed commit as evidence before saving the new batch.
 An exhausted saved batch is a reason to prepare the next bounded batch, not a
 reason to restart strategy research.
-For a card unit the selector returns the exact saved batch ID, or a bounded
-reviewed plan in the existing `add-reviewed-batch` format. The deterministic
+For a card unit the coordinator uses the exact saved batch ID, or the selector's
+bounded reviewed plan in the existing `add-reviewed-batch` format. The deterministic
 coordinator saves that plan if needed and claims the whole batch **before**
 launching the card worker. The worker receives confirmed owner/identity evidence
 and never waits for a separate claim message or edits the saved queue itself.
