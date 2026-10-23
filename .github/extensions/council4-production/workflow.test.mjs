@@ -58,6 +58,22 @@ test("Review fixes are separate work and require validation and re-review", asyn
   assert.deepEqual(f.calls, ["implementation", "validate", "review-0", "review_fix", "validate", "review-1", "prepare"]);
 });
 
+test("Engine work gets two review-fix rounds; card work gets one", async () => {
+  const twice = round => ({ verdict: round < 2 ? "changes_needed" : "approve", findings: round < 2 ? [`finding ${round}`] : [] });
+  const engine = fixture();
+  engine.review = async round => { engine.calls.push(`review-${round}`); return twice(round); };
+  assert.equal((await executeUnit(engine)).status, "accepted");
+  assert.deepEqual(engine.calls.filter(call => call === "review_fix").length, 2);
+  const card = fixture({ task: { taskType: "card", id: "batch", reviewRequired: true } });
+  card.review = async round => { card.calls.push(`review-${round}`); return twice(round); };
+  card.publish = async () => assert.fail("card exceeded its review-fix rounds");
+  assert.notEqual((await executeUnit(card)).status, "accepted");
+  assert.deepEqual(card.calls.filter(call => call.startsWith("review-")), ["review-0", "review-1"]);
+  for (const reviewFixRounds of [1, { card: 1 }, { card: 1, engine: -1 }]) {
+    assert.throws(() => checkPolicy({ ...policy, reviewFixRounds }), /reviewFixRounds/);
+  }
+});
+
 test("Validation failures, missing agent output and unresolved reviews never land", async () => {
   for (const f of [
     fixture({ stage: async () => null }),

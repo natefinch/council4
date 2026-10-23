@@ -55,8 +55,12 @@ const reviewSchema = {
 
 export function checkPolicy(policy) {
   if (!policy.version || !["risk", "always"].includes(policy.cardReview)) throw new Error("Invalid policy version/review policy");
-  for (const field of ["reviewFixRounds", "validationFixRounds", "ciFixRounds"]) {
+  for (const field of ["validationFixRounds", "ciFixRounds"]) {
     if (!Number.isInteger(policy[field]) || policy[field] < 0) throw new Error(`Invalid ${field}`);
+  }
+  for (const type of ["card", "engine"]) {
+    const rounds = policy.reviewFixRounds?.[type];
+    if (!Number.isInteger(rounds) || rounds < 0) throw new Error(`Invalid reviewFixRounds.${type}`);
   }
   for (const type of ["card", "engine"]) {
     for (const phase of ["implementation", "review", "review_fix", "validation_fix", "ci_fix"]) {
@@ -182,7 +186,7 @@ export async function executeUnit({ task, policy, stage, validate, snapshot, rev
       const afterReview = await snapshot();
       if (afterReview.digest !== approved.digest) throw new Error("Reviewer modified submission; refusing approval");
       if (verdict?.verdict === "approve" && verdict.findings.length === 0) break;
-      if (!verdict || verdict.verdict === "blocked" || round >= policy.reviewFixRounds) {
+      if (!verdict || verdict.verdict === "blocked" || round >= policy.reviewFixRounds[task.taskType]) {
         return { status: "review_rejected", result, verdict };
       }
       result = await stage("review_fix", round + 1, verdict);
