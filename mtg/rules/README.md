@@ -86,6 +86,9 @@ The [Engine proving fixture](buyback_test.go) and
 [retained independent probes](buyback_independent_test.go) cover the shared
 prerequisite; the production Reiterate, Allay, and Capsize registrations and
 their named-card scenarios are in [buyback_interaction_test.go](buyback_interaction_test.go).
+Shattering Pulse, Whispers of the Muse, and Disturbed Burial extend those
+scenarios with destruction, private draws, and exact public-graveyard returns
+in [buyback_value_test.go](buyback_value_test.go).
 This does not add generalized recasting or compiler support.
 Multiple Buyback instances and buyback-specific X announcements remain rejected;
 this does not add a parser, generalized cast-source policy, or new Rebound,
