@@ -614,7 +614,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	g.Stack.Push(obj)
-	emitPreparedTargetEvents(g, obj, targetEvents)
+	emitCastTargetEvents(g, obj, targetEvents)
 	emitEvent(g, game.Event{
 		Kind:                         game.EventSpellCast,
 		SourceID:                     sourceID,
