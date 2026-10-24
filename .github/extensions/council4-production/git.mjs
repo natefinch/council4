@@ -1,16 +1,17 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { createHash } from "node:crypto";
-import { mkdir, readFile, readdir, stat, lstat } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, readFile, readdir, stat, lstat, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { pullRequestAPI, landPullRequest } from "./pull-request.mjs";
 
 const execute = promisify(execFile);
 
-export async function command(cwd, executable, args, signal) {
+export async function command(cwd, executable, args, signal, env = {}) {
   try {
     const result = await execute(executable, args, {
-      cwd, signal, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, GIT_PAGER: "cat", GIT_TERMINAL_PROMPT: "0" },
+      cwd, signal, maxBuffer: 16 * 1024 * 1024, env: { ...process.env, GIT_PAGER: "cat", GIT_TERMINAL_PROMPT: "0", ...env },
     });
     return result.stdout.trim();
   } catch (error) {
@@ -19,7 +20,7 @@ export async function command(cwd, executable, args, signal) {
   }
 }
 
-export const git = (cwd, args, signal) => command(cwd, "git", args, signal);
+export const git = (cwd, args, signal, env) => command(cwd, "git", args, signal, env);
 
 export async function checkCoordinator(root, head, upstream, signal) {
   if (await git(root, ["merge-base", head, upstream], signal) === head) return;
@@ -98,6 +99,30 @@ export async function workspace(root, directory, runId, index, signal) {
   }
   if (await git(target, ["branch", "--show-current"], signal) !== branch) throw new Error("Task worktree branch changed");
   return { path: target, branch, base: await git(target, ["rev-parse", "HEAD"], signal) };
+}
+
+// Apply a retained unit's uncommitted work, including new files, to a fresh
+// task worktree on current main. The retained worktree and its index are not
+// changed, and the result stays uncommitted like any other unit's work.
+export async function seedFromRetained(source, work, signal) {
+  if ((await changes(work.path, signal)).files.length) throw new Error("Resumed unit worktree is not clean; inspect it before seeding");
+  const index = path.join(os.tmpdir(), `council4-seed-${randomUUID()}`);
+  try {
+    const env = { GIT_INDEX_FILE: index };
+    const base = await git(source, ["rev-parse", "HEAD"], signal);
+    await git(source, ["read-tree", base], signal, env);
+    await git(source, ["add", "-A", "--", "."], signal, env);
+    const tree = await git(source, ["write-tree"], signal, env);
+    const snapshot = await git(source, ["commit-tree", tree, "-p", base, "-m", "Retained production unit"], signal);
+    let merged;
+    try { merged = (await git(work.path, ["merge-tree", "--write-tree", work.base, snapshot], signal)).split("\n")[0]; }
+    catch (error) { throw new Error("Retained work conflicts with current main; integrate it manually", { cause: error }); }
+    await git(work.path, ["read-tree", "-u", "-m", "HEAD", merged], signal);
+    await git(work.path, ["reset", "-q"], signal);
+    return { snapshot, retainedBase: base, tree: merged };
+  } finally {
+    await rm(index, { force: true });
+  }
 }
 
 export async function land(root, work, task, expected, sessionId, signal, options = {}) {

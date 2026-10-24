@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { defaultCorpusPath, executeUnit, carryGaps, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
-import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
+import { defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { git, changes, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
 import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
@@ -56,6 +56,33 @@ test("Review fixes are separate work and require validation and re-review", asyn
   };
   assert.equal((await executeUnit(f)).status, "accepted");
   assert.deepEqual(f.calls, ["implementation", "validate", "review-0", "review_fix", "validate", "review-1", "prepare"]);
+});
+
+test("Resumed units repair final findings first and keep the review-fix budget", async () => {
+  const calls = [], fixes = [], reviews = [];
+  const earlier = [{ round: 0, verdict: "changes_needed", findings: ["first"] }];
+  const f = fixture({
+    stage: async (phase, round, feedback) => {
+      calls.push(`${phase}-${round}`);
+      fixes.push(feedback);
+      return { ...complete, summary: `fix ${round}`, gaps: [] };
+    },
+    review: async (round, _result, _snapshot, history) => {
+      calls.push(`review-${round}`);
+      reviews.push(history);
+      return { verdict: "changes_needed", findings: [`still ${round}`] };
+    },
+    resume: { history: earlier, verdict: { verdict: "changes_needed", findings: ["final"] },
+      result: { ...complete, gaps: [{ id: "#3333", description: "cascade trigger" }] } },
+  });
+  f.calls = calls;
+  f.validate = async () => { calls.push("validate"); return { ok: true }; };
+  const outcome = await executeUnit(f);
+  assert.equal(outcome.status, "review_rejected");
+  assert.deepEqual(calls, ["review_fix-0", "validate", "review-0", "review_fix-1", "validate", "review-1"]);
+  assert.deepEqual(fixes[0], { findings: ["final"], earlierRounds: earlier });
+  assert.deepEqual(reviews[0], [...earlier, { round: 1, verdict: "changes_needed", findings: ["final"], response: "fix 0" }]);
+  assert.deepEqual(outcome.result.gaps, [{ id: "#3333", description: "cascade trigger" }]);
 });
 
 test("Re-reviews and fixes see earlier rounds, and repairs keep earlier gaps", async () => {
@@ -501,6 +528,61 @@ async function repositoryFixture(t) {
 }
 
 const remoteHead = f => git(f.repo, ["ls-remote", "origin", "refs/heads/main"]).then(out => out.split(/\s+/)[0]);
+
+test("Resume arguments, retained units and seeding fail closed and preserve work", async t => {
+  checkArgs({ mode: "produce", maxTasks: 2, resumeUnits: [{ runId: "run-1", index: 0 }, { runId: "run-1", index: 3 }] });
+  for (const resumeUnits of [[], [{ runId: "../x", index: 0 }], [{ runId: "r", index: -1 }],
+    [{ runId: "r", index: 0 }, { runId: "r", index: 0 }], [{ runId: "r", index: 0 }, { runId: "r", index: 1 }, { runId: "r", index: 2 }]]) {
+    assert.throws(() => checkArgs({ mode: "produce", maxTasks: 2, resumeUnits }));
+  }
+
+  const f = await repositoryFixture(t);
+  const runId = "old-run";
+  const run = path.join(f.repo, ".cardwork", "workflows", runId);
+  const retained = path.join(run, "work", "0");
+  await git(f.repo, ["worktree", "add", "-b", "retained", retained, f.base]);
+  await writeFile(path.join(retained, "card.txt"), "retained fix\n");
+  await writeFile(path.join(retained, "new_test.go"), "package rules\n");
+  const unit = { index: 0, task: { taskType: "engine", id: "gap-3287", issue: 3287, unitIndex: 0 }, status: "review_rejected",
+    worktree: retained, result: { ...complete, gaps: [] }, verdict: { verdict: "changes_needed", findings: ["final"] } };
+  const stages = [
+    { unitIndex: 0, phase: "review", verdict: "changes_needed", findings: ["first"] },
+    { unitIndex: 0, phase: "re_review", verdict: "changes_needed", findings: ["final"] },
+  ];
+  const writeState = units => writeFile(path.join(run, "state.json"), JSON.stringify({ units, stages }));
+  await writeState([unit, { ...unit, index: 1, task: { taskType: "card", id: "b" } }, { ...unit, index: 2, status: "landed" },
+    { ...unit, index: 3, worktree: f.work.path }]);
+  const loaded = await retainedUnit(f.repo, { runId, index: 0 });
+  assert.deepEqual(loaded.history, [{ round: 0, verdict: "changes_needed", findings: ["first"] }]);
+  for (const index of [1, 2, 3, 4]) await assert.rejects(retainedUnit(f.repo, { runId, index }));
+
+  // Main advanced independently; the resumed worktree gets both.
+  await writeFile(path.join(f.repo, "other.txt"), "main moved\n");
+  await git(f.repo, ["add", "other.txt"]);
+  await git(f.repo, ["commit", "-m", "main moved"]);
+  const head = await git(f.repo, ["rev-parse", "HEAD"]);
+  const target = { path: path.join(path.dirname(f.repo), "resumed"), base: head };
+  await git(f.repo, ["worktree", "add", "-b", "resumed", target.path, head]);
+  const sourceStatus = await git(retained, ["status", "--porcelain"]);
+  const seeded = await seedFromRetained(retained, target);
+  assert.equal(seeded.retainedBase, f.base);
+  assert.equal(await git(target.path, ["rev-parse", "HEAD"]), head);
+  assert.deepEqual((await changes(target.path)).files, ["card.txt", "new_test.go"]);
+  assert.equal(await readFile(path.join(target.path, "card.txt"), "utf8"), "retained fix\n");
+  assert.equal(await readFile(path.join(target.path, "other.txt"), "utf8"), "main moved\n");
+  assert.equal(await git(target.path, ["diff", "--cached", "--name-only"]), "");
+  assert.equal(await git(retained, ["status", "--porcelain"]), sourceStatus);
+  await assert.rejects(seedFromRetained(retained, target), /not clean/);
+
+  // Conflicting main changes stop instead of overwriting retained work.
+  const clash = { path: path.join(path.dirname(f.repo), "clash"), base: null };
+  await writeFile(path.join(f.repo, "card.txt"), "main changed card\n");
+  await git(f.repo, ["commit", "-am", "conflict"]);
+  clash.base = await git(f.repo, ["rev-parse", "HEAD"]);
+  await git(f.repo, ["worktree", "add", "-b", "clash", clash.path, clash.base]);
+  await assert.rejects(seedFromRetained(retained, clash), /conflicts with current main/);
+  assert.deepEqual((await changes(clash.path)).files, []);
+});
 const required = { checks: ["Tests", "Race Tests"], reviewRequired: false };
 const successfulChecks = head => ({
   head, statuses: [],
