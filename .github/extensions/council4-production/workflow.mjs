@@ -62,13 +62,21 @@ export function checkPolicy(policy) {
     const rounds = policy.reviewFixRounds?.[type];
     if (!Number.isInteger(rounds) || rounds < 0) throw new Error(`Invalid reviewFixRounds.${type}`);
   }
+  // Every agent's model settings are explicit so results never depend on the
+  // session that starts the run.
+  const checkSlot = (slot, name) => {
+    if (!slot || typeof slot.model !== "string" || !slot.model.trim() ||
+        typeof slot.reasoningEffort !== "string" || !slot.reasoningEffort.trim() ||
+        !["default", "long_context"].includes(slot.contextTier)) {
+      throw new Error(`Invalid ${name} model settings: model, reasoningEffort and contextTier are required`);
+    }
+  };
+  checkSlot(policy.models?.selection, "selection");
   for (const type of ["card", "engine"]) {
     for (const phase of ["implementation", "review", "review_fix", "validation_fix", "ci_fix"]) {
-      const value = policy.models?.[type]?.[phase];
-      if (value !== null && (typeof value !== "string" || !value.trim())) throw new Error(`Invalid ${type}/${phase} model`);
+      checkSlot(policy.models?.[type]?.[phase], `${type}/${phase}`);
     }
   }
-  if (policy.models.selection !== null && typeof policy.models.selection !== "string") throw new Error("Invalid selection model");
   if (!Array.isArray(policy.validationPackages) || !policy.validationPackages.length ||
       policy.validationPackages.some(p => !/^\.\/[a-zA-Z0-9_/-]+(?:\/\.\.\.)?$/.test(p))) {
     throw new Error("Invalid validation package allowlist");
@@ -238,17 +246,21 @@ export async function runProduction(ctx) {
   };
   const invoke = async (task, phase, round, prompt, schema) => {
     const label = `${task.taskType}/${task.id}/unit-${task.unitIndex ?? "selection"}/${phase}/${round}`;
-    const model = phase === "selection" ? policy.models.selection
-      : policy.models[task.taskType]?.[["re_review", "integration_review", "ci_review"].includes(phase) ? "review" : phase] ?? null;
+    const settings = phase === "selection" ? policy.models.selection
+      : policy.models[task.taskType]?.[["re_review", "integration_review", "ci_review"].includes(phase) ? "review" : phase];
+    if (!settings) throw new Error(`No explicit model settings for ${task.taskType}/${phase}`);
+    const model = settings.model;
     let record = state.stages.find(s => s.label === label);
     if (!record) {
       record = { label, taskType: task.taskType, taskId: task.id, unitIndex: task.unitIndex ?? null, phase, round, requestedModel: model,
+        reasoningEffort: settings.reasoningEffort, contextTier: settings.contextTier,
         startedAt: new Date().toISOString(), completedAt: null };
       state.stages.push(record);
     }
     await save();
-    ctx.log(`${label} starting (${model ?? "inherited model"})`);
-    const answer = await ctx.agent(prompt, { label, schema, ...(model ? { model } : {}) });
+    ctx.log(`${label} starting (${model}, ${settings.reasoningEffort})`);
+    const answer = await ctx.agent(prompt, { label, schema, model,
+      reasoningEffort: settings.reasoningEffort, contextTier: settings.contextTier });
     if (ctx.args.mode === "produce" && await git(root, ["status", "--porcelain"], ctx.signal)) {
       throw new Error("Worker modified the coordinator checkout; preserve changes and stop");
     }

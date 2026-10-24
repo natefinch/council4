@@ -1,24 +1,71 @@
 {
-  "version": "1.7.0",
+  "version": "1.8.0",
   "models": {
-    "selection": null,
+    "selection": {
+      "model": "gpt-6.1-sol",
+      "reasoningEffort": "high",
+      "contextTier": "default"
+    },
     "card": {
-      "implementation": "gpt-6-luna",
-      "review": null,
-      "review_fix": "gpt-6-luna",
-      "validation_fix": "gpt-6-luna",
-      "ci_fix": "gpt-6-luna"
+      "implementation": {
+        "model": "gpt-6-luna",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "review": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "review_fix": {
+        "model": "gpt-6-luna",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "validation_fix": {
+        "model": "gpt-6-luna",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "ci_fix": {
+        "model": "gpt-6-luna",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      }
     },
     "engine": {
-      "implementation": null,
-      "review": null,
-      "review_fix": null,
-      "validation_fix": null,
-      "ci_fix": null
+      "implementation": {
+        "model": "claude-opus-5.5",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "review": {
+        "model": "gpt-6.1-sol",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "review_fix": {
+        "model": "claude-opus-5.5",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "validation_fix": {
+        "model": "claude-opus-5.5",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "ci_fix": {
+        "model": "claude-opus-5.5",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      }
     }
   },
   "cardReview": "risk",
-  "reviewFixRounds": { "card": 1, "engine": 2 },
+  "reviewFixRounds": {
+    "card": 1,
+    "engine": 2
+  },
   "validationFixRounds": 1,
   "ciFixRounds": 1,
   "validationPackages": [

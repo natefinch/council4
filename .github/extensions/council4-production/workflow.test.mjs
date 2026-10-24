@@ -58,6 +58,21 @@ test("Review fixes are separate work and require validation and re-review", asyn
   assert.deepEqual(f.calls, ["implementation", "validate", "review-0", "review_fix", "validate", "review-1", "prepare"]);
 });
 
+test("Every agent's model settings must be explicit", () => {
+  assert.doesNotThrow(() => checkPolicy(policy));
+  assert.equal(policy.models.engine.implementation.model, "claude-opus-5.5");
+  const broken = mutate => { const copy = structuredClone(policy); mutate(copy.models); return copy; };
+  for (const copy of [
+    broken(models => { models.selection = null; }),
+    broken(models => { models.engine.review = null; }),
+    broken(models => { delete models.card.ci_fix.reasoningEffort; }),
+    broken(models => { models.engine.implementation.contextTier = "huge"; }),
+    broken(models => { models.card.implementation = "gpt-6-luna"; }),
+  ]) {
+    assert.throws(() => checkPolicy(copy), /model settings/);
+  }
+});
+
 test("Engine work gets two review-fix rounds; card work gets one", async () => {
   const twice = round => ({ verdict: round < 2 ? "changes_needed" : "approve", findings: round < 2 ? [`finding ${round}`] : [] });
   const engine = fixture();
@@ -765,6 +780,27 @@ test("Configuration identity rejects changed workflow resume before execution", 
     args: { mode: "preflight" },
     step: async () => ({ revision: "old-incompatible-code" }),
   }), /changed since this run/);
+});
+
+test("Agents are started with the policy's explicit model, effort and context tier", async t => {
+  const runId = `test-explicit-models-${process.pid}`;
+  const root = (await git(process.cwd(), ["rev-parse", "--show-toplevel"]));
+  t.after(() => rm(path.join(root, ".cardwork/workflows", runId), { recursive: true, force: true }));
+  const calls = [];
+  await runProduction({
+    runId, args: { mode: "telemetry-smoke" }, signal: undefined,
+    step: async (_key, fn) => fn(), phase() {}, log() {},
+    session: {
+      sessionId: "session", on: () => () => {},
+      workflow: { getRunDetail: async () => ({ runId, workflowName: "test", status: "running", observedAt: 0,
+        agents: [], consumed: { nanoAiu: 0, activeMs: 0 } }) },
+    },
+    agent: async (_prompt, options) => { calls.push(options); return { ready: true }; },
+  });
+  const { model, reasoningEffort, contextTier } = policy.models.card.implementation;
+  assert.equal(calls.length, 1);
+  assert.deepEqual({ model: calls[0].model, reasoningEffort: calls[0].reasoningEffort, contextTier: calls[0].contextTier },
+    { model, reasoningEffort, contextTier });
 });
 
 test("Production refuses to run in GitHub Actions without launching agents", async () => {
