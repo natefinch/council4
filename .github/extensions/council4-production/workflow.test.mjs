@@ -449,6 +449,13 @@ test("A split gap is worked through its first open sub-issue, in order", () => {
   assert.equal(choice.gap.issue, 4003);
   const failedSub = { status: "review_rejected", task: { taskType: "engine", id: "gap-4002", issue: 4002 } };
   assert.equal(chooseWork({ next, priorUnits: [failedParent, failedSub], issues }).kind, "card");
+  // A failed Engine unit whose gap came from neither a card nor the queue is
+  // still worked through its sub-issues once split.
+  const selectorGap = { status: "review_rejected", task: { taskType: "engine", id: "gap-170" } };
+  const adventure = { 170: { ...open(170), subIssues: subs([[3353, "OPEN"], [3354, "OPEN"]]) } };
+  choice = chooseWork({ next: { batch: readyBatch }, priorUnits: [selectorGap], issues: adventure });
+  assert.equal(choice.gap.issue, 3353);
+  assert.equal(chooseWork({ next: { batch: readyBatch }, priorUnits: [selectorGap], issues: { 170: open(170) } }).kind, "card");
   // Without sub-issues a failed parent stays parked.
   assert.equal(chooseWork({ next, priorUnits: [failedParent], issues: { 3285: open(3285) } }).kind, "card");
 });
