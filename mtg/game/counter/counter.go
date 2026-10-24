@@ -112,11 +112,13 @@ const (
 	Collection // Collection counter (Evelyn, the Covetous, Charitable Levy)
 	Hour       // Hour counter (Midnight Clock, Nexus of Fate cycle)
 	Ribbon     // Ribbon counter (Prize Pig)
+	Slime      // Slime counter (Sludge Monster)
+	Bounty     // Bounty counter (Termination Facilitator)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Ribbon
+	return k >= PlusOnePlusOne && k <= Bounty
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -302,6 +304,10 @@ func (k Kind) String() string {
 		return "hour"
 	case Ribbon:
 		return "ribbon"
+	case Slime:
+		return "slime"
+	case Bounty:
+		return "bounty"
 	default:
 		return "unknown"
 	}

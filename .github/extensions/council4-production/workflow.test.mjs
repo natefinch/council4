@@ -3,13 +3,13 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { defaultCorpusPath, executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
-import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
+import { defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { git, changes, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
 import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
 import { gapEvidence, earlierUnits } from "./workflow.mjs";
-import { observeUsage, readReceipts, summarize } from "./telemetry.mjs";
+import { observeUsage, readReceipts, summarize, writeReport, reviewHistory } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
 const complete = { status: "complete", reviewRequired: false, evidence: ["actual test"], gaps: [] };
@@ -56,6 +56,66 @@ test("Review fixes are separate work and require validation and re-review", asyn
   };
   assert.equal((await executeUnit(f)).status, "accepted");
   assert.deepEqual(f.calls, ["implementation", "validate", "review-0", "review_fix", "validate", "review-1", "prepare"]);
+});
+
+test("Resumed units repair final findings first and keep the review-fix budget", async () => {
+  const calls = [], fixes = [], reviews = [];
+  const earlier = [{ round: 0, verdict: "changes_needed", findings: ["first"] }];
+  const f = fixture({
+    stage: async (phase, round, feedback) => {
+      calls.push(`${phase}-${round}`);
+      fixes.push(feedback);
+      return { ...complete, summary: `fix ${round}`, gaps: [] };
+    },
+    review: async (round, _result, _snapshot, history) => {
+      calls.push(`review-${round}`);
+      reviews.push(history);
+      return { verdict: "changes_needed", findings: [`still ${round}`] };
+    },
+    resume: { history: earlier, verdict: { verdict: "changes_needed", findings: ["final"] },
+      result: { ...complete, gaps: [{ id: "#3333", description: "cascade trigger" }] } },
+  });
+  f.calls = calls;
+  f.validate = async () => { calls.push("validate"); return { ok: true }; };
+  const outcome = await executeUnit(f);
+  assert.equal(outcome.status, "review_rejected");
+  assert.deepEqual(calls, ["review_fix-0", "validate", "review-0", "review_fix-1", "validate", "review-1"]);
+  assert.deepEqual(fixes[0], { findings: ["final"], earlierRounds: earlier });
+  assert.deepEqual(reviews[0], [...earlier, { round: 1, verdict: "changes_needed", findings: ["final"], response: "fix 0" }]);
+  assert.deepEqual(outcome.result.gaps, [{ id: "#3333", description: "cascade trigger" }]);
+});
+
+test("Re-reviews and fixes see earlier rounds, and repairs keep earlier gaps", async () => {
+  const reviews = [], fixes = [];
+  const gap = (id, description = id) => ({ id, description });
+  const f = fixture({
+    stage: async (phase, round, feedback) => {
+      if (phase === "implementation") return { ...complete, gaps: [gap("#1"), gap("#2")] };
+      fixes.push(feedback);
+      return round === 1
+        ? { ...complete, summary: "fixed controller", gaps: [] }
+        : { ...complete, summary: "fixed zone", gaps: [gap("#2", "narrower"), gap("#3")], resolvedGaps: ["#1"] };
+    },
+    review: async (round, _result, _snapshot, history) => {
+      reviews.push(history);
+      return round < 2 ? { verdict: "changes_needed", findings: [`finding ${round}`] } : { verdict: "approve", findings: [] };
+    },
+  });
+  const outcome = await executeUnit(f);
+  assert.equal(outcome.status, "accepted");
+  assert.deepEqual(reviews, [
+    [],
+    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], response: "fixed controller" }],
+    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], response: "fixed controller" },
+      { round: 1, verdict: "changes_needed", findings: ["finding 1"], response: "fixed zone" }],
+  ]);
+  assert.deepEqual(fixes, [
+    { findings: ["finding 0"], earlierRounds: [] },
+    { findings: ["finding 1"], earlierRounds: [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], response: "fixed controller" }] },
+  ]);
+  assert.deepEqual(outcome.result.gaps, [gap("#2", "narrower"), gap("#3")]);
+  assert.deepEqual(carryGaps({ gaps: [gap("#1")] }, { status: "blocked", gaps: [] }).gaps, [gap("#1")]);
+  assert.equal(carryGaps({ gaps: [gap("#1")] }, null), null);
 });
 
 test("The corpus defaults to the shared pinned cache location", () => {
@@ -129,6 +189,25 @@ test("Inputs fail closed and card tasks cannot hide Engine work", () => {
   assert.throws(() => checkPolicy({ ...policy, validationPackages: ["--help"] }));
   assert.throws(() => assertCardBoundary({ taskType: "card" }, ["mtg/rules/effects.go"]));
   assert.doesNotThrow(() => assertCardBoundary({ taskType: "card" }, ["mtg/rules/my_card_test.go", "mtg/cards/authored/my_card.go"]));
+  assert.doesNotThrow(() => assertCardBoundary({ taskType: "card" },
+    ["mtg/rules/testdata/my-card/rulings.json", "cardgen/testdata/source.txt"]));
+  assert.throws(() => assertCardBoundary({ taskType: "card" }, ["mtg/rules/testdata.go"]));
+});
+
+test("A card unit's Engine changes block that unit without aborting the run", async () => {
+  const task = { taskType: "card", id: "batch" };
+  const answer = { ...complete, gaps: [{ id: "#3285", description: "missing operation" }] };
+  assert.equal(cardBoundaryOutcome(task, ["mtg/cards/authored/my_card.go", "mtg/rules/testdata/x.json"], answer), answer);
+  const blocked = cardBoundaryOutcome(task, ["mtg/rules/effects.go", "mtg/rules/my_card_test.go"], answer);
+  assert.equal(blocked.status, "blocked");
+  assert.deepEqual(blocked.boundaryViolation, ["mtg/rules/effects.go"]);
+  assert.deepEqual(blocked.gaps, answer.gaps);
+  assert.equal(cardBoundaryOutcome({ taskType: "engine" }, ["mtg/rules/effects.go"], answer), answer);
+  const f = fixture({ task, stage: async () => cardBoundaryOutcome(task, ["mtg/game/state.go"], complete) });
+  f.publish = async () => assert.fail("boundary violation reached publication");
+  const outcome = await executeUnit(f);
+  assert.equal(outcome.status, "blocked");
+  assert.deepEqual(outcome.result.boundaryViolation, ["mtg/game/state.go"]);
 });
 
 test("Actual usage receipts deduplicate, survive reload, exclude unrelated agents and preserve model attribution", async t => {
@@ -449,6 +528,65 @@ async function repositoryFixture(t) {
 }
 
 const remoteHead = f => git(f.repo, ["ls-remote", "origin", "refs/heads/main"]).then(out => out.split(/\s+/)[0]);
+
+test("Resume arguments, retained units and seeding fail closed and preserve work", async t => {
+  checkArgs({ mode: "produce", maxTasks: 2, resumeUnits: [{ runId: "run-1", index: 0 }, { runId: "run-1", index: 3 }] });
+  for (const resumeUnits of [[], [{ runId: "../x", index: 0 }], [{ runId: "r", index: -1 }],
+    [{ runId: "r", index: 0 }, { runId: "r", index: 0 }], [{ runId: "r", index: 0 }, { runId: "r", index: 1 }, { runId: "r", index: 2 }]]) {
+    assert.throws(() => checkArgs({ mode: "produce", maxTasks: 2, resumeUnits }));
+  }
+
+  const f = await repositoryFixture(t);
+  const runId = "old-run";
+  const run = path.join(f.repo, ".cardwork", "workflows", runId);
+  const retained = path.join(run, "work", "0");
+  await git(f.repo, ["worktree", "add", "-b", "retained", retained, f.base]);
+  await writeFile(path.join(retained, "card.txt"), "retained fix\n");
+  await writeFile(path.join(retained, "new_test.go"), "package rules\n");
+  const unit = { index: 0, task: { taskType: "engine", id: "gap-3287", issue: 3287, unitIndex: 0 }, status: "review_rejected",
+    worktree: retained, result: { ...complete, gaps: [] }, verdict: { verdict: "changes_needed", findings: ["final"] } };
+  const stages = [
+    { unitIndex: 0, phase: "review", verdict: "changes_needed", findings: ["first"] },
+    { unitIndex: 0, phase: "re_review", verdict: "changes_needed", findings: ["final"] },
+  ];
+  const writeState = units => writeFile(path.join(run, "state.json"), JSON.stringify({ units, stages }));
+  await writeState([unit, { ...unit, index: 1, task: { taskType: "card", id: "b" } }, { ...unit, index: 2, status: "landed" },
+    { ...unit, index: 3, worktree: f.work.path }]);
+  const loaded = await retainedUnit(f.repo, { runId, index: 0 });
+  assert.deepEqual(loaded.history, [{ round: 0, verdict: "changes_needed", findings: ["first"] }]);
+  for (const index of [1, 2, 3, 4]) await assert.rejects(retainedUnit(f.repo, { runId, index }));
+  // Another top-level worktree of the repository (a new session) finds the run.
+  assert.equal((await retainedUnit(f.work.path, { runId, index: 0 })).unit.worktree, retained);
+  assert.equal((await earlierUnits(f.work.path, "current")).length, 4);
+  await assert.rejects(retainedUnit(f.repo, { runId: "missing", index: 0 }), /No retained run/);
+
+  // Main advanced independently; the resumed worktree gets both.
+  await writeFile(path.join(f.repo, "other.txt"), "main moved\n");
+  await git(f.repo, ["add", "other.txt"]);
+  await git(f.repo, ["commit", "-m", "main moved"]);
+  const head = await git(f.repo, ["rev-parse", "HEAD"]);
+  const target = { path: path.join(path.dirname(f.repo), "resumed"), base: head };
+  await git(f.repo, ["worktree", "add", "-b", "resumed", target.path, head]);
+  const sourceStatus = await git(retained, ["status", "--porcelain"]);
+  const seeded = await seedFromRetained(retained, target);
+  assert.equal(seeded.retainedBase, f.base);
+  assert.equal(await git(target.path, ["rev-parse", "HEAD"]), head);
+  assert.deepEqual((await changes(target.path)).files, ["card.txt", "new_test.go"]);
+  assert.equal(await readFile(path.join(target.path, "card.txt"), "utf8"), "retained fix\n");
+  assert.equal(await readFile(path.join(target.path, "other.txt"), "utf8"), "main moved\n");
+  assert.equal(await git(target.path, ["diff", "--cached", "--name-only"]), "");
+  assert.equal(await git(retained, ["status", "--porcelain"]), sourceStatus);
+  await assert.rejects(seedFromRetained(retained, target), /not clean/);
+
+  // Conflicting main changes stop instead of overwriting retained work.
+  const clash = { path: path.join(path.dirname(f.repo), "clash"), base: null };
+  await writeFile(path.join(f.repo, "card.txt"), "main changed card\n");
+  await git(f.repo, ["commit", "-am", "conflict"]);
+  clash.base = await git(f.repo, ["rev-parse", "HEAD"]);
+  await git(f.repo, ["worktree", "add", "-b", "clash", clash.path, clash.base]);
+  await assert.rejects(seedFromRetained(retained, clash), /conflicts with current main/);
+  assert.deepEqual((await changes(clash.path)).files, []);
+});
 const required = { checks: ["Tests", "Race Tests"], reviewRequired: false };
 const successfulChecks = head => ({
   head, statuses: [],
@@ -782,6 +920,32 @@ test("Exact-head checks require real Actions tests and reject skipped required c
   const forged = successfulChecks("head");
   forged.runs[1].app.slug = "not-actions";
   assert.throws(() => assessChecks(pr, forged, required, "head"), /not a GitHub Actions/);
+});
+
+test("Reports show every review round, falling back to a legacy final verdict", async t => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "council4-report-"));
+  t.after(() => rm(directory, { recursive: true }));
+  const stages = [
+    { label: "engine/1/unit-0/implementation/0", unitIndex: 0, phase: "implementation", round: 0, outcome: "returned" },
+    { label: "engine/1/unit-0/review/0", unitIndex: 0, phase: "review", round: 0, verdict: "changes_needed", findings: ["wrong | controller"] },
+    { label: "engine/1/unit-0/re_review/1", unitIndex: 0, phase: "re_review", round: 1, verdict: "approve", findings: [] },
+  ];
+  const units = [
+    { index: 0, task: { taskType: "engine", id: "gap-1" }, status: "landed" },
+    { index: 1, task: { taskType: "engine", id: "gap-2" }, status: "review_rejected",
+      verdict: { verdict: "changes_needed", findings: ["legacy finding"] } },
+    { index: 2, task: { taskType: "card", id: "batch" }, status: "blocked" },
+  ];
+  assert.deepEqual(reviewHistory(units[0], stages).map(r => [r.phase, r.round, r.verdict]),
+    [["review", 0, "changes_needed"], ["re_review", 1, "approve"]]);
+  assert.deepEqual(reviewHistory(units[1], stages), [{ phase: "final review", round: null, verdict: "changes_needed", findings: ["legacy finding"] }]);
+  assert.deepEqual(reviewHistory(units[2], stages), []);
+  writeReport(directory, { runId: "r", policyVersion: "1.10.0", runtimeStatus: "completed", runtimeAic: 0,
+    reconciliation: "matched", unallocatedNanoAiu: 0, groups: [], stages, units, note: "" });
+  const markdown = await readFile(path.join(directory, "report.md"), "utf8");
+  assert.match(markdown, /- engine \/ gap-1: \*\*landed\*\*\n  - review 0: \*\*changes_needed\*\*\n    - wrong \\\| controller\n  - re_review 1: \*\*approve\*\*\n/);
+  assert.match(markdown, /- engine \/ gap-2: \*\*review_rejected\*\*\n  - final review: \*\*changes_needed\*\*\n    - legacy finding\n/);
+  assert.match(markdown, /- card \/ batch: \*\*blocked\*\*\n\n/);
 });
 
 test("Configuration identity rejects changed workflow resume before execution", async () => {

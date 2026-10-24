@@ -117,12 +117,18 @@ type delivered struct {
 	ExistingSupportVerified []card `json:"existingSupportVerified"`
 }
 
+type review struct {
+	Verdict  string   `json:"verdict"`
+	Findings []string `json:"findings"`
+}
+
 type unit struct {
 	Index    int      `json:"index"`
 	Task     task     `json:"task"`
 	Status   string   `json:"status"`
 	Reason   string   `json:"reason,omitempty"`
 	Result   *result  `json:"result,omitempty"`
+	Verdict  *review  `json:"verdict,omitempty"`
 	Landing  *landing `json:"landing,omitempty"`
 	Prepared *struct {
 		Delivered *delivered `json:"delivered,omitempty"`
@@ -140,8 +146,10 @@ type stage struct {
 	ReasoningEffort string `json:"reasoningEffort"`
 	StartedAt       string `json:"startedAt"`
 	CompletedAt     string `json:"completedAt"`
-	Outcome         string `json:"outcome"`
-	Agent           *bool  `json:"agent"`
+	Outcome         string   `json:"outcome"`
+	Agent           *bool    `json:"agent"`
+	Verdict         string   `json:"verdict,omitempty"`
+	Findings        []string `json:"findings,omitempty"`
 }
 
 type current struct {

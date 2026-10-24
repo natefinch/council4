@@ -38,7 +38,7 @@ func emitSpellCastEventsWithTargets(g *game.Game, obj *game.StackObject, castEve
 	consumeNextSpellCantBeCounteredEffects(g, obj)
 	consumeNextSpellAsThoughFlashEffects(g, obj)
 	consumeNextSpellKeywordGrantEffects(g, obj)
-	emitPreparedTargetEvents(g, obj, targets)
+	emitCastTargetEvents(g, obj, targets)
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID
 	castPlayer := castEvent.Controller

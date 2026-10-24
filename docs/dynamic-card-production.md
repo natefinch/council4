@@ -134,7 +134,8 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
 1.4.0 the coordinator selects deterministically, in this order:
 
 1. **Known open Engine gaps.** Gaps demonstrated by blocked card units (this
-   run, then earlier local runs under `.cardwork/workflows/`) and saved queue
+   run, then earlier local runs under `.cardwork/workflows/` in any of the
+   repository's top-level worktrees, since policy 1.13.0) and saved queue
    prerequisites from `cardqueue next`. A gap counts while its GitHub issue is
    open and no landed Engine unit has targeted it. The unit is an Engine task
    `gap-<issue>`; card work never proceeds past a known gap.
@@ -146,7 +147,22 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
 Steps 1 and 2 need no model and cost no AIC. An Engine gap whose unit fails is
 parked (in that run and later ones) rather than paid for again; its stage outcome
 and retained work show why. To retry deliberately, pass its issue number in the
-`retryGaps` argument, e.g. `"retryGaps": [3287]`.
+`retryGaps` argument, e.g. `"retryGaps": [3287]`. A retry starts again from
+current main.
+
+To continue a review-rejected Engine unit instead of starting over, pass it in
+`resumeUnits`, e.g. `"resumeUnits": [{"runId": "05d8c46b-…", "index": 0}]`
+(policy 1.11.0). The run may be in any top-level worktree of the repository, so
+a new session can resume another session's units (policy 1.13.0). The first
+units of the run, in list order, apply the retained
+worktree's uncommitted work onto a fresh worktree from current main, without
+changing the retained worktree. They start with a `review_fix` of the final
+review findings, then validate, re-review and land as usual. That repair counts
+against the unit's review-fix rounds, and earlier recorded rounds are passed to
+the fixer and re-reviewer. Conflicts with current main stop the run for manual
+integration. Card units cannot be resumed because their queue claim would need
+to be re-established. `maxTasks` must cover every resumed unit; any remaining
+units select work normally.
 
 A large gap is delivered in slices. An Engine unit lands the first shared piece
 that is correct on its own and reports each remaining piece as a gap naming the
@@ -162,7 +178,14 @@ stable ID and one task type:
 
 A card agent may not silently include shared Engine production changes. When it
 finds a gap, it returns blocked with the canonical issue number as the gap ID,
-and its attempt (including the claimed cards) is retained. The next unit then
+and its attempt (including the claimed cards) is retained. If a card unit
+changes shared Engine production files anyway, the coordinator records that unit
+as blocked with the offending files and continues the run (since policy 1.10.0;
+earlier versions stopped the whole run); Go tests, `testdata/`
+fixtures and Markdown are not Engine production files. Card source records
+belong in a `// Source review:` comment in the card's behavioral test file; raw
+retrieved responses stay untracked under the unit's `.cardwork/`.
+The next unit then
 selects that Engine gap. After the Engine unit lands, batch preparation can
 include the previously blocked cards; the coordinator reassesses queue-blocked
 members with the landed commit as evidence before saving the new batch.
@@ -218,6 +241,14 @@ for Engine work (`reviewFixRounds` in the policy). Exhausting those rounds retai
 the unsuccessful result and its cost; it never turns rejection into admission.
 Null/invalid agent responses and reviewer edits to the submission fail closed.
 
+Since policy 1.10.0, each fixer and re-reviewer receives the earlier rounds'
+findings and the author's responses. A fixer repairs the underlying rule behind
+each finding, not only its reproduced case. A re-reviewer first verifies the
+earlier findings and checks the repairs for regressions, labelling each finding
+`[unresolved]`, `[regression]` or `[new]`. A reviewer who disagrees with behavior
+an earlier reviewer required must cite the primary source. Gaps reported earlier
+in a unit carry forward unless a repair lists them in `resolvedGaps`.
+
 ## See time, AIC and model
 
 The app's **Workflows** view shows named phases, live agents, active time,
@@ -225,10 +256,10 @@ requested/resolved model and aggregate AIC. The extension also writes:
 
 | File under `.cardwork/workflows/<run-id>/` | Purpose |
 | --- | --- |
-| `state.json` | Pinned code/policy revision, stage identities, task outcomes, PRs and verified merge commits |
+| `state.json` | Pinned code/policy revision, stage identities, every review round's verdict and findings, task outcomes, PRs and verified merge commits |
 | `usage.jsonl` | Sanitized authoritative usage receipts keyed by source-session/sequence and agent ID; no prompts or model reasoning |
 | `report.json` | Per-task-type/task/stage/model AIC and agent time, outcomes, native totals and reconciliation |
-| `report.md` | Readable task/stage/model table and landed/blocked outcomes, suitable for the app's editor panel |
+| `report.md` | Readable task/stage/model table, landed/blocked outcomes and each unit's review findings, suitable for the app's editor panel |
 | `costs.csv` | Copyable task/stage/model credit and active-time rows |
 | `validation-*.json` | Actual deterministic check results |
 
@@ -262,7 +293,8 @@ go run ./cmd/productiondash
 
 It reads each run's `state.json` and `report.json`, refreshes every 5 seconds,
 and shows totals by task type, stage and model plus each run's units, PRs,
-cards, gaps, costs and stage timeline. Runs record a final outcome since
+cards, gaps, review findings, costs and stage timeline. Runs before policy 1.10.0
+saved only a rejected unit's final review verdict. Runs record a final outcome since
 these changes; older runs, or runs whose workflow process died, show
 `unknown` once their ledger stops updating.
 
@@ -293,7 +325,8 @@ Edit [`policy.json`](../.github/extensions/council4-production/policy.json):
 - Card implementation and fixes: `gpt-6-luna`. Engine implementation and fixes:
   `claude-opus-5.5`. All reviews: `gpt-6.1-terra`, a different model from each
   author (policy 1.9.0 trial; earlier runs reviewed with `gpt-6.1-sol`).
-  Selection: `gpt-6.1-sol`. All at `high` effort and the `default` context tier.
+  Selection: `gpt-6-luna` (policy 1.12.0 cost trial; earlier runs used
+  `gpt-6.1-sol`). All at `high` effort and the `default` context tier.
 - Separate choices for each task type's implementation, review, review fixes,
   validation fixes and CI fixes.
 - Risk-based versus always-on card review, bounded local/review/CI repair rounds, and affected
