@@ -146,7 +146,20 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
 Steps 1 and 2 need no model and cost no AIC. An Engine gap whose unit fails is
 parked (in that run and later ones) rather than paid for again; its stage outcome
 and retained work show why. To retry deliberately, pass its issue number in the
-`retryGaps` argument, e.g. `"retryGaps": [3287]`.
+`retryGaps` argument, e.g. `"retryGaps": [3287]`. A retry starts again from
+current main.
+
+To continue a review-rejected Engine unit instead of starting over, pass it in
+`resumeUnits`, e.g. `"resumeUnits": [{"runId": "05d8c46b-…", "index": 0}]`
+(policy 1.11.0). The first units of the run, in list order, apply the retained
+worktree's uncommitted work onto a fresh worktree from current main, without
+changing the retained worktree. They start with a `review_fix` of the final
+review findings, then validate, re-review and land as usual. That repair counts
+against the unit's review-fix rounds, and earlier recorded rounds are passed to
+the fixer and re-reviewer. Conflicts with current main stop the run for manual
+integration. Card units cannot be resumed because their queue claim would need
+to be re-established. `maxTasks` must cover every resumed unit; any remaining
+units select work normally.
 
 A large gap is delivered in slices. An Engine unit lands the first shared piece
 that is correct on its own and reports each remaining piece as a gap naming the
