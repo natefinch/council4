@@ -141,7 +141,13 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
 Steps 1 and 2 need no model and cost no AIC. An Engine gap whose unit fails is
 parked (in that run and later ones) rather than paid for again; its stage outcome
 and retained work show why. To retry deliberately, pass its issue number in the
-`retryGaps` argument, e.g. `"retryGaps": [3287]`. Each production unit has a
+`retryGaps` argument, e.g. `"retryGaps": [3287]`.
+
+A large gap is delivered in slices. An Engine unit lands the first shared piece
+that is correct on its own and reports each remaining piece as a gap naming the
+same issue or a new linked sub-issue. Such a gap stays scheduled, so the next
+unit continues it; a landed unit with no remainder fills the gap. Failing probes
+or a design writeup alone are not an Engine result. Each production unit has a
 stable ID and one task type:
 
 | Task type | Scope |
