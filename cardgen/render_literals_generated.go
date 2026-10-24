@@ -203,6 +203,8 @@ var counterKindLiterals = map[counter.Kind]string{
 	counter.Collection:        "counter.Collection",
 	counter.Hour:              "counter.Hour",
 	counter.Ribbon:            "counter.Ribbon",
+	counter.Slime:             "counter.Slime",
+	counter.Bounty:            "counter.Bounty",
 }
 
 // gameAggregateKindLiterals maps each exported game.AggregateKind constant to the Go
