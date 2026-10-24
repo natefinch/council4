@@ -464,6 +464,10 @@ tests and was only found in independent review (buyback, PR #3318):
 - **Clone and replay:** recorded choices survive game cloning and replay.
 
 Skip routes that genuinely cannot carry the state, and say why in the handoff.
+The checklist covers routes your change touches. If the same rule is already
+broken on a route the change does not touch, that defect predates the work:
+reuse or file a `Card Support TODO` issue and report it as a gap rather than
+widening the change. Reviewers classify such defects the same way.
 
 ## Fresh worker prompt
 

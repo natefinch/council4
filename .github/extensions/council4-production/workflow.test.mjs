@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
 import { git, changes, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -105,13 +105,13 @@ test("Re-reviews and fixes see earlier rounds, and repairs keep earlier gaps", a
   assert.equal(outcome.status, "accepted");
   assert.deepEqual(reviews, [
     [],
-    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], response: "fixed controller" }],
-    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], response: "fixed controller" },
-      { round: 1, verdict: "changes_needed", findings: ["finding 1"], response: "fixed zone" }],
+    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], response: "fixed controller" }],
+    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], response: "fixed controller" },
+      { round: 1, verdict: "changes_needed", findings: ["finding 1"], preexisting: [], response: "fixed zone" }],
   ]);
   assert.deepEqual(fixes, [
     { findings: ["finding 0"], earlierRounds: [] },
-    { findings: ["finding 1"], earlierRounds: [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], response: "fixed controller" }] },
+    { findings: ["finding 1"], earlierRounds: [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], response: "fixed controller" }] },
   ]);
   assert.deepEqual(outcome.result.gaps, [gap("#2", "narrower"), gap("#3")]);
   assert.deepEqual(carryGaps({ gaps: [gap("#1")] }, { status: "blocked", gaps: [] }).gaps, [gap("#1")]);
@@ -412,6 +412,47 @@ test("A landed Engine slice with a remainder keeps its gap scheduled; a complete
     /first shared piece[\s\S]*status complete/);
 });
 
+test("Pre-existing defects are filed, carried forward and never block approval", async () => {
+  const filed = [{ issue: 4100, description: "face-down graveyard casts ignore granted abilities", evidence: "path unchanged by diff" }];
+  const seen = [];
+  const f = fixture({
+    review: async (round, _result, _snapshot, history) => {
+      seen.push(history);
+      return round === 0
+        ? { verdict: "changes_needed", findings: ["introduced regression"], preexisting: filed }
+        : { verdict: "approve", findings: [], preexisting: [] };
+    },
+  });
+  assert.equal((await executeUnit(f)).status, "accepted");
+  assert.deepEqual(seen[1][0].preexisting, filed);
+  const onlyPreexisting = fixture({ review: async () => ({ verdict: "approve", findings: [], preexisting: filed }) });
+  assert.equal((await executeUnit(onlyPreexisting)).status, "accepted");
+  assert.match(preexistingRule("abc123"), /base commit abc123[\s\S]*never block approval/);
+});
+
+test("A split gap is worked through its first open sub-issue, in order", () => {
+  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
+  const subs = states => states.map(([number, state]) => ({ number, state, title: `Part ${number}`, url: `u/${number}` }));
+  const issues = { 3285: { ...open(3285), subIssues: subs([[4001, "CLOSED"], [4002, "OPEN"], [4003, "OPEN"]]) } };
+  const failedParent = { status: "review_rejected", task: { taskType: "engine", id: "gap-3285", issue: 3285 } };
+  let choice = chooseWork({ next, priorUnits: [failedParent], issues });
+  assert.equal(choice.kind, "engine");
+  assert.equal(choice.gap.issue, 4002);
+  assert.equal(choice.gap.parent, 3285);
+  assert.deepEqual(choice.gap.oracleIds, ["q"]);
+  const task = gapTask(choice, { q: "Necromancy" });
+  assert.equal(task.id, "gap-4002");
+  assert.match(task.title, /#4002: Part 4002/);
+  assert.match(task.instructions, /sub-issue of #3285/);
+  // A landed sub-issue moves on to the next; a failed one parks the parent.
+  choice = chooseWork({ next, priorUnits: [failedParent, landedGap(4002)], issues });
+  assert.equal(choice.gap.issue, 4003);
+  const failedSub = { status: "review_rejected", task: { taskType: "engine", id: "gap-4002", issue: 4002 } };
+  assert.equal(chooseWork({ next, priorUnits: [failedParent, failedSub], issues }).kind, "card");
+  // Without sub-issues a failed parent stays parked.
+  assert.equal(chooseWork({ next, priorUnits: [failedParent], issues: { 3285: open(3285) } }).kind, "card");
+});
+
 test("Known open Engine gaps are selected before ready card batches, demonstrated gaps first", () => {
   const next = { batch: readyBatch, cards: [{ name: "A" }], pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
   const issues = { 3285: open(3285), 2161: open(2161) };
@@ -566,7 +607,7 @@ test("Resume arguments, retained units and seeding fail closed and preserve work
   await writeState([unit, { ...unit, index: 1, task: { taskType: "card", id: "b" } }, { ...unit, index: 2, status: "landed" },
     { ...unit, index: 3, worktree: f.work.path }]);
   const loaded = await retainedUnit(f.repo, { runId, index: 0 });
-  assert.deepEqual(loaded.history, [{ round: 0, verdict: "changes_needed", findings: ["first"] }]);
+  assert.deepEqual(loaded.history, [{ round: 0, verdict: "changes_needed", findings: ["first"], preexisting: [] }]);
   for (const index of [1, 2, 3, 4]) await assert.rejects(retainedUnit(f.repo, { runId, index }));
   // Another top-level worktree of the repository (a new session) finds the run.
   assert.equal((await retainedUnit(f.work.path, { runId, index: 0 })).unit.worktree, retained);

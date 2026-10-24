@@ -164,6 +164,19 @@ integration. Card units cannot be resumed because their queue claim would need
 to be re-established. `maxTasks` must cover every resumed unit; any remaining
 units select work normally.
 
+A gap that proves too large is split into ordered GitHub sub-issues of its
+issue. Selection then works the first open sub-issue (it inherits the parent's
+blocked cards); a landed sub-issue moves on to the next, and a failed one parks
+the parent. Split a parked gap this way instead of resuming it again.
+
+Reviews block only on defects the change causes or behavior the unit must
+deliver (its target cards and rule, on the routes it changes). A defect that
+already exists on the unit's base in behavior the unit doesn't deliver is
+pre-existing: the reviewer reuses or files a `Card Support TODO` issue, lists it
+under `preexisting` with how it confirmed the defect predates the change, and
+does not block. Fixers likewise don't widen a change into routes it doesn't
+touch. The dashboard shows filed pre-existing defects under each review round.
+
 A large gap is delivered in slices. An Engine unit lands the first shared piece
 that is correct on its own and reports each remaining piece as a gap naming the
 same issue or a new linked sub-issue. Such a gap stays scheduled, so the next
