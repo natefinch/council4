@@ -269,11 +269,14 @@ not just accepted cards. No reports are committed automatically.
 
 Edit [`policy.json`](../.github/extensions/council4-production/policy.json):
 
-- Card author/fix defaults: `gpt-6-luna`.
-- Engine, selection and reviewer defaults: `null`, meaning the session/runtime
-  model preference is inherited; the actual model is measured, not assumed.
-- Independent model choices for each task type's implementation, review,
-  review fixes, validation fixes and CI fixes.
+- Every agent has explicit `model`, `reasoningEffort` and `contextTier`
+  settings; nothing inherits the starting session's choices, and the policy is
+  rejected if any is missing.
+- Card implementation and fixes: `gpt-6-luna`. Engine implementation and fixes:
+  `claude-opus-5.5`. Selection and all reviews: `gpt-6.1-sol`, a different model
+  family from both authors. All at `high` effort and the `default` context tier.
+- Separate choices for each task type's implementation, review, review fixes,
+  validation fixes and CI fixes.
 - Risk-based versus always-on card review, bounded local/review/CI repair rounds, and affected
   package validation.
 
