@@ -502,19 +502,37 @@ func stackObjectAnnouncementTargets(obj *game.StackObject) []game.Target {
 	return targets
 }
 
+// emitPreparedTargetEvents publishes obj's prepared target events. Only an
+// original spell or ability put on the stack commits a crime here: a copy put
+// directly onto the stack is not cast or activated (CR 707.10). Genuinely cast
+// card copies use emitCastTargetEvents instead.
 func emitPreparedTargetEvents(g *game.Game, obj *game.StackObject, events []game.Event) {
+	for _, event := range events {
+		emitEvent(g, event)
+	}
+	if !obj.Copy {
+		emitCrimeEvent(g, obj)
+	}
+}
+
+// emitCastTargetEvents publishes the prepared target events of a spell whose
+// casting has just completed. Every successful cast is an announcement, so it
+// commits a crime with qualifying targets even when the spell is a cast copy of
+// a card (CR 700.13, 707.12).
+func emitCastTargetEvents(g *game.Game, obj *game.StackObject, events []game.Event) {
 	for _, event := range events {
 		emitEvent(g, event)
 	}
 	emitCrimeEvent(g, obj)
 }
 
-// emitCrimeEvent emits an EventCrimeCommitted when putting obj on the stack
-// constitutes committing a crime (CR 700.13). A crime is committed once per
-// original spell or ability announcement, regardless of how many qualifying targets
-// it has, so this fires at most one event per push.
+// emitCrimeEvent emits an EventCrimeCommitted when announcing obj constitutes
+// committing a crime (CR 700.13). A crime is committed once per spell cast,
+// ability activation or triggered ability put on the stack, regardless of how
+// many qualifying targets it has, so this fires at most one event per
+// announcement. Callers decide whether obj was announced rather than copied.
 func emitCrimeEvent(g *game.Game, obj *game.StackObject) {
-	if obj.Copy || !committedCrime(g, obj) {
+	if !committedCrime(g, obj) {
 		return
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
@@ -541,7 +559,7 @@ func committedCrime(g *game.Game, obj *game.StackObject) bool {
 			}
 		case game.TargetPermanent:
 			if permanent, ok := permanentByObjectID(g, target.PermanentID); ok &&
-				permanent.Controller != obj.Controller {
+				effectiveController(g, permanent) != obj.Controller {
 				return true
 			}
 		case game.TargetStackObject:
