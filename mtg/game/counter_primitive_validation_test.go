@@ -3,8 +3,10 @@ package game
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestCounterPlacementPrimitiveValidation(t *testing.T) {
@@ -256,5 +258,65 @@ func TestCounterObjectPrimitiveValidation(t *testing.T) {
 		if err := ValidateInstructionSequence([]Instruction{{Primitive: counterPrimitive}}, targets); err == nil {
 			t.Fatalf("incompatible target %+v: ValidateInstructionSequence() = nil", targets[0])
 		}
+	}
+}
+
+func TestSlimeAndBountyCounterPlacementValidation(t *testing.T) {
+	t.Parallel()
+	permanentTargets := []TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPermanent}}
+	playerTargets := []TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPlayer}}
+	for _, kind := range []counter.Kind{counter.Slime, counter.Bounty} {
+		for _, primitive := range []Primitive{
+			AddCounter{Amount: Fixed(1), Object: TargetPermanentReference(0), CounterKind: kind},
+			RemoveCounter{Amount: Fixed(1), Object: TargetPermanentReference(0), CounterKind: kind},
+		} {
+			if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}, permanentTargets); err != nil {
+				t.Fatalf("%s %T: ValidateInstructionSequence() = %v", kind, primitive, err)
+			}
+		}
+		if err := ValidateInstructionSequence([]Instruction{{Primitive: AddPlayerCounter{
+			Amount: Fixed(1), Player: TargetPlayerReference(0), CounterKind: kind,
+		}}}, playerTargets); err == nil {
+			t.Fatalf("%s accepted as a player counter; want permanent-only marker", kind)
+		}
+		selection := Selection{MatchCounter: true, RequiredCounter: kind}
+		if problems := selection.Validate(); len(problems) != 0 {
+			t.Fatalf("%s counter selection Validate() = %v", kind, problems)
+		}
+	}
+	for name, selection := range map[string]Selection{
+		"required":     {MatchCounter: true, RequiredCounter: counter.Bounty + 1},
+		"count":        {RequiredCounter: counter.Bounty + 1, RequiredCounterCount: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 1})},
+		"excluded":     {MatchExcludedCounter: true, ExcludedCounter: counter.Bounty + 1},
+		"nested AnyOf": {AnyOf: []Selection{{MatchCounter: true, RequiredCounter: counter.Slime}, {MatchCounter: true, RequiredCounter: -1}}},
+	} {
+		if problems := selection.Validate(); len(problems) == 0 {
+			t.Fatalf("%s invalid counter kind accepted by Selection.Validate", name)
+		}
+	}
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: AddCounter{
+		Amount: Fixed(1), Object: TargetPermanentReference(0), CounterKind: counter.Bounty + 1,
+	}}}, permanentTargets); err == nil {
+		t.Fatal("kind after Bounty accepted; want unrecognized counter kind rejected")
+	}
+}
+
+func TestDamagedSubjectMarkerCounterTriggerValidation(t *testing.T) {
+	t.Parallel()
+	markerOnDamaged := Selection{
+		RequiredTypesAny: []types.Card{types.Creature, types.Planeswalker},
+		MatchCounter:     true,
+		RequiredCounter:  counter.Bounty,
+	}
+	if residue := triggerSubjectSelectionResidue(markerOnDamaged, EventDamageDealt); !residue.Empty() {
+		t.Fatalf("damaged-permanent bounty filter residue = %+v; want supported", residue)
+	}
+	if residue := triggerSubjectSelectionResidue(markerOnDamaged, EventSpellCast); residue.Empty() {
+		t.Fatal("spell-cast subject counter filter accepted; want unavailable counters to fail closed")
+	}
+	extra := Selection{MatchCounter: true, RequiredCounter: counter.Slime, MatchCommander: true, MatchGoaded: true}
+	residue := triggerSubjectSelectionResidue(extra, EventDamageDealt)
+	if residue.MatchCounter || !residue.MatchCommander || !residue.MatchGoaded {
+		t.Fatalf("damage subject residue = %+v; want only the counter predicate supported", residue)
 	}
 }

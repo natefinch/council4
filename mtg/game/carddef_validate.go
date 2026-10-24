@@ -2645,10 +2645,15 @@ func triggerSubjectSelectionResidue(selection Selection, event EventKind) Select
 	residue.NonToken = false
 	residue.TokenOnly = false
 	residue.SubtypeChoice = SubtypeChoiceWithoutEntry(residue.SubtypeChoice)
-	if eventExposesSubjectCounters(event) {
+	if eventExposesSubjectCounters(event) || event == EventDamageDealt {
 		// The subject is a battlefield permanent (or, for a death, its
 		// last-known snapshot), so the runtime can read its counters to honor a
-		// "with a [<kind>] counter on it" subject filter.
+		// "with a [<kind>] counter on it" subject filter. A damage event's
+		// subject is the damaged permanent; damage triggers are matched when
+		// the damage is dealt, before state-based actions can move a lethally
+		// damaged recipient, so its live counters are read (Termination
+		// Facilitator: "a creature ... with a bounty counter on it is dealt
+		// damage").
 		residue.MatchCounter = false
 		residue.RequiredCounter = 0
 		residue.MatchAnyCounter = false

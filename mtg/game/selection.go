@@ -548,6 +548,12 @@ func (s Selection) Validate() []string {
 	if s.MatchNoCounters && (s.MatchAnyCounter || s.MatchCounter || s.RequiredCounterCount.Exists) {
 		problems = append(problems, "selection cannot require both no counters and a counter")
 	}
+	if (s.MatchCounter || s.RequiredCounterCount.Exists) && !s.RequiredCounter.Valid() {
+		problems = append(problems, fmt.Sprintf("required counter kind %d is not a recognized counter kind", s.RequiredCounter))
+	}
+	if s.MatchExcludedCounter && !s.ExcludedCounter.Valid() {
+		problems = append(problems, fmt.Sprintf("excluded counter kind %d is not a recognized counter kind", s.ExcludedCounter))
+	}
 	if s.MatchExcludedCounter && s.MatchCounter && s.ExcludedCounter == s.RequiredCounter {
 		problems = append(problems, "selection cannot both require and exclude the same counter kind")
 	}

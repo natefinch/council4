@@ -119,3 +119,62 @@ func TestRemoveAll(t *testing.T) {
 		t.Fatalf("RemoveAll on empty = %d, want 0", got)
 	}
 }
+
+// TestSlimeAndBountyMarkerKinds proves the slime (Sludge Monster) and bounty
+// (Termination Facilitator) marker kinds are distinct, publicly named permanent
+// counters appended after the existing kinds. Neither carries an intrinsic
+// characteristic: their consequences belong to the declarations that read them.
+func TestSlimeAndBountyMarkerKinds(t *testing.T) {
+	t.Parallel()
+	if Ribbon != 84 || Slime != Ribbon+1 || Bounty != Ribbon+2 {
+		t.Fatalf("ordinals: Ribbon=%d Slime=%d Bounty=%d; want existing ordinals preserved and new kinds appended", Ribbon, Slime, Bounty)
+	}
+	for _, c := range []struct {
+		kind Kind
+		name string
+	}{{Slime, "slime"}, {Bounty, "bounty"}} {
+		if !c.kind.Valid() {
+			t.Errorf("%s.Valid() = false; want true", c.name)
+		}
+		if c.kind.PlayerOnly() {
+			t.Errorf("%s.PlayerOnly() = true; want permanent marker", c.name)
+		}
+		if got := c.kind.String(); got != c.name {
+			t.Errorf("String() = %q; want %q", got, c.name)
+		}
+		if _, _, ok := c.kind.powerToughness(); ok {
+			t.Errorf("%s has an intrinsic power/toughness delta; want none", c.name)
+		}
+	}
+	names := map[string]Kind{}
+	for k := PlusOnePlusOne; k.Valid(); k++ {
+		name := k.String()
+		if name == "unknown" {
+			t.Fatalf("valid kind %d has no public name", k)
+		}
+		if prior, ok := names[name]; ok {
+			t.Fatalf("kinds %d and %d share public name %q", prior, k, name)
+		}
+		names[name] = k
+	}
+	for _, invalid := range []Kind{Bounty + 1, -1} {
+		if invalid.Valid() || invalid.String() != "unknown" {
+			t.Fatalf("Kind(%d) is recognized; want invalid", invalid)
+		}
+	}
+
+	s := NewSet()
+	s.Add(Slime, 2)
+	s.Add(Bounty, 1)
+	if power, toughness := s.PowerToughnessDelta(); power != 0 || toughness != 0 {
+		t.Fatalf("PowerToughnessDelta() = (%d, %d); want (0, 0)", power, toughness)
+	}
+	if s.Get(Slime) != 2 || s.Get(Bounty) != 1 || s.Get(Ribbon) != 0 {
+		t.Fatalf("set counts = %v; want slime and bounty tracked independently", s.All())
+	}
+	clone := s.Clone()
+	clone.Add(Bounty, 3)
+	if s.Get(Bounty) != 1 || clone.Get(Bounty) != 4 {
+		t.Fatalf("clone shares storage: original=%d clone=%d", s.Get(Bounty), clone.Get(Bounty))
+	}
+}
