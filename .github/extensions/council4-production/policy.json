@@ -1,8 +1,8 @@
 {
-  "version": "1.11.0",
+  "version": "1.12.0",
   "models": {
     "selection": {
-      "model": "gpt-6.1-sol",
+      "model": "gpt-6-luna",
       "reasoningEffort": "high",
       "contextTier": "default"
     },
