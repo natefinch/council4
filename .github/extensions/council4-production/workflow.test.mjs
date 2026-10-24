@@ -555,6 +555,10 @@ test("Resume arguments, retained units and seeding fail closed and preserve work
   const loaded = await retainedUnit(f.repo, { runId, index: 0 });
   assert.deepEqual(loaded.history, [{ round: 0, verdict: "changes_needed", findings: ["first"] }]);
   for (const index of [1, 2, 3, 4]) await assert.rejects(retainedUnit(f.repo, { runId, index }));
+  // Another top-level worktree of the repository (a new session) finds the run.
+  assert.equal((await retainedUnit(f.work.path, { runId, index: 0 })).unit.worktree, retained);
+  assert.equal((await earlierUnits(f.work.path, "current")).length, 4);
+  await assert.rejects(retainedUnit(f.repo, { runId: "missing", index: 0 }), /No retained run/);
 
   // Main advanced independently; the resumed worktree gets both.
   await writeFile(path.join(f.repo, "other.txt"), "main moved\n");

@@ -134,7 +134,8 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
 1.4.0 the coordinator selects deterministically, in this order:
 
 1. **Known open Engine gaps.** Gaps demonstrated by blocked card units (this
-   run, then earlier local runs under `.cardwork/workflows/`) and saved queue
+   run, then earlier local runs under `.cardwork/workflows/` in any of the
+   repository's top-level worktrees, since policy 1.13.0) and saved queue
    prerequisites from `cardqueue next`. A gap counts while its GitHub issue is
    open and no landed Engine unit has targeted it. The unit is an Engine task
    `gap-<issue>`; card work never proceeds past a known gap.
@@ -151,7 +152,9 @@ current main.
 
 To continue a review-rejected Engine unit instead of starting over, pass it in
 `resumeUnits`, e.g. `"resumeUnits": [{"runId": "05d8c46b-…", "index": 0}]`
-(policy 1.11.0). The first units of the run, in list order, apply the retained
+(policy 1.11.0). The run may be in any top-level worktree of the repository, so
+a new session can resume another session's units (policy 1.13.0). The first
+units of the run, in list order, apply the retained
 worktree's uncommitted work onto a fresh worktree from current main, without
 changing the retained worktree. They start with a `review_fix` of the final
 review findings, then validate, re-review and land as usual. That repair counts

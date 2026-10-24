@@ -1,4 +1,4 @@
-import { readFile, readdir, writeFile, mkdir, rmdir, unlink } from "node:fs/promises";
+import { readFile, readdir, writeFile, mkdir, rmdir, unlink, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
@@ -113,7 +113,8 @@ export function checkArgs(args) {
 // A review-rejected Engine unit from an earlier run, resumable from its
 // retained worktree with its final findings as the next repair.
 export async function retainedUnit(root, ref) {
-  const directory = path.join(root, ".cardwork", "workflows", ref.runId);
+  const directory = (await runDirectories(root)).get(ref.runId);
+  if (!directory) throw new Error(`No retained run ${ref.runId} in this repository's worktrees`);
   const source = JSON.parse(await readFile(path.join(directory, "state.json"), "utf8"));
   const unit = source.units?.find(u => u.index === ref.index);
   if (!unit) throw new Error(`Run ${ref.runId} has no unit ${ref.index}`);
@@ -121,7 +122,9 @@ export async function retainedUnit(root, ref) {
   if (unit.status !== "review_rejected" || !unit.verdict?.findings?.length) {
     throw new Error(`Unit ${ref.index} of ${ref.runId} is ${unit.status}; only review-rejected units with findings can be resumed`);
   }
-  if (unit.worktree !== path.join(directory, "work", String(ref.index))) throw new Error("Retained unit worktree is outside its run");
+  const expected = path.join(directory, "work", String(ref.index));
+  const real = file => realpath(file).catch(() => file);
+  if (!unit.worktree || await real(unit.worktree) !== await real(expected)) throw new Error("Retained unit worktree is outside its run");
   const rounds = (source.stages ?? []).filter(stage => stage.verdict && stage.unitIndex === ref.index);
   const history = rounds.slice(0, -1).map((stage, round) => ({ round, verdict: stage.verdict, findings: stage.findings ?? [] }));
   return { unit, history };
@@ -143,16 +146,37 @@ export function validationPackagesForTask(policy, taskType) {
   return [...new Set([...policy.validationPackages, "./cardgen/cmd/genrender"])];
 }
 
+// Workflow run ledgers live under .cardwork/workflows in whichever worktree
+// started them. Production runs from any top-level worktree of the repository
+// see each other's runs; per-unit worktrees under .cardwork are not roots.
+export async function runDirectories(root) {
+  let roots = [root];
+  try {
+    const listing = await git(root, ["worktree", "list", "--porcelain"]);
+    roots = [root, ...listing.split("\n").filter(line => line.startsWith("worktree "))
+      .map(line => line.slice("worktree ".length))
+      .filter(tree => tree !== root && !tree.split(path.sep).includes(".cardwork"))];
+  } catch {
+    // Not a git checkout (tests or a copied ledger); only this root's runs.
+  }
+  const runs = new Map();
+  for (const tree of roots) {
+    const directory = path.join(tree, ".cardwork", "workflows");
+    let entries;
+    try { entries = await readdir(directory); }
+    catch (error) { if (error.code === "ENOENT") continue; throw error; }
+    for (const name of entries.sort()) if (!runs.has(name)) runs.set(name, path.join(directory, name));
+  }
+  return runs;
+}
+
 // Units from earlier local runs carry blocked-card gaps and landed Engine work
 // forward, so a later run does not rediscover the same gap by paying for it.
 export async function earlierUnits(root, runId) {
-  const directory = path.join(root, ".cardwork", "workflows");
-  let entries;
-  try { entries = await readdir(directory); }
-  catch (error) { if (error.code === "ENOENT") return []; throw error; }
   const units = [];
-  for (const name of entries.filter(name => name !== runId).sort()) {
-    try { units.push(...(JSON.parse(await readFile(path.join(directory, name, "state.json"), "utf8")).units ?? [])); }
+  for (const [name, directory] of await runDirectories(root)) {
+    if (name === runId) continue;
+    try { units.push(...(JSON.parse(await readFile(path.join(directory, "state.json"), "utf8")).units ?? [])); }
     catch (error) { if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error; }
   }
   return units;
