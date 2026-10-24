@@ -294,7 +294,9 @@ func status(s state, idle time.Duration) (string, string) {
 	case s.Error != nil:
 		return "error", s.Error.Message
 	case idle < staleAfter:
-		return "running", fmt.Sprintf("Last update %s ago.", idle.Round(time.Second))
+		// Relative times are rendered by the page; keeping this text stable lets
+		// the page skip re-rendering runs whose ledgers did not change.
+		return "running", "The workflow is still updating its ledger."
 	default:
 		return "unknown", "No final status recorded (older run, or its workflow process stopped). Check the Workflows view."
 	}

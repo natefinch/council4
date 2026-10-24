@@ -78,11 +78,24 @@ showChecks.checked = localStorage.getItem("showChecks") === "1";
 showChecks.onchange = () => { localStorage.setItem("showChecks", showChecks.checked ? "1" : "0"); render(); };
 
 let runs = [], lastJSON = "";
+// Open/closed state for every collapsible section, keyed by data-key, so
+// updates never collapse what the reader expanded.
 const open = new Map(JSON.parse(localStorage.getItem("open") || "[]"));
+const isOpen = (key, fallback) => open.has(key) ? open.get(key) : fallback;
+app.addEventListener("toggle", e => {
+  const key = e.target.dataset?.key;
+  if (!key) return;
+  open.set(key, e.target.open);
+  localStorage.setItem("open", JSON.stringify([...open]));
+}, true);
 
 const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const aic = v => (v ?? 0).toFixed(2);
 const mins = ms => ms ? (ms / 60000).toFixed(1) : "–";
+const ago = iso => {
+  const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+  return s < 90 ? `${s.toFixed(0)}s ago` : s < 5400 ? `${(s / 60).toFixed(0)}m ago` : s < 172800 ? `${(s / 3600).toFixed(1)}h ago` : `${(s / 86400).toFixed(0)}d ago`;
+};
 const when = iso => { if (!iso) return "–"; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
 const span = (a, b) => { if (!a || !b) return "–"; const s = (new Date(b) - new Date(a)) / 1000; return s < 90 ? `${s.toFixed(0)}s` : `${(s / 60).toFixed(1)}m`; };
 const badge = s => `<span class="badge s-${esc(s)}">${esc(s ?? "?")}</span>`;
@@ -169,14 +182,14 @@ function stageRows(r) {
 
 function runSection(r) {
   const key = r.id;
-  const isOpen = open.has(key) ? open.get(key) : runs.indexOf(r) === 0;
+  const expanded = isOpen(key, runs.indexOf(r) === 0);
   const args = Object.entries(r.args ?? {}).filter(([k]) => !["corpusPath", "scope"].includes(k))
     .map(([k, v]) => `${esc(k)}=<b>${esc(JSON.stringify(v))}</b>`).join(" ");
   const landed = (r.units ?? []).filter(u => u.status === "landed").length;
   const newCards = (r.units ?? []).reduce((n, u) => n + cards(u).length, 0);
   const costs = costRows(r);
   const current = r.currentUnit ? `<div class="kv">Current unit <b>${r.currentUnit.index}</b> ${type(r.currentUnit.task.taskType)} <span class="id">${esc(r.currentUnit.task.id)}</span> ${esc(r.currentUnit.task.title)}</div>` : "";
-  return `<details class="run" data-key="${esc(key)}" ${isOpen ? "open" : ""}>
+  return `<details class="run" data-key="${esc(key)}" ${expanded ? "open" : ""}>
     <summary>${badge(r.status)} <span class="id">${esc(r.id)}</span>
       <span>${when(r.startedAt)}</span><span class="dim">${esc(r.mode)}</span>
       <span><b>${aic(r.aic)}</b> <span class="dim">AIC</span></span>
@@ -185,7 +198,7 @@ function runSection(r) {
     <div class="body">
       <div class="kv"><span>${esc(r.statusDetail)}</span></div>
       <div class="kv">
-        <span>updated <b>${when(r.updatedAt)}</b></span>${r.finishedAt ? `<span>finished <b>${when(r.finishedAt)}</b></span>` : ""}
+        <span>updated <b>${when(r.updatedAt)}</b> <span class="ago dim" data-ts="${esc(r.updatedAt)}"></span></span>${r.finishedAt ? `<span>finished <b>${when(r.finishedAt)}</b></span>` : ""}
         <span>worktree <b>${esc(base(r.worktree))}</b></span><span>${args}</span>
         <span>agent active <b>${mins(r.activeMs)}</b> min</span>
         <span>accounting <b>${esc(r.reconciliation || "–")}</b>${r.unallocatedAic ? `, ${aic(r.unallocatedAic)} unallocated` : ""}</span>
@@ -200,21 +213,50 @@ function runSection(r) {
       <table><thead><tr><th class="num">Unit</th><th>Type</th><th>Task</th><th>Stage</th><th>Model</th><th class="num">Agents</th><th class="num">Active min</th><th class="num">AIC</th></tr></thead>
         <tbody>${costs.body || `<tr><td colspan=8 class=dim>No agent costs</td></tr>`}</tbody>
         <tfoot><tr><td colspan=7>Total observed</td><td class="num">${aic(costs.sum)}</td></tr></tfoot></table>
-      <details class="more"><summary>Stage timeline (${(r.stages ?? []).length})</summary>
+      <details class="more" data-key="${esc(key)}:stages" ${isOpen(`${key}:stages`, false) ? "open" : ""}><summary>Stage timeline (${(r.stages ?? []).length})</summary>
         <table><thead><tr><th>Type</th><th>Stage</th><th>Model</th><th>Started</th><th class="num">Took</th><th>Outcome</th></tr></thead><tbody>${stageRows(r)}</tbody></table>
       </details>
     </div></details>`;
 }
 
+// Replace a node's content only when its markup changed, so unchanged runs
+// keep their DOM (expanded sections, text selection, scroll position).
+function patch(node, html) {
+  if (node.dataset.html === html) return;
+  node.dataset.html = html;
+  node.innerHTML = html;
+}
+
+function section(id) {
+  let node = document.getElementById(id);
+  if (!node) { node = document.createElement("div"); node.id = id; app.append(node); }
+  return node;
+}
+
 function render() {
   const list = runs.filter(r => showChecks.checked || production(r));
-  const prod = runs.filter(production);
-  app.innerHTML = list.length
-    ? overview(prod) + `<h2>Runs</h2>` + list.map(runSection).join("")
-    : `<div class="empty">No workflow runs found in any council4 worktree.</div>`;
-  for (const d of app.querySelectorAll("details.run")) {
-    d.addEventListener("toggle", () => { open.set(d.dataset.key, d.open); localStorage.setItem("open", JSON.stringify([...open])); });
+  patch(section("overview"), list.length ? overview(runs.filter(production)) + `<h2>Runs</h2>`
+    : `<div class="empty">No workflow runs found in any council4 worktree.</div>`);
+  const container = section("runs");
+  const keep = new Set();
+  let previous = null;
+  for (const r of list) {
+    const id = `run-${r.id}`;
+    keep.add(id);
+    let node = document.getElementById(id);
+    if (!node) { node = document.createElement("div"); node.id = id; }
+    patch(node, runSection(r));
+    // Moving an existing node preserves its state; only reorder when needed.
+    const expected = previous ? previous.nextSibling : container.firstChild;
+    if (node !== expected) container.insertBefore(node, expected);
+    previous = node;
   }
+  for (const node of [...container.children]) if (!keep.has(node.id)) node.remove();
+  tick();
+}
+
+function tick() {
+  for (const node of app.querySelectorAll(".ago")) node.textContent = `(${ago(node.dataset.ts)})`;
 }
 
 async function refresh() {
@@ -230,6 +272,7 @@ async function refresh() {
 }
 refresh();
 setInterval(refresh, 5000);
+setInterval(tick, 1000);
 </script>
 </body>
 </html>
