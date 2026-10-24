@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { defaultCorpusPath, executeUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
 import { git, changes, land, checkProtection, checkCoordinator } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -56,6 +56,15 @@ test("Review fixes are separate work and require validation and re-review", asyn
   };
   assert.equal((await executeUnit(f)).status, "accepted");
   assert.deepEqual(f.calls, ["implementation", "validate", "review-0", "review_fix", "validate", "review-1", "prepare"]);
+});
+
+test("The corpus defaults to the shared pinned cache location", () => {
+  const sha = "6da9ced0";
+  assert.equal(defaultCorpusPath(sha, {}, "darwin", "/Users/me"), "/Users/me/Library/Caches/council4/pinned/6da9ced0.json");
+  assert.equal(defaultCorpusPath(sha, {}, "linux", "/home/me"), "/home/me/.cache/council4/pinned/6da9ced0.json");
+  assert.equal(defaultCorpusPath(sha, { XDG_CACHE_HOME: "/xdg" }, "linux", "/home/me"), "/xdg/council4/pinned/6da9ced0.json");
+  assert.equal(defaultCorpusPath(sha, { COUNCIL4_ORACLE_CARDS: "/mine.json" }, "darwin", "/Users/me"), "/mine.json");
+  assert.throws(() => defaultCorpusPath(sha, {}, "win32", "C:/Users/me"), /user cache directory/);
 });
 
 test("Every agent's model settings must be explicit", () => {
@@ -112,7 +121,8 @@ test("Reviewer cannot approve a changed submission", async () => {
 test("Inputs fail closed and card tasks cannot hide Engine work", () => {
   checkPolicy(policy);
   checkArgs({ mode: "produce", maxTasks: 2, corpusPath: "/verified/corpus.json" });
-  for (const args of [{}, { mode: "produce" }, { mode: "produce", maxTasks: 0, corpusPath: "x" }]) {
+  checkArgs({ mode: "produce", maxTasks: 2 });
+  for (const args of [{}, { mode: "produce" }, { mode: "produce", maxTasks: 0, corpusPath: "x" }, { mode: "produce", maxTasks: 1, corpusPath: "" }]) {
     assert.throws(() => checkArgs(args));
   }
   assert.throws(() => checkSelection({ taskType: "card", id: "../bad", title: "bad", instructions: "bad" }));

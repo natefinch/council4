@@ -2,6 +2,7 @@ import { readFile, readdir, writeFile, mkdir, rmdir, unlink } from "node:fs/prom
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
+import os from "node:os";
 import { git, command, changes, workspace, land, mainProtection, checkCoordinator } from "./git.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, writeJSON } from "./telemetry.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -88,9 +89,20 @@ export function checkArgs(args) {
   if (args.mode === "produce" && (!Number.isInteger(args.maxTasks) || args.maxTasks < 1)) {
     throw new Error("produce requires an explicit positive maxTasks scope");
   }
-  if (args.mode === "produce" && (typeof args.corpusPath !== "string" || !args.corpusPath)) {
-    throw new Error("produce requires the verified corpusPath");
+  if (args.corpusPath !== undefined && (typeof args.corpusPath !== "string" || !args.corpusPath)) {
+    throw new Error("corpusPath must be a non-empty path when given");
   }
+}
+
+// Same location as the magefiles' pinned corpus: COUNCIL4_ORACLE_CARDS, else
+// <user cache>/council4/pinned/<sha256>.json (Go's os.UserCacheDir).
+export function defaultCorpusPath(sha256, env = process.env, platform = process.platform, home = os.homedir()) {
+  if (env.COUNCIL4_ORACLE_CARDS) return env.COUNCIL4_ORACLE_CARDS;
+  const cache = platform === "darwin" ? path.join(home, "Library", "Caches")
+    : platform === "win32" ? env.LOCALAPPDATA || env.LocalAppData
+    : env.XDG_CACHE_HOME || path.join(home, ".cache");
+  if (!cache) throw new Error("Cannot locate the user cache directory; pass corpusPath or set COUNCIL4_ORACLE_CARDS");
+  return path.join(cache, "council4", "pinned", `${sha256}.json`);
 }
 
 export function validationPackagesForTask(policy, taskType) {
@@ -303,10 +315,16 @@ export async function runProduction(ctx) {
     const head = await git(root, ["rev-parse", "HEAD"], ctx.signal);
     const upstream = await git(root, ["rev-parse", "refs/remotes/origin/main"], ctx.signal);
     await checkCoordinator(root, head, upstream, ctx.signal);
-    const corpus = path.resolve(ctx.args.corpusPath);
-    const corpusHash = createHash("sha256").update(await readFile(corpus)).digest("hex");
     const manifest = JSON.parse(await readFile(path.join(root, "testdata/card-authoring/production.json"), "utf8"));
-    if (corpusHash !== manifest.corpus_sha256) throw new Error("Corpus does not match the saved queue pin");
+    const corpus = path.resolve(ctx.args.corpusPath ?? defaultCorpusPath(manifest.corpus_sha256));
+    let corpusData;
+    try { corpusData = await readFile(corpus); }
+    catch (error) {
+      if (error.code !== "ENOENT") throw error;
+      throw new Error(`Pinned Oracle corpus not found at ${corpus}. Put the corpus with SHA-256 ${manifest.corpus_sha256} there, set COUNCIL4_ORACLE_CARDS, or pass corpusPath.`);
+    }
+    const corpusHash = createHash("sha256").update(corpusData).digest("hex");
+    if (corpusHash !== manifest.corpus_sha256) throw new Error(`Corpus ${corpus} does not match the saved queue pin ${manifest.corpus_sha256}`);
     const common = await git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"], ctx.signal);
     lock = path.join(common, "council4-production.lock");
     try { await mkdir(lock); }

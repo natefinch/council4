@@ -85,8 +85,7 @@ run state before manually clearing a stale lock. The workflow never steals it.
 
 Ask Copilot:
 
-> Run `council4-production` in produce mode for up to three work units, using
-> the verified Oracle corpus at `/absolute/path/oracle-cards.json`, with scope
+> Run `council4-production` in produce mode for up to three work units, with scope
 > “remaining cards and their required Engine prerequisites.”
 
 Equivalent arguments:
@@ -95,10 +94,16 @@ Equivalent arguments:
 {
   "mode": "produce",
   "maxTasks": 3,
-  "corpusPath": "/absolute/path/oracle-cards.json",
   "scope": "remaining cards and their required Engine prerequisites"
 }
 ```
+
+The pinned Oracle corpus is found where the magefiles keep it:
+`COUNCIL4_ORACLE_CARDS` if set, otherwise the user cache directory's
+`council4/pinned/<sha256>.json` (on macOS
+`~/Library/Caches/council4/pinned/`), where `<sha256>` is the queue's
+`corpus_sha256`. Pass `corpusPath` only to override it; the file's hash must
+still match the queue pin.
 
 `maxTasks` is an explicit work scope, **not** an AIC or time ceiling. Set resource
 limits in the invocation/app when desired. No guessed limits are embedded.
