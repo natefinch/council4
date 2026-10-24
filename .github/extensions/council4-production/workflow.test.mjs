@@ -277,6 +277,24 @@ test("Gap references parse canonical issue forms only", () => {
   assert.deepEqual(knownGaps({ units: [{ ...blockedCard(1), result: { gaps: [{ id: "08-scry-interaction-claim" }] } }] }), []);
 });
 
+test("A landed Engine slice with a remainder keeps its gap scheduled; a complete one fills it", () => {
+  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
+  const issues = { 3285: open(3285), 3400: open(3400) };
+  const slice = { ...landedGap(3285), task: { taskType: "engine", id: "gap-3285", issue: 3285, oracleIds: ["q"] },
+    result: { status: "complete", gaps: [{ id: "#3285", description: "linked Aura transition" }] } };
+  let choice = chooseWork({ next, units: [slice], issues });
+  assert.equal(choice.kind, "engine");
+  assert.equal(choice.gap.issue, 3285);
+  assert.ok(choice.gap.sources.includes("this run remainder of gap-3285"));
+  const subIssue = { ...slice, result: { status: "complete", gaps: [{ id: "#3400", description: "sub-issue" }] } };
+  choice = chooseWork({ next, units: [subIssue], issues });
+  assert.equal(choice.gap.issue, 3400);
+  assert.deepEqual(choice.gap.oracleIds, ["q"]);
+  assert.equal(chooseWork({ next, units: [landedGap(3285)], issues }).kind, "card");
+  assert.match(gapTask({ gap: { issue: 3285, oracleIds: [], sources: [] }, issue: open(3285) }, {}).instructions,
+    /first shared piece[\s\S]*status complete/);
+});
+
 test("Known open Engine gaps are selected before ready card batches, demonstrated gaps first", () => {
   const next = { batch: readyBatch, cards: [{ name: "A" }], pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
   const issues = { 3285: open(3285), 2161: open(2161) };
