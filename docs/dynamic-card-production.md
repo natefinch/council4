@@ -162,7 +162,14 @@ stable ID and one task type:
 
 A card agent may not silently include shared Engine production changes. When it
 finds a gap, it returns blocked with the canonical issue number as the gap ID,
-and its attempt (including the claimed cards) is retained. The next unit then
+and its attempt (including the claimed cards) is retained. If a card unit
+changes shared Engine production files anyway, the coordinator records that unit
+as blocked with the offending files and continues the run (since policy 1.10.0;
+earlier versions stopped the whole run); Go tests, `testdata/`
+fixtures and Markdown are not Engine production files. Card source records
+belong in a `// Source review:` comment in the card's behavioral test file; raw
+retrieved responses stay untracked under the unit's `.cardwork/`.
+The next unit then
 selects that Engine gap. After the Engine unit lands, batch preparation can
 include the previously blocked cards; the coordinator reassesses queue-blocked
 members with the landed commit as evidence before saving the new batch.
@@ -218,6 +225,14 @@ for Engine work (`reviewFixRounds` in the policy). Exhausting those rounds retai
 the unsuccessful result and its cost; it never turns rejection into admission.
 Null/invalid agent responses and reviewer edits to the submission fail closed.
 
+Since policy 1.10.0, each fixer and re-reviewer receives the earlier rounds'
+findings and the author's responses. A fixer repairs the underlying rule behind
+each finding, not only its reproduced case. A re-reviewer first verifies the
+earlier findings and checks the repairs for regressions, labelling each finding
+`[unresolved]`, `[regression]` or `[new]`. A reviewer who disagrees with behavior
+an earlier reviewer required must cite the primary source. Gaps reported earlier
+in a unit carry forward unless a repair lists them in `resolvedGaps`.
+
 ## See time, AIC and model
 
 The app's **Workflows** view shows named phases, live agents, active time,
@@ -225,10 +240,10 @@ requested/resolved model and aggregate AIC. The extension also writes:
 
 | File under `.cardwork/workflows/<run-id>/` | Purpose |
 | --- | --- |
-| `state.json` | Pinned code/policy revision, stage identities, task outcomes, PRs and verified merge commits |
+| `state.json` | Pinned code/policy revision, stage identities, every review round's verdict and findings, task outcomes, PRs and verified merge commits |
 | `usage.jsonl` | Sanitized authoritative usage receipts keyed by source-session/sequence and agent ID; no prompts or model reasoning |
 | `report.json` | Per-task-type/task/stage/model AIC and agent time, outcomes, native totals and reconciliation |
-| `report.md` | Readable task/stage/model table and landed/blocked outcomes, suitable for the app's editor panel |
+| `report.md` | Readable task/stage/model table, landed/blocked outcomes and each unit's review findings, suitable for the app's editor panel |
 | `costs.csv` | Copyable task/stage/model credit and active-time rows |
 | `validation-*.json` | Actual deterministic check results |
 
@@ -262,7 +277,8 @@ go run ./cmd/productiondash
 
 It reads each run's `state.json` and `report.json`, refreshes every 5 seconds,
 and shows totals by task type, stage and model plus each run's units, PRs,
-cards, gaps, costs and stage timeline. Runs record a final outcome since
+cards, gaps, review findings, costs and stage timeline. Runs before policy 1.10.0
+saved only a rejected unit's final review verdict. Runs record a final outcome since
 these changes; older runs, or runs whose workflow process died, show
 `unknown` once their ledger stops updating.
 

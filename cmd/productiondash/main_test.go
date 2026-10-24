@@ -36,7 +36,10 @@ func TestScanCollatesRunsAcrossWorktrees(t *testing.T) {
 		`{"runtimeAic":113.9,"runtimeActiveMs":60000,"reconciliation":"matched","unallocatedNanoAiu":0,
 		"groups":[{"taskType":"card","taskId":"b","phase":"implementation","model":"gpt-6-luna","observedAic":7.0,"activeMs":1000,"agents":1}]}`)
 	writeRun(t, second, "new", `{"runId":"new","policy":{"version":"1.9.0"},"args":{"mode":"produce"},
-		"stages":[{"label":"x","startedAt":"2026-10-24T00:53:00Z"}],"units":[]}`, "")
+		"stages":[{"label":"x","startedAt":"2026-10-24T00:53:00Z"},
+			{"label":"engine/g/unit-0/review/0","unitIndex":0,"phase":"review","round":0,"verdict":"changes_needed","findings":["wrong controller"]}],
+		"units":[{"index":0,"task":{"taskType":"engine","id":"g"},"status":"review_rejected",
+			"verdict":{"verdict":"changes_needed","findings":["wrong controller"]}}]}`, "")
 	writeRun(t, second, "empty", "", "")
 	// The same run reachable from two worktrees is reported once.
 	writeRun(t, second, "old", `{"runId":"old","stages":[],"units":[]}`, "")
@@ -60,6 +63,13 @@ func TestScanCollatesRunsAcrossWorktrees(t *testing.T) {
 	}
 	if runs[0].Status != "running" {
 		t.Fatalf("freshly updated run without an outcome should be running, got %s", runs[0].Status)
+	}
+	review := runs[0].Stages[1]
+	if review.Verdict != "changes_needed" || len(review.Findings) != 1 || review.Findings[0] != "wrong controller" {
+		t.Fatalf("stage review verdict lost: %+v", review)
+	}
+	if v := runs[0].Units[0].Verdict; v == nil || v.Verdict != "changes_needed" || len(v.Findings) != 1 {
+		t.Fatalf("unit final verdict lost: %+v", runs[0].Units[0])
 	}
 }
 
