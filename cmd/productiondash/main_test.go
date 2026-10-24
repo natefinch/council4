@@ -1,0 +1,86 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func writeRun(t *testing.T, root, id, stateJSON, reportJSON string) {
+	t.Helper()
+	dir := filepath.Join(root, ".cardwork", "workflows", id)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if stateJSON != "" {
+		if err := os.WriteFile(filepath.Join(dir, "state.json"), []byte(stateJSON), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if reportJSON != "" {
+		if err := os.WriteFile(filepath.Join(dir, "report.json"), []byte(reportJSON), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
+func TestScanCollatesRunsAcrossWorktrees(t *testing.T) {
+	first, second := t.TempDir(), t.TempDir()
+	writeRun(t, first, "old", `{"runId":"old","policy":{"version":"1.2.0"},"args":{"mode":"produce","maxTasks":4},
+		"stages":[{"label":"card/b/unit-0/implementation/0","startedAt":"2026-10-23T04:30:00Z","completedAt":"2026-10-23T04:40:00Z"}],
+		"units":[{"index":0,"task":{"taskType":"card","id":"b"},"status":"landed",
+			"landing":{"commit":"abc","pr":{"number":3317,"url":"https://example/pr/3317"}},
+			"prepared":{"delivered":{"newlySupported":[{"oracleId":"x","name":"Card X"}]}}}],
+		"outcome":"scope_finished","finishedAt":"2026-10-23T05:00:00Z"}`,
+		`{"runtimeAic":113.9,"runtimeActiveMs":60000,"reconciliation":"matched","unallocatedNanoAiu":0,
+		"groups":[{"taskType":"card","taskId":"b","phase":"implementation","model":"gpt-6-luna","observedAic":7.0,"activeMs":1000,"agents":1}]}`)
+	writeRun(t, second, "new", `{"runId":"new","policy":{"version":"1.9.0"},"args":{"mode":"produce"},
+		"stages":[{"label":"x","startedAt":"2026-10-24T00:53:00Z"}],"units":[]}`, "")
+	writeRun(t, second, "empty", "", "")
+	// The same run reachable from two worktrees is reported once.
+	writeRun(t, second, "old", `{"runId":"old","stages":[],"units":[]}`, "")
+
+	runs := scan([]string{first, second, filepath.Join(t.TempDir(), "missing")}, time.Now())
+	if len(runs) != 2 {
+		t.Fatalf("got %d runs, want 2: %+v", len(runs), runs)
+	}
+	if runs[0].ID != "new" || runs[1].ID != "old" {
+		t.Fatalf("runs not newest first: %s, %s", runs[0].ID, runs[1].ID)
+	}
+	old := runs[1]
+	if old.Worktree != first || old.Status != "finished" || old.Aic != 113.9 || old.PolicyVersion != "1.2.0" || old.Mode != "produce" {
+		t.Fatalf("old run not loaded from its own worktree: %+v", old)
+	}
+	if got := old.Units[0].Prepared.Delivered.NewlySupported[0].Name; got != "Card X" || old.Units[0].Landing.PR.Number != 3317 {
+		t.Fatalf("unit delivery details lost: %+v", old.Units[0])
+	}
+	if len(old.Costs) != 1 || old.Costs[0].Model != "gpt-6-luna" {
+		t.Fatalf("costs lost: %+v", old.Costs)
+	}
+	if runs[0].Status != "running" {
+		t.Fatalf("freshly updated run without an outcome should be running, got %s", runs[0].Status)
+	}
+}
+
+func TestStatusNeverInventsCompletion(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		s    state
+		idle time.Duration
+		want string
+	}{
+		{"finished", state{Outcome: "scope_finished"}, time.Hour, "finished"},
+		{"partial", state{Outcome: "partial"}, time.Hour, "partial"},
+		{"error", state{Outcome: "error", Error: &runError{Message: "boom"}}, 0, "error"},
+		{"error without outcome", state{Error: &runError{Message: "boom"}}, time.Hour, "error"},
+		{"paused", state{Outcome: "paused_or_cancelled", Error: &runError{Cancelled: true}}, time.Hour, "paused"},
+		{"cancelled without outcome", state{Error: &runError{Cancelled: true}}, time.Hour, "paused"},
+		{"live", state{}, time.Minute, "running"},
+		{"stale", state{}, staleAfter + time.Minute, "unknown"},
+	} {
+		if got, _ := status(tc.s, tc.idle); got != tc.want {
+			t.Errorf("%s: got %s, want %s", tc.name, got, tc.want)
+		}
+	}
+}

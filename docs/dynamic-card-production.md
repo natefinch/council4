@@ -248,6 +248,19 @@ time would not equal wall time. AIC excludes this outer setup/coordinator chat,
 CI compute, and non-model shell cost. Do not omit those from a full business-cost
 estimate or pretend they belong to a particular model.
 
+For a live overview of every run in every council4 worktree, run the local
+dashboard and open <http://localhost:8765>:
+
+```sh
+go run ./cmd/productiondash
+```
+
+It reads each run's `state.json` and `report.json`, refreshes every 5 seconds,
+and shows totals by task type, stage and model plus each run's units, PRs,
+cards, gaps, costs and stage timeline. Runs record a final outcome since
+these changes; older runs, or runs whose workflow process died, show
+`unknown` once their ledger stops updating.
+
 The workflow writes snapshots after stages. Once it settles, ask:
 
 > Run `council4-production-report` with runId `<the-production-run-id>`.

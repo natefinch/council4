@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>council4 production</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --line: #2a2f3a; --text: #e6e8ec; --dim: #8b93a1;
+    --good: #3fb950; --bad: #f85149; --warn: #d29922; --info: #58a6ff; --accent: #a371f7;
+    font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f6f8fa; --panel: #fff; --line: #d0d7de; --text: #1f2328; --dim: #656d76; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--text); }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line);
+    padding: 10px 24px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  header h1 { font-size: 22px; margin: 0; }
+  header .meta { color: var(--dim); font-size: 12px; }
+  header label { color: var(--dim); font-size: 12px; margin-left: auto; }
+  main { padding: 16px 24px 64px; max-width: 1400px; margin: 0 auto; }
+  h2 { font-size: 18px; margin: 28px 0 10px; }
+  h3 { font-size: 12px; margin: 16px 0 6px; color: var(--dim); text-transform: uppercase; letter-spacing: .04em; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  .tile b { display: block; font-size: 22px; }
+  .tile span { color: var(--dim); font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 8px; overflow: hidden; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; font-size: 12px; background: color-mix(in srgb, var(--panel) 85%, var(--line)); }
+  tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tfoot td { font-weight: 600; }
+  details.run { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin: 12px 0; }
+  details.run > summary { cursor: pointer; padding: 12px 16px; display: flex; gap: 12px; align-items: center;
+    flex-wrap: wrap; list-style: none; }
+  details.run > summary::-webkit-details-marker { display: none; }
+  details.run > summary::before { content: "▸"; color: var(--dim); }
+  details.run[open] > summary::before { content: "▾"; }
+  details.run > .body { padding: 0 16px 16px; }
+  details.run table { background: var(--bg); }
+  .id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    border: 1px solid currentColor; white-space: nowrap; }
+  .s-finished, .s-landed { color: var(--good); }
+  .s-error, .s-blocked, .s-ci_failed, .s-validation_failed, .s-evidence_missing { color: var(--bad); }
+  .s-partial, .s-paused, .s-stopped, .s-unknown { color: var(--warn); }
+  .s-running { color: var(--info); }
+  .t-engine { color: var(--accent); } .t-card { color: var(--info); } .t-coordination { color: var(--dim); }
+  .dim { color: var(--dim); }
+  .nowrap { white-space: nowrap; }
+  .pair { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-top: 12px; align-items: start; }
+  @media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
+  .kv { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin: 4px 0 8px; }
+  .kv b { color: var(--text); font-weight: 600; }
+  .summary { white-space: pre-wrap; }
+  .gap { margin-top: 4px; font-size: 12px; }
+  .gap code { color: var(--warn); }
+  .error { color: var(--bad); white-space: pre-wrap; }
+  details.more summary { cursor: pointer; color: var(--dim); font-size: 12px; }
+  a { color: var(--info); }
+  .empty { color: var(--dim); padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>council4 production runs</h1>
+  <span class="meta" id="refreshed">loading…</span>
+  <label><input type="checkbox" id="showChecks"> show preflight / smoke runs</label>
+</header>
+<main id="app"></main>
+<script>
+const app = document.getElementById("app");
+const showChecks = document.getElementById("showChecks");
+showChecks.checked = localStorage.getItem("showChecks") === "1";
+showChecks.onchange = () => { localStorage.setItem("showChecks", showChecks.checked ? "1" : "0"); render(); };
+
+let runs = [], lastJSON = "";
+const open = new Map(JSON.parse(localStorage.getItem("open") || "[]"));
+
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const aic = v => (v ?? 0).toFixed(2);
+const mins = ms => ms ? (ms / 60000).toFixed(1) : "–";
+const when = iso => { if (!iso) return "–"; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+const span = (a, b) => { if (!a || !b) return "–"; const s = (new Date(b) - new Date(a)) / 1000; return s < 90 ? `${s.toFixed(0)}s` : `${(s / 60).toFixed(1)}m`; };
+const badge = s => `<span class="badge s-${esc(s)}">${esc(s ?? "?")}</span>`;
+const type = t => `<span class="t-${esc(t)}">${esc(t)}</span>`;
+const base = p => (p || "").split("/").pop();
+const cards = u => u.prepared?.delivered?.newlySupported ?? [];
+const production = r => r.mode === "produce";
+
+function totals(list) {
+  const t = { aic: 0, active: 0, landed: { card: 0, engine: 0 }, blocked: 0, other: 0, cards: 0, runs: list.length };
+  const byStage = new Map(), byModel = new Map();
+  for (const r of list) {
+    t.aic += r.aic; t.active += r.activeMs;
+    for (const u of r.units ?? []) {
+      if (u.status === "landed") t.landed[u.task.taskType] = (t.landed[u.task.taskType] ?? 0) + 1;
+      else if (u.status === "blocked") t.blocked++;
+      else if (u.status !== "stopped") t.other++;
+      t.cards += cards(u).length;
+    }
+    for (const g of r.costs ?? []) {
+      for (const [map, key] of [[byStage, `${g.taskType}\u0000${g.phase}`], [byModel, g.model || "unknown"]]) {
+        const row = map.get(key) ?? { aic: 0, ms: 0, agents: 0 };
+        row.aic += g.observedAic; row.ms += g.activeMs ?? 0; row.agents += g.agents ?? 0;
+        map.set(key, row);
+      }
+    }
+  }
+  return { t, byStage, byModel };
+}
+
+function overview(list) {
+  const { t, byStage, byModel } = totals(list);
+  const tile = (v, label) => `<div class="tile"><b>${v}</b><span>${label}</span></div>`;
+  const stageRows = [...byStage].sort((a, b) => b[1].aic - a[1].aic).map(([k, v]) => {
+    const [tt, ph] = k.split("\u0000");
+    return `<tr><td>${type(tt)}</td><td>${esc(ph)}</td><td class="num">${v.agents}</td><td class="num">${mins(v.ms)}</td><td class="num">${aic(v.aic)}</td><td class="num">${t.aic ? (100 * v.aic / t.aic).toFixed(0) : 0}%</td></tr>`;
+  }).join("");
+  const modelRows = [...byModel].sort((a, b) => b[1].aic - a[1].aic).map(([m, v]) =>
+    `<tr><td class="nowrap">${esc(m)}</td><td class="num">${v.agents}</td><td class="num">${mins(v.ms)}</td><td class="num">${aic(v.aic)}</td></tr>`).join("");
+  return `
+  <h2>All production runs</h2>
+  <div class="tiles">
+    ${tile(t.runs, "runs")}${tile(aic(t.aic), "workflow AIC")}${tile(mins(t.active), "agent active minutes")}
+    ${tile(t.cards, "new cards landed")}${tile(t.landed.card ?? 0, "card units landed")}${tile(t.landed.engine ?? 0, "Engine units landed")}
+    ${tile(t.blocked, "units blocked")}${tile(t.other, "units failed / in progress")}
+  </div>
+  <div class="pair">
+    <table><thead><tr><th>Task type</th><th>Stage</th><th class="num">Agents</th><th class="num">Active min</th><th class="num">AIC</th><th class="num">Share</th></tr></thead><tbody>${stageRows || `<tr><td colspan=6 class=dim>No costs yet</td></tr>`}</tbody></table>
+    <table><thead><tr><th>Model</th><th class="num">Agents</th><th class="num">Active min</th><th class="num">AIC</th></tr></thead><tbody>${modelRows || `<tr><td colspan=4 class=dim>–</td></tr>`}</tbody></table>
+  </div>
+  <p class="dim" style="font-size:12px">AIC is native workflow billing (nano-AIU / 1e9), not USD. It excludes the chat session that starts a run, CI compute, and work done outside the workflow (for example the ordinary-agent fallback on Oct 23).</p>`;
+}
+
+function unitRows(r) {
+  return (r.units ?? []).map(u => {
+    const res = u.result ?? {};
+    const pr = u.landing?.pr ? `<a href="${esc(u.landing.pr.url)}" target="_blank">#${u.landing.pr.number}</a>` : "";
+    const newCards = cards(u).map(c => esc(c.name)).join(", ");
+    const gaps = (res.gaps ?? []).map(g => `<div class="gap"><code>${esc(g.id)}</code> ${esc(g.description)}</div>`).join("");
+    const text = res.summary || u.reason || (u.task.taskType === "none" ? u.task.instructions : "");
+    return `<tr>
+      <td class="num">${u.index ?? ""}</td><td>${type(u.task.taskType)}</td>
+      <td><span class="id">${esc(u.task.id)}</span><br><span class="dim">${esc(u.task.title)}</span></td>
+      <td>${badge(u.status)}${u.landing?.ciFixes ? `<div class="dim">${u.landing.ciFixes} CI fix</div>` : ""}</td>
+      <td>${pr}${u.landing?.commit ? `<div class="id dim">${esc(u.landing.commit.slice(0, 9))}</div>` : ""}</td>
+      <td>${newCards || "<span class=dim>–</span>"}</td>
+      <td><div class="summary">${esc(text)}</div>${gaps}</td></tr>`;
+  }).join("");
+}
+
+function costRows(r) {
+  const rows = [...(r.costs ?? [])].sort((a, b) => (a.unitIndex ?? -1) - (b.unitIndex ?? -1));
+  const body = rows.map(g => `<tr><td class="num">${g.unitIndex ?? "–"}</td><td>${type(g.taskType)}</td><td class="id">${esc(g.taskId)}</td>
+    <td>${esc(g.phase)}</td><td class="nowrap">${esc(g.model)}</td><td class="num">${g.agents ?? ""}</td><td class="num">${mins(g.activeMs)}</td><td class="num">${aic(g.observedAic)}</td></tr>`).join("");
+  const sum = rows.reduce((s, g) => s + g.observedAic, 0);
+  return { body, sum };
+}
+
+function stageRows(r) {
+  return (r.stages ?? []).map(s => `<tr><td>${type(s.taskType)}</td><td class="id">${esc(s.label)}</td>
+    <td>${esc(s.requestedModel || (s.agent === false ? "(no agent)" : ""))}${s.reasoningEffort ? ` <span class=dim>${esc(s.reasoningEffort)}</span>` : ""}</td>
+    <td>${when(s.startedAt)}</td><td class="num">${span(s.startedAt, s.completedAt)}</td><td>${s.outcome ? badge(s.outcome) : s.completedAt ? "" : badge("running")}</td></tr>`).join("");
+}
+
+function runSection(r) {
+  const key = r.id;
+  const isOpen = open.has(key) ? open.get(key) : runs.indexOf(r) === 0;
+  const args = Object.entries(r.args ?? {}).filter(([k]) => !["corpusPath", "scope"].includes(k))
+    .map(([k, v]) => `${esc(k)}=<b>${esc(JSON.stringify(v))}</b>`).join(" ");
+  const landed = (r.units ?? []).filter(u => u.status === "landed").length;
+  const newCards = (r.units ?? []).reduce((n, u) => n + cards(u).length, 0);
+  const costs = costRows(r);
+  const current = r.currentUnit ? `<div class="kv">Current unit <b>${r.currentUnit.index}</b> ${type(r.currentUnit.task.taskType)} <span class="id">${esc(r.currentUnit.task.id)}</span> ${esc(r.currentUnit.task.title)}</div>` : "";
+  return `<details class="run" data-key="${esc(key)}" ${isOpen ? "open" : ""}>
+    <summary>${badge(r.status)} <span class="id">${esc(r.id)}</span>
+      <span>${when(r.startedAt)}</span><span class="dim">${esc(r.mode)}</span>
+      <span><b>${aic(r.aic)}</b> <span class="dim">AIC</span></span>
+      <span class="dim">${(r.units ?? []).length} units · ${landed} landed · ${newCards} new cards</span>
+      <span class="dim">policy ${esc(r.policyVersion)}</span></summary>
+    <div class="body">
+      <div class="kv"><span>${esc(r.statusDetail)}</span></div>
+      <div class="kv">
+        <span>updated <b>${when(r.updatedAt)}</b></span>${r.finishedAt ? `<span>finished <b>${when(r.finishedAt)}</b></span>` : ""}
+        <span>worktree <b>${esc(base(r.worktree))}</b></span><span>${args}</span>
+        <span>agent active <b>${mins(r.activeMs)}</b> min</span>
+        <span>accounting <b>${esc(r.reconciliation || "–")}</b>${r.unallocatedAic ? `, ${aic(r.unallocatedAic)} unallocated` : ""}</span>
+      </div>
+      ${r.error ? `<div class="error">${esc(r.error.message)}</div>` : ""}
+      ${r.telemetryError ? `<div class="error">Telemetry: ${esc(r.telemetryError)}</div>` : ""}
+      ${current}
+      <h3>Units</h3>
+      <table><thead><tr><th class="num">#</th><th>Type</th><th>Task</th><th>Status</th><th>PR</th><th>New cards</th><th>Result</th></tr></thead>
+        <tbody>${unitRows(r) || `<tr><td colspan=7 class=dim>No completed units yet</td></tr>`}</tbody></table>
+      <h3>Cost by stage</h3>
+      <table><thead><tr><th class="num">Unit</th><th>Type</th><th>Task</th><th>Stage</th><th>Model</th><th class="num">Agents</th><th class="num">Active min</th><th class="num">AIC</th></tr></thead>
+        <tbody>${costs.body || `<tr><td colspan=8 class=dim>No agent costs</td></tr>`}</tbody>
+        <tfoot><tr><td colspan=7>Total observed</td><td class="num">${aic(costs.sum)}</td></tr></tfoot></table>
+      <details class="more"><summary>Stage timeline (${(r.stages ?? []).length})</summary>
+        <table><thead><tr><th>Type</th><th>Stage</th><th>Model</th><th>Started</th><th class="num">Took</th><th>Outcome</th></tr></thead><tbody>${stageRows(r)}</tbody></table>
+      </details>
+    </div></details>`;
+}
+
+function render() {
+  const list = runs.filter(r => showChecks.checked || production(r));
+  const prod = runs.filter(production);
+  app.innerHTML = list.length
+    ? overview(prod) + `<h2>Runs</h2>` + list.map(runSection).join("")
+    : `<div class="empty">No workflow runs found in any council4 worktree.</div>`;
+  for (const d of app.querySelectorAll("details.run")) {
+    d.addEventListener("toggle", () => { open.set(d.dataset.key, d.open); localStorage.setItem("open", JSON.stringify([...open])); });
+  }
+}
+
+async function refresh() {
+  try {
+    const res = await fetch("api/runs", { cache: "no-store" });
+    if (!res.ok) throw new Error(await res.text());
+    const text = await res.text();
+    if (text !== lastJSON) { lastJSON = text; runs = JSON.parse(text); render(); }
+    document.getElementById("refreshed").textContent = `updated ${new Date().toLocaleTimeString()} · refreshes every 5s`;
+  } catch (e) {
+    document.getElementById("refreshed").textContent = `refresh failed: ${e.message}`;
+  }
+}
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
