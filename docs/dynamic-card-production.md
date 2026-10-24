@@ -322,7 +322,8 @@ Edit [`policy.json`](../.github/extensions/council4-production/policy.json):
 - Card implementation and fixes: `gpt-6-luna`. Engine implementation and fixes:
   `claude-opus-5.5`. All reviews: `gpt-6.1-terra`, a different model from each
   author (policy 1.9.0 trial; earlier runs reviewed with `gpt-6.1-sol`).
-  Selection: `gpt-6.1-sol`. All at `high` effort and the `default` context tier.
+  Selection: `gpt-6-luna` (policy 1.12.0 cost trial; earlier runs used
+  `gpt-6.1-sol`). All at `high` effort and the `default` context tier.
 - Separate choices for each task type's implementation, review, review fixes,
   validation fixes and CI fixes.
 - Risk-based versus always-on card review, bounded local/review/CI repair rounds, and affected
