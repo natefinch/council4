@@ -51,6 +51,8 @@
   .t-engine { color: var(--accent); } .t-card { color: var(--info); } .t-coordination { color: var(--dim); }
   .dim { color: var(--dim); }
   .nowrap { white-space: nowrap; }
+  .elapsed { font-variant-numeric: tabular-nums; color: var(--info); }
+  .active { white-space: nowrap; }
   .pair { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; margin-top: 12px; align-items: start; }
   @media (max-width: 900px) { .pair { grid-template-columns: 1fr; } }
   .kv { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--dim); margin: 4px 0 8px; }
@@ -97,6 +99,16 @@ const ago = iso => {
   return s < 90 ? `${s.toFixed(0)}s ago` : s < 5400 ? `${(s / 60).toFixed(0)}m ago` : s < 172800 ? `${(s / 3600).toFixed(1)}h ago` : `${(s / 86400).toFixed(0)}d ago`;
 };
 const when = iso => { if (!iso) return "–"; const d = new Date(iso); return isNaN(d) ? iso : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
+const duration = seconds => {
+  const s = Math.max(0, Math.floor(seconds));
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+  return `${Math.floor(s / 3600)}h ${String(Math.floor(s / 60) % 60).padStart(2, "0")}m`;
+};
+// A live, ticking elapsed time; filled in and updated every second by tick().
+const elapsed = start => `<span class="elapsed" data-start="${esc(start)}"></span>`;
+// Stages without a completion time are only live while their run is running.
+const unfinished = r => (r.stages ?? []).filter(s => s.startedAt && !s.completedAt);
 const span = (a, b) => { if (!a || !b) return "–"; const s = (new Date(b) - new Date(a)) / 1000; return s < 90 ? `${s.toFixed(0)}s` : `${(s / 60).toFixed(1)}m`; };
 const badge = s => `<span class="badge s-${esc(s)}">${esc(s ?? "?")}</span>`;
 const type = t => `<span class="t-${esc(t)}">${esc(t)}</span>`;
@@ -175,9 +187,21 @@ function costRows(r) {
 }
 
 function stageRows(r) {
-  return (r.stages ?? []).map(s => `<tr><td>${type(s.taskType)}</td><td class="id">${esc(s.label)}</td>
+  const live = r.status === "running";
+  return (r.stages ?? []).map(s => {
+    const open = s.startedAt && !s.completedAt;
+    const took = open ? (live ? elapsed(s.startedAt) : "–") : span(s.startedAt, s.completedAt);
+    const state = s.outcome ? badge(s.outcome) : open ? badge(live ? "running" : "unfinished") : "";
+    return `<tr><td>${type(s.taskType)}</td><td class="id">${esc(s.label)}</td>
     <td>${esc(s.requestedModel || (s.agent === false ? "(no agent)" : ""))}${s.reasoningEffort ? ` <span class=dim>${esc(s.reasoningEffort)}</span>` : ""}</td>
-    <td>${when(s.startedAt)}</td><td class="num">${span(s.startedAt, s.completedAt)}</td><td>${s.outcome ? badge(s.outcome) : s.completedAt ? "" : badge("running")}</td></tr>`).join("");
+    <td>${when(s.startedAt)}</td><td class="num">${took}</td><td>${state}</td></tr>`;
+  }).join("");
+}
+
+// The stage(s) in progress, with a ticking elapsed time, for running runs.
+function activeStages(r) {
+  if (r.status !== "running") return "";
+  return unfinished(r).map(s => `<span class="active">${type(s.taskType)} ${esc(s.phase || s.label)} ${esc(s.requestedModel ?? "")} <b>${elapsed(s.startedAt)}</b></span>`).join(" ");
 }
 
 function runSection(r) {
@@ -188,13 +212,14 @@ function runSection(r) {
   const landed = (r.units ?? []).filter(u => u.status === "landed").length;
   const newCards = (r.units ?? []).reduce((n, u) => n + cards(u).length, 0);
   const costs = costRows(r);
-  const current = r.currentUnit ? `<div class="kv">Current unit <b>${r.currentUnit.index}</b> ${type(r.currentUnit.task.taskType)} <span class="id">${esc(r.currentUnit.task.id)}</span> ${esc(r.currentUnit.task.title)}</div>` : "";
+  const active = activeStages(r);
+  const current = r.currentUnit || active ? `<div class="kv">${r.currentUnit ? `Current unit <b>${r.currentUnit.index}</b> ${type(r.currentUnit.task.taskType)} <span class="id">${esc(r.currentUnit.task.id)}</span> ${esc(r.currentUnit.task.title)}` : ""}${active ? ` · now ${active}` : ""}</div>` : "";
   return `<details class="run" data-key="${esc(key)}" ${expanded ? "open" : ""}>
     <summary>${badge(r.status)} <span class="id">${esc(r.id)}</span>
       <span>${when(r.startedAt)}</span><span class="dim">${esc(r.mode)}</span>
       <span><b>${aic(r.aic)}</b> <span class="dim">AIC</span></span>
       <span class="dim">${(r.units ?? []).length} units · ${landed} landed · ${newCards} new cards</span>
-      <span class="dim">policy ${esc(r.policyVersion)}</span></summary>
+      <span class="dim">policy ${esc(r.policyVersion)}</span>${active ? `<span>now ${active}</span>` : ""}</summary>
     <div class="body">
       <div class="kv"><span>${esc(r.statusDetail)}</span></div>
       <div class="kv">
@@ -257,6 +282,7 @@ function render() {
 
 function tick() {
   for (const node of app.querySelectorAll(".ago")) node.textContent = `(${ago(node.dataset.ts)})`;
+  for (const node of app.querySelectorAll(".elapsed")) node.textContent = duration((Date.now() - new Date(node.dataset.start)) / 1000);
 }
 
 async function refresh() {
