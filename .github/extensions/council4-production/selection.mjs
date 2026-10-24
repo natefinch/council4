@@ -41,6 +41,11 @@ export function knownGaps({ next, units = [], priorUnits = [] }) {
       if (unit?.task?.taskType === "engine" && unit.status === "landed") {
         for (const issue of remainingIssues(unit)) add(issue, unit.task.oracleIds, `${source} remainder of ${unit.task.id}`);
       }
+      // A failed Engine unit's gap stays parked, but if it has since been split
+      // into sub-issues, those are worked through it.
+      if (unit?.task?.taskType === "engine" && unit.status !== "landed") {
+        add(engineIssue(unit), unit.task.oracleIds, `${source} parked ${unit.task.id}`);
+      }
       if (unit?.task?.taskType !== "card" || unit.status !== "blocked") continue;
       const oracleIds = (unit.claim?.cards ?? []).map(card => card.oracleId);
       for (const gap of unit.result?.gaps ?? []) add(issueNumber(gap.id), oracleIds, `${source} card ${unit.task.id}`);
