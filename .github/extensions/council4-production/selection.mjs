@@ -72,9 +72,10 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
     ...priorUnits.filter(failed).map(engineIssue).filter(issue => !retry.includes(issue)),
   ].filter(Boolean));
   const gaps = knownGaps({ next, units, priorUnits });
-  const open = gaps.filter(gap => !filled.has(gap.issue) && issues[gap.issue]?.state === "OPEN");
+  const open = gaps.filter(gap => !filled.has(gap.issue) && issues[gap.issue]?.state === "OPEN")
+    .map(gap => nextSubIssue(gap, issues, filled));
   const gap = open.find(candidate => !attempted.has(candidate.issue));
-  if (gap) return { kind: "engine", gap, issue: issues[gap.issue] };
+  if (gap) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
   if (next?.batch) return { kind: "card", batch: next.batch, cards: next.cards ?? [] };
   return {
     kind: "prepare",
@@ -85,6 +86,16 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
   };
 }
 
+// A gap split into ordered sub-issues is worked through its first open
+// sub-issue, which inherits the parent's blocked cards. Later sub-issues wait
+// for earlier ones, so a parked first sub-issue parks the parent.
+export function nextSubIssue(gap, issues, filled = new Set()) {
+  const sub = (issues[gap.issue]?.subIssues ?? []).find(candidate => candidate.state === "OPEN" && !filled.has(candidate.number));
+  if (!sub) return gap;
+  return { ...gap, issue: sub.number, parent: gap.issue, subIssue: sub,
+    sources: [...gap.sources, `sub-issue of #${gap.issue}`] };
+}
+
 export function gapTask(choice, names) {
   const { gap, issue } = choice;
   const cards = gap.oracleIds.map(id => names[id] ? `${names[id]} (${id})` : id);
@@ -92,7 +103,8 @@ export function gapTask(choice, names) {
     taskType: "engine", id: `gap-${gap.issue}`, issue: gap.issue, oracleIds: gap.oracleIds,
     title: `Close Engine gap #${gap.issue}: ${issue.title}`.slice(0, 200),
     reviewRequired: true, batchPlan: "",
-    instructions: `Known Engine gap #${gap.issue} (${issue.url}) blocks card work: ${cards.join(", ") || "see issue"}.
+    instructions: `Known Engine gap #${gap.issue} (${issue.url}) blocks card work: ${cards.join(", ") || "see issue"}.${gap.parent ? `
+This is one ordered sub-issue of #${gap.parent}; implement only this sub-issue's scope. Read #${gap.parent} and its retained earlier attempts for context, but leave other sub-issues to their own units.` : ""}
 Evidence sources: ${gap.sources.join("; ")}. Read the issue, its comments and retained blocked-card probes listed in earlier unit evidence.
 Deliver working shared Engine code with proving rules scenarios; a design writeup or failing probes alone is not a result. If it touches spell, cost or stack-object state, cover every applicable route in the spell-route checklist in docs/card-authoring.md from the start. Do not admit cards; a later card unit does that.
 If the whole capability is too large for one unit, split it: implement and prove the first shared piece that is correct and useful on its own (a complete rule for the situations it handles, not an approximation), then return status complete with each remaining piece as a gap whose id is #${gap.issue} or a new sub-issue you file and link from #${gap.issue}. The coordinator schedules the next piece. Return blocked only when no piece can land without an unresolved design decision, and name that decision.`,

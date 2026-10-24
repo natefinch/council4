@@ -135,21 +135,30 @@ type unit struct {
 	} `json:"prepared,omitempty"`
 }
 
+// preexisting is a defect a reviewer found that predates the unit's change; it
+// is filed as an issue and does not block approval.
+type preexisting struct {
+	Issue       int    `json:"issue"`
+	Description string `json:"description"`
+	Evidence    string `json:"evidence"`
+}
+
 type stage struct {
-	Label           string `json:"label"`
-	TaskType        string `json:"taskType"`
-	TaskID          string `json:"taskId"`
-	UnitIndex       *int   `json:"unitIndex"`
-	Phase           string `json:"phase"`
-	Round           *int   `json:"round"`
-	RequestedModel  string `json:"requestedModel"`
-	ReasoningEffort string `json:"reasoningEffort"`
-	StartedAt       string `json:"startedAt"`
-	CompletedAt     string `json:"completedAt"`
-	Outcome         string   `json:"outcome"`
-	Agent           *bool    `json:"agent"`
-	Verdict         string   `json:"verdict,omitempty"`
-	Findings        []string `json:"findings,omitempty"`
+	Label           string        `json:"label"`
+	TaskType        string        `json:"taskType"`
+	TaskID          string        `json:"taskId"`
+	UnitIndex       *int          `json:"unitIndex"`
+	Phase           string        `json:"phase"`
+	Round           *int          `json:"round"`
+	RequestedModel  string        `json:"requestedModel"`
+	ReasoningEffort string        `json:"reasoningEffort"`
+	StartedAt       string        `json:"startedAt"`
+	CompletedAt     string        `json:"completedAt"`
+	Outcome         string        `json:"outcome"`
+	Agent           *bool         `json:"agent"`
+	Verdict         string        `json:"verdict,omitempty"`
+	Findings        []string      `json:"findings,omitempty"`
+	Preexisting     []preexisting `json:"preexisting,omitempty"`
 }
 
 type current struct {
