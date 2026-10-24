@@ -63,10 +63,19 @@ func loadReviewedPlan(path string) (reviewedPlan, error) {
 	return *plan, nil
 }
 
+// validateBatch checks a batch definition. Prerequisites may be empty when the
+// batch relies only on operations already on main; each listed issue still
+// needs prerequisite evidence before the batch is claimable.
 func validateBatch(b batch) error {
-	if strings.TrimSpace(b.ID) == "" || strings.TrimSpace(b.Family) == "" ||
-		len(b.OracleIDs) < 3 || len(b.OracleIDs) > 5 || len(b.Prerequisites) == 0 || len(b.Operations) == 0 {
-		return fmt.Errorf("invalid batch %s", b.ID)
+	switch {
+	case strings.TrimSpace(b.ID) == "":
+		return errors.New("invalid batch: missing id")
+	case strings.TrimSpace(b.Family) == "":
+		return fmt.Errorf("invalid batch %s: missing family", b.ID)
+	case len(b.OracleIDs) < 3 || len(b.OracleIDs) > 5:
+		return fmt.Errorf("invalid batch %s: needs 3–5 oracle_ids, has %d", b.ID, len(b.OracleIDs))
+	case len(b.Operations) == 0:
+		return fmt.Errorf("invalid batch %s: operations must name the Engine operations the cards use", b.ID)
 	}
 	seen := make(map[string]bool)
 	for _, id := range b.OracleIDs {

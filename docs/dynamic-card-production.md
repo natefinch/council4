@@ -189,6 +189,9 @@ The next unit then
 selects that Engine gap. After the Engine unit lands, batch preparation can
 include the previously blocked cards; the coordinator reassesses queue-blocked
 members with the landed commit as evidence before saving the new batch.
+If `cardqueue` rejects a selector's batch plan, that unit is recorded as
+`claim_failed` with the reason and the run continues; a second rejection in a
+row stops the run.
 An exhausted saved batch is a reason to prepare the next bounded batch, not a
 reason to restart strategy research.
 For a card unit the coordinator uses the exact saved batch ID, or the selector's

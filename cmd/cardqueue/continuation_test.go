@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/cardgen"
@@ -126,6 +127,36 @@ func TestReviewedContinuationAfterExhaustionAndResume(t *testing.T) {
 		before := snapshot(t, resumed)
 		if err := continueQueue(&resumed, "add-reviewed-batch", "third", owner, plan); err == nil || snapshot(t, resumed) != before {
 			t.Fatal("replanning silently replaced an active claim")
+		}
+	}
+}
+
+func TestBatchWithoutPrerequisitesIsReadyOnExistingOperations(t *testing.T) {
+	q, plan, corpus, inventory := continuationFixture(t)
+	plan.Batches[0].Prerequisites = nil
+	if err := continueQueue(&q, "add-reviewed-batch", "third", "writer", plan); err != nil {
+		t.Fatal(err)
+	}
+	if err := validate(q, corpus, inventory); err != nil {
+		t.Fatal(err)
+	}
+	if next, err := nextBatch(q, "writer"); err != nil || next == nil || next.ID != "third" {
+		t.Fatalf("batch using only existing operations is not claimable: %+v, %v", next, err)
+	}
+	if pending := pendingPrerequisites(q); len(pending) != 0 {
+		t.Fatalf("empty prerequisites reported pending: %+v", pending)
+	}
+}
+
+func TestInvalidBatchErrorsExplainWhy(t *testing.T) {
+	for want, b := range map[string]batch{
+		"missing id":     {Family: "f", OracleIDs: []string{"a", "b", "c"}, Operations: []string{"op"}},
+		"missing family": {ID: "x", OracleIDs: []string{"a", "b", "c"}, Operations: []string{"op"}},
+		"needs 3–5":      {ID: "x", Family: "f", OracleIDs: []string{"a", "b"}, Operations: []string{"op"}},
+		"operations":     {ID: "x", Family: "f", OracleIDs: []string{"a", "b", "c"}},
+	} {
+		if err := validateBatch(b); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%s: got %v", want, err)
 		}
 	}
 }
