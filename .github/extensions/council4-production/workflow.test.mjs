@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
 import { git, changes, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -208,6 +208,19 @@ test("A card unit's Engine changes block that unit without aborting the run", as
   const outcome = await executeUnit(f);
   assert.equal(outcome.status, "blocked");
   assert.deepEqual(outcome.result.boundaryViolation, ["mtg/game/state.go"]);
+});
+
+test("A rejected batch plan fails its unit, and a second rejection in a row stops the run", async () => {
+  const rejected = await tryClaim(async () => { throw new Error("invalid batch x: missing family"); });
+  assert.deepEqual(rejected, { error: "invalid batch x: missing family" });
+  assert.deepEqual(await tryClaim(async () => ({ batchId: "b" })), { claim: { batchId: "b" } });
+  const controller = new AbortController();
+  controller.abort();
+  await assert.rejects(tryClaim(async () => { throw new Error("cancelled"); }, controller.signal), /cancelled/);
+  const first = claimFailure({ index: 1 }, rejected.error, [{ status: "landed" }]);
+  assert.equal(first.status, "claim_failed");
+  assert.equal(first.stop, undefined);
+  assert.equal(claimFailure({ index: 2 }, "again", [first]).stop, true);
 });
 
 test("Actual usage receipts deduplicate, survive reload, exclude unrelated agents and preserve model attribution", async t => {

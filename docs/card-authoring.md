@@ -153,7 +153,8 @@ fields, rejects conflicting metadata, and never invents source retrieval,
 rules-reading or review claims. Record those separately from actual sources.
 
 `prerequisites` lists canonical issues, not an assumption that their closure
-establishes behavior. Each needs explicit `prerequisite_evidence` with the
+establishes behavior. Use an empty list when the batch needs only operations
+already on main; such a batch is claimable once saved. Each needs explicit `prerequisite_evidence` with the
 runtime revision and references to the actual checked path and executed
 behavioral evidence. Missing entries keep the saved batch pending and
 unclaimable; operation names alone never make it ready. Older batch JSON
