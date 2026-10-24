@@ -234,6 +234,9 @@ export async function runProduction(ctx) {
     state = { runId: ctx.runId, revision, policy, args: ctx.args, stages: [], units: [] };
   }
   if (state.revision !== revision) throw new Error("Local run ledger revision mismatch");
+  // A resumed attempt is live again until it records a new outcome.
+  delete state.outcome;
+  delete state.finishedAt;
   let telemetryError;
   const off = observeUsage(ctx.session, ctx.runId, receiptPath, error => { telemetryError = error; });
   let lock;
@@ -242,6 +245,7 @@ export async function runProduction(ctx) {
     const detail = await ctx.session.workflow.getRunDetail(ctx.runId);
     writeReport(directory, { ...summarize(detail, state.stages, readReceipts(receiptPath)),
       revision, policyVersion: policy.version, units: state.units, currentUnit: state.currentUnit ?? null,
+      outcome: state.outcome ?? null, finishedAt: state.finishedAt ?? null,
       error: state.error ?? null, telemetryError: telemetryError?.message ?? null });
   };
   const invoke = async (task, phase, round, prompt, schema) => {
@@ -278,6 +282,8 @@ export async function runProduction(ctx) {
     }
     if (ctx.args.mode === "preflight") {
       const protection = await mainProtection(root, ctx.signal);
+      state.outcome = "scope_finished";
+      state.finishedAt = new Date().toISOString();
       return { status: "ready", revision, policy, remote, publicationTarget: "pull request -> CI -> main",
         protection, reportDirectory: directory, note: "No agents, implementation, commits or publication performed." };
     }
@@ -287,6 +293,8 @@ export async function runProduction(ctx) {
         'Read-only telemetry smoke check. No tools, files, Git or other agents. Return {"ready":true}.',
         { type: "object", properties: { ready: { type: "boolean" } }, required: ["ready"] });
       if (!result?.ready) throw new Error("Smoke agent did not return a valid result");
+      state.outcome = "scope_finished";
+      state.finishedAt = new Date().toISOString();
       return { status: "telemetry-smoke-complete", reportDirectory: directory };
     }
     if (await git(root, ["status", "--porcelain"], ctx.signal)) throw new Error("Coordinator checkout must be clean; preserve existing edits");
@@ -535,11 +543,17 @@ Return complete only with actual repair/evidence, or blocked with the cause.`,
       if (unit.status === "stopped") break;
     }
     ctx.phase("Report");
-    return { status: state.units.some(u => !["landed", "stopped"].includes(u.status)) ? "partial" : "scope_finished",
+    // The native status is still "running" during this final save, so record
+    // the workflow's own outcome for reports and the dashboard.
+    state.outcome = state.units.some(u => !["landed", "stopped"].includes(u.status)) ? "partial" : "scope_finished";
+    state.finishedAt = new Date().toISOString();
+    return { status: state.outcome,
       revision, units: state.units, reportDirectory: directory,
       note: "A completed workflow run is not whole-corpus completion. Only units with verified origin/main landing count as delivered." };
   } catch (error) {
     state.error = { message: error.message, at: new Date().toISOString(), cancelled: ctx.signal.aborted };
+    state.outcome = ctx.signal.aborted ? "paused_or_cancelled" : "error";
+    state.finishedAt = state.error.at;
     throw error;
   } finally {
     try { await save(); }
