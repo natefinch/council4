@@ -129,6 +129,15 @@ export function summarize(detail, stages, receipts) {
   };
 }
 
+// Every recorded review round for a unit. Runs before policy 1.10.0 kept only
+// the final rejecting verdict on the unit itself.
+export function reviewHistory(unit, stages) {
+  const rounds = (stages ?? []).filter(stage => stage.verdict && stage.unitIndex === unit.index)
+    .map(stage => ({ phase: stage.phase, round: stage.round, verdict: stage.verdict, findings: stage.findings ?? [] }));
+  if (rounds.length || !unit.verdict) return rounds;
+  return [{ phase: "final review", round: null, verdict: unit.verdict.verdict, findings: unit.verdict.findings ?? [] }];
+}
+
 export function writeReport(directory, report) {
   const destination = `${directory}/report.json`;
   writeJSON(destination, report);
@@ -152,7 +161,13 @@ export function writeReport(directory, report) {
     "",
     "## Outcomes",
     "",
-    ...(report.units ?? []).map(unit => `- ${cell(unit.task?.taskType)} / ${cell(unit.task?.id)}: **${cell(unit.status)}**${unit.landing?.commit ? ` (\`${unit.landing.commit}\` on origin/main)` : ""}`),
+    ...(report.units ?? []).flatMap(unit => [
+      `- ${cell(unit.task?.taskType)} / ${cell(unit.task?.id)}: **${cell(unit.status)}**${unit.landing?.commit ? ` (\`${unit.landing.commit}\` on origin/main)` : ""}`,
+      ...reviewHistory(unit, report.stages).flatMap(review => [
+        `  - ${cell(review.phase)}${review.round == null ? "" : ` ${review.round}`}: **${cell(review.verdict)}**`,
+        ...review.findings.map(finding => `    - ${cell(finding)}`),
+      ]),
+    ]),
     "",
     report.error ? `**Run error:** ${cell(report.error.message)}` : "",
     report.note,

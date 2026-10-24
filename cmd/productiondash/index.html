@@ -46,7 +46,11 @@
     border: 1px solid currentColor; white-space: nowrap; }
   .s-finished, .s-landed { color: var(--good); }
   .s-error, .s-blocked, .s-ci_failed, .s-validation_failed, .s-evidence_missing { color: var(--bad); }
-  .s-partial, .s-paused, .s-stopped, .s-unknown { color: var(--warn); }
+  .s-partial, .s-paused, .s-stopped, .s-unknown, .s-changes_needed { color: var(--warn); }
+  .s-review_rejected { color: var(--bad); } .s-approve { color: var(--good); }
+  .review { margin-top: 6px; font-size: 12px; }
+  .review ul { margin: 4px 0 6px; padding-left: 18px; }
+  .review li { margin: 2px 0; white-space: pre-wrap; }
   .s-running { color: var(--info); }
   .t-engine { color: var(--accent); } .t-card { color: var(--info); } .t-coordination { color: var(--dim); }
   .dim { color: var(--dim); }
@@ -161,6 +165,26 @@ function overview(list) {
   <p class="dim" style="font-size:12px">AIC is native workflow billing (nano-AIU / 1e9), not USD. It excludes the chat session that starts a run, CI compute, and work done outside the workflow (for example the ordinary-agent fallback on Oct 23).</p>`;
 }
 
+// Every recorded review round for a unit. Runs before policy 1.10.0 kept only
+// the final rejecting verdict on the unit itself.
+function reviews(r, u) {
+  const rounds = (r.stages ?? []).filter(s => s.verdict && s.unitIndex === u.index)
+    .map(s => ({ name: `${s.phase} ${s.round ?? ""}`, verdict: s.verdict, findings: s.findings ?? [] }));
+  if (rounds.length || !u.verdict) return rounds;
+  return [{ name: "final review", verdict: u.verdict.verdict, findings: u.verdict.findings ?? [] }];
+}
+
+function reviewBlock(r, u) {
+  const rounds = reviews(r, u);
+  if (!rounds.length) return "";
+  const key = `${r.id}:review:${u.index}`;
+  const findings = rounds.reduce((n, x) => n + x.findings.length, 0);
+  return `<details class="more review" data-key="${esc(key)}" ${isOpen(key, u.status === "review_rejected") ? "open" : ""}>
+    <summary>Review: ${rounds.length} round${rounds.length === 1 ? "" : "s"}, ${findings} finding${findings === 1 ? "" : "s"}</summary>
+    ${rounds.map(x => `<div>${esc(x.name)} ${badge(x.verdict)}</div>${x.findings.length ? `<ul>${x.findings.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}`).join("")}
+  </details>`;
+}
+
 function unitRows(r) {
   return (r.units ?? []).map(u => {
     const res = u.result ?? {};
@@ -174,7 +198,7 @@ function unitRows(r) {
       <td>${badge(u.status)}${u.landing?.ciFixes ? `<div class="dim">${u.landing.ciFixes} CI fix</div>` : ""}</td>
       <td>${pr}${u.landing?.commit ? `<div class="id dim">${esc(u.landing.commit.slice(0, 9))}</div>` : ""}</td>
       <td>${newCards || "<span class=dim>–</span>"}</td>
-      <td><div class="summary">${esc(text)}</div>${gaps}</td></tr>`;
+      <td><div class="summary">${esc(text)}</div>${gaps}${reviewBlock(r, u)}</td></tr>`;
   }).join("");
 }
 
@@ -191,7 +215,7 @@ function stageRows(r) {
   return (r.stages ?? []).map(s => {
     const open = s.startedAt && !s.completedAt;
     const took = open ? (live ? elapsed(s.startedAt) : "–") : span(s.startedAt, s.completedAt);
-    const state = s.outcome ? badge(s.outcome) : open ? badge(live ? "running" : "unfinished") : "";
+    const state = s.verdict ? badge(s.verdict) : s.outcome ? badge(s.outcome) : open ? badge(live ? "running" : "unfinished") : "";
     return `<tr><td>${type(s.taskType)}</td><td class="id">${esc(s.label)}</td>
     <td>${esc(s.requestedModel || (s.agent === false ? "(no agent)" : ""))}${s.reasoningEffort ? ` <span class=dim>${esc(s.reasoningEffort)}</span>` : ""}</td>
     <td>${when(s.startedAt)}</td><td class="num">${took}</td><td>${state}</td></tr>`;
