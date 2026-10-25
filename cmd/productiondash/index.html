@@ -44,7 +44,7 @@
   .id { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
     border: 1px solid currentColor; white-space: nowrap; }
-  .s-finished, .s-landed { color: var(--good); }
+  .s-finished, .s-landed, .s-split { color: var(--good); }
   .s-error, .s-blocked, .s-claim_failed, .s-ci_failed, .s-validation_failed, .s-evidence_missing { color: var(--bad); }
   .s-partial, .s-paused, .s-stopped, .s-unknown, .s-changes_needed { color: var(--warn); }
   .s-review_rejected { color: var(--bad); } .s-approve { color: var(--good); }
@@ -169,9 +169,9 @@ function overview(list) {
 // the final rejecting verdict on the unit itself.
 function reviews(r, u) {
   const rounds = (r.stages ?? []).filter(s => s.verdict && s.unitIndex === u.index)
-    .map(s => ({ name: `${s.phase} ${s.round ?? ""}`, verdict: s.verdict, findings: s.findings ?? [], preexisting: s.preexisting ?? [] }));
+    .map(s => ({ name: `${s.phase} ${s.round ?? ""}`, verdict: s.verdict, findings: s.findings ?? [], preexisting: s.preexisting ?? [], followUps: s.followUps ?? [] }));
   if (rounds.length || !u.verdict) return rounds;
-  return [{ name: "final review", verdict: u.verdict.verdict, findings: u.verdict.findings ?? [], preexisting: u.verdict.preexisting ?? [] }];
+  return [{ name: "final review", verdict: u.verdict.verdict, findings: u.verdict.findings ?? [], preexisting: u.verdict.preexisting ?? [], followUps: u.verdict.followUps ?? [] }];
 }
 
 function reviewBlock(r, u) {
@@ -180,10 +180,11 @@ function reviewBlock(r, u) {
   const key = `${r.id}:review:${u.index}`;
   const findings = rounds.reduce((n, x) => n + x.findings.length, 0);
   const filed = rounds.reduce((n, x) => n + x.preexisting.length, 0);
+  const followUps = rounds.reduce((n, x) => n + x.followUps.length, 0);
   const issue = n => `<a href="https://github.com/natefinch/council4/issues/${Number(n)}" target="_blank">#${Number(n)}</a>`;
   return `<details class="more review" data-key="${esc(key)}" ${isOpen(key, u.status === "review_rejected") ? "open" : ""}>
-    <summary>Review: ${rounds.length} round${rounds.length === 1 ? "" : "s"}, ${findings} finding${findings === 1 ? "" : "s"}${filed ? `, ${filed} pre-existing filed` : ""}</summary>
-    ${rounds.map(x => `<div>${esc(x.name)} ${badge(x.verdict)}</div>${x.findings.length ? `<ul>${x.findings.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}${x.preexisting.length ? `<div class="dim">Pre-existing (filed, not blocking):</div><ul>${x.preexisting.map(f => `<li>${issue(f.issue)} ${esc(f.description)}</li>`).join("")}</ul>` : ""}`).join("")}
+    <summary>Review: ${rounds.length} round${rounds.length === 1 ? "" : "s"}, ${findings} finding${findings === 1 ? "" : "s"}${filed ? `, ${filed} pre-existing filed` : ""}${followUps ? `, ${followUps} follow-ups filed` : ""}</summary>
+    ${rounds.map(x => `<div>${esc(x.name)} ${badge(x.verdict)}</div>${x.findings.length ? `<ul>${x.findings.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}${x.preexisting.length ? `<div class="dim">Pre-existing (filed, not blocking):</div><ul>${x.preexisting.map(f => `<li>${issue(f.issue)} ${esc(f.description)}</li>`).join("")}</ul>` : ""}${x.followUps.length ? `<div class="dim">Follow-ups (filed, not blocking):</div><ul>${x.followUps.map(f => `<li>${issue(f.issue)} ${esc(f.description)}</li>`).join("")}</ul>` : ""}`).join("")}
   </details>`;
 }
 

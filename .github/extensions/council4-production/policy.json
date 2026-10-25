@@ -1,5 +1,5 @@
 {
-  "version": "1.18.0",
+  "version": "1.19.0",
   "models": {
     "selection": {
       "model": "gpt-6-luna",
@@ -55,6 +55,11 @@
         "contextTier": "default"
       },
       "ci_fix": {
+        "model": "claude-opus-5.5",
+        "reasoningEffort": "high",
+        "contextTier": "default"
+      },
+      "split": {
         "model": "claude-opus-5.5",
         "reasoningEffort": "high",
         "contextTier": "default"

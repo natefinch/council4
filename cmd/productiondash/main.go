@@ -159,6 +159,7 @@ type stage struct {
 	Verdict         string        `json:"verdict,omitempty"`
 	Findings        []string      `json:"findings,omitempty"`
 	Preexisting     []preexisting `json:"preexisting,omitempty"`
+	FollowUps       []preexisting `json:"followUps,omitempty"`
 }
 
 type current struct {
