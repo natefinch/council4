@@ -88,10 +88,19 @@ func (e *Engine) legalPlotActions(g *game.Game, playerID game.PlayerID) []action
 	return actions
 }
 
-// cardIsPlottedInExile reports whether cardID is a card plotted into exile that
-// may now be cast from exile: it must be recorded as plotted and the current turn
-// must be later than the turn it was plotted (CR 718.2 "on a later turn").
-func cardIsPlottedInExile(g *game.Game, cardID id.ID) bool {
+// cardIsPlottedInExile reports whether playerID may now cast cardID from exile
+// through its plotted status: it must be recorded as plotted, the current turn
+// must be later than the turn it became plotted, and playerID must be the card's
+// owner (CR 702.170d "A plotted card's owner may cast it ... during any turn
+// after the turn in which it became plotted"). Any other player's permission to
+// cast the card is an independent route with its own cost.
+func cardIsPlottedInExile(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
 	plotTurn, ok := g.PlottedCards[cardID]
-	return ok && g.Turn.TurnNumber > plotTurn
+	return ok && g.Turn.TurnNumber > plotTurn && cardOwnedBy(g, playerID, cardID)
+}
+
+// cardOwnedBy reports whether playerID owns the card instance cardID.
+func cardOwnedBy(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	card, ok := g.GetCardInstance(cardID)
+	return ok && card.Owner == playerID
 }

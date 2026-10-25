@@ -142,11 +142,11 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	payLifeFromTop := sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, cast.Face)
 	// plotted marks a plotted card being cast from exile (CR 718): it is cast
 	// without paying its mana cost. It must be read before the card leaves exile.
-	plotted := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsPlottedInExile(g, card.ID)
+	plotted := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsPlottedInExile(g, playerID, card.ID)
 	// foretold marks a foretold card being cast from exile (CR 702.144): it is
 	// cast for its foretell cost rather than its mana cost. It must be read before
 	// the card leaves exile.
-	foretold := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsForetoldInExile(g, card.ID)
+	foretold := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsForetoldInExile(g, playerID, card.ID)
 	// freeLinkedExile marks a card cast for free from the pool of cards exiled
 	// under this source ("cast a spell from among cards exiled with this
 	// enchantment without paying its mana cost.", Court of Locthwain). The
@@ -783,8 +783,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if castFromZoneProhibited(g, playerID, sourceZone) {
 		return false
 	}
-	plotted := sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, cardID)
-	foretold := sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, cardID)
+	plotted := sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, playerID, cardID)
+	foretold := sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, playerID, cardID)
 	switch sourceZone {
 	case zone.Command:
 		if !isCommanderOwnedBy(g, playerID, cardID) {
@@ -1030,11 +1030,11 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 				faces = append(faces, face)
 				continue
 			}
-			if sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, card.ID) {
+			if sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, playerID, card.ID) {
 				faces = append(faces, face)
 				continue
 			}
-			if sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, card.ID) {
+			if sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, playerID, card.ID) {
 				faces = append(faces, face)
 				continue
 			}
