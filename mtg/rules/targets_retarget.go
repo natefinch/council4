@@ -7,7 +7,8 @@ import (
 )
 
 // Retargeting preserves the number and position of targets (CR 115.7d).
-// An unchanged target may remain illegal; only new targets must be legal.
+// An unchanged target may remain illegal; only new targets must be legal. The
+// host stack object is never offered as one of its own new targets (CR 115.5).
 func retargetChoices(g *game.Game, controller game.PlayerID, specs stackObjectSpecs, event game.Event,
 	targets []game.Target, recorded []int, xValue int, keepIllegal bool) targetChoiceResult {
 	counts, ok := resolutionTargetCounts(specs.specs, recorded, len(targets))
@@ -23,6 +24,11 @@ func retargetChoices(g *game.Game, controller game.PlayerID, specs stackObjectSp
 		}
 		spec := normalizeTargetSpecForEvent(&specs.specs[specIndex], event)
 		candidates := targetCandidatesForSpec(g, controller, specs.def, specs.sourceObjectID, event, &spec)
+		if specs.hostObjectID != 0 {
+			candidates = slices.DeleteFunc(candidates, func(target game.Target) bool {
+				return target.Kind == game.TargetStackObject && target.StackObjectID == specs.hostObjectID
+			})
+		}
 		var appendMembers func(int, []game.Target)
 		appendMembers = func(member int, next []game.Target) {
 			if member == counts[specIndex] {
