@@ -2759,7 +2759,7 @@ func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, tar
 		if i >= len(target.SplicedTargets) || i >= len(target.SplicedTargetCounts) {
 			continue
 		}
-		result := retargetChoices(g, target.Controller, stackObjectSpecs{def: hostDef, specs: specs},
+		result := retargetChoices(g, target.Controller, stackObjectSpecs{def: hostDef, sourceObjectID: target.ID, hostObjectID: target.ID, specs: specs},
 			game.Event{}, target.SplicedTargets[i], target.SplicedTargetCounts[i], target.XValue, optional)
 		if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
 			continue
@@ -2790,10 +2790,14 @@ func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, tar
 
 // stackObjectSpecs bundles the target specs a stack object chose against with
 // the source definition and source object ID that target legality is evaluated
-// relative to.
+// relative to. hostObjectID is the stack object whose targets are being chosen;
+// it can never be one of its own targets (CR 115.5). For a spell it equals
+// sourceObjectID; an ability keeps its source permanent as sourceObjectID so
+// "another" and source-relative predicates still refer to that permanent.
 type stackObjectSpecs struct {
 	def            *game.CardDef
 	sourceObjectID id.ID
+	hostObjectID   id.ID
 	specs          []game.TargetSpec
 }
 
@@ -2807,7 +2811,7 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 		if !defOK {
 			return stackObjectSpecs{}, false
 		}
-		return stackObjectSpecs{def: def, specs: spellTargetSpecs(def, obj.ChosenModes, castBranchForObject(obj))}, true
+		return stackObjectSpecs{def: def, sourceObjectID: obj.ID, hostObjectID: obj.ID, specs: spellTargetSpecs(def, obj.ChosenModes, castBranchForObject(obj))}, true
 	case game.StackActivatedAbility:
 		if !defOK {
 			if permanent, permanentOK := permanentByObjectID(g, obj.SourceID); permanentOK {
@@ -2823,7 +2827,7 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 		if body == nil {
 			return stackObjectSpecs{}, false
 		}
-		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes, obj.XValue)}, true
+		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, hostObjectID: obj.ID, specs: bodyTargetSpecs(body, obj.ChosenModes, obj.XValue)}, true
 	case game.StackTriggeredAbility:
 		var body game.Ability
 		if obj.InlineTrigger != nil {
@@ -2834,7 +2838,7 @@ func stackObjectTargetSpecs(g *game.Game, obj *game.StackObject) (stackObjectSpe
 		if body == nil {
 			return stackObjectSpecs{}, false
 		}
-		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, specs: bodyTargetSpecs(body, obj.ChosenModes, obj.XValue)}, true
+		return stackObjectSpecs{def: def, sourceObjectID: obj.SourceID, hostObjectID: obj.ID, specs: bodyTargetSpecs(body, obj.ChosenModes, obj.XValue)}, true
 	default:
 		return stackObjectSpecs{}, false
 	}
