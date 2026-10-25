@@ -7,6 +7,7 @@ import { preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit
 import { git, changes, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
+import { rankTriage, chunk } from "./triage.mjs";
 import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
 import { gapEvidence, earlierUnits } from "./workflow.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, reviewHistory } from "./telemetry.mjs";
@@ -458,6 +459,43 @@ test("A split gap is worked through its first open sub-issue, in order", () => {
   assert.equal(chooseWork({ next: { batch: readyBatch }, priorUnits: [selectorGap], issues: { 170: open(170) } }).kind, "card");
   // Without sub-issues a failed parent stays parked.
   assert.equal(chooseWork({ next, priorUnits: [failedParent], issues: { 3285: open(3285) } }).kind, "card");
+});
+
+test("Triage ranks defects first, assigns each queued card to one issue and drops unknown cards", () => {
+  assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
+  const issues = [1, 2, 3, 4, 5].map(number => ({ number, title: `Issue ${number}` }));
+  const queued = new Map(["a", "b", "c", "d"].map(id => [id, { oracle_id: id, revision: `r-${id}`, name: id.toUpperCase(), status: "unclaimed" }]));
+  queued.set("x", { oracle_id: "x", status: "blocked" });
+  const v = (issue, extra) => ({ issue, verdict: "valid", evidence: "e", existingCardDefect: false, registeredExamples: [],
+    blockedOracleIds: [], blockedEstimate: 0, size: "small", ...extra });
+  const ranked = rankTriage([
+    v(1, { blockedOracleIds: ["a", "b", "zzz", "x"], blockedEstimate: 30 }),
+    v(2, { blockedOracleIds: ["b", "c"], blockedEstimate: 50 }),
+    v(3, { existingCardDefect: true, registeredExamples: ["Lim-Dûl"], blockedOracleIds: ["d"], blockedEstimate: 1 }),
+    v(4, { verdict: "stale" }),
+    v(99, {}),
+  ], issues, queued);
+  assert.deepEqual(ranked.valid.map(row => row.issue), [3, 2, 1]);
+  assert.deepEqual(ranked.valid.map(row => row.assignedOracleIds), [["d"], ["b", "c"], ["a"]]);
+  assert.deepEqual(ranked.stale.map(row => row.issue), [4]);
+  assert.deepEqual(ranked.missing, [5]);
+  assert.deepEqual(ranked.blockers.map(b => [b.oracle_id, b.blocker, b.revision]), [["d", 3, "r-d"], ["b", 2, "r-b"], ["c", 2, "r-c"], ["a", 1, "r-a"]]);
+  assert.match(ranked.blockers[0].reason, /#3/);
+});
+
+test("Existing-card defects come first, then gaps blocking the most queued cards", () => {
+  const next = { batch: readyBatch, pending_prerequisites: [
+    { blocked_oracle_ids: ["a"], issues: [10] },
+    { blocked_oracle_ids: ["b", "c", "d"], issues: [20] },
+    { blocked_oracle_ids: ["e", "f"], issues: [30] },
+  ] };
+  const issues = Object.fromEntries([10, 20, 30, 40].map(n => [n, open(n)]));
+  assert.deepEqual(knownGaps({ next }).map(gap => gap.issue), [20, 30, 10]);
+  assert.deepEqual(knownGaps({ next, defects: [40, 10] }).map(gap => gap.issue), [10, 40, 20, 30]);
+  assert.equal(chooseWork({ next, issues, defects: [40] }).gap.issue, 40);
+  assert.equal(chooseWork({ next, issues }).gap.issue, 20);
+  // A closed defect issue is not worked.
+  assert.equal(chooseWork({ next, issues: { ...issues, 40: { state: "CLOSED" } }, defects: [40] }).gap.issue, 20);
 });
 
 test("Known open Engine gaps are selected before ready card batches, demonstrated gaps first", () => {

@@ -27,7 +27,7 @@ function remainingIssues(unit) {
 // Known gaps, in priority order: those demonstrated by blocked card work and
 // remainders of landed Engine slices (this run first, then earlier local runs),
 // then saved queue prerequisites.
-export function knownGaps({ next, units = [], priorUnits = [] }) {
+export function knownGaps({ next, units = [], priorUnits = [], defects = [] }) {
   const gaps = new Map();
   const add = (issue, oracleIds, source) => {
     if (!Number.isInteger(issue) || issue <= 0) return;
@@ -51,10 +51,16 @@ export function knownGaps({ next, units = [], priorUnits = [] }) {
       for (const gap of unit.result?.gaps ?? []) add(issueNumber(gap.id), oracleIds, `${source} card ${unit.task.id}`);
     }
   }
+  for (const issue of defects) add(issue, [], "existing-card defect");
   for (const pending of next?.pending_prerequisites ?? []) {
     for (const issue of pending.issues ?? []) add(issue, pending.blocked_oracle_ids, pending.batch ? `queue batch ${pending.batch}` : "queue");
   }
-  return [...gaps.values()];
+  // Priority: defects in rules already-supported cards use, then gaps by how
+  // many queued cards they block (most first). Sort is stable, so equal gaps
+  // keep discovery order.
+  const defect = new Set(defects);
+  return [...gaps.values()].sort((a, b) =>
+    (defect.has(b.issue) - defect.has(a.issue)) || (b.oracleIds.length - a.oracleIds.length));
 }
 
 // A gap is filled once a landed Engine unit targeted it and reported no
@@ -69,14 +75,14 @@ export function filledIssues(units = [], priorUnits = []) {
 // A gap whose Engine unit failed (this run or an earlier one) is parked rather
 // than paid for again, unless the caller explicitly lists it in retry. A landed
 // slice with a reported remainder stays eligible so the next slice follows.
-export function chooseWork({ next, units = [], priorUnits = [], issues = {}, retry = [] }) {
+export function chooseWork({ next, units = [], priorUnits = [], issues = {}, retry = [], defects = [] }) {
   const filled = filledIssues(units, priorUnits);
   const failed = unit => unit.status !== "landed";
   const attempted = new Set([
     ...units.filter(failed).map(engineIssue),
     ...priorUnits.filter(failed).map(engineIssue).filter(issue => !retry.includes(issue)),
   ].filter(Boolean));
-  const gaps = knownGaps({ next, units, priorUnits });
+  const gaps = knownGaps({ next, units, priorUnits, defects });
   const open = gaps.filter(gap => !filled.has(gap.issue) && issues[gap.issue]?.state === "OPEN")
     .map(gap => nextSubIssue(gap, issues, filled));
   const gap = open.find(candidate => !attempted.has(candidate.issue));
