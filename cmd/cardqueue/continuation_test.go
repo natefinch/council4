@@ -131,6 +131,41 @@ func TestReviewedContinuationAfterExhaustionAndResume(t *testing.T) {
 	}
 }
 
+func TestRecordBlockersMarksUnbatchedCardsAndSchedulesTheGap(t *testing.T) {
+	q, plan, corpus, inventory := continuationFixture(t)
+	blocked := plan.Records[0]
+	blocked.Blocker, blocked.Reason = 4100, "triage: needs combined search"
+	blockers := reviewedPlan{CorpusSHA256: q.CorpusSHA256, Records: []reviewedRecord{blocked}}
+	for name, mutate := range map[string]func(*reviewedPlan) (string, string){
+		"no reason":  func(p *reviewedPlan) (string, string) { p.Records[0].Reason = ""; return "", "writer" },
+		"no blocker": func(p *reviewedPlan) (string, string) { p.Records[0].Blocker = 0; return "", "writer" },
+		"batch flag": func(p *reviewedPlan) (string, string) { return "third", "writer" },
+		"no owner":   func(p *reviewedPlan) (string, string) { return "", "" },
+		"stale":      func(p *reviewedPlan) (string, string) { p.Records[0].Revision = "old"; return "", "writer" },
+	} {
+		bad := blockers
+		bad.Records = slices.Clone(blockers.Records)
+		batch, owner := mutate(&bad)
+		before := snapshot(t, q)
+		if err := continueQueue(&q, "record-blockers", batch, owner, bad); err == nil || snapshot(t, q) != before {
+			t.Fatalf("%s: invalid blocker plan accepted or changed state", name)
+		}
+	}
+	if err := continueQueue(&q, "record-blockers", "", "writer", blockers); err != nil {
+		t.Fatal(err)
+	}
+	if err := validate(q, corpus, inventory); err != nil {
+		t.Fatal(err)
+	}
+	pending := pendingPrerequisites(q)
+	if len(pending) != 1 || !slices.Equal(pending[0].Issues, []int{4100}) || pending[0].OracleIDs[0] != blocked.OracleID {
+		t.Fatalf("triage blocker not scheduled: %+v", pending)
+	}
+	if err := continueQueue(&q, "record-blockers", "", "writer", blockers); err == nil {
+		t.Fatal("already blocked card re-blocked")
+	}
+}
+
 func TestBatchWithoutPrerequisitesIsReadyOnExistingOperations(t *testing.T) {
 	q, plan, corpus, inventory := continuationFixture(t)
 	plan.Batches[0].Prerequisites = nil

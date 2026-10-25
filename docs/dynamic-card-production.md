@@ -164,6 +164,31 @@ integration. Card units cannot be resumed because their queue claim would need
 to be re-established. `maxTasks` must cover every resumed unit; any remaining
 units select work normally.
 
+Known gaps are ordered: open issues labeled `Existing Card Defect` (defects in
+rules already-supported cards use, so they play wrong today) first, then gaps
+by how many queued cards they block, most first. Reviewers add that label when
+they file a pre-existing defect that registered cards hit.
+
+### Backlog triage
+
+The separate `council4-engine-triage` workflow ranks the open
+`Card Support TODO` backlog with cheap read-only agents (`policy.models.triage`,
+8 issues per agent). For each issue it decides stale (main already supports it),
+duplicate, or valid; whether registered cards hit it; and which queued cards
+need it. It searches card indexes it writes to `.cardwork/triage/<run>/`, and
+writes `report.md`, `triage.json` and `blockers-plan.json` there.
+
+1. Run it: `{}` (or `{"issues":[...]}` for a subset). No GitHub or queue changes.
+2. Review `report.md`.
+3. Apply GitHub changes: `{"apply":true,"fromRunId":"<run>"}` labels
+   existing-card defects and closes stale/duplicate issues with an evidence
+   comment (reopen any that are wrong). No new agents.
+4. Record queue blockers in a PR:
+   `go run ./cmd/cardqueue -operation record-blockers -owner <you> -plan .cardwork/triage/<run>/blockers-plan.json`.
+   Each queued card is blocked by at most one issue (the highest ranked), so
+   selection schedules those gaps by card count and batch preparation avoids
+   the blocked cards until a landed fix reassesses them.
+
 A gap that proves too large is split into ordered GitHub sub-issues of its
 issue. Selection then works the first open sub-issue (it inherits the parent's
 blocked cards); a landed sub-issue moves on to the next, and a failed one parks

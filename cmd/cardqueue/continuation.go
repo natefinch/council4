@@ -177,6 +177,12 @@ func continueQueue(queue *manifest, operation, batchID, owner string, plan revie
 			return fmt.Errorf("active writer %s on %s: resume or finish the claim before replanning", r.Owner, r.Batch)
 		}
 	}
+	if operation == "record-blockers" {
+		if batchID != "" || len(plan.Batches) != 0 {
+			return errors.New("record-blockers marks exact unbatched records, not -batch or batch definitions")
+		}
+		return recordBlockers(queue, plan.Records)
+	}
 	if operation == "reassess" {
 		if batchID != "" || len(plan.Batches) != 0 {
 			return errors.New("reassess selects exact records, not -batch or new batch definitions")
@@ -322,5 +328,33 @@ func retireBatch(queue *manifest, batchID string, plan reviewedPlan) error {
 	queue.Records = updated
 	queue.RetiredBatches = append(slices.Clone(queue.RetiredBatches), b)
 	queue.Batches = slices.Delete(slices.Clone(queue.Batches), index, index+1)
+	return nil
+}
+
+// recordBlockers marks unbatched, unclaimed records as blocked by an open
+// capability issue found during backlog triage, so batch selection avoids them
+// and the Engine gap is scheduled. Reassessment unblocks them later.
+func recordBlockers(queue *manifest, candidates []reviewedRecord) error {
+	if len(candidates) == 0 {
+		return errors.New("record-blockers requires at least one exact record")
+	}
+	updated := slices.Clone(queue.Records)
+	seen := make(map[string]bool)
+	for _, candidate := range candidates {
+		if seen[candidate.OracleID] || candidate.Blocker <= 0 || strings.TrimSpace(candidate.Reason) == "" || candidate.Reassessment != nil {
+			return fmt.Errorf("record-blockers needs one entry per card with a blocker issue and reason: %s", candidate.OracleID)
+		}
+		seen[candidate.OracleID] = true
+		index := slices.IndexFunc(updated, func(r record) bool { return r.OracleID == candidate.OracleID })
+		if index < 0 {
+			return fmt.Errorf("unknown identity %s", candidate.OracleID)
+		}
+		r := &updated[index]
+		if r.Revision != candidate.Revision || r.Name != candidate.Name || r.Status != "unclaimed" || r.Batch != "" || r.Owner != "" {
+			return fmt.Errorf("stale/non-unclaimed/batched identity %s", candidate.OracleID)
+		}
+		r.Status, r.Blocker, r.Reason = "blocked", candidate.Blocker, candidate.Reason
+	}
+	queue.Records = updated
 	return nil
 }

@@ -163,6 +163,10 @@ Existing same-owner claims remain resumable. Evidence fields are the
 coordinator's checked record, not automated proof of rules correctness.
 Recheck that saved evidence applies to the current runtime before using it.
 
+Backlog triage can mark unbatched, unclaimed cards as blocked by an open
+capability issue with `-operation record-blockers` (plan `records` with
+`blocker` and `reason`); reassessment unblocks them later.
+
 After completing a pending prerequisite, use `-operation record-prerequisites
 -plan PATH -batch BATCH_ID -owner SESSION_ID`. Supply the same saved batch
 definition in `batches`, only newly checked `prerequisite_evidence`, and no

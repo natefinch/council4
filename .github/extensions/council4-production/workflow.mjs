@@ -64,7 +64,7 @@ const reviewSchema = {
 };
 
 // Review classification rules shared by every review prompt.
-export const preexistingRule = base => `Classify every defect you find. It is a finding (blocks approval) when this change causes it, or when it is behavior this unit must deliver: its target cards and the rule it implements, on the routes it changes. A defect that already exists on the unit's base commit ${base}, in behavior this unit does not claim to deliver, is pre-existing: do NOT list it as a finding. Confirm that before using it: the defective path is unchanged by \`git diff ${base}\`, or your probe fails the same way on ${base} in a temporary worktree under .cardwork. For each pre-existing defect, reuse an open issue (search the "Card Support TODO" label) or file one precise issue with labels "Card Support TODO" and "To Be Triaged", then list it in preexisting with the issue number, a short description and how you confirmed it predates this change. Pre-existing defects never block approval; do not ask the author to fix them.`;
+export const preexistingRule = base => `Classify every defect you find. It is a finding (blocks approval) when this change causes it, or when it is behavior this unit must deliver: its target cards and the rule it implements, on the routes it changes. A defect that already exists on the unit's base commit ${base}, in behavior this unit does not claim to deliver, is pre-existing: do NOT list it as a finding. Confirm that before using it: the defective path is unchanged by \`git diff ${base}\`, or your probe fails the same way on ${base} in a temporary worktree under .cardwork. For each pre-existing defect, reuse an open issue (search the "Card Support TODO" label) or file one precise issue with labels "Card Support TODO" and "To Be Triaged", then list it in preexisting with the issue number, a short description and how you confirmed it predates this change. If cards already in the default registry hit the defective path, also add the label "${existingCardDefectLabel}" and name one such card in the issue; those defects are fixed before new card work. Pre-existing defects never block approval; do not ask the author to fix them.`;
 
 const reviewPhases = ["review", "re_review", "integration_review", "ci_review"];
 
@@ -87,6 +87,7 @@ export function checkPolicy(policy) {
     }
   };
   checkSlot(policy.models?.selection, "selection");
+  checkSlot(policy.models?.triage, "triage");
   for (const type of ["card", "engine"]) {
     for (const phase of ["implementation", "review", "review_fix", "validation_fix", "ci_fix"]) {
       checkSlot(policy.models?.[type]?.[phase], `${type}/${phase}`);
@@ -188,6 +189,15 @@ export async function earlierUnits(root, runId) {
     catch (error) { if (error.code !== "ENOENT" && !(error instanceof SyntaxError)) throw error; }
   }
   return units;
+}
+
+// Open issues for defects in rules that already-supported cards use; these are
+// worked before any other gap.
+export const existingCardDefectLabel = "Existing Card Defect";
+async function existingCardDefects(cwd, signal) {
+  const list = JSON.parse(await command(cwd, "gh", ["issue", "list", "--repo", "natefinch/council4", "--state", "open",
+    "--label", existingCardDefectLabel, "--json", "number", "--limit", "500"], signal));
+  return list.map(issue => issue.number).sort((a, b) => a - b);
 }
 
 async function issueStates(cwd, numbers, signal) {
@@ -485,8 +495,9 @@ export async function runProduction(ctx) {
           const next = JSON.parse(await command(work.path, "go", ["run", "./cmd/cardqueue", "-operation", "next",
             "-owner", ctx.runId, "-corpus", corpus], ctx.signal));
           const priorUnits = await earlierUnits(root, ctx.runId);
-          const issues = await issueStates(work.path, knownGaps({ next, units: state.units, priorUnits }).map(gap => gap.issue), ctx.signal);
-          const choice = chooseWork({ next, units: state.units, priorUnits, issues, retry: ctx.args.retryGaps ?? [] });
+          const defects = await existingCardDefects(work.path, ctx.signal);
+          const issues = await issueStates(work.path, knownGaps({ next, units: state.units, priorUnits, defects }).map(gap => gap.issue), ctx.signal);
+          const choice = chooseWork({ next, units: state.units, priorUnits, issues, retry: ctx.args.retryGaps ?? [], defects });
           state.stages.push({ label: `coordination/select-${index}/selection/deterministic`, taskType: "coordination",
             taskId: `select-${index}`, phase: "selection", startedAt, completedAt: new Date().toISOString(),
             outcome: choice.kind === "engine" ? `gap #${choice.gap.issue}` : choice.kind === "card" ? `batch ${choice.batch.id}` : "prepare batch",

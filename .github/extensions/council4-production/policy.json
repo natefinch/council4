@@ -1,5 +1,5 @@
 {
-  "version": "1.16.0",
+  "version": "1.17.0",
   "models": {
     "selection": {
       "model": "gpt-6-luna",
@@ -59,6 +59,11 @@
         "reasoningEffort": "high",
         "contextTier": "default"
       }
+    },
+    "triage": {
+      "model": "gpt-6-luna",
+      "reasoningEffort": "high",
+      "contextTier": "default"
     }
   },
   "cardReview": "risk",
