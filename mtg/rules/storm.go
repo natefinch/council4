@@ -73,6 +73,7 @@ func emitSpellCopiedEvent(g *game.Game, copyObj *game.StackObject, spell *game.C
 		event.CardSupertypes = cardSupertypes(spell)
 		event.CardSubtypes = stackObjectCardSubtypes(copyObj, spell)
 		event.Colors = spellColors(spell)
+		event.CardCharacteristicsKnown = true
 		event.ManaValue = stackObjectKnownManaValue(g, copyObj)
 	}
 	emitEvent(g, event)

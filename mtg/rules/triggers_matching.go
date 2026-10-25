@@ -282,6 +282,8 @@ func eventCapturesSubjectController(kind game.EventKind) bool {
 	switch kind {
 	case game.EventAttackerDeclared,
 		game.EventBlockerDeclared,
+		game.EventSpellCast,
+		game.EventSpellCopied,
 		game.EventZoneChanged,
 		game.EventPermanentDied,
 		game.EventPermanentSacrificed:
@@ -1067,10 +1069,11 @@ func eventSpellHistoric(event game.Event) bool {
 // eventWithCardCharacteristics fills a card-filter event's printed characteristic
 // slices from its card instance's front face when the event does not already
 // carry them, so subtype, supertype, and color filters on draw, discard, and
-// cycle triggers read the moved card. Spell-cast events already record these, so
-// the populated-field guard leaves them unchanged.
+// cycle triggers read the moved card. Spell-cast and spell-copy events record an
+// authoritative snapshot of the spell, so they are returned unchanged even when
+// a field is legitimately empty.
 func eventWithCardCharacteristics(g *game.Game, event game.Event) game.Event {
-	if event.CardID == 0 {
+	if event.CardID == 0 || event.CardCharacteristicsKnown {
 		return event
 	}
 	card, ok := g.GetCardInstance(event.CardID)
@@ -1094,10 +1097,11 @@ func eventWithCardCharacteristics(g *game.Game, event game.Event) game.Event {
 }
 
 // eventSpellCardTypes resolves the card types a spell-cast event matches against,
-// using the event's recorded types and falling back to the front face.
+// using the event's recorded types and falling back to the front face only when
+// the event carries no authoritative characteristic snapshot.
 func eventSpellCardTypes(g *game.Game, event game.Event) []types.Card {
 	cardTypes := event.CardTypes
-	if len(cardTypes) == 0 && event.CardID != 0 {
+	if len(cardTypes) == 0 && event.CardID != 0 && !event.CardCharacteristicsKnown {
 		if card, ok := g.GetCardInstance(event.CardID); ok {
 			cardTypes = cardFaceOrDefault(card, game.FaceFront).Types
 		}
