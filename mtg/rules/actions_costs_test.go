@@ -1382,7 +1382,7 @@ func TestCommanderControlledAlternativeCostFromExile(t *testing.T) {
 	g.CommanderIDs[commander.CardInstanceID] = true
 	g.Players[game.Player1].Hand.Remove(spellID)
 	g.Players[game.Player1].Exile.Add(spellID)
-	g.AdventureCards[spellID] = true
+	g.AdventureCards[spellID] = game.AdventureExile{Player: game.Player1, ZoneVersion: g.CardInstances[spellID].ZoneVersion}
 	g.Turn.Phase = game.PhasePrecombatMain
 	g.Turn.Step = game.StepNone
 

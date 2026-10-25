@@ -2006,7 +2006,7 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			if !ok {
 				continue
 			}
-			if g.AdventureCards[cardID] || cardIsPlottedInExile(g, playerID, cardID) || cardIsForetoldInExile(g, playerID, cardID) || slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+			if hasAdventureExilePermission(g, playerID, cardID) || cardIsPlottedInExile(g, playerID, cardID) || cardIsForetoldInExile(g, playerID, cardID) || slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
 				return canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, face) ||
 					canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, face)
 			}) {
