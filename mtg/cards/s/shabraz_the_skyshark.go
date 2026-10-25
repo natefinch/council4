@@ -121,6 +121,7 @@ func newShabrazTheSkyshark() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Brallin, Skyshark Rider"),
 			},
 			OracleText: `
 			Partner with Brallin, Skyshark Rider

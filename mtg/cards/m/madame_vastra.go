@@ -77,6 +77,7 @@ func newMadameVastra() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Jenny Flint"),
 			},
 			OracleText: `
 			Partner with Jenny Flint (When this creature enters, target player may put Jenny Flint into their hand from their library, then shuffle.)

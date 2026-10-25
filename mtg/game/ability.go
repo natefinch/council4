@@ -121,14 +121,12 @@ const (
 	// card on resolution. Appended at the end of the enum so existing keyword
 	// ordinals are unchanged.
 	JumpStart
-	// PartnerWith (CR 702.124e) is the "Partner with <name>" keyword. It is
-	// modeled as a recognized simple keyword carried on the card so
-	// HasKeyword(PartnerWith) reports true. The "partner commander"
-	// deck-construction permission and the pair-fetch enters trigger are not
-	// simulated by the deterministic playtester, so the keyword is inert; it is
-	// modeled as a simple keyword purely so partner-with cards are
-	// representable. Appended at the end of the enum so existing keyword ordinals
-	// are unchanged.
+	// PartnerWith (CR 702.124j) is the "Partner with <name>" keyword. It is
+	// carried as a simple keyword by both of its abilities, PartnerWithStaticBody
+	// (the "partner commander" deck-construction permission) and
+	// PartnerWithTriggeredAbility (the pair-fetch enters trigger), so
+	// HasKeyword(PartnerWith) reports true. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
 	PartnerWith
 	// ChooseABackground (CR 702.124f) is the "Choose a Background" keyword: "You
 	// can have a Background as a second commander." It is a deck-construction
@@ -510,14 +508,12 @@ var (
 	// keyword purely so companion cards are representable.
 	CompanionStaticBody = simpleKeywordStaticBody("Companion", Companion)
 
-	// PartnerWithStaticBody is the reusable StaticAbilityBody for the "Partner
-	// with <name>" keyword (CR 702.124e). Partner with names a specific partner
-	// card, grants the two cards the "partner commander" deck-construction
-	// permission, and gives each an enters trigger that lets the chosen player
-	// tutor the named partner into hand. Both halves are deck-construction and
-	// pair-fetch mechanics the deterministic playtester does not simulate, so the
-	// keyword carries no continuous in-game effect; it is modeled as a simple
-	// keyword purely so partner-with cards are representable.
+	// PartnerWithStaticBody is the reusable StaticAbilityBody for the
+	// deck-construction half of the "Partner with <name>" keyword (CR 702.124j):
+	// the "partner commander" permission for the named pair. It carries no
+	// continuous in-game effect. The keyword's other half, the enters trigger that
+	// lets a target player tutor the named partner into hand, is built by
+	// PartnerWithTriggeredAbility; a card with the keyword needs both.
 	PartnerWithStaticBody = simpleKeywordStaticBody("Partner with", PartnerWith)
 
 	// ChooseABackgroundStaticBody is the reusable StaticAbilityBody for the

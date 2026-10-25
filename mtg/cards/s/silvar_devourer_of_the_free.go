@@ -42,6 +42,9 @@ func newSilvarDevourerOfTheFree() *game.CardDef {
 				game.PartnerWithStaticBody,
 				game.MenaceStaticBody,
 			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.PartnerWithTriggeredAbility("Trynn, Champion of Freedom"),
+			},
 			ActivatedAbilities: []game.ActivatedAbility{
 				game.ActivatedAbility{
 					Text: "Sacrifice a Human: Put a +1/+1 counter on Silvar. It gains indestructible until end of turn.",

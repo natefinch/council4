@@ -38,6 +38,9 @@ func newLeyWeaver() *game.CardDef {
 			StaticAbilities: []game.StaticAbility{
 				game.PartnerWithStaticBody,
 			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.PartnerWithTriggeredAbility("Lore Weaver"),
+			},
 			ActivatedAbilities: []game.ActivatedAbility{
 				game.ActivatedAbility{
 					Text: "{T}: Untap two target lands.",

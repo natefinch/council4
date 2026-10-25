@@ -83,6 +83,7 @@ func newJennyFlint() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Madame Vastra"),
 			},
 			OracleText: `
 			Partner with Madame Vastra

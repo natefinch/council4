@@ -38,6 +38,9 @@ func newProudMentor() *game.CardDef {
 			StaticAbilities: []game.StaticAbility{
 				game.PartnerWithStaticBody,
 			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.PartnerWithTriggeredAbility("Impetuous Protege"),
+			},
 			ActivatedAbilities: []game.ActivatedAbility{
 				game.ActivatedAbility{
 					Text: "{W}, {T}: Tap target creature.",

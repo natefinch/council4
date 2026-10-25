@@ -70,6 +70,7 @@ func newAlphinaudLeveilleur() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Alisaie Leveilleur"),
 			},
 			OracleText: `
 			Partner with Alisaie Leveilleur (When this creature enters, target player may put Alisaie Leveilleur into their hand from their library, then shuffle.)

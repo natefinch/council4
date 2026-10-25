@@ -71,6 +71,7 @@ func newImpetuousProtege() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Proud Mentor"),
 			},
 			OracleText: `
 			Partner with Proud Mentor (When this creature enters, target player may put Proud Mentor into their hand from their library, then shuffle.)

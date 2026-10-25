@@ -69,6 +69,7 @@ func newSoulbladeCorrupter() *game.CardDef {
 						},
 					}.Ability(),
 				},
+				game.PartnerWithTriggeredAbility("Soulblade Renewer"),
 			},
 			OracleText: `
 			Partner with Soulblade Renewer (When this creature enters, target player may put Soulblade Renewer into their hand from their library, then shuffle.)

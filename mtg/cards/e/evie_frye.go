@@ -38,6 +38,9 @@ func newEvieFrye() *game.CardDef {
 			StaticAbilities: []game.StaticAbility{
 				game.PartnerWithStaticBody,
 			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.PartnerWithTriggeredAbility("Jacob Frye"),
+			},
 			ActivatedAbilities: []game.ActivatedAbility{
 				game.ActivatedAbility{
 					Text:            "{1}, {T}: Draw a card, then discard a card. When you discard a creature card this way, target creature you control can't be blocked this turn.",

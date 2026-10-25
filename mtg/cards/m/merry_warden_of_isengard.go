@@ -71,6 +71,7 @@ func newMerryWardenOfIsengard() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Pippin, Warden of Isengard"),
 			},
 			OracleText: `
 			Partner with Pippin, Warden of Isengard (When this creature enters, target player may put Pippin into their hand from their library, then shuffle.)
