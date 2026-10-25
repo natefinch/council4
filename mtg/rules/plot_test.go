@@ -86,7 +86,7 @@ func TestPlottedCardNotCastableSameTurn(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.PlotCard(cardID)) {
 		t.Fatal("plot action failed")
 	}
-	if cardIsPlottedInExile(g, cardID) {
+	if cardIsPlottedInExile(g, game.Player1, cardID) {
 		t.Fatal("card is castable from exile the same turn it was plotted")
 	}
 	legal := engine.legalActions(g, game.Player1)
@@ -117,7 +117,7 @@ func TestPlottedCardCastableFreeLaterTurn(t *testing.T) {
 		t.Fatal("precondition: forest should still be tapped from the plot cost")
 	}
 
-	if !cardIsPlottedInExile(g, cardID) {
+	if !cardIsPlottedInExile(g, game.Player1, cardID) {
 		t.Fatal("card is not castable from exile on a later turn")
 	}
 	legal := engine.legalActions(g, game.Player1)

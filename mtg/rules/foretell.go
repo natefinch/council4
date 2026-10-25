@@ -97,11 +97,14 @@ func (e *Engine) legalForetellActions(g *game.Game, playerID game.PlayerID) []ac
 	return actions
 }
 
-// cardIsForetoldInExile reports whether cardID is a card foretold into exile that
-// may now be cast from exile: it must be recorded as foretold and the current
-// turn must be later than the turn it was foretold (CR 702.144b "on a later
-// turn").
-func cardIsForetoldInExile(g *game.Game, cardID id.ID) bool {
+// cardIsForetoldInExile reports whether playerID may now cast cardID from exile
+// for its foretell cost: it must be recorded as foretold, the current turn must
+// be later than the turn it was foretold, and playerID must be the card's owner.
+// Foretelling exiles a card from its owner's hand and only "that player" may
+// cast it (CR 702.143a); a card that becomes foretold by an effect may be cast by
+// its owner (CR 702.143d). Any other player's permission to cast the card is an
+// independent route with its own cost.
+func cardIsForetoldInExile(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
 	foretoldTurn, ok := g.ForetoldCards[cardID]
-	return ok && g.Turn.TurnNumber > foretoldTurn
+	return ok && g.Turn.TurnNumber > foretoldTurn && cardOwnedBy(g, playerID, cardID)
 }
