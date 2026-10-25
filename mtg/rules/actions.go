@@ -251,7 +251,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 						}
 					}
 				}
-				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
+				for _, xValue := range zoneCastXValues(g, playerID, card, sourceZone, face, spellDef) {
 					for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 						plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 						if plainResult.kind != targetInvalidSpec {

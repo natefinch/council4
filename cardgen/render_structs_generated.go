@@ -409,6 +409,7 @@ func isZeroGameRuleEffect(v game.RuleEffect) bool {
 		!(v.ExileCounterFilter.Exists) &&
 		!(v.WithoutPayingManaCost) &&
 		!(v.ExileCounterExiledByController) &&
+		!(v.OwnedCardsOnly) &&
 		!(v.OncePerTurn) &&
 		!(!isZeroGameGraveyardCastGrantCost(v.GraveyardCastCost)) &&
 		!(v.TriggerCauseCastOrCopyInstantSorcery) &&
@@ -11375,47 +11376,51 @@ func (r Renderer) renderGameRuleEffect(ctx *renderCtx, v game.RuleEffect) (strin
 		lit127 := strconv.FormatBool(bool(v.ExileCounterExiledByController))
 		fields = append(fields, "ExileCounterExiledByController: "+lit127+",")
 	}
+	if v.OwnedCardsOnly {
+		lit128 := strconv.FormatBool(bool(v.OwnedCardsOnly))
+		fields = append(fields, "OwnedCardsOnly: "+lit128+",")
+	}
 	if v.OncePerTurn {
-		lit128 := strconv.FormatBool(bool(v.OncePerTurn))
-		fields = append(fields, "OncePerTurn: "+lit128+",")
+		lit129 := strconv.FormatBool(bool(v.OncePerTurn))
+		fields = append(fields, "OncePerTurn: "+lit129+",")
 	}
 	if !isZeroGameGraveyardCastGrantCost(v.GraveyardCastCost) {
-		lit129, err130 := r.renderGameGraveyardCastGrantCost(ctx, v.GraveyardCastCost)
-		if err130 != nil {
-			return "", fmt.Errorf("game.RuleEffect.GraveyardCastCost: %w", err130)
+		lit130, err131 := r.renderGameGraveyardCastGrantCost(ctx, v.GraveyardCastCost)
+		if err131 != nil {
+			return "", fmt.Errorf("game.RuleEffect.GraveyardCastCost: %w", err131)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "GraveyardCastCost: "+lit129+",")
+		fields = append(fields, "GraveyardCastCost: "+lit130+",")
 	}
 	if v.TriggerCauseCastOrCopyInstantSorcery {
-		lit131 := strconv.FormatBool(bool(v.TriggerCauseCastOrCopyInstantSorcery))
-		fields = append(fields, "TriggerCauseCastOrCopyInstantSorcery: "+lit131+",")
+		lit132 := strconv.FormatBool(bool(v.TriggerCauseCastOrCopyInstantSorcery))
+		fields = append(fields, "TriggerCauseCastOrCopyInstantSorcery: "+lit132+",")
 	}
 	if len(v.TriggerCausePermanentFilters) > 0 {
-		var items133 []string
-		for _, item134 := range v.TriggerCausePermanentFilters {
-			lit135, err136 := r.renderGameCharacteristicFilter(ctx, item134)
-			if err136 != nil {
-				return "", fmt.Errorf("game.RuleEffect.TriggerCausePermanentFilters[]: %w", err136)
+		var items134 []string
+		for _, item135 := range v.TriggerCausePermanentFilters {
+			lit136, err137 := r.renderGameCharacteristicFilter(ctx, item135)
+			if err137 != nil {
+				return "", fmt.Errorf("game.RuleEffect.TriggerCausePermanentFilters[]: %w", err137)
 			}
 			ctx.need(importGame)
-			items133 = append(items133, lit135+",")
+			items134 = append(items134, lit136+",")
 		}
-		lit132 := namedSliceLit("", "game.CharacteristicFilter", items133)
-		fields = append(fields, "TriggerCausePermanentFilters: "+lit132+",")
+		lit133 := namedSliceLit("", "game.CharacteristicFilter", items134)
+		fields = append(fields, "TriggerCausePermanentFilters: "+lit133+",")
 	}
 	if v.TriggerCausePermanentEnters {
-		lit137 := strconv.FormatBool(bool(v.TriggerCausePermanentEnters))
-		fields = append(fields, "TriggerCausePermanentEnters: "+lit137+",")
+		lit138 := strconv.FormatBool(bool(v.TriggerCausePermanentEnters))
+		fields = append(fields, "TriggerCausePermanentEnters: "+lit138+",")
 	}
 	if v.TriggerCausePermanentLeaves {
-		lit138 := strconv.FormatBool(bool(v.TriggerCausePermanentLeaves))
-		fields = append(fields, "TriggerCausePermanentLeaves: "+lit138+",")
+		lit139 := strconv.FormatBool(bool(v.TriggerCausePermanentLeaves))
+		fields = append(fields, "TriggerCausePermanentLeaves: "+lit139+",")
 	}
 	if v.PermissionKey != "" {
-		lit139 := "game.LinkedKey(" + strconv.Quote(string(v.PermissionKey)) + ")"
+		lit140 := "game.LinkedKey(" + strconv.Quote(string(v.PermissionKey)) + ")"
 		ctx.need(importGame)
-		fields = append(fields, "PermissionKey: "+lit139+",")
+		fields = append(fields, "PermissionKey: "+lit140+",")
 	}
 	return structLit("game.RuleEffect", fields), nil
 }

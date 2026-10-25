@@ -684,6 +684,12 @@ type StaticDeclarationSyntax struct {
 	ExilePlayExiledByControlledAbility bool `json:",omitempty"`
 	ExilePlaySpendAnyColorMana         bool `json:",omitempty"`
 
+	// ExilePlayOwnedCardsOnly records the "from among cards you own in exile"
+	// ownership scope of a StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter
+	// declaration (Grolnok, the Omnivore): the permission reaches only exiled
+	// cards the acting player owns. It is false for every other declaration.
+	ExilePlayOwnedCardsOnly bool `json:",omitempty"`
+
 	// Per-creature attack-tax payload (Baird, Archon of Absolution, Sphere of
 	// Safety, Collective Restraint): AttackTaxAmountKind selects how the
 	// per-attacker generic amount is derived (a fixed AttackTaxGeneric, the
@@ -3118,8 +3124,9 @@ func parseStaticPlayAndCastFromExileWithCounterDeclaration(tokens []shared.Token
 			Kind: StaticDeclarationSubjectController,
 			Span: tokens[0].Span,
 		},
-		PlayerRule:   StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter,
-		ExileCounter: kind,
+		PlayerRule:              StaticDeclarationPlayerRulePlayAndCastFromExileWithCounter,
+		ExileCounter:            kind,
+		ExilePlayOwnedCardsOnly: true,
 	}, true
 }
 

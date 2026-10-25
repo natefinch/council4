@@ -769,6 +769,12 @@ type StaticPlayerRuleDeclaration struct {
 	ExilePlayOncePerTurn               bool
 	ExilePlayExiledByControlledAbility bool
 	ExilePlaySpendAnyColorMana         bool
+
+	// ExilePlayOwnedCardsOnly limits a
+	// StaticPlayerRulePlayAndCastFromExileWithCounter rule to exiled cards the
+	// acting player owns ("... from among cards you own in exile ...", Grolnok,
+	// the Omnivore). It is false for every other kind.
+	ExilePlayOwnedCardsOnly bool
 }
 
 // StaticCardAbilityGrantDeclaration grants a keyword ability to cards in a
@@ -5159,7 +5165,8 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 	} else if node.ExileCounter != 0 ||
 		node.ExilePlayOncePerTurn ||
 		node.ExilePlayExiledByControlledAbility ||
-		node.ExilePlaySpendAnyColorMana {
+		node.ExilePlaySpendAnyColorMana ||
+		node.ExilePlayOwnedCardsOnly {
 		return StaticDeclaration{}, false
 	}
 	return StaticDeclaration{
@@ -5182,6 +5189,7 @@ func recognizeStaticPlayerRuleDeclaration(ability CompiledAbility, statics []par
 			ExilePlayOncePerTurn:               node.ExilePlayOncePerTurn,
 			ExilePlayExiledByControlledAbility: node.ExilePlayExiledByControlledAbility,
 			ExilePlaySpendAnyColorMana:         node.ExilePlaySpendAnyColorMana,
+			ExilePlayOwnedCardsOnly:            node.ExilePlayOwnedCardsOnly,
 		},
 	}, true
 }
