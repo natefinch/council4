@@ -86,7 +86,9 @@ type AbilityRequest struct {
 
 // GenericRequest bundles parameters for a generic mana payment. Spell is set
 // only when the payment is part of casting a spell outside the normal spell
-// planner, such as a madness cost.
+// planner, such as a madness cost, or when a feasibility check bounds such a
+// cast (legal X candidates for a spell cast from exile); it selects the spell's
+// mana-spending context.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
 	Source          *game.Permanent

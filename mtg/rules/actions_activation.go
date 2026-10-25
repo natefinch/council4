@@ -286,8 +286,30 @@ func legalXValuesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Ma
 }
 
 func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional) []int {
+	return legalXValuesWithManaCheck(g, playerID, costHasVariableMana(manaCost), additionalCosts, func(x int) bool {
+		return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x})
+	})
+}
+
+// legalXValuesWithManaCheck samples the X values from zero that enumeration
+// validates for a cost whose mana portion has an X (variableMana) and whose
+// additional costs may also use X. affordable reports whether the mana cost
+// could be paid at a given X; sampling stops at the first unaffordable X, so
+// affordable must be monotone (once false, false for every larger X) and must
+// never reject an X that full validation would accept.
+func legalXValuesWithManaCheck(g *game.Game, playerID game.PlayerID, variableMana bool, additionalCosts []cost.Additional, affordable func(x int) bool) []int {
 	if !additionalCostsUseX(additionalCosts) {
-		return legalXValuesForCost(g, playerID, manaCost)
+		if !variableMana {
+			return []int{0}
+		}
+		var values []int
+		for x := 0; x <= maxSampledXValue; x++ {
+			if !affordable(x) {
+				break
+			}
+			values = append(values, x)
+		}
+		return values
 	}
 	upperBound := maxSampledXValue
 	for _, additional := range additionalCosts {
@@ -307,7 +329,7 @@ func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, mana
 		lowerBound = 1
 	}
 	for x := lowerBound; x <= upperBound; x++ {
-		if costHasVariableMana(manaCost) && !paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, XValue: x}) {
+		if variableMana && !affordable(x) {
 			break
 		}
 		values = append(values, x)

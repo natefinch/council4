@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"math"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -986,6 +987,106 @@ func anyManaSymbols(manaCost opt.V[cost.Mana]) cost.Mana {
 	return rewritten
 }
 
+// zoneCastXCandidateManaCost returns the mana cost whose affordability bounds
+// the X values legal-action enumeration samples for casting face of card from
+// sourceZone. A card cast from exile under a permission that lets mana be spent
+// as though it were mana of any color/type (Evelyn, the Covetous; Court of
+// Locthwain) is paid with anyManaAlternativeCost's all-generic rewrite, so its X
+// candidates are sampled against that rewrite rather than the printed colored
+// cost (CR 107.3a, 601.2f-h, 609.4b). Every other cast samples the printed
+// cost. Each candidate is still checked by full cast validation.
+func zoneCastXCandidateManaCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef) *cost.Mana {
+	if sourceZone == zone.Exile && spellDef.ManaCost.Exists &&
+		castFromZoneAllowsAnyMana(g, playerID, card.ID, sourceZone, face) {
+		rewritten := anyManaSymbols(spellDef.ManaCost)
+		return &rewritten
+	}
+	return manaCostPtr(spellDef.ManaCost)
+}
+
+// zoneCastXValues returns the X candidates legal-action enumeration validates
+// for casting face of card from sourceZone. Every candidate is still checked by
+// full cast validation, so the candidates only need to include every X that
+// validation accepts. A cast from exile samples them against the cost
+// zoneCastXCandidateManaCost names, lowered by the most generic mana any
+// applicable cost reduction could remove (CR 601.2f): a reduction lowers the
+// total cost, so an X the unreduced cost can't afford may still be payable.
+// The exile check is paid in spellDef's spell-cast spending context, the one
+// cast payment uses, so mana restricted to spells of its kind ("Spend this mana
+// only to cast a creature spell.", Humble Naturalist) counts toward the bound.
+// Other source zones sample the unreduced cost outside any spell context.
+func zoneCastXValues(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef) []int {
+	manaCost := zoneCastXCandidateManaCost(g, playerID, card, sourceZone, face, spellDef)
+	if sourceZone != zone.Exile || !costHasVariableMana(manaCost) {
+		return legalXValuesForCostAndAdditional(g, playerID, manaCost, spellDef.AdditionalCosts)
+	}
+	reduction, noGeneric, replacesCost := maxSpellGenericCostReduction(g, playerID, card.ID, sourceZone, spellDef)
+	if noGeneric {
+		reduction = math.MaxInt
+	}
+	return legalXValuesWithManaCheck(g, playerID, true, spellDef.AdditionalCosts, func(x int) bool {
+		if replacesCost {
+			return true
+		}
+		lowered := genericReducedManaCost(*manaCost, x, reduction)
+		return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Spell: spellDef, Cost: &lowered})
+	})
+}
+
+// maxSpellGenericCostReduction bounds the generic mana the spell cost modifiers
+// applicable to casting spellDef from sourceZone could remove from its total
+// cost (CR 601.2f), whatever targets, Bargain or Bestow choice the cast makes.
+// The modifiers are gathered as the payment planner gathers them, once per
+// optional cost-determining choice, with every battlefield permanent offered as
+// a target so each target-gated reduction ("Spells you cast that target this
+// creature cost {2} less to cast.", Elderwood Scion) counts. Increases are
+// ignored. noGeneric reports that some modifier replaces the generic amount, so
+// no generic mana need be payable at all; replacesCost reports that some
+// modifier replaces the whole mana cost, so no printed symbol bounds X and every
+// sampled candidate is left to full validation.
+func maxSpellGenericCostReduction(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, spellDef *game.CardDef) (reduction int, noGeneric, replacesCost bool) {
+	targets := make([]game.Target, 0, len(g.Battlefield))
+	for _, permanent := range g.Battlefield {
+		targets = append(targets, game.PermanentTarget(permanent.ObjectID))
+	}
+	state := &rulesPaymentState{g: g}
+	for _, bargained := range []bool{false, spellHasBargain(spellDef)} {
+		for _, bestowed := range []bool{false, spellHasBestow(spellDef)} {
+			total := 0
+			for _, modifier := range state.CostModifiersForSpell(playerID, spellDef, cardID, sourceZone, targets, bargained, bestowed) {
+				noGeneric = noGeneric || modifier.SetGeneric.Exists
+				replacesCost = replacesCost || modifier.SetManaCost.Exists
+				total += max(0, modifier.GenericReduction)
+			}
+			reduction = max(reduction, total)
+		}
+	}
+	return reduction, noGeneric, replacesCost
+}
+
+// genericReducedManaCost resolves manaCost's X symbols to xValue and lowers its
+// combined generic amount by reduction, never below zero, leaving every other
+// symbol unchanged. Generic cost reductions affect only the generic component
+// and can't take it below zero (CR 118.7a, 601.2f).
+func genericReducedManaCost(manaCost cost.Mana, xValue, reduction int) cost.Mana {
+	lowered := make(cost.Mana, 0, len(manaCost)+1)
+	generic := 0
+	for _, symbol := range manaCost {
+		switch symbol.Kind {
+		case cost.VariableSymbol:
+			generic += xValue
+		case cost.GenericSymbol:
+			generic += symbol.Generic
+		default:
+			lowered = append(lowered, symbol)
+		}
+	}
+	if generic > reduction {
+		lowered = append(lowered, cost.O(generic-reduction))
+	}
+	return lowered
+}
+
 // anyManaAlternativeCost is the alternative cost of a card cast from exile under
 // a play permission whose SpendAnyMana flag lets mana of any type pay its cost
 // (Court of Locthwain). The printed mana cost is replaced by its all-generic
@@ -1042,6 +1143,10 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 				continue
 			}
 			if canCastFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
+				faces = append(faces, face)
+				continue
+			}
+			if sourceZone == zone.Exile && canCastSpellsFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
 				faces = append(faces, face)
 			}
 		}
@@ -1130,10 +1235,16 @@ func castSourcePlayer(g *game.Game, caster *game.Player, cardID id.ID, sourceZon
 // controls (the monarch-gated free cast — the effect only exists while the gate
 // is satisfied), plus every exiled card whose CR 715.3d Adventure permission
 // belongs to playerID (for example a stolen Adventure owned by another player),
-// in card-ID order. Cards already in playerID's own exile are omitted, cards no
-// longer in exile are skipped, and each card is returned at most once. The
-// result is empty for any player who holds no such cross-player exile
-// permission, so it adds nothing to enumeration for every other card.
+// in card-ID order, plus, when a group RuleEffectPlayLandsFromZone /
+// RuleEffectCastSpellsFromZone exile permission reaches playerID ("you may play
+// a card from exile with a collection counter on it", Evelyn, the Covetous),
+// every card in another player's exile that permission currently covers for
+// some face, in card-ID order. Group matching reuses the validation matchers,
+// so their exile-counter, provenance, ownership and once-per-turn filters apply.
+// Cards already in playerID's own exile are omitted, cards no longer in exile
+// are skipped, and each card is returned at most once. The result is empty for
+// any player who holds no such cross-player exile permission, so it adds
+// nothing to enumeration for every other card.
 func foreignExileCastableCards(g *game.Game, playerID game.PlayerID) []id.ID {
 	own, ok := playerByID(g, playerID)
 	if !ok {
@@ -1154,6 +1265,7 @@ func foreignExileCastableCards(g *game.Game, playerID game.PlayerID) []id.ID {
 		seen[cardID] = struct{}{}
 		cards = append(cards, cardID)
 	}
+	groupExilePermission := false
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
@@ -1164,6 +1276,10 @@ func foreignExileCastableCards(g *game.Game, playerID game.PlayerID) []id.ID {
 		case game.RuleEffectPlayFromZone, game.RuleEffectCastFromZone:
 			if effect.CastFromZone == zone.Exile {
 				consider(effect.AffectedCardID)
+			}
+		case game.RuleEffectPlayLandsFromZone, game.RuleEffectCastSpellsFromZone:
+			if effect.CastFromZone == zone.Exile {
+				groupExilePermission = true
 			}
 		case game.RuleEffectCastLinkedExileForFree:
 			if effect.ExiledLinkKey == "" {
@@ -1187,6 +1303,37 @@ func foreignExileCastableCards(g *game.Game, playerID game.PlayerID) []id.ID {
 	for _, cardID := range adventures {
 		consider(cardID)
 	}
+	if groupExilePermission {
+		for _, cardID := range foreignExileGroupPermittedCards(g, own) {
+			consider(cardID)
+		}
+	}
+	return cards
+}
+
+// foreignExileGroupPermittedCards returns, in card-ID order, the cards in other
+// players' exile buckets that a continuous group play-lands or cast-spells
+// permission lets own's player play or cast as some face right now.
+func foreignExileGroupPermittedCards(g *game.Game, own *game.Player) []id.ID {
+	var cards []id.ID
+	for _, other := range g.Players {
+		if other == nil || other.ID == own.ID {
+			continue
+		}
+		for _, cardID := range other.Exile.All() {
+			card, ok := g.GetCardInstance(cardID)
+			if !ok {
+				continue
+			}
+			if canPlayLandFromZoneByRuleEffect(g, own.ID, cardID, zone.Exile) ||
+				slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+					return canCastSpellsFromZoneByRuleEffect(g, own.ID, cardID, zone.Exile, face)
+				}) {
+				cards = append(cards, cardID)
+			}
+		}
+	}
+	slices.Sort(cards)
 	return cards
 }
 
