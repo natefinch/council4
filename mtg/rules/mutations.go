@@ -44,6 +44,7 @@ func emitSpellCastEventsWithTargets(g *game.Game, obj *game.StackObject, castEve
 	castPlayer := castEvent.Controller
 	castEvent = emitZoneChangeEventAfterCounterTransition(g, castEvent)
 	castEvent.Kind = game.EventSpellCast
+	castEvent.CardCharacteristicsKnown = true
 	castEvent.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, castEvent.Controller)
 	emitEvent(g, castEvent)
 	emitCardPlayedFromExileEvent(g, castPlayer, castCardID, fromZone)

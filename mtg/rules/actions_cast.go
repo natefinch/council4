@@ -628,6 +628,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		CardSupertypes:               cardSupertypes(spellDef),
 		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
 		Colors:                       spellColors(spellDef),
+		CardCharacteristicsKnown:     true,
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
