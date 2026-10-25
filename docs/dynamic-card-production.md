@@ -178,6 +178,13 @@ duplicate, or valid; whether registered cards hit it; and which queued cards
 need it. It searches card indexes it writes to `.cardwork/triage/<run>/`, and
 writes `report.md`, `triage.json` and `blockers-plan.json` there.
 
+The cheap pass over-claims: in the first run Terra rejected 61 of Luna's 67
+"stale" verdicts and 4 of 24 existing-card defects. So every stale and
+existing-card-defect claim is independently re-checked (`policy.models.triage_verify`)
+before it counts; unconfirmed stale issues stay open and unconfirmed defects are
+ordinary gaps. Apply refuses unverified output. Issues labeled `Parked` or
+`Legacy Compiler` never block queued cards.
+
 1. Run it: `{}` (or `{"issues":[...]}` for a subset). No GitHub or queue changes.
 2. Review `report.md`.
 3. Apply GitHub changes: `{"apply":true,"fromRunId":"<run>"}` labels

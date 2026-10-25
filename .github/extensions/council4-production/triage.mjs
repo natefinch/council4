@@ -13,7 +13,7 @@ import { defaultCorpusPath, existingCardDefectLabel } from "./workflow.mjs";
 export const triageMeta = {
   name: "council4-engine-triage",
   description: "Rank open Card Support TODO issues: stale/duplicate, existing-card defects, and queued cards each blocks. Read-only agents; apply=true labels defects and closes stale/duplicate issues with evidence.",
-  phases: [{ title: "Index" }, { title: "Triage" }, { title: "Report" }, { title: "Apply" }],
+  phases: [{ title: "Index" }, { title: "Triage" }, { title: "Verify" }, { title: "Report" }, { title: "Apply" }],
   argsSchema: {
     type: "object",
     properties: {
@@ -90,17 +90,33 @@ export function chunk(items, size) {
 
 // Deterministic merge of agent verdicts: drop unknown cards, give each queued
 // card to the highest-priority issue that claims it, and rank issues.
-export function rankTriage(verdicts, issues, queued) {
+// The cheap pass over-claims, so its stale and existing-card-defect verdicts
+// count only when an independent verifier confirmed them: an unconfirmed stale
+// issue stays open (valid), and an unconfirmed defect is an ordinary gap.
+// Parked and Legacy Compiler issues never block queued cards.
+const notScheduled = ["Parked", "Legacy Compiler"];
+export function rankTriage(verdicts, issues, queued, verified = { stale: {}, defects: {} }) {
   const byNumber = new Map(issues.map(issue => [issue.number, issue]));
-  const rows = verdicts.filter(v => byNumber.has(v.issue)).map(v => ({
-    ...v, title: byNumber.get(v.issue).title,
-    blockedOracleIds: [...new Set(v.blockedOracleIds)].filter(id => queued.get(id)?.status === "unclaimed"),
-  }));
+  const rows = verdicts.filter(v => byNumber.has(v.issue)).map(v => {
+    const issue = byNumber.get(v.issue);
+    const staleConfirmed = v.verdict === "stale" && verified.stale[v.issue]?.confirmed === true;
+    const defect = verified.defects[v.issue];
+    return {
+      ...v, title: issue.title,
+      verdict: v.verdict === "stale" && !staleConfirmed ? "valid" : v.verdict,
+      ...(v.verdict === "stale" ? { staleCheck: verified.stale[v.issue] ?? null } : {}),
+      existingCardDefect: v.existingCardDefect && defect?.confirmed === true,
+      registeredExamples: defect?.confirmed ? defect.examples : v.registeredExamples,
+      ...(v.existingCardDefect ? { defectCheck: defect ?? null } : {}),
+      scheduled: !(issue.labels ?? []).some(label => notScheduled.includes(label)),
+      blockedOracleIds: [...new Set(v.blockedOracleIds)].filter(id => queued.get(id)?.status === "unclaimed"),
+    };
+  });
   const valid = rows.filter(row => row.verdict === "valid")
     .sort((a, b) => (b.existingCardDefect - a.existingCardDefect) || (b.blockedEstimate - a.blockedEstimate) || (a.issue - b.issue));
   const owner = new Map();
   for (const row of valid) {
-    row.assignedOracleIds = row.blockedOracleIds.filter(id => !owner.has(id));
+    row.assignedOracleIds = row.scheduled ? row.blockedOracleIds.filter(id => !owner.has(id)) : [];
     for (const id of row.assignedOracleIds) owner.set(id, row.issue);
   }
   const blockers = valid.flatMap(row => row.assignedOracleIds.map(id => {
@@ -131,6 +147,11 @@ function markdown(ranked, meta) {
 }
 
 async function apply(root, ranked, signal) {
+  // Older triage output may predate verification; never act on unverified claims.
+  if (ranked.stale.some(row => row.staleCheck?.confirmed !== true) ||
+      ranked.valid.some(row => row.existingCardDefect && row.defectCheck?.confirmed !== true)) {
+    throw new Error("Triage claims are not independently verified; rerun triage");
+  }
   const gh = args => command(root, "gh", args, signal);
   const labels = JSON.parse(await gh(["label", "list", "--repo", "natefinch/council4", "--json", "name", "--limit", "200"]));
   if (!labels.some(label => label.name === existingCardDefectLabel)) {
@@ -151,6 +172,35 @@ async function apply(root, ranked, signal) {
     applied.closed.push(row.issue);
   }
   return applied;
+}
+
+const checkSchema = { type: "object", required: ["results"], properties: { results: { type: "array", items: {
+  type: "object", required: ["issue", "confirmed", "examples", "reason"],
+  properties: { issue: { type: "integer" }, confirmed: { type: "boolean" }, examples: { type: "array", items: text }, reason: text } } } } };
+
+const checkPrompts = {
+  stale: (root, batch) => `You are checking whether open GitHub issues in natefinch/council4 (a Go Magic: The Gathering rules engine) can be closed because main already supports what they ask for. A cheaper model claimed each is stale. READ ONLY: do not edit files or touch issues.
+Checkout (current main): ${root}.
+For EACH issue: read it fully (gh issue view N --repo natefinch/council4 --comments), then check the claim against the code. Confirm only if main supports the WHOLE capability the issue asks for, for the cards or behavior it names, and a behavioral test actually exercises it (run the cited or a relevant test with go test -run if cheap). If any part is missing, the cited code or test does not exist or does not cover it, the issue has open sub-issues, or you are unsure, set confirmed=false. examples may be empty. Give a 1-2 sentence reason citing file:line or a test name.
+Issues and claims: ${JSON.stringify(batch)}`,
+  defects: (root, batch, directory) => `You are checking whether open GitHub issues in natefinch/council4 (a Go Magic: The Gathering rules engine) describe defects that cards ALREADY SUPPORTED on main hit today, so those cards play wrong in games now. A cheaper model claimed each does and named example cards. READ ONLY: do not edit files or touch issues.
+Checkout (current main): ${root}. Supported cards are registered in the default registry (mtg/cards); a list with rules text is at ${directory}/registered-cards.jsonl (one JSON card per line).
+For EACH issue: read it (gh issue view N --repo natefinch/council4 --comments). Confirm only if (a) the defect is real on main (cite file:line), and (b) at least one registered card's actual implementation goes through the defective path in normal play, so it behaves wrongly today. A capability that is simply missing, so cards needing it are not registered, is NOT confirmed. If unsure, confirmed=false. Return the registered cards you checked as examples and a 1-2 sentence reason.
+Issues and claims: ${JSON.stringify(batch)}`,
+};
+
+// Independent confirmation of the cheap pass's closing and prioritizing claims.
+async function verifyClaims(ctx, kind, rows, directory, settings) {
+  const root = path.dirname(path.dirname(path.dirname(directory)));
+  const claims = rows.map(row => ({ issue: row.issue, claim: row.evidence, examples: row.registeredExamples, ...(row.duplicateOf ? { duplicateOf: row.duplicateOf } : {}) }));
+  const results = {};
+  for (const wave of chunk(chunk(claims, 6).map((batch, i) => ({ batch, i })), 5)) {
+    const out = await ctx.parallel(wave.map(({ batch, i }) => () => ctx.agent(checkPrompts[kind](root, batch, directory),
+      { label: `triage-verify/${kind}-${i}`, schema: checkSchema, model: settings.model,
+        reasoningEffort: settings.reasoningEffort, contextTier: settings.contextTier })));
+    for (const result of out.flatMap(r => r?.results ?? [])) results[result.issue] = result;
+  }
+  return results;
 }
 
 export async function runTriage(ctx) {
@@ -203,8 +253,16 @@ ${JSON.stringify(batch)}`,
       for (const result of results) verdicts.push(...(result?.issues ?? []));
       await writeFile(path.join(directory, "verdicts.json"), JSON.stringify(verdicts, null, 2) + "\n");
     }
+    ctx.phase("Verify");
+    const verifier = policy.models.triage_verify;
+    if (!verifier?.model) throw new Error("policy.models.triage_verify is required");
+    const verified = {
+      stale: await verifyClaims(ctx, "stale", verdicts.filter(v => v.verdict === "stale"), directory, verifier),
+      defects: await verifyClaims(ctx, "defects", verdicts.filter(v => v.verdict === "valid" && v.existingCardDefect), directory, verifier),
+    };
+    await writeFile(path.join(directory, "verified.json"), JSON.stringify(verified, null, 2) + "\n");
     ctx.phase("Report");
-    const ranked = rankTriage(verdicts, index.issues, queued);
+    const ranked = rankTriage(verdicts, index.issues, queued, verified);
     await writeFile(path.join(directory, "triage.json"), JSON.stringify(ranked, null, 2) + "\n");
     await writeFile(path.join(directory, "blockers-plan.json"), JSON.stringify({ corpus_sha256: index.corpus, records: ranked.blockers }, null, 2) + "\n");
     await writeFile(path.join(directory, "report.md"), markdown(ranked, { issues: index.issues.length, queued: index.queuedCount, registered: index.registeredCount }));

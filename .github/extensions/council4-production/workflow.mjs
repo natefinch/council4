@@ -88,6 +88,7 @@ export function checkPolicy(policy) {
   };
   checkSlot(policy.models?.selection, "selection");
   checkSlot(policy.models?.triage, "triage");
+  checkSlot(policy.models?.triage_verify, "triage_verify");
   for (const type of ["card", "engine"]) {
     for (const phase of ["implementation", "review", "review_fix", "validation_fix", "ci_fix"]) {
       checkSlot(policy.models?.[type]?.[phase], `${type}/${phase}`);

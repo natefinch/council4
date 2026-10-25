@@ -1,5 +1,5 @@
 {
-  "version": "1.17.0",
+  "version": "1.18.0",
   "models": {
     "selection": {
       "model": "gpt-6-luna",
@@ -62,6 +62,11 @@
     },
     "triage": {
       "model": "gpt-6-luna",
+      "reasoningEffort": "high",
+      "contextTier": "default"
+    },
+    "triage_verify": {
+      "model": "gpt-6.1-terra",
       "reasoningEffort": "high",
       "contextTier": "default"
     }

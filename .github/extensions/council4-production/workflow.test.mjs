@@ -463,7 +463,7 @@ test("A split gap is worked through its first open sub-issue, in order", () => {
 
 test("Triage ranks defects first, assigns each queued card to one issue and drops unknown cards", () => {
   assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
-  const issues = [1, 2, 3, 4, 5].map(number => ({ number, title: `Issue ${number}` }));
+  const issues = [1, 2, 3, 4, 5, 6, 7].map(number => ({ number, title: `Issue ${number}`, labels: number === 7 ? ["Parked"] : [] }));
   const queued = new Map(["a", "b", "c", "d"].map(id => [id, { oracle_id: id, revision: `r-${id}`, name: id.toUpperCase(), status: "unclaimed" }]));
   queued.set("x", { oracle_id: "x", status: "blocked" });
   const v = (issue, extra) => ({ issue, verdict: "valid", evidence: "e", existingCardDefect: false, registeredExamples: [],
@@ -473,12 +473,23 @@ test("Triage ranks defects first, assigns each queued card to one issue and drop
     v(2, { blockedOracleIds: ["b", "c"], blockedEstimate: 50 }),
     v(3, { existingCardDefect: true, registeredExamples: ["Lim-Dûl"], blockedOracleIds: ["d"], blockedEstimate: 1 }),
     v(4, { verdict: "stale" }),
+    v(5, { verdict: "stale" }),
+    v(6, { existingCardDefect: true, registeredExamples: ["Wrong"] }),
+    v(7, { blockedOracleIds: ["c"], blockedEstimate: 99 }),
     v(99, {}),
-  ], issues, queued);
-  assert.deepEqual(ranked.valid.map(row => row.issue), [3, 2, 1]);
-  assert.deepEqual(ranked.valid.map(row => row.assignedOracleIds), [["d"], ["b", "c"], ["a"]]);
+  ], issues, queued, {
+    stale: { 4: { issue: 4, confirmed: true, reason: "test" }, 5: { issue: 5, confirmed: false, reason: "partial" } },
+    defects: { 3: { issue: 3, confirmed: true, examples: ["Lim-Dûl"] }, 6: { issue: 6, confirmed: false, examples: [] } },
+  });
+  // Only verified defects lead; an unconfirmed defect is an ordinary gap; a
+  // parked issue never blocks cards; an unconfirmed stale issue stays open.
+  assert.deepEqual(ranked.valid.map(row => row.issue), [3, 7, 2, 1, 5, 6]);
+  assert.deepEqual(ranked.valid.map(row => row.assignedOracleIds), [["d"], [], ["b", "c"], ["a"], [], []]);
+  assert.equal(ranked.valid.find(row => row.issue === 6).existingCardDefect, false);
   assert.deepEqual(ranked.stale.map(row => row.issue), [4]);
-  assert.deepEqual(ranked.missing, [5]);
+  assert.deepEqual(ranked.missing, []);
+  const unverified = rankTriage([v(3, { existingCardDefect: true }), v(4, { verdict: "stale" })], issues, queued);
+  assert.deepEqual([unverified.stale.length, unverified.valid.filter(row => row.existingCardDefect).length], [0, 0]);
   assert.deepEqual(ranked.blockers.map(b => [b.oracle_id, b.blocker, b.revision]), [["d", 3, "r-d"], ["b", 2, "r-b"], ["c", 2, "r-c"], ["a", 1, "r-a"]]);
   assert.match(ranked.blockers[0].reason, /#3/);
 });
