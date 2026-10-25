@@ -75,6 +75,7 @@ func newChakramRetriever() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Chakram Slinger"),
 			},
 			OracleText: `
 			Partner with Chakram Slinger (When this creature enters, target player may put Chakram Slinger into their hand from their library, then shuffle.)

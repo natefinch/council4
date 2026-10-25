@@ -72,6 +72,7 @@ func newCazurRuthlessStalker() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Ukkima, Stalking Shadow"),
 			},
 			OracleText: `
 			Partner with Ukkima, Stalking Shadow (When this creature enters, target player may put Ukkima into their hand from their library, then shuffle.)

@@ -41,6 +41,9 @@ func newLaurineTheDiversion() *game.CardDef {
 				game.PartnerWithStaticBody,
 				game.FirstStrikeStaticBody,
 			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.PartnerWithTriggeredAbility("Kamber, the Plunderer"),
+			},
 			ActivatedAbilities: []game.ActivatedAbility{
 				game.ActivatedAbility{
 					Text: "{2}, Sacrifice an artifact or creature: Goad target creature. (Until your next turn, that creature attacks each combat if able and attacks a player other than you if able.)",

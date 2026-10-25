@@ -1912,6 +1912,54 @@ func HideawayTriggeredAbility(amount int) TriggeredAbility {
 	}
 }
 
+// PartnerWithTriggeredAbility builds the pair-fetch triggered half of "Partner
+// with <partner>" (CR 702.124j): "When this permanent enters, target player may
+// search their library for a card named <partner>, reveal it, put it into their
+// hand, then shuffle." The ability's controller chooses the target player, who
+// then decides whether to search; declining skips the search and its shuffle.
+// The search is a hidden-zone search for a stated quality, so the searcher may
+// fail to find the named card (CR 701.23b). Pair it with PartnerWithStaticBody,
+// the deck-construction half of the keyword.
+func PartnerWithTriggeredAbility(partner string) TriggeredAbility {
+	searcher := TargetPlayerReference(0)
+	return TriggeredAbility{
+		Text: fmt.Sprintf("When this permanent enters, target player may search their library for a card named %s, reveal it, put it into their hand, then shuffle.", partner),
+		Trigger: TriggerCondition{
+			Type: TriggerWhen,
+			Pattern: TriggerPattern{
+				Event:  EventPermanentEnteredBattlefield,
+				Source: TriggerSourceSelf,
+			},
+		},
+		KeywordAbilities: []KeywordAbility{
+			SimpleKeyword{Kind: PartnerWith},
+		},
+		Content: Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1,
+				MaxTargets: 1,
+				Constraint: "target player",
+				Allow:      TargetAllowPlayer,
+			}},
+			Sequence: []Instruction{{
+				Optional:      true,
+				OptionalActor: opt.Val(searcher),
+				Primitive: Search{
+					Amount: Fixed(1),
+					Player: searcher,
+					Spec: SearchSpec{
+						SourceZone:       zone.Library,
+						Destination:      zone.Hand,
+						FailToFindPolicy: SearchMayFailToFind,
+						Reveal:           true,
+						Name:             partner,
+					},
+				},
+			}},
+		}.Ability(),
+	}
+}
+
 // LivingWeaponTriggeredAbility builds the entry trigger for Living weapon
 // (CR 702.91): when this Equipment enters, create a 0/0 black Phyrexian Germ
 // creature token, then attach this Equipment to it.

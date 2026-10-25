@@ -82,6 +82,7 @@ func newTrynnChampionOfFreedom() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Silvar, Devourer of the Free"),
 			},
 			OracleText: `
 			Partner with Silvar, Devourer of the Free (When this creature enters, target player may put Silvar into their hand from their library, then shuffle.)
