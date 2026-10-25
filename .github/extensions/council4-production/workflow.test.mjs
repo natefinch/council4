@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
 import { git, changes, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -59,31 +59,39 @@ test("Review fixes are separate work and require validation and re-review", asyn
   assert.deepEqual(f.calls, ["implementation", "validate", "review-0", "review_fix", "validate", "review-1", "prepare"]);
 });
 
-test("Resumed units repair final findings first and keep the review-fix budget", async () => {
+test("Resumed units are re-reviewed under the current bar first, with the full fix budget", async () => {
   const calls = [], fixes = [], reviews = [];
   const earlier = [{ round: 0, verdict: "changes_needed", findings: ["first"] }];
-  const f = fixture({
-    stage: async (phase, round, feedback) => {
-      calls.push(`${phase}-${round}`);
-      fixes.push(feedback);
-      return { ...complete, summary: `fix ${round}`, gaps: [] };
-    },
-    review: async (round, _result, _snapshot, history) => {
-      calls.push(`review-${round}`);
-      reviews.push(history);
-      return { verdict: "changes_needed", findings: [`still ${round}`] };
-    },
-    resume: { history: earlier, verdict: { verdict: "changes_needed", findings: ["final"] },
-      result: { ...complete, gaps: [{ id: "#3333", description: "cascade trigger" }] } },
-  });
-  f.calls = calls;
-  f.validate = async () => { calls.push("validate"); return { ok: true }; };
-  const outcome = await executeUnit(f);
-  assert.equal(outcome.status, "review_rejected");
-  assert.deepEqual(calls, ["review_fix-0", "validate", "review-0", "review_fix-1", "validate", "review-1"]);
-  assert.deepEqual(fixes[0], { findings: ["final"], earlierRounds: earlier });
-  assert.deepEqual(reviews[0], [...earlier, { round: 1, verdict: "changes_needed", findings: ["final"], response: "fix 0" }]);
-  assert.deepEqual(outcome.result.gaps, [{ id: "#3333", description: "cascade trigger" }]);
+  const resumeFixture = verdicts => {
+    const f = fixture({
+      stage: async (phase, round, feedback) => {
+        calls.push(`${phase}-${round}`);
+        fixes.push(feedback);
+        return { ...complete, summary: `fix ${round}`, gaps: [] };
+      },
+      review: async (round, _result, _snapshot, history) => {
+        calls.push(`review-${round}`);
+        reviews.push(history);
+        return verdicts(round);
+      },
+      resume: { history: earlier, verdict: { verdict: "changes_needed", findings: ["final"] },
+        result: { ...complete, gaps: [{ id: "#3333", description: "cascade trigger" }] } },
+    });
+    f.calls = calls;
+    f.validate = async () => { calls.push("validate"); return { ok: true }; };
+    return f;
+  };
+  const rejected = await executeUnit(resumeFixture(round => ({ verdict: "changes_needed", findings: [`still ${round}`] })));
+  assert.equal(rejected.status, "review_rejected");
+  assert.deepEqual(calls, ["validate", "review-0", "review_fix-1", "validate", "review-1", "review_fix-2", "validate", "review-2"]);
+  assert.deepEqual(reviews[0], [...earlier, { round: 1, verdict: "changes_needed", findings: ["final"] }]);
+  assert.deepEqual(fixes[0].findings, ["still 0"]);
+  assert.deepEqual(rejected.result.gaps, [{ id: "#3333", description: "cascade trigger" }]);
+  calls.length = 0;
+  // Earlier findings that are now follow-ups no longer block: no fix is paid for.
+  const approved = await executeUnit(resumeFixture(() => ({ verdict: "approve", findings: [], followUps: [{ issue: 9, description: "edge" }] })));
+  assert.equal(approved.status, "accepted");
+  assert.deepEqual(calls, ["validate", "review-0"]);
 });
 
 test("Re-reviews and fixes see earlier rounds, and repairs keep earlier gaps", async () => {
@@ -106,13 +114,13 @@ test("Re-reviews and fixes see earlier rounds, and repairs keep earlier gaps", a
   assert.equal(outcome.status, "accepted");
   assert.deepEqual(reviews, [
     [],
-    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], response: "fixed controller" }],
-    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], response: "fixed controller" },
-      { round: 1, verdict: "changes_needed", findings: ["finding 1"], preexisting: [], response: "fixed zone" }],
+    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], followUps: [], response: "fixed controller" }],
+    [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], followUps: [], response: "fixed controller" },
+      { round: 1, verdict: "changes_needed", findings: ["finding 1"], preexisting: [], followUps: [], response: "fixed zone" }],
   ]);
   assert.deepEqual(fixes, [
     { findings: ["finding 0"], earlierRounds: [] },
-    { findings: ["finding 1"], earlierRounds: [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], response: "fixed controller" }] },
+    { findings: ["finding 1"], earlierRounds: [{ round: 0, verdict: "changes_needed", findings: ["finding 0"], preexisting: [], followUps: [], response: "fixed controller" }] },
   ]);
   assert.deepEqual(outcome.result.gaps, [gap("#2", "narrower"), gap("#3")]);
   assert.deepEqual(carryGaps({ gaps: [gap("#1")] }, { status: "blocked", gaps: [] }).gaps, [gap("#1")]);
@@ -494,6 +502,31 @@ test("Triage ranks defects first, assigns each queued card to one issue and drop
   assert.match(ranked.blockers[0].reason, /#3/);
 });
 
+test("A gap labeled Needs Split becomes a split unit until it has open sub-issues", () => {
+  const big = { ...open(1580), labels: ["Needs Split"] };
+  const choice = { gap: { issue: 1580, oracleIds: ["r"], sources: [] }, issue: big };
+  const task = gapTask(choice, { r: "Moldering Gym" });
+  assert.equal(task.split, true);
+  assert.equal(task.id, "split-1580");
+  assert.equal(task.issue, 1580);
+  assert.match(splitPrompt(task, "/repo"), /#1580[\s\S]*Acceptance scenarios define what blocks review/);
+  assert.equal(gapTask({ ...choice, issue: { ...big, subIssues: [{ number: 2, state: "OPEN" }] } }, {}).split, undefined);
+  assert.equal(gapTask({ ...choice, issue: open(1580) }, {}).split, undefined);
+  // A split unit parks the parent and the next selection works its first sub-issue.
+  const splitUnit = { status: "split", task: { taskType: "engine", id: "split-1580", issue: 1580 } };
+  const issues = { 1580: { ...big, labels: [], subIssues: [{ number: 4001, state: "OPEN", title: "Unlock", url: "u" }] } };
+  const next = { batch: null, pending_prerequisites: [{ blocked_oracle_ids: ["r"], issues: [1580] }] };
+  assert.equal(chooseWork({ next, units: [splitUnit], issues }).gap.issue, 4001);
+});
+
+test("Reviews block only on regressions, acceptance and common-play harm", () => {
+  const bar = reviewBar("abc123", 3357);
+  assert.match(bar, /regression[\s\S]*abc123[\s\S]*acceptance[\s\S]*common-play harm/);
+  assert.match(bar, /follow-up[\s\S]*sub-issue of #3357[\s\S]*followUps/);
+  assert.match(bar, /Approve when no finding blocks/);
+  assert.doesNotMatch(reviewBar("abc123", undefined), /sub-issue of #/);
+});
+
 test("Existing-card defects come first, then gaps blocking the most queued cards", () => {
   const next = { batch: readyBatch, pending_prerequisites: [
     { blocked_oracle_ids: ["a"], issues: [10] },
@@ -663,7 +696,7 @@ test("Resume arguments, retained units and seeding fail closed and preserve work
   await writeState([unit, { ...unit, index: 1, task: { taskType: "card", id: "b" } }, { ...unit, index: 2, status: "landed" },
     { ...unit, index: 3, worktree: f.work.path }]);
   const loaded = await retainedUnit(f.repo, { runId, index: 0 });
-  assert.deepEqual(loaded.history, [{ round: 0, verdict: "changes_needed", findings: ["first"], preexisting: [] }]);
+  assert.deepEqual(loaded.history, [{ round: 0, verdict: "changes_needed", findings: ["first"], preexisting: [], followUps: [] }]);
   for (const index of [1, 2, 3, 4]) await assert.rejects(retainedUnit(f.repo, { runId, index }));
   // Another top-level worktree of the repository (a new session) finds the run.
   assert.equal((await retainedUnit(f.work.path, { runId, index: 0 })).unit.worktree, retained);

@@ -201,13 +201,26 @@ issue. Selection then works the first open sub-issue (it inherits the parent's
 blocked cards); a landed sub-issue moves on to the next, and a failed one parks
 the parent. Split a parked gap this way instead of resuming it again.
 
-Reviews block only on defects the change causes or behavior the unit must
-deliver (its target cards and rule, on the routes it changes). A defect that
-already exists on the unit's base in behavior the unit doesn't deliver is
-pre-existing: the reviewer reuses or files a `Card Support TODO` issue, lists it
-under `preexisting` with how it confirmed the defect predates the change, and
-does not block. Fixers likewise don't widen a change into routes it doesn't
-touch. The dashboard shows filed pre-existing defects under each review round.
+Reviews land changes that are strictly better than their base. A finding blocks
+only if it is a regression (works on the base, breaks now), an acceptance
+failure (the issue's acceptance scenarios or ordinary play with the target cards
+don't work), or common-play harm the change introduces (crash, hidden-information
+leak, illegal or missing action in ordinary lines). Other gaps in the new
+behavior are follow-ups: the reviewer files them as issues (sub-issues of the
+unit's gap), lists them under `followUps`, and approves. A defect already on the
+base in behavior the unit doesn't deliver is pre-existing: filed the same way
+under `preexisting`, and labeled `Existing Card Defect` if registered cards hit
+it. Re-reviews re-evaluate earlier findings under this bar and only report new
+blockers the repairs caused. Fixers implement the general approach a finding
+names rather than patching its example, and don't widen a change into routes it
+doesn't touch. The dashboard shows filed follow-ups and pre-existing defects per
+review round. Resumed units are re-reviewed under the current bar before any
+fix, with the full fix budget.
+
+Issues labeled `Needs Split` (triage applies it to large issues) are not
+implemented directly: the unit is a split unit (`policy.models.engine.split`)
+that proposes ordered sub-issues, which the coordinator files and attaches,
+then removes the label. Later units work the sub-issues in order.
 
 A large gap is delivered in slices. An Engine unit lands the first shared piece
 that is correct on its own and reports each remaining piece as a gap naming the

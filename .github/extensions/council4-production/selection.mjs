@@ -107,9 +107,22 @@ export function nextSubIssue(gap, issues, filled = new Set()) {
     sources: [...gap.sources, `sub-issue of #${gap.issue}`] };
 }
 
+export const needsSplitLabel = "Needs Split";
+
 export function gapTask(choice, names) {
   const { gap, issue } = choice;
   const cards = gap.oracleIds.map(id => names[id] ? `${names[id]} (${id})` : id);
+  // A gap triaged as too large for one unit is split into ordered sub-issues
+  // before anyone implements it.
+  const split = !gap.parent && (issue.labels ?? []).includes(needsSplitLabel) &&
+    !(issue.subIssues ?? []).some(sub => sub.state === "OPEN");
+  if (split) {
+    return {
+      taskType: "engine", id: `split-${gap.issue}`, issue: gap.issue, oracleIds: gap.oracleIds, split: true,
+      title: `Split Engine gap #${gap.issue}: ${issue.title}`.slice(0, 200), reviewRequired: false, batchPlan: "",
+      instructions: `Engine gap #${gap.issue} (${issue.url}) is too large for one unit. It blocks: ${cards.join(", ") || "see issue"}.`,
+    };
+  }
   return {
     taskType: "engine", id: `gap-${gap.issue}`, issue: gap.issue, oracleIds: gap.oracleIds,
     title: `Close Engine gap #${gap.issue}: ${issue.title}`.slice(0, 200),

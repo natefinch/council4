@@ -158,7 +158,15 @@ async function apply(root, ranked, signal) {
     await gh(["label", "create", existingCardDefectLabel, "--repo", "natefinch/council4", "--color", "B60205",
       "--description", "Defect in rules that already-supported cards use; fixed before new card work"]);
   }
-  const applied = { labeled: [], closed: [] };
+  if (!labels.some(label => label.name === "Needs Split")) {
+    await gh(["label", "create", "Needs Split", "--repo", "natefinch/council4", "--color", "FBCA04",
+      "--description", "Too large for one Engine unit; production splits it into ordered sub-issues first"]);
+  }
+  const applied = { labeled: [], closed: [], split: [] };
+  for (const row of ranked.valid.filter(row => row.size === "large" && row.scheduled)) {
+    await gh(["issue", "edit", String(row.issue), "--repo", "natefinch/council4", "--add-label", "Needs Split"]);
+    applied.split.push(row.issue);
+  }
   for (const row of ranked.valid.filter(row => row.existingCardDefect)) {
     await gh(["issue", "edit", String(row.issue), "--repo", "natefinch/council4", "--add-label", existingCardDefectLabel]);
     await gh(["issue", "comment", String(row.issue), "--repo", "natefinch/council4", "--body",
