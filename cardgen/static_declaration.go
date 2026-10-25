@@ -1386,6 +1386,7 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 		filter := opt.Val(declaration.Player.ExileCounter)
 		oncePerTurn := declaration.Player.ExilePlayOncePerTurn
 		exiledByController := declaration.Player.ExilePlayExiledByControlledAbility
+		ownedCardsOnly := declaration.Player.ExilePlayOwnedCardsOnly
 		body.RuleEffects = append(body.RuleEffects,
 			game.RuleEffect{
 				Kind:                           game.RuleEffectPlayLandsFromZone,
@@ -1394,6 +1395,7 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 				PermanentTypes:                 []types.Card{types.Land},
 				ExileCounterFilter:             filter,
 				ExileCounterExiledByController: exiledByController,
+				OwnedCardsOnly:                 ownedCardsOnly,
 				OncePerTurn:                    oncePerTurn,
 			},
 			game.RuleEffect{
@@ -1402,6 +1404,7 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 				CastFromZone:                   zone.Exile,
 				ExileCounterFilter:             filter,
 				ExileCounterExiledByController: exiledByController,
+				OwnedCardsOnly:                 ownedCardsOnly,
 				OncePerTurn:                    oncePerTurn,
 				SpendAnyMana:                   declaration.Player.ExilePlaySpendAnyColorMana,
 			},

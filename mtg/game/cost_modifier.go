@@ -1155,6 +1155,15 @@ type RuleEffect struct {
 	// filter and is meaningful only alongside ExileCounterFilter.
 	ExileCounterExiledByController bool
 
+	// OwnedCardsOnly narrows a RuleEffectPlayLandsFromZone or
+	// RuleEffectCastSpellsFromZone permission to cards the acting player owns
+	// ("... from among cards you own in exile with croak counters on them.",
+	// Grolnok, the Omnivore). The rules layer compares the card's owner with the
+	// player playing or casting it, so a player who gains control of the source
+	// can't reach the previous controller's cards. It is false for every
+	// permission with no ownership filter.
+	OwnedCardsOnly bool
+
 	// OncePerTurn caps a RuleEffectPlayLandsFromZone or RuleEffectCastSpellsFromZone
 	// permission to one use per turn per source permanent ("Once each turn, you may
 	// play a card from exile ...", Evelyn, the Covetous). A source that grants both

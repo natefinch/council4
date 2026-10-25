@@ -84,11 +84,6 @@ var paymentColors = []mana.Color{
 	mana.C,
 }
 
-func canPayCostWithX(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int) bool {
-	_, ok := buildPaymentPlan(s, playerID, manaCost, xValue, nil)
-	return ok
-}
-
 func canPaySpellCosts(s State, req SpellRequest) bool {
 	for _, option := range spellCostOptionsForRequest(s, req) {
 		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, req.Bestowed, nil); ok {
@@ -383,6 +378,10 @@ func tappedPermanentIDs(plan additionalCostPlan) []id.ID {
 	return ids
 }
 
+// canPayGenericCost reports whether req's costs could be paid. A set req.Spell
+// checks the mana in that spell's casting context, as payGenericCost pays it,
+// so mana restricted to spells of its kind counts; otherwise restricted mana is
+// checked as a non-spell payment.
 func canPayGenericCost(s State, req GenericRequest) bool {
 	if len(req.AdditionalCosts) > 0 {
 		if _, ok := buildGenericCostPlan(s, req); !ok {
@@ -390,11 +389,8 @@ func canPayGenericCost(s State, req GenericRequest) bool {
 		}
 		return true
 	}
-	if len(req.Exclude) > 0 {
-		_, ok := buildPaymentPlan(s, req.PlayerID, req.Cost, req.XValue, req.Exclude)
-		return ok
-	}
-	return canPayCostWithX(s, req.PlayerID, req.Cost, req.XValue)
+	_, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, spendContext{spell: req.Spell}, nil)
+	return ok
 }
 
 func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, ok bool) {

@@ -53,4 +53,7 @@ func TestGenerateExecutableCardSourceEvelynTheCovetous(t *testing.T) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
 	}
+	if strings.Contains(source, "OwnedCardsOnly") {
+		t.Fatalf("Evelyn's permission covers cards other players own:\n%s", source)
+	}
 }

@@ -1803,6 +1803,16 @@ func recordExilePlayPermissionUse(g *game.Game, effect game.RuleEffect) {
 	g.ExilePlayPermissionUsedThisTurn[effect.SourceObjectID] = true
 }
 
+// ownedCardsOnlyPermits reports whether effect's OwnedCardsOnly rider, if any,
+// lets playerID use it for cardID: the card must be owned by playerID.
+func ownedCardsOnlyPermits(g *game.Game, effect *game.RuleEffect, playerID game.PlayerID, cardID id.ID) bool {
+	if !effect.OwnedCardsOnly {
+		return true
+	}
+	card, ok := g.GetCardInstance(cardID)
+	return ok && card.Owner == playerID
+}
+
 func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
 	_, ok := matchingPlayLandFromZoneEffect(g, playerID, cardID, sourceZone)
 	if ok {
@@ -1844,6 +1854,9 @@ func matchingPlayLandFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID
 				continue
 			}
 			if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
+				continue
+			}
+			if !ownedCardsOnlyPermits(g, effect, playerID, cardID) {
 				continue
 			}
 			if exileCounterPermissionBlocked(g, effect, cardID) {
@@ -1892,6 +1905,9 @@ func matchingCastSpellsFromZoneEffect(g *game.Game, playerID game.PlayerID, card
 			continue
 		}
 		if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
+			continue
+		}
+		if effect.OwnedCardsOnly && card.Owner != playerID {
 			continue
 		}
 		if exileCounterPermissionBlocked(g, effect, cardID) {

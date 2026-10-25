@@ -14,7 +14,8 @@ import (
 // static "You may play lands and cast spells from among cards you own in exile
 // with croak counters on them." lowers to a paired RuleEffectPlayLandsFromZone
 // (lands only) and RuleEffectCastSpellsFromZone over the exile zone, each
-// filtered by an ExileCounterFilter of counter.Croak. The whole card lowers
+// filtered by an ExileCounterFilter of counter.Croak and restricted by
+// OwnedCardsOnly to cards the permission's player owns. The whole card lowers
 // without diagnostics.
 func TestGenerateExecutableCardSourceGrolnokTheOmnivore(t *testing.T) {
 	t.Parallel()
@@ -43,9 +44,13 @@ func TestGenerateExecutableCardSourceGrolnokTheOmnivore(t *testing.T) {
 		"Kind:               game.RuleEffectCastSpellsFromZone,",
 		"CastFromZone:       zone.Exile,",
 		"ExileCounterFilter: opt.Val(counter.Croak),",
+		"OwnedCardsOnly:     true,",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)
 		}
+	}
+	if got := strings.Count(source, "OwnedCardsOnly:     true,"); got != 2 {
+		t.Fatalf("OwnedCardsOnly count = %d, want 2 (land and spell permissions):\n%s", got, source)
 	}
 }
