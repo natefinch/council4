@@ -65,7 +65,7 @@ func TestAdventureAlternateFaceResolvesAndExilesCard(t *testing.T) {
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("adventure spell was not exiled")
 	}
-	if !g.AdventureCards[cardID] {
+	if g.AdventureCards[cardID].Player != game.Player1 {
 		t.Fatal("adventure spell was not tracked in AdventureCards")
 	}
 	if !g.Players[game.Player1].Hand.Contains(drawnID) {
@@ -105,7 +105,7 @@ func TestAdventureCreatureFaceResolvesFromExileToNewBattlefield(t *testing.T) {
 	if !ok || obj.Face != game.FaceFront || obj.SourceZone != zone.Exile {
 		t.Fatalf("stack object = %+v, want front face from exile", obj)
 	}
-	if g.AdventureCards[cardID] {
+	if _, ok := g.AdventureCards[cardID]; ok {
 		t.Fatal("AdventureCards entry was not cleared when creature was cast from exile")
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
@@ -140,7 +140,7 @@ func TestAdventureFizzledGoesToGraveyard(t *testing.T) {
 	if g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("fizzled adventure spell was exiled")
 	}
-	if g.AdventureCards[cardID] {
+	if _, ok := g.AdventureCards[cardID]; ok {
 		t.Fatal("fizzled adventure spell was tracked in AdventureCards")
 	}
 }
@@ -170,7 +170,7 @@ func TestAdventureCounteredGoesToGraveyard(t *testing.T) {
 	if g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("countered adventure spell was exiled")
 	}
-	if g.AdventureCards[cardID] {
+	if _, ok := g.AdventureCards[cardID]; ok {
 		t.Fatal("countered adventure spell was tracked in AdventureCards")
 	}
 }
@@ -200,7 +200,7 @@ func TestAdventurePermissionClearsWhenCardLeavesExile(t *testing.T) {
 	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Exile, zone.Graveyard) {
 		t.Fatal("moving Adventure card from exile to graveyard failed")
 	}
-	if g.AdventureCards[cardID] {
+	if _, ok := g.AdventureCards[cardID]; ok {
 		t.Fatal("Adventure permission remained after card left exile")
 	}
 	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Graveyard, zone.Exile) {
@@ -230,7 +230,7 @@ func resolveAdventureToExile(t *testing.T, g *game.Game, engine *Engine, def *ga
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("adventure spell did not move to exile")
 	}
-	if !g.AdventureCards[cardID] {
+	if g.AdventureCards[cardID].Player != game.Player1 {
 		t.Fatal("adventure spell was not tracked in AdventureCards")
 	}
 	return cardID

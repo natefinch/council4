@@ -935,12 +935,6 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(card.ID)
 	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
-	if destination == zone.Exile {
-		if g.AdventureCards == nil {
-			g.AdventureCards = make(map[id.ID]bool)
-		}
-		g.AdventureCards[card.ID] = true
-	}
 	event = game.Event{
 		SourceID:      card.ID,
 		StackObjectID: stackObjectID(obj),
@@ -953,6 +947,17 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 		ToZone:        destination,
 	}
 	emitZoneChangeEvent(g, event)
+	if destination == zone.Exile {
+		// CR 715.3d: the spell's controller, not necessarily its owner, may
+		// play this exiled incarnation of the card.
+		if g.AdventureCards == nil {
+			g.AdventureCards = make(map[id.ID]game.AdventureExile)
+		}
+		g.AdventureCards[card.ID] = game.AdventureExile{
+			Player:      stackObjectController(obj),
+			ZoneVersion: card.ZoneVersion,
+		}
+	}
 	placeRedirectExileCounter(g, card.Owner, card.ID, replacement)
 	return true
 }
