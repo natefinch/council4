@@ -81,6 +81,7 @@ func newRocksteadyMutantMarauder() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Bebop, Skull & Crossbones"),
 			},
 			OracleText: `
 			Partner with Bebop, Skull & Crossbones (When this creature enters, target player may put Bebop into their hand from their library, then shuffle.)

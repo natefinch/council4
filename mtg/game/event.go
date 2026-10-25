@@ -358,6 +358,16 @@ type Event struct {
 	// EventSpellCast emission site from the effective face being cast.
 	Colors []color.Color
 
+	// CardCharacteristicsKnown marks CardTypes, CardSupertypes, CardSubtypes,
+	// and Colors as an authoritative snapshot of the spell as it exists on the
+	// stack, including legitimately empty fields (a face without subtypes or
+	// supertypes, a colorless face, a face-down spell). Event publication and
+	// matching must not backfill such a snapshot from the card's front face or
+	// from a prepared spell's originating permanent. It is set at every
+	// EventSpellCast and EventSpellCopied emission site that records the
+	// spell's characteristics.
+	CardCharacteristicsKnown bool
+
 	// ManaValue records the mana value of the spell as cast on the stack for
 	// mana-value-filtered cast triggers.
 	ManaValue opt.V[int]

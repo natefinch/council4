@@ -105,6 +105,7 @@ func newToothyImaginaryFriend() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Pir, Imaginative Rascal"),
 			},
 			OracleText: `
 			Partner with Pir, Imaginative Rascal (When this creature enters, target player may put Pir into their hand from their library, then shuffle.)

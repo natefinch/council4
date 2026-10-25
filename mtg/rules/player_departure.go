@@ -82,6 +82,11 @@ func leaveDepartedOwnedObjects(g *game.Game) {
 		delete(g.ForetoldCards, cardID)
 		delete(g.ExileCounterExiledBy, cardID)
 	}
+	for cardID, adventure := range g.AdventureCards {
+		if departedPlayer(g, adventure.Player) {
+			delete(g.AdventureCards, cardID)
+		}
+	}
 	g.Emblems = slices.DeleteFunc(g.Emblems, func(emblem game.Emblem) bool {
 		return departedPlayer(g, emblem.Owner)
 	})

@@ -40,6 +40,9 @@ func newPippinWardenOfIsengard() *game.CardDef {
 			StaticAbilities: []game.StaticAbility{
 				game.PartnerWithStaticBody,
 			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.PartnerWithTriggeredAbility("Merry, Warden of Isengard"),
+			},
 			ActivatedAbilities: []game.ActivatedAbility{
 				game.ActivatedAbility{
 					Text: "{1}, {T}: Create a Food token.",

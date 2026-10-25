@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -142,11 +144,11 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	payLifeFromTop := sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, cast.Face)
 	// plotted marks a plotted card being cast from exile (CR 718): it is cast
 	// without paying its mana cost. It must be read before the card leaves exile.
-	plotted := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsPlottedInExile(g, card.ID)
+	plotted := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsPlottedInExile(g, playerID, card.ID)
 	// foretold marks a foretold card being cast from exile (CR 702.144): it is
 	// cast for its foretell cost rather than its mana cost. It must be read before
 	// the card leaves exile.
-	foretold := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsForetoldInExile(g, card.ID)
+	foretold := sourceZone == zone.Exile && cast.Face == game.FaceFront && cardIsForetoldInExile(g, playerID, card.ID)
 	// freeLinkedExile marks a card cast for free from the pool of cards exiled
 	// under this source ("cast a spell from among cards exiled with this
 	// enchantment without paying its mana cost.", Court of Locthwain). The
@@ -439,7 +441,7 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 			return false
 		}
 	case zone.Exile:
-		if !g.AdventureCards[cardID] {
+		if !adventureExileFrontFacePermitted(g, playerID, cardID) {
 			return false
 		}
 	case zone.Graveyard:
@@ -628,6 +630,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		CardSupertypes:               cardSupertypes(spellDef),
 		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
 		Colors:                       spellColors(spellDef),
+		CardCharacteristicsKnown:     true,
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
@@ -782,8 +785,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if castFromZoneProhibited(g, playerID, sourceZone) {
 		return false
 	}
-	plotted := sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, cardID)
-	foretold := sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, cardID)
+	plotted := sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, playerID, cardID)
+	foretold := sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, playerID, cardID)
 	switch sourceZone {
 	case zone.Command:
 		if !isCommanderOwnedBy(g, playerID, cardID) {
@@ -798,10 +801,11 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) ||
 			canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
 		freeLinkedExile := face == game.FaceFront && castLinkedExileForFree(g, playerID, cardID)
-		if !g.AdventureCards[cardID] && !hasRulePermission && !plotted && !foretold && !freeLinkedExile {
+		adventure := hasAdventureExilePermission(g, playerID, cardID)
+		if !adventure && !hasRulePermission && !plotted && !foretold && !freeLinkedExile {
 			return false
 		}
-		if g.AdventureCards[cardID] && !hasRulePermission && !plotted && !foretold && !freeLinkedExile && face != game.FaceFront {
+		if adventure && !hasRulePermission && !plotted && !foretold && !freeLinkedExile && face != game.FaceFront {
 			return false
 		}
 	case zone.Library:
@@ -1025,15 +1029,15 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 	if sourceZone == zone.Graveyard || sourceZone == zone.Exile {
 		var faces []game.FaceIndex
 		for _, face := range card.Def.LegalCastFaces() {
-			if sourceZone == zone.Exile && g.AdventureCards[card.ID] && face == game.FaceFront {
+			if sourceZone == zone.Exile && face == game.FaceFront && adventureExileFrontFacePermitted(g, playerID, card.ID) {
 				faces = append(faces, face)
 				continue
 			}
-			if sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, card.ID) {
+			if sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, playerID, card.ID) {
 				faces = append(faces, face)
 				continue
 			}
-			if sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, card.ID) {
+			if sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, playerID, card.ID) {
 				faces = append(faces, face)
 				continue
 			}
@@ -1053,6 +1057,40 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 		return faces
 	}
 	return card.Def.LegalCastFaces()
+}
+
+// adventureExileFrontFacePermitted reports whether playerID may cast the front
+// face of an Adventure-exiled card: playerID holds its CR 715.3d permission, or
+// an independent permission to cast it from exile (a per-card play/cast grant
+// or a continuous "cast spells from exile" permission) covers it even though
+// another player controlled the Adventure spell (for example the owner of a
+// stolen Adventure). Timing, costs and other restrictions still apply.
+func adventureExileFrontFacePermitted(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	if hasAdventureExilePermission(g, playerID, cardID) {
+		return true
+	}
+	if _, tracked := g.AdventureCards[cardID]; !tracked {
+		return false
+	}
+	return canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, game.FaceFront) ||
+		canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, game.FaceFront)
+}
+
+// hasAdventureExilePermission reports whether playerID holds the CR 715.3d
+// permission to play cardID: playerID controlled the Adventure spell as it
+// resolved into exile, and that same exiled object (same incarnation, in its
+// owner's exile) is still there. The owner gains nothing merely by owning it.
+func hasAdventureExilePermission(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	adventure, ok := g.AdventureCards[cardID]
+	if !ok || adventure.Player != playerID {
+		return false
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || card.ZoneVersion != adventure.ZoneVersion {
+		return false
+	}
+	owner, ok := playerByID(g, card.Owner)
+	return ok && owner.Exile.Contains(cardID)
 }
 
 // castSourcePlayer returns the player whose zone physically holds the card being
@@ -1090,7 +1128,9 @@ func castSourcePlayer(g *game.Game, caster *game.Player, cardID id.ID, sourceZon
 // RuleEffectCastFromZone whose exile permission reaches playerID, plus the
 // linked-exile pool of every active RuleEffectCastLinkedExileForFree the player
 // controls (the monarch-gated free cast — the effect only exists while the gate
-// is satisfied). Cards already in playerID's own exile are omitted, cards no
+// is satisfied), plus every exiled card whose CR 715.3d Adventure permission
+// belongs to playerID (for example a stolen Adventure owned by another player),
+// in card-ID order. Cards already in playerID's own exile are omitted, cards no
 // longer in exile are skipped, and each card is returned at most once. The
 // result is empty for any player who holds no such cross-player exile
 // permission, so it adds nothing to enumeration for every other card.
@@ -1136,6 +1176,16 @@ func foreignExileCastableCards(g *game.Game, playerID game.PlayerID) []id.ID {
 		default:
 			continue
 		}
+	}
+	var adventures []id.ID
+	for cardID := range g.AdventureCards {
+		if hasAdventureExilePermission(g, playerID, cardID) {
+			adventures = append(adventures, cardID)
+		}
+	}
+	slices.Sort(adventures)
+	for _, cardID := range adventures {
+		consider(cardID)
 	}
 	return cards
 }

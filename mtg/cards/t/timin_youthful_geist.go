@@ -76,6 +76,7 @@ func newTiminYouthfulGeist() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Rhoda, Geist Avenger"),
 			},
 			OracleText: `
 			Partner with Rhoda, Geist Avenger (When this creature enters, target player may put Rhoda into their hand from their library, then shuffle.)

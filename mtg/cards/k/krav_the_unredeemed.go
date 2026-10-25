@@ -39,6 +39,9 @@ func newKravTheUnredeemed() *game.CardDef {
 			StaticAbilities: []game.StaticAbility{
 				game.PartnerWithStaticBody,
 			},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.PartnerWithTriggeredAbility("Regna, the Redeemer"),
+			},
 			ActivatedAbilities: []game.ActivatedAbility{
 				game.ActivatedAbility{
 					Text:     "{B}, Sacrifice X creatures: Target player draws X cards and gains X life. Put X +1/+1 counters on Krav.",

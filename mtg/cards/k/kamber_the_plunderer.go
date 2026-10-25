@@ -77,6 +77,7 @@ func newKamberThePlunderer() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Laurine, the Diversion"),
 			},
 			OracleText: `
 			Partner with Laurine, the Diversion (When this creature enters, target player may put Laurine into their hand from their library, then shuffle.)

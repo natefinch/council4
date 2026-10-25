@@ -77,6 +77,7 @@ func newVirtusTheVeiled() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Gorm the Great"),
 			},
 			OracleText: `
 			Partner with Gorm the Great (When this creature enters, target player may put Gorm into their hand from their library, then shuffle.)

@@ -118,6 +118,7 @@ func newBrallinSkysharkRider() *game.CardDef {
 						MaxModes: 1,
 					},
 				},
+				game.PartnerWithTriggeredAbility("Shabraz, the Skyshark"),
 			},
 			OracleText: `
 			Partner with Shabraz, the Skyshark (When this creature enters, target player may put Shabraz into their hand from their library, then shuffle.)

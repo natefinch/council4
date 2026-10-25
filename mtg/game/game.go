@@ -42,6 +42,16 @@ type ReboundCard struct {
 	Controller PlayerID
 }
 
+// AdventureExile records the CR 715.3d permission created when an Adventure
+// spell resolves into exile. Player is the spell's controller as it resolved,
+// who alone may play the card, which is not necessarily its owner. ZoneVersion
+// is the exiled card's incarnation; the permission ends once that object leaves
+// exile (CR 400.7).
+type AdventureExile struct {
+	Player      PlayerID
+	ZoneVersion uint64
+}
+
 // PlayerConfig holds the configuration for a single player when setting
 // up a new game — their name, deck list, and commanders.
 type PlayerConfig struct {
@@ -179,8 +189,9 @@ type Game struct {
 	// next-upkeep free recast from exile.
 	ReboundCards map[id.ID]ReboundCard
 
-	// AdventureCards tracks cards in exile that may be cast from adventure exile.
-	AdventureCards map[id.ID]bool
+	// AdventureCards tracks exiled cards whose resolving Adventure spell's
+	// controller may play them (CR 715.3d).
+	AdventureCards map[id.ID]AdventureExile
 
 	// PlottedCards tracks cards plotted into exile (CR 718) and the turn number on
 	// which each was plotted. A card in this map is in exile face up and may be
@@ -405,7 +416,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		CommanderIDs:                       make(map[id.ID]bool),
 		SuspendedCards:                     make(map[id.ID]SuspendedCard),
 		ReboundCards:                       make(map[id.ID]ReboundCard),
-		AdventureCards:                     make(map[id.ID]bool),
+		AdventureCards:                     make(map[id.ID]AdventureExile),
 		PlottedCards:                       make(map[id.ID]int),
 		ForetoldCards:                      make(map[id.ID]int),
 		CardCounters:                       make(map[id.ID]counter.Set),

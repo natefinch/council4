@@ -106,7 +106,7 @@ func TestForetoldCardNotCastableSameTurn(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.ForetellCard(cardID)) {
 		t.Fatal("foretell action failed")
 	}
-	if cardIsForetoldInExile(g, cardID) {
+	if cardIsForetoldInExile(g, game.Player1, cardID) {
 		t.Fatal("card is castable from exile the same turn it was foretold")
 	}
 	legal := engine.legalActions(g, game.Player1)
@@ -140,7 +140,7 @@ func TestForetoldCardCastableForForetellCostLaterTurn(t *testing.T) {
 		t.Fatal("precondition: an Island should remain untapped for the foretell cast")
 	}
 
-	if !cardIsForetoldInExile(g, cardID) {
+	if !cardIsForetoldInExile(g, game.Player1, cardID) {
 		t.Fatal("card is not castable from exile on a later turn")
 	}
 	legal := engine.legalActions(g, game.Player1)

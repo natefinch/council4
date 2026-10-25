@@ -61,8 +61,13 @@ func emitPreparedEvent(g *game.Game, event game.Event) {
 	certifySimultaneousAttachedDeathDeparture(g, event)
 }
 
+// populateEventPermanentCharacteristics fills missing type-line characteristics
+// from the event's permanent. An authoritative spell snapshot is left unchanged:
+// a prepared spell's event names its originating permanent, but the cast copy
+// has only the prepare spell's characteristics, including legitimately empty
+// fields (CR 722.3c).
 func populateEventPermanentCharacteristics(g *game.Game, event *game.Event) {
-	if event == nil || event.PermanentID == 0 {
+	if event == nil || event.PermanentID == 0 || event.CardCharacteristicsKnown {
 		return
 	}
 	if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
