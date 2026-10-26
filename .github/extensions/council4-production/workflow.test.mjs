@@ -1198,3 +1198,53 @@ test("catalog examples use only declared arguments and registration follows the 
   const extension = await readFile(new URL("./extension.mjs", import.meta.url), "utf8");
   assert.match(extension, /workflows\.map\(\(\{ meta, run \}\) => defineWorkflow\(\{ meta, run \}\)\)/);
 });
+
+test("recorded workflows leave a mirrored run record with phases, outcome and native AIC", async () => {
+  const { recorded, costsByModel } = await import("./record.mjs");
+  const repo = await mkdtemp(path.join(os.tmpdir(), "c4-record-"));
+  await git(repo, ["init", "-q"]);
+  const listeners = [];
+  const ctx = {
+    runId: "run-1", args: { issues: [1] }, signal: new AbortController().signal, phases: [],
+    phase(title) { this.phases.push(title); },
+    session: {
+      on: listener => { listeners.push(listener); return () => listeners.splice(listeners.indexOf(listener), 1); },
+      workflow: { getRunDetail: async () => ({ consumed: { nanoAiu: 2_500_000_000, activeMs: 1200 }, agents: [{}, {}] }) },
+    },
+  };
+  const before = process.cwd();
+  process.chdir(repo);
+  try {
+    const result = await recorded("demo", async run => {
+      run.phase("Index");
+      assert.equal(run.runId, "run-1");
+      listeners[0]({ type: "subagent.started", agentId: "a", data: { workflowRunId: "run-1" } });
+      listeners[0]({ type: "assistant.usage", agentId: "a", id: "u1", timestamp: "t", data: { model: "m", copilotUsage: { totalNanoAiu: 2_500_000_000 } } });
+      run.phase("Report");
+      return 42;
+    })(ctx);
+    assert.equal(result, 42);
+    assert.deepEqual(ctx.phases, ["Index", "Report"]);
+    assert.equal(listeners.length, 0);
+    const local = JSON.parse(await readFile(path.join(repo, ".cardwork/runs/run-1/run.json"), "utf8"));
+    const mirrored = JSON.parse(await readFile(path.join(repo, ".git/council4-production/workflow-runs/run-1/run.json"), "utf8"));
+    assert.deepEqual(mirrored, local);
+    assert.equal(local.workflow, "demo");
+    assert.equal(local.outcome, "finished");
+    assert.ok(local.finishedAt >= local.startedAt);
+    assert.equal(local.aic, 2.5);
+    assert.equal(local.agents, 2);
+    assert.deepEqual(local.phases.map(p => p.title), ["Index", "Report"]);
+    assert.deepEqual(local.models, [{ model: "m", calls: 1, aic: 2.5 }]);
+
+    await assert.rejects(recorded("demo", async () => { throw new Error("boom"); })({ ...ctx, runId: "run-2" }), /boom/);
+    const failed = JSON.parse(await readFile(path.join(repo, ".cardwork/runs/run-2/run.json"), "utf8"));
+    assert.equal(failed.outcome, "error");
+    assert.equal(failed.error, "boom");
+  } finally {
+    process.chdir(before);
+    await rm(repo, { recursive: true, force: true });
+  }
+  assert.deepEqual(costsByModel([{ kind: "usage", key: "k", model: "x", nanoAiu: 1e9 }, { kind: "usage", key: "k", model: "x", nanoAiu: 1e9 }]),
+    [{ model: "x", calls: 1, aic: 1 }]);
+});

@@ -1,9 +1,11 @@
 import { meta, runProduction, reportMeta, runReport } from "./workflow.mjs";
 import { fileURLToPath } from "node:url";
 import { triageMeta, runTriage } from "./triage.mjs";
+import { recorded } from "./record.mjs";
 
 // The workflows this extension registers, with example arguments for starting
-// them. The production dashboard lists these so a run can be copied into a new
+// them. Production keeps its own ledger; the others are wrapped by recorded so
+// every run leaves a run record for the dashboard. The production dashboard lists these so a run can be copied into a new
 // session. Placeholders in angle brackets must be replaced before running.
 export const workflows = [
   {
@@ -16,11 +18,11 @@ export const workflows = [
     ],
   },
   {
-    meta: reportMeta, run: runReport,
+    meta: reportMeta, run: recorded(reportMeta.name, runReport),
     examples: [{ title: "Refresh a run's cost report", args: { runId: "<run id>" } }],
   },
   {
-    meta: triageMeta, run: runTriage,
+    meta: triageMeta, run: recorded(triageMeta.name, runTriage),
     examples: [
       { title: "Triage the backlog (read-only)", args: {} },
       { title: "Triage selected issues", args: { issues: ["<issue number>"] } },
