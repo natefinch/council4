@@ -54,10 +54,20 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		json.NewEncoder(w).Encode(scan(roots, time.Now()))
+		json.NewEncoder(w).Encode(scan(roots, sharedRuns(*repo), time.Now()))
 	})
 	log.Printf("council4 production dashboard on http://%s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
+}
+
+// sharedRuns is where runs mirror their ledgers so they outlive the session
+// worktree that ran them.
+func sharedRuns(repo string) string {
+	out, err := exec.Command("git", "-C", repo, "rev-parse", "--path-format=absolute", "--git-common-dir").Output()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(strings.TrimSpace(string(out)), "council4-production", "runs")
 }
 
 // worktrees lists the repository's top-level worktrees, excluding the
@@ -232,11 +242,21 @@ type Run struct {
 	Error          *runError      `json:"error"`
 }
 
-func scan(roots []string, now time.Time) []Run {
+// scan collects runs from each worktree's ledger directory, then from the
+// shared mirror for runs whose worktree is gone. The first copy found wins.
+func scan(roots []string, shared string, now time.Time) []Run {
 	seen := make(map[string]bool)
 	runs := []Run{}
+	type source struct{ dir, worktree string }
+	var sources []source
 	for _, root := range roots {
-		dirs, err := os.ReadDir(filepath.Join(root, ".cardwork", "workflows"))
+		sources = append(sources, source{filepath.Join(root, ".cardwork", "workflows"), root})
+	}
+	if shared != "" {
+		sources = append(sources, source{shared, "(worktree removed)"})
+	}
+	for _, src := range sources {
+		dirs, err := os.ReadDir(src.dir)
 		if err != nil {
 			continue
 		}
@@ -244,14 +264,14 @@ func scan(roots []string, now time.Time) []Run {
 			if !dir.IsDir() || seen[dir.Name()] {
 				continue
 			}
-			run, err := load(filepath.Join(root, ".cardwork", "workflows", dir.Name()), now)
+			run, err := load(filepath.Join(src.dir, dir.Name()), now)
 			if err != nil {
 				if !errors.Is(err, fs.ErrNotExist) {
 					log.Printf("skipping %s: %v", dir.Name(), err)
 				}
 				continue
 			}
-			run.Worktree = root
+			run.Worktree = src.worktree
 			seen[dir.Name()] = true
 			runs = append(runs, run)
 		}

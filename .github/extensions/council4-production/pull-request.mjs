@@ -56,7 +56,7 @@ export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined
       // rather than the current-session PR tool. No admin/auto-merge flags.
       const pr = JSON.parse(await gh(cwd, ["api", `repos/${repository}/pulls`, "--method", "POST",
         "-f", `head=${branch}`, "-f", "base=main", "-f", `title=${task.title}`,
-        "-f", `body=Production ${task.taskType} unit \`${task.id}\`.\n\nLocal behavioral validation and applicable independent review completed. The workflow waits for Tests, Race Tests, every other reported check, and repository-required approval before merging. CI fixes and integration re-review are separately attributed. No protection bypass.`]));
+        "-f", `body=Production ${task.taskType} unit \`${task.id}\`.\n\n${task.issue ? `Engine gap #${task.issue}.\n\n` : ""}Local behavioral validation and applicable independent review completed. The workflow waits for Tests, Race Tests, every other reported check, and repository-required approval before merging. CI fixes and integration re-review are separately attributed. No protection bypass.`]));
       return this.view(cwd, pr.number);
     },
     async view(cwd, number) {

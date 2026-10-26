@@ -44,7 +44,24 @@ func TestScanCollatesRunsAcrossWorktrees(t *testing.T) {
 	// The same run reachable from two worktrees is reported once.
 	writeRun(t, second, "old", `{"runId":"old","stages":[],"units":[]}`, "")
 
-	runs := scan([]string{first, second, filepath.Join(t.TempDir(), "missing")}, time.Now())
+	shared := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(shared, "gone"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(shared, "gone", "state.json"), []byte(`{"runId":"gone","stages":[{"label":"x","startedAt":"2026-10-20T00:00:00Z"}],"units":[],"outcome":"scope_finished"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(shared, "old"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(shared, "old", "state.json"), []byte(`{"runId":"old","stages":[],"units":[]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	all := scan([]string{first, second, filepath.Join(t.TempDir(), "missing")}, shared, time.Now())
+	if len(all) != 3 || all[2].ID != "gone" || all[2].Worktree != "(worktree removed)" || all[2].Status != "finished" {
+		t.Fatalf("shared ledger of a removed worktree not shown, or shadowed a worktree copy: %+v", all)
+	}
+	runs := all[:2]
 	if len(runs) != 2 {
 		t.Fatalf("got %d runs, want 2: %+v", len(runs), runs)
 	}
