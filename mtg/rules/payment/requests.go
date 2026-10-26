@@ -72,6 +72,18 @@ type SpellRequest struct {
 	SpendAnyMana game.ManaSpendPermission
 }
 
+// SpellManaRequest describes a mana cost to check as the total mana cost of
+// casting Card (card CardID from SourceZone). Cost has its X symbols resolved;
+// SpendAs is the spending permission (CR 609.4b) the cast pays under.
+type SpellManaRequest struct {
+	PlayerID   game.PlayerID
+	CardID     id.ID
+	SourceZone zone.Type
+	Card       *game.CardDef
+	SpendAs    game.ManaSpendPermission
+	Cost       *cost.Mana
+}
+
 // AbilityRequest bundles all parameters needed to check or pay activated
 // ability costs.
 type AbilityRequest struct {
@@ -92,17 +104,12 @@ type AbilityRequest struct {
 
 // GenericRequest bundles parameters for a generic mana payment. Spell is set
 // only when the payment is part of casting a spell outside the normal spell
-// planner, such as a madness cost, or when a feasibility check bounds such a
-// cast (legal X candidates for a spell cast from exile); it selects the spell's
-// mana-spending context. SpendAs is the spending permission (CR 609.4b) that
-// context pays under, such as the rider of a permission to cast the spell from
-// exile.
+// planner, such as a madness cost; it selects the spell's mana-spending context.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
 	Source          *game.Permanent
 	SourceCardID    id.ID
 	Spell           *game.CardDef
-	SpendAs         game.ManaSpendPermission
 	Cost            *cost.Mana
 	XValue          int
 	Exclude         map[id.ID]bool

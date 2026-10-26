@@ -87,6 +87,18 @@ func (o paymentOrchestratorType) canPayGenericCost(g *game.Game, req payment.Gen
 	return o.planner(g).CanPayGenericCost(req)
 }
 
+// canPaySpellManaCost reports whether the player could pay req.Cost as the
+// total mana cost of casting req.Card, including with convoke, improvise or
+// delve (CR 601.2f-h).
+func (o paymentOrchestratorType) canPaySpellManaCost(g *game.Game, req payment.SpellManaRequest) bool {
+	return o.planner(g).CanPaySpellManaCost(req)
+}
+
+// spellCostOptions returns every cost option req offers, payable or not.
+func (o paymentOrchestratorType) spellCostOptions(g *game.Game, req payment.SpellRequest) []payment.SpellOptionSummary {
+	return o.planner(g).SpellCostOptions(req)
+}
+
 // payGenericCostForSpell pays a mana cost that is part of casting a spell (such
 // as a madness cost) and returns the per-unit pool mana consumed so the caller
 // can resolve mana-spend riders as a spell cast after the spell is on the stack.

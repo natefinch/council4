@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -932,50 +933,108 @@ type exileCastRoute struct {
 	linkedFree game.RuleEffect
 }
 
-// zoneCastXSpendPermission returns the spending permission whose rider bounds
-// the X values legal-action enumeration samples for casting face of card from
-// sourceZone. A card cast from exile under a permission that lets mana be spent
-// as though it were mana of any color/type (Evelyn, the Covetous; Court of
-// Locthwain) keeps its printed cost, but that cost is paid under the broadest
-// such rider, so its X candidates are sampled with it (CR 107.3a, 601.2f-h,
-// 609.4b). Every other cast samples the printed cost normally. Each candidate is
-// still checked by full cast validation, through one specific permission.
-func zoneCastXSpendPermission(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type, face game.FaceIndex) game.ManaSpendPermission {
-	if sourceZone != zone.Exile {
-		return game.ManaSpendNormal
+// zoneCastXValues returns the X candidates legal-action enumeration validates
+// for casting face of card from sourceZone, overloaded or not. The candidates
+// are sampled from the same permission routes and cost options cast validation
+// pays through: the normal cost, each alternative cost the spell offers from
+// sourceZone (flashback, escape, evoke), and each route's own alternative cost
+// (a free or foretell cast from exile, Bolas's Citadel's life payment) and
+// spending rider (Evelyn, the Covetous; Court of Locthwain) (CR 601.2b, 609.4b).
+func zoneCastXValues(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef, overloaded bool) []int {
+	announced := manaCostPtr(spellDef.ManaCost)
+	if overloaded {
+		overloadCost := spellDef.Overload.Val.Cost
+		announced = &overloadCost
 	}
-	return castFromZoneManaSpendPermission(g, playerID, card.ID, sourceZone, face)
+	if !costHasVariableMana(announced) {
+		return legalXValuesForCostAndAdditional(g, playerID, announced, spellDef.AdditionalCosts)
+	}
+	mode := castCostMode{
+		overloaded: overloaded,
+		payLife:    sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, face),
+	}
+	base := payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          card.ID,
+		SourceZone:      sourceZone,
+		Card:            spellDef,
+		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
+	}
+	return spellCastXValues(g, spellDef, mode.castRouteRequests(base, exileCastRoutes(g, playerID, card.ID, sourceZone, face, mode)))
 }
 
-// zoneCastXValues returns the X candidates legal-action enumeration validates
-// for casting face of card from sourceZone. Every candidate is still checked by
-// full cast validation, so the candidates only need to include every X that
-// validation accepts. A cast from exile samples them against the printed cost,
-// paid under the rider zoneCastXSpendPermission names and lowered by the most
-// generic mana any applicable cost reduction could remove (CR 601.2f): a
-// reduction lowers the total cost, so an X the unreduced cost can't afford may
-// still be payable.
-// The exile check is paid in spellDef's spell-cast spending context, the one
-// cast payment uses, so mana restricted to spells of its kind ("Spend this mana
-// only to cast a creature spell.", Humble Naturalist) counts toward the bound.
-// Other source zones sample the unreduced cost outside any spell context.
-func zoneCastXValues(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef) []int {
+// preparedSpellXValues returns the X candidates legal-action enumeration
+// validates for casting the copy of spellDef, the prepare spell of the prepared
+// permanent's card sourceID, through the request cast validation pays.
+func preparedSpellXValues(g *game.Game, playerID game.PlayerID, sourceID id.ID, spellDef *game.CardDef) []int {
 	manaCost := manaCostPtr(spellDef.ManaCost)
-	if sourceZone != zone.Exile || !costHasVariableMana(manaCost) {
+	if !costHasVariableMana(manaCost) {
 		return legalXValuesForCostAndAdditional(g, playerID, manaCost, spellDef.AdditionalCosts)
 	}
-	reduction, noGeneric, replacesCost := maxSpellGenericCostReduction(g, playerID, card.ID, sourceZone, spellDef)
+	return spellCastXValues(g, spellDef, []payment.SpellRequest{{
+		PlayerID:   playerID,
+		CardID:     sourceID,
+		SourceZone: zone.Battlefield,
+		Card:       spellDef,
+	}})
+}
+
+// spellCastXValues returns the X candidates legal-action enumeration validates
+// for casting spellDef, whose announced mana cost has an X, through any of
+// requests, the payment requests of the permission routes cast validation may
+// pay through. Every candidate is still checked by full cast validation, so the
+// candidates only need to include every X that validation accepts: the union,
+// over every cost option of every request, of the X values that option could
+// pay. An option is any total cost the caster may choose (CR 601.2b, 601.2f):
+// the mana cost or an alternative cost, which need not share the printed cost's
+// {X} (Firecat Blitz's flashback cost "{R}{R}, Sacrifice X Mountains" bounds X
+// by its additional cost, not by mana), or any mana at all. A route whose alternative cost
+// has no {X} announces only X=0. Each option's mana at a given X is lowered by
+// the most generic mana any applicable cost reduction could remove (CR 601.2f,
+// 118.7a), since a reduction lowers the total cost whichever option is chosen,
+// and is paid as cast payment pays it: under the request's spending rider, in
+// spellDef's spell-cast spending context, so mana restricted to spells of its
+// kind ("Spend this mana only to cast a creature spell.", Humble Naturalist)
+// counts, and with the convoke, improvise or delve payment the spell may use
+// once its total cost is determined (CR 702.51a-b, 702.66a-b, 702.126a-b).
+func spellCastXValues(g *game.Game, spellDef *game.CardDef, requests []payment.SpellRequest) []int {
+	if len(requests) == 0 {
+		return nil
+	}
+	playerID, cardID, sourceZone := requests[0].PlayerID, requests[0].CardID, requests[0].SourceZone
+	reduction, noGeneric, replacesCost := maxSpellGenericCostReduction(g, playerID, cardID, sourceZone, spellDef)
 	if noGeneric {
 		reduction = math.MaxInt
 	}
-	spendAs := zoneCastXSpendPermission(g, playerID, card, sourceZone, face)
-	return legalXValuesWithManaCheck(g, playerID, true, spellDef.AdditionalCosts, func(x int) bool {
-		if replacesCost {
-			return true
+	candidates := map[int]bool{}
+	for _, request := range requests {
+		for _, option := range paymentOrch.spellCostOptions(g, request) {
+			var optionMana cost.Mana
+			if option.ManaCost != nil {
+				optionMana = *option.ManaCost
+			}
+			values := legalXValuesWithManaCheck(g, playerID, costHasVariableMana(option.ManaCost), option.AdditionalCosts, func(x int) bool {
+				if replacesCost {
+					return true
+				}
+				lowered := genericReducedManaCost(optionMana, x, reduction)
+				return paymentOrch.canPaySpellManaCost(g, payment.SpellManaRequest{
+					PlayerID:   playerID,
+					CardID:     cardID,
+					SourceZone: sourceZone,
+					Card:       request.Card,
+					SpendAs:    request.SpendAnyMana,
+					Cost:       &lowered,
+				})
+			})
+			for _, x := range values {
+				if castRouteAllowsX(spellDef, x, request) {
+					candidates[x] = true
+				}
+			}
 		}
-		lowered := genericReducedManaCost(*manaCost, x, reduction)
-		return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Spell: spellDef, SpendAs: spendAs, Cost: &lowered})
-	})
+	}
+	return slices.Sorted(maps.Keys(candidates))
 }
 
 // maxSpellGenericCostReduction bounds the generic mana the spell cost modifiers

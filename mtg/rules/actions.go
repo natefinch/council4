@@ -113,7 +113,7 @@ func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Ac
 		if !ok {
 			continue
 		}
-		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
+		for _, xValue := range preparedSpellXValues(g, playerID, sourceID, spellDef) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 				if targetResult.kind == targetInvalidSpec {
@@ -251,7 +251,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 						}
 					}
 				}
-				for _, xValue := range zoneCastXValues(g, playerID, card, sourceZone, face, spellDef) {
+				for _, xValue := range zoneCastXValues(g, playerID, card, sourceZone, face, spellDef, false) {
 					for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 						plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 						if plainResult.kind != targetInvalidSpec {
@@ -323,8 +323,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 				}
 				if spellDef.Overload.Exists {
 					overloadedDef := overloadSpellDef(spellDef)
-					overloadCost := spellDef.Overload.Val.Cost
-					for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, &overloadCost, spellDef.AdditionalCosts) {
+					for _, xValue := range zoneCastXValues(g, playerID, card, sourceZone, face, spellDef, true) {
 						for _, modes := range modeChoicesForSpellAt(g, playerID, overloadedDef) {
 							if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, xValue, modes, false) {
 								actions = append(actions, actionBuild.castOverloadedSpell(cardID, sourceZone, face, xValue, modes, false))
@@ -380,7 +379,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 				}
 			}
 		}
-		for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(spellDef.ManaCost), spellDef.AdditionalCosts) {
+		for _, xValue := range zoneCastXValues(g, playerID, card, zone.Command, face, spellDef, false) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
 				plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 				if plainResult.kind != targetInvalidSpec {
@@ -442,8 +441,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 		}
 		if spellDef.Overload.Exists {
 			overloadedDef := overloadSpellDef(spellDef)
-			overloadCost := spellDef.Overload.Val.Cost
-			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, &overloadCost, spellDef.AdditionalCosts) {
+			for _, xValue := range zoneCastXValues(g, playerID, card, zone.Command, face, spellDef, true) {
 				for _, modes := range modeChoicesForSpellAt(g, playerID, overloadedDef) {
 					if e.canCastOverloadedSpellFaceFromZoneWithOptions(g, playerID, card.ID, zone.Command, face, xValue, modes, false) {
 						actions = append(actions, actionBuild.castOverloadedSpell(card.ID, zone.Command, face, xValue, modes, false))

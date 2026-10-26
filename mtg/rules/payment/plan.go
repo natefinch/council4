@@ -389,7 +389,7 @@ func canPayGenericCost(s State, req GenericRequest) bool {
 		}
 		return true
 	}
-	_, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, spendContext{spell: req.Spell, spendAs: req.SpendAs}, nil)
+	_, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, spendContext{spell: req.Spell}, nil)
 	return ok
 }
 
@@ -407,7 +407,7 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 		applyAdditionalCostPlan(s, plan.additional)
 		return clonePoolSpend(plan.mana.poolSpend), true
 	}
-	plan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, spendContext{spell: req.Spell, spendAs: req.SpendAs}, req.Prefs)
+	plan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, spendContext{spell: req.Spell}, req.Prefs)
 	if !ok {
 		return nil, false
 	}
@@ -425,7 +425,7 @@ func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	if !ok {
 		return plan, false
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, additional, true), spendContext{spell: req.Spell, spendAs: req.SpendAs}, clonePreferences(req.Prefs))
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, additional, true), spendContext{spell: req.Spell}, clonePreferences(req.Prefs))
 	if !ok {
 		additional, manaPlan, ok = retryGenericCostPlanAvoidingManaTapConflict(s, req, additional)
 		if !ok {
@@ -441,7 +441,7 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 	if len(previous.permanentsToTap) == 0 {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, previous, false), spendContext{spell: req.Spell, spendAs: req.SpendAs}, clonePreferences(req.Prefs))
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, previous, false), spendContext{spell: req.Spell}, clonePreferences(req.Prefs))
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
@@ -449,7 +449,7 @@ func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, pr
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
-	manaPlan, ok = buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, additional, true), spendContext{spell: req.Spell, spendAs: req.SpendAs}, clonePreferences(req.Prefs))
+	manaPlan, ok = buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, additional, true), spendContext{spell: req.Spell}, clonePreferences(req.Prefs))
 	if !ok {
 		return additionalCostPlan{}, paymentPlan{}, false
 	}
