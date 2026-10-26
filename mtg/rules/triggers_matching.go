@@ -881,6 +881,9 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 		return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||
 			(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID)
 	}
+	if enteredObjectID, ok := enteredBattlefieldObjectIdentity(source, subject, event); ok {
+		return enteredObjectID == source.ObjectID
+	}
 	if subject == game.TriggerSubjectPermanent {
 		return (source.ObjectID != 0 && event.PermanentID == source.ObjectID) ||
 			(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
@@ -890,6 +893,21 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 		(source.ObjectID != 0 && subjectID == source.ObjectID) ||
 		(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID) ||
 		(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
+}
+
+// enteredBattlefieldObjectIdentity returns the battlefield object an entry
+// event put onto the battlefield when both it and the source have object
+// identities. A card that leaves and reenters becomes a new object (CR 400.7),
+// so an entry of its earlier incarnation is "another" permanent's entry and not
+// this source's, even though both share one card instance (CR 201.5).
+func enteredBattlefieldObjectIdentity(source *game.Permanent, subject game.TriggerSubjectObject, event game.Event) (id.ID, bool) {
+	if event.Kind != game.EventPermanentEnteredBattlefield || source.ObjectID == 0 || event.PermanentID == 0 {
+		return 0, false
+	}
+	if subject != game.TriggerSubjectDefault && subject != game.TriggerSubjectPermanent {
+		return 0, false
+	}
+	return event.PermanentID, true
 }
 
 func triggerSourceAttachedPermanentMatches(g *game.Game, source *game.Permanent, event game.Event) bool {
