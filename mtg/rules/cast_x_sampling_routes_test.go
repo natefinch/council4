@@ -108,6 +108,16 @@ import (
 //     cost." Ruling 2019-05-03: a spell with {X} in its mana cost cast this way
 //     must choose X=0. The scenario uses the test permission
 //     castSpellsFromLibraryTopPayLifePermanent with the same rule effect.
+//   - Comprehensive Rules 601.2b (kicker intentions are announced with X),
+//     702.33c-d (multikicker may be paid any number of times; each payment is
+//     an additional cost).
+//   - Comet Storm, printing bb5f586d-6bf0-4590-ad73-2d46b2a45b1a (oracle_id
+//     9c2b262b-53c0-41a1-8f1a-0c336453d4bf), {X}{R}{R} Instant: "Multikicker
+//     {1} ... Choose any target, then choose another target for each time this
+//     spell was kicked. Comet Storm deals X damage to each of them." Rulings
+//     2024-11-08: the total cost starts with the mana cost, adds increases
+//     such as kicker, then applies reductions; 2010-03-01: X and the number of
+//     kicks are declared together, then targets, then costs are paid.
 
 // assertCastXRange gives player sorcery-speed priority and checks that casting
 // cardID's face from source with targets is listed by legal-action
@@ -393,4 +403,50 @@ func TestCastXSamplingAlternativeCostRoutes(t *testing.T) {
 			t.Fatalf("life = %d after casting the X=0 Hydra for life, want 19", got)
 		}
 	})
+}
+
+// TestCastXSamplingMultikickedReducedSpell covers CR 601.2b, 601.2f and
+// 702.33c-d for the combined-cost route: Comet Storm's multikicker payments add
+// to the total cost that Goblin Electromancer's {1} reduction lowers, so three
+// Mountains cast it for X up to 2 unkicked, 1 kicked once and 0 kicked twice,
+// and each kick count's boundary X is listed exactly when validation accepts it.
+func TestCastXSamplingMultikickedReducedSpell(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	groupExileRegistryPermanent(t, g, game.Player1, "Goblin Electromancer")
+	var mountains []*game.Permanent
+	for range 3 {
+		mountains = append(mountains, addBasicLandPermanent(g, game.Player1, types.Mountain))
+	}
+	storm := addCardToHand(g, game.Player1, groupExileRegistryDef(t, "Comet Storm"))
+	giveMainPhasePriority(g, game.Player1)
+	actions := engine.legalActions(g, game.Player1)
+	opponents := []game.Target{game.PlayerTarget(game.Player2), game.PlayerTarget(game.Player3), game.PlayerTarget(game.Player4)}
+	cast := func(kicks, x int) action.Action {
+		return action.CastMultikickedSpellFaceFromZone(storm, zone.Hand, game.FaceFront, opponents[:kicks+1], x, nil, kicks)
+	}
+	for kicks, limit := range []int{3, 2, 1} {
+		for x := 0; x <= limit; x++ {
+			act := cast(kicks, x)
+			listed := actionsContain(actions, act)
+			applied := engine.applyAction(g.Clone(), game.Player1, act)
+			want := x < limit
+			if listed != want || applied != want {
+				t.Fatalf("Comet Storm kicked %d times X=%d: listed=%v applied=%v, want %v", kicks, x, listed, applied, want)
+			}
+		}
+	}
+
+	if !engine.applyAction(g, game.Player1, cast(1, 1)) {
+		t.Fatal("casting the enumerated once-kicked Comet Storm for X=1 failed")
+	}
+	top, ok := g.Stack.Peek()
+	if !ok || top.SourceID != storm || top.XValue != 1 || top.KickerCount != 1 || len(top.Targets) != 2 {
+		t.Fatalf("stack top = %+v, want Comet Storm kicked once for X=1 with two targets", top)
+	}
+	for _, mountain := range mountains {
+		if !mountain.Tapped {
+			t.Fatalf("Mountain %v untapped after paying {1}{R}{R} plus {1} kicker minus {1}; want all three tapped", mountain.ObjectID)
+		}
+	}
 }
