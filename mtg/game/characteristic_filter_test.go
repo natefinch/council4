@@ -48,6 +48,26 @@ func TestCloneControlledTriggerDoublerSnapshot(t *testing.T) {
 	}
 }
 
+func TestCloneEventEnteredPermanentSnapshot(t *testing.T) {
+	original := Event{
+		Kind: EventPermanentEnteredBattlefield,
+		EnteredPermanent: &ObjectSnapshot{
+			Controller: Player1,
+			Types:      []types.Card{types.Artifact},
+			Subtypes:   []types.Sub{types.Human},
+		},
+	}
+	cloned := cloneEvent(original)
+	cloned.EnteredPermanent.Controller = Player2
+	cloned.EnteredPermanent.Types[0] = types.Land
+	cloned.EnteredPermanent.Subtypes[0] = types.Wolf
+
+	got := original.EnteredPermanent
+	if got.Controller != Player1 || got.Types[0] != types.Artifact || got.Subtypes[0] != types.Human {
+		t.Fatalf("clone mutated original entry snapshot: %#v", got)
+	}
+}
+
 func TestValidateCharacteristicFilteredRuleEffects(t *testing.T) {
 	valid := &CardDef{CardFace: CardFace{
 		Name:  "Valid",

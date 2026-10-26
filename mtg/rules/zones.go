@@ -318,38 +318,55 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 		addRetainedCounters(entries[i].permanent, entries[i].retained)
 		g.Battlefield = append(g.Battlefield, entries[i].permanent)
 	}
+	events := make([]game.Event, len(entries))
+	for i := range entries {
+		events[i] = simultaneousCardPermanentEntryEvent(&entries[i])
+	}
 	for i := range entries {
 		entry := &entries[i]
 		permanent := entry.permanent
 		if lore := permanent.Counters.Get(counter.Lore) - entry.retained.Get(counter.Lore); lore > 0 {
 			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, entry.retained.Get(counter.Lore), lore)
 		}
-		event := game.Event{
-			SourceID:                  entry.card.ID,
-			Controller:                entry.controller,
-			Player:                    entry.card.Owner,
-			CardID:                    entry.card.ID,
-			Face:                      permanent.Face,
-			KickerPaid:                entry.options.KickerPaid,
-			Bargained:                 entry.options.Bargained,
-			OffspringPaid:             entry.options.OffspringPaid,
-			EnterEvoked:               entry.options.Evoked,
-			EnterDashed:               entry.options.Dashed,
-			EnterWasCast:              entry.options.WasCast,
-			EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
-			EnterCastController:       entry.options.CastController,
-			EnterHasCastController:    entry.options.HasCastController,
-			EnterCastFromZone:         entry.options.CastFromZone,
-			EnterXValue:               permanent.CastXValue,
-			PermanentID:               permanent.ObjectID,
-			FromZone:                  entry.fromZone,
-			ToZone:                    zone.Battlefield,
-			SimultaneousID:            entry.options.SimultaneousID,
-			EnterPutByAbilitySource:   entry.options.PutByAbilitySource,
-		}
-		event = emitZoneChangeEvent(g, event)
+		event := emitZoneChangeEvent(g, events[i])
 		event.Kind = game.EventPermanentEnteredBattlefield
-		emitEvent(g, event)
+		emitEnteredBattlefieldEvent(g, event, enteredBattlefieldEvents(events[i+1:]))
+	}
+}
+
+func enteredBattlefieldEvents(events []game.Event) []game.Event {
+	entered := make([]game.Event, len(events))
+	for i, event := range events {
+		event.Kind = game.EventPermanentEnteredBattlefield
+		entered[i] = event
+	}
+	return entered
+}
+
+func simultaneousCardPermanentEntryEvent(entry *preparedCardPermanentEntry) game.Event {
+	permanent := entry.permanent
+	return game.Event{
+		SourceID:                  entry.card.ID,
+		Controller:                entry.controller,
+		Player:                    entry.card.Owner,
+		CardID:                    entry.card.ID,
+		Face:                      permanent.Face,
+		KickerPaid:                entry.options.KickerPaid,
+		Bargained:                 entry.options.Bargained,
+		OffspringPaid:             entry.options.OffspringPaid,
+		EnterEvoked:               entry.options.Evoked,
+		EnterDashed:               entry.options.Dashed,
+		EnterWasCast:              entry.options.WasCast,
+		EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
+		EnterCastController:       entry.options.CastController,
+		EnterHasCastController:    entry.options.HasCastController,
+		EnterCastFromZone:         entry.options.CastFromZone,
+		EnterXValue:               permanent.CastXValue,
+		PermanentID:               permanent.ObjectID,
+		FromZone:                  entry.fromZone,
+		ToZone:                    zone.Battlefield,
+		SimultaneousID:            entry.options.SimultaneousID,
+		EnterPutByAbilitySource:   entry.options.PutByAbilitySource,
 	}
 }
 

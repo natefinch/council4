@@ -666,15 +666,11 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 			created = append(created, entry.permanent)
 		}
 	}
-	for _, entry := range entries {
+	events := make([]game.Event, len(entries))
+	var entered []game.Event
+	for i, entry := range entries {
 		permanent := entry.permanent
-		if entry.destination == zone.Battlefield && entry.attachedTo != nil {
-			attachPermanent(g, permanent, entry.attachedTo)
-		}
-		if lore := permanent.Counters.Get(counter.Lore); entry.destination == zone.Battlefield && lore > 0 {
-			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
-		}
-		event := game.Event{
+		events[i] = game.Event{
 			Controller: entry.controller, Player: permanent.Owner,
 			PermanentID: permanent.ObjectID, TokenName: entry.visible.Name, TokenDef: entry.token,
 			FromZone: zone.None, ToZone: entry.destination, SimultaneousID: simultaneousID,
@@ -685,13 +681,29 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 			EnterHasCastController: entry.options.HasCastController, EnterCastFromZone: entry.options.CastFromZone,
 		}
 		if entry.spellCopyID != 0 {
-			event.FromZone = zone.Stack
-			event.StackObjectID = entry.spellCopyID
+			events[i].FromZone = zone.Stack
+			events[i].StackObjectID = entry.spellCopyID
 		}
+		if entry.destination == zone.Battlefield {
+			event := events[i]
+			event.Kind = game.EventPermanentEnteredBattlefield
+			entered = append(entered, event)
+		}
+	}
+	for i, entry := range entries {
+		permanent := entry.permanent
+		if entry.destination == zone.Battlefield && entry.attachedTo != nil {
+			attachPermanent(g, permanent, entry.attachedTo)
+		}
+		if lore := permanent.Counters.Get(counter.Lore); entry.destination == zone.Battlefield && lore > 0 {
+			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
+		}
+		event := events[i]
 		emitZoneChangeEvent(g, event)
 		if entry.destination == zone.Battlefield {
+			entered = entered[1:]
 			event.Kind = game.EventPermanentEnteredBattlefield
-			emitEvent(g, event)
+			emitEnteredBattlefieldEvent(g, event, entered)
 		}
 		if entry.spellCopyID == 0 {
 			event.Kind = game.EventTokenCreated
