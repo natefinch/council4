@@ -15,9 +15,18 @@ import (
 type eventWindow []game.Event
 
 // eventsThisTurnWindow returns the current turn's events as a non-cloning
-// window for read-only aggregation.
+// window for read-only aggregation. While an entering permanent is being
+// snapshotted, it also includes the pending entry events that have happened but
+// are not yet recorded, so history conditions see the entry itself and any
+// simultaneous entries (CR 603.6a, 603.10).
 func eventsThisTurnWindow(g *game.Game) eventWindow {
-	return eventsForTurnWindow(g, g.Turn.TurnNumber)
+	window := eventsForTurnWindow(g, g.Turn.TurnNumber)
+	pending := g.PendingEntryEvents()
+	if len(pending) == 0 {
+		return window
+	}
+	combined := make(eventWindow, 0, len(window)+len(pending))
+	return append(append(combined, window...), pending...)
 }
 
 // eventsPreviousTurnWindow returns the previous turn's events as a non-cloning

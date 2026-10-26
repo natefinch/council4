@@ -508,6 +508,16 @@ type Event struct {
 	// battlefield state can change, preserving source control and simultaneous
 	// enter/leave behavior.
 	ControlledTriggerDoublers *ControlledTriggerDoublerSnapshot
+
+	// EnteredPermanent snapshots an EventPermanentEnteredBattlefield subject's
+	// controller and characteristics immediately after it entered, as trigger
+	// conditions see it (CR 110.2, 603.6a, 603.10). Later history checks such as
+	// "if an artifact entered the battlefield under your control this turn" read
+	// it, so a later control change, type change or departure cannot rewrite
+	// what entered. Its characteristics are computed with this entry and any
+	// simultaneous entries visible to current-turn history conditions. It is nil
+	// for other events and for raw events that bypass rules emission.
+	EnteredPermanent *ObjectSnapshot
 }
 
 // AppendEvent records a rules event. Unknown events are ignored.
@@ -587,6 +597,10 @@ func cloneEvent(event Event) Event {
 			snapshot.Doublers[i].PermanentFilter = cloneCharacteristicFilters(snapshot.Doublers[i].PermanentFilter)
 		}
 		event.ControlledTriggerDoublers = &snapshot
+	}
+	if event.EnteredPermanent != nil {
+		snapshot := cloneObjectSnapshot(*event.EnteredPermanent)
+		event.EnteredPermanent = &snapshot
 	}
 	return event
 }
