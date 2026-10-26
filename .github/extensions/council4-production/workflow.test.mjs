@@ -1182,3 +1182,19 @@ test("Branch protection cannot silently use admin bypass privileges", async t =>
   await assert.rejects(land(f.repo, f.work, { title: "protected" }, f.expected, "session", undefined, services), /unsupported protection/);
   assert.equal(await remoteHead(f), f.base);
 });
+
+test("catalog examples use only declared arguments and registration follows the catalog", async () => {
+  const { workflows, describe } = await import("./catalog.mjs");
+  for (const { meta: m, examples } of workflows) {
+    assert.ok(examples.length, `${m.name} has examples`);
+    const properties = m.argsSchema?.properties ?? {};
+    for (const { args } of examples) {
+      for (const key of Object.keys(args)) assert.ok(properties[key], `${m.name} example uses undeclared ${key}`);
+      for (const key of m.argsSchema?.required ?? []) assert.ok(key in args, `${m.name} example omits required ${key}`);
+      if (properties.mode?.enum && args.mode) assert.ok(properties.mode.enum.includes(args.mode));
+    }
+  }
+  assert.deepEqual(describe().map(w => w.name), ["council4-production", "council4-production-report", "council4-engine-triage"]);
+  const extension = await readFile(new URL("./extension.mjs", import.meta.url), "utf8");
+  assert.match(extension, /workflows\.map\(\(\{ meta, run \}\) => defineWorkflow\(\{ meta, run \}\)\)/);
+});
