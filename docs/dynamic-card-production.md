@@ -215,7 +215,11 @@ blockers the repairs caused. Fixers implement the general approach a finding
 names rather than patching its example, and don't widen a change into routes it
 doesn't touch. The dashboard shows filed follow-ups and pre-existing defects per
 review round. Resumed units are re-reviewed under the current bar before any
-fix, with the full fix budget.
+fix, with the full fix budget. If current main changed the same code as retained work, the
+conflicted files are left with conflict markers and the unit's fixer
+(`integration_fix`, using the `review_fix` model) integrates them first, keeping
+main's landed behavior. Remaining markers or a blocked integration mark that
+unit `integration_failed`; the run continues.
 
 Issues labeled `Needs Split` (triage applies it to large issues) are not
 implemented directly: the unit is a split unit (`policy.models.engine.split`)

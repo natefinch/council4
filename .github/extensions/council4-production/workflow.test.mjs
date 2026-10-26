@@ -4,7 +4,7 @@ import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/
 import os from "node:os";
 import path from "node:path";
 import { reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
-import { git, changes, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
+import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
 import { rankTriage, chunk } from "./triage.mjs";
@@ -721,14 +721,23 @@ test("Resume arguments, retained units and seeding fail closed and preserve work
   assert.equal(await git(retained, ["status", "--porcelain"]), sourceStatus);
   await assert.rejects(seedFromRetained(retained, target), /not clean/);
 
-  // Conflicting main changes stop instead of overwriting retained work.
+  // Conflicting main changes are left as conflict markers for an integration
+  // repair, with both sides present and non-conflicting files applied.
   const clash = { path: path.join(path.dirname(f.repo), "clash"), base: null };
   await writeFile(path.join(f.repo, "card.txt"), "main changed card\n");
   await git(f.repo, ["commit", "-am", "conflict"]);
   clash.base = await git(f.repo, ["rev-parse", "HEAD"]);
   await git(f.repo, ["worktree", "add", "-b", "clash", clash.path, clash.base]);
-  await assert.rejects(seedFromRetained(retained, clash), /conflicts with current main/);
-  assert.deepEqual((await changes(clash.path)).files, []);
+  const conflicted = await seedFromRetained(retained, clash);
+  assert.deepEqual(conflicted.conflicts, ["card.txt"]);
+  const card = await readFile(path.join(clash.path, "card.txt"), "utf8");
+  assert.match(card, /^<{7} [\s\S]*main changed card[\s\S]*retained fix[\s\S]*^>{7} /m);
+  assert.ok(await readFile(path.join(clash.path, "new_test.go"), "utf8"));
+  assert.equal(await git(clash.path, ["diff", "--cached", "--name-only"]), "");
+  assert.equal(await git(retained, ["status", "--porcelain"]), sourceStatus);
+  assert.deepEqual(await unresolvedConflicts(clash.path, ["card.txt", "missing.txt"]), ["card.txt"]);
+  await writeFile(path.join(clash.path, "card.txt"), "main changed card\nretained fix\n");
+  assert.deepEqual(await unresolvedConflicts(clash.path, ["card.txt"]), []);
 });
 const required = { checks: ["Tests", "Race Tests"], reviewRequired: false };
 const successfulChecks = head => ({
