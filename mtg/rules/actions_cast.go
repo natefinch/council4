@@ -90,7 +90,7 @@ func (e *Engine) choosePlayLandRoute(g *game.Game, playerID game.PlayerID, route
 	}
 	options := make([]game.ChoiceOption, len(routes))
 	for i, route := range routes {
-		options[i] = game.ChoiceOption{Index: i, Label: "Play land " + castRouteSourceLabel(g, exileCastRoute{permission: route}, i)}
+		options[i] = game.ChoiceOption{Index: i, Label: "Play land " + castRouteSourceLabel(g, castRoute{permission: route}, i)}
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
@@ -172,22 +172,21 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		splicePermissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
 		splice = e.chooseSpliceOntoArcane(g, playerID, card.ID, spellDef, cast, splicePermissions, agents, log)
 	}
-	// payLifeFromTop reads the card's position in its source zone (the top of
-	// the library), so it must be determined before the card is moved to the
-	// stack below.
-	payLifeFromTop := sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, cast.Face)
 	// castRoutes are the permissions this cast may use, read before the card
-	// leaves exile because plotted, foretold, and linked-exile status and a
-	// permission's exile-counter filter no longer match once the card moves
-	// (Evelyn, the Covetous). A free route (plot, a linked free cast such as
+	// leaves its source zone because plotted, foretold, and linked-exile status,
+	// a permission's exile-counter filter (Evelyn, the Covetous), and a
+	// top-of-library permission's position filter (Bolas's Citadel) no longer
+	// match once the card moves. A free route (plot, a linked free cast such as
 	// Court of Locthwain's, or a per-card "play it without paying its mana cost"
 	// permission such as Dauthi Voidwalker's) replaces the mana cost with an
-	// empty payment; a foretell route pays the foretell cost. Each route carries
-	// only its own permission's spending rider and usage (CR 118.14); only the
-	// route actually cast through has its once-per-turn use recorded or its
-	// one-shot linked permission consumed once the spell is put on the stack.
-	mode := castCostMode{overloaded: cast.Overloaded, bestowed: cast.Bestowed, payLife: payLifeFromTop}
-	castRoutes := exileCastRoutes(g, playerID, card.ID, sourceZone, cast.Face, mode)
+	// empty payment; a foretell route pays the foretell cost; a pay-life route
+	// pays life equal to the spell's mana value. Each route carries only its own
+	// permission's cost replacement, spending rider and usage (CR 118.9a,
+	// 118.14); only the route actually cast through has its once-per-turn use
+	// recorded or its one-shot linked permission consumed once the spell is put
+	// on the stack.
+	mode := castCostMode{overloaded: cast.Overloaded, bestowed: cast.Bestowed}
+	castRoutes := spellCastRoutes(g, playerID, card.ID, sourceZone, cast.Face, mode)
 
 	// CR 601.2a: proposing a cast first moves the card from its source zone to
 	// the stack as the topmost object. Doing this before the spell's costs are
@@ -338,7 +337,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	// no longer matches once the card moves (Evelyn, the Covetous). Mutate is an
 	// alternative cost, so the cast is never one made without paying its mana
 	// cost (CR 118.9a).
-	castRoutes := exileCastRoutes(g, playerID, card.ID, sourceZone, game.FaceFront, mutateCastCostMode)
+	castRoutes := spellCastRoutes(g, playerID, card.ID, sourceZone, game.FaceFront, mutateCastCostMode)
 
 	// CR 601.2a: move the card to the stack before its costs are paid, so a
 	// from-zone cost can't select the card being cast (see applyCastSpellWithChoices).
@@ -460,7 +459,7 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 		!mutateTargetLegal(g, playerID, card.Owner, spellDef, targetID) {
 		return false
 	}
-	routes := exileCastRoutes(g, playerID, cardID, sourceZone, game.FaceFront, mutateCastCostMode)
+	routes := spellCastRoutes(g, playerID, cardID, sourceZone, game.FaceFront, mutateCastCostMode)
 	return anyCastRouteAvailable(g, spellDef, 0, mutateCastRouteRequests(payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          cardID,
@@ -478,7 +477,7 @@ var mutateCastCostMode = castCostMode{mutate: true}
 
 // mutateCastRouteRequests returns one mutate payment request per route, each
 // paying the mutate alternative cost with only its own route's spending rider.
-func mutateCastRouteRequests(base payment.SpellRequest, routes []exileCastRoute) []payment.SpellRequest {
+func mutateCastRouteRequests(base payment.SpellRequest, routes []castRoute) []payment.SpellRequest {
 	requests := make([]payment.SpellRequest, len(routes))
 	for i, route := range routes {
 		requests[i] = base
@@ -887,12 +886,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		Targets:         targets,
 		Bestowed:        bestowed,
 	}
-	mode := castCostMode{
-		overloaded: overloaded,
-		bestowed:   bestowed,
-		payLife:    sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, face),
-	}
-	routes := exileCastRoutes(g, playerID, card.ID, sourceZone, face, mode)
+	mode := castCostMode{overloaded: overloaded, bestowed: bestowed}
+	routes := spellCastRoutes(g, playerID, card.ID, sourceZone, face, mode)
 	return anyCastRouteAvailable(g, spellDef, xValue, mode.castRouteRequests(request, routes))
 }
 
@@ -944,10 +939,12 @@ func foretellAlternativeCost(card *game.CardDef) cost.Alternative {
 	}
 }
 
-// exileCastRoute is one permission through which a card may be cast from
-// exile. free marks a permission that casts it without paying its mana cost
-// (plot, a linked free cast, or a free play permission); foretell marks a cast
-// for its foretell cost; spendAs is the spending permission riding on that same
+// castRoute is one permission through which a card may be cast from exile
+// or the top of a library. free marks a permission that casts it without
+// paying its mana cost (plot, a linked free cast, or a free play permission);
+// foretell marks a cast for its foretell cost; payLife marks a permission that
+// replaces the mana cost with paying life equal to the spell's mana value
+// (Bolas's Citadel); spendAs is the spending permission riding on that same
 // permission (CR 118.14, 609.4b); permission is the authorizing rule effect,
 // whose use is recorded once the spell is cast through it so a once-per-turn
 // permission spends its use (Evelyn, the Covetous); linkedFree is the one-shot
@@ -956,9 +953,10 @@ func foretellAlternativeCost(card *game.CardDef) cost.Alternative {
 // rule effect (an Adventure's permanent face). A rider is not an alternative
 // cost: it governs paying whichever total cost the caster chooses, so it
 // combines with overload, bestow, evoke, kicker, and additional costs.
-type exileCastRoute struct {
+type castRoute struct {
 	free       bool
 	foretell   bool
+	payLife    bool
 	spendAs    game.ManaSpendPermission
 	permission game.RuleEffect
 	linkedFree game.RuleEffect
@@ -980,10 +978,7 @@ func zoneCastXValues(g *game.Game, playerID game.PlayerID, card *game.CardInstan
 	if !costHasVariableMana(announced) {
 		return legalXValuesForCostAndAdditional(g, playerID, announced, spellDef.AdditionalCosts)
 	}
-	mode := castCostMode{
-		overloaded: overloaded,
-		payLife:    sourceZone == zone.Library && castFromZoneRequiresPayLife(g, playerID, card.ID, sourceZone, face),
-	}
+	mode := castCostMode{overloaded: overloaded}
 	base := payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          card.ID,
@@ -991,7 +986,7 @@ func zoneCastXValues(g *game.Game, playerID game.PlayerID, card *game.CardInstan
 		Card:            spellDef,
 		CastPermissions: castPermissionsForZone(g, playerID, card.ID, sourceZone, face),
 	}
-	return spellCastXValues(g, spellDef, mode.castRouteRequests(base, exileCastRoutes(g, playerID, card.ID, sourceZone, face, mode)))
+	return spellCastXValues(g, spellDef, mode.castRouteRequests(base, spellCastRoutes(g, playerID, card.ID, sourceZone, face, mode)))
 }
 
 // preparedSpellXValues returns the X candidates legal-action enumeration
@@ -1130,25 +1125,25 @@ type castCostMode struct {
 	mutate     bool
 	overloaded bool
 	bestowed   bool
-	payLife    bool
 }
 
 // otherAlternative reports a cast already using another alternative cost, which
-// cannot also be cast without paying its mana cost (CR 118.9a).
+// cannot also be cast without paying its mana cost or for another cost "rather
+// than pay its mana cost" (CR 118.9a).
 func (m castCostMode) otherAlternative() bool {
-	return m.mutate || m.overloaded || m.bestowed || m.payLife
+	return m.mutate || m.overloaded || m.bestowed
 }
 
 // alternative returns the alternative cost a cast in mode m pays through route,
 // or none when the spell is cast for its normal mana cost or chooses among its
 // own alternative costs.
-func (m castCostMode) alternative(spellDef *game.CardDef, xValue int, route exileCastRoute) opt.V[cost.Alternative] {
+func (m castCostMode) alternative(spellDef *game.CardDef, xValue int, route castRoute) opt.V[cost.Alternative] {
 	switch {
 	case m.overloaded:
 		return opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
 	case m.bestowed:
 		return opt.Val(bestowAlternativeCost(spellDef))
-	case m.payLife:
+	case route.payLife:
 		return opt.Val(payLifeManaValueAlternativeCost(spellDef, xValue))
 	case route.free:
 		return opt.Val(freeCastAlternativeCost())
@@ -1161,7 +1156,7 @@ func (m castCostMode) alternative(spellDef *game.CardDef, xValue int, route exil
 
 // castRouteRequests returns one payment request per route, each carrying only
 // its own route's alternative cost and spending rider.
-func (m castCostMode) castRouteRequests(base payment.SpellRequest, routes []exileCastRoute) []payment.SpellRequest {
+func (m castCostMode) castRouteRequests(base payment.SpellRequest, routes []castRoute) []payment.SpellRequest {
 	requests := make([]payment.SpellRequest, len(routes))
 	for i, route := range routes {
 		request := base
@@ -1177,19 +1172,19 @@ func (m castCostMode) castRouteRequests(base payment.SpellRequest, routes []exil
 // per-card or zone-wide play/cast permission and each matching group
 // RuleEffectCastSpellsFromZone permission. Every one is a separate permission
 // the caster may choose to cast through, with only its own rider and usage
-// (CR 118.14). allowFree reports whether the cast may be made without paying
-// its mana cost. A "without paying its mana cost" permission authorizes only
-// that free cast, so when the cast already uses another alternative cost
+// (CR 118.14). allowFree reports whether the cast may use a permission's own
+// alternative cost. A "without paying its mana cost" permission authorizes
+// only that free cast, so when the cast already uses another alternative cost
 // (CR 118.9a) it offers no route; excluded then reports that such a matching
 // permission was left out.
-func castFromZonePermissionRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, allowFree bool) (routes []exileCastRoute, excluded bool) {
+func castFromZonePermissionRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, allowFree bool) (routes []castRoute, excluded bool) {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
 		if !castFromZoneRuleEffectMatches(g, effect, playerID, cardID, sourceZone, face) {
 			continue
 		}
-		route := exileCastRoute{spendAs: effect.SpendAnyMana, permission: *effect}
+		route := castRoute{spendAs: effect.SpendAnyMana, permission: *effect}
 		if ruleEffectCastsWithoutPayingManaCost(effect) {
 			if !allowFree {
 				excluded = true
@@ -1199,10 +1194,26 @@ func castFromZonePermissionRoutes(g *game.Game, playerID game.PlayerID, cardID i
 		}
 		routes = append(routes, route)
 	}
+	groupRoutes, groupExcluded := castSpellsFromZoneRoutes(g, playerID, cardID, sourceZone, face, allowFree)
+	return orderedCastRoutes(append(routes, groupRoutes...)), excluded || groupExcluded
+}
+
+// castSpellsFromZoneRoutes returns one route per matching group
+// RuleEffectCastSpellsFromZone permission that lets playerID cast the face of
+// cardID from sourceZone, in effect order. A permission that replaces the mana
+// cost with paying life equal to the spell's mana value (Bolas's Citadel)
+// imposes that cost only on a cast made through it; it is an alternative cost
+// (CR 118.9a), so when allowFree is false (the cast already uses another
+// alternative cost) it offers no route and excluded reports it was left out.
+func castSpellsFromZoneRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, allowFree bool) (routes []castRoute, excluded bool) {
 	for _, effect := range matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face) {
-		routes = append(routes, exileCastRoute{spendAs: effect.SpendAnyMana, permission: effect})
+		if effect.PayLifeEqualToManaValue && !allowFree {
+			excluded = true
+			continue
+		}
+		routes = append(routes, castRoute{payLife: effect.PayLifeEqualToManaValue, spendAs: effect.SpendAnyMana, permission: effect})
 	}
-	return orderedCastRoutes(routes), excluded
+	return routes, excluded
 }
 
 // orderedCastRoutes merges routes that differ only in which permission without
@@ -1210,8 +1221,8 @@ func castFromZonePermissionRoutes(g *game.Game, playerID game.PlayerID, cardID i
 // first, then a one-shot linked free cast, then paying routes without a usage
 // limit, then once-per-turn routes, so the default choice never spends a
 // limited use or one-shot permission when another route offers the same option.
-func orderedCastRoutes(routes []exileCastRoute) []exileCastRoute {
-	rank := func(route exileCastRoute) int {
+func orderedCastRoutes(routes []castRoute) []castRoute {
+	rank := func(route castRoute) int {
 		switch {
 		case route.free && route.linkedFree.ID == 0 && !route.permission.OncePerTurn:
 			return 0
@@ -1223,17 +1234,18 @@ func orderedCastRoutes(routes []exileCastRoute) []exileCastRoute {
 			return 2
 		}
 	}
-	slices.SortStableFunc(routes, func(a, b exileCastRoute) int { return rank(a) - rank(b) })
+	slices.SortStableFunc(routes, func(a, b castRoute) int { return rank(a) - rank(b) })
 	type routeKey struct {
 		free     bool
 		foretell bool
+		payLife  bool
 		spendAs  game.ManaSpendPermission
 		limited  id.ID
 	}
 	seen := make(map[routeKey]bool, len(routes))
 	merged := routes[:0]
 	for _, route := range routes {
-		key := routeKey{free: route.free, foretell: route.foretell, spendAs: route.spendAs}
+		key := routeKey{free: route.free, foretell: route.foretell, payLife: route.payLife, spendAs: route.spendAs}
 		if route.permission.OncePerTurn {
 			key.limited = route.permission.SourceObjectID
 		}
@@ -1246,7 +1258,7 @@ func orderedCastRoutes(routes []exileCastRoute) []exileCastRoute {
 	return merged
 }
 
-// exileCastRoutes returns the permission routes through which playerID may cast
+// spellCastRoutes returns the permission routes through which playerID may cast
 // the face of cardID from sourceZone in mode. Each permission is a separate
 // route the caster may choose (CR 601.2b), carrying only its own cost, rider,
 // and usage (CR 118.14), so the routes never mix one permission's free cast
@@ -1256,24 +1268,33 @@ func orderedCastRoutes(routes []exileCastRoute) []exileCastRoute {
 // (CR 702.143a) a foretell-cost route; these, like a free play permission, are
 // alternative costs, so a cast already using another alternative cost
 // (CR 118.9a) cannot use them. An Adventure card's CR 715.3d permission covers
-// only its permanent face (the front face) and adds a zero route. A cast
-// outside exile has the single zero route; a cast from exile with no
-// applicable route has none. A cast from exile whose permission this model
-// does not track at all keeps the zero route.
-func exileCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, mode castCostMode) []exileCastRoute {
-	if sourceZone != zone.Exile {
-		return []exileCastRoute{{}}
+// only its permanent face (the front face) and adds a zero route. A cast from
+// the top of a library has one route per matching cast-from-library
+// permission, so a pay-life permission (Bolas's Citadel) never forces its
+// cost on a cast another permission also authorizes; that pay-life cost is an
+// alternative cost too, so a cast already using another one cannot use it. A
+// cast from another zone has the single zero route; a cast from exile or a
+// library with no applicable route has none. A cast from exile whose
+// permission this model does not track at all keeps the zero route.
+func spellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, mode castCostMode) []castRoute {
+	switch sourceZone {
+	case zone.Exile:
+		routes, excluded := exilePermissionCastRoutes(g, playerID, cardID, face, !mode.otherAlternative())
+		if len(routes) == 0 && !excluded {
+			return []castRoute{{}}
+		}
+		return routes
+	case zone.Library:
+		routes, _ := castSpellsFromZoneRoutes(g, playerID, cardID, zone.Library, face, !mode.otherAlternative())
+		return orderedCastRoutes(routes)
+	default:
+		return []castRoute{{}}
 	}
-	routes, excluded := exilePermissionCastRoutes(g, playerID, cardID, face, !mode.otherAlternative())
-	if len(routes) == 0 && !excluded {
-		return []exileCastRoute{{}}
-	}
-	return routes
 }
 
 // exileCastAuthorized reports whether some exile cast route authorizes
 // playerID to cast the face of cardID from exile under any cost mode: the
-// routes are those exileCastRoutes offers a cast that uses no other
+// routes are those spellCastRoutes offers a cast that uses no other
 // alternative cost, a superset of every mode's routes. Cast validation and
 // legal-action face enumeration share it, so a face is listed exactly when a
 // permission can authorize it; each concrete cast is still fully validated
@@ -1283,34 +1304,34 @@ func exileCastAuthorized(g *game.Game, playerID game.PlayerID, cardID id.ID, fac
 	return len(routes) > 0
 }
 
-// exilePermissionCastRoutes returns, in exileCastRoutes order, the permission
+// exilePermissionCastRoutes returns, in spellCastRoutes order, the permission
 // routes through which playerID may cast the face of cardID from exile.
 // allowFree is false when the cast already uses another alternative cost, so
 // free and foretell routes are left out; excluded then reports that such a
 // matching permission was left out.
-func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, allowFree bool) (routes []exileCastRoute, excluded bool) {
+func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, allowFree bool) (routes []castRoute, excluded bool) {
 	routes, excluded = castFromZonePermissionRoutes(g, playerID, cardID, zone.Exile, face, allowFree)
 	if face == game.FaceFront {
 		if cardIsPlottedInExile(g, playerID, cardID) {
 			excluded = true
 			if allowFree && isSorcerySpeed(g, playerID) {
-				routes = append(routes, exileCastRoute{free: true})
+				routes = append(routes, castRoute{free: true})
 			}
 		}
 		if cardIsForetoldInExile(g, playerID, cardID) {
 			excluded = true
 			if allowFree {
-				routes = append(routes, exileCastRoute{foretell: true})
+				routes = append(routes, castRoute{foretell: true})
 			}
 		}
 		if permission, ok := castLinkedExileForFreePermission(g, playerID, cardID); ok {
 			excluded = true
 			if allowFree {
-				routes = append(routes, exileCastRoute{free: true, linkedFree: permission})
+				routes = append(routes, castRoute{free: true, linkedFree: permission})
 			}
 		}
 		if hasAdventureExilePermission(g, playerID, cardID) {
-			routes = append(routes, exileCastRoute{})
+			routes = append(routes, castRoute{})
 		}
 	}
 	return orderedCastRoutes(routes), excluded
@@ -1341,7 +1362,7 @@ func anyCastRouteAvailable(g *game.Game, spellDef *game.CardDef, xValue int, req
 // only its own alternative costs and rider. It returns the chosen route and the
 // payment preferences for its option. A single route keeps the ordinary
 // spell-cost choice.
-func (e *Engine) chooseCastRoute(g *game.Game, routes []exileCastRoute, requests []payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, *payment.Preferences) {
+func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, *payment.Preferences) {
 	if len(requests) == 1 {
 		return 0, e.paymentPreferencesForSpellRequest(g, requests[0], agents, log)
 	}
@@ -1391,7 +1412,7 @@ func (e *Engine) chooseCastRoute(g *game.Game, routes []exileCastRoute, requests
 
 // castRouteSourceLabel names the permission a route casts through, to tell
 // apart otherwise identical cost options offered by different permissions.
-func castRouteSourceLabel(g *game.Game, route exileCastRoute, index int) string {
+func castRouteSourceLabel(g *game.Game, route castRoute, index int) string {
 	source := route.permission.SourceCardID
 	if source == 0 {
 		source = route.linkedFree.SourceCardID
