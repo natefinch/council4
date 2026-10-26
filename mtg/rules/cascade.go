@@ -58,7 +58,7 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 	if found != 0 {
 		e.castFreeSpellFromExileWithMaxManaValue(g, obj.Controller, found, spellDef.ManaValue()-1, agents, log)
 	}
-	bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+	bottomExiledCards(g, player, revealed, e.rng)
 }
 
 func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -71,16 +71,16 @@ func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue 
 	}
 	revealed, found := exileUntilDiscoverHit(g, player, obj.Controller, manaValue)
 	if found == 0 {
-		bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+		bottomExiledCards(g, player, revealed, e.rng)
 		return len(revealed) > 0
 	}
 	if e.chooseMay(g, agents, obj.Controller, "Cast discovered card without paying its mana cost?", log) &&
 		e.castFreeSpellFromExileWithMaxManaValue(g, obj.Controller, found, manaValue, agents, log) {
-		bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+		bottomExiledCards(g, player, revealed, e.rng)
 		return true
 	}
 	moveCardBetweenZonesInBatch(g, obj.Controller, found, zone.Exile, zone.Hand, false, 0)
-	bottomExiledCards(g, player, obj.Controller, revealed, e.rng)
+	bottomExiledCards(g, player, revealed, e.rng)
 	return true
 }
 
@@ -119,21 +119,35 @@ func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.Play
 	return revealed, found
 }
 
-func bottomExiledCards(g *game.Game, player *game.Player, playerID game.PlayerID, cards []game.ZoneCardSnapshot, rng *rand.Rand) bool {
+// bottomExiledCards puts the still-exiled cards on the bottom of player's library
+// in a random order as one simultaneous move ("put all ... on the bottom"): every
+// card shares one batch id, so a one-or-more zone-change trigger sees one event
+// (CR 603.2c). Each card's zone-change replacements and commander choice are
+// determined before any card moves (CR 400.6, 614, 903.9b). A snapshot whose
+// card has left that exile incarnation is skipped.
+func bottomExiledCards(g *game.Game, player *game.Player, cards []game.ZoneCardSnapshot, rng *rand.Rand) bool {
+	var moves []simultaneousCardMove
+	for _, snapshot := range randomlyOrderedSnapshots(cards, rng) {
+		if player.Exile.Contains(snapshot.CardID) {
+			moves = append(moves, simultaneousCardMove{card: snapshot, fromZone: zone.Exile})
+		}
+	}
+	if len(moves) == 0 {
+		return false
+	}
+	return moveCardsBetweenZonesSimultaneously(g, moves, zone.Library, true, g.IDGen.Next())
+}
+
+// randomlyOrderedSnapshots returns cards in a random order drawn from rng (or
+// unchanged without one), leaving the caller's slice intact.
+func randomlyOrderedSnapshots(cards []game.ZoneCardSnapshot, rng *rand.Rand) []game.ZoneCardSnapshot {
 	cards = slices.Clone(cards)
 	if rng != nil && len(cards) > 1 {
 		rng.Shuffle(len(cards), func(i, j int) {
 			cards[i], cards[j] = cards[j], cards[i]
 		})
 	}
-	moved := false
-	for _, snapshot := range cards {
-		card, exists := g.GetCardInstance(snapshot.CardID)
-		if exists && card.ZoneVersion == snapshot.ZoneVersion && player.Exile.Contains(card.ID) {
-			moved = moveCardBetweenZonesInBatch(g, playerID, card.ID, zone.Exile, zone.Library, true, 0) || moved
-		}
-	}
-	return moved
+	return cards
 }
 
 func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
