@@ -402,6 +402,8 @@ func TestCascadeRemainderMovesAsOneBatch(t *testing.T) {
 		[game.NumPlayers]PlayerAgent{agent, agent, agent, agent}, &TurnLog{}) {
 		t.Fatal("cascade spell cast failed")
 	}
+	agents := [game.NumPlayers]PlayerAgent{agent, agent, agent, agent}
+	resolveCascadeTrigger(t, engine, g, &agents)
 
 	if choices != 2 {
 		t.Fatalf("commander choices = %d, want 2", choices)

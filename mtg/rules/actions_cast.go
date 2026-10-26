@@ -300,7 +300,6 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}, targetEvents)
 	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
 
@@ -656,7 +655,6 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }
 
