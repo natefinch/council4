@@ -68,6 +68,20 @@
   details.more summary { cursor: pointer; color: var(--dim); font-size: 12px; }
   a { color: var(--info); }
   .empty { color: var(--dim); padding: 40px; text-align: center; }
+  details.workflows { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin: 16px 0 0; }
+  details.workflows > summary { cursor: pointer; padding: 10px 16px; font-weight: 600; }
+  details.workflows > .body { padding: 0 16px 12px; }
+  .workflow { border-top: 1px solid var(--line); padding: 10px 0; }
+  .workflow:first-child { border-top: none; }
+  .workflow .args { font-size: 12px; color: var(--dim); margin: 4px 0 8px; }
+  .workflow .args code { color: var(--text); }
+  .example { display: grid; grid-template-columns: 220px minmax(0, 1fr) auto; gap: 8px; align-items: center; margin: 4px 0; }
+  @media (max-width: 900px) { .example { grid-template-columns: 1fr; } }
+  .example input { font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 5px 8px; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); width: 100%; box-sizing: border-box; }
+  .example button { font: inherit; font-size: 12px; padding: 4px 12px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--bg); color: var(--text); min-width: 72px; }
+  .example button.copied { color: var(--good); border-color: var(--good); }
 </style>
 </head>
 <body>
@@ -76,7 +90,13 @@
   <span class="meta" id="refreshed">loading…</span>
   <label><input type="checkbox" id="showChecks"> show preflight / smoke runs</label>
 </header>
-<main id="app"></main>
+<main>
+<details class="workflows" id="workflows">
+  <summary>Start a workflow</summary>
+  <div class="body" id="workflowList"><p class="dim">Loading…</p></div>
+</details>
+<div id="app"></div>
+</main>
 <script>
 const app = document.getElementById("app");
 const showChecks = document.getElementById("showChecks");
@@ -326,6 +346,53 @@ async function refresh() {
 refresh();
 setInterval(refresh, 5000);
 setInterval(tick, 1000);
+
+// The workflows the repository's extension registers, with prompts to paste
+// into a new Copilot session. Prompts are editable so placeholders can be
+// filled in before copying.
+const workflowsNode = document.getElementById("workflows");
+workflowsNode.open = localStorage.getItem("workflowsOpen") === "1";
+workflowsNode.addEventListener("toggle", () => {
+  localStorage.setItem("workflowsOpen", workflowsNode.open ? "1" : "0");
+  if (workflowsNode.open) loadWorkflows();
+});
+
+async function loadWorkflows() {
+  const list = document.getElementById("workflowList");
+  try {
+    const res = await fetch("api/workflows", { cache: "no-store" });
+    if (!res.ok) throw new Error(await res.text());
+    const workflows = await res.json();
+    const html = workflows.map(w => `<div class="workflow">
+      <div><b class="id">${esc(w.name)}</b></div>
+      <div class="dim">${esc(w.description)}</div>
+      <div class="args">Arguments: ${w.args.length ? w.args.map(a => `<code>${esc(a.name)}</code>${a.required ? "*" : ""} <span>${esc(a.type)}</span>`).join(" · ") : "none"}</div>
+      ${w.examples.map(e => `<div class="example"><span>${esc(e.title)}</span>
+        <input type="text" value="${esc(e.prompt)}" spellcheck="false" aria-label="${esc(e.title)} prompt">
+        <button type="button" class="copy">Copy</button></div>`).join("")}
+    </div>`).join("");
+    patch(list, html + `<p class="dim" style="font-size:12px">Paste into a new Interactive session in this repository. Replace any &lt;placeholder&gt; first; * marks required arguments.</p>`);
+  } catch (e) {
+    patch(list, `<div class="error">Could not list workflows: ${esc(e.message)}</div>`);
+  }
+}
+
+document.getElementById("workflowList").addEventListener("click", async e => {
+  const button = e.target.closest("button.copy");
+  if (!button) return;
+  const input = button.previousElementSibling;
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch {
+    input.select();
+    document.execCommand("copy");
+  }
+  button.textContent = "Copied";
+  button.classList.add("copied");
+  setTimeout(() => { button.textContent = "Copy"; button.classList.remove("copied"); }, 1500);
+});
+
+if (workflowsNode.open) loadWorkflows();
 </script>
 </body>
 </html>

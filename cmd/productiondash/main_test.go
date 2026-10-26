@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 	"time"
@@ -108,6 +110,43 @@ func TestStatusNeverInventsCompletion(t *testing.T) {
 	} {
 		if got, _ := status(tc.s, tc.idle); got != tc.want {
 			t.Errorf("%s: got %s, want %s", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestCatalogListsRegisteredWorkflowsWithPrompts(t *testing.T) {
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node is required to read the workflow catalog")
+	}
+	out, err := catalog(".")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var workflows []struct {
+		Name     string
+		Examples []struct{ Prompt string }
+	}
+	if err := json.Unmarshal(out, &workflows); err != nil {
+		t.Fatal(err)
+	}
+	prompts := map[string]string{}
+	for _, w := range workflows {
+		for _, e := range w.Examples {
+			prompts[w.Name] = e.Prompt
+			break
+		}
+	}
+	want := map[string]string{
+		"council4-production":        "Run the `council4-production` workflow with `{\"mode\":\"produce\",\"maxTasks\":20}`",
+		"council4-production-report": "Run the `council4-production-report` workflow with `{\"runId\":\"<run id>\"}`",
+		"council4-engine-triage":     "Run the `council4-engine-triage` workflow with `{}`",
+	}
+	if len(prompts) != len(want) {
+		t.Fatalf("workflows = %v, want %v", prompts, want)
+	}
+	for name, prompt := range want {
+		if prompts[name] != prompt {
+			t.Errorf("%s first prompt = %q, want %q", name, prompts[name], prompt)
 		}
 	}
 }

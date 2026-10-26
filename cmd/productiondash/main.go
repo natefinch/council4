@@ -3,7 +3,9 @@
 //
 // Runs write their ledgers to .cardwork/workflows/<run-id>/ in whichever
 // worktree started them, so the dashboard discovers all worktrees with
-// `git worktree list` on every scan.
+// `git worktree list` on every scan. It also lists the workflows the
+// repository's extension registers, with copyable prompts, using Node to read
+// .github/extensions/council4-production/catalog.mjs.
 //
 //	go run ./cmd/productiondash            # http://localhost:8765
 //	go run ./cmd/productiondash -addr :9000 -repo /path/to/any/council4/worktree
@@ -56,6 +58,16 @@ func main() {
 		w.Header().Set("Cache-Control", "no-store")
 		json.NewEncoder(w).Encode(scan(roots, sharedRuns(*repo), time.Now()))
 	})
+	http.HandleFunc("/api/workflows", func(w http.ResponseWriter, r *http.Request) {
+		out, err := catalog(*repo)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
+		w.Write(out)
+	})
 	log.Printf("council4 production dashboard on http://%s", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
@@ -68,6 +80,28 @@ func sharedRuns(repo string) string {
 		return ""
 	}
 	return filepath.Join(strings.TrimSpace(string(out)), "council4-production", "runs")
+}
+
+// catalog describes the workflows the repository's extension registers, with
+// example prompts, by running its catalog module with Node.
+func catalog(repo string) ([]byte, error) {
+	top, err := exec.Command("git", "-C", repo, "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return nil, fmt.Errorf("finding the checkout containing %s: %w", repo, err)
+	}
+	script := filepath.Join(strings.TrimSpace(string(top)), ".github", "extensions", "council4-production", "catalog.mjs")
+	out, err := exec.Command("node", script).Output()
+	if err != nil {
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			return nil, fmt.Errorf("describing workflows with %s: %w: %s", script, err, exit.Stderr)
+		}
+		return nil, fmt.Errorf("describing workflows with %s: %w", script, err)
+	}
+	if !json.Valid(out) {
+		return nil, fmt.Errorf("describing workflows with %s: output is not JSON", script)
+	}
+	return out, nil
 }
 
 // worktrees lists the repository's top-level worktrees, excluding the

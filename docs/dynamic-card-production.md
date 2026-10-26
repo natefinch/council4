@@ -370,6 +370,13 @@ saved only a rejected unit's final review verdict. Runs record a final outcome s
 these changes; older runs, or runs whose workflow process died, show
 `unknown` once their ledger stops updating.
 
+Its collapsible **Start a workflow** section lists the workflows the extension
+registers, their arguments and example prompts with copy buttons; paste one into
+a new Interactive session after replacing any `<placeholder>`. The list and
+examples come from
+[`catalog.mjs`](../.github/extensions/council4-production/catalog.mjs), which
+`extension.mjs` also registers from, so add new workflows and examples there.
+
 The workflow writes snapshots after stages. Once it settles, ask:
 
 > Run `council4-production-report` with runId `<the-production-run-id>`.
