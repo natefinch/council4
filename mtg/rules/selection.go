@@ -648,6 +648,11 @@ func (s *selectionSubject) hasKeyword(keyword game.Keyword) bool {
 			return def.HasKeyword(keyword)
 		}
 	}
+	if s.kind == subjectCastSpell && keyword == game.Cascade {
+		// "Whenever you cast a spell with cascade" reads the cascade the spell
+		// had as it became cast, printed, conditional or granted.
+		return eventCascadeInstances(s.g, s.event) > 0
+	}
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
 		return s.card.Def.HasKeyword(keyword)
 	}

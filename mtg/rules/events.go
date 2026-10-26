@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func emitEvent(g *game.Game, event game.Event) {
@@ -44,6 +45,9 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 	}
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
+	}
+	if event.Kind == game.EventSpellCast && !event.CascadeInstances.Exists {
+		event.CascadeInstances = opt.Val(spellCascadeInstancesAtCast(g, event))
 	}
 	if event.Kind == game.EventCardDiscarded && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = discardBatchOrdinalThisTurn(g, event.Player, event.SimultaneousID)

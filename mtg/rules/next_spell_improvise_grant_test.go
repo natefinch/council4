@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // nextSpellImproviseGrant builds the global, turn-scoped, controller-scoped
@@ -40,7 +41,7 @@ func TestNextSpellImproviseGrantConsumedByFirstSpell(t *testing.T) {
 	if !spellGrantedKeyword(g, game.Player1, elfFace(def), 0, 0, game.Improvise) {
 		t.Fatal("first spell should see the one-shot improvise grant")
 	}
-	consumeNextSpellKeywordGrantEffects(g, first)
+	consumeNextSpellKeywordGrantEffects(g, first, zone.Hand)
 	if len(g.RuleEffects) != 0 {
 		t.Fatalf("global rule effects = %#v, want the one-shot grant consumed", g.RuleEffects)
 	}
@@ -58,7 +59,7 @@ func TestNextSpellImproviseGrantIgnoresOpponentSpell(t *testing.T) {
 	def := elfCreatureDef()
 
 	opponentSpell := &game.StackObject{ID: g.IDGen.Next(), Kind: game.StackSpell, Controller: game.Player2, SourceTokenDef: def}
-	consumeNextSpellKeywordGrantEffects(g, opponentSpell)
+	consumeNextSpellKeywordGrantEffects(g, opponentSpell, zone.Hand)
 	if len(g.RuleEffects) != 1 {
 		t.Fatalf("global rule effects = %#v, want the one-shot grant untouched by an opponent's spell", g.RuleEffects)
 	}
@@ -74,7 +75,7 @@ func TestNextSpellImproviseGrantNotConsumedByNonmatchingSpell(t *testing.T) {
 	artifactDef := &game.CardDef{CardFace: game.CardFace{Name: "Ornithopter", Types: []types.Card{types.Artifact}}}
 
 	artifactSpell := &game.StackObject{ID: g.IDGen.Next(), Kind: game.StackSpell, Controller: game.Player1, SourceTokenDef: artifactDef}
-	consumeNextSpellKeywordGrantEffects(g, artifactSpell)
+	consumeNextSpellKeywordGrantEffects(g, artifactSpell, zone.Hand)
 	if len(g.RuleEffects) != 1 {
 		t.Fatalf("global rule effects = %#v, want the filtered grant untouched by a nonmatching spell", g.RuleEffects)
 	}

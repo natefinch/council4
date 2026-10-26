@@ -1561,10 +1561,19 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		}
 		switch effect.GrantedKeyword {
 		case Improvise, Convoke, Delve:
+		case Cascade:
+			if effect.AppliesToNextSpellOnly {
+				v.add(faceName, appendPath(path, "AppliesToNextSpellOnly"), CardDefIssueInvalidRuleEffect, "cascade spell grants cannot be next-spell-only")
+			}
 		case KeywordNone:
 			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grant must grant a keyword")
 		default:
-			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grants support only improvise, convoke, or delve")
+			v.add(faceName, appendPath(path, "GrantedKeyword"), CardDefIssueInvalidRuleEffect, "spell keyword grants support only improvise, convoke, delve, or cascade")
+		}
+		switch effect.CastFromZone {
+		case zone.None, zone.Hand, zone.Graveyard, zone.Exile, zone.Library, zone.Command:
+		default:
+			v.add(faceName, appendPath(path, "CastFromZone"), CardDefIssueInvalidRuleEffect, "spell keyword grant cast-from zone must be a zone spells are cast from")
 		}
 	case RuleEffectNoMaximumHandSize, RuleEffectLifeTotalCantChange, RuleEffectPlayWithTopCardRevealed, RuleEffectLookAtTopCardAnyTime, RuleEffectSkipDrawStep, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectDamageDoesntCauseLifeLoss, RuleEffectRedirectDamageToSource, RuleEffectActivateAbilitiesAsThoughHaste, RuleEffectSkipExtraTurns, RuleEffectLegendRuleDoesNotApply:
 		if effect.AffectedPlayer == PlayerAny {
@@ -2373,6 +2382,11 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 			unsupported.ManaValue.Exists = false
 			unsupported.ManaValueLessThanSourcePower = false
 			unsupported.ColorChoice = ColorChoiceNone
+			// The spell's cascade at cast time is recorded on the cast event
+			// (Event.CascadeInstances); a copy event carries no such record.
+			if !pattern.MatchSpellCopy && unsupported.Keyword == Cascade {
+				unsupported.Keyword = KeywordNone
+			}
 		}
 		if eventCarriesMovedCardCharacteristics(pattern.Event) {
 			unsupported.Supertypes = nil
