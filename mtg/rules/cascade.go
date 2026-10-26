@@ -12,13 +12,84 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	// Only completed casts call this helper. A card copy can be cast (CR 707.12);
-	// ordinary stack/storm copying never enters a cast path (CR 707.10).
-	if spellDef == nil || !spellDef.HasKeyword(game.Cascade) {
-		return
+// cascadeTriggeredAbility is the "When you cast this spell" triggered ability a
+// cascade instance creates (CR 702.85a). It carries the Cascade keyword so
+// resolution dispatches to the shared cascade operation, and it has no targets,
+// so it can be countered (Stifle) or copied like any triggered ability.
+func cascadeTriggeredAbility() *game.TriggeredAbility {
+	return &game.TriggeredAbility{
+		Text:             "Cascade",
+		KeywordAbilities: game.SimpleKeywords(game.Cascade),
 	}
-	player, ok := playerByID(g, obj.Controller)
+}
+
+// cascadeInstanceCount counts the cascade instances printed on a spell's face;
+// each instance triggers separately (CR 702.85c), so "Cascade, cascade" yields
+// two triggers.
+func cascadeInstanceCount(def *game.CardDef) int {
+	if def == nil {
+		return 0
+	}
+	count := 0
+	for i := range def.StaticAbilities {
+		for _, keyword := range game.BodyKeywordAbilities(&def.StaticAbilities[i]) {
+			if game.KeywordAbilityKind(keyword) == game.Cascade {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// cascadeCastTriggers returns one pending cascade trigger for each cascade
+// instance of a genuinely cast spell (CR 702.85a/c). Only EventSpellCast reaches
+// here, so non-cast stack and storm copies never cascade (CR 707.10), while a
+// cast copy of a card does (CR 707.12). A face-down spell has no abilities (CR
+// 708.2). The trigger keeps the cast event, whose ManaValue snapshots the spell
+// as it was cast on the stack, including X; resolution compares against that
+// value even if the spell has since left the stack (CR 608.2h).
+func cascadeCastTriggers(g *game.Game, source *game.Permanent, def *game.CardDef, event game.Event) []pendingTriggeredAbility {
+	count := cascadeInstanceCount(def)
+	if count == 0 {
+		return nil
+	}
+	if obj, ok := stackObjectByID(g, event.StackObjectID); ok && obj.FaceDown {
+		return nil
+	}
+	pending := make([]pendingTriggeredAbility, 0, count)
+	for range count {
+		pending = append(pending, pendingTriggeredAbility{
+			controller:      event.Controller,
+			sourceID:        source.ObjectID,
+			sourceCardID:    source.CardInstanceID,
+			sourceToken:     source.TokenDef,
+			face:            event.Face,
+			inline:          cascadeTriggeredAbility(),
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
+		})
+	}
+	return pending
+}
+
+// resolveCascadeTriggeredAbility resolves one cascade trigger with the spell's
+// mana value captured when it was cast.
+func (e *Engine) resolveCascadeTriggeredAbility(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if !obj.HasTriggerEvent || !obj.TriggerEvent.ManaValue.Exists {
+		return "missing source"
+	}
+	e.cascade(g, obj.Controller, obj.TriggerEvent.ManaValue.Val, agents, log)
+	return "resolved"
+}
+
+// cascade performs the cascade process for playerID against a spell of
+// manaValue (CR 702.85a): exile cards from the top of the library until a
+// nonland card with lesser mana value is exiled, offer to cast it without paying
+// its mana cost if the resulting spell's mana value is also less, then put every
+// exiled card that wasn't cast on the bottom in a random order as one batch.
+func (e *Engine) cascade(g *game.Game, playerID game.PlayerID, manaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	player, ok := playerByID(g, playerID)
 	if !ok {
 		return
 	}
@@ -31,8 +102,8 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 		}
 		epoch := player.Library.ReorderVersion()
 		destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
-			Controller: obj.Controller,
-			Player:     obj.Controller,
+			Controller: playerID,
+			Player:     playerID,
 			CardID:     cardID,
 			FromZone:   zone.Library,
 			ToZone:     zone.Exile,
@@ -49,14 +120,16 @@ func (e *Engine) resolveCascadeForCast(g *game.Game, obj *game.StackObject, spel
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
-		if destination == zone.Exile && !def.HasType(types.Land) && def.ManaValue() < spellDef.ManaValue() {
+		if destination == zone.Exile && !def.HasType(types.Land) && def.ManaValue() < manaValue {
 			found = cardID
 			break
 		}
 		requireLibraryAdvance(player, cardID, epoch)
 	}
 	if found != 0 {
-		e.castFreeSpellFromExileWithMaxManaValue(g, obj.Controller, found, spellDef.ManaValue()-1, agents, log)
+		// "You may cast it": the cast is optional, so the choice offers declining
+		// and a declined (or uncastable) hit is bottomed with the rest.
+		e.chooseAndCastFreeSpellFromSourceMay(g, player, playerID, found, zone.Exile, game.Selection{}, opt.Val(manaValue-1), false, true, agents, log)
 	}
 	bottomExiledCards(g, player, revealed, e.rng)
 }
