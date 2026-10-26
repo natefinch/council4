@@ -89,7 +89,7 @@ func TestExileToExileInvalidatesOldPermissionsAndHandles(t *testing.T) {
 	if card.ZoneVersion != original.ZoneVersion+1 {
 		t.Fatal("exile-to-exile move did not create a new incarnation")
 	}
-	if bottomExiledCards(g, g.Players[game.Player1], game.Player1, []game.ZoneCardSnapshot{original}, nil) {
+	if bottomExiledCards(g, g.Players[game.Player1], []game.ZoneCardSnapshot{original}, nil) {
 		t.Fatal("an old exile handle followed the physical card into its new occurrence")
 	}
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
