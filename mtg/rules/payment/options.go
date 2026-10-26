@@ -29,6 +29,15 @@ type spellCostOption struct {
 	bargained        bool
 	buybackPaid      bool
 	locked           bool
+	// spendAs is the request's spending permission (CR 609.4b). It travels with
+	// the option, including a prepared total, so it governs only how the
+	// option's mana is paid.
+	spendAs game.ManaSpendPermission
+}
+
+// spendContext is the mana-spending context for paying this option's mana.
+func (o spellCostOption) spendContext() spendContext {
+	return spendContext{spell: o.card, spendAs: o.spendAs}
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
@@ -160,6 +169,9 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	addSpliceCosts(options, req.SpliceManaCosts)
 	if req.Offspring {
 		addOffspringCost(options, req.Card)
+	}
+	for i := range options {
+		options[i].spendAs = req.SpendAnyMana
 	}
 	return options
 }

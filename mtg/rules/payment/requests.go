@@ -64,6 +64,12 @@ type SpellRequest struct {
 	// spell (CR 702.47), each paid as an additional cost of casting it. They are
 	// added to every payable cost option. It is empty for spells with no splices.
 	SpliceManaCosts []cost.Mana
+	// SpendAnyMana is the spending permission the caster may use for this cast
+	// (CR 118.14, 609.4b), such as the "spend mana as though it were mana of any
+	// color to cast it" rider of the permission authorizing a cast from exile.
+	// It applies to every cost option's total mana cost, including alternative,
+	// additional, kicker and splice mana, and never adds or removes an option.
+	SpendAnyMana game.ManaSpendPermission
 }
 
 // AbilityRequest bundles all parameters needed to check or pay activated
@@ -88,12 +94,15 @@ type AbilityRequest struct {
 // only when the payment is part of casting a spell outside the normal spell
 // planner, such as a madness cost, or when a feasibility check bounds such a
 // cast (legal X candidates for a spell cast from exile); it selects the spell's
-// mana-spending context.
+// mana-spending context. SpendAs is the spending permission (CR 609.4b) that
+// context pays under, such as the rider of a permission to cast the spell from
+// exile.
 type GenericRequest struct {
 	PlayerID        game.PlayerID
 	Source          *game.Permanent
 	SourceCardID    id.ID
 	Spell           *game.CardDef
+	SpendAs         game.ManaSpendPermission
 	Cost            *cost.Mana
 	XValue          int
 	Exclude         map[id.ID]bool

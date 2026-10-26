@@ -909,14 +909,16 @@ type RuleEffect struct {
 	// kind.
 	AffectToOwner bool
 
-	// SpendAnyMana, on a RuleEffectPlayFromZone permission, lets the affected
-	// player spend mana of any type to cast the permitted card ("mana of any
-	// type can be spent to cast it.", Court of Locthwain, Court of the Grim
-	// Captain). The colored and colorless requirements of the cast card's mana
-	// cost stay the same size but become payable with mana of any color, so the
-	// rules layer casts it under an alternative cost whose symbols are all
-	// generic. It is false for every other kind.
-	SpendAnyMana bool
+	// SpendAnyMana, on a play/cast-from-zone permission, is the spending
+	// permission the affected player may use to cast a card that permission
+	// allows (CR 118.14, 609.4b): ManaSpendAsAnyType for "mana of any type can be
+	// spent to cast it." (Court of Locthwain) and ManaSpendAsAnyColor for "you may
+	// spend mana as though it were mana of any color to cast it." (Evelyn, the
+	// Covetous). It changes which mana may pay the chosen total cost, including
+	// alternative, additional and kicker mana costs, without changing that cost
+	// or replacing any alternative cost. It is ManaSpendNormal for every other
+	// kind.
+	SpendAnyMana ManaSpendPermission
 
 	// ExiledLinkKey, on a RuleEffectCastLinkedExileForFree permission, names the
 	// source-keyed linked-exile set whose cards the affected player may cast for

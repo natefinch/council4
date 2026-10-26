@@ -86,7 +86,12 @@ func (e *Engine) paymentPreferencesForSpellFromZoneWithKicker(g *game.Game, play
 }
 
 func (e *Engine) paymentPreferencesForSpellRequest(g *game.Game, request payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
-	option := e.chooseSpellCostOptionForRequest(g, request, agents, log)
+	return e.paymentPreferencesForSpellOption(g, request, e.chooseSpellCostOptionForRequest(g, request, agents, log), agents, log)
+}
+
+// paymentPreferencesForSpellOption returns payment preferences for an already
+// chosen spell cost option of request.
+func (e *Engine) paymentPreferencesForSpellOption(g *game.Game, request payment.SpellRequest, option payment.SpellOptionSummary, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	prefs := e.paymentPreferencesForCostFromSource(g, request.PlayerID, option.ManaCost, option.AdditionalCosts, request.XValue, request.CardID, request.SourceZone, agents, log)
 	prefs.AlternativeIndex = option.Index
 	return prefs

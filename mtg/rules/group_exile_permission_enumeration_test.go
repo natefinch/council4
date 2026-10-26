@@ -317,7 +317,7 @@ func TestExileAnyManaPermissionEnumeratesXSpells(t *testing.T) {
 			Player:        game.TargetPlayerReference(0),
 			Amount:        game.Fixed(1),
 			Duration:      game.DurationPermanent,
-			SpendAnyMana:  true,
+			SpendAnyMana:  game.ManaSpendAsAnyType,
 			PublishLinked: courtOfLocthwainLink,
 		}, &TurnLog{})
 		if !g.Players[game.Player2].Exile.Contains(topID) {

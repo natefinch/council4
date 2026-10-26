@@ -1500,7 +1500,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.PermissionKey == "" || effect.AffectedPlayer != PlayerYou ||
 			effect.CastFromZone != zone.Graveyard || !effect.RestrictedDuringControllerTurn ||
 			effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 ||
-			effect.AffectedCardID != 0 || effect.WithoutPayingManaCost || effect.SpendAnyMana {
+			effect.AffectedCardID != 0 || effect.WithoutPayingManaCost || effect.SpendAnyMana != ManaSpendNormal {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "permanent-type play permissions require a key, the controller's graveyard and turn, and ordinary costs")
 		}
 	case RuleEffectCostModifier:

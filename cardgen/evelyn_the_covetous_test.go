@@ -47,7 +47,7 @@ func TestGenerateExecutableCardSourceEvelynTheCovetous(t *testing.T) {
 		"ExileCounterFilter:             opt.Val(counter.Collection),",
 		"ExileCounterExiledByController: true,",
 		"OncePerTurn:                    true,",
-		"SpendAnyMana:                   true,",
+		"SpendAnyMana:                   game.ManaSpendAsAnyColor,",
 	} {
 		if !strings.Contains(source, want) {
 			t.Fatalf("source missing %q:\n%s", want, source)

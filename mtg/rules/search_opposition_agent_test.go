@@ -160,7 +160,7 @@ func TestOppositionAgentExilesOpponentTutorToHand(t *testing.T) {
 	if effect.Controller != game.Player1 {
 		t.Fatalf("permission controller = %d, want Player1", effect.Controller)
 	}
-	if !effect.SpendAnyMana {
+	if effect.SpendAnyMana != game.ManaSpendAsAnyColor {
 		t.Fatal("permission does not allow spending mana as any color")
 	}
 	if effect.Duration != game.DurationPermanent {
@@ -169,7 +169,7 @@ func TestOppositionAgentExilesOpponentTutorToHand(t *testing.T) {
 	if !slices.Contains(foreignExileCastableCards(g, game.Player1), bear) {
 		t.Fatal("Opposition Agent controller cannot play the exiled card")
 	}
-	if !castFromZoneAllowsAnyMana(g, game.Player1, bear, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, bear, zone.Exile, game.FaceFront) != game.ManaSpendAsAnyColor {
 		t.Fatal("exiled card cannot be cast spending mana of any color")
 	}
 	if slices.Contains(foreignExileCastableCards(g, game.Player2), bear) {
@@ -405,7 +405,7 @@ func TestOppositionAgentRedirectsRevealOnlySearch(t *testing.T) {
 	if !ok {
 		t.Fatal("no play-from-exile permission was granted for the reveal-only find")
 	}
-	if effect.Controller != game.Player1 || !effect.SpendAnyMana {
+	if effect.Controller != game.Player1 || effect.SpendAnyMana != game.ManaSpendAsAnyColor {
 		t.Fatalf("permission = {controller:%d anyMana:%v}, want Player1 with any-color spending", effect.Controller, effect.SpendAnyMana)
 	}
 	if !slices.Contains(foreignExileCastableCards(g, game.Player1), plains) {
@@ -456,7 +456,7 @@ func TestOppositionAgentRedirectsExileFaceDownSearch(t *testing.T) {
 	if !ok {
 		t.Fatal("no play-from-exile permission was granted for the exile-face-down find")
 	}
-	if effect.Controller != game.Player1 || !effect.SpendAnyMana {
+	if effect.Controller != game.Player1 || effect.SpendAnyMana != game.ManaSpendAsAnyColor {
 		t.Fatalf("permission = {controller:%d anyMana:%v}, want Player1 with any-color spending", effect.Controller, effect.SpendAnyMana)
 	}
 	if !slices.Contains(foreignExileCastableCards(g, game.Player1), spell) {

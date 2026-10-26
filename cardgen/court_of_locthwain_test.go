@@ -38,7 +38,7 @@ func TestGenerateExecutableCardSourceCourtOfLocthwain(t *testing.T) {
 		"Primitive: game.ImpulseExile{",
 		"Player:        game.TargetPlayerReference(0),",
 		"Duration:      game.DurationPermanent,",
-		"SpendAnyMana:  true,",
+		"SpendAnyMana:  game.ManaSpendAsAnyType,",
 		`PublishLinked: game.LinkedKey("court-of-locthwain-exile"),`,
 		"Primitive: game.ApplyRule{",
 		"Kind:           game.RuleEffectCastLinkedExileForFree,",

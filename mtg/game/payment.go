@@ -16,6 +16,26 @@ type AdditionalCostSelection struct {
 	LifePaid     int
 }
 
+// ManaSpendPermission is a spending permission that changes which mana may pay
+// a cost without changing the cost itself (CR 609.4b): "you may spend mana as
+// though it were mana of any color" or "mana of any type can be spent". It
+// applies to the whole chosen total cost, including alternative, additional and
+// kicker mana costs. The zero value spends mana normally.
+type ManaSpendPermission uint8
+
+// Mana spend permission values.
+const (
+	// ManaSpendNormal applies no spending permission.
+	ManaSpendNormal ManaSpendPermission = iota
+	// ManaSpendAsAnyColor lets any mana pay a colored requirement as though it
+	// were mana of any color (CR 106.1a). It does not let colored mana pay a
+	// colorless {C} requirement (CR 107.4c).
+	ManaSpendAsAnyColor
+	// ManaSpendAsAnyType lets any mana pay a requirement as though it were
+	// colorless mana or mana of any color (CR 106.1b, 118.14), including {C}.
+	ManaSpendAsAnyType
+)
+
 // SymbolPaymentMethod classifies how one mana symbol was paid.
 type SymbolPaymentMethod int
 
