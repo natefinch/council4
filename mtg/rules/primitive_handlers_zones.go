@@ -1152,7 +1152,7 @@ func (r *effectResolver) chooseTriggeringBatchMember(chooser game.PlayerID, cand
 	}
 	options := make([]game.ChoiceOption, 0, len(candidates))
 	for i, candidate := range candidates {
-		options = append(options, game.ChoiceOption{Index: i, Label: permanentEffectiveName(r.game, candidate)})
+		options = append(options, game.ChoiceOption{Index: i, Label: permanentChoiceLabel(r.game, candidate)})
 	}
 	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,

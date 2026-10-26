@@ -534,7 +534,7 @@ func chooseNinjutsuAttacker(e *Engine, g *game.Game, playerID game.PlayerID, att
 	}
 	options := make([]game.ChoiceOption, 0, len(attackers))
 	for i, attacker := range attackers {
-		options = append(options, game.ChoiceOption{Index: i, Label: permanentEffectiveName(g, attacker)})
+		options = append(options, game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, attacker)})
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 		Kind:             game.ChoicePayment,

@@ -56,7 +56,7 @@ func (r *effectResolver) designateRingBearer(player *game.Player) {
 	for i, permanent := range candidates {
 		options[i] = game.ChoiceOption{
 			Index: i,
-			Label: permanentEffectiveName(r.game, permanent),
+			Label: permanentChoiceLabel(r.game, permanent),
 			Card:  permanentChoiceInfo(r.game, permanent),
 		}
 		if permanent.ObjectID == player.RingBearerID {

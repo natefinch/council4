@@ -607,12 +607,20 @@ func selectedCardIDs(candidates []id.ID, selected []int) []id.ID {
 	return ids
 }
 
+// permanentChoiceLabel labels a permanent in a choice request or logged
+// decision by its effective (public) name. A nameless face-down permanent (CR
+// 708.2a) is labeled as a face-down permanent with its object ID, so several
+// face-down permanents stay distinguishable without revealing the card
+// underneath; its controller can match the ID against the private face-down
+// card views in its observation (CR 708.5).
 func permanentChoiceLabel(g *game.Game, permanent *game.Permanent) string {
-	card, ok := permanentCardDef(g, permanent)
-	if !ok {
-		return fmt.Sprintf("Permanent %d", permanent.ObjectID)
+	if name := permanentEffectiveName(g, permanent); name != "" {
+		return name
 	}
-	return card.Name
+	if permanent.FaceDown {
+		return fmt.Sprintf("Face-down permanent %d", permanent.ObjectID)
+	}
+	return fmt.Sprintf("Permanent %d", permanent.ObjectID)
 }
 
 func cardChoiceLabel(g *game.Game, cardID id.ID) string {
