@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -28,6 +29,21 @@ func TestSpellModeRunsDeterministicallyWithCastsAndResolves(t *testing.T) {
 	}
 	if resolves == 0 {
 		t.Fatal("spell mode produced no resolves")
+	}
+}
+
+func TestFormatActionLogLabelsFusedSplitCast(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	registry := cards.NewDefaultRegistry()
+	cardID := addTestCard(g, game.Player1, registry.Lookup("Wear"))
+	for face, want := range map[game.FaceIndex]string{
+		game.FaceFront: `cast "Wear"`,
+		game.FaceFused: `cast "Wear // Tear (fused)"`,
+	} {
+		logged := &rules.ActionLog{Player: game.Player1, Action: action.CastSpellFace(cardID, face, nil, 0, nil)}
+		if got := formatActionLog(g, logged); got != want {
+			t.Fatalf("formatActionLog(face %d) = %q, want %q", face, got, want)
+		}
 	}
 }
 

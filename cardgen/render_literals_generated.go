@@ -630,6 +630,7 @@ var gameFaceIndexLiterals = map[game.FaceIndex]string{
 	game.FaceFront:     "game.FaceFront",
 	game.FaceBack:      "game.FaceBack",
 	game.FaceAlternate: "game.FaceAlternate",
+	game.FaceFused:     "game.FaceFused",
 }
 
 // gameGroupReferenceDomainLiterals maps each exported game.GroupReferenceDomain constant to the Go

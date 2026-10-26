@@ -37,6 +37,11 @@ const (
 	FaceFront FaceIndex = iota
 	FaceBack
 	FaceAlternate
+	// FaceFused is not a printed face. It is the cast choice and stack view of a
+	// fused split spell (CR 702.102a-b, 709.4d): both halves of a split card
+	// with fuse cast together from hand with their characteristics combined.
+	// FaceIndexes never lists it; CanFuse reports whether a card offers it.
+	FaceFused
 )
 
 // PT represents a creature's power or toughness. It can be a numeric
@@ -194,6 +199,12 @@ func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
 		return c.Back.Val, c.Back.Exists
 	case FaceAlternate:
 		return c.Alternate.Val, c.Alternate.Exists
+	case FaceFused:
+		face, ok := c.fusedFace()
+		if !ok {
+			return CardFace{}, false
+		}
+		return face.clone(), true
 	default:
 		return CardFace{}, false
 	}
@@ -201,7 +212,8 @@ func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
 
 // FaceView returns a read-only pointer to one printed face without cloning it.
 // Card definitions are immutable, so rules queries can safely retain this
-// pointer. Callers that need an owned value must use Face.
+// pointer. Callers that need an owned value must use Face. FaceFused has no
+// printed storage, so its view is a freshly combined face on every call.
 func (c *CardDef) FaceView(index FaceIndex) (*CardFace, bool) {
 	switch index {
 	case FaceFront:
@@ -210,6 +222,12 @@ func (c *CardDef) FaceView(index FaceIndex) (*CardFace, bool) {
 		return &c.Back.Val, c.Back.Exists
 	case FaceAlternate:
 		return &c.Alternate.Val, c.Alternate.Exists
+	case FaceFused:
+		face, ok := c.fusedFace()
+		if !ok {
+			return nil, false
+		}
+		return &face, true
 	default:
 		return nil, false
 	}
@@ -264,6 +282,9 @@ func (c *CardDef) FaceIndexes() []FaceIndex {
 // cards cast copies of their spell face from prepared battlefield permanents.
 // Other layouts cast only their front face.
 func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
+	if index == FaceFused {
+		return c.CanFuse()
+	}
 	face, ok := c.FaceView(index)
 	if !ok || face.HasType(types.Land) {
 		return false

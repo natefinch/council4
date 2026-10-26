@@ -789,6 +789,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if !ok || !card.Def.CanChooseCastFace(face) {
 		return false
 	}
+	if face == game.FaceFused && (!canFuseFromZone(playerID, card, sourceZone) || !slices.Equal(chosenModes, game.FusedModes())) {
+		return false
+	}
 	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(spellDef, bestowed), announced)
 	if !valid {
 		return false
@@ -1481,7 +1484,19 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 		}
 		return faces
 	}
-	return card.Def.LegalCastFaces()
+	faces := card.Def.LegalCastFaces()
+	if canFuseFromZone(playerID, card, sourceZone) {
+		faces = append(faces, game.FaceFused)
+	}
+	return faces
+}
+
+// canFuseFromZone reports whether playerID may choose to cast both halves of a
+// fuse split card as one fused split spell. Fuse functions only while the card
+// is in its caster's own hand (CR 702.102a), so the choice is never offered
+// from another zone or another player's hand, even with a cast permission.
+func canFuseFromZone(playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type) bool {
+	return sourceZone == zone.Hand && card.Owner == playerID && card.Def.CanFuse()
 }
 
 // hasAdventureExilePermission reports whether playerID holds the CR 715.3d
