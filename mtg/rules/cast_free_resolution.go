@@ -21,7 +21,7 @@ func (*Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card
 		return nil
 	}
 	var options []freeCastOption
-	for _, face := range card.Def.LegalCastFaces() {
+	for _, face := range freeCastFaces(playerID, card, fromZone) {
 		spellDef := cardFaceOrDefault(card, face)
 		if !freeCastFaceAvailable(g, playerID, card, spellDef, selection, maxManaValue) {
 			continue
@@ -45,6 +45,20 @@ func (*Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card
 		}
 	}
 	return options
+}
+
+// freeCastFaces lists the faces a resolving effect may let playerID cast
+// without paying its mana cost. A fuse card cast from its caster's own hand may
+// be cast fused even without paying its mana cost (CR 702.102a; Wear // Tear
+// ruling 2013-04-15), and the fused spell's combined mana value is what any
+// mana value limit sees (CR 709.4d). From any other zone only the halves are
+// offered.
+func freeCastFaces(playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type) []game.FaceIndex {
+	faces := card.Def.LegalCastFaces()
+	if canFuseFromZone(playerID, card, fromZone) {
+		faces = append(faces, game.FaceFused)
+	}
+	return faces
 }
 
 func freeCastFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
@@ -197,7 +211,9 @@ func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *ga
 
 func freeCastOptionLabel(spellDef *game.CardDef, cast action.CastSpellAction) string {
 	label := spellDef.Name
-	if len(cast.ChosenModes) > 0 {
+	if cast.Face == game.FaceFused {
+		label += " (fused)"
+	} else if len(cast.ChosenModes) > 0 {
 		label += fmt.Sprintf(" modes %v", cast.ChosenModes)
 	}
 	if cast.KickerCount > 1 {
