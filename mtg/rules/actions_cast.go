@@ -803,12 +803,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 			return false
 		}
 	case zone.Exile:
-		hasRulePermission := canCastFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) ||
-			canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face)
-		ownPermission := face == game.FaceFront && (cardIsPlottedInExile(g, playerID, cardID) ||
-			cardIsForetoldInExile(g, playerID, cardID) || castLinkedExileForFree(g, playerID, cardID))
-		adventure := face == game.FaceFront && hasAdventureExilePermission(g, playerID, cardID)
-		if !adventure && !hasRulePermission && !ownPermission {
+		if !exileCastAuthorized(g, playerID, cardID, face) {
 			return false
 		}
 	case zone.Library:
@@ -1264,8 +1259,32 @@ func exileCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZ
 	if sourceZone != zone.Exile {
 		return []exileCastRoute{{}}
 	}
-	allowFree := !mode.otherAlternative()
-	routes, excluded := castFromZonePermissionRoutes(g, playerID, cardID, sourceZone, face, allowFree)
+	routes, excluded := exilePermissionCastRoutes(g, playerID, cardID, face, !mode.otherAlternative())
+	if len(routes) == 0 && !excluded {
+		return []exileCastRoute{{}}
+	}
+	return routes
+}
+
+// exileCastAuthorized reports whether some exile cast route authorizes
+// playerID to cast the face of cardID from exile under any cost mode: the
+// routes are those exileCastRoutes offers a cast that uses no other
+// alternative cost, a superset of every mode's routes. Cast validation and
+// legal-action face enumeration share it, so a face is listed exactly when a
+// permission can authorize it; each concrete cast is still fully validated
+// against the routes of its own mode.
+func exileCastAuthorized(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex) bool {
+	routes, _ := exilePermissionCastRoutes(g, playerID, cardID, face, true)
+	return len(routes) > 0
+}
+
+// exilePermissionCastRoutes returns, in exileCastRoutes order, the permission
+// routes through which playerID may cast the face of cardID from exile.
+// allowFree is false when the cast already uses another alternative cost, so
+// free and foretell routes are left out; excluded then reports that such a
+// matching permission was left out.
+func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, allowFree bool) (routes []exileCastRoute, excluded bool) {
+	routes, excluded = castFromZonePermissionRoutes(g, playerID, cardID, zone.Exile, face, allowFree)
 	if face == game.FaceFront {
 		if cardIsPlottedInExile(g, playerID, cardID) {
 			excluded = true
@@ -1289,10 +1308,7 @@ func exileCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZ
 			routes = append(routes, exileCastRoute{})
 		}
 	}
-	if len(routes) == 0 && !excluded {
-		return []exileCastRoute{{}}
-	}
-	return orderedCastRoutes(routes)
+	return orderedCastRoutes(routes), excluded
 }
 
 // castRouteAllowsX reports whether request, built for one route, can announce
@@ -1412,26 +1428,19 @@ func overloadSpellDef(card *game.CardDef) *game.CardDef {
 }
 
 func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type) []game.FaceIndex {
-	if sourceZone == zone.Graveyard || sourceZone == zone.Exile {
+	if sourceZone == zone.Exile {
 		var faces []game.FaceIndex
 		for _, face := range card.Def.LegalCastFaces() {
-			if sourceZone == zone.Exile && face == game.FaceFront && adventureExileFrontFacePermitted(g, playerID, card.ID) {
+			if exileCastAuthorized(g, playerID, card.ID, face) {
 				faces = append(faces, face)
-				continue
 			}
-			if sourceZone == zone.Exile && face == game.FaceFront && cardIsPlottedInExile(g, playerID, card.ID) {
-				faces = append(faces, face)
-				continue
-			}
-			if sourceZone == zone.Exile && face == game.FaceFront && cardIsForetoldInExile(g, playerID, card.ID) {
-				faces = append(faces, face)
-				continue
-			}
+		}
+		return faces
+	}
+	if sourceZone == zone.Graveyard {
+		var faces []game.FaceIndex
+		for _, face := range card.Def.LegalCastFaces() {
 			if canCastFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
-				faces = append(faces, face)
-				continue
-			}
-			if sourceZone == zone.Exile && canCastSpellsFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
 				faces = append(faces, face)
 			}
 		}
