@@ -103,7 +103,9 @@ export async function workspace(root, directory, runId, index, signal) {
 
 // Apply a retained unit's uncommitted work, including new files, to a fresh
 // task worktree on current main. The retained worktree and its index are not
-// changed, and the result stays uncommitted like any other unit's work.
+// changed, and the result stays uncommitted like any other unit's work. If main
+// changed the same lines, the conflicted files are left with conflict markers
+// and listed in conflicts for an integration repair.
 export async function seedFromRetained(source, work, signal) {
   if ((await changes(work.path, signal)).files.length) throw new Error("Resumed unit worktree is not clean; inspect it before seeding");
   const index = path.join(os.tmpdir(), `council4-seed-${randomUUID()}`);
@@ -114,15 +116,34 @@ export async function seedFromRetained(source, work, signal) {
     await git(source, ["add", "-A", "--", "."], signal, env);
     const tree = await git(source, ["write-tree"], signal, env);
     const snapshot = await git(source, ["commit-tree", tree, "-p", base, "-m", "Retained production unit"], signal);
-    let merged;
-    try { merged = (await git(work.path, ["merge-tree", "--write-tree", work.base, snapshot], signal)).split("\n")[0]; }
-    catch (error) { throw new Error("Retained work conflicts with current main; integrate it manually", { cause: error }); }
+    let output, conflicts = [];
+    try {
+      output = await git(work.path, ["merge-tree", "--write-tree", "--name-only", "--no-messages", work.base, snapshot], signal);
+    } catch (error) {
+      // Exit status 1 means conflicts: the written tree contains conflict markers.
+      if (error.cause?.code !== 1 || !error.cause?.stdout) throw error;
+      output = error.cause.stdout.trim();
+      conflicts = output.split("\n").slice(1).filter(Boolean);
+    }
+    const merged = output.split("\n")[0];
     await git(work.path, ["read-tree", "-u", "-m", "HEAD", merged], signal);
     await git(work.path, ["reset", "-q"], signal);
-    return { snapshot, retainedBase: base, tree: merged };
+    return { snapshot, retainedBase: base, tree: merged, conflicts };
   } finally {
     await rm(index, { force: true });
   }
+}
+
+// Files that still contain merge conflict markers.
+export async function unresolvedConflicts(cwd, files, signal) {
+  const remaining = [];
+  for (const file of files) {
+    let content;
+    try { content = await readFile(path.join(cwd, file), "utf8"); }
+    catch (error) { if (error.code === "ENOENT") continue; throw error; }
+    if (/^(<{7}|>{7})( |$)/m.test(content)) remaining.push(file);
+  }
+  return remaining;
 }
 
 export async function land(root, work, task, expected, sessionId, signal, options = {}) {
