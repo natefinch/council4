@@ -709,6 +709,17 @@ const (
 	// one cast of each other permanent type during the controller's turn.
 	// PermissionKey names a shared allowance on the source's current object.
 	RuleEffectPlayFromGraveyardPerPermanentType
+	// RuleEffectCascadeLandOption is the "as you cascade" land option (CR
+	// 702.85b): "As you cascade, you may put a land card from among the exiled
+	// cards onto the battlefield tapped." (Averna, the Chaos Bloom). Each active
+	// instance lets the effect's Controller, and only that player, put up to one
+	// land card exiled by their current cascade onto the battlefield tapped after
+	// the last card is exiled and before deciding whether to cast the hit (or,
+	// with no hit, before the exiled cards go to the bottom). Putting a land onto
+	// the battlefield is not playing it (CR 305.4). It is a marker rule effect
+	// carrying no payload beyond its Controller. Added last so existing kinds
+	// keep their wire values.
+	RuleEffectCascadeLandOption
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -783,7 +794,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectControlOpponentSearches,
 		RuleEffectExileOpponentSearchFinds,
 		RuleEffectLegendRuleDoesNotApply,
-		RuleEffectPlayFromGraveyardPerPermanentType:
+		RuleEffectPlayFromGraveyardPerPermanentType,
+		RuleEffectCascadeLandOption:
 		return true
 	default:
 		return false

@@ -1752,6 +1752,12 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent-search control does not accept additional payload")
 		}
+	case RuleEffectCascadeLandOption:
+		payload := *effect
+		payload.Kind = RuleEffectNone
+		if !reflect.DeepEqual(payload, RuleEffect{}) {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "cascade land option does not accept additional payload")
+		}
 	case RuleEffectExileOpponentSearchFinds:
 		payload := *effect
 		payload.Kind = RuleEffectNone
