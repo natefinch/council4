@@ -1,5 +1,6 @@
 // Command productiondash serves a local, auto-refreshing page summarizing every
-// council4-production Dynamic Workflow run found in this repository's worktrees.
+// run of this repository's Dynamic Workflows found in its worktrees, with full
+// detail for council4-production runs.
 //
 // Runs write their ledgers to .cardwork/workflows/<run-id>/ in whichever
 // worktree started them, so the dashboard discovers all worktrees with
@@ -56,7 +57,12 @@ func main() {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
-		json.NewEncoder(w).Encode(scan(roots, sharedRuns(*repo), time.Now()))
+		now := time.Now()
+		runs := scan(roots, sharedRuns(*repo), now)
+		json.NewEncoder(w).Encode(struct {
+			Runs    []Run   `json:"runs"`
+			History []Entry `json:"history"`
+		}{runs, history(roots, sharedRecords(*repo), runs, now)})
 	})
 	http.HandleFunc("/api/workflows", func(w http.ResponseWriter, r *http.Request) {
 		out, err := catalog(*repo)
@@ -102,6 +108,16 @@ func catalog(repo string) ([]byte, error) {
 		return nil, fmt.Errorf("describing workflows with %s: output is not JSON", script)
 	}
 	return out, nil
+}
+
+// sharedRecords is where workflows other than production mirror their run
+// records (see record.mjs).
+func sharedRecords(repo string) string {
+	runs := sharedRuns(repo)
+	if runs == "" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(runs), "workflow-runs")
 }
 
 // worktrees lists the repository's top-level worktrees, excluding the
