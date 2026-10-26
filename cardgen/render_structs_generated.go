@@ -787,7 +787,8 @@ func isZeroGameReplacementEffect(v game.ReplacementEffect) bool {
 		!(v.AffectedObjectID != 0) &&
 		!(v.AffectedObjectMustBeCreature) &&
 		!(v.AffectedCardID != 0) &&
-		!(v.FromSourceAbility)
+		!(v.FromSourceAbility) &&
+		!(v.CreatedByResolution)
 }
 
 // isZeroGameTriggerPattern reports whether every field of a game.TriggerPattern holds its zero value.
@@ -10384,6 +10385,10 @@ func (r Renderer) renderGameReplacementEffect(ctx *renderCtx, v game.Replacement
 	if v.FromSourceAbility {
 		lit220 := strconv.FormatBool(bool(v.FromSourceAbility))
 		fields = append(fields, "FromSourceAbility: "+lit220+",")
+	}
+	if v.CreatedByResolution {
+		lit221 := strconv.FormatBool(bool(v.CreatedByResolution))
+		fields = append(fields, "CreatedByResolution: "+lit221+",")
 	}
 	return structLit("game.ReplacementEffect", fields), nil
 }
