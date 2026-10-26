@@ -91,6 +91,15 @@ const (
 	ChoiceNumber
 	// ChoiceCombatDeclaration selects one extendable attack choice or block edge.
 	ChoiceCombatDeclaration
+	// ChoiceCombatDamageDivision asks a player to divide one creature's combat
+	// damage among the creatures it is blocked by or blocking (CR 510.1c-d), as
+	// when banding transfers that division to them (CR 702.22j-k). Each option
+	// corresponds to one recipient creature; the returned selection lists option
+	// indices with repetition, so the number of times an option appears equals
+	// the damage assigned to that creature. MinChoices and MaxChoices both equal
+	// the total damage, and a recipient may receive zero. CombatAttacker or
+	// CombatBlocker identifies the creature whose damage is divided.
+	ChoiceCombatDamageDivision
 )
 
 // NumberRange describes a compact integer choice without enumerating its values.
@@ -179,7 +188,8 @@ type ChoiceRequest struct {
 	// NumberRange is required for ChoiceNumber; Options must be empty.
 	NumberRange opt.V[NumberRange]
 	// CombatAttacker and CombatBlocker identify the current staged decision.
-	// CombatBlocker is zero for an attack decision.
+	// CombatBlocker is zero for an attack decision. For a combat damage
+	// division, exactly one identifies the creature whose damage is divided.
 	CombatAttacker id.ID
 	CombatBlocker  id.ID
 }
