@@ -164,7 +164,7 @@ func resolutionChoiceOptions(g *game.Game, obj *game.StackObject, playerID game.
 				continue
 			}
 			name := permanentEffectiveName(g, permanent)
-			add(index, name, game.ResolutionChoiceResult{
+			add(index, permanentChoiceLabel(g, permanent), game.ResolutionChoiceResult{
 				Kind:        choice.Kind,
 				CardID:      permanent.CardInstanceID,
 				PermanentID: permanent.ObjectID,

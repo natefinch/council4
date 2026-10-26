@@ -83,7 +83,7 @@ func (c combatDamageChooser) divideBlockedAttackerDamage(g *game.Game, player ga
 		return c.divideCombatDamage(g, player, attacker, blockers, damage, true), 0
 	}
 	if remaining := damage - tramplingDamage - totalLethal; remaining > 0 {
-		prompt := fmt.Sprintf("Divide the other %d of %s's combat damage among the creatures blocking it, beyond lethal damage to each", remaining, publicPermanentChoiceLabel(g, attacker))
+		prompt := fmt.Sprintf("Divide the other %d of %s's combat damage among the creatures blocking it, beyond lethal damage to each", remaining, permanentChoiceLabel(g, attacker))
 		defaultDivision := []creatureDamageAssignment{{permanent: blockers[0], damage: remaining}}
 		for _, assignment := range c.chooseCombatDamageDivision(g, player, attacker, blockers, remaining, true, prompt, defaultDivision) {
 			amounts[assignment.permanent] += assignment.damage
@@ -106,12 +106,12 @@ func (c combatDamageChooser) trampleExcessToAttackTarget(g *game.Game, player ga
 	request := game.ChoiceRequest{
 		Kind:             game.ChoiceNumber,
 		Player:           player,
-		Prompt:           fmt.Sprintf("How much of %s's %d combat damage is assigned to %s? Any amount above 0 requires lethal damage to each creature blocking it", publicPermanentChoiceLabel(g, attacker), damage, attackTargetChoiceLabel(g, target)),
+		Prompt:           fmt.Sprintf("How much of %s's %d combat damage is assigned to %s? Any amount above 0 requires lethal damage to each creature blocking it", permanentChoiceLabel(g, attacker), damage, attackTargetChoiceLabel(g, target)),
 		NumberRange:      opt.Val(game.NumberRange{Minimum: 0, Maximum: opt.Val(maxExcess)}),
 		MinChoices:       1,
 		MaxChoices:       1,
 		DefaultSelection: []int{0},
-		Subject:          publicPermanentChoiceInfo(g, attacker),
+		Subject:          permanentChoiceInfo(g, attacker),
 		CombatAttacker:   attacker.ObjectID,
 	}
 	selected := c.choose(g, request)
@@ -137,7 +137,7 @@ func (c combatDamageChooser) divideCombatDamage(g *game.Game, player game.Player
 	if sourceAttacking {
 		relation = "blocking it"
 	}
-	prompt := fmt.Sprintf("Divide %s's %d combat damage among the creatures %s", publicPermanentChoiceLabel(g, source), damage, relation)
+	prompt := fmt.Sprintf("Divide %s's %d combat damage among the creatures %s", permanentChoiceLabel(g, source), damage, relation)
 	return c.chooseCombatDamageDivision(g, player, source, recipients, damage, sourceAttacking, prompt, protectiveCombatDamageDivision(g, source, recipients, damage))
 }
 
@@ -152,7 +152,7 @@ func (c combatDamageChooser) chooseCombatDamageDivision(g *game.Game, player gam
 	}
 	options := make([]game.ChoiceOption, len(recipients))
 	for i, recipient := range recipients {
-		options[i] = game.ChoiceOption{Index: i, Label: publicPermanentChoiceLabel(g, recipient), Card: publicPermanentChoiceInfo(g, recipient)}
+		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, recipient), Card: permanentChoiceInfo(g, recipient)}
 	}
 	defaultSelection := make([]int, 0, damage)
 	for _, assignment := range defaultDivision {
@@ -169,7 +169,7 @@ func (c combatDamageChooser) chooseCombatDamageDivision(g *game.Game, player gam
 		MinChoices:       damage,
 		MaxChoices:       damage,
 		DefaultSelection: defaultSelection,
-		Subject:          publicPermanentChoiceInfo(g, source),
+		Subject:          permanentChoiceInfo(g, source),
 	}
 	if sourceAttacking {
 		request.CombatAttacker = source.ObjectID
@@ -191,39 +191,11 @@ func (c combatDamageChooser) chooseCombatDamageDivision(g *game.Game, player gam
 	return assignments
 }
 
-// publicPermanentChoiceInfo describes a permanent in a combat damage decision
-// by its current public characteristics: its effective name, types, colors and
-// mana value. A face-down permanent shows only its face-down characteristics,
-// never the card underneath (CR 708.2).
-func publicPermanentChoiceInfo(g *game.Game, permanent *game.Permanent) opt.V[game.ChoiceCardInfo] {
-	values := effectivePermanentValues(g, permanent)
-	manaValue, _ := effectivePermanentManaValue(g, permanent)
-	return opt.Val(game.ChoiceCardInfo{
-		CardID:    permanent.CardInstanceID,
-		Name:      values.name,
-		Types:     slices.Clone(values.types),
-		ManaValue: manaValue,
-		Colors:    slices.Clone(values.colors),
-	})
-}
-
-// publicPermanentChoiceLabel labels a permanent by its effective name, or, for a
-// nameless face-down permanent (CR 708.2a), as a face-down permanent.
-func publicPermanentChoiceLabel(g *game.Game, permanent *game.Permanent) string {
-	if name := permanentEffectiveName(g, permanent); name != "" {
-		return name
-	}
-	if permanent.FaceDown {
-		return fmt.Sprintf("Face-down permanent %d", permanent.ObjectID)
-	}
-	return fmt.Sprintf("Permanent %d", permanent.ObjectID)
-}
-
 // attackTargetChoiceLabel labels what an attacker is attacking, by public
 // characteristics only.
 func attackTargetChoiceLabel(g *game.Game, target game.AttackTarget) string {
 	if permanent, ok := attackTargetPermanent(g, target); ok {
-		return publicPermanentChoiceLabel(g, permanent)
+		return permanentChoiceLabel(g, permanent)
 	}
 	return fmt.Sprintf("Player %d", target.Player+1)
 }
@@ -234,9 +206,9 @@ func attackTargetChoiceLabel(g *game.Game, target game.AttackTarget) string {
 // weren't blocked" permission is used. The default keeps the damage on the
 // blockers.
 func (c combatDamageChooser) defenderAssignsAsThoughUnblocked(g *game.Game, player game.PlayerID, attacker *game.Permanent) bool {
-	request := mayChoiceRequest(player, fmt.Sprintf("Have %s assign its combat damage as though it weren't blocked?", publicPermanentChoiceLabel(g, attacker)))
+	request := mayChoiceRequest(player, fmt.Sprintf("Have %s assign its combat damage as though it weren't blocked?", permanentChoiceLabel(g, attacker)))
 	request.DefaultSelection = []int{0}
-	request.Subject = publicPermanentChoiceInfo(g, attacker)
+	request.Subject = permanentChoiceInfo(g, attacker)
 	request.CombatAttacker = attacker.ObjectID
 	selected := c.choose(g, request)
 	return len(selected) == 1 && selected[0] == 1

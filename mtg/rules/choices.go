@@ -28,19 +28,22 @@ func cardChoiceInfo(g *game.Game, cardID id.ID) opt.V[game.ChoiceCardInfo] {
 	})
 }
 
-// permanentChoiceInfo builds the public ChoiceCardInfo for a permanent.
+// permanentChoiceInfo builds the public ChoiceCardInfo for a permanent from its
+// current effective characteristics: name, types, colors and mana value after
+// continuous effects. A face-down permanent shows only its face-down
+// characteristics, never the card underneath (CR 708.2).
 func permanentChoiceInfo(g *game.Game, permanent *game.Permanent) opt.V[game.ChoiceCardInfo] {
-	def, ok := permanentCardDef(g, permanent)
-	if !ok {
+	if _, ok := permanentCardDef(g, permanent); !ok {
 		return opt.V[game.ChoiceCardInfo]{}
 	}
+	values := effectivePermanentValues(g, permanent)
 	manaValue, _ := effectivePermanentManaValue(g, permanent)
 	return opt.Val(game.ChoiceCardInfo{
 		CardID:    permanent.CardInstanceID,
-		Name:      permanentEffectiveName(g, permanent),
-		Types:     append([]types.Card(nil), def.Types...),
+		Name:      values.name,
+		Types:     slices.Clone(values.types),
 		ManaValue: manaValue,
-		Colors:    append([]color.Color(nil), def.Colors...),
+		Colors:    slices.Clone(values.colors),
 	})
 }
 
