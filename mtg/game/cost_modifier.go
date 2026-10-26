@@ -633,9 +633,19 @@ const (
 	// AppliesToNextSpellOnly limits the grant to the single next matching spell
 	// its caster casts and is then consumed (the Archway one-shot); when false
 	// the grant is a static that applies to every matching spell for its
-	// duration (Inspiring Statuary). The grant only affects cost payment, which
-	// the payment planner reads before costs are paid; it is never snapshotted
-	// onto the spell. Added last so existing kinds keep their wire values.
+	// duration (Inspiring Statuary). A cost keyword grant only affects cost
+	// payment, which the payment planner reads before costs are paid; it is
+	// never snapshotted onto the spell.
+	//
+	// GrantedKeyword Cascade gives each matching spell one cascade instance as
+	// it becomes cast ("Sliver spells you cast have cascade.", The First Sliver;
+	// "Commander spells you cast have cascade.", Flamekin Herald). It is counted
+	// once, onto the spell-cast event (Event.CascadeInstances), and cannot be
+	// next-spell-only. CardSelection.MatchCommander requires the spell's card to
+	// be a commander, and a non-None CastFromZone requires the spell to have been
+	// cast from that zone ("Instant and sorcery spells you cast from your hand
+	// have cascade.", Quandrix, the Proof). Added last so existing kinds keep
+	// their wire values.
 	RuleEffectGrantSpellKeyword
 	// RuleEffectAscend is the permanent ascend static ability (CR 702.131b): "Any
 	// time you control ten or more permanents and you don't have the city's

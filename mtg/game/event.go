@@ -372,6 +372,16 @@ type Event struct {
 	// mana-value-filtered cast triggers.
 	ManaValue opt.V[int]
 
+	// CascadeInstances records how many instances of cascade the spell had at
+	// the moment it became cast (CR 601.2i, 702.85a/c): printed cascade, cascade
+	// statics that function on the stack and whose condition held, and active
+	// "spells you cast have cascade" grants that matched it. It is set when an
+	// EventSpellCast is emitted and is the only input to the spell's cascade
+	// triggers and to "whenever you cast a spell with cascade" matching, so a
+	// grant gained or lost afterwards changes neither. It is never copied onto
+	// the stack object, so stack copies do not inherit it.
+	CascadeInstances opt.V[int]
+
 	// ManaSpentToCast records the total amount of mana spent to cast the spell
 	// for spell-cast triggers whose intervening-if reads the mana actually paid
 	// ("if no mana was spent to cast it", "if at least four mana was spent to

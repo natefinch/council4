@@ -37,7 +37,7 @@ func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Eve
 func emitSpellCastEventsWithTargets(g *game.Game, obj *game.StackObject, castEvent game.Event, targets []game.Event) {
 	consumeNextSpellCantBeCounteredEffects(g, obj)
 	consumeNextSpellAsThoughFlashEffects(g, obj)
-	consumeNextSpellKeywordGrantEffects(g, obj)
+	consumeNextSpellKeywordGrantEffects(g, obj, castEvent.FromZone)
 	emitCastTargetEvents(g, obj, targets)
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID

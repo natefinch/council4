@@ -23,37 +23,100 @@ func cascadeTriggeredAbility() *game.TriggeredAbility {
 	}
 }
 
-// cascadeInstanceCount counts the cascade instances printed on a spell's face;
-// each instance triggers separately (CR 702.85c), so "Cascade, cascade" yields
-// two triggers.
-func cascadeInstanceCount(def *game.CardDef) int {
+// spellCascadeInstancesAtCast counts the cascade instances a spell has at the
+// moment it becomes cast (CR 601.2i), each of which triggers separately (CR
+// 702.85c):
+//
+//   - each cascade keyword on a static ability of the spell's face that works
+//     on the stack (no ZoneOfFunction, or zone.Stack) and whose Condition holds
+//     for the caster now ("This spell has cascade as long as ...", Bloodbraid
+//     Marauder), so "Cascade, cascade" yields two;
+//   - each active RuleEffectGrantSpellKeyword granting Cascade that matches the
+//     spell, its caster, its card's commander designation and the zone it was
+//     cast from ("Sliver spells you cast have cascade.", The First Sliver).
+//
+// A face-down spell has no printed abilities (CR 708.2) but can still be granted
+// cascade, matched against its face-down characteristics (CR 708.4). The count
+// is recorded once on the spell-cast event (Event.CascadeInstances) rather than
+// on the stack object, so stack copies never inherit it and later changes to the
+// grants do not alter it.
+func spellCascadeInstancesAtCast(g *game.Game, event game.Event) int {
+	if event.Kind != game.EventSpellCast {
+		return 0
+	}
+	var def *game.CardDef
+	cardID := event.CardID
+	if event.CardID == 0 && event.TokenDef != nil {
+		def, _ = event.TokenDef.FaceDef(event.Face)
+	} else if card, ok := g.GetCardInstance(event.CardID); ok {
+		def, _ = cardFaceDef(card, event.Face)
+	}
 	if def == nil {
 		return 0
 	}
+	obj, onStack := stackObjectByID(g, event.StackObjectID)
+	if !onStack {
+		obj = nil
+	} else if obj.Copy {
+		// A cast copy is not the commander card (CR 903.3, 707.12).
+		cardID = 0
+	}
 	count := 0
-	for i := range def.StaticAbilities {
-		for _, keyword := range game.BodyKeywordAbilities(&def.StaticAbilities[i]) {
-			if game.KeywordAbilityKind(keyword) == game.Cascade {
-				count++
+	grantDef := def
+	if obj != nil && obj.FaceDown {
+		grantDef = faceDownSpellDef()
+	} else {
+		ctx := conditionContext{controller: event.Controller, sourceObjectID: event.StackObjectID, obj: obj}
+		for i := range def.StaticAbilities {
+			static := &def.StaticAbilities[i]
+			if static.ZoneOfFunction != zone.None && static.ZoneOfFunction != zone.Stack {
+				continue
 			}
+			instances := 0
+			for _, keyword := range game.BodyKeywordAbilities(static) {
+				if game.KeywordAbilityKind(keyword) == game.Cascade {
+					instances++
+				}
+			}
+			if instances > 0 && conditionSatisfied(g, ctx, static.Condition) {
+				count += instances
+			}
+		}
+	}
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind == game.RuleEffectGrantSpellKeyword &&
+			effect.GrantedKeyword == game.Cascade &&
+			spellKeywordGrantMatches(g, &effect, event.Controller, grantDef, cardID, event.FromZone) {
+			count++
 		}
 	}
 	return count
 }
 
-// cascadeCastTriggers returns one pending cascade trigger for each cascade
-// instance of a genuinely cast spell (CR 702.85a/c). Only EventSpellCast reaches
-// here, so non-cast stack and storm copies never cascade (CR 707.10), while a
-// cast copy of a card does (CR 707.12). A face-down spell has no abilities (CR
-// 708.2). The trigger keeps the cast event, whose ManaValue snapshots the spell
-// as it was cast on the stack, including X; resolution compares against that
-// value even if the spell has since left the stack (CR 608.2h).
-func cascadeCastTriggers(g *game.Game, source *game.Permanent, def *game.CardDef, event game.Event) []pendingTriggeredAbility {
-	count := cascadeInstanceCount(def)
-	if count == 0 {
-		return nil
+// eventCascadeInstances returns the cascade instances a spell had when it
+// became cast. Emitted spell-cast events carry the recorded count; a raw event
+// that bypassed emission is evaluated now. Any other event, including a
+// non-cast spell copy, has none.
+func eventCascadeInstances(g *game.Game, event game.Event) int {
+	if event.Kind != game.EventSpellCast {
+		return 0
 	}
-	if obj, ok := stackObjectByID(g, event.StackObjectID); ok && obj.FaceDown {
+	if event.CascadeInstances.Exists {
+		return event.CascadeInstances.Val
+	}
+	return spellCascadeInstancesAtCast(g, event)
+}
+
+// cascadeCastTriggers returns one pending cascade trigger for each cascade
+// instance a genuinely cast spell had as it became cast (CR 702.85a/c). Only
+// EventSpellCast reaches here, so non-cast stack and storm copies never cascade
+// (CR 707.10), while a cast copy of a card does (CR 707.12). The trigger keeps
+// the cast event, whose ManaValue snapshots the spell as it was cast on the
+// stack, including X; resolution compares against that value even if the spell
+// has since left the stack (CR 608.2h).
+func cascadeCastTriggers(g *game.Game, source *game.Permanent, event game.Event) []pendingTriggeredAbility {
+	count := eventCascadeInstances(g, event)
+	if count == 0 {
 		return nil
 	}
 	pending := make([]pendingTriggeredAbility, 0, count)
