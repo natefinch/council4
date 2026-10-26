@@ -1815,43 +1815,75 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 	return false
 }
 
-// matchingPlayLandFromZoneEffect returns the first continuous play-from-zone
-// permission that lets playerID play cardID as a land from sourceZone, applying
-// the same TopCardOnly, exile-counter, provenance, and once-per-turn filters as
-// canPlayLandFromZoneByRuleEffect. Callers record a once-per-turn use against the
-// returned effect after the land is actually played.
+// matchingPlayLandFromZoneEffect returns the default permission route through
+// which playerID may play cardID as a land from sourceZone: the first of
+// playLandFromZoneRoutes, which spends no once-per-turn use whenever any
+// matching permission without one exists. It reports false when no
+// continuous play-from-zone permission covers the card.
 func matchingPlayLandFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) (game.RuleEffect, bool) {
+	routes := playLandFromZoneRoutes(g, playerID, cardID, sourceZone)
+	if len(routes) == 0 {
+		return game.RuleEffect{}, false
+	}
+	return routes[0], true
+}
+
+// playLandFromZoneRoutes returns the continuous permissions through which
+// playerID may play cardID as a land from sourceZone: each matching per-card
+// RuleEffectPlayFromZone and each matching group RuleEffectPlayLandsFromZone,
+// with its TopCardOnly, exile-counter, provenance, owned-only and
+// once-per-turn filters applied. The player chooses which permission
+// authorizes the play (CR 305.1, as for a spell in CR 601.2b) and only that
+// permission's usage is spent, so permissions that differ only in which
+// unlimited permission authorizes them merge into one route ordered first,
+// followed by one route per once-per-turn source (Evelyn, the Covetous).
+func playLandFromZoneRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) []game.RuleEffect {
+	var routes []game.RuleEffect
+	unlimited := false
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.CastFromZone != sourceZone ||
-			!ruleEffectAffectsPlayer(g, effect, playerID) {
+		if !playLandFromZoneEffectMatches(g, effect, playerID, cardID, sourceZone) {
 			continue
 		}
-		switch effect.Kind {
-		case game.RuleEffectPlayFromZone:
-			if effect.AffectedCardID == cardID {
-				return *effect, true
+		if !effect.OncePerTurn {
+			if !unlimited {
+				unlimited = true
+				routes = slices.Insert(routes, 0, *effect)
 			}
-		case game.RuleEffectPlayLandsFromZone:
-			if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
-				continue
-			}
-			if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
-				continue
-			}
-			if !ownedCardsOnlyPermits(g, effect, playerID, cardID) {
-				continue
-			}
-			if exileCounterPermissionBlocked(g, effect, cardID) {
-				continue
-			}
-			return *effect, true
-		default:
 			continue
 		}
+		if slices.ContainsFunc(routes, func(route game.RuleEffect) bool {
+			return route.OncePerTurn && route.SourceObjectID == effect.SourceObjectID
+		}) {
+			continue
+		}
+		routes = append(routes, *effect)
 	}
-	return game.RuleEffect{}, false
+	return routes
+}
+
+// playLandFromZoneEffectMatches reports whether effect is a continuous
+// play-from-zone permission that currently lets playerID play cardID as a land
+// from sourceZone.
+func playLandFromZoneEffectMatches(g *game.Game, effect *game.RuleEffect, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
+	if effect.CastFromZone != sourceZone || !ruleEffectAffectsPlayer(g, effect, playerID) {
+		return false
+	}
+	switch effect.Kind {
+	case game.RuleEffectPlayFromZone:
+		return effect.AffectedCardID == cardID
+	case game.RuleEffectPlayLandsFromZone:
+		if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
+			return false
+		}
+		if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
+			return false
+		}
+		return ownedCardsOnlyPermits(g, effect, playerID, cardID) && !exileCounterPermissionBlocked(g, effect, cardID)
+	default:
+		return false
+	}
 }
 
 // canCastSpellsFromZoneByRuleEffect reports whether a continuous

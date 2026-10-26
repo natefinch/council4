@@ -46,13 +46,13 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 		permission = announced[0]
 	}
 	if sourceZone != zone.Hand {
-		effect, independent := matchingPlayLandFromZoneEffect(g, playerID, cardID, sourceZone)
-		permission, ok = e.selectPermanentTypePlay(g, playerID, permission, sourceZone, cardFaceOrDefault(card, face), independent, agents, log)
+		routes := playLandFromZoneRoutes(g, playerID, cardID, sourceZone)
+		permission, ok = e.selectPermanentTypePlay(g, playerID, permission, sourceZone, cardFaceOrDefault(card, face), len(routes) > 0, agents, log)
 		if !ok {
 			return false
 		}
 		if permission == (game.PlayPermission{}) {
-			landPermission = effect
+			landPermission = e.choosePlayLandRoute(g, playerID, routes, agents, log)
 		}
 	} else if permission != (game.PlayPermission{}) {
 		return false
@@ -74,6 +74,37 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 	emitCardPlayedFromExileEvent(g, playerID, cardID, sourceZone)
 	emitLandPlayedEvent(g, playerID, cardID)
 	return true
+}
+
+// choosePlayLandRoute returns the permission that authorizes a land play from
+// routes, ordered by playLandFromZoneRoutes. A route that spends no
+// once-per-turn use is always taken when one exists; otherwise the player
+// chooses which once-per-turn permission to spend (CR 305.1, as for a spell in
+// CR 601.2b).
+func (e *Engine) choosePlayLandRoute(g *game.Game, playerID game.PlayerID, routes []game.RuleEffect, agents [game.NumPlayers]PlayerAgent, log *TurnLog) game.RuleEffect {
+	if len(routes) == 0 {
+		return game.RuleEffect{}
+	}
+	if len(routes) == 1 || !routes[0].OncePerTurn {
+		return routes[0]
+	}
+	options := make([]game.ChoiceOption, len(routes))
+	for i, route := range routes {
+		options[i] = game.ChoiceOption{Index: i, Label: "Play land " + castRouteSourceLabel(g, exileCastRoute{permission: route}, i)}
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           playerID,
+		Prompt:           "Choose land play permission",
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, log)
+	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(routes) {
+		return routes[selected[0]]
+	}
+	return routes[0]
 }
 
 func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction) bool {
