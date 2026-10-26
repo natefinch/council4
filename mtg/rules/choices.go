@@ -169,7 +169,7 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 		return selected
 	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return defaultDividedAllocation(request.MaxChoices, len(request.Options))
-	case game.ChoiceManaCombination:
+	case game.ChoiceManaCombination, game.ChoiceCombatDamageDivision:
 		return defaultManaCombination(request.MaxChoices, len(request.Options))
 	default:
 		return nil
@@ -199,7 +199,7 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 		return orderSelectionValid(request, selected)
 	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return damageAllocationSelectionValid(request, selected)
-	case game.ChoiceManaCombination:
+	case game.ChoiceManaCombination, game.ChoiceCombatDamageDivision:
 		return manaCombinationSelectionValid(request, selected)
 	default:
 		seen := make(map[int]bool, len(selected))
@@ -233,11 +233,12 @@ func damageAllocationSelectionValid(request game.ChoiceRequest, selected []int) 
 	return true
 }
 
-// manaCombinationSelectionValid accepts a mana-combination split expressed as a
-// multiset of option indices: the total count must equal the requested amount
-// (MinChoices == MaxChoices) and every index must name a valid color option.
-// Unlike divided damage and counters, an option may receive zero, so no per-
-// option minimum is enforced — a color simply goes unproduced when unchosen.
+// manaCombinationSelectionValid accepts a mana-combination split (or a combat
+// damage division) expressed as a multiset of option indices: the total count
+// must equal the requested amount (MinChoices == MaxChoices) and every index
+// must name a valid option. Unlike divided damage and counters, an option may
+// receive zero, so no per-option minimum is enforced — a color simply goes
+// unproduced, or a creature is assigned no combat damage, when unchosen.
 func manaCombinationSelectionValid(request game.ChoiceRequest, selected []int) bool {
 	for _, index := range selected {
 		if !choiceOptionExists(request, index) {

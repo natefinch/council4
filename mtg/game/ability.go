@@ -94,11 +94,11 @@ const (
 	Saddle
 	Rebound
 	Retrace
-	// Banding (CR 702.22) is a static combat keyword. It is modeled as a
-	// recognized, grantable simple keyword so cards that have or grant banding
-	// are representable. Banding's combat damage-assignment-control nuance is not
-	// simulated by the deterministic combat engine (which has no per-player
-	// Appended at the end of the enum so existing keyword ordinals are unchanged.
+	// Banding (CR 702.22) is a static combat keyword, modeled as a recognized,
+	// grantable simple keyword. The combat engine applies its damage-assignment
+	// control (CR 702.22j-k); attacking bands (CR 702.22c-i) and "bands with
+	// other" are not yet modeled. Appended at the end of the enum so existing
+	// keyword ordinals are unchanged.
 	Banding
 	// Crew (CR 702.122) is the Vehicles activated keyword. It is modeled as a
 	// grantable keyword identity carried by CrewKeyword inside the activated
@@ -492,10 +492,9 @@ var (
 
 	// BandingStaticBody is the reusable StaticAbilityBody for banding (CR
 	// 702.22). It carries the Banding keyword so HasKeyword(Banding) reports
-	// true. Banding's combat damage-assignment-control rule is not simulated by
-	// the deterministic combat engine, so the keyword is inert in combat; it is
-	// modeled as a simple keyword purely so cards that have or grant banding are
-	// representable.
+	// true, which the combat engine reads to transfer combat damage division to
+	// the banding creature's controller (CR 702.22j-k). Attacking bands (CR
+	// 702.22c-i) are not yet modeled.
 	BandingStaticBody = simpleKeywordStaticBody("Banding", Banding)
 
 	// CompanionStaticBody is the reusable StaticAbilityBody for companion (CR
