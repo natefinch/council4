@@ -142,16 +142,17 @@ func (e *Engine) resolveCascadeTriggeredAbility(g *game.Game, obj *game.StackObj
 	if !obj.HasTriggerEvent || !obj.TriggerEvent.ManaValue.Exists {
 		return "missing source"
 	}
-	e.cascade(g, obj.Controller, obj.TriggerEvent.ManaValue.Val, agents, log)
+	e.cascade(g, obj, obj.Controller, obj.TriggerEvent.ManaValue.Val, agents, log)
 	return "resolved"
 }
 
 // cascade performs the cascade process for playerID against a spell of
 // manaValue (CR 702.85a): exile cards from the top of the library until a
-// nonland card with lesser mana value is exiled, offer to cast it without paying
-// its mana cost if the resulting spell's mana value is also less, then put every
-// exiled card that wasn't cast on the bottom in a random order as one batch.
-func (e *Engine) cascade(g *game.Game, playerID game.PlayerID, manaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+// nonland card with lesser mana value is exiled, take any "as you cascade"
+// actions (CR 702.85b), offer to cast the hit without paying its mana cost if
+// the resulting spell's mana value is also less, then put every exiled card that
+// wasn't cast or otherwise moved on the bottom in a random order as one batch.
+func (e *Engine) cascade(g *game.Game, obj *game.StackObject, playerID game.PlayerID, manaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return
@@ -189,12 +190,77 @@ func (e *Engine) cascade(g *game.Game, playerID game.PlayerID, manaValue int, ag
 		}
 		requireLibraryAdvance(player, cardID, epoch)
 	}
+	e.cascadeLandOptions(g, obj, player, revealed, agents, log)
 	if found != 0 {
 		// "You may cast it": the cast is optional, so the choice offers declining
 		// and a declined (or uncastable) hit is bottomed with the rest.
 		e.chooseAndCastFreeSpellFromSourceMay(g, player, playerID, found, zone.Exile, game.Selection{}, opt.Val(manaValue-1), false, true, agents, log)
 	}
 	bottomExiledCards(g, player, revealed, e.rng)
+}
+
+// cascadeLandOptions applies each active RuleEffectCascadeLandOption the
+// cascading player controls ("As you cascade, you may put a land card from among
+// the exiled cards onto the battlefield tapped.", Averna, the Chaos Bloom). CR
+// 702.85b times these actions after the last card is exiled and before the cast
+// decision, or before bottoming when nothing was hit. The applicable instances
+// are fixed as the step begins; each lets the player put up to one land card
+// still in exile from this cascade onto the battlefield tapped under their
+// control through the shared battlefield-entry path, so zone-change
+// replacements, "as enters" choices and enters triggers apply. An opponent's
+// effect never applies, and the land is put, not played (CR 305.4).
+func (e *Engine) cascadeLandOptions(g *game.Game, obj *game.StackObject, player *game.Player, revealed []game.ZoneCardSnapshot, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	var sources []id.ID
+	for _, effect := range activeRuleEffects(g) {
+		if effect.Kind == game.RuleEffectCascadeLandOption && effect.Controller == player.ID {
+			sources = append(sources, effect.SourceCardID)
+		}
+	}
+	for _, sourceCardID := range sources {
+		lands := exiledCascadeLands(g, player, revealed)
+		if len(lands) == 0 {
+			return
+		}
+		options := make([]game.ChoiceOption, len(lands))
+		for i, cardID := range lands {
+			options[i] = game.ChoiceOption{Index: i, Label: cardChoiceLabel(g, cardID), Card: cardChoiceInfo(g, cardID)}
+		}
+		selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+			Kind:             game.ChoiceResolution,
+			Player:           player.ID,
+			Prompt:           "As you cascade, you may put a land card from among the exiled cards onto the battlefield tapped",
+			Options:          options,
+			MinChoices:       0,
+			MaxChoices:       1,
+			DefaultSelection: []int{0},
+			Subject:          cardChoiceInfo(g, sourceCardID),
+		}, log)
+		if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(lands) {
+			continue
+		}
+		card, ok := g.GetCardInstance(lands[selected[0]])
+		if !ok {
+			continue
+		}
+		newEffectResolver(e, g, obj, agents, log).putResolvedCardOnBattlefieldValue(
+			card, zone.Exile, player.ID, nil, permanentCreationOptions{ForceTapped: true})
+	}
+}
+
+// exiledCascadeLands returns the land cards among a cascade's exiled cards that
+// are still in that exile incarnation, in exile order.
+func exiledCascadeLands(g *game.Game, player *game.Player, revealed []game.ZoneCardSnapshot) []id.ID {
+	var lands []id.ID
+	for _, snapshot := range revealed {
+		card, ok := g.GetCardInstance(snapshot.CardID)
+		if !ok || card.ZoneVersion != snapshot.ZoneVersion || !player.Exile.Contains(snapshot.CardID) {
+			continue
+		}
+		if cardFaceOrDefault(card, game.FaceFront).HasType(types.Land) {
+			lands = append(lands, snapshot.CardID)
+		}
+	}
+	return lands
 }
 
 func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
