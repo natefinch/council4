@@ -32,24 +32,26 @@ func castSpellsFromLibraryTopPayLifePermanent(g *game.Game, playerID game.Player
 	}})
 }
 
-func TestCastFromZoneRequiresPayLifeMatchesFlaggedPermission(t *testing.T) {
+func TestLibraryCastRouteRequiresPayLifeOnlyForFlaggedPermission(t *testing.T) {
 	plainGame := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	plainSpellID := addCardToLibrary(plainGame, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Bear", Types: []types.Card{types.Creature}}})
 	castSpellsFromLibraryTopPermanent(plainGame, game.Player1, nil)
-	if castFromZoneRequiresPayLife(plainGame, game.Player1, plainSpellID, zone.Library, game.FaceFront) {
-		t.Fatal("a plain cast-from-top permission must not require paying life")
+	routes := spellCastRoutes(plainGame, game.Player1, plainSpellID, zone.Library, game.FaceFront, castCostMode{})
+	if len(routes) != 1 || routes[0].payLife {
+		t.Fatalf("plain cast-from-top routes = %+v, want one route that pays the mana cost", routes)
 	}
 
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	spellID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Bear", Types: []types.Card{types.Creature}}})
 	castSpellsFromLibraryTopPayLifePermanent(g, game.Player1)
-	if !castFromZoneRequiresPayLife(g, game.Player1, spellID, zone.Library, game.FaceFront) {
-		t.Fatal("a pay-life cast-from-top permission must require paying life")
+	routes = spellCastRoutes(g, game.Player1, spellID, zone.Library, game.FaceFront, castCostMode{})
+	if len(routes) != 1 || !routes[0].payLife {
+		t.Fatalf("pay-life cast-from-top routes = %+v, want one pay-life route", routes)
 	}
-	if castFromZoneRequiresPayLife(g, game.Player2, spellID, zone.Library, game.FaceFront) {
-		t.Fatal("an opponent must not be subject to the controller's pay-life permission")
+	if routes := spellCastRoutes(g, game.Player2, spellID, zone.Library, game.FaceFront, castCostMode{}); len(routes) != 0 {
+		t.Fatalf("opponent routes = %+v, want none from the controller's pay-life permission", routes)
 	}
 }
 

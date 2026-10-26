@@ -1894,20 +1894,7 @@ func playLandFromZoneEffectMatches(g *game.Game, effect *game.RuleEffect, player
 // spells and colorless spells from the top of your library.", Mystic Forge);
 // TopCardOnly requires the card to be on top of the player's library.
 func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	_, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face)
-	return ok
-}
-
-// matchingCastSpellsFromZoneEffect returns the first continuous
-// RuleEffectCastSpellsFromZone permission that lets playerID cast the face of
-// cardID from sourceZone, applying the same TopCardOnly, chosen-subtype, and
-// type/colorless filters as canCastSpellsFromZoneByRuleEffect.
-func matchingCastSpellsFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) (game.RuleEffect, bool) {
-	matches := matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face)
-	if len(matches) == 0 {
-		return game.RuleEffect{}, false
-	}
-	return matches[0], true
+	return len(matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face)) > 0
 }
 
 // matchingCastSpellsFromZoneEffects returns every continuous
@@ -1958,16 +1945,6 @@ func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, car
 		matches = append(matches, *effect)
 	}
 	return matches
-}
-
-// castFromZoneRequiresPayLife reports whether the permission authorizing
-// playerID to cast the face of cardID from sourceZone replaces the spell's mana
-// cost with paying life equal to its mana value ("If you cast a spell this way,
-// pay life equal to its mana value rather than pay its mana cost.", Bolas's
-// Citadel, Gwenom, Remorseless).
-func castFromZoneRequiresPayLife(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	effect, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face)
-	return ok && effect.PayLifeEqualToManaValue
 }
 
 // cardMatchesSourceEntryChosenSubtype reports whether faceDef shares the creature
