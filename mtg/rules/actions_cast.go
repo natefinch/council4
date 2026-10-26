@@ -431,7 +431,12 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 			return false
 		}
 	case zone.Exile:
-		if !adventureExileFrontFacePermitted(g, playerID, cardID) {
+		// CR 702.140a: Mutate is an alternative cost, usable from exile under
+		// whatever permission authorizes casting the card there (CR 118.9a):
+		// an Adventure card's CR 715.3d permission or an independent per-card
+		// or group cast/play permission. The mutate-mode routes below leave out
+		// permissions that only cast the card without paying its mana cost.
+		if !exileCastAuthorized(g, playerID, cardID, game.FaceFront) {
 			return false
 		}
 	case zone.Graveyard:
@@ -1456,23 +1461,6 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 		return faces
 	}
 	return card.Def.LegalCastFaces()
-}
-
-// adventureExileFrontFacePermitted reports whether playerID may cast the front
-// face of an Adventure-exiled card: playerID holds its CR 715.3d permission, or
-// an independent permission to cast it from exile (a per-card play/cast grant
-// or a continuous "cast spells from exile" permission) covers it even though
-// another player controlled the Adventure spell (for example the owner of a
-// stolen Adventure). Timing, costs and other restrictions still apply.
-func adventureExileFrontFacePermitted(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
-	if hasAdventureExilePermission(g, playerID, cardID) {
-		return true
-	}
-	if _, tracked := g.AdventureCards[cardID]; !tracked {
-		return false
-	}
-	return canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, game.FaceFront) ||
-		canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, game.FaceFront)
 }
 
 // hasAdventureExilePermission reports whether playerID holds the CR 715.3d
