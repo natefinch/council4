@@ -319,6 +319,13 @@ in a unit carry forward unless a repair lists them in `resolvedGaps`.
 The app's **Workflows** view shows named phases, live agents, active time,
 requested/resolved model and aggregate AIC. The extension also writes:
 
+Each run also mirrors `state.json` and `report.json` to
+`<git common dir>/council4-production/runs/<run-id>/`, so selection history and
+the dashboard survive when the session worktree that ran it is removed. When an
+Engine unit lands, the workflow closes its issue (unless it reported a remainder
+on the same issue) and closes a split parent once all its sub-issues are closed;
+a split gap with no open sub-issues is never implemented as a whole.
+
 | File under `.cardwork/workflows/<run-id>/` | Purpose |
 | --- | --- |
 | `state.json` | Pinned code/policy revision, stage identities, every review round's verdict and findings, task outcomes, PRs and verified merge commits |

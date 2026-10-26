@@ -84,7 +84,7 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
   ].filter(Boolean));
   const gaps = knownGaps({ next, units, priorUnits, defects });
   const open = gaps.filter(gap => !filled.has(gap.issue) && issues[gap.issue]?.state === "OPEN")
-    .map(gap => nextSubIssue(gap, issues, filled));
+    .map(gap => nextSubIssue(gap, issues, filled)).filter(Boolean);
   const gap = open.find(candidate => !attempted.has(candidate.issue));
   if (gap) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
   if (next?.batch) return { kind: "card", batch: next.batch, cards: next.cards ?? [] };
@@ -100,9 +100,12 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
 // A gap split into ordered sub-issues is worked through its first open
 // sub-issue, which inherits the parent's blocked cards. Later sub-issues wait
 // for earlier ones, so a parked first sub-issue parks the parent.
+// A split gap whose sub-issues have all landed or closed is done, not
+// re-implemented as a whole: returns null.
 export function nextSubIssue(gap, issues, filled = new Set()) {
-  const sub = (issues[gap.issue]?.subIssues ?? []).find(candidate => candidate.state === "OPEN" && !filled.has(candidate.number));
-  if (!sub) return gap;
+  const subs = issues[gap.issue]?.subIssues ?? [];
+  const sub = subs.find(candidate => candidate.state === "OPEN" && !filled.has(candidate.number));
+  if (!sub) return subs.length ? null : gap;
   return { ...gap, issue: sub.number, parent: gap.issue, subIssue: sub,
     sources: [...gap.sources, `sub-issue of #${gap.issue}`] };
 }

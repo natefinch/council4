@@ -6,7 +6,7 @@ import os from "node:os";
 import { git, command, changes, workspace, seedFromRetained, unresolvedConflicts, land, mainProtection, checkCoordinator } from "./git.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, writeJSON } from "./telemetry.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
-import { knownGaps, chooseWork, gapTask, batchTask, engineIssue, needsSplitLabel } from "./selection.mjs";
+import { knownGaps, chooseWork, gapTask, batchTask, engineIssue, issueNumber, needsSplitLabel } from "./selection.mjs";
 
 export const meta = {
   name: "council4-production",
@@ -171,6 +171,13 @@ export function validationPackagesForTask(policy, taskType) {
 // Workflow run ledgers live under .cardwork/workflows in whichever worktree
 // started them. Production runs from any top-level worktree of the repository
 // see each other's runs; per-unit worktrees under .cardwork are not roots.
+// Run ledgers are mirrored into the repository's shared git directory so they
+// survive the deletion of the session worktree that ran them.
+export async function sharedRunsDirectory(root) {
+  const common = await git(root, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+  return path.join(common, "council4-production", "runs");
+}
+
 export async function runDirectories(root) {
   let roots = [root];
   try {
@@ -188,6 +195,12 @@ export async function runDirectories(root) {
     try { entries = await readdir(directory); }
     catch (error) { if (error.code === "ENOENT") continue; throw error; }
     for (const name of entries.sort()) if (!runs.has(name)) runs.set(name, path.join(directory, name));
+  }
+  try {
+    const shared = await sharedRunsDirectory(root);
+    for (const name of (await readdir(shared)).sort()) if (!runs.has(name)) runs.set(name, path.join(shared, name));
+  } catch (error) {
+    if (error.code !== "ENOENT" && !/failed \(/.test(error.message)) throw error;
   }
   return runs;
 }
@@ -295,6 +308,33 @@ async function fileSplit(cwd, parent, plan, signal) {
   await gh(["issue", "comment", String(parent), "--repo", "natefinch/council4", "--body",
     `Split into ordered sub-issues, worked one at a time by the production workflow: ${numbers.map(n => `#${n}`).join(" → ")}.\n\n${plan.assessment}`]);
   return { parent, subIssues: numbers };
+}
+
+// GitHub is the durable record of finished gaps: close the issue a landed
+// Engine unit delivered, unless it reported a remainder on the same issue, and
+// close a split parent once all its sub-issues are closed.
+export async function closeLandedIssue(cwd, issue, gaps, pr, signal, gh = args => command(cwd, "gh", args, signal)) {
+  const repo = ["--repo", "natefinch/council4"];
+  const closed = [];
+  if (gaps.some(gap => issueNumber(gap.id) === issue)) return { closed, remainder: true };
+  const state = JSON.parse(await gh(["issue", "view", String(issue), ...repo, "--json", "state"])).state;
+  if (state === "OPEN") {
+    const rest = gaps.map(gap => `#${issueNumber(gap.id) ?? gap.id}`).join(", ");
+    await gh(["issue", "close", String(issue), ...repo, "--reason", "completed", "--comment",
+      `Landed in ${pr.url}.${rest ? ` Remaining work is tracked in ${rest}.` : ""}`]);
+    closed.push(issue);
+  }
+  let parent;
+  try { parent = JSON.parse(await gh(["api", `repos/natefinch/council4/issues/${issue}/parent`])).number; }
+  catch { return { closed }; }
+  const subs = JSON.parse(await gh(["api", `repos/natefinch/council4/issues/${parent}/sub_issues`, "--paginate", "--slurp"])).flat();
+  const parentState = JSON.parse(await gh(["issue", "view", String(parent), ...repo, "--json", "state"])).state;
+  if (parentState === "OPEN" && subs.length && subs.every(sub => sub.state === "closed")) {
+    await gh(["issue", "close", String(parent), ...repo, "--reason", "completed", "--comment",
+      `All sub-issues are closed (${subs.map(sub => `#${sub.number}`).join(", ")}); the last landed in ${pr.url}.`]);
+    closed.push(parent);
+  }
+  return { closed };
 }
 
 export function checkSelection(task) {
@@ -440,13 +480,18 @@ export async function runProduction(ctx) {
   let telemetryError;
   const off = observeUsage(ctx.session, ctx.runId, receiptPath, error => { telemetryError = error; });
   let lock;
+  const shared = path.join(await sharedRunsDirectory(root), ctx.runId);
+  await mkdir(shared, { recursive: true });
   const save = async () => {
     writeJSON(statePath, state);
     const detail = await ctx.session.workflow.getRunDetail(ctx.runId);
-    writeReport(directory, { ...summarize(detail, state.stages, readReceipts(receiptPath)),
+    const report = { ...summarize(detail, state.stages, readReceipts(receiptPath)),
       revision, policyVersion: policy.version, units: state.units, currentUnit: state.currentUnit ?? null,
       outcome: state.outcome ?? null, finishedAt: state.finishedAt ?? null,
-      error: state.error ?? null, telemetryError: telemetryError?.message ?? null });
+      error: state.error ?? null, telemetryError: telemetryError?.message ?? null };
+    writeReport(directory, report);
+    writeJSON(path.join(shared, "state.json"), state);
+    writeJSON(path.join(shared, "report.json"), report);
   };
   const invoke = async (task, phase, round, prompt, schema) => {
     const label = `${task.taskType}/${task.id}/unit-${task.unitIndex ?? "selection"}/${phase}/${round}`;
@@ -807,7 +852,12 @@ Return complete only with actual repair/evidence, or blocked with the cause.`,
             await save();
           }
         });
-        if (landing.published) ctx.log(`${task.taskType}/${task.id} merged ${landing.pr.url}: ${landing.commit} on main`);
+        if (landing.published) {
+          ctx.log(`${task.taskType}/${task.id} merged ${landing.pr.url}: ${landing.commit} on main`);
+          if (task.taskType === "engine" && task.issue) {
+            await ctx.step(`close-issue-v1-${index}`, () => closeLandedIssue(work.path, task.issue, result.result?.gaps ?? [], landing.pr, ctx.signal));
+          }
+        }
         return { index, task, base: work.base, worktree: work.path, ...result,
           status: landing.published ? "landed" : "ci_failed", landing };
       });

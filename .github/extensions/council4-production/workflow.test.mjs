@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { closeLandedIssue, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
 import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -517,6 +517,31 @@ test("A gap labeled Needs Split becomes a split unit until it has open sub-issue
   const issues = { 1580: { ...big, labels: [], subIssues: [{ number: 4001, state: "OPEN", title: "Unlock", url: "u" }] } };
   const next = { batch: null, pending_prerequisites: [{ blocked_oracle_ids: ["r"], issues: [1580] }] };
   assert.equal(chooseWork({ next, units: [splitUnit], issues }).gap.issue, 4001);
+});
+
+test("A split gap whose sub-issues are all closed is done, not re-implemented", () => {
+  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3355] }] };
+  const issues = { 3355: { ...open(3355), subIssues: [{ number: 3404, state: "CLOSED" }, { number: 3405, state: "OPEN" }] } };
+  assert.equal(chooseWork({ next, issues, priorUnits: [landedGap(3404), landedGap(3405)] }).kind, "card");
+  issues[3355].subIssues[1].state = "CLOSED";
+  assert.equal(chooseWork({ next, issues }).kind, "card");
+});
+
+test("Landed Engine issues and fully finished split parents are closed", async () => {
+  const calls = [];
+  const states = { 3404: "OPEN", 3355: "OPEN" };
+  const fake = { 3405: "closed" };
+  const gh = async args => {
+    calls.push(args.join(" "));
+    if (args[0] === "issue" && args[1] === "view") return JSON.stringify({ state: states[args[2]] });
+    if (args[0] === "issue" && args[1] === "close") { states[args[2]] = "CLOSED"; return ""; }
+    if (args[1].endsWith("/parent")) { if (args[1].includes("/3404/")) return JSON.stringify({ number: 3355 }); throw new Error("404"); }
+    if (args[1].endsWith("/sub_issues")) return JSON.stringify([[{ number: 3404, state: states[3404].toLowerCase() }, { number: 3405, state: fake[3405] }]]);
+    return "";
+  };
+  assert.deepEqual(await closeLandedIssue("/repo", 3404, [{ id: "#3404" }], { url: "u" }, undefined, gh), { closed: [], remainder: true });
+  assert.deepEqual((await closeLandedIssue("/repo", 3404, [{ id: "#3417" }], { url: "pr/1" }, undefined, gh)).closed, [3404, 3355]);
+  assert.match(calls.find(c => c.startsWith("issue close 3404")), /Remaining work is tracked in #3417/);
 });
 
 test("Reviews block only on regressions, acceptance and common-play harm", () => {
@@ -1111,7 +1136,10 @@ test("Configuration identity rejects changed workflow resume before execution", 
 test("Agents are started with the policy's explicit model, effort and context tier", async t => {
   const runId = `test-explicit-models-${process.pid}`;
   const root = (await git(process.cwd(), ["rev-parse", "--show-toplevel"]));
-  t.after(() => rm(path.join(root, ".cardwork/workflows", runId), { recursive: true, force: true }));
+  t.after(async () => {
+    await rm(path.join(root, ".cardwork/workflows", runId), { recursive: true, force: true });
+    await rm(path.join(await sharedRunsDirectory(root), runId), { recursive: true, force: true });
+  });
   const calls = [];
   await runProduction({
     runId, args: { mode: "telemetry-smoke" }, signal: undefined,
