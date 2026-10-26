@@ -58,6 +58,11 @@ func consumeNextSpellAsThoughFlashEffects(g *game.Game, obj *game.StackObject) {
 	if !ok {
 		return
 	}
+	if obj.FaceDown {
+		// The permission was matched against the face-down spell's
+		// characteristics when it was cast (CR 708.4), so consume it the same way.
+		spellDef = faceDownSpellDef()
+	}
 	kept := g.RuleEffects[:0]
 	for i := range g.RuleEffects {
 		effect := &g.RuleEffects[i]
