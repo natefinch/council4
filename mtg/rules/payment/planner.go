@@ -36,6 +36,25 @@ func (p Planner) PayableSpellOptions(req SpellRequest) []SpellOptionSummary {
 	return payableSpellOptionsFromState(p.s, req)
 }
 
+// SpellCostOptions returns every cost option req offers the caster, whether or
+// not it is currently payable: the normal cost and each applicable alternative
+// cost (flashback, escape, evoke, a route's alternative), with their additional
+// costs, unresolved X symbols and no cost modifiers applied (CR 601.2b, 601.2f).
+func (p Planner) SpellCostOptions(req SpellRequest) []SpellOptionSummary {
+	options := spellCostOptionsForRequest(p.s, req)
+	result := make([]SpellOptionSummary, 0, len(options))
+	for _, option := range options {
+		result = append(result, SpellOptionSummary{
+			Index:           option.index,
+			Label:           option.label,
+			ManaCost:        option.manaCost,
+			AdditionalCosts: option.additionalCosts,
+			CastPermission:  option.castPermission,
+		})
+	}
+	return result
+}
+
 // PrepareSpellCosts locks each available total before mana abilities change
 // cost-modifying sources. Unlike PayableSpellOptions, it includes costs that
 // may become payable by activating a manual mana ability.
@@ -88,6 +107,19 @@ func (p Planner) BuildAbilityCostPlan(req AbilityRequest) bool {
 // card-instance IDs of cards exiled as a cost, plus a success flag.
 func (p Planner) PayAbilityCosts(req AbilityRequest) (AbilityCostPayment, bool) {
 	return payAbilityCosts(p.s, req)
+}
+
+// CanPaySpellManaCost reports whether the player could pay req.Cost as the
+// total mana cost of casting req.Card, without paying it. The cost is paid as
+// the spell planner pays a cast's mana: in the spell's spending context, and
+// with the convoke, improvise or delve payment the spell may use once its total
+// cost is determined (CR 601.2f-h, 702.51a, 702.66a, 702.126a). It bounds a
+// cast before its targets and other choices are made, so req.Cost must already
+// include any cost reduction the bound allows.
+func (p Planner) CanPaySpellManaCost(req SpellManaRequest) bool {
+	option := spellCostOption{card: req.Card, manaCost: req.Cost, spendAs: req.SpendAs}
+	_, ok := buildSpellManaPlanForOption(p.s, req.PlayerID, req.CardID, req.SourceZone, option, 0, manaSourceRestrictions{}, nil)
+	return ok
 }
 
 // CanPayGenericCost reports whether the player can pay the mana (and optional
