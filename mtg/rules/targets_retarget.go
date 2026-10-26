@@ -60,12 +60,12 @@ func retargetChoices(g *game.Game, controller game.PlayerID, specs stackObjectSp
 	}
 	appendSlots(0, 0, nil)
 	result := targetChoiceResult{kind: targetLegalChoicesFound, choices: choices}
-	for _, choice := range choices {
-		if _, unique := uniqueTargetCountsForSpecs(g, controller, specs.def, specs.sourceObjectID, event, specs.specs, choice); unique {
-			result.targetCounts = append(result.targetCounts, nil)
-		} else {
-			result.targetCounts = append(result.targetCounts, slices.Clone(counts))
-		}
+	// Every choice keeps the per-spec counts it was enumerated with, so a
+	// stack object with several chosen modes (a fused split spell, or a
+	// "choose two" spell) can still segment its new targets by mode when it
+	// resolves.
+	for range choices {
+		result.targetCounts = append(result.targetCounts, slices.Clone(counts))
 	}
 	return result
 }

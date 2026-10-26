@@ -25,7 +25,7 @@ import (
 // same object; the spell doesn't resolve only if all targets are illegal;
 // left half first, then right; a fused spell of differently colored halves is
 // multicolored; Away targets only a player, who chooses the sacrifice on
-// resolution. Copies and free casts of fused spells are part 2 (#3429).
+// resolution. Copies and free casts of fused spells are covered in fuse_copy_test.go.
 
 var fuseTestRegistry = cards.NewDefaultRegistry()
 
