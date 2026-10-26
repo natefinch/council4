@@ -42,7 +42,7 @@ func TestImpulseExileFromTargetOpponentGrantsAnyManaPlay(t *testing.T) {
 		Player:        game.TargetPlayerReference(0),
 		Amount:        game.Fixed(1),
 		Duration:      game.DurationPermanent,
-		SpendAnyMana:  true,
+		SpendAnyMana:  game.ManaSpendAsAnyType,
 		PublishLinked: courtOfLocthwainLink,
 	}, &TurnLog{})
 
@@ -59,8 +59,8 @@ func TestImpulseExileFromTargetOpponentGrantsAnyManaPlay(t *testing.T) {
 	if effect == nil {
 		t.Fatal("no play-from-zone rule effect was created for the exiled card")
 	}
-	if !effect.SpendAnyMana {
-		t.Fatal("play-from-zone permission does not carry SpendAnyMana")
+	if effect.SpendAnyMana != game.ManaSpendAsAnyType {
+		t.Fatal("play-from-zone permission does not carry the any-type spending permission")
 	}
 	if effect.ExpiresFor != game.Player1 || effect.CastFromZone != zone.Exile {
 		t.Fatalf("rule effect = %+v", *effect)
@@ -98,19 +98,19 @@ func TestPlayFromExilePermissionSurvivesSourceLeaving(t *testing.T) {
 		Player:        game.TargetPlayerReference(0),
 		Amount:        game.Fixed(1),
 		Duration:      game.DurationPermanent,
-		SpendAnyMana:  true,
+		SpendAnyMana:  game.ManaSpendAsAnyType,
 		PublishLinked: courtOfLocthwainLink,
 	}, &TurnLog{})
 
-	if !castFromZoneAllowsAnyMana(g, game.Player1, topID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, topID, zone.Exile, game.FaceFront) != game.ManaSpendAsAnyType {
 		t.Fatal("permission must be active while its source is off the battlefield")
 	}
 	expireRuleEffects(g)
-	if !castFromZoneAllowsAnyMana(g, game.Player1, topID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, topID, zone.Exile, game.FaceFront) != game.ManaSpendAsAnyType {
 		t.Fatal("cleanup must not delete the permission while the card remains exiled")
 	}
 	g.Players[game.Player2].Exile.Remove(topID)
-	if castFromZoneAllowsAnyMana(g, game.Player1, topID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, topID, zone.Exile, game.FaceFront) != game.ManaSpendNormal {
 		t.Fatal("permission must end once the card leaves exile")
 	}
 }
@@ -119,7 +119,7 @@ func TestPlayFromExilePermissionSurvivesSourceLeaving(t *testing.T) {
 // cost entirely with green mana, and that the permission without SpendAnyMana
 // does not.
 func TestPlayFromExileWithAnyManaCastsWithOffColorMana(t *testing.T) {
-	setup := func(spendAny bool) (*Engine, *game.Game, id.ID, action.Action) {
+	setup := func(spendAny game.ManaSpendPermission) (*Engine, *game.Game, id.ID, action.Action) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
 		cardID := addCardToExile(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
@@ -147,7 +147,7 @@ func TestPlayFromExileWithAnyManaCastsWithOffColorMana(t *testing.T) {
 		return engine, g, cardID, action.CastSpellFaceFromZone(cardID, zone.Exile, game.FaceFront, nil, 0, nil)
 	}
 
-	engine, g, cardID, act := setup(true)
+	engine, g, cardID, act := setup(game.ManaSpendAsAnyType)
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("casting the exiled card with any-color mana failed")
 	}
@@ -159,15 +159,15 @@ func TestPlayFromExileWithAnyManaCastsWithOffColorMana(t *testing.T) {
 		t.Fatalf("mana pool = %d, want 0 (four green paid the {2}{B}{B} cost)", got)
 	}
 
-	engineNo, gNo, _, actNo := setup(false)
+	engineNo, gNo, _, actNo := setup(game.ManaSpendNormal)
 	if engineNo.applyAction(gNo, game.Player1, actNo) {
 		t.Fatal("casting a {2}{B}{B} card with only green mana must fail without SpendAnyMana")
 	}
 }
 
-// TestCastFromZoneAllowsAnyMana gates the any-mana permission to the affected
+// TestCastFromZoneManaSpendPermission gates the any-mana permission to the affected
 // player, card, and SpendAnyMana flag.
-func TestCastFromZoneAllowsAnyMana(t *testing.T) {
+func TestCastFromZoneManaSpendPermission(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	cardID := addCardToExile(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Exiled Spell", Types: []types.Card{types.Instant}}})
@@ -183,38 +183,17 @@ func TestCastFromZoneAllowsAnyMana(t *testing.T) {
 		CastFromZone:   zone.Exile,
 		AffectedCardID: cardID,
 		ExpiresFor:     game.Player1,
-		SpendAnyMana:   true,
+		SpendAnyMana:   game.ManaSpendAsAnyType,
 	})
 
-	if !castFromZoneAllowsAnyMana(g, game.Player1, cardID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, cardID, zone.Exile, game.FaceFront) != game.ManaSpendAsAnyType {
 		t.Fatal("the affected card should allow any-mana casting")
 	}
-	if castFromZoneAllowsAnyMana(g, game.Player1, otherID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, otherID, zone.Exile, game.FaceFront) != game.ManaSpendNormal {
 		t.Fatal("the permission must not extend to another exiled card")
 	}
-	if castFromZoneAllowsAnyMana(g, game.Player2, cardID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player2, cardID, zone.Exile, game.FaceFront) != game.ManaSpendNormal {
 		t.Fatal("only the affected player may spend any mana")
-	}
-}
-
-// TestAnyManaSymbols proves the mana-cost rewrite keeps the cost's size but drops
-// every color restriction.
-func TestAnyManaSymbols(t *testing.T) {
-	got := anyManaSymbols(opt.Val(cost.Mana{
-		cost.O(2), cost.B, cost.C, cost.HybridMana(mana.W, mana.U),
-		cost.Twobrid(mana.R), cost.PhyrexianMana(mana.G), cost.X, cost.S,
-	}))
-	want := cost.Mana{
-		cost.O(2), cost.O(1), cost.O(1), cost.O(1),
-		cost.O(1), cost.PhyrexianGeneric(1), cost.X, cost.S,
-	}
-	if len(got) != len(want) {
-		t.Fatalf("rewritten cost = %v, want %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("symbol[%d] = %v, want %v", i, got[i], want[i])
-		}
 	}
 }
 

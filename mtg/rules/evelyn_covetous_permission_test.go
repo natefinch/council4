@@ -38,7 +38,7 @@ func evelynCovetousPermanent(g *game.Game, playerID game.PlayerID) *game.Permane
 					ExileCounterFilter:             opt.Val(counter.Collection),
 					ExileCounterExiledByController: true,
 					OncePerTurn:                    true,
-					SpendAnyMana:                   true,
+					SpendAnyMana:                   game.ManaSpendAsAnyColor,
 				},
 			},
 		}},
@@ -123,7 +123,7 @@ func TestExilePlayPermissionAnyColorMana(t *testing.T) {
 		Name: "Collected Bolt", Types: []types.Card{types.Instant}}})
 	g.AddExileCounterFromController(spellID, counter.Collection, 1, game.Player1)
 
-	if !castFromZoneAllowsAnyMana(g, game.Player1, spellID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, spellID, zone.Exile, game.FaceFront) != game.ManaSpendAsAnyColor {
 		t.Fatal("any-color mana permission not honored for the collection-countered exiled spell")
 	}
 
@@ -132,7 +132,7 @@ func TestExilePlayPermissionAnyColorMana(t *testing.T) {
 	croakSpell := addCardToExile(other, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Croaked Bolt", Types: []types.Card{types.Instant}}})
 	other.AddExileCounter(croakSpell, counter.Croak, 1)
-	if castFromZoneAllowsAnyMana(other, game.Player1, croakSpell, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(other, game.Player1, croakSpell, zone.Exile, game.FaceFront) != game.ManaSpendNormal {
 		t.Fatal("a permission without the any-color rider wrongly allows any-color mana")
 	}
 }

@@ -165,7 +165,7 @@ func TestAuthoredGiftsUngivenOppositionAgentPrivateViewAndPermissions(t *testing
 	for _, cardID := range found {
 		permission, ok := playFromExilePermissionFor(g, cardID)
 		if !g.Players[game.Player1].Exile.Contains(cardID) || !ok ||
-			permission.Controller != game.Player3 || !permission.SpendAnyMana ||
+			permission.Controller != game.Player3 || permission.SpendAnyMana != game.ManaSpendAsAnyColor ||
 			!slices.Contains(foreignExileCastableCards(g, game.Player3), cardID) {
 			t.Fatal("each found card did not receive its actual exile destination and lasting permission")
 		}

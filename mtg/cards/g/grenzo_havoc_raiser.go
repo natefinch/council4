@@ -77,7 +77,7 @@ func newGrenzoHavocRaiser() *game.CardDef {
 											Player:       game.EventPlayerReference(),
 											Amount:       game.Fixed(1),
 											Duration:     game.DurationUntilEndOfTurn,
-											SpendAnyMana: true,
+											SpendAnyMana: game.ManaSpendAsAnyColor,
 											Cast:         true,
 										},
 									},

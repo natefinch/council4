@@ -799,9 +799,18 @@ func lowerImpulseExileContent(ctx contentCtx) (game.AbilityContent, *shared.Diag
 		Amount:                amount,
 		Duration:              duration,
 		Cast:                  effect.ImpulseCast,
-		SpendAnyMana:          effect.ImpulseSpendAnyColor,
+		SpendAnyMana:          anyColorSpendPermission(effect.ImpulseSpendAnyColor),
 		WithoutPayingManaCost: effect.ImpulseWithoutPayingManaCost,
 	}}}}.Ability(), nil
+}
+
+// anyColorSpendPermission lowers the parsed "you may spend mana as though it were
+// mana of any color" rider to its spending permission (CR 609.4b).
+func anyColorSpendPermission(anyColor bool) game.ManaSpendPermission {
+	if anyColor {
+		return game.ManaSpendAsAnyColor
+	}
+	return game.ManaSpendNormal
 }
 
 // lowerImpulseExileLibraryOwner maps the impulse-exile library owner context to

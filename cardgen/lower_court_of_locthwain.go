@@ -79,7 +79,7 @@ func lowerCourtOfLocthwainUpkeep(ctx contentCtx) (game.AbilityContent, bool) {
 				Player:        game.TargetPlayerReference(0),
 				Amount:        game.Fixed(1),
 				Duration:      game.DurationPermanent,
-				SpendAnyMana:  true,
+				SpendAnyMana:  game.ManaSpendAsAnyType,
 				PublishLinked: courtOfLocthwainExileLink,
 			}},
 			{

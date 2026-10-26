@@ -89,8 +89,8 @@ func TestLowerGrenzoHavocRaiserModalCombatDamageTrigger(t *testing.T) {
 	if !impulse.Cast {
 		t.Fatal("impulse Cast = false, want cast-only (\"you may cast that card\")")
 	}
-	if !impulse.SpendAnyMana {
-		t.Fatal("impulse SpendAnyMana = false, want the spend-any-color rider honored")
+	if impulse.SpendAnyMana != game.ManaSpendAsAnyColor {
+		t.Fatalf("impulse SpendAnyMana = %v, want the spend-any-color rider honored", impulse.SpendAnyMana)
 	}
 }
 
@@ -152,7 +152,7 @@ func TestLowerImpulseExileThatPlayersLibraryCastAnyColor(t *testing.T) {
 	if impulse.Player != game.EventPlayerReference() {
 		t.Fatalf("impulse player = %#v, want the event player's library", impulse.Player)
 	}
-	if !impulse.Cast || !impulse.SpendAnyMana || impulse.Duration != game.DurationUntilEndOfTurn {
+	if !impulse.Cast || impulse.SpendAnyMana != game.ManaSpendAsAnyColor || impulse.Duration != game.DurationUntilEndOfTurn {
 		t.Fatalf("impulse = %#v, want cast-only any-color until end of turn", impulse)
 	}
 }

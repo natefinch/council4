@@ -2221,14 +2221,14 @@ type DigSlot struct {
 // cards it moves to exile, so a DigSlot exile slot and ImpulseExile share one
 // permission shape (CR 118.7 impulse draw). Duration bounds the permission
 // (DurationThisTurn for "you may play ... this turn"); Cast grants casting a
-// spell but not playing a land; SpendAnyMana lets the controller spend mana of
-// any type; WithoutPayingManaCost casts an exiled spell for free while still
+// spell but not playing a land; SpendAnyMana is the spending permission the
+// controller may use to cast the exiled spells (CR 609.4b); WithoutPayingManaCost casts an exiled spell for free while still
 // allowing an exiled land to be played. The zero value grants ordinary "you may
 // play" permission with normal timing, cost, and land-per-turn limits.
 type ImpulsePlayGrant struct {
 	Duration              EffectDuration
 	Cast                  bool
-	SpendAnyMana          bool
+	SpendAnyMana          ManaSpendPermission
 	WithoutPayingManaCost bool
 }
 
@@ -2278,10 +2278,12 @@ type ImpulseExile struct {
 	Player   PlayerReference
 	Amount   Quantity
 	Duration EffectDuration
-	// SpendAnyMana, when set, lets the controller spend mana of any type to cast
-	// the exiled cards ("mana of any type can be spent to cast it.", Court of
-	// Locthwain). It carries onto the RuleEffectPlayFromZone permission.
-	SpendAnyMana bool
+	// SpendAnyMana is the spending permission the controller may use to cast the
+	// exiled cards: ManaSpendAsAnyType for "mana of any type can be spent to cast
+	// it." (Court of Locthwain), ManaSpendAsAnyColor for "you may spend mana as
+	// though it were mana of any color to cast that spell." (Grenzo, Havoc
+	// Raiser). It carries onto the play/cast-from-exile permission.
+	SpendAnyMana ManaSpendPermission
 	// Cast, when set, grants permission to *cast* the exiled cards ("you may cast
 	// that card", Grenzo, Havoc Raiser) rather than to *play* them. A cast-only
 	// grant lets the controller cast an exiled card as a spell but not play an

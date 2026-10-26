@@ -787,6 +787,14 @@ var gameManaSpendConditionKindLiterals = map[game.ManaSpendConditionKind]string{
 	game.ManaSpendCastMonocoloredSpellOfChosenColor: "game.ManaSpendCastMonocoloredSpellOfChosenColor",
 }
 
+// gameManaSpendPermissionLiterals maps each exported game.ManaSpendPermission constant to the Go
+// expression that names it in generated card source.
+var gameManaSpendPermissionLiterals = map[game.ManaSpendPermission]string{
+	game.ManaSpendNormal:     "game.ManaSpendNormal",
+	game.ManaSpendAsAnyColor: "game.ManaSpendAsAnyColor",
+	game.ManaSpendAsAnyType:  "game.ManaSpendAsAnyType",
+}
+
 // gameManaSpendRestrictionKindLiterals maps each exported game.ManaSpendRestrictionKind constant to the Go
 // expression that names it in generated card source.
 var gameManaSpendRestrictionKindLiterals = map[game.ManaSpendRestrictionKind]string{
@@ -1933,6 +1941,9 @@ func enumSpelling(v any) (string, bool) {
 		return name, ok
 	case game.ManaSpendConditionKind:
 		name, ok := gameManaSpendConditionKindLiterals[value]
+		return name, ok
+	case game.ManaSpendPermission:
+		name, ok := gameManaSpendPermissionLiterals[value]
 		return name, ok
 	case game.ManaSpendRestrictionKind:
 		name, ok := gameManaSpendRestrictionKindLiterals[value]
