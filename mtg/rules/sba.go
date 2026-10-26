@@ -213,7 +213,7 @@ func chooseLegendaryRuleStateBasedActions(g *game.Game, groups []legendaryRuleGr
 		options := make([]game.ChoiceOption, len(group.members))
 		for index, permanent := range group.members {
 			options[index] = game.ChoiceOption{
-				Index: index, Label: permanentEffectiveName(g, permanent),
+				Index: index, Label: permanentChoiceLabel(g, permanent),
 				Card: permanentChoiceInfo(g, permanent), Targets: []game.Target{game.PermanentTarget(permanent.ObjectID)},
 			}
 		}

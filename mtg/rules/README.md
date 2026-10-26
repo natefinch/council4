@@ -237,7 +237,7 @@ The current engine generates these actions:
 - `action.CastMutateSpell(cardID, targetID)` for a creature card in hand with a
   typed Mutate cost and an owned non-Human creature target. The over-or-under
   placement is a resolution-time `ChoiceAgent` decision.
-- `action.CastFaceDown(cardID, face, kind)` for Morph/Disguise cards in hand during sorcery-speed windows, using the face-down `{3}` alternative cost.
+- `action.CastFaceDown(cardID, face, kind)` for Morph/Disguise cards in hand, using the face-down `{3}` alternative cost. Timing permissions (sorcery speed or an as-though-flash effect) and casting prohibitions are judged against the colorless 2/2 face-down creature spell, not the hidden card (CR 702.37c, 708.4).
 - `action.TurnFaceUp(permanentID)` for controlled face-down permanents whose Morph/Disguise turn-up cost is payable. This is a special action and does not use the stack.
 - `action.ActivateAbility(sourceID, abilityIndex, targets, xValue)` and
   `action.ActivateAbilityWithModes(sourceID, abilityIndex, targets, xValue,

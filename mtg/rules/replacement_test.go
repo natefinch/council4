@@ -139,38 +139,61 @@ func TestMultipleGenericReplacementsRecordOrder(t *testing.T) {
 	}
 }
 
-func TestPermanentSourceReplacementStopsAfterSourceLeaves(t *testing.T) {
-	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	engine := NewEngine(nil)
-	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Replacement Source",
-		Types: []types.Card{types.Enchantment}},
-	})
-	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	resolveInstruction(engine, g, &game.StackObject{
-		Kind:         game.StackActivatedAbility,
-		Controller:   game.Player1,
-		SourceID:     source.ObjectID,
-		SourceCardID: source.CardInstanceID,
-	}, game.CreateReplacement{
-		Replacement: &game.ReplacementEffect{
-			Description:   "exile instead",
-			MatchEvent:    game.EventZoneChanged,
-			MatchFromZone: true,
-			FromZone:      zone.Battlefield,
-			MatchToZone:   true,
-			ToZone:        zone.Graveyard,
-			ReplaceToZone: zone.Exile,
-		},
-	}, nil)
+// A replacement created by a resolving ability with no stated duration lasts
+// for the rest of the game even after its source leaves (CR 611.2a, CR 614.3),
+// while a static declaration's replacement ends with its source permanent.
+func TestPermanentSourceReplacementLifetimeAfterSourceLeaves(t *testing.T) {
+	for _, test := range []struct {
+		name       string
+		created    bool
+		wantExiled bool
+	}{
+		{name: "created by resolution persists", created: true, wantExiled: true},
+		{name: "static declaration stops", created: false, wantExiled: false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Replacement Source",
+				Types: []types.Card{types.Enchantment}},
+			})
+			target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+			replacement := game.ReplacementEffect{
+				Description:   "exile instead",
+				MatchEvent:    game.EventZoneChanged,
+				MatchFromZone: true,
+				FromZone:      zone.Battlefield,
+				MatchToZone:   true,
+				ToZone:        zone.Graveyard,
+				ReplaceToZone: zone.Exile,
+			}
+			if test.created {
+				resolveInstruction(engine, g, &game.StackObject{
+					Kind:         game.StackActivatedAbility,
+					Controller:   game.Player1,
+					SourceID:     source.ObjectID,
+					SourceCardID: source.CardInstanceID,
+				}, game.CreateReplacement{Replacement: &replacement}, nil)
+			} else {
+				replacement.ID = g.IDGen.Next()
+				replacement.Controller = game.Player1
+				replacement.SourceCardID = source.CardInstanceID
+				replacement.SourceObjectID = source.ObjectID
+				replacement.FromSourceAbility = true
+				g.ReplacementEffects = append(g.ReplacementEffects, replacement)
+			}
 
-	if !movePermanentToZone(g, source, zone.Graveyard) {
-		t.Fatal("source should leave battlefield")
-	}
-	if !movePermanentToZone(g, target, zone.Graveyard) {
-		t.Fatal("target should move to graveyard")
-	}
-	if !g.Players[game.Player1].Graveyard.Contains(target.CardInstanceID) {
-		t.Fatal("replacement from departed source should not apply")
+			if !movePermanentToZone(g, source, zone.Graveyard) {
+				t.Fatal("source should leave battlefield")
+			}
+			expireCleanupDurations(g)
+			if !movePermanentToZone(g, target, zone.Graveyard) {
+				t.Fatal("target should leave the battlefield")
+			}
+			if got := g.Players[game.Player1].Exile.Contains(target.CardInstanceID); got != test.wantExiled {
+				t.Fatalf("target exiled = %v, want %v", got, test.wantExiled)
+			}
+		})
 	}
 }
 

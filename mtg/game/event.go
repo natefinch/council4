@@ -372,6 +372,16 @@ type Event struct {
 	// mana-value-filtered cast triggers.
 	ManaValue opt.V[int]
 
+	// CascadeInstances records how many instances of cascade the spell had at
+	// the moment it became cast (CR 601.2i, 702.85a/c): printed cascade, cascade
+	// statics that function on the stack and whose condition held, and active
+	// "spells you cast have cascade" grants that matched it. It is set when an
+	// EventSpellCast is emitted and is the only input to the spell's cascade
+	// triggers and to "whenever you cast a spell with cascade" matching, so a
+	// grant gained or lost afterwards changes neither. It is never copied onto
+	// the stack object, so stack copies do not inherit it.
+	CascadeInstances opt.V[int]
+
 	// ManaSpentToCast records the total amount of mana spent to cast the spell
 	// for spell-cast triggers whose intervening-if reads the mana actually paid
 	// ("if no mana was spent to cast it", "if at least four mana was spent to
@@ -508,6 +518,16 @@ type Event struct {
 	// battlefield state can change, preserving source control and simultaneous
 	// enter/leave behavior.
 	ControlledTriggerDoublers *ControlledTriggerDoublerSnapshot
+
+	// EnteredPermanent snapshots an EventPermanentEnteredBattlefield subject's
+	// controller and characteristics immediately after it entered, as trigger
+	// conditions see it (CR 110.2, 603.6a, 603.10). Later history checks such as
+	// "if an artifact entered the battlefield under your control this turn" read
+	// it, so a later control change, type change or departure cannot rewrite
+	// what entered. Its characteristics are computed with this entry and any
+	// simultaneous entries visible to current-turn history conditions. It is nil
+	// for other events and for raw events that bypass rules emission.
+	EnteredPermanent *ObjectSnapshot
 }
 
 // AppendEvent records a rules event. Unknown events are ignored.
@@ -587,6 +607,10 @@ func cloneEvent(event Event) Event {
 			snapshot.Doublers[i].PermanentFilter = cloneCharacteristicFilters(snapshot.Doublers[i].PermanentFilter)
 		}
 		event.ControlledTriggerDoublers = &snapshot
+	}
+	if event.EnteredPermanent != nil {
+		snapshot := cloneObjectSnapshot(*event.EnteredPermanent)
+		event.EnteredPermanent = &snapshot
 	}
 	return event
 }

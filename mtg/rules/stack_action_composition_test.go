@@ -78,7 +78,6 @@ func TestCompiledStackActionsPreserveSubjectAndNewControllerLegality(t *testing.
 				wantCounts := []int{1}
 				if accept {
 					want = next.ObjectID
-					wantCounts = nil
 					request := log.Choices[optionalIndex+1].Request
 					if request.Player != game.Player1 || len(request.Options) != 1 ||
 						!slices.Equal(request.Options[0].Targets, []game.Target{game.PermanentTarget(next.ObjectID)}) {

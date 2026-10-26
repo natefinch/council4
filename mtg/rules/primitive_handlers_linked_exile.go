@@ -12,45 +12,40 @@ import (
 // card on the bottom of their library." (Trial of a Time Lord's guilty verdict),
 // consuming the link so the synthesized leaves-the-battlefield trigger finds
 // nothing left to return. Each disposed card is matched by the linked object
-// identity, so an object that already left exile is skipped.
+// identity, so an object that already left exile is skipped. Every card, across
+// all owners, moves as one simultaneous batch (CR 603.2c): each card's
+// zone-change replacements and its owner's choices are determined in APNAP order
+// before any card moves (CR 101.4, 400.6, 616.1). RandomOrder randomizes each
+// owner's cards independently.
 func handlePutLinkedExiledCardsInLibrary(r *effectResolver, prim game.PutLinkedExiledCardsInLibrary) effectResolved {
 	res := effectResolved{accepted: true}
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
-	refs := linkedObjects(r.game, key)
-	if prim.RandomOrder {
-		cardsByOwner := make(map[game.PlayerID][]game.ZoneCardSnapshot)
-		var owners []game.PlayerID
-		for _, ref := range refs {
-			card, ok := linkedExiledCard(r.game, ref)
-			if !ok {
-				continue
-			}
-			if _, seen := cardsByOwner[card.Owner]; !seen {
-				owners = append(owners, card.Owner)
-			}
-			cardsByOwner[card.Owner] = append(cardsByOwner[card.Owner], game.ZoneCardSnapshot{
-				CardID: card.ID, ZoneVersion: card.ZoneVersion,
-			})
-		}
-		for _, ownerID := range owners {
-			owner, ok := playerByID(r.game, ownerID)
-			if !ok {
-				continue
-			}
-			if bottomExiledCards(r.game, owner, ownerID, cardsByOwner[ownerID], r.engine.rng) {
-				res.succeeded = true
-			}
-		}
-		clearLinkedObjects(r.game, key)
-		return res
-	}
-	for _, ref := range refs {
+	var owners []game.PlayerID
+	cardsByOwner := make(map[game.PlayerID][]game.ZoneCardSnapshot)
+	for _, ref := range linkedObjects(r.game, key) {
 		card, ok := linkedExiledCard(r.game, ref)
 		if !ok {
 			continue
 		}
-		res.succeeded = moveCardBetweenZonesInBatch(r.game, card.Owner, ref.CardID,
-			zone.Exile, zone.Library, prim.Bottom, 0) || res.succeeded
+		if _, seen := cardsByOwner[card.Owner]; !seen {
+			owners = append(owners, card.Owner)
+		}
+		cardsByOwner[card.Owner] = append(cardsByOwner[card.Owner], game.ZoneCardSnapshot{
+			CardID: card.ID, ZoneVersion: card.ZoneVersion,
+		})
+	}
+	var moves []simultaneousCardMove
+	for _, owner := range owners {
+		cards := cardsByOwner[owner]
+		if prim.RandomOrder {
+			cards = randomlyOrderedSnapshots(cards, r.engine.rng)
+		}
+		for _, snapshot := range cards {
+			moves = append(moves, simultaneousCardMove{card: snapshot, fromZone: zone.Exile})
+		}
+	}
+	if len(moves) > 0 {
+		res.succeeded = moveCardsBetweenZonesSimultaneously(r.game, moves, zone.Library, prim.Bottom, r.game.IDGen.Next())
 	}
 	clearLinkedObjects(r.game, key)
 	return res

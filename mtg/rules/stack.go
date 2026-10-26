@@ -290,6 +290,9 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	if _, ok := game.BodyMadnessCost(body); ok {
 		return e.resolveMadnessTriggeredAbilityWithChoices(g, obj, body, agents, log)
 	}
+	if game.BodyHasKeyword(body, game.Cascade) {
+		return e.resolveCascadeTriggeredAbility(g, obj, agents, log)
+	}
 	var event *game.Event
 	if obj.HasTriggerEvent {
 		event = &obj.TriggerEvent

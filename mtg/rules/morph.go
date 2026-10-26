@@ -164,8 +164,17 @@ func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
 	return faces
 }
 
+// canCastFaceDown judges timing and casting prohibitions against the face-down
+// spell's characteristics, not the hidden card's (CR 702.37c, 708.4): an
+// as-though-flash permission covering a colorless 2/2 creature spell applies,
+// while the face-up card's own flash does not.
 func (*Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) bool {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || !isSorcerySpeed(g, playerID) || splitSecondOnStack(g) || kind == game.FaceDownNone {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || splitSecondOnStack(g) || kind == game.FaceDownNone {
+		return false
+	}
+	spell := faceDownSpellDef()
+	if !canCastAtCurrentTiming(g, playerID, spell) || castFromZoneProhibited(g, playerID, zone.Hand) ||
+		spellCastProhibited(g, playerID, spell) || spellCastLimitReached(g, playerID, spell) {
 		return false
 	}
 	player, ok := playerByID(g, playerID)

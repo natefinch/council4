@@ -507,7 +507,7 @@ func retrySpellCostPlanAvoidingManaTapConflict(s State, playerID game.PlayerID, 
 }
 
 func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, restrictions manaSourceRestrictions, prefs *Preferences) (paymentPlan, bool) {
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, playerID, option.manaCost, xValue, restrictions, spendContext{spell: option.card}, prefs)
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, playerID, option.manaCost, xValue, restrictions, option.spendContext(), prefs)
 	if ok {
 		return manaPlan, true
 	}
@@ -517,7 +517,7 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 		for _, permanent := range convokeTaps {
 			convokeRestrictions.excluded[permanent.ObjectID] = true
 		}
-		manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, convokedCost, xValue, convokeRestrictions, spendContext{spell: option.card}, prefs)
+		manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, convokedCost, xValue, convokeRestrictions, option.spendContext(), prefs)
 		if ok {
 			manaPlan.convokeTaps = convokeTaps
 			return manaPlan, true
@@ -530,7 +530,7 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 			for _, permanent := range improviseTaps {
 				improviseRestrictions.excluded[permanent.ObjectID] = true
 			}
-			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, improvisedCost, xValue, improviseRestrictions, spendContext{spell: option.card}, prefs)
+			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, improvisedCost, xValue, improviseRestrictions, option.spendContext(), prefs)
 			if ok {
 				manaPlan.improviseTaps = improviseTaps
 				return manaPlan, true
@@ -541,7 +541,7 @@ func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 		delveExiles, generic, delveOK := delveCandidates(s, playerID, option.manaCost, xValue, cardID, sourceZone, restrictions.reservedGraveyardCardIDs)
 		for exiledCount := 1; delveOK && exiledCount <= min(generic, len(delveExiles)); exiledCount++ {
 			delvedCost := costWithGenericRequirement(option.manaCost, generic-exiledCount)
-			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, delvedCost, 0, restrictions, spendContext{spell: option.card}, prefs)
+			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, delvedCost, 0, restrictions, option.spendContext(), prefs)
 			if ok {
 				manaPlan.delveExiles = append([]id.ID(nil), delveExiles[:exiledCount]...)
 				return manaPlan, true
@@ -599,6 +599,36 @@ func effectiveManaSymbols(s State, playerID game.PlayerID, manaCost cost.Mana) [
 	return symbols
 }
 
+// spendPermissionSymbols returns the requirements a spending permission lets
+// any mana satisfy (CR 609.4b). It does not change the cost: the planner pays
+// the returned symbols while the actual mana spent keeps its own color, type and
+// riders. Under ManaSpendAsAnyColor each colored requirement ({R}, hybrid, a
+// colored Twobrid half or a colored Phyrexian symbol) becomes payable with one
+// mana of any type, while {C} still requires colorless mana (CR 107.4c);
+// ManaSpendAsAnyType also lets any mana pay {C} (CR 118.14). Snow requirements
+// concern the mana's source, not its type, so they are unchanged.
+func spendPermissionSymbols(symbols []cost.Symbol, spendAs game.ManaSpendPermission) []cost.Symbol {
+	if spendAs == game.ManaSpendNormal {
+		return symbols
+	}
+	rewritten := make([]cost.Symbol, 0, len(symbols))
+	for _, symbol := range symbols {
+		switch symbol.Kind {
+		case cost.ColoredSymbol, cost.HybridSymbol, cost.TwobridSymbol:
+			symbol = cost.O(1)
+		case cost.PhyrexianSymbol:
+			symbol = cost.PhyrexianGeneric(1)
+		case cost.ColorlessSymbol:
+			if spendAs == game.ManaSpendAsAnyType {
+				symbol = cost.O(1)
+			}
+		default:
+		}
+		rewritten = append(rewritten, symbol)
+	}
+	return rewritten
+}
+
 // EffectiveManaCost returns manaCost with each colored symbol the player may pay
 // life for instead rewritten to the equivalent Phyrexian symbol (CR for K'rrik's
 // "For each {B} in a cost, ..." static). Callers that enumerate Phyrexian payment
@@ -622,7 +652,7 @@ func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *
 		return plan, true
 	}
 
-	symbols := effectiveManaSymbols(s, playerID, *manaCost)
+	symbols := spendPermissionSymbols(effectiveManaSymbols(s, playerID, *manaCost), ctx.spendAs)
 
 	for _, symbol := range symbols {
 		switch symbol.Kind {
@@ -846,6 +876,8 @@ func costRequirements(manaCost *cost.Mana, xValue int) (colored map[mana.Color]i
 type spendContext struct {
 	spell         *game.CardDef
 	abilitySource *game.Permanent
+	// spendAs is the payment's spending permission (CR 609.4b).
+	spendAs game.ManaSpendPermission
 }
 
 func snapshotPool(s State, player *game.Player, ctx spendContext) map[mana.Unit]int {

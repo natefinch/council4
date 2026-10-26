@@ -25,7 +25,14 @@ the package-local `paymentOrch` adapter.
 
 - `SpellRequest` checks or pays a spell's selected cost option. It includes the
   casting player, card, source zone, X value, kicker flag, and optional payment
-  preferences.
+  preferences. Its `SpendAnyMana` field carries a spending permission such as
+  "spend mana as though it were mana of any color to cast it" (CR 118.14,
+  609.4b). It is not an alternative cost: every cost option keeps its normal,
+  alternative, additional, kicker, and splice mana, and only the final mana
+  payment lets any mana pay colored requirements. `ManaSpendAsAnyColor` still
+  requires colorless mana for `{C}`; `ManaSpendAsAnyType` lets any mana pay
+  `{C}` too. Convoke, improvise, and delve are planned from the unchanged cost,
+  and the recorded pool spend keeps the actual mana spent.
 - `AbilityRequest` checks or pays an activated ability. It includes either the
   source permanent or a source card/zone for non-battlefield abilities, the
   ability definition, X value, and optional payment preferences.
@@ -36,7 +43,10 @@ the package-local `paymentOrch` adapter.
   multipliers before sending the fixed result through this same planner,
   agent-choice, and application path. Combat combines
   the independent per-attacker attack-tax amounts into one request and excludes
-  every declared attacker from automatic mana-source planning.
+  every declared attacker from automatic mana-source planning. A set `Spell`
+  checks mana in that spell's casting context, and `SpendAs` carries the same
+  spending permission as `SpellRequest.SpendAnyMana` (legal X bounds for a
+  spell cast from exile under such a rider).
 
 `Preferences` records choices that the rules engine already collected from the
 agent or deterministic fallback: alternative-cost index, phyrexian mana-vs-life

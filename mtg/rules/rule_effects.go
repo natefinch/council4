@@ -1619,63 +1619,51 @@ func independentCastPermissionsForZone(g *game.Game, playerID game.PlayerID, car
 func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
 	effects := activeRuleEffects(g)
 	for i := range effects {
-		effect := &effects[i]
-		if (effect.Kind != game.RuleEffectCastFromZone && effect.Kind != game.RuleEffectPlayFromZone) ||
-			effect.CastFromZone != sourceZone {
-			continue
+		if castFromZoneRuleEffectMatches(g, &effects[i], playerID, cardID, sourceZone, face) {
+			return true
 		}
-		if !ruleEffectAffectsPlayer(g, effect, playerID) {
-			continue
-		}
-		if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
-			continue
-		}
-		if effect.CastFace.Exists {
-			if effect.CastFace.Val != face {
-				continue
-			}
-		} else if effect.Kind == game.RuleEffectCastFromZone && face != game.FaceFront {
-			continue
-		}
-		return true
 	}
 	return false
 }
 
-// castFromZoneAllowsAnyMana reports whether an active play/cast-from-zone
-// permission lets playerID spend mana of any color to cast cardID from
-// sourceZone ("mana of any type can be spent to cast it.", Court of Locthwain;
-// "you may spend mana as though it were mana of any color to cast it.", Evelyn,
-// the Covetous; "you may spend mana as though it were mana of any color to cast
-// that spell.", Grenzo, Havoc Raiser). A per-card RuleEffectPlayFromZone or
-// RuleEffectCastFromZone permission carries the flag on the self-scoped card
-// grant; a RuleEffectCastSpellsFromZone permission carries it on the group cast
-// grant, in which case the full CastSpellsFromZone match (including its
-// exile-counter, provenance, and once-per-turn filters) must also hold.
-func castFromZoneAllowsAnyMana(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	if effect, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face); ok && effect.SpendAnyMana {
-		return true
+// castFromZoneRuleEffectMatches reports whether effect is a per-card or
+// zone-wide RuleEffectCastFromZone/RuleEffectPlayFromZone permission letting
+// playerID cast the face of cardID from sourceZone. A cast permission naming no
+// face covers only the front face.
+func castFromZoneRuleEffectMatches(g *game.Game, effect *game.RuleEffect, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	if (effect.Kind != game.RuleEffectCastFromZone && effect.Kind != game.RuleEffectPlayFromZone) ||
+		effect.CastFromZone != sourceZone {
+		return false
 	}
-	effects := activeRuleEffects(g)
-	for i := range effects {
-		effect := &effects[i]
-		if (effect.Kind != game.RuleEffectPlayFromZone && effect.Kind != game.RuleEffectCastFromZone) ||
-			!effect.SpendAnyMana ||
-			effect.CastFromZone != sourceZone {
-			continue
-		}
-		if !playerRelationMatches(effect.Controller, playerID, effect.AffectedPlayer) {
-			continue
-		}
-		if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
-			continue
-		}
-		if effect.CastFace.Exists && effect.CastFace.Val != face {
-			continue
-		}
-		return true
+	if !ruleEffectAffectsPlayer(g, effect, playerID) {
+		return false
 	}
-	return false
+	if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
+		return false
+	}
+	if effect.CastFace.Exists {
+		return effect.CastFace.Val == face
+	}
+	return effect.Kind != game.RuleEffectCastFromZone || face == game.FaceFront
+}
+
+// castFromZoneManaSpendPermission returns the broadest spending permission any
+// active play/cast-from-zone permission that lets playerID cast cardID from
+// sourceZone by paying its costs carries (CR 118.14, 609.4b): "mana of any type
+// can be spent to cast it." (Court of Locthwain) or "you may spend mana as
+// though it were mana of any color to cast it." (Evelyn, the Covetous; Grenzo,
+// Havoc Raiser). Every matching permission is considered, including each
+// matching RuleEffectCastSpellsFromZone group permission with its full
+// exile-counter, provenance, and once-per-turn filters. A cast uses only the
+// rider of the one permission it is cast through (see castFromZonePermissionRoutes);
+// a "without paying its mana cost" permission's rider is not reported here.
+func castFromZoneManaSpendPermission(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) game.ManaSpendPermission {
+	permission := game.ManaSpendNormal
+	routes, _ := castFromZonePermissionRoutes(g, playerID, cardID, sourceZone, face, false)
+	for _, route := range routes {
+		permission = max(permission, route.spendAs)
+	}
+	return permission
 }
 
 // castFromZoneWithoutPayingManaCost reports whether an active per-card
@@ -1689,22 +1677,18 @@ func castFromZoneWithoutPayingManaCost(g *game.Game, playerID game.PlayerID, car
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind != game.RuleEffectPlayFromZone || !effect.WithoutPayingManaCost ||
-			effect.CastFromZone != sourceZone {
-			continue
+		if ruleEffectCastsWithoutPayingManaCost(effect) &&
+			castFromZoneRuleEffectMatches(g, effect, playerID, cardID, sourceZone, face) {
+			return true
 		}
-		if !ruleEffectAffectsPlayer(g, effect, playerID) {
-			continue
-		}
-		if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
-			continue
-		}
-		if effect.CastFace.Exists && effect.CastFace.Val != face {
-			continue
-		}
-		return true
 	}
 	return false
+}
+
+// ruleEffectCastsWithoutPayingManaCost reports whether effect is a per-card
+// play permission whose spell is cast without paying its mana cost.
+func ruleEffectCastsWithoutPayingManaCost(effect *game.RuleEffect) bool {
+	return effect.Kind == game.RuleEffectPlayFromZone && effect.WithoutPayingManaCost
 }
 
 // RuleEffectCastLinkedExileForFree permission, if any, that lets playerID cast
@@ -1831,43 +1815,75 @@ func canPlayLandFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardI
 	return false
 }
 
-// matchingPlayLandFromZoneEffect returns the first continuous play-from-zone
-// permission that lets playerID play cardID as a land from sourceZone, applying
-// the same TopCardOnly, exile-counter, provenance, and once-per-turn filters as
-// canPlayLandFromZoneByRuleEffect. Callers record a once-per-turn use against the
-// returned effect after the land is actually played.
+// matchingPlayLandFromZoneEffect returns the default permission route through
+// which playerID may play cardID as a land from sourceZone: the first of
+// playLandFromZoneRoutes, which spends no once-per-turn use whenever any
+// matching permission without one exists. It reports false when no
+// continuous play-from-zone permission covers the card.
 func matchingPlayLandFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) (game.RuleEffect, bool) {
+	routes := playLandFromZoneRoutes(g, playerID, cardID, sourceZone)
+	if len(routes) == 0 {
+		return game.RuleEffect{}, false
+	}
+	return routes[0], true
+}
+
+// playLandFromZoneRoutes returns the continuous permissions through which
+// playerID may play cardID as a land from sourceZone: each matching per-card
+// RuleEffectPlayFromZone and each matching group RuleEffectPlayLandsFromZone,
+// with its TopCardOnly, exile-counter, provenance, owned-only and
+// once-per-turn filters applied. The player chooses which permission
+// authorizes the play (CR 305.1, as for a spell in CR 601.2b) and only that
+// permission's usage is spent, so permissions that differ only in which
+// unlimited permission authorizes them merge into one route ordered first,
+// followed by one route per once-per-turn source (Evelyn, the Covetous).
+func playLandFromZoneRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) []game.RuleEffect {
+	var routes []game.RuleEffect
+	unlimited := false
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.CastFromZone != sourceZone ||
-			!ruleEffectAffectsPlayer(g, effect, playerID) {
+		if !playLandFromZoneEffectMatches(g, effect, playerID, cardID, sourceZone) {
 			continue
 		}
-		switch effect.Kind {
-		case game.RuleEffectPlayFromZone:
-			if effect.AffectedCardID == cardID {
-				return *effect, true
+		if !effect.OncePerTurn {
+			if !unlimited {
+				unlimited = true
+				routes = slices.Insert(routes, 0, *effect)
 			}
-		case game.RuleEffectPlayLandsFromZone:
-			if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
-				continue
-			}
-			if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
-				continue
-			}
-			if !ownedCardsOnlyPermits(g, effect, playerID, cardID) {
-				continue
-			}
-			if exileCounterPermissionBlocked(g, effect, cardID) {
-				continue
-			}
-			return *effect, true
-		default:
 			continue
 		}
+		if slices.ContainsFunc(routes, func(route game.RuleEffect) bool {
+			return route.OncePerTurn && route.SourceObjectID == effect.SourceObjectID
+		}) {
+			continue
+		}
+		routes = append(routes, *effect)
 	}
-	return game.RuleEffect{}, false
+	return routes
+}
+
+// playLandFromZoneEffectMatches reports whether effect is a continuous
+// play-from-zone permission that currently lets playerID play cardID as a land
+// from sourceZone.
+func playLandFromZoneEffectMatches(g *game.Game, effect *game.RuleEffect, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type) bool {
+	if effect.CastFromZone != sourceZone || !ruleEffectAffectsPlayer(g, effect, playerID) {
+		return false
+	}
+	switch effect.Kind {
+	case game.RuleEffectPlayFromZone:
+		return effect.AffectedCardID == cardID
+	case game.RuleEffectPlayLandsFromZone:
+		if effect.TopCardOnly && !cardIsTopOfLibrary(g, playerID, cardID) {
+			return false
+		}
+		if effect.ExileCounterFilter.Exists && !g.HasExileCounter(cardID, effect.ExileCounterFilter.Val) {
+			return false
+		}
+		return ownedCardsOnlyPermits(g, effect, playerID, cardID) && !exileCounterPermissionBlocked(g, effect, cardID)
+	default:
+		return false
+	}
 }
 
 // canCastSpellsFromZoneByRuleEffect reports whether a continuous
@@ -1878,21 +1894,22 @@ func matchingPlayLandFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID
 // spells and colorless spells from the top of your library.", Mystic Forge);
 // TopCardOnly requires the card to be on top of the player's library.
 func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	_, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face)
-	return ok
+	return len(matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face)) > 0
 }
 
-// matchingCastSpellsFromZoneEffect returns the first continuous
+// matchingCastSpellsFromZoneEffects returns every continuous
 // RuleEffectCastSpellsFromZone permission that lets playerID cast the face of
-// cardID from sourceZone, applying the same TopCardOnly, chosen-subtype, and
-// type/colorless filters as canCastSpellsFromZoneByRuleEffect.
-func matchingCastSpellsFromZoneEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) (game.RuleEffect, bool) {
+// cardID from sourceZone, in effect order. Each is a separate permission the
+// caster may choose to cast through (CR 118.14), with its own rider and
+// once-per-turn usage.
+func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) []game.RuleEffect {
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
-		return game.RuleEffect{}, false
+		return nil
 	}
 	faceDef := cardFaceOrDefault(card, face)
 	faceTypes := faceDef.Types
+	var matches []game.RuleEffect
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
@@ -1925,19 +1942,9 @@ func matchingCastSpellsFromZoneEffect(g *game.Game, playerID game.PlayerID, card
 				continue
 			}
 		}
-		return *effect, true
+		matches = append(matches, *effect)
 	}
-	return game.RuleEffect{}, false
-}
-
-// castFromZoneRequiresPayLife reports whether the permission authorizing
-// playerID to cast the face of cardID from sourceZone replaces the spell's mana
-// cost with paying life equal to its mana value ("If you cast a spell this way,
-// pay life equal to its mana value rather than pay its mana cost.", Bolas's
-// Citadel, Gwenom, Remorseless).
-func castFromZoneRequiresPayLife(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	effect, ok := matchingCastSpellsFromZoneEffect(g, playerID, cardID, sourceZone, face)
-	return ok && effect.PayLifeEqualToManaValue
+	return matches
 }
 
 // cardMatchesSourceEntryChosenSubtype reports whether faceDef shares the creature
@@ -2022,9 +2029,8 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			if !ok {
 				continue
 			}
-			if hasAdventureExilePermission(g, playerID, cardID) || cardIsPlottedInExile(g, playerID, cardID) || cardIsForetoldInExile(g, playerID, cardID) || slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
-				return canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, face) ||
-					canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, zone.Exile, face)
+			if slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+				return exileCastAuthorized(g, playerID, cardID, face)
 			}) {
 				zones = append(zones, zone.Exile)
 				break

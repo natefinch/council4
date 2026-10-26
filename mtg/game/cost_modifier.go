@@ -633,9 +633,19 @@ const (
 	// AppliesToNextSpellOnly limits the grant to the single next matching spell
 	// its caster casts and is then consumed (the Archway one-shot); when false
 	// the grant is a static that applies to every matching spell for its
-	// duration (Inspiring Statuary). The grant only affects cost payment, which
-	// the payment planner reads before costs are paid; it is never snapshotted
-	// onto the spell. Added last so existing kinds keep their wire values.
+	// duration (Inspiring Statuary). A cost keyword grant only affects cost
+	// payment, which the payment planner reads before costs are paid; it is
+	// never snapshotted onto the spell.
+	//
+	// GrantedKeyword Cascade gives each matching spell one cascade instance as
+	// it becomes cast ("Sliver spells you cast have cascade.", The First Sliver;
+	// "Commander spells you cast have cascade.", Flamekin Herald). It is counted
+	// once, onto the spell-cast event (Event.CascadeInstances), and cannot be
+	// next-spell-only. CardSelection.MatchCommander requires the spell's card to
+	// be a commander, and a non-None CastFromZone requires the spell to have been
+	// cast from that zone ("Instant and sorcery spells you cast from your hand
+	// have cascade.", Quandrix, the Proof). Added last so existing kinds keep
+	// their wire values.
 	RuleEffectGrantSpellKeyword
 	// RuleEffectAscend is the permanent ascend static ability (CR 702.131b): "Any
 	// time you control ten or more permanents and you don't have the city's
@@ -699,6 +709,17 @@ const (
 	// one cast of each other permanent type during the controller's turn.
 	// PermissionKey names a shared allowance on the source's current object.
 	RuleEffectPlayFromGraveyardPerPermanentType
+	// RuleEffectCascadeLandOption is the "as you cascade" land option (CR
+	// 702.85b): "As you cascade, you may put a land card from among the exiled
+	// cards onto the battlefield tapped." (Averna, the Chaos Bloom). Each active
+	// instance lets the effect's Controller, and only that player, put up to one
+	// land card exiled by their current cascade onto the battlefield tapped after
+	// the last card is exiled and before deciding whether to cast the hit (or,
+	// with no hit, before the exiled cards go to the bottom). Putting a land onto
+	// the battlefield is not playing it (CR 305.4). It is a marker rule effect
+	// carrying no payload beyond its Controller. Added last so existing kinds
+	// keep their wire values.
+	RuleEffectCascadeLandOption
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -773,7 +794,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectControlOpponentSearches,
 		RuleEffectExileOpponentSearchFinds,
 		RuleEffectLegendRuleDoesNotApply,
-		RuleEffectPlayFromGraveyardPerPermanentType:
+		RuleEffectPlayFromGraveyardPerPermanentType,
+		RuleEffectCascadeLandOption:
 		return true
 	default:
 		return false
@@ -909,14 +931,16 @@ type RuleEffect struct {
 	// kind.
 	AffectToOwner bool
 
-	// SpendAnyMana, on a RuleEffectPlayFromZone permission, lets the affected
-	// player spend mana of any type to cast the permitted card ("mana of any
-	// type can be spent to cast it.", Court of Locthwain, Court of the Grim
-	// Captain). The colored and colorless requirements of the cast card's mana
-	// cost stay the same size but become payable with mana of any color, so the
-	// rules layer casts it under an alternative cost whose symbols are all
-	// generic. It is false for every other kind.
-	SpendAnyMana bool
+	// SpendAnyMana, on a play/cast-from-zone permission, is the spending
+	// permission the affected player may use to cast a card that permission
+	// allows (CR 118.14, 609.4b): ManaSpendAsAnyType for "mana of any type can be
+	// spent to cast it." (Court of Locthwain) and ManaSpendAsAnyColor for "you may
+	// spend mana as though it were mana of any color to cast it." (Evelyn, the
+	// Covetous). It changes which mana may pay the chosen total cost, including
+	// alternative, additional and kicker mana costs, without changing that cost
+	// or replacing any alternative cost. It is ManaSpendNormal for every other
+	// kind.
+	SpendAnyMana ManaSpendPermission
 
 	// ExiledLinkKey, on a RuleEffectCastLinkedExileForFree permission, names the
 	// source-keyed linked-exile set whose cards the affected player may cast for

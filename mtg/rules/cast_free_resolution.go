@@ -21,7 +21,7 @@ func (*Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card
 		return nil
 	}
 	var options []freeCastOption
-	for _, face := range card.Def.LegalCastFaces() {
+	for _, face := range freeCastFaces(playerID, card, fromZone) {
 		spellDef := cardFaceOrDefault(card, face)
 		if !freeCastFaceAvailable(g, playerID, card, spellDef, selection, maxManaValue) {
 			continue
@@ -45,6 +45,20 @@ func (*Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card
 		}
 	}
 	return options
+}
+
+// freeCastFaces lists the faces a resolving effect may let playerID cast
+// without paying its mana cost. A fuse card cast from its caster's own hand may
+// be cast fused even without paying its mana cost (CR 702.102a; Wear // Tear
+// ruling 2013-04-15), and the fused spell's combined mana value is what any
+// mana value limit sees (CR 709.4d). From any other zone only the halves are
+// offered.
+func freeCastFaces(playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type) []game.FaceIndex {
+	faces := card.Def.LegalCastFaces()
+	if canFuseFromZone(playerID, card, fromZone) {
+		faces = append(faces, game.FaceFused)
+	}
+	return faces
 }
 
 func freeCastFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
@@ -140,6 +154,14 @@ func freeCastOptionLegal(g *game.Game, playerID game.PlayerID, spellDef *game.Ca
 }
 
 func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.chooseAndCastFreeSpellFromSourceMay(g, sourcePlayer, controllerID, cardID, fromZone, selection, maxManaValue, exileOnResolution, false, agents, log)
+}
+
+// chooseAndCastFreeSpellFromSourceMay offers controllerID the legal ways to cast
+// cardID without paying its mana cost. When mayDecline is set the cast is
+// optional ("you may cast"), so the same choice also offers declining, and
+// declining casts nothing; it is only offered when a legal cast exists.
+func (e *Engine) chooseAndCastFreeSpellFromSourceMay(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], exileOnResolution, mayDecline bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) || castFromZoneProhibited(g, controllerID, fromZone) {
 		return false
 	}
@@ -172,6 +194,13 @@ func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *ga
 			Targets: append([]game.Target(nil), options[i].cast.Targets...),
 		}
 	}
+	if mayDecline {
+		choiceOptions = append(choiceOptions, game.ChoiceOption{
+			Index: len(options),
+			Label: "Don't cast " + cardChoiceLabel(g, cardID),
+			Card:  cardChoiceInfo(g, cardID),
+		})
+	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           controllerID,
@@ -182,6 +211,9 @@ func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *ga
 		DefaultSelection: firstChoiceIndices(1),
 		Private:          fromZone == zone.Hand || fromZone == zone.Library,
 	}, log)
+	if mayDecline && len(selected) == 1 && selected[0] == len(options) {
+		return false
+	}
 	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(options) {
 		return false
 	}
@@ -197,7 +229,9 @@ func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *ga
 
 func freeCastOptionLabel(spellDef *game.CardDef, cast action.CastSpellAction) string {
 	label := spellDef.Name
-	if len(cast.ChosenModes) > 0 {
+	if cast.Face == game.FaceFused {
+		label += " (fused)"
+	} else if len(cast.ChosenModes) > 0 {
 		label += fmt.Sprintf(" modes %v", cast.ChosenModes)
 	}
 	if cast.KickerCount > 1 {
@@ -398,6 +432,5 @@ func (e *Engine) castFreeOptionWithCopy(g *game.Game, sourcePlayer *game.Player,
 	}, targetEvents)
 	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	e.resolveCascadeForCast(g, obj, spellDef, agents, log)
 	return true
 }

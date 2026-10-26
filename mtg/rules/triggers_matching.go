@@ -134,6 +134,11 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 		subjectController = event.Player
 	case pattern.Subject == game.TriggerSubjectDamageSource && event.Kind == game.EventDamageDealt:
 		subjectController = event.Controller
+	case event.EnteredPermanent != nil && triggerSubjectObjectID(event, pattern.Subject) == event.PermanentID:
+		// CR 110.2: "entered under your control" names the player who controlled
+		// the permanent as it entered, not its current controller, whichever
+		// subject role selects the entered permanent.
+		subjectController = event.EnteredPermanent.Controller
 	case pattern.Subject != game.TriggerSubjectDefault || !eventCapturesSubjectController(event.Kind):
 		if permanent, ok := triggerSubjectPermanent(g, pattern.Subject, event); ok {
 			subjectController = effectiveController(g, permanent)
@@ -686,13 +691,20 @@ func triggerSelectionMatches(g *game.Game, viewer game.PlayerID, event game.Even
 		}
 	}
 	controller := event.Controller
-	if resolved, ok := resolvePermanentOrLastKnown(g, objectID); ok && resolved.permanent != nil {
+	var snapshot *game.ObjectSnapshot
+	if objectID == event.PermanentID && event.EnteredPermanent != nil {
+		// An entry event's subject is matched as it entered (CR 603.10), even
+		// after it changes control or characteristics or leaves.
+		snapshot = event.EnteredPermanent
+		controller = snapshot.Controller
+	} else if resolved, ok := resolvePermanentOrLastKnown(g, objectID); ok && resolved.permanent != nil {
 		controller = effectiveController(g, resolved.permanent)
 	}
 	subject := selectionSubject{
 		kind:           subjectEventPermanent,
 		g:              g,
 		event:          subjectEvent,
+		snapshot:       snapshot,
 		controller:     controller,
 		viewer:         viewer,
 		sourceObjectID: sourceObjectID,
@@ -869,6 +881,9 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 		return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||
 			(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID)
 	}
+	if enteredObjectID, ok := enteredBattlefieldObjectIdentity(source, subject, event); ok {
+		return enteredObjectID == source.ObjectID
+	}
 	if subject == game.TriggerSubjectPermanent {
 		return (source.ObjectID != 0 && event.PermanentID == source.ObjectID) ||
 			(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
@@ -878,6 +893,21 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 		(source.ObjectID != 0 && subjectID == source.ObjectID) ||
 		(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID) ||
 		(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
+}
+
+// enteredBattlefieldObjectIdentity returns the battlefield object an entry
+// event put onto the battlefield when both it and the source have object
+// identities. A card that leaves and reenters becomes a new object (CR 400.7),
+// so an entry of its earlier incarnation is "another" permanent's entry and not
+// this source's, even though both share one card instance (CR 201.5).
+func enteredBattlefieldObjectIdentity(source *game.Permanent, subject game.TriggerSubjectObject, event game.Event) (id.ID, bool) {
+	if event.Kind != game.EventPermanentEnteredBattlefield || source.ObjectID == 0 || event.PermanentID == 0 {
+		return 0, false
+	}
+	if subject != game.TriggerSubjectDefault && subject != game.TriggerSubjectPermanent {
+		return 0, false
+	}
+	return event.PermanentID, true
 }
 
 func triggerSourceAttachedPermanentMatches(g *game.Game, source *game.Permanent, event game.Event) bool {

@@ -318,38 +318,55 @@ func commitSimultaneousCardPermanentEntries(g *game.Game, entries []preparedCard
 		addRetainedCounters(entries[i].permanent, entries[i].retained)
 		g.Battlefield = append(g.Battlefield, entries[i].permanent)
 	}
+	events := make([]game.Event, len(entries))
+	for i := range entries {
+		events[i] = simultaneousCardPermanentEntryEvent(&entries[i])
+	}
 	for i := range entries {
 		entry := &entries[i]
 		permanent := entry.permanent
 		if lore := permanent.Counters.Get(counter.Lore) - entry.retained.Get(counter.Lore); lore > 0 {
 			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, entry.retained.Get(counter.Lore), lore)
 		}
-		event := game.Event{
-			SourceID:                  entry.card.ID,
-			Controller:                entry.controller,
-			Player:                    entry.card.Owner,
-			CardID:                    entry.card.ID,
-			Face:                      permanent.Face,
-			KickerPaid:                entry.options.KickerPaid,
-			Bargained:                 entry.options.Bargained,
-			OffspringPaid:             entry.options.OffspringPaid,
-			EnterEvoked:               entry.options.Evoked,
-			EnterDashed:               entry.options.Dashed,
-			EnterWasCast:              entry.options.WasCast,
-			EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
-			EnterCastController:       entry.options.CastController,
-			EnterHasCastController:    entry.options.HasCastController,
-			EnterCastFromZone:         entry.options.CastFromZone,
-			EnterXValue:               permanent.CastXValue,
-			PermanentID:               permanent.ObjectID,
-			FromZone:                  entry.fromZone,
-			ToZone:                    zone.Battlefield,
-			SimultaneousID:            entry.options.SimultaneousID,
-			EnterPutByAbilitySource:   entry.options.PutByAbilitySource,
-		}
-		event = emitZoneChangeEvent(g, event)
+		event := emitZoneChangeEvent(g, events[i])
 		event.Kind = game.EventPermanentEnteredBattlefield
-		emitEvent(g, event)
+		emitEnteredBattlefieldEvent(g, event, enteredBattlefieldEvents(events[i+1:]))
+	}
+}
+
+func enteredBattlefieldEvents(events []game.Event) []game.Event {
+	entered := make([]game.Event, len(events))
+	for i, event := range events {
+		event.Kind = game.EventPermanentEnteredBattlefield
+		entered[i] = event
+	}
+	return entered
+}
+
+func simultaneousCardPermanentEntryEvent(entry *preparedCardPermanentEntry) game.Event {
+	permanent := entry.permanent
+	return game.Event{
+		SourceID:                  entry.card.ID,
+		Controller:                entry.controller,
+		Player:                    entry.card.Owner,
+		CardID:                    entry.card.ID,
+		Face:                      permanent.Face,
+		KickerPaid:                entry.options.KickerPaid,
+		Bargained:                 entry.options.Bargained,
+		OffspringPaid:             entry.options.OffspringPaid,
+		EnterEvoked:               entry.options.Evoked,
+		EnterDashed:               entry.options.Dashed,
+		EnterWasCast:              entry.options.WasCast,
+		EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
+		EnterCastController:       entry.options.CastController,
+		EnterHasCastController:    entry.options.HasCastController,
+		EnterCastFromZone:         entry.options.CastFromZone,
+		EnterXValue:               permanent.CastXValue,
+		PermanentID:               permanent.ObjectID,
+		FromZone:                  entry.fromZone,
+		ToZone:                    zone.Battlefield,
+		SimultaneousID:            entry.options.SimultaneousID,
+		EnterPutByAbilitySource:   entry.options.PutByAbilitySource,
 	}
 }
 
@@ -917,6 +934,86 @@ func moveCardBetweenZonesWithEvent(g *game.Game, event game.Event, options zoneM
 	moved := moveCardBetweenZonesAfterReplacement(g, event.Player, card.ID, event.FromZone,
 		replacement, event, options, event.SimultaneousID)
 	return replacement.destination, moved
+}
+
+// simultaneousCardMove is one card of a simultaneous move out of a player zone,
+// identified by its exact zone incarnation.
+type simultaneousCardMove struct {
+	card     game.ZoneCardSnapshot
+	fromZone zone.Type
+}
+
+// moveCardsBetweenZonesSimultaneously moves several cards, possibly owned by
+// different players, to their owners' toZone as one event (CR 603.2c).
+// Every card's replacements and its owner's choices, including the commander
+// option (CR 903.9b), are determined against the pre-move state, owners in APNAP
+// order (CR 101.4, 400.6, 616.1); only then do the cards move together, in the
+// given order (which fixes their relative library-bottom placement). A card that
+// has left its source incarnation is skipped. Replacement shuffles wait until the
+// whole batch has moved so they cannot disturb its other members.
+func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardMove, toZone zone.Type, bottom bool, simultaneousID id.ID) bool {
+	type preparedMove struct {
+		move        simultaneousCardMove
+		owner       game.PlayerID
+		event       game.Event
+		replacement zoneChangeReplacementResult
+	}
+	available := func(move simultaneousCardMove) (*game.CardInstance, bool) {
+		card, ok := g.GetCardInstance(move.card.CardID)
+		if !ok || card.ZoneVersion != move.card.ZoneVersion {
+			return nil, false
+		}
+		from, ok := destinationZone(g, card.Owner, move.fromZone)
+		return card, ok && from.Contains(card.ID)
+	}
+	prepared := make([]opt.V[preparedMove], len(moves))
+	owners := triggerAPNAPPlayers(g)
+	for player := range game.NumPlayers {
+		if !slices.Contains(owners, game.PlayerID(player)) {
+			owners = append(owners, game.PlayerID(player))
+		}
+	}
+	for _, owner := range owners {
+		for index, move := range moves {
+			card, ok := available(move)
+			if !ok || card.Owner != owner {
+				continue
+			}
+			event := game.Event{
+				Kind: game.EventZoneChanged, Controller: owner, Player: owner, CardID: card.ID,
+				FromZone: move.fromZone, ToZone: toZone, SimultaneousID: simultaneousID,
+			}
+			replacement := replacementZoneChange(g, event)
+			replacement.destination = commanderReplacementDestination(g, card.ID, replacement.destination)
+			prepared[index] = opt.Val(preparedMove{move: move, owner: owner, event: event, replacement: replacement})
+		}
+	}
+	moved := false
+	shuffle := make(map[game.PlayerID]bool)
+	for _, entry := range prepared {
+		if !entry.Exists {
+			continue
+		}
+		prep := entry.Val
+		if _, ok := available(prep.move); !ok {
+			continue
+		}
+		replacement := prep.replacement
+		replacement.shuffleIntoLibrary = false
+		if moveCardBetweenZonesAfterReplacement(g, prep.owner, prep.move.card.CardID, prep.move.fromZone,
+			replacement, prep.event, zoneMoveOptions{bottom: bottom}, simultaneousID) {
+			moved = true
+			if prep.replacement.shuffleIntoLibrary && replacement.destination == zone.Library {
+				shuffle[prep.owner] = true
+			}
+		}
+	}
+	for player := range game.NumPlayers {
+		if shuffle[game.PlayerID(player)] {
+			g.Players[player].Library.Shuffle(g.RNG)
+		}
+	}
+	return moved
 }
 
 func moveCardBetweenZonesAfterReplacement(

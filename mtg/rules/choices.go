@@ -28,19 +28,22 @@ func cardChoiceInfo(g *game.Game, cardID id.ID) opt.V[game.ChoiceCardInfo] {
 	})
 }
 
-// permanentChoiceInfo builds the public ChoiceCardInfo for a permanent.
+// permanentChoiceInfo builds the public ChoiceCardInfo for a permanent from its
+// current effective characteristics: name, types, colors and mana value after
+// continuous effects. A face-down permanent shows only its face-down
+// characteristics, never the card underneath (CR 708.2).
 func permanentChoiceInfo(g *game.Game, permanent *game.Permanent) opt.V[game.ChoiceCardInfo] {
-	def, ok := permanentCardDef(g, permanent)
-	if !ok {
+	if _, ok := permanentCardDef(g, permanent); !ok {
 		return opt.V[game.ChoiceCardInfo]{}
 	}
+	values := effectivePermanentValues(g, permanent)
 	manaValue, _ := effectivePermanentManaValue(g, permanent)
 	return opt.Val(game.ChoiceCardInfo{
 		CardID:    permanent.CardInstanceID,
-		Name:      permanentEffectiveName(g, permanent),
-		Types:     append([]types.Card(nil), def.Types...),
+		Name:      values.name,
+		Types:     slices.Clone(values.types),
 		ManaValue: manaValue,
-		Colors:    append([]color.Color(nil), def.Colors...),
+		Colors:    slices.Clone(values.colors),
 	})
 }
 
@@ -169,7 +172,7 @@ func fallbackChoice(request game.ChoiceRequest) []int {
 		return selected
 	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return defaultDividedAllocation(request.MaxChoices, len(request.Options))
-	case game.ChoiceManaCombination:
+	case game.ChoiceManaCombination, game.ChoiceCombatDamageDivision:
 		return defaultManaCombination(request.MaxChoices, len(request.Options))
 	default:
 		return nil
@@ -199,7 +202,7 @@ func choiceSelectionValid(request game.ChoiceRequest, selected []int) bool {
 		return orderSelectionValid(request, selected)
 	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return damageAllocationSelectionValid(request, selected)
-	case game.ChoiceManaCombination:
+	case game.ChoiceManaCombination, game.ChoiceCombatDamageDivision:
 		return manaCombinationSelectionValid(request, selected)
 	default:
 		seen := make(map[int]bool, len(selected))
@@ -233,11 +236,12 @@ func damageAllocationSelectionValid(request game.ChoiceRequest, selected []int) 
 	return true
 }
 
-// manaCombinationSelectionValid accepts a mana-combination split expressed as a
-// multiset of option indices: the total count must equal the requested amount
-// (MinChoices == MaxChoices) and every index must name a valid color option.
-// Unlike divided damage and counters, an option may receive zero, so no per-
-// option minimum is enforced — a color simply goes unproduced when unchosen.
+// manaCombinationSelectionValid accepts a mana-combination split (or a combat
+// damage division) expressed as a multiset of option indices: the total count
+// must equal the requested amount (MinChoices == MaxChoices) and every index
+// must name a valid option. Unlike divided damage and counters, an option may
+// receive zero, so no per-option minimum is enforced — a color simply goes
+// unproduced, or a creature is assigned no combat damage, when unchosen.
 func manaCombinationSelectionValid(request game.ChoiceRequest, selected []int) bool {
 	for _, index := range selected {
 		if !choiceOptionExists(request, index) {

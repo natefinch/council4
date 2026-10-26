@@ -376,7 +376,7 @@ func isZeroGameRuleEffect(v game.RuleEffect) bool {
 		!(v.CastFace.Exists) &&
 		!(v.ExpiresFor != 0) &&
 		!(v.AffectToOwner) &&
-		!(v.SpendAnyMana) &&
+		!(v.SpendAnyMana != 0) &&
 		!(v.ExiledLinkKey != "") &&
 		!(v.AdditionalLandPlays != 0) &&
 		!(v.DrawLimitPerTurn != 0) &&
@@ -787,7 +787,8 @@ func isZeroGameReplacementEffect(v game.ReplacementEffect) bool {
 		!(v.AffectedObjectID != 0) &&
 		!(v.AffectedObjectMustBeCreature) &&
 		!(v.AffectedCardID != 0) &&
-		!(v.FromSourceAbility)
+		!(v.FromSourceAbility) &&
+		!(v.CreatedByResolution)
 }
 
 // isZeroGameTriggerPattern reports whether every field of a game.TriggerPattern holds its zero value.
@@ -7011,22 +7012,26 @@ func (r Renderer) renderGameImpulseExile(ctx *renderCtx, v game.ImpulseExile) (s
 		ctx.need(importGame)
 		fields = append(fields, "Duration: "+lit5+",")
 	}
-	if v.SpendAnyMana {
-		lit7 := strconv.FormatBool(bool(v.SpendAnyMana))
+	if v.SpendAnyMana != 0 {
+		lit7, err8 := enumLiteral(gameManaSpendPermissionLiterals, "game.ManaSpendPermission", v.SpendAnyMana)
+		if err8 != nil {
+			return "", fmt.Errorf("game.ImpulseExile.SpendAnyMana: %w", err8)
+		}
+		ctx.need(importGame)
 		fields = append(fields, "SpendAnyMana: "+lit7+",")
 	}
 	if v.Cast {
-		lit8 := strconv.FormatBool(bool(v.Cast))
-		fields = append(fields, "Cast: "+lit8+",")
+		lit9 := strconv.FormatBool(bool(v.Cast))
+		fields = append(fields, "Cast: "+lit9+",")
 	}
 	if v.WithoutPayingManaCost {
-		lit9 := strconv.FormatBool(bool(v.WithoutPayingManaCost))
-		fields = append(fields, "WithoutPayingManaCost: "+lit9+",")
+		lit10 := strconv.FormatBool(bool(v.WithoutPayingManaCost))
+		fields = append(fields, "WithoutPayingManaCost: "+lit10+",")
 	}
 	if v.PublishLinked != "" {
-		lit10 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
+		lit11 := "game.LinkedKey(" + strconv.Quote(string(v.PublishLinked)) + ")"
 		ctx.need(importGame)
-		fields = append(fields, "PublishLinked: "+lit10+",")
+		fields = append(fields, "PublishLinked: "+lit11+",")
 	}
 	return structLit("game.ImpulseExile", fields), nil
 }
@@ -7046,13 +7051,17 @@ func (r Renderer) renderGameImpulsePlayGrant(ctx *renderCtx, v game.ImpulsePlayG
 		lit3 := strconv.FormatBool(bool(v.Cast))
 		fields = append(fields, "Cast: "+lit3+",")
 	}
-	if v.SpendAnyMana {
-		lit4 := strconv.FormatBool(bool(v.SpendAnyMana))
+	if v.SpendAnyMana != 0 {
+		lit4, err5 := enumLiteral(gameManaSpendPermissionLiterals, "game.ManaSpendPermission", v.SpendAnyMana)
+		if err5 != nil {
+			return "", fmt.Errorf("game.ImpulsePlayGrant.SpendAnyMana: %w", err5)
+		}
+		ctx.need(importGame)
 		fields = append(fields, "SpendAnyMana: "+lit4+",")
 	}
 	if v.WithoutPayingManaCost {
-		lit5 := strconv.FormatBool(bool(v.WithoutPayingManaCost))
-		fields = append(fields, "WithoutPayingManaCost: "+lit5+",")
+		lit6 := strconv.FormatBool(bool(v.WithoutPayingManaCost))
+		fields = append(fields, "WithoutPayingManaCost: "+lit6+",")
 	}
 	return structLit("game.ImpulsePlayGrant", fields), nil
 }
@@ -10377,6 +10386,10 @@ func (r Renderer) renderGameReplacementEffect(ctx *renderCtx, v game.Replacement
 		lit220 := strconv.FormatBool(bool(v.FromSourceAbility))
 		fields = append(fields, "FromSourceAbility: "+lit220+",")
 	}
+	if v.CreatedByResolution {
+		lit221 := strconv.FormatBool(bool(v.CreatedByResolution))
+		fields = append(fields, "CreatedByResolution: "+lit221+",")
+	}
 	return structLit("game.ReplacementEffect", fields), nil
 }
 
@@ -11170,257 +11183,261 @@ func (r Renderer) renderGameRuleEffect(ctx *renderCtx, v game.RuleEffect) (strin
 		lit69 := strconv.FormatBool(bool(v.AffectToOwner))
 		fields = append(fields, "AffectToOwner: "+lit69+",")
 	}
-	if v.SpendAnyMana {
-		lit70 := strconv.FormatBool(bool(v.SpendAnyMana))
+	if v.SpendAnyMana != 0 {
+		lit70, err71 := enumLiteral(gameManaSpendPermissionLiterals, "game.ManaSpendPermission", v.SpendAnyMana)
+		if err71 != nil {
+			return "", fmt.Errorf("game.RuleEffect.SpendAnyMana: %w", err71)
+		}
+		ctx.need(importGame)
 		fields = append(fields, "SpendAnyMana: "+lit70+",")
 	}
 	if v.ExiledLinkKey != "" {
-		lit71 := "game.LinkedKey(" + strconv.Quote(string(v.ExiledLinkKey)) + ")"
+		lit72 := "game.LinkedKey(" + strconv.Quote(string(v.ExiledLinkKey)) + ")"
 		ctx.need(importGame)
-		fields = append(fields, "ExiledLinkKey: "+lit71+",")
+		fields = append(fields, "ExiledLinkKey: "+lit72+",")
 	}
 	if v.AdditionalLandPlays != 0 {
-		lit72 := strconv.FormatInt(int64(v.AdditionalLandPlays), 10)
-		fields = append(fields, "AdditionalLandPlays: "+lit72+",")
+		lit73 := strconv.FormatInt(int64(v.AdditionalLandPlays), 10)
+		fields = append(fields, "AdditionalLandPlays: "+lit73+",")
 	}
 	if v.DrawLimitPerTurn != 0 {
-		lit73 := strconv.FormatInt(int64(v.DrawLimitPerTurn), 10)
-		fields = append(fields, "DrawLimitPerTurn: "+lit73+",")
+		lit74 := strconv.FormatInt(int64(v.DrawLimitPerTurn), 10)
+		fields = append(fields, "DrawLimitPerTurn: "+lit74+",")
 	}
 	if v.CastLimitPerTurn != 0 {
-		lit74 := strconv.FormatInt(int64(v.CastLimitPerTurn), 10)
-		fields = append(fields, "CastLimitPerTurn: "+lit74+",")
+		lit75 := strconv.FormatInt(int64(v.CastLimitPerTurn), 10)
+		fields = append(fields, "CastLimitPerTurn: "+lit75+",")
 	}
 	if v.RestrictedDuringControllerTurn {
-		lit75 := strconv.FormatBool(bool(v.RestrictedDuringControllerTurn))
-		fields = append(fields, "RestrictedDuringControllerTurn: "+lit75+",")
+		lit76 := strconv.FormatBool(bool(v.RestrictedDuringControllerTurn))
+		fields = append(fields, "RestrictedDuringControllerTurn: "+lit76+",")
 	}
 	if v.ExemptManaAbilities {
-		lit76 := strconv.FormatBool(bool(v.ExemptManaAbilities))
-		fields = append(fields, "ExemptManaAbilities: "+lit76+",")
+		lit77 := strconv.FormatBool(bool(v.ExemptManaAbilities))
+		fields = append(fields, "ExemptManaAbilities: "+lit77+",")
 	}
 	if v.AppliesToNextSpellOnly {
-		lit77 := strconv.FormatBool(bool(v.AppliesToNextSpellOnly))
-		fields = append(fields, "AppliesToNextSpellOnly: "+lit77+",")
+		lit78 := strconv.FormatBool(bool(v.AppliesToNextSpellOnly))
+		fields = append(fields, "AppliesToNextSpellOnly: "+lit78+",")
 	}
 	if v.TopCardOnly {
-		lit78 := strconv.FormatBool(bool(v.TopCardOnly))
-		fields = append(fields, "TopCardOnly: "+lit78+",")
+		lit79 := strconv.FormatBool(bool(v.TopCardOnly))
+		fields = append(fields, "TopCardOnly: "+lit79+",")
 	}
 	if len(v.CantCastFromZones) > 0 {
-		var items80 []string
-		for _, item81 := range v.CantCastFromZones {
-			lit82, err83 := enumLiteral(zoneTypeLiterals, "zone.Type", item81)
-			if err83 != nil {
-				return "", fmt.Errorf("game.RuleEffect.CantCastFromZones[]: %w", err83)
+		var items81 []string
+		for _, item82 := range v.CantCastFromZones {
+			lit83, err84 := enumLiteral(zoneTypeLiterals, "zone.Type", item82)
+			if err84 != nil {
+				return "", fmt.Errorf("game.RuleEffect.CantCastFromZones[]: %w", err84)
 			}
 			ctx.need(importZone)
-			items80 = append(items80, lit82)
+			items81 = append(items81, lit83)
 		}
-		lit79 := compactNamedSliceLit("", "zone.Type", items80)
-		fields = append(fields, "CantCastFromZones: "+lit79+",")
+		lit80 := compactNamedSliceLit("", "zone.Type", items81)
+		fields = append(fields, "CantCastFromZones: "+lit80+",")
 	}
 	if len(v.SpellSubtypes) > 0 {
-		var items85 []string
-		for _, item86 := range v.SpellSubtypes {
-			lit87, err88 := enumLiteral(typesSubLiterals, "types.Sub", item86)
-			if err88 != nil {
-				return "", fmt.Errorf("game.RuleEffect.SpellSubtypes[]: %w", err88)
+		var items86 []string
+		for _, item87 := range v.SpellSubtypes {
+			lit88, err89 := enumLiteral(typesSubLiterals, "types.Sub", item87)
+			if err89 != nil {
+				return "", fmt.Errorf("game.RuleEffect.SpellSubtypes[]: %w", err89)
 			}
 			ctx.need(importTypes)
-			items85 = append(items85, lit87)
+			items86 = append(items86, lit88)
 		}
-		lit84 := compactNamedSliceLit("", "types.Sub", items85)
-		fields = append(fields, "SpellSubtypes: "+lit84+",")
+		lit85 := compactNamedSliceLit("", "types.Sub", items86)
+		fields = append(fields, "SpellSubtypes: "+lit85+",")
 	}
 	if len(v.EnterFromZones) > 0 {
-		var items90 []string
-		for _, item91 := range v.EnterFromZones {
-			lit92, err93 := enumLiteral(zoneTypeLiterals, "zone.Type", item91)
-			if err93 != nil {
-				return "", fmt.Errorf("game.RuleEffect.EnterFromZones[]: %w", err93)
+		var items91 []string
+		for _, item92 := range v.EnterFromZones {
+			lit93, err94 := enumLiteral(zoneTypeLiterals, "zone.Type", item92)
+			if err94 != nil {
+				return "", fmt.Errorf("game.RuleEffect.EnterFromZones[]: %w", err94)
 			}
 			ctx.need(importZone)
-			items90 = append(items90, lit92)
+			items91 = append(items91, lit93)
 		}
-		lit89 := compactNamedSliceLit("", "zone.Type", items90)
-		fields = append(fields, "EnterFromZones: "+lit89+",")
+		lit90 := compactNamedSliceLit("", "zone.Type", items91)
+		fields = append(fields, "EnterFromZones: "+lit90+",")
 	}
 	if v.EnterExcludeLandCards {
-		lit94 := strconv.FormatBool(bool(v.EnterExcludeLandCards))
-		fields = append(fields, "EnterExcludeLandCards: "+lit94+",")
+		lit95 := strconv.FormatBool(bool(v.EnterExcludeLandCards))
+		fields = append(fields, "EnterExcludeLandCards: "+lit95+",")
 	}
 	if v.SpellColorless {
-		lit95 := strconv.FormatBool(bool(v.SpellColorless))
-		fields = append(fields, "SpellColorless: "+lit95+",")
+		lit96 := strconv.FormatBool(bool(v.SpellColorless))
+		fields = append(fields, "SpellColorless: "+lit96+",")
 	}
 	if v.SpellChosenSubtypeFrom != "" {
-		lit96, err97 := openStringLiteral(gameChoiceKeyLiterals, "game.ChoiceKey", v.SpellChosenSubtypeFrom)
-		if err97 != nil {
-			return "", fmt.Errorf("game.RuleEffect.SpellChosenSubtypeFrom: %w", err97)
+		lit97, err98 := openStringLiteral(gameChoiceKeyLiterals, "game.ChoiceKey", v.SpellChosenSubtypeFrom)
+		if err98 != nil {
+			return "", fmt.Errorf("game.RuleEffect.SpellChosenSubtypeFrom: %w", err98)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "SpellChosenSubtypeFrom: "+lit96+",")
+		fields = append(fields, "SpellChosenSubtypeFrom: "+lit97+",")
 	}
 	if v.PayLifeEqualToManaValue {
-		lit98 := strconv.FormatBool(bool(v.PayLifeEqualToManaValue))
-		fields = append(fields, "PayLifeEqualToManaValue: "+lit98+",")
+		lit99 := strconv.FormatBool(bool(v.PayLifeEqualToManaValue))
+		fields = append(fields, "PayLifeEqualToManaValue: "+lit99+",")
 	}
 	if !isZeroGameSelection(v.AffectedSelection) {
-		lit99, err100 := r.renderGameSelection(ctx, v.AffectedSelection)
-		if err100 != nil {
-			return "", fmt.Errorf("game.RuleEffect.AffectedSelection: %w", err100)
+		lit100, err101 := r.renderGameSelection(ctx, v.AffectedSelection)
+		if err101 != nil {
+			return "", fmt.Errorf("game.RuleEffect.AffectedSelection: %w", err101)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "AffectedSelection: "+lit99+",")
+		fields = append(fields, "AffectedSelection: "+lit100+",")
 	}
 	if !isZeroGameSelection(v.BlockedSelection) {
-		lit101, err102 := r.renderGameSelection(ctx, v.BlockedSelection)
-		if err102 != nil {
-			return "", fmt.Errorf("game.RuleEffect.BlockedSelection: %w", err102)
+		lit102, err103 := r.renderGameSelection(ctx, v.BlockedSelection)
+		if err103 != nil {
+			return "", fmt.Errorf("game.RuleEffect.BlockedSelection: %w", err103)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "BlockedSelection: "+lit101+",")
+		fields = append(fields, "BlockedSelection: "+lit102+",")
 	}
 	if v.BlockedSource {
-		lit103 := strconv.FormatBool(bool(v.BlockedSource))
-		fields = append(fields, "BlockedSource: "+lit103+",")
+		lit104 := strconv.FormatBool(bool(v.BlockedSource))
+		fields = append(fields, "BlockedSource: "+lit104+",")
 	}
 	if !isZeroGameSelection(v.AttackDefenderControlsSelection) {
-		lit104, err105 := r.renderGameSelection(ctx, v.AttackDefenderControlsSelection)
-		if err105 != nil {
-			return "", fmt.Errorf("game.RuleEffect.AttackDefenderControlsSelection: %w", err105)
+		lit105, err106 := r.renderGameSelection(ctx, v.AttackDefenderControlsSelection)
+		if err106 != nil {
+			return "", fmt.Errorf("game.RuleEffect.AttackDefenderControlsSelection: %w", err106)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "AttackDefenderControlsSelection: "+lit104+",")
+		fields = append(fields, "AttackDefenderControlsSelection: "+lit105+",")
 	}
 	if v.AttackDefenderIsMonarch {
-		lit106 := strconv.FormatBool(bool(v.AttackDefenderIsMonarch))
-		fields = append(fields, "AttackDefenderIsMonarch: "+lit106+",")
+		lit107 := strconv.FormatBool(bool(v.AttackDefenderIsMonarch))
+		fields = append(fields, "AttackDefenderIsMonarch: "+lit107+",")
 	}
 	if v.UntapUnlessControllerIsMonarch {
-		lit107 := strconv.FormatBool(bool(v.UntapUnlessControllerIsMonarch))
-		fields = append(fields, "UntapUnlessControllerIsMonarch: "+lit107+",")
+		lit108 := strconv.FormatBool(bool(v.UntapUnlessControllerIsMonarch))
+		fields = append(fields, "UntapUnlessControllerIsMonarch: "+lit108+",")
 	}
 	if v.AdditionalBlockCount != 0 {
-		lit108 := strconv.FormatInt(int64(v.AdditionalBlockCount), 10)
-		fields = append(fields, "AdditionalBlockCount: "+lit108+",")
+		lit109 := strconv.FormatInt(int64(v.AdditionalBlockCount), 10)
+		fields = append(fields, "AdditionalBlockCount: "+lit109+",")
 	}
 	if v.AffectedPlayerRef != (game.PlayerReference{}) {
-		lit109, err110 := r.renderPlayerReference(v.AffectedPlayerRef)
-		if err110 != nil {
-			return "", fmt.Errorf("game.RuleEffect.AffectedPlayerRef: %w", err110)
+		lit110, err111 := r.renderPlayerReference(v.AffectedPlayerRef)
+		if err111 != nil {
+			return "", fmt.Errorf("game.RuleEffect.AffectedPlayerRef: %w", err111)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "AffectedPlayerRef: "+lit109+",")
+		fields = append(fields, "AffectedPlayerRef: "+lit110+",")
 	}
 	if v.AffectedSpecificPlayer.Exists {
-		lit112, err113 := enumLiteral(gamePlayerIDLiterals, "game.PlayerID", v.AffectedSpecificPlayer.Val)
-		if err113 != nil {
-			return "", fmt.Errorf("game.RuleEffect.AffectedSpecificPlayer: %w", err113)
+		lit113, err114 := enumLiteral(gamePlayerIDLiterals, "game.PlayerID", v.AffectedSpecificPlayer.Val)
+		if err114 != nil {
+			return "", fmt.Errorf("game.RuleEffect.AffectedSpecificPlayer: %w", err114)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit111 := "opt.Val(" + lit112 + ")"
-		fields = append(fields, "AffectedSpecificPlayer: "+lit111+",")
+		lit112 := "opt.Val(" + lit113 + ")"
+		fields = append(fields, "AffectedSpecificPlayer: "+lit112+",")
 	}
 	if v.RequiredAttackTargetRef != (game.PlayerReference{}) {
-		lit114, err115 := r.renderPlayerReference(v.RequiredAttackTargetRef)
-		if err115 != nil {
-			return "", fmt.Errorf("game.RuleEffect.RequiredAttackTargetRef: %w", err115)
+		lit115, err116 := r.renderPlayerReference(v.RequiredAttackTargetRef)
+		if err116 != nil {
+			return "", fmt.Errorf("game.RuleEffect.RequiredAttackTargetRef: %w", err116)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "RequiredAttackTargetRef: "+lit114+",")
+		fields = append(fields, "RequiredAttackTargetRef: "+lit115+",")
 	}
 	if v.RequiredAttackTarget.Exists {
-		lit117, err118 := enumLiteral(gamePlayerIDLiterals, "game.PlayerID", v.RequiredAttackTarget.Val)
-		if err118 != nil {
-			return "", fmt.Errorf("game.RuleEffect.RequiredAttackTarget: %w", err118)
+		lit118, err119 := enumLiteral(gamePlayerIDLiterals, "game.PlayerID", v.RequiredAttackTarget.Val)
+		if err119 != nil {
+			return "", fmt.Errorf("game.RuleEffect.RequiredAttackTarget: %w", err119)
 		}
 		ctx.need(importGame)
 		ctx.need(importOpt)
-		lit116 := "opt.Val(" + lit117 + ")"
-		fields = append(fields, "RequiredAttackTarget: "+lit116+",")
+		lit117 := "opt.Val(" + lit118 + ")"
+		fields = append(fields, "RequiredAttackTarget: "+lit117+",")
 	}
 	if v.AttackTaxIncludesPlaneswalkers {
-		lit119 := strconv.FormatBool(bool(v.AttackTaxIncludesPlaneswalkers))
-		fields = append(fields, "AttackTaxIncludesPlaneswalkers: "+lit119+",")
+		lit120 := strconv.FormatBool(bool(v.AttackTaxIncludesPlaneswalkers))
+		fields = append(fields, "AttackTaxIncludesPlaneswalkers: "+lit120+",")
 	}
 	if v.AttackTaxScaledAmount != 0 {
-		lit120, err121 := enumLiteral(gameAggregateKindLiterals, "game.AggregateKind", v.AttackTaxScaledAmount)
-		if err121 != nil {
-			return "", fmt.Errorf("game.RuleEffect.AttackTaxScaledAmount: %w", err121)
+		lit121, err122 := enumLiteral(gameAggregateKindLiterals, "game.AggregateKind", v.AttackTaxScaledAmount)
+		if err122 != nil {
+			return "", fmt.Errorf("game.RuleEffect.AttackTaxScaledAmount: %w", err122)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "AttackTaxScaledAmount: "+lit120+",")
+		fields = append(fields, "AttackTaxScaledAmount: "+lit121+",")
 	}
 	if v.ManaProductionMultiplier != 0 {
-		lit122 := strconv.FormatInt(int64(v.ManaProductionMultiplier), 10)
-		fields = append(fields, "ManaProductionMultiplier: "+lit122+",")
+		lit123 := strconv.FormatInt(int64(v.ManaProductionMultiplier), 10)
+		fields = append(fields, "ManaProductionMultiplier: "+lit123+",")
 	}
 	if v.ExileCounterFilter.Exists {
-		lit124, err125 := enumLiteral(counterKindLiterals, "counter.Kind", v.ExileCounterFilter.Val)
-		if err125 != nil {
-			return "", fmt.Errorf("game.RuleEffect.ExileCounterFilter: %w", err125)
+		lit125, err126 := enumLiteral(counterKindLiterals, "counter.Kind", v.ExileCounterFilter.Val)
+		if err126 != nil {
+			return "", fmt.Errorf("game.RuleEffect.ExileCounterFilter: %w", err126)
 		}
 		ctx.need(importCounter)
 		ctx.need(importOpt)
-		lit123 := "opt.Val(" + lit124 + ")"
-		fields = append(fields, "ExileCounterFilter: "+lit123+",")
+		lit124 := "opt.Val(" + lit125 + ")"
+		fields = append(fields, "ExileCounterFilter: "+lit124+",")
 	}
 	if v.WithoutPayingManaCost {
-		lit126 := strconv.FormatBool(bool(v.WithoutPayingManaCost))
-		fields = append(fields, "WithoutPayingManaCost: "+lit126+",")
+		lit127 := strconv.FormatBool(bool(v.WithoutPayingManaCost))
+		fields = append(fields, "WithoutPayingManaCost: "+lit127+",")
 	}
 	if v.ExileCounterExiledByController {
-		lit127 := strconv.FormatBool(bool(v.ExileCounterExiledByController))
-		fields = append(fields, "ExileCounterExiledByController: "+lit127+",")
+		lit128 := strconv.FormatBool(bool(v.ExileCounterExiledByController))
+		fields = append(fields, "ExileCounterExiledByController: "+lit128+",")
 	}
 	if v.OwnedCardsOnly {
-		lit128 := strconv.FormatBool(bool(v.OwnedCardsOnly))
-		fields = append(fields, "OwnedCardsOnly: "+lit128+",")
+		lit129 := strconv.FormatBool(bool(v.OwnedCardsOnly))
+		fields = append(fields, "OwnedCardsOnly: "+lit129+",")
 	}
 	if v.OncePerTurn {
-		lit129 := strconv.FormatBool(bool(v.OncePerTurn))
-		fields = append(fields, "OncePerTurn: "+lit129+",")
+		lit130 := strconv.FormatBool(bool(v.OncePerTurn))
+		fields = append(fields, "OncePerTurn: "+lit130+",")
 	}
 	if !isZeroGameGraveyardCastGrantCost(v.GraveyardCastCost) {
-		lit130, err131 := r.renderGameGraveyardCastGrantCost(ctx, v.GraveyardCastCost)
-		if err131 != nil {
-			return "", fmt.Errorf("game.RuleEffect.GraveyardCastCost: %w", err131)
+		lit131, err132 := r.renderGameGraveyardCastGrantCost(ctx, v.GraveyardCastCost)
+		if err132 != nil {
+			return "", fmt.Errorf("game.RuleEffect.GraveyardCastCost: %w", err132)
 		}
 		ctx.need(importGame)
-		fields = append(fields, "GraveyardCastCost: "+lit130+",")
+		fields = append(fields, "GraveyardCastCost: "+lit131+",")
 	}
 	if v.TriggerCauseCastOrCopyInstantSorcery {
-		lit132 := strconv.FormatBool(bool(v.TriggerCauseCastOrCopyInstantSorcery))
-		fields = append(fields, "TriggerCauseCastOrCopyInstantSorcery: "+lit132+",")
+		lit133 := strconv.FormatBool(bool(v.TriggerCauseCastOrCopyInstantSorcery))
+		fields = append(fields, "TriggerCauseCastOrCopyInstantSorcery: "+lit133+",")
 	}
 	if len(v.TriggerCausePermanentFilters) > 0 {
-		var items134 []string
-		for _, item135 := range v.TriggerCausePermanentFilters {
-			lit136, err137 := r.renderGameCharacteristicFilter(ctx, item135)
-			if err137 != nil {
-				return "", fmt.Errorf("game.RuleEffect.TriggerCausePermanentFilters[]: %w", err137)
+		var items135 []string
+		for _, item136 := range v.TriggerCausePermanentFilters {
+			lit137, err138 := r.renderGameCharacteristicFilter(ctx, item136)
+			if err138 != nil {
+				return "", fmt.Errorf("game.RuleEffect.TriggerCausePermanentFilters[]: %w", err138)
 			}
 			ctx.need(importGame)
-			items134 = append(items134, lit136+",")
+			items135 = append(items135, lit137+",")
 		}
-		lit133 := namedSliceLit("", "game.CharacteristicFilter", items134)
-		fields = append(fields, "TriggerCausePermanentFilters: "+lit133+",")
+		lit134 := namedSliceLit("", "game.CharacteristicFilter", items135)
+		fields = append(fields, "TriggerCausePermanentFilters: "+lit134+",")
 	}
 	if v.TriggerCausePermanentEnters {
-		lit138 := strconv.FormatBool(bool(v.TriggerCausePermanentEnters))
-		fields = append(fields, "TriggerCausePermanentEnters: "+lit138+",")
+		lit139 := strconv.FormatBool(bool(v.TriggerCausePermanentEnters))
+		fields = append(fields, "TriggerCausePermanentEnters: "+lit139+",")
 	}
 	if v.TriggerCausePermanentLeaves {
-		lit139 := strconv.FormatBool(bool(v.TriggerCausePermanentLeaves))
-		fields = append(fields, "TriggerCausePermanentLeaves: "+lit139+",")
+		lit140 := strconv.FormatBool(bool(v.TriggerCausePermanentLeaves))
+		fields = append(fields, "TriggerCausePermanentLeaves: "+lit140+",")
 	}
 	if v.PermissionKey != "" {
-		lit140 := "game.LinkedKey(" + strconv.Quote(string(v.PermissionKey)) + ")"
+		lit141 := "game.LinkedKey(" + strconv.Quote(string(v.PermissionKey)) + ")"
 		ctx.need(importGame)
-		fields = append(fields, "PermissionKey: "+lit140+",")
+		fields = append(fields, "PermissionKey: "+lit141+",")
 	}
 	return structLit("game.RuleEffect", fields), nil
 }

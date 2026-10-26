@@ -358,6 +358,12 @@ type Game struct {
 	// it). See choice_context.go.
 	choiceCtx any
 
+	// pendingEntryEvents is a transient overlay of battlefield-entry events
+	// that have happened but are not yet in Events. It is set only while the
+	// rules layer snapshots an entering permanent and is never deep copied
+	// (Clone starts without it). See pending_entry_events.go.
+	pendingEntryEvents []Event
+
 	attachedDeathDepartures map[attachedDeathDepartureKey]attachedDeathDeparture
 	triggerOriginUses       map[TriggerOrigin]int
 	triggerOriginTurn       int

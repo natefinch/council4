@@ -25,6 +25,7 @@ func TestCascadeExilesUntilLowerManaNonlandAndCastsIt(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
 		t.Fatal("cascade spell cast failed")
 	}
+	resolveCascadeTrigger(t, engine, g, nil)
 
 	obj, ok := g.Stack.Peek()
 	if !ok || obj.SourceID != hitID {
@@ -53,6 +54,7 @@ func TestCascadeBottomsCardsWhenNoEligibleCardExists(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
 		t.Fatal("cascade spell cast failed")
 	}
+	resolveCascadeTrigger(t, engine, g, nil)
 
 	if g.Stack.Size() != 1 {
 		t.Fatalf("stack size = %d, want only original cascade spell", g.Stack.Size())
@@ -77,6 +79,8 @@ func TestCascadeChainsFromCascadedSpell(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cascadeID, nil, 0, nil)) {
 		t.Fatal("cascade spell cast failed")
 	}
+	resolveCascadeTrigger(t, engine, g, nil)
+	resolveCascadeTrigger(t, engine, g, nil)
 
 	top, ok := g.Stack.Peek()
 	if !ok || top.SourceID != secondHitID {
@@ -144,6 +148,7 @@ func TestCascadeDoesNotTriggerForNonCastStackCopy(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(cardID, nil, 0, nil)) {
 		t.Fatal("physical cascade cast failed")
 	}
+	resolveCascadeTrigger(t, engine, g, nil)
 	original := g.Stack.Objects()[0]
 	if g.Stack.Size() != 2 || !stackContainsSource(g, firstHit) {
 		t.Fatal("original cast did not cascade once")
@@ -158,12 +163,40 @@ func TestCascadeDoesNotTriggerForNonCastStackCopy(t *testing.T) {
 		!g.Players[game.Player1].Library.Contains(remaining) {
 		t.Fatal("copying the stack spell was incorrectly treated as another cascade cast")
 	}
+	if engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("copying the stack spell put a cascade trigger on the stack")
+	}
 	for !g.Stack.IsEmpty() {
 		engine.resolveTopOfStack(g, &TurnLog{})
+		if engine.putTriggeredAbilitiesOnStack(g) {
+			t.Fatal("resolving a non-cast copy put a triggered ability on the stack")
+		}
 	}
 	if spellCastEventCount(g) != before || !g.Players[game.Player1].Library.Contains(remaining) {
 		t.Fatal("resolving a non-cast copy triggered cascade")
 	}
+}
+
+// resolveCascadeTrigger puts waiting triggers on the stack, checks that the top
+// object is a cascade trigger and resolves it with agents.
+func resolveCascadeTrigger(t *testing.T, engine *Engine, g *game.Game, agents *[game.NumPlayers]PlayerAgent) {
+	t.Helper()
+	var chosen [game.NumPlayers]PlayerAgent
+	if agents != nil {
+		chosen = *agents
+	}
+	log := &TurnLog{}
+	engine.putTriggeredAbilitiesOnStackWithChoices(g, chosen, log)
+	top, ok := g.Stack.Peek()
+	if !ok || !isCascadeTrigger(top) {
+		t.Fatalf("stack top = %+v, want a cascade trigger", top)
+	}
+	engine.resolveTopOfStackWithChoices(g, chosen, log)
+}
+
+func isCascadeTrigger(obj *game.StackObject) bool {
+	return obj != nil && obj.Kind == game.StackTriggeredAbility && obj.InlineTrigger != nil &&
+		game.BodyHasKeyword(obj.InlineTrigger, game.Cascade)
 }
 
 func cascadeSpell(manaValue int) *game.CardDef {

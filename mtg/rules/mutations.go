@@ -37,7 +37,7 @@ func emitSpellCastEvents(g *game.Game, obj *game.StackObject, castEvent game.Eve
 func emitSpellCastEventsWithTargets(g *game.Game, obj *game.StackObject, castEvent game.Event, targets []game.Event) {
 	consumeNextSpellCantBeCounteredEffects(g, obj)
 	consumeNextSpellAsThoughFlashEffects(g, obj)
-	consumeNextSpellKeywordGrantEffects(g, obj)
+	consumeNextSpellKeywordGrantEffects(g, obj, castEvent.FromZone)
 	emitCastTargetEvents(g, obj, targets)
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID
@@ -57,6 +57,11 @@ func consumeNextSpellAsThoughFlashEffects(g *game.Game, obj *game.StackObject) {
 	spellDef, ok := spellDefForStackObject(g, obj)
 	if !ok {
 		return
+	}
+	if obj.FaceDown {
+		// The permission was matched against the face-down spell's
+		// characteristics when it was cast (CR 708.4), so consume it the same way.
+		spellDef = faceDownSpellDef()
 	}
 	kept := g.RuleEffects[:0]
 	for i := range g.RuleEffects {

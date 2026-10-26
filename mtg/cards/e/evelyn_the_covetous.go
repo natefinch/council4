@@ -60,7 +60,7 @@ func newEvelynTheCovetous() *game.CardDef {
 							ExileCounterFilter:             opt.Val(counter.Collection),
 							ExileCounterExiledByController: true,
 							OncePerTurn:                    true,
-							SpendAnyMana:                   true,
+							SpendAnyMana:                   game.ManaSpendAsAnyColor,
 						},
 					},
 				},

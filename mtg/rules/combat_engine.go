@@ -96,7 +96,7 @@ func (ce combatEngine) resolveCombatAfterAttackers(g *game.Game, agents [game.Nu
 		if combatHasFirstStrikeDamage(g) {
 			g.Turn.Step = game.StepFirstStrikeDamage
 			log.addStep(game.StepFirstStrikeDamage)
-			ce.resolveDamagePass(g, firstStrikeCombatDamage, log)
+			ce.resolveDamagePassWithAgents(g, firstStrikeCombatDamage, agents, log)
 			ce.e.applyStateBasedActionsWithLog(g, log)
 			if g.IsGameOver() {
 				return
@@ -109,7 +109,7 @@ func (ce combatEngine) resolveCombatAfterAttackers(g *game.Game, agents [game.Nu
 
 		g.Turn.Step = game.StepCombatDamage
 		log.addStep(game.StepCombatDamage)
-		ce.resolveDamagePass(g, normalCombatDamage, log)
+		ce.resolveDamagePassWithAgents(g, normalCombatDamage, agents, log)
 		ce.e.applyStateBasedActionsWithLog(g, log)
 		if g.IsGameOver() {
 			return
@@ -815,20 +815,35 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 }
 
 // resolveDamagePass assigns and marks combat damage for all attackers in the
-// given damage pass (first-strike or normal), implementing the combat damage step
-// (CR 510). Combat damage is assigned per CR 510.1 (unblocked creatures to the
-// player/planeswalker/battle they attack, blocked creatures to their blockers)
-// and then all of it is dealt simultaneously (CR 510.2).
-func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *TurnLog) {
+// given damage pass without player agents, so every damage-assignment decision
+// takes its deterministic default.
+func (ce combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *TurnLog) {
+	ce.resolveDamagePassWithAgents(g, pass, [game.NumPlayers]PlayerAgent{}, log)
+}
+
+// resolveDamagePassWithAgents assigns and marks combat damage for all attackers
+// in the given damage pass (first-strike or normal), implementing the combat
+// damage step (CR 510). Combat damage is assigned per CR 510.1 (unblocked
+// creatures to the player/planeswalker/battle they attack, blocked creatures to
+// their blockers), attacking creatures' assignments before blocking creatures',
+// and then all of it is dealt simultaneously (CR 510.2). A division a player
+// chooses (CR 702.22j-k) is asked of that player's agent.
+func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDamagePass, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	if g.Combat == nil {
 		return
 	}
 	if pass == firstStrikeCombatDamage {
 		captureFirstStrikeEligibility(g)
 	}
-	var assignments []damageEvent
+	chooser := combatDamageChooser{engine: ce.e, agents: agents, log: log}
+	type attackerDamage struct {
+		attacker *game.Permanent
+		blockers []*game.Permanent
+		blocked  bool
+		events   []damageEvent
+	}
+	var attackerDamages []attackerDamage
 	blockerMap := blockersByAttacker(g)
-	blockerDamage := blockerCombatDamageAssignments(g, blockerMap, pass)
 	for _, declaration := range g.Combat.Attackers {
 		attacker, ok := permanentByObjectID(g, declaration.Attacker)
 		if !ok || attacker.PhasedOut {
@@ -836,7 +851,12 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 		}
 		blockers := blockerMap[declaration.Attacker]
 		if attackerWasBlocked(g, declaration.Attacker) {
-			assignments = append(assignments, blockedCombatDamageEvents(g, attacker, blockers, declaration.Target, pass, blockerDamageForAttacker(blockerDamage, declaration.Attacker))...)
+			attackerDamages = append(attackerDamages, attackerDamage{
+				attacker: attacker,
+				blockers: blockers,
+				blocked:  true,
+				events:   blockedAttackerCombatDamageEvents(g, chooser, attacker, blockers, declaration.Target, pass),
+			})
 			continue
 		}
 		if !isLegalAttackTarget(g, effectiveController(g, attacker), declaration.Target) {
@@ -844,8 +864,16 @@ func (combatEngine) resolveDamagePass(g *game.Game, pass combatDamagePass, log *
 		}
 		if dealsCombatDamageInPass(g, attacker, pass) {
 			if event, ok := attackTargetCombatDamageEvent(g, attacker, declaration.Target, combatDamageAssignedBy(g, attacker)); ok {
-				assignments = append(assignments, event)
+				attackerDamages = append(attackerDamages, attackerDamage{attacker: attacker, events: []damageEvent{event}})
 			}
+		}
+	}
+	blockerDamage := blockerCombatDamageAssignments(g, chooser, blockerMap, pass)
+	var assignments []damageEvent
+	for _, damage := range attackerDamages {
+		assignments = append(assignments, damage.events...)
+		if damage.blocked {
+			assignments = append(assignments, blockerCombatDamageEvents(g, damage.attacker, damage.blockers, blockerDamageForAttacker(blockerDamage, damage.attacker.ObjectID))...)
 		}
 	}
 	if len(assignments) > 0 {

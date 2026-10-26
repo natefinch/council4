@@ -42,7 +42,7 @@ func TestImpulseExileCastFromEventPlayerLibraryGrantsCastOnlyAnyMana(t *testing.
 		Amount:       game.Fixed(1),
 		Duration:     game.DurationUntilEndOfTurn,
 		Cast:         true,
-		SpendAnyMana: true,
+		SpendAnyMana: game.ManaSpendAsAnyColor,
 	}, &TurnLog{})
 
 	if !g.Players[game.Player2].Exile.Contains(topID) {
@@ -57,7 +57,7 @@ func TestImpulseExileCastFromEventPlayerLibraryGrantsCastOnlyAnyMana(t *testing.
 	if canPlayLandFromZoneByRuleEffect(g, game.Player1, topID, zone.Exile) {
 		t.Fatal("cast-only impulse granted land-play permission, but should grant cast only")
 	}
-	if !castFromZoneAllowsAnyMana(g, game.Player1, topID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, topID, zone.Exile, game.FaceFront) != game.ManaSpendAsAnyColor {
 		t.Fatal("the cast-only permission did not honor the spend-any-color rider")
 	}
 }

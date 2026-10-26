@@ -1396,13 +1396,26 @@ func matchingZoneReplacementEffects(g *game.Game, event game.Event, applied map[
 	var matches []game.ReplacementEffect
 	for i := range g.ReplacementEffects {
 		replacement := &g.ReplacementEffects[i]
-		if applied[replacement.ID] || replacement.ReplaceToZone == zone.None || !replacementEffectMatchesEvent(g, replacement, event) {
+		if applied[replacement.ID] || replacement.ReplaceToZone == zone.None ||
+			zoneReplacementLeavesEventUnchanged(replacement, event) ||
+			!replacementEffectMatchesEvent(g, replacement, event) {
 			continue
 		}
 		matches = append(matches, *replacement)
 	}
 	matches = append(matches, matchingStaticSelfZoneReplacementEffects(g, event, applied)...)
 	return matches
+}
+
+// zoneReplacementLeavesEventUnchanged reports whether a resolution-created zone
+// replacement ("exile it instead of putting it anywhere else") would only
+// restate the event's existing destination. Such an effect has nothing to
+// replace: an effect that exiles the permanent succeeds in exiling it (Unearth
+// and Whip of Erebos rulings), so it is neither applied nor offered as a
+// CR 616.1 choice.
+func zoneReplacementLeavesEventUnchanged(replacement *game.ReplacementEffect, event game.Event) bool {
+	return replacement.CreatedByResolution && replacement.ReplaceToZone == event.ToZone &&
+		!replacement.ShuffleIntoLibrary && !replacement.RevealSource && !replacement.RedirectCounter.Exists
 }
 
 func matchingStaticSelfZoneReplacementEffects(g *game.Game, event game.Event, applied map[id.ID]bool) []game.ReplacementEffect {
@@ -2114,11 +2127,32 @@ func replacementLifeLossAmount(g *game.Game, playerID game.PlayerID, amount int)
 	return amount
 }
 
+// replacementSourceTied reports whether a replacement lasts only while its
+// source permanent is on the battlefield: a registered static declaration.
+// A replacement created by a resolving spell or ability lasts for its stated
+// duration even after its source leaves (CR 611.2a, CR 614.3).
+func replacementSourceTied(replacement *game.ReplacementEffect) bool {
+	return replacement.Duration == game.DurationPermanent && replacement.SourceObjectID != 0 &&
+		!replacement.CreatedByResolution
+}
+
 func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEffect) bool {
-	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
-		return true
+	if !replacementSourceTied(replacement) {
+		return replacementAffectedObjectStillExists(g, replacement)
 	}
 	_, ok := permanentByObjectID(g, replacement.SourceObjectID)
+	return ok
+}
+
+// replacementAffectedObjectStillExists reports whether a resolution-created
+// replacement bound to one permanent can still apply. Object identity never
+// recurs (CR 400.7), so once that permanent has left the battlefield the
+// replacement can never match again and is discarded.
+func replacementAffectedObjectStillExists(g *game.Game, replacement *game.ReplacementEffect) bool {
+	if !replacement.CreatedByResolution || replacement.AffectedObjectID == 0 {
+		return true
+	}
+	_, ok := permanentByObjectID(g, replacement.AffectedObjectID)
 	return ok
 }
 
@@ -2126,7 +2160,7 @@ func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect
 	if !replacementSourceStillApplies(g, replacement) {
 		return false
 	}
-	if replacement.Duration != game.DurationPermanent || replacement.SourceObjectID == 0 {
+	if !replacementSourceTied(replacement) {
 		return true
 	}
 	source, ok := permanentByObjectID(g, replacement.SourceObjectID)

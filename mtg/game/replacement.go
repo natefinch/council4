@@ -802,6 +802,13 @@ type ReplacementEffect struct {
 	// rather than an effect created by a resolving spell or ability. CR 305.7
 	// can erase the former; it does not end the latter's stated duration.
 	FromSourceAbility bool
+	// CreatedByResolution marks a replacement created by a resolving spell or
+	// ability (CreateReplacement). It lasts for its stated Duration even after
+	// its source leaves the battlefield (CR 611.2a, CR 614.3), unlike a
+	// registered static declaration. One bound to AffectedObjectID ends once
+	// that permanent has left the battlefield, since that object never recurs
+	// (CR 400.7). It is runtime state and is never set in a card definition.
+	CreatedByResolution bool
 }
 
 // EntryTypeChoiceKey is the ChoiceKey under which an entry-time creature-type

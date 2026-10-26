@@ -128,7 +128,7 @@ func grantSearchExilePlayPermission(g *game.Game, control searchControl, cardID 
 		CreatedTurn:    g.Turn.TurnNumber,
 		CastFromZone:   zone.Exile,
 		AffectedCardID: cardID,
-		SpendAnyMana:   true,
+		SpendAnyMana:   game.ManaSpendAsAnyColor,
 		ExpiresFor:     control.beneficiary,
 	})
 }

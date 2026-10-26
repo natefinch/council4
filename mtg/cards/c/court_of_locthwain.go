@@ -75,7 +75,7 @@ func newCourtOfLocthwain() *game.CardDef {
 									Player:        game.TargetPlayerReference(0),
 									Amount:        game.Fixed(1),
 									Duration:      game.DurationPermanent,
-									SpendAnyMana:  true,
+									SpendAnyMana:  game.ManaSpendAsAnyType,
 									PublishLinked: game.LinkedKey("court-of-locthwain-exile"),
 								},
 							},

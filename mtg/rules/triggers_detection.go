@@ -1539,7 +1539,7 @@ func castSpellSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbi
 			ordinaryTrigger: true,
 		})
 	}
-	return pending
+	return append(pending, cascadeCastTriggers(g, source, event)...)
 }
 
 func leftBattlefieldTriggerSource(g *game.Game, event game.Event) (*game.Permanent, bool) {

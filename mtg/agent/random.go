@@ -50,7 +50,7 @@ func (a RandomAgent) ChooseChoice(_ rules.PlayerObservation, request game.Choice
 		return a.randomPermutation(request)
 	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
 		return a.randomAllocation(request)
-	case game.ChoiceManaCombination:
+	case game.ChoiceManaCombination, game.ChoiceCombatDamageDivision:
 		return a.randomCombination(request)
 	default:
 		return a.randomSelection(request)
@@ -87,7 +87,8 @@ func (a RandomAgent) randomAllocation(request game.ChoiceRequest) []int {
 // randomCombination distributes MinChoices (== MaxChoices) units freely across
 // the options as a multiset of option indices, allowing any option to receive
 // zero. It backs ChoiceManaCombination, whose "add N mana in any combination of
-// <colors>" split places no per-color minimum.
+// <colors>" split places no per-color minimum, and ChoiceCombatDamageDivision,
+// where a recipient creature may be assigned no combat damage.
 func (a RandomAgent) randomCombination(request game.ChoiceRequest) []int {
 	indices := optionIndices(request)
 	total := request.MinChoices

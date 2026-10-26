@@ -630,6 +630,7 @@ var gameFaceIndexLiterals = map[game.FaceIndex]string{
 	game.FaceFront:     "game.FaceFront",
 	game.FaceBack:      "game.FaceBack",
 	game.FaceAlternate: "game.FaceAlternate",
+	game.FaceFused:     "game.FaceFused",
 }
 
 // gameGroupReferenceDomainLiterals maps each exported game.GroupReferenceDomain constant to the Go
@@ -785,6 +786,14 @@ var gameManaSpendConditionKindLiterals = map[game.ManaSpendConditionKind]string{
 	game.ManaSpendCastPlaneswalkerSpell:             "game.ManaSpendCastPlaneswalkerSpell",
 	game.ManaSpendCastOrActivateCreature:            "game.ManaSpendCastOrActivateCreature",
 	game.ManaSpendCastMonocoloredSpellOfChosenColor: "game.ManaSpendCastMonocoloredSpellOfChosenColor",
+}
+
+// gameManaSpendPermissionLiterals maps each exported game.ManaSpendPermission constant to the Go
+// expression that names it in generated card source.
+var gameManaSpendPermissionLiterals = map[game.ManaSpendPermission]string{
+	game.ManaSpendNormal:     "game.ManaSpendNormal",
+	game.ManaSpendAsAnyColor: "game.ManaSpendAsAnyColor",
+	game.ManaSpendAsAnyType:  "game.ManaSpendAsAnyType",
 }
 
 // gameManaSpendRestrictionKindLiterals maps each exported game.ManaSpendRestrictionKind constant to the Go
@@ -1006,6 +1015,7 @@ var gameRuleEffectKindLiterals = map[game.RuleEffectKind]string{
 	game.RuleEffectExileOpponentSearchFinds:                "game.RuleEffectExileOpponentSearchFinds",
 	game.RuleEffectLegendRuleDoesNotApply:                  "game.RuleEffectLegendRuleDoesNotApply",
 	game.RuleEffectPlayFromGraveyardPerPermanentType:       "game.RuleEffectPlayFromGraveyardPerPermanentType",
+	game.RuleEffectCascadeLandOption:                       "game.RuleEffectCascadeLandOption",
 }
 
 // gameSacrificeFallbackKindLiterals maps each exported game.SacrificeFallbackKind constant to the Go
@@ -1933,6 +1943,9 @@ func enumSpelling(v any) (string, bool) {
 		return name, ok
 	case game.ManaSpendConditionKind:
 		name, ok := gameManaSpendConditionKindLiterals[value]
+		return name, ok
+	case game.ManaSpendPermission:
+		name, ok := gameManaSpendPermissionLiterals[value]
 		return name, ok
 	case game.ManaSpendRestrictionKind:
 		name, ok := gameManaSpendRestrictionKindLiterals[value]

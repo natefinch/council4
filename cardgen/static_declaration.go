@@ -1406,7 +1406,7 @@ func appendStaticPlayerRuleDeclaration(body *game.StaticAbility, declaration com
 				ExileCounterExiledByController: exiledByController,
 				OwnedCardsOnly:                 ownedCardsOnly,
 				OncePerTurn:                    oncePerTurn,
-				SpendAnyMana:                   declaration.Player.ExilePlaySpendAnyColorMana,
+				SpendAnyMana:                   anyColorSpendPermission(declaration.Player.ExilePlaySpendAnyColorMana),
 			},
 		)
 		return true

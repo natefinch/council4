@@ -9,13 +9,24 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func emitEvent(g *game.Game, event game.Event) {
 	emitPreparedEvent(g, prepareEvent(g, event))
 }
 
+// emitEnteredBattlefieldEvent emits one battlefield-entry event of a
+// simultaneous batch. simultaneous holds the batch's later entry events, which
+// have already happened but are not yet recorded, so the entering permanent's
+// snapshot sees every simultaneous entry (CR 603.6a, 603.10).
+func emitEnteredBattlefieldEvent(g *game.Game, event game.Event, simultaneous []game.Event) {
+	captureEnteredPermanentSnapshot(g, &event, simultaneous)
+	emitEvent(g, event)
+}
+
 func prepareEvent(g *game.Game, event game.Event) game.Event {
+	captureEnteredPermanentSnapshot(g, &event, nil)
 	populateEventPermanentCharacteristics(g, &event)
 	if (event.Kind == game.EventLifeGained || event.Kind == game.EventLifeLost) && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, event.Kind, event.Player)
@@ -34,6 +45,9 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 	}
 	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
+	}
+	if event.Kind == game.EventSpellCast && !event.CascadeInstances.Exists {
+		event.CascadeInstances = opt.Val(spellCascadeInstancesAtCast(g, event))
 	}
 	if event.Kind == game.EventCardDiscarded && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = discardBatchOrdinalThisTurn(g, event.Player, event.SimultaneousID)
@@ -70,6 +84,10 @@ func populateEventPermanentCharacteristics(g *game.Game, event *game.Event) {
 	if event == nil || event.PermanentID == 0 || event.CardCharacteristicsKnown {
 		return
 	}
+	if snapshot := event.EnteredPermanent; snapshot != nil {
+		fillEventPermanentCharacteristics(event, snapshot.Types, snapshot.Supertypes, snapshot.Subtypes)
+		return
+	}
 	if permanent, ok := permanentByObjectID(g, event.PermanentID); ok {
 		values := effectivePermanentValues(g, permanent)
 		fillEventPermanentCharacteristics(event, values.types, values.supertypes, values.subtypes)
@@ -77,6 +95,58 @@ func populateEventPermanentCharacteristics(g *game.Game, event *game.Event) {
 	}
 	if snapshot, ok := lastKnownObject(g, event.PermanentID); ok {
 		fillEventPermanentCharacteristics(event, snapshot.Types, snapshot.Supertypes, snapshot.Subtypes)
+	}
+}
+
+// captureEnteredPermanentSnapshot records an entering permanent's controller
+// and characteristics as trigger conditions see them immediately after it
+// entered (CR 603.6a, 603.10). The game state immediately after the entry
+// includes the entry itself and any simultaneous entries, so they are visible to
+// current-turn history conditions while the characteristics are computed: a
+// Celebration permanent entering as the second nonland permanent sees itself.
+// It runs before battlefield triggers are captured, so live enter triggers and
+// later entry-history checks read the same values. The snapshot holds only
+// characteristics; counters, status and attachments remain live or last-known
+// reads.
+func captureEnteredPermanentSnapshot(g *game.Game, event *game.Event, simultaneous []game.Event) {
+	if event.Kind != game.EventPermanentEnteredBattlefield || event.EnteredPermanent != nil || event.PermanentID == 0 {
+		return
+	}
+	permanent, ok := permanentByObjectID(g, event.PermanentID)
+	if !ok {
+		return
+	}
+	pending := make([]game.Event, 0, len(g.PendingEntryEvents())+1+len(simultaneous))
+	pending = append(pending, g.PendingEntryEvents()...)
+	pending = append(pending, *event)
+	pending = append(pending, simultaneous...)
+	previous := g.SetPendingEntryEvents(pending)
+	values := effectivePermanentValues(g, permanent)
+	manaValue, manaValueOK := effectivePermanentManaValue(g, permanent)
+	controller := effectiveController(g, permanent)
+	g.SetPendingEntryEvents(previous)
+	event.EnteredPermanent = &game.ObjectSnapshot{
+		ObjectID:       permanent.ObjectID,
+		CardID:         permanent.CardInstanceID,
+		TokenName:      permanentTokenName(permanent),
+		TokenDef:       permanent.TokenDef,
+		Face:           permanent.Face,
+		FaceDown:       permanent.FaceDown,
+		FaceDownFace:   permanent.FaceDownFace,
+		FaceDownKind:   permanent.FaceDownKind,
+		Name:           values.name,
+		Owner:          permanent.Owner,
+		Controller:     controller,
+		FromZone:       zone.Battlefield,
+		Colors:         slices.Clone(values.colors),
+		Supertypes:     slices.Clone(values.supertypes),
+		Types:          slices.Clone(values.types),
+		Subtypes:       slices.Clone(values.subtypes),
+		Power:          optionalInt(values.power, values.powerOK),
+		Toughness:      optionalInt(values.toughness, values.toughnessOK),
+		ManaValue:      optionalInt(manaValue, manaValueOK),
+		Keywords:       effectiveKeywords(values),
+		ZoneOrderIndex: -1,
 	}
 }
 

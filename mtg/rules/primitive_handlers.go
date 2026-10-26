@@ -1897,6 +1897,7 @@ func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) eff
 	replacement.Controller = r.obj.Controller
 	replacement.SourceCardID, replacement.SourceObjectID = damageSourceIDs(r.game, r.obj)
 	replacement.CreatedTurn = r.game.Turn.TurnNumber
+	replacement.CreatedByResolution = true
 	if prim.Duration != game.DurationPermanent {
 		replacement.Duration = prim.Duration
 	}

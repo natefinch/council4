@@ -70,7 +70,7 @@ func TestCourtOfLocthwainCardDefUpkeepEndToEnd(t *testing.T) {
 	if !g.Players[game.Player2].Exile.Contains(topID) {
 		t.Fatal("upkeep did not exile the top card of the target opponent's library")
 	}
-	if !castFromZoneAllowsAnyMana(g, game.Player1, topID, zone.Exile, game.FaceFront) {
+	if castFromZoneManaSpendPermission(g, game.Player1, topID, zone.Exile, game.FaceFront) != game.ManaSpendAsAnyType {
 		t.Fatal("controller did not receive an any-mana play-from-exile permission for the exiled card")
 	}
 	refs := linkedObjects(g, linkedObjectSourceKey(g, obj, courtOfLocthwainLink))

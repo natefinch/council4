@@ -168,6 +168,7 @@ func TestBuybackRereviewCastCopyStormCascadeAndRiders(t *testing.T) {
 			}, false, independentBuybackAgent(t, independentChooseBuyback), &TurnLog{}) {
 			t.Fatal("otherwise equivalent physical free cast failed")
 		}
+		resolveCascadeTrigger(t, engine, control, nil)
 		controlObjects := control.Stack.Objects()
 		if len(controlObjects) != 4 || controlObjects[3].SourceID != hit ||
 			controlObjects[1].ManaSpentToCast != 3 || !controlObjects[1].BuybackPaid ||
@@ -180,6 +181,10 @@ func TestBuybackRereviewCastCopyStormCascadeAndRiders(t *testing.T) {
 	log := &TurnLog{}
 	engine.resolveAbilityContentWithChoices(g, obj, imprintCopyCastAbility(),
 		independentBuybackAgent(t, independentChooseBuyback), log)
+	if !g.Players[game.Player1].Library.Contains(hit) {
+		t.Fatal("cast card copy cascaded before its cascade trigger resolved")
+	}
+	resolveCascadeTrigger(t, engine, g, nil)
 	objects := g.Stack.Objects()
 	if len(objects) != 4 || !objects[1].Copy || !objects[1].BuybackPaid ||
 		!objects[2].Copy || !objects[2].BuybackPaid || objects[3].SourceID != hit ||

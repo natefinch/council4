@@ -94,11 +94,11 @@ const (
 	Saddle
 	Rebound
 	Retrace
-	// Banding (CR 702.22) is a static combat keyword. It is modeled as a
-	// recognized, grantable simple keyword so cards that have or grant banding
-	// are representable. Banding's combat damage-assignment-control nuance is not
-	// simulated by the deterministic combat engine (which has no per-player
-	// Appended at the end of the enum so existing keyword ordinals are unchanged.
+	// Banding (CR 702.22) is a static combat keyword, modeled as a recognized,
+	// grantable simple keyword. The combat engine applies its damage-assignment
+	// control (CR 702.22j-k); attacking bands (CR 702.22c-i) and "bands with
+	// other" are not yet modeled. Appended at the end of the enum so existing
+	// keyword ordinals are unchanged.
 	Banding
 	// Crew (CR 702.122) is the Vehicles activated keyword. It is modeled as a
 	// grantable keyword identity carried by CrewKeyword inside the activated
@@ -492,10 +492,9 @@ var (
 
 	// BandingStaticBody is the reusable StaticAbilityBody for banding (CR
 	// 702.22). It carries the Banding keyword so HasKeyword(Banding) reports
-	// true. Banding's combat damage-assignment-control rule is not simulated by
-	// the deterministic combat engine, so the keyword is inert in combat; it is
-	// modeled as a simple keyword purely so cards that have or grant banding are
-	// representable.
+	// true, which the combat engine reads to transfer combat damage division to
+	// the banding creature's controller (CR 702.22j-k). Attacking bands (CR
+	// 702.22c-i) are not yet modeled.
 	BandingStaticBody = simpleKeywordStaticBody("Banding", Banding)
 
 	// CompanionStaticBody is the reusable StaticAbilityBody for companion (CR
@@ -1671,8 +1670,13 @@ func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 // haste. Exile it at the beginning of the next end step or if it would leave the
 // battlefield. Unearth only as a sorcery." The ability returns the source card
 // to the battlefield under its controller, grants it haste while it remains
-// there, and schedules a delayed end-step trigger that exiles it.
+// there, schedules a delayed end-step trigger that exiles it, and binds a
+// leave-the-battlefield exile replacement (CR 614.1a) to that returned object.
+// Both exile clauses follow only the permanent this resolution returned
+// (CR 400.7): if the card already left the graveyard the ability does nothing,
+// and the replacement does not follow the card to a later incarnation.
 func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
+	returned := LinkedKey("unearth-returned")
 	return ActivatedAbility{
 		Text:           "Unearth " + manaCost.String(),
 		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
@@ -1688,15 +1692,32 @@ func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 						AffectedSource: true,
 						AddKeywords:    []Keyword{Haste},
 					}},
+					PublishLinked: returned,
 				},
+				LocalProducts: LocalProducts{Links: []LinkedKey{returned}},
 			},
 			{
 				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 					Timing: DelayedAtBeginningOfNextEndStep,
 					Content: Mode{Sequence: []Instruction{{
-						Primitive: MovePermanent{Object: SourceCardPermanentReference(), Destination: zone.Exile},
+						Primitive: MovePermanent{Object: CapturedObjectReference(), Destination: zone.Exile},
 					}}}.Ability(),
+					CapturedObject: opt.Val(LinkedObjectReference(string(returned))),
 				}},
+			},
+			{
+				Primitive: CreateReplacement{
+					Replacement: &ReplacementEffect{
+						Description:   "Unearth: exile it instead of putting it anywhere else",
+						Duration:      DurationPermanent,
+						MatchEvent:    EventZoneChanged,
+						MatchFromZone: true,
+						FromZone:      zone.Battlefield,
+						ReplaceToZone: zone.Exile,
+					},
+					Duration: DurationPermanent,
+					Object:   LinkedObjectReference(string(returned)),
+				},
 			},
 		}}.Ability(),
 		KeywordAbilities: []KeywordAbility{UnearthKeyword{Cost: append(cost.Mana(nil), manaCost...)}},
