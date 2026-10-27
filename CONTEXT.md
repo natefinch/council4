@@ -208,20 +208,14 @@ _Avoid_: Results, stats, output
 A lookup table (`cards.Registry`) mapping card names to `CardDef` values. Pure data, no behavior. Used by the decklist parser to resolve card names.
 _Avoid_: Card database, card store, card catalog
 
-**Card Generation (cardgen)**:
-Retained legacy tooling that turns Scryfall bulk data and Oracle text into
-executable `CardDef` Go source. Recognition produces conservative semantic IR;
-lowering assembles typed `game.*` values validated by `game.ValidateCardDef`;
-rendering emits deterministic Go. It emits no partial definitions. `mtg/game`
-owns typed data and validity; `mtg/rules` owns behavior; `cardgen` owns translation.
-Maintain focused correctness fixes and useful tests without bulk corpus
-regeneration or compiler-driven coverage expansion. Compiler refusal is not a
-global unsupported verdict for an independently authored implementation.
-See [ADR 0008](docs/adr/0008-typed-ir-lowering.md)
-for the preserved pipeline and [ADR 0012](docs/adr/0012-authored-go-card-implementations.md)
-for the superseding authoring decision. Checks follow the
-[repository validation policy](.github/copilot-instructions.md#verify-proportionally).
-_Avoid_: Card compiler (the package is tooling, not part of the runtime engine)
+**Legacy generated cards**:
+Committed Go definitions produced by the retired Oracle compiler. They remain
+ordinary runtime card data; the compiler, parser and source renderer have been
+removed. New implementations are authored Go using shared Engine operations.
+The registration-list tools in `cmd/gencardlist` and `cmd/genregistry` only index
+existing definitions, never translate Oracle text. Legacy rules-test definitions
+are frozen typed fixtures, not a second compiler. See
+[ADR 0012](docs/adr/0012-authored-go-card-implementations.md).
 
 ## Relationships
 

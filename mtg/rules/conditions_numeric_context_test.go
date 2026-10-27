@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -32,7 +32,7 @@ func TestCompiledNumericCurrentAndDepartedSubjects(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Numeric Resolution", Layout: "normal",
+			def := legacyCard(t, carddata.ScryfallCard{Name: "Numeric Resolution", Layout: "normal",
 				TypeLine: "Instant", OracleText: tt.text})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			target := addCreatureWithPowerToughness(g, game.Player2, tt.power, tt.toughness)
@@ -61,7 +61,7 @@ func TestCompiledNumericCurrentAndDepartedSubjects(t *testing.T) {
 
 func TestCompiledNumericTargetOccurrenceAndSourceIsolation(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Numeric Isolation", Layout: "normal", TypeLine: "Creature",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Numeric Isolation", Layout: "normal", TypeLine: "Creature",
 		Power: new("9"), Toughness: new("9"),
 		OracleText: "Whenever another creature enters, tap target creature. Put a +1/+1 counter on another target creature. You gain 1 life. If its toughness is 6 or greater, you gain 2 life."})
 	for _, toughness := range []int{4, 5, 6} {
@@ -100,7 +100,7 @@ func TestCompiledNumericGroupAndIndependentTiming(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Numeric Timing", Layout: "normal", TypeLine: "Instant",
+			def := legacyCard(t, carddata.ScryfallCard{Name: "Numeric Timing", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Tap target creature. " + tt.tail})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			target := addCreatureWithPowerToughness(g, game.Player2, 2, 5)
@@ -116,7 +116,7 @@ func TestCompiledNumericGroupAndIndependentTiming(t *testing.T) {
 
 func TestCompiledCounteredSpellNumericInformation(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Past Spell", Layout: "normal", TypeLine: "Instant",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Past Spell", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Counter target spell. You gain 1 life. If that spell's mana value was 3 or less, you gain 2 life."})
 	for _, value := range []int{0, 2, 3, 4} {
 		t.Run(fmt.Sprint(value), func(t *testing.T) {
@@ -159,7 +159,7 @@ func TestNumericConditionUnknownFailsClosedUnderNegation(t *testing.T) {
 
 func TestCompiledSplitskinNumericUnlessIsolation(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Splitskin Doll", Layout: "normal", TypeLine: "Artifact Creature",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Splitskin Doll", Layout: "normal", TypeLine: "Artifact Creature",
 		OracleText: "When this creature enters, draw a card. Then discard a card unless you control another creature with power 2 or less.",
 		Power:      new("2"), Toughness: new("1")})
 	for _, tt := range []struct {

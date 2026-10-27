@@ -59,7 +59,8 @@ func TestSimulationResultAggregatesOutcomes(t *testing.T) {
 }
 
 func TestSimulationResultWinsPlusDrawsCoverEveryGame(t *testing.T) {
-	result := Run(smokeConfig(12, 31415))
+	result := Run(smokeConfig(3, 31415))
+	requireCompletedGames(t, result)
 	wins := result.WinCounts()
 	total := result.DrawCount()
 	for _, n := range wins {

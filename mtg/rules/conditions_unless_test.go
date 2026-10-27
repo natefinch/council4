@@ -4,25 +4,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
 
-func compileUnlessCard(t *testing.T, card cardgen.ScryfallCard) *game.CardDef {
-	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&card)
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile %s: defs=%d diagnostics=%#v err=%v", card.Name, len(defs), diagnostics, err)
-	}
-	return defs[0]
-}
-
 func TestUnlessControllerSelectionResolution(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Unless Selection Test", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Draw a card. You lose 2 life unless you control a Villain.",
 	})
@@ -61,7 +52,7 @@ func TestUnlessControllerSelectionResolution(t *testing.T) {
 
 func TestUnlessGraveyardThresholdResolution(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Shoreline Looter", Layout: "normal", TypeLine: "Creature — Rat Rogue", ManaCost: "{1}{U}",
 		Power: new("1"), Toughness: new("1"),
 		OracleText: "This creature can't be blocked.\nThreshold — Whenever this creature deals combat damage to a player, draw a card. Then discard a card unless there are seven or more cards in your graveyard.",
@@ -97,7 +88,7 @@ func TestUnlessGraveyardThresholdResolution(t *testing.T) {
 
 func taintedIndulgenceDef(t *testing.T) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Tainted Indulgence", Layout: "normal", TypeLine: "Instant", ManaCost: "{U}{B}",
 		OracleText: "Draw two cards. Then discard a card unless there are five or more mana values among cards in your graveyard.",
 	})

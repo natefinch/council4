@@ -68,14 +68,25 @@ func writeValidDecklists(t *testing.T) []string {
 
 func TestRunDeckGameLoadsAndRunsRealDecklists(t *testing.T) {
 	paths := writeValidDecklists(t)
+	// End on the first land play: this tests CLI wiring, not a 99-card deck-out.
+	finisher := testBasicLand("Forest")
+	finisher.TriggeredAbilities = []game.TriggeredAbility{{
+		Trigger: game.TriggerCondition{Pattern: game.TriggerPattern{
+			Event: game.EventPermanentEnteredBattlefield, Source: game.TriggerSourceSelf,
+		}},
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.PlayerWinsGame{Player: game.ControllerReference()},
+		}}}.Ability(),
+	}}
+	registry := cards.NewRegistry([]*game.CardDef{testCommanderCard("Test Commander"), finisher})
 
 	var buf bytes.Buffer
-	if err := runDeckGame(&buf, paths, 2, 1, false, false, testDeckRegistry()); err != nil {
+	if err := runDeckGame(&buf, paths, 2, 1, false, false, registry); err != nil {
 		t.Fatalf("runDeckGame: %v", err)
 	}
 
 	out := buf.String()
-	for _, want := range []string{"Council4 deck game", "(under test)", "Players:", "Turns:"} {
+	for _, want := range []string{"Council4 deck game", "(under test)", "Players:", "Turns: 1", "Winner: Player 1"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output missing %q:\n%s", want, out)
 		}

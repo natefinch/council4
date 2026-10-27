@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -34,7 +34,7 @@ func TestGraveyardTriggerRefusesWrongSourceIdentity(t *testing.T) {
 }
 
 func TestBattlefieldAndGraveyardStepSourcesStayDistinct(t *testing.T) {
-	ordinary := compileUnlessCard(t, cardgen.ScryfallCard{
+	ordinary := legacyCard(t, carddata.ScryfallCard{
 		Name: "Ordinary Source", Layout: "normal", TypeLine: "Creature", Power: new("1"), Toughness: new("1"),
 		OracleText: "At the beginning of your upkeep, you gain 1 life.",
 	})

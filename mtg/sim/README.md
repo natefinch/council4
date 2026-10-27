@@ -22,6 +22,12 @@ concurrently (zero means `GOMAXPROCS`); each game's result is written to its own
 index, so `Run` returns the same slice for any worker count. A `NewAgents`
 factory must therefore be safe to call from multiple goroutines.
 
+Batch regression tests use small batches and eight-card smoke decks that reach
+actual deck-out wins, rather than budget stops. Replay scenarios use only the
+turns and choices needed for their interaction. The throughput benchmarks retain their
+original twelve-card workload so test-fixture changes do not alter the benchmark
+baseline.
+
 ## Usage
 
 ```go

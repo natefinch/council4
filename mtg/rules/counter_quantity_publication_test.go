@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -54,7 +54,7 @@ func TestCounterQuantityActualRemoval(t *testing.T) {
 
 func TestCompiledCounterRemovalSuccessIsNotScalarAvailability(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Removal Success", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: Remove a charge counter from target artifact. If you do, you gain 2 life.",
 	})
@@ -74,7 +74,7 @@ func TestCompiledCounterRemovalSuccessIsNotScalarAvailability(t *testing.T) {
 
 func TestCounterQuantityGroupAggregatesActual(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Aggregate", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: Remove two +1/+1 counters from each creature you control. You gain life equal to the number of counters removed this way.",
 	})
@@ -157,7 +157,7 @@ func TestCounterQuantitySkippedDeclinedAndUnavailable(t *testing.T) {
 
 func TestCompiledCounterQuantityIndependentAndRepeated(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Independent", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: Remove a charge counter from this artifact. You gain that much life. Remove two charge counters from this artifact. Draw that many cards.",
 	})
@@ -189,7 +189,7 @@ func TestCompiledCounterQuantityIndependentAndRepeated(t *testing.T) {
 
 func TestCompiledCounterQuantityNonzeroTargetSlot(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Target Quantity", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Tap target creature. Remove all +1/+1 counters from target creature. You gain that much life.",
 	})

@@ -3,13 +3,13 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 )
 
 func TestLimitedTriggerDeclaredOrigins(t *testing.T) {
-	native := compileUnlessCard(t, cardgen.ScryfallCard{
+	native := legacyCard(t, carddata.ScryfallCard{
 		Name: "Native Counted Trigger", Layout: "normal", TypeLine: "Creature",
 		Power: new("2"), Toughness: new("3"),
 		OracleText: "Whenever this creature becomes the target of a spell or ability, you gain 1 life. This ability triggers only twice each turn.",

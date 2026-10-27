@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -12,11 +12,11 @@ import (
 
 func compiledScopedResultContent(t *testing.T, text string) game.AbilityContent {
 	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Scoped Runtime Probe", Layout: "normal", TypeLine: "Sorcery", OracleText: text,
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 || !defs[0].SpellAbility.Exists {
-		t.Fatalf("compile = %v, %v", diagnostics, err)
+	if !defs[0].SpellAbility.Exists {
+		t.Fatal("fixture has no spell ability")
 	}
 	return defs[0].SpellAbility.Val
 }

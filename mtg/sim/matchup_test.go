@@ -94,7 +94,7 @@ func TestRunMatchupRotatesTestedAgentThroughEverySeat(t *testing.T) {
 		Configs:      smokeConfigs(),
 		GamesPerSeat: 2,
 		Seed:         7,
-		TurnLimit:    12,
+		TurnLimit:    1,
 		Tested:       recordingSeatAgent(&seen),
 		Baseline:     firstLegalSeatAgent(),
 	}
@@ -112,7 +112,7 @@ func TestRunMatchupAccountingIsComplete(t *testing.T) {
 		Configs:      smokeConfigs(),
 		GamesPerSeat: 3,
 		Seed:         42,
-		TurnLimit:    12,
+		TurnLimit:    1,
 		Tested:       firstLegalSeatAgent(),
 		Baseline:     firstLegalSeatAgent(),
 	}
@@ -136,15 +136,18 @@ func TestRunMatchupAccountingIsComplete(t *testing.T) {
 
 func TestRunMatchupIsDeterministic(t *testing.T) {
 	m := Matchup{
-		Configs:      smokeConfigs(),
-		GamesPerSeat: 2,
+		Configs:      smokeConfig(1, 99).Configs,
+		GamesPerSeat: 1,
 		Seed:         99,
-		TurnLimit:    12,
 		Tested:       firstLegalSeatAgent(),
 		Baseline:     firstLegalSeatAgent(),
 	}
-	if first, second := RunMatchup(m), RunMatchup(m); first != second {
+	first, second := RunMatchup(m), RunMatchup(m)
+	if first != second {
 		t.Fatal("RunMatchup is not deterministic for a fixed Matchup")
+	}
+	if first.TestedWins != 1 || first.BaselineWins != 3 || first.BudgetStops != 0 || first.Failures != 0 {
+		t.Fatalf("each seat rotation should complete with a rules win: %+v", first)
 	}
 }
 

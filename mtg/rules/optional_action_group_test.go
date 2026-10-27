@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -132,7 +132,7 @@ func TestOptionalDecisionAvailabilityAndInvalidation(t *testing.T) {
 }
 
 func TestCompiledGustcloakGroupUsesEventIncarnation(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Optional Combat Probe", Layout: "normal", TypeLine: "Creature",
 		OracleText: "Whenever this creature becomes blocked, you may untap it and remove it from combat.",
 	})

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -16,7 +16,7 @@ import (
 
 func TestCompiledNumericSourceDoesNotReadEventOrTarget(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Source Numeric", Layout: "normal", TypeLine: "Creature",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Source Numeric", Layout: "normal", TypeLine: "Creature",
 		Power: new("1"), Toughness: new("2"), OracleText: "Whenever another creature enters, tap target creature. This creature gets +1/+1 until end of turn. If this creature's toughness is 4 or greater, you gain 2 life."})
 	for _, extra := range []int{0, 1, 2} {
 		t.Run(strconv.Itoa(extra), func(t *testing.T) {

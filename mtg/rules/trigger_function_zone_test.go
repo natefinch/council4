@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -109,7 +109,7 @@ func TestCompiledRecurringGraveyardTriggers(t *testing.T) {
 }
 
 func TestGraveyardTriggerSnapshotSurvivesDepartureWithoutRebinding(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Snapshot Source", Layout: "normal", TypeLine: "Creature", Power: new("1"), Toughness: new("1"),
 		OracleText: "At the beginning of your upkeep, return this card from your graveyard to your hand. You gain 1 life.",
 	})

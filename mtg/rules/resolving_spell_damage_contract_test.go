@@ -3,18 +3,18 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestCompiledResolvingSpellRiderDamageAttribution(t *testing.T) {
-	for _, card := range []cardgen.ScryfallCard{
+	for _, card := range []carddata.ScryfallCard{
 		{Name: "Burn the Accursed", Layout: "normal", TypeLine: "Instant", OracleText: "Burn the Accursed deals 5 damage to target creature and 2 damage to that creature's controller. If that creature would die this turn, exile it instead."},
 		{Name: "Lava Coil", Layout: "normal", TypeLine: "Sorcery", OracleText: "Lava Coil deals 4 damage to target creature. If that creature would die this turn, exile it instead."},
 	} {
 		t.Run(card.Name, func(t *testing.T) {
-			def := compileUnlessCard(t, card)
+			def := legacyCard(t, card)
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			source := addCardToHand(g, game.Player1, def)
 			target := addCombatCreaturePermanentWithPower(g, game.Player3, 9)
@@ -57,7 +57,7 @@ func TestCompiledResolvingSpellRiderDamageAttribution(t *testing.T) {
 }
 
 func TestCompiledDestroyedTargetPowerAndControllerLKI(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Agonizing Demise", Layout: "normal", TypeLine: "Instant",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Agonizing Demise", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Kicker {1}{R}\nDestroy target nonblack creature. It can't be regenerated. If this spell was kicked, Agonizing Demise deals damage equal to that creature's power to the creature's controller."})
 	for _, outcome := range []string{"destroyed", "indestructible", "exile replacement", "modified power", "changed controller", "not kicked", "missing target", "stale incarnation"} {
 		t.Run(outcome, func(t *testing.T) {

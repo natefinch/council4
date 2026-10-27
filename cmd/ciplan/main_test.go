@@ -21,7 +21,7 @@ func TestValidationMatrix(t *testing.T) {
 			want: plan{Code: true}},
 		{name: "model", paths: []string{"mtg/game/card.go"},
 			want: plan{Code: true}},
-		{name: "compiler", paths: []string{"cardgen/lower.go"},
+		{name: "card data", paths: []string{"internal/carddata/corpus_policy.go"},
 			want: plan{Code: true}},
 		{name: "tooling", paths: []string{"magefiles/support_docs.go"},
 			want: plan{Code: true}},

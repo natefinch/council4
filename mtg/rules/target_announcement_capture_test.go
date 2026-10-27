@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -13,7 +13,7 @@ import (
 
 func targetAnnouncementGrant(t *testing.T) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Target Announcement Grant", Layout: "normal", TypeLine: "Creature",
 		Power: new("3"), Toughness: new("4"),
 		OracleText: `Creatures you control have "Whenever this creature becomes the target of a spell or ability, reveal the top card of your library. If it's a land card, put it onto the battlefield. Otherwise, put it into your hand. This ability triggers only twice each turn."`,
@@ -64,7 +64,7 @@ func TestTargetAnnouncementPaymentRetainsGrantedBody(t *testing.T) {
 			}
 			agents := [game.NumPlayers]PlayerAgent{game.Player2: costAgent}
 			if strings.HasPrefix(route, "activate") {
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Announcement Actuator", Layout: "normal", TypeLine: "Artifact",
 					OracleText: "Sacrifice a creature: Target creature gets +1/+1 until end of turn.",
 				})
@@ -75,7 +75,7 @@ func TestTargetAnnouncementPaymentRetainsGrantedBody(t *testing.T) {
 					t.Fatal("legal target-then-sacrifice activation failed")
 				}
 			} else {
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Announcement Spell", Layout: "normal", TypeLine: "Instant", ManaCost: "{0}",
 					OracleText: "As an additional cost to cast this spell, sacrifice a creature.\nTarget creature gets +1/+1 until end of turn.",
 				})
@@ -137,7 +137,7 @@ func TestTargetAnnouncementRejectedPaymentPublishesNothing(t *testing.T) {
 	engine := NewEngine(nil)
 	grant := addCombatPermanent(g, game.Player4, targetAnnouncementGrant(t))
 	grant.Controller = game.Player2
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Unpaid Announcement", Layout: "normal", TypeLine: "Instant", ManaCost: "{2}",
 		OracleText: "As an additional cost to cast this spell, sacrifice a creature.\nTarget creature gets +1/+1 until end of turn.",
 	})
@@ -163,11 +163,11 @@ func TestTargetAnnouncementRejectedPaymentPublishesNothing(t *testing.T) {
 
 func TestTargetAnnouncementRejectedActionConsumesNoGrant(t *testing.T) {
 	grantDef := targetAnnouncementGrant(t)
-	abilityDef := compileUnlessCard(t, cardgen.ScryfallCard{
+	abilityDef := legacyCard(t, carddata.ScryfallCard{
 		Name: "Rejected Announcement Actuator", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "Sacrifice a creature: Target creature gets +1/+1 until end of turn.",
 	})
-	spellDef := compileUnlessCard(t, cardgen.ScryfallCard{
+	spellDef := legacyCard(t, carddata.ScryfallCard{
 		Name: "Rejected Announcement Spell", Layout: "normal", TypeLine: "Instant", ManaCost: "{0}",
 		OracleText: "As an additional cost to cast this spell, sacrifice a creature.\nTarget creature gets +1/+1 until end of turn.",
 	})

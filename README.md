@@ -4,9 +4,11 @@ Council4 is a Go playtesting engine for Magic: The Gathering Commander decks. Th
 
 ## Development direction
 
-New card support uses **authored Go over shared Engine operations**, not expansion
-of the Oracle compiler. Preserve existing generated cards and behavioral tests;
-keep costs, targets and declarations inspectable, and rules mutation engine-owned.
+New card support uses **authored Go over shared Engine operations**. The Oracle
+compiler and source renderer have been removed; existing generated cards and
+behavioral tests are preserved. Legacy compiler-backed rules scenarios now use
+frozen typed Go fixtures, and generated-package scenarios run as ordinary tests.
+Keep costs, targets and declarations inspectable, and rules mutation engine-owned.
 See [ADR 0012](./docs/adr/0012-authored-go-card-implementations.md) and the ordered
 [migration epic](https://github.com/natefinch/council4/issues/3269).
 

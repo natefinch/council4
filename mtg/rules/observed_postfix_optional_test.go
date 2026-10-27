@@ -3,14 +3,14 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func compiledObservedMatter(t *testing.T) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Matter Reshaper", Layout: "normal", TypeLine: "Creature — Eldrazi", ManaCost: "{2}{C}",
 		Power: new("3"), Toughness: new("2"),
 		OracleText: "({C} represents colorless mana.)\nWhen this creature dies, reveal the top card of your library. You may put that card onto the battlefield if it's a permanent card with mana value 3 or less. Otherwise, put that card into your hand.",
@@ -31,14 +31,14 @@ func TestCompiledObservedPostfixActualDeathSubject(t *testing.T) {
 		{"qualifying accepted", "{3}", "Creature — Horse", "", true, false, 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fixture := cardgen.ScryfallCard{
+			fixture := carddata.ScryfallCard{
 				Name: tc.name, Layout: "normal", TypeLine: tc.typeLine, ManaCost: tc.cost,
 				Power: new("2"), Toughness: new("2"), OracleText: tc.text,
 			}
 			if tc.typeLine == "Sorcery" {
 				fixture.Power, fixture.Toughness = nil, nil
 			}
-			def := compileUnlessCard(t, fixture)
+			def := legacyCard(t, fixture)
 			assertObservedMatterDeath(t, matter, def, tc.accept, tc.wantHand, tc.prompts)
 		})
 	}
@@ -48,7 +48,7 @@ func TestCompiledObservedPostfixDeclineReachesHand(t *testing.T) {
 	matter := compiledObservedMatter(t)
 	for _, cost := range []string{"{0}", "{3}"} {
 		t.Run(cost, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Qualifying Creature", Layout: "normal", TypeLine: "Creature — Horse", ManaCost: cost,
 				Power: new("2"), Toughness: new("2"),
 			})
@@ -93,7 +93,7 @@ func assertObservedMatterDeath(t *testing.T, matter, observed *game.CardDef, acc
 
 func TestCompiledObservedPostfixDeathIsolation(t *testing.T) {
 	matter := compiledObservedMatter(t)
-	creature := compileUnlessCard(t, cardgen.ScryfallCard{
+	creature := legacyCard(t, carddata.ScryfallCard{
 		Name: "Qualifying Creature", Layout: "normal", TypeLine: "Creature — Horse", ManaCost: "{3}",
 		Power: new("2"), Toughness: new("2"),
 	})
@@ -195,14 +195,14 @@ func TestCompiledObservedPostfixAndPredicateLeadingChoices(t *testing.T) {
 		if leading {
 			conditional = "If it's a permanent card with mana value 3 or less, you may put that card onto the battlefield."
 		}
-		def := compileUnlessCard(t, cardgen.ScryfallCard{
+		def := legacyCard(t, carddata.ScryfallCard{
 			Name: "Optional Condition Timing", Layout: "normal", TypeLine: "Sorcery",
 			OracleText: "Reveal the top card of your library. " + conditional + " Otherwise, put that card into your hand. You gain 1 life.",
 		})
 		for _, accept := range []bool{false, true} {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			g.Players[game.Player1].Life = 40
-			card := addCardToLibrary(g, game.Player1, compileUnlessCard(t, cardgen.ScryfallCard{
+			card := addCardToLibrary(g, game.Player1, legacyCard(t, carddata.ScryfallCard{
 				Name: "Forest", Layout: "normal", TypeLine: "Basic Land — Forest", OracleText: "{T}: Add {G}.",
 			}))
 			agent := &libraryPaymentAgent{accept: accept}

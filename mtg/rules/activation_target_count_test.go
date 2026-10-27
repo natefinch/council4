@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -25,14 +25,12 @@ func TestCompiledActivationExactXRejectsWrongCountBeforeCosts(t *testing.T) {
 		{"discard return", "Creature", "{X}{U}, {T}, Discard two cards: Return X target creatures to their owners' hands.", true, zone.Hand},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			card := &cardgen.ScryfallCard{Name: "Count Activation", Layout: "normal", TypeLine: tc.typeLine, OracleText: tc.body}
+			card := &carddata.ScryfallCard{Name: "Count Activation", Layout: "normal", TypeLine: tc.typeLine, OracleText: tc.body}
 			if tc.typeLine == "Creature" {
 				card.Power, card.Toughness = new("2"), new("2")
 			}
-			defs, diagnostics, err := cardgen.CompileCardDefs(card)
-			if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-				t.Fatalf("compile: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-			}
+			defs := legacyCardDefs(t, *card)
+
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			g.Turn.Phase, g.Turn.Step = game.PhasePrecombatMain, game.StepNone
 			source := addCombatPermanent(g, game.Player1, defs[0])

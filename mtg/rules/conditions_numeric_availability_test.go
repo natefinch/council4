@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -46,7 +46,7 @@ func TestCapturedNumericConditionUnavailableIsNotFalse(t *testing.T) {
 
 func TestCompiledTargetCardOtherwiseRequiresAvailableActualMove(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Card Otherwise", Layout: "normal", TypeLine: "Instant",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Card Otherwise", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Exile target card from a graveyard. If it was a creature card, you gain 2 life. Otherwise, you gain 1 life."})
 	for _, name := range []string{"creature", "noncreature", "redirected"} {
 		t.Run(name, func(t *testing.T) {

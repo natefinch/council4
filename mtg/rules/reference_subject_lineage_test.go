@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -11,7 +11,7 @@ import (
 
 func referenceSubjectActivated(t *testing.T, text string) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Reference Capability", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: " + text,
 	})
@@ -41,7 +41,7 @@ func TestCompiledReferenceSubjectIndependentCardPredicate(t *testing.T) {
 				g.CardInstances[source.CardInstanceID].Owner = game.Player1
 				var observed game.CardInstance
 				if tc.typeLine != "" {
-					card := compileUnlessCard(t, cardgen.ScryfallCard{
+					card := legacyCard(t, carddata.ScryfallCard{
 						Name: "Observed Capability", Layout: "normal", TypeLine: tc.typeLine,
 					})
 					cardID := addCardToLibrary(g, game.Player2, card)
@@ -164,7 +164,7 @@ func TestCompiledReferenceSubjectOptionalIndependentCardPredicate(t *testing.T) 
 				if state == "skipped artifact" {
 					typeLine = "Snow Artifact"
 				}
-				card := compileUnlessCard(t, cardgen.ScryfallCard{
+				card := legacyCard(t, carddata.ScryfallCard{
 					Name: "Optional Observed", Layout: "normal", TypeLine: typeLine,
 				})
 				observed = *g.CardInstances[addCardToLibrary(g, game.Player2, card)]

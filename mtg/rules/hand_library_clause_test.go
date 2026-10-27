@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -21,7 +21,7 @@ func TestCompiledHandLibraryChosenX(t *testing.T) {
 				if bottom {
 					position = "on the bottom of"
 				}
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Hand Library X", Layout: "normal", TypeLine: "Instant", ManaCost: "{X}{U}",
 					OracleText: "Draw two cards. You gain 2 life. Put X cards from your hand " + position + " your library.",
 				})
@@ -83,7 +83,7 @@ func TestCompiledHandLibraryStandaloneAndOptional(t *testing.T) {
 			if tt.name == "activated zero" || tt.name == "activated one" {
 				typeLine = "Artifact"
 			}
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Hand Library Standalone", Layout: "normal", TypeLine: typeLine, OracleText: tt.text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -136,7 +136,7 @@ func TestCompiledHandLibraryConditionAndOptionalCompositions(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Hand Library Envelope", Layout: "normal", TypeLine: "Instant", OracleText: tt.text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -160,7 +160,7 @@ func TestCompiledHandLibraryConditionAndOptionalCompositions(t *testing.T) {
 
 func TestCompiledHandLibraryMultipleIndependentChoices(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Independent Hand Placements", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Put a card from your hand on top of your library. You gain 2 life. Put a card from your hand on the bottom of your library.",
 	})
@@ -184,7 +184,7 @@ func TestCompiledHandLibraryMultipleIndependentChoices(t *testing.T) {
 
 func TestCompiledHandLibraryReplacementKeepsActualDestination(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Hand Library Replacement", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Put two cards from your hand on the bottom of your library.",
 	})

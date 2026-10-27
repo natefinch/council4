@@ -3,13 +3,13 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
 func TestCompiledSkippedTokenProducerCannotReusePreviousActivation(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Conditional Product", Layout: "normal", TypeLine: "Enchantment",
 		OracleText: "{1}: If you have no cards in hand, create a 1/1 green Elf creature token. Tap it.",
 	})

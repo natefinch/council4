@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -32,7 +32,7 @@ func TestCompiledSingletonLifePaymentTriggerChoice(t *testing.T) {
 			if text == "" {
 				text = "At the beginning of your upkeep, you may pay 2 life."
 			}
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Singleton Trigger Choice Runtime", Layout: "normal", TypeLine: "Enchantment", OracleText: text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

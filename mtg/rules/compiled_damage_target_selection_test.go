@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -13,7 +13,7 @@ import (
 
 func compiledDamageAlternative(t *testing.T) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Damage Alternative", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{2}{R}",
 		OracleText: "Kicker {5}{R} (You may pay an additional {5}{R} as you cast this spell.)\n" +
 			"Damage Alternative deals 5 damage to target creature.\nIf this spell was kicked, Damage Alternative deals 10 damage instead.",
@@ -38,7 +38,7 @@ func TestCompiledDamageTargetSelection(t *testing.T) {
 			if tc.text == "" {
 				def = compiledDamageAlternative(t)
 			} else {
-				def = compileUnlessCard(t, cardgen.ScryfallCard{
+				def = legacyCard(t, carddata.ScryfallCard{
 					Name: tc.name, Layout: "normal", TypeLine: "Instant", OracleText: tc.text,
 				})
 			}

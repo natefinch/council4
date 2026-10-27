@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -20,13 +20,11 @@ func TestResultThisWaySpecializedSacrificeFlows(t *testing.T) {
 		{"search", "search your library for a basic land card, reveal it, put it into your hand, then shuffle.", 1, 40},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+			defs := legacyCardDefs(t, carddata.ScryfallCard{
 				Name: "Sacrifice Filter Probe", Layout: "normal", TypeLine: "Artifact",
 				OracleText: "When this artifact enters, you may sacrifice a creature. If a Saproling was sacrificed this way, " + test.tail,
 			})
-			if err != nil || len(diagnostics) != 0 {
-				t.Fatalf("compile = %v, %v", diagnostics, err)
-			}
+
 			content := defs[0].TriggeredAbilities[0].Content
 			for i := 1; i < len(content.Modes[0].Sequence); i++ {
 				gate := content.Modes[0].Sequence[i].ResultGate

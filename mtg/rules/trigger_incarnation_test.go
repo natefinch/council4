@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -23,7 +23,7 @@ func TestTriggerGrantIncarnationLimits(t *testing.T) {
 			grant.Controller = game.Player2
 			recipient := addCombatPermanent(g, game.Player1, vanillaCreature("Recipient", 2, 3))
 			recipient.Controller = game.Player2
-			actuator := addCombatPermanent(g, game.Player3, compileUnlessCard(t, cardgen.ScryfallCard{
+			actuator := addCombatPermanent(g, game.Player3, legacyCard(t, carddata.ScryfallCard{
 				Name: "Identity Actuator", Layout: "normal", TypeLine: "Artifact",
 				OracleText: "{0}: Target creature gets +1/+1 until end of turn.",
 			}))

@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -19,7 +19,7 @@ func TestCompiledSharedPlayerRecipientCopiedEventAfterSourceLeaves(t *testing.T)
 	} {
 		t.Run(tt.text, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Copied Event Recipient", Layout: "normal", TypeLine: "Enchantment", OracleText: tt.text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

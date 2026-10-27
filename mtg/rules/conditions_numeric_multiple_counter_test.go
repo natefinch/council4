@@ -4,14 +4,14 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 )
 
 func TestCompiledCounteredSpellUsesActualSecondOccurrence(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Second Counter", Layout: "normal", TypeLine: "Instant",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Second Counter", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Counter target spell. Counter target spell. You gain 1 life. If that spell's mana value was 3 or less, you gain 2 life."})
 	for _, value := range []int{2, 3, 4} {
 		t.Run(strconv.Itoa(value), func(t *testing.T) {

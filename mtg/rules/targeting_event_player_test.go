@@ -3,14 +3,14 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestCompiledTargetingEventPlayerSurvivesCauseDepartureAndCopy(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Ashenmoor Liege", Layout: "normal", TypeLine: "Creature", Power: new("4"), Toughness: new("1"),
 		OracleText: "Other black creatures you control get +1/+1.\nOther red creatures you control get +1/+1.\n" +
 			"Whenever this creature becomes the target of a spell or ability an opponent controls, that player loses 4 life.",

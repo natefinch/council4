@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -24,7 +24,7 @@ func TestCompiledLifeEventPlayerIsQualifiedPermanentController(t *testing.T) {
 		{"Suture Priest", "Whenever another creature you control enters, you may gain 1 life.\nWhenever a creature an opponent controls enters, you may have that player lose 1 life.", types.Creature, false, true, 1, 0},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: tt.name, Layout: "normal", TypeLine: "Creature", Power: new("4"), Toughness: new("4"), OracleText: tt.text,
 			})
 			for _, controlled := range []bool{false, true} {
@@ -85,7 +85,7 @@ func TestCompiledLifeEventPlayerIsQualifiedPermanentController(t *testing.T) {
 }
 
 func TestCompiledLifeMonarchPlayerUsesEventPlayer(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Knights of the Black Rose", Layout: "normal", TypeLine: "Creature",
 		Power: new("4"), Toughness: new("4"),
 		OracleText: "When this creature enters, you become the monarch.\n" +

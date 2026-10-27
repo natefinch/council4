@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -12,7 +12,7 @@ import (
 
 func ashlingQuantityFixture(t *testing.T) (*game.Game, *Engine, *game.Permanent) {
 	t.Helper()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Ashling", Layout: "normal", TypeLine: "Legendary Creature - Elemental Shaman",
 		ManaCost: "{1}{R}", Power: new("1"), Toughness: new("1"),
 		OracleText: "{1}{R}: Put a +1/+1 counter on Ashling. If this is the third time this ability has resolved this turn, remove all +1/+1 counters from Ashling, and it deals that much damage to each creature and each player.",
@@ -130,7 +130,7 @@ func TestCompiledAshlingCounterQuantitySourceIncarnation(t *testing.T) {
 
 func TestCompiledCounterQuantityCapturesGroupBeforeRemoval(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Capture", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: If there are three or more charge counters on this artifact, remove all charge counters from this artifact, then you gain that much life.",
 	})

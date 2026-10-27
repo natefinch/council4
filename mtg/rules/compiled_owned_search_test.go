@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -15,12 +15,10 @@ const compiledOwnedLandSearch = "Search your library for a basic land card, put 
 
 func compileOwnedSearchMode(t *testing.T, text string) game.Mode {
 	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Owned Search", Layout: "normal", TypeLine: "Sorcery", OracleText: text,
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: %v; diagnostics: %v; definitions: %d", err, diagnostics, len(defs))
-	}
+
 	return defs[0].SpellAbility.Val.Modes[0]
 }
 

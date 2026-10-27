@@ -3,12 +3,12 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
-func referenceSubjectOriginals() []cardgen.ScryfallCard {
-	return []cardgen.ScryfallCard{
+func referenceSubjectOriginals() []carddata.ScryfallCard {
+	return []carddata.ScryfallCard{
 		{
 			ID: "c808a8ec-895c-4777-9e11-e83ce34eddef", OracleID: "bbf90463-280a-413e-b8a3-4577dcf11e54",
 			Name: "Killer Instinct", Layout: "normal", ManaCost: "{4}{R}{G}", TypeLine: "Enchantment",
@@ -57,7 +57,7 @@ func compiledReferenceSubjectOriginal(t *testing.T, name string) *game.CardDef {
 	t.Helper()
 	for _, card := range referenceSubjectOriginals() {
 		if card.Name == name {
-			return compileUnlessCard(t, card)
+			return legacyCard(t, card)
 		}
 	}
 	t.Fatalf("original fixture missing: %s", name)
@@ -66,7 +66,7 @@ func compiledReferenceSubjectOriginal(t *testing.T, name string) *game.CardDef {
 
 func referenceSubjectCreature(t *testing.T) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Grizzly Bears", Layout: "normal", ManaCost: "{1}{G}", TypeLine: "Creature \u2014 Bear",
 		Power: new("2"), Toughness: new("2"),
 	})

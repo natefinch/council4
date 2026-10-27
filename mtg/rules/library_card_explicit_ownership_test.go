@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 )
@@ -28,7 +28,7 @@ func TestCompiledLibraryCardExplicitObservationOwnership(t *testing.T) {
 		{name: "independent products keep owners", text: "Look at the top card of target player's library. Reveal the top card of target opponent's library. Put the looked-at card into that player's hand. Put the revealed card into that player's graveyard.", owner: game.Player2, firstLook: true, targeted: true, moveSecond: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Explicit Observation Runtime", Layout: "normal", TypeLine: "Sorcery", OracleText: tc.text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

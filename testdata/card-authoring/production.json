@@ -3,7 +3,7 @@
  "baseline_head": "9a47dfd25ba4ef870cb0b780e617e4add667da22",
  "corpus_sha256": "6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4",
  "rules_effective": "2026-09-25",
- "policy": "cardgen.CorpusPolicy; all sanctioned paper formats, including banned/restricted and non-Commander. Seven disowned records omitted per canonical policy, never listed. Existing loadable name-only associations remain baseline evidence, not exact admissions.",
+ "policy": "carddata.CorpusPolicy; all sanctioned paper formats, including banned/restricted and non-Commander. Seven disowned records omitted per canonical policy, never listed. Existing loadable name-only associations remain baseline evidence, not exact admissions.",
  "ordering": "Bounded capability batches: deck-occurring Bedevil/An Offer first; complete each established family. Other remaining records ordered by observed deck occurrences descending, then unreviewed layout family and Oracle identity. No inferred popularity/EDHREC/compiler diagnostic ranking. Six saved batches only; the rest remain available for later bounded review.",
  "effort": "No per-card elapsed measurements in this run or old pilot. No throughput target claimed. Actual commands, counts and performance recorded in docs/card-production.md.",
  "deck_sources": [

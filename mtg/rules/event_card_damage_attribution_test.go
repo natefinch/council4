@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -11,7 +11,7 @@ import (
 
 func TestCompiledLibraryGraveyardDamageAttribution(t *testing.T) {
 	for _, typeLine := range []string{"Sorcery", "Creature"} {
-		def := compileUnlessCard(t, cardgen.ScryfallCard{
+		def := legacyCard(t, carddata.ScryfallCard{
 			Name: "Event Source", Layout: "normal", TypeLine: typeLine, Power: new("1"), Toughness: new("1"),
 			OracleText: "When Event Source is put into your graveyard from your library, you may exile it. If you do, Event Source deals 3 damage to each opponent and you gain 3 life.",
 		})
@@ -133,7 +133,7 @@ func TestCompiledLibraryGraveyardDamageAttribution(t *testing.T) {
 }
 
 func TestCompiledLibraryWatcherKeepsPermanentAttribution(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Library Watcher", Layout: "normal", TypeLine: "Creature", Power: new("1"), Toughness: new("1"),
 		OracleText: "Whenever a card is put into your graveyard from your library, Library Watcher deals 3 damage to each opponent. You gain 3 life.",
 	})

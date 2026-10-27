@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -12,15 +12,13 @@ import (
 
 func TestFixedPhaseDamageSourceFilterCapturesDamagedRecipient(t *testing.T) {
 	t.Parallel()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Sosuke, Son of Seshiro", Layout: "normal", ManaCost: "{2}{G}{G}",
 		TypeLine: "Legendary Creature — Snake Warrior", Power: new("3"), Toughness: new("4"),
 		OracleText: "Other Snake creatures you control get +1/+0.\n" +
 			"Whenever a Warrior you control deals combat damage to a creature, destroy that creature at end of combat.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: %v; diagnostics: %v; definitions: %d", err, diagnostics, len(defs))
-	}
+
 	ability := defs[0].TriggeredAbilities[0]
 	capture := captureTestPrimitive[game.CreateDelayedTrigger](t, ability.Content.Modes[0].Sequence[0].Primitive).Trigger
 	if ability.Trigger.Pattern.Subject != game.TriggerSubjectDamageSource ||

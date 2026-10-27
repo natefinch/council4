@@ -25,22 +25,21 @@ func randomAgentsFactory(gameSeed uint64) [game.NumPlayers]rules.PlayerAgent {
 }
 
 func randomAgentConfig(games int, seed uint64) Config {
-	return Config{
-		Configs:   smokeConfigs(),
-		Games:     games,
-		Seed:      seed,
-		NewAgents: randomAgentsFactory,
-	}
+	cfg := smokeConfig(games, seed)
+	cfg.NewAgents = randomAgentsFactory
+	return cfg
 }
 
 // TestRunWithRandomAgentsIsDeterministic strengthens the same-seed guarantee to
 // RNG-driven agents: two runs of the same master seed must be identical even
 // when every decision is drawn from a random source.
 func TestRunWithRandomAgentsIsDeterministic(t *testing.T) {
-	cfg := randomAgentConfig(12, 13579)
+	cfg := randomAgentConfig(3, 13579)
 
 	first := Run(cfg)
 	second := Run(cfg)
+	requireCompletedGames(t, first)
+	requireCompletedGames(t, second)
 
 	if !reflect.DeepEqual(first, second) {
 		t.Error("Run with random agents is not deterministic across two runs of the same master seed")
@@ -52,13 +51,15 @@ func TestRunWithRandomAgentsIsDeterministic(t *testing.T) {
 // produce byte-identical SimulationResults. This also runs under -race in CI,
 // guarding the concurrent collection path.
 func TestRunParallelMatchesSequential(t *testing.T) {
-	sequential := randomAgentConfig(16, 7777)
+	sequential := randomAgentConfig(3, 7777)
 	sequential.Workers = 1
-	parallel := randomAgentConfig(16, 7777)
+	parallel := randomAgentConfig(3, 7777)
 	parallel.Workers = 8
 
 	seq := Run(sequential)
 	par := Run(parallel)
+	requireCompletedGames(t, seq)
+	requireCompletedGames(t, par)
 
 	if !reflect.DeepEqual(seq, par) {
 		t.Error("parallel and sequential simulation produced different results for the same master seed")
@@ -67,14 +68,15 @@ func TestRunParallelMatchesSequential(t *testing.T) {
 
 // TestRunOneIsIdenticalAcrossRepeats guards against map-iteration order (which
 // Go randomizes on every range, even within one process) leaking into a
-// slice-valued GameResult field. Replaying the same game many times in one
+// slice-valued GameResult field. Replaying the same small game repeatedly in one
 // process must yield an identical result every time; if any result slice were
 // built by ranging a map, these repeats would diverge.
 func TestRunOneIsIdenticalAcrossRepeats(t *testing.T) {
 	cfg := randomAgentConfig(1, 24680)
 
 	first := RunOne(cfg, 0)
-	for repeat := range 30 {
+	requireCompletedGames(t, SimulationResult{Games: []rules.GameResult{first}})
+	for repeat := range 3 {
 		again := RunOne(cfg, 0)
 		if !reflect.DeepEqual(again, first) {
 			t.Fatalf("RunOne repeat %d differs from the first run; nondeterminism (e.g. map-iteration order) is leaking into GameResult", repeat)

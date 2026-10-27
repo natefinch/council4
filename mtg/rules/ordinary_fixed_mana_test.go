@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -216,7 +216,7 @@ func TestOrdinaryFixedManaConditionTiming(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Mana Timing", Layout: "normal", TypeLine: "Instant", OracleText: tc.text})
+			def := legacyCard(t, carddata.ScryfallCard{Name: "Mana Timing", Layout: "normal", TypeLine: "Instant", OracleText: tc.text})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			for range tc.initialHand {
 				addCardToHand(g, game.Player1, evidenceCard("Initial", 1))
@@ -237,7 +237,7 @@ func TestOrdinaryFixedManaConditionTiming(t *testing.T) {
 
 func TestOrdinaryFixedManaGroupIndependentOfPrimitiveSuccess(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Mana Group", Layout: "normal", TypeLine: "Instant",
 		OracleText: "If you control a creature, destroy target creature, then add {R}{G}.",
 	})
@@ -289,7 +289,7 @@ func TestOrdinaryFixedManaModesAndTriggers(t *testing.T) {
 	})
 	t.Run("trigger stack body", func(t *testing.T) {
 		t.Parallel()
-		def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Mana Trigger", Layout: "normal", TypeLine: "Artifact",
+		def := legacyCard(t, carddata.ScryfallCard{Name: "Mana Trigger", Layout: "normal", TypeLine: "Artifact",
 			OracleText: "Whenever a creature you control enters, target creature gains first strike until end of turn. If this is the third time this ability has resolved this turn, you may add {R}{R}."})
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		source := addCombatPermanent(g, game.Player1, def)

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestCompiledOptionalLifePaymentDrawCompatibility(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Life Payment", Layout: "normal",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Life Payment", Layout: "normal",
 		TypeLine: "Sorcery", OracleText: "You may pay 2 life. If you do, draw a card."})
 	for _, tc := range []struct {
 		name                  string
@@ -48,7 +48,7 @@ func TestCompiledOptionalLifePaymentDrawCompatibility(t *testing.T) {
 }
 
 func TestCompiledAnotherUnionRecipientExcludesDealer(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Another Recipient", Layout: "normal",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Another Recipient", Layout: "normal",
 		TypeLine: "Instant", OracleText: "Target creature you control deals damage equal to its power to another target creature, planeswalker, or battle."})
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	card := addCardToHand(g, game.Player1, def)
@@ -80,7 +80,7 @@ func TestCompiledAnotherUnionRecipientExcludesDealer(t *testing.T) {
 }
 
 func TestCompiledSplitAddendumExactTargetCompatibility(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Split Addendum", Layout: "normal",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Split Addendum", Layout: "normal",
 		TypeLine: "Instant", OracleText: "Target creature gets +2/+2 until end of turn.\nAddendum — If you cast this spell during your main phase, that creature gains flying until end of turn."})
 	for _, main := range []bool{false, true} {
 		t.Run(fmt.Sprint(main), func(t *testing.T) {
@@ -105,7 +105,7 @@ func TestCompiledSplitAddendumExactTargetCompatibility(t *testing.T) {
 }
 
 func TestCompiledObservedCardPaymentCompatibility(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Observed Payment", Layout: "normal", TypeLine: "Artifact",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Observed Payment", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{T}: Look at the top card of target player's library. If it's a nonland card, you may pay 2 life. If you do, put it into that player's graveyard."})
 	for _, tc := range []struct {
 		name                    string
@@ -160,7 +160,7 @@ func TestCompiledObservedCardPaymentCompatibility(t *testing.T) {
 }
 
 func TestCompiledOptionalReturnConditionCompatibility(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Optional Returned Elf", Layout: "normal", TypeLine: "Instant",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Optional Returned Elf", Layout: "normal", TypeLine: "Instant",
 		OracleText: "You may return target creature card from your graveyard to the battlefield. If it's an Elf, draw a card."})
 	for _, tc := range []struct {
 		name                string
@@ -206,7 +206,7 @@ func TestCompiledOptionalReturnConditionCompatibility(t *testing.T) {
 }
 
 func TestCompiledLatestObservationAfterReturnCompatibility(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Latest Observed Elf", Layout: "normal", TypeLine: "Instant",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Latest Observed Elf", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Return target creature card from your graveyard to the battlefield. Reveal the top card of your library. If it's an Elf, draw a card."})
 	for _, returnedElf := range []bool{false, true} {
 		for _, observedElf := range []bool{false, true} {
@@ -233,7 +233,7 @@ func TestCompiledLatestObservationAfterReturnCompatibility(t *testing.T) {
 }
 
 func TestCompiledObservedManaValueThresholdCompatibility(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Observed Mana Value", Layout: "normal", TypeLine: "Creature",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Observed Mana Value", Layout: "normal", TypeLine: "Creature",
 		OracleText: "When this creature enters, reveal the top card of your library. If it had mana value 3 or less, draw a card."})
 	for _, tc := range []struct {
 		name         string
@@ -275,7 +275,7 @@ func TestCompiledObservedManaValueThresholdCompatibility(t *testing.T) {
 }
 
 func TestCompiledReturnedManaValueLifeRiderCompatibility(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Returned Mana Value", Layout: "normal", TypeLine: "Instant",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Returned Mana Value", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Put target creature card from a graveyard onto the battlefield under your control. You lose life equal to its mana value."})
 	for _, stale := range []bool{false, true} {
 		t.Run(fmt.Sprint(stale), func(t *testing.T) {

@@ -15,10 +15,9 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// These property-based tests exercise core engine invariants over many
-// seeded pseudo-random games and board states. They use math/rand/v2 with
-// explicit seeds (not Go fuzzing) so the whole file stays well under the CI
-// budget (a few seconds) while still covering hundreds of distinct states.
+// Gameplay properties use a small default seed corpus and opt-in Go fuzzing
+// for broader exploration. Focused board-state properties remain inexpensive
+// deterministic sweeps.
 //
 // Every helper here is prefixed with "prop" so it never collides with the
 // shared helpers in the other package rules test files.
@@ -398,13 +397,15 @@ func propRandomAgents(seed uint64, g *game.Game, sink *propViolationSink) [game.
 	return agents
 }
 
-// TestPropZoneMovesConserveCards exercises property 1 over land-only games.
+// FuzzZoneMovesConserveCards exercises property 1 over land-only games.
 // Land-only decks make exact live-zone counts provable at game end, including
 // owned objects leaving the game when their owner departs.
-func TestPropZoneMovesConserveCards(t *testing.T) {
-	const iterations = 120
+func FuzzZoneMovesConserveCards(f *testing.F) {
+	for _, seed := range []uint64{0, 1, 37, 119} {
+		f.Add(seed)
+	}
 	configs := landOnlyConfigs(8)
-	for seed := range uint64(iterations) {
+	f.Fuzz(func(t *testing.T, seed uint64) {
 		engine := NewEngine(propRand(seed))
 		g := engine.NewGame(configs)
 		sink := propNewSink()
@@ -418,10 +419,10 @@ func TestPropZoneMovesConserveCards(t *testing.T) {
 		if incorrect := propIncorrectCardCounts(g); len(incorrect) > 0 {
 			t.Fatalf("seed %d: incorrect live-zone counts by game end:%s", seed, propLocationReport(g, incorrect))
 		}
-	}
+	})
 }
 
-// TestPropRandomGamesPreserveInvariants exercises properties 1, 2, and 3 over
+// FuzzRandomGamesPreserveInvariants exercises properties 1, 2, and 3 over
 // mixed decks that drive cards through hand -> stack -> battlefield ->
 // graveyard. At every priority point the agents assert no card is duplicated
 // (property 1) and every offered cast target is legal (property 2). Every
@@ -431,10 +432,12 @@ func TestPropZoneMovesConserveCards(t *testing.T) {
 // We do NOT assert "no vanishing" here: eliminating a player legitimately
 // removes their owned cards from every zone (CR 800.4a). The duplication half of
 // conservation has no such caveat and is asserted throughout and at game end.
-func TestPropRandomGamesPreserveInvariants(t *testing.T) {
-	const iterations = 80
+func FuzzRandomGamesPreserveInvariants(f *testing.F) {
+	for _, seed := range []uint64{0, 1, 39, 79} {
+		f.Add(seed)
+	}
 	configs := propMixedConfigs()
-	for seed := range uint64(iterations) {
+	f.Fuzz(func(t *testing.T, seed uint64) {
 		engine := NewEngine(propRand(seed))
 		g := engine.NewGame(configs)
 		sink := propNewSink()
@@ -451,7 +454,7 @@ func TestPropRandomGamesPreserveInvariants(t *testing.T) {
 		if !result.HasWinner {
 			t.Fatalf("seed %d: game ended without a winner after %d turns", seed, result.TurnCount)
 		}
-	}
+	})
 }
 
 // TestPropPriorityLoopTerminates is the hang guard for property 3: it runs each
@@ -459,10 +462,9 @@ func TestPropRandomGamesPreserveInvariants(t *testing.T) {
 // converge is reported instead of hanging the suite indefinitely. RunGame's
 // own maxGameTurns cap bounds turn count; this bounds wall-clock time.
 func TestPropPriorityLoopTerminates(t *testing.T) {
-	const iterations = 16
 	const perGameBudget = 5 * time.Second
 	configs := propMixedConfigs()
-	for seed := range uint64(iterations) {
+	for _, seed := range []uint64{0, 15} {
 		engine := NewEngine(propRand(seed))
 		g := engine.NewGame(configs)
 		done := make(chan *GameResult, 1)

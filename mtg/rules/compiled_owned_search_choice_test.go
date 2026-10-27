@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -70,13 +70,11 @@ func TestCompiledOwnedSearchNameChoiceUnavailable(t *testing.T) {
 func TestCompiledCanoptekOwnedSearchPayment(t *testing.T) {
 	t.Parallel()
 	const oracle = "Wraith Form — This creature can't be blocked.\nTransdimensional Scout — When this creature deals combat damage to a player, you may pay {3} and sacrifice it. If you do, choose a land you control. Then search your library for up to two basic land cards which have the same name as the chosen land, put them onto the battlefield tapped, then shuffle."
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Canoptek Wraith", Layout: "normal", TypeLine: "Artifact Creature — Wraith",
 		OracleText: oracle, ManaCost: "{3}", Power: new("2"), Toughness: new("1"),
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: %v %v, definitions=%d", err, diagnostics, len(defs))
-	}
+
 	for _, tt := range []struct {
 		name string
 		mana int

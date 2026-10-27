@@ -3,14 +3,14 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func TestCompiledUnlessLibraryComposition(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "The Spot's Portal", Layout: "normal", TypeLine: "Instant", ManaCost: "{2}{B}",
 		OracleText: "Put target creature on the bottom of its owner's library. You lose 2 life unless you control a Villain.",
 	})

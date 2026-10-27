@@ -3,13 +3,13 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 )
 
 func TestCompiledResolvingThirdParagraphUsesItsOwnEvaluation(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Independent Resolving Check", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "You lose 4 life.\nFateful hour — If you have 5 or less life, you lose 8 life instead.\nFormidable — If you have 5 or less life, draw a card.",
 	})
@@ -24,7 +24,7 @@ func TestCompiledResolvingThirdParagraphUsesItsOwnEvaluation(t *testing.T) {
 }
 
 func TestCompiledResolvingParagraphConditionCapturedBeforeMutation(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Resolving Life Branch", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "You lose 4 life.\nFateful hour — If you have 5 or less life, you lose 8 life instead.",
 	})
@@ -45,7 +45,7 @@ func TestCompiledResolvingParagraphConditionCapturedBeforeMutation(t *testing.T)
 }
 
 func TestCompiledResolvingParagraphKeepsIndependentTargetAndRider(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Resolving Counter Branch", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Tap target creature. Put a +1/+1 counter on target creature.\nMorbid — Put three +1/+1 counters on that creature instead if a creature died this turn.",
 	})

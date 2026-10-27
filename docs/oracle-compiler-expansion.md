@@ -3,9 +3,9 @@
 **Historical rollout; superseded by
 [epic #3269](https://github.com/natefinch/council4/issues/3269) and
 [ADR 0012](adr/0012-authored-go-card-implementations.md).** Do not resume this
-checklist. New cards use authored Go over shared
-Engine operations. Focused legacy correctness/compatibility fixes remain possible;
-bulk compilation, import and fingerprint workflows are retired.
+checklist. New cards use authored Go over shared Engine operations. The compiler,
+parser and renderer have been removed; their committed card definitions and
+behavioral regression scenarios are retained.
 
 The procedures and counts below are preserved historical evidence, not current
 readiness, validation policy or support guarantees. Use the
@@ -58,8 +58,8 @@ Read these before changing the compiler:
 - [`../CONTEXT.md`](../CONTEXT.md), especially Card Definition, Card
   Implementation, Effect Primitive, Instruction, Selection, and Card Generation.
 - [`adr/0008-typed-ir-lowering.md`](adr/0008-typed-ir-lowering.md).
-- [`../cardgen/README.md`](../cardgen/README.md).
-- [`../cardgen/oracle/README.md`](../cardgen/oracle/README.md).
+- The former `cardgen/README.md` and `cardgen/oracle/README.md` (in repository
+  history; the compiler source is no longer installed).
 
 ## Non-negotiable invariants
 

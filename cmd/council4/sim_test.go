@@ -11,27 +11,9 @@ import (
 
 	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/rules"
 	"github.com/natefinch/council4/mtg/sim"
 )
-
-// passSeat passes priority on every decision. It keeps the battlefield empty so
-// smoke games end (by decking out) quickly, exercising the full simulation
-// pipeline without the cost of long board-building games.
-type passSeat struct{}
-
-func (passSeat) ChooseAction(_ rules.PlayerObservation, _ []action.Action) action.Action {
-	return action.Pass()
-}
-
-func passFactory(uint64) [game.NumPlayers]rules.PlayerAgent {
-	var seated [game.NumPlayers]rules.PlayerAgent
-	for i := range seated {
-		seated[i] = passSeat{}
-	}
-	return seated
-}
 
 func smokePaths() []string {
 	path := filepath.Join("testdata", "smoke.txt")
@@ -53,13 +35,16 @@ func TestSmokeFixtureLoadsIntoLegalConfigs(t *testing.T) {
 	}
 }
 
-func TestSimulationReportFromRealGames(t *testing.T) {
+func TestSimulationReport(t *testing.T) {
 	paths := smokePaths()
-	configs, err := loadConfigs(paths, 1, cards.NewDefaultRegistry())
-	if err != nil {
-		t.Fatalf("loadConfigs: %v", err)
+	result := sim.SimulationResult{
+		Games: []rules.GameResult{
+			{HasWinner: true, Winner: game.Player1, TurnCount: 2},
+			{HasWinner: true, Winner: game.Player3, TurnCount: 4},
+			{Termination: rules.TerminationDraw, TurnCount: 3},
+		},
+		Seeds: []uint64{11, 12, 13}, GameCount: 3, MasterSeed: 7,
 	}
-	result := sim.Run(sim.Config{Configs: configs, Games: 3, Seed: 7, NewAgents: passFactory})
 
 	var out bytes.Buffer
 	reportPath := filepath.Join(t.TempDir(), "report.json")
@@ -84,6 +69,9 @@ func TestSimulationReportFromRealGames(t *testing.T) {
 	}
 	if report.Games != 3 {
 		t.Errorf("report.Games = %d, want 3", report.Games)
+	}
+	if report.WinsBySeat[game.Player1] != 1 || report.WinsBySeat[game.Player3] != 1 || report.Draws != 1 {
+		t.Fatalf("report lost known outcomes: wins=%v draws=%d", report.WinsBySeat, report.Draws)
 	}
 	if len(report.WinsBySeat) != game.NumPlayers {
 		t.Fatalf("WinsBySeat = %d entries, want %d", len(report.WinsBySeat), game.NumPlayers)

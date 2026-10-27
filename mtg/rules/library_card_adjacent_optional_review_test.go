@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -15,7 +15,7 @@ func TestCompiledAdjacentOptionalObservationCharacteristic(t *testing.T) {
 		{"look power", "look at", "power"},
 	} {
 		t.Run(producer.name, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Adjacent Optional Characteristic", Layout: "normal", TypeLine: "Sorcery",
 				OracleText: "You may " + producer.verb + " the top card of your library. If it's a creature card, you gain life equal to its " + producer.property + ". You gain 1 life.",
 			})
@@ -46,7 +46,7 @@ func TestCompiledAdjacentOptionalObservationCharacteristic(t *testing.T) {
 					if outcome == "unavailable" {
 						power, toughness = "*", "*"
 					}
-					card := compileUnlessCard(t, cardgen.ScryfallCard{
+					card := legacyCard(t, carddata.ScryfallCard{
 						Name: "Observed Creature", Layout: "normal", TypeLine: "Creature — Horse",
 						ManaCost: "{1}{B}", Power: &power, Toughness: &toughness,
 					})
@@ -58,7 +58,7 @@ func TestCompiledAdjacentOptionalObservationCharacteristic(t *testing.T) {
 						amount = 0
 					}
 					if outcome == "noncreature" {
-						card = compileUnlessCard(t, cardgen.ScryfallCard{
+						card = legacyCard(t, carddata.ScryfallCard{
 							Name: "Divination", Layout: "normal", TypeLine: "Sorcery",
 							ManaCost: "{2}{U}", OracleText: "Draw two cards.",
 						})

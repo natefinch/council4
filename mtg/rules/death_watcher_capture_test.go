@@ -4,14 +4,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func attachedDeathWatcher(t *testing.T) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Attached Death Watcher", Layout: "normal", TypeLine: "Enchantment — Aura",
 		OracleText: "Enchant creature\nWhen enchanted creature dies, return this card to the battlefield at the beginning of the next end step.",
 	})
@@ -142,7 +142,7 @@ func TestAttachedDeathWatcherCopiedBodyKeepsPhysicalSource(t *testing.T) {
 	if !attachPermanent(g, template, otherHost) {
 		t.Fatal("template Aura attachment failed")
 	}
-	sourceDef := compileUnlessCard(t, cardgen.ScryfallCard{
+	sourceDef := legacyCard(t, carddata.ScryfallCard{
 		Name: "Physical Copy Source", Layout: "normal", TypeLine: "Enchantment — Aura",
 		OracleText: "Enchant creature",
 	})

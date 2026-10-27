@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -17,17 +17,17 @@ import (
 
 func compiledReferenceRoleOriginal(t *testing.T, name string) *game.CardDef {
 	t.Helper()
-	data, err := os.ReadFile("../../cardgen/testdata/reference-role-originals.json")
+	data, err := os.ReadFile("testdata/reference-role-originals.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	var cards []cardgen.ScryfallCard
+	var cards []carddata.ScryfallCard
 	if err := json.Unmarshal(data, &cards); err != nil {
 		t.Fatal(err)
 	}
 	for _, card := range cards {
 		if card.Name == name {
-			return compileUnlessCard(t, card)
+			return legacyCard(t, card)
 		}
 	}
 	t.Fatalf("missing full original %q", name)

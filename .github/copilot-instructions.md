@@ -76,9 +76,11 @@ do not create another authoring checklist.
   compatibility, not a slot for arbitrary static/replacement rules. Later
   migration slices supply deeper operations and policy seams. If one is missing,
   reuse its prerequisite rather than inventing another runtime or parser route.
-- `cardgen` is retained for focused legacy correctness/compatibility maintenance,
-  not new coverage or bulk regeneration. Keep existing generated cards and tests.
-  Compiler acceptance and loadability do not certify gameplay.
+- The Oracle compiler and source renderer have been removed. Keep the committed
+  card definitions and behavioral tests; do not reintroduce a text compiler.
+  `cmd/gencardlist` and `cmd/genregistry` only maintain registration lists.
+  Legacy rules fixtures are frozen typed Go, not runtime-compiled Oracle text.
+  Historical compiler acceptance and loadability do not certify gameplay.
 
 ## Verify proportionally
 
@@ -87,18 +89,14 @@ This is the authoritative validation policy; skills and guides link here.
 - Ordinary code work: run affected-package behavioral tests. Shared rules also
   need affected interaction/rules scenarios. Run `go test ./...` locally only for
   broad changes or an explicit request; CI runs it once for code changes.
-- New or changed Engine types/enums also affect `cardgen/cmd/genrender`; include
-  that package's tests. If its generated type tables are stale, run
-  `go generate ./cardgen/...` to refresh those tables, not the Oracle corpus.
 - Documentation/comment-only work: check links/instructions and
   `git diff --check`; no local game tests. CI skips code checks for Markdown-only
   changes; other changes run the full suite.
 - Lint and lint autofixes require an explicit user request. The command is
-  `go run github.com/magefile/mage@v1.15.0 lint`; wait for any cardgen round-trip
-  tests to finish first. Standalone lint CI is manual maintenance, not a
-  default gate. Build and platform checks are needed only when affected or
+  `go run github.com/magefile/mage@v1.15.0 lint`. Standalone lint CI is manual
+  maintenance, not a default gate. Build and platform checks are needed only when affected or
   explicitly requested. By explicit user request, PR CI has `Tests` and required
-  `Race Tests` (`go test -race ./...`); race is not an extra local per-card gate.
+  `Race Tests` (`go test -race -v ./...`); race is not an extra local per-card gate.
   Manual `workflow_dispatch` choices `check=tests|lint|race` remain available.
 - Never recompile the Oracle corpus. Source-fingerprint refresh and registry
   fingerprint-baseline workflows are removed. Do not run global

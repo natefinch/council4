@@ -11,7 +11,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/internal/supportinventory"
 	"github.com/natefinch/council4/mtg/cards"
 )
@@ -86,7 +86,7 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 	if err != nil {
 		return err
 	}
-	var corpus []cardgen.ScryfallCard
+	var corpus []carddata.ScryfallCard
 	if err := json.Unmarshal(corpusData, &corpus); err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 	return saveManifest(path, append(data, '\n'), originalData)
 }
 
-func initialize(queue *manifest, corpus []cardgen.ScryfallCard, inventory supportinventory.Inventory) error {
+func initialize(queue *manifest, corpus []carddata.ScryfallCard, inventory supportinventory.Inventory) error {
 	seed := make(map[string]record)
 	for _, r := range queue.Records {
 		if _, exists := seed[r.OracleID]; exists {
@@ -217,13 +217,13 @@ func initialize(queue *manifest, corpus []cardgen.ScryfallCard, inventory suppor
 		associations[r.OracleID] = r
 	}
 	for _, card := range corpus {
-		if cardgen.DisownedCard(card) {
+		if carddata.DisownedCard(card) {
 			continue
 		}
 		r := seed[card.OracleID]
 		delete(seed, card.OracleID)
 		r.OracleID, r.Revision, r.Name = card.OracleID, card.ID, card.Name
-		exclusion, excluded := (cardgen.CorpusPolicy{}).Exclusion(card)
+		exclusion, excluded := (carddata.CorpusPolicy{}).Exclusion(card)
 		switch {
 		case excluded:
 			r.Status, r.Reason = "excluded", string(exclusion)

@@ -3,14 +3,14 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func compiledObservationBronco(t *testing.T) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Caustic Bronco", Layout: "normal", TypeLine: "Creature — Horse", ManaCost: "{1}{B}",
 		Power: new("2"), Toughness: new("2"),
 		OracleText: "Whenever this creature attacks, reveal the top card of your library and put it into your hand. You lose life equal to that card's mana value if this creature isn't saddled. Otherwise, each opponent loses that much life.\nSaddle 3 (Tap any number of other creatures you control with total power 3 or more: This Mount becomes saddled until end of turn. Saddle only as a sorcery.)",
@@ -19,10 +19,10 @@ func compiledObservationBronco(t *testing.T) *game.CardDef {
 
 func TestCompiledRevealPostMoveManaValueIsolation(t *testing.T) {
 	bronco := compiledObservationBronco(t)
-	divination := compileUnlessCard(t, cardgen.ScryfallCard{
+	divination := legacyCard(t, carddata.ScryfallCard{
 		Name: "Divination", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{2}{U}", OracleText: "Draw two cards.",
 	})
-	forest := compileUnlessCard(t, cardgen.ScryfallCard{
+	forest := legacyCard(t, carddata.ScryfallCard{
 		Name: "Forest", Layout: "normal", TypeLine: "Basic Land — Forest", OracleText: "{T}: Add {G}.",
 	})
 	for _, outcome := range []string{"repeat", "cloned pending trigger", "replaced hand move", "empty", "known zero"} {
@@ -95,7 +95,7 @@ func TestCompiledRevealPostMoveManaValueIsolation(t *testing.T) {
 
 func TestCompiledRevealPostMoveManaValueAttack(t *testing.T) {
 	bronco := compiledObservationBronco(t)
-	divination := compileUnlessCard(t, cardgen.ScryfallCard{
+	divination := legacyCard(t, carddata.ScryfallCard{
 		Name: "Divination", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{2}{U}", OracleText: "Draw two cards.",
 	})
 	if len(bronco.TriggeredAbilities) != 1 || len(bronco.ActivatedAbilities) != 1 ||

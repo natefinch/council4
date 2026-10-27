@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -65,7 +65,7 @@ func TestTargetAnnouncementRetargetAndCopyPublishExactlyOnce(t *testing.T) {
 				a.Controller = game.Player2
 				b := addCombatPermanent(g, game.Player3, vanillaCreature("Recipient B", 2, 3))
 				b.Controller = game.Player2
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Retarget Actuator", Layout: "normal", TypeLine: "Artifact",
 					OracleText: "{0}: Target creature gets +1/+1 until end of turn.",
 				})
@@ -77,7 +77,7 @@ func TestTargetAnnouncementRetargetAndCopyPublishExactlyOnce(t *testing.T) {
 						t.Fatal("legal original targeted activation failed")
 					}
 				} else {
-					spellDef := compileUnlessCard(t, cardgen.ScryfallCard{
+					spellDef := legacyCard(t, carddata.ScryfallCard{
 						Name: "Retarget Spell", Layout: "normal", TypeLine: "Instant", ManaCost: "{0}",
 						OracleText: "Target creature gets +1/+1 until end of turn.",
 					})

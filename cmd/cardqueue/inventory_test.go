@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/internal/supportinventory"
 	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
@@ -58,11 +58,11 @@ func TestQueueInventoryWithoutHistoricalCompilerReport(t *testing.T) {
 
 func TestQueueInventoryHonorsExplicitFrozenReportAndRejectsMalformedReport(t *testing.T) {
 	t.Chdir(t.TempDir())
-	card := cardgen.ScryfallCard{
+	card := carddata.ScryfallCard{
 		OracleID: "one", ID: "printing-one", Name: "One", Layout: "normal",
 		Games: []string{"paper"}, Legalities: map[string]string{"legacy": "legal"},
 	}
-	data, err := json.Marshal([]cardgen.ScryfallCard{card})
+	data, err := json.Marshal([]carddata.ScryfallCard{card})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,32 +72,32 @@ func TestQueueInventoryHonorsExplicitFrozenReportAndRejectsMalformedReport(t *te
 	if err := os.WriteFile("compiler.json", []byte(`{"eligible_count":1,"generated_count":1}`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	inventory, err := loadQueueInventory("corpus.json", "compiler.json", []cardgen.ScryfallCard{card}, "pin", cards.NewRegistry())
+	inventory, err := loadQueueInventory("corpus.json", "compiler.json", []carddata.ScryfallCard{card}, "pin", cards.NewRegistry())
 	if err != nil || len(inventory.Corpus) != 1 || !inventory.Corpus[0].CompilerAccepted {
 		t.Fatal("existing frozen-report behavior lost", err)
 	}
 	if err := os.WriteFile("compiler.json", []byte(`{`), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := loadQueueInventory("corpus.json", "compiler.json", []cardgen.ScryfallCard{card}, "pin", cards.NewRegistry()); err == nil {
+	if _, err := loadQueueInventory("corpus.json", "compiler.json", []carddata.ScryfallCard{card}, "pin", cards.NewRegistry()); err == nil {
 		t.Fatal("malformed supplied report silently fell back")
 	}
 }
 
 func TestRetainedInventoryPreservesExactAndLegacyIdentityBoundaries(t *testing.T) {
-	paper := func(id, name, layout string) cardgen.ScryfallCard {
-		return cardgen.ScryfallCard{
+	paper := func(id, name, layout string) carddata.ScryfallCard {
+		return carddata.ScryfallCard{
 			OracleID: id, ID: "printing-" + id, Name: name, Layout: layout, TypeLine: "Creature",
 			Games: []string{"paper"}, Legalities: map[string]string{"legacy": "legal"},
 		}
 	}
-	corpus := []cardgen.ScryfallCard{
+	corpus := []carddata.ScryfallCard{
 		paper("spell", "Recall", "normal"), paper("prepared", "Scholar // Recall", "prepare"),
 		paper("token", "Recall", "token"), paper("multiface", "Front // Back", "modal_dfc"),
 		paper("authored", "Authored", "normal"), paper("unloadable", "Unloadable", "normal"),
 	}
-	corpus[1].CardFaces = []cardgen.ScryfallCardFace{{Name: "Scholar"}, {Name: "Recall"}}
-	corpus[3].CardFaces = []cardgen.ScryfallCardFace{{Name: "Front"}, {Name: "Back"}}
+	corpus[1].CardFaces = []carddata.ScryfallCardFace{{Name: "Scholar"}, {Name: "Recall"}}
+	corpus[3].CardFaces = []carddata.ScryfallCardFace{{Name: "Front"}, {Name: "Back"}}
 	production := []cards.Support{
 		{Key: "legacy-name:Recall/0", Name: "Recall", Loadable: true, Faces: []string{"Recall"}},
 		{Key: "legacy-name:Front/0", Name: "Front", Loadable: true, Faces: []string{"Front", "Back"}},
