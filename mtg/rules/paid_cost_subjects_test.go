@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -20,12 +20,10 @@ import (
 
 func compiledPaidSubjectCard(t *testing.T, text, typeLine string) *game.CardDef {
 	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Paid Subject", Layout: "normal", TypeLine: typeLine, OracleText: text,
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: %v; diagnostics %#v", err, diagnostics)
-	}
+
 	return defs[0]
 }
 

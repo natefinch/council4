@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -55,7 +55,7 @@ func (agent *controllerObservationAgent) ChooseChoice(_ PlayerObservation, reque
 }
 
 func TestCompiledControllerObservationInterveningRider(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Observation With Rider", Layout: "normal", TypeLine: "Enchantment",
 		OracleText: "At the beginning of your upkeep, you may look at the top card of target opponent's library. You gain 1 life. If you do, you may put that card on the bottom of that player's library.",
 	})
@@ -105,7 +105,7 @@ func TestCompiledControllerObservationInterveningRider(t *testing.T) {
 }
 func compiledControllerObservation(t *testing.T, prefix string) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Precognition", Layout: "normal", TypeLine: "Enchantment", ManaCost: "{4}{U}",
 		OracleText: "At the beginning of your upkeep, " + prefix +
 			"you may look at the top card of target opponent's library. If you do, you may put that card on the bottom of that player's library.",
@@ -282,7 +282,7 @@ func TestCompiledControllerObservationCopiesAndCurrentCardIdentity(t *testing.T)
 }
 
 func TestCompiledControllerObservationSkippedStateDoesNotBorrowReceipt(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Conditional Observer", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "If you control an artifact, you may look at the top card of target opponent's library. You gain 1 life. If you do, you may put that card on the bottom of that player's library.",
 	})

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func compiledLibrarySource(t *testing.T, name, typeLine string) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: name, Layout: "normal", TypeLine: typeLine, Power: new("1"), Toughness: new("1"),
 		OracleText: fmt.Sprintf("When %s is put into your graveyard from your library, you may exile it. If you do, %s deals 3 damage to each opponent and you gain 3 life.", name, name),
 	})
@@ -115,7 +115,7 @@ func TestLibrarySourceCaptureRequiresDeclaredSelfPattern(t *testing.T) {
 
 func TestLibrarySourceNaturalMillUsesOwnerNotMiller(t *testing.T) {
 	def := compiledLibrarySource(t, "Creeping Chill", "Sorcery")
-	miller := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Milling Spell", Layout: "normal",
+	miller := legacyCard(t, carddata.ScryfallCard{Name: "Milling Spell", Layout: "normal",
 		TypeLine: "Instant", OracleText: "Target player mills one card."})
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	card := addCardToLibrary(g, game.Player2, def)

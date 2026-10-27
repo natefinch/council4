@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -12,12 +12,10 @@ import (
 
 func compileCounterTaxCard(t *testing.T, name, text, typeLine string) *game.CardDef {
 	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: name, Layout: "normal", TypeLine: typeLine, OracleText: text,
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: err=%v diagnostics=%#v defs=%d", err, diagnostics, len(defs))
-	}
+
 	return defs[0]
 }
 

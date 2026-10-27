@@ -7,12 +7,12 @@ import (
 	"os"
 	"slices"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/internal/supportinventory"
 	"github.com/natefinch/council4/mtg/cards"
 )
 
-func loadQueueInventory(corpusPath, compilerPath string, corpus []cardgen.ScryfallCard, hash string, registry *cards.Registry) (supportinventory.Inventory, error) {
+func loadQueueInventory(corpusPath, compilerPath string, corpus []carddata.ScryfallCard, hash string, registry *cards.Registry) (supportinventory.Inventory, error) {
 	if _, err := os.Stat(compilerPath); err == nil {
 		return supportinventory.Load(corpusPath, compilerPath, registry)
 	} else if !errors.Is(err, os.ErrNotExist) {
@@ -37,7 +37,7 @@ func loadQueueInventory(corpusPath, compilerPath string, corpus []cardgen.Scryfa
 
 // This joins retained installation evidence, not compiler acceptance for the
 // uninstalled tail. Loadability and verification still come from the registry.
-func inventoryFromInstallation(corpus []cardgen.ScryfallCard, hash string, production []cards.Support, installation []installedCompilerIdentity) (supportinventory.Inventory, error) {
+func inventoryFromInstallation(corpus []carddata.ScryfallCard, hash string, production []cards.Support, installation []installedCompilerIdentity) (supportinventory.Inventory, error) {
 	out := supportinventory.Inventory{CorpusSHA256: hash, Production: production}
 	installed := make(map[string]installedCompilerIdentity)
 	for _, identity := range installation {
@@ -63,7 +63,7 @@ func inventoryFromInstallation(corpus []cardgen.ScryfallCard, hash string, produ
 	}
 	seen := make(map[string]bool)
 	for _, card := range corpus {
-		if cardgen.DisownedCard(card) {
+		if carddata.DisownedCard(card) {
 			continue
 		}
 		if card.OracleID == "" || seen[card.OracleID] {
@@ -75,7 +75,7 @@ func inventoryFromInstallation(corpus []cardgen.ScryfallCard, hash string, produ
 			return out, fmt.Errorf("stale installation identity %s", card.OracleID)
 		}
 		delete(installed, card.OracleID)
-		if _, excluded := (cardgen.CorpusPolicy{}).Exclusion(card); excluded {
+		if _, excluded := (carddata.CorpusPolicy{}).Exclusion(card); excluded {
 			if wasInstalled {
 				return out, fmt.Errorf("excluded installation identity %s", card.OracleID)
 			}
@@ -104,7 +104,7 @@ func inventoryFromInstallation(corpus []cardgen.ScryfallCard, hash string, produ
 				continue
 			}
 			legacyLoadable = legacyLoadable || support.Name == card.Name ||
-				len(card.CardFaces) > 1 && !slices.ContainsFunc(card.CardFaces, func(face cardgen.ScryfallCardFace) bool {
+				len(card.CardFaces) > 1 && !slices.ContainsFunc(card.CardFaces, func(face carddata.ScryfallCardFace) bool {
 					return !slices.Contains(support.Faces, face.Name)
 				})
 		}

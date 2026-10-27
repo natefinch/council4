@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -27,7 +27,7 @@ func TestCompiledLegacyReturnedPermanentConditions(t *testing.T) {
 		for _, matches := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/matches=%t", test.name, matches), func(t *testing.T) {
 				t.Parallel()
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: test.name, Layout: "normal", TypeLine: "Instant", OracleText: test.text,
 				})
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -91,7 +91,7 @@ func TestCompiledReturnedCurrentCharacteristicsAndTargetSlot(t *testing.T) {
 	for _, addElf := range []bool{false, true} {
 		t.Run(fmt.Sprintf("addElf=%t", addElf), func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Returned Incarnation", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Tap target creature. Return target creature card from a graveyard to the battlefield under your control. You gain 1 life. If it's an Elf, put a +1/+1 counter on it.",
 			})
@@ -198,7 +198,7 @@ func TestReturnedPublisherSkippedOrStaleTargetDoesNotReuseResult(t *testing.T) {
 
 func TestPublishedBlinkSourceAndFreshObjectLKI(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Blinking Source", Layout: "normal", TypeLine: "Creature — Elf",
 		OracleText: "{2}: Exile this creature, then return it to the battlefield under its owner's control. If it's an Elf, put a +1/+1 counter on it.",
 	})
@@ -292,7 +292,7 @@ func TestCompiledReturnedPublisherReplacementOrCounter(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: test.name, Layout: "normal", TypeLine: "Instant", OracleText: test.text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -364,7 +364,7 @@ func TestPublishedCardVersionAndPermanentFallbackStayDistinct(t *testing.T) {
 
 func TestCompiledReturnedSubjectsRemainIndependent(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Independent Returns", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Return target creature card from your graveyard to the battlefield. If it's an Elf, create a 1/1 green Elf Warrior creature token. Return target creature card from your graveyard to the battlefield. If it's a Dragon, put a +1/+1 counter on it.",
 	})

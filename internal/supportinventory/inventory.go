@@ -9,7 +9,7 @@ import (
 	"os"
 	"slices"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/cards"
 )
 
@@ -115,7 +115,7 @@ func Merge(corpus []OracleCard, compiler CompilerReport, production []cards.Supp
 	seen := make(map[string]bool)
 	accepted := 0
 	for _, card := range corpus {
-		if cardgen.DisownedCard(cardgen.ScryfallCard{Name: card.Name}) {
+		if carddata.DisownedCard(carddata.ScryfallCard{Name: card.Name}) {
 			continue
 		}
 		if seen[card.OracleID] || card.OracleID == "" {

@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -137,7 +137,7 @@ func TestLibrarySourceReplacedMillDoesNotCapture(t *testing.T) {
 
 func TestLibrarySourceMulticardMillKeepsWatchers(t *testing.T) {
 	def := compiledLibrarySource(t, "Creeping Chill", "Sorcery")
-	watcher := compileUnlessCard(t, cardgen.ScryfallCard{
+	watcher := legacyCard(t, carddata.ScryfallCard{
 		Name: "Library Watcher", Layout: "normal", TypeLine: "Creature", Power: new("1"), Toughness: new("1"),
 		OracleText: "Whenever a card is put into a graveyard from a library, you gain 1 life.",
 	})

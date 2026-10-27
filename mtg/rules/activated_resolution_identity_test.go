@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -38,7 +38,7 @@ func TestActivatedOrdinalTransformCapturesBody(t *testing.T) {
 	t.Parallel()
 	g, engine, source := ordinalFixture(t, "{1}: If this is the second time this ability has resolved this turn, draw a card.")
 	def, _ := permanentCardDef(g, source)
-	back := compileUnlessCard(t, cardgen.ScryfallCard{
+	back := legacyCard(t, carddata.ScryfallCard{
 		Name: "Ordinal Back", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: If this is the second time this ability has resolved this turn, you gain 2 life.",
 	})
@@ -104,7 +104,7 @@ func TestActivatedOrdinalMergedComponentIdentity(t *testing.T) {
 	}
 	// Replace the top with a card carrying two different abilities, shifting
 	// both old components without changing their immutable origins.
-	top := compileUnlessCard(t, cardgen.ScryfallCard{
+	top := legacyCard(t, carddata.ScryfallCard{
 		Name: "New Top", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: You gain 1 life.\n{1}: Draw a card.",
 	})
@@ -247,7 +247,7 @@ func TestActivatedOrdinalManaRoutesRemainSeparate(t *testing.T) {
 
 func TestInnerFlameIgniterActualThirdResolution(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Inner-Flame Igniter", Layout: "normal", TypeLine: "Creature - Elemental Warrior",
 		Power: new("2"), Toughness: new("2"),
 		OracleText: "{2}{R}: Creatures you control get +1/+0 until end of turn. If this is the third time this ability has resolved this turn, creatures you control gain first strike until end of turn.",

@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -14,7 +14,7 @@ import (
 
 func TestUnlessSourceExclusionCompiledResolution(t *testing.T) {
 	t.Parallel()
-	for _, card := range []cardgen.ScryfallCard{
+	for _, card := range []carddata.ScryfallCard{
 		{
 			Name: "Fathom Fleet Boarder", Layout: "normal", ManaCost: "{2}{B}", Colors: []string{"B"},
 			TypeLine:   "Creature — Orc Pirate",
@@ -30,7 +30,7 @@ func TestUnlessSourceExclusionCompiledResolution(t *testing.T) {
 	} {
 		t.Run(card.Name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, card)
+			def := legacyCard(t, card)
 			sequence := def.TriggeredAbilities[0].Content.Modes[0].Sequence
 			if len(sequence) != 1 || !sequence[0].Condition.Val.Condition.Val.Negate ||
 				!sequence[0].Condition.Val.Condition.Val.ControlsMatching.Val.Selection.ExcludeSource {
@@ -333,7 +333,7 @@ func TestUnlessSourceExclusionCompiledScopeTiming(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Unless Source Scope", Layout: "normal", TypeLine: "Creature — Pirate",
 				Power: new("2"), Toughness: new("2"),
 				OracleText: "When this creature enters, tap target artifact. " + tt.text,

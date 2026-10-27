@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -112,7 +112,7 @@ func TestCompiledDeclaredPermanentRawPaidCopyAndClone(t *testing.T) {
 				name = noun + "/real copy"
 			}
 			t.Run(name, func(t *testing.T) {
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Raw Declared Composition", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{G}",
 					OracleText: "Exile target card from a graveyard. Return target " + noun +
 						" to its owner's hand. Its controller loses 2 life. Its owner gains 3 life.",

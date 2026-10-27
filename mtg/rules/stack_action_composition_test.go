@@ -4,14 +4,14 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
 func compiledStackActionCard(t *testing.T, text string) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Stack Action Probe", Layout: "normal", TypeLine: "Instant", OracleText: text,
 	})
 }

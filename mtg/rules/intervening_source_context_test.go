@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestInterveningCounterConditionPreservesQueuedSourceOccurrence(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Intervening Source Context", Layout: "normal", TypeLine: "Enchantment",
 		OracleText: "At the beginning of each end step, if there are three or more quest counters on this enchantment, you may put a Kraken, Leviathan, Octopus, or Serpent creature card from your hand onto the battlefield.",
 	})

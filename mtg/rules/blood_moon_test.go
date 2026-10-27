@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
@@ -162,13 +162,11 @@ func TestBloodMoonExternalGrantsAnimatedLandAndManaLoss(t *testing.T) {
 
 func compileUrborg(t *testing.T) *game.CardDef {
 	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Urborg, Tomb of Yawgmoth", Layout: "normal", TypeLine: "Legendary Land",
 		OracleText: "Each land is a Swamp in addition to its other land types.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("retained supported Urborg: %v, %v", err, diagnostics)
-	}
+
 	return defs[0]
 }
 

@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -95,7 +95,7 @@ func TestTargetCardConditionRequiresActualReachedIncarnation(t *testing.T) {
 
 func TestCompiledTargetCardTypeConditionUsesPublishedMove(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Card Type Context", Layout: "normal", TypeLine: "Creature",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Card Type Context", Layout: "normal", TypeLine: "Creature",
 		Power: new("1"), Toughness: new("1"), OracleText: "{1}: Exile target card from a graveyard. You gain 1 life. If it was a permanent card, put a +1/+1 counter on this creature."})
 	for _, cardType := range []types.Card{types.Artifact, types.Creature, types.Land, types.Instant} {
 		t.Run(string(cardType), func(t *testing.T) {

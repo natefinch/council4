@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -20,7 +20,7 @@ func TestCompiledBlinkConditionAndConsequenceShareNewObject(t *testing.T) {
 				if modal {
 					text = "Choose one —\n• " + body + "\n• Draw a card."
 				}
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Published Untap", Layout: "normal", TypeLine: "Instant", OracleText: text,
 				})
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

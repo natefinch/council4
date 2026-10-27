@@ -48,7 +48,7 @@ jobs:
           fi
       - name: Full test suite
         if: steps.plan.outputs.code == 'true'
-        run: go test ./...
+        run: go test -v ./...
       - uses: actions/setup-node@v4
         if: steps.plan.outputs.code == 'true'
         with:
@@ -74,7 +74,7 @@ jobs:
           go-version-file: go.mod
           cache: true
       - name: Race test suite
-        run: go test -race ./...
+        run: go test -race -v ./...
 
   maintenance:
     name: Manual ${{ inputs.check }}
@@ -93,4 +93,4 @@ jobs:
         run: go run github.com/magefile/mage@v1.15.0 lint
       - name: Explicit race run
         if: inputs.check == 'race'
-        run: go test -race -short ./...
+        run: go test -race -short -v ./...

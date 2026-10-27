@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -22,7 +22,7 @@ func TestCompiledSharedPlayerRecipientTargetOutcomeVerbs(t *testing.T) {
 		for _, prefix := range []string{"", "Target player draws a card. ", "Exile target creature card from a graveyard. "} {
 			t.Run(prefix+tt.action, func(t *testing.T) {
 				t.Parallel()
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Target Outcome Recipient", Layout: "normal", TypeLine: "Instant",
 					OracleText: prefix + "Target opponent sacrifices a creature of their choice. If that player does, " + tt.action,
 				})

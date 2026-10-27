@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -79,7 +79,7 @@ func TestCompiledReferenceSubjectDeceiverSourceIdentity(t *testing.T) {
 					source.Owner = game.Player1
 					g.CardInstances[source.CardInstanceID].Owner = game.Player1
 					decoy := addCombatPermanent(g, controller, def)
-					forest := compileUnlessCard(t, cardgen.ScryfallCard{
+					forest := legacyCard(t, carddata.ScryfallCard{
 						Name: "Forest", Layout: "normal", TypeLine: "Basic Land \u2014 Forest", OracleText: "{T}: Add {G}.",
 					})
 					observed := addCardToLibrary(g, controller, forest)

@@ -47,9 +47,9 @@ source, structural assertions and hashes cannot prove runtime semantics.
   compiler-first/declarative-by-default authoring and the claim that Go is only
   for a small exceptional tail. Controlled Go resolution is not arbitrary
   generated state-mutation code.
-- **ADR 0008:** retain typed validation, deterministic rendering and conservative
-  consumption for the existing compiler. That compiler is now legacy
-  correctness/compatibility tooling, not the route to new card coverage.
+- **ADR 0008:** retain typed validation and the generated definitions. The Oracle
+  compiler, parser and source renderer have been removed; the translation
+  pipeline is historical, not maintained compatibility tooling.
 - **ADR 0009:** retain text-blind runtime behavior and descriptive text as
   nonbehavioral metadata. Supersede the requirement that a serializable CardDef
   alone contains every card's behavior. Authored program identities need an
@@ -71,10 +71,15 @@ evidence, not a completion gate. Step 12 (#3278) supplies mixed support reportin
 Existing compiler reports measure recognition, not all deployed or
 behavior-verified cards.
 
-Keep generated definitions, tests, merged improvements and unmerged work.
-Freeze compiler coverage expansion; allow focused correctness fixes without
-corpus recompilation. Preserve genuine runtime bugs when parking a compiler-only
-approach. Do not turn this migration into wholesale card regeneration.
+Keep generated definitions, behavioral tests, merged improvements and unmerged
+work. The compiler has been removed without regenerating the installed corpus.
+Compiler-backed rules tests now select frozen typed Go fixtures; nested
+generated-package scenarios run directly under `internal/legacyfixtures`.
+Compiler-only parsing, rendering and refusal tests are retired with their code.
+`internal/carddata` retains corpus metadata and eligibility policy for the
+authored-card queue. `cmd/gencardlist` and `cmd/genregistry` only maintain
+registration lists for existing Go definitions. Do not reintroduce a text
+compiler or turn this migration into wholesale card regeneration.
 
 ### Original-source linked exile channels (#3232)
 
@@ -103,4 +108,4 @@ Legacy `PublishLinked`, imprint and resolution-local frames keep their existing
 namespaces and consumer lifetimes. No source-disable lifecycle policy or broad
 linked-runtime rewrite is introduced. The pinned Helvault topology is tested
 as a shared-operation fixture; Helvault, Trove Warden and Underworld Sentinel
-remain refused by the legacy compiler, not newly deployed cards.
+were refused by the retired compiler, not newly deployed cards.

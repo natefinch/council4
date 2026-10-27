@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -149,7 +149,7 @@ func TestPastStackConditionRetainsSpellCharacteristics(t *testing.T) {
 
 func TestCompiledEventSpellManaValueIdentityAndDeparture(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Event Numeric", Layout: "normal", TypeLine: "Creature",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Event Numeric", Layout: "normal", TypeLine: "Creature",
 		Power: new("1"), Toughness: new("1"),
 		OracleText: "Whenever you cast or copy an instant or sorcery spell, you gain 1 life. If that spell has mana value 5 or greater, you gain 2 life."})
 	for _, removed := range []bool{false, true} {

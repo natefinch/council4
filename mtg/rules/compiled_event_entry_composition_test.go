@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -13,7 +13,7 @@ import (
 func TestCompiledEventEntryCounterAcrossVerbs(t *testing.T) {
 	for _, verb := range []string{"put that card onto", "return that card to"} {
 		t.Run(verb, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Entry Watcher", Layout: "normal", TypeLine: "Creature",
 				Power: new("1"), Toughness: new("1"),
 				OracleText: "Whenever an opponent sacrifices a nontoken permanent, " +
@@ -44,7 +44,7 @@ func TestCompiledEventEntryCounterAcrossVerbs(t *testing.T) {
 }
 
 func TestCompiledPaidEventEntryRequiresActualPayment(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Tenacious Dead", Layout: "normal", TypeLine: "Creature — Skeleton Warrior",
 		ManaCost: "{B}", Power: new("1"), Toughness: new("1"),
 		OracleText: "When this creature dies, you may pay {1}{B}. If you do, return it to the battlefield tapped under its owner's control.",
@@ -107,10 +107,10 @@ func TestCompiledPaidEventEntryRequiresActualPayment(t *testing.T) {
 }
 
 func TestCompiledFrontFaceReturnPreservesWholeCard(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Vincent Valentine // Galian Beast", Layout: "transform",
 		TypeLine: "Legendary Creature — Assassin // Legendary Creature — Werewolf Beast",
-		CardFaces: []cardgen.ScryfallCardFace{{
+		CardFaces: []carddata.ScryfallCardFace{{
 			Name: "Vincent Valentine", ManaCost: "{2}{B}{B}",
 			TypeLine: "Legendary Creature — Assassin", Power: new("2"), Toughness: new("2"),
 			OracleText: "Whenever a creature an opponent controls dies, put a number of +1/+1 counters on Vincent Valentine equal to that creature's power.\nWhenever Vincent Valentine attacks, you may transform it.",

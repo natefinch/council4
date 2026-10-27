@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -36,13 +36,10 @@ func TestCompiledMovePermanentLibrarySequences(t *testing.T) {
 		{"token", "Put target creature on the bottom of its owner's library. Its controller loses 2 life.", game.Player2, true, true, false, false, game.Player3, -2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+			defs := legacyCardDefs(t, carddata.ScryfallCard{
 				Name: "Test Library Move", Layout: "normal", TypeLine: "Sorcery",
 				OracleText: "Tap target creature. " + tc.body,
 			})
-			if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-				t.Fatalf("compile: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-			}
 
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			prior := addCombatCreaturePermanentWithPower(g, game.Player4, 7)
@@ -122,13 +119,11 @@ func TestCompiledMovePermanentLibrarySequences(t *testing.T) {
 }
 
 func TestCompiledMovePermanentConditionalLifeRider(t *testing.T) {
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Test Conditional Library Move", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Put target creature on the bottom of its owner's library. If you control three or more artifacts, you lose 2 life.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-	}
+
 	for _, count := range []int{2, 3} {
 		t.Run(strconv.Itoa(count)+" artifacts", func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

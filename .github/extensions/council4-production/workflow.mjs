@@ -163,11 +163,6 @@ export function defaultCorpusPath(sha256, env = process.env, platform = process.
   return path.join(cache, "council4", "pinned", `${sha256}.json`);
 }
 
-export function validationPackagesForTask(policy, taskType) {
-  if (taskType !== "engine") return policy.validationPackages;
-  return [...new Set([...policy.validationPackages, "./cardgen/cmd/genrender"])];
-}
-
 // Workflow run ledgers live under .cardwork/workflows in whichever worktree
 // started them. Production runs from any top-level worktree of the repository
 // see each other's runs; per-unit worktrees under .cardwork are not roots.
@@ -347,7 +342,7 @@ export function checkSelection(task) {
 // fixtures and Markdown are not production code.
 export function cardBoundaryViolations(task, files) {
   if (task.taskType !== "card") return [];
-  return files.filter(file => /^(mtg\/(rules|game|cardprogram)\/|cardgen\/)/.test(file) &&
+  return files.filter(file => /^mtg\/(rules|game|cardprogram)\//.test(file) &&
     !file.endsWith("_test.go") && !file.endsWith(".md") && !file.split("/").includes("testdata"));
 }
 
@@ -656,7 +651,7 @@ Return taskType none only if no candidates remain or a genuine external/unsafe b
           return claimFailure({ index, task, base: work.base, worktree: work.path }, claimed.error, state.units);
         }
         const claim = claimed.claim;
-        const validationPackages = validationPackagesForTask(policy, task.taskType);
+        const validationPackages = policy.validationPackages;
         const contract = `Write ONLY in isolated worktree ${work.path}; other checkouts (including the parent) are off limits for mutation.
 You may read earlier retained unit evidence at paths explicitly listed here: ${JSON.stringify(state.units.map(u => ({ id: u.task?.id, worktree: u.worktree, gaps: u.result?.gaps })))}
 Task type ${task.taskType}, id ${task.id}, title ${task.title}.

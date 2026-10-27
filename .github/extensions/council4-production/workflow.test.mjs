@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { closeLandedIssue, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction, validationPackagesForTask } from "./workflow.mjs";
+import { closeLandedIssue, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -14,16 +14,6 @@ import { observeUsage, readReceipts, summarize, writeReport, reviewHistory } fro
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
 const complete = { status: "complete", reviewRequired: false, evidence: ["actual test"], gaps: [] };
-
-test("Engine validation includes renderer type drift without adding a card gate or mutating policy", () => {
-  const original = [...policy.validationPackages];
-  const renderer = "./cardgen/cmd/genrender";
-  assert.deepEqual(validationPackagesForTask(policy, "card"), original);
-  assert.deepEqual(validationPackagesForTask(policy, "engine"), [...original, renderer]);
-  assert.deepEqual(policy.validationPackages, original);
-  assert.deepEqual(validationPackagesForTask({ ...policy, validationPackages: [...original, renderer] }, "engine"),
-    [...original, renderer]);
-});
 
 function fixture(overrides = {}) {
   const calls = [];
@@ -199,7 +189,7 @@ test("Inputs fail closed and card tasks cannot hide Engine work", () => {
   assert.throws(() => assertCardBoundary({ taskType: "card" }, ["mtg/rules/effects.go"]));
   assert.doesNotThrow(() => assertCardBoundary({ taskType: "card" }, ["mtg/rules/my_card_test.go", "mtg/cards/authored/my_card.go"]));
   assert.doesNotThrow(() => assertCardBoundary({ taskType: "card" },
-    ["mtg/rules/testdata/my-card/rulings.json", "cardgen/testdata/source.txt"]));
+    ["mtg/rules/testdata/my-card/rulings.json", "mtg/rules/testdata/source.txt"]));
   assert.throws(() => assertCardBoundary({ taskType: "card" }, ["mtg/rules/testdata.go"]));
 });
 

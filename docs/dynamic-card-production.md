@@ -32,7 +32,7 @@ explicit scope; preflight, reporting and telemetry-smoke do not.
 
 **User-directed landing policy:** use PRs and merge after CI, not direct main
 pushes. The remaining GitHub `Race Tests` protection stays enabled. CI now has a
-PR job named exactly `Race Tests`, running `go test -race ./...`; production
+PR job named exactly `Race Tests`, running `go test -race -v ./...`; production
 agents themselves still run locally in Copilot, not in Actions.
 
 The workflow creates an isolated worktree per unit from fetched `origin/main`.
@@ -439,12 +439,10 @@ This does not repair Copilot extension-provider disconnects. Avoid editing,
 reloading or enabling/disabling the owning extension during a live run.
 An interrupted provider is a stopped run, not background progress; preserve
 its journal, work, billing and lock ownership before choosing recovery.
-Engine units also validate `cardgen/cmd/genrender` during initial, repair and
-integrated-head checks. Runtime type/enum changes can stale its generated
-renderer tables even when gameplay packages pass. This is focused compatibility
-maintenance, not Oracle compilation or a new per-card gate; follow the
-[canonical validation policy](../.github/copilot-instructions.md#verify-proportionally)
-if the tables need regeneration.
+The Oracle compiler and source renderer are retired. Engine units validate the
+configured behavioral packages; there is no renderer drift check or generated
+type table to refresh. Existing card definitions and frozen legacy gameplay
+fixtures remain ordinary Go code.
 
 Resuming reuses completed durable steps and agent calls. **Changing code/policy
 does not retroactively change a paused run**: the workflow rejects a mismatched

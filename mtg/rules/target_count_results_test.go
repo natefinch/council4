@@ -3,22 +3,8 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
 	"github.com/natefinch/council4/mtg/game"
 )
-
-// The original runtime counterexample exiled two chosen cards but created one
-// token. An unmodeled actual-card iterator must refuse before execution.
-func TestXCardExileUnmodeledActualCountRefused(t *testing.T) {
-	card := &cardgen.ScryfallCard{
-		Name: "Unmodeled Iterator", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{X}{B}",
-		OracleText: "Exile X target creature cards from your graveyard. For each creature card exiled this way, create a 2/2 black Zombie creature token.",
-	}
-	defs, diagnostics, err := cardgen.CompileCardDefs(card)
-	if err != nil || len(defs) != 0 || len(diagnostics) == 0 {
-		t.Fatalf("unmodeled actual-card iterator admitted: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-	}
-}
 
 func TestCompiledLeadingTokenCountPreservesTypedSelection(t *testing.T) {
 	def := compileTargetCountSpell(t, "For each token you control, create a 1/1 white Rabbit creature token.")

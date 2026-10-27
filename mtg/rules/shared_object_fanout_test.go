@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -22,12 +22,10 @@ func TestSharedFanoutPayloadsAffectOnlyChosenObjects(t *testing.T) {
 	} {
 		for _, count := range []int{0, 1, 2} {
 			t.Run(tc.name+"/"+strconv.Itoa(count), func(t *testing.T) {
-				defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+				defs := legacyCardDefs(t, carddata.ScryfallCard{
 					Name: "Fanout Payload", Layout: "normal", TypeLine: "Sorcery", OracleText: tc.body,
 				})
-				if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-					t.Fatalf("compile: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-				}
+
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				creature := &game.CardDef{CardFace: game.CardFace{
 					Name: "Creature", Types: []types.Card{types.Creature},

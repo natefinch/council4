@@ -3,17 +3,17 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
 func TestObservedManaValueScalarAvailabilityAndIncarnation(t *testing.T) {
-	divination := compileUnlessCard(t, cardgen.ScryfallCard{
+	divination := legacyCard(t, carddata.ScryfallCard{
 		Name: "Divination", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{2}{U}", OracleText: "Draw two cards.",
 	})
-	forest := compileUnlessCard(t, cardgen.ScryfallCard{
+	forest := legacyCard(t, carddata.ScryfallCard{
 		Name: "Forest", Layout: "normal", TypeLine: "Basic Land — Forest", OracleText: "{T}: Add {G}.",
 	})
 	for _, outcome := range []string{"known zero", "nonzero", "empty", "skipped", "declined", "missing definition", "reincarnated input"} {

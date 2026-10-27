@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -11,15 +11,13 @@ import (
 )
 
 func TestResultThisWayDiscardSelection(t *testing.T) {
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Lord Windgrace", Layout: "normal",
 		TypeLine: "Legendary Planeswalker — Windgrace", ManaCost: "{3}{B}{R}{G}",
 		Loyalty:    new("4"),
 		OracleText: "+2: Discard a card, then draw a card. If a land card is discarded this way, draw an additional card.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile = %v, %v, %v", defs, diagnostics, err)
-	}
+
 	content := defs[0].LoyaltyAbilities[0].Content
 	for _, test := range []struct {
 		name      string
@@ -65,12 +63,10 @@ func TestResultThisWayProducerSelections(t *testing.T) {
 		{"exile card", "You may exile a card from a graveyard. If a creature card was exiled this way, you gain 3 life.", zone.Graveyard, types.Creature, types.Land, "", ""},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+			defs := legacyCardDefs(t, carddata.ScryfallCard{
 				Name: "Result Probe", Layout: "normal", TypeLine: "Sorcery", OracleText: test.text,
 			})
-			if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-				t.Fatalf("compile = %v, %v, %v", defs, diagnostics, err)
-			}
+
 			content := defs[0].SpellAbility.Val
 			for _, branch := range []struct {
 				name                      string

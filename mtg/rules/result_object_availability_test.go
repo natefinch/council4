@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -108,7 +108,7 @@ func TestResultObjectAvailabilityKnownEmptyAndIncomplete(t *testing.T) {
 func TestCompiledHiddenMilledQuantityUnavailable(t *testing.T) {
 	for _, noun := range []string{"creature card", "card"} {
 		t.Run(noun, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Unavailable quantity", Layout: "normal", TypeLine: "Sorcery",
 				OracleText: "Mill a card. For each " + noun + " milled this way, you gain 2 life.",
 			})

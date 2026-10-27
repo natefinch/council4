@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -27,7 +27,7 @@ func TestCompiledPostfixTargetTypeConditions(t *testing.T) {
 		} {
 			t.Run(keyword+"/"+test.name, func(t *testing.T) {
 				t.Parallel()
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Postfix Subject Probe", Layout: "normal", TypeLine: "Creature — Human",
 					ManaCost: "{1}{W}", Power: new("1"), Toughness: new("1"),
 					OracleText: "When Postfix Subject Probe enters, target permanent you control gains " + keyword +

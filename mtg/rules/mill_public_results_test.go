@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -206,7 +206,7 @@ func TestCompiledMilledCardFiltersIncludePublicRedirects(t *testing.T) {
 	for _, noun := range []string{"card", "creature card", "land card"} {
 		for _, qualifying := range []int{0, 2} {
 			t.Run(fmt.Sprintf("%s/%d", noun, qualifying), func(t *testing.T) {
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Public mill quantity", Layout: "normal", TypeLine: "Sorcery",
 					OracleText: "Mill three cards. For each " + noun + " milled this way, create a 1/1 green Insect creature token.",
 				})
@@ -240,7 +240,7 @@ func TestCompiledMilledCardFiltersIncludePublicRedirects(t *testing.T) {
 }
 
 func TestCompiledMilledResultConditionIncludesPublicRedirect(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Public mill condition", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Mill a card. If a creature card was milled this way, you gain 2 life.",
 	})

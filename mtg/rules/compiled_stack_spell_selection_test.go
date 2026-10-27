@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -44,7 +44,7 @@ func TestCompiledStackSpellSelectionPredicates(t *testing.T) {
 		{"artifact, enchantment, or battle spell with mana value 3 or greater", []types.Card{types.Enchantment}, nil, 2, false},
 	} {
 		t.Run(fmt.Sprintf("%s/%v/%v/%d", tc.selector, tc.types, tc.colors, tc.mv), func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Predicate Probe", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Counter target " + tc.selector + ".",
 			})
@@ -84,7 +84,7 @@ func TestCompiledStackSpellControllerNotOwner(t *testing.T) {
 		{" you don't control", game.Player1, game.Player2, false},
 	} {
 		t.Run(fmt.Sprintf("%s/%d", tc.suffix, tc.controller), func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Controller Probe", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Counter target enchantment spell" + tc.suffix + " with mana value 3 or less.",
 			})
@@ -122,7 +122,7 @@ func TestCompiledStackSpellBestowCharacteristics(t *testing.T) {
 		{"artifact or enchantment spell you don't control", true},
 	} {
 		t.Run(tc.selector, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Bestow Probe", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Counter target " + tc.selector + ".",
 			})
@@ -135,7 +135,7 @@ func TestCompiledStackSpellBestowCharacteristics(t *testing.T) {
 }
 
 func TestCompiledStackSpellGroupExile(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Group Probe", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Exile any number of target artifact or enchantment spells an opponent controls with mana value 3 or less.",
 	})

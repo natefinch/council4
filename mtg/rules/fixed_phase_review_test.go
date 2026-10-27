@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -36,13 +36,11 @@ func TestFixedPhaseDirectTargetRetainsOwnSlot(t *testing.T) {
 
 func TestFixedPhaseDepartureCardUsesEventIncarnation(t *testing.T) {
 	t.Parallel()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Departure Capture", Layout: "normal", TypeLine: "Enchantment",
 		OracleText: "Whenever another creature you control leaves the battlefield, return that card to the battlefield at the beginning of the next end step.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: %v; diagnostics: %v", err, diagnostics)
-	}
+
 	sequence := defs[0].TriggeredAbilities[0].Content.Modes[0].Sequence
 	for _, reentered := range []bool{false, true} {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

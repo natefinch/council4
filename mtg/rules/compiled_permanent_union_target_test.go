@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -14,7 +14,7 @@ import (
 
 func compiledPermanentUnion(t *testing.T, text string) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Union Capability", Layout: "normal", TypeLine: "Instant", OracleText: text,
 	})
 }

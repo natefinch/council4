@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -34,12 +34,12 @@ func TestCompiledRecipientDamageFrameRuntime(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			card := cardgen.ScryfallCard{Name: "Frame Source", Layout: "normal", TypeLine: "Creature",
+			card := carddata.ScryfallCard{Name: "Frame Source", Layout: "normal", TypeLine: "Creature",
 				Power: new("5"), Toughness: new("8"), OracleText: tc.text}
 			if tc.spell {
 				card.TypeLine = "Instant"
 			}
-			def := compileUnlessCard(t, card)
+			def := legacyCard(t, card)
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
 			source := addCombatPermanent(g, game.Player1, def)

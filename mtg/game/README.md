@@ -328,6 +328,11 @@ This package is the **data model** used by the rules engine. Future layers will 
 
 Runtime policy concerns, such as whether a hand-written `ImplementationID` is registered, remain outside structural Card Definition validation. No Oracle-text parsing or compiler concepts are present in this package.
 
-### Typed data as a compiler target
+### Typed card definitions
 
-Because `mtg/game` owns the canonical typed card model and its structural validation, the `cardgen` executable backend uses these same types as a typed **intermediate representation (IR)**. `cardgen` lowers Oracle text directly into `game.StaticAbility`, `game.ActivatedAbility`, `game.ManaAbility`, `game.TriggeredAbility`, `game.ReplacementAbility`, and `game.AbilityContent` values, assembles a `game.CardDef`, and calls `ValidateCardDef` before rendering Go source. This keeps the boundary clean: `mtg/game` owns the typed data and what makes it structurally valid, `mtg/rules` owns behavior, and `cardgen` owns recognition (Oracle text → typed values) and rendering (typed values → Go source). See [`cardgen/README.md`](../../cardgen/README.md#compiler-stages) and [ADR 0008](../../docs/adr/0008-typed-ir-lowering.md).
+`mtg/game` owns the canonical typed card model and its structural validation;
+`mtg/rules` owns behavior. Both the retained generated definitions and authored
+Go implementations use these types and the same Engine. The Oracle compiler and
+source renderer have been removed, so changes to game types no longer require
+renderer tables or a compiler update. See
+[ADR 0012](../../docs/adr/0012-authored-go-card-implementations.md).

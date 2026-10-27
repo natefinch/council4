@@ -8,12 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/internal/supportinventory"
 	"github.com/natefinch/council4/mtg/cards"
 )
 
-func continuationFixture(t *testing.T) (manifest, reviewedPlan, []cardgen.ScryfallCard, supportinventory.Inventory) {
+func continuationFixture(t *testing.T) (manifest, reviewedPlan, []carddata.ScryfallCard, supportinventory.Inventory) {
 	t.Helper()
 	q, corpus, inventory := queueFixture(t)
 	q.CorpusSHA256 = "pinned-corpus"

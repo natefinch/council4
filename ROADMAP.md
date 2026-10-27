@@ -140,8 +140,8 @@ This phase closes major gameplay-rule gaps that are not Commander-specific befor
 
 - [x] `mtg/cards` registry package mapping canonical card names to card definitions.
 - [x] Scryfall Oracle Cards bulk data as the source of truth for Card Definition metadata and Oracle text.
-- [x] Deterministic Oracle recognition, typed lowering, validation, and Go source rendering in `cardgen`.
-- [x] Isolated Card Generation tooling under `cardgen/`, including the Oracle compiler and `gencardlist`.
+- [x] Historical Oracle recognition, typed lowering, validation, and Go source rendering; the compiler is now removed and its installed cards retained.
+- [x] Retain registration-list maintenance in `cmd/gencardlist` and `cmd/genregistry`, independent of the retired compiler.
 
 See [`CARD_FEATURES_ROADMAP.md`](./CARD_FEATURES_ROADMAP.md) for the detailed card-text feature coverage roadmap that feeds generated card implementation work.
 

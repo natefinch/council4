@@ -3,11 +3,12 @@
 This page summarizes what the rules engine supports along the **playtest path**
 — the flow exercised when [`mtg/sim`](../mtg/sim/README.md) runs many games over
 a set of decks and [`mtg/report`](../mtg/report/README.md) aggregates the
-outcomes. It is the runtime counterpart to the card-compile coverage tracked in
+outcomes. It is the runtime counterpart to the historical card-compile coverage in
 [`supported.md`](../supported.md), [`unsupported.md`](../unsupported.md), and
 [`unsupported-reasons.md`](../unsupported-reasons.md): those describe which cards
-cardgen can *generate*, while this page describes which mechanics the engine can
-*resolve* once a generated card is in play.
+the retired compiler accepted, while this page describes which mechanics the
+engine can *resolve*. Existing generated cards remain installed alongside
+authored Go implementations; the compiler itself has been removed.
 
 For the authoritative, frequently-updated capability list, see the **Current
 implementation status** section of [`mtg/rules/README.md`](../mtg/rules/README.md);
@@ -81,11 +82,9 @@ declarative path for effects that do not yet lower cleanly; see
   it does not yet resolve), the dispatch path panics with a
   `rules.UnsupportedError` carrying the offending kind and a human-readable
   reason. This is intentional and attributable rather than an opaque string
-  panic or a silent wrong result. Most unsupported mechanics are instead caught
-  earlier, at card-generation time: cardgen rejects card shapes it cannot lower,
-  so those cards never enter a deck or reach the playtest path. `UnsupportedError`
-  covers the narrower runtime case of a structurally-recognized primitive that
-  reaches the engine with no registered handler.
+  panic or a silent wrong result. Historical compiler refusals remain frozen
+  evidence, not a runtime admission gate. Authored cards require complete
+  implementation and executable scenarios before registration.
 - **Failures are captured, not fatal.** A single game must not abort a long
   batch. `sim.Run` plays each game under a recover, so any panic — an engine
   bug, an unsupported mechanic, or an illegal applied action — is caught and
@@ -95,10 +94,10 @@ declarative path for effects that do not yet lower cleanly; see
   when the recovered value is a `rules.UnsupportedError`, letting a batch
   distinguish "not implemented yet" from genuine defects. Every failure carries
   its seed, so the game is reproducible via `RunOne(cfg, i)` or replay.
-- **Card-compile coverage is partial.** Roughly a quarter of paper-eligible
-  cards currently generate; the rest are blocked at compile time and never reach
-  the playtest path. See [`unsupported-reasons.md`](../unsupported-reasons.md)
-  for the capability-aware blocker breakdown.
+- **Card support is partial.** The installed generated definitions are retained;
+  new coverage is authored Go. See [`support-inventory.md`](../support-inventory.md)
+  for separate installed, loadable and behavior-verified evidence. Frozen
+  compiler diagnostics do not certify or reject an authored implementation.
 - **Engine features still in progress.** The rules README's *Not implemented
   yet* list is authoritative; current gaps include full attachment legality,
   agent-driven mulligan/discard/sacrifice/reveal/tutor decisions, several

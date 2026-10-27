@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -22,7 +22,7 @@ func TestCompiledSharedPlayerRecipientSecondSlot(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Second Recipient", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Tap target creature. " + tt.action,
 			})
@@ -69,7 +69,7 @@ func TestCompiledSharedPlayerRecipientDepartedControllerAndOwner(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Departed Recipient", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Tap target artifact. Destroy target creature. Scry 1. " + tt.action,
 			})
@@ -113,7 +113,7 @@ func TestCompiledSharedPlayerRecipientDepartedControllerAndOwner(t *testing.T) {
 
 func TestCompiledSharedPlayerRecipientEdictOutcome(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Self-Inflicted Wound", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Target opponent sacrifices a green or white creature of their choice. If that player does, they lose 2 life.",
 	})
@@ -122,7 +122,7 @@ func TestCompiledSharedPlayerRecipientEdictOutcome(t *testing.T) {
 			t.Parallel()
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			if succeeds {
-				creatureDef := compileUnlessCard(t, cardgen.ScryfallCard{
+				creatureDef := legacyCard(t, carddata.ScryfallCard{
 					Name: "Green Creature", Layout: "normal", TypeLine: "Creature",
 					ManaCost: "{G}", Colors: []string{"G"}, Power: new("2"), Toughness: new("2"),
 				})
@@ -155,7 +155,7 @@ func TestCompiledSharedPlayerRecipientEdictOutcome(t *testing.T) {
 
 func TestCompiledSharedPlayerRecipientZoneEventPlayer(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Zone Event Recipient", Layout: "normal", TypeLine: "Enchantment",
 		OracleText: "Whenever a card is put into an opponent's graveyard from anywhere, you may have that player lose 2 life. If you do, you gain 2 life.",
 	})
@@ -198,7 +198,7 @@ func TestCompiledSharedPlayerRecipientGroups(t *testing.T) {
 	} {
 		t.Run(tt.text, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Group Recipients", Layout: "normal", TypeLine: "Instant", OracleText: tt.text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -225,7 +225,7 @@ func TestCompiledSharedPlayerRecipientGroups(t *testing.T) {
 
 func TestCompiledSharedPlayerRecipientConditionalOptionalAction(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Scoped Recipients", Layout: "normal", TypeLine: "Instant",
 		OracleText: "If you control a creature, you may draw a card and gain 2 life. You lose 1 life.",
 	})
@@ -264,7 +264,7 @@ func TestCompiledSharedPlayerRecipientConditionalOptionalAction(t *testing.T) {
 
 func TestCompiledSharedPlayerRecipientStackController(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Stack Recipients", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Counter target spell. Counter target spell. Its controller draws a card.",
 	})

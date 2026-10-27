@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -13,13 +13,11 @@ import (
 )
 
 func TestResultThisWayBlinkKeepsDepartureCharacteristics(t *testing.T) {
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Siren's Ruse", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Exile target creature you control, then return that card to the battlefield under its owner's control. If a Pirate was exiled this way, draw a card.",
 	})
-	if err != nil || len(diagnostics) != 0 {
-		t.Fatalf("compile = %v, %v", diagnostics, err)
-	}
+
 	for _, pirate := range []bool{false, true} {
 		t.Run(map[bool]string{false: "non-Pirate", true: "temporary Pirate"}[pirate], func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

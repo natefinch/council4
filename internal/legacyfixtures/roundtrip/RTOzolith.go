@@ -1,0 +1,123 @@
+// Legacy regression fixture preserved when the Oracle compiler was retired.
+package fixtures
+
+import (
+	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
+)
+
+// RTOzolith is the card definition for RT Ozolith.
+//
+// Type: Legendary Artifact
+//
+// Oracle text:
+//
+//	Whenever a creature you control leaves the battlefield, if it had counters on it, put those counters on RT Ozolith.
+//	At the beginning of combat on your turn, if RT Ozolith has counters on it, you may move all counters from RT Ozolith onto target creature.
+var RTOzolith = newRTOzolith
+
+func newRTOzolith() *game.CardDef {
+	return &game.CardDef{
+		CardFace: game.CardFace{
+			Name:       "RT Ozolith",
+			Supertypes: []types.Super{types.Legendary},
+			Types:      []types.Card{types.Artifact},
+			TriggeredAbilities: []game.TriggeredAbility{
+				game.TriggeredAbility{
+					Text: "Whenever a creature you control leaves the battlefield, if it had counters on it, put those counters on RT Ozolith.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerWhenever,
+						Pattern: game.TriggerPattern{
+							Event:            game.EventZoneChanged,
+							Controller:       game.TriggerControllerYou,
+							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							MatchFromZone:    true,
+							FromZone:         zone.Battlefield,
+							StackObjectKind:  game.StackSpell,
+							CounterKind:      counter.PlusOnePlusOne,
+						},
+						InterveningIf:                          "if it had counters on it",
+						InterveningIfEventPermanentHadCounters: true,
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.MoveCounters{
+											Object:      game.SourcePermanentReference(),
+											CounterKind: counter.PlusOnePlusOne,
+											Source: game.CounterSourceSpec{
+												Kind: game.CounterSourceEventPermanent,
+											},
+											AllKinds: true,
+										},
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+				game.TriggeredAbility{
+					Text: "At the beginning of combat on your turn, if RT Ozolith has counters on it, you may move all counters from RT Ozolith onto target creature.",
+					Trigger: game.TriggerCondition{
+						Type: game.TriggerAt,
+						Pattern: game.TriggerPattern{
+							Event:           game.EventBeginningOfStep,
+							Controller:      game.TriggerControllerYou,
+							StackObjectKind: game.StackSpell,
+							CounterKind:     counter.PlusOnePlusOne,
+							Step:            game.StepBeginningOfCombat,
+						},
+						InterveningIf: "if RT Ozolith has counters on it",
+						InterveningCondition: opt.Val(game.Condition{
+							Text:              "if RT Ozolith has counters on it",
+							Object:            opt.Val(game.SourcePermanentReference()),
+							ObjectMatches:     opt.Val(game.Selection{MatchAnyCounter: true}),
+							SourceCounterKind: counter.PlusOnePlusOne,
+						}),
+					},
+					Content: game.AbilityContent{
+						Modes: []game.Mode{
+							game.Mode{
+								Targets: []game.TargetSpec{
+									game.TargetSpec{
+										MinTargets: 1,
+										MaxTargets: 1,
+										Constraint: "target creature",
+										Allow:      game.TargetAllowPermanent,
+										Selection:  opt.Val(game.Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+									},
+								},
+								Sequence: []game.Instruction{
+									game.Instruction{
+										Primitive: game.MoveCounters{
+											Object:      game.TargetPermanentReference(0),
+											CounterKind: counter.PlusOnePlusOne,
+											Source: game.CounterSourceSpec{
+												Kind: game.CounterSourceSelf,
+											},
+											AllKinds: true,
+										},
+										Optional: true,
+									},
+								},
+							},
+						},
+						MinModes: 1,
+						MaxModes: 1,
+					},
+				},
+			},
+			OracleText: `
+			Whenever a creature you control leaves the battlefield, if it had counters on it, put those counters on RT Ozolith.
+			At the beginning of combat on your turn, if RT Ozolith has counters on it, you may move all counters from RT Ozolith onto target creature.
+		`,
+		},
+	}
+}

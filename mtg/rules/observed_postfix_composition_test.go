@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -38,12 +38,12 @@ func TestCompiledObservedPostfixUnavailableAndSkippedProducts(t *testing.T) {
 			if outcome == "declined observation" {
 				text = "You may reveal" + body[len("Reveal"):]
 			}
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Unavailable Postfix Subject", Layout: "normal", TypeLine: "Sorcery", OracleText: text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			g.Players[game.Player1].Life = 40
-			card := addCardToLibrary(g, game.Player1, compileUnlessCard(t, cardgen.ScryfallCard{
+			card := addCardToLibrary(g, game.Player1, legacyCard(t, carddata.ScryfallCard{
 				Name: "Forest", Layout: "normal", TypeLine: "Basic Land — Forest", OracleText: "{T}: Add {G}.",
 			}))
 			agent := &observedPostfixAgent{answers: []bool{false}}
@@ -93,15 +93,15 @@ func TestCompiledObservedPostfixIndependentOwnersAndModes(t *testing.T) {
 				if modal {
 					text = "Choose one \u2014\n\u2022 " + body + "\n\u2022 You gain 1 life."
 				}
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Independent Observations", Layout: "normal", TypeLine: "Sorcery", OracleText: text,
 				})
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 				g.Players[game.Player1].Life = 40
-				ours := compileUnlessCard(t, cardgen.ScryfallCard{
+				ours := legacyCard(t, carddata.ScryfallCard{
 					Name: "Divination", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{2}{U}", OracleText: "Draw two cards.",
 				})
-				theirs := compileUnlessCard(t, cardgen.ScryfallCard{
+				theirs := legacyCard(t, carddata.ScryfallCard{
 					Name: "Observed Horse", Layout: "normal", TypeLine: "Creature — Horse", ManaCost: "{3}", Power: new("2"), Toughness: new("2"),
 				})
 				if outcome == "nonqualifying" {
@@ -146,15 +146,15 @@ func TestCompiledObservedPostfixIndependentOwnersAndModes(t *testing.T) {
 }
 
 func TestCompiledObservedShuffleLibraryOwnerIdentity(t *testing.T) {
-	warp := compileUnlessCard(t, cardgen.ScryfallCard{
+	warp := legacyCard(t, carddata.ScryfallCard{
 		Name: "Chaos Warp", Layout: "normal", TypeLine: "Instant", ManaCost: "{2}{R}",
 		OracleText: "The owner of target permanent shuffles it into their library, then reveals the top card of their library. If it's a permanent card, they put it onto the battlefield.",
 	})
-	creature := compileUnlessCard(t, cardgen.ScryfallCard{
+	creature := legacyCard(t, carddata.ScryfallCard{
 		Name: "Owner's Horse", Layout: "normal", TypeLine: "Creature — Horse", ManaCost: "{4}",
 		Power: new("2"), Toughness: new("2"),
 	})
-	divination := compileUnlessCard(t, cardgen.ScryfallCard{
+	divination := legacyCard(t, carddata.ScryfallCard{
 		Name: "Divination", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{2}{U}", OracleText: "Draw two cards.",
 	})
 	for _, diverted := range []bool{false, true} {

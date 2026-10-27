@@ -3,13 +3,13 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestCompiledNamedDamageUsesOriginalPermanentAttribution(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Prodigal Sorcerer", Layout: "normal",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Prodigal Sorcerer", Layout: "normal",
 		TypeLine: "Creature — Human Wizard", Power: new("1"), Toughness: new("1"),
 		OracleText: "{T}: Prodigal Sorcerer deals 1 damage to any target."})
 	content := def.ActivatedAbilities[0].Content
@@ -64,7 +64,7 @@ func TestCompiledNamedDamageUsesOriginalPermanentAttribution(t *testing.T) {
 			}
 		})
 	}
-	spell := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Shock", Layout: "normal", TypeLine: "Instant",
+	spell := legacyCard(t, carddata.ScryfallCard{Name: "Shock", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Shock deals 2 damage to any target."})
 	spellDamage, ok := spell.SpellAbility.Val.Modes[0].Sequence[0].Primitive.(game.Damage)
 	if !ok || spellDamage.DamageSource.Exists {

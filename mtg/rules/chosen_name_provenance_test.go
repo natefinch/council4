@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -32,7 +32,7 @@ type chosenNameAgent struct {
 
 func TestCompiledChosenNameCanoptekPaymentRuntime(t *testing.T) {
 	const text = "When this creature deals combat damage to a player, you may pay {3} and sacrifice it. If you do, choose a land you control. Then " + chosenNameRuntimeSearch
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Chosen payment runtime", Layout: "normal", TypeLine: "Artifact Creature", OracleText: text,
 		Power: new("2"), Toughness: new("1"),
 	})
@@ -109,7 +109,7 @@ func (a *chosenNameAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceR
 
 func chosenNameRuntimeDef(t *testing.T, text string) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Chosen name runtime", Layout: "normal", TypeLine: "Sorcery", OracleText: text,
 	})
 }

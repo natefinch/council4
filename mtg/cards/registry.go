@@ -23,7 +23,7 @@
 // every CardDef up front — a game touches only a few hundred of them.
 package cards
 
-//go:generate go run github.com/natefinch/council4/cardgen/cmd/genregistry
+//go:generate go run github.com/natefinch/council4/cmd/genregistry
 
 import (
 	"fmt"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 )
@@ -17,12 +17,10 @@ func TestCompiledCourtActorChosenSetAndCurrentMonarch(t *testing.T) {
 			for _, monarch := range []bool{false, true} {
 				t.Run(fmt.Sprintf("%s/%d/monarch=%v", prefix, count, monarch), func(t *testing.T) {
 					t.Parallel()
-					card := &cardgen.ScryfallCard{Name: "Court of Cunning", Layout: "normal", TypeLine: "Enchantment",
+					card := &carddata.ScryfallCard{Name: "Court of Cunning", Layout: "normal", TypeLine: "Enchantment",
 						ManaCost: "{1}{U}{U}", OracleText: "When this enchantment enters, you become the monarch.\nAt the beginning of your upkeep, " + prefix + action + " You gain 1 life."}
-					defs, diagnostics, err := cardgen.CompileCardDefs(card)
-					if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-						t.Fatalf("compile Court actor: %v %+v", err, diagnostics)
-					}
+					defs := legacyCardDefs(t, *card)
+
 					g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 					source := addCombatPermanent(g, game.Player1, defs[0])
 					for player := range g.Players {
@@ -72,13 +70,11 @@ func TestCompiledCourtActorChosenSetAndCurrentMonarch(t *testing.T) {
 
 func TestCompiledCourtActorPartialAndFullTargetFizzle(t *testing.T) {
 	t.Parallel()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Court of Cunning", Layout: "normal", TypeLine: "Enchantment", ManaCost: "{1}{U}{U}",
 		OracleText: "When this enchantment enters, you become the monarch.\nAt the beginning of your upkeep, any number of target players each mill two cards. If you're the monarch, each of those players mills ten cards instead. You gain 1 life.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile Court actor: %v %+v", err, diagnostics)
-	}
+
 	for _, allGone := range []bool{false, true} {
 		t.Run(fmt.Sprintf("allgone=%v", allGone), func(t *testing.T) {
 			t.Parallel()

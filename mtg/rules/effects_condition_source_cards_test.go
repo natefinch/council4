@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -13,12 +13,12 @@ import (
 func TestResolvingSourceExclusionCompiledSequences(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		card    cardgen.ScryfallCard
+		card    carddata.ScryfallCard
 		subtype types.Sub
 		check   func(*testing.T, *game.Game, *game.Permanent, int, bool)
 	}{
 		{
-			card: cardgen.ScryfallCard{
+			card: carddata.ScryfallCard{
 				Name: "Hero in Training", Layout: "normal", ManaCost: "{2}{W}",
 				TypeLine:   "Creature \u2014 Human Hero",
 				OracleText: "When this creature enters, draw a card. If you control another Hero, you gain 2 life.",
@@ -40,7 +40,7 @@ func TestResolvingSourceExclusionCompiledSequences(t *testing.T) {
 			},
 		},
 		{
-			card: cardgen.ScryfallCard{
+			card: carddata.ScryfallCard{
 				Name: "Protocol Knight", Layout: "normal", ManaCost: "{3}{U}",
 				TypeLine:   "Creature \u2014 Human Knight",
 				OracleText: "When this creature enters, tap target creature an opponent controls. Put a stun counter on that creature if you control another Knight. (If a permanent with a stun counter would become untapped, remove one from it instead.)",
@@ -65,10 +65,8 @@ func TestResolvingSourceExclusionCompiledSequences(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.card.Name, func(t *testing.T) {
 			t.Parallel()
-			defs, diagnostics, err := cardgen.CompileCardDefs(&tt.card)
-			if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-				t.Fatalf("compile = %v, diagnostics = %v, defs = %d", err, diagnostics, len(defs))
-			}
+			defs := legacyCardDefs(t, tt.card)
+
 			def := defs[0]
 			if len(def.TriggeredAbilities) != 1 || len(def.TriggeredAbilities[0].Content.Modes) != 1 {
 				t.Fatal("compiled card did not retain its single triggered mode")

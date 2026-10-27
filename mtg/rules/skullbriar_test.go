@@ -3,10 +3,8 @@ package rules
 import (
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
 	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
@@ -462,15 +460,6 @@ func TestSkullbriarOrdinaryCloneAndParallelCounterIsolation(t *testing.T) {
 			e.applyStateBasedActions(branch)
 			assertSkullCounters(t, g.CardCounters[card.ID])
 		})
-	}
-}
-
-func TestSkullbriarPolicyRenderer(t *testing.T) {
-	def := lifetimeDefinition(t, cards.NewDefaultRegistry(), skullbriarID)
-	source, err := (cardgen.Renderer{}).RenderCardSource(
-		&cardgen.ScryfallCard{Name: def.Name, Layout: "normal"}, []*game.CardDef{def}, nil, "test")
-	if err != nil || !strings.Contains(source, "game.ZoneTransitionRetainCountersExceptHandLibrary") {
-		t.Fatalf("policy renderer: %v", err)
 	}
 }
 

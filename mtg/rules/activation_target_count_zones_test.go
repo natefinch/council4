@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -21,13 +21,11 @@ func TestCompiledNonBattlefieldActivationCountsBeforeSourceCost(t *testing.T) {
 		{"graveyard", "{X}, Exile this card from your graveyard: Tap X target lands.", zone.Graveyard},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+			defs := legacyCardDefs(t, carddata.ScryfallCard{
 				Name: "Count Source", Layout: "normal", TypeLine: "Creature", Power: new("2"), Toughness: new("2"),
 				OracleText: tc.body,
 			})
-			if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-				t.Fatalf("compile: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-			}
+
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			g.Turn.Phase, g.Turn.Step = game.PhasePrecombatMain, game.StepNone
 			source := addCardToHand(g, game.Player1, defs[0])
@@ -62,13 +60,11 @@ func TestCompiledNonBattlefieldActivationCountsBeforeSourceCost(t *testing.T) {
 }
 
 func TestCompiledModalActivationCountUsesSelectedModes(t *testing.T) {
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Count Modes", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{X}: Choose one —\n• Tap X target lands.\n• Draw a card.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-	}
+
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	g.Turn.Phase, g.Turn.Step = game.PhasePrecombatMain, game.StepNone
 	source := addCombatPermanent(g, game.Player1, defs[0])

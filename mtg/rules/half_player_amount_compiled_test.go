@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
@@ -26,7 +26,7 @@ func TestCompiledHalfPlayerAmountUsesCurrentSameRecipient(t *testing.T) {
 						body = "Target opponent loses 2 life. Scry 1. That player mills half their library, rounded " + rounding + "."
 					}
 				}
-				def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Half Current Player", Layout: "normal",
+				def := legacyCard(t, carddata.ScryfallCard{Name: "Half Current Player", Layout: "normal",
 					TypeLine: "Instant", OracleText: body})
 				for _, initial := range []int{7, 8} {
 					t.Run(fmt.Sprintf("library%v-up%v-inherited%v-%d", library, roundUp, inherited, initial), func(t *testing.T) {

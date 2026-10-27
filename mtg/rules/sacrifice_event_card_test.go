@@ -3,14 +3,14 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func compiledSacrificeCardReturn(t *testing.T, control string) *game.CardDef {
 	t.Helper()
-	return compileUnlessCard(t, cardgen.ScryfallCard{
+	return legacyCard(t, carddata.ScryfallCard{
 		Name: "Sacrifice Watcher", Layout: "normal", TypeLine: "Creature",
 		Power: new("1"), Toughness: new("1"),
 		OracleText: "Whenever an opponent sacrifices a nontoken permanent, put that card onto the battlefield" + control + ".",

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -14,7 +14,7 @@ import (
 
 func ordinalFixture(t *testing.T, text string) (*game.Game, *Engine, *game.Permanent) {
 	t.Helper()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Ordinal", Layout: "normal", TypeLine: "Artifact", OracleText: text,
 	})
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -42,7 +42,7 @@ func activateOrdinal(t *testing.T, g *game.Game, engine *Engine, sourceID id.ID,
 
 func TestCompiledActivatedResolutionOrdinal(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Ordinal", Layout: "normal", TypeLine: "Artifact",
 		OracleText: "{1}: If this is the second time this ability has resolved this turn, draw a card.",
 	})

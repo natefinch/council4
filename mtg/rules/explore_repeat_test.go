@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
@@ -16,15 +16,13 @@ import (
 
 func compileExploreRepeatDef(t *testing.T, text, typeLine string) *game.CardDef {
 	t.Helper()
-	card := &cardgen.ScryfallCard{Name: "Test Scout", Layout: "normal",
+	card := &carddata.ScryfallCard{Name: "Test Scout", Layout: "normal",
 		TypeLine: typeLine, ManaCost: "{X}{G}", OracleText: text}
 	if typeLine == "Creature" {
 		card.Power, card.Toughness = new("1"), new("1")
 	}
-	defs, diagnostics, err := cardgen.CompileCardDefs(card)
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile repeat: err=%v diagnostics=%+v defs=%d", err, diagnostics, len(defs))
-	}
+	defs := legacyCardDefs(t, *card)
+
 	return defs[0]
 }
 
@@ -243,14 +241,12 @@ func TestCompiledExploreRepeatEntryXAndCopy(t *testing.T) {
 
 func TestJadelightRepeatNormalCastEntryXAndIncarnationCopies(t *testing.T) {
 	t.Parallel()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Jadelight Spelunker", Layout: "normal", ManaCost: "{X}{G}",
 		TypeLine: "Creature — Merfolk Scout", Power: new("1"), Toughness: new("1"),
 		OracleText: "When Jadelight Spelunker enters, it explores X times.",
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile Jadelight: err=%v diagnostics=%+v defs=%d", err, diagnostics, len(defs))
-	}
+
 	for _, x := range []int{0, 1, 2} {
 		for _, leave := range []bool{false, true} {
 			t.Run(fmt.Sprintf("x=%d/depart-reenter=%v", x, leave), func(t *testing.T) {

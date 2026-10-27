@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -17,13 +17,11 @@ func TestResultThisWayElseBranchSemantics(t *testing.T) {
 			clause, nonmatchingDraws = "Otherwise", 1
 		}
 		t.Run(clause, func(t *testing.T) {
-			defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+			defs := legacyCardDefs(t, carddata.ScryfallCard{
 				Name: "Else Probe", Layout: "normal", TypeLine: "Sorcery",
 				OracleText: "You may discard a card. If a land card is discarded this way, draw two cards. " + clause + ", draw a card.",
 			})
-			if err != nil || len(diagnostics) != 0 {
-				t.Fatalf("compile = %v, %v", diagnostics, err)
-			}
+
 			for _, test := range []struct {
 				name    string
 				card    types.Card
@@ -59,13 +57,11 @@ func TestResultThisWayElseBranchSemantics(t *testing.T) {
 }
 
 func TestResultThisWayColoredPermanentSelection(t *testing.T) {
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Colored Result Probe", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "You may sacrifice a creature. If a creature with one or more colors was sacrificed this way, you gain 3 life.",
 	})
-	if err != nil || len(diagnostics) != 0 {
-		t.Fatalf("compile = %v, %v", diagnostics, err)
-	}
+
 	for _, colored := range []bool{false, true} {
 		t.Run(map[bool]string{false: "colorless", true: "colored"}[colored], func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

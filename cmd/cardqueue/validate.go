@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/internal/supportinventory"
 )
 
-func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportinventory.Inventory) error {
-	byID := make(map[string]cardgen.ScryfallCard)
+func validate(queue manifest, corpus []carddata.ScryfallCard, inventory supportinventory.Inventory) error {
+	byID := make(map[string]carddata.ScryfallCard)
 	for _, card := range corpus {
-		if cardgen.DisownedCard(card) {
+		if carddata.DisownedCard(card) {
 			continue
 		}
 		if _, exists := byID[card.OracleID]; exists || card.ID == "" || card.OracleID == "" {
@@ -80,7 +80,7 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 			return fmt.Errorf("duplicate/stale/missing record %s", r.OracleID)
 		}
 		delete(byID, r.OracleID)
-		exclusion, excluded := (cardgen.CorpusPolicy{}).Exclusion(card)
+		exclusion, excluded := (carddata.CorpusPolicy{}).Exclusion(card)
 		if (r.Status == "excluded") != excluded || excluded && r.Reason != string(exclusion) {
 			return fmt.Errorf("policy mismatch %s", r.OracleID)
 		}
@@ -143,7 +143,7 @@ func validate(queue manifest, corpus []cardgen.ScryfallCard, inventory supportin
 			r.Owner != "" || r.Batch != "" || len(r.Keys) == 0 || backlog[r.OracleID] {
 			return fmt.Errorf("invalid baseline association %s", r.OracleID)
 		}
-		if _, excluded := (cardgen.CorpusPolicy{}).Exclusion(card); excluded {
+		if _, excluded := (carddata.CorpusPolicy{}).Exclusion(card); excluded {
 			return fmt.Errorf("excluded baseline association %s", r.OracleID)
 		}
 		if !slices.ContainsFunc(r.Keys, func(key string) bool { return loadable[key] }) {

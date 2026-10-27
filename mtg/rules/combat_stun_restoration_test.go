@@ -3,12 +3,12 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 )
 
 func TestCompiledCombatStunUsesOtherCombatantAndItsNextUntap(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Combat Stun", Layout: "normal", TypeLine: "Creature", Power: new("0"), Toughness: new("4"),
 		OracleText: "Whenever this creature blocks a creature, tap that creature. That creature doesn't untap during its controller's next untap step.",
 	})
@@ -45,7 +45,7 @@ func TestCompiledCombatStunUsesOtherCombatantAndItsNextUntap(t *testing.T) {
 }
 
 func TestCompiledEquipmentConditionTracksActualAttachment(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Equipment Condition", Layout: "normal", TypeLine: "Artifact Creature", Power: new("4"), Toughness: new("4"),
 		OracleText: "This creature can't attack or block unless it's equipped.",
 	})

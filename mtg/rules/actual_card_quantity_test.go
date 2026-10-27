@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -30,7 +30,7 @@ func TestCompiledActualCardQuantityResults(t *testing.T) {
 	} {
 		for _, qualifying := range []int{0, 2} {
 			t.Run(fmt.Sprintf("%s/%d", tc.name, qualifying), func(t *testing.T) {
-				def := compileUnlessCard(t, cardgen.ScryfallCard{
+				def := legacyCard(t, carddata.ScryfallCard{
 					Name: "Quantity", Layout: "normal", TypeLine: "Sorcery", OracleText: tc.text,
 				})
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -74,7 +74,7 @@ func TestCompiledActualCardQuantityResults(t *testing.T) {
 }
 
 func TestCompiledActualCardQuantitySingleTargetIncarnation(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Target history", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Exile target card from a graveyard. For each creature card exiled this way, you gain 2 life.",
 	})
@@ -104,7 +104,7 @@ func TestCompiledActualCardQuantitySingleTargetIncarnation(t *testing.T) {
 }
 
 func TestActualCardQuantityCountsCommanderBeforeCommandZoneSBA(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Exile destination", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Exile target player's graveyard. For each creature card exiled this way, create a 2/2 black Zombie creature token.",
 	})
@@ -124,7 +124,7 @@ func TestActualCardQuantityCountsCommanderBeforeCommandZoneSBA(t *testing.T) {
 }
 
 func TestCompiledActualCardQuantityIndependentProducers(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Independent", Layout: "normal", TypeLine: "Sorcery",
 		OracleText: "Mill two cards. For each creature card milled this way, you gain 2 life. You gain 1 life. Mill two cards. For each creature card milled this way, you gain 3 life.",
 	})
@@ -152,7 +152,7 @@ func TestCompiledActualCardQuantityPermanentCardDomain(t *testing.T) {
 		{"nonland permanent card", [2]types.Card{types.Artifact, types.Land}, 1},
 	} {
 		t.Run(fmt.Sprintf("%s/%v", tc.noun, tc.members), func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Card domain", Layout: "normal", TypeLine: "Sorcery",
 				OracleText: "Mill two cards. For each " + tc.noun + " milled this way, you gain 2 life.",
 			})
@@ -182,7 +182,7 @@ func TestCompiledActualCardQuantityDestinationAndEventDomains(t *testing.T) {
 		{"discard commander event", "Discard a card. For each creature card discarded this way, you gain 2 life.", true, true, 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Destination", Layout: "normal", TypeLine: "Sorcery", OracleText: tc.text})
+			def := legacyCard(t, carddata.ScryfallCard{Name: "Destination", Layout: "normal", TypeLine: "Sorcery", OracleText: tc.text})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			owner := game.Player1
 			if tc.commander {

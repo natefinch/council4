@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -12,13 +12,11 @@ import (
 
 func compileTargetCountSpell(t *testing.T, body string) *game.CardDef {
 	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Count Parameters", Layout: "normal", TypeLine: "Sorcery", ManaCost: "{X}{B}",
 		OracleText: body,
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: defs=%d diagnostics=%+v err=%v", len(defs), diagnostics, err)
-	}
+
 	return defs[0]
 }
 

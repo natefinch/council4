@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -19,7 +19,7 @@ func TestCompiledResolvingParagraphDamageAndPT(t *testing.T) {
 		{"PT Alternative", "Target creature gets -1/-1 until end of turn.\nMorbid — That creature gets -13/-13 until end of turn instead if a creature died this turn.", 1, 13, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: test.name, Layout: "normal", TypeLine: "Instant", OracleText: test.text,
 			})
 			for _, died := range []bool{false, true} {
@@ -49,7 +49,7 @@ func TestCompiledResolvingParagraphDamageAndPT(t *testing.T) {
 }
 
 func TestCompiledResolvingParagraphExpandedMana(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Expanded Mana Alternative", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Add {B}{B}{B}.\nThreshold — Add {B}{B}{B}{B}{B} instead if there are seven or more cards in your graveyard.",
 	})
@@ -74,7 +74,7 @@ func TestCompiledResolvingParagraphExpandedMana(t *testing.T) {
 }
 
 func TestCompiledResolvingParagraphCounterPaymentAlternative(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Counter Payment Alternative", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Counter target noncreature spell unless its controller pays {1}.\nFerocious — If you control a creature with power 4 or greater, counter that spell instead.",
 	})

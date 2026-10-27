@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -12,12 +12,10 @@ import (
 
 func compiledCaptureSequence(t *testing.T, text string) []game.Instruction {
 	t.Helper()
-	defs, diagnostics, err := cardgen.CompileCardDefs(&cardgen.ScryfallCard{
+	defs := legacyCardDefs(t, carddata.ScryfallCard{
 		Name: "Capture Capability", Layout: "normal", TypeLine: "Sorcery", OracleText: text,
 	})
-	if err != nil || len(diagnostics) != 0 || len(defs) != 1 {
-		t.Fatalf("compile: %v; diagnostics: %v; definitions: %d", err, diagnostics, len(defs))
-	}
+
 	return defs[0].SpellAbility.Val.Modes[0].Sequence
 }
 

@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -24,7 +24,7 @@ func TestCompiledSinglePermanentColorGateReadsResolvingTarget(t *testing.T) {
 		{"unavailable blue target", []color.Color{color.Blue}, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Color Gate Probe", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Destroy target creature if it's blue.",
 			})
@@ -72,7 +72,7 @@ func TestCompiledSinglePermanentQualifierCandidates(t *testing.T) {
 		{"land", types.Land, true, game.Player2, game.Player2, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Qualifier Probe", Layout: "normal", TypeLine: "Instant",
 				OracleText: "Destroy target tapped nonland permanent an opponent controls.",
 			})
@@ -100,7 +100,7 @@ func TestCompiledSinglePermanentQualifierCandidates(t *testing.T) {
 }
 
 func TestCompiledSinglePermanentAttackDefenderNotEventPlayer(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "The Spear of Bashenga", Layout: "normal", ManaCost: "{4}{W}", TypeLine: "Legendary Artifact — Equipment",
 		OracleText: "When The Spear of Bashenga enters, if there is no monarch, you become the monarch.\n" +
 			"Equipped creature gets +2/+2 and has vigilance.\n" +
@@ -138,7 +138,7 @@ func TestCompiledSinglePermanentAttackDefenderNotEventPlayer(t *testing.T) {
 }
 
 func TestCompiledSinglePermanentEventPlayerNotOwner(t *testing.T) {
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Event Player Destroy Probe", Layout: "normal", TypeLine: "Creature", Power: new("2"), Toughness: new("2"),
 		OracleText: "Whenever this creature deals combat damage to a player, destroy target artifact or enchantment that player controls.",
 	})
@@ -170,7 +170,7 @@ func TestCompiledSinglePermanentEventPlayerNotOwner(t *testing.T) {
 func TestCompiledSinglePermanentOptionalDestroyChoice(t *testing.T) {
 	for _, accept := range []bool{false, true} {
 		t.Run(map[bool]string{false: "declined", true: "accepted"}[accept], func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Optional Destroy Probe", Layout: "normal", TypeLine: "Instant",
 				OracleText: "You may destroy target creature.",
 			})

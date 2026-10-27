@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -13,7 +13,7 @@ import (
 
 func TestCompiledSpellConditionDoesNotAcquireReturnedPermanent(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{Name: "Spell Not Returned Creature", Layout: "normal",
+	def := legacyCard(t, carddata.ScryfallCard{Name: "Spell Not Returned Creature", Layout: "normal",
 		TypeLine: "Creature", ManaCost: "{9}", Power: new("1"), Toughness: new("1"),
 		OracleText: "Whenever you cast an instant or sorcery spell, return target creature card from your graveyard to the battlefield. You gain 1 life. If that spell has mana value 5 or greater, you gain 2 life."})
 	for _, eventValue := range []int{4, 5, 6} {

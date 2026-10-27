@@ -2904,15 +2904,13 @@ func appendPath(parent, child string) string {
 	return parent + "." + child
 }
 
-// isKnownProtectionSubtype reports whether sub is a creature or land subtype
-// that the renderer can emit (via types.KnownSubtypeForType).
+// isKnownProtectionSubtype reports whether sub is a known creature or land subtype.
 func isKnownProtectionSubtype(sub types.Sub) bool {
 	return types.KnownSubtypeForType(types.Creature, sub) ||
 		types.KnownSubtypeForType(types.Land, sub)
 }
 
-// isKnownProtectionCardType reports whether t is a card type the renderer can
-// serialise. Mirrors the set supported by cardgen.cardTypeLiteral.
+// isKnownProtectionCardType reports whether t is a supported protection card type.
 func isKnownProtectionCardType(t types.Card) bool {
 	switch t {
 	case types.Land, types.Creature, types.Artifact, types.Enchantment,

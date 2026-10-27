@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 )
@@ -29,7 +29,7 @@ func TestCompiledBodyConditionVersusActivationRestrictionTiming(t *testing.T) {
 			if tt.restriction {
 				body = "Draw a card, then draw a card. Activate only if you have no cards in hand."
 			}
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Activation Timing", Layout: "normal", TypeLine: "Artifact",
 				OracleText: "Discard your hand: " + body,
 			})

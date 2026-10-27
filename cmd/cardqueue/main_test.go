@@ -6,12 +6,12 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/internal/supportinventory"
 	"github.com/natefinch/council4/mtg/cards"
 )
 
-func queueFixture(t *testing.T) (manifest, []cardgen.ScryfallCard, supportinventory.Inventory) {
+func queueFixture(t *testing.T) (manifest, []carddata.ScryfallCard, supportinventory.Inventory) {
 	t.Helper()
 	q := manifest{Batches: []batch{
 		{ID: "first", Family: "destruction", OracleIDs: []string{"a", "b", "c"}, Prerequisites: []int{3273}, Operations: []string{"Context.Destroy"}},
@@ -23,10 +23,10 @@ func queueFixture(t *testing.T) (manifest, []cardgen.ScryfallCard, supportinvent
 			Evidence: "complete Engine path and executed behavioral scenario",
 		}}
 	}
-	var corpus []cardgen.ScryfallCard
+	var corpus []carddata.ScryfallCard
 	var inventory supportinventory.Inventory
 	for _, oracleID := range []string{"a", "b", "c", "d", "e", "f", "existing"} {
-		card := cardgen.ScryfallCard{
+		card := carddata.ScryfallCard{
 			ID: "printing-" + oracleID, OracleID: oracleID, Name: oracleID,
 			Layout: "normal", Games: []string{"paper"}, Legalities: map[string]string{"legacy": "legal"},
 		}
@@ -40,7 +40,7 @@ func queueFixture(t *testing.T) (manifest, []cardgen.ScryfallCard, supportinvent
 		}
 		inventory.Corpus = append(inventory.Corpus, r)
 	}
-	corpus = append(corpus, cardgen.ScryfallCard{ID: "printing-excluded", OracleID: "excluded", Name: "excluded", Layout: "normal", Digital: true})
+	corpus = append(corpus, carddata.ScryfallCard{ID: "printing-excluded", OracleID: "excluded", Name: "excluded", Layout: "normal", Digital: true})
 	if err := initialize(&q, corpus, inventory); err != nil {
 		t.Fatal(err)
 	}

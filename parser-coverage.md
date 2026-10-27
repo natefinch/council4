@@ -3,8 +3,8 @@
 **Historical parser report, not a production queue or completion gate.**
 Preserve these measurements; current validation follows the
 [repository policy](.github/copilot-instructions.md#verify-proportionally).
-Optional parser-only reporting is documented separately in
-[parsercoverage](cardgen/oracle/cmd/parsercoverage/README.md).
+The parser and its reporting commands have been removed. This saved report is
+historical evidence, not a command that should be regenerated.
 
 Parser-only coverage across the eligible Scryfall corpus, measured without running the compiler or lowering. Two distinct metrics are reported:
 

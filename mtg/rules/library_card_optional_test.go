@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -20,7 +20,7 @@ func TestCompiledObservedCardOptionalRevealAndMoveUsesOneDecision(t *testing.T) 
 		{"instant or sorcery card", game.CardFace{Types: []types.Card{types.Instant}}},
 	} {
 		t.Run(subject.noun, func(t *testing.T) {
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Observed Optional Group", Layout: "normal", TypeLine: "Artifact",
 				OracleText: "{T}: Look at the top card of your library. If it's a " + subject.noun +
 					", you may reveal it and put it into your hand. You gain 1 life.",

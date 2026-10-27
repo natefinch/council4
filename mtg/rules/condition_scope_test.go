@@ -3,7 +3,7 @@ package rules
 import (
 	"testing"
 
-	"github.com/natefinch/council4/cardgen"
+	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -30,14 +30,14 @@ func TestCompiledConditionScopeTiming(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			card := cardgen.ScryfallCard{
+			card := carddata.ScryfallCard{
 				Name: "Condition Scope", Layout: "normal", TypeLine: "Instant", OracleText: tt.text,
 			}
 			if tt.activated {
 				card.TypeLine = "Enchantment"
 				card.OracleText = "{1}: " + tt.text
 			}
-			def := compileUnlessCard(t, card)
+			def := legacyCard(t, card)
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			for range tt.initialHand {
 				addCardToHand(g, game.Player1, evidenceCard("Initial", 1))
@@ -82,7 +82,7 @@ func TestCompiledConditionBranchTiming(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			def := compileUnlessCard(t, cardgen.ScryfallCard{
+			def := legacyCard(t, carddata.ScryfallCard{
 				Name: "Condition Branch", Layout: "normal", TypeLine: "Instant", OracleText: tt.text,
 			})
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -103,7 +103,7 @@ func TestCompiledConditionBranchTiming(t *testing.T) {
 
 func TestCompiledExpandedClauseConditionTiming(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Expanded Condition", Layout: "normal", TypeLine: "Instant",
 		OracleText: "Tap target artifact. Unless you control a creature with power 2 or greater, put a +1/+1 counter on each of up to two target creatures you control.",
 	})
@@ -167,7 +167,7 @@ func TestCompiledExpandedClauseConditionTiming(t *testing.T) {
 
 func TestCompiledGroupConditionDoesNotRequireFirstEffectSuccess(t *testing.T) {
 	t.Parallel()
-	def := compileUnlessCard(t, cardgen.ScryfallCard{
+	def := legacyCard(t, carddata.ScryfallCard{
 		Name: "Ineffective Group", Layout: "normal", TypeLine: "Instant",
 		OracleText: "If you control a creature, destroy target creature, then draw a card.",
 	})
