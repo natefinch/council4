@@ -17,8 +17,7 @@ import (
 
 // genericAgents seats a GenericStrategy agent at every seat. The agent answers
 // engine-mediated choices (it is a rules.ChoiceAgent), so recording exercises the
-// choice path — land-only smoke decks overfill their hands and face cleanup
-// discard choices.
+// choice path when a scenario supplies spells such as the scry fixture below.
 func genericAgents(uint64) [game.NumPlayers]rules.PlayerAgent {
 	var agents [game.NumPlayers]rules.PlayerAgent
 	for i := range agents {
@@ -111,10 +110,8 @@ func TestReplayChecksTransitiveProgramVersions(t *testing.T) {
 }
 
 func TestRecordCapturesChoices(t *testing.T) {
-	// Free scry sorceries resolve a scry each cast, an engine-mediated choice,
-	// so every seat makes scry choices that
-	// recording must capture.
-	cfg := Config{Configs: scryDeckConfigs(), Games: 1, Seed: 9, NewAgents: genericAgents}
+	// One turn of free scry spells exercises recorded engine-mediated choices.
+	cfg := Config{Configs: scryDeckConfigs(), Games: 1, Seed: 9, NewAgents: genericAgents, TurnLimit: 1}
 	_, record := RecordGame(cfg, 0)
 	captured := false
 	for _, seat := range record.Seats {
@@ -126,7 +123,7 @@ func TestRecordCapturesChoices(t *testing.T) {
 		}
 	}
 	if !captured {
-		t.Error("expected at least one recorded choice (cleanup discard) across seats")
+		t.Error("expected at least one recorded scry choice")
 	}
 }
 
@@ -165,9 +162,18 @@ func TestReplayIsDeterministic(t *testing.T) {
 // through the same fallback rather than answering nil (a valid empty selection
 // for a search), which would otherwise find nothing and diverge.
 func TestReplayWithDefaultAgentsAndTutorChoice(t *testing.T) {
-	cfg := Config{Configs: tutorConfigs(), Games: 1, Seed: 314} // nil NewAgents -> FirstLegal
+	cfg := Config{Configs: tutorConfigs(), Games: 1, Seed: 314, TurnLimit: 1} // nil NewAgents -> FirstLegal
 	result, record := RecordGame(cfg, 0)
 
+	searched := false
+	for _, turn := range result.Turns {
+		for _, choice := range turn.Choices {
+			searched = searched || choice.Request.Kind == game.ChoiceSearch && choice.UsedFallback
+		}
+	}
+	if !searched {
+		t.Fatal("fixture did not exercise a fallback search choice")
+	}
 	for _, seat := range record.Seats {
 		if seat.ChoiceCapable {
 			t.Fatal("a FirstLegal seat should not be marked choice-capable")

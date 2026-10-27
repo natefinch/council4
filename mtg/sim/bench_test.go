@@ -17,6 +17,7 @@ import "testing"
 // allocations.
 func BenchmarkRunOneGame(b *testing.B) {
 	cfg := smokeConfig(1, 20240101)
+	cfg.Configs = smokeConfigs() // Preserve the twelve-card benchmark workload.
 	b.ReportAllocs()
 	b.ResetTimer()
 	for range b.N {
@@ -38,6 +39,7 @@ func BenchmarkRunOneGame(b *testing.B) {
 // isolating per-game cost from concurrency effects.
 func BenchmarkRunBatchSequential(b *testing.B) {
 	cfg := smokeConfig(16, 20240101)
+	cfg.Configs = smokeConfigs()
 	cfg.Workers = 1
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -50,6 +52,7 @@ func BenchmarkRunBatchSequential(b *testing.B) {
 // reporting the throughput gain from parallel execution.
 func BenchmarkRunBatchParallel(b *testing.B) {
 	cfg := smokeConfig(16, 20240101)
+	cfg.Configs = smokeConfigs()
 	cfg.Workers = 0 // GOMAXPROCS
 	b.ReportAllocs()
 	b.ResetTimer()

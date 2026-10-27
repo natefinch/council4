@@ -21,7 +21,7 @@ func (invalidProductionAgent) ChooseAction(rules.PlayerObservation, []action.Act
 func productionConfig(t *testing.T) Config {
 	t.Helper()
 	registry := cards.NewDefaultRegistry()
-	cfg := Config{Games: 2, Seed: 20261014, TurnLimit: 12, Workers: 1}
+	cfg := Config{Games: 2, Seed: 20261014, TurnLimit: 2, Workers: 1}
 	for p := range cfg.Configs {
 		for range 70 {
 			cfg.Configs[p].Deck = append(cfg.Configs[p].Deck, registry.Lookup("Forest"))

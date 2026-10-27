@@ -84,10 +84,11 @@ func TestCompleteCombatReplayRoundTrip(t *testing.T) {
 				Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 3}),
 				StaticAbilities: []game.StaticAbility{{KeywordAbilities: game.SimpleKeywords(game.Haste, game.Vigilance)}},
 			}}
-			cfg := Config{Games: 1, Seed: 3126, TurnLimit: 5}
+			cfg := Config{Games: 1, Seed: 3126, TurnLimit: 2}
 			for player := range cfg.Configs {
-				for range 30 {
-					cfg.Configs[player].Deck = append(cfg.Configs[player].Deck, bear)
+				cfg.Configs[player].Deck = []*game.CardDef{bear, bear, bear}
+				for range 5 {
+					cfg.Configs[player].Deck = append(cfg.Configs[player].Deck, forest())
 				}
 			}
 			cfg.NewAgents = func(uint64) [game.NumPlayers]rules.PlayerAgent {
@@ -102,8 +103,12 @@ func TestCompleteCombatReplayRoundTrip(t *testing.T) {
 			for _, seat := range record.Seats {
 				choices += len(seat.Choices)
 				for _, proposal := range seat.Announcements {
-					capturedAttack = capturedAttack || proposal.Attack != nil
-					capturedBlock = capturedBlock || proposal.Block != nil
+					if proposal.Attack != nil {
+						for _, attack := range proposal.Attack.Attackers {
+							capturedAttack = capturedAttack || attack.Target != proposal.Attack.Attackers[0].Target
+						}
+					}
+					capturedBlock = capturedBlock || proposal.Block != nil && len(proposal.Block.Blockers) >= 2
 				}
 			}
 			// Staged markers are sampled; exact mixed declarations are not.

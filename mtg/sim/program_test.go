@@ -27,9 +27,9 @@ func authoredSimulation(t *testing.T) Config {
 	}
 	def := &game.CardDef{CardFace: game.CardFace{Name: "Authored Gain", Types: []types.Card{types.Sorcery},
 		ManaCost: opt.Val(cost.Mana{}), SpellAbility: opt.Val(game.Mode{Program: ref}.Ability())}}
-	cfg := Config{Seed: 7, Games: 4, Programs: &catalog}
+	cfg := Config{Seed: 7, Games: 2, Programs: &catalog, TurnLimit: 1}
 	for player := range game.NumPlayers {
-		for range 12 {
+		for range 8 {
 			cfg.Configs[player].Deck = append(cfg.Configs[player].Deck, def)
 		}
 	}
@@ -41,12 +41,15 @@ func TestAuthoredParallelGamesAndReplayShareOnlyImmutableCode(t *testing.T) {
 	cfg := authoredSimulation(t)
 	cfg.Workers = 1
 	serial := Run(cfg)
-	cfg.Workers = 4
+	cfg.Workers = 2
 	parallel := Run(cfg)
 	if len(serial.Failures) != 0 || !reflect.DeepEqual(serial, parallel) {
 		t.Fatal("parallel authored games diverged or failed")
 	}
 	original, record := RecordGame(cfg, 0)
+	if original.Outcome() != rules.TerminationTurnBudget || original.EndState.Players[game.Player1].Life <= 40 {
+		t.Fatal("one-turn fixture did not execute the authored gain-life body")
+	}
 	if len(record.Programs) != 1 {
 		t.Fatal("replay omitted the code version")
 	}

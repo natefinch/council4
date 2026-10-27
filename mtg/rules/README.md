@@ -4,6 +4,21 @@
 
 The package operates on the core data types from `mtg/game`. The `game` package stores state; `rules` changes that state according to Magic rules.
 
+## Gameplay regression fixtures
+
+Ordinary tests use focused transitions and small seeded games, not large
+simulation sweeps. The game-invariant fuzz targets run their representative seed
+corpus during normal tests; broader exploration is explicit:
+
+```bash
+go test ./mtg/rules -run '^$' -fuzz '^FuzzRandomGamesPreserveInvariants$' -fuzztime=30s
+go test ./mtg/rules -run '^$' -fuzz '^FuzzZoneMovesConserveCards$' -fuzztime=30s
+```
+
+These are optional stress runs, not additional completion gates. Follow the
+[repository validation policy](../../.github/copilot-instructions.md#verify-proportionally)
+for normal checks.
+
 ## Main types
 
 ### Engine

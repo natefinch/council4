@@ -3,8 +3,8 @@ package main
 import (
 	"bytes"
 	"math/rand/v2"
+	"slices"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/cards"
@@ -14,15 +14,8 @@ import (
 	"github.com/natefinch/council4/mtg/rules"
 )
 
-func TestSpellModeRunsDeterministicallyWithCastsAndResolves(t *testing.T) {
-	result := runSpellMode(t, 1)
-
-	if result.TurnCount != 52 {
-		t.Fatalf("spell mode produced %d turns, want 52", result.TurnCount)
-	}
-	if !result.HasWinner || result.Winner != game.Player4 {
-		t.Fatalf("spell mode winner = (%v,%v), want (true,%v)", result.HasWinner, result.Winner, game.Player4)
-	}
+func TestSpellModeCastsAndResolves(t *testing.T) {
+	_, result := runModeTurn(t, "spells", healingSpell())
 	casts, resolves := countCastsAndResolves(result)
 	if casts == 0 {
 		t.Fatal("spell mode produced no casts")
@@ -47,15 +40,8 @@ func TestFormatActionLogLabelsFusedSplitCast(t *testing.T) {
 	}
 }
 
-func TestCombatModeRunsDeterministicallyWithAttacksAndCombatDamage(t *testing.T) {
-	_, result := runCombatModeSeed1(t)
-
-	if result.TurnCount != 73 {
-		t.Fatalf("combat mode produced %d turns, want 73", result.TurnCount)
-	}
-	if !result.HasWinner || result.Winner != game.Player4 {
-		t.Fatalf("combat mode winner = (%v,%v), want (true,%v)", result.HasWinner, result.Winner, game.Player4)
-	}
+func TestCombatModeAttacksAndDealsCombatDamage(t *testing.T) {
+	_, result := runModeTurn(t, "combat", hastyWolf())
 	attacks, damage := countAttacksAndDamage(result)
 	if attacks == 0 {
 		t.Fatal("combat mode produced no attacks")
@@ -210,7 +196,9 @@ func TestPrintTurnLogNoPassKeepsOtherEvents(t *testing.T) {
 }
 
 func TestCombatVerboseLogPrintsResolveBeforeResolvedPermanentAttacks(t *testing.T) {
-	g, result := runCombatModeSeed1(t)
+	g, result := runModeTurn(t, "combat", hastyWolf())
+	// Log snapshots must still name attackers after they have left play.
+	g.Battlefield = nil
 	var out bytes.Buffer
 
 	printTurnLog(&out, g, result, logOptions{OmitPasses: true})
@@ -237,31 +225,6 @@ func TestCombatVerboseLogPrintsResolveBeforeResolvedPermanentAttacks(t *testing.
 	}
 }
 
-type modeRun struct {
-	game   *game.Game
-	result *rules.GameResult
-}
-
-var combatModeSeed1 struct {
-	once sync.Once
-	run  modeRun
-	err  error
-}
-
-func runCombatModeSeed1(t testing.TB) (*game.Game, *rules.GameResult) {
-	t.Helper()
-	if testing.Short() {
-		t.Skip("skipping full-game combat simulation in short mode")
-	}
-	combatModeSeed1.once.Do(func() {
-		combatModeSeed1.run, combatModeSeed1.err = runMode("combat", 1)
-	})
-	if combatModeSeed1.err != nil {
-		t.Fatal(combatModeSeed1.err)
-	}
-	return combatModeSeed1.run.game, combatModeSeed1.run.result
-}
-
 func addTestCard(g *game.Game, owner game.PlayerID, def *game.CardDef) id.ID {
 	cardID := g.IDGen.Next()
 	g.CardInstances[cardID] = &game.CardInstance{
@@ -272,26 +235,67 @@ func addTestCard(g *game.Game, owner game.PlayerID, def *game.CardDef) id.ID {
 	return cardID
 }
 
-func runSpellMode(t testing.TB, seed uint64) *rules.GameResult {
+func runModeTurn(t testing.TB, mode string, spell *game.CardDef) (*game.Game, *rules.GameResult) {
 	t.Helper()
-	if testing.Short() {
-		t.Skip("skipping full-game spell simulation in short mode")
-	}
-	run, err := runMode("spells", seed)
+	configs, agents, err := gameModeConfig(mode, 8, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return run.result
-}
-
-func runMode(mode string, seed uint64) (modeRun, error) {
-	configs, agents, err := gameModeConfig(mode, 8, false)
-	if err != nil {
-		return modeRun{}, err
+	for player := range configs {
+		configs[player].Deck = []*game.CardDef{spell, spell}
+		for range 6 {
+			configs[player].Deck = append(configs[player].Deck, forest())
+		}
 	}
+	const seed = 1
 	engine := rules.NewEngine(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
 	g := engine.NewGame(configs)
-	return modeRun{game: g, result: engine.RunGame(g, agents)}, nil
+	result := engine.RunGameWithTurnLimit(g, agents, 1)
+	if result.Outcome() != rules.TerminationTurnBudget || result.TurnCount != 1 {
+		t.Fatalf("one-turn fixture ended unexpectedly: %s after %d turns", result.Outcome(), result.TurnCount)
+	}
+	if result.Execution.InvalidActions != 0 || result.Execution.InvalidChoices != 0 {
+		t.Fatal("one-turn fixture used invalid actions or choices")
+	}
+	return g, result
+}
+
+func TestGameModeConfig(t *testing.T) {
+	for _, test := range []struct {
+		mode  string
+		cards []string
+	}{
+		{"land", []string{"Forest"}},
+		{"spells", []string{"Forest", "Grizzly Bears", "Simple Divination", "Simple Healing", "Simple Lava Spike"}},
+		{"combat", []string{"Forest", "Trained Armodon", "Hasty Wolf", "Vigilant Guard", "Wall of Vines"}},
+	} {
+		t.Run(test.mode, func(t *testing.T) {
+			configs, agents, err := gameModeConfig(test.mode, 8, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for seat, config := range configs {
+				if len(config.Deck) == 0 || agents[seat] == nil {
+					t.Fatalf("seat %d has no deck or agent", seat)
+				}
+				for _, name := range test.cards {
+					if !slices.ContainsFunc(config.Deck, func(card *game.CardDef) bool { return card.Name == name }) {
+						t.Errorf("seat %d is missing %q", seat, name)
+					}
+				}
+				if test.mode == "land" && len(config.Deck) != 8 {
+					t.Errorf("seat %d land deck has %d cards, want 8", seat, len(config.Deck))
+				}
+			}
+			_, _, err = gameModeConfig(test.mode, 8, true)
+			if (err != nil) != (test.mode != "land") {
+				t.Fatalf("mode %q deck-size validation: %v", test.mode, err)
+			}
+		})
+	}
+	if _, _, err := gameModeConfig("unknown", 8, false); err == nil {
+		t.Fatal("unknown mode was accepted")
+	}
 }
 
 func countCastsAndResolves(result *rules.GameResult) (casts, resolves int) {

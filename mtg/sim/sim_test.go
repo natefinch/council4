@@ -2,6 +2,7 @@ package sim
 
 import (
 	"reflect"
+	"runtime"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/agent"
@@ -30,8 +31,13 @@ func smokeConfigs() [game.NumPlayers]game.PlayerConfig {
 }
 
 func smokeConfig(games int, seed uint64) Config {
+	configs := smokeConfigs()
+	for player := range configs {
+		// One draw beyond the opening hand, then a real deck-out result.
+		configs[player].Deck = configs[player].Deck[:8]
+	}
 	return Config{
-		Configs:   smokeConfigs(),
+		Configs:   configs,
 		Games:     games,
 		Seed:      seed,
 		NewAgents: nil, // default FirstLegal agents
@@ -39,9 +45,11 @@ func smokeConfig(games int, seed uint64) Config {
 }
 
 func TestRunIsDeterministicForAMasterSeed(t *testing.T) {
-	cfg := smokeConfig(8, 12345)
+	cfg := smokeConfig(3, 12345)
 	first := Run(cfg)
 	second := Run(cfg)
+	requireCompletedGames(t, first)
+	requireCompletedGames(t, second)
 
 	if len(first.Games) != cfg.Games || len(second.Games) != cfg.Games {
 		t.Fatalf("Run returned %d/%d results, want %d", len(first.Games), len(second.Games), cfg.Games)
@@ -52,8 +60,9 @@ func TestRunIsDeterministicForAMasterSeed(t *testing.T) {
 }
 
 func TestRunOneReproducesTheSameGame(t *testing.T) {
-	cfg := smokeConfig(4, 999)
+	cfg := smokeConfig(3, 999)
 	all := Run(cfg)
+	requireCompletedGames(t, all)
 	for i := range cfg.Games {
 		if again := RunOne(cfg, i); !reflect.DeepEqual(again, all.Games[i]) {
 			t.Errorf("RunOne(cfg, %d) does not reproduce game %d from Run", i, i)
@@ -64,8 +73,10 @@ func TestRunOneReproducesTheSameGame(t *testing.T) {
 func TestDifferentMasterSeedsCanDiffer(t *testing.T) {
 	// Not a strict guarantee for every pair, but a non-degenerate seed mixer
 	// should make at least one game of a small batch differ across seeds.
-	a := Run(smokeConfig(8, 1))
-	b := Run(smokeConfig(8, 2))
+	a := Run(smokeConfig(2, 1))
+	b := Run(smokeConfig(2, 2))
+	requireCompletedGames(t, a)
+	requireCompletedGames(t, b)
 	if reflect.DeepEqual(a.Games, b.Games) {
 		t.Error("two different master seeds produced identical batches; seed derivation looks degenerate")
 	}
@@ -116,16 +127,19 @@ func TestRunHonorsAgentFactory(t *testing.T) {
 // worker counts for a fixed master seed. Run under -race, the parallel path also
 // proves games share no mutable state.
 func TestParallelMatchesSequential(t *testing.T) {
-	base := smokeConfig(16, 4242)
+	base := smokeConfig(3, 4242)
 
 	sequential := base
 	sequential.Workers = 1
 	want := Run(sequential)
+	requireCompletedGames(t, want)
 
-	for _, workers := range []int{2, 4, 8, 32} {
+	for _, workers := range []int{2, 8} {
 		cfg := base
 		cfg.Workers = workers
-		if got := Run(cfg); !reflect.DeepEqual(got, want) {
+		got := Run(cfg)
+		requireCompletedGames(t, got)
+		if !reflect.DeepEqual(got, want) {
 			t.Errorf("Run with %d workers differs from sequential", workers)
 		}
 	}
@@ -134,8 +148,9 @@ func TestParallelMatchesSequential(t *testing.T) {
 // TestDefaultWorkersRunsConcurrently checks the default (zero) worker count runs
 // a batch correctly; combined with -race it exercises the concurrent path.
 func TestDefaultWorkersRunsConcurrently(t *testing.T) {
-	cfg := smokeConfig(8, 55) // Workers left at 0 -> GOMAXPROCS
+	cfg := smokeConfig(3, 55) // Workers left at 0 -> GOMAXPROCS
 	got := Run(cfg)
+	requireCompletedGames(t, got)
 	if len(got.Games) != cfg.Games {
 		t.Fatalf("Run returned %d results, want %d", len(got.Games), cfg.Games)
 	}
@@ -143,5 +158,38 @@ func TestDefaultWorkersRunsConcurrently(t *testing.T) {
 	sequential.Workers = 1
 	if want := Run(sequential); !reflect.DeepEqual(got, want) {
 		t.Error("default-worker run differs from the sequential run")
+	}
+}
+
+func TestWorkerCount(t *testing.T) {
+	for _, test := range []struct {
+		name           string
+		games, workers int
+		want           int
+	}{
+		{"default", 3, 0, min(3, runtime.GOMAXPROCS(0))},
+		{"negative", 3, -1, min(3, runtime.GOMAXPROCS(0))},
+		{"sequential", 3, 1, 1},
+		{"parallel", 3, 2, 2},
+		{"clamped", 3, 32, 3},
+		{"empty", 0, 4, 0},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if got := workerCount(Config{Games: test.games, Workers: test.workers}); got != test.want {
+				t.Fatalf("workerCount = %d, want %d", got, test.want)
+			}
+		})
+	}
+}
+
+func requireCompletedGames(t *testing.T, result SimulationResult) {
+	t.Helper()
+	if result.FailureCount() != 0 {
+		t.Fatalf("fixture games failed: %+v", result.Failures)
+	}
+	for i, game := range result.Games {
+		if !game.Completed() || !game.HasWinner || game.TurnCount == 0 {
+			t.Fatalf("fixture game %d did not reach a rules win: %s after %d turns", i, game.Outcome(), game.TurnCount)
+		}
 	}
 }
