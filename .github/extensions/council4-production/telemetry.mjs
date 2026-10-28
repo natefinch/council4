@@ -149,7 +149,7 @@ export function writeReport(directory, report) {
   const markdown = [
     "# Council4 production run",
     "",
-    `Run: \`${report.runId}\` · policy: \`${report.policyVersion}\` · status: **${report.runtimeStatus}**`,
+    `Run: \`${report.runId}\` · policy: \`${report.policyVersion}\` · status: **${report.outcome ?? report.runtimeStatus}**${report.finishedAt ? ` · finished: ${report.finishedAt}` : ""}`,
     "",
     `Native total: **${report.runtimeAic.toFixed(6)} AIC**. Accounting: **${report.reconciliation}**. Unallocated: **${(report.unallocatedNanoAiu / 1e9).toFixed(6)} AIC**.`,
     "",

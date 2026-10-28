@@ -9,7 +9,7 @@ import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
 import { rankTriage, chunk } from "./triage.mjs";
 import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
-import { gapEvidence, earlierUnits } from "./workflow.mjs";
+import { gapEvidence, earlierUnits, issueStates } from "./workflow.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, reviewHistory } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
@@ -598,6 +598,19 @@ test("Landed Engine issues and fully finished split parents are closed", async (
   assert.deepEqual(await closeLandedIssue("/repo", 3404, [{ id: "#3404" }], { url: "u" }, undefined, gh), { closed: [], remainder: true });
   assert.deepEqual((await closeLandedIssue("/repo", 3404, [{ id: "#3417" }], { url: "pr/1" }, undefined, gh)).closed, [3404, 3355]);
   assert.match(calls.find(c => c.startsWith("issue close 3404")), /Remaining work is tracked in #3417/);
+});
+
+test("A remainder naming the split parent keeps the parent open", async () => {
+  const states = { 3476: "OPEN", 3347: "OPEN" };
+  const gh = async args => {
+    if (args[0] === "issue" && args[1] === "view") return JSON.stringify({ state: states[args[2]] });
+    if (args[0] === "issue" && args[1] === "close") { states[args[2]] = "CLOSED"; return ""; }
+    if (args[1].endsWith("/parent")) return JSON.stringify({ number: 3347 });
+    if (args[1].endsWith("/sub_issues")) return JSON.stringify([[{ number: 3476, state: states[3476].toLowerCase() }]]);
+    return "";
+  };
+  assert.deepEqual((await closeLandedIssue("/repo", 3476, [{ id: "3347" }], { url: "pr/2" }, undefined, gh)).closed, [3476]);
+  assert.equal(states[3347], "OPEN");
 });
 
 test("Reviews block only on regressions, acceptance and common-play harm", () => {
@@ -1227,9 +1240,11 @@ test("Reports show every review round, falling back to a legacy final verdict", 
     [["review", 0, "changes_needed"], ["re_review", 1, "approve"]]);
   assert.deepEqual(reviewHistory(units[1], stages), [{ phase: "final review", round: null, verdict: "changes_needed", findings: ["legacy finding"] }]);
   assert.deepEqual(reviewHistory(units[2], stages), []);
-  writeReport(directory, { runId: "r", policyVersion: "1.10.0", runtimeStatus: "completed", runtimeAic: 0,
+  writeReport(directory, { runId: "r", policyVersion: "1.10.0", runtimeStatus: "running", outcome: "partial",
+    finishedAt: "2026-10-28T13:52:00Z", runtimeAic: 0,
     reconciliation: "matched", unallocatedNanoAiu: 0, groups: [], stages, units, note: "" });
   const markdown = await readFile(path.join(directory, "report.md"), "utf8");
+  assert.match(markdown, /status: \*\*partial\*\* · finished: 2026-10-28T13:52:00Z/);
   assert.match(markdown, /- engine \/ gap-1: \*\*landed\*\*\n  - review 0: \*\*changes_needed\*\*\n    - wrong \\\| controller\n  - re_review 1: \*\*approve\*\*\n/);
   assert.match(markdown, /- engine \/ gap-2: \*\*review_rejected\*\*\n  - final review: \*\*changes_needed\*\*\n    - legacy finding\n/);
   assert.match(markdown, /- card \/ batch: \*\*blocked\*\*\n\n/);
@@ -1357,4 +1372,28 @@ test("recorded workflows leave a mirrored run record with phases, outcome and na
   }
   assert.deepEqual(costsByModel([{ kind: "usage", key: "k", model: "x", nanoAiu: 1e9 }, { kind: "usage", key: "k", model: "x", nanoAiu: 1e9 }]),
     [{ model: "x", calls: 1, aic: 1 }]);
+});
+
+test("Issue states are batched, keep missing issues absent and fail on other errors", async () => {
+  const queries = [];
+  const issue = number => ({ number, state: "OPEN", title: `t${number}`, url: `u${number}`,
+    labels: { pageInfo: { hasNextPage: false }, nodes: [{ name: "Engine" }] },
+    subIssues: { pageInfo: { hasNextPage: false }, nodes: [{ number: number * 10, state: "CLOSED", title: "s", url: "su" }] } });
+  const graphql = async query => {
+    queries.push(query);
+    const numbers = [...query.matchAll(/i(\d+): issue/g)].map(match => Number(match[1]));
+    const repository = Object.fromEntries(numbers.map(number => [`i${number}`, number === 13 ? null : issue(number)]));
+    return { data: { repository }, errors: numbers.includes(13) ? [{ type: "NOT_FOUND", path: ["repository", "i13"] }] : undefined };
+  };
+  const numbers = Array.from({ length: 20 }, (_, i) => i + 1);
+  const issues = await issueStates("/repo", [...numbers, 1], undefined, graphql, 8);
+  assert.equal(queries.length, 3);
+  assert.equal(Object.keys(issues).length, 19);
+  assert.equal(issues[13], undefined);
+  assert.deepEqual(issues[2], { number: 2, state: "OPEN", title: "t2", url: "u2", labels: ["Engine"],
+    subIssues: [{ number: 20, state: "CLOSED", title: "s", url: "su" }] });
+  await assert.rejects(issueStates("/repo", [1], undefined, async () => ({ data: null, errors: [{ type: "RATE_LIMITED" }] })),
+    /Issue state lookup failed/);
+  await assert.rejects(issueStates("/repo", [1], undefined, async () => ({ data: { repository: { i1: {
+    ...issue(1), subIssues: { pageInfo: { hasNextPage: true }, nodes: [] } } } } })), /more than 100/);
 });
