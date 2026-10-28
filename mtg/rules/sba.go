@@ -510,6 +510,12 @@ func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 			removeFromCombat = append(removeFromCombat, block.Blocker)
 		}
 	}
+	for blockerID := range g.Combat.BlockersOfRemovedAttackers {
+		blocker, ok := permanentByObjectID(g, blockerID)
+		if ok && effectiveController(g, blocker) == playerID {
+			removeFromCombat = append(removeFromCombat, blockerID)
+		}
+	}
 	for _, objectID := range removeFromCombat {
 		removePermanentFromCombat(g, objectID)
 	}

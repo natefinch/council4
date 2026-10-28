@@ -104,8 +104,17 @@ type CombatState struct {
 	// attacks on permanents they control and creatures entering attacking.
 	PlayersAttacked map[PlayerID]bool
 
-	// Blockers lists all declared blockers and which attacker they block.
+	// Blockers lists the current blocks: each blocking creature and the attacker
+	// it blocks. A block is dropped when either creature is removed from combat.
 	Blockers []BlockDeclaration
+
+	// BlockersOfRemovedAttackers records creatures that remain blocking
+	// creatures after an attacker they blocked was removed from combat, whether
+	// or not that attacker left the battlefield (CR 509.1g). The block itself is
+	// gone from Blockers, so neither creature deals or is dealt combat damage for
+	// it and the removed attacker is not blocked. A creature leaves this set when
+	// it is itself removed from combat.
+	BlockersOfRemovedAttackers map[id.ID]bool
 
 	// BlockedAttackers preserves which attackers became blocked even if all of
 	// their blockers later leave combat.

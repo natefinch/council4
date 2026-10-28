@@ -410,9 +410,7 @@ func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.Com
 		attacking = slices.ContainsFunc(g.Combat.Attackers, func(declaration game.AttackDeclaration) bool {
 			return declaration.Attacker == permanent.ObjectID
 		})
-		blocking = slices.ContainsFunc(g.Combat.Blockers, func(declaration game.BlockDeclaration) bool {
-			return declaration.Blocker == permanent.ObjectID
-		})
+		blocking = isBlockingCreature(g, permanent.ObjectID)
 	}
 	switch filter {
 	case game.CombatStateAttacking:
