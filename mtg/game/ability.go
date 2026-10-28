@@ -95,10 +95,10 @@ const (
 	Rebound
 	Retrace
 	// Banding (CR 702.22) is a static combat keyword, modeled as a recognized,
-	// grantable simple keyword. The combat engine applies its damage-assignment
-	// control (CR 702.22j-k); attacking bands (CR 702.22c-i) and "bands with
-	// other" are not yet modeled. Appended at the end of the enum so existing
-	// keyword ordinals are unchanged.
+	// grantable simple keyword. The combat engine forms attacking bands with it
+	// (CR 702.22c-i) and applies its damage-assignment control (CR 702.22j-k).
+	// The parameterized "bands with other" form is BandsWithOther. Appended at
+	// the end of the enum so existing keyword ordinals are unchanged.
 	Banding
 	// Crew (CR 702.122) is the Vehicles activated keyword. It is modeled as a
 	// grantable keyword identity carried by CrewKeyword inside the activated
@@ -312,6 +312,11 @@ const (
 	// Buyback offers an additional cost and replaces the paid spell's
 	// graveyard move only as it resolves (CR 702.27).
 	Buyback
+	// BandsWithOther is the parameterized "bands with other [quality]" form of
+	// banding (CR 702.22a), carried by BandsWithOtherKeyword. Losing banding also
+	// loses every "bands with other" ability (CR 702.22b). Appended at the end of
+	// the enum so existing keyword ordinals are unchanged.
+	BandsWithOther
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -493,8 +498,8 @@ var (
 	// BandingStaticBody is the reusable StaticAbilityBody for banding (CR
 	// 702.22). It carries the Banding keyword so HasKeyword(Banding) reports
 	// true, which the combat engine reads to transfer combat damage division to
-	// the banding creature's controller (CR 702.22j-k). Attacking bands (CR
-	// 702.22c-i) are not yet modeled.
+	// the banding creature's controller (CR 702.22j-k) and to form attacking
+	// bands (CR 702.22c-i).
 	BandingStaticBody = simpleKeywordStaticBody("Banding", Banding)
 
 	// CompanionStaticBody is the reusable StaticAbilityBody for companion (CR

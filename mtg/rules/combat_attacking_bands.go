@@ -11,10 +11,11 @@ import (
 
 // attackingBandsLegal checks the bands announced with an attack declaration
 // (CR 508.1e, 702.22c-d). Every member is declared in this declaration, each
-// creature is in at most one band, each band has at least two members, at least
-// one with banding and at most one without (a creature with only "bands with
-// other" counts as one without banding), and every member attacks the same
-// player, planeswalker or battle.
+// creature is in at most one band, every member attacks the same player,
+// planeswalker or battle, and each band is a legal band (bandEligibility.legalBand):
+// at least two members, either at least one with banding and at most one
+// without, or all of one [quality] with a member that has "bands with other
+// [quality]".
 func attackingBandsLegal(g *game.Game, declarations []game.AttackDeclaration, bands []game.AttackingBand, eligibleByID map[id.ID]*game.Permanent) bool {
 	if len(bands) == 0 {
 		return true
@@ -25,11 +26,9 @@ func attackingBandsLegal(g *game.Game, declarations []game.AttackDeclaration, ba
 	}
 	inBand := make(map[id.ID]bool)
 	for _, band := range bands {
-		if len(band.Members) < 2 {
-			return false
-		}
-		withBanding, withoutBanding := 0, 0
-		for _, member := range band.Members {
+		creatures := make([]*game.Permanent, 0, len(band.Members))
+		members := make([]int, 0, len(band.Members))
+		for index, member := range band.Members {
 			target, declared := targets[member]
 			if !declared || inBand[member] || target != targets[band.Members[0]] {
 				return false
@@ -39,13 +38,10 @@ func attackingBandsLegal(g *game.Game, declarations []game.AttackDeclaration, ba
 			if attacker == nil {
 				return false
 			}
-			if hasKeyword(g, attacker, game.Banding) {
-				withBanding++
-			} else {
-				withoutBanding++
-			}
+			creatures = append(creatures, attacker)
+			members = append(members, index)
 		}
-		if withBanding == 0 || withoutBanding > 1 {
+		if !newBandEligibility(g, creatures).legalBand(members) {
 			return false
 		}
 	}
@@ -53,37 +49,35 @@ func attackingBandsLegal(g *game.Game, declarations []game.AttackDeclaration, ba
 }
 
 // chooseAttackingBands asks the active player to form attacking bands among a
-// completed attack declaration (CR 508.1e). Each declared creature with banding
-// that is not yet in a band may start one; the player then adds members one at a
-// time until finishing it. Only creatures attacking the same player,
-// planeswalker or battle that are not in another band are offered, and a
-// creature without banding only while the band has none, so every answer stays
-// legal (CR 702.22c-d). Choosing to finish immediately forms no band, so the
+// completed attack declaration (CR 508.1e). Each declared creature not yet in a
+// band that has banding, or a "bands with other [quality]" ability while having
+// that quality, may start one; the player then adds members one at a time until
+// finishing it. Only creatures attacking the same player, planeswalker or
+// battle, not in another band, whose addition keeps the band legal
+// (bandEligibility.legalBand) are offered, so every answer stays legal (CR
+// 702.22c-d). Every legal band is reachable this way: its other members can
+// join its anchor in any order once a creature with banding or the "bands with
+// other" holder has joined. Choosing to finish immediately forms no band, so the
 // deterministic default declares no bands. Requests describe creatures only by
 // their public characteristics.
 func (ce combatEngine) chooseAttackingBands(g *game.Game, player game.PlayerID, declarations []game.AttackDeclaration, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []game.AttackingBand {
 	attackers := make([]*game.Permanent, len(declarations))
-	banding := make([]bool, len(declarations))
 	g.BeginStaticSourceFrame()
 	for index, declaration := range declarations {
 		if attacker, ok := permanentByObjectID(g, declaration.Attacker); ok {
 			attackers[index] = attacker
-			banding[index] = hasKeyword(g, attacker, game.Banding)
 		}
 	}
+	eligibility := newBandEligibility(g, attackers)
 	g.EndStaticSourceFrame()
-	if !slices.Contains(banding, true) {
-		return nil
-	}
 
 	banded := make([]bool, len(declarations))
 	var bands []game.AttackingBand
 	for anchor, declaration := range declarations {
-		if !banding[anchor] || banded[anchor] {
+		if attackers[anchor] == nil || !eligibility.canStartBand(anchor) || banded[anchor] {
 			continue
 		}
 		members := []int{anchor}
-		hasMemberWithoutBanding := false
 		for {
 			options := []game.ChoiceOption{{Index: 0, Label: "Finish this band"}}
 			if len(members) == 1 {
@@ -92,7 +86,8 @@ func (ce combatEngine) chooseAttackingBands(g *game.Game, player game.PlayerID, 
 			var candidates []int
 			for index, candidate := range declarations {
 				if banded[index] || slices.Contains(members, index) || attackers[index] == nil ||
-					candidate.Target != declaration.Target || !banding[index] && hasMemberWithoutBanding {
+					candidate.Target != declaration.Target ||
+					!eligibility.legalBand(append(slices.Clip(members), index)) {
 					continue
 				}
 				options = append(options, game.ChoiceOption{
@@ -116,9 +111,7 @@ func (ce combatEngine) chooseAttackingBands(g *game.Game, player game.PlayerID, 
 			if selected[0] == 0 {
 				break
 			}
-			joined := candidates[selected[0]-1]
-			members = append(members, joined)
-			hasMemberWithoutBanding = hasMemberWithoutBanding || !banding[joined]
+			members = append(members, candidates[selected[0]-1])
 		}
 		if len(members) < 2 {
 			continue

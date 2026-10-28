@@ -20,9 +20,9 @@ import (
 // creatures, if any, are banded; 508.1f onward taps attackers and pays costs.
 // 702.22c: a band is any number of creatures with banding plus up to one
 // creature without banding, all attacking the same player, planeswalker or
-// battle, formed only as attackers are declared. 702.22d: creatures with "bands
-// with other" form a band only with each other (a separate capability; such a
-// creature is counted here as one without banding). 702.22e: a band is a
+// battle, formed only as attackers are declared; in such a band a creature with
+// only "bands with other" counts as one without banding ("bands with other"
+// bands are covered by combat_bands_with_other_test.go). 702.22e: a band is a
 // continuing relation that survives its members losing banding. 702.22f: a
 // creature removed from combat is removed from its band, and the band is still a
 // band only while at least two creatures remain. 702.22g-k (blocking and damage

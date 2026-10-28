@@ -934,6 +934,11 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Nonbasic && (keyword.AnyLand || keyword.Subtype != "") {
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "landwalk must not combine Nonbasic with AnyLand or a subtype")
 		}
+	case BandsWithOtherKeyword:
+		if keyword.Quality.Empty() {
+			v.add(faceName, appendPath(path, "Quality"), CardDefIssueInvalidKeywordAbility, "bands with other needs a quality")
+		}
+		v.validateSelection(faceName, appendPath(path, "Quality"), keyword.Quality)
 	case SaddleKeyword:
 		if keyword.Power <= 0 {
 			v.add(faceName, appendPath(path, "Power"), CardDefIssueInvalidKeywordAbility, "saddle power must be positive")
