@@ -82,7 +82,9 @@ type CombatState struct {
 	// FirstStrikeEligible records the original ObjectIDs that had first or
 	// double strike as the first damage step began (CR 510.4).
 	FirstStrikeEligible map[id.ID]bool
-	// Attackers lists all declared attackers and their targets.
+	// Attackers lists the current attackers and their targets. A creature
+	// removed from combat, including by leaving the battlefield, is removed from
+	// this list (CR 506.4); AttackersDeclared and recorded events keep history.
 	Attackers []AttackDeclaration
 
 	// Bands lists the attacking bands announced with the attack declaration

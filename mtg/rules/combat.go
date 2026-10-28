@@ -413,7 +413,27 @@ func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 	return false
 }
 
+// removePermanentFromCombat removes a permanent that stays on the battlefield
+// from combat (CR 506.4): it stops attacking or blocking and leaves its band, and
+// a planeswalker or battle stops being attacked. Blocks against a removed
+// attacker are dropped so its former blockers cannot deal it combat damage.
 func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
+	removeFromCombat(g, permanentID, false)
+}
+
+// removeDepartedPermanentFromCombat removes a permanent leaving the battlefield
+// from combat (CR 506.4), so current-combat queries such as "exactly one
+// creature is attacking" no longer count it. A creature that was blocking it
+// remains a blocking creature (CR 509.1g), so those blocks are kept; the departed
+// ObjectID never names a permanent again (CR 400.7), so no damage or attacker
+// query reaches it. Combat history (AttackersDeclared, PlayersAttacked, the
+// blocked status of remaining attackers, recorded events) and the departing
+// permanent's last known information, captured before the move, are unaffected.
+func removeDepartedPermanentFromCombat(g *game.Game, permanentID id.ID) {
+	removeFromCombat(g, permanentID, true)
+}
+
+func removeFromCombat(g *game.Game, permanentID id.ID, departed bool) {
 	if g.Combat == nil || permanentID == 0 {
 		return
 	}
@@ -438,7 +458,7 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 
 	var blockers []game.BlockDeclaration
 	for _, block := range g.Combat.Blockers {
-		if block.Blocker == permanentID || removedAttackers[block.Blocking] {
+		if block.Blocker == permanentID || (!departed && removedAttackers[block.Blocking]) {
 			continue
 		}
 		blockers = append(blockers, block)

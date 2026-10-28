@@ -473,9 +473,7 @@ func removePermanentFromBattlefield(g *game.Game, objectID id.ID) (*game.Permane
 		// A permanent leaving the battlefield is removed from combat, and an
 		// attacking creature removed from combat leaves its band (CR 506.4,
 		// 702.22f).
-		if g.Combat != nil {
-			removeFromAttackingBands(g.Combat, objectID)
-		}
+		removeDepartedPermanentFromCombat(g, objectID)
 		return permanent, true
 	}
 	return nil, false
