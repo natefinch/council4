@@ -319,37 +319,6 @@ func freeCastOptionLabel(spellDef *game.CardDef, cast action.CastSpellAction) st
 	return label
 }
 
-func (e *Engine) chooseCastPaymentOption(g *game.Game, controllerID game.PlayerID, request payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.SpellOptionSummary, bool) {
-	options := paymentOrch.planner(g).PayableSpellOptions(request)
-	if len(options) == 0 {
-		return payment.SpellOptionSummary{}, false
-	}
-	if len(options) == 1 {
-		return options[0], true
-	}
-	choiceOptions := make([]game.ChoiceOption, len(options))
-	for i, option := range options {
-		choiceOptions[i] = game.ChoiceOption{Index: option.Index, Label: option.Label}
-	}
-	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
-		Kind:             game.ChoicePayment,
-		Player:           controllerID,
-		Prompt:           "Choose additional spell cost",
-		Options:          choiceOptions,
-		MinChoices:       1,
-		MaxChoices:       1,
-		DefaultSelection: []int{options[0].Index},
-	}, log)
-	if len(selected) == 1 {
-		for _, option := range options {
-			if option.Index == selected[0] {
-				return option, true
-			}
-		}
-	}
-	return options[0], true
-}
-
 func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	return e.castFreeSpell(g, sourcePlayer, controllerID, card, cast, freeCastSpell{exileOnResolution: exileOnResolution}, agents, log)
 }
