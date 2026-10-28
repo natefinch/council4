@@ -440,6 +440,9 @@ func castAsThoughFlashEffectMatchesCard(g *game.Game, effect *game.RuleEffect, c
 	if effect == nil || card == nil {
 		return false
 	}
+	// The permission reads the spell's subtypes and colors as its own
+	// characteristic-defining abilities define them (CR 604.3).
+	card = characteristicDefinedFace(card)
 	if len(effect.SpellCharacteristicFilters) != 0 &&
 		!cardDefMatchesAnyCharacteristicFilter(card, effect.SpellCharacteristicFilters) {
 		return false

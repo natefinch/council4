@@ -1,11 +1,8 @@
 package rules
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -42,7 +39,7 @@ func spellGrantedKeyword(g *game.Game, playerID game.PlayerID, card *game.CardDe
 // equal fromZone, CardSelection.MatchCommander requires the card to carry the
 // commander designation (CR 903.3, an attribute of the card rather than a
 // characteristic), and the rest of the selection reads the spell's
-// characteristics as spellGrantSelectionFace computes them.
+// characteristics as characteristicDefinedFace computes them.
 func spellKeywordGrantMatches(g *game.Game, effect *game.RuleEffect, caster game.PlayerID, card *game.CardDef, cardID id.ID, fromZone zone.Type) bool {
 	if card == nil || !controllerRelationMatches(effect.Controller, caster, effect.AffectedController) {
 		return false
@@ -57,115 +54,7 @@ func spellKeywordGrantMatches(g *game.Game, effect *game.RuleEffect, caster game
 		}
 		selection.MatchCommander = false
 	}
-	return selection.Empty() || cardDefMatchesCostSelection(g, spellGrantSelectionFace(card), selection)
-}
-
-// spellGrantSelectionFace returns the characteristics a spell-keyword grant's
-// selection reads for a spell whose face is card: its printed characteristics as
-// its own characteristic-defining abilities modify them. CDAs function in every
-// zone (CR 604.3), and a CDA defines only colors, subtypes or power/toughness
-// (CR 604.3a), so this applies:
-//   - Changeling, which makes the spell every creature type (CR 702.73a) while
-//     keeping its other subtypes;
-//   - Devoid, which makes the spell colorless (CR 702.114a);
-//   - every unconditional static ability whose continuous effects change only
-//     the card's own subtypes or colors ("Mistform Ultimus is every creature
-//     type (even if this card isn't on the battlefield).", "Transguild Courier
-//     is all colors."), as characteristicDefiningStatic recognizes them.
-//
-// A self type effect keyed to a battlefield entry choice (Adaptive Automaton's
-// chosen type) is not a CDA and has no value off the battlefield. card itself is
-// never mutated; a face with no CDA is returned unchanged.
-func spellGrantSelectionFace(card *game.CardDef) *game.CardDef {
-	if card == nil {
-		return nil
-	}
-	subtypes := slices.Clone(card.Subtypes)
-	colors := slices.Clone(card.Colors)
-	changed := false
-	if card.HasKeyword(game.Changeling) {
-		subtypes = appendUniqueSubtypes(slices.Clone(types.SubtypesForType(types.Creature)), subtypes...)
-		changed = true
-	}
-	for i := range card.StaticAbilities {
-		static := &card.StaticAbilities[i]
-		if !characteristicDefiningStatic(static) {
-			continue
-		}
-		changed = true
-		for j := range static.ContinuousEffects {
-			effect := &static.ContinuousEffects[j]
-			switch effect.Layer {
-			case game.LayerType:
-				if effect.SetSubtypes != nil {
-					subtypes = slices.Clone(effect.SetSubtypes)
-				}
-				subtypes = removeSubtypes(subtypes, effect.RemoveSubtypes)
-				subtypes = appendUniqueSubtypes(subtypes, effect.AddSubtypes...)
-				if effect.AddEveryCreatureType {
-					subtypes = appendUniqueSubtypes(subtypes, types.SubtypesForType(types.Creature)...)
-				}
-			case game.LayerColor:
-				if effect.SetColorless {
-					colors = nil
-				} else if effect.SetColors != nil {
-					colors = slices.Clone(effect.SetColors)
-				}
-				colors = removeColors(colors, effect.RemoveColors)
-				colors = appendUniqueColors(colors, effect.AddColors...)
-			}
-		}
-	}
-	if card.HasKeyword(game.Devoid) && len(colors) > 0 {
-		colors = nil
-		changed = true
-	}
-	if !changed {
-		return card
-	}
-	expanded := *card
-	expanded.Subtypes = subtypes
-	expanded.Colors = colors
-	return &expanded
-}
-
-// characteristicDefiningStatic reports whether static is a characteristic-
-// defining ability of the subtype or color kind (CR 604.3a): it is
-// unconditional, and each of its continuous effects affects only its own object
-// and changes only subtypes (set, remove, add or every creature type) at the
-// type layer or colors at the color layer. Abilities that also grant rules
-// effects, keywords or other abilities, change card types or supertypes, depend
-// on a battlefield entry choice or work only from a particular zone are not.
-func characteristicDefiningStatic(static *game.StaticAbility) bool {
-	if static == nil || static.Condition.Exists || static.ZoneOfFunction != zone.None ||
-		len(static.ContinuousEffects) == 0 || len(static.RuleEffects) != 0 || len(static.KeywordAbilities) != 0 {
-		return false
-	}
-	for i := range static.ContinuousEffects {
-		effect := &static.ContinuousEffects[i]
-		if !effect.AffectedSource || !effect.Group.Empty() || effect.CardZone != zone.None {
-			return false
-		}
-		switch effect.Layer {
-		case game.LayerType:
-			if effect.SetSupertypes != nil || len(effect.AddSupertypes) != 0 || len(effect.RemoveSupertypes) != 0 ||
-				effect.SetTypes != nil || len(effect.AddTypes) != 0 || len(effect.RemoveTypes) != 0 ||
-				len(effect.SetBasicLandTypes) != 0 || effect.AddEveryBasicLandType ||
-				effect.AddSubtypeFromEntryChoice != "" || effect.SetSubtypeFromSourceChoice != "" {
-				return false
-			}
-			if effect.SetSubtypes == nil && len(effect.RemoveSubtypes) == 0 && len(effect.AddSubtypes) == 0 && !effect.AddEveryCreatureType {
-				return false
-			}
-		case game.LayerColor:
-			if !effect.SetColorless && effect.SetColors == nil && len(effect.RemoveColors) == 0 && len(effect.AddColors) == 0 {
-				return false
-			}
-		default:
-			return false
-		}
-	}
-	return true
+	return selection.Empty() || cardDefMatchesCostSelection(g, characteristicDefinedFace(card), selection)
 }
 
 // consumeNextSpellKeywordGrantEffects applies and consumes any one-shot "The

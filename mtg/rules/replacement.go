@@ -2432,7 +2432,7 @@ func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, b
 	chars := sourceChars{
 		colors:   spellColors(def),
 		types:    def.Types,
-		subtypes: def.Subtypes,
+		subtypes: characteristicDefinedFace(def).Subtypes,
 	}
 	// CR 702.103b: a spell cast for its bestow cost is an Aura spell and is not a
 	// creature spell while on the stack, so type/subtype-based spell qualifiers and
@@ -2483,16 +2483,11 @@ func sourceCharsForProtection(g *game.Game, sourceID, sourceObjectID id.ID, fall
 	}
 	if sourceID != 0 {
 		if card, ok := g.GetCardInstance(sourceID); ok {
-			def := cardFaceOrDefault(card, selectedFaceForCardInstance(g, card))
-			return sourceChars{colors: def.Colors, types: def.Types, subtypes: def.Subtypes}, true
+			return cardDefSourceChars(cardFaceOrDefault(card, selectedFaceForCardInstance(g, card))), true
 		}
 	}
 	if fallback != nil {
-		return sourceChars{
-			colors:   fallback.Colors,
-			types:    fallback.Types,
-			subtypes: fallback.Subtypes,
-		}, true
+		return cardDefSourceChars(fallback), true
 	}
 	return sourceChars{}, false
 }
@@ -2532,11 +2527,15 @@ func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, so
 	if permanent == nil || source == nil {
 		return false
 	}
-	return permanentProtectedFromChars(g, permanent, sourceChars{
-		colors:   source.Colors,
-		types:    source.Types,
-		subtypes: source.Subtypes,
-	})
+	return permanentProtectedFromChars(g, permanent, cardDefSourceChars(source))
+}
+
+// cardDefSourceChars returns a card face's protection-relevant qualities as its
+// own characteristic-defining abilities define them, which function in every
+// zone (CR 604.3).
+func cardDefSourceChars(def *game.CardDef) sourceChars {
+	face := characteristicDefinedFace(def)
+	return sourceChars{colors: face.Colors, types: face.Types, subtypes: face.Subtypes}
 }
 
 func permanentProtectedFromChars(g *game.Game, permanent *game.Permanent, source sourceChars) bool {
