@@ -150,19 +150,35 @@ and retained work show why. To retry deliberately, pass its issue number in the
 `retryGaps` argument, e.g. `"retryGaps": [3287]`. A retry starts again from
 current main.
 
-To continue a review-rejected Engine unit instead of starting over, pass it in
-`resumeUnits`, e.g. `"resumeUnits": [{"runId": "05d8c46b-…", "index": 0}]`
-(policy 1.11.0). The run may be in any top-level worktree of the repository, so
-a new session can resume another session's units (policy 1.13.0). The first
-units of the run, in list order, apply the retained
-worktree's uncommitted work onto a fresh worktree from current main, without
-changing the retained worktree. They start with a `review_fix` of the final
-review findings, then validate, re-review and land as usual. That repair counts
-against the unit's review-fix rounds, and earlier recorded rounds are passed to
-the fixer and re-reviewer. Conflicts with current main stop the run for manual
-integration. Card units cannot be resumed because their queue claim would need
-to be re-established. `maxTasks` must cover every resumed unit; any remaining
-units select work normally.
+To continue a review-rejected or validation-failed Engine unit instead of
+starting over, start a new production run with `resumeUnits`:
+
+```json
+{
+  "mode": "produce",
+  "maxTasks": 1,
+  "resumeUnits": [{"runId": "<earlier run ID>", "index": 0}]
+}
+```
+
+Review-rejected recovery was added in policy 1.11.0; validation-failed recovery
+is supported since 1.22.0. Both require a complete implementation result with
+evidence; review-rejected units also require their final findings. The earlier
+run may be in any top-level worktree of the repository, so a new session can
+resume another session's units (policy 1.13.0).
+
+The first units of the new run, in list order, apply the retained worktree's
+uncommitted work onto a fresh worktree from current main, without changing the
+retained worktree. They rerun validation under the current policy before
+independent review, without repeating implementation. Still-failing checks get
+the current bounded validation-fix budget; a failure never counts as a pass.
+Earlier review findings are retained as context, not approval. Review fixes use
+the current review-fix budget, and normal PR/CI landing gates still apply.
+Conflicts with current main are handled by the integration repair described
+below. Card units cannot be resumed because their queue claim would need to be
+re-established. `maxTasks` must cover every resumed unit; any remaining units
+select work normally. This explicit recovery does not resume or modify the
+old run, or bypass its workflow-revision guard.
 
 Known gaps are ordered: open issues labeled `Existing Card Defect` (defects in
 rules already-supported cards use, so they play wrong today) first, then gaps

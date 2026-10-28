@@ -84,6 +84,72 @@ test("Resumed units are re-reviewed under the current bar first, with the full f
   assert.deepEqual(calls, ["validate", "review-0"]);
 });
 
+test("Validation-failed drafts retry validation before review without reimplementation", async () => {
+  const result = { ...complete, gaps: [{ id: "#3333", description: "remaining route" }] };
+  const f = fixture({ resume: { result, history: [] } });
+  f.stage = async () => assert.fail("Passing retained work should not be reimplemented or repaired");
+  f.review = async (round, submission, _snapshot, history) => {
+    f.calls.push(`review-${round}`);
+    assert.deepEqual(submission, result);
+    assert.deepEqual(history, []);
+    return { verdict: "approve", findings: [] };
+  };
+  assert.equal((await executeUnit(f)).status, "accepted");
+  assert.deepEqual(f.calls, ["validate", "review-0", "prepare"]);
+});
+
+test("Resumed validation failures use current failures and bounded repairs, preserving review history", async () => {
+  const history = [{ round: 0, verdict: "changes_needed", findings: ["earlier finding"] }];
+  const gap = { id: "#3333", description: "remaining route" };
+  for (const repaired of [true, false]) {
+    const f = fixture({ resume: { result: { ...complete, gaps: [gap] }, history } });
+    const failure = { ok: false, error: "current validation failure" };
+    let attempts = 0;
+    f.validate = async () => {
+      f.calls.push("validate");
+      return attempts++ && repaired ? { ok: true } : failure;
+    };
+    f.stage = async (phase, round, feedback) => {
+      f.calls.push(phase);
+      assert.equal(phase, "validation_fix");
+      assert.equal(round, 1);
+      assert.deepEqual(feedback, failure);
+      return { ...complete, summary: "repaired retained draft" };
+    };
+    f.review = async (round, submission, _snapshot, earlier) => {
+      f.calls.push(`review-${round}`);
+      assert.equal(submission.summary, "repaired retained draft");
+      assert.deepEqual(submission.gaps, [gap]);
+      assert.deepEqual(earlier, history);
+      return { verdict: "approve", findings: [] };
+    };
+    const outcome = await executeUnit(f);
+    assert.equal(outcome.status, repaired ? "accepted" : "validation_failed");
+    assert.deepEqual(f.calls, repaired
+      ? ["validate", "validation_fix", "validate", "review-0", "prepare"]
+      : ["validate", "validation_fix", "validate"]);
+    assert.deepEqual(history, [{ round: 0, verdict: "changes_needed", findings: ["earlier finding"] }]);
+  }
+});
+
+test("Resumed drafts cannot skip independent review or use incomplete implementation results", async () => {
+  const f = fixture({
+    resume: { result: complete, history: [] },
+    policy: { ...policy, reviewFixRounds: { ...policy.reviewFixRounds, engine: 0 } },
+  });
+  f.review = async () => {
+    f.calls.push("review");
+    return { verdict: "changes_needed", findings: ["retained defect"] };
+  };
+  assert.equal((await executeUnit(f)).status, "review_rejected");
+  assert.deepEqual(f.calls, ["validate", "review"]);
+  for (const result of [null, { ...complete, status: "blocked" }, { ...complete, evidence: [] }]) {
+    const incomplete = fixture({ resume: { result, history: [] } });
+    assert.notEqual((await executeUnit(incomplete)).status, "accepted");
+    assert.deepEqual(incomplete.calls, []);
+  }
+});
+
 test("Re-reviews and fixes see earlier rounds, and repairs keep earlier gaps", async () => {
   const reviews = [], fixes = [];
   const gap = (id, description = id) => ({ id, description });
@@ -754,6 +820,50 @@ test("Resume arguments, retained units and seeding fail closed and preserve work
   await writeFile(path.join(clash.path, "card.txt"), "main changed card\nretained fix\n");
   assert.deepEqual(await unresolvedConflicts(clash.path, ["card.txt"]), []);
 });
+
+test("Validation-failed units can be loaded without a verdict and retain all earlier reviews", async t => {
+  const f = await repositoryFixture(t);
+  const runId = "validation-run";
+  const run = path.join(f.repo, ".cardwork", "workflows", runId);
+  const retained = path.join(run, "work", "0");
+  await git(f.repo, ["worktree", "add", "-b", "retained", retained, f.base]);
+  await writeFile(path.join(retained, "card.txt"), "retained fix\n");
+  await writeFile(path.join(retained, "new_test.go"), "package rules\n");
+  const unit = { index: 0, task: { taskType: "engine", id: "gap-3287" }, status: "validation_failed",
+    worktree: retained, result: complete, validation: { ok: false, error: "obsolete validation target" } };
+  const writeState = (candidate, stages = []) =>
+    writeFile(path.join(run, "state.json"), JSON.stringify({ units: [candidate], stages }));
+  await writeState(unit);
+  const loaded = await retainedUnit(f.repo, { runId, index: 0 });
+  assert.equal(loaded.unit.status, "validation_failed");
+  assert.equal(loaded.unit.verdict, undefined);
+  assert.deepEqual(loaded.history, []);
+  const stages = [
+    { unitIndex: 0, phase: "review", verdict: "changes_needed", findings: ["first"] },
+    { unitIndex: 0, phase: "re_review", verdict: "changes_needed", findings: ["last"] },
+    { unitIndex: 1, phase: "review", verdict: "changes_needed", findings: ["another unit"] },
+  ];
+  await writeState(unit, stages);
+  assert.deepEqual((await retainedUnit(f.repo, { runId, index: 0 })).history.map(round => round.findings),
+    [["first"], ["last"]]);
+  for (const overrides of [
+    { status: "blocked" }, { status: "landed" }, { status: "ci_failed" },
+    { status: "review_rejected" }, { task: { taskType: "card" } }, { worktree: f.work.path },
+    { result: null }, { result: { ...complete, status: "blocked" } }, { result: { ...complete, evidence: [] } },
+  ]) {
+    await writeState({ ...unit, ...overrides });
+    await assert.rejects(retainedUnit(f.repo, { runId, index: 0 }));
+  }
+  await writeState(unit);
+  const target = { path: path.join(path.dirname(f.repo), "resumed-validation"), base: f.base };
+  await git(f.repo, ["worktree", "add", "-b", "resumed-validation", target.path, target.base]);
+  const before = await changes(retained);
+  await seedFromRetained(loaded.unit.worktree, target);
+  assert.deepEqual((await changes(target.path)).files, ["card.txt", "new_test.go"]);
+  assert.equal(await readFile(path.join(target.path, "new_test.go"), "utf8"), "package rules\n");
+  assert.deepEqual(await changes(retained), before);
+});
+
 const required = { checks: ["Tests", "Race Tests"], reviewRequired: false };
 const successfulChecks = head => ({
   head, statuses: [],

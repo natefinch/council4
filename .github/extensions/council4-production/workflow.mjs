@@ -131,8 +131,8 @@ export function checkArgs(args) {
   }
 }
 
-// A review-rejected Engine unit from an earlier run, resumable from its
-// retained worktree with its final findings as the next repair.
+// Retained Engine drafts are revalidated and reviewed in a new run without
+// changing the original worktree or reusing its failed checks as evidence.
 export async function retainedUnit(root, ref) {
   const directory = (await runDirectories(root)).get(ref.runId);
   if (!directory) throw new Error(`No retained run ${ref.runId} in this repository's worktrees`);
@@ -140,14 +140,22 @@ export async function retainedUnit(root, ref) {
   const unit = source.units?.find(u => u.index === ref.index);
   if (!unit) throw new Error(`Run ${ref.runId} has no unit ${ref.index}`);
   if (unit.task?.taskType !== "engine") throw new Error("Only Engine units can be resumed; card work needs its queue claim re-established");
-  if (unit.status !== "review_rejected" || !unit.verdict?.findings?.length) {
-    throw new Error(`Unit ${ref.index} of ${ref.runId} is ${unit.status}; only review-rejected units with findings can be resumed`);
+  if (!["review_rejected", "validation_failed"].includes(unit.status)) {
+    throw new Error(`Unit ${ref.index} of ${ref.runId} is ${unit.status}; only review-rejected or validation-failed units can be resumed`);
+  }
+  if (unit.status === "review_rejected" && !unit.verdict?.findings?.length) {
+    throw new Error("Review-rejected units need their final review findings to be resumed");
+  }
+  if (unit.result?.status !== "complete" || !Array.isArray(unit.result.evidence) ||
+      !unit.result.evidence.some(e => typeof e === "string" && e.trim())) {
+    throw new Error("Resumed units need a complete implementation result with evidence");
   }
   const expected = path.join(directory, "work", String(ref.index));
   const real = file => realpath(file).catch(() => file);
   if (!unit.worktree || await real(unit.worktree) !== await real(expected)) throw new Error("Retained unit worktree is outside its run");
   const rounds = (source.stages ?? []).filter(stage => stage.verdict && stage.unitIndex === ref.index);
-  const history = rounds.slice(0, -1).map((stage, round) => ({ round, verdict: stage.verdict, findings: stage.findings ?? [],
+  const earlier = unit.status === "review_rejected" ? rounds.slice(0, -1) : rounds;
+  const history = earlier.map((stage, round) => ({ round, verdict: stage.verdict, findings: stage.findings ?? [],
     preexisting: stage.preexisting ?? [], followUps: stage.followUps ?? [] }));
   return { unit, history };
 }
@@ -386,8 +394,8 @@ export function carryGaps(previous, next) {
 }
 
 // The same state machine is tested with fake agents, without spending credits.
-// A resumed unit starts from retained work by repairing its final findings; that
-// repair counts against the unit's review-fix rounds.
+// A resumed unit revalidates and reviews retained work before repairing any
+// remaining findings, using the current policy's bounded repair rounds.
 export async function executeUnit({ task, policy, stage, validate, snapshot, review, publish, resume }) {
   // Earlier rounds' findings and the author's responses, given to each later
   // reviewer and fixer so repairs are verified rather than reviewed afresh.
@@ -396,9 +404,11 @@ export async function executeUnit({ task, policy, stage, validate, snapshot, rev
   if (resume) {
     // Retained work is validated and re-reviewed under the current review bar
     // first; only findings that still block are repaired.
-    history.push({ round: history.length, verdict: resume.verdict.verdict, findings: resume.verdict.findings });
+    if (resume.verdict) {
+      history.push({ round: history.length, verdict: resume.verdict.verdict, findings: resume.verdict.findings });
+    }
     result = resume.result;
-    if (!result) return { status: "blocked", result, verdict: resume.verdict };
+    if (!result || result.status !== "complete") return { status: "blocked", result, verdict: resume.verdict };
   } else {
     result = await stage("implementation", 0, null);
     if (!result || result.status !== "complete") return { status: "blocked", result };
@@ -578,8 +588,9 @@ export async function runProduction(ctx) {
             outcome: `resume ${resumeRef.runId} unit ${resumeRef.index}`, agent: false });
           await save();
           const { unitIndex, ...task } = source.task;
-          return { task: { ...task, resumedFrom: { ...resumeRef, retainedBase: seeded.retainedBase } },
-            verdict: source.verdict, result: source.result ?? null, history, conflicts: seeded.conflicts ?? [] };
+          return { task: { ...task, resumedFrom: { ...resumeRef, status: source.status, retainedBase: seeded.retainedBase } },
+            verdict: source.status === "review_rejected" ? source.verdict : undefined,
+            result: source.result, history, conflicts: seeded.conflicts ?? [] };
         }) : null;
         const task = resumed ? resumed.task : await ctx.step(`selection-v2-${index}`, async () => {
           const startedAt = new Date().toISOString();
@@ -655,7 +666,7 @@ Return taskType none only if no candidates remain or a genuine external/unsafe b
         const contract = `Write ONLY in isolated worktree ${work.path}; other checkouts (including the parent) are off limits for mutation.
 You may read earlier retained unit evidence at paths explicitly listed here: ${JSON.stringify(state.units.map(u => ({ id: u.task?.id, worktree: u.worktree, gaps: u.result?.gaps })))}
 Task type ${task.taskType}, id ${task.id}, title ${task.title}.
-${task.resumedFrom ? `This unit resumes review-rejected work from run ${task.resumedFrom.runId} unit ${task.resumedFrom.index}. That work, including its earlier review fixes, is already applied to this worktree on top of current main; continue from it rather than reimplementing.
+${task.resumedFrom ? `This unit resumes retained ${task.resumedFrom.status} work from run ${task.resumedFrom.runId} unit ${task.resumedFrom.index}. That work, including any earlier repairs, is already applied to this worktree on top of current main; continue from it rather than reimplementing. Earlier validation or approval does not establish that the current submission passes; it must be validated and independently reviewed under the current policy.
 ` : ""}Use repository skills/policy; no nested agents, commits, pushes, PR actions, checkout resets, broad cleanup or new schedules. This workflow owns PR creation and merging after CI. Do not change workflow definitions/policy or CI.
 Reuse canonical blocker issues; creating one precise missing-capability issue is allowed when genuinely needed. Do not close issues or claim main integration; only the workflow's confirmed landing proves delivery.
 Corpus ${corpus}. Read current exact Oracle/rulings/verified CR passages before card design and retain complete source/handoff with tests.
