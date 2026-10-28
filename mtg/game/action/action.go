@@ -149,6 +149,9 @@ type TurnFaceUpAction struct {
 // DeclareAttackersAction is the payload for declaring attackers.
 type DeclareAttackersAction struct {
 	Attackers []game.AttackDeclaration
+	// Bands announces attacking bands among the declared attackers (CR 508.1e,
+	// 702.22c). No bands is the default.
+	Bands []game.AttackingBand `json:",omitempty"`
 	// Staged requests completion-safe Engine choices instead of a full proposal.
 	Staged bool
 }
@@ -436,10 +439,17 @@ func TurnFaceUp(permanentID id.ID) Action {
 
 // DeclareAttackers creates an action to declare attackers.
 func DeclareAttackers(attackers []game.AttackDeclaration) Action {
+	return DeclareAttackersWithBands(attackers, nil)
+}
+
+// DeclareAttackersWithBands creates an action to declare attackers and announce
+// attacking bands among them (CR 508.1e).
+func DeclareAttackersWithBands(attackers []game.AttackDeclaration, bands []game.AttackingBand) Action {
 	return Action{
 		Kind: ActionDeclareAttackers,
 		declareAttackers: DeclareAttackersAction{
 			Attackers: copyAttackers(attackers),
+			Bands:     game.CloneAttackingBands(bands),
 		},
 	}
 }
@@ -565,6 +575,7 @@ func (a Action) DeclareAttackersPayload() (DeclareAttackersAction, bool) {
 	}
 	payload := a.declareAttackers
 	payload.Attackers = copyAttackers(payload.Attackers)
+	payload.Bands = game.CloneAttackingBands(payload.Bands)
 	return payload, true
 }
 
@@ -665,12 +676,19 @@ func (a Action) Validate() error {
 			return errors.New("turn face-up action missing permanent ID")
 		}
 	case ActionDeclareAttackers:
-		if a.declareAttackers.Staged && len(a.declareAttackers.Attackers) != 0 {
+		if a.declareAttackers.Staged && (len(a.declareAttackers.Attackers) != 0 || len(a.declareAttackers.Bands) != 0) {
 			return errors.New("staged attackers action includes a complete declaration")
 		}
 		for _, attacker := range a.declareAttackers.Attackers {
 			if attacker.Attacker == 0 {
 				return errors.New("declare attackers action has attacker with zero object ID")
+			}
+		}
+		for _, band := range a.declareAttackers.Bands {
+			for _, member := range band.Members {
+				if member == 0 {
+					return errors.New("declare attackers action has band member with zero object ID")
+				}
 			}
 		}
 	case ActionDeclareBlockers:
@@ -776,7 +794,7 @@ func turnFaceUpActionEmpty(a TurnFaceUpAction) bool {
 }
 
 func declareAttackersActionEmpty(a DeclareAttackersAction) bool {
-	return !a.Staged && len(a.Attackers) == 0
+	return !a.Staged && len(a.Attackers) == 0 && len(a.Bands) == 0
 }
 
 func declareBlockersActionEmpty(a DeclareBlockersAction) bool {

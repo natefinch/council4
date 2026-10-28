@@ -475,6 +475,7 @@ func cloneCombatState(c *CombatState) *CombatState {
 	clone := *c
 	clone.FirstStrikeEligible = cloneComparableMap(c.FirstStrikeEligible)
 	clone.Attackers = cloneSlice(c.Attackers)
+	clone.Bands = CloneAttackingBands(c.Bands)
 	clone.PlayersAttacked = cloneComparableMap(c.PlayersAttacked)
 	clone.Blockers = cloneSlice(c.Blockers)
 	clone.BlockedAttackers = cloneComparableMap(c.BlockedAttackers)

@@ -40,6 +40,25 @@ type AttackDeclaration struct {
 	Target AttackTarget
 }
 
+// AttackingBand records creatures the active player announced as one attacking
+// band while declaring attackers (CR 508.1e, 702.22c). Members are the
+// attacking creatures' ObjectIDs.
+type AttackingBand struct {
+	Members []id.ID
+}
+
+// CloneAttackingBands returns a deep copy of bands.
+func CloneAttackingBands(bands []AttackingBand) []AttackingBand {
+	if bands == nil {
+		return nil
+	}
+	out := make([]AttackingBand, len(bands))
+	for i, band := range bands {
+		out[i] = AttackingBand{Members: append([]id.ID(nil), band.Members...)}
+	}
+	return out
+}
+
 // BlockDeclaration records that a creature has been declared as a blocker.
 type BlockDeclaration struct {
 	// Blocker is the ObjectID of the blocking creature.
@@ -65,6 +84,13 @@ type CombatState struct {
 	FirstStrikeEligible map[id.ID]bool
 	// Attackers lists all declared attackers and their targets.
 	Attackers []AttackDeclaration
+
+	// Bands lists the attacking bands announced with the attack declaration
+	// (CR 702.22c-d). A band lasts for the rest of combat even if its members
+	// later lose banding (CR 702.22e). A member removed from combat leaves its
+	// band, and a band left with one member is no longer a band (CR 702.22f).
+	// Creatures put onto the battlefield attacking never join a band.
+	Bands []AttackingBand
 
 	// AttackersDeclared records whether any creature was declared as an attacker
 	// or put onto the battlefield attacking this combat (CR 508.8). It stays true

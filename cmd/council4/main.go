@@ -511,7 +511,15 @@ func formatDeclareAttackers(g *game.Game, logged *rules.ActionLog, declare actio
 	for _, declaration := range declare.Attackers {
 		parts = append(parts, fmt.Sprintf("%s at %s", formatAttacker(g, logged, declaration), playerName(declaration.Target.Player)))
 	}
-	return "declare attackers: " + strings.Join(parts, ", ")
+	text := "declare attackers: " + strings.Join(parts, ", ")
+	for _, band := range declare.Bands {
+		members := make([]string, 0, len(band.Members))
+		for _, member := range band.Members {
+			members = append(members, formatPermanentForAction(g, logged, member))
+		}
+		text += "; band: " + strings.Join(members, " + ")
+	}
+	return text
 }
 
 func formatAttacker(g *game.Game, logged *rules.ActionLog, declaration game.AttackDeclaration) string {

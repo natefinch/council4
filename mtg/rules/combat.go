@@ -432,6 +432,9 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 		attackers = append(attackers, attack)
 	}
 	g.Combat.Attackers = attackers
+	if removedAttackers[permanentID] {
+		removeFromAttackingBands(g.Combat, permanentID)
+	}
 
 	var blockers []game.BlockDeclaration
 	for _, block := range g.Combat.Blockers {
