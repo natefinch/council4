@@ -150,9 +150,9 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 	log := &TurnLog{}
 	s.engine.setReplacementChoiceContext(clone, policies, log)
 	defer clone.ClearChoiceContext()
-	proposal := action.DeclareAttackers(attackers.Attackers)
+	proposal := action.DeclareAttackersWithBands(attackers.Attackers, attackers.Bands)
 	if attackers.Staged {
-		if len(attackers.Attackers) != 0 {
+		if len(attackers.Attackers) != 0 || len(attackers.Bands) != 0 {
 			return nil, false
 		}
 		proposal = action.ChooseAttackers()

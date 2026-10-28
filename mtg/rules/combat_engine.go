@@ -631,6 +631,9 @@ func (ce combatEngine) attackersLegal(g *game.Game, playerID game.PlayerID, decl
 	if !attackDeclarationsSatisfyAloneRestriction(g, declare.Attackers, eligibleByID) {
 		return false
 	}
+	if !attackingBandsLegal(g, declare.Attackers, declare.Bands, eligibleByID) {
+		return false
+	}
 	return ce.canPayAttackTax(g, playerID, declare.Attackers)
 }
 
@@ -647,6 +650,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	}
 
 	g.Combat.Attackers = append([]game.AttackDeclaration(nil), declare.Attackers...)
+	g.Combat.Bands = game.CloneAttackingBands(declare.Bands)
 	g.Combat.AttackDeclarationComplete = true
 	if len(declare.Attackers) > 0 {
 		// CR 508.8: record that creatures attacked so the declare blockers and

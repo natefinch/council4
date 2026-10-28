@@ -9,6 +9,10 @@ import "github.com/natefinch/council4/mtg/game"
 type CombatView struct {
 	// Attackers lists every creature currently attacking, in declaration order.
 	Attackers []AttackerView
+	// Bands lists the attacking bands announced with the attack declaration that
+	// still have at least two members (CR 702.22c, 702.22f). Each member is an
+	// attacking creature's public object ID.
+	Bands []game.AttackingBand
 }
 
 // AttackerView describes one attacking creature: its effective characteristics
@@ -39,6 +43,7 @@ func (o PlayerObservation) Combat() CombatView {
 		return view
 	}
 	combat := o.g.Combat
+	view.Bands = game.CloneAttackingBands(combat.Bands)
 	for i := range combat.Attackers {
 		declaration := combat.Attackers[i]
 		attacker, ok := permanentByObjectID(o.g, declaration.Attacker)

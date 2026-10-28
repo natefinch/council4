@@ -100,6 +100,13 @@ const (
 	// the total damage, and a recipient may receive zero. CombatAttacker or
 	// CombatBlocker identifies the creature whose damage is divided.
 	ChoiceCombatDamageDivision
+	// ChoiceAttackingBand asks the active player, after the attack targets are
+	// fixed, whether to add another attacking creature to the band of the
+	// creature identified by CombatAttacker (CR 508.1e, 702.22c-d). Option 0
+	// finishes that band; each other option's Attack identifies one attacking
+	// creature that can legally join it. A finished band of one creature is no
+	// band, so the default declares no bands.
+	ChoiceAttackingBand
 )
 
 // NumberRange describes a compact integer choice without enumerating its values.

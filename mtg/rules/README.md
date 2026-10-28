@@ -439,6 +439,18 @@ feasibility includes lure, menace, maximum-one, additional capacity and distinct
 creature alone restrictions. Ordinary must-block assignments use residual
 bipartite b-matching rather than factorial enumeration.
 
+Attacking bands (CR 508.1e, 702.22c-f) are announced with the attack
+declaration: `action.DeclareAttackersWithBands` carries them in a complete
+proposal, and a staged declaration whose attackers include a creature with
+banding asks `ChoiceAttackingBand` questions after the attack targets are fixed.
+Each creature with banding not yet banded may start a band; only creatures that
+can still legally join (same attack target, not in another band, at most one
+without banding) are offered, and the default forms no band. Bands live in
+`CombatState.Bands`, survive members losing banding, lose members removed from
+combat or leaving the battlefield and dissolve at one member, and appear in
+`PlayerObservation.Combat()`.
+Blocking and damage across a band are not yet propagated.
+
 Live play and `Simulator.Apply` use the same completion and application paths,
 including controlled-player routing, actor-owned payment, explicit invalid
 choice fallback and clone-independent declaration-window completion. Exact
