@@ -47,60 +47,11 @@ func (c combatDamageChooser) choose(g *game.Game, request game.ChoiceRequest) []
 	return c.engine.chooseChoice(g, c.agents, request, c.log)
 }
 
-// divideBlockedAttackerDamage has the defending player choose how a blocked
-// attacker's combat damage is assigned when a creature blocking it has banding
-// (CR 702.22j). Any division among the blockers is legal. If the attacker has
-// trample, the defending player may instead assign lethal damage to every
-// blocker and the excess among the blockers and the attack target (CR 702.19b),
-// so they first choose how much of the excess, if any, is assigned to the
-// attack target. Any damage assigned to the attack target is returned as
-// tramplingDamage.
-func (c combatDamageChooser) divideBlockedAttackerDamage(g *game.Game, player game.PlayerID, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, damage int) (assignments []creatureDamageAssignment, tramplingDamage int) {
-	blockers = slices.DeleteFunc(slices.Clone(blockers), func(blocker *game.Permanent) bool {
-		return blocker == nil
-	})
-	if damage <= 0 || len(blockers) == 0 {
-		return nil, 0
-	}
-	if !hasKeyword(g, attacker, game.Trample) {
-		return c.divideCombatDamage(g, player, attacker, blockers, damage, true), 0
-	}
-	if _, ok := attackTargetCombatDamageEvent(g, attacker, target, damage); !ok {
-		return c.divideCombatDamage(g, player, attacker, blockers, damage, true), 0
-	}
-	amounts := make(map[*game.Permanent]int, len(blockers))
-	totalLethal := 0
-	for _, blocker := range blockers {
-		amounts[blocker] = lethalDamageRemainingFromSource(g, attacker, blocker)
-		totalLethal += amounts[blocker]
-	}
-	maxExcess := damage - totalLethal
-	if maxExcess <= 0 {
-		return c.divideCombatDamage(g, player, attacker, blockers, damage, true), 0
-	}
-	tramplingDamage = c.trampleExcessToAttackTarget(g, player, attacker, target, damage, maxExcess)
-	if tramplingDamage <= 0 {
-		return c.divideCombatDamage(g, player, attacker, blockers, damage, true), 0
-	}
-	if remaining := damage - tramplingDamage - totalLethal; remaining > 0 {
-		prompt := fmt.Sprintf("Divide the other %d of %s's combat damage among the creatures blocking it, beyond lethal damage to each", remaining, permanentChoiceLabel(g, attacker))
-		defaultDivision := []creatureDamageAssignment{{permanent: blockers[0], damage: remaining}}
-		for _, assignment := range c.chooseCombatDamageDivision(g, player, attacker, blockers, remaining, true, prompt, defaultDivision) {
-			amounts[assignment.permanent] += assignment.damage
-		}
-	}
-	for _, blocker := range blockers {
-		if amounts[blocker] > 0 {
-			assignments = append(assignments, creatureDamageAssignment{permanent: blocker, damage: amounts[blocker]})
-		}
-	}
-	return assignments, tramplingDamage
-}
-
 // trampleExcessToAttackTarget asks the defending player, who chooses how a
 // trampling attacker blocked by a creature with banding assigns its damage (CR
-// 702.22j), how much of its damage beyond lethal to each blocker is assigned to
-// the attack target (CR 702.19b). The default assigns none, keeping all of the
+// 702.22j), how much of its damage beyond lethal to each blocker, counting the
+// step's other assignments, is assigned to the attack target (CR 702.19b). The
+// default assigns none, keeping all of the
 // damage on the blockers.
 func (c combatDamageChooser) trampleExcessToAttackTarget(g *game.Game, player game.PlayerID, attacker *game.Permanent, target game.AttackTarget, damage, maxExcess int) int {
 	request := game.ChoiceRequest{

@@ -46,6 +46,10 @@ func TestCombatSimultaneousShieldMultiBlock(t *testing.T) {
 	}
 }
 
+// TestCombatSimultaneousAssignmentsPrecedeWither: the trampler's lethal damage
+// counts the 3 the wither creature is assigning to the 5/5 in the same step
+// (CR 702.19b) but not the -1/-1 counters that damage will become, so it
+// assigns 2 to the blocker and tramples 1 over.
 func TestCombatSimultaneousAssignmentsPrecedeWither(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	first := addCombatCreaturePermanentWithPower(g, game.Player1, 3, game.Wither)
@@ -66,8 +70,8 @@ func TestCombatSimultaneousAssignmentsPrecedeWither(t *testing.T) {
 	}
 
 	NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
-	if g.Players[game.Player2].Life != 40 || blocker.MarkedDamage != 3 || blocker.Counters.Get(counter.MinusOneMinusOne) != 3 {
-		t.Fatalf("life/marked damage/counters = %d/%d/%d, want 40/3/3",
+	if g.Players[game.Player2].Life != 39 || blocker.MarkedDamage != 2 || blocker.Counters.Get(counter.MinusOneMinusOne) != 3 {
+		t.Fatalf("life/marked damage/counters = %d/%d/%d, want 39/2/3",
 			g.Players[game.Player2].Life, blocker.MarkedDamage, blocker.Counters.Get(counter.MinusOneMinusOne))
 	}
 }
