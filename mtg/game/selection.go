@@ -411,6 +411,18 @@ type Selection struct {
 	// relation. Placed at the end so the field joins no existing cluster's
 	// packing.
 	Owner OwnerRelation
+
+	// BandedWithSource requires the matched permanent to be another current
+	// member of the predicate source permanent's attacking band ("all creatures
+	// banded with it", Icatian Skirmishers; "creatures banded with this
+	// creature", Camel). It reads the public CombatState.Bands record, so the
+	// relation lasts for the rest of combat even after members lose banding
+	// (CR 702.22e) and ends for a creature removed from combat (CR 702.22f).
+	// The source itself never matches. Outside combat, when the source is not in
+	// a band, when no source permanent is known, or for a non-battlefield
+	// subject, it matches nothing. A resolving group reference fixes its members
+	// as it resolves (CR 611.2c); a static or prevention scope re-reads it live.
+	BandedWithSource bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -492,7 +504,8 @@ func (s Selection) Empty() bool {
 		!s.ControlledByDefendingPlayer &&
 		!s.ManaValueLessThanEventPermanent &&
 		!s.ManaValueLessOrEqualEventPermanent &&
-		!s.ManaValueLessThanSourcePower
+		!s.ManaValueLessThanSourcePower &&
+		!s.BandedWithSource
 }
 
 // Validate reports structural contradictions in the Selection that represent

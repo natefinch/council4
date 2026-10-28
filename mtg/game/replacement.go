@@ -439,6 +439,15 @@ type ReplacementEffect struct {
 	// controller relation is resolved relative to the replacement's controller. It
 	// is nil for a prevention with a fixed self/attached/player recipient scope.
 	DamageRecipientSelection *Selection
+	// DamageSourceSelection scopes a damage replacement or prevention to damage
+	// whose source matches this canonical Selection ("damage Deserts would deal",
+	// Camel), matched through the shared matchSelection with "you" and the
+	// source-relative predicates read from the replacement's controller and
+	// source permanent. A battlefield source is matched live; a source that has
+	// left the battlefield is matched by its last-known information (CR 608.2h);
+	// a source with neither, such as a spell, never matches. It is nil for a
+	// replacement with no Selection-based source filter.
+	DamageSourceSelection *Selection
 
 	// LifeGainMultiplier multiplies a single "you would gain life" event by the
 	// replacement's controller before the life is gained (CR 614), backing "If
