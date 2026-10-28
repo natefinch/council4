@@ -1312,30 +1312,30 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 		}
 		candidates = append(candidates, cardID)
 	}
-	if len(candidates) == 0 {
-		return res
-	}
-	options := make([]game.ChoiceOption, len(candidates))
-	for i, cardID := range candidates {
-		options[i] = game.ChoiceOption{
-			Index: i,
-			Label: cardChoiceLabel(r.game, cardID),
-			Card:  cardChoiceInfo(r.game, cardID),
+	// CR 733: an unpaid proposal is reversed, so the player chooses again among
+	// the eligible spells not yet tried.
+	for len(candidates) > 0 {
+		options := make([]game.ChoiceOption, len(candidates))
+		for i, cardID := range candidates {
+			options[i] = game.ChoiceOption{
+				Index: i,
+				Label: cardChoiceLabel(r.game, cardID),
+				Card:  cardChoiceInfo(r.game, cardID),
+			}
 		}
-	}
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           "Choose a spell to cast without paying its mana cost",
-		Options:          options,
-		MinChoices:       1,
-		MaxChoices:       1,
-		DefaultSelection: firstChoiceIndices(1),
-	}, r.log)
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
+		selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+			Kind:             game.ChoiceResolution,
+			Player:           playerID,
+			Prompt:           "Choose a spell to cast without paying its mana cost",
+			Options:          options,
+			MinChoices:       1,
+			MaxChoices:       1,
+			DefaultSelection: firstChoiceIndices(1),
+		}, r.log)
+		if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(candidates) {
+			return res
 		}
+		idx := selected[0]
 		if r.engine.chooseAndCastFreeSpellFromSource(
 			r.game,
 			player,
@@ -1349,7 +1349,9 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 			r.log,
 		) {
 			res.succeeded = true
+			return res
 		}
+		candidates = slices.Delete(candidates, idx, idx+1)
 	}
 	return res
 }

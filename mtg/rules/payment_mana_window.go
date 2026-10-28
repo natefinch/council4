@@ -13,10 +13,8 @@ func (e *Engine) choosePreparedSpellCost(g *game.Game, request payment.SpellRequ
 	fallback := 0
 	foundPayable := false
 	for _, prepared := range costs {
-		proposal := request
-		proposal.PreparedCost = &prepared
-		canPay := paymentOrch.canPaySpellCosts(g, proposal)
-		if canPay || manual {
+		canPay, feasible := preparedSpellCostFeasibility(g, request, prepared, manual)
+		if feasible {
 			if canPay && !foundPayable {
 				fallback, foundPayable = len(payable), true
 			}
@@ -39,6 +37,40 @@ func (e *Engine) choosePreparedSpellCost(g *game.Game, request payment.SpellRequ
 		}, log)
 	}
 	return costs[selected[0]], true
+}
+
+// spellCostFeasibility reports whether request's total cost can be paid from
+// current resources (payableNow), and whether it can be paid now or after the
+// caster activates payment-time mana abilities (feasible). manual reports
+// whether the caster has such an ability.
+func spellCostFeasibility(g *game.Game, request payment.SpellRequest, manual bool) (payableNow, feasible bool) {
+	if paymentOrch.canPaySpellCosts(g, request) {
+		return true, true
+	}
+	if !manual {
+		return false, false
+	}
+	for _, prepared := range paymentOrch.planner(g).PrepareSpellCosts(request) {
+		if _, feasible := preparedSpellCostFeasibility(g, request, prepared, true); feasible {
+			return false, true
+		}
+	}
+	return false, false
+}
+
+// preparedSpellCostFeasibility classifies one locked total cost (CR 601.2f).
+// Mana abilities may be activated while paying only when the total includes a
+// mana payment (CR 601.2g), and they add only mana, so a total that is not
+// payable now is feasible only if it includes mana and its non-mana costs are
+// payable now.
+func preparedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, prepared payment.PreparedSpellCost, manual bool) (payableNow, feasible bool) {
+	proposal := request
+	proposal.PreparedCost = &prepared
+	if paymentOrch.canPaySpellCosts(g, proposal) {
+		return true, true
+	}
+	return false, manual && prepared.IncludesManaPayment() &&
+		paymentOrch.planner(g).CanPayPreparedNonManaCosts(proposal)
 }
 
 func (e *Engine) hasManualPaymentManaAbility(g *game.Game, player game.PlayerID) bool {
