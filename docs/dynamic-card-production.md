@@ -174,6 +174,8 @@ independent review, without repeating implementation. Still-failing checks get
 the current bounded validation-fix budget; a failure never counts as a pass.
 Earlier review findings are retained as context, not approval. Review fixes use
 the current review-fix budget, and normal PR/CI landing gates still apply.
+Validation-failed units without a final review retain a JSON `null` verdict in
+the durable resume checkpoint; this means no review has approved the work.
 Conflicts with current main are handled by the integration repair described
 below. Card units cannot be resumed because their queue claim would need to be
 re-established. `maxTasks` must cover every resumed unit; any remaining units

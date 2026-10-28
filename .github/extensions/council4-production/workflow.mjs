@@ -160,6 +160,17 @@ export async function retainedUnit(root, ref) {
   return { unit, history };
 }
 
+export async function prepareResume(root, ref, work, signal) {
+  const { unit: source, history } = await retainedUnit(root, ref);
+  const seeded = await seedFromRetained(source.worktree, work, signal);
+  const { unitIndex, ...task } = source.task;
+  return {
+    task: { ...task, resumedFrom: { ...ref, status: source.status, retainedBase: seeded.retainedBase } },
+    verdict: source.status === "review_rejected" ? source.verdict : null,
+    result: source.result, history, conflicts: seeded.conflicts ?? [],
+  };
+}
+
 // Same location as the magefiles' pinned corpus: COUNCIL4_ORACLE_CARDS, else
 // <user cache>/council4/pinned/<sha256>.json (Go's os.UserCacheDir).
 export function defaultCorpusPath(sha256, env = process.env, platform = process.platform, home = os.homedir()) {
@@ -581,16 +592,12 @@ export async function runProduction(ctx) {
         const resumeRef = ctx.args.resumeUnits?.[index];
         const resumed = resumeRef ? await ctx.step(`resume-v1-${index}`, async () => {
           const startedAt = new Date().toISOString();
-          const { unit: source, history } = await retainedUnit(root, resumeRef);
-          const seeded = await seedFromRetained(source.worktree, work, ctx.signal);
+          const checkpoint = await prepareResume(root, resumeRef, work, ctx.signal);
           state.stages.push({ label: `coordination/select-${index}/selection/deterministic`, taskType: "coordination",
             taskId: `select-${index}`, phase: "selection", startedAt, completedAt: new Date().toISOString(),
             outcome: `resume ${resumeRef.runId} unit ${resumeRef.index}`, agent: false });
           await save();
-          const { unitIndex, ...task } = source.task;
-          return { task: { ...task, resumedFrom: { ...resumeRef, status: source.status, retainedBase: seeded.retainedBase } },
-            verdict: source.status === "review_rejected" ? source.verdict : undefined,
-            result: source.result, history, conflicts: seeded.conflicts ?? [] };
+          return checkpoint;
         }) : null;
         const task = resumed ? resumed.task : await ctx.step(`selection-v2-${index}`, async () => {
           const startedAt = new Date().toISOString();
