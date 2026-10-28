@@ -13,7 +13,7 @@ export const workflows = [
     examples: [
       { title: "Produce", args: { mode: "produce", maxTasks: 20 } },
       { title: "Preflight only", args: { mode: "preflight" } },
-      { title: "Resume retained units", args: { mode: "produce", resumeUnits: [{ runId: "<run id>", index: 0 }] } },
+      { title: "Resume retained units", args: { mode: "produce", maxTasks: 1, resumeUnits: [{ runId: "<run id>", index: 0 }] } },
       { title: "Retry parked gaps", args: { mode: "produce", maxTasks: 5, retryGaps: ["<issue number>"] } },
     ],
   },
