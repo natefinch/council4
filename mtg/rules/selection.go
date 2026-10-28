@@ -341,7 +341,28 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.ControlledByDefendingPlayer && !s.controlledByDefendingPlayer() {
 		return false
 	}
+	if sel.BandedWithSource && !s.bandedWithSource() {
+		return false
+	}
 	return true
+}
+
+// bandedWithSource reports whether the battlefield subject and the predicate's
+// source permanent are distinct members of one current attacking band. Bands
+// live on the public combat record (CR 702.22c-f), so a subject without a live
+// source, outside combat or outside the source's band never matches; a
+// last-known snapshot carries no band and never matches either.
+func (s *selectionSubject) bandedWithSource() bool {
+	if s.kind != subjectPermanent || s.permanent == nil || s.sourceObjectID == 0 ||
+		s.g == nil || s.g.Combat == nil || s.permanent.ObjectID == s.sourceObjectID {
+		return false
+	}
+	for _, band := range s.g.Combat.Bands {
+		if slices.Contains(band.Members, s.sourceObjectID) {
+			return slices.Contains(band.Members, s.permanent.ObjectID)
+		}
+	}
+	return false
 }
 
 // dynamicManaValueBound evaluates the controller-relative upper bound for a

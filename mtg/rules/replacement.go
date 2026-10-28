@@ -1705,6 +1705,9 @@ func matchingDamageReplacementEffects(
 		if replacement.DamageRecipientSelection != nil && !damageRecipientMatchesSelection(g, event, replacement) {
 			continue
 		}
+		if replacement.DamageSourceSelection != nil && !damageSourceMatchesSelection(g, event, replacement) {
+			continue
+		}
 		if replacement.DamageRecipientOpponent && !damageRecipientIsOpponent(g, event, replacement) {
 			continue
 		}
@@ -1720,7 +1723,11 @@ func matchingDamageReplacementEffects(
 		if replacement.DamageRecipientAttached && !damageRecipientIsSourceAttached(g, event, replacement) {
 			continue
 		}
-		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
+		// Thread the source permanent so a source-relative condition ("as long
+		// as this creature is attacking", Camel) reads the replacement's own
+		// permanent.
+		source, _ := permanentByObjectID(g, replacement.SourceObjectID)
+		if applied[replacement.ID] || !replacementEffectMatchesEventWithSource(g, replacement, matchEvent, source, nil) {
 			continue
 		}
 		matches = append(matches, *replacement)
@@ -1789,6 +1796,49 @@ func damageRecipientMatchesSelection(g *game.Game, event damageEvent, replacemen
 		sourceObjectID: replacement.SourceObjectID,
 	}
 	return matchSelection(&subject, replacement.DamageRecipientSelection)
+}
+
+// damageSourceMatchesSelection reports whether the damage event's source
+// satisfies the replacement's DamageSourceSelection. A battlefield source is
+// matched live with its effective characteristics; a source that has left the
+// battlefield is matched by its last-known information (CR 608.2h). "You" and
+// source-relative predicates resolve against the replacement's controller and
+// source permanent. A source with no permanent identity never matches.
+func damageSourceMatchesSelection(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	if event.sourceObjectID == 0 {
+		return false
+	}
+	viewer := replacementCurrentController(g, replacement)
+	if permanent, ok := permanentByObjectID(g, event.sourceObjectID); ok {
+		subject := selectionSubject{
+			kind:           subjectPermanent,
+			g:              g,
+			permanent:      permanent,
+			values:         effectivePermanentValues(g, permanent),
+			controller:     effectiveController(g, permanent),
+			viewer:         viewer,
+			sourceObjectID: replacement.SourceObjectID,
+		}
+		return matchSelection(&subject, replacement.DamageSourceSelection)
+	}
+	snapshot, ok := lastKnownObject(g, event.sourceObjectID)
+	if !ok {
+		return false
+	}
+	subject := selectionSubject{
+		kind: subjectEventPermanent,
+		g:    g,
+		event: game.Event{
+			PermanentID: snapshot.ObjectID, CardID: snapshot.CardID,
+			TokenDef: snapshot.TokenDef, Face: snapshot.Face,
+		},
+		controller:       snapshot.Controller,
+		viewer:           viewer,
+		snapshotObjectID: snapshot.ObjectID,
+		snapshot:         &snapshot,
+		sourceObjectID:   replacement.SourceObjectID,
+	}
+	return matchSelection(&subject, replacement.DamageSourceSelection)
 }
 
 func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
