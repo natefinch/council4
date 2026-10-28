@@ -1011,7 +1011,7 @@ func quantityRefs(quantity Quantity) primitiveRefs {
 		if dynamic.LinkedKey != "" {
 			refs.consumesLinked = append(refs.consumesLinked, dynamic.LinkedKey)
 		}
-	case DynamicAmountMaxOf:
+	case DynamicAmountMaxOf, DynamicAmountSumOf, DynamicAmountDifferenceOf:
 		for i := range dynamic.Operands {
 			refs = mergePrimitiveRefs(refs, quantityRefs(Dynamic(dynamic.Operands[i])))
 		}

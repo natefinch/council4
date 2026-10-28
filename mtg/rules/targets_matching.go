@@ -77,51 +77,19 @@ func externalChooserCouldChooseTarget(g *game.Game, controller game.PlayerID, so
 }
 
 func targetSpecAllowsPlayers(spec *game.TargetSpec) bool {
-	if spec.Allow != game.TargetAllowUnspecified {
-		return spec.Allow&game.TargetAllowPlayer != 0
-	}
-	normalized := normalizedTargetConstraint(spec)
-	return normalized == "player" ||
-		normalized == "target player" ||
-		normalized == "opponent" ||
-		normalized == "target opponent" ||
-		normalized == "any target"
+	return spec.MatchableKinds()&game.TargetAllowPlayer != 0
 }
 
 func targetSpecAllowsPermanents(spec *game.TargetSpec) bool {
-	if spec.Allow != game.TargetAllowUnspecified {
-		return spec.Allow&game.TargetAllowPermanent != 0
-	}
-	normalized := normalizedTargetConstraint(spec)
-	if normalized == "any target" {
-		return true
-	}
-	if strings.Contains(normalized, "permanent") ||
-		strings.Contains(normalized, "creature") ||
-		strings.Contains(normalized, "artifact") ||
-		strings.Contains(normalized, "enchantment") ||
-		strings.Contains(normalized, "land") ||
-		strings.Contains(normalized, "planeswalker") ||
-		strings.Contains(normalized, "battle") {
-		return true
-	}
-	return false
+	return spec.MatchableKinds()&game.TargetAllowPermanent != 0
 }
 
 func targetSpecAllowsCards(spec *game.TargetSpec) bool {
-	if spec.Allow != game.TargetAllowUnspecified {
-		return spec.Allow&game.TargetAllowCard != 0
-	}
-	normalized := normalizedTargetConstraint(spec)
-	return strings.Contains(normalized, "card") &&
-		(strings.Contains(normalized, "graveyard") || strings.Contains(normalized, "library") || strings.Contains(normalized, "hand"))
+	return spec.MatchableKinds()&game.TargetAllowCard != 0
 }
 
 func targetSpecAllowsStackObjects(spec *game.TargetSpec) bool {
-	if spec.Allow != game.TargetAllowUnspecified {
-		return spec.Allow&game.TargetAllowStackObject != 0
-	}
-	return false
+	return spec.MatchableKinds()&game.TargetAllowStackObject != 0
 }
 
 func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec, target game.Target) bool {
@@ -648,9 +616,7 @@ func permanentTypesForConstraint(normalized string) []types.Card {
 }
 
 func normalizedTargetConstraint(spec *game.TargetSpec) string {
-	normalized := strings.ToLower(strings.TrimSpace(spec.Constraint))
-	normalized = strings.TrimPrefix(normalized, "target ")
-	return strings.Join(strings.Fields(normalized), " ")
+	return spec.NormalizedConstraint()
 }
 
 func isPlayerAlive(g *game.Game, playerID game.PlayerID) bool {

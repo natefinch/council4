@@ -71,7 +71,7 @@ func newDyingWish() *game.CardDef {
 											Amount: game.Dynamic(game.DynamicAmount{
 												Kind:       game.DynamicAmountObjectPower,
 												Multiplier: 1,
-												Object:     game.SourcePermanentReference(),
+												Object:     game.EventPermanentReference(),
 											}),
 											Player: game.TargetPlayerReference(0),
 										},
@@ -81,7 +81,7 @@ func newDyingWish() *game.CardDef {
 											Amount: game.Dynamic(game.DynamicAmount{
 												Kind:       game.DynamicAmountObjectPower,
 												Multiplier: 1,
-												Object:     game.SourcePermanentReference(),
+												Object:     game.EventPermanentReference(),
 											}),
 											Player: game.ControllerReference(),
 										},
