@@ -441,11 +441,18 @@ bipartite b-matching rather than factorial enumeration.
 
 Attacking bands (CR 508.1e, 702.22c-f) are announced with the attack
 declaration: `action.DeclareAttackersWithBands` carries them in a complete
-proposal, and a staged declaration whose attackers include a creature with
-banding asks `ChoiceAttackingBand` questions after the attack targets are fixed.
-Each creature with banding not yet banded may start a band; only creatures that
-can still legally join (same attack target, not in another band, at most one
-without banding) are offered, and the default forms no band. Bands live in
+proposal, and a staged declaration asks `ChoiceAttackingBand` questions after
+the attack targets are fixed. Each creature not yet banded that has banding, or
+a "bands with other [quality]" ability while having that quality, may start a
+band. A band is legal with at least one member with banding and at most one
+without, or with every member of one [quality] and at least one of them having
+"bands with other [quality]" (702.22c). Only creatures that keep the band legal
+(and share its attack target and aren't in another band) are offered, and the
+default forms no band. `game.BandsWithOtherStaticAbility` builds the keyword;
+its quality is a `Selection` read from current characteristics. A layer-6
+removal of banding also removes every "bands with other" ability (702.22b),
+while removing `BandsWithOther` keeps banding; abilities gained later in
+timestamp order still apply. Bands live in
 `CombatState.Bands`, survive members losing banding, lose members removed from
 combat or leaving the battlefield and dissolve at one member, and appear in
 `PlayerObservation.Combat()`.
@@ -457,8 +464,11 @@ and never offered. `applyBlockers` records every propagated pair in
 event. Each pair gets its own blocker-declared event (CR 509.3b/d), and each
 newly blocked member gets a becomes-blocked event (509.3c). All of these events
 share the declaration batch. Combat damage then uses the existing
-division paths: the active player divides a blocker's damage among band members
-while any of them has banding (702.22k). Otherwise the blocker's controller
+division paths: the active player divides a blocker's damage among the
+attackers it blocks while one has banding, or a [quality] creature with "bands
+with other [quality]" and another [quality] creature are among them (702.22k);
+blockers give the defending player an attacker's division the same way
+(702.22j). Otherwise the blocker's controller
 is asked to divide it (510.1d); the default assigns lethal damage in order.
 A band member with trample counts damage the other members assign to a shared
 blocker (702.19c).

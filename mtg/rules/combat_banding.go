@@ -10,24 +10,35 @@ import (
 
 // defendingPlayerAssignsAttackerDamage reports whether CR 702.22j transfers the
 // division of a blocked attacker's combat damage to the defending player: an
-// attacking creature being blocked by a creature with banding has its damage
-// divided by the defending player, among any creatures blocking it, rather than
-// by the active player (an exception to CR 510.1c).
+// attacking creature blocked by a creature with banding, or by both a [quality]
+// creature with "bands with other [quality]" and another [quality] creature,
+// has its damage divided by the defending player, among any creatures blocking
+// it, rather than by the active player (an exception to CR 510.1c).
 func defendingPlayerAssignsAttackerDamage(g *game.Game, blockers []*game.Permanent) bool {
-	return slices.ContainsFunc(blockers, func(blocker *game.Permanent) bool {
-		return blocker != nil && hasKeyword(g, blocker, game.Banding)
-	})
+	return combatGroupControlsDamageDivision(g, blockers)
 }
 
 // activePlayerAssignsBlockerDamage reports whether CR 702.22k transfers the
 // division of a blocking creature's combat damage to the active player: a
-// blocking creature blocking a creature with banding has its damage divided by
-// the active player among any creatures it's blocking, rather than by the
-// defending player (an exception to CR 510.1d).
+// blocking creature blocking a creature with banding, or both a [quality]
+// creature with "bands with other [quality]" and another [quality] creature,
+// has its damage divided by the active player among any creatures it's
+// blocking, rather than by the defending player (an exception to CR 510.1d).
 func activePlayerAssignsBlockerDamage(g *game.Game, attackers []*game.Permanent) bool {
-	return slices.ContainsFunc(attackers, func(attacker *game.Permanent) bool {
-		return attacker != nil && hasKeyword(g, attacker, game.Banding)
-	})
+	return combatGroupControlsDamageDivision(g, attackers)
+}
+
+// combatGroupControlsDamageDivision reports whether the creatures blocking, or
+// blocked by, one creature give their controller its damage division (CR
+// 702.22j-k): one of them has banding, or a [quality] creature with "bands
+// with other [quality]" is among them with another [quality] creature.
+func combatGroupControlsDamageDivision(g *game.Game, creatures []*game.Permanent) bool {
+	if slices.ContainsFunc(creatures, func(creature *game.Permanent) bool {
+		return creature != nil && hasKeyword(g, creature, game.Banding)
+	}) {
+		return true
+	}
+	return len(creatures) > 1 && newBandEligibility(g, creatures).sharesBandsWithOther()
 }
 
 // combatDamageChooser routes the combat damage-assignment decisions banding
