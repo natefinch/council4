@@ -188,6 +188,21 @@ func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *ga
 // optional ("you may cast"), so the same choice also offers declining, and
 // declining casts nothing; it is only offered when a legal cast exists.
 func (e *Engine) chooseAndCastFreeSpellFromSourceMay(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], exileOnResolution, mayDecline bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.chooseAndCastFreeSpell(g, sourcePlayer, controllerID, cardID, fromZone, selection, maxManaValue, freeCastSpell{exileOnResolution: exileOnResolution}, mayDecline, agents, log)
+}
+
+// freeCastSpell records how a free-cast route marks the spell it puts on the
+// stack.
+type freeCastSpell struct {
+	exileOnResolution bool
+	// copyCard casts a copy of the card rather than the card itself.
+	copyCard bool
+	// suspend marks a spell cast by its suspend ability; a creature spell cast
+	// this way gains haste (CR 702.62a).
+	suspend bool
+}
+
+func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], spell freeCastSpell, mayDecline bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) || castFromZoneProhibited(g, controllerID, fromZone) {
 		return false
 	}
@@ -225,7 +240,7 @@ func (e *Engine) chooseAndCastFreeSpellFromSourceMay(g *game.Game, sourcePlayer 
 			g.Execution.InvalidChoices++
 			return false
 		}
-		if e.castFreeOption(g, sourcePlayer, controllerID, card, cast, exileOnResolution, agents, log) {
+		if e.castFreeSpell(g, sourcePlayer, controllerID, card, cast, spell, agents, log) {
 			return true
 		}
 		options = slices.Delete(options, index, index+1)
@@ -336,10 +351,15 @@ func (e *Engine) chooseCastPaymentOption(g *game.Game, controllerID game.PlayerI
 }
 
 func (e *Engine) castFreeOption(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	return e.castFreeOptionWithCopy(g, sourcePlayer, controllerID, card, cast, exileOnResolution, false, agents, log)
+	return e.castFreeSpell(g, sourcePlayer, controllerID, card, cast, freeCastSpell{exileOnResolution: exileOnResolution}, agents, log)
 }
 
 func (e *Engine) castFreeOptionWithCopy(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, exileOnResolution, copyCard bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.castFreeSpell(g, sourcePlayer, controllerID, card, cast, freeCastSpell{exileOnResolution: exileOnResolution, copyCard: copyCard}, agents, log)
+}
+
+func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, spell freeCastSpell, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	copyCard := spell.copyCard
 	if castFromZoneProhibited(g, controllerID, cast.SourceZone) {
 		return false
 	}
@@ -384,7 +404,8 @@ func (e *Engine) castFreeOptionWithCopy(g *game.Game, sourcePlayer *game.Player,
 		GiftRecipient:                 cast.GiftRecipient,
 		Bargained:                     cast.Bargained,
 		OffspringPaid:                 cast.Offspring,
-		ExileOnResolution:             exileOnResolution,
+		ExileOnResolution:             spell.exileOnResolution,
+		Suspend:                       spell.suspend,
 		SourceZone:                    cast.SourceZone,
 		SplicedContent:                splice.contents,
 		SplicedTargets:                splice.targets,
