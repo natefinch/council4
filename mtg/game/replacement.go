@@ -802,6 +802,13 @@ type ReplacementEffect struct {
 	// rather than an effect created by a resolving spell or ability. CR 305.7
 	// can erase the former; it does not end the latter's stated duration.
 	FromSourceAbility bool
+	// SourceAbilityOrigin identifies the copiable values that supplied a
+	// FromSourceAbility replacement: zero for the source permanent's own
+	// definition, or the ID of the layer-1 copy effect whose copiable values
+	// contain the ability (CR 707.2, 613.2a). The replacement functions only
+	// while that origin still supplies the source's copiable abilities, so a
+	// copy effect suspends the original ability and its expiry restores it.
+	SourceAbilityOrigin id.ID
 	// CreatedByResolution marks a replacement created by a resolving spell or
 	// ability (CreateReplacement). It lasts for its stated Duration even after
 	// its source leaves the battlefield (CR 611.2a, CR 614.3), unlike a

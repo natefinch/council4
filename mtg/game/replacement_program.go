@@ -34,6 +34,7 @@ func (r *ReplacementEffect) ValidateProgram() error {
 	residue.Optional, residue.SelfReplacement = false, false
 	residue.DrawCardExceptFirstInDrawStep = false
 	residue.FromSourceAbility = false
+	residue.SourceAbilityOrigin = 0
 	residue.CreatedByResolution = false
 	residue.Condition = opt.V[Condition]{}
 	residue.MatchFromZone, residue.MatchToZone = false, false
