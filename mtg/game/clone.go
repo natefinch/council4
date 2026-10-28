@@ -339,6 +339,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.TappedAsCostIDs = cloneSlice(o.TappedAsCostIDs)
 	clone.ExiledAsCostIDs = cloneSlice(o.ExiledAsCostIDs)
 	clone.CapturedObjectIDs = cloneSlice(o.CapturedObjectIDs)
+	clone.BoundEventObjectIDs = cloneSlice(o.BoundEventObjectIDs)
 	clone.GainsKeywordsUntilEndOfTurn = cloneSlice(o.GainsKeywordsUntilEndOfTurn)
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)

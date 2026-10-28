@@ -167,6 +167,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 	}
 	sourceID, sourceObjectID := damageSourceIDs(g, obj)
 	ability := game.TriggeredAbility{
+		Text:     delayedTriggerText(g, obj, def),
 		Optional: def.Optional,
 		Content:  def.Content,
 	}
@@ -203,6 +204,42 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 		CapturedCardZoneVersion:     capturedCardZoneVersion,
 	})
 	return true
+}
+
+// delayedTriggerText returns the public rules text a scheduled delayed
+// triggered ability carries while pending and on the stack (CR 603.7a). A
+// definition that records the delayed ability's own wording uses it. Otherwise
+// the trigger carries the public text of the spell or ability whose resolution
+// created it, which contains the delayed trigger's wording ("{T}: Create a token
+// ... Exile that token at the beginning of the next end step."). No text is
+// captured from a face-down spell or from a face-down source's hidden card (CR
+// 708.2, 708.5), nor for a resolution context that is not a stack object, such
+// as a replacement program, whose creating text is unknown.
+func delayedTriggerText(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) string {
+	if def.Text != "" {
+		return def.Text
+	}
+	if obj.ID == 0 {
+		return ""
+	}
+	if obj.Kind == game.StackSpell {
+		if obj.FaceDown {
+			return ""
+		}
+		spellDef, ok := stackObjectSpellDef(g, obj)
+		if !ok {
+			return ""
+		}
+		return oracleRulesText(spellDef.OracleText)
+	}
+	inline := inlineAbilityBody(obj)
+	if text := game.BodyText(inline); text != "" {
+		return text
+	}
+	if permanent, ok := permanentByObjectID(g, obj.SourceID); ok && permanent.FaceDown {
+		return ""
+	}
+	return printedAbilityText(g, obj, inline)
 }
 
 // capturedDelayedEventPlayer freezes the player named by an event-based delayed
@@ -463,17 +500,10 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 				}
 			}
 			ability := trigger.Ability
-			pending = append(pending, pendingTriggeredAbility{
-				controller:                  trigger.Controller,
-				sourceID:                    trigger.SourceObjectID,
-				sourceCardID:                trigger.SourceID,
-				sourceToken:                 trigger.SourceTokenDef,
-				inline:                      &ability,
-				event:                       matchEvent,
-				hasEvent:                    true,
-				capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
-				capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
-			})
+			fire := firedDelayedTrigger(trigger, &ability)
+			fire.event = matchEvent
+			fire.hasEvent = true
+			pending = append(pending, fire)
 			fired = true
 			// A one-shot delayed trigger fires only once even when several
 			// matching events occur simultaneously.
@@ -564,22 +594,35 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 			continue
 		}
 		ability := trigger.Ability
-		pending = append(pending, pendingTriggeredAbility{
-			controller:                  trigger.Controller,
-			sourceID:                    trigger.SourceObjectID,
-			sourceCardID:                trigger.SourceID,
-			sourceToken:                 trigger.SourceTokenDef,
-			inline:                      &ability,
-			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
-			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
-			capturedObjectID:            trigger.CapturedObjectID,
-			capturedObjectIDs:           append([]id.ID(nil), trigger.CapturedObjectIDs...),
-			capturedCardID:              trigger.CapturedCardID,
-			capturedCardZoneVersion:     trigger.CapturedCardZoneVersion,
-		})
+		pending = append(pending, firedDelayedTrigger(trigger, &ability))
 	}
 	g.DelayedTriggers = remaining
 	return pending
+}
+
+// firedDelayedTrigger builds the pending triggered ability a delayed trigger
+// becomes when it fires (CR 603.7b), carrying every object it was bound to when
+// created (CR 603.7c) onto the stack: the permanents and card its content acts
+// on and the damage source, attacker or dying permanent whose event it awaited.
+func firedDelayedTrigger(trigger *game.DelayedTrigger, ability *game.TriggeredAbility) pendingTriggeredAbility {
+	return pendingTriggeredAbility{
+		controller:                  trigger.Controller,
+		sourceID:                    trigger.SourceObjectID,
+		sourceCardID:                trigger.SourceID,
+		sourceToken:                 trigger.SourceTokenDef,
+		inline:                      ability,
+		capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
+		capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
+		capturedObjectID:            trigger.CapturedObjectID,
+		capturedObjectIDs:           append([]id.ID(nil), trigger.CapturedObjectIDs...),
+		capturedCardID:              trigger.CapturedCardID,
+		capturedCardZoneVersion:     trigger.CapturedCardZoneVersion,
+		boundEventObjectIDs: boundObjectIDs(0, nil,
+			trigger.BoundDamageSourceObjectID,
+			trigger.BoundAttackerObjectID,
+			trigger.BoundDyingObjectID,
+		),
+	}
 }
 
 // delayedTriggerReadyAtBoundary reports whether a fixed-phase delayed trigger

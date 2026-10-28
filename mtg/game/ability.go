@@ -660,6 +660,7 @@ func myriadTriggeredBody() TriggeredAbility {
 			{
 				Primitive: CreateDelayedTrigger{
 					Trigger: DelayedTriggerDef{
+						Text:                "Exile the tokens at end of combat.",
 						Timing:              DelayedAtEndOfCombat,
 						CapturedObjectGroup: opt.Val(LinkedObjectReference("myriad-tokens")),
 						Content: Mode{
@@ -1698,6 +1699,7 @@ func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 			},
 			{
 				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Text:   "Exile it at the beginning of the next end step.",
 					Timing: DelayedAtBeginningOfNextEndStep,
 					Content: Mode{Sequence: []Instruction{{
 						Primitive: MovePermanent{Object: CapturedObjectReference(), Destination: zone.Exile},

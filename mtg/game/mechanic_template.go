@@ -948,10 +948,10 @@ func EvokeSacrificeTriggeredAbility() TriggeredAbility {
 // Dash alternative cost, preserved on the entering permanent event. When it
 // resolves it grants the source haste for as long as it remains on the
 // battlefield and schedules a delayed end-step trigger that returns that same
-// object to its owner's hand. Both the haste grant and the delayed return bind
-// to the object via SourcePermanentReference, so the return no-ops if that
-// object has already left the battlefield (CR 702.109a returns the specific
-// permanent, not any later object the same card becomes).
+// object to its owner's hand. The haste grant binds to the source permanent, and
+// the delayed return captures it when scheduled (CR 603.7c), so the return
+// no-ops if that object has already left the battlefield (CR 702.109a returns
+// the specific permanent, not any later object the same card becomes).
 func DashTriggeredAbility() TriggeredAbility {
 	return TriggeredAbility{
 		Text: "When this creature enters, if its dash cost was paid, it gains haste. Return it to its owner's hand at the beginning of the next end step.",
@@ -977,10 +977,12 @@ func DashTriggeredAbility() TriggeredAbility {
 				},
 				{
 					Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+						Text:   "Return it to its owner's hand at the beginning of the next end step.",
 						Timing: DelayedAtBeginningOfNextEndStep,
 						Content: Mode{Sequence: []Instruction{{
-							Primitive: MovePermanent{Object: SourcePermanentReference(), Destination: zone.Hand},
+							Primitive: MovePermanent{Object: CapturedObjectReference(), Destination: zone.Hand},
 						}}}.Ability(),
+						CapturedObject: opt.Val(SourcePermanentReference()),
 					}},
 				},
 			},
