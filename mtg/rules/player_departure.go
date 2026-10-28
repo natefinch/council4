@@ -48,7 +48,6 @@ func leaveDepartedOwnedObjects(g *game.Game) {
 		}
 		detachPermanent(g, permanent)
 		detachAttachmentsFromPermanent(g, permanent)
-		removePermanentFromCombat(g, permanent.ObjectID)
 		removePermanentFromBattlefield(g, permanent.ObjectID)
 		delete(g.CardCounters, permanent.ObjectID)
 	}
