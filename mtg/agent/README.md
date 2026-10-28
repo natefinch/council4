@@ -50,7 +50,7 @@ Strategies must be deterministic so simulations are reproducible. `BaselineStrat
 seat := agent.NewRandomAgent(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
 ```
 
-It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgent` owns its injected `*rand.Rand`, so games are reproducible for a fixed seed and parallel simulations never share an RNG — give each seat in each game its own `RandomAgent`. Choosing from the engine's legal list keeps actions legal; choice selections respect each request's bounds (ordering choices get a permutation, divided-damage choices give every option at least one).
+It implements both `rules.PlayerAgent` and `rules.ChoiceAgent`. Each `RandomAgent` owns its injected `*rand.Rand`, so games are reproducible for a fixed seed and parallel simulations never share an RNG — give each seat in each game its own `RandomAgent`. Choosing from the engine's legal list keeps actions legal; choice selections respect each request's bounds (ordering choices get a permutation, divided-damage choices give every option at least one). A numeric choice with a bounded range gets a uniformly random integer in that range; an unbounded range (such as a resolution-time X announcement) gets the engine's proposed value when it is in range, otherwise the minimum.
 
 ### GenericStrategy
 
