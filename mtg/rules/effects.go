@@ -833,13 +833,53 @@ func applyDamageSourceLifelink(g *game.Game, source effectDamageSource, damage i
 	gainLife(g, source.controller, damage)
 }
 
+// registerPermanentReplacementEffects registers the replacement abilities a
+// permanent has from its own definition and from every copy effect already
+// applying to it. Each registration records its copiable-values origin, and
+// replacementSourceIsActive applies only the one whose origin currently
+// supplies the permanent's abilities (CR 707.2, 613.2a).
 func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent) {
-	def, ok := permanentCardDef(g, permanent)
-	if !ok {
+	if def, ok := permanentCardDef(g, permanent); ok {
+		registerSourceReplacementAbilities(g, permanent, def.ReplacementAbilities, 0)
+	}
+	registerPermanentCopyReplacementEffects(g, permanent)
+}
+
+// registerPermanentCopyReplacementEffects installs the replacement abilities
+// carried by copy effects on the permanent that have not been registered yet,
+// such as an entering Clone's copy of a permanent with a replacement ability.
+func registerPermanentCopyReplacementEffects(g *game.Game, permanent *game.Permanent) {
+	for _, effect := range permanentCopyEffects(g, permanent) {
+		registerCopyEffectReplacementAbilities(g, permanent, &effect)
+	}
+}
+
+// registerCopyEffectReplacementAbilities registers the replacement abilities in
+// a layer-1 copy effect's copiable values as abilities of the copying
+// permanent. It is idempotent per copy effect.
+func registerCopyEffectReplacementAbilities(g *game.Game, permanent *game.Permanent, effect *game.ContinuousEffect) {
+	if effect == nil || !effect.CopyValues.Exists || effect.ID == 0 {
 		return
 	}
-	for i := range def.ReplacementAbilities {
-		replacement := def.ReplacementAbilities[i].Replacement
+	for i := range g.ReplacementEffects {
+		registered := &g.ReplacementEffects[i]
+		if registered.FromSourceAbility && registered.SourceObjectID == permanent.ObjectID &&
+			registered.SourceAbilityOrigin == effect.ID {
+			return
+		}
+	}
+	var abilities []game.ReplacementAbility
+	for _, ability := range effect.CopyValues.Val.Abilities {
+		if body, ok := ability.(*game.ReplacementAbility); ok {
+			abilities = append(abilities, *body)
+		}
+	}
+	registerSourceReplacementAbilities(g, permanent, abilities, effect.ID)
+}
+
+func registerSourceReplacementAbilities(g *game.Game, permanent *game.Permanent, abilities []game.ReplacementAbility, origin id.ID) {
+	for i := range abilities {
+		replacement := abilities[i].Replacement
 		if replacement.TokenMultiplier <= 1 &&
 			replacement.TokenAddend == 0 &&
 			replacement.CounterMultiplier <= 1 &&
@@ -868,6 +908,7 @@ func registerPermanentReplacementEffects(g *game.Game, permanent *game.Permanent
 		}
 		replacement.ID = g.IDGen.Next()
 		replacement.FromSourceAbility = true
+		replacement.SourceAbilityOrigin = origin
 		replacement.SourceObjectID = permanent.ObjectID
 		replacement.SourceCardID = permanent.CardInstanceID
 		replacement.Controller = effectiveController(g, permanent)

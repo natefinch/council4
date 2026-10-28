@@ -1749,6 +1749,7 @@ func handleBecomeCopy(r *effectResolver, prim game.BecomeCopy) effectResolved {
 		Layer:            game.LayerCopy,
 		CopyValues:       opt.Val(values),
 	})
+	registerCopyEffectReplacementAbilities(g, source, &g.ContinuousEffects[len(g.ContinuousEffects)-1])
 	res.succeeded = true
 	return res
 }

@@ -2140,8 +2140,47 @@ func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEf
 	if !replacementSourceTied(replacement) {
 		return replacementAffectedObjectStillExists(g, replacement)
 	}
-	_, ok := permanentByObjectID(g, replacement.SourceObjectID)
-	return ok
+	if _, ok := permanentByObjectID(g, replacement.SourceObjectID); !ok {
+		return false
+	}
+	// A copied replacement ability ends with the copy effect that supplied it.
+	return !replacement.FromSourceAbility || replacement.SourceAbilityOrigin == 0 ||
+		continuousEffectExists(g, replacement.SourceAbilityOrigin)
+}
+
+func continuousEffectExists(g *game.Game, effectID id.ID) bool {
+	for i := range g.ContinuousEffects {
+		if g.ContinuousEffects[i].ID == effectID {
+			return true
+		}
+	}
+	return false
+}
+
+// sourceAbilityReplacementIsCurrent reports whether a registered intrinsic
+// replacement is still one of its source's abilities. A face-down permanent has
+// no such abilities (CR 708.2), ability loss erases them (CR 613.1f), and the
+// latest copy effect's copiable values replace every ability from the
+// permanent's own definition or an earlier copy (CR 707.2, 613.2a).
+func sourceAbilityReplacementIsCurrent(g *game.Game, source *game.Permanent, replacement *game.ReplacementEffect) bool {
+	if !replacement.FromSourceAbility {
+		return true
+	}
+	if source.FaceDown || effectivePermanentValues(g, source).intrinsicAbilitiesRemoved {
+		return false
+	}
+	return permanentCopiableAbilityOrigin(g, source) == replacement.SourceAbilityOrigin
+}
+
+// permanentCopiableAbilityOrigin returns the ID of the copy effect that
+// currently supplies the permanent's copiable abilities, or zero when its own
+// definition does.
+func permanentCopiableAbilityOrigin(g *game.Game, permanent *game.Permanent) id.ID {
+	if !permanentHasCopyLayer(g, permanent) {
+		return 0
+	}
+	effects := permanentCopyEffects(g, permanent)
+	return effects[len(effects)-1].ID
 }
 
 // replacementAffectedObjectStillExists reports whether a resolution-created
@@ -2164,8 +2203,7 @@ func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect
 		return true
 	}
 	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
-	return ok && activeBattlefieldPermanent(source) &&
-		(!replacement.FromSourceAbility || !effectivePermanentValues(g, source).intrinsicAbilitiesRemoved)
+	return ok && activeBattlefieldPermanent(source) && sourceAbilityReplacementIsCurrent(g, source, replacement)
 }
 
 // replacementEventPlayer returns the player who chooses among several applicable

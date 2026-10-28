@@ -175,6 +175,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		redirectPendingCardEntry(g, card, permanent, fromZone, destination, options)
 		return nil, false
 	}
+	registerPermanentCopyReplacementEffects(g, permanent)
 	for _, placement := range options.Counters {
 		amount := replacementPermanentCounterPlacementAmount(g, controller, permanent, placement.Kind, placement.Amount)
 		permanent.Counters.Add(placement.Kind, amount)
