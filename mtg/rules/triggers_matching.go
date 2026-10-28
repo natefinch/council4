@@ -420,6 +420,10 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 	if pattern.AttackWhileSaddled && (source == nil || !source.Saddled) {
 		return false
 	}
+	if pattern.BlockerScope == game.BlockerTriggerOnce && event.Kind == game.EventBlockerDeclared &&
+		!event.BlockerBecameBlocking {
+		return false
+	}
 	if !pattern.DamageRecipientSelection.Empty() &&
 		event.DamageRecipient == game.DamageRecipientPermanent &&
 		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection, selfObjectID) {

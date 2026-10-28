@@ -74,6 +74,7 @@ func newNumaiOutcast() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:           game.EventBlockerDeclared,
+							BlockerScope:    game.BlockerTriggerOnce,
 							Source:          game.TriggerSourceSelf,
 							StackObjectKind: game.StackSpell,
 							CounterKind:     counter.PlusOnePlusOne,

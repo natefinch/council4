@@ -494,6 +494,11 @@ type Event struct {
 	// BlockedAttackerID is set for EventBlockerDeclared.
 	BlockedAttackerID id.ID
 
+	// BlockerBecameBlocking marks the EventBlockerDeclared for a blocker's first
+	// block in its declaration when it was not already a blocking creature, the
+	// one event a "Whenever [a creature] blocks" trigger matches (CR 509.3a).
+	BlockerBecameBlocking bool
+
 	// Step identifies the turn step for EventBeginningOfStep triggers
 	// (CR 603.6c).
 	Step Step

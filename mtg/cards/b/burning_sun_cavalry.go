@@ -37,9 +37,10 @@ func newBurningSunCavalry() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:      game.EventAttackerDeclared,
-							Source:     game.TriggerSourceSelf,
-							UnionEvent: game.EventBlockerDeclared,
+							Event:        game.EventAttackerDeclared,
+							Source:       game.TriggerSourceSelf,
+							UnionEvent:   game.EventBlockerDeclared,
+							BlockerScope: game.BlockerTriggerOnce,
 						},
 						InterveningIf: "while you control a Dinosaur",
 						InterveningCondition: opt.Val(game.Condition{

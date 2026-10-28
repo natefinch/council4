@@ -45,6 +45,7 @@ func newDuskUrchins() *game.CardDef {
 							StackObjectKind: game.StackSpell,
 							CounterKind:     counter.PlusOnePlusOne,
 							UnionEvent:      game.EventBlockerDeclared,
+							BlockerScope:    game.BlockerTriggerOnce,
 						},
 					},
 					Content: game.AbilityContent{

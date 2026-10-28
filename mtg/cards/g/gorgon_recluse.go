@@ -47,6 +47,7 @@ func newGorgonRecluse() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:                   game.EventBlockerDeclared,
+							BlockerScope:            game.BlockerTriggerEachBlockedCreature,
 							Source:                  game.TriggerSourceSelf,
 							UnionEvent:              game.EventAttackerBecameBlocked,
 							RelatedSubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedColors: []color.Color{color.Black}},
