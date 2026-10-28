@@ -3,6 +3,7 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -91,5 +92,39 @@ func benchmarkEffectiveValuesBoardFramed(b *testing.B, n int) {
 		g.BeginStaticSourceFrame()
 		_ = benchPriorityPointRecompute(g)
 		g.EndStaticSourceFrame()
+	}
+}
+
+func BenchmarkEffectiveValuesJetmir(b *testing.B) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := jetmirPermanent(g, game.Player1)
+	for range 8 {
+		addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	}
+	if got := effectivePower(g, source); got != 6 {
+		b.Fatalf("Jetmir power = %d, want all three thresholds active", got)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		_ = effectivePermanentValues(g, source)
+	}
+}
+
+func BenchmarkEffectiveValuesCopiedOpalescence(b *testing.B) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	opal := addCombatPermanent(g, game.Player1, authored.Opalescence.New())
+	blueprint := addCombatPermanent(g, game.Player1, challengeEnchantment("Five mana blueprint", 5))
+	copied := addCombatPermanent(g, game.Player2, challengeEnchantment("Copy holder", 0))
+	becomeStaticCopy(b, g, copied, blueprint, false)
+	becomeStaticCopy(b, g, copied, opal, false)
+	addCombatPermanent(g, game.Player1, authored.Humility.New())
+	if got := effectivePower(g, copied); got != 1 {
+		b.Fatalf("Humility copy power = %d, want 1", got)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for range b.N {
+		_ = effectivePermanentValues(g, copied)
 	}
 }

@@ -1,14 +1,59 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/opt"
 )
 
+type castTargetKey struct {
+	card   *game.CardDef
+	branch game.CastBranch
+}
+
+type castTargetSpecs struct {
+	modes []int
+	specs []game.TargetSpec
+}
+
+// Target declarations depend on the card, modes and cast branch, not the chosen
+// objects. Cached specs are read-only; each announcement still validates targets.
+func spellTargetSpecsInFrame(g *game.Game, card *game.CardDef, chosenModes []int, branch game.CastBranch) []game.TargetSpec {
+	fc := frameCacheFor(g)
+	if fc == nil {
+		return spellTargetSpecs(card, chosenModes, branch)
+	}
+	key := castTargetKey{card: card, branch: branch}
+	for _, entry := range fc.castTargets[key] {
+		if slices.Equal(entry.modes, chosenModes) {
+			return entry.specs
+		}
+	}
+	specs := spellTargetSpecs(card, chosenModes, branch)
+	if fc.castTargets == nil {
+		fc.castTargets = make(map[castTargetKey][]castTargetSpecs)
+	}
+	fc.castTargets[key] = append(fc.castTargets[key], castTargetSpecs{
+		modes: slices.Clone(chosenModes), specs: specs[:len(specs):len(specs)],
+	})
+	return specs
+}
+
 func targetsValidForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, branch game.CastBranch) bool {
 	specs := spellTargetSpecs(card, chosenModes, branch)
 	return targetsValidForSpecs(g, controller, card, 0, specs, targets)
+}
+
+// Cast validation shares one target layout and legality pass across its numeric
+// checks. Payment and target-specific costs are still checked per announcement.
+func spellTargetsValidForCast(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, targets []game.Target, xValue, kickerCount int, branch game.CastBranch) bool {
+	specs := spellTargetSpecsInFrame(g, card, chosenModes, branch)
+	counts, ok := targetCountsForSpecs(g, controller, card, 0, game.Event{}, specs, targets)
+	return ok && targetCountsMatchX(specs, counts, xValue) &&
+		targetCountsMatchKicker(specs, counts, kickerCount) &&
+		targetsSatisfyManaValueXForSpecs(g, specs, counts, targets, xValue)
 }
 
 func targetsValidForBody(g *game.Game, controller game.PlayerID, body game.Ability, targets []game.Target) bool {
@@ -112,11 +157,15 @@ func spellTargetCountsMatchKicker(g *game.Game, controller game.PlayerID, card *
 	if !requiresMatch {
 		return true
 	}
-	want := kickerCount + 1
 	counts, ok := spellTargetCounts(g, controller, card, chosenModes, targets, branch)
 	if !ok {
 		return false
 	}
+	return targetCountsMatchKicker(specs, counts, kickerCount)
+}
+
+func targetCountsMatchKicker(specs []game.TargetSpec, counts []int, kickerCount int) bool {
+	want := kickerCount + 1
 	for i := range specs {
 		if specs[i].CountEqualsKickerPlusOne && (i >= len(counts) || counts[i] != want) {
 			return false

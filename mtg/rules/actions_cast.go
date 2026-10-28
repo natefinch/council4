@@ -539,10 +539,7 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
-		!targetsValidForSpell(g, playerID, spellDef, chosenModes, targets, branch) ||
-		!spellTargetCountsMatchX(g, playerID, spellDef, chosenModes, targets, xValue, branch) ||
-		!spellTargetCountsMatchKicker(g, playerID, spellDef, chosenModes, targets, 0, branch) ||
-		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, chosenModes, targets, xValue, branch) ||
+		!spellTargetsValidForCast(g, playerID, spellDef, chosenModes, targets, xValue, 0, branch) ||
 		!canCastAtCurrentTiming(g, playerID, spellDef) {
 		return false
 	}
@@ -836,16 +833,8 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
-	if !modesValidForSpellAtBranch(g, playerID, announcementDef, chosenModes, branch) || !isSupportedSpell(spellDef) || !targetsValidForSpell(g, playerID, announcementDef, chosenModes, targets, branch) {
-		return false
-	}
-	if !spellTargetCountsMatchX(g, playerID, announcementDef, chosenModes, targets, xValue, branch) {
-		return false
-	}
-	if !spellTargetCountsMatchKicker(g, playerID, announcementDef, chosenModes, targets, kickerCount, branch) {
-		return false
-	}
-	if !spellTargetsSatisfyManaValueX(g, playerID, announcementDef, chosenModes, targets, xValue, branch) {
+	if !modesValidForSpellAtBranch(g, playerID, announcementDef, chosenModes, branch) || !isSupportedSpell(spellDef) ||
+		!spellTargetsValidForCast(g, playerID, announcementDef, chosenModes, targets, xValue, kickerCount, branch) {
 		return false
 	}
 	if !canCastAtCurrentTiming(g, playerID, spellDef) {
@@ -961,6 +950,14 @@ type castRoute struct {
 	spendAs    game.ManaSpendPermission
 	permission game.RuleEffect
 	linkedFree game.RuleEffect
+}
+
+type castRouteKey struct {
+	player game.PlayerID
+	card   id.ID
+	zone   zone.Type
+	face   game.FaceIndex
+	mode   castCostMode
 }
 
 // zoneCastXValues returns the X candidates legal-action enumeration validates
@@ -1138,7 +1135,7 @@ func (m castCostMode) otherAlternative() bool {
 // alternative returns the alternative cost a cast in mode m pays through route,
 // or none when the spell is cast for its normal mana cost or chooses among its
 // own alternative costs.
-func (m castCostMode) alternative(spellDef *game.CardDef, xValue int, route castRoute) opt.V[cost.Alternative] {
+func (m castCostMode) alternative(spellDef *game.CardDef, xValue int, route *castRoute) opt.V[cost.Alternative] {
 	switch {
 	case m.overloaded:
 		return opt.Val(overloadAlternativeCost(spellDef.Overload.Val.Cost))
@@ -1159,7 +1156,8 @@ func (m castCostMode) alternative(spellDef *game.CardDef, xValue int, route cast
 // its own route's alternative cost and spending rider.
 func (m castCostMode) castRouteRequests(base payment.SpellRequest, routes []castRoute) []payment.SpellRequest {
 	requests := make([]payment.SpellRequest, len(routes))
-	for i, route := range routes {
+	for i := range routes {
+		route := &routes[i]
 		request := base
 		request.SpendAnyMana = route.spendAs
 		request.Alternative = m.alternative(base.Card, base.XValue, route)
@@ -1277,7 +1275,27 @@ func orderedCastRoutes(routes []castRoute) []castRoute {
 // cast from another zone has the single zero route; a cast from exile or a
 // library with no applicable route has none. A cast from exile whose
 // permission this model does not track at all keeps the zero route.
+// The returned routes are read-only and shared only within a pure-read frame.
 func spellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, mode castCostMode) []castRoute {
+	fc := frameCacheFor(g)
+	key := castRouteKey{player: playerID, card: cardID, zone: sourceZone, face: face, mode: mode}
+	if fc != nil {
+		if routes, ok := fc.castRoutes[key]; ok {
+			return routes
+		}
+	}
+	routes := buildSpellCastRoutes(g, playerID, cardID, sourceZone, face, mode)
+	if fc != nil {
+		if fc.castRoutes == nil {
+			fc.castRoutes = make(map[castRouteKey][]castRoute)
+		}
+		fc.castRoutes[key] = routes[:len(routes):len(routes)]
+		return fc.castRoutes[key]
+	}
+	return routes
+}
+
+func buildSpellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, mode castCostMode) []castRoute {
 	switch sourceZone {
 	case zone.Exile:
 		routes, excluded := exilePermissionCastRoutes(g, playerID, cardID, face, !mode.otherAlternative())

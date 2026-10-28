@@ -84,7 +84,11 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 }
 
 func activeRuleEffects(g *game.Game) []game.RuleEffect {
-	fc := frameCacheFor(g)
+	fc, owned := beginStaticSourceRead(g)
+	if owned {
+		defer g.EndStaticSourceFrame()
+	}
+
 	if fc != nil && fc.ruleEffectsBuilt {
 		return fc.ruleEffects
 	}
@@ -131,12 +135,14 @@ func appendStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.Rul
 				continue
 			}
 			cardID := source.CardInstanceID
+		componentMatch:
 			for _, component := range components {
-				if slices.ContainsFunc(component.face.StaticAbilities, func(static game.StaticAbility) bool {
-					return reflect.DeepEqual(&static, body)
-				}) {
-					cardID = component.cardID
-					break
+				for i := range component.face.StaticAbilities {
+					static := &component.face.StaticAbilities[i]
+					if static == body || reflect.DeepEqual(static, body) {
+						cardID = component.cardID
+						break componentMatch
+					}
 				}
 			}
 			controller := effectiveController(g, source)

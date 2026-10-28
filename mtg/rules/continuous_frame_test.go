@@ -7,14 +7,15 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
 // The static-source frame cache must be transparent: a value computed inside a
-// frame must equal the value computed without one. These tests build a board
-// that exercises the cached paths (static-ability sources, counters, control
-// change, face-down) and assert framed and unframed results agree for every
-// permanent, which catches any cache divergence.
+// caller-owned frame must equal the value computed by standalone queries. These
+// tests build a board that exercises the cached paths (static-ability sources,
+// counters, control change, face-down) and assert framed and unframed results
+// agree for every permanent, which catches any cache divergence.
 
 func frameDiffCreature(name string, power, toughness int) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
@@ -166,5 +167,111 @@ func TestStaticSourceFrameReflectsTypeAndControlChangesBetweenFrames(t *testing.
 	if framed.controller != stolen.Owner {
 		t.Errorf("controller should revert to owner %v after the control effect is removed, got %v",
 			stolen.Owner, framed.controller)
+	}
+}
+
+func TestStandaloneEvaluatorReadFrames(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		read func(*game.Game, *game.Permanent)
+	}{
+		{"characteristics", func(g *game.Game, p *game.Permanent) { _ = effectivePermanentValues(g, p) }},
+		{"controller", func(g *game.Game, p *game.Permanent) { _ = effectiveController(g, p) }},
+		{"before layer", func(g *game.Game, p *game.Permanent) {
+			_ = permanentValuesBeforeLayer(g, p, game.LayerPowerToughnessModify)
+		}},
+		{"rule effects", func(g *game.Game, _ *game.Permanent) { _ = activeRuleEffects(g) }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			g := frameDiffBoard(t)
+			p := g.Battlefield[1]
+			test.read(g, p)
+			if g.InStaticSourceFrame() {
+				t.Fatal("standalone read retained its frame")
+			}
+			func() {
+				g.BeginStaticSourceFrame()
+				defer g.EndStaticSourceFrame()
+				outer := frameCacheFor(g)
+				for range 2 {
+					test.read(g, p)
+					if !g.InStaticSourceFrame() || frameCacheFor(g) != outer || !outer.sourcesBuilt {
+						t.Error("nested read discarded or replaced its caller's cache")
+					}
+				}
+			}()
+			if g.InStaticSourceFrame() {
+				t.Fatal("nested read left an unbalanced frame")
+			}
+		})
+	}
+}
+
+func TestStandaloneEvaluatorSeesMutationsAndClones(t *testing.T) {
+	g := frameDiffBoard(t)
+	permanent := g.Battlefield[2]
+	if effectivePower(g, permanent) != 4 || effectiveController(g, permanent) != game.Player1 {
+		t.Fatal("initial control effect or power was not applied")
+	}
+
+	g.BeginStaticSourceFrame()
+	_ = effectivePermanentValues(g, permanent)
+	branch := g.Clone()
+	g.EndStaticSourceFrame()
+	if branch.InStaticSourceFrame() {
+		t.Fatal("clone inherited its parent's read frame")
+	}
+	copied, ok := permanentByObjectID(branch, permanent.ObjectID)
+	if !ok {
+		t.Fatal("clone lost the fixture permanent")
+	}
+	branch.ContinuousEffects = branch.ContinuousEffects[:1]
+	copied.Counters.Add(counter.PlusOnePlusOne, 3)
+	if effectivePower(branch, copied) != 7 || effectiveController(branch, copied) != game.Player2 {
+		t.Fatal("standalone reads retained pre-mutation characteristics")
+	}
+	if before := permanentValuesBeforeLayer(branch, copied, game.LayerPowerToughnessModify); before.power != 4 {
+		t.Fatal("before-layer read included later counters or retained a stale board")
+	}
+	copied.FaceDown = true
+	if effectivePower(branch, copied) != 5 {
+		t.Fatal("standalone read retained face-up characteristics")
+	}
+	copied.FaceDown = false
+	if effectivePower(branch, copied) != 7 ||
+		effectivePower(g, permanent) != 4 || effectiveController(g, permanent) != game.Player1 {
+		t.Fatal("mutation or derived values leaked between clones")
+	}
+	if g.InStaticSourceFrame() || branch.InStaticSourceFrame() {
+		t.Fatal("standalone reads left a frame on the game or clone")
+	}
+}
+
+func TestStandaloneRuleEffectsReflectSourceDeparture(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Read-frame prohibition", Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{RuleEffects: []game.RuleEffect{{
+			Kind: game.RuleEffectCantAttack, AffectedController: game.ControllerOpponent,
+			PermanentTypes: []types.Card{types.Creature},
+		}}}},
+	}})
+	original := activeRuleEffects(g)
+	if len(original) != 1 || original[0].SourceObjectID != source.ObjectID {
+		t.Fatal("fixture did not expose its static rule effect")
+	}
+	branch := g.Clone()
+	clonedSource, ok := permanentByObjectID(branch, source.ObjectID)
+	if !ok || !movePermanentToZone(branch, clonedSource, zone.Graveyard) {
+		t.Fatal("could not remove the cloned source")
+	}
+	if len(activeRuleEffects(branch)) != 0 || len(activeRuleEffects(g)) != 1 {
+		t.Fatal("rule-effect cache survived source departure or crossed clones")
+	}
+	if !movePermanentToZone(g, source, zone.Graveyard) || len(activeRuleEffects(g)) != 0 {
+		t.Fatal("standalone rule query retained a departed source")
+	}
+	if len(original) != 1 || original[0].SourceObjectID != source.ObjectID {
+		t.Fatal("later reads mutated the earlier rule-effect snapshot")
 	}
 }

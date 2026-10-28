@@ -130,10 +130,8 @@ func freeCastOptionLegal(g *game.Game, playerID game.PlayerID, spellDef *game.Ca
 	}
 	branch := castBranchForCast(cast)
 	if !modesValidForSpellAtBranch(g, playerID, spellDef, cast.ChosenModes, branch) ||
-		!targetsValidForSpell(g, playerID, spellDef, cast.ChosenModes, cast.Targets, branch) ||
-		!spellTargetCountsMatchX(g, playerID, spellDef, cast.ChosenModes, cast.Targets, cast.XValue, branch) ||
-		!spellTargetCountsMatchKicker(g, playerID, spellDef, cast.ChosenModes, cast.Targets, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), branch) ||
-		!spellTargetsSatisfyManaValueX(g, playerID, spellDef, cast.ChosenModes, cast.Targets, cast.XValue, branch) {
+		!spellTargetsValidForCast(g, playerID, spellDef, cast.ChosenModes, cast.Targets, cast.XValue,
+			effectiveKickerCount(cast.KickerPaid, cast.KickerCount), branch) {
 		return false
 	}
 	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
