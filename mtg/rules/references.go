@@ -268,12 +268,20 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		if !ok {
 			return resolvedObjectReference{}, false
 		}
-		if _, ok := r.g.GetCardInstance(cardID); !ok {
+		card, ok := r.g.GetCardInstance(cardID)
+		if !ok {
 			return resolvedObjectReference{}, false
 		}
+		// A card outside the battlefield has its printed characteristics plus
+		// any counters on it, read as the effect uses them (CR 608.2h).
+		power, powerOK := cardPower(r.g, card)
+		toughness, toughnessOK := cardToughness(r.g, card)
 		return resolvedObjectReference{snapshot: game.ObjectSnapshot{
-			CardID: cardID,
-			Face:   game.FaceFront,
+			CardID:    cardID,
+			Face:      game.FaceFront,
+			Power:     optionalInt(power, powerOK),
+			Toughness: optionalInt(toughness, toughnessOK),
+			Counters:  cloneCounters(r.g.CardCounters[cardID]),
 		}}, true
 	case game.ObjectReferenceSacrificedCost:
 		if r.obj == nil || len(r.obj.SacrificedAsCostIDs) == 0 {

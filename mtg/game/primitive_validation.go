@@ -620,7 +620,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 				return err
 			}
 		}
-		return validateObjectReference(dynamic.Object, targets, checkTargets)
+		return validateCharacteristicObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCapturedTargetManaValue:
 		if dynamic.Object.Kind() != ObjectReferenceCapturedTargetStackObject {
 			return errors.New("captured target mana value requires a captured target stack object reference")
@@ -630,7 +630,7 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if !dynamic.CounterKind.Valid() {
 			return errors.New("object-counter count requires a valid counter kind")
 		}
-		return validateObjectReference(dynamic.Object, targets, checkTargets)
+		return validateCharacteristicObjectReference(dynamic.Object, targets, checkTargets)
 	case DynamicAmountCountSelector, DynamicAmountGreatestPowerInGroup, DynamicAmountGreatestToughnessInGroup, DynamicAmountGreatestManaValueInGroup,
 		DynamicAmountTotalPowerInGroup, DynamicAmountTotalToughnessInGroup, DynamicAmountTotalManaValueInGroup, DynamicAmountColorCountInGroup,
 		DynamicAmountSharedCreatureTypeCountInGroup:
@@ -674,12 +674,66 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 		if len(dynamic.Operands) < 2 {
 			return errors.New("max-of quantity requires at least two operands")
 		}
-		for i := range dynamic.Operands {
-			if err := validateQuantity(Dynamic(dynamic.Operands[i]), targets, checkTargets); err != nil {
-				return err
-			}
+		return validateQuantityOperands(dynamic.Operands, targets, checkTargets)
+	case DynamicAmountSumOf:
+		if len(dynamic.Operands) < 2 {
+			return errors.New("sum-of quantity requires at least two operands")
 		}
+		return validateQuantityOperands(dynamic.Operands, targets, checkTargets)
+	case DynamicAmountDifferenceOf:
+		if len(dynamic.Operands) != 2 {
+			return errors.New("difference-of quantity requires exactly two operands")
+		}
+		return validateQuantityOperands(dynamic.Operands, targets, checkTargets)
 	default:
+	}
+	return nil
+}
+
+func validateQuantityOperands(operands []DynamicAmount, targets []TargetSpec, checkTargets bool) error {
+	for i := range operands {
+		if err := validateQuantity(Dynamic(operands[i]), targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateCharacteristicObjectReference checks the object read by a power,
+// toughness, mana-value or counter quantity. A target-slot reference must
+// address a slot that can hold the kind of object the reference resolves to: a
+// player-only slot never supplies an object characteristic, so "target player
+// loses life equal to its power" cannot bind "its" to the targeted player,
+// whichever target-object reference names that slot. Slot kinds come from
+// TargetSpec.MatchableKinds, the same inference the runtime matcher uses, so a
+// legacy "creature card in a graveyard" slot is accepted for a card reference.
+func validateCharacteristicObjectReference(ref ObjectReference, targets []TargetSpec, checkTargets bool) error {
+	if err := validateObjectReference(ref, targets, checkTargets); err != nil {
+		return err
+	}
+	if !checkTargets {
+		return nil
+	}
+	var objectKinds TargetAllow
+	switch ref.Kind() {
+	case ObjectReferenceTargetPermanent, ObjectReferenceTargetAttachedPermanent:
+		objectKinds = TargetAllowPermanent
+	case ObjectReferenceTargetStackObject:
+		objectKinds = TargetAllowStackObject
+	case ObjectReferenceTargetObject:
+		objectKinds = TargetAllowPermanent | TargetAllowStackObject
+	case ObjectReferenceTargetCard:
+		objectKinds = TargetAllowCard
+	default:
+		return nil
+	}
+	specIndex, ok := targetSpecForSlot(targets, ref.TargetIndex())
+	if !ok {
+		return fmt.Errorf("target index %d has no matching target specification", ref.TargetIndex())
+	}
+	allowed := targets[specIndex].MatchableKinds()
+	if allowed != TargetAllowUnspecified && allowed&objectKinds == 0 {
+		return fmt.Errorf("characteristic quantity reads target index %d, which cannot hold the referenced object", ref.TargetIndex())
 	}
 	return nil
 }

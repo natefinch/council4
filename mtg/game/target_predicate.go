@@ -1,6 +1,8 @@
 package game
 
 import (
+	"strings"
+
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -20,6 +22,47 @@ const (
 	TargetAllowStackObject TargetAllow = 1 << 2
 	TargetAllowCard        TargetAllow = 1 << 3
 )
+
+// MatchableKinds reports every target category this spec can choose from. An
+// explicit Allow is authoritative. Without one, the legacy Constraint text is
+// read the same way the runtime target matcher reads it: "player"/"opponent"
+// choose players, "any target" chooses permanents and players, permanent and
+// card-type words choose permanents, and a card in a graveyard, library or
+// hand chooses cards. Stack objects are never inferred; they need an explicit
+// Allow. A constraint such as "creature card in a graveyard" therefore yields
+// both permanent and card categories, exactly as the matcher evaluates it.
+func (t *TargetSpec) MatchableKinds() TargetAllow {
+	if t.Allow != TargetAllowUnspecified {
+		return t.Allow
+	}
+	normalized := t.NormalizedConstraint()
+	var kinds TargetAllow
+	switch normalized {
+	case "player", "target player", "opponent", "target opponent":
+		kinds |= TargetAllowPlayer
+	case "any target":
+		kinds |= TargetAllowPlayer | TargetAllowPermanent
+	}
+	for _, word := range []string{"permanent", "creature", "artifact", "enchantment", "land", "planeswalker", "battle"} {
+		if strings.Contains(normalized, word) {
+			kinds |= TargetAllowPermanent
+			break
+		}
+	}
+	if strings.Contains(normalized, "card") &&
+		(strings.Contains(normalized, "graveyard") || strings.Contains(normalized, "library") || strings.Contains(normalized, "hand")) {
+		kinds |= TargetAllowCard
+	}
+	return kinds
+}
+
+// NormalizedConstraint lowercases the legacy Constraint text, drops one leading
+// "target " and collapses whitespace.
+func (t *TargetSpec) NormalizedConstraint() string {
+	normalized := strings.ToLower(strings.TrimSpace(t.Constraint))
+	normalized = strings.TrimPrefix(normalized, "target ")
+	return strings.Join(strings.Fields(normalized), " ")
+}
 
 // ControllerRelation constrains a permanent by its controller relative to the
 // player choosing targets.

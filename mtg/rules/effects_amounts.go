@@ -234,6 +234,13 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before, groupMember)
+	case game.DynamicAmountSumOf:
+		for i := range dynamic.Operands {
+			amount += arithmeticOperandValue(g, obj, controller, dynamic.Operands[i], before, groupMember)
+		}
+		amount = max(0, amount)
+	case game.DynamicAmountDifferenceOf:
+		amount = differenceOfDynamicAmounts(g, obj, controller, dynamic.Operands, before, groupMember)
 	case game.DynamicAmountReferencedCardsTotalManaValue:
 		if obj.Exists {
 			amount = referencedCardsTotalManaValue(g, obj.Val, dynamic.LinkedKey)
@@ -244,11 +251,33 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		}
 	default:
 	}
+	return scaleDynamicAmount(amount, dynamic)
+}
+
+func scaleDynamicAmount(amount int, dynamic game.DynamicAmount) int {
 	multiplier := dynamic.Multiplier
 	if multiplier == 0 {
 		multiplier = 1
 	}
 	return applyDynamicAmountDivisor(amount*multiplier+dynamic.Addend, dynamic)
+}
+
+// arithmeticOperandValue evaluates one operand of a sum or difference. A
+// creature's power can be less than zero, and that negative value takes part
+// in the calculation; only the calculation's result is treated as zero when
+// negative (CR 107.1b). A standalone power amount keeps reading zero for
+// negative live power.
+func arithmeticOperandValue(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, operand game.DynamicAmount, before game.ContinuousLayer, groupMember opt.V[game.PlayerID]) int {
+	if operand.Kind != game.DynamicAmountObjectPower {
+		return dynamicAmountValueBeforeLayerWithGroupMember(g, obj, controller, operand, before, groupMember)
+	}
+	power := 0
+	if obj.Exists {
+		if resolved, ok := resolveDynamicAmountObjectReference(g, obj.Val, operand, groupMember); ok {
+			power = resolvedObjectSignedPower(g, &resolved)
+		}
+	}
+	return scaleDynamicAmount(power, operand)
 }
 
 // referencedCardsTotalManaValue sums the printed mana values of the exact card
@@ -442,6 +471,19 @@ func maxOfDynamicAmounts(g *game.Game, obj opt.V[*game.StackObject], controller 
 		}
 	}
 	return best
+}
+
+// differenceOfDynamicAmounts evaluates the two operands of a
+// DynamicAmountDifferenceOf combinator against the same resolution context and
+// subtracts the smaller from the larger, as the Jaws of Defeat ruling directs.
+// Any operand count other than two, which validation rejects, yields zero.
+func differenceOfDynamicAmounts(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, operands []game.DynamicAmount, before game.ContinuousLayer, groupMember opt.V[game.PlayerID]) int {
+	if len(operands) != 2 {
+		return 0
+	}
+	first := arithmeticOperandValue(g, obj, controller, operands[0], before, groupMember)
+	second := arithmeticOperandValue(g, obj, controller, operands[1], before, groupMember)
+	return max(first, second) - min(first, second)
 }
 
 // spellsCastThisTurn counts the spells the controller has cast so far this turn
@@ -1171,6 +1213,19 @@ func resolvedObjectPower(g *game.Game, resolved *resolvedObjectReference) int {
 		return resolved.snapshot.Power.Val
 	}
 	return 0
+}
+
+// resolvedObjectSignedPower is resolvedObjectPower without flooring a live
+// permanent's negative power at zero; last-known power is already signed.
+func resolvedObjectSignedPower(g *game.Game, resolved *resolvedObjectReference) int {
+	if resolved.permanent != nil {
+		values := effectivePermanentValues(g, resolved.permanent)
+		if !values.powerOK {
+			return 0
+		}
+		return values.power
+	}
+	return resolvedObjectPower(g, resolved)
 }
 
 // sourceCardPrintedPower reads the printed power of the resolving ability's
