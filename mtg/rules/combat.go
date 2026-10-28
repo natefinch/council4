@@ -326,6 +326,13 @@ func combatHasFirstStrikeDamage(g *game.Game) bool {
 			return true
 		}
 	}
+	// A blocking creature counts even if the attacker it blocked was removed
+	// from combat (CR 509.1g, 510.4).
+	for blockerID := range g.Combat.BlockersOfRemovedAttackers {
+		if permanent, ok := permanentByObjectID(g, blockerID); ok && hasFirstOrDoubleStrike(g, permanent) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -398,6 +405,21 @@ func keywordCounterKind(keyword game.Keyword) (counter.Kind, bool) {
 	}
 }
 
+// isBlockingCreature reports whether the permanent is a blocking creature: it
+// blocks an attacker, or it blocked one that was later removed from combat and
+// has not itself been removed (CR 509.1g).
+func isBlockingCreature(g *game.Game, permanentID id.ID) bool {
+	if g.Combat == nil {
+		return false
+	}
+	if g.Combat.BlockersOfRemovedAttackers[permanentID] {
+		return true
+	}
+	return slices.ContainsFunc(g.Combat.Blockers, func(block game.BlockDeclaration) bool {
+		return block.Blocker == permanentID
+	})
+}
+
 func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 	if g.Combat == nil {
 		return false
@@ -413,27 +435,18 @@ func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 	return false
 }
 
-// removePermanentFromCombat removes a permanent that stays on the battlefield
-// from combat (CR 506.4): it stops attacking or blocking and leaves its band, and
-// a planeswalker or battle stops being attacked. Blocks against a removed
-// attacker are dropped so its former blockers cannot deal it combat damage.
-func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
-	removeFromCombat(g, permanentID, false)
-}
-
-// removeDepartedPermanentFromCombat removes a permanent leaving the battlefield
-// from combat (CR 506.4), so current-combat queries such as "exactly one
-// creature is attacking" no longer count it. A creature that was blocking it
-// remains a blocking creature (CR 509.1g), so those blocks are kept; the departed
-// ObjectID never names a permanent again (CR 400.7), so no damage or attacker
-// query reaches it. Combat history (AttackersDeclared, PlayersAttacked, the
-// blocked status of remaining attackers, recorded events) and the departing
+// removePermanentFromCombat removes a permanent from combat (CR 506.4), whether
+// it stays on the battlefield (a RemoveFromCombat effect, regeneration, phasing,
+// a control change) or is leaving it. It stops attacking or blocking and leaves
+// its band, and a planeswalker or battle stops being attacked, so current-combat
+// queries such as "exactly one creature is attacking" no longer count it. The
+// blocks against a removed attacker are dropped, so it is no longer blocked and
+// neither it nor its blockers deal or are dealt combat damage for them, but each
+// of those blockers remains a blocking creature until it is itself removed from
+// combat (CR 509.1g). Combat history (AttackersDeclared, PlayersAttacked, the
+// blocked status of remaining attackers, recorded events) and a departing
 // permanent's last known information, captured before the move, are unaffected.
-func removeDepartedPermanentFromCombat(g *game.Game, permanentID id.ID) {
-	removeFromCombat(g, permanentID, true)
-}
-
-func removeFromCombat(g *game.Game, permanentID id.ID, departed bool) {
+func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 	if g.Combat == nil || permanentID == 0 {
 		return
 	}
@@ -458,12 +471,20 @@ func removeFromCombat(g *game.Game, permanentID id.ID, departed bool) {
 
 	var blockers []game.BlockDeclaration
 	for _, block := range g.Combat.Blockers {
-		if block.Blocker == permanentID || (!departed && removedAttackers[block.Blocking]) {
+		if block.Blocker == permanentID {
+			continue
+		}
+		if removedAttackers[block.Blocking] {
+			if g.Combat.BlockersOfRemovedAttackers == nil {
+				g.Combat.BlockersOfRemovedAttackers = make(map[id.ID]bool)
+			}
+			g.Combat.BlockersOfRemovedAttackers[block.Blocker] = true
 			continue
 		}
 		blockers = append(blockers, block)
 	}
 	g.Combat.Blockers = blockers
+	delete(g.Combat.BlockersOfRemovedAttackers, permanentID)
 	for attackerID, order := range g.Combat.BlockerOrder {
 		if removedAttackers[attackerID] {
 			delete(g.Combat.BlockerOrder, attackerID)
