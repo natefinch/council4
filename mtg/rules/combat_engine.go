@@ -843,6 +843,19 @@ func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDama
 		events   []damageEvent
 	}
 	var attackerDamages []attackerDamage
+	// CR 702.19b: a trampler's lethal damage counts the damage all other
+	// creatures assign in this step, so the blocked tramplers assign after
+	// every other attacker, jointly (see trampleStep). Whether each assigns as
+	// though it weren't blocked is decided first, since only the others assign
+	// damage to their blockers.
+	type tramplerDamage struct {
+		index       int
+		target      game.AttackTarget
+		deals       bool
+		asUnblocked bool
+	}
+	var tramplers []tramplerDamage
+	step := newTrampleStep()
 	blockerMap := blockersByAttacker(g)
 	for _, declaration := range g.Combat.Attackers {
 		attacker, ok := permanentByObjectID(g, declaration.Attacker)
@@ -851,12 +864,14 @@ func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDama
 		}
 		blockers := blockerMap[declaration.Attacker]
 		if attackerWasBlocked(g, declaration.Attacker) {
-			attackerDamages = append(attackerDamages, attackerDamage{
-				attacker: attacker,
-				blockers: blockers,
-				blocked:  true,
-				events:   blockedAttackerCombatDamageEvents(g, chooser, attacker, blockers, declaration.Target, pass),
-			})
+			damage := attackerDamage{attacker: attacker, blockers: blockers, blocked: true}
+			if hasKeyword(g, attacker, game.Trample) {
+				tramplers = append(tramplers, tramplerDamage{index: len(attackerDamages), target: declaration.Target})
+			} else {
+				damage.events = blockedAttackerCombatDamageEvents(g, chooser, attacker, blockers, declaration.Target, pass)
+				step.record(g, attacker, damage.events)
+			}
+			attackerDamages = append(attackerDamages, damage)
 			continue
 		}
 		if !isLegalAttackTarget(g, effectiveController(g, attacker), declaration.Target) {
@@ -866,6 +881,24 @@ func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDama
 			if event, ok := attackTargetCombatDamageEvent(g, attacker, declaration.Target, combatDamageAssignedBy(g, attacker)); ok {
 				attackerDamages = append(attackerDamages, attackerDamage{attacker: attacker, events: []damageEvent{event}})
 			}
+		}
+	}
+	for i := range tramplers {
+		trampler := &tramplers[i]
+		damage := attackerDamages[trampler.index]
+		trampler.deals = dealsCombatDamageInPass(g, damage.attacker, pass)
+		if !trampler.deals {
+			continue
+		}
+		trampler.asUnblocked = blockedAttackerAssignsAsThoughUnblocked(g, chooser, damage.attacker, damage.blockers)
+		if !trampler.asUnblocked {
+			step.addPending(g, damage.attacker, damage.blockers)
+		}
+	}
+	for _, trampler := range tramplers {
+		if trampler.deals {
+			damage := &attackerDamages[trampler.index]
+			damage.events = blockedAttackerAssignedDamageEvents(g, chooser, damage.attacker, damage.blockers, trampler.target, trampler.asUnblocked, step)
 		}
 	}
 	blockerDamage := blockerCombatDamageAssignments(g, chooser, blockerMap, pass)
