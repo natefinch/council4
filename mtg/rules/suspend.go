@@ -160,7 +160,7 @@ func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id
 		CardID:                       cardID,
 		CardTypes:                    cardTypes(spellDef),
 		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 cardSubtypes(spellDef),
+		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
 		Colors:                       spellColors(spellDef),
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(0),
