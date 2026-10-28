@@ -151,3 +151,30 @@ func removeFromAttackingBands(combat *game.CombatState, permanentID id.ID) {
 	}
 	combat.Bands = bands
 }
+
+// attackingBandMembers returns every creature in attackerID's attacking band,
+// including attackerID, or attackerID alone when it is not in a band. Blocking
+// any member blocks them all (CR 702.22h).
+func attackingBandMembers(combat *game.CombatState, attackerID id.ID) []id.ID {
+	for _, band := range combat.Bands {
+		if slices.Contains(band.Members, attackerID) {
+			return band.Members
+		}
+	}
+	return []id.ID{attackerID}
+}
+
+// attackingBandIndex maps each banded attacker to its band's index in
+// combat.Bands. Attackers not in a band are absent.
+func attackingBandIndex(combat *game.CombatState) map[id.ID]int {
+	if len(combat.Bands) == 0 {
+		return nil
+	}
+	index := make(map[id.ID]int)
+	for i, band := range combat.Bands {
+		for _, member := range band.Members {
+			index[member] = i
+		}
+	}
+	return index
+}

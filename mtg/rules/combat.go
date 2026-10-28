@@ -669,13 +669,13 @@ func blockerCombatDamageAssignments(g *game.Game, chooser combatDamageChooser, b
 }
 
 // assignBlockerCombatDamage divides a blocking creature's combat damage (equal to
-// its power, CR 510.1a) among the attackers it is blocking (CR 510.1c). A creature
-// blocking a single attacker assigns all of its damage to that attacker, matching
-// the pre-multiblock behavior exactly. A creature blocking more than one attacker
-// assigns lethal damage to each in declaration order until its damage is spent,
-// a legal division the "can block an additional creature" cards rely on. When
-// one of those attackers has banding, the active player divides the blocker's
-// damage instead (CR 702.22k).
+// its power, CR 510.1a) among the attackers it is blocking (CR 510.1d). A creature
+// blocking a single attacker assigns all of its damage to that attacker. A
+// creature blocking more than one attacker, through an attacking band (CR
+// 702.22h) or "can block an additional creature", has its damage divided as its
+// controller chooses (CR 510.1d); the default assigns lethal damage to each in
+// declaration order until its damage is spent. When one of those attackers has
+// banding, the active player divides the blocker's damage instead (CR 702.22k).
 func assignBlockerCombatDamage(g *game.Game, chooser combatDamageChooser, blocker *game.Permanent, attackers []*game.Permanent) []creatureDamageAssignment {
 	damageRemaining := combatDamageAssignedBy(g, blocker)
 	if damageRemaining <= 0 || len(attackers) == 0 {
@@ -687,22 +687,24 @@ func assignBlockerCombatDamage(g *game.Game, chooser combatDamageChooser, blocke
 	if activePlayerAssignsBlockerDamage(g, attackers) {
 		return chooser.divideCombatDamage(g, g.Turn.ActivePlayer, blocker, attackers, damageRemaining, false)
 	}
+	damage := damageRemaining
 	assignments := make([]creatureDamageAssignment, 0, len(attackers))
 	for i, attacker := range attackers {
 		if damageRemaining <= 0 {
 			break
 		}
-		damage := damageRemaining
+		assigned := damageRemaining
 		if i < len(attackers)-1 {
-			damage = min(damageRemaining, lethalDamageRemainingFromSource(g, blocker, attacker))
+			assigned = min(damageRemaining, lethalDamageRemainingFromSource(g, blocker, attacker))
 		}
-		if damage <= 0 {
+		if assigned <= 0 {
 			continue
 		}
-		assignments = append(assignments, creatureDamageAssignment{permanent: attacker, damage: damage})
-		damageRemaining -= damage
+		assignments = append(assignments, creatureDamageAssignment{permanent: attacker, damage: assigned})
+		damageRemaining -= assigned
 	}
-	return assignments
+	prompt := fmt.Sprintf("Divide %s's %d combat damage among the creatures it's blocking", permanentChoiceLabel(g, blocker), damage)
+	return chooser.chooseCombatDamageDivision(g, effectiveController(g, blocker), blocker, attackers, damage, false, prompt, assignments)
 }
 
 // legalDeclareBlockersActions returns the legal declare-blockers actions for
