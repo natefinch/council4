@@ -63,59 +63,14 @@ func (e *Engine) processReboundUpkeep(g *game.Game, playerID game.PlayerID, agen
 }
 
 // offerReboundCast lets the controller optionally cast a rebounded card from
-// exile without paying its mana cost. It returns whether the card was cast.
+// exile without paying its mana cost. The cast follows the alternative-cost
+// rules (CR 702.88b, 601.2b, 601.2f-h): additional costs, cost increases and
+// reductions still apply to the free alternative cost, so an unpayable total
+// cost leaves the card in exile. It returns whether the card was cast.
 func (e *Engine) offerReboundCast(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Exile.Contains(cardID) {
 		return false
 	}
-	card, ok := g.GetCardInstance(cardID)
-	if !ok {
-		return false
-	}
-	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	if !cardCastRestrictionsSatisfied(g, playerID, spellDef) {
-		return false
-	}
-	modes, targets, ok := firstLegalSpellCastChoice(g, playerID, spellDef)
-	if !ok {
-		return false
-	}
-	if !e.chooseMay(g, agents, playerID, "Cast "+spellDef.Name+" from exile with rebound?", log) {
-		return false
-	}
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets, game.CastBranch{})
-	if !ok {
-		panic("validated rebounded spell targets could not be segmented")
-	}
-	if !player.Exile.Remove(cardID) {
-		return false
-	}
-	obj := &game.StackObject{
-		ID:           g.IDGen.Next(),
-		Kind:         game.StackSpell,
-		SourceID:     cardID,
-		Face:         game.FaceFront,
-		Controller:   playerID,
-		Targets:      append([]game.Target(nil), targets...),
-		TargetCounts: targetCounts,
-		ChosenModes:  append([]int(nil), modes...),
-		SourceZone:   zone.Exile,
-	}
-	pushSpellToStack(g, obj, game.Event{
-		SourceID:                     cardID,
-		StackObjectID:                obj.ID,
-		Controller:                   playerID,
-		CardID:                       cardID,
-		CardTypes:                    cardTypes(spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
-		Colors:                       spellColors(spellDef),
-		ManaValue:                    stackObjectKnownManaValue(g, obj),
-		ManaSpentToCast:              opt.Val(0),
-		ManaFromCreaturesSpentToCast: opt.Val(0),
-		FromZone:                     zone.Exile,
-		ToZone:                       zone.Stack,
-	})
-	return true
+	return e.chooseAndCastFreeSpellFromSourceMay(g, player, playerID, cardID, zone.Exile, game.Selection{}, opt.V[int]{}, false, true, agents, log)
 }
