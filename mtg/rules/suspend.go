@@ -93,7 +93,7 @@ func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []act
 	return actions
 }
 
-func (e *Engine) processSuspendUpkeep(g *game.Game, playerID game.PlayerID) {
+func (e *Engine) processSuspendUpkeep(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	for _, cardID := range suspendedCardIDsInOrder(g) {
 		suspended := g.SuspendedCards[cardID]
 		if suspended.Controller != playerID || suspended.TimeCounters <= 0 {
@@ -105,7 +105,7 @@ func (e *Engine) processSuspendUpkeep(g *game.Game, playerID game.PlayerID) {
 			continue
 		}
 		g.SuspendedCards[cardID] = suspended
-		e.castSuspendedCard(g, playerID, cardID)
+		e.castSuspendedCard(g, playerID, cardID, agents, log)
 	}
 }
 
@@ -118,55 +118,15 @@ func suspendedCardIDsInOrder(g *game.Game) []id.ID {
 	return ids
 }
 
-func (*Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+// castSuspendedCard lets the controller cast a card whose last time counter
+// was removed from exile without paying its mana cost (CR 702.62a). The cast
+// follows the alternative-cost rules (CR 702.62d, 601.2b, 601.2f-h):
+// additional costs, cost increases and reductions still apply, and a creature
+// spell cast this way gains haste. If the card isn't cast it remains exiled.
+func (e *Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Exile.Contains(cardID) {
 		return false
 	}
-	card, ok := g.GetCardInstance(cardID)
-	if !ok {
-		return false
-	}
-	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	if !cardCastRestrictionsSatisfied(g, playerID, spellDef) {
-		return false
-	}
-	modes, targets, ok := firstLegalSpellCastChoice(g, playerID, spellDef)
-	if !ok {
-		return false
-	}
-	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, modes, targets, game.CastBranch{})
-	if !ok {
-		panic("validated suspended spell targets could not be segmented")
-	}
-	if !player.Exile.Remove(cardID) {
-		return false
-	}
-	obj := &game.StackObject{
-		ID:           g.IDGen.Next(),
-		Kind:         game.StackSpell,
-		SourceID:     cardID,
-		Face:         game.FaceFront,
-		Controller:   playerID,
-		Targets:      append([]game.Target(nil), targets...),
-		TargetCounts: targetCounts,
-		ChosenModes:  append([]int(nil), modes...),
-		Suspend:      true,
-	}
-	pushSpellToStack(g, obj, game.Event{
-		SourceID:                     cardID,
-		StackObjectID:                obj.ID,
-		Controller:                   playerID,
-		CardID:                       cardID,
-		CardTypes:                    cardTypes(spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
-		Colors:                       spellColors(spellDef),
-		ManaValue:                    stackObjectKnownManaValue(g, obj),
-		ManaSpentToCast:              opt.Val(0),
-		ManaFromCreaturesSpentToCast: opt.Val(0),
-		FromZone:                     zone.Exile,
-		ToZone:                       zone.Stack,
-	})
-	return true
+	return e.chooseAndCastFreeSpell(g, player, playerID, cardID, zone.Exile, game.Selection{}, opt.V[int]{}, freeCastSpell{suspend: true}, true, agents, log)
 }

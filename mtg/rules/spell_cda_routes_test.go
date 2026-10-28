@@ -204,7 +204,7 @@ func TestChangelingCastEventRoutes(t *testing.T) {
 	t.Run("suspend", func(t *testing.T) {
 		engine, g := newEffectiveCascadeGame()
 		addSuspendedCard(g, game.Player1, withKindredChangeling(suspendSorcery(1, cost.Mana{cost.O(1)})), 1)
-		engine.processSuspendUpkeep(g, game.Player1)
+		engine.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 		requireKoboldDragonCastEvent(t, g)
 	})
 	t.Run("rebound", func(t *testing.T) {
