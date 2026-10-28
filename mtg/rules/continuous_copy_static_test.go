@@ -36,7 +36,7 @@ func copiedMaxSpeedDef(pattern game.TriggerPattern) *game.CardDef {
 	}}
 }
 
-func becomeStaticCopy(t *testing.T, g *game.Game, source, blueprint *game.Permanent, untilEndOfTurn bool) {
+func becomeStaticCopy(t testing.TB, g *game.Game, source, blueprint *game.Permanent, untilEndOfTurn bool) {
 	t.Helper()
 	r := &effectResolver{engine: NewEngine(nil), game: g, log: &TurnLog{}, obj: &game.StackObject{
 		ID: g.IDGen.Next(), Kind: game.StackActivatedAbility,

@@ -179,6 +179,11 @@ type frameCache struct {
 	ruleEffects      []game.RuleEffect
 	ruleEffectsBuilt bool
 	layerBoards      map[game.ContinuousLayer]*landTypeLayerResult
+
+	// Candidate enumeration reuses declarations and routes, never target
+	// legality or payment results, within this same immutable game snapshot.
+	castRoutes  map[castRouteKey][]castRoute
+	castTargets map[castTargetKey][]castTargetSpecs
 }
 
 // beforeLayerKey identifies a permanentValuesBeforeLayer result: a permanent and
@@ -204,12 +209,26 @@ func frameCacheFor(g *game.Game) *frameCache {
 	return fc
 }
 
+// beginStaticSourceRead returns the caller's cache or opens a frame that this
+// query must close. A standalone result need not be cached just before closing.
+func beginStaticSourceRead(g *game.Game) (*frameCache, bool) {
+	if g.InStaticSourceFrame() {
+		return frameCacheFor(g), false
+	}
+	g.BeginStaticSourceFrame()
+	return nil, true
+}
+
 // effectiveController resolves a permanent's controller by applying only the
 // control-changing effects of layer 2 (CR 613.1b). It is separated from the full
 // layer computation because many layer effects are controller-relative, so the
 // controller must be known before the later layers are applied.
 func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID {
-	fc := frameCacheFor(g)
+	fc, owned := beginStaticSourceRead(g)
+	if owned {
+		defer g.EndStaticSourceFrame()
+	}
+
 	if fc != nil {
 		if controller, ok := fc.controllers[permanent.ObjectID]; ok {
 			return controller
@@ -243,7 +262,8 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 // printed/defined values, then apply each layer in order. Counters and temporary
 // power/toughness modifiers are applied within power/toughness layer 7c during
 // the layer pass (see applyContinuousLayers), not afterward. Results are memoized
-// per static-source frame.
+// per static-source frame. A standalone query owns a frame so its nested reads
+// share derived values without retaining them across game mutations.
 //
 // A characteristic-defining effect can depend on the very characteristic it
 // defines — for example a creature whose power is set to "the greatest power
@@ -255,7 +275,11 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 // 613.8c: a dependency loop is applied in timestamp order, i.e. without
 // re-entering).
 func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
-	fc := frameCacheFor(g)
+	fc, owned := beginStaticSourceRead(g)
+	if owned {
+		defer g.EndStaticSourceFrame()
+	}
+
 	if fc != nil {
 		if values, ok := fc.values[permanent.ObjectID]; ok {
 			return values
@@ -750,7 +774,11 @@ func counterAndTemporaryEffect(permanent *game.Permanent) (game.ContinuousEffect
 }
 
 func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop game.ContinuousLayer) permanentEffectiveValues {
-	fc := frameCacheFor(g)
+	fc, owned := beginStaticSourceRead(g)
+	if owned {
+		defer g.EndStaticSourceFrame()
+	}
+
 	key := beforeLayerKey{object: permanent.ObjectID, stop: stop}
 	if fc != nil {
 		if cached, ok := fc.beforeValues[key]; ok {
@@ -821,7 +849,7 @@ func continuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *
 			effects = append(effects, *effect)
 		}
 	}
-	effects = append(effects, staticAbilityContinuousEffectsForLayer(g, permanent, values, layer, sources)...)
+	effects = appendStaticAbilityContinuousEffectsForLayer(effects, g, permanent, values, layer, sources)
 	if layer == game.LayerAbility {
 		effects = append(effects, keywordCounterEffects(permanent)...)
 	}
@@ -843,8 +871,7 @@ type staticAbilitySource struct {
 	emblem bool
 }
 
-func staticAbilityContinuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
-	var effects []game.ContinuousEffect
+func appendStaticAbilityContinuousEffectsForLayer(effects []game.ContinuousEffect, g *game.Game, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
 	for _, source := range sources {
 		if !sourceStaticAbilityHasLayer(source, layer) {
 			continue
@@ -852,7 +879,7 @@ func staticAbilityContinuousEffectsForLayer(g *game.Game, permanent *game.Perman
 		if source.permanent != nil && layer != game.LayerControl {
 			source.controller = effectiveController(g, source.permanent)
 		}
-		effects = append(effects, staticAbilitySourceContinuousEffects(g, source, permanent, values, layer, sources)...)
+		effects = appendStaticAbilitySourceContinuousEffects(effects, g, source, permanent, values, layer, sources)
 	}
 	return effects
 }
@@ -998,8 +1025,7 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 	}
 }
 
-func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
-	var effects []game.ContinuousEffect
+func appendStaticAbilitySourceContinuousEffects(effects []game.ContinuousEffect, g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
 	for i := range source.face.StaticAbilities {
 		body := &source.face.StaticAbilities[i]
 		if !staticAbilityFunctionsFromSource(body, source) || !staticAbilityHasEffectForLayer(body, layer) {
@@ -1029,6 +1055,18 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			staticEffect.SourceCardID = source.cardID
 			staticEffect.Controller = source.controller
 			staticEffect.Timestamp = source.timestamp
+			if staticEffect.Layer == game.LayerControl && staticEffect.NewController.Exists {
+				staticEffect.NewController = opt.Val(source.controller)
+			}
+			if template.AffectedSource {
+				if source.permanent == nil {
+					continue
+				}
+				staticEffect.AffectedObjectID = source.permanent.ObjectID
+			}
+			if !continued && !continuousEffectApplies(g, permanent, values, &staticEffect) {
+				continue
+			}
 			originID := source.originID
 			face := source.faceIndex
 			if source.permanent != nil {
@@ -1052,18 +1090,7 @@ func staticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySour
 			}
 			rewriteChosenColorProtectionEffect(&staticEffect, source.permanent)
 			rewriteCommanderIdentityProtectionEffect(g, &staticEffect, source.controller)
-			if staticEffect.Layer == game.LayerControl && staticEffect.NewController.Exists {
-				staticEffect.NewController = opt.Val(source.controller)
-			}
-			if template.AffectedSource {
-				if source.permanent == nil {
-					continue
-				}
-				staticEffect.AffectedObjectID = source.permanent.ObjectID
-			}
-			if continued || continuousEffectApplies(g, permanent, values, &staticEffect) {
-				effects = append(effects, staticEffect)
-			}
+			effects = append(effects, staticEffect)
 		}
 	}
 	return effects

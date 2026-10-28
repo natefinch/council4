@@ -43,10 +43,8 @@ func (e *Engine) chooseCastNumbers(g *game.Game, player game.PlayerID, def *game
 		}, log)
 		cast.ChosenModes = slices.Clone(modes[selected[0]])
 	}
-	if targetsValidForSpell(g, player, def, cast.ChosenModes, cast.Targets, branch) &&
-		spellTargetCountsMatchX(g, player, def, cast.ChosenModes, cast.Targets, cast.XValue, branch) &&
-		spellTargetCountsMatchKicker(g, player, def, cast.ChosenModes, cast.Targets, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), branch) &&
-		spellTargetsSatisfyManaValueX(g, player, def, cast.ChosenModes, cast.Targets, cast.XValue, branch) {
+	if spellTargetsValidForCast(g, player, def, cast.ChosenModes, cast.Targets, cast.XValue,
+		effectiveKickerCount(cast.KickerPaid, cast.KickerCount), branch) {
 		return cast, true
 	}
 	var ok bool

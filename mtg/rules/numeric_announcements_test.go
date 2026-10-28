@@ -223,7 +223,71 @@ func TestExactNumericCastingZonesAndFaces(t *testing.T) {
 	}
 }
 
-func TestExactNumericMultikickerTargetCardinalityAndPolicyBound(t *testing.T) {
+func TestNumericMultikickerPolicySamplesAreBounded(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	setMainPhasePriority(g, game.Player1)
+	for range maxSampledMultikickCount - 2 {
+		addCombatCreaturePermanentWithPower(g, game.Player2, 3)
+	}
+	def := cometStormDef()
+	card := addCardToHand(g, game.Player1, def)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 40)
+	g.Players[game.Player1].ManaPool.Add(mana.R, 1)
+
+	// One X value exercises every sampled kicker count and the target-choice cap.
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
+	candidates := engine.appendMultikickedCastActions(g, game.Player1, nil, actionBuild, card, zone.Hand, game.FaceFront, def, 1, nil)
+	if len(candidates) == 0 || len(candidates) > maxSampledMultikickCount*maxSampledNumericTargetChoices {
+		t.Fatalf("sampled %d casts, want a nonempty bounded sample", len(candidates))
+	}
+	counts := make(map[int]int)
+	for _, candidate := range candidates {
+		cast, ok := candidate.CastSpellPayload()
+		if !ok || cast.XValue != 1 || cast.KickerCount < 1 || cast.KickerCount > maxSampledMultikickCount ||
+			len(cast.Targets) != cast.KickerCount+1 {
+			t.Fatalf("invalid multikicker sample: %+v", cast)
+		}
+		counts[cast.KickerCount]++
+		if counts[cast.KickerCount] > maxSampledNumericTargetChoices {
+			t.Fatal("one kicker count exceeded the target-choice cap")
+		}
+	}
+	if len(counts) != maxSampledMultikickCount || counts[1] != maxSampledNumericTargetChoices {
+		t.Fatal("fixture did not exercise every kicker count and fill the target-choice cap")
+	}
+}
+
+func TestNumericXPolicySamplesAreBounded(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	setMainPhasePriority(g, game.Player1)
+	addCardToHand(g, game.Player1, numericDamageSpell())
+	g.Players[game.Player1].ManaPool.Add(mana.C, maxSampledXValue+5)
+	g.Players[game.Player1].ManaPool.Add(mana.R, 1)
+
+	candidates := engine.Simulator().LegalActions(g, game.Player1)
+	if len(candidates) > (maxSampledXValue+1)*maxSampledNumericTargetChoices+1 {
+		t.Fatal("numeric policy candidates exceeded their concrete independent bound")
+	}
+	counts := make(map[int]int)
+	for _, candidate := range candidates {
+		cast, ok := candidate.CastSpellPayload()
+		if !ok {
+			continue
+		}
+		if cast.XValue < 0 || cast.XValue > maxSampledXValue {
+			t.Fatalf("X sample exceeded the policy cap: %d", cast.XValue)
+		}
+		counts[cast.XValue]++
+	}
+	if len(counts) != maxSampledXValue+1 {
+		t.Fatal("fixture did not exercise every sampled X value")
+	}
+}
+
+func TestExactNumericMultikickerTargetCardinality(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	setMainPhasePriority(g, game.Player1)
@@ -236,11 +300,6 @@ func TestExactNumericMultikickerTargetCardinalityAndPolicyBound(t *testing.T) {
 	card := addCardToHand(g, game.Player1, cometStormDef())
 	g.Players[game.Player1].ManaPool.Add(mana.C, 40)
 	g.Players[game.Player1].ManaPool.Add(mana.R, 1)
-	candidates := engine.Simulator().LegalActions(g, game.Player1)
-	bound := (maxSampledXValue + 1) * (maxSampledMultikickCount + 1) * maxSampledNumericTargetChoices
-	if len(candidates) > bound+1 {
-		t.Fatal("numeric policy candidates exceeded their concrete independent bound")
-	}
 	announcement := action.CastMultikickedSpellFaceFromZone(card, zone.Hand, game.FaceFront, targets, 1, nil, 21)
 	branch, accepted := engine.Simulator().Apply(g, game.Player1, announcement, simPassPolicies())
 	if !accepted {

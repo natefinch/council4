@@ -233,6 +233,9 @@ func TestStagedAttackDeclarationsExhaustiveMixedDefenders(t *testing.T) {
 }
 
 func blockOracle(p *blockDeclarationProblem) [][]game.BlockDeclaration {
+	p.game.BeginStaticSourceFrame()
+	defer p.game.EndStaticSourceFrame()
+
 	var legal [][]game.BlockDeclaration
 	best := -1
 	for mask := 0; mask < 1<<(len(p.blockers)*len(p.attackers)); mask++ {
@@ -329,6 +332,10 @@ func TestStagedBlockDeclarationsExhaustiveGlobalRequirements(t *testing.T) {
 				}
 			}
 
+			// Every declaration below reads the same board. Share derived rule
+			// data across the exhaustive sweep, never across simulator mutation.
+			g.BeginStaticSourceFrame()
+			defer g.EndStaticSourceFrame()
 			for mask := range 1 << (len(problem.blockers) * len(problem.attackers)) {
 				var declaration []game.BlockDeclaration
 				for blocker, source := range problem.blockers {
