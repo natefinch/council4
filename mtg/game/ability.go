@@ -1045,6 +1045,26 @@ const (
 	AttackRecipientBattle
 )
 
+// BlockerTriggerScope distinguishes the two CR 509.3 trigger conditions of an
+// EventBlockerDeclared pattern whose subject is the blocking creature.
+type BlockerTriggerScope uint8
+
+// Blocker trigger scopes. A card definition must choose one explicitly for
+// every blocker-subject EventBlockerDeclared pattern.
+const (
+	// BlockerTriggerUnspecified is the zero value; such a pattern matches each
+	// blocked attacker.
+	BlockerTriggerUnspecified BlockerTriggerScope = iota
+	// BlockerTriggerOnce is "Whenever [a creature] blocks": it triggers once
+	// when the creature becomes a blocking creature, even if it blocks several
+	// attackers (CR 509.3a).
+	BlockerTriggerOnce
+	// BlockerTriggerEachBlockedCreature is "Whenever [a creature] blocks a
+	// creature": it triggers once for each attacking creature the creature
+	// blocks (CR 509.3b).
+	BlockerTriggerEachBlockedCreature
+)
+
 // TriggerPattern matches a Event for triggered-ability detection.
 // Zero-valued filters are wildcards except Event, which must be set.
 type TriggerPattern struct {
@@ -1353,6 +1373,13 @@ type TriggerPattern struct {
 	// where the ability's source is saddled ("attacks while saddled", saddle
 	// CR 702.166). It is only valid with Event == EventAttackerDeclared.
 	AttackWhileSaddled bool
+
+	// BlockerScope chooses how often an EventBlockerDeclared trigger (Event or
+	// UnionEvent) whose subject is the blocker fires: once per blocking
+	// creature ("blocks", CR 509.3a) or once per blocked attacker ("blocks a
+	// creature", CR 509.3b). It must be unspecified for a blocked-attacker
+	// subject ("becomes blocked by a creature", CR 509.3d).
+	BlockerScope BlockerTriggerScope
 
 	// AttacksAlongsideSelection restricts an EventAttackerDeclared trigger to
 	// combats where the ability's source is attacking and at least

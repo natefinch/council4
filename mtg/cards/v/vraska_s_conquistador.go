@@ -44,6 +44,7 @@ func newVraskaSConquistador() *game.CardDef {
 							StackObjectKind: game.StackSpell,
 							CounterKind:     counter.PlusOnePlusOne,
 							UnionEvent:      game.EventBlockerDeclared,
+							BlockerScope:    game.BlockerTriggerOnce,
 						},
 						InterveningIf: "if you control a Vraska planeswalker",
 						InterveningCondition: opt.Val(game.Condition{

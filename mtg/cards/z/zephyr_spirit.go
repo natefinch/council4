@@ -38,8 +38,9 @@ func newZephyrSpirit() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhen,
 						Pattern: game.TriggerPattern{
-							Event:  game.EventBlockerDeclared,
-							Source: game.TriggerSourceSelf,
+							Event:        game.EventBlockerDeclared,
+							BlockerScope: game.BlockerTriggerOnce,
+							Source:       game.TriggerSourceSelf,
 						},
 					},
 					Content: game.Mode{

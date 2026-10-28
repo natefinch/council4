@@ -798,23 +798,30 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 			blocks = append(blocks, block)
 		}
 	}
+	blocking := make(map[id.ID]bool, len(g.Combat.Blockers)+len(blocks))
+	for _, block := range g.Combat.Blockers {
+		blocking[block.Blocker] = true
+	}
 	g.Combat.Blockers = append(g.Combat.Blockers, blocks...)
 	newlyBlocked := make([]bool, len(blocks))
+	newlyBlocking := make([]bool, len(blocks))
 	for i, block := range blocks {
 		newlyBlocked[i] = !g.Combat.BlockedAttackers[block.Blocking]
+		newlyBlocking[i] = !blocking[block.Blocker]
+		blocking[block.Blocker] = true
 		g.Combat.BlockedAttackers[block.Blocking] = true
 		g.Combat.BlockerOrder[block.Blocking] = append(g.Combat.BlockerOrder[block.Blocking], block.Blocker)
 	}
 	for i, block := range blocks {
-		emitBlockEvents(g, block, eligibleByID[block.Blocker], newlyBlocked[i])
+		emitBlockEvents(g, block, eligibleByID[block.Blocker], newlyBlocked[i], newlyBlocking[i])
 	}
 	return true
 }
 
 // emitBlockEvents emits one block's events in the declaration batch: the
 // attacker becoming blocked when this is its first blocker, then the blocker
-// blocking it (CR 509.3).
-func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Permanent, attackerBecameBlocked bool) {
+// blocking it, marked when this is the blocker's first block (CR 509.3).
+func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Permanent, attackerBecameBlocked, blockerBecameBlocking bool) {
 	if attackerBecameBlocked {
 		if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
 			attackTarget, _ := attackTargetForAttacker(g, attacker.ObjectID)
@@ -835,16 +842,17 @@ func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Pe
 		return
 	}
 	emitEvent(g, game.Event{
-		Kind:               game.EventBlockerDeclared,
-		SourceID:           blocker.CardInstanceID,
-		SourceObjectID:     blocker.ObjectID,
-		Controller:         effectiveController(g, blocker),
-		PermanentID:        blocker.ObjectID,
-		SubjectGoaded:      isGoadedNow(g, blocker),
-		SubjectGoadedKnown: true,
-		RelatedPermanentID: block.Blocking,
-		BlockedAttackerID:  block.Blocking,
-		SimultaneousID:     g.Combat.BlockDeclarationBatchID,
+		Kind:                  game.EventBlockerDeclared,
+		SourceID:              blocker.CardInstanceID,
+		SourceObjectID:        blocker.ObjectID,
+		Controller:            effectiveController(g, blocker),
+		PermanentID:           blocker.ObjectID,
+		SubjectGoaded:         isGoadedNow(g, blocker),
+		SubjectGoadedKnown:    true,
+		RelatedPermanentID:    block.Blocking,
+		BlockedAttackerID:     block.Blocking,
+		SimultaneousID:        g.Combat.BlockDeclarationBatchID,
+		BlockerBecameBlocking: blockerBecameBlocking,
 	})
 }
 

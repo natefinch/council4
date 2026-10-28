@@ -33,6 +33,7 @@ func newIllusionToken349852d6169748cf86a4c20a2aabf0fc() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:                   game.EventBlockerDeclared,
+							BlockerScope:            game.BlockerTriggerEachBlockedCreature,
 							Source:                  game.TriggerSourceSelf,
 							RelatedSubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 						},

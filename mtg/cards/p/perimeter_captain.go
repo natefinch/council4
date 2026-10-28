@@ -43,6 +43,7 @@ func newPerimeterCaptain() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:            game.EventBlockerDeclared,
+							BlockerScope:     game.BlockerTriggerOnce,
 							Controller:       game.TriggerControllerYou,
 							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Defender},
 							StackObjectKind:  game.StackSpell,
