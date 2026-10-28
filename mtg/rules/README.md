@@ -449,7 +449,19 @@ without banding) are offered, and the default forms no band. Bands live in
 `CombatState.Bands`, survive members losing banding, lose members removed from
 combat or leaving the battlefield and dissolve at one member, and appear in
 `PlayerObservation.Combat()`.
-Blocking and damage across a band are not yet propagated.
+A blocker declared against one band member blocks every member (CR 702.22h).
+Restrictions, requirements and evasion are checked only for the declared
+attacker, and declaring one blocker against two members of a band is illegal
+and never offered. `applyBlockers` records every propagated pair in
+`Blockers`, `BlockedAttackers` and `BlockerOrder` before emitting any block
+event. Each pair gets its own blocker-declared event (CR 509.3b/d), and each
+newly blocked member gets a becomes-blocked event (509.3c). All of these events
+share the declaration batch. Combat damage then uses the existing
+division paths: the active player divides a blocker's damage among band members
+while any of them has banding (702.22k). Otherwise the blocker's controller
+is asked to divide it (510.1d); the default assigns lethal damage in order.
+A band member with trample counts damage the other members assign to a shared
+blocker (702.19c).
 
 Live play and `Simulator.Apply` use the same completion and application paths,
 including controlled-player routing, actor-owned payment, explicit invalid

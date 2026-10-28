@@ -16,6 +16,7 @@ type blockDeclarationProblem struct {
 	lures      [][]int
 	minimum    []int
 	oneBlocker []bool
+	bands      []int
 	weights    []int
 	capacities []int
 	unit       bool
@@ -27,6 +28,8 @@ func newBlockDeclarationProblem(g *game.Game, player game.PlayerID) *blockDeclar
 	defer g.EndStaticSourceFrame()
 	p := &blockDeclarationProblem{game: g, player: player, blockers: eligibleBlockers(g, player), unit: true}
 	effects := activeRuleEffects(g)
+	bandIndex := attackingBandIndex(g.Combat)
+	banded := false
 	for _, declaration := range attacksAgainstPlayer(g, player) {
 		attacker, exists := permanentByObjectID(g, declaration.Attacker)
 		if !exists {
@@ -47,9 +50,18 @@ func newBlockDeclarationProblem(g *game.Game, player game.PlayerID) *blockDeclar
 		}
 		p.minimum, p.weights = append(p.minimum, minimum), append(p.weights, weight)
 		p.oneBlocker = append(p.oneBlocker, ruleEffectLimitsBlockersToOne(g, attacker))
+		band, inBand := bandIndex[attacker.ObjectID]
+		if !inBand {
+			band = -1
+		}
+		banded = banded || inBand
+		p.bands = append(p.bands, band)
 	}
 	for _, blocker := range p.blockers {
 		p.capacities = append(p.capacities, blockerBlockLimit(g, blocker))
+		if banded && p.capacities[len(p.capacities)-1] > 1 {
+			p.unit = false
+		}
 		allowed, lures := make([]bool, len(p.attackers)), make([]int, len(p.attackers))
 		if ruleEffectProhibitsBlockingAlone(g, blocker) {
 			p.unit = false
@@ -103,10 +115,30 @@ func (p *blockDeclarationProblem) score(declarations []game.BlockDeclaration) in
 	return score
 }
 
+// sameBand reports whether two distinct attackers are in the same band, so one
+// blocker declared against both would be redundant (CR 702.22h).
+func (p *blockDeclarationProblem) sameBand(first, second int) bool {
+	return first != second && p.bands[first] >= 0 && p.bands[first] == p.bands[second]
+}
+
 func (p *blockDeclarationProblem) restricted(declarations []game.BlockDeclaration) bool {
 	counts := make(map[id.ID]int)
+	type bandBlock struct {
+		blocker id.ID
+		band    int
+	}
+	blockedBands := make(map[bandBlock]bool)
 	for _, declaration := range declarations {
 		counts[declaration.Blocking]++
+		attacker := slices.IndexFunc(p.attackers, func(permanent *game.Permanent) bool { return permanent.ObjectID == declaration.Blocking })
+		if attacker < 0 || p.bands[attacker] < 0 {
+			continue
+		}
+		key := bandBlock{blocker: declaration.Blocker, band: p.bands[attacker]}
+		if blockedBands[key] {
+			return false
+		}
+		blockedBands[key] = true
 	}
 	for index, attacker := range p.attackers {
 		count := counts[attacker.ObjectID]
@@ -272,7 +304,10 @@ func (p *blockDeclarationProblem) search(fixed []int8, goal int) ([]game.BlockDe
 				}
 				next := slices.Clone(declarations)
 				score, valid := lureScore, true
-				for _, attacker := range chosen {
+				for index, attacker := range chosen {
+					if slices.ContainsFunc(chosen[:index], func(other int) bool { return p.sameBand(attacker, other) }) {
+						valid = false
+					}
 					counts[attacker]++
 					if counts[attacker] > 1 && p.oneBlocker[attacker] {
 						valid = false
