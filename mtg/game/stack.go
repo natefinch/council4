@@ -400,6 +400,11 @@ type StackObject struct {
 	// this stack object.
 	CapturedCardID          id.ID
 	CapturedCardZoneVersion uint64
+	// BoundEventObjectIDs are the permanents an event-based delayed trigger was
+	// bound to when it was created (CR 603.7c): the damage source, attacker or
+	// dying permanent whose event it waited for. They identify which object the
+	// fired trigger concerns; resolution reads its trigger event.
+	BoundEventObjectIDs []id.ID
 
 	// DungeonRoom, when set, marks this stack object as a dungeon room-entry
 	// triggered ability so completion is recorded exactly once when a final

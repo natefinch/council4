@@ -2,6 +2,7 @@ package rules
 
 import (
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
@@ -295,6 +296,7 @@ func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, b
 		return nil, false
 	}
 	copied := copyCardDef(top)
+	fillCopiedAbilityText(&copied.CardFace, top.OracleText)
 	for _, component := range permanent.MergedCards {
 		if component.FaceDown {
 			if component.FaceDownKind == game.FaceDownDisguise || component.FaceDownKind == game.FaceDownCloak {
@@ -315,7 +317,9 @@ func permanentCopyDef(g *game.Game, permanent *game.Permanent) (*game.CardDef, b
 		if !ok {
 			continue
 		}
-		appendCardFaceAbilities(&copied.CardFace, &def.CardFace)
+		componentFace := def.CardFace
+		fillCopiedAbilityText(&componentFace, def.OracleText)
+		appendCardFaceAbilities(&copied.CardFace, &componentFace)
 	}
 	applyPermanentCopyLayer(g, permanent, copied)
 	return copied, true
@@ -443,6 +447,38 @@ func applyCopyValuesToCardDef(def *game.CardDef, values *game.CopyableValues) {
 		default:
 		}
 	}
+}
+
+// fillCopiedAbilityText gives each untexted triggered, activated, loyalty and
+// chapter ability on face the Oracle text of the card it is printed on. Card
+// definitions often omit per-ability text and rely on their card's Oracle text;
+// once the ability is copied (CR 707.2) onto another object, that object's own
+// Oracle text no longer contains it, so the copiable ability carries the text
+// with it. The ability slices are replaced, never written through, so a shared
+// registry definition is not mutated. Mana abilities are left untouched because
+// their templates are recognized structurally.
+func fillCopiedAbilityText(face *game.CardFace, oracleText string) {
+	text := oracleRulesText(oracleText)
+	if text == "" {
+		return
+	}
+	face.ActivatedAbilities = withAbilityText(face.ActivatedAbilities, text, func(a *game.ActivatedAbility) *string { return &a.Text })
+	face.LoyaltyAbilities = withAbilityText(face.LoyaltyAbilities, text, func(a *game.LoyaltyAbility) *string { return &a.Text })
+	face.TriggeredAbilities = withAbilityText(face.TriggeredAbilities, text, func(a *game.TriggeredAbility) *string { return &a.Text })
+	face.ChapterAbilities = withAbilityText(face.ChapterAbilities, text, func(a *game.ChapterAbility) *string { return &a.Text })
+}
+
+func withAbilityText[T any](abilities []T, text string, field func(*T) *string) []T {
+	if len(abilities) == 0 {
+		return abilities
+	}
+	filled := slices.Clone(abilities)
+	for i := range filled {
+		if t := field(&filled[i]); strings.TrimSpace(*t) == "" {
+			*t = text
+		}
+	}
+	return filled
 }
 
 func appendCardFaceAbilities(dst, src *game.CardFace) {

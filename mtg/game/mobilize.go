@@ -103,6 +103,7 @@ func MobilizeTriggeredBody(amount MobilizeAmount) TriggeredAbility {
 			{
 				Primitive: CreateDelayedTrigger{
 					Trigger: DelayedTriggerDef{
+						Text:                "Sacrifice them at the beginning of the next end step.",
 						Timing:              DelayedAtBeginningOfNextEndStep,
 						CapturedObjectGroup: opt.Val(LinkedObjectReference(string(mobilizeLinkKey))),
 						Content: Mode{
