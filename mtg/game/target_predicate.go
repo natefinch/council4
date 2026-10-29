@@ -192,6 +192,15 @@ type TargetPredicate struct {
 	// counter target. It applies only to spell stack objects; abilities never
 	// match. An empty slice imposes no restriction (CR 115.4, CR 608.2b).
 	SpellTargets []SpellTargetRequirement
+
+	// SingleTarget restricts a matched spell or ability to one "with a single
+	// target": exactly one object or player was chosen as its target when it
+	// was put on the stack, counting each target instance of its own and any
+	// spliced text separately. The count ignores current legality and a target
+	// chosen more than once counts once per choice, so a spell targeting the
+	// same object twice doesn't match (CR 115.9a). Applies to spells and
+	// abilities alike.
+	SingleTarget bool
 }
 
 // SpellTargetRequirementKind classifies one alternative of a "that targets <X>"
@@ -237,5 +246,6 @@ func (p TargetPredicate) Empty() bool {
 		len(p.StackObjectSourceTypes) == 0 &&
 		p.Controller == ControllerAny &&
 		!p.ManaValue.Exists &&
-		len(p.SpellTargets) == 0
+		len(p.SpellTargets) == 0 &&
+		!p.SingleTarget
 }
