@@ -755,8 +755,9 @@ func flankingTriggeredBody() TriggeredAbility {
 		Trigger: TriggerCondition{
 			Type: TriggerWhenever,
 			Pattern: TriggerPattern{
-				Event:  EventAttackerBecameBlocked,
-				Source: TriggerSourceSelf,
+				Event:        EventAttackerBecameBlocked,
+				BlockedScope: BlockedTriggerEachBlocker,
+				Source:       TriggerSourceSelf,
 				RelatedSubjectSelection: Selection{
 					RequiredTypes:   []types.Card{types.Creature},
 					ExcludedKeyword: Flanking,
@@ -1063,6 +1064,26 @@ const (
 	// creature": it triggers once for each attacking creature the creature
 	// blocks (CR 509.3b).
 	BlockerTriggerEachBlockedCreature
+)
+
+// BlockedTriggerScope distinguishes the two CR 509.3 trigger conditions of an
+// EventAttackerBecameBlocked pattern whose subject is the blocked attacker.
+type BlockedTriggerScope uint8
+
+// Blocked trigger scopes. A card definition must choose one explicitly for
+// every attacker-subject EventAttackerBecameBlocked pattern.
+const (
+	// BlockedTriggerUnspecified is the zero value; such a pattern matches once
+	// per attacker, like BlockedTriggerOnce.
+	BlockedTriggerUnspecified BlockedTriggerScope = iota
+	// BlockedTriggerOnce is "Whenever [a creature] becomes blocked": it
+	// triggers once when the creature becomes a blocked creature, even if
+	// several creatures block it (CR 509.3c).
+	BlockedTriggerOnce
+	// BlockedTriggerEachBlocker is "Whenever [a creature] becomes blocked by a
+	// creature": it triggers once for each creature that blocks it
+	// (CR 509.3d).
+	BlockedTriggerEachBlocker
 )
 
 // TriggerPattern matches a Event for triggered-ability detection.
@@ -1380,6 +1401,12 @@ type TriggerPattern struct {
 	// creature", CR 509.3b). It must be unspecified for a blocked-attacker
 	// subject ("becomes blocked by a creature", CR 509.3d).
 	BlockerScope BlockerTriggerScope
+
+	// BlockedScope chooses how often an EventAttackerBecameBlocked trigger
+	// (Event or UnionEvent) whose subject is the blocked attacker fires: once
+	// per attacker ("becomes blocked", CR 509.3c) or once per blocking
+	// creature ("becomes blocked by a creature", CR 509.3d).
+	BlockedScope BlockedTriggerScope
 
 	// AttacksAlongsideSelection restricts an EventAttackerDeclared trigger to
 	// combats where the ability's source is attacking and at least

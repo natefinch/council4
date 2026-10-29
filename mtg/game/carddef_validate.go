@@ -2477,6 +2477,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	}
 	v.validateAttackerCountRelations(faceName, path, pattern)
 	v.validateBlockerScope(faceName, path, pattern)
+	v.validateBlockedScope(faceName, path, pattern)
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "StepPlayerSourceAttachedSelection"), pattern.StepPlayerSourceAttachedSelection)
 		if pattern.Event != EventBeginningOfStep {
@@ -2725,6 +2726,26 @@ func (v *cardDefValidator) validateBlockerScope(faceName, path string, pattern *
 		}
 	case pattern.BlockerScope == BlockerTriggerUnspecified:
 		v.add(faceName, scopePath, CardDefIssueInvalidSelection, "blocker-declared trigger must choose \"blocks\" (CR 509.3a) or \"blocks a creature\" (CR 509.3b)")
+	}
+}
+
+// validateBlockedScope requires every EventAttackerBecameBlocked pattern whose
+// subject is the blocked attacker to choose between "becomes blocked"
+// (CR 509.3c) and "becomes blocked by a creature" (CR 509.3d), and rejects a
+// scope on any other pattern.
+func (v *cardDefValidator) validateBlockedScope(faceName, path string, pattern *TriggerPattern) {
+	becameBlocked := pattern.Event == EventAttackerBecameBlocked || pattern.UnionEvent == EventAttackerBecameBlocked
+	attackerSubject := pattern.Subject == TriggerSubjectDefault || pattern.Subject == TriggerSubjectPermanent
+	scopePath := appendPath(path, "BlockedScope")
+	switch {
+	case pattern.BlockedScope > BlockedTriggerEachBlocker:
+		v.add(faceName, scopePath, CardDefIssueInvalidSelection, "unknown blocked trigger scope")
+	case !becameBlocked || !attackerSubject:
+		if pattern.BlockedScope != BlockedTriggerUnspecified {
+			v.add(faceName, scopePath, CardDefIssueInvalidSelection, "blocked trigger scope is only valid for an attacker-became-blocked event whose subject is the attacker")
+		}
+	case pattern.BlockedScope == BlockedTriggerUnspecified:
+		v.add(faceName, scopePath, CardDefIssueInvalidSelection, "attacker-became-blocked trigger must choose \"becomes blocked\" (CR 509.3c) or \"becomes blocked by a creature\" (CR 509.3d)")
 	}
 }
 

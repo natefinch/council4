@@ -43,6 +43,7 @@ func newRoninCliffrider() *game.CardDef {
 							BlockerScope: game.BlockerTriggerOnce,
 							Source:       game.TriggerSourceSelf,
 							UnionEvent:   game.EventAttackerBecameBlocked,
+							BlockedScope: game.BlockedTriggerOnce,
 						},
 					},
 					Content: game.Mode{

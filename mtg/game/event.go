@@ -499,6 +499,13 @@ type Event struct {
 	// one event a "Whenever [a creature] blocks" trigger matches (CR 509.3a).
 	BlockerBecameBlocking bool
 
+	// AttackerAlreadyBlocked marks an EventAttackerBecameBlocked for a blocker
+	// of an attacker that was already a blocked creature. The engine emits one
+	// such event per blocking creature (CR 509.3d); a "Whenever [a creature]
+	// becomes blocked" trigger matches only the one without this mark
+	// (CR 509.3c).
+	AttackerAlreadyBlocked bool
+
 	// Step identifies the turn step for EventBeginningOfStep triggers
 	// (CR 603.6c).
 	Step Step

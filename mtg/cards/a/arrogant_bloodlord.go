@@ -43,6 +43,7 @@ func newArrogantBloodlord() *game.CardDef {
 							BlockerScope:            game.BlockerTriggerEachBlockedCreature,
 							Source:                  game.TriggerSourceSelf,
 							UnionEvent:              game.EventAttackerBecameBlocked,
+							BlockedScope:            game.BlockedTriggerEachBlocker,
 							RelatedSubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}, Power: opt.Val(compare.Int{Op: compare.LessOrEqual, Value: 1})},
 						},
 					},

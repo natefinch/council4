@@ -819,24 +819,24 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 }
 
 // emitBlockEvents emits one block's events in the declaration batch: the
-// attacker becoming blocked when this is its first blocker, then the blocker
-// blocking it, marked when this is the blocker's first block (CR 509.3).
+// attacker becoming blocked by this blocker, marked when the attacker was
+// already blocked, then the blocker blocking it, marked when this is the
+// blocker's first block (CR 509.3).
 func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Permanent, attackerBecameBlocked, blockerBecameBlocking bool) {
-	if attackerBecameBlocked {
-		if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
-			attackTarget, _ := attackTargetForAttacker(g, attacker.ObjectID)
-			emitEvent(g, game.Event{
-				Kind:               game.EventAttackerBecameBlocked,
-				SourceID:           attacker.CardInstanceID,
-				SourceObjectID:     attacker.ObjectID,
-				Controller:         effectiveController(g, attacker),
-				Player:             attackerDefendingPlayer(g, attacker.ObjectID),
-				PermanentID:        attacker.ObjectID,
-				RelatedPermanentID: block.Blocker,
-				AttackTarget:       attackTarget,
-				SimultaneousID:     g.Combat.BlockDeclarationBatchID,
-			})
-		}
+	if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
+		attackTarget, _ := attackTargetForAttacker(g, attacker.ObjectID)
+		emitEvent(g, game.Event{
+			Kind:                   game.EventAttackerBecameBlocked,
+			SourceID:               attacker.CardInstanceID,
+			SourceObjectID:         attacker.ObjectID,
+			Controller:             effectiveController(g, attacker),
+			Player:                 attackerDefendingPlayer(g, attacker.ObjectID),
+			PermanentID:            attacker.ObjectID,
+			RelatedPermanentID:     block.Blocker,
+			AttackTarget:           attackTarget,
+			SimultaneousID:         g.Combat.BlockDeclarationBatchID,
+			AttackerAlreadyBlocked: !attackerBecameBlocked,
+		})
 	}
 	if blocker == nil {
 		return

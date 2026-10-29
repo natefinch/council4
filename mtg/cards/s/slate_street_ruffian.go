@@ -37,8 +37,9 @@ func newSlateStreetRuffian() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:  game.EventAttackerBecameBlocked,
-							Source: game.TriggerSourceSelf,
+							Event:        game.EventAttackerBecameBlocked,
+							BlockedScope: game.BlockedTriggerOnce,
+							Source:       game.TriggerSourceSelf,
 						},
 					},
 					Content: game.Mode{

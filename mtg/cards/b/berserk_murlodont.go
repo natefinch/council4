@@ -40,6 +40,7 @@ func newBerserkMurlodont() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:            game.EventAttackerBecameBlocked,
+							BlockedScope:     game.BlockedTriggerOnce,
 							SubjectSelection: game.Selection{SubtypesAny: []types.Sub{types.Beast}},
 							StackObjectKind:  game.StackSpell,
 							CounterKind:      counter.PlusOnePlusOne,
