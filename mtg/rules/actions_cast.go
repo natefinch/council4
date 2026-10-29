@@ -1263,18 +1263,19 @@ func orderedCastRoutes(routes []castRoute) []castRoute {
 // and usage (CR 118.14), so the routes never mix one permission's free cast
 // with another permission's rider or usage, and no permission hides another's
 // cost options. A plotted card (CR 702.170d, at sorcery speed) and a linked
-// free cast (Court of Locthwain) offer a free route, and a foretold card
-// (CR 702.143a) a foretell-cost route; these, like a free play permission, are
-// alternative costs, so a cast already using another alternative cost
-// (CR 118.9a) cannot use them. An Adventure card's CR 715.3d permission covers
-// only its permanent face (the front face) and adds a zero route. A cast from
-// the top of a library has one route per matching cast-from-library
-// permission, so a pay-life permission (Bolas's Citadel) never forces its
-// cost on a cast another permission also authorizes; that pay-life cost is an
-// alternative cost too, so a cast already using another one cannot use it. A
-// cast from another zone has the single zero route; a cast from exile or a
-// library with no applicable route has none. A cast from exile whose
-// permission this model does not track at all keeps the zero route.
+// free cast (Court of Locthwain, for any legal spell face) offer a free route,
+// and a foretold card (CR 702.143a) a foretell-cost route; these, like a free
+// play permission, are alternative costs, so a cast already using another
+// alternative cost (CR 118.9a) cannot use them. An Adventure card's CR 715.3d
+// permission covers only its permanent face (the front face) and adds a zero
+// route. A cast from the top of a library has one route per matching
+// cast-from-library permission, so a pay-life permission (Bolas's Citadel)
+// never forces its cost on a cast another permission also authorizes; that
+// pay-life cost is an alternative cost too, so a cast already using another
+// one cannot use it. A cast from another zone has the single zero route; a
+// cast from exile or a library with no applicable route has none. A cast from
+// exile whose permission this model does not track at all keeps the zero
+// route.
 // The returned routes are read-only and shared only within a pure-read frame.
 func spellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, mode castCostMode) []castRoute {
 	fc := frameCacheFor(g)
@@ -1327,7 +1328,11 @@ func exileCastAuthorized(g *game.Game, playerID game.PlayerID, cardID id.ID, fac
 // routes through which playerID may cast the face of cardID from exile.
 // allowFree is false when the cast already uses another alternative cost, so
 // free and foretell routes are left out; excluded then reports that such a
-// matching permission was left out.
+// matching permission was left out. A plotted or foretold card and the
+// CR 715.3d Adventure permission authorize only the front face. A linked free
+// cast ("cast a spell from among cards exiled with this enchantment", Court of
+// Locthwain) authorizes every legal spell face: an adventurer card as its
+// Adventure (CR 715.3a, 715.3d) or either half of a split card (CR 709.3).
 func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, allowFree bool) (routes []castRoute, excluded bool) {
 	routes, excluded = castFromZonePermissionRoutes(g, playerID, cardID, zone.Exile, face, allowFree)
 	if face == game.FaceFront {
@@ -1343,14 +1348,14 @@ func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.I
 				routes = append(routes, castRoute{foretell: true})
 			}
 		}
-		if permission, ok := castLinkedExileForFreePermission(g, playerID, cardID); ok {
-			excluded = true
-			if allowFree {
-				routes = append(routes, castRoute{free: true, linkedFree: permission})
-			}
-		}
 		if hasAdventureExilePermission(g, playerID, cardID) {
 			routes = append(routes, castRoute{})
+		}
+	}
+	if permission, ok := castLinkedExileForFreePermission(g, playerID, cardID); ok {
+		excluded = true
+		if allowFree {
+			routes = append(routes, castRoute{free: true, linkedFree: permission})
 		}
 	}
 	return orderedCastRoutes(routes), excluded
