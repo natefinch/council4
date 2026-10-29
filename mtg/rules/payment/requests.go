@@ -75,12 +75,16 @@ type SpellRequest struct {
 // SpellManaRequest describes a mana cost to check as the total mana cost of
 // casting Card (card CardID from SourceZone). Cost has its X symbols resolved;
 // SpendAs is the spending permission (CR 609.4b) the cast pays under.
+// Bestowed marks a cast for the spell's Bestow cost (CR 702.103b); with the
+// type-changing effects that apply to the caster's spells, it decides the
+// effective characteristics restricted mana tests.
 type SpellManaRequest struct {
 	PlayerID   game.PlayerID
 	CardID     id.ID
 	SourceZone zone.Type
 	Card       *game.CardDef
 	SpendAs    game.ManaSpendPermission
+	Bestowed   bool
 	Cost       *cost.Mana
 }
 

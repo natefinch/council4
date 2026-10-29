@@ -233,11 +233,20 @@ func stackObjectSpellDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bo
 // abilities and rules see for a spell on the stack. A face-down spell exposes
 // only its face-down characteristics (CR 708.2, 708.4), never the hidden card's
 // colors, types, subtypes, supertypes or abilities; every other spell uses its
-// effective selected face. Resolution and the controller's own view still read
-// the hidden card through stackObjectSpellDef.
+// effective selected face. Its supertypes, types and subtypes are the spell's
+// effective type line (stackSpellTypeLine: characteristic-defining abilities,
+// a bestowed cast and type-changing effects that apply to spells), so callers
+// must not reapply those transforms. Resolution and the controller's own view
+// still read the hidden card through stackObjectSpellDef.
 func stackSpellCharacteristicsDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
+	var def *game.CardDef
 	if obj != nil && obj.Kind == game.StackSpell && obj.FaceDown {
-		return faceDownStackSpellDef(obj), true
+		def = faceDownStackSpellDef(obj)
+	} else {
+		var ok bool
+		if def, ok = stackObjectSpellDef(g, obj); !ok {
+			return nil, false
+		}
 	}
-	return stackObjectSpellDef(g, obj)
+	return withSpellTypeLine(def, stackSpellTypeLine(g, obj, def)), true
 }

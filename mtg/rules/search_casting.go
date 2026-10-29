@@ -17,8 +17,9 @@ func searchCastCardAllowed(g *game.Game, player game.PlayerID, card *game.CardIn
 	for _, ability := range def.StaticAbilities {
 		if ability.CastWhileSearchingOwnLibrary && ability.ZoneOfFunction == zone.Library &&
 			conditionSatisfied(g, conditionContext{controller: player}, ability.Condition) {
-			return cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, def) &&
-				!spellCastLimitReached(g, player, def) && !castFromZoneProhibited(g, player, zone.Library) && isSupportedSpell(def)
+			castFace := castSelectionFace(g, player, def, false)
+			return cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, castFace) &&
+				!spellCastLimitReached(g, player, castFace) && !castFromZoneProhibited(g, player, zone.Library) && isSupportedSpell(def)
 		}
 	}
 	return false

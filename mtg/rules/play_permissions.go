@@ -141,7 +141,7 @@ func (e *Engine) expandPermanentTypePlayActions(g *game.Game, player game.Player
 				expanded = append(expanded, act)
 			}
 		}
-		for _, permission := range permanentTypePlayPermissions(g, player, sourceZone, castSelectionFace(cardFaceOrDefault(card, face), bestowed)) {
+		for _, permission := range permanentTypePlayPermissions(g, player, sourceZone, castSelectionFace(g, player, cardFaceOrDefault(card, face), bestowed)) {
 			if cast, ok := act.CastSpellPayload(); ok && !e.castActionPermissionLegal(g, player, cast, permission) {
 				continue
 			}

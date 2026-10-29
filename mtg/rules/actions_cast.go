@@ -151,7 +151,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	cast.Targets = completedTargets
 	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
-	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, castSelectionFace(spellDef, cast.Bestowed), len(permissions) > 0, agents, log)
+	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, castSelectionFace(g, playerID, spellDef, cast.Bestowed), len(permissions) > 0, agents, log)
 	if !ok {
 		return false
 	}
@@ -281,15 +281,16 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// CR 601.2i: the costs are paid, so the spell becomes cast. The card is
 	// already on the stack; emit its zone-change and spell-cast events now so
 	// "when you cast" triggers fire after payment.
+	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     cast.CardID,
 		StackObjectID:                obj.ID,
 		Controller:                   playerID,
 		CardID:                       cast.CardID,
 		Face:                         cast.Face,
-		CardTypes:                    stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		CardTypes:                    typeLine.types,
+		CardSupertypes:               typeLine.supertypes,
+		CardSubtypes:                 typeLine.subtypes,
 		Colors:                       spellColors(spellDef),
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
@@ -389,15 +390,16 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
+	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     cast.CardID,
 		StackObjectID:                obj.ID,
 		Controller:                   playerID,
 		CardID:                       cast.CardID,
 		Face:                         game.FaceFront,
-		CardTypes:                    stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		CardTypes:                    typeLine.types,
+		CardSupertypes:               typeLine.supertypes,
+		CardSubtypes:                 typeLine.subtypes,
 		Colors:                       spellColors(spellDef),
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
@@ -445,16 +447,17 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, game.FaceFront, spellDef, announced)
+	castFace := castSelectionFace(g, playerID, spellDef, false)
+	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, game.FaceFront, castFace, announced)
 	if !valid || castFromZoneProhibited(g, playerID, sourceZone) ||
-		spellCastProhibited(g, playerID, spellDef) || spellCastLimitReached(g, playerID, spellDef) {
+		spellCastProhibited(g, playerID, castFace) || spellCastLimitReached(g, playerID, castFace) {
 		return false
 	}
 	mutateCost, ok := spellDef.MutateCost()
 	if !ok ||
 		!spellDef.HasType(types.Creature) ||
 		!isSupportedSpell(spellDef) ||
-		!canCastAtCurrentTiming(g, playerID, spellDef) ||
+		!canCastAtCurrentTiming(g, playerID, castFace) ||
 		!mutateTargetLegal(g, playerID, card.Owner, spellDef, targetID) {
 		return false
 	}
@@ -540,7 +543,7 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
 		!spellTargetsValidForCast(g, playerID, spellDef, chosenModes, targets, xValue, 0, branch) ||
-		!canCastAtCurrentTiming(g, playerID, spellDef) {
+		!canCastAtCurrentTiming(g, playerID, castSelectionFace(g, playerID, spellDef, false)) {
 		return false
 	}
 	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
@@ -627,6 +630,7 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	stormCopies := stormCopyCount(g, spellDef)
 	g.Stack.Push(obj)
 	emitCastTargetEvents(g, obj, targetEvents)
+	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitEvent(g, game.Event{
 		Kind:                         game.EventSpellCast,
 		SourceID:                     sourceID,
@@ -636,9 +640,9 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		Face:                         game.FaceAlternate,
 		PermanentID:                  permanent.ObjectID,
 		TokenDef:                     permanent.TokenDef,
-		CardTypes:                    stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		CardTypes:                    typeLine.types,
+		CardSupertypes:               typeLine.supertypes,
+		CardSubtypes:                 typeLine.subtypes,
 		Colors:                       spellColors(spellDef),
 		CardCharacteristicsKnown:     true,
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
@@ -790,7 +794,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if face == game.FaceFused && (!canFuseFromZone(playerID, card, sourceZone) || !slices.Equal(chosenModes, game.FusedModes())) {
 		return false
 	}
-	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(spellDef, bestowed), announced)
+	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(g, playerID, spellDef, bestowed), announced)
 	if !valid {
 		return false
 	}
@@ -840,13 +844,14 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		!spellTargetsValidForCast(g, playerID, announcementDef, chosenModes, targets, xValue, kickerCount, branch) {
 		return false
 	}
-	if !canCastAtCurrentTiming(g, playerID, spellDef) {
+	castFace := castSelectionFace(g, playerID, spellDef, bestowed)
+	if !canCastAtCurrentTiming(g, playerID, castFace) {
 		return false
 	}
-	if spellCastProhibited(g, playerID, castSelectionFace(spellDef, bestowed)) {
+	if spellCastProhibited(g, playerID, castFace) {
 		return false
 	}
-	if spellCastLimitReached(g, playerID, spellDef) {
+	if spellCastLimitReached(g, playerID, castFace) {
 		return false
 	}
 	if kickerPaid && !spellHasKicker(spellDef) {
@@ -1051,6 +1056,7 @@ func spellCastXValues(g *game.Game, spellDef *game.CardDef, requests []payment.S
 					SourceZone: sourceZone,
 					Card:       request.Card,
 					SpendAs:    request.SpendAnyMana,
+					Bestowed:   request.Bestowed,
 					Cost:       &lowered,
 				})
 			})

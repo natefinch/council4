@@ -259,4 +259,13 @@ type ContinuousEffect struct {
 	// a nil immutable selection matches all cards in the specified zone.
 	CardZone      zone.Type
 	CardSelection *Selection
+	// SpellSelection extends a battlefield static ability's type-changing
+	// (layer 4) effect to each spell on the stack controlled by the effect's
+	// controller whose type line, as of the start of the type layer, matches the
+	// immutable selection ("The same is true for creature spells you control",
+	// CR 613.1d). The effect follows its source's current controller, and the
+	// spell's effective types are computed on demand rather than stored on the
+	// stack object. Nil keeps the effect off the stack; a non-nil selection
+	// carries only type, supertype and subtype predicates.
+	SpellSelection *Selection
 }

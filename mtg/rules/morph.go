@@ -153,7 +153,8 @@ func faceDownSpellRequest(player game.PlayerID, cardID id.ID, sourceZone zone.Ty
 }
 
 func canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind, permission game.PlayPermission) bool {
-	if !canAct(g, player) || player != g.Turn.PriorityPlayer || !canCastAtCurrentTiming(g, player, faceDownSpellDef()) || splitSecondOnStack(g) {
+	spell := castSelectionFace(g, player, faceDownSpellDef(), false)
+	if !canAct(g, player) || player != g.Turn.PriorityPlayer || !canCastAtCurrentTiming(g, player, spell) || splitSecondOnStack(g) {
 		return false
 	}
 	card, ok := g.GetCardInstance(cardID)
@@ -167,9 +168,9 @@ func canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, 
 	if _, ok := faceDownCostForCard(def, kind); !ok {
 		return false
 	}
-	if !slices.Contains(permanentTypePlayPermissions(g, player, zone.Graveyard, faceDownSpellDef()), permission) ||
+	if !slices.Contains(permanentTypePlayPermissions(g, player, zone.Graveyard, spell), permission) ||
 		castFromZoneProhibited(g, player, zone.Graveyard) ||
-		spellCastProhibited(g, player, faceDownSpellDef()) || spellCastLimitReached(g, player, faceDownSpellDef()) {
+		spellCastProhibited(g, player, spell) || spellCastLimitReached(g, player, spell) {
 		return false
 	}
 	return paymentOrch.canPaySpellCosts(g, faceDownSpellRequest(player, cardID, zone.Graveyard))
@@ -193,7 +194,7 @@ func (*Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.I
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || splitSecondOnStack(g) || kind == game.FaceDownNone {
 		return false
 	}
-	spell := faceDownSpellDef()
+	spell := castSelectionFace(g, playerID, faceDownSpellDef(), false)
 	if !canCastAtCurrentTiming(g, playerID, spell) || castFromZoneProhibited(g, playerID, zone.Hand) ||
 		spellCastProhibited(g, playerID, spell) || spellCastLimitReached(g, playerID, spell) {
 		return false
@@ -280,9 +281,12 @@ func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast acti
 	obj.ManaSpentByColorToCast = manaSpentByColor(result.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(result.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(result.PoolSpend)
+	// The event carries only the face-down characteristics (CR 708.2), changed
+	// by any type effects that apply to the controller's creature spells.
+	typeLine := stackSpellTypeLine(g, obj, faceDownStackSpellDef(obj))
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID: cast.CardID, StackObjectID: obj.ID, CardID: cast.CardID, Controller: player,
-		Face: cast.Face, CardTypes: []types.Card{types.Creature},
+		Face: cast.Face, CardTypes: typeLine.types, CardSupertypes: typeLine.supertypes, CardSubtypes: typeLine.subtypes,
 		Colors:                       nil, // Face-down spells are colorless (CR 708.2b).
 		ManaValue:                    opt.Val(0),
 		ManaSpentToCast:              opt.Val(obj.ManaSpentToCast),

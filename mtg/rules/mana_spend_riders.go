@@ -259,11 +259,20 @@ func resolveSpellCastManaSpendRiders(
 	})
 }
 
+// manaSpendConditionSatisfied reports whether the spell cast with spellDef as
+// its base face satisfies rider's spend condition. The condition reads the
+// spell's effective characteristics, the same ones the payment planner tests
+// (rulesPaymentState.SpellCharacteristics): its characteristic-defining
+// abilities, a bestowed cast (CR 702.103b: not a creature spell) and
+// type-changing effects that apply to its controller's spells.
 func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spellObj *game.StackObject, spellDef *game.CardDef) bool {
-	// CR 702.103b: a spell cast for its bestow cost is not a creature spell while
-	// on the stack, so creature-spell mana-spend riders never see it as a creature.
 	bestowed := spellObj != nil && spellObj.Kind == game.StackSpell && spellObj.Bestowed
-	isCreatureSpell := spellDef != nil && spellDef.HasType(types.Creature) && !bestowed
+	caster := rider.Controller
+	if spellObj != nil && spellObj.Kind == game.StackSpell {
+		caster = spellObj.Controller
+	}
+	spellDef = castSelectionFace(g, caster, spellDef, bestowed)
+	isCreatureSpell := spellDef != nil && spellDef.HasType(types.Creature)
 	switch rider.Rider.Condition {
 	case game.ManaSpendCastCommanderCreatureType:
 		return !bestowed && spellSatisfiesCommanderCreatureTypeRider(g, rider.Controller, spellDef)

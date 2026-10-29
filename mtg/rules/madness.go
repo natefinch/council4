@@ -131,15 +131,16 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 	stackObj.ManaSpentByColorToCast = manaSpentByColor(poolSpent)
 	stackObj.ManaSpentToCast = totalManaSpent(poolSpent)
 	stackObj.ManaFromCreaturesSpentToCast = creatureManaSpent(poolSpent)
+	typeLine := stackSpellTypeLine(g, stackObj, spellDef)
 	emitSpellCastEventsWithTargets(g, stackObj, game.Event{
 		SourceID:                     card.ID,
 		StackObjectID:                stackObj.ID,
 		Controller:                   playerID,
 		CardID:                       card.ID,
 		Face:                         game.FaceFront,
-		CardTypes:                    stackObjectCardTypes(stackObj, spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(stackObj, spellDef),
+		CardTypes:                    typeLine.types,
+		CardSupertypes:               typeLine.supertypes,
+		CardSubtypes:                 typeLine.subtypes,
 		Colors:                       spellColors(spellDef),
 		ManaValue:                    stackObjectKnownManaValue(g, stackObj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(poolSpent)),
