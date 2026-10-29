@@ -305,14 +305,16 @@ func cloneStack(s Stack) Stack {
 }
 
 // NewStackObjectCopy returns a copy of o as a new stack object on the stack
-// (CR 707) with a fresh ID and Copy set. The copy owns its own mutable target
-// and resolution state while sharing immutable rules data (the inline ability
-// bodies and source token definition), so re-choosing the copy's targets never
-// disturbs the original.
+// (CR 707) with a fresh ID and Copy set. The copy is not cast (CR 707.10), even
+// when o is a cast copy. The copy owns its own mutable target and resolution
+// state while sharing immutable rules data (the inline ability bodies and source
+// token definition), so re-choosing the copy's targets never disturbs the
+// original.
 func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
 	clone := cloneStackObject(o)
 	clone.ID = newID
 	clone.Copy = true
+	clone.CastCopy = false
 	clone.CopyOwner = opt.Val(o.Controller)
 	clone.AbilityOwner = opt.V[PlayerID]{}
 	clone.ResolutionOrdinalThisTurn = 0

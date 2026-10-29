@@ -76,8 +76,9 @@ type Permanent struct {
 	Controller PlayerID
 
 	// EnteredFromCast and CastXValue preserve the cast state of the spell that
-	// became this permanent. A spell copy retains its announced X without
-	// becoming a cast; ordinary tokens and put-onto-battlefield entries have X=0.
+	// became this permanent. A spell copy put onto the stack retains its
+	// announced X without becoming a cast, while a cast copy (CR 707.12) was
+	// cast; ordinary tokens and put-onto-battlefield entries have X=0.
 	EnteredFromCast      bool
 	CastXValue           int
 	HasSpellAnnouncement bool

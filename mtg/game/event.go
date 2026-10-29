@@ -311,8 +311,8 @@ type Event struct {
 	// trigger's intervening "if its dash cost was paid" condition.
 	EnterDashed bool
 
-	// EnterWasCast records whether a permanent entered from resolving a cast,
-	// non-copy spell.
+	// EnterWasCast records whether a permanent entered from resolving a cast
+	// spell: a non-copy spell or a copy that was itself cast (CR 707.12).
 	EnterWasCast bool
 	// EnterHasSpellAnnouncement includes copied spell decisions without implying
 	// an actual cast or any mana spent.

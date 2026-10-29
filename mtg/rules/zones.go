@@ -84,21 +84,21 @@ type permanentCreationOptions struct {
 	// spent to cast the spell that is resolving into this permanent, so a
 	// Converge enters-with-counters replacement ("for each color of mana spent
 	// to cast it") reads the count as the permanent enters. It is zero for a
-	// permanent that did not enter from a cast spell (a token, a copy, a
+	// permanent that did not enter from a cast spell (a token, an uncast copy, a
 	// put-into-play effect).
 	ColorsOfManaSpentToCast int
 	// ManaSpentByColorToCast carries, per color, how much colored mana was spent
 	// to cast the spell that is resolving into this permanent, so an Adamant
 	// enters-with-counters replacement ("if at least three <color> mana was spent
 	// to cast this spell") reads it as the permanent enters. It is nil for a
-	// permanent that did not enter from a cast spell (a token, a copy, a
+	// permanent that did not enter from a cast spell (a token, an uncast copy, a
 	// put-into-play effect).
 	ManaSpentByColorToCast map[color.Color]int
 	// ManaSpentToCast carries the total amount of mana spent to cast the spell
 	// that is resolving into this permanent, so Mockingbird's "with mana value
 	// less than or equal to the amount of mana spent to cast this creature"
 	// enters-as-copy filter reads it as the permanent enters. It is zero for a
-	// permanent that did not enter from a cast spell (a token, a copy, a
+	// permanent that did not enter from a cast spell (a token, an uncast copy, a
 	// put-into-play effect).
 	ManaSpentToCast int
 	// PutByAbilitySource records the object identity of the ability source that
