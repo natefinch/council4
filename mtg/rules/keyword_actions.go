@@ -178,12 +178,13 @@ func discardCards(g *game.Game, playerID game.PlayerID, amount int) bool {
 		return false
 	}
 	discarded := false
+	simultaneousID := g.IDGen.Next()
 	for range amount {
 		cardID, ok := player.Hand.Top()
 		if !ok {
 			return discarded
 		}
-		if !discardCardFromHand(g, playerID, cardID) {
+		if !discardCardFromHandInBatch(g, playerID, cardID, simultaneousID) {
 			return discarded
 		}
 		discarded = true
