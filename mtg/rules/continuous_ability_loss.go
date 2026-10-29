@@ -237,7 +237,7 @@ func continuousLayerCandidates(g *game.Game, sources []staticAbilitySource, laye
 				}
 				effect := template
 				effect.SourceObjectID, effect.SourceCardID = sourceObjectID(source), source.cardID
-				effect.Controller, effect.Timestamp = source.controller, source.timestamp
+				effect.Controller, effect.Timestamp = source.controller, staticEffectTimestamp(source, body, &template)
 				if effect.AffectedSource {
 					if source.permanent == nil {
 						continue

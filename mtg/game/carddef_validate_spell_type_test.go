@@ -158,3 +158,48 @@ func TestValidateCardDefOwnedCardTypeEffect(t *testing.T) {
 		t.Fatalf("validatePrimitive() = %v, want owned card type effect rejection", err)
 	}
 }
+
+func entryChoiceCreatureTypeOverwrite() ContinuousEffect {
+	effect := creatureOwnedCardTypeEffect()
+	effect.AddTypes = nil
+	effect.SetSubtypeFromSourceChoice = EntryTypeChoiceKey
+	effect.SetSubtypeChoiceType = types.Creature
+	return effect
+}
+
+// TestValidateCardDefEntryChoiceCreatureTypeOverwrite proves a group, spell and
+// owned-card type effect may overwrite creature types with the source's entry
+// creature-type choice (Conspiracy), and rejects any other subtype family or
+// key.
+func TestValidateCardDefEntryChoiceCreatureTypeOverwrite(t *testing.T) {
+	t.Parallel()
+	if issues := ValidateCardDef(spellTypeEffectCard(entryChoiceCreatureTypeOverwrite(), zone.None)); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+	landFamily := entryChoiceCreatureTypeOverwrite()
+	landFamily.SetSubtypeChoiceType = types.Land
+	unknownKey := entryChoiceCreatureTypeOverwrite()
+	unknownKey.SetSubtypeFromSourceChoice = EntryColorChoiceKey
+	noFamily := entryChoiceCreatureTypeOverwrite()
+	noFamily.SetSubtypeChoiceType = ""
+	noAffected := entryChoiceCreatureTypeOverwrite()
+	noAffected.Group = GroupReference{}
+	noAffected.SpellSelection = nil
+	noAffected.OwnedCardSelection = nil
+	for name, test := range map[string]struct {
+		effect ContinuousEffect
+		path   string
+	}{
+		"land family":      {landFamily, "SetSubtypeChoiceType"},
+		"unknown key":      {unknownKey, "SetSubtypeFromSourceChoice"},
+		"no family":        {noFamily, "SetSubtypeChoiceType"},
+		"nothing affected": {noAffected, "AffectedSource"},
+	} {
+		issues := ValidateCardDef(spellTypeEffectCard(test.effect, zone.None))
+		if !slices.ContainsFunc(issues, func(issue CardDefIssue) bool {
+			return issue.Code == CardDefIssueInvalidReference && strings.HasSuffix(issue.Path, test.path)
+		}) {
+			t.Errorf("%s: issues = %+v, want invalid reference on %s", name, issues, test.path)
+		}
+	}
+}
