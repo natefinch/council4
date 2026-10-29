@@ -452,8 +452,9 @@ func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
 		return
 	}
 	cards := player.Hand.All()
+	simultaneousID := g.IDGen.Next()
 	for i := len(cards) - 1; i >= maximumHandSize; i-- {
-		discardCardFromHand(g, playerID, cards[i])
+		discardCardFromHandInBatch(g, playerID, cards[i], simultaneousID)
 	}
 }
 
@@ -476,8 +477,11 @@ func (e *Engine) discardToMaximumHandSizeWithChoices(g *game.Game, playerID game
 		Kind: game.ChoiceZoneSelection, Player: playerID, Prompt: "Discard to maximum hand size.",
 		Options: options, MinChoices: count, MaxChoices: count, DefaultSelection: defaults,
 	}, log)
+	// CR 514.1: the cleanup discard is one simultaneous discard of every
+	// chosen card, so "one or more" triggers see a single batch.
+	simultaneousID := g.IDGen.Next()
 	for _, index := range selected {
-		discardCardFromHand(g, playerID, cards[index])
+		discardCardFromHandInBatch(g, playerID, cards[index], simultaneousID)
 	}
 }
 
