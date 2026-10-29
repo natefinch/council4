@@ -349,7 +349,7 @@ func sacrificePermanentsSimultaneously(g *game.Game, permanents []*game.Permanen
 	for _, event := range events {
 		emitEvent(g, event)
 	}
-	settleDepartedControl(g)
+	settleControlChanges(g)
 	return len(events) > 0
 }
 

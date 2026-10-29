@@ -2021,7 +2021,7 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		g.ContinuousEffects = append(g.ContinuousEffects, runtimeEffect)
 		applied = true
 	}
-	settleDepartedControl(g)
+	settleControlChanges(g)
 	return applied
 }
 

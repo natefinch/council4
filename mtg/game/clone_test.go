@@ -91,6 +91,7 @@ func buildRichGame(t *testing.T) *Game {
 		DamageAssignment: map[id.ID]int{perm.ObjectID: 2},
 		// A creature still blocking after its attacker was removed from combat.
 		BlockersOfRemovedAttackers: map[id.ID]bool{12: true},
+		CombatantControllers:       map[id.ID]PlayerID{perm.ObjectID: Player1},
 	}
 
 	// Day/night pointer.
@@ -367,6 +368,7 @@ func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	c.Players[Player1].CommanderCastCounts[g.Players[Player1].CommanderInstanceID] = 7
 	c.Combat.BlockerOrder[g.Battlefield[0].ObjectID] = append(c.Combat.BlockerOrder[g.Battlefield[0].ObjectID], 99)
 	delete(c.Combat.BlockersOfRemovedAttackers, 12)
+	c.Combat.CombatantControllers[g.Battlefield[0].ObjectID] = Player2
 	c.SkippedSteps[Player1][StepDraw] = 99
 	*c.DayNight = Day
 	// Draw a card on the clone (move zones).
@@ -417,6 +419,9 @@ func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	}
 	if !g.Combat.BlockersOfRemovedAttackers[12] {
 		t.Error("original blockers of removed attackers changed")
+	}
+	if got := g.Combat.CombatantControllers[g.Battlefield[0].ObjectID]; got != Player1 {
+		t.Errorf("original combatant controller changed: got %v, want Player1", got)
 	}
 	if g.SkippedSteps[Player1][StepDraw] != 1 {
 		t.Errorf("original skipped steps changed: %d != 1", g.SkippedSteps[Player1][StepDraw])

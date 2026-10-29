@@ -663,6 +663,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	}
 	for _, declaration := range declare.Attackers {
 		g.Combat.PlayersAttacked[declaration.Target.Player] = true
+		recordCombatantController(g, declaration.Attacker)
 	}
 	simultaneousID := id.ID(0)
 	if len(declare.Attackers) > 1 {
@@ -803,6 +804,9 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 		blocking[block.Blocker] = true
 	}
 	g.Combat.Blockers = append(g.Combat.Blockers, blocks...)
+	for _, block := range blocks {
+		recordCombatantController(g, block.Blocker)
+	}
 	newlyBlocked := make([]bool, len(blocks))
 	newlyBlocking := make([]bool, len(blocks))
 	for i, block := range blocks {

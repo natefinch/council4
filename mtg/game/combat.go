@@ -120,6 +120,12 @@ type CombatState struct {
 	// their blockers later leave combat.
 	BlockedAttackers map[id.ID]bool
 
+	// CombatantControllers records the controller each current attacking or
+	// blocking creature had when it became one. A combatant whose controller
+	// later changes, by any control effect starting, ending or changing, is
+	// removed from combat (CR 506.4); its entry is dropped with it.
+	CombatantControllers map[id.ID]PlayerID
+
 	// BlockerOrder maps each attacker's ObjectID to the ordered list of
 	// its blockers for damage assignment (CR 510.1c). The attacking
 	// player chooses this order.
