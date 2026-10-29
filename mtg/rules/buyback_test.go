@@ -595,41 +595,63 @@ func TestBuybackCastCopyUsesSharedCastHooks(t *testing.T) {
 		t.Fatal("genuine card-copy cast failed")
 	}
 	objects := g.Stack.Objects()
-	castCopy, stormCopy := objects[1], objects[2]
-	if stackSpellCanBeCountered(g, castCopy) || !stackSpellCanBeCountered(g, stormCopy) ||
-		len(g.RuleEffects) != 0 {
-		t.Fatal("genuine cast did not consume the shared next-spell hook independently of its storm copy")
+	if len(objects) != 2 {
+		t.Fatalf("storm copied the cast copy before its storm trigger resolved: %+v", objects)
+	}
+	castCopy := objects[1]
+	if stackSpellCanBeCountered(g, castCopy) || len(g.RuleEffects) != 0 {
+		t.Fatal("genuine cast did not consume the shared next-spell hook")
 	}
 	for _, branch := range []*game.Game{g, g.Clone()} {
 		if !engine.putTriggeredAbilitiesOnStack(branch) {
 			t.Fatal("shared cast-event hooks captured no triggers")
 		}
-		self, cast, copies := 0, 0, 0
+		self, cast, copies, storm := 0, 0, 0, 0
 		for _, obj := range branch.Stack.Objects() {
 			if obj.Kind != game.StackTriggeredAbility {
 				continue
 			}
-			switch obj.SourceID {
-			case castOnly.ObjectID:
+			switch {
+			case isStormTrigger(obj):
+				storm++
+			case obj.SourceID == castOnly.ObjectID:
 				cast++
-			case magecraft.ObjectID:
+			case obj.SourceID == magecraft.ObjectID:
 				copies++
-			case castCopy.ID:
+			case obj.SourceID == castCopy.ID:
 				if obj.SourceCardID != 0 || obj.SourceTokenDef == nil {
 					t.Fatal("cast-copy self trigger borrowed the imprinted physical source")
 				}
 				self++
 			default:
-				t.Fatal("non-cast storm copy produced a self-cast trigger")
+				t.Fatal("unexpected triggered ability from the cast copy")
 			}
 		}
-		if self != 1 || cast != 1 || copies != 2 {
-			t.Fatalf("shared boundary conflated cast/copy triggers: self=%d cast=%d magecraft=%d", self, cast, copies)
+		if self != 1 || cast != 1 || copies != 1 || storm != 1 {
+			t.Fatalf("shared boundary conflated cast/copy triggers: self=%d cast=%d magecraft=%d storm=%d",
+				self, cast, copies, storm)
 		}
-		for range 4 {
+		if top, _ := branch.Stack.Peek(); !isStormTrigger(top) {
+			t.Fatalf("stack top = %+v, want the storm trigger", top)
+		}
+		engine.resolveTopOfStack(branch, &TurnLog{})
+		stormCopy, _ := branch.Stack.Peek()
+		if !stormCopy.Copy || stormCopy.SourceID != castCopy.SourceID ||
+			!stackSpellCanBeCountered(branch, stormCopy) {
+			t.Fatal("storm copy was missing or consumed the cast copy's next-spell hook")
+		}
+		if engine.putTriggeredAbilitiesOnStack(branch); branch.Stack.Size() != 7 {
+			t.Fatalf("storm copy did not trigger magecraft exactly once: stack=%d", branch.Stack.Size())
+		}
+		engine.resolveTopOfStack(branch, &TurnLog{})
+		if top, _ := branch.Stack.Peek(); top.ID != stormCopy.ID {
+			t.Fatal("storm copy magecraft trigger did not resolve above the copy")
+		}
+		branch.Stack.RemoveByID(stormCopy.ID)
+		for range 3 {
 			engine.resolveTopOfStack(branch, &TurnLog{})
 		}
-		if branch.Players[game.Player1].Life != 51 || branch.Stack.Size() != 3 ||
+		if branch.Players[game.Player1].Life != 51 || branch.Stack.Size() != 2 ||
 			!branch.Players[game.Player4].Exile.Contains(cardID) ||
 			branch.CardInstances[cardID].ZoneVersion != 0 {
 			t.Fatal("shared captured triggers lost their controller/source across cloning")

@@ -275,9 +275,6 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 
-	// stormCopyCount must be read before the spell-cast event is emitted, since
-	// that event increments the storm count for later spells this turn.
-	stormCopies := stormCopyCount(g, spellDef)
 	// CR 601.2i: the costs are paid, so the spell becomes cast. The card is
 	// already on the stack; emit its zone-change and spell-cast events now so
 	// "when you cast" triggers fire after payment.
@@ -299,7 +296,6 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		FromZone:                     sourceZone,
 		ToZone:                       zone.Stack,
 	}, targetEvents)
-	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	return true
 }
@@ -627,7 +623,6 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 
 		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
-	stormCopies := stormCopyCount(g, spellDef)
 	g.Stack.Push(obj)
 	emitCastTargetEvents(g, obj, targetEvents)
 	typeLine := stackSpellTypeLine(g, obj, spellDef)
@@ -653,7 +648,6 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 
 		PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, playerID),
 	})
-	createStormCopies(g, obj, spellDef, stormCopies)
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)

@@ -131,6 +131,7 @@ func TestTokenPreparedStormCopiesPreserveSourceDefinition(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, preparedCast) {
 		t.Fatal("casting token's prepared storm spell failed")
 	}
+	resolveStormTrigger(t, engine, g, nil)
 	if g.Stack.Size() != 2 {
 		t.Fatalf("stack size = %d, want original plus storm copy", g.Stack.Size())
 	}

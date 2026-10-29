@@ -815,6 +815,10 @@ func TestSpellCopyTriggerFiresForStormCopy(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(stormID, nil, 0, nil)) {
 		t.Fatal("storm spell cast failed")
 	}
+	if got := spellCopiedEventCount(g); got != 0 {
+		t.Fatalf("EventSpellCopied count = %d before the storm trigger resolved, want 0", got)
+	}
+	resolveStormTrigger(t, engine, g, nil)
 
 	if got := spellCopiedEventCount(g); got != 1 {
 		t.Fatalf("EventSpellCopied count = %d, want 1 storm copy", got)
@@ -824,7 +828,7 @@ func TestSpellCopyTriggerFiresForStormCopy(t *testing.T) {
 	}
 
 	if !engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("storm cast did not put any triggered abilities on stack")
+		t.Fatal("storm copy did not put any triggered abilities on stack")
 	}
 
 	magecraftTriggers, castOnlyTriggers := 0, 0

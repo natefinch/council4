@@ -382,6 +382,17 @@ type Event struct {
 	// the stack object, so stack copies do not inherit it.
 	CascadeInstances opt.V[int]
 
+	// SpellsCastBeforeThisTurn records, on an EventSpellCast, how many other
+	// spells any player had cast earlier this turn as the spell became cast
+	// (CR 601.2i). The spell's storm triggers copy it this many times (CR
+	// 702.40a); copies put directly onto the stack were never cast and are not
+	// counted.
+	SpellsCastBeforeThisTurn opt.V[int]
+
+	// StormInstances records, on an EventSpellCast, how many storm instances
+	// the spell had as it became cast (CR 702.40b), like CascadeInstances.
+	StormInstances opt.V[int]
+
 	// ManaSpentToCast records the total amount of mana spent to cast the spell
 	// for spell-cast triggers whose intervening-if reads the mana actually paid
 	// ("if no mana was spent to cast it", "if at least four mana was spent to

@@ -73,6 +73,13 @@ func TestBuybackIndependentStormCopies(t *testing.T) {
 		independentBuybackAgent(t, independentChooseBuyback), log) {
 		t.Fatal("paid original with storm failed to cast")
 	}
+	if objects := g.Stack.Objects(); len(objects) != 2 || !objects[1].BuybackPaid {
+		t.Fatalf("expected subject and paid original before the storm trigger: %+v", objects)
+	}
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("storm did not trigger")
+	}
+	engine.resolveTopOfStack(g, log)
 	objects := g.Stack.Objects()
 	if len(objects) != 3 || !objects[1].BuybackPaid || !objects[2].Copy {
 		t.Fatalf("expected subject, paid original, and real storm copy: %+v", objects)

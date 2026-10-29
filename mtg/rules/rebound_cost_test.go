@@ -291,6 +291,7 @@ func TestReboundCastOptionalCostsAndStormCopies(t *testing.T) {
 			if got := g.Players[game.Player1].ManaPool.Total(); got != 0 {
 				t.Fatalf("mana pool = %d, want all spent", got)
 			}
+			resolveStormTrigger(t, e, g, nil)
 			copies := 0
 			for _, stackObj := range g.Stack.Objects() {
 				if stackObj.Copy && stackObj.SourceID == cardID {

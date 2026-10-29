@@ -41,6 +41,14 @@ func cascadeTriggeredAbility() *game.TriggeredAbility {
 // on the stack object, so stack copies never inherit it and later changes to the
 // grants do not alter it.
 func spellCascadeInstancesAtCast(g *game.Game, event game.Event) int {
+	return spellKeywordInstancesAtCast(g, event, game.Cascade)
+}
+
+// spellKeywordInstancesAtCast counts the instances of a "when you cast this
+// spell" keyword trigger (cascade, storm) the cast spell has as it becomes cast,
+// from the spell's own statics that work on the stack and from active spell
+// keyword grants, as documented on spellCascadeInstancesAtCast.
+func spellKeywordInstancesAtCast(g *game.Game, event game.Event, keyword game.Keyword) int {
 	if event.Kind != game.EventSpellCast {
 		return 0
 	}
@@ -73,8 +81,8 @@ func spellCascadeInstancesAtCast(g *game.Game, event game.Event) int {
 				continue
 			}
 			instances := 0
-			for _, keyword := range game.BodyKeywordAbilities(static) {
-				if game.KeywordAbilityKind(keyword) == game.Cascade {
+			for _, ability := range game.BodyKeywordAbilities(static) {
+				if game.KeywordAbilityKind(ability) == keyword {
 					instances++
 				}
 			}
@@ -85,7 +93,7 @@ func spellCascadeInstancesAtCast(g *game.Game, event game.Event) int {
 	}
 	for _, effect := range activeRuleEffects(g) {
 		if effect.Kind == game.RuleEffectGrantSpellKeyword &&
-			effect.GrantedKeyword == game.Cascade &&
+			effect.GrantedKeyword == keyword &&
 			spellKeywordGrantMatches(g, &effect, event.Controller, grantDef, cardID, event.FromZone) {
 			count++
 		}

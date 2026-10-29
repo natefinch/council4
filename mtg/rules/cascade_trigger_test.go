@@ -438,6 +438,7 @@ func TestStormCopiesOfCascadeSpellDoNotCascade(t *testing.T) {
 		!engine.applyAction(g, game.Player1, action.CastSpell(spellID, nil, 0, nil)) {
 		t.Fatal("casting warmup and storm cascade spell failed")
 	}
+	resolveStormTrigger(t, engine, g, nil)
 	copies := 0
 	for _, obj := range g.Stack.Objects() {
 		if obj.Copy && obj.SourceID == spellID {

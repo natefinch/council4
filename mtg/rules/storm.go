@@ -6,51 +6,108 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func stormCopyCount(g *game.Game, spell *game.CardDef) int {
-	if spell == nil || !spell.HasKeyword(game.Storm) {
-		return 0
+// stormTriggeredAbility is the "When you cast this spell" triggered ability a
+// storm instance creates (CR 702.40a). It carries the Storm keyword so
+// resolution dispatches to the shared storm operation. It has no targets, so it
+// can be countered (Stifle) or copied like any triggered ability.
+func stormTriggeredAbility() *game.TriggeredAbility {
+	return &game.TriggeredAbility{
+		Text:             "Storm",
+		KeywordAbilities: game.SimpleKeywords(game.Storm),
 	}
-	count := eventsThisTurnWindow(g).count(func(event game.Event) bool {
-		return event.Kind == game.EventSpellCast
-	})
-	return count
 }
 
-func createStormCopies(g *game.Game, original *game.StackObject, spell *game.CardDef, count int) {
+// spellsCastEarlierThisTurn counts the spells any player has cast this turn
+// before the spell-cast event being prepared now. Copies put directly onto the
+// stack are not cast and emit no EventSpellCast.
+func spellsCastEarlierThisTurn(g *game.Game) int {
+	return eventsThisTurnWindow(g).count(func(event game.Event) bool {
+		return event.Kind == game.EventSpellCast
+	})
+}
+
+// stormCastTriggers returns one pending storm trigger for each storm instance a
+// genuinely cast spell had as it became cast (CR 702.40a/b). Only
+// EventSpellCast reaches here, so non-cast stack copies never storm (CR 707.10),
+// while a cast copy of a card does (CR 707.12). The trigger keeps the cast
+// event, whose SpellsCastBeforeThisTurn fixes the number of copies. Emitted
+// spell-cast events carry the instances recorded as the spell became cast; a raw
+// event that bypassed emission is evaluated now.
+func stormCastTriggers(g *game.Game, source *game.Permanent, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventSpellCast {
+		return nil
+	}
+	count := event.StormInstances.Val
+	if !event.StormInstances.Exists {
+		count = spellKeywordInstancesAtCast(g, event, game.Storm)
+	}
+	if count == 0 {
+		return nil
+	}
+	pending := make([]pendingTriggeredAbility, 0, count)
+	for range count {
+		pending = append(pending, pendingTriggeredAbility{
+			controller:      event.Controller,
+			sourceID:        source.ObjectID,
+			sourceCardID:    source.CardInstanceID,
+			sourceToken:     source.TokenDef,
+			face:            event.Face,
+			inline:          stormTriggeredAbility(),
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
+		})
+	}
+	return pending
+}
+
+// resolveStormTriggeredAbility copies the spell that triggered it once for each
+// other spell cast before it this turn (CR 702.40a). The spell is copied as it
+// currently exists on the stack, or from its last known information if it has
+// already left the stack (CR 608.2h), so countering the spell in response does
+// not stop the copies; countering this trigger does. The trigger's controller
+// puts each copy onto the stack and, when the spell has targets, may choose new
+// targets for each copy independently (CR 707.10c). A copy is put onto the
+// stack before the next copy's targets are chosen, so later copies can target
+// earlier ones.
+func (e *Engine) resolveStormTriggeredAbility(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if !obj.HasTriggerEvent || !obj.TriggerEvent.SpellsCastBeforeThisTurn.Exists {
+		return "missing source"
+	}
+	original, ok := stormSpell(g, obj)
+	if !ok {
+		return "missing source"
+	}
+	count := obj.TriggerEvent.SpellsCastBeforeThisTurn.Val
 	if count > 0 {
-		addend, _ := additionalSpellCopies(g, original.Controller)
+		addend, _ := additionalSpellCopies(g, obj.Controller)
 		count += addend
 	}
 	for range count {
-		copyObj := &game.StackObject{
-			ID:                  g.IDGen.Next(),
-			Kind:                game.StackSpell,
-			SourceID:            original.SourceID,
-			Face:                original.Face,
-			SourceCardID:        original.SourceCardID,
-			SourceTokenDef:      original.SourceTokenDef,
-			Controller:          original.Controller,
-			Targets:             append([]game.Target(nil), original.Targets...),
-			TargetCounts:        append([]int(nil), original.TargetCounts...),
-			ChosenModes:         append([]int(nil), original.ChosenModes...),
-			XValue:              original.XValue,
-			KickerPaid:          original.KickerPaid,
-			BuybackPaid:         original.BuybackPaid,
-			Overloaded:          original.Overloaded,
-			Flashback:           original.Flashback,
-			Suspend:             original.Suspend,
-			Mutate:              original.Mutate,
-			MutateTargetID:      original.MutateTargetID,
-			Bestowed:            original.Bestowed,
-			Copy:                true,
-			CopyOwner:           opt.Val(original.Controller),
-			SourceZone:          original.SourceZone,
-			AdditionalCostsPaid: append([]string(nil), original.AdditionalCostsPaid...),
-			PaidCostSubjects:    game.ClonePaidCostSubjects(original.PaidCostSubjects),
+		copyObj := game.NewStackObjectCopy(original, g.IDGen.Next())
+		copyDef, copyOK := prepareStackSpellCopy(g, original, copyObj, nil)
+		if !copyOK {
+			continue
 		}
+		copyObj.Controller = obj.Controller
+		copyObj.CopyOwner = opt.Val(obj.Controller)
+		e.mayRetargetStackObjectChoice(g, obj.Controller, copyObj, agents, log)
 		g.Stack.Push(copyObj)
-		emitSpellCopiedEvent(g, copyObj, spell)
+		emitSpellCopiedEvent(g, copyObj, copyDef)
 	}
+	return "resolved"
+}
+
+// stormSpell returns the spell a storm trigger copies: the spell itself while it
+// is still on the stack, otherwise its last known information.
+func stormSpell(g *game.Game, obj *game.StackObject) (*game.StackObject, bool) {
+	if spell, ok := stackObjectByID(g, obj.TriggerEvent.StackObjectID); ok && spell.Kind == game.StackSpell {
+		return spell, true
+	}
+	if obj.TriggerSpellLKI != nil && obj.TriggerSpellLKI.ID == obj.TriggerEvent.StackObjectID {
+		return obj.TriggerSpellLKI, true
+	}
+	return nil, false
 }
 
 // emitSpellCopiedEvent records that a spell copy was created on the stack
