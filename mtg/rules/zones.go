@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"math/rand/v2"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -953,10 +954,15 @@ type simultaneousCardMove struct {
 // Every card's replacements and its owner's choices, including the commander
 // option (CR 903.9b), are determined against the pre-move state, owners in APNAP
 // order (CR 101.4, 400.6, 616.1); only then do the cards move together, in the
-// given order (which fixes their relative library-bottom placement). A card that
-// has left its source incarnation is skipped. Replacement shuffles wait until the
+// given order (which fixes their relative library placement). A card that has
+// left its source incarnation is skipped. Replacement shuffles wait until the
 // whole batch has moved so they cannot disturb its other members.
-func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardMove, toZone zone.Type, bottom bool, simultaneousID id.ID) bool {
+//
+// With a non-nil randomOrder, the cards that arrive in each owner's library are
+// then put in a random order among themselves ("in a random order", CR 401.2,
+// 702.85a, 701.57a). Choices and zone-change events still follow the given
+// order, so neither reveals the hidden random library order.
+func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardMove, toZone zone.Type, bottom bool, simultaneousID id.ID, randomOrder *rand.Rand) bool {
 	type preparedMove struct {
 		move        simultaneousCardMove
 		owner       game.PlayerID
@@ -995,6 +1001,7 @@ func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardM
 	}
 	moved := false
 	shuffle := make(map[game.PlayerID]bool)
+	arrived := make(map[game.PlayerID][]id.ID)
 	for _, entry := range prepared {
 		if !entry.Exists {
 			continue
@@ -1008,17 +1015,51 @@ func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardM
 		if moveCardBetweenZonesAfterReplacement(g, prep.owner, prep.move.card.CardID, prep.move.fromZone,
 			replacement, prep.event, zoneMoveOptions{bottom: bottom}, simultaneousID) {
 			moved = true
-			if prep.replacement.shuffleIntoLibrary && replacement.destination == zone.Library {
-				shuffle[prep.owner] = true
+			if replacement.destination == zone.Library {
+				arrived[prep.owner] = append(arrived[prep.owner], prep.move.card.CardID)
+				if prep.replacement.shuffleIntoLibrary {
+					shuffle[prep.owner] = true
+				}
 			}
 		}
 	}
 	for player := range game.NumPlayers {
 		if shuffle[game.PlayerID(player)] {
 			g.Players[player].Library.Shuffle(g.RNG)
+		} else if randomOrder != nil {
+			randomizeLibraryArrivals(&g.Players[player].Library, arrived[game.PlayerID(player)], randomOrder)
 		}
 	}
 	return moved
+}
+
+// randomizeLibraryArrivals randomly permutes cards among the library positions
+// they occupy, leaving every other card where it is. A card no longer in the
+// library is ignored.
+func randomizeLibraryArrivals(library *zone.Zone, cards []id.ID, rng *rand.Rand) {
+	var positions []int
+	var placed []id.ID
+	for index, cardID := range library.All() {
+		if slices.Contains(cards, cardID) {
+			positions = append(positions, index)
+			placed = append(placed, cardID)
+		}
+	}
+	if len(placed) < 2 {
+		return
+	}
+	faceDown := make(map[id.ID]bool, len(placed))
+	for _, cardID := range placed {
+		faceDown[cardID] = library.IsFaceDown(cardID)
+		library.Remove(cardID)
+	}
+	rng.Shuffle(len(placed), func(i, j int) {
+		placed[i], placed[j] = placed[j], placed[i]
+	})
+	for i, index := range positions {
+		library.InsertAt(index, placed[i])
+		library.SetFaceDown(placed[i], faceDown[placed[i]])
+	}
 }
 
 func moveCardBetweenZonesAfterReplacement(

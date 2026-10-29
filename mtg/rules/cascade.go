@@ -325,11 +325,14 @@ func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.Play
 // in a random order as one simultaneous move ("put all ... on the bottom"): every
 // card shares one batch id, so a one-or-more zone-change trigger sees one event
 // (CR 603.2c). Each card's zone-change replacements and commander choice are
-// determined before any card moves (CR 400.6, 614, 903.9b). A snapshot whose
-// card has left that exile incarnation is skipped.
+// determined before any card moves (CR 400.6, 614, 903.9b), in exile order, and
+// only the cards that actually arrive are then randomly ordered, so neither the
+// choices nor the zone-change events reveal the hidden library order (CR 401.2,
+// 702.85a, 701.57a). A snapshot whose card has left that exile incarnation is
+// skipped.
 func bottomExiledCards(g *game.Game, player *game.Player, cards []game.ZoneCardSnapshot, rng *rand.Rand) bool {
 	var moves []simultaneousCardMove
-	for _, snapshot := range randomlyOrderedSnapshots(cards, rng) {
+	for _, snapshot := range cards {
 		if player.Exile.Contains(snapshot.CardID) {
 			moves = append(moves, simultaneousCardMove{card: snapshot, fromZone: zone.Exile})
 		}
@@ -337,19 +340,7 @@ func bottomExiledCards(g *game.Game, player *game.Player, cards []game.ZoneCardS
 	if len(moves) == 0 {
 		return false
 	}
-	return moveCardsBetweenZonesSimultaneously(g, moves, zone.Library, true, g.IDGen.Next())
-}
-
-// randomlyOrderedSnapshots returns cards in a random order drawn from rng (or
-// unchanged without one), leaving the caller's slice intact.
-func randomlyOrderedSnapshots(cards []game.ZoneCardSnapshot, rng *rand.Rand) []game.ZoneCardSnapshot {
-	cards = slices.Clone(cards)
-	if rng != nil && len(cards) > 1 {
-		rng.Shuffle(len(cards), func(i, j int) {
-			cards[i], cards[j] = cards[j], cards[i]
-		})
-	}
-	return cards
+	return moveCardsBetweenZonesSimultaneously(g, moves, zone.Library, true, g.IDGen.Next(), rng)
 }
 
 func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
