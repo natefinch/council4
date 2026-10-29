@@ -2,6 +2,7 @@ package rules
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
@@ -631,6 +632,9 @@ func (ce combatEngine) attackersLegal(g *game.Game, playerID game.PlayerID, decl
 	if !attackDeclarationsSatisfyAloneRestriction(g, declare.Attackers, eligibleByID) {
 		return false
 	}
+	if !attackingBandsLegal(g, declare.Attackers, declare.Bands, eligibleByID) {
+		return false
+	}
 	return ce.canPayAttackTax(g, playerID, declare.Attackers)
 }
 
@@ -647,6 +651,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	}
 
 	g.Combat.Attackers = append([]game.AttackDeclaration(nil), declare.Attackers...)
+	g.Combat.Bands = game.CloneAttackingBands(declare.Bands)
 	g.Combat.AttackDeclarationComplete = true
 	if len(declare.Attackers) > 0 {
 		// CR 508.8: record that creatures attacked so the declare blockers and
@@ -718,6 +723,13 @@ func (combatEngine) blockersLegal(g *game.Game, playerID game.PlayerID, declare 
 		if seenPairs[pair] {
 			return false
 		}
+		// Declaring a blocker against a second member of a band it already
+		// blocks is redundant: blocking one member blocks the band (CR 702.22h).
+		for _, member := range attackingBandMembers(g.Combat, block.Blocking) {
+			if seenPairs[[2]id.ID{block.Blocker, member}] {
+				return false
+			}
+		}
 		seenPairs[pair] = true
 		seenBlockers[block.Blocker]++
 		if eligibleByID[block.Blocker] == nil {
@@ -764,7 +776,6 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 	}
 	eligibleByID := permanentMapByObjectID(eligibleBlockers(g, playerID))
 	g.Combat.BlockDeclarationsComplete[playerID] = true
-	g.Combat.Blockers = append(g.Combat.Blockers, declare.Blockers...)
 	if len(declare.Blockers) > 0 && g.Combat.BlockedAttackers == nil {
 		g.Combat.BlockedAttackers = make(map[id.ID]bool)
 	}
@@ -774,44 +785,75 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 	if len(declare.Blockers) > 0 && g.Combat.BlockDeclarationBatchID == 0 {
 		g.Combat.BlockDeclarationBatchID = g.IDGen.Next()
 	}
-	for _, block := range declare.Blockers {
-		attackerBecameBlocked := !g.Combat.BlockedAttackers[block.Blocking]
+	// A blocker declared against one member of a band also blocks every other
+	// member of that band (CR 702.22h). Every block is recorded before any
+	// block event, since all blocks are declared simultaneously (CR 509.1h-i).
+	var blocks []game.BlockDeclaration
+	for _, declared := range declare.Blockers {
+		for _, member := range attackingBandMembers(g.Combat, declared.Blocking) {
+			block := game.BlockDeclaration{Blocker: declared.Blocker, Blocking: member}
+			if member != declared.Blocking && (slices.Contains(g.Combat.Blockers, block) || slices.Contains(blocks, block)) {
+				continue
+			}
+			blocks = append(blocks, block)
+		}
+	}
+	blocking := make(map[id.ID]bool, len(g.Combat.Blockers)+len(blocks))
+	for _, block := range g.Combat.Blockers {
+		blocking[block.Blocker] = true
+	}
+	g.Combat.Blockers = append(g.Combat.Blockers, blocks...)
+	newlyBlocked := make([]bool, len(blocks))
+	newlyBlocking := make([]bool, len(blocks))
+	for i, block := range blocks {
+		newlyBlocked[i] = !g.Combat.BlockedAttackers[block.Blocking]
+		newlyBlocking[i] = !blocking[block.Blocker]
+		blocking[block.Blocker] = true
 		g.Combat.BlockedAttackers[block.Blocking] = true
 		g.Combat.BlockerOrder[block.Blocking] = append(g.Combat.BlockerOrder[block.Blocking], block.Blocker)
-		if attackerBecameBlocked {
-			if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
-				attackTarget, _ := attackTargetForAttacker(g, attacker.ObjectID)
-				emitEvent(g, game.Event{
-					Kind:               game.EventAttackerBecameBlocked,
-					SourceID:           attacker.CardInstanceID,
-					SourceObjectID:     attacker.ObjectID,
-					Controller:         effectiveController(g, attacker),
-					Player:             attackerDefendingPlayer(g, attacker.ObjectID),
-					PermanentID:        attacker.ObjectID,
-					RelatedPermanentID: block.Blocker,
-					AttackTarget:       attackTarget,
-					SimultaneousID:     g.Combat.BlockDeclarationBatchID,
-				})
-			}
-		}
-		blocker := eligibleByID[block.Blocker]
-		if blocker == nil {
-			continue
-		}
-		emitEvent(g, game.Event{
-			Kind:               game.EventBlockerDeclared,
-			SourceID:           blocker.CardInstanceID,
-			SourceObjectID:     blocker.ObjectID,
-			Controller:         effectiveController(g, blocker),
-			PermanentID:        blocker.ObjectID,
-			SubjectGoaded:      isGoadedNow(g, blocker),
-			SubjectGoadedKnown: true,
-			RelatedPermanentID: block.Blocking,
-			BlockedAttackerID:  block.Blocking,
-			SimultaneousID:     g.Combat.BlockDeclarationBatchID,
-		})
+	}
+	for i, block := range blocks {
+		emitBlockEvents(g, block, eligibleByID[block.Blocker], newlyBlocked[i], newlyBlocking[i])
 	}
 	return true
+}
+
+// emitBlockEvents emits one block's events in the declaration batch: the
+// attacker becoming blocked when this is its first blocker, then the blocker
+// blocking it, marked when this is the blocker's first block (CR 509.3).
+func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Permanent, attackerBecameBlocked, blockerBecameBlocking bool) {
+	if attackerBecameBlocked {
+		if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
+			attackTarget, _ := attackTargetForAttacker(g, attacker.ObjectID)
+			emitEvent(g, game.Event{
+				Kind:               game.EventAttackerBecameBlocked,
+				SourceID:           attacker.CardInstanceID,
+				SourceObjectID:     attacker.ObjectID,
+				Controller:         effectiveController(g, attacker),
+				Player:             attackerDefendingPlayer(g, attacker.ObjectID),
+				PermanentID:        attacker.ObjectID,
+				RelatedPermanentID: block.Blocker,
+				AttackTarget:       attackTarget,
+				SimultaneousID:     g.Combat.BlockDeclarationBatchID,
+			})
+		}
+	}
+	if blocker == nil {
+		return
+	}
+	emitEvent(g, game.Event{
+		Kind:                  game.EventBlockerDeclared,
+		SourceID:              blocker.CardInstanceID,
+		SourceObjectID:        blocker.ObjectID,
+		Controller:            effectiveController(g, blocker),
+		PermanentID:           blocker.ObjectID,
+		SubjectGoaded:         isGoadedNow(g, blocker),
+		SubjectGoadedKnown:    true,
+		RelatedPermanentID:    block.Blocking,
+		BlockedAttackerID:     block.Blocking,
+		SimultaneousID:        g.Combat.BlockDeclarationBatchID,
+		BlockerBecameBlocking: blockerBecameBlocking,
+	})
 }
 
 // resolveDamagePass assigns and marks combat damage for all attackers in the
@@ -843,6 +885,19 @@ func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDama
 		events   []damageEvent
 	}
 	var attackerDamages []attackerDamage
+	// CR 702.19b: a trampler's lethal damage counts the damage all other
+	// creatures assign in this step, so the blocked tramplers assign after
+	// every other attacker, jointly (see trampleStep). Whether each assigns as
+	// though it weren't blocked is decided first, since only the others assign
+	// damage to their blockers.
+	type tramplerDamage struct {
+		index       int
+		target      game.AttackTarget
+		deals       bool
+		asUnblocked bool
+	}
+	var tramplers []tramplerDamage
+	step := newTrampleStep()
 	blockerMap := blockersByAttacker(g)
 	for _, declaration := range g.Combat.Attackers {
 		attacker, ok := permanentByObjectID(g, declaration.Attacker)
@@ -851,12 +906,14 @@ func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDama
 		}
 		blockers := blockerMap[declaration.Attacker]
 		if attackerWasBlocked(g, declaration.Attacker) {
-			attackerDamages = append(attackerDamages, attackerDamage{
-				attacker: attacker,
-				blockers: blockers,
-				blocked:  true,
-				events:   blockedAttackerCombatDamageEvents(g, chooser, attacker, blockers, declaration.Target, pass),
-			})
+			damage := attackerDamage{attacker: attacker, blockers: blockers, blocked: true}
+			if hasKeyword(g, attacker, game.Trample) {
+				tramplers = append(tramplers, tramplerDamage{index: len(attackerDamages), target: declaration.Target})
+			} else {
+				damage.events = blockedAttackerCombatDamageEvents(g, chooser, attacker, blockers, declaration.Target, pass)
+				step.record(g, attacker, damage.events)
+			}
+			attackerDamages = append(attackerDamages, damage)
 			continue
 		}
 		if !isLegalAttackTarget(g, effectiveController(g, attacker), declaration.Target) {
@@ -866,6 +923,24 @@ func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDama
 			if event, ok := attackTargetCombatDamageEvent(g, attacker, declaration.Target, combatDamageAssignedBy(g, attacker)); ok {
 				attackerDamages = append(attackerDamages, attackerDamage{attacker: attacker, events: []damageEvent{event}})
 			}
+		}
+	}
+	for i := range tramplers {
+		trampler := &tramplers[i]
+		damage := attackerDamages[trampler.index]
+		trampler.deals = dealsCombatDamageInPass(g, damage.attacker, pass)
+		if !trampler.deals {
+			continue
+		}
+		trampler.asUnblocked = blockedAttackerAssignsAsThoughUnblocked(g, chooser, damage.attacker, damage.blockers)
+		if !trampler.asUnblocked {
+			step.addPending(g, damage.attacker, damage.blockers)
+		}
+	}
+	for _, trampler := range tramplers {
+		if trampler.deals {
+			damage := &attackerDamages[trampler.index]
+			damage.events = blockedAttackerAssignedDamageEvents(g, chooser, damage.attacker, damage.blockers, trampler.target, trampler.asUnblocked, step)
 		}
 	}
 	blockerDamage := blockerCombatDamageAssignments(g, chooser, blockerMap, pass)

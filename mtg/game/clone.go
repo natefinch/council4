@@ -339,6 +339,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 	clone.TappedAsCostIDs = cloneSlice(o.TappedAsCostIDs)
 	clone.ExiledAsCostIDs = cloneSlice(o.ExiledAsCostIDs)
 	clone.CapturedObjectIDs = cloneSlice(o.CapturedObjectIDs)
+	clone.BoundEventObjectIDs = cloneSlice(o.BoundEventObjectIDs)
 	clone.GainsKeywordsUntilEndOfTurn = cloneSlice(o.GainsKeywordsUntilEndOfTurn)
 	clone.ResolvedAmounts = cloneComparableMap(o.ResolvedAmounts)
 	clone.ResolvedExcessDamage = cloneComparableMap(o.ResolvedExcessDamage)
@@ -474,8 +475,10 @@ func cloneCombatState(c *CombatState) *CombatState {
 	clone := *c
 	clone.FirstStrikeEligible = cloneComparableMap(c.FirstStrikeEligible)
 	clone.Attackers = cloneSlice(c.Attackers)
+	clone.Bands = CloneAttackingBands(c.Bands)
 	clone.PlayersAttacked = cloneComparableMap(c.PlayersAttacked)
 	clone.Blockers = cloneSlice(c.Blockers)
+	clone.BlockersOfRemovedAttackers = cloneComparableMap(c.BlockersOfRemovedAttackers)
 	clone.BlockedAttackers = cloneComparableMap(c.BlockedAttackers)
 	clone.DamageAssignment = cloneComparableMap(c.DamageAssignment)
 	clone.BlockerOrder = cloneBlockerOrder(c.BlockerOrder)

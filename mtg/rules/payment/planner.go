@@ -94,6 +94,26 @@ func (p Planner) PrepareSpellCosts(req SpellRequest) []PreparedSpellCost {
 	return result
 }
 
+// CanPayPreparedNonManaCosts reports whether the non-mana components of
+// req.PreparedCost (sacrifices, discards, life and the other additional costs)
+// can be paid from current resources. Mana abilities activated while paying
+// (CR 601.2g) only add mana, so a total whose non-mana costs fail this check
+// cannot become payable by activating them.
+func (p Planner) CanPayPreparedNonManaCosts(req SpellRequest) bool {
+	if req.PreparedCost == nil {
+		return false
+	}
+	option := req.PreparedCost.option
+	_, ok := buildAdditionalCostPlanForCosts(p.s, req.PlayerID, option.additionalCosts, req.XValue, nil, nil, req.CardID, req.SourceZone, req.CardID)
+	return ok
+}
+
+// IncludesManaPayment reports whether the locked total includes a mana
+// payment, the condition for the payment-time mana ability window (CR 601.2g).
+func (c PreparedSpellCost) IncludesManaPayment() bool {
+	return c.option.manaCost != nil && c.option.manaCost.ManaValue() > 0
+}
+
 // BuildAbilityCostPlan reports whether a payment plan can be built for the
 // activated ability described by req without applying it.
 func (p Planner) BuildAbilityCostPlan(req AbilityRequest) bool {

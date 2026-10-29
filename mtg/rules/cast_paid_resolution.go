@@ -75,7 +75,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		ChosenModes: modes, Targets: targets,
 		CastPermissions: castPermissionsForZone(g, controllerID, cardID, fromZone, game.FaceFront),
 	}
-	if !paymentOrch.canPaySpellCosts(g, request) && !e.hasManualPaymentManaAbility(g, controllerID) {
+	if _, feasible := spellCostFeasibility(g, request, e.hasManualPaymentManaAbility(g, controllerID)); !feasible {
 		return false
 	}
 	// CR 601.2a: proposing the cast moves the card to the stack before its costs
@@ -127,7 +127,12 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	}
 	request.PreparedCost = &prepared
 	paymentOption := prepared.Summary
-	undoMana := e.activateManualPaymentManaAbilities(g, controllerID, agents, log)
+	// CR 601.2g: mana abilities may be activated while paying only when the
+	// locked total cost includes a mana payment.
+	undoMana := func() {}
+	if prepared.IncludesManaPayment() {
+		undoMana = e.activateManualPaymentManaAbilities(g, controllerID, agents, log)
+	}
 	prefs := e.paymentPreferencesForCostFromSource(g, controllerID, paymentOption.ManaCost,
 		paymentOption.AdditionalCosts, cast.XValue, cardID, fromZone, agents, log)
 	prefs.AlternativeIndex = paymentOption.Index

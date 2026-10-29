@@ -264,7 +264,7 @@ func (a *scriptedActionAgent) ChooseAction(_ rules.PlayerObservation, legal []ac
 				if announcement.Attack.Staged {
 					return action.ChooseAttackers()
 				}
-				return action.DeclareAttackers(announcement.Attack.Attackers)
+				return action.DeclareAttackersWithBands(announcement.Attack.Attackers, announcement.Attack.Bands)
 			}
 			if announcement.Block != nil {
 				if announcement.Block.Staged {

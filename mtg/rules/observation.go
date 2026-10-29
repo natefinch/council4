@@ -139,7 +139,13 @@ type PermanentView struct {
 	// can add. It is empty for non-producers and for sources that only produce
 	// colorless mana.
 	ProducesColors []color.Color
-	keywords       map[game.Keyword]bool
+	// PendingDelayedTriggers lists the pending delayed triggered abilities whose
+	// source is this permanent or that are bound to it (CR 603.7), such as an
+	// end-step sacrifice of a token or a dashed creature's return to hand.
+	// Delayed triggers are created by public spells and abilities, so every
+	// observer sees them; hidden face-down identities stay redacted.
+	PendingDelayedTriggers []DelayedTriggerView
+	keywords               map[game.Keyword]bool
 }
 
 // HasKeyword reports whether the permanent currently has the given keyword.
@@ -186,6 +192,21 @@ type StackObjectView struct {
 	ManaValue int
 	Types     []types.Card
 	Colors    []color.Color
+	// Text is the public rules text of an ability on the stack (CR 602.2a,
+	// 603.3), including a fired delayed trigger. It is empty for spells and for
+	// abilities whose definition records no text. An ability of a face-down
+	// permanent the viewer may not look at keeps only text granted to it
+	// publicly (such as ward), never its hidden card's text.
+	Text string
+	// SourceObjectID is the battlefield permanent an ability came from while
+	// that permanent remains on the battlefield (CR 113.7), else zero.
+	SourceObjectID id.ID
+	// BoundObjectIDs and BoundCardID identify the permanents and card a fired
+	// delayed trigger captured when it was created (CR 603.7c), so two delayed
+	// triggers from same-name sources can be told apart. BoundCardID is zero
+	// unless that card is still in the same zone and visible to the viewer.
+	BoundObjectIDs []id.ID
+	BoundCardID    id.ID
 }
 
 // Players returns a public view of every player, in seat order.
@@ -397,26 +418,27 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 		entryChoices = maps.Clone(permanent.EntryChoices)
 	}
 	return PermanentView{
-		ObjectID:             permanent.ObjectID,
-		CardInstanceID:       permanent.CardInstanceID,
-		CommanderInstanceIDs: permanentCommanderInstanceIDs(o.g, permanent),
-		FaceDownCards:        o.faceDownCardViews(permanent),
-		Name:                 values.name,
-		Controller:           effectiveController(o.g, permanent),
-		Owner:                permanent.Owner,
-		Power:                values.power,
-		Toughness:            values.toughness,
-		HasToughness:         values.toughnessOK,
-		Tapped:               permanent.Tapped,
-		SummoningSick:        permanent.SummoningSick,
-		FaceDown:             permanent.FaceDown,
-		PhasedOut:            permanent.PhasedOut,
-		Types:                append([]types.Card(nil), values.types...),
-		Subtypes:             append([]types.Sub(nil), values.subtypes...),
-		EntryChoices:         entryChoices,
-		ProducesMana:         producesMana,
-		ProducesColors:       producesColors,
-		keywords:             keywords,
+		ObjectID:               permanent.ObjectID,
+		CardInstanceID:         permanent.CardInstanceID,
+		CommanderInstanceIDs:   permanentCommanderInstanceIDs(o.g, permanent),
+		FaceDownCards:          o.faceDownCardViews(permanent),
+		Name:                   values.name,
+		Controller:             effectiveController(o.g, permanent),
+		Owner:                  permanent.Owner,
+		Power:                  values.power,
+		Toughness:              values.toughness,
+		HasToughness:           values.toughnessOK,
+		Tapped:                 permanent.Tapped,
+		SummoningSick:          permanent.SummoningSick,
+		FaceDown:               permanent.FaceDown,
+		PhasedOut:              permanent.PhasedOut,
+		Types:                  append([]types.Card(nil), values.types...),
+		Subtypes:               append([]types.Sub(nil), values.subtypes...),
+		EntryChoices:           entryChoices,
+		ProducesMana:           producesMana,
+		ProducesColors:         producesColors,
+		PendingDelayedTriggers: o.permanentDelayedTriggers(permanent.ObjectID),
+		keywords:               keywords,
 	}
 }
 
@@ -513,6 +535,9 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 		FaceDown:   obj.FaceDown,
 		Targets:    append([]game.Target(nil), obj.Targets...),
 	}
+	if obj.Kind != game.StackSpell {
+		o.fillAbilityStackObjectView(&view, obj)
+	}
 	if obj.FaceDown && o.g.CanSeePlayerInformation(o.viewer, obj.Controller) {
 		if card, exists := o.g.GetCardInstance(obj.SourceID); exists {
 			view.FaceDownCard = opt.Val(o.cardViewForDef(card.ID, card.Owner, card.Def))
@@ -541,6 +566,8 @@ func (o PlayerObservation) stackObjectName(obj *game.StackObject) string {
 		if def, ok := stackObjectSpellDef(o.g, obj); ok {
 			return def.Name
 		}
+	} else if o.hiddenFaceDownPermanent(obj.SourceID) {
+		return ""
 	}
 	if card, ok := o.g.GetCardInstance(obj.SourceID); ok {
 		return card.Def.Name

@@ -439,6 +439,15 @@ type ReplacementEffect struct {
 	// controller relation is resolved relative to the replacement's controller. It
 	// is nil for a prevention with a fixed self/attached/player recipient scope.
 	DamageRecipientSelection *Selection
+	// DamageSourceSelection scopes a damage replacement or prevention to damage
+	// whose source matches this canonical Selection ("damage Deserts would deal",
+	// Camel), matched through the shared matchSelection with "you" and the
+	// source-relative predicates read from the replacement's controller and
+	// source permanent. A battlefield source is matched live; a source that has
+	// left the battlefield is matched by its last-known information (CR 608.2h);
+	// a source with neither, such as a spell, never matches. It is nil for a
+	// replacement with no Selection-based source filter.
+	DamageSourceSelection *Selection
 
 	// LifeGainMultiplier multiplies a single "you would gain life" event by the
 	// replacement's controller before the life is gained (CR 614), backing "If
@@ -802,6 +811,13 @@ type ReplacementEffect struct {
 	// rather than an effect created by a resolving spell or ability. CR 305.7
 	// can erase the former; it does not end the latter's stated duration.
 	FromSourceAbility bool
+	// SourceAbilityOrigin identifies the copiable values that supplied a
+	// FromSourceAbility replacement: zero for the source permanent's own
+	// definition, or the ID of the layer-1 copy effect whose copiable values
+	// contain the ability (CR 707.2, 613.2a). The replacement functions only
+	// while that origin still supplies the source's copiable abilities, so a
+	// copy effect suspends the original ability and its expiry restores it.
+	SourceAbilityOrigin id.ID
 	// CreatedByResolution marks a replacement created by a resolving spell or
 	// ability (CreateReplacement). It lasts for its stated Duration even after
 	// its source leaves the battlefield (CR 611.2a, CR 614.3), unlike a

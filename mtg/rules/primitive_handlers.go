@@ -1749,6 +1749,7 @@ func handleBecomeCopy(r *effectResolver, prim game.BecomeCopy) effectResolved {
 		Layer:            game.LayerCopy,
 		CopyValues:       opt.Val(values),
 	})
+	registerCopyEffectReplacementAbilities(g, source, &g.ContinuousEffects[len(g.ContinuousEffects)-1])
 	res.succeeded = true
 	return res
 }
@@ -1765,7 +1766,12 @@ func becomeCopyTargetDef(g *game.Game, r *effectResolver, prim game.BecomeCopy) 
 			return nil, false
 		}
 		_, def, ok := cardInstanceFaceDef(g, cardID, game.FaceFront)
-		return def, ok
+		if !ok {
+			return nil, false
+		}
+		copied := copyCardDef(def)
+		fillCopiedAbilityText(&copied.CardFace, def.OracleText)
+		return copied, true
 	}
 	target, ok := r.resolveObject(prim.Object)
 	if !ok {

@@ -335,7 +335,10 @@ func actionsEqual(a, b action.Action) bool {
 	case action.ActionDeclareAttackers:
 		aPayload, aOK := a.DeclareAttackersPayload()
 		bPayload, bOK := b.DeclareAttackersPayload()
-		return aOK && bOK && aPayload.Staged == bPayload.Staged && slices.Equal(aPayload.Attackers, bPayload.Attackers)
+		return aOK && bOK && aPayload.Staged == bPayload.Staged && slices.Equal(aPayload.Attackers, bPayload.Attackers) &&
+			slices.EqualFunc(aPayload.Bands, bPayload.Bands, func(a, b game.AttackingBand) bool {
+				return slices.Equal(a.Members, b.Members)
+			})
 	case action.ActionDeclareBlockers:
 		aPayload, aOK := a.DeclareBlockersPayload()
 		bPayload, bOK := b.DeclareBlockersPayload()

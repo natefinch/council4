@@ -175,6 +175,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		redirectPendingCardEntry(g, card, permanent, fromZone, destination, options)
 		return nil, false
 	}
+	registerPermanentCopyReplacementEffects(g, permanent)
 	for _, placement := range options.Counters {
 		amount := replacementPermanentCounterPlacementAmount(g, controller, permanent, placement.Kind, placement.Amount)
 		permanent.Counters.Add(placement.Kind, amount)
@@ -469,6 +470,10 @@ func removePermanentFromBattlefield(g *game.Game, objectID id.ID) (*game.Permane
 			continue
 		}
 		g.Battlefield = append(g.Battlefield[:i], g.Battlefield[i+1:]...)
+		// A permanent leaving the battlefield is removed from combat, and an
+		// attacking creature removed from combat leaves its band (CR 506.4,
+		// 702.22f).
+		removePermanentFromCombat(g, objectID)
 		return permanent, true
 	}
 	return nil, false

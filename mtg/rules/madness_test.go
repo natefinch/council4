@@ -98,6 +98,50 @@ func TestDeclinedMadnessTriggerMovesCardToGraveyard(t *testing.T) {
 	}
 }
 
+// TestMadnessCastPaysSpellAdditionalCosts proves the madness cost replaces only
+// the mana cost (CR 702.35b, 601.2f): the spell's additional cost is still part
+// of the total cost, so the cast pays it alongside the madness mana and cannot be
+// made when the additional cost is unpayable.
+func TestMadnessCastPaysSpellAdditionalCosts(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		life     int
+		cast     bool
+		wantLife int
+	}{
+		{"payable", 20, true, 17},
+		{"unpayable", 2, false, 2},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			def := madnessSorcery(cost.Mana{cost.G})
+			def.AdditionalCosts = []cost.Additional{{Kind: cost.AdditionalPayLife, Amount: 3, Text: "Pay 3 life"}}
+			cardID := addCardToHand(g, game.Player1, def)
+			forest := addBasicLandPermanent(g, game.Player1, types.Forest)
+			player := g.Players[game.Player1]
+			player.Life = tc.life
+
+			discardCardFromHand(g, game.Player1, cardID)
+			if !engine.putTriggeredAbilitiesOnStack(g) {
+				t.Fatal("madness trigger was not put on the stack")
+			}
+			engine.resolveTopOfStack(g, &TurnLog{})
+
+			obj, ok := g.Stack.Peek()
+			if cast := ok && obj.Kind == game.StackSpell && obj.SourceID == cardID; cast != tc.cast {
+				t.Fatalf("madness cast = %v, want %v", cast, tc.cast)
+			}
+			if player.Life != tc.wantLife || forest.Tapped != tc.cast {
+				t.Fatalf("life = %d, forest tapped = %v; want %d, %v", player.Life, forest.Tapped, tc.wantLife, tc.cast)
+			}
+			if !tc.cast && (!player.Graveyard.Contains(cardID) || player.Exile.Contains(cardID)) {
+				t.Fatal("uncast madness card did not move from exile to the graveyard")
+			}
+		})
+	}
+}
+
 func madnessSorcery(manaCost cost.Mana) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Madness Sorcery",
 		Types: []types.Card{types.Sorcery},

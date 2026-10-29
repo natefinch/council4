@@ -318,6 +318,19 @@ type LandwalkKeyword struct {
 	Nonbasic bool
 }
 
+// BandsWithOtherKeyword parameterizes "bands with other [quality]" (CR
+// 702.22a). Quality is the [quality] a band formed through this ability needs
+// on every member, evaluated as a Selection against each creature's current
+// characteristics ("legendary creatures", "creatures named Wolves of the
+// Hunt"). A creature with it can form an attacking band with other attacking
+// creatures of that quality (CR 702.22c) and transfers combat damage division
+// when it and another creature of that quality block or are blocked together
+// (CR 702.22j-k). Abilities with the same quality are redundant (CR 702.22m);
+// different qualities are not.
+type BandsWithOtherKeyword struct {
+	Quality Selection
+}
+
 func (SimpleKeyword) isKeywordAbility()           {}
 func (WardKeyword) isKeywordAbility()             {}
 func (CumulativeUpkeepKeyword) isKeywordAbility() {}
@@ -354,6 +367,7 @@ func (SoulshiftKeyword) isKeywordAbility()        {}
 func (MobilizeKeyword) isKeywordAbility()         {}
 func (DredgeKeyword) isKeywordAbility()           {}
 func (LandwalkKeyword) isKeywordAbility()         {}
+func (BandsWithOtherKeyword) isKeywordAbility()   {}
 func (SaddleKeyword) isKeywordAbility()           {}
 func (CrewKeyword) isKeywordAbility()             {}
 
@@ -397,8 +411,11 @@ func (SoulshiftKeyword) keyword() Keyword  { return Soulshift }
 func (MobilizeKeyword) keyword() Keyword   { return Mobilize }
 func (DredgeKeyword) keyword() Keyword     { return Dredge }
 func (LandwalkKeyword) keyword() Keyword   { return Landwalk }
-func (SaddleKeyword) keyword() Keyword     { return Saddle }
-func (CrewKeyword) keyword() Keyword       { return Crew }
+func (BandsWithOtherKeyword) keyword() Keyword {
+	return BandsWithOther
+}
+func (SaddleKeyword) keyword() Keyword { return Saddle }
+func (CrewKeyword) keyword() Keyword   { return Crew }
 
 func (ability SimpleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
 func (ability WardKeyword) cloneKeywordAbility() KeywordAbility {
@@ -526,8 +543,12 @@ func (ability SoulshiftKeyword) cloneKeywordAbility() KeywordAbility { return ab
 func (ability MobilizeKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
 func (ability DredgeKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
 func (ability LandwalkKeyword) cloneKeywordAbility() KeywordAbility  { return ability }
-func (ability SaddleKeyword) cloneKeywordAbility() KeywordAbility    { return ability }
-func (ability CrewKeyword) cloneKeywordAbility() KeywordAbility      { return ability }
+func (ability BandsWithOtherKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Quality = cloneSelection(ability.Quality)
+	return ability
+}
+func (ability SaddleKeyword) cloneKeywordAbility() KeywordAbility { return ability }
+func (ability CrewKeyword) cloneKeywordAbility() KeywordAbility   { return ability }
 
 // SimpleKeywords returns sealed keyword variants for non-parameterized keywords.
 func SimpleKeywords(keywords ...Keyword) []KeywordAbility {
@@ -1095,4 +1116,28 @@ func StaticBodyLandwalkKeyword(body *StaticAbility) (LandwalkKeyword, bool) {
 	}
 	landwalk, ok := ka.(LandwalkKeyword)
 	return landwalk, ok
+}
+
+// StaticBodyBandsWithOtherKeywords returns every BandsWithOtherKeyword in a
+// StaticAbility body. One body may carry several "bands with other" abilities
+// with distinct qualities, each of which works independently (CR 702.22m).
+func StaticBodyBandsWithOtherKeywords(body *StaticAbility) []BandsWithOtherKeyword {
+	var keywords []BandsWithOtherKeyword
+	for _, ka := range BodyKeywordAbilities(body) {
+		if bands, ok := ka.(BandsWithOtherKeyword); ok {
+			keywords = append(keywords, bands)
+		}
+	}
+	return keywords
+}
+
+// BandsWithOtherStaticAbility returns the static keyword ability "Bands with
+// other <qualityText>" (CR 702.22a). quality is the Selection every band member
+// formed through it must match; qualityText is its printed plural wording, for
+// example "legendary creatures".
+func BandsWithOtherStaticAbility(quality Selection, qualityText string) StaticAbility {
+	return StaticAbility{
+		Text:             "Bands with other " + qualityText,
+		KeywordAbilities: []KeywordAbility{BandsWithOtherKeyword{Quality: quality}},
+	}
 }

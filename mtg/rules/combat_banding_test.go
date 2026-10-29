@@ -321,7 +321,9 @@ func TestGrantedAndRemovedBandingControlDamageDivision(t *testing.T) {
 // with registered War Elephant: a 3/3 blocking both War Elephant (2/2) and a
 // 4/4 has its damage divided by the active player, who puts all 3 on the 4/4
 // so neither attacker dies. Without banding, the defending player's
-// deterministic division kills the first attacker.
+// deterministic division kills the first attacker. Either way the 4/4 assigns
+// lethal damage to the 3/3 in the same step, so the trampling 2/2 assigns all
+// of its damage to the defending player (CR 702.19b).
 func TestBlockerOfBandingAttackerDamageDividedByActivePlayer(t *testing.T) {
 	run := func(t *testing.T, elephantName string) (*game.Permanent, *game.Permanent) {
 		t.Helper()
@@ -345,8 +347,8 @@ func TestBlockerOfBandingAttackerDamageDividedByActivePlayer(t *testing.T) {
 			},
 		}
 		NewEngine(nil).resolveCombatDamage(g, &TurnLog{})
-		if blocker.MarkedDamage != 6 {
-			t.Fatalf("blocker damage = %d, want 6 (2 from the elephant, 4 from the 4/4)", blocker.MarkedDamage)
+		if blocker.MarkedDamage != 4 || g.Players[game.Player2].Life != 38 {
+			t.Fatalf("blocker damage/defender life = %d/%d, want 4/38 (4 from the 4/4, the elephant's 2 trampling over)", blocker.MarkedDamage, g.Players[game.Player2].Life)
 		}
 		return elephant, big
 	}
@@ -526,7 +528,8 @@ func TestBandingActivePlayerChoosesBlockerDamageInLiveCombat(t *testing.T) {
 // creatures' assignments are announced before blocking creatures' (CR 510.1).
 // The defending player divides the 4/4's damage among the Escort, a 1/1 and a
 // 3/3 (CR 702.22j); then the active player divides that 3/3's damage between
-// War Elephant and the 4/4 it also blocks (CR 702.22k).
+// War Elephant and the 4/4 it also blocks (CR 702.22k). The defender's 3 to
+// the 3/3 is lethal, so War Elephant's 2 trample over (CR 702.19b).
 func TestBandingDivisionsAskedInAnnouncementOrder(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	elephant := registryCombatPermanent(t, g, game.Player1, "War Elephant")
@@ -567,8 +570,8 @@ func TestBandingDivisionsAskedInAnnouncementOrder(t *testing.T) {
 		second.Request.Player != game.Player1 || second.Request.CombatBlocker != wide.ObjectID || second.UsedFallback {
 		t.Fatalf("decision order = %+v then %+v, want defender's attacker division then active player's blocker division", first.Request, second.Request)
 	}
-	if escort.MarkedDamage != 0 || chump.MarkedDamage != 1 || wide.MarkedDamage != 5 {
-		t.Fatalf("blocker damage escort/1-1/3-3 = %d/%d/%d, want 0/1/5 (2 from the elephant)", escort.MarkedDamage, chump.MarkedDamage, wide.MarkedDamage)
+	if escort.MarkedDamage != 0 || chump.MarkedDamage != 1 || wide.MarkedDamage != 3 || g.Players[game.Player2].Life != 38 {
+		t.Fatalf("blocker damage escort/1-1/3-3 = %d/%d/%d, defender life %d, want 0/1/3 and 38 (the elephant's 2 trample over)", escort.MarkedDamage, chump.MarkedDamage, wide.MarkedDamage, g.Players[game.Player2].Life)
 	}
 	if elephant.MarkedDamage != 0 || big.MarkedDamage != 6 {
 		t.Fatalf("attacker damage elephant/4-4 = %d/%d, want 0/6 (3 from the 3/3, 2 from the Escort, 1 from the 1/1)", elephant.MarkedDamage, big.MarkedDamage)

@@ -76,8 +76,9 @@ var GigglingSkitterspike = func() *game.CardDef {
 			Trigger: game.TriggerCondition{
 				Type: game.TriggerWhenever,
 				Pattern: game.TriggerPattern{
-					Event:  game.EventBlockerDeclared,
-					Source: game.TriggerSourceSelf,
+					Event:        game.EventBlockerDeclared,
+					BlockerScope: game.BlockerTriggerOnce,
+					Source:       game.TriggerSourceSelf,
 				},
 			},
 			Content: game.Mode{

@@ -60,7 +60,7 @@ func TestSuspendUpkeepRemovesTimeCounter(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(2, cost.Mana{cost.O(1)}), 2)
 
-	engine.processSuspendUpkeep(g, game.Player1)
+	engine.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
 	if got := g.SuspendedCards[cardID].TimeCounters; got != 1 {
 		t.Fatalf("time counters = %d, want 1", got)
@@ -75,7 +75,7 @@ func TestSuspendCastsSpellWhenLastCounterRemoved(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
 
-	engine.processSuspendUpkeep(g, game.Player1)
+	engine.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
 	if g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("suspended card remained in exile after last counter")
@@ -102,7 +102,7 @@ func TestSuspendCastsMultipleReadyCardsInIDOrder(t *testing.T) {
 	firstID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
 	secondID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
 
-	engine.processSuspendUpkeep(g, game.Player1)
+	engine.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 
 	var castOrder []id.ID
 	for _, event := range g.Events {
@@ -132,7 +132,7 @@ func TestSuspendedCreatureEntersWithSuspendHaste(t *testing.T) {
 	engine := NewEngine(nil)
 	cardID := addSuspendedCard(g, game.Player1, suspendCreature(1, cost.Mana{cost.O(1)}), 1)
 
-	engine.processSuspendUpkeep(g, game.Player1)
+	engine.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	engine.resolveTopOfStack(g, &TurnLog{})
 
 	permanent := permanentByCardID(g, cardID)

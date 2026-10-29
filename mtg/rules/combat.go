@@ -92,11 +92,28 @@ func blockedAttackerCombatDamageEvents(g *game.Game, chooser combatDamageChooser
 	if !dealsCombatDamageInPass(g, attacker, pass) {
 		return nil
 	}
+	asUnblocked := blockedAttackerAssignsAsThoughUnblocked(g, chooser, attacker, blockers)
+	return blockedAttackerAssignedDamageEvents(g, chooser, attacker, blockers, target, asUnblocked, nil)
+}
+
+// blockedAttackerAssignsAsThoughUnblocked reports whether a blocked attacker's
+// "may assign its combat damage as though it weren't blocked" permission is
+// used. With a banding blocker the defending player decides (CR 702.22j).
+func blockedAttackerAssignsAsThoughUnblocked(g *game.Game, chooser combatDamageChooser, attacker *game.Permanent, blockers []*game.Permanent) bool {
 	asUnblocked := ruleEffectAssignsCombatDamageAsThoughUnblocked(g, attacker)
 	if asUnblocked && defendingPlayerAssignsAttackerDamage(g, blockers) {
 		asUnblocked = combatDamageAssignedBy(g, attacker) > 0 &&
 			chooser.defenderAssignsAsThoughUnblocked(g, attackerDefendingPlayer(g, attacker.ObjectID), attacker)
 	}
+	return asUnblocked
+}
+
+// blockedAttackerAssignedDamageEvents is blockedAttackerCombatDamageEvents
+// once the attacker is known to deal damage in this pass and whether it
+// assigns as though unblocked has been decided. A trampler's assignment is
+// checked against step, the combat damage step's other assignments (CR
+// 702.19b); a nil step means no other creature is assigning damage.
+func blockedAttackerAssignedDamageEvents(g *game.Game, chooser combatDamageChooser, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, asUnblocked bool, step *trampleStep) []damageEvent {
 	if !asUnblocked && len(blockers) == 0 && !hasKeyword(g, attacker, game.Trample) {
 		return nil
 	}
@@ -106,7 +123,7 @@ func blockedAttackerCombatDamageEvents(g *game.Game, chooser combatDamageChooser
 		tramplingDamage = combatDamageAssignedBy(g, attacker)
 	} else {
 		var assignments []creatureDamageAssignment
-		assignments, tramplingDamage = assignAttackerCombatDamage(g, chooser, attacker, blockers, target)
+		assignments, tramplingDamage = assignAttackerCombatDamage(g, chooser, attacker, blockers, target, step)
 		for _, assignment := range assignments {
 			event := combatDamageEvent(g, attacker, assignment.damage)
 			event.permanent = assignment.permanent
@@ -309,6 +326,13 @@ func combatHasFirstStrikeDamage(g *game.Game) bool {
 			return true
 		}
 	}
+	// A blocking creature counts even if the attacker it blocked was removed
+	// from combat (CR 509.1g, 510.4).
+	for blockerID := range g.Combat.BlockersOfRemovedAttackers {
+		if permanent, ok := permanentByObjectID(g, blockerID); ok && hasFirstOrDoubleStrike(g, permanent) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -381,6 +405,21 @@ func keywordCounterKind(keyword game.Keyword) (counter.Kind, bool) {
 	}
 }
 
+// isBlockingCreature reports whether the permanent is a blocking creature: it
+// blocks an attacker, or it blocked one that was later removed from combat and
+// has not itself been removed (CR 509.1g).
+func isBlockingCreature(g *game.Game, permanentID id.ID) bool {
+	if g.Combat == nil {
+		return false
+	}
+	if g.Combat.BlockersOfRemovedAttackers[permanentID] {
+		return true
+	}
+	return slices.ContainsFunc(g.Combat.Blockers, func(block game.BlockDeclaration) bool {
+		return block.Blocker == permanentID
+	})
+}
+
 func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 	if g.Combat == nil {
 		return false
@@ -396,6 +435,17 @@ func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 	return false
 }
 
+// removePermanentFromCombat removes a permanent from combat (CR 506.4), whether
+// it stays on the battlefield (a RemoveFromCombat effect, regeneration, phasing,
+// a control change) or is leaving it. It stops attacking or blocking and leaves
+// its band, and a planeswalker or battle stops being attacked, so current-combat
+// queries such as "exactly one creature is attacking" no longer count it. The
+// blocks against a removed attacker are dropped, so it is no longer blocked and
+// neither it nor its blockers deal or are dealt combat damage for them, but each
+// of those blockers remains a blocking creature until it is itself removed from
+// combat (CR 509.1g). Combat history (AttackersDeclared, PlayersAttacked, the
+// blocked status of remaining attackers, recorded events) and a departing
+// permanent's last known information, captured before the move, are unaffected.
 func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 	if g.Combat == nil || permanentID == 0 {
 		return
@@ -415,15 +465,26 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 		attackers = append(attackers, attack)
 	}
 	g.Combat.Attackers = attackers
+	if removedAttackers[permanentID] {
+		removeFromAttackingBands(g.Combat, permanentID)
+	}
 
 	var blockers []game.BlockDeclaration
 	for _, block := range g.Combat.Blockers {
-		if block.Blocker == permanentID || removedAttackers[block.Blocking] {
+		if block.Blocker == permanentID {
+			continue
+		}
+		if removedAttackers[block.Blocking] {
+			if g.Combat.BlockersOfRemovedAttackers == nil {
+				g.Combat.BlockersOfRemovedAttackers = make(map[id.ID]bool)
+			}
+			g.Combat.BlockersOfRemovedAttackers[block.Blocker] = true
 			continue
 		}
 		blockers = append(blockers, block)
 	}
 	g.Combat.Blockers = blockers
+	delete(g.Combat.BlockersOfRemovedAttackers, permanentID)
 	for attackerID, order := range g.Combat.BlockerOrder {
 		if removedAttackers[attackerID] {
 			delete(g.Combat.BlockerOrder, attackerID)
@@ -451,29 +512,34 @@ type creatureDamageAssignment struct {
 // its power, CR 510.1a) among the creatures blocking it (CR 510.1c). It honors a
 // legal player-chosen assignment if one was recorded, otherwise it falls back to
 // a deterministic default that assigns lethal damage to each blocker in turn.
-// With trample, lethal damage must be assigned to every blocker before any
-// excess tramples through to the attack target (CR 702.19b); that excess is
-// returned as tramplingDamage. When a blocker has banding, the defending player
-// chooses the assignment instead (CR 702.22j), under the same trample rules.
-func assignAttackerCombatDamage(g *game.Game, chooser combatDamageChooser, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget) (assignments []creatureDamageAssignment, tramplingDamage int) {
+// When a blocker has banding, the defending player chooses the assignment
+// instead (CR 702.22j). A trampler's assignment, and any excess it assigns to
+// the attack target (returned as tramplingDamage), is made by step under the
+// trample rules (CR 702.19b).
+func assignAttackerCombatDamage(g *game.Game, chooser combatDamageChooser, attacker *game.Permanent, blockers []*game.Permanent, target game.AttackTarget, step *trampleStep) (assignments []creatureDamageAssignment, tramplingDamage int) {
 	damageRemaining := combatDamageAssignedBy(g, attacker)
 	if damageRemaining <= 0 {
 		return nil, 0
 	}
-	if defendingPlayerAssignsAttackerDamage(g, blockers) {
-		return chooser.divideBlockedAttackerDamage(g, attackerDefendingPlayer(g, attacker.ObjectID), attacker, blockers, target, damageRemaining)
+	if hasKeyword(g, attacker, game.Trample) {
+		if step == nil {
+			step = newTrampleStep()
+		}
+		return step.assign(g, chooser, attacker, blockers, target, damageRemaining)
 	}
-	if assignments, tramplingDamage, ok := attackerChosenDamageAssignments(g, attacker, blockers, damageRemaining); ok {
-		return assignments, tramplingDamage
+	if defendingPlayerAssignsAttackerDamage(g, blockers) {
+		return chooser.divideCombatDamage(g, attackerDefendingPlayer(g, attacker.ObjectID), attacker, blockers, damageRemaining, true), 0
+	}
+	if assignments, total, ok := recordedAttackerDamageAssignments(g, attacker, blockers, damageRemaining); ok && total == damageRemaining {
+		return assignments, 0
 	}
 	assignments = make([]creatureDamageAssignment, 0, len(blockers))
-	hasTrample := hasKeyword(g, attacker, game.Trample)
 	for i, blocker := range blockers {
 		if blocker == nil || damageRemaining <= 0 {
 			continue
 		}
 		damage := damageRemaining
-		if hasTrample || i < len(blockers)-1 {
+		if i < len(blockers)-1 {
 			damage = min(damageRemaining, lethalDamageRemainingFromSource(g, attacker, blocker))
 		}
 		if damage <= 0 {
@@ -485,19 +551,21 @@ func assignAttackerCombatDamage(g *game.Game, chooser combatDamageChooser, attac
 		})
 		damageRemaining -= damage
 	}
-	if hasTrample {
-		return assignments, damageRemaining
-	}
 	return assignments, 0
 }
 
-func attackerChosenDamageAssignments(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, damage int) ([]creatureDamageAssignment, int, bool) {
+// recordedAttackerDamageAssignments reads a player-chosen division of the
+// attacker's damage among its blockers from the combat's recorded damage
+// assignment, returning it with its total. CR 510.1c: a blocked creature's
+// controller divides its combat damage among the creatures blocking it however
+// they choose; there is no requirement to assign lethal damage to one blocker
+// before another (the pre-2017 damage assignment order rule no longer exists).
+// ok is false when nothing usable is recorded: a negative amount, or a total of
+// zero or more than damage.
+func recordedAttackerDamageAssignments(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent, damage int) (assignments []creatureDamageAssignment, total int, ok bool) {
 	if g.Combat == nil || attacker == nil || len(g.Combat.DamageAssignment) == 0 {
 		return nil, 0, false
 	}
-	var assignments []creatureDamageAssignment
-	total := 0
-	hasTrample := hasKeyword(g, attacker, game.Trample)
 	for _, blocker := range blockers {
 		if blocker == nil {
 			continue
@@ -512,35 +580,10 @@ func attackerChosenDamageAssignments(g *game.Game, attacker *game.Permanent, blo
 		total += assigned
 		assignments = append(assignments, creatureDamageAssignment{permanent: blocker, damage: assigned})
 	}
-	// CR 510.1c: a blocked creature's controller divides its combat damage among
-	// the creatures blocking it however they choose; there is no requirement to
-	// assign lethal damage to one blocker before another (the pre-2017 damage
-	// assignment order rule no longer exists).
 	if total == 0 || total > damage {
 		return nil, 0, false
 	}
-	if hasTrample {
-		// CR 702.19b: a trampling attacker may assign its remaining damage to the
-		// attack target, but only if it has assigned lethal damage to every
-		// blocker. If it assigns no excess to the target (all of its damage goes
-		// to blockers), it need not assign lethal to all of them.
-		excess := damage - total
-		if excess > 0 {
-			for _, blocker := range blockers {
-				if blocker == nil {
-					continue
-				}
-				if g.Combat.DamageAssignment[blocker.ObjectID] < lethalDamageRemainingFromSource(g, attacker, blocker) {
-					return nil, 0, false
-				}
-			}
-		}
-		return assignments, excess, true
-	}
-	if total != damage {
-		return nil, 0, false
-	}
-	return assignments, 0, true
+	return assignments, total, true
 }
 
 // lethalDamageRemainingFromSource is like lethalDamageRemaining but accounts for
@@ -667,13 +710,13 @@ func blockerCombatDamageAssignments(g *game.Game, chooser combatDamageChooser, b
 }
 
 // assignBlockerCombatDamage divides a blocking creature's combat damage (equal to
-// its power, CR 510.1a) among the attackers it is blocking (CR 510.1c). A creature
-// blocking a single attacker assigns all of its damage to that attacker, matching
-// the pre-multiblock behavior exactly. A creature blocking more than one attacker
-// assigns lethal damage to each in declaration order until its damage is spent,
-// a legal division the "can block an additional creature" cards rely on. When
-// one of those attackers has banding, the active player divides the blocker's
-// damage instead (CR 702.22k).
+// its power, CR 510.1a) among the attackers it is blocking (CR 510.1d). A creature
+// blocking a single attacker assigns all of its damage to that attacker. A
+// creature blocking more than one attacker, through an attacking band (CR
+// 702.22h) or "can block an additional creature", has its damage divided as its
+// controller chooses (CR 510.1d); the default assigns lethal damage to each in
+// declaration order until its damage is spent. When one of those attackers has
+// banding, the active player divides the blocker's damage instead (CR 702.22k).
 func assignBlockerCombatDamage(g *game.Game, chooser combatDamageChooser, blocker *game.Permanent, attackers []*game.Permanent) []creatureDamageAssignment {
 	damageRemaining := combatDamageAssignedBy(g, blocker)
 	if damageRemaining <= 0 || len(attackers) == 0 {
@@ -685,22 +728,24 @@ func assignBlockerCombatDamage(g *game.Game, chooser combatDamageChooser, blocke
 	if activePlayerAssignsBlockerDamage(g, attackers) {
 		return chooser.divideCombatDamage(g, g.Turn.ActivePlayer, blocker, attackers, damageRemaining, false)
 	}
+	damage := damageRemaining
 	assignments := make([]creatureDamageAssignment, 0, len(attackers))
 	for i, attacker := range attackers {
 		if damageRemaining <= 0 {
 			break
 		}
-		damage := damageRemaining
+		assigned := damageRemaining
 		if i < len(attackers)-1 {
-			damage = min(damageRemaining, lethalDamageRemainingFromSource(g, blocker, attacker))
+			assigned = min(damageRemaining, lethalDamageRemainingFromSource(g, blocker, attacker))
 		}
-		if damage <= 0 {
+		if assigned <= 0 {
 			continue
 		}
-		assignments = append(assignments, creatureDamageAssignment{permanent: attacker, damage: damage})
-		damageRemaining -= damage
+		assignments = append(assignments, creatureDamageAssignment{permanent: attacker, damage: assigned})
+		damageRemaining -= assigned
 	}
-	return assignments
+	prompt := fmt.Sprintf("Divide %s's %d combat damage among the creatures it's blocking", permanentChoiceLabel(g, blocker), damage)
+	return chooser.chooseCombatDamageDivision(g, effectiveController(g, blocker), blocker, attackers, damage, false, prompt, assignments)
 }
 
 // legalDeclareBlockersActions returns the legal declare-blockers actions for

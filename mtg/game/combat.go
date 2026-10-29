@@ -40,6 +40,25 @@ type AttackDeclaration struct {
 	Target AttackTarget
 }
 
+// AttackingBand records creatures the active player announced as one attacking
+// band while declaring attackers (CR 508.1e, 702.22c). Members are the
+// attacking creatures' ObjectIDs.
+type AttackingBand struct {
+	Members []id.ID
+}
+
+// CloneAttackingBands returns a deep copy of bands.
+func CloneAttackingBands(bands []AttackingBand) []AttackingBand {
+	if bands == nil {
+		return nil
+	}
+	out := make([]AttackingBand, len(bands))
+	for i, band := range bands {
+		out[i] = AttackingBand{Members: append([]id.ID(nil), band.Members...)}
+	}
+	return out
+}
+
 // BlockDeclaration records that a creature has been declared as a blocker.
 type BlockDeclaration struct {
 	// Blocker is the ObjectID of the blocking creature.
@@ -63,8 +82,17 @@ type CombatState struct {
 	// FirstStrikeEligible records the original ObjectIDs that had first or
 	// double strike as the first damage step began (CR 510.4).
 	FirstStrikeEligible map[id.ID]bool
-	// Attackers lists all declared attackers and their targets.
+	// Attackers lists the current attackers and their targets. A creature
+	// removed from combat, including by leaving the battlefield, is removed from
+	// this list (CR 506.4); AttackersDeclared and recorded events keep history.
 	Attackers []AttackDeclaration
+
+	// Bands lists the attacking bands announced with the attack declaration
+	// (CR 702.22c-d). A band lasts for the rest of combat even if its members
+	// later lose banding (CR 702.22e). A member removed from combat leaves its
+	// band, and a band left with one member is no longer a band (CR 702.22f).
+	// Creatures put onto the battlefield attacking never join a band.
+	Bands []AttackingBand
 
 	// AttackersDeclared records whether any creature was declared as an attacker
 	// or put onto the battlefield attacking this combat (CR 508.8). It stays true
@@ -76,8 +104,17 @@ type CombatState struct {
 	// attacks on permanents they control and creatures entering attacking.
 	PlayersAttacked map[PlayerID]bool
 
-	// Blockers lists all declared blockers and which attacker they block.
+	// Blockers lists the current blocks: each blocking creature and the attacker
+	// it blocks. A block is dropped when either creature is removed from combat.
 	Blockers []BlockDeclaration
+
+	// BlockersOfRemovedAttackers records creatures that remain blocking
+	// creatures after an attacker they blocked was removed from combat, whether
+	// or not that attacker left the battlefield (CR 509.1g). The block itself is
+	// gone from Blockers, so neither creature deals or is dealt combat damage for
+	// it and the removed attacker is not blocked. A creature leaves this set when
+	// it is itself removed from combat.
+	BlockersOfRemovedAttackers map[id.ID]bool
 
 	// BlockedAttackers preserves which attackers became blocked even if all of
 	// their blockers later leave combat.

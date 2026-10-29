@@ -41,6 +41,7 @@ type pendingTriggeredAbility struct {
 	capturedObjectIDs            []id.ID
 	capturedCardID               id.ID
 	capturedCardZoneVersion      uint64
+	boundEventObjectIDs          []id.ID
 	additionalTriggers           int
 	triggerMultiplierCaptured    bool
 	controlledMultiplierCaptured bool
@@ -152,6 +153,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			CapturedObjectIDs:           append([]id.ID(nil), trigger.capturedObjectIDs...),
 			CapturedCardID:              trigger.capturedCardID,
 			CapturedCardZoneVersion:     trigger.capturedCardZoneVersion,
+			BoundEventObjectIDs:         append([]id.ID(nil), trigger.boundEventObjectIDs...),
 			DungeonRoom:                 trigger.dungeonRoom,
 		}
 		obj.SetTriggerOrigin(trigger.triggerOrigin)

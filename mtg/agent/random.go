@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"math"
 	"math/rand/v2"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -42,10 +43,12 @@ func (a RandomAgent) ChooseAction(_ rules.PlayerObservation, legal []action.Acti
 // ChooseChoice implements rules.ChoiceAgent by returning a valid random
 // selection for the request. Ordering choices get a random permutation and
 // divided-damage choices get a random allocation giving each option at least
-// one; other choices get a random count of distinct options within the
-// requested bounds.
+// one; numeric choices get an integer from randomNumber; other choices get a
+// random count of distinct options within the requested bounds.
 func (a RandomAgent) ChooseChoice(_ rules.PlayerObservation, request game.ChoiceRequest) []int {
 	switch request.Kind {
+	case game.ChoiceNumber:
+		return a.randomNumber(request)
 	case game.ChoiceOrder:
 		return a.randomPermutation(request)
 	case game.ChoiceDamageAllocation, game.ChoiceCounterAllocation:
@@ -55,6 +58,40 @@ func (a RandomAgent) ChooseChoice(_ rules.PlayerObservation, request game.Choice
 	default:
 		return a.randomSelection(request)
 	}
+}
+
+// randomNumber answers a ChoiceNumber request with exactly one integer. A
+// bounded range yields a uniformly random integer in [Minimum, Maximum]. An
+// unbounded range has no uniform distribution, so the agent answers the
+// engine-proposed DefaultSelection when it lies in range (for a resolution-time
+// X or multikicker announcement, the cast's current value) and Minimum
+// otherwise, never guessing an unaffordable amount. A
+// malformed request (no range, options present, or Maximum below Minimum) gets
+// no answer, leaving the engine's invalid-choice fallback.
+func (a RandomAgent) randomNumber(request game.ChoiceRequest) []int {
+	if !request.NumberRange.Exists || len(request.Options) != 0 {
+		return nil
+	}
+	domain := request.NumberRange.Val
+	if !domain.Maximum.Exists {
+		if len(request.DefaultSelection) == 1 && request.DefaultSelection[0] >= domain.Minimum {
+			return []int{request.DefaultSelection[0]}
+		}
+		return []int{domain.Minimum}
+	}
+	if domain.Maximum.Val < domain.Minimum {
+		return nil
+	}
+	// Two's-complement differences keep the span exact even when the
+	// range covers more than math.MaxInt values.
+	span := uint64(domain.Maximum.Val) - uint64(domain.Minimum)
+	var offset uint64
+	if span == math.MaxUint64 {
+		offset = a.rng.Uint64()
+	} else {
+		offset = a.rng.Uint64N(span + 1)
+	}
+	return []int{domain.Minimum + int(offset)}
 }
 
 // randomPermutation returns the option indices in a uniformly random order.

@@ -313,6 +313,19 @@ const (
 	// printed characteristics outside the stack: split cards contribute both
 	// halves, while double-faced and Adventure cards contribute their front face.
 	DynamicAmountReferencedCardsTotalManaValue
+	// DynamicAmountSumOf is the sum of Operands, each evaluated as the effect
+	// resolves (CR 608.2c, CR 608.2h). It backs "equal to that creature's power
+	// plus its toughness" (Predator's Rapport). A negative operand, such as a
+	// creature's negative power, is used as-is in the calculation; a negative
+	// total is zero (CR 107.1b). Multiplier and Addend apply to that total.
+	DynamicAmountSumOf
+	// DynamicAmountDifferenceOf is the difference between its two Operands: the
+	// smaller value subtracted from the larger, so it is never negative. It
+	// backs "the difference between that creature's power and its toughness"
+	// (Jaws of Defeat), whose ruling subtracts the smaller of the two numbers
+	// from the larger. Negative power is used as-is, so a -2/3 creature's
+	// difference is 5.
+	DynamicAmountDifferenceOf
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
@@ -363,8 +376,9 @@ type DynamicAmount struct {
 	// devotion color is the color chosen as the ability resolves rather than a
 	// fixed color printed in the amount.
 	ColorFrom ChoiceKey
-	// Operands lists the sub-amounts of a DynamicAmountMaxOf combinator, each
-	// evaluated independently; the amount's value is the greatest among them. It
-	// is empty for every other kind.
+	// Operands lists the sub-amounts of a DynamicAmountMaxOf, DynamicAmountSumOf
+	// or DynamicAmountDifferenceOf combinator, each evaluated independently; the
+	// amount's value is the greatest among them, their sum, or the difference
+	// between exactly two of them. It is empty for every other kind.
 	Operands []DynamicAmount
 }

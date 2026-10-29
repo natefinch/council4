@@ -95,7 +95,13 @@ const (
 type DelayedTriggerDef struct {
 	Timing   DelayedTriggerTiming
 	Optional bool
-	Content  AbilityContent
+	// Text is the public rules text of the delayed triggered ability ("Sacrifice
+	// it at the beginning of the next end step."). The scheduled ability and the
+	// stack object it later becomes carry it (CR 603.3, 603.7), so observers can
+	// tell pending delayed triggers apart. When empty, the scheduled ability
+	// carries the public text of the spell or ability that created it instead.
+	Text    string
+	Content AbilityContent
 	// EventPattern, when present, makes this an event-based delayed trigger that
 	// fires when a matching game event occurs within its window, reusing the
 	// ordinary triggered-ability event matcher. Timing must be zero when

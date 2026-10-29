@@ -42,6 +42,7 @@ func newGhostHounds() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:                   game.EventBlockerDeclared,
+							BlockerScope:            game.BlockerTriggerEachBlockedCreature,
 							Source:                  game.TriggerSourceSelf,
 							UnionEvent:              game.EventAttackerBecameBlocked,
 							RelatedSubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}, ColorsAny: []color.Color{color.White}},

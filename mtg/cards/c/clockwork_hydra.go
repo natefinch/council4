@@ -55,9 +55,10 @@ func newClockworkHydra() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:      game.EventAttackerDeclared,
-							Source:     game.TriggerSourceSelf,
-							UnionEvent: game.EventBlockerDeclared,
+							Event:        game.EventAttackerDeclared,
+							Source:       game.TriggerSourceSelf,
+							UnionEvent:   game.EventBlockerDeclared,
+							BlockerScope: game.BlockerTriggerOnce,
 						},
 					},
 					Content: game.Mode{

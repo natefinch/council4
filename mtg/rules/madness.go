@@ -38,6 +38,16 @@ func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *ga
 	return "resolved"
 }
 
+// castMadnessSpellWithChoices casts card from exile for its madness cost, an
+// alternative cost (CR 702.35a-b). The card moves to the stack first (CR 601.2a),
+// then the total cost is determined from the madness cost through the shared
+// spell-cost planner (CR 601.2f), so cost increases and reductions that match the
+// spell, and the spell's additional costs, apply before the cost is paid
+// (CR 601.2h). The cast is proposed when that total is payable now or after the
+// caster activates payment-time mana abilities; the total is locked before those
+// abilities are activated (CR 601.2g). An unpaid cost undoes the proposal and
+// its reversible mana activations (CR 733) and leaves the card in exile for the
+// caller to move to the graveyard.
 func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerID, card *game.CardInstance, manaCost cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Exile.Contains(card.ID) {
@@ -55,18 +65,17 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 	if !ok {
 		panic("validated madness spell targets could not be segmented")
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
-	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	poolSpent, ok := paymentOrch.payGenericCostForSpell(g, payment.GenericRequest{
-		PlayerID: playerID,
-		Spell:    spellDef,
-		Cost:     &manaCost,
-		Prefs:    prefs,
-	})
-	if !ok {
-		return false
+	request := payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          card.ID,
+		SourceZone:      zone.Exile,
+		Card:            spellDef,
+		ChosenModes:     modes,
+		Targets:         targets,
+		CastPermissions: []payment.SpellCastPermission{payment.SpellCastPermissionDefault},
+		Alternative:     opt.Val(cost.Alternative{Label: "Madness", ManaCost: opt.Val(manaCost)}),
 	}
-	if !player.Exile.Remove(card.ID) {
+	if _, feasible := spellCostFeasibility(g, request, e.hasManualPaymentManaAbility(g, playerID)); !feasible {
 		return false
 	}
 	stackObj := &game.StackObject{
@@ -78,26 +87,66 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		Targets:      append([]game.Target(nil), targets...),
 		TargetCounts: targetCounts,
 		ChosenModes:  append([]int(nil), modes...),
+		SourceZone:   zone.Exile,
 	}
-	pushSpellToStack(g, stackObj, game.Event{
+	counterTransition := prepareCastCounterTransition(g, card, zone.Exile)
+	if !player.Exile.Remove(card.ID) {
+		return false
+	}
+	counterTransition.apply(g)
+	g.Stack.Push(stackObj)
+	rollback := func() {
+		g.Stack.RemoveByID(stackObj.ID)
+		restoreCastSourceCard(player, card.ID, zone.Exile)
+		counterTransition.undo(g)
+	}
+	targetEvents := prepareTargetEvents(g, stackObj)
+	prepared, ok := e.choosePreparedSpellCost(g, request, agents, log)
+	if !ok {
+		rollback()
+		return false
+	}
+	request.PreparedCost = &prepared
+	paymentOption := prepared.Summary
+	undoMana := func() {}
+	if prepared.IncludesManaPayment() {
+		undoMana = e.activateManualPaymentManaAbilities(g, playerID, agents, log)
+	}
+	prefs := e.paymentPreferencesForCostFromSource(g, playerID, paymentOption.ManaCost,
+		paymentOption.AdditionalCosts, 0, card.ID, zone.Exile, agents, log)
+	prefs.AlternativeIndex = paymentOption.Index
+	request.Prefs = prefs
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
+	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
+	if !ok {
+		undoMana()
+		rollback()
+		return false
+	}
+	poolSpent := paymentResult.PoolSpend
+	stackObj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
+	stackObj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
+	stackObj.PaidCostSubjects = paymentResult.PaidCostSubjects
+	stackObj.ColorsOfManaSpentToCast = distinctManaColorsSpent(poolSpent)
+	stackObj.ManaSpentByColorToCast = manaSpentByColor(poolSpent)
+	stackObj.ManaSpentToCast = totalManaSpent(poolSpent)
+	stackObj.ManaFromCreaturesSpentToCast = creatureManaSpent(poolSpent)
+	emitSpellCastEventsWithTargets(g, stackObj, game.Event{
 		SourceID:                     card.ID,
 		StackObjectID:                stackObj.ID,
 		Controller:                   playerID,
 		CardID:                       card.ID,
-		CardTypes:                    cardTypes(spellDef),
+		Face:                         game.FaceFront,
+		CardTypes:                    stackObjectCardTypes(stackObj, spellDef),
 		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 cardSubtypes(spellDef),
+		CardSubtypes:                 stackObjectCardSubtypes(stackObj, spellDef),
 		Colors:                       spellColors(spellDef),
 		ManaValue:                    stackObjectKnownManaValue(g, stackObj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(poolSpent)),
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(poolSpent)),
 		FromZone:                     zone.Exile,
 		ToZone:                       zone.Stack,
-	})
-	stackObj.ColorsOfManaSpentToCast = distinctManaColorsSpent(poolSpent)
-	stackObj.ManaSpentByColorToCast = manaSpentByColor(poolSpent)
-	stackObj.ManaSpentToCast = totalManaSpent(poolSpent)
-	stackObj.ManaFromCreaturesSpentToCast = creatureManaSpent(poolSpent)
+	}, targetEvents)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, poolSpent, spellDef, stackObj)
 	return true
 }

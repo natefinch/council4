@@ -35,6 +35,7 @@ func newBattleStrain() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:            game.EventBlockerDeclared,
+							BlockerScope:     game.BlockerTriggerOnce,
 							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 						},
 					},

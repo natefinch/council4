@@ -1705,6 +1705,9 @@ func matchingDamageReplacementEffects(
 		if replacement.DamageRecipientSelection != nil && !damageRecipientMatchesSelection(g, event, replacement) {
 			continue
 		}
+		if replacement.DamageSourceSelection != nil && !damageSourceMatchesSelection(g, event, replacement) {
+			continue
+		}
 		if replacement.DamageRecipientOpponent && !damageRecipientIsOpponent(g, event, replacement) {
 			continue
 		}
@@ -1720,7 +1723,11 @@ func matchingDamageReplacementEffects(
 		if replacement.DamageRecipientAttached && !damageRecipientIsSourceAttached(g, event, replacement) {
 			continue
 		}
-		if applied[replacement.ID] || !replacementEffectMatchesEvent(g, replacement, matchEvent) {
+		// Thread the source permanent so a source-relative condition ("as long
+		// as this creature is attacking", Camel) reads the replacement's own
+		// permanent.
+		source, _ := permanentByObjectID(g, replacement.SourceObjectID)
+		if applied[replacement.ID] || !replacementEffectMatchesEventWithSource(g, replacement, matchEvent, source, nil) {
 			continue
 		}
 		matches = append(matches, *replacement)
@@ -1789,6 +1796,49 @@ func damageRecipientMatchesSelection(g *game.Game, event damageEvent, replacemen
 		sourceObjectID: replacement.SourceObjectID,
 	}
 	return matchSelection(&subject, replacement.DamageRecipientSelection)
+}
+
+// damageSourceMatchesSelection reports whether the damage event's source
+// satisfies the replacement's DamageSourceSelection. A battlefield source is
+// matched live with its effective characteristics; a source that has left the
+// battlefield is matched by its last-known information (CR 608.2h). "You" and
+// source-relative predicates resolve against the replacement's controller and
+// source permanent. A source with no permanent identity never matches.
+func damageSourceMatchesSelection(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
+	if event.sourceObjectID == 0 {
+		return false
+	}
+	viewer := replacementCurrentController(g, replacement)
+	if permanent, ok := permanentByObjectID(g, event.sourceObjectID); ok {
+		subject := selectionSubject{
+			kind:           subjectPermanent,
+			g:              g,
+			permanent:      permanent,
+			values:         effectivePermanentValues(g, permanent),
+			controller:     effectiveController(g, permanent),
+			viewer:         viewer,
+			sourceObjectID: replacement.SourceObjectID,
+		}
+		return matchSelection(&subject, replacement.DamageSourceSelection)
+	}
+	snapshot, ok := lastKnownObject(g, event.sourceObjectID)
+	if !ok {
+		return false
+	}
+	subject := selectionSubject{
+		kind: subjectEventPermanent,
+		g:    g,
+		event: game.Event{
+			PermanentID: snapshot.ObjectID, CardID: snapshot.CardID,
+			TokenDef: snapshot.TokenDef, Face: snapshot.Face,
+		},
+		controller:       snapshot.Controller,
+		viewer:           viewer,
+		snapshotObjectID: snapshot.ObjectID,
+		snapshot:         &snapshot,
+		sourceObjectID:   replacement.SourceObjectID,
+	}
+	return matchSelection(&subject, replacement.DamageSourceSelection)
 }
 
 func damageRecipientIsOpponent(g *game.Game, event damageEvent, replacement *game.ReplacementEffect) bool {
@@ -2140,8 +2190,47 @@ func replacementSourceStillApplies(g *game.Game, replacement *game.ReplacementEf
 	if !replacementSourceTied(replacement) {
 		return replacementAffectedObjectStillExists(g, replacement)
 	}
-	_, ok := permanentByObjectID(g, replacement.SourceObjectID)
-	return ok
+	if _, ok := permanentByObjectID(g, replacement.SourceObjectID); !ok {
+		return false
+	}
+	// A copied replacement ability ends with the copy effect that supplied it.
+	return !replacement.FromSourceAbility || replacement.SourceAbilityOrigin == 0 ||
+		continuousEffectExists(g, replacement.SourceAbilityOrigin)
+}
+
+func continuousEffectExists(g *game.Game, effectID id.ID) bool {
+	for i := range g.ContinuousEffects {
+		if g.ContinuousEffects[i].ID == effectID {
+			return true
+		}
+	}
+	return false
+}
+
+// sourceAbilityReplacementIsCurrent reports whether a registered intrinsic
+// replacement is still one of its source's abilities. A face-down permanent has
+// no such abilities (CR 708.2), ability loss erases them (CR 613.1f), and the
+// latest copy effect's copiable values replace every ability from the
+// permanent's own definition or an earlier copy (CR 707.2, 613.2a).
+func sourceAbilityReplacementIsCurrent(g *game.Game, source *game.Permanent, replacement *game.ReplacementEffect) bool {
+	if !replacement.FromSourceAbility {
+		return true
+	}
+	if source.FaceDown || effectivePermanentValues(g, source).intrinsicAbilitiesRemoved {
+		return false
+	}
+	return permanentCopiableAbilityOrigin(g, source) == replacement.SourceAbilityOrigin
+}
+
+// permanentCopiableAbilityOrigin returns the ID of the copy effect that
+// currently supplies the permanent's copiable abilities, or zero when its own
+// definition does.
+func permanentCopiableAbilityOrigin(g *game.Game, permanent *game.Permanent) id.ID {
+	if !permanentHasCopyLayer(g, permanent) {
+		return 0
+	}
+	effects := permanentCopyEffects(g, permanent)
+	return effects[len(effects)-1].ID
 }
 
 // replacementAffectedObjectStillExists reports whether a resolution-created
@@ -2164,8 +2253,7 @@ func replacementSourceIsActive(g *game.Game, replacement *game.ReplacementEffect
 		return true
 	}
 	source, ok := permanentByObjectID(g, replacement.SourceObjectID)
-	return ok && activeBattlefieldPermanent(source) &&
-		(!replacement.FromSourceAbility || !effectivePermanentValues(g, source).intrinsicAbilitiesRemoved)
+	return ok && activeBattlefieldPermanent(source) && sourceAbilityReplacementIsCurrent(g, source, replacement)
 }
 
 // replacementEventPlayer returns the player who chooses among several applicable
@@ -2432,7 +2520,7 @@ func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, b
 	chars := sourceChars{
 		colors:   spellColors(def),
 		types:    def.Types,
-		subtypes: def.Subtypes,
+		subtypes: characteristicDefinedFace(def).Subtypes,
 	}
 	// CR 702.103b: a spell cast for its bestow cost is an Aura spell and is not a
 	// creature spell while on the stack, so type/subtype-based spell qualifiers and
@@ -2483,16 +2571,11 @@ func sourceCharsForProtection(g *game.Game, sourceID, sourceObjectID id.ID, fall
 	}
 	if sourceID != 0 {
 		if card, ok := g.GetCardInstance(sourceID); ok {
-			def := cardFaceOrDefault(card, selectedFaceForCardInstance(g, card))
-			return sourceChars{colors: def.Colors, types: def.Types, subtypes: def.Subtypes}, true
+			return cardDefSourceChars(cardFaceOrDefault(card, selectedFaceForCardInstance(g, card))), true
 		}
 	}
 	if fallback != nil {
-		return sourceChars{
-			colors:   fallback.Colors,
-			types:    fallback.Types,
-			subtypes: fallback.Subtypes,
-		}, true
+		return cardDefSourceChars(fallback), true
 	}
 	return sourceChars{}, false
 }
@@ -2532,11 +2615,15 @@ func permanentProtectedFromSourceDef(g *game.Game, permanent *game.Permanent, so
 	if permanent == nil || source == nil {
 		return false
 	}
-	return permanentProtectedFromChars(g, permanent, sourceChars{
-		colors:   source.Colors,
-		types:    source.Types,
-		subtypes: source.Subtypes,
-	})
+	return permanentProtectedFromChars(g, permanent, cardDefSourceChars(source))
+}
+
+// cardDefSourceChars returns a card face's protection-relevant qualities as its
+// own characteristic-defining abilities define them, which function in every
+// zone (CR 604.3).
+func cardDefSourceChars(def *game.CardDef) sourceChars {
+	face := characteristicDefinedFace(def)
+	return sourceChars{colors: face.Colors, types: face.Types, subtypes: face.Subtypes}
 }
 
 func permanentProtectedFromChars(g *game.Game, permanent *game.Permanent, source sourceChars) bool {

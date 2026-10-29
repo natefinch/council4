@@ -934,6 +934,11 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Nonbasic && (keyword.AnyLand || keyword.Subtype != "") {
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "landwalk must not combine Nonbasic with AnyLand or a subtype")
 		}
+	case BandsWithOtherKeyword:
+		if keyword.Quality.Empty() {
+			v.add(faceName, appendPath(path, "Quality"), CardDefIssueInvalidKeywordAbility, "bands with other needs a quality")
+		}
+		v.validateSelection(faceName, appendPath(path, "Quality"), keyword.Quality)
 	case SaddleKeyword:
 		if keyword.Power <= 0 {
 			v.add(faceName, appendPath(path, "Power"), CardDefIssueInvalidKeywordAbility, "saddle power must be positive")
@@ -2474,6 +2479,7 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		v.add(faceName, appendPath(path, "DyingDamagedBySource"), CardDefIssueInvalidSelection, "dealt-damage-by-source trigger filter is only supported for permanent-died events")
 	}
 	v.validateAttackerCountRelations(faceName, path, pattern)
+	v.validateBlockerScope(faceName, path, pattern)
 	if !pattern.StepPlayerSourceAttachedSelection.Empty() {
 		v.validateSelection(faceName, appendPath(path, "StepPlayerSourceAttachedSelection"), pattern.StepPlayerSourceAttachedSelection)
 		if pattern.Event != EventBeginningOfStep {
@@ -2704,6 +2710,25 @@ func triggerSubjectSelectionResidue(selection Selection, event EventKind) Select
 		}
 	}
 	return residue
+}
+
+// validateBlockerScope requires every EventBlockerDeclared pattern whose
+// subject is the blocker to choose between "blocks" (CR 509.3a) and "blocks a
+// creature" (CR 509.3b), and rejects a scope on any other pattern.
+func (v *cardDefValidator) validateBlockerScope(faceName, path string, pattern *TriggerPattern) {
+	blockerDeclared := pattern.Event == EventBlockerDeclared || pattern.UnionEvent == EventBlockerDeclared
+	blockerSubject := pattern.Subject == TriggerSubjectDefault || pattern.Subject == TriggerSubjectPermanent
+	scopePath := appendPath(path, "BlockerScope")
+	switch {
+	case pattern.BlockerScope > BlockerTriggerEachBlockedCreature:
+		v.add(faceName, scopePath, CardDefIssueInvalidSelection, "unknown blocker trigger scope")
+	case !blockerDeclared || !blockerSubject:
+		if pattern.BlockerScope != BlockerTriggerUnspecified {
+			v.add(faceName, scopePath, CardDefIssueInvalidSelection, "blocker trigger scope is only valid for a blocker-declared event whose subject is the blocker")
+		}
+	case pattern.BlockerScope == BlockerTriggerUnspecified:
+		v.add(faceName, scopePath, CardDefIssueInvalidSelection, "blocker-declared trigger must choose \"blocks\" (CR 509.3a) or \"blocks a creature\" (CR 509.3b)")
+	}
 }
 
 // validateAttackerCountRelations checks the attacker-count combat relations.

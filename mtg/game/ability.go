@@ -95,10 +95,10 @@ const (
 	Rebound
 	Retrace
 	// Banding (CR 702.22) is a static combat keyword, modeled as a recognized,
-	// grantable simple keyword. The combat engine applies its damage-assignment
-	// control (CR 702.22j-k); attacking bands (CR 702.22c-i) and "bands with
-	// other" are not yet modeled. Appended at the end of the enum so existing
-	// keyword ordinals are unchanged.
+	// grantable simple keyword. The combat engine forms attacking bands with it
+	// (CR 702.22c-i) and applies its damage-assignment control (CR 702.22j-k).
+	// The parameterized "bands with other" form is BandsWithOther. Appended at
+	// the end of the enum so existing keyword ordinals are unchanged.
 	Banding
 	// Crew (CR 702.122) is the Vehicles activated keyword. It is modeled as a
 	// grantable keyword identity carried by CrewKeyword inside the activated
@@ -312,6 +312,11 @@ const (
 	// Buyback offers an additional cost and replaces the paid spell's
 	// graveyard move only as it resolves (CR 702.27).
 	Buyback
+	// BandsWithOther is the parameterized "bands with other [quality]" form of
+	// banding (CR 702.22a), carried by BandsWithOtherKeyword. Losing banding also
+	// loses every "bands with other" ability (CR 702.22b). Appended at the end of
+	// the enum so existing keyword ordinals are unchanged.
+	BandsWithOther
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -493,8 +498,8 @@ var (
 	// BandingStaticBody is the reusable StaticAbilityBody for banding (CR
 	// 702.22). It carries the Banding keyword so HasKeyword(Banding) reports
 	// true, which the combat engine reads to transfer combat damage division to
-	// the banding creature's controller (CR 702.22j-k). Attacking bands (CR
-	// 702.22c-i) are not yet modeled.
+	// the banding creature's controller (CR 702.22j-k) and to form attacking
+	// bands (CR 702.22c-i).
 	BandingStaticBody = simpleKeywordStaticBody("Banding", Banding)
 
 	// CompanionStaticBody is the reusable StaticAbilityBody for companion (CR
@@ -660,6 +665,7 @@ func myriadTriggeredBody() TriggeredAbility {
 			{
 				Primitive: CreateDelayedTrigger{
 					Trigger: DelayedTriggerDef{
+						Text:                "Exile the tokens at end of combat.",
 						Timing:              DelayedAtEndOfCombat,
 						CapturedObjectGroup: opt.Val(LinkedObjectReference("myriad-tokens")),
 						Content: Mode{
@@ -1039,6 +1045,26 @@ const (
 	AttackRecipientBattle
 )
 
+// BlockerTriggerScope distinguishes the two CR 509.3 trigger conditions of an
+// EventBlockerDeclared pattern whose subject is the blocking creature.
+type BlockerTriggerScope uint8
+
+// Blocker trigger scopes. A card definition must choose one explicitly for
+// every blocker-subject EventBlockerDeclared pattern.
+const (
+	// BlockerTriggerUnspecified is the zero value; such a pattern matches each
+	// blocked attacker.
+	BlockerTriggerUnspecified BlockerTriggerScope = iota
+	// BlockerTriggerOnce is "Whenever [a creature] blocks": it triggers once
+	// when the creature becomes a blocking creature, even if it blocks several
+	// attackers (CR 509.3a).
+	BlockerTriggerOnce
+	// BlockerTriggerEachBlockedCreature is "Whenever [a creature] blocks a
+	// creature": it triggers once for each attacking creature the creature
+	// blocks (CR 509.3b).
+	BlockerTriggerEachBlockedCreature
+)
+
 // TriggerPattern matches a Event for triggered-ability detection.
 // Zero-valued filters are wildcards except Event, which must be set.
 type TriggerPattern struct {
@@ -1347,6 +1373,13 @@ type TriggerPattern struct {
 	// where the ability's source is saddled ("attacks while saddled", saddle
 	// CR 702.166). It is only valid with Event == EventAttackerDeclared.
 	AttackWhileSaddled bool
+
+	// BlockerScope chooses how often an EventBlockerDeclared trigger (Event or
+	// UnionEvent) whose subject is the blocker fires: once per blocking
+	// creature ("blocks", CR 509.3a) or once per blocked attacker ("blocks a
+	// creature", CR 509.3b). It must be unspecified for a blocked-attacker
+	// subject ("becomes blocked by a creature", CR 509.3d).
+	BlockerScope BlockerTriggerScope
 
 	// AttacksAlongsideSelection restricts an EventAttackerDeclared trigger to
 	// combats where the ability's source is attacking and at least
@@ -1698,6 +1731,7 @@ func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 			},
 			{
 				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Text:   "Exile it at the beginning of the next end step.",
 					Timing: DelayedAtBeginningOfNextEndStep,
 					Content: Mode{Sequence: []Instruction{{
 						Primitive: MovePermanent{Object: CapturedObjectReference(), Destination: zone.Exile},

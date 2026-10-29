@@ -99,7 +99,7 @@ func (ce combatEngine) chooseStagedAttackers(g *game.Game, player game.PlayerID,
 	if !found {
 		panic("completed attack choices have no legal declaration")
 	}
-	return action.DeclareAttackers(declarations)
+	return action.DeclareAttackersWithBands(declarations, ce.chooseAttackingBands(g, player, declarations, agents, log))
 }
 
 func (ce combatEngine) chooseStagedBlockers(g *game.Game, player game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) action.Action {

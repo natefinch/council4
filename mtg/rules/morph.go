@@ -123,11 +123,20 @@ func faceDownSpellDef() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Creature}}}
 }
 
-func faceDownSpellRequest(player game.PlayerID, cardID id.ID) payment.SpellRequest {
+// faceDownSpellRequest determines a face-down cast's total cost from the {3}
+// alternative cost and the face-down spell's characteristics (CR 702.37c,
+// 702.168b, 601.2f): increases, reductions and additional costs that apply to
+// a colorless 2/2 creature spell with no name, subtypes or mana cost apply,
+// and those keyed to the hidden card's own characteristics do not.
+func faceDownSpellRequest(player game.PlayerID, cardID id.ID, sourceZone zone.Type) payment.SpellRequest {
+	permission := payment.SpellCastPermissionDefault
+	if sourceZone == zone.Graveyard {
+		permission = payment.SpellCastPermissionRuleEffect
+	}
 	return payment.SpellRequest{
-		PlayerID: player, CardID: cardID, SourceZone: zone.Graveyard, Card: faceDownSpellDef(),
+		PlayerID: player, CardID: cardID, SourceZone: sourceZone, Card: faceDownSpellDef(),
 		Alternative:     opt.Val(cost.Alternative{Label: "Face down", ManaCost: opt.Val(faceDownCastCost)}),
-		CastPermissions: []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect},
+		CastPermissions: []payment.SpellCastPermission{permission},
 	}
 }
 
@@ -151,7 +160,7 @@ func canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, 
 		spellCastProhibited(g, player, faceDownSpellDef()) || spellCastLimitReached(g, player, faceDownSpellDef()) {
 		return false
 	}
-	return paymentOrch.canPaySpellCosts(g, faceDownSpellRequest(player, cardID))
+	return paymentOrch.canPaySpellCosts(g, faceDownSpellRequest(player, cardID, zone.Graveyard))
 }
 
 func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
@@ -192,7 +201,7 @@ func (*Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.I
 	if _, ok := faceDownCostForCard(spellDef, kind); !ok {
 		return false
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &faceDownCastCost})
+	return paymentOrch.canPaySpellCosts(g, faceDownSpellRequest(playerID, cardID, zone.Hand))
 }
 
 func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -205,43 +214,7 @@ func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.Player
 	if !e.canCastFaceDown(g, playerID, cast.CardID, cast.Face, cast.FaceDownKind) {
 		return false
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, &faceDownCastCost, nil, 0, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &faceDownCastCost, Prefs: prefs}) {
-		return false
-	}
-	player := g.Players[playerID]
-	if !player.Hand.Remove(cast.CardID) {
-		panic("face-down cast card disappeared from hand after validation")
-	}
-	obj := &game.StackObject{
-		ID:           g.IDGen.Next(),
-		Kind:         game.StackSpell,
-		SourceID:     cast.CardID,
-		Face:         cast.Face,
-		Controller:   playerID,
-		FaceDown:     true,
-		FaceDownFace: cast.Face,
-		FaceDownKind: cast.FaceDownKind,
-	}
-	pushSpellToStack(g, obj, game.Event{
-		SourceID:      cast.CardID,
-		StackObjectID: obj.ID,
-		Controller:    playerID,
-		CardID:        cast.CardID,
-		Face:          cast.Face,
-		CardTypes:     []types.Card{types.Creature},
-		Colors:        nil, // Face-down spells are colorless (CR 708.2b).
-		ManaValue:     opt.Val(0),
-		// A face-down permanent is cast for the fixed {3} face-down cast cost
-		// (CR 702.37e); record that spend for mana-spent-to-cast triggers. The
-		// face-down cast path does not track per-unit provenance, so no creature
-		// mana is attributed.
-		ManaSpentToCast:              opt.Val(faceDownCastCost.ManaValue()),
-		ManaFromCreaturesSpentToCast: opt.Val(0),
-		FromZone:                     zone.Hand,
-		ToZone:                       zone.Stack,
-	})
-	return true
+	return e.castFaceDownSpell(g, playerID, cast, zone.Hand, agents, log)
 }
 
 func (e *Engine) applyGraveyardFaceDown(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -253,37 +226,56 @@ func (e *Engine) applyGraveyardFaceDown(g *game.Game, player game.PlayerID, cast
 	if !canCastGraveyardFaceDown(g, player, cast.CardID, cast.Face, cast.FaceDownKind, cast.Permission) {
 		return false
 	}
+	return e.castFaceDownSpell(g, player, cast, zone.Graveyard, agents, log)
+}
+
+// castFaceDownSpell casts a validated face-down spell: the card moves to the
+// stack face down first (CR 601.2a), then the total cost is determined from
+// the face-down characteristics and paid (CR 702.37c, 601.2f-h), and only then
+// does the spell become cast (CR 601.2i). An unpaid proposal is undone.
+func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	obj := &game.StackObject{
 		ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: cast.CardID, Controller: player,
 		Face: cast.Face, FaceDown: true, FaceDownFace: cast.Face, FaceDownKind: cast.FaceDownKind,
-		SourceZone: zone.Graveyard,
+		SourceZone: sourceZone,
 	}
-	card, _ := g.GetCardInstance(cast.CardID)
-	counterTransition := prepareCastCounterTransition(g, card, zone.Graveyard)
-	if !g.Players[player].Graveyard.Remove(cast.CardID) {
+	card, ok := g.GetCardInstance(cast.CardID)
+	if !ok {
+		return false
+	}
+	owner := g.Players[player]
+	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
+	if !removeCastSourceCard(g, owner, cast.CardID, sourceZone) {
 		return false
 	}
 	counterTransition.apply(g)
 	g.Stack.Push(obj)
-	request := faceDownSpellRequest(player, cast.CardID)
+	request := faceDownSpellRequest(player, cast.CardID, sourceZone)
 	request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, player)
 	result, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(g.Players[player], cast.CardID, zone.Graveyard)
+		restoreCastSourceCard(owner, cast.CardID, sourceZone)
 		counterTransition.undo(g)
 		return false
 	}
 	recordPermanentTypePlay(g, player, cast.Permission)
-	obj.ManaSpentToCast = totalManaSpent(result.PoolSpend)
+	obj.AdditionalCostsPaid = result.AdditionalCostsPaid
+	obj.SacrificedAsCostIDs = result.SacrificedIDs
+	obj.PaidCostSubjects = result.PaidCostSubjects
 	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(result.PoolSpend)
+	obj.ManaSpentByColorToCast = manaSpentByColor(result.PoolSpend)
+	obj.ManaSpentToCast = totalManaSpent(result.PoolSpend)
+	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(result.PoolSpend)
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID: cast.CardID, StackObjectID: obj.ID, CardID: cast.CardID, Controller: player,
-		Face: cast.Face, CardTypes: []types.Card{types.Creature}, ManaValue: opt.Val(0),
+		Face: cast.Face, CardTypes: []types.Card{types.Creature},
+		Colors:                       nil, // Face-down spells are colorless (CR 708.2b).
+		ManaValue:                    opt.Val(0),
 		ManaSpentToCast:              opt.Val(obj.ManaSpentToCast),
-		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(result.PoolSpend)),
-		FromZone:                     zone.Graveyard, ToZone: zone.Stack,
+		ManaFromCreaturesSpentToCast: opt.Val(obj.ManaFromCreaturesSpentToCast),
+		FromZone:                     sourceZone, ToZone: zone.Stack,
 	}, nil)
 	resolveSpellCastManaSpendRiders(g, player, riderSnapshot, result.PoolSpend, request.Card, obj)
 	return true

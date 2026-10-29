@@ -60,6 +60,7 @@ func newDwindle() *game.CardDef {
 						Type: game.TriggerWhen,
 						Pattern: game.TriggerPattern{
 							Event:            game.EventBlockerDeclared,
+							BlockerScope:     game.BlockerTriggerOnce,
 							Source:           game.TriggerSourceAttachedPermanent,
 							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 							StackObjectKind:  game.StackSpell,

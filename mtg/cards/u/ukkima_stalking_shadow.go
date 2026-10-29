@@ -71,7 +71,9 @@ func newUkkimaStalkingShadow() *game.CardDef {
 									game.Instruction{
 										Primitive: game.Damage{
 											Amount: game.Dynamic(game.DynamicAmount{
-												Kind: game.DynamicAmountX,
+												Kind:       game.DynamicAmountObjectPower,
+												Multiplier: 1,
+												Object:     game.EventPermanentReference(),
 											}),
 											Recipient:    game.AnyTargetDamageRecipient(0),
 											DamageSource: opt.Val(game.EventPermanentReference()),

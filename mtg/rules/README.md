@@ -439,6 +439,40 @@ feasibility includes lure, menace, maximum-one, additional capacity and distinct
 creature alone restrictions. Ordinary must-block assignments use residual
 bipartite b-matching rather than factorial enumeration.
 
+Attacking bands (CR 508.1e, 702.22c-f) are announced with the attack
+declaration: `action.DeclareAttackersWithBands` carries them in a complete
+proposal, and a staged declaration asks `ChoiceAttackingBand` questions after
+the attack targets are fixed. Each creature not yet banded that has banding, or
+a "bands with other [quality]" ability while having that quality, may start a
+band. A band is legal with at least one member with banding and at most one
+without, or with every member of one [quality] and at least one of them having
+"bands with other [quality]" (702.22c). Only creatures that keep the band legal
+(and share its attack target and aren't in another band) are offered, and the
+default forms no band. `game.BandsWithOtherStaticAbility` builds the keyword;
+its quality is a `Selection` read from current characteristics. A layer-6
+removal of banding also removes every "bands with other" ability (702.22b),
+while removing `BandsWithOther` keeps banding; abilities gained later in
+timestamp order still apply. Bands live in
+`CombatState.Bands`, survive members losing banding, lose members removed from
+combat or leaving the battlefield and dissolve at one member, and appear in
+`PlayerObservation.Combat()`.
+A blocker declared against one band member blocks every member (CR 702.22h).
+Restrictions, requirements and evasion are checked only for the declared
+attacker, and declaring one blocker against two members of a band is illegal
+and never offered. `applyBlockers` records every propagated pair in
+`Blockers`, `BlockedAttackers` and `BlockerOrder` before emitting any block
+event. Each pair gets its own blocker-declared event (CR 509.3b/d), and each
+newly blocked member gets a becomes-blocked event (509.3c). All of these events
+share the declaration batch. Combat damage then uses the existing
+division paths: the active player divides a blocker's damage among the
+attackers it blocks while one has banding, or a [quality] creature with "bands
+with other [quality]" and another [quality] creature are among them (702.22k);
+blockers give the defending player an attacker's division the same way
+(702.22j). Otherwise the blocker's controller
+is asked to divide it (510.1d); the default assigns lethal damage in order.
+A band member with trample counts damage the other members assign to a shared
+blocker (702.19c).
+
 Live play and `Simulator.Apply` use the same completion and application paths,
 including controlled-player routing, actor-owned payment, explicit invalid
 choice fallback and clone-independent declaration-window completion. Exact
@@ -703,7 +737,7 @@ This struct is the intended seam for a future effect pipeline: middleware, loggi
 
 All code that puts an object onto the stack must use one of:
 
-- **`pushSpellToStack(g, obj, castEvent)`** — pushes a spell stack object, emits `EventObjectBecameTarget` for each target, emits the `EventZoneChanged` event pre-built by the caller, then emits `EventSpellCast` from the same event. Used for all spell casts (hand, command zone, graveyard, exile, suspend, cascade, madness). Callers must populate `CardTypes`, `CardSupertypes`, `CardSubtypes`, `Colors`, and `ManaValue` in the `castEvent` using the face-specific `cardTypes(spellDef)`, `cardSupertypes(spellDef)`, `cardSubtypes(spellDef)`, `spellColors(spellDef)`, and stack mana-value helpers so that type-, supertype-, subtype-, color-, and mana-value-filtered cast triggers match correctly; face-down casts explicitly record creature type, no colors, no supertypes/subtypes, and mana value 0. Callers that produce storm copies must call `stormCopyCount` *before* this helper because `EventSpellCast` is emitted inside.
+- **`pushSpellToStack(g, obj, castEvent)`** — pushes a spell stack object, emits `EventObjectBecameTarget` for each target, emits the `EventZoneChanged` event pre-built by the caller, then emits `EventSpellCast` from the same event. Used for all spell casts (hand, command zone, graveyard, exile, cascade, madness); suspend and rebound casts use the shared free-cast route (`chooseAndCastFreeSpell`), which plans and pays additional costs and cost increases on the free alternative cost. Madness casts plan their madness alternative cost through the same spell-cost planner, lock the total before opening the payment-time mana ability window when it includes mana (CR 601.2f-g), and reverse an unpaid proposal with its reversible mana activations (CR 733.1). Callers must populate `CardTypes`, `CardSupertypes`, `CardSubtypes`, `Colors`, and `ManaValue` in the `castEvent` using the face-specific `cardTypes(spellDef)`, `cardSupertypes(spellDef)`, `cardSubtypes(spellDef)`, `spellColors(spellDef)`, and stack mana-value helpers so that type-, supertype-, subtype-, color-, and mana-value-filtered cast triggers match correctly; face-down casts explicitly record creature type, no colors, no supertypes/subtypes, and mana value 0. Callers that produce storm copies must call `stormCopyCount` *before* this helper because `EventSpellCast` is emitted inside.
 
 - **`pushAbilityToStack(g, obj)`** — pushes an activated or triggered ability stack object and emits target events. Used for non-mana activated abilities, cycling, and triggered abilities.
 

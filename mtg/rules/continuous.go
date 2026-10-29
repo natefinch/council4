@@ -43,6 +43,11 @@ type permanentEffectiveValues struct {
 	triggerGrantOrigins       map[*game.Ability]game.TriggerOrigin
 	controller                game.PlayerID
 	intrinsicAbilitiesRemoved bool
+	// bandsWithOtherFrom is the index in abilities before which every "bands
+	// with other" ability has been lost to a layer-6 removal of banding or of
+	// "bands with other" (CR 702.22b). Only abilities gained after that removal
+	// (later in timestamp order) remain.
+	bandsWithOtherFrom int
 
 	power            int
 	powerOK          bool
@@ -1568,6 +1573,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.resolutionUses = nil
 			values.triggerOrigins = nil
 			values.keywords.clear()
+			values.bandsWithOtherFrom = 0
 		}
 		for i, body := range effect.AddAbilities {
 			appendEffectiveAbility(values, permanent, body, game.ActivatedAbilityResolutionUse{
@@ -1590,6 +1596,12 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		}
 		for _, keyword := range effect.RemoveKeywords {
 			values.keywords.set(keyword, false)
+			if keyword == game.Banding || keyword == game.BandsWithOther {
+				// Losing banding also loses every "bands with other" ability
+				// (CR 702.22b).
+				values.keywords.set(game.BandsWithOther, false)
+				values.bandsWithOtherFrom = len(values.abilities)
+			}
 		}
 		for _, keyword := range effect.AddKeywords {
 			values.keywords.set(keyword, true)
@@ -1763,6 +1775,7 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 		values.resolutionUses = nil
 		values.triggerOrigins = nil
 		values.keywords.clear()
+		values.bandsWithOtherFrom = 0
 		values.intrinsicAbilitiesRemoved = true
 		oldSubtypes = nil
 	}
@@ -1852,6 +1865,7 @@ func applyCounterAndTemporaryValues(permanent *game.Permanent, values *permanent
 
 func rebuildKeywords(permanent *game.Permanent, values *permanentEffectiveValues) {
 	values.keywords.clear()
+	values.bandsWithOtherFrom = 0
 	for _, body := range values.abilities {
 		if static, ok := body.(*game.StaticAbility); ok &&
 			!levelBandKeywordConditionSatisfied(permanent, static.Condition) {
