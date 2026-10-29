@@ -233,9 +233,6 @@ func stackObjectSpellQualifiersMatch(g *game.Game, obj *game.StackObject, pred g
 		return false
 	}
 	cardTypes := chars.types
-	if obj.FaceDown {
-		cardTypes = []types.Card{types.Creature}
-	}
 	for _, cardType := range pred.SpellCardTypes {
 		if !slices.Contains(cardTypes, cardType) {
 			return false
@@ -290,7 +287,13 @@ func stackObjectSourceHasTypes(g *game.Game, obj *game.StackObject, required []t
 		}
 		return true
 	}
-	def, ok := stackObjectSourceDef(g, obj)
+	var def *game.CardDef
+	var ok bool
+	if obj.Kind == game.StackSpell {
+		def, ok = stackSpellCharacteristicsDef(g, obj)
+	} else {
+		def, ok = stackObjectSourceDef(g, obj)
+	}
 	if !ok {
 		return false
 	}
@@ -308,7 +311,7 @@ func stackObjectSourceHasTypes(g *game.Game, obj *game.StackObject, required []t
 }
 
 func stackSpellSupertypes(g *game.Game, obj *game.StackObject) []types.Super {
-	spellDef, ok := stackObjectSpellDef(g, obj)
+	spellDef, ok := stackSpellCharacteristicsDef(g, obj)
 	if !ok {
 		return nil
 	}

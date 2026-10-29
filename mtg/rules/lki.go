@@ -136,7 +136,7 @@ func snapshotStackSpell(g *game.Game, obj *game.StackObject) game.ObjectSnapshot
 		Owner:      obj.Controller,
 		Controller: obj.Controller,
 	}
-	if def, ok := stackObjectSpellDef(g, obj); ok {
+	if def, ok := stackSpellCharacteristicsDef(g, obj); ok {
 		var keywords keywordSet
 		for index := range def.AbilityCount() {
 			addBodyKeywords(&keywords, def.BodyAt(index))

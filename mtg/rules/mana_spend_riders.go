@@ -501,7 +501,8 @@ func commanderCreatureSubtypeMatcher(g *game.Game, player *game.Player) (func(ty
 }
 
 // commanderStackFaceDef returns the face definition of the commander while it is
-// a spell on the stack, using the spell's selected face. The bool reports
+// a spell on the stack, using the spell's selected face, or the face-down spell's
+// characteristics when it was cast face down (CR 708.2). The bool reports
 // whether the commander is currently on the stack as a spell; when it is and the
 // selected face cannot be resolved the returned face is nil so the caller fails
 // closed rather than falling back to the printed front face.
@@ -509,6 +510,9 @@ func commanderStackFaceDef(g *game.Game, commander *game.CardInstance) (*game.Ca
 	for _, obj := range g.Stack.Objects() {
 		if obj.Kind != game.StackSpell || obj.SourceID != commander.ID {
 			continue
+		}
+		if obj.FaceDown {
+			return faceDownStackSpellDef(obj), true
 		}
 		faceDef, ok := commander.Def.FaceDef(obj.Face)
 		if !ok {

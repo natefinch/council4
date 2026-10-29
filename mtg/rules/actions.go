@@ -142,6 +142,10 @@ func splitSecondOnStack(g *game.Game) bool {
 		if obj.Kind != game.StackSpell {
 			continue
 		}
+		if obj.FaceDown {
+			// A face-down spell has no abilities (CR 708.2).
+			continue
+		}
 		card, ok := g.GetCardInstance(obj.SourceID)
 		if ok && cardFaceOrDefault(card, obj.Face).HasKeyword(game.SplitSecond) {
 			return true

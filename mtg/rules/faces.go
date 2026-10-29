@@ -236,7 +236,7 @@ func characteristicDefinedFace(card *game.CardDef) *game.CardDef {
 // so a resolving color condition ("if it's blue") can test the targeted object.
 func stackObjectColors(g *game.Game, obj *game.StackObject) ([]color.Color, bool) {
 	if obj != nil && obj.Kind == game.StackSpell {
-		if def, ok := stackObjectSpellDef(g, obj); ok {
+		if def, ok := stackSpellCharacteristicsDef(g, obj); ok {
 			return spellColors(def), true
 		}
 	}

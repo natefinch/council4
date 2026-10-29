@@ -2503,7 +2503,7 @@ func permanentProtectedFromSource(g *game.Game, permanent *game.Permanent, sourc
 	// Use the card's selected face if one is on the stack; otherwise root def.
 	if sourceID != 0 {
 		if card, ok := g.GetCardInstance(sourceID); ok {
-			return permanentProtectedFromSourceDef(g, permanent, cardFaceOrDefault(card, selectedFaceForCardInstance(g, card)))
+			return permanentProtectedFromSourceDef(g, permanent, cardInstanceSourceDef(g, card))
 		}
 	}
 	return false
@@ -2513,7 +2513,7 @@ func permanentProtectedFromSource(g *game.Game, permanent *game.Permanent, sourc
 // spell stack object, using the selected face (obj.Face) so that
 // alternate-face spells carry the correct types/colors/subtypes.
 func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, bool) {
-	def, ok := stackObjectSpellDef(g, obj)
+	def, ok := stackSpellCharacteristicsDef(g, obj)
 	if !ok {
 		return sourceChars{}, false
 	}
@@ -2532,15 +2532,20 @@ func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, b
 	return chars, true
 }
 
-// selectedFaceForCardInstance finds the face the card instance is currently
-// using on the stack (if any); falls back to FaceFront.
-func selectedFaceForCardInstance(g *game.Game, card *game.CardInstance) game.FaceIndex {
+// cardInstanceSourceDef returns the characteristics of a source known only by
+// its card instance: the face it is using as a spell on the stack (if any), the
+// face-down spell characteristics when it was cast face down (CR 708.2), and
+// otherwise its front face.
+func cardInstanceSourceDef(g *game.Game, card *game.CardInstance) *game.CardDef {
 	for _, obj := range g.Stack.Objects() {
 		if obj.SourceID == card.ID {
-			return obj.Face
+			if obj.Kind == game.StackSpell && obj.FaceDown {
+				return faceDownStackSpellDef(obj)
+			}
+			return cardFaceOrDefault(card, obj.Face)
 		}
 	}
-	return game.FaceFront
+	return cardFaceOrDefault(card, game.FaceFront)
 }
 
 // sourceChars holds the effective qualities used for protection evaluation.
@@ -2571,7 +2576,7 @@ func sourceCharsForProtection(g *game.Game, sourceID, sourceObjectID id.ID, fall
 	}
 	if sourceID != 0 {
 		if card, ok := g.GetCardInstance(sourceID); ok {
-			return cardDefSourceChars(cardFaceOrDefault(card, selectedFaceForCardInstance(g, card))), true
+			return cardDefSourceChars(cardInstanceSourceDef(g, card)), true
 		}
 	}
 	if fallback != nil {

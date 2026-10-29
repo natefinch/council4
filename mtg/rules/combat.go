@@ -264,7 +264,7 @@ func damageSourceHasKeyword(g *game.Game, sourceID, sourceObjectID id.ID, keywor
 			return hasKeyword(g, source, keyword)
 		}
 		if source, present := stackObjectByID(g, sourceObjectID); present {
-			def, found := stackObjectSpellDef(g, source)
+			def, found := stackSpellCharacteristicsDef(g, source)
 			return found && def.HasKeyword(keyword)
 		}
 		if snapshot, present := lastKnownObject(g, sourceObjectID); present {
