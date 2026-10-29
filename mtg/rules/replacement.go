@@ -374,7 +374,7 @@ func replacementZoneChange(g *game.Game, event game.Event, local ...game.Replace
 		if len(matches) == 0 {
 			return pending.result
 		}
-		decision := chooseReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
+		decision := chooseZoneChangeReplacementDecision(g, event, replacementEffectLabels(matches))
 		pending.choose(selectedReplacementIndex(matches, decision))
 	}
 }
