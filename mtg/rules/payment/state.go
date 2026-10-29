@@ -123,11 +123,15 @@ type stateQueries interface {
 	// tests these effective characteristics. card is never mutated.
 	SpellCharacteristics(playerID game.PlayerID, card *game.CardDef, bestowed bool) *game.CardDef
 
-	// CardMatchesSelection reports whether the card face satisfies the
-	// selection's printed-characteristic predicates. The planner uses it so an
+	// CardMatchesSelection reports whether the card instance, read as the card
+	// it is in its current zone, satisfies the selection. The read is of the real
+	// instance, so the card's own characteristic-defining abilities, its
+	// counters and type-changing effects that apply to cards its owner owns
+	// outside the battlefield ("creature cards you own that aren't on the
+	// battlefield are the chosen type") count. The planner uses it so an
 	// additional card cost (discard/exile/reveal) tests the same eligibility
 	// predicate as the choice layer.
-	CardMatchesSelection(card *game.CardDef, sel game.Selection) bool
+	CardMatchesSelection(card *game.CardInstance, sel game.Selection) bool
 
 	// GraveyardCastGrantedAlternatives returns the alternative costs that active
 	// rule effects grant for casting card from playerID's graveyard

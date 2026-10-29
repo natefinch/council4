@@ -71,7 +71,7 @@ func exilePlannerCardIDs(g *game.Game, playerID game.PlayerID, addCost cost.Addi
 		if !ok {
 			continue
 		}
-		if state.CardMatchesSelection(cardFaceOrDefault(card, game.FaceFront), sel) {
+		if state.CardMatchesSelection(card, sel) {
 			set[cardID] = true
 		}
 	}

@@ -42,7 +42,13 @@ func spellTypeLineFor(g *game.Game, controller game.PlayerID, def *game.CardDef,
 	if g == nil {
 		return line
 	}
-	effects := spellTypeEffects(g, controller, line)
+	return applyTypeLineEffects(g, controller, line, typeLineEffects(g, controller, line, spellTypeSelection))
+}
+
+// applyTypeLineEffects applies the collected layer 4 effects to line in
+// timestamp order (CR 613.7) through the battlefield type layer. line must be
+// owned by the caller because the type layer may append to its slices.
+func applyTypeLineEffects(g *game.Game, controller game.PlayerID, line spellTypeLine, effects []game.ContinuousEffect) spellTypeLine {
 	if len(effects) == 0 {
 		return line
 	}
@@ -82,12 +88,25 @@ func withSpellTypeLine(def *game.CardDef, line spellTypeLine) *game.CardDef {
 	return &effective
 }
 
-// spellTypeEffects collects the type-changing effects of battlefield static
-// abilities that apply to a spell controlled by controller whose type line at
-// the start of the type layer is line. Each effect is stamped with its source,
-// controller and timestamp so ordering and source entry choices (Leyline of
-// Transformation's chosen creature type) resolve as they do for permanents.
-func spellTypeEffects(g *game.Game, controller game.PlayerID, line spellTypeLine) []game.ContinuousEffect {
+// typeLineSelection picks the selection that extends a battlefield type-changing
+// effect to an object outside the battlefield (a spell or an owned card).
+type typeLineSelection func(*game.ContinuousEffect) *game.Selection
+
+func spellTypeSelection(effect *game.ContinuousEffect) *game.Selection {
+	return effect.SpellSelection
+}
+
+func ownedCardTypeSelection(effect *game.ContinuousEffect) *game.Selection {
+	return effect.OwnedCardSelection
+}
+
+// typeLineEffects collects the type-changing effects of battlefield static
+// abilities controlled by controller whose selection, picked by selectionOf,
+// matches an object whose type line at the start of the type layer is line.
+// Each effect is stamped with its source, controller and timestamp so ordering
+// and source entry choices (Leyline of Transformation's chosen creature type)
+// resolve as they do for permanents.
+func typeLineEffects(g *game.Game, controller game.PlayerID, line spellTypeLine, selectionOf typeLineSelection) []game.ContinuousEffect {
 	if _, owned := beginStaticSourceRead(g); owned {
 		defer g.EndStaticSourceFrame()
 	}
@@ -105,7 +124,7 @@ func spellTypeEffects(g *game.Game, controller game.PlayerID, line spellTypeLine
 		resolvedController := false
 		for i := range source.face.StaticAbilities {
 			body := &source.face.StaticAbilities[i]
-			if !staticAbilityDeclaresSpellTypeEffect(body) || !staticAbilityFunctionsFromSource(body, source) {
+			if !staticAbilityDeclaresTypeLineEffect(body, selectionOf) || !staticAbilityFunctionsFromSource(body, source) {
 				continue
 			}
 			if !resolvedController {
@@ -126,8 +145,8 @@ func spellTypeEffects(g *game.Game, controller game.PlayerID, line spellTypeLine
 			}
 			for j := range body.ContinuousEffects {
 				template := &body.ContinuousEffects[j]
-				if template.Layer != game.LayerType || template.SpellSelection == nil ||
-					!matchSelection(&subject, template.SpellSelection) {
+				selection := selectionOf(template)
+				if template.Layer != game.LayerType || selection == nil || !matchSelection(&subject, selection) {
 					continue
 				}
 				effect := *template
@@ -142,9 +161,9 @@ func spellTypeEffects(g *game.Game, controller game.PlayerID, line spellTypeLine
 	return effects
 }
 
-func staticAbilityDeclaresSpellTypeEffect(body *game.StaticAbility) bool {
+func staticAbilityDeclaresTypeLineEffect(body *game.StaticAbility, selectionOf typeLineSelection) bool {
 	for i := range body.ContinuousEffects {
-		if body.ContinuousEffects[i].SpellSelection != nil {
+		if selectionOf(&body.ContinuousEffects[i]) != nil {
 			return true
 		}
 	}

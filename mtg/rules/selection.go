@@ -25,7 +25,9 @@ const (
 	subjectEventPermanent
 	// subjectCastSpell reads a cast spell's card types from the event.
 	subjectCastSpell
-	// subjectCard reads printed characteristics from a card in a non-battlefield zone.
+	// subjectCard reads printed characteristics from a card in a non-battlefield
+	// zone; its type line also reflects its own characteristic-defining abilities
+	// and type-changing effects that apply to cards its owner owns there.
 	subjectCard
 )
 
@@ -67,6 +69,11 @@ type selectionSubject struct {
 	snapshot  *game.ObjectSnapshot
 	cardTypes []types.Card
 	card      *game.CardInstance
+
+	// cardLine caches a subjectCard's effective type line, computed on first read
+	// (cardLineOK) so one match reads the card's type-changing effects once.
+	cardLine   spellTypeLine
+	cardLineOK bool
 
 	// resolutionChoices holds the resolving stack object's published choices so a
 	// SubtypeChoiceResolution predicate can read the creature type chosen earlier in
@@ -402,7 +409,7 @@ func (s *selectionSubject) hasType(cardType types.Card) bool {
 		if s.card == nil || s.card.Def == nil {
 			return false
 		}
-		return slices.Contains(s.card.Def.DefaultFace().Types, cardType)
+		return slices.Contains(s.cardTypeLine().types, cardType)
 	default:
 		return false
 	}
@@ -428,7 +435,7 @@ func (s *selectionSubject) hasSupertype(supertype types.Super) bool {
 		return slices.Contains(s.event.CardSupertypes, supertype)
 	}
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
-		return slices.Contains(s.card.Def.DefaultFace().Supertypes, supertype)
+		return slices.Contains(s.cardTypeLine().supertypes, supertype)
 	}
 	return false
 }
@@ -461,8 +468,9 @@ func (s *selectionSubject) hasAnySubtype(subtypes []types.Sub) bool {
 		}
 	}
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
+		line := s.cardTypeLine()
 		for _, subtype := range subtypes {
-			if slices.Contains(s.card.Def.DefaultFace().Subtypes, subtype) {
+			if slices.Contains(line.subtypes, subtype) {
 				return true
 			}
 		}
@@ -597,12 +605,26 @@ func (s *selectionSubject) chosenCardTypeFromResolution(key game.ChoiceKey) (typ
 
 // isPermanentCard reports whether the subject is a permanent card, for the
 // Selection.RequirePermanentCard gate. Only a card in a non-battlefield zone
-// carries the printed type line this predicate reads; other subjects fail closed.
+// carries the card type line this predicate reads; other subjects fail closed.
 func (s *selectionSubject) isPermanentCard() bool {
 	if s.kind == subjectCard && s.card != nil && s.card.Def != nil {
-		return s.card.Def.IsPermanent()
+		return slices.ContainsFunc(s.cardTypeLine().types, types.Card.IsPermanent)
 	}
 	return false
+}
+
+// cardTypeLine returns a subjectCard's effective type line: its default face
+// with its own characteristic-defining abilities (CR 604.3) and the
+// type-changing effects that apply to cards its owner owns outside the
+// battlefield and stack (ownedCardTypeLine). A synthetic card without an ID,
+// such as a cast face matched against a cost selection, keeps its face's type
+// line. Callers ensure s.card and its Def are present.
+func (s *selectionSubject) cardTypeLine() spellTypeLine {
+	if !s.cardLineOK {
+		s.cardLine = offBattlefieldCardTypeLine(s.g, s.card)
+		s.cardLineOK = true
+	}
+	return s.cardLine
 }
 
 func (s *selectionSubject) hasColor(c color.Color) bool {

@@ -39,6 +39,7 @@ func newArcaneAdaptation() *game.CardDef {
 							Group:                     game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),
 							Layer:                     game.LayerType,
 							SpellSelection:            &game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							OwnedCardSelection:        &game.Selection{RequiredTypes: []types.Card{types.Creature}},
 							AddSubtypeFromEntryChoice: game.EntryTypeChoiceKey,
 						},
 					},

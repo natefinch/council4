@@ -268,4 +268,13 @@ type ContinuousEffect struct {
 	// stack object. Nil keeps the effect off the stack; a non-nil selection
 	// carries only type, supertype and subtype predicates.
 	SpellSelection *Selection
+	// OwnedCardSelection extends a battlefield static ability's type-changing
+	// (layer 4) effect to each card the effect's controller owns in the hand,
+	// library, graveyard, exile or command zone whose type line, as of the start
+	// of the type layer, matches the immutable selection ("... and creature cards
+	// you own that aren't on the battlefield", CR 613.1d). Cards on the stack are
+	// spells, covered by SpellSelection. The card's effective types are computed
+	// on demand and reveal nothing. Nil keeps the effect off such cards; a non-nil
+	// selection carries only type, supertype and subtype predicates.
+	OwnedCardSelection *Selection
 }

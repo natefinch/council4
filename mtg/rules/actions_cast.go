@@ -816,7 +816,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 			return false
 		}
 	case zone.Library:
-		if !canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face) {
+		if !canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face, bestowed) {
 			return false
 		}
 	default:
@@ -1180,12 +1180,13 @@ func (m castCostMode) castRouteRequests(base payment.SpellRequest, routes []cast
 // per-card or zone-wide play/cast permission and each matching group
 // RuleEffectCastSpellsFromZone permission. Every one is a separate permission
 // the caster may choose to cast through, with only its own rider and usage
-// (CR 118.14). allowFree reports whether the cast may use a permission's own
-// alternative cost. A "without paying its mana cost" permission authorizes
+// (CR 118.14). bestowed selects the characteristics a bestowed cast has as an
+// Aura spell (CR 702.103b) for the group permissions' type filters. allowFree
+// reports whether the cast may use a permission's own alternative cost. A "without paying its mana cost" permission authorizes
 // only that free cast, so when the cast already uses another alternative cost
 // (CR 118.9a) it offers no route; excluded then reports that such a matching
 // permission was left out.
-func castFromZonePermissionRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, allowFree bool) (routes []castRoute, excluded bool) {
+func castFromZonePermissionRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, bestowed, allowFree bool) (routes []castRoute, excluded bool) {
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
@@ -1202,19 +1203,20 @@ func castFromZonePermissionRoutes(g *game.Game, playerID game.PlayerID, cardID i
 		}
 		routes = append(routes, route)
 	}
-	groupRoutes, groupExcluded := castSpellsFromZoneRoutes(g, playerID, cardID, sourceZone, face, allowFree)
+	groupRoutes, groupExcluded := castSpellsFromZoneRoutes(g, playerID, cardID, sourceZone, face, bestowed, allowFree)
 	return orderedCastRoutes(append(routes, groupRoutes...)), excluded || groupExcluded
 }
 
 // castSpellsFromZoneRoutes returns one route per matching group
 // RuleEffectCastSpellsFromZone permission that lets playerID cast the face of
-// cardID from sourceZone, in effect order. A permission that replaces the mana
+// cardID from sourceZone in the selected cast mode (bestowed or not), in effect
+// order. A permission that replaces the mana
 // cost with paying life equal to the spell's mana value (Bolas's Citadel)
 // imposes that cost only on a cast made through it; it is an alternative cost
 // (CR 118.9a), so when allowFree is false (the cast already uses another
 // alternative cost) it offers no route and excluded reports it was left out.
-func castSpellsFromZoneRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, allowFree bool) (routes []castRoute, excluded bool) {
-	for _, effect := range matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face) {
+func castSpellsFromZoneRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, bestowed, allowFree bool) (routes []castRoute, excluded bool) {
+	for _, effect := range matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face, bestowed) {
 		if effect.PayLifeEqualToManaValue && !allowFree {
 			excluded = true
 			continue
@@ -1308,13 +1310,13 @@ func spellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZ
 func buildSpellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, mode castCostMode) []castRoute {
 	switch sourceZone {
 	case zone.Exile:
-		routes, excluded := exilePermissionCastRoutes(g, playerID, cardID, face, !mode.otherAlternative())
+		routes, excluded := exilePermissionCastRoutes(g, playerID, cardID, face, mode.bestowed, !mode.otherAlternative())
 		if len(routes) == 0 && !excluded {
 			return []castRoute{{}}
 		}
 		return routes
 	case zone.Library:
-		routes, _ := castSpellsFromZoneRoutes(g, playerID, cardID, zone.Library, face, !mode.otherAlternative())
+		routes, _ := castSpellsFromZoneRoutes(g, playerID, cardID, zone.Library, face, mode.bestowed, !mode.otherAlternative())
 		return orderedCastRoutes(routes)
 	default:
 		return []castRoute{{}}
@@ -1324,26 +1326,34 @@ func buildSpellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, so
 // exileCastAuthorized reports whether some exile cast route authorizes
 // playerID to cast the face of cardID from exile under any cost mode: the
 // routes are those spellCastRoutes offers a cast that uses no other
-// alternative cost, a superset of every mode's routes. Cast validation and
+// alternative cost, normally or (for a face with Bestow) bestowed, a superset
+// of every mode's routes. Cast validation and
 // legal-action face enumeration share it, so a face is listed exactly when a
 // permission can authorize it; each concrete cast is still fully validated
 // against the routes of its own mode.
 func exileCastAuthorized(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex) bool {
-	routes, _ := exilePermissionCastRoutes(g, playerID, cardID, face, true)
+	if routes, _ := exilePermissionCastRoutes(g, playerID, cardID, face, false, true); len(routes) > 0 {
+		return true
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok || !spellHasBestow(cardFaceOrDefault(card, face)) {
+		return false
+	}
+	routes, _ := exilePermissionCastRoutes(g, playerID, cardID, face, true, true)
 	return len(routes) > 0
 }
 
 // exilePermissionCastRoutes returns, in spellCastRoutes order, the permission
-// routes through which playerID may cast the face of cardID from exile.
-// allowFree is false when the cast already uses another alternative cost, so
+// routes through which playerID may cast the face of cardID from exile, bestowed
+// or not. allowFree is false when the cast already uses another alternative cost, so
 // free and foretell routes are left out; excluded then reports that such a
 // matching permission was left out. A plotted or foretold card and the
 // CR 715.3d Adventure permission authorize only the front face. A linked free
 // cast ("cast a spell from among cards exiled with this enchantment", Court of
 // Locthwain) authorizes every legal spell face: an adventurer card as its
 // Adventure (CR 715.3a, 715.3d) or either half of a split card (CR 709.3).
-func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, allowFree bool) (routes []castRoute, excluded bool) {
-	routes, excluded = castFromZonePermissionRoutes(g, playerID, cardID, zone.Exile, face, allowFree)
+func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, bestowed, allowFree bool) (routes []castRoute, excluded bool) {
+	routes, excluded = castFromZonePermissionRoutes(g, playerID, cardID, zone.Exile, face, bestowed, allowFree)
 	if face == game.FaceFront {
 		if cardIsPlottedInExile(g, playerID, cardID) {
 			excluded = true
@@ -1508,7 +1518,7 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 	if sourceZone == zone.Library {
 		var faces []game.FaceIndex
 		for _, face := range card.Def.LegalCastFaces() {
-			if canCastSpellsFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
+			if castSpellsFromZonePermitsSomeCast(g, playerID, card.ID, sourceZone, face) {
 				faces = append(faces, face)
 			}
 		}
@@ -1675,7 +1685,7 @@ func foreignExileGroupPermittedCards(g *game.Game, own *game.Player) []id.ID {
 			}
 			if canPlayLandFromZoneByRuleEffect(g, own.ID, cardID, zone.Exile) ||
 				slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
-					return canCastSpellsFromZoneByRuleEffect(g, own.ID, cardID, zone.Exile, face)
+					return castSpellsFromZonePermitsSomeCast(g, own.ID, cardID, zone.Exile, face)
 				}) {
 				cards = append(cards, cardID)
 			}

@@ -456,18 +456,20 @@ func dynamicValueBase(
 		return allGraveyardsCardTypeCount(g)
 	case game.DynamicValueControllerCreatureCardsInGraveyard:
 		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
-			return graveyardCardHasType(card, types.Creature)
+			return graveyardCardHasType(g, card, types.Creature)
 		})
 	case game.DynamicValueControllerInstantOrSorceryCardsInGraveyard:
 		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
-			return graveyardCardHasType(card, types.Instant) || graveyardCardHasType(card, types.Sorcery)
+			return graveyardCardHasType(g, card, types.Instant) || graveyardCardHasType(g, card, types.Sorcery)
 		})
 	case game.DynamicValueControllerLandCardsInGraveyard:
 		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
-			return graveyardCardHasType(card, types.Land)
+			return graveyardCardHasType(g, card, types.Land)
 		})
 	case game.DynamicValueControllerPermanentCardsInGraveyard:
-		return controllerGraveyardCardCount(g, controller, graveyardCardIsPermanent)
+		return controllerGraveyardCardCount(g, controller, func(card *game.CardInstance) bool {
+			return graveyardCardIsPermanent(g, card)
+		})
 	case game.DynamicValueControllerCardTypesInGraveyard:
 		return controllerGraveyardCardTypeCount(g, controller)
 	case game.DynamicValueControllerSubtypeCount:
@@ -532,7 +534,7 @@ func allGraveyardsCardCount(g *game.Game, cardType types.Card, filterByType bool
 			if !ok {
 				continue
 			}
-			if !filterByType || graveyardCardHasType(card, cardType) {
+			if !filterByType || graveyardCardHasType(g, card, cardType) {
 				count++
 			}
 		}
@@ -550,7 +552,7 @@ func allGraveyardsCardTypeCount(g *game.Game) int {
 			if !ok {
 				continue
 			}
-			for _, cardType := range graveyardCardTypes(card) {
+			for _, cardType := range graveyardCardTypes(g, card) {
 				distinct[cardType] = true
 			}
 		}
@@ -558,18 +560,27 @@ func allGraveyardsCardTypeCount(g *game.Game) int {
 	return len(distinct)
 }
 
-// graveyardCardTypes returns the card types of a graveyard card's front face,
-// including a split card's alternate face.
-func graveyardCardTypes(card *game.CardInstance) []types.Card {
-	cardTypes := append([]types.Card(nil), cardFaceOrDefault(card, game.FaceFront).Types...)
+// graveyardCardTypes returns the card types of a card in a graveyard or exile:
+// its front face combined with a split card's alternate face (CR 709.4), plus
+// the types that type-changing effects give cards its owner owns outside the
+// battlefield (ownedCardTypeLine; Biotransference makes a creature card an
+// artifact card). The result must not be mutated.
+func graveyardCardTypes(g *game.Game, card *game.CardInstance) []types.Card {
+	front := cardDefTypeLine(cardFaceOrDefault(card, game.FaceFront))
 	if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
-		cardTypes = append(cardTypes, card.Def.Alternate.Val.Types...)
+		alternate := &card.Def.Alternate.Val
+		front = spellTypeLine{
+			supertypes: appendUniqueSupertypes(slices.Clone(front.supertypes), alternate.Supertypes...),
+			types:      appendUniqueTypes(slices.Clone(front.types), alternate.Types...),
+			subtypes:   appendUniqueSubtypes(slices.Clone(front.subtypes), alternate.Subtypes...),
+		}
 	}
-	return cardTypes
+	line, _ := ownedCardTypeLine(g, card, front)
+	return line.types
 }
 
-func graveyardCardHasType(card *game.CardInstance, cardType types.Card) bool {
-	return slices.Contains(graveyardCardTypes(card), cardType)
+func graveyardCardHasType(g *game.Game, card *game.CardInstance, cardType types.Card) bool {
+	return slices.Contains(graveyardCardTypes(g, card), cardType)
 }
 
 func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType types.Card) int {
@@ -662,9 +673,10 @@ var permanentCardTypes = []types.Card{
 	types.Artifact, types.Creature, types.Enchantment, types.Land, types.Planeswalker, types.Battle,
 }
 
-func graveyardCardIsPermanent(card *game.CardInstance) bool {
+func graveyardCardIsPermanent(g *game.Game, card *game.CardInstance) bool {
+	cardTypes := graveyardCardTypes(g, card)
 	for _, cardType := range permanentCardTypes {
-		if graveyardCardHasType(card, cardType) {
+		if slices.Contains(cardTypes, cardType) {
 			return true
 		}
 	}

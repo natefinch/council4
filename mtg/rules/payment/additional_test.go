@@ -274,7 +274,7 @@ func (fakePaymentState) PermanentEffectiveColors(*game.Permanent) []color.Color 
 func (fakePaymentState) PermanentMatchesSelection(*game.Permanent, game.Selection) bool {
 	return true
 }
-func (fakePaymentState) CardMatchesSelection(*game.CardDef, game.Selection) bool { return true }
+func (fakePaymentState) CardMatchesSelection(*game.CardInstance, game.Selection) bool { return true }
 func (fakePaymentState) GraveyardCastGrantedAlternatives(game.PlayerID, *game.CardDef) []cost.Alternative {
 	return nil
 }

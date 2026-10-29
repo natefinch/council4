@@ -74,7 +74,7 @@ func cardSatisfiesObjectCost(s State, cardID id.ID, choice cardCostChoice) bool 
 	if !ok {
 		return false
 	}
-	return s.CardMatchesSelection(s.CardFace(card, game.FaceFront), choice.selection)
+	return s.CardMatchesSelection(card, choice.selection)
 }
 
 // candidateCardsForObjectCost enumerates, in zone order, every card eligible for

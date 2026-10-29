@@ -569,10 +569,14 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 		for i := range abilityBody.ContinuousEffects {
 			effectPath := appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i))
 			v.validateContinuousEffect(faceName, effectPath, &abilityBody.ContinuousEffects[i], targets)
-			if abilityBody.ContinuousEffects[i].SpellSelection != nil &&
-				abilityBody.ZoneOfFunction != zone.None && abilityBody.ZoneOfFunction != zone.Battlefield {
+			functionsOffBattlefield := abilityBody.ZoneOfFunction != zone.None && abilityBody.ZoneOfFunction != zone.Battlefield
+			if abilityBody.ContinuousEffects[i].SpellSelection != nil && functionsOffBattlefield {
 				v.add(faceName, appendPath(effectPath, "SpellSelection"), CardDefIssueInvalidAbilityBody,
 					"spell type effects require a static ability that functions on the battlefield")
+			}
+			if abilityBody.ContinuousEffects[i].OwnedCardSelection != nil && functionsOffBattlefield {
+				v.add(faceName, appendPath(effectPath, "OwnedCardSelection"), CardDefIssueInvalidAbilityBody,
+					"owned card type effects require a static ability that functions on the battlefield")
 			}
 		}
 		for i := range abilityBody.RuleEffects {
@@ -1397,6 +1401,22 @@ func spellTypeSelectionSupported(selection Selection) bool {
 	return reflect.ValueOf(selection).IsZero()
 }
 
+// validateTypeLineEffectSelection checks a SpellSelection or OwnedCardSelection:
+// it extends only a type-layer effect with no card zone, single affected object
+// or basic land type setting, and selects only by type line.
+func (v *cardDefValidator) validateTypeLineEffectSelection(faceName, path string, continuous *ContinuousEffect, selection Selection, kind, subjects string) {
+	if continuous.Layer != LayerType || continuous.CardZone != zone.None ||
+		continuous.AffectedSource || continuous.AffectedObjectID != 0 || len(continuous.SetBasicLandTypes) > 0 {
+		v.add(faceName, path, CardDefIssueInvalidAbilityBody,
+			kind+" type effects require the type layer, no card zone, no single affected object and no basic land type setting")
+	}
+	v.validateSelection(faceName, path, selection)
+	if !spellTypeSelectionSupported(selection) {
+		v.add(faceName, path, CardDefIssueInvalidSelection,
+			kind+" type effects select "+subjects+" only by type, supertype and subtype")
+	}
+}
+
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
 	if continuous.SetPowerToManaValue || continuous.SetToughnessToManaValue {
 		if continuous.Layer != LayerPowerToughnessSet ||
@@ -1419,16 +1439,10 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 		}
 	}
 	if continuous.SpellSelection != nil {
-		if continuous.Layer != LayerType || continuous.CardZone != zone.None ||
-			continuous.AffectedSource || continuous.AffectedObjectID != 0 || len(continuous.SetBasicLandTypes) > 0 {
-			v.add(faceName, appendPath(path, "SpellSelection"), CardDefIssueInvalidAbilityBody,
-				"spell type effects require the type layer, no card zone, no single affected object and no basic land type setting")
-		}
-		v.validateSelection(faceName, appendPath(path, "SpellSelection"), *continuous.SpellSelection)
-		if !spellTypeSelectionSupported(*continuous.SpellSelection) {
-			v.add(faceName, appendPath(path, "SpellSelection"), CardDefIssueInvalidSelection,
-				"spell type effects select spells only by type, supertype and subtype")
-		}
+		v.validateTypeLineEffectSelection(faceName, appendPath(path, "SpellSelection"), continuous, *continuous.SpellSelection, "spell", "spells")
+	}
+	if continuous.OwnedCardSelection != nil {
+		v.validateTypeLineEffectSelection(faceName, appendPath(path, "OwnedCardSelection"), continuous, *continuous.OwnedCardSelection, "owned card", "cards")
 	}
 	if len(continuous.SetBasicLandTypes) > 0 {
 		if continuous.Layer != LayerType {
