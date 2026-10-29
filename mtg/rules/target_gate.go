@@ -228,3 +228,16 @@ func stackObjectSpellDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bo
 	applyCopyValuesToCardDef(effective, &obj.CopyValues.Val)
 	return effective, true
 }
+
+// stackSpellCharacteristicsDef returns the characteristics other spells,
+// abilities and rules see for a spell on the stack. A face-down spell exposes
+// only its face-down characteristics (CR 708.2, 708.4), never the hidden card's
+// colors, types, subtypes, supertypes or abilities; every other spell uses its
+// effective selected face. Resolution and the controller's own view still read
+// the hidden card through stackObjectSpellDef.
+func stackSpellCharacteristicsDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
+	if obj != nil && obj.Kind == game.StackSpell && obj.FaceDown {
+		return faceDownStackSpellDef(obj), true
+	}
+	return stackObjectSpellDef(g, obj)
+}

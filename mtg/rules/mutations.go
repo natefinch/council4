@@ -58,11 +58,6 @@ func consumeNextSpellAsThoughFlashEffects(g *game.Game, obj *game.StackObject) {
 	if !ok {
 		return
 	}
-	if obj.FaceDown {
-		// The permission was matched against the face-down spell's
-		// characteristics when it was cast (CR 708.4), so consume it the same way.
-		spellDef = faceDownSpellDef()
-	}
 	kept := g.RuleEffects[:0]
 	for i := range g.RuleEffects {
 		effect := &g.RuleEffects[i]
@@ -143,9 +138,15 @@ func consumeNextSpellCantBeCounteredEffects(g *game.Game, obj *game.StackObject)
 	g.RuleEffects = kept
 }
 
-// spellDefForStackObject resolves the card definition of a spell stack object,
-// whether it is backed by a card instance or a token definition.
+// spellDefForStackObject resolves the card definition a just-cast spell stack
+// object presents to one-shot "next spell" effects, whether it is backed by a
+// card instance or a token definition. A face-down spell presents the same
+// face-down characteristics its cast permissions and costs were matched against
+// (CR 702.37c, 708.4).
 func spellDefForStackObject(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
+	if obj.FaceDown {
+		return faceDownSpellDef(), true
+	}
 	if obj.SourceTokenDef != nil {
 		return obj.SourceTokenDef.FaceDef(obj.Face)
 	}

@@ -47,13 +47,7 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 	// triggers order correctly.
 	completeDungeonForStackObject(g, obj)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
-		emitEvent(g, game.Event{
-			Kind:          game.EventSpellResolved,
-			SourceID:      obj.SourceID,
-			StackObjectID: obj.ID,
-			Controller:    obj.Controller,
-			CardID:        obj.SourceID,
-		})
+		emitEvent(g, spellResolvedEvent(obj))
 	}
 	recordEnteredBattlefield(g, log, eventsBefore)
 	log.addResolve(ResolveLog{
@@ -122,6 +116,25 @@ func (e *Engine) resolveStackObjectWithChoices(g *game.Game, obj *game.StackObje
 	default:
 		return "resolved"
 	}
+}
+
+// spellResolvedEvent describes a spell that resolved. A face-down spell's event
+// carries its face-down characteristics so card-selection matching doesn't
+// backfill the hidden card's printed ones (CR 702.37c, 708.2).
+func spellResolvedEvent(obj *game.StackObject) game.Event {
+	event := game.Event{
+		Kind:          game.EventSpellResolved,
+		SourceID:      obj.SourceID,
+		StackObjectID: obj.ID,
+		Controller:    obj.Controller,
+		CardID:        obj.SourceID,
+	}
+	if obj.FaceDown {
+		def := faceDownStackSpellDef(obj)
+		event.CardTypes = cardTypes(def)
+		event.CardCharacteristicsKnown = true
+	}
+	return event
 }
 
 func spellResolved(result string) bool {
@@ -468,7 +481,7 @@ func deleteStateTriggerLatch(g *game.Game, sourceObjectID, sourceCardID id.ID, a
 // it isn't countered. Both the object-scoped effects captured when the spell was
 // cast and the currently active rule effects are consulted.
 func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
-	spellDef, ok := stackObjectSpellDef(g, obj)
+	spellDef, ok := stackSpellCharacteristicsDef(g, obj)
 	if !ok {
 		return true
 	}

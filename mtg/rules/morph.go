@@ -123,6 +123,18 @@ func faceDownSpellDef() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Creature}}}
 }
 
+// faceDownStackSpellDef returns the characteristics of a face-down spell on the
+// stack: a colorless 2/2 creature with no text, name, subtypes, supertypes or
+// mana cost, plus ward {2} for disguise (CR 702.37c, 702.168b, 708.2, 708.4).
+// The hidden card's own characteristics are not part of the spell.
+func faceDownStackSpellDef(obj *game.StackObject) *game.CardDef {
+	def := faceDownCopyDef(&game.Permanent{})
+	if obj.FaceDownKind == game.FaceDownDisguise || obj.FaceDownKind == game.FaceDownCloak {
+		def.StaticAbilities = []game.StaticAbility{faceDownDisguiseWardBody()}
+	}
+	return def
+}
+
 // faceDownSpellRequest determines a face-down cast's total cost from the {3}
 // alternative cost and the face-down spell's characteristics (CR 702.37c,
 // 702.168b, 601.2f): increases, reductions and additional costs that apply to

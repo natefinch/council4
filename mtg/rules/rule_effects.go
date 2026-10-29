@@ -257,7 +257,9 @@ func stackStaticRuleEffects(g *game.Game) []game.RuleEffect {
 
 func appendStackStaticRuleEffects(effects []game.RuleEffect, g *game.Game) []game.RuleEffect {
 	for _, source := range g.Stack.Objects() {
-		if source.Kind != game.StackSpell {
+		// A face-down spell has no text, so the hidden card's stack abilities
+		// (such as "This spell can't be countered.") don't function (CR 702.37c).
+		if source.Kind != game.StackSpell || source.FaceDown {
 			continue
 		}
 		_, sourceDef, ok := cardInstanceFaceDef(g, source.SourceID, source.Face)
