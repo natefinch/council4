@@ -240,23 +240,49 @@ async function existingCardDefects(cwd, signal) {
   return list.map(issue => issue.number).sort((a, b) => a - b);
 }
 
-async function issueStates(cwd, numbers, signal) {
+// One GraphQL query per chunk of issues: a selection checks every known gap
+// (hundreds), and per-issue gh calls cost minutes per unit. A nonexistent issue
+// stays absent; any other error or truncated result fails selection rather than
+// silently dropping gaps.
+export async function issueStates(cwd, numbers, signal, graphql = query => ghGraphQL(cwd, query, signal), size = 50) {
   const issues = {};
-  for (const number of [...new Set(numbers)]) {
-    try {
-      issues[number] = JSON.parse(await command(cwd, "gh", ["issue", "view", String(number), "--repo", "natefinch/council4",
-        "--json", "number,state,title,url,labels"], signal));
-      issues[number].labels = (issues[number].labels ?? []).map(label => label.name);
+  const unique = [...new Set(numbers)].filter(number => Number.isInteger(number) && number > 0);
+  for (let i = 0; i < unique.length; i += size) {
+    const chunk = unique.slice(i, i + size);
+    const fields = chunk.map(number => `i${number}: issue(number: ${number}) { number state title url ` +
+      "labels(first: 100) { pageInfo { hasNextPage } nodes { name } } " +
+      "subIssues(first: 100) { pageInfo { hasNextPage } nodes { number state title url } } }").join(" ");
+    const response = await graphql(`query { repository(owner: "natefinch", name: "council4") { ${fields} } }`);
+    const unexpected = (response.errors ?? []).filter(error => error.type !== "NOT_FOUND");
+    if (unexpected.length || !response.data?.repository) {
+      throw new Error(`Issue state lookup failed: ${JSON.stringify(unexpected.length ? unexpected : response.errors ?? response)}`);
+    }
+    for (const number of chunk) {
+      const issue = response.data.repository[`i${number}`];
+      if (!issue) continue;
+      if (issue.labels.pageInfo.hasNextPage || issue.subIssues.pageInfo.hasNextPage) {
+        throw new Error(`Issue #${number} has more than 100 labels or sub-issues`);
+      }
       // A gap split into ordered sub-issues is worked one sub-issue at a time.
-      const subIssues = JSON.parse(await command(cwd, "gh", ["api", `repos/natefinch/council4/issues/${number}/sub_issues`,
-        "--paginate", "--slurp"], signal)).flat();
-      issues[number].subIssues = subIssues.map(sub => ({ number: sub.number, state: String(sub.state).toUpperCase(),
-        title: sub.title, url: sub.html_url }));
-    } catch (error) {
-      if (signal?.aborted) throw error;
+      issues[number] = { number: issue.number, state: issue.state, title: issue.title, url: issue.url,
+        labels: issue.labels.nodes.map(label => label.name),
+        subIssues: issue.subIssues.nodes.map(sub => ({ number: sub.number, state: sub.state, title: sub.title, url: sub.url })) };
     }
   }
   return issues;
+}
+
+// gh exits nonzero when a GraphQL response has any error, including a missing
+// issue, but still prints the partial response.
+async function ghGraphQL(cwd, query, signal) {
+  try { return JSON.parse(await command(cwd, "gh", ["api", "graphql", "-f", `query=${query}`], signal)); }
+  catch (error) {
+    if (signal?.aborted) throw error;
+    let response;
+    try { response = JSON.parse(error.cause?.stdout ?? ""); } catch { throw error; }
+    if (!response?.errors?.length) throw error;
+    return response;
+  }
 }
 
 // Reassessment evidence for queue cards whose blocking gap has since been filled.
@@ -342,6 +368,9 @@ export async function closeLandedIssue(cwd, issue, gaps, pr, signal, gh = args =
   try { parent = JSON.parse(await gh(["api", `repos/natefinch/council4/issues/${issue}/parent`])).number; }
   catch { return { closed }; }
   const subs = JSON.parse(await gh(["api", `repos/natefinch/council4/issues/${parent}/sub_issues`, "--paginate", "--slurp"])).flat();
+  // A remainder naming the parent means the split is not finished, even when
+  // every current sub-issue (including reviewer follow-ups) is closed.
+  if (gaps.some(gap => issueNumber(gap.id) === parent)) return { closed };
   const parentState = JSON.parse(await gh(["issue", "view", String(parent), ...repo, "--json", "state"])).state;
   if (parentState === "OPEN" && subs.length && subs.every(sub => sub.state === "closed")) {
     await gh(["issue", "close", String(parent), ...repo, "--reason", "completed", "--comment",
@@ -908,7 +937,8 @@ export async function refreshReport(session, root, runId) {
   const detail = await session.workflow.getRunDetail(runId);
   const report = { ...summarize(detail, state.stages, readReceipts(path.join(directory, "usage.jsonl"))),
     revision: state.revision, policyVersion: state.policy.version, units: state.units,
-    currentUnit: state.currentUnit ?? null, error: state.error ?? null };
+    currentUnit: state.currentUnit ?? null, outcome: state.outcome ?? null, finishedAt: state.finishedAt ?? null,
+    error: state.error ?? null };
   writeReport(directory, report);
   return report;
 }

@@ -35,7 +35,18 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
+      # setup-go's cache is keyed only on go.sum, so it is saved once and goes
+      # stale. Restore the newest cache saved by a main push instead.
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-tests-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-tests-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-
+            go-tests-${{ runner.os }}-${{ runner.arch }}-
       - id: plan
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -59,6 +70,14 @@ jobs:
       - name: Documentation-only change
         if: steps.plan.outputs.code != 'true'
         run: echo "No code changes; test suite not required."
+      - name: Save Go cache
+        if: github.event_name == 'push' && steps.plan.outputs.code == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-tests-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
 
   race:
     name: Race Tests
@@ -72,9 +91,56 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-          cache: true
+          cache: false
+      # setup-go's cache is keyed only on go.sum, so it is saved once and goes
+      # stale. Restore the newest cache saved by a main push instead.
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-race-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-race-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-
+            go-race-${{ runner.os }}-${{ runner.arch }}-
       - name: Race test suite
         run: go test -race -v ./...
+
+  race-cache:
+    name: Race build cache
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      # setup-go's cache is keyed only on go.sum, so it is saved once and goes
+      # stale. Restore the newest cache saved by a main push instead.
+      - uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-race-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
+          restore-keys: |
+            go-race-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-
+            go-race-${{ runner.os }}-${{ runner.arch }}-
+      # Compiles race-instrumented packages and test binaries for later PRs;
+      # main's race behavior is verified by the PR that landed it.
+      - name: Build race test binaries
+        run: go test -race -run '^$' ./...
+      - name: Save Go cache
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: go-race-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('go.sum') }}-${{ github.sha }}
 
   maintenance:
     name: Manual ${{ inputs.check }}

@@ -341,7 +341,8 @@ Each run also mirrors `state.json` and `report.json` to
 `<git common dir>/council4-production/runs/<run-id>/`, so selection history and
 the dashboard survive when the session worktree that ran it is removed. When an
 Engine unit lands, the workflow closes its issue (unless it reported a remainder
-on the same issue) and closes a split parent once all its sub-issues are closed;
+on the same issue) and closes a split parent once all its sub-issues are closed
+and the landing reported no remainder on the parent;
 a split gap with no open sub-issues is never implemented as a whole.
 
 | File under `.cardwork/workflows/<run-id>/` | Purpose |
