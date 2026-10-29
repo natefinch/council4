@@ -57,7 +57,7 @@ func TestCastForFreeTargetedOpponentGraveyard(t *testing.T) {
 
 // TestCastForFreeTargetedExileOnResolution verifies the "If that spell would be
 // put into your graveyard, exile it instead." rider (Torrential Gearhulk): the
-// free-cast spell carries ExileOnResolution, so after it resolves the instant
+// free-cast spell carries ExileInsteadOfGraveyard, so after it resolves the instant
 // moves to exile rather than its owner's graveyard.
 func TestCastForFreeTargetedExileOnResolution(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -91,8 +91,8 @@ func TestCastForFreeTargetedExileOnResolution(t *testing.T) {
 	if !ok {
 		t.Fatal("no spell on the stack after the free cast")
 	}
-	if !top.ExileOnResolution {
-		t.Fatal("cast spell did not carry ExileOnResolution from the rider")
+	if !top.ExileInsteadOfGraveyard || top.ExileOnResolution {
+		t.Fatal("cast spell did not carry the rider as a graveyard replacement")
 	}
 
 	engine.resolveTopOfStack(g, &TurnLog{})

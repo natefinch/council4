@@ -374,7 +374,7 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 		GiftRecipient:                 cast.GiftRecipient,
 		Bargained:                     cast.Bargained,
 		OffspringPaid:                 cast.Offspring,
-		ExileOnResolution:             spell.exileOnResolution,
+		ExileInsteadOfGraveyard:       spell.exileOnResolution,
 		Suspend:                       spell.suspend,
 		SourceZone:                    cast.SourceZone,
 		SplicedContent:                splice.contents,

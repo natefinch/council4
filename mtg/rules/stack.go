@@ -618,10 +618,14 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 		return "hand"
 	}
 	if isAdventureAlternateFaceSpell(g, obj) {
-		if !moveAdventureSpellToExile(g, obj, card) {
+		destination, ok := moveAdventureSpellFromStack(g, obj, card)
+		if !ok {
 			return "invalid owner"
 		}
-		return "adventure exile"
+		if destination == zone.Exile {
+			return "adventure exile"
+		}
+		return "graveyard"
 	}
 	if obj.SourceZone == zone.Hand && cardHasRebound(spellDef) {
 		if !e.reboundExileResolvingSpell(g, obj, card) {
@@ -936,45 +940,26 @@ func isAdventureAlternateFaceSpell(g *game.Game, obj *game.StackObject) bool {
 	return card.Def.Layout == game.LayoutAdventure
 }
 
-func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
-	if _, ok := playerByID(g, card.Owner); !ok {
-		return false
+// moveAdventureSpellFromStack finishes resolving a spell cast as an Adventure.
+// CR 715.3d's exile is a replacement of the spell's move to its owner's
+// graveyard, so it competes with other applicable replacements and the spell's
+// controller chooses the order (CR 616.1). The controller gains permission to
+// play the card only when the Adventure replacement was applied and the card
+// actually arrived in exile; another redirect (Dauthi Voidwalker, Rest in
+// Peace, flashback or a cast's exile rider) grants nothing.
+func moveAdventureSpellFromStack(g *game.Game, obj *game.StackObject, card *game.CardInstance) (zone.Type, bool) {
+	adventure := game.ReplacementEffect{
+		ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
+		Description: "Adventure (CR 715.3d)", MatchEvent: game.EventZoneChanged,
+		MatchFromZone: true, FromZone: zone.Stack,
+		MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Exile,
 	}
-	event := game.Event{
-		Kind:          game.EventZoneChanged,
-		SourceID:      card.ID,
-		StackObjectID: stackObjectID(obj),
-		Controller:    stackObjectController(obj),
-		Player:        card.Owner,
-		CardID:        card.ID,
-		Face:          stackObjectFace(obj),
-		FaceDown:      obj != nil && obj.FaceDown,
-		FromZone:      zone.Stack,
-		ToZone:        zone.Exile,
-	}
-	replacement := replacementZoneChange(g, event)
-	destination := replacement.destination
-	destination = commanderReplacementDestination(g, card.ID, destination)
-	destinationCards, ok := destinationZone(g, card.Owner, destination)
+	move, ok := moveStackCardToZoneResult(g, obj, card, zone.Graveyard, false, adventure)
 	if !ok {
-		return false
+		return zone.Graveyard, false
 	}
-	revealZoneReplacementSource(g, event, replacement.revealSource)
-	destinationCards.Add(card.ID)
-	shuffleLibraryIfRequested(g, destinationCards, destination, replacement.shuffleIntoLibrary)
-	event = game.Event{
-		SourceID:      card.ID,
-		StackObjectID: stackObjectID(obj),
-		Controller:    stackObjectController(obj),
-		Player:        card.Owner,
-		CardID:        card.ID,
-		Face:          stackObjectFace(obj),
-		FaceDown:      obj != nil && obj.FaceDown,
-		FromZone:      zone.Stack,
-		ToZone:        destination,
-	}
-	emitZoneChangeEvent(g, event)
-	if destination == zone.Exile {
+	owner, _ := playerByID(g, card.Owner)
+	if move.appliedLocal[0] && move.destination == zone.Exile && owner.Exile.Contains(card.ID) {
 		// CR 715.3d: the spell's controller, not necessarily its owner, may
 		// play this exiled incarnation of the card.
 		if g.AdventureCards == nil {
@@ -985,8 +970,7 @@ func moveAdventureSpellToExile(g *game.Game, obj *game.StackObject, card *game.C
 			ZoneVersion: card.ZoneVersion,
 		}
 	}
-	placeRedirectExileCounter(g, card.Owner, card.ID, replacement)
-	return true
+	return move.destination, true
 }
 
 func moveStackCardToGraveyard(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
@@ -1002,18 +986,31 @@ func moveStackCardToOwnersLibrary(g *game.Game, obj *game.StackObject, card *gam
 
 // moveStackCardToZone moves a spell's card from the stack to intendedDestination
 // (its owner's graveyard when countered, or hand when bounced), honoring the
-// flashback/exile-on-resolution replacement that diverts the card to exile
-// instead (CR 702.34c) and the commander zone-change replacement. When
+// spell's own redirects and the commander zone-change replacement. When
 // forceShuffle is set and the card lands in a library, that library is shuffled
 // even without a replacement requesting it, backing the "shuffle this card into
-// its owner's library" resolution tail.
+// its owner's library" resolution tail. local supplies the caller's
+// replacement effects for this move (buyback, an Adventure's resolution exile).
 func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type, forceShuffle bool, local ...game.ReplacementEffect) bool {
+	_, ok := moveStackCardToZoneResult(g, obj, card, intendedDestination, forceShuffle, local...)
+	return ok
+}
+
+// moveStackCardToZoneResult is moveStackCardToZone, also reporting the applied
+// replacements. Its appliedLocal entries correspond to local, in order.
+//
+// A self-exile instruction or a counterspell's own "exile it instead" (a
+// self-replacement, CR 614.15 and 616.1a) and a counter-and-redirect
+// (Memory Lapse, Remand) change the intended destination before other
+// replacements are considered. Flashback (CR 702.34a) and a cast's "exile it
+// instead" rider are replacement effects of the move itself, so they compete
+// with the caller's local replacements and the game's replacement effects
+// under CR 616.1.
+func moveStackCardToZoneResult(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type, forceShuffle bool, local ...game.ReplacementEffect) (zoneChangeReplacementResult, bool) {
 	if _, ok := playerByID(g, card.Owner); !ok {
-		return false
+		return zoneChangeReplacementResult{}, false
 	}
-	if obj != nil && (obj.Flashback || obj.ExileOnResolution) {
-		// Flashback replaces any move from the stack to anywhere else with exile
-		// after the spell was cast from a graveyard (CR 702.34a, CR 702.34c).
+	if obj != nil && obj.ExileOnResolution {
 		intendedDestination = zone.Exile
 	} else if obj != nil {
 		// A counter-and-redirect replacement diverts the countered spell's card
@@ -1028,6 +1025,7 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 			// CounteredSpellGraveyard keeps the caller's intended destination.
 		}
 	}
+	replacements := append(slices.Clip(local), stackObjectMoveReplacements(obj, card)...)
 	event := game.Event{
 		Kind:          game.EventZoneChanged,
 		SourceID:      card.ID,
@@ -1040,12 +1038,13 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 		FromZone:      zone.Stack,
 		ToZone:        intendedDestination,
 	}
-	replacement := replacementZoneChange(g, event, local...)
+	replacement := replacementZoneChange(g, event, replacements...)
+	replacement.appliedLocal = replacement.appliedLocal[:len(local)]
 	destination := replacement.destination
 	destination = commanderReplacementDestination(g, card.ID, destination)
 	destinationCards, ok := destinationZone(g, card.Owner, destination)
 	if !ok {
-		return false
+		return zoneChangeReplacementResult{}, false
 	}
 	revealZoneReplacementSource(g, event, replacement.revealSource)
 	destinationCards.Add(card.ID)
@@ -1063,7 +1062,35 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 	}
 	emitZoneChangeEvent(g, event)
 	placeRedirectExileCounter(g, card.Owner, card.ID, replacement)
-	return true
+	replacement.destination = destination
+	return replacement, true
+}
+
+// stackObjectMoveReplacements returns the replacement effects a spell carries
+// for its own move off the stack: flashback's "exile this card instead of
+// putting it anywhere else" (CR 702.34a) and a cast rider's "if it would be put
+// into your graveyard, exile it instead". Their IDs are only local keys.
+func stackObjectMoveReplacements(obj *game.StackObject, card *game.CardInstance) []game.ReplacementEffect {
+	if obj == nil {
+		return nil
+	}
+	var replacements []game.ReplacementEffect
+	if obj.Flashback {
+		replacements = append(replacements, game.ReplacementEffect{
+			ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
+			Description: "Flashback (CR 702.34a)", MatchEvent: game.EventZoneChanged,
+			MatchFromZone: true, FromZone: zone.Stack, ReplaceToZone: zone.Exile,
+		})
+	}
+	if obj.ExileInsteadOfGraveyard {
+		replacements = append(replacements, game.ReplacementEffect{
+			ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
+			Description: "Exile instead of graveyard", MatchEvent: game.EventZoneChanged,
+			MatchFromZone: true, FromZone: zone.Stack,
+			MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Exile,
+		})
+	}
+	return replacements
 }
 
 func stackObjectID(obj *game.StackObject) id.ID {

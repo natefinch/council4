@@ -320,12 +320,16 @@ func replacementDecisionPlayer(g *game.Game, event damageEvent) game.PlayerID {
 }
 
 func selectedReplacementEffect(matches []game.ReplacementEffect, decision game.ReplacementDecision) game.ReplacementEffect {
+	return matches[selectedReplacementIndex(matches, decision)]
+}
+
+func selectedReplacementIndex(matches []game.ReplacementEffect, decision game.ReplacementDecision) int {
 	for _, selected := range decision.Selected {
 		if selected >= 0 && selected < len(matches) {
-			return matches[selected]
+			return selected
 		}
 	}
-	return matches[0]
+	return 0
 }
 
 type zoneChangeReplacementResult struct {
@@ -338,6 +342,9 @@ type zoneChangeReplacementResult struct {
 	// the card to exile and carries a RedirectCounter; callers place it with
 	// placeRedirectExileCounter after the card lands.
 	exileCounter opt.V[counter.Kind]
+	// appliedLocal reports, for each local replacement passed to
+	// replacementZoneChange, whether that replacement was applied to the event.
+	appliedLocal []bool
 }
 
 func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type {
@@ -352,16 +359,23 @@ func replacementZoneChangeDestination(g *game.Game, event game.Event) zone.Type 
 // (CR 616.1f); when several match at once the affected object's controller or the
 // affected player chooses one (CR 616.1, falling back to the first match when no
 // agent is available).
+//
+// local supplies replacement effects that belong to the moving object rather
+// than to the game (flashback, an Adventure's resolution exile, buyback, or a
+// cast's "exile it instead" rider). They compete with the game's effects under
+// CR 616.1, are offered first so the deterministic fallback keeps the object's
+// own redirect, and the result reports which of them were applied.
 func replacementZoneChange(g *game.Game, event game.Event, local ...game.ReplacementEffect) zoneChangeReplacementResult {
 	pending := newZoneChangeReplacement(event)
 	pending.local = local
+	pending.result.appliedLocal = make([]bool, len(local))
 	for {
 		matches := pending.pendingChoices(g)
 		if len(matches) == 0 {
 			return pending.result
 		}
 		decision := chooseReplacementDecision(g, replacementEventPlayer(event), replacementEffectLabels(matches))
-		pending.apply(selectedReplacementEffect(matches, decision))
+		pending.choose(selectedReplacementIndex(matches, decision))
 	}
 }
 
@@ -373,6 +387,11 @@ type zoneChangeReplacement struct {
 	result  zoneChangeReplacementResult
 	applied map[id.ID]bool
 	local   []game.ReplacementEffect
+	// matches and matchLocal describe the latest pendingChoices result:
+	// matchLocal[i] is the index into local of matches[i], or -1 for a game
+	// replacement effect.
+	matches    []game.ReplacementEffect
+	matchLocal []int
 }
 
 func newZoneChangeReplacement(event game.Event) zoneChangeReplacement {
@@ -385,22 +404,42 @@ func newZoneChangeReplacement(event game.Event) zoneChangeReplacement {
 func (pending *zoneChangeReplacement) pendingChoices(g *game.Game) []game.ReplacementEffect {
 	for {
 		pending.event.ToZone = pending.result.destination
-		matches := matchingZoneReplacementEffects(g, pending.event, pending.applied)
-		for _, replacement := range pending.local {
-			if !pending.applied[replacement.ID] &&
-				replacementEffectMatchesEvent(g, &replacement, pending.event) {
-				matches = append(matches, replacement)
+		pending.matches = pending.matches[:0]
+		pending.matchLocal = pending.matchLocal[:0]
+		for i := range pending.local {
+			replacement := &pending.local[i]
+			// A local redirect to where the object is already going would not
+			// modify the event, so it doesn't apply (flashback's "anywhere
+			// else" excludes exile).
+			if pending.result.appliedLocal[i] || replacement.ReplaceToZone == pending.event.ToZone ||
+				!replacementEffectMatchesEvent(g, replacement, pending.event) {
+				continue
 			}
+			pending.matches = append(pending.matches, *replacement)
+			pending.matchLocal = append(pending.matchLocal, i)
 		}
-		if len(matches) != 1 {
-			return matches
+		for _, replacement := range matchingZoneReplacementEffects(g, pending.event, pending.applied) {
+			pending.matches = append(pending.matches, replacement)
+			pending.matchLocal = append(pending.matchLocal, -1)
 		}
-		pending.apply(matches[0])
+		if len(pending.matches) != 1 {
+			return pending.matches
+		}
+		pending.choose(0)
 	}
 }
 
+// choose applies matches[index] from the latest pendingChoices result.
+func (pending *zoneChangeReplacement) choose(index int) {
+	if local := pending.matchLocal[index]; local >= 0 {
+		pending.result.appliedLocal[local] = true
+	} else {
+		pending.applied[pending.matches[index].ID] = true
+	}
+	pending.apply(pending.matches[index])
+}
+
 func (pending *zoneChangeReplacement) apply(replacement game.ReplacementEffect) {
-	pending.applied[replacement.ID] = true
 	// Recheck the modified event, applying each effect at most once
 	// (CR 614.5, CR 616.1f).
 	result := &pending.result
