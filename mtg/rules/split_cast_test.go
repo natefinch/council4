@@ -83,7 +83,9 @@ func TestSplitAlternateFaceCastAndResolve(t *testing.T) {
 	}
 }
 
-func TestSplitOnlyFrontFaceLegalFromGraveyard(t *testing.T) {
+// A cast permission naming no face ("you may cast that card") lets the caster
+// choose either half of a split card (CR 709.3).
+func TestSplitBothFacesLegalFromGraveyardPermission(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addCardToHand(g, game.Player1, splitCard())
@@ -105,8 +107,50 @@ func TestSplitOnlyFrontFaceLegalFromGraveyard(t *testing.T) {
 	if !actionsContain(legal, action.CastSpellFaceFromZone(cardID, zone.Graveyard, game.FaceFront, nil, 0, nil)) {
 		t.Fatalf("legal actions = %+v, want graveyard CastSpellFace(front)", legal)
 	}
-	if actionsContain(legal, action.CastSpellFaceFromZone(cardID, zone.Graveyard, game.FaceAlternate, nil, 0, nil)) {
+	alternate := action.CastSpellFaceFromZone(cardID, zone.Graveyard, game.FaceAlternate, nil, 0, nil)
+	if !actionsContain(legal, alternate) {
+		t.Fatalf("legal actions = %+v, want graveyard CastSpellFace(alternate)", legal)
+	}
+	if !engine.applyAction(g, game.Player1, alternate) {
+		t.Fatal("applyAction graveyard CastSpellFace(alternate) = false, want true")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if got := g.Players[game.Player1].Life; got != 42 {
+		t.Fatalf("life = %d, want 42 from the alternate half", got)
+	}
+}
+
+// A permission naming one face (GrantCastPermission) still authorizes only it.
+func TestSplitFaceSpecificGraveyardPermissionCoversOnlyThatFace(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	cardID := addCardToHand(g, game.Player1, splitCard())
+	g.Players[game.Player1].Hand.Remove(cardID)
+	g.Players[game.Player1].Graveyard.Add(cardID)
+	g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+		ID:             g.IDGen.Next(),
+		Kind:           game.RuleEffectCastFromZone,
+		Controller:     game.Player1,
+		AffectedPlayer: game.PlayerYou,
+		AffectedCardID: cardID,
+		CastFromZone:   zone.Graveyard,
+		CastFace:       opt.Val(game.FaceFront),
+	})
+	addBasicLandPermanent(g, game.Player1, types.Plains)
+	addBasicLandPermanent(g, game.Player1, types.Swamp)
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+
+	legal := engine.legalActions(g, game.Player1)
+	if !actionsContain(legal, action.CastSpellFaceFromZone(cardID, zone.Graveyard, game.FaceFront, nil, 0, nil)) {
+		t.Fatalf("legal actions = %+v, want graveyard CastSpellFace(front)", legal)
+	}
+	alternate := action.CastSpellFaceFromZone(cardID, zone.Graveyard, game.FaceAlternate, nil, 0, nil)
+	if actionsContain(legal, alternate) {
 		t.Fatalf("legal actions = %+v, did not want graveyard CastSpellFace(alternate)", legal)
+	}
+	if engine.applyAction(g, game.Player1, alternate) {
+		t.Fatal("applyAction graveyard CastSpellFace(alternate) = true, want false")
 	}
 }
 

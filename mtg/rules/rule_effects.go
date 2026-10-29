@@ -1637,8 +1637,12 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 
 // castFromZoneRuleEffectMatches reports whether effect is a per-card or
 // zone-wide RuleEffectCastFromZone/RuleEffectPlayFromZone permission letting
-// playerID cast the face of cardID from sourceZone. A cast permission naming no
-// face covers only the front face.
+// playerID cast the face of cardID from sourceZone. A permission naming a face
+// (GrantCastPermission) covers only that face. A permission naming no face
+// ("you may cast that card") covers every face the card may be cast as:
+// either half of a split card (CR 709.3), an adventurer card as its Adventure
+// (CR 715.3, 715.3d), or either face of a modal double-faced card
+// (CR 712.11b). Cast validation separately rejects faces that cannot be cast.
 func castFromZoneRuleEffectMatches(g *game.Game, effect *game.RuleEffect, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
 	if (effect.Kind != game.RuleEffectCastFromZone && effect.Kind != game.RuleEffectPlayFromZone) ||
 		effect.CastFromZone != sourceZone {
@@ -1650,10 +1654,7 @@ func castFromZoneRuleEffectMatches(g *game.Game, effect *game.RuleEffect, player
 	if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
 		return false
 	}
-	if effect.CastFace.Exists {
-		return effect.CastFace.Val == face
-	}
-	return effect.Kind != game.RuleEffectCastFromZone || face == game.FaceFront
+	return !effect.CastFace.Exists || effect.CastFace.Val == face
 }
 
 // castFromZoneManaSpendPermission returns the broadest spending permission any
