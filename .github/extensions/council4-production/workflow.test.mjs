@@ -618,6 +618,22 @@ test("A split gap whose sub-issues are all closed is done, not re-implemented", 
   assert.equal(chooseWork({ next, issues }).kind, "card");
 });
 
+test("A remainder a landed sub-issue reported on its closed-out split parent is worked next", () => {
+  const next = { batch: readyBatch };
+  const issues = { 3347: { ...open(3347), subIssues: [{ number: 3476, state: "CLOSED" }] } };
+  const landed = { ...landedGap(3476), result: { gaps: [{ id: "3347", description: "capture source permanents" }] } };
+  let choice = chooseWork({ next, issues, priorUnits: [landed] });
+  assert.equal(choice.kind, "engine");
+  assert.equal(choice.gap.issue, 3347);
+  assert.equal(choice.gap.parent, undefined);
+  // An earlier failed attempt on the parent parks it unless explicitly retried.
+  const failed = { status: "review_rejected", task: { taskType: "engine", id: "gap-3347", issue: 3347 } };
+  assert.equal(chooseWork({ next, issues, priorUnits: [failed, landed] }).kind, "card");
+  choice = chooseWork({ next, issues, priorUnits: [failed, landed], retry: [3347] });
+  assert.equal(choice.gap.issue, 3347);
+  assert.equal(gapTask(choice, {}).id, "gap-3347");
+});
+
 test("Landed Engine issues and fully finished split parents are closed", async () => {
   const calls = [];
   const states = { 3404: "OPEN", 3355: "OPEN" };
