@@ -332,6 +332,14 @@ earlier findings and checks the repairs for regressions, labelling each finding
 an earlier reviewer required must cite the primary source. Gaps reported earlier
 in a unit carry forward unless a repair lists them in `resolvedGaps`.
 
+Since policy 1.23.0, the last allowed re-review of an Engine unit with an issue
+is told it is final. Only `[unresolved]` earlier findings and `[regression]`s
+(base behavior that breaks, or a crash, panic or hidden-information leak the
+change introduces) reject it. If every remaining finding is `[new]`, the unit
+lands and the findings become a remainder gap on its issue, so the issue stays
+open for the next unit instead of discarding the reviewed work. Card units and
+units without an issue still reject when their rounds are exhausted.
+
 ## See time, AIC and model
 
 The app's **Workflows** view shows named phases, live agents, active time,
@@ -341,7 +349,7 @@ Each run also mirrors `state.json` and `report.json` to
 `<git common dir>/council4-production/runs/<run-id>/`, so selection history and
 the dashboard survive when the session worktree that ran it is removed. When an
 Engine unit lands, the workflow closes its issue (unless it reported a remainder
-on the same issue) and closes a split parent once all its sub-issues are closed
+on the same issue, which it comments on the issue instead) and closes a split parent once all its sub-issues are closed
 and the landing reported no remainder on the parent;
 a split gap with no open sub-issues is never implemented as a whole.
 
