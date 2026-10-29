@@ -37,10 +37,11 @@ func newBiotransference() *game.CardDef {
 					Text: "Creatures you control are artifacts in addition to their other types. The same is true for creature spells you control and creature cards you own that aren't on the battlefield.",
 					ContinuousEffects: []game.ContinuousEffect{
 						game.ContinuousEffect{
-							Duration: game.DurationPermanent,
-							Group:    game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),
-							Layer:    game.LayerType,
-							AddTypes: []types.Card{types.Artifact},
+							Duration:       game.DurationPermanent,
+							Group:          game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+							Layer:          game.LayerType,
+							SpellSelection: &game.Selection{RequiredTypes: []types.Card{types.Creature}},
+							AddTypes:       []types.Card{types.Artifact},
 						},
 					},
 				},

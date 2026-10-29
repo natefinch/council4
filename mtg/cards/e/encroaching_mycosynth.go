@@ -37,6 +37,9 @@ func newEncroachingMycosynth() *game.CardDef {
 							Duration: game.DurationPermanent,
 							Group:    game.ObjectControlledGroup(game.SourcePermanentReference(), game.Selection{ExcludedTypes: []types.Card{types.Land}}),
 							Layer:    game.LayerType,
+							SpellSelection: &game.Selection{RequiredTypesAny: []types.Card{
+								types.Artifact, types.Battle, types.Creature, types.Enchantment, types.Land, types.Planeswalker,
+							}},
 							AddTypes: []types.Card{types.Artifact},
 						},
 					},

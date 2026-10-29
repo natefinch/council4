@@ -33,11 +33,21 @@ type spellCostOption struct {
 	// the option, including a prepared total, so it governs only how the
 	// option's mana is paid.
 	spendAs game.ManaSpendPermission
+	// spendSpell is the spell's effective characteristics while it is being
+	// cast (State.SpellCharacteristics). Restricted mana ("Spend this mana only
+	// to cast a creature spell") tests them rather than the printed card, so a
+	// type-changing effect, a characteristic-defining ability or a bestowed cast
+	// decides which tagged mana can pay. Nil falls back to card.
+	spendSpell *game.CardDef
 }
 
 // spendContext is the mana-spending context for paying this option's mana.
 func (o spellCostOption) spendContext() spendContext {
-	return spendContext{spell: o.card, spendAs: o.spendAs}
+	spell := o.spendSpell
+	if spell == nil {
+		spell = o.card
+	}
+	return spendContext{spell: spell, spendAs: o.spendAs}
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
@@ -156,7 +166,9 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 
 func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if req.PreparedCost != nil {
-		return []spellCostOption{req.PreparedCost.option}
+		option := req.PreparedCost.option
+		option.spendSpell = s.SpellCharacteristics(req.PlayerID, option.card, req.Bestowed)
+		return []spellCostOption{option}
 	}
 	options := spellCostOptionsForRequestWithoutModes(s, req)
 	for i := range options {
@@ -170,8 +182,10 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if req.Offspring {
 		addOffspringCost(options, req.Card)
 	}
+	spendSpell := s.SpellCharacteristics(req.PlayerID, req.Card, req.Bestowed)
 	for i := range options {
 		options[i].spendAs = req.SpendAnyMana
+		options[i].spendSpell = spendSpell
 	}
 	return options
 }

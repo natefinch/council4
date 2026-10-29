@@ -301,6 +301,10 @@ func (fakePaymentState) ActivationConditionSatisfied(game.PlayerID, *game.Perman
 func (fakePaymentState) ManaAbilityTimingAllowed(game.PlayerID, *game.Permanent, int, game.TimingRestriction) bool {
 	return true
 }
+func (fakePaymentState) SpellCharacteristics(_ game.PlayerID, card *game.CardDef, _ bool) *game.CardDef {
+	return card
+}
+
 func (fakePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type, []game.Target, bool, bool) []game.CostModifier {
 	return nil
 }

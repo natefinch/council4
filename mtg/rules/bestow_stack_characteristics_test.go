@@ -219,27 +219,28 @@ func TestBestowedSpellCreatureSelectionForCost(t *testing.T) {
 }
 
 // TestStackObjectCardTypeHelpersScopeTransform documents that the reusable
-// helpers only transform bestowed spells, leaving abilities and non-bestowed
-// spells untouched.
+// spell type-line helper only transforms bestowed spells, leaving abilities and
+// non-bestowed spells untouched.
 func TestStackObjectCardTypeHelpersScopeTransform(t *testing.T) {
 	def := &game.CardDef{CardFace: game.CardFace{
 		Types:    []types.Card{types.Enchantment, types.Creature},
 		Subtypes: []types.Sub{types.Satyr},
 	}}
+	var g *game.Game // no static sources: the base type line only
 	bestowed := &game.StackObject{Kind: game.StackSpell, Bestowed: true}
-	if got := stackObjectCardTypes(bestowed, def); slices.Contains(got, types.Creature) {
+	if got := stackSpellTypeLine(g, bestowed, def).types; slices.Contains(got, types.Creature) {
 		t.Fatalf("bestowed helper kept Creature: %v", got)
 	}
-	if got := stackObjectCardSubtypes(bestowed, def); !slices.Contains(got, types.Aura) {
+	if got := stackSpellTypeLine(g, bestowed, def).subtypes; !slices.Contains(got, types.Aura) {
 		t.Fatalf("bestowed helper missing Aura: %v", got)
 	}
 	// A triggered ability object carrying the same source def is not a spell and
 	// must not be transformed.
 	ability := &game.StackObject{Kind: game.StackTriggeredAbility, Bestowed: true}
-	if got := stackObjectCardTypes(ability, def); !slices.Contains(got, types.Creature) {
+	if got := stackSpellTypeLine(g, ability, def).types; !slices.Contains(got, types.Creature) {
 		t.Fatalf("non-spell object was transformed: %v", got)
 	}
-	if got := stackObjectCardSubtypes(nil, def); slices.Contains(got, types.Aura) {
+	if got := stackSpellTypeLine(g, nil, def).subtypes; slices.Contains(got, types.Aura) {
 		t.Fatalf("nil object was transformed: %v", got)
 	}
 }

@@ -52,9 +52,10 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	// The cast ignores priority and sorcery-speed timing but still obeys printed
 	// cast restrictions, cast prohibitions, and per-turn cast limits (CR 601.3e).
+	castFace := castSelectionFace(g, controllerID, spellDef, false)
 	if castFromZoneProhibited(g, controllerID, fromZone) || !cardCastRestrictionsSatisfied(g, controllerID, spellDef) ||
-		spellCastProhibited(g, controllerID, spellDef) ||
-		spellCastLimitReached(g, controllerID, spellDef) || !isSupportedSpell(spellDef) {
+		spellCastProhibited(g, controllerID, castFace) ||
+		spellCastLimitReached(g, controllerID, castFace) || !isSupportedSpell(spellDef) {
 		return false
 	}
 	cast, ok := e.chooseCastNumbers(g, controllerID, spellDef, action.CastSpellAction{
@@ -159,15 +160,16 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	// stormCopyCount must be read before the spell-cast event is emitted, since
 	// that event increments the storm count for later spells this turn.
 	stormCopies := stormCopyCount(g, spellDef)
+	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     cardID,
 		StackObjectID:                obj.ID,
 		Controller:                   controllerID,
 		CardID:                       cardID,
 		Face:                         game.FaceFront,
-		CardTypes:                    stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		CardTypes:                    typeLine.types,
+		CardSupertypes:               typeLine.supertypes,
+		CardSubtypes:                 typeLine.subtypes,
 		Colors:                       spellColors(spellDef),
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),

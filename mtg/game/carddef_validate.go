@@ -567,7 +567,13 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 			v.validateKeywordAbility(faceName, appendPath(path, fmt.Sprintf("KeywordAbilities[%d]", i)), abilityBody.KeywordAbilities[i], targets)
 		}
 		for i := range abilityBody.ContinuousEffects {
-			v.validateContinuousEffect(faceName, appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i)), &abilityBody.ContinuousEffects[i], targets)
+			effectPath := appendPath(path, fmt.Sprintf("ContinuousEffects[%d]", i))
+			v.validateContinuousEffect(faceName, effectPath, &abilityBody.ContinuousEffects[i], targets)
+			if abilityBody.ContinuousEffects[i].SpellSelection != nil &&
+				abilityBody.ZoneOfFunction != zone.None && abilityBody.ZoneOfFunction != zone.Battlefield {
+				v.add(faceName, appendPath(effectPath, "SpellSelection"), CardDefIssueInvalidAbilityBody,
+					"spell type effects require a static ability that functions on the battlefield")
+			}
 		}
 		for i := range abilityBody.RuleEffects {
 			v.validateRuleEffect(faceName, appendPath(path, fmt.Sprintf("RuleEffects[%d]", i)), &abilityBody.RuleEffects[i])
@@ -1372,6 +1378,25 @@ func selectionHasPermanentPredicates(selection Selection) bool {
 		selection.TokenOnly
 }
 
+// spellTypeSelectionSupported reports whether a SpellSelection uses only the
+// type-line predicates a spell's computed type line can answer.
+func spellTypeSelectionSupported(selection Selection) bool {
+	for _, alternative := range selection.AnyOf {
+		if !spellTypeSelectionSupported(alternative) {
+			return false
+		}
+	}
+	selection.AnyOf = nil
+	selection.RequiredTypes = nil
+	selection.RequiredTypesAny = nil
+	selection.ExcludedTypes = nil
+	selection.Supertypes = nil
+	selection.ExcludedSupertype = ""
+	selection.SubtypesAny = nil
+	selection.ExcludedSubtype = ""
+	return reflect.ValueOf(selection).IsZero()
+}
+
 func (v *cardDefValidator) validateContinuousEffect(faceName, path string, continuous *ContinuousEffect, targets []TargetSpec) {
 	if continuous.SetPowerToManaValue || continuous.SetToughnessToManaValue {
 		if continuous.Layer != LayerPowerToughnessSet ||
@@ -1391,6 +1416,18 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 			if handCardSelectionHasUnsupportedPredicates(*continuous.CardSelection) {
 				v.add(faceName, appendPath(path, "CardSelection"), CardDefIssueInvalidSelection, "card-zone ability effects support printed card characteristics")
 			}
+		}
+	}
+	if continuous.SpellSelection != nil {
+		if continuous.Layer != LayerType || continuous.CardZone != zone.None ||
+			continuous.AffectedSource || continuous.AffectedObjectID != 0 || len(continuous.SetBasicLandTypes) > 0 {
+			v.add(faceName, appendPath(path, "SpellSelection"), CardDefIssueInvalidAbilityBody,
+				"spell type effects require the type layer, no card zone, no single affected object and no basic land type setting")
+		}
+		v.validateSelection(faceName, appendPath(path, "SpellSelection"), *continuous.SpellSelection)
+		if !spellTypeSelectionSupported(*continuous.SpellSelection) {
+			v.add(faceName, appendPath(path, "SpellSelection"), CardDefIssueInvalidSelection,
+				"spell type effects select spells only by type, supertype and subtype")
 		}
 	}
 	if len(continuous.SetBasicLandTypes) > 0 {

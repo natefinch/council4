@@ -75,10 +75,11 @@ func freeCastFaces(playerID game.PlayerID, card *game.CardInstance, fromZone zon
 }
 
 func freeCastFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
+	castFace := castSelectionFace(g, player, def, false)
 	return freeCastFaceMatchesSelection(g, card, def, selection, player) &&
 		(!maxManaValue.Exists || stackManaValue(def, 0) <= maxManaValue.Val) &&
-		cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, def) &&
-		!spellCastLimitReached(g, player, def) && isSupportedSpell(def)
+		cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, castFace) &&
+		!spellCastLimitReached(g, player, castFace) && isSupportedSpell(def)
 }
 
 func freeCastFaceMatchesSelection(g *game.Game, card *game.CardInstance, spellDef *game.CardDef, selection game.Selection, viewer game.PlayerID) bool {
@@ -463,6 +464,7 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	stormCopies := stormCopyCount(g, spellDef)
+	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     card.ID,
 		StackObjectID:                obj.ID,
@@ -470,9 +472,9 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 		CardID:                       paymentCardID,
 		TokenDef:                     obj.SourceTokenDef,
 		Face:                         cast.Face,
-		CardTypes:                    stackObjectCardTypes(obj, spellDef),
-		CardSupertypes:               cardSupertypes(spellDef),
-		CardSubtypes:                 stackObjectCardSubtypes(obj, spellDef),
+		CardTypes:                    typeLine.types,
+		CardSupertypes:               typeLine.supertypes,
+		CardSubtypes:                 typeLine.subtypes,
 		Colors:                       spellColors(spellDef),
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),

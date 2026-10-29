@@ -495,12 +495,12 @@ func stackSpellCanBeCountered(g *game.Game, obj *game.StackObject) bool {
 	return true
 }
 
+// spellCantBeCounteredByEffects reads spellDef as stackSpellCharacteristicsDef
+// returns it: its type line is already effective, so a bestowed spell is an Aura
+// spell and not a creature spell (CR 702.103b) for type/subtype filters.
 func spellCantBeCounteredByEffects(obj *game.StackObject, spellDef *game.CardDef, effects []game.RuleEffect) bool {
-	// CR 702.103b: a bestowed spell is an Aura spell and not a creature spell, so
-	// type/subtype-filtered "can't be countered" effects test the transformed
-	// characteristics.
-	effectiveTypes := stackObjectCardTypes(obj, spellDef)
-	effectiveSubtypes := stackObjectCardSubtypes(obj, spellDef)
+	effectiveTypes := spellDef.Types
+	effectiveSubtypes := spellDef.Subtypes
 	for i := range effects {
 		effect := &effects[i]
 		if effect.Kind != game.RuleEffectCantBeCountered {

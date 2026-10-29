@@ -61,6 +61,10 @@ func (s choicePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) 
 	return &game.Player{ID: playerID, Life: s.life, ManaPool: s.pool}, true
 }
 
+func (choicePaymentState) SpellCharacteristics(_ game.PlayerID, card *game.CardDef, _ bool) *game.CardDef {
+	return card
+}
+
 func (s choicePaymentState) CostModifiersForSpell(game.PlayerID, *game.CardDef, id.ID, zone.Type, []game.Target, bool, bool) []game.CostModifier {
 	return s.modifiers
 }

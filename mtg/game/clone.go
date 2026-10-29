@@ -400,7 +400,7 @@ func fixupContinuousEffect(e *ContinuousEffect) {
 	e.AddKeywords = cloneSlice(e.AddKeywords)
 	e.RemoveKeywords = cloneSlice(e.RemoveKeywords)
 	// AddAbilities holds immutable Ability values; a fresh backing array is
-	// enough. Group, CardSelection, CopyValues, and the dynamic deltas are immutable rules
+	// enough. Group, CardSelection, SpellSelection, CopyValues, and the dynamic deltas are immutable rules
 	// configuration and are copied by value with the surrounding struct.
 	e.AddAbilities = cloneSlice(e.AddAbilities)
 }

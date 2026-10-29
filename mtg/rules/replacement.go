@@ -2517,19 +2517,14 @@ func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, b
 	if !ok {
 		return sourceChars{}, false
 	}
-	chars := sourceChars{
+	// def carries the spell's effective type line, including the Aura spell a
+	// bestowed cast becomes (CR 702.103b), so type/subtype-based spell
+	// qualifiers and protection see the transformed characteristics.
+	return sourceChars{
 		colors:   spellColors(def),
 		types:    def.Types,
-		subtypes: characteristicDefinedFace(def).Subtypes,
-	}
-	// CR 702.103b: a spell cast for its bestow cost is an Aura spell and is not a
-	// creature spell while on the stack, so type/subtype-based spell qualifiers and
-	// protection see the transformed characteristics.
-	if obj.Kind == game.StackSpell && obj.Bestowed {
-		chars.types = game.BestowSpellTypes(chars.types)
-		chars.subtypes = game.BestowSpellSubtypes(chars.subtypes)
-	}
-	return chars, true
+		subtypes: def.Subtypes,
+	}, true
 }
 
 // cardInstanceSourceDef returns the characteristics of a source known only by

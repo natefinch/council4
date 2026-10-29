@@ -116,6 +116,13 @@ type stateQueries interface {
 	// the base definition when the face does not exist.
 	CardFace(card *game.CardInstance, face game.FaceIndex) *game.CardDef
 
+	// SpellCharacteristics returns card as the spell playerID is casting
+	// presents itself while its costs are paid (CR 601.2h): its own
+	// characteristic-defining abilities, a bestowed cast (CR 702.103b) and
+	// type-changing effects that apply to that player's spells. Restricted mana
+	// tests these effective characteristics. card is never mutated.
+	SpellCharacteristics(playerID game.PlayerID, card *game.CardDef, bestowed bool) *game.CardDef
+
 	// CardMatchesSelection reports whether the card face satisfies the
 	// selection's printed-characteristic predicates. The planner uses it so an
 	// additional card cost (discard/exile/reveal) tests the same eligibility

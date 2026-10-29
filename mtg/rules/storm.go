@@ -69,9 +69,10 @@ func emitSpellCopiedEvent(g *game.Game, copyObj *game.StackObject, spell *game.C
 		ToZone:        zone.Stack,
 	}
 	if spell != nil {
-		event.CardTypes = stackObjectCardTypes(copyObj, spell)
-		event.CardSupertypes = cardSupertypes(spell)
-		event.CardSubtypes = stackObjectCardSubtypes(copyObj, spell)
+		typeLine := stackSpellTypeLine(g, copyObj, spell)
+		event.CardTypes = typeLine.types
+		event.CardSupertypes = typeLine.supertypes
+		event.CardSubtypes = typeLine.subtypes
 		event.Colors = spellColors(spell)
 		event.CardCharacteristicsKnown = true
 		event.ManaValue = stackObjectKnownManaValue(g, copyObj)

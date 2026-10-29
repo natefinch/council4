@@ -135,9 +135,15 @@ func (p Planner) PayAbilityCosts(req AbilityRequest) (AbilityCostPayment, bool) 
 // with the convoke, improvise or delve payment the spell may use once its total
 // cost is determined (CR 601.2f-h, 702.51a, 702.66a, 702.126a). It bounds a
 // cast before its targets and other choices are made, so req.Cost must already
-// include any cost reduction the bound allows.
+// include any cost reduction the bound allows. Restricted mana is tested
+// against the spell's effective characteristics, as the cast pays it.
 func (p Planner) CanPaySpellManaCost(req SpellManaRequest) bool {
-	option := spellCostOption{card: req.Card, manaCost: req.Cost, spendAs: req.SpendAs}
+	option := spellCostOption{
+		card:       req.Card,
+		manaCost:   req.Cost,
+		spendAs:    req.SpendAs,
+		spendSpell: p.s.SpellCharacteristics(req.PlayerID, req.Card, req.Bestowed),
+	}
 	_, ok := buildSpellManaPlanForOption(p.s, req.PlayerID, req.CardID, req.SourceZone, option, 0, manaSourceRestrictions{}, nil)
 	return ok
 }

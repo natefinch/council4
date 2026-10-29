@@ -97,50 +97,24 @@ func cardSubtypes(def *game.CardDef) []types.Sub {
 	return append([]types.Sub(nil), def.Subtypes...)
 }
 
-// stackObjectCardTypes returns the effective card types of a spell on the stack,
-// applying the Bestow cast transform (CR 702.103b) when the spell was cast for
-// its bestow cost: a bestowed spell is an Aura spell and not a creature spell.
-// Callers pass the already-resolved face def to avoid re-resolving it. Abilities
-// and non-bestowed spells keep their printed types.
-func stackObjectCardTypes(obj *game.StackObject, def *game.CardDef) []types.Card {
-	printed := cardTypes(def)
-	if obj != nil && obj.Kind == game.StackSpell && obj.Bestowed {
-		return game.BestowSpellTypes(printed)
-	}
-	return printed
-}
-
-// stackObjectCardSubtypes returns the effective subtypes of a spell on the
-// stack: its printed subtypes as its own characteristic-defining abilities
-// define them (CR 604.3; a Changeling spell is every creature type), plus the
-// Aura subtype for a bestowed spell (CR 702.103b).
-func stackObjectCardSubtypes(obj *game.StackObject, def *game.CardDef) []types.Sub {
-	subtypes := cardSubtypes(characteristicDefinedFace(def))
-	if obj != nil && obj.Kind == game.StackSpell && obj.Bestowed {
-		return game.BestowSpellSubtypes(subtypes)
-	}
-	return subtypes
-}
-
 // castSelectionFace returns the CardDef characteristics a spell presents to
 // cost-modifier, cast-permission and cast-prohibition CardSelection matching
-// while it is being cast (CR 601.2f). It first applies the card's own
-// characteristic-defining abilities, which function in every zone (CR 604.3), so
-// a Changeling spell is every creature type and a Devoid spell is colorless. For
-// a bestowed cast (CR 702.103b) it then drops Creature from the types and adds
-// the Aura subtype, so "creature spells cost less" modifiers no longer match and
-// "Aura spells cost less" modifiers do. Power and every other characteristic are
-// preserved, and the original CardDef is never mutated. A card with neither a
-// CDA nor a bestowed cast is returned unchanged.
-func castSelectionFace(card *game.CardDef, bestowed bool) *game.CardDef {
-	card = characteristicDefinedFace(card)
-	if card == nil || !bestowed {
-		return card
+// while caster casts it (CR 601.2f). Its type line is the spell's effective one
+// (spellTypeLineFor): the card's own characteristic-defining abilities, which
+// function in every zone (CR 604.3), so a Changeling spell is every creature
+// type; a bestowed cast (CR 702.103b), which drops Creature and adds Aura, so
+// "creature spells cost less" modifiers no longer match and "Aura spells cost
+// less" modifiers do; and type-changing effects that apply to spells the caster
+// controls ("The same is true for creature spells you control"). Colors follow
+// the card's color-defining abilities (a Devoid spell is colorless). Power and
+// every other characteristic are preserved, and the original CardDef is never
+// mutated.
+func castSelectionFace(g *game.Game, caster game.PlayerID, card *game.CardDef, bestowed bool) *game.CardDef {
+	if card == nil {
+		return nil
 	}
-	transformed := *card
-	transformed.Types = game.BestowSpellTypes(card.Types)
-	transformed.Subtypes = game.BestowSpellSubtypes(card.Subtypes)
-	return &transformed
+	line := spellTypeLineFor(g, caster, card, bestowed)
+	return withSpellTypeLine(characteristicDefinedFace(card), line)
 }
 
 // spellColors returns the colors of a spell's effective face for use in
