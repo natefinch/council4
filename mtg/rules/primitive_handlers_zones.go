@@ -2474,7 +2474,7 @@ func handleChooseNewTargets(r *effectResolver, prim game.ChooseNewTargets) effec
 	}
 	return effectResolved{
 		accepted:  true,
-		succeeded: r.engine.retargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), r.agents, r.log),
+		succeeded: r.engine.retargetStackObject(r.game, r.obj, prim.Object.TargetIndex(), prim.Rule, r.agents, r.log),
 	}
 }
 
@@ -2642,11 +2642,11 @@ func copyStackObjectSourceID(g *game.Game, obj *game.StackObject, ref game.Objec
 	}
 }
 
-// retargetStackObject re-chooses the targets of the spell or ability referenced
-// by obj's target slot (CR 115.7). The new targets must be legal for the
-// referenced object's own target specs, but the resolving controller of the
-// retarget effect (obj.Controller) makes the selection.
-func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// retargetStackObject changes or re-chooses the targets of the spell or ability
+// referenced by obj's target slot under rule (CR 115.7). The new targets must
+// be legal for the referenced object's own target specs, but the resolving
+// controller of the retarget effect (obj.Controller) makes the selection.
+func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, targetIndex int, rule game.RetargetRule, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	stackObjectID, ok := effectStackObjectID(g, obj, targetIndex)
 	if !ok {
 		return false
@@ -2655,41 +2655,88 @@ func (e *Engine) retargetStackObject(g *game.Game, obj *game.StackObject, target
 	if !ok {
 		return false
 	}
-	return e.retargetStackObjectChoice(g, obj.Controller, target, agents, log)
+	return e.retargetStackObjectWithRule(g, obj.Controller, target, rule, agents, log)
 }
 
-// retargetStackObjectChoice re-chooses the targets of target (CR 115.7). The
-// new targets must be legal for target's own target specs, but the resolving
-// controller chooser makes the selection. It is shared by the ChooseNewTargets
-// retarget effect and by CopyStackObject's "you may choose new targets for the
-// copy" rider, which retargets the freshly created copy. When the object is an
-// Arcane spell carrying spliced text (CR 702.47), each spliced card's targets
-// are re-chosen independently in addition to the host spell's own targets, so a
-// copy may choose new targets for every instance of "target" including the
-// spliced text.
+// retargetStackObjectChoice changes the targets of target (CR 115.7a): every
+// target changes to another legal target, or none changes.
 func (e *Engine) retargetStackObjectChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	return e.retargetStackObjectChoiceOptional(g, chooser, target, agents, log, false)
+	return e.retargetStackObjectWithRule(g, chooser, target, game.RetargetChangeTargets, agents, log)
 }
 
+// mayRetargetStackObjectChoice lets chooser choose new targets for target,
+// leaving any of them unchanged (CR 115.7d, CR 707.10c). CopyStackObject's
+// "you may choose new targets for the copy" rider uses it for a fresh copy.
 func (e *Engine) mayRetargetStackObjectChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	return e.retargetStackObjectChoiceOptional(g, chooser, target, agents, log, true)
+	return e.retargetStackObjectWithRule(g, chooser, target, game.RetargetChooseNewTargets, agents, log)
 }
 
-func (e *Engine) retargetStackObjectChoiceOptional(g *game.Game, chooser game.PlayerID, target *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog, optional bool) bool {
+// retargetGroup is one independently chosen set of target slots on a stack
+// object: the host's own targets, or one spliced card's targets (CR 702.47).
+type retargetGroup struct {
+	spliced int // -1 for the host's own targets
+	prompt  string
+	targets []game.Target
+	result  targetChoiceResult
+}
+
+// retargetStackObjectWithRule changes (CR 115.7a) or chooses new (CR 115.7d)
+// targets for target, with chooser making the selection. When the object is an
+// Arcane spell carrying spliced text (CR 702.47), each spliced card's targets
+// are chosen independently in addition to the host spell's own targets, so a
+// copy may choose new targets for every instance of "target" including the
+// spliced text. Changing targets is all-or-none across every group: if any
+// target can't change to another legal target, no target changes.
+func (e *Engine) retargetStackObjectWithRule(g *game.Game, chooser game.PlayerID, target *game.StackObject, rule game.RetargetRule, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	groups, ok := retargetGroups(g, target, rule)
+	if !ok || len(groups) == 0 {
+		return false
+	}
 	previousTargets := stackObjectAnnouncementTargets(target)
-	specs, specsOK := stackObjectTargetSpecs(g, target)
-	hostRetargeted := false
-	if specsOK && len(specs.specs) > 0 {
-		hostRetargeted = e.applyHostRetargetChoice(g, chooser, target, specs, agents, log, optional)
-		if !hostRetargeted && !optional {
-			return false
+	selections := make([]int, len(groups))
+	for i := range groups {
+		group := &groups[i]
+		request := targetChoiceRequest(chooser, group.prompt, group.result.choices)
+		if rule == game.RetargetChooseNewTargets {
+			request.Options = append(request.Options, game.ChoiceOption{Index: len(group.result.choices), Label: "Keep current targets"})
+			request.DefaultSelection = []int{len(group.result.choices)}
+		}
+		selected := e.chooseChoice(g, agents, request, log)
+		selections[i] = -1
+		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(group.result.choices) {
+			selections[i] = selected[0]
 		}
 	}
-	splicedRetargeted := false
-	if specsOK {
-		splicedRetargeted = e.retargetSplicedChoices(g, chooser, target, specs.def, agents, log, optional)
+	bound := make([][]game.Target, len(groups))
+	for i, group := range groups {
+		if selections[i] < 0 {
+			continue
+		}
+		next, ok := bindRetargetZoneVersions(g, group.result.choices[selections[i]], group.targets)
+		if !ok {
+			if rule == game.RetargetChangeTargets {
+				return false
+			}
+			selections[i] = -1
+			continue
+		}
+		bound[i] = next
 	}
-	retargeted := hostRetargeted || splicedRetargeted
+	retargeted := false
+	for i, group := range groups {
+		if selections[i] < 0 {
+			continue
+		}
+		counts := group.result.targetCounts[selections[i]]
+		if group.spliced < 0 {
+			target.Targets = bound[i]
+			target.TargetCounts = counts
+		} else {
+			target.SplicedTargets[group.spliced] = bound[i]
+			target.SplicedTargetCounts[group.spliced] = counts
+		}
+		retargeted = true
+	}
 	if retargeted {
 		if _, onStack := stackObjectByID(g, target.ID); onStack {
 			changed := *target
@@ -2708,86 +2755,71 @@ func (e *Engine) retargetStackObjectChoiceOptional(g *game.Game, chooser game.Pl
 	return retargeted
 }
 
-// applyHostRetargetChoice re-chooses and binds the host spell or ability's own
-// targets, returning false when no legal new target combination exists or the
-// selection is abandoned.
-func (e *Engine) applyHostRetargetChoice(g *game.Game, chooser game.PlayerID, target *game.StackObject, specs stackObjectSpecs, agents [game.NumPlayers]PlayerAgent, log *TurnLog, optional bool) bool {
-	// Re-enumerating a triggered ability's targets must reuse its captured
-	// triggering event so event-relative target predicates (e.g. "target
-	// creature that player controls", Garland, Royal Kidnapper) resolve the
-	// same event player as the original enumeration and resolution recheck.
-	retargetEvent := game.Event{}
-	if target.HasTriggerEvent {
-		retargetEvent = target.TriggerEvent
+// retargetGroups enumerates the legal new-target combinations for each target
+// group of target. A group without targets has nothing to change. When
+// changing targets, a group with no combination of other legal targets leaves
+// every target unchanged (CR 115.7a), so ok is false; when choosing new
+// targets, such a group is simply skipped.
+func retargetGroups(g *game.Game, target *game.StackObject, rule game.RetargetRule) ([]retargetGroup, bool) {
+	specs, specsOK := stackObjectTargetSpecs(g, target)
+	if !specsOK {
+		return nil, false
 	}
-	result := retargetChoices(g, target.Controller, specs, retargetEvent, target.Targets, target.TargetCounts, target.XValue, optional)
-	if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
-		return false
+	prompt := "Choose new targets"
+	if rule == game.RetargetChangeTargets {
+		prompt = "Change targets"
 	}
-	request := targetChoiceRequest(chooser, "Choose new targets", result.choices)
-	if optional {
-		request.Options = append(request.Options, game.ChoiceOption{Index: len(result.choices), Label: "Keep current targets"})
-		request.DefaultSelection = []int{len(result.choices)}
+	var groups []retargetGroup
+	add := func(group retargetGroup) bool {
+		if len(group.targets) == 0 {
+			return true
+		}
+		if group.result.kind != targetLegalChoicesFound || len(group.result.choices) == 0 {
+			return rule != game.RetargetChangeTargets
+		}
+		groups = append(groups, group)
+		return true
 	}
-	selected := e.chooseChoice(g, agents, request, log)
-	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
-		return false
+	if len(specs.specs) > 0 {
+		// Re-enumerating a triggered ability's targets must reuse its captured
+		// triggering event so event-relative target predicates (e.g. "target
+		// creature that player controls", Garland, Royal Kidnapper) resolve the
+		// same event player as the original enumeration and resolution recheck.
+		retargetEvent := game.Event{}
+		if target.HasTriggerEvent {
+			retargetEvent = target.TriggerEvent
+		}
+		if !add(retargetGroup{
+			spliced: -1,
+			prompt:  prompt,
+			targets: target.Targets,
+			result:  retargetChoices(g, target.Controller, specs, retargetEvent, target.Targets, target.TargetCounts, target.XValue, rule),
+		}) {
+			return nil, false
+		}
 	}
-	bound, ok := bindRetargetZoneVersions(g, result.choices[selected[0]], target.Targets)
-	if !ok {
-		return false
+	if target.Kind != game.StackSpell || specs.def == nil {
+		return groups, true
 	}
-	target.Targets = bound
-	target.TargetCounts = result.targetCounts[selected[0]]
-	return true
-}
-
-// retargetSplicedChoices re-chooses the targets of each spliced card on an
-// Arcane spell (CR 702.47), independently of the host spell's targets. Spliced
-// targets are enumerated against the spliced card's own specs but evaluated
-// relative to the host spell (the combined spell is the source), mirroring the
-// resolution-time recheck. A spliced card with no legal new target combination
-// keeps its original targets. It returns whether any spliced card was retargeted.
-func (e *Engine) retargetSplicedChoices(g *game.Game, chooser game.PlayerID, target *game.StackObject, hostDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog, optional bool) bool {
-	if target.Kind != game.StackSpell || len(target.SplicedContent) == 0 || hostDef == nil {
-		return false
-	}
-	retargeted := false
+	// Spliced targets are enumerated against the spliced card's own specs but
+	// evaluated relative to the host spell (the combined spell is the source),
+	// mirroring the resolution-time recheck.
 	for i := range target.SplicedContent {
-		specs := splicedContentTargetSpecs(target.SplicedContent[i])
-		if len(specs) == 0 {
+		splicedSpecs := splicedContentTargetSpecs(target.SplicedContent[i])
+		if len(splicedSpecs) == 0 || i >= len(target.SplicedTargets) || i >= len(target.SplicedTargetCounts) {
 			continue
 		}
-		if i >= len(target.SplicedTargets) || i >= len(target.SplicedTargetCounts) {
-			continue
+		if !add(retargetGroup{
+			spliced: i,
+			prompt:  prompt + " of the spliced spell",
+			targets: target.SplicedTargets[i],
+			result: retargetChoices(g, target.Controller, stackObjectSpecs{def: specs.def, sourceObjectID: target.ID, hostObjectID: target.ID, specs: splicedSpecs},
+				game.Event{}, target.SplicedTargets[i], target.SplicedTargetCounts[i], target.XValue, rule),
+		}) {
+			return nil, false
 		}
-		result := retargetChoices(g, target.Controller, stackObjectSpecs{def: hostDef, sourceObjectID: target.ID, hostObjectID: target.ID, specs: specs},
-			game.Event{}, target.SplicedTargets[i], target.SplicedTargetCounts[i], target.XValue, optional)
-		if result.kind != targetLegalChoicesFound || len(result.choices) == 0 {
-			continue
-		}
-		request := targetChoiceRequest(chooser, "Choose new targets for the spliced spell", result.choices)
-		if optional {
-			request.Options = append(request.Options, game.ChoiceOption{Index: len(result.choices), Label: "Keep current targets"})
-			request.DefaultSelection = []int{len(result.choices)}
-		}
-		selected := e.chooseChoice(g, agents, request, log)
-		if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(result.choices) {
-			continue
-		}
-		bound, ok := bindRetargetZoneVersions(g, result.choices[selected[0]], target.SplicedTargets[i])
-		if !ok {
-			continue
-		}
-		if i < len(target.SplicedTargets) {
-			target.SplicedTargets[i] = bound
-		}
-		if i < len(target.SplicedTargetCounts) {
-			target.SplicedTargetCounts[i] = result.targetCounts[selected[0]]
-		}
-		retargeted = true
 	}
-	return retargeted
+	return groups, true
 }
 
 // stackObjectSpecs bundles the target specs a stack object chose against with

@@ -112,8 +112,8 @@ func TestRedirectCannotRetargetCounterspellToItself(t *testing.T) {
 }
 
 // TestWillbenderKeepsTargetWhenOnlyHostIsAlternative proves the no-valid
-// alternative case: the host is never offered, so changing the target leaves the
-// original target unchanged (CR 115.7a).
+// alternative case: the host is never a legal new target, so Willbender offers
+// no change and the original target stays unchanged (CR 115.5, CR 115.7a).
 func TestWillbenderKeepsTargetWhenOnlyHostIsAlternative(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := removalTokenEngine(t, authored.Counterspell)
@@ -136,9 +136,8 @@ func TestWillbenderKeepsTargetWhenOnlyHostIsAlternative(t *testing.T) {
 	agents := [game.NumPlayers]PlayerAgent{game.Player2: agent}
 	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
 
-	assertRetargetNeverOffers(t, agent.requests, counter.ID)
-	if offered := retargetOfferedTargets(agent.requests); len(offered) != 1 {
-		t.Fatalf("new-target options = %v, want only the unchanged victim", offered)
+	if len(agent.requests) != 0 {
+		t.Fatalf("Willbender offered a change with no other legal target: %+v", agent.requests)
 	}
 	if !slices.Equal(counter.Targets, []game.Target{game.StackObjectTarget(victim.ID)}) {
 		t.Fatalf("Counterspell targets = %v, want unchanged victim", counter.Targets)
@@ -209,7 +208,7 @@ func TestChooseNewTargetsExcludesHostAbilityAndKeepsSourceIdentity(t *testing.T)
 		TargetCounts: []int{1, 1},
 	}
 	g.Stack.Push(host)
-	addEffectSpellToStack(g, game.Player1, game.ChooseNewTargets{Object: game.TargetStackObjectReference(0)},
+	addEffectSpellToStack(g, game.Player1, game.ChooseNewTargets{Object: game.TargetStackObjectReference(0), Rule: game.RetargetChooseNewTargets},
 		[]game.Target{game.StackObjectTarget(host.ID)})
 
 	want := []game.Target{game.StackObjectTarget(otherAbility.ID), game.PermanentTarget(creatureB.ObjectID)}
@@ -245,7 +244,7 @@ func TestChooseNewTargetsExcludesHostFromSplicedTargets(t *testing.T) {
 	}}}}}}
 	host.SplicedTargets = [][]game.Target{{game.StackObjectTarget(victim.ID)}}
 	host.SplicedTargetCounts = [][]int{{1}}
-	addEffectSpellToStack(g, game.Player2, game.ChooseNewTargets{Object: game.TargetStackObjectReference(0)},
+	addEffectSpellToStack(g, game.Player2, game.ChooseNewTargets{Object: game.TargetStackObjectReference(0), Rule: game.RetargetChooseNewTargets},
 		[]game.Target{game.StackObjectTarget(host.ID)})
 
 	agent := &retargetRecordingAgent{t: t, want: []game.Target{game.StackObjectTarget(bystander.ID)}}

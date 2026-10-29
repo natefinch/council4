@@ -2002,14 +2002,33 @@ type ExileTargetSpells struct {
 	Object ObjectReference
 }
 
-// ChooseNewTargets re-chooses the targets of a referenced spell or ability on
-// the stack ("You may choose new targets for target spell or ability."). The
-// resolving controller selects a new legal target for each of the referenced
-// object's target specs; the choice is bounded by that object's own targeting
-// restrictions (CR 115.7). The enclosing Instruction's Optional flag expresses
-// the "you may" wrapper.
+// ChooseNewTargets changes or re-chooses the targets of a referenced spell or
+// ability on the stack. The resolving controller makes the selection, bounded
+// by that object's own targeting restrictions; Rule selects whether the effect
+// "changes the target(s)" (CR 115.7a) or "chooses new targets" (CR 115.7d).
+// The enclosing Instruction's Optional flag expresses a "you may" wrapper.
 type ChooseNewTargets struct {
 	Object ObjectReference
+	Rule   RetargetRule
+}
+
+// RetargetRule distinguishes the CR 115.7 target-changing procedures.
+type RetargetRule uint8
+
+const (
+	// RetargetChangeTargets is "change the target(s)" (CR 115.7a): each target
+	// must be changed to another legal target. If the whole set can't be
+	// changed that way, every target remains unchanged, even an illegal one.
+	RetargetChangeTargets RetargetRule = iota
+	// RetargetChooseNewTargets is "choose new targets" (CR 115.7d): any number
+	// of targets may stay unchanged, even if illegal, while changed targets
+	// must be legal and must not make an unchanged target illegal.
+	RetargetChooseNewTargets
+)
+
+// Valid reports whether r is a recognized retarget rule.
+func (r RetargetRule) Valid() bool {
+	return r == RetargetChangeTargets || r == RetargetChooseNewTargets
 }
 
 // ChangeStackObjectController changes who controls a referenced spell or

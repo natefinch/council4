@@ -96,7 +96,8 @@ func TestTargetAnnouncementRetargetAndCopyPublishExactlyOnce(t *testing.T) {
 				if targetAnnouncementCount(g, obj.ID) != 2 {
 					t.Fatal("changed target did not publish one new occurrence")
 				}
-				if !engine.retargetStackObjectChoice(g, game.Player3, obj, agents, &TurnLog{}) ||
+				// Only choosing new targets may keep a target unchanged (CR 115.7d).
+				if !engine.mayRetargetStackObjectChoice(g, game.Player3, obj, agents, &TurnLog{}) ||
 					targetAnnouncementCount(g, obj.ID) != 2 {
 					t.Fatal("unchanged target emitted a duplicate occurrence")
 				}
