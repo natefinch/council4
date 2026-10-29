@@ -1522,8 +1522,16 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 		}
 	}
 	if continuous.SetSubtypeFromSourceChoice != "" {
-		if continuous.SetSubtypeFromSourceChoice != AttachmentSubtypeChoiceKey {
-			v.add(faceName, appendPath(path, "SetSubtypeFromSourceChoice"), CardDefIssueInvalidReference, "source-choice subtype reference must use AttachmentSubtypeChoiceKey")
+		switch continuous.SetSubtypeFromSourceChoice {
+		case AttachmentSubtypeChoiceKey:
+		case EntryTypeChoiceKey:
+			// The entry choice is a creature type ("choose a creature type"),
+			// so it can overwrite only creature types (Conspiracy).
+			if continuous.SetSubtypeChoiceType != types.Creature {
+				v.add(faceName, appendPath(path, "SetSubtypeChoiceType"), CardDefIssueInvalidReference, "entry-choice subtype overwrite must replace creature types")
+			}
+		default:
+			v.add(faceName, appendPath(path, "SetSubtypeFromSourceChoice"), CardDefIssueInvalidReference, "source-choice subtype reference must use AttachmentSubtypeChoiceKey or EntryTypeChoiceKey")
 		}
 		if continuous.SetSubtypeChoiceType == "" {
 			v.add(faceName, appendPath(path, "SetSubtypeChoiceType"), CardDefIssueInvalidReference, "source-choice subtype reference requires a card-type family")

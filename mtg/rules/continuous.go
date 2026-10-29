@@ -973,6 +973,24 @@ func buildStaticAbilitySources(g *game.Game) []staticAbilitySource {
 	return sources
 }
 
+// characteristicDefiningTimestamp orders effects from characteristic-defining
+// abilities before every timestamped effect in their layer (CR 613.3). Real
+// timestamps come from the ID generator and are never zero.
+const characteristicDefiningTimestamp game.Timestamp = 0
+
+// staticEffectTimestamp returns the layer-ordering timestamp of an effect that
+// body generates on source. A permanent's own characteristic-defining ability
+// (Mistform Ultimus "is every creature type", CR 604.3) applies first within
+// its layer (CR 613.3), so a later "are the chosen type" overwrite (Conspiracy)
+// replaces its creature types regardless of timestamps; everything else uses the
+// source's timestamp (CR 613.7a).
+func staticEffectTimestamp(source staticAbilitySource, body *game.StaticAbility, template *game.ContinuousEffect) game.Timestamp {
+	if source.permanent != nil && template.AffectedSource && characteristicDefiningStatic(body) {
+		return characteristicDefiningTimestamp
+	}
+	return source.timestamp
+}
+
 // emblemTimestampBase offsets emblem continuous-effect timestamps so emblems sort
 // after ordinary permanents in layer ordering (CR 613.7); emblems are created
 // during the game, after most permanents.
@@ -1071,7 +1089,7 @@ func appendStaticAbilitySourceContinuousEffects(effects []game.ContinuousEffect,
 			staticEffect.SourceObjectID = sourceObjectID(source)
 			staticEffect.SourceCardID = source.cardID
 			staticEffect.Controller = source.controller
-			staticEffect.Timestamp = source.timestamp
+			staticEffect.Timestamp = staticEffectTimestamp(source, body, template)
 			if staticEffect.Layer == game.LayerControl && staticEffect.NewController.Exists {
 				staticEffect.NewController = opt.Val(source.controller)
 			}
