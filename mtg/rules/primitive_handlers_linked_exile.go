@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"math/rand/v2"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -15,8 +17,9 @@ import (
 // identity, so an object that already left exile is skipped. Every card, across
 // all owners, moves as one simultaneous batch (CR 603.2c): each card's
 // zone-change replacements and its owner's choices are determined in APNAP order
-// before any card moves (CR 101.4, 400.6, 616.1). RandomOrder randomizes each
-// owner's cards independently.
+// before any card moves (CR 101.4, 400.6, 616.1), in linked order. RandomOrder
+// then randomly orders each owner's arrived cards independently, so the choices
+// and events do not reveal the hidden library order (CR 401.2).
 func handlePutLinkedExiledCardsInLibrary(r *effectResolver, prim game.PutLinkedExiledCardsInLibrary) effectResolved {
 	res := effectResolved{accepted: true}
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
@@ -36,16 +39,16 @@ func handlePutLinkedExiledCardsInLibrary(r *effectResolver, prim game.PutLinkedE
 	}
 	var moves []simultaneousCardMove
 	for _, owner := range owners {
-		cards := cardsByOwner[owner]
-		if prim.RandomOrder {
-			cards = randomlyOrderedSnapshots(cards, r.engine.rng)
-		}
-		for _, snapshot := range cards {
+		for _, snapshot := range cardsByOwner[owner] {
 			moves = append(moves, simultaneousCardMove{card: snapshot, fromZone: zone.Exile})
 		}
 	}
+	var randomOrder *rand.Rand
+	if prim.RandomOrder {
+		randomOrder = r.engine.rng
+	}
 	if len(moves) > 0 {
-		res.succeeded = moveCardsBetweenZonesSimultaneously(r.game, moves, zone.Library, prim.Bottom, r.game.IDGen.Next())
+		res.succeeded = moveCardsBetweenZonesSimultaneously(r.game, moves, zone.Library, prim.Bottom, r.game.IDGen.Next(), randomOrder)
 	}
 	clearLinkedObjects(r.game, key)
 	return res

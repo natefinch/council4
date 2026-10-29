@@ -977,7 +977,8 @@ type ShufflePermanentIntoLibrary struct {
 
 // PutLinkedExiledCardsInLibrary moves every card a sibling clause exiled under
 // LinkedKey from exile to its owner's library, to the bottom when Bottom is set.
-// RandomOrder randomizes each owner's cards before putting them on the bottom.
+// RandomOrder puts each owner's arriving cards in a hidden random order, decided
+// after their replacement choices so those choices do not reveal it.
 // It backs the linked disposal "The owner of each card exiled with <this
 // permanent> puts that card on the bottom of their library." (Trial of a Time
 // Lord), consuming the link the paired exile-until-leaves clause published so
