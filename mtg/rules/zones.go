@@ -583,7 +583,7 @@ func replacePermanentZoneMoveDestinations(g *game.Game, moves []preparedPermanen
 				if len(matches) != 0 {
 					choices = append(choices, pendingChoice{replacementEventPlayer(move.event), func() {
 						decision := chooseReplacementDecision(g, replacementEventPlayer(move.event), replacementEffectLabels(matches))
-						state.ordinary.apply(selectedReplacementEffect(matches, decision))
+						state.ordinary.choose(selectedReplacementIndex(matches, decision))
 					}})
 					continue
 				}

@@ -248,10 +248,18 @@ type StackObject struct {
 	// feeds the Addendum cast-timing condition at resolution.
 	CastDuringControllerMainPhase bool
 
-	// ExileOnResolution is set by a resolving self-exile instruction. A
+	// ExileOnResolution is set by a resolving self-exile instruction or by a
+	// counterspell's own "exile it instead" (a CR 614.15 self-replacement). A
 	// non-copy instant or sorcery moves to exile instead of its normal
 	// graveyard destination after its remaining instructions resolve.
 	ExileOnResolution bool
+
+	// ExileInsteadOfGraveyard records a cast rider's replacement effect, "If
+	// that spell would be put into your graveyard, exile it instead"
+	// (Torrential Gearhulk). Unlike ExileOnResolution it is an ordinary
+	// replacement of the graveyard move, so it competes with other
+	// replacements such as an Adventure's resolution exile (CR 616.1).
+	ExileInsteadOfGraveyard bool
 
 	// CounteredDestination redirects this spell's card to a zone other than its
 	// owner's graveyard when it is countered, backing the CR 614-style

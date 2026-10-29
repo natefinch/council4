@@ -15,8 +15,7 @@ func TestProductionZoneArrivalsStayInMovementCore(t *testing.T) {
 	allowed := map[string]string{
 		// Replacement-aware commits and entry transactions own raw placement.
 		"zones.go:*":                         "*",
-		"stack.go:moveAdventureSpellToExile": "*",
-		"stack.go:moveStackCardToZone":       "*",
+		"stack.go:moveStackCardToZoneResult": "*",
 		"primitive_handlers_zones.go:putResolvedCardsOnBattlefieldCollecting": "*",
 		"primitive_handlers_zones.go:putResolvedCardOnBattlefieldValue":       "*",
 
