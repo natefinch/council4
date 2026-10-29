@@ -1241,6 +1241,9 @@ func (p ApplyContinuous) validatePrimitive(targets []TargetSpec, checkTargets bo
 		if p.ContinuousEffects[i].SpellSelection != nil {
 			return errors.New("spell type effects are declared only on static abilities")
 		}
+		if p.ContinuousEffects[i].OwnedCardSelection != nil {
+			return errors.New("owned card type effects are declared only on static abilities")
+		}
 	}
 	if p.ChooseFrom.Valid() {
 		if p.Object.Exists {

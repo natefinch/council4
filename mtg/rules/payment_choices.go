@@ -456,7 +456,7 @@ func remainingGraveyardPreferenceCostsPayable(g *game.Game, playerID game.Player
 				return false
 			}
 			card, ok := g.GetCardInstance(sourceCardID)
-			if !ok || !g.Players[playerID].Graveyard.Contains(sourceCardID) || !localAdditionalCostMatchesCard(g, cardFaceOrDefault(card, game.FaceFront), additional) {
+			if !ok || !g.Players[playerID].Graveyard.Contains(sourceCardID) || !localAdditionalCostMatchesCard(g, card, additional) {
 				return false
 			}
 			nextReserved := cardIDSet(reservedCardIDs(reserved)...)
@@ -539,12 +539,12 @@ func candidateAdditionalCostCards(g *game.Game, playerID game.PlayerID, addCost 
 	return payment.CandidateCardsForCost(&rulesPaymentState{g: g}, playerID, addCost, 0, excludedCardIDs...)
 }
 
-func localAdditionalCostMatchesCard(g *game.Game, face *game.CardDef, addCost cost.Additional) bool {
+func localAdditionalCostMatchesCard(g *game.Game, card *game.CardInstance, addCost cost.Additional) bool {
 	sel, ok := payment.SelectionForAdditionalCost(addCost)
 	if !ok {
 		return false
 	}
-	return cardDefMatchesCostSelection(g, face, sel)
+	return cardMatchesCostSelection(g, card, sel)
 }
 
 // permanentMatchesCostSelection reports whether a battlefield permanent
@@ -565,9 +565,28 @@ func permanentMatchesCostSelection(g *game.Game, permanent *game.Permanent, sel 
 	return matchSelection(&subject, &sel)
 }
 
-// cardDefMatchesCostSelection reports whether a card face satisfies a cost's
-// converted Selection, reading printed characteristics through the same
-// subjectCard the effect side uses.
+// cardMatchesCostSelection reports whether a real card in a non-battlefield zone
+// (a card to discard, exile or reveal for a cost, or a card whose ability cost
+// is modified) satisfies a cost's converted Selection. It reads the instance
+// itself through the subjectCard the effect side uses, so the card's own
+// characteristic-defining abilities, its counters and the type-changing
+// effects that apply to cards its owner owns outside the battlefield count
+// (Arcane Adaptation makes a creature card in hand the chosen type, CR 613.1d).
+func cardMatchesCostSelection(g *game.Game, card *game.CardInstance, sel game.Selection) bool {
+	if card == nil || card.Def == nil {
+		return false
+	}
+	return matchSelection(&selectionSubject{
+		kind: subjectCard,
+		g:    g,
+		card: card,
+	}, &sel)
+}
+
+// cardDefMatchesCostSelection reports whether a card face that is not a card
+// in a zone (a spell's cast characteristics, castSelectionFace) satisfies a
+// cost's converted Selection, reading the face through the same subjectCard
+// the effect side uses. A card in a zone uses cardMatchesCostSelection.
 func cardDefMatchesCostSelection(g *game.Game, face *game.CardDef, sel game.Selection) bool {
 	if face == nil {
 		return false

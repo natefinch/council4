@@ -77,7 +77,7 @@ func TestLinkedFreeCastOnlyPermissionIsListedAndApplied(t *testing.T) {
 				t.Fatal("precondition: the monarch's linked free-cast permission is missing")
 			}
 			if canCastFromZoneByRuleEffect(g, game.Player1, cardID, zone.Exile, game.FaceFront) ||
-				canCastSpellsFromZoneByRuleEffect(g, game.Player1, cardID, zone.Exile, game.FaceFront) {
+				canCastSpellsFromZoneByRuleEffect(g, game.Player1, cardID, zone.Exile, game.FaceFront, false) {
 				t.Fatal("precondition: another permission covers the pooled card")
 			}
 			setSorcerySpeedTurn(g, game.Player1)

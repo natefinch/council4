@@ -33,16 +33,16 @@ func TestCanCastSpellFromLibraryTopRequiresStatic(t *testing.T) {
 	spellID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Test Bolt", Types: []types.Card{types.Instant}}})
 
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Library, game.FaceFront, false) {
 		t.Fatal("library spell is castable without the static permission")
 	}
 
 	castSpellsFromLibraryTopPermanent(g, game.Player1, nil)
 
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Library, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Library, game.FaceFront, false) {
 		t.Fatal("top library spell is not castable despite the static permission")
 	}
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player2, spellID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player2, spellID, zone.Library, game.FaceFront, false) {
 		t.Fatal("opponent may cast from a library they do not control the static for")
 	}
 }
@@ -55,10 +55,10 @@ func TestCanCastSpellFromLibraryTopOnlyTopCard(t *testing.T) {
 	topID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Bolt", Types: []types.Card{types.Instant}}})
 
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, topID, zone.Library, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, topID, zone.Library, game.FaceFront, false) {
 		t.Fatal("top library spell is not castable despite the static permission")
 	}
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, buriedID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, buriedID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a non-top library spell must not be castable")
 	}
 }
@@ -69,13 +69,13 @@ func TestCanCastSpellFromLibraryTopRespectsTypeFilter(t *testing.T) {
 	instantID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Bolt", Types: []types.Card{types.Instant}}})
 
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, instantID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, instantID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a non-creature spell must not be castable under a creature-only filter")
 	}
 
 	creatureID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Bear", Types: []types.Card{types.Creature}}})
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, creatureID, zone.Library, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, creatureID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a creature spell is not castable despite the creature-only filter")
 	}
 }
@@ -107,19 +107,19 @@ func TestCanCastSpellFromLibraryTopRespectsColorlessFilter(t *testing.T) {
 
 	coloredID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Blue Sorcery", Types: []types.Card{types.Sorcery}, Colors: []color.Color{color.Blue}}})
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, coloredID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, coloredID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a colored non-artifact spell must not be castable under an artifact-or-colorless filter")
 	}
 
 	colorlessID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Eldrazi", Types: []types.Card{types.Creature}}})
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, colorlessID, zone.Library, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, colorlessID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a colorless spell is not castable despite the colorless permission")
 	}
 
 	artifactID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Colored Artifact", Types: []types.Card{types.Artifact}, Colors: []color.Color{color.Blue}}})
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, artifactID, zone.Library, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, artifactID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a colored artifact spell is not castable despite the artifact permission")
 	}
 }
@@ -179,19 +179,19 @@ func TestCanCastSpellFromLibraryTopRespectsChosenType(t *testing.T) {
 
 	matchID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Elf", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Elf}}})
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, matchID, zone.Library, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, matchID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a creature spell of the chosen type is not castable despite the chosen-type permission")
 	}
 
 	mismatchID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Goblin", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Goblin}}})
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, mismatchID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, mismatchID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a creature spell of a different subtype must not be castable under the chosen-type permission")
 	}
 
 	noncreatureID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Bolt", Types: []types.Card{types.Instant}}})
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, noncreatureID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, noncreatureID, zone.Library, game.FaceFront, false) {
 		t.Fatal("a noncreature spell must not be castable under the chosen-type permission")
 	}
 }
@@ -203,7 +203,7 @@ func TestCanCastSpellFromLibraryTopChosenTypeRequiresChoice(t *testing.T) {
 
 	matchID := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Top Elf", Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Elf}}})
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, matchID, zone.Library, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, matchID, zone.Library, game.FaceFront, false) {
 		t.Fatal("no spell may be cast under the chosen-type permission before a type is chosen")
 	}
 }

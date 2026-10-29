@@ -551,6 +551,11 @@ func attackersInBatchAttackedControllerDirectly(g *game.Game, trigger *game.Even
 	return count
 }
 
+// controllerGraveyardCardTypeCount counts the card types among cards in the
+// controller's graveyard (delirium), reading each card's types as
+// graveyardCardTypes does: a split card's both halves and the types that
+// type-changing effects give cards the owner owns outside the battlefield
+// (Biotransference makes a creature card an artifact card too).
 func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) int {
 	player, ok := playerByID(g, controller)
 	if !ok {
@@ -562,13 +567,8 @@ func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) in
 		if !ok {
 			continue
 		}
-		for _, cardType := range cardFaceOrDefault(card, game.FaceFront).Types {
+		for _, cardType := range graveyardCardTypes(g, card) {
 			distinct[cardType] = true
-		}
-		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
-			for _, cardType := range card.Def.Alternate.Val.Types {
-				distinct[cardType] = true
-			}
 		}
 	}
 	return len(distinct)
@@ -576,7 +576,8 @@ func controllerGraveyardCardTypeCount(g *game.Game, controller game.PlayerID) in
 
 // controllerGraveyardPermanentCardCount counts the cards in the controller's
 // graveyard that are permanent cards ("there are four or more permanent cards in
-// your graveyard", the Descend ability word).
+// your graveyard", the Descend ability word), reading types as
+// graveyardCardIsPermanent does.
 func controllerGraveyardPermanentCardCount(g *game.Game, controller game.PlayerID) int {
 	player, ok := playerByID(g, controller)
 	if !ok {
@@ -588,12 +589,7 @@ func controllerGraveyardPermanentCardCount(g *game.Game, controller game.PlayerI
 		if !ok {
 			continue
 		}
-		if cardFaceOrDefault(card, game.FaceFront).IsPermanent() {
-			count++
-			continue
-		}
-		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
-			card.Def.Alternate.Val.IsPermanent() {
+		if graveyardCardIsPermanent(g, card) {
 			count++
 		}
 	}

@@ -40,6 +40,12 @@ func newEncroachingMycosynth() *game.CardDef {
 							SpellSelection: &game.Selection{RequiredTypesAny: []types.Card{
 								types.Artifact, types.Battle, types.Creature, types.Enchantment, types.Land, types.Planeswalker,
 							}},
+							OwnedCardSelection: &game.Selection{
+								RequiredTypesAny: []types.Card{
+									types.Artifact, types.Battle, types.Creature, types.Enchantment, types.Planeswalker,
+								},
+								ExcludedTypes: []types.Card{types.Land},
+							},
 							AddTypes: []types.Card{types.Artifact},
 						},
 					},

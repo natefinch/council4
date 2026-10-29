@@ -89,7 +89,7 @@ func preferredThresholdExileCards(s State, playerID game.PlayerID, additional co
 	for _, cardID := range prefs.ExileChoices {
 		card, ok := s.CardInstance(cardID)
 		if !ok || !zoneContainsCard(s, playerID, selectionZone, cardID) || chosenIDs[cardID] ||
-			!additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) ||
+			!additionalCostMatchesCard(s, card, additional) ||
 			(additional.ExcludeSource && cardID == sourceCardID) {
 			return nil
 		}
@@ -136,7 +136,7 @@ func preferredExileCards(s State, playerID game.PlayerID, additional cost.Additi
 	var consumed int
 	for _, cardID := range prefs.ExileChoices {
 		card, ok := s.CardInstance(cardID)
-		if !ok || !zoneContainsCard(s, playerID, selectionZone, cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) || (additional.ExcludeSource && cardID == sourceCardID) {
+		if !ok || !zoneContainsCard(s, playerID, selectionZone, cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s, card, additional) || (additional.ExcludeSource && cardID == sourceCardID) {
 			return nil
 		}
 		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: selectionZone})
@@ -183,7 +183,7 @@ func remainingGraveyardCostsPayable(s State, playerID game.PlayerID, remainingCo
 				}
 			}
 			card, ok := s.CardInstance(sourceCardID)
-			if !ok || !zoneContainsCard(s, playerID, sourceZone, sourceCardID) || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
+			if !ok || !zoneContainsCard(s, playerID, sourceZone, sourceCardID) || !additionalCostMatchesCard(s, card, additional) {
 				return false
 			}
 			return remainingGraveyardCostsPayable(
@@ -260,7 +260,7 @@ func preferredRevealCards(s State, playerID game.PlayerID, additional cost.Addit
 		if !ok ||
 			!zoneContainsCard(s, playerID, sourceZone, cardID) ||
 			chosenIDs[cardID] ||
-			!additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
+			!additionalCostMatchesCard(s, card, additional) {
 			return nil
 		}
 		chosen = append(chosen, cardZoneSelection{cardID: cardID, zone: sourceZone})
@@ -501,7 +501,7 @@ func preferredDiscardCards(s State, playerID game.PlayerID, additional cost.Addi
 	var consumed int
 	for _, cardID := range prefs.DiscardChoices {
 		card, ok := s.CardInstance(cardID)
-		if !ok || !player.Hand.Contains(cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
+		if !ok || !player.Hand.Contains(cardID) || chosenIDs[cardID] || !additionalCostMatchesCard(s, card, additional) {
 			return nil
 		}
 		chosen = append(chosen, cardID)

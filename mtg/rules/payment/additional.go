@@ -413,7 +413,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			card, ok := s.CardInstance(sourceCardID)
-			if !ok || !additionalCostMatchesCard(s, s.CardFace(card, game.FaceFront), additional) {
+			if !ok || !additionalCostMatchesCard(s, card, additional) {
 				return plan, false
 			}
 			plan.exiles = append(plan.exiles, cardZoneSelection{cardID: sourceCardID, zone: sourceZone})
@@ -524,7 +524,7 @@ func additionalCostMatchesPermanent(s State, permanent *game.Permanent, addition
 	return s.PermanentMatchesSelection(permanent, sel)
 }
 
-func additionalCostMatchesCard(s State, card *game.CardDef, additional cost.Additional) bool {
+func additionalCostMatchesCard(s State, card *game.CardInstance, additional cost.Additional) bool {
 	sel, ok := SelectionForAdditionalCost(additional)
 	if !ok {
 		return false

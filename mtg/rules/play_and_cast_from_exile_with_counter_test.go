@@ -122,13 +122,13 @@ func TestCastSpellFromExileRequiresCroakCounter(t *testing.T) {
 		Name: "Plain Bolt", Types: []types.Card{types.Instant}}})
 	g.AddExileCounter(withCounter, counter.Croak, 1)
 
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, withCounter, zone.Exile, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, withCounter, zone.Exile, game.FaceFront, false) {
 		t.Fatal("croak-countered exiled spell is not castable despite the permission")
 	}
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, withoutCounter, zone.Exile, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, withoutCounter, zone.Exile, game.FaceFront, false) {
 		t.Fatal("exiled spell without a croak counter is castable")
 	}
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player2, withCounter, zone.Exile, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player2, withCounter, zone.Exile, game.FaceFront, false) {
 		t.Fatal("opponent may cast from an exile permission they do not control")
 	}
 }
@@ -253,7 +253,7 @@ func TestGrolnokTriggerExilesMilledPermanentWithCroak(t *testing.T) {
 	if !g.HasExileCounter(creatureID, counter.Croak) {
 		t.Fatal("exiled permanent is missing the croak counter placed by the trigger")
 	}
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, creatureID, zone.Exile, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, creatureID, zone.Exile, game.FaceFront, false) {
 		t.Fatal("croak-countered permanent in exile is not castable despite Grolnok's static")
 	}
 }

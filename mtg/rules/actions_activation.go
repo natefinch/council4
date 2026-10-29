@@ -83,7 +83,7 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 		return false
 	}
 	if !modifier.CardSelection.Empty() {
-		if card == nil || !cardDefMatchesCostSelection(g, card.Def, modifier.CardSelection) {
+		if card == nil || !cardMatchesCostSelection(g, card, modifier.CardSelection) {
 			return false
 		}
 	}

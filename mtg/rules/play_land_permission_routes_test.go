@@ -122,7 +122,7 @@ func TestRegisteredGrolnokLandPlayLeavesEvelynUnspent(t *testing.T) {
 			t.Fatalf("evelynFirst=%v: Grolnok's land play spent Evelyn's once-each-turn use", evelynFirst)
 		}
 
-		if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront) {
+		if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront, false) {
 			t.Fatalf("evelynFirst=%v: Evelyn cannot authorize a cast after Grolnok's land play", evelynFirst)
 		}
 		if !castCollectedSorcery(g, engine, spellID) {
@@ -166,7 +166,7 @@ func TestEvelynAloneLandPlaySpendsHerUse(t *testing.T) {
 	if engine.applyAction(g, game.Player1, playLandFromExile(second)) {
 		t.Fatal("a second land play through Evelyn was accepted in the same turn")
 	}
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront) || castCollectedSorcery(g, engine, spellID) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront, false) || castCollectedSorcery(g, engine, spellID) {
 		t.Fatal("a cast through Evelyn was accepted after her land play spent the use")
 	}
 }

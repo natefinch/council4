@@ -1,6 +1,7 @@
 package game
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -91,5 +92,69 @@ func TestApplyContinuousRejectsSpellTypeEffect(t *testing.T) {
 	err := primitive.validatePrimitive(nil, false)
 	if err == nil || !strings.Contains(err.Error(), "spell type effects") {
 		t.Fatalf("validatePrimitive() = %v, want spell type effect rejection", err)
+	}
+}
+
+func creatureOwnedCardTypeEffect() ContinuousEffect {
+	effect := creatureSpellTypeEffect()
+	effect.OwnedCardSelection = &Selection{RequiredTypes: []types.Card{types.Creature}}
+	return effect
+}
+
+// TestValidateCardDefOwnedCardTypeEffect proves a battlefield type-changing
+// static ability may extend to owned off-battlefield cards by type-line
+// selection, and rejects every other placement or predicate.
+func TestValidateCardDefOwnedCardTypeEffect(t *testing.T) {
+	t.Parallel()
+	if issues := ValidateCardDef(spellTypeEffectCard(creatureOwnedCardTypeEffect(), zone.None)); len(issues) != 0 {
+		t.Fatalf("issues = %+v, want none", issues)
+	}
+	nonland := creatureOwnedCardTypeEffect()
+	nonland.OwnedCardSelection = &Selection{
+		RequiredTypesAny: []types.Card{types.Artifact, types.Creature},
+		ExcludedTypes:    []types.Card{types.Land},
+	}
+	if issues := ValidateCardDef(spellTypeEffectCard(nonland, zone.Battlefield)); len(issues) != 0 {
+		t.Fatalf("nonland permanent selection issues = %+v, want none", issues)
+	}
+
+	nonTypeLayer := creatureOwnedCardTypeEffect()
+	nonTypeLayer.SpellSelection = nil
+	nonTypeLayer.Layer = LayerColor
+	nonTypeLayer.AddTypes = nil
+	nonTypeLayer.AddColors = []color.Color{color.Blue}
+
+	colorSelection := creatureOwnedCardTypeEffect()
+	colorSelection.OwnedCardSelection = &Selection{ColorsAny: []color.Color{color.Red}}
+
+	cardZone := creatureOwnedCardTypeEffect()
+	cardZone.SpellSelection = nil
+	cardZone.CardZone = zone.Graveyard
+
+	for name, test := range map[string]struct {
+		effect ContinuousEffect
+		zone   zone.Type
+		issue  CardDefIssueCode
+	}{
+		"non-type layer":   {nonTypeLayer, zone.None, CardDefIssueInvalidAbilityBody},
+		"color predicate":  {colorSelection, zone.None, CardDefIssueInvalidSelection},
+		"card zone":        {cardZone, zone.None, CardDefIssueInvalidAbilityBody},
+		"graveyard static": {creatureOwnedCardTypeEffect(), zone.Graveyard, CardDefIssueInvalidAbilityBody},
+	} {
+		issues := ValidateCardDef(spellTypeEffectCard(test.effect, test.zone))
+		if !hasCardDefIssue(issues, test.issue) || !slices.ContainsFunc(issues, func(issue CardDefIssue) bool {
+			return strings.Contains(issue.Path, "OwnedCardSelection")
+		}) {
+			t.Errorf("%s: issues = %+v, want %s on OwnedCardSelection", name, issues, test.issue)
+		}
+	}
+
+	primitive := ApplyContinuous{ContinuousEffects: []ContinuousEffect{func() ContinuousEffect {
+		effect := creatureOwnedCardTypeEffect()
+		effect.SpellSelection = nil
+		return effect
+	}()}}
+	if err := primitive.validatePrimitive(nil, false); err == nil || !strings.Contains(err.Error(), "owned card type effects") {
+		t.Fatalf("validatePrimitive() = %v, want owned card type effect rejection", err)
 	}
 }

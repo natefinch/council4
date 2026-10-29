@@ -126,8 +126,8 @@ func (s *rulesPaymentState) PermanentMatchesSelection(p *game.Permanent, sel gam
 	return permanentMatchesCostSelection(s.g, p, sel)
 }
 
-func (s *rulesPaymentState) CardMatchesSelection(card *game.CardDef, sel game.Selection) bool {
-	return cardDefMatchesCostSelection(s.g, card, sel)
+func (s *rulesPaymentState) CardMatchesSelection(card *game.CardInstance, sel game.Selection) bool {
+	return cardMatchesCostSelection(s.g, card, sel)
 }
 
 func (s *rulesPaymentState) GraveyardCastGrantedAlternatives(playerID game.PlayerID, card *game.CardDef) []cost.Alternative {

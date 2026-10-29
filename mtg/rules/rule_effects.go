@@ -1495,7 +1495,7 @@ func exiledLinkedCardTypes(g *game.Game, key game.LinkedObjectKey) map[types.Car
 		if !ok || !owner.Exile.Contains(card.ID) {
 			continue
 		}
-		for _, cardType := range graveyardCardTypes(card) {
+		for _, cardType := range graveyardCardTypes(g, card) {
 			distinct[cardType] = true
 		}
 	}
@@ -1671,7 +1671,7 @@ func castFromZoneRuleEffectMatches(g *game.Game, effect *game.RuleEffect, player
 // a "without paying its mana cost" permission's rider is not reported here.
 func castFromZoneManaSpendPermission(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) game.ManaSpendPermission {
 	permission := game.ManaSpendNormal
-	routes, _ := castFromZonePermissionRoutes(g, playerID, cardID, sourceZone, face, false)
+	routes, _ := castFromZonePermissionRoutes(g, playerID, cardID, sourceZone, face, false, false)
 	for _, route := range routes {
 		permission = max(permission, route.spendAs)
 	}
@@ -1904,23 +1904,49 @@ func playLandFromZoneEffectMatches(g *game.Game, effect *game.RuleEffect, player
 // Sight). A SpellTypes and/or SpellColorless filter requires the cast face to
 // have one of the listed card types or be colorless ("You may cast artifact
 // spells and colorless spells from the top of your library.", Mystic Forge);
-// TopCardOnly requires the card to be on top of the player's library.
-func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
-	return len(matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face)) > 0
+// TopCardOnly requires the card to be on top of the player's library. bestowed
+// reports a cast for its Bestow cost, which is an Aura spell rather than a
+// creature spell (CR 702.103b), so the filters read that spell's type line.
+func canCastSpellsFromZoneByRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, bestowed bool) bool {
+	return len(matchingCastSpellsFromZoneEffects(g, playerID, cardID, sourceZone, face, bestowed)) > 0
+}
+
+// castSpellsFromZonePermitsSomeCast reports whether a RuleEffectCastSpellsFromZone
+// permission lets playerID cast the face of cardID from sourceZone in some cast
+// mode: normally or, when the face has Bestow, bestowed. Legal-action
+// enumeration lists a face or zone through it; each concrete cast is validated
+// with its own mode (canCastSpellsFromZoneByRuleEffect, spellCastRoutes).
+func castSpellsFromZonePermitsSomeCast(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	if canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face, false) {
+		return true
+	}
+	card, ok := g.GetCardInstance(cardID)
+	return ok && spellHasBestow(cardFaceOrDefault(card, face)) &&
+		canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face, true)
 }
 
 // matchingCastSpellsFromZoneEffects returns every continuous
 // RuleEffectCastSpellsFromZone permission that lets playerID cast the face of
 // cardID from sourceZone, in effect order. Each is a separate permission the
 // caster may choose to cast through (CR 118.14), with its own rider and
-// once-per-turn usage.
-func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) []game.RuleEffect {
+// once-per-turn usage. Type and subtype filters read the characteristics the
+// face would have as playerID's spell cast in the selected mode (CR 601.3e,
+// castSelectionFace), so "creature spells you control are the chosen type"
+// (Arcane Adaptation) lets Realmwalker cast a creature card of another type,
+// while a bestowed cast of that card is an Aura spell, not a creature spell
+// (CR 702.103b), and is not permitted.
+func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, bestowed bool) []game.RuleEffect {
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
 		return nil
 	}
-	faceDef := cardFaceOrDefault(card, face)
-	faceTypes := faceDef.Types
+	var faceDef *game.CardDef
+	spellFace := func() *game.CardDef {
+		if faceDef == nil {
+			faceDef = castSelectionFace(g, playerID, cardFaceOrDefault(card, face), bestowed)
+		}
+		return faceDef
+	}
 	var matches []game.RuleEffect
 	effects := activeRuleEffects(g)
 	for i := range effects {
@@ -1942,14 +1968,15 @@ func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, car
 		if exileCounterPermissionBlocked(g, effect, cardID) {
 			continue
 		}
-		if effect.SpellChosenSubtypeFrom != "" && !cardMatchesSourceEntryChosenSubtype(g, effect, faceDef) {
+		if effect.SpellChosenSubtypeFrom != "" && !cardMatchesSourceEntryChosenSubtype(g, effect, spellFace()) {
 			continue
 		}
 		if len(effect.SpellTypes) > 0 || effect.SpellColorless {
+			spell := spellFace()
 			typeMatch := len(effect.SpellTypes) > 0 && slices.ContainsFunc(effect.SpellTypes, func(t types.Card) bool {
-				return slices.Contains(faceTypes, t)
+				return slices.Contains(spell.Types, t)
 			})
-			colorMatch := effect.SpellColorless && len(faceDef.Colors) == 0
+			colorMatch := effect.SpellColorless && len(spell.Colors) == 0
 			if !typeMatch && !colorMatch {
 				continue
 			}
@@ -2051,7 +2078,7 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 		if topID, ok := player.Library.Top(); ok {
 			if card, cardOK := g.GetCardInstance(topID); cardOK &&
 				slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
-					return canCastSpellsFromZoneByRuleEffect(g, playerID, topID, zone.Library, face)
+					return castSpellsFromZonePermitsSomeCast(g, playerID, topID, zone.Library, face)
 				}) {
 				zones = append(zones, zone.Library)
 			}

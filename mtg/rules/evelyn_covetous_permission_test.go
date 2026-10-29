@@ -95,7 +95,7 @@ func TestExilePlayPermissionOncePerTurnSharedAcrossPlayAndCast(t *testing.T) {
 	if !canPlayLandFromZoneByRuleEffect(g, game.Player1, landID, zone.Exile) {
 		t.Fatal("land is not playable before the once-per-turn use is spent")
 	}
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront, false) {
 		t.Fatal("spell is not castable before the once-per-turn use is spent")
 	}
 
@@ -103,12 +103,12 @@ func TestExilePlayPermissionOncePerTurnSharedAcrossPlayAndCast(t *testing.T) {
 		t.Fatal("playing the collection-countered land from exile was rejected")
 	}
 
-	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront) {
+	if canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront, false) {
 		t.Fatal("spell remained castable after the shared once-per-turn use was spent by the land play")
 	}
 
 	engine.advanceToNextTurn(g)
-	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront) {
+	if !canCastSpellsFromZoneByRuleEffect(g, game.Player1, spellID, zone.Exile, game.FaceFront, false) {
 		t.Fatal("shared once-per-turn use did not reset on the next turn")
 	}
 }
