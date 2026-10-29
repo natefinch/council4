@@ -1237,7 +1237,10 @@ type TriggerPattern struct {
 	// delayed-trigger matcher resolves that reference at schedule time and
 	// enforces the captured dying permanent's identity ("... target creature an
 	// opponent controls ... When the creature an opponent controls dies this
-	// turn, ..."). It must not be combined with a Source filter or Subject.
+	// turn, ..."). It must not be combined with a Source filter, Subject, or any
+	// dying-subject characteristic or controller filter: the captured object
+	// still matches after it changes characteristics (CR 603.7c), so a creature
+	// that stopped being a creature still "dies" (CR 700.4).
 	DyingObjectCaptured bool
 	// AttackerCountAtLeast restricts a controller-scoped EventAttackerDeclared
 	// trigger to combats where at least this many creatures are attacking

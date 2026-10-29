@@ -3,11 +3,13 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards"
 	cardf "github.com/natefinch/council4/mtg/cards/f"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -299,4 +301,113 @@ func TestFightForTheThroneCommanderLeavingBeforeDeathNoMonarch(t *testing.T) {
 	if g.Players[game.Player1].IsMonarch {
 		t.Fatal("Player1 became the monarch even though they no longer controlled their commander at the death")
 	}
+}
+
+// Source review: issue #3414. Fight for the Throne (oracle_id
+// 53129de9-4809-4c8c-9d11-37369899e70a, pinned corpus 6da9ced0…): "Put a +1/+1
+// counter on target creature you control. Then it fights target creature an
+// opponent controls. When the creature an opponent controls dies this turn, if
+// you control your commander, you become the monarch." Scryfall lists no
+// rulings (retained under .cardwork/gap-3414). CR 2026-09-25 (verified official
+// copy): 603.7c (a delayed triggered ability that refers to a particular object
+// still affects it even if it changes characteristics; a returned object is new
+// per 400.7), 700.4 (dies means put into a graveyard from the battlefield) and
+// 613.1d (layer 4 type-changing effects). The captured trigger therefore
+// matches by identity only, not by the object still being a creature.
+
+// makeNoncreatureArtifact turns permanent into a noncreature artifact until end
+// of turn through a real layer 4 type-changing continuous effect.
+func makeNoncreatureArtifact(t *testing.T, g *game.Game, permanent *game.Permanent) {
+	t.Helper()
+	obj := &game.StackObject{Controller: game.Player2}
+	if !applyTypedContinuousEffects(g, obj, permanent, []game.ContinuousEffect{{
+		Layer:    game.LayerType,
+		SetTypes: []types.Card{types.Artifact},
+	}}, game.DurationUntilEndOfTurn) {
+		t.Fatal("type-changing effect was not applied")
+	}
+	if permanentHasType(g, permanent, types.Creature) || !permanentHasType(g, permanent, types.Artifact) {
+		t.Fatal("captured permanent did not become a noncreature artifact")
+	}
+}
+
+// TestFightForTheThroneCapturedPermanentDiesAfterLosingCreatureType proves the
+// registered card's delayed trigger follows the fought opponent's creature
+// through a type change (CR 603.7c): after it becomes a noncreature artifact and
+// is then destroyed this turn, it still dies (CR 700.4), the trigger fires, and
+// Player1, who controls their commander, becomes the monarch. A replacement to
+// exile and a later incarnation of the same card still fire nothing.
+func TestFightForTheThroneCapturedPermanentDiesAfterLosingCreatureType(t *testing.T) {
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: monarchNoChoiceAgent{}}
+	setup := func(t *testing.T) (*game.Game, *Engine, *game.Permanent) {
+		t.Helper()
+		g, engine := newFightForThroneGame(t)
+		addCommanderPermanent(g, game.Player1)
+		mine := addCombatCreaturePermanentWithPower(g, game.Player1, 1) // 2/2 after counter
+		opp := addCreatureWithPT(g, game.Player2, 1, 10)                // survives the fight
+		castFightForThrone(t, g, engine, mine, opp)
+		if _, ok := permanentByObjectID(g, opp.ObjectID); !ok || len(g.DelayedTriggers) != 1 {
+			t.Fatal("fought creature should survive with the delayed trigger scheduled")
+		}
+		makeNoncreatureArtifact(t, g, opp)
+		return g, engine, opp
+	}
+
+	t.Run("dies as a noncreature artifact", func(t *testing.T) {
+		g, engine, opp := setup(t)
+		if _, ok := destroyPermanent(g, opp.ObjectID); !ok {
+			t.Fatal("destroying the captured artifact failed")
+		}
+		if !g.Players[game.Player2].Graveyard.Contains(opp.CardInstanceID) {
+			t.Fatal("captured artifact was not put into its owner's graveyard")
+		}
+		log := TurnLog{}
+		if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &log) || g.Stack.Size() != 1 {
+			t.Fatalf("delayed dies trigger did not fire for the type-changed object: stack size %d", g.Stack.Size())
+		}
+		engine.resolveTopOfStackWithChoices(g, agents, &log)
+		if !g.Players[game.Player1].IsMonarch {
+			t.Fatal("Player1 did not become the monarch after the captured object died as an artifact")
+		}
+	})
+
+	t.Run("replaced to exile", func(t *testing.T) {
+		g, engine, opp := setup(t)
+		resolveHiddenReplacementPermanent(t, g, engine, game.Player1, cards.NewDefaultRegistry().Lookup("Leyline of the Void"))
+		if _, ok := destroyPermanent(g, opp.ObjectID); !ok {
+			t.Fatal("destroying the captured artifact failed")
+		}
+		if !g.Players[game.Player2].Exile.Contains(opp.CardInstanceID) {
+			t.Fatal("Leyline of the Void did not exile the captured artifact instead")
+		}
+		if engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) || g.Stack.Size() != 0 {
+			t.Fatalf("delayed dies trigger fired for a replaced-to-exile object: stack size %d", g.Stack.Size())
+		}
+		if g.Players[game.Player1].IsMonarch {
+			t.Fatal("Player1 became the monarch without the captured object dying")
+		}
+	})
+
+	t.Run("later incarnation dies", func(t *testing.T) {
+		g, engine, opp := setup(t)
+		if !movePermanentToZone(g, opp, zone.Exile) {
+			t.Fatal("exiling the captured artifact failed")
+		}
+		resolveInstruction(engine, g, &game.StackObject{SourceCardID: opp.CardInstanceID, Controller: game.Player2}, game.PutOnBattlefield{
+			Source: game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceSource}),
+		}, nil)
+		returned := permanentByCardID(g, opp.CardInstanceID)
+		if returned == nil || returned.ObjectID == opp.ObjectID {
+			t.Fatal("returned card is not a new object")
+		}
+		if _, ok := destroyPermanent(g, returned.ObjectID); !ok {
+			t.Fatal("destroying the returned object failed")
+		}
+		if engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) || g.Stack.Size() != 0 {
+			t.Fatalf("delayed dies trigger fired for a new object (CR 400.7): stack size %d", g.Stack.Size())
+		}
+		if len(g.DelayedTriggers) != 1 || g.Players[game.Player1].IsMonarch {
+			t.Fatal("new object's death consumed the trigger or made Player1 the monarch")
+		}
+	})
 }

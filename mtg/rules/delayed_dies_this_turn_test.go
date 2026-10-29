@@ -37,7 +37,6 @@ func diesThisTurnTrigger(content ...game.Instruction) game.Instruction {
 		EventPattern: opt.Val(game.TriggerPattern{
 			Event:               game.EventPermanentDied,
 			DyingObjectCaptured: true,
-			SubjectSelection:    game.Selection{RequiredTypes: []types.Card{types.Creature}},
 		}),
 		Window:              game.DelayedWindowThisTurn,
 		CapturedDyingObject: opt.Val(game.TargetPermanentReference(0)),

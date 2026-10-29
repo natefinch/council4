@@ -3446,6 +3446,9 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		if !p.Trigger.EventPattern.Exists || !p.Trigger.EventPattern.Val.DyingObjectCaptured {
 			return errors.New("delayed trigger CapturedDyingObject requires a DyingObjectCaptured event pattern")
 		}
+		if p.Trigger.EventPattern.Val.filtersCapturedDyingSubject() {
+			return errors.New("delayed trigger " + capturedDyingSubjectFilterMessage)
+		}
 		if err := validateObjectReference(p.Trigger.CapturedDyingObject.Val, targets, checkTargets); err != nil {
 			return err
 		}

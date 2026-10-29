@@ -2517,6 +2517,9 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 		if pattern.Source != TriggerSourceAny || pattern.Subject != TriggerSubjectDefault {
 			v.add(faceName, appendPath(path, "DyingObjectCaptured"), CardDefIssueInvalidSelection, "DyingObjectCaptured must not be combined with a dying source filter")
 		}
+		if pattern.filtersCapturedDyingSubject() {
+			v.add(faceName, appendPath(path, "DyingObjectCaptured"), CardDefIssueInvalidSelection, capturedDyingSubjectFilterMessage)
+		}
 	}
 	if pattern.OneOrMorePerAttackTarget && (!pattern.OneOrMore || pattern.Event != EventAttackerDeclared) {
 		v.add(faceName, path, CardDefIssueInvalidSelection, "OneOrMorePerAttackTarget requires a one-or-more attacker-declared pattern")
@@ -2767,6 +2770,25 @@ func triggerSubjectSelectionResidue(selection Selection, event EventKind) Select
 		}
 	}
 	return residue
+}
+
+const capturedDyingSubjectFilterMessage = "DyingObjectCaptured must not be combined with a dying-subject characteristic or controller filter"
+
+// filtersCapturedDyingSubject reports whether a DyingObjectCaptured pattern
+// also filters the dying permanent by its characteristics or controller. The
+// captured identity alone determines the match: a delayed trigger that refers
+// to a particular object still affects it even if it changes characteristics
+// (CR 603.7c), and it dies whenever it is put into a graveyard from the
+// battlefield (CR 700.4), so "when that creature dies this turn" must still
+// fire after the object stopped being a creature or changed controller.
+func (p *TriggerPattern) filtersCapturedDyingSubject() bool {
+	return p.Controller != TriggerControllerAny ||
+		p.ExcludeSelf ||
+		len(p.RequirePermanentTypes) != 0 ||
+		len(p.ExcludePermanentTypes) != 0 ||
+		p.RequireNonToken ||
+		!p.SubjectSelection.Empty() ||
+		p.SubjectSelectionOrSelf
 }
 
 // validateBlockerScope requires every EventBlockerDeclared pattern whose

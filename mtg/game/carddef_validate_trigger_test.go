@@ -1,6 +1,7 @@
 package game
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game/color"
@@ -766,6 +767,74 @@ func TestValidateCardDefRejectsMalformedMultiOriginZoneUnion(t *testing.T) {
 			}}
 			if issues := ValidateCardDef(card); !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
 				t.Fatalf("issues = %+v, want invalid-selection issue", issues)
+			}
+		})
+	}
+}
+
+// capturedDyingDelayedTriggerCard is "When the creature an opponent controls
+// dies this turn, ..." bound to target 0, with an optional extra filter on the
+// dying subject.
+func capturedDyingDelayedTriggerCard(pattern TriggerPattern) (*CardDef, CreateDelayedTrigger) {
+	pattern.Event = EventPermanentDied
+	pattern.DyingObjectCaptured = true
+	delayed := CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+		EventPattern:        opt.Val(pattern),
+		Window:              DelayedWindowThisTurn,
+		CapturedDyingObject: opt.Val(TargetPermanentReference(0)),
+		Content:             Mode{Sequence: []Instruction{{Primitive: BecomeMonarch{Player: ControllerReference()}}}}.Ability(),
+	}}
+	return &CardDef{CardFace: CardFace{
+		Name:  "Captured Dying Watcher",
+		Types: []types.Card{types.Instant},
+		SpellAbility: opt.Val(Mode{
+			Targets: []TargetSpec{{
+				MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPermanent,
+				Selection: opt.Val(Selection{RequiredTypesAny: []types.Card{types.Creature}}),
+			}},
+			Sequence: []Instruction{{Primitive: delayed}},
+		}.Ability()),
+	}}, delayed
+}
+
+// TestValidateCardDefCapturedDyingObjectIsIdentityOnly proves a captured
+// permanent-died delayed trigger matches by identity alone: CR 603.7c keeps it
+// bound to the object through characteristic changes and CR 700.4 makes any
+// battlefield-to-graveyard move a death, so a dying-subject type, token or
+// controller filter is rejected on both the card and primitive routes.
+func TestValidateCardDefCapturedDyingObjectIsIdentityOnly(t *testing.T) {
+	targets := []TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: TargetAllowPermanent}}
+	card, delayed := capturedDyingDelayedTriggerCard(TriggerPattern{})
+	if issues := ValidateCardDef(card); len(issues) != 0 {
+		t.Fatalf("identity-only captured dies trigger issues = %+v, want none", issues)
+	}
+	if err := delayed.validatePrimitive(targets, true); err != nil {
+		t.Fatalf("identity-only captured dies trigger primitive error = %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		pattern TriggerPattern
+	}{
+		{"subject selection", TriggerPattern{SubjectSelection: Selection{RequiredTypes: []types.Card{types.Creature}}}},
+		{"required permanent types", TriggerPattern{RequirePermanentTypes: []types.Card{types.Creature}}},
+		{"excluded permanent types", TriggerPattern{ExcludePermanentTypes: []types.Card{types.Artifact}}},
+		{"nontoken", TriggerPattern{RequireNonToken: true}},
+		{"controller", TriggerPattern{Controller: TriggerControllerOpponent}},
+		{"exclude self", TriggerPattern{ExcludeSelf: true}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			card, delayed := capturedDyingDelayedTriggerCard(tt.pattern)
+			found := false
+			for _, issue := range ValidateCardDef(card) {
+				found = found || issue.Code == CardDefIssueInvalidSelection && issue.Message == capturedDyingSubjectFilterMessage
+			}
+			if !found {
+				t.Fatalf("issues = %+v, want %q", ValidateCardDef(card), capturedDyingSubjectFilterMessage)
+			}
+			if err := delayed.validatePrimitive(targets, true); err == nil || !strings.Contains(err.Error(), capturedDyingSubjectFilterMessage) {
+				t.Fatalf("primitive validation error = %v, want %q", err, capturedDyingSubjectFilterMessage)
 			}
 		})
 	}
