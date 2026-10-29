@@ -856,6 +856,7 @@ func TestAdventureCopiesGrantNoPermission(t *testing.T) {
 		if !engine.applyAction(g, game.Player1, action.CastSpellFace(cardID, game.FaceAlternate, nil, 0, nil)) {
 			t.Fatal("storm Seasonal Ritual cast failed")
 		}
+		resolveStormTrigger(t, engine, g, nil)
 		if spellCastEventCount(g) != casts+1 || g.Stack.Size() != 2 {
 			t.Fatalf("casts = %d stack = %d, want one cast plus one storm copy", spellCastEventCount(g)-casts, g.Stack.Size())
 		}
@@ -1032,6 +1033,10 @@ func TestAdventureCastTriggersFollowGenuineCasts(t *testing.T) {
 		if !engine.applyAction(g, game.Player1, action.CastSpellFace(cardID, game.FaceAlternate, nil, 0, nil)) {
 			t.Fatal("storm Seasonal Ritual cast failed")
 		}
+		if got := resolveCastWatcherTriggers(t, g, engine, watcher); got != 1 {
+			t.Fatalf("Cast Watcher triggers = %d, want 1 for the original storm cast", got)
+		}
+		resolveStormTrigger(t, engine, g, nil)
 		copies := 0
 		for _, obj := range g.Stack.Objects() {
 			if obj.Copy && obj.SourceID == cardID {
@@ -1041,8 +1046,8 @@ func TestAdventureCastTriggersFollowGenuineCasts(t *testing.T) {
 		if copies != 1 {
 			t.Fatalf("storm copies = %d, want 1", copies)
 		}
-		if got := resolveCastWatcherTriggers(t, g, engine, watcher); got != 1 {
-			t.Fatalf("Cast Watcher triggers = %d, want 1 for the original storm cast only", got)
+		if got := resolveCastWatcherTriggers(t, g, engine, watcher); got != 0 {
+			t.Fatalf("Cast Watcher triggers = %d, want none for the storm copy", got)
 		}
 	})
 }

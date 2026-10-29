@@ -463,7 +463,6 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
-	stormCopies := stormCopyCount(g, spellDef)
 	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     card.ID,
@@ -483,7 +482,6 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 		FromZone:                     cast.SourceZone,
 		ToZone:                       zone.Stack,
 	}, targetEvents)
-	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	return true
 }

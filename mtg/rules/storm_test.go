@@ -25,6 +25,16 @@ func TestStormCreatesCopiesForPriorSpellsThisTurn(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpell(stormID, nil, 0, nil)) {
 		t.Fatal("storm spell cast failed")
 	}
+	if g.Stack.Size() != 1 {
+		t.Fatalf("stack size = %d, want no copies before the storm trigger resolves", g.Stack.Size())
+	}
+	engine.putTriggeredAbilitiesOnStack(g)
+	trigger, _ := g.Stack.Peek()
+	if !isStormTrigger(trigger) || trigger.Controller != game.Player1 ||
+		trigger.TriggerEvent.SpellsCastBeforeThisTurn != opt.Val(1) {
+		t.Fatalf("stack top = %+v, want storm trigger counting one earlier spell", trigger)
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
 
 	if g.Stack.Size() != 2 {
 		t.Fatalf("stack size = %d, want storm original plus one copy", g.Stack.Size())
@@ -48,6 +58,7 @@ func TestStormCopyResolvesWithoutMovingSourceCard(t *testing.T) {
 	engine.applyAction(g, game.Player1, action.CastSpell(firstID, nil, 0, nil))
 	engine.resolveTopOfStack(g, &TurnLog{})
 	engine.applyAction(g, game.Player1, action.CastSpell(stormID, nil, 0, nil))
+	resolveStormTrigger(t, engine, g, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 
 	if g.Players[game.Player1].Graveyard.Contains(stormID) {
@@ -74,6 +85,7 @@ func TestStormCopyCounteredByRulesDoesNotMoveSourceCard(t *testing.T) {
 	engine.applyAction(g, game.Player1, action.CastSpell(firstID, nil, 0, nil))
 	engine.resolveTopOfStack(g, &TurnLog{})
 	engine.applyAction(g, game.Player1, action.CastSpell(stormID, []game.Target{game.PermanentTarget(target.ObjectID)}, 0, nil))
+	resolveStormTrigger(t, engine, g, nil)
 	movePermanentToZone(g, target, zone.Graveyard)
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -142,4 +154,47 @@ func spellCastEventCount(g *game.Game) int {
 		}
 	}
 	return count
+}
+
+// resolveStormTriggerFor puts a storm trigger for spell onto the stack, as if
+// spell had been cast after spellsBefore other spells this turn, and resolves it.
+func resolveStormTriggerFor(engine *Engine, g *game.Game, spell *game.StackObject, spellsBefore int) {
+	g.Stack.Push(&game.StackObject{
+		ID:              g.IDGen.Next(),
+		Kind:            game.StackTriggeredAbility,
+		SourceID:        spell.SourceID,
+		Controller:      spell.Controller,
+		InlineTrigger:   stormTriggeredAbility(),
+		HasTriggerEvent: true,
+		TriggerEvent: game.Event{
+			Kind:                     game.EventSpellCast,
+			SourceID:                 spell.SourceID,
+			StackObjectID:            spell.ID,
+			Controller:               spell.Controller,
+			SpellsCastBeforeThisTurn: opt.Val(spellsBefore),
+		},
+	})
+	engine.resolveTopOfStack(g, &TurnLog{})
+}
+
+// resolveStormTrigger puts pending triggered abilities onto the stack, requires
+// a storm trigger on top, and resolves it.
+func resolveStormTrigger(t *testing.T, engine *Engine, g *game.Game, agents *[game.NumPlayers]PlayerAgent) {
+	t.Helper()
+	var chosen [game.NumPlayers]PlayerAgent
+	if agents != nil {
+		chosen = *agents
+	}
+	log := &TurnLog{}
+	engine.putTriggeredAbilitiesOnStackWithChoices(g, chosen, log)
+	top, ok := g.Stack.Peek()
+	if !ok || !isStormTrigger(top) {
+		t.Fatalf("stack top = %+v, want a storm trigger", top)
+	}
+	engine.resolveTopOfStackWithChoices(g, chosen, log)
+}
+
+func isStormTrigger(obj *game.StackObject) bool {
+	return obj != nil && obj.Kind == game.StackTriggeredAbility && obj.InlineTrigger != nil &&
+		game.BodyHasKeyword(obj.InlineTrigger, game.Storm)
 }

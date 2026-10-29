@@ -733,6 +733,7 @@ func TestCopiedCardCrimeOriginalAnnouncementsAndCopies(t *testing.T) {
 		storm := crimeTargetSpell("Storm Crime", playerTargets(1, 1))
 		storm.StaticAbilities = []game.StaticAbility{game.StormStaticBody}
 		castCrimeSpellFromHand(t, engine, g, storm, opponent, [game.NumPlayers]PlayerAgent{})
+		resolveStormTrigger(t, engine, g, nil)
 		copies := 0
 		for _, obj := range g.Stack.Objects() {
 			if obj.Copy {

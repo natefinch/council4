@@ -84,6 +84,13 @@ type StackObject struct {
 	TriggerEvent    Event
 	HasTriggerEvent bool
 
+	// TriggerSpellLKI is the last known information of the spell a spell-cast
+	// trigger's event names (TriggerEvent.StackObjectID), recorded by the Stack
+	// when that spell leaves it while this trigger is on the stack. Storm still
+	// copies a spell that was countered or otherwise left the stack in response
+	// to its trigger (CR 608.2h, 702.40a).
+	TriggerSpellLKI *StackObject
+
 	// WardTargetStackObjectID is the spell or ability a Ward trigger may
 	// counter unless its controller pays the Ward cost.
 	WardTargetStackObjectID id.ID
@@ -438,6 +445,7 @@ func (s *Stack) Pop() (*StackObject, bool) {
 	}
 	top := s.objects[len(s.objects)-1]
 	s.objects = s.objects[:len(s.objects)-1]
+	s.recordTriggerSpellLKI(top)
 	return top, true
 }
 
@@ -457,9 +465,26 @@ func (s *Stack) RemoveByID(objectID id.ID) (*StackObject, bool) {
 			continue
 		}
 		s.objects = append(s.objects[:i], s.objects[i+1:]...)
+		s.recordTriggerSpellLKI(obj)
 		return obj, true
 	}
 	return nil, false
+}
+
+// recordTriggerSpellLKI snapshots a spell that just left the stack onto every
+// spell-cast trigger still on the stack whose event names it.
+func (s *Stack) recordTriggerSpellLKI(departed *StackObject) {
+	if departed.Kind != StackSpell {
+		return
+	}
+	for _, obj := range s.objects {
+		if obj.Kind != StackTriggeredAbility || !obj.HasTriggerEvent ||
+			obj.TriggerEvent.Kind != EventSpellCast || obj.TriggerEvent.StackObjectID != departed.ID {
+			continue
+		}
+		obj.TriggerSpellLKI = cloneStackObject(departed)
+		obj.TriggerSpellLKI.TriggerSpellLKI = nil
+	}
 }
 
 // IsEmpty reports whether the stack has no objects.

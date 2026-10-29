@@ -168,11 +168,12 @@ func TestBuybackRereviewCastCopyStormCascadeAndRiders(t *testing.T) {
 			}, false, independentBuybackAgent(t, independentChooseBuyback), &TurnLog{}) {
 			t.Fatal("otherwise equivalent physical free cast failed")
 		}
+		putCascadeAboveStorm(t, engine, control)
 		resolveCascadeTrigger(t, engine, control, nil)
 		controlObjects := control.Stack.Objects()
 		if len(controlObjects) != 4 || controlObjects[3].SourceID != hit ||
 			controlObjects[1].ManaSpentToCast != 3 || !controlObjects[1].BuybackPaid ||
-			!controlObjects[2].BuybackPaid || control.Players[game.Player1].ManaPool.Total() != 0 ||
+			!isStormTrigger(controlObjects[2]) || control.Players[game.Player1].ManaPool.Total() != 0 ||
 			len(control.Players[game.Player1].ManaRiders) != 0 {
 			t.Fatal("physical free-cast control did not cast its cascade hit, pay buyback, and consume riders")
 		}
@@ -184,10 +185,11 @@ func TestBuybackRereviewCastCopyStormCascadeAndRiders(t *testing.T) {
 	if !g.Players[game.Player1].Library.Contains(hit) {
 		t.Fatal("cast card copy cascaded before its cascade trigger resolved")
 	}
+	putCascadeAboveStorm(t, engine, g)
 	resolveCascadeTrigger(t, engine, g, nil)
 	objects := g.Stack.Objects()
 	if len(objects) != 4 || !objects[1].Copy || !objects[1].BuybackPaid ||
-		!objects[2].Copy || !objects[2].BuybackPaid || objects[3].SourceID != hit ||
+		!isStormTrigger(objects[2]) || objects[3].SourceID != hit ||
 		objects[1].ManaSpentToCast != 3 || g.Players[game.Player1].ManaPool.Total() != 0 ||
 		len(g.Players[game.Player1].ManaRiders) != 0 || firedSpendRiderCount(g) != 0 {
 		for _, object := range objects {
@@ -202,8 +204,8 @@ func TestBuybackRereviewCastCopyStormCascadeAndRiders(t *testing.T) {
 			g.Players[game.Player1].Library.All(), len(g.Players[game.Player1].ManaRiders), firedSpendRiderCount(g))
 	}
 	if countEventsOfKind(g.Events[beforeEvents:], game.EventSpellCast) != 2 ||
-		countEventsOfKind(g.Events[beforeEvents:], game.EventSpellCopied) != 1 {
-		t.Fatal("cast card copy or its non-cast storm copy produced wrong cast/copy history")
+		countEventsOfKind(g.Events[beforeEvents:], game.EventSpellCopied) != 0 {
+		t.Fatal("cast card copy or its pending storm trigger produced wrong cast/copy history")
 	}
 	for _, event := range g.Events[beforeEvents:] {
 		if event.CardID == cardID &&
@@ -218,6 +220,15 @@ func TestBuybackRereviewCastCopyStormCascadeAndRiders(t *testing.T) {
 		}
 	}
 	for _, branch := range []*game.Game{g, g.Clone()} {
+		engine.resolveTopOfStack(branch, &TurnLog{})
+		copiesBefore := countEventsOfKind(branch.Events, game.EventSpellCopied)
+		engine.resolveTopOfStack(branch, &TurnLog{})
+		stormCopy, _ := branch.Stack.Peek()
+		if branch.Stack.Size() != 3 || !stormCopy.Copy || !stormCopy.BuybackPaid ||
+			stormCopy.Controller != game.Player1 ||
+			countEventsOfKind(branch.Events, game.EventSpellCopied) != copiesBefore+1 {
+			t.Fatal("storm trigger did not copy the cast card copy exactly once")
+		}
 		for range 8 {
 			if branch.Stack.Size() == 0 {
 				break
@@ -264,5 +275,24 @@ func TestBuybackRereviewSacrificedImprintSourceDoesNotInvalidateCast(t *testing.
 	if g.Players[game.Player1].Life != 44 || !g.Players[game.Player4].Exile.Contains(cardID) ||
 		g.CardInstances[cardID].ZoneVersion != 0 || g.ExileCounterCount(cardID, counter.Void) != 1 {
 		t.Fatal("paid cast copy lost its body or changed the original after its imprint source left")
+	}
+}
+
+// putCascadeAboveStorm puts a spell's simultaneous storm and cascade triggers
+// onto the stack with cascade on top, as its controller may choose (CR 603.3b).
+func putCascadeAboveStorm(t *testing.T, engine *Engine, g *game.Game) {
+	t.Helper()
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &authoredCopyChoiceAgent{
+		choose: func(request game.ChoiceRequest) []int {
+			if request.Kind == game.ChoiceOrder && len(request.Options) == 2 {
+				return []int{1, 0}
+			}
+			return request.DefaultSelection
+		},
+	}}
+	engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
+	objects := g.Stack.Objects()
+	if len(objects) < 2 || !isStormTrigger(objects[len(objects)-2]) || !isCascadeTrigger(objects[len(objects)-1]) {
+		t.Fatal("storm and cascade triggers were not ordered with cascade on top")
 	}
 }

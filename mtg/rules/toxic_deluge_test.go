@@ -182,11 +182,10 @@ func TestToxicDelugeSpellCopyUsesChosenXWithoutRepayingLife(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	creature := addCombatPermanent(g, game.Player2, creatureWithPT("Copy Victim", 8, 8))
-	sourceID := addEffectSpellToStack(g, game.Player1, toxicDelugeContinuous(), nil)
+	addEffectSpellToStack(g, game.Player1, toxicDelugeContinuous(), nil)
 	original, _ := g.Stack.Peek()
 	original.XValue = 4
-	spell := g.CardInstances[sourceID].Def
-	createStormCopies(g, original, spell, 1)
+	resolveStormTriggerFor(engine, g, original, 1)
 
 	copyObj, _ := g.Stack.Peek()
 	if !copyObj.Copy || copyObj.XValue != 4 {

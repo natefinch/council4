@@ -361,6 +361,9 @@ func cloneStackObject(o *StackObject) *StackObject {
 	if o.CopyValues.Exists {
 		clone.CopyValues = opt.Val(cloneCopyableValues(o.CopyValues.Val))
 	}
+	if o.TriggerSpellLKI != nil {
+		clone.TriggerSpellLKI = cloneStackObject(o.TriggerSpellLKI)
+	}
 	// InlineTrigger/InlineActivated/InlineLoyalty and SourceTokenDef are
 	// immutable rules data and are intentionally shared.
 	return &clone

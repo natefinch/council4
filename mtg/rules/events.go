@@ -49,6 +49,12 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 	if event.Kind == game.EventSpellCast && !event.CascadeInstances.Exists {
 		event.CascadeInstances = opt.Val(spellCascadeInstancesAtCast(g, event))
 	}
+	if event.Kind == game.EventSpellCast && !event.SpellsCastBeforeThisTurn.Exists {
+		event.SpellsCastBeforeThisTurn = opt.Val(spellsCastEarlierThisTurn(g))
+	}
+	if event.Kind == game.EventSpellCast && !event.StormInstances.Exists {
+		event.StormInstances = opt.Val(spellKeywordInstancesAtCast(g, event, game.Storm))
+	}
 	if event.Kind == game.EventCardDiscarded && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = discardBatchOrdinalThisTurn(g, event.Player, event.SimultaneousID)
 	}

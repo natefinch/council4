@@ -41,9 +41,10 @@ func TestAdditionalSpellCopyReplacementAddsDirectAndStormCopies(t *testing.T) {
 	}
 
 	g.Stack = game.Stack{}
-	createStormCopies(g, original, &game.CardDef{}, 2)
-	if got := g.Stack.Size(); got != 3 {
-		t.Fatalf("storm copy stack size = %d, want 3", got)
+	g.Stack.Push(original)
+	resolveStormTriggerFor(engine, g, original, 2)
+	if got := g.Stack.Size(); got != 4 {
+		t.Fatalf("storm stack size = %d, want the original plus 3 copies", got)
 	}
 }
 

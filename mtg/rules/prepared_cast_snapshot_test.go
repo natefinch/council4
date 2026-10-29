@@ -229,6 +229,7 @@ func TestPreparedCastAndStormCopyKeepEmptyCharacteristicSnapshot(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, action.CastSpellFaceFromZone(cardID, zone.Battlefield, game.FaceAlternate, nil, 0, nil)) {
 		t.Fatal("casting prepared storm spell failed")
 	}
+	resolveStormTrigger(t, engine, g, nil)
 	cast := lastSnapshotEvent(t, g, game.EventSpellCast)
 	copied := lastSnapshotEvent(t, g, game.EventSpellCopied)
 	for _, event := range []game.Event{cast, copied} {
@@ -599,7 +600,7 @@ func TestCastCopyOfExiledCardKeepsCardSnapshot(t *testing.T) {
 				!slices.Equal(cast.CardSupertypes, tc.def.Supertypes) || !slices.Equal(cast.Colors, tc.def.Colors) {
 				t.Fatalf("copy cast event = %+v, want authoritative free cast of %s", cast, tc.def.Name)
 			}
-			if got := stormCopyCount(g, &game.CardDef{CardFace: game.CardFace{StaticAbilities: []game.StaticAbility{game.StormStaticBody}}}); got != 1 {
+			if got := spellsCastEarlierThisTurn(g); got != 1 {
 				t.Fatalf("spells cast this turn after the copy = %d, want 1", got)
 			}
 

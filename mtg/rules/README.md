@@ -737,11 +737,11 @@ This struct is the intended seam for a future effect pipeline: middleware, loggi
 
 All code that puts an object onto the stack must use one of:
 
-- **`pushSpellToStack(g, obj, castEvent)`** — pushes a spell stack object, emits `EventObjectBecameTarget` for each target, emits the `EventZoneChanged` event pre-built by the caller, then emits `EventSpellCast` from the same event. Used for all spell casts (hand, command zone, graveyard, exile, cascade, madness); suspend and rebound casts use the shared free-cast route (`chooseAndCastFreeSpell`), which plans and pays additional costs and cost increases on the free alternative cost. Madness casts plan their madness alternative cost through the same spell-cost planner, lock the total before opening the payment-time mana ability window when it includes mana (CR 601.2f-g), and reverse an unpaid proposal with its reversible mana activations (CR 733.1). Callers must populate `CardTypes`, `CardSupertypes`, `CardSubtypes`, `Colors`, and `ManaValue` in the `castEvent` using the face-specific `cardTypes(spellDef)`, `cardSupertypes(spellDef)`, `cardSubtypes(spellDef)`, `spellColors(spellDef)`, and stack mana-value helpers so that type-, supertype-, subtype-, color-, and mana-value-filtered cast triggers match correctly; face-down casts explicitly record creature type, no colors, no supertypes/subtypes, and mana value 0. Callers that produce storm copies must call `stormCopyCount` *before* this helper because `EventSpellCast` is emitted inside.
+- **`pushSpellToStack(g, obj, castEvent)`** — pushes a spell stack object, emits `EventObjectBecameTarget` for each target, emits the `EventZoneChanged` event pre-built by the caller, then emits `EventSpellCast` from the same event. Used for all spell casts (hand, command zone, graveyard, exile, cascade, madness); suspend and rebound casts use the shared free-cast route (`chooseAndCastFreeSpell`), which plans and pays additional costs and cost increases on the free alternative cost. Madness casts plan their madness alternative cost through the same spell-cost planner, lock the total before opening the payment-time mana ability window when it includes mana (CR 601.2f-g), and reverse an unpaid proposal with its reversible mana activations (CR 733.1). Callers must populate `CardTypes`, `CardSupertypes`, `CardSubtypes`, `Colors`, and `ManaValue` in the `castEvent` using the face-specific `cardTypes(spellDef)`, `cardSupertypes(spellDef)`, `cardSubtypes(spellDef)`, `spellColors(spellDef)`, and stack mana-value helpers so that type-, supertype-, subtype-, color-, and mana-value-filtered cast triggers match correctly; face-down casts explicitly record creature type, no colors, no supertypes/subtypes, and mana value 0. Storm is a "when you cast this spell" trigger (CR 702.40a): `prepareEvent` records on the `EventSpellCast` the number of spells cast earlier this turn and the spell's storm instances, and each storm trigger copies the spell (or its last known information, kept on the trigger if the spell leaves the stack) when it resolves, letting its controller choose new targets for each copy.
 
 - **`pushAbilityToStack(g, obj)`** — pushes an activated or triggered ability stack object and emits target events. Used for non-mana activated abilities, cycling, and triggered abilities.
 
-Delayed triggered abilities with no targets may call `g.Stack.Push` directly (no target events to emit). Storm copies call `g.Stack.Push` directly because copies are silent (no zone-change or cast events).
+Delayed triggered abilities with no targets may call `g.Stack.Push` directly (no target events to emit). Spell copies, including those a resolving storm trigger creates, call `g.Stack.Push` directly because copies are silent (no zone-change or cast events).
 
 ### Card lookup helper
 
@@ -764,7 +764,7 @@ The following helpers in `zones.go`, `events.go`, and `payment_apply.go` predate
 
 - Emit `EventZoneChanged` before the domain-specific event for the same transition (e.g. emit zone change before `EventSpellCast`).
 - Do not append directly to `g.Events` outside `emitEvent`.
-- Do not call `g.Stack.Push` outside `pushSpellToStack`, `pushAbilityToStack`, or the two explicit exceptions above (delayed triggers and storm copies).
+- Do not call `g.Stack.Push` outside `pushSpellToStack`, `pushAbilityToStack`, or the two explicit exceptions above (delayed triggers and spell copies).
 
 ## Scenario fixtures (tests)
 

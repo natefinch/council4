@@ -157,9 +157,6 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
-	// stormCopyCount must be read before the spell-cast event is emitted, since
-	// that event increments the storm count for later spells this turn.
-	stormCopies := stormCopyCount(g, spellDef)
 	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID:                     cardID,
@@ -177,7 +174,6 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		FromZone:                     fromZone,
 		ToZone:                       zone.Stack,
 	}, targetEvents)
-	createStormCopies(g, obj, spellDef, stormCopies)
 	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
 	return true
 }

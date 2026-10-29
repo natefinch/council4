@@ -151,7 +151,7 @@ func TestUncastCopiesOfCastCopyEnterWithoutCastFacts(t *testing.T) {
 	if spellCastEvents(g, castCopy.ID) != 1 {
 		t.Fatal("casting a copy did not emit exactly one spell-cast event")
 	}
-	createStormCopies(g, castCopy, tigerDef, 1)
+	resolveStormTriggerFor(engine, g, castCopy, 1)
 	addEffectSpellToStack(g, game.Player1, game.CopyStackObject{Object: game.TargetStackObjectReference(0)},
 		[]game.Target{game.StackObjectTarget(castCopy.ID)})
 	engine.resolveTopOfStack(g, &TurnLog{})
