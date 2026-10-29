@@ -63,12 +63,13 @@ func newDarkMaze() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.MovePermanent{
-														Object:      game.SourceCardPermanentReference(),
+														Object:      game.CapturedObjectReference(),
 														Destination: zone.Exile,
 													},
 												},
 											},
 										}.Ability(),
+										CapturedObject: opt.Val(game.SourcePermanentReference()),
 									},
 								},
 							},

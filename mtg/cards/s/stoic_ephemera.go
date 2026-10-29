@@ -58,11 +58,12 @@ func newStoicEphemera() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.Sacrifice{
-														Object: game.SourceCardPermanentReference(),
+														Object: game.CapturedObjectReference(),
 													},
 												},
 											},
 										}.Ability(),
+										CapturedObject: opt.Val(game.SourcePermanentReference()),
 									},
 								},
 							},

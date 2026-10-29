@@ -53,8 +53,9 @@ func newZektarShrineExpedition() *game.CardDef {
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.CreateToken{
-									Amount: game.Fixed(1),
-									Source: game.TokenDef(zektarShrineExpeditionToken),
+									Amount:        game.Fixed(1),
+									Source:        game.TokenDef(zektarShrineExpeditionToken),
+									PublishLinked: game.LinkedKey("zektar-elemental"),
 								},
 							},
 							{
@@ -65,12 +66,13 @@ func newZektarShrineExpedition() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.MovePermanent{
-														Object:      game.SourceCardPermanentReference(),
+														Object:      game.CapturedObjectReference(),
 														Destination: zone.Exile,
 													},
 												},
 											},
 										}.Ability(),
+										CapturedObject: opt.Val(game.LinkedObjectReference("zektar-elemental")),
 									},
 								},
 							},

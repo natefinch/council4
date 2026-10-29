@@ -58,12 +58,13 @@ func newWindscouter() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.MovePermanent{
-														Object:      game.SourceCardPermanentReference(),
+														Object:      game.CapturedObjectReference(),
 														Destination: zone.Hand,
 													},
 												},
 											},
 										}.Ability(),
+										CapturedObject: opt.Val(game.SourcePermanentReference()),
 									},
 								},
 							},

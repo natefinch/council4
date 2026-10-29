@@ -150,11 +150,12 @@ func newOptimusPrimeHero() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.Transform{
-														Object: game.SourcePermanentReference(),
+														Object: game.CapturedObjectReference(),
 													},
 												},
 											},
 										}.Ability(),
+										CapturedObject: opt.Val(game.SourcePermanentReference()),
 									},
 								},
 							},
