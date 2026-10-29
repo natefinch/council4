@@ -725,6 +725,13 @@ func failedPermanentSpellEntry(g *game.Game, card *game.CardInstance, invalid st
 	return invalid
 }
 
+// stackObjectCarriesCastFacts reports whether obj has its own casting facts:
+// an original spell, or a copy that was itself cast (CR 707.12). A copy merely
+// put onto the stack was not cast and spent no mana (CR 707.10).
+func stackObjectCarriesCastFacts(obj *game.StackObject) bool {
+	return !obj.Copy || obj.CastCopy
+}
+
 func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions {
 	options := permanentCreationOptions{
 		HasSpellAnnouncement: true, XValue: obj.XValue,
@@ -732,7 +739,7 @@ func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions 
 		OffspringPaid: obj.OffspringPaid, Evoked: obj.Evoked, Dashed: obj.Dashed,
 		Bestowed: obj.Bestowed, EntersTransformed: obj.Converted,
 	}
-	if !obj.Copy {
+	if stackObjectCarriesCastFacts(obj) {
 		options.WasCast, options.HasCastController = true, true
 		options.CastController, options.CastFromZone = obj.Controller, obj.SourceZone
 		options.ColorsOfManaSpentToCast = obj.ColorsOfManaSpentToCast

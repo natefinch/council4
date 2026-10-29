@@ -289,10 +289,10 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 		matches = matches && conditionTargetEnteredThisTurn(g, ctx, cond.TargetEnteredThisTurn.Val)
 	}
 	if cond.CastFromZone.Exists {
-		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.SourceZone == cond.CastFromZone.Val
+		matches = matches && ctx.obj != nil && stackObjectCarriesCastFacts(ctx.obj) && ctx.obj.SourceZone == cond.CastFromZone.Val
 	}
 	if cond.CastDuringControllerMainPhase {
-		matches = matches && ctx.obj != nil && !ctx.obj.Copy && ctx.obj.CastDuringControllerMainPhase
+		matches = matches && ctx.obj != nil && stackObjectCarriesCastFacts(ctx.obj) && ctx.obj.CastDuringControllerMainPhase
 	}
 	if cond.SpellWasKicked {
 		matches = matches && ctx.obj != nil && ctx.obj.KickerPaid
@@ -324,11 +324,11 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 			ctx.event.EnterCastFromZone == zone.Hand
 	}
 	if cond.SpellColorManaSpent.Count > 0 {
-		matches = matches && ctx.obj != nil && !ctx.obj.Copy &&
+		matches = matches && ctx.obj != nil && stackObjectCarriesCastFacts(ctx.obj) &&
 			ctx.obj.ManaSpentByColorToCast[cond.SpellColorManaSpent.Color] >= cond.SpellColorManaSpent.Count
 	}
 	if cond.SpellSameColorManaSpentAtLeast > 0 {
-		matches = matches && ctx.obj != nil && !ctx.obj.Copy &&
+		matches = matches && ctx.obj != nil && stackObjectCarriesCastFacts(ctx.obj) &&
 			greatestSameColorManaSpent(ctx.obj.ManaSpentByColorToCast) >= cond.SpellSameColorManaSpentAtLeast
 	}
 	if cond.LandEnteredThisTurnOrControlsBasicLand {

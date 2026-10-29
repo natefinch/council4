@@ -286,6 +286,13 @@ type StackObject struct {
 	// physical source card.
 	Copy bool
 
+	// CastCopy distinguishes a Copy that was itself cast (CR 707.12: an effect
+	// that casts a copy of a card, or a prepared permanent's spell copy) from a
+	// copy merely put onto the stack, which was not cast (CR 707.10). A cast copy
+	// keeps its own casting facts: cast zone, timing and mana spent to cast it.
+	// Copying a cast copy produces an uncast copy.
+	CastCopy bool
+
 	// CopyOwner is fixed when a spell or ability copy is put onto the stack.
 	// It does not follow later changes of control.
 	CopyOwner opt.V[PlayerID]

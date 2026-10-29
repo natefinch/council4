@@ -384,6 +384,7 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	var counterTransition castCounterTransition
 	if copyCard {
 		obj.Copy = true
+		obj.CastCopy = true
 		obj.CopyOwner = opt.Val(controllerID)
 		obj.SourceCardID = card.ID
 		obj.SourceTokenDef = copyCardDef(card.Def)

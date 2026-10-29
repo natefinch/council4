@@ -615,11 +615,14 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		ChosenModes:         append([]int(nil), cast.ChosenModes...),
 		XValue:              cast.XValue,
 		Copy:                true,
+		CastCopy:            true,
 		BuybackPaid:         paymentResult.BuybackPaid,
 		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
 		SacrificedAsCostIDs: paymentResult.SacrificedIDs,
 		PaidCostSubjects:    paymentResult.PaidCostSubjects,
 		SourceZone:          zone.Battlefield,
+
+		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
 	stormCopies := stormCopyCount(g, spellDef)
 	g.Stack.Push(obj)
