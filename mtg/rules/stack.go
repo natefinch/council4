@@ -889,34 +889,49 @@ func mutateSpellOnTop(selection []int) bool {
 	return len(selection) == 1 && selection[0] == 0
 }
 
+// shiftPermanentAbilityUseIndexes moves every per-turn record keyed by one of
+// sourceID's effective ability indexes when a mutating creature spell is put
+// over it. The merged permanent is the same object (CR 702.140c, CR 730.2c), so
+// its abilities keep their history while the top card's abilities take the
+// lowest indexes. Triggered abilities from the source still on the stack keep
+// counting their resolutions with the moved ability.
 func shiftPermanentAbilityUseIndexes(g *game.Game, sourceID id.ID, offset int) {
 	if offset <= 0 {
 		return
 	}
-	activated := make(map[game.ActivatedAbilityUse]bool, len(g.ActivatedAbilitiesThisTurn))
-	for use, used := range g.ActivatedAbilitiesThisTurn {
+	shiftActivated := func(use game.ActivatedAbilityUse) game.ActivatedAbilityUse {
 		if use.SourceID == sourceID && use.AbilityIndex >= 0 {
 			use.AbilityIndex += offset
 		}
-		activated[use] = used
+		return use
 	}
-	g.ActivatedAbilitiesThisTurn = activated
-	triggered := make(map[game.TriggeredAbilityUse]int, len(g.TriggeredAbilitiesThisTurn))
-	for use, count := range g.TriggeredAbilitiesThisTurn {
+	shiftTriggered := func(use game.TriggeredAbilityUse) game.TriggeredAbilityUse {
 		if use.SourceID == sourceID && use.AbilityIndex >= 0 {
 			use.AbilityIndex += offset
 		}
-		triggered[use] = count
+		return use
 	}
-	g.TriggeredAbilitiesThisTurn = triggered
-	chosenModes := make(map[game.TriggeredAbilityUse]uint64, len(g.ChosenModesThisTurn))
-	for use, modes := range g.ChosenModesThisTurn {
-		if use.SourceID == sourceID && use.AbilityIndex >= 0 {
-			use.AbilityIndex += offset
+	g.ActivatedAbilitiesThisTurn = shiftAbilityUseKeys(g.ActivatedAbilitiesThisTurn, shiftActivated)
+	g.AbilityActivationsThisTurn = shiftAbilityUseKeys(g.AbilityActivationsThisTurn, shiftActivated)
+	g.TriggeredAbilitiesThisTurn = shiftAbilityUseKeys(g.TriggeredAbilitiesThisTurn, shiftTriggered)
+	g.ResolvedTriggeredAbilitiesThisTurn = shiftAbilityUseKeys(g.ResolvedTriggeredAbilitiesThisTurn, shiftTriggered)
+	g.ChosenModesThisTurn = shiftAbilityUseKeys(g.ChosenModesThisTurn, shiftTriggered)
+	// Only inline triggered abilities are moved: their index is a history key,
+	// never a lookup into the source card's printed abilities.
+	for _, obj := range g.Stack.Objects() {
+		if obj.Kind == game.StackTriggeredAbility && obj.InlineTrigger != nil &&
+			obj.SourceID == sourceID && obj.AbilityIndex >= 0 {
+			obj.AbilityIndex += offset
 		}
-		chosenModes[use] = modes
 	}
-	g.ChosenModesThisTurn = chosenModes
+}
+
+func shiftAbilityUseKeys[K comparable, V any](uses map[K]V, shift func(K) K) map[K]V {
+	shifted := make(map[K]V, len(uses))
+	for use, value := range uses {
+		shifted[shift(use)] = value
+	}
+	return shifted
 }
 
 func counteredSpellResolution(g *game.Game, obj *game.StackObject, card *game.CardInstance) string {

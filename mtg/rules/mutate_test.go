@@ -649,6 +649,8 @@ func TestMutateOverPreservesPerTurnAbilityUseIndexes(t *testing.T) {
 	fixture.game.ActivatedAbilitiesThisTurn[oldActivated] = true
 	fixture.game.TriggeredAbilitiesThisTurn[oldTriggered] = 1
 	fixture.game.ChosenModesThisTurn[oldTriggered] = 0b101
+	fixture.game.AbilityActivationsThisTurn[oldActivated] = 3
+	fixture.game.ResolvedTriggeredAbilitiesThisTurn[oldTriggered] = 2
 	if !fixture.engine.applyAction(fixture.game, game.Player1, action.CastMutateSpell(fixture.mutatorID, fixture.target.ObjectID)) {
 		t.Fatal("Mutate cast failed")
 	}
@@ -666,6 +668,12 @@ func TestMutateOverPreservesPerTurnAbilityUseIndexes(t *testing.T) {
 	}
 	if fixture.game.ChosenModesThisTurn[oldTriggered] != 0 || fixture.game.ChosenModesThisTurn[newTriggered] != 0b101 {
 		t.Fatalf("chosen modes = %+v, want old ability shifted by %d", fixture.game.ChosenModesThisTurn, offset)
+	}
+	if fixture.game.AbilityActivationsThisTurn[oldActivated] != 0 || fixture.game.AbilityActivationsThisTurn[newActivated] != 3 {
+		t.Fatalf("activation counts = %+v, want old ability shifted by %d", fixture.game.AbilityActivationsThisTurn, offset)
+	}
+	if fixture.game.ResolvedTriggeredAbilitiesThisTurn[oldTriggered] != 0 || fixture.game.ResolvedTriggeredAbilitiesThisTurn[newTriggered] != 2 {
+		t.Fatalf("resolved trigger counts = %+v, want old ability shifted by %d", fixture.game.ResolvedTriggeredAbilitiesThisTurn, offset)
 	}
 }
 
