@@ -83,8 +83,9 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
     ...priorUnits.filter(failed).map(engineIssue).filter(issue => !retry.includes(issue)),
   ].filter(Boolean));
   const gaps = knownGaps({ next, units, priorUnits, defects });
+  const remainders = new Set([...units, ...priorUnits].filter(u => u.status === "landed").flatMap(remainingIssues));
   const open = gaps.filter(gap => !filled.has(gap.issue) && issues[gap.issue]?.state === "OPEN")
-    .map(gap => nextSubIssue(gap, issues, filled)).filter(Boolean);
+    .map(gap => nextSubIssue(gap, issues, filled, remainders)).filter(Boolean);
   const gap = open.find(candidate => !attempted.has(candidate.issue));
   if (gap) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
   if (next?.batch) return { kind: "card", batch: next.batch, cards: next.cards ?? [] };
@@ -101,11 +102,12 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
 // sub-issue, which inherits the parent's blocked cards. Later sub-issues wait
 // for earlier ones, so a parked first sub-issue parks the parent.
 // A split gap whose sub-issues have all landed or closed is done, not
-// re-implemented as a whole: returns null.
-export function nextSubIssue(gap, issues, filled = new Set()) {
+// re-implemented as a whole: returns null. The exception is a remainder a
+// landed unit reported on the parent itself; that remainder is worked next.
+export function nextSubIssue(gap, issues, filled = new Set(), remainders = new Set()) {
   const subs = issues[gap.issue]?.subIssues ?? [];
   const sub = subs.find(candidate => candidate.state === "OPEN" && !filled.has(candidate.number));
-  if (!sub) return subs.length ? null : gap;
+  if (!sub) return subs.length && !remainders.has(gap.issue) ? null : gap;
   return { ...gap, issue: sub.number, parent: gap.issue, subIssue: sub,
     sources: [...gap.sources, `sub-issue of #${gap.issue}`] };
 }
