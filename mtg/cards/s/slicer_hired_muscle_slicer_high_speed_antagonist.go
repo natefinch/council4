@@ -160,11 +160,12 @@ func newSlicerHiredMuscle() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.Transform{
-														Object: game.SourceCardPermanentReference(),
+														Object: game.CapturedObjectReference(),
 													},
 												},
 											},
 										}.Ability(),
+										CapturedObject: opt.Val(game.SourcePermanentReference()),
 									},
 								},
 							},

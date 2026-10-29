@@ -54,12 +54,13 @@ func newSaprazzanOutrigger() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.MovePermanent{
-														Object:      game.SourceCardPermanentReference(),
+														Object:      game.CapturedObjectReference(),
 														Destination: zone.Library,
 													},
 												},
 											},
 										}.Ability(),
+										CapturedObject: opt.Val(game.SourcePermanentReference()),
 									},
 								},
 							},

@@ -129,7 +129,7 @@ func newRottenReunionToken() *game.CardDef {
 															Sequence: []game.Instruction{
 																game.Instruction{
 																	Primitive: game.Sacrifice{
-																		Object: game.SourcePermanentReference(),
+																		Object: game.CapturedObjectReference(),
 																	},
 																},
 															},
@@ -138,6 +138,7 @@ func newRottenReunionToken() *game.CardDef {
 													MinModes: 1,
 													MaxModes: 1,
 												},
+												CapturedObject: opt.Val(game.SourcePermanentReference()),
 											},
 										},
 									},
