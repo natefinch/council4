@@ -104,7 +104,7 @@ func applyDistributiveRemoval(r *effectResolver, removal game.DistributiveRemova
 	if move.actualDestination == zone.Exile {
 		rememberLinkedObject(r.game, key, ref)
 	}
-	settleDepartedControl(r.game)
+	settleControlChanges(r.game)
 	return true
 }
 

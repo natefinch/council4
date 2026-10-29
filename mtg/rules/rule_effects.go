@@ -346,7 +346,7 @@ func expireEndOfCombatRuleEffects(g *game.Game) {
 		return effect.Duration == game.DurationUntilEndOfCombat
 	})
 	if len(g.RuleEffects) == 0 {
-		settleDepartedControl(g)
+		settleControlChanges(g)
 		return
 	}
 	kept := g.RuleEffects[:0]
@@ -357,7 +357,7 @@ func expireEndOfCombatRuleEffects(g *game.Game) {
 		kept = append(kept, g.RuleEffects[i])
 	}
 	g.RuleEffects = kept
-	settleDepartedControl(g)
+	settleControlChanges(g)
 }
 
 func expireRuleEffects(g *game.Game) {

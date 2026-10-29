@@ -42,7 +42,7 @@ func expireTurnStartDurations(g *game.Game) {
 			effect.CreatedTurn < g.Turn.TurnNumber
 	})
 	if len(g.RuleEffects) == 0 {
-		settleDepartedControl(g)
+		settleControlChanges(g)
 		return
 	}
 	kept := g.RuleEffects[:0]
@@ -56,7 +56,7 @@ func expireTurnStartDurations(g *game.Game) {
 		kept = append(kept, *effect)
 	}
 	g.RuleEffects = kept
-	settleDepartedControl(g)
+	settleControlChanges(g)
 }
 
 func expireCleanupDurations(g *game.Game) {
@@ -67,7 +67,7 @@ func expireCleanupDurations(g *game.Game) {
 	expirePreventionShields(g)
 	expireReplacementEffects(g)
 	expireRuleEffects(g)
-	settleDepartedControl(g)
+	settleControlChanges(g)
 }
 
 // CR 800.4m ends even an end-of-next-turn duration when a departed player's
@@ -83,7 +83,7 @@ func expireDepartedNextTurnDurations(g *game.Game, player game.PlayerID) {
 	g.RuleEffects = slices.DeleteFunc(g.RuleEffects, func(effect game.RuleEffect) bool {
 		return effect.ExpiresFor == player && expires(effect.Duration)
 	})
-	settleDepartedControl(g)
+	settleControlChanges(g)
 }
 
 // expireConditionalControlDurations removes continuous effects whose duration
@@ -94,7 +94,7 @@ func expireDepartedNextTurnDurations(g *game.Game, player game.PlayerID) {
 // decisions are made.  Returns true when at least one effect was removed.
 func expireConditionalControlDurations(g *game.Game) bool {
 	changed := removeExpiredConditionalControlDurations(g)
-	return settleDepartedControl(g) || changed
+	return settleControlChanges(g) || changed
 }
 
 func removeExpiredConditionalControlDurations(g *game.Game) bool {

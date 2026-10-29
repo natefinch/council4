@@ -745,7 +745,7 @@ func movePermanentToZoneInBatchWithControlledTriggerSnapshot(
 		move.event.ControlledTriggerDoublers = triggerSnapshot
 	}
 	moved := applyPreparedPermanentZoneMove(g, &move)
-	settleDepartedControl(g)
+	settleControlChanges(g)
 	return moved
 }
 
@@ -838,7 +838,7 @@ func applyPreparedPermanentZoneMoves(g *game.Game, moves []preparedPermanentZone
 		}
 		results = append(results, result)
 	}
-	settleDepartedControl(g)
+	settleControlChanges(g)
 	return results
 }
 

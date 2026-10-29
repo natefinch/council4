@@ -133,6 +133,15 @@ func cleanupDepartedStackObjects(g *game.Game, playerID game.PlayerID) {
 	}
 }
 
+// settleControlChanges applies the immediate consequences of control changes
+// wherever control may have changed: a departed player's objects are settled
+// (CR 800.4a) and a combatant whose controller changed is removed from combat
+// (CR 506.4).
+func settleControlChanges(g *game.Game) bool {
+	changed := settleDepartedControl(g)
+	return removeCombatantsWithChangedControl(g) || changed
+}
+
 // A departed default controller is not replaced by the owner. If no surviving
 // control effect remains, exile the object immediately (CR 800.4a, 800.4c).
 func settleDepartedControl(g *game.Game) bool {

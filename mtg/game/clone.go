@@ -480,6 +480,7 @@ func cloneCombatState(c *CombatState) *CombatState {
 	clone.Blockers = cloneSlice(c.Blockers)
 	clone.BlockersOfRemovedAttackers = cloneComparableMap(c.BlockersOfRemovedAttackers)
 	clone.BlockedAttackers = cloneComparableMap(c.BlockedAttackers)
+	clone.CombatantControllers = cloneComparableMap(c.CombatantControllers)
 	clone.DamageAssignment = cloneComparableMap(c.DamageAssignment)
 	clone.BlockerOrder = cloneBlockerOrder(c.BlockerOrder)
 	return &clone

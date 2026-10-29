@@ -497,6 +497,87 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 		delete(g.Combat.DamageAssignment, attackerID)
 	}
 	delete(g.Combat.DamageAssignment, permanentID)
+	delete(g.Combat.CombatantControllers, permanentID)
+}
+
+// recordCombatantController records the controller a creature has as it becomes
+// an attacking or blocking creature, so a later change of controller removes it
+// from combat (CR 506.4). A creature already in combat keeps its record.
+func recordCombatantController(g *game.Game, permanentID id.ID) {
+	if g.Combat == nil {
+		return
+	}
+	if _, ok := g.Combat.CombatantControllers[permanentID]; ok {
+		return
+	}
+	permanent, ok := permanentByObjectID(g, permanentID)
+	if !ok {
+		return
+	}
+	if g.Combat.CombatantControllers == nil {
+		g.Combat.CombatantControllers = make(map[id.ID]game.PlayerID)
+	}
+	g.Combat.CombatantControllers[permanentID] = effectiveController(g, permanent)
+}
+
+// removeCombatantsWithChangedControl removes from combat each attacking or
+// blocking creature whose controller has changed since it became one, and each
+// planeswalker being attacked whose controller is no longer the player its
+// attackers attack (CR 506.4). Control is derived from continuous effects, so a
+// change can come from an effect starting, ending or being reordered; callers
+// settle it wherever control may have changed and before each priority. A
+// combatant without a record (combat state built outside the declaration
+// routes) is recorded under its current controller. The blockers of a removed
+// attacker remain blocking creatures (CR 509.1g).
+func removeCombatantsWithChangedControl(g *game.Game) bool {
+	if g.Combat == nil {
+		return false
+	}
+	var removed []id.ID
+	remove := func(permanentID id.ID) {
+		if !slices.Contains(removed, permanentID) {
+			removed = append(removed, permanentID)
+		}
+	}
+	check := func(permanentID id.ID) {
+		permanent, ok := permanentByObjectID(g, permanentID)
+		if !ok || !activeBattlefieldPermanent(permanent) {
+			return
+		}
+		recorded, ok := g.Combat.CombatantControllers[permanentID]
+		if !ok {
+			recordCombatantController(g, permanentID)
+			return
+		}
+		if effectiveController(g, permanent) != recorded {
+			remove(permanentID)
+		}
+	}
+	for _, attack := range g.Combat.Attackers {
+		check(attack.Attacker)
+		if attack.Target.NoTarget || attack.Target.PlaneswalkerID == 0 {
+			continue
+		}
+		if planeswalker, ok := permanentByObjectID(g, attack.Target.PlaneswalkerID); ok &&
+			activeBattlefieldPermanent(planeswalker) && effectiveController(g, planeswalker) != attack.Target.Player {
+			remove(planeswalker.ObjectID)
+		}
+	}
+	for _, block := range g.Combat.Blockers {
+		check(block.Blocker)
+	}
+	blockersOfRemoved := make([]id.ID, 0, len(g.Combat.BlockersOfRemovedAttackers))
+	for blockerID := range g.Combat.BlockersOfRemovedAttackers {
+		blockersOfRemoved = append(blockersOfRemoved, blockerID)
+	}
+	slices.Sort(blockersOfRemoved)
+	for _, blockerID := range blockersOfRemoved {
+		check(blockerID)
+	}
+	for _, permanentID := range removed {
+		removePermanentFromCombat(g, permanentID)
+	}
+	return len(removed) > 0
 }
 
 func attackTargetsPermanent(target game.AttackTarget, permanentID id.ID) bool {
@@ -1414,6 +1495,7 @@ func declareCreatedTokensAttacking(e *Engine, g *game.Game, controller game.Play
 			Attacker: token.ObjectID,
 			Target:   game.AttackTarget{Player: defender},
 		})
+		recordCombatantController(g, token.ObjectID)
 		// CR 508.8: a creature put onto the battlefield attacking counts the same
 		// as a declared attacker for whether the later combat steps are skipped.
 		g.Combat.AttackersDeclared = true
@@ -1480,6 +1562,7 @@ func declareTokenAttackingDefender(g *game.Game, controller game.PlayerID, token
 		Attacker: token.ObjectID,
 		Target:   game.AttackTarget{Player: defender},
 	})
+	recordCombatantController(g, token.ObjectID)
 	// CR 508.8: a creature put onto the battlefield attacking counts the same as
 	// a declared attacker for whether the later combat steps are skipped.
 	g.Combat.AttackersDeclared = true
@@ -1505,6 +1588,7 @@ func declareTokenAttackingTarget(g *game.Game, controller game.PlayerID, token *
 		Attacker: token.ObjectID,
 		Target:   target,
 	})
+	recordCombatantController(g, token.ObjectID)
 	// CR 508.8: a creature put onto the battlefield attacking counts the same as
 	// a declared attacker for whether the later combat steps are skipped.
 	g.Combat.AttackersDeclared = true
