@@ -54,6 +54,7 @@ func newFerocity() *game.CardDef {
 							StackObjectKind:  game.StackSpell,
 							CounterKind:      counter.PlusOnePlusOne,
 							UnionEvent:       game.EventAttackerBecameBlocked,
+							BlockedScope:     game.BlockedTriggerOnce,
 						},
 					},
 					Optional: true,

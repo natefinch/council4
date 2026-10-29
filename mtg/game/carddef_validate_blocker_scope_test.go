@@ -16,7 +16,7 @@ func TestValidateCardDefBlockerScope(t *testing.T) {
 		{"blocks a creature", TriggerPattern{Event: EventBlockerDeclared, Source: TriggerSourceSelf, BlockerScope: BlockerTriggerEachBlockedCreature}, true},
 		{"attacks or blocks unspecified", TriggerPattern{Event: EventAttackerDeclared, UnionEvent: EventBlockerDeclared, Source: TriggerSourceSelf}, false},
 		{"attacks or blocks once", TriggerPattern{Event: EventAttackerDeclared, UnionEvent: EventBlockerDeclared, Source: TriggerSourceSelf, BlockerScope: BlockerTriggerOnce}, true},
-		{"blocks or becomes blocked unspecified", TriggerPattern{Event: EventBlockerDeclared, UnionEvent: EventAttackerBecameBlocked, Source: TriggerSourceSelf}, false},
+		{"blocks or becomes blocked unspecified", TriggerPattern{Event: EventBlockerDeclared, UnionEvent: EventAttackerBecameBlocked, BlockedScope: BlockedTriggerOnce, Source: TriggerSourceSelf}, false},
 		{"becomes blocked by a creature", TriggerPattern{Event: EventBlockerDeclared, Subject: TriggerSubjectBlockedAttacker, Source: TriggerSourceSelf}, true},
 		{"becomes blocked by a creature with scope", TriggerPattern{Event: EventBlockerDeclared, Subject: TriggerSubjectBlockedAttacker, Source: TriggerSourceSelf, BlockerScope: BlockerTriggerOnce}, false},
 		{"attacks with scope", TriggerPattern{Event: EventAttackerDeclared, Source: TriggerSourceSelf, BlockerScope: BlockerTriggerOnce}, false},

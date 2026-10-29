@@ -424,6 +424,10 @@ func triggerCombatPatternMatches(g *game.Game, viewer game.PlayerID, source *gam
 		!event.BlockerBecameBlocking {
 		return false
 	}
+	if pattern.BlockedScope != game.BlockedTriggerEachBlocker && event.Kind == game.EventAttackerBecameBlocked &&
+		event.AttackerAlreadyBlocked {
+		return false
+	}
 	if !pattern.DamageRecipientSelection.Empty() &&
 		event.DamageRecipient == game.DamageRecipientPermanent &&
 		!triggerSelectionMatches(g, viewer, event, event.PermanentID, &pattern.DamageRecipientSelection, selfObjectID) {

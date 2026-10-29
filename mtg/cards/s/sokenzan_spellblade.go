@@ -80,6 +80,7 @@ func newSokenzanSpellblade() *game.CardDef {
 							StackObjectKind: game.StackSpell,
 							CounterKind:     counter.PlusOnePlusOne,
 							UnionEvent:      game.EventAttackerBecameBlocked,
+							BlockedScope:    game.BlockedTriggerOnce,
 						},
 					},
 					Content: game.AbilityContent{

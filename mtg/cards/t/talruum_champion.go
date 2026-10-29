@@ -50,6 +50,7 @@ func newTalruumChampion() *game.CardDef {
 							StackObjectKind:         game.StackSpell,
 							CounterKind:             counter.PlusOnePlusOne,
 							UnionEvent:              game.EventAttackerBecameBlocked,
+							BlockedScope:            game.BlockedTriggerEachBlocker,
 						},
 					},
 					Content: game.AbilityContent{

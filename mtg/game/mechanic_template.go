@@ -1006,8 +1006,9 @@ func RampageTriggeredAbility(n int) TriggeredAbility {
 		Trigger: TriggerCondition{
 			Type: TriggerWhenever,
 			Pattern: TriggerPattern{
-				Event:  EventAttackerBecameBlocked,
-				Source: TriggerSourceSelf,
+				Event:        EventAttackerBecameBlocked,
+				BlockedScope: BlockedTriggerOnce,
+				Source:       TriggerSourceSelf,
 			},
 		},
 		KeywordAbilities: []KeywordAbility{

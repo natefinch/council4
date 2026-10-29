@@ -6146,6 +6146,7 @@ func legacyFixture222fe0b70cb29d5f() []*game.CardDef {
 								StackObjectKind:         game.StackSpell,
 								CounterKind:             counter.PlusOnePlusOne,
 								UnionEvent:              game.EventAttackerBecameBlocked,
+								BlockedScope:            game.BlockedTriggerEachBlocker,
 							},
 						},
 						Content: game.AbilityContent{
@@ -12269,6 +12270,7 @@ func legacyFixture51ea7e3f3cc80bdc() []*game.CardDef {
 								StackObjectKind:         game.StackSpell,
 								CounterKind:             counter.PlusOnePlusOne,
 								UnionEvent:              game.EventAttackerBecameBlocked,
+								BlockedScope:            game.BlockedTriggerEachBlocker,
 							},
 						},
 						Content: game.AbilityContent{
@@ -19946,6 +19948,7 @@ func legacyFixture84ae188d684133bf() []*game.CardDef {
 							Type: game.TriggerWhenever,
 							Pattern: game.TriggerPattern{
 								Event:           game.EventAttackerBecameBlocked,
+								BlockedScope:    game.BlockedTriggerOnce,
 								Source:          game.TriggerSourceSelf,
 								StackObjectKind: game.StackSpell,
 								CounterKind:     counter.PlusOnePlusOne,
@@ -30505,6 +30508,7 @@ func legacyFixturecfce950259503d89() []*game.CardDef {
 								StackObjectKind:         game.StackSpell,
 								CounterKind:             counter.PlusOnePlusOne,
 								UnionEvent:              game.EventAttackerBecameBlocked,
+								BlockedScope:            game.BlockedTriggerEachBlocker,
 							},
 						},
 						Content: game.AbilityContent{
@@ -34399,6 +34403,7 @@ func legacyFixturee9398c612c61889f() []*game.CardDef {
 								StackObjectKind:         game.StackSpell,
 								CounterKind:             counter.PlusOnePlusOne,
 								UnionEvent:              game.EventAttackerBecameBlocked,
+								BlockedScope:            game.BlockedTriggerEachBlocker,
 							},
 						},
 						Content: game.AbilityContent{

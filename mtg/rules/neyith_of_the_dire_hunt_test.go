@@ -41,6 +41,7 @@ func neyithTestDef() *game.CardDef {
 							Event:            game.EventFight,
 							Controller:       game.TriggerControllerYou,
 							UnionEvent:       game.EventAttackerBecameBlocked,
+							BlockedScope:     game.BlockedTriggerOnce,
 							OneOrMore:        true,
 							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 						},

@@ -42,6 +42,7 @@ func newInfernoElemental() *game.CardDef {
 							BlockerScope:            game.BlockerTriggerEachBlockedCreature,
 							Source:                  game.TriggerSourceSelf,
 							UnionEvent:              game.EventAttackerBecameBlocked,
+							BlockedScope:            game.BlockedTriggerEachBlocker,
 							RelatedSubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 						},
 					},

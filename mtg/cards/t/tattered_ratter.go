@@ -40,6 +40,7 @@ func newTatteredRatter() *game.CardDef {
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
 							Event:            game.EventAttackerBecameBlocked,
+							BlockedScope:     game.BlockedTriggerOnce,
 							Controller:       game.TriggerControllerYou,
 							SubjectSelection: game.Selection{SubtypesAny: []types.Sub{types.Rat}},
 							StackObjectKind:  game.StackSpell,

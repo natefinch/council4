@@ -36,8 +36,9 @@ func newSomberwaldVigilante() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:  game.EventAttackerBecameBlocked,
-							Source: game.TriggerSourceSelf,
+							Event:        game.EventAttackerBecameBlocked,
+							BlockedScope: game.BlockedTriggerEachBlocker,
+							Source:       game.TriggerSourceSelf,
 						},
 					},
 					Content: game.Mode{

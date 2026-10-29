@@ -45,6 +45,7 @@ func newRetaliation() *game.CardDef {
 										Type: game.TriggerWhenever,
 										Pattern: game.TriggerPattern{
 											Event:           game.EventAttackerBecameBlocked,
+											BlockedScope:    game.BlockedTriggerEachBlocker,
 											Source:          game.TriggerSourceSelf,
 											StackObjectKind: game.StackSpell,
 											CounterKind:     counter.PlusOnePlusOne,

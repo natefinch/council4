@@ -52,6 +52,7 @@ func newBarrowBlade() *game.CardDef {
 							BlockerScope:            game.BlockerTriggerEachBlockedCreature,
 							Source:                  game.TriggerSourceAttachedPermanent,
 							UnionEvent:              game.EventAttackerBecameBlocked,
+							BlockedScope:            game.BlockedTriggerEachBlocker,
 							SubjectSelection:        game.Selection{RequiredTypes: []types.Card{types.Creature}},
 							RelatedSubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 						},
