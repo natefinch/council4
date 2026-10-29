@@ -133,7 +133,21 @@ func stackObjectTargetMatchesSpec(g *game.Game, controller game.PlayerID, source
 	if !stackObjectSpellTargetsMatch(g, controller, obj, pred.SpellTargets) {
 		return false
 	}
+	if pred.SingleTarget && stackObjectTargetInstanceCount(obj) != 1 {
+		return false
+	}
 	return stackObjectSpellQualifiersMatch(g, obj, pred)
+}
+
+// stackObjectTargetInstanceCount counts every target chosen for obj, including
+// the targets of spliced text (CR 702.47c-d). Each instance counts separately,
+// even a repeated object or player or one that is no longer legal (CR 115.9a).
+func stackObjectTargetInstanceCount(obj *game.StackObject) int {
+	count := len(obj.Targets)
+	for _, spliced := range obj.SplicedTargets {
+		count += len(spliced)
+	}
+	return count
 }
 
 // stackObjectSpellTargetsMatch enforces a "Counter target spell that targets

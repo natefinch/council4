@@ -38,6 +38,7 @@ func newSwerve() *game.CardDef {
 						Allow:      game.TargetAllowStackObject,
 						Predicate: game.TargetPredicate{
 							StackObjectKinds: []game.StackObjectKind{game.StackSpell},
+							SingleTarget:     true,
 						},
 					},
 				},

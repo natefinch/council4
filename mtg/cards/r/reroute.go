@@ -39,6 +39,7 @@ func newReroute() *game.CardDef {
 						Allow:      game.TargetAllowStackObject,
 						Predicate: game.TargetPredicate{
 							StackObjectKinds: []game.StackObjectKind{game.StackActivatedAbility},
+							SingleTarget:     true,
 						},
 					},
 				},

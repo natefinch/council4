@@ -59,6 +59,7 @@ func newBoltBend() *game.CardDef {
 						Allow:      game.TargetAllowStackObject,
 						Predicate: game.TargetPredicate{
 							StackObjectKinds: []game.StackObjectKind{game.StackSpell, game.StackActivatedAbility, game.StackTriggeredAbility},
+							SingleTarget:     true,
 						},
 					},
 				},
