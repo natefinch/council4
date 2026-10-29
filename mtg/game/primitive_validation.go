@@ -2946,6 +2946,9 @@ func (p ChooseNewTargets) validatePrimitive(targets []TargetSpec, checkTargets b
 	if p.Object.Kind() != ObjectReferenceTargetStackObject {
 		return errors.New("choose new targets requires a target stack object reference")
 	}
+	if !p.Rule.Valid() {
+		return errors.New("choose new targets has an unknown retarget rule")
+	}
 	return validateTargetAllows(p.Object.TargetIndex(), TargetAllowStackObject, targets, checkTargets)
 }
 

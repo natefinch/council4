@@ -69,6 +69,7 @@ func newCommandeer() *game.CardDef {
 					{
 						Primitive: game.ChooseNewTargets{
 							Object: game.TargetStackObjectReference(0),
+							Rule:   game.RetargetChooseNewTargets,
 						},
 						Optional: true,
 					},

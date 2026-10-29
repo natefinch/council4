@@ -46,8 +46,9 @@ func TestCompiledStackActionsPreserveSubjectAndNewControllerLegality(t *testing.
 					card := addCardToGraveyard(g, game.Player1, simpleSorceryDef("Earlier Card"))
 					targets = append([]game.Target{currentCardTarget(t, g, card)}, targets...)
 				case "Change the target of target spell with a single target. ":
+					// The neighbor's controller has no other creature, so its
+					// target can't change and no change prompt is offered (CR 115.7a).
 					targets = append([]game.Target{game.StackObjectTarget(neighbor.ID)}, targets...)
-					choices = append(choices, []int{0})
 				default:
 					t.Fatalf("unexpected stack-action prefix %q", prefix)
 				}
