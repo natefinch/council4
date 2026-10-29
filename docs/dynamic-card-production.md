@@ -217,7 +217,10 @@ ordinary gaps. Apply refuses unverified output. Issues labeled `Parked` or
 A gap that proves too large is split into ordered GitHub sub-issues of its
 issue. Selection then works the first open sub-issue (it inherits the parent's
 blocked cards); a landed sub-issue moves on to the next, and a failed one parks
-the parent. Split a parked gap this way instead of resuming it again.
+the parent. Once every sub-issue is closed, the parent is worked as a whole
+only if a landed unit reported a remainder on it (since policy 1.23.1); an
+earlier failed parent attempt still parks it unless `retryGaps` lists it.
+Split a parked gap this way instead of resuming it again.
 
 Reviews land changes that are strictly better than their base. A finding blocks
 only if it is a regression (works on the base, breaks now), an acceptance
@@ -351,7 +354,8 @@ the dashboard survive when the session worktree that ran it is removed. When an
 Engine unit lands, the workflow closes its issue (unless it reported a remainder
 on the same issue, which it comments on the issue instead) and closes a split parent once all its sub-issues are closed
 and the landing reported no remainder on the parent;
-a split gap with no open sub-issues is never implemented as a whole.
+a split gap with no open sub-issues is implemented as a whole only for such a
+reported remainder.
 
 | File under `.cardwork/workflows/<run-id>/` | Purpose |
 | --- | --- |
