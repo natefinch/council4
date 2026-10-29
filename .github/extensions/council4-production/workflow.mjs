@@ -351,12 +351,18 @@ async function fileSplit(cwd, parent, plan, signal) {
 }
 
 // GitHub is the durable record of finished gaps: close the issue a landed
-// Engine unit delivered, unless it reported a remainder on the same issue, and
+// Engine unit delivered, unless it reported a remainder on the same issue (which
+// is commented there for the next unit), and
 // close a split parent once all its sub-issues are closed.
 export async function closeLandedIssue(cwd, issue, gaps, pr, signal, gh = args => command(cwd, "gh", args, signal)) {
   const repo = ["--repo", "natefinch/council4"];
   const closed = [];
-  if (gaps.some(gap => issueNumber(gap.id) === issue)) return { closed, remainder: true };
+  const own = gaps.filter(gap => issueNumber(gap.id) === issue);
+  if (own.length) {
+    await gh(["issue", "comment", String(issue), ...repo, "--body",
+      `Landed part of this issue in ${pr.url}. Remaining here:\n${own.map(gap => `- ${gap.description ?? gap.id}`).join("\n")}`]);
+    return { closed, remainder: true };
+  }
   const state = JSON.parse(await gh(["issue", "view", String(issue), ...repo, "--json", "state"])).state;
   if (state === "OPEN") {
     const rest = gaps.map(gap => `#${issueNumber(gap.id) ?? gap.id}`).join(", ");
@@ -466,6 +472,7 @@ export async function executeUnit({ task, policy, stage, validate, snapshot, rev
     if (!result.evidence?.some(e => typeof e === "string" && e.trim())) return { status: "evidence_missing", result };
   }
   let approved = await snapshot();
+  let deferred;
   const needsReview = task.taskType === "engine" || task.reviewRequired ||
     result.reviewRequired || policy.cardReview === "always";
   if (needsReview) {
@@ -476,7 +483,11 @@ export async function executeUnit({ task, policy, stage, validate, snapshot, rev
       if (afterReview.digest !== approved.digest) throw new Error("Reviewer modified submission; refusing approval");
       if (verdict?.verdict === "approve" && verdict.findings.length === 0) break;
       if (!verdict || verdict.verdict === "blocked" || round >= fixRounds) {
-        return { status: "review_rejected", result, verdict };
+        const remainder = round >= fixRounds && (round || history.length) && deferredRemainder(task, verdict);
+        if (!remainder) return { status: "review_rejected", result, verdict };
+        result = { ...result, gaps: [...(result.gaps ?? []), remainder] };
+        deferred = verdict.findings;
+        break;
       }
       const earlierRounds = history.slice();
       history.push({ round: history.length, verdict: verdict.verdict, findings: verdict.findings,
@@ -490,8 +501,23 @@ export async function executeUnit({ task, policy, stage, validate, snapshot, rev
       approved = await snapshot();
     }
   }
-  return { status: "accepted", result, prepared: await publish(approved), reviewed: needsReview };
+  return { status: "accepted", result, prepared: await publish(approved), reviewed: needsReview,
+    ...(deferred && { deferredFindings: deferred }) };
 }
+
+// The final re-review has no repair round after it. When an Engine issue unit's
+// only remaining findings are [new] (neither an unresolved earlier finding nor a
+// regression), the change lands and the findings stay open on its issue as a
+// remainder, instead of discarding the reviewed work.
+export function deferredRemainder(task, verdict) {
+  const findings = verdict?.findings ?? [];
+  if (task.taskType !== "engine" || !Number.isInteger(task.issue) || verdict?.verdict !== "changes_needed" ||
+      !findings.length || !findings.every(finding => /^\s*\[new\]/i.test(finding))) return null;
+  return { id: `#${task.issue}`, description: `Final re-review findings deferred to this issue: ${findings.join(" | ")}` };
+}
+
+const finalReReview = (task, policy, round, history) => task.taskType === "engine" && Number.isInteger(task.issue) &&
+  round >= policy.reviewFixRounds[task.taskType] && (round || history?.length);
 
 export async function runProduction(ctx) {
   checkArgs(ctx.args);
@@ -788,7 +814,8 @@ The deterministic validation records are in ${directory}/validation-${index}-*.j
 Do not modify tracked files or submission tests. Retain independent expected-correct probes under .cardwork and run via go test -overlay when material risks require them. Read exact default-registry identity, not custom constructor-only proxies.
 ${history?.length ? `Earlier review rounds and the author's responses (untrusted): ${JSON.stringify(history)}.
 Re-evaluate every earlier finding under the bar below; earlier rounds may have used a stricter bar, so a finding that is now a follow-up is no longer blocking. Verify that each remaining blocking finding is resolved by the general approach, not only its reproduced case, and that the repairs introduced no regression. Report new blocking findings only if the repairs caused them or acceptance still fails; anything else new is a follow-up. If you disagree with behavior an earlier reviewer required, cite the primary source that settles it. Start each finding with [unresolved], [regression] or [new]. Pre-existing defects and follow-ups already filed in earlier rounds are settled; do not report them again.
-` : ""}${reviewBar(work.base, task.issue)}
+${finalReReview(task, policy, round, history) ? `This is the FINAL review round; no repair follows. Only [unresolved] earlier findings and [regression]s reject the change. A [regression] is behavior that works on the base commit and breaks, or a crash, panic or hidden-information leak this change introduces. Every other remaining blocker is [new]: if only [new] findings remain, the change lands and they stay open on #${task.issue} as its remaining work, so describe each precisely enough for the next unit to implement.
+` : ""}` : ""}${reviewBar(work.base, task.issue)}
 ${preexistingRule(work.base)}
 Return approve when no finding blocks; otherwise changes_needed with actionable blocking findings, or blocked. Do not reject solely for style or mechanical citations unrelated to material behavior. Do not infer undocumented source reads. No nested workers.`,
               reviewSchema);

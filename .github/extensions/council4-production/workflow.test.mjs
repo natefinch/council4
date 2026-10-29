@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { closeLandedIssue, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, prepareResume, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
+import { closeLandedIssue, deferredRemainder, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, prepareResume, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -47,6 +47,41 @@ test("Review fixes are separate work and require validation and re-review", asyn
   };
   assert.equal((await executeUnit(f)).status, "accepted");
   assert.deepEqual(f.calls, ["implementation", "validate", "review-0", "review_fix", "validate", "review-1", "prepare"]);
+});
+
+test("A final re-review with only [new] findings lands them as a remainder on the Engine issue", async () => {
+  const verdicts = { 0: ["missing route"], 1: ["[unresolved] route"], 2: ["[new] bound IDs", "[NEW] text"] };
+  const engine = { taskType: "engine", id: "gap-3347", issue: 3347 };
+  const run = (task, last) => {
+    const f = fixture({ task });
+    f.stage = async phase => { f.calls.push(phase); return { ...complete, gaps: [{ id: "#9", description: "other" }] }; };
+    f.review = async round => {
+      f.calls.push(`review-${round}`);
+      return { verdict: "changes_needed", findings: round === 2 ? last : verdicts[round] };
+    };
+    return f;
+  };
+  const landed = await executeUnit(run(engine, verdicts[2]));
+  assert.equal(landed.status, "accepted");
+  assert.deepEqual(landed.deferredFindings, verdicts[2]);
+  assert.deepEqual(landed.result.gaps, [{ id: "#9", description: "other" },
+    { id: "#3347", description: "Final re-review findings deferred to this issue: [new] bound IDs | [NEW] text" }]);
+  // Unresolved or regression findings, card units and issue-less units still reject.
+  for (const [task, last] of [[engine, ["[new] a", "[regression] b"]], [engine, ["[unresolved] a"]],
+    [{ ...engine, issue: undefined }, verdicts[2]]]) {
+    const outcome = await executeUnit(run(task, last));
+    assert.equal(outcome.status, "review_rejected");
+    assert.equal(outcome.deferredFindings, undefined);
+  }
+  const card = run({ taskType: "card", id: "c", issue: 5, reviewRequired: true }, verdicts[2]);
+  card.review = async round => ({ verdict: "changes_needed", findings: round ? ["[new] x"] : ["y"] });
+  assert.equal((await executeUnit(card)).status, "review_rejected");
+  // A first review is never final, even with no repair budget.
+  const first = run(engine, verdicts[2]);
+  first.policy = { ...policy, reviewFixRounds: { ...policy.reviewFixRounds, engine: 0 } };
+  first.review = async () => ({ verdict: "changes_needed", findings: ["[new] x"] });
+  assert.equal((await executeUnit(first)).status, "review_rejected");
+  assert.equal(deferredRemainder(engine, { verdict: "blocked", findings: ["[new] x"] }), null);
 });
 
 test("Resumed units are re-reviewed under the current bar first, with the full fix budget", async () => {
@@ -595,7 +630,9 @@ test("Landed Engine issues and fully finished split parents are closed", async (
     if (args[1].endsWith("/sub_issues")) return JSON.stringify([[{ number: 3404, state: states[3404].toLowerCase() }, { number: 3405, state: fake[3405] }]]);
     return "";
   };
-  assert.deepEqual(await closeLandedIssue("/repo", 3404, [{ id: "#3404" }], { url: "u" }, undefined, gh), { closed: [], remainder: true });
+  assert.deepEqual(await closeLandedIssue("/repo", 3404, [{ id: "#3404", description: "bound IDs" }], { url: "u" }, undefined, gh), { closed: [], remainder: true });
+  assert.match(calls.find(c => c.startsWith("issue comment 3404")), /Landed part of this issue in u\. Remaining here:\n- bound IDs/);
+  assert.equal(calls.filter(c => c.startsWith("issue close")).length, 0);
   assert.deepEqual((await closeLandedIssue("/repo", 3404, [{ id: "#3417" }], { url: "pr/1" }, undefined, gh)).closed, [3404, 3355]);
   assert.match(calls.find(c => c.startsWith("issue close 3404")), /Remaining work is tracked in #3417/);
 });
