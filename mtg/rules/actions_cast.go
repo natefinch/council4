@@ -444,6 +444,15 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 		if len(castPermissionsForZone(g, playerID, cardID, sourceZone, game.FaceFront)) == 0 {
 			return false
 		}
+	case zone.Library:
+		// CR 702.140a, 118.9a: a permission to cast the top card of the library
+		// (Future Sight) allows its mutate alternative cost. The mutate-mode
+		// routes below leave out a permission that replaces the mana cost with
+		// another cost (Bolas's Citadel's life payment), which can't be combined
+		// with mutate.
+		if !canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, game.FaceFront, false) {
+			return false
+		}
 	default:
 		return false
 	}

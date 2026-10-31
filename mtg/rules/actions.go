@@ -247,7 +247,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			}
 			for _, face := range legalCastFacesForZone(g, playerID, card, sourceZone) {
 				spellDef := cardFaceOrDefault(card, face)
-				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile || sourceZone == zone.Graveyard) {
+				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile || sourceZone == zone.Graveyard || sourceZone == zone.Library) {
 					if _, ok := spellDef.MutateCost(); ok {
 						for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
 							if canCastMutateSpell(g, playerID, cardID, sourceZone, target.ObjectID) {
