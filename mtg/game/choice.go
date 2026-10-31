@@ -145,6 +145,13 @@ type ChoiceOption struct {
 	// empty for non-targeting options.
 	Targets []Target
 
+	// SourcePermanent is the object ID of the battlefield permanent whose
+	// permission this option uses, when options differ by source rather than by
+	// what they select: which of two same-named permanents' once-each-turn
+	// permissions a cast from exile or a land play spends. It is zero when the
+	// option uses no permanent's permission.
+	SourcePermanent id.ID
+
 	// Attack and Block identify a proposed declaration, not a rules target.
 	Attack opt.V[AttackDeclaration]
 	Block  opt.V[BlockDeclaration]
