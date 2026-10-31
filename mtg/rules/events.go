@@ -19,14 +19,22 @@ func emitEvent(g *game.Game, event game.Event) {
 // emitEnteredBattlefieldEvent emits one battlefield-entry event of a
 // simultaneous batch. simultaneous holds the batch's later entry events, which
 // have already happened but are not yet recorded, so the entering permanent's
-// snapshot sees every simultaneous entry (CR 603.6a, 603.10).
+// snapshot and live trigger capture see every simultaneous entry (CR 603.6a,
+// 603.10).
 func emitEnteredBattlefieldEvent(g *game.Game, event game.Event, simultaneous []game.Event) {
-	captureEnteredPermanentSnapshot(g, &event, simultaneous)
-	emitEvent(g, event)
+	emitPreparedEvent(g, prepareEventWithSimultaneousEntries(g, event, simultaneous))
 }
 
 func prepareEvent(g *game.Game, event game.Event) game.Event {
-	captureEnteredPermanentSnapshot(g, &event, nil)
+	return prepareEventWithSimultaneousEntries(g, event, nil)
+}
+
+// prepareEventWithSimultaneousEntries completes an event before it is recorded.
+// simultaneous holds later battlefield-entry events of the same batch that have
+// happened but are not yet recorded; it is nil for an event outside such a
+// batch.
+func prepareEventWithSimultaneousEntries(g *game.Game, event game.Event, simultaneous []game.Event) game.Event {
+	captureEnteredPermanentSnapshot(g, &event, simultaneous)
 	populateEventPermanentCharacteristics(g, &event)
 	if (event.Kind == game.EventLifeGained || event.Kind == game.EventLifeLost) && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, event.Kind, event.Player)
@@ -60,6 +68,10 @@ func prepareEvent(g *game.Game, event game.Event) game.Event {
 	}
 	if event.Kind == game.EventCycled && event.PlayerEventOrdinalThisTurn == 0 {
 		event.PlayerEventOrdinalThisTurn = nextPlayerEventOrdinalThisTurn(g, game.EventCycled, event.Player)
+	}
+	previous, installed := installPendingEntryEvents(g, event, simultaneous)
+	if installed {
+		defer g.SetPendingEntryEvents(previous)
 	}
 	event.TriggeredAbilities = append(event.TriggeredAbilities, captureLibraryGraveyardSourceTriggers(g, event)...)
 	if event.ControlledTriggerDoublers == nil && eventPermanentEnteredOrLeft(&event) {
@@ -110,10 +122,10 @@ func populateEventPermanentCharacteristics(g *game.Game, event *game.Event) {
 // includes the entry itself and any simultaneous entries, so they are visible to
 // current-turn history conditions while the characteristics are computed: a
 // Celebration permanent entering as the second nonland permanent sees itself.
-// It runs before battlefield triggers are captured, so live enter triggers and
-// later entry-history checks read the same values. The snapshot holds only
-// characteristics; counters, status and attachments remain live or last-known
-// reads.
+// It runs before battlefield triggers are captured, and capture sees the same
+// pending entries, so live enter triggers and later entry-history checks read
+// the same values. The snapshot holds only characteristics; counters, status
+// and attachments remain live or last-known reads.
 func captureEnteredPermanentSnapshot(g *game.Game, event *game.Event, simultaneous []game.Event) {
 	if event.Kind != game.EventPermanentEnteredBattlefield || event.EnteredPermanent != nil || event.PermanentID == 0 {
 		return
@@ -122,11 +134,7 @@ func captureEnteredPermanentSnapshot(g *game.Game, event *game.Event, simultaneo
 	if !ok {
 		return
 	}
-	pending := make([]game.Event, 0, len(g.PendingEntryEvents())+1+len(simultaneous))
-	pending = append(pending, g.PendingEntryEvents()...)
-	pending = append(pending, *event)
-	pending = append(pending, simultaneous...)
-	previous := g.SetPendingEntryEvents(pending)
+	previous, _ := installPendingEntryEvents(g, *event, simultaneous)
 	values := effectivePermanentValues(g, permanent)
 	manaValue, manaValueOK := effectivePermanentManaValue(g, permanent)
 	controller := effectiveController(g, permanent)
@@ -154,6 +162,27 @@ func captureEnteredPermanentSnapshot(g *game.Game, event *game.Event, simultaneo
 		Keywords:       effectiveKeywords(values),
 		ZoneOrderIndex: -1,
 	}
+}
+
+// installPendingEntryEvents adds a battlefield-entry event and the later
+// simultaneous entries of its batch to the pending-entry overlay while the
+// event is prepared, and returns the previous overlay for the caller to
+// restore. The event has happened but is not yet recorded, so this-turn
+// history must include it, and every simultaneous entry, exactly once both
+// when the entering permanent is snapshotted and when triggers are captured:
+// trigger events and intervening-if conditions see the game immediately after
+// the event (CR 603.4, 603.6a, 603.10). Restore before the event is recorded.
+// installed is false, and nothing changes, for any other event.
+func installPendingEntryEvents(g *game.Game, event game.Event, simultaneous []game.Event) (previous []game.Event, installed bool) {
+	if event.Kind != game.EventPermanentEnteredBattlefield {
+		return nil, false
+	}
+	current := g.PendingEntryEvents()
+	pending := make([]game.Event, 0, len(current)+1+len(simultaneous))
+	pending = append(pending, current...)
+	pending = append(pending, event)
+	pending = append(pending, simultaneous...)
+	return g.SetPendingEntryEvents(pending), true
 }
 
 func fillEventPermanentCharacteristics(event *game.Event, cardTypes []types.Card, supertypes []types.Super, subtypes []types.Sub) {
