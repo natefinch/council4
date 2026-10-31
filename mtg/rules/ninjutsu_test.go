@@ -1,11 +1,13 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -215,4 +217,106 @@ func permanentWithCardID(g *game.Game, cardID game.ObjectID) *game.Permanent {
 		}
 	}
 	return nil
+}
+
+// Source review: Okiba-Gang Shinobi (Oracle: "Ninjutsu {3}{B} ({3}{B}, Return
+// an unblocked attacker you control to hand: Put this card onto the
+// battlefield from your hand tapped and attacking.) Whenever this creature
+// deals combat damage to a player, that player discards two cards."; its one
+// ruling covers only the discard). CR 702.49a/702.49c (the returned
+// unblocked attacker is a cost; the Ninja attacks what it attacked), CR
+// 708.2a (a face-down permanent has no name, color or mana cost), CR 708.5
+// (only its controller may look at it) and CR 708.6 (face-down permanents
+// must remain distinguishable). Engine gap #3423.
+
+// TestNinjutsuChoiceDistinguishesFaceDownAttackers activates registered
+// Okiba-Gang Shinobi's ninjutsu while its controller attacks with a face-down
+// Exalted Angel (morph) and a face-down Grizzly Bears (manifest). The payment
+// choice and its logged copy identify each attacker by object ID, public
+// face-down card info and a permanent reference without revealing either
+// card, and the chosen Grizzly Bears is the attacker returned to hand.
+func TestNinjutsuChoiceDistinguishesFaceDownAttackers(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	ninjaID := addCardToHand(g, game.Player1, registryCardDef(t, "Okiba-Gang Shinobi"))
+	angel := addFaceDownPermanent(g, game.Player1, registryCardDef(t, "Exalted Angel"), game.FaceDownMorph)
+	bears := addFaceDownPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears"), game.FaceDownManifest)
+	angelTarget := game.AttackTarget{Player: game.Player2}
+	bearsTarget := game.AttackTarget{Player: game.Player3}
+	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{
+		{Attacker: angel.ObjectID, Target: angelTarget},
+		{Attacker: bears.ObjectID, Target: bearsTarget},
+	}}
+	g.Turn.Phase = game.PhaseCombat
+	g.Turn.Step = game.StepDeclareBlockers
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.PriorityPlayer = game.Player1
+	g.Players[game.Player1].ManaPool.Add(mana.B, 1)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 3)
+	activate := action.ActivateAbility(ninjaID, 0, nil, 0)
+	if !actionsContain(engine.legalActions(g, game.Player1), activate) {
+		t.Fatal("Okiba-Gang Shinobi ninjutsu is not a legal action")
+	}
+
+	recorder := &faceDownChoiceRecorder{selections: [][]int{{1}}}
+	agents := simPassPolicies()
+	agents[game.Player1] = recorder
+	log := &TurnLog{}
+	if !engine.applyActionWithChoices(g, game.Player1, activate, agents, log) {
+		t.Fatal("Okiba-Gang Shinobi ninjutsu activation failed")
+	}
+
+	const prompt = "Choose an unblocked attacker to return"
+	var requests []game.ChoiceRequest
+	for _, request := range recorder.requests {
+		if request.Prompt == prompt {
+			requests = append(requests, request)
+		}
+	}
+	var logged []game.ChoiceRequest
+	for _, choice := range log.Choices {
+		if choice.Request.Prompt == prompt {
+			logged = append(logged, choice.Request)
+		}
+	}
+	if len(requests) != 1 || len(logged) != 1 {
+		t.Fatalf("ninjutsu requests/logged = %d/%d, want one attacker choice", len(requests), len(logged))
+	}
+	attackers := []*game.Permanent{angel, bears}
+	for _, request := range []game.ChoiceRequest{requests[0], logged[0]} {
+		if request.Kind != game.ChoicePayment || request.Player != game.Player1 || len(request.Options) != 2 {
+			t.Fatalf("request = %+v, want the controller's two-way ninjutsu payment choice", request)
+		}
+		for _, hidden := range []string{"Exalted Angel", "Grizzly Bears"} {
+			assertFaceDownChoicePublic(t, request, hidden, attackers, nil)
+		}
+		for i, attacker := range attackers {
+			option := request.Options[i]
+			if option.Card.Val.CardID != attacker.CardInstanceID ||
+				!slices.Equal(option.Targets, []game.Target{game.PermanentTarget(attacker.ObjectID)}) {
+				t.Fatalf("option %d = %+v, want face-down attacker %d", i, option, attacker.ObjectID)
+			}
+		}
+	}
+
+	hand := g.Players[game.Player1].Hand
+	if !hand.Contains(bears.CardInstanceID) || hand.Contains(angel.CardInstanceID) {
+		t.Fatal("ninjutsu did not return the chosen face-down Grizzly Bears")
+	}
+	if _, ok := permanentByObjectID(g, angel.ObjectID); !ok || !angel.FaceDown {
+		t.Fatal("unchosen face-down Exalted Angel left the battlefield or turned face up")
+	}
+	if len(g.Combat.Attackers) != 1 || g.Combat.Attackers[0].Attacker != angel.ObjectID {
+		t.Fatalf("attackers after ninjutsu cost = %+v, want only the face-down Exalted Angel", g.Combat.Attackers)
+	}
+
+	engine.resolveTopOfStackWithChoices(g, agents, log)
+
+	ninja := permanentWithCardID(g, ninjaID)
+	if ninja == nil || !ninja.Tapped {
+		t.Fatalf("Okiba-Gang Shinobi = %+v, want it on the battlefield tapped", ninja)
+	}
+	if target, ok := attackTargetForAttacker(g, ninja.ObjectID); !ok || target != bearsTarget {
+		t.Fatalf("Okiba-Gang Shinobi attack target = %+v/%v, want returned Grizzly Bears' target %+v", target, ok, bearsTarget)
+	}
 }
