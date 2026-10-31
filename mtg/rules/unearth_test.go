@@ -3,10 +3,12 @@ package rules
 import (
 	"testing"
 
+	cardregistry "github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -309,8 +311,8 @@ func TestUnearthDoesNothingWhenCardLeftGraveyard(t *testing.T) {
 	if len(g.ReplacementEffects) != 0 {
 		t.Fatalf("replacements = %d, want 0", len(g.ReplacementEffects))
 	}
-	if len(g.DelayedTriggers) != 0 && g.DelayedTriggers[0].CapturedObjectID != 0 {
-		t.Fatalf("end-step trigger captured %v, want nothing", g.DelayedTriggers[0].CapturedObjectID)
+	if len(g.DelayedTriggers) != 0 {
+		t.Fatalf("delayed triggers = %d, want 0 when unearth returned nothing", len(g.DelayedTriggers))
 	}
 	if hasKeyword(g, other, game.Haste) {
 		t.Fatal("unrelated object gained haste")
@@ -399,4 +401,128 @@ func addCardToBattlefieldFromGraveyard(t *testing.T, engine *Engine, g *game.Gam
 		t.Fatal("card was not returned to the battlefield")
 	}
 	return permanent
+}
+
+// Source review: Scrapwork Cohort (oracle 149694e6-5cf0-4983-9546-a4bd579b2ade)
+// "Unearth {2}{W}". CR 702.84a (September 25, 2026) defines unearth as "Return
+// this card from your graveyard to the battlefield. It gains haste. Exile it at
+// the beginning of the next end step. If it would leave the battlefield, exile
+// it instead ..."; CR 603.7a: a delayed triggered ability exists only once it
+// is created during resolution. Ruling 2022-10-14: "If you activate a card's
+// unearth ability but that card is removed from your graveyard before the
+// ability resolves, that unearth ability will do nothing as it resolves."
+
+func scrapworkCohortUnearthGame(t *testing.T) (*game.Game, *Engine, id.ID) {
+	t.Helper()
+	registry := cardregistry.NewDefaultRegistry()
+	def, err := registry.LookupChecked("Scrapwork Cohort")
+	if err != nil || def == nil {
+		t.Fatalf("Scrapwork Cohort lookup = %v, %v", def, err)
+	}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngineWithPrograms(nil, registry.Programs())
+	cardID := addCardToGraveyard(g, game.Player1, def)
+	g.Turn.ActivePlayer = game.Player1
+	g.Turn.Phase = game.PhasePrecombatMain
+	g.Turn.Step = game.StepNone
+	g.Turn.PriorityPlayer = game.Player1
+	g.Players[game.Player1].ManaPool.Add(mana.C, 2)
+	g.Players[game.Player1].ManaPool.Add(mana.W, 1)
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(cardID, 0, nil, 0)) {
+		t.Fatal("Scrapwork Cohort unearth activation failed")
+	}
+	return g, engine, cardID
+}
+
+// resolveUnearthAndTriggers resolves the unearth ability and any abilities it
+// triggers, returning how many triggered abilities were put on the stack.
+func resolveUnearthAndTriggers(engine *Engine, g *game.Game) int {
+	agents := [game.NumPlayers]PlayerAgent{}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	return drainUnearthTriggers(engine, g)
+}
+
+func drainUnearthTriggers(engine *Engine, g *game.Game) int {
+	agents := [game.NumPlayers]PlayerAgent{}
+	engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
+	triggered := g.Stack.Size()
+	for g.Stack.Size() > 0 {
+		engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+		before := g.Stack.Size()
+		engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
+		triggered += g.Stack.Size() - before
+	}
+	return triggered
+}
+
+func runUnearthEndStep(engine *Engine, g *game.Game) int {
+	g.Turn.Phase = game.PhaseEnding
+	g.Turn.Step = game.StepEnd
+	emitBeginningOfStepEvent(g, game.StepEnd)
+	return drainUnearthTriggers(engine, g)
+}
+
+// Exiling Scrapwork Cohort from the graveyard in response makes unearth do
+// nothing: no delayed end-step trigger is created and none goes on the stack at
+// the next end step (issue #3426).
+func TestScrapworkCohortUnearthDoesNothingAfterCardLeftGraveyard(t *testing.T) {
+	t.Parallel()
+	g, engine, cardID := scrapworkCohortUnearthGame(t)
+	if !moveCardBetweenZones(g, game.Player1, cardID, zone.Graveyard, zone.Exile) {
+		t.Fatal("exiling Scrapwork Cohort from the graveyard failed")
+	}
+
+	if triggered := resolveUnearthAndTriggers(engine, g); triggered != 0 {
+		t.Fatalf("unearth resolution triggered %d abilities, want 0", triggered)
+	}
+	if permanentForCard(g, cardID) != nil {
+		t.Fatal("Scrapwork Cohort returned from exile")
+	}
+	if len(g.DelayedTriggers) != 0 {
+		t.Fatalf("delayed triggers = %d, want 0", len(g.DelayedTriggers))
+	}
+	if len(g.ReplacementEffects) != 0 {
+		t.Fatalf("replacements = %d, want 0", len(g.ReplacementEffects))
+	}
+	if triggered := runUnearthEndStep(engine, g); triggered != 0 {
+		t.Fatalf("end step put %d abilities on the stack, want 0", triggered)
+	}
+	if !g.Players[game.Player1].Exile.Contains(cardID) {
+		t.Fatal("Scrapwork Cohort left exile")
+	}
+}
+
+// A successful Scrapwork Cohort unearth still schedules the end-step exile of
+// exactly the returned object, which the next end step exiles.
+func TestScrapworkCohortUnearthExilesReturnedObjectAtEndStep(t *testing.T) {
+	t.Parallel()
+	g, engine, cardID := scrapworkCohortUnearthGame(t)
+
+	if triggered := resolveUnearthAndTriggers(engine, g); triggered != 1 {
+		t.Fatalf("unearth resolution triggered %d abilities, want the enters trigger", triggered)
+	}
+
+	permanent := permanentForCard(g, cardID)
+	if permanent == nil {
+		t.Fatal("Scrapwork Cohort did not return to the battlefield")
+	}
+	if len(g.Battlefield) != 2 {
+		t.Fatalf("battlefield size = %d, want Scrapwork Cohort and its Soldier token", len(g.Battlefield))
+	}
+	if !hasKeyword(g, permanent, game.Haste) {
+		t.Fatal("unearthed Scrapwork Cohort lacks haste")
+	}
+	if len(g.DelayedTriggers) != 1 || g.DelayedTriggers[0].CapturedObjectID != permanent.ObjectID {
+		t.Fatalf("delayed triggers = %+v, want one capturing %v", g.DelayedTriggers, permanent.ObjectID)
+	}
+	if len(g.ReplacementEffects) != 1 || g.ReplacementEffects[0].AffectedObjectID != permanent.ObjectID {
+		t.Fatalf("replacements = %+v, want one bound to %v", g.ReplacementEffects, permanent.ObjectID)
+	}
+	if triggered := runUnearthEndStep(engine, g); triggered != 1 {
+		t.Fatalf("end step put %d abilities on the stack, want the unearth exile trigger", triggered)
+	}
+	assertExiledNotElsewhere(t, g, cardID)
+	if len(g.DelayedTriggers) != 0 {
+		t.Fatalf("delayed triggers = %d after the end step, want 0", len(g.DelayedTriggers))
+	}
 }

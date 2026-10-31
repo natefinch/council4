@@ -1743,10 +1743,14 @@ func ScavengeActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 // there, schedules a delayed end-step trigger that exiles it, and binds a
 // leave-the-battlefield exile replacement (CR 614.1a) to that returned object.
 // Both exile clauses follow only the permanent this resolution returned
-// (CR 400.7): if the card already left the graveyard the ability does nothing,
-// and the replacement does not follow the card to a later incarnation.
+// (CR 400.7) and are gated on the return actually happening: if the card
+// already left the graveyard the ability does nothing, creating neither the
+// delayed trigger nor the replacement (Scrapwork Cohort ruling), and the
+// replacement does not follow the card to a later incarnation.
 func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 	returned := LinkedKey("unearth-returned")
+	const returnResult ResultKey = "unearth-returned"
+	returnedGate := opt.Val(InstructionResultGate{Key: returnResult, Succeeded: TriTrue})
 	return ActivatedAbility{
 		Text:           "Unearth " + manaCost.String(),
 		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
@@ -1765,8 +1769,10 @@ func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 					PublishLinked: returned,
 				},
 				LocalProducts: LocalProducts{Links: []LinkedKey{returned}},
+				PublishResult: returnResult,
 			},
 			{
+				ResultGate: returnedGate,
 				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
 					Text:   "Exile it at the beginning of the next end step.",
 					Timing: DelayedAtBeginningOfNextEndStep,
@@ -1777,6 +1783,7 @@ func UnearthActivatedAbility(manaCost cost.Mana) ActivatedAbility {
 				}},
 			},
 			{
+				ResultGate: returnedGate,
 				Primitive: CreateReplacement{
 					Replacement: &ReplacementEffect{
 						Description:   "Unearth: exile it instead of putting it anywhere else",
