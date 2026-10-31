@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"maps"
 	"math"
 	"slices"
@@ -88,9 +89,10 @@ func (e *Engine) choosePlayLandRoute(g *game.Game, playerID game.PlayerID, route
 	if len(routes) == 1 || !routes[0].OncePerTurn {
 		return routes[0]
 	}
+	sources := permissionSources(g, routes)
 	options := make([]game.ChoiceOption, len(routes))
-	for i, route := range routes {
-		options[i] = game.ChoiceOption{Index: i, Label: "Play land " + castRouteSourceLabel(g, castRoute{permission: route}, i)}
+	for i, source := range sources {
+		options[i] = game.ChoiceOption{Index: i, Label: "Play land " + source.label, SourcePermanent: source.permanent}
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
@@ -1423,13 +1425,18 @@ func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []pa
 	}
 	selected := options[0]
 	if len(options) > 1 {
+		permissions := make([]game.RuleEffect, len(routes))
+		for i, route := range routes {
+			permissions[i] = castRoutePermission(route)
+		}
+		sources := permissionSources(g, permissions)
 		choiceOptions := make([]game.ChoiceOption, 0, len(options))
 		for i, option := range options {
 			label := option.option.Label
 			if labels[label] > 1 {
-				label += " (" + castRouteSourceLabel(g, routes[option.route], option.route) + ")"
+				label += " (" + sources[option.route].label + ")"
 			}
-			choiceOptions = append(choiceOptions, game.ChoiceOption{Index: i, Label: label})
+			choiceOptions = append(choiceOptions, game.ChoiceOption{Index: i, Label: label, SourcePermanent: sources[option.route].permanent})
 		}
 		chosen := e.chooseChoice(g, agents, game.ChoiceRequest{
 			Kind:             game.ChoicePayment,
@@ -1447,19 +1454,70 @@ func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []pa
 	return selected.route, e.paymentPreferencesForSpellOption(g, requests[selected.route], selected.option, agents, log)
 }
 
-// castRouteSourceLabel names the permission a route casts through, to tell
-// apart otherwise identical cost options offered by different permissions.
-func castRouteSourceLabel(g *game.Game, route castRoute, index int) string {
-	source := route.permission.SourceCardID
-	if source == 0 {
-		source = route.linkedFree.SourceCardID
+// castRoutePermission returns the permission a route casts through: its play
+// permission, or else its linked free-cast permission.
+func castRoutePermission(route castRoute) game.RuleEffect {
+	if route.permission.SourceCardID == 0 && route.permission.SourceObjectID == 0 {
+		return route.linkedFree
 	}
-	if source != 0 {
-		if card, ok := g.GetCardInstance(source); ok && card.Def != nil {
-			return "via " + card.Def.Name
+	return route.permission
+}
+
+// permissionSource is the player-visible identity of the source of one
+// permission offered in a cast-route or land-play choice.
+type permissionSource struct {
+	label     string
+	permanent id.ID
+}
+
+// permissionSources names the source of each permission, to tell apart
+// otherwise identical options different permissions offer (CR 601.2b). A
+// battlefield source is named by its public effective name; when two sources
+// share a name (two copies of a legendary permanent while the legend rule
+// doesn't apply, CR 704.5j, or a copy of one), each permanent's object ID
+// follows its name and a same-named source off the battlefield is numbered, so
+// every option names exactly the source whose use it spends. A permission with
+// no identifiable source is numbered.
+func permissionSources(g *game.Game, permissions []game.RuleEffect) []permissionSource {
+	sources := make([]permissionSource, len(permissions))
+	names := make([]string, len(permissions))
+	counts := map[string]int{}
+	for i := range permissions {
+		names[i], sources[i].permanent = permissionSourceName(g, permissions[i])
+		if names[i] != "" {
+			counts[names[i]]++
 		}
 	}
-	return "permission " + strconv.Itoa(index+1)
+	for i, name := range names {
+		switch {
+		case name == "":
+			sources[i].label = "permission " + strconv.Itoa(i+1)
+		case counts[name] == 1:
+			sources[i].label = "via " + name
+		case sources[i].permanent != 0:
+			sources[i].label = fmt.Sprintf("via %s [%d]", name, sources[i].permanent)
+		default:
+			sources[i].label = fmt.Sprintf("via %s (permission %d)", name, i+1)
+		}
+	}
+	return sources
+}
+
+// permissionSourceName returns the public name of a permission's source and,
+// when that source is still on the battlefield, its object ID. A departed or
+// non-permanent source is named by its card.
+func permissionSourceName(g *game.Game, permission game.RuleEffect) (string, id.ID) {
+	if permission.SourceObjectID != 0 {
+		if permanent, ok := permanentByObjectID(g, permission.SourceObjectID); ok {
+			return permanentChoiceLabel(g, permanent), permanent.ObjectID
+		}
+	}
+	if permission.SourceCardID != 0 {
+		if card, ok := g.GetCardInstance(permission.SourceCardID); ok && card.Def != nil {
+			return card.Def.Name, 0
+		}
+	}
+	return "", 0
 }
 
 // payLifeManaValueAlternativeCost is the alternative cost imposed when a spell is
