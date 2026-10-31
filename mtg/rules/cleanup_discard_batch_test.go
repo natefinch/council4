@@ -110,17 +110,22 @@ func TestRielleTheEverwiseCleanupDiscardDrawsThatMany(t *testing.T) {
 	}
 }
 
-// TestDiscardCardsFromTopIsOneSimultaneousBatch proves the non-choice "discard
-// N cards" route used for player-group discards batches one player's discards.
-func TestDiscardCardsFromTopIsOneSimultaneousBatch(t *testing.T) {
+// TestGroupDiscardIsOneSimultaneousBatchPerPlayer proves a player-group
+// "discards N cards" effect batches each affected player's discards: Player1's
+// two chosen discards share one nonzero batch, so Rielle triggers once and draws
+// two.
+func TestGroupDiscardIsOneSimultaneousBatchPerPlayer(t *testing.T) {
 	g, engine, _ := rielleCleanupScenario(t, 4)
+	addEffectSpellToStack(g, game.Player1, game.Discard{
+		Amount:      game.Fixed(2),
+		PlayerGroup: game.AllPlayersReference(),
+	}, nil)
 
-	if !discardCards(g, game.Player1, 2) {
-		t.Fatal("discardCards() = false, want true")
-	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
 	discards := cleanupDiscardEvents(g)
 	if len(discards) != 2 || discards[0].SimultaneousID == 0 || discards[0].SimultaneousID != discards[1].SimultaneousID {
-		t.Fatalf("discardCards produced %d discards, want two sharing one nonzero batch", len(discards))
+		t.Fatalf("group discard produced %d discards, want two sharing one nonzero batch", len(discards))
 	}
 	if !engine.putTriggeredAbilitiesOnStack(g) || g.Stack.Size() != 1 {
 		t.Fatalf("Rielle trigger count = %d, want 1", g.Stack.Size())

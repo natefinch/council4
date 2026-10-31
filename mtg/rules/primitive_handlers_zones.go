@@ -287,12 +287,13 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			if prim.AtRandom {
-				res.succeeded = len(discardCardsAtRandomFromHand(r.game, playerID, res.amount)) > 0 || res.succeeded
-			} else {
-				res.succeeded = discardCards(r.game, playerID, res.amount) || res.succeeded
-			}
+		players := playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup))
+		if !prim.AtRandom {
+			res.succeeded = r.discardGroupCardsWithChoices(players, res.amount)
+			return res
+		}
+		for _, playerID := range players {
+			res.succeeded = len(discardCardsAtRandomFromHand(r.game, playerID, res.amount)) > 0 || res.succeeded
 		}
 		return res
 	}
@@ -336,14 +337,59 @@ func handleDiscardEntireHand(r *effectResolver, prim game.Discard) effectResolve
 }
 
 func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount int, publishKey game.LinkedObjectKey) bool {
+	chosen := r.chooseCardsToDiscard(playerID, amount)
+	if len(chosen) == 0 {
+		return false
+	}
+	simultaneousID := r.game.IDGen.Next()
+	discarded := false
+	for _, cardID := range chosen {
+		if discardCardFromHandInBatch(r.game, playerID, cardID, simultaneousID) {
+			discarded = true
+			if publishKey != (game.LinkedObjectKey{}) {
+				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: cardID})
+			}
+		}
+	}
+	return discarded
+}
+
+// discardGroupCardsWithChoices resolves a non-random player-group discard
+// ("Each player discards a card."). Each affected player chooses the cards
+// from their own hand (CR 701.9b), in APNAP order, before any card is discarded;
+// then the chosen cards are discarded (CR 101.4). Each player's discards form one
+// batch. An amount of zero or less discards nothing.
+func (r *effectResolver) discardGroupCardsWithChoices(players []game.PlayerID, amount int) bool {
+	chosen := make([][]id.ID, len(players))
+	for i, playerID := range players {
+		chosen[i] = r.chooseCardsToDiscard(playerID, amount)
+	}
+	discarded := false
+	for i, playerID := range players {
+		if len(chosen[i]) == 0 {
+			continue
+		}
+		simultaneousID := r.game.IDGen.Next()
+		for _, cardID := range chosen[i] {
+			discarded = discardCardFromHandInBatch(r.game, playerID, cardID, simultaneousID) || discarded
+		}
+	}
+	return discarded
+}
+
+// chooseCardsToDiscard asks playerID to choose min(amount, hand size) cards from
+// their own hand to discard and returns the chosen cards without moving them.
+// The request is private: the chooser sees their hand, but the log must not
+// reveal undiscarded hand cards to other players.
+func (r *effectResolver) chooseCardsToDiscard(playerID game.PlayerID, amount int) []id.ID {
 	player, ok := playerByID(r.game, playerID)
 	if !ok {
-		return false
+		return nil
 	}
 	candidates := player.Hand.All()
 	amount = min(amount, len(candidates))
 	if amount <= 0 {
-		return false
+		return nil
 	}
 	options := make([]game.ChoiceOption, len(candidates))
 	for i, cardID := range candidates {
@@ -361,21 +407,16 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 		MinChoices:       amount,
 		MaxChoices:       amount,
 		DefaultSelection: firstChoiceIndices(amount),
+		Private:          true,
 	}, r.log)
-	simultaneousID := r.game.IDGen.Next()
-	discarded := false
+	chosen := make([]id.ID, 0, len(selected))
 	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
+		if idx < 0 || idx >= len(candidates) || slices.Contains(chosen, candidates[idx]) {
 			continue
 		}
-		if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
-			discarded = true
-			if publishKey != (game.LinkedObjectKey{}) {
-				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: candidates[idx]})
-			}
-		}
+		chosen = append(chosen, candidates[idx])
 	}
-	return discarded
+	return chosen
 }
 
 // discardCardsAtRandom discards up to amount cards chosen uniformly at random
