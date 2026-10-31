@@ -211,11 +211,11 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		}
 		return resolvedObjectReference{}, false
 	case game.ObjectReferenceSourceAttachedPermanent:
-		permanent, ok := r.sourcePermanent()
-		if !ok || !permanent.AttachedTo.Exists {
+		objectID, ok := r.sourceAttachedObjectID()
+		if !ok {
 			return resolvedObjectReference{}, false
 		}
-		return resolvePermanentOrLastKnown(r.g, permanent.AttachedTo.Val)
+		return resolvePermanentOrLastKnown(r.g, objectID)
 	case game.ObjectReferenceTargetAttachedPermanent:
 		objectID, ok := targetPermanentObjectID(r.g, r.obj, ref.TargetIndex())
 		if !ok {
@@ -669,6 +669,27 @@ func (r referenceResolver) sourcePermanent() (*game.Permanent, bool) {
 		return r.source, r.source != nil
 	}
 	return sourcePermanent(r.g, r.obj)
+}
+
+// sourceAttachedObjectID identifies the permanent the source is attached to.
+// A source that has left the battlefield uses the attachment it had as it last
+// existed there (CR 113.7a), so "enchanted creature" in an Aura's ability still
+// names the formerly enchanted permanent.
+func (r referenceResolver) sourceAttachedObjectID() (id.ID, bool) {
+	if permanent, ok := r.sourcePermanent(); ok {
+		return permanent.AttachedTo.Val, permanent.AttachedTo.Exists
+	}
+	if r.sourceFixed || r.obj == nil {
+		return 0, false
+	}
+	if _, onBattlefield := permanentByObjectID(r.g, r.obj.SourceID); onBattlefield {
+		return 0, false
+	}
+	snapshot, ok := lastKnownObject(r.g, r.obj.SourceID)
+	if !ok {
+		return 0, false
+	}
+	return snapshot.AttachedTo.Val, snapshot.AttachedTo.Exists
 }
 
 func (r referenceResolver) targetPlayer(targetIndex int) (game.PlayerID, bool) {
@@ -1196,11 +1217,7 @@ func (r referenceResolver) objectIdentityID(ref game.ObjectReference) (id.ID, bo
 		}
 		return 0, false
 	case game.ObjectReferenceSourceAttachedPermanent:
-		permanent, ok := r.sourcePermanent()
-		if !ok || !permanent.AttachedTo.Exists {
-			return 0, false
-		}
-		return permanent.AttachedTo.Val, true
+		return r.sourceAttachedObjectID()
 	case game.ObjectReferenceTargetAttachedPermanent:
 		objectID, ok := targetPermanentObjectID(r.g, r.obj, ref.TargetIndex())
 		if !ok {

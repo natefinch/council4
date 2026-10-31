@@ -730,6 +730,10 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 		permanent := entry.permanent
 		if entry.destination == zone.Battlefield && entry.attachedTo != nil {
 			attachPermanent(g, permanent, entry.attachedTo)
+		} else if entry.destination == zone.Battlefield && permanent.AttachedTo.Exists {
+			if host, found := permanentByObjectID(g, permanent.AttachedTo.Val); found && !permanentIDsContain(host.Attachments, permanent.ObjectID) {
+				host.Attachments = append(host.Attachments, permanent.ObjectID)
+			}
 		}
 		if lore := permanent.Counters.Get(counter.Lore); entry.destination == zone.Battlefield && lore > 0 {
 			emitCounterAddedEvent(g, permanent, effectiveController(g, permanent), counter.Lore, 0, lore)
@@ -759,6 +763,9 @@ func (e *Engine) enterPermanentSpellCopy(g *game.Game, obj *game.StackObject, sp
 	entry.spellCopyID = obj.ID
 	if obj.CopyOwner.Exists {
 		entry.permanent.Owner = obj.CopyOwner.Val
+	}
+	if entry.destination == zone.Battlefield {
+		attachEnteringAuraSpell(e, g, entry.permanent, resolvingAuraSpellTarget(g, obj, spellDef), agents, log)
 	}
 	created := commitTokenEntries(g, []preparedTokenEntry{entry}, 0)
 	if len(created) == 0 {

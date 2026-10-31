@@ -87,7 +87,7 @@ func newHowlOfTheHunt() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Untap{
-											Object: game.EventPermanentReference(),
+											Object: game.SourceAttachedPermanentReference(),
 										},
 									},
 								},
