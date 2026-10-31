@@ -59,9 +59,25 @@ func newDevouringTendrils() *game.CardDef {
 						},
 					},
 					{
-						Primitive: game.GainLife{
-							Amount: game.Fixed(2),
-							Player: game.ControllerReference(),
+						Primitive: game.CreateDelayedTrigger{
+							Trigger: game.DelayedTriggerDef{
+								EventPattern: opt.Val(game.TriggerPattern{
+									Event:               game.EventPermanentDied,
+									DyingObjectCaptured: true,
+								}),
+								Window:              game.DelayedWindowThisTurn,
+								CapturedDyingObject: opt.Val(game.TargetPermanentReference(1)),
+								Content: game.Mode{
+									Sequence: []game.Instruction{
+										{
+											Primitive: game.GainLife{
+												Amount: game.Fixed(2),
+												Player: game.ControllerReference(),
+											},
+										},
+									},
+								}.Ability(),
+							},
 						},
 					},
 				},
