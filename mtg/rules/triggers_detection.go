@@ -1326,11 +1326,11 @@ func evolveTriggerForEvent(g *game.Game, permanent *game.Permanent, controller g
 	if event.PermanentID == permanent.ObjectID {
 		return nil, false
 	}
-	entered, ok := permanentByObjectID(g, event.PermanentID)
-	if !ok || !permanentHasType(g, entered, types.Creature) {
+	if _, ok := permanentByObjectID(g, event.PermanentID); !ok {
 		return nil, false
 	}
-	if !evolveGreater(g, entered, permanent) {
+	trigger := game.TriggerCondition{InterveningIfEventPermanentEvolvesSource: true}
+	if !triggerInterveningIf(g, permanent, controller, &trigger, &event) {
 		return nil, false
 	}
 	instr := game.Instruction{Primitive: game.AddCounter{
@@ -1339,7 +1339,8 @@ func evolveTriggerForEvent(g *game.Game, permanent *game.Permanent, controller g
 		Amount:      game.Fixed(1),
 	}}
 	return &game.TriggeredAbility{
-		Text: "Evolve",
+		Text:    "Evolve",
+		Trigger: trigger,
 		Content: game.Mode{
 			Sequence: []game.Instruction{instr},
 		}.Ability(),
@@ -1347,18 +1348,62 @@ func evolveTriggerForEvent(g *game.Game, permanent *game.Permanent, controller g
 	}, true
 }
 
-// evolveGreater reports whether the entered creature has greater power or
-// greater toughness than the evolve creature (CR 702.100a). Toughness counts
-// only when both creatures have a defined toughness, so an undefined "*"
-// toughness never satisfies the comparison on that axis.
-func evolveGreater(g *game.Game, entered, evolve *game.Permanent) bool {
-	enteredValues := effectivePermanentValues(g, entered)
-	evolveValues := effectivePermanentValues(g, evolve)
-	if enteredValues.powerOK && evolveValues.powerOK && enteredValues.power > evolveValues.power {
+// evolveStats is the power and toughness one side of an evolve comparison
+// reads. A false OK flag marks an undefined value ("*" without a defining
+// ability), which never satisfies the comparison on that axis.
+type evolveStats struct {
+	power, toughness     int
+	powerOK, toughnessOK bool
+}
+
+// eventPermanentEvolvesSource is evolve's intervening "if" (CR 702.100a),
+// checked both when the entry triggers and again as the ability resolves (CR
+// 603.4). It compares power to power and toughness to toughness; either being
+// greater suffices. Both objects must currently be creatures (CR 702.100c). An
+// entered creature that has left the battlefield is compared using its last
+// known information; an evolve source that has left the battlefield cannot
+// receive the counter, so the ability does nothing.
+func eventPermanentEvolvesSource(g *game.Game, source *game.Permanent, event *game.Event) bool {
+	if source == nil || event == nil || event.PermanentID == 0 || event.PermanentID == source.ObjectID {
+		return false
+	}
+	if _, ok := permanentByObjectID(g, source.ObjectID); !ok || !permanentHasType(g, source, types.Creature) {
+		return false
+	}
+	entered, ok := evolveEnteredCreatureStats(g, event.PermanentID)
+	if !ok {
+		return false
+	}
+	values := effectivePermanentValues(g, source)
+	if entered.powerOK && values.powerOK && entered.power > values.power {
 		return true
 	}
-	return enteredValues.toughnessOK && evolveValues.toughnessOK &&
-		enteredValues.toughness > evolveValues.toughness
+	return entered.toughnessOK && values.toughnessOK && entered.toughness > values.toughness
+}
+
+// evolveEnteredCreatureStats returns the entered creature's current power and
+// toughness while it remains on the battlefield, otherwise its last known
+// battlefield values. It reports false when that object is not, or was not
+// last known as, a creature.
+func evolveEnteredCreatureStats(g *game.Game, objectID id.ID) (evolveStats, bool) {
+	if entered, ok := permanentByObjectID(g, objectID); ok {
+		if !permanentHasType(g, entered, types.Creature) {
+			return evolveStats{}, false
+		}
+		values := effectivePermanentValues(g, entered)
+		return evolveStats{
+			power: values.power, toughness: values.toughness,
+			powerOK: values.powerOK, toughnessOK: values.toughnessOK,
+		}, true
+	}
+	snapshot, ok := lastKnownObject(g, objectID)
+	if !ok || snapshot.FromZone != zone.Battlefield || !slices.Contains(snapshot.Types, types.Creature) {
+		return evolveStats{}, false
+	}
+	return evolveStats{
+		power: snapshot.Power.Val, toughness: snapshot.Toughness.Val,
+		powerOK: snapshot.Power.Exists, toughnessOK: snapshot.Toughness.Exists,
+	}, true
 }
 
 func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbility {

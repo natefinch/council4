@@ -965,6 +965,13 @@ type TriggerCondition struct {
 	// source object identity.
 	InterveningIfEventPermanentWasNotPutByThisAbilitySource bool
 
+	// InterveningIfEventPermanentEvolvesSource is evolve's intervening "if that
+	// creature's power is greater than this creature's power and/or that
+	// creature's toughness is greater than this creature's toughness" (CR
+	// 702.100a). Both objects must be creatures (CR 702.100c); the entered
+	// creature uses its last known information once it has left the battlefield.
+	InterveningIfEventPermanentEvolvesSource bool
+
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]

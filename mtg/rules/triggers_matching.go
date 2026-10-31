@@ -856,6 +856,9 @@ func triggerInterveningIfWithObject(g *game.Game, source *game.Permanent, contro
 		event.EnterPutByAbilitySource == source.ObjectID {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentEvolvesSource && !eventPermanentEvolvesSource(g, source, event) {
+		return false
+	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
 		source:     source,
