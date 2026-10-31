@@ -53,10 +53,10 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {
 	// Trigger patterns are checked when the triggering event is processed, and
 	// LTB/dies checks may need last-known information for the moved permanent
-	// (CR 603.2, CR 603.6c, CR 603.10). A nil source has no controller; that
-	// only reaches here for source-agnostic event-history conditions evaluated
-	// during a spell's resolution, where source-relative filters fail closed via
-	// the out-of-range controller sentinel below.
+	// (CR 603.2, CR 603.6c, CR 603.10). A nil source has no controller, so
+	// controller-relative filters fail closed via the out-of-range controller
+	// sentinel below. Event-history conditions bind "you" to the checked
+	// ability's controller through triggerMatchesEventForController instead.
 	sourceController := game.PlayerID(-1)
 	if source != nil {
 		sourceController = effectiveController(g, source)
