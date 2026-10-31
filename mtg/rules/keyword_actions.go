@@ -169,29 +169,6 @@ func effectStackObjectID(g *game.Game, obj *game.StackObject, targetIndex int) (
 	return target.StackObjectID, true
 }
 
-func discardCards(g *game.Game, playerID game.PlayerID, amount int) bool {
-	if amount <= 0 {
-		amount = 1
-	}
-	player, ok := playerByID(g, playerID)
-	if !ok {
-		return false
-	}
-	discarded := false
-	simultaneousID := g.IDGen.Next()
-	for range amount {
-		cardID, ok := player.Hand.Top()
-		if !ok {
-			return discarded
-		}
-		if !discardCardFromHandInBatch(g, playerID, cardID, simultaneousID) {
-			return discarded
-		}
-		discarded = true
-	}
-	return discarded
-}
-
 // discardEntireHand discards every card in a player's hand as one simultaneous
 // batch and returns the number of cards discarded.
 func discardEntireHand(g *game.Game, playerID game.PlayerID) int {
