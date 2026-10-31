@@ -173,33 +173,10 @@ func (*Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.A
 		}
 	}
 	for _, cardID := range player.Exile.All() {
-		if !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, zone.Exile) {
-			continue
-		}
-		card, ok := g.GetCardInstance(cardID)
-		if !ok {
-			continue
-		}
-		for _, face := range card.Def.FaceIndexes() {
-			if _, ok := landCardInstanceFaceFromZone(g, player, cardID, zone.Exile, face); ok {
-				actions = append(actions, actionBuild.playLandFromZone(cardID, zone.Exile, face))
-			}
-		}
+		actions = appendExileLandPlayActions(g, actions, player, cardID)
 	}
 	for _, cardID := range foreignExileCastableCards(g, playerID) {
-		if !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, zone.Exile) {
-			continue
-		}
-		card, ok := g.GetCardInstance(cardID)
-		if !ok {
-			continue
-		}
-		sourcePlayer := castSourcePlayer(g, player, cardID, zone.Exile)
-		for _, face := range card.Def.FaceIndexes() {
-			if _, ok := landCardInstanceFaceFromZone(g, sourcePlayer, cardID, zone.Exile, face); ok {
-				actions = append(actions, actionBuild.playLandFromZone(cardID, zone.Exile, face))
-			}
-		}
+		actions = appendExileLandPlayActions(g, actions, player, cardID)
 	}
 	for _, cardID := range player.Graveyard.All() {
 		if !canPlayLandFromZoneByRuleEffect(g, playerID, cardID, zone.Graveyard) {
@@ -222,6 +199,30 @@ func (*Engine) legalLandActions(g *game.Game, playerID game.PlayerID) []action.A
 					actions = append(actions, actionBuild.playLandFromZone(topID, zone.Library, face))
 				}
 			}
+		}
+	}
+	return actions
+}
+
+// appendExileLandPlayActions appends player's land plays of cardID from exile:
+// every land face a continuous play-from-zone permission covers, plus the
+// front face when player holds the card's CR 715.3d Adventure permission.
+func appendExileLandPlayActions(g *game.Game, actions []action.Action, player *game.Player, cardID id.ID) []action.Action {
+	byRuleEffect := canPlayLandFromZoneByRuleEffect(g, player.ID, cardID, zone.Exile)
+	if !byRuleEffect && !hasAdventureExilePermission(g, player.ID, cardID) {
+		return actions
+	}
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return actions
+	}
+	sourcePlayer := castSourcePlayer(g, player, cardID, zone.Exile)
+	for _, face := range card.Def.FaceIndexes() {
+		if !byRuleEffect && !adventureLandPlayPermitted(g, player.ID, cardID, zone.Exile, face) {
+			continue
+		}
+		if _, ok := landCardInstanceFaceFromZone(g, sourcePlayer, cardID, zone.Exile, face); ok {
+			actions = append(actions, actionBuild.playLandFromZone(cardID, zone.Exile, face))
 		}
 	}
 	return actions

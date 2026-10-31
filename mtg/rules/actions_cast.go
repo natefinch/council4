@@ -48,11 +48,14 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 	}
 	if sourceZone != zone.Hand {
 		routes := playLandFromZoneRoutes(g, playerID, cardID, sourceZone)
-		permission, ok = e.selectPermanentTypePlay(g, playerID, permission, sourceZone, cardFaceOrDefault(card, face), len(routes) > 0, agents, log)
+		adventure := adventureLandPlayPermitted(g, playerID, cardID, sourceZone, face)
+		permission, ok = e.selectPermanentTypePlay(g, playerID, permission, sourceZone, cardFaceOrDefault(card, face), adventure || len(routes) > 0, agents, log)
 		if !ok {
 			return false
 		}
-		if permission == (game.PlayPermission{}) {
+		// The Adventure permission is unlimited and a land play has no cost to
+		// differ, so it authorizes the play without spending any once-per-turn use.
+		if permission == (game.PlayPermission{}) && !adventure {
 			landPermission = e.choosePlayLandRoute(g, playerID, routes, agents, log)
 		}
 	} else if permission != (game.PlayPermission{}) {
@@ -1606,6 +1609,15 @@ func hasAdventureExilePermission(g *game.Game, playerID game.PlayerID, cardID id
 	}
 	owner, ok := playerByID(g, card.Owner)
 	return ok && owner.Exile.Contains(cardID)
+}
+
+// adventureLandPlayPermitted reports whether playerID's CR 715.3d Adventure
+// permission lets them play face of cardID from exile as a land. The permission
+// is to "play" the card, and outside the stack an adventurer card has only its
+// normal characteristics (CR 715.4), so only the front face qualifies; the
+// ordinary land-play timing and count rules still apply (CR 305.2, 305.3).
+func adventureLandPlayPermitted(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
+	return sourceZone == zone.Exile && face == game.FaceFront && hasAdventureExilePermission(g, playerID, cardID)
 }
 
 // castSourcePlayer returns the player whose zone physically holds the card being
