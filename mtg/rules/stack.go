@@ -670,10 +670,11 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		return counteredSpellResolution(g, obj, card)
 	}
 	if obj.FaceDown && !obj.Copy {
-		_, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy, agents, log)
+		permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy, agents, log)
 		if !ok {
 			return failedPermanentSpellEntry(g, card, "invalid face-down")
 		}
+		applySpellKeywordRiders(g, obj, permanent)
 		return "battlefield"
 	}
 
@@ -708,12 +709,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}
-	if ok && len(obj.GainsKeywordsUntilEndOfTurn) > 0 && permanentHasType(g, permanent, types.Creature) {
-		applyTypedContinuousEffects(g, obj, permanent, []game.ContinuousEffect{{
-			Layer:       game.LayerAbility,
-			AddKeywords: obj.GainsKeywordsUntilEndOfTurn,
-		}}, game.DurationUntilEndOfTurn)
-	}
+	applySpellKeywordRiders(g, obj, permanent)
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 		if _, reanimates := game.CardDefReanimationEnchant(spellDef); reanimates {
 			// A graveyard-reanimation Aura targets a creature card in a
@@ -735,6 +731,21 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		}
 	}
 	return "battlefield"
+}
+
+// applySpellKeywordRiders gives the creature a resolved spell became the
+// keywords that mana spent to cast the spell granted "until end of turn"
+// (Generator Servant, Arena of Glory: the spell "and resulting creature" gain
+// haste). It applies equally to a face-down spell, which is a 2/2 creature
+// spell (CR 702.37c, 702.168b) whose face-down cost is an alternative cost.
+func applySpellKeywordRiders(g *game.Game, obj *game.StackObject, permanent *game.Permanent) {
+	if len(obj.GainsKeywordsUntilEndOfTurn) == 0 || !permanentHasType(g, permanent, types.Creature) {
+		return
+	}
+	applyTypedContinuousEffects(g, obj, permanent, []game.ContinuousEffect{{
+		Layer:       game.LayerAbility,
+		AddKeywords: obj.GainsKeywordsUntilEndOfTurn,
+	}}, game.DurationUntilEndOfTurn)
 }
 
 // A replaced battlefield entry still resolves the spell (CR 608.3, 614.12).
