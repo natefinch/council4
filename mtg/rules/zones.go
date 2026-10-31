@@ -107,6 +107,10 @@ type permanentCreationOptions struct {
 	// battlefield with this ability" enter-trigger intervening-if (Kodama of the
 	// East Tree). It is zero for every entry that carries no origin ability.
 	PutByAbilitySource id.ID
+	// auraSpellTarget is a resolving Aura spell's target. The Aura enters
+	// attached to it when that is legal (CR 608.3c); otherwise it enters
+	// unattached for the resolving spell's CR 303.4i or 702.103f outcome.
+	auraSpellTarget opt.V[game.Target]
 }
 
 func (options permanentCreationOptions) entryContext(e *Engine, agents [game.NumPlayers]PlayerAgent, log *TurnLog) enterBattlefieldContext {
@@ -181,6 +185,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		amount := replacementPermanentCounterPlacementAmount(g, controller, permanent, placement.Kind, placement.Amount)
 		permanent.Counters.Add(placement.Kind, amount)
 	}
+	attachEnteringAuraSpell(e, g, permanent, options.auraSpellTarget, agents, log)
 	if !commitAuraEffectAttachment(g, permanent, options) {
 		return nil, false
 	}

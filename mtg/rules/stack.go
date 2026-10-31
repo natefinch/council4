@@ -687,6 +687,8 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		}
 		ok = true
 	} else {
+		options := permanentSpellEntryOptions(obj)
+		options.auraSpellTarget = resolvingAuraSpellTarget(g, obj, spellDef)
 		permanent, ok = createCardPermanentFaceWithOptions(
 			e,
 			g,
@@ -695,7 +697,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 			zone.Stack,
 			obj.Face,
 			nil,
-			permanentSpellEntryOptions(obj),
+			options,
 			agents,
 			log,
 		)
