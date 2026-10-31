@@ -156,9 +156,11 @@ func (e *Engine) resolveCascadeTriggeredAbility(g *game.Game, obj *game.StackObj
 
 // cascade performs the cascade process for playerID against a spell of
 // manaValue (CR 702.85a): exile cards from the top of the library until a
-// nonland card with lesser mana value is exiled, take any "as you cascade"
-// actions (CR 702.85b), offer to cast the hit without paying its mana cost if
-// the resulting spell's mana value is also less, then put every exiled card that
+// nonland card with lesser mana value is exiled, judged by the card's
+// characteristics in exile, so a split card's halves are combined (CR 709.4),
+// take any "as you cascade" actions (CR 702.85b), offer to cast the hit without
+// paying its mana cost if the resulting spell's mana value is also less (only
+// the chosen half of a split card), then put every exiled card that
 // wasn't cast or otherwise moved on the bottom in a random order as one batch.
 func (e *Engine) cascade(g *game.Game, obj *game.StackObject, playerID game.PlayerID, manaValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	player, ok := playerByID(g, playerID)
@@ -191,8 +193,7 @@ func (e *Engine) cascade(g *game.Game, obj *game.StackObject, playerID game.Play
 		if !ok {
 			continue
 		}
-		def := cardFaceOrDefault(card, game.FaceFront)
-		if destination == zone.Exile && !def.HasType(types.Land) && def.ManaValue() < manaValue {
+		if destination == zone.Exile && !graveyardCardHasType(g, card, types.Land) && offStackCardManaValue(card) < manaValue {
 			found = cardID
 			break
 		}
@@ -294,6 +295,10 @@ func (e *Engine) resolveDiscover(g *game.Game, obj *game.StackObject, manaValue 
 	return true
 }
 
+// exileUntilDiscoverHit exiles cards from the top of player's library until a
+// nonland card with mana value manaValue or less is exiled, judged by the
+// card's characteristics in exile, so a split card's halves are combined (CR
+// 701.57a, 709.4).
 func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.PlayerID, manaValue int) (revealed []game.ZoneCardSnapshot, found id.ID) {
 	for {
 		cardID, ok := player.Library.Top()
@@ -319,8 +324,7 @@ func exileUntilDiscoverHit(g *game.Game, player *game.Player, playerID game.Play
 		if !ok {
 			continue
 		}
-		def := cardFaceOrDefault(card, game.FaceFront)
-		if destination == zone.Exile && !def.HasType(types.Land) && def.ManaValue() <= manaValue {
+		if destination == zone.Exile && !graveyardCardHasType(g, card, types.Land) && offStackCardManaValue(card) <= manaValue {
 			found = cardID
 			break
 		}
