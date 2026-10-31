@@ -282,11 +282,15 @@ func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast acti
 	obj.ManaSpentToCast = totalManaSpent(result.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(result.PoolSpend)
 	// The event carries only the face-down characteristics (CR 708.2), changed
-	// by any type effects that apply to the controller's creature spells.
+	// by any type effects that apply to the controller's creature spells. The
+	// card is turned face down before it moves (CR 708.4), so both the zone
+	// change and the cast see that authoritative snapshot, never the hidden
+	// card's printed characteristics.
 	typeLine := stackSpellTypeLine(g, obj, faceDownStackSpellDef(obj))
 	emitSpellCastEventsWithTargets(g, obj, game.Event{
 		SourceID: cast.CardID, StackObjectID: obj.ID, CardID: cast.CardID, Controller: player,
-		Face: cast.Face, CardTypes: typeLine.types, CardSupertypes: typeLine.supertypes, CardSubtypes: typeLine.subtypes,
+		Face: cast.Face, FaceDown: true, CardCharacteristicsKnown: true,
+		CardTypes: typeLine.types, CardSupertypes: typeLine.supertypes, CardSubtypes: typeLine.subtypes,
 		Colors:                       nil, // Face-down spells are colorless (CR 708.2b).
 		ManaValue:                    opt.Val(0),
 		ManaSpentToCast:              opt.Val(obj.ManaSpentToCast),

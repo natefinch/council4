@@ -729,6 +729,10 @@ func triggerCardInstanceSelectionMatches(g *game.Game, viewer game.PlayerID, eve
 	if !ok || card.Def == nil {
 		return false
 	}
+	if event.FaceDown && event.CardCharacteristicsKnown {
+		subject := faceDownCastCardSubject(g, viewer, event, card, sourceObjectID)
+		return matchSelection(&subject, selection)
+	}
 	subject := selectionSubject{
 		kind:           subjectCard,
 		g:              g,
@@ -739,6 +743,34 @@ func triggerCardInstanceSelectionMatches(g *game.Game, viewer game.PlayerID, eve
 		sourceObjectID: sourceObjectID,
 	}
 	return matchSelection(&subject, selection)
+}
+
+// faceDownCastCardSubject is the card moved by a face-down cast. That card was
+// turned face down before it moved (CR 708.4), so it is still a card, but its
+// only characteristics are the face-down ones (CR 708.2): a colorless 2/2
+// creature card with no name or mana cost, plus ward {2} for disguise, whose
+// type line is the snapshot the cast recorded on the event. The hidden card's
+// printed characteristics, own type-changing effects and counters are not read.
+func faceDownCastCardSubject(g *game.Game, viewer game.PlayerID, event game.Event, card *game.CardInstance, sourceObjectID id.ID) selectionSubject {
+	def := faceDownCopyDef(&game.Permanent{})
+	if obj, ok := stackObjectByID(g, event.StackObjectID); ok && obj.FaceDown {
+		def = faceDownStackSpellDef(obj)
+	}
+	return selectionSubject{
+		kind:       subjectCard,
+		g:          g,
+		event:      event,
+		card:       &game.CardInstance{Def: def, Owner: card.Owner},
+		cardLineOK: true,
+		cardLine: spellTypeLine{
+			types:      event.CardTypes,
+			supertypes: event.CardSupertypes,
+			subtypes:   event.CardSubtypes,
+		},
+		controller:     event.Player,
+		viewer:         viewer,
+		sourceObjectID: sourceObjectID,
+	}
 }
 
 func eventStackObjectKindMatches(g *game.Game, event game.Event, kind game.StackObjectKind) bool {

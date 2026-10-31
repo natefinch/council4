@@ -365,7 +365,8 @@ type Event struct {
 	// matching must not backfill such a snapshot from the card's front face or
 	// from a prepared spell's originating permanent. It is set at every
 	// EventSpellCast and EventSpellCopied emission site that records the
-	// spell's characteristics.
+	// spell's characteristics, and on the zone change of a face-down cast,
+	// whose card is turned face down before it moves (CR 708.4).
 	CardCharacteristicsKnown bool
 
 	// ManaValue records the mana value of the spell as cast on the stack for
