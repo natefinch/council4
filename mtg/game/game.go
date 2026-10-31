@@ -349,7 +349,7 @@ type Game struct {
 	// recursing forever. It is transient engine-computation state — empty except
 	// while a computation is in progress — and is never deep copied (Clone starts
 	// empty), like staticFrame. See characteristic_computation.go.
-	computingCharacteristics map[id.ID]bool
+	computingCharacteristics map[id.ID]ContinuousLayer
 
 	// choiceCtx is a transient, rules-owned context (held as an opaque any to
 	// avoid an import cycle) used to prompt a player for a CR 616.1 replacement

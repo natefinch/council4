@@ -559,3 +559,95 @@ func TestEntryHistorySnapshotSeesSimultaneousEntries(t *testing.T) {
 		}
 	})
 }
+
+// creaturesAreLands adds a layer-4 effect making every creature a land in
+// addition to its other types, so an entering Guest is a land creature (CR
+// 613.1d, 205.1b).
+func creaturesAreLands(g *game.Game) {
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID: g.IDGen.Next(), Timestamp: game.Timestamp(g.IDGen.Next()), Layer: game.LayerType,
+		Group:    game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+		AddTypes: []types.Card{types.Land}, Duration: game.DurationPermanent,
+	})
+}
+
+// A Celebration creature's own pending entry is matched with the
+// characteristics it entered with, including layer-4 type changes already
+// applied before its layer-7c bonus (CR 603.10, 611.3c, 613.1). A land creature
+// is not a nonland permanent, so it does not count toward its own Celebration.
+func TestEntryHistorySnapshotSeesEntryTimeTypeChanges(t *testing.T) {
+	t.Parallel()
+	t.Run("single entry", func(t *testing.T) {
+		t.Parallel()
+		g, mentor := entryHistoryCelebrationGame(t)
+		creaturesAreLands(g)
+		enterEntryHistoryCard(t, g, game.Player1, entryHistoryArtifact())
+		guest := enterEntryHistoryCard(t, g, game.Player1, entryHistoryCelebrationGuest("Entry History Guest"))
+		if !permanentHasType(g, guest, types.Land) {
+			t.Fatal("Guest is not a land creature")
+		}
+		if got := entryHistoryEnteredPower(t, g, guest); got != 2 {
+			t.Fatalf("land-creature Guest entering after one artifact had entry power %d, want 2", got)
+		}
+		if !entryHistoryMentorTriggered(t, g, mentor, guest) {
+			t.Fatal("Mentor of the Meek did not trigger for a Guest that entered with power 2")
+		}
+		if got := effectivePermanentValues(g, guest).power; got != 2 {
+			t.Fatalf("land-creature Guest power = %d, want 2", got)
+		}
+		if !movePermanentToZone(g, guest, zone.Graveyard) {
+			t.Fatal("Guest did not leave the battlefield")
+		}
+		if !entryHistoryPowerEnteredThisTurn(g, mentor, 2) || entryHistoryPowerEnteredThisTurn(g, mentor, 3) {
+			t.Fatal("entry history did not record the departed Guest as a 2-power entry")
+		}
+	})
+	t.Run("simultaneous entries", func(t *testing.T) {
+		t.Parallel()
+		g, mentor := entryHistoryCelebrationGame(t)
+		creaturesAreLands(g)
+		enterEntryHistoryCard(t, g, game.Player1, entryHistoryArtifact())
+		guests, ok := createTokenPermanentsCollectingWithChoices(NewEngine(nil), g, game.Player1,
+			entryHistoryCelebrationGuest("Entry History Guest Token"), 2, false, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+		if !ok || len(guests) != 2 {
+			t.Fatalf("created %d Guest tokens, want 2", len(guests))
+		}
+		for i, guest := range guests {
+			if got := entryHistoryEnteredPower(t, g, guest); got != 2 {
+				t.Errorf("simultaneous land-creature Guest token %d had entry power %d, want 2", i, got)
+			}
+			if !entryHistoryMentorTriggered(t, g, mentor, guest) {
+				t.Errorf("Mentor of the Meek did not trigger for simultaneous Guest token %d", i)
+			}
+		}
+		if len(g.PendingEntryEvents()) != 0 {
+			t.Fatalf("pending entry overlay leaked after the batch: %d events", len(g.PendingEntryEvents()))
+		}
+	})
+	t.Run("type change on the other entrant", func(t *testing.T) {
+		t.Parallel()
+		g, mentor := entryHistoryCelebrationGame(t)
+		creaturesAreLands(g)
+		e := NewEngine(nil)
+		var entries []preparedCardPermanentEntry
+		for _, def := range []*game.CardDef{entryHistoryCelebrationGuest("Entry History Guest"), entryHistoryArtifact(), entryHistoryArtifact()} {
+			cardID := addCardToHand(g, game.Player1, def)
+			card := g.CardInstances[cardID]
+			g.Players[game.Player1].Hand.Remove(cardID)
+			entry, ok := prepareCardPermanentFaceForSimultaneousEntry(e, g, card, game.Player1, zone.Hand, game.FaceFront, nil,
+				permanentCreationOptions{SimultaneousID: g.IDGen.Next()}, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			if !ok {
+				t.Fatalf("%s was not prepared for simultaneous entry", def.Name)
+			}
+			entries = append(entries, entry)
+		}
+		commitSimultaneousCardPermanentEntries(g, entries)
+		guest := entries[0].permanent
+		if got := entryHistoryEnteredPower(t, g, guest); got != 3 {
+			t.Fatalf("land-creature Guest entering with two artifacts had entry power %d, want 3", got)
+		}
+		if entryHistoryMentorTriggered(t, g, mentor, guest) {
+			t.Fatal("Mentor of the Meek triggered for a Guest that entered with power 3")
+		}
+	})
+}

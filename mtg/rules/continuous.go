@@ -275,10 +275,12 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 // among creatures you control", a group that includes itself, or two such
 // creatures that measure each other. Computing the permanent then re-enters this
 // function for the same permanent; the game's characteristic-computation guard
-// detects that loop and breaks it by returning base (pre-layer) values, so a real
-// board state produces a finite answer instead of overflowing the stack (CR
-// 613.8c: a dependency loop is applied in timestamp order, i.e. without
-// re-entering).
+// detects that loop and breaks it by returning the values the layers already
+// applied have determined (base values before layer 1), so a real board state
+// produces a finite answer instead of overflowing the stack (CR 613.8b: a
+// dependency loop is applied in timestamp order, i.e. without re-entering). A
+// layer-7 condition that reads the permanent itself, such as a Celebration
+// creature's own pending entry, therefore sees its layer-4 type changes.
 func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
 	fc, owned := beginStaticSourceRead(g)
 	if owned {
@@ -291,7 +293,7 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 		}
 	}
 	if g.BeginCharacteristicComputation(permanent.ObjectID) {
-		return basePermanentValues(g, permanent)
+		return permanentValuesDeterminedSoFar(g, permanent)
 	}
 	defer g.EndCharacteristicComputation(permanent.ObjectID)
 
@@ -711,6 +713,7 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 	sources := staticAbilitySources(g)
 	counterEffect, hasCounterEffect := counterAndTemporaryEffect(permanent)
 	for _, layer := range continuousLayers {
+		g.SetCharacteristicComputationLayer(permanent.ObjectID, layer)
 		if layer == game.LayerType && values.keywords.has(game.Changeling) {
 			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
 		}
@@ -804,9 +807,19 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 	}
 	values := basePermanentValues(g, permanent)
 	sources := staticAbilitySources(g)
+	// While the permanent's own characteristics are in progress, a nested read
+	// of it sees only the layers this computation has applied, so each nested
+	// read stops at an earlier layer and the recursion terminates.
+	progress, inProgress := g.CharacteristicComputationLayer(permanent.ObjectID)
+	if inProgress {
+		defer g.SetCharacteristicComputationLayer(permanent.ObjectID, progress)
+	}
 	for _, layer := range continuousLayers {
 		if layer == stop {
 			break
+		}
+		if inProgress {
+			g.SetCharacteristicComputationLayer(permanent.ObjectID, layer)
 		}
 		if layer == game.LayerType && values.keywords.has(game.Changeling) {
 			values.subtypes = append([]types.Sub(nil), types.SubtypesForType(types.Creature)...)
@@ -836,6 +849,19 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		fc.beforeValues[key] = values
 	}
 	return values
+}
+
+// permanentValuesDeterminedSoFar returns the characteristics an in-progress
+// computation of the permanent has already determined: the values before the
+// layer it is applying, or its base values before any layer has begun. A
+// condition evaluated while applying a layer that reads the permanent itself
+// sees every earlier layer's effects (CR 613.1) rather than its printed values.
+func permanentValuesDeterminedSoFar(g *game.Game, permanent *game.Permanent) permanentEffectiveValues {
+	layer, _ := g.CharacteristicComputationLayer(permanent.ObjectID)
+	if layer == 0 {
+		return basePermanentValues(g, permanent)
+	}
+	return permanentValuesBeforeLayer(g, permanent, layer)
 }
 
 // continuousLayers is the order in which continuous effects are applied
