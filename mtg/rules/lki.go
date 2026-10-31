@@ -167,6 +167,46 @@ func lastKnownObject(g *game.Game, objectID id.ID) (game.ObjectSnapshot, bool) {
 	return snapshot, ok
 }
 
+// abilitySourceLastKnownPermanent returns the source permanent of an activated
+// or triggered ability on the stack: the live permanent while it remains the
+// same battlefield object, otherwise a read-only stand-in built from its
+// last-known information (CR 113.7a, 608.2h). The stand-in preserves the source
+// object's identity so source-relative checks ("another Human", "this
+// creature") keep naming the original object after it leaves; a card that
+// re-enters is a new object (CR 400.7) and does not match. It returns nil for
+// spells and for sources that never left the battlefield as a permanent.
+func abilitySourceLastKnownPermanent(g *game.Game, obj *game.StackObject) *game.Permanent {
+	if obj == nil || obj.SourceID == 0 ||
+		obj.Kind != game.StackActivatedAbility && obj.Kind != game.StackTriggeredAbility {
+		return nil
+	}
+	if permanent, ok := permanentByObjectID(g, obj.SourceID); ok {
+		return permanent
+	}
+	snapshot, ok := lastKnownObject(g, obj.SourceID)
+	if !ok || snapshot.FromZone != zone.Battlefield {
+		return nil
+	}
+	return &game.Permanent{
+		ObjectID:         snapshot.ObjectID,
+		CardInstanceID:   snapshot.CardID,
+		Owner:            snapshot.Owner,
+		Controller:       snapshot.Controller,
+		Face:             snapshot.Face,
+		FaceDown:         snapshot.FaceDown,
+		FaceDownFace:     snapshot.FaceDownFace,
+		FaceDownKind:     snapshot.FaceDownKind,
+		MergedCards:      append([]game.MergedCard(nil), snapshot.MergedCards...),
+		Token:            snapshot.TokenDef != nil || snapshot.CardID == 0,
+		TokenDef:         snapshot.TokenDef,
+		Counters:         cloneCounters(snapshot.Counters),
+		EntryChoices:     cloneChoiceResults(snapshot.EntryChoices),
+		Attachments:      append([]id.ID(nil), snapshot.Attachments...),
+		AttachedTo:       snapshot.AttachedTo,
+		AttachedToPlayer: snapshot.AttachedToPlayer,
+	}
+}
+
 func linkedObjectSourceKey(g *game.Game, obj *game.StackObject, linkID string) game.LinkedObjectKey {
 	if obj != nil {
 		if address, exists := obj.LocalLinkedProducts[game.LinkedKey(linkID)]; exists {

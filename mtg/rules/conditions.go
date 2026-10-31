@@ -1553,14 +1553,21 @@ func controllerCreatedTokenThisTurn(g *game.Game, controller game.PlayerID) bool
 
 // conditionEventHistorySatisfied returns true when the chosen turn's event
 // history contains at least hist.MinCount events matching hist.Pattern (at least
-// one when MinCount is zero). The source permanent is passed to
-// triggerMatchesEvent so controller-relative filters (TriggerControllerYou,
-// TriggerPlayerYou, etc.) resolve correctly. A nil source permanent fails closed
-// for any pattern that references the source (such filters can never match
-// without one); source-agnostic patterns, such as "a creature died this turn"
-// gating a resolving instant, evaluate against the event log directly.
+// one when MinCount is zero). Controller-relative filters (TriggerControllerYou,
+// TriggerPlayerYou, etc.) bind to ctx.controller, the controller of the ability
+// or spell being checked (CR 109.5, 113.8), not the source's current controller:
+// a triggered ability keeps its controller after its source changes control.
+// Source-relative filters ("another", "this creature") use the live source, or
+// the resolving ability's source as it last existed when that source has left
+// the battlefield (CR 113.7a). Without either, a source-relative pattern fails
+// closed; source-agnostic patterns, such as "a creature died this turn" gating a
+// resolving instant, evaluate against the event log directly.
 func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *game.EventHistoryCondition) bool {
-	if ctx.source == nil && eventHistoryPatternNeedsSource(&hist.Pattern) {
+	source := ctx.source
+	if source == nil {
+		source = abilitySourceLastKnownPermanent(g, ctx.obj)
+	}
+	if source == nil && eventHistoryPatternNeedsSource(&hist.Pattern) {
 		return false
 	}
 	var events eventWindow
@@ -1575,17 +1582,7 @@ func conditionEventHistorySatisfied(g *game.Game, ctx conditionContext, hist *ga
 	want := max(hist.MinCount, 1)
 	matches := 0
 	for i := range events {
-		var matched bool
-		if ctx.source != nil {
-			matched = triggerMatchesEvent(g, ctx.source, &hist.Pattern, events[i])
-		} else {
-			// A resolving instant has no source permanent, so controller-relative
-			// filters (TriggerControllerOpponent for "an opponent has cast ...",
-			// TriggerControllerYou/TriggerPlayerYou for "you've cast ...") resolve
-			// against the ability's controller instead.
-			matched = triggerMatchesEventForController(g, nil, ctx.controller, &hist.Pattern, events[i])
-		}
-		if matched {
+		if triggerMatchesEventForController(g, source, ctx.controller, &hist.Pattern, events[i]) {
 			matches++
 			if matches >= want {
 				return true
