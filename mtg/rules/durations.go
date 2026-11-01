@@ -211,14 +211,28 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 // definition that records the delayed ability's own wording uses it. Otherwise
 // the trigger carries the public text of the spell or ability whose resolution
 // created it, which contains the delayed trigger's wording ("{T}: Create a token
-// ... Exile that token at the beginning of the next end step."). No text is
-// captured from a face-down spell or from a face-down source's hidden card (CR
-// 708.2, 708.5), nor for a resolution context that is not a stack object, such
-// as a replacement program, whose creating text is unknown.
+// ... Exile that token at the beginning of the next end step."). An event-based
+// delayed trigger whose wording is a separate sentence of that text carries only
+// that sentence (delayedTriggerOwnText). No text is captured from a face-down
+// spell or from a face-down source's hidden card (CR 708.2, 708.5), nor for a
+// resolution context that is not a stack object, such as a replacement program,
+// whose creating text is unknown.
 func delayedTriggerText(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) string {
 	if def.Text != "" {
 		return def.Text
 	}
+	text := creatingObjectText(g, obj)
+	if def.EventPattern.Exists {
+		if own, ok := delayedTriggerOwnText(text); ok {
+			return own
+		}
+	}
+	return text
+}
+
+// creatingObjectText returns the public text of the spell or ability whose
+// resolution creates a delayed trigger.
+func creatingObjectText(g *game.Game, obj *game.StackObject) string {
 	if obj.ID == 0 {
 		return ""
 	}

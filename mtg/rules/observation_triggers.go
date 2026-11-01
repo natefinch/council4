@@ -143,25 +143,28 @@ func inlineAbilityBody(obj *game.StackObject) game.Ability {
 
 // printedAbilityText returns the rules text of the printed ability a stack
 // object represents. Definitions that omit per-ability text fall back to the
-// source face's full Oracle text, which contains that ability, as
-// activatedAbilityText does. An untexted inline ability gets that fallback only
-// when it is one of the source face's own printed abilities; a granted or
-// keyword ability without text has none, since the source's Oracle text does not
-// contain it. A copied ability already carries its original card's text
-// (fillCopiedAbilityText). Callers enforce face-down secrecy.
+// ability's own paragraph of the source face's Oracle text
+// (printedAbilityParagraphs), never to the face's other abilities; an ability
+// whose paragraph cannot be identified has no text. An untexted inline ability
+// gets that fallback only when it is one of the source face's own printed
+// abilities; a granted or keyword ability without text has none, since the
+// source's Oracle text does not contain it. A copied ability already carries its
+// original card's paragraph (fillCopiedAbilityText). Callers enforce face-down
+// secrecy.
 func printedAbilityText(g *game.Game, obj *game.StackObject, inline game.Ability) string {
 	def, ok := abilitySourceFaceView(g, obj)
 	if !ok || def == nil {
 		return ""
 	}
+	index := obj.AbilityIndex
 	if inline != nil {
-		if !faceHasAbilityBody(def, inline) {
+		if index, ok = faceAbilityIndex(def, inline); !ok {
 			return ""
 		}
-	} else if text := strings.TrimSpace(game.BodyText(def.BodyAt(obj.AbilityIndex))); text != "" {
+	} else if text := strings.TrimSpace(game.BodyText(def.BodyAt(index))); text != "" {
 		return text
 	}
-	return oracleRulesText(def.OracleText)
+	return printedAbilityParagraph(&def.CardFace, def.OracleText, index)
 }
 
 // abilitySourceFaceView returns the read-only printed face an ability on the
@@ -189,13 +192,15 @@ func abilitySourceFaceView(g *game.Game, obj *game.StackObject) (*game.CardDef, 
 	return nil, false
 }
 
-func faceHasAbilityBody(def *game.CardDef, body game.Ability) bool {
+// faceAbilityIndex returns the canonical index of body among the face's own
+// ability bodies, recognized by identity.
+func faceAbilityIndex(def *game.CardDef, body game.Ability) (int, bool) {
 	for i := range def.AbilityCount() {
 		if def.BodyAt(i) == body {
-			return true
+			return i, true
 		}
 	}
-	return false
+	return 0, false
 }
 
 // oracleRulesText returns Oracle text as its rules-text lines, without the
