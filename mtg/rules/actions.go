@@ -470,27 +470,49 @@ func (e *Engine) applyAction(g *game.Game, playerID game.PlayerID, act action.Ac
 }
 
 func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	outcome, _ := e.attemptActionWithChoices(g, playerID, act, agents, log, nil)
+	return outcome == actionApplied
+}
+
+// attemptActionWithChoices takes act for playerID and returns the action taken:
+// act, with a cast's targets as finally chosen (CR 601.2c). A cast the player
+// started but couldn't legally complete is reversed (CR 733.1) and recorded in
+// attempts, which may be nil.
+func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, action.Action) {
 	if synchronousSearchOrPayment(g) {
-		return false
+		return actionFailed, act
 	}
 	if player, ok := playerByID(g, playerID); !ok || player.Eliminated {
-		return false
+		return actionFailed, act
 	}
 	if err := act.Validate(); err != nil {
-		return false
+		return actionFailed, act
 	}
 	previous, _ := g.ChoiceContext()
 	e.setReplacementChoiceContext(g, agents, log)
 	defer g.SetChoiceContext(previous)
+	if act.Kind == action.ActionCastSpell {
+		cast, ok := act.CastSpellPayload()
+		if !ok {
+			return actionFailed, act
+		}
+		outcome, targets := e.attemptCastSpellWithChoices(g, playerID, cast, agents, log, attempts)
+		if outcome == actionApplied {
+			cast.Targets = targets
+			act = action.AnnounceSpell(cast)
+		}
+		return outcome, act
+	}
+	return outcomeOf(e.applyNonCastAction(g, playerID, act, agents, log)), act
+}
+
+func (e *Engine) applyNonCastAction(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	switch act.Kind {
 	case action.ActionPass:
 		return true
 	case action.ActionPlayLand:
 		playLand, ok := act.PlayLandPayload()
 		return ok && e.applyPlayLandFaceFromZoneWithChoices(g, playerID, playLand.CardID, playLand.SourceZone, playLand.Face, agents, log, playLand.Permission)
-	case action.ActionCastSpell:
-		cast, ok := act.CastSpellPayload()
-		return ok && e.applyCastSpellWithChoices(g, playerID, cast, agents, log)
 	case action.ActionActivateAbility:
 		activate, ok := act.ActivateAbilityPayload()
 		if !ok || !e.applyActivateAbilityWithChoices(g, playerID, activate, agents, log) {

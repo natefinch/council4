@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -64,11 +66,110 @@ func (e *Engine) proposeSpellCost(g *game.Game, request payment.SpellRequest, ta
 	proposal := spellCostProposal{optionIndex: payable[selected[0]].Summary.Index}
 	for _, option := range planner.SpellCostOptions(request) {
 		if option.Index == proposal.optionIndex {
-			proposal.phyrexian = e.announcePhyrexianPayments(g, request.PlayerID, option.ManaCost, agents, log)
+			proposal.phyrexian = e.announcePhyrexianPayments(g, request.PlayerID, option.ManaCost,
+				e.announcedSpellCostFeasibility(g, request, proposal.optionIndex, true), agents, log)
 			break
 		}
 	}
 	return proposal, true
+}
+
+// announcedSpellCostFeasibility returns a check of whether request's cost
+// option optionIndex can still be paid once the given Phyrexian payments are
+// announced; any other Phyrexian symbol may still be paid either way. With
+// manaWindow, paying after activating payment-time mana abilities counts too
+// (CR 601.2g). The check reports true when request doesn't offer that option,
+// so it never steers an announcement.
+func (e *Engine) announcedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, optionIndex int, manaWindow bool) func([]phyrexianAnnouncement) bool {
+	manual := manaWindow && e.hasManualPaymentManaAbility(g, request.PlayerID)
+	for _, prepared := range paymentOrch.planner(g).PrepareSpellCosts(request) {
+		if prepared.Summary.Index != optionIndex {
+			continue
+		}
+		return func(announcements []phyrexianAnnouncement) bool {
+			announced := matchPhyrexianAnnouncements(prepared.Summary.ManaCost, announcements)
+			_, feasible := preparedSpellCostFeasibility(g, request, prepared, manual, announced)
+			return feasible
+		}
+	}
+	return func([]phyrexianAnnouncement) bool { return true }
+}
+
+// proposableSpellOptions returns the cost options of request that are payable
+// with some choice of targets in targetChoices, or with request's own targets
+// when there are none. A cost proposed before the spell's targets are chosen
+// (CR 601.2b) can be one whose total is payable only once they are, such as
+// one reduced for targeting Elderwood Scion (CR 601.2f).
+func proposableSpellOptions(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target) []payment.SpellOptionSummary {
+	planner := paymentOrch.planner(g)
+	if len(targetChoices) == 0 {
+		return planner.PayableSpellOptions(request)
+	}
+	payable := map[int]bool{}
+	for _, variant := range targetCostVariants(request, targetChoices) {
+		for _, option := range planner.PayableSpellOptions(variant) {
+			payable[option.Index] = true
+		}
+	}
+	var options []payment.SpellOptionSummary
+	for _, option := range planner.SpellCostOptions(request) {
+		if payable[option.Index] {
+			options = append(options, option)
+		}
+	}
+	return options
+}
+
+// proposedSpellCostFeasibility is announcedSpellCostFeasibility for a cost
+// proposed before the spell's targets are chosen: the announcements are
+// feasible when the option can be paid with them for some choice of targets
+// in targetChoices.
+func (e *Engine) proposedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target, optionIndex int) func([]phyrexianAnnouncement) bool {
+	variants := targetCostVariants(request, targetChoices)
+	checks := make([]func([]phyrexianAnnouncement) bool, len(variants))
+	for i, variant := range variants {
+		checks[i] = e.announcedSpellCostFeasibility(g, variant, optionIndex, false)
+	}
+	return func(announcements []phyrexianAnnouncement) bool {
+		return slices.ContainsFunc(checks, func(check func([]phyrexianAnnouncement) bool) bool {
+			return check(announcements)
+		})
+	}
+}
+
+// payableTargetChoices returns the choices of targets in targetChoices with
+// which the cost proposed for request can still be paid with the Phyrexian
+// payments announced with it (CR 601.2b, 601.2f): a legal target such as an
+// opponent's Elderwood Scion can raise the total cost beyond what the caster
+// can pay, and choosing it would only make the cast illegal (CR 733.1). It
+// returns nil, leaving the choice unrestricted, when targetChoices may be a
+// sample rather than every legal choice, or when no choice is payable and the
+// cast will be reversed whatever targets are chosen.
+func (e *Engine) payableTargetChoices(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target, proposal spellCostProposal) [][]game.Target {
+	if len(targetChoices) >= maxSampledNumericTargetChoices {
+		return nil
+	}
+	var payable [][]game.Target
+	for _, variant := range targetCostVariants(request, targetChoices) {
+		if e.announcedSpellCostFeasibility(g, variant, proposal.optionIndex, false)(proposal.phyrexian) {
+			payable = append(payable, variant.Targets)
+		}
+	}
+	return payable
+}
+
+// targetCostVariants returns request once with each choice of targets in
+// targetChoices, or request itself when there are none.
+func targetCostVariants(request payment.SpellRequest, targetChoices [][]game.Target) []payment.SpellRequest {
+	if len(targetChoices) == 0 {
+		return []payment.SpellRequest{request}
+	}
+	variants := make([]payment.SpellRequest, len(targetChoices))
+	for i, targets := range targetChoices {
+		variants[i] = request
+		variants[i].Targets = targets
+	}
+	return variants
 }
 
 // lockSpellCostProposal locks the total cost of the proposed option once the
@@ -204,13 +305,53 @@ func (e *Engine) preparedSpellPaymentPreferences(g *game.Game, request payment.S
 	if manaCostIncludesManaPayment(summary.ManaCost, announced) {
 		undoMana = e.activateManualPaymentManaAbilities(g, request.PlayerID, agents, log)
 	}
+	return e.lockedSpellPaymentPreferences(g, request, summary, announced, agents, log), undoMana
+}
+
+// lockedSpellPaymentPreferences takes the caster's remaining payment choices
+// for the locked total cost summary. announced maps positions of its mana cost
+// to the payment announced for each Phyrexian symbol there, true for 2 life
+// (CR 601.2b); see phyrexianPaymentChoicesAfter.
+func (e *Engine) lockedSpellPaymentPreferences(g *game.Game, request payment.SpellRequest, summary payment.SpellOptionSummary, announced map[int]bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *payment.Preferences {
 	lifeChoices, manaOnly := e.phyrexianPaymentChoicesAfter(g, request.PlayerID, summary.ManaCost, announced, agents, log)
 	prefs := e.additionalCostPaymentPreferences(g, request.PlayerID, summary.AdditionalCosts, request.XValue,
 		request.CardID, request.SourceZone, agents, log)
 	prefs.PhyrexianLifeChoices = lifeChoices
 	prefs.PhyrexianManaOnly = manaOnly
 	prefs.AlternativeIndex = summary.Index
-	return prefs, undoMana
+	return prefs
+}
+
+// spellCostsIncludePhyrexian reports whether any cost option of any request
+// includes a Phyrexian symbol whose payment the caster announces (CR 601.2b).
+func spellCostsIncludePhyrexian(g *game.Game, requests []payment.SpellRequest) bool {
+	planner := paymentOrch.planner(g)
+	for _, request := range requests {
+		for _, option := range planner.SpellCostOptions(request) {
+			if option.ManaCost != nil && slices.ContainsFunc(*option.ManaCost, isPhyrexianSymbol) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// lockAnnouncedSpellCost locks the total cost of proposal's option for request
+// once the spell's targets and other choices are final (CR 601.2f) and takes
+// the remaining payment choices for it. The Phyrexian payments announced with
+// the proposal are binding (CR 601.2b, 601.2h). It fails when request no longer
+// offers the proposed option.
+func (e *Engine) lockAnnouncedSpellCost(g *game.Game, request payment.SpellRequest, proposal spellCostProposal, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.SpellRequest, bool) {
+	for _, prepared := range paymentOrch.planner(g).PrepareSpellCosts(request) {
+		if prepared.Summary.Index != proposal.optionIndex {
+			continue
+		}
+		request.PreparedCost = &prepared
+		announced := matchPhyrexianAnnouncements(prepared.Summary.ManaCost, proposal.phyrexian)
+		request.Prefs = e.lockedSpellPaymentPreferences(g, request, prepared.Summary, announced, agents, log)
+		return request, true
+	}
+	return request, false
 }
 
 // matchPhyrexianAnnouncements maps each announced Phyrexian symbol to its

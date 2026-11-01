@@ -45,6 +45,7 @@ import (
 // Phyrexian payment choices, target choices and mana ability windows.
 type phyrexianWindowAgent struct {
 	payLife         bool
+	payMana         bool
 	lifeAfterWindow bool
 	ability         string
 	steps           []string
@@ -84,6 +85,9 @@ func (a *phyrexianWindowAgent) ChooseChoice(_ PlayerObservation, request game.Ch
 		a.steps = append(a.steps, "phyrexian")
 		if a.payLife || a.lifeAfterWindow && slices.Contains(a.steps, "window") {
 			return pick("Pay 2 life")
+		}
+		if a.payMana {
+			return []int{0}
 		}
 	}
 	return request.DefaultSelection

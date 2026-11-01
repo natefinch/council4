@@ -183,6 +183,12 @@ type ChoiceRequest struct {
 	// valid answer. It must contain option indices valid for this request.
 	DefaultSelection []int
 
+	// Provisional reports that DefaultSelection is the deciding player's own
+	// earlier, provisional answer to this decision, such as the targets named
+	// by a cast action before its Phyrexian payments were announced (CR
+	// 601.2b-c). Strategies keep it unless they deliberately change it.
+	Provisional bool
+
 	// MaxTotalManaValue, when set, caps the combined mana value of the selected
 	// options. A selection is valid only when the sum of its options' card mana
 	// values does not exceed this cap. Options without card info contribute zero.

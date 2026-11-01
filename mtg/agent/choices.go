@@ -28,8 +28,12 @@ const (
 // the choices that carry card information (scry, surveil, and card- or
 // permanent-loss payments), and falls back to the BaselineStrategy for choices
 // that do not expose enough information to decide well (mode selection, trigger
-// ordering, and similar).
+// ordering, and similar). It keeps a provisional answer it already gave, such
+// as the targets of the cast action it chose.
 func (s GenericStrategy) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceRequest) []int {
+	if request.Provisional {
+		return slices.Clone(request.DefaultSelection)
+	}
 	switch request.Kind {
 	case game.ChoiceCombatDeclaration:
 		best, score := 0, math.Inf(-1)
