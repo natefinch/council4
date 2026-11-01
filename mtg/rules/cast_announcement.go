@@ -65,7 +65,7 @@ func (e *Engine) chooseCastTargets(g *game.Game, player game.PlayerID, def *game
 		return cast, true
 	}
 	var ok bool
-	cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, player, def, cast, agents, log)
+	cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, player, def, cast, nil, nil, agents, log)
 	return cast, ok
 }
 
@@ -78,11 +78,33 @@ func (e *Engine) chooseAnnouncementNumber(g *game.Game, player game.PlayerID, pr
 	return selected[0]
 }
 
-func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
-	specs := spellTargetSpecs(def, cast.ChosenModes, castBranchForCast(cast))
+// chooseAnnouncedSpellTargets asks the caster to choose cast's targets, spec by
+// spec (CR 601.2c). preferred holds the caster's provisional targets, such as
+// those named by its cast action before its Phyrexian payments were announced.
+// When they are still candidates, each choice defaults to the matching targets
+// of preferred, marked provisional so that the caster keeps them unless it
+// deliberately changes them; otherwise it defaults to the first legal
+// completion. When payable is non-nil, it holds the legal target choices with
+// which the cost already proposed for the spell can be paid (see
+// payableTargetChoices), and each spec offers only targets that extend the
+// targets chosen so far toward one of them, when any do.
+func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, preferred []game.Target, payable [][]game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	branch := castBranchForCast(cast)
+	specs := spellTargetSpecs(def, cast.ChosenModes, branch)
+	payableChoices, restricted := segmentTargetChoices(g, player, def, specs, payable)
+	var preferredCounts []int
+	if len(preferred) > 0 {
+		preferredCounts, _ = spellTargetCounts(g, player, def, cast.ChosenModes, preferred, branch)
+	}
 	var targets []game.Target
 	var counts []int
+	preferredOffset := 0
 	for index := range specs {
+		var preferredSpec []game.Target
+		if index < len(preferredCounts) {
+			preferredSpec = preferred[preferredOffset : preferredOffset+preferredCounts[index]]
+			preferredOffset += preferredCounts[index]
+		}
 		spec := normalizeTargetSpec(&specs[index])
 		if !targetSpecValid(&spec) {
 			return nil, false
@@ -104,6 +126,10 @@ func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID,
 		if spec.DistinctFromPriorTargets {
 			candidates = filterTargetsDistinctFrom(candidates, targets)
 		}
+		fallback := completions[0][len(targets) : len(targets)+completionCounts[0][index]]
+		if restricted {
+			candidates, fallback = payableTargetsForSpec(payableChoices, targets, counts, candidates, fallback)
+		}
 		options := make([][]game.Target, len(candidates))
 		for position, candidate := range candidates {
 			options[position] = []game.Target{candidate}
@@ -111,10 +137,11 @@ func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID,
 		request := targetChoiceRequest(player, "Choose spell targets.", options)
 		request.MinChoices, request.MaxChoices = spec.MinTargets, min(spec.MaxTargets, len(candidates))
 		request.Private = cast.SourceZone == zone.Hand || cast.SourceZone == zone.Library
-		request.DefaultSelection = nil
-		for _, target := range completions[0][len(targets) : len(targets)+completionCounts[0][index]] {
-			position := slices.IndexFunc(candidates, func(candidate game.Target) bool { return sameTargetObject(candidate, target) })
-			request.DefaultSelection = append(request.DefaultSelection, position)
+		request.DefaultSelection = targetPositions(candidates, preferredSpec)
+		request.Provisional = index < len(preferredCounts) && len(request.DefaultSelection) == len(preferredSpec) &&
+			len(preferredSpec) >= request.MinChoices && len(preferredSpec) <= request.MaxChoices
+		if !request.Provisional {
+			request.DefaultSelection = targetPositions(candidates, fallback)
 		}
 		selected := e.chooseChoice(g, agents, request, log)
 		for _, position := range selected {
@@ -124,4 +151,67 @@ func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID,
 	}
 	return targets, targetsValidForSpecs(g, player, def, 0, specs, targets) &&
 		targetsSatisfyManaValueXForSpecs(g, specs, counts, targets, cast.XValue)
+}
+
+// targetPositions returns the position in candidates of each of targets that
+// is a candidate.
+func targetPositions(candidates, targets []game.Target) []int {
+	var positions []int
+	for _, target := range targets {
+		position := slices.IndexFunc(candidates, func(candidate game.Target) bool { return sameTargetObject(candidate, target) })
+		if position >= 0 {
+			positions = append(positions, position)
+		}
+	}
+	return positions
+}
+
+// segmentedTargetChoice is a complete choice of targets for a spell together
+// with the number of them chosen for each of its target specs.
+type segmentedTargetChoice struct {
+	targets []game.Target
+	counts  []int
+}
+
+// segmentTargetChoices splits each of choices into its targets for each of
+// specs. It reports false, leaving the choice of targets unrestricted, when
+// choices is empty or one of them can't be split.
+func segmentTargetChoices(g *game.Game, player game.PlayerID, def *game.CardDef, specs []game.TargetSpec, choices [][]game.Target) ([]segmentedTargetChoice, bool) {
+	if len(choices) == 0 {
+		return nil, false
+	}
+	segmented := make([]segmentedTargetChoice, 0, len(choices))
+	for _, choice := range choices {
+		counts, ok := targetCountsForSpecs(g, player, def, 0, game.Event{}, specs, choice)
+		if !ok {
+			return nil, false
+		}
+		segmented = append(segmented, segmentedTargetChoice{targets: choice, counts: counts})
+	}
+	return segmented, true
+}
+
+// payableTargetsForSpec returns the candidates for the next target spec that
+// belong to that spec's targets in some choice of choices beginning with
+// chosen, split by counts, and the first such choice's targets for that spec.
+// When no choice begins with chosen, every candidate is returned with fallback.
+func payableTargetsForSpec(choices []segmentedTargetChoice, chosen []game.Target, counts []int, candidates, fallback []game.Target) ([]game.Target, []game.Target) {
+	index := len(counts)
+	var segments [][]game.Target
+	for _, choice := range choices {
+		if len(choice.counts) <= index || !slices.Equal(choice.counts[:index], counts) ||
+			!slices.EqualFunc(choice.targets[:len(chosen)], chosen, sameTargetObject) {
+			continue
+		}
+		segments = append(segments, choice.targets[len(chosen):len(chosen)+choice.counts[index]])
+	}
+	if len(segments) == 0 {
+		return candidates, fallback
+	}
+	payable := slices.DeleteFunc(slices.Clone(candidates), func(candidate game.Target) bool {
+		return !slices.ContainsFunc(segments, func(segment []game.Target) bool {
+			return slices.ContainsFunc(segment, func(target game.Target) bool { return sameTargetObject(target, candidate) })
+		})
+	})
+	return payable, segments[0]
 }

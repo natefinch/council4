@@ -80,7 +80,7 @@ func (BaselineStrategy) ScoreAction(_ rules.PlayerObservation, _ action.Action) 
 // when present, otherwise the first MinChoices options, which is a valid
 // selection for ordering and most bounded choices.
 func (BaselineStrategy) ChooseChoice(_ rules.PlayerObservation, request game.ChoiceRequest) []int {
-	if len(request.DefaultSelection) > 0 {
+	if len(request.DefaultSelection) > 0 || request.Provisional {
 		return append([]int(nil), request.DefaultSelection...)
 	}
 	count := min(request.MinChoices, len(request.Options))

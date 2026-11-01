@@ -390,6 +390,28 @@ func (log *TurnLog) addAction(actionLog *ActionLog) {
 	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryAction, Action: *actionLog})
 }
 
+// setTakenAction records act as the last logged action, whose entry is at
+// entryIndex, as it was finally taken.
+func (log *TurnLog) setTakenAction(entryIndex int, act action.Action) {
+	if log == nil || entryIndex < 0 || entryIndex >= len(log.Entries) || len(log.Actions) == 0 {
+		return
+	}
+	log.Entries[entryIndex].Action.Action = act
+	log.Actions[len(log.Actions)-1].Action = act
+}
+
+// removeAction removes the last logged action, whose entry is at entryIndex,
+// together with the entries logged after it, when that action was reversed
+// (CR 733.1). The choices made while attempting it remain in Choices so that
+// replays see the same decisions.
+func (log *TurnLog) removeAction(entryIndex int) {
+	if log == nil || entryIndex < 0 || entryIndex >= len(log.Entries) || len(log.Actions) == 0 {
+		return
+	}
+	log.Entries = log.Entries[:entryIndex]
+	log.Actions = log.Actions[:len(log.Actions)-1]
+}
+
 func (log *TurnLog) addChoice(choice game.ChoiceDecision) {
 	if log == nil {
 		return

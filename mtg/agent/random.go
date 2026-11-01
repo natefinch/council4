@@ -44,8 +44,13 @@ func (a RandomAgent) ChooseAction(_ rules.PlayerObservation, legal []action.Acti
 // selection for the request. Ordering choices get a random permutation and
 // divided-damage choices get a random allocation giving each option at least
 // one; numeric choices get an integer from randomNumber; other choices get a
-// random count of distinct options within the requested bounds.
+// random count of distinct options within the requested bounds. A provisional
+// answer the agent already gave, such as the targets of the random cast action
+// it chose, is kept.
 func (a RandomAgent) ChooseChoice(_ rules.PlayerObservation, request game.ChoiceRequest) []int {
+	if request.Provisional {
+		return append([]int(nil), request.DefaultSelection...)
+	}
 	switch request.Kind {
 	case game.ChoiceNumber:
 		return a.randomNumber(request)

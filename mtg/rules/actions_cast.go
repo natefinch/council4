@@ -117,18 +117,27 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 }
 
 func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	outcome, _ := e.attemptCastSpellWithChoices(g, playerID, cast, agents, log, nil)
+	return outcome == actionApplied
+}
+
+// attemptCastSpellWithChoices casts cast with priority. When its cost is
+// proposed before its targets are chosen (CR 601.2b-c), a cast whose chosen
+// targets or locked cost turn out illegal or unpayable is reversed rather than
+// failed (CR 733.1), and recorded in attempts, which may be nil.
+func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, []game.Target) {
 	if !castGiftRecipientValid(g, playerID, cast) {
-		return false
+		return actionFailed, nil
 	}
 	if cast.Mutate {
-		return e.applyMutateCastWithChoices(g, playerID, cast, agents, log)
+		return outcomeOf(e.applyMutateCastWithChoices(g, playerID, cast, agents, log)), cast.Targets
 	}
 	sourceZone := normalizedCastSourceZone(cast)
 	if sourceZone == zone.Battlefield {
 		if cast.Permission != (game.PlayPermission{}) {
-			return false
+			return actionFailed, nil
 		}
-		return e.applyPreparedCopyWithChoices(g, playerID, cast, agents, log)
+		return e.attemptPreparedCopyWithChoices(g, playerID, cast, agents, log, attempts)
 	}
 
 	branch := castBranchForCast(cast)
@@ -137,45 +146,26 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		validationPermission = []game.PlayPermission{cast.Permission}
 	}
 	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, validationPermission...) {
-		return false
+		return actionFailed, nil
 	}
 
 	player := g.Players[playerID]
 	card, ok := g.GetCardInstance(cast.CardID)
 	if !ok {
-		return false
+		return actionFailed, nil
 	}
 	spellDef := cardFaceOrDefault(card, cast.Face)
 	announcementDef := spellDef
 	if cast.Overloaded {
 		announcementDef = overloadSpellDef(spellDef)
 	}
-	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, validationPermission...) {
-		return false
-	}
-	cast.Targets = completedTargets
 	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
 	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, castSelectionFace(g, playerID, spellDef, cast.Bestowed), len(permissions) > 0, agents, log)
 	if !ok {
-		return false
+		return actionFailed, nil
 	}
 	if cast.Permission != (game.PlayPermission{}) {
 		permissions = []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect}
-	}
-	targetCounts, ok := spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, branch)
-	if !ok {
-		panic("validated spell targets could not be segmented")
-	}
-	// Splice onto Arcane (CR 702.47): as an Arcane spell is cast from hand for its
-	// normal cost, the caster may reveal splice cards in hand, pay their mana
-	// splice costs as additional costs, and append their spell effects to this
-	// spell. Overloaded casts and non-Arcane spells are never spliceable. When no
-	// card is spliced these are all nil, leaving the cast unchanged.
-	var splice spliceCastResult
-	if sourceZone == zone.Hand && !cast.Overloaded && spellIsArcane(spellDef) {
-		splicePermissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
-		splice = e.chooseSpliceOntoArcane(g, playerID, card.ID, spellDef, cast, splicePermissions, agents, log)
 	}
 	// castRoutes are the permissions this cast may use, read before the card
 	// leaves its source zone because plotted, foretold, and linked-exile status,
@@ -192,6 +182,54 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	// on the stack.
 	mode := castCostMode{overloaded: cast.Overloaded, bestowed: cast.Bestowed}
 	castRoutes := spellCastRoutes(g, playerID, card.ID, sourceZone, cast.Face, mode)
+	// CR 601.2b-c: a cost that includes Phyrexian symbols is proposed, with
+	// each symbol's payment announced, before the targets are chosen. Any
+	// targets the action names are only the default choice. Once that has
+	// begun, a cast that can't be completed legally is reversed (CR 733.1).
+	route := 0
+	var proposal spellCostProposal
+	var splice spliceCastResult
+	proposalRequests := mode.castRouteRequests(priorityCastRequest(playerID, spellDef, sourceZone, cast, permissions, nil), castRoutes)
+	proposed := spellCostsIncludePhyrexian(g, proposalRequests)
+	fail := func() actionOutcome {
+		if !proposed {
+			return actionFailed
+		}
+		return attempts.reverse(fmt.Sprintf("%+v|%d|%+v|%v", cast, route, proposal, splice.manaCosts))
+	}
+	if proposed {
+		targeted := len(spellTargetSpecs(announcementDef, cast.ChosenModes, branch)) > 0
+		var targetChoices [][]game.Target
+		if targeted {
+			targetChoices = targetChoicesForSpellWithKickerCount(g, playerID, announcementDef, cast.ChosenModes, branch, effectiveKickerCount(cast.KickerPaid, cast.KickerCount)).choices
+		}
+		route, proposal = e.proposeCastRouteCost(g, castRoutes, proposalRequests, targetChoices, agents, log)
+		if targeted {
+			payable := e.payableTargetChoices(g, proposalRequests[route], targetChoices, proposal)
+			cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, playerID, announcementDef, cast, cast.Targets, payable, agents, log)
+			if !ok {
+				return fail(), nil
+			}
+		}
+	}
+	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
+	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, validationPermission...) {
+		return fail(), nil
+	}
+	cast.Targets = completedTargets
+	targetCounts, ok := spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, branch)
+	if !ok {
+		panic("validated spell targets could not be segmented")
+	}
+	// Splice onto Arcane (CR 702.47): as an Arcane spell is cast from hand for its
+	// normal cost, the caster may reveal splice cards in hand, pay their mana
+	// splice costs as additional costs, and append their spell effects to this
+	// spell. Overloaded casts and non-Arcane spells are never spliceable. When no
+	// card is spliced these are all nil, leaving the cast unchanged.
+	if sourceZone == zone.Hand && !cast.Overloaded && spellIsArcane(spellDef) {
+		splicePermissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
+		splice = e.chooseSpliceOntoArcane(g, playerID, card.ID, spellDef, cast, splicePermissions, agents, log)
+	}
 
 	// CR 601.2a: proposing a cast first moves the card from its source zone to
 	// the stack as the topmost object. Doing this before the spell's costs are
@@ -223,42 +261,35 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 	}
 	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
 	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
-		return false
+		return actionFailed, nil
 	}
 	counterTransition.apply(g)
 	g.Stack.Push(obj)
 
 	targetEvents := prepareTargetEvents(g, obj)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	request := payment.SpellRequest{
-		PlayerID:        playerID,
-		CardID:          card.ID,
-		SourceZone:      sourceZone,
-		Card:            spellDef,
-		XValue:          cast.XValue,
-		KickerPaid:      cast.KickerPaid,
-		KickerCount:     cast.KickerCount,
-		Bargained:       cast.Bargained,
-		Offspring:       cast.Offspring,
-		ChosenModes:     cast.ChosenModes,
-		CastPermissions: permissions,
-		Targets:         cast.Targets,
-		SpliceManaCosts: splice.manaCosts,
-		Bestowed:        cast.Bestowed,
+	requests := mode.castRouteRequests(priorityCastRequest(playerID, spellDef, sourceZone, cast, permissions, splice.manaCosts), castRoutes)
+	var request payment.SpellRequest
+	if proposed {
+		request, ok = e.lockAnnouncedSpellCost(g, requests[route], proposal, agents, log)
+	} else {
+		var prefs *payment.Preferences
+		route, prefs = e.chooseCastRoute(g, castRoutes, requests, agents, log)
+		request = requests[route]
+		request.Prefs = prefs
 	}
-	requests := mode.castRouteRequests(request, castRoutes)
-	route, prefs := e.chooseCastRoute(g, castRoutes, requests, agents, log)
-	request = requests[route]
-	request.Prefs = prefs
-	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
+	var paymentResult payment.SpellPaymentResult
+	if ok {
+		paymentResult, ok = paymentOrch.paySpellCosts(g, request)
+	}
 	if !ok {
-		// CR 728: the proposed cast is illegal because its costs can't be paid,
-		// so the proposal is undone — take the spell back off the stack and
-		// return the card to the zone it was cast from.
+		// CR 733.1: the proposed cast is illegal because its costs can't be
+		// paid, so the proposal is undone — take the spell back off the stack
+		// and return the card to the zone it was cast from.
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
 		counterTransition.undo(g)
-		return false
+		return fail(), nil
 	}
 	if sourceZone == zone.Command {
 		recordCommanderCast(g, playerID, cast.CardID)
@@ -302,7 +333,28 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 		ToZone:                       zone.Stack,
 	}, targetEvents)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	return true
+	return actionApplied, cast.Targets
+}
+
+// priorityCastRequest is the payment request for casting cast with priority
+// through the given permissions, with spliceManaCosts as additional costs.
+func priorityCastRequest(playerID game.PlayerID, spellDef *game.CardDef, sourceZone zone.Type, cast action.CastSpellAction, permissions []payment.SpellCastPermission, spliceManaCosts []cost.Mana) payment.SpellRequest {
+	return payment.SpellRequest{
+		PlayerID:        playerID,
+		CardID:          cast.CardID,
+		SourceZone:      sourceZone,
+		Card:            spellDef,
+		XValue:          cast.XValue,
+		KickerPaid:      cast.KickerPaid,
+		KickerCount:     cast.KickerCount,
+		Bargained:       cast.Bargained,
+		Offspring:       cast.Offspring,
+		ChosenModes:     cast.ChosenModes,
+		CastPermissions: permissions,
+		Targets:         cast.Targets,
+		SpliceManaCosts: spliceManaCosts,
+		Bestowed:        cast.Bestowed,
+	}
 }
 
 func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -566,26 +618,52 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 	})
 }
 
-func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// attemptPreparedCopyWithChoices casts a copy of a prepared permanent's spell
+// (see attemptCastSpellWithChoices).
+func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, []game.Target) {
 	if cast.Face != game.FaceAlternate || cast.KickerPaid {
-		return false
+		return actionFailed, nil
 	}
 	permanent := preparedSourcePermanent(g, cast.CardID)
-	if !canCastPreparedCopy(g, playerID, permanent, cast.Targets, cast.XValue, cast.ChosenModes) {
-		return false
-	}
-	sourceID, sourceDef, ok := preparedSpellSource(g, permanent)
+	request, ok := preparedCopyCostRequest(g, playerID, cast)
 	if !ok {
-		return false
+		return actionFailed, nil
 	}
-	spellDef, ok := sourceDef.FaceDef(game.FaceAlternate)
-	if !ok {
-		return false
-	}
+	sourceID, spellDef := request.CardID, request.Card
 	branch := castBranchForCast(cast)
+	// CR 601.2b-c: Phyrexian payments are announced before the targets are
+	// chosen; any targets the action names are then only the default choice.
+	// Once that has begun, a cast that can't be completed legally is reversed
+	// (CR 733.1).
+	proposed := spellCostsIncludePhyrexian(g, []payment.SpellRequest{request})
+	if !canCastPreparedCopy(g, playerID, permanent, cast.Targets, cast.XValue, cast.ChosenModes) {
+		return actionFailed, nil
+	}
+	var proposal spellCostProposal
+	fail := func() actionOutcome {
+		if !proposed {
+			return actionFailed
+		}
+		return attempts.reverse(fmt.Sprintf("%+v|%+v", cast, proposal))
+	}
+	if proposed {
+		var targetChoices [][]game.Target
+		targeted := len(spellTargetSpecs(spellDef, cast.ChosenModes, branch)) > 0
+		if targeted {
+			targetChoices = targetChoicesForSpell(g, playerID, spellDef, cast.ChosenModes, branch).choices
+		}
+		_, proposal = e.proposeCastRouteCost(g, nil, []payment.SpellRequest{request}, targetChoices, agents, log)
+		if targeted {
+			payable := e.payableTargetChoices(g, request, targetChoices, proposal)
+			cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, playerID, spellDef, cast, cast.Targets, payable, agents, log)
+			if !ok {
+				return fail(), nil
+			}
+		}
+	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
 	if !ok || !canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
-		return false
+		return fail(), nil
 	}
 	cast.Targets = completedTargets
 	targetCounts, ok := spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets, branch)
@@ -600,19 +678,19 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 		Targets: cast.Targets, TargetCounts: targetCounts,
 		ChosenModes: cast.ChosenModes, XValue: cast.XValue,
 	})
-	prefs := e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, game.FaceAlternate, spellDef, cast.XValue, agents, log)
+	request.Targets = cast.Targets
+	if proposed {
+		request, ok = e.lockAnnouncedSpellCost(g, request, proposal, agents, log)
+	} else {
+		request.Prefs = e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, game.FaceAlternate, spellDef, cast.XValue, agents, log)
+	}
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
-	paymentResult, ok := paymentOrch.paySpellCosts(g, payment.SpellRequest{
-		PlayerID:   playerID,
-		CardID:     sourceID,
-		SourceZone: zone.Battlefield,
-		Card:       spellDef,
-		XValue:     cast.XValue,
-		Targets:    cast.Targets,
-		Prefs:      prefs,
-	})
+	var paymentResult payment.SpellPaymentResult
+	if ok {
+		paymentResult, ok = paymentOrch.paySpellCosts(g, request)
+	}
 	if !ok {
-		return false
+		return fail(), nil
 	}
 	permanent.Prepared = false
 	obj := &game.StackObject{
@@ -667,7 +745,33 @@ func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.Player
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	return true
+	return actionApplied, cast.Targets
+}
+
+func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	outcome, _ := e.attemptPreparedCopyWithChoices(g, playerID, cast, agents, log, nil)
+	return outcome == actionApplied
+}
+
+// preparedCopyCostRequest is the payment request for casting a copy of the
+// spell of the prepared permanent cast names.
+func preparedCopyCostRequest(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction) (payment.SpellRequest, bool) {
+	sourceID, sourceDef, ok := preparedSpellSource(g, preparedSourcePermanent(g, cast.CardID))
+	if !ok {
+		return payment.SpellRequest{}, false
+	}
+	spellDef, ok := sourceDef.FaceDef(game.FaceAlternate)
+	if !ok {
+		return payment.SpellRequest{}, false
+	}
+	return payment.SpellRequest{
+		PlayerID:   playerID,
+		CardID:     sourceID,
+		SourceZone: zone.Battlefield,
+		Card:       spellDef,
+		XValue:     cast.XValue,
+		Targets:    cast.Targets,
+	}, true
 }
 
 func preparedSourcePermanent(g *game.Game, sourceID id.ID) *game.Permanent {
@@ -1408,14 +1512,37 @@ func anyCastRouteAvailable(g *game.Game, spellDef *game.CardDef, xValue int, req
 }
 
 // chooseCastRoute lets the caster choose the permission to cast through
+// together with that permission's cost option (see chooseCastRouteOption). It
+// returns the chosen route and the payment preferences for its option.
+func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, *payment.Preferences) {
+	route, option := e.chooseCastRouteOption(g, routes, requests, nil, agents, log)
+	return route, e.paymentPreferencesForSpellOption(g, requests[route], option, agents, log)
+}
+
+// proposeCastRouteCost proposes the cost of a spell cast with priority before
+// its targets are chosen (CR 601.2b): the caster chooses the route and its cost
+// option (see chooseCastRouteOption), then announces how each Phyrexian symbol
+// in that option will be paid. targetChoices are the choices of targets the
+// spell may still be given, which can change its total cost (CR 601.2f); nil
+// when its targets are already known.
+func (e *Engine) proposeCastRouteCost(g *game.Game, routes []castRoute, requests []payment.SpellRequest, targetChoices [][]game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, spellCostProposal) {
+	route, option := e.chooseCastRouteOption(g, routes, requests, targetChoices, agents, log)
+	return route, spellCostProposal{
+		optionIndex: option.Index,
+		phyrexian: e.announcePhyrexianPayments(g, requests[route].PlayerID, option.ManaCost,
+			e.proposedSpellCostFeasibility(g, requests[route], targetChoices, option.Index), agents, log),
+	}
+}
+
+// chooseCastRouteOption lets the caster choose the permission to cast through
 // together with that permission's cost option (CR 601.2b, 601.2f, 118.9): every
 // payable option of every route is offered in one choice, each route offering
-// only its own alternative costs and rider. It returns the chosen route and the
-// payment preferences for its option. A single route keeps the ordinary
-// spell-cost choice.
-func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, *payment.Preferences) {
+// only its own alternative costs and rider. A single route keeps the ordinary
+// spell-cost choice. With targetChoices, an option is payable when it is
+// payable with some choice of targets (see proposableSpellOptions).
+func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, requests []payment.SpellRequest, targetChoices [][]game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, payment.SpellOptionSummary) {
 	if len(requests) == 1 {
-		return 0, e.paymentPreferencesForSpellRequest(g, requests[0], agents, log)
+		return 0, e.chooseSpellCostOption(g, requests[0].PlayerID, proposableSpellOptions(g, requests[0], targetChoices), agents, log)
 	}
 	type routeOption struct {
 		route  int
@@ -1427,13 +1554,13 @@ func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []pa
 		if !castRouteAllowsX(request.Card, request.XValue, request) {
 			continue
 		}
-		for _, option := range paymentOrch.planner(g).PayableSpellOptions(request) {
+		for _, option := range proposableSpellOptions(g, request, targetChoices) {
 			options = append(options, routeOption{route: i, option: option})
 			labels[option.Label]++
 		}
 	}
 	if len(options) == 0 {
-		return 0, e.paymentPreferencesForSpellRequest(g, requests[0], agents, log)
+		return 0, e.chooseSpellCostOption(g, requests[0].PlayerID, proposableSpellOptions(g, requests[0], targetChoices), agents, log)
 	}
 	selected := options[0]
 	if len(options) > 1 {
@@ -1463,7 +1590,7 @@ func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []pa
 			selected = options[chosen[0]]
 		}
 	}
-	return selected.route, e.paymentPreferencesForSpellOption(g, requests[selected.route], selected.option, agents, log)
+	return selected.route, selected.option
 }
 
 // castRoutePermission returns the permission a route casts through: its play
