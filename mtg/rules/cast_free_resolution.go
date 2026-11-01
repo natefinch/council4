@@ -224,8 +224,10 @@ func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player,
 		}
 	}
 	// CR 733: a proposal whose costs are not paid is reversed to the moment
-	// before it was proposed, so the caster chooses again among the proposals
-	// not yet tried rather than losing the opportunity.
+	// before it was proposed, so the caster chooses again rather than losing
+	// the opportunity. A cast none of whose proposals remain (see castAttempts)
+	// is no longer offered.
+	var attempts castAttempts
 	for len(options) > 0 {
 		if !castSourceContains(sourcePlayer, cardID, fromZone) {
 			return false
@@ -241,10 +243,13 @@ func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player,
 			g.Execution.InvalidChoices++
 			return false
 		}
-		if e.castFreeSpell(g, sourcePlayer, controllerID, card, cast, spell, agents, log) {
+		switch e.attemptFreeSpell(g, sourcePlayer, controllerID, card, cast, spell, agents, log, &attempts) {
+		case actionApplied:
 			return true
+		case actionFailed:
+			options = slices.Delete(options, index, index+1)
+		case actionReversed:
 		}
-		options = slices.Delete(options, index, index+1)
 	}
 	return false
 }
@@ -329,9 +334,18 @@ func (e *Engine) castFreeOptionWithCopy(g *game.Game, sourcePlayer *game.Player,
 }
 
 func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, spell freeCastSpell, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.attemptFreeSpell(g, sourcePlayer, controllerID, card, cast, spell, agents, log, nil) == actionApplied
+}
+
+// attemptFreeSpell casts cast without paying its mana cost. A cast whose cost
+// includes Phyrexian symbols and that is reversed because the proposed cost
+// isn't paid (CR 733.1) is recorded in attempts, which may be nil; it reports
+// actionReversed while the caster may redo it with a proposal that remains,
+// and actionFailed once none does or the cast is otherwise not possible.
+func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, spell freeCastSpell, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
 	copyCard := spell.copyCard
 	if castFromZoneProhibited(g, controllerID, cast.SourceZone) {
-		return false
+		return actionFailed
 	}
 	// A cast copy has its own costs, not the identity of the card remaining in
 	// exile. Payment must not reserve or consume that card as the casting source.
@@ -342,19 +356,26 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	}
 	spellDef := cardFaceOrDefault(card, cast.Face)
 	// CR 601.2b: the cost is proposed, with its Phyrexian payments announced,
-	// before any remaining targets are chosen and before splicing.
-	proposal, ok := e.proposeSpellCost(g, freeCastCostRequest(controllerID, spellDef, cast), false, agents, log)
+	// before any remaining targets are chosen and before splicing. The free
+	// cast's own targets are part of the cast the caster chose, so a
+	// proposal is withheld for that cast alone.
+	costRequest := freeCastCostRequest(controllerID, spellDef, cast)
+	if !spellCostsIncludePhyrexian(g, []payment.SpellRequest{costRequest}) {
+		attempts = nil
+	}
+	proposals := newCastProposals(attempts, fmt.Sprintf("%+v", cast), nil)
+	proposal, ok := e.proposeSpellCost(g, costRequest, false, proposals, agents, log)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	branch := castBranchForCast(cast)
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, controllerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	cast.Targets = completedTargets
 	if !e.freeCastOptionLegal(g, controllerID, spellDef, cast) {
-		return false
+		return actionFailed
 	}
 	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, cast.ChosenModes, cast.Targets, branch)
 	if !ok {
@@ -398,7 +419,7 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	} else {
 		counterTransition = prepareCastCounterTransition(g, card, cast.SourceZone)
 		if !removeCastSourceCard(g, sourcePlayer, card.ID, cast.SourceZone) {
-			return false
+			return actionFailed
 		}
 		counterTransition.apply(g)
 	}
@@ -409,6 +430,13 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 			restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
 			counterTransition.undo(g)
 		}
+	}
+	attempt := fmt.Sprintf("%+v|%+v|%v", cast, proposal, splice.manaCosts)
+	reversed := func(outcome actionOutcome) actionOutcome {
+		if attempts == nil || proposals.exhausted() {
+			return actionFailed
+		}
+		return outcome
 	}
 	targetEvents := prepareTargetEvents(g, obj)
 	request := payment.SpellRequest{
@@ -433,7 +461,12 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
 	if !ok {
 		rollback()
-		return false
+		// The proposal can't be paid even after activating mana abilities,
+		// so it is withheld unless a spliced cost made it unpayable.
+		if len(splice.manaCosts) == 0 {
+			return reversed(proposals.reverseUnpayable(attempt, 0, proposal, nil, nil))
+		}
+		return reversed(proposals.reverse(attempt, 0, proposal, nil))
 	}
 	request.PreparedCost = &prepared
 	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)
@@ -443,7 +476,7 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	if !ok {
 		undoMana()
 		rollback()
-		return false
+		return reversed(proposals.reverse(attempt, 0, proposal, nil))
 	}
 	obj.BuybackPaid = paymentResult.BuybackPaid
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
@@ -473,5 +506,5 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 		ToZone:                       zone.Stack,
 	}, targetEvents)
 	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	return true
+	return actionApplied
 }

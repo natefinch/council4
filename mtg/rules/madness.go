@@ -77,7 +77,7 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 	}
 	// CR 601.2b: the madness cost is proposed, with its Phyrexian payments
 	// announced, before the total is locked and paid.
-	proposal, ok := e.proposeSpellCost(g, request, false, agents, log)
+	proposal, ok := e.proposeSpellCost(g, request, false, castProposals{}, agents, log)
 	if !ok {
 		return false
 	}

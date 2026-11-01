@@ -43,7 +43,9 @@ import (
 // Vault Skirge 64cf5d59-7bcd-4b0b-a160-c8468d4c0f60 {1}{B/P}; Etherium
 // Sculptor "Artifact spells you cast cost {1} less to cast."; Grizzly Bears
 // 2/2 vanilla. These scenarios cover Engine gap #3573 on the priority cast and
-// prepared copy routes; the free cast route remains #3570.
+// prepared copy routes, and #3574's redo of a reversed cast on both: only the
+// announcements a reversal shows can't be paid are withheld, never the cast.
+// The free cast route's targets remain #3570.
 
 // TestPriorityPhyrexianAnnouncedBeforeTargetDependentCost takes the registered
 // Dismember ({1}{B/P}{B/P}) cast offered with priority while Player1 controls
@@ -345,7 +347,9 @@ func TestPhyrexianTargetsOfferedOnlyWithPayableCost(t *testing.T) {
 // before the target is chosen (CR 601.2b-c), and the proposed target remains
 // the default. Announcing 2 life casts it. Announcing {U} without blue mana is
 // binding, so that cast is reversed (CR 733.1): the token stays prepared and no
-// life is paid, and repeating the same attempt is recorded as repeated.
+// life is paid. That announcement can't be paid with any target, so redoing
+// the cast (CR 733.2) offers only 2 life, and answering {U} again is an invalid
+// choice that takes the offered 2 life and casts it (#3574).
 func TestPreparedCopyPhyrexianAnnouncedBeforeTargets(t *testing.T) {
 	t.Run("announcing 2 life", func(t *testing.T) {
 		e, g := newEffectiveCascadeGame()
@@ -375,14 +379,19 @@ func TestPreparedCopyPhyrexianAnnouncedBeforeTargets(t *testing.T) {
 			Targets: []game.Target{game.PlayerTarget(game.Player2)}}
 		var attempts castAttempts
 
-		for attempt := range 2 {
-			outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
-			if outcome != actionReversed || attempts.repeated != (attempt == 1) {
-				t.Fatalf("attempt %d outcome=%v repeated=%t, want reversed, repeated only on the second", attempt, outcome, attempts.repeated)
-			}
-			if !token.Prepared || !g.Stack.IsEmpty() || g.Players[game.Player1].Life != life {
-				t.Fatalf("prepared=%t stack=%d life=%d, want the cast reversed", token.Prepared, g.Stack.Size(), g.Players[game.Player1].Life)
-			}
+		outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
+		if outcome != actionReversed || !token.Prepared || !g.Stack.IsEmpty() || g.Players[game.Player1].Life != life ||
+			g.Execution.InvalidChoices != 0 {
+			t.Fatalf("outcome=%v prepared=%t stack=%d life=%d invalid=%d, want the cast reversed",
+				outcome, token.Prepared, g.Stack.Size(), g.Players[game.Player1].Life, g.Execution.InvalidChoices)
+		}
+
+		outcome, _ = e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
+		obj, _ := g.Stack.Peek()
+		if outcome != actionApplied || token.Prepared || g.Players[game.Player1].Life != life-2 || g.Execution.InvalidChoices != 1 ||
+			obj == nil || obj.SourceID != token.ObjectID || !slices.Equal(obj.Targets, []game.Target{game.PlayerTarget(game.Player2)}) {
+			t.Fatalf("outcome=%v prepared=%t life=%d invalid=%d stack top=%+v, want the redo offered only 2 life and cast at Player2",
+				outcome, token.Prepared, g.Players[game.Player1].Life, g.Execution.InvalidChoices, obj)
 		}
 		if !slices.Equal(agent.steps, []string{"phyrexian", "target", "phyrexian", "target"}) {
 			t.Fatalf("steps=%v, want each attempt to announce the {U/P} before its target", agent.steps)
@@ -457,20 +466,21 @@ func (a *priorityProbeAgent) ObserveAction(_ game.PlayerID, act action.Action, _
 // so the cast is reversed rather than failing the priority loop (CR 733.1).
 // Player1 keeps priority (CR 733.2) and may redo the cast announcing 2 life,
 // which casts and resolves it, logging only that cast with the target chosen
-// in the target prompt, which observers also see. Redoing an offered cast
-// with the same announcement and target would only be reversed again, so that
-// offer is then withdrawn; once every offer (one per player as the default
-// target) is withdrawn, priority moves on with Probe still in hand.
+// in the target prompt, which observers also see. With no blue mana the {U}
+// can't be paid with any target, so that announcement is withheld while
+// Player1 holds priority and a redo offers only 2 life: an agent that keeps
+// answering {U} makes an invalid choice that takes the offered 2 life, so the
+// cast stays available and the loop still moves on (#3574).
 func TestPriorityLoopReversesUnpayablePhyrexianAnnouncement(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		maxCasts  int
-		lifeFrom  int
-		wantCasts int
-		wantCast  bool
+		name        string
+		maxCasts    int
+		lifeFrom    int
+		wantCasts   int
+		wantInvalid int
 	}{
-		{name: "redo announcing life", maxCasts: 2, lifeFrom: 2, wantCasts: 2, wantCast: true},
-		{name: "repeating the reversed cast", maxCasts: 99, lifeFrom: 99, wantCasts: 1 + game.NumPlayers},
+		{name: "redo announcing life", maxCasts: 2, lifeFrom: 2, wantCasts: 2},
+		{name: "repeating the mana announcement", maxCasts: 99, lifeFrom: 99, wantCasts: 2, wantInvalid: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()
@@ -505,16 +515,9 @@ func TestPriorityLoopReversesUnpayablePhyrexianAnnouncement(t *testing.T) {
 					spellCasts++
 				}
 			}
-			if g.Execution.InvalidActions != 0 || !g.Stack.IsEmpty() {
-				t.Fatalf("invalid=%d stack=%d, want no invalid actions and an empty stack", g.Execution.InvalidActions, g.Stack.Size())
-			}
-			if !tc.wantCast {
-				if len(logged) != 0 || len(observer.observed) != 0 || spellCasts != 0 ||
-					g.Players[game.Player1].Life != life || !g.Players[game.Player1].Hand.Contains(probeID) {
-					t.Fatalf("logged=%+v observed=%+v casts=%d life=%d, want no cast, Gitaxian Probe in hand and life %d",
-						logged, observer.observed, spellCasts, g.Players[game.Player1].Life, life)
-				}
-				return
+			if g.Execution.InvalidActions != 0 || g.Execution.InvalidChoices != tc.wantInvalid || !g.Stack.IsEmpty() {
+				t.Fatalf("invalid actions=%d choices=%d stack=%d, want no invalid actions, %d invalid choices and an empty stack",
+					g.Execution.InvalidActions, g.Execution.InvalidChoices, g.Stack.Size(), tc.wantInvalid)
 			}
 			if spellCasts != 1 || g.Players[game.Player1].Life != life-2 || !g.Players[game.Player1].Graveyard.Contains(probeID) {
 				t.Fatalf("casts=%d life=%d, want Gitaxian Probe cast once for 2 life (%d) and resolved",

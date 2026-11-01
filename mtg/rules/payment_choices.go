@@ -197,19 +197,25 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 // proposed cost can still be paid with the given announcements; each symbol's
 // choice defaults to mana when announcing it as mana keeps the cost payable,
 // and otherwise to 2 life, since an announced mana payment is binding.
-func (e *Engine) announcePhyrexianPayments(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, manaFeasible func([]phyrexianAnnouncement) bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []phyrexianAnnouncement {
-	if manaCost == nil {
-		return nil
-	}
+// withheld, when non-nil, reports whether a complete set of announcements was
+// withheld after an earlier attempt was reversed (see castAttempts); a payment
+// is offered only while some announcements including it remain open.
+func (e *Engine) announcePhyrexianPayments(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, manaFeasible, withheld func([]phyrexianAnnouncement) bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []phyrexianAnnouncement {
+	symbols := phyrexianSymbols(manaCost)
 	availableLife := playerLife(g, playerID)
 	var announced []phyrexianAnnouncement
-	for _, symbol := range *manaCost {
-		if !isPhyrexianSymbol(symbol) {
-			continue
+	for _, symbol := range symbols {
+		withMana := append(slices.Clone(announced), phyrexianAnnouncement{symbol: symbol})
+		withLife := append(slices.Clone(announced), phyrexianAnnouncement{symbol: symbol, payLife: true})
+		offer := phyrexianOffer{
+			mana: announcementsOpen(symbols, availableLife, withMana, withheld),
+			life: availableLife >= 2 && announcementsOpen(symbols, availableLife-2, withLife, withheld),
 		}
-		preferLife := manaFeasible != nil &&
-			!manaFeasible(append(slices.Clone(announced), phyrexianAnnouncement{symbol: symbol}))
-		payLife := e.choosePhyrexianPayment(g, playerID, symbol, availableLife, preferLife, agents, log)
+		if !offer.mana && !offer.life {
+			offer = phyrexianOffer{mana: true, life: availableLife >= 2}
+		}
+		preferLife := manaFeasible != nil && !manaFeasible(withMana)
+		payLife := e.choosePhyrexianPaymentOf(g, playerID, symbol, offer, preferLife, agents, log)
 		if payLife {
 			availableLife -= 2
 		}
@@ -263,16 +269,32 @@ func (e *Engine) phyrexianPaymentChoicesAfter(g *game.Game, playerID game.Player
 // The choice defaults to life when preferLife and life is offered, and
 // otherwise to mana.
 func (e *Engine) choosePhyrexianPayment(g *game.Game, playerID game.PlayerID, symbol cost.Symbol, availableLife int, preferLife bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.choosePhyrexianPaymentOf(g, playerID, symbol, phyrexianOffer{mana: true, life: availableLife >= 2}, preferLife, agents, log)
+}
+
+// phyrexianOffer is which payments a Phyrexian symbol's choice offers.
+type phyrexianOffer struct {
+	mana, life bool
+}
+
+// choosePhyrexianPaymentOf asks whether to pay a Phyrexian symbol with 2 life
+// rather than mana, offering the payments in offer, at least one of them. The
+// choice defaults to life when it is offered and either preferLife or mana
+// isn't offered, and otherwise to mana.
+func (e *Engine) choosePhyrexianPaymentOf(g *game.Game, playerID game.PlayerID, symbol cost.Symbol, offer phyrexianOffer, preferLife bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	manaLabel := fmt.Sprintf("Pay %s mana", symbol.Color)
 	if symbol.Kind == cost.PhyrexianGenericSymbol {
 		manaLabel = fmt.Sprintf("Pay {%d}", symbol.Generic)
 	}
-	options := []game.ChoiceOption{{Index: 0, Label: manaLabel}}
-	if availableLife >= 2 {
+	var options []game.ChoiceOption
+	if offer.mana {
+		options = append(options, game.ChoiceOption{Index: 0, Label: manaLabel})
+	}
+	if offer.life {
 		options = append(options, game.ChoiceOption{Index: 1, Label: "Pay 2 life"})
 	}
 	defaultSelection := 0
-	if preferLife && len(options) > 1 {
+	if offer.life && (preferLife || !offer.mana) {
 		defaultSelection = 1
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
