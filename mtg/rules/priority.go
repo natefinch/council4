@@ -215,8 +215,9 @@ func activatedAbilityEffectSummary(g *game.Game, playerID game.PlayerID, activat
 // activatedAbilityText returns the rules text describing the ability the action
 // activates, whether it is printed on a battlefield permanent or on a card
 // activated from hand (for example cycling). Generated card defs omit per-ability
-// text, so it falls back to the source's full oracle text. It returns "" when no
-// text is available.
+// text, so it falls back to the ability's own Oracle paragraph when that can be
+// identified (printedAbilityParagraphs), and otherwise to the source's full
+// oracle text. It returns "" when no text is available.
 func activatedAbilityText(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) string {
 	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
 		if text := strings.TrimSpace(game.BodyText(body)); text != "" {
@@ -224,6 +225,11 @@ func activatedAbilityText(g *game.Game, playerID game.PlayerID, activate action.
 		}
 		if permanent, ok := permanentByObjectID(g, activate.SourceID); ok {
 			if def, ok := permanentFaceDef(g, permanent); ok {
+				if index, ok := faceAbilityIndex(def, body); ok {
+					if text := printedAbilityParagraph(&def.CardFace, def.OracleText, index); text != "" {
+						return text
+					}
+				}
 				return strings.TrimSpace(def.OracleText)
 			}
 		}
@@ -234,6 +240,12 @@ func activatedAbilityText(g *game.Game, playerID game.PlayerID, activate action.
 			return text
 		}
 		if card != nil && card.Def != nil {
+			front := cardFaceOrDefault(card, game.FaceFront)
+			if _, printed := front.BodyAt(activate.AbilityIndex).(*game.ActivatedAbility); printed {
+				if text := printedAbilityParagraph(&front.CardFace, front.OracleText, activate.AbilityIndex); text != "" {
+					return text
+				}
+			}
 			return strings.TrimSpace(card.Def.OracleText)
 		}
 	}

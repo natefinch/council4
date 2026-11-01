@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -688,19 +689,34 @@ func TestObservationFiredEventDelayedTriggersKeepBindings(t *testing.T) {
 	})
 }
 
-const okoyeDelayedTriggerText = "Whenever that creature attacks the monarch this turn"
+const (
+	okoyeDelayedTriggerText = "Whenever that creature attacks the monarch this turn"
+	okoyeMonarchText        = "When Okoye enters, you become the monarch."
+	okoyeCombatText         = "At the beginning of combat on your turn, put a +1/+1 counter on target creature. " + okoyeDelayedOwnText
+	okoyeDelayedOwnText     = okoyeDelayedTriggerText + ", it gains double strike and trample until end of turn."
+)
 
-// Source review: default-registry Okoye, Mighty and Adored and Clone Oracle
-// text. CR 2026-09-25 (verified official copy): a triggered ability on the
-// stack has the text of the ability that created it (603.3), a delayed
-// trigger's text comes from the resolving ability that created it (603.7a), and
+// Source review: Okoye, Mighty and Adored (oracle_id
+// 8fbfc5b1-2146-4d07-a5fe-5f025da31bd6) and Clone (oracle_id
+// 42226b87-0746-4ebf-9fd0-108d508462af) Oracle text from the run's pinned
+// corpus 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4;
+// Scryfall lists no rulings for Okoye. Comprehensive Rules effective
+// 2026-09-25 (https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt),
+// read 113.2c, 207.2c, 602.1, 603.1, 603.3, 603.7, 603.7a, 603.7e, 700.2,
+// 707.2, 707.10 and 708.2: each paragraph break in a card's text marks a
+// separate ability (113.2c); a triggered ability on the stack has the text of
+// the ability that created it and no other characteristics (603.3); a delayed
+// triggered ability is created by a resolving ability, contains "when",
+// "whenever" or "at" (603.7, 603.7a) and shares its creator's source (603.7e);
 // a copy acquires the original's rules text as a copiable value (707.2), but a
 // face-down permanent copied has none (707.2, 708.2).
 //
 // Clone entering as a copy of Okoye has Okoye's untexted beginning-of-combat
-// trigger. Every observer sees Okoye's copied ability text on the stack and on
-// the delayed trigger it creates, never Clone's own text, and the text stays
-// after the copied Okoye and then the Clone leave the battlefield.
+// trigger. Every observer sees exactly that ability's paragraph on the stack,
+// not Okoye's enters ability or Clone's own text, and the delayed trigger it
+// creates carries only its own "Whenever that creature attacks the monarch"
+// sentence. The text and copied-source identity stay after the copied Okoye
+// and then the Clone leave the battlefield.
 func TestObservationCopiedUntextedTriggerKeepsCopiedText(t *testing.T) {
 	registry := cards.NewDefaultRegistry()
 	okoye := registry.Lookup("Okoye, Mighty and Adored")
@@ -733,24 +749,24 @@ func TestObservationCopiedUntextedTriggerKeepsCopiedText(t *testing.T) {
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
 		t.Fatal("the copied beginning-of-combat trigger did not trigger")
 	}
-	wantCopiedText := func(where, text string) {
+	wantText := func(where, text, want string) {
 		t.Helper()
-		if !strings.Contains(text, okoyeDelayedTriggerText) || strings.Contains(text, "enter as a copy") {
-			t.Errorf("%s text = %q, want Okoye's copied ability text", where, text)
+		if text != want {
+			t.Errorf("%s text = %q, want exactly %q", where, text, want)
 		}
 	}
-	for _, viewer := range []game.PlayerID{game.Player1, game.Player3} {
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2, game.Player3} {
 		stack := observe(g, viewer).Stack()
 		if len(stack) != 1 || stack[0].SourceObjectID != copied.ObjectID {
 			t.Fatalf("player %d stack = %+v, want the copied trigger from %d", viewer, stack, copied.ObjectID)
 		}
-		wantCopiedText("stack", stack[0].Text)
+		wantText("stack", stack[0].Text, okoyeCombatText)
 	}
 	if !movePermanentToZone(g, blueprint, zone.Graveyard) {
 		t.Fatal("could not remove the copied Okoye")
 	}
 	if stack := observe(g, game.Player3).Stack(); len(stack) == 1 {
-		wantCopiedText("stack after the copied Okoye left", stack[0].Text)
+		wantText("stack after the copied Okoye left", stack[0].Text, okoyeCombatText)
 	} else {
 		t.Fatalf("stack = %+v, want the copied trigger", stack)
 	}
@@ -758,20 +774,22 @@ func TestObservationCopiedUntextedTriggerKeepsCopiedText(t *testing.T) {
 	if target.Counters.Get(counter.PlusOnePlusOne) != 1 {
 		t.Fatal("the copied trigger did not put a +1/+1 counter on its target")
 	}
-	pending := observe(g, game.Player3).DelayedTriggers()
-	if len(pending) != 1 || pending[0].SourceObjectID != copied.ObjectID ||
-		!slices.Contains(pending[0].BoundObjectIDs, target.ObjectID) {
-		t.Fatalf("pending = %+v, want the copied Okoye's delayed trigger bound to %d", pending, target.ObjectID)
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2, game.Player3} {
+		pending := observe(g, viewer).DelayedTriggers()
+		if len(pending) != 1 || pending[0].SourceObjectID != copied.ObjectID ||
+			!slices.Contains(pending[0].BoundObjectIDs, target.ObjectID) {
+			t.Fatalf("player %d pending = %+v, want the copied Okoye's delayed trigger bound to %d", viewer, pending, target.ObjectID)
+		}
+		wantText("pending delayed trigger", pending[0].Text, okoyeDelayedOwnText)
 	}
-	wantCopiedText("pending delayed trigger", pending[0].Text)
 	if !movePermanentToZone(g, copied, zone.Graveyard) {
 		t.Fatal("could not remove the Clone")
 	}
-	pending = observe(g, game.Player3).DelayedTriggers()
+	pending := observe(g, game.Player3).DelayedTriggers()
 	if len(pending) != 1 || pending[0].SourceObjectID != 0 {
 		t.Fatalf("pending after the Clone left = %+v, want one sourceless delayed trigger", pending)
 	}
-	wantCopiedText("delayed trigger after the Clone left", pending[0].Text)
+	wantText("delayed trigger after the Clone left", pending[0].Text, okoyeDelayedOwnText)
 }
 
 // A permanent that becomes a copy of a card in a graveyard (Shifting Woodland's
@@ -902,5 +920,275 @@ func TestObservationDashReturnBindsDashedPermanent(t *testing.T) {
 	engine.resolveTopOfStack(g, &TurnLog{})
 	if g.Players[game.Player1].Hand.Contains(card) {
 		t.Fatal("the dash return moved the card from the graveyard to its owner's hand")
+	}
+}
+
+// Okoye's own untexted abilities are observed with their own Oracle paragraphs
+// (CR 113.2c, 603.3): its enters trigger shows only the monarch ability, its
+// beginning-of-combat trigger only that paragraph, and the delayed trigger it
+// creates only its own "Whenever that creature attacks the monarch" sentence
+// (CR 603.7, 603.7a), from creation until it fires from Okoye (CR 603.7e).
+// See the source review on TestObservationCopiedUntextedTriggerKeepsCopiedText.
+func TestObservationPrintedOkoyeAbilitiesShowOwnParagraphs(t *testing.T) {
+	okoye := cards.NewDefaultRegistry().Lookup("Okoye, Mighty and Adored")
+	if okoye == nil {
+		t.Fatal("Okoye is not in the default registry")
+	}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	wantStack := func(where string, source id.ID, want string) {
+		t.Helper()
+		for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+			stack := observe(g, viewer).Stack()
+			if len(stack) != 1 || stack[0].SourceObjectID != source || stack[0].Text != want {
+				t.Fatalf("player %d %s stack = %+v, want text %q from %d", viewer, where, stack, want, source)
+			}
+		}
+	}
+	addImplementationSpellToStack(g, game.Player1, okoye, nil)
+	engine.resolveTopOfStack(g, &TurnLog{})
+	printed := g.Battlefield[len(g.Battlefield)-1]
+	if permanentEffectiveName(g, printed) != okoye.Name {
+		t.Fatalf("resolved permanent = %q, want Okoye", permanentEffectiveName(g, printed))
+	}
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("Okoye's enters trigger did not trigger")
+	}
+	wantStack("enters trigger", printed.ObjectID, okoyeMonarchText)
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if !g.Players[game.Player1].IsMonarch {
+		t.Fatal("Okoye's enters trigger did not make Player1 the monarch")
+	}
+
+	g.TriggerEventCursor = len(g.Events)
+	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseCombat, game.StepBeginningOfCombat, game.Player1
+	g.Combat = &game.CombatState{}
+	emitBeginningOfStepEvent(g, game.StepBeginningOfCombat)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &okoyeTargetAgent{targetPick: target.ObjectID}}
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("Okoye's beginning-of-combat trigger did not trigger")
+	}
+	wantStack("beginning-of-combat trigger", printed.ObjectID, okoyeCombatText)
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+		pending := observe(g, viewer).DelayedTriggers()
+		if len(pending) != 1 || pending[0].SourceObjectID != printed.ObjectID || pending[0].Text != okoyeDelayedOwnText {
+			t.Fatalf("player %d pending = %+v, want Okoye's delayed trigger with text %q", viewer, pending, okoyeDelayedOwnText)
+		}
+	}
+
+	if !setMonarch(g, game.Player2) {
+		t.Fatal("setMonarch(Player2) = false")
+	}
+	declareAttack(t, g, engine, target, game.Player2)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("the delayed attacks-the-monarch trigger did not fire")
+	}
+	wantStack("fired delayed trigger", printed.ObjectID, okoyeDelayedOwnText)
+}
+
+const paragraphBeastOracle = `
+	Flying
+	{1}: You gain 1 life.
+	{T}: Add {G}.
+	Landfall — Whenever a land you control enters, you gain 1 life.
+	At the beginning of your upkeep, you gain 1 life.
+`
+
+// paragraphBeast is a creature whose untexted activated and triggered
+// abilities are each written as their own Oracle paragraph (CR 113.2c), among a
+// keyword paragraph and a mana ability.
+func paragraphBeast() *game.CardDef {
+	gain := game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()},
+	}}}.Ability()
+	def := vanillaCreature("Paragraph Beast", 2, 2, game.Flying)
+	def.OracleText = paragraphBeastOracle
+	def.ActivatedAbilities = []game.ActivatedAbility{{
+		ManaCost:       opt.Val(cost.Mana{cost.O(1)}),
+		ZoneOfFunction: zone.Battlefield,
+		Content:        gain,
+	}}
+	def.ManaAbilities = []game.ManaAbility{game.TapManaAbility(mana.G)}
+	def.TriggeredAbilities = []game.TriggeredAbility{{
+		Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{
+			Event:            game.EventPermanentEnteredBattlefield,
+			Controller:       game.TriggerControllerYou,
+			SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Land}},
+		}},
+		Content: gain,
+	}, {
+		Trigger: game.TriggerCondition{Type: game.TriggerAt, Pattern: game.TriggerPattern{
+			Event:      game.EventBeginningOfStep,
+			Step:       game.StepUpkeep,
+			Controller: game.TriggerControllerYou,
+		}},
+		Content: gain,
+	}}
+	return def
+}
+
+// Clone copying a creature with several untexted abilities acquires each
+// ability with only its own Oracle paragraph (CR 113.2c, 707.2), so the copied
+// activated ability's label and stack text and the copied upkeep trigger's
+// stack text name only that ability, never the keyword line, the mana ability or
+// the other trigger, while the shared definition stays untexted.
+func TestObservationCopiedAbilitiesCarryOnlyTheirOwnParagraphs(t *testing.T) {
+	clone := cards.NewDefaultRegistry().Lookup("Clone")
+	if clone == nil {
+		t.Fatal("Clone is not in the default registry")
+	}
+	beast := paragraphBeast()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	addCombatPermanent(g, game.Player2, beast)
+	addImplementationSpellToStack(g, game.Player1, clone, nil)
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}, &TurnLog{})
+	copied := g.Battlefield[len(g.Battlefield)-1]
+	if copied.Controller != game.Player1 || permanentEffectiveName(g, copied) != beast.Name {
+		t.Fatalf("Clone entered as %q, want a copy of %q", permanentEffectiveName(g, copied), beast.Name)
+	}
+	if beast.ActivatedAbilities[0].Text != "" || beast.TriggeredAbilities[0].Text != "" || beast.TriggeredAbilities[1].Text != "" {
+		t.Fatal("copying wrote text into the shared card definition")
+	}
+
+	const activatedText = "{1}: You gain 1 life."
+	activate := action.ActivateAbilityAction{SourceID: copied.ObjectID, AbilityIndex: 0}
+	if text := activatedAbilityText(g, game.Player1, activate); text != activatedText {
+		t.Fatalf("copied activated ability label = %q, want %q", text, activatedText)
+	}
+	g.Turn.PriorityPlayer = game.Player1
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	if !engine.applyActivateAbilityWithChoices(g, game.Player1, activate, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("the copied activated ability could not be activated")
+	}
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+		stack := observe(g, viewer).Stack()
+		if len(stack) != 1 || stack[0].SourceObjectID != copied.ObjectID || stack[0].Text != activatedText {
+			t.Fatalf("player %d stack = %+v, want the copied activated ability with text %q", viewer, stack, activatedText)
+		}
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+
+	const upkeepText = "At the beginning of your upkeep, you gain 1 life."
+	g.TriggerEventCursor = len(g.Events)
+	g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseBeginning, game.StepUpkeep, game.Player1
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("the copied upkeep trigger did not trigger")
+	}
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+		stack := observe(g, viewer).Stack()
+		if len(stack) != 1 || stack[0].SourceObjectID != copied.ObjectID || stack[0].Text != upkeepText {
+			t.Fatalf("player %d stack = %+v, want the copied upkeep trigger with text %q", viewer, stack, upkeepText)
+		}
+	}
+}
+
+// When an untexted ability's own paragraph cannot be identified, as when one
+// "enters or dies" paragraph is authored as two triggered abilities so the
+// face's triggered abilities and triggered paragraphs no longer pair up, the
+// ability is observed with no printed text rather than with the card's
+// unrelated abilities, both on the original and on a copy.
+func TestObservationUnidentifiedAbilityParagraphShowsNoUnrelatedText(t *testing.T) {
+	gain := game.Mode{Sequence: []game.Instruction{{
+		Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()},
+	}}}.Ability()
+	def := vanillaCreature("Split Trigger Beast", 2, 2, game.Flying)
+	def.OracleText = `
+		Flying
+		When this creature enters or dies, you gain 1 life.
+		At the beginning of your upkeep, you gain 1 life.
+	`
+	def.TriggeredAbilities = []game.TriggeredAbility{{
+		Trigger: game.TriggerCondition{Type: game.TriggerWhen, Pattern: game.TriggerPattern{
+			Event: game.EventPermanentEnteredBattlefield, Source: game.TriggerSourceSelf,
+		}},
+		Content: gain,
+	}, {
+		Trigger: game.TriggerCondition{Type: game.TriggerWhen, Pattern: game.TriggerPattern{
+			Event: game.EventPermanentDied, Source: game.TriggerSourceSelf,
+		}},
+		Content: gain,
+	}, {
+		Trigger: game.TriggerCondition{Type: game.TriggerAt, Pattern: game.TriggerPattern{
+			Event: game.EventBeginningOfStep, Step: game.StepUpkeep, Controller: game.TriggerControllerYou,
+		}},
+		Content: gain,
+	}}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	original := addCombatPermanent(g, game.Player1, def)
+	copyDef, ok := permanentCopyDef(g, original)
+	if !ok {
+		t.Fatal("permanentCopyDef failed")
+	}
+	for i := range copyDef.TriggeredAbilities {
+		if text := copyDef.TriggeredAbilities[i].Text; text != "" {
+			t.Fatalf("copied trigger %d text = %q, want none", i, text)
+		}
+	}
+	g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseBeginning, game.StepUpkeep, game.Player1
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("the upkeep trigger did not trigger")
+	}
+	stack := observe(g, game.Player2).Stack()
+	if len(stack) != 1 || stack[0].SourceObjectID != original.ObjectID || stack[0].Text != "" {
+		t.Fatalf("stack = %+v, want the upkeep trigger from %d with no unrelated text", stack, original.ObjectID)
+	}
+}
+
+// Oracle paragraphs pair with untexted abilities of their own kind (CR 113.2c):
+// ability words (CR 207.2c), "•" mode lines (CR 700.2), loyalty and chapter
+// abilities are recognized, and an "At" paragraph never pairs with a When or
+// Whenever trigger.
+func TestPrintedAbilityParagraphsPairByKind(t *testing.T) {
+	when := game.TriggeredAbility{Trigger: game.TriggerCondition{Type: game.TriggerWhen}}
+	at := game.TriggeredAbility{Trigger: game.TriggerCondition{Type: game.TriggerAt}}
+	face := game.CardFace{
+		LoyaltyAbilities:   []game.LoyaltyAbility{{LoyaltyCost: 1}, {LoyaltyCost: -2}},
+		TriggeredAbilities: []game.TriggeredAbility{when, at},
+	}
+	const oracle = `
+		Eerie — When this enters, choose one —
+		• You gain 1 life.
+		• Scry 1.
+		At the beginning of your end step, draw a card.
+		+1: Scry 1.
+		−2: Draw a card.
+	`
+	got := printedAbilityParagraphs(&face, oracle)
+	want := map[int]string{
+		face.LoyaltyAbilityIndex(0):   "+1: Scry 1.",
+		face.LoyaltyAbilityIndex(1):   "−2: Draw a card.",
+		face.TriggeredAbilityIndex(0): "Eerie — When this enters, choose one —\n• You gain 1 life.\n• Scry 1.",
+		face.TriggeredAbilityIndex(1): "At the beginning of your end step, draw a card.",
+	}
+	if !maps.Equal(got, want) {
+		t.Fatalf("paragraphs = %v, want %v", got, want)
+	}
+
+	face.TriggeredAbilities = []game.TriggeredAbility{at, when}
+	got = printedAbilityParagraphs(&face, oracle)
+	if text, ok := got[face.TriggeredAbilityIndex(0)]; ok {
+		t.Fatalf("an At trigger paired with %q", text)
+	}
+
+	saga := game.CardFace{ChapterAbilities: []game.ChapterAbility{{Chapters: []int{1, 2}}, {Chapters: []int{3}}}}
+	got = printedAbilityParagraphs(&saga, `
+		(As this Saga enters and after your draw step, add a lore counter. Sacrifice after III.)
+		I, II — Scry 1.
+		III — Draw a card.
+	`)
+	want = map[int]string{
+		saga.TriggeredAbilityIndex(0):     "I, II — Scry 1.",
+		saga.TriggeredAbilityIndex(0) + 1: "III — Draw a card.",
+	}
+	if !maps.Equal(got, want) {
+		t.Fatalf("chapter paragraphs = %v, want %v", got, want)
 	}
 }

@@ -450,32 +450,36 @@ func applyCopyValuesToCardDef(def *game.CardDef, values *game.CopyableValues) {
 }
 
 // fillCopiedAbilityText gives each untexted triggered, activated, loyalty and
-// chapter ability on face the Oracle text of the card it is printed on. Card
-// definitions often omit per-ability text and rely on their card's Oracle text;
-// once the ability is copied (CR 707.2) onto another object, that object's own
-// Oracle text no longer contains it, so the copiable ability carries the text
-// with it. The ability slices are replaced, never written through, so a shared
-// registry definition is not mutated. Mana abilities are left untouched because
-// their templates are recognized structurally.
+// chapter ability on face its own Oracle paragraph from the card it is printed
+// on (printedAbilityParagraphs). Card definitions often omit per-ability text
+// and rely on their card's Oracle text; once the ability is copied (CR 707.2)
+// onto another object, that object's own Oracle text no longer identifies it,
+// so the copiable ability carries its text with it. An ability whose paragraph
+// cannot be identified stays untexted rather than carrying unrelated abilities.
+// The ability slices are replaced, never written through, so a shared registry
+// definition is not mutated. Mana abilities are left untouched because their
+// templates are recognized structurally.
 func fillCopiedAbilityText(face *game.CardFace, oracleText string) {
-	text := oracleRulesText(oracleText)
-	if text == "" {
+	texts := printedAbilityParagraphs(face, oracleText)
+	if len(texts) == 0 {
 		return
 	}
-	face.ActivatedAbilities = withAbilityText(face.ActivatedAbilities, text, func(a *game.ActivatedAbility) *string { return &a.Text })
-	face.LoyaltyAbilities = withAbilityText(face.LoyaltyAbilities, text, func(a *game.LoyaltyAbility) *string { return &a.Text })
-	face.TriggeredAbilities = withAbilityText(face.TriggeredAbilities, text, func(a *game.TriggeredAbility) *string { return &a.Text })
-	face.ChapterAbilities = withAbilityText(face.ChapterAbilities, text, func(a *game.ChapterAbility) *string { return &a.Text })
+	face.ActivatedAbilities = withAbilityText(face.ActivatedAbilities, texts, face.ActivatedAbilityIndex(0), func(a *game.ActivatedAbility) *string { return &a.Text })
+	face.LoyaltyAbilities = withAbilityText(face.LoyaltyAbilities, texts, face.LoyaltyAbilityIndex(0), func(a *game.LoyaltyAbility) *string { return &a.Text })
+	face.TriggeredAbilities = withAbilityText(face.TriggeredAbilities, texts, face.TriggeredAbilityIndex(0), func(a *game.TriggeredAbility) *string { return &a.Text })
+	face.ChapterAbilities = withAbilityText(face.ChapterAbilities, texts, face.TriggeredAbilityIndex(len(face.TriggeredAbilities)), func(a *game.ChapterAbility) *string { return &a.Text })
 }
 
-func withAbilityText[T any](abilities []T, text string, field func(*T) *string) []T {
+// withAbilityText fills untexted abilities from texts, keyed by canonical
+// ability index; first is the canonical index of abilities[0].
+func withAbilityText[T any](abilities []T, texts map[int]string, first int, field func(*T) *string) []T {
 	if len(abilities) == 0 {
 		return abilities
 	}
 	filled := slices.Clone(abilities)
 	for i := range filled {
 		if t := field(&filled[i]); strings.TrimSpace(*t) == "" {
-			*t = text
+			*t = texts[first+i]
 		}
 	}
 	return filled
