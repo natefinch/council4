@@ -35,8 +35,12 @@ import (
 // "Artifact spells you cast cost {1} less to cast."; Waterlogged Grove
 // 70fa2eba-565e-4fed-adc9-7f5d9fcbf1fa "{T}, Pay 1 life: Add {G} or {U}.";
 // Thalia, Guardian of Thraben "Noncreature spells cost {1} more to cast."
+// Lightning Bolt 4457ed35-7c10-48c8-9776-456485fdf070 {R} "Lightning Bolt
+// deals 3 damage to any target." CR 733.2: the player "may redo the reversed
+// action in a legal way or take any other action allowed by the rules."
 // These scenarios cover Engine gap #3470 on the paid, free and madness cast
-// routes that open a payment-time mana ability window.
+// routes that open a payment-time mana ability window, and #3574's redo of a
+// reversed free cast.
 
 // phyrexianWindowAgent announces each Phyrexian payment as 2 life when payLife
 // is set, or chooses 2 life after a mana ability window when lifeAfterWindow is
@@ -250,8 +254,11 @@ func TestMadnessPhyrexianLifeAnnouncedBeforeManaWindow(t *testing.T) {
 // on each route, then activates Waterlogged Grove, which can add only {G} or
 // {U}. The announcement is binding (CR 601.2b, 601.2h): the symbol can't fall
 // back to 2 life, so the proposal is reversed (CR 733) with the Grove untapped
-// and its life refunded. The paid Vault Skirge returns to the graveyard, the
-// madness card goes to the graveyard, and the free cast retries unkicked.
+// and its life refunded. The paid Vault Skirge returns to the graveyard and the
+// madness card goes to the graveyard. The free cast may redo the kicked cast
+// (CR 733.2): announcing {B} again without activating the Grove is reversed
+// too, and repeating that announcement would only be reversed again, so only 2
+// life is then offered for the kicker, which casts it kicked (#3574).
 func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	blackPhyrexian := cost.PhyrexianMana(mana.B)
@@ -295,11 +302,55 @@ func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 			game.Selection{}, opt.V[int]{}, false, reboundKickerAgents(agent), &TurnLog{})
 
 		obj, found := g.Stack.Peek()
-		if !ok || !found || obj.SourceID != cardID || obj.KickerPaid {
-			t.Fatalf("cast=%t stack top=%+v, want the unkicked retry after the unpaid kicker", ok, obj)
+		if !ok || !found || obj.SourceID != cardID || !obj.KickerPaid {
+			t.Fatalf("cast=%t stack top=%+v, want the kicked cast redone after the unpaid kicker", ok, obj)
 		}
-		requireAnnouncedManaReversed(t, g, agent, grove, life)
+		requireAnnouncedManaReversed(t, g, agent, grove, life-2)
+		if want := []string{"phyrexian", "window", "phyrexian", "window", "phyrexian"}; !slices.Equal(agent.steps, want) {
+			t.Fatalf("steps=%v, want %v: {B} announced twice, then only 2 life offered", agent.steps, want)
+		}
 	})
+}
+
+// TestFreeCastRedoesUnpayablePhyrexianKicker casts a spell without paying its
+// mana cost, choosing it kicked with a {B/P} kicker and announcing {B} with no
+// mana ability that could pay it. The announcement is binding (CR 601.2b,
+// 601.2h), so the cast is reversed (CR 733.1), and the caster may redo it in a
+// legal way (CR 733.2): the kicked cast stays available and only 2 life is
+// offered for its kicker, so answering {B} again is an invalid choice that
+// takes the offered 2 life (#3574). The registered Lightning Bolt, given the
+// kicker, is redone the same way.
+func TestFreeCastRedoesUnpayablePhyrexianKicker(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		def  func() *game.CardDef
+	}{
+		{name: "untargeted", def: func() *game.CardDef { return freeCastTestInstant("Phyrexian Kicker Spell") }},
+		{name: "Lightning Bolt", def: func() *game.CardDef { return copyCardDef(cards.NewDefaultRegistry().Lookup("Lightning Bolt")) }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			def := tc.def()
+			def.StaticAbilities = []game.StaticAbility{{KeywordAbilities: []game.KeywordAbility{
+				game.KickerKeyword{Cost: cost.Mana{cost.PhyrexianMana(mana.B)}},
+			}}}
+			cardID := addCardToHand(g, game.Player1, def)
+			life := g.Players[game.Player1].Life
+			agent := &phyrexianWindowAgent{payMana: true}
+
+			ok := e.chooseAndCastFreeSpellFromSource(g, g.Players[game.Player1], game.Player1, cardID, zone.Hand,
+				game.Selection{}, opt.V[int]{}, false, reboundKickerAgents(agent), &TurnLog{})
+
+			obj, found := g.Stack.Peek()
+			if !ok || !found || obj.SourceID != cardID || !obj.KickerPaid || obj.ManaSpentToCast != 0 || g.Players[game.Player1].Life != life-2 {
+				t.Fatalf("cast=%t stack top=%+v life=%d, want the kicked free cast redone for 2 life (%d)",
+					ok, obj, g.Players[game.Player1].Life, life-2)
+			}
+			if !slices.Equal(agent.steps, []string{"phyrexian", "phyrexian"}) || g.Execution.InvalidChoices != 1 {
+				t.Fatalf("steps=%v invalid=%d, want {B} announced, then 2 life the only offer", agent.steps, g.Execution.InvalidChoices)
+			}
+		})
+	}
 }
 
 func requireAnnouncedManaReversed(t *testing.T, g *game.Game, agent *phyrexianWindowAgent, grove *game.Permanent, life int) {

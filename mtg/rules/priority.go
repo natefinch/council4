@@ -27,10 +27,9 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 	e.setReplacementChoiceContext(g, agents, log)
 	defer g.SetChoiceContext(previous)
 	consecutivePasses := 0
-	// attempts and exhausted cover the casts reversed while the current player
-	// holds priority (CR 733.2); see castAttempts.
+	// attempts covers the casts reversed while the current player holds
+	// priority (CR 733.2); see castAttempts.
 	var attempts castAttempts
-	var exhausted []action.Action
 
 	for {
 		// CR 117.5 / CR 603.3b: before a player gets priority, perform all
@@ -65,15 +64,13 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		}
 
 		legal := e.legalActions(g, playerID)
-		if len(exhausted) > 0 {
-			legal = slices.DeleteFunc(legal, func(act action.Action) bool { return containsAction(exhausted, act) })
-		}
+		legal = slices.DeleteFunc(legal, attempts.castExhausted)
 		if len(legal) == 0 {
 			legal = []action.Action{actionBuild.pass()}
 		}
 
 		chosen := e.chooseAction(g, agents, playerID, legal, actionBuild.pass())
-		if containsAction(exhausted, chosen) {
+		if attempts.castExhausted(chosen) {
 			g.Execution.InvalidActions++
 			chosen = actionBuild.pass()
 		}
@@ -96,14 +93,10 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 			// CR 733.1-2: the cast was reversed, so it isn't logged as taken,
 			// and the player keeps priority to take another action or pass.
 			log.removeAction(entryIndex)
-			if attempts.repeated {
-				exhausted = append(exhausted, chosen)
-				attempts.repeated = false
-			}
 			continue
 		case actionApplied:
 		}
-		attempts, exhausted = castAttempts{}, nil
+		attempts = castAttempts{}
 		// CR 601.2c: a cast's targets may be chosen while casting it, so the
 		// log and observers see the action as taken, with its chosen targets.
 		chosen = taken
@@ -156,33 +149,6 @@ func outcomeOf(applied bool) actionOutcome {
 		return actionApplied
 	}
 	return actionFailed
-}
-
-// castAttempts records the casts reversed while one player holds priority.
-// That player may redo a reversed action in a legal way or take another
-// (CR 733.2). Repeating a reversed attempt unchanged, with the same choices
-// for the same action, would only be reversed again, so it sets repeated and
-// the priority loop stops offering that action until the player passes or
-// another action succeeds. Each cast offers finitely many distinct attempts,
-// so priority always moves on.
-type castAttempts struct {
-	reversed map[string]bool
-	repeated bool
-}
-
-// reverse records the reversed attempt key and returns actionReversed.
-func (a *castAttempts) reverse(key string) actionOutcome {
-	if a == nil {
-		return actionReversed
-	}
-	if a.reversed[key] {
-		a.repeated = true
-	}
-	if a.reversed == nil {
-		a.reversed = map[string]bool{}
-	}
-	a.reversed[key] = true
-	return actionReversed
 }
 
 func observe(g *game.Game, playerID game.PlayerID) PlayerObservation {

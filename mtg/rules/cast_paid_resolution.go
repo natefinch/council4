@@ -73,7 +73,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	}
 	// CR 601.2b-c: the cost is proposed, with its Phyrexian payments announced,
 	// before the spell's targets are chosen.
-	proposal, ok := e.proposeSpellCost(g, request, true, agents, log)
+	proposal, ok := e.proposeSpellCost(g, request, true, castProposals{}, agents, log)
 	if !ok {
 		return false
 	}

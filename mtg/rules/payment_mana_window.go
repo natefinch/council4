@@ -29,15 +29,25 @@ type phyrexianAnnouncement struct {
 // Phyrexian symbol in the chosen option will be paid (CR 601.2b). When
 // targetsPending, request has no targets yet; if no option is feasible without
 // them, every option is offered, since a target-dependent reduction may make
-// one payable, and lockSpellCostProposal rechecks the total.
-func (e *Engine) proposeSpellCost(g *game.Game, request payment.SpellRequest, targetsPending bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (spellCostProposal, bool) {
+// one payable, and lockSpellCostProposal rechecks the total. Only proposals
+// open leaves open are offered (see castAttempts); it reports false when there
+// are none.
+func (e *Engine) proposeSpellCost(g *game.Game, request payment.SpellRequest, targetsPending bool, open castProposals, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (spellCostProposal, bool) {
 	planner := paymentOrch.planner(g)
 	costs := planner.PrepareSpellCosts(request)
 	manual := e.hasManualPaymentManaAbility(g, request.PlayerID)
+	summaries := planner.SpellCostOptions(request)
+	closed := func(prepared payment.PreparedSpellCost) bool {
+		index := slices.IndexFunc(summaries, func(option payment.SpellOptionSummary) bool { return option.Index == prepared.Summary.Index })
+		return index >= 0 && !open.optionOpen(g, request.PlayerID, 0, summaries[index])
+	}
 	payable := make([]payment.PreparedSpellCost, 0, len(costs))
 	fallback := 0
 	foundPayable := false
 	for _, prepared := range costs {
+		if closed(prepared) {
+			continue
+		}
 		canPay, feasible := preparedSpellCostFeasibility(g, request, prepared, manual, nil)
 		if feasible {
 			if canPay && !foundPayable {
@@ -47,7 +57,7 @@ func (e *Engine) proposeSpellCost(g *game.Game, request payment.SpellRequest, ta
 		}
 	}
 	if len(payable) == 0 && targetsPending {
-		payable = costs
+		payable = slices.DeleteFunc(slices.Clone(costs), closed)
 	}
 	if len(payable) == 0 {
 		return spellCostProposal{}, false
@@ -64,10 +74,11 @@ func (e *Engine) proposeSpellCost(g *game.Game, request payment.SpellRequest, ta
 		}, log)
 	}
 	proposal := spellCostProposal{optionIndex: payable[selected[0]].Summary.Index}
-	for _, option := range planner.SpellCostOptions(request) {
+	for _, option := range summaries {
 		if option.Index == proposal.optionIndex {
 			proposal.phyrexian = e.announcePhyrexianPayments(g, request.PlayerID, option.ManaCost,
-				e.announcedSpellCostFeasibility(g, request, proposal.optionIndex, true), agents, log)
+				e.announcedSpellCostFeasibility(g, request, proposal.optionIndex, true),
+				open.announcementsWithheld(0, proposal.optionIndex), agents, log)
 			break
 		}
 	}
