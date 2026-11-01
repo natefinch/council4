@@ -75,7 +75,10 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		CastPermissions: []payment.SpellCastPermission{payment.SpellCastPermissionDefault},
 		Alternative:     opt.Val(cost.Alternative{Label: "Madness", ManaCost: opt.Val(manaCost)}),
 	}
-	if _, feasible := spellCostFeasibility(g, request, e.hasManualPaymentManaAbility(g, playerID)); !feasible {
+	// CR 601.2b: the madness cost is proposed, with its Phyrexian payments
+	// announced, before the total is locked and paid.
+	proposal, ok := e.proposeSpellCost(g, request, false, agents, log)
+	if !ok {
 		return false
 	}
 	stackObj := &game.StackObject{
@@ -101,20 +104,13 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		counterTransition.undo(g)
 	}
 	targetEvents := prepareTargetEvents(g, stackObj)
-	prepared, ok := e.choosePreparedSpellCost(g, request, agents, log)
+	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
 	if !ok {
 		rollback()
 		return false
 	}
 	request.PreparedCost = &prepared
-	paymentOption := prepared.Summary
-	undoMana := func() {}
-	if prepared.IncludesManaPayment() {
-		undoMana = e.activateManualPaymentManaAbilities(g, playerID, agents, log)
-	}
-	prefs := e.paymentPreferencesForCostFromSource(g, playerID, paymentOption.ManaCost,
-		paymentOption.AdditionalCosts, 0, card.ID, zone.Exile, agents, log)
-	prefs.AlternativeIndex = paymentOption.Index
+	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)
 	request.Prefs = prefs
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
