@@ -610,11 +610,7 @@ func controllerGraveyardManaValueCount(g *game.Game, controller game.PlayerID) i
 		if !ok {
 			continue
 		}
-		manaValue := cardFaceOrDefault(card, game.FaceFront).ManaValue()
-		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
-			manaValue += card.Def.Alternate.Val.ManaValue()
-		}
-		distinct[manaValue] = true
+		distinct[offStackCardManaValue(card)] = true
 	}
 	return len(distinct)
 }

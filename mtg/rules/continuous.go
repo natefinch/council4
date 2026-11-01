@@ -585,6 +585,18 @@ func graveyardCardHasType(g *game.Game, card *game.CardInstance, cardType types.
 	return slices.Contains(graveyardCardTypes(g, card), cardType)
 }
 
+// offStackCardManaValue returns the mana value of a card in a zone other than
+// the stack or battlefield: its front face's, combined with a split card's
+// alternate half (CR 709.4, 709.4b; Assault // Battery has mana value 5 in a
+// library or exile). A spell cast from the card uses only its chosen face.
+func offStackCardManaValue(card *game.CardInstance) int {
+	manaValue := cardFaceOrDefault(card, game.FaceFront).ManaValue()
+	if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists {
+		manaValue += card.Def.Alternate.Val.ManaValue()
+	}
+	return manaValue
+}
+
 func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType types.Card) int {
 	count := 0
 	for _, permanent := range g.Battlefield {
