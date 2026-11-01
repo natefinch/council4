@@ -148,6 +148,10 @@ type Preferences struct {
 	// policy applies uniformly to sacrifice, tap, return, discard, exile,
 	// reveal, evidence, and counter-removal preferences.
 	StrictReplay bool
+	// PhyrexianManaOnly parallels PhyrexianLifeChoices. A true entry marks a
+	// Phyrexian symbol the caster announced as a mana payment (CR 601.2b) that
+	// no effect lets them pay with life, so it can't be paid with 2 life.
+	PhyrexianManaOnly []bool
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.
@@ -185,16 +189,17 @@ type SpellPaymentResult struct {
 	CastPermission SpellCastPermission
 }
 
-// NextPhyrexianLifeChoice returns the next phyrexian payment preference,
-// advancing the internal cursor. Returns false (pay mana) when no preference is
-// recorded or the list is exhausted.
-func (p *Preferences) NextPhyrexianLifeChoice() bool {
+// NextPhyrexianChoice returns the next Phyrexian payment preference, advancing
+// the internal cursor. payLife pays 2 life. Otherwise the symbol is paid with
+// mana, or with 2 life when no mana can pay it unless manaOnly is set. With no
+// preference recorded, or the list exhausted, it prefers mana without manaOnly.
+func (p *Preferences) NextPhyrexianChoice() (payLife, manaOnly bool) {
 	if p == nil || p.phyrexianIndex >= len(p.PhyrexianLifeChoices) {
-		return false
+		return false, false
 	}
-	choice := p.PhyrexianLifeChoices[p.phyrexianIndex]
+	index := p.phyrexianIndex
 	p.phyrexianIndex++
-	return choice
+	return p.PhyrexianLifeChoices[index], index < len(p.PhyrexianManaOnly) && p.PhyrexianManaOnly[index]
 }
 
 func clonePreferences(prefs *Preferences) *Preferences {
@@ -204,6 +209,7 @@ func clonePreferences(prefs *Preferences) *Preferences {
 	return &Preferences{
 		AlternativeIndex:     prefs.AlternativeIndex,
 		PhyrexianLifeChoices: append([]bool(nil), prefs.PhyrexianLifeChoices...),
+		PhyrexianManaOnly:    append([]bool(nil), prefs.PhyrexianManaOnly...),
 		phyrexianIndex:       prefs.phyrexianIndex,
 		SacrificeChoices:     append([]id.ID(nil), prefs.SacrificeChoices...),
 		TapChoices:           append([]id.ID(nil), prefs.TapChoices...),

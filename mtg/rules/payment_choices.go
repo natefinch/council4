@@ -18,8 +18,16 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 }
 
 func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
+	phyrexianLifeChoices := e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
+	prefs := e.additionalCostPaymentPreferences(g, playerID, additionalCosts, xValue, sourceCardID, sourceZone, agents, log, tapExclusions...)
+	prefs.PhyrexianLifeChoices = phyrexianLifeChoices
+	return prefs
+}
+
+// additionalCostPaymentPreferences gathers the caster's choices for paying
+// additionalCosts, without the Phyrexian mana announcements.
+func (e *Engine) additionalCostPaymentPreferences(g *game.Game, playerID game.PlayerID, additionalCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
 	prefs := &payment.Preferences{}
-	prefs.PhyrexianLifeChoices = e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
 	reservedGraveyardCards := map[id.ID]bool{}
 	for i, additionalCost := range additionalCosts {
 		amount := payment.AdditionalCostAmountFor(additionalCost, xValue)
@@ -174,46 +182,104 @@ func (e *Engine) chooseSpellCostOptionForRequest(g *game.Game, request payment.S
 }
 
 func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []bool {
+	choices, _ := e.phyrexianPaymentChoicesAfter(g, playerID, manaCost, nil, agents, log)
+	return choices
+}
+
+// announcePhyrexianPayments asks how the caster will pay each Phyrexian symbol
+// of a proposed spell cost, in cost order, before its targets are chosen and
+// before any mana ability window (CR 601.2b).
+func (e *Engine) announcePhyrexianPayments(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []phyrexianAnnouncement {
 	if manaCost == nil {
 		return nil
 	}
-	effective := payment.EffectiveManaCost(&rulesPaymentState{g: g}, playerID, *manaCost)
-	var choices []bool
-	availableLife := 0
-	if player, ok := playerByID(g, playerID); ok {
-		availableLife = player.Life
-	}
-	for _, symbol := range effective {
-		var manaLabel string
-		switch symbol.Kind {
-		case cost.PhyrexianSymbol:
-			manaLabel = fmt.Sprintf("Pay %s mana", symbol.Color)
-		case cost.PhyrexianGenericSymbol:
-			manaLabel = fmt.Sprintf("Pay {%d}", symbol.Generic)
-		default:
+	availableLife := playerLife(g, playerID)
+	var announced []phyrexianAnnouncement
+	for _, symbol := range *manaCost {
+		if !isPhyrexianSymbol(symbol) {
 			continue
 		}
-		options := []game.ChoiceOption{{Index: 0, Label: manaLabel}}
-		if availableLife >= 2 {
-			options = append(options, game.ChoiceOption{Index: 1, Label: "Pay 2 life"})
-		}
-		request := game.ChoiceRequest{
-			Kind:             game.ChoicePayment,
-			Player:           playerID,
-			Prompt:           fmt.Sprintf("Pay %s", symbol),
-			Options:          options,
-			MinChoices:       1,
-			MaxChoices:       1,
-			DefaultSelection: []int{0},
-		}
-		selected := e.chooseChoice(g, agents, request, log)
-		payLife := len(selected) == 1 && selected[0] == 1
+		payLife := e.choosePhyrexianPayment(g, playerID, symbol, availableLife, agents, log)
 		if payLife {
 			availableLife -= 2
 		}
-		choices = append(choices, payLife)
+		announced = append(announced, phyrexianAnnouncement{symbol: symbol, payLife: payLife})
 	}
-	return choices
+	return announced
+}
+
+// phyrexianPaymentChoicesAfter returns one payment choice per Phyrexian symbol
+// of manaCost's effective cost, in cost order, true paying 2 life, and whether
+// each must be paid with mana. announced maps cost positions to announced
+// payments (true is 2 life). A symbol announced as mana must be paid with mana
+// unless an effect such as K'rrik, Son of Yawgmoth lets the caster pay 2 life
+// for that color: then, as for each unannounced symbol, the caster chooses
+// while paying (CR 601.2h).
+func (e *Engine) phyrexianPaymentChoicesAfter(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, announced map[int]bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (lifeChoices, manaOnly []bool) {
+	if manaCost == nil {
+		return nil, nil
+	}
+	state := &rulesPaymentState{g: g}
+	effective := payment.EffectiveManaCost(state, playerID, *manaCost)
+	availableLife := playerLife(g, playerID)
+	for _, payLife := range announced {
+		if payLife {
+			availableLife -= 2
+		}
+	}
+	for i, symbol := range effective {
+		if !isPhyrexianSymbol(symbol) {
+			continue
+		}
+		payLife, ok := announced[i]
+		locked := ok && !payLife
+		if locked && symbol.Kind == cost.PhyrexianSymbol && state.PayLifeForManaColor(playerID, symbol.Color) {
+			ok, locked = false, false
+		}
+		if !ok {
+			payLife = e.choosePhyrexianPayment(g, playerID, symbol, availableLife, agents, log)
+			if payLife {
+				availableLife -= 2
+			}
+		}
+		lifeChoices = append(lifeChoices, payLife)
+		manaOnly = append(manaOnly, locked)
+	}
+	return lifeChoices, manaOnly
+}
+
+// choosePhyrexianPayment asks whether to pay a Phyrexian symbol with 2 life
+// rather than mana; paying life is offered only with at least 2 life available.
+func (e *Engine) choosePhyrexianPayment(g *game.Game, playerID game.PlayerID, symbol cost.Symbol, availableLife int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	manaLabel := fmt.Sprintf("Pay %s mana", symbol.Color)
+	if symbol.Kind == cost.PhyrexianGenericSymbol {
+		manaLabel = fmt.Sprintf("Pay {%d}", symbol.Generic)
+	}
+	options := []game.ChoiceOption{{Index: 0, Label: manaLabel}}
+	if availableLife >= 2 {
+		options = append(options, game.ChoiceOption{Index: 1, Label: "Pay 2 life"})
+	}
+	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		Kind:             game.ChoicePayment,
+		Player:           playerID,
+		Prompt:           fmt.Sprintf("Pay %s", symbol),
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, log)
+	return len(selected) == 1 && selected[0] == 1
+}
+
+func playerLife(g *game.Game, playerID game.PlayerID) int {
+	if player, ok := playerByID(g, playerID); ok {
+		return player.Life
+	}
+	return 0
+}
+
+func isPhyrexianSymbol(symbol cost.Symbol) bool {
+	return symbol.Kind == cost.PhyrexianSymbol || symbol.Kind == cost.PhyrexianGenericSymbol
 }
 
 func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedTapIDs ...id.ID) []id.ID {

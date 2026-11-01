@@ -341,6 +341,12 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 		cast.CardID = 0
 	}
 	spellDef := cardFaceOrDefault(card, cast.Face)
+	// CR 601.2b: the cost is proposed, with its Phyrexian payments announced,
+	// before any remaining targets are chosen and before splicing.
+	proposal, ok := e.proposeSpellCost(g, freeCastCostRequest(controllerID, spellDef, cast), false, agents, log)
+	if !ok {
+		return false
+	}
 	branch := castBranchForCast(cast)
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, controllerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
 	if !ok {
@@ -424,29 +430,13 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 	// CR 601.2f-h: lock the total cost, then, if it includes a mana payment,
 	// let the caster activate mana abilities before paying it. An unpaid
 	// proposal is reversed (CR 733).
-	prepared, ok := e.choosePreparedSpellCost(g, request, agents, log)
+	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
 	if !ok {
 		rollback()
 		return false
 	}
 	request.PreparedCost = &prepared
-	paymentOption := prepared.Summary
-	undoMana := func() {}
-	if prepared.IncludesManaPayment() {
-		undoMana = e.activateManualPaymentManaAbilities(g, controllerID, agents, log)
-	}
-	prefs := e.paymentPreferencesForCostFromSource(
-		g,
-		controllerID,
-		paymentOption.ManaCost,
-		paymentOption.AdditionalCosts,
-		cast.XValue,
-		paymentCardID,
-		cast.SourceZone,
-		agents,
-		log,
-	)
-	prefs.AlternativeIndex = paymentOption.Index
+	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)
 	request.Prefs = prefs
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, controllerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)

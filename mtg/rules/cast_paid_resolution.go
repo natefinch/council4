@@ -58,9 +58,26 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		spellCastLimitReached(g, controllerID, castFace) || !isSupportedSpell(spellDef) {
 		return false
 	}
-	cast, ok := e.chooseCastNumbers(g, controllerID, spellDef, action.CastSpellAction{
+	cast, ok := e.chooseCastAnnouncements(g, controllerID, spellDef, action.CastSpellAction{
 		CardID: cardID, SourceZone: fromZone, Face: game.FaceFront,
 	}, false, agents, log)
+	if !ok {
+		g.Execution.InvalidChoices++
+		return false
+	}
+	request := payment.SpellRequest{
+		PlayerID: controllerID, CardID: cardID, SourceZone: fromZone, Card: spellDef,
+		XValue: cast.XValue, KickerPaid: cast.KickerPaid, KickerCount: cast.KickerCount,
+		ChosenModes:     cast.ChosenModes,
+		CastPermissions: castPermissionsForZone(g, controllerID, cardID, fromZone, game.FaceFront),
+	}
+	// CR 601.2b-c: the cost is proposed, with its Phyrexian payments announced,
+	// before the spell's targets are chosen.
+	proposal, ok := e.proposeSpellCost(g, request, true, agents, log)
+	if !ok {
+		return false
+	}
+	cast, ok = e.chooseCastTargets(g, controllerID, spellDef, cast, agents, log)
 	if !ok {
 		g.Execution.InvalidChoices++
 		return false
@@ -70,13 +87,8 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	if !ok {
 		panic("validated paid-cast spell targets could not be segmented")
 	}
-	request := payment.SpellRequest{
-		PlayerID: controllerID, CardID: cardID, SourceZone: fromZone, Card: spellDef,
-		XValue: cast.XValue, KickerPaid: cast.KickerPaid, KickerCount: cast.KickerCount,
-		ChosenModes: modes, Targets: targets,
-		CastPermissions: castPermissionsForZone(g, controllerID, cardID, fromZone, game.FaceFront),
-	}
-	if _, feasible := spellCostFeasibility(g, request, e.hasManualPaymentManaAbility(g, controllerID)); !feasible {
+	request.Targets = targets
+	if _, feasible := e.lockSpellCostProposal(g, request, proposal); !feasible {
 		return false
 	}
 	// CR 601.2a: proposing the cast moves the card to the stack before its costs
@@ -119,7 +131,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	counterTransition.apply(g)
 	g.Stack.Push(obj)
 	targetEvents := prepareTargetEvents(g, obj)
-	prepared, ok := e.choosePreparedSpellCost(g, request, agents, log)
+	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
 		restoreSource()
@@ -127,16 +139,9 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		return false
 	}
 	request.PreparedCost = &prepared
-	paymentOption := prepared.Summary
 	// CR 601.2g: mana abilities may be activated while paying only when the
-	// locked total cost includes a mana payment.
-	undoMana := func() {}
-	if prepared.IncludesManaPayment() {
-		undoMana = e.activateManualPaymentManaAbilities(g, controllerID, agents, log)
-	}
-	prefs := e.paymentPreferencesForCostFromSource(g, controllerID, paymentOption.ManaCost,
-		paymentOption.AdditionalCosts, cast.XValue, cardID, fromZone, agents, log)
-	prefs.AlternativeIndex = paymentOption.Index
+	// locked total, with its announced Phyrexian payments, includes mana.
+	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)
 	request.Prefs = prefs
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, controllerID)
 	paymentResult, ok := paymentOrch.paySpellCosts(g, request)

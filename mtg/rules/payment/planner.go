@@ -108,10 +108,13 @@ func (p Planner) CanPayPreparedNonManaCosts(req SpellRequest) bool {
 	return ok
 }
 
-// IncludesManaPayment reports whether the locked total includes a mana
-// payment, the condition for the payment-time mana ability window (CR 601.2g).
-func (c PreparedSpellCost) IncludesManaPayment() bool {
-	return c.option.manaCost != nil && c.option.manaCost.ManaValue() > 0
+// CanPaySpellCostsAsPreferred reports whether the player can currently pay req
+// as req.Prefs directs, honoring its cost option and its Phyrexian life and
+// mana choices, without applying the payment. With nil Prefs it is
+// CanPaySpellCosts.
+func (p Planner) CanPaySpellCostsAsPreferred(req SpellRequest) bool {
+	_, ok := buildSpellCostPlan(p.s, req)
+	return ok
 }
 
 // BuildAbilityCostPlan reports whether a payment plan can be built for the

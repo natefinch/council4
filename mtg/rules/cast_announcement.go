@@ -11,6 +11,16 @@ import (
 )
 
 func (e *Engine) chooseCastNumbers(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, free bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (action.CastSpellAction, bool) {
+	cast, ok := e.chooseCastAnnouncements(g, player, def, cast, free, agents, log)
+	if !ok {
+		return cast, false
+	}
+	return e.chooseCastTargets(g, player, def, cast, agents, log)
+}
+
+// chooseCastAnnouncements takes the caster's X, multikicker and mode choices
+// for cast (CR 601.2b).
+func (e *Engine) chooseCastAnnouncements(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, free bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (action.CastSpellAction, bool) {
 	private := cast.SourceZone == zone.Hand || cast.SourceZone == zone.Library
 	manaX := costHasVariableMana(manaCostPtr(def.ManaCost))
 	if free && manaX {
@@ -43,6 +53,13 @@ func (e *Engine) chooseCastNumbers(g *game.Game, player game.PlayerID, def *game
 		}, log)
 		cast.ChosenModes = slices.Clone(modes[selected[0]])
 	}
+	return cast, true
+}
+
+// chooseCastTargets keeps cast's targets when they are legal and otherwise asks
+// the caster to choose them (CR 601.2c).
+func (e *Engine) chooseCastTargets(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (action.CastSpellAction, bool) {
+	branch := castBranchForCast(cast)
 	if spellTargetsValidForCast(g, player, def, cast.ChosenModes, cast.Targets, cast.XValue,
 		effectiveKickerCount(cast.KickerPaid, cast.KickerCount), branch) {
 		return cast, true

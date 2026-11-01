@@ -226,7 +226,8 @@ func paySnowMana(plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Col
 }
 
 func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, prefs *Preferences, canPayLife bool) bool {
-	if prefs != nil && prefs.NextPhyrexianLifeChoice() {
+	payLife, manaOnly := prefs.NextPhyrexianChoice()
+	if payLife {
 		if !canPayLife || player.Life-plan.lifePayment < 2 {
 			return false
 		}
@@ -243,7 +244,7 @@ func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Un
 	}) {
 		return true
 	}
-	if !canPayLife || player.Life-plan.lifePayment < 2 {
+	if manaOnly || !canPayLife || player.Life-plan.lifePayment < 2 {
 		return false
 	}
 	plan.lifePayment += 2
@@ -261,7 +262,8 @@ func payPhyrexianSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Un
 // mirrors payPhyrexianSymbol but pays the symbol's generic mana rather than a
 // color when not paying life.
 func payPhyrexianGenericSymbol(player *game.Player, plan *paymentPlan, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, symbol cost.Symbol, prefs *Preferences, canPayLife bool) bool {
-	if prefs != nil && prefs.NextPhyrexianLifeChoice() {
+	payLife, manaOnly := prefs.NextPhyrexianChoice()
+	if payLife {
 		if !canPayLife || player.Life-plan.lifePayment < 2 {
 			return false
 		}
@@ -278,7 +280,7 @@ func payPhyrexianGenericSymbol(player *game.Player, plan *paymentPlan, pool map[
 	}) {
 		return true
 	}
-	if !canPayLife || player.Life-plan.lifePayment < 2 {
+	if manaOnly || !canPayLife || player.Life-plan.lifePayment < 2 {
 		return false
 	}
 	plan.lifePayment += 2
