@@ -10,17 +10,106 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// Source review: Sakashima of a Thousand Faces oracle ID
+// 8ecdaf4b-4442-42da-9714-4257a83faf50 (pinned corpus text); Evelyn, the
+// Covetous oracle ID 4ab6f615-1f04-4ed2-88b2-49faa8356dd0. Scryfall rulings
+// (https://api.scryfall.com/cards/714c3a1f-7b30-4ed8-8f38-6176758741fb/rulings)
+// dated 2020-11-10: Sakashima copies exactly the printed original except that it
+// also has Sakashima's other abilities, and once the legend rule applies again
+// duplicate names must immediately comply. CR effective 2026-09-25 (official
+// TXT, local verified copy): 707.2 (copiable values include name), 707.9a
+// (gained abilities become copiable), 707.9c (only characteristics an exception
+// names are retained) and 704.5j (legend rule by name). The exception names no
+// retained name, so the copy takes the copied creature's name (#3541).
+
+func registeredSakashimaEntersCopyingEvelyn(t *testing.T, accept bool) (*game.Game, *Engine, *game.Permanent, *game.Permanent) {
+	t.Helper()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	evelyn := addCombatPermanent(g, game.Player1, registryCardDef(t, "Evelyn, the Covetous"))
+	pushSpell(g, game.Player1, registryCardDef(t, "Sakashima of a Thousand Faces"), false)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: optionalMayAgent{accept: accept}}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	var sakashima *game.Permanent
+	for _, permanent := range g.Battlefield {
+		card := g.CardInstances[permanent.CardInstanceID]
+		if card != nil && card.Def.Name == "Sakashima of a Thousand Faces" {
+			sakashima = permanent
+		}
+	}
+	if sakashima == nil {
+		t.Fatal("registered Sakashima did not resolve onto the battlefield")
+	}
+	return g, engine, evelyn, sakashima
+}
+
+func TestRegisteredSakashimaCopiesEvelynName(t *testing.T) {
+	g, engine, evelyn, sakashima := registeredSakashimaEntersCopyingEvelyn(t, true)
+
+	if got := permanentEffectiveName(g, sakashima); got != "Evelyn, the Covetous" {
+		t.Fatalf("effective name = %q, want copied Evelyn, the Covetous", got)
+	}
+	snapshot, ok := permanentCopyDef(g, sakashima)
+	if !ok || snapshot.Name != "Evelyn, the Covetous" {
+		t.Fatalf("copiable name = %q (ok %v), want Evelyn, the Covetous", snapshot.Name, ok)
+	}
+	if !hasKeyword(g, sakashima, game.Flash) || !hasKeyword(g, sakashima, game.Partner) {
+		t.Fatal("copy lost Evelyn's Flash or Sakashima's other Partner ability")
+	}
+	if !playerRuleEffectActive(g, game.Player1, game.RuleEffectLegendRuleDoesNotApply) {
+		t.Fatal("copy lost Sakashima's other legend-rule exemption")
+	}
+	engine.applyStateBasedActions(g)
+	for _, permanent := range []*game.Permanent{evelyn, sakashima} {
+		if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
+			t.Fatal("the legend rule applied while Sakashima's exemption was active")
+		}
+	}
+
+	// Once the copy loses its abilities, the legend rule applies again and the
+	// two permanents named Evelyn, the Covetous must comply (CR 704.5j).
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID: g.IDGen.Next(), Timestamp: 100000, AffectedObjectID: sakashima.ObjectID,
+		Layer: game.LayerAbility, Duration: game.DurationPermanent, RemoveAllAbilities: true,
+	})
+	engine.applyStateBasedActions(g)
+	_, evelynStays := permanentByObjectID(g, evelyn.ObjectID)
+	_, sakashimaStays := permanentByObjectID(g, sakashima.ObjectID)
+	if evelynStays == sakashimaStays {
+		t.Fatalf("after losing the exemption Evelyn stays %v, Sakashima stays %v; want exactly one by the legend rule", evelynStays, sakashimaStays)
+	}
+}
+
+func TestRegisteredSakashimaDeclinedCopyKeepsItsName(t *testing.T) {
+	g, engine, evelyn, sakashima := registeredSakashimaEntersCopyingEvelyn(t, false)
+
+	if got := permanentEffectiveName(g, sakashima); got != "Sakashima of a Thousand Faces" {
+		t.Fatalf("effective name = %q after decline, want Sakashima of a Thousand Faces", got)
+	}
+	if got := effectivePower(g, sakashima); got != 3 {
+		t.Fatalf("effective power = %d after decline, want printed 3", got)
+	}
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		ID: g.IDGen.Next(), Timestamp: 100000, AffectedObjectID: sakashima.ObjectID,
+		Layer: game.LayerAbility, Duration: game.DurationPermanent, RemoveAllAbilities: true,
+	})
+	engine.applyStateBasedActions(g)
+	for _, permanent := range []*game.Permanent{evelyn, sakashima} {
+		if _, ok := permanentByObjectID(g, permanent.ObjectID); !ok {
+			t.Fatal("legend rule removed a permanent although the names differ")
+		}
+	}
+}
+
 func sakashimaTestReplacement() game.ReplacementAbility {
 	return game.EntersAsCopyWithOtherAbilities(
-		game.EntersAsCopyWithRetainedName(
-			game.EntersAsCopyReplacement(
-				"You may have Sakashima enter as a copy of another creature you control, except it has Sakashima's other abilities.",
-				&game.Selection{
-					RequiredTypes: []types.Card{types.Creature},
-					Controller:    game.ControllerYou,
-				},
-				true, false, nil, false, nil, nil,
-			),
+		game.EntersAsCopyReplacement(
+			"You may have Sakashima enter as a copy of another creature you control, except it has Sakashima's other abilities.",
+			&game.Selection{
+				RequiredTypes: []types.Card{types.Creature},
+				Controller:    game.ControllerYou,
+			},
+			true, false, nil, false, nil, nil,
 		),
 	)
 }
@@ -76,8 +165,8 @@ func TestSakashimaAcceptsOnlyControlledCreatureAndKeepsExceptions(t *testing.T) 
 	replacement := sakashimaTestReplacement()
 	applyEntersAsCopy(ctx, g, sakashima, &replacement.Replacement)
 
-	if got := permanentEffectiveName(g, sakashima); got != "Sakashima of a Thousand Faces" {
-		t.Fatalf("effective name = %q, want retained Sakashima name", got)
+	if got := permanentEffectiveName(g, sakashima); got != "Controlled Dragon" {
+		t.Fatalf("effective name = %q, want copied Controlled Dragon name", got)
 	}
 	if got := effectivePower(g, sakashima); got != 4 {
 		t.Fatalf("effective power = %d, want controlled creature's 4 (opponent's 9 is illegal)", got)
@@ -139,8 +228,8 @@ func TestSakashimaCopySnapshotPreservesCopyLayerForTokensAndCopies(t *testing.T)
 	if !ok {
 		t.Fatal("permanentCopyDef failed for copied Sakashima")
 	}
-	if snapshot.Name != "Sakashima of a Thousand Faces" || !snapshot.Power.Exists || snapshot.Power.Val.Value != 6 {
-		t.Fatalf("copy snapshot = name %q power %#v, want retained name and copied 6", snapshot.Name, snapshot.Power)
+	if snapshot.Name != "Controlled Wurm" || !snapshot.Power.Exists || snapshot.Power.Val.Value != 6 {
+		t.Fatalf("copy snapshot = name %q power %#v, want copied name and copied 6", snapshot.Name, snapshot.Power)
 	}
 	if got := snapshot.ManaValue(); got != 6 {
 		t.Fatalf("copy snapshot mana value = %d, want copied creature's 6", got)
