@@ -99,6 +99,13 @@ type Permanent struct {
 	// without clearing this control-history flag.
 	SummoningSick bool
 
+	// SicknessController is the controller SummoningSick was last reconciled
+	// against. Unset, it is the entry controller (Controller). The engine sets
+	// SummoningSick whenever it observes a different current controller, so a
+	// control change, including one that later changes back, restarts the
+	// continuous-control requirement of CR 302.6.
+	SicknessController opt.V[PlayerID]
+
 	// PhasedOut is true if this permanent is phased out. Phased-out
 	// permanents are treated as though they don't exist (CR 702.26).
 	PhasedOut bool

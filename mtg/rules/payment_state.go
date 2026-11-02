@@ -110,6 +110,10 @@ func (s *rulesPaymentState) PermanentHasType(p *game.Permanent, t types.Card) bo
 	return permanentHasType(s.g, p, t)
 }
 
+func (s *rulesPaymentState) PermanentSummoningSick(p *game.Permanent) bool {
+	return permanentSummoningSick(s.g, p)
+}
+
 func (s *rulesPaymentState) PermanentHasSupertype(p *game.Permanent, supertype types.Super) bool {
 	return permanentHasSupertype(s.g, p, supertype)
 }

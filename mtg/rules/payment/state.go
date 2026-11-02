@@ -150,6 +150,11 @@ type statePermanentQueries interface {
 	// card type, accounting for continuous type-changing effects.
 	PermanentHasType(p *game.Permanent, t types.Card) bool
 
+	// PermanentSummoningSick reports whether the permanent's current controller
+	// has not controlled it continuously since their most recent turn began
+	// (CR 302.6), including an unsettled control change.
+	PermanentSummoningSick(p *game.Permanent) bool
+
 	// PermanentHasSupertype reports whether the permanent has the given supertype.
 	PermanentHasSupertype(p *game.Permanent, s types.Super) bool
 

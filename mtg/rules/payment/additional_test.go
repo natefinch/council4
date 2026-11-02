@@ -268,6 +268,7 @@ func (fakePaymentState) CardFace(*game.CardInstance, game.FaceIndex) *game.CardD
 	return nil
 }
 func (fakePaymentState) PermanentHasType(*game.Permanent, types.Card) bool       { return false }
+func (fakePaymentState) PermanentSummoningSick(p *game.Permanent) bool           { return p.SummoningSick }
 func (fakePaymentState) PermanentHasSupertype(*game.Permanent, types.Super) bool { return false }
 func (fakePaymentState) PermanentHasSubtype(*game.Permanent, types.Sub) bool     { return false }
 func (fakePaymentState) PermanentEffectiveColors(*game.Permanent) []color.Color  { return nil }

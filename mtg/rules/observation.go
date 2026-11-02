@@ -429,7 +429,7 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 		Toughness:              values.toughness,
 		HasToughness:           values.toughnessOK,
 		Tapped:                 permanent.Tapped,
-		SummoningSick:          permanent.SummoningSick,
+		SummoningSick:          permanentSummoningSick(o.g, permanent),
 		FaceDown:               permanent.FaceDown,
 		PhasedOut:              permanent.PhasedOut,
 		Types:                  append([]types.Card(nil), values.types...),
