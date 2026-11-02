@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -109,23 +107,8 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		SourceZone:   fromZone,
 	}
 	counterTransition := prepareCastCounterTransition(g, card, fromZone)
-	libraryBefore := sourcePlayer.Library.All()
-	restoreSource := func() {
-		if fromZone != zone.Library {
-			restoreCastSourceCard(sourcePlayer, cardID, fromZone)
-			return
-		}
-		// Costs can remove other cards from the library. Restore before the next
-		// surviving original neighbour rather than moving the proposal to the top.
-		for _, next := range libraryBefore[slices.Index(libraryBefore, cardID)+1:] {
-			if index := slices.Index(sourcePlayer.Library.All(), next); index >= 0 {
-				sourcePlayer.Library.InsertAt(index, cardID)
-				return
-			}
-		}
-		sourcePlayer.Library.AddToBottom(cardID)
-	}
-	if !removeCastSourceCard(g, sourcePlayer, cardID, fromZone) {
+	place, ok := takeCastSourceCard(sourcePlayer, cardID, fromZone)
+	if !ok {
 		return false
 	}
 	counterTransition.apply(g)
@@ -134,7 +117,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
 	if !ok {
 		g.Stack.RemoveByID(obj.ID)
-		restoreSource()
+		restoreCastSourceCard(place)
 		counterTransition.undo(g)
 		return false
 	}
@@ -150,7 +133,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 		// paid, so the proposal is undone.
 		undoMana()
 		g.Stack.RemoveByID(obj.ID)
-		restoreSource()
+		restoreCastSourceCard(place)
 		counterTransition.undo(g)
 		return false
 	}

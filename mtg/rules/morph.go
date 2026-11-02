@@ -285,9 +285,9 @@ func stackFaceDownCast(g *game.Game, player game.PlayerID, cast action.CastFaceD
 		return nil, nil, false
 	}
 	owner := g.Players[player]
-	position := castSourcePosition(owner, cast.CardID, sourceZone)
 	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
-	if position < 0 || !removeCastSourceCard(g, owner, cast.CardID, sourceZone) {
+	place, ok := takeCastSourceCard(owner, cast.CardID, sourceZone)
+	if !ok {
 		return nil, nil, false
 	}
 	counterTransition.apply(g)
@@ -299,7 +299,7 @@ func stackFaceDownCast(g *game.Game, player game.PlayerID, cast action.CastFaceD
 	g.Stack.Push(obj)
 	return obj, func() {
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCardAt(owner, cast.CardID, sourceZone, position)
+		restoreCastSourceCard(place)
 		counterTransition.undo(g)
 	}, true
 }
