@@ -161,7 +161,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		announcementDef = overloadSpellDef(spellDef)
 	}
 	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
-	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, castSelectionFace(g, playerID, spellDef, cast.Bestowed), len(permissions) > 0, agents, log)
+	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, castSelectionFace(g, playerID, card.ID, spellDef, cast.Bestowed), len(permissions) > 0, agents, log)
 	if !ok {
 		return actionFailed, nil
 	}
@@ -537,7 +537,7 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	castFace := castSelectionFace(g, playerID, spellDef, false)
+	castFace := castSelectionFace(g, playerID, cardID, spellDef, false)
 	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, game.FaceFront, castFace, announced)
 	if !valid || castFromZoneProhibited(g, playerID, sourceZone) ||
 		spellCastProhibited(g, playerID, castFace) || spellCastLimitReached(g, playerID, castFace) {
@@ -677,7 +677,7 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		return false
 	}
 	branch := game.CastBranch{XValue: opt.Val(xValue), KickerCount: opt.Val(0)}
-	castFace := castSelectionFace(g, playerID, spellDef, false)
+	castFace := castSelectionFace(g, playerID, 0, spellDef, false)
 	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
@@ -1004,7 +1004,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	if face == game.FaceFused && (!canFuseFromZone(playerID, card, sourceZone) || !slices.Equal(chosenModes, game.FusedModes())) {
 		return false
 	}
-	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(g, playerID, spellDef, bestowed), announced)
+	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(g, playerID, cardID, spellDef, bestowed), announced)
 	if !valid {
 		return false
 	}
@@ -1054,7 +1054,7 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 		!spellTargetsValidForCast(g, playerID, announcementDef, chosenModes, targets, xValue, kickerCount, branch) {
 		return false
 	}
-	castFace := castSelectionFace(g, playerID, spellDef, bestowed)
+	castFace := castSelectionFace(g, playerID, cardID, spellDef, bestowed)
 	if !canCastAtCurrentTiming(g, playerID, castFace) {
 		return false
 	}

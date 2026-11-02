@@ -61,7 +61,7 @@ func (s choicePaymentState) Player(playerID game.PlayerID) (*game.Player, bool) 
 	return &game.Player{ID: playerID, Life: s.life, ManaPool: s.pool}, true
 }
 
-func (choicePaymentState) SpellCharacteristics(_ game.PlayerID, card *game.CardDef, _ bool) *game.CardDef {
+func (choicePaymentState) SpellCharacteristics(_ game.PlayerID, _ id.ID, card *game.CardDef, _ bool) *game.CardDef {
 	return card
 }
 

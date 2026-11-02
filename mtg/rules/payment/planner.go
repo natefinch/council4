@@ -145,7 +145,7 @@ func (p Planner) CanPaySpellManaCost(req SpellManaRequest) bool {
 		card:       req.Card,
 		manaCost:   req.Cost,
 		spendAs:    req.SpendAs,
-		spendSpell: p.s.SpellCharacteristics(req.PlayerID, req.Card, req.Bestowed),
+		spendSpell: p.s.SpellCharacteristics(req.PlayerID, req.CardID, req.Card, req.Bestowed),
 	}
 	_, ok := buildSpellManaPlanForOption(p.s, req.PlayerID, req.CardID, req.SourceZone, option, 0, manaSourceRestrictions{}, nil)
 	return ok

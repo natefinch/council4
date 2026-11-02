@@ -119,9 +119,12 @@ type stateQueries interface {
 	// SpellCharacteristics returns card as the spell playerID is casting
 	// presents itself while its costs are paid (CR 601.2h): its own
 	// characteristic-defining abilities, a bestowed cast (CR 702.103b) and
-	// type-changing effects that apply to that player's spells. Restricted mana
-	// tests these effective characteristics. card is never mutated.
-	SpellCharacteristics(playerID game.PlayerID, card *game.CardDef, bestowed bool) *game.CardDef
+	// type-changing effects that apply to that player's spells and, when the
+	// spell is the card cardID, to cards its owner owns that aren't on the
+	// battlefield (CR 112.1). cardID is 0 for a copy, which isn't a card
+	// (CR 707.10). Restricted mana tests these effective characteristics. card
+	// is never mutated.
+	SpellCharacteristics(playerID game.PlayerID, cardID id.ID, card *game.CardDef, bestowed bool) *game.CardDef
 
 	// CardMatchesSelection reports whether the card instance, read as the card
 	// it is in its current zone, satisfies the selection. The read is of the real

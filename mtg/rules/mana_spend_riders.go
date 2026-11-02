@@ -267,11 +267,11 @@ func resolveSpellCastManaSpendRiders(
 // type-changing effects that apply to its controller's spells.
 func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spellObj *game.StackObject, spellDef *game.CardDef) bool {
 	bestowed := spellObj != nil && spellObj.Kind == game.StackSpell && spellObj.Bestowed
-	caster := rider.Controller
+	scope := castSpellTypeScope(rider.Controller, 0)
 	if spellObj != nil && spellObj.Kind == game.StackSpell {
-		caster = spellObj.Controller
+		scope = stackSpellTypeScope(spellObj)
 	}
-	spellDef = castSelectionFace(g, caster, spellDef, bestowed)
+	spellDef = castSelectionFace(g, scope.controller, scope.card, spellDef, bestowed)
 	isCreatureSpell := spellDef != nil && spellDef.HasType(types.Creature)
 	switch rider.Rider.Condition {
 	case game.ManaSpendCastCommanderCreatureType:

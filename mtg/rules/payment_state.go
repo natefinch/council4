@@ -163,8 +163,8 @@ func (*rulesPaymentState) CardFace(card *game.CardInstance, face game.FaceIndex)
 	return cardFaceOrDefault(card, face)
 }
 
-func (s *rulesPaymentState) SpellCharacteristics(playerID game.PlayerID, card *game.CardDef, bestowed bool) *game.CardDef {
-	return castSelectionFace(s.g, playerID, card, bestowed)
+func (s *rulesPaymentState) SpellCharacteristics(playerID game.PlayerID, cardID id.ID, card *game.CardDef, bestowed bool) *game.CardDef {
+	return castSelectionFace(s.g, playerID, cardID, card, bestowed)
 }
 
 func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *game.CardDef, cardID id.ID, sourceZone zone.Type, targets []game.Target, bargained, bestowed bool) []game.CostModifier {
@@ -173,7 +173,7 @@ func (s *rulesPaymentState) CostModifiersForSpell(playerID game.PlayerID, card *
 	// caster's spells change the type line too, so type/subtype-filtered modifiers
 	// match on the effective characteristics. The original card is never mutated;
 	// commander tax is unaffected and keeps reading the printed card.
-	matchFace := castSelectionFace(s.g, playerID, card, bestowed)
+	matchFace := castSelectionFace(s.g, playerID, cardID, card, bestowed)
 	var modifiers []game.CostModifier
 	for _, modifier := range s.g.CostModifiers {
 		if modifier.Kind != game.CostModifierSpell {

@@ -167,7 +167,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if req.PreparedCost != nil {
 		option := req.PreparedCost.option
-		option.spendSpell = s.SpellCharacteristics(req.PlayerID, option.card, req.Bestowed)
+		option.spendSpell = s.SpellCharacteristics(req.PlayerID, req.CardID, option.card, req.Bestowed)
 		return []spellCostOption{option}
 	}
 	options := spellCostOptionsForRequestWithoutModes(s, req)
@@ -182,7 +182,7 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if req.Offspring {
 		addOffspringCost(options, req.Card)
 	}
-	spendSpell := s.SpellCharacteristics(req.PlayerID, req.Card, req.Bestowed)
+	spendSpell := s.SpellCharacteristics(req.PlayerID, req.CardID, req.Card, req.Bestowed)
 	for i := range options {
 		options[i].spendAs = req.SpendAnyMana
 		options[i].spendSpell = spendSpell

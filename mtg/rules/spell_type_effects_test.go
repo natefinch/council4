@@ -223,11 +223,11 @@ func TestArcaneAdaptationDoesNotAffectNoncreatureSpells(t *testing.T) {
 	g, _ := spellTypeScenario(t)
 	addChosenTypePermanent(t, g, game.Player1, "Arcane Adaptation", types.Elf)
 	bolt := productionChoiceCard(t, "Lightning Bolt")
-	if line := spellTypeLineFor(g, game.Player1, bolt, false); slices.Contains(line.subtypes, types.Elf) {
+	if line := spellTypeLineFor(g, castSpellTypeScope(game.Player1, 0), bolt, false); slices.Contains(line.subtypes, types.Elf) {
 		t.Fatalf("Lightning Bolt spell subtypes = %v, want no Elf", line.subtypes)
 	}
 	bears := productionChoiceCard(t, "Grizzly Bears")
-	if line := spellTypeLineFor(g, game.Player1, bears, false); !slices.Contains(line.subtypes, types.Elf) {
+	if line := spellTypeLineFor(g, castSpellTypeScope(game.Player1, 0), bears, false); !slices.Contains(line.subtypes, types.Elf) {
 		t.Fatalf("Grizzly Bears spell subtypes = %v, want Elf", line.subtypes)
 	}
 }

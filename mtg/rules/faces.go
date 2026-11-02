@@ -105,15 +105,18 @@ func cardSubtypes(def *game.CardDef) []types.Sub {
 // type; a bestowed cast (CR 702.103b), which drops Creature and adds Aura, so
 // "creature spells cost less" modifiers no longer match and "Aura spells cost
 // less" modifiers do; and type-changing effects that apply to spells the caster
-// controls ("The same is true for creature spells you control"). Colors follow
-// the card's color-defining abilities (a Devoid spell is colorless). Power and
-// every other characteristic are preserved, and the original CardDef is never
-// mutated.
-func castSelectionFace(g *game.Game, caster game.PlayerID, card *game.CardDef, bestowed bool) *game.CardDef {
+// controls ("The same is true for creature spells you control") and, when the
+// spell is spellCard, the card's owner owns ("... and creature cards you own that
+// aren't on the battlefield"; a spell is a card on the stack, CR 112.1).
+// spellCard is 0 for a copy, which isn't a card (CR 707.10, 707.12). Colors
+// follow the card's color-defining abilities (a Devoid spell is colorless).
+// Power and every other characteristic are preserved, and the original CardDef
+// is never mutated.
+func castSelectionFace(g *game.Game, caster game.PlayerID, spellCard id.ID, card *game.CardDef, bestowed bool) *game.CardDef {
 	if card == nil {
 		return nil
 	}
-	line := spellTypeLineFor(g, caster, card, bestowed)
+	line := spellTypeLineFor(g, castSpellTypeScope(caster, spellCard), card, bestowed)
 	return withSpellTypeLine(characteristicDefinedFace(card), line)
 }
 

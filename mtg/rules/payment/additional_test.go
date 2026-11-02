@@ -302,7 +302,7 @@ func (fakePaymentState) ActivationConditionSatisfied(game.PlayerID, *game.Perman
 func (fakePaymentState) ManaAbilityTimingAllowed(game.PlayerID, *game.Permanent, int, game.TimingRestriction) bool {
 	return true
 }
-func (fakePaymentState) SpellCharacteristics(_ game.PlayerID, card *game.CardDef, _ bool) *game.CardDef {
+func (fakePaymentState) SpellCharacteristics(_ game.PlayerID, _ id.ID, card *game.CardDef, _ bool) *game.CardDef {
 	return card
 }
 

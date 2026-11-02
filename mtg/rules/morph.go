@@ -153,7 +153,7 @@ func faceDownSpellRequest(player game.PlayerID, cardID id.ID, sourceZone zone.Ty
 }
 
 func (e *Engine) canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind, permission game.PlayPermission) bool {
-	spell := castSelectionFace(g, player, faceDownSpellDef(), false)
+	spell := castSelectionFace(g, player, cardID, faceDownSpellDef(), false)
 	if !canAct(g, player) || player != g.Turn.PriorityPlayer || !canCastAtCurrentTiming(g, player, spell) || splitSecondOnStack(g) {
 		return false
 	}
@@ -219,7 +219,7 @@ func (e *Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || splitSecondOnStack(g) || kind == game.FaceDownNone {
 		return false
 	}
-	spell := castSelectionFace(g, playerID, faceDownSpellDef(), false)
+	spell := castSelectionFace(g, playerID, cardID, faceDownSpellDef(), false)
 	if !canCastAtCurrentTiming(g, playerID, spell) || castFromZoneProhibited(g, playerID, zone.Hand) ||
 		spellCastProhibited(g, playerID, spell) || spellCastLimitReached(g, playerID, spell) {
 		return false

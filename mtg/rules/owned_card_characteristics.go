@@ -25,7 +25,8 @@ func cardDefTypeLine(def *game.CardDef) spellTypeLine {
 // (CR 613.1d, 613.7), each to the cards its controller owns that match the
 // selection as of the start of the type layer ("The same is true for ...
 // creature cards you own that aren't on the battlefield"). A card on the stack
-// is a spell (spellTypeLineFor), and a synthetic card without an ID has no
+// is a spell (spellTypeLineFor, which applies these effects to the spell
+// through its owner), and a synthetic card without an ID has no
 // zone. changed reports whether any effect applied; otherwise base is returned
 // unchanged without being copied. Nothing is stored and nothing is revealed:
 // the result tracks each source's current presence, controller and condition.
@@ -33,7 +34,7 @@ func ownedCardTypeLine(g *game.Game, card *game.CardInstance, base spellTypeLine
 	if g == nil || card == nil || card.ID == 0 {
 		return base, false
 	}
-	effects := typeLineEffects(g, card.Owner, base, ownedCardTypeSelection)
+	effects := typeLineEffects(g, base, typeLineReach{player: card.Owner, selectionOf: ownedCardTypeSelection})
 	if len(effects) == 0 {
 		return base, false
 	}
