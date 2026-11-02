@@ -173,7 +173,7 @@ func releasePendingStateTriggerLatch(g *game.Game, trigger *pendingTriggeredAbil
 	if trigger.inline == nil || !trigger.inline.Trigger.State.Exists {
 		return
 	}
-	deleteStateTriggerLatch(g, trigger.sourceID, trigger.sourceCardID, trigger.abilityIndex)
+	deleteStateTriggerLatch(g, trigger.sourceID, trigger.abilityIndex)
 }
 
 func pendingTriggerAbility(g *game.Game, trigger *pendingTriggeredAbility) (*game.TriggeredAbility, bool) {

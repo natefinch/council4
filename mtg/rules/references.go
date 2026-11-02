@@ -204,6 +204,11 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 		if r.obj == nil || r.obj.SourceCardID == 0 {
 			return resolvedObjectReference{}, false
 		}
+		// Mutating over the source keeps the same object with the source card
+		// as a component below the new top card (CR 702.140c, CR 730.2c).
+		if permanent, ok := permanentByObjectID(r.g, r.obj.SourceID); ok && permanentHasComponentCard(permanent, r.obj.SourceCardID) {
+			return resolvedObjectReference{permanent: permanent}, true
+		}
 		for _, permanent := range r.g.Battlefield {
 			if permanent.CardInstanceID == r.obj.SourceCardID {
 				return resolvedObjectReference{permanent: permanent}, true
@@ -1310,4 +1315,21 @@ func targetCardID(g *game.Game, obj *game.StackObject, targetIndex int) (id.ID, 
 		return 0, false
 	}
 	return target.CardID, true
+}
+
+// permanentHasComponentCard reports whether cardID is the top card or a merged
+// component of permanent.
+func permanentHasComponentCard(permanent *game.Permanent, cardID id.ID) bool {
+	if cardID == 0 {
+		return false
+	}
+	if permanent.CardInstanceID == cardID {
+		return true
+	}
+	for _, component := range permanent.MergedCards {
+		if component.CardInstanceID == cardID {
+			return true
+		}
+	}
+	return false
 }
