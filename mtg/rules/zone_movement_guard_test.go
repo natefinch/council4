@@ -40,6 +40,7 @@ func TestProductionZoneArrivalsStayInMovementCore(t *testing.T) {
 		"mulligan.go:bottomCardsFromHand":                                "Library",
 		"determinize.go:*":                                               "Hand Library",
 		"actions_cast.go:restoreCastSourceCard":                          "*",
+		"actions_cast.go:restoreCastSourceCardAt":                        "*",
 		"cast_paid_resolution.go:castPaidSpellFromSource":                "Library",
 		"opening_hand_battlefield.go:considerOpeningHandBattlefieldCard": "Hand",
 		"stack.go:resolveActivatedAbilityWithChoices":                    "Hand",

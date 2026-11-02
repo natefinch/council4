@@ -455,7 +455,7 @@ func TestMuldrothaFaceDownUsesAnnouncedCreatureTypeAndPlanner(t *testing.T) {
 		})
 	}
 	if !containsAction(e.Simulator().LegalActions(g, game.Player1), cast) {
-		t.Fatalf("face down missing from legal actions: %+v; can cast = %v", e.legalActions(g, game.Player1), canCastGraveyardFaceDown(g, game.Player1, card, game.FaceFront, game.FaceDownMorph, permission))
+		t.Fatalf("face down missing from legal actions: %+v; can cast = %v", e.legalActions(g, game.Player1), e.canCastGraveyardFaceDown(g, game.Player1, card, game.FaceFront, game.FaceDownMorph, permission))
 	}
 	if !e.applyAction(g, game.Player1, cast) {
 		t.Fatal("legal face-down cast failed application")
