@@ -17,17 +17,18 @@ const maxManaPaymentProbeRuns = 128
 
 // manualManaMayPay reports whether the caster of request may activate
 // payment-time mana abilities (CR 601.2g) so that the locked total prepared
-// becomes payable (CR 601.2h). On clones of g it tries each sequence of the
-// caster's legal manual mana abilities with each of their choices, checking
-// after every activation whether the total can then be paid from the pool and
-// the planner's automatic sources. When the search can't be completed, because
+// becomes payable with the Phyrexian payments announced (CR 601.2b, 601.2h).
+// On clones of g it tries each sequence of the caster's legal manual mana
+// abilities with each of their choices, checking after every activation
+// whether the total can then be paid from the pool and the planner's automatic
+// sources. When the search can't be completed, because
 // it ran out of activations, met a choice it can't enumerate, or activated an
 // ability whose outcome depends on information hidden from the caster, it
 // reports true: the proposal is legal to begin and is reversed if it can't be
 // paid (CR 733.1). Offering or withholding the cast must not reveal hidden
 // information such as the identity or order of library cards (CR 401.2), so
 // no answer is drawn from a state that saw it.
-func (e *Engine) manualManaMayPay(g *game.Game, request payment.SpellRequest, prepared payment.PreparedSpellCost) bool {
+func (e *Engine) manualManaMayPay(g *game.Game, request payment.SpellRequest, prepared payment.PreparedSpellCost, announced map[int]bool) bool {
 	root := g.Clone()
 	root.Execution = game.ExecutionDiagnostics{}
 	seed := g.IDGen.Current()
@@ -41,7 +42,7 @@ func (e *Engine) manualManaMayPay(g *game.Game, request payment.SpellRequest, pr
 		},
 		player: request.PlayerID,
 		payable: func(clone *game.Game) bool {
-			payable, _ := preparedSpellCostFeasibility(clone, request, prepared, false, nil)
+			payable, _ := preparedSpellCostFeasibility(clone, request, prepared, nil, announced)
 			return payable
 		},
 	}

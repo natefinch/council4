@@ -29,7 +29,7 @@ func (e *Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, ca
 		return nil
 	}
 	var options []freeCastOption
-	manualMana := e.hasManualPaymentManaAbility(g, playerID)
+	manualMana := e.paymentManaWindow(g, playerID)
 	for _, face := range freeCastFaces(playerID, card, fromZone) {
 		spellDef := cardFaceOrDefault(card, face)
 		if !freeCastFaceAvailable(g, playerID, card, spellDef, selection, maxManaValue) {
@@ -144,7 +144,7 @@ func (e *Engine) freeCastOptionLegal(g *game.Game, playerID game.PlayerID, spell
 	if !freeCastProposalLegal(g, playerID, spellDef, cast) {
 		return false
 	}
-	_, feasible := spellCostFeasibility(g, freeCastCostRequest(playerID, spellDef, cast), e.hasManualPaymentManaAbility(g, playerID))
+	_, feasible := spellCostFeasibility(g, freeCastCostRequest(playerID, spellDef, cast), e.paymentManaWindow(g, playerID))
 	return feasible
 }
 

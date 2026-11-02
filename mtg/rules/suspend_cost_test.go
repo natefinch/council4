@@ -392,27 +392,48 @@ func TestSuspendCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 }
 
 // TestSuspendCastRollsBackPaymentTimeManaAbilities: with two Thalias the {2}
-// tax exceeds Waterlogged Grove's mana, so the proposal is offered but the
-// unpaid cast is reversed along with the reversible mana activation (CR 733),
+// tax exceeds Waterlogged Grove's mana, so the proposal is not offered and no
+// window opens (#3585). Adding Nurturing Peatland makes it payable: the
+// proposal is offered, but leaving the Peatland unused leaves the cast unpaid,
+// so it is reversed along with the reversible mana activation (CR 733),
 // leaving the card exiled.
 func TestSuspendCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
-	e, g := newEffectiveCascadeGame()
-	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
-	addCombatPermanent(g, game.Player2, reg.Lookup("Thalia, Guardian of Thraben"))
-	addCombatPermanent(g, game.Player2, reg.Lookup("Thalia, Guardian of Thraben"))
-	grove := addCombatPermanent(g, game.Player1, reg.Lookup("Waterlogged Grove"))
-	setReboundUpkeep(g)
-	life := g.Players[game.Player1].Life
-	agent := &paymentManaAgent{ability: "Pay 1 life"}
+	for _, tc := range []struct {
+		name          string
+		peatland      bool
+		wantWindows   int
+		wantActivated int
+	}{
+		{name: "mana short"},
+		{name: "mana unpaid", peatland: true, wantWindows: 2, wantActivated: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			cardID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
+			addCombatPermanent(g, game.Player2, reg.Lookup("Thalia, Guardian of Thraben"))
+			addCombatPermanent(g, game.Player2, reg.Lookup("Thalia, Guardian of Thraben"))
+			grove := addCombatPermanent(g, game.Player1, reg.Lookup("Waterlogged Grove"))
+			var peatland *game.Permanent
+			if tc.peatland {
+				peatland = addCombatPermanent(g, game.Player1, reg.Lookup("Nurturing Peatland"))
+			}
+			setReboundUpkeep(g)
+			life := g.Players[game.Player1].Life
+			agent := &paymentManaAgent{ability: "Add {G} or {U}"}
 
-	e.processSuspendUpkeep(g, game.Player1, suspendAgents(agent), &TurnLog{})
+			e.processSuspendUpkeep(g, game.Player1, suspendAgents(agent), &TurnLog{})
 
-	if agent.windows != 1 || agent.activated != 1 {
-		t.Fatalf("payment windows=%d activations=%d, want 1/1", agent.windows, agent.activated)
-	}
-	requireSuspendNotCast(t, g, cardID)
-	if grove.Tapped || g.Players[game.Player1].Life != life || g.Players[game.Player1].ManaPool.Total() != 0 {
-		t.Fatalf("grove tapped=%t life=%d pool=%d, want no mana activation left behind", grove.Tapped, g.Players[game.Player1].Life, g.Players[game.Player1].ManaPool.Total())
+			if agent.windows != tc.wantWindows || agent.activated != tc.wantActivated {
+				t.Fatalf("payment windows=%d activations=%d, want %d/%d", agent.windows, agent.activated, tc.wantWindows, tc.wantActivated)
+			}
+			requireSuspendNotCast(t, g, cardID)
+			if grove.Tapped || g.Players[game.Player1].Life != life || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatalf("grove tapped=%t life=%d pool=%d, want no mana activation left behind", grove.Tapped, g.Players[game.Player1].Life, g.Players[game.Player1].ManaPool.Total())
+			}
+			if peatland != nil && peatland.Tapped {
+				t.Fatal("the Peatland was activated although the caster declined it")
+			}
+		})
 	}
 }

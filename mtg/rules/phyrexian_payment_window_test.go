@@ -251,21 +251,23 @@ func TestMadnessPhyrexianLifeAnnouncedBeforeManaWindow(t *testing.T) {
 }
 
 // TestAnnouncedPhyrexianManaIsPaidWithMana announces a {B/P} as a mana payment
-// on each route, then activates Waterlogged Grove, which can add only {G} or
-// {U}. The announcement is binding (CR 601.2b, 601.2h): the symbol can't fall
+// on each route, which Nurturing Peatland could pay, then activates Waterlogged
+// Grove, which can add only {G} or {U}. The announcement is binding (CR 601.2b, 601.2h): the symbol can't fall
 // back to 2 life, so the proposal is reversed (CR 733) with the Grove untapped
 // and its life refunded. The paid Vault Skirge returns to the graveyard and the
 // madness card goes to the graveyard. The free cast may redo the kicked cast
-// (CR 733.2): announcing {B} again without activating the Grove is reversed
-// too, and repeating that announcement would only be reversed again, so only 2
-// life is then offered for the kicker, which casts it kicked (#3574).
+// (CR 733.2): after the Grove the window is offered again while the Peatland
+// is untapped, but declining it leaves {B} unpaid; announcing {B} again and
+// declining the window is reversed too, and repeating that announcement would
+// only be reversed again, so only 2 life is then offered for the kicker, which
+// casts it kicked (#3574).
 func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	blackPhyrexian := cost.PhyrexianMana(mana.B)
 	t.Run("paid", func(t *testing.T) {
-		e, g, cardID := conduitPaidCastGame(t, "Vault Skirge", "Etherium Sculptor")
+		e, g, cardID := conduitPaidCastGame(t, "Vault Skirge", "Etherium Sculptor", "Nurturing Peatland")
 		life := g.Players[game.Player1].Life
-		agent := &phyrexianWindowAgent{ability: "Pay 1 life"}
+		agent := &phyrexianWindowAgent{ability: "Add {G} or {U}"}
 
 		e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
 
@@ -278,9 +280,10 @@ func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 		e, g := newEffectiveCascadeGame()
 		cardID := addCardToHand(g, game.Player1, madnessSorcery(cost.Mana{blackPhyrexian}))
 		grove := addCombatPermanent(g, game.Player1, reg.Lookup("Waterlogged Grove"))
+		addCombatPermanent(g, game.Player1, reg.Lookup("Nurturing Peatland"))
 		discardIntoMadness(t, e, g, cardID)
 		life := g.Players[game.Player1].Life
-		agent := &phyrexianWindowAgent{ability: "Pay 1 life"}
+		agent := &phyrexianWindowAgent{ability: "Add {G} or {U}"}
 
 		e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
 
@@ -290,13 +293,14 @@ func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 	t.Run("free", func(t *testing.T) {
 		e, g := newEffectiveCascadeGame()
 		grove := addCombatPermanent(g, game.Player1, reg.Lookup("Waterlogged Grove"))
+		addCombatPermanent(g, game.Player1, reg.Lookup("Nurturing Peatland"))
 		def := freeCastTestInstant("Phyrexian Kicker Spell")
 		def.StaticAbilities = []game.StaticAbility{{KeywordAbilities: []game.KeywordAbility{
 			game.KickerKeyword{Cost: cost.Mana{blackPhyrexian}},
 		}}}
 		cardID := addCardToHand(g, game.Player1, def)
 		life := g.Players[game.Player1].Life
-		agent := &phyrexianWindowAgent{ability: "Pay 1 life"}
+		agent := &phyrexianWindowAgent{ability: "Add {G} or {U}"}
 
 		ok := e.chooseAndCastFreeSpellFromSource(g, g.Players[game.Player1], game.Player1, cardID, zone.Hand,
 			game.Selection{}, opt.V[int]{}, false, reboundKickerAgents(agent), &TurnLog{})
@@ -306,8 +310,8 @@ func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 			t.Fatalf("cast=%t stack top=%+v, want the kicked cast redone after the unpaid kicker", ok, obj)
 		}
 		requireAnnouncedManaReversed(t, g, agent, grove, life-2)
-		if want := []string{"phyrexian", "window", "phyrexian", "window", "phyrexian"}; !slices.Equal(agent.steps, want) {
-			t.Fatalf("steps=%v, want %v: {B} announced twice, then only 2 life offered", agent.steps, want)
+		if want := []string{"phyrexian", "window", "window", "phyrexian", "window", "phyrexian"}; !slices.Equal(agent.steps, want) {
+			t.Fatalf("steps=%v, want %v: {B} announced twice with the Peatland unused, then only 2 life offered", agent.steps, want)
 		}
 	})
 }
