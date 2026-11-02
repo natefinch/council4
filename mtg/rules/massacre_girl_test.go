@@ -1,11 +1,13 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	cardd "github.com/natefinch/council4/mtg/cards/d"
 	cardm "github.com/natefinch/council4/mtg/cards/m"
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -267,4 +269,177 @@ func TestDeathFrenzyGainsLifePerSimultaneousDeath(t *testing.T) {
 	if got := g.Players[game.Player1].Life; got != 24 {
 		t.Fatalf("Death Frenzy controller life = %d, want 24 (20 + 1 life for each of 4 simultaneous deaths)", got)
 	}
+}
+
+// Source review (#3502): Oracle text from the pinned corpus for Massacre Girl
+// (59957c45-4672-4650-80b1-70e4a60b429e, DSC 146): "Menace / When Massacre
+// Girl enters, each other creature gets -1/-1 until end of turn. Whenever a
+// creature dies this turn, each creature other than Massacre Girl gets -1/-1
+// until end of turn." https://api.scryfall.com/cards/59957c45-4672-4650-80b1-70e4a60b429e/rulings
+// returned five 2019-05-03 rulings: both abilities affect only creatures on the
+// battlefield as they resolve; once the enters ability has triggered it doesn't
+// matter whether Massacre Girl remains on the battlefield; deaths before the
+// delayed trigger is created don't trigger it; 0-toughness creatures die after
+// the delayed trigger exists; simultaneous deaths trigger it that many times.
+// CR 2026-09-25 (official TXT, MagicCompRules 20260925): 201.5 (a card's own
+// name means that particular object), 400.7 (a zone change makes a new
+// object), 603.7a/603.7c/603.7e (a delayed trigger created by a triggered
+// ability shares its source and acts on the particular object it refers to,
+// not a later object for the same card) and 611.2c (the affected set is fixed
+// when the effect begins). The delayed trigger therefore binds the Massacre
+// Girl object whose ability created it, keeps that binding observable after it
+// leaves, still excludes it while present, and excludes no later object.
+
+// massacreGirlScheduled puts the default-registry Massacre Girl onto the
+// battlefield with the given other creatures and resolves her enters ability,
+// scheduling her this-turn delayed death trigger.
+func massacreGirlScheduled(t *testing.T, others ...*game.Permanent) (*game.Game, *Engine, *game.Permanent, [game.NumPlayers]PlayerAgent) {
+	t.Helper()
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.ActivePlayer = game.Player1
+	engine := NewEngine(nil)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: defaultChoiceAgent{}}
+	mg := addCombatPermanent(g, game.Player1, registryCard(t, "Massacre Girl"))
+	enterMassacreGirl(g, mg)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("Massacre Girl's enters trigger did not fire")
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	if len(g.DelayedTriggers) != 1 {
+		t.Fatalf("delayed triggers = %d, want Massacre Girl's death trigger", len(g.DelayedTriggers))
+	}
+	return g, engine, mg, agents
+}
+
+func assertPT(t *testing.T, g *game.Game, permanent *game.Permanent, want int, what string) {
+	t.Helper()
+	power := effectivePower(g, permanent)
+	toughness, _ := effectiveToughness(g, permanent)
+	if power != want || toughness != want {
+		t.Fatalf("%s = %d/%d, want %d/%d", what, power, toughness, want, want)
+	}
+}
+
+// While Massacre Girl remains, her delayed trigger is bound to her pending and
+// on the stack, and resolving it still excludes her.
+func TestMassacreGirlDelayedTriggerBindsAndExcludesPresentSource(t *testing.T) {
+	g, engine, mg, agents := massacreGirlScheduled(t)
+	victim := addCreatureWithPT(g, game.Player2, 1, 1)
+	bystander := addCreatureWithPT(g, game.Player2, 4, 4)
+
+	obs := observe(g, game.Player2)
+	if delayedViewBoundTo(obs.DelayedTriggers(), mg.ObjectID) != 1 {
+		t.Fatalf("pending delayed triggers = %+v, want one bound to Massacre Girl %d", obs.DelayedTriggers(), mg.ObjectID)
+	}
+	if delayedViewBoundTo(findPermanentView(t, obs, mg.ObjectID).PendingDelayedTriggers, mg.ObjectID) != 1 {
+		t.Fatal("Massacre Girl's view does not list her bound delayed trigger")
+	}
+
+	victim.MarkedDamage = 1
+	engine.applyStateBasedActions(g)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("the creature death did not fire Massacre Girl's delayed trigger")
+	}
+	stack := observe(g, game.Player2).Stack()
+	if len(stack) != 1 || !slices.Contains(stack[0].BoundObjectIDs, mg.ObjectID) || stack[0].SourceObjectID != mg.ObjectID {
+		t.Fatalf("stack = %+v, want the delayed trigger sourced from and bound to Massacre Girl %d", stack, mg.ObjectID)
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	assertPT(t, g, bystander, 3, "bystander after the delayed -1/-1")
+	assertPT(t, g, mg, 4, "Massacre Girl after her delayed -1/-1")
+}
+
+// After Massacre Girl leaves the battlefield, her pending delayed trigger and
+// the stack object it becomes still name the original object (CR 603.7c), and
+// it keeps working.
+func TestMassacreGirlDelayedTriggerKeepsBindingAfterDeparture(t *testing.T) {
+	g, engine, mg, agents := massacreGirlScheduled(t)
+	victim := addCreatureWithPT(g, game.Player2, 1, 1)
+	bystander := addCreatureWithPT(g, game.Player2, 4, 4)
+	oldID := mg.ObjectID
+	if !movePermanentToZone(g, mg, zone.Exile) {
+		t.Fatal("could not exile Massacre Girl")
+	}
+
+	views := observe(g, game.Player2).DelayedTriggers()
+	if len(views) != 1 || !slices.Equal(views[0].BoundObjectIDs, []id.ID{oldID}) || views[0].SourceObjectID != 0 || views[0].SourceName != "Massacre Girl" {
+		t.Fatalf("pending delayed triggers = %+v, want Massacre Girl's trigger still bound to %d with no battlefield source", views, oldID)
+	}
+
+	victim.MarkedDamage = 1
+	engine.applyStateBasedActions(g)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("the creature death did not fire Massacre Girl's delayed trigger after she left")
+	}
+	stack := observe(g, game.Player2).Stack()
+	if len(stack) != 1 || !slices.Equal(stack[0].BoundObjectIDs, []id.ID{oldID}) || stack[0].SourceObjectID != 0 {
+		t.Fatalf("stack = %+v, want the fired trigger still bound to departed Massacre Girl %d", stack, oldID)
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	assertPT(t, g, bystander, 3, "bystander after the delayed -1/-1")
+}
+
+// A Massacre Girl that leaves and returns is a new object (CR 400.7). The
+// original's delayed trigger does not exclude it, while the new object's own
+// enters ability creates a separate delayed trigger that does.
+func TestMassacreGirlDelayedTriggerDoesNotExcludeLaterObject(t *testing.T) {
+	g, engine, mg, agents := massacreGirlScheduled(t)
+	victim := addCreatureWithPT(g, game.Player2, 1, 1)
+	bystander := addCreatureWithPT(g, game.Player2, 5, 5)
+	oldID := mg.ObjectID
+	if !movePermanentToZone(g, mg, zone.Exile) {
+		t.Fatal("could not exile Massacre Girl")
+	}
+	card, ok := g.GetCardInstance(mg.CardInstanceID)
+	if !ok {
+		t.Fatal("Massacre Girl card instance not found")
+	}
+	returned, ok := createCardPermanent(g, card, game.Player1, zone.Exile)
+	if !ok || returned.ObjectID == oldID {
+		t.Fatal("Massacre Girl did not return as a new object")
+	}
+	obs := observe(g, game.Player2)
+	if delayedViewBoundTo(obs.DelayedTriggers(), oldID) != 1 {
+		t.Fatalf("pending delayed triggers = %+v, want the original's trigger bound to %d", obs.DelayedTriggers(), oldID)
+	}
+	if pending := findPermanentView(t, obs, returned.ObjectID).PendingDelayedTriggers; len(pending) != 0 {
+		t.Fatalf("returned Massacre Girl pending = %+v, want none from the original object", pending)
+	}
+
+	// The returned object's own enters ability: the 1/1 victim drops to 0/0 and
+	// the 5/5 bystander to 4/4, and a second delayed trigger binds the new object.
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("the returned Massacre Girl's enters trigger did not fire")
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	if delayedViewBoundTo(observe(g, game.Player2).DelayedTriggers(), returned.ObjectID) != 1 {
+		t.Fatal("the returned Massacre Girl did not schedule a delayed trigger bound to itself")
+	}
+
+	engine.applyStateBasedActions(g)
+	if _, ok := permanentByObjectID(g, victim.ObjectID); ok {
+		t.Fatal("the 0/0 victim did not die")
+	}
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
+		t.Fatal("the death did not fire the delayed triggers")
+	}
+	stack := observe(g, game.Player2).Stack()
+	if len(stack) != 2 || delayedStackBoundTo(stack, oldID) != 1 || delayedStackBoundTo(stack, returned.ObjectID) != 1 {
+		t.Fatalf("stack = %+v, want one trigger bound to the original %d and one to the returned %d", stack, oldID, returned.ObjectID)
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+	// Only the original's trigger affects the returned object; both hit the bystander.
+	assertPT(t, g, returned, 3, "returned Massacre Girl")
+	assertPT(t, g, bystander, 2, "bystander")
+}
+
+func delayedStackBoundTo(stack []StackObjectView, objectID id.ID) int {
+	count := 0
+	for _, view := range stack {
+		if slices.Contains(view.BoundObjectIDs, objectID) {
+			count++
+		}
+	}
+	return count
 }

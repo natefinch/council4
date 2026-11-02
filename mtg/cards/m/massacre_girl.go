@@ -69,7 +69,8 @@ func newMassacreGirl() *game.CardDef {
 											Event:            game.EventPermanentDied,
 											SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}},
 										}),
-										Window: game.DelayedWindowThisTurn,
+										Window:         game.DelayedWindowThisTurn,
+										CapturedObject: opt.Val(game.SourcePermanentReference()),
 										Content: game.Mode{
 											Sequence: []game.Instruction{
 												{
@@ -77,7 +78,7 @@ func newMassacreGirl() *game.CardDef {
 														ContinuousEffects: []game.ContinuousEffect{
 															game.ContinuousEffect{
 																Layer:          game.LayerPowerToughnessModify,
-																Group:          game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.SourcePermanentReference()),
+																Group:          game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.CapturedObjectReference()),
 																PowerDelta:     -1,
 																ToughnessDelta: -1,
 															},
