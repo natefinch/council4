@@ -100,6 +100,10 @@ type StackObject struct {
 	// AbilityOwner preserves the original controller of a non-copy ability
 	// before a control change. Without a control change, Controller is its owner.
 	AbilityOwner opt.V[PlayerID]
+	// Caster preserves the player who cast this spell once another player
+	// gains control of it. Without a control change, Controller is its caster.
+	// It is unset on a copy that was not cast (CR 707.10).
+	Caster opt.V[PlayerID]
 
 	// Targets are the chosen runtime targets (permanents, players, etc.).
 	// Targets are locked in when the spell/ability is put on the stack
