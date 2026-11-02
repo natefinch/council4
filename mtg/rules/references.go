@@ -864,14 +864,16 @@ func (r referenceResolver) linkedObjectsGroupMembers(ref game.GroupReference) []
 // capturedObjectsGroupMembers enumerates the permanents a delayed trigger froze
 // under its CapturedObjectGroup reference at schedule time, kept on the resolving
 // stack object as CapturedObjectIDs. Members that have left the battlefield since
-// capture are skipped ("Exile the tokens at end of combat.", the myriad keyword).
+// capture are skipped ("Exile the tokens at end of combat.", the myriad keyword),
+// as are phased-out members, which are treated as though they don't exist
+// (CR 702.26b), matching the single CapturedObjectReference.
 func (r referenceResolver) capturedObjectsGroupMembers() []id.ID {
 	if r.obj == nil {
 		return []id.ID{}
 	}
 	members := make([]id.ID, 0, len(r.obj.CapturedObjectIDs))
 	for _, objectID := range r.obj.CapturedObjectIDs {
-		if _, ok := permanentByObjectID(r.g, objectID); ok {
+		if permanent, ok := permanentByObjectID(r.g, objectID); ok && !permanent.PhasedOut {
 			members = append(members, objectID)
 		}
 	}

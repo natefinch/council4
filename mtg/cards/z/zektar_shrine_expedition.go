@@ -66,13 +66,13 @@ func newZektarShrineExpedition() *game.CardDef {
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.MovePermanent{
-														Object:      game.CapturedObjectReference(),
+														Group:       game.CapturedObjectsGroup(),
 														Destination: zone.Exile,
 													},
 												},
 											},
 										}.Ability(),
-										CapturedObject: opt.Val(game.LinkedObjectReference("zektar-elemental")),
+										CapturedObjectGroup: opt.Val(game.LinkedObjectReference("zektar-elemental")),
 									},
 								},
 							},

@@ -278,11 +278,10 @@ func capturedDelayedEventPlayer(g *game.Game, obj *game.StackObject, def *game.D
 // delayed "at end of combat" disposal of the creature involved in combat
 // ("destroy that creature at end of combat"), where the original combat event is
 // gone once the trigger fires, so the blocked or damaged creature must be
-// captured now; delayed disposal of a permanent an earlier clause in the same
-// resolution published under a linked key ("Create a token ... Sacrifice it at
-// the beginning of the next end step.", Feldon of the Third Path), where the
-// reference is that linked object so each activation captures the permanent it
-// created; and a delayed trigger acting on its own source, which captures that
+// captured now; delayed disposal of a single permanent an earlier clause in the
+// same resolution published under a linked key, where the reference is that
+// linked object so each activation captures the permanent it acted on (created
+// tokens use capturedObjectIDs, since a replacement can multiply them); and a delayed trigger acting on its own source, which captures that
 // permanent object rather than a later object for the same card (CR 603.7c). It
 // returns zero when the definition carries no such reference or the permanent
 // cannot be identified, in which case the trigger's content finds nothing and

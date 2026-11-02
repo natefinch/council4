@@ -65,11 +65,13 @@ const (
 	// Serpentine Basilisk), where "Whenever this creature blocks or becomes
 	// blocked by a creature, destroy that creature at end of combat" must remember
 	// the blocked creature across the delay because the original combat event is
-	// gone when the trigger fires. It also backs delayed disposal of a permanent
-	// an earlier clause created or acted on and published under a linked key
-	// ("Create a token ... Sacrifice it at the beginning of the next end step.",
-	// Feldon of the Third Path), where per-activation capture keeps several
-	// same-turn activations from all resolving one shared, source-scoped link key.
+	// gone when the trigger fires. It also backs delayed disposal of a single
+	// permanent an earlier clause acted on and published under a linked key,
+	// where per-activation capture keeps several same-turn activations from all
+	// resolving one shared, source-scoped link key. Delayed disposal of created
+	// tokens ("Create a token ... Sacrifice it at the beginning of the next end
+	// step.", Feldon of the Third Path) uses CapturedObjectsGroup instead, since a
+	// replacement effect can make that "it" several tokens (CR 608.2c, 616.1).
 	ObjectReferenceCapturedObject
 	// ObjectReferenceTargetCard references the card chosen for a card target
 	// slot (a card in a zone such as a graveyard), addressed by the spec index.
@@ -229,8 +231,8 @@ func AllTargetStackObjectsReference(specIndex int) ObjectReference {
 // creating ability's context (its triggering event, or a linked object an
 // earlier clause published). It backs delayed "at end of combat" disposal of the
 // creature involved in combat ("destroy that creature at end of combat") and
-// delayed disposal of a per-activation created or acted-on permanent ("Create a
-// token ... Sacrifice it at the beginning of the next end step.").
+// delayed disposal of a single per-activation acted-on permanent. Created tokens
+// use CapturedObjectsGroup, since a replacement can multiply them.
 func CapturedObjectReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceCapturedObject}
 }

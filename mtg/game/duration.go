@@ -162,18 +162,17 @@ type DelayedTriggerDef struct {
 	// is gone. In delayed "at end of combat" disposal of the creature involved
 	// in combat ("destroy that creature at end of combat"), CapturedObject is
 	// the event or event-related permanent, resolved against the creating
-	// ability's triggering event. In delayed disposal of a permanent an earlier
-	// clause in the same resolution created or acted on and published under a
-	// linked key ("Create a token ... Sacrifice it at the beginning of the next
-	// end step.", Feldon of the Third Path), CapturedObject is a linked-object
-	// reference, so each activation captures the object it published rather
-	// than re-resolving one shared, source-scoped link key when the trigger
-	// fires. A delayed trigger that acts on its own source ("sacrifice this
-	// creature at end of combat", "transform Optimus Prime" after a captured
-	// damage event) captures SourcePermanentReference, binding that permanent
-	// object rather than whichever permanent the source card later becomes
-	// (CR 603.7c) and keeping the binding observable after the source leaves
-	// the battlefield. In each case the content references
+	// ability's triggering event. In delayed disposal of a single permanent an
+	// earlier clause in the same resolution acted on and published under a
+	// linked key, CapturedObject is a linked-object reference, so each
+	// activation captures the object it published rather than re-resolving one
+	// shared, source-scoped link key when the trigger fires. Delayed disposal of
+	// created tokens uses CapturedObjectGroup instead (see below). A delayed
+	// trigger that acts on its own source ("sacrifice this creature at end of
+	// combat", "transform Optimus Prime" after a captured damage event)
+	// captures SourcePermanentReference, binding that permanent object rather
+	// than whichever permanent the source card later becomes (CR 603.7c) and
+	// keeping the binding observable after the source leaves the battlefield. In each case the content references
 	// ObjectReferenceCapturedObject. It is valid with a fixed-phase Timing or an
 	// EventPattern.
 	CapturedObject opt.V[ObjectReference]
@@ -185,9 +184,13 @@ type DelayedTriggerDef struct {
 	// earlier clause in the same resolution created and published under one
 	// linked key ("... create a token that's a copy of this creature ... Exile
 	// the tokens at end of combat.", the myriad keyword CR 702.116, which creates
-	// one token per other opponent). The content references
-	// GroupDomainCapturedObjects via CapturedObjectsGroup(). It is only valid
-	// with a fixed-phase Timing and a linked-object reference.
+	// one token per other opponent). It also backs a singular "it" for a created
+	// token ("Create a ... token ... Exile it at the beginning of the next end
+	// step.", Zektar Shrine Expedition; Feldon of the Third Path), because a
+	// replacement effect such as Ojer Taq's can make that one token several and
+	// the delayed trigger must act on each of them (CR 608.2c, 616.1). The
+	// content references GroupDomainCapturedObjects via CapturedObjectsGroup().
+	// It is only valid with a fixed-phase Timing and a linked-object reference.
 	CapturedObjectGroup opt.V[ObjectReference]
 	// CapturedCard, when present, freezes the card an earlier clause in the same
 	// resolution moved to a non-battlefield zone and published under a linked
