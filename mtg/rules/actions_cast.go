@@ -646,6 +646,13 @@ func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {
 	}
 }
 
+// preparedCopyCastZone is the zone a prepared permanent's spell copy is cast
+// from. The copy is created in exile and cast from there (CR 722.3c), so
+// cast-zone prohibitions (CR 601.3), cost changes, the spell's cast-from zone
+// and its cast event all see exile. The prepared permanent only links the cast:
+// a CastSpellAction names it with zone.Battlefield as the cast permission.
+const preparedCopyCastZone = zone.Exile
+
 func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, targets []game.Target, xValue int, chosenModes []int) bool {
 	if !canAct(g, playerID) ||
 		playerID != g.Turn.PriorityPlayer ||
@@ -670,17 +677,21 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		return false
 	}
 	branch := game.CastBranch{XValue: opt.Val(xValue), KickerCount: opt.Val(0)}
+	castFace := castSelectionFace(g, playerID, spellDef, false)
 	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
 		!isSupportedSpell(spellDef) ||
 		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
 		!spellTargetsValidForCast(g, playerID, spellDef, chosenModes, targets, xValue, 0, branch) ||
-		!canCastAtCurrentTiming(g, playerID, castSelectionFace(g, playerID, spellDef, false)) {
+		!canCastAtCurrentTiming(g, playerID, castFace) ||
+		castFromZoneProhibited(g, playerID, preparedCopyCastZone) ||
+		spellCastProhibited(g, playerID, castFace) ||
+		spellCastLimitReached(g, playerID, castFace) {
 		return false
 	}
 	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
 		PlayerID:   playerID,
 		CardID:     sourceID,
-		SourceZone: zone.Battlefield,
+		SourceZone: preparedCopyCastZone,
 		Card:       spellDef,
 		XValue:     xValue,
 		Targets:    targets,
@@ -756,7 +767,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	targetEvents := prepareTargetEvents(g, &game.StackObject{
 		ID: stackID, Kind: game.StackSpell, Controller: playerID,
 		SourceID: sourceID, SourceCardID: permanent.CardInstanceID, SourceTokenDef: permanent.TokenDef,
-		Face: game.FaceAlternate, SourceZone: zone.Battlefield, Copy: true,
+		Face: game.FaceAlternate, SourceZone: preparedCopyCastZone, Copy: true,
 		Targets: cast.Targets, TargetCounts: targetCounts,
 		ChosenModes: cast.ChosenModes, XValue: cast.XValue,
 	})
@@ -764,7 +775,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	if proposed {
 		request, ok = e.lockAnnouncedSpellCost(g, request, proposal, agents, log)
 	} else {
-		request.Prefs = e.paymentPreferencesForSpellFromZone(g, playerID, sourceID, zone.Battlefield, game.FaceAlternate, spellDef, cast.XValue, agents, log)
+		request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
 	}
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	var paymentResult payment.SpellPaymentResult
@@ -798,7 +809,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
 		SacrificedAsCostIDs: paymentResult.SacrificedIDs,
 		PaidCostSubjects:    paymentResult.PaidCostSubjects,
-		SourceZone:          zone.Battlefield,
+		SourceZone:          preparedCopyCastZone,
 
 		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
@@ -822,7 +833,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		ManaValue:                    stackObjectKnownManaValue(g, obj),
 		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
 		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
-		FromZone:                     zone.Battlefield,
+		FromZone:                     preparedCopyCastZone,
 		ToZone:                       zone.Stack,
 
 		PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, playerID),
@@ -854,7 +865,7 @@ func preparedCopyCostRequest(g *game.Game, playerID game.PlayerID, cast action.C
 	return payment.SpellRequest{
 		PlayerID:   playerID,
 		CardID:     sourceID,
-		SourceZone: zone.Battlefield,
+		SourceZone: preparedCopyCastZone,
 		Card:       spellDef,
 		XValue:     cast.XValue,
 		Targets:    cast.Targets,
@@ -1205,7 +1216,7 @@ func preparedSpellXValues(g *game.Game, playerID game.PlayerID, sourceID id.ID, 
 	return spellCastXValues(g, spellDef, []payment.SpellRequest{{
 		PlayerID:   playerID,
 		CardID:     sourceID,
-		SourceZone: zone.Battlefield,
+		SourceZone: preparedCopyCastZone,
 		Card:       spellDef,
 	}})
 }

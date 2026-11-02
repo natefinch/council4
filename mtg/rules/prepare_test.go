@@ -48,8 +48,8 @@ func TestPreparedPermanentCastsSpellCopyOnce(t *testing.T) {
 		t.Fatal("prepared permanent left the battlefield")
 	}
 	stackObject, ok := g.Stack.Peek()
-	if !ok || !stackObject.Copy || stackObject.Face != game.FaceAlternate || stackObject.SourceZone != zone.Battlefield {
-		t.Fatalf("stack object = %+v, want alternate-face battlefield copy", stackObject)
+	if !ok || !stackObject.Copy || stackObject.Face != game.FaceAlternate || stackObject.SourceZone != zone.Exile {
+		t.Fatalf("stack object = %+v, want alternate-face copy cast from exile", stackObject)
 	}
 	if slices.ContainsFunc(engine.legalActions(g, game.Player1), func(got action.Action) bool {
 		return actionsEqual(got, preparedCast)
