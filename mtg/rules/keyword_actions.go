@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"slices"
-
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/compare"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -173,21 +171,10 @@ func effectStackObjectID(g *game.Game, obj *game.StackObject, targetIndex int) (
 // batch and returns the number of cards discarded.
 func discardEntireHand(g *game.Game, playerID game.PlayerID) int {
 	player, ok := playerByID(g, playerID)
-	if !ok {
+	if !ok || player.Hand.Size() == 0 {
 		return 0
 	}
-	cards := slices.Clone(player.Hand.All())
-	if len(cards) == 0 {
-		return 0
-	}
-	simultaneousID := g.IDGen.Next()
-	discarded := 0
-	for _, cardID := range cards {
-		if discardCardFromHandInBatch(g, playerID, cardID, simultaneousID) {
-			discarded++
-		}
-	}
-	return discarded
+	return len(discardChosenCardsInBatch(g, playerID, player.Hand.All(), g.IDGen.Next()))
 }
 
 func searchSpecSupported(spec game.SearchSpec) bool {

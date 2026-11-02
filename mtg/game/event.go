@@ -250,7 +250,11 @@ type Event struct {
 	// StackObjectID is set for spell or ability cast/resolution events.
 	StackObjectID id.ID
 
-	// SimultaneousID groups events that happened simultaneously.
+	// SimultaneousID groups events that happened simultaneously. A cohort can
+	// hold several players' actions: a group discard ("Each player discards a
+	// card.") shares one SimultaneousID, and each EventCardDiscarded's Player
+	// distinguishes that player's own discard occurrence within it
+	// (TriggerPattern.OneOrMorePerPlayer).
 	SimultaneousID id.ID
 
 	// AbilityIndex identifies an activated or triggered ability on its source.

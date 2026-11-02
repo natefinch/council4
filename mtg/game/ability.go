@@ -1282,8 +1282,18 @@ type TriggerPattern struct {
 	ExcludeFirstDrawInDrawStep bool
 
 	// OneOrMore coalesces matching events that happened as one batch into one
-	// trigger. The first matching event is retained as TriggerEvent.
+	// trigger. The first matching event is retained as TriggerEvent. Without a
+	// per-player or per-target scope below, one simultaneous cohort is one
+	// occurrence even when several players acted in it.
 	OneOrMore bool
+	// OneOrMorePerPlayer coalesces a one-or-more batch separately for each
+	// player who performed the action (the event's Player). When an effect makes
+	// several players discard at once ("Each player discards a card."), the
+	// discards share one cohort, yet "Whenever a player discards one or more
+	// cards" (Tinybones, Pocket Nuisance) triggers once per discarding player
+	// because each player's discard is its own occurrence (CR 603.2c). It is
+	// only valid with OneOrMore and Event == EventCardDiscarded.
+	OneOrMorePerPlayer bool
 	// OneOrMorePerAttackTarget coalesces attack events separately for each
 	// attacked player, planeswalker, or battle.
 	OneOrMorePerAttackTarget bool

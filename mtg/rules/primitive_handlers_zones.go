@@ -288,12 +288,16 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		players := playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup))
-		if !prim.AtRandom {
-			res.succeeded = r.discardGroupCardsWithChoices(players, res.amount)
-			return res
+		chosen := make([][]id.ID, len(players))
+		for i, playerID := range players {
+			if prim.AtRandom {
+				chosen[i] = chooseRandomHandCards(r.game, playerID, res.amount)
+			} else {
+				chosen[i] = r.chooseCardsToDiscard(playerID, res.amount)
+			}
 		}
-		for _, playerID := range players {
-			res.succeeded = len(discardCardsAtRandomFromHand(r.game, playerID, res.amount)) > 0 || res.succeeded
+		for _, discarded := range discardGroupSimultaneously(r.game, players, chosen) {
+			res.succeeded = len(discarded) > 0 || res.succeeded
 		}
 		return res
 	}
@@ -319,12 +323,16 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 func handleDiscardEntireHand(r *effectResolver, prim game.Discard) effectResolved {
 	res := effectResolved{accepted: true}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-		for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup)) {
-			discarded := discardEntireHand(r.game, playerID)
-			if discarded > res.amount {
-				res.amount = discarded
+		players := playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup))
+		hands := make([][]id.ID, len(players))
+		for i, playerID := range players {
+			if player, ok := playerByID(r.game, playerID); ok {
+				hands[i] = player.Hand.All()
 			}
-			res.succeeded = discarded > 0 || res.succeeded
+		}
+		for _, discarded := range discardGroupSimultaneously(r.game, players, hands) {
+			res.amount = max(res.amount, len(discarded))
+			res.succeeded = len(discarded) > 0 || res.succeeded
 		}
 		return res
 	}
@@ -354,27 +362,21 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 	return discarded
 }
 
-// discardGroupCardsWithChoices resolves a non-random player-group discard
-// ("Each player discards a card."). Each affected player chooses the cards
-// from their own hand (CR 701.9b), in APNAP order, before any card is discarded;
-// then the chosen cards are discarded (CR 101.4). Each player's discards form one
-// batch. An amount of zero or less discards nothing.
-func (r *effectResolver) discardGroupCardsWithChoices(players []game.PlayerID, amount int) bool {
-	chosen := make([][]id.ID, len(players))
-	for i, playerID := range players {
-		chosen[i] = r.chooseCardsToDiscard(playerID, amount)
+// discardGroupSimultaneously discards the cards chosen for each affected player
+// of a player-group discard ("Each player discards a card."). Every affected
+// player has already chosen (CR 101.4, CR 701.9b) or had cards chosen at random;
+// all chosen cards are then discarded at the same time as one simultaneous
+// cohort (one SimultaneousID) whose replacement decisions are all made before
+// any card moves (discardCardsSimultaneously). Each discard event keeps its
+// discarding Player, so a per-player one-or-more trigger ("Whenever a player
+// discards one or more cards", TriggerPattern.OneOrMorePerPlayer) still sees
+// each player's discard as its own occurrence (CR 603.2c). It returns the cards
+// each player actually discarded, parallel to players.
+func discardGroupSimultaneously(g *game.Game, players []game.PlayerID, chosen [][]id.ID) [][]id.ID {
+	if !slices.ContainsFunc(chosen, func(cards []id.ID) bool { return len(cards) > 0 }) {
+		return make([][]id.ID, len(players))
 	}
-	discarded := false
-	for i, playerID := range players {
-		if len(chosen[i]) == 0 {
-			continue
-		}
-		simultaneousID := r.game.IDGen.Next()
-		for _, cardID := range chosen[i] {
-			discarded = discardCardFromHandInBatch(r.game, playerID, cardID, simultaneousID) || discarded
-		}
-	}
-	return discarded
+	return discardCardsSimultaneously(g, players, chosen, g.IDGen.Next())
 }
 
 // chooseCardsToDiscard asks playerID to choose min(amount, hand size) cards from
@@ -1490,8 +1492,8 @@ func handleMassReturnFromGraveyard(r *effectResolver, prim game.MassReturnFromGr
 
 // triggerBatchCardIDs returns the card IDs that triggered the resolving
 // one-or-more zone-change ability: the cards whose simultaneous zone-change
-// events (the retained trigger event plus every event sharing its
-// SimultaneousID) match the resolving trigger's pattern. Filtering by the
+// events (the retained trigger event plus every event of the same one-or-more
+// occurrence, sameOneOrMoreOccurrence) match the resolving trigger's pattern. Filtering by the
 // pattern keeps "put them onto the battlefield" restricted to the cards the
 // trigger actually fired for (e.g. only the land cards of "one or more land
 // cards"), mirroring triggeringBatchPermanents for graveyard-bound cards.
@@ -1515,11 +1517,9 @@ func triggerBatchCardIDs(g *game.Game, obj *game.StackObject) map[id.ID]bool {
 		ids[event.CardID] = true
 	}
 	consider(obj.TriggerEvent)
-	if obj.TriggerEvent.SimultaneousID != 0 {
-		for _, event := range g.Events {
-			if event.SimultaneousID == obj.TriggerEvent.SimultaneousID {
-				consider(event)
-			}
+	for i := range g.Events {
+		if sameOneOrMoreOccurrence(pattern, &obj.TriggerEvent, &g.Events[i]) {
+			consider(g.Events[i])
 		}
 	}
 	return ids

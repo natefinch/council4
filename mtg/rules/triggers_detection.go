@@ -1058,6 +1058,9 @@ func coalescePendingTriggeredAbilities(g *game.Game, pending []pendingTriggeredA
 				controller:   trigger.controller,
 				simultaneous: trigger.event.SimultaneousID,
 			}
+			if ability.Trigger.Pattern.OneOrMorePerPlayer {
+				key.player = trigger.event.Player
+			}
 			if ability.Trigger.Pattern.OneOrMorePerAttackTarget {
 				key.attackTarget = trigger.event.AttackTarget
 			}
@@ -1129,8 +1132,19 @@ type triggerBatchKey struct {
 	event         game.EventKind
 	controller    game.PlayerID
 	simultaneous  id.ID
+	player        game.PlayerID
 	attackTarget  game.AttackTarget
 	damagedPlayer game.PlayerID
+}
+
+// sameOneOrMoreOccurrence reports whether event belongs to the same one-or-more
+// occurrence as trigger under pattern: it shares trigger's nonzero simultaneous
+// cohort and, for a per-player pattern (TriggerPattern.OneOrMorePerPlayer), the
+// same acting player.
+func sameOneOrMoreOccurrence(pattern *game.TriggerPattern, trigger, event *game.Event) bool {
+	return trigger.SimultaneousID != 0 &&
+		event.SimultaneousID == trigger.SimultaneousID &&
+		(!pattern.OneOrMorePerPlayer || event.Player == trigger.Player)
 }
 
 func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permanent, event game.Event) []pendingTriggeredAbility {

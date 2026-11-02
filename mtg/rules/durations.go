@@ -495,6 +495,9 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 					event:        matchEvent.Kind,
 					simultaneous: matchEvent.SimultaneousID,
 				}
+				if pattern.OneOrMorePerPlayer {
+					key.player = matchEvent.Player
+				}
 				if pattern.OneOrMorePerAttackTarget {
 					key.attackTarget = matchEvent.AttackTarget
 				}
