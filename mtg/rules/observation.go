@@ -187,8 +187,10 @@ type StackObjectView struct {
 	FaceDownCard opt.V[CardView]
 	Targets      []game.Target
 	// ManaValue, Types, and Colors describe a spell on the stack so an agent can
-	// decide whether it is worth countering. They are unset for face-down spells
-	// (hidden identity) and for non-spell stack objects (abilities).
+	// decide whether it is worth countering. A face-down spell shows only its
+	// public face-down values (a colorless creature with mana value 0, plus
+	// type-changing effects that apply to it), never its hidden card's. They
+	// are unset for non-spell stack objects (abilities).
 	ManaValue int
 	Types     []types.Card
 	Colors    []color.Color
@@ -543,7 +545,18 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 			view.FaceDownCard = opt.Val(o.cardViewForDef(card.ID, card.Owner, card.Def))
 		}
 	}
-	if obj.FaceDown || obj.Kind != game.StackSpell {
+	if obj.Kind != game.StackSpell {
+		return view
+	}
+	if obj.FaceDown {
+		// A face-down spell's public characteristics are its face-down values
+		// (CR 708.2a, 708.4) with type-changing effects that apply to spells, never
+		// the hidden card's.
+		if def, ok := stackSpellCharacteristicsDef(o.g, obj); ok {
+			view.ManaValue = stackManaValue(def, 0)
+			view.Types = def.Types
+			view.Colors = spellColors(def)
+		}
 		return view
 	}
 	if def, ok := stackObjectSpellDef(o.g, obj); ok {
