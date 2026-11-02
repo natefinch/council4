@@ -1943,7 +1943,7 @@ func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, car
 	var faceDef *game.CardDef
 	spellFace := func() *game.CardDef {
 		if faceDef == nil {
-			faceDef = castSelectionFace(g, playerID, cardFaceOrDefault(card, face), bestowed)
+			faceDef = castSelectionFace(g, playerID, card.ID, cardFaceOrDefault(card, face), bestowed)
 		}
 		return faceDef
 	}

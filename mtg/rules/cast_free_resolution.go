@@ -32,7 +32,7 @@ func (e *Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, ca
 	manualMana := e.paymentManaWindow(g, playerID)
 	for _, face := range freeCastFaces(playerID, card, fromZone) {
 		spellDef := cardFaceOrDefault(card, face)
-		if !freeCastFaceAvailable(g, playerID, card, spellDef, selection, maxManaValue) {
+		if !freeCastFaceAvailable(g, playerID, card, card.ID, spellDef, selection, maxManaValue) {
 			continue
 		}
 		for _, cast := range freeCastBranchOptions(g, playerID, card.ID, fromZone, face, spellDef) {
@@ -74,8 +74,11 @@ func freeCastFaces(playerID game.PlayerID, card *game.CardInstance, fromZone zon
 	return faces
 }
 
-func freeCastFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
-	castFace := castSelectionFace(g, player, def, false)
+// freeCastFaceAvailable reports whether player may cast def, a face of card,
+// without paying its mana cost. spellCard is card.ID when the card itself is
+// cast and 0 when a copy of it is (CR 707.12).
+func freeCastFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, spellCard id.ID, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
+	castFace := castSelectionFace(g, player, spellCard, def, false)
 	return freeCastFaceMatchesSelection(g, card, def, selection, player) &&
 		(!maxManaValue.Exists || stackManaValue(def, 0) <= maxManaValue.Val) &&
 		cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, castFace) &&
@@ -215,7 +218,7 @@ func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player,
 	if len(options) == 0 {
 		for _, face := range card.Def.LegalCastFaces() {
 			def := cardFaceOrDefault(card, face)
-			if freeCastFaceAvailable(g, controllerID, card, def, selection, maxManaValue) &&
+			if freeCastFaceAvailable(g, controllerID, card, card.ID, def, selection, maxManaValue) &&
 				(spellHasMultikicker(def) || !costHasVariableMana(manaCostPtr(def.ManaCost)) && additionalCostsUseX(def.AdditionalCosts)) {
 				options = append(options, freeCastOption{cardID: card.ID, cast: action.CastSpellAction{
 					CardID: card.ID, SourceZone: fromZone, Face: face,

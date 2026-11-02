@@ -50,7 +50,7 @@ func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	// The cast ignores priority and sorcery-speed timing but still obeys printed
 	// cast restrictions, cast prohibitions, and per-turn cast limits (CR 601.3e).
-	castFace := castSelectionFace(g, controllerID, spellDef, false)
+	castFace := castSelectionFace(g, controllerID, card.ID, spellDef, false)
 	if castFromZoneProhibited(g, controllerID, fromZone) || !cardCastRestrictionsSatisfied(g, controllerID, spellDef) ||
 		spellCastProhibited(g, controllerID, castFace) ||
 		spellCastLimitReached(g, controllerID, castFace) || !isSupportedSpell(spellDef) {

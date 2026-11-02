@@ -100,7 +100,7 @@ func (e *Engine) castFreeCopyOfCard(g *game.Game, controllerID game.PlayerID, ca
 		return false
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	if !freeCastFaceAvailable(g, controllerID, card, spellDef, game.Selection{}, opt.V[int]{}) {
+	if !freeCastFaceAvailable(g, controllerID, card, 0, spellDef, game.Selection{}, opt.V[int]{}) {
 		return false
 	}
 	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
