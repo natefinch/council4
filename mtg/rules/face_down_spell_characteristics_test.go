@@ -233,7 +233,7 @@ func TestFaceDownSpellObservationStillShowsControllerHiddenCard(t *testing.T) {
 	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
 		stack := NewObservation(g, viewer).Stack()
 		if len(stack) != 1 || stack[0].ID != obj.ID || !stack[0].FaceDown || stack[0].Name != "" ||
-			len(stack[0].Colors) != 0 || len(stack[0].Types) != 0 {
+			len(stack[0].Colors) != 0 || stack[0].ManaValue != 0 || !slices.Equal(stack[0].Types, []types.Card{types.Creature}) {
 			t.Fatalf("viewer %v public stack view = %+v", viewer, stack)
 		}
 		private := stack[0].FaceDownCard
