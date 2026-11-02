@@ -42,10 +42,14 @@ func castActionKey(cast action.CastSpellAction) string {
 	return fmt.Sprintf("%+v", cast)
 }
 
-// castExhausted reports whether act is a cast none of whose proposals remain.
+// castExhausted reports whether act is a cast, including a face-down cast,
+// none of whose proposals remain.
 func (a *castAttempts) castExhausted(act action.Action) bool {
 	if a == nil || len(a.exhausted) == 0 {
 		return false
+	}
+	if faceDown, ok := act.CastFaceDownPayload(); ok {
+		return a.exhausted[faceDownCastKey(faceDown)]
 	}
 	cast, ok := act.CastSpellPayload()
 	return ok && a.exhausted[castActionKey(cast)]

@@ -109,7 +109,7 @@ func (e *Engine) legalFaceDownCastActions(g *game.Game, playerID game.PlayerID) 
 		for _, face := range legalFaceDownFaces(card.Def) {
 			for _, kind := range faceDownKindsForCard(cardFaceOrDefault(card, face)) {
 				for _, permission := range permanentTypePlayPermissions(g, playerID, zone.Graveyard, faceDownSpellDef()) {
-					if canCastGraveyardFaceDown(g, playerID, cardID, face, kind, permission) {
+					if e.canCastGraveyardFaceDown(g, playerID, cardID, face, kind, permission) {
 						actions = append(actions, action.CastFaceDownFromZone(cardID, zone.Graveyard, face, kind).WithPlayPermission(permission))
 					}
 				}
@@ -152,7 +152,7 @@ func faceDownSpellRequest(player game.PlayerID, cardID id.ID, sourceZone zone.Ty
 	}
 }
 
-func canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind, permission game.PlayPermission) bool {
+func (e *Engine) canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind, permission game.PlayPermission) bool {
 	spell := castSelectionFace(g, player, faceDownSpellDef(), false)
 	if !canAct(g, player) || player != g.Turn.PriorityPlayer || !canCastAtCurrentTiming(g, player, spell) || splitSecondOnStack(g) {
 		return false
@@ -173,7 +173,32 @@ func canCastGraveyardFaceDown(g *game.Game, player game.PlayerID, cardID id.ID, 
 		spellCastProhibited(g, player, spell) || spellCastLimitReached(g, player, spell) {
 		return false
 	}
-	return paymentOrch.canPaySpellCosts(g, faceDownSpellRequest(player, cardID, zone.Graveyard))
+	return e.faceDownCostProposable(g, player, action.CastFaceDownAction{CardID: cardID, Face: face, FaceDownKind: kind}, zone.Graveyard)
+}
+
+// faceDownCostProposable reports whether a face-down cast may be proposed:
+// some total cost for it is payable now, or becomes payable once the caster
+// activates the payment-time mana abilities available to them (CR 601.2g),
+// which manualManaMayPay checks by trying them. Those abilities are tried in
+// the state they'd be activated in, with the card already on the stack face
+// down (CR 601.2a), so its old zone no longer contributes to them.
+func (e *Engine) faceDownCostProposable(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type) bool {
+	request := faceDownSpellRequest(player, cast.CardID, sourceZone)
+	if paymentOrch.canPaySpellCosts(g, request) {
+		return true
+	}
+	proposed := g.Clone()
+	proposed.Execution = game.ExecutionDiagnostics{}
+	if _, _, ok := stackFaceDownCast(proposed, player, cast, sourceZone); !ok ||
+		!e.hasManualPaymentManaAbility(proposed, player) {
+		return false
+	}
+	for _, prepared := range paymentOrch.planner(proposed).PrepareSpellCosts(request) {
+		if _, feasible := preparedSpellCostFeasibility(proposed, request, prepared, true, nil); feasible && e.manualManaMayPay(proposed, request, prepared) {
+			return true
+		}
+	}
+	return false
 }
 
 func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
@@ -190,7 +215,7 @@ func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
 // spell's characteristics, not the hidden card's (CR 702.37c, 708.4): an
 // as-though-flash permission covering a colorless 2/2 creature spell applies,
 // while the face-up card's own flash does not.
-func (*Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) bool {
+func (e *Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, kind game.FaceDownKind) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || splitSecondOnStack(g) || kind == game.FaceDownNone {
 		return false
 	}
@@ -214,64 +239,105 @@ func (*Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id.I
 	if _, ok := faceDownCostForCard(spellDef, kind); !ok {
 		return false
 	}
-	return paymentOrch.canPaySpellCosts(g, faceDownSpellRequest(playerID, cardID, zone.Hand))
+	return e.faceDownCostProposable(g, playerID, action.CastFaceDownAction{CardID: cardID, Face: face, FaceDownKind: kind}, zone.Hand)
 }
 
-func (e *Engine) applyCastFaceDownWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// attemptCastFaceDownWithChoices casts a face-down spell for playerID. A cast
+// whose locked total cost isn't paid is reversed (CR 733.1) and recorded in
+// attempts, which may be nil.
+func (e *Engine) attemptCastFaceDownWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
 	if cast.SourceZone == zone.Graveyard {
-		return e.applyGraveyardFaceDown(g, playerID, cast, agents, log)
+		return e.attemptGraveyardFaceDown(g, playerID, cast, agents, log, attempts)
 	}
 	if cast.SourceZone != zone.None && cast.SourceZone != zone.Hand || cast.Permission != (game.PlayPermission{}) {
-		return false
+		return actionFailed
 	}
 	if !e.canCastFaceDown(g, playerID, cast.CardID, cast.Face, cast.FaceDownKind) {
-		return false
+		return actionFailed
 	}
-	return e.castFaceDownSpell(g, playerID, cast, zone.Hand, agents, log)
+	return e.castFaceDownSpell(g, playerID, cast, zone.Hand, agents, log, attempts)
 }
 
-func (e *Engine) applyGraveyardFaceDown(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) attemptGraveyardFaceDown(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
 	var ok bool
 	cast.Permission, ok = e.selectPermanentTypePlay(g, player, cast.Permission, zone.Graveyard, faceDownSpellDef(), false, agents, log)
 	if !ok {
-		return false
+		return actionFailed
 	}
-	if !canCastGraveyardFaceDown(g, player, cast.CardID, cast.Face, cast.FaceDownKind, cast.Permission) {
-		return false
+	if !e.canCastGraveyardFaceDown(g, player, cast.CardID, cast.Face, cast.FaceDownKind, cast.Permission) {
+		return actionFailed
 	}
-	return e.castFaceDownSpell(g, player, cast, zone.Graveyard, agents, log)
+	return e.castFaceDownSpell(g, player, cast, zone.Graveyard, agents, log, attempts)
 }
 
-// castFaceDownSpell casts a validated face-down spell: the card moves to the
-// stack face down first (CR 601.2a), then the total cost is determined from
-// the face-down characteristics and paid (CR 702.37c, 601.2f-h), and only then
-// does the spell become cast (CR 601.2i). An unpaid proposal is undone.
-func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// faceDownCastKey identifies the face-down cast an attempt redoes (see
+// castAttempts).
+func faceDownCastKey(cast action.CastFaceDownAction) string {
+	return fmt.Sprintf("face down|%+v", cast)
+}
+
+// stackFaceDownCast moves the card cast to the stack as a face-down spell
+// controlled by player (CR 601.2a, 702.37c), returning the spell and a function
+// that undoes the move, returning the card to its place in sourceZone.
+func stackFaceDownCast(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type) (*game.StackObject, func(), bool) {
+	card, ok := g.GetCardInstance(cast.CardID)
+	if !ok {
+		return nil, nil, false
+	}
+	owner := g.Players[player]
+	position := castSourcePosition(owner, cast.CardID, sourceZone)
+	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
+	if position < 0 || !removeCastSourceCard(g, owner, cast.CardID, sourceZone) {
+		return nil, nil, false
+	}
+	counterTransition.apply(g)
 	obj := &game.StackObject{
 		ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: cast.CardID, Controller: player,
 		Face: cast.Face, FaceDown: true, FaceDownFace: cast.Face, FaceDownKind: cast.FaceDownKind,
 		SourceZone: sourceZone,
 	}
-	card, ok := g.GetCardInstance(cast.CardID)
-	if !ok {
-		return false
-	}
-	owner := g.Players[player]
-	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
-	if !removeCastSourceCard(g, owner, cast.CardID, sourceZone) {
-		return false
-	}
-	counterTransition.apply(g)
 	g.Stack.Push(obj)
+	return obj, func() {
+		g.Stack.RemoveByID(obj.ID)
+		restoreCastSourceCardAt(owner, cast.CardID, sourceZone, position)
+		counterTransition.undo(g)
+	}, true
+}
+
+// castFaceDownSpell casts a validated face-down spell: the card moves to the
+// stack face down first (CR 601.2a), then the {3} alternative cost is proposed
+// and the total cost is determined from the face-down characteristics and
+// locked (CR 702.37c, 601.2b, 601.2f). If that total includes a mana payment,
+// the caster may then activate mana abilities (CR 601.2g) before paying it
+// (CR 601.2h), and only then does the spell become cast (CR 601.2i). An unpaid
+// proposal is undone along with its reversible mana activations (CR 733.1).
+func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
+	obj, rollback, ok := stackFaceDownCast(g, player, cast, sourceZone)
+	if !ok {
+		return actionFailed
+	}
 	request := faceDownSpellRequest(player, cast.CardID, sourceZone)
-	request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
+	proposals := newCastProposals(attempts, faceDownCastKey(cast), nil)
+	proposal, ok := e.proposeSpellCost(g, request, false, proposals, agents, log)
+	if !ok {
+		rollback()
+		return proposals.exhaust()
+	}
+	attempt := fmt.Sprintf("%s|%+v", faceDownCastKey(cast), proposal)
+	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
+	if !ok {
+		rollback()
+		return proposals.reverseUnpayable(attempt, 0, proposal, nil, nil)
+	}
+	request.PreparedCost = &prepared
+	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)
+	request.Prefs = prefs
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, player)
 	result, ok := paymentOrch.paySpellCosts(g, request)
 	if !ok {
-		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(owner, cast.CardID, sourceZone)
-		counterTransition.undo(g)
-		return false
+		undoMana()
+		rollback()
+		return proposals.reverse(attempt, 0, proposal, nil)
 	}
 	recordPermanentTypePlay(g, player, cast.Permission)
 	obj.AdditionalCostsPaid = result.AdditionalCostsPaid
@@ -298,7 +364,7 @@ func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast acti
 		FromZone:                     sourceZone, ToZone: zone.Stack,
 	}, nil)
 	resolveSpellCastManaSpendRiders(g, player, riderSnapshot, result.PoolSpend, request.Card, obj)
-	return true
+	return actionApplied
 }
 
 func (e *Engine) legalTurnFaceUpActions(g *game.Game, playerID game.PlayerID) []action.Action {

@@ -503,6 +503,9 @@ func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, 
 		}
 		return outcome, act
 	}
+	if faceDown, ok := act.CastFaceDownPayload(); ok {
+		return e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log, attempts), act
+	}
 	return outcomeOf(e.applyNonCastAction(g, playerID, act, agents, log)), act
 }
 
@@ -534,7 +537,7 @@ func (e *Engine) applyNonCastAction(g *game.Game, playerID game.PlayerID, act ac
 		return ok && e.applyForetellCard(g, playerID, foretell.CardID, agents, log)
 	case action.ActionCastFaceDown:
 		faceDown, ok := act.CastFaceDownPayload()
-		return ok && e.applyCastFaceDownWithChoices(g, playerID, faceDown, agents, log)
+		return ok && e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log, nil) == actionApplied
 	case action.ActionTurnFaceUp:
 		turnFaceUp, ok := act.TurnFaceUpPayload()
 		return ok && e.applyTurnFaceUpWithChoices(g, playerID, turnFaceUp.PermanentID, agents, log)

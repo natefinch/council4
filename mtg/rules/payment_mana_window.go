@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
@@ -407,9 +408,15 @@ func manaCostIncludesManaPayment(manaCost *cost.Mana, announced map[int]bool) bo
 }
 
 func (e *Engine) hasManualPaymentManaAbility(g *game.Game, player game.PlayerID) bool {
+	return len(e.paymentManaAbilityActions(g, player)) != 0
+}
+
+// paymentManaAbilityActions returns the manual mana abilities player may
+// activate while paying a cost (CR 601.2g).
+func (e *Engine) paymentManaAbilityActions(g *game.Game, player game.PlayerID) []action.Action {
 	g.ManaPaymentScopes = append(g.ManaPaymentScopes, player)
 	defer func() { g.ManaPaymentScopes = g.ManaPaymentScopes[:len(g.ManaPaymentScopes)-1] }()
-	return len(e.legalManaAbilityActions(g, player)) != 0
+	return e.legalManaAbilityActions(g, player)
 }
 
 func (e *Engine) activateManualPaymentManaAbilities(g *game.Game, player game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) func() {

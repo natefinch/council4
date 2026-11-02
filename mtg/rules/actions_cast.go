@@ -2019,6 +2019,42 @@ func removeCastSourceCard(g *game.Game, player *game.Player, cardID id.ID, sourc
 	}
 }
 
+// castSourcePosition returns where cardID is in player's zone sourceZone, for
+// restoreCastSourceCardAt, or -1 when it isn't there.
+func castSourcePosition(player *game.Player, cardID id.ID, sourceZone zone.Type) int {
+	source := castSourceZone(player, sourceZone)
+	if source == nil {
+		return -1
+	}
+	return slices.Index(source.All(), cardID)
+}
+
+// restoreCastSourceCardAt is restoreCastSourceCard returning the card to
+// position, its place in that zone before the proposal, so a reversed cast
+// (CR 733.1) keeps a graveyard's order (CR 404.2).
+func restoreCastSourceCardAt(player *game.Player, cardID id.ID, sourceZone zone.Type, position int) {
+	if source := castSourceZone(player, sourceZone); source != nil {
+		source.InsertAt(min(max(position, 0), source.Size()), cardID)
+	}
+}
+
+func castSourceZone(player *game.Player, sourceZone zone.Type) *zone.Zone {
+	switch sourceZone {
+	case zone.Hand:
+		return &player.Hand
+	case zone.Command:
+		return &player.CommandZone
+	case zone.Graveyard:
+		return &player.Graveyard
+	case zone.Exile:
+		return &player.Exile
+	case zone.Library:
+		return &player.Library
+	default:
+		return nil
+	}
+}
+
 // restoreCastSourceCard returns a card to the zone it was cast from. It reverses
 // removeCastSourceCard when a proposed cast is abandoned because its costs can't
 // be paid (CR 601.2h / 728, handling an illegal action by undoing the
