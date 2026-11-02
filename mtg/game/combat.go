@@ -13,7 +13,9 @@ type AttackTarget struct {
 
 	// Player is the PlayerID being attacked or originally defending an attacker
 	// whose permanent target left combat. Even when attacking a planeswalker or
-	// battle, the creature is attacking "in the direction of" a player.
+	// battle, the creature is attacking "in the direction of" a player: the
+	// planeswalker's controller, or the battle's protector (CR 310.9d), who is
+	// the defending player for it.
 	Player PlayerID
 
 	// PlaneswalkerID is the ObjectID of the planeswalker being attacked.

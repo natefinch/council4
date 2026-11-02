@@ -354,6 +354,9 @@ const (
 	PermanentDeathReasonLegendaryRule PermanentDeathReason = "legendary rule"
 	PermanentDeathReasonRoleRule      PermanentDeathReason = "Role rule"
 	PermanentDeathReasonSagaComplete  PermanentDeathReason = "Saga final chapter complete"
+	// PermanentDeathReasonNoProtector means no player could be chosen as a
+	// battle's protector (CR 310.11).
+	PermanentDeathReasonNoProtector PermanentDeathReason = "no battle protector"
 )
 
 // PermanentDeathLog records a permanent leaving the battlefield due to rules.

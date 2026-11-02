@@ -158,7 +158,7 @@ func combatDamageEvent(g *game.Game, source *game.Permanent, damage int) damageE
 
 func attackTargetCombatDamageEvent(g *game.Game, source *game.Permanent, target game.AttackTarget, damage int) (damageEvent, bool) {
 	event := combatDamageEvent(g, source, damage)
-	if damage <= 0 || !isLegalAttackTarget(g, event.controller, target) {
+	if damage <= 0 || !attackTargetReceivesCombatDamage(g, event.controller, target) {
 		return event, false
 	}
 	if target.IsPlayerAttack() {
@@ -502,8 +502,9 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 }
 
 // recordCombatantController records the controller a creature has as it becomes
-// an attacking or blocking creature, so a later change of controller removes it
-// from combat (CR 506.4). A creature already in combat keeps its record.
+// an attacking or blocking creature, or a battle has as it becomes attacked, so a
+// later change of controller removes it from combat (CR 506.4). A permanent
+// already in combat keeps its record.
 func recordCombatantController(g *game.Game, permanentID id.ID) {
 	if g.Combat == nil {
 		return
@@ -522,14 +523,17 @@ func recordCombatantController(g *game.Game, permanentID id.ID) {
 }
 
 // removeCombatantsWithChangedControl removes from combat each attacking or
-// blocking creature whose controller has changed since it became one, and each
+// blocking creature whose controller has changed since it became one, each
 // planeswalker being attacked whose controller is no longer the player its
-// attackers attack (CR 506.4). Control is derived from continuous effects, so a
-// change can come from an effect starting, ending or being reordered; callers
-// settle it wherever control may have changed and before each priority. A
-// combatant without a record (combat state built outside the declaration
-// routes) is recorded under its current controller. The blockers of a removed
-// attacker remain blocking creatures (CR 509.1g).
+// attackers attack, and each battle being attacked whose controller has changed
+// since it was first attacked or whose protector is no longer the player its
+// attackers attack (CR 506.4). The creatures attacking a removed planeswalker or
+// battle keep attacking, but attack nothing (CR 506.4c). Control is derived from
+// continuous effects, so a change can come from an effect starting, ending or
+// being reordered; callers settle it wherever control may have changed and
+// before each priority. A combatant without a record (combat state built outside
+// the declaration routes) is recorded under its current controller. The blockers
+// of a removed attacker remain blocking creatures (CR 509.1g).
 func removeCombatantsWithChangedControl(g *game.Game) bool {
 	if g.Combat == nil {
 		return false
@@ -556,12 +560,24 @@ func removeCombatantsWithChangedControl(g *game.Game) bool {
 	}
 	for _, attack := range g.Combat.Attackers {
 		check(attack.Attacker)
-		if attack.Target.NoTarget || attack.Target.PlaneswalkerID == 0 {
+		if attack.Target.NoTarget {
 			continue
 		}
-		if planeswalker, ok := permanentByObjectID(g, attack.Target.PlaneswalkerID); ok &&
-			activeBattlefieldPermanent(planeswalker) && effectiveController(g, planeswalker) != attack.Target.Player {
-			remove(planeswalker.ObjectID)
+		if attack.Target.PlaneswalkerID != 0 {
+			if planeswalker, ok := permanentByObjectID(g, attack.Target.PlaneswalkerID); ok &&
+				activeBattlefieldPermanent(planeswalker) && effectiveController(g, planeswalker) != attack.Target.Player {
+				remove(planeswalker.ObjectID)
+			}
+			continue
+		}
+		if attack.Target.BattleID == 0 {
+			continue
+		}
+		check(attack.Target.BattleID)
+		if battle, ok := permanentByObjectID(g, attack.Target.BattleID); ok && activeBattlefieldPermanent(battle) {
+			if protector, protected := battleProtector(battle); !protected || protector != attack.Target.Player {
+				remove(battle.ObjectID)
+			}
 		}
 	}
 	for _, block := range g.Combat.Blockers {
@@ -1122,6 +1138,23 @@ func canDeclareAttackers(g *game.Game, playerID game.PlayerID) bool {
 		isPlayerAlive(g, playerID)
 }
 
+// attackTargetReceivesCombatDamage reports whether an attacker controlled by
+// attackerController can deal combat damage to the target it attacks. That is
+// any legal attack target, and also a battle still being attacked after its
+// protector left the game: only damage to a departed player isn't assigned (CR
+// 310.11, 800.4e).
+func attackTargetReceivesCombatDamage(g *game.Game, attackerController game.PlayerID, target game.AttackTarget) bool {
+	if target.NoTarget || target.BattleID == 0 || isPlayerAlive(g, target.Player) {
+		return isLegalAttackTarget(g, attackerController, target)
+	}
+	battle, ok := attackTargetPermanent(g, target)
+	if !ok || target.Player == attackerController || !permanentHasType(g, battle, types.Battle) {
+		return false
+	}
+	protector, protected := battleProtector(battle)
+	return protected && protector == target.Player
+}
+
 func isLegalAttackTarget(g *game.Game, attackerController game.PlayerID, target game.AttackTarget) bool {
 	if target.NoTarget {
 		return false
@@ -1133,14 +1166,18 @@ func isLegalAttackTarget(g *game.Game, attackerController game.PlayerID, target 
 		return true
 	}
 	permanent, ok := attackTargetPermanent(g, target)
-	if !ok || effectiveController(g, permanent) != target.Player {
+	if !ok {
 		return false
 	}
 	if target.PlaneswalkerID != 0 {
-		return target.BattleID == 0 && permanentHasType(g, permanent, types.Planeswalker)
+		return target.BattleID == 0 && effectiveController(g, permanent) == target.Player &&
+			permanentHasType(g, permanent, types.Planeswalker)
 	}
 	if target.BattleID != 0 {
-		return permanentHasType(g, permanent, types.Battle)
+		// A battle is attacked in the direction of its protector, who can never
+		// attack it; its controller may (CR 310.9b, 310.9d).
+		protector, protected := battleProtector(permanent)
+		return protected && protector == target.Player && permanentHasType(g, permanent, types.Battle)
 	}
 	return false
 }
@@ -1318,17 +1355,26 @@ func legalAttackTargets(g *game.Game, attackerController game.PlayerID) []game.A
 		targets = append(targets, game.AttackTarget{Player: opponent})
 	}
 	for _, permanent := range g.Battlefield {
-		permanentController := effectiveController(g, permanent)
-		if permanent.PhasedOut || permanentController == attackerController || !isPlayerAlive(g, permanentController) {
+		if permanent.PhasedOut {
 			continue
 		}
+		var target game.AttackTarget
 		switch {
 		case permanentHasType(g, permanent, types.Planeswalker):
-			targets = append(targets, game.AttackTarget{Player: permanentController, PlaneswalkerID: permanent.ObjectID})
+			target = game.AttackTarget{Player: effectiveController(g, permanent), PlaneswalkerID: permanent.ObjectID}
 		case permanentHasType(g, permanent, types.Battle):
-			targets = append(targets, game.AttackTarget{Player: permanentController, BattleID: permanent.ObjectID})
+			protector, protected := battleProtector(permanent)
+			if !protected {
+				continue
+			}
+			target = game.AttackTarget{Player: protector, BattleID: permanent.ObjectID}
 		default:
+			continue
 		}
+		if target.Player == attackerController || !isPlayerAlive(g, target.Player) {
+			continue
+		}
+		targets = append(targets, target)
 	}
 	return targets
 }

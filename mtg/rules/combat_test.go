@@ -403,6 +403,10 @@ func addCombatPermanent(g *game.Game, controller game.PlayerID, def *game.CardDe
 		Owner:          controller,
 		Controller:     controller,
 	}
+	if def != nil && def.HasType(types.Battle) && !def.HasSubtype(types.Siege) {
+		// A battle without battle types is protected by its controller (CR 310.9a).
+		permanent.BattleProtector = opt.Val(controller)
+	}
 	g.Battlefield = append(g.Battlefield, permanent)
 	return permanent
 }

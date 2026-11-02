@@ -667,6 +667,9 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 			g.Combat.DeclaredPlayerAttacks[playerID][declaration.Target.Player] = true
 		}
 		recordCombatantController(g, declaration.Attacker)
+		if declaration.Target.BattleID != 0 {
+			recordCombatantController(g, declaration.Target.BattleID)
+		}
 	}
 	simultaneousID := id.ID(0)
 	if len(declare.Attackers) > 1 {
@@ -923,7 +926,7 @@ func (ce combatEngine) resolveDamagePassWithAgents(g *game.Game, pass combatDama
 			attackerDamages = append(attackerDamages, damage)
 			continue
 		}
-		if !isLegalAttackTarget(g, effectiveController(g, attacker), declaration.Target) {
+		if !attackTargetReceivesCombatDamage(g, effectiveController(g, attacker), declaration.Target) {
 			continue
 		}
 		if dealsCombatDamageInPass(g, attacker, pass) {
