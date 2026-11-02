@@ -18,8 +18,8 @@ const maxStateBasedActionPasses = 1000
 //     Commander-legal cards such as Concordant Crossroads have it), but the
 //     "shortest time as a world permanent" removal is not modeled.
 //   - CR 704.5r: removing counters beyond a "can't have more than N" cap.
-//   - CR 704.5t/u/w/x/z: dungeon venture, space sculptor, battle protector, and
-//     start-your-engines speed actions.
+//   - CR 704.5t/u/z: dungeon venture, space sculptor, and start-your-engines
+//     speed actions.
 //   - CR 704.6a/b/e/f: Two-Headed Giant, Archenemy, and Planechase variant SBAs.
 
 func (e *Engine) applyStateBasedActions(g *game.Game) []LossLog {
@@ -499,7 +499,9 @@ func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	var removeFromCombat []id.ID
 	for _, attack := range g.Combat.Attackers {
 		attacker, ok := permanentByObjectID(g, attack.Attacker)
-		if (!attack.Target.NoTarget && attack.Target.Player == playerID) ||
+		// A battle whose protector leaves the game stays attacked; its new
+		// protector is chosen only once nothing attacks it (CR 310.11).
+		if (!attack.Target.NoTarget && attack.Target.BattleID == 0 && attack.Target.Player == playerID) ||
 			(ok && effectiveController(g, attacker) == playerID) {
 			removeFromCombat = append(removeFromCombat, attack.Attacker)
 		}

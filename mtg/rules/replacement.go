@@ -623,6 +623,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 			if copyRider != nil {
 				copyRider.apply(g, permanent)
 			}
+			chooseEnteringBattleProtector(ctx, g, permanent)
 			return zone.Battlefield
 		}
 		precedence := matches[0].precedence()

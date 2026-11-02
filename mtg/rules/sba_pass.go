@@ -49,6 +49,7 @@ type stateBasedActionPass struct {
 	tokens      []stateBasedToken
 	losses      []LossLog
 	commanders  []stateBasedCommander
+	protectors  []stateBasedBattleProtector
 }
 
 func prepareStateBasedActionPass(g *game.Game, commanders []game.Event) stateBasedActionPass {
@@ -68,6 +69,9 @@ func prepareStateBasedActionPass(g *game.Game, commanders []game.Event) stateBas
 	for _, player := range triggerAPNAPPlayers(g) {
 		pass.commanders = append(pass.commanders, prepareCommanderStateBasedActionsForPlayer(g, commanders, player)...)
 		pass.addDepartures(stateBasedDeparturesForIDs(g, chooseLegendaryRuleStateBasedActions(g, legends, player), PermanentDeathReasonLegendaryRule))
+		protectors, unprotected := battleProtectorStateBasedActions(g, player)
+		pass.protectors = append(pass.protectors, protectors...)
+		pass.addDepartures(stateBasedDeparturesForIDs(g, unprotected, PermanentDeathReasonNoProtector))
 	}
 	return pass
 }
@@ -329,6 +333,13 @@ func (pass *stateBasedActionPass) apply(g *game.Game, batchID func() id.ID) (boo
 		pair.permanent.Counters.Remove(counter.PlusOnePlusOne, pair.count)
 		pair.permanent.Counters.Remove(counter.MinusOneMinusOne, pair.count)
 		changed = true
+	}
+	for _, assignment := range pass.protectors {
+		assignment.battle.BattleProtector = opt.Val(assignment.protector)
+		changed = true
+	}
+	if len(pass.protectors) > 0 {
+		removeCombatantsWithChangedControl(g)
 	}
 	for _, attachment := range pass.attachments {
 		if attachment.unbestow {

@@ -191,6 +191,15 @@ type Permanent struct {
 	// Tribute.
 	TributePaid bool
 
+	// BattleProtector is the player protecting this battle (CR 310.9). It is
+	// chosen by the battle's controller as the battle enters (CR 310.9a) and is
+	// independent of control: a control change does not change it, and it does
+	// not change if the permanent stops being a battle (CR 310.9g). The state-based
+	// action of CR 310.11 assigns a new protector to a battle that is not being
+	// attacked when this is absent or illegal. Only the protector can block
+	// creatures attacking the battle, and it is the defending player for them.
+	BattleProtector opt.V[PlayerID]
+
 	// --- Attachments ---
 
 	// Attachments lists the ObjectIDs of permanents attached to this one
