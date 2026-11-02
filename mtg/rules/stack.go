@@ -627,28 +627,34 @@ func (e *Engine) resolveInstantOrSorcerySpell(
 		}
 		return "graveyard"
 	}
-	if obj.SourceZone == zone.Hand && cardHasRebound(spellDef) {
-		if !e.reboundExileResolvingSpell(g, obj, card) {
-			return "invalid owner"
-		}
-		return "rebound exile"
+	// Rebound and buyback are static replacements of the spell's move to the
+	// graveyard, not resolving-body self-replacements. They compete with each
+	// other and with the game's graveyard redirects under CR 616.1.
+	var local []game.ReplacementEffect
+	rebound := reboundAppliesToResolvingSpell(obj, spellDef)
+	if rebound {
+		local = append(local, reboundReplacement(obj, card))
 	}
 	if obj.BuybackPaid {
-		// Buyback is a static replacement, not a resolving-body self-replacement.
-		// Competing graveyard redirects must remain choices under CR 616.1.
-		buyback := game.ReplacementEffect{
+		local = append(local, game.ReplacementEffect{
 			ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
 			Description: "Buyback", MatchEvent: game.EventZoneChanged,
 			MatchFromZone: true, FromZone: zone.Stack,
 			MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Hand,
-		}
-		if !moveStackCardToZone(g, obj, card, zone.Graveyard, false, buyback) {
-			return "invalid owner"
-		}
-		return "resolved"
+		})
 	}
-	if !moveStackCardToGraveyard(g, obj, card) {
+	move, ok := moveStackCardToZoneResult(g, obj, card, zone.Graveyard, false, local...)
+	if !ok {
 		return "invalid owner"
+	}
+	if rebound && move.appliedLocal[0] && move.destination == zone.Exile {
+		if owner, ok := playerByID(g, card.Owner); ok && owner.Exile.Contains(card.ID) {
+			recordReboundExile(g, obj, card)
+			return "rebound exile"
+		}
+	}
+	if obj.BuybackPaid {
+		return "resolved"
 	}
 	return "graveyard"
 }
