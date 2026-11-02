@@ -4,7 +4,6 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -40,8 +39,6 @@ func newFlameshadowConjuring() *game.CardDef {
 							Event:            game.EventPermanentEnteredBattlefield,
 							Controller:       game.TriggerControllerYou,
 							SubjectSelection: game.Selection{RequiredTypes: []types.Card{types.Creature}, NonToken: true},
-							StackObjectKind:  game.StackSpell,
-							CounterKind:      counter.PlusOnePlusOne,
 						},
 					},
 					Content: game.AbilityContent{
@@ -63,11 +60,25 @@ func newFlameshadowConjuring() *game.CardDef {
 										Primitive: game.CreateToken{
 											Amount: game.Fixed(1),
 											Source: game.TokenCopyOf(game.TokenCopySpec{
-												Source:      game.TokenCopySourceObject,
-												Object:      game.EventPermanentReference(),
-												AddKeywords: []game.Keyword{game.Haste},
+												Source: game.TokenCopySourceObject,
+												Object: game.EventPermanentReference(),
 											}),
 											PublishLinked: game.LinkedKey("flameshadow-copy"),
+										},
+										ResultGate: opt.Val(game.InstructionResultGate{
+											Key:       game.ResultKey("controller-paid"),
+											Succeeded: game.TriTrue,
+										}),
+									},
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											ContinuousEffects: []game.ContinuousEffect{
+												game.ContinuousEffect{
+													Group:       game.LinkedObjectsGroup(game.LinkedKey("flameshadow-copy")),
+													Layer:       game.LayerAbility,
+													AddKeywords: []game.Keyword{game.Haste},
+												},
+											},
 										},
 										ResultGate: opt.Val(game.InstructionResultGate{
 											Key:       game.ResultKey("controller-paid"),
@@ -84,7 +95,7 @@ func newFlameshadowConjuring() *game.CardDef {
 															Sequence: []game.Instruction{
 																game.Instruction{
 																	Primitive: game.MovePermanent{
-																		Object:      game.CapturedObjectReference(),
+																		Group:       game.CapturedObjectsGroup(),
 																		Destination: zone.Exile,
 																	},
 																},
@@ -94,7 +105,7 @@ func newFlameshadowConjuring() *game.CardDef {
 													MinModes: 1,
 													MaxModes: 1,
 												},
-												CapturedObject: opt.Val(game.LinkedObjectReference("flameshadow-copy")),
+												CapturedObjectGroup: opt.Val(game.LinkedObjectReference("flameshadow-copy")),
 											},
 										},
 										ResultGate: opt.Val(game.InstructionResultGate{
