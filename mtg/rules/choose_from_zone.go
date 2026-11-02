@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // resolveChooseFromZone resolves a game.ChooseFromZone envelope: it gathers the
@@ -371,7 +372,7 @@ func (r *effectResolver) chooseFromZoneEnterBattlefield(env game.ChooseFromZone,
 			if env.Riders.Reveal {
 				emitCardRevealEvent(r.game, r.obj, card.Owner, cardID, env.SourceZone)
 			}
-			if _, placed := createCardPermanentFaceDownWithChoices(r.engine, r.game, card, controller, env.SourceZone, game.FaceFront, env.Riders.FaceDownKind, false, r.agents, r.log); placed {
+			if _, placed := createCardPermanentFaceDownWithChoices(r.engine, r.game, card, controller, env.SourceZone, game.FaceFront, env.Riders.FaceDownKind, opt.V[faceDownCastFacts]{}, r.agents, r.log); placed {
 				succeeded = true
 				r.chooseFromZonePublish(env, cardID)
 			}

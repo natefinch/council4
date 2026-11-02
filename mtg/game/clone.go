@@ -317,6 +317,7 @@ func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
 	clone.CastCopy = false
 	clone.CopyOwner = opt.Val(o.Controller)
 	clone.AbilityOwner = opt.V[PlayerID]{}
+	clone.Caster = opt.V[PlayerID]{}
 	clone.ResolutionOrdinalThisTurn = 0
 	// A mana-spend keyword rider is an effect on the original spell, not a
 	// copiable value, and a copy put onto the stack spent no mana (CR 707.2,

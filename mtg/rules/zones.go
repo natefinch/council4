@@ -400,10 +400,25 @@ func applyInitialContinuousEffects(g *game.Game, permanent *game.Permanent, cont
 }
 
 func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind, wasCast bool) (*game.Permanent, bool) {
-	return createCardPermanentFaceDownWithChoices(NewEngine(nil), g, card, controller, fromZone, face, kind, wasCast, [game.NumPlayers]PlayerAgent{}, nil)
+	var cast opt.V[faceDownCastFacts]
+	if wasCast {
+		cast = opt.Val(faceDownCastFacts{caster: controller, from: fromZone})
+	}
+	return createCardPermanentFaceDownWithChoices(NewEngine(nil), g, card, controller, fromZone, face, kind, cast, [game.NumPlayers]PlayerAgent{}, nil)
 }
 
-func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind, wasCast bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+// faceDownCastFacts records who cast a face-down spell and the zone it was
+// cast from (CR 708.4). The caster stays fixed if control of the spell changed.
+type faceDownCastFacts struct {
+	caster game.PlayerID
+	from   zone.Type
+}
+
+// createCardPermanentFaceDownWithChoices puts card onto the battlefield face
+// down under controller. cast is set only when the card entered as a resolving
+// cast spell.
+func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.CardInstance, controller game.PlayerID, fromZone zone.Type, face game.FaceIndex, kind game.FaceDownKind, cast opt.V[faceDownCastFacts], agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, bool) {
+	wasCast := cast.Exists
 	if _, ok := cardFaceDef(card, face); !ok || kind == game.FaceDownNone {
 		return nil, false
 	}
@@ -424,9 +439,9 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		agents:            agents,
 		log:               log,
 		wasCast:           wasCast,
-		castController:    controller,
+		castController:    cast.Val.caster,
 		hasCastController: wasCast,
-		castFromZone:      fromZone,
+		castFromZone:      cast.Val.from,
 	}, g, permanent, fromZone)
 	if destination != zone.Battlefield {
 		redirectPendingCardEntry(g, card, permanent, fromZone, destination, permanentCreationOptions{SourceFaceDown: true})
@@ -442,8 +457,9 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		Face:                   face,
 		FaceDown:               true,
 		EnterWasCast:           wasCast,
-		EnterCastController:    controller,
+		EnterCastController:    cast.Val.caster,
 		EnterHasCastController: wasCast,
+		EnterCastFromZone:      cast.Val.from,
 		PermanentID:            objectID,
 		CardTypes:              []types.Card{types.Creature},
 		FromZone:               fromZone,

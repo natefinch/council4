@@ -636,7 +636,7 @@ func (e *Engine) manifestTopCard(g *game.Game, agents [game.NumPlayers]PlayerAge
 	if !ok || !player.Library.Remove(cardID) {
 		return nil, false
 	}
-	permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, kind, false, agents, log)
+	permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, playerID, zone.Library, game.FaceFront, kind, opt.V[faceDownCastFacts]{}, agents, log)
 	return permanent, ok
 }
 
@@ -661,7 +661,7 @@ func (e *Engine) manifestDread(g *game.Game, agents [game.NumPlayers]PlayerAgent
 	if !ok || !player.Library.Remove(chosenID) {
 		return nil, false
 	}
-	manifested, ok := createCardPermanentFaceDownWithChoices(e, g, chosen, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, false, agents, log)
+	manifested, ok := createCardPermanentFaceDownWithChoices(e, g, chosen, playerID, zone.Library, game.FaceFront, game.FaceDownManifest, opt.V[faceDownCastFacts]{}, agents, log)
 	if !ok {
 		return nil, false
 	}

@@ -2543,6 +2543,9 @@ func handleChangeStackObjectController(r *effectResolver, prim game.ChangeStackO
 	} else if target.Kind != game.StackSpell && !target.Copy && !target.AbilityOwner.Exists {
 		target.AbilityOwner = opt.Val(target.Controller)
 	}
+	if target.Kind == game.StackSpell && stackObjectCarriesCastFacts(target) && !target.Caster.Exists {
+		target.Caster = opt.Val(target.Controller)
+	}
 	target.Controller = controller
 	return effectResolved{accepted: true, succeeded: true}
 }

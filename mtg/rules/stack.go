@@ -670,7 +670,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		return counteredSpellResolution(g, obj, card)
 	}
 	if obj.FaceDown && !obj.Copy {
-		permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, !obj.Copy, agents, log)
+		permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, opt.Val(faceDownCastFacts{caster: stackSpellCaster(obj), from: obj.SourceZone}), agents, log)
 		if !ok {
 			return failedPermanentSpellEntry(g, card, "invalid face-down")
 		}
@@ -765,6 +765,16 @@ func stackObjectCarriesCastFacts(obj *game.StackObject) bool {
 	return !obj.Copy || obj.CastCopy
 }
 
+// stackSpellCaster is the player who cast obj. It stays fixed when another
+// player gains control of the spell, so "if you cast it" reads the entering
+// permanent's controller against the actual caster (CR 109.5, 603.4).
+func stackSpellCaster(obj *game.StackObject) game.PlayerID {
+	if obj.Caster.Exists {
+		return obj.Caster.Val
+	}
+	return obj.Controller
+}
+
 func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions {
 	options := permanentCreationOptions{
 		HasSpellAnnouncement: true, XValue: obj.XValue,
@@ -774,7 +784,7 @@ func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions 
 	}
 	if stackObjectCarriesCastFacts(obj) {
 		options.WasCast, options.HasCastController = true, true
-		options.CastController, options.CastFromZone = obj.Controller, obj.SourceZone
+		options.CastController, options.CastFromZone = stackSpellCaster(obj), obj.SourceZone
 		options.ColorsOfManaSpentToCast = obj.ColorsOfManaSpentToCast
 		options.ManaSpentByColorToCast = obj.ManaSpentByColorToCast
 		options.ManaSpentToCast = obj.ManaSpentToCast
