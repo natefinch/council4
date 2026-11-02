@@ -663,6 +663,9 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 	}
 	for _, declaration := range declare.Attackers {
 		g.Combat.PlayersAttacked[declaration.Target.Player] = true
+		if declaration.Target.IsPlayerAttack() {
+			g.Combat.DeclaredPlayerAttacks[playerID][declaration.Target.Player] = true
+		}
 		recordCombatantController(g, declaration.Attacker)
 	}
 	simultaneousID := id.ID(0)

@@ -192,12 +192,14 @@ const (
 	// kinds keep their wire values.
 	DynamicAmountTimesKicked
 	// DynamicAmountOpponentsAttackedThisCombat is the number of the resolving
-	// ability controller's opponents being attacked this combat by creatures the
-	// controller controls, read from the current combat's attack declarations as
-	// the ability resolves (CR 506.2, CR 702.72). Each distinct opponent counts
-	// once; it is zero outside combat. It backs Melee N, whose attack trigger
-	// pumps the source "+1/+1 until end of turn for each opponent you attacked
-	// this combat." Added last so existing kinds keep their wire values.
+	// ability controller's opponents that controller attacked this combat: those
+	// it declared one or more creatures as attackers attacking directly, read
+	// from the combat's attack history as the ability resolves (CR 508.6, CR
+	// 702.121a). Each distinct opponent counts once, even if its attackers have
+	// left combat or it has left the game; it is zero outside combat. It backs
+	// Melee, whose attack trigger pumps the source "+1/+1 until end of turn for
+	// each opponent you attacked this combat." Added last so existing kinds keep
+	// their wire values.
 	DynamicAmountOpponentsAttackedThisCombat
 	// DynamicAmountControllerSpeed is the resolving ability controller's current
 	// speed (the Start your engines! subsystem, CR 702.179), read from the

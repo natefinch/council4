@@ -103,6 +103,13 @@ type CombatState struct {
 	// PlayersAttacked records defending players attacked this combat, including
 	// attacks on permanents they control and creatures entering attacking.
 	PlayersAttacked map[PlayerID]bool
+	// DeclaredPlayerAttacks[attacker][defender] records that the attacking
+	// player declared one or more creatures as attackers attacking the defending
+	// player directly this combat, so that player has "attacked" them (CR 508.6).
+	// Attacks on planeswalkers or battles and creatures put onto the battlefield
+	// attacking do not count (CR 508.4), and the record stays even if those
+	// attackers leave combat or the defending player leaves the game.
+	DeclaredPlayerAttacks [NumPlayers][NumPlayers]bool
 
 	// Blockers lists the current blocks: each blocking creature and the attacker
 	// it blocks. A block is dropped when either creature is removed from combat.

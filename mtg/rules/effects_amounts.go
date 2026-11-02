@@ -645,31 +645,21 @@ func controllerPartySize(g *game.Game, controller game.PlayerID) int {
 	return maximum
 }
 
-// opponentsAttackedThisCombat counts the distinct opponents of controller being
-// attacked this combat by creatures controller controls, read from the current
-// combat's attack declarations as the ability resolves (CR 506.2, CR 702.72).
-// It backs the Melee count "for each opponent you attacked this combat" and is
-// zero outside combat.
+// opponentsAttackedThisCombat counts the distinct opponents controller attacked
+// this combat: players controller declared one or more creatures as attackers
+// attacking directly (CR 508.6, CR 702.121a). It reads the combat's attack
+// history, so it still counts an opponent whose attackers have left combat or
+// the battlefield, or who has since left the game, but not attacks on
+// planeswalkers or battles or creatures put onto the battlefield attacking. It
+// backs the Melee count "for each opponent you attacked this combat" and is zero
+// outside combat.
 func opponentsAttackedThisCombat(g *game.Game, controller game.PlayerID) int {
-	if g.Combat == nil {
+	if g.Combat == nil || controller < 0 || controller >= game.NumPlayers {
 		return 0
 	}
-	opponents := make(map[game.PlayerID]bool, game.NumPlayers)
-	for _, opponent := range aliveOpponents(g, controller) {
-		opponents[opponent] = false
-	}
-	for _, declaration := range g.Combat.Attackers {
-		attacker, ok := permanentByObjectID(g, declaration.Attacker)
-		if !ok || effectiveController(g, attacker) != controller {
-			continue
-		}
-		if _, ok := opponents[declaration.Target.Player]; ok {
-			opponents[declaration.Target.Player] = true
-		}
-	}
 	attacked := 0
-	for _, did := range opponents {
-		if did {
+	for opponent, did := range g.Combat.DeclaredPlayerAttacks[controller] {
+		if did && game.PlayerID(opponent) != controller {
 			attacked++
 		}
 	}
