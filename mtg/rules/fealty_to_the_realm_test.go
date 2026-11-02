@@ -107,6 +107,7 @@ func TestFealtyToTheRealmEnchantedCreatureMustAttackEachCombat(t *testing.T) {
 	if got := effectiveController(g, creature); got != game.Player3 {
 		t.Fatalf("effectiveController = %v, want monarch Player3", got)
 	}
+	controlledSinceTurnBegan(g, creature)
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Turn.ActivePlayer = game.Player3
@@ -162,6 +163,7 @@ func TestFealtyToTheRealmEnchantedCreatureCantAttackAuraController(t *testing.T)
 	if got := effectiveController(g, creature); got != game.Player3 {
 		t.Fatalf("effectiveController = %v, want monarch Player3", got)
 	}
+	controlledSinceTurnBegan(g, creature)
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Turn.ActivePlayer = game.Player3
@@ -217,6 +219,7 @@ func TestFealtyToTheRealmEnchantedCreatureCanAttackAuraControllerPlaneswalker(t 
 	if !setMonarch(g, game.Player3) {
 		t.Fatal("setMonarch(Player3) = false")
 	}
+	controlledSinceTurnBegan(g, creature)
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareAttackers
 	g.Turn.ActivePlayer = game.Player3

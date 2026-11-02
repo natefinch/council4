@@ -941,6 +941,7 @@ func TestControlChangeEffectsAffectLegalityAndSelectors(t *testing.T) {
 		Layer:            game.LayerControl,
 		NewController:    opt.Val(newController),
 	})
+	controlledSinceTurnBegan(g, creature)
 
 	if canAttackWith(g, creature, game.Player1) {
 		t.Fatal("old controller can attack with control-changed creature")

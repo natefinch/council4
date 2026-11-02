@@ -1110,7 +1110,7 @@ func canAttackWith(g *game.Game, permanent *game.Permanent, playerID game.Player
 	if ruleEffectProhibitsAttack(g, permanent, nil) {
 		return false
 	}
-	return !permanent.SummoningSick || hasKeyword(g, permanent, game.Haste) || suspendHasteApplies(g, permanent)
+	return !permanentSummoningSick(g, permanent) || hasKeyword(g, permanent, game.Haste) || suspendHasteApplies(g, permanent)
 }
 
 func suspendHasteApplies(g *game.Game, permanent *game.Permanent) bool {

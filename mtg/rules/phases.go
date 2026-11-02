@@ -196,6 +196,10 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 			CardID:      permanent.CardInstanceID,
 		})
 	}
+	// Control changes since the last observation, including effects that ended
+	// as this turn began, are recorded before the active player's permanents
+	// count as continuously controlled since its start (CR 302.6, 611.2b).
+	observeControlForSummoningSickness(g)
 	for _, permanent := range g.Battlefield {
 		if !activeBattlefieldPermanent(permanent) ||
 			effectiveController(g, permanent) != g.Turn.ActivePlayer {

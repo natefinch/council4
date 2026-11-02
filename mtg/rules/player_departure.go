@@ -135,11 +135,14 @@ func cleanupDepartedStackObjects(g *game.Game, playerID game.PlayerID) {
 
 // settleControlChanges applies the immediate consequences of control changes
 // wherever control may have changed: a departed player's objects are settled
-// (CR 800.4a) and a combatant whose controller changed is removed from combat
-// (CR 506.4).
+// (CR 800.4a), a combatant whose controller changed is removed from combat
+// (CR 506.4) and a permanent whose controller changed becomes summoning sick
+// (CR 302.6). Only the first two report a change.
 func settleControlChanges(g *game.Game) bool {
 	changed := settleDepartedControl(g)
-	return removeCombatantsWithChangedControl(g) || changed
+	changed = removeCombatantsWithChangedControl(g) || changed
+	observeControlForSummoningSickness(g)
+	return changed
 }
 
 // A departed default controller is not replaced by the owner. If no surviving

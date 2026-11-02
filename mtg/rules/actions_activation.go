@@ -1050,7 +1050,7 @@ func canTapPermanentForAbility(g *game.Game, permanent *game.Permanent) bool {
 	if permanent.Tapped {
 		return false
 	}
-	return !permanentHasType(g, permanent, types.Creature) || !permanent.SummoningSick ||
+	return !permanentHasType(g, permanent, types.Creature) || !permanentSummoningSick(g, permanent) ||
 		hasKeyword(g, permanent, game.Haste) || suspendHasteApplies(g, permanent)
 }
 

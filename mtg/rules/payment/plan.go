@@ -1050,7 +1050,7 @@ func canUntapForAbility(s State, p *game.Permanent) bool {
 // RuleEffectActivateAbilitiesAsThoughHaste lifts that restriction
 // (CR 702.10c, Thousand-Year Elixir).
 func summoningSicknessAllowsAbilityCost(s State, p *game.Permanent) bool {
-	if !s.PermanentHasType(p, types.Creature) || !p.SummoningSick {
+	if !s.PermanentHasType(p, types.Creature) || !s.PermanentSummoningSick(p) {
 		return true
 	}
 	if s.PermanentHasKeyword(p, game.Haste) {

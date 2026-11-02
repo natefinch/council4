@@ -485,8 +485,9 @@ func cleanupEliminatedPlayer(g *game.Game, playerID game.PlayerID) {
 	}
 	settleDepartedControl(g)
 	for _, permanent := range g.Battlefield {
-		if before[permanent.ObjectID] != effectiveController(g, permanent) {
+		if after := effectiveController(g, permanent); before[permanent.ObjectID] != after {
 			permanent.SummoningSick = true
+			markObservedController(permanent, after)
 			removePermanentFromCombat(g, permanent.ObjectID)
 		}
 	}
