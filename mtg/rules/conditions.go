@@ -633,8 +633,10 @@ func anyOpponentGraveyardCardCount(g *game.Game, controller game.PlayerID) int {
 	return largest
 }
 
+// controllerGraveyardCardOfTypeCount counts the cards in the controller's
 // graveyard whose card types include cardType ("twenty or more creature cards
-// are in your graveyard", Mortal Combat).
+// are in your graveyard", Mortal Combat), reading types as graveyardCardTypes
+// does.
 func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, cardType types.Card) int {
 	player, ok := playerByID(g, controller)
 	if !ok {
@@ -646,12 +648,7 @@ func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, 
 		if !ok {
 			continue
 		}
-		if slices.Contains(cardFaceOrDefault(card, game.FaceFront).Types, cardType) {
-			count++
-			continue
-		}
-		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
-			slices.Contains(card.Def.Alternate.Val.Types, cardType) {
+		if graveyardCardHasType(g, card, cardType) {
 			count++
 		}
 	}
@@ -660,15 +657,13 @@ func controllerGraveyardCardOfTypeCount(g *game.Game, controller game.PlayerID, 
 
 // controllerGraveyardInstantOrSorceryCount counts the cards in the controller's
 // graveyard that are instants and/or sorceries, backing the "instant and/or
-// sorcery cards in your graveyard" count condition (Spell mastery). A split card
-// counts once when either half is an instant or sorcery.
+// sorcery cards in your graveyard" count condition (Spell mastery), reading
+// types as graveyardCardTypes does. A split card counts once when either half is
+// an instant or sorcery.
 func controllerGraveyardInstantOrSorceryCount(g *game.Game, controller game.PlayerID) int {
 	player, ok := playerByID(g, controller)
 	if !ok {
 		return 0
-	}
-	isInstantOrSorcery := func(cardTypes []types.Card) bool {
-		return slices.Contains(cardTypes, types.Instant) || slices.Contains(cardTypes, types.Sorcery)
 	}
 	count := 0
 	for _, cardID := range player.Graveyard.All() {
@@ -676,12 +671,7 @@ func controllerGraveyardInstantOrSorceryCount(g *game.Game, controller game.Play
 		if !ok {
 			continue
 		}
-		if isInstantOrSorcery(cardFaceOrDefault(card, game.FaceFront).Types) {
-			count++
-			continue
-		}
-		if card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
-			isInstantOrSorcery(card.Def.Alternate.Val.Types) {
+		if graveyardCardHasType(g, card, types.Instant) || graveyardCardHasType(g, card, types.Sorcery) {
 			count++
 		}
 	}
@@ -1510,8 +1500,7 @@ func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, 
 		if !ok {
 			continue
 		}
-		def := cardFaceOrDefault(card, game.FaceFront)
-		if def.Name == name && def.HasType(types.Creature) {
+		if cardFaceOrDefault(card, game.FaceFront).Name == name && graveyardCardHasType(g, card, types.Creature) {
 			return false
 		}
 	}
