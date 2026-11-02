@@ -1088,11 +1088,12 @@ func TestObservationCopiedAbilitiesCarryOnlyTheirOwnParagraphs(t *testing.T) {
 	}
 }
 
-// When an untexted ability's own paragraph cannot be identified, as when one
-// "enters or dies" paragraph is authored as two triggered abilities so the
-// face's triggered abilities and triggered paragraphs no longer pair up, the
-// ability is observed with no printed text rather than with the card's
-// unrelated abilities, both on the original and on a copy.
+// When an untexted ability's own paragraph cannot be identified, as when two
+// paragraphs each naming two trigger events are authored as only three
+// triggered abilities with one effect, so the face's triggered abilities and
+// triggered paragraphs pair up in more than one way, the ability is observed
+// with no printed text rather than with the card's unrelated abilities, both on
+// the original and on a copy.
 func TestObservationUnidentifiedAbilityParagraphShowsNoUnrelatedText(t *testing.T) {
 	gain := game.Mode{Sequence: []game.Instruction{{
 		Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()},
@@ -1101,6 +1102,7 @@ func TestObservationUnidentifiedAbilityParagraphShowsNoUnrelatedText(t *testing.
 	def.OracleText = `
 		Flying
 		When this creature enters or dies, you gain 1 life.
+		Whenever this creature attacks or blocks, you gain 1 life.
 		At the beginning of your upkeep, you gain 1 life.
 	`
 	def.TriggeredAbilities = []game.TriggeredAbility{{
@@ -1111,6 +1113,11 @@ func TestObservationUnidentifiedAbilityParagraphShowsNoUnrelatedText(t *testing.
 	}, {
 		Trigger: game.TriggerCondition{Type: game.TriggerWhen, Pattern: game.TriggerPattern{
 			Event: game.EventPermanentDied, Source: game.TriggerSourceSelf,
+		}},
+		Content: gain,
+	}, {
+		Trigger: game.TriggerCondition{Type: game.TriggerWhenever, Pattern: game.TriggerPattern{
+			Event: game.EventAttackerDeclared, Source: game.TriggerSourceSelf,
 		}},
 		Content: gain,
 	}, {

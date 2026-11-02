@@ -205,6 +205,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
 		return false
 	}
+	stackBody := activationStackBody(card, activate.AbilityIndex, &ability)
 	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
 	resolutionUse := cardActivatedResolutionUse(card, def, activate.AbilityIndex)
@@ -231,7 +232,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		SourceID: card.ID, SourceCardID: card.ID, SourceZone: zone.Hand,
 		SourceZoneVersion: sourceZoneVersion, AbilityIndex: activate.AbilityIndex,
 		Targets: completedTargets, TargetCounts: targetCounts, ChosenModes: activate.ChosenModes,
-		XValue: activate.XValue, InlineActivated: &ability,
+		XValue: activate.XValue, InlineActivated: stackBody,
 	})
 	var additionalCostsPaid []string
 	var sacrificedAsCostIDs, tappedAsCostIDs, exiledAsCostIDs []id.ID
@@ -296,7 +297,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		PaidCostSubjects:       paidCostSubjects,
 		TappedAsCostIDs:        tappedAsCostIDs,
 		ExiledAsCostIDs:        exiledAsCostIDs,
-		InlineActivated:        &ability,
+		InlineActivated:        stackBody,
 		ActivatedResolutionUse: resolutionUse,
 	}
 	pushAbilityToStackWithTargets(g, obj, targetEvents)
@@ -345,6 +346,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
 		return false
 	}
+	stackBody := activationStackBody(card, activate.AbilityIndex, &ability)
 	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
 	resolutionUse := cardActivatedResolutionUse(card, def, activate.AbilityIndex)
@@ -363,7 +365,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		SourceID: card.ID, SourceCardID: card.ID, SourceZone: zone.Graveyard,
 		SourceZoneVersion: sourceZoneVersion, AbilityIndex: activate.AbilityIndex,
 		Targets: completedTargets, TargetCounts: targetCounts, ChosenModes: activate.ChosenModes,
-		XValue: activate.XValue, InlineActivated: &ability,
+		XValue: activate.XValue, InlineActivated: stackBody,
 	})
 	costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
@@ -395,7 +397,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		PaidCostSubjects:       costPaid.subjects,
 		TappedAsCostIDs:        costPaid.tappedIDs,
 		ExiledAsCostIDs:        costPaid.exiledIDs,
-		InlineActivated:        &ability,
+		InlineActivated:        stackBody,
 		ActivatedResolutionUse: resolutionUse,
 	}
 	pushAbilityToStackWithTargets(g, obj, targetEvents)
@@ -451,6 +453,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	if !canActivateCyclingAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
 		return false
 	}
+	stackBody := activationStackBody(card, activate.AbilityIndex, &ability)
 	effectiveCost := effectiveCyclingCost(g, playerID, card, &ability)
 	prefs := e.paymentPreferencesForCost(g, playerID, effectiveCost, nil, activate.XValue, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCost, XValue: activate.XValue, Prefs: prefs}) {
@@ -476,7 +479,7 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 		Targets:             append([]game.Target(nil), activate.Targets...),
 		XValue:              activate.XValue,
 		AdditionalCostsPaid: []string{"Discard this card"},
-		InlineActivated:     &ability,
+		InlineActivated:     stackBody,
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)

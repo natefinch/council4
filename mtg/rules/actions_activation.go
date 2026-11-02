@@ -541,6 +541,22 @@ func effectiveHandActivatedAbilities(g *game.Game, playerID game.PlayerID, card 
 	return abilities
 }
 
+// activationStackBody returns the ability body a stack object activated from
+// card in hand or graveyard carries. A printed ability shares the front face's
+// own immutable body, so its stack object is recognized as that printed ability
+// and keeps its identified text (printedAbilityText). An ability granted to the
+// card (indexed past its printed abilities) is not in its Oracle text and keeps
+// its own copy, ability.
+func activationStackBody(card *game.CardInstance, index int, ability *game.ActivatedAbility) *game.ActivatedAbility {
+	def := cardFaceOrDefault(card, game.FaceFront)
+	if index < def.AbilityCount() {
+		if printed, ok := def.BodyAt(index).(*game.ActivatedAbility); ok {
+			return printed
+		}
+	}
+	return ability
+}
+
 func handCardMatchesSelection(g *game.Game, card *game.CardInstance, selection game.Selection, viewer game.PlayerID) bool {
 	return handCardMatchesSelectionWithEvent(g, card, selection, viewer, game.Event{})
 }

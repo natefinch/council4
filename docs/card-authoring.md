@@ -39,6 +39,10 @@ Ordinary non-mana activations, triggers and resolving spells can use Go programs
    printed costs, targets, modes, triggers and static/replacement applicability
    stay inspectable; synchronous resolution may use ordinary control flow.
    Mutable links, counters and delayed references stay Engine-owned and clone-safe.
+   An ability without its own `Text` is shown (printed and copied) with its own
+   Oracle paragraph or keyword line, identified by the Engine
+   (`mtg/rules/ability_paragraphs.go`); `TestRegisteredUntextedAbilitiesHaveOwnParagraphs`
+   fails when that is ambiguous, so then record the ability's exact `Text`.
 4. Execute named-card scenarios through the real Engine. Exercise choices,
    target changes/all-illegal targets, source departure, relevant replacements
    and timing, not just CardDef shapes or a smoke game's winner.
