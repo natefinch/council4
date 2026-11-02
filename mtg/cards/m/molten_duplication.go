@@ -48,33 +48,33 @@ func newMoltenDuplication() *game.CardDef {
 								Object:   game.TargetPermanentReference(0),
 								AddTypes: []types.Card{types.Artifact},
 							}),
+							PublishLinked: game.LinkedKey("molten-duplication-copy"),
 						},
 					},
 					{
 						Primitive: game.ApplyContinuous{
-							Object: opt.Val(game.TargetPermanentReference(0)),
 							ContinuousEffects: []game.ContinuousEffect{
 								game.ContinuousEffect{
+									Group: game.LinkedObjectsGroup(game.LinkedKey("molten-duplication-copy")),
 									Layer: game.LayerAbility,
 									AddKeywords: []game.Keyword{
 										game.Haste,
 									},
 								},
 							},
-							Duration:      game.DurationUntilEndOfTurn,
-							PublishLinked: game.LinkedKey("delayed-sacrifice-2"),
+							Duration: game.DurationUntilEndOfTurn,
 						},
 					},
 					{
 						Primitive: game.CreateDelayedTrigger{
 							Trigger: game.DelayedTriggerDef{
-								Timing:         game.DelayedAtBeginningOfNextEndStep,
-								CapturedObject: opt.Val(game.LinkedObjectReference("delayed-sacrifice-2")),
+								Timing:              game.DelayedAtBeginningOfNextEndStep,
+								CapturedObjectGroup: opt.Val(game.LinkedObjectReference("molten-duplication-copy")),
 								Content: game.Mode{
 									Sequence: []game.Instruction{
 										{
 											Primitive: game.Sacrifice{
-												Object: game.CapturedObjectReference(),
+												Group: game.CapturedObjectsGroup(),
 											},
 										},
 									},
