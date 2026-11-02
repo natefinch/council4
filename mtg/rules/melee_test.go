@@ -7,9 +7,9 @@ import (
 )
 
 // TestMeleeCountScalesWithDistinctOpponentsAttacked covers the Melee count
-// (CR 702.72): "for each opponent you attacked this combat" is the number of
-// distinct opponents that creatures the controller controls are attacking this
-// combat, read from the current combat's attack declarations at resolution.
+// (CR 702.121a, 508.6): "for each opponent you attacked this combat" is the
+// number of distinct opponents the controller declared attackers attacking this
+// combat, read from the combat's attack history at resolution.
 func TestMeleeCountScalesWithDistinctOpponentsAttacked(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -27,39 +27,37 @@ func TestMeleeCountScalesWithDistinctOpponentsAttacked(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		source := addCombatPermanent(g, game.Player1, vanillaCreature("Adriana", 3, 3))
 		obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID}
-		declarations := make([]game.AttackDeclaration, 0, len(tc.targets))
+		g.Combat = &game.CombatState{}
 		for _, target := range tc.targets {
-			attacker := addCombatPermanent(g, game.Player1, vanillaCreature("Soldier", 1, 1))
-			declarations = append(declarations, game.AttackDeclaration{
-				Attacker: attacker.ObjectID,
-				Target:   game.AttackTarget{Player: target},
-			})
+			g.Combat.DeclaredPlayerAttacks[game.Player1][target] = true
 		}
-		g.Combat = &game.CombatState{Attackers: declarations}
 		if got := dynamicAmountValue(g, obj, game.Player1, dynamic); got != tc.want {
 			t.Errorf("%s: Melee count = %d, want %d", tc.name, got, tc.want)
 		}
 	}
 }
 
-// TestMeleeCountIgnoresOpponentsAttacks confirms only the controller's own
-// attackers count: an opponent attacking a third player does not contribute to
-// the controller's Melee count.
-func TestMeleeCountIgnoresOpponentsAttacks(t *testing.T) {
+// TestMeleeCountIgnoresOtherPlayersAttacks confirms only the controller's own
+// attacks count: another player's attack history, and attackers currently
+// listed in combat that the controller never declared, do not contribute.
+func TestMeleeCountIgnoresOtherPlayersAttacks(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, vanillaCreature("Adriana", 3, 3))
 	dynamic := game.DynamicAmount{Kind: game.DynamicAmountOpponentsAttackedThisCombat}
 	obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID}
 
-	mine := addCombatPermanent(g, game.Player1, vanillaCreature("Soldier", 1, 1))
-	theirs := addCombatPermanent(g, game.Player2, vanillaCreature("Raider", 2, 2))
+	entered := addCombatPermanent(g, game.Player1, vanillaCreature("Soldier", 1, 1))
 	g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{
-		{Attacker: mine.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-		{Attacker: theirs.ObjectID, Target: game.AttackTarget{Player: game.Player3}},
+		{Attacker: entered.ObjectID, Target: game.AttackTarget{Player: game.Player4}},
 	}}
+	g.Combat.DeclaredPlayerAttacks[game.Player1][game.Player2] = true
+	g.Combat.DeclaredPlayerAttacks[game.Player2][game.Player3] = true
 	if got := dynamicAmountValue(g, obj, game.Player1, dynamic); got != 1 {
-		t.Errorf("Melee count = %d, want 1 (only the controller's attack on Player2)", got)
+		t.Errorf("Melee count = %d, want 1 (only Player1's declared attack on Player2)", got)
+	}
+	if got := dynamicAmountValue(g, obj, game.Player3, dynamic); got != 0 {
+		t.Errorf("Melee count for a player who attacked no one = %d, want 0", got)
 	}
 }
 

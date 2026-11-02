@@ -443,9 +443,10 @@ func attackerWasBlocked(g *game.Game, attackerID id.ID) bool {
 // blocks against a removed attacker are dropped, so it is no longer blocked and
 // neither it nor its blockers deal or are dealt combat damage for them, but each
 // of those blockers remains a blocking creature until it is itself removed from
-// combat (CR 509.1g). Combat history (AttackersDeclared, PlayersAttacked, the
-// blocked status of remaining attackers, recorded events) and a departing
-// permanent's last known information, captured before the move, are unaffected.
+// combat (CR 509.1g). Combat history (AttackersDeclared, PlayersAttacked,
+// DeclaredPlayerAttacks, the blocked status of remaining attackers, recorded
+// events) and a departing permanent's last known information, captured before
+// the move, are unaffected.
 func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 	if g.Combat == nil || permanentID == 0 {
 		return
