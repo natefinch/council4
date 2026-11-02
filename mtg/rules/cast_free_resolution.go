@@ -410,6 +410,7 @@ func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, contr
 		CastDuringControllerMainPhase: controllerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
 	var counterTransition castCounterTransition
+	var place castSourcePlace
 	if copyCard {
 		obj.Copy = true
 		obj.CastCopy = true
@@ -418,7 +419,9 @@ func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, contr
 		obj.SourceTokenDef = copyCardDef(card.Def)
 	} else {
 		counterTransition = prepareCastCounterTransition(g, card, cast.SourceZone)
-		if !removeCastSourceCard(g, sourcePlayer, card.ID, cast.SourceZone) {
+		var taken bool
+		place, taken = takeCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
+		if !taken {
 			return actionFailed
 		}
 		counterTransition.apply(g)
@@ -427,7 +430,7 @@ func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, contr
 	rollback := func() {
 		g.Stack.RemoveByID(obj.ID)
 		if !copyCard {
-			restoreCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
+			restoreCastSourceCard(place)
 			counterTransition.undo(g)
 		}
 	}

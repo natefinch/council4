@@ -61,13 +61,13 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 	} else if permission != (game.PlayPermission{}) {
 		return false
 	}
-	source, ok := playerCardsInZone(sourcePlayer, sourceZone)
-	if !ok || !source.Remove(cardID) {
+	place, ok := takeCastSourceCard(sourcePlayer, cardID, sourceZone)
+	if !ok {
 		return false
 	}
 
 	if _, ok := createCardPermanentFaceWithChoices(e, g, card, playerID, sourceZone, face, agents, log); !ok {
-		restoreCastSourceCard(sourcePlayer, cardID, sourceZone)
+		restoreCastSourceCard(place)
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
@@ -275,7 +275,8 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
 	}
 	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
-	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
+	place, ok := takeCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
+	if !ok {
 		return actionFailed, nil
 	}
 	counterTransition.apply(g)
@@ -310,7 +311,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		// paid, so the proposal is undone — take the spell back off the stack
 		// and return the card to the zone it was cast from.
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
+		restoreCastSourceCard(place)
 		counterTransition.undo(g)
 		if unpayable {
 			return proposals.reverseUnpayable(attempt(), route, proposal, proposedTargets(), unpayableTargets), nil
@@ -433,7 +434,8 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		SourceZone:     sourceZone,
 	}
 	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
-	if !removeCastSourceCard(g, castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone) {
+	place, ok := takeCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
+	if !ok {
 		return false
 	}
 	counterTransition.apply(g)
@@ -457,7 +459,7 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	if !ok {
 		// CR 728: undo the proposal when costs can't be paid.
 		g.Stack.RemoveByID(obj.ID)
-		restoreCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
+		restoreCastSourceCard(place)
 		counterTransition.undo(g)
 		return false
 	}
@@ -2002,40 +2004,32 @@ func castSourceZoneCards(player *game.Player, sourceZone zone.Type) []id.ID {
 	}
 }
 
-func removeCastSourceCard(g *game.Game, player *game.Player, cardID id.ID, sourceZone zone.Type) bool {
-	switch sourceZone {
-	case zone.Hand:
-		return player.Hand.Remove(cardID)
-	case zone.Command:
-		return player.CommandZone.Remove(cardID)
-	case zone.Graveyard:
-		return player.Graveyard.Remove(cardID)
-	case zone.Exile:
-		return player.Exile.Remove(cardID)
-	case zone.Library:
-		return player.Library.Remove(cardID)
-	default:
-		return false
-	}
+// castSourcePlace is where a card being cast or played was in its source zone
+// before the proposal moved it, so an undone proposal (CR 733.1) can put it
+// back there without reordering the zone (CR 401.4, 404.2).
+type castSourcePlace struct {
+	source   *zone.Zone
+	cardID   id.ID
+	below    []id.ID
+	faceDown bool
 }
 
-// castSourcePosition returns where cardID is in player's zone sourceZone, for
-// restoreCastSourceCardAt, or -1 when it isn't there.
-func castSourcePosition(player *game.Player, cardID id.ID, sourceZone zone.Type) int {
+// takeCastSourceCard removes cardID from player's zone sourceZone for a
+// proposed cast or land play (CR 601.2a, 305.1), recording its place there for
+// restoreCastSourceCard.
+func takeCastSourceCard(player *game.Player, cardID id.ID, sourceZone zone.Type) (castSourcePlace, bool) {
 	source := castSourceZone(player, sourceZone)
 	if source == nil {
-		return -1
+		return castSourcePlace{}, false
 	}
-	return slices.Index(source.All(), cardID)
-}
-
-// restoreCastSourceCardAt is restoreCastSourceCard returning the card to
-// position, its place in that zone before the proposal, so a reversed cast
-// (CR 733.1) keeps a graveyard's order (CR 404.2).
-func restoreCastSourceCardAt(player *game.Player, cardID id.ID, sourceZone zone.Type, position int) {
-	if source := castSourceZone(player, sourceZone); source != nil {
-		source.InsertAt(min(max(position, 0), source.Size()), cardID)
+	cards := source.All()
+	index := slices.Index(cards, cardID)
+	if index < 0 {
+		return castSourcePlace{}, false
 	}
+	place := castSourcePlace{source: source, cardID: cardID, below: cards[index+1:], faceDown: source.IsFaceDown(cardID)}
+	source.Remove(cardID)
+	return place, true
 }
 
 func castSourceZone(player *game.Player, sourceZone zone.Type) *zone.Zone {
@@ -2055,22 +2049,24 @@ func castSourceZone(player *game.Player, sourceZone zone.Type) *zone.Zone {
 	}
 }
 
-// restoreCastSourceCard returns a card to the zone it was cast from. It reverses
-// removeCastSourceCard when a proposed cast is abandoned because its costs can't
-// be paid (CR 601.2h / 728, handling an illegal action by undoing the
-// proposal), so the card is never lost.
-func restoreCastSourceCard(player *game.Player, cardID id.ID, sourceZone zone.Type) {
-	switch sourceZone {
-	case zone.Hand:
-		player.Hand.Add(cardID)
-	case zone.Command:
-		player.CommandZone.Add(cardID)
-	case zone.Graveyard:
-		player.Graveyard.Add(cardID)
-	case zone.Exile:
-		player.Exile.Add(cardID)
-	case zone.Library:
-		player.Library.Add(cardID)
-	default:
+// restoreCastSourceCard returns a card taken by takeCastSourceCard to its place
+// when the proposed cast or play is undone (CR 733.1), so the card is never
+// lost and its zone keeps its order. Costs and mana abilities may have moved
+// other cards meanwhile, so the card goes directly above the nearest card that
+// was beneath it and is still there, or to the bottom if none remains; cards
+// that arrived on top stay above it. A face-down card stays face down.
+func restoreCastSourceCard(place castSourcePlace) {
+	if place.source == nil {
+		return
 	}
+	cards := place.source.All()
+	index := len(cards)
+	for _, next := range place.below {
+		if i := slices.Index(cards, next); i >= 0 {
+			index = i
+			break
+		}
+	}
+	place.source.InsertAt(index, place.cardID)
+	place.source.SetFaceDown(place.cardID, place.faceDown)
 }

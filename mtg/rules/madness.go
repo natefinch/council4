@@ -93,14 +93,15 @@ func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerI
 		SourceZone:   zone.Exile,
 	}
 	counterTransition := prepareCastCounterTransition(g, card, zone.Exile)
-	if !player.Exile.Remove(card.ID) {
+	place, ok := takeCastSourceCard(player, card.ID, zone.Exile)
+	if !ok {
 		return false
 	}
 	counterTransition.apply(g)
 	g.Stack.Push(stackObj)
 	rollback := func() {
 		g.Stack.RemoveByID(stackObj.ID)
-		restoreCastSourceCard(player, card.ID, zone.Exile)
+		restoreCastSourceCard(place)
 		counterTransition.undo(g)
 	}
 	targetEvents := prepareTargetEvents(g, stackObj)
