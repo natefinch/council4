@@ -36,7 +36,7 @@ type phyrexianAnnouncement struct {
 func (e *Engine) proposeSpellCost(g *game.Game, request payment.SpellRequest, targetsPending bool, open castProposals, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (spellCostProposal, bool) {
 	planner := paymentOrch.planner(g)
 	costs := planner.PrepareSpellCosts(request)
-	manual := e.hasManualPaymentManaAbility(g, request.PlayerID)
+	manual := e.paymentManaWindow(g, request.PlayerID)
 	summaries := planner.SpellCostOptions(request)
 	closed := func(prepared payment.PreparedSpellCost) bool {
 		index := slices.IndexFunc(summaries, func(option payment.SpellOptionSummary) bool { return option.Index == prepared.Summary.Index })
@@ -89,11 +89,14 @@ func (e *Engine) proposeSpellCost(g *game.Game, request payment.SpellRequest, ta
 // announcedSpellCostFeasibility returns a check of whether request's cost
 // option optionIndex can still be paid once the given Phyrexian payments are
 // announced; any other Phyrexian symbol may still be paid either way. With
-// manaWindow, paying after activating payment-time mana abilities counts too
-// (CR 601.2g). The check reports true when request doesn't offer that option,
-// so it never steers an announcement.
+// manaWindow, paying after activating payment-time mana abilities that can
+// actually make it payable counts too (CR 601.2g). The check reports true when
+// request doesn't offer that option, so it never steers an announcement.
 func (e *Engine) announcedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, optionIndex int, manaWindow bool) func([]phyrexianAnnouncement) bool {
-	manual := manaWindow && e.hasManualPaymentManaAbility(g, request.PlayerID)
+	var manual manaWindowCheck
+	if manaWindow {
+		manual = e.paymentManaWindow(g, request.PlayerID)
+	}
 	for _, prepared := range paymentOrch.planner(g).PrepareSpellCosts(request) {
 		if prepared.Summary.Index != optionIndex {
 			continue
@@ -188,7 +191,7 @@ func targetCostVariants(request payment.SpellRequest, targetChoices [][]game.Tar
 // spell's targets and other choices are final (CR 601.2f). It fails when that
 // total can't be paid now or after activating payment-time mana abilities.
 func (e *Engine) lockSpellCostProposal(g *game.Game, request payment.SpellRequest, proposal spellCostProposal) (payment.PreparedSpellCost, bool) {
-	manual := e.hasManualPaymentManaAbility(g, request.PlayerID)
+	manual := e.paymentManaWindow(g, request.PlayerID)
 	for _, prepared := range paymentOrch.planner(g).PrepareSpellCosts(request) {
 		if prepared.Summary.Index == proposal.optionIndex {
 			announced := matchPhyrexianAnnouncements(prepared.Summary.ManaCost, proposal.phyrexian)
@@ -201,10 +204,11 @@ func (e *Engine) lockSpellCostProposal(g *game.Game, request payment.SpellReques
 
 // spellCostFeasibility reports whether request's total cost can be paid from
 // current resources (payableNow), and whether it can be paid now or after the
-// caster activates payment-time mana abilities (feasible). manual reports
-// whether the caster has such an ability. Phyrexian payments are not announced
-// yet, so each may be paid with mana or with 2 life.
-func spellCostFeasibility(g *game.Game, request payment.SpellRequest, manual bool) (payableNow, feasible bool) {
+// caster activates payment-time mana abilities (feasible). manual checks
+// whether those abilities can make a total payable, nil when the caster has
+// none. Phyrexian payments are not announced yet, so each may be paid with mana
+// or with 2 life.
+func spellCostFeasibility(g *game.Game, request payment.SpellRequest, manual manaWindowCheck) (payableNow, feasible bool) {
 	if paymentOrch.canPaySpellCosts(g, request) {
 		return true, true
 	}
@@ -225,9 +229,10 @@ func spellCostFeasibility(g *game.Game, request payment.SpellRequest, manual boo
 // Phyrexian symbol paid with either mana or life. Mana abilities may be
 // activated while paying only when the total, with those announcements,
 // includes a mana payment (CR 601.2g), and they add only mana, so a total that
-// is not payable now is feasible only if it includes mana and its non-mana
-// costs, including the announced life, are payable now.
-func preparedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, prepared payment.PreparedSpellCost, manual bool, announced map[int]bool) (payableNow, feasible bool) {
+// is not payable now is feasible only if it includes mana, its non-mana costs,
+// including the announced life, are payable now, and manual, which is nil when
+// no such window is considered, finds the abilities can make it payable.
+func preparedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, prepared payment.PreparedSpellCost, manual manaWindowCheck, announced map[int]bool) (payableNow, feasible bool) {
 	proposal := request
 	proposal.PreparedCost = &prepared
 	planner := paymentOrch.planner(g)
@@ -239,9 +244,24 @@ func preparedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, pr
 		}
 	}
 	proposal.Prefs = nil
-	return false, manual && manaCostIncludesManaPayment(prepared.Summary.ManaCost, announced) &&
+	return false, manual != nil && manaCostIncludesManaPayment(prepared.Summary.ManaCost, announced) &&
 		announcedPhyrexianLifePayable(g, request.PlayerID, announced) &&
-		planner.CanPayPreparedNonManaCosts(proposal)
+		planner.CanPayPreparedNonManaCosts(proposal) && manual(g, request, prepared, announced)
+}
+
+// manaWindowCheck reports whether activating payment-time mana abilities in g
+// can make the locked total prepared for request payable with the Phyrexian
+// payments announced (CR 601.2g-h).
+type manaWindowCheck func(g *game.Game, request payment.SpellRequest, prepared payment.PreparedSpellCost, announced map[int]bool) bool
+
+// paymentManaWindow returns the check of whether player's payment-time mana
+// abilities can make a total payable (see manualManaMayPay), or nil when
+// player has none to activate.
+func (e *Engine) paymentManaWindow(g *game.Game, player game.PlayerID) manaWindowCheck {
+	if !e.hasManualPaymentManaAbility(g, player) {
+		return nil
+	}
+	return e.manualManaMayPay
 }
 
 // maxOpenPhyrexianCandidates bounds the Phyrexian symbols whose mana-or-life

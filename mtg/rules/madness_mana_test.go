@@ -148,22 +148,26 @@ func TestMadnessCastLocksCostBeforeManaAbilities(t *testing.T) {
 // ability with Thalia's tax and a mandatory sacrifice cost on a madness cast.
 // Mana abilities only add mana, so without an artifact the proposal is not made
 // and no payment window opens. With a second Thalia the {2}{G} total exceeds
-// the available mana: the proposal is made, but the unpaid cast is reversed
-// along with the Grove's reversible activation (CR 733.1), and the card goes to
-// the graveyard (CR 702.35a).
+// the mana the Grove and pool can make, so no proposal is made (#3585). Adding
+// Nurturing Peatland makes it payable: the proposal is made, but leaving the
+// Peatland unused leaves the cast unpaid, so it is reversed along with the
+// Grove's reversible activation (CR 733.1), and the card goes to the graveyard
+// (CR 702.35a).
 func TestMadnessCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	for _, tc := range []struct {
 		name          string
 		artifact      bool
 		thalias       int
+		peatland      bool
 		wantWindows   int
 		wantActivated int
 		wantCast      bool
 	}{
 		{name: "all costs paid", artifact: true, thalias: 1, wantWindows: 1, wantActivated: 1, wantCast: true},
 		{name: "sacrifice impossible", artifact: false, thalias: 1},
-		{name: "mana short", artifact: true, thalias: 2, wantWindows: 1, wantActivated: 1},
+		{name: "mana short", artifact: true, thalias: 2},
+		{name: "mana unpaid", artifact: true, thalias: 2, peatland: true, wantWindows: 2, wantActivated: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()
@@ -185,9 +189,13 @@ func TestMadnessCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 				addCombatPermanent(g, game.Player2, reg.Lookup("Thalia, Guardian of Thraben"))
 			}
 			grove := addCombatPermanent(g, game.Player1, reg.Lookup("Waterlogged Grove"))
+			var peatland *game.Permanent
+			if tc.peatland {
+				peatland = addCombatPermanent(g, game.Player1, reg.Lookup("Nurturing Peatland"))
+			}
 			discardIntoMadness(t, e, g, cardID)
 			life := g.Players[game.Player1].Life
-			agent := &paymentManaAgent{ability: "Pay 1 life"}
+			agent := &paymentManaAgent{ability: "Add {G} or {U}"}
 
 			e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
 
@@ -199,6 +207,9 @@ func TestMadnessCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 				if grove.Tapped || g.Players[game.Player1].Life != life || g.Players[game.Player1].ManaPool.Total() != 1 {
 					t.Fatalf("grove tapped=%t life=%d pool=%d, want no mana activation or payment left behind",
 						grove.Tapped, g.Players[game.Player1].Life, g.Players[game.Player1].ManaPool.Total())
+				}
+				if peatland != nil && peatland.Tapped {
+					t.Fatal("the Peatland was activated although the caster declined it")
 				}
 				if fodder != nil {
 					if _, ok := permanentByObjectID(g, fodder.ObjectID); !ok {

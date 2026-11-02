@@ -194,7 +194,7 @@ func (e *Engine) faceDownCostProposable(g *game.Game, player game.PlayerID, cast
 		return false
 	}
 	for _, prepared := range paymentOrch.planner(proposed).PrepareSpellCosts(request) {
-		if _, feasible := preparedSpellCostFeasibility(proposed, request, prepared, true, nil); feasible && e.manualManaMayPay(proposed, request, prepared) {
+		if _, feasible := preparedSpellCostFeasibility(proposed, request, prepared, e.manualManaMayPay, nil); feasible {
 			return true
 		}
 	}
