@@ -69,10 +69,11 @@ func newTinybonesPocketNuisance() *game.CardDef {
 					Trigger: game.TriggerCondition{
 						Type: game.TriggerWhenever,
 						Pattern: game.TriggerPattern{
-							Event:           game.EventCardDiscarded,
-							StackObjectKind: game.StackSpell,
-							OneOrMore:       true,
-							CounterKind:     counter.PlusOnePlusOne,
+							Event:              game.EventCardDiscarded,
+							StackObjectKind:    game.StackSpell,
+							OneOrMore:          true,
+							OneOrMorePerPlayer: true,
+							CounterKind:        counter.PlusOnePlusOne,
 						},
 					},
 					Content: game.AbilityContent{

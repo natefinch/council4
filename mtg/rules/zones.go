@@ -1194,6 +1194,16 @@ func discardCardFromHand(g *game.Game, playerID game.PlayerID, cardID id.ID) boo
 // the order they left the hand. Randomness is drawn from g.RNG, so a replay with
 // the same seed discards the same cards.
 func discardCardsAtRandomFromHand(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
+	chosen := chooseRandomHandCards(g, playerID, amount)
+	if len(chosen) == 0 {
+		return nil
+	}
+	return discardChosenCardsInBatch(g, playerID, chosen, g.IDGen.Next())
+}
+
+// chooseRandomHandCards picks min(amount, hand size) cards uniformly at random
+// from the player's hand without moving them. Randomness is drawn from g.RNG.
+func chooseRandomHandCards(g *game.Game, playerID game.PlayerID, amount int) []id.ID {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
@@ -1210,14 +1220,17 @@ func discardCardsAtRandomFromHand(g *game.Game, playerID game.PlayerID, amount i
 	g.RNG.Shuffle(len(order), func(i, j int) {
 		order[i], order[j] = order[j], order[i]
 	})
-	simultaneousID := g.IDGen.Next()
-	var discarded []id.ID
-	for _, idx := range order[:amount] {
-		if discardCardFromHandInBatch(g, playerID, candidates[idx], simultaneousID) {
-			discarded = append(discarded, candidates[idx])
-		}
+	chosen := make([]id.ID, amount)
+	for i, idx := range order[:amount] {
+		chosen[i] = candidates[idx]
 	}
-	return discarded
+	return chosen
+}
+
+// discardChosenCardsInBatch discards the chosen hand cards of one player as part
+// of the simultaneous batch simultaneousID and returns those actually discarded.
+func discardChosenCardsInBatch(g *game.Game, playerID game.PlayerID, chosen []id.ID, simultaneousID id.ID) []id.ID {
+	return discardCardsSimultaneously(g, []game.PlayerID{playerID}, [][]id.ID{chosen}, simultaneousID)[0]
 }
 
 // discardCardFromHandInBatch discards a card by moving it from its owner's hand to
@@ -1225,56 +1238,168 @@ func discardCardsAtRandomFromHand(g *game.Game, playerID game.PlayerID, amount i
 // madness exiles it instead, CR 702.35a). The discarded card becomes a new object
 // in its destination zone (CR 400.7).
 func discardCardFromHandInBatch(g *game.Game, playerID game.PlayerID, cardID, simultaneousID id.ID) bool {
-	player, ok := playerByID(g, playerID)
-	if !ok || !player.Hand.Remove(cardID) {
-		return false
-	}
-	card, cardOK := g.GetCardInstance(cardID)
-	destination := zone.Graveyard
-	shuffleIntoLibrary := false
-	revealSource := false
-	var replacement zoneChangeReplacementResult
-	event := game.Event{}
-	if cardOK {
-		if _, ok := madnessCostForCard(cardFaceOrDefault(card, game.FaceFront)); ok {
-			destination = zone.Exile
+	return len(discardChosenCardsInBatch(g, playerID, []id.ID{cardID}, simultaneousID)) > 0
+}
+
+// preparedDiscard is one card of a simultaneous discard whose destination has
+// been decided but which has not yet left its owner's hand.
+type preparedDiscard struct {
+	player       game.PlayerID
+	cardID       id.ID
+	card         *game.CardInstance
+	event        game.Event
+	replacement  zoneChangeReplacementResult
+	destination  zone.Type
+	ordinary     zoneChangeReplacement
+	ordinaryDone bool
+	commander    bool
+}
+
+// discardCardsSimultaneously discards chosen[i] from players[i]'s hand for every
+// i as one simultaneous discard sharing simultaneousID (CR 101.4, CR 701.9a). It
+// first decides every card's destination against the pre-discard state: each
+// pending zone-change replacement or commander choice (CR 614, CR 616.1,
+// CR 903.9b) is asked in APNAP order while every card is still in its hand, so no
+// choice reveals or depends on another card of the same discard. Only then do the
+// cards move and the zone-change and discard events publish. It returns the cards
+// each player actually discarded, parallel to players.
+func discardCardsSimultaneously(g *game.Game, players []game.PlayerID, chosen [][]id.ID, simultaneousID id.ID) [][]id.ID {
+	discarded := make([][]id.ID, len(players))
+	var moves []preparedDiscard
+	seen := make(map[id.ID]bool)
+	for i, playerID := range players {
+		player, ok := playerByID(g, playerID)
+		if !ok {
+			continue
 		}
-		event = game.Event{
-			Kind:           game.EventZoneChanged,
-			Controller:     playerID,
-			Player:         playerID,
-			CardID:         cardID,
-			FromZone:       zone.Hand,
-			ToZone:         destination,
-			SimultaneousID: simultaneousID,
+		for _, cardID := range chosen[i] {
+			if seen[cardID] || !player.Hand.Contains(cardID) {
+				continue
+			}
+			seen[cardID] = true
+			moves = append(moves, prepareDiscard(g, playerID, cardID, simultaneousID))
 		}
-		replacement = replacementZoneChange(g, event)
-		destination = replacement.destination
-		destination = commanderReplacementDestination(g, card.ID, destination)
-		shuffleIntoLibrary = replacement.shuffleIntoLibrary
-		revealSource = replacement.revealSource
 	}
-	zoneOwner := playerID
-	if destination == zone.Command && cardOK {
-		zoneOwner = card.Owner
+	replaceDiscardDestinations(g, moves)
+	for i := range moves {
+		if !applyPreparedDiscard(g, &moves[i]) {
+			continue
+		}
+		index := slices.Index(players, moves[i].player)
+		discarded[index] = append(discarded[index], moves[i].cardID)
 	}
-	destinationCards, ok := destinationZone(g, zoneOwner, destination)
+	return discarded
+}
+
+func prepareDiscard(g *game.Game, playerID game.PlayerID, cardID, simultaneousID id.ID) preparedDiscard {
+	move := preparedDiscard{
+		player: playerID, cardID: cardID, destination: zone.Graveyard, ordinaryDone: true,
+		event: game.Event{SimultaneousID: simultaneousID},
+	}
+	card, ok := g.GetCardInstance(cardID)
 	if !ok {
-		return false
+		return move
 	}
-	revealZoneReplacementSource(g, event, revealSource)
-	destinationCards.Add(cardID)
-	shuffleLibraryIfRequested(g, destinationCards, destination, shuffleIntoLibrary)
-	event = game.Event{
+	move.card = card
+	if _, ok := madnessCostForCard(cardFaceOrDefault(card, game.FaceFront)); ok {
+		move.destination = zone.Exile
+	}
+	move.event = game.Event{
+		Kind:           game.EventZoneChanged,
+		Controller:     playerID,
 		Player:         playerID,
 		CardID:         cardID,
 		FromZone:       zone.Hand,
-		ToZone:         destination,
-		Amount:         1,
+		ToZone:         move.destination,
 		SimultaneousID: simultaneousID,
 	}
-	event = emitZoneChangeEvent(g, event)
-	placeRedirectExileCounter(g, zoneOwner, cardID, replacement)
+	move.ordinary = newZoneChangeReplacement(move.event)
+	move.ordinaryDone = false
+	return move
+}
+
+// replaceDiscardDestinations resolves every prepared discard's zone-change
+// replacements and commander choice before any card moves. Pending decisions are
+// taken in APNAP order and reconsidered after each one, since applying one
+// replacement may expose a new decision for an earlier player (CR 101.4d), as
+// replacePermanentZoneMoveDestinations does for permanents.
+func replaceDiscardDestinations(g *game.Game, moves []preparedDiscard) {
+	type pendingChoice struct {
+		player  game.PlayerID
+		resolve func()
+	}
+	for {
+		var choices []pendingChoice
+		for i := range moves {
+			move := &moves[i]
+			if !move.ordinaryDone {
+				matches := move.ordinary.pendingChoices(g)
+				if len(matches) != 0 {
+					choices = append(choices, pendingChoice{replacementEventPlayer(move.event), func() {
+						decision := chooseZoneChangeReplacementDecision(g, move.event, replacementEffectLabels(matches))
+						move.ordinary.choose(selectedReplacementIndex(matches, decision))
+					}})
+					continue
+				}
+				move.ordinaryDone = true
+				move.replacement = move.ordinary.result
+				move.destination = move.replacement.destination
+			}
+			if move.commander || move.card == nil || !isCommanderCardID(g, move.cardID) ||
+				(move.destination != zone.Hand && move.destination != zone.Library) || !isPlayerAlive(g, move.card.Owner) {
+				continue
+			}
+			choices = append(choices, pendingChoice{move.card.Owner, func() {
+				move.destination = commanderReplacementDestination(g, move.cardID, move.destination)
+				move.commander = true
+			}})
+		}
+		if len(choices) == 0 {
+			return
+		}
+		next := choices[0]
+	findNext:
+		for _, player := range triggerAPNAPPlayers(g) {
+			for _, choice := range choices {
+				if choice.player == player {
+					next = choice
+					break findNext
+				}
+			}
+		}
+		next.resolve()
+	}
+}
+
+// applyPreparedDiscard moves a prepared discard's card from its hand to its
+// decided destination and publishes the zone change and the discard.
+func applyPreparedDiscard(g *game.Game, move *preparedDiscard) bool {
+	zoneOwner := move.player
+	if move.destination == zone.Command && move.card != nil {
+		zoneOwner = move.card.Owner
+	}
+	player, ok := playerByID(g, move.player)
+	if !ok {
+		return false
+	}
+	destinationCards, ok := destinationZone(g, zoneOwner, move.destination)
+	if !ok || !player.Hand.Remove(move.cardID) {
+		return false
+	}
+	if move.card != nil {
+		revealZoneReplacementSource(g, move.event, move.replacement.revealSource)
+	}
+	destinationCards.Add(move.cardID)
+	shuffleLibraryIfRequested(g, destinationCards, move.destination, move.replacement.shuffleIntoLibrary)
+	event := emitZoneChangeEvent(g, game.Event{
+		Player:         move.player,
+		CardID:         move.cardID,
+		FromZone:       zone.Hand,
+		ToZone:         move.destination,
+		Amount:         1,
+		SimultaneousID: move.event.SimultaneousID,
+	})
+	placeRedirectExileCounter(g, zoneOwner, move.cardID, move.replacement)
 	// A command-zone replacement changes the destination, but the discard still happened.
 	event.Kind = game.EventCardDiscarded
 	emitEvent(g, event)
