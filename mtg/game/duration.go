@@ -169,7 +169,8 @@ type DelayedTriggerDef struct {
 	// shared, source-scoped link key when the trigger fires. Delayed disposal of
 	// created tokens uses CapturedObjectGroup instead (see below). A delayed
 	// trigger that acts on its own source ("sacrifice this creature at end of
-	// combat", "transform Optimus Prime" after a captured damage event)
+	// combat", "transform Optimus Prime" after a captured damage event) or
+	// otherwise refers to it ("each creature other than Massacre Girl")
 	// captures SourcePermanentReference, binding that permanent object rather
 	// than whichever permanent the source card later becomes (CR 603.7c) and
 	// keeping the binding observable after the source leaves the battlefield. In each case the content references
