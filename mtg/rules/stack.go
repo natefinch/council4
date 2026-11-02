@@ -468,13 +468,12 @@ func releaseStateTriggerLatch(g *game.Game, obj *game.StackObject) {
 		!obj.InlineTrigger.Trigger.State.Exists {
 		return
 	}
-	deleteStateTriggerLatch(g, obj.SourceID, obj.SourceCardID, obj.AbilityIndex)
+	deleteStateTriggerLatch(g, obj.SourceID, obj.AbilityIndex)
 }
 
-func deleteStateTriggerLatch(g *game.Game, sourceObjectID, sourceCardID id.ID, abilityIndex int) {
+func deleteStateTriggerLatch(g *game.Game, sourceObjectID id.ID, abilityIndex int) {
 	delete(g.StateTriggerLatches, game.StateTriggerKey{
 		SourceObjectID: sourceObjectID,
-		SourceCardID:   sourceCardID,
 		AbilityIndex:   abilityIndex,
 	})
 }
@@ -920,7 +919,9 @@ func mutateSpellOnTop(selection []int) bool {
 // over it. The merged permanent is the same object (CR 702.140c, CR 730.2c), so
 // its abilities keep their history while the top card's abilities take the
 // lowest indexes. Triggered abilities from the source still on the stack keep
-// counting their resolutions with the moved ability.
+// counting their resolutions with the moved ability, and a pending state
+// trigger keeps its latch so it doesn't trigger again until that instance
+// leaves the stack (CR 603.8).
 func shiftPermanentAbilityUseIndexes(g *game.Game, sourceID id.ID, offset int) {
 	if offset <= 0 {
 		return
@@ -942,6 +943,12 @@ func shiftPermanentAbilityUseIndexes(g *game.Game, sourceID id.ID, offset int) {
 	g.TriggeredAbilitiesThisTurn = shiftAbilityUseKeys(g.TriggeredAbilitiesThisTurn, shiftTriggered)
 	g.ResolvedTriggeredAbilitiesThisTurn = shiftAbilityUseKeys(g.ResolvedTriggeredAbilitiesThisTurn, shiftTriggered)
 	g.ChosenModesThisTurn = shiftAbilityUseKeys(g.ChosenModesThisTurn, shiftTriggered)
+	g.StateTriggerLatches = shiftAbilityUseKeys(g.StateTriggerLatches, func(key game.StateTriggerKey) game.StateTriggerKey {
+		if key.SourceObjectID == sourceID && key.AbilityIndex >= 0 {
+			key.AbilityIndex += offset
+		}
+		return key
+	})
 	// Only inline triggered abilities are moved: their index is a history key,
 	// never a lookup into the source card's printed abilities.
 	for _, obj := range g.Stack.Objects() {

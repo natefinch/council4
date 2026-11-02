@@ -95,10 +95,12 @@ type ReplacementDecision struct {
 	UsedFallback bool
 }
 
-// StateTriggerKey identifies one state-triggered ability latch (CR 603.8).
+// StateTriggerKey identifies one state-triggered ability latch (CR 603.8): the
+// source object and the ability's effective index on it. The key deliberately
+// omits the top card, since mutating over a permanent keeps the same object and
+// abilities (CR 730.2c) while changing which card represents it.
 type StateTriggerKey struct {
 	SourceObjectID id.ID
-	SourceCardID   id.ID
 	AbilityIndex   int
 }
 

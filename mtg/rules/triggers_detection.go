@@ -1427,7 +1427,6 @@ func (*Engine) detectStateTriggeredAbilities(g *game.Game) []pendingTriggeredAbi
 			}
 			key := game.StateTriggerKey{
 				SourceObjectID: permanent.ObjectID,
-				SourceCardID:   permanent.CardInstanceID,
 				AbilityIndex:   i,
 			}
 			seen[key] = true
