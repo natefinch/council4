@@ -786,10 +786,7 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 	if card == nil && !obj.Copy {
 		return "missing source"
 	}
-	owner := obj.Controller
-	if card != nil && !obj.Copy {
-		owner = card.Owner
-	}
+	owner := mutateSpellOwner(obj, card)
 	if !mutateTargetLegal(g, obj.Controller, owner, spellDef, obj.MutateTargetID) {
 		if obj.Copy {
 			_, result := e.enterPermanentSpellCopy(g, obj, spellDef, agents, log)

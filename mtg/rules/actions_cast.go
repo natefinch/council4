@@ -588,6 +588,47 @@ func legalMutateTargets(g *game.Game, playerID, owner game.PlayerID, spellDef *g
 	return targets
 }
 
+// mutateSpellOwner returns the owner whose creatures a mutating creature spell
+// may target (CR 702.140a): the card's owner, or for a copy the player under
+// whose control it was put on the stack (CR 707.10).
+func mutateSpellOwner(obj *game.StackObject, card *game.CardInstance) game.PlayerID {
+	if obj.Copy {
+		if obj.CopyOwner.Exists {
+			return obj.CopyOwner.Val
+		}
+		return obj.Controller
+	}
+	if card != nil {
+		return card.Owner
+	}
+	return obj.Controller
+}
+
+// mutateRetargetGroup enumerates the new targets for a mutating creature
+// spell's only target (CR 702.140a, CR 115.7). Changing its target offers only
+// another non-Human creature with the spell's owner; choosing new targets also
+// offers the unchanged original.
+func mutateRetargetGroup(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, prompt string, rule game.RetargetRule) retargetGroup {
+	card, _ := g.GetCardInstance(obj.SourceID)
+	if !obj.Copy && card == nil {
+		return retargetGroup{spliced: -1, mutate: true, prompt: prompt, targets: []game.Target{game.PermanentTarget(obj.MutateTargetID)}}
+	}
+	original := game.PermanentTarget(obj.MutateTargetID)
+	result := targetChoiceResult{kind: targetLegalChoicesFound}
+	for _, permanent := range legalMutateTargets(g, obj.Controller, mutateSpellOwner(obj, card), spellDef) {
+		if permanent.ObjectID != obj.MutateTargetID {
+			result.choices = append(result.choices, []game.Target{game.PermanentTarget(permanent.ObjectID)})
+		}
+	}
+	if rule == game.RetargetChooseNewTargets {
+		result.choices = append(result.choices, []game.Target{original})
+	}
+	for range result.choices {
+		result.targetCounts = append(result.targetCounts, []int{1})
+	}
+	return retargetGroup{spliced: -1, mutate: true, prompt: prompt, targets: []game.Target{original}, result: result}
+}
+
 func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellDef *game.CardDef, targetID id.ID) bool {
 	target, ok := permanentByObjectID(g, targetID)
 	return ok &&

@@ -2716,6 +2716,9 @@ func (e *Engine) mayRetargetStackObjectChoice(g *game.Game, chooser game.PlayerI
 // object: the host's own targets, or one spliced card's targets (CR 702.47).
 type retargetGroup struct {
 	spliced int // -1 for the host's own targets
+	// mutate marks a mutating creature spell's only target (CR 702.140a),
+	// which also selects the creature the spell merges with.
+	mutate  bool
 	prompt  string
 	targets []game.Target
 	result  targetChoiceResult
@@ -2772,6 +2775,9 @@ func (e *Engine) retargetStackObjectWithRule(g *game.Game, chooser game.PlayerID
 		if group.spliced < 0 {
 			target.Targets = bound[i]
 			target.TargetCounts = counts
+			if group.mutate {
+				target.MutateTargetID = bound[i][0].PermanentID
+			}
 		} else {
 			target.SplicedTargets[group.spliced] = bound[i]
 			target.SplicedTargetCounts[group.spliced] = counts
@@ -2820,6 +2826,14 @@ func retargetGroups(g *game.Game, target *game.StackObject, rule game.RetargetRu
 		}
 		groups = append(groups, group)
 		return true
+	}
+	if target.Kind == game.StackSpell && target.Mutate {
+		// A mutating creature spell's target comes from its mutate ability,
+		// not its spell text, so it has no other target to change.
+		if !add(mutateRetargetGroup(g, target, specs.def, prompt, rule)) {
+			return nil, false
+		}
+		return groups, true
 	}
 	if len(specs.specs) > 0 {
 		// Re-enumerating a triggered ability's targets must reuse its captured
