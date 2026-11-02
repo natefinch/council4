@@ -40,7 +40,7 @@ func newSakashimaOfAThousandFaces() *game.CardDef {
 				game.PartnerStaticBody,
 			},
 			ReplacementAbilities: []game.ReplacementAbility{
-				game.EntersAsCopyWithOtherAbilities(game.EntersAsCopyWithRetainedName(game.EntersAsCopyReplacement("You may have Sakashima enter as a copy of another creature you control, except it has Sakashima's other abilities.", &game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true}, true, false, nil, false, nil, nil))),
+				game.EntersAsCopyWithOtherAbilities(game.EntersAsCopyReplacement("You may have Sakashima enter as a copy of another creature you control, except it has Sakashima's other abilities.", &game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerYou, ExcludeSource: true}, true, false, nil, false, nil, nil)),
 			},
 			OracleText: `
 			You may have Sakashima enter as a copy of another creature you control, except it has Sakashima's other abilities.
