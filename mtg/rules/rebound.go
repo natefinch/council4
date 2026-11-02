@@ -15,25 +15,41 @@ func cardHasRebound(spellDef *game.CardDef) bool {
 	return spellDef.HasKeyword(game.Rebound)
 }
 
-// reboundExileResolvingSpell exiles a resolving Rebound spell that was cast from
-// its owner's hand instead of putting it into the graveyard, and records it for
-// the caster's next-upkeep free recast (CR 702.88a). It mirrors the stack-to-zone
-// move used for ordinary resolution but forces the exile destination.
-func (*Engine) reboundExileResolvingSpell(g *game.Game, obj *game.StackObject, card *game.CardInstance) bool {
-	player, ok := playerByID(g, card.Owner)
-	if !ok {
-		return false
+const reboundReplacementLabel = "Rebound (CR 702.88a)"
+
+// reboundAppliesToResolvingSpell reports whether a resolving spell's rebound
+// replacement can apply to its move to the graveyard. "If this spell was cast
+// from your hand" (CR 702.88a) refers to the spell's controller, so a spell
+// whose control changed after it was cast doesn't rebound for its new
+// controller, and copies are never cast.
+func reboundAppliesToResolvingSpell(obj *game.StackObject, spellDef *game.CardDef) bool {
+	return !obj.Copy && obj.SourceZone == zone.Hand && stackSpellCaster(obj) == obj.Controller && cardHasRebound(spellDef)
+}
+
+// reboundReplacement is rebound's "instead of putting it into your graveyard
+// as it resolves, exile it" (CR 702.88a). It is a static ability of the spell,
+// not a self-replacement, so it competes with other replacements of the same
+// stack-to-graveyard move and the spell's controller chooses the order (CR
+// 616.1). Its ID is only a local key.
+func reboundReplacement(obj *game.StackObject, card *game.CardInstance) game.ReplacementEffect {
+	return game.ReplacementEffect{
+		ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
+		Description: reboundReplacementLabel, MatchEvent: game.EventZoneChanged,
+		MatchFromZone: true, FromZone: zone.Stack,
+		MatchToZone: true, ToZone: zone.Graveyard, ReplaceToZone: zone.Exile,
 	}
-	if !moveStackCardToZone(g, obj, card, zone.Exile, false) {
-		return false
+}
+
+// recordReboundExile schedules rebound's next-upkeep free recast for the
+// spell's controller (CR 702.88a). Callers record it only when the rebound
+// replacement was applied and the card actually arrived in its owner's exile;
+// a card exiled by another redirect (Dauthi Voidwalker, Rest in Peace) or sent
+// elsewhere gets no delayed cast.
+func recordReboundExile(g *game.Game, obj *game.StackObject, card *game.CardInstance) {
+	if g.ReboundCards == nil {
+		g.ReboundCards = make(map[id.ID]game.ReboundCard)
 	}
-	if player.Exile.Contains(card.ID) {
-		if g.ReboundCards == nil {
-			g.ReboundCards = make(map[id.ID]game.ReboundCard)
-		}
-		g.ReboundCards[card.ID] = game.ReboundCard{Owner: card.Owner, Controller: obj.Controller}
-	}
-	return true
+	g.ReboundCards[card.ID] = game.ReboundCard{Owner: card.Owner, Controller: obj.Controller}
 }
 
 // reboundCardIDsInOrder lists the tracked Rebound card IDs in a stable order.
