@@ -346,6 +346,7 @@ func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controll
 // actionReversed while the caster may redo it with a proposal that remains,
 // and actionFailed once none does or the cast is otherwise not possible.
 func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, spell freeCastSpell, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
+	defer g.OpenLibraryTopWindow()()
 	copyCard := spell.copyCard
 	if castFromZoneProhibited(g, controllerID, cast.SourceZone) {
 		return actionFailed

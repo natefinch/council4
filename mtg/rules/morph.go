@@ -246,6 +246,7 @@ func (e *Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id
 // whose locked total cost isn't paid is reversed (CR 733.1) and recorded in
 // attempts, which may be nil.
 func (e *Engine) attemptCastFaceDownWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
+	defer g.OpenLibraryTopWindow()()
 	if cast.SourceZone == zone.Graveyard {
 		return e.attemptGraveyardFaceDown(g, playerID, cast, agents, log, attempts)
 	}

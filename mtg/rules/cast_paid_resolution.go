@@ -36,6 +36,7 @@ func (e *Engine) castPaidTargetedSpell(g *game.Game, controllerID game.PlayerID,
 // source player and controller differ only for a targeted cast from another
 // player's zone.
 func (e *Engine) castPaidSpellFromSource(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	defer g.OpenLibraryTopWindow()()
 	if sourcePlayer == nil {
 		return false
 	}
