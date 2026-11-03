@@ -51,6 +51,7 @@ func (g *Game) Clone() *Game {
 		ControlGrantsEnded:                 g.ControlGrantsEnded,
 		SearchControlScopes:                cloneSlice(g.SearchControlScopes),
 		ManaPaymentScopes:                  cloneSlice(g.ManaPaymentScopes),
+		LibraryTopWindows:                  cloneSlice(g.LibraryTopWindows),
 		SkippedTurns:                       cloneComparableMap(g.SkippedTurns),
 		CostModifiers:                      cloneSlice(g.CostModifiers),
 		RuleEffects:                        cloneSlicePtr(g.RuleEffects, fixupRuleEffect),

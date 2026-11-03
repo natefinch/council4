@@ -49,6 +49,7 @@ func (e *Engine) resolveMadnessTriggeredAbilityWithChoices(g *game.Game, obj *ga
 // its reversible mana activations (CR 733) and leaves the card in exile for the
 // caller to move to the graveyard.
 func (e *Engine) castMadnessSpellWithChoices(g *game.Game, playerID game.PlayerID, card *game.CardInstance, manaCost cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	defer g.OpenLibraryTopWindow()()
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Exile.Contains(card.ID) {
 		return false

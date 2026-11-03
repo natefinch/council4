@@ -276,9 +276,11 @@ func (o PlayerObservation) CommandZone(playerID game.PlayerID) []CardView {
 // LibraryTopRevealed returns the top card of a player's library when that player
 // plays with the top card of their library revealed (Oracle of Mul Daya, Future
 // Sight). It reports false when the player has no such effect or an empty
-// library; the library's order is otherwise hidden from every observer.
+// library; the library's order is otherwise hidden from every observer. A top
+// card that changed while a spell is being cast stays hidden until the spell
+// becomes cast (CR 401.5).
 func (o PlayerObservation) LibraryTopRevealed(playerID game.PlayerID) (CardView, bool) {
-	if !playerPlaysWithTopCardRevealed(o.g, playerID) {
+	if !playerPlaysWithTopCardRevealed(o.g, playerID) || o.g.LibraryTopHidden(playerID) {
 		return CardView{}, false
 	}
 	return o.libraryTopView(playerID)
@@ -287,9 +289,12 @@ func (o PlayerObservation) LibraryTopRevealed(playerID game.PlayerID) (CardView,
 // LibraryTopLookable returns the top card of a visible player's library
 // when they may privately look at it at any time ("You may look at the top card
 // of your library any time.", Bolas's Citadel). Turn control shares this private
-// permission with the controller, but never with uninvolved players.
+// permission with the controller, but never with uninvolved players. Like
+// LibraryTopRevealed, it withholds a top card that changed while a spell is
+// being cast (CR 401.5).
 func (o PlayerObservation) LibraryTopLookable(playerID game.PlayerID) (CardView, bool) {
-	if !o.g.CanSeePlayerInformation(o.viewer, playerID) || !playerCanLookAtTopCardAnyTime(o.g, playerID) {
+	if !o.g.CanSeePlayerInformation(o.viewer, playerID) || !playerCanLookAtTopCardAnyTime(o.g, playerID) ||
+		o.g.LibraryTopHidden(playerID) {
 		return CardView{}, false
 	}
 	return o.libraryTopView(playerID)

@@ -126,6 +126,7 @@ func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID,
 // targets or locked cost turn out illegal or unpayable is reversed rather than
 // failed (CR 733.1), and recorded in attempts, which may be nil.
 func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, []game.Target) {
+	defer g.OpenLibraryTopWindow()()
 	if !castGiftRecipientValid(g, playerID, cast) {
 		return actionFailed, nil
 	}

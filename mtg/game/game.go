@@ -173,6 +173,8 @@ type Game struct {
 	SearchControlScopes []SearchControlScope
 	// ManaPaymentScopes grant mana activation, never ordinary priority.
 	ManaPaymentScopes []PlayerID
+	// LibraryTopWindows are the open CR 401.5 windows, outermost first.
+	LibraryTopWindows []LibraryTopWindow
 	// SkippedTurns counts one-shot "skip your next turn" replacements.
 	SkippedTurns map[PlayerID]int
 
