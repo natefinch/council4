@@ -171,7 +171,7 @@ func (e *Engine) unpayableTargetChoices(g *game.Game, request payment.SpellReque
 	}
 	var unpayable [][]game.Target
 	for _, variant := range targetCostVariants(request, targetChoices) {
-		if !e.announcedSpellCostFeasibility(g, variant, proposal.optionIndex, false)(proposal.phyrexian) {
+		if !e.announcedSpellCostFeasibility(g, variant, proposal.optionIndex, true)(proposal.phyrexian) {
 			unpayable = append(unpayable, variant.Targets)
 		}
 	}

@@ -524,7 +524,7 @@ func TestEvelynRiderPaysMutateAfterCardLeavesExile(t *testing.T) {
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 	giveMainPhasePriority(g, game.Player1)
-	if canCastMutateSpell(g, game.Player1, second, zone.Exile, target.ObjectID) {
+	if engine.canCastMutateSpell(g, game.Player1, second, zone.Exile, target.ObjectID) {
 		t.Fatal("Evelyn's once-each-turn permission was not used by the Mutate cast")
 	}
 }
@@ -775,7 +775,7 @@ func TestMutateCastChoosesAmongGroupPermissionRoutes(t *testing.T) {
 		g.AddExileCounter(cardID, counter.Croak, 1)
 		g.Players[game.Player1].ManaPool.Add(pool, 1)
 		giveMainPhasePriority(g, game.Player1)
-		if !canCastMutateSpell(g, game.Player1, cardID, zone.Exile, target.ObjectID) {
+		if !engine.canCastMutateSpell(g, game.Player1, cardID, zone.Exile, target.ObjectID) {
 			t.Fatalf("pool %v: Mutate cast not valid", pool)
 		}
 		if !engine.applyAction(g, game.Player1, action.CastMutateSpellFromZone(cardID, zone.Exile, target.ObjectID)) {
