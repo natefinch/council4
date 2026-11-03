@@ -52,6 +52,7 @@ func (*Engine) canForetellCard(g *game.Game, playerID game.PlayerID, cardID id.I
 // {2} and exiles the card from hand, recording the foretell turn so the card may
 // be cast from exile for its foretell cost on a later turn (CR 702.144a).
 func (e *Engine) applyForetellCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	defer g.OpenLibraryTopWindow()()
 	if !e.canForetellCard(g, playerID, cardID) {
 		return false
 	}

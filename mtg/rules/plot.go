@@ -43,6 +43,7 @@ func (*Engine) canPlotCard(g *game.Game, playerID game.PlayerID, cardID id.ID) b
 // exiles the card from hand, recording the plot turn so the card may be cast from
 // exile without paying its mana cost on a later turn (CR 718.2).
 func (e *Engine) applyPlotCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	defer g.OpenLibraryTopWindow()()
 	if !e.canPlotCard(g, playerID, cardID) {
 		return false
 	}
