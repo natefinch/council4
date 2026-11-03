@@ -807,6 +807,36 @@ type effectDamageSource struct {
 	permanent      *game.Permanent
 	deathtouch     bool
 	lifelink       bool
+	// cantBePrevented is set when the dealing instruction says the damage
+	// can't be prevented (CR 615.12).
+	cantBePrevented bool
+}
+
+// dealPlayer deals noncombat damage from this source to playerID and reports
+// the damage dealt.
+func (s effectDamageSource) dealPlayer(g *game.Game, playerID game.PlayerID, damage int) int {
+	dealt, _ := dealPlayerDamageEvent(g, damageEvent{
+		sourceID:        s.sourceID,
+		sourceObjectID:  s.sourceObjectID,
+		controller:      s.controller,
+		player:          playerID,
+		amount:          damage,
+		cantBePrevented: s.cantBePrevented,
+	})
+	return dealt
+}
+
+// dealPermanent deals noncombat damage from this source to permanent and
+// reports the damage dealt.
+func (s effectDamageSource) dealPermanent(g *game.Game, permanent *game.Permanent, damage int) int {
+	return dealPermanentDamageEvent(g, damageEvent{
+		sourceID:        s.sourceID,
+		sourceObjectID:  s.sourceObjectID,
+		controller:      s.controller,
+		permanent:       permanent,
+		amount:          damage,
+		cantBePrevented: s.cantBePrevented,
+	})
 }
 
 func applyDamageSourceKeywordEffects(g *game.Game, source effectDamageSource, damaged *game.Permanent, damage int) {

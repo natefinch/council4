@@ -443,6 +443,15 @@ type Damage struct {
 	// skipped (CR 608.2b). It is valid only with an any-target recipient that
 	// addresses a multi-target spec and is mutually exclusive with Divided.
 	EachTarget bool
+
+	// CantBePrevented marks every damage event this instruction deals as
+	// unpreventable ("... and the damage can't be prevented.", Combust, Urza's
+	// Rage). Prevention effects, including protection and prevention shields,
+	// still apply but prevent nothing; their additional effects still happen and
+	// finite shields are not reduced (CR 615.12). Replacement and redirection
+	// effects that don't use the word "prevent" apply normally, and redirected
+	// damage stays unpreventable.
+	CantBePrevented bool
 }
 
 // GroupSourceDamage has each permanent in a battlefield group deal an amount of

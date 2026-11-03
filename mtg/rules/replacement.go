@@ -45,6 +45,10 @@ type damageEvent struct {
 	amount         int
 	combatDamage   bool
 	simultaneousID id.ID
+	// cantBePrevented records that the instruction dealing this damage made
+	// it unpreventable (CR 615.12). It travels with the event through
+	// redirection.
+	cantBePrevented bool
 }
 
 type damageModificationResult struct {
@@ -1775,28 +1779,56 @@ func matchingDamageReplacementEffects(
 	return matches
 }
 
-// damageEventCantBePrevented reports whether an active static rule makes this
-// combat-damage event unpreventable. Both the rule's controller and the damage
-// source's characteristics are evaluated live at the event, so control changes
-// and continuous type changes are honored before replacement/prevention ordering
-// begins.
+// damageEventCantBePrevented reports whether this damage event is
+// unpreventable (CR 615.12): its dealing instruction said so, or an active rule
+// effect covers it. Rule controllers and the damage source's characteristics are
+// evaluated live at the event, so control changes and continuous type changes
+// are honored before replacement/prevention ordering begins.
 func damageEventCantBePrevented(g *game.Game, event damageEvent) bool {
-	if !event.combatDamage || event.sourceObjectID == 0 {
-		return false
+	if event.cantBePrevented {
+		return true
 	}
-	source, ok := permanentByObjectID(g, event.sourceObjectID)
-	if !ok {
-		return false
+	var source *game.Permanent
+	sourceKnown := false
+	sourcePermanent := func() *game.Permanent {
+		if !sourceKnown {
+			sourceKnown = true
+			if event.sourceObjectID != 0 {
+				source, _ = permanentByObjectID(g, event.sourceObjectID)
+			}
+		}
+		return source
 	}
 	effects := activeRuleEffects(g)
 	for i := range effects {
 		effect := &effects[i]
-		if effect.Kind == game.RuleEffectCombatDamageCantBePrevented &&
-			ruleEffectMatchesPermanent(g, effect, source) {
-			return true
+		switch effect.Kind {
+		case game.RuleEffectDamageCantBePrevented:
+			if !ruleEffectScopesDamageSource(effect) {
+				return true
+			}
+			if permanent := sourcePermanent(); permanent != nil && ruleEffectMatchesPermanent(g, effect, permanent) {
+				return true
+			}
+		case game.RuleEffectCombatDamageCantBePrevented:
+			if event.combatDamage {
+				if permanent := sourcePermanent(); permanent != nil && ruleEffectMatchesPermanent(g, effect, permanent) {
+					return true
+				}
+			}
+		default:
 		}
 	}
 	return false
+}
+
+// ruleEffectScopesDamageSource reports whether an unpreventable-damage rule is
+// limited to damage dealt by particular battlefield permanents rather than
+// covering all damage.
+func ruleEffectScopesDamageSource(effect *game.RuleEffect) bool {
+	return effect.AffectedObjectID != 0 || effect.AffectedSource ||
+		!effect.AffectedSelection.Empty() || len(effect.PermanentTypes) != 0 ||
+		effect.AffectedController != game.ControllerAny || effect.AffectedSpecificPlayer.Exists
 }
 
 // damageRecipientIsSourceAttached reports whether the damage event's recipient is

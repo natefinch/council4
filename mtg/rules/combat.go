@@ -201,16 +201,22 @@ func dealPlayerDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller, 
 // (commander damage, poison, the monarch-by-combat-damage transfer, ring-bearer
 // life loss) that only apply when combat damage actually reaches the player.
 func dealPlayerDamageMaybeRedirect(g *game.Game, sourceID, sourceObjectID id.ID, controller, playerID game.PlayerID, damage int, combatDamage bool) (int, bool) {
-	if damage <= 0 || !isPlayerAlive(g, playerID) {
-		return 0, false
-	}
-	event := damageEvent{
+	return dealPlayerDamageEvent(g, damageEvent{
 		sourceID:       sourceID,
 		sourceObjectID: sourceObjectID,
 		controller:     controller,
 		player:         playerID,
 		amount:         damage,
 		combatDamage:   combatDamage,
+	})
+}
+
+// dealPlayerDamageEvent resolves one damage event to event.player through the
+// shared damage batch and reports the damage dealt and whether it was
+// redirected.
+func dealPlayerDamageEvent(g *game.Game, event damageEvent) (int, bool) {
+	if event.amount <= 0 || !isPlayerAlive(g, event.player) {
+		return 0, false
 	}
 	result := resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0]
 	return result.amount, result.redirected
@@ -228,16 +234,21 @@ func damageSourceHasDeathtouch(g *game.Game, sourceObjectID id.ID) bool {
 }
 
 func dealPermanentDamage(g *game.Game, sourceID, sourceObjectID id.ID, controller game.PlayerID, permanent *game.Permanent, damage int, combatDamage bool) int {
-	if damage <= 0 || !activeBattlefieldPermanent(permanent) {
-		return 0
-	}
-	event := damageEvent{
+	return dealPermanentDamageEvent(g, damageEvent{
 		sourceID:       sourceID,
 		sourceObjectID: sourceObjectID,
 		controller:     controller,
 		permanent:      permanent,
 		amount:         damage,
 		combatDamage:   combatDamage,
+	})
+}
+
+// dealPermanentDamageEvent resolves one damage event to event.permanent through
+// the shared damage batch and reports the damage dealt.
+func dealPermanentDamageEvent(g *game.Game, event damageEvent) int {
+	if event.amount <= 0 || !activeBattlefieldPermanent(event.permanent) {
+		return 0
 	}
 	return resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0].amount
 }

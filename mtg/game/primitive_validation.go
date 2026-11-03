@@ -1326,6 +1326,10 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 			if err := validatePlayFromZoneRuleEffect(effect, p.Object.Exists, false); err != nil {
 				return err
 			}
+		case RuleEffectDamageCantBePrevented:
+			if err := validateDamageCantBePreventedRuleEffect(effect, p.Object.Exists); err != nil {
+				return err
+			}
 		default:
 		}
 	}

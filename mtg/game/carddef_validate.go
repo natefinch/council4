@@ -1,6 +1,7 @@
 package game
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"reflect"
@@ -1813,6 +1814,11 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if !reflect.DeepEqual(payload, RuleEffect{}) {
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "opponent-search control does not accept additional payload")
 		}
+	case RuleEffectDamageCantBePrevented:
+		if err := validateDamageCantBePreventedRuleEffect(effect, false); err != nil {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())
+		}
+		v.validateSelection(faceName, appendPath(path, "AffectedSelection"), effect.AffectedSelection)
 	case RuleEffectCascadeLandOption:
 		payload := *effect
 		payload.Kind = RuleEffectNone
@@ -3058,4 +3064,28 @@ func isKnownProtectionColor(c color.Color) bool {
 	default:
 		return false
 	}
+}
+
+// validateDamageCantBePreventedRuleEffect accepts only a duration and at most
+// one damage-source scope: the effect's source, an instruction object, or a
+// permanent selection.
+func validateDamageCantBePreventedRuleEffect(effect *RuleEffect, hasObject bool) error {
+	scopes := 0
+	for _, scoped := range []bool{effect.AffectedSource, hasObject, !effect.AffectedSelection.Empty()} {
+		if scoped {
+			scopes++
+		}
+	}
+	if scopes > 1 {
+		return errors.New("unpreventable-damage rule accepts at most one damage-source scope")
+	}
+	payload := *effect
+	payload.Kind = RuleEffectNone
+	payload.Duration = DurationPermanent
+	payload.AffectedSource = false
+	payload.AffectedSelection = Selection{}
+	if !reflect.DeepEqual(payload, RuleEffect{}) {
+		return errors.New("unpreventable-damage rule accepts only a duration and a damage-source scope")
+	}
+	return nil
 }

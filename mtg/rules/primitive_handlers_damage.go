@@ -65,6 +65,7 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	if !ok {
 		return res
 	}
+	source.cantBePrevented = prim.CantBePrevented
 	if prim.Divided {
 		return r.damageDivided(res, source, prim)
 	}
@@ -85,7 +86,7 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 	}
 	if player, ok := prim.Recipient.AnyTargetPlayerReference(); ok {
 		if resolvedPlayer, playerOK := r.resolvePlayer(player); playerOK {
-			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, resolvedPlayer, res.amount, false)
+			dealt := source.dealPlayer(r.game, resolvedPlayer, res.amount)
 			applyDamageSourceLifelink(r.game, source, dealt)
 			res.amount = typedDamageResultAmount(prim.ResultAmountKind, dealt, 0)
 			res.succeeded = dealt > 0
@@ -105,7 +106,7 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		perRecipient := res.amount
 		total := 0
 		for _, playerID := range r.playerGroupMembers(group) {
-			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, perRecipient, false)
+			dealt := source.dealPlayer(r.game, playerID, perRecipient)
 			total += dealt
 			res.succeeded = dealt > 0 || res.succeeded
 		}
@@ -164,12 +165,12 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 			if !found {
 				continue
 			}
-			dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, amount, false)
+			dealt := source.dealPermanent(r.game, permanent, amount)
 			applyDamageSourceDeathtouch(source, permanent, dealt)
 			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		case game.TargetPlayer:
-			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, entry.target.PlayerID, amount, false)
+			dealt := source.dealPlayer(r.game, entry.target.PlayerID, amount)
 			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		default:
@@ -211,12 +212,12 @@ func (r *effectResolver) damageEachTarget(res effectResolved, source effectDamag
 			if !found {
 				continue
 			}
-			dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, amount, false)
+			dealt := source.dealPermanent(r.game, permanent, amount)
 			applyDamageSourceDeathtouch(source, permanent, dealt)
 			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		case game.TargetPlayer:
-			dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, entry.target.PlayerID, amount, false)
+			dealt := source.dealPlayer(r.game, entry.target.PlayerID, amount)
 			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		default:
@@ -345,7 +346,7 @@ func (r *effectResolver) damageReferencedPlayer(res effectResolved, source effec
 	if !ok {
 		return res
 	}
-	dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, res.amount, false)
+	dealt := source.dealPlayer(r.game, playerID, res.amount)
 	applyDamageSourceLifelink(r.game, source, dealt)
 	res.amount = typedDamageResultAmount(resultKind, dealt, 0)
 	res.succeeded = dealt > 0
@@ -366,7 +367,7 @@ func (r *effectResolver) damageReferencedPermanent(res effectResolved, source ef
 	} else if source.permanent != nil {
 		lethalRemaining = lethalDamageRemainingFromSource(r.game, source.permanent, permanent)
 	}
-	dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
+	dealt := source.dealPermanent(r.game, permanent, res.amount)
 	applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
 	res.excessDamage = max(0, dealt-lethalRemaining)
 	res.amount = typedDamageResultAmount(resultKind, dealt, res.excessDamage)
@@ -405,13 +406,13 @@ func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, so
 	excessAmount := res.amount - creatureAmount
 	dealtToPermanent := 0
 	if creatureAmount > 0 {
-		dealtToPermanent = dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, creatureAmount, false)
+		dealtToPermanent = source.dealPermanent(r.game, permanent, creatureAmount)
 		applyDamageSourceDeathtouch(source, permanent, dealtToPermanent)
 	}
 	dealtToPlayer := 0
 	if excessAmount > 0 {
 		if playerID, playerOK := r.resolvePlayer(excessPlayer); playerOK {
-			dealtToPlayer = dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, playerID, excessAmount, false)
+			dealtToPlayer = source.dealPlayer(r.game, playerID, excessAmount)
 		}
 	}
 	applyDamageSourceLifelink(r.game, source, dealtToPermanent+dealtToPlayer)
@@ -424,7 +425,7 @@ func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, so
 func (r *effectResolver) damageSelectedPermanents(res effectResolved, source effectDamageSource, group game.GroupReference) effectResolved {
 	total := 0
 	for _, permanent := range r.groupPermanentsWithSource(group, source.permanent) {
-		dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
+		dealt := source.dealPermanent(r.game, permanent, res.amount)
 		applyDamageSourceDeathtouch(source, permanent, dealt)
 		total += dealt
 		res.succeeded = dealt > 0 || res.succeeded
