@@ -70,7 +70,9 @@ func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOut
 	controller := s.EffectiveController(permanent)
 	multiplier := s.ManaProductionMultiplier(controller)
 	fromCreature := s.PermanentHasType(permanent, types.Creature)
-	if c, ok := basicLandManaColor(s, permanent); ok {
+	// The intrinsic basic-land ability (CR 305.6) has {T} in its cost, so an
+	// animated land obeys the summoning-sickness rule (CR 302.6, 702.10c).
+	if c, ok := basicLandManaColor(s, permanent); ok && summoningSicknessAllowsAbilityCost(s, permanent) {
 		outputs = append(outputs, permanentManaOutputResult{
 			color:        c,
 			amount:       multiplyTappedManaAmount(1, false, multiplier),
