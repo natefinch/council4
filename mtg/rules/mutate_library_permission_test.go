@@ -75,7 +75,7 @@ func (f parcelbeastLibraryFixture) assertMutate(t *testing.T, want bool) {
 	if got := actionsContain(f.engine.legalActions(f.game, game.Player1), f.mutate()); got != want {
 		t.Fatalf("legal actions contain the library mutate cast = %v, want %v", got, want)
 	}
-	if got := canCastMutateSpell(f.game, game.Player1, f.cardID, zone.Library, f.target.ObjectID); got != want {
+	if got := f.engine.canCastMutateSpell(f.game, game.Player1, f.cardID, zone.Library, f.target.ObjectID); got != want {
 		t.Fatalf("library mutate validation = %v, want %v", got, want)
 	}
 }
@@ -262,7 +262,7 @@ func TestMutateFromLibraryUsesOnlyChosenPermission(t *testing.T) {
 		}
 		next := addCardToLibrary(f.game, game.Player1, registryCardDef(t, "Parcelbeast"))
 		f.game.Players[game.Player1].ManaPool.Add(mana.R, 2)
-		if canCastMutateSpell(f.game, game.Player1, next, zone.Library, f.target.ObjectID) {
+		if f.engine.canCastMutateSpell(f.game, game.Player1, next, zone.Library, f.target.ObjectID) {
 			t.Fatal("a second mutate cast spent red mana through the used once-per-turn permission")
 		}
 	})

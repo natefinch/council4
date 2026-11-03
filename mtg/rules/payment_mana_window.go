@@ -114,16 +114,26 @@ func (e *Engine) announcedSpellCostFeasibility(g *game.Game, request payment.Spe
 // with some choice of targets in targetChoices, or with request's own targets
 // when there are none. A cost proposed before the spell's targets are chosen
 // (CR 601.2b) can be one whose total is payable only once they are, such as
-// one reduced for targeting Elderwood Scion (CR 601.2f).
-func proposableSpellOptions(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target) []payment.SpellOptionSummary {
+// one reduced for targeting Elderwood Scion (CR 601.2f). With manual, which is
+// nil when the caster has no payment-time mana abilities, an option whose total
+// those abilities can make payable is proposable too (CR 601.2g).
+func proposableSpellOptions(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target, manual manaWindowCheck) []payment.SpellOptionSummary {
 	planner := paymentOrch.planner(g)
-	if len(targetChoices) == 0 {
+	if len(targetChoices) == 0 && manual == nil {
 		return planner.PayableSpellOptions(request)
 	}
 	payable := map[int]bool{}
 	for _, variant := range targetCostVariants(request, targetChoices) {
 		for _, option := range planner.PayableSpellOptions(variant) {
 			payable[option.Index] = true
+		}
+		if manual == nil {
+			continue
+		}
+		for _, prepared := range planner.PrepareSpellCosts(variant) {
+			if !payable[prepared.Summary.Index] {
+				_, payable[prepared.Summary.Index] = preparedSpellCostFeasibility(g, variant, prepared, manual, nil)
+			}
 		}
 	}
 	var options []payment.SpellOptionSummary
@@ -138,12 +148,13 @@ func proposableSpellOptions(g *game.Game, request payment.SpellRequest, targetCh
 // proposedSpellCostFeasibility is announcedSpellCostFeasibility for a cost
 // proposed before the spell's targets are chosen: the announcements are
 // feasible when the option can be paid with them for some choice of targets
-// in targetChoices.
+// in targetChoices, now or after activating payment-time mana abilities
+// (CR 601.2g).
 func (e *Engine) proposedSpellCostFeasibility(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target, optionIndex int) func([]phyrexianAnnouncement) bool {
 	variants := targetCostVariants(request, targetChoices)
 	checks := make([]func([]phyrexianAnnouncement) bool, len(variants))
 	for i, variant := range variants {
-		checks[i] = e.announcedSpellCostFeasibility(g, variant, optionIndex, false)
+		checks[i] = e.announcedSpellCostFeasibility(g, variant, optionIndex, true)
 	}
 	return func(announcements []phyrexianAnnouncement) bool {
 		return slices.ContainsFunc(checks, func(check func([]phyrexianAnnouncement) bool) bool {
@@ -154,7 +165,8 @@ func (e *Engine) proposedSpellCostFeasibility(g *game.Game, request payment.Spel
 
 // payableTargetChoices returns the choices of targets in targetChoices with
 // which the cost proposed for request can still be paid with the Phyrexian
-// payments announced with it (CR 601.2b, 601.2f): a legal target such as an
+// payments announced with it, now or after activating payment-time mana
+// abilities (CR 601.2b, 601.2f, 601.2g): a legal target such as an
 // opponent's Elderwood Scion can raise the total cost beyond what the caster
 // can pay, and choosing it would only make the cast illegal (CR 733.1). It
 // returns nil, leaving the choice unrestricted, when targetChoices may be a
@@ -166,7 +178,7 @@ func (e *Engine) payableTargetChoices(g *game.Game, request payment.SpellRequest
 	}
 	var payable [][]game.Target
 	for _, variant := range targetCostVariants(request, targetChoices) {
-		if e.announcedSpellCostFeasibility(g, variant, proposal.optionIndex, false)(proposal.phyrexian) {
+		if e.announcedSpellCostFeasibility(g, variant, proposal.optionIndex, true)(proposal.phyrexian) {
 			payable = append(payable, variant.Targets)
 		}
 	}
@@ -368,22 +380,23 @@ func spellCostsIncludePhyrexian(g *game.Game, requests []payment.SpellRequest) b
 	return false
 }
 
-// lockAnnouncedSpellCost locks the total cost of proposal's option for request
-// once the spell's targets and other choices are final (CR 601.2f) and takes
-// the remaining payment choices for it. The Phyrexian payments announced with
-// the proposal are binding (CR 601.2b, 601.2h). It fails when request no longer
-// offers the proposed option.
-func (e *Engine) lockAnnouncedSpellCost(g *game.Game, request payment.SpellRequest, proposal spellCostProposal, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.SpellRequest, bool) {
-	for _, prepared := range paymentOrch.planner(g).PrepareSpellCosts(request) {
-		if prepared.Summary.Index != proposal.optionIndex {
-			continue
-		}
-		request.PreparedCost = &prepared
-		announced := matchPhyrexianAnnouncements(prepared.Summary.ManaCost, proposal.phyrexian)
-		request.Prefs = e.lockedSpellPaymentPreferences(g, request, prepared.Summary, announced, agents, log)
-		return request, true
+// lockCastPayment locks the total cost of proposal's option for request once
+// the spell's targets and other choices are final (CR 601.2f). When that total,
+// with the Phyrexian payments announced with the proposal (CR 601.2b), includes
+// a mana payment, the caster may then activate mana abilities (CR 601.2g)
+// before taking the remaining payment choices (CR 601.2h). It fails, activating
+// nothing, when request no longer offers the option or its total can't be paid
+// now or after activating payment-time mana abilities. The returned undo
+// reverses the reversible mana abilities activated (CR 733.1).
+func (e *Engine) lockCastPayment(g *game.Game, request payment.SpellRequest, proposal spellCostProposal, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.SpellRequest, func(), bool) {
+	prepared, feasible := e.lockSpellCostProposal(g, request, proposal)
+	if !feasible {
+		return request, func() {}, false
 	}
-	return request, false
+	request.PreparedCost = &prepared
+	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)
+	request.Prefs = prefs
+	return request, undoMana, true
 }
 
 // matchPhyrexianAnnouncements maps each announced Phyrexian symbol to its
@@ -439,14 +452,19 @@ func (e *Engine) paymentManaAbilityActions(g *game.Game, player game.PlayerID) [
 	return e.legalManaAbilityActions(g, player)
 }
 
+// activateManualPaymentManaAbilities lets player activate mana abilities while
+// paying a cost (CR 601.2g). The returned undo reverses those activations
+// when the cost then goes unpaid (CR 733.1); see undoManualPaymentMana.
 func (e *Engine) activateManualPaymentManaAbilities(g *game.Game, player game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) func() {
+	if log == nil {
+		// The undo replays kept activations from the choices logged for them.
+		log = &TurnLog{}
+	}
 	g.ManaPaymentScopes = append(g.ManaPaymentScopes, player)
 	defer func() { g.ManaPaymentScopes = g.ManaPaymentScopes[:len(g.ManaPaymentScopes)-1] }()
-	var undo func()
+	var steps []manaPaymentStep
 	finish := func() {
-		if undo != nil {
-			undo()
-		}
+		e.undoManualPaymentMana(g, player, steps, log)
 	}
 	for {
 		actions := e.legalManaAbilityActions(g, player)
@@ -459,6 +477,7 @@ func (e *Engine) activateManualPaymentManaAbilities(g *game.Game, player game.Pl
 			label := activatedAbilityText(g, player, activation)
 			options = append(options, game.ChoiceOption{Index: len(options), Label: label, Card: cardChoiceInfo(g, activation.SourceID)})
 		}
+		entryStart := len(log.Entries)
 		selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 			Kind: game.ChoicePayment, Player: player, Prompt: "Activate a mana ability while paying?",
 			Options: options, MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{0},
@@ -466,23 +485,22 @@ func (e *Engine) activateManualPaymentManaAbilities(g *game.Game, player game.Pl
 		if selected[0] == 0 {
 			return finish
 		}
-		if undo == nil {
-			undo = reversibleManaCheckpoint(g, log)
-		}
+		activation, _ := actions[selected[0]-1].ActivateAbilityPayload()
+		step := manaPaymentStep{restore: reversibleManaCheckpoint(g, log), activation: activation}
 		var libraries [game.NumPlayers]zone.Zone
 		for owner := range libraries {
 			libraries[owner] = g.Players[owner].Library.Clone()
 		}
-		eventStart := len(g.Events)
-		activation, _ := actions[selected[0]-1].ActivateAbilityPayload()
+		eventStart, choiceStart, spent := len(g.Events), len(log.Choices), manaSpent(g)
 		if !e.applyActivateAbilityWithChoices(g, player, activation, agents, log) {
 			panic("validated payment-time mana ability failed")
 		}
-		if !manaActivationIsReversible(g, libraries, eventStart) {
-			// CR 733.1 forbids reversing a draw, library move, shuffle or reveal.
-			// Keep that activation and any mana it consumed; only later
-			// reversible activations may be undone on an unpaid proposal.
-			undo = nil
-		}
+		// CR 733.1 forbids reversing a draw, library move, shuffle or reveal.
+		step.reversible = manaActivationIsReversible(g, libraries, eventStart)
+		step.spentMana = manaSpent(g) != spent
+		step.choices = slices.Clone(log.Choices[choiceStart:])
+		step.entries = slices.Clone(log.Entries[entryStart:])
+		step.events = replayableManaEvents(g.Events[eventStart:])
+		steps = append(steps, step)
 	}
 }

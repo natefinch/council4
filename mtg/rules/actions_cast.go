@@ -132,7 +132,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		return actionFailed, nil
 	}
 	if cast.Mutate {
-		return outcomeOf(e.applyMutateCastWithChoices(g, playerID, cast, agents, log)), cast.Targets
+		return e.attemptMutateCastWithChoices(g, playerID, cast, agents, log, attempts), cast.Targets
 	}
 	sourceZone := normalizedCastSourceZone(cast)
 	if sourceZone == zone.Battlefield {
@@ -206,8 +206,9 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	attempt := func() string {
 		return fmt.Sprintf("%+v|%d|%+v|%v", cast, route, proposal, splice.manaCosts)
 	}
+	reversible := proposed
 	fail := func() actionOutcome {
-		if !proposed {
+		if !reversible {
 			return actionFailed
 		}
 		return proposals.reverse(attempt(), route, proposal, proposedTargets())
@@ -285,26 +286,42 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	g.Stack.Push(obj)
 
 	targetEvents := prepareTargetEvents(g, obj)
-	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	requests := mode.castRouteRequests(priorityCastRequest(playerID, spellDef, sourceZone, cast, permissions, splice.manaCosts), castRoutes)
-	var request payment.SpellRequest
-	if proposed {
-		request, ok = e.lockAnnouncedSpellCost(g, requests[route], proposal, agents, log)
-	} else {
-		var prefs *payment.Preferences
-		route, prefs = e.chooseCastRoute(g, castRoutes, requests, agents, log)
-		request = requests[route]
-		request.Prefs = prefs
+	// CR 601.2g: a caster who may activate mana abilities while paying may
+	// leave the locked total unpaid, so the cast is then reversed rather than
+	// failed (CR 733.1), like a proposed one.
+	reversible = proposed || e.hasManualPaymentManaAbility(g, playerID)
+	undoMana := func() {}
+	if !proposed {
+		// CR 601.2a-b: the card is on the stack and its targets are final, so
+		// the route and its cost option are proposed now.
+		if targeted {
+			proposals.targetChoices = [][]game.Target{cast.Targets}
+		}
+		route, proposal, ok = e.chooseCastRouteCost(g, castRoutes, requests, proposals, agents, log)
+		if !ok {
+			g.Stack.RemoveByID(obj.ID)
+			restoreCastSourceCard(place)
+			counterTransition.undo(g)
+			return proposals.exhaust(), nil
+		}
 	}
+	var request payment.SpellRequest
+	request, undoMana, ok = e.lockCastPayment(g, requests[route], proposal, agents, log)
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	var paymentResult payment.SpellPaymentResult
 	if ok {
 		paymentResult, ok = paymentOrch.paySpellCosts(g, request)
 	}
 	if !ok {
+		// CR 733.1: the reversible mana abilities activated while paying are
+		// undone with the proposal.
+		undoMana()
 		// A proposal that can't be paid with its targets as cast, before any
-		// other payment choice, can't be paid with them on any later attempt.
-		unpayable := proposed && len(splice.manaCosts) == 0 &&
-			!e.announcedSpellCostFeasibility(g, requests[route], proposal.optionIndex, false)(proposal.phyrexian)
+		// other payment choice, even after activating mana abilities, can't be
+		// paid with them on any later attempt.
+		unpayable := reversible && len(splice.manaCosts) == 0 &&
+			!e.announcedSpellCostFeasibility(g, requests[route], proposal.optionIndex, true)(proposal.phyrexian)
 		var unpayableTargets [][]game.Target
 		if unpayable {
 			unpayableTargets = e.unpayableTargetChoices(g, requests[route], proposals.targetChoices, proposal)
@@ -386,32 +403,36 @@ func priorityCastRequest(playerID game.PlayerID, spellDef *game.CardDef, sourceZ
 	}
 }
 
-func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// attemptMutateCastWithChoices casts a validated mutating creature spell
+// (CR 702.140a). A caster who may activate mana abilities while paying (CR
+// 601.2g) may leave its locked total unpaid, and the cast is then reversed
+// (CR 733.1) and recorded in attempts, which may be nil.
+func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
 	sourceZone := normalizedCastSourceZone(cast)
 	var validationPermission []game.PlayPermission
 	if cast.Permission != (game.PlayPermission{}) {
 		validationPermission = []game.PlayPermission{cast.Permission}
 	}
-	if !canCastMutateSpell(g, playerID, cast.CardID, sourceZone, cast.MutateTargetID, validationPermission...) {
-		return false
+	if !e.canCastMutateSpell(g, playerID, cast.CardID, sourceZone, cast.MutateTargetID, validationPermission...) {
+		return actionFailed
 	}
 	player := g.Players[playerID]
 	card, ok := g.GetCardInstance(cast.CardID)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, game.FaceFront)
 	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, spellDef, len(permissions) > 0, agents, log)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	if cast.Permission != (game.PlayPermission{}) {
 		permissions = []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect}
 	}
 	mutateCost, ok := spellDef.MutateCost()
 	if !ok {
-		return false
+		return actionFailed
 	}
 	alternative := mutateAlternativeCost(mutateCost)
 	// The permissions authorizing a cast from exile, with their spending riders
@@ -438,13 +459,12 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
 	place, ok := takeCastSourceCard(castSourcePlayer(g, player, cast.CardID, sourceZone), cast.CardID, sourceZone)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	counterTransition.apply(g)
 	g.Stack.Push(obj)
 
 	targetEvents := prepareTargetEvents(g, obj)
-	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	request := payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          card.ID,
@@ -454,16 +474,39 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 		CastPermissions: permissions,
 	}
 	requests := mutateCastRouteRequests(request, castRoutes)
-	route, prefs := e.chooseCastRoute(g, castRoutes, requests, agents, log)
-	request = requests[route]
-	request.Prefs = prefs
-	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
-	if !ok {
-		// CR 728: undo the proposal when costs can't be paid.
+	reversible := e.hasManualPaymentManaAbility(g, playerID)
+	proposals := newCastProposals(attempts, castActionKey(cast), nil)
+	undo := func() {
 		g.Stack.RemoveByID(obj.ID)
 		restoreCastSourceCard(place)
 		counterTransition.undo(g)
-		return false
+	}
+	route, proposal, ok := e.chooseCastRouteCost(g, castRoutes, requests, proposals, agents, log)
+	if !ok {
+		undo()
+		return proposals.exhaust()
+	}
+	request, undoMana, ok := e.lockCastPayment(g, requests[route], proposal, agents, log)
+	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
+	var paymentResult payment.SpellPaymentResult
+	if ok {
+		paymentResult, ok = paymentOrch.paySpellCosts(g, request)
+	}
+	if !ok {
+		// CR 733.1: undo the proposal, with the reversible mana abilities
+		// activated while paying, when its costs can't or won't be paid.
+		undoMana()
+		unpayable := reversible && !e.announcedSpellCostFeasibility(g, requests[route], proposal.optionIndex, true)(nil)
+		undo()
+		attempt := fmt.Sprintf("%+v|%d|%+v", cast, route, proposal)
+		switch {
+		case !reversible:
+			return actionFailed
+		case unpayable:
+			return proposals.reverseUnpayable(attempt, route, proposal, nil, nil)
+		default:
+			return proposals.reverse(attempt, route, proposal, nil)
+		}
 	}
 	if sourceZone == zone.Command {
 		recordCommanderCast(g, playerID, cast.CardID)
@@ -495,10 +538,13 @@ func (e *Engine) applyMutateCastWithChoices(g *game.Game, playerID game.PlayerID
 	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
 	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 	resolveSpellCastManaSpendRiders(g, playerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	return true
+	return actionApplied
 }
 
-func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, targetID id.ID, announced ...game.PlayPermission) bool {
+// canCastMutateSpell reports whether playerID may cast cardID from sourceZone
+// for its mutate alternative cost onto targetID (CR 702.140a), paying now or
+// after activating payment-time mana abilities (CR 601.2g).
+func (e *Engine) canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, targetID id.ID, announced ...game.PlayPermission) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -554,14 +600,16 @@ func canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sour
 		return false
 	}
 	routes := spellCastRoutes(g, playerID, cardID, sourceZone, game.FaceFront, mutateCastCostMode)
-	return anyCastRouteAvailable(g, spellDef, 0, mutateCastRouteRequests(payment.SpellRequest{
+	requests := mutateCastRouteRequests(payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          cardID,
 		SourceZone:      sourceZone,
 		Card:            spellDef,
 		Alternative:     opt.Val(mutateAlternativeCost(mutateCost)),
 		CastPermissions: permissions,
-	}, routes))
+	}, routes)
+	return anyCastRouteAvailable(g, spellDef, 0, requests) ||
+		e.castFeasibleWithManaWindow(g, playerID, cardID, sourceZone, game.FaceFront, spellDef, 0, requests)
 }
 
 // mutateCastCostMode is the cost mode of a mutate cast: Mutate is an
@@ -655,7 +703,10 @@ func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {
 // a CastSpellAction names it with zone.Battlefield as the cast permission.
 const preparedCopyCastZone = zone.Exile
 
-func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, targets []game.Target, xValue int, chosenModes []int) bool {
+// canCastPreparedCopy reports whether playerID may cast a copy of permanent's
+// prepared spell with these choices, paying now or after activating
+// payment-time mana abilities (CR 601.2g).
+func (e *Engine) canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, targets []game.Target, xValue int, chosenModes []int) bool {
 	if !canAct(g, playerID) ||
 		playerID != g.Turn.PriorityPlayer ||
 		permanent == nil ||
@@ -690,14 +741,15 @@ func canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.P
 		spellCastLimitReached(g, playerID, castFace) {
 		return false
 	}
-	return paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
+	_, feasible := spellCostFeasibility(g, payment.SpellRequest{
 		PlayerID:   playerID,
 		CardID:     sourceID,
 		SourceZone: preparedCopyCastZone,
 		Card:       spellDef,
 		XValue:     xValue,
 		Targets:    targets,
-	})
+	}, e.paymentManaWindow(g, playerID))
+	return feasible
 }
 
 // attemptPreparedCopyWithChoices casts a copy of a prepared permanent's spell
@@ -718,7 +770,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	// Once that has begun, a cast that can't be completed legally is reversed
 	// (CR 733.1).
 	proposed := spellCostsIncludePhyrexian(g, []payment.SpellRequest{request})
-	if !canCastPreparedCopy(g, playerID, permanent, cast.Targets, cast.XValue, cast.ChosenModes) {
+	if !e.canCastPreparedCopy(g, playerID, permanent, cast.Targets, cast.XValue, cast.ChosenModes) {
 		return actionFailed, nil
 	}
 	proposals := newCastProposals(attempts, castActionKey(cast), nil)
@@ -733,8 +785,12 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	attempt := func() string {
 		return fmt.Sprintf("%+v|%+v", cast, proposal)
 	}
+	// CR 601.2g: a caster who may activate mana abilities while paying may
+	// leave the locked total unpaid, so the cast is then reversed rather than
+	// failed (CR 733.1), like a proposed one.
+	reversible := proposed || e.hasManualPaymentManaAbility(g, playerID)
 	fail := func() actionOutcome {
-		if !proposed {
+		if !reversible {
 			return actionFailed
 		}
 		return proposals.reverse(attempt(), 0, proposal, proposedTargets())
@@ -757,7 +813,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		}
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok || !canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
+	if !ok || !e.canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
 		return fail(), nil
 	}
 	cast.Targets = completedTargets
@@ -774,19 +830,27 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		ChosenModes: cast.ChosenModes, XValue: cast.XValue,
 	})
 	request.Targets = cast.Targets
-	if proposed {
-		request, ok = e.lockAnnouncedSpellCost(g, request, proposal, agents, log)
-	} else {
-		request.Prefs = e.paymentPreferencesForSpellRequest(g, request, agents, log)
+	if !proposed {
+		if targeted {
+			proposals.targetChoices = [][]game.Target{cast.Targets}
+		}
+		_, proposal, ok = e.chooseCastRouteCost(g, nil, []payment.SpellRequest{request}, proposals, agents, log)
+		if !ok {
+			return proposals.exhaust(), nil
+		}
 	}
+	request, undoMana, ok := e.lockCastPayment(g, request, proposal, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	var paymentResult payment.SpellPaymentResult
 	if ok {
 		paymentResult, ok = paymentOrch.paySpellCosts(g, request)
 	}
 	if !ok {
+		// CR 733.1: the reversible mana abilities activated while paying are
+		// undone with the proposal.
+		undoMana()
 		proposalRequest.Targets = cast.Targets
-		if proposed && !e.announcedSpellCostFeasibility(g, proposalRequest, proposal.optionIndex, false)(proposal.phyrexian) {
+		if reversible && !e.announcedSpellCostFeasibility(g, proposalRequest, proposal.optionIndex, true)(proposal.phyrexian) {
 			return proposals.reverseUnpayable(attempt(), 0, proposal, proposedTargets(),
 				e.unpayableTargetChoices(g, proposalRequest, proposals.targetChoices, proposal)), nil
 		}
@@ -979,7 +1043,7 @@ func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, pla
 	return e.canCastSpellFaceFromZoneWithOptions(g, playerID, cardID, sourceZone, face, nil, xValue, chosenModes, effectiveKickerCount(kickerPaid, 0), true, false, false, false, false)
 }
 
-func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool, announced ...game.PlayPermission) bool {
+func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool, announced ...game.PlayPermission) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -1098,7 +1162,9 @@ func (*Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.P
 	}
 	mode := castCostMode{overloaded: overloaded, bestowed: bestowed}
 	routes := spellCastRoutes(g, playerID, card.ID, sourceZone, face, mode)
-	return anyCastRouteAvailable(g, spellDef, xValue, mode.castRouteRequests(request, routes))
+	requests := mode.castRouteRequests(request, routes)
+	return anyCastRouteAvailable(g, spellDef, xValue, requests) ||
+		e.castFeasibleWithManaWindow(g, playerID, card.ID, sourceZone, face, spellDef, xValue, requests)
 }
 
 func overloadAlternativeCost(manaCost cost.Mana) cost.Alternative {
@@ -1611,12 +1677,54 @@ func anyCastRouteAvailable(g *game.Game, spellDef *game.CardDef, xValue int, req
 	return false
 }
 
-// chooseCastRoute lets the caster choose the permission to cast through
-// together with that permission's cost option (see chooseCastRouteOption). It
-// returns the chosen route and the payment preferences for its option.
-func (e *Engine) chooseCastRoute(g *game.Game, routes []castRoute, requests []payment.SpellRequest, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, *payment.Preferences) {
-	route, option, _ := e.chooseCastRouteOption(g, routes, requests, castProposals{}, agents, log)
-	return route, e.paymentPreferencesForSpellOption(g, requests[route], option, agents, log)
+// castFeasibleWithManaWindow reports whether some route's request to cast
+// spellDef with xValue, though not payable from current resources, can be paid
+// after the caster activates payment-time mana abilities (CR 601.2g). The cast
+// is judged as it would be proposed: with the card already moved from
+// sourceZone to the stack (CR 601.2a), so an ability such as Millikin's can't
+// mill the very card cast from the top of the library.
+func (e *Engine) castFeasibleWithManaWindow(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef, xValue int, requests []payment.SpellRequest) bool {
+	if !e.hasManualPaymentManaAbility(g, playerID) {
+		return false
+	}
+	proposed := g.Clone()
+	proposed.Execution = game.ExecutionDiagnostics{}
+	card, ok := proposed.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	counterTransition := prepareCastCounterTransition(proposed, card, sourceZone)
+	if _, ok := takeCastSourceCard(castSourcePlayer(proposed, proposed.Players[playerID], cardID, sourceZone), cardID, sourceZone); !ok {
+		return false
+	}
+	counterTransition.apply(proposed)
+	proposed.Stack.Push(&game.StackObject{
+		ID: proposed.IDGen.Next(), Kind: game.StackSpell, SourceID: cardID, Face: face, Controller: playerID,
+		XValue: xValue, SourceZone: sourceZone,
+	})
+	manual := e.paymentManaWindow(proposed, playerID)
+	if manual == nil {
+		return false
+	}
+	for _, request := range requests {
+		if !castRouteAllowsX(spellDef, xValue, request) {
+			continue
+		}
+		if _, feasible := spellCostFeasibility(proposed, request, manual); feasible {
+			return true
+		}
+	}
+	return false
+}
+
+// chooseCastRouteCost lets the caster choose the permission to cast through
+// together with that permission's cost option (see chooseCastRouteOption) once
+// the spell's targets are final, for a cost with no Phyrexian payment to
+// announce (CR 601.2b). Only proposals open leaves open are offered; it
+// reports false when every proposal the cost allows is withheld.
+func (e *Engine) chooseCastRouteCost(g *game.Game, routes []castRoute, requests []payment.SpellRequest, open castProposals, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, spellCostProposal, bool) {
+	route, option, ok := e.chooseCastRouteOption(g, routes, requests, open, agents, log)
+	return route, spellCostProposal{optionIndex: option.Index}, ok
 }
 
 // proposeCastRouteCost proposes the cost of a spell cast with priority before
@@ -1644,18 +1752,20 @@ func (e *Engine) proposeCastRouteCost(g *game.Game, routes []castRoute, requests
 // payable option of every route is offered in one choice, each route offering
 // only its own alternative costs and rider. A single route keeps the ordinary
 // spell-cost choice. With open's targetChoices, an option is payable when it
-// is payable with some choice of targets (see proposableSpellOptions). Only
-// options with a proposal open leaves open are offered; it reports false when
-// there are payable options but none is open.
+// is payable with some choice of targets (see proposableSpellOptions); an
+// option the caster's payment-time mana abilities can make payable counts too
+// (CR 601.2g). Only options with a proposal open leaves open are offered; it
+// reports false when there are payable options but none is open.
 func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, requests []payment.SpellRequest, open castProposals, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, payment.SpellOptionSummary, bool) {
 	playerID := requests[0].PlayerID
+	manual := e.paymentManaWindow(g, playerID)
 	openOptions := func(route int, options []payment.SpellOptionSummary) []payment.SpellOptionSummary {
 		return slices.DeleteFunc(options, func(option payment.SpellOptionSummary) bool {
 			return !open.optionOpen(g, playerID, route, option)
 		})
 	}
 	if len(requests) == 1 {
-		options := proposableSpellOptions(g, requests[0], open.targetChoices)
+		options := proposableSpellOptions(g, requests[0], open.targetChoices, manual)
 		if len(options) > 0 {
 			if options = openOptions(0, options); len(options) == 0 {
 				return 0, payment.SpellOptionSummary{}, false
@@ -1674,7 +1784,7 @@ func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, request
 		if !castRouteAllowsX(request.Card, request.XValue, request) {
 			continue
 		}
-		routeOptions := proposableSpellOptions(g, request, open.targetChoices)
+		routeOptions := proposableSpellOptions(g, request, open.targetChoices, manual)
 		proposable = proposable || len(routeOptions) > 0
 		for _, option := range openOptions(i, routeOptions) {
 			options = append(options, routeOption{route: i, option: option})
@@ -1685,7 +1795,7 @@ func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, request
 		if proposable {
 			return 0, payment.SpellOptionSummary{}, false
 		}
-		return 0, e.chooseSpellCostOption(g, playerID, proposableSpellOptions(g, requests[0], open.targetChoices), agents, log), true
+		return 0, e.chooseSpellCostOption(g, playerID, proposableSpellOptions(g, requests[0], open.targetChoices, manual), agents, log), true
 	}
 	selected := options[0]
 	if len(options) > 1 {

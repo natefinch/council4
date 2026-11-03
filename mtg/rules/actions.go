@@ -82,7 +82,7 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 
 	actions := e.legalLandActions(g, playerID)
 	actions = append(actions, e.legalCastActions(g, playerID)...)
-	actions = append(actions, legalPreparedSpellActions(g, playerID)...)
+	actions = append(actions, e.legalPreparedSpellActions(g, playerID)...)
 	actions = append(actions, e.legalFaceDownCastActions(g, playerID)...)
 	actions = append(actions, e.legalCommanderCastActions(g, playerID)...)
 	actions = append(actions, e.legalActivateAbilityActions(g, playerID)...)
@@ -96,7 +96,7 @@ func (e *Engine) legalActions(g *game.Game, playerID game.PlayerID) []action.Act
 	return e.expandPermanentTypePlayActions(g, playerID, actions)
 }
 
-func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (e *Engine) legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return nil
 	}
@@ -120,7 +120,7 @@ func legalPreparedSpellActions(g *game.Game, playerID game.PlayerID) []action.Ac
 					continue
 				}
 				for _, targets := range targetResult.choices {
-					if canCastPreparedCopy(g, playerID, permanent, targets, xValue, modes) {
+					if e.canCastPreparedCopy(g, playerID, permanent, targets, xValue, modes) {
 						actions = append(actions, actionBuild.castSpell(sourceID, zone.Battlefield, game.FaceAlternate, targets, xValue, modes))
 					}
 				}
@@ -250,7 +250,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile || sourceZone == zone.Graveyard || sourceZone == zone.Library) {
 					if _, ok := spellDef.MutateCost(); ok {
 						for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
-							if canCastMutateSpell(g, playerID, cardID, sourceZone, target.ObjectID) {
+							if e.canCastMutateSpell(g, playerID, cardID, sourceZone, target.ObjectID) {
 								actions = append(actions, actionBuild.castMutateSpell(cardID, sourceZone, target.ObjectID))
 							}
 						}
@@ -378,7 +378,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 		if face == game.FaceFront {
 			if _, ok := spellDef.MutateCost(); ok {
 				for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
-					if canCastMutateSpell(g, playerID, card.ID, zone.Command, target.ObjectID) {
+					if e.canCastMutateSpell(g, playerID, card.ID, zone.Command, target.ObjectID) {
 						actions = append(actions, actionBuild.castMutateSpell(card.ID, zone.Command, target.ObjectID))
 					}
 				}

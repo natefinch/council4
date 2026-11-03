@@ -58,7 +58,7 @@ func (f parcelbeastExileFixture) assertMutate(t *testing.T, want bool) {
 	if got := actionsContain(f.engine.legalActions(f.game, game.Player1), f.mutate()); got != want {
 		t.Fatalf("legal actions contain the exile mutate cast = %v, want %v", got, want)
 	}
-	if got := canCastMutateSpell(f.game, game.Player1, f.cardID, zone.Exile, f.target.ObjectID); got != want {
+	if got := f.engine.canCastMutateSpell(f.game, game.Player1, f.cardID, zone.Exile, f.target.ObjectID); got != want {
 		t.Fatalf("exile mutate validation = %v, want %v", got, want)
 	}
 }
@@ -224,7 +224,7 @@ func TestMutateFromExileSpendsOncePerTurnPermission(t *testing.T) {
 		t.Fatal("the mutate cast did not spend the once-per-turn permission")
 	}
 	other := addCardToExile(f.game, game.Player1, registryCardDef(t, "Parcelbeast"))
-	if canCastMutateSpell(f.game, game.Player1, other, zone.Exile, f.target.ObjectID) {
+	if f.engine.canCastMutateSpell(f.game, game.Player1, other, zone.Exile, f.target.ObjectID) {
 		t.Fatal("a second card mutate-cast through the spent once-per-turn permission")
 	}
 }
@@ -238,7 +238,7 @@ func TestMutateFromAnotherPlayersExileTargetsSpellOwnersCreature(t *testing.T) {
 	f := newParcelbeastExileFixture(t, game.Player2)
 	ownTarget := addCombatPermanent(f.game, game.Player1, mutateTargetCard())
 	f.game.RuleEffects = append(f.game.RuleEffects, perCardExileEffect(f.game, game.RuleEffectCastFromZone, game.Player1, f.cardID))
-	if canCastMutateSpell(f.game, game.Player1, f.cardID, zone.Exile, ownTarget.ObjectID) ||
+	if f.engine.canCastMutateSpell(f.game, game.Player1, f.cardID, zone.Exile, ownTarget.ObjectID) ||
 		actionsContain(f.engine.legalActions(f.game, game.Player1), action.CastMutateSpellFromZone(f.cardID, zone.Exile, ownTarget.ObjectID)) {
 		t.Fatal("Player2's Parcelbeast could target a creature Player1 owns")
 	}

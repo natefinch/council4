@@ -42,7 +42,7 @@ func (e *Engine) announcementLegal(g *game.Game, player game.PlayerID, announcem
 			return cast.Face == game.FaceAlternate && cast.Permission == (game.PlayPermission{}) &&
 				!cast.KickerPaid && cast.KickerCount == 0 && !cast.Overloaded && !cast.GiftPromised &&
 				!cast.Bargained && !cast.Bestowed && !cast.Offspring &&
-				canCastPreparedCopy(g, player, preparedSourcePermanent(g, cast.CardID), cast.Targets, cast.XValue, cast.ChosenModes)
+				e.canCastPreparedCopy(g, player, preparedSourcePermanent(g, cast.CardID), cast.Targets, cast.XValue, cast.ChosenModes)
 		}
 		var permission []game.PlayPermission
 		if cast.Permission != (game.PlayPermission{}) {

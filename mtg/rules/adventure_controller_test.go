@@ -516,7 +516,7 @@ func TestAdventureMutateFromExileFollowsPermissionHolder(t *testing.T) {
 		if got := actionsContain(engine.legalActions(g, game.Player1), act); got != want {
 			t.Fatalf("legal actions contain owner's exile Mutate cast = %v, want %v", got, want)
 		}
-		if got := canCastMutateSpell(g, game.Player1, cardID, zone.Exile, target.ObjectID); got != want {
+		if got := engine.canCastMutateSpell(g, game.Player1, cardID, zone.Exile, target.ObjectID); got != want {
 			t.Fatalf("owner's exile Mutate validation = %v, want %v", got, want)
 		}
 	}
