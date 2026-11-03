@@ -1,5 +1,5 @@
 {
-  "version": "1.23.1",
+  "version": "1.24.0",
   "models": {
     "selection": {
       "model": "gpt-6-luna",
@@ -83,6 +83,7 @@
   },
   "validationFixRounds": 1,
   "ciFixRounds": 1,
+  "ciInfrastructureReruns": 2,
   "validationPackages": [
     "./cmd/cardqueue",
     "./mtg/game",

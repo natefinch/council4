@@ -41,6 +41,13 @@ export function assessChecks(pr, checks, required, expectedHead) {
   return { status: "ready" };
 }
 
+// GitHub-hosted failures that a code change cannot repair.
+export function classifyInfrastructure(text) {
+  if (/recent account payments have failed|spending limit needs to be increased/i.test(text)) return "billing";
+  if (/lost communication with the server|runner has received a shutdown signal|No space left on device|hosted runner encountered an error/i.test(text)) return "runner";
+  return null;
+}
+
 export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined, { signal })) {
   const gh = (cwd, args) => command(cwd, "gh", args, signal);
   const fields = "number,url,state,isDraft,headRefOid,baseRefName,baseRefOid,mergeStateStatus,reviewDecision,mergeCommit";
@@ -94,12 +101,62 @@ export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined
         if (![1, 8].includes(error.cause?.code)) throw error;
       }
     },
+    // Per-job evidence works while sibling jobs still run and tolerates jobs
+    // whose runner died before uploading logs. Only cancellation propagates.
     async failedLogs(cwd, checks) {
-      const urls = checks.failed.map(check => check.html_url ?? check.target_url ?? check.details_url).filter(Boolean);
-      const runIds = [...new Set(urls.map(url => /\/actions\/runs\/(\d+)/.exec(url)?.[1]).filter(Boolean))];
+      const read = async args => {
+        try { return { output: await gh(cwd, args) }; }
+        catch (error) {
+          if (signal?.aborted) throw error;
+          return { error: String(error.message ?? error).slice(0, 2000) };
+        }
+      };
       const logs = [];
-      for (const run of runIds) logs.push(await gh(cwd, ["run", "view", run, "--repo", repository, "--log-failed"]));
-      return { checks, logs: logs.map(log => log.slice(-32000)) };
+      const failures = [];
+      for (const check of checks.failed) {
+        const url = check.html_url ?? check.target_url ?? check.details_url ?? "";
+        const run = /\/actions\/runs\/(\d+)/.exec(url)?.[1] ?? null;
+        const name = check.name ?? check.context;
+        if (!run || check.app?.slug !== "github-actions") {
+          failures.push({ name, run, infrastructure: null });
+          continue;
+        }
+        const log = await read(["api", `repos/${repository}/actions/jobs/${check.id}/logs`]);
+        const notes = await read(["api", `repos/${repository}/check-runs/${check.id}/annotations`]);
+        const annotations = notes.error ? [] :
+          JSON.parse(notes.output || "[]").map(note => note.message ?? "").filter(Boolean);
+        const text = log.error ? `Job log unavailable: ${log.error}` : log.output.slice(-32000);
+        const infrastructure = classifyInfrastructure([...annotations, text].join("\n"));
+        failures.push({ name, run, id: check.id, infrastructure, annotations });
+        logs.push(`${name} (job ${check.id})\n${annotations.map(note => `annotation: ${note}`).join("\n")}\n${text}`);
+      }
+      const kinds = failures.map(failure => failure.infrastructure);
+      const infrastructure = kinds.length && kinds.every(Boolean) ?
+        (kinds.includes("billing") ? "billing" : "runner") : null;
+      return { checks, logs, failures, infrastructure };
+    },
+    // Wait for every check on the head to finish so an infrastructure failure
+    // is never retried while a sibling job could still report a real failure.
+    async settle(cwd, head, polls = 240) {
+      for (let attempt = 0; attempt < polls; attempt++) {
+        const checks = await this.checks(cwd, head);
+        if (checks.runs.every(check => check.status === "completed")) return true;
+        await wait(30000);
+      }
+      return false;
+    },
+    // Rerun only failed jobs of completed workflow runs, then wait for GitHub
+    // to register replacement check runs so stale failures are not reread.
+    async rerunFailed(cwd, head, failures, polls = 20) {
+      const runs = [...new Set(failures.map(failure => failure.run).filter(Boolean))];
+      if (!runs.length) throw new Error("Infrastructure failure has no rerunnable Actions run");
+      for (const run of runs) await gh(cwd, ["run", "rerun", run, "--repo", repository, "--failed"]);
+      for (let attempt = 0; attempt < polls; attempt++) {
+        const checks = await this.checks(cwd, head);
+        if (failures.every(failure => checks.runs.some(check => check.name === failure.name && check.id > failure.id))) return true;
+        await wait(15000);
+      }
+      return false;
     },
     async merge(cwd, number, head) {
       await gh(cwd, ["pr", "merge", String(number), "--repo", repository, "--squash", "--match-head-commit", head]);
@@ -110,7 +167,7 @@ export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined
 
 export async function landPullRequest({
   root, work, task, expected, sessionId, signal, git, changes, protection, api,
-  validate, reviewIntegration, fixCI, ciFixRounds = 1, checkpoint,
+  validate, reviewIntegration, fixCI, ciFixRounds = 1, ciInfrastructureReruns = 2, checkpoint,
   watchCI = watch => watch(),
 }) {
   if (!validate || !reviewIntegration) throw new Error("PR landing requires local validation and integration-review hooks");
@@ -249,6 +306,36 @@ export async function landPullRequest({
       assessed = assessChecks(pr, checks, required, state.head);
     }
     if (assessed.status === "failed") {
+      const evidence = await api.failedLogs(work.path, assessed);
+      if (evidence.infrastructure) {
+        // Code repair cannot fix GitHub-hosted failures. Let sibling jobs
+        // finish first, then rerun failed jobs a bounded number of times.
+        if (!await api.settle(work.path, state.head)) {
+          return { status: "pending", reason: "CI jobs are still running after an infrastructure failure", published: false, pr: state.pr };
+        }
+        const settled = assessChecks(await api.view(work.path, pr.number),
+          await api.checks(work.path, state.head), required, state.head);
+        if (settled.status !== "failed" ||
+            settled.failed.some(check => !evidence.failures.some(failure => failure.id === check.id))) continue;
+        if (state.ciReruns?.head !== state.head) state.ciReruns = { head: state.head, count: 0 };
+        const blocked = evidence.infrastructure === "billing";
+        if (blocked && state.ciBlocked !== state.head) {
+          // Pause for the account owner; resuming retries the same jobs.
+          state.ciBlocked = state.head;
+          save();
+          return { status: "ci_blocked", reason: "GitHub Actions billing prevented CI jobs from starting", published: false, pr: state.pr, checks: assessed };
+        }
+        if (!blocked && state.ciReruns.count >= ciInfrastructureReruns) {
+          return { status: "ci_failed", reason: "CI infrastructure failed after bounded reruns", published: false, pr: state.pr, checks: assessed };
+        }
+        if (blocked) delete state.ciBlocked;
+        else state.ciReruns.count++;
+        save();
+        if (!await api.rerunFailed(work.path, state.head, evidence.failures)) {
+          return { status: "pending", reason: "Rerun CI jobs have not registered yet", published: false, pr: state.pr };
+        }
+        continue;
+      }
       if (!fixCI || state.ciFixes >= ciFixRounds) {
         return { status: "ci_failed", published: false, pr: state.pr, checks: assessed };
       }
@@ -256,7 +343,7 @@ export async function landPullRequest({
       state.ciFixes++;
       state.round++;
       save();
-      await fixCI({ round: state.ciFixes, head: before, ...(await api.failedLogs(work.path, assessed)) });
+      await fixCI({ round: state.ciFixes, head: before, ...evidence });
       if (await head() !== before) throw new Error("CI fixer committed outside landing");
       const fixed = await changes(work.path, signal);
       if (!fixed.files.length) throw new Error("CI fixer produced no changes; no empty success");

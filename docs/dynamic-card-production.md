@@ -468,6 +468,16 @@ Policy 1.3.0 adds the bounded check-registration wait so a newly opened PR
 does not immediately pause merely because GitHub has not registered its CI yet.
 This does not repair Copilot extension-provider disconnects. Avoid editing,
 reloading or enabling/disabling the owning extension during a live run.
+
+Policy 1.24.0 reads failed-check evidence per job, with annotations. A
+missing log or a still-running sibling job no longer crashes the run.
+GitHub-hosted failures cannot be repaired by changing code, so they never go to
+the CI fixer. These are a lost runner, a runner shutdown or a full disk. The
+workflow waits for sibling jobs to finish. If a sibling reports a real failure,
+the normal CI fix runs. Otherwise it reruns only the failed jobs, up to
+`ciInfrastructureReruns` times per head, and then reports `ci_failed`. A
+billing failure pauses the run as `ci_blocked`. After fixing billing, resume the
+run to rerun the blocked jobs.
 An interrupted provider is a stopped run, not background progress; preserve
 its journal, work, billing and lock ownership before choosing recovery.
 The Oracle compiler and source renderer are retired. Engine units validate the
