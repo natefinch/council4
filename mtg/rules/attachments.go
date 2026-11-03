@@ -33,10 +33,20 @@ func attachPermanentWithChoices(g *game.Game, attachment, target *game.Permanent
 		maps.Copy(attachment.EntryChoices, choices)
 	}
 	attachment.AttachedTo = opt.Val(target.ObjectID)
+	refreshAttachmentTimestamp(g, attachment)
 	if !permanentIDsContain(target.Attachments, attachment.ObjectID) {
 		target.Attachments = append(target.Attachments, attachment.ObjectID)
 	}
 	return true
+}
+
+// refreshAttachmentTimestamp gives an attachment that just became attached to a
+// different object or player a new timestamp (CR 613.7e, 701.3c). Its static
+// abilities' effects follow that timestamp (CR 613.7a), so a moved Aura applies
+// after effects that were older than the move and is the most recent Role for
+// CR 704.5z.
+func refreshAttachmentTimestamp(g *game.Game, attachment *game.Permanent) {
+	attachment.AttachmentTimestamp = game.Timestamp(g.IDGen.Next())
 }
 
 func attachmentChoices(g *game.Game, attachment *game.Permanent, choiceCtx *replacementChoiceContext) (map[game.ChoiceKey]game.ResolutionChoiceResult, bool) {
@@ -92,8 +102,13 @@ func attachAuraToPlayer(g *game.Game, aura *game.Permanent, playerID game.Player
 	if !auraCanAttachToPlayer(g, aura, playerID) {
 		return false
 	}
+	if aura.AttachedToPlayer.Exists && aura.AttachedToPlayer.Val == playerID {
+		// Attaching to the player it already enchants does nothing (CR 701.3b).
+		return true
+	}
 	detachPermanent(g, aura)
 	aura.AttachedToPlayer = opt.Val(playerID)
+	refreshAttachmentTimestamp(g, aura)
 	return true
 }
 
