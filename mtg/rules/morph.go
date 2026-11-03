@@ -393,6 +393,7 @@ func (*Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID i
 }
 
 func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID, permanentID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	defer g.OpenLibraryTopWindow()()
 	if !e.canTurnFaceUp(g, playerID, permanentID) {
 		return false
 	}

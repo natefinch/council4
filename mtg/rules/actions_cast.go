@@ -31,6 +31,7 @@ func (e *Engine) applyPlayLandFaceWithChoices(g *game.Game, playerID game.Player
 }
 
 func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog, announced ...game.PlayPermission) bool {
+	defer g.OpenLibraryTopWindow()()
 	if !canPlayAnyLand(g, playerID) {
 		return false
 	}

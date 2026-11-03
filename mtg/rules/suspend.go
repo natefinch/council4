@@ -48,6 +48,7 @@ func (*Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID
 }
 
 func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	defer g.OpenLibraryTopWindow()()
 	if !e.canSuspendCard(g, playerID, cardID) {
 		return false
 	}

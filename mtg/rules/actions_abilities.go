@@ -23,8 +23,11 @@ func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, acti
 // choosing targets and modes, then determining and paying the total cost. The
 // special activation forms (cycling, ninjutsu, and hand/graveyard abilities) are
 // dispatched first; a mana ability is handled inline because it doesn't go on
-// the stack and resolves immediately (CR 605.3b).
+// the stack and resolves immediately (CR 605.3b). A library top changed during
+// activation (or a mana ability's resolution) stays hidden until it finishes
+// (CR 401.5).
 func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	defer g.OpenLibraryTopWindow()()
 	if e.applyCyclingAbilityWithChoices(g, playerID, activate, agents, log) {
 		return true
 	}
