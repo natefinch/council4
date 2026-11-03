@@ -63,8 +63,9 @@ func newUrzaSRage() *game.CardDef {
 					},
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(10),
-							Recipient: game.AnyTargetDamageRecipient(0),
+							Amount:          game.Fixed(10),
+							Recipient:       game.AnyTargetDamageRecipient(0),
+							CantBePrevented: true,
 						},
 						Condition: opt.Val(game.EffectCondition{
 							Condition: opt.Val(game.Condition{

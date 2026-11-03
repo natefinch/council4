@@ -22,7 +22,7 @@ func (r *effectResolver) damageAttackedDefender(res effectResolved, source effec
 			res.succeeded = false
 			return res
 		}
-		dealt := dealPlayerDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, target.Player, res.amount, false)
+		dealt := source.dealPlayer(r.game, target.Player, res.amount)
 		applyDamageSourceLifelink(r.game, source, dealt)
 		res.amount = typedDamageResultAmount(resultKind, dealt, 0)
 		res.succeeded = dealt > 0
@@ -33,7 +33,7 @@ func (r *effectResolver) damageAttackedDefender(res effectResolved, source effec
 		res.succeeded = false
 		return res
 	}
-	dealt := dealPermanentDamage(r.game, source.sourceID, source.sourceObjectID, source.controller, permanent, res.amount, false)
+	dealt := source.dealPermanent(r.game, permanent, res.amount)
 	applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
 	res.amount = typedDamageResultAmount(resultKind, dealt, 0)
 	res.succeeded = dealt > 0

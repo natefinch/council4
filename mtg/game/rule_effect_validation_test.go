@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestRuleEffectKindValid(t *testing.T) {
@@ -80,6 +81,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectLegendRuleDoesNotApply,
 		RuleEffectPlayFromGraveyardPerPermanentType,
 		RuleEffectCascadeLandOption,
+		RuleEffectDamageCantBePrevented,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -90,7 +92,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectCascadeLandOption + 1,
+		RuleEffectDamageCantBePrevented + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -109,7 +111,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectCascadeLandOption + 1,
+		"future":       RuleEffectDamageCantBePrevented + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -133,7 +135,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectCascadeLandOption + 1,
+		"future":       RuleEffectDamageCantBePrevented + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -344,5 +346,63 @@ func TestValidatePayLifeForCommanderTaxRuleEffect(t *testing.T) {
 				t.Fatalf("issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
 			}
 		})
+	}
+}
+
+func TestValidateDamageCantBePreventedRuleEffect(t *testing.T) {
+	t.Parallel()
+
+	creatures := Selection{RequiredTypes: []types.Card{types.Creature}}
+	valid := []RuleEffect{
+		{Kind: RuleEffectDamageCantBePrevented},
+		{Kind: RuleEffectDamageCantBePrevented, AffectedSource: true},
+		{Kind: RuleEffectDamageCantBePrevented, AffectedSelection: creatures},
+		{Kind: RuleEffectDamageCantBePrevented, Duration: DurationUntilEndOfTurn},
+	}
+	for _, effect := range valid {
+		if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); len(issues) != 0 {
+			t.Errorf("valid static %+v issues = %+v, want none", effect, issues)
+		}
+		if err := validateApplyRuleTestEffect(&effect); err != nil {
+			t.Errorf("valid instruction %+v rejected: %v", effect, err)
+		}
+	}
+	scopedObject := ValidateInstructionSequence([]Instruction{{
+		Primitive: ApplyRule{
+			Object:      opt.Val(TargetPermanentReference(0)),
+			RuleEffects: []RuleEffect{{Kind: RuleEffectDamageCantBePrevented}},
+			Duration:    DurationUntilEndOfTurn,
+		},
+	}})
+	if scopedObject != nil {
+		t.Errorf("object-scoped instruction rejected: %v", scopedObject)
+	}
+
+	invalid := map[string]RuleEffect{
+		"two scopes":      {Kind: RuleEffectDamageCantBePrevented, AffectedSource: true, AffectedSelection: creatures},
+		"controller":      {Kind: RuleEffectDamageCantBePrevented, AffectedController: ControllerYou},
+		"permanent types": {Kind: RuleEffectDamageCantBePrevented, PermanentTypes: []types.Card{types.Creature}},
+		"affected player": {Kind: RuleEffectDamageCantBePrevented, AffectedPlayer: PlayerOpponent},
+		"attached":        {Kind: RuleEffectDamageCantBePrevented, AffectedAttached: true},
+	}
+	for name, effect := range invalid {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if !hasCardDefIssue(ValidateCardDef(cardDefWithRuleEffect(&effect)), CardDefIssueInvalidRuleEffect) {
+				t.Fatalf("static %+v accepted", effect)
+			}
+			if err := validateApplyRuleTestEffect(&effect); err == nil {
+				t.Fatalf("instruction %+v accepted", effect)
+			}
+		})
+	}
+	sourceAndObject := ValidateInstructionSequence([]Instruction{{
+		Primitive: ApplyRule{
+			Object:      opt.Val(TargetPermanentReference(0)),
+			RuleEffects: []RuleEffect{{Kind: RuleEffectDamageCantBePrevented, AffectedSource: true}},
+		},
+	}})
+	if sourceAndObject == nil {
+		t.Error("instruction with both source and object scopes accepted")
 	}
 }

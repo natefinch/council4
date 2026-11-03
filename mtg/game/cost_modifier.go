@@ -720,6 +720,15 @@ const (
 	// carrying no payload beyond its Controller. Added last so existing kinds
 	// keep their wire values.
 	RuleEffectCascadeLandOption
+	// RuleEffectDamageCantBePrevented makes damage unpreventable (CR 615.12):
+	// prevention effects still apply but prevent nothing, their additional
+	// effects still happen, and finite shields are not reduced. Without a
+	// source scope it covers all damage, combat or not, from any source ("Damage
+	// can't be prevented [this turn].", Leyline of Punishment, Skullcrack). An
+	// AffectedSource, Object or AffectedSelection scope limits it to damage
+	// dealt by matching battlefield permanents, evaluated live ("Damage that
+	// would be dealt by this creature can't be prevented.", Excruciator).
+	RuleEffectDamageCantBePrevented
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -795,7 +804,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectExileOpponentSearchFinds,
 		RuleEffectLegendRuleDoesNotApply,
 		RuleEffectPlayFromGraveyardPerPermanentType,
-		RuleEffectCascadeLandOption:
+		RuleEffectCascadeLandOption,
+		RuleEffectDamageCantBePrevented:
 		return true
 	default:
 		return false
