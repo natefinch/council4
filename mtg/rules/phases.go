@@ -480,6 +480,8 @@ func (e *Engine) discardToMaximumHandSizeWithChoices(g *game.Game, playerID game
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 		Kind: game.ChoiceZoneSelection, Player: playerID, Prompt: "Discard to maximum hand size.",
 		Options: options, MinChoices: count, MaxChoices: count, DefaultSelection: defaults,
+		// CR 400.2: the hand is hidden, so the log must not list kept cards.
+		Private: true,
 	}, log)
 	// CR 514.1: the cleanup discard is one simultaneous discard of every
 	// chosen card, so "one or more" triggers see a single batch.
