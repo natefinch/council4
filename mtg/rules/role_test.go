@@ -146,7 +146,9 @@ func TestRoleRuleReplacementAndCoexistence(t *testing.T) {
 		}
 	})
 
-	t.Run("attachment change forms a new competing group", func(t *testing.T) {
+	// CR 613.7e gives a moved Role a new timestamp, so the older token moved
+	// onto a creature with a newer Role is the most recent one (CR 704.5z).
+	t.Run("moved older Role becomes the most recent Role", func(t *testing.T) {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		firstTarget := addRoleTestCreature(g, game.Player1, "First")
 		secondTarget := addRoleTestCreature(g, game.Player1, "Second")
@@ -157,12 +159,15 @@ func TestRoleRuleReplacementAndCoexistence(t *testing.T) {
 		NewEngine(nil).applyStateBasedActions(g)
 
 		attachPermanent(g, first, secondTarget)
-		NewEngine(nil).applyStateBasedActions(g)
-		if _, ok := permanentByObjectID(g, first.ObjectID); ok {
-			t.Fatal("older moved Role remained beside newer Role")
+		_, deaths := NewEngine(nil).applyStateBasedActionsWithDeaths(g)
+		if _, ok := permanentByObjectID(g, first.ObjectID); !ok {
+			t.Fatal("most recently attached Role did not remain")
 		}
-		if _, ok := permanentByObjectID(g, second.ObjectID); !ok {
-			t.Fatal("newer Role did not remain")
+		if _, ok := permanentByObjectID(g, second.ObjectID); ok {
+			t.Fatal("Role with the older attachment timestamp remained")
+		}
+		if !deathReasonFound(deaths, second.ObjectID, PermanentDeathReasonRoleRule) {
+			t.Fatalf("deaths = %#v", deaths)
 		}
 	})
 }

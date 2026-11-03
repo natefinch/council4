@@ -226,6 +226,12 @@ type Permanent struct {
 	// AttachedToPlayer is present. Absent if this is not attached to a player.
 	AttachedToPlayer opt.V[PlayerID]
 
+	// AttachmentTimestamp is the timestamp this Aura, Equipment, or
+	// Fortification received when it most recently became attached to a
+	// different object or player (CR 613.7e, 701.3c). Zero until it first
+	// becomes attached; detaching keeps the last value.
+	AttachmentTimestamp Timestamp
+
 	// Bestowed is true if this permanent entered the battlefield as a bestowed
 	// Aura, i.e. its card was cast for its bestow cost (CR 702.103). While
 	// bestowed it is an Aura enchantment and not a creature (see the bestow type
@@ -299,12 +305,13 @@ type MergedCard struct {
 }
 
 // Timestamp returns the permanent's timestamp for continuous-effect ordering.
-// Permanent timestamps are derived from ObjectID because permanents receive
-// monotonically increasing object IDs as they enter the battlefield. Control
-// changes are modeled as continuous effects with their own timestamps, so a
-// permanent does not need separate mutable timestamp state.
+// A permanent's entry timestamp is derived from ObjectID because permanents
+// receive monotonically increasing object IDs as they enter the battlefield
+// (CR 613.7d). An attachment's newer AttachmentTimestamp replaces it when it
+// becomes attached (CR 613.7e). Control changes are modeled as continuous
+// effects with their own timestamps.
 func (p *Permanent) Timestamp() Timestamp {
-	return Timestamp(p.ObjectID)
+	return max(Timestamp(p.ObjectID), p.AttachmentTimestamp)
 }
 
 // GoadStatus records the duration for one player's goad effect.
