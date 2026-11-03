@@ -63,6 +63,8 @@ func (r *effectResolver) conniveDiscard(playerID game.PlayerID, amount int) int 
 		MinChoices:       amount,
 		MaxChoices:       amount,
 		DefaultSelection: firstChoiceIndices(amount),
+		// CR 400.2: the hand is hidden, so the log must not list kept cards.
+		Private: true,
 	}, r.log)
 	simultaneousID := r.game.IDGen.Next()
 	nonland := 0
