@@ -602,7 +602,7 @@ func (e *Engine) canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID
 		!spellDef.HasType(types.Creature) ||
 		!isSupportedSpell(spellDef) ||
 		!canCastAtCurrentTiming(g, playerID, castFace) ||
-		!mutateTargetLegal(g, playerID, card.Owner, spellDef, targetID) {
+		!mutateTargetLegal(g, playerID, card.Owner, castFace, targetID) {
 		return false
 	}
 	routes := spellCastRoutes(g, playerID, cardID, sourceZone, game.FaceFront, mutateCastCostMode)
@@ -634,10 +634,12 @@ func mutateCastRouteRequests(base payment.SpellRequest, routes []castRoute) []pa
 	return requests
 }
 
-func legalMutateTargets(g *game.Game, playerID, owner game.PlayerID, spellDef *game.CardDef) []*game.Permanent {
+// legalMutateTargets returns the creatures a mutating creature spell whose
+// effective characteristics are spellChars may target (see mutateTargetLegal).
+func legalMutateTargets(g *game.Game, playerID, owner game.PlayerID, spellChars *game.CardDef) []*game.Permanent {
 	var targets []*game.Permanent
 	for _, permanent := range g.Battlefield {
-		if mutateTargetLegal(g, playerID, owner, spellDef, permanent.ObjectID) {
+		if mutateTargetLegal(g, playerID, owner, spellChars, permanent.ObjectID) {
 			targets = append(targets, permanent)
 		}
 	}
@@ -664,14 +666,18 @@ func mutateSpellOwner(obj *game.StackObject, card *game.CardInstance) game.Playe
 // spell's only target (CR 702.140a, CR 115.7). Changing its target offers only
 // another non-Human creature with the spell's owner; choosing new targets also
 // offers the unchanged original.
-func mutateRetargetGroup(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, prompt string, rule game.RetargetRule) retargetGroup {
+func mutateRetargetGroup(g *game.Game, obj *game.StackObject, prompt string, rule game.RetargetRule) retargetGroup {
 	card, _ := g.GetCardInstance(obj.SourceID)
 	if !obj.Copy && card == nil {
 		return retargetGroup{spliced: -1, mutate: true, prompt: prompt, targets: []game.Target{game.PermanentTarget(obj.MutateTargetID)}}
 	}
 	original := game.PermanentTarget(obj.MutateTargetID)
 	result := targetChoiceResult{kind: targetLegalChoicesFound}
-	for _, permanent := range legalMutateTargets(g, obj.Controller, mutateSpellOwner(obj, card), spellDef) {
+	spellChars, ok := stackSpellCharacteristicsDef(g, obj)
+	if !ok {
+		return retargetGroup{spliced: -1, mutate: true, prompt: prompt, targets: []game.Target{original}}
+	}
+	for _, permanent := range legalMutateTargets(g, obj.Controller, mutateSpellOwner(obj, card), spellChars) {
 		if permanent.ObjectID != obj.MutateTargetID {
 			result.choices = append(result.choices, []game.Target{game.PermanentTarget(permanent.ObjectID)})
 		}
@@ -685,14 +691,21 @@ func mutateRetargetGroup(g *game.Game, obj *game.StackObject, spellDef *game.Car
 	return retargetGroup{spliced: -1, mutate: true, prompt: prompt, targets: []game.Target{original}, result: result}
 }
 
-func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellDef *game.CardDef, targetID id.ID) bool {
+// mutateTargetLegal reports whether targetID is a legal target for playerID's
+// mutating creature spell owned by owner: a non-Human creature with that owner
+// (CR 702.140a) that isn't protected from or untargetable by the spell. Protection
+// reads spellChars, the spell's effective characteristics at the time of the
+// check (CR 702.16a-b): castSelectionFace while casting it (CR 601.2a, 601.2c)
+// and stackSpellCharacteristicsDef on the stack, so type-changing effects that
+// apply to spells (Biotransference making it an artifact) are seen.
+func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellChars *game.CardDef, targetID id.ID) bool {
 	target, ok := permanentByObjectID(g, targetID)
 	return ok &&
 		!target.PhasedOut &&
 		target.Owner == owner &&
 		permanentHasType(g, target, types.Creature) &&
 		!permanentHasSubtype(g, target, types.Human) &&
-		!targetProtectedFromSource(g, playerID, spellDef, 0, game.PermanentTarget(targetID))
+		!targetProtectedFromSource(g, playerID, spellChars, 0, game.PermanentTarget(targetID))
 }
 
 func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {
