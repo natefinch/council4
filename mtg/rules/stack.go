@@ -169,9 +169,15 @@ func spellResolvedEvent(obj *game.StackObject) game.Event {
 	return event
 }
 
+// spellResolved reports whether a spell's resolution result means it resolved
+// (CR 608.2, 608.3), whatever its final destination: a rebound exile, a
+// shuffle into its owner's library or a return to hand still follows a
+// completed resolution (CR 608.2n). Countered, fizzled and missing spells
+// didn't resolve.
 func spellResolved(result string) bool {
 	switch result {
-	case "resolved", "battlefield", "entry replaced", "graveyard", "exile", "adventure exile", "mutated":
+	case "resolved", "battlefield", "entry replaced", "graveyard", "exile", "adventure exile", "rebound exile",
+		"library", "hand", "mutated":
 		return true
 	default:
 		return false
