@@ -111,7 +111,16 @@ type DelayedTriggerDef struct {
 	// public text (the sentence stating its timing or event, without the
 	// creator's cost, trigger condition or conditions, through the later
 	// sentences that depend on it), or that whole text when the wording cannot
-	// be singled out. Set Text when the wording cannot be singled out.
+	// be singled out. Set Text when the wording cannot be singled out: a later
+	// sentence that may be either ability's ("If it would leave the
+	// battlefield, exile it instead ..."), two delayed triggers stating the
+	// same timing, a timing that ends an instruction coordinated with the
+	// creator's ("you gain 2 life, and you return this card ... at the
+	// beginning of the next end step"), or a granted ability without its own
+	// text. Recorded Text is hidden with the creating text when that is hidden,
+	// a face-down spell's (CR 708.4, 708.5); an ability's text stays public
+	// even if its source is turned face down after the ability was put on the
+	// stack (CR 113.7a, 405.4).
 	Text    string
 	Content AbilityContent
 	// EventPattern, when present, makes this an event-based delayed trigger that

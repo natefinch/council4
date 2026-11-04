@@ -420,11 +420,21 @@ var delayedTimingWording = map[game.DelayedTriggerTiming]*regexp.Regexp{
 // delayed trigger's; a spell has no such condition. Wording inside quotation
 // marks (a granted ability) or reminder text is ignored.
 //
+// When the creator joins another instruction to the delayed wording in that
+// sentence, the delayed ability is the clause the timing opens ("..., the
+// creature attacks this turn if able, and at the beginning of the next end
+// step, destroy it if it didn't attack this turn."), see delayedClause. A
+// timing that ends a coordinated sentence ("you gain 2 life, and you return
+// this card ... at the beginning of the next end step") cannot be separated
+// from the creator's instruction by its wording.
+//
 // The delayed ability continues through the later sentences of its paragraph
 // that depend on its own instruction (delayedContinuation): "At the beginning
 // of your next upkeep, pay {3}{U}{U}. If you don't, you lose the game." It
 // reports false, so the whole text is kept, unless exactly one sentence states
-// the timing and every later sentence of its paragraph can be attributed.
+// the timing, its clause can be separated and every later sentence of its
+// paragraph can be attributed. A definition whose delayed wording cannot be
+// singled out records it in DelayedTriggerDef.Text.
 func delayedTriggerTimingText(text string, timing game.DelayedTriggerTiming, spell bool) (string, bool) {
 	wording, ok := delayedTimingWording[timing]
 	if !ok {
@@ -450,11 +460,15 @@ func delayedTriggerTimingText(text string, timing game.DelayedTriggerTiming, spe
 				continue
 			}
 			count++
+			clause, ok := delayedClause(withoutLeadingConditions(own, at))
+			if !ok {
+				return "", false
+			}
 			rest, ok := delayedContinuation(sentences[i+1:])
 			if !ok {
 				return "", false
 			}
-			found = strings.Join(append([]string{capitalized(withoutLeadingConditions(own, at))}, rest...), " ")
+			found = strings.Join(append([]string{capitalized(clause)}, rest...), " ")
 		}
 	}
 	if count != 1 {
@@ -518,8 +532,9 @@ func withoutCreatorPrefix(sentence string) (string, bool) {
 var creatorConditionPattern = regexp.MustCompile(`^(?i:if |otherwise, |then )`)
 
 // withoutLeadingConditions strips the conditions that open sentence before the
-// delayed timing wording at offset at.
-func withoutLeadingConditions(sentence string, at int) string {
+// delayed timing wording at offset at, returning the rest of the sentence and
+// the timing wording's offset in it.
+func withoutLeadingConditions(sentence string, at int) (string, int) {
 	for at > 0 {
 		prefix := creatorConditionPattern.FindString(sentence)
 		if prefix == "" {
@@ -537,7 +552,40 @@ func withoutLeadingConditions(sentence string, at int) string {
 		at -= len(sentence) - len(trimmed)
 		sentence = trimmed
 	}
-	return sentence
+	return sentence, at
+}
+
+// conjunctOpeningPattern matches wording that ends by coordinating a following
+// clause ("the creature attacks this turn if able, and ", "... this turn and ",
+// "..., then ").
+var conjunctOpeningPattern = regexp.MustCompile(`(?i)(?:^|[ ,])(?:and|then) $`)
+
+// coordinationPattern matches a coordinating conjunction or clause separator
+// that may join two instructions ("exile this permanent and return it",
+// "you gain 2 life, and you return this card", "..., then return it").
+var coordinationPattern = regexp.MustCompile(`(?i) and |, then |; `)
+
+// delayedClause returns the part of sentence that is the delayed ability's own
+// wording, given the offset at of the delayed timing wording in it. When the
+// timing opens a clause coordinated with an earlier instruction ("the creature
+// attacks this turn if able, and at the beginning of the next end step, destroy
+// it if it didn't attack this turn."), the delayed ability is that clause: the
+// earlier instruction is the creator's (CR 603.7a, 608.2c). It reports false
+// when wording before the timing is coordinated with another instruction
+// ("exile this permanent and return it ... at the beginning of the next end
+// step"), since a conjunction may join either two instructions, one of them
+// the creator's, or two objects of the delayed ability's own instruction.
+func delayedClause(sentence string, at int) (string, bool) {
+	before := sentence[:at]
+	if at > 0 && conjunctOpeningPattern.MatchString(before) {
+		return sentence[at:], true
+	}
+	for _, match := range coordinationPattern.FindAllStringIndex(before, -1) {
+		if topLevelOffset(before, match[0]) {
+			return "", false
+		}
+	}
+	return sentence, true
 }
 
 // delayedContinuationPattern matches the opening of a sentence that depends on

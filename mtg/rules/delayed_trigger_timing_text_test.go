@@ -1,11 +1,14 @@
 package rules
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -225,7 +228,8 @@ func TestFixedDelayedTriggerOwnTextSkipsCreatingTriggerCondition(t *testing.T) {
 // one: "If you don't, you lose the game." is the delayed ability's). The
 // creator's cost and restrictions are not the delayed ability's text; Pact's
 // payment consequence is. A later sentence that cannot be attributed to either
-// ability (Whip's replacement sentence) keeps the whole creating text.
+// ability by its wording (Whip's replacement sentence) is recorded by the
+// definition's DelayedTriggerDef.Text instead.
 
 // Giant Caterpillar's delayed token creation is embedded after its activation
 // cost, which belongs to the creating ability, so the delayed trigger carries
@@ -302,10 +306,75 @@ func TestFixedDelayedTriggerOwnTextOmitsActivationRestriction(t *testing.T) {
 	}
 }
 
-// Whip of Erebos's replacement sentence after its delayed exile cannot be
-// attributed from its wording alone, so the delayed trigger keeps the whole
-// creating ability's text rather than dropping a sentence that may be its own.
-func TestFixedDelayedTriggerUnattributableSentenceKeepsCreatingText(t *testing.T) {
+// Source review (#3666): Oracle text from the run's pinned corpus
+// 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4 for Whip of
+// Erebos (53987a39-c18c-4c13-b1ea-fd1b2a369f9e), quoted above; Moira and
+// Teshar (445ad01c-c899-424d-8666-ee7bb2a6e535): "Whenever you cast a historic
+// spell, return target nonland permanent card from your graveyard to the
+// battlefield. It gains haste. Exile it at the beginning of the next end step.
+// If it would leave the battlefield, exile it instead of putting it anywhere
+// else. (...)"; Calamity, Galloping Inferno
+// (eb37496e-374f-41b9-bd52-f52f37bdac31): "... create a tapped and attacking
+// token that's a copy of it. Sacrifice that token at the beginning of the next
+// end step. Repeat this process once."; Arcane Denial
+// (ab1cc360-b9de-48d9-9983-4dfe4a7d2a37): "Counter target spell. Its
+// controller may draw up to two cards at the beginning of the next turn's
+// upkeep." / "You draw a card at the beginning of the next turn's upkeep.";
+// Inkshield (da93264e-4e04-401a-9809-e4e1056cf604): "Prevent all combat damage
+// that would be dealt to you this turn. For each 1 damage prevented this way,
+// create a 2/1 white and black Inkling creature token with flying."; Simic
+// Basilisk (5e0f0fd8-fdeb-44d9-b5e7-e3948f2dd10b): "{1}{G}: Until end of turn,
+// target creature with a +1/+1 counter on it gains "Whenever this creature
+// deals combat damage to a creature, destroy that creature at end of
+// combat.""; Mangara's Blessing (5d9431de-7cf0-43d4-9b86-e0ef4a7756f9): "When a
+// spell or ability an opponent controls causes you to discard this card, you
+// gain 2 life, and you return this card from your graveyard to your hand at the
+// beginning of the next end step."; Frenetic Sliver
+// (b1af4207-e546-4bde-950b-3234dfffe278): All Slivers have "{0}: If this
+// permanent is on the battlefield, flip a coin. If you win the flip, exile this
+// permanent and return it to the battlefield under its owner's control at the
+// beginning of the next end step. If you lose the flip, sacrifice it.";
+// Arcum's Whistle (de691eed-d90b-48f9-bae4-f982767f2bfd): "... If they don't
+// pay, the creature attacks this turn if able, and at the beginning of the next
+// end step, destroy it if it didn't attack this turn. Activate only before
+// attackers are declared."; Pygmy Hippo (0d39513a-1f05-4d9a-a772-745f4f1a3471):
+// "... If you do, this creature assigns no combat damage this turn and at the
+// beginning of your next main phase this turn, you add an amount of {C} equal
+// to the amount of mana that player lost this way."; Kaya, Ghost Assassin
+// (5e4c81b9-a31e-45e6-983f-30f11b8a05c0): "0: Exile Kaya or up to one target
+// creature. Return that card to the battlefield under its owner's control at
+// the beginning of your next upkeep. You lose 2 life."; Obzedat, Ghost Council
+// (6c3df703-e96a-4ee4-b449-b8e1e3460bd3): "... If you do, return it to the
+// battlefield under its owner's control at the beginning of your next upkeep.
+// It gains haste."; Elemental Appeal (3bcfc82c-3523-40e3-b236-78ece8a8d69f):
+// "... Exile it at the beginning of the next end step. If this spell was
+// kicked, that creature gets +7/+0 until end of turn." Scryfall rulings: Whip
+// of Erebos 2013-09-15 "neither of the 'exile' abilities is granted to that
+// creature" and the replacement effect still applies if the delayed trigger is
+// countered (so it is the creator's, not the delayed trigger's); Mangara's
+// Blessing 2004-10-04 "The 2 life ... is gained when the triggered ability
+// resolves, not at end of turn. Only the return to hand is done at end of
+// turn."; Arcane Denial 2007-09-16 "The controller of the countered spell
+// doesn't choose how many cards to draw until the relevant ability resolves.";
+// Calamity's rulings, Inkshield's 2021-04-16 ruling and Arcum's Whistle's and
+// Pygmy Hippo's rulings do not address the delayed text; Moira and Teshar and
+// Simic Basilisk have none. CR 603.3, 603.7, 603.7a, 608.2c (later
+// instructions in one sentence or later sentences may each be the creator's or
+// the delayed ability's) and 113.2c/603.7a (two delayed abilities created by
+// one spell). Wording that ends a coordinated creator instruction ("you gain 2
+// life, and you return this card ...") cannot be separated from the creator's
+// by syntax, since "and" may equally join two objects of one instruction;
+// wording whose timing opens its own coordinated clause ("..., and at the
+// beginning of the next end step, destroy it ...") can. Where wording cannot be
+// attributed, the card definition records the delayed ability's text.
+
+const whipDelayedText = "Exile it at the beginning of the next end step."
+
+// Whip of Erebos's replacement sentence after its delayed exile is the
+// creating ability's, not the delayed trigger's, which the definition records:
+// the delayed exile carries only its own sentence, pending and on the stack,
+// for every viewer and in a cloned game, and exiles the returned creature.
+func TestFixedDelayedTriggerRecordedTextForUnattributableSentence(t *testing.T) {
 	g, engine := grantedHasteGame()
 	whip := addCombatPermanent(g, game.Player1, registryCard(t, "Whip of Erebos"))
 	bear := addCardToGraveyard(g, game.Player1, copyTestBear("Whipped Bear"))
@@ -315,8 +384,361 @@ func TestFixedDelayedTriggerUnattributableSentenceKeepsCreatingText(t *testing.T
 		t.Fatal("could not activate Whip of Erebos")
 	}
 	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
-	want := registryCard(t, "Whip of Erebos").ActivatedAbilities[0].Text
-	requirePendingTexts(t, g, game.Player2, "Whip of Erebos", want)
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+		requirePendingTexts(t, g, viewer, "Whip of Erebos", whipDelayedText)
+	}
+	clone := g.Clone()
+	fireEndStep(t, clone, engine)
+	requireStackTexts(t, clone, game.Player2, "Whip of Erebos", whipDelayedText)
+	resolveStackWithTriggers(engine, clone, [game.NumPlayers]PlayerAgent{})
+	if !clone.Players[game.Player1].Exile.Contains(bear) {
+		t.Fatal("Whip of Erebos's returned creature was not exiled at the end step")
+	}
+	requirePendingTexts(t, g, game.Player2, "Whip of Erebos", whipDelayedText)
+}
+
+// Moira and Teshar's triggered ability shares Whip's shape: its delayed exile
+// carries only its recorded sentence, pending and on the stack, and exiles the
+// returned permanent.
+func TestFixedDelayedTriggerRecordedTextFromTriggeredAbility(t *testing.T) {
+	g, engine := grantedHasteGame()
+	addCombatPermanent(g, game.Player1, registryCard(t, "Moira and Teshar"))
+	bear := addCardToGraveyard(g, game.Player1, copyTestBear("Historic Return"))
+	trinket := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Free Trinket", Types: []types.Card{types.Artifact}}})
+	setMainPhasePriority(g, game.Player1)
+	if !engine.applyAction(g, game.Player1, action.CastSpell(trinket, nil, 0, nil)) {
+		t.Fatal("could not cast the historic spell")
+	}
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if g.Players[game.Player1].Graveyard.Contains(bear) {
+		t.Fatal("Moira and Teshar did not return the permanent card")
+	}
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player3} {
+		requirePendingTexts(t, g, viewer, "Moira and Teshar", whipDelayedText)
+	}
+	fireEndStep(t, g, engine)
+	requireStackTexts(t, g, game.Player2, "Moira and Teshar", whipDelayedText)
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if !g.Players[game.Player1].Exile.Contains(bear) {
+		t.Fatal("Moira and Teshar's returned permanent was not exiled at the end step")
+	}
+}
+
+// Arcane Denial creates two delayed triggers with the same upkeep timing, so
+// neither sentence can be singled out by its timing; each carries its recorded
+// sentence, pending and on the stack, and each draws for its own player.
+func TestFixedDelayedTriggersWithSameTimingCarryRecordedTexts(t *testing.T) {
+	const (
+		theirDraw = "Its controller may draw up to two cards at the beginning of the next turn's upkeep."
+		yourDraw  = "You draw a card at the beginning of the next turn's upkeep."
+	)
+	g, engine := grantedHasteGame()
+	for range 3 {
+		addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Denial Draw"}})
+		addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Denial Draw"}})
+	}
+	victim := pushStackSpell(g, game.Player2, "Victim", types.Instant)
+	denial := addCardToHand(g, game.Player1, registryCard(t, "Arcane Denial"))
+	g.Players[game.Player1].ManaPool.Add(mana.U, 2)
+	setMainPhasePriority(g, game.Player1)
+	if !engine.applyAction(g, game.Player1, action.CastSpell(denial, []game.Target{game.StackObjectTarget(victim.ID)}, 0, nil)) {
+		t.Fatal("could not cast Arcane Denial")
+	}
+	engine.resolveTopOfStack(g, &TurnLog{})
+	if _, ok := g.Stack.Peek(); ok {
+		t.Fatal("Arcane Denial did not counter its target")
+	}
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+		requirePendingTexts(t, g, viewer, "Arcane Denial", theirDraw, yourDraw)
+	}
+	yourHand, theirHand := g.Players[game.Player1].Hand.Size(), g.Players[game.Player2].Hand.Size()
+	g.Turn.TurnNumber++
+	g.Turn.ActivePlayer = game.Player2
+	g.Turn.Phase, g.Turn.Step = game.PhaseBeginning, game.StepUpkeep
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("the next upkeep did not fire Arcane Denial's delayed triggers")
+	}
+	var stacked []string
+	for _, object := range observe(g, game.Player3).Stack() {
+		stacked = append(stacked, object.Text)
+	}
+	slices.Sort(stacked)
+	if want := []string{theirDraw, yourDraw}; !slices.Equal(stacked, want) {
+		t.Fatalf("stack texts = %q, want %q", stacked, want)
+	}
+	agents := [game.NumPlayers]PlayerAgent{}
+	agents[game.Player2] = numberChoiceAgent{number: 2}
+	resolveStackWithTriggers(engine, g, agents)
+	if got := g.Players[game.Player1].Hand.Size() - yourHand; got != 1 {
+		t.Fatalf("Arcane Denial's controller drew %d cards, want 1", got)
+	}
+	if got := g.Players[game.Player2].Hand.Size() - theirHand; got != 2 {
+		t.Fatalf("the countered spell's controller drew %d cards, want 2", got)
+	}
+}
+
+// A granted triggered ability records its own text, so the end-of-combat
+// destruction it creates carries only its own wording ("destroy that creature
+// at end of combat"), on the stack after combat damage and pending, and
+// destroys the damaged creature at end of combat.
+func TestFixedDelayedTriggerOwnTextFromGrantedTriggeredAbility(t *testing.T) {
+	const (
+		granted = "Whenever this creature deals combat damage to a creature, destroy that creature at end of combat."
+		want    = "Destroy that creature at end of combat."
+	)
+	g, engine := grantedHasteGame()
+	basilisk := addCombatPermanent(g, game.Player1, registryCard(t, "Simic Basilisk"))
+	basilisk.Counters.Add(counter.PlusOnePlusOne, 1)
+	victim := addSturdyCombatCreature(g, game.Player2)
+	g.Players[game.Player1].ManaPool.Add(mana.G, 2)
+	setMainPhasePriority(g, game.Player1)
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(basilisk.ObjectID, 0, []game.Target{game.PermanentTarget(basilisk.ObjectID)}, 0)) {
+		t.Fatal("could not activate Simic Basilisk")
+	}
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	g.Turn.Phase, g.Turn.Step = game.PhaseCombat, game.StepCombatDamage
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: basilisk.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers:  []game.BlockDeclaration{{Blocker: victim.ObjectID, Blocking: basilisk.ObjectID}},
+	}
+	engine.resolveCombatDamage(g, &TurnLog{})
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("the granted combat damage trigger did not trigger")
+	}
+	requireStackTexts(t, g, game.Player2, "Simic Basilisk", granted)
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+		requirePendingTexts(t, g, viewer, "Simic Basilisk", want)
+	}
+	fireEndOfCombat(t, g, engine)
+	requireStackTexts(t, g, game.Player3, "Simic Basilisk", want)
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if _, ok := permanentByObjectID(g, victim.ObjectID); ok {
+		t.Fatal("the damaged creature survived end of combat")
+	}
+}
+
+// An ability on the stack has its own text, independent of its source (CR
+// 113.7a, 405.4), and that text was public when it was put on the stack, so
+// turning the source face down before the ability resolves hides only the
+// source's identity (CR 708.2, 708.5): Moira and Teshar's delayed exile keeps
+// its recorded sentence, pending and on the stack, with no source name, and
+// still exiles the returned permanent.
+func TestFixedDelayedTriggerRecordedTextPublicAfterSourceTurnedFaceDown(t *testing.T) {
+	g, engine := grantedHasteGame()
+	moira := addCombatPermanent(g, game.Player1, registryCard(t, "Moira and Teshar"))
+	bear := addCardToGraveyard(g, game.Player1, copyTestBear("Historic Return"))
+	trinket := addCardToHand(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Free Trinket", Types: []types.Card{types.Artifact}}})
+	setMainPhasePriority(g, game.Player1)
+	if !engine.applyAction(g, game.Player1, action.CastSpell(trinket, nil, 0, nil)) {
+		t.Fatal("could not cast the historic spell")
+	}
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("Moira and Teshar's historic trigger did not trigger")
+	}
+	if stacked := observe(g, game.Player2).Stack(); len(stacked) != 2 || stacked[1].Text == "" {
+		t.Fatalf("Moira and Teshar's creating ability = %+v, want public text", stacked)
+	}
+	applyCyberConversion(g, moira)
+	if !moira.FaceDown {
+		t.Fatal("Moira and Teshar was not turned face down")
+	}
+	if stacked := observe(g, game.Player2).Stack(); len(stacked) != 2 || stacked[1].Name != "" {
+		t.Fatalf("face-down source's creating ability = %+v, want no source name", stacked)
+	}
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if g.Players[game.Player1].Graveyard.Contains(bear) {
+		t.Fatal("Moira and Teshar did not return the permanent card")
+	}
+	for _, viewer := range []game.PlayerID{game.Player2, game.Player3} {
+		requirePendingTexts(t, g, viewer, "", whipDelayedText)
+	}
+	fireEndStep(t, g, engine)
+	requireStackTexts(t, g, game.Player2, "", whipDelayedText)
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if !g.Players[game.Player1].Exile.Contains(bear) {
+		t.Fatal("the returned permanent was not exiled at the end step")
+	}
+}
+
+// The same holds for wording singled out of the creating ability's printed
+// text rather than recorded: Kiki-Jiki is turned face down after its ability is
+// activated, and the delayed sacrifice still carries "Sacrifice it at the
+// beginning of the next end step." for every player, pending and on the stack,
+// without Kiki-Jiki's name, and sacrifices the token.
+func TestFixedDelayedTriggerOwnTextPublicAfterSourceTurnedFaceDown(t *testing.T) {
+	g, engine := grantedHasteGame()
+	kiki := addCombatPermanent(g, game.Player1, registryCard(t, "Kiki-Jiki, Mirror Breaker"))
+	bear := addCombatPermanent(g, game.Player1, copyTestBear("Kiki Bear"))
+	setMainPhasePriority(g, game.Player1)
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(kiki.ObjectID, 0, []game.Target{game.PermanentTarget(bear.ObjectID)}, 0)) {
+		t.Fatal("could not activate Kiki-Jiki")
+	}
+	applyCyberConversion(g, kiki)
+	if !kiki.FaceDown {
+		t.Fatal("Kiki-Jiki was not turned face down")
+	}
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if tokens := playerTokensNamed(g, game.Player1, "Kiki Bear"); len(tokens) != 1 {
+		t.Fatalf("Kiki-Jiki's ability created %d tokens, want 1", len(tokens))
+	}
+	for _, viewer := range []game.PlayerID{game.Player2, game.Player3} {
+		requirePendingTexts(t, g, viewer, "", kikiJikiDelayedText)
+	}
+	fireEndStep(t, g, engine)
+	requireStackTexts(t, g, game.Player2, "", kikiJikiDelayedText)
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if tokens := playerTokensNamed(g, game.Player1, "Kiki Bear"); len(tokens) != 0 {
+		t.Fatalf("Kiki-Jiki's token survived the end step: %d left", len(tokens))
+	}
+}
+
+// An ability granted to a face-down creature is not part of the hidden card,
+// so its public text, and the delayed wording singled out of it, stay visible:
+// Simic Basilisk's granted ability on a face-down creature schedules "Destroy
+// that creature at end of combat." for every player.
+func TestFixedDelayedTriggerTextFromAbilityGrantedToFaceDownCreature(t *testing.T) {
+	const want = "Destroy that creature at end of combat."
+	g, engine := grantedHasteGame()
+	basilisk := addCombatPermanent(g, game.Player1, registryCard(t, "Simic Basilisk"))
+	hidden := addCombatPermanent(g, game.Player1, copyTestBear("Hidden Attacker"))
+	hidden.Counters.Add(counter.PlusOnePlusOne, 1)
+	applyCyberConversion(g, hidden)
+	if !hidden.FaceDown {
+		t.Fatal("the attacker was not turned face down")
+	}
+	victim := addSturdyCombatCreature(g, game.Player2)
+	g.Players[game.Player1].ManaPool.Add(mana.G, 2)
+	setMainPhasePriority(g, game.Player1)
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(basilisk.ObjectID, 0, []game.Target{game.PermanentTarget(hidden.ObjectID)}, 0)) {
+		t.Fatal("could not activate Simic Basilisk")
+	}
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	g.Turn.Phase, g.Turn.Step = game.PhaseCombat, game.StepCombatDamage
+	g.Combat = &game.CombatState{
+		Attackers: []game.AttackDeclaration{{Attacker: hidden.ObjectID, Target: game.AttackTarget{Player: game.Player2}}},
+		Blockers:  []game.BlockDeclaration{{Blocker: victim.ObjectID, Blocking: hidden.ObjectID}},
+	}
+	engine.resolveCombatDamage(g, &TurnLog{})
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
+		t.Fatal("the granted combat damage trigger did not trigger")
+	}
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	for _, viewer := range []game.PlayerID{game.Player2, game.Player3} {
+		requirePendingTexts(t, g, viewer, "", want)
+	}
+	fireEndOfCombat(t, g, engine)
+	requireStackTexts(t, g, game.Player2, "", want)
+	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
+	if _, ok := permanentByObjectID(g, victim.ObjectID); ok {
+		t.Fatal("the damaged creature survived end of combat")
+	}
+}
+
+// delayedTriggerOwnWording prefers the definition's recorded text, and
+// otherwise reports whether the creating text's wording can be singled out.
+func TestDelayedTriggerOwnWordingPrefersRecordedText(t *testing.T) {
+	whip := registryCard(t, "Whip of Erebos").ActivatedAbilities[0].Text
+	def := &game.DelayedTriggerDef{Timing: game.DelayedAtBeginningOfNextEndStep}
+	if got, ok := delayedTriggerOwnWording(whip, def, false); ok {
+		t.Fatalf("unrecorded Whip wording = %q, true; want not attributable", got)
+	}
+	def.Text = whipDelayedText
+	if got, ok := delayedTriggerOwnWording(whip, def, false); !ok || got != whipDelayedText {
+		t.Fatalf("recorded Whip wording = %q, %v; want %q, true", got, ok, whipDelayedText)
+	}
+}
+
+// Every registered card's fixed-timing delayed trigger has its own text: the
+// definition records it or the creating spell's or ability's wording singles it
+// out, so no pending or triggered delayed ability falls back to the whole
+// creating text. A granted ability's delayed trigger is created from that
+// granted ability's own text.
+func TestRegisteredFixedDelayedTriggersHaveOwnText(t *testing.T) {
+	reg := cards.NewDefaultRegistry()
+	for _, name := range reg.All() {
+		def := reg.Lookup(name)
+		faces := []*game.CardFace{&def.CardFace}
+		if def.Back.Exists {
+			faces = append(faces, &def.Back.Val)
+		}
+		if def.Alternate.Exists {
+			faces = append(faces, &def.Alternate.Val)
+		}
+		for _, face := range faces {
+			for i := range face.AbilityCount() {
+				body := face.BodyAt(i)
+				_, spell := body.(*game.AbilityContent)
+				text := game.BodyText(body)
+				switch {
+				case spell:
+					text = oracleRulesText(face.OracleText)
+				case text == "":
+					text = printedAbilityParagraph(face, face.OracleText, i)
+				}
+				visitDelayedTriggers(reflect.ValueOf(body), text, spell, true, map[uintptr]bool{}, func(trigger game.DelayedTriggerDef, text string, spell bool) {
+					if trigger.EventPattern.Exists {
+						return
+					}
+					if _, ok := delayedTriggerOwnWording(text, &trigger, spell); !ok {
+						t.Errorf("%s: fixed-timing delayed trigger has no own text in %q; record DelayedTriggerDef.Text", name, text)
+					}
+				})
+			}
+		}
+	}
+}
+
+// visitDelayedTriggers calls visit for each delayed trigger definition reachable
+// from v with the text of the spell or ability that creates it: an ability
+// nested in v (a granted or token ability) creates its delayed triggers from
+// its own text.
+func visitDelayedTriggers(v reflect.Value, text string, spell, root bool, seen map[uintptr]bool, visit func(game.DelayedTriggerDef, string, bool)) {
+	switch v.Kind() {
+	case reflect.Pointer:
+		if v.IsNil() || seen[v.Pointer()] {
+			return
+		}
+		seen[v.Pointer()] = true
+		visitDelayedTriggers(v.Elem(), text, spell, root, seen, visit)
+		return
+	case reflect.Interface:
+		if !v.IsNil() {
+			visitDelayedTriggers(v.Elem(), text, spell, root, seen, visit)
+		}
+		return
+	case reflect.Slice, reflect.Array:
+		for i := range v.Len() {
+			visitDelayedTriggers(v.Index(i), text, spell, false, seen, visit)
+		}
+		return
+	case reflect.Map:
+		for _, key := range v.MapKeys() {
+			visitDelayedTriggers(v.MapIndex(key), text, spell, false, seen, visit)
+		}
+		return
+	case reflect.Struct:
+	default:
+		return
+	}
+	switch x := v.Interface().(type) {
+	case game.CreateDelayedTrigger:
+		visit(x.Trigger, text, spell)
+	case game.ActivatedAbility:
+		if !root {
+			text, spell = x.Text, false
+		}
+	case game.TriggeredAbility:
+		if !root {
+			text, spell = x.Text, false
+		}
+	}
+	for i := range v.NumField() {
+		if v.Type().Field(i).IsExported() {
+			visitDelayedTriggers(v.Field(i), text, spell, false, seen, visit)
+		}
+	}
 }
 
 // delayedTriggerTimingText singles out the one sentence stating a fixed
@@ -442,6 +864,68 @@ func TestDelayedTriggerTimingTextSentences(t *testing.T) {
 			name:   "unattributable later sentence after embedded wording keeps the whole text",
 			text:   "At the beginning of your upkeep, you gain 1 life at the beginning of the next end step. You lose 1 life.",
 			timing: game.DelayedAtBeginningOfNextEndStep,
+		},
+		{
+			name:   "creator's replacement sentence is not attributable",
+			text:   "{2}{B}{B}, {T}: Return target creature card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step. If it would leave the battlefield, exile it instead of putting it anywhere else. Activate only as a sorcery.",
+			timing: game.DelayedAtBeginningOfNextEndStep,
+		},
+		{
+			name:   "unattributable later sentence after a condition checked by the creator",
+			text:   "At the beginning of your end step, you may exile Obzedat. If you do, return it to the battlefield under its owner's control at the beginning of your next upkeep. It gains haste.",
+			timing: game.DelayedAtBeginningOfYourNextUpkeep,
+		},
+		{
+			name:   "unattributable kicker sentence",
+			text:   "Kicker {5} (You may pay an additional {5} as you cast this spell.)\nCreate a 7/1 red Elemental creature token with trample and haste. Exile it at the beginning of the next end step. If this spell was kicked, that creature gets +7/+0 until end of turn.",
+			timing: game.DelayedAtBeginningOfNextEndStep,
+			spell:  true,
+		},
+		{
+			name:   "timing ending a coordinated creator instruction is not attributable",
+			text:   "When a spell or ability an opponent controls causes you to discard this card, you gain 2 life, and you return this card from your graveyard to your hand at the beginning of the next end step.",
+			timing: game.DelayedAtBeginningOfNextEndStep,
+		},
+		{
+			name:   "coordinated instructions after a condition are not attributable",
+			text:   "{0}: If this permanent is on the battlefield, flip a coin. If you win the flip, exile this permanent and return it to the battlefield under its owner's control at the beginning of the next end step. If you lose the flip, sacrifice it.",
+			timing: game.DelayedAtBeginningOfNextEndStep,
+		},
+		{
+			name:   "then-coordinated creator instruction is not attributable",
+			text:   "Exile target creature, then return it to the battlefield at the beginning of the next end step.",
+			timing: game.DelayedAtBeginningOfNextEndStep,
+			spell:  true,
+		},
+		{
+			name:   "timing opening a coordinated clause after a comma",
+			text:   "{3}, {T}: Choose target non-Wall creature the active player has controlled continuously since the beginning of the turn. That player may pay {X}, where X is that creature's mana value. If they don't pay, the creature attacks this turn if able, and at the beginning of the next end step, destroy it if it didn't attack this turn. Activate only before attackers are declared.",
+			timing: game.DelayedAtBeginningOfNextEndStep,
+			want:   "At the beginning of the next end step, destroy it if it didn't attack this turn.",
+			ok:     true,
+		},
+		{
+			name:   "timing opening a coordinated clause",
+			text:   "Whenever this creature attacks and isn't blocked, you may have defending player activate a mana ability of each land they control and lose all unspent mana. If you do, this creature assigns no combat damage this turn and at the beginning of your next main phase this turn, you add an amount of {C} equal to the amount of mana that player lost this way.",
+			timing: game.DelayedAtBeginningOfNextMainPhase,
+			want:   "At the beginning of your next main phase this turn, you add an amount of {C} equal to the amount of mana that player lost this way.",
+			ok:     true,
+		},
+		{
+			name:   "timing opening a then clause",
+			text:   "Exile target creature, then at the beginning of the next end step, return it to the battlefield.",
+			timing: game.DelayedAtBeginningOfNextEndStep,
+			spell:  true,
+			want:   "At the beginning of the next end step, return it to the battlefield.",
+			ok:     true,
+		},
+		{
+			name:   "coordination inside quoted wording does not block attribution",
+			text:   `Exile target creature. Return it to the battlefield with "Whenever this creature attacks, draw a card and discard a card." at the beginning of the next end step.`,
+			timing: game.DelayedAtBeginningOfNextEndStep,
+			spell:  true,
+			want:   `Return it to the battlefield with "Whenever this creature attacks, draw a card and discard a card." at the beginning of the next end step.`,
+			ok:     true,
 		},
 		{
 			name:   "modal line",

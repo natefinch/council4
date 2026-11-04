@@ -43,6 +43,9 @@ Ordinary non-mana activations, triggers and resolving spells can use Go programs
    Oracle paragraph or keyword line, identified by the Engine
    (`mtg/rules/ability_paragraphs.go`); `TestRegisteredUntextedAbilitiesHaveOwnParagraphs`
    fails when that is ambiguous, so then record the ability's exact `Text`.
+   Likewise a fixed-timing delayed trigger carries its own sentence of the
+   creating text; `TestRegisteredFixedDelayedTriggersHaveOwnText` fails when
+   that sentence cannot be singled out, so then record `DelayedTriggerDef.Text`.
 4. Execute named-card scenarios through the real Engine. Exercise choices,
    target changes/all-illegal targets, source departure, relevant replacements
    and timing, not just CardDef shapes or a smoke game's winner.

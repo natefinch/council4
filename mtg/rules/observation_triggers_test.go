@@ -503,9 +503,13 @@ func TestObservationPrintedTriggerDelayedTriggerFallsBackToOracleText(t *testing
 	}
 }
 
-// A delayed trigger created by a face-down permanent's ability never captures
-// text from the hidden card (CR 708.2, 708.5), for any observer.
-func TestObservationFaceDownSourceDelayedTriggerCapturesNoHiddenText(t *testing.T) {
+// An ability on the stack has its own text, independent of its source (CR
+// 113.7a, 405.4). A face-down permanent has no printed abilities (CR 708.2), so
+// a printed ability whose source is face down was announced while the source
+// was face up, and the delayed trigger it creates keeps that public text. It
+// never captures the hidden card's other text, and the source's name stays
+// hidden from other players (CR 708.5).
+func TestObservationFaceDownSourceDelayedTriggerCapturesOnlyAbilityText(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	def := triggeredCreature(&game.TriggerPattern{Event: game.EventBeginningOfStep, Step: game.StepUpkeep}, []game.Instruction{{
@@ -541,13 +545,14 @@ func TestObservationFaceDownSourceDelayedTriggerCapturesNoHiddenText(t *testing.
 	if len(g.DelayedTriggers) != 1 {
 		t.Fatalf("delayed triggers = %d, want 1", len(g.DelayedTriggers))
 	}
-	if text := g.DelayedTriggers[0].Ability.Text; text != "" {
-		t.Fatalf("delayed trigger captured hidden text %q", text)
+	const abilityText = "Secret upkeep text."
+	if text := g.DelayedTriggers[0].Ability.Text; text != abilityText {
+		t.Fatalf("delayed trigger text = %q, want the ability's own %q", text, abilityText)
 	}
-	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player3} {
 		pending := observe(g, viewer).DelayedTriggers()
-		if len(pending) != 1 || pending[0].Text != "" {
-			t.Fatalf("Player%d pending = %+v, want no text", viewer, pending)
+		if len(pending) != 1 || pending[0].Text != abilityText || pending[0].SourceName != "" {
+			t.Fatalf("Player%d pending = %+v, want text %q and no source name", viewer, pending, abilityText)
 		}
 	}
 }
