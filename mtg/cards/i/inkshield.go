@@ -43,6 +43,7 @@ func newInkshield() *game.CardDef {
 						Primitive: game.CreateDelayedTrigger{
 							Trigger: game.DelayedTriggerDef{
 								Timing: game.DelayedAtBeginningOfNextEndStep,
+								Text:   "For each 1 damage prevented this way, create a 2/1 white and black Inkling creature token with flying.",
 								Content: game.Mode{
 									Sequence: []game.Instruction{
 										{

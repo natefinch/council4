@@ -84,6 +84,7 @@ func newCalamityGallopingInferno() *game.CardDef {
 																Primitive: game.CreateDelayedTrigger{
 																	Trigger: game.DelayedTriggerDef{
 																		Timing: game.DelayedAtBeginningOfNextEndStep,
+																		Text:   "Sacrifice that token at the beginning of the next end step.",
 																		Content: game.AbilityContent{
 																			Modes: []game.Mode{
 																				game.Mode{

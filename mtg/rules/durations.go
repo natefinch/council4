@@ -216,51 +216,71 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 // (delayedTriggerOwnText), and a fixed-timing one carries only the sentence that
 // states its timing, without the creator's cost, trigger condition or
 // conditions, through the later sentences that depend on it ("Exile that token
-// at the beginning of the next end step.", delayedTriggerTimingText). No text is captured from a face-down spell or from
-// a face-down source's hidden card (CR 708.2, 708.5), nor for a resolution
-// context that is not a stack object, such as a replacement program, whose
-// creating text is unknown.
+// at the beginning of the next end step.", delayedTriggerTimingText). No text,
+// not even a definition's recorded wording, is captured from a face-down spell
+// (CR 708.2, 708.4), since the delayed wording is part of that hidden text. An
+// ability on the stack has its own text, independent of its source (CR 113.7a,
+// 405.4), and that text was public when it was put on the stack, so it keeps
+// its delayed wording even if its source is turned face down before it
+// resolves; only the source's identity stays hidden (CR 708.5). No text is
+// captured from the creator for a resolution context that is not a stack
+// object, such as a replacement program, whose creating text is unknown.
 func delayedTriggerText(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) string {
-	if def.Text != "" {
-		return def.Text
+	text, public := creatingObjectText(g, obj)
+	if !public {
+		return ""
 	}
-	text := creatingObjectText(g, obj)
-	if def.EventPattern.Exists {
-		if own, ok := delayedTriggerOwnText(text); ok {
-			return own
-		}
-		return text
-	}
-	if own, ok := delayedTriggerTimingText(text, def.Timing, obj.Kind == game.StackSpell); ok {
+	if own, ok := delayedTriggerOwnWording(text, def, obj.Kind == game.StackSpell); ok {
 		return own
 	}
 	return text
 }
 
+// delayedTriggerOwnWording returns a delayed triggered ability's own text: the
+// definition's recorded Text, or else its wording singled out of the creating
+// spell's or ability's text (delayedTriggerOwnText, delayedTriggerTimingText).
+// It reports false when the definition records no Text and the wording cannot
+// be singled out, such as when a later sentence may belong to either ability
+// ("Exile it at the beginning of the next end step. If it would leave the
+// battlefield, exile it instead ..."), two delayed abilities state the same
+// timing, or the creator's instruction is coordinated with the delayed one
+// ("you gain 2 life, and you return this card ... at the beginning of the next
+// end step").
+func delayedTriggerOwnWording(text string, def *game.DelayedTriggerDef, spell bool) (string, bool) {
+	if def.Text != "" {
+		return def.Text, true
+	}
+	if def.EventPattern.Exists {
+		return delayedTriggerOwnText(text)
+	}
+	return delayedTriggerTimingText(text, def.Timing, spell)
+}
+
 // creatingObjectText returns the public text of the spell or ability whose
-// resolution creates a delayed trigger.
-func creatingObjectText(g *game.Game, obj *game.StackObject) string {
+// resolution creates a delayed trigger. It reports false when that text is
+// hidden, which is only a face-down spell's (CR 708.2, 708.4). A face-down
+// permanent has no printed abilities (CR 708.2), so a printed ability on the
+// stack was announced while its source was face up, and its text stays public
+// after the source is turned face down (CR 113.7a, 405.4).
+func creatingObjectText(g *game.Game, obj *game.StackObject) (string, bool) {
 	if obj.ID == 0 {
-		return ""
+		return "", true
 	}
 	if obj.Kind == game.StackSpell {
 		if obj.FaceDown {
-			return ""
+			return "", false
 		}
 		spellDef, ok := stackObjectSpellDef(g, obj)
 		if !ok {
-			return ""
+			return "", true
 		}
-		return oracleRulesText(spellDef.OracleText)
+		return oracleRulesText(spellDef.OracleText), true
 	}
 	inline := inlineAbilityBody(obj)
 	if text := game.BodyText(inline); text != "" {
-		return text
+		return text, true
 	}
-	if permanent, ok := permanentByObjectID(g, obj.SourceID); ok && permanent.FaceDown {
-		return ""
-	}
-	return printedAbilityText(g, obj, inline)
+	return printedAbilityText(g, obj, inline), true
 }
 
 // capturedDelayedEventPlayer freezes the player named by an event-based delayed

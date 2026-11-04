@@ -103,6 +103,7 @@ func newWhipOfErebos() *game.CardDef {
 										Primitive: game.CreateDelayedTrigger{
 											Trigger: game.DelayedTriggerDef{
 												Timing: game.DelayedAtBeginningOfNextEndStep,
+												Text:   "Exile it at the beginning of the next end step.",
 												Content: game.AbilityContent{
 													Modes: []game.Mode{
 														game.Mode{

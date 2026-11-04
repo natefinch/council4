@@ -52,6 +52,7 @@ func newArcaneDenial() *game.CardDef {
 						Primitive: game.CreateDelayedTrigger{
 							Trigger: game.DelayedTriggerDef{
 								Timing: game.DelayedAtBeginningOfNextUpkeep,
+								Text:   "Its controller may draw up to two cards at the beginning of the next turn's upkeep.",
 								Content: game.AbilityContent{
 									Modes: []game.Mode{
 										game.Mode{
@@ -89,6 +90,7 @@ func newArcaneDenial() *game.CardDef {
 						Primitive: game.CreateDelayedTrigger{
 							Trigger: game.DelayedTriggerDef{
 								Timing: game.DelayedAtBeginningOfNextUpkeep,
+								Text:   "You draw a card at the beginning of the next turn's upkeep.",
 								Content: game.AbilityContent{
 									Modes: []game.Mode{
 										game.Mode{

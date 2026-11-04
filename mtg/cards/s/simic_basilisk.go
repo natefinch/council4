@@ -60,6 +60,7 @@ func newSimicBasilisk() *game.CardDef {
 											Layer: game.LayerAbility,
 											AddAbilities: []game.Ability{
 												new(game.TriggeredAbility{
+													Text: "Whenever this creature deals combat damage to a creature, destroy that creature at end of combat.",
 													Trigger: game.TriggerCondition{
 														Type: game.TriggerWhenever,
 														Pattern: game.TriggerPattern{
