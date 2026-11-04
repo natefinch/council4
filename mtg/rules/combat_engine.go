@@ -666,10 +666,7 @@ func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, decl
 		if declaration.Target.IsPlayerAttack() {
 			g.Combat.DeclaredPlayerAttacks[playerID][declaration.Target.Player] = true
 		}
-		recordCombatantController(g, declaration.Attacker)
-		if declaration.Target.BattleID != 0 {
-			recordCombatantController(g, declaration.Target.BattleID)
-		}
+		recordAttackCombatants(g, declaration)
 	}
 	simultaneousID := id.ID(0)
 	if len(declare.Attackers) > 1 {
