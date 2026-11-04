@@ -194,12 +194,46 @@ type SpellPaymentResult struct {
 // mana, or with 2 life when no mana can pay it unless manaOnly is set. With no
 // preference recorded, or the list exhausted, it prefers mana without manaOnly.
 func (p *Preferences) NextPhyrexianChoice() (payLife, manaOnly bool) {
-	if p == nil || p.phyrexianIndex >= len(p.PhyrexianLifeChoices) {
+	payLife, manaOnly = p.phyrexianChoiceAt(0)
+	if p != nil {
+		p.phyrexianIndex++
+	}
+	return payLife, manaOnly
+}
+
+// phyrexianChoiceAt returns the Phyrexian payment preference offset symbols
+// after the next one, without advancing the cursor.
+func (p *Preferences) phyrexianChoiceAt(offset int) (payLife, manaOnly bool) {
+	if p == nil {
 		return false, false
 	}
-	index := p.phyrexianIndex
-	p.phyrexianIndex++
+	index := p.phyrexianIndex + offset
+	if index >= len(p.PhyrexianLifeChoices) {
+		return false, false
+	}
 	return p.PhyrexianLifeChoices[index], index < len(p.PhyrexianManaOnly) && p.PhyrexianManaOnly[index]
+}
+
+// withPhyrexianChoices returns a copy of p whose Phyrexian payment preferences
+// are only those at the given offsets after the next one, in order, for a cost
+// from which the other Phyrexian symbols were removed.
+func (p *Preferences) withPhyrexianChoices(offsets []int) *Preferences {
+	clone := clonePreferences(p)
+	if clone == nil {
+		return nil
+	}
+	clone.PhyrexianLifeChoices = nil
+	clone.PhyrexianManaOnly = nil
+	clone.phyrexianIndex = 0
+	for _, offset := range offsets {
+		index := p.phyrexianIndex + offset
+		if index >= len(p.PhyrexianLifeChoices) {
+			break
+		}
+		clone.PhyrexianLifeChoices = append(clone.PhyrexianLifeChoices, p.PhyrexianLifeChoices[index])
+		clone.PhyrexianManaOnly = append(clone.PhyrexianManaOnly, index < len(p.PhyrexianManaOnly) && p.PhyrexianManaOnly[index])
+	}
+	return clone
 }
 
 func clonePreferences(prefs *Preferences) *Preferences {

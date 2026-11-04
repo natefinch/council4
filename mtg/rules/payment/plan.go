@@ -506,49 +506,16 @@ func retrySpellCostPlanAvoidingManaTapConflict(s State, playerID game.PlayerID, 
 	return additional, manaPlan, true
 }
 
+// buildSpellManaPlanForOption pays option's mana cost, with mana alone when it
+// can and otherwise with the spell's nonmana payment mechanics. Each attempt
+// pays with its own copy of prefs, so every retry honors the same announced
+// Phyrexian payments (CR 601.2b).
 func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, restrictions manaSourceRestrictions, prefs *Preferences) (paymentPlan, bool) {
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, playerID, option.manaCost, xValue, restrictions, option.spendContext(), prefs)
+	manaPlan, ok := buildPaymentPlanWithPreferences(s, playerID, option.manaCost, xValue, restrictions, option.spendContext(), clonePreferences(prefs))
 	if ok {
 		return manaPlan, true
 	}
-	convokeTaps, convokedCost, convokeOK := convokePayment(s, playerID, option.manaCost, xValue, restrictions.excluded)
-	if spellHasCostKeyword(s, playerID, option.card, cardID, sourceZone, game.Convoke) && convokeOK {
-		convokeRestrictions := cloneManaSourceRestrictions(restrictions)
-		for _, permanent := range convokeTaps {
-			convokeRestrictions.excluded[permanent.ObjectID] = true
-		}
-		manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, convokedCost, xValue, convokeRestrictions, option.spendContext(), prefs)
-		if ok {
-			manaPlan.convokeTaps = convokeTaps
-			return manaPlan, true
-		}
-	}
-	if spellHasCostKeyword(s, playerID, option.card, cardID, sourceZone, game.Improvise) {
-		improviseTaps, improvisedCost, improviseOK := improvisePayment(s, playerID, option.manaCost, xValue, restrictions.excluded)
-		if improviseOK {
-			improviseRestrictions := cloneManaSourceRestrictions(restrictions)
-			for _, permanent := range improviseTaps {
-				improviseRestrictions.excluded[permanent.ObjectID] = true
-			}
-			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, improvisedCost, xValue, improviseRestrictions, option.spendContext(), prefs)
-			if ok {
-				manaPlan.improviseTaps = improviseTaps
-				return manaPlan, true
-			}
-		}
-	}
-	if spellHasCostKeyword(s, playerID, option.card, cardID, sourceZone, game.Delve) {
-		delveExiles, generic, delveOK := delveCandidates(s, playerID, option.manaCost, xValue, cardID, sourceZone, restrictions.reservedGraveyardCardIDs)
-		for exiledCount := 1; delveOK && exiledCount <= min(generic, len(delveExiles)); exiledCount++ {
-			delvedCost := costWithGenericRequirement(option.manaCost, generic-exiledCount)
-			manaPlan, ok = buildPaymentPlanWithPreferences(s, playerID, delvedCost, 0, restrictions, option.spendContext(), prefs)
-			if ok {
-				manaPlan.delveExiles = append([]id.ID(nil), delveExiles[:exiledCount]...)
-				return manaPlan, true
-			}
-		}
-	}
-	return paymentPlan{}, false
+	return buildNonManaSpellPlan(s, playerID, cardID, sourceZone, option, xValue, restrictions, prefs)
 }
 
 // spellHasCostKeyword reports whether the spell being cast carries keyword,
@@ -838,33 +805,6 @@ func replaceManaSources(dst, src map[mana.Color][]manaSource) {
 	for color, colorSources := range src {
 		dst[color] = append([]manaSource(nil), colorSources...)
 	}
-}
-
-func costRequirements(manaCost *cost.Mana, xValue int) (colored map[mana.Color]int, generic int, ok bool) {
-	colored = make(map[mana.Color]int)
-	if xValue < 0 {
-		return nil, 0, false
-	}
-	if manaCost == nil {
-		return colored, 0, true
-	}
-
-	generic = 0
-	for _, symbol := range *manaCost {
-		switch symbol.Kind {
-		case cost.ColoredSymbol:
-			colored[symbol.Color]++
-		case cost.ColorlessSymbol:
-			colored[mana.C]++
-		case cost.GenericSymbol:
-			generic += symbol.Generic
-		case cost.VariableSymbol:
-			generic += xValue
-		default:
-			return nil, 0, false
-		}
-	}
-	return colored, generic, true
 }
 
 // spendContext identifies what a mana payment is for, so a restricted
