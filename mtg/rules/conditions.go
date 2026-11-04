@@ -1478,7 +1478,9 @@ func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, 
 	}
 	name := resolvedObjectName(g, &resolved)
 	if name == "" {
-		return false
+		// An object with no name, such as a face-down creature, shares no name
+		// with anything (CR 201.2a).
+		return true
 	}
 	for _, permanent := range g.Battlefield {
 		if !activeBattlefieldPermanent(permanent) ||
@@ -1487,7 +1489,7 @@ func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, 
 			!permanentHasType(g, permanent, types.Creature) {
 			continue
 		}
-		if def, ok := permanentCardDef(g, permanent); ok && def.Name == name {
+		if other, ok := permanentComparisonName(g, permanent); ok && other == name {
 			return false
 		}
 	}
@@ -1509,9 +1511,6 @@ func eventPermanentNameUniqueAmongControlledAndGraveyardCreatures(g *game.Game, 
 
 func resolvedObjectName(g *game.Game, resolved *resolvedObjectReference) string {
 	if resolved.permanent != nil {
-		if resolved.permanent.Token {
-			return permanentTokenName(resolved.permanent)
-		}
 		return permanentEffectiveName(g, resolved.permanent)
 	}
 	return resolved.snapshot.Name

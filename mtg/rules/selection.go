@@ -1077,26 +1077,27 @@ func (s *selectionSubject) name() (string, bool) {
 // nameUniqueAmongControlled reports whether the subject permanent's name differs
 // from every other permanent its controller controls, the runtime side of
 // Selection.NameUniqueAmongControlled ("... that doesn't have the same name as
-// another permanent you control"). A non-permanent subject, an unavailable name,
-// or any other permanent sharing the name fails it closed.
+// another permanent you control"). Both sides compare current effective names,
+// so copies and name-changing effects count and printed names beneath them
+// don't. A nameless subject or other permanent shares no name (CR 201.2a). A
+// non-permanent subject fails it closed.
 func (s *selectionSubject) nameUniqueAmongControlled() bool {
 	if s.kind != subjectPermanent || s.permanent == nil {
 		return false
 	}
-	name, ok := s.name()
+	name, ok := permanentComparisonName(s.g, s.permanent)
 	if !ok {
-		return false
+		return true
 	}
 	controller := effectiveController(s.g, s.permanent)
 	for _, other := range s.g.Battlefield {
-		if other == nil || other.ObjectID == s.permanent.ObjectID || other.FaceDown {
+		if !activeBattlefieldPermanent(other) || other.ObjectID == s.permanent.ObjectID {
 			continue
 		}
 		if effectiveController(s.g, other) != controller {
 			continue
 		}
-		def, ok := permanentCardDef(s.g, other)
-		if ok && def.Name == name {
+		if otherName, ok := permanentComparisonName(s.g, other); ok && otherName == name {
 			return false
 		}
 	}

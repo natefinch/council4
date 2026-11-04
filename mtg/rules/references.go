@@ -1039,7 +1039,7 @@ func (r referenceResolver) sameNameGroupMembers(ref game.GroupReference) []id.ID
 	if !ok || resolved.permanent == nil {
 		return []id.ID{}
 	}
-	anchorName, ok := permanentNameForSameNameGroup(r.g, resolved.permanent)
+	anchorName, ok := permanentComparisonName(r.g, resolved.permanent)
 	if !ok {
 		return []id.ID{}
 	}
@@ -1050,7 +1050,7 @@ func (r referenceResolver) sameNameGroupMembers(ref game.GroupReference) []id.ID
 	}
 	members := make([]id.ID, 0, len(r.g.Battlefield))
 	for _, permanent := range r.g.Battlefield {
-		name, ok := permanentNameForSameNameGroup(r.g, permanent)
+		name, ok := permanentComparisonName(r.g, permanent)
 		if !ok || name != anchorName {
 			continue
 		}
@@ -1062,18 +1062,19 @@ func (r referenceResolver) sameNameGroupMembers(ref game.GroupReference) []id.ID
 	return members
 }
 
-// permanentNameForSameNameGroup resolves a permanent's effective name for
-// same-name group matching, reporting false when no name is available (a
-// face-down permanent or a permanent without a card def) so an unnamed object
-// neither anchors nor joins the group.
-func permanentNameForSameNameGroup(g *game.Game, permanent *game.Permanent) (string, bool) {
-	if permanent == nil || permanent.FaceDown {
+// permanentComparisonName resolves the name a "same name" comparison reads for a
+// battlefield permanent: its current effective name after copy effects,
+// face-down status and name-changing effects (CR 613.1a, 707.2, 708.2), never
+// the printed name of the card or token definition beneath it. It reports false
+// for a permanent with no name (a face-down permanent or one without a
+// definition), because an object with no name doesn't have the same name as any
+// other object (CR 201.2a).
+func permanentComparisonName(g *game.Game, permanent *game.Permanent) (string, bool) {
+	if permanent == nil {
 		return "", false
 	}
-	if _, ok := permanentCardDef(g, permanent); !ok {
-		return "", false
-	}
-	return permanentEffectiveName(g, permanent), true
+	name := permanentEffectiveName(g, permanent)
+	return name, name != ""
 }
 
 func (r referenceResolver) objectControlledGroupMembers(ref game.GroupReference) []id.ID {
