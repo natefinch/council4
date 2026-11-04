@@ -370,6 +370,13 @@ func TestFixedDelayedTriggerOwnTextOmitsActivationRestriction(t *testing.T) {
 
 const whipDelayedText = "Exile it at the beginning of the next end step."
 
+// moiraTriggerText is Moira and Teshar's whole historic-cast trigger paragraph,
+// without the card's other Oracle text ("Flying").
+const moiraTriggerText = "Whenever you cast a historic spell, return target nonland permanent card from your graveyard to the battlefield. It gains haste. Exile it at the beginning of the next end step. If it would leave the battlefield, exile it instead of putting it anywhere else. (Artifacts, legendaries, and Sagas are historic.)"
+
+// kikiJikiAbilityText is Kiki-Jiki's printed activated ability.
+const kikiJikiAbilityText = "{T}: Create a token that's a copy of target nonlegendary creature you control, except it has haste. Sacrifice it at the beginning of the next end step."
+
 // Whip of Erebos's replacement sentence after its delayed exile is the
 // creating ability's, not the delayed trigger's, which the definition records:
 // the delayed exile carries only its own sentence, pending and on the stack,
@@ -522,9 +529,10 @@ func TestFixedDelayedTriggerOwnTextFromGrantedTriggeredAbility(t *testing.T) {
 // An ability on the stack has its own text, independent of its source (CR
 // 113.7a, 405.4), and that text was public when it was put on the stack, so
 // turning the source face down before the ability resolves hides only the
-// source's identity (CR 708.2, 708.5): Moira and Teshar's delayed exile keeps
-// its recorded sentence, pending and on the stack, with no source name, and
-// still exiles the returned permanent.
+// source's identity (CR 708.2, 708.5): Moira and Teshar's historic-cast trigger
+// keeps its own paragraph, never "Flying", for every player with no source name
+// for opponents; its delayed exile keeps its recorded sentence, pending and on
+// the stack, and still exiles the returned permanent.
 func TestFixedDelayedTriggerRecordedTextPublicAfterSourceTurnedFaceDown(t *testing.T) {
 	g, engine := grantedHasteGame()
 	moira := addCombatPermanent(g, game.Player1, registryCard(t, "Moira and Teshar"))
@@ -537,15 +545,21 @@ func TestFixedDelayedTriggerRecordedTextPublicAfterSourceTurnedFaceDown(t *testi
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
 		t.Fatal("Moira and Teshar's historic trigger did not trigger")
 	}
-	if stacked := observe(g, game.Player2).Stack(); len(stacked) != 2 || stacked[1].Text == "" {
-		t.Fatalf("Moira and Teshar's creating ability = %+v, want public text", stacked)
+	if stacked := observe(g, game.Player2).Stack(); len(stacked) != 2 || stacked[1].Text != moiraTriggerText {
+		t.Fatalf("Moira and Teshar's creating ability = %+v, want public text %q", stacked, moiraTriggerText)
 	}
 	applyCyberConversion(g, moira)
 	if !moira.FaceDown {
 		t.Fatal("Moira and Teshar was not turned face down")
 	}
-	if stacked := observe(g, game.Player2).Stack(); len(stacked) != 2 || stacked[1].Name != "" {
-		t.Fatalf("face-down source's creating ability = %+v, want no source name", stacked)
+	for _, viewer := range []game.PlayerID{game.Player2, game.Player3} {
+		stacked := observe(g, viewer).Stack()
+		if len(stacked) != 2 || stacked[1].Name != "" || stacked[1].Text != moiraTriggerText || stacked[1].SourceObjectID != moira.ObjectID {
+			t.Fatalf("Player%d face-down source's creating ability = %+v, want announced text %q and no source name", viewer, stacked, moiraTriggerText)
+		}
+	}
+	if own := observe(g, game.Player1).Stack(); len(own) != 2 || own[1].Name != "Moira and Teshar" || own[1].Text != moiraTriggerText {
+		t.Fatalf("controller's view of the creating ability = %+v, want Moira and Teshar/%q", own, moiraTriggerText)
 	}
 	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
 	if g.Players[game.Player1].Graveyard.Contains(bear) {
@@ -564,7 +578,8 @@ func TestFixedDelayedTriggerRecordedTextPublicAfterSourceTurnedFaceDown(t *testi
 
 // The same holds for wording singled out of the creating ability's printed
 // text rather than recorded: Kiki-Jiki is turned face down after its ability is
-// activated, and the delayed sacrifice still carries "Sacrifice it at the
+// activated, the ability keeps its printed text on the stack, and the delayed
+// sacrifice still carries "Sacrifice it at the
 // beginning of the next end step." for every player, pending and on the stack,
 // without Kiki-Jiki's name, and sacrifices the token.
 func TestFixedDelayedTriggerOwnTextPublicAfterSourceTurnedFaceDown(t *testing.T) {
@@ -579,6 +594,7 @@ func TestFixedDelayedTriggerOwnTextPublicAfterSourceTurnedFaceDown(t *testing.T)
 	if !kiki.FaceDown {
 		t.Fatal("Kiki-Jiki was not turned face down")
 	}
+	requireStackTexts(t, g, game.Player2, "", kikiJikiAbilityText)
 	resolveStackWithTriggers(engine, g, [game.NumPlayers]PlayerAgent{})
 	if tokens := playerTokensNamed(g, game.Player1, "Kiki Bear"); len(tokens) != 1 {
 		t.Fatalf("Kiki-Jiki's ability created %d tokens, want 1", len(tokens))
