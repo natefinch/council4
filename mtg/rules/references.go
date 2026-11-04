@@ -205,12 +205,20 @@ func (r referenceResolver) object(ref game.ObjectReference) (resolvedObjectRefer
 			return resolvedObjectReference{}, false
 		}
 		// Mutating over the source keeps the same object with the source card
-		// as a component below the new top card (CR 702.140c, CR 730.2c).
+		// as a component below the new top card (CR 702.140c, CR 730.2c). A
+		// phased-out permanent is treated as though it does not exist, so the
+		// source card then represents no battlefield permanent (CR 702.26b,d).
 		if permanent, ok := permanentByObjectID(r.g, r.obj.SourceID); ok && permanentHasComponentCard(permanent, r.obj.SourceCardID) {
+			if permanent.PhasedOut {
+				return resolvedObjectReference{}, false
+			}
 			return resolvedObjectReference{permanent: permanent}, true
 		}
 		for _, permanent := range r.g.Battlefield {
 			if permanent.CardInstanceID == r.obj.SourceCardID {
+				if permanent.PhasedOut {
+					return resolvedObjectReference{}, false
+				}
 				return resolvedObjectReference{permanent: permanent}, true
 			}
 		}

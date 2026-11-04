@@ -155,7 +155,8 @@ func SourcePermanentReference() ObjectReference {
 // by the resolving stack object's source card. It may find a later object for
 // that card, so delayed-trigger content that acts on its own source instead
 // captures SourcePermanentReference through DelayedTriggerDef.CapturedObject
-// and references CapturedObjectReference (CR 603.7c).
+// and references CapturedObjectReference (CR 603.7c). It finds nothing while
+// that permanent is phased out (CR 702.26b, 702.26d).
 func SourceCardPermanentReference() ObjectReference {
 	return ObjectReference{kind: ObjectReferenceSourceCard}
 }
