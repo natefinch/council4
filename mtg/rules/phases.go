@@ -149,7 +149,7 @@ func (e *Engine) runExtraPhases(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		g.Turn.ExtraPhases = g.Turn.ExtraPhases[1:]
 		switch phase {
 		case game.PhaseBeginning:
-			e.runBeginningPhase(g, agents, log)
+			e.runAdditionalBeginningPhase(g, agents, log)
 		case game.PhaseCombat:
 			e.runCombatPhase(g, agents, log)
 		case game.PhasePrecombatMain, game.PhasePostcombatMain:
@@ -166,14 +166,31 @@ func (e *Engine) runExtraPhases(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	}
 }
 
+// runBeginningPhase runs the beginning phase that starts the active player's
+// turn.
 func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	e.beginningPhase(g, agents, log, true)
+}
+
+// runAdditionalBeginningPhase runs a beginning phase added to the current turn
+// (Sphinx of the Second Sun, Shadow of the Second Sun). Its untap, upkeep and
+// draw steps happen as usual, but no turn begins: "until your next turn"
+// durations and goad do not end, and a permanent that has not been controlled
+// continuously since the turn began stays summoning sick (CR 302.6, 500.8).
+func (e *Engine) runAdditionalBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+	e.beginningPhase(g, agents, log, false)
+}
+
+func (e *Engine) beginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, turnStart bool) {
 	g.Turn.Phase = game.PhaseBeginning
 	log.addPhase(game.PhaseBeginning)
 
 	g.Turn.Step = game.StepUntap
 	log.addStep(game.StepUntap)
-	expireTurnStartDurations(g)
-	expireGoadForActivePlayer(g)
+	if turnStart {
+		expireTurnStartDurations(g)
+		expireGoadForActivePlayer(g)
+	}
 	for _, permanent := range g.Battlefield {
 		if !permanent.PhasedOut {
 			continue
@@ -200,23 +217,25 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 	// Control changes since the last observation, including effects that ended
 	// as this turn began, are recorded before the active player's permanents
 	// count as continuously controlled since its start (CR 302.6, 611.2b).
+	// Only the turn's own beginning phase starts that continuous control; an
+	// additional beginning phase leaves summoning sickness unchanged.
 	observeControlForSummoningSickness(g)
 	for _, permanent := range g.Battlefield {
 		if !activeBattlefieldPermanent(permanent) ||
 			effectiveController(g, permanent) != g.Turn.ActivePlayer {
 			continue
 		}
+		if turnStart {
+			permanent.SummoningSick = false
+		}
 		if permanent.Exerted {
 			permanent.Exerted = false
-			permanent.SummoningSick = false
 			continue
 		}
 		if ruleEffectPreventsUntap(g, permanent) {
-			permanent.SummoningSick = false
 			continue
 		}
 		setPermanentTapped(g, permanent, false)
-		permanent.SummoningSick = false
 	}
 	untapDuringOtherPlayersUntapStep(g)
 	completeTurnBoundary(g)
