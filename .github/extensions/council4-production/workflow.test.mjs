@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { closeLandedIssue, deferredRemainder, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, prepareResume, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
-import { assessChecks, pullRequestAPI } from "./pull-request.mjs";
+import { assessChecks, classifyInfrastructure, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
 import { rankTriage, chunk } from "./triage.mjs";
 import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
@@ -970,7 +970,11 @@ function landingServices(f) {
       },
       checks: async (_cwd, head) => successfulChecks(head),
       watch: async () => {},
-      failedLogs: async (_cwd, checks) => ({ checks, logs: ["Actual failing check log"] }),
+      failedLogs: async (_cwd, checks) => ({ checks, logs: ["Actual failing check log"],
+        failures: checks.failed.map(check => ({ name: check.name, id: check.id, run: "9", infrastructure: null })),
+        infrastructure: null }),
+      settle: async () => true,
+      rerunFailed: async () => true,
       merge: async (_cwd, _number, expectedHead) => {
         assert.equal(expectedHead, await git(f.work.path, ["rev-parse", "HEAD"]));
         calls.merged++;
@@ -1179,6 +1183,138 @@ test("CI fixes change the PR head, rerun validation and require fresh successful
   assert.notEqual(result.head, initialHead);
   assert.equal(services.calls.validation, 2);
   assert.equal(services.calls.created, 1);
+});
+
+test("Failed job evidence is per job, survives missing logs and classifies infrastructure", async () => {
+  const commands = [];
+  const api = pullRequestAPI(async (_cwd, _executable, args) => {
+    commands.push(args.join(" "));
+    if (args[1].endsWith("/jobs/11/logs")) throw new Error("HTTP 404: log not found");
+    if (args[1].endsWith("/jobs/12/logs")) return "x".repeat(40000) + "--- FAIL: TestCard";
+    if (args[1].endsWith("/check-runs/11/annotations")) {
+      return JSON.stringify([{ message: "The hosted runner lost communication with the server." }]);
+    }
+    if (args[1].endsWith("/check-runs/12/annotations")) return "[]";
+    assert.fail(`unexpected ${args.join(" ")}`);
+  });
+  const actions = (id, name) => ({ id, name, app: { slug: "github-actions" },
+    html_url: `https://github.com/natefinch/council4/actions/runs/7/job/${id}` });
+  const runner = await api.failedLogs("/repo", { failed: [actions(11, "Race Tests")] });
+  assert.equal(runner.infrastructure, "runner");
+  assert.match(runner.logs[0], /log unavailable: HTTP 404/);
+  assert.deepEqual(runner.failures, [{ name: "Race Tests", run: "7", id: 11, infrastructure: "runner",
+    annotations: ["The hosted runner lost communication with the server."] }]);
+  const mixed = await api.failedLogs("/repo", { failed: [actions(11, "Race Tests"), actions(12, "Tests")] });
+  assert.equal(mixed.infrastructure, null);
+  assert.ok(mixed.logs[1].endsWith("--- FAIL: TestCard"));
+  assert.ok(mixed.logs[1].length < 33000);
+  assert.ok(commands.every(command => !command.startsWith("run view")));
+  assert.equal(classifyInfrastructure("recent account payments have failed"), "billing");
+  assert.equal(classifyInfrastructure("write /tmp/x: No space left on device"), "runner");
+  assert.equal(classifyInfrastructure("--- FAIL: TestCard"), null);
+});
+
+test("Rerun waits for replacement check runs before reporting registration", async () => {
+  const commands = [];
+  let reads = 0;
+  const api = pullRequestAPI(async (_cwd, _executable, args) => { commands.push(args.join(" ")); return ""; },
+    undefined, async () => {});
+  api.checks = async () => ({ head: "h", statuses: [], runs: reads++ < 2 ?
+    [{ id: 11, name: "Race Tests", status: "completed", conclusion: "failure" }] :
+    [{ id: 11, name: "Race Tests", status: "completed", conclusion: "failure" },
+      { id: 13, name: "Race Tests", status: "queued", conclusion: null }] });
+  assert.equal(await api.rerunFailed("/repo", "h", [{ name: "Race Tests", id: 11, run: "7" }]), true);
+  assert.equal(reads, 3);
+  assert.deepEqual(commands, ["run rerun 7 --repo natefinch/council4 --failed"]);
+});
+
+function infrastructureLanding(f, kinds) {
+  const services = landingServices(f);
+  let attempt = 0;
+  const reruns = [];
+  services.api.checks = async (_cwd, head) => {
+    const checks = successfulChecks(head);
+    const kind = kinds[attempt];
+    if (kind && kind !== "pending_real") checks.runs[1].conclusion = "failure";
+    if (kind === "pending_real") checks.runs[0].conclusion = "failure";
+    checks.runs[1].id += attempt * 10;
+    return checks;
+  };
+  services.api.failedLogs = async (_cwd, checks) => {
+    const infrastructure = kinds[attempt] === "pending_real" ? null : kinds[attempt];
+    return { checks, logs: ["evidence"], infrastructure,
+      failures: checks.failed.map(check => ({ name: check.name, id: check.id, run: "7", infrastructure })) };
+  };
+  services.api.rerunFailed = async (_cwd, _head, failures) => {
+    reruns.push(failures.map(failure => failure.id));
+    attempt++;
+    return true;
+  };
+  services.fixCI = async () => assert.fail("Infrastructure failures must not invoke the CI fixer");
+  return { services, reruns };
+}
+
+test("Infrastructure CI failures rerun failed jobs without the CI fixer, within a bound", async t => {
+  const f = await repositoryFixture(t);
+  const { services, reruns } = infrastructureLanding(f, ["runner"]);
+  let settled = 0;
+  services.api.settle = async () => { settled++; return true; };
+  const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(result.published, true);
+  assert.equal(settled, 1);
+  assert.deepEqual(reruns, [[2]]);
+  assert.equal(result.ciFixes, 0);
+
+  const g = await repositoryFixture(t);
+  const exhausted = infrastructureLanding(g, ["runner", "runner", "runner"]);
+  const failed = await land(g.repo, g.work, { title: "card" }, g.expected, "session", undefined, exhausted.services);
+  assert.equal(failed.status, "ci_failed");
+  assert.match(failed.reason, /infrastructure/);
+  assert.equal(exhausted.reruns.length, 2);
+  assert.equal(exhausted.services.calls.merged, 0);
+});
+
+test("Billing failures pause the landing and resuming reruns the blocked jobs", async t => {
+  const f = await repositoryFixture(t);
+  const { services, reruns } = infrastructureLanding(f, ["billing"]);
+  const blocked = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(blocked.status, "ci_blocked");
+  assert.equal(reruns.length, 0);
+  const resumed = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(resumed.published, true);
+  assert.deepEqual(reruns, [[2]]);
+});
+
+test("Infrastructure failures wait for sibling jobs and defer to a real sibling failure", async t => {
+  const f = await repositoryFixture(t);
+  const services = landingServices(f);
+  let settled = false;
+  let initialHead;
+  services.api.checks = async (_cwd, head) => {
+    initialHead ??= head;
+    const checks = successfulChecks(head);
+    if (head !== initialHead) return checks;
+    checks.runs[1].conclusion = "failure";
+    if (settled) checks.runs[0].conclusion = "failure";
+    else Object.assign(checks.runs[0], { status: "in_progress", conclusion: null });
+    return checks;
+  };
+  services.api.failedLogs = async (_cwd, checks) => {
+    const real = checks.failed.some(check => check.name === "Tests");
+    return { checks, logs: ["evidence"], infrastructure: real ? null : "runner",
+      failures: checks.failed.map(check => ({ name: check.name, id: check.id, run: "7",
+        infrastructure: check.name === "Tests" ? null : "runner" })) };
+  };
+  services.api.settle = async () => { settled = true; return true; };
+  services.api.rerunFailed = async () => assert.fail("A real sibling failure must not be rerun");
+  let fixed = 0;
+  services.fixCI = async () => {
+    fixed++;
+    await writeFile(path.join(f.work.path, "card.txt"), "fixed real failure\n");
+  };
+  const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(result.published, true);
+  assert.equal(fixed, 1);
 });
 
 test("Failed or missing CI, external review and nonmergeable PRs never merge", async t => {

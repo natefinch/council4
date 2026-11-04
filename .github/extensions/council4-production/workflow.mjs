@@ -81,7 +81,7 @@ const reviewPhases = ["review", "re_review", "integration_review", "ci_review"];
 
 export function checkPolicy(policy) {
   if (!policy.version || !["risk", "always"].includes(policy.cardReview)) throw new Error("Invalid policy version/review policy");
-  for (const field of ["validationFixRounds", "ciFixRounds"]) {
+  for (const field of ["validationFixRounds", "ciFixRounds", "ciInfrastructureReruns"]) {
     if (!Number.isInteger(policy[field]) || policy[field] < 0) throw new Error(`Invalid ${field}`);
   }
   for (const type of ["card", "engine"]) {
@@ -878,6 +878,7 @@ Return approve with no findings only when no material unresolved defect remains,
                 validate: landingValidation,
                 reviewIntegration: facts => landingReview("integration_review", facts.round, facts),
                 ciFixRounds: policy.ciFixRounds,
+                ciInfrastructureReruns: policy.ciInfrastructureReruns,
                 watchCI: async (watch, facts) => {
                   ctx.phase("CI");
                   const stage = { label: `${task.taskType}/${task.id}/ci_wait/${facts.head}`, taskType: task.taskType,
@@ -907,7 +908,7 @@ Return complete only with actual repair/evidence, or blocked with the cause.`,
               state.currentUnit.pr = receipt.pr;
               await save();
               if (!receipt.published && receipt.status !== "ci_failed") {
-                ctx.log(`PR ${receipt.pr?.url ?? ""} waiting: ${receipt.status}. Resume this run after the external check/approval is available.`);
+                ctx.log(`PR ${receipt.pr?.url ?? ""} waiting: ${receipt.status}${receipt.reason ? ` (${receipt.reason})` : ""}. Resume this run after the external check/approval is available.`);
                 await ctx.pause(`pr-wait-v1-${index}-${waitAttempt++}`);
               }
             } while (!receipt.published && receipt.status !== "ci_failed");
