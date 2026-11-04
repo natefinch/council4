@@ -540,7 +540,11 @@ func resolveDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 					facts = append(facts, damageFact{event: counterAddedEvent(g, event.permanent, event.controller, counter.MinusOneMinusOne, previous, result.counters, simultaneousID)})
 				}
 			case result.counterKind.Exists:
-				event.permanent.Counters.Remove(result.counterKind.Val, result.counters)
+				kind := result.counterKind.Val
+				previous := event.permanent.Counters.Get(kind)
+				if removed := event.permanent.Counters.Remove(kind, result.counters); removed > 0 {
+					facts = append(facts, damageFact{event: counterRemovedEvent(event.permanent, event.controller, kind, previous, removed, simultaneousID)})
+				}
 			default:
 				event.permanent.MarkedDamage += event.amount
 			}

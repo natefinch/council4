@@ -277,6 +277,9 @@ func (e *Engine) resolveTriggeredAbility(g *game.Game, obj *game.StackObject, lo
 }
 
 func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	if obj.SiegeDefeat {
+		return e.resolveSiegeDefeat(g, obj, agents, log)
+	}
 	if obj.InlineTrigger != nil {
 		source, _ := stackObjectSourceDef(g, obj)
 		return e.resolveTriggeredAbilityBodyWithChoices(g, obj, source, obj.InlineTrigger, agents, log)

@@ -34,6 +34,7 @@ type pendingTriggeredAbility struct {
 	inline                       *game.TriggeredAbility
 	entryChoices                 map[game.ChoiceKey]game.ResolutionChoiceResult
 	sagaChapter                  bool
+	siegeDefeat                  bool
 	wardTargetID                 id.ID
 	capturedTargetControllerLKI  map[int]game.PlayerID
 	capturedTargetManaValueLKI   map[int]int
@@ -142,6 +143,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			XValue:                      triggeredAbilityXValue(trigger),
 			InlineTrigger:               trigger.inline,
 			SagaChapter:                 trigger.sagaChapter,
+			SiegeDefeat:                 trigger.siegeDefeat,
 			WardTargetStackObjectID:     trigger.wardTargetID,
 			Controller:                  trigger.controller,
 			ChosenModes:                 append([]int(nil), trigger.chosenModes...),
@@ -966,6 +968,7 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 			Controller: trigger.controller, SourceID: trigger.sourceID, SourceCardID: trigger.sourceCardID,
 			SourceTokenDef: trigger.sourceToken, SourceZone: trigger.sourceZone, SourceZoneVersion: trigger.sourceZoneVersion,
 			Face: trigger.face, AbilityIndex: trigger.abilityIndex, Ability: trigger.inline, SagaChapter: trigger.sagaChapter,
+			SiegeDefeat:     trigger.siegeDefeat,
 			OrdinaryTrigger: trigger.ordinaryTrigger,
 			AdditionalTriggers: liveChosenCreatureTypeAdditionalTriggerCount(g, &trigger) +
 				enteringPermanentAdditionalTriggerCount(g, &trigger) + controlledPermanentAdditionalTriggerCount(g, &trigger),
@@ -1001,6 +1004,7 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 			inline:                    captured.Ability,
 			entryChoices:              captured.EntryChoices,
 			sagaChapter:               captured.SagaChapter,
+			siegeDefeat:               captured.SiegeDefeat,
 			event:                     event,
 			hasEvent:                  true,
 			wardTargetID:              wardTargetID,
@@ -1154,6 +1158,20 @@ func detectTriggeredAbilitiesFromPermanent(g *game.Game, permanent *game.Permane
 		controller = captured
 	}
 	values := effectivePermanentValues(g, permanent)
+	if slices.Contains(values.subtypes, types.Siege) && siegeDefeatTriggeredByEvent(permanent, event) {
+		pending = append(pending, pendingTriggeredAbility{
+			controller:      controller,
+			sourceID:        permanent.ObjectID,
+			sourceCardID:    permanent.CardInstanceID,
+			sourceToken:     permanent.TokenDef,
+			face:            permanent.Face,
+			inline:          siegeDefeatAbility,
+			siegeDefeat:     true,
+			event:           event,
+			hasEvent:        true,
+			ordinaryTrigger: true,
+		})
+	}
 	for i, body := range values.abilities {
 		if chapter, ok := body.(*game.ChapterAbility); ok {
 			if event.Kind != game.EventCountersAdded ||

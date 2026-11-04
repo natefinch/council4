@@ -150,12 +150,20 @@ const (
 	// EventObjectLeftGame is not a zone change. A phased-in permanent leaving
 	// with its owner can still trigger leaves-the-battlefield abilities.
 	EventObjectLeftGame
+	// EventCountersRemoved marks counters being removed from a permanent.
+	// PermanentID and CardID identify the permanent, Controller is the player
+	// whose effect or damage source removed them, CounterKind is the kind
+	// removed, PreviousCounterAmount is how many of that kind it had
+	// immediately before, and Amount is how many were actually removed.
+	// Damage dealt to a planeswalker or battle removes loyalty or defense
+	// counters this way (CR 120.3c, 120.3h, 310.6).
+	EventCountersRemoved
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventObjectLeftGame) + 1
+const EventKindCount = int(EventCountersRemoved) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
@@ -187,6 +195,7 @@ type EventTriggeredAbility struct {
 	TriggerMultiplierCaptured bool
 	OrdinaryTrigger           bool
 	SagaChapter               bool
+	SiegeDefeat               bool
 	EntryChoices              map[ChoiceKey]ResolutionChoiceResult
 }
 
@@ -461,7 +470,7 @@ type Event struct {
 	FirstInDrawStep bool
 
 	// CounterKind and PreviousCounterAmount describe EventCountersAdded for
-	// either PermanentID or Player.
+	// either PermanentID or Player, and EventCountersRemoved for PermanentID.
 	CounterKind           counter.Kind
 	PreviousCounterAmount int
 
