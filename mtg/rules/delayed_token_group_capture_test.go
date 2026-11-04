@@ -213,6 +213,12 @@ func TestFeldonOfTheThirdPathSacrificesEveryTokenOjerTaqCreates(t *testing.T) {
 	if len(copies) != 3 {
 		t.Fatalf("copy tokens created under Ojer Taq = %d, want 3", len(copies))
 	}
+	for _, tokenID := range copies {
+		token, _ := g.PermanentByID(tokenID)
+		if !hasKeyword(g, token, game.Haste) || !permanentHasType(g, token, types.Artifact) {
+			t.Fatalf("Feldon token %d lacks haste or the artifact type", tokenID)
+		}
+	}
 	views := observe(g, game.Player2).DelayedTriggers()
 	if len(views) != 1 || !sameIDs(views[0].BoundObjectIDs, copies) {
 		t.Fatalf("pending delayed triggers = %+v, want one sacrifice bound to %v", views, copies)

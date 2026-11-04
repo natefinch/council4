@@ -49,16 +49,35 @@ func newCogworkAssembler() *game.CardDef {
 								Primitive: game.CreateToken{
 									Amount: game.Fixed(1),
 									Source: game.TokenCopyOf(game.TokenCopySpec{
-										Source:      game.TokenCopySourceObject,
-										Object:      game.TargetPermanentReference(0),
-										AddKeywords: []game.Keyword{game.Haste},
+										Source: game.TokenCopySourceObject,
+										Object: game.TargetPermanentReference(0),
 									}),
+									PublishLinked: game.LinkedKey("cogwork-assembler-token"),
 								},
 							},
 							{
-								Primitive: game.MovePermanent{
-									Object:      game.TargetPermanentReference(0),
-									Destination: zone.Exile,
+								Primitive: game.ApplyContinuous{
+									ContinuousEffects: []game.ContinuousEffect{{
+										Group:       game.LinkedObjectsGroup(game.LinkedKey("cogwork-assembler-token")),
+										Layer:       game.LayerAbility,
+										AddKeywords: []game.Keyword{game.Haste},
+									}},
+								},
+							},
+							{
+								Primitive: game.CreateDelayedTrigger{
+									Trigger: game.DelayedTriggerDef{
+										Timing:              game.DelayedAtBeginningOfNextEndStep,
+										CapturedObjectGroup: opt.Val(game.LinkedObjectReference("cogwork-assembler-token")),
+										Content: game.Mode{
+											Sequence: []game.Instruction{{
+												Primitive: game.MovePermanent{
+													Group:       game.CapturedObjectsGroup(),
+													Destination: zone.Exile,
+												},
+											}},
+										}.Ability(),
+									},
 								},
 							},
 						},

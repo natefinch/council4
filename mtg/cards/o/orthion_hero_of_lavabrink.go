@@ -68,14 +68,22 @@ func newOrthionHeroOfLavabrink() *game.CardDef {
 										Primitive: game.CreateToken{
 											Amount: game.Fixed(1),
 											Source: game.TokenCopyOf(game.TokenCopySpec{
-												Source:      game.TokenCopySourceObject,
-												Object:      game.TargetPermanentReference(0),
-												AddKeywords: []game.Keyword{game.Haste},
+												Source: game.TokenCopySourceObject,
+												Object: game.TargetPermanentReference(0),
 											}),
 											PublishLinked: game.LinkedKey("sequence-effect-0-product"),
 										},
 										LocalProducts: game.LocalProducts{
 											Links: []game.LinkedKey{game.LinkedKey("sequence-effect-0-product")},
+										},
+									},
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											ContinuousEffects: []game.ContinuousEffect{{
+												Group:       game.LinkedObjectsGroup(game.LinkedKey("sequence-effect-0-product")),
+												Layer:       game.LayerAbility,
+												AddKeywords: []game.Keyword{game.Haste},
+											}},
 										},
 									},
 									game.Instruction{
@@ -141,14 +149,22 @@ func newOrthionHeroOfLavabrink() *game.CardDef {
 										Primitive: game.CreateToken{
 											Amount: game.Fixed(5),
 											Source: game.TokenCopyOf(game.TokenCopySpec{
-												Source:      game.TokenCopySourceObject,
-												Object:      game.TargetPermanentReference(0),
-												AddKeywords: []game.Keyword{game.Haste},
+												Source: game.TokenCopySourceObject,
+												Object: game.TargetPermanentReference(0),
 											}),
 											PublishLinked: game.LinkedKey("sequence-effect-0-product"),
 										},
 										LocalProducts: game.LocalProducts{
 											Links: []game.LinkedKey{game.LinkedKey("sequence-effect-0-product")},
+										},
+									},
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											ContinuousEffects: []game.ContinuousEffect{{
+												Group:       game.LinkedObjectsGroup(game.LinkedKey("sequence-effect-0-product")),
+												Layer:       game.LayerAbility,
+												AddKeywords: []game.Keyword{game.Haste},
+											}},
 										},
 									},
 									game.Instruction{

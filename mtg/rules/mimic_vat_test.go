@@ -30,13 +30,19 @@ func mimicVatTokenContent() game.AbilityContent {
 			Primitive: game.CreateToken{
 				Amount: game.Fixed(1),
 				Source: game.TokenCopyOf(game.TokenCopySpec{
-					Source:      game.TokenCopySourceLinkedExiledCard,
-					LinkID:      mimicVatImprintLink,
-					AddKeywords: []game.Keyword{game.Haste},
+					Source: game.TokenCopySourceLinkedExiledCard,
+					LinkID: mimicVatImprintLink,
 				}),
 				PublishLinked: tokenLink,
 			},
 			PublishResult: resultKey,
+		},
+		{
+			Primitive: game.ApplyContinuous{ContinuousEffects: []game.ContinuousEffect{{
+				Group:       game.LinkedObjectsGroup(tokenLink),
+				Layer:       game.LayerAbility,
+				AddKeywords: []game.Keyword{game.Haste},
+			}}},
 		},
 		{
 			ResultGate: opt.Val(game.InstructionResultGate{

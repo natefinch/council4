@@ -50,13 +50,21 @@ func newMimicVat() *game.CardDef {
 										Primitive: game.CreateToken{
 											Amount: game.Fixed(1),
 											Source: game.TokenCopyOf(game.TokenCopySpec{
-												Source:      game.TokenCopySourceLinkedExiledCard,
-												LinkID:      game.LinkedKey("imprint"),
-												AddKeywords: []game.Keyword{game.Haste},
+												Source: game.TokenCopySourceLinkedExiledCard,
+												LinkID: game.LinkedKey("imprint"),
 											}),
 											PublishLinked: game.LinkedKey("imprint-created-token"),
 										},
 										PublishResult: game.ResultKey("imprint-token-created"),
+									},
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											ContinuousEffects: []game.ContinuousEffect{{
+												Group:       game.LinkedObjectsGroup(game.LinkedKey("imprint-created-token")),
+												Layer:       game.LayerAbility,
+												AddKeywords: []game.Keyword{game.Haste},
+											}},
+										},
 									},
 									game.Instruction{
 										Primitive: game.CreateDelayedTrigger{

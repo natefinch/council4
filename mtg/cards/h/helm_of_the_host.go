@@ -56,8 +56,17 @@ func newHelmOfTheHost() *game.CardDef {
 												Source:          game.TokenCopySourceObject,
 												Object:          game.SourceAttachedPermanentReference(),
 												SetNotLegendary: true,
-												AddKeywords:     []game.Keyword{game.Haste},
 											}),
+											PublishLinked: game.LinkedKey("helm-of-the-host-token"),
+										},
+									},
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											ContinuousEffects: []game.ContinuousEffect{{
+												Group:       game.LinkedObjectsGroup(game.LinkedKey("helm-of-the-host-token")),
+												Layer:       game.LayerAbility,
+												AddKeywords: []game.Keyword{game.Haste},
+											}},
 										},
 									},
 								},

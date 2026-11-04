@@ -48,21 +48,31 @@ func newMoltenEchoes() *game.CardDef {
 								Primitive: game.CreateToken{
 									Amount: game.Fixed(1),
 									Source: game.TokenCopyOf(game.TokenCopySpec{
-										Source:      game.TokenCopySourceObject,
-										Object:      game.EventPermanentReference(),
-										AddKeywords: []game.Keyword{game.Haste},
+										Source: game.TokenCopySourceObject,
+										Object: game.EventPermanentReference(),
 									}),
+									PublishLinked: game.LinkedKey("molten-echoes-token"),
+								},
+							},
+							{
+								Primitive: game.ApplyContinuous{
+									ContinuousEffects: []game.ContinuousEffect{{
+										Group:       game.LinkedObjectsGroup(game.LinkedKey("molten-echoes-token")),
+										Layer:       game.LayerAbility,
+										AddKeywords: []game.Keyword{game.Haste},
+									}},
 								},
 							},
 							{
 								Primitive: game.CreateDelayedTrigger{
 									Trigger: game.DelayedTriggerDef{
-										Timing: game.DelayedAtBeginningOfNextEndStep,
+										Timing:              game.DelayedAtBeginningOfNextEndStep,
+										CapturedObjectGroup: opt.Val(game.LinkedObjectReference("molten-echoes-token")),
 										Content: game.Mode{
 											Sequence: []game.Instruction{
 												{
 													Primitive: game.MovePermanent{
-														Object:      game.EventPermanentReference(),
+														Group:       game.CapturedObjectsGroup(),
 														Destination: zone.Exile,
 													},
 												},

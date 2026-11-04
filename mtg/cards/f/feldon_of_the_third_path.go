@@ -57,12 +57,20 @@ func newFeldonOfTheThirdPath() *game.CardDef {
 								Primitive: game.CreateToken{
 									Amount: game.Fixed(1),
 									Source: game.TokenCopyOf(game.TokenCopySpec{
-										Source:      game.TokenCopySourceObject,
-										Object:      game.TargetCardReference(0),
-										AddTypes:    []types.Card{types.Artifact},
-										AddKeywords: []game.Keyword{game.Haste},
+										Source:   game.TokenCopySourceObject,
+										Object:   game.TargetCardReference(0),
+										AddTypes: []types.Card{types.Artifact},
 									}),
 									PublishLinked: game.LinkedKey("delayed-sacrifice-1"),
+								},
+							},
+							{
+								Primitive: game.ApplyContinuous{
+									ContinuousEffects: []game.ContinuousEffect{{
+										Group:       game.LinkedObjectsGroup(game.LinkedKey("delayed-sacrifice-1")),
+										Layer:       game.LayerAbility,
+										AddKeywords: []game.Keyword{game.Haste},
+									}},
 								},
 							},
 							{
