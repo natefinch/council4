@@ -25,14 +25,20 @@ type freeCastOption struct {
 // still offered when they could be paid after activating payment-time mana
 // abilities (CR 601.2g); an unpaid proposal is then reversed (CR 733).
 func (e *Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int]) []freeCastOption {
+	return e.freeCastSpellOptions(g, playerID, card, fromZone, selection, maxManaValue, freeCastSpell{})
+}
+
+// freeCastSpellOptions is freeCastOptionsForCard for a route whose spell
+// options (such as casting the card transformed) restrict the faces offered.
+func (e *Engine) freeCastSpellOptions(g *game.Game, playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], spell freeCastSpell) []freeCastOption {
 	if card == nil || card.Def == nil || castFromZoneProhibited(g, playerID, fromZone) {
 		return nil
 	}
 	var options []freeCastOption
 	manualMana := e.paymentManaWindow(g, playerID)
-	for _, face := range freeCastFaces(playerID, card, fromZone) {
+	for _, face := range freeCastSpellFaces(playerID, card, fromZone, spell) {
 		spellDef := cardFaceOrDefault(card, face)
-		if !freeCastFaceAvailable(g, playerID, card, card.ID, spellDef, selection, maxManaValue) {
+		if !freeCastCardFaceAvailable(g, playerID, card, face, spellDef, selection, maxManaValue) {
 			continue
 		}
 		for _, cast := range freeCastBranchOptions(g, playerID, card.ID, fromZone, face, spellDef) {
@@ -74,14 +80,50 @@ func freeCastFaces(playerID game.PlayerID, card *game.CardInstance, fromZone zon
 	return faces
 }
 
+// freeCastSpellFaces lists the faces spell may put on the stack. A card cast
+// "transformed" is put on the stack with its back face up (CR 712.11a), and only
+// that face is evaluated to determine whether it can be cast (CR 712.11c). Only
+// a transforming double-faced card has a back face to cast that way; any other
+// card, including a single-faced card that is a copy of one, can't be cast
+// transformed and offers no face.
+func freeCastSpellFaces(playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type, spell freeCastSpell) []game.FaceIndex {
+	if !spell.transformed {
+		return freeCastFaces(playerID, card, fromZone)
+	}
+	if card.Def.IsTransformingDoubleFaced() && card.Def.Back.Exists {
+		return []game.FaceIndex{game.FaceBack}
+	}
+	return nil
+}
+
+// freeCastCardFaceAvailable is freeCastFaceAvailable for the card itself cast
+// with face up. A transforming double-faced card cast with its back face up has
+// only its back face's characteristics, but its mana value is calculated using
+// its front face's mana cost (CR 712.8c), so a mana value limit or selection
+// sees the front mana value.
+func freeCastCardFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, face game.FaceIndex, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
+	if face == game.FaceBack && card.Def.IsTransformingDoubleFaced() {
+		view := copyCardDef(def)
+		view.ManaCost = card.Def.ManaCost
+		return freeCastFaceMatchesSelection(g, card, view, selection, player) &&
+			(!maxManaValue.Exists || stackManaValue(view, 0) <= maxManaValue.Val) &&
+			freeCastFaceCastable(g, player, card.ID, def)
+	}
+	return freeCastFaceAvailable(g, player, card, card.ID, def, selection, maxManaValue)
+}
+
 // freeCastFaceAvailable reports whether player may cast def, a face of card,
 // without paying its mana cost. spellCard is card.ID when the card itself is
 // cast and 0 when a copy of it is (CR 707.12).
 func freeCastFaceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, spellCard id.ID, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
-	castFace := castSelectionFace(g, player, spellCard, def, false)
 	return freeCastFaceMatchesSelection(g, card, def, selection, player) &&
 		(!maxManaValue.Exists || stackManaValue(def, 0) <= maxManaValue.Val) &&
-		cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, castFace) &&
+		freeCastFaceCastable(g, player, spellCard, def)
+}
+
+func freeCastFaceCastable(g *game.Game, player game.PlayerID, spellCard id.ID, def *game.CardDef) bool {
+	castFace := castSelectionFace(g, player, spellCard, def, false)
+	return cardCastRestrictionsSatisfied(g, player, def) && !spellCastProhibited(g, player, castFace) &&
 		!spellCastLimitReached(g, player, castFace) && isSupportedSpell(def)
 }
 
@@ -204,6 +246,9 @@ type freeCastSpell struct {
 	// suspend marks a spell cast by its suspend ability; a creature spell cast
 	// this way gains haste (CR 702.62a).
 	suspend bool
+	// transformed casts a transforming double-faced card with its back face up
+	// (CR 712.11a). A card without such a back face can't be cast this way.
+	transformed bool
 }
 
 func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], spell freeCastSpell, mayDecline bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
@@ -214,11 +259,14 @@ func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player,
 	if !ok {
 		return false
 	}
-	options := e.freeCastOptionsForCard(g, controllerID, card, fromZone, selection, maxManaValue)
+	options := e.freeCastSpellOptions(g, controllerID, card, fromZone, selection, maxManaValue, spell)
 	if len(options) == 0 {
-		for _, face := range card.Def.LegalCastFaces() {
+		for _, face := range freeCastSpellFaces(controllerID, card, fromZone, spell) {
+			if face == game.FaceFused {
+				continue
+			}
 			def := cardFaceOrDefault(card, face)
-			if freeCastFaceAvailable(g, controllerID, card, card.ID, def, selection, maxManaValue) &&
+			if freeCastCardFaceAvailable(g, controllerID, card, face, def, selection, maxManaValue) &&
 				(spellHasMultikicker(def) || !costHasVariableMana(manaCostPtr(def.ManaCost)) && additionalCostsUseX(def.AdditionalCosts)) {
 				options = append(options, freeCastOption{cardID: card.ID, cast: action.CastSpellAction{
 					CardID: card.ID, SourceZone: fromZone, Face: face,
