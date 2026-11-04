@@ -38,7 +38,8 @@ import (
 // a graveyard by the zero-defense state-based action doesn't trigger it; if the
 // ability is countered, the battle is put into its owner's graveyard; a Siege
 // that isn't a transforming double-faced card is exiled and can't be cast,
-// remaining in exile. Removal by effects, costs or moves is #3649.
+// remaining in exile. Removal by effects, costs or moves (#3649) is proven in
+// siege_counter_removal_test.go.
 
 func siegeDefeatAbilityOnTop(t *testing.T, g *game.Game, siege *game.Permanent) *game.StackObject {
 	t.Helper()

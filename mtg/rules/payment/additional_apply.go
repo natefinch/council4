@@ -127,7 +127,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 		}
 	}
 	for _, removal := range plan.counterRemovals {
-		if !s.RemoveCounters(removal.source, removal.kind, removal.amount) {
+		if !s.RemoveCounters(plan.player, removal.source, removal.kind, removal.amount) {
 			panic("additional cost plan became invalid while removing counters")
 		}
 	}

@@ -354,8 +354,11 @@ func (s *rulesPaymentState) RecordManaAbilityUse(p *game.Permanent, abilityIndex
 	recordActivatedAbilityUse(s.g, p.ObjectID, abilityIndex, timing)
 }
 
-func (*rulesPaymentState) RemoveCounters(p *game.Permanent, kind counter.Kind, amount int) bool {
-	return p != nil && p.Counters.Remove(kind, amount) == amount
+func (s *rulesPaymentState) RemoveCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool {
+	if p == nil || p.Counters.Get(kind) < amount {
+		return false
+	}
+	return removeCountersFromPermanent(s.g, playerID, p, kind, amount) == max(amount, 0)
 }
 
 func (s *rulesPaymentState) AddCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool {
