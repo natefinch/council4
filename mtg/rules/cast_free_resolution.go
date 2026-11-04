@@ -38,7 +38,7 @@ func (e *Engine) freeCastSpellOptions(g *game.Game, playerID game.PlayerID, card
 	manualMana := e.paymentManaWindow(g, playerID)
 	for _, face := range freeCastSpellFaces(playerID, card, fromZone, spell) {
 		spellDef := cardFaceOrDefault(card, face)
-		if !freeCastCardFaceAvailable(g, playerID, card, face, spellDef, selection, maxManaValue) {
+		if !spell.faceAvailable(g, playerID, card, face, spellDef, selection, maxManaValue) {
 			continue
 		}
 		for _, cast := range freeCastBranchOptions(g, playerID, card.ID, fromZone, face, spellDef) {
@@ -55,7 +55,7 @@ func (e *Engine) freeCastSpellOptions(g *game.Game, playerID game.PlayerID, card
 					if !freeCastProposalLegal(g, playerID, spellDef, candidate) {
 						continue
 					}
-					payable, feasible := spellCostFeasibility(g, freeCastCostRequest(playerID, spellDef, candidate), manualMana)
+					payable, feasible := spellCostFeasibility(g, freeCastCostRequest(playerID, spellDef, spell.costCast(candidate)), manualMana)
 					if feasible {
 						options = append(options, freeCastOption{cardID: card.ID, cast: candidate, payable: payable})
 					}
@@ -251,6 +251,26 @@ type freeCastSpell struct {
 	transformed bool
 }
 
+// faceAvailable reports whether def, a face of card, may be cast by this
+// route. A cast copy of the card (CR 707.12) is not the card itself, so it is
+// evaluated without the card's identity.
+func (s freeCastSpell) faceAvailable(g *game.Game, player game.PlayerID, card *game.CardInstance, face game.FaceIndex, def *game.CardDef, selection game.Selection, maxManaValue opt.V[int]) bool {
+	if s.copyCard {
+		return freeCastFaceAvailable(g, player, card, 0, def, selection, maxManaValue)
+	}
+	return freeCastCardFaceAvailable(g, player, card, face, def, selection, maxManaValue)
+}
+
+// costCast returns cast as its costs are evaluated. A cast copy has its own
+// costs, not the identity of the card it copies, so payment must not reserve or
+// consume that card as the casting source (see attemptFreeSpell).
+func (s freeCastSpell) costCast(cast action.CastSpellAction) action.CastSpellAction {
+	if s.copyCard {
+		cast.CardID = 0
+	}
+	return cast
+}
+
 func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], spell freeCastSpell, mayDecline bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if sourcePlayer == nil || !castSourceContains(sourcePlayer, cardID, fromZone) || castFromZoneProhibited(g, controllerID, fromZone) {
 		return false
@@ -266,7 +286,7 @@ func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player,
 				continue
 			}
 			def := cardFaceOrDefault(card, face)
-			if freeCastCardFaceAvailable(g, controllerID, card, face, def, selection, maxManaValue) &&
+			if spell.faceAvailable(g, controllerID, card, face, def, selection, maxManaValue) &&
 				(spellHasMultikicker(def) || !costHasVariableMana(manaCostPtr(def.ManaCost)) && additionalCostsUseX(def.AdditionalCosts)) {
 				options = append(options, freeCastOption{cardID: card.ID, cast: action.CastSpellAction{
 					CardID: card.ID, SourceZone: fromZone, Face: face,
@@ -290,7 +310,7 @@ func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player,
 		cast := options[index].cast
 		spellDef := cardFaceOrDefault(card, cast.Face)
 		cast, ok = e.chooseCastNumbers(g, controllerID, spellDef, cast, true, agents, log)
-		if !ok || !e.freeCastOptionLegal(g, controllerID, spellDef, cast) {
+		if !ok || !e.freeCastOptionLegal(g, controllerID, spellDef, spell.costCast(cast)) {
 			g.Execution.InvalidChoices++
 			return false
 		}
