@@ -163,6 +163,12 @@ type frameCache struct {
 	values       map[id.ID]permanentEffectiveValues
 	controllers  map[id.ID]game.PlayerID
 
+	// controlBoard holds every battlefield permanent's layer-2 controller when
+	// a control effect's new controller depends on another control effect
+	// (controlBoardState records whether that board is needed).
+	controlBoard      map[*game.Permanent]game.PlayerID
+	controlBoardState controlBoardState
+
 	// beforeValues memoizes permanentValuesBeforeLayer per (permanent, stop
 	// layer). Evaluating a static ability's condition during layer application
 	// scans the battlefield and recomputes each permanent's characteristics "as of
@@ -239,6 +245,12 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 			return controller
 		}
 	}
+	if board, ok := controlLayerBoard(g, frameCacheFor(g)); ok {
+		if controller, found := board[permanent]; found {
+			cacheEffectiveController(fc, permanent, controller)
+			return controller
+		}
+	}
 	values := basePermanentValues(g, permanent)
 	sources := staticAbilitySources(g)
 	effects := orderContinuousEffects(continuousEffectsForLayer(g, permanent, &values, game.LayerControl, sources))
@@ -253,13 +265,20 @@ func effectiveController(g *game.Game, permanent *game.Permanent) game.PlayerID 
 			}
 		}
 	}
-	if fc != nil {
-		if fc.controllers == nil {
-			fc.controllers = make(map[id.ID]game.PlayerID)
-		}
-		fc.controllers[permanent.ObjectID] = values.controller
+	if fc != nil && fc.controlBoardState != controlBoardBuilding {
+		cacheEffectiveController(fc, permanent, values.controller)
 	}
 	return values.controller
+}
+
+func cacheEffectiveController(fc *frameCache, permanent *game.Permanent, controller game.PlayerID) {
+	if fc == nil {
+		return
+	}
+	if fc.controllers == nil {
+		fc.controllers = make(map[id.ID]game.PlayerID)
+	}
+	fc.controllers[permanent.ObjectID] = controller
 }
 
 // effectivePermanentValues computes a permanent's characteristics by the
@@ -299,7 +318,9 @@ func effectivePermanentValues(g *game.Game, permanent *game.Permanent) permanent
 
 	values := basePermanentValues(g, permanent)
 	applyContinuousLayers(g, permanent, &values)
-	if fc != nil {
+	// Values read while the control board is being built use per-permanent
+	// layer-2 controllers, so they aren't kept for the rest of the frame.
+	if fc != nil && fc.controlBoardState != controlBoardBuilding {
 		if fc.values == nil {
 			fc.values = make(map[id.ID]permanentEffectiveValues)
 		}
@@ -738,6 +759,9 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 		if layer == game.LayerColor && applyDependentColorLayer(g, permanent, values, sources) {
 			continue
 		}
+		if layer == game.LayerControl && applyControlLayerBoard(g, permanent, values) {
+			continue
+		}
 		effects := continuousEffectsForLayer(g, permanent, values, layer, sources)
 		if layer == game.LayerPowerToughnessModify && hasCounterEffect {
 			effects = append(effects, counterEffect)
@@ -845,6 +869,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		if layer == game.LayerColor && applyDependentColorLayer(g, permanent, &values, sources) {
 			continue
 		}
+		if layer == game.LayerControl && applyControlLayerBoard(g, permanent, &values) {
+			continue
+		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
 		ordered := orderContinuousEffects(effects)
 		for i := range ordered {
@@ -854,7 +881,7 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 			applyFaceDownCharacteristics(permanent, &values)
 		}
 	}
-	if fc != nil {
+	if fc != nil && (stop <= game.LayerControl || fc.controlBoardState != controlBoardBuilding) {
 		if fc.beforeValues == nil {
 			fc.beforeValues = make(map[beforeLayerKey]permanentEffectiveValues)
 		}
@@ -1099,6 +1126,39 @@ func visitPermanentStaticAbilityComponents(g *game.Game, permanent *game.Permane
 }
 
 func appendStaticAbilitySourceContinuousEffects(effects []game.ContinuousEffect, g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource) []game.ContinuousEffect {
+	visitStaticAbilitySourceContinuousEffects(g, source, permanent, values, layer, sources, func(staticEffect game.ContinuousEffect, i, effectIndex int) {
+		originID := source.originID
+		face := source.faceIndex
+		if source.permanent != nil {
+			if originID == 0 {
+				originID = permanentAbilityOrigin(source.permanent).OriginID
+			}
+		}
+		if len(staticEffect.AddAbilities) > 0 {
+			// The fresh slice routes provenance through ordering without
+			// adding runtime state to the serialized effect definition.
+			// Its address is transport only; the captured identity is the
+			// exact source and immutable declaration coordinates below.
+			staticEffect.AddAbilities = slices.Clone(staticEffect.AddAbilities)
+			if values.triggerGrantOrigins == nil {
+				values.triggerGrantOrigins = make(map[*game.Ability]game.TriggerOrigin)
+			}
+			values.triggerGrantOrigins[&staticEffect.AddAbilities[0]] = game.TriggerOrigin{
+				SourceID: sourceObjectID(source), OriginID: originID, Face: face,
+				StaticIndex: i, EffectIndex: effectIndex, Granted: true,
+			}
+		}
+		rewriteChosenColorProtectionEffect(&staticEffect, source.permanent)
+		rewriteCommanderIdentityProtectionEffect(g, &staticEffect, source.controller)
+		effects = append(effects, staticEffect)
+	})
+	return effects
+}
+
+// visitStaticAbilitySourceContinuousEffects calls visit with each continuous
+// effect in layer that source's functioning static abilities apply to
+// permanent, with the effect's static-ability and effect indexes.
+func visitStaticAbilitySourceContinuousEffects(g *game.Game, source staticAbilitySource, permanent *game.Permanent, values *permanentEffectiveValues, layer game.ContinuousLayer, sources []staticAbilitySource, visit func(effect game.ContinuousEffect, staticIndex, effectIndex int)) {
 	for i := range source.face.StaticAbilities {
 		body := &source.face.StaticAbilities[i]
 		if !staticAbilityFunctionsFromSource(body, source) || !staticAbilityHasEffectForLayer(body, layer) {
@@ -1140,33 +1200,9 @@ func appendStaticAbilitySourceContinuousEffects(effects []game.ContinuousEffect,
 			if !continued && !continuousEffectApplies(g, permanent, values, &staticEffect) {
 				continue
 			}
-			originID := source.originID
-			face := source.faceIndex
-			if source.permanent != nil {
-				if originID == 0 {
-					originID = permanentAbilityOrigin(source.permanent).OriginID
-				}
-			}
-			if len(staticEffect.AddAbilities) > 0 {
-				// The fresh slice routes provenance through ordering without
-				// adding runtime state to the serialized effect definition.
-				// Its address is transport only; the captured identity is the
-				// exact source and immutable declaration coordinates below.
-				staticEffect.AddAbilities = slices.Clone(staticEffect.AddAbilities)
-				if values.triggerGrantOrigins == nil {
-					values.triggerGrantOrigins = make(map[*game.Ability]game.TriggerOrigin)
-				}
-				values.triggerGrantOrigins[&staticEffect.AddAbilities[0]] = game.TriggerOrigin{
-					SourceID: sourceObjectID(source), OriginID: originID, Face: face,
-					StaticIndex: i, EffectIndex: effectIndex, Granted: true,
-				}
-			}
-			rewriteChosenColorProtectionEffect(&staticEffect, source.permanent)
-			rewriteCommanderIdentityProtectionEffect(g, &staticEffect, source.controller)
-			effects = append(effects, staticEffect)
+			visit(staticEffect, i, effectIndex)
 		}
 	}
-	return effects
 }
 
 // rewriteChosenColorProtectionEffect resolves a granted "protection from the
