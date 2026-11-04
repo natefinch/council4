@@ -4,6 +4,7 @@ import (
 	"iter"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -387,6 +388,216 @@ func delayedTriggerOwnText(text string) (string, bool) {
 		}
 	}
 	return found, count == 1
+}
+
+// delayedTimingWording matches the wording that states each fixed delayed
+// trigger timing ("at the beginning of the next end step", "at the beginning of
+// your next upkeep", "at end of combat"). A delayed triggered ability contains
+// "at" even when that word does not begin it (CR 603.7).
+var delayedTimingWording = map[game.DelayedTriggerTiming]*regexp.Regexp{
+	game.DelayedAtBeginningOfNextEndStep:     regexp.MustCompile(`(?i)\bat the beginning of [^,.;:]*?\bend step\b`),
+	game.DelayedAtBeginningOfYourNextEndStep: regexp.MustCompile(`(?i)\bat the beginning of [^,.;:]*?\bend step\b`),
+	game.DelayedAtBeginningOfNextUpkeep:      regexp.MustCompile(`(?i)\bat the beginning of [^,.;:]*?\bupkeep\b`),
+	game.DelayedAtBeginningOfYourNextUpkeep:  regexp.MustCompile(`(?i)\bat the beginning of [^,.;:]*?\bupkeep\b`),
+	game.DelayedAtBeginningOfNextMainPhase:   regexp.MustCompile(`(?i)\bat the beginning of [^,.;:]*?\bmain phase\b`),
+	game.DelayedAtEndOfCombat:                regexp.MustCompile(`(?i)\bat (?:the )?end of combat\b`),
+}
+
+// delayedTriggerTimingText returns the wording of a creating spell's or
+// ability's text that is a fixed-timing delayed triggered ability's own text
+// ("{T}: Create a token ... Exile that token at the beginning of the next end
+// step." carries "Exile that token at the beginning of the next end step."). A
+// delayed triggered ability has only its own text, not the rest of the spell or
+// ability that created it (CR 603.3, 603.7).
+//
+// The delayed ability begins at the one sentence that states its timing, less
+// any wording of the creator that precedes the timing in that sentence: an
+// ability's ability word, cost or trigger condition ("{G}, Sacrifice this
+// creature: Create ... at the beginning of the next end step.") and conditions
+// the creator checks before creating it ("If you do, return it ... at the
+// beginning of your next upkeep."). An ability's own leading trigger condition
+// ("At the beginning of your end step, ...") is the creator's timing, not the
+// delayed trigger's; a spell has no such condition. Wording inside quotation
+// marks (a granted ability) or reminder text is ignored.
+//
+// The delayed ability continues through the later sentences of its paragraph
+// that depend on its own instruction (delayedContinuation): "At the beginning
+// of your next upkeep, pay {3}{U}{U}. If you don't, you lose the game." It
+// reports false, so the whole text is kept, unless exactly one sentence states
+// the timing and every later sentence of its paragraph can be attributed.
+func delayedTriggerTimingText(text string, timing game.DelayedTriggerTiming, spell bool) (string, bool) {
+	wording, ok := delayedTimingWording[timing]
+	if !ok {
+		return "", false
+	}
+	var found string
+	count := 0
+	lead := !spell
+	for line := range strings.Lines(text) {
+		line = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "•"))
+		if line == "" {
+			continue
+		}
+		sentences := paragraphSentences(line)
+		for i, sentence := range sentences {
+			own, conditionKept := sentence, false
+			if lead {
+				own, conditionKept = withoutCreatorPrefix(sentence)
+				lead = false
+			}
+			at := topLevelMatch(wording, own, conditionKept)
+			if at < 0 {
+				continue
+			}
+			count++
+			rest, ok := delayedContinuation(sentences[i+1:])
+			if !ok {
+				return "", false
+			}
+			found = strings.Join(append([]string{capitalized(withoutLeadingConditions(own, at))}, rest...), " ")
+		}
+	}
+	if count != 1 {
+		return "", false
+	}
+	return found, true
+}
+
+// paragraphSentences splits paragraph into its sentences, ignoring sentence
+// ends inside quotation marks and reminder text.
+func paragraphSentences(paragraph string) []string {
+	starts := append([]int{0}, slices.Collect(laterSentenceStarts(paragraph))...)
+	sentences := make([]string, len(starts))
+	for i, start := range starts {
+		end := len(paragraph)
+		if i+1 < len(starts) {
+			end = starts[i+1]
+		}
+		sentences[i] = strings.TrimSpace(paragraph[start:end])
+	}
+	return sentences
+}
+
+// topLevelMatch returns the offset of wording's first match in sentence outside
+// quotation marks and reminder text, or -1. When skipLeading is set, a match at
+// the start of sentence is the creator's own trigger condition and is skipped.
+func topLevelMatch(wording *regexp.Regexp, sentence string, skipLeading bool) int {
+	for _, match := range wording.FindAllStringIndex(sentence, -1) {
+		if skipLeading && match[0] == 0 || !topLevelOffset(sentence, match[0]) {
+			continue
+		}
+		return match[0]
+	}
+	return -1
+}
+
+// withoutCreatorPrefix returns the first sentence of an ability's text without
+// its ability word (CR 207.2c), its cost (CR 602.1a, 606.4) or its trigger
+// condition (CR 603.1), none of which belong to a delayed triggered ability the
+// ability creates. It reports true when a trigger condition could not be
+// separated from the effect, so it still begins the returned text.
+func withoutCreatorPrefix(sentence string) (string, bool) {
+	body := withoutAbilityWord(sentence)
+	if startsWithTriggerWord(body) {
+		if comma := topLevelIndex(body, ','); comma >= 0 {
+			return strings.TrimSpace(body[comma+1:]), false
+		}
+		return body, true
+	}
+	if colon := topLevelIndex(body, ':'); colon >= 0 {
+		return strings.TrimSpace(body[colon+1:]), false
+	}
+	return body, false
+}
+
+// creatorConditionPattern matches a condition that opens a sentence ("If you
+// do, ", "if it had two or more +1/+1 counters on it, ", "Otherwise, ",
+// "Then "). Before a delayed trigger's timing wording, it is checked by the
+// spell or ability creating that trigger, not by the delayed trigger (CR
+// 603.7a, 608.2c).
+var creatorConditionPattern = regexp.MustCompile(`^(?i:if |otherwise, |then )`)
+
+// withoutLeadingConditions strips the conditions that open sentence before the
+// delayed timing wording at offset at.
+func withoutLeadingConditions(sentence string, at int) string {
+	for at > 0 {
+		prefix := creatorConditionPattern.FindString(sentence)
+		if prefix == "" {
+			break
+		}
+		cut := len(prefix)
+		if strings.EqualFold(prefix, "if ") {
+			comma := topLevelIndex(sentence, ',')
+			if comma < 0 || comma >= at {
+				break
+			}
+			cut = comma + 1
+		}
+		trimmed := strings.TrimLeft(sentence[cut:], " ")
+		at -= len(sentence) - len(trimmed)
+		sentence = trimmed
+	}
+	return sentence
+}
+
+// delayedContinuationPattern matches the opening of a sentence that depends on
+// the instruction immediately before it: whether it was done ("If you don't,
+// you lose the game."), what happens otherwise or next, or a reflexive trigger
+// on it ("When you do, ...", "When you sacrifice a creature this way, ...")
+// (CR 603.12, 608.2c).
+var delayedContinuationPattern = regexp.MustCompile(`^(?:If (?:you|they|he or she|that player|the player|its controller|it) (?:do|does|did|don't|doesn't|didn't)\b|Otherwise\b|Then\b|When you do\b|When [^,.]* this way\b)`)
+
+// delayedContinuation returns the sentences after a delayed trigger's timing
+// sentence in its paragraph that belong to the delayed ability: each one that
+// depends on the delayed ability's preceding instruction. Reminder text and the
+// creating ability's activation restrictions ("Activate only as a sorcery.",
+// CR 602.5) are not the delayed ability's, and a sentence stating another
+// delayed timing begins another delayed ability. It reports false when a later
+// sentence cannot be attributed ("It gains haste.", "You lose 2 life."), since
+// it may be either ability's.
+func delayedContinuation(sentences []string) ([]string, bool) {
+	var own []string
+	for _, sentence := range sentences {
+		switch {
+		case strings.HasPrefix(sentence, "(") || strings.HasPrefix(sentence, "Activate "):
+		case statesDelayedTiming(sentence):
+			return own, true
+		case delayedContinuationPattern.MatchString(sentence):
+			own = append(own, sentence)
+		default:
+			return nil, false
+		}
+	}
+	return own, true
+}
+
+// statesDelayedTiming reports whether sentence states any fixed delayed trigger
+// timing outside quotation marks and reminder text.
+func statesDelayedTiming(sentence string) bool {
+	for _, wording := range delayedTimingWording {
+		if topLevelMatch(wording, sentence, false) >= 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// topLevelOffset reports whether offset in text lies outside quotation marks
+// and parenthesized reminder text.
+func topLevelOffset(text string, offset int) bool {
+	quoted := false
+	depth := 0
+	for _, c := range text[:offset] {
+		switch {
+		case c == '"' || c == '“' || c == '”':
+			quoted = !quoted
+		case c == '(':
+			depth++
+		case c == ')' && depth > 0:
+			depth--
+		}
+	}
+	return !quoted && depth == 0
 }
 
 // laterSentenceStarts yields the byte offsets of the sentences after the first

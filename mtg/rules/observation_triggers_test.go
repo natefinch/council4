@@ -379,12 +379,14 @@ func TestObservationEventDelayedTriggerReportsBindings(t *testing.T) {
 	}
 }
 
-const splinterTwinGrantedText = "{T}: Create a token that's a copy of this creature, except it has haste. Exile that token at the beginning of the next end step."
+const splinterTwinDelayedText = "Exile that token at the beginning of the next end step."
 
 // Splinter Twin's delayed exile records no wording of its own, so it carries the
-// public text of the granted ability whose resolution created it (CR 603.7a)
-// while pending, on the token's view, and on the stack once it fires.
-func TestObservationSplinterTwinDelayedExileCarriesCreatingAbilityText(t *testing.T) {
+// sentence of the granted ability whose resolution created it that states its
+// timing, not the rest of that ability (CR 603.3, 603.7), while pending, on the
+// token's view, and on the stack once it fires, keeping the host as its source
+// (CR 603.7e).
+func TestObservationSplinterTwinDelayedExileCarriesOwnText(t *testing.T) {
 	twin := cards.NewDefaultRegistry().Lookup("Splinter Twin")
 	if twin == nil || twin.Name != "Splinter Twin" {
 		t.Fatal("Splinter Twin is not in the default registry")
@@ -407,11 +409,11 @@ func TestObservationSplinterTwinDelayedExileCarriesCreatingAbilityText(t *testin
 	if len(pending) != 1 || len(pending[0].BoundObjectIDs) != 1 {
 		t.Fatalf("pending delayed triggers = %+v, want one exile bound to the token", pending)
 	}
-	if pending[0].Text != splinterTwinGrantedText || pending[0].SourceName != "Twin Host" {
-		t.Fatalf("pending exile = source %q text %q, want the granted ability's host Twin Host/%q", pending[0].SourceName, pending[0].Text, splinterTwinGrantedText)
+	if pending[0].Text != splinterTwinDelayedText || pending[0].SourceName != "Twin Host" {
+		t.Fatalf("pending exile = source %q text %q, want the granted ability's host Twin Host/%q", pending[0].SourceName, pending[0].Text, splinterTwinDelayedText)
 	}
 	token := findPermanentView(t, obs, pending[0].BoundObjectIDs[0])
-	if len(token.PendingDelayedTriggers) != 1 || token.PendingDelayedTriggers[0].Text != splinterTwinGrantedText {
+	if len(token.PendingDelayedTriggers) != 1 || token.PendingDelayedTriggers[0].Text != splinterTwinDelayedText {
 		t.Fatalf("token pending delayed triggers = %+v", token.PendingDelayedTriggers)
 	}
 
@@ -422,17 +424,18 @@ func TestObservationSplinterTwinDelayedExileCarriesCreatingAbilityText(t *testin
 		t.Fatal("the end step did not fire Splinter Twin's delayed exile")
 	}
 	stack := observe(g, game.Player2).Stack()
-	if len(stack) != 1 || stack[0].Text != splinterTwinGrantedText {
-		t.Fatalf("fired exile = %+v, want text %q", stack, splinterTwinGrantedText)
+	if len(stack) != 1 || stack[0].Text != splinterTwinDelayedText || stack[0].Name != "Twin Host" {
+		t.Fatalf("fired exile = %+v, want Twin Host with text %q", stack, splinterTwinDelayedText)
 	}
 	if !slices.Equal(stack[0].BoundObjectIDs, []id.ID{token.ObjectID}) {
 		t.Fatalf("fired exile bound = %v, want token %d", stack[0].BoundObjectIDs, token.ObjectID)
 	}
 }
 
-// A delayed trigger created by a resolving spell carries that spell's public
-// Oracle text, as rules-text lines (CR 603.7a).
-func TestObservationSpellDelayedTriggerCarriesSpellText(t *testing.T) {
+// A delayed trigger created by a resolving spell carries only the line of that
+// spell's public Oracle text that states its timing, not the spell's other
+// instructions (CR 603.7, 603.7d).
+func TestObservationSpellDelayedTriggerCarriesOwnSpellLine(t *testing.T) {
 	wine := cards.NewDefaultRegistry().Lookup("Blessed Wine")
 	if wine == nil || wine.Name != "Blessed Wine" {
 		t.Fatal("Blessed Wine is not in the default registry")
@@ -448,7 +451,7 @@ func TestObservationSpellDelayedTriggerCarriesSpellText(t *testing.T) {
 	engine.resolveTopOfStack(g, &TurnLog{})
 
 	pending := observe(g, game.Player3).DelayedTriggers()
-	const want = "You gain 1 life.\nDraw a card at the beginning of the next turn's upkeep."
+	const want = "Draw a card at the beginning of the next turn's upkeep."
 	if len(pending) != 1 || pending[0].Text != want || pending[0].SourceName != "Blessed Wine" {
 		t.Fatalf("pending delayed triggers = %+v, want Blessed Wine with text %q", pending, want)
 	}
@@ -456,7 +459,8 @@ func TestObservationSpellDelayedTriggerCarriesSpellText(t *testing.T) {
 
 // A printed triggered ability whose definition omits per-ability text shows its
 // source's Oracle text on the stack, and the delayed trigger it creates carries
-// the same text while pending and after it fires.
+// that text's delayed wording without the creating trigger condition (CR 603.7)
+// while pending and after it fires.
 func TestObservationPrintedTriggerDelayedTriggerFallsBackToOracleText(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -472,6 +476,7 @@ func TestObservationPrintedTriggerDelayedTriggerFallsBackToOracleText(t *testing
 	}}}}, nil)
 	card, _ := g.GetCardInstance(source.CardInstanceID)
 	const text = "At the beginning of your upkeep, you gain 1 life at the beginning of the next end step."
+	const delayed = "You gain 1 life at the beginning of the next end step."
 	card.Def.OracleText = "\n\t\t" + text + "\n\t"
 	g.Turn.ActivePlayer = game.Player1
 	emitEvent(g, game.Event{Kind: game.EventBeginningOfStep, Step: game.StepUpkeep, Player: game.Player1, Controller: game.Player1})
@@ -484,8 +489,8 @@ func TestObservationPrintedTriggerDelayedTriggerFallsBackToOracleText(t *testing
 	engine.resolveTopOfStack(g, &TurnLog{})
 
 	view := findPermanentView(t, observe(g, game.Player2), source.ObjectID)
-	if len(view.PendingDelayedTriggers) != 1 || view.PendingDelayedTriggers[0].Text != text {
-		t.Fatalf("pending delayed triggers = %+v, want text %q", view.PendingDelayedTriggers, text)
+	if len(view.PendingDelayedTriggers) != 1 || view.PendingDelayedTriggers[0].Text != delayed {
+		t.Fatalf("pending delayed triggers = %+v, want text %q", view.PendingDelayedTriggers, delayed)
 	}
 	g.Turn.Phase = game.PhaseEnding
 	g.Turn.Step = game.StepEnd
@@ -493,8 +498,8 @@ func TestObservationPrintedTriggerDelayedTriggerFallsBackToOracleText(t *testing
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
 		t.Fatal("the end step did not fire the delayed trigger")
 	}
-	if stack := observe(g, game.Player2).Stack(); len(stack) != 1 || stack[0].Text != text || stack[0].SourceObjectID != source.ObjectID {
-		t.Fatalf("fired delayed trigger = %+v, want text %q from %d", stack, text, source.ObjectID)
+	if stack := observe(g, game.Player2).Stack(); len(stack) != 1 || stack[0].Text != delayed || stack[0].SourceObjectID != source.ObjectID {
+		t.Fatalf("fired delayed trigger = %+v, want text %q from %d", stack, delayed, source.ObjectID)
 	}
 }
 
@@ -584,8 +589,8 @@ func TestObservationUntextedGrantedTriggerGetsNoOracleFallback(t *testing.T) {
 // A delayed trigger's text comes from the public ability that created it, so it
 // stays visible to every observer even when its source is a face-down permanent
 // whose identity is hidden (CR 603.7a, 708.5). Splinter Twin grants its ability
-// to a face-down Willbender: opponents see the granted ability's delayed exile
-// text while it is pending and once it fires, but never the hidden source's name.
+// to a face-down Willbender: opponents see the delayed exile's own text while it
+// is pending and once it fires, but never the hidden source's name.
 func TestObservationFaceDownHostDelayedTriggerKeepsPublicText(t *testing.T) {
 	registry := cards.NewDefaultRegistry()
 	twin := registry.Lookup("Splinter Twin")
@@ -609,8 +614,8 @@ func TestObservationFaceDownHostDelayedTriggerKeepsPublicText(t *testing.T) {
 
 	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
 		pending := observe(g, viewer).DelayedTriggers()
-		if len(pending) != 1 || pending[0].Text != splinterTwinGrantedText {
-			t.Fatalf("Player%d pending = %+v, want text %q", viewer, pending, splinterTwinGrantedText)
+		if len(pending) != 1 || pending[0].Text != splinterTwinDelayedText {
+			t.Fatalf("Player%d pending = %+v, want text %q", viewer, pending, splinterTwinDelayedText)
 		}
 	}
 	if pending := observe(g, game.Player2).DelayedTriggers()[0]; pending.SourceName != "" {
@@ -627,8 +632,8 @@ func TestObservationFaceDownHostDelayedTriggerKeepsPublicText(t *testing.T) {
 		t.Fatal("the end step did not fire the delayed exile")
 	}
 	stack := observe(g, game.Player2).Stack()
-	if len(stack) != 1 || stack[0].Text != splinterTwinGrantedText || stack[0].Name != "" {
-		t.Fatalf("fired exile seen by opponent = %+v, want text %q and no source name", stack, splinterTwinGrantedText)
+	if len(stack) != 1 || stack[0].Text != splinterTwinDelayedText || stack[0].Name != "" {
+		t.Fatalf("fired exile seen by opponent = %+v, want text %q and no source name", stack, splinterTwinDelayedText)
 	}
 }
 
