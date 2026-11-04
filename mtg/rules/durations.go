@@ -210,13 +210,16 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 // triggered ability carries while pending and on the stack (CR 603.7a). A
 // definition that records the delayed ability's own wording uses it. Otherwise
 // the trigger carries the public text of the spell or ability whose resolution
-// created it, which contains the delayed trigger's wording ("{T}: Create a token
-// ... Exile that token at the beginning of the next end step."). An event-based
-// delayed trigger whose wording is a separate sentence of that text carries only
-// that sentence (delayedTriggerOwnText). No text is captured from a face-down
-// spell or from a face-down source's hidden card (CR 708.2, 708.5), nor for a
-// resolution context that is not a stack object, such as a replacement program,
-// whose creating text is unknown.
+// created it, which contains the delayed trigger's wording, narrowed to the
+// trigger's own wording where it can be singled out: an event-based delayed
+// trigger whose wording is a separate sentence carries only that sentence
+// (delayedTriggerOwnText), and a fixed-timing one carries only the sentence that
+// states its timing, without the creator's cost, trigger condition or
+// conditions, through the later sentences that depend on it ("Exile that token
+// at the beginning of the next end step.", delayedTriggerTimingText). No text is captured from a face-down spell or from
+// a face-down source's hidden card (CR 708.2, 708.5), nor for a resolution
+// context that is not a stack object, such as a replacement program, whose
+// creating text is unknown.
 func delayedTriggerText(g *game.Game, obj *game.StackObject, def *game.DelayedTriggerDef) string {
 	if def.Text != "" {
 		return def.Text
@@ -226,6 +229,10 @@ func delayedTriggerText(g *game.Game, obj *game.StackObject, def *game.DelayedTr
 		if own, ok := delayedTriggerOwnText(text); ok {
 			return own
 		}
+		return text
+	}
+	if own, ok := delayedTriggerTimingText(text, def.Timing, obj.Kind == game.StackSpell); ok {
+		return own
 	}
 	return text
 }

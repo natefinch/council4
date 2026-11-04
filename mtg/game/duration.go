@@ -107,7 +107,11 @@ type DelayedTriggerDef struct {
 	// it at the beginning of the next end step."). The scheduled ability and the
 	// stack object it later becomes carry it (CR 603.3, 603.7), so observers can
 	// tell pending delayed triggers apart. When empty, the scheduled ability
-	// carries the public text of the spell or ability that created it instead.
+	// carries its own wording singled out of the creating spell's or ability's
+	// public text (the sentence stating its timing or event, without the
+	// creator's cost, trigger condition or conditions, through the later
+	// sentences that depend on it), or that whole text when the wording cannot
+	// be singled out. Set Text when the wording cannot be singled out.
 	Text    string
 	Content AbilityContent
 	// EventPattern, when present, makes this an event-based delayed trigger that
