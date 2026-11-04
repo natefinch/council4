@@ -269,14 +269,20 @@ func handleChooseDiscardFromHand(r *effectResolver, prim game.ChooseDiscardFromH
 		MaxChoices:       1,
 		DefaultSelection: firstChoiceIndices(1),
 	}, r.log)
-	simultaneousID := r.game.IDGen.Next()
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID)
-	}
+	discardChosenCardsInBatch(r.game, playerID, selectedCandidates(candidates, selected), r.game.IDGen.Next())
 	return res
+}
+
+// selectedCandidates returns the candidates named by the in-range choice
+// indices in selected, in selection order.
+func selectedCandidates(candidates []id.ID, selected []int) []id.ID {
+	var chosen []id.ID
+	for _, idx := range selected {
+		if idx >= 0 && idx < len(candidates) {
+			chosen = append(chosen, candidates[idx])
+		}
+	}
+	return chosen
 }
 
 func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
@@ -349,17 +355,13 @@ func (r *effectResolver) discardCardsWithChoices(playerID game.PlayerID, amount 
 	if len(chosen) == 0 {
 		return false
 	}
-	simultaneousID := r.game.IDGen.Next()
-	discarded := false
-	for _, cardID := range chosen {
-		if discardCardFromHandInBatch(r.game, playerID, cardID, simultaneousID) {
-			discarded = true
-			if publishKey != (game.LinkedObjectKey{}) {
-				rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: cardID})
-			}
+	discarded := discardChosenCardsInBatch(r.game, playerID, chosen, r.game.IDGen.Next())
+	if publishKey != (game.LinkedObjectKey{}) {
+		for _, cardID := range discarded {
+			rememberLinkedObject(r.game, publishKey, game.LinkedObjectRef{CardID: cardID})
 		}
 	}
-	return discarded
+	return len(discarded) > 0
 }
 
 // discardGroupSimultaneously discards the cards chosen for each affected player
@@ -3122,15 +3124,7 @@ func handleDiscardThenDraw(r *effectResolver, prim game.DiscardThenDraw) effectR
 			MinChoices: 0,
 			MaxChoices: maxChoices,
 		}, r.log)
-		simultaneousID := r.game.IDGen.Next()
-		for _, idx := range selected {
-			if idx < 0 || idx >= len(candidates) {
-				continue
-			}
-			if discardCardFromHandInBatch(r.game, playerID, candidates[idx], simultaneousID) {
-				discarded++
-			}
-		}
+		discarded = len(discardChosenCardsInBatch(r.game, playerID, selectedCandidates(candidates, selected), r.game.IDGen.Next()))
 	}
 	res.amount = discarded + prim.DrawOffset
 	if res.amount > 0 {

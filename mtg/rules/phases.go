@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -456,10 +457,11 @@ func discardToMaximumHandSize(g *game.Game, playerID game.PlayerID) {
 		return
 	}
 	cards := player.Hand.All()
-	simultaneousID := g.IDGen.Next()
+	var chosen []id.ID
 	for i := len(cards) - 1; i >= maximumHandSize; i-- {
-		discardCardFromHandInBatch(g, playerID, cards[i], simultaneousID)
+		chosen = append(chosen, cards[i])
 	}
+	discardChosenCardsInBatch(g, playerID, chosen, g.IDGen.Next())
 }
 
 func (e *Engine) discardToMaximumHandSizeWithChoices(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
@@ -484,11 +486,9 @@ func (e *Engine) discardToMaximumHandSizeWithChoices(g *game.Game, playerID game
 		Private: true,
 	}, log)
 	// CR 514.1: the cleanup discard is one simultaneous discard of every
-	// chosen card, so "one or more" triggers see a single batch.
-	simultaneousID := g.IDGen.Next()
-	for _, index := range selected {
-		discardCardFromHandInBatch(g, playerID, cards[index], simultaneousID)
-	}
+	// chosen card, so "one or more" triggers see a single batch and every
+	// replacement is decided before any card leaves the hand.
+	discardChosenCardsInBatch(g, playerID, selectedCandidates(cards, selected), g.IDGen.Next())
 }
 
 func (*Engine) advanceToNextTurn(g *game.Game) {

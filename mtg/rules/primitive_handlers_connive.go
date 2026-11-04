@@ -66,15 +66,14 @@ func (r *effectResolver) conniveDiscard(playerID game.PlayerID, amount int) int 
 		// CR 400.2: the hand is hidden, so the log must not list kept cards.
 		Private: true,
 	}, r.log)
-	simultaneousID := r.game.IDGen.Next()
+	chosen := selectedCandidates(candidates, selected)
+	wasNonland := make(map[id.ID]bool, len(chosen))
+	for _, cardID := range chosen {
+		wasNonland[cardID] = conniveCardIsNonland(r.game, cardID)
+	}
 	nonland := 0
-	for _, idx := range selected {
-		if idx < 0 || idx >= len(candidates) {
-			continue
-		}
-		cardID := candidates[idx]
-		wasNonland := conniveCardIsNonland(r.game, cardID)
-		if discardCardFromHandInBatch(r.game, playerID, cardID, simultaneousID) && wasNonland {
+	for _, cardID := range discardChosenCardsInBatch(r.game, playerID, chosen, r.game.IDGen.Next()) {
+		if wasNonland[cardID] {
 			nonland++
 		}
 	}
