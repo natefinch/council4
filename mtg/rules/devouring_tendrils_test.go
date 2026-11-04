@@ -176,9 +176,9 @@ func TestDevouringTendrilsLethalDamageGainsLifeOnlyFromDelayedTrigger(t *testing
 		t.Fatalf("Player2 life = %d, want 40", got)
 	}
 	s.assertNoFire(t)
-	expireCleanupDurations(s.g)
+	s.engine.advanceToNextTurn(s.g)
 	if len(s.g.DelayedTriggers) != 0 {
-		t.Fatalf("this-turn delayed trigger survived cleanup: %+v", s.g.DelayedTriggers)
+		t.Fatalf("this-turn delayed trigger survived the end of its turn: %+v", s.g.DelayedTriggers)
 	}
 }
 
@@ -272,18 +272,18 @@ func TestDevouringTendrilsNonGraveyardDepartureGainsNoLife(t *testing.T) {
 	s.assertLife(t, 40, "after the target was exiled")
 }
 
-// TestDevouringTendrilsTriggerExpiresAtCleanup proves the "this turn" window:
+// TestDevouringTendrilsTriggerExpiresAtTurnEnd proves the "this turn" window:
 // the target dying on a later turn gains nothing.
-func TestDevouringTendrilsTriggerExpiresAtCleanup(t *testing.T) {
+func TestDevouringTendrilsTriggerExpiresAtTurnEnd(t *testing.T) {
 	s := newDevouringTendrilsScenario(t)
 	mine := addCombatCreaturePermanentWithPower(s.g, game.Player1, 1)
 	theirs := addCombatCreaturePermanentWithPower(s.g, game.Player2, 10)
 
 	s.castAndResolve(t, mine, theirs)
-	expireCleanupDurations(s.g)
-	s.g.Turn.TurnNumber++
+	runEndingPhaseForTest(s.engine, s.g, endingPhasePassPolicies())
+	s.engine.advanceToNextTurn(s.g)
 	if len(s.g.DelayedTriggers) != 0 {
-		t.Fatalf("this-turn delayed trigger survived cleanup: %+v", s.g.DelayedTriggers)
+		t.Fatalf("this-turn delayed trigger survived the end of its turn: %+v", s.g.DelayedTriggers)
 	}
 	s.destroy(t, theirs)
 	s.assertNoFire(t)

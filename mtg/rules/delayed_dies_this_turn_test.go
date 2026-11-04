@@ -155,11 +155,11 @@ func TestDelayedDiesThisTurnSpellDamagesLastKnownController(t *testing.T) {
 		return event.Player == game.Player3 && event.Amount == 3 && event.SourceID == spellCard
 	})
 	// "This turn" is a stated duration (CR 603.7b), so the trigger stays until
-	// cleanup, but the dead object can never die again and nothing refires.
+	// the turn ends, but the dead object can never die again and nothing refires.
 	assertNoDelayedDiesFire(t, g, engine)
-	expireCleanupDurations(g)
+	engine.advanceToNextTurn(g)
 	if len(g.DelayedTriggers) != 0 {
-		t.Fatalf("this-turn delayed trigger survived cleanup: %+v", g.DelayedTriggers)
+		t.Fatalf("this-turn delayed trigger survived the end of its turn: %+v", g.DelayedTriggers)
 	}
 }
 
@@ -506,9 +506,10 @@ func TestDelayedDiesThisTurnOnlyMatchesThatCreatureDyingThisTurn(t *testing.T) {
 		victim := addCombatCreaturePermanentWithPower(g, game.Player2, 5)
 		castDiesThisTurnSpell(t, g, engine, searingBloodShape(), victim)
 
-		expireCleanupDurations(g)
+		runEndingPhaseForTest(engine, g, endingPhasePassPolicies())
+		engine.advanceToNextTurn(g)
 		if len(g.DelayedTriggers) != 0 {
-			t.Fatalf("this-turn delayed trigger survived cleanup: %+v", g.DelayedTriggers)
+			t.Fatalf("this-turn delayed trigger survived the end of its turn: %+v", g.DelayedTriggers)
 		}
 		victim.MarkedDamage = 5
 		assertNoDelayedDiesFire(t, g, engine)
