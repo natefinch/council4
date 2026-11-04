@@ -63,7 +63,6 @@ func expireCleanupDurations(g *game.Game) {
 	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
 		return effect.Duration == game.DurationUntilEndOfTurn || effect.Duration == game.DurationThisTurn
 	})
-	expireEventDelayedTriggers(g)
 	expirePreventionShields(g)
 	expireReplacementEffects(g)
 	expireRuleEffects(g)
@@ -499,6 +498,11 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 			remaining = append(remaining, *trigger)
 			continue
 		}
+		// A this-turn window never reaches a later turn's events, even if the
+		// trigger was not yet removed at its turn's end.
+		if trigger.Window == game.DelayedWindowThisTurn && trigger.CreatedTurn != g.Turn.TurnNumber {
+			continue
+		}
 		matchEvents := matchEventDelayedTriggerEvents(g, trigger, events)
 		if len(matchEvents) == 0 {
 			remaining = append(remaining, *trigger)
@@ -606,8 +610,12 @@ func matchEventDelayedTriggerEvents(g *game.Game, trigger *game.DelayedTrigger, 
 }
 
 // expireEventDelayedTriggers removes event-based delayed triggers whose
-// this-turn window has ended. It runs during the cleanup step, so a "whenever
-// you cast a spell this turn" rider stops firing once its turn is over.
+// this-turn window has ended. It runs when the turn ends, after its last cleanup
+// step, not with the cleanup step's "this turn" effects (CR 514.2): a delayed
+// triggered ability is created by a one-shot effect (CR 603.7a-b), and the turn
+// is not over while cleanup performs state-based actions or grants priority
+// (CR 514.3a). So "when that creature dies this turn" still sees a creature
+// dying to a cleanup state-based action or to a spell cast during cleanup.
 func expireEventDelayedTriggers(g *game.Game) {
 	if len(g.DelayedTriggers) == 0 {
 		return

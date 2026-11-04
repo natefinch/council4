@@ -493,6 +493,9 @@ func (e *Engine) discardToMaximumHandSizeWithChoices(g *game.Game, playerID game
 
 func (*Engine) advanceToNextTurn(g *game.Game) {
 	next := nextActualTurn(g)
+	// The turn ends after its last cleanup step (CR 514.3a), ending "this turn"
+	// delayed triggers before the next turn's events can occur.
+	expireEventDelayedTriggers(g)
 
 	g.Turn.TurnNumber++
 	g.Turn.ActivePlayer = next

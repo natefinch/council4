@@ -87,8 +87,9 @@ const (
 	// DelayedWindowNone is the zero value for fixed-phase delayed triggers.
 	DelayedWindowNone DelayedTriggerWindow = iota
 	// DelayedWindowThisTurn bounds an event-based delayed trigger to the turn it
-	// was created on ("... this turn"). It is removed during that turn's cleanup
-	// step.
+	// was created on ("... this turn"). It still sees events during that turn's
+	// cleanup steps, including cleanup state-based actions and spells cast in
+	// cleanup priority (CR 514.3a), and is removed when the turn ends.
 	DelayedWindowThisTurn
 	// DelayedWindowUntilFires bounds an event-based delayed trigger to its own
 	// firing: it persists across turns until a matching event occurs, then a
