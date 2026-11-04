@@ -145,7 +145,12 @@ type PermanentView struct {
 	// Delayed triggers are created by public spells and abilities, so every
 	// observer sees them; hidden face-down identities stay redacted.
 	PendingDelayedTriggers []DelayedTriggerView
-	keywords               map[game.Keyword]bool
+	// BattleProtector is the player protecting this permanent (CR 310.9), if
+	// one has been designated. Protectors are public to every observer. It is
+	// independent of Controller, and a permanent that stops being a battle
+	// keeps it (CR 310.9g).
+	BattleProtector opt.V[game.PlayerID]
+	keywords        map[game.Keyword]bool
 }
 
 // HasKeyword reports whether the permanent currently has the given keyword.
@@ -446,6 +451,7 @@ func (o PlayerObservation) permanentView(permanent *game.Permanent) PermanentVie
 		ProducesMana:           producesMana,
 		ProducesColors:         producesColors,
 		PendingDelayedTriggers: o.permanentDelayedTriggers(permanent.ObjectID),
+		BattleProtector:        permanent.BattleProtector,
 		keywords:               keywords,
 	}
 }
