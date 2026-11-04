@@ -320,17 +320,19 @@ func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRe
 func (fakePaymentState) AddCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
 	return true
 }
-func (fakePaymentState) ExertPermanent(*game.Permanent) bool                    { return true }
-func (fakePaymentState) MillCards(game.PlayerID, int)                           {}
-func (fakePaymentState) RemoveCounters(*game.Permanent, counter.Kind, int) bool { return false }
-func (fakePaymentState) LoseLife(game.PlayerID, int)                            {}
-func (fakePaymentState) SetPlayerEnergyCounters(game.PlayerID, int) bool        { return true }
-func (fakePaymentState) EmitZoneChange(game.Event)                              {}
-func (fakePaymentState) EmitCardReveal(game.PlayerID, id.ID, id.ID, zone.Type)  {}
-func (fakePaymentState) MovePermanentToZone(*game.Permanent, zone.Type) bool    { return true }
-func (fakePaymentState) SacrificePermanent(*game.Permanent) bool                { return true }
-func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool              { return false }
-func (fakePaymentState) DiscardAtRandom(game.PlayerID, int) bool                { return false }
+func (fakePaymentState) ExertPermanent(*game.Permanent) bool { return true }
+func (fakePaymentState) MillCards(game.PlayerID, int)        {}
+func (fakePaymentState) RemoveCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
+	return false
+}
+func (fakePaymentState) LoseLife(game.PlayerID, int)                           {}
+func (fakePaymentState) SetPlayerEnergyCounters(game.PlayerID, int) bool       { return true }
+func (fakePaymentState) EmitZoneChange(game.Event)                             {}
+func (fakePaymentState) EmitCardReveal(game.PlayerID, id.ID, id.ID, zone.Type) {}
+func (fakePaymentState) MovePermanentToZone(*game.Permanent, zone.Type) bool   { return true }
+func (fakePaymentState) SacrificePermanent(*game.Permanent) bool               { return true }
+func (fakePaymentState) DiscardFromHand(game.PlayerID, id.ID) bool             { return false }
+func (fakePaymentState) DiscardAtRandom(game.PlayerID, int) bool               { return false }
 func (fakePaymentState) PaySacrificeSubject(*game.Permanent, string) (game.PaidCostSubject, bool) {
 	return game.PaidCostSubject{}, false
 }

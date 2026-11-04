@@ -1,6 +1,9 @@
 package rules
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -28,6 +31,76 @@ func counterRemovedEvent(permanent *game.Permanent, controller game.PlayerID, ki
 		Amount:                amount,
 		SimultaneousID:        simultaneousID,
 	}
+}
+
+// counterRemoval removes counters from permanents on behalf of one player as
+// one simultaneous action by an effect or cost, then publishes the matching
+// EventCountersRemoved events once every removal has happened. Each event
+// records the number of that kind actually removed and how many the permanent
+// had immediately before, so a Siege whose last defense counter is removed
+// triggers (CR 310.12b) however the counters are removed.
+type counterRemoval struct {
+	g          *game.Game
+	controller game.PlayerID
+	events     []game.Event
+}
+
+func newCounterRemoval(g *game.Game, controller game.PlayerID) *counterRemoval {
+	return &counterRemoval{g: g, controller: controller}
+}
+
+// remove removes up to amount counters of kind from permanent and returns the
+// number removed.
+func (c *counterRemoval) remove(permanent *game.Permanent, kind counter.Kind, amount int) int {
+	if permanent == nil || amount <= 0 {
+		return 0
+	}
+	previous := permanent.Counters.Get(kind)
+	removed := permanent.Counters.Remove(kind, amount)
+	if removed > 0 {
+		c.events = append(c.events, counterRemovedEvent(permanent, c.controller, kind, previous, removed, 0))
+	}
+	return removed
+}
+
+// removeAll removes every counter of every kind from permanent ("remove all
+// counters", Vampire Hexmage) and returns the total removed. Kinds are removed
+// in counter-kind order so the published events are reproducible.
+func (c *counterRemoval) removeAll(permanent *game.Permanent) int {
+	if permanent == nil {
+		return 0
+	}
+	counts := permanent.Counters.All()
+	total := 0
+	for _, kind := range slices.Sorted(maps.Keys(counts)) {
+		total += c.remove(permanent, kind, counts[kind])
+	}
+	return total
+}
+
+// publish emits the collected events. Removals from more than one permanent or
+// of more than one kind happened simultaneously and share a SimultaneousID.
+func (c *counterRemoval) publish() {
+	if len(c.events) > 1 {
+		simultaneousID := c.g.IDGen.Next()
+		for i := range c.events {
+			c.events[i].SimultaneousID = simultaneousID
+		}
+	}
+	for _, event := range c.events {
+		emitEvent(c.g, event)
+	}
+	c.events = nil
+}
+
+// removeCountersFromPermanent removes up to amount counters of kind from
+// permanent on behalf of controller, publishes the removal and returns the
+// number removed.
+func removeCountersFromPermanent(g *game.Game, controller game.PlayerID, permanent *game.Permanent, kind counter.Kind, amount int) int {
+	removal := newCounterRemoval(g, controller)
+	removed := removal.remove(permanent, kind, amount)
+	removal.publish()
+	return removed
 }
 
 // siegeDefeatTriggeredByEvent reports whether event removed the last defense

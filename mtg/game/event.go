@@ -152,11 +152,14 @@ const (
 	EventObjectLeftGame
 	// EventCountersRemoved marks counters being removed from a permanent.
 	// PermanentID and CardID identify the permanent, Controller is the player
-	// whose effect or damage source removed them, CounterKind is the kind
+	// whose effect, cost or damage source removed them, CounterKind is the kind
 	// removed, PreviousCounterAmount is how many of that kind it had
 	// immediately before, and Amount is how many were actually removed.
 	// Damage dealt to a planeswalker or battle removes loyalty or defense
-	// counters this way (CR 120.3c, 120.3h, 310.6).
+	// counters this way (CR 120.3c, 120.3h, 310.6), as do "remove counter"
+	// effects and costs and the source side of a counter move (CR 122.5).
+	// Simultaneous removals from several permanents or of several kinds share
+	// a SimultaneousID.
 	EventCountersRemoved
 )
 

@@ -237,8 +237,9 @@ type stateMutations interface {
 	// RecordManaAbilityUse records a restricted mana ability activation.
 	RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction)
 
-	// RemoveCounters removes exactly amount counters of kind from a permanent.
-	RemoveCounters(p *game.Permanent, kind counter.Kind, amount int) bool
+	// RemoveCounters has playerID remove exactly amount counters of kind from a
+	// permanent, publishing the removal.
+	RemoveCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool
 
 	// AddCounters adds amount counters of kind to a permanent.
 	AddCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool

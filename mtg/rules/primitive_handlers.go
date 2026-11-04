@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"maps"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -705,13 +706,15 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 	if !ok || counters.IsEmpty() || source != nil && source.ObjectID == destination.ObjectID {
 		return res
 	}
+	controller := stackObjectController(r.obj)
 	if prim.AllKinds {
-		for kind, amount := range counters.All() {
-			addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, kind, amount)
-			if source != nil {
-				source.Counters.Remove(kind, amount)
-			}
+		removal := newCounterRemoval(r.game, controller)
+		all := counters.All()
+		for _, kind := range slices.Sorted(maps.Keys(all)) {
+			addCountersToPermanentControlledBy(r.game, controller, destination, kind, all[kind])
+			removal.remove(source, kind, all[kind])
 		}
+		removal.publish()
 		res.succeeded = true
 		return res
 	}
@@ -728,10 +731,8 @@ func handleMoveCounters(r *effectResolver, prim game.MoveCounters) effectResolve
 	if moved <= 0 {
 		return res
 	}
-	addCountersToPermanentControlledBy(r.game, stackObjectController(r.obj), destination, moveKind, moved)
-	if source != nil {
-		source.Counters.Remove(moveKind, moved)
-	}
+	addCountersToPermanentControlledBy(r.game, controller, destination, moveKind, moved)
+	removeCountersFromPermanent(r.game, controller, source, moveKind, moved)
 	res.succeeded = true
 	return res
 }
@@ -818,7 +819,7 @@ func (r *effectResolver) distributeMoveCounters(prim game.MoveCounters) effectRe
 			break
 		}
 		addCountersToPermanentControlledBy(r.game, placementController, candidates[index], prim.CounterKind, 1)
-		source.Counters.Remove(prim.CounterKind, 1)
+		removeCountersFromPermanent(r.game, placementController, source, prim.CounterKind, 1)
 		available--
 		res.amount++
 		res.succeeded = true
@@ -1504,10 +1505,12 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 	}
 	res := effectResolved{accepted: true}
 	requested := max(0, r.quantity(prim.Amount))
+	removal := newCounterRemoval(r.game, stackObjectController(r.obj))
+	defer removal.publish()
 	if prim.Group.Valid() {
 		res.amountKnown = true
 		for _, permanent := range r.groupPermanents(prim.Group) {
-			res.amount += permanent.Counters.Remove(prim.CounterKind, requested)
+			res.amount += removal.remove(permanent, prim.CounterKind, requested)
 		}
 		res.succeeded = res.amount > 0
 		return res
@@ -1522,7 +1525,7 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 			}
 			kind = chosen
 		}
-		res.amount = permanent.Counters.Remove(kind, requested)
+		res.amount = removal.remove(permanent, kind, requested)
 		res.succeeded = res.amount > 0
 	}
 	return res
@@ -1533,17 +1536,19 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 // kind from the referenced permanent or group regardless of count.
 func handleRemoveAllCounters(r *effectResolver, prim game.RemoveCounter) effectResolved {
 	res := effectResolved{accepted: true}
+	removal := newCounterRemoval(r.game, stackObjectController(r.obj))
+	defer removal.publish()
 	if prim.Group.Valid() {
 		res.amountKnown = true
 		for _, permanent := range r.groupPermanents(prim.Group) {
-			res.amount += permanent.Counters.RemoveAll()
+			res.amount += removal.removeAll(permanent)
 		}
 		res.succeeded = res.amount > 0
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
 		res.amountKnown = true
-		res.amount = permanent.Counters.RemoveAll()
+		res.amount = removal.removeAll(permanent)
 		res.succeeded = res.amount > 0
 	}
 	return res
