@@ -359,6 +359,36 @@ func reboundBuybackFixture() *game.CardDef {
 	return def
 }
 
+// castReboundBuybackFixture has Player1 cast the fixture from hand, paying
+// buyback.
+func castReboundBuybackFixture(t *testing.T, g *game.Game, engine *Engine, cardID id.ID) *game.StackObject {
+	t.Helper()
+	g.Players[game.Player1].ManaPool.Add(mana.G, 1)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	giveMainPhasePriority(g, game.Player1)
+	payBuyback := [game.NumPlayers]PlayerAgent{game.Player1: &authoredCopyChoiceAgent{
+		choose: func(request game.ChoiceRequest) []int {
+			if request.Kind == game.ChoicePayment {
+				for _, option := range request.Options {
+					if strings.Contains(option.Label, "Buyback") {
+						return []int{option.Index}
+					}
+				}
+				t.Fatalf("buyback payment branch missing: %+v", request)
+			}
+			return request.DefaultSelection
+		},
+	}}
+	if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(cardID, nil, 0, nil), payBuyback, &TurnLog{}) {
+		t.Fatal("cast with buyback failed")
+	}
+	obj, ok := g.Stack.Peek()
+	if !ok || !obj.BuybackPaid {
+		t.Fatalf("stack object = %+v, want buyback paid", obj)
+	}
+	return obj
+}
+
 func TestReboundCompetesWithBuyback(t *testing.T) {
 	t.Parallel()
 	for _, chooseRebound := range []bool{true, false} {
@@ -371,28 +401,7 @@ func TestReboundCompetesWithBuyback(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			engine := NewEngine(nil)
 			cardID := addCardToHand(g, game.Player1, reboundBuybackFixture())
-			g.Players[game.Player1].ManaPool.Add(mana.G, 1)
-			g.Players[game.Player1].ManaPool.Add(mana.C, 1)
-			giveMainPhasePriority(g, game.Player1)
-			payBuyback := [game.NumPlayers]PlayerAgent{game.Player1: &authoredCopyChoiceAgent{
-				choose: func(request game.ChoiceRequest) []int {
-					if request.Kind == game.ChoicePayment {
-						for _, option := range request.Options {
-							if strings.Contains(option.Label, "Buyback") {
-								return []int{option.Index}
-							}
-						}
-						t.Fatalf("buyback payment branch missing: %+v", request)
-					}
-					return request.DefaultSelection
-				},
-			}}
-			if !engine.applyActionWithChoices(g, game.Player1, action.CastSpell(cardID, nil, 0, nil), payBuyback, &TurnLog{}) {
-				t.Fatal("cast with buyback failed")
-			}
-			if obj, ok := g.Stack.Peek(); !ok || !obj.BuybackPaid {
-				t.Fatalf("stack object = %+v, want buyback paid", obj)
-			}
+			castReboundBuybackFixture(t, g, engine, cardID)
 			var requests []game.ChoiceRequest
 			engine.resolveTopOfStackWithChoices(g, reboundOrderAgents(t, game.Player1, chooseRebound, &requests), &TurnLog{})
 			requireReboundTwoWayChoice(t, requests, game.Player1, "Buyback")
