@@ -573,10 +573,11 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 	return view
 }
 
-// stackObjectName resolves a display name for a stack object from its source
-// card or token definition, falling back to an empty string. A face-down spell
-// keeps its real source card on the stack (CR 712 / morph), so its name is
-// suppressed to avoid exposing the hidden identity.
+// stackObjectName resolves a display name for a stack object: an ability's
+// battlefield source's effective or last-known name (a copy names what it
+// copied), else its source card or token definition, falling back to an empty
+// string. A face-down spell keeps its real source card on the stack (CR 712 /
+// morph), so its name is suppressed to avoid exposing the hidden identity.
 func (o PlayerObservation) stackObjectName(obj *game.StackObject) string {
 	if obj.FaceDown {
 		return ""
@@ -587,6 +588,8 @@ func (o PlayerObservation) stackObjectName(obj *game.StackObject) string {
 		}
 	} else if o.hiddenFaceDownPermanent(obj.SourceID) {
 		return ""
+	} else if name, ok := abilitySourceEffectiveName(o.g, obj.SourceID); ok {
+		return name
 	}
 	if card, ok := o.g.GetCardInstance(obj.SourceID); ok {
 		return card.Def.Name

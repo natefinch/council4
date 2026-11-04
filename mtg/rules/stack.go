@@ -86,9 +86,15 @@ func recordEnteredBattlefield(g *game.Game, log *TurnLog, eventsBefore int) {
 }
 
 // stackObjectSourceName resolves the display name of a stack object's source —
-// a token definition, the source card instance for an activated or triggered
-// ability, or the card instance a spell was cast from.
+// the effective name of an activated or triggered ability's battlefield source
+// (abilitySourceEffectiveName), else a token definition, the source card
+// instance for an ability, or the card instance a spell was cast from.
 func stackObjectSourceName(g *game.Game, obj *game.StackObject) string {
+	if obj.Kind != game.StackSpell {
+		if name, ok := abilitySourceEffectiveName(g, obj.SourceID); ok {
+			return name
+		}
+	}
 	if obj.SourceTokenDef != nil {
 		return obj.SourceTokenDef.Name
 	}
@@ -99,6 +105,32 @@ func stackObjectSourceName(g *game.Game, obj *game.StackObject) string {
 		return instance.Def.Name
 	}
 	return ""
+}
+
+// abilitySourceEffectiveName returns the name of the face-up battlefield
+// permanent identified by objectID as the source of an activated, triggered or
+// delayed triggered ability: its current effective name, including copy and
+// name-changing effects (CR 707.2, 613.1), while it remains on the battlefield,
+// else its last-known name from when it left (CR 113.7a, 603.7e). A copy of a
+// face-down permanent is legitimately nameless. ok is false when objectID is
+// not such a permanent — a card in another zone, a spell, or a face-down
+// permanent whose identity callers protect separately — so callers keep their
+// printed-definition fallback.
+func abilitySourceEffectiveName(g *game.Game, objectID id.ID) (string, bool) {
+	if objectID == 0 {
+		return "", false
+	}
+	if permanent, ok := permanentByObjectID(g, objectID); ok {
+		if permanent.FaceDown {
+			return "", false
+		}
+		return permanentEffectiveName(g, permanent), true
+	}
+	snapshot, ok := lastKnownObject(g, objectID)
+	if !ok || snapshot.FromZone != zone.Battlefield || snapshot.FaceDown {
+		return "", false
+	}
+	return snapshot.Name, true
 }
 
 func (e *Engine) resolveStackObject(g *game.Game, obj *game.StackObject, log *TurnLog) string {

@@ -18,7 +18,9 @@ import (
 type DelayedTriggerView struct {
 	ID         id.ID
 	Controller game.PlayerID
-	// SourceName names the delayed trigger's source (CR 603.7d-g).
+	// SourceName names the delayed trigger's source (CR 603.7d-g): a source
+	// permanent's effective name, including copy effects, while it remains on
+	// the battlefield, else its last-known name (CR 113.7a, 707.2).
 	SourceName string
 	// SourceObjectID is the source permanent while it remains on the
 	// battlefield, else zero.
@@ -90,6 +92,10 @@ func (o PlayerObservation) delayedTriggerView(trigger *game.DelayedTrigger) Dela
 		Text: trigger.Ability.Text,
 	}
 	if o.hiddenFaceDownPermanent(trigger.SourceObjectID) {
+		return view
+	}
+	if name, ok := abilitySourceEffectiveName(o.g, trigger.SourceObjectID); ok {
+		view.SourceName = name
 		return view
 	}
 	switch {
