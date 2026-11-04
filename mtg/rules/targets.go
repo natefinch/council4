@@ -34,6 +34,10 @@ type targetChoiceResult struct {
 	choices      [][]game.Target
 	targetCounts [][]int
 	kind         targetChoiceKind
+	// sampled reports that enumeration stopped at its limit with further
+	// legal choices left out, so choices is a sample rather than every legal
+	// choice of targets.
+	sampled bool
 	// err is diagnostic context for invalid card-definition input. Production
 	// enumeration currently treats invalid specs as unavailable actions/triggers.
 	err error
@@ -42,6 +46,10 @@ type targetChoiceResult struct {
 type targetChoiceOptions struct {
 	limit  int
 	xValue opt.V[int]
+	// visit, when set, receives each choice of targets and its counts in
+	// place of the result slices, which are left unchanged; enumeration stops
+	// once it returns false. The slices passed to it may be reused.
+	visit func(targets []game.Target, counts []int) bool
 }
 
 func targetChoicesForSpell(g *game.Game, controller game.PlayerID, card *game.CardDef, chosenModes []int, branch game.CastBranch) targetChoiceResult {
@@ -137,39 +145,57 @@ func targetChoicesForSpecs(g *game.Game, controller game.PlayerID, source *game.
 	if len(options) != 0 {
 		choices = options[0]
 	}
+	// One choice beyond the limit is enumerated only to learn whether the
+	// limit left any legal choice out.
+	limit := choices.limit
+	if limit > 0 {
+		choices.limit++
+	}
 	appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, 0, nil, nil, &result, &targetCounts, choices)
 	if len(result) == 0 {
 		return targetChoiceResult{kind: targetNoLegalChoices}
+	}
+	sampled := limit > 0 && len(result) > limit
+	if sampled {
+		result, targetCounts = result[:limit], targetCounts[:limit]
 	}
 	for i, targets := range result {
 		if _, unique := uniqueTargetCountsForSpecs(g, controller, source, sourceObjectID, triggerEvent, specs, targets); unique {
 			targetCounts[i] = nil
 		}
 	}
-	return targetChoiceResult{kind: targetLegalChoicesFound, choices: result, targetCounts: targetCounts}
+	return targetChoiceResult{kind: targetLegalChoicesFound, choices: result, targetCounts: targetCounts, sampled: sampled}
 }
 
 func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, specIndex int, prefix []game.Target, countPrefix []int, result *[][]game.Target, targetCounts *[][]int, choices targetChoiceOptions) {
+	visitTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex, prefix, countPrefix, result, targetCounts, choices)
+}
+
+// visitTargetChoicesForSpec enumerates as appendTargetChoicesForSpec does and
+// reports whether enumeration should continue.
+func visitTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, specIndex int, prefix []game.Target, countPrefix []int, result *[][]game.Target, targetCounts *[][]int, choices targetChoiceOptions) bool {
 	if choices.limit > 0 && len(*result) >= choices.limit {
-		return
+		return false
 	}
 	if specIndex >= len(specs) {
+		if choices.visit != nil {
+			return choices.visit(prefix, countPrefix)
+		}
 		*result = append(*result, append([]game.Target(nil), prefix...))
 		*targetCounts = append(*targetCounts, append([]int(nil), countPrefix...))
-		return
+		return true
 	}
 	spec := normalizeTargetSpecForEvent(&specs[specIndex], triggerEvent)
 	if !targetSpecValid(&spec) {
-		return
+		return true
 	}
 	if targetSpecUsesExternalChooser(&spec) {
 		if len(choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, &spec)) == 0 {
-			return
+			return true
 		}
 		next := append(append([]game.Target(nil), prefix...), game.DeferredTarget())
 		nextCounts := append(append([]int(nil), countPrefix...), 1)
-		appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts, choices)
-		return
+		return visitTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts, choices)
 	}
 	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, triggerEvent, &spec)
 	candidates = filterAnnouncedManaValueTargets(g, spec, candidates, choices.xValue)
@@ -184,12 +210,15 @@ func appendTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *
 			}
 			next := append(append([]game.Target(nil), prefix...), combination...)
 			nextCounts := append(append([]int(nil), countPrefix...), count)
-			appendTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts, choices)
+			if !visitTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts, choices) {
+				return false
+			}
 			if choices.limit > 0 && len(*result) >= choices.limit {
-				return
+				return false
 			}
 		}
 	}
+	return true
 }
 
 // targetsSatisfySameGraveyard reports whether targets meet a SameGraveyard spec's

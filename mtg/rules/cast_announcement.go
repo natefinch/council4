@@ -65,7 +65,7 @@ func (e *Engine) chooseCastTargets(g *game.Game, player game.PlayerID, def *game
 		return cast, true
 	}
 	var ok bool
-	cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, player, def, cast, nil, nil, agents, log)
+	cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, player, def, cast, nil, nil, nil, agents, log)
 	return cast, ok
 }
 
@@ -87,8 +87,15 @@ func (e *Engine) chooseAnnouncementNumber(g *game.Game, player game.PlayerID, pr
 // completion. When payable is non-nil, it holds the legal target choices with
 // which the cost already proposed for the spell can be paid (see
 // payableTargetChoices), and each spec offers only targets that extend the
-// targets chosen so far toward one of them, when any do.
-func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, preferred []game.Target, payable [][]game.Target, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+// targets chosen so far toward one of them, when any do. When open is non-nil,
+// it holds the choices of targets still open with that proposal after earlier
+// attempts were reversed (CR 733.2), and each spec offers only the targets it
+// finds some open choice extending (see openTargetsForSpec). A selection that
+// begins only withheld choices, found by searching every choice it begins
+// rather than a sample, is invalid and replaced by an open default, so legal
+// choices beyond any sample stay open. When no open choice remains, it
+// records that and the choice fails.
+func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, preferred []game.Target, payable [][]game.Target, open *proposalTargets, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
 	branch := castBranchForCast(cast)
 	specs := spellTargetSpecs(def, cast.ChosenModes, branch)
 	payableChoices, restricted := segmentTargetChoices(g, player, def, specs, payable)
@@ -130,6 +137,14 @@ func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID,
 		if restricted {
 			candidates, fallback = payableTargetsForSpec(payableChoices, targets, counts, candidates, fallback)
 		}
+		if open != nil {
+			var closed bool
+			candidates, fallback, closed = openTargetsForSpec(g, player, def, specs, index, cast.XValue, targets, counts, candidates, fallback, open)
+			if closed {
+				open.closePrefix(targets, counts)
+				return nil, false
+			}
+		}
 		options := make([][]game.Target, len(candidates))
 		for position, candidate := range candidates {
 			options[position] = []game.Target{candidate}
@@ -144,13 +159,145 @@ func (e *Engine) chooseAnnouncedSpellTargets(g *game.Game, player game.PlayerID,
 			request.DefaultSelection = targetPositions(candidates, fallback)
 		}
 		selected := e.chooseChoice(g, agents, request, log)
-		for _, position := range selected {
-			targets = append(targets, candidates[position])
+		chosen := make([]game.Target, len(selected))
+		for i, position := range selected {
+			chosen[i] = candidates[position]
 		}
-		counts = append(counts, len(selected))
+		if open != nil {
+			// Each search stops at the first open choice it finds, so
+			// searching every choice is costly only when none is open.
+			extends := func(segment []game.Target) bool {
+				return openTargetStatus(g, player, def, specs, index+1, cast.XValue,
+					append(slices.Clone(targets), segment...), append(slices.Clone(counts), len(segment)), open, 0) == targetsOpen
+			}
+			if !extends(chosen) {
+				// Every choice of targets this selection begins is withheld,
+				// so it is invalid and an open default replaces it: the
+				// provisional one if still open, otherwise the one
+				// openTargetsForSpec found.
+				defaults := make([]game.Target, len(request.DefaultSelection))
+				for i, position := range request.DefaultSelection {
+					defaults[i] = candidates[position]
+				}
+				g.Execution.InvalidChoices++
+				chosen = fallback
+				if len(defaults) >= spec.MinTargets && extends(defaults) {
+					chosen = defaults
+				}
+			}
+		}
+		targets = append(targets, chosen...)
+		counts = append(counts, len(chosen))
 	}
 	return targets, targetsValidForSpecs(g, player, def, 0, specs, targets) &&
 		targetsSatisfyManaValueXForSpecs(g, specs, counts, targets, cast.XValue)
+}
+
+// openTargetsStatus is what a search for an open choice of targets found.
+type openTargetsStatus int
+
+const (
+	// targetsOpen means an open choice of targets was found.
+	targetsOpen openTargetsStatus = iota
+	// targetsUnknown means none was found among the choices searched, but
+	// more remain.
+	targetsUnknown
+	// targetsClosed means every choice of targets searched for is withheld.
+	targetsClosed
+)
+
+// openTargetCompletion searches the choices of targets that begin with chosen,
+// the targets for the specs before specs[index] split by counts, for one that
+// open doesn't withhold (CR 733.2), and returns the first open one found. It
+// searches at most limit of them, reporting targetsUnknown when it finds none
+// but more remain, or every one of them, lazily, when limit is 0. When
+// segmentOK is non-nil, only the choices whose targets for specs[index] it
+// accepts are searched.
+func openTargetCompletion(g *game.Game, player game.PlayerID, def *game.CardDef, specs []game.TargetSpec, index, xValue int, chosen []game.Target, counts []int, open *proposalTargets, limit int, segmentOK func([]game.Target) bool) ([]game.Target, []int, openTargetsStatus) {
+	if open.prefixClosed(chosen, counts) {
+		return nil, nil, targetsClosed
+	}
+	status := targetsClosed
+	var completion []game.Target
+	var completionCounts []int
+	searched := 0
+	visit := func(targets []game.Target, targetCounts []int) bool {
+		if limit > 0 && searched == limit {
+			status = targetsUnknown
+			return false
+		}
+		searched++
+		if segmentOK != nil && !segmentOK(targets[len(chosen):len(chosen)+targetCounts[index]]) ||
+			open.closed(targets, targetCounts) {
+			return true
+		}
+		completion, completionCounts, status = slices.Clone(targets), slices.Clone(targetCounts), targetsOpen
+		return false
+	}
+	visitTargetChoicesForSpec(g, player, def, 0, game.Event{}, specs, index, chosen, counts,
+		&[][]game.Target{}, &[][]int{}, targetChoiceOptions{xValue: opt.Val(xValue), visit: visit})
+	return completion, completionCounts, status
+}
+
+// openTargetStatus reports whether some choice of targets that begins with
+// chosen, split by counts, is open, searching at most limit of them (see
+// openTargetCompletion).
+func openTargetStatus(g *game.Game, player game.PlayerID, def *game.CardDef, specs []game.TargetSpec, index, xValue int, chosen []game.Target, counts []int, open *proposalTargets, limit int) openTargetsStatus {
+	_, _, status := openTargetCompletion(g, player, def, specs, index, xValue, chosen, counts, open, limit, nil)
+	return status
+}
+
+// openTargetsForSpec returns the candidates for specs[index] to offer after
+// chosen, split by counts, and the targets to choose for it by default, when
+// open holds the choices of targets still open (CR 733.2). A spec that takes
+// at most one target leaves out the candidates a bounded search finds begin
+// only withheld choices, so that one withheld choice leaves every other open;
+// a spec that takes more offers every candidate, and a selection that begins
+// only withheld choices is replaced by the default (see
+// chooseAnnouncedSpellTargets). Unless a bounded search finds the default
+// begins an open choice, it is moved to the first open choice that begins with
+// chosen, searching every one of them, so that the default always begins an
+// open choice however many legal choices there are. It reports closed,
+// offering nothing, when no choice that begins with chosen is open.
+func openTargetsForSpec(g *game.Game, player game.PlayerID, def *game.CardDef, specs []game.TargetSpec, index, xValue int, chosen []game.Target, counts []int, candidates, fallback []game.Target, open *proposalTargets) ([]game.Target, []game.Target, bool) {
+	extend := func(targets []game.Target) openTargetsStatus {
+		return openTargetStatus(g, player, def, specs, index+1, xValue,
+			append(slices.Clone(chosen), targets...), append(slices.Clone(counts), len(targets)), open,
+			maxSampledNumericTargetChoices)
+	}
+	spec := normalizeTargetSpec(&specs[index])
+	if spec.MaxTargets == 1 {
+		candidates = slices.DeleteFunc(slices.Clone(candidates), func(candidate game.Target) bool {
+			return extend([]game.Target{candidate}) == targetsClosed
+		})
+	}
+	if extend(fallback) == targetsOpen {
+		return candidates, fallback, false
+	}
+	// An open choice whose targets for this spec are all offered is
+	// preferred; otherwise the targets of the first open choice are offered
+	// too, since the payable choices candidates may be narrowed to can all
+	// be withheld.
+	offered := func(target game.Target) bool {
+		return slices.ContainsFunc(candidates, func(candidate game.Target) bool { return sameTargetObject(candidate, target) })
+	}
+	completion, completionCounts, status := openTargetCompletion(g, player, def, specs, index, xValue, chosen, counts, open, 0,
+		func(segment []game.Target) bool {
+			return !slices.ContainsFunc(segment, func(target game.Target) bool { return !offered(target) })
+		})
+	if status != targetsOpen {
+		completion, completionCounts, status = openTargetCompletion(g, player, def, specs, index, xValue, chosen, counts, open, 0, nil)
+	}
+	if status != targetsOpen {
+		return nil, nil, true
+	}
+	segment := completion[len(chosen) : len(chosen)+completionCounts[index]]
+	for _, target := range segment {
+		if !offered(target) {
+			candidates = append(slices.Clone(candidates), target)
+		}
+	}
+	return candidates, segment, false
 }
 
 // targetPositions returns the position in candidates of each of targets that

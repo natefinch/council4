@@ -328,7 +328,7 @@ func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast acti
 	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
 	if !ok {
 		rollback()
-		return proposals.reverseUnpayable(attempt, 0, proposal, nil, nil)
+		return proposals.reverseUnpayable(attempt, 0, proposal, nil)
 	}
 	request.PreparedCost = &prepared
 	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)

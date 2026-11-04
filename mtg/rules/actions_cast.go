@@ -197,6 +197,9 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	proposalRequests := mode.castRouteRequests(priorityCastRequest(playerID, spellDef, sourceZone, cast, permissions, nil), castRoutes)
 	proposed := spellCostsIncludePhyrexian(g, proposalRequests)
 	targeted := len(spellTargetSpecs(announcementDef, cast.ChosenModes, branch)) > 0
+	if targeted {
+		e.checkPayment(g, &proposals, proposalRequests)
+	}
 	proposedTargets := func() []game.Target {
 		if !targeted {
 			return nil
@@ -215,7 +218,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	}
 	if proposed {
 		if targeted {
-			proposals.targetChoices = targetChoicesForSpellWithKickerCount(g, playerID, announcementDef, cast.ChosenModes, branch, effectiveKickerCount(cast.KickerPaid, cast.KickerCount)).choices
+			proposals.offerTargets(targetChoicesForSpellWithKickerCount(g, playerID, announcementDef, cast.ChosenModes, branch, effectiveKickerCount(cast.KickerPaid, cast.KickerCount)))
 		}
 		route, proposal, ok = e.proposeCastRouteCost(g, castRoutes, proposalRequests, proposals, agents, log)
 		if !ok {
@@ -223,8 +226,9 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		}
 		if targeted {
 			payable := proposals.openTargetChoices(route, proposal,
-				e.payableTargetChoices(g, proposalRequests[route], proposals.targetChoices, proposal))
-			cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, playerID, announcementDef, cast, cast.Targets, payable, agents, log)
+				e.payableTargetChoices(g, proposalRequests[route], proposals, proposal))
+			cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, playerID, announcementDef, cast, cast.Targets, payable,
+				proposals.targetsFor(route, proposal), agents, log)
 			if !ok {
 				return fail(), nil
 			}
@@ -232,6 +236,12 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, agents, log, branch)
 	if !ok || !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, completedTargets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, validationPermission...) {
+		if proposed && targeted && !proposals.payableWithTargets(route, proposal, cast.Targets) {
+			// The proposal can't be paid with the targets chosen, so it is
+			// withheld with them and every other choice it can't be paid
+			// with (CR 733.1).
+			return proposals.reverseUnpayable(attempt(), route, proposal, cast.Targets), nil
+		}
 		return fail(), nil
 	}
 	cast.Targets = completedTargets
@@ -322,10 +332,6 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		// paid with them on any later attempt.
 		unpayable := reversible && len(splice.manaCosts) == 0 &&
 			!e.announcedSpellCostFeasibility(g, requests[route], proposal.optionIndex, true)(proposal.phyrexian)
-		var unpayableTargets [][]game.Target
-		if unpayable {
-			unpayableTargets = e.unpayableTargetChoices(g, requests[route], proposals.targetChoices, proposal)
-		}
 		// CR 733.1: the proposed cast is illegal because its costs can't be
 		// paid, so the proposal is undone — take the spell back off the stack
 		// and return the card to the zone it was cast from.
@@ -333,7 +339,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		restoreCastSourceCard(place)
 		counterTransition.undo(g)
 		if unpayable {
-			return proposals.reverseUnpayable(attempt(), route, proposal, proposedTargets(), unpayableTargets), nil
+			return proposals.reverseUnpayable(attempt(), route, proposal, proposedTargets()), nil
 		}
 		return fail(), nil
 	}
@@ -503,7 +509,7 @@ func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.Player
 		case !reversible:
 			return actionFailed
 		case unpayable:
-			return proposals.reverseUnpayable(attempt, route, proposal, nil, nil)
+			return proposals.reverseUnpayable(attempt, route, proposal, nil)
 		default:
 			return proposals.reverse(attempt, route, proposal, nil)
 		}
@@ -776,6 +782,9 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	proposals := newCastProposals(attempts, castActionKey(cast), nil)
 	var proposal spellCostProposal
 	targeted := len(spellTargetSpecs(spellDef, cast.ChosenModes, branch)) > 0
+	if targeted {
+		e.checkPayment(g, &proposals, []payment.SpellRequest{request})
+	}
 	proposedTargets := func() []game.Target {
 		if !targeted {
 			return nil
@@ -798,15 +807,16 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	proposalRequest := request
 	if proposed {
 		if targeted {
-			proposals.targetChoices = targetChoicesForSpell(g, playerID, spellDef, cast.ChosenModes, branch).choices
+			proposals.offerTargets(targetChoicesForSpell(g, playerID, spellDef, cast.ChosenModes, branch))
 		}
 		_, proposal, ok = e.proposeCastRouteCost(g, nil, []payment.SpellRequest{request}, proposals, agents, log)
 		if !ok {
 			return proposals.exhaust(), nil
 		}
 		if targeted {
-			payable := proposals.openTargetChoices(0, proposal, e.payableTargetChoices(g, request, proposals.targetChoices, proposal))
-			cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, playerID, spellDef, cast, cast.Targets, payable, agents, log)
+			payable := proposals.openTargetChoices(0, proposal, e.payableTargetChoices(g, request, proposals, proposal))
+			cast.Targets, ok = e.chooseAnnouncedSpellTargets(g, playerID, spellDef, cast, cast.Targets, payable,
+				proposals.targetsFor(0, proposal), agents, log)
 			if !ok {
 				return fail(), nil
 			}
@@ -814,6 +824,12 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	}
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
 	if !ok || !e.canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
+		if proposed && targeted && !proposals.payableWithTargets(0, proposal, cast.Targets) {
+			// The proposal can't be paid with the targets chosen, so it is
+			// withheld with them and every other choice it can't be paid
+			// with (CR 733.1).
+			return proposals.reverseUnpayable(attempt(), 0, proposal, cast.Targets), nil
+		}
 		return fail(), nil
 	}
 	cast.Targets = completedTargets
@@ -851,8 +867,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		undoMana()
 		proposalRequest.Targets = cast.Targets
 		if reversible && !e.announcedSpellCostFeasibility(g, proposalRequest, proposal.optionIndex, true)(proposal.phyrexian) {
-			return proposals.reverseUnpayable(attempt(), 0, proposal, proposedTargets(),
-				e.unpayableTargetChoices(g, proposalRequest, proposals.targetChoices, proposal)), nil
+			return proposals.reverseUnpayable(attempt(), 0, proposal, proposedTargets()), nil
 		}
 		return fail(), nil
 	}
