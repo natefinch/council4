@@ -32,7 +32,7 @@ func castIntoReboundExile(t *testing.T, e *Engine, g *game.Game, cardID id.ID) {
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("rebound spell was not exiled on resolution")
 	}
-	if _, ok := g.ReboundCards[cardID]; !ok {
+	if !reboundTriggerPending(g, cardID) {
 		t.Fatal("rebound spell was not tracked for the next upkeep")
 	}
 }
@@ -57,7 +57,7 @@ func requireReboundNotCast(t *testing.T, g *game.Game, cardID id.ID) {
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatal("uncast rebound card left exile")
 	}
-	if _, ok := g.ReboundCards[cardID]; ok {
+	if reboundTriggerPending(g, cardID) {
 		t.Fatal("rebound permission survived the upkeep")
 	}
 	if g.Stack.Size() != 0 {
@@ -132,7 +132,7 @@ func TestReboundCastPaysThaliaTax(t *testing.T) {
 			}
 			g.Players[game.Player1].ManaPool.Add(mana.C, tc.upkeepC)
 
-			e.processReboundUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			runReboundUpkeep(e, g, game.Player1, [game.NumPlayers]PlayerAgent{})
 
 			if !tc.wantCast {
 				requireReboundNotCast(t, g, cardID)
@@ -194,7 +194,7 @@ func TestReboundCastPaysAdditionalCosts(t *testing.T) {
 			}
 			g.Players[game.Player1].ManaPool.Add(mana.C, tc.upkeepC)
 
-			e.processReboundUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			runReboundUpkeep(e, g, game.Player1, [game.NumPlayers]PlayerAgent{})
 
 			if !tc.wantCast {
 				requireReboundNotCast(t, g, cardID)
@@ -272,7 +272,10 @@ func TestReboundCastOptionalCostsAndStormCopies(t *testing.T) {
 			g.Players[game.Player1].ManaPool.Add(mana.C, tc.upkeepC)
 			agent := &reboundKickerAgent{}
 
-			e.processReboundUpkeep(g, game.Player1, reboundKickerAgents(agent), &TurnLog{})
+			// An additional upkeep this turn is still Player1's next upkeep,
+			// so the earlier hand cast counts for storm.
+			beginAdditionalUpkeep(e, g, game.Player1, reboundKickerAgents(agent))
+			resolveReboundTriggers(e, g, reboundKickerAgents(agent))
 
 			if len(agent.requests) != 1 {
 				t.Fatalf("free-cast requests = %d, want 1", len(agent.requests))
@@ -317,7 +320,7 @@ func TestReboundCastMayBeDeclined(t *testing.T) {
 	castIntoReboundExile(t, e, g, cardID)
 	agent := &cascadeCastChoiceAgent{decline: true}
 
-	e.processReboundUpkeep(g, game.Player1, reboundKickerAgents(agent), &TurnLog{})
+	runReboundUpkeep(e, g, game.Player1, reboundKickerAgents(agent))
 
 	if len(agent.requests) != 1 || declineOptionCount(agent.requests[0]) != 1 {
 		t.Fatalf("free-cast requests = %+v, want one request offering a decline", agent.requests)
@@ -339,13 +342,13 @@ func TestReboundCastCostsSurviveClone(t *testing.T) {
 	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
 
 	clone := g.Clone()
-	e.processReboundUpkeep(clone, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	runReboundUpkeep(e, clone, game.Player1, [game.NumPlayers]PlayerAgent{})
 
 	obj, _ := requireReboundCast(t, clone, cardID)
 	if obj.ManaSpentToCast != 1 || clone.Players[game.Player1].ManaPool.Total() != 0 {
 		t.Fatalf("clone rebound mana spent = %d pool = %d, want Thalia tax paid", obj.ManaSpentToCast, clone.Players[game.Player1].ManaPool.Total())
 	}
-	if _, ok := g.ReboundCards[cardID]; !ok || !g.Players[game.Player1].Exile.Contains(cardID) ||
+	if !reboundTriggerPending(g, cardID) || !g.Players[game.Player1].Exile.Contains(cardID) ||
 		g.Players[game.Player1].ManaPool.Total() != 1 || g.Stack.Size() != 0 {
 		t.Fatal("casting the rebound in the clone changed the original game")
 	}
@@ -413,7 +416,7 @@ func TestReboundCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 
 	clone := g.Clone()
 	agent := &paymentManaAgent{ability: "Pay 1 life"}
-	e.processReboundUpkeep(clone, game.Player1, reboundKickerAgents(agent), &TurnLog{})
+	runReboundUpkeep(e, clone, game.Player1, reboundKickerAgents(agent))
 
 	obj, event := requireReboundCast(t, clone, cardID)
 	grove := reboundPermanentNamed(t, clone, "Waterlogged Grove")
@@ -423,7 +426,7 @@ func TestReboundCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 	if obj.ManaSpentToCast != 1 || event.ManaSpentToCast.Val != 1 || clone.Players[game.Player1].ManaPool.Total() != 0 {
 		t.Fatalf("mana spent obj=%d event=%+v pool=%d, want the Grove's mana spent on the tax", obj.ManaSpentToCast, event.ManaSpentToCast, clone.Players[game.Player1].ManaPool.Total())
 	}
-	if _, ok := g.ReboundCards[cardID]; !ok || !g.Players[game.Player1].Exile.Contains(cardID) ||
+	if !reboundTriggerPending(g, cardID) || !g.Players[game.Player1].Exile.Contains(cardID) ||
 		reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped || g.Stack.Size() != 0 {
 		t.Fatal("casting the rebound in the clone changed the original game")
 	}
@@ -445,7 +448,7 @@ func TestReboundCastLocksCostBeforeManaAbilities(t *testing.T) {
 	setReboundUpkeep(g)
 	agent := &paymentManaAgent{ability: "Sacrifice a creature"}
 
-	e.processReboundUpkeep(g, game.Player1, reboundKickerAgents(agent), &TurnLog{})
+	runReboundUpkeep(e, g, game.Player1, reboundKickerAgents(agent))
 
 	obj, _ := requireReboundCast(t, g, cardID)
 	if _, onBattlefield := permanentByObjectID(g, thalia.ObjectID); agent.activated != 1 || onBattlefield {
@@ -510,7 +513,7 @@ func TestReboundCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 			life := g.Players[game.Player1].Life
 			agent := &paymentManaAgent{ability: "Add {G} or {U}"}
 
-			e.processReboundUpkeep(g, game.Player1, reboundKickerAgents(agent), &TurnLog{})
+			runReboundUpkeep(e, g, game.Player1, reboundKickerAgents(agent))
 
 			if agent.windows != tc.wantWindows || agent.activated != tc.wantActivated {
 				t.Fatalf("payment windows=%d activations=%d, want %d/%d", agent.windows, agent.activated, tc.wantWindows, tc.wantActivated)
@@ -681,7 +684,7 @@ func TestFreeCastWithoutManaPaymentOpensNoManaWindow(t *testing.T) {
 			g.Players[game.Player1].ManaPool.Add(mana.C, 1)
 			castIntoReboundExile(t, e, g, cardID)
 			setReboundUpkeep(g)
-			e.processReboundUpkeep(g, game.Player1, agents, &TurnLog{})
+			runReboundUpkeep(e, g, game.Player1, agents)
 			requireReboundCast(t, g, cardID)
 			return true
 		}},
@@ -692,7 +695,7 @@ func TestFreeCastWithoutManaPaymentOpensNoManaWindow(t *testing.T) {
 			castIntoReboundExile(t, e, g, cardID)
 			reboundTestArtifact(g)
 			setReboundUpkeep(g)
-			e.processReboundUpkeep(g, game.Player1, agents, &TurnLog{})
+			runReboundUpkeep(e, g, game.Player1, agents)
 			requireReboundCast(t, g, cardID)
 			return true
 		}},

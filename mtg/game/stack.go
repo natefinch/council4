@@ -85,6 +85,12 @@ type StackObject struct {
 	// the ability keeps it (CR 707.10).
 	SiegeDefeat bool
 
+	// Rebound identifies rebound's delayed triggered ability (CR 702.88a): its
+	// controller may cast the captured card (CapturedCardID at
+	// CapturedCardZoneVersion) from exile without paying its mana cost. A copy
+	// of the ability keeps it (CR 707.10).
+	Rebound bool
+
 	// TriggerEvent is the event that caused this triggered ability to trigger.
 	// HasTriggerEvent distinguishes a real zero-valued event from no event.
 	TriggerEvent    Event

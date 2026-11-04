@@ -69,6 +69,14 @@ const (
 	// return for their following end step (CR 603.7c). Added last so existing
 	// timings keep their wire values.
 	DelayedAtBeginningOfYourNextEndStep
+	// DelayedAtBeginningOfYourNextUpkeep fires at the beginning of the delayed
+	// trigger's controller's next upkeep ("at the beginning of your next
+	// upkeep", rebound CR 702.88a). Like DelayedAtBeginningOfYourNextEndStep it
+	// is skipped at other players' upkeeps and fires only when the controller is
+	// the active player; because it is always created after the current step's
+	// beginning event has passed, one created during the controller's own upkeep
+	// waits for their next upkeep step.
+	DelayedAtBeginningOfYourNextUpkeep
 )
 
 // DelayedTriggerWindow bounds the lifetime of an event-based delayed trigger.
@@ -279,6 +287,11 @@ type DelayedTrigger struct {
 	// means no card was captured, so CardReferenceCaptured finds nothing.
 	CapturedCardID          id.ID
 	CapturedCardZoneVersion uint64
+	// Rebound marks rebound's delayed triggered ability (CR 702.88a), "at the
+	// beginning of your next upkeep, you may cast this card from exile without
+	// paying its mana cost." The captured card is the rebounded card; the
+	// ability's behavior is rules-owned and selected by StackObject.Rebound.
+	Rebound bool
 }
 
 // ReflexiveTrigger is a runtime reflexive triggered ability (CR 603.11) queued

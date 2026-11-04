@@ -636,6 +636,7 @@ func firedDelayedTrigger(trigger *game.DelayedTrigger, ability *game.TriggeredAb
 		capturedObjectIDs:           append([]id.ID(nil), trigger.CapturedObjectIDs...),
 		capturedCardID:              trigger.CapturedCardID,
 		capturedCardZoneVersion:     trigger.CapturedCardZoneVersion,
+		rebound:                     trigger.Rebound,
 		boundEventObjectIDs: boundObjectIDs(0, nil,
 			trigger.BoundDamageSourceObjectID,
 			trigger.BoundAttackerObjectID,
@@ -651,11 +652,13 @@ func firedDelayedTrigger(trigger *game.DelayedTrigger, ability *game.TriggeredAb
 // the following turn. The controller-keyed timings additionally require the
 // trigger's controller to be the active player, so an intervening opponent's step
 // does not consume them: "your next main phase" fires at a main-phase boundary of
-// the controller's turn, and "your next end step" ("Put that card into your hand
+// the controller's turn, "your next end step" ("Put that card into your hand
 // at the beginning of your next end step.", Necropotence) fires at an end-step
-// boundary of the controller's turn. Because a delayed trigger is always created
-// after the current step's beginning event has passed, activating during your own
-// end step correctly waits for your following turn's end step.
+// boundary of the controller's turn, and "your next upkeep" (rebound) fires at
+// an upkeep boundary of the controller's turn. Because a delayed trigger is
+// always created after the current step's beginning event has passed,
+// activating during your own end step correctly waits for your following
+// turn's end step.
 func delayedTriggerReadyAtBoundary(g *game.Game, trigger *game.DelayedTrigger, boundaryTiming game.DelayedTriggerTiming) bool {
 	switch trigger.Timing {
 	case game.DelayedAtBeginningOfNextUpkeep:
@@ -664,6 +667,8 @@ func delayedTriggerReadyAtBoundary(g *game.Game, trigger *game.DelayedTrigger, b
 		return boundaryTiming == game.DelayedAtBeginningOfNextMainPhase && trigger.Controller == g.Turn.ActivePlayer
 	case game.DelayedAtBeginningOfYourNextEndStep:
 		return boundaryTiming == game.DelayedAtBeginningOfNextEndStep && trigger.Controller == g.Turn.ActivePlayer
+	case game.DelayedAtBeginningOfYourNextUpkeep:
+		return boundaryTiming == game.DelayedAtBeginningOfNextUpkeep && trigger.Controller == g.Turn.ActivePlayer
 	default:
 		return boundaryTiming == trigger.Timing
 	}
