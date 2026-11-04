@@ -792,6 +792,129 @@ func TestObservationCopiedUntextedTriggerKeepsCopiedText(t *testing.T) {
 	wantText("delayed trigger after the Clone left", pending[0].Text, okoyeDelayedOwnText)
 }
 
+// Source review (#3579): Okoye, Mighty and Adored (oracle_id
+// 8fbfc5b1-2146-4d07-a5fe-5f025da31bd6: "When Okoye enters, you become the
+// monarch. / At the beginning of combat on your turn, put a +1/+1 counter on
+// target creature. Whenever that creature attacks the monarch this turn, it
+// gains double strike and trample until end of turn.") and Clone (oracle_id
+// 42226b87-0746-4ebf-9fd0-108d508462af: "You may have this creature enter as a
+// copy of any creature on the battlefield.") from pinned corpus
+// 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4. Comprehensive
+// Rules effective 2026-09-25
+// (https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt), read
+// 113.7, 113.7a, 603.7d-f, 613.1a, 707.2 and 708.9: a copy's name is a copiable
+// value applied in layer 1 (707.2, 613.1a); an ability's source is the object
+// that generated it, and a source that has left its zone is described by its
+// last known information (113.7, 113.7a); a delayed triggered ability created
+// by an ability has that ability's source (603.7e).
+//
+// Clone copying Okoye generates the beginning-of-combat trigger, so every log
+// and observer names its source "Okoye, Mighty and Adored", never the Clone
+// card, on the stack, while its delayed trigger is pending, after the Clone
+// left the battlefield (last-known name) and when the delayed trigger fires.
+func TestObservationCopiedAbilitySourceUsesCopiedName(t *testing.T) {
+	registry := cards.NewDefaultRegistry()
+	okoye := registry.Lookup("Okoye, Mighty and Adored")
+	clone := registry.Lookup("Clone")
+	if okoye == nil || clone == nil {
+		t.Fatal("Okoye or Clone is not in the default registry")
+	}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	blueprint := addCombatPermanent(g, game.Player2, okoye)
+	addImplementationSpellToStack(g, game.Player1, clone, nil)
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+	}, &TurnLog{})
+	copied := g.Battlefield[len(g.Battlefield)-1]
+	if copied.Controller != game.Player1 || permanentEffectiveName(g, copied) != okoye.Name {
+		t.Fatalf("Clone entered as %q, want a copy of %q", permanentEffectiveName(g, copied), okoye.Name)
+	}
+	if card, ok := g.GetCardInstance(copied.CardInstanceID); !ok || card.Def.Name != clone.Name {
+		t.Fatal("the copy is not backed by the physical Clone card")
+	}
+	g.TriggerEventCursor = len(g.Events)
+	target := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseCombat, game.StepBeginningOfCombat, game.Player1
+	g.Combat = &game.CombatState{}
+	emitBeginningOfStepEvent(g, game.StepBeginningOfCombat)
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: &okoyeTargetAgent{targetPick: target.ObjectID}}
+	log := &TurnLog{}
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, log) {
+		t.Fatal("the copied beginning-of-combat trigger did not trigger")
+	}
+	wantName := func(where, got string) {
+		t.Helper()
+		if got != okoye.Name {
+			t.Errorf("%s source name = %q, want %q", where, got, okoye.Name)
+		}
+	}
+	if len(log.Triggers) != 1 {
+		t.Fatalf("trigger log = %+v, want one entry", log.Triggers)
+	}
+	wantName("trigger log", log.Triggers[0].SourceName)
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2, game.Player3} {
+		stack := observe(g, viewer).Stack()
+		if len(stack) != 1 || stack[0].SourceObjectID != copied.ObjectID {
+			t.Fatalf("player %d stack = %+v, want the copied trigger from %d", viewer, stack, copied.ObjectID)
+		}
+		wantName("stack", stack[0].Name)
+	}
+	if !movePermanentToZone(g, blueprint, zone.Graveyard) {
+		t.Fatal("could not remove the original Okoye")
+	}
+	wantName("stack after the original Okoye left", observe(g, game.Player2).Stack()[0].Name)
+	engine.resolveTopOfStackWithChoices(g, agents, log)
+	if len(log.Resolves) != 1 {
+		t.Fatalf("resolve log = %+v, want one entry", log.Resolves)
+	}
+	wantName("resolve log", log.Resolves[0].SourceName)
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2, game.Player3} {
+		pending := observe(g, viewer).DelayedTriggers()
+		if len(pending) != 1 || pending[0].SourceObjectID != copied.ObjectID {
+			t.Fatalf("player %d pending = %+v, want the delayed trigger from %d", viewer, pending, copied.ObjectID)
+		}
+		wantName("pending delayed trigger", pending[0].SourceName)
+	}
+	if !movePermanentToZone(g, copied, zone.Graveyard) {
+		t.Fatal("could not remove the Clone")
+	}
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2, game.Player3} {
+		pending := observe(g, viewer).DelayedTriggers()
+		if len(pending) != 1 || pending[0].SourceObjectID != 0 {
+			t.Fatalf("player %d pending after the Clone left = %+v, want one sourceless delayed trigger", viewer, pending)
+		}
+		wantName("delayed trigger after the Clone left", pending[0].SourceName)
+	}
+	if !setMonarch(g, game.Player2) {
+		t.Fatal("could not make Player2 the monarch")
+	}
+	declareAttack(t, g, engine, target, game.Player2)
+	fired := &TurnLog{}
+	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, fired) {
+		t.Fatal("attacking the monarch did not fire the copied Okoye's delayed trigger")
+	}
+	if len(fired.Triggers) != 1 {
+		t.Fatalf("fired trigger log = %+v, want one entry", fired.Triggers)
+	}
+	wantName("fired trigger log", fired.Triggers[0].SourceName)
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player2, game.Player3} {
+		stack := observe(g, viewer).Stack()
+		if len(stack) != 1 || stack[0].Text != okoyeDelayedOwnText {
+			t.Fatalf("player %d stack = %+v, want the fired delayed trigger", viewer, stack)
+		}
+		wantName("fired delayed trigger", stack[0].Name)
+	}
+	engine.resolveTopOfStackWithChoices(g, agents, fired)
+	if len(fired.Resolves) != 1 {
+		t.Fatalf("fired resolve log = %+v, want one entry", fired.Resolves)
+	}
+	wantName("fired resolve log", fired.Resolves[0].SourceName)
+	if !hasKeyword(g, target, game.DoubleStrike) || !hasKeyword(g, target, game.Trample) {
+		t.Fatal("the copied Okoye's delayed trigger did not grant double strike and trample")
+	}
+}
+
 // A permanent that becomes a copy of a card in a graveyard (Shifting Woodland's
 // path, CR 707.2) gains the card's untexted activated abilities with that
 // card's Oracle text, so its activation is labeled with the copied text rather
