@@ -140,11 +140,40 @@ func stackObjectManaValue(g *game.Game, obj *game.StackObject) (int, bool) {
 	if obj.FaceDown {
 		return 0, true
 	}
+	if front, ok := transformedStackSpellFrontDef(g, obj); ok {
+		return stackManaValue(front, obj.XValue), true
+	}
 	def, ok := stackObjectSpellDef(g, obj)
 	if !ok {
 		return 0, false
 	}
 	return stackManaValue(def, obj.XValue), true
+}
+
+// transformedStackSpellFrontDef returns the front face of a transforming
+// double-faced spell cast with its back face up. CR 712.8c / 202.3b: such a
+// spell's mana value uses its front face's mana cost. A non-cast copy of it is
+// a copy of the back face, whose mana value is 0, so it is not reported.
+func transformedStackSpellFrontDef(g *game.Game, obj *game.StackObject) (*game.CardDef, bool) {
+	if obj == nil || obj.Kind != game.StackSpell || obj.Face != game.FaceBack || obj.FaceDown ||
+		obj.Copy && !obj.CastCopy || obj.CopyValues.Exists {
+		return nil, false
+	}
+	physical := obj.SourceTokenDef
+	if physical == nil {
+		card, ok := g.GetCardInstance(obj.SourceID)
+		if !ok && obj.SourceCardID != 0 {
+			card, ok = g.GetCardInstance(obj.SourceCardID)
+		}
+		if !ok || card == nil {
+			return nil, false
+		}
+		physical = card.Def
+	}
+	if physical == nil || !physical.IsTransformingDoubleFaced() || !physical.Back.Exists {
+		return nil, false
+	}
+	return physical, true
 }
 
 func stackObjectKnownManaValue(g *game.Game, obj *game.StackObject) opt.V[int] {

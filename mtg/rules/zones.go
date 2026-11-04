@@ -141,6 +141,10 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		card.Def.IsTransformingDoubleFaced() && card.Def.Back.Exists {
 		face = game.FaceBack
 		enteringTransformed = true
+	} else if face == game.FaceBack && card != nil && card.Def != nil &&
+		card.Def.IsTransformingDoubleFaced() && card.Def.Back.Exists {
+		// A spell cast transformed resolves with its back face up (CR 712.11a).
+		enteringTransformed = true
 	}
 	faceDef, ok := cardFaceDef(card, face)
 	if !ok {

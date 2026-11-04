@@ -566,7 +566,7 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 		return view
 	}
 	if def, ok := stackObjectSpellDef(o.g, obj); ok {
-		view.ManaValue = stackManaValue(def, obj.XValue)
+		view.ManaValue, _ = stackObjectManaValue(o.g, obj)
 		view.Types = stackSpellTypeLine(o.g, obj, def).types
 		view.Colors = spellColors(def)
 	}
