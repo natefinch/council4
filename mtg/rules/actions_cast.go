@@ -887,6 +887,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		SourceID:                     sourceID,
 		StackObjectID:                obj.ID,
 		Controller:                   playerID,
+		Player:                       playerID,
 		CardID:                       permanent.CardInstanceID,
 		Face:                         game.FaceAlternate,
 		PermanentID:                  permanent.ObjectID,

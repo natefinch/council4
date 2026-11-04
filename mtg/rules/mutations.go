@@ -42,12 +42,27 @@ func emitSpellCastEventsWithTargets(g *game.Game, obj *game.StackObject, castEve
 	fromZone := castEvent.FromZone
 	castCardID := castEvent.CardID
 	castPlayer := castEvent.Controller
+	// Like every other card move, the zone change names the card's owner, whose
+	// zone it leaves ("leaves your graveyard", CR 400.3, 603.10a), while the
+	// caster controls the spell (CR 601.2a); the cast event names the caster.
+	castEvent.Player = castSourceZoneOwner(g, castCardID, castPlayer)
 	castEvent = emitZoneChangeEventAfterCounterTransition(g, castEvent)
+	castEvent.Player = castPlayer
 	castEvent.Kind = game.EventSpellCast
 	castEvent.CardCharacteristicsKnown = true
 	castEvent.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, castEvent.Controller)
 	emitEvent(g, castEvent)
 	emitCardPlayedFromExileEvent(g, castPlayer, castCardID, fromZone)
+}
+
+// castSourceZoneOwner is the player whose zone a cast card leaves: its owner,
+// since a card is only ever in its owner's hand, library or graveyard (CR
+// 400.3). A cast without a card instance falls back to the caster.
+func castSourceZoneOwner(g *game.Game, cardID id.ID, caster game.PlayerID) game.PlayerID {
+	if card, ok := g.GetCardInstance(cardID); ok {
+		return card.Owner
+	}
+	return caster
 }
 
 func consumeNextSpellAsThoughFlashEffects(g *game.Game, obj *game.StackObject) {
