@@ -932,6 +932,9 @@ func triggerSourceMatches(g *game.Game, source *game.Permanent, filter game.Trig
 			(source.CardInstanceID != 0 && event.CardID == source.CardInstanceID)
 	}
 	subjectID := triggerSubjectObjectID(event, subject)
+	if combatEventHasObjectIdentity(source, subjectID, event) {
+		return event.SourceObjectID == source.ObjectID || subjectID == source.ObjectID
+	}
 	return (source.ObjectID != 0 && event.SourceObjectID == source.ObjectID) ||
 		(source.ObjectID != 0 && subjectID == source.ObjectID) ||
 		(source.CardInstanceID != 0 && event.SourceID == source.CardInstanceID) ||
@@ -951,6 +954,27 @@ func enteredBattlefieldObjectIdentity(source *game.Permanent, subject game.Trigg
 		return 0, false
 	}
 	return event.PermanentID, true
+}
+
+// combatEventHasObjectIdentity reports whether a combat declaration event and
+// the source both carry battlefield object identities. Such events only ever
+// concern battlefield objects, and a card that leaves and reenters becomes a new
+// object with no memory of its earlier incarnation (CR 400.7), so its earlier
+// attack or block is not this source's even though both share one card
+// instance (CR 201.5). Matching therefore uses object identity alone.
+func combatEventHasObjectIdentity(source *game.Permanent, subjectID id.ID, event game.Event) bool {
+	if source.ObjectID == 0 || (event.SourceObjectID == 0 && subjectID == 0) {
+		return false
+	}
+	switch event.Kind {
+	case game.EventAttackerDeclared,
+		game.EventBlockerDeclared,
+		game.EventAttackerBecameBlocked,
+		game.EventAttackerBecameUnblocked:
+		return true
+	default:
+		return false
+	}
 }
 
 func triggerSourceAttachedPermanentMatches(g *game.Game, source *game.Permanent, event game.Event) bool {
