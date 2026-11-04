@@ -163,21 +163,21 @@ func (e *Engine) proposedSpellCostFeasibility(g *game.Game, request payment.Spel
 	}
 }
 
-// payableTargetChoices returns the choices of targets in targetChoices with
+// payableTargetChoices returns the choices of targets in open's targetChoices with
 // which the cost proposed for request can still be paid with the Phyrexian
 // payments announced with it, now or after activating payment-time mana
 // abilities (CR 601.2b, 601.2f, 601.2g): a legal target such as an
 // opponent's Elderwood Scion can raise the total cost beyond what the caster
 // can pay, and choosing it would only make the cast illegal (CR 733.1). It
-// returns nil, leaving the choice unrestricted, when targetChoices may be a
-// sample rather than every legal choice, or when no choice is payable and the
-// cast will be reversed whatever targets are chosen.
-func (e *Engine) payableTargetChoices(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target, proposal spellCostProposal) [][]game.Target {
-	if len(targetChoices) >= maxSampledNumericTargetChoices {
+// returns nil, leaving the choice unrestricted, when open's targetChoices are
+// a sample rather than every legal choice, or when no choice is payable and
+// the cast will be reversed whatever targets are chosen.
+func (e *Engine) payableTargetChoices(g *game.Game, request payment.SpellRequest, open castProposals, proposal spellCostProposal) [][]game.Target {
+	if open.sampled {
 		return nil
 	}
 	var payable [][]game.Target
-	for _, variant := range targetCostVariants(request, targetChoices) {
+	for _, variant := range targetCostVariants(request, open.targetChoices) {
 		if e.announcedSpellCostFeasibility(g, variant, proposal.optionIndex, true)(proposal.phyrexian) {
 			payable = append(payable, variant.Targets)
 		}

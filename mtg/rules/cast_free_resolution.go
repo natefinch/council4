@@ -539,7 +539,7 @@ func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, contr
 		// The proposal can't be paid even after activating mana abilities,
 		// so it is withheld unless a spliced cost made it unpayable.
 		if len(splice.manaCosts) == 0 {
-			return reversed(proposals.reverseUnpayable(attempt, 0, proposal, nil, nil))
+			return reversed(proposals.reverseUnpayable(attempt, 0, proposal, nil))
 		}
 		return reversed(proposals.reverse(attempt, 0, proposal, nil))
 	}

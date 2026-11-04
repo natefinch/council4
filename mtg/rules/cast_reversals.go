@@ -25,13 +25,41 @@ import (
 //     repeats it with the same choices, since repeating those would only be
 //     reversed again.
 //
+// Each later attempt offers a proposal only with the choices of targets it
+// isn't withheld with (see proposalTargets), whether the legal choices are few
+// enough to list or only a sample of them is, so each other target stays open
+// with the payment revised for it. A selection that begins only withheld
+// choices is replaced by one that begins an open choice, found by searching
+// every legal choice when needed, so a search that stops early never withholds
+// the choices it didn't reach. A proposal is withheld with every choice of
+// targets only once none of them remains open with it, or once an attempt
+// whose choices couldn't be filtered repeats withheld ones (see
+// repeatWithheld).
+//
 // A cast none of whose proposals remain is exhausted and no longer offered.
-// Each cast offers finitely many proposals, and each repeated attempt withholds
-// one or exhausts its cast, so a deterministic caster always moves on.
+// Each cast offers finitely many proposals and choices of targets, and each
+// repeated attempt withholds one of them or exhausts its cast, so a
+// deterministic caster always moves on.
 type castAttempts struct {
 	reversed  map[string]bool
 	withheld  map[string]bool
 	exhausted map[string]bool
+	// unpayable are the proposals reversed because they couldn't be paid
+	// with their targets; each is withheld with every choice of targets it
+	// can't be paid with.
+	unpayable map[string]bool
+	// closedPrefixes are the targets chosen for a proposal's first target
+	// specs that no open choice of targets for it begins with.
+	closedPrefixes map[string]bool
+	// withheldProposals are the proposals withheld with every choice of
+	// targets.
+	withheldProposals map[string]bool
+}
+
+// withholding reports whether a has withheld anything.
+func (a *castAttempts) withholding() bool {
+	return a != nil && (len(a.withheld) > 0 || len(a.unpayable) > 0 ||
+		len(a.closedPrefixes) > 0 || len(a.withheldProposals) > 0)
 }
 
 // castActionKey identifies the cast an attempt redoes. A cast's targets are
@@ -64,20 +92,76 @@ type castProposals struct {
 	// targetChoices are the choices of targets chosen after the proposal, nil
 	// when the spell has none or they were fixed before it.
 	targetChoices [][]game.Target
+	// sampled reports that targetChoices are a sample of the legal choices
+	// rather than every one of them.
+	sampled bool
+	// payableWith reports whether a proposal through a route can be paid
+	// with a choice of targets (see payableTargetChoices), or is nil when
+	// the spell has no targets chosen after its proposal.
+	payableWith func(route int, proposal spellCostProposal, targets []game.Target) bool
+	// payable caches payableWith by key.
+	payable map[string]bool
 }
 
 // newCastProposals returns the proposals attempts leaves open for cast, whose
 // targets are chosen among targetChoices after its cost is proposed.
 func newCastProposals(attempts *castAttempts, cast string, targetChoices [][]game.Target) castProposals {
-	return castProposals{attempts: attempts, cast: cast, targetChoices: targetChoices}
+	return castProposals{attempts: attempts, cast: cast, targetChoices: targetChoices, payable: map[string]bool{}}
+}
+
+// offerTargets records the choices of targets enumerated for the spell after
+// its proposal (CR 601.2c).
+func (p *castProposals) offerTargets(result targetChoiceResult) {
+	p.targetChoices, p.sampled = result.choices, result.sampled
+}
+
+// checkPayment records how to check whether a proposal through a route can be
+// paid with a choice of targets, given the request each route proposes with.
+func (e *Engine) checkPayment(g *game.Game, p *castProposals, requests []payment.SpellRequest) {
+	p.payableWith = func(route int, proposal spellCostProposal, targets []game.Target) bool {
+		request := requests[route]
+		request.Targets = targets
+		return e.announcedSpellCostFeasibility(g, request, proposal.optionIndex, true)(proposal.phyrexian)
+	}
+}
+
+func (p castProposals) proposalKey(route int, proposal spellCostProposal) string {
+	return fmt.Sprintf("%s|%d|%+v", p.cast, route, proposal)
 }
 
 func (p castProposals) key(route int, proposal spellCostProposal, targets []game.Target) string {
-	return fmt.Sprintf("%s|%d|%+v|%v", p.cast, route, proposal, targets)
+	return fmt.Sprintf("%s|%v", p.proposalKey(route, proposal), targets)
 }
 
+// withheld reports whether proposal through route is withheld with targets.
 func (p castProposals) withheld(route int, proposal spellCostProposal, targets []game.Target) bool {
-	return p.attempts != nil && p.attempts.withheld[p.key(route, proposal, targets)]
+	a := p.attempts
+	if a == nil {
+		return false
+	}
+	proposalKey := p.proposalKey(route, proposal)
+	if a.withheldProposals[proposalKey] || a.withheld[p.key(route, proposal, targets)] {
+		return true
+	}
+	return a.unpayable[proposalKey] && targets != nil && !p.payableWithTargets(route, proposal, targets)
+}
+
+// payableWithTargets reports whether proposal through route can be paid with
+// targets, now or after activating payment-time mana abilities. It reports
+// true when that can't be checked.
+func (p castProposals) payableWithTargets(route int, proposal spellCostProposal, targets []game.Target) bool {
+	if p.payableWith == nil {
+		return true
+	}
+	key := p.key(route, proposal, targets)
+	payable, ok := p.payable[key]
+	if !ok {
+		payable = p.payableWith(route, proposal, targets)
+		if p.payable != nil {
+			p.payable[key] = payable
+		}
+	}
+	return payable
 }
 
 func (p castProposals) withhold(route int, proposal spellCostProposal, targets []game.Target) {
@@ -90,22 +174,19 @@ func (p castProposals) withhold(route int, proposal spellCostProposal, targets [
 	p.attempts.withheld[p.key(route, proposal, targets)] = true
 }
 
-// sampled reports whether targetChoices may be a sample rather than every
-// legal choice of targets (see payableTargetChoices).
-func (p castProposals) sampled() bool {
-	return len(p.targetChoices) >= maxSampledNumericTargetChoices
-}
-
 // proposalWithheld reports whether proposal through route is withheld with
 // every choice of targets the spell may still be given.
 func (p castProposals) proposalWithheld(route int, proposal spellCostProposal) bool {
-	if p.attempts == nil || len(p.attempts.withheld) == 0 {
+	if !p.attempts.withholding() {
 		return false
+	}
+	if p.attempts.withheldProposals[p.proposalKey(route, proposal)] {
+		return true
 	}
 	if len(p.targetChoices) == 0 {
 		return p.withheld(route, proposal, nil)
 	}
-	if p.sampled() {
+	if p.sampled {
 		return false
 	}
 	for _, targets := range p.targetChoices {
@@ -120,7 +201,7 @@ func (p castProposals) proposalWithheld(route int, proposal spellCostProposal) b
 // Phyrexian payments for cost option optionIndex through route is withheld, or
 // nil when nothing is withheld.
 func (p castProposals) announcementsWithheld(route, optionIndex int) func([]phyrexianAnnouncement) bool {
-	if p.attempts == nil || len(p.attempts.withheld) == 0 {
+	if !p.attempts.withholding() {
 		return nil
 	}
 	return func(announcements []phyrexianAnnouncement) bool {
@@ -142,7 +223,7 @@ func (p castProposals) optionOpen(g *game.Game, playerID game.PlayerID, route in
 // be given that isn't. It returns payable unchanged when nothing is withheld
 // with proposal or targetChoices may be a sample.
 func (p castProposals) openTargetChoices(route int, proposal spellCostProposal, payable [][]game.Target) [][]game.Target {
-	if p.attempts == nil || len(p.attempts.withheld) == 0 || len(p.targetChoices) == 0 || p.sampled() {
+	if !p.attempts.withholding() || len(p.targetChoices) == 0 || p.sampled {
 		return payable
 	}
 	open := func(choices [][]game.Target) [][]game.Target {
@@ -162,27 +243,12 @@ func (p castProposals) openTargetChoices(route int, proposal spellCostProposal, 
 	return payable
 }
 
-// unpayableTargetChoices returns the choices of targets in targetChoices with
-// which proposal can't be paid through request, given that it can't be paid
-// with request's own targets (see payableTargetChoices).
-func (e *Engine) unpayableTargetChoices(g *game.Game, request payment.SpellRequest, targetChoices [][]game.Target, proposal spellCostProposal) [][]game.Target {
-	if len(targetChoices) == 0 {
-		return nil
-	}
-	var unpayable [][]game.Target
-	for _, variant := range targetCostVariants(request, targetChoices) {
-		if !e.announcedSpellCostFeasibility(g, variant, proposal.optionIndex, true)(proposal.phyrexian) {
-			unpayable = append(unpayable, variant.Targets)
-		}
-	}
-	return unpayable
-}
-
 // reverse records an attempt reversed because a later choice, such as how
 // an additional cost was paid, couldn't be completed (CR 733.1). attempt
 // identifies the attempt's choices; it made proposal through route with
 // targets. Once an attempt repeats, its proposal and targets are withheld; if
-// they already were, the cast is exhausted.
+// they already were, so is its proposal with every choice of targets (see
+// repeatWithheld).
 func (p castProposals) reverse(attempt string, route int, proposal spellCostProposal, targets []game.Target) actionOutcome {
 	a := p.attempts
 	if a == nil {
@@ -190,7 +256,7 @@ func (p castProposals) reverse(attempt string, route int, proposal spellCostProp
 	}
 	if a.reversed[attempt] {
 		if p.withheld(route, proposal, targets) {
-			return p.exhaust()
+			return p.repeatWithheld(route, proposal)
 		}
 		p.withhold(route, proposal, targets)
 	}
@@ -203,20 +269,116 @@ func (p castProposals) reverse(attempt string, route int, proposal spellCostProp
 
 // reverseUnpayable records an attempt reversed because proposal through route
 // can't be paid with targets (CR 733.1). Its proposal is withheld at once with
-// those targets and with each other choice of targets in unpayable, those it
-// can't be paid with either.
-func (p castProposals) reverseUnpayable(attempt string, route int, proposal spellCostProposal, targets []game.Target, unpayable [][]game.Target) actionOutcome {
-	if p.attempts == nil {
+// those targets and with every other choice of targets it can't be paid with
+// either (see payableWithTargets). If they already were, so is its proposal
+// with every choice of targets (see repeatWithheld).
+func (p castProposals) reverseUnpayable(attempt string, route int, proposal spellCostProposal, targets []game.Target) actionOutcome {
+	a := p.attempts
+	if a == nil {
 		return actionReversed
 	}
 	if p.withheld(route, proposal, targets) {
-		return p.exhaust()
+		return p.repeatWithheld(route, proposal)
 	}
 	p.withhold(route, proposal, targets)
-	for _, choice := range unpayable {
-		p.withhold(route, proposal, choice)
+	if targets != nil && p.payableWith != nil {
+		if a.unpayable == nil {
+			a.unpayable = map[string]bool{}
+		}
+		a.unpayable[p.proposalKey(route, proposal)] = true
 	}
 	return p.reverse(attempt, route, proposal, targets)
+}
+
+// repeatWithheld reverses an attempt that made proposal through route with
+// targets it was already withheld with. Withheld choices of targets are left
+// out of later attempts' prompts or replaced (see proposalTargets), so an
+// attempt repeats them only when its choices weren't filtered, such as more
+// Phyrexian symbols than its announcements filter. Only that proposal is
+// withheld then, with every choice of targets; each other proposal stays open
+// for the caster to redo the cast with (CR 733.2). A proposal already withheld
+// that way exhausts the cast.
+func (p castProposals) repeatWithheld(route int, proposal spellCostProposal) actionOutcome {
+	a := p.attempts
+	key := p.proposalKey(route, proposal)
+	if a.withheldProposals[key] {
+		return p.exhaust()
+	}
+	if a.withheldProposals == nil {
+		a.withheldProposals = map[string]bool{}
+	}
+	a.withheldProposals[key] = true
+	return actionReversed
+}
+
+// proposalTargets are the choices of targets still open with one proposal
+// through one route (CR 601.2c, 733.2). A nil *proposalTargets withholds
+// nothing.
+type proposalTargets struct {
+	proposals castProposals
+	route     int
+	proposal  spellCostProposal
+}
+
+// targetsFor returns the choices of targets still open with proposal through
+// route, or nil when nothing is withheld.
+func (p castProposals) targetsFor(route int, proposal spellCostProposal) *proposalTargets {
+	if !p.attempts.withholding() {
+		return nil
+	}
+	return &proposalTargets{proposals: p, route: route, proposal: proposal}
+}
+
+func (t *proposalTargets) prefixKey(prefix []game.Target, counts []int) string {
+	return fmt.Sprintf("%s|%v|%v", t.proposals.proposalKey(t.route, t.proposal), prefix, counts)
+}
+
+// closed reports whether the complete choice targets, split among the target
+// specs by counts, is withheld, including because no open choice begins with
+// its targets for the first specs.
+func (t *proposalTargets) closed(targets []game.Target, counts []int) bool {
+	if t == nil {
+		return false
+	}
+	offset := 0
+	for spec, count := range counts {
+		offset += count
+		if offset <= len(targets) && t.prefixClosed(targets[:offset], counts[:spec+1]) {
+			return true
+		}
+	}
+	return t.proposals.withheld(t.route, t.proposal, targets)
+}
+
+// prefixClosed reports whether no open choice of targets begins with prefix,
+// the targets chosen for the first len(counts) target specs.
+func (t *proposalTargets) prefixClosed(prefix []game.Target, counts []int) bool {
+	if t == nil {
+		return false
+	}
+	a := t.proposals.attempts
+	if len(counts) == 0 {
+		return a.withheldProposals[t.proposals.proposalKey(t.route, t.proposal)]
+	}
+	return a.closedPrefixes[t.prefixKey(prefix, counts)]
+}
+
+// closePrefix records that no open choice of targets begins with prefix, the
+// targets chosen for the first len(counts) target specs. With no targets
+// chosen yet, the proposal is withheld with every choice of targets.
+func (t *proposalTargets) closePrefix(prefix []game.Target, counts []int) {
+	a := t.proposals.attempts
+	if len(counts) == 0 {
+		if a.withheldProposals == nil {
+			a.withheldProposals = map[string]bool{}
+		}
+		a.withheldProposals[t.proposals.proposalKey(t.route, t.proposal)] = true
+		return
+	}
+	if a.closedPrefixes == nil {
+		a.closedPrefixes = map[string]bool{}
+	}
+	a.closedPrefixes[t.prefixKey(prefix, counts)] = true
 }
 
 // exhaust records that no proposal for the cast remains and reverses it.
