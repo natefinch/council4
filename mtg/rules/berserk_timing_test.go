@@ -122,6 +122,7 @@ func TestFreeCopyCastStillObeysBeforeCombatDamageRestriction(t *testing.T) {
 		Def:   beforeCombatDamageInstant(),
 		Owner: game.Player1,
 	}
+	g.Players[game.Player1].Exile.Add(cardID)
 	g.Turn.Phase = game.PhasePostcombatMain
 	g.Turn.CombatPhasesThisTurn = 1
 

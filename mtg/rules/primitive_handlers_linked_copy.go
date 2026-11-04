@@ -2,7 +2,6 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -28,9 +27,10 @@ func handleCopyCard(r *effectResolver, prim game.CopyCard) effectResolved {
 // imprint link (CR 707.12). With prim.Copy set it casts a copy of that card
 // (Isochron Scepter, Spellbinder): the linked card stays in exile and a spell
 // carrying its copiable values is put on the stack, ceasing to exist when it
-// leaves the stack. The cast chooses the first legal targets and modes with any
-// X treated as 0 and, with prim.WithoutPayingManaCost set, pays no mana cost.
-// Additional costs and taxes still use the ordinary free-cast payment path. It
+// leaves the stack. The caster chooses the cast's face, modes, optional
+// additional costs and targets with any X treated as 0 and, with
+// prim.WithoutPayingManaCost set, pays no mana cost. Additional costs and taxes
+// still use the ordinary free-cast payment path. It
 // is a legal no-op when the linked card no longer rests in exile (the source
 // left the battlefield since it imprinted, or the card moved) or has no legal
 // way to be cast.
@@ -87,28 +87,20 @@ func linkedExiledCardInExile(g *game.Game, obj *game.StackObject, linkID string)
 }
 
 // castFreeCopyOfCard casts a copy of cardID (a card resting in exile) for
-// controllerID without paying its mana cost, choosing the first legal
-// modes/targets with X as 0 and putting a copy spell on the stack (CR 707.12).
+// controllerID without paying its mana cost (CR 707.12). Casting the copy
+// follows steps 601.2a-h, so the caster chooses among its legal faces (CR 709.3,
+// 712.11b, 715.3), modes, optional additional costs such as kicker and targets,
+// with any X as 0 (CR 107.3b), exactly as for the free cast of the card itself.
 // The copy carries the card's copiable values through an embedded token
 // definition rather than the card instance, so the original card stays in exile
 // and the copy ceases to exist when it leaves the stack. It returns false
-// (casting nothing) when the card has no legal cast choice or its additional
-// costs cannot be paid.
+// (casting nothing) when the card is no longer in exile, has no legal cast
+// choice, or its chosen costs cannot be paid.
 func (e *Engine) castFreeCopyOfCard(g *game.Game, controllerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	card, ok := g.GetCardInstance(cardID)
+	source, ok := playerHoldingCastSource(g, cardID, zone.Exile)
 	if !ok {
 		return false
 	}
-	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	if !freeCastFaceAvailable(g, controllerID, card, 0, spellDef, game.Selection{}, opt.V[int]{}) {
-		return false
-	}
-	modes, targets, ok := firstLegalSpellCastChoice(g, controllerID, spellDef)
-	if !ok {
-		return false
-	}
-	return e.castFreeOptionWithCopy(g, nil, controllerID, card, action.CastSpellAction{
-		CardID: cardID, SourceZone: zone.Exile, Face: game.FaceFront,
-		ChosenModes: modes, Targets: targets,
-	}, false, true, agents, log)
+	return e.chooseAndCastFreeSpell(g, source, controllerID, cardID, zone.Exile, game.Selection{}, opt.V[int]{},
+		freeCastSpell{copyCard: true}, false, agents, log)
 }
