@@ -1420,11 +1420,14 @@ func eventPermanentEvolvesSource(g *game.Game, source *game.Permanent, event *ga
 }
 
 // evolveEnteredCreatureStats returns the entered creature's current power and
-// toughness while it remains on the battlefield, otherwise its last known
-// battlefield values. It reports false when that object is not, or was not
-// last known as, a creature.
+// toughness while it remains on the battlefield and phased in, otherwise its
+// last known battlefield values. A phased-out creature is treated as though it
+// doesn't exist (CR 702.26b), so it is compared using the snapshot captured as
+// it phased out; once it phases back in as the same object (CR 702.26d) its
+// current values apply again. It reports false when that object is not, or was
+// not last known as, a creature.
 func evolveEnteredCreatureStats(g *game.Game, objectID id.ID) (evolveStats, bool) {
-	if entered, ok := permanentByObjectID(g, objectID); ok {
+	if entered, ok := permanentByObjectID(g, objectID); ok && !entered.PhasedOut {
 		if !permanentHasType(g, entered, types.Creature) {
 			return evolveStats{}, false
 		}
