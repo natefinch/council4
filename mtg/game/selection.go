@@ -309,9 +309,10 @@ type Selection struct {
 	// NameUniqueAmongControlled requires the matched permanent's name to differ
 	// from every other permanent its controller controls ("target enchantment
 	// you control that doesn't have the same name as another permanent you
-	// control", Yenna, Redtooth Regent). A subject whose name is unavailable, or
-	// that is not an on-battlefield permanent, fails it closed. Placed at the end
-	// so the bool joins no existing cluster's packing.
+	// control", Yenna, Redtooth Regent). Names are current effective names, so
+	// copies and name-changing effects count; a nameless permanent shares no name
+	// (CR 201.2a). A subject that is not an on-battlefield permanent fails it
+	// closed. Placed at the end so the bool joins no existing cluster's packing.
 	NameUniqueAmongControlled bool
 
 	// SharesCreatureTypeWithSource requires the matched card to share at least
