@@ -120,16 +120,17 @@ func (o PlayerObservation) fillAbilityStackObjectView(view *StackObjectView, obj
 
 // stackAbilityText returns the text of the ability a stack object represents.
 // Inline abilities (delayed, granted, keyword and activated abilities) carry
-// their own text. A face-down permanent has no printed abilities (CR 708.2), so
-// for a hidden face-down source only inline text is reported, never text read
-// from the hidden card's definition.
+// their own text. An ability on the stack has the text of the ability that
+// created it, independently of its source (CR 113.7a, 405.4, 602.2a, 603.3).
+// A face-down permanent has no printed abilities (CR 708.2), so a printed
+// ability whose source is now face down was announced while the source was
+// face up, and its text stays public; only the source's identity is hidden
+// (CR 708.5). printedAbilityText reports only that ability's own text, never
+// the hidden card's other text, matching creatingObjectText.
 func (o PlayerObservation) stackAbilityText(obj *game.StackObject) string {
 	inline := inlineAbilityBody(obj)
 	if text := game.BodyText(inline); text != "" {
 		return text
-	}
-	if o.hiddenFaceDownPermanent(obj.SourceID) {
-		return ""
 	}
 	return printedAbilityText(o.g, obj, inline)
 }

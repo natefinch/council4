@@ -235,13 +235,17 @@ func TestObservationFaceDownWardTriggerHidesIdentity(t *testing.T) {
 	}
 }
 
-// An ability that left a permanent before it was turned face down keeps its
-// printed text secret from opponents once the source is face down, while the
-// controller can still read it (CR 708.2, 708.5).
-func TestObservationFaceDownSourceHidesPrintedAbilityText(t *testing.T) {
+// An ability on the stack has the text of the ability that created it,
+// independently of its source (CR 113.7a, 405.4, 603.3). A face-down permanent
+// has no printed abilities (CR 708.2), so this printed trigger was announced
+// while its source was face up: after the source is face down every player
+// still reads the trigger's own text, but only the controller sees the source's
+// name, and nobody sees the hidden card's other text (CR 708.5).
+func TestObservationFaceDownSourceKeepsAnnouncedAbilityText(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	def := triggeredCreature(&game.TriggerPattern{Event: game.EventBeginningOfStep, Step: game.StepUpkeep}, nil, nil)
 	def.Name = "Secret Schemer"
+	def.OracleText = "Secret oracle text."
 	def.TriggeredAbilities[0].Text = "Secret upkeep text."
 	source := addFaceDownPermanent(g, game.Player2, def, game.FaceDownMorph)
 	index := -1
@@ -262,9 +266,15 @@ func TestObservationFaceDownSourceHidesPrintedAbilityText(t *testing.T) {
 		AbilityIndex: index,
 	})
 
-	opponent := observe(g, game.Player1).Stack()[0]
-	if opponent.Name != "" || opponent.Text != "" || opponent.SourceObjectID != source.ObjectID {
-		t.Fatalf("opponent view = name %q text %q source %d, want hidden identity", opponent.Name, opponent.Text, opponent.SourceObjectID)
+	for _, viewer := range []game.PlayerID{game.Player1, game.Player3} {
+		obs := observe(g, viewer)
+		opponent := obs.Stack()[0]
+		if opponent.Name != "" || opponent.Text != "Secret upkeep text." || opponent.SourceObjectID != source.ObjectID {
+			t.Fatalf("Player%d view = name %q text %q source %d, want announced text and hidden identity", viewer, opponent.Name, opponent.Text, opponent.SourceObjectID)
+		}
+		if names := reachableNames(obs); names["Secret Schemer"] {
+			t.Fatalf("Player%d observation exposed the face-down source's name", viewer)
+		}
 	}
 	if own := observe(g, game.Player2).Stack()[0]; own.Name != "Secret Schemer" || own.Text != "Secret upkeep text." {
 		t.Fatalf("controller view = name %q text %q", own.Name, own.Text)
