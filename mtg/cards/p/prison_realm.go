@@ -59,9 +59,9 @@ func newPrisonRealm() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.MovePermanent{
-											Object:        game.TargetPermanentReference(0),
-											Destination:   zone.Exile,
-											PublishLinked: game.LinkedKey("exile-until-leaves"),
+											Object:            game.TargetPermanentReference(0),
+											Destination:       zone.Exile,
+											UntilSourceLeaves: true,
 										},
 									},
 								},
@@ -90,35 +90,6 @@ func newPrisonRealm() *game.CardDef {
 										Primitive: game.Scry{
 											Amount: game.Fixed(1),
 											Player: game.ControllerReference(),
-										},
-									},
-								},
-							},
-						},
-						MinModes: 1,
-						MaxModes: 1,
-					},
-				},
-				game.TriggeredAbility{
-					Text: "When this permanent leaves the battlefield, return the exiled card to the battlefield under its owner's control.",
-					Trigger: game.TriggerCondition{
-						Type: game.TriggerWhen,
-						Pattern: game.TriggerPattern{
-							Event:           game.EventZoneChanged,
-							Source:          game.TriggerSourceSelf,
-							MatchFromZone:   true,
-							FromZone:        zone.Battlefield,
-							StackObjectKind: game.StackSpell,
-							CounterKind:     counter.PlusOnePlusOne,
-						},
-					},
-					Content: game.AbilityContent{
-						Modes: []game.Mode{
-							game.Mode{
-								Sequence: []game.Instruction{
-									game.Instruction{
-										Primitive: game.PutOnBattlefield{
-											Source: game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves")),
 										},
 									},
 								},

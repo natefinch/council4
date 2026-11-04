@@ -101,6 +101,10 @@ func buildRichGame(t *testing.T) *Game {
 	// Nested tracking maps.
 	g.SkippedSteps[Player1] = map[Step]int{StepDraw: 1}
 	g.LinkedObjects[LinkedObjectKey{SourceID: 1, LinkID: "exile"}] = []LinkedObjectRef{{ObjectID: 5, CardID: 6}}
+	g.UntilSourceLeavesExiles = []UntilSourceLeavesExile{{
+		SourceObjectID: 1,
+		Objects:        []LinkedObjectRef{{ObjectID: 5, CardID: 6, CardZoneVersion: 2, CardZoneVersionSet: true}},
+	}}
 	g.Players[Player1].CommanderDamage[g.Players[Player2].CommanderInstanceID] = 4
 	g.Players[Player1].CommanderCastCounts = map[id.ID]int{g.Players[Player1].CommanderInstanceID: 2}
 	g.TurnOrder.Eliminate(Player4)
@@ -370,6 +374,8 @@ func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	delete(c.Combat.BlockersOfRemovedAttackers, 12)
 	c.Combat.CombatantControllers[g.Battlefield[0].ObjectID] = Player2
 	c.SkippedSteps[Player1][StepDraw] = 99
+	c.UntilSourceLeavesExiles[0].Objects[0].CardID = 99
+	c.UntilSourceLeavesExiles = append(c.UntilSourceLeavesExiles, UntilSourceLeavesExile{SourceObjectID: 7})
 	*c.DayNight = Day
 	// Draw a card on the clone (move zones).
 	if top, ok := c.Players[Player1].Library.Top(); ok {
@@ -428,6 +434,9 @@ func TestCloneMutatingCloneDoesNotAffectOriginal(t *testing.T) {
 	}
 	if *g.DayNight != Night {
 		t.Errorf("original day/night changed: %v != Night", *g.DayNight)
+	}
+	if len(g.UntilSourceLeavesExiles) != 1 || g.UntilSourceLeavesExiles[0].Objects[0].CardID != 6 {
+		t.Errorf("original until-source-leaves exiles changed: %+v", g.UntilSourceLeavesExiles)
 	}
 }
 

@@ -60,11 +60,14 @@ func (e *Engine) applyStateBasedActionsWithDeaths(g *game.Game) ([]LossLog, []Pe
 	return losses, deaths
 }
 
-func (*Engine) applyStateBasedActionsWithOutcome(g *game.Game) ([]LossLog, []PermanentDeathLog, bool) {
+func (e *Engine) applyStateBasedActionsWithOutcome(g *game.Game) ([]LossLog, []PermanentDeathLog, bool) {
 	var losses []LossLog
 	var deaths []PermanentDeathLog
 	applied := false
 	for range maxStateBasedActionPasses {
+		// CR 610.3: a source that left in the previous pass (or before this
+		// check) returns its exiled cards immediately, before the next check.
+		returned := e.returnUntilSourceLeavesExilesInContext(g)
 		batchID := newPassBatchID(g)
 		commanders := pendingCommanderZoneActions(g)
 		durationsChanged := expireConditionalControlDurations(g)
@@ -73,7 +76,7 @@ func (*Engine) applyStateBasedActionsWithOutcome(g *game.Game) ([]LossLog, []Per
 		changed, passDeaths := pass.apply(g, batchID)
 		losses = append(losses, pass.losses...)
 		deaths = append(deaths, passDeaths...)
-		if !changed && !durationsChanged && !blessingChanged {
+		if !changed && !durationsChanged && !blessingChanged && !returned {
 			return losses, deaths, applied
 		}
 		applied = true

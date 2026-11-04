@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // abilityParagraphKind classifies an Oracle paragraph by the kind of ability
@@ -85,16 +84,12 @@ func printedAbilityParagraphs(face *game.CardFace, oracleText string) map[int]st
 		}
 		return result
 	}
-	companions := untilLeavesReturns(face, untexted)
 	byKind := make(map[abilityParagraphKind][]abilityParagraphUnit)
 	for _, unit := range units {
 		byKind[unit.kind] = append(byKind[unit.kind], unit)
 	}
 	abilities := make(map[abilityParagraphKind][]int)
 	for _, index := range untexted {
-		if _, ok := companions[index]; ok {
-			continue
-		}
 		body := face.BodyAt(index)
 		if len(game.BodyKeywordAbilities(body)) > 0 && !pairsWithKeyword(body) {
 			continue
@@ -107,15 +102,6 @@ func printedAbilityParagraphs(face *game.CardFace, oracleText string) map[int]st
 			continue
 		}
 		for index, text := range pairAbilityParagraphs(face, indexes, byKind[kind]) {
-			result[index] = text
-		}
-	}
-	for index, publisher := range companions {
-		text := oracleRulesText(game.BodyText(face.BodyAt(publisher)))
-		if text == "" {
-			text = result[publisher]
-		}
-		if text != "" {
 			result[index] = text
 		}
 	}
@@ -274,70 +260,6 @@ func sameTriggeredEffect(a, b *game.TriggeredAbility) bool {
 		a.MaxTriggersPerTurn == b.MaxTriggersPerTurn &&
 		a.CountsResolutionsThisTurn == b.CountsResolutionsThisTurn &&
 		reflect.DeepEqual(a.Content, b.Content)
-}
-
-// untilLeavesReturns maps each untexted triggered ability that returns what an
-// "until this leaves the battlefield" exile exiled to the one other ability
-// on face whose exile publishes that link. The return is part of the exiling
-// ability's effect (CR 610.3), so it has that ability's text.
-func untilLeavesReturns(face *game.CardFace, untexted []int) map[int]int {
-	var companions map[int]int
-	for _, index := range untexted {
-		ability, ok := face.BodyAt(index).(*game.TriggeredAbility)
-		if !ok {
-			continue
-		}
-		key, ok := returnedLinkedKey(ability)
-		if !ok {
-			continue
-		}
-		publisher, count := 0, 0
-		for other := range face.AbilityCount() {
-			if other != index && publishesLinkedExile(game.BodyContent(face.BodyAt(other)), key) {
-				publisher = other
-				count++
-			}
-		}
-		if count == 1 {
-			if companions == nil {
-				companions = make(map[int]int)
-			}
-			companions[index] = publisher
-		}
-	}
-	return companions
-}
-
-// returnedLinkedKey returns the link of a leaves-the-battlefield trigger that
-// only returns linked exiled cards to the battlefield.
-func returnedLinkedKey(ability *game.TriggeredAbility) (game.LinkedKey, bool) {
-	pattern := ability.Trigger.Pattern
-	if pattern.Event != game.EventZoneChanged || pattern.Source != game.TriggerSourceSelf ||
-		!pattern.MatchFromZone || pattern.FromZone != zone.Battlefield {
-		return "", false
-	}
-	modes := ability.Content.Modes
-	if len(modes) != 1 || len(modes[0].Sequence) != 1 {
-		return "", false
-	}
-	put, ok := modes[0].Sequence[0].Primitive.(game.PutOnBattlefield)
-	if !ok {
-		return "", false
-	}
-	key, ok := put.Source.LinkedKey()
-	return key, ok && key != ""
-}
-
-func publishesLinkedExile(content game.AbilityContent, key game.LinkedKey) bool {
-	for _, mode := range content.Modes {
-		for _, instruction := range mode.Sequence {
-			if move, ok := instruction.Primitive.(game.MovePermanent); ok &&
-				move.Destination == zone.Exile && move.PublishLinked == key {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 // oracleParagraphs yields the paragraphs of Oracle text, each with the "•"

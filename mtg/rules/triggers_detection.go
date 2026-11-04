@@ -80,6 +80,10 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 	// pass and the room abilities they queue are drained below. This runs outside
 	// the static-source frame because it makes player choices and mutates state.
 	e.drainPendingInitiativeVentures(g, agents, log)
+	// CR 610.3: return cards whose until-leaves source left (for example as a
+	// cost) before detecting triggers, so the returned permanents' enter
+	// events are seen by this same pass.
+	e.returnUntilSourceLeavesExiles(g, agents, log)
 	start := g.TriggerEventCursor
 	if start < 0 || start > len(g.Events) {
 		start = len(g.Events)

@@ -15,6 +15,12 @@ import (
 func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResolved {
 	res := effectResolved{accepted: true}
 
+	until, proceed := r.startUntilSourceLeaves(prim.UntilSourceLeaves)
+	if !proceed {
+		return res
+	}
+	defer until.commit(r.game)
+
 	var linkedKey game.LinkedObjectKey
 	if prim.PublishLinkedProducer != "" {
 		linkedKey = r.originalProducerPublicationKey(prim.PublishLinkedProducer)
@@ -27,6 +33,7 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 	if prim.ControlledChoice {
 		chosen := r.chooseControlledMovePermanents(prim)
 		for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, chosen, prim.Destination) {
+			until.add(r.game, result)
 			if result.moved {
 				res.succeeded = true
 				if result.destination == prim.Destination {
@@ -58,6 +65,7 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 		}
 		moved := make([]*game.Permanent, 0, len(targets.permanents))
 		for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, targets.permanents, prim.Destination) {
+			until.add(r.game, result)
 			if !result.moved {
 				continue
 			}
@@ -85,6 +93,7 @@ func handleMovePermanent(r *effectResolver, prim game.MovePermanent) effectResol
 		linkedObjectRef := permanentLinkedObjectRef(permanent)
 		reached := false
 		for _, result := range movePermanentsToZoneSimultaneouslyWithResults(r.game, targets.permanents, prim.Destination) {
+			until.add(r.game, result)
 			if result.moved {
 				res.succeeded = true
 				if result.destination == prim.Destination {

@@ -31,7 +31,6 @@ import (
 const (
 	knightOfSorrowsAfterlifeText = "Afterlife 1 (When this creature dies, create a 1/1 white and black Spirit creature token with flying.)"
 	bilboEntersOrLeavesText      = "When Bilbo enters or leaves the battlefield, the Ring tempts you."
-	staticSnareExileText         = "When this enchantment enters, exile target artifact or creature an opponent controls until this enchantment leaves the battlefield."
 	timelessDragonCyclingText    = "Plainscycling {2} ({2}, Discard this card: Search your library for a Plains card, reveal it, put it into your hand, then shuffle.)"
 )
 
@@ -105,7 +104,6 @@ func TestPrintedAbilityParagraphsOfKeywordAndSplitTriggerCards(t *testing.T) {
 		want: map[int]string{
 			0: "When this enchantment enters, exile target nonland permanent an opponent controls until this enchantment leaves the battlefield.",
 			1: "When this enchantment enters, create a 1/1 red Mercenary creature token with \"{T}: Target creature you control gets +1/+0 until end of turn. Activate only as a sorcery.\"",
-			2: "When this enchantment enters, exile target nonland permanent an opponent controls until this enchantment leaves the battlefield.",
 		},
 	}}
 	for _, tt := range tests {
@@ -263,32 +261,6 @@ func TestObservationCopiedSplitTriggerShowsItsParagraph(t *testing.T) {
 	wantStack("left")
 	if bilbo.TriggeredAbilities[0].Text != "" || bilbo.TriggeredAbilities[1].Text != "" {
 		t.Fatal("copying wrote text into the shared card definition")
-	}
-}
-
-// The return of an "until this leaves the battlefield" exile is part of the
-// exiling ability (CR 610.3), so Static Snare's leaves-the-battlefield return
-// shows the exiling paragraph rather than its other abilities' text.
-func TestObservationUntilLeavesReturnShowsExilingParagraph(t *testing.T) {
-	snare := cards.NewDefaultRegistry().Lookup("Static Snare")
-	if snare == nil {
-		t.Fatal("Static Snare is not in the default registry")
-	}
-	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	engine := NewEngine(nil)
-	permanent := addCombatPermanent(g, game.Player1, snare)
-	g.TriggerEventCursor = len(g.Events)
-	if !movePermanentToZone(g, permanent, zone.Graveyard) {
-		t.Fatal("could not move Static Snare to the graveyard")
-	}
-	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) {
-		t.Fatal("Static Snare's return did not trigger")
-	}
-	for _, viewer := range []game.PlayerID{game.Player1, game.Player2} {
-		stack := observe(g, viewer).Stack()
-		if len(stack) != 1 || stack[0].Text != staticSnareExileText {
-			t.Fatalf("player %d stack = %+v, want the return with text %q", viewer, stack, staticSnareExileText)
-		}
 	}
 }
 

@@ -63,6 +63,7 @@ func (g *Game) Clone() *Game {
 		ExileCounterExiledBy:               cloneComparableMap(g.ExileCounterExiledBy),
 		LastKnownInformation:               cloneMapFunc(g.LastKnownInformation, cloneObjectSnapshot),
 		LinkedObjects:                      cloneLinkedObjects(g.LinkedObjects),
+		UntilSourceLeavesExiles:            cloneSliceFunc(g.UntilSourceLeavesExiles, cloneUntilSourceLeavesExile),
 		Turn:                               cloneTurnState(g.Turn),
 		TurnOrder:                          cloneTurnOrder(g.TurnOrder),
 		FailedDraws:                        cloneComparableMap(g.FailedDraws),
@@ -134,6 +135,7 @@ func (g *Game) RestoreReversibleManaPayment(before *Game) {
 	g.ExileCounterExiledBy = before.ExileCounterExiledBy
 	g.LastKnownInformation = before.LastKnownInformation
 	g.LinkedObjects = before.LinkedObjects
+	g.UntilSourceLeavesExiles = before.UntilSourceLeavesExiles
 	g.Turn = before.Turn
 	g.TurnOrder = before.TurnOrder
 	g.FailedDraws = before.FailedDraws

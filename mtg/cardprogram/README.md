@@ -39,7 +39,7 @@ Oracle variant in that family is supported.
 | "Exiled with this" across different activations | [`MoveCard.PublishLinkedProducer`, `AbilityContent.LinkedProducers`](../game/primitive.go), original-source linked battlefield sources | [Worldgorger Dragon](../cards/authored/worldgorger_dragon.go), [linked-producer scenarios](../rules/linked_producer_test.go) | State is owned by the original source occurrence, not a mutable program closure or physical-card ID. |
 | Return only matching linked exiles with entry changes | [`PutOnBattlefield.Selection`](../game/primitive.go), original-source sources, existing `ContinuousEffects`/`Recipient`/`EntryCounters` | [Ghost Vacuum operation composition](../rules/linked_producer_ghost_vacuum_test.go) | Filter each current linked card; do not use a whole-instruction gate as a per-card filter. Only noncontextual card predicates are supported here; unreturned cards retain their exact link. |
 | "When that creature dies this turn, …" | [`CreateDelayedTrigger`](../game/primitive.go) with `TriggerPattern.DyingObjectCaptured`, [`DelayedTriggerDef.CapturedDyingObject`](../game/duration.go) and `DelayedWindowThisTurn`; content reads the dead object through `EventPermanentReference`/`CardReferenceEvent` | [spell, attack-trigger, activated and program scenarios](../rules/delayed_dies_this_turn_test.go), [Fight for the Throne](../rules/fight_for_the_throne_test.go) | Resolution only schedules; nothing happens immediately. The binding is that exact object: other deaths, leaving without dying, a later turn, or an illegal target do not fire it. "Its controller"/"its power" use last-known information; the dead card returned is a new object. |
-| "When it leaves" versus "until it leaves" | Existing [`LinkedKey`, `LinkedProducerKey`](../game/primitive.go), delayed declarations | [Worldgorger and Nim](../rules/authored_lifetime_test.go), [delayed programs](../rules/authored_delayed_program_test.go) | CR 607 linked triggers and CR 610.3 durations have different order/lifetime behavior. |
+| "When it leaves" versus "until it leaves" | Existing [`LinkedKey`, `LinkedProducerKey`](../game/primitive.go), delayed declarations; [`MovePermanent.UntilSourceLeaves`](../game/primitive_move_permanent.go) | [Worldgorger and Nim](../rules/authored_lifetime_test.go), [delayed programs](../rules/authored_delayed_program_test.go), [until-source-leaves](../rules/until_source_leaves_test.go) | CR 607 linked triggers and CR 610.3 durations have different order/lifetime behavior. |
 | "Creatures lose abilities", base P/T, colors or types | [`StaticAbility`](../game/ability_body.go), [`ContinuousEffect`](../game/continuous.go), `ApplyContinuous` | [Humility/Opalescence](../cards/authored/humility_opalescence.go), [layer scenarios](../rules/humility_opalescence_test.go) | Static groups stay live; resolving characteristic effects snapshot their recipients. Check timestamps, dependencies and additive versus replacing fields. |
 | "Until your next turn", unblockability, goad | [`ApplyRule`, `Goad`](../game/primitive.go), [`EffectDuration`](../game/duration.go) | [goad attack tests](../rules/goaded_subject_attack_test.go) | Goad and can't-be-blocked are not ordinary granted abilities. Duration is tied to the creating effect's controller. |
 | Replace an individual draw | [`ReplacementEffect.Program`](../game/replacement.go) with inspectable applicability | [Abundance](../cards/authored/abundance.go), [draw replacement tests](../rules/draw_replacement_program_test.go) | This program seam is for individual draws, not arbitrary replacement categories; preserve lineage and first-actual-draw rules. |
@@ -295,6 +295,17 @@ Comprehensive Rules effective 2026-09-25 (400.7, 607 and 610.3).
   Tokens cease to exist at SBA and cannot return as cards. Replaced exiles do
   not publish intended arrivals; replaced returns and moved exiled cards cannot
   be reclaimed through their physical CardIDs.
+- A CR 610.3 "exile ... until this leaves the battlefield" uses
+  `MovePermanent{Destination: zone.Exile, UntilSourceLeaves: true}` from the
+  source's triggered or activated ability, with no paired return trigger. If
+  the source already left, nothing is exiled (610.3a-b). Otherwise the Engine
+  records the exact exiled incarnations in game-owned, clone-safe state and
+  returns those still in exile, under their owners' control and as one
+  simultaneous entry per checkpoint (610.3c-d), immediately after the source
+  leaves: after the resolving instruction, at the start of each SBA pass, or
+  before triggered abilities are put on the stack. No stack object is created.
+  Departures inside cost payment return at that next checkpoint, before any
+  player receives priority.
 - Nim's `Execute(Pay)` uses the Engine's optional resolution payment planner;
   only actual successful payment enables return. The death event freezes the
   public graveyard incarnation (400.7e). A normal `PutOnBattlefield` publishes the

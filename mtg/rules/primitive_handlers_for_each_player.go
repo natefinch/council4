@@ -21,6 +21,11 @@ import (
 // the intended destination are linked.
 func handleForEachPlayer(r *effectResolver, prim game.ForEachPlayer) effectResolved {
 	res := effectResolved{accepted: true}
+	until, proceed := r.startUntilSourceLeaves(prim.UntilSourceLeaves)
+	if !proceed {
+		return res
+	}
+	defer until.commit(r.game)
 	source, _ := sourcePermanent(r.game, r.obj)
 	resolver := newReferenceResolver(r.game, r.obj)
 	key := linkedObjectSourceKey(r.game, r.obj, string(prim.LinkedKey))
@@ -65,14 +70,14 @@ func handleForEachPlayer(r *effectResolver, prim game.ForEachPlayer) effectResol
 			deferred = append(deferred, distributiveChoice{permanent: permanent, ref: linkedRef})
 			continue
 		}
-		if applyDistributiveRemoval(r, prim.Removal, permanent, key, linkedRef) {
+		if applyDistributiveRemoval(r, prim.Removal, permanent, key, linkedRef, until) {
 			res.succeeded = true
 		}
 	}
 	if len(deferred) == 0 {
 		return res
 	}
-	if applyDistributiveRemovalBatch(r, prim.Removal, deferred, key) {
+	if applyDistributiveRemovalBatch(r, prim.Removal, deferred, key, until) {
 		res.succeeded = true
 	}
 	return res
@@ -89,7 +94,7 @@ type distributiveChoice struct {
 // reference only when the permanent actually reached the intended destination,
 // so a replacement effect that redirects the removal does not leave a paired
 // payoff acting on a permanent that never went anywhere.
-func applyDistributiveRemoval(r *effectResolver, removal game.DistributiveRemoval, permanent *game.Permanent, key game.LinkedObjectKey, ref game.LinkedObjectRef) bool {
+func applyDistributiveRemoval(r *effectResolver, removal game.DistributiveRemoval, permanent *game.Permanent, key game.LinkedObjectKey, ref game.LinkedObjectRef, until *untilSourceLeavesRecorder) bool {
 	if removal == game.DistributiveRemovalDestroy {
 		if _, destroyed := destroyPermanentInBatch(r.game, permanent.ObjectID, 0, false); destroyed {
 			rememberLinkedObject(r.game, key, ref)
@@ -104,6 +109,7 @@ func applyDistributiveRemoval(r *effectResolver, removal game.DistributiveRemova
 	if move.actualDestination == zone.Exile {
 		rememberLinkedObject(r.game, key, ref)
 	}
+	until.add(r.game, preparedPermanentZoneMoveResult(r.game, &move, true))
 	settleControlChanges(r.game)
 	return true
 }
@@ -117,7 +123,7 @@ func applyDistributiveRemoval(r *effectResolver, removal game.DistributiveRemova
 // shield, and skip destroy-replacement and commander redirection, all of which
 // live in the destroy planner rather than in the move. The two removals
 // therefore share the apply step but not the plan step.
-func applyDistributiveRemovalBatch(r *effectResolver, removal game.DistributiveRemoval, choices []distributiveChoice, key game.LinkedObjectKey) bool {
+func applyDistributiveRemovalBatch(r *effectResolver, removal game.DistributiveRemoval, choices []distributiveChoice, key game.LinkedObjectKey, until *untilSourceLeavesRecorder) bool {
 	permanents := make([]*game.Permanent, len(choices))
 	refsByObject := make(map[game.ObjectID]game.LinkedObjectRef, len(choices))
 	for i, chosen := range choices {
@@ -134,6 +140,7 @@ func applyDistributiveRemovalBatch(r *effectResolver, removal game.DistributiveR
 	}
 	succeeded := false
 	for _, result := range results {
+		until.add(r.game, result)
 		if !result.moved {
 			continue
 		}
