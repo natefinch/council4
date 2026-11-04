@@ -1705,19 +1705,9 @@ func (e *Engine) castFeasibleWithManaWindow(g *game.Game, playerID game.PlayerID
 	}
 	proposed := g.Clone()
 	proposed.Execution = game.ExecutionDiagnostics{}
-	card, ok := proposed.GetCardInstance(cardID)
-	if !ok {
+	if !stageProposedSpell(proposed, playerID, cardID, sourceZone, face, xValue) {
 		return false
 	}
-	counterTransition := prepareCastCounterTransition(proposed, card, sourceZone)
-	if _, ok := takeCastSourceCard(castSourcePlayer(proposed, proposed.Players[playerID], cardID, sourceZone), cardID, sourceZone); !ok {
-		return false
-	}
-	counterTransition.apply(proposed)
-	proposed.Stack.Push(&game.StackObject{
-		ID: proposed.IDGen.Next(), Kind: game.StackSpell, SourceID: cardID, Face: face, Controller: playerID,
-		XValue: xValue, SourceZone: sourceZone,
-	})
 	manual := e.paymentManaWindow(proposed, playerID)
 	if manual == nil {
 		return false
@@ -1731,6 +1721,40 @@ func (e *Engine) castFeasibleWithManaWindow(g *game.Game, playerID game.PlayerID
 		}
 	}
 	return false
+}
+
+// stageProposedSpell moves cardID from the zone sourceZone of whichever player
+// holds it to the stack as a spell controlled by playerID with face and
+// xValue, as proposing its cast does (CR 601.2a). It is only for a clone of the
+// game that judges what the caster can do once the cast is proposed, such as
+// which payment-time mana abilities they can then activate (CR 601.2g): a cost
+// of one of those abilities can't use the very card being cast. It reports
+// false, changing nothing, when no player's sourceZone holds the card.
+func stageProposedSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int) bool {
+	card, ok := g.GetCardInstance(cardID)
+	if !ok {
+		return false
+	}
+	holder := slices.IndexFunc(g.Players[:], func(player *game.Player) bool {
+		if player == nil {
+			return false
+		}
+		source := castSourceZone(player, sourceZone)
+		return source != nil && source.Contains(cardID)
+	})
+	if holder < 0 {
+		return false
+	}
+	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
+	if _, ok := takeCastSourceCard(g.Players[holder], cardID, sourceZone); !ok {
+		return false
+	}
+	counterTransition.apply(g)
+	g.Stack.Push(&game.StackObject{
+		ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: cardID, Face: face, Controller: playerID,
+		XValue: xValue, SourceZone: sourceZone,
+	})
+	return true
 }
 
 // chooseCastRouteCost lets the caster choose the permission to cast through

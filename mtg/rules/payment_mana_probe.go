@@ -28,10 +28,20 @@ const maxManaPaymentProbeRuns = 128
 // paid (CR 733.1). Offering or withholding the cast must not reveal hidden
 // information such as the identity or order of library cards (CR 401.2), so
 // no answer is drawn from a state that saw it.
+//
+// Those abilities are activated only after the card has moved to the stack
+// (CR 601.2a), so when g still holds the proposed card in its source zone, as
+// when a cast is offered or a total locked before the move, the search starts
+// from a clone with the card staged on the stack: a mana ability can't
+// discard, exile or otherwise pay its cost with the spell being cast. A copy
+// cast, or a state where the card already moved, is searched as it is.
 func (e *Engine) manualManaMayPay(g *game.Game, request payment.SpellRequest, prepared payment.PreparedSpellCost, announced map[int]bool) bool {
 	root := g.Clone()
 	root.Execution = game.ExecutionDiagnostics{}
 	seed := g.IDGen.Current()
+	if request.CardID != 0 {
+		stageProposedSpell(root, request.PlayerID, request.CardID, request.SourceZone, proposedSpellFace(root, request), request.XValue)
+	}
 	probe := &manaPaymentProbe{
 		engine: &Engine{
 			rng:                 rand.New(rand.NewPCG(seed, seed^searchSeedLo)),
@@ -47,6 +57,25 @@ func (e *Engine) manualManaMayPay(g *game.Game, request payment.SpellRequest, pr
 		},
 	}
 	return probe.search(root) || probe.inconclusive
+}
+
+// proposedSpellFace is the face of the proposed card whose characteristics
+// request casts, or its front face when none of its faces carries that name.
+func proposedSpellFace(g *game.Game, request payment.SpellRequest) game.FaceIndex {
+	card, ok := g.GetCardInstance(request.CardID)
+	if !ok || card.Def == nil || request.Card == nil {
+		return game.FaceFront
+	}
+	faces := card.Def.FaceIndexes()
+	if card.Def.CanFuse() {
+		faces = append(faces, game.FaceFused)
+	}
+	for _, index := range faces {
+		if face, ok := card.Def.FaceView(index); ok && face.Name == request.Card.Name {
+			return index
+		}
+	}
+	return game.FaceFront
 }
 
 // manaPaymentProbe searches for payment-time mana ability activations after
