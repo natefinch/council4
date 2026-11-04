@@ -4,9 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -35,37 +33,6 @@ func newBattleAtTheHelvault() *game.CardDef {
 			Colors:   []color.Color{color.White},
 			Types:    []types.Card{types.Enchantment},
 			Subtypes: []types.Sub{types.Saga},
-			TriggeredAbilities: []game.TriggeredAbility{
-				game.TriggeredAbility{
-					Text: "When this permanent leaves the battlefield, return the exiled card to the battlefield under its owner's control.",
-					Trigger: game.TriggerCondition{
-						Type: game.TriggerWhen,
-						Pattern: game.TriggerPattern{
-							Event:           game.EventZoneChanged,
-							Source:          game.TriggerSourceSelf,
-							MatchFromZone:   true,
-							FromZone:        zone.Battlefield,
-							StackObjectKind: game.StackSpell,
-							CounterKind:     counter.PlusOnePlusOne,
-						},
-					},
-					Content: game.AbilityContent{
-						Modes: []game.Mode{
-							game.Mode{
-								Sequence: []game.Instruction{
-									game.Instruction{
-										Primitive: game.PutOnBattlefield{
-											Source: game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves")),
-										},
-									},
-								},
-							},
-						},
-						MinModes: 1,
-						MaxModes: 1,
-					},
-				},
-			},
 			ChapterAbilities: []game.ChapterAbility{
 				game.ChapterAbility{
 					Text:     "I, II — For each player, exile up to one target non-Saga, nonland permanent that player controls until this Saga leaves the battlefield.",
@@ -76,11 +43,12 @@ func newBattleAtTheHelvault() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.ForEachPlayer{
-											Scope:     game.AllPlayersReference(),
-											Chooser:   game.ControllerReference(),
-											Selection: game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludedSubtype: types.Saga},
-											Removal:   game.DistributiveRemovalExile,
-											LinkedKey: game.LinkedKey("exile-until-leaves"),
+											Scope:             game.AllPlayersReference(),
+											Chooser:           game.ControllerReference(),
+											Selection:         game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludedSubtype: types.Saga},
+											Removal:           game.DistributiveRemovalExile,
+											LinkedKey:         game.LinkedKey("exile-until-leaves"),
+											UntilSourceLeaves: true,
 										},
 									},
 								},

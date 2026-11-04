@@ -220,6 +220,12 @@ type Game struct {
 	// LinkedObjects stores objects associated with linked ability pairs.
 	LinkedObjects map[LinkedObjectKey][]LinkedObjectRef
 
+	// UntilSourceLeavesExiles holds pending CR 610.3 returns for cards exiled
+	// "until <this source> leaves the battlefield" (MovePermanent with
+	// UntilSourceLeaves). The Engine consumes a record immediately after its
+	// source leaves the battlefield.
+	UntilSourceLeavesExiles []UntilSourceLeavesExile
+
 	// Turn tracks the current turn, phase, step, and priority.
 	Turn TurnState
 

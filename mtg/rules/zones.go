@@ -848,24 +848,31 @@ func preparePermanentZoneMovesInBatch(g *game.Game, permanents []*game.Permanent
 func applyPreparedPermanentZoneMoves(g *game.Game, moves []preparedPermanentZoneMove) []permanentZoneMoveResult {
 	results := make([]permanentZoneMoveResult, 0, len(moves))
 	for i := range moves {
-		result := permanentZoneMoveResult{
-			permanent:   moves[i].permanent,
-			destination: moves[i].actualDestination,
-			moved:       applyPreparedPermanentZoneMove(g, &moves[i]),
-		}
-		if result.moved {
-			for _, component := range moves[i].snapshot.ZoneCards {
-				if card, ok := g.GetCardInstance(component.CardID); ok {
-					result.arrivals = append(result.arrivals, game.ZoneCardSnapshot{
-						CardID: card.ID, ZoneVersion: card.ZoneVersion,
-					})
-				}
-			}
-		}
-		results = append(results, result)
+		results = append(results, preparedPermanentZoneMoveResult(g, &moves[i], applyPreparedPermanentZoneMove(g, &moves[i])))
 	}
 	settleControlChanges(g)
 	return results
+}
+
+// preparedPermanentZoneMoveResult reports an applied prepared move, including
+// the post-move incarnation of every card component that moved.
+func preparedPermanentZoneMoveResult(g *game.Game, move *preparedPermanentZoneMove, moved bool) permanentZoneMoveResult {
+	result := permanentZoneMoveResult{
+		permanent:   move.permanent,
+		destination: move.actualDestination,
+		moved:       moved,
+	}
+	if !moved {
+		return result
+	}
+	for _, component := range move.snapshot.ZoneCards {
+		if card, ok := g.GetCardInstance(component.CardID); ok {
+			result.arrivals = append(result.arrivals, game.ZoneCardSnapshot{
+				CardID: card.ID, ZoneVersion: card.ZoneVersion,
+			})
+		}
+	}
+	return result
 }
 
 type mergedCardZoneMove struct {

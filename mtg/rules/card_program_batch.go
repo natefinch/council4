@@ -38,6 +38,9 @@ func (c *programContext) Destroy(primitive game.Destroy) (cardprogram.Destructio
 	batch := &destroyBatch{game: c.game, simultaneousID: c.game.IDGen.Next()}
 	destroyed, replacements := planDestroyPermanents(c.game, permanents, primitive.PreventRegeneration, batch.simultaneousID)
 	results := applyPlannedDestroyBatchResults(c.game, destroyed, replacements, batch)
+	// CR 610.3: a destroyed until-leaves source returns its exiled cards
+	// immediately after the destruction, before the program continues.
+	c.engine.returnUntilSourceLeavesExiles(c.game, c.agents, c.log)
 	for index := range outcome.Members {
 		member := &outcome.Members[index]
 		for _, result := range results {

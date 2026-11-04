@@ -1921,6 +1921,9 @@ func (p ForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool
 	default:
 		return errors.New("for each player requires a removal verb")
 	}
+	if p.UntilSourceLeaves && p.Removal != DistributiveRemovalExile {
+		return errors.New("for each player until-source-leaves duration requires exile")
+	}
 	if p.Scope.Kind == PlayerGroupReferenceNone {
 		return errors.New("for each player requires a player scope")
 	}
@@ -2533,6 +2536,9 @@ func (p MovePermanent) validatePrimitive(targets []TargetSpec, checkTargets bool
 	}
 	if p.LibraryBottom && p.Destination != zone.Library {
 		return errors.New("move permanent library-bottom placement requires a library destination")
+	}
+	if p.UntilSourceLeaves && p.Destination != zone.Exile {
+		return errors.New("move permanent until-source-leaves duration requires an exile destination")
 	}
 	if p.ControlledChoice {
 		if p.Object.Kind() != ObjectReferenceNone {

@@ -70,29 +70,9 @@ func newStaticSnare() *game.CardDef {
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.MovePermanent{
-									Object:        game.TargetPermanentReference(0),
-									PublishLinked: game.LinkedKey("exile-until-leaves"),
-									Destination:   zone.Exile,
-								},
-							},
-						},
-					}.Ability(),
-				},
-				game.TriggeredAbility{
-					Trigger: game.TriggerCondition{
-						Type: game.TriggerWhen,
-						Pattern: game.TriggerPattern{
-							Event:         game.EventZoneChanged,
-							Source:        game.TriggerSourceSelf,
-							MatchFromZone: true,
-							FromZone:      zone.Battlefield,
-						},
-					},
-					Content: game.Mode{
-						Sequence: []game.Instruction{
-							{
-								Primitive: game.PutOnBattlefield{
-									Source: game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves")),
+									Object:            game.TargetPermanentReference(0),
+									UntilSourceLeaves: true,
+									Destination:       zone.Exile,
 								},
 							},
 						},

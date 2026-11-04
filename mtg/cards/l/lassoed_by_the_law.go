@@ -53,9 +53,9 @@ func newLassoedByTheLaw() *game.CardDef {
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.MovePermanent{
-									Object:        game.TargetPermanentReference(0),
-									PublishLinked: game.LinkedKey("exile-until-leaves"),
-									Destination:   zone.Exile,
+									Object:            game.TargetPermanentReference(0),
+									UntilSourceLeaves: true,
+									Destination:       zone.Exile,
 								},
 							},
 						},
@@ -75,26 +75,6 @@ func newLassoedByTheLaw() *game.CardDef {
 								Primitive: game.CreateToken{
 									Amount: game.Fixed(1),
 									Source: game.TokenDef(lassoedByTheLawToken),
-								},
-							},
-						},
-					}.Ability(),
-				},
-				game.TriggeredAbility{
-					Trigger: game.TriggerCondition{
-						Type: game.TriggerWhen,
-						Pattern: game.TriggerPattern{
-							Event:         game.EventZoneChanged,
-							Source:        game.TriggerSourceSelf,
-							MatchFromZone: true,
-							FromZone:      zone.Battlefield,
-						},
-					},
-					Content: game.Mode{
-						Sequence: []game.Instruction{
-							{
-								Primitive: game.PutOnBattlefield{
-									Source: game.LinkedBattlefieldSource(game.LinkedKey("exile-until-leaves")),
 								},
 							},
 						},

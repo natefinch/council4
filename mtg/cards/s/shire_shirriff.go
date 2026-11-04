@@ -84,9 +84,9 @@ func newShireShirriff() *game.CardDef {
 															Sequence: []game.Instruction{
 																game.Instruction{
 																	Primitive: game.MovePermanent{
-																		Object:        game.TargetPermanentReference(0),
-																		Destination:   zone.Exile,
-																		PublishLinked: game.LinkedKey("exile-until-leaves"),
+																		Object:            game.TargetPermanentReference(0),
+																		Destination:       zone.Exile,
+																		UntilSourceLeaves: true,
 																	},
 																},
 															},

@@ -426,6 +426,9 @@ func (r *effectResolver) resolveInstruction(instr *game.Instruction) {
 	handler := globalPrimitiveRegistry().dispatch(kind)
 	publicationAttempted = true
 	res := handler(r, instr.Primitive)
+	// CR 610.3: an instruction that removed an until-leaves source returns the
+	// cards it exiled immediately, before the next instruction.
+	r.engine.returnUntilSourceLeavesExiles(r.game, r.agents, r.log)
 	r.resultObjectsKnown = true
 	r.publishInstructionResult(instr, res)
 }

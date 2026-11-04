@@ -58,6 +58,16 @@ type MovePermanent struct {
 	// channel, scoped to the original source permanent ObjectID (CR 607).
 	// It is mutually exclusive with the legacy PublishLinked channel.
 	PublishLinkedProducer LinkedProducerKey
+	// UntilSourceLeaves makes an exile last "until <this source> leaves the
+	// battlefield" (CR 610.3). Destination must be zone.Exile and the
+	// instruction must resolve from a triggered or activated ability of the
+	// source permanent. If that permanent has already left the battlefield when
+	// the instruction resolves, nothing is exiled (CR 610.3a-b). Otherwise the
+	// Engine records each card that reached exile and returns it to the
+	// battlefield under its owner's control immediately after the source leaves
+	// (CR 610.3c-d), with no triggered ability or stack object. It is
+	// independent of PublishLinked, which still backs "cards exiled with" text.
+	UntilSourceLeaves bool
 }
 
 // MoveResolvingSpell moves the spell currently resolving to Destination instead

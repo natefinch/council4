@@ -63,6 +63,13 @@ type ForEachPlayer struct {
 	// Simultaneous collects every choice in APNAP order before moving all chosen
 	// permanents in one zone-change batch.
 	Simultaneous bool
+	// UntilSourceLeaves makes the exile last "until <this source> leaves the
+	// battlefield" with the same CR 610.3 semantics as
+	// MovePermanent.UntilSourceLeaves: nothing is exiled if the source already
+	// left, and the Engine returns the exiled cards immediately when it leaves,
+	// without a stack object. It requires DistributiveRemovalExile. LinkedKey
+	// still backs "cards exiled with" payoffs.
+	UntilSourceLeaves bool
 }
 
 // Kind implements Primitive for ForEachPlayer.
