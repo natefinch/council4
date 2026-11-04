@@ -215,7 +215,7 @@ func TestChangelingCastEventRoutes(t *testing.T) {
 			t.Fatal("casting the rebound Changeling failed")
 		}
 		engine.resolveTopOfStack(g, &TurnLog{})
-		engine.processReboundUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+		runReboundUpkeep(engine, g, game.Player1, [game.NumPlayers]PlayerAgent{})
 		if event := lastSpellCastEvent(t, g); event.FromZone != zone.Exile {
 			t.Fatalf("last cast from %v, want the rebound cast from exile", event.FromZone)
 		}

@@ -35,6 +35,7 @@ type pendingTriggeredAbility struct {
 	entryChoices                 map[game.ChoiceKey]game.ResolutionChoiceResult
 	sagaChapter                  bool
 	siegeDefeat                  bool
+	rebound                      bool
 	wardTargetID                 id.ID
 	capturedTargetControllerLKI  map[int]game.PlayerID
 	capturedTargetManaValueLKI   map[int]int
@@ -144,6 +145,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			InlineTrigger:               trigger.inline,
 			SagaChapter:                 trigger.sagaChapter,
 			SiegeDefeat:                 trigger.siegeDefeat,
+			Rebound:                     trigger.rebound,
 			WardTargetStackObjectID:     trigger.wardTargetID,
 			Controller:                  trigger.controller,
 			ChosenModes:                 append([]int(nil), trigger.chosenModes...),

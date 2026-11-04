@@ -129,8 +129,8 @@ func controlledElephants(g *game.Game, player game.PlayerID) int {
 func assertReboundUpkeep(t *testing.T, g *game.Game, engine *Engine, cardID id.ID, wantRecast bool) {
 	t.Helper()
 	stackBefore := g.Stack.Size()
-	engine.processReboundUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-	if _, tracked := g.ReboundCards[cardID]; tracked {
+	runReboundUpkeep(engine, g, game.Player1, [game.NumPlayers]PlayerAgent{})
+	if reboundTriggerPending(g, cardID) {
 		t.Fatal("rebound tracking survived the upkeep")
 	}
 	obj, ok := g.Stack.Peek()
@@ -172,7 +172,7 @@ func TestReboundCompetesWithDauthiVoidwalker(t *testing.T) {
 			if got := g.ExileCounterCount(cardID, counter.Void); got != voidCounters {
 				t.Fatalf("void counters = %d, want %d", got, voidCounters)
 			}
-			if _, tracked := g.ReboundCards[cardID]; tracked != chooseRebound {
+			if tracked := reboundTriggerPending(g, cardID); tracked != chooseRebound {
 				t.Fatalf("rebound tracked = %v, want %v", tracked, chooseRebound)
 			}
 			assertReboundUpkeep(t, g, engine, cardID, chooseRebound)
@@ -180,7 +180,7 @@ func TestReboundCompetesWithDauthiVoidwalker(t *testing.T) {
 				// The recast is not from hand, so Dauthi alone exiles it.
 				engine.resolveTopOfStackWithChoices(g, reboundOrderAgents(t, game.Player1, false, &requests), &TurnLog{})
 				if controlledElephants(g, game.Player1) != 2 || g.ExileCounterCount(cardID, counter.Void) != 1 ||
-					len(requests) != 1 || len(g.ReboundCards) != 0 {
+					len(requests) != 1 || reboundTriggerPending(g, cardID) {
 					t.Fatal("rebound recast did not resolve once and fall to Dauthi Voidwalker")
 				}
 			}
@@ -202,17 +202,17 @@ func TestReboundReplacementDefaultWithoutAgentAndClone(t *testing.T) {
 		decisions[len(decisions)-1].Options[0] != reboundReplacementLabel {
 		t.Fatalf("replacement decisions = %+v, want a rebound-first fallback", decisions)
 	}
-	if _, tracked := g.ReboundCards[cardID]; !tracked || g.ExileCounterCount(cardID, counter.Void) != 0 {
+	if !reboundTriggerPending(g, cardID) || g.ExileCounterCount(cardID, counter.Void) != 0 {
 		t.Fatal("fallback did not apply rebound")
 	}
 	// A clone taken before resolution makes its own choice independently.
 	var requests []game.ChoiceRequest
 	engine.resolveTopOfStackWithChoices(replay, reboundOrderAgents(t, game.Player1, false, &requests), &TurnLog{})
 	requireReboundTwoWayChoice(t, requests, game.Player1, replay.ReplacementEffects[0].Description)
-	if _, tracked := replay.ReboundCards[cardID]; tracked || replay.ExileCounterCount(cardID, counter.Void) != 1 {
+	if reboundTriggerPending(replay, cardID) || replay.ExileCounterCount(cardID, counter.Void) != 1 {
 		t.Fatal("cloned game did not resolve its own Dauthi-first choice")
 	}
-	if _, tracked := g.ReboundCards[cardID]; !tracked {
+	if !reboundTriggerPending(g, cardID) {
 		t.Fatal("clone's resolution changed the original's rebound tracking")
 	}
 	// A clone taken after rebound keeps the delayed recast.
@@ -286,8 +286,8 @@ func assertNoRebound(t *testing.T, g *game.Game, cardID id.ID, withDauthi bool) 
 	} else if !owner.Graveyard.Contains(cardID) {
 		t.Fatal("unresolved rebound spell did not go to its owner's graveyard")
 	}
-	if len(g.ReboundCards) != 0 {
-		t.Fatalf("rebound tracking = %+v for an unresolved spell", g.ReboundCards)
+	if reboundTriggerPending(g, cardID) {
+		t.Fatalf("delayed triggers = %+v for an unresolved spell", g.DelayedTriggers)
 	}
 }
 
@@ -303,7 +303,7 @@ func TestReboundStolenSpellAndCopyDoNotRebound(t *testing.T) {
 		engine.resolveTopOfStack(g, &TurnLog{})
 		// Player2 didn't cast it from their hand, so "your hand" fails.
 		if controlledElephants(g, game.Player2) != 1 || !g.Players[game.Player1].Graveyard.Contains(cardID) ||
-			len(g.ReboundCards) != 0 {
+			reboundTriggerPending(g, cardID) {
 			t.Fatal("stolen rebound spell rebounded or left its owner's graveyard")
 		}
 	})
@@ -318,14 +318,14 @@ func TestReboundStolenSpellAndCopyDoNotRebound(t *testing.T) {
 			t.Fatalf("top of stack = %+v, want a copy of Trumpeting Herd", copied)
 		}
 		engine.resolveTopOfStack(g, &TurnLog{})
-		if controlledElephants(g, game.Player1) != 1 || len(g.ReboundCards) != 0 {
+		if controlledElephants(g, game.Player1) != 1 || reboundTriggerPending(g, cardID) {
 			t.Fatal("copy of a rebound spell did not resolve without rebound")
 		}
 		engine.resolveTopOfStack(g, &TurnLog{})
 		if controlledElephants(g, game.Player1) != 2 || !g.Players[game.Player1].Exile.Contains(cardID) {
 			t.Fatal("original rebound spell did not rebound after its copy")
 		}
-		if _, tracked := g.ReboundCards[cardID]; !tracked {
+		if !reboundTriggerPending(g, cardID) {
 			t.Fatal("original rebound spell was not scheduled")
 		}
 	})
@@ -338,7 +338,7 @@ func TestReboundEndsWhenCardLeavesExile(t *testing.T) {
 	engine := NewEngineWithPrograms(nil, registry.Programs())
 	cardID, _ := castTrumpetingHerd(t, g, engine, herd)
 	engine.resolveTopOfStack(g, &TurnLog{})
-	if _, tracked := g.ReboundCards[cardID]; !tracked {
+	if !reboundTriggerPending(g, cardID) {
 		t.Fatal("Trumpeting Herd did not rebound")
 	}
 	// The card returned to exile is a new object (CR 400.7) that rebound's
@@ -397,7 +397,7 @@ func TestReboundCompetesWithBuyback(t *testing.T) {
 			engine.resolveTopOfStackWithChoices(g, reboundOrderAgents(t, game.Player1, chooseRebound, &requests), &TurnLog{})
 			requireReboundTwoWayChoice(t, requests, game.Player1, "Buyback")
 			owner := g.Players[game.Player1]
-			_, tracked := g.ReboundCards[cardID]
+			tracked := reboundTriggerPending(g, cardID)
 			if owner.Exile.Contains(cardID) != chooseRebound || owner.Hand.Contains(cardID) == chooseRebound ||
 				tracked != chooseRebound {
 				t.Fatalf("exile=%v hand=%v rebound=%v, want rebound %v",

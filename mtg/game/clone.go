@@ -56,7 +56,6 @@ func (g *Game) Clone() *Game {
 		CostModifiers:                      cloneSlice(g.CostModifiers),
 		RuleEffects:                        cloneSlicePtr(g.RuleEffects, fixupRuleEffect),
 		SuspendedCards:                     cloneComparableMap(g.SuspendedCards),
-		ReboundCards:                       cloneComparableMap(g.ReboundCards),
 		AdventureCards:                     cloneComparableMap(g.AdventureCards),
 		PlottedCards:                       cloneComparableMap(g.PlottedCards),
 		ForetoldCards:                      cloneComparableMap(g.ForetoldCards),
@@ -128,7 +127,6 @@ func (g *Game) RestoreReversibleManaPayment(before *Game) {
 	g.CostModifiers = before.CostModifiers
 	g.RuleEffects = before.RuleEffects
 	g.SuspendedCards = before.SuspendedCards
-	g.ReboundCards = before.ReboundCards
 	g.AdventureCards = before.AdventureCards
 	g.PlottedCards = before.PlottedCards
 	g.ForetoldCards = before.ForetoldCards

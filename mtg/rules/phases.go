@@ -268,8 +268,9 @@ func (e *Engine) runBeginningPhase(g *game.Game, agents [game.NumPlayers]PlayerA
 // TurnState.ExtraUpkeepSteps share this body. It counts the step toward
 // UpkeepStepsThisTurn (backing the "first upkeep each turn" gate), emits the
 // beginning-of-step event so "at the beginning of upkeep" triggers fire each
-// step, performs the upkeep turn-based actions (initiative venture, suspend and
-// rebound processing), and resolves the upkeep priority window.
+// step, performs the upkeep turn-based actions (initiative venture and suspend
+// processing), and resolves the upkeep priority window. Rebound's delayed
+// triggers fire from the beginning-of-step event like other upkeep triggers.
 func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	g.Turn.UpkeepStepsThisTurn++
 	g.Turn.Step = game.StepUpkeep
@@ -286,7 +287,6 @@ func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent
 		queueInitiativeVenture(g, g.Turn.ActivePlayer)
 	}
 	e.processSuspendUpkeep(g, g.Turn.ActivePlayer, agents, log)
-	e.processReboundUpkeep(g, g.Turn.ActivePlayer, agents, log)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
 	completeTurnBoundary(g)
