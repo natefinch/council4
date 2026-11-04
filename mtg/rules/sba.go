@@ -395,16 +395,24 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 	return "", false
 }
 
-// battleAwaitingAbility reports whether a battle is the source of a triggered
-// ability currently on the stack. CR 704.5v keeps a battle with 0 defense from
-// being put into its graveyard while it "is the source of an ability that has
-// triggered but not yet left the stack" — for example a "when this battle's
-// defense becomes 0" trigger that has not finished resolving. Abilities that
-// have triggered but have not yet been put on the stack are not covered here.
+// battleAwaitingAbility reports whether a battle is the source of an ability
+// that has triggered but not yet left the stack (CR 704.5v): a triggered
+// ability on the stack, or one captured by an event not yet processed and so
+// waiting to be put on the stack. A Siege whose last defense counter was just
+// removed therefore stays on the battlefield until its intrinsic ability
+// (CR 310.12b) resolves or otherwise leaves the stack.
 func battleAwaitingAbility(g *game.Game, permanent *game.Permanent) bool {
 	for _, object := range g.Stack.Objects() {
 		if object.Kind == game.StackTriggeredAbility && object.SourceID == permanent.ObjectID {
 			return true
+		}
+	}
+	start := min(max(g.TriggerEventCursor, 0), len(g.Events))
+	for _, event := range g.Events[start:] {
+		for _, trigger := range event.TriggeredAbilities {
+			if trigger.SourceID == permanent.ObjectID {
+				return true
+			}
 		}
 	}
 	return false

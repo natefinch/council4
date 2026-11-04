@@ -79,6 +79,12 @@ type StackObject struct {
 	// chapter.
 	SagaChapter bool
 
+	// SiegeDefeat identifies a Siege's intrinsic triggered ability (CR 310.12b),
+	// "When the last defense counter is removed from this permanent, exile it,
+	// then you may cast it transformed without paying its mana cost." A copy of
+	// the ability keeps it (CR 707.10).
+	SiegeDefeat bool
+
 	// TriggerEvent is the event that caused this triggered ability to trigger.
 	// HasTriggerEvent distinguishes a real zero-valued event from no event.
 	TriggerEvent    Event
