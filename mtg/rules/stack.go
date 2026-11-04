@@ -231,7 +231,7 @@ func (e *Engine) resolveActivatedAbilityWithChoices(g *game.Game, obj *game.Stac
 				Attacker: ninja.ObjectID,
 				Target:   obj.NinjutsuAttackTarget,
 			})
-			recordCombatantController(g, ninja.ObjectID)
+			recordAttackCombatants(g, g.Combat.Attackers[len(g.Combat.Attackers)-1])
 		}
 		return "resolved"
 	}

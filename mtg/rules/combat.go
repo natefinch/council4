@@ -510,6 +510,47 @@ func removePermanentFromCombat(g *game.Game, permanentID id.ID) {
 	}
 	delete(g.Combat.DamageAssignment, permanentID)
 	delete(g.Combat.CombatantControllers, permanentID)
+	dropControllersOfPermanentsOutOfCombat(g.Combat)
+}
+
+// dropControllersOfPermanentsOutOfCombat discards the recorded controller of
+// each permanent no longer in combat, such as a battle whose last attacker was
+// removed from combat or left the battlefield. A battle that later becomes
+// attacked again is recorded afresh under its controller at that time, so a
+// control change while it wasn't attacked doesn't remove it from the new attack
+// (CR 506.4).
+func dropControllersOfPermanentsOutOfCombat(combat *game.CombatState) {
+	for permanentID := range combat.CombatantControllers {
+		if !combatantStillInCombat(combat, permanentID) {
+			delete(combat.CombatantControllers, permanentID)
+		}
+	}
+}
+
+// combatantStillInCombat reports whether permanentID is an attacking or
+// blocking creature or a battle being attacked.
+func combatantStillInCombat(combat *game.CombatState, permanentID id.ID) bool {
+	if combat.BlockersOfRemovedAttackers[permanentID] {
+		return true
+	}
+	for _, attack := range combat.Attackers {
+		if attack.Attacker == permanentID || (!attack.Target.NoTarget && attack.Target.BattleID == permanentID) {
+			return true
+		}
+	}
+	return slices.ContainsFunc(combat.Blockers, func(block game.BlockDeclaration) bool {
+		return block.Blocker == permanentID
+	})
+}
+
+// recordAttackCombatants records the controllers of an attack's creature and of
+// the battle it attacks, if any, as the creature is declared or put onto the
+// battlefield attacking. A battle already being attacked keeps its record.
+func recordAttackCombatants(g *game.Game, attack game.AttackDeclaration) {
+	recordCombatantController(g, attack.Attacker)
+	if !attack.Target.NoTarget && attack.Target.BattleID != 0 {
+		recordCombatantController(g, attack.Target.BattleID)
+	}
 }
 
 // recordCombatantController records the controller a creature has as it becomes
@@ -1553,7 +1594,7 @@ func declareCreatedTokensAttacking(e *Engine, g *game.Game, controller game.Play
 			Attacker: token.ObjectID,
 			Target:   game.AttackTarget{Player: defender},
 		})
-		recordCombatantController(g, token.ObjectID)
+		recordAttackCombatants(g, g.Combat.Attackers[len(g.Combat.Attackers)-1])
 		// CR 508.8: a creature put onto the battlefield attacking counts the same
 		// as a declared attacker for whether the later combat steps are skipped.
 		g.Combat.AttackersDeclared = true
@@ -1620,7 +1661,7 @@ func declareTokenAttackingDefender(g *game.Game, controller game.PlayerID, token
 		Attacker: token.ObjectID,
 		Target:   game.AttackTarget{Player: defender},
 	})
-	recordCombatantController(g, token.ObjectID)
+	recordAttackCombatants(g, g.Combat.Attackers[len(g.Combat.Attackers)-1])
 	// CR 508.8: a creature put onto the battlefield attacking counts the same as
 	// a declared attacker for whether the later combat steps are skipped.
 	g.Combat.AttackersDeclared = true
@@ -1646,7 +1687,7 @@ func declareTokenAttackingTarget(g *game.Game, controller game.PlayerID, token *
 		Attacker: token.ObjectID,
 		Target:   target,
 	})
-	recordCombatantController(g, token.ObjectID)
+	recordAttackCombatants(g, g.Combat.Attackers[len(g.Combat.Attackers)-1])
 	// CR 508.8: a creature put onto the battlefield attacking counts the same as
 	// a declared attacker for whether the later combat steps are skipped.
 	g.Combat.AttackersDeclared = true
