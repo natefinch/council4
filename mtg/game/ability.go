@@ -1629,8 +1629,13 @@ type TokenCopySpec struct {
 	AddColors   []color.Color
 	AddTypes    []types.Card
 	AddSubtypes []types.Sub
-	// AddKeywords grants additional keyword abilities to the created token on top
-	// of the copied characteristics ("That token gains haste").
+	// AddKeywords adds keyword abilities as part of the copying process ("except
+	// it has haste", Kiki-Jiki, Mirror-Breaker). Per CR 707.9a they become part
+	// of the token's copiable values, so a later copy of the token has them too.
+	// A separate sentence such as "It gains haste" or "That token gains haste"
+	// is not a copy exception: model it as an ApplyContinuous layer-6 effect on
+	// the PublishLinked tokens (LinkedObjectsGroup) so it stays non-copiable
+	// (CR 707.2) and applies to every token actually created.
 	AddKeywords []Keyword
 	// Group is copied member-by-member when Source is
 	// TokenCopySourceEachInGroup, or supplies the candidates for

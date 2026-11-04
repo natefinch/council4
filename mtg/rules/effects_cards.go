@@ -192,7 +192,8 @@ func buildTokenCopyDef(g *game.Game, obj *game.StackObject, spec game.TokenCopyS
 
 // applyTokenCopyOverrides copies source and applies a copy spec's explicit
 // copy-modifying exceptions (name, colors, types, power/toughness, mana cost,
-// printed text, legendary drop, and granted keywords). It is shared by the
+// printed text, legendary drop, and CR 707.9a "except it has" keywords, which
+// therefore become copiable values). It is shared by the
 // single-source copy path and the per-each group copy path, which both copy a
 // resolved source CardDef before applying the same overrides.
 func applyTokenCopyOverrides(source *game.CardDef, spec game.TokenCopySpec) (*game.CardDef, bool) {

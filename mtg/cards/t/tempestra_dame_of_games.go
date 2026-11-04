@@ -77,12 +77,20 @@ func newTempestraDameOfGames() *game.CardDef {
 												Source:          game.TokenCopySourceObject,
 												Object:          game.TargetPermanentReference(0),
 												SetNotLegendary: true,
-												AddKeywords:     []game.Keyword{game.Haste},
 											}),
 											PublishLinked: game.LinkedKey("sequence-effect-0-product"),
 										},
 										LocalProducts: game.LocalProducts{
 											Links: []game.LinkedKey{game.LinkedKey("sequence-effect-0-product")},
+										},
+									},
+									game.Instruction{
+										Primitive: game.ApplyContinuous{
+											ContinuousEffects: []game.ContinuousEffect{{
+												Group:       game.LinkedObjectsGroup(game.LinkedKey("sequence-effect-0-product")),
+												Layer:       game.LayerAbility,
+												AddKeywords: []game.Keyword{game.Haste},
+											}},
 										},
 									},
 									game.Instruction{

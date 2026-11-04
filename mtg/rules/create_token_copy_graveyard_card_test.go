@@ -69,10 +69,11 @@ func TestResolveTargetCardReferenceWrongKindFailsClosed(t *testing.T) {
 	}
 }
 
-// TestCreateCopyTokenOfGraveyardCard covers the Feldon of the Third Path copy:
-// creating a token that copies a creature card in the controller's graveyard,
-// adding the artifact type and haste, without disturbing the copied card in the
-// graveyard.
+// TestCreateCopyTokenOfGraveyardCard covers a graveyard-card copy with copy
+// exceptions: creating a token that copies a creature card in the controller's
+// graveyard, adding the artifact type and an "except it has haste" keyword (CR
+// 707.9a), without disturbing the copied card in the graveyard. Feldon's
+// non-copiable "It gains haste" is covered by TestFeldonOfTheThirdPath* tests.
 func TestCreateCopyTokenOfGraveyardCard(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -116,7 +117,7 @@ func TestCreateCopyTokenOfGraveyardCard(t *testing.T) {
 		t.Error("copy token is not an artifact in addition to its other types")
 	}
 	if !hasKeyword(g, token, game.Haste) {
-		t.Error("copy token did not gain haste")
+		t.Error("copy token lacks its copy-exception haste")
 	}
 
 	// The copied card remains untouched in the graveyard.
@@ -177,10 +178,9 @@ func TestCreateCopyTokenOfGraveyardCardTwiceSacrificesBoth(t *testing.T) {
 	createToken := game.CreateToken{
 		Amount: game.Fixed(1),
 		Source: game.TokenCopyOf(game.TokenCopySpec{
-			Source:      game.TokenCopySourceObject,
-			Object:      game.TargetCardReference(0),
-			AddTypes:    []types.Card{types.Artifact},
-			AddKeywords: []game.Keyword{game.Haste},
+			Source:   game.TokenCopySourceObject,
+			Object:   game.TargetCardReference(0),
+			AddTypes: []types.Card{types.Artifact},
 		}),
 		PublishLinked: game.LinkedKey("delayed-sacrifice-1"),
 	}
@@ -235,10 +235,9 @@ func feldonSameTurnHarness(t *testing.T, def *game.DelayedTriggerDef) (*game.Gam
 	createToken := game.CreateToken{
 		Amount: game.Fixed(1),
 		Source: game.TokenCopyOf(game.TokenCopySpec{
-			Source:      game.TokenCopySourceObject,
-			Object:      game.TargetCardReference(0),
-			AddTypes:    []types.Card{types.Artifact},
-			AddKeywords: []game.Keyword{game.Haste},
+			Source:   game.TokenCopySourceObject,
+			Object:   game.TargetCardReference(0),
+			AddTypes: []types.Card{types.Artifact},
 		}),
 		PublishLinked: game.LinkedKey("delayed-sacrifice-1"),
 	}
