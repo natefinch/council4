@@ -2835,7 +2835,7 @@ func retargetGroups(g *game.Game, target *game.StackObject, rule game.RetargetRu
 	if target.Kind == game.StackSpell && target.Mutate {
 		// A mutating creature spell's target comes from its mutate ability,
 		// not its spell text, so it has no other target to change.
-		if !add(mutateRetargetGroup(g, target, specs.def, prompt, rule)) {
+		if !add(mutateRetargetGroup(g, target, prompt, rule)) {
 			return nil, false
 		}
 		return groups, true

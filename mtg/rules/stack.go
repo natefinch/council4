@@ -840,7 +840,11 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 		return "missing source"
 	}
 	owner := mutateSpellOwner(obj, card)
-	if !mutateTargetLegal(g, obj.Controller, owner, spellDef, obj.MutateTargetID) {
+	spellChars, ok := stackSpellCharacteristicsDef(g, obj)
+	if !ok {
+		spellChars = spellDef
+	}
+	if !mutateTargetLegal(g, obj.Controller, owner, spellChars, obj.MutateTargetID) {
 		if obj.Copy {
 			_, result := e.enterPermanentSpellCopy(g, obj, spellDef, agents, log)
 			return result

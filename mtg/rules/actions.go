@@ -249,7 +249,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 				spellDef := cardFaceOrDefault(card, face)
 				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile || sourceZone == zone.Graveyard || sourceZone == zone.Library) {
 					if _, ok := spellDef.MutateCost(); ok {
-						for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
+						for _, target := range legalMutateTargets(g, playerID, card.Owner, castSelectionFace(g, playerID, cardID, spellDef, false)) {
 							if e.canCastMutateSpell(g, playerID, cardID, sourceZone, target.ObjectID) {
 								actions = append(actions, actionBuild.castMutateSpell(cardID, sourceZone, target.ObjectID))
 							}
@@ -377,7 +377,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 		spellDef := cardFaceOrDefault(card, face)
 		if face == game.FaceFront {
 			if _, ok := spellDef.MutateCost(); ok {
-				for _, target := range legalMutateTargets(g, playerID, card.Owner, spellDef) {
+				for _, target := range legalMutateTargets(g, playerID, card.Owner, castSelectionFace(g, playerID, card.ID, spellDef, false)) {
 					if e.canCastMutateSpell(g, playerID, card.ID, zone.Command, target.ObjectID) {
 						actions = append(actions, actionBuild.castMutateSpell(card.ID, zone.Command, target.ObjectID))
 					}
