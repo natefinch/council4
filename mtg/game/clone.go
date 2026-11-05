@@ -316,6 +316,7 @@ func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
 	clone.ID = newID
 	clone.Copy = true
 	clone.CastCopy = false
+	clone.Casting = false
 	clone.CopyOwner = opt.Val(o.Controller)
 	clone.AbilityOwner = opt.V[PlayerID]{}
 	clone.Caster = opt.V[PlayerID]{}
