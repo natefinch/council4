@@ -52,9 +52,23 @@ func captureDiscardCostSubject(g *game.Game, playerID game.PlayerID, cardID id.I
 	return subject
 }
 
-func (s *rulesPaymentState) PayDiscardSubject(playerID game.PlayerID, cardID id.ID, key string) (game.PaidCostSubject, bool) {
-	subject := captureDiscardCostSubject(s.g, playerID, cardID, key)
-	return subject, discardCardFromHand(s.g, playerID, cardID)
+func (s *rulesPaymentState) PayDiscards(playerID game.PlayerID, cardIDs []id.ID, keys []string) ([]game.PaidCostSubject, bool) {
+	player, ok := playerByID(s.g, playerID)
+	if !ok || len(cardIDs) == 0 || len(keys) != len(cardIDs) {
+		return nil, false
+	}
+	// Freeze every paid subject before the simultaneous discard moves any card.
+	var subjects []game.PaidCostSubject
+	for i, cardID := range cardIDs {
+		if !player.Hand.Contains(cardID) || slices.Contains(cardIDs[:i], cardID) {
+			return nil, false
+		}
+		if keys[i] != "" {
+			subjects = append(subjects, captureDiscardCostSubject(s.g, playerID, cardID, keys[i]))
+		}
+	}
+	discarded := discardChosenCardsInBatch(s.g, playerID, cardIDs, s.g.IDGen.Next())
+	return subjects, len(discarded) == len(cardIDs)
 }
 
 func (s *rulesPaymentState) PayRandomDiscardSubjects(playerID game.PlayerID, keys []string) ([]game.PaidCostSubject, bool) {

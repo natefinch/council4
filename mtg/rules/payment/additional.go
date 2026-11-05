@@ -25,6 +25,10 @@ type additionalCostPlan struct {
 	exertSource     *game.Permanent
 	millAmount      int
 	discards        []id.ID
+	// discardBatches partitions discards by cost component. Each component's
+	// cards are discarded simultaneously, but separate costs remain separate
+	// discard actions (CR 601.2h, CR 701.9a).
+	discardBatches [][]id.ID
 	// randomDiscardAmount totals the cards to discard at random for
 	// AdditionalDiscard costs marked Random. The specific cards are not chosen
 	// during planning; the rules layer selects them uniformly at random when
@@ -336,6 +340,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			plan.discards = append(plan.discards, chosen...)
+			plan.discardBatches = append(plan.discardBatches, chosen)
 			plan.recordDiscardSubjects(additional.SubjectKey, chosen)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalPayLife:

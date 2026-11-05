@@ -423,10 +423,6 @@ func (s *rulesPaymentState) SacrificePermanent(p *game.Permanent) bool {
 	return sacrificePermanent(s.g, p)
 }
 
-func (s *rulesPaymentState) DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool {
-	return discardCardFromHand(s.g, playerID, cardID)
-}
-
 func (s *rulesPaymentState) DiscardAtRandom(playerID game.PlayerID, amount int) bool {
 	return len(discardCardsAtRandomFromHand(s.g, playerID, amount)) == amount
 }

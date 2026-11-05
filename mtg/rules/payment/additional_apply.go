@@ -171,17 +171,19 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 			panic("additional cost plan became invalid while exiling permanents")
 		}
 	}
-	for _, cardID := range plan.discards {
-		key := plan.discardSubjectKey(cardID)
-		if key != "" {
-			subject, ok := s.PayDiscardSubject(plan.player, cardID, key)
-			if !ok {
-				panic("additional cost plan became invalid while capturing discarded subject")
-			}
-			subjects = append(subjects, subject)
-		} else if !s.DiscardFromHand(plan.player, cardID) {
+	for _, batch := range plan.discardBatches {
+		if len(batch) == 0 {
+			continue
+		}
+		keys := make([]string, len(batch))
+		for i, cardID := range batch {
+			keys[i] = plan.discardSubjectKey(cardID)
+		}
+		paid, ok := s.PayDiscards(plan.player, batch, keys)
+		if !ok {
 			panic("additional cost plan became invalid while discarding cards")
 		}
+		subjects = append(subjects, paid...)
 	}
 	if plan.randomDiscardAmount > 0 {
 		keys := plan.randomDiscardSubjectKeys()

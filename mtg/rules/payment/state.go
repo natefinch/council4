@@ -212,12 +212,21 @@ type stateAbilityQueries interface {
 
 //nolint:interfacebloat // Payment plans need one adapter surface for all atomic game-state mutations.
 type stateMutations interface {
-	// PaySacrificeSubject and PayDiscardSubject perform the same actual payment
-	// as their unbound counterparts, capturing characteristics immediately before
-	// the move. PayRandomDiscardSubjects captures the actual random selection.
+	// PaySacrificeSubject performs the same actual payment as SacrificePermanent,
+	// capturing characteristics immediately before the move.
+	// PayRandomDiscardSubjects captures the actual random selection.
 	PaySacrificeSubject(p *game.Permanent, key string) (game.PaidCostSubject, bool)
-	PayDiscardSubject(playerID game.PlayerID, cardID id.ID, key string) (game.PaidCostSubject, bool)
 	PayRandomDiscardSubjects(playerID game.PlayerID, keys []string) ([]game.PaidCostSubject, bool)
+
+	// PayDiscards discards every chosen card of one discard cost component from
+	// the player's hand as a single simultaneous discard (CR 101.4, CR 701.9a);
+	// separate cost components are separate discards (CR 601.2h). Each card's
+	// replacement or commander choice is decided while every card is still in
+	// hand, then all move sharing one simultaneous cohort. keys parallels cardIDs;
+	// a nonempty key captures that card's paid-cost subject before any card moves.
+	// It returns the captured subjects in cardIDs order and whether every card
+	// was discarded.
+	PayDiscards(playerID game.PlayerID, cardIDs []id.ID, keys []string) ([]game.PaidCostSubject, bool)
 
 	// SetTapped sets the tapped state of a permanent and emits the appropriate
 	// tapped/untapped event.
@@ -270,10 +279,6 @@ type stateMutations interface {
 	// SacrificePermanent moves a permanent to its graveyard as a sacrifice and
 	// emits the corresponding sacrifice and zone-change events.
 	SacrificePermanent(p *game.Permanent) bool
-
-	// DiscardFromHand discards a card from the player's hand, emitting the
-	// appropriate discard and zone-change events.
-	DiscardFromHand(playerID game.PlayerID, cardID id.ID) bool
 
 	// DiscardAtRandom discards exactly amount cards chosen uniformly at random
 	// from the player's hand as a single simultaneous batch (CR 701.9a),
