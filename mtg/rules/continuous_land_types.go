@@ -7,6 +7,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/types"
 )
 
 type staticBodyKey struct {
@@ -36,7 +37,7 @@ func hasBasicLandTypeSet(g *game.Game, sources []staticAbilitySource) bool {
 	for i := range g.ContinuousEffects {
 		effect := &g.ContinuousEffects[i]
 		if effect.Layer == game.LayerType &&
-			(len(effect.SetBasicLandTypes) > 0 || len(effect.DependsOn) > 0 || selectionReadsTypes(effect.Group.Selection())) {
+			(effectSetsBasicLandTypes(effect) || len(effect.DependsOn) > 0 || selectionReadsTypes(effect.Group.Selection())) {
 			return true
 		}
 	}
@@ -46,7 +47,7 @@ func hasBasicLandTypeSet(g *game.Game, sources []staticAbilitySource) bool {
 			for j := range body.ContinuousEffects {
 				effect := &body.ContinuousEffects[j]
 				if effect.Layer == game.LayerType &&
-					(len(effect.SetBasicLandTypes) > 0 || len(effect.DependsOn) > 0 ||
+					(effectSetsBasicLandTypes(effect) || len(effect.DependsOn) > 0 ||
 						selectionReadsTypes(effect.Group.Selection()) || body.Condition.Exists || len(body.ContinuousEffects) > 1) &&
 					staticAbilityFunctionsFromSource(body, source) {
 					return true
@@ -55,6 +56,30 @@ func hasBasicLandTypeSet(g *game.Game, sources []staticAbilitySource) bool {
 		}
 	}
 	return false
+}
+
+// effectSetsBasicLandTypes reports whether effect sets a land's subtype to a
+// basic land type (CR 305.7), removing abilities that may be another layer-4
+// effect's source (CR 613.8a).
+func effectSetsBasicLandTypes(effect *game.ContinuousEffect) bool {
+	return len(effect.SetBasicLandTypes) > 0 || setSubtypesIncludeBasicLandType(effect)
+}
+
+func setSubtypesIncludeBasicLandType(effect *game.ContinuousEffect) bool {
+	return slices.ContainsFunc(effect.SetSubtypes, func(subtype types.Sub) bool {
+		_, ok := basicLandSubtypeManaColor(subtype)
+		return ok
+	})
+}
+
+func allLandSubtypes(subtypes []types.Sub) bool {
+	landTypes := types.SubtypesForType(types.Land)
+	for _, subtype := range subtypes {
+		if !slices.Contains(landTypes, subtype) {
+			return false
+		}
+	}
+	return true
 }
 
 func selectionReadsTypes(selection game.Selection) bool {
