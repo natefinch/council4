@@ -1237,6 +1237,30 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 	default:
 		v.add(faceName, appendPath(path, "Chooser"), CardDefIssueInvalidTargetSpec, "unknown target chooser")
 	}
+	v.validateTargetControlledBy(faceName, path, target)
+}
+
+// validateTargetControlledBy checks a per-player target slot: it names a real
+// seat, targets only permanents, is announced by the ability's controller, and
+// holds at most one target, matching "up to one target ... that player
+// controls".
+func (v *cardDefValidator) validateTargetControlledBy(faceName, path string, target *TargetSpec) {
+	if !target.ControlledBy.Exists {
+		return
+	}
+	seat := target.ControlledBy.Val
+	if seat < 0 || int(seat) >= NumPlayers {
+		v.add(faceName, appendPath(path, "ControlledBy"), CardDefIssueInvalidTargetSpec, "per-player target slot names an unknown seat")
+	}
+	if target.Allow != TargetAllowPermanent {
+		v.add(faceName, appendPath(path, "ControlledBy"), CardDefIssueInvalidTargetSpec, "per-player target slot requires a permanent-only target")
+	}
+	if target.Chooser != TargetChooserController {
+		v.add(faceName, appendPath(path, "ControlledBy"), CardDefIssueInvalidTargetSpec, "per-player target slot requires the controller target chooser")
+	}
+	if target.MaxTargets > 1 {
+		v.add(faceName, appendPath(path, "ControlledBy"), CardDefIssueInvalidTargetSpec, "per-player target slot allows at most one target")
+	}
 }
 
 func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path string, target *TargetSpec) {

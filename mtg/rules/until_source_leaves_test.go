@@ -475,9 +475,14 @@ func untilLeavesChapterExile(t *testing.T, def *game.CardDef) game.ForEachPlayer
 	return exile
 }
 
-func untilLeavesChapterObject(source *game.Permanent) *game.StackObject {
+// untilLeavesChapterObject builds a chapter ability stack object whose
+// announced per-player targets are the given permanents.
+func untilLeavesChapterObject(source *game.Permanent, targets ...*game.Permanent) *game.StackObject {
 	obj := linkedSourceObject(source)
 	obj.Kind = game.StackTriggeredAbility
+	for _, target := range targets {
+		obj.Targets = append(obj.Targets, game.PermanentTarget(target.ObjectID))
+	}
 	return obj
 }
 
@@ -491,7 +496,7 @@ func TestBattleAtTheHelvaultCaptivesReturnTogetherWhenSagaLeaves(t *testing.T) {
 	saga := addCombatPermanent(g, game.Player1, def)
 	first := addCombatCreaturePermanent(g, game.Player2)
 	second := addCombatCreaturePermanent(g, game.Player3)
-	resolveInstruction(engine, g, untilLeavesChapterObject(saga), untilLeavesChapterExile(t, def), nil)
+	resolveInstruction(engine, g, untilLeavesChapterObject(saga, first, second), untilLeavesChapterExile(t, def), nil)
 	requireExiled(t, g, first.CardInstanceID)
 	requireExiled(t, g, second.CardInstanceID)
 
@@ -522,7 +527,7 @@ func TestVault13LeavingBeforeChapterOneExilesNothing(t *testing.T) {
 	def := untilLeavesRegistryDef(t, "Vault 13: Dweller's Journey")
 	saga := addCombatPermanent(g, game.Player1, def)
 	victim := addCombatCreaturePermanent(g, game.Player2)
-	obj := untilLeavesChapterObject(saga)
+	obj := untilLeavesChapterObject(saga, victim)
 	resolveOpponentDestroy(t, engine, g, game.Player2, saga)
 
 	resolveInstruction(engine, g, obj, untilLeavesChapterExile(t, def), nil)
@@ -548,7 +553,7 @@ func TestVault13ChapterThreeLibraryCardsDoNotReturn(t *testing.T) {
 		addCombatCreaturePermanent(g, game.Player3),
 		addCombatCreaturePermanent(g, game.Player4),
 	}
-	obj := untilLeavesChapterObject(saga)
+	obj := untilLeavesChapterObject(saga, captives...)
 	resolveInstruction(engine, g, obj, untilLeavesChapterExile(t, def), nil)
 	for _, captive := range captives {
 		requireExiled(t, g, captive.CardInstanceID)

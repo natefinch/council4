@@ -70,6 +70,17 @@ type ForEachPlayer struct {
 	// without a stack object. It requires DistributiveRemovalExile. LinkedKey
 	// still backs "cards exiled with" payoffs.
 	UntilSourceLeaves bool
+	// Targeted takes each player's permanent from the resolving object's
+	// announced targets instead of a resolution-time choice. The mode declares
+	// the per-player slots with PlayerSlotTargetSpecs, so the targets are chosen
+	// as the ability is put on the stack (CR 115.1d, 601.2c, 603.3d) and
+	// rechecked as it resolves (CR 608.2b); a target that became illegal is
+	// skipped while the rest are still removed. Every still-legal target is
+	// removed in one simultaneous batch, as a single "exile"/"destroy" of all
+	// the targets. Chooser, Selection, Extremum and Required describe the
+	// resolution-time choice and must be unset; Scope still orders the removed
+	// permanents and correlates each with its controller in the link.
+	Targeted bool
 }
 
 // Kind implements Primitive for ForEachPlayer.

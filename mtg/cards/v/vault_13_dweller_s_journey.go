@@ -40,15 +40,15 @@ func newVault13DwellerSJourney() *game.CardDef {
 					Content: game.AbilityContent{
 						Modes: []game.Mode{
 							game.Mode{
+								Targets: game.PlayerSlotTargetSpecs(game.Selection{RequiredTypesAny: []types.Card{types.Enchantment, types.Creature}, ExcludeSource: true}),
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.ForEachPlayer{
 											Scope:             game.AllPlayersReference(),
-											Chooser:           game.ControllerReference(),
-											Selection:         game.Selection{RequiredTypesAny: []types.Card{types.Enchantment, types.Creature}, ExcludeSource: true},
 											Removal:           game.DistributiveRemovalExile,
 											LinkedKey:         game.LinkedKey("exile-until-leaves"),
 											UntilSourceLeaves: true,
+											Targeted:          true,
 										},
 									},
 								},

@@ -2153,6 +2153,40 @@ type TargetSpec struct {
 	// when its branch is chosen, so a promised-only or kicked-only target is
 	// ignored on the branch that does not have it.
 	Gate TargetGate
+
+	// ControlledBy restricts a permanent target to permanents controlled by this
+	// exact seat. It is the per-player slot of "For each player, <verb> up to
+	// one target <permanent> that player controls": PlayerSlotTargetSpecs
+	// declares one slot per seat, so each instance of "target" is bound to its
+	// own player when announced (CR 115.1d, 601.2c) and becomes illegal at
+	// resolution if that permanent's controller changed (CR 608.2b). The seat is
+	// absolute rather than controller-relative, so a later change of the
+	// ability's controller does not reassign the slots. Unset imposes no
+	// specific-player restriction.
+	ControlledBy opt.V[PlayerID]
+}
+
+// PlayerSlotTargetSpecs returns the announced target slots of "For each
+// player, <verb> up to one target <selection> that player controls": one
+// "up to one" permanent target per seat, each restricted to the permanents
+// that seat's player controls. Selection is evaluated relative to the
+// ability's controller, so an opponent-only wording ("For each opponent, ...")
+// keeps Selection.Controller at ControllerOpponent and the controller's own
+// slot simply has no legal candidate. The slots are independent, so the
+// Engine announces them one player at a time instead of enumerating every
+// combination.
+func PlayerSlotTargetSpecs(selection Selection) []TargetSpec {
+	specs := make([]TargetSpec, NumPlayers)
+	for seat := range PlayerID(NumPlayers) {
+		specs[seat] = TargetSpec{
+			MinTargets:   0,
+			MaxTargets:   1,
+			Allow:        TargetAllowPermanent,
+			Selection:    opt.Val(cloneSelection(selection)),
+			ControlledBy: opt.Val(seat),
+		}
+	}
+	return specs
 }
 
 // TargetChooser identifies who chooses a target slot during announcement.

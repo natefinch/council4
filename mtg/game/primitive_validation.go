@@ -1927,6 +1927,9 @@ func (p ForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if p.Scope.Kind == PlayerGroupReferenceNone {
 		return errors.New("for each player requires a player scope")
 	}
+	if p.Targeted {
+		return p.validateTargeted(targets, checkTargets)
+	}
 	if err := firstProblem(p.Selection.Validate()); err != nil {
 		return err
 	}
@@ -1937,6 +1940,33 @@ func (p ForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool
 		return errors.New("for each player has an invalid choice extremum")
 	}
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
+}
+
+// validateTargeted checks the announced-target form: it carries no
+// resolution-time choice, and its mode's targets are all per-player slots so
+// every target the handler removes belongs to exactly one player.
+func (p ForEachPlayer) validateTargeted(targets []TargetSpec, checkTargets bool) error {
+	if p.Chooser.Kind() != PlayerReferenceNone {
+		return errors.New("targeted for each player must not set a chooser")
+	}
+	if !p.Selection.Empty() {
+		return errors.New("targeted for each player must not set a selection; the target specs carry it")
+	}
+	if p.Extremum != PermanentChoiceExtremumNone || p.Required {
+		return errors.New("targeted for each player must not narrow or require a resolution-time choice")
+	}
+	if !checkTargets {
+		return nil
+	}
+	if len(targets) == 0 {
+		return errors.New("targeted for each player requires per-player target slots")
+	}
+	for i := range targets {
+		if !targets[i].ControlledBy.Exists {
+			return errors.New("targeted for each player requires every target to be a per-player slot")
+		}
+	}
+	return nil
 }
 
 func (p DrawForEachExiled) validatePrimitive([]TargetSpec, bool) error {
