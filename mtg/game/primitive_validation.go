@@ -2180,8 +2180,11 @@ func (p ShufflePermanentIntoLibrary) validatePrimitive(targets []TargetSpec, che
 }
 
 func (p PutLinkedExiledCardsInLibrary) validatePrimitive([]TargetSpec, bool) error {
-	if p.LinkedKey == "" {
-		return errors.New("put linked exiled cards in library requires a linked key")
+	if (p.LinkedKey == "") == (p.LinkedProducer == "") {
+		return errors.New("put linked exiled cards in library requires exactly one of a linked key and a linked producer")
+	}
+	if p.LinkedProducer != "" && !p.LinkedProducer.valid() {
+		return fmt.Errorf("put linked exiled cards in library linked producer %q is invalid", p.LinkedProducer)
 	}
 	if p.RandomOrder && !p.Bottom {
 		return errors.New("put linked exiled cards in library random order requires bottom placement")

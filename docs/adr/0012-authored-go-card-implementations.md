@@ -99,7 +99,12 @@ batch, each under its owner's control unless `Recipient` overrides it. Exact
 zone versions prevent reclaiming captives that departed and reentered exile.
 Movement replacements and non-targeting Aura admission use the existing entry
 path; linked arrival publications and authored outcomes contain only actual
-entered permanents.
+entered permanents. `PutLinkedExiledCardsInLibrary.LinkedProducer` reads the
+same namespace for "the owner of each card exiled with this permanent puts it
+into their library" (Trial of a Time Lord, whose repeated chapter resolutions
+accumulate), moving only exact incarnations still in exile, including every
+component of an exiled merged permanent, as one batch. Each owner then
+privately orders their cards that arrived together (CR 401.4).
 
 These are CR 607 links, not CR 610.3 “until” one-shot effects: a failed Aura
 admission leaves its unchanged exile incarnation linked for another resolving

@@ -352,7 +352,7 @@ func bottomExiledCards(g *game.Game, player *game.Player, cards []game.ZoneCardS
 	if len(moves) == 0 {
 		return false
 	}
-	return moveCardsBetweenZonesSimultaneously(g, moves, zone.Library, true, g.IDGen.Next(), rng)
+	return moveCardsBetweenZonesSimultaneously(g, moves, zone.Library, true, g.IDGen.Next(), randomLibraryArrivals(rng))
 }
 
 func (e *Engine) castFreeSpellFromExile(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {

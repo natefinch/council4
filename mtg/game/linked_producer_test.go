@@ -135,3 +135,31 @@ func TestLinkedProducerNamespacesAreExplicitAndCannotMix(t *testing.T) {
 		t.Fatal("copied rules data aliased producer declarations")
 	}
 }
+
+func TestPutLinkedExiledCardsInLibraryProducerChannel(t *testing.T) {
+	valid := PutLinkedExiledCardsInLibrary{LinkedProducer: "test/exile", Bottom: true}
+	if err := ValidatePrimitive(valid, nil); err != nil {
+		t.Fatalf("valid producer disposal rejected: %v", err)
+	}
+	for _, invalid := range []PutLinkedExiledCardsInLibrary{
+		{Bottom: true},
+		{LinkedKey: "legacy", LinkedProducer: "test/exile", Bottom: true},
+		{LinkedProducer: " ", Bottom: true},
+	} {
+		if err := ValidatePrimitive(invalid, nil); err == nil {
+			t.Fatalf("invalid disposal accepted: %#v", invalid)
+		}
+	}
+	for _, scenario := range []string{"owned", "dangling"} {
+		t.Run(scenario, func(t *testing.T) {
+			def := producerValidationCard()
+			def.TriggeredAbilities[0].Content = Mode{Sequence: []Instruction{{Primitive: valid}}}.Ability()
+			if scenario == "dangling" {
+				def.ActivatedAbilities = nil
+			}
+			if issues := ValidateCardDef(def); (len(issues) == 0) != (scenario == "owned") {
+				t.Fatalf("validation=%+v, want valid=%t", issues, scenario == "owned")
+			}
+		})
+	}
+}
