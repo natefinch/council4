@@ -726,38 +726,56 @@ const preparedCopyCastZone = zone.Exile
 // prepared spell with these choices, paying now or after activating
 // payment-time mana abilities (CR 601.2g).
 func (e *Engine) canCastPreparedCopy(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, targets []game.Target, xValue int, chosenModes []int) bool {
+	sourceID, spellDef, ok := preparedCopyCastPermitted(g, playerID, permanent)
+	return ok && e.preparedCopyChoicesLegal(g, playerID, sourceID, spellDef, targets, xValue, chosenModes)
+}
+
+// preparedCopyCastPermitted reports whether playerID may begin to cast a copy
+// of permanent's prepared spell (CR 601.3, 722.3c), returning the spell's
+// source ID and definition. Timing is checked as the cast begins, before the
+// copy is moved to the stack (CR 601.2a).
+func preparedCopyCastPermitted(g *game.Game, playerID game.PlayerID, permanent *game.Permanent) (id.ID, *game.CardDef, bool) {
 	if !canAct(g, playerID) ||
 		playerID != g.Turn.PriorityPlayer ||
 		permanent == nil ||
 		!permanent.Prepared ||
 		permanent.PhasedOut ||
-		effectiveController(g, permanent) != playerID ||
-		xValue < 0 {
-		return false
+		effectiveController(g, permanent) != playerID {
+		return 0, nil, false
 	}
 	sourceID, sourceDef, ok := preparedSpellSource(g, permanent)
 	if !ok {
-		return false
+		return 0, nil, false
 	}
 	spellDef, ok := sourceDef.FaceDef(game.FaceAlternate)
 	if !ok {
-		return false
+		return 0, nil, false
 	}
-	if xValue != 0 &&
+	castFace := castSelectionFace(g, playerID, 0, spellDef, false)
+	if !isSupportedSpell(spellDef) ||
+		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
+		!canCastAtCurrentTiming(g, playerID, castFace) ||
+		castFromZoneProhibited(g, playerID, preparedCopyCastZone) ||
+		spellCastProhibited(g, playerID, castFace) ||
+		spellCastLimitReached(g, playerID, castFace) {
+		return 0, nil, false
+	}
+	return sourceID, spellDef, true
+}
+
+// preparedCopyChoicesLegal reports whether a prepared spell copy's X, modes
+// and targets are legal and its cost can be paid with them now or after
+// activating payment-time mana abilities (CR 601.2g). It is checked again once
+// the targets are chosen, when the copy is already on the stack.
+func (e *Engine) preparedCopyChoicesLegal(g *game.Game, playerID game.PlayerID, sourceID id.ID, spellDef *game.CardDef, targets []game.Target, xValue int, chosenModes []int) bool {
+	if xValue < 0 || xValue != 0 &&
 		!costHasVariableMana(manaCostPtr(spellDef.ManaCost)) &&
 		!additionalCostsUseX(spellDef.AdditionalCosts) {
 		return false
 	}
 	branch := game.CastBranch{XValue: opt.Val(xValue), KickerCount: opt.Val(0)}
-	castFace := castSelectionFace(g, playerID, 0, spellDef, false)
 	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
-		!isSupportedSpell(spellDef) ||
-		(!spellDef.HasType(types.Instant) && !spellDef.HasType(types.Sorcery)) ||
-		!spellTargetsValidForCast(g, playerID, spellDef, chosenModes, targets, xValue, 0, branch) ||
-		!canCastAtCurrentTiming(g, playerID, castFace) ||
-		castFromZoneProhibited(g, playerID, preparedCopyCastZone) ||
-		spellCastProhibited(g, playerID, castFace) ||
-		spellCastLimitReached(g, playerID, castFace) {
+		!spellTargetsValidForCast(g, playerID, spellDef, chosenModes, targets, xValue, 0, branch) {
 		return false
 	}
 	_, feasible := spellCostFeasibility(g, payment.SpellRequest{
@@ -792,6 +810,36 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	if !e.canCastPreparedCopy(g, playerID, permanent, cast.Targets, cast.XValue, cast.ChosenModes) {
 		return actionFailed, nil
 	}
+	// CR 601.2a, 722.3c: proposing the cast first moves the copy from exile to
+	// the stack as the topmost object, so it is there while its Phyrexian
+	// payments and targets are announced (CR 601.2b-c) and while its total
+	// cost is determined and paid (CR 601.2f-h). The copy has no card to
+	// move; a cast that doesn't become cast just takes the same object back
+	// off the stack (CR 733.1), leaving the permanent prepared.
+	obj := &game.StackObject{
+		ID:             g.IDGen.Next(),
+		Kind:           game.StackSpell,
+		SourceID:       sourceID,
+		Face:           game.FaceAlternate,
+		SourceCardID:   permanent.CardInstanceID,
+		SourceTokenDef: permanent.TokenDef,
+		Controller:     playerID,
+		ChosenModes:    append([]int(nil), cast.ChosenModes...),
+		XValue:         cast.XValue,
+		Copy:           true,
+		CastCopy:       true,
+		Casting:        true,
+		SourceZone:     preparedCopyCastZone,
+
+		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
+	}
+	g.Stack.Push(obj)
+	becameCast := false
+	defer func() {
+		if !becameCast {
+			g.Stack.RemoveByID(obj.ID)
+		}
+	}()
 	proposals := newCastProposals(attempts, castActionKey(cast), nil)
 	var proposal spellCostProposal
 	targeted := len(spellTargetSpecs(spellDef, cast.ChosenModes, branch)) > 0
@@ -835,8 +883,10 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 			}
 		}
 	}
+	// The cast's timing and permission were checked as it began; with the
+	// copy now on the stack, only its choices are checked again.
 	completedTargets, ok := e.completeSpellAnnouncementTargets(g, playerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok || !e.canCastPreparedCopy(g, playerID, permanent, completedTargets, cast.XValue, cast.ChosenModes) {
+	if !ok || !e.preparedCopyChoicesLegal(g, playerID, sourceID, spellDef, completedTargets, cast.XValue, cast.ChosenModes) {
 		if proposed && targeted && !proposals.payableWithTargets(0, proposal, cast.Targets) {
 			// The proposal can't be paid with the targets chosen, so it is
 			// withheld with them and every other choice it can't be paid
@@ -850,14 +900,9 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 	if !ok {
 		panic("validated prepared spell targets could not be segmented")
 	}
-	stackID := g.IDGen.Next()
-	targetEvents := prepareTargetEvents(g, &game.StackObject{
-		ID: stackID, Kind: game.StackSpell, Controller: playerID,
-		SourceID: sourceID, SourceCardID: permanent.CardInstanceID, SourceTokenDef: permanent.TokenDef,
-		Face: game.FaceAlternate, SourceZone: preparedCopyCastZone, Copy: true,
-		Targets: cast.Targets, TargetCounts: targetCounts,
-		ChosenModes: cast.ChosenModes, XValue: cast.XValue,
-	})
+	obj.Targets = append([]game.Target(nil), cast.Targets...)
+	obj.TargetCounts = targetCounts
+	targetEvents := prepareTargetEvents(g, obj)
 	request.Targets = cast.Targets
 	if !proposed {
 		if targeted {
@@ -884,30 +929,15 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		}
 		return fail(), nil
 	}
+	becameCast = true
+	obj.Casting = false
+	// CR 722.3c: the permanent loses the prepared designation as the spell
+	// becomes cast (CR 601.2i).
 	permanent.Prepared = false
-	obj := &game.StackObject{
-		ID:                  stackID,
-		Kind:                game.StackSpell,
-		SourceID:            sourceID,
-		Face:                game.FaceAlternate,
-		SourceCardID:        permanent.CardInstanceID,
-		SourceTokenDef:      permanent.TokenDef,
-		Controller:          playerID,
-		Targets:             append([]game.Target(nil), cast.Targets...),
-		TargetCounts:        targetCounts,
-		ChosenModes:         append([]int(nil), cast.ChosenModes...),
-		XValue:              cast.XValue,
-		Copy:                true,
-		CastCopy:            true,
-		BuybackPaid:         paymentResult.BuybackPaid,
-		AdditionalCostsPaid: paymentResult.AdditionalCostsPaid,
-		SacrificedAsCostIDs: paymentResult.SacrificedIDs,
-		PaidCostSubjects:    paymentResult.PaidCostSubjects,
-		SourceZone:          preparedCopyCastZone,
-
-		CastDuringControllerMainPhase: playerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
-	}
-	g.Stack.Push(obj)
+	obj.BuybackPaid = paymentResult.BuybackPaid
+	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
+	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
+	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
 	emitCastTargetEvents(g, obj, targetEvents)
 	typeLine := stackSpellTypeLine(g, obj, spellDef)
 	emitEvent(g, game.Event{

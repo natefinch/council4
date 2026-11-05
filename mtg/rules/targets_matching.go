@@ -112,7 +112,7 @@ func stackObjectTargetMatchesSpec(g *game.Game, controller game.PlayerID, source
 		return false
 	}
 	obj, ok := stackObjectByID(g, stackObjectID)
-	if !ok || stackObjectID == sourceObjectID {
+	if !ok || stackObjectID == sourceObjectID || obj.Casting {
 		return false
 	}
 	switch obj.Kind {

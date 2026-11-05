@@ -324,6 +324,12 @@ type StackObject struct {
 	// Copying a cast copy produces an uncast copy.
 	CastCopy bool
 
+	// Casting is true while this spell is being cast: it was moved to the
+	// stack as its cast was proposed (CR 601.2a) and hasn't become cast yet
+	// (CR 601.2i). The only targets chosen meanwhile are its own (CR 601.2c),
+	// and a spell can't target itself (CR 115.5), so it is no legal target.
+	Casting bool
+
 	// CopyOwner is fixed when a spell or ability copy is put onto the stack.
 	// It does not follow later changes of control.
 	CopyOwner opt.V[PlayerID]
