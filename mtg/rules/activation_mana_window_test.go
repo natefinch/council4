@@ -27,8 +27,8 @@ import (
 // issue, is deliberately not used: its pinned Oracle text reads "{T}, Mill a
 // card: Add {C}. (Activate only as an instant. …)" and its 2026-08-05 ruling
 // says "Millikin's ability is not a mana ability. … it can't be activated in
-// the middle of paying for a cost.", the engine's classification of it being
-// #3690. Comprehensive Rules effective 2026-09-25: 602.2b "The remainder of
+// the middle of paying for a cost."; #3690 models it as a stack ability (see
+// library_moving_mana_ability_test.go). Comprehensive Rules effective 2026-09-25: 602.2b "The remainder of
 // the process for activating an ability is identical to the process for
 // casting a spell listed in rules 601.2b–i. … An activated ability's analog to
 // a spell's mana cost (as referenced in rule 601.2f) is its activation cost.";

@@ -25,8 +25,9 @@ import (
 // to cast."; Grizzly Bears 14c8f55d-d177-4c25-a931-ebeb9e6062a0 (vanilla 2/2
 // creature); Muldrotha, the Gravetide e4625704-1d52-44e4-804f-2f45644d76ac
 // (cast a permanent spell of each permanent type from your graveyard); Millikin
-// c2073453-4108-4039-a8c2-0f94dd7bf237 "{T}, Mill a card: Add {C}. (Activate
-// only as an instant. ...)"; Deathbloom Ritualist
+// fa4dffda-6f04-4d0b-829d-28a1a5794dee "{T}, Mill a card: Add {C}. (Activate
+// only as an instant. ...)", not a mana ability (605.1a, ruling 2026-08-05);
+// Deathbloom Ritualist
 // 45ff816d-1eb7-4985-90ec-f44802a696fc "{T}: Add X mana of any one color,
 // where X is the number of creature cards in your graveyard."; Forest
 // 2e781bfd-f8cb-4d20-b977-4359f3a21311.
@@ -433,59 +434,64 @@ func TestFaceDownCastNotOfferedWhenManaAbilitiesFallShort(t *testing.T) {
 }
 
 // TestFaceDownCastOfferDoesNotRevealLibrary gives the caster one mana,
-// Millikin and Deathbloom Ritualist. Whether they can pay the locked {3}
-// depends on whether Millikin mills a creature card, which the caster can't
-// know (CR 401.2), so the face-down cast is offered whatever the library holds
-// and in whatever order: offering or withholding it must not reveal the hidden
-// cards. Checking leaves the library and game unchanged. Casting mills the
-// real top card: a creature card lets the Ritualist pay the rest, while a land
-// leaves the cost unpaid and the cast is reversed with the milled card staying
-// in the graveyard (CR 733.1).
+// Millikin and Deathbloom Ritualist. Millikin's ability mills a card, so it
+// isn't a mana ability (CR 605.1a) and can't be activated while paying (CR
+// 601.2g): the Ritualist, with no creature card in the graveyard, can't make
+// up the locked {3}, so the face-down cast isn't offered whatever the library
+// holds and in whatever order (CR 401.2), and checking leaves the game
+// unchanged. Activating Millikin with priority first puts its ability on the
+// stack (CR 602.2), milling the top card publicly as a cost; once it resolves,
+// a milled creature card lets the Ritualist pay the rest of {3} and the cast
+// is offered and made, while a milled land doesn't.
 func TestFaceDownCastOfferDoesNotRevealLibrary(t *testing.T) {
 	for _, library := range [][]string{
 		{"Grizzly Bears"}, {"Forest"}, {"Forest", "Grizzly Bears"}, {"Grizzly Bears", "Forest"},
 	} {
 		t.Run(strings.Join(library, " then "), func(t *testing.T) {
 			g, engine, cardID := faceDownCostGame(t, "War Behemoth", mana.C, 1)
-			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Millikin"))
+			millikin := addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Millikin"))
 			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Deathbloom Ritualist"))
 			for _, name := range library {
 				addCardToLibrary(g, game.Player1, productionChoiceCard(t, name))
 			}
 			order, events, nextID := g.Players[game.Player1].Library.All(), len(g.Events), g.IDGen.Current()
 
-			if !faceDownCastOffered(engine, g, cardID, game.FaceDownMorph) {
-				t.Fatal("face-down cast withheld because of the hidden library contents")
+			if faceDownCastOffered(engine, g, cardID, game.FaceDownMorph) {
+				t.Fatal("face-down cast offered as if Millikin could pay while casting")
 			}
 			if !slices.Equal(g.Players[game.Player1].Library.All(), order) || g.Players[game.Player1].Graveyard.Size() != 0 ||
-				len(g.Events) != events || g.IDGen.Current() != nextID || g.Players[game.Player1].ManaPool.Total() != 1 {
+				len(g.Events) != events || g.IDGen.Current() != nextID || g.Players[game.Player1].ManaPool.Total() != 1 || millikin.Tapped {
 				t.Fatal("checking whether the face-down cast is payable changed the game")
 			}
 			if len(library) != 1 {
 				return
 			}
 
-			agent := &manaSequenceAgent{abilities: []string{"Mill a card", "number of creature cards"}}
-			cast := actionBuild.castFaceDown(cardID, game.FaceFront, game.FaceDownMorph)
-			outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
-			milled := order[0]
-			if !g.Players[game.Player1].Graveyard.Contains(milled) || g.Players[game.Player1].Library.Size() != 0 {
-				t.Fatal("Millikin didn't mill the top card while paying")
+			agent := &manaSequenceAgent{abilities: []string{"number of creature cards"}}
+			agents := reboundKickerAgents(agent)
+			if !engine.applyActionWithChoices(g, game.Player1, sourceActivation(t, engine, g, millikin.ObjectID), agents, &TurnLog{}) {
+				t.Fatal("activating Millikin failed")
 			}
-			if library[0] == "Grizzly Bears" {
-				if outcome != actionApplied || len(agent.activated) != 2 {
-					t.Fatalf("outcome=%v activated=%v, want Millikin and the Ritualist to pay {3}", outcome, agent.activated)
-				}
-				requireFaceDownSpell(t, g, cardID, game.FaceDownMorph, zone.Hand, 3)
+			if obj, ok := g.Stack.Peek(); !ok || obj.Kind != game.StackActivatedAbility || !g.Players[game.Player1].Graveyard.Contains(order[0]) {
+				t.Fatalf("stack top = %+v, want Millikin's ability on the stack after milling the top card", obj)
+			}
+			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+			if g.Stack.Size() != 0 || g.Players[game.Player1].ManaPool.Total() != 2 {
+				t.Fatalf("pool = %d, want Millikin's {C} added on resolution", g.Players[game.Player1].ManaPool.Total())
+			}
+
+			offered := faceDownCastOffered(engine, g, cardID, game.FaceDownMorph)
+			if offered != (library[0] == "Grizzly Bears") {
+				t.Fatalf("face-down cast offered = %t after milling %s", offered, library[0])
+			}
+			if !offered {
 				return
 			}
-			if outcome != actionReversed || !reboundPermanentNamed(t, g, "Millikin").Tapped {
-				t.Fatalf("outcome=%v, want the unpaid cast reversed with Millikin's mill kept", outcome)
+			cast := actionBuild.castFaceDown(cardID, game.FaceFront, game.FaceDownMorph)
+			if outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}, nil); outcome != actionApplied || len(agent.activated) != 1 {
+				t.Fatalf("outcome=%v activated=%v, want the Ritualist to pay the rest of {3}", outcome, agent.activated)
 			}
-			requireNoFaceDownCast(t, g, cardID)
-			if !g.Players[game.Player1].Hand.Contains(cardID) {
-				t.Fatal("the reversed face-down spell didn't return to hand")
-			}
+			requireFaceDownSpell(t, g, cardID, game.FaceDownMorph, zone.Hand, 3)
 		})
 	}
 }

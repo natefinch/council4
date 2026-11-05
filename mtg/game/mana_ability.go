@@ -1,12 +1,14 @@
 package game
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 var anyColorManaChoices = []mana.Color{mana.W, mana.U, mana.B, mana.R, mana.G}
@@ -177,4 +179,46 @@ func IsTapAnyColorCreatureSpellRestrictedManaAbility(body *ManaAbility) bool {
 		return false
 	}
 	return reflect.DeepEqual(*body, TapAnyColorCreatureSpellRestrictedManaAbility(body.Text))
+}
+
+// ManaAbilityLibraryMovement reports why body can't be a mana ability under
+// CR 605.1a: an activated ability is a mana ability only if "its cost and
+// effect don't move any card to or from a library" (replacement effects other
+// than self-replacement effects aren't considered). Such an ability, like
+// Millikin's "{T}, Mill a card: Add {C}.", is an ActivatedAbility that uses the
+// stack. A cost is judged by its kind and card zone. An effect is judged by
+// its instructions' primitives, which must each be one known to leave every
+// library alone; any other primitive is reported so its movement is decided
+// before it is allowed in a mana ability. It returns "" when body qualifies.
+func ManaAbilityLibraryMovement(body *ManaAbility) string {
+	if body == nil {
+		return ""
+	}
+	for _, additional := range body.AdditionalCosts {
+		if additional.Kind == cost.AdditionalMill || additional.Source == zone.Library && additional.Kind != cost.AdditionalReveal {
+			return "its cost moves a card from a library"
+		}
+	}
+	for _, mode := range body.Content.Modes {
+		for i := range mode.Sequence {
+			instruction := &mode.Sequence[i]
+			if len(instruction.TemptingOfferBody) != 0 {
+				return "its effect has a tempting-offer body not classified as leaving libraries alone"
+			}
+			if instruction.Primitive != nil && !primitiveLeavesLibraries(instruction.Primitive) {
+				return fmt.Sprintf("its effect primitive %T isn't classified as leaving libraries alone", instruction.Primitive)
+			}
+		}
+	}
+	return ""
+}
+
+// primitiveLeavesLibraries reports whether primitive is known never to move a
+// card to or from a library, apart from replacement effects (CR 605.1a).
+func primitiveLeavesLibraries(primitive Primitive) bool {
+	switch primitive.(type) {
+	case AddMana, Choose, Damage, GainLife, LoseLife, SkipNextUntap, Tap, Untap, AddCounter, RemoveCounter:
+		return true
+	}
+	return false
 }

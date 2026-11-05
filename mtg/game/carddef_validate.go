@@ -526,6 +526,10 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 			v.add(faceName, appendPath(path, "Content"), CardDefIssueInvalidAbilityBody,
 				"program-backed mana abilities are unsupported; use inspectable mana instruction sequences")
 		}
+		if reason := ManaAbilityLibraryMovement(abilityBody); reason != "" {
+			v.add(faceName, path, CardDefIssueInvalidAbilityBody,
+				"not a mana ability (CR 605.1a): "+reason+"; model it as an activated ability that uses the stack")
+		}
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}

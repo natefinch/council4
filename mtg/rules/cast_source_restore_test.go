@@ -15,8 +15,9 @@ import (
 )
 
 // Source review: issue #3584. Default-registry cards checked against the
-// pinned corpus (oracle_id): Millikin fa4dffda-6f04-4d0b-829d-28a1a5794dee
-// "{T}, Mill a card: Add {C}. (Activate only as an instant. ...)"; Waterlogged
+// pinned corpus (oracle_id): Phyrexian Altar
+// 8d02b297-97c4-4379-9862-0a462400f66f "Sacrifice a creature: Add one mana of
+// any color."; Waterlogged
 // Grove 70fa2eba-565e-4fed-adc9-7f5d9fcbf1fa "{T}, Pay 1 life: Add {G} or
 // {U}. ..."; Muldrotha, the Gravetide e4625704-1d52-44e4-804f-2f45644d76ac
 // "During each of your turns, you may play a land and cast a permanent spell of
@@ -40,15 +41,19 @@ import (
 // "the entire action is reversed ... If the action was casting a spell, the
 // spell returns to the zone it came from", and "Players may not reverse
 // actions that moved cards ... from a library to any zone other than the
-// stack", so Millikin's mill stays; 404.2 "players normally can't change"
+// stack", so a sacrifice that put a card into a library stays; 605.1a an
+// ability isn't a mana ability if it moves cards to or from a library, unless
+// through a replacement effect that isn't its own, so Phyrexian Altar's
+// sacrifice of a test creature that its own replacement effect puts on top of
+// its owner's library is such a move; 404.2 "players normally can't change"
 // a graveyard's order; 406.3 a card exiled face down stays face down and
 // players can't look at it unless an instruction allows it.
 
-// sourceRestoreAgent accepts optional casts and activates only Millikin's mana
-// ability while paying, leaving the cost short so the cast is reversed after
-// the mill.
+// sourceRestoreAgent accepts optional casts and activates only Phyrexian
+// Altar's mana ability while paying, sacrificing Homing Golem, leaving the cost
+// short so the cast is reversed after the Golem went to the library.
 type sourceRestoreAgent struct {
-	milled int
+	sacrificed int
 }
 
 func (*sourceRestoreAgent) ChooseAction(PlayerObservation, []action.Action) action.Action {
@@ -56,13 +61,16 @@ func (*sourceRestoreAgent) ChooseAction(PlayerObservation, []action.Action) acti
 }
 
 func (a *sourceRestoreAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
+	if selected, ok := sacrificeNamed(request, homingGolem); ok {
+		return selected
+	}
 	switch {
 	case request.Kind == game.ChoiceMay:
 		return []int{1}
-	case request.Prompt == "Activate a mana ability while paying?" && a.milled == 0:
+	case request.Prompt == "Activate a mana ability while paying?" && a.sacrificed == 0:
 		for _, option := range request.Options {
-			if strings.Contains(option.Label, "Mill a card") {
-				a.milled++
+			if strings.Contains(option.Label, "Sacrifice a creature") {
+				a.sacrificed++
 				return []int{option.Index}
 			}
 		}
@@ -78,8 +86,8 @@ func addCardToGraveyardBottom(g *game.Game, playerID game.PlayerID, def *game.Ca
 }
 
 // graveyardRestoreRoute casts a default-registry card out of Player1's
-// graveyard on one cast route, with Millikin and Waterlogged Grove able to pay
-// together but Millikin alone not.
+// graveyard on one cast route, with Phyrexian Altar and Waterlogged Grove able
+// to pay together but the Altar alone not.
 type graveyardRestoreRoute struct {
 	name  string
 	build func(t *testing.T) (*game.Game, id.ID, func([game.NumPlayers]PlayerAgent))
@@ -133,17 +141,18 @@ func graveyardRestoreRoutes() []graveyardRestoreRoute {
 // TestReversedGraveyardCastKeepsGraveyardOrder casts a card from the middle of
 // its owner's graveyard on each route that opens a payment-time mana ability
 // window: a face-down cast through Muldrotha, a paid cast through Conduit of
-// Worlds and a free cast. Millikin and Waterlogged Grove could pay together, so
-// the cast is proposed, but the caster activates only Millikin, milling Forest
-// onto the graveyard (CR 601.2g), and the cost goes unpaid. The cast is
-// reversed (CR 733.1): Millikin's mill stays, and the card returns between the
-// cards that were above and below it rather than on top (CR 404.2), with the
-// milled Forest still on top.
+// Worlds and a free cast. Phyrexian Altar and Waterlogged Grove could pay
+// together, so the cast is proposed, but the caster activates only the Altar,
+// sacrificing Homing Golem, which goes on top of its owner's library (CR
+// 601.2g), and the cost goes unpaid. The cast is reversed (CR 733.1): the
+// Golem stays in the library, and the card returns between the cards that were
+// above and below it rather than on top (CR 404.2).
 func TestReversedGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 	for _, route := range graveyardRestoreRoutes() {
 		t.Run(route.name, func(t *testing.T) {
 			g, cardID, run := route.build(t)
-			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Millikin"))
+			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Phyrexian Altar"))
+			golem := addCombatPermanent(g, game.Player1, homingGolemDef()).CardInstanceID
 			if !slices.ContainsFunc(g.Battlefield, func(permanent *game.Permanent) bool {
 				card, ok := g.GetCardInstance(permanent.CardInstanceID)
 				return ok && card.Def.Name == "Waterlogged Grove"
@@ -152,7 +161,6 @@ func TestReversedGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 			}
 			above := addCardToGraveyard(g, game.Player1, productionChoiceCard(t, "Grizzly Bears"))
 			below := addCardToGraveyardBottom(g, game.Player1, productionChoiceCard(t, "Forest"))
-			milled := addCardToLibrary(g, game.Player1, productionChoiceCard(t, "Forest"))
 			if got, want := g.Players[game.Player1].Graveyard.All(), []id.ID{above, cardID, below}; !slices.Equal(got, want) {
 				t.Fatalf("graveyard before = %v, want %v", got, want)
 			}
@@ -161,8 +169,8 @@ func TestReversedGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 
 			run(reboundKickerAgents(agent))
 
-			if agent.milled != 1 || !reboundPermanentNamed(t, g, "Millikin").Tapped || g.Players[game.Player1].Library.Size() != 0 {
-				t.Fatal("Millikin didn't mill while paying")
+			if library := g.Players[game.Player1].Library.All(); agent.sacrificed != 1 || !slices.Equal(library, []id.ID{golem}) {
+				t.Fatalf("library = %v, want Phyrexian Altar's sacrifice to put Homing Golem there while paying", library)
 			}
 			if g.Stack.Size() != 0 || reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped || g.Players[game.Player1].Life != life {
 				t.Fatal("the unpaid cast left a spell or a Grove payment behind")
@@ -172,8 +180,8 @@ func TestReversedGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 					t.Fatal("the reversed cast produced a spell-cast event")
 				}
 			}
-			if got, want := g.Players[game.Player1].Graveyard.All(), []id.ID{milled, above, cardID, below}; !slices.Equal(got, want) {
-				t.Fatalf("graveyard after reversal = %v, want %v: the card back in its place under the milled card (CR 404.2)", got, want)
+			if got, want := g.Players[game.Player1].Graveyard.All(), []id.ID{above, cardID, below}; !slices.Equal(got, want) {
+				t.Fatalf("graveyard after reversal = %v, want %v: the card back in its place (CR 404.2)", got, want)
 			}
 		})
 	}
@@ -220,8 +228,9 @@ func TestReversedPriorityGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 
 // TestReversedFreeCastFromExileStaysFaceDownInPlace foretells Doomskar between
 // two other exiled cards, then on a later turn casts it from exile without
-// paying its mana cost while two Thalias add {2}. Millikin and Waterlogged
-// Grove could pay that together, but only Millikin is activated, so the cast is
+// paying its mana cost while two Thalias add {2}. Phyrexian Altar and
+// Waterlogged Grove could pay that together, but only the Altar is activated,
+// sacrificing Homing Golem into its owner's library, so the cast is
 // reversed (CR 733.1): the card returns to its place in exile still face down
 // (CR 406.3) and foretold, and its foretell cast is still offered.
 func TestReversedFreeCastFromExileStaysFaceDownInPlace(t *testing.T) {
@@ -239,9 +248,9 @@ func TestReversedFreeCastFromExileStaysFaceDownInPlace(t *testing.T) {
 	for range 2 {
 		addCombatPermanent(g, game.Player2, productionChoiceCard(t, "Thalia, Guardian of Thraben"))
 	}
-	addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Millikin"))
+	addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Phyrexian Altar"))
+	golem := addCombatPermanent(g, game.Player1, homingGolemDef()).CardInstanceID
 	grove := addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Waterlogged Grove"))
-	addCardToLibrary(g, game.Player1, productionChoiceCard(t, "Forest"))
 	exile := &g.Players[game.Player1].Exile
 	if got, want := exile.All(), []id.ID{above, cardID, below}; !slices.Equal(got, want) || !exile.IsFaceDown(cardID) {
 		t.Fatalf("exile before = %v face down=%t, want %v with the foretold card face down", got, exile.IsFaceDown(cardID), want)
@@ -251,8 +260,9 @@ func TestReversedFreeCastFromExileStaysFaceDownInPlace(t *testing.T) {
 	e.chooseAndCastFreeSpellFromSource(g, g.Players[game.Player1], game.Player1, cardID, zone.Exile,
 		game.Selection{}, opt.V[int]{}, false, reboundKickerAgents(agent), &TurnLog{})
 
-	if agent.milled != 1 || g.Stack.Size() != 0 || grove.Tapped {
-		t.Fatalf("milled=%d stack=%d grove tapped=%t, want the unpaid free cast reversed after Millikin's mill", agent.milled, g.Stack.Size(), grove.Tapped)
+	if top, _ := g.Players[game.Player1].Library.Top(); agent.sacrificed != 1 || top != golem || g.Stack.Size() != 0 || grove.Tapped {
+		t.Fatalf("sacrificed=%d stack=%d grove tapped=%t, want the unpaid free cast reversed after Homing Golem went to the library",
+			agent.sacrificed, g.Stack.Size(), grove.Tapped)
 	}
 	if got, want := exile.All(), []id.ID{above, cardID, below}; !slices.Equal(got, want) {
 		t.Fatalf("exile after reversal = %v, want %v", got, want)

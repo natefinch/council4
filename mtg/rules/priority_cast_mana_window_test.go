@@ -35,7 +35,15 @@ import (
 // 365548fb-5acc-4a8a-b20b-26d28b7d029f {B} "As an additional cost to cast this
 // spell, sacrifice a creature. / Draw two cards."; Millikin
 // fa4dffda-6f04-4d0b-829d-28a1a5794dee "{T}, Mill a card: Add {C}. (Activate
-// only as an instant. …)"; Silent Clearing
+// only as an instant. …)", not a mana ability (605.1a; ruling 2026-08-05, see
+// library_moving_mana_ability_test.go); Phyrexian Altar
+// 8d02b297-97c4-4379-9862-0a462400f66f "Sacrifice a creature: Add one mana of
+// any color."; Blightsteel Colossus e80772e2-8623-4094-81a2-70828b2b151c "… If
+// Blightsteel Colossus would be put into a graveyard from anywhere, reveal
+// Blightsteel Colossus and shuffle it into its owner's library instead.", a
+// replacement effect not the Altar's own, so the Altar's ability is still a
+// mana ability (605.1a) whose sacrifice of the Colossus moves a card into a
+// library; Silent Clearing
 // fd45063f-c83c-431c-9104-f139c497ec0d "{T}, Pay 1 life: Add {W} or {B}. …".
 // Rulings: Future Sight 2019-06-14 "If the top card of
 // your library changes while you're casting a spell, …, the new top card won't
@@ -403,25 +411,26 @@ func TestPriorityCastReversalsInPriorityLoop(t *testing.T) {
 	requireLandsUnused(t, g, life, "Waterlogged Grove", "Nurturing Peatland")
 }
 
-// TestFutureSightVillageRitesPaysWithMillikin casts Village Rites off the top
-// of the library with Future Sight under Thalia, with {B} in the pool: the
-// locked {1}{B} total (CR 601.2f) needs Millikin's {C} when no other mana is
-// available, so the cast is offered only because of Millikin. Either way
-// Millikin is activated while paying (CR 601.2g) and mills the card under
-// Village Rites, which moved to the stack first (CR 601.2a). The new top stays
-// hidden from everyone until the spell becomes cast and is revealed after
-// (CR 401.5).
-func TestFutureSightVillageRitesPaysWithMillikin(t *testing.T) {
+// TestFutureSightVillageRitesNotPaidWithMillikin casts Village Rites off the
+// top of the library with Future Sight under Thalia, with {B} in the pool, so
+// its locked total is {1}{B} (CR 601.2f). Millikin's ability mills a card, so
+// it isn't a mana ability (CR 605.1a) and can't be activated while paying (CR
+// 601.2g): without other mana the cast isn't offered even with Millikin
+// untapped. With {C} in the pool too, the cast is paid from the pool, Millikin
+// is never offered while paying and the card under Village Rites stays in the
+// library, the new top revealed once the spell is cast (CR 401.5).
+func TestFutureSightVillageRitesNotPaidWithMillikin(t *testing.T) {
 	t.Parallel()
 	for _, spare := range []bool{false, true} {
-		name := "Millikin required"
+		name := "no other mana"
 		if spare {
-			name = "Millikin optional"
+			name = "spare colorless mana"
 		}
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			g, e, rites, next := villageRitesLibraryGame(t, "Future Sight", 0)
 			addCombatPermanent(g, game.Player2, registryCardDef(t, "Thalia, Guardian of Thraben"))
+			millikin := addCombatPermanent(g, game.Player1, registryCardDef(t, "Millikin"))
 			p := g.Players[game.Player1]
 			p.ManaPool.Add(mana.B, 1)
 			if spare {
@@ -429,38 +438,27 @@ func TestFutureSightVillageRitesPaysWithMillikin(t *testing.T) {
 			}
 			act := action.CastSpellFaceFromZone(rites, zone.Library, game.FaceFront, nil, 0, nil)
 			if offered := actionsContain(e.legalActions(g, game.Player1), act); offered != spare {
-				t.Fatalf("Village Rites offered without Millikin = %t, want %t", offered, spare)
+				t.Fatalf("Village Rites offered = %t, want %t: Millikin can't pay while casting", offered, spare)
 			}
-			addCombatPermanent(g, game.Player1, registryCardDef(t, "Millikin"))
-			under := addCardToLibraryNamed(g, game.Player1, "Second Next")
-			p.Library.Remove(rites)
-			p.Library.Remove(next)
-			p.Library.Remove(under)
-			p.Library.Add(under)
-			p.Library.Add(next)
-			p.Library.Add(rites)
-			if !actionsContain(e.legalActions(g, game.Player1), act) {
-				t.Fatal("Village Rites payable with Millikin was not offered")
+			if !spare {
+				return
 			}
-			agent := &libraryTopWindowAgent{owner: game.Player1, start: rites, mill: true}
+			agent := &windowOptionsAgent{priorityCastWindowAgent: priorityCastWindowAgent{limit: -1}}
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, agent.agents(), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
 
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want Village Rites cast", outcome)
 			}
 			assertVillageRitesCast(t, g, rites)
-			if agent.milled != 1 || !p.Graveyard.Contains(next) {
-				t.Fatalf("milled = %d, next in graveyard = %t; want Millikin to mill the card under Village Rites", agent.milled, p.Graveyard.Contains(next))
+			requireNotOffered(t, agent.offered, millProducerMana)
+			if millikin.Tapped || !p.Library.Contains(next) || p.Graveyard.Contains(next) {
+				t.Fatalf("Millikin tapped = %t, next card milled = %t; want Millikin unused", millikin.Tapped, p.Graveyard.Contains(next))
 			}
-			if obj, _ := g.Stack.Peek(); obj.ManaSpentToCast != 2 {
-				t.Fatalf("mana spent = %d, want Thalia's {1} and {B}", obj.ManaSpentToCast)
+			if obj, _ := g.Stack.Peek(); obj.ManaSpentToCast != 2 || p.ManaPool.Total() != 0 {
+				t.Fatalf("mana spent = %d, pool = %d; want Thalia's {1} and {B} paid from the pool", obj.ManaSpentToCast, p.ManaPool.Total())
 			}
-			if got := p.ManaPool.Total(); spare && got != 1 || !spare && got != 0 {
-				t.Fatalf("mana left = %d", got)
-			}
-			agent.assertHiddenWhileChanged(t)
-			assertTopShown(t, g, "Future Sight", under)
+			assertTopShown(t, g, "Future Sight", next)
 			assertNoLibraryTopWindow(t, g)
 		})
 	}
@@ -501,38 +499,24 @@ func (a *manaOrderAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceRe
 	return request.DefaultSelection
 }
 
-// Labels of the mana abilities of Silent Clearing, Waterlogged Grove and
-// Millikin.
+// Labels of the mana abilities of Silent Clearing and Waterlogged Grove.
 const (
 	clearingMana = "Pay 1 life: Add {W} or {B}"
 	groveMana    = "Pay 1 life: Add {G} or {U}"
-	millikinMana = "Mill a card: Add {C}."
 )
 
-// requireKeptMill checks that Millikin's activation was kept when a cast was
-// reversed: Millikin is tapped, milled is in the graveyard and its {C} is in
-// the pool beside pool other mana.
-func requireKeptMill(t *testing.T, g *game.Game, milled id.ID, pool int) {
-	t.Helper()
-	p := g.Players[game.Player1]
-	if !reboundPermanentNamed(t, g, "Millikin").Tapped || !p.Graveyard.Contains(milled) || p.Library.Contains(milled) {
-		t.Fatalf("Millikin tapped = %t, milled card in graveyard = %t; want Millikin's activation kept", reboundPermanentNamed(t, g, "Millikin").Tapped, p.Graveyard.Contains(milled))
-	}
-	if got := p.ManaPool.Total(); got != pool {
-		t.Fatalf("pool = %d, want %d", got, pool)
-	}
-}
-
-// TestUnpaidPriorityCastReversesManaAroundMill casts on each route offered
-// because Waterlogged Grove, Nurturing Peatland and Millikin together could
-// pay its total, raised to three mana by another Thalia for a noncreature
-// spell, but activates only the Grove and then Millikin while paying. The
-// total can't be paid, so the cast is reversed (CR 733.1). Millikin's mill
-// can't be reversed, but the Grove's activation came before it and none of
-// its mana was spent on Millikin, so it is reversed anyway: the Grove untaps
-// and the life is restored, while Millikin stays tapped, the milled card stays
-// in the graveyard and its {C} stays in the pool.
-func TestUnpaidPriorityCastReversesManaAroundMill(t *testing.T) {
+// TestUnpaidPriorityCastReversesManaAroundShuffle casts on each route offered
+// because Waterlogged Grove, Nurturing Peatland and Phyrexian Altar together
+// could pay its total, raised to three mana by another Thalia for a
+// noncreature spell, but activates only the Grove and then the Altar,
+// sacrificing Blightsteel Colossus, while paying. The Altar's ability is a
+// mana ability: the Colossus's replacement effect that shuffles it into its
+// owner's library isn't the Altar's own (CR 605.1a). The total can't be paid,
+// so the cast is reversed (CR 733.1). The shuffle can't be reversed, but the
+// Grove's activation came before it and none of its mana was spent on the
+// Altar, so it is reversed anyway: the Grove untaps and the life is restored,
+// while the Colossus stays in the library and the Altar's mana in the pool.
+func TestUnpaidPriorityCastReversesManaAroundShuffle(t *testing.T) {
 	t.Parallel()
 	for _, route := range priorityCastRoutes() {
 		t.Run(route.name, func(t *testing.T) {
@@ -543,46 +527,44 @@ func TestUnpaidPriorityCastReversesManaAroundMill(t *testing.T) {
 			}
 			addCombatPermanent(g, game.Player1, registryCardDef(t, "Waterlogged Grove"))
 			addCombatPermanent(g, game.Player1, registryCardDef(t, "Nurturing Peatland"))
-			addCombatPermanent(g, game.Player1, registryCardDef(t, "Millikin"))
+			colossus := addAltarAndColossus(t, g, game.Player1)
 			p := g.Players[game.Player1]
-			if top, ok := p.Library.Top(); !ok || top != cardID {
-				addCardToLibraryNamed(g, game.Player1, "Mill Fodder")
-			}
-			below := p.Library.Clone()
-			below.Remove(cardID)
-			milled, _ := below.Top()
 			life := p.Life
 			act, ok := findPriorityCast(e, g, route, cardID)
 			if !ok {
-				t.Fatal("cast payable with both lands and Millikin was not offered")
+				t.Fatal("cast payable with both lands and Phyrexian Altar was not offered")
 			}
-			agent := &manaOrderAgent{order: []string{groveMana, millikinMana}, colors: route.colors}
+			order := &manaOrderAgent{order: []string{groveMana, altarMana}, colors: route.colors}
+			agent := &sacrificingAgent{next: order, victim: "Blightsteel Colossus"}
 
 			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
 
-			if outcome != actionReversed || agent.activated != 2 {
-				t.Fatalf("outcome = %v, activated = %d; want a reversed cast after two activations", outcome, agent.activated)
+			if outcome != actionReversed || order.activated != 2 || agent.sacrifices != 1 {
+				t.Fatalf("outcome = %v, activated = %d, Colossus sacrificed %d times; want a reversed cast after two activations", outcome, order.activated, agent.sacrifices)
 			}
 			route.undone(t, g, cardID)
 			requireLandsUnused(t, g, life, "Waterlogged Grove", "Nurturing Peatland")
-			requireKeptMill(t, g, milled, 1)
+			requireColossusShuffled(t, g, colossus)
+			if got := p.ManaPool.Total(); got != 1 {
+				t.Fatalf("pool = %d, want the Altar's mana kept", got)
+			}
 		})
 	}
 }
 
-// millFilterDef is a test artifact whose mana ability spends mana and mills:
-// "{1}, {T}, Mill a card: Add {C}{C}."
-func millFilterDef() *game.CardDef {
+// colossusFilterDef is a test artifact whose mana ability spends mana and
+// sacrifices a creature: "{1}, Sacrifice a creature: Add {C}{C}."
+func colossusFilterDef() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
-		Name:  "Mill Filter",
+		Name:  "Sacrifice Filter",
 		Types: []types.Card{types.Artifact},
 		ManaAbilities: []game.ManaAbility{{
-			Text:     "{1}, {T}, Mill a card: Add {C}{C}.",
+			Text:     "{1}, Sacrifice a creature: Add {C}{C}.",
 			ManaCost: opt.Val(cost.Mana{cost.O(1)}),
-			AdditionalCosts: []cost.Additional{
-				{Kind: cost.AdditionalTap},
-				{Kind: cost.AdditionalMill, Text: "Mill a card", Amount: 1},
-			},
+			AdditionalCosts: []cost.Additional{{
+				Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1,
+				MatchPermanentType: true, PermanentType: types.Creature,
+			}},
 			Content: game.AbilityContent{
 				Modes:    []game.Mode{{Sequence: []game.Instruction{{Primitive: game.AddMana{Amount: game.Fixed(2), ManaColor: mana.C}}}}},
 				MinModes: 1, MaxModes: 1,
@@ -597,11 +579,14 @@ func millFilterDef() *game.CardDef {
 // paying (CR 601.2g), so the cast is reversed (CR 733.1). A player may reverse
 // legal mana abilities activated while casting it, unless mana from them was
 // spent on another mana ability that isn't reversed, but not an action that
-// moved a card from a library (CR 733.1):
-//   - Silent Clearing for {W}, Millikin, then Waterlogged Grove for {G}: both
-//     lands are reversed, before and after the mill, and Millikin is kept.
-//   - Silent Clearing for {W}, then Mill Filter spending that {W}: the Filter's
-//     mill is kept, so the Clearing, whose mana it spent, is kept too.
+// moved a card to a library (CR 733.1), here Blightsteel Colossus shuffled
+// into the library when sacrificed by a mana ability (CR 605.1a):
+//   - Silent Clearing for {W}, Phyrexian Altar sacrificing the Colossus, then
+//     Waterlogged Grove for {G}: both lands are reversed, before and after the
+//     shuffle, and the Altar's activation is kept.
+//   - Silent Clearing for {W}, then Sacrifice Filter spending that {W} and
+//     sacrificing the Colossus: the Filter's activation is kept, so the
+//     Clearing, whose mana it spent, is kept too.
 func TestUnpaidVillageRitesReversesIndependentMana(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
@@ -612,34 +597,37 @@ func TestUnpaidVillageRitesReversesIndependentMana(t *testing.T) {
 		life     int
 		pool     int
 	}{
-		{name: "lands around Millikin", order: []string{clearingMana, millikinMana, groveMana}, reversed: []string{"Silent Clearing", "Waterlogged Grove"}, kept: "Millikin", life: 20, pool: 1},
-		{name: "land spent on Mill Filter", order: []string{clearingMana, "Add {C}{C}"}, reversed: []string{"Waterlogged Grove"}, kept: "Silent Clearing", life: 19, pool: 2},
+		{name: "lands around Phyrexian Altar", order: []string{clearingMana, altarMana, groveMana}, reversed: []string{"Silent Clearing", "Waterlogged Grove"}, life: 20, pool: 1},
+		{name: "land spent on Sacrifice Filter", order: []string{clearingMana, "Add {C}{C}"}, reversed: []string{"Waterlogged Grove"}, kept: "Silent Clearing", life: 19, pool: 2},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			g, e, rites, next := villageRitesLibraryGame(t, "Future Sight", 0)
+			g, e, rites, _ := villageRitesLibraryGame(t, "Future Sight", 0)
 			addCombatPermanent(g, game.Player2, registryCardDef(t, "Thalia, Guardian of Thraben"))
-			for _, name := range []string{"Silent Clearing", "Waterlogged Grove", "Millikin"} {
+			for _, name := range []string{"Silent Clearing", "Waterlogged Grove"} {
 				addCombatPermanent(g, game.Player1, registryCardDef(t, name))
 			}
-			addCombatPermanent(g, game.Player1, millFilterDef())
+			addCombatPermanent(g, game.Player1, colossusFilterDef())
+			colossus := addAltarAndColossus(t, g, game.Player1)
 			act := action.CastSpellFaceFromZone(rites, zone.Library, game.FaceFront, nil, 0, nil)
 			if !actionsContain(e.legalActions(g, game.Player1), act) {
 				t.Fatal("Village Rites payable while paying was not offered")
 			}
-			agent := &manaOrderAgent{order: test.order, colors: []string{"W", "G"}}
+			order := &manaOrderAgent{order: test.order, colors: []string{"W", "G"}}
+			agent := &sacrificingAgent{next: order, victim: "Blightsteel Colossus"}
 
 			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
 
-			if outcome != actionReversed || agent.activated != len(test.order) {
-				t.Fatalf("outcome = %v, activated = %d; want a reversed cast after %d activations", outcome, agent.activated, len(test.order))
+			if outcome != actionReversed || order.activated != len(test.order) || agent.sacrifices != 1 {
+				t.Fatalf("outcome = %v, activated = %d, Colossus sacrificed %d times; want a reversed cast after %d activations", outcome, order.activated, agent.sacrifices, len(test.order))
 			}
 			p := g.Players[game.Player1]
-			if top, _ := p.Library.Top(); top != rites || !p.Graveyard.Contains(next) {
-				t.Fatalf("library top = %v, next milled = %t; want Village Rites back on top over the kept mill", top, p.Graveyard.Contains(next))
+			if top, _ := p.Library.Top(); top != rites {
+				t.Fatalf("library top = %v, want Village Rites back on top", top)
 			}
+			requireColossusShuffled(t, g, colossus)
 			requireLandsUnused(t, g, test.life, test.reversed...)
-			if !reboundPermanentNamed(t, g, test.kept).Tapped {
+			if test.kept != "" && !reboundPermanentNamed(t, g, test.kept).Tapped {
 				t.Fatalf("%s is untapped, want its activation kept", test.kept)
 			}
 			if got := p.ManaPool.Total(); got != test.pool {
