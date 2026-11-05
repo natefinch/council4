@@ -66,10 +66,10 @@ func (e *Engine) announcementLegal(g *game.Game, player game.PlayerID, announcem
 			return false
 		}
 		if body, general := ability.(*game.ActivatedAbility); general {
-			return canActivateEquipAbilityWithModes(g, player, permanent, body, activate.AbilityIndex,
-				activate.Targets, activate.XValue, activate.ChosenModes) ||
-				canActivateGeneralAbilityWithModes(g, player, permanent, body, activate.AbilityIndex,
-					activate.Targets, activate.XValue, activate.ChosenModes)
+			return e.activationFeasible(g, player, equipActivation(g, player, permanent, body, activate.AbilityIndex,
+				activate.Targets, activate.XValue, activate.ChosenModes)) ||
+				e.activationFeasible(g, player, generalActivation(g, player, permanent, body, activate.AbilityIndex,
+					activate.Targets, activate.XValue, activate.ChosenModes))
 		}
 		return false
 	}
@@ -78,16 +78,16 @@ func (e *Engine) announcementLegal(g *game.Game, player game.PlayerID, announcem
 			activate.ChosenModes, activate.TargetCounts, activate.Targets, activate.XValue); !valid {
 			return false
 		}
-		return canActivateHandAbilityWithModes(g, player, activate.SourceID, &body, activate.AbilityIndex,
-			activate.Targets, activate.XValue, activate.ChosenModes)
+		return e.activationFeasible(g, player, handActivation(g, player, activate.SourceID, &body, activate.AbilityIndex,
+			activate.Targets, activate.XValue, activate.ChosenModes))
 	}
 	if card, body, present := graveyardAbilitySource(g, player, activate.SourceID, activate.AbilityIndex); present {
 		if _, valid := bodyTargetCountsWithModesAndRecorded(g, player, cardFaceOrDefault(card, game.FaceFront), 0, &body,
 			activate.ChosenModes, activate.TargetCounts, activate.Targets, activate.XValue); !valid {
 			return false
 		}
-		return canActivateGraveyardAbilityWithModes(g, player, activate.SourceID, &body, activate.AbilityIndex,
-			activate.Targets, activate.XValue, activate.ChosenModes)
+		return e.activationFeasible(g, player, graveyardActivation(g, player, activate.SourceID, &body, activate.AbilityIndex,
+			activate.Targets, activate.XValue, activate.ChosenModes))
 	}
 	return false
 }

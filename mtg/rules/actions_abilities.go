@@ -27,30 +27,59 @@ func (e *Engine) applyActivateAbility(g *game.Game, playerID game.PlayerID, acti
 // activation (or a mana ability's resolution) stays hidden until it finishes
 // (CR 401.5).
 func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	return e.attemptActivateAbilityWithChoices(g, playerID, activate, agents, log) == actionApplied
+}
+
+// attemptActivateAbilityWithChoices activates an ability as
+// applyActivateAbilityWithChoices does. Once its total cost is locked, when
+// that cost includes a mana payment, the player may activate mana abilities
+// (CR 602.2b, 601.2g); an activation whose cost then goes unpaid is reversed
+// with them (CR 733.1).
+func (e *Engine) attemptActivateAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	defer g.OpenLibraryTopWindow()()
-	if e.applyCyclingAbilityWithChoices(g, playerID, activate, agents, log) {
-		return true
+	if outcome := e.applyCyclingAbilityWithChoices(g, playerID, activate, agents, log); outcome != actionFailed {
+		return outcome
 	}
-	if e.applyNinjutsuAbilityWithChoices(g, playerID, activate, agents, log) {
-		return true
+	if outcome := e.applyNinjutsuAbilityWithChoices(g, playerID, activate, agents, log); outcome != actionFailed {
+		return outcome
 	}
-	if e.applyHandAbilityWithChoices(g, playerID, activate, agents, log) {
-		return true
+	if outcome := e.applyHandAbilityWithChoices(g, playerID, activate, agents, log); outcome != actionFailed {
+		return outcome
 	}
 	if e.applyHandManaAbilityWithChoices(g, playerID, activate, agents, log) {
-		return true
+		return actionApplied
 	}
-	if e.applyGraveyardAbilityWithChoices(g, playerID, activate, agents, log) {
-		return true
+	if outcome := e.applyGraveyardAbilityWithChoices(g, playerID, activate, agents, log); outcome != actionFailed {
+		return outcome
 	}
+	return e.applyPermanentAbilityWithChoices(g, playerID, activate, agents, log)
+}
+
+// permanentActivation is the cost of activating the activated ability body of
+// permanent as activate describes, when it's an equip-like or other activated
+// ability the player may begin activating (see activationFeasible), and the
+// zero activationCost otherwise.
+func (e *Engine) permanentActivation(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, activate action.ActivateAbilityAction) activationCost {
+	if equip := equipActivation(g, playerID, permanent, body, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes); e.activationFeasible(g, playerID, equip) {
+		return equip
+	}
+	if general := generalActivation(g, playerID, permanent, body, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes); e.activationFeasible(g, playerID, general) {
+		return general
+	}
+	return activationCost{}
+}
+
+// applyPermanentAbilityWithChoices activates an ability of a permanent: a mana
+// ability, a loyalty ability or another activated ability.
+func (e *Engine) applyPermanentAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	permanent, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
 	if !ok {
-		return false
+		return actionFailed
 	}
 
 	if manaBody, ok := body.(*game.ManaAbility); ok && canActivateManaAbility(g, playerID, permanent, manaBody, activate.AbilityIndex) {
 		if len(activate.Targets) != 0 || len(activate.TargetCounts) != 0 || activate.XValue != 0 || len(activate.ChosenModes) != 0 {
-			return false
+			return actionFailed
 		}
 		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
 		manaSource := captureManaProducedSource(g, permanent)
@@ -65,7 +94,7 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 			ForMana:         true,
 		})
 		if !ok {
-			return false
+			return actionFailed
 		}
 		obj := &game.StackObject{
 			ID:               g.IDGen.Next(),
@@ -90,44 +119,43 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		}
 		emitAbilityActivatedEvent(g, obj, permanent.ObjectID, true)
 		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, manaBody.Timing)
-		return true
+		return actionApplied
 	}
 
 	card, ok := permanentCardDef(g, permanent)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	activatedBody, activatedOK := body.(*game.ActivatedAbility)
 	loyaltyBody, loyaltyOK := body.(*game.LoyaltyAbility)
 	if !activatedOK && !loyaltyOK {
-		return false
+		return actionFailed
 	}
-	if activatedOK &&
-		!canActivateEquipAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
-		!canActivateGeneralAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
-		!loyaltyOK {
-		return false
+	if activatedOK && e.permanentActivation(g, playerID, permanent, activatedBody, activate).payable == nil {
+		return actionFailed
 	}
 	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
-		return false
+		return actionFailed
 	}
 	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, card, permanent.ObjectID, body, activate.ChosenModes, activate.Targets, agents, log)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	activate.Targets = completedTargets
 	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, card, permanent.ObjectID, body, activate.ChosenModes, activate.TargetCounts, activate.Targets, activate.XValue)
 	if !ok {
-		return false
+		return actionFailed
 	}
-	if activatedOK &&
-		!canActivateEquipAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
-		!canActivateGeneralAbilityWithModes(g, playerID, permanent, activatedBody, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) &&
-		!loyaltyOK {
-		return false
+	// The total cost is locked once the targets are final (CR 601.2f).
+	var activation activationCost
+	if activatedOK {
+		activation = e.permanentActivation(g, playerID, permanent, activatedBody, activate)
+		if activation.payable == nil {
+			return actionFailed
+		}
 	}
 	if loyaltyOK && (len(activate.ChosenModes) != 0 || !canActivateLoyaltyAbility(g, playerID, permanent, loyaltyBody, activate.AbilityIndex, activate.Targets, activate.XValue)) {
-		return false
+		return actionFailed
 	}
 	sourceCardID := permanent.CardInstanceID
 	sourceTokenDef := permanent.TokenDef
@@ -169,6 +197,10 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		alternativeCosts = append([]cost.Alternative(nil), activatedBody.AlternativeCosts...)
 		timing = activatedBody.Timing
 	}
+	undoMana := e.activationPaymentManaWindow(g, playerID, activation, agents, log)
+	if undoMana != nil && !activation.payableNow(g) {
+		return reverseActivation(undoMana)
+	}
 	var tapExclusions []id.ID
 	if hasTapCostOf(additionalCosts) {
 		tapExclusions = append(tapExclusions, permanent.ObjectID)
@@ -185,7 +217,10 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 		Prefs:            prefs,
 	})
 	if !ok {
-		return false
+		if undoMana != nil {
+			return reverseActivation(undoMana)
+		}
+		return actionFailed
 	}
 	if loyaltyOK {
 		applyLoyaltyCost(permanent, loyaltyBody.LoyaltyCost)
@@ -200,25 +235,30 @@ func (e *Engine) applyActivateAbilityWithChoices(g *game.Game, playerID game.Pla
 	if loyaltyOK {
 		recordActivatedAbilityUse(g, permanent.ObjectID, -1, game.OncePerTurn)
 	}
-	return true
+	return actionApplied
 }
 
-func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	card, ability, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
-	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
-		return false
+	if !ok || !e.activationFeasible(g, playerID, handActivation(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes)) {
+		return actionFailed
 	}
 	stackBody := activationStackBody(card, activate.AbilityIndex, &ability)
 	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
 	resolutionUse := cardActivatedResolutionUse(card, def, activate.AbilityIndex)
 	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
-	if !ok || !canActivateHandAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
-		return false
+	if !ok {
+		return actionFailed
+	}
+	// The total cost is locked once the targets are final (CR 601.2f).
+	activation := handActivation(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes)
+	if !e.activationFeasible(g, playerID, activation) {
+		return actionFailed
 	}
 	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets, activate.XValue)
 	if !ok {
-		return false
+		return actionFailed
 	}
 	// The self-entry family (Talon Gates of Madara, Urban Retreat) keeps its
 	// source card in the hand until resolution, when the ability's own
@@ -237,6 +277,16 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 		Targets: completedTargets, TargetCounts: targetCounts, ChosenModes: activate.ChosenModes,
 		XValue: activate.XValue, InlineActivated: stackBody,
 	})
+	undoMana := e.activationPaymentManaWindow(g, playerID, activation, agents, log)
+	if undoMana != nil && !activation.payableNow(g) {
+		return reverseActivation(undoMana)
+	}
+	unpaid := func() actionOutcome {
+		if undoMana != nil {
+			return reverseActivation(undoMana)
+		}
+		return actionFailed
+	}
 	var additionalCostsPaid []string
 	var sacrificedAsCostIDs, tappedAsCostIDs, exiledAsCostIDs []id.ID
 	var paidCostSubjects []game.PaidCostSubject
@@ -253,7 +303,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 			Prefs:            prefs,
 		})
 		if !ok {
-			return false
+			return unpaid()
 		}
 		sacrificedAsCostIDs = costPaid.sacrificedIDs
 		paidCostSubjects = costPaid.subjects
@@ -268,7 +318,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 			XValue:   activate.XValue,
 			Prefs:    prefs,
 		}) {
-			return false
+			return unpaid()
 		}
 		if discardSelf {
 			for _, additional := range ability.AdditionalCosts {
@@ -306,7 +356,7 @@ func (e *Engine) applyHandAbilityWithChoices(g *game.Game, playerID game.PlayerI
 	pushAbilityToStackWithTargets(g, obj, targetEvents)
 	emitAbilityActivatedEvent(g, obj, 0, false)
 	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
-	return true
+	return actionApplied
 }
 
 // applyHandManaAbilityWithChoices activates a mana ability printed on a card in
@@ -344,22 +394,31 @@ func (e *Engine) applyHandManaAbilityWithChoices(g *game.Game, playerID game.Pla
 	return true
 }
 
-func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	card, ability, ok := graveyardAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
-	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes) {
-		return false
+	if !ok || !e.activationFeasible(g, playerID, graveyardActivation(g, playerID, card.ID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue, activate.ChosenModes)) {
+		return actionFailed
 	}
 	stackBody := activationStackBody(card, activate.AbilityIndex, &ability)
 	sourceZoneVersion := card.ZoneVersion
 	def := cardFaceOrDefault(card, game.FaceFront)
 	resolutionUse := cardActivatedResolutionUse(card, def, activate.AbilityIndex)
 	completedTargets, ok := e.completeAbilityAnnouncementTargetsWithModes(g, playerID, def, 0, &ability, activate.ChosenModes, activate.Targets, agents, log)
-	if !ok || !canActivateGraveyardAbilityWithModes(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes) {
-		return false
+	if !ok {
+		return actionFailed
+	}
+	// The total cost is locked once the targets are final (CR 601.2f).
+	activation := graveyardActivation(g, playerID, card.ID, &ability, activate.AbilityIndex, completedTargets, activate.XValue, activate.ChosenModes)
+	if !e.activationFeasible(g, playerID, activation) {
+		return actionFailed
 	}
 	targetCounts, ok := bodyTargetCountsWithModesAndRecorded(g, playerID, def, 0, &ability, activate.ChosenModes, activate.TargetCounts, completedTargets, activate.XValue)
 	if !ok {
-		return false
+		return actionFailed
+	}
+	undoMana := e.activationPaymentManaWindow(g, playerID, activation, agents, log)
+	if undoMana != nil && !activation.payableNow(g) {
+		return reverseActivation(undoMana)
 	}
 	prefs := e.paymentPreferencesForCostFromSource(g, playerID, manaCostPtr(ability.ManaCost), abilityAdditionalCosts(ability.AdditionalCosts), activate.XValue, card.ID, zone.Graveyard, agents, log)
 	stackID := g.IDGen.Next()
@@ -381,7 +440,10 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 		Prefs:            prefs,
 	})
 	if !ok {
-		return false
+		if undoMana != nil {
+			return reverseActivation(undoMana)
+		}
+		return actionFailed
 	}
 	obj := &game.StackObject{
 		ID:                     stackID,
@@ -406,7 +468,7 @@ func (e *Engine) applyGraveyardAbilityWithChoices(g *game.Game, playerID game.Pl
 	pushAbilityToStackWithTargets(g, obj, targetEvents)
 	emitAbilityActivatedEvent(g, obj, 0, false)
 	recordActivatedAbilityUse(g, card.ID, activate.AbilityIndex, ability.Timing)
-	return true
+	return actionApplied
 }
 
 func canActivateLoyaltyAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.LoyaltyAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -442,25 +504,33 @@ func applyLoyaltyCost(permanent *game.Permanent, loyalty int) {
 }
 
 func (e *Engine) applyCyclingAbility(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) bool {
-	return e.applyCyclingAbilityWithChoices(g, playerID, activate, [game.NumPlayers]PlayerAgent{}, nil)
+	return e.applyCyclingAbilityWithChoices(g, playerID, activate, [game.NumPlayers]PlayerAgent{}, nil) == actionApplied
 }
 
-func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	if len(activate.TargetCounts) != 0 || len(activate.ChosenModes) != 0 {
-		return false
+		return actionFailed
 	}
 	card, ability, ok := cyclingAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
 	if !ok {
-		return false
+		return actionFailed
 	}
-	if !canActivateCyclingAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
-		return false
+	activation := cyclingActivation(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue)
+	if !e.activationFeasible(g, playerID, activation) {
+		return actionFailed
 	}
 	stackBody := activationStackBody(card, activate.AbilityIndex, &ability)
 	effectiveCost := effectiveCyclingCost(g, playerID, card, &ability)
+	undoMana := e.activationPaymentManaWindow(g, playerID, activation, agents, log)
+	if undoMana != nil && !activation.payableNow(g) {
+		return reverseActivation(undoMana)
+	}
 	prefs := e.paymentPreferencesForCost(g, playerID, effectiveCost, nil, activate.XValue, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCost, XValue: activate.XValue, Prefs: prefs}) {
-		return false
+		if undoMana != nil {
+			return reverseActivation(undoMana)
+		}
+		return actionFailed
 	}
 	if !discardCardFromHand(g, playerID, card.ID) {
 		panic("cycling card disappeared from hand after validation")
@@ -486,28 +556,43 @@ func (e *Engine) applyCyclingAbilityWithChoices(g *game.Game, playerID game.Play
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)
-	return true
+	return actionApplied
 }
 
-func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	if len(activate.TargetCounts) != 0 || len(activate.ChosenModes) != 0 {
-		return false
+		return actionFailed
 	}
 	card, ability, ok := handActivatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex)
-	if !ok || !canActivateNinjutsuAbility(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue) {
-		return false
+	if !ok {
+		return actionFailed
+	}
+	activation := ninjutsuActivation(g, playerID, activate.SourceID, &ability, activate.AbilityIndex, activate.Targets, activate.XValue)
+	if !e.activationFeasible(g, playerID, activation) {
+		return actionFailed
 	}
 	attacker := chooseNinjutsuAttacker(e, g, playerID, unblockedAttackers(g, playerID), agents, log)
 	if attacker == nil {
-		return false
+		return actionFailed
 	}
 	attackTarget, ok := attackTargetForAttacker(g, attacker.ObjectID)
 	if !ok || attackerWasBlocked(g, attacker.ObjectID) {
-		return false
+		return actionFailed
+	}
+	undoMana := e.activationPaymentManaWindow(g, playerID, activation, agents, log)
+	if undoMana != nil {
+		// A mana ability activated while paying may have removed the attacker
+		// chosen to return or the card itself.
+		if _, attacking := attackTargetForAttacker(g, attacker.ObjectID); !attacking || attackerWasBlocked(g, attacker.ObjectID) || !activation.payableNow(g) {
+			return reverseActivation(undoMana)
+		}
 	}
 	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(ability.ManaCost), nil, 0, agents, log)
 	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(ability.ManaCost), Prefs: prefs}) {
-		return false
+		if undoMana != nil {
+			return reverseActivation(undoMana)
+		}
+		return actionFailed
 	}
 	removePermanentFromCombat(g, attacker.ObjectID)
 	if !movePermanentToZone(g, attacker, zone.Hand) {
@@ -528,7 +613,7 @@ func (e *Engine) applyNinjutsuAbilityWithChoices(g *game.Game, playerID game.Pla
 	}
 	pushAbilityToStack(g, obj)
 	emitAbilityActivatedEvent(g, obj, 0, false)
-	return true
+	return actionApplied
 }
 
 func chooseNinjutsuAttacker(e *Engine, g *game.Game, playerID game.PlayerID, attackers []*game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) *game.Permanent {
@@ -591,8 +676,15 @@ func attackTargetForAttacker(g *game.Game, attackerID id.ID) (game.AttackTarget,
 }
 
 func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
+	return ninjutsuActivation(g, playerID, cardID, body, abilityIndex, targets, xValue).payableNow(g)
+}
+
+// ninjutsuActivation is the cost of activating the ninjutsu ability body of the
+// card cardID, or the zero activationCost when that isn't legal. Its other
+// component, returning an unblocked attacker, can be paid while there is one.
+func ninjutsuActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) activationCost {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
-		return false
+		return activationCost{}
 	}
 	if xValue != 0 ||
 		abilityIndex < 0 ||
@@ -603,11 +695,14 @@ func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.
 		len(game.BodyTargets(body)) != 0 ||
 		!abilityHasReturnUnblockedAttackerCost(body.AdditionalCosts) ||
 		len(unblockedAttackers(g, playerID)) == 0 {
-		return false
+		return activationCost{}
 	}
 	_, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Ninjutsu) {
-		return false
+		return activationCost{}
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)})
+	inHand := cardSourcePresent(handActivatedAbilitySource, playerID, cardID, abilityIndex)
+	return genericRequestCost(payment.GenericRequest{PlayerID: playerID, Cost: manaCostPtr(body.ManaCost)}, func(g *game.Game) bool {
+		return inHand(g) && len(unblockedAttackers(g, playerID)) != 0
+	})
 }

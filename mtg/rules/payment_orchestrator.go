@@ -48,6 +48,12 @@ func (o paymentOrchestratorType) buildAbilityCostPlan(g *game.Game, req payment.
 	return o.planner(g).BuildAbilityCostPlan(req)
 }
 
+// canPayAbilityNonManaCosts reports whether the components of the ability cost
+// req describes other than its mana cost can be paid now.
+func (o paymentOrchestratorType) canPayAbilityNonManaCosts(g *game.Game, req payment.AbilityRequest) bool {
+	return o.planner(g).CanPayAbilityNonManaCosts(req)
+}
+
 // abilityCostPayment carries the identities of objects and cards consumed to pay
 // an ability's activation cost so the caller can record them on the resolving
 // stack object: the object IDs of permanents sacrificed and the card-instance

@@ -183,16 +183,8 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 		req.ManaCost = opt.Val(*resolved)
 	}
 	tapSource := hasTapCostOf(req.AdditionalCosts)
-	if tapSource && (req.Source == nil || !canTapForAbility(s, req.Source)) {
-		return plan, false
-	}
-	sourceCardID := req.SourceCardID
-	sourceZone := req.SourceZone
-	if req.Source != nil && sourceCardID == 0 {
-		sourceCardID = req.Source.CardInstanceID
-		sourceZone = zone.Battlefield
-	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone, 0)
+	sourceCardID, sourceZone := abilityCostSource(req)
+	additional, ok := buildAbilityNonManaCostPlan(s, req, tapSource, sourceCardID, sourceZone)
 	if !ok {
 		return plan, false
 	}
@@ -207,6 +199,38 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	plan.additional = additional
 	plan.tapSource = tapSource
 	return plan, true
+}
+
+// abilityCostSource returns the card and zone of the source of the ability req
+// pays for.
+func abilityCostSource(req AbilityRequest) (id.ID, zone.Type) {
+	if req.Source != nil && req.SourceCardID == 0 {
+		return req.Source.CardInstanceID, zone.Battlefield
+	}
+	return req.SourceCardID, req.SourceZone
+}
+
+// buildAbilityNonManaCostPlan plans the components of req's cost other than
+// its mana cost: the source's {T} and the additional costs.
+func buildAbilityNonManaCostPlan(s State, req AbilityRequest, tapSource bool, sourceCardID id.ID, sourceZone zone.Type) (additionalCostPlan, bool) {
+	if tapSource && (req.Source == nil || !canTapForAbility(s, req.Source)) {
+		return additionalCostPlan{}, false
+	}
+	return buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone, 0)
+}
+
+// canPayAbilityNonManaCosts reports whether the components of req's cost other
+// than its mana cost can be paid from current resources.
+func canPayAbilityNonManaCosts(s State, req AbilityRequest) bool {
+	if req.Source == nil && req.SourceCardID == 0 {
+		return false
+	}
+	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.ManaCost)) && !additionalCostsUseX(req.AdditionalCosts) {
+		return false
+	}
+	sourceCardID, sourceZone := abilityCostSource(req)
+	_, ok := buildAbilityNonManaCostPlan(s, req, hasTapCostOf(req.AdditionalCosts), sourceCardID, sourceZone)
+	return ok
 }
 
 func retryAbilityCostPlanAvoidingManaTapConflict(s State, req AbilityRequest, sourceCardID id.ID, sourceZone zone.Type, tapSource bool, previous additionalCostPlan) (additionalCostPlan, paymentPlan, bool) {
