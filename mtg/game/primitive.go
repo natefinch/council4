@@ -986,16 +986,25 @@ type ShufflePermanentIntoLibrary struct {
 
 // PutLinkedExiledCardsInLibrary moves every card a sibling clause exiled under
 // LinkedKey from exile to its owner's library, to the bottom when Bottom is set.
-// RandomOrder puts each owner's arriving cards in a hidden random order, decided
-// after their replacement choices so those choices do not reveal it.
-// It backs the linked disposal "The owner of each card exiled with <this
+// RandomOrder puts each owner's arriving cards in a hidden random order;
+// otherwise each owner privately chooses the order of their cards arriving
+// together (CR 401.4). Either is decided after the replacement choices so
+// those choices do not reveal it.
+// The legacy LinkedKey form reads and then clears one resolution's published
+// link (Tibalt's Trickery's "the exiled cards").
+//
+// LinkedProducer instead reads the declared original-source channel every
+// resolution and copy of the producing body accumulates on this permanent
+// occurrence (CR 607.2a), backing "The owner of each card exiled with <this
 // permanent> puts that card on the bottom of their library." (Trial of a Time
-// Lord), consuming the link the paired exile-until-leaves clause published so
-// the runtime clears it and the synthesized leaves trigger returns nothing.
+// Lord, whose chapters I, II and III each exile a card). Only the exact exiled
+// incarnations still in exile move; the channel is not consumed. Exactly one of
+// LinkedKey and LinkedProducer is set.
 type PutLinkedExiledCardsInLibrary struct {
-	LinkedKey   LinkedKey
-	Bottom      bool
-	RandomOrder bool
+	LinkedKey      LinkedKey
+	LinkedProducer LinkedProducerKey
+	Bottom         bool
+	RandomOrder    bool
 }
 
 // PartitionExiledCostCards disposes of the cards exiled to pay the resolving

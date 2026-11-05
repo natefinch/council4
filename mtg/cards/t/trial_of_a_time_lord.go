@@ -21,6 +21,11 @@ import (
 //	IV — Starting with you, each player votes for innocent or guilty. If guilty gets more votes, the owner of each card exiled with this Saga puts that card on the bottom of their library.
 var TrialOfATimeLord = newTrialOfATimeLord
 
+// trialOfATimeLordExiled is the original-source channel chapters I, II and III
+// accumulate their exiled creatures in, so chapter IV disposes of every card
+// still exiled with this Saga occurrence (CR 607.2a).
+const trialOfATimeLordExiled game.LinkedProducerKey = "a5425d4f-cd6c-4240-89a4-dd13e0e1a95f/chapter-1-2-3/exile"
+
 func newTrialOfATimeLord() *game.CardDef {
 	return &game.CardDef{
 		ColorIdentity: color.NewIdentity(color.White),
@@ -39,6 +44,7 @@ func newTrialOfATimeLord() *game.CardDef {
 					Text:     "I, II, III — Exile target nontoken creature an opponent controls until this Saga leaves the battlefield.",
 					Chapters: []int{1, 2, 3},
 					Content: game.AbilityContent{
+						LinkedProducers: []game.LinkedProducerKey{trialOfATimeLordExiled},
 						Modes: []game.Mode{
 							game.Mode{
 								Targets: []game.TargetSpec{
@@ -53,10 +59,10 @@ func newTrialOfATimeLord() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.MovePermanent{
-											Object:            game.TargetPermanentReference(0),
-											Destination:       zone.Exile,
-											PublishLinked:     game.LinkedKey("exile-until-leaves"),
-											UntilSourceLeaves: true,
+											Object:                game.TargetPermanentReference(0),
+											Destination:           zone.Exile,
+											PublishLinkedProducer: trialOfATimeLordExiled,
+											UntilSourceLeaves:     true,
 										},
 									},
 								},
@@ -81,8 +87,8 @@ func newTrialOfATimeLord() *game.CardDef {
 									},
 									game.Instruction{
 										Primitive: game.PutLinkedExiledCardsInLibrary{
-											LinkedKey: game.LinkedKey("exile-until-leaves"),
-											Bottom:    true,
+											LinkedProducer: trialOfATimeLordExiled,
+											Bottom:         true,
 										},
 										ResultGate: opt.Val(game.InstructionResultGate{
 											Key: game.ResultKey("vote-result"),

@@ -76,6 +76,14 @@ func (p PutOnBattlefield) LinkedProducerConsumption() []LinkedProducerKey {
 	return producers
 }
 
+// LinkedProducerConsumption reports the disposed original-source channel.
+func (p PutLinkedExiledCardsInLibrary) LinkedProducerConsumption() []LinkedProducerKey {
+	if p.LinkedProducer == "" {
+		return nil
+	}
+	return []LinkedProducerKey{p.LinkedProducer}
+}
+
 // NestedAbilityContents exposes resolving bodies without knowing concrete primitives.
 func (p RepeatProcess) NestedAbilityContents() []AbilityContent { return []AbilityContent{p.Body} }
 

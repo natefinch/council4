@@ -990,11 +990,13 @@ type simultaneousCardMove struct {
 // left its source incarnation is skipped. Replacement shuffles wait until the
 // whole batch has moved so they cannot disturb its other members.
 //
-// With a non-nil randomOrder, the cards that arrive in each owner's library are
-// then put in a random order among themselves ("in a random order", CR 401.2,
-// 702.85a, 701.57a). Choices and zone-change events still follow the given
-// order, so neither reveals the hidden random library order.
-func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardMove, toZone zone.Type, bottom bool, simultaneousID id.ID, randomOrder *rand.Rand) bool {
+// With a non-nil arrange, the cards that arrive together in each owner's
+// library (one that no replacement shuffled) are then rearranged among the
+// positions they occupy, owners in APNAP order: randomLibraryArrivals puts them
+// in a random order ("in a random order", CR 401.2, 702.85a, 701.57a), and an
+// owner's ordering choice realizes CR 401.4. Choices and zone-change events
+// still follow the given order, so neither reveals the hidden library order.
+func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardMove, toZone zone.Type, bottom bool, simultaneousID id.ID, arrange libraryArrivalArrangement) bool {
 	type preparedMove struct {
 		move        simultaneousCardMove
 		owner       game.PlayerID
@@ -1058,17 +1060,42 @@ func moveCardsBetweenZonesSimultaneously(g *game.Game, moves []simultaneousCardM
 	for player := range game.NumPlayers {
 		if shuffle[game.PlayerID(player)] {
 			g.Players[player].Library.Shuffle(g.RNG)
-		} else if randomOrder != nil {
-			randomizeLibraryArrivals(&g.Players[player].Library, arrived[game.PlayerID(player)], randomOrder)
+		}
+	}
+	if arrange != nil {
+		for _, owner := range owners {
+			if !shuffle[owner] {
+				rearrangeLibraryArrivals(&g.Players[owner].Library, arrived[owner], func(placed []id.ID) []id.ID {
+					return arrange(owner, placed)
+				})
+			}
 		}
 	}
 	return moved
 }
 
-// randomizeLibraryArrivals randomly permutes cards among the library positions
-// they occupy, leaving every other card where it is. A card no longer in the
-// library is ignored.
-func randomizeLibraryArrivals(library *zone.Zone, cards []id.ID, rng *rand.Rand) {
+// libraryArrivalArrangement returns a permutation of the cards that arrived
+// together in owner's library, given top card first.
+type libraryArrivalArrangement func(owner game.PlayerID, placed []id.ID) []id.ID
+
+// randomLibraryArrivals puts the arriving cards in a random order (CR 401.2).
+func randomLibraryArrivals(rng *rand.Rand) libraryArrivalArrangement {
+	if rng == nil {
+		return nil
+	}
+	return func(_ game.PlayerID, placed []id.ID) []id.ID {
+		rng.Shuffle(len(placed), func(i, j int) {
+			placed[i], placed[j] = placed[j], placed[i]
+		})
+		return placed
+	}
+}
+
+// rearrangeLibraryArrivals permutes cards among the library positions they
+// occupy, leaving every other card where it is. A card no longer in the
+// library is ignored, and fewer than two cards have no order to choose. A
+// permutation that is not of exactly the placed cards leaves them unchanged.
+func rearrangeLibraryArrivals(library *zone.Zone, cards []id.ID, arrange func(placed []id.ID) []id.ID) {
 	var positions []int
 	var placed []id.ID
 	for index, cardID := range library.All() {
@@ -1080,17 +1107,23 @@ func randomizeLibraryArrivals(library *zone.Zone, cards []id.ID, rng *rand.Rand)
 	if len(placed) < 2 {
 		return
 	}
+	ordered := arrange(slices.Clone(placed))
+	if len(ordered) != len(placed) {
+		return
+	}
+	for _, cardID := range placed {
+		if !slices.Contains(ordered, cardID) {
+			return
+		}
+	}
 	faceDown := make(map[id.ID]bool, len(placed))
 	for _, cardID := range placed {
 		faceDown[cardID] = library.IsFaceDown(cardID)
 		library.Remove(cardID)
 	}
-	rng.Shuffle(len(placed), func(i, j int) {
-		placed[i], placed[j] = placed[j], placed[i]
-	})
 	for i, index := range positions {
-		library.InsertAt(index, placed[i])
-		library.SetFaceDown(placed[i], faceDown[placed[i]])
+		library.InsertAt(index, ordered[i])
+		library.SetFaceDown(ordered[i], faceDown[ordered[i]])
 	}
 }
 
