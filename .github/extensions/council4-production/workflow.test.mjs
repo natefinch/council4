@@ -560,6 +560,24 @@ test("A split gap is worked through its first open sub-issue, in order", () => {
   assert.equal(chooseWork({ next, priorUnits: [failedParent], issues: { 3285: open(3285) } }).kind, "card");
 });
 
+test("Parked gaps are never selected but still keep their cards out of new batches", () => {
+  const parked = number => ({ ...open(number), labels: ["Parked"] });
+  const next = { pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }, { blocked_oracle_ids: ["r"], issues: [3286] }] };
+  let choice = chooseWork({ next, issues: { 3285: parked(3285), 3286: open(3286) } });
+  assert.equal(choice.kind, "engine");
+  assert.equal(choice.gap.issue, 3286);
+  choice = chooseWork({ next, issues: { 3285: parked(3285), 3286: parked(3286) } });
+  assert.equal(choice.kind, "prepare");
+  assert.deepEqual(choice.avoid.map(gap => gap.issue), [3285, 3286]);
+  assert.deepEqual(choice.parked.map(gap => gap.issue), [3285, 3286]);
+  // A parked first sub-issue parks its parent; a parked parent parks its sub-issues.
+  const sub = (number, labels = []) => ({ number, state: "OPEN", title: `Part ${number}`, url: `u/${number}`, labels });
+  const one = { pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
+  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [sub(4001, ["Parked"]), sub(4002)] } } }).kind, "prepare");
+  assert.equal(chooseWork({ next: one, issues: { 3285: { ...parked(3285), subIssues: [sub(4001)] } } }).kind, "prepare");
+  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [sub(4001)] } } }).gap.issue, 4001);
+});
+
 test("Triage ranks defects first, assigns each queued card to one issue and drops unknown cards", () => {
   assert.deepEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
   const issues = [1, 2, 3, 4, 5, 6, 7].map(number => ({ number, title: `Issue ${number}`, labels: number === 7 ? ["Parked"] : [] }));
@@ -1567,7 +1585,7 @@ test("Issue states are batched, keep missing issues absent and fail on other err
   const queries = [];
   const issue = number => ({ number, state: "OPEN", title: `t${number}`, url: `u${number}`,
     labels: { pageInfo: { hasNextPage: false }, nodes: [{ name: "Engine" }] },
-    subIssues: { pageInfo: { hasNextPage: false }, nodes: [{ number: number * 10, state: "CLOSED", title: "s", url: "su" }] } });
+    subIssues: { pageInfo: { hasNextPage: false }, nodes: [{ number: number * 10, state: "CLOSED", title: "s", url: "su", labels: { nodes: [{ name: "Parked" }] } }] } });
   const graphql = async query => {
     queries.push(query);
     const numbers = [...query.matchAll(/i(\d+): issue/g)].map(match => Number(match[1]));
@@ -1580,7 +1598,7 @@ test("Issue states are batched, keep missing issues absent and fail on other err
   assert.equal(Object.keys(issues).length, 19);
   assert.equal(issues[13], undefined);
   assert.deepEqual(issues[2], { number: 2, state: "OPEN", title: "t2", url: "u2", labels: ["Engine"],
-    subIssues: [{ number: 20, state: "CLOSED", title: "s", url: "su" }] });
+    subIssues: [{ number: 20, state: "CLOSED", title: "s", url: "su", labels: ["Parked"] }] });
   await assert.rejects(issueStates("/repo", [1], undefined, async () => ({ data: null, errors: [{ type: "RATE_LIMITED" }] })),
     /Issue state lookup failed/);
   await assert.rejects(issueStates("/repo", [1], undefined, async () => ({ data: { repository: { i1: {

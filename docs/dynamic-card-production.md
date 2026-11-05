@@ -185,7 +185,10 @@ old run, or bypass its workflow-revision guard.
 Known gaps are ordered: open issues labeled `Existing Card Defect` (defects in
 rules already-supported cards use, so they play wrong today) first, then gaps
 by how many queued cards they block, most first. Reviewers add that label when
-they file a pre-existing defect that registered cards hit.
+they file a pre-existing defect that registered cards hit. A gap labeled
+`Parked` (on its issue, its parent or the sub-issue being worked) is never
+selected, since policy 1.25.0. It is reserved for directed work such as an
+epic, and still keeps its blocked cards out of new batches.
 
 ### Backlog triage
 
