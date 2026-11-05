@@ -4,11 +4,9 @@ import (
 	"fmt"
 
 	"github.com/natefinch/council4/mtg/game"
-	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
-	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
@@ -50,20 +48,60 @@ type spliceCastResult struct {
 	manaCosts    []cost.Mana
 }
 
+// spliceCostsPayable reports whether the host spell's total cost, with the
+// given mana splice costs added as additional costs (CR 702.47a), can be paid
+// now or after the caster activates payment-time mana abilities (CR 601.2g).
+type spliceCostsPayable func(spliceCosts []cost.Mana) bool
+
+// proposedSpliceCostsPayable judges splice costs against the cost already
+// proposed for the host (CR 601.2b): the proposed option's total with them,
+// locked as the cast's would be (CR 601.2f), must be payable with the
+// announced Phyrexian payments, now or after activating payment-time mana
+// abilities (CR 601.2g).
+func (e *Engine) proposedSpliceCostsPayable(g *game.Game, request payment.SpellRequest, proposal spellCostProposal) spliceCostsPayable {
+	return func(spliceCosts []cost.Mana) bool {
+		request.SpliceManaCosts = spliceCosts
+		_, ok := e.lockSpellCostProposal(g, request, proposal)
+		return ok
+	}
+}
+
+// routeSpliceCostsPayable judges splice costs for a host whose route and cost
+// option are chosen only after splicing (CR 601.2a-b): some cost option of
+// some route in requests must be payable with them, now or after activating
+// payment-time mana abilities (CR 601.2g).
+func (e *Engine) routeSpliceCostsPayable(g *game.Game, requests []payment.SpellRequest) spliceCostsPayable {
+	if len(requests) == 0 {
+		return func([]cost.Mana) bool { return false }
+	}
+	manual := e.paymentManaWindow(g, requests[0].PlayerID)
+	return func(spliceCosts []cost.Mana) bool {
+		for _, request := range requests {
+			if !castRouteAllowsX(request.Card, request.XValue, request) {
+				continue
+			}
+			request.SpliceManaCosts = spliceCosts
+			if _, feasible := spellCostFeasibility(g, request, manual); feasible {
+				return true
+			}
+		}
+		return false
+	}
+}
+
 // chooseSpliceOntoArcane offers the caster each affordable, legally targetable
 // "Splice onto Arcane" card in hand while an Arcane spell is being cast (CR
 // 702.47). The caster may splice any number of them, in any order; each chosen
 // card is revealed and stays in hand, its splice cost is paid as an additional
 // cost of the host spell, and its spell effects (and targets) are appended to the
-// host spell. When no card is spliced it returns the zero result so the cast is
-// byte-for-byte identical to one with no splice opportunity.
+// host spell. payable judges whether the host's cost with the chosen splice
+// costs can be paid. When no card is spliced it returns the zero result so the
+// cast is byte-for-byte identical to one with no splice opportunity.
 func (e *Engine) chooseSpliceOntoArcane(
 	g *game.Game,
 	playerID game.PlayerID,
 	hostCardID id.ID,
-	hostDef *game.CardDef,
-	cast action.CastSpellAction,
-	permissions []payment.SpellCastPermission,
+	payable spliceCostsPayable,
 	agents [game.NumPlayers]PlayerAgent,
 	log *TurnLog,
 ) spliceCastResult {
@@ -71,7 +109,7 @@ func (e *Engine) chooseSpliceOntoArcane(
 	var selections []spliceSelection
 	for {
 		accumulated := spliceManaCostsOf(selections)
-		candidates := e.eligibleSpliceCandidates(g, playerID, hostCardID, hostDef, cast, permissions, accumulated, chosen)
+		candidates := eligibleSpliceCandidates(g, playerID, hostCardID, payable, accumulated, chosen)
 		if len(candidates) == 0 {
 			break
 		}
@@ -128,16 +166,14 @@ func spliceManaCostsOf(selections []spliceSelection) []cost.Mana {
 
 // eligibleSpliceCandidates gathers the "Splice onto Arcane" cards in the caster's
 // hand that can still be spliced onto the host spell: excluding the host card and
-// any already-chosen splice, requiring a spell ability, requiring the caster to
-// be able to pay the host cost plus every accumulated splice cost plus this one,
-// and requiring at least one legal target combination for the spliced effects.
-func (*Engine) eligibleSpliceCandidates(
+// any already-chosen splice, requiring a spell ability, requiring payable to
+// accept the host cost plus every accumulated splice cost plus this one, and
+// requiring at least one legal target combination for the spliced effects.
+func eligibleSpliceCandidates(
 	g *game.Game,
 	playerID game.PlayerID,
 	hostCardID id.ID,
-	hostDef *game.CardDef,
-	cast action.CastSpellAction,
-	permissions []payment.SpellCastPermission,
+	payable spliceCostsPayable,
 	accumulated []cost.Mana,
 	chosen map[id.ID]bool,
 ) []spliceCandidate {
@@ -161,19 +197,7 @@ func (*Engine) eligibleSpliceCandidates(
 			continue
 		}
 		combined := append(append([]cost.Mana(nil), accumulated...), append(cost.Mana(nil), spliceCost...))
-		if !paymentOrch.canPaySpellCosts(g, payment.SpellRequest{
-			PlayerID:        playerID,
-			CardID:          hostCardID,
-			SourceZone:      zone.Hand,
-			Card:            hostDef,
-			XValue:          cast.XValue,
-			KickerPaid:      cast.KickerPaid,
-			KickerCount:     cast.KickerCount,
-			ChosenModes:     cast.ChosenModes,
-			CastPermissions: permissions,
-			Targets:         cast.Targets,
-			SpliceManaCosts: combined,
-		}) {
+		if !payable(combined) {
 			continue
 		}
 		result := targetChoicesForSpell(g, playerID, def, nil, game.CastBranch{})

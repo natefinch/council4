@@ -455,7 +455,8 @@ func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, contr
 	}
 	var splice spliceCastResult
 	if cast.SourceZone == zone.Hand && spellIsArcane(spellDef) {
-		splice = e.chooseSpliceOntoArcane(g, controllerID, card.ID, spellDef, cast, nil, agents, log)
+		payable := e.proposedSpliceCostsPayable(g, freeCastCostRequest(controllerID, spellDef, cast), proposal)
+		splice = e.chooseSpliceOntoArcane(g, controllerID, card.ID, payable, agents, log)
 	}
 	obj := &game.StackObject{
 		ID:                            g.IDGen.Next(),

@@ -254,9 +254,14 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	// splice costs as additional costs, and append their spell effects to this
 	// spell. Overloaded casts and non-Arcane spells are never spliceable. When no
 	// card is spliced these are all nil, leaving the cast unchanged.
+	// Each splice cost is judged with the host's own cost as this cast pays it.
 	if sourceZone == zone.Hand && !cast.Overloaded && spellIsArcane(spellDef) {
-		splicePermissions := castPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
-		splice = e.chooseSpliceOntoArcane(g, playerID, card.ID, spellDef, cast, splicePermissions, agents, log)
+		hostRequests := mode.castRouteRequests(priorityCastRequest(playerID, spellDef, sourceZone, cast, permissions, nil), castRoutes)
+		payable := e.routeSpliceCostsPayable(g, hostRequests)
+		if proposed {
+			payable = e.proposedSpliceCostsPayable(g, hostRequests[route], proposal)
+		}
+		splice = e.chooseSpliceOntoArcane(g, playerID, card.ID, payable, agents, log)
 	}
 
 	// CR 601.2a: proposing a cast first moves the card from its source zone to
