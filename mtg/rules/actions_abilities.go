@@ -81,7 +81,7 @@ func (e *Engine) applyPermanentAbilityWithChoices(g *game.Game, playerID game.Pl
 		if len(activate.Targets) != 0 || len(activate.TargetCounts) != 0 || activate.XValue != 0 || len(activate.ChosenModes) != 0 {
 			return actionFailed
 		}
-		prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
+		prefs := e.paymentPreferencesForPermanentCost(g, playerID, permanent, manaCostPtr(manaBody.ManaCost), abilityAdditionalCosts(manaBody.AdditionalCosts), 0, agents, log)
 		manaSource := captureManaProducedSource(g, permanent)
 		eventsBeforePayment := len(g.Events)
 		costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
@@ -205,7 +205,7 @@ func (e *Engine) applyPermanentAbilityWithChoices(g *game.Game, playerID game.Pl
 	if hasTapCostOf(additionalCosts) {
 		tapExclusions = append(tapExclusions, permanent.ObjectID)
 	}
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCostPtr(manaCost), additionalCosts, activate.XValue, agents, log, tapExclusions...)
+	prefs := e.paymentPreferencesForPermanentCost(g, playerID, permanent, manaCostPtr(manaCost), additionalCosts, activate.XValue, agents, log, tapExclusions...)
 	costPaid, ok := paymentOrch.payAbilityCosts(g, payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,

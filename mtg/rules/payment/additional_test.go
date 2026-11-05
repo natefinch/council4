@@ -500,7 +500,7 @@ func TestPlanRemoveCounterAmongHonorsPreference(t *testing.T) {
 	second.Counters.Add(counter.PlusOnePlusOne, 3)
 	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
 	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, CounterKind: counter.PlusOnePlusOne}
-	prefs := &Preferences{RemoveCounterChoices: []id.ID{2, 2}}
+	prefs := &Preferences{RemoveCounterChoices: []CounterRemovalChoice{{Permanent: 2, Kind: counter.PlusOnePlusOne}, {Permanent: 2, Kind: counter.PlusOnePlusOne}}}
 
 	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, prefs)
 	if !ok || len(removals) != 1 || removals[0].source != second || removals[0].amount != 2 {
@@ -542,7 +542,7 @@ func TestPlanRemoveCounterAmongInvalidPreferenceFallsBack(t *testing.T) {
 
 	// Default policy: a stale preference falls back to a deterministic legal
 	// removal rather than rejecting the payment.
-	prefs := &Preferences{RemoveCounterChoices: []id.ID{999}}
+	prefs := &Preferences{RemoveCounterChoices: []CounterRemovalChoice{{Permanent: 999, Kind: counter.PlusOnePlusOne}}}
 	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, prefs)
 	if !ok {
 		t.Fatal("planRemoveCounterAmong with stale preference = !ok, want fallback to deterministic removal")
@@ -553,7 +553,7 @@ func TestPlanRemoveCounterAmongInvalidPreferenceFallsBack(t *testing.T) {
 
 	// Strict replay: a stale preference rejects the payment instead of
 	// substituting a different choice.
-	strict := &Preferences{RemoveCounterChoices: []id.ID{999}, StrictReplay: true}
+	strict := &Preferences{RemoveCounterChoices: []CounterRemovalChoice{{Permanent: 999, Kind: counter.PlusOnePlusOne}}, StrictReplay: true}
 	if removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, strict); ok {
 		t.Fatalf("removals = %#v ok = true, want strict replay to reject invalid preference", removals)
 	}
@@ -581,7 +581,7 @@ func TestPlanRemoveCounterAmongAnyKindHonorsPreference(t *testing.T) {
 	second.Counters.Add(counter.Charge, 2)
 	state := fakePaymentState{battlefield: []*game.Permanent{first, second}}
 	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, AnyCounterKind: true}
-	prefs := &Preferences{RemoveCounterChoices: []id.ID{2, 2}}
+	prefs := &Preferences{RemoveCounterChoices: []CounterRemovalChoice{{Permanent: 2, Kind: counter.Charge}, {Permanent: 2, Kind: counter.Charge}}}
 
 	removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 2, nil, prefs)
 	if !ok || len(removals) != 1 || removals[0].source != second || removals[0].kind != counter.Charge || removals[0].amount != 2 {
@@ -645,6 +645,108 @@ func TestPlanRemoveCounterFromSourceReservesPlannedCounters(t *testing.T) {
 
 	if removals, ok := planRemoveCounterFromSource(source, 1, planned); ok {
 		t.Fatalf("removals = %#v ok = true, want failure once the only counter is reserved", removals)
+	}
+}
+
+// TestPlanRemoveCounterAmongAnyKindHonorsChosenKind proves an any-kind
+// among-removal preference removes the chosen kind even when another kind on
+// the same permanent sorts first (issue #3652).
+func TestPlanRemoveCounterAmongAnyKindHonorsChosenKind(t *testing.T) {
+	siege := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	siege.Counters.Add(counter.Charge, 1)
+	siege.Counters.Add(counter.Defense, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{siege}}
+	additional := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 1, AnyCounterKind: true}
+	for _, kind := range []counter.Kind{counter.Charge, counter.Defense} {
+		prefs := &Preferences{RemoveCounterChoices: []CounterRemovalChoice{{Permanent: 1, Kind: kind}}, StrictReplay: true}
+		removals, ok := planRemoveCounterAmong(state, game.Player1, additional, 1, nil, prefs)
+		if !ok || len(removals) != 1 || removals[0].source != siege || removals[0].kind != kind || removals[0].amount != 1 {
+			t.Fatalf("removals = %#v ok = %t, want one %s counter", removals, ok, kind)
+		}
+	}
+}
+
+// TestPlanRemoveCounterAmongRejectsIllegalKindChoice proves a recorded kind
+// that the cost can't take, or that has no unreserved counter left, is an
+// invalid preference: strict replay rejects it and the default policy falls
+// back to a legal deterministic removal.
+func TestPlanRemoveCounterAmongRejectsIllegalKindChoice(t *testing.T) {
+	permanent := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	permanent.Counters.Add(counter.PlusOnePlusOne, 1)
+	permanent.Counters.Add(counter.Charge, 1)
+	state := fakePaymentState{battlefield: []*game.Permanent{permanent}}
+	specific := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 1, CounterKind: counter.PlusOnePlusOne}
+	anyKind := cost.Additional{Kind: cost.AdditionalRemoveCounterAmong, Amount: 2, AnyCounterKind: true}
+	for _, tc := range []struct {
+		name       string
+		additional cost.Additional
+		choices    []CounterRemovalChoice
+		planned    []counterRemoval
+	}{
+		{"wrong kind for kind-specific cost", specific, []CounterRemovalChoice{{Permanent: 1, Kind: counter.Charge}}, nil},
+		{"absent kind", anyKind, []CounterRemovalChoice{{Permanent: 1, Kind: counter.Defense}, {Permanent: 1, Kind: counter.Charge}}, nil},
+		{"same counter twice", anyKind, []CounterRemovalChoice{{Permanent: 1, Kind: counter.Charge}, {Permanent: 1, Kind: counter.Charge}}, nil},
+		{"reserved counter", specific, []CounterRemovalChoice{{Permanent: 1, Kind: counter.PlusOnePlusOne}}, []counterRemoval{{source: permanent, kind: counter.PlusOnePlusOne, amount: 1}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			amount := AdditionalCostAmount(tc.additional)
+			strict := &Preferences{RemoveCounterChoices: tc.choices, StrictReplay: true}
+			if removals, ok := planRemoveCounterAmong(state, game.Player1, tc.additional, amount, tc.planned, strict); ok {
+				t.Fatalf("strict removals = %#v, want rejection", removals)
+			}
+			if tc.planned != nil {
+				return
+			}
+			removals, ok := planRemoveCounterAmong(state, game.Player1, tc.additional, amount, nil, &Preferences{RemoveCounterChoices: tc.choices})
+			if !ok || removeCounterAmongTotal(removals) != amount {
+				t.Fatalf("fallback removals = %#v ok = %t, want %d legal counters", removals, ok, amount)
+			}
+			for _, removal := range removals {
+				if !tc.additional.AnyCounterKind && removal.kind != counter.PlusOnePlusOne {
+					t.Fatalf("fallback removed %s, want only the named kind", removal.kind)
+				}
+			}
+		})
+	}
+}
+
+// TestPlanRemoveAnyCounterFromSourceHonorsChosenKinds proves the source's
+// any-kind removal takes the kinds the payer chose, consumes them, and treats a
+// stale choice under the uniform invalid-preference policy.
+func TestPlanRemoveAnyCounterFromSourceHonorsChosenKinds(t *testing.T) {
+	source := &game.Permanent{ObjectID: 1, Controller: game.Player1}
+	source.Counters.Add(counter.MinusOneMinusOne, 2)
+	source.Counters.Add(counter.Charge, 1)
+
+	prefs := &Preferences{SourceCounterKindChoices: []counter.Kind{counter.Charge, counter.MinusOneMinusOne}, StrictReplay: true}
+	removals, ok := planRemoveAnyCounterFromSource(source, 2, nil, prefs)
+	if !ok || len(removals) != 2 || removals[0].kind != counter.Charge || removals[1].kind != counter.MinusOneMinusOne ||
+		removals[0].amount != 1 || removals[1].amount != 1 || len(prefs.SourceCounterKindChoices) != 0 {
+		t.Fatalf("removals = %#v ok = %t remaining = %v, want one charge and one -1/-1 counter consumed", removals, ok, prefs.SourceCounterKindChoices)
+	}
+
+	stale := []counter.Kind{counter.Charge, counter.Charge}
+	if removals, ok := planRemoveAnyCounterFromSource(source, 2, nil, &Preferences{SourceCounterKindChoices: stale, StrictReplay: true}); ok {
+		t.Fatalf("strict removals = %#v, want rejection of a second charge counter", removals)
+	}
+	removals, ok = planRemoveAnyCounterFromSource(source, 2, nil, &Preferences{SourceCounterKindChoices: stale})
+	if !ok || removeCounterAmongTotal(removals) != 2 {
+		t.Fatalf("fallback removals = %#v ok = %t, want two legal counters", removals, ok)
+	}
+}
+
+// TestClonePreferencesCopiesCounterChoices proves recorded counter-removal
+// choices are copied, not shared, so planning one clone can't consume another's.
+func TestClonePreferencesCopiesCounterChoices(t *testing.T) {
+	prefs := &Preferences{
+		RemoveCounterChoices:     []CounterRemovalChoice{{Permanent: 1, Kind: counter.Defense}},
+		SourceCounterKindChoices: []counter.Kind{counter.Charge},
+	}
+	cloned := clonePreferences(prefs)
+	cloned.RemoveCounterChoices[0].Kind = counter.Charge
+	cloned.SourceCounterKindChoices[0] = counter.Defense
+	if prefs.RemoveCounterChoices[0].Kind != counter.Defense || prefs.SourceCounterKindChoices[0] != counter.Charge {
+		t.Fatalf("original preferences = %+v, want unchanged after editing the clone", prefs)
 	}
 }
 

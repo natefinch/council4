@@ -155,7 +155,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			if additional.AnyCounterKind {
-				removals, ok := planRemoveCounterFromSource(source, amount, plan.counterRemovals)
+				removals, ok := planRemoveAnyCounterFromSource(source, amount, plan.counterRemovals, prefs)
 				if !ok {
 					return plan, false
 				}
