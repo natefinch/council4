@@ -40,15 +40,15 @@ func newBattleAtTheHelvault() *game.CardDef {
 					Content: game.AbilityContent{
 						Modes: []game.Mode{
 							game.Mode{
+								Targets: game.PlayerSlotTargetSpecs(game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludedSubtype: types.Saga}),
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.ForEachPlayer{
 											Scope:             game.AllPlayersReference(),
-											Chooser:           game.ControllerReference(),
-											Selection:         game.Selection{ExcludedTypes: []types.Card{types.Land}, ExcludedSubtype: types.Saga},
 											Removal:           game.DistributiveRemovalExile,
 											LinkedKey:         game.LinkedKey("exile-until-leaves"),
 											UntilSourceLeaves: true,
+											Targeted:          true,
 										},
 									},
 								},

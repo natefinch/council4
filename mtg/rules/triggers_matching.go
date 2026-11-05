@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -32,6 +33,11 @@ func sourceEntryChosenManaColor(source *game.Permanent) (mana.Color, bool) {
 // ok=false when the ability has targets but no legal set of targets can be
 // chosen, so the caller removes the ability from the stack (CR 603.3d).
 func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+	if modesValidForBody(ability, chosenModes) {
+		if specs := bodyTargetSpecs(ability, chosenModes); playerSlotTargetSpecs(specs) {
+			return e.choosePlayerSlotTargets(g, controller, source, sourceObjectID, triggerEvent, specs, agents, log), true
+		}
+	}
 	result := targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, triggerEvent, ability, chosenModes)
 	switch result.kind {
 	case targetNoLegalChoices, targetInvalidSpec:
@@ -48,6 +54,51 @@ func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *
 		return append([]game.Target(nil), choices[0]...), true
 	}
 	return append([]game.Target(nil), choices[selected[0]]...), true
+}
+
+// playerSlotTargetSpecs reports whether specs are all per-player "up to one
+// target ... that player controls" slots (game.PlayerSlotTargetSpecs).
+func playerSlotTargetSpecs(specs []game.TargetSpec) bool {
+	if len(specs) == 0 {
+		return false
+	}
+	for i := range specs {
+		if !specs[i].ControlledBy.Exists || specs[i].MinTargets != 0 || specs[i].MaxTargets != 1 {
+			return false
+		}
+	}
+	return true
+}
+
+// choosePlayerSlotTargets announces per-player target slots one player at a
+// time (CR 601.2c via 603.3d). Each slot only accepts a permanent that its
+// player controls, and a permanent has exactly one controller, so the slots are
+// independent: announcing them in sequence offers exactly the legal
+// combinations without enumerating their product, which grows with every
+// player's board. Each slot is optional ("up to one"), so an empty slot is
+// always legal and the ability is never removed for lack of targets.
+func (e *Engine) choosePlayerSlotTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, specs []game.TargetSpec, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []game.Target {
+	var targets []game.Target
+	for i := range specs {
+		spec := normalizeTargetSpecForEvent(&specs[i], triggerEvent)
+		candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, triggerEvent, &spec)
+		if len(candidates) == 0 {
+			continue
+		}
+		choices := make([][]game.Target, 0, len(candidates)+1)
+		for _, candidate := range candidates {
+			choices = append(choices, []game.Target{candidate})
+		}
+		choices = append(choices, nil)
+		prompt := fmt.Sprintf("Choose up to one target permanent player %d controls.", int(spec.ControlledBy.Val)+1)
+		selected := e.chooseChoice(g, agents, targetChoiceRequest(controller, prompt, choices), log)
+		index := 0
+		if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(choices) {
+			index = selected[0]
+		}
+		targets = append(targets, choices[index]...)
+	}
+	return targets
 }
 
 func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.TriggerPattern, event game.Event) bool {

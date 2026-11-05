@@ -373,6 +373,9 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 	if !ok || permanent.PhasedOut {
 		return false
 	}
+	if spec.ControlledBy.Exists && effectiveController(g, permanent) != spec.ControlledBy.Val {
+		return false
+	}
 	sel := targetSelection(spec)
 	if !sel.Empty() {
 		values := effectivePermanentValues(g, permanent)

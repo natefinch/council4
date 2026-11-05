@@ -32,6 +32,13 @@ func handleForEachPlayer(r *effectResolver, prim game.ForEachPlayer) effectResol
 	if prim.ReplaceLink {
 		clearLinkedObjects(r.game, key)
 	}
+	if prim.Targeted {
+		choices := targetedDistributiveChoices(r, prim.Scope)
+		if len(choices) > 0 && applyDistributiveRemovalBatch(r, prim.Removal, choices, key, until) {
+			res.succeeded = true
+		}
+		return res
+	}
 	prompt := "Choose a permanent to exile"
 	if prim.Removal == game.DistributiveRemovalDestroy {
 		prompt = "Choose a permanent to destroy"
@@ -81,6 +88,34 @@ func handleForEachPlayer(r *effectResolver, prim game.ForEachPlayer) effectResol
 		res.succeeded = true
 	}
 	return res
+}
+
+// targetedDistributiveChoices collects the still-legal announced targets of a
+// targeted ForEachPlayer in the APNAP order of scope, each linked with the
+// player whose slot it fills. Targets that became illegal before resolution
+// (CR 608.2b) are not resolved by resolveObject and are skipped, as is any
+// target whose controller is no longer in scope.
+func targetedDistributiveChoices(r *effectResolver, scope game.PlayerGroupReference) []distributiveChoice {
+	byController := make(map[game.PlayerID][]*game.Permanent, len(r.obj.Targets))
+	seen := make(map[game.ObjectID]bool, len(r.obj.Targets))
+	for i := range r.obj.Targets {
+		permanent, ok := r.resolveObject(game.TargetPermanentReference(i))
+		if !ok || seen[permanent.ObjectID] {
+			continue
+		}
+		seen[permanent.ObjectID] = true
+		controller := effectiveController(r.game, permanent)
+		byController[controller] = append(byController[controller], permanent)
+	}
+	var choices []distributiveChoice
+	for _, playerID := range playersInAPNAPOrder(r.game, r.playerGroupMembers(scope)) {
+		for _, permanent := range byController[playerID] {
+			linkedRef := permanentObjectBindingRef(permanent)
+			linkedRef.CorrelatedPlayer = opt.Val(playerID)
+			choices = append(choices, distributiveChoice{permanent: permanent, ref: linkedRef})
+		}
+	}
+	return choices
 }
 
 // distributiveChoice pairs a chosen permanent with the linked reference to
