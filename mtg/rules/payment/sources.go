@@ -1,8 +1,8 @@
 package payment
 
 import (
+	"reflect"
 	"slices"
-	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
 
@@ -70,17 +70,6 @@ func permanentManaOutputs(s State, permanent *game.Permanent) []permanentManaOut
 	controller := s.EffectiveController(permanent)
 	multiplier := s.ManaProductionMultiplier(controller)
 	fromCreature := s.PermanentHasType(permanent, types.Creature)
-	// The intrinsic basic-land ability (CR 305.6) has {T} in its cost, so an
-	// animated land obeys the summoning-sickness rule (CR 302.6, 702.10c).
-	if c, ok := basicLandManaColor(s, permanent); ok && summoningSicknessAllowsAbilityCost(s, permanent) {
-		outputs = append(outputs, permanentManaOutputResult{
-			color:        c,
-			amount:       multiplyTappedManaAmount(1, false, multiplier),
-			snow:         s.PermanentHasSupertype(permanent, types.Snow),
-			fromCreature: fromCreature,
-			abilityIndex: -1,
-		})
-	}
 	abilities := paymentManaAbilities(s, controller, permanent)
 	for _, ability := range abilities {
 		for _, color := range ability.colors {
@@ -126,17 +115,38 @@ func appendUniquePermanentManaOutput(outputs []permanentManaOutputResult, candid
 	return append(outputs, candidate)
 }
 
-func basicLandManaColor(s State, permanent *game.Permanent) (mana.Color, bool) {
-	card, ok := s.PermanentCardDef(permanent)
-	if !ok || !card.HasType(types.Land) {
-		return "", false
-	}
+// effectiveBasicLandManaColors returns the color of each basic land type the
+// permanent currently has (CR 305.6), in WUBRG order.
+func effectiveBasicLandManaColors(s State, permanent *game.Permanent) []mana.Color {
+	var colors []mana.Color
 	for _, landType := range basicLandTypes {
-		if card.HasSubtype(landType.subtype) || strings.EqualFold(card.Name, string(landType.subtype)) {
-			return landType.color, true
+		if s.PermanentHasSubtype(permanent, landType.subtype) {
+			colors = append(colors, landType.color)
 		}
 	}
-	return "", false
+	return colors
+}
+
+// intrinsicLandManaChoiceOutput recognizes an effective "{T}: Add {U} or {B}."
+// ability that states the intrinsic mana abilities of a land's basic land types
+// (CR 305.6), such as a dual land's reminder text. It is recognized only while
+// the permanent still has every basic land type the choice names, so an ability
+// removed by type-setting (CR 305.7) or ability-removing effects stays removed.
+func intrinsicLandManaChoiceOutput(s State, permanent *game.Permanent, body *game.ManaAbility) (paymentManaOutput, bool) {
+	colors, amount, ok := game.ManaAbilityChoiceOutput(body)
+	if !ok || !s.PermanentHasType(permanent, types.Land) {
+		return paymentManaOutput{}, false
+	}
+	landColors := effectiveBasicLandManaColors(s, permanent)
+	for _, c := range colors {
+		if !slices.Contains(landColors, c) {
+			return paymentManaOutput{}, false
+		}
+	}
+	if !reflect.DeepEqual(*body, game.TapManaChoiceAbility(colors...)) {
+		return paymentManaOutput{}, false
+	}
+	return paymentManaOutput{colors: slices.Clone(colors), amount: amount}, true
 }
 
 var basicLandTypes = []struct {
@@ -158,6 +168,9 @@ func paymentManaAbilities(s State, playerID game.PlayerID, permanent *game.Perma
 			continue
 		}
 		output, ok := paymentManaAbilityOutput(body)
+		if !ok {
+			output, ok = intrinsicLandManaChoiceOutput(s, permanent, body)
+		}
 		if !ok {
 			continue
 		}

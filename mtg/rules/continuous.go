@@ -355,6 +355,7 @@ func basePermanentValues(g *game.Game, permanent *game.Permanent) permanentEffec
 			Face: permanent.Face, BodyIndex: i,
 		})
 	}
+	appendUndeclaredBasicLandManaAbilities(&values, card)
 	for _, component := range permanent.MergedCards {
 		if component.FaceDown {
 			if component.FaceDownKind == game.FaceDownDisguise || component.FaceDownKind == game.FaceDownCloak {
@@ -1839,8 +1840,16 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 	values.types = removeTypes(values.types, effect.RemoveTypes)
 	values.types = appendUniqueTypes(values.types, effect.AddTypes...)
 
+	setBasicLandTypes := effect.SetBasicLandTypes
+	setsLandToBasicType := false
 	if effect.SetSubtypes != nil {
-		values.subtypes = append([]types.Sub(nil), effect.SetSubtypes...)
+		setsLandToBasicType = slices.Contains(values.types, types.Land) && setSubtypesIncludeBasicLandType(effect)
+		if setsLandToBasicType && len(setBasicLandTypes) == 0 && effect.SetTypes == nil && allLandSubtypes(effect.SetSubtypes) {
+			// CR 205.1a: setting only land subtypes replaces only land types.
+			setBasicLandTypes = effect.SetSubtypes
+		} else {
+			values.subtypes = append([]types.Sub(nil), effect.SetSubtypes...)
+		}
 	}
 	values.subtypes = removeSubtypes(values.subtypes, effect.RemoveSubtypes)
 	values.subtypes = appendUniqueSubtypes(values.subtypes, effect.AddSubtypes...)
@@ -1869,12 +1878,18 @@ func applyTypeLayer(g *game.Game, values *permanentEffectiveValues, effect *game
 		}
 		values.subtypes = appendUniqueSubtypes(filtered, choice.Subtype)
 	}
-	if len(effect.SetBasicLandTypes) > 0 && slices.Contains(values.types, types.Land) {
+	if len(setBasicLandTypes) > 0 && slices.Contains(values.types, types.Land) {
 		landTypes := types.SubtypesForType(types.Land)
 		values.subtypes = slices.DeleteFunc(values.subtypes, func(subtype types.Sub) bool {
 			return slices.Contains(landTypes, subtype)
 		})
-		values.subtypes = appendUniqueSubtypes(values.subtypes, effect.SetBasicLandTypes...)
+		values.subtypes = appendUniqueSubtypes(values.subtypes, setBasicLandTypes...)
+		setsLandToBasicType = true
+	}
+	// CR 305.7: a land whose subtype is set to a basic land type loses the
+	// abilities from its rules text, old land types and copiable effects and
+	// gains each new basic type's mana ability. Later grants still apply.
+	if setsLandToBasicType && slices.Contains(values.types, types.Land) {
 		values.abilities = nil
 		values.resolutionUses = nil
 		values.triggerOrigins = nil
@@ -1916,18 +1931,50 @@ func applyAddedBasicLandManaAbilities(values *permanentEffectiveValues, baseSubt
 		return
 	}
 	for _, subtype := range values.subtypes {
-		manaColor, ok := basicLandSubtypeManaColor(subtype)
-		if !ok || slices.Contains(baseSubtypes, subtype) {
-			continue
+		if !slices.Contains(baseSubtypes, subtype) {
+			appendBasicLandManaAbility(values, subtype)
 		}
-		ability := game.TapManaAbility(manaColor)
-		if slices.ContainsFunc(values.abilities, func(existing game.Ability) bool {
-			body, ok := existing.(*game.ManaAbility)
-			return ok && reflect.DeepEqual(*body, ability)
-		}) {
-			continue
+	}
+}
+
+// appendBasicLandManaAbility adds the intrinsic "{T}: Add [mana]." ability of a
+// basic land subtype (CR 305.6) unless the permanent already has it.
+func appendBasicLandManaAbility(values *permanentEffectiveValues, subtype types.Sub) {
+	manaColor, ok := basicLandSubtypeManaColor(subtype)
+	if !ok {
+		return
+	}
+	ability := game.TapManaAbility(manaColor)
+	if slices.ContainsFunc(values.abilities, func(existing game.Ability) bool {
+		body, ok := existing.(*game.ManaAbility)
+		return ok && reflect.DeepEqual(*body, ability)
+	}) {
+		return
+	}
+	values.abilities = append(values.abilities, &ability)
+}
+
+// appendUndeclaredBasicLandManaAbilities supplies, as printed abilities, the
+// intrinsic mana ability of each basic land type on a land face that doesn't
+// declare its mana abilities (CR 305.6). A face with no subtypes that is named
+// for a basic land type has that type's ability. Like a declared reminder
+// ability, these abilities are removed by type-setting (CR 305.7) and by
+// ability-removing effects (CR 613.1f), so every reader of the permanent's
+// effective abilities, including automatic payment, sees the same result.
+func appendUndeclaredBasicLandManaAbilities(values *permanentEffectiveValues, card *game.CardDef) {
+	if !card.HasType(types.Land) || len(card.ManaAbilities) > 0 {
+		return
+	}
+	landTypes := card.Subtypes
+	if len(landTypes) == 0 {
+		for _, subtype := range basicLandSubtypes {
+			if strings.EqualFold(card.Name, string(subtype)) {
+				landTypes = []types.Sub{subtype}
+			}
 		}
-		values.abilities = append(values.abilities, &ability)
+	}
+	for _, subtype := range landTypes {
+		appendBasicLandManaAbility(values, subtype)
 	}
 }
 
