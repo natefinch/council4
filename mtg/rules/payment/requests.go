@@ -3,6 +3,7 @@ package payment
 import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -135,11 +136,15 @@ type Preferences struct {
 	ExileChoices         []id.ID
 	RevealChoices        []id.ID
 	EvidenceChoices      []id.ID
-	// RemoveCounterChoices lists the permanents chosen to lose counters for an
-	// AdditionalRemoveCounterAmong cost, one entry per counter removed. The same
-	// permanent may appear multiple times when several of its counters are
-	// removed.
-	RemoveCounterChoices []id.ID
+	// RemoveCounterChoices lists the counters chosen for an
+	// AdditionalRemoveCounterAmong cost, one entry per counter removed, each
+	// naming both the permanent and the counter kind. The same permanent and
+	// kind may appear multiple times when several such counters are removed.
+	RemoveCounterChoices []CounterRemovalChoice
+	// SourceCounterKindChoices lists the kinds chosen, one entry per counter
+	// removed, for the source's any-kind AdditionalRemoveCounter costs ("remove
+	// a counter from this creature"), in cost order.
+	SourceCounterKindChoices []counter.Kind
 	// StrictReplay selects the strict invalid-preference policy. By default an
 	// additional cost whose recorded preference is stale or now illegal falls
 	// back to a deterministic legal selection so play continues; under strict
@@ -152,6 +157,15 @@ type Preferences struct {
 	// Phyrexian symbol the caster announced as a mana payment (CR 601.2b) that
 	// no effect lets them pay with life, so it can't be paid with 2 life.
 	PhyrexianManaOnly []bool
+}
+
+// CounterRemovalChoice names one counter the payer chose to remove for a
+// counter-removal cost: a counter of Kind on the permanent with object ID
+// Permanent. Recording the kind keeps an any-kind cost's choice exact when the
+// permanent carries several kinds (CR 601.2h).
+type CounterRemovalChoice struct {
+	Permanent id.ID
+	Kind      counter.Kind
 }
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.
@@ -241,18 +255,19 @@ func clonePreferences(prefs *Preferences) *Preferences {
 		return nil
 	}
 	return &Preferences{
-		AlternativeIndex:     prefs.AlternativeIndex,
-		PhyrexianLifeChoices: append([]bool(nil), prefs.PhyrexianLifeChoices...),
-		PhyrexianManaOnly:    append([]bool(nil), prefs.PhyrexianManaOnly...),
-		phyrexianIndex:       prefs.phyrexianIndex,
-		SacrificeChoices:     append([]id.ID(nil), prefs.SacrificeChoices...),
-		TapChoices:           append([]id.ID(nil), prefs.TapChoices...),
-		ReturnChoices:        append([]id.ID(nil), prefs.ReturnChoices...),
-		DiscardChoices:       append([]id.ID(nil), prefs.DiscardChoices...),
-		ExileChoices:         append([]id.ID(nil), prefs.ExileChoices...),
-		RevealChoices:        append([]id.ID(nil), prefs.RevealChoices...),
-		EvidenceChoices:      append([]id.ID(nil), prefs.EvidenceChoices...),
-		RemoveCounterChoices: append([]id.ID(nil), prefs.RemoveCounterChoices...),
-		StrictReplay:         prefs.StrictReplay,
+		AlternativeIndex:         prefs.AlternativeIndex,
+		PhyrexianLifeChoices:     append([]bool(nil), prefs.PhyrexianLifeChoices...),
+		PhyrexianManaOnly:        append([]bool(nil), prefs.PhyrexianManaOnly...),
+		phyrexianIndex:           prefs.phyrexianIndex,
+		SacrificeChoices:         append([]id.ID(nil), prefs.SacrificeChoices...),
+		TapChoices:               append([]id.ID(nil), prefs.TapChoices...),
+		ReturnChoices:            append([]id.ID(nil), prefs.ReturnChoices...),
+		DiscardChoices:           append([]id.ID(nil), prefs.DiscardChoices...),
+		ExileChoices:             append([]id.ID(nil), prefs.ExileChoices...),
+		RevealChoices:            append([]id.ID(nil), prefs.RevealChoices...),
+		EvidenceChoices:          append([]id.ID(nil), prefs.EvidenceChoices...),
+		RemoveCounterChoices:     append([]CounterRemovalChoice(nil), prefs.RemoveCounterChoices...),
+		SourceCounterKindChoices: append([]counter.Kind(nil), prefs.SourceCounterKindChoices...),
+		StrictReplay:             prefs.StrictReplay,
 	}
 }

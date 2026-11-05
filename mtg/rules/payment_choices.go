@@ -9,12 +9,22 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
 	return e.paymentPreferencesForCostFromSource(g, playerID, manaCost, additionalCosts, xValue, 0, zone.None, agents, log, tapExclusions...)
+}
+
+// paymentPreferencesForPermanentCost is paymentPreferencesForCost for a cost
+// whose source is a permanent, which also takes the kinds removed by the
+// source's any-kind "remove a counter from this permanent" costs.
+func (e *Engine) paymentPreferencesForPermanentCost(g *game.Game, playerID game.PlayerID, source *game.Permanent, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
+	prefs := e.paymentPreferencesForCost(g, playerID, manaCost, additionalCosts, xValue, agents, log, tapExclusions...)
+	prefs.SourceCounterKindChoices = e.sourceCounterKindChoices(g, playerID, source, additionalCosts, xValue, agents, log)
+	return prefs
 }
 
 func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
@@ -344,20 +354,22 @@ func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.Play
 
 // additionalCostRemoveCounterAmongChoices gathers the per-counter selection for
 // an AdditionalRemoveCounterAmong cost. Each removable counter on a matching
-// controlled permanent becomes one selectable option, so the player may take
-// several counters from the same permanent. The returned slice names one
-// permanent per counter removed.
-func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []id.ID {
+// controlled permanent becomes one selectable option naming its permanent and
+// kind, so the player may take several counters from the same permanent and
+// choose which kind an any-kind cost removes (CR 601.2h). The returned slice
+// names one permanent and kind per counter removed.
+func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []payment.CounterRemovalChoice {
 	if amount <= 0 {
 		return nil
 	}
-	candidates := candidateSacrificePermanents(g, playerID, addCost, nil)
-	var expanded []id.ID
-	options := make([]game.ChoiceOption, 0, len(candidates))
-	for _, permanent := range candidates {
-		for range payment.RemovableAmongCounterCount(permanent, addCost) {
-			options = append(options, game.ChoiceOption{Index: len(expanded), Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)})
-			expanded = append(expanded, permanent.ObjectID)
+	var expanded []payment.CounterRemovalChoice
+	var options []game.ChoiceOption
+	for _, permanent := range candidateSacrificePermanents(g, playerID, addCost, nil) {
+		for _, kind := range payment.RemovableCounterKinds(permanent, addCost) {
+			for range permanent.Counters.Get(kind) {
+				options = append(options, game.ChoiceOption{Index: len(expanded), Label: counterChoiceLabel(permanentChoiceLabel(g, permanent), kind), Card: permanentChoiceInfo(g, permanent)})
+				expanded = append(expanded, payment.CounterRemovalChoice{Permanent: permanent.ObjectID, Kind: kind})
+			}
 		}
 	}
 	if len(expanded) <= amount {
@@ -373,7 +385,7 @@ func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID 
 		DefaultSelection: firstChoiceIndices(amount),
 	}
 	selected := e.chooseChoice(g, agents, request, log)
-	result := make([]id.ID, 0, len(selected))
+	result := make([]payment.CounterRemovalChoice, 0, len(selected))
 	for _, index := range selected {
 		if index < 0 || index >= len(expanded) {
 			continue
@@ -381,6 +393,74 @@ func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID 
 		result = append(result, expanded[index])
 	}
 	return result
+}
+
+// sourceCounterKindChoices gathers, in cost order, the kind of each counter the
+// player removes from source for its any-kind "remove N counters from this
+// permanent" costs (CR 601.2h). Counters claimed by the source's kind-specific
+// removal costs are set aside first. The player is asked only when the source
+// carries more than one removable kind and more counters than the cost removes.
+func (e *Engine) sourceCounterKindChoices(g *game.Game, playerID game.PlayerID, source *game.Permanent, additionalCosts []cost.Additional, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []counter.Kind {
+	if source == nil {
+		return nil
+	}
+	amounts := make([]int, len(additionalCosts))
+	reserved := map[counter.Kind]int{}
+	for i, additionalCost := range additionalCosts {
+		amounts[i] = payment.AdditionalCostAmountFor(additionalCost, xValue)
+		if additionalCost.AmountDynamic != cost.AdditionalDynamicAmountNone {
+			amounts[i] = (&rulesPaymentState{g: g}).AdditionalDynamicAmountValue(playerID, additionalCost.AmountDynamic)
+		}
+		if additionalCost.Kind == cost.AdditionalRemoveCounter && !additionalCost.AnyCounterKind {
+			reserved[additionalCost.CounterKind] += amounts[i]
+		}
+	}
+	var choices []counter.Kind
+	for i, additionalCost := range additionalCosts {
+		amount := amounts[i]
+		if additionalCost.Kind != cost.AdditionalRemoveCounter || !additionalCost.AnyCounterKind || amount <= 0 {
+			continue
+		}
+		var expanded []counter.Kind
+		var options []game.ChoiceOption
+		kinds := 0
+		label := permanentChoiceLabel(g, source)
+		for _, kind := range payment.RemovableCounterKinds(source, additionalCost) {
+			available := source.Counters.Get(kind) - reserved[kind]
+			if available > 0 {
+				kinds++
+			}
+			for range max(available, 0) {
+				options = append(options, game.ChoiceOption{Index: len(expanded), Label: counterChoiceLabel(label, kind), Card: permanentChoiceInfo(g, source)})
+				expanded = append(expanded, kind)
+			}
+		}
+		selected := firstChoiceIndices(min(amount, len(expanded)))
+		if kinds > 1 && len(expanded) > amount {
+			selected = e.chooseChoice(g, agents, game.ChoiceRequest{
+				Kind:             game.ChoicePayment,
+				Player:           playerID,
+				Prompt:           payment.AdditionalCostText(additionalCost),
+				Options:          options,
+				MinChoices:       amount,
+				MaxChoices:       amount,
+				DefaultSelection: firstChoiceIndices(amount),
+			}, log)
+		}
+		for _, index := range selected {
+			if index < 0 || index >= len(expanded) {
+				continue
+			}
+			choices = append(choices, expanded[index])
+			reserved[expanded[index]]++
+		}
+	}
+	return choices
+}
+
+// counterChoiceLabel labels one removable counter on a permanent.
+func counterChoiceLabel(permanentLabel string, kind counter.Kind) string {
+	return fmt.Sprintf("%s: %s counter", permanentLabel, kind)
 }
 
 func (e *Engine) additionalCostCardChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedCardIDs ...id.ID) []id.ID {
