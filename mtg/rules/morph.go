@@ -381,37 +381,77 @@ func (e *Engine) legalTurnFaceUpActions(g *game.Game, playerID game.PlayerID) []
 	return actions
 }
 
-func (*Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID id.ID) bool {
-	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
-		return false
-	}
-	permanent, ok := permanentByObjectID(g, permanentID)
-	if !ok || permanent.PhasedOut || !permanent.FaceDown || effectiveController(g, permanent) != playerID || permanent.FaceDownKind == game.FaceDownNone {
-		return false
-	}
-	return len(payableFaceDownCostsForPermanent(g, playerID, permanent)) > 0
+// canTurnFaceUp reports whether the player may turn the face-down permanent
+// permanentID face up (CR 116.2b, 702.37e, 701.40b, 701.58b): they control it
+// with priority and one of its turn-face-up costs is payable now or with
+// payment-time mana abilities (CR 605.3a).
+func (e *Engine) canTurnFaceUp(g *game.Game, playerID game.PlayerID, permanentID id.ID) bool {
+	return len(e.feasibleTurnFaceUpCosts(g, playerID, permanentID)) > 0
 }
 
-func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID, permanentID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// turnableFaceDown reports whether permanentID is a face-down permanent the
+// player controls and may try to turn face up in the game checked.
+func turnableFaceDown(g *game.Game, playerID game.PlayerID, permanentID id.ID) (*game.Permanent, bool) {
+	permanent, ok := permanentByObjectID(g, permanentID)
+	if !ok || permanent.PhasedOut || !permanent.FaceDown || effectiveController(g, permanent) != playerID || permanent.FaceDownKind == game.FaceDownNone {
+		return nil, false
+	}
+	return permanent, true
+}
+
+// turnFaceUpCost is the activationCost of turning permanentID face up for
+// manaCost. Its payment requires the permanent to remain face down under the
+// player's control after any payment-time mana abilities.
+func turnFaceUpCost(playerID game.PlayerID, permanentID id.ID, manaCost *cost.Mana) activationCost {
+	return specialActionCost(playerID, manaCost, func(g *game.Game) bool {
+		_, ok := turnableFaceDown(g, playerID, permanentID)
+		return ok
+	})
+}
+
+// feasibleTurnFaceUpCosts lists the distinct turn-face-up costs of
+// permanentID that the player can pay now or with payment-time mana abilities.
+func (e *Engine) feasibleTurnFaceUpCosts(g *game.Game, playerID game.PlayerID, permanentID id.ID) []cost.Mana {
+	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
+		return nil
+	}
+	permanent, ok := turnableFaceDown(g, playerID, permanentID)
+	if !ok {
+		return nil
+	}
+	var costs []cost.Mana
+	for _, face := range faceDownTurnUpFaces(g, permanent) {
+		for _, manaCost := range faceDownCostsForCard(face, permanent.FaceDownKind) {
+			duplicate := false
+			for _, prior := range costs {
+				if prior.String() == manaCost.String() {
+					duplicate = true
+					break
+				}
+			}
+			if !duplicate && e.activationFeasible(g, playerID, turnFaceUpCost(playerID, permanentID, &manaCost)) {
+				costs = append(costs, manaCost)
+			}
+		}
+	}
+	return costs
+}
+
+// applyTurnFaceUpWithChoices turns a face-down permanent face up as a special
+// action: the player chooses a turn-face-up cost and pays it, activating mana
+// abilities while paying if they choose (CR 605.3a).
+func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID, permanentID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	defer g.OpenLibraryTopWindow()()
-	if !e.canTurnFaceUp(g, playerID, permanentID) {
-		return false
+	costs := e.feasibleTurnFaceUpCosts(g, playerID, permanentID)
+	manaCost, ok := e.chooseFaceDownCostOptions(g, playerID, costs, agents, log)
+	if !ok {
+		return actionFailed
+	}
+	c := turnFaceUpCost(playerID, permanentID, &manaCost)
+	if outcome := e.paySpecialActionCost(g, playerID, c, &manaCost, agents, log); outcome != actionApplied {
+		return outcome
 	}
 	permanent, _ := permanentByObjectID(g, permanentID)
-	manaCost, ok := e.chooseFaceDownCostOptions(
-		g,
-		playerID,
-		payableFaceDownCostsForPermanent(g, playerID, permanent),
-		agents,
-		log,
-	)
-	if !ok {
-		return false
-	}
-	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
-		return false
-	}
 	permanent.Face = permanent.FaceDownFace
 	permanent.FaceDown = false
 	permanent.FaceDownKind = game.FaceDownNone
@@ -426,7 +466,7 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 		Face:        permanent.Face,
 		PermanentID: permanent.ObjectID,
 	})
-	return true
+	return actionApplied
 }
 
 func payableFaceDownCosts(g *game.Game, playerID game.PlayerID, face *game.CardDef, kind game.FaceDownKind) []cost.Mana {
@@ -434,25 +474,6 @@ func payableFaceDownCosts(g *game.Game, playerID game.PlayerID, face *game.CardD
 	for _, manaCost := range faceDownCostsForCard(face, kind) {
 		if paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost}) {
 			costs = append(costs, manaCost)
-		}
-	}
-	return costs
-}
-
-func payableFaceDownCostsForPermanent(g *game.Game, playerID game.PlayerID, permanent *game.Permanent) []cost.Mana {
-	var costs []cost.Mana
-	for _, face := range faceDownTurnUpFaces(g, permanent) {
-		for _, manaCost := range payableFaceDownCosts(g, playerID, face, permanent.FaceDownKind) {
-			duplicate := false
-			for _, prior := range costs {
-				if prior.String() == manaCost.String() {
-					duplicate = true
-					break
-				}
-			}
-			if !duplicate {
-				costs = append(costs, manaCost)
-			}
 		}
 	}
 	return costs

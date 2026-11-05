@@ -9,7 +9,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
-	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -27,44 +26,56 @@ func suspendCostForCard(card *game.CardDef) (cost.Mana, int, bool) {
 	return nil, 0, false
 }
 
-func (*Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+// canSuspendCard reports whether the player may suspend the hand card cardID
+// (CR 702.62a, 116.2f): they could begin to cast it, and its suspend cost is
+// payable now or with payment-time mana abilities (CR 605.3a).
+func (e *Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	c, _, _ := suspendCost(g, playerID, cardID)
+	return e.activationFeasible(g, playerID, c)
+}
+
+// suspendCost is the cost of suspending the hand card cardID with its suspend
+// mana cost and time counters, or the zero activationCost when that isn't
+// legal.
+func suspendCost(g *game.Game, playerID game.PlayerID, cardID id.ID) (activationCost, cost.Mana, int) {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
-		return false
+		return activationCost{}, nil, 0
 	}
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Hand.Contains(cardID) {
-		return false
+		return activationCost{}, nil, 0
 	}
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
-		return false
+		return activationCost{}, nil, 0
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	manaCost, _, ok := suspendCostForCard(spellDef)
+	manaCost, counters, ok := suspendCostForCard(spellDef)
 	if !ok || !canCastAtCurrentTiming(g, playerID, spellDef) {
-		return false
+		return activationCost{}, nil, 0
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost})
+	return specialActionCost(playerID, &manaCost, handCardPresent(playerID, cardID)), manaCost, counters
 }
 
-func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// applySuspendCard resolves a suspend special action: the player pays the
+// suspend cost, activating mana abilities while paying if they choose
+// (CR 605.3a), and exiles the card with its time counters (CR 702.62a).
+func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	defer g.OpenLibraryTopWindow()()
-	if !e.canSuspendCard(g, playerID, cardID) {
-		return false
+	c, manaCost, counters := suspendCost(g, playerID, cardID)
+	if !e.activationFeasible(g, playerID, c) {
+		return actionFailed
 	}
 	card, _ := g.GetCardInstance(cardID)
-	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	manaCost, counters, _ := suspendCostForCard(spellDef)
-	prefs := e.paymentPreferencesForCost(g, playerID, &manaCost, nil, 0, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Prefs: prefs}) {
-		return false
+	if outcome := e.paySpecialActionCost(g, playerID, c, &manaCost, agents, log); outcome != actionApplied {
+		return outcome
 	}
 	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
 		Controller: playerID, Player: card.Owner, CardID: cardID,
 		FromZone: zone.Hand, ToZone: zone.Exile,
 	}, zoneMoveOptions{})
 	if !moved {
-		return false
+		return actionFailed
 	}
 	if destination == zone.Exile {
 		if g.SuspendedCards == nil {
@@ -74,7 +85,7 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 			Owner: card.Owner, Controller: playerID, TimeCounters: counters,
 		}
 	}
-	return true
+	return actionApplied
 }
 
 func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []action.Action {

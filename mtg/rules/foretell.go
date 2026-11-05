@@ -6,17 +6,16 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 // foretellExileCost is the fixed generic cost paid to foretell a card
-// (CR 702.144a): {2}, regardless of the card's foretell cost.
+// (CR 702.143a): {2}, regardless of the card's foretell cost.
 func foretellExileCost() cost.Mana {
 	return cost.Mana{cost.O(2)}
 }
 
 // foretellCostForCard returns the Foretell cast cost printed on the card's front
-// face (CR 702.144), or (nil, false) when the card has no Foretell keyword. This
+// face (CR 702.143), or (nil, false) when the card has no Foretell keyword. This
 // is the cost paid to cast the card from exile after foretelling it, not the
 // fixed {2} paid to foretell it.
 func foretellCostForCard(card *game.CardDef) (cost.Mana, bool) {
@@ -25,49 +24,57 @@ func foretellCostForCard(card *game.CardDef) (cost.Mana, bool) {
 
 // canForetellCard reports whether the player may foretell the hand card cardID:
 // foretelling is a special action usable any time the player has priority during
-// their own turn (CR 702.144a), so it requires the player's turn, priority, the
-// card in the player's hand, a Foretell keyword, and the ability to pay the fixed
-// {2} foretell cost. Unlike Plot, foretelling is not restricted to sorcery speed.
-func (*Engine) canForetellCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+// their own turn (CR 702.143a, 116.2h), so it requires the player's turn,
+// priority, the card in the player's hand, a Foretell keyword, and the fixed {2}
+// foretell cost payable now or with payment-time mana abilities (CR 605.3a).
+// Unlike Plot, foretelling is not restricted to sorcery speed.
+func (e *Engine) canForetellCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
+	return e.activationFeasible(g, playerID, foretellCost(g, playerID, cardID))
+}
+
+// foretellCost is the cost of foretelling the hand card cardID, or the zero
+// activationCost when that isn't legal.
+func foretellCost(g *game.Game, playerID game.PlayerID, cardID id.ID) activationCost {
 	if !canAct(g, playerID) || playerID != g.Turn.ActivePlayer || playerID != g.Turn.PriorityPlayer {
-		return false
+		return activationCost{}
 	}
 	player, ok := playerByID(g, playerID)
 	if !ok || !player.Hand.Contains(cardID) {
-		return false
+		return activationCost{}
 	}
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
-		return false
+		return activationCost{}
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	if _, ok := foretellCostForCard(spellDef); !ok {
-		return false
+		return activationCost{}
 	}
 	exileCost := foretellExileCost()
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &exileCost})
+	return specialActionCost(playerID, &exileCost, handCardPresent(playerID, cardID))
 }
 
 // applyForetellCard resolves a foretell special action: the player pays the fixed
-// {2} and exiles the card from hand, recording the foretell turn so the card may
-// be cast from exile for its foretell cost on a later turn (CR 702.144a).
-func (e *Engine) applyForetellCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// {2}, activating mana abilities while paying if they choose (CR 605.3a), and
+// exiles the card from hand face down, recording the foretell turn so the card
+// may be cast from exile for its foretell cost on a later turn (CR 702.143a).
+func (e *Engine) applyForetellCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	defer g.OpenLibraryTopWindow()()
-	if !e.canForetellCard(g, playerID, cardID) {
-		return false
+	c := foretellCost(g, playerID, cardID)
+	if !e.activationFeasible(g, playerID, c) {
+		return actionFailed
 	}
 	card, _ := g.GetCardInstance(cardID)
 	exileCost := foretellExileCost()
-	prefs := e.paymentPreferencesForCost(g, playerID, &exileCost, nil, 0, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: &exileCost, Prefs: prefs}) {
-		return false
+	if outcome := e.paySpecialActionCost(g, playerID, c, &exileCost, agents, log); outcome != actionApplied {
+		return outcome
 	}
 	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
 		Controller: playerID, Player: card.Owner, CardID: cardID,
 		FromZone: zone.Hand, ToZone: zone.Exile,
 	}, zoneMoveOptions{faceDownExile: true})
 	if !moved {
-		return false
+		return actionFailed
 	}
 	if destination == zone.Exile {
 		if g.ForetoldCards == nil {
@@ -75,7 +82,7 @@ func (e *Engine) applyForetellCard(g *game.Game, playerID game.PlayerID, cardID 
 		}
 		g.ForetoldCards[cardID] = g.Turn.TurnNumber
 	}
-	return true
+	return actionApplied
 }
 
 // legalForetellActions returns the foretell special actions available to the

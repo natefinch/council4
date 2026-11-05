@@ -72,8 +72,8 @@ func castActionKey(cast action.CastSpellAction) string {
 }
 
 // actionExhausted reports whether act is a cast, including a face-down cast,
-// none of whose proposals remain, or an activation already reversed and
-// repeated (see reverseActivationAttempt).
+// none of whose proposals remain, or an activation or special action already
+// reversed and repeated (see reverseActivationAttempt).
 func (a *castAttempts) actionExhausted(act action.Action) bool {
 	if a == nil || len(a.exhausted) == 0 {
 		return false
@@ -83,6 +83,9 @@ func (a *castAttempts) actionExhausted(act action.Action) bool {
 	}
 	if activate, ok := act.ActivateAbilityPayload(); ok {
 		return a.exhausted[activationAttemptKey(activate)]
+	}
+	if isManaCostSpecialAction(act) {
+		return a.exhausted[specialActionAttemptKey(act)]
 	}
 	cast, ok := act.CastSpellPayload()
 	return ok && a.exhausted[castActionKey(cast)]

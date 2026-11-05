@@ -162,10 +162,15 @@ func activationAttemptKey(activate action.ActivateAbilityAction) string {
 // already reversed exhausts it, so it's no longer offered until an action is
 // taken and a deterministic player always moves on.
 func (a *castAttempts) reverseActivationAttempt(activate action.ActivateAbilityAction) {
+	a.reverseAttempt(activationAttemptKey(activate))
+}
+
+// reverseAttempt records the action key identifies as reversed, exhausting it
+// when it was already reversed.
+func (a *castAttempts) reverseAttempt(key string) {
 	if a == nil {
 		return
 	}
-	key := activationAttemptKey(activate)
 	if a.reversed[key] {
 		if a.exhausted == nil {
 			a.exhausted = map[string]bool{}

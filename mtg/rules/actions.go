@@ -517,6 +517,12 @@ func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, 
 		}
 		return outcome, act
 	}
+	if outcome, ok := e.attemptSpecialAction(g, playerID, act, agents, log); ok {
+		if outcome == actionReversed {
+			attempts.reverseSpecialActionAttempt(act)
+		}
+		return outcome, act
+	}
 	return outcomeOf(e.applyNonCastAction(g, playerID, act, agents, log)), act
 }
 
@@ -534,21 +540,12 @@ func (e *Engine) applyNonCastAction(g *game.Game, playerID game.PlayerID, act ac
 		}
 		countAbilityActivation(g, activate)
 		return true
-	case action.ActionSuspendCard:
-		suspend, ok := act.SuspendCardPayload()
-		return ok && e.applySuspendCard(g, playerID, suspend.CardID, agents, log)
-	case action.ActionPlotCard:
-		plot, ok := act.PlotCardPayload()
-		return ok && e.applyPlotCard(g, playerID, plot.CardID, agents, log)
-	case action.ActionForetellCard:
-		foretell, ok := act.ForetellCardPayload()
-		return ok && e.applyForetellCard(g, playerID, foretell.CardID, agents, log)
+	case action.ActionSuspendCard, action.ActionPlotCard, action.ActionForetellCard, action.ActionTurnFaceUp:
+		outcome, _ := e.attemptSpecialAction(g, playerID, act, agents, log)
+		return outcome == actionApplied
 	case action.ActionCastFaceDown:
 		faceDown, ok := act.CastFaceDownPayload()
 		return ok && e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log, nil) == actionApplied
-	case action.ActionTurnFaceUp:
-		turnFaceUp, ok := act.TurnFaceUpPayload()
-		return ok && e.applyTurnFaceUpWithChoices(g, playerID, turnFaceUp.PermanentID, agents, log)
 	case action.ActionDeclareAttackers:
 		attackers, ok := act.DeclareAttackersPayload()
 		return ok && e.applyDeclareAttackers(g, playerID, attackers)

@@ -385,6 +385,10 @@ func actionsEqual(a, b action.Action) bool {
 		aPayload, aOK := a.CastFaceDownPayload()
 		bPayload, bOK := b.CastFaceDownPayload()
 		return aOK && bOK && aPayload == bPayload
+	case action.ActionTurnFaceUp:
+		aPayload, aOK := a.TurnFaceUpPayload()
+		bPayload, bOK := b.TurnFaceUpPayload()
+		return aOK && bOK && aPayload == bPayload
 	case action.ActionDeclareAttackers:
 		aPayload, aOK := a.DeclareAttackersPayload()
 		bPayload, bOK := b.DeclareAttackersPayload()
