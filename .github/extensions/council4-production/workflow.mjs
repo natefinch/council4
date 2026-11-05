@@ -251,7 +251,7 @@ export async function issueStates(cwd, numbers, signal, graphql = query => ghGra
     const chunk = unique.slice(i, i + size);
     const fields = chunk.map(number => `i${number}: issue(number: ${number}) { number state title url ` +
       "labels(first: 100) { pageInfo { hasNextPage } nodes { name } } " +
-      "subIssues(first: 100) { pageInfo { hasNextPage } nodes { number state title url } } }").join(" ");
+      "subIssues(first: 100) { pageInfo { hasNextPage } nodes { number state title url labels(first: 20) { pageInfo { hasNextPage } nodes { name } } } } }").join(" ");
     const response = await graphql(`query { repository(owner: "natefinch", name: "council4") { ${fields} } }`);
     const unexpected = (response.errors ?? []).filter(error => error.type !== "NOT_FOUND");
     if (unexpected.length || !response.data?.repository) {
@@ -260,13 +260,15 @@ export async function issueStates(cwd, numbers, signal, graphql = query => ghGra
     for (const number of chunk) {
       const issue = response.data.repository[`i${number}`];
       if (!issue) continue;
-      if (issue.labels.pageInfo.hasNextPage || issue.subIssues.pageInfo.hasNextPage) {
-        throw new Error(`Issue #${number} has more than 100 labels or sub-issues`);
+      if (issue.labels.pageInfo.hasNextPage || issue.subIssues.pageInfo.hasNextPage ||
+        issue.subIssues.nodes.some(sub => sub.labels?.pageInfo?.hasNextPage)) {
+        throw new Error(`Issue #${number} has more than 100 labels or sub-issues, or a sub-issue with more than 20 labels`);
       }
       // A gap split into ordered sub-issues is worked one sub-issue at a time.
       issues[number] = { number: issue.number, state: issue.state, title: issue.title, url: issue.url,
         labels: issue.labels.nodes.map(label => label.name),
-        subIssues: issue.subIssues.nodes.map(sub => ({ number: sub.number, state: sub.state, title: sub.title, url: sub.url })) };
+        subIssues: issue.subIssues.nodes.map(sub => ({ number: sub.number, state: sub.state, title: sub.title, url: sub.url,
+          labels: (sub.labels?.nodes ?? []).map(label => label.name) })) };
     }
   }
   return issues;

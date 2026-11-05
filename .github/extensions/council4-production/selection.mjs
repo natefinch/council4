@@ -86,7 +86,11 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
   const remainders = new Set([...units, ...priorUnits].filter(u => u.status === "landed").flatMap(remainingIssues));
   const open = gaps.filter(gap => !filled.has(gap.issue) && issues[gap.issue]?.state === "OPEN")
     .map(gap => nextSubIssue(gap, issues, filled, remainders)).filter(Boolean);
-  const gap = open.find(candidate => !attempted.has(candidate.issue));
+  // A Parked gap (its issue, or the parent it is worked through) is reserved
+  // for directed work such as an epic; it still blocks its cards.
+  const parked = candidate => [issues[candidate.issue], issues[candidate.parent], candidate.subIssue]
+    .some(issue => (issue?.labels ?? []).includes(parkedLabel));
+  const gap = open.find(candidate => !attempted.has(candidate.issue) && !parked(candidate));
   if (gap) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
   if (next?.batch) return { kind: "card", batch: next.batch, cards: next.cards ?? [] };
   return {
@@ -94,7 +98,7 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
     avoid: open,
     unblocked: gaps.filter(candidate => candidate.oracleIds.length &&
       (filled.has(candidate.issue) || issues[candidate.issue]?.state === "CLOSED")),
-    parked: open.filter(candidate => attempted.has(candidate.issue)),
+    parked: open.filter(candidate => attempted.has(candidate.issue) || parked(candidate)),
   };
 }
 
@@ -113,6 +117,7 @@ export function nextSubIssue(gap, issues, filled = new Set(), remainders = new S
 }
 
 export const needsSplitLabel = "Needs Split";
+export const parkedLabel = "Parked";
 
 export function gapTask(choice, names) {
   const { gap, issue } = choice;
