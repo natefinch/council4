@@ -94,7 +94,7 @@ func turnUpWillbender(t *testing.T, g *game.Game, engine *Engine, agent *retarge
 	g.Players[game.Player2].ManaPool.Add(mana.U, 2)
 	g.Turn.PriorityPlayer = game.Player2
 	agents := [game.NumPlayers]PlayerAgent{game.Player2: agent}
-	if !engine.applyTurnFaceUpWithChoices(g, game.Player2, willbender.ObjectID, agents, &TurnLog{}) {
+	if engine.applyTurnFaceUpWithChoices(g, game.Player2, willbender.ObjectID, agents, &TurnLog{}) != actionApplied {
 		t.Fatal("Willbender was not turned face up for its morph cost")
 	}
 	if !engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{}) {
