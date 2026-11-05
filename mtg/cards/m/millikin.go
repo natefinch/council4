@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -30,8 +31,8 @@ func newMillikin() *game.CardDef {
 			Subtypes:  []types.Sub{types.Construct},
 			Power:     opt.Val(game.PT{Value: 0}),
 			Toughness: opt.Val(game.PT{Value: 1}),
-			ManaAbilities: []game.ManaAbility{
-				game.ManaAbility{
+			ActivatedAbilities: []game.ActivatedAbility{
+				game.ActivatedAbility{
 					Text: "{T}, Mill a card: Add {C}. (Activate only as an instant. To mill a card, put the top card of your library into your graveyard.)",
 					AdditionalCosts: []cost.Additional{
 						cost.Additional{
@@ -45,6 +46,7 @@ func newMillikin() *game.CardDef {
 							CounterKind: counter.PlusOnePlusOne,
 						},
 					},
+					ZoneOfFunction: zone.Battlefield,
 					Content: game.AbilityContent{
 						Modes: []game.Mode{
 							game.Mode{

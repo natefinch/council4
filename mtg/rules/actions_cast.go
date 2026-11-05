@@ -1710,8 +1710,8 @@ func anyCastRouteAvailable(g *game.Game, spellDef *game.CardDef, xValue int, req
 // spellDef with xValue, though not payable from current resources, can be paid
 // after the caster activates payment-time mana abilities (CR 601.2g). The cast
 // is judged as it would be proposed: with the card already moved from
-// sourceZone to the stack (CR 601.2a), so an ability such as Millikin's can't
-// mill the very card cast from the top of the library.
+// sourceZone to the stack (CR 601.2a), so a mana ability such as Deathbloom
+// Ritualist's doesn't count the very card cast from the graveyard.
 func (e *Engine) castFeasibleWithManaWindow(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef, xValue int, requests []payment.SpellRequest) bool {
 	if !e.hasManualPaymentManaAbility(g, playerID) {
 		return false

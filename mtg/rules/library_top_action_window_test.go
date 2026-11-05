@@ -9,7 +9,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
-	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -21,8 +20,16 @@ import (
 // Bolas's Citadel 2bd111bb-ce02-414c-b5b7-e0e037d8d96b; Thriving Bluff
 // 91fceb34-0f2d-4392-be27-00dcd765637f "This land enters tapped. As it enters,
 // choose a color other than red. …"; Millikin
-// fa4dffda-6f04-4d0b-829d-28a1a5794dee "{T}, Mill a card: Add {C}. …";
-// Sinister Concoction ffc3beec-6485-428d-a251-fa0bc21263a5 {B} "{B}, Pay 1
+// fa4dffda-6f04-4d0b-829d-28a1a5794dee "{T}, Mill a card: Add {C}. …" and
+// Deranged Assistant 9e1b0034-bd2c-4412-8d81-db3306c8814f, the same ability,
+// not mana abilities (605.1a; Millikin ruling 2026-08-05, see
+// library_moving_mana_ability_test.go); Phyrexian Altar
+// 8d02b297-97c4-4379-9862-0a462400f66f "Sacrifice a creature: Add one mana of
+// any color.", still a mana ability when the test creature Homing Golem's own
+// replacement effect puts the sacrificed Golem on top of its owner's library
+// (605.1a ignores replacement effects other than the ability's own); Mana
+// Confluence d0ee5bdc-2b69-4b73-9a20-ffcc18783b29 "{T}, Pay 1 life: Add one
+// mana of any color."; Sinister Concoction ffc3beec-6485-428d-a251-fa0bc21263a5 {B} "{B}, Pay 1
 // life, Mill a card, Discard a card, Sacrifice this enchantment: Destroy target
 // creature."; Saw It Coming 90edaf33-d0ab-47e0-8f6a-6fba38286e6e (Foretell
 // {1}{U}); Slickshot Show-Off 74c7a029-59aa-4511-8e4c-f8f167cda4e2 (Plot
@@ -112,20 +119,6 @@ func TestLibraryTopChangedByLandPlayStaysHidden(t *testing.T) {
 	}
 }
 
-// millingPrism is a test artifact whose mana ability has a mill cost and
-// asks for a color as it resolves, a choice made after the library changed
-// but before the mana ability finishes (CR 605.3b).
-func millingPrism() *game.CardDef {
-	ability := game.TapManaChoiceAbility(mana.W, mana.U, mana.B, mana.R, mana.G)
-	ability.Text = "{T}, Mill a card: Add one mana of any color."
-	ability.AdditionalCosts = append(ability.AdditionalCosts, cost.Additional{Kind: cost.AdditionalMill, Text: "Mill a card", Amount: 1})
-	return &game.CardDef{CardFace: game.CardFace{
-		Name:          "Milling Prism",
-		Types:         []types.Card{types.Artifact},
-		ManaAbilities: []game.ManaAbility{ability},
-	}}
-}
-
 // sourceActivation returns the legal activation of source's ability for player.
 func sourceActivation(t *testing.T, e *Engine, g *game.Game, source id.ID) action.Action {
 	t.Helper()
@@ -138,39 +131,53 @@ func sourceActivation(t *testing.T, e *Engine, g *game.Game, source id.ID) actio
 	return action.Action{}
 }
 
-// TestLibraryTopChangedByActivationStaysHidden activates abilities whose
-// costs mill Player1's revealed top card. The new top stays hidden from
-// everyone through the rest of the activation, a mana ability's resolution
-// included, and is shown as soon as the activation finishes (CR 401.5, 602.2b,
-// 605.3b).
+// TestLibraryTopChangedByActivationStaysHidden activates abilities that
+// change Player1's revealed top card: Phyrexian Altar's mana ability
+// sacrificing Homing Golem, whose own replacement effect puts it on top of the
+// library (still a mana ability, CR 605.1a), with a color chosen as it
+// resolves (CR 605.3b); and abilities whose costs mill the top card, Millikin's
+// and Deranged Assistant's (not mana abilities, so put on the stack, CR 602.2)
+// and Sinister Concoction's. The new top stays hidden from everyone through the
+// rest of the activation, a mana ability's resolution included, and is shown
+// as soon as the activation finishes (CR 401.5, 602.2b).
 func TestLibraryTopChangedByActivationStaysHidden(t *testing.T) {
 	t.Parallel()
-	routes := []struct {
+	type activationRoute struct {
 		name   string
 		source func(t *testing.T) *game.CardDef
 		// changedChoice and unchangedChoice require a choice made after, or
-		// before, the cost milled the top card.
+		// before, the top card changed.
 		changedChoice, unchangedChoice bool
 		prepare                        func(t *testing.T, g *game.Game)
-		finished                       func(t *testing.T, g *game.Game, source *game.Permanent)
-	}{
+		// finished checks the completed activation and returns the card then
+		// on top.
+		finished func(t *testing.T, g *game.Game, source *game.Permanent, top, next id.ID) id.ID
+	}
+	milled := func(t *testing.T, g *game.Game, top, next id.ID) id.ID {
+		t.Helper()
+		if !g.Players[game.Player1].Graveyard.Contains(top) {
+			t.Fatal("the activation's cost didn't mill the top card")
+		}
+		return next
+	}
+	routes := []activationRoute{
 		{
-			name:          "mana ability resolving with a choice",
-			source:        func(*testing.T) *game.CardDef { return millingPrism() },
+			name:          "Phyrexian Altar mana ability resolving with a choice",
+			source:        func(t *testing.T) *game.CardDef { return registryCardDef(t, "Phyrexian Altar") },
 			changedChoice: true,
-			finished: func(t *testing.T, g *game.Game, source *game.Permanent) {
-				if !source.Tapped || g.Players[game.Player1].ManaPool.Total() != 1 {
-					t.Fatal("Milling Prism didn't tap for one mana")
-				}
+			prepare: func(t *testing.T, g *game.Game) {
+				addCombatPermanent(g, game.Player1, homingGolemDef())
 			},
-		},
-		{
-			name:   "Millikin's mana ability",
-			source: func(t *testing.T) *game.CardDef { return registryCardDef(t, "Millikin") },
-			finished: func(t *testing.T, g *game.Game, source *game.Permanent) {
-				if !source.Tapped || g.Players[game.Player1].ManaPool.Amount(mana.C) != 1 {
-					t.Fatal("Millikin didn't tap for {C}")
+			finished: func(t *testing.T, g *game.Game, _ *game.Permanent, top, _ id.ID) id.ID {
+				t.Helper()
+				library := g.Players[game.Player1].Library.All()
+				if len(library) != 3 || g.CardInstances[library[0]].Def.Name != homingGolem || library[1] != top {
+					t.Fatalf("library = %v, want Homing Golem put on top over %v", library, top)
 				}
+				if g.Stack.Size() != 0 || g.Players[game.Player1].ManaPool.Total() != 1 {
+					t.Fatal("Phyrexian Altar's mana ability didn't add one mana without using the stack")
+				}
+				return library[0]
 			},
 		},
 		{
@@ -183,12 +190,29 @@ func TestLibraryTopChangedByActivationStaysHidden(t *testing.T) {
 				addCardToHand(g, game.Player1, vanillaCreature("Second Spare", 1, 1))
 				g.Players[game.Player1].ManaPool.Add(mana.B, 1)
 			},
-			finished: func(t *testing.T, g *game.Game, _ *game.Permanent) {
+			finished: func(t *testing.T, g *game.Game, _ *game.Permanent, top, next id.ID) id.ID {
+				t.Helper()
 				if obj, ok := g.Stack.Peek(); !ok || obj.Kind != game.StackActivatedAbility || g.Players[game.Player1].Life != 19 {
 					t.Fatalf("stack top = %+v, want Sinister Concoction's ability activated for 1 life", obj)
 				}
+				return milled(t, g, top, next)
 			},
 		},
+	}
+	for _, name := range libraryMovingManaProducers {
+		routes = append(routes, activationRoute{
+			name:   name + "'s ability",
+			source: func(t *testing.T) *game.CardDef { return registryCardDef(t, name) },
+			finished: func(t *testing.T, g *game.Game, source *game.Permanent, top, next id.ID) id.ID {
+				t.Helper()
+				obj, ok := g.Stack.Peek()
+				if !source.Tapped || !ok || obj.Kind != game.StackActivatedAbility || obj.SourceID != source.ObjectID ||
+					g.Players[game.Player1].ManaPool.Total() != 0 {
+					t.Fatalf("stack top = %+v, want %s tapped and its ability on the stack, not yet adding {C}", obj, name)
+				}
+				return milled(t, g, top, next)
+			},
+		})
 	}
 	for _, permission := range []string{"Future Sight", "Bolas's Citadel"} {
 		for _, route := range routes {
@@ -206,31 +230,29 @@ func TestLibraryTopChangedByActivationStaysHidden(t *testing.T) {
 					t.Fatal("the activation failed")
 				}
 
-				if !g.Players[game.Player1].Graveyard.Contains(top) {
-					t.Fatal("the activation's cost didn't mill the top card")
-				}
+				newTop := route.finished(t, g, source, top, next)
 				if route.changedChoice {
 					agent.assertHiddenWhileChanged(t)
 				} else if len(agent.leaks) != 0 {
 					t.Fatalf("the changed top card was shown during activation: %v", agent.leaks)
 				}
 				if route.unchangedChoice && agent.unchanged == 0 {
-					t.Fatal("no choice was made before the cost milled the top card")
+					t.Fatal("no choice was made before the top card changed")
 				}
 				if agent.unchangedVisible != agent.unchanged {
 					t.Fatalf("the unchanged top was shown at %d of %d choices, want all", agent.unchangedVisible, agent.unchanged)
 				}
-				route.finished(t, g, source)
-				assertTopShown(t, g, permission, next)
+				assertTopShown(t, g, permission, newTop)
 			})
 		}
 	}
 }
 
 // nestedManaWindowAgent pays a madness cast's {2} in its payment-time mana
-// window by activating Millikin, which mills the revealed top card, then Mana
-// Confluence, whose color choice is made while Confluence's own window is
-// nested inside the cast's.
+// window by activating Phyrexian Altar, sacrificing Homing Golem, which goes
+// on top of the library over the revealed top card, then Mana Confluence,
+// whose color choice is made while Confluence's own window is nested inside
+// the cast's.
 type nestedManaWindowAgent struct {
 	*libraryTopWindowAgent
 	activated   []string
@@ -240,12 +262,15 @@ type nestedManaWindowAgent struct {
 
 func (a *nestedManaWindowAgent) ChooseChoice(obs PlayerObservation, request game.ChoiceRequest) []int {
 	a.check(obs, request.Prompt)
+	if selected, ok := sacrificeNamed(request, homingGolem); ok {
+		return selected
+	}
 	if request.Prompt == "Choose a color" {
 		a.colorChoice = true
 		a.depth = len(obs.g.LibraryTopWindows)
 	}
 	if request.Prompt == "Activate a mana ability while paying?" && len(a.activated) < 2 {
-		want := []string{"Mill a card", "Pay 1 life"}[len(a.activated)]
+		want := []string{"Sacrifice a creature", "Pay 1 life"}[len(a.activated)]
 		for _, option := range request.Options {
 			if strings.Contains(option.Label, want) {
 				a.activated = append(a.activated, want)
@@ -257,23 +282,24 @@ func (a *nestedManaWindowAgent) ChooseChoice(obs PlayerObservation, request game
 }
 
 // TestNestedManaAbilityKeepsOuterLibraryTopSnapshot casts Sol Ring for its
-// madness cost under Future Sight, paying with Millikin and then Mana
-// Confluence in the payment-time mana window (CR 605.3a). Confluence's
-// activation opens a window nested in the cast's after Millikin already
-// changed the top card; the cast's snapshot governs, so the new top stays
+// madness cost under Future Sight, paying with Phyrexian Altar and then Mana
+// Confluence in the payment-time mana window (CR 605.3a). The Altar's
+// sacrifice of Homing Golem puts the Golem on top of the library (its own
+// replacement effect, so the Altar's ability is still a mana ability, CR
+// 605.1a). Confluence's activation opens a window nested in the cast's after
+// the top already changed; the cast's snapshot governs, so the new top stays
 // hidden through Confluence's color choice and is revealed once the spell
-// becomes cast (CR 401.5, 601.2i). Madness is used because priority casts
-// (such as Village Rites from the top under Future Sight) don't yet offer the
-// payment-time mana window; that casting gap is #3627.
+// becomes cast (CR 401.5, 601.2i).
 func TestNestedManaAbilityKeepsOuterLibraryTopSnapshot(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	giveMainPhasePriority(g, game.Player1)
 	g.Players[game.Player1].Life = 20
 	addCombatPermanent(g, game.Player1, registryCardDef(t, "Future Sight"))
-	addCombatPermanent(g, game.Player1, registryCardDef(t, "Millikin"))
+	addCombatPermanent(g, game.Player1, registryCardDef(t, "Phyrexian Altar"))
+	golem := addCombatPermanent(g, game.Player1, homingGolemDef()).CardInstanceID
 	addCombatPermanent(g, game.Player1, registryCardDef(t, "Mana Confluence"))
-	next := addCardToLibraryNamed(g, game.Player1, "Next Card")
+	addCardToLibraryNamed(g, game.Player1, "Next Card")
 	start := addCardToLibraryNamed(g, game.Player1, "Revealed Card")
 	solRing := addCardToExile(g, game.Player1, registryCardDef(t, "Sol Ring"))
 	agent := &nestedManaWindowAgent{libraryTopWindowAgent: &libraryTopWindowAgent{owner: game.Player1, start: start}}
@@ -284,8 +310,8 @@ func TestNestedManaAbilityKeepsOuterLibraryTopSnapshot(t *testing.T) {
 		t.Fatal("Sol Ring wasn't cast for its madness cost")
 	}
 
-	if len(agent.activated) != 2 || !g.Players[game.Player1].Graveyard.Contains(start) {
-		t.Fatalf("activated %v, want Millikin (milling the revealed card) then Mana Confluence", agent.activated)
+	if top, _ := g.Players[game.Player1].Library.Top(); len(agent.activated) != 2 || top != golem {
+		t.Fatalf("activated %v, want Phyrexian Altar (putting Homing Golem on top) then Mana Confluence", agent.activated)
 	}
 	if !agent.colorChoice || agent.depth != 2 {
 		t.Fatalf("Confluence's color choice made = %t with %d windows open, want it inside the cast's window", agent.colorChoice, agent.depth)
@@ -294,7 +320,7 @@ func TestNestedManaAbilityKeepsOuterLibraryTopSnapshot(t *testing.T) {
 	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != solRing {
 		t.Fatalf("stack top = %+v, want Sol Ring cast", obj)
 	}
-	assertTopShown(t, g, "Future Sight", next)
+	assertTopShown(t, g, "Future Sight", golem)
 }
 
 // TestUnchangedLibraryTopStaysShownThroughSpecialActions takes each special

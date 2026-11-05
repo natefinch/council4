@@ -25,8 +25,11 @@ import (
 // equal to its mana value rather than pay its mana cost. …"; Village Rites
 // 365548fb-5acc-4a8a-b20b-26d28b7d029f {B} "As an additional cost to cast this
 // spell, sacrifice a creature. Draw two cards."; Parcelbeast
-// de83b309-ac31-4a57-95e6-ccd3659e6c1f "Mutate {G}{U} …"; Millikin
-// fa4dffda-6f04-4d0b-829d-28a1a5794dee "{T}, Mill a card: Add {C}. …"; Silent
+// de83b309-ac31-4a57-95e6-ccd3659e6c1f "Mutate {G}{U} …"; Phyrexian Altar
+// 8d02b297-97c4-4379-9862-0a462400f66f "Sacrifice a creature: Add one mana of
+// any color.", sacrificing the test creature Homing Golem, whose own
+// replacement effect puts it on top of its owner's library (still a mana
+// ability, 605.1a, as that replacement isn't the Altar's own); Silent
 // Clearing fd45063f-c83c-431c-9104-f139c497ec0d "{T}, Pay 1 life: Add {W} or
 // {B}. …"; Waterlogged Grove 70fa2eba-565e-4fed-adc9-7f5d9fcbf1fa; Thalia,
 // Guardian of Thraben 9b7f1d05-707c-4ed3-9f0e-8ced1232c2ee "Noncreature spells
@@ -46,23 +49,26 @@ import (
 // the spell becomes cast or the ability becomes activated (see rule 601.2i)";
 // 601.2a moves the card to the stack first; 601.2g/h pay costs, mana abilities
 // included; 601.2i the spell becomes cast; 733.1 a reversed cast doesn't undo
-// a mill from the library. Activations, land plays and special actions are
+// a move into the library. Activations, land plays and special actions are
 // #3625.
 
 // libraryTopWindowAgent answers a cast's choices by default, optionally
-// activating only Millikin's mana ability while paying, and checks at each
+// activating only Phyrexian Altar's mana ability while paying, sacrificing
+// Homing Golem, which goes on top of owner's library, and checks at each
 // choice what every observer is shown of owner's library top: an unchanged
 // top (start) may stay visible, but a changed one must be hidden from all.
 type libraryTopWindowAgent struct {
 	owner game.PlayerID
 	start id.ID
-	mill  bool
+	// sacrificeGolem activates Phyrexian Altar once while paying, sacrificing
+	// Homing Golem.
+	sacrificeGolem bool
 	// onChanged runs once, at the first choice made after the top changed;
 	// onUnchanged runs at each choice made before.
 	onChanged, onUnchanged func(g *game.Game)
 
-	milled, unchanged, unchangedVisible, changed int
-	leaks                                        []string
+	sacrificed, unchanged, unchangedVisible, changed int
+	leaks                                            []string
 }
 
 func (*libraryTopWindowAgent) ChooseAction(PlayerObservation, []action.Action) action.Action {
@@ -71,13 +77,18 @@ func (*libraryTopWindowAgent) ChooseAction(PlayerObservation, []action.Action) a
 
 func (a *libraryTopWindowAgent) ChooseChoice(obs PlayerObservation, request game.ChoiceRequest) []int {
 	a.check(obs, request.Prompt)
+	if a.sacrificeGolem {
+		if selected, ok := sacrificeNamed(request, homingGolem); ok {
+			return selected
+		}
+	}
 	switch {
 	case request.Kind == game.ChoiceMay:
 		return []int{1}
-	case a.mill && a.milled == 0 && request.Prompt == "Activate a mana ability while paying?":
+	case a.sacrificeGolem && a.sacrificed == 0 && request.Prompt == "Activate a mana ability while paying?":
 		for _, option := range request.Options {
-			if strings.Contains(option.Label, "Mill a card") {
-				a.milled++
+			if strings.Contains(option.Label, "Sacrifice a creature") {
+				a.sacrificed++
 				return []int{option.Index}
 			}
 		}
@@ -337,17 +348,17 @@ func TestLibraryTopWindowSurvivesCloneAndDeterminize(t *testing.T) {
 	}
 }
 
-// millDuringPaymentRoute builds a reversible cast, from a zone other than the
+// topChangingPaymentRoute builds a reversible cast, from a zone other than the
 // library, that opens a payment-time mana ability window in which Player1 can
-// pay only with Millikin plus another manual mana source. (A cast from hand
+// pay only with Phyrexian Altar plus another manual mana source. (A cast from hand
 // with priority pays from mana activated beforehand.)
-type millDuringPaymentRoute struct {
+type topChangingPaymentRoute struct {
 	name string
 	run  func(t *testing.T) (*game.Game, func([game.NumPlayers]PlayerAgent))
 }
 
-func millDuringPaymentRoutes() []millDuringPaymentRoute {
-	routes := []millDuringPaymentRoute{
+func topChangingPaymentRoutes() []topChangingPaymentRoute {
+	routes := []topChangingPaymentRoute{
 		{name: "madness cast", run: func(t *testing.T) (*game.Game, func([game.NumPlayers]PlayerAgent)) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			giveMainPhasePriority(g, game.Player1)
@@ -365,7 +376,7 @@ func millDuringPaymentRoutes() []millDuringPaymentRoute {
 		}},
 	}
 	for _, route := range graveyardRestoreRoutes() {
-		routes = append(routes, millDuringPaymentRoute{name: route.name, run: func(t *testing.T) (*game.Game, func([game.NumPlayers]PlayerAgent)) {
+		routes = append(routes, topChangingPaymentRoute{name: route.name, run: func(t *testing.T) (*game.Game, func([game.NumPlayers]PlayerAgent)) {
 			g, _, run := route.build(t)
 			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Waterlogged Grove"))
 			return g, run
@@ -376,34 +387,37 @@ func millDuringPaymentRoutes() []millDuringPaymentRoute {
 
 // TestLibraryTopChangedByPaymentStaysHidden casts a spell from outside the
 // library under Future Sight on each remaining cast route. The revealed top
-// card stays revealed while the cast begins, but Millikin's mill during
-// payment (CR 601.2g) changes the top, and the new top stays hidden through
-// the rest of the payment. The cost goes unpaid and the cast is reversed (CR
-// 733.1), which ends the cast without undoing the mill, so the new top card is
-// then revealed.
+// card stays revealed while the cast begins, but paying with Phyrexian Altar's
+// mana ability (CR 601.2g), sacrificing Homing Golem, puts the Golem on top
+// (its own replacement effect, so the Altar's ability is still a mana ability,
+// CR 605.1a), and the new top stays hidden through the rest of the payment.
+// The cost goes unpaid and the cast is reversed (CR 733.1), which ends the
+// cast without undoing the sacrifice, so the Golem is then revealed.
 func TestLibraryTopChangedByPaymentStaysHidden(t *testing.T) {
 	t.Parallel()
-	for _, route := range millDuringPaymentRoutes() {
+	for _, route := range topChangingPaymentRoutes() {
 		t.Run(route.name, func(t *testing.T) {
 			t.Parallel()
 			g, run := route.run(t)
 			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Future Sight"))
-			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Millikin"))
-			next := addCardToLibraryNamed(g, game.Player1, "Next Card")
+			addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Phyrexian Altar"))
+			golem := addCombatPermanent(g, game.Player1, homingGolemDef()).CardInstanceID
+			addCardToLibraryNamed(g, game.Player1, "Next Card")
 			start := addCardToLibraryNamed(g, game.Player1, "Revealed Card")
-			agent := &libraryTopWindowAgent{owner: game.Player1, start: start, mill: true}
+			agent := &libraryTopWindowAgent{owner: game.Player1, start: start, sacrificeGolem: true}
 
 			run(agent.agents())
 
-			if agent.milled != 1 || !g.Players[game.Player1].Graveyard.Contains(start) {
-				t.Fatal("Millikin didn't mill the revealed card while paying")
+			library := g.Players[game.Player1].Library.All()
+			if agent.sacrificed != 1 || len(library) < 2 || library[0] != golem || library[1] != start {
+				t.Fatalf("library = %v, want Phyrexian Altar's sacrifice to put Homing Golem on top of the revealed card", library)
 			}
 			if agent.unchanged == 0 || agent.unchangedVisible != agent.unchanged {
 				t.Fatalf("the unchanged top was visible at %d of %d choices, want all", agent.unchangedVisible, agent.unchanged)
 			}
 			agent.assertHiddenWhileChanged(t)
 			assertNoLibraryTopWindow(t, g)
-			if card, ok := NewObservation(g, game.Player2).LibraryTopRevealed(game.Player1); !ok || card.CardInstanceID != next {
+			if card, ok := NewObservation(g, game.Player2).LibraryTopRevealed(game.Player1); !ok || card.CardInstanceID != golem {
 				t.Fatal("the new top card isn't revealed after the cast was reversed")
 			}
 		})
