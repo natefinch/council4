@@ -1,13 +1,16 @@
 package rules
 
 import (
+	"fmt"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/mtg/rules/payment"
+	"github.com/natefinch/council4/opt"
 )
 
 // spellCostProposal is the cost a caster proposes for a spell before choosing
@@ -452,6 +455,49 @@ func (e *Engine) paymentManaAbilityActions(g *game.Game, player game.PlayerID) [
 	return e.legalManaAbilityActions(g, player)
 }
 
+// paymentManaAbilityOptions offers "Finish activating mana abilities" and then
+// each of actions, identified by its source: a permanent by its object ID and
+// current public characteristics (a face-down one only as face-down, CR 708.2),
+// so distinct same-named permanents and tokens stay distinguishable, and a card
+// in player's hand by its card instance. A label names the source before the
+// ability's text, adding the source's ID when sources share a name.
+func paymentManaAbilityOptions(g *game.Game, player game.PlayerID, actions []action.Action) []game.ChoiceOption {
+	type source struct {
+		name      string
+		id        id.ID
+		permanent id.ID
+		card      opt.V[game.ChoiceCardInfo]
+	}
+	sources := make([]source, len(actions))
+	namedSources := map[string]map[id.ID]bool{}
+	for i, candidate := range actions {
+		activation, _ := candidate.ActivateAbilityPayload()
+		src := source{id: activation.SourceID}
+		if permanent, ok := permanentByObjectID(g, activation.SourceID); ok {
+			src.name, src.permanent, src.card = permanentChoiceLabel(g, permanent), permanent.ObjectID, permanentChoiceInfo(g, permanent)
+		} else {
+			src.name, src.card = cardChoiceLabel(g, activation.SourceID), cardChoiceInfo(g, activation.SourceID)
+		}
+		if namedSources[src.name] == nil {
+			namedSources[src.name] = map[id.ID]bool{}
+		}
+		namedSources[src.name][src.id] = true
+		sources[i] = src
+	}
+	options := []game.ChoiceOption{{Index: 0, Label: "Finish activating mana abilities"}}
+	for i, candidate := range actions {
+		activation, _ := candidate.ActivateAbilityPayload()
+		src := sources[i]
+		name := src.name
+		if len(namedSources[name]) > 1 {
+			name = fmt.Sprintf("%s [%d]", name, src.id)
+		}
+		label := name + ": " + activatedAbilityText(g, player, activation)
+		options = append(options, game.ChoiceOption{Index: len(options), Label: label, Card: src.card, SourcePermanent: src.permanent})
+	}
+	return options
+}
+
 // activateManualPaymentManaAbilities lets player activate mana abilities while
 // paying a cost (CR 601.2g). The returned undo reverses those activations
 // when the cost then goes unpaid (CR 733.1); see undoManualPaymentMana.
@@ -471,29 +517,35 @@ func (e *Engine) activateManualPaymentManaAbilities(g *game.Game, player game.Pl
 		if len(actions) == 0 {
 			return finish
 		}
-		options := []game.ChoiceOption{{Index: 0, Label: "Finish activating mana abilities"}}
-		for _, candidate := range actions {
-			activation, _ := candidate.ActivateAbilityPayload()
-			label := activatedAbilityText(g, player, activation)
-			options = append(options, game.ChoiceOption{Index: len(options), Label: label, Card: cardChoiceInfo(g, activation.SourceID)})
-		}
 		entryStart := len(log.Entries)
-		selected := e.chooseChoice(g, agents, game.ChoiceRequest{
+		// Options can name cards in the player's hand (CR 400.2), and whether
+		// a window opens and how many options it has can reveal one, so no
+		// window is logged; each activation chosen in it is logged instead.
+		selected := e.chooseUnloggedChoice(g, agents, game.ChoiceRequest{
 			Kind: game.ChoicePayment, Player: player, Prompt: "Activate a mana ability while paying?",
-			Options: options, MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{0},
+			Options: paymentManaAbilityOptions(g, player, actions), MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{0},
+			Private: true,
 		}, log)
 		if selected[0] == 0 {
 			return finish
 		}
-		activation, _ := actions[selected[0]-1].ActivateAbilityPayload()
+		chosen := actions[selected[0]-1]
+		activation, _ := chosen.ActivateAbilityPayload()
 		step := manaPaymentStep{restore: reversibleManaCheckpoint(g, log), activation: activation}
 		var libraries [game.NumPlayers]zone.Zone
 		for owner := range libraries {
 			libraries[owner] = g.Players[owner].Library.Clone()
 		}
 		eventStart, choiceStart, spent := len(g.Events), len(log.Choices), manaSpent(g)
+		actionLog := &ActionLog{Player: player, DecisionMaker: g.DecisionMaker(player, game.DecisionRules), Action: chosen}
+		recordActionSource(g, player, actionLog, chosen)
+		actionEntry := log.addPaymentManaActivation(actionLog)
 		if !e.applyActivateAbilityWithChoices(g, player, activation, agents, log) {
 			panic("validated payment-time mana ability failed")
+		}
+		recordActionManaTaps(g, log, actionEntry, eventStart)
+		for i := entryStart; i < len(log.Entries); i++ {
+			log.Entries[i].paymentMana = true
 		}
 		// CR 733.1 forbids reversing a draw, library move, shuffle or reveal.
 		step.reversible = manaActivationIsReversible(g, libraries, eventStart)

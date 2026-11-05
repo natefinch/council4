@@ -148,8 +148,9 @@ type ChoiceOption struct {
 	// SourcePermanent is the object ID of the battlefield permanent whose
 	// permission this option uses, when options differ by source rather than by
 	// what they select: which of two same-named permanents' once-each-turn
-	// permissions a cast from exile or a land play spends. It is zero when the
-	// option uses no permanent's permission.
+	// permissions a cast from exile or a land play spends, or which permanent's
+	// mana ability a payment-time mana window activates. It is zero when the
+	// option uses no permanent's permission or ability.
 	SourcePermanent id.ID
 
 	// Attack and Block identify a proposed declaration, not a rules target.
