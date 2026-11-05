@@ -188,6 +188,11 @@ type TurnLogEntry struct {
 	Phase          PhaseLog
 	Step           StepLog
 	Trigger        TriggeredAbilityLog
+
+	// paymentMana marks an entry logged by a mana ability activated while
+	// paying a cost (CR 601.2g). Such an activation that isn't reversed
+	// stays performed when the action it paid for is (CR 733.1).
+	paymentMana bool
 }
 
 // PhaseLog records the start of a turn phase (CR 500.1).
@@ -405,14 +410,27 @@ func (log *TurnLog) setTakenAction(entryIndex int, act action.Action) {
 
 // removeAction removes the last logged action, whose entry is at entryIndex,
 // together with the entries logged after it, when that action was reversed
-// (CR 733.1). The choices made while attempting it remain in Choices so that
-// replays see the same decisions.
+// (CR 733.1). Entries of mana abilities activated while paying for it that
+// weren't reversed remain, since those activations remain performed. The
+// choices made while attempting it remain in Choices so that replays see the
+// same decisions.
 func (log *TurnLog) removeAction(entryIndex int) {
 	if log == nil || entryIndex < 0 || entryIndex >= len(log.Entries) || len(log.Actions) == 0 {
 		return
 	}
-	log.Entries = log.Entries[:entryIndex]
+	kept := slices.DeleteFunc(slices.Clone(log.Entries[entryIndex+1:]), func(entry TurnLogEntry) bool {
+		return !entry.paymentMana
+	})
+	log.Entries = append(log.Entries[:entryIndex], kept...)
 	log.Actions = log.Actions[:len(log.Actions)-1]
+}
+
+// addPaymentManaActivation records a mana ability activated while paying a
+// cost (CR 601.2g, 605.3a) as a public action entry and returns its index. It
+// isn't added to Actions, whose last element is the action being paid for.
+func (log *TurnLog) addPaymentManaActivation(actionLog *ActionLog) int {
+	log.Entries = append(log.Entries, TurnLogEntry{Kind: TurnLogEntryAction, Action: *actionLog})
+	return len(log.Entries) - 1
 }
 
 func (log *TurnLog) addChoice(choice game.ChoiceDecision) {

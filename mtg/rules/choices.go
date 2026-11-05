@@ -63,23 +63,10 @@ func (e *Engine) chooseChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 // to use a deterministic fallback (no agent, no ChoiceAgent, or an invalid agent
 // answer), so callers that record their own decision can mirror that flag.
 func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest, log *TurnLog) ([]int, bool) {
-	e.countDecision(g)
 	if request.ID == 0 {
 		request.ID = nextChoiceID(log)
 	}
-	selected, usedFallback := e.agentChoice(g, agents, request)
-	if !choiceSelectionValid(request, selected) {
-		g.Execution.InvalidChoices++
-		selected = fallbackChoice(request)
-		usedFallback = true
-	}
-	if !choiceSelectionValid(request, selected) {
-		panic("invalid fallback choice")
-	}
-	selected = append([]int(nil), selected...)
-	if usedFallback {
-		g.Execution.ChoiceFallbacks++
-	}
+	selected, usedFallback := e.decideChoice(g, agents, request)
 	loggedRequest := cloneChoiceRequest(request)
 	if request.Kind == game.ChoiceSearch || request.Private {
 		// Replay needs indices, not private library identities.
@@ -97,6 +84,38 @@ func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]
 		Selected:      selected,
 		UsedFallback:  usedFallback,
 	})
+	return selected, usedFallback
+}
+
+// chooseUnloggedChoice asks for a decision whose presence or option count can
+// reveal hidden information (CR 400.2), so it is left out of the public log
+// entirely, without consuming a logged choice ID. Seat replay records the
+// agent's answer itself, not the log.
+func (e *Engine) chooseUnloggedChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest, log *TurnLog) []int {
+	if request.ID == 0 {
+		request.ID = nextChoiceID(log)
+	}
+	selected, _ := e.decideChoice(g, agents, request)
+	return selected
+}
+
+// decideChoice asks the deciding agent for request and validates its answer,
+// falling back to a deterministic choice; it reports whether it fell back.
+func (e *Engine) decideChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest) ([]int, bool) {
+	e.countDecision(g)
+	selected, usedFallback := e.agentChoice(g, agents, request)
+	if !choiceSelectionValid(request, selected) {
+		g.Execution.InvalidChoices++
+		selected = fallbackChoice(request)
+		usedFallback = true
+	}
+	if !choiceSelectionValid(request, selected) {
+		panic("invalid fallback choice")
+	}
+	selected = append([]int(nil), selected...)
+	if usedFallback {
+		g.Execution.ChoiceFallbacks++
+	}
 	return selected, usedFallback
 }
 
