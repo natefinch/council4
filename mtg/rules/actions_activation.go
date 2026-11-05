@@ -606,38 +606,44 @@ func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *ga
 }
 
 func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	return equipActivation(g, playerID, permanent, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
+}
+
+// equipActivation is the cost of activating the equip-like ability body of
+// permanent with targets, or the zero activationCost when that isn't legal.
+func equipActivation(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) activationCost {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
-		return false
+		return activationCost{}
 	}
 	if xValue != 0 || !bodyFunctionsOnBattlefield(body) || !isEquipmentPermanent(g, permanent) {
-		return false
+		return activationCost{}
 	}
 	if !bodyAttachesLikeEquip(body) && body.Timing != game.SorceryOnly {
-		return false
+		return activationCost{}
 	}
 	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(body.AdditionalCosts) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
-		return false
+		return activationCost{}
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
-		return false
+		return activationCost{}
 	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
-		return false
+		return activationCost{}
 	}
 	if len(targets) != 1 || targets[0].Kind != game.TargetPermanent {
-		return false
+		return activationCost{}
 	}
 	target, ok := permanentByObjectID(g, targets[0].PermanentID)
 	if !ok || effectiveController(g, target) != playerID || !canAttachPermanent(g, permanent, target) {
-		return false
+		return activationCost{}
 	}
 	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
+	return genericRequestCost(payment.GenericRequest{
 		PlayerID: playerID,
 		Cost:     manaCostPtr(effectiveActivatedAbilityCost(g, playerID, sourceCard, body)),
-	})
+	}, activationPermanentPresent(permanent.ObjectID))
 }
 
 func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -645,33 +651,39 @@ func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *
 }
 
 func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	return generalActivation(g, playerID, permanent, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
+}
+
+// generalActivation is the cost of activating the ability body of permanent
+// with targets, modes and X, or the zero activationCost when that isn't legal.
+func generalActivation(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) activationCost {
 	if xValue < 0 || xValue != 0 && !abilityCanAnnounceX(body) {
-		return false
+		return activationCost{}
 	}
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
-		return false
+		return activationCost{}
 	}
 	if bodyAttachesLikeEquip(body) || !bodyFunctionsOnBattlefield(body) {
-		return false
+		return activationCost{}
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
-		return false
+		return activationCost{}
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
-		return false
+		return activationCost{}
 	}
 	if abilityActivationProhibited(g, playerID, permanent, false) {
-		return false
+		return activationCost{}
 	}
 	card, ok := permanentCardDef(g, permanent)
 	if !ok || !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) ||
 		!bodyTargetCountsMatchX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) ||
 		!bodyTargetsSatisfyManaValueX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
-		return false
+		return activationCost{}
 	}
 	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
-	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+	return abilityRequestCost(manaCostPtr(effectiveActivatedAbilityCost(g, playerID, sourceCard, body)), payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
 		ManaCost:         body.ManaCost,
@@ -679,28 +691,35 @@ func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, pe
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
-	})
+	}, permanentSource(permanent.ObjectID))
 }
 
 func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
+	return cyclingActivation(g, playerID, cardID, body, abilityIndex, targets, xValue).payableNow(g)
+}
+
+// cyclingActivation is the cost of cycling the card cardID, or the zero
+// activationCost when that isn't legal.
+func cyclingActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) activationCost {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
-		return false
+		return activationCost{}
 	}
 
 	if xValue != 0 || abilityIndex < 0 || !game.BodyHasKeyword(body, game.Cycling) {
-		return false
+		return activationCost{}
 	}
 	if body.Timing != game.NoTimingRestriction || !abilityHasDiscardThisCardCost(body.AdditionalCosts) {
-		return false
+		return activationCost{}
 	}
 	if len(targets) != 0 || len(game.BodyTargets(body)) != 0 {
-		return false
+		return activationCost{}
 	}
 	card, gotAbility, ok := cyclingAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Cycling) {
-		return false
+		return activationCost{}
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: effectiveCyclingCost(g, playerID, card, body)})
+	return genericRequestCost(payment.GenericRequest{PlayerID: playerID, Cost: effectiveCyclingCost(g, playerID, card, body)},
+		cardSourcePresent(cyclingAbilitySource, playerID, cardID, abilityIndex))
 }
 
 func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -708,16 +727,22 @@ func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id
 }
 
 func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	return handActivation(g, playerID, cardID, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
+}
+
+// handActivation is the cost of activating the ability body of the card cardID
+// in the hand, or the zero activationCost when that isn't legal.
+func handActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) activationCost {
 	if xValue < 0 || xValue != 0 && !abilityCanAnnounceX(body) {
-		return false
+		return activationCost{}
 	}
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
-		return false
+		return activationCost{}
 	}
 	if game.BodyFunctionZone(body) != zone.Hand ||
 		game.BodyHasKeyword(body, game.Cycling) ||
 		game.BodyHasKeyword(body, game.Ninjutsu) {
-		return false
+		return activationCost{}
 	}
 	// A hand activated ability is supported in one of two families: the
 	// discard-self family (Channel, Transmute), whose sole additional cost
@@ -729,27 +754,28 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 	selfEntry := bodyPutsSourceCardOntoBattlefield(body)
 	discardSelf := !selfEntry && len(body.AdditionalCosts) == 1 && abilityHasDiscardThisCardCost(body.AdditionalCosts)
 	if !discardSelf && !selfEntry {
-		return false
+		return activationCost{}
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
 		activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
-		return false
+		return activationCost{}
 	}
 	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
-		return false
+		return activationCost{}
 	}
 	card, gotAbility, ok := handActivatedAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok || game.BodyFunctionZone(&gotAbility) != zone.Hand {
-		return false
+		return activationCost{}
 	}
 	def := cardFaceOrDefault(card, game.FaceFront)
 	if !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets, xValue) ||
 		!bodyTargetCountsMatchX(g, playerID, def, 0, body, chosenModes, targets, xValue) {
-		return false
+		return activationCost{}
 	}
+	present := cardSourcePresent(handActivatedAbilitySource, playerID, cardID, abilityIndex)
 	if selfEntry {
-		return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+		return abilityRequestCost(manaCostPtr(body.ManaCost), payment.AbilityRequest{
 			PlayerID:         playerID,
 			SourceCardID:     card.ID,
 			SourceZone:       zone.Hand,
@@ -757,42 +783,48 @@ func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardI
 			AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 			AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 			XValue:           xValue,
-		})
+		}, cardSource(present))
 	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
+	return genericRequestCost(payment.GenericRequest{
 		PlayerID: playerID,
 		Cost:     effectiveHandAbilityCost(g, playerID, card, body),
 		XValue:   xValue,
-	})
+	}, present)
 }
 
 func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
+	return graveyardActivation(g, playerID, cardID, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
+}
+
+// graveyardActivation is the cost of activating the ability body of the card
+// cardID in the graveyard, or the zero activationCost when that isn't legal.
+func graveyardActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) activationCost {
 	if xValue < 0 || xValue != 0 && !abilityCanAnnounceX(body) {
-		return false
+		return activationCost{}
 	}
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
-		return false
+		return activationCost{}
 	}
 	if game.BodyFunctionZone(body) != zone.Graveyard {
-		return false
+		return activationCost{}
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
-		return false
+		return activationCost{}
 	}
 	if !activationConditionSatisfied(g, playerID, nil, body.ActivationCondition) {
-		return false
+		return activationCost{}
 	}
 	card, _, ok := graveyardAbilitySource(g, playerID, cardID, abilityIndex)
 	if !ok {
-		return false
+		return activationCost{}
 	}
 	def := cardFaceOrDefault(card, game.FaceFront)
 	if !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, def, 0, body, chosenModes, targets, xValue) ||
 		!bodyTargetCountsMatchX(g, playerID, def, 0, body, chosenModes, targets, xValue) {
-		return false
+		return activationCost{}
 	}
-	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+	return abilityRequestCost(manaCostPtr(body.ManaCost), payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     cardID,
 		SourceZone:       zone.Graveyard,
@@ -800,7 +832,7 @@ func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, 
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
-	})
+	}, cardSource(cardSourcePresent(graveyardAbilitySource, playerID, cardID, abilityIndex)))
 }
 
 // canActivateManaAbility reports whether the player may activate a permanent's

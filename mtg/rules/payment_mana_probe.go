@@ -42,6 +42,28 @@ func (e *Engine) manualManaMayPay(g *game.Game, request payment.SpellRequest, pr
 	if request.CardID != 0 {
 		stageProposedSpell(root, request.PlayerID, request.CardID, request.SourceZone, proposedSpellFace(root, request), request.XValue)
 	}
+	return e.manualManaMayMakePayable(root, seed, request.PlayerID, func(clone *game.Game) bool {
+		payable, _ := preparedSpellCostFeasibility(clone, request, prepared, nil, announced)
+		return payable
+	})
+}
+
+// manualActivationManaMayPay reports whether player may activate payment-time
+// mana abilities while activating an ability (CR 602.2b, 601.2g) so that its
+// cost becomes payable. payable checks the cost in a clone of g, resolving the
+// ability's source there by its identity. The search and its handling of
+// hidden information are manualManaMayPay's. The ability's source stays where
+// it is while its cost is paid, so the search starts from g as it is.
+func (e *Engine) manualActivationManaMayPay(g *game.Game, player game.PlayerID, payable func(*game.Game) bool) bool {
+	root := g.Clone()
+	root.Execution = game.ExecutionDiagnostics{}
+	return e.manualManaMayMakePayable(root, g.IDGen.Current(), player, payable)
+}
+
+// manualManaMayMakePayable searches root, a clone of the live game whose ID
+// generator was at seed, for payment-time mana ability activations by player
+// after which payable holds, reporting true when the search is inconclusive.
+func (e *Engine) manualManaMayMakePayable(root *game.Game, seed uint64, player game.PlayerID, payable func(*game.Game) bool) bool {
 	probe := &manaPaymentProbe{
 		engine: &Engine{
 			rng:                 rand.New(rand.NewPCG(seed, seed^searchSeedLo)),
@@ -50,11 +72,8 @@ func (e *Engine) manualManaMayPay(g *game.Game, request payment.SpellRequest, pr
 			programs:            e.programs,
 			DecisionLimit:       e.DecisionLimit,
 		},
-		player: request.PlayerID,
-		payable: func(clone *game.Game) bool {
-			payable, _ := preparedSpellCostFeasibility(clone, request, prepared, nil, announced)
-			return payable
-		},
+		player:  player,
+		payable: payable,
 	}
 	return probe.search(root) || probe.inconclusive
 }

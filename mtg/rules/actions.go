@@ -475,9 +475,9 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 }
 
 // attemptActionWithChoices takes act for playerID and returns the action taken:
-// act, with a cast's targets as finally chosen (CR 601.2c). A cast the player
-// started but couldn't legally complete is reversed (CR 733.1) and recorded in
-// attempts, which may be nil.
+// act, with a cast's targets as finally chosen (CR 601.2c). A cast or
+// activation the player started but couldn't legally complete is reversed
+// (CR 733.1) and recorded in attempts, which may be nil.
 func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, action.Action) {
 	if synchronousSearchOrPayment(g) {
 		return actionFailed, act
@@ -506,6 +506,17 @@ func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, 
 	if faceDown, ok := act.CastFaceDownPayload(); ok {
 		return e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log, attempts), act
 	}
+	if activate, ok := act.ActivateAbilityPayload(); ok {
+		outcome := e.attemptActivateAbilityWithChoices(g, playerID, activate, agents, log)
+		switch outcome {
+		case actionApplied:
+			countAbilityActivation(g, activate)
+		case actionReversed:
+			attempts.reverseActivationAttempt(activate)
+		case actionFailed:
+		}
+		return outcome, act
+	}
 	return outcomeOf(e.applyNonCastAction(g, playerID, act, agents, log)), act
 }
 
@@ -521,10 +532,7 @@ func (e *Engine) applyNonCastAction(g *game.Game, playerID game.PlayerID, act ac
 		if !ok || !e.applyActivateAbilityWithChoices(g, playerID, activate, agents, log) {
 			return false
 		}
-		if g.AbilityActivationsThisTurn == nil {
-			g.AbilityActivationsThisTurn = make(map[game.ActivatedAbilityUse]int)
-		}
-		g.AbilityActivationsThisTurn[game.ActivatedAbilityUse{SourceID: activate.SourceID, AbilityIndex: activate.AbilityIndex}]++
+		countAbilityActivation(g, activate)
 		return true
 	case action.ActionSuspendCard:
 		suspend, ok := act.SuspendCardPayload()
@@ -550,6 +558,14 @@ func (e *Engine) applyNonCastAction(g *game.Game, playerID game.PlayerID, act ac
 	default:
 		return false
 	}
+}
+
+// countAbilityActivation counts an activation taken as an action this turn.
+func countAbilityActivation(g *game.Game, activate action.ActivateAbilityAction) {
+	if g.AbilityActivationsThisTurn == nil {
+		g.AbilityActivationsThisTurn = make(map[game.ActivatedAbilityUse]int)
+	}
+	g.AbilityActivationsThisTurn[game.ActivatedAbilityUse{SourceID: activate.SourceID, AbilityIndex: activate.AbilityIndex}]++
 }
 
 func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
@@ -587,8 +603,8 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 							continue
 						}
 						for choiceIndex, targets := range targetResult.choices {
-							if canActivateEquipAbilityWithModes(g, playerID, permanent, body, idx, targets, xValue, modes) ||
-								canActivateGeneralAbilityWithModes(g, playerID, permanent, body, idx, targets, xValue, modes) {
+							if e.activationFeasible(g, playerID, equipActivation(g, playerID, permanent, body, idx, targets, xValue, modes)) ||
+								e.activationFeasible(g, playerID, generalActivation(g, playerID, permanent, body, idx, targets, xValue, modes)) {
 								actions = append(actions, actionBuild.activateAbilityWithModes(permanent.ObjectID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
 							}
 						}
@@ -617,7 +633,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 	return actions
 }
 
-func (*Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (e *Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
@@ -640,7 +656,7 @@ func (*Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.Playe
 						continue
 					}
 					for choiceIndex, targets := range targetResult.choices {
-						if canActivateHandAbilityWithModes(g, playerID, cardID, body, indexed.index, targets, xValue, modes) {
+						if e.activationFeasible(g, playerID, handActivation(g, playerID, cardID, body, indexed.index, targets, xValue, modes)) {
 							actions = append(actions, actionBuild.activateAbilityWithModes(cardID, indexed.index, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
 						}
 					}
@@ -651,7 +667,7 @@ func (*Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.Playe
 	return actions
 }
 
-func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (e *Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	player, ok := playerByID(g, playerID)
 	if !ok {
 		return nil
@@ -673,7 +689,7 @@ func (*Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID game.
 						continue
 					}
 					for choiceIndex, targets := range targetResult.choices {
-						if canActivateGraveyardAbilityWithModes(g, playerID, cardID, body, idx, targets, xValue, modes) {
+						if e.activationFeasible(g, playerID, graveyardActivation(g, playerID, cardID, body, idx, targets, xValue, modes)) {
 							actions = append(actions, actionBuild.activateAbilityWithModes(cardID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
 						}
 					}
@@ -747,7 +763,7 @@ func containsEquivalentManaAbility(abilities []*game.ManaAbility, candidate *gam
 	return false
 }
 
-func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (e *Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return nil
 	}
@@ -764,7 +780,7 @@ func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []actio
 		effectiveAbilities := effectiveHandActivatedAbilities(g, playerID, card)
 		for i := range effectiveAbilities {
 			effective := &effectiveAbilities[i]
-			if canActivateCyclingAbility(g, playerID, cardID, &effective.body, effective.index, nil, 0) {
+			if e.activationFeasible(g, playerID, cyclingActivation(g, playerID, cardID, &effective.body, effective.index, nil, 0)) {
 				actions = append(actions, actionBuild.activateAbility(cardID, effective.index, nil, 0))
 			}
 		}
@@ -772,7 +788,7 @@ func (*Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []actio
 	return actions
 }
 
-func (*Engine) legalNinjutsuActions(g *game.Game, playerID game.PlayerID) []action.Action {
+func (e *Engine) legalNinjutsuActions(g *game.Game, playerID game.PlayerID) []action.Action {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || len(unblockedAttackers(g, playerID)) == 0 {
 		return nil
 	}
@@ -790,7 +806,7 @@ func (*Engine) legalNinjutsuActions(g *game.Game, playerID game.PlayerID) []acti
 		for i := range frontDef.ActivatedAbilities {
 			body := &frontDef.ActivatedAbilities[i]
 			idx := frontDef.ActivatedAbilityIndex(i)
-			if canActivateNinjutsuAbility(g, playerID, cardID, body, idx, nil, 0) {
+			if e.activationFeasible(g, playerID, ninjutsuActivation(g, playerID, cardID, body, idx, nil, 0)) {
 				actions = append(actions, actionBuild.activateAbility(cardID, idx, nil, 0))
 			}
 		}

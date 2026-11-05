@@ -124,6 +124,16 @@ func (p Planner) BuildAbilityCostPlan(req AbilityRequest) bool {
 	return ok
 }
 
+// CanPayAbilityNonManaCosts reports whether the components of the ability cost
+// req describes other than its mana cost (the source's {T}, sacrifices,
+// discards, life and the other additional costs) can be paid from current
+// resources. Mana abilities activated while paying (CR 602.2b, 601.2g) only
+// add mana, so a cost failing this check can't become payable by activating
+// them.
+func (p Planner) CanPayAbilityNonManaCosts(req AbilityRequest) bool {
+	return canPayAbilityNonManaCosts(p.s, req)
+}
+
 // PayAbilityCosts pays all costs for the activated ability described by req. It
 // returns an AbilityCostPayment carrying the pool mana consumed (for mana-spend
 // rider resolution), the object IDs of permanents sacrificed as a cost, and the

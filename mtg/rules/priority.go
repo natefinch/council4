@@ -64,13 +64,13 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		}
 
 		legal := e.legalActions(g, playerID)
-		legal = slices.DeleteFunc(legal, attempts.castExhausted)
+		legal = slices.DeleteFunc(legal, attempts.actionExhausted)
 		if len(legal) == 0 {
 			legal = []action.Action{actionBuild.pass()}
 		}
 
 		chosen := e.chooseAction(g, agents, playerID, legal, actionBuild.pass())
-		if attempts.castExhausted(chosen) {
+		if attempts.actionExhausted(chosen) {
 			g.Execution.InvalidActions++
 			chosen = actionBuild.pass()
 		}
@@ -90,8 +90,9 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		case actionFailed:
 			panic("applyAction failed for validated action")
 		case actionReversed:
-			// CR 733.1-2: the cast was reversed, so it isn't logged as taken,
-			// and the player keeps priority to take another action or pass.
+			// CR 733.1-2: the cast or activation was reversed, so it isn't
+			// logged as taken, and the player keeps priority to take another
+			// action or pass.
 			log.removeAction(entryIndex)
 			continue
 		case actionApplied:
