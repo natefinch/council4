@@ -46,9 +46,12 @@ Ordinary non-mana activations, triggers and resolving spells can use Go programs
    Likewise a fixed-timing delayed trigger carries its own sentence of the
    creating text; `TestRegisteredFixedDelayedTriggersHaveOwnText` fails when
    that sentence cannot be singled out, so then record `DelayedTriggerDef.Text`.
-4. Execute named-card scenarios through the real Engine. Exercise choices,
-   target changes/all-illegal targets, source departure, relevant replacements
-   and timing, not just CardDef shapes or a smoke game's winner.
+4. Execute one named scenario per card through the real Engine that plays its
+   own Oracle text: its costs, choices, targets and result, not just CardDef
+   shapes or a smoke game's winner. Shared-operation behavior (copies, clones,
+   retargeting, protection, replacements, illegal targets, source departure) is
+   tested once with the operation, not repeated per card; add a card-specific
+   case only when the card's own text changes that behavior.
    Follow the [validation and review policy](../.github/copilot-instructions.md#verify-proportionally).
 5. Register only complete behavior-verified entries in
    `mtg/cards/authored/cards.go`, with exact Oracle identity and program versions.
@@ -106,7 +109,7 @@ place, refusing an observed intervening edit; exclusive first creation remains
 separate. This protects against truncation, not concurrent-writer races.
 
 When no saved batch is executable, `next` returns `batch: null`, saved
-`pending_prerequisites`, up to five exact `unreviewed_candidates` in saved order,
+`pending_prerequisites`, up to twenty exact `unreviewed_candidates` in saved order,
 and `next_action`. Candidates are only a bounded discovery slice, not a
 capability/readiness verdict. Review actual deck priorities, primary sources,
 complete declarations, runtime paths and behavioral prior art before selection.
@@ -116,7 +119,7 @@ Pending output also retains canonical whole-card blockers and their
 evidence never silently reopens these cards.
 
 Use `-operation add-reviewed-batch -plan PATH -batch NEW_ID -owner SESSION_ID`
-to append **one** reviewed three-to-five-card batch. The plan is a small JSON
+to append **one** reviewed batch of three to twenty cards. The plan is a small JSON
 object, not a replacement manifest:
 
 ```json
@@ -218,7 +221,7 @@ do not falsely classify ready siblings or partially verify a claim. Instead:
    `retired_batches`, clears those released memberships and blocks only the
    specified cards. Retired batch IDs cannot be reused.
 3. Review eligible siblings and additional unassigned candidates, then
-   `add-reviewed-batch` under a new ID with three-to-five exact identities and
+   `add-reviewed-batch` under a new ID with three to twenty exact identities and
    checked prerequisites. Preserve any existing draft/scenario work; retirement
    neither admits it nor discards it. Blocked members remain available for
    explicit reassessment after their prerequisite, never automatic admission.
@@ -239,7 +242,7 @@ Establish scope, integration destination, commit/push permissions and resource
 limits once per run. A request for a bounded issue or card batch does not
 authorize replenishment or unrelated Engine work. Under an explicit assignment
 to implement remaining cards **and their required Engine support**, finish and
-record a batch, replenish the next reviewed small family, and continue without
+record a batch, replenish the next reviewed family, and continue without
 another card-selection or strategy conversation.
 
 A demonstrated capability gap routes to its canonical executable prerequisite:

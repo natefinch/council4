@@ -63,6 +63,13 @@ func loadReviewedPlan(path string) (reviewedPlan, error) {
 	return *plan, nil
 }
 
+// Batch size bounds. Card units only author cards on operations already on
+// main, so a batch is one family of cards sharing those operations.
+const (
+	minBatchCards = 3
+	maxBatchCards = 20
+)
+
 // validateBatch checks a batch definition. Prerequisites may be empty when the
 // batch relies only on operations already on main; each listed issue still
 // needs prerequisite evidence before the batch is claimable.
@@ -72,8 +79,8 @@ func validateBatch(b batch) error {
 		return errors.New("invalid batch: missing id")
 	case strings.TrimSpace(b.Family) == "":
 		return fmt.Errorf("invalid batch %s: missing family", b.ID)
-	case len(b.OracleIDs) < 3 || len(b.OracleIDs) > 5:
-		return fmt.Errorf("invalid batch %s: needs 3–5 oracle_ids, has %d", b.ID, len(b.OracleIDs))
+	case len(b.OracleIDs) < minBatchCards || len(b.OracleIDs) > maxBatchCards:
+		return fmt.Errorf("invalid batch %s: needs %d–%d oracle_ids, has %d", b.ID, minBatchCards, maxBatchCards, len(b.OracleIDs))
 	case len(b.Operations) == 0:
 		return fmt.Errorf("invalid batch %s: operations must name the Engine operations the cards use", b.ID)
 	}
@@ -157,7 +164,7 @@ func unreviewedCandidates(queue manifest) []record {
 	for _, r := range queue.Records {
 		if r.Status == "unclaimed" && r.Batch == "" {
 			candidates = append(candidates, r)
-			if len(candidates) == 5 {
+			if len(candidates) == maxBatchCards {
 				break
 			}
 		}
@@ -258,8 +265,8 @@ func continueQueue(queue *manifest, operation, batchID, owner string, plan revie
 }
 
 func reassessRecords(queue *manifest, candidates []reviewedRecord) error {
-	if len(candidates) == 0 || len(candidates) > 5 {
-		return errors.New("reassess requires 1–5 exact blocked identities")
+	if len(candidates) == 0 || len(candidates) > maxBatchCards {
+		return fmt.Errorf("reassess requires 1–%d exact blocked identities", maxBatchCards)
 	}
 	updated := slices.Clone(queue.Records)
 	seen := make(map[string]bool)
@@ -297,7 +304,7 @@ func reassessRecords(queue *manifest, candidates []reviewedRecord) error {
 
 func retireBatch(queue *manifest, batchID string, plan reviewedPlan) error {
 	index := slices.IndexFunc(queue.Batches, func(b batch) bool { return b.ID == batchID })
-	if batchID == "" || index < 0 || len(plan.Batches) != 0 || len(plan.Records) == 0 || len(plan.Records) > 5 {
+	if batchID == "" || index < 0 || len(plan.Batches) != 0 || len(plan.Records) == 0 || len(plan.Records) > maxBatchCards {
 		return errors.New("retire-batch needs an existing released batch and exact newly blocked records, not batch definitions")
 	}
 	b := queue.Batches[index]

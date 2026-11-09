@@ -37,6 +37,18 @@ test("Engine review is mandatory; cards follow tunable risk policy", async () =>
   const card = fixture({ task: { taskType: "card", reviewRequired: false } });
   assert.equal((await executeUnit(card)).status, "accepted");
   assert.deepEqual(card.calls, ["implementation", "validate", "prepare"]);
+  // Card units cannot change Engine code; under "never" a flagged card is still unreviewed.
+  const flagged = (cardReview, reviewRequired) => fixture({ policy: { ...policy, cardReview },
+    task: { taskType: "card", reviewRequired }, stage: async () => ({ ...complete, reviewRequired }) });
+  const never = flagged("never", true);
+  await executeUnit(never);
+  assert.ok(!never.calls.includes("review-0"));
+  const risk = flagged("risk", true);
+  await executeUnit(risk);
+  assert.ok(risk.calls.includes("review-0"));
+  const always = flagged("always", false);
+  await executeUnit(always);
+  assert.ok(always.calls.includes("review-0"));
 });
 
 test("Review fixes are separate work and require validation and re-review", async () => {
@@ -74,6 +86,7 @@ test("A final re-review with only [new] findings lands them as a remainder on th
     assert.equal(outcome.deferredFindings, undefined);
   }
   const card = run({ taskType: "card", id: "c", issue: 5, reviewRequired: true }, verdicts[2]);
+  card.policy = { ...policy, cardReview: "always" };
   card.review = async round => ({ verdict: "changes_needed", findings: round ? ["[new] x"] : ["y"] });
   assert.equal((await executeUnit(card)).status, "review_rejected");
   // A first review is never final, even with no repair budget.
@@ -248,7 +261,7 @@ test("Engine work gets two review-fix rounds; card work gets one", async () => {
   engine.review = async round => { engine.calls.push(`review-${round}`); return twice(round); };
   assert.equal((await executeUnit(engine)).status, "accepted");
   assert.deepEqual(engine.calls.filter(call => call === "review_fix").length, 2);
-  const card = fixture({ task: { taskType: "card", id: "batch", reviewRequired: true } });
+  const card = fixture({ task: { taskType: "card", id: "batch", reviewRequired: true }, policy: { ...policy, cardReview: "always" } });
   card.review = async round => { card.calls.push(`review-${round}`); return twice(round); };
   card.publish = async () => assert.fail("card exceeded its review-fix rounds");
   assert.notEqual((await executeUnit(card)).status, "accepted");
@@ -690,6 +703,24 @@ test("Reviews block only on regressions, acceptance and common-play harm", () =>
   assert.match(bar, /follow-up[\s\S]*sub-issue of #3357[\s\S]*followUps/);
   assert.match(bar, /Approve when no finding blocks/);
   assert.doesNotMatch(reviewBar("abc123", undefined), /sub-issue of #/);
+});
+
+test("Gaps awaiting gameplay evidence wait until a card hits them", () => {
+  const unproven = number => ({ ...open(number), labels: ["Needs Gameplay Evidence"] });
+  const issues = { 40: unproven(40), 50: unproven(50) };
+  // A reviewer-filed defect without card evidence is not worked, and batches may include cards that need it.
+  assert.equal(chooseWork({ next: { batch: readyBatch }, issues, defects: [40] }).kind, "card");
+  const prepare = chooseWork({ next: {}, issues, defects: [40] });
+  assert.equal(prepare.kind, "prepare");
+  assert.deepEqual(prepare.avoid, []);
+  // A card that hits it is the evidence.
+  assert.equal(chooseWork({ next: { batch: readyBatch }, units: [blockedCard(50)], issues, defects: [40] }).gap.issue, 50);
+  // Follow-up sub-issues awaiting evidence are not worked through their parent's blocked cards.
+  const sub = (number, labels = []) => ({ number, state: "OPEN", title: `Part ${number}`, url: `u/${number}`, labels });
+  const one = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
+  const followUp = sub(4001, ["Needs Gameplay Evidence"]);
+  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [followUp, sub(4002)] } } }).gap.issue, 4002);
+  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [followUp] } } }).kind, "card");
 });
 
 test("Existing-card defects come first, then gaps blocking the most queued cards", () => {

@@ -184,11 +184,19 @@ old run, or bypass its workflow-revision guard.
 
 Known gaps are ordered: open issues labeled `Existing Card Defect` (defects in
 rules already-supported cards use, so they play wrong today) first, then gaps
-by how many queued cards they block, most first. Reviewers add that label when
-they file a pre-existing defect that registered cards hit. A gap labeled
+by how many queued cards they block, most first. A gap labeled
 `Parked` (on its issue, its parent or the sub-issue being worked) is never
 selected, since policy 1.25.0. It is reserved for directed work such as an
 epic, and still keeps its blocked cards out of new batches.
+
+Since policy 1.26.0 a gap labeled `Needs Gameplay Evidence` is selected only
+once a real card hits it: a card unit reports it as its blocker, or a queued
+card records it. Reviewer follow-ups and pre-existing defects get this label, so
+reasoning about a rare interaction no longer schedules work ahead of cards.
+Batch preparation does not avoid cards that need such a gap; authoring them
+supplies the evidence. A split gap is not worked through its labeled
+sub-issues. To promote a gap found in a game, comment with the card and game
+and remove the label.
 
 ### Backlog triage
 
@@ -231,10 +239,11 @@ failure (the issue's acceptance scenarios or ordinary play with the target cards
 don't work), or common-play harm the change introduces (crash, hidden-information
 leak, illegal or missing action in ordinary lines). Other gaps in the new
 behavior are follow-ups: the reviewer files them as issues (sub-issues of the
-unit's gap), lists them under `followUps`, and approves. A defect already on the
+unit's gap) labeled `Needs Gameplay Evidence`, lists them under `followUps`,
+and approves. A defect already on the
 base in behavior the unit doesn't deliver is pre-existing: filed the same way
-under `preexisting`, and labeled `Existing Card Defect` if registered cards hit
-it. Re-reviews re-evaluate earlier findings under this bar and only report new
+under `preexisting`, and also labeled `Existing Card Defect` if registered cards hit
+it. Both wait for gameplay evidence before they are scheduled. Re-reviews re-evaluate earlier findings under this bar and only report new
 blockers the repairs caused. Fixers implement the general approach a finding
 names rather than patching its example, and don't widen a change into routes it
 doesn't touch. The dashboard shows filed follow-ups and pre-existing defects per
@@ -317,10 +326,11 @@ stages, not falsely attributed as model active time or AIC. A new
 independent reviewer is used for re-review; repeated identical workflow calls
 are memoized by the runtime rather than spawning accidental duplicates.
 
-Engine units always get independent review. Card review defaults to risk-based:
-the selection or implementation flags material novelty, and a focused review
-then runs. Known-supported routine cards still receive real behavioral tests
-and self-inspection. Set `cardReview` to `always` to compare a stricter policy.
+Engine units always get independent review. Card units cannot change shared
+Engine code, so since policy 1.26.0 `cardReview` is `never`: each card needs
+one named scenario playing its own text, and shared-operation edge cases are
+tested once with the operation. `risk` reviews units the selection or
+implementation flags, and `always` reviews every card unit.
 The workflow does not treat model approval, strings in Verification, or passing
 constructor assertions as sufficient proof of correctness.
 

@@ -86,16 +86,21 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
   const remainders = new Set([...units, ...priorUnits].filter(u => u.status === "landed").flatMap(remainingIssues));
   const open = gaps.filter(gap => !filled.has(gap.issue) && issues[gap.issue]?.state === "OPEN")
     .map(gap => nextSubIssue(gap, issues, filled, remainders)).filter(Boolean);
+  const labeled = (candidate, label) => [issues[candidate.issue], issues[candidate.parent], candidate.subIssue]
+    .some(issue => (issue?.labels ?? []).includes(label));
   // A Parked gap (its issue, or the parent it is worked through) is reserved
   // for directed work such as an epic; it still blocks its cards.
-  const parked = candidate => [issues[candidate.issue], issues[candidate.parent], candidate.subIssue]
-    .some(issue => (issue?.labels ?? []).includes(parkedLabel));
-  const gap = open.find(candidate => !attempted.has(candidate.issue) && !parked(candidate));
+  const parked = candidate => labeled(candidate, parkedLabel);
+  // A gap awaiting gameplay evidence is worked only once a real card hits it.
+  const unproven = candidate => !candidate.oracleIds.length && labeled(candidate, needsEvidenceLabel);
+  const gap = open.find(candidate => !attempted.has(candidate.issue) && !parked(candidate) && !unproven(candidate));
   if (gap) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
   if (next?.batch) return { kind: "card", batch: next.batch, cards: next.cards ?? [] };
   return {
     kind: "prepare",
-    avoid: open,
+    // Cards that need an unproven gap are still batched, so authoring them
+    // supplies the evidence.
+    avoid: open.filter(candidate => !unproven(candidate)),
     unblocked: gaps.filter(candidate => candidate.oracleIds.length &&
       (filled.has(candidate.issue) || issues[candidate.issue]?.state === "CLOSED")),
     parked: open.filter(candidate => attempted.has(candidate.issue) || parked(candidate)),
@@ -108,9 +113,12 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
 // A split gap whose sub-issues have all landed or closed is done, not
 // re-implemented as a whole: returns null. The exception is a remainder a
 // landed unit reported on the parent itself; that remainder is worked next.
+// Sub-issues awaiting gameplay evidence are review follow-ups, not ordered
+// pieces of the split, so they are skipped until a card reports them itself.
 export function nextSubIssue(gap, issues, filled = new Set(), remainders = new Set()) {
   const subs = issues[gap.issue]?.subIssues ?? [];
-  const sub = subs.find(candidate => candidate.state === "OPEN" && !filled.has(candidate.number));
+  const sub = subs.find(candidate => candidate.state === "OPEN" && !filled.has(candidate.number) &&
+    !(candidate.labels ?? []).includes(needsEvidenceLabel));
   if (!sub) return subs.length && !remainders.has(gap.issue) ? null : gap;
   return { ...gap, issue: sub.number, parent: gap.issue, subIssue: sub,
     sources: [...gap.sources, `sub-issue of #${gap.issue}`] };
@@ -118,6 +126,7 @@ export function nextSubIssue(gap, issues, filled = new Set(), remainders = new S
 
 export const needsSplitLabel = "Needs Split";
 export const parkedLabel = "Parked";
+export const needsEvidenceLabel = "Needs Gameplay Evidence";
 
 export function gapTask(choice, names) {
   const { gap, issue } = choice;

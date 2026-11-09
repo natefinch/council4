@@ -1,5 +1,5 @@
 {
-  "version": "1.25.0",
+  "version": "1.26.0",
   "models": {
     "selection": {
       "model": "gpt-6-luna",
@@ -76,7 +76,7 @@
       "contextTier": "default"
     }
   },
-  "cardReview": "risk",
+  "cardReview": "never",
   "reviewFixRounds": {
     "card": 1,
     "engine": 2

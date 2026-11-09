@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -187,12 +188,28 @@ func TestInvalidBatchErrorsExplainWhy(t *testing.T) {
 	for want, b := range map[string]batch{
 		"missing id":     {Family: "f", OracleIDs: []string{"a", "b", "c"}, Operations: []string{"op"}},
 		"missing family": {ID: "x", OracleIDs: []string{"a", "b", "c"}, Operations: []string{"op"}},
-		"needs 3–5":      {ID: "x", Family: "f", OracleIDs: []string{"a", "b"}, Operations: []string{"op"}},
+		"needs 3–20":     {ID: "x", Family: "f", OracleIDs: []string{"a", "b"}, Operations: []string{"op"}},
 		"operations":     {ID: "x", Family: "f", OracleIDs: []string{"a", "b", "c"}},
 	} {
 		if err := validateBatch(b); err == nil || !strings.Contains(err.Error(), want) {
 			t.Errorf("%s: got %v", want, err)
 		}
+	}
+}
+
+func TestBatchesHoldUpToTwentyCards(t *testing.T) {
+	ids := func(n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = fmt.Sprintf("card-%d", i)
+		}
+		return out
+	}
+	if err := validateBatch(batch{ID: "x", Family: "f", OracleIDs: ids(20), Operations: []string{"op"}}); err != nil {
+		t.Fatalf("20-card batch rejected: %v", err)
+	}
+	if err := validateBatch(batch{ID: "x", Family: "f", OracleIDs: ids(21), Operations: []string{"op"}}); err == nil {
+		t.Fatal("21-card batch accepted")
 	}
 }
 
