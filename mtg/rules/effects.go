@@ -705,6 +705,14 @@ func (e *Engine) chooseSacrificePermanentsForPlayer(g *game.Game, resolver refer
 		}
 		candidates = append(candidates, permanent)
 	}
+	return e.chooseSacrificeFromCandidates(g, playerID, amount, candidates, nil, agents, log)
+}
+
+// chooseSacrificeFromCandidates makes playerID choose amount of the eligible
+// candidates to sacrifice. If there are fewer or equal candidates than amount,
+// it chooses all of them without asking. earlier carries the public choices
+// already made by previous players in the same APNAP edict (CR 101.4b).
+func (e *Engine) chooseSacrificeFromCandidates(g *game.Game, playerID game.PlayerID, amount int, candidates []*game.Permanent, earlier []game.SacrificeDecision, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []*game.Permanent {
 	if len(candidates) == 0 || amount <= 0 {
 		return nil
 	}
@@ -716,13 +724,14 @@ func (e *Engine) chooseSacrificePermanentsForPlayer(g *game.Game, resolver refer
 		options[i] = game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)}
 	}
 	request := game.ChoiceRequest{
-		Kind:             game.ChoicePayment,
-		Player:           playerID,
-		Prompt:           "Choose a permanent to sacrifice",
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
+		Kind:               game.ChoicePayment,
+		Player:             playerID,
+		Prompt:             "Choose a permanent to sacrifice",
+		Options:            options,
+		MinChoices:         amount,
+		MaxChoices:         amount,
+		DefaultSelection:   firstChoiceIndices(amount),
+		SacrificeDecisions: earlier,
 	}
 	selected := e.chooseChoice(g, agents, request, log)
 	chosen := make([]*game.Permanent, 0, len(selected))

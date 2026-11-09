@@ -1443,6 +1443,10 @@ const (
 	PermanentChoiceGreatestManaValue
 )
 
+func (e PermanentChoiceExtremum) valid() bool {
+	return e <= PermanentChoiceGreatestManaValue
+}
+
 // CreateTokenForEachDestroyed creates one token defined by Source for each
 // permanent a sibling DestroyForEachPlayer recorded under LinkedKey, giving each
 // token to that destroyed permanent's last-known controller. It models the per-
@@ -1799,6 +1803,16 @@ type SacrificePermanents struct {
 	// matching Selection, i.e. who can't satisfy the edict ("Each player who
 	// can't discards a card."). SacrificeFallbackNone leaves no rider.
 	Fallback SacrificeFallback
+	// Extremum narrows each affected player's pool, independently and as the
+	// edict resolves, to the permanents matching Selection tied for the extreme
+	// effective characteristic among every matching permanent that player
+	// controls ("Each opponent sacrifices a creature with the greatest power
+	// among creatures that player controls." — Crackling Doom). If none of those
+	// tied permanents can be sacrificed, the player sacrifices nothing rather
+	// than a lesser permanent, and counts as unable to satisfy the edict for
+	// Fallback. The sacrificing player chooses among ties. It requires a fixed
+	// Amount of 1 and is mutually exclusive with All and AnyNumber.
+	Extremum PermanentChoiceExtremum
 	// PublishLinked, when set, records the permanents sacrificed by this edict as
 	// linked objects under the given key so a later instruction can read them
 	// through last-known information once they have left the battlefield. It

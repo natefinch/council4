@@ -1933,10 +1933,7 @@ func (p ForEachPlayer) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if err := firstProblem(p.Selection.Validate()); err != nil {
 		return err
 	}
-	switch p.Extremum {
-	case PermanentChoiceExtremumNone, PermanentChoiceGreatestPower,
-		PermanentChoiceGreatestToughness, PermanentChoiceGreatestManaValue:
-	default:
+	if !p.Extremum.valid() {
 		return errors.New("for each player has an invalid choice extremum")
 	}
 	return validatePlayerReference(p.Chooser, targets, checkTargets)
@@ -2860,6 +2857,17 @@ func (p SacrificePermanents) validatePrimitive(targets []TargetSpec, checkTarget
 		}
 		if p.Fallback.Kind != SacrificeFallbackNone {
 			return errors.New("SacrificePermanents with AnyNumber set cannot carry a fallback")
+		}
+	}
+	if p.Extremum != PermanentChoiceExtremumNone {
+		if !p.Extremum.valid() {
+			return errors.New("SacrificePermanents has an invalid choice extremum")
+		}
+		if p.All || p.AnyNumber {
+			return errors.New("SacrificePermanents cannot combine a choice extremum with All or AnyNumber")
+		}
+		if p.Amount.IsDynamic() || p.Amount.Value() != 1 {
+			return errors.New("SacrificePermanents with a choice extremum requires a fixed Amount of 1")
 		}
 	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
