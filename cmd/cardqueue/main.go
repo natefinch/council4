@@ -347,8 +347,8 @@ func transition(queue *manifest, operation, batchID, owner string, blocker int, 
 			r.Status, r.Owner, r.Blocker, r.Reason = "blocked", "", blocker, reason
 		}
 	}
-	if count < 3 || count > 5 {
-		return errors.New("batch must contain 3–5 records")
+	if count < minBatchCards || count > maxBatchCards {
+		return fmt.Errorf("batch must contain %d–%d records", minBatchCards, maxBatchCards)
 	}
 	queue.Records = updated
 	return nil

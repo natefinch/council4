@@ -105,6 +105,8 @@ This is the authoritative validation policy; skills and guides link here.
 - Preserve exact card identities, program IDs/versions/dependencies and genuine
   scenario evidence. Test actual card interactions and shared operations;
   structural assertions, generated source and hashes are not behavior evidence.
+  Each authored card needs one scenario playing its own text; shared-operation
+  edge cases are tested once with the operation, not per card.
 - Self-inspect every diff. Focused independent review is only for significant
   shared identity, timing, replacement, cloning or hidden-information changes,
   not every nontrivial batch. Fix substantive findings without restarting broad
@@ -124,3 +126,5 @@ it as the blocker. One shared blocker may cover many cards. File new work only
 when its scope and completion condition are known; do not enumerate speculative
 neighboring wording or mirror routine notes across epics. Park affected cards
 whole and continue other eligible work when the assigned scope allows it.
+Rules gaps found by reasoning or review rather than play are labeled
+`Needs Gameplay Evidence` and wait until a real card or simulated game hits them.
