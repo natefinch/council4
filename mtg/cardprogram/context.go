@@ -24,7 +24,9 @@ type Source struct {
 type Outcome struct {
 	Available bool
 	Succeeded bool
-	Objects   []game.ObjectSnapshot
+	// Objects carry public characteristics, including last-known power,
+	// toughness and mana value for permanents that left the battlefield.
+	Objects []game.ObjectSnapshot
 	// Cards contains exact local handles for cards observed by Reveal.
 	Cards []FoundCard
 }

@@ -44,10 +44,10 @@ func playerControlledSelectionCandidates(g *game.Game, resolver referenceResolve
 }
 
 func permanentChoiceExtremumCandidates(g *game.Game, candidates []*game.Permanent, extremum game.PermanentChoiceExtremum) []*game.Permanent {
-	if extremum == game.PermanentChoiceExtremumNone || len(candidates) < 2 {
+	if extremum == game.PermanentChoiceExtremumNone {
 		return candidates
 	}
-	value := func(permanent *game.Permanent) (int, bool) {
+	return extremeValuedPermanents(candidates, func(permanent *game.Permanent) (int, bool) {
 		switch extremum {
 		case game.PermanentChoiceGreatestPower:
 			return effectivePower(g, permanent), true
@@ -58,6 +58,32 @@ func permanentChoiceExtremumCandidates(g *game.Game, candidates []*game.Permanen
 		default:
 			return 0, false
 		}
+	})
+}
+
+// signedPermanentChoiceExtremumValue reads permanent's effective characteristic
+// for extremum without clamping negative power or toughness to zero, because
+// comparing which value is greatest uses the actual signed values (CR 107.1b).
+// A permanent without the characteristic reports false.
+func signedPermanentChoiceExtremumValue(g *game.Game, permanent *game.Permanent, extremum game.PermanentChoiceExtremum) (int, bool) {
+	switch extremum {
+	case game.PermanentChoiceGreatestPower:
+		values := effectivePermanentValues(g, permanent)
+		return values.power, values.powerOK
+	case game.PermanentChoiceGreatestToughness:
+		return effectiveToughness(g, permanent)
+	case game.PermanentChoiceGreatestManaValue:
+		return effectivePermanentManaValue(g, permanent)
+	default:
+		return 0, false
+	}
+}
+
+// extremeValuedPermanents keeps the candidates tied for the greatest value,
+// ignoring candidates whose value is unavailable.
+func extremeValuedPermanents(candidates []*game.Permanent, value func(*game.Permanent) (int, bool)) []*game.Permanent {
+	if len(candidates) < 2 {
+		return candidates
 	}
 	bestSet := false
 	best := 0

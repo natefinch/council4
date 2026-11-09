@@ -2266,6 +2266,9 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 	resolver := newReferenceResolver(r.game, r.obj)
 	var chosen []*game.Permanent
 	var cantSacrifice []game.PlayerID
+	// decisions records each earlier player's public choice so later players
+	// in APNAP order know it before choosing (CR 101.4b).
+	var decisions []game.SacrificeDecision
 	for _, playerID := range players {
 		if prim.All {
 			chosen = append(chosen, playerControlledMatchingSelection(r.game, resolver, playerID, prim.Selection)...)
@@ -2273,6 +2276,20 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 		}
 		if prim.AnyNumber {
 			chosen = append(chosen, r.engine.chooseAnyNumberToSacrificeForPlayer(r.game, resolver, playerID, prim.Selection, r.agents, r.log)...)
+			continue
+		}
+		if prim.Extremum != game.PermanentChoiceExtremumNone {
+			candidates := sacrificeExtremumCandidates(r.game, resolver, playerID, prim.Selection, prim.Extremum)
+			if len(candidates) == 0 && prim.Fallback.Kind != game.SacrificeFallbackNone {
+				cantSacrifice = append(cantSacrifice, playerID)
+			}
+			picked := r.engine.chooseSacrificeFromCandidates(r.game, playerID, amount, candidates, decisions, r.agents, r.log)
+			decision := game.SacrificeDecision{Player: playerID}
+			for _, permanent := range picked {
+				decision.Permanents = append(decision.Permanents, permanent.ObjectID)
+			}
+			decisions = append(decisions, decision)
+			chosen = append(chosen, picked...)
 			continue
 		}
 		if prim.Fallback.Kind != game.SacrificeFallbackNone &&
@@ -2309,6 +2326,23 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 	r.rememberDepartedResultPermanents(chosen)
 	r.applySacrificeFallback(prim.Fallback, cantSacrifice)
 	return res
+}
+
+// sacrificeExtremumCandidates returns the permanents playerID could sacrifice to
+// an edict narrowed by extremum: those tied for the extreme value among every
+// matching permanent the player controls, minus any that can't be sacrificed.
+// Values are compared signed, so a 0-power creature is greater than a
+// -1-power one (CR 107.1b). The extreme is taken before the can't-be-sacrificed
+// filter, so an unsacrificeable greatest permanent leaves an empty pool instead
+// of promoting a lesser one.
+func sacrificeExtremumCandidates(g *game.Game, resolver referenceResolver, playerID game.PlayerID, sel game.Selection, extremum game.PermanentChoiceExtremum) []*game.Permanent {
+	candidates := playerControlledSelectionCandidates(g, resolver, nil, playerID, sel)
+	candidates = extremeValuedPermanents(candidates, func(permanent *game.Permanent) (int, bool) {
+		return signedPermanentChoiceExtremumValue(g, permanent, extremum)
+	})
+	return slices.DeleteFunc(candidates, func(permanent *game.Permanent) bool {
+		return permanentCantBeSacrificed(g, permanent)
+	})
 }
 
 // playerControlsSelection reports whether playerID controls at least one

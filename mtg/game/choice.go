@@ -168,6 +168,15 @@ type ScryDecision struct {
 	BottomCount     int
 }
 
+// SacrificeDecision is one earlier player's public choice within the same
+// APNAP edict, made before any chosen permanent is sacrificed (CR 101.4b).
+// Permanents lists the battlefield object IDs that player chose; it is empty
+// when they chose nothing.
+type SacrificeDecision struct {
+	Player     PlayerID
+	Permanents []id.ID
+}
+
 // ChoiceRequest describes a bounded decision the rules engine needs from a
 // player while resolving rules procedures such as triggered abilities.
 type ChoiceRequest struct {
@@ -206,6 +215,9 @@ type ChoiceRequest struct {
 	// ScryDecisions exposes earlier public participation/placement decisions in
 	// the same simultaneous scry (CR 101.4b), before library changes commit.
 	ScryDecisions []ScryDecision
+	// SacrificeDecisions exposes earlier players' public choices in the same
+	// APNAP edict (CR 101.4b), before the simultaneous sacrifice.
+	SacrificeDecisions []SacrificeDecision
 	// NumberRange is required for ChoiceNumber; Options must be empty.
 	NumberRange opt.V[NumberRange]
 	// CombatAttacker and CombatBlocker identify the current staged decision.

@@ -147,6 +147,10 @@ func cloneChoiceRequest(request game.ChoiceRequest) game.ChoiceRequest {
 	request.Subject = cloneChoiceCardInfo(request.Subject)
 	request.DefaultSelection = slices.Clone(request.DefaultSelection)
 	request.ScryDecisions = slices.Clone(request.ScryDecisions)
+	request.SacrificeDecisions = slices.Clone(request.SacrificeDecisions)
+	for i := range request.SacrificeDecisions {
+		request.SacrificeDecisions[i].Permanents = slices.Clone(request.SacrificeDecisions[i].Permanents)
+	}
 	return request
 }
 

@@ -62,6 +62,7 @@ func resultCharacteristicSnapshot(snapshot game.ObjectSnapshot) game.ObjectSnaps
 		Owner:                 snapshot.Owner, Controller: snapshot.Controller, FromZone: snapshot.FromZone,
 		Types: slices.Clone(snapshot.Types), Supertypes: slices.Clone(snapshot.Supertypes),
 		Subtypes: slices.Clone(snapshot.Subtypes), Colors: slices.Clone(snapshot.Colors),
+		Power: snapshot.Power, Toughness: snapshot.Toughness, ManaValue: snapshot.ManaValue,
 	}
 }
 
