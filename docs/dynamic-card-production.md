@@ -138,7 +138,9 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
    repository's top-level worktrees, since policy 1.13.0) and saved queue
    prerequisites from `cardqueue next`. A gap counts while its GitHub issue is
    open and no landed Engine unit has targeted it. The unit is an Engine task
-   `gap-<issue>`; card work never proceeds past a known gap.
+   `gap-<issue>`. Since policy 1.26.0 Engine and card units alternate within
+   a run: after an Engine unit (not a split), the next unit is card work (step
+   2 or 3) even while gaps remain, so open gaps cannot starve card admissions.
 2. **A ready saved batch** from `cardqueue next`.
 3. **Batch preparation.** Only then does a measured selection agent review
    queue candidates and return a new reviewed batch plan. It is told which open

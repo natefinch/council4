@@ -1,6 +1,7 @@
 // Deterministic work selection. Known Engine gaps come first so card work does
-// not repeatedly trip over them; then saved ready batches; only when neither
-// exists does a model prepare a new reviewed batch.
+// not repeatedly trip over them, alternating with card units within a run;
+// then saved ready batches; only when neither applies does a model prepare a
+// new reviewed batch.
 
 // Gap references must name an issue explicitly; batch IDs such as
 // "08-scry-interaction" are not issue numbers.
@@ -94,7 +95,12 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
   // A gap awaiting gameplay evidence is worked only once a real card hits it.
   const unproven = candidate => !candidate.oracleIds.length && labeled(candidate, needsEvidenceLabel);
   const gap = open.find(candidate => !attempted.has(candidate.issue) && !parked(candidate) && !unproven(candidate));
-  if (gap) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
+  // Engine and card units alternate within a run so open gaps cannot starve
+  // card work: after an Engine unit, the next unit authors cards. Splitting a
+  // gap into sub-issues plans work rather than doing it, so it takes no turn.
+  const last = units.at(-1)?.task;
+  const cardTurn = last?.taskType === "engine" && !last.split;
+  if (gap && !cardTurn) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
   if (next?.batch) return { kind: "card", batch: next.batch, cards: next.cards ?? [] };
   return {
     kind: "prepare",

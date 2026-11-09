@@ -682,7 +682,7 @@ export async function runProduction(ctx) {
           `Prepare ONE new bounded card batch for Council4 production. READ ONLY; do not mutate code, queue, Git or issues, or spawn agents.
 Work only in ${work.path}, based on origin/main at ${work.base}. Read .github/copilot-instructions.md, card-authoring/impl-loop and the canonical batch guide. Corpus: ${corpus}.
 Scope: ${ctx.args.scope ?? "remaining cards and the shared Engine prerequisites they require"}.
-There is no ready saved batch and no unattempted open known Engine gap; the coordinator already handles those first.
+There is no ready saved batch, and this is a card turn: the coordinator schedules Engine gaps itself, alternating them with card units.
 Open known Engine gaps (do NOT batch cards that need them): ${listGaps(choice.avoid)}.
 Of those, parked gaps whose Engine unit already failed (do not reselect): ${listGaps(choice.parked)}.
 Cards whose blocking gap has since landed or closed (prefer including these; the coordinator reassesses them): ${listGaps(choice.unblocked)}.

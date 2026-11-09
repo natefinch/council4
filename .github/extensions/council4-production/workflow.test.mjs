@@ -512,12 +512,14 @@ test("A landed Engine slice with a remainder keeps its gap scheduled; a complete
   const issues = { 3285: open(3285), 3400: open(3400) };
   const slice = { ...landedGap(3285), task: { taskType: "engine", id: "gap-3285", issue: 3285, oracleIds: ["q"] },
     result: { status: "complete", gaps: [{ id: "#3285", description: "linked Aura transition" }] } };
-  let choice = chooseWork({ next, units: [slice], issues });
+  // A card unit runs between Engine units.
+  const cardUnit = { status: "landed", task: { taskType: "card", id: "c" } };
+  let choice = chooseWork({ next, units: [slice, cardUnit], issues });
   assert.equal(choice.kind, "engine");
   assert.equal(choice.gap.issue, 3285);
   assert.ok(choice.gap.sources.includes("this run remainder of gap-3285"));
   const subIssue = { ...slice, result: { status: "complete", gaps: [{ id: "#3400", description: "sub-issue" }] } };
-  choice = chooseWork({ next, units: [subIssue], issues });
+  choice = chooseWork({ next, units: [subIssue, cardUnit], issues });
   assert.equal(choice.gap.issue, 3400);
   assert.deepEqual(choice.gap.oracleIds, ["q"]);
   assert.equal(chooseWork({ next, units: [landedGap(3285)], issues }).kind, "card");
@@ -635,7 +637,7 @@ test("A gap labeled Needs Split becomes a split unit until it has open sub-issue
   assert.equal(gapTask({ ...choice, issue: { ...big, subIssues: [{ number: 2, state: "OPEN" }] } }, {}).split, undefined);
   assert.equal(gapTask({ ...choice, issue: open(1580) }, {}).split, undefined);
   // A split unit parks the parent and the next selection works its first sub-issue.
-  const splitUnit = { status: "split", task: { taskType: "engine", id: "split-1580", issue: 1580 } };
+  const splitUnit = { status: "split", task: { taskType: "engine", id: "split-1580", issue: 1580, split: true } };
   const issues = { 1580: { ...big, labels: [], subIssues: [{ number: 4001, state: "OPEN", title: "Unlock", url: "u" }] } };
   const next = { batch: null, pending_prerequisites: [{ blocked_oracle_ids: ["r"], issues: [1580] }] };
   assert.equal(chooseWork({ next, units: [splitUnit], issues }).gap.issue, 4001);
@@ -703,6 +705,20 @@ test("Reviews block only on regressions, acceptance and common-play harm", () =>
   assert.match(bar, /follow-up[\s\S]*sub-issue of #3357[\s\S]*followUps/);
   assert.match(bar, /Approve when no finding blocks/);
   assert.doesNotMatch(reviewBar("abc123", undefined), /sub-issue of #/);
+});
+
+test("Engine and card units alternate within a run", () => {
+  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
+  const issues = { 3285: open(3285), 3286: open(3286) };
+  const engineUnit = { status: "blocked", task: { taskType: "engine", id: "gap-3286", issue: 3286 } };
+  assert.equal(chooseWork({ next, issues }).kind, "engine");
+  assert.equal(chooseWork({ next, units: [engineUnit], issues }).kind, "card");
+  // With no ready batch, the card turn prepares one rather than taking another gap.
+  const prepare = chooseWork({ next: { ...next, batch: null }, units: [engineUnit], issues });
+  assert.equal(prepare.kind, "prepare");
+  assert.deepEqual(prepare.avoid.map(gap => gap.issue), [3285, 3286]);
+  const cardUnit = { status: "landed", task: { taskType: "card", id: "c" } };
+  assert.equal(chooseWork({ next, units: [engineUnit, cardUnit], issues }).gap.issue, 3285);
 });
 
 test("Gaps awaiting gameplay evidence wait until a card hits them", () => {
