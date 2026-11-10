@@ -581,6 +581,27 @@
     "oracle_text_sha256": "1fb559b39ab9c0be42924df764bc3a8f4769efc308643035d0564891db89fc36",
     "revision": "13cfde34-f76b-47ab-b83e-1c188d61a613",
     "rulings_uri": "https://api.scryfall.com/cards/13cfde34-f76b-47ab-b83e-1c188d61a613/rulings"
+   },
+   {
+    "name": "Party Dude",
+    "oracle_id": "8df7a58c-053f-4ead-a778-2747718e5f10",
+    "oracle_text_sha256": "81e921c4006459a80c196885ee9922440f1d29f75fb4effa2b3fb69580f872fc",
+    "revision": "d27b6f2a-84df-4097-a66a-8e463db47f58",
+    "rulings_uri": "https://api.scryfall.com/cards/d27b6f2a-84df-4097-a66a-8e463db47f58/rulings"
+   },
+   {
+    "name": "Sengir Autocrat",
+    "oracle_id": "0561043a-3896-4bb1-8ff5-ee674ddfea2a",
+    "oracle_text_sha256": "5db95368924959365506aab5a3151abf1516a6606c2fd44a01887091b285191e",
+    "revision": "83fa8a17-ff86-465e-9092-0968081f4e28",
+    "rulings_uri": "https://api.scryfall.com/cards/83fa8a17-ff86-465e-9092-0968081f4e28/rulings"
+   },
+   {
+    "name": "White Glove Gourmand",
+    "oracle_id": "3771c0d7-cea3-4c03-933d-f236f32ef2db",
+    "oracle_text_sha256": "1ad620b27570bf8d7ad7b4fc0bbaf5ffe9cdc4def6c512a73383109dbdf24877",
+    "revision": "c5bf1f6c-4653-4734-9bd7-af689a1b679d",
+    "rulings_uri": "https://api.scryfall.com/cards/c5bf1f6c-4653-4734-9bd7-af689a1b679d/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -6995,6 +7016,26 @@
     "DynamicAmountCountSelector(BattlefieldGroup)"
    ],
    "review": "Pinned Oracle records at corpus hash 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4. Current rulings: Hammerheim https://api.scryfall.com/cards/773acde9-504c-4065-95e0-f96428f05a7d/rulings; Crash Landing https://api.scryfall.com/cards/f8683546-85b7-4658-91be-91ef65fb3fc3/rulings; Kinscaer Harpoonist https://api.scryfall.com/cards/13cfde34-f76b-47ab-b83e-1c188d61a613/rulings. WotC Comprehensive Rules, effective 2026-11-06: https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.pdf, §§508.1m, 601.2c, 608.2b–c, 611.2a, 613.1f, 702.9, 702.14. At f72be05511f426fe39afea17196a0c4136a799d3, verified existing declarations/runtime in mtg/game/continuous.go and keyword.go, mtg/rules/continuous.go, and dynamic-count support in mtg/game/dynamic_amount.go and mtg/rules/selection.go; prior behavioral evidence includes mtg/rules/continuous_test.go, combat_landwalk_test.go, effects_dynamic_amount_test.go, and triggers_damage_test.go. All three queue records are unclaimed and unbatched; no open Engine prerequisite is required."
+  },
+  {
+   "id": "triggered-token-cards-2026-11-10",
+   "family": "triggered-token-cards",
+   "oracle_ids": [
+    "8df7a58c-053f-4ead-a778-2747718e5f10",
+    "0561043a-3896-4bb1-8ff5-ee674ddfea2a",
+    "3771c0d7-cea3-4c03-933d-f236f32ef2db"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "SetClassLevel, class-level gates, and sorcery-only level advancement",
+    "CreateToken/CreateTokens, including multiple recipients and token replacement",
+    "EventPermanentEnteredBattlefield, EventPermanentLeftBattlefield, and EventZoneChanged trigger patterns",
+    "Condition.EventHistory with EventPermanentDied and Selection filters",
+    "MovePermanent over BattlefieldGroup selections to exile",
+    "Draw and opponent-controlled artifact zone-change filtering",
+    "EventAttackerDeclared OneOrMore coalescing, attacking-creature targets, and DynamicAmountControllerHandSize for power/toughness until end of turn"
+   ],
+   "review": "Reviewed exact pinned Oracle text and printing revisions from the records below (corpus SHA-256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4). Retrieved current Scryfall rulings: Party Dude https://api.scryfall.com/cards/d27b6f2a-84df-4097-a66a-8e463db47f58/rulings (11; X is determined on resolution); Sengir Autocrat https://api.scryfall.com/cards/83fa8a17-ff86-465e-9092-0968081f4e28/rulings (0, empty list); White Glove Gourmand https://api.scryfall.com/cards/c5bf1f6c-4653-4734-9bd7-af689a1b679d/rulings (5; the end-step condition checks at step start and can use a Human death from earlier that turn). Read the official Wizards Comprehensive Rules TXT effective 2026-11-06 at https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt: 111.1, 111.7-111.8, 603.2/603.2b, 603.4, 700.4, 508.3b, and 717.2a/717.3. Traced the selected behaviors to existing Engine operations and prior art in class_level_lifecycle_test.go, class_level_gating_test.go, conditions_event_history_test.go, triggers_zonechange_test.go, group_blink_test.go, removal_token_spells_test.go, combat_calligrapher_test.go, triggers_coalescing_test.go, and effects_dynamic_amount_test.go. No selected card needs a shared Engine prerequisite."
   }
  ],
  "records": [
@@ -49542,8 +49583,10 @@
    "oracle_id": "8df7a58c-053f-4ead-a778-2747718e5f10",
    "revision": "d27b6f2a-84df-4097-a66a-8e463db47f58",
    "name": "Party Dude",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "triggered-token-cards",
+   "batch": "triggered-token-cards-2026-11-10",
+   "evidence": "mtg/rules/triggered_token_cards_test.go: TestPartyDudeOwnText"
   },
   {
    "oracle_id": "96e6d220-87db-4dab-abaa-e80c9577d89a",
@@ -56247,8 +56290,10 @@
    "oracle_id": "0561043a-3896-4bb1-8ff5-ee674ddfea2a",
    "revision": "83fa8a17-ff86-465e-9092-0968081f4e28",
    "name": "Sengir Autocrat",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "triggered-token-cards",
+   "batch": "triggered-token-cards-2026-11-10",
+   "evidence": "mtg/rules/triggered_token_cards_test.go: TestSengirAutocratOwnText"
   },
   {
    "oracle_id": "0566ab5d-c804-4ac0-add2-87fc352b4c7e",
@@ -98351,8 +98396,10 @@
    "oracle_id": "3771c0d7-cea3-4c03-933d-f236f32ef2db",
    "revision": "c5bf1f6c-4653-4734-9bd7-af689a1b679d",
    "name": "White Glove Gourmand",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "triggered-token-cards",
+   "batch": "triggered-token-cards-2026-11-10",
+   "evidence": "mtg/rules/triggered_token_cards_test.go: TestWhiteGloveGourmandOwnText"
   },
   {
    "oracle_id": "3773001a-8868-49ec-a406-298cf72359c2",
