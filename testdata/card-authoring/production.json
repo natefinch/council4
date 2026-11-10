@@ -560,6 +560,27 @@
     "oracle_text_sha256": "21148f4d309b39ab8c2d7baa1d3f9d1635835ab9ef3f299b4c08ec0c2aa38d7e",
     "revision": "8b9e51d9-189b-4dd6-87cb-628ea6373e81",
     "rulings_uri": "https://api.scryfall.com/cards/8b9e51d9-189b-4dd6-87cb-628ea6373e81/rulings"
+   },
+   {
+    "name": "Hammerheim",
+    "oracle_id": "c7476beb-7923-4994-8476-bc69187ecb72",
+    "oracle_text_sha256": "4409c8eb311b316bb8b6d580efb4d13a7028b949185f60a0d3bd6fd13af44d4e",
+    "revision": "773acde9-504c-4065-95e0-f96428f05a7d",
+    "rulings_uri": "https://api.scryfall.com/cards/773acde9-504c-4065-95e0-f96428f05a7d/rulings"
+   },
+   {
+    "name": "Crash Landing",
+    "oracle_id": "5d36e5ee-1e23-48fe-ad13-081cc153342b",
+    "oracle_text_sha256": "c9ccddc401f25fed259f605567bdfb391730887ef7bc22eba04de36b2ee80e29",
+    "revision": "f8683546-85b7-4658-91be-91ef65fb3fc3",
+    "rulings_uri": "https://api.scryfall.com/cards/f8683546-85b7-4658-91be-91ef65fb3fc3/rulings"
+   },
+   {
+    "name": "Kinscaer Harpoonist",
+    "oracle_id": "8ee98d6a-6a7e-411d-818c-816d84cfb7cd",
+    "oracle_text_sha256": "1fb559b39ab9c0be42924df764bc3a8f4769efc308643035d0564891db89fc36",
+    "revision": "13cfde34-f76b-47ab-b83e-1c188d61a613",
+    "rulings_uri": "https://api.scryfall.com/cards/13cfde34-f76b-47ab-b83e-1c188d61a613/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -6952,6 +6973,28 @@
     "DamageReplacementFiltered with DamageAddend, DamageNoncombatOnly, and DamageRecipientOpponent"
    ],
    "review": "Reviewed the pinned Scryfall Oracle records (exact IDs, revisions, names, and text) and current Scryfall rulings for all four cards. Read the official Wizards Comprehensive Rules effective 2026-11-06 (https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt), including 305.1-305.2b, 307.5, 508.3d, 601.2, 602.2, 603.4, 614.1, 616.1, 717.2a-717.3, and 120.1-120.3a. Traced existing class-level behavior in mtg/rules/class_level_lifecycle_test.go and class_level_gating_test.go; current-turn conditions and static rule effects in mtg/rules/conditions_event_history_test.go and mtg/rules/rule_effects.go; top-library cast/play and non-hand cost paths in mtg/rules/cast_spells_from_library_top_test.go, mtg/rules/play_lands_from_library_top_test.go, and mtg/rules/spell_cost_zone_test.go; Dig and discard/draw behavior in mtg/rules/effects_dig_test.go and mtg/rules/effects_discard_then_draw_test.go; life-loss and damage-addend paths in mtg/rules/effects_dynamic_life_this_turn_test.go and mtg/rules/replacement_damage_test.go plus mtg/rules/replacement.go. The selected abilities map to existing Engine operations; no open Engine prerequisite is required."
+  },
+  {
+   "id": "evasion-keyword-removal-f72be055",
+   "family": "evasion-keyword-removal",
+   "oracle_ids": [
+    "c7476beb-7923-4994-8476-bc69187ecb72",
+    "5d36e5ee-1e23-48fe-ad13-081cc153342b",
+    "8ee98d6a-6a7e-411d-818c-816d84cfb7cd"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "ManaAbility",
+    "ActivatedAbility",
+    "TriggeredAbility(EventAttackerDeclared, Optional)",
+    "TargetSpec.Selection",
+    "Execute(ApplyContinuous)",
+    "ContinuousEffect.RemoveKeywords",
+    "DurationUntilEndOfTurn",
+    "Execute(Damage)",
+    "DynamicAmountCountSelector(BattlefieldGroup)"
+   ],
+   "review": "Pinned Oracle records at corpus hash 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4. Current rulings: Hammerheim https://api.scryfall.com/cards/773acde9-504c-4065-95e0-f96428f05a7d/rulings; Crash Landing https://api.scryfall.com/cards/f8683546-85b7-4658-91be-91ef65fb3fc3/rulings; Kinscaer Harpoonist https://api.scryfall.com/cards/13cfde34-f76b-47ab-b83e-1c188d61a613/rulings. WotC Comprehensive Rules, effective 2026-11-06: https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.pdf, §§508.1m, 601.2c, 608.2b–c, 611.2a, 613.1f, 702.9, 702.14. At f72be05511f426fe39afea17196a0c4136a799d3, verified existing declarations/runtime in mtg/game/continuous.go and keyword.go, mtg/rules/continuous.go, and dynamic-count support in mtg/game/dynamic_amount.go and mtg/rules/selection.go; prior behavioral evidence includes mtg/rules/continuous_test.go, combat_landwalk_test.go, effects_dynamic_amount_test.go, and triggers_damage_test.go. All three queue records are unclaimed and unbatched; no open Engine prerequisite is required."
   }
  ],
  "records": [
@@ -7564,9 +7607,11 @@
    "oracle_id": "c7476beb-7923-4994-8476-bc69187ecb72",
    "revision": "773acde9-504c-4065-95e0-f96428f05a7d",
    "name": "Hammerheim",
-   "status": "unclaimed",
-   "family": "unreviewed/normal",
-   "deck_occurrences": 1
+   "status": "implemented-verified",
+   "family": "evasion-keyword-removal",
+   "deck_occurrences": 1,
+   "batch": "evasion-keyword-removal-f72be055",
+   "evidence": "mtg/rules/evasion_keyword_removal_test.go: TestHammerheimRemovesAllLandwalkAbilities, TestHammerheimCanTargetCreatureWithoutLandwalk, TestHammerheimAddsRedMana"
   },
   {
    "oracle_id": "c97361b5-af16-4a7b-af85-a429dbaf4ad2",
@@ -130340,8 +130385,10 @@
    "oracle_id": "5d36e5ee-1e23-48fe-ad13-081cc153342b",
    "revision": "f8683546-85b7-4658-91be-91ef65fb3fc3",
    "name": "Crash Landing",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "evasion-keyword-removal",
+   "batch": "evasion-keyword-removal-f72be055",
+   "evidence": "mtg/rules/evasion_keyword_removal_test.go: TestCrashLandingRemovesFlyingThenDealsDamageFromForests"
   },
   {
    "oracle_id": "5d39cce9-afa1-422a-8e6c-8f50c710a681",
@@ -173110,8 +173157,10 @@
    "oracle_id": "8ee98d6a-6a7e-411d-818c-816d84cfb7cd",
    "revision": "13cfde34-f76b-47ab-b83e-1c188d61a613",
    "name": "Kinscaer Harpoonist",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "evasion-keyword-removal",
+   "batch": "evasion-keyword-removal-f72be055",
+   "evidence": "mtg/rules/evasion_keyword_removal_test.go: TestKinscaerHarpoonistAttackMayRemoveFlying, TestKinscaerHarpoonistMayTargetCreatureWithoutFlying, TestKinscaerHarpoonistMayDeclineFlyingRemoval"
   },
   {
    "oracle_id": "8eeb83b4-dca1-497e-a6b7-0485807aeef3",
