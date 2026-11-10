@@ -672,6 +672,27 @@
     "oracle_text_sha256": "7565fabb8776fcae0948289f77738d950bebaf536dbc12f484fda043a54b7a72",
     "revision": "e5a24943-0121-4c64-9624-2e4cff37e6ca",
     "rulings_uri": "https://api.scryfall.com/cards/e5a24943-0121-4c64-9624-2e4cff37e6ca/rulings"
+   },
+   {
+    "name": "Fear",
+    "oracle_id": "355bbe9b-59bf-470f-8600-410af4c7fe18",
+    "oracle_text_sha256": "40d70f51a68886825b2c3228d6ab1209274781fd90970f5d4a7ce2ca64b06871",
+    "revision": "d8fa57eb-e307-4104-a291-c6cbfa235816",
+    "rulings_uri": "https://api.scryfall.com/cards/d8fa57eb-e307-4104-a291-c6cbfa235816/rulings"
+   },
+   {
+    "name": "Lifelink",
+    "oracle_id": "4fe8316a-9cff-43e9-a1d5-993a0c9daf3a",
+    "oracle_text_sha256": "65abb58bd93e1c0f9a03995912f6f6413d0338ea796dc6622dfacb7af32ab262",
+    "revision": "a8e207d4-9930-4aff-a7c8-b53bd1b5d566",
+    "rulings_uri": "https://api.scryfall.com/cards/a8e207d4-9930-4aff-a7c8-b53bd1b5d566/rulings"
+   },
+   {
+    "name": "Vigilance",
+    "oracle_id": "70570170-be76-4c56-9151-c4b6e253f462",
+    "oracle_text_sha256": "8f0012dcd44b9ce486328c04c4ea5e5f531d308bc1ad4327802811a697021057",
+    "revision": "d24dc353-abc9-430a-a7f5-5da3b38cd411",
+    "rulings_uri": "https://api.scryfall.com/cards/d24dc353-abc9-430a-a7f5-5da3b38cd411/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7165,6 +7186,22 @@
     "game.Discard"
    ],
    "review": "Selection check: read these four pinned Oracle entries; checked the no-new-paragraph family, BuybackKeyword in mtg/game/keyword.go and mtg/cardprogram/README.md, prior art in mtg/cards/authored/buyback_interaction.go with scenarios in mtg/rules/buyback_interaction_test.go, and Damage, ModifyPT, Discard, and TargetSpec declarations in mtg/game/primitive.go and mtg/game/ability.go. No new Engine capability identified."
+  },
+  {
+   "id": "attached-keyword-auras-20261110-01",
+   "family": "none",
+   "oracle_ids": [
+    "355bbe9b-59bf-470f-8600-410af4c7fe18",
+    "4fe8316a-9cff-43e9-a1d5-993a0c9daf3a",
+    "70570170-be76-4c56-9151-c4b6e253f462"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.EnchantStaticAbility",
+    "game.ContinuousEffect (LayerAbility/AddKeywords)",
+    "game.AttachedObjectGroup"
+   ],
+   "review": "Fit-only check against pinned corpus SHA256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4: inspected these three cards' Oracle text. Verified the matching attached-object keyword-grant pattern in mtg/cards/h/howl_of_the_hunt.go and keyword-add behavior in mtg/rules/continuous_test.go; FearStaticBody, LifelinkStaticBody, and VigilanceStaticBody are defined in mtg/game/ability.go. No CR, rulings, or source review performed."
   }
  ],
  "records": [
@@ -96860,8 +96897,10 @@
    "oracle_id": "355bbe9b-59bf-470f-8600-410af4c7fe18",
    "revision": "d8fa57eb-e307-4104-a291-c6cbfa235816",
    "name": "Fear",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none",
+   "batch": "attached-keyword-auras-20261110-01",
+   "evidence": "mtg/rules/attached_keyword_auras_test.go: TestFearAuraGrantsFearInCombat"
   },
   {
    "oracle_id": "355c2840-2cb8-431a-bcdc-f4b8824a1f5d",
@@ -119375,8 +119414,10 @@
    "oracle_id": "4fe8316a-9cff-43e9-a1d5-993a0c9daf3a",
    "revision": "a8e207d4-9930-4aff-a7c8-b53bd1b5d566",
    "name": "Lifelink",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none",
+   "batch": "attached-keyword-auras-20261110-01",
+   "evidence": "mtg/rules/attached_keyword_auras_test.go: TestLifelinkAuraGrantsLifeToEnchantedCreatureController"
   },
   {
    "oracle_id": "4fe8af73-c84a-44bd-9739-ee5c8b027874",
@@ -147065,8 +147106,10 @@
    "oracle_id": "70570170-be76-4c56-9151-c4b6e253f462",
    "revision": "d24dc353-abc9-430a-a7f5-5da3b38cd411",
    "name": "Vigilance",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none",
+   "batch": "attached-keyword-auras-20261110-01",
+   "evidence": "mtg/rules/attached_keyword_auras_test.go: TestVigilanceAuraAllowsEnchantedCreatureToAttackUntapped"
   },
   {
    "oracle_id": "7058e7c3-b704-47f6-85f8-ee584f76a1fe",
