@@ -2306,30 +2306,28 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 			chosen = append(chosen, playerControlledMatchingSelection(r.game, resolver, playerID, prim.Selection)...)
 			continue
 		}
-		if prim.AnyNumber {
-			chosen = append(chosen, r.engine.chooseAnyNumberToSacrificeForPlayer(r.game, resolver, playerID, prim.Selection, r.agents, r.log)...)
-			continue
-		}
-		if prim.Extremum != game.PermanentChoiceExtremumNone {
+		var picked []*game.Permanent
+		switch {
+		case prim.AnyNumber:
+			picked = r.engine.chooseAnyNumberToSacrificeForPlayer(r.game, resolver, playerID, prim.Selection, decisions, r.agents, r.log)
+		case prim.Extremum != game.PermanentChoiceExtremumNone:
 			candidates := sacrificeExtremumCandidates(r.game, resolver, playerID, prim.Selection, prim.Extremum)
 			if len(candidates) == 0 && prim.Fallback.Kind != game.SacrificeFallbackNone {
 				cantSacrifice = append(cantSacrifice, playerID)
 			}
-			picked := r.engine.chooseSacrificeFromCandidates(r.game, playerID, amount, candidates, decisions, r.agents, r.log)
-			decision := game.SacrificeDecision{Player: playerID}
-			for _, permanent := range picked {
-				decision.Permanents = append(decision.Permanents, permanent.ObjectID)
-			}
-			decisions = append(decisions, decision)
-			chosen = append(chosen, picked...)
-			continue
-		}
-		if prim.Fallback.Kind != game.SacrificeFallbackNone &&
-			!playerControlsSelection(r.game, resolver, playerID, prim.Selection) {
+			picked = r.engine.chooseSacrificeFromCandidates(r.game, playerID, amount, candidates, decisions, r.agents, r.log)
+		case prim.Fallback.Kind != game.SacrificeFallbackNone &&
+			!playerControlsSelection(r.game, resolver, playerID, prim.Selection):
 			cantSacrifice = append(cantSacrifice, playerID)
-			continue
+		default:
+			picked = r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, decisions, r.agents, r.log)
 		}
-		chosen = append(chosen, r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, amount, prim.Selection, r.agents, r.log)...)
+		decision := game.SacrificeDecision{Player: playerID}
+		for _, permanent := range picked {
+			decision.Permanents = append(decision.Permanents, permanent.ObjectID)
+		}
+		decisions = append(decisions, decision)
+		chosen = append(chosen, picked...)
 	}
 	if prim.PublishLinked != "" {
 		key := linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
@@ -2369,9 +2367,7 @@ func handleSacrificePermanents(r *effectResolver, prim game.SacrificePermanents)
 // of promoting a lesser one.
 func sacrificeExtremumCandidates(g *game.Game, resolver referenceResolver, playerID game.PlayerID, sel game.Selection, extremum game.PermanentChoiceExtremum) []*game.Permanent {
 	candidates := playerControlledSelectionCandidates(g, resolver, nil, playerID, sel)
-	candidates = extremeValuedPermanents(candidates, func(permanent *game.Permanent) (int, bool) {
-		return signedPermanentChoiceExtremumValue(g, permanent, extremum)
-	})
+	candidates = permanentChoiceExtremumCandidates(g, candidates, extremum)
 	return slices.DeleteFunc(candidates, func(permanent *game.Permanent) bool {
 		return permanentCantBeSacrificed(g, permanent)
 	})
@@ -2541,7 +2537,7 @@ func (r *effectResolver) applyPunisherForPlayer(prim game.PunisherEachLoseLife, 
 	tookLoss := false
 	switch action {
 	case punisherSacrifice:
-		chosen := r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, 1, prim.SacrificeSelection, r.agents, r.log)
+		chosen := r.engine.chooseSacrificePermanentsForPlayer(r.game, resolver, playerID, 1, prim.SacrificeSelection, nil, r.agents, r.log)
 		if len(chosen) == 0 {
 			loseLife(r.game, playerID, amount)
 			tookLoss = true
