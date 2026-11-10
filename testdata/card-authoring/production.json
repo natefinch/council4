@@ -532,6 +532,34 @@
     "oracle_text_sha256": "602a49ac7542451bac5549c2577bc658d093dc1e434b27b957f6b545ce179069",
     "revision": "5bf81fb1-7992-4ae9-b1a8-80c31579a2bf",
     "rulings_uri": "https://api.scryfall.com/cards/5bf81fb1-7992-4ae9-b1a8-80c31579a2bf/rulings"
+   },
+   {
+    "name": "Fortune Teller's Talent",
+    "oracle_id": "1b430f67-3686-4452-8594-b060f1a5a04e",
+    "oracle_text_sha256": "44c4b7154f3848ae218056a6607dce56e1779b7344ac77c2232adf4ff1b87293",
+    "revision": "a1d43877-20ab-4e84-a597-4b5e03a6bf90",
+    "rulings_uri": "https://api.scryfall.com/cards/a1d43877-20ab-4e84-a597-4b5e03a6bf90/rulings"
+   },
+   {
+    "name": "Warlock Class",
+    "oracle_id": "766c2c67-d1ee-44ff-b9bb-355361646ef1",
+    "oracle_text_sha256": "2d8ddbe2a7e3d3141cbadda77a652a7e04b82a6e313b17c31063954849e26986",
+    "revision": "b7faf899-96b7-454e-b634-6684c2d72f26",
+    "rulings_uri": "https://api.scryfall.com/cards/b7faf899-96b7-454e-b634-6684c2d72f26/rulings"
+   },
+   {
+    "name": "Ranger Class",
+    "oracle_id": "d1586808-efc2-469a-8384-ba4acf231e69",
+    "oracle_text_sha256": "72d9a04c45891d991d71b4b7286a640bc950ffaa0169d1acc16198db106bde90",
+    "revision": "7ca392ca-3219-4694-9a74-aa079c76b91e",
+    "rulings_uri": "https://api.scryfall.com/cards/7ca392ca-3219-4694-9a74-aa079c76b91e/rulings"
+   },
+   {
+    "name": "Artist's Talent",
+    "oracle_id": "ea734863-5793-49d6-b10e-109432aec0a3",
+    "oracle_text_sha256": "21148f4d309b39ab8c2d7baa1d3f9d1635835ab9ef3f299b4c08ec0c2aa38d7e",
+    "revision": "8b9e51d9-189b-4dd6-87cb-628ea6373e81",
+    "rulings_uri": "https://api.scryfall.com/cards/8b9e51d9-189b-4dd6-87cb-628ea6373e81/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -6899,6 +6927,31 @@
     "token creation, counter placement, MoveCard, and PutOnBattlefield"
    ],
    "review": "Source and capability review: exact Oracle text and rulings URIs from the pinned corpus (SHA-256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4); Scryfall rulings checked for each printing; official Magic Comprehensive Rules effective 2026-11-06, section 717, reviewed for Class level structure and cumulative abilities. At runtime 764dfd67878bff8b95e3f6089b0251e58e0d4fbd, checked Class-level support against mtg/cards/w/wizard_class.go and mtg/rules/class_level_lifecycle_test.go, plus the relevant declarations and behavior paths for each card's token, counter, return, spell-cost, attack-count, surveil, evasion, and combat-damage effects. None of these exact Oracle IDs appears in the supplied open Engine-gap exclusions; no Engine prerequisite is needed."
+  },
+  {
+   "id": "2111ddbd-2fd8-4350-b8c3-5b4efc6dcae1",
+   "family": "class-level-cards",
+   "oracle_ids": [
+    "1b430f67-3686-4452-8594-b060f1a5a04e",
+    "d1586808-efc2-469a-8384-ba4acf231e69",
+    "766c2c67-d1ee-44ff-b9bb-355361646ef1",
+    "ea734863-5793-49d6-b10e-109432aec0a3"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "SetClassLevel and class-level Conditions",
+    "RuleEffectLookAtTopCardAnyTime",
+    "Condition.EventHistory",
+    "RuleEffectPlayLandsFromZone and RuleEffectCastSpellsFromZone",
+    "CostModifier.SourceZones and GenericReduction",
+    "TriggerPattern.EventAttackerDeclared with OneOrMore and attacking-creature targeting",
+    "CreateToken and AddCounter",
+    "Dig",
+    "DynamicAmountLifeLostThisTurn with player/group-member references; LoseLife",
+    "DiscardThenDraw",
+    "DamageReplacementFiltered with DamageAddend, DamageNoncombatOnly, and DamageRecipientOpponent"
+   ],
+   "review": "Reviewed the pinned Scryfall Oracle records (exact IDs, revisions, names, and text) and current Scryfall rulings for all four cards. Read the official Wizards Comprehensive Rules effective 2026-11-06 (https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt), including 305.1-305.2b, 307.5, 508.3d, 601.2, 602.2, 603.4, 614.1, 616.1, 717.2a-717.3, and 120.1-120.3a. Traced existing class-level behavior in mtg/rules/class_level_lifecycle_test.go and class_level_gating_test.go; current-turn conditions and static rule effects in mtg/rules/conditions_event_history_test.go and mtg/rules/rule_effects.go; top-library cast/play and non-hand cost paths in mtg/rules/cast_spells_from_library_top_test.go, mtg/rules/play_lands_from_library_top_test.go, and mtg/rules/spell_cost_zone_test.go; Dig and discard/draw behavior in mtg/rules/effects_dig_test.go and mtg/rules/effects_discard_then_draw_test.go; life-loss and damage-addend paths in mtg/rules/effects_dynamic_life_this_turn_test.go and mtg/rules/replacement_damage_test.go plus mtg/rules/replacement.go. The selected abilities map to existing Engine operations; no open Engine prerequisite is required."
   }
  ],
  "records": [
@@ -49327,8 +49380,10 @@
    "oracle_id": "1b430f67-3686-4452-8594-b060f1a5a04e",
    "revision": "a1d43877-20ab-4e84-a597-4b5e03a6bf90",
    "name": "Fortune Teller's Talent",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-level-cards",
+   "batch": "2111ddbd-2fd8-4350-b8c3-5b4efc6dcae1",
+   "evidence": "mtg/rules/four_class_cards_test.go: TestFortuneTellersTalentOwnText"
   },
   {
    "oracle_id": "1f076303-d160-4e02-aa1e-9ed6040c3735",
@@ -49415,8 +49470,10 @@
    "oracle_id": "766c2c67-d1ee-44ff-b9bb-355361646ef1",
    "revision": "b7faf899-96b7-454e-b634-6684c2d72f26",
    "name": "Warlock Class",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-level-cards",
+   "batch": "2111ddbd-2fd8-4350-b8c3-5b4efc6dcae1",
+   "evidence": "mtg/rules/four_class_cards_test.go: TestWarlockClassOwnText"
   },
   {
    "oracle_id": "76f0f39a-ce1b-4935-a6b8-5c4e1a27ab24",
@@ -49500,8 +49557,10 @@
    "oracle_id": "d1586808-efc2-469a-8384-ba4acf231e69",
    "revision": "7ca392ca-3219-4694-9a74-aa079c76b91e",
    "name": "Ranger Class",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-level-cards",
+   "batch": "2111ddbd-2fd8-4350-b8c3-5b4efc6dcae1",
+   "evidence": "mtg/rules/four_class_cards_test.go: TestRangerClassOwnText"
   },
   {
    "oracle_id": "dcbcbf42-4654-487a-acad-21f2606d229b",
@@ -49534,8 +49593,10 @@
    "oracle_id": "ea734863-5793-49d6-b10e-109432aec0a3",
    "revision": "8b9e51d9-189b-4dd6-87cb-628ea6373e81",
    "name": "Artist's Talent",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-level-cards",
+   "batch": "2111ddbd-2fd8-4350-b8c3-5b4efc6dcae1",
+   "evidence": "mtg/rules/four_class_cards_test.go: TestArtistsTalentOwnText"
   },
   {
    "oracle_id": "f00bc101-8082-4459-b987-f0c4b7a12344",
