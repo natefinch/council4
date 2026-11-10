@@ -716,6 +716,18 @@ test("Reviews block only on regressions, acceptance and common-play harm", () =>
   assert.doesNotMatch(reviewBar("abc123", undefined), /sub-issue of #/);
 });
 
+test("A cardsOnly run never schedules gaps but still avoids their cards", () => {
+  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
+  const issues = { 3285: open(3285) };
+  assert.equal(chooseWork({ next, issues, defects: [3285], cardsOnly: true }).kind, "card");
+  const prepare = chooseWork({ next: { ...next, batch: null }, issues, cardsOnly: true });
+  assert.equal(prepare.kind, "prepare");
+  assert.deepEqual(prepare.avoid.map(gap => gap.issue), [3285]);
+  assert.doesNotThrow(() => checkArgs({ mode: "produce", maxTasks: 20, cardsOnly: true }));
+  assert.throws(() => checkArgs({ mode: "produce", maxTasks: 2, cardsOnly: true, retryGaps: [1] }), /cardsOnly/);
+  assert.throws(() => checkArgs({ mode: "produce", maxTasks: 2, cardsOnly: "yes" }), /boolean/);
+});
+
 test("Engine and card units alternate within a run", () => {
   const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
   const issues = { 3285: open(3285), 3286: open(3286) };

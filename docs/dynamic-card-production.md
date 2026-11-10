@@ -141,6 +141,10 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
    `gap-<issue>`. Since policy 1.26.0 Engine and card units alternate within
    a run: after an Engine unit (not a split), the next unit is card work (step
    2 or 3) even while gaps remain, so open gaps cannot starve card admissions.
+   A run started with `"cardsOnly": true` (policy 1.28.0) skips this step
+   entirely; its selector never returns Engine work, and an Engine answer
+   fails only that unit. Cards that hit a missing capability are still
+   blocked on their gap for later runs.
 2. **A ready saved batch** from `cardqueue next`.
 3. **Batch preparation.** Only then does a measured selection agent return a
    new reviewed batch plan. Since policy 1.27.0 it is given candidate families
