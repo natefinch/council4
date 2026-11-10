@@ -54,6 +54,10 @@ type pendingTriggeredAbility struct {
 	// triggers are never multiplied and leave this false.
 	ordinaryTrigger bool
 
+	// xValue is a value of X carried from the spell or ability that created a
+	// reflexive trigger (ReflexiveTriggerDef.X). When set it is the ability's X.
+	xValue opt.V[int]
+
 	// dungeonRoom, when set, marks this as a dungeon room-entry ability so the
 	// resulting stack object is tagged for completion bookkeeping. It is copied
 	// onto every doubled occurrence, so each copy carries the same completion
@@ -190,6 +194,9 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 }
 
 func triggeredAbilityXValue(trigger *pendingTriggeredAbility) int {
+	if trigger != nil && trigger.xValue.Exists {
+		return trigger.xValue.Val
+	}
 	if trigger == nil ||
 		!trigger.hasEvent ||
 		trigger.event.Kind != game.EventPermanentEnteredBattlefield ||

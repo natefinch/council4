@@ -32,13 +32,13 @@ func sourceEntryChosenManaColor(source *game.Permanent) (mana.Color, bool) {
 // stack (CR 603.3d, which uses the casting target rules of CR 601.2c). It returns
 // ok=false when the ability has targets but no legal set of targets can be
 // chosen, so the caller removes the ability from the stack (CR 603.3d).
-func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]game.Target, bool) {
+func (e *Engine) triggerTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, ability *game.TriggeredAbility, chosenModes []int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, xValue int) ([]game.Target, bool) {
 	if modesValidForBody(ability, chosenModes) {
-		if specs := bodyTargetSpecs(ability, chosenModes); playerSlotTargetSpecs(specs) {
+		if specs := bodyTargetSpecs(ability, chosenModes, xValue); playerSlotTargetSpecs(specs) {
 			return e.choosePlayerSlotTargets(g, controller, source, sourceObjectID, triggerEvent, specs, agents, log), true
 		}
 	}
-	result := targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, triggerEvent, ability, chosenModes)
+	result := targetChoicesForBodyFromSourceObjectWithModes(g, controller, source, sourceObjectID, triggerEvent, ability, chosenModes, xValue)
 	switch result.kind {
 	case targetNoLegalChoices, targetInvalidSpec:
 		return nil, false

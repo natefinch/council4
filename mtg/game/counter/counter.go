@@ -114,11 +114,12 @@ const (
 	Ribbon     // Ribbon counter (Prize Pig)
 	Slime      // Slime counter (Sludge Monster)
 	Bounty     // Bounty counter (Termination Facilitator)
+	Valor      // Valor counter (Intrepid Adversary)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Bounty
+	return k >= PlusOnePlusOne && k <= Valor
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -308,6 +309,8 @@ func (k Kind) String() string {
 		return "slime"
 	case Bounty:
 		return "bounty"
+	case Valor:
+		return "valor"
 	default:
 		return "unknown"
 	}

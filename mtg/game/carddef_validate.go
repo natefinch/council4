@@ -506,7 +506,35 @@ func abilityContentHasTargets(content AbilityContent) bool {
 	return false
 }
 
+// contentUsesTriggeredX reports whether content limits its modes or targets by
+// a triggered ability's X. Spells and activated abilities announce X after
+// modes (CR 601.2b, 602.2b), so these limits are meaningful only for triggered
+// abilities, whose X is known as they are put on the stack.
+func contentUsesTriggeredX(content *AbilityContent) bool {
+	if content.MaxModesFromX {
+		return true
+	}
+	for i := range content.SharedTargets {
+		if content.SharedTargets[i].MaxTargetsFromX {
+			return true
+		}
+	}
+	for i := range content.Modes {
+		for j := range content.Modes[i].Targets {
+			if content.Modes[i].Targets[j].MaxTargetsFromX {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Ability, targets []TargetSpec) {
+	if _, triggered := body.(*TriggeredAbility); !triggered && body != nil {
+		if content := BodyContent(body); contentUsesTriggeredX(&content) {
+			v.add(faceName, path, CardDefIssueInvalidAbilityBody, "X-limited modes and targets are supported only on triggered abilities")
+		}
+	}
 	switch abilityBody := body.(type) {
 	case *AbilityContent:
 		v.validateAbilityContent(faceName, path, *abilityBody, targets)
@@ -704,6 +732,10 @@ func (v *cardDefValidator) validateAbilityContentWithLinked(
 	}
 	if content.ModesUniquePerTurn && (content.RandomModes || minModes != 1 || maxModes != 1 || len(content.Modes) > 64) {
 		v.add(faceName, appendPath(path, "ModesUniquePerTurn"), CardDefIssueInvalidAbilityBody, "per-turn unique modes must choose one nonrandom mode from at most 64 modes")
+	}
+	if content.MaxModesFromX && (!content.IsModal() || content.MinModes != 0 || content.RandomModes ||
+		content.AllowDuplicateModes || content.ModesUniquePerTurn || content.ModeChoiceBonus != (ModeChoiceBonus{})) {
+		v.add(faceName, appendPath(path, "MaxModesFromX"), CardDefIssueInvalidAbilityBody, "X-limited modes require a plain \"choose up to\" modal range")
 	}
 	if bonus := content.ModeChoiceBonus; bonus != (ModeChoiceBonus{}) {
 		switch bonus.Condition {
@@ -1108,6 +1140,9 @@ func (v *cardDefValidator) validateInstructionSequence(
 				delayed.Trigger.CapturedObjectGroup.Exists && delayed.Trigger.CapturedCard.Exists {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "delayed trigger has conflicting captured subject domains")
 			}
+			if contentUsesTriggeredX(&delayed.Trigger.Content) {
+				v.add(faceName, appendPath(instructionPath, "Primitive.Trigger.Content"), CardDefIssueInvalidAbilityBody, "delayed trigger cannot limit modes or targets by X")
+			}
 			v.validateAbilityContentWithLinked(
 				faceName,
 				appendPath(instructionPath, "Primitive.Trigger.Content"),
@@ -1186,6 +1221,10 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 	}
 	if target.MaxTargets < target.MinTargets {
 		v.add(faceName, path, CardDefIssueInvalidTargetSpec, "max targets is less than min targets")
+	}
+	if target.MaxTargetsFromX && (target.MinTargets != 0 || target.MaxTargets < 1 ||
+		target.CountEqualsX || target.CountEqualsKickerPlusOne || target.MaxTargetsFromTriggerEventX) {
+		v.add(faceName, appendPath(path, "MaxTargetsFromX"), CardDefIssueInvalidTargetSpec, "X-limited targets require an \"up to\" range with a positive ceiling")
 	}
 	if target.Allow&^knownTargetAllows != 0 {
 		v.add(faceName, appendPath(path, "Allow"), CardDefIssueInvalidTargetSpec, "unknown target allow category")

@@ -927,9 +927,14 @@ func (p CreateDelayedTrigger) instructionRefs() primitiveRefs {
 	}
 	return primitiveRefs{}
 }
-func (CreateReflexiveTrigger) instructionRefs() primitiveRefs { return primitiveRefs{} }
-func (p CreateReplacement) instructionRefs() primitiveRefs    { return objectReferenceRefs(p.Object) }
-func (p PreventDamage) instructionRefs() primitiveRefs        { return quantityRefs(p.Amount) }
+func (p CreateReflexiveTrigger) instructionRefs() primitiveRefs {
+	if p.Trigger.X.Exists {
+		return quantityRefs(p.Trigger.X.Val)
+	}
+	return primitiveRefs{}
+}
+func (p CreateReplacement) instructionRefs() primitiveRefs { return objectReferenceRefs(p.Object) }
+func (p PreventDamage) instructionRefs() primitiveRefs     { return quantityRefs(p.Amount) }
 func (p MoveCard) instructionRefs() primitiveRefs {
 	refs := primitiveRefs{publishesLinked: p.PublishLinked, publishesResults: p.PublishDepartureCharacteristics.keys()}
 	if p.Player.Kind() != PlayerReferenceNone {

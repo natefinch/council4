@@ -77,19 +77,21 @@ func applyCastBranchToSpecs(specs []game.TargetSpec, branch game.CastBranch) []g
 func applyTargetNumbersToSpecs(specs []game.TargetSpec, branch game.CastBranch) []game.TargetSpec {
 	var out []game.TargetSpec
 	for index, spec := range specs {
-		count := 0
+		minTargets, maxTargets := 0, 0
 		switch {
 		case spec.CountEqualsX && branch.XValue.Exists:
-			count = branch.XValue.Val
+			minTargets, maxTargets = branch.XValue.Val, branch.XValue.Val
 		case spec.CountEqualsKickerPlusOne && branch.KickerCount.Exists:
-			count = branch.KickerCount.Val + 1
+			minTargets, maxTargets = branch.KickerCount.Val+1, branch.KickerCount.Val+1
+		case spec.MaxTargetsFromX && branch.XValue.Exists:
+			minTargets, maxTargets = spec.MinTargets, max(spec.MinTargets, min(spec.MaxTargets, branch.XValue.Val))
 		default:
 			continue
 		}
 		if out == nil {
 			out = append([]game.TargetSpec(nil), specs...)
 		}
-		out[index].MinTargets, out[index].MaxTargets = count, count
+		out[index].MinTargets, out[index].MaxTargets = minTargets, maxTargets
 	}
 	if out != nil {
 		return out

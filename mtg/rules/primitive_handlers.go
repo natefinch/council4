@@ -38,7 +38,7 @@ func (r *effectResolver) quantityForPermanent(q game.Quantity, permanent *game.P
 	if q.IsDynamic() {
 		dynamic := q.DynamicAmount().Val
 		if dynamic.Kind == game.DynamicAmountSharedCreatureTypeCountInGroup {
-			return dynamicAmountValueForPermanent(r.game, permanent, stackObjectController(r.obj), dynamic, 0)
+			return dynamicAmountValueForPermanent(r.game, permanent, stackObjectController(r.obj), 0, dynamic, 0)
 		}
 	}
 	return r.quantity(q)
@@ -1899,7 +1899,11 @@ func handleCreateDelayedTrigger(r *effectResolver, prim game.CreateDelayedTrigge
 }
 
 func handleCreateReflexiveTrigger(r *effectResolver, prim game.CreateReflexiveTrigger) effectResolved {
-	return effectResolved{accepted: true, succeeded: queueReflexiveTrigger(r.game, r.obj, &prim.Trigger)}
+	var xValue opt.V[int]
+	if prim.Trigger.X.Exists {
+		xValue = opt.Val(max(0, r.quantity(prim.Trigger.X.Val)))
+	}
+	return effectResolved{accepted: true, succeeded: queueReflexiveTrigger(r.game, r.obj, &prim.Trigger, xValue)}
 }
 
 func handleCreateReplacement(r *effectResolver, prim game.CreateReplacement) effectResolved {

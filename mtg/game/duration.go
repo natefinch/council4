@@ -335,4 +335,8 @@ type ReflexiveTrigger struct {
 	// stack, exactly as the creating triggered ability would have inline.
 	TriggerEvent    Event
 	HasTriggerEvent bool
+	// XValue is the value of X captured from the creating spell or ability by
+	// ReflexiveTriggerDef.X when the trigger was created. It becomes the
+	// reflexive ability's StackObject.XValue.
+	XValue opt.V[int]
 }

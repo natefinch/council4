@@ -3565,8 +3565,8 @@ func (p CreateReflexiveTrigger) validatePrimitive(targets []TargetSpec, checkTar
 	if len(p.Trigger.Content.Modes) == 0 {
 		return errors.New("reflexive trigger requires content")
 	}
-	if p.Trigger.Content.IsModal() {
-		return errors.New("reflexive trigger content must not be modal")
+	if contentUsesTriggeredX(&p.Trigger.Content) && !p.Trigger.X.Exists {
+		return errors.New("reflexive trigger X-limited modes or targets require an X value")
 	}
 	return nil
 }

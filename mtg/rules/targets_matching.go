@@ -13,7 +13,7 @@ import (
 
 func normalizeTargetSpec(spec *game.TargetSpec) game.TargetSpec {
 	normalized := *spec
-	if normalized.MinTargets == 0 && normalized.MaxTargets == 0 && normalized.Constraint != "" && !normalized.CountEqualsX {
+	if normalized.MinTargets == 0 && normalized.MaxTargets == 0 && normalized.Constraint != "" && !normalized.CountEqualsX && !normalized.MaxTargetsFromX {
 		normalized.MinTargets = 1
 		normalized.MaxTargets = 1
 	}

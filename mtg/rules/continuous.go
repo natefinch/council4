@@ -1725,7 +1725,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.dynamicPower = nil
 			values.power, values.powerOK = set, ok
 		case effect.SetPowerDynamic.Exists:
-			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetPowerDynamic.Val, effect.Layer)}
+			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SourceObjectID, effect.SetPowerDynamic.Val, effect.Layer)}
 			values.powerPT = &set
 			values.dynamicPower = nil
 			values.power, values.powerOK = ptValue(g, permanent, values.controller, values.powerPT, nil)
@@ -1742,7 +1742,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.dynamicToughness = nil
 			values.toughness, values.toughnessOK = set, ok
 		case effect.SetToughnessDynamic.Exists:
-			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SetToughnessDynamic.Val, effect.Layer)}
+			set := game.PT{Value: dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SourceObjectID, effect.SetToughnessDynamic.Val, effect.Layer)}
 			values.toughnessPT = &set
 			values.dynamicToughness = nil
 			values.toughness, values.toughnessOK = ptValue(g, permanent, values.controller, values.toughnessPT, nil)
@@ -1755,11 +1755,11 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 		// layer pass (see counterAndTemporaryEffect).
 		powerDelta := effect.PowerDelta
 		if effect.PowerDeltaDynamic.Exists {
-			powerDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.PowerDeltaDynamic.Val, effect.Layer)
+			powerDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SourceObjectID, effect.PowerDeltaDynamic.Val, effect.Layer)
 		}
 		toughnessDelta := effect.ToughnessDelta
 		if effect.ToughnessDeltaDynamic.Exists {
-			toughnessDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.ToughnessDeltaDynamic.Val, effect.Layer)
+			toughnessDelta = dynamicAmountValueForPermanent(g, permanent, effect.Controller, effect.SourceObjectID, effect.ToughnessDeltaDynamic.Val, effect.Layer)
 		}
 		if values.powerOK {
 			if effect.DoublePower {
