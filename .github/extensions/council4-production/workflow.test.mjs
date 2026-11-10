@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { closeLandedIssue, deferredRemainder, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, prepareResume, checkArgs, checkPolicy, checkSelection, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
+import { closeLandedIssue, deferredRemainder, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, prepareResume, checkArgs, checkPolicy, checkSelection, selectionProblem, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, classifyInfrastructure, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
@@ -334,6 +334,15 @@ test("A rejected batch plan fails its unit, and a second rejection in a row stop
   assert.equal(first.status, "claim_failed");
   assert.equal(first.stop, undefined);
   assert.equal(claimFailure({ index: 2 }, "again", [first]).stop, true);
+});
+
+test("An invalid selector answer is a unit problem, not a thrown run error", () => {
+  assert.equal(selectionProblem({ taskType: "engine", id: "", title: "Correct controller-aware matching", instructions: "x" }),
+    "Incomplete/unsafe work identity");
+  assert.equal(selectionProblem(null), "No valid selection returned");
+  assert.equal(selectionProblem({ taskType: "none" }), null);
+  assert.equal(selectionProblem({ taskType: "engine", id: "gap-3742", title: "t", instructions: "i" }), null);
+  assert.throws(() => checkSelection({ taskType: "card", id: "../x", title: "t", instructions: "i" }), /unsafe work identity/);
 });
 
 test("Actual usage receipts deduplicate, survive reload, exclude unrelated agents and preserve model attribution", async t => {

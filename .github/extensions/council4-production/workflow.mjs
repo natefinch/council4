@@ -390,9 +390,17 @@ export async function closeLandedIssue(cwd, issue, gaps, pr, signal, gh = args =
 }
 
 export function checkSelection(task) {
-  if (!task || !["card", "engine", "none"].includes(task.taskType)) throw new Error("No valid selection returned");
+  const problem = selectionProblem(task);
+  if (problem) throw new Error(problem);
+}
+
+// A selector agent's output problem, or null. An invalid selector answer fails
+// its unit like a rejected batch plan rather than ending the run.
+export function selectionProblem(task) {
+  if (!task || !["card", "engine", "none"].includes(task.taskType)) return "No valid selection returned";
   if (task.taskType !== "none" && (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(task.id) ||
-      !task.title?.trim() || !task.instructions?.trim())) throw new Error("Incomplete/unsafe work identity");
+      !task.title?.trim() || !task.instructions?.trim())) return "Incomplete/unsafe work identity";
+  return null;
 }
 
 // Shared Engine production files changed by card work. Go tests, testdata
@@ -693,13 +701,22 @@ Return taskType card with a new batch ID (letters/digits/dot/underscore/hyphen),
 If every reasonable candidate needs one missing shared capability, instead return taskType engine with id "gap-<canonical issue number>" (reuse or cite the existing issue), proving scenarios, batchPlan "" and no card admissions.
 Return taskType none only if no candidates remain or a genuine external/unsafe blocker exists; state it in instructions. Do not claim source review, implementation or issue completion.`,
           selectionSchema);
-          checkSelection(selected);
           if ((await changes(work.path, ctx.signal)).files.length ||
               await git(work.path, ["rev-parse", "HEAD"], ctx.signal) !== work.base) throw new Error("Selector modified its read-only checkout");
+          const problem = selectionProblem(selected);
+          if (problem) {
+            return { taskType: "invalid", id: `select-${index}`, title: `Invalid selection: ${problem}`,
+              instructions: "", batchPlan: "", reviewRequired: false, problem, selected: selected ?? null };
+          }
           if (selected.taskType === "card") selected.prerequisiteEvidence = gapEvidence(choice.unblocked, [...priorUnits, ...state.units], issues, work.base);
           return selected;
         });
         task.unitIndex = index;
+        if (task.taskType === "invalid") {
+          ctx.log(`select-${index} returned an invalid task: ${task.problem}`);
+          return claimFailure({ index, task, base: work.base, worktree: work.path },
+            `Selector returned an invalid task (${task.problem}): ${JSON.stringify(task.selected).slice(0, 500)}`, state.units);
+        }
         if (task.taskType === "none") return { index, task, status: "stopped" };
         state.currentUnit = { index, task, worktree: work.path, base: work.base };
         delete state.error;
