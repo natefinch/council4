@@ -291,6 +291,9 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 	if prim.EntireHand {
 		return handleDiscardEntireHand(r, prim)
 	}
+	if prim.KeepInHand {
+		return handleDiscardKeepInHand(r, prim)
+	}
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
 	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
 		players := playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup))
@@ -319,6 +322,35 @@ func handleDiscard(r *effectResolver, prim game.Discard) effectResolved {
 		} else {
 			res.succeeded = r.discardCardsWithChoices(playerID, res.amount, publishKey)
 		}
+	}
+	return res
+}
+
+// handleDiscardKeepInHand resolves a hand-equalizing discard (Balance:
+// "Players discard cards the same way"): each affected player keeps Amount
+// cards and discards the rest. Players choose in APNAP order with private
+// requests that reveal no other player's choice (Balance ruling 2016-06-08),
+// then every chosen card is discarded in one simultaneous batch (CR 101.4b,
+// 701.9b). A player already at or below Amount is not asked. res.amount is the
+// total number of cards discarded.
+func handleDiscardKeepInHand(r *effectResolver, prim game.Discard) effectResolved {
+	res := effectResolved{accepted: true}
+	keep := max(r.quantity(prim.Amount), 0)
+	var players []game.PlayerID
+	if prim.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
+		players = playersInAPNAPOrder(r.game, r.playerGroupMembers(prim.PlayerGroup))
+	} else if playerID, ok := r.resolvePlayer(prim.Player); ok {
+		players = []game.PlayerID{playerID}
+	}
+	chosen := make([][]id.ID, len(players))
+	for i, playerID := range players {
+		if player, ok := playerByID(r.game, playerID); ok {
+			chosen[i] = r.chooseCardsToDiscard(playerID, len(player.Hand.All())-keep)
+		}
+	}
+	for _, discarded := range discardGroupSimultaneously(r.game, players, chosen) {
+		res.amount += len(discarded)
+		res.succeeded = len(discarded) > 0 || res.succeeded
 	}
 	return res
 }

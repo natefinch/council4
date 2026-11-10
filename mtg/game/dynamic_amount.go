@@ -328,6 +328,22 @@ const (
 	// from the larger. Negative power is used as-is, so a -2/3 creature's
 	// difference is 5.
 	DynamicAmountDifferenceOf
+	// DynamicAmountFewestPermanentsControlled is the number of permanents
+	// matching Selection controlled by the player who controls the fewest of
+	// them ("a number of lands they control equal to the number of lands
+	// controlled by the player who controls the fewest" — Balance). Every
+	// non-eliminated player counts, including one who controls none, and the
+	// count is taken as the effect resolves, so a later step of the same effect
+	// sees the board left by earlier steps (CR 608.2c). A nil Selection counts
+	// every permanent. Selection must not restrict controller or player, since
+	// each player's own permanents are counted. Added last so existing kinds keep
+	// their wire values.
+	DynamicAmountFewestPermanentsControlled
+	// DynamicAmountFewestCardsInHand is the smallest number of cards in hand
+	// among non-eliminated players, evaluated as the effect resolves (CR
+	// 608.2c). It backs Balance's "Players discard cards ... the same way".
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountFewestCardsInHand
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

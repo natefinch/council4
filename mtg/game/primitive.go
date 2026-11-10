@@ -574,6 +574,12 @@ type ChooseDiscardFromHand struct {
 // AtRandom marks an "at random" discard ("Discard a card at random."): the
 // discarded cards are chosen at random rather than by the player.
 //
+// KeepInHand marks a hand-equalizing discard (Balance: "Players discard cards
+// the same way"): Amount is the number of cards each affected player keeps, and
+// each discards the rest of their hand. Each player in APNAP order privately
+// chooses which cards to discard, no choice is revealed to the others, and all
+// chosen cards are then discarded simultaneously (CR 101.4, 101.4b, 701.9b).
+//
 // PublishLinked, when set, remembers each discarded card under this key so a
 // later instruction can read it ("Discard a card, then ... deals damage equal
 // to that card's mana value ..."). It is meaningful only for a single-player,
@@ -585,6 +591,8 @@ type Discard struct {
 	EntireHand    bool
 	AtRandom      bool
 	PublishLinked LinkedKey
+	// KeepInHand is added last so existing positional definitions keep their meaning.
+	KeepInHand bool
 }
 
 // Destroy destroys one referenced permanent or every permanent in a referenced group.
