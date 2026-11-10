@@ -123,7 +123,9 @@ import (
 // so both the number of permanents removed and the player-relative audience (each
 // opponent for Liliana, Dreadhorde General; every player for Cataclysm and
 // Cataclysmic Gearhulk) depend on runtime board state and per-player choices,
-// which the single-target atom heuristic does not model.
+// which the single-target atom heuristic does not model. KeepPermanents is
+// value-neutral for the same reason: each affected player keeps a runtime count
+// of permanents and sacrifices the rest.
 //
 // The mass reanimation primitives (ChooseCardFromEachGraveyard,
 // ReanimateLinkedCards) are value-neutral here, matching the sibling per-player
@@ -138,7 +140,7 @@ import (
 // TurnFaceDown is value-neutral (no atom): its value depends on the target's
 // hidden identity and any alternative face-down characteristics, so it has no
 // stable standalone value.
-const knownPrimitiveCount = 147
+const knownPrimitiveCount = 148
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its

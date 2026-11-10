@@ -177,6 +177,15 @@ type SacrificeDecision struct {
 	Permanents []id.ID
 }
 
+// KeepDecision is one earlier player's public choice within the same APNAP
+// "choose N, then sacrifice the rest" effect (CR 101.4b), made before any unkept
+// permanent is sacrificed. Kept lists the battlefield object IDs that player
+// chose to keep; it is empty when they kept nothing.
+type KeepDecision struct {
+	Player PlayerID
+	Kept   []id.ID
+}
+
 // ChoiceRequest describes a bounded decision the rules engine needs from a
 // player while resolving rules procedures such as triggered abilities.
 type ChoiceRequest struct {
@@ -218,6 +227,10 @@ type ChoiceRequest struct {
 	// SacrificeDecisions exposes earlier players' public choices in the same
 	// APNAP edict (CR 101.4b), before the simultaneous sacrifice.
 	SacrificeDecisions []SacrificeDecision
+	// KeepDecisions exposes earlier players' public keep choices in the same
+	// APNAP "sacrifice the rest" effect (CR 101.4b), before the simultaneous
+	// sacrifice.
+	KeepDecisions []KeepDecision
 	// NumberRange is required for ChoiceNumber; Options must be empty.
 	NumberRange opt.V[NumberRange]
 	// CombatAttacker and CombatBlocker identify the current staged decision.

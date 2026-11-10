@@ -245,6 +245,9 @@ func (SacrificePermanents) Kind() PrimitiveKind { return PrimitiveSacrificePerma
 // Kind implements Primitive for KeepOnePerType.
 func (KeepOnePerType) Kind() PrimitiveKind { return PrimitiveKeepOnePerType }
 
+// Kind implements Primitive for KeepPermanents.
+func (KeepPermanents) Kind() PrimitiveKind { return PrimitiveKeepPermanents }
+
 // Kind implements Primitive for Untap.
 func (Untap) Kind() PrimitiveKind { return PrimitiveUntap }
 
@@ -517,6 +520,7 @@ func (MoveResolvingSpell) isPrimitive()                   {}
 func (Sacrifice) isPrimitive()                            {}
 func (SacrificePermanents) isPrimitive()                  {}
 func (KeepOnePerType) isPrimitive()                       {}
+func (KeepPermanents) isPrimitive()                       {}
 func (Untap) isPrimitive()                                {}
 func (SkipNextUntap) isPrimitive()                        {}
 func (RemoveFromCombat) isPrimitive()                     {}
@@ -813,7 +817,8 @@ func (p SacrificePermanents) instructionRefs() primitiveRefs {
 	}
 	return refs
 }
-func (KeepOnePerType) instructionRefs() primitiveRefs { return primitiveRefs{} }
+func (KeepOnePerType) instructionRefs() primitiveRefs   { return primitiveRefs{} }
+func (p KeepPermanents) instructionRefs() primitiveRefs { return quantityRefs(p.Keep) }
 func (p Untap) instructionRefs() primitiveRefs {
 	return mergePrimitiveRefs(objectReferenceRefs(p.Object), quantityRefs(p.Amount))
 }
