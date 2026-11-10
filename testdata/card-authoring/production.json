@@ -623,6 +623,27 @@
     "oracle_text_sha256": "16a7e54e2e372dd982f5bfc1148c1b47793a9d6810f474db8c3b6182879c8dc1",
     "revision": "a05d1cac-7012-4d22-82d3-0f82b168fe68",
     "rulings_uri": "https://api.scryfall.com/cards/a05d1cac-7012-4d22-82d3-0f82b168fe68/rulings"
+   },
+   {
+    "name": "Fear of Falling",
+    "oracle_id": "00ba96e0-42a7-432a-a500-5e607d75a358",
+    "oracle_text_sha256": "c1acb32aed8d184ab36f21ddb39232b1cd5f515a02a13a36ef45086cd56a7641",
+    "revision": "0e814e48-cd9d-428f-90e2-74d97cb9c8f1",
+    "rulings_uri": "https://api.scryfall.com/cards/0e814e48-cd9d-428f-90e2-74d97cb9c8f1/rulings"
+   },
+   {
+    "name": "Short Circuit",
+    "oracle_id": "5ea0e3a5-9c38-4da4-98a6-41c14be512d9",
+    "oracle_text_sha256": "143734cb129fbff9e1d6c51e3a9a54b5bb94cefa00e35f5d3a2fc8e44022ad1a",
+    "revision": "74fe0fb5-e994-41b1-a73d-4e68f7afdf34",
+    "rulings_uri": "https://api.scryfall.com/cards/74fe0fb5-e994-41b1-a73d-4e68f7afdf34/rulings"
+   },
+   {
+    "name": "Canopy Dragon",
+    "oracle_id": "a9e59ee4-02a6-498c-82f0-f4f2ff334d65",
+    "oracle_text_sha256": "137462868b444406e50574f222c4d30995283827fcb38bf3d92345877c8d2b4e",
+    "revision": "20c5e4d6-b716-4994-b226-b1eb799bec25",
+    "rulings_uri": "https://api.scryfall.com/cards/20c5e4d6-b716-4994-b226-b1eb799bec25/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7078,6 +7099,25 @@
     "Execute(Damage)"
    ],
    "review": "Pinned Oracle records and Scryfall rulings retrieved 2026-11-10: Burning Palm Efreet (https://api.scryfall.com/cards/a194488a-1d6f-4bc3-8f30-82e2c3c91389/rulings; empty), Wind Shear (https://api.scryfall.com/cards/b8324f44-c7f5-41ee-bc8d-16822bd8942f/rulings; one 2004-10-04 ruling confirms both effects last until end of turn), and Leering Gargoyle (https://api.scryfall.com/cards/a05d1cac-7012-4d22-82d3-0f82b168fe68/rulings; empty). Read official Wizards Comprehensive Rules effective 2026-11-06: https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt, §§113.10/113.10b, 508.1a-k/m, 601.2a-b/i, 602.2, 608.2c, 611.2a, 613.1f-g, 613.4b-d, 613.6, 702.9a-c, 120.3e, 514.2, 704.5g. At runtime 0a1bb501af9a7a7ac2f95c0fbe527d53ac786a35, traced group resolution/snapshotting in mtg/rules/primitive_handlers.go, ability/P-T layers in mtg/rules/continuous.go, and supporting declarations in mtg/game/continuous.go and selection.go. Prior art: mtg/cards/authored/evasion_keyword_removal.go and mtg/rules/evasion_keyword_removal_test.go; group behavior: mtg/rules/effects_player_life_test.go and attack_group_keyword_test.go. Focused existing tests passed with `go test ./mtg/rules -run 'Test(HammerheimRemovesAllLandwalkAbilities|CrashLandingRemovesFlyingThenDealsDamageFromForests|KinscaerHarpoonistAttackMayRemoveFlying|ApplyContinuousGroupSnapshotsPermanentsAtResolution|TriggeringAttackersGroupKeywordGrantBindsDeclaredAttackers)$'`. Records are unclaimed and unbatched; no shared Engine prerequisite is needed. This is readiness evidence, not implementation verification."
+  },
+  {
+   "id": "keyword-removal-2026-11-10",
+   "family": "keyword-removal",
+   "oracle_ids": [
+    "00ba96e0-42a7-432a-a500-5e607d75a358",
+    "5ea0e3a5-9c38-4da4-98a6-41c14be512d9",
+    "a9e59ee4-02a6-498c-82f0-f4f2ff334d65"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "ContinuousEffect.AddKeywords and RemoveKeywords",
+    "ContinuousEffect.PowerDelta",
+    "DurationUntilYourNextTurn",
+    "TriggeredAbility(EventAttackerDeclared; defending-player target)",
+    "Aura static effect on AffectedAttached with Enchant restrictions",
+    "ActivatedAbility with end-of-turn keyword changes"
+   ],
+   "review": "Checked pinned identities/text and current Scryfall rulings: Fear of Falling (2024-09-20 ruling confirms flying can be gained again), Short Circuit (no rulings returned), and Canopy Dragon (no rulings returned). Read official Comprehensive Rules, effective 2026-11-06: https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt — CR 303.4, 702.5, 508.1m, 603.2, 611.2a-c, 611.3, 613.1f, 613.4c, 702.9, and 702.19. Capability trace at baseline 2fa7c48905cf291e1b86fcbcaf5abde71dbf4a25: mtg/game/continuous.go (AddKeywords, RemoveKeywords, PowerDelta), mtg/game/duration.go (DurationUntilYourNextTurn), mtg/rules/rule_effects.go (AffectedAttached), and prior behavior in mtg/cards/authored/evasion_keyword_removal.go with mtg/rules/evasion_keyword_removal_test.go. Exact-ID open-issue searches found no matches for these three cards; no listed Engine prerequisite is needed."
   }
  ],
  "records": [
@@ -52124,8 +52164,10 @@
    "oracle_id": "00ba96e0-42a7-432a-a500-5e607d75a358",
    "revision": "0e814e48-cd9d-428f-90e2-74d97cb9c8f1",
    "name": "Fear of Falling",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "keyword-removal",
+   "batch": "keyword-removal-2026-11-10",
+   "evidence": "mtg/rules/keyword_change_cards_test.go: TestFearOfFallingAttacksDefendingPlayerAndRestoresFlyingNextTurn"
   },
   {
    "oracle_id": "00bcbeb5-196a-4a54-ac8d-dec708e68d01",
@@ -131537,8 +131579,10 @@
    "oracle_id": "5ea0e3a5-9c38-4da4-98a6-41c14be512d9",
    "revision": "74fe0fb5-e994-41b1-a73d-4e68f7afdf34",
    "name": "Short Circuit",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "keyword-removal",
+   "batch": "keyword-removal-2026-11-10",
+   "evidence": "mtg/rules/keyword_change_cards_test.go: TestShortCircuitEnchantsArtifactsAndCreaturesConditionally"
   },
   {
    "oracle_id": "5ea1d89c-8650-4373-9835-e369587020ef",
@@ -195908,8 +195952,10 @@
    "oracle_id": "a9e59ee4-02a6-498c-82f0-f4f2ff334d65",
    "revision": "20c5e4d6-b716-4994-b226-b1eb799bec25",
    "name": "Canopy Dragon",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "keyword-removal",
+   "batch": "keyword-removal-2026-11-10",
+   "evidence": "mtg/rules/keyword_change_cards_test.go: TestCanopyDragonGainsFlyingAndLosesTrampleUntilEndOfTurn"
   },
   {
    "oracle_id": "a9e72fe7-c4b3-421a-8b2f-bb9448b04a44",
