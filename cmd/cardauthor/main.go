@@ -12,6 +12,9 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
+
+	"github.com/natefinch/council4/internal/cardname"
 )
 
 type oracleCard struct {
@@ -31,7 +34,7 @@ type oracleCard struct {
 func main() {
 	corpus := flag.String("corpus", ".cardwork/corpus/oracle-cards.json", "pinned Oracle JSON")
 	oracleID := flag.String("oracle-id", "", "exact Oracle identity")
-	symbol := flag.String("symbol", "", "exported Go entry identifier")
+	symbol := flag.String("symbol", "", "exported Go entry identifier; defaults to an ASCII one derived from the card name")
 	out := flag.String("out", "", "new scratch directory; never production")
 	flag.Parse()
 	if err := run(*corpus, *oracleID, *symbol, *out); err != nil {
@@ -41,8 +44,8 @@ func main() {
 }
 
 func run(corpus, oracleID, symbol, out string) error {
-	if oracleID == "" || out == "" || !token.IsIdentifier(symbol) || !token.IsExported(symbol) {
-		return errors.New("require -oracle-id, exported -symbol and new -out directory")
+	if oracleID == "" || out == "" || symbol != "" && (!token.IsIdentifier(symbol) || !token.IsExported(symbol)) {
+		return errors.New("require -oracle-id, new -out directory and an exported -symbol when given")
 	}
 	clean := filepath.Clean(out)
 	if filepath.IsAbs(clean) || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) ||
@@ -66,6 +69,10 @@ func run(corpus, oracleID, symbol, out string) error {
 	if len(found) != 1 {
 		return fmt.Errorf("oracle identity must resolve exactly once, got %d", len(found))
 	}
+	stem, symbol, err := draftNames(found[0].Name, symbol)
+	if err != nil {
+		return err
+	}
 	body, scenario, err := render(found[0], symbol)
 	if err != nil {
 		return err
@@ -76,13 +83,53 @@ func run(corpus, oracleID, symbol, out string) error {
 	if err := os.Mkdir(clean, 0o700); err != nil {
 		return err
 	}
-	for name, content := range map[string][]byte{"card.go": body, "scenario_test.go": scenario} {
+	for name, content := range map[string][]byte{stem + ".go": body, stem + "_test.go": scenario} {
 		if err := os.WriteFile(filepath.Join(clean, name), content, 0o600); err != nil {
 			return err
 		}
 	}
-	fmt.Printf("Unregistered draft for %s (%s), revision %s: %s\n", found[0].Name, oracleID, found[0].ID, clean)
+	fmt.Printf("Unregistered draft for %s (%s), revision %s: %s (%s.go, %s_test.go, symbol %s)\n",
+		found[0].Name, oracleID, found[0].ID, clean, stem, stem, symbol)
 	return nil
+}
+
+// draftNames derives the ASCII draft file stem and, unless one was given, the
+// exported entry symbol from the exact printed name, which stays unchanged in
+// the draft's metadata. An explicit symbol is used verbatim and, when the name
+// has no ASCII spelling (for example "_____"), also names the files.
+func draftNames(name, symbol string) (stem, entry string, err error) {
+	stem, err = cardname.FileStem(name)
+	if symbol == "" {
+		if err != nil {
+			return "", "", fmt.Errorf("%w; pass an explicit -symbol", err)
+		}
+		entry, err = cardname.Symbol(name)
+		return stem, entry, err
+	}
+	if err != nil {
+		stem = symbolStem(symbol)
+	}
+	return stem, symbol, nil
+}
+
+// symbolStem derives an ASCII file stem from an exported Go identifier by
+// splitting its camel-case words ("BlankCreature" becomes blank_creature).
+// An identifier without an ASCII spelling falls back to the stem "card",
+// which is safe because every draft is written to its own new directory.
+func symbolStem(symbol string) string {
+	var spaced strings.Builder
+	var prev rune
+	for i, r := range symbol {
+		if i > 0 && unicode.IsUpper(r) && (unicode.IsLower(prev) || unicode.IsDigit(prev)) {
+			_ = spaced.WriteByte(' ')
+		}
+		_, _ = spaced.WriteRune(r)
+		prev = r
+	}
+	if stem, err := cardname.FileStem(spaced.String()); err == nil {
+		return stem
+	}
+	return "card"
 }
 
 func render(card oracleCard, symbol string) (body, scenario []byte, err error) {

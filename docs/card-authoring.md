@@ -288,8 +288,14 @@ go run ./cmd/cardauthor \
 
 The command reads metadata verbatim from the pinned input and emits ordinary
 formatted Go: an unregistered entry/constructor, one program declaration/body,
-and a real Engine/stack scenario skeleton. It does **not** interpret Oracle
-English or decide card behavior. Fill metadata/declarations, replace the explicit
+and a real Engine/stack scenario skeleton. `-symbol` is optional: by default
+`internal/cardname` derives the exported symbol and the draft's
+`<stem>.go`/`<stem>_test.go` file names from the printed name, folding Latin
+diacritics to ASCII (El-Hajjâj becomes `ElHajjaj` in `el_hajjaj.go`) while the
+`Name:` metadata stays exact. An explicit `-symbol` may be any exported Go
+identifier and names the files when the printed name has no ASCII spelling.
+Authored file names must be ASCII; `TestSourceFileNamesAreASCII` in
+`mtg/cards/authored` enforces this. It does **not** interpret Oracle English or decide card behavior. Fill metadata/declarations, replace the explicit
 unsupported body and final failing assertion, then copy the draft to authored
 and rules packages. The scratch output is not compiled into production.
 No automatic registry edit or false successful scenario is generated.

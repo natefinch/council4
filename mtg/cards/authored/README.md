@@ -13,6 +13,8 @@ inspectable. Use the [program context](../../cardprogram/README.md) for shared
 Engine operations, not raw Game mutation. Preserve existing registrations; a
 duplicate identity is an error unless a unique legacy replacement is explicitly
 declared. Infrastructure and synthetic tests do not themselves promote a card.
+File names stay ASCII even for diacritic card names; derive them with
+`internal/cardname` (`cmd/cardauthor` does by default).
 
 Intuition and Realms Uncharted compose reveal-only `Search`, recorded `Ask`,
 simultaneous `MoveCards`, and `ShuffleLibrary`. Intuition declares its targeted
