@@ -602,6 +602,27 @@
     "oracle_text_sha256": "1ad620b27570bf8d7ad7b4fc0bbaf5ffe9cdc4def6c512a73383109dbdf24877",
     "revision": "c5bf1f6c-4653-4734-9bd7-af689a1b679d",
     "rulings_uri": "https://api.scryfall.com/cards/c5bf1f6c-4653-4734-9bd7-af689a1b679d/rulings"
+   },
+   {
+    "name": "Burning Palm Efreet",
+    "oracle_id": "55cbc0e8-eeec-433a-b70c-3501238b658b",
+    "oracle_text_sha256": "b892a4a82e169ed46464018e7ae7f922e2ea9e6c1fe251d2ff566c546dff7c31",
+    "revision": "a194488a-1d6f-4bc3-8f30-82e2c3c91389",
+    "rulings_uri": "https://api.scryfall.com/cards/a194488a-1d6f-4bc3-8f30-82e2c3c91389/rulings"
+   },
+   {
+    "name": "Wind Shear",
+    "oracle_id": "fa683059-b9de-4063-ae71-597ed4e2df30",
+    "oracle_text_sha256": "94e7203ed0b4db3ac91c23a47dce00c4470438c3445e722fa89de01669b70b37",
+    "revision": "b8324f44-c7f5-41ee-bc8d-16822bd8942f",
+    "rulings_uri": "https://api.scryfall.com/cards/b8324f44-c7f5-41ee-bc8d-16822bd8942f/rulings"
+   },
+   {
+    "name": "Leering Gargoyle",
+    "oracle_id": "fc0907eb-a3fc-40ef-950d-b05aee9d5da7",
+    "oracle_text_sha256": "16a7e54e2e372dd982f5bfc1148c1b47793a9d6810f474db8c3b6182879c8dc1",
+    "revision": "a05d1cac-7012-4d22-82d3-0f82b168fe68",
+    "rulings_uri": "https://api.scryfall.com/cards/a05d1cac-7012-4d22-82d3-0f82b168fe68/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7036,6 +7057,27 @@
     "EventAttackerDeclared OneOrMore coalescing, attacking-creature targets, and DynamicAmountControllerHandSize for power/toughness until end of turn"
    ],
    "review": "Reviewed exact pinned Oracle text and printing revisions from the records below (corpus SHA-256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4). Retrieved current Scryfall rulings: Party Dude https://api.scryfall.com/cards/d27b6f2a-84df-4097-a66a-8e463db47f58/rulings (11; X is determined on resolution); Sengir Autocrat https://api.scryfall.com/cards/83fa8a17-ff86-465e-9092-0968081f4e28/rulings (0, empty list); White Glove Gourmand https://api.scryfall.com/cards/c5bf1f6c-4653-4734-9bd7-af689a1b679d/rulings (5; the end-step condition checks at step start and can use a Human death from earlier that turn). Read the official Wizards Comprehensive Rules TXT effective 2026-11-06 at https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt: 111.1, 111.7-111.8, 603.2/603.2b, 603.4, 700.4, 508.3b, and 717.2a/717.3. Traced the selected behaviors to existing Engine operations and prior art in class_level_lifecycle_test.go, class_level_gating_test.go, conditions_event_history_test.go, triggers_zonechange_test.go, group_blink_test.go, removal_token_spells_test.go, combat_calligrapher_test.go, triggers_coalescing_test.go, and effects_dynamic_amount_test.go. No selected card needs a shared Engine prerequisite."
+  },
+  {
+   "id": "evasion-keyword-removal-followup",
+   "family": "evasion-keyword-removal",
+   "oracle_ids": [
+    "55cbc0e8-eeec-433a-b70c-3501238b658b",
+    "fa683059-b9de-4063-ae71-597ed4e2df30",
+    "fc0907eb-a3fc-40ef-950d-b05aee9d5da7"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "ActivatedAbility with inspectable costs and TargetSpec.Selection",
+    "StaticAbility.Flying",
+    "Execute(ApplyContinuous)",
+    "ContinuousEffect.RemoveKeywords",
+    "ContinuousEffect.PowerDelta and ToughnessDelta",
+    "ContinuousEffect.Group with BattlefieldGroup Selection (CombatStateAttacking and Keyword.Flying)",
+    "DurationUntilEndOfTurn",
+    "Execute(Damage)"
+   ],
+   "review": "Pinned Oracle records and Scryfall rulings retrieved 2026-11-10: Burning Palm Efreet (https://api.scryfall.com/cards/a194488a-1d6f-4bc3-8f30-82e2c3c91389/rulings; empty), Wind Shear (https://api.scryfall.com/cards/b8324f44-c7f5-41ee-bc8d-16822bd8942f/rulings; one 2004-10-04 ruling confirms both effects last until end of turn), and Leering Gargoyle (https://api.scryfall.com/cards/a05d1cac-7012-4d22-82d3-0f82b168fe68/rulings; empty). Read official Wizards Comprehensive Rules effective 2026-11-06: https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt, §§113.10/113.10b, 508.1a-k/m, 601.2a-b/i, 602.2, 608.2c, 611.2a, 613.1f-g, 613.4b-d, 613.6, 702.9a-c, 120.3e, 514.2, 704.5g. At runtime 0a1bb501af9a7a7ac2f95c0fbe527d53ac786a35, traced group resolution/snapshotting in mtg/rules/primitive_handlers.go, ability/P-T layers in mtg/rules/continuous.go, and supporting declarations in mtg/game/continuous.go and selection.go. Prior art: mtg/cards/authored/evasion_keyword_removal.go and mtg/rules/evasion_keyword_removal_test.go; group behavior: mtg/rules/effects_player_life_test.go and attack_group_keyword_test.go. Focused existing tests passed with `go test ./mtg/rules -run 'Test(HammerheimRemovesAllLandwalkAbilities|CrashLandingRemovesFlyingThenDealsDamageFromForests|KinscaerHarpoonistAttackMayRemoveFlying|ApplyContinuousGroupSnapshotsPermanentsAtResolution|TriggeringAttackersGroupKeywordGrantBindsDeclaredAttackers)$'`. Records are unclaimed and unbatched; no shared Engine prerequisite is needed. This is readiness evidence, not implementation verification."
   }
  ],
  "records": [
@@ -124218,8 +124260,10 @@
    "oracle_id": "55cbc0e8-eeec-433a-b70c-3501238b658b",
    "revision": "a194488a-1d6f-4bc3-8f30-82e2c3c91389",
    "name": "Burning Palm Efreet",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "evasion-keyword-removal",
+   "batch": "evasion-keyword-removal-followup",
+   "evidence": "mtg/rules/evasion_keyword_removal_test.go: TestBurningPalmEfreetDealsDamageAndRemovesFlying"
   },
   {
    "oracle_id": "55cc14d0-11ed-444d-884a-cfb692ba632b",
@@ -264165,8 +264209,10 @@
    "oracle_id": "fa683059-b9de-4063-ae71-597ed4e2df30",
    "revision": "b8324f44-c7f5-41ee-bc8d-16822bd8942f",
    "name": "Wind Shear",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "evasion-keyword-removal",
+   "batch": "evasion-keyword-removal-followup",
+   "evidence": "mtg/rules/evasion_keyword_removal_test.go: TestWindShearAffectsOnlyAttackingCreaturesWithFlying"
   },
   {
    "oracle_id": "fa6d05a1-3df4-4751-b1a0-8d9693faec73",
@@ -265741,8 +265787,10 @@
    "oracle_id": "fc0907eb-a3fc-40ef-950d-b05aee9d5da7",
    "revision": "a05d1cac-7012-4d22-82d3-0f82b168fe68",
    "name": "Leering Gargoyle",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "evasion-keyword-removal",
+   "batch": "evasion-keyword-removal-followup",
+   "evidence": "mtg/rules/evasion_keyword_removal_test.go: TestLeeringGargoyleTapGetsMinusTwoPlusTwoAndLosesFlying"
   },
   {
    "oracle_id": "fc09cbc0-2d28-44c6-b9a9-b95e9e58bb1b",
