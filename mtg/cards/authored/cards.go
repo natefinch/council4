@@ -21,6 +21,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, ShatteringPulse, WhispersOfTheMuse, DisturbedBurial)
 	entries = append(entries, Mundungu, SlyInstigator, HalfElfMonk)
 	entries = append(entries, EagerConstruct, SeaGodsRevenge, DevoutDecree)
+	entries = append(entries, BuildersTalent, LeadersTalent, PaladinClass, GossipsTalent)
 	for i := range entries {
 		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
 	}

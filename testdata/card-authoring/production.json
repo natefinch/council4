@@ -504,6 +504,34 @@
     "oracle_text_sha256": "e64ad9c91c0ec3632d9aef6555089f2d4240c0fcb48882f982a7a3f4f5b7045a",
     "revision": "06254b6c-eb22-4ec9-9420-74e9ee15e072",
     "rulings_uri": "https://api.scryfall.com/cards/06254b6c-eb22-4ec9-9420-74e9ee15e072/rulings"
+   },
+   {
+    "name": "Builder's Talent",
+    "oracle_id": "0b19082c-8f80-448b-9e1b-0f324a159409",
+    "oracle_text_sha256": "caca65dd35a01a22d305c9782e24958096827ae1eea6b0a13069924814f579be",
+    "revision": "15fa581a-724e-4196-a9a3-ff84c54bdb7d",
+    "rulings_uri": "https://api.scryfall.com/cards/15fa581a-724e-4196-a9a3-ff84c54bdb7d/rulings"
+   },
+   {
+    "name": "Leader's Talent",
+    "oracle_id": "134430b7-d566-485a-bd5c-7db8a285f4ca",
+    "oracle_text_sha256": "a57f2cb781530aa584f46556dd14dc29eae1ede7ddb4d34f2eaa5edd21efe6c1",
+    "revision": "4cbcb622-1aff-460f-b8fa-4502d991e0ad",
+    "rulings_uri": "https://api.scryfall.com/cards/4cbcb622-1aff-460f-b8fa-4502d991e0ad/rulings"
+   },
+   {
+    "name": "Gossip's Talent",
+    "oracle_id": "96e6d220-87db-4dab-abaa-e80c9577d89a",
+    "oracle_text_sha256": "8688b40deb49c0a66478dfa99c54385f10b4de0837dadbbd1499e65305bdeffd",
+    "revision": "b299889a-03d6-4659-b0e1-f0830842e40f",
+    "rulings_uri": "https://api.scryfall.com/cards/b299889a-03d6-4659-b0e1-f0830842e40f/rulings"
+   },
+   {
+    "name": "Paladin Class",
+    "oracle_id": "ac9d52b2-78a5-4b17-8aaf-1c1cb936a508",
+    "oracle_text_sha256": "602a49ac7542451bac5549c2577bc658d093dc1e434b27b957f6b545ce179069",
+    "revision": "5bf81fb1-7992-4ae9-b1a8-80c31579a2bf",
+    "rulings_uri": "https://api.scryfall.com/cards/5bf81fb1-7992-4ae9-b1a8-80c31579a2bf/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -6846,6 +6874,31 @@
      "evidence": "PR3318 added bounded BuybackKeyword/payment/copy/success-only replacement operation; no broader issue-closure claim. PR3319 on this runtime exercised paid and normal exact production Reiterate/Allay/Capsize through live and Simulator, source-funded payment, copies/target changes, protections/redirects, independent clones and real token/commander behavior. Independent probes retained. Both PRs passed all exact-head Tests and Race Tests before squash commits verified on fetched origin/main. Current unchanged shared Destroy,Draw and public TargetCards/MoveCards paths inspected against existing production destruction/numeric scenarios."
     }
    ]
+  },
+  {
+   "id": "class-level-cards-2026-11-09",
+   "family": "class-cards",
+   "oracle_ids": [
+    "0b19082c-8f80-448b-9e1b-0f324a159409",
+    "134430b7-d566-485a-bd5c-7db8a285f4ca",
+    "ac9d52b2-78a5-4b17-8aaf-1c1cb936a508",
+    "96e6d220-87db-4dab-abaa-e80c9577d89a"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "SetClassLevel",
+    "Condition.SourceClassLevelAtLeast and SourceClassLevelLessThan",
+    "EventClassLevelGained and TriggerPattern.ClassBecameLevel",
+    "SorceryOnly",
+    "TriggerPattern.OneOrMore and enter, leave, attack, cast, and combat-damage events",
+    "InterveningIfEventPermanentHadCounters",
+    "CostModifier",
+    "DynamicAmountTriggeringAttackerCount",
+    "Surveil",
+    "RuleEffectCantBeBlocked",
+    "token creation, counter placement, MoveCard, and PutOnBattlefield"
+   ],
+   "review": "Source and capability review: exact Oracle text and rulings URIs from the pinned corpus (SHA-256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4); Scryfall rulings checked for each printing; official Magic Comprehensive Rules effective 2026-11-06, section 717, reviewed for Class level structure and cumulative abilities. At runtime 764dfd67878bff8b95e3f6089b0251e58e0d4fbd, checked Class-level support against mtg/cards/w/wizard_class.go and mtg/rules/class_level_lifecycle_test.go, plus the relevant declarations and behavior paths for each card's token, counter, return, spell-cost, attack-count, surveil, evasion, and combat-damage effects. None of these exact Oracle IDs appears in the supplied open Engine-gap exclusions; no Engine prerequisite is needed."
   }
  ],
  "records": [
@@ -49247,15 +49300,19 @@
    "oracle_id": "0b19082c-8f80-448b-9e1b-0f324a159409",
    "revision": "15fa581a-724e-4196-a9a3-ff84c54bdb7d",
    "name": "Builder's Talent",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-cards",
+   "batch": "class-level-cards-2026-11-09",
+   "evidence": "mtg/rules/class_level_cards_authored_test.go: TestBuildersTalentOwnText"
   },
   {
    "oracle_id": "134430b7-d566-485a-bd5c-7db8a285f4ca",
    "revision": "4cbcb622-1aff-460f-b8fa-4502d991e0ad",
    "name": "Leader's Talent",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-cards",
+   "batch": "class-level-cards-2026-11-09",
+   "evidence": "mtg/rules/class_level_cards_authored_test.go: TestLeadersTalentOwnText"
   },
   {
    "oracle_id": "19ba0f2d-4de3-49a0-be7d-da0aa220cd8a",
@@ -49390,8 +49447,10 @@
    "oracle_id": "96e6d220-87db-4dab-abaa-e80c9577d89a",
    "revision": "b299889a-03d6-4659-b0e1-f0830842e40f",
    "name": "Gossip's Talent",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-cards",
+   "batch": "class-level-cards-2026-11-09",
+   "evidence": "mtg/rules/class_level_cards_authored_test.go: TestGossipsTalentOwnText"
   },
   {
    "oracle_id": "9fdad42a-9db5-4d91-9e80-9d5ce19038b8",
@@ -49406,8 +49465,10 @@
    "oracle_id": "ac9d52b2-78a5-4b17-8aaf-1c1cb936a508",
    "revision": "5bf81fb1-7992-4ae9-b1a8-80c31579a2bf",
    "name": "Paladin Class",
-   "status": "unclaimed",
-   "family": "unreviewed/class"
+   "status": "implemented-verified",
+   "family": "class-cards",
+   "batch": "class-level-cards-2026-11-09",
+   "evidence": "mtg/rules/class_level_cards_authored_test.go: TestPaladinClassOwnText"
   },
   {
    "oracle_id": "aefea339-8a0d-4531-8a62-afaecc88d078",
