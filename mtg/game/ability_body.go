@@ -42,6 +42,12 @@ type AbilityContent struct {
 	// ModesUniquePerTurn requires each mode to be chosen at most once per turn
 	// for each source object and triggered ability.
 	ModesUniquePerTurn bool
+	// MaxModesFromX limits "choose up to that many —" on a triggered ability to
+	// the ability's X value as it is put on the stack (CR 603.3c, 700.2b), such
+	// as a reflexive trigger carrying ReflexiveTriggerDef.X. MaxModes is the
+	// declared ceiling; the effective maximum is min(MaxModes, X). MinModes
+	// must be zero, so an X of zero allows no mode and removes the ability.
+	MaxModesFromX bool
 	// RandomModes reports that the single required mode is chosen at random
 	// rather than by the controller ("Choose one at random —", CR 700.2). It is
 	// set only on one/one modal content; mode resolution picks the mode with the

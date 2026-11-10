@@ -2064,6 +2064,15 @@ type TargetSpec struct {
 	// event's X value when the triggered ability is put on the stack.
 	MaxTargetsFromTriggerEventX bool
 
+	// MaxTargetsFromX limits an "up to that many target ..." spec of a
+	// triggered ability to the ability's X value as it is put on the stack
+	// (CR 601.2c via 603.3d), such as a reflexive trigger carrying
+	// ReflexiveTriggerDef.X. MaxTargets is the declared ceiling used when no X
+	// is known; the effective maximum is min(MaxTargets, X). MinTargets must be
+	// zero. The same limit is reapplied when targets are rechecked on
+	// resolution or changed, using the stack object's XValue.
+	MaxTargetsFromX bool
+
 	// Constraint describes what can be targeted (e.g., "creature",
 	// "creature or planeswalker", "player").
 	Constraint string

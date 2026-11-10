@@ -157,7 +157,7 @@ func TestSlimeAndBountyMarkerKinds(t *testing.T) {
 		}
 		names[name] = k
 	}
-	for _, invalid := range []Kind{Bounty + 1, -1} {
+	for _, invalid := range []Kind{Valor + 1, -1} {
 		if invalid.Valid() || invalid.String() != "unknown" {
 			t.Fatalf("Kind(%d) is recognized; want invalid", invalid)
 		}

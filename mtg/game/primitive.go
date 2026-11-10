@@ -2690,6 +2690,17 @@ type CreateReflexiveTrigger struct {
 // its own targets, chosen when the trigger is put on the stack.
 type ReflexiveTriggerDef struct {
 	Content AbilityContent
+	// X, when set, is evaluated once against the creating spell or ability as
+	// the reflexive trigger is created and becomes the reflexive ability's X
+	// value ("that many", CR 107.3c). It backs "you may pay <cost> any number
+	// of times. When you pay this cost one or more times, ... that many ..."
+	// through DynamicAmountChosenNumber reading PayRepeatedly's published count.
+	// The reflexive content reads it with DynamicAmountX for amounts and with
+	// TargetSpec.MaxTargetsFromX / AbilityContent.MaxModesFromX for "up to that
+	// many target ..." and "choose up to that many —". The value is fixed when
+	// the trigger is created and does not change while it waits or is on the
+	// stack. Unset leaves the reflexive ability without an X value.
+	X opt.V[Quantity]
 }
 
 // CreateReplacement creates a replacement effect that applies to a future event.

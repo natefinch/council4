@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -813,9 +814,15 @@ func totalCharacteristicInGroup(g *game.Game, obj opt.V[*game.StackObject], cont
 // affected permanent and delegate to dynamicAmountValueBeforeLayer; the
 // shared-creature-type count yields a different value per affected permanent, so
 // it counts the other creatures in its group that share a creature type with it.
-func dynamicAmountValueForPermanent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
+// A nonzero sourceID binds source-relative references ("each valor counter on
+// this creature") to the permanent that generates the effect.
+func dynamicAmountValueForPermanent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, sourceID id.ID, dynamic game.DynamicAmount, before game.ContinuousLayer) int {
 	if dynamic.Kind != game.DynamicAmountSharedCreatureTypeCountInGroup {
-		return dynamicAmountValueBeforeLayer(g, opt.V[*game.StackObject]{}, controller, dynamic, before)
+		var obj opt.V[*game.StackObject]
+		if sourceID != 0 {
+			obj = opt.Val(&game.StackObject{Controller: controller, SourceID: sourceID})
+		}
+		return dynamicAmountValueBeforeLayer(g, obj, controller, dynamic, before)
 	}
 	multiplier := dynamic.Multiplier
 	if multiplier == 0 {

@@ -285,9 +285,9 @@ func TestSlimeAndBountyCounterPlacementValidation(t *testing.T) {
 		}
 	}
 	for name, selection := range map[string]Selection{
-		"required":     {MatchCounter: true, RequiredCounter: counter.Bounty + 1},
-		"count":        {RequiredCounter: counter.Bounty + 1, RequiredCounterCount: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 1})},
-		"excluded":     {MatchExcludedCounter: true, ExcludedCounter: counter.Bounty + 1},
+		"required":     {MatchCounter: true, RequiredCounter: counter.Valor + 1},
+		"count":        {RequiredCounter: counter.Valor + 1, RequiredCounterCount: opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 1})},
+		"excluded":     {MatchExcludedCounter: true, ExcludedCounter: counter.Valor + 1},
 		"nested AnyOf": {AnyOf: []Selection{{MatchCounter: true, RequiredCounter: counter.Slime}, {MatchCounter: true, RequiredCounter: -1}}},
 	} {
 		if problems := selection.Validate(); len(problems) == 0 {
@@ -295,9 +295,9 @@ func TestSlimeAndBountyCounterPlacementValidation(t *testing.T) {
 		}
 	}
 	if err := ValidateInstructionSequence([]Instruction{{Primitive: AddCounter{
-		Amount: Fixed(1), Object: TargetPermanentReference(0), CounterKind: counter.Bounty + 1,
+		Amount: Fixed(1), Object: TargetPermanentReference(0), CounterKind: counter.Valor + 1,
 	}}}, permanentTargets); err == nil {
-		t.Fatal("kind after Bounty accepted; want unrecognized counter kind rejected")
+		t.Fatal("kind after Valor accepted; want unrecognized counter kind rejected")
 	}
 }
 

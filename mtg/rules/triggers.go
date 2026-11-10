@@ -5,6 +5,8 @@ import (
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
 )
 
 // orderTriggeredAbilitiesAPNAP orders pending triggered abilities for placement
@@ -60,11 +62,9 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 		return false
 	}
 	use := game.TriggeredAbilityUse{SourceID: trigger.sourceID, AbilityIndex: trigger.abilityIndex}
-	chosenModes, ok := e.triggerModes(g, trigger.controller, use, ability, agents, log)
-	if !ok {
-		return false
-	}
-	trigger.chosenModes = chosenModes
+	// The ability's X is fixed before it is put on the stack, so it bounds
+	// "up to that many" modes and targets as they are announced (CR 603.3c-d).
+	xValue := triggeredAbilityXValue(trigger)
 	// "That player" style target predicates (Garland, Royal Kidnapper) resolve
 	// against the player of the triggering event. The stack object does not exist
 	// yet while targets are chosen (CR 603.3d runs before the ability is on the
@@ -73,12 +73,20 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 	if trigger.hasEvent {
 		triggerEvent = trigger.event
 	}
-	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, triggerEvent, ability, chosenModes, agents, log)
+	modeLegal := func(mode int) bool {
+		return triggerModeHasLegalTargets(g, trigger.controller, source, trigger.sourceID, triggerEvent, &ability.Content, mode, xValue)
+	}
+	chosenModes, ok := e.triggerModes(g, trigger.controller, use, ability, agents, log, xValue, modeLegal)
+	if !ok {
+		return false
+	}
+	trigger.chosenModes = chosenModes
+	targets, ok := e.triggerTargets(g, trigger.controller, source, trigger.sourceID, triggerEvent, ability, chosenModes, agents, log, xValue)
 	if !ok {
 		return false
 	}
 	trigger.targets = targets
-	targetCounts, ok := bodyTargetCountsWithModes(g, trigger.controller, source, trigger.sourceID, triggerEvent, ability, chosenModes, targets)
+	targetCounts, ok := bodyTargetCountsWithModes(g, trigger.controller, source, trigger.sourceID, triggerEvent, ability, chosenModes, targets, xValue)
 	if !ok {
 		panic("validated triggered ability targets could not be segmented")
 	}
@@ -90,8 +98,11 @@ func (e *Engine) prepareTriggeredAbility(g *game.Game, trigger *pendingTriggered
 // the stack (CR 603.3c: a modal triggered ability's controller announces the
 // mode choice; an illegal mode can't be chosen; if no mode is chosen the ability
 // is removed from the stack). It returns ok=false when no mode is chosen so the
-// caller removes the ability from the stack.
-func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, use game.TriggeredAbilityUse, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog) ([]int, bool) {
+// caller removes the ability from the stack. xValue is the ability's X, which
+// limits MaxModesFromX content ("choose up to that many —"). modeLegal, when
+// set, reports whether a mode could be chosen on its own; modes it rejects are
+// not offered (CR 700.2b).
+func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, use game.TriggeredAbilityUse, ability *game.TriggeredAbility, agents [game.NumPlayers]PlayerAgent, log *TurnLog, xValue int, modeLegal func(int) bool) ([]int, bool) {
 	content := ability.Content
 	if !content.IsModal() {
 		return nil, true
@@ -106,6 +117,12 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, use game.T
 		return nil, false
 	}
 	minModes, maxModes := modeChoiceRangeFromContent(content)
+	if content.MaxModesFromX {
+		maxModes = min(maxModes, max(0, xValue))
+		if maxModes == 0 {
+			return nil, false
+		}
+	}
 	if !modeChoiceRangeValid(content, minModes, maxModes) {
 		return nil, false
 	}
@@ -128,6 +145,9 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, use game.T
 		if content.ModesUniquePerTurn && usedModes&(uint64(1)<<i) != 0 {
 			continue
 		}
+		if modeLegal != nil && !modeLegal(i) {
+			continue
+		}
 		options = append(options, game.ChoiceOption{Index: i, Label: content.Modes[i].Text})
 	}
 	if len(options) < minModes {
@@ -147,7 +167,7 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, use game.T
 		DefaultSelection: defaultSelection,
 	}, log)
 	slices.Sort(selected)
-	if !modesValidForContent(content, selected) {
+	if !modesValidForContentRange(content, selected, minModes, maxModes) {
 		return nil, false
 	}
 	// Keyword-only triggers such as ward and madness have no content modes.
@@ -167,6 +187,20 @@ func (e *Engine) triggerModes(g *game.Game, controller game.PlayerID, use game.T
 		g.ChosenModesThisTurn[use] = usedModes
 	}
 	return selected, true
+}
+
+// triggerModeHasLegalTargets reports whether mode of a modal triggered ability
+// could be chosen on its own: it has no targets, or a legal choice of its
+// targets exists now, with X-limited target counts bound by the ability's X
+// (CR 603.3c, 700.2b). A mode failing this can't be chosen.
+func triggerModeHasLegalTargets(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, triggerEvent game.Event, content *game.AbilityContent, mode, xValue int) bool {
+	if mode < 0 || mode >= len(content.Modes) {
+		return false
+	}
+	specs := append(slices.Clone(content.SharedTargets), content.Modes[mode].Targets...)
+	specs = applyTargetNumbersToSpecs(specs, game.CastBranch{XValue: opt.Val(xValue)})
+	result := targetChoicesForSpecs(g, controller, source, sourceObjectID, triggerEvent, specs, targetChoiceOptions{limit: 1, xValue: opt.Val(xValue)})
+	return result.kind == targetNoTargetsRequired || result.kind == targetLegalChoicesFound
 }
 
 func releasePendingStateTriggerLatch(g *game.Game, trigger *pendingTriggeredAbility) {

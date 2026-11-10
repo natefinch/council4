@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/opt"
 )
 
 // queueReflexiveTrigger enqueues a reflexive triggered ability (CR 603.11) from
@@ -10,8 +11,10 @@ import (
 // trigger is queued only when the enabling action was performed. The queued
 // trigger is put on the stack by drainReadyReflexiveTriggers the next time
 // triggered abilities are gathered (immediately after the enabling ability
-// finishes resolving), with its targets chosen then.
-func queueReflexiveTrigger(g *game.Game, obj *game.StackObject, def *game.ReflexiveTriggerDef) bool {
+// finishes resolving), with its targets chosen then. xValue is the value of X
+// captured from the creating resolution (ReflexiveTriggerDef.X), fixed now so a
+// later change to the information it was derived from cannot change it.
+func queueReflexiveTrigger(g *game.Game, obj *game.StackObject, def *game.ReflexiveTriggerDef, xValue opt.V[int]) bool {
 	if obj == nil || def == nil || len(def.Content.Modes) == 0 {
 		return false
 	}
@@ -26,6 +29,7 @@ func queueReflexiveTrigger(g *game.Game, obj *game.StackObject, def *game.Reflex
 		CapturedTargetManaValueLKI:  cloneIntMap(obj.TargetManaValueLKI),
 		TriggerEvent:                obj.TriggerEvent,
 		HasTriggerEvent:             obj.HasTriggerEvent,
+		XValue:                      xValue,
 	})
 	return true
 }
@@ -57,6 +61,7 @@ func drainReadyReflexiveTriggers(g *game.Game) []pendingTriggeredAbility {
 			capturedTargetControllerLKI: clonePlayerIDMap(trigger.CapturedTargetControllerLKI),
 			capturedTargetManaValueLKI:  cloneIntMap(trigger.CapturedTargetManaValueLKI),
 			capturedObjectID:            trigger.CapturedObjectID,
+			xValue:                      trigger.XValue,
 		})
 	}
 	g.PendingReflexiveTriggers = nil

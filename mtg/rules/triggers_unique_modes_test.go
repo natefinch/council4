@@ -26,7 +26,7 @@ func TestTriggeredModesUniquePerTurn(t *testing.T) {
 	log := &TurnLog{}
 
 	for want := range 3 {
-		selected, ok := engine.triggerModes(g, game.Player1, use, ability, agents, log)
+		selected, ok := engine.triggerModes(g, game.Player1, use, ability, agents, log, 0, nil)
 		if !ok || !slices.Equal(selected, []int{want}) {
 			t.Fatalf("choice %d = %v/%v, want [%d]/true", want, selected, ok, want)
 		}
@@ -35,7 +35,7 @@ func TestTriggeredModesUniquePerTurn(t *testing.T) {
 			t.Fatalf("choice %d options = %#v, want remaining printed modes", want, request.Options)
 		}
 	}
-	if _, ok := engine.triggerModes(g, game.Player1, use, ability, agents, log); ok {
+	if _, ok := engine.triggerModes(g, game.Player1, use, ability, agents, log, 0, nil); ok {
 		t.Fatal("fourth choice succeeded after every mode was chosen")
 	}
 	if len(log.Choices) != 3 {
@@ -45,7 +45,7 @@ func TestTriggeredModesUniquePerTurn(t *testing.T) {
 	otherUse := game.TriggeredAbilityUse{SourceID: 102, AbilityIndex: 2}
 	otherAgent := &choiceOnlyAgent{choices: [][]int{{0}}}
 	otherAgents := [game.NumPlayers]PlayerAgent{game.Player1: otherAgent}
-	if selected, ok := engine.triggerModes(g, game.Player1, otherUse, ability, otherAgents, &TurnLog{}); !ok ||
+	if selected, ok := engine.triggerModes(g, game.Player1, otherUse, ability, otherAgents, &TurnLog{}, 0, nil); !ok ||
 		!slices.Equal(selected, []int{0}) {
 		t.Fatalf("other source choice = %v/%v, want independent [0]/true", selected, ok)
 	}
@@ -59,7 +59,7 @@ func TestTriggeredModesUniquePerTurn(t *testing.T) {
 	engine.advanceToNextTurn(g)
 	resetAgent := &choiceOnlyAgent{choices: [][]int{{0}}}
 	resetAgents := [game.NumPlayers]PlayerAgent{game.Player1: resetAgent}
-	if selected, ok := engine.triggerModes(g, game.Player1, use, ability, resetAgents, &TurnLog{}); !ok ||
+	if selected, ok := engine.triggerModes(g, game.Player1, use, ability, resetAgents, &TurnLog{}, 0, nil); !ok ||
 		!slices.Equal(selected, []int{0}) {
 		t.Fatalf("new-turn choice = %v/%v, want reset [0]/true", selected, ok)
 	}

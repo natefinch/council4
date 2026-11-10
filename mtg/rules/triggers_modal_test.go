@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func optionalModalTriggeredCreature() *game.CardDef {
@@ -86,6 +88,69 @@ func TestTriggeredModesEmptySelectionDeclinesPlacement(t *testing.T) {
 				choice.Request.MinChoices != 0 || choice.Request.MaxChoices != 1 ||
 				len(choice.Selected) != 0 || choice.UsedFallback != tc.wantFallback {
 				t.Fatalf("mode choice = %+v, want empty choice with fallback=%v", choice, tc.wantFallback)
+			}
+		})
+	}
+}
+
+// TestTriggeredModesWithoutLegalTargetsAreNotOffered proves a modal triggered
+// ability's controller can't choose a mode whose targets can't be legally chosen
+// (CR 603.3c, 700.2b): it is not offered, the remaining legal mode is chosen and
+// resolves, and a required choice with no legal mode removes the ability unasked.
+func TestTriggeredModesWithoutLegalTargetsAreNotOffered(t *testing.T) {
+	artifactMode := func(def *game.CardDef) {
+		content := &def.TriggeredAbilities[0].Content
+		content.MinModes = 1
+		content.Modes[0].Text = "Target artifact's controller gains 3 life."
+		content.Modes[0].Targets = []game.TargetSpec{{
+			MinTargets: 1, MaxTargets: 1, Constraint: "target artifact", Allow: game.TargetAllowPermanent,
+			Selection: opt.Val(game.Selection{RequiredTypes: []types.Card{types.Artifact}}),
+		}}
+		content.Modes[0].Sequence = []game.Instruction{{Primitive: game.GainLife{
+			Amount: game.Fixed(3), Player: game.ControllerReference(),
+		}}}
+	}
+	for _, tc := range []struct {
+		name       string
+		onlyTarget bool
+		wantChoice bool
+		wantLife   int
+	}{
+		{name: "legal untargeted mode remains", wantChoice: true, wantLife: 47},
+		{name: "no legal mode", onlyTarget: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			def := optionalModalTriggeredCreature()
+			artifactMode(def)
+			if tc.onlyTarget {
+				def.TriggeredAbilities[0].Content.Modes[1] = def.TriggeredAbilities[0].Content.Modes[0]
+			}
+			source := addCombatPermanent(g, game.Player2, def)
+			g.Events = append(g.Events, game.Event{
+				Kind: game.EventAttackerDeclared, Controller: game.Player2, PermanentID: source.ObjectID,
+			})
+			agents := [game.NumPlayers]PlayerAgent{game.Player2: &choiceOnlyAgent{choices: [][]int{{1}}}}
+			log := &TurnLog{}
+
+			placed := engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, log)
+			if placed != tc.wantChoice || (len(log.Choices) == 1) != tc.wantChoice {
+				t.Fatalf("placed=%v choices=%+v, want placement and mode prompt %v", placed, log.Choices, tc.wantChoice)
+			}
+			if !tc.wantChoice {
+				if g.Stack.Size() != 0 {
+					t.Fatal("trigger with no legal mode was put on the stack")
+				}
+				return
+			}
+			request := log.Choices[0].Request
+			if len(request.Options) != 1 || request.Options[0].Index != 1 || log.Choices[0].UsedFallback {
+				t.Fatalf("mode request = %+v, want only the untargeted mode", log.Choices[0])
+			}
+			engine.resolveTopOfStack(g, log)
+			if got := g.Players[game.Player2].Life; got != tc.wantLife {
+				t.Fatalf("life = %d, want %d", got, tc.wantLife)
 			}
 		})
 	}
