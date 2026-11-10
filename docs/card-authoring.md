@@ -118,6 +118,14 @@ Pending output also retains canonical whole-card blockers and their
 `blocked_oracle_ids`, including cards outside a saved batch; checked prerequisite
 evidence never silently reopens these cards.
 
+`-operation families` (read-only) groups unclaimed, unbatched candidates by
+the one rules paragraph each adds beyond paragraphs already on installed or
+verified cards, largest first; the family with an empty `key` adds none.
+Supporting a family's paragraph once makes the whole family authorable, so a
+family is a natural batch. Cards adding two or more new paragraphs are left to
+queue order. Paragraphs are compared after normalizing the card's name,
+quantities, mana symbols, power/toughness, colors and subtypes.
+
 Use `-operation add-reviewed-batch -plan PATH -batch NEW_ID -owner SESSION_ID`
 to append **one** reviewed batch of three to twenty cards. The plan is a small JSON
 object, not a replacement manifest:
