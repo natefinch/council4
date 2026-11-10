@@ -104,8 +104,9 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 		return append(atoms, quantityAtom(EffectCardsDrawn, p.Amount, affectedFromPlayer(p.Player)))
 	case game.Discard:
 		atom := quantityAtom(EffectCardsLost, p.Amount, affectedFromPlayer(p.Player))
-		if p.EntireHand {
+		if p.EntireHand || p.KeepInHand {
 			atom.IsDynamic = true
+			atom.Amount = 0
 		}
 		return append(atoms, atom)
 	case game.MoveTopOfLibrary:

@@ -650,6 +650,14 @@ func validateQuantity(quantity Quantity, targets []TargetSpec, checkTargets bool
 			return errors.New("card-zone count requires a player")
 		}
 		return validatePlayerReference(*dynamic.Player, targets, checkTargets)
+	case DynamicAmountFewestPermanentsControlled:
+		if dynamic.Selection == nil {
+			return nil
+		}
+		if dynamic.Selection.Controller != ControllerAny || dynamic.Selection.Player != PlayerAny {
+			return errors.New("fewest-permanents count must not restrict controller or player")
+		}
+		return firstProblem(dynamic.Selection.Validate())
 	case DynamicAmountReferencedCardsTotalManaValue:
 		if dynamic.LinkedKey == "" {
 			return errors.New("referenced-cards total mana value requires a linked key")
@@ -905,6 +913,9 @@ func (p ChooseDiscardFromHand) validatePrimitive(targets []TargetSpec, checkTarg
 func (p Discard) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if p.EntireHand && (p.Amount.IsDynamic() || p.Amount.Value() != 0) {
 		return errors.New("Discard with EntireHand must not set Amount")
+	}
+	if p.KeepInHand && (p.EntireHand || p.AtRandom || p.PublishLinked != "") {
+		return errors.New("Discard with KeepInHand must not set EntireHand, AtRandom, or PublishLinked")
 	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err

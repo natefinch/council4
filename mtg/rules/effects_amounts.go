@@ -93,6 +93,8 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 				amount++
 			}
 		}
+	case game.DynamicAmountFewestPermanentsControlled, game.DynamicAmountFewestCardsInHand:
+		amount = fewestAmongPlayers(g, obj, controller, &dynamic, groupMember)
 	case game.DynamicAmountDevotion:
 		// ColorFrom binds devotion to the color chosen as the ability resolves
 		// (Nykthos, Shrine to Nyx's "devotion to that color"); otherwise the
@@ -324,6 +326,38 @@ func dynamicReferenceResolver(g *game.Game, obj opt.V[*game.StackObject], contro
 		resolver = newReferenceResolver(g, &game.StackObject{Controller: controller})
 	}
 	return resolver.withGroupOfferMember(groupMember)
+}
+
+// fewestAmongPlayers evaluates the Balance-style "the player who controls the
+// fewest" amounts: the minimum, over every non-eliminated player, of that
+// player's matching permanents or cards in hand. A player with none counts as
+// zero (CR 800.4a removes only players who have left the game).
+func fewestAmongPlayers(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, dynamic *game.DynamicAmount, groupMember opt.V[game.PlayerID]) int {
+	resolver := dynamicReferenceResolver(g, obj, controller, groupMember)
+	var source *game.Permanent
+	if obj.Exists && obj.Val != nil {
+		source, _ = sourcePermanent(g, obj.Val)
+	}
+	sel := game.Selection{}
+	if dynamic.Selection != nil {
+		sel = *dynamic.Selection
+	}
+	fewest := -1
+	for playerID := range game.PlayerID(game.NumPlayers) {
+		if !isPlayerAlive(g, playerID) {
+			continue
+		}
+		var count int
+		if dynamic.Kind == game.DynamicAmountFewestCardsInHand {
+			count = cardInstanceCount(g, g.Players[playerID].Hand.All())
+		} else {
+			count = len(playerControlledSelectionCandidates(g, resolver, source, playerID, sel))
+		}
+		if fewest < 0 || count < fewest {
+			fewest = count
+		}
+	}
+	return max(fewest, 0)
 }
 
 func resolveDynamicPlayerReference(g *game.Game, obj opt.V[*game.StackObject], controller game.PlayerID, ref game.PlayerReference, groupMember opt.V[game.PlayerID]) (game.PlayerID, bool) {
