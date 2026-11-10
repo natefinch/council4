@@ -243,3 +243,58 @@ func TestScryPrivateMultiCardFallback(t *testing.T) {
 		})
 	}
 }
+
+// Surveil looks at library cards only its player may see (CR 701.25a): the
+// chooser gets each card's identity, but the public log keeps only replayable
+// indices, so a card kept on top is never named there.
+func TestSurveilPrivateChoicesAndReplay(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	kept := addCardToLibrary(g, game.Player1, vanillaCreature("Surveil kept secret", 2, 2))
+	binned := addCardToLibrary(g, game.Player1, vanillaCreature("Surveil binned", 2, 2))
+	addEffectSpellToStack(g, game.Player1, game.Surveil{Player: game.ControllerReference(), Amount: game.Fixed(2)}, nil)
+	replay := g.Clone()
+	answers := [][]int{{1}, {0}}
+	var seen []id.ID
+	agent := &controlScript{choice: func(obs PlayerObservation, request game.ChoiceRequest) []int {
+		if obs.Player != game.Player1 || request.Kind != game.ChoiceSurveil || !request.Subject.Exists ||
+			request.Subject.Val.Name == "" || len(request.Options) != 2 || request.Options[1].Label != "graveyard" {
+			t.Fatalf("surveilling player lost the private card or options: %+v", request)
+		}
+		seen = append(seen, request.Subject.Val.CardID)
+		return answers[len(seen)-1]
+	}}
+	engine := NewEngine(nil)
+	log := &TurnLog{}
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{agent}, log)
+	if !slices.Equal(seen, []id.ID{binned, kept}) || !g.Players[game.Player1].Graveyard.Contains(binned) ||
+		!slices.Equal(g.Players[game.Player1].Library.All(), []id.ID{kept}) {
+		t.Fatalf("surveil saw %v, library %v; want binned milled and kept on top", seen, g.Players[game.Player1].Library.All())
+	}
+	if len(log.Choices) != 2 {
+		t.Fatalf("logged surveil choices = %d, want 2", len(log.Choices))
+	}
+	for i, decision := range log.Choices {
+		request := decision.Request
+		if request.Kind != game.ChoiceSurveil || !request.Private || request.Subject.Exists ||
+			request.Prompt != "Private decision" || decision.UsedFallback || !slices.Equal(decision.Selected, answers[i]) {
+			t.Fatalf("surveil log entry is not private or lost replay indices: %+v", decision)
+		}
+		for _, option := range request.Options {
+			if option.Card.Exists || option.Label != "Private option" {
+				t.Fatalf("surveil log retained private option information: %+v", option)
+			}
+		}
+	}
+	data, err := json.Marshal(GameResult{Turns: []TurnLog{*log}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "Surveil kept secret") {
+		t.Fatal("returned game log names the library card kept on top")
+	}
+	engine.resolveTopOfStackWithChoices(replay, [game.NumPlayers]PlayerAgent{&choiceOnlyAgent{choices: answers}}, &TurnLog{})
+	if !slices.Equal(replay.Players[game.Player1].Library.All(), []id.ID{kept}) ||
+		!replay.Players[game.Player1].Graveyard.Contains(binned) {
+		t.Fatal("sanitized surveil choices did not reproduce the cloned game")
+	}
+}

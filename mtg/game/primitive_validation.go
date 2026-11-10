@@ -404,6 +404,10 @@ func (p Incubate) validateCapturedTargetControllerReferences(targets []TargetSpe
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
 
+func (p EmpowerJace) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
+}
+
 func (p Bolster) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerQuantity(p.Amount, targets, checkTargets)
 }
@@ -2346,6 +2350,10 @@ func (p Incubate) validatePrimitive(targets []TargetSpec, checkTargets bool) err
 		return validatePlayerReference(p.Recipient.Val, targets, checkTargets)
 	}
 	return nil
+}
+
+func (p EmpowerJace) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateQuantity(p.Amount, targets, checkTargets)
 }
 
 func (p Bolster) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

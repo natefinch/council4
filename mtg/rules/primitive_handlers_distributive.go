@@ -43,21 +43,15 @@ func playerControlledSelectionCandidates(g *game.Game, resolver referenceResolve
 	return candidates
 }
 
+// permanentChoiceExtremumCandidates keeps the candidates tied for extremum's
+// greatest effective value. Values are compared signed, so a 0-power creature
+// is greater than a -1-power one (CR 107.1b).
 func permanentChoiceExtremumCandidates(g *game.Game, candidates []*game.Permanent, extremum game.PermanentChoiceExtremum) []*game.Permanent {
 	if extremum == game.PermanentChoiceExtremumNone {
 		return candidates
 	}
 	return extremeValuedPermanents(candidates, func(permanent *game.Permanent) (int, bool) {
-		switch extremum {
-		case game.PermanentChoiceGreatestPower:
-			return effectivePower(g, permanent), true
-		case game.PermanentChoiceGreatestToughness:
-			return effectiveToughness(g, permanent)
-		case game.PermanentChoiceGreatestManaValue:
-			return effectivePermanentManaValue(g, permanent)
-		default:
-			return 0, false
-		}
+		return signedPermanentChoiceExtremumValue(g, permanent, extremum)
 	})
 }
 

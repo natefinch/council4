@@ -384,10 +384,14 @@ const (
 	// simultaneously (game.KeepPermanents). It backs "Each player chooses three
 	// permanents they control, then sacrifices the rest." (Razia's Purification).
 	PrimitiveKeepPermanents
+	// PrimitiveEmpowerJace performs the empower Jace keyword action (CR 701.71):
+	// the controller puts Amount loyalty counters on a Jace planeswalker token
+	// they control, first creating one if they control none (game.EmpowerJace).
+	PrimitiveEmpowerJace
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveKeepPermanents) + 1
+const primitiveKindCount = int(PrimitiveEmpowerJace) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1190,6 +1194,18 @@ type Amass struct {
 type Incubate struct {
 	Amount    Quantity
 	Recipient opt.V[PlayerReference]
+}
+
+// EmpowerJace performs the empower Jace keyword action (CR 701.71a): if the
+// resolving controller doesn't control a Jace planeswalker token, they create a
+// blue Jace planeswalker token with 0 loyalty, "[−1]: Surveil 1," and
+// "[−3]: Draw a card." They then choose a Jace planeswalker token they control
+// and put Amount loyalty counters on it. Only tokens qualify: a nontoken Jace
+// planeswalker neither receives the counters nor prevents the token's creation,
+// while a Jace planeswalker token obtained another way (such as a token copy)
+// does. Several controlled Jace planeswalker tokens give the controller a choice.
+type EmpowerJace struct {
+	Amount Quantity
 }
 
 // Renown performs the renown keyword action (CR 702.111): if the referenced

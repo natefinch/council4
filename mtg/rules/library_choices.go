@@ -332,6 +332,9 @@ func (e *Engine) surveilCards(g *game.Game, agents [game.NumPlayers]PlayerAgent,
 	for _, cardID := range peekLibrary(player, amount) {
 		request := libraryChoiceRequest(game.ChoiceSurveil, playerID, "Surveil: choose where to put card.", []string{"top", "graveyard"})
 		request.Subject = cardChoiceInfo(g, cardID)
+		// Only the surveilling player looks at the card (CR 701.25a); a card
+		// kept on top stays hidden, so the public log omits its identity.
+		request.Private = true
 		selected := e.chooseChoice(g, agents, request, log)
 		if len(selected) == 1 && selected[0] == 1 {
 			putLibraryCardIntoGraveyard(g, playerID, cardID, 0)
