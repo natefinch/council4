@@ -644,6 +644,34 @@
     "oracle_text_sha256": "137462868b444406e50574f222c4d30995283827fcb38bf3d92345877c8d2b4e",
     "revision": "20c5e4d6-b716-4994-b226-b1eb799bec25",
     "rulings_uri": "https://api.scryfall.com/cards/20c5e4d6-b716-4994-b226-b1eb799bec25/rulings"
+   },
+   {
+    "name": "Searing Touch",
+    "oracle_id": "1cd9a3ba-a115-4e59-983d-605e4435f3a8",
+    "oracle_text_sha256": "3bb333ceb0fd31ffc18fdf61fc629c5c397ac2db143fe11ad877672243470bf7",
+    "revision": "34406508-da49-4b63-b123-55f0924a0675",
+    "rulings_uri": "https://api.scryfall.com/cards/34406508-da49-4b63-b123-55f0924a0675/rulings"
+   },
+   {
+    "name": "Seething Anger",
+    "oracle_id": "2effcd1c-5833-4e0e-bb67-2d2ffb22a014",
+    "oracle_text_sha256": "bc7fb68964aa21cfe602eddc541e3018c9d71e4c153c5ace55a9c7cb0dd09ba1",
+    "revision": "2294ef08-c27a-4bb4-bd59-434516717961",
+    "rulings_uri": "https://api.scryfall.com/cards/2294ef08-c27a-4bb4-bd59-434516717961/rulings"
+   },
+   {
+    "name": "Mind Peel",
+    "oracle_id": "4f424d94-1544-4086-a57d-2add17332094",
+    "oracle_text_sha256": "fd3a8cd164c5e7ca90970ef33775b42c743f33d7605ece8d6a674102c7adb874",
+    "revision": "92bd531c-fdd1-4a22-816e-258b2975c1a3",
+    "rulings_uri": "https://api.scryfall.com/cards/92bd531c-fdd1-4a22-816e-258b2975c1a3/rulings"
+   },
+   {
+    "name": "Elvish Fury",
+    "oracle_id": "557d2af0-04c5-461d-826b-7208c4535dc2",
+    "oracle_text_sha256": "7565fabb8776fcae0948289f77738d950bebaf536dbc12f484fda043a54b7a72",
+    "revision": "e5a24943-0121-4c64-9624-2e4cff37e6ca",
+    "rulings_uri": "https://api.scryfall.com/cards/e5a24943-0121-4c64-9624-2e4cff37e6ca/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7118,6 +7146,25 @@
     "ActivatedAbility with end-of-turn keyword changes"
    ],
    "review": "Checked pinned identities/text and current Scryfall rulings: Fear of Falling (2024-09-20 ruling confirms flying can be gained again), Short Circuit (no rulings returned), and Canopy Dragon (no rulings returned). Read official Comprehensive Rules, effective 2026-11-06: https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt — CR 303.4, 702.5, 508.1m, 603.2, 611.2a-c, 611.3, 613.1f, 613.4c, 702.9, and 702.19. Capability trace at baseline 2fa7c48905cf291e1b86fcbcaf5abde71dbf4a25: mtg/game/continuous.go (AddKeywords, RemoveKeywords, PowerDelta), mtg/game/duration.go (DurationUntilYourNextTurn), mtg/rules/rule_effects.go (AffectedAttached), and prior behavior in mtg/cards/authored/evasion_keyword_removal.go with mtg/rules/evasion_keyword_removal_test.go. Exact-ID open-issue searches found no matches for these three cards; no listed Engine prerequisite is needed."
+  },
+  {
+   "id": "buyback-repeaters-20261110",
+   "family": "no-new-paragraph",
+   "oracle_ids": [
+    "1cd9a3ba-a115-4e59-983d-605e4435f3a8",
+    "2effcd1c-5833-4e0e-bb67-2d2ffb22a014",
+    "4f424d94-1544-4086-a57d-2add17332094",
+    "557d2af0-04c5-461d-826b-7208c4535dc2"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.BuybackKeyword",
+    "game.TargetSpec",
+    "game.Damage",
+    "game.ModifyPT",
+    "game.Discard"
+   ],
+   "review": "Selection check: read these four pinned Oracle entries; checked the no-new-paragraph family, BuybackKeyword in mtg/game/keyword.go and mtg/cardprogram/README.md, prior art in mtg/cards/authored/buyback_interaction.go with scenarios in mtg/rules/buyback_interaction_test.go, and Damage, ModifyPT, Discard, and TargetSpec declarations in mtg/game/primitive.go and mtg/game/ability.go. No new Engine capability identified."
   }
  ],
  "records": [
@@ -76725,8 +76772,10 @@
    "oracle_id": "1cd9a3ba-a115-4e59-983d-605e4435f3a8",
    "revision": "34406508-da49-4b63-b123-55f0924a0675",
    "name": "Searing Touch",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph",
+   "batch": "buyback-repeaters-20261110",
+   "evidence": "mtg/rules/buyback_repeaters_test.go: TestSearingTouchScenario"
   },
   {
    "oracle_id": "1cdac498-3c94-48d6-b94c-1d98697370ea",
@@ -91070,8 +91119,10 @@
    "oracle_id": "2effcd1c-5833-4e0e-bb67-2d2ffb22a014",
    "revision": "2294ef08-c27a-4bb4-bd59-434516717961",
    "name": "Seething Anger",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph",
+   "batch": "buyback-repeaters-20261110",
+   "evidence": "mtg/rules/buyback_repeaters_test.go: TestSeethingAngerScenario"
   },
   {
    "oracle_id": "2f01c3d9-e0fc-4cdf-b4db-daeb8bb24bc3",
@@ -118675,8 +118726,10 @@
    "oracle_id": "4f424d94-1544-4086-a57d-2add17332094",
    "revision": "92bd531c-fdd1-4a22-816e-258b2975c1a3",
    "name": "Mind Peel",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph",
+   "batch": "buyback-repeaters-20261110",
+   "evidence": "mtg/rules/buyback_repeaters_test.go: TestMindPeelScenario"
   },
   {
    "oracle_id": "4f42517b-e62e-4b8c-8c56-cb32fb62c478",
@@ -124008,8 +124061,10 @@
    "oracle_id": "557d2af0-04c5-461d-826b-7208c4535dc2",
    "revision": "e5a24943-0121-4c64-9624-2e4cff37e6ca",
    "name": "Elvish Fury",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph",
+   "batch": "buyback-repeaters-20261110",
+   "evidence": "mtg/rules/buyback_repeaters_test.go: TestElvishFuryScenario"
   },
   {
    "oracle_id": "557dda97-c9e6-4d3d-95d8-8180ab9d87b3",
