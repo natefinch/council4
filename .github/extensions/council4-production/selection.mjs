@@ -76,7 +76,9 @@ export function filledIssues(units = [], priorUnits = []) {
 // A gap whose Engine unit failed (this run or an earlier one) is parked rather
 // than paid for again, unless the caller explicitly lists it in retry. A landed
 // slice with a reported remainder stays eligible so the next slice follows.
-export function chooseWork({ next, units = [], priorUnits = [], issues = {}, retry = [], defects = [] }) {
+// A cardsOnly run never schedules gaps; they still keep their cards out of
+// new batches.
+export function chooseWork({ next, units = [], priorUnits = [], issues = {}, retry = [], defects = [], cardsOnly = false }) {
   const filled = filledIssues(units, priorUnits);
   const failed = unit => unit.status !== "landed";
   const attempted = new Set([
@@ -100,7 +102,7 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
   // gap into sub-issues plans work rather than doing it, so it takes no turn.
   const last = units.at(-1)?.task;
   const cardTurn = last?.taskType === "engine" && !last.split;
-  if (gap && !cardTurn) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
+  if (gap && !cardTurn && !cardsOnly) return { kind: "engine", gap, issue: issues[gap.issue] ?? gap.subIssue };
   if (next?.batch) return { kind: "card", batch: next.batch, cards: next.cards ?? [] };
   return {
     kind: "prepare",
