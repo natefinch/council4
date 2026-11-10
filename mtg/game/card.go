@@ -911,6 +911,13 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case SacrificePermanents:
 		value.Selection = cloneSelection(value.Selection)
 		return value
+	case KeepPermanents:
+		value.AffectedSelection = cloneSelection(value.AffectedSelection)
+		if value.Keep.IsDynamic() {
+			dynamic := value.Keep.DynamicAmount().Val
+			value.Keep = Dynamic(cloneDynamicAmount(&dynamic))
+		}
+		return value
 	case ApplyContinuous:
 		value.ChooseFrom = cloneGroupReference(value.ChooseFrom)
 		return value

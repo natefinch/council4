@@ -39,6 +39,7 @@ func (Discard) publishesResultObjects() bool             { return true }
 func (Destroy) publishesResultObjects() bool             { return true }
 func (Sacrifice) publishesResultObjects() bool           { return true }
 func (SacrificePermanents) publishesResultObjects() bool { return true }
+func (KeepPermanents) publishesResultObjects() bool      { return true }
 func (MovePermanent) publishesResultObjects() bool       { return true }
 func (PutOnBattlefield) publishesResultObjects() bool    { return true }
 func (PutOnBattlefield) publishesResultCards() bool      { return false }
@@ -55,6 +56,7 @@ func (Discard) publishesResultCards() bool             { return true }
 func (Destroy) publishesResultCards() bool             { return false }
 func (Sacrifice) publishesResultCards() bool           { return false }
 func (SacrificePermanents) publishesResultCards() bool { return false }
+func (KeepPermanents) publishesResultCards() bool      { return false }
 func (MovePermanent) publishesResultCards() bool       { return false }
 func (MoveTopOfLibrary) publishesResultCards() bool    { return true }
 func (p MoveCard) publishesResultCards() bool          { return p.publishesResultObjects() }

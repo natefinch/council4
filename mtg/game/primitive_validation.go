@@ -447,6 +447,10 @@ func (p SacrificePermanents) validateCapturedTargetControllerReferences(targets 
 	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
 
+func (p KeepPermanents) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Keep, targets, checkTargets)
+}
+
 func (p MoveTopOfLibrary) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
 	return validateCapturedTargetControllerPlayerAndQuantity(p.Player, p.Amount, targets, checkTargets)
 }
@@ -2897,6 +2901,22 @@ func (p KeepOnePerType) validatePrimitive(_ []TargetSpec, _ bool) error {
 		return err
 	}
 	return validatePlayerGroupReference(p.Players)
+}
+
+func (p KeepPermanents) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := firstProblem(p.AffectedSelection.Validate()); err != nil {
+		return err
+	}
+	if err := validateQuantity(p.Keep, targets, checkTargets); err != nil {
+		return err
+	}
+	if err := validateMassPlayerOrGroup("KeepPermanents", p.Player, p.PlayerGroup); err != nil {
+		return err
+	}
+	if p.PlayerGroup.Kind != PlayerGroupReferenceNone {
+		return validatePlayerGroupReference(p.PlayerGroup)
+	}
+	return validatePlayerReference(p.Player, targets, checkTargets)
 }
 
 func (p SacrificeFallback) validate(targets []TargetSpec, checkTargets bool) error {

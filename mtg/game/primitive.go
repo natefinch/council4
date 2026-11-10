@@ -378,10 +378,16 @@ const (
 	// template "For each player, <verb> up to one target permanent that player
 	// controls."
 	PrimitiveForEachPlayer
+	// PrimitiveKeepPermanents has each affected player choose a number of
+	// permanents they control to keep and sacrifice the rest, gathering every
+	// choice in APNAP order before sacrificing all unkept permanents
+	// simultaneously (game.KeepPermanents). It backs "Each player chooses three
+	// permanents they control, then sacrifices the rest." (Razia's Purification).
+	PrimitiveKeepPermanents
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveForEachPlayer) + 1
+const primitiveKindCount = int(PrimitiveKeepPermanents) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -1878,6 +1884,42 @@ type KeepOnePerType struct {
 	// kept permanents for every affected player instead of each player choosing
 	// their own.
 	ControllerChoosesForAll bool
+}
+
+// KeepPermanents has each affected player choose Keep permanents they control
+// within the affected pool and sacrifice the rest. It models the count-based
+// keep family: "Each player chooses three permanents they control, then
+// sacrifices the rest." (Razia's Purification), "Each player chooses six lands
+// they control, then sacrifices the rest." (Planetary Annihilation) and the
+// up-to variant "that player chooses up to two creatures they control, then
+// sacrifices the rest." (Archfiend of Depravity).
+//
+// Walking each affected player in APNAP order, the player chooses which of their
+// own affected permanents to keep; later players know the earlier players'
+// choices (CR 101.4b, exposed through ChoiceRequest.KeepDecisions). Without
+// UpTo the player keeps exactly min(Keep, pool size), so a player with Keep or
+// fewer affected permanents keeps all of them without being asked. With UpTo the
+// player may keep any number from zero to Keep. The choice doesn't target.
+//
+// All keep choices are gathered before any permanent leaves. Every unkept
+// permanent in each pool is then sacrificed by its controller in one
+// simultaneous batch, so indestructible permanents are still sacrificed and
+// death or leave triggers see a single event. A permanent that can't be
+// sacrificed stays in the pool and may be kept, but is never sacrificed. The
+// sacrificed count is the instruction's resolved amount and the sacrificed
+// permanents are its result objects.
+type KeepPermanents struct {
+	Player      PlayerReference      // single player; zero if PlayerGroup is set
+	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
+	// AffectedSelection narrows the permanents subject to the effect for each
+	// affected player ("lands", "creatures"). A zero selection covers every
+	// permanent they control.
+	AffectedSelection Selection
+	// Keep is the number of permanents each affected player keeps. A negative
+	// computed value keeps none.
+	Keep Quantity
+	// UpTo lets each player keep fewer than Keep ("chooses up to two").
+	UpTo bool
 }
 
 // SacrificeFallbackKind identifies the per-player rider applied to players who

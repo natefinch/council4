@@ -126,6 +126,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleRecordEchoObligation)
 	registerPrimitiveHandler(reg, handleSacrificePermanents)
 	registerPrimitiveHandler(reg, handleKeepOnePerType)
+	registerPrimitiveHandler(reg, handleKeepPermanents)
 	registerPrimitiveHandler(reg, handleUntap)
 	registerPrimitiveHandler(reg, handleSkipNextUntap)
 	registerPrimitiveHandler(reg, handleRemoveFromCombat)
