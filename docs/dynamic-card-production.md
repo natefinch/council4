@@ -142,9 +142,12 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
    a run: after an Engine unit (not a split), the next unit is card work (step
    2 or 3) even while gaps remain, so open gaps cannot starve card admissions.
 2. **A ready saved batch** from `cardqueue next`.
-3. **Batch preparation.** Only then does a measured selection agent review
-   queue candidates and return a new reviewed batch plan. It is told which open
-   gaps to avoid and which blocked cards are now unblocked.
+3. **Batch preparation.** Only then does a measured selection agent return a
+   new reviewed batch plan. Since policy 1.27.0 it is given candidate families
+   from `cardqueue -operation families` instead of raw queue order, the
+   largest groups of cards whose landed gap now unblocks them, and open gaps
+   as issue numbers with blocked-card counts. It checks capability fit only;
+   source review (Comprehensive Rules, rulings) belongs to the card author.
 
 Steps 1 and 2 need no model and cost no AIC. An Engine gap whose unit fails is
 parked (in that run and later ones) rather than paid for again; its stage outcome

@@ -65,7 +65,7 @@ type manifest struct {
 }
 
 func main() {
-	operation := flag.String("operation", "check", "init, check, next, add-reviewed-batch, record-prerequisites, retire-batch, reassess, record-blockers, claim, verify, release, block, format, reconcile-compiled")
+	operation := flag.String("operation", "check", "init, check, next, families, add-reviewed-batch, record-prerequisites, retire-batch, reassess, record-blockers, claim, verify, release, block, format, reconcile-compiled")
 	path := flag.String("manifest", "testdata/card-authoring/production.json", "saved queue")
 	plan := flag.String("plan", ".cardwork/production-plan.json", "init seed or explicit reviewed continuation/evidence input")
 	corpus := flag.String("corpus", ".cardwork/corpus/oracle-cards.json", "pinned Oracle corpus")
@@ -131,6 +131,8 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 	switch operation {
 	case "check":
 		return printCounts(queue)
+	case "families":
+		return json.NewEncoder(os.Stdout).Encode(cardFamilies(queue, corpus))
 	case "next":
 		next, err := nextBatch(queue, owner)
 		if err != nil {
