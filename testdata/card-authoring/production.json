@@ -805,6 +805,20 @@
     "oracle_text_sha256": "74e98d941ed5a7fc3cf1393c971173bfc35db6a0e18e4e39a20643e118153882",
     "revision": "c3896705-bbd2-4ffb-a590-ee78e0eabdc5",
     "rulings_uri": "https://api.scryfall.com/cards/c3896705-bbd2-4ffb-a590-ee78e0eabdc5/rulings"
+   },
+   {
+    "name": "Forced March",
+    "oracle_id": "457dc141-bc72-42ad-b482-c78183462e34",
+    "oracle_text_sha256": "b65a792e68b025fd999fd7009563b47b0c9ec7472765b1feb5e45a66d80e01a0",
+    "revision": "36eae0e1-7100-449d-a259-7abfcd429117",
+    "rulings_uri": "https://api.scryfall.com/cards/36eae0e1-7100-449d-a259-7abfcd429117/rulings"
+   },
+   {
+    "name": "Incinerating Blast",
+    "oracle_id": "49f0da4a-e046-4220-b90e-e105a5f2ef00",
+    "oracle_text_sha256": "1ad83929a85e03f3e1d3791f4f63cc62b46b915ccd31560d08ae562dddf2db9e",
+    "revision": "d58e20ab-c5ca-4295-884d-78efdaa83243",
+    "rulings_uri": "https://api.scryfall.com/cards/d58e20ab-c5ca-4295-884d-78efdaa83243/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7373,6 +7387,23 @@
     "game.CantBeCounteredStaticBody"
    ],
    "review": "Capability review only: checked pinned-corpus identities and revisions; mtg/cards/m/mizzium_mortars.go for overload prior art; mtg/cards/authored/keyword_change_cards.go and game/continuous.go for continuous effects; mtg/cards/authored/numeric_targets.go and game/selection.go for constrained targets; game/primitive.go for Destroy; and mtg/cards/authored/stat_damage_spells.go for CantBeCounteredStaticBody. No new Engine capability or prerequisite identified."
+  },
+  {
+   "id": "existing-paragraph-damage-removal-20261111",
+   "family": "no-new-paragraph",
+   "oracle_ids": [
+    "457dc141-bc72-42ad-b482-c78183462e34",
+    "49f0da4a-e046-4220-b90e-e105a5f2ef00"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.Damage",
+    "game.Destroy",
+    "game.ModifyPT",
+    "game.Discard",
+    "game.Draw"
+   ],
+   "review": "Checked the no-new-paragraph candidate family against origin/main at 0f9cdd7896d79b069b3c8438def369c57cd48a8e and mtg/cardprogram/README.md#capability-lookup; inspected the Damage, Destroy, ModifyPT, Discard, and Draw declarations in mtg/game/primitive.go and relevant behavioral coverage in mtg/rules/resolving_spell_damage_contract_test.go, mtg/rules/mass_destroy_controller_filter_test.go, mtg/rules/effects_discard_then_draw_test.go, and mtg/game/instruction_test.go. Capability-fit only; no primary-source, rulings, or Comprehensive Rules review claimed."
   }
  ],
  "records": [
@@ -111055,8 +111086,10 @@
    "oracle_id": "457dc141-bc72-42ad-b482-c78183462e34",
    "revision": "36eae0e1-7100-449d-a259-7abfcd429117",
    "name": "Forced March",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph",
+   "batch": "existing-paragraph-damage-removal-20261111",
+   "evidence": "mtg/rules/existing_paragraph_removals_test.go: TestForcedMarchScenario; pinned Oracle corpus SHA256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; no published Scryfall rulings; official CR 2026-09-25 §§ 107.3a, 202.3, 608.2c, 701.8"
   },
   {
    "oracle_id": "457e3218-b2ef-4280-931a-5320987b9657",
@@ -114699,8 +114732,10 @@
    "oracle_id": "49f0da4a-e046-4220-b90e-e105a5f2ef00",
    "revision": "d58e20ab-c5ca-4295-884d-78efdaa83243",
    "name": "Incinerating Blast",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph",
+   "batch": "existing-paragraph-damage-removal-20261111",
+   "evidence": "mtg/rules/existing_paragraph_removals_test.go: TestIncineratingBlastScenario; pinned Oracle corpus SHA256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; Scryfall ruling 2024-11-08; official CR 2026-09-25 §§ 601.2c, 608.2b-c, 120.4b-d, 701.9"
   },
   {
    "oracle_id": "49f1dd11-aa10-442d-aaca-dd94d1ca108a",
@@ -149339,8 +149374,10 @@
    "oracle_id": "728d2e30-2f36-4054-81db-29b01e376a82",
    "revision": "9396ac77-9f53-46bd-b126-02441a0f5594",
    "name": "Sickening Dreams",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "blocked",
+   "family": "no-new-paragraph",
+   "blocker": 3762,
+   "reason": "needs one damage operation that can target both creatures and players"
   },
   {
    "oracle_id": "728e2960-1d85-4b3f-8b5b-915f9b9ffd2f",
@@ -156958,8 +156995,10 @@
    "oracle_id": "7b47891f-130a-4d76-b262-53f5e3bb6b95",
    "revision": "f7a4d87d-b844-4f20-8b14-4fd32c53dea5",
    "name": "Killing Glare",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "blocked",
+   "family": "no-new-paragraph",
+   "blocker": 3763,
+   "reason": "needs an X-derived target power bound at casting and resolution"
   },
   {
    "oracle_id": "7b4aa101-3c8a-44b3-9d87-91a4fe4fbae4",
