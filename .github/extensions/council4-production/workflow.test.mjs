@@ -132,6 +132,24 @@ test("Resumed units are re-reviewed under the current bar first, with the full f
   assert.deepEqual(calls, ["validate", "review-0"]);
 });
 
+test("A fixer's blocked claim is rechecked: passing validation continues, failing validation blocks", async () => {
+  const outcomes = [{ ok: false, error: "absent identity" }, { ok: true }];
+  const blocked = { ...complete, status: "blocked", summary: "queue typo", gaps: [{ id: "queue-typo", description: "not mine" }] };
+  const f = fixture({ task: { taskType: "card", id: "batch", reviewRequired: false } });
+  f.validate = async key => { f.calls.push(`validate:${key}`); return outcomes.shift(); };
+  f.stage = async phase => { f.calls.push(phase); return phase === "validation_fix" ? blocked : complete; };
+  const accepted = await executeUnit(f);
+  assert.equal(accepted.status, "accepted");
+  assert.equal(accepted.result.status, "complete");
+  assert.deepEqual(f.calls, ["implementation", "validate:initial-0", "validation_fix", "validate:blocked-check-1", "prepare"]);
+  const g = fixture({ task: { taskType: "card", id: "batch", reviewRequired: false } });
+  g.validate = async () => ({ ok: false, error: "still failing" });
+  g.stage = async phase => phase === "validation_fix" ? blocked : complete;
+  const still = await executeUnit(g);
+  assert.equal(still.status, "blocked");
+  assert.equal(still.validation.error, "still failing");
+});
+
 test("Validation-failed drafts retry validation before review without reimplementation", async () => {
   const result = { ...complete, gaps: [{ id: "#3333", description: "remaining route" }] };
   const f = fixture({ resume: { result, history: [] } });
@@ -1298,6 +1316,20 @@ test("Failed job evidence is per job, survives missing logs and classifies infra
   assert.equal(classifyInfrastructure("recent account payments have failed"), "billing");
   assert.equal(classifyInfrastructure("write /tmp/x: No space left on device"), "runner");
   assert.equal(classifyInfrastructure("--- FAIL: TestCard"), null);
+});
+
+test("A merge whose response is lost counts only if GitHub merged that exact head", async () => {
+  const view = state => JSON.stringify({ number: 5, state, headRefOid: "h", mergeCommit: state === "MERGED" ? { oid: "m" } : null });
+  const reset = new Error("read: connection reset by peer");
+  const api = (state, viewFails = false) => pullRequestAPI(async (_cwd, _executable, args) => {
+    if (args[1] === "merge") throw reset;
+    if (viewFails) throw new Error("offline");
+    return view(state);
+  }, undefined, async () => {});
+  assert.equal((await api("MERGED").merge("/repo", 5, "h")).mergeCommit.oid, "m");
+  await assert.rejects(api("OPEN").merge("/repo", 5, "h"), /connection reset/);
+  await assert.rejects(api("MERGED").merge("/repo", 5, "other"), /connection reset/);
+  await assert.rejects(api("MERGED", true).merge("/repo", 5, "h"), /connection reset/);
 });
 
 test("Rerun waits for replacement check runs before reporting registration", async () => {
