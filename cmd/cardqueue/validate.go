@@ -48,7 +48,7 @@ func validate(queue manifest, corpus []carddata.ScryfallCard, inventory supporti
 		if retired[b.ID] {
 			return fmt.Errorf("duplicate retired batch %s", b.ID)
 		}
-		if err := validateBatch(b); err != nil {
+		if err := checkBatch(b, 1); err != nil {
 			return err
 		}
 		retired[b.ID] = true
@@ -62,7 +62,7 @@ func validate(queue manifest, corpus []carddata.ScryfallCard, inventory supporti
 		if _, exists := batches[b.ID]; exists || retired[b.ID] {
 			return fmt.Errorf("duplicate batch %s", b.ID)
 		}
-		if err := validateBatch(b); err != nil {
+		if err := checkBatch(b, 1); err != nil {
 			return err
 		}
 		batches[b.ID] = b

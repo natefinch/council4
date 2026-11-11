@@ -74,13 +74,20 @@ const (
 // batch relies only on operations already on main; each listed issue still
 // needs prerequisite evidence before the batch is claimable.
 func validateBatch(b batch) error {
+	return checkBatch(b, minBatchCards)
+}
+
+// checkBatch validates a batch definition with at least minCards members.
+// Saved batches may hold fewer than minBatchCards once settle removes members
+// left blocked on a gap.
+func checkBatch(b batch, minCards int) error {
 	switch {
 	case strings.TrimSpace(b.ID) == "":
 		return errors.New("invalid batch: missing id")
 	case strings.TrimSpace(b.Family) == "":
 		return fmt.Errorf("invalid batch %s: missing family", b.ID)
-	case len(b.OracleIDs) < minBatchCards || len(b.OracleIDs) > maxBatchCards:
-		return fmt.Errorf("invalid batch %s: needs %d–%d oracle_ids, has %d", b.ID, minBatchCards, maxBatchCards, len(b.OracleIDs))
+	case len(b.OracleIDs) < minCards || len(b.OracleIDs) > maxBatchCards:
+		return fmt.Errorf("invalid batch %s: needs %d–%d oracle_ids, has %d", b.ID, minCards, maxBatchCards, len(b.OracleIDs))
 	case len(b.Operations) == 0:
 		return fmt.Errorf("invalid batch %s: operations must name the Engine operations the cards use", b.ID)
 	}

@@ -17,12 +17,12 @@ type oracleMetadata struct {
 	RulingsURI string `json:"rulings_uri"`
 }
 
-func verifyBatch(queue *manifest, batchID, owner string, inventory supportinventory.Inventory, corpusData []byte) error {
+func verifyBatch(queue *manifest, batchID, owner string, inventory supportinventory.Inventory, corpusData []byte, blocked map[string]reviewedRecord) error {
 	if fmt.Sprintf("%x", sha256.Sum256(corpusData)) != queue.CorpusSHA256 {
 		return errors.New("verification metadata must come from the saved pinned corpus")
 	}
 	updated := *queue
-	if err := transition(&updated, "verify", batchID, owner, 0, "", inventory); err != nil {
+	if err := settle(&updated, "verify", batchID, owner, 0, "", inventory, blocked); err != nil {
 		return err
 	}
 	var corpus []oracleMetadata
@@ -63,7 +63,7 @@ func verifyBatch(queue *manifest, batchID, owner string, inventory supportinvent
 		indices[id] = i
 	}
 	for _, r := range updated.Records {
-		if r.Batch != batchID {
+		if r.Batch != batchID || r.Status != "implemented-verified" {
 			continue
 		}
 		card, exists := byID[r.OracleID]

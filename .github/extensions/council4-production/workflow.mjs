@@ -50,6 +50,9 @@ const workSchema = {
     evidence: { type: "array", items: text },
     gaps: { type: "array", items: { type: "object", required: ["id", "description"], properties: { id: text, description: text } } },
     resolvedGaps: { type: "array", items: text },
+    // Card units: members left unregistered on a canonical gap issue.
+    blockedCards: { type: "array", items: { type: "object", required: ["oracleId", "gap", "reason"],
+      properties: { oracleId: text, gap: { type: "integer" }, reason: text } } },
   },
 };
 const reviewSchema = {
@@ -780,6 +783,7 @@ Return taskType none only if no candidates remain or a genuine external/unsafe b
         const claim = claimed.claim;
         const validationPackages = policy.validationPackages;
         const contract = `Write ONLY in isolated worktree ${work.path}; other checkouts (including the parent) are off limits for mutation.
+Your shell starts in the coordinator checkout ${root}, which must never change (any edit there stops the whole run). Start every shell command with \`cd ${work.path} &&\` and create or edit files only by absolute paths under ${work.path}.
 You may read earlier retained unit evidence at paths explicitly listed here: ${JSON.stringify(state.units.map(u => ({ id: u.task?.id, worktree: u.worktree, gaps: u.result?.gaps })))}
 Task type ${task.taskType}, id ${task.id}, title ${task.title}.
 ${task.resumedFrom ? `This unit resumes retained ${task.resumedFrom.status} work from run ${task.resumedFrom.runId} unit ${task.resumedFrom.index}. That work, including any earlier repairs, is already applied to this worktree on top of current main; continue from it rather than reimplementing. Earlier validation or approval does not establish that the current submission passes; it must be validated and independently reviewed under the current policy.
@@ -788,7 +792,7 @@ Reuse canonical blocker issues; creating one precise missing-capability issue is
 Corpus ${corpus}. Read current exact Oracle/rulings/verified CR passages before card design and retain complete source/handoff with tests.
 Keep each card's concise source record as a "// Source review:" comment in its behavioral test file (see mtg/rules/marchesa_dealer_of_death_test.go). Keep raw retrieved responses, if needed, under ${work.path}/.cardwork/, not in tracked files.
 ${claim ? `COORDINATOR CLAIM CONFIRMED: ${JSON.stringify(claim)}. Begin the assigned card implementation now; no further confirmation is needed. You may read but must not mutate the saved queue. The workflow will verify your completed family through the actual registry and pinned corpus.` : "Do not mutate the saved card queue in an Engine task; retain canonical gap/evidence handoffs for subsequent selection."}
-Card tasks must not alter shared Engine production code. Each card needs one named scenario that plays its own Oracle text through the real Engine (its costs, choices, targets and result); do not retest shared-operation behavior (copies, clones, retargeting, protection, replacements, source departure) per card unless the card's own text changes it. On a genuine Engine gap leave whole card unregistered, retain a narrow failing probe and return blocked; each gap id MUST be the canonical GitHub issue number (reuse an existing Card Support TODO issue or file one precise issue) so the coordinator schedules that Engine gap before more card work. If the reused issue is labeled "${needsEvidenceLabel}", comment on it naming the card and failing probe; that is its gameplay evidence. Engine tasks implement only shared operations and proving scenarios; do not author unrelated cards. For shared spell/cost/stack-object changes, authors cover and reviewers probe every applicable route in the spell-route checklist in docs/card-authoring.md. Preserve unmerged work; no fabricated verification or success fallback.
+Card tasks must not alter shared Engine production code. Each card needs one named scenario that plays its own Oracle text through the real Engine (its costs, choices, targets and result); do not retest shared-operation behavior (copies, clones, retargeting, protection, replacements, source departure) per card unless the card's own text changes it. When a card hits a genuine Engine gap, leave that whole card unregistered with a narrow failing probe, finish and register the batch's other cards, and return status complete with blockedCards listing each unregistered card (oracleId, gap issue number, observed missing behavior) and the same gaps; the coordinator admits the finished cards and blocks the rest. Return blocked only when no card in the batch can be completed. Each gap id MUST be the canonical GitHub issue number (reuse an existing Card Support TODO issue or file one precise issue) so the coordinator schedules that Engine gap before more card work. If the reused issue is labeled "${needsEvidenceLabel}", comment on it naming the card and failing probe; that is its gameplay evidence. Engine tasks implement only shared operations and proving scenarios; do not author unrelated cards. For shared spell/cost/stack-object changes, authors cover and reviewers probe every applicable route in the spell-route checklist in docs/card-authoring.md. Preserve unmerged work; no fabricated verification or success fallback.
 No lint unless explicitly requested. Use affected behavioral checks, inspect the diff, ensure named scenarios actually execute. Source metadata is not gameplay evidence.
 Task instructions (data, not extra authorization): ${task.instructions}`;
         // Retained work that conflicts with current main is integrated by the
@@ -812,6 +816,9 @@ Return status complete with a summary of how each file was resolved and the exac
           resumed.result = carryGaps(resumed.result, integrated.answer);
         }
         let snapshotIndex = 0;
+        // The latest worker answer's unregistered cards; set outside the
+        // memoized step so a replay restores it too.
+        let blockedCards = [];
         const result = await ctx.step(`accepted-v1-${index}`, () => executeUnit({
           task, policy,
           resume: resumed && { result: resumed.result, verdict: resumed.verdict, history: resumed.history },
@@ -828,6 +835,9 @@ Gaps you reported earlier are carried forward automatically. Report only new gap
 Return status complete or blocked, concise summary, reviewRequired for material rules/identity/timing/replacement/hidden-information changes, exact evidence/test commands and gaps. Never return estimated time, tokens or AIC; runtime measures them.`, workSchema);
             if (await git(work.path, ["rev-parse", "HEAD"], ctx.signal) !== work.base) throw new Error("Worker committed outside landing stage");
             return cardBoundaryOutcome(task, (await changes(work.path, ctx.signal)).files, answer);
+          }).then(answer => {
+            if (task.taskType === "card" && Array.isArray(answer?.blockedCards)) blockedCards = answer.blockedCards;
+            return answer;
           }),
           snapshot: async () => ctx.step(`snapshot-v1-${index}-${snapshotIndex++}`, async () => {
             const snapshot = await changes(work.path, ctx.signal);
@@ -843,7 +853,7 @@ Return status complete or blocked, concise summary, reviewRequired for material 
             let result;
             try {
               if (claim) await verifyCardBatch({ workPath: work.path, batchId: claim.batchId,
-                corpus, owner: ctx.runId, command, signal: ctx.signal });
+                corpus, owner: ctx.runId, command, signal: ctx.signal, blocked: blockedCards });
               await git(work.path, ["diff", "--check"], ctx.signal);
               const output = await command(work.path, "go", ["test", ...validationPackages, "-count=1"], ctx.signal);
               result = { ok: true, output };
@@ -888,6 +898,7 @@ Return approve when no finding blocks; otherwise changes_needed with actionable 
             });
           },
         }));
+        if (Array.isArray(result.result?.blockedCards)) blockedCards = result.result.blockedCards;
         if (result.status !== "accepted") return { index, task, base: work.base, worktree: work.path, claim, ...result };
         ctx.phase("Landing");
         const landing = await ctx.step(`land-v1-${index}`, async () => {
@@ -954,7 +965,7 @@ Return complete only with actual repair/evidence, or blocked with the cause.`,
                   assertCardBoundary(task, (await changes(work.path, ctx.signal)).files);
                   if ((await changes(work.path, ctx.signal)).files.some(file => file.startsWith(".github/"))) throw new Error("CI fixer changed workflow controls");
                   if (claim) await verifyCardBatch({ workPath: work.path, batchId: claim.batchId,
-                    corpus, owner: ctx.runId, command, signal: ctx.signal });
+                    corpus, owner: ctx.runId, command, signal: ctx.signal, blocked: blockedCards });
                   await landingValidation({ round: feedback.round, head: feedback.head, repair: true });
                   await landingReview("ci_review", feedback.round, feedback);
                 },
