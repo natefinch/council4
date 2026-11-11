@@ -861,6 +861,27 @@
     "oracle_text_sha256": "83f0750487c117dba132de66084f86bbaea2ac9ebebc1fc6811da72d2aef804b",
     "revision": "9bf662e7-e63f-40c2-b163-1ebce47d8696",
     "rulings_uri": "https://api.scryfall.com/cards/9bf662e7-e63f-40c2-b163-1ebce47d8696/rulings"
+   },
+   {
+    "name": "Recruit the Worthy",
+    "oracle_id": "e25e2a3f-4add-4744-b1f8-2e880998a51f",
+    "oracle_text_sha256": "7490ff4712fd1aacd9ed92c136980b7c50d2880282e1da67432d95ff16feddd0",
+    "revision": "fb025c0c-7fdf-4f71-afd5-ef11cd2804eb",
+    "rulings_uri": "https://api.scryfall.com/cards/fb025c0c-7fdf-4f71-afd5-ef11cd2804eb/rulings"
+   },
+   {
+    "name": "Mind Games",
+    "oracle_id": "ea43372f-b0a7-4d1b-be3e-a4a738b06d59",
+    "oracle_text_sha256": "628bd302b8ad96a4b886ae02f29c7a74e7bcb4d91570fe6b6a06220a5207f2a6",
+    "revision": "4da50979-1f5d-48d1-9406-dfc785273c04",
+    "rulings_uri": "https://api.scryfall.com/cards/4da50979-1f5d-48d1-9406-dfc785273c04/rulings"
+   },
+   {
+    "name": "Haze of Rage",
+    "oracle_id": "f17d0fb8-c157-43b8-be26-f5ba4c6aed14",
+    "oracle_text_sha256": "8b3b3fa8cd47b760e392775251e425088154824249063dda9ba8ac78a184062a",
+    "revision": "c344b885-68c6-43d2-b6c1-6c89b3c94983",
+    "rulings_uri": "https://api.scryfall.com/cards/c344b885-68c6-43d2-b6c1-6c89b3c94983/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7479,6 +7500,24 @@
     "game.ModifyPT"
    ],
    "review": "Checked pinned corpus text for these three identities and confirmed each is unclaimed/unbatched. On origin/main 425d4419, checked mtg/game/primitive.go declarations for AddCounter and ModifyPT, plus mtg/rules/effects_permanent_test.go cases TestAddCounterEffectFansOutAcrossChosenTargets and TestMultiTargetPumpAppliesToEachChosenTarget. No open capability prerequisite identified."
+  },
+  {
+   "id": "buyback-spells-20261111-1807",
+   "family": "supported-buyback-spells",
+   "oracle_ids": [
+    "e25e2a3f-4add-4744-b1f8-2e880998a51f",
+    "ea43372f-b0a7-4d1b-be3e-a4a738b06d59",
+    "f17d0fb8-c157-43b8-be26-f5ba4c6aed14"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.BuybackKeyword",
+    "game.CreateToken",
+    "game.Tap",
+    "game.ApplyContinuous",
+    "game.Storm"
+   ],
+   "review": "Capability-fit only: checked the pinned Oracle records for these exact IDs and the capability lookup in mtg/cardprogram/README.md. Buyback prior art: mtg/cards/authored/buyback_repeaters.go and mtg/rules/buyback_interaction_test.go. Tap, CreateToken, and ApplyContinuous declarations: mtg/game/primitive.go; token creation and controlled-creature pump example: mtg/cards/h/hire_a_crew.go. Storm implementation/tests: mtg/rules/storm.go and mtg/rules/storm_test.go. No primary-source, rulings, or Comprehensive Rules review is claimed."
   }
  ],
  "records": [
@@ -244236,8 +244275,10 @@
    "oracle_id": "e25e2a3f-4add-4744-b1f8-2e880998a51f",
    "revision": "fb025c0c-7fdf-4f71-afd5-ef11cd2804eb",
    "name": "Recruit the Worthy",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "supported-buyback-spells",
+   "batch": "buyback-spells-20261111-1807",
+   "evidence": "mtg/rules/buyback_spells_test.go: TestRecruitTheWorthyScenario"
   },
   {
    "oracle_id": "e262b226-9463-40a9-95b2-fe2c3eafc043",
@@ -250834,8 +250875,10 @@
    "oracle_id": "ea43372f-b0a7-4d1b-be3e-a4a738b06d59",
    "revision": "4da50979-1f5d-48d1-9406-dfc785273c04",
    "name": "Mind Games",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "supported-buyback-spells",
+   "batch": "buyback-spells-20261111-1807",
+   "evidence": "mtg/rules/buyback_spells_test.go: TestMindGamesScenario"
   },
   {
    "oracle_id": "ea43fd04-e9fa-42fb-ba20-22dcc21c6c43",
@@ -257225,8 +257268,10 @@
    "oracle_id": "f17d0fb8-c157-43b8-be26-f5ba4c6aed14",
    "revision": "c344b885-68c6-43d2-b6c1-6c89b3c94983",
    "name": "Haze of Rage",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "supported-buyback-spells",
+   "batch": "buyback-spells-20261111-1807",
+   "evidence": "mtg/rules/buyback_spells_test.go: TestHazeOfRageScenario"
   },
   {
    "oracle_id": "f17d3aa4-6e88-4973-b2a4-942098a1c463",
