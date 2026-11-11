@@ -784,6 +784,27 @@
     "oracle_text_sha256": "1e0bb6e3bc1dfe30089a8986b267069ce9907eb11ad5048340f1cb5c7a04dcdd",
     "revision": "317800b3-6b2d-4de6-8e44-7e54dd623055",
     "rulings_uri": "https://api.scryfall.com/cards/317800b3-6b2d-4de6-8e44-7e54dd623055/rulings"
+   },
+   {
+    "name": "Mizzium Skin",
+    "oracle_id": "02d998a6-0afd-4be1-a209-05618fcc43ea",
+    "oracle_text_sha256": "a2a3b169b27db87f6e0b0515a833a4d714db2a075480f5fc52acf9e909b8d75b",
+    "revision": "d9859344-4efc-4b87-a3fb-147e496cee68",
+    "rulings_uri": "https://api.scryfall.com/cards/d9859344-4efc-4b87-a3fb-147e496cee68/rulings"
+   },
+   {
+    "name": "Bounty of Might",
+    "oracle_id": "6f067bfd-1c59-463f-99e1-61161b43b405",
+    "oracle_text_sha256": "c581ed604a0504901e8a09c5b52618bd1ea6c85ce6b47750fbb8b578582678f5",
+    "revision": "e9a950d8-e6e2-42d6-83d7-a60c15d2035d",
+    "rulings_uri": "https://api.scryfall.com/cards/e9a950d8-e6e2-42d6-83d7-a60c15d2035d/rulings"
+   },
+   {
+    "name": "Long Goodbye",
+    "oracle_id": "9d63ba8a-a5cd-4fdb-bba3-95612be0077c",
+    "oracle_text_sha256": "74e98d941ed5a7fc3cf1393c971173bfc35db6a0e18e4e39a20643e118153882",
+    "revision": "c3896705-bbd2-4ffb-a590-ee78e0eabdc5",
+    "rulings_uri": "https://api.scryfall.com/cards/c3896705-bbd2-4ffb-a590-ee78e0eabdc5/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7334,6 +7355,24 @@
     "game.CantBeCounteredStaticBody"
    ],
    "review": "Capability-fit checked on origin/main 0f9cdd7896d79b069b3c8438def369c57cd48a8e against the pinned text for all three cards. ModifyPT is handled at mtg/rules/primitive_handlers.go:973; DynamicAmountX is available for Slice from the Shadows. Damage is handled at mtg/rules/primitive_handlers_damage.go:55, with any-target prior art in mtg/cards/i/inescapable_blaze.go. CantBeCounteredStaticBody is defined at mtg/game/mechanic_template.go:115, with behavior coverage in mtg/rules/effects_counterspell_token_test.go. No source, rulings, or Comprehensive Rules review claimed."
+  },
+  {
+   "id": "no-new-paragraph-20261111-a",
+   "family": "existing-paragraph-no-new-paragraph",
+   "oracle_ids": [
+    "02d998a6-0afd-4be1-a209-05618fcc43ea",
+    "6f067bfd-1c59-463f-99e1-61161b43b405",
+    "9d63ba8a-a5cd-4fdb-bba3-95612be0077c"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.OverloadAbility",
+    "game.ApplyContinuous",
+    "game.Destroy",
+    "game.Selection.ManaValue",
+    "game.CantBeCounteredStaticBody"
+   ],
+   "review": "Capability review only: checked pinned-corpus identities and revisions; mtg/cards/m/mizzium_mortars.go for overload prior art; mtg/cards/authored/keyword_change_cards.go and game/continuous.go for continuous effects; mtg/cards/authored/numeric_targets.go and game/selection.go for constrained targets; game/primitive.go for Destroy; and mtg/cards/authored/stat_damage_spells.go for CantBeCounteredStaticBody. No new Engine capability or prerequisite identified."
   }
  ],
  "records": [
@@ -54458,8 +54497,10 @@
    "oracle_id": "02d998a6-0afd-4be1-a209-05618fcc43ea",
    "revision": "d9859344-4efc-4b87-a3fb-147e496cee68",
    "name": "Mizzium Skin",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "existing-paragraph-no-new-paragraph",
+   "batch": "no-new-paragraph-20261111-a",
+   "evidence": "mtg/rules/authored_existing_paragraph_effects_test.go: TestMizziumSkinScenario; CR 2026-11-06 601.2b/c/f, 608.2b, 611.2a/c, 612.1, 613.1f, 613.4c, 702.11a/b, 702.96a/b"
   },
   {
    "oracle_id": "02da2145-0edb-44be-8622-360182a8c25a",
@@ -146186,8 +146227,10 @@
    "oracle_id": "6f067bfd-1c59-463f-99e1-61161b43b405",
    "revision": "e9a950d8-e6e2-42d6-83d7-a60c15d2035d",
    "name": "Bounty of Might",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "existing-paragraph-no-new-paragraph",
+   "batch": "no-new-paragraph-20261111-a",
+   "evidence": "mtg/rules/authored_existing_paragraph_effects_test.go: TestBountyOfMightScenario; CR 2026-11-06 601.2c, 608.2b, 611.2a, 613.4c"
   },
   {
    "oracle_id": "6f096e98-d351-4050-90ed-4c6f12e129d6",
@@ -185913,8 +185956,10 @@
    "oracle_id": "9d63ba8a-a5cd-4fdb-bba3-95612be0077c",
    "revision": "c3896705-bbd2-4ffb-a590-ee78e0eabdc5",
    "name": "Long Goodbye",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "existing-paragraph-no-new-paragraph",
+   "batch": "no-new-paragraph-20261111-a",
+   "evidence": "mtg/rules/authored_existing_paragraph_effects_test.go: TestLongGoodbyeScenario; CR 2026-11-06 101.2, 202.3, 601.2c, 608.2b, 701.6a, 701.8a, 702.21a"
   },
   {
    "oracle_id": "9d6686a0-1648-42f6-a606-16d2a84138a7",
