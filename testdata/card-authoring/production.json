@@ -693,6 +693,76 @@
     "oracle_text_sha256": "8f0012dcd44b9ce486328c04c4ea5e5f531d308bc1ad4327802811a697021057",
     "revision": "d24dc353-abc9-430a-a7f5-5da3b38cd411",
     "rulings_uri": "https://api.scryfall.com/cards/d24dc353-abc9-430a-a7f5-5da3b38cd411/rulings"
+   },
+   {
+    "name": "Ancestral Vision",
+    "oracle_id": "9728dec9-d482-4c7a-8cdc-44d010dc878d",
+    "oracle_text_sha256": "f5d00657ce9d6fa4c962a258873d729c5ba6ebc04e8e8657122b51325327358e",
+    "revision": "9ec075ba-db56-4dcf-b1dc-fe6270b7ab36",
+    "rulings_uri": "https://api.scryfall.com/cards/9ec075ba-db56-4dcf-b1dc-fe6270b7ab36/rulings"
+   },
+   {
+    "name": "Search for Tomorrow",
+    "oracle_id": "9cdc9f99-c6fa-40cd-90b0-e47d43a8cc3c",
+    "oracle_text_sha256": "472485fbd850579d4385e7d2ffc3916b92252165a37651880b6e0cf657fea909",
+    "revision": "4a0c73a9-38a2-4a3d-938e-b81ba166f0ff",
+    "rulings_uri": "https://api.scryfall.com/cards/4a0c73a9-38a2-4a3d-938e-b81ba166f0ff/rulings"
+   },
+   {
+    "name": "Viscerid Deepwalker",
+    "oracle_id": "9dea848b-d758-46d0-829d-b096061fd460",
+    "oracle_text_sha256": "15180ad59459dffd27fc654890c524a8008495b5f9a0e34a866874d45b18828a",
+    "revision": "cdc9f54e-7fba-4f03-83ca-6d293dffc07a",
+    "rulings_uri": "https://api.scryfall.com/cards/cdc9f54e-7fba-4f03-83ca-6d293dffc07a/rulings"
+   },
+   {
+    "name": "Keldon Halberdier",
+    "oracle_id": "a1472a2d-e6f7-4d65-8bb2-4ecfae2d2764",
+    "oracle_text_sha256": "62aab4713cfa459ce05c187233cabfb1d6ce0633bd5a1d96da882a89ce82c2f7",
+    "revision": "55e0caef-215a-4433-8a85-322e62e3590d",
+    "rulings_uri": "https://api.scryfall.com/cards/55e0caef-215a-4433-8a85-322e62e3590d/rulings"
+   },
+   {
+    "name": "Corpulent Corpse",
+    "oracle_id": "b3a84b75-a6a2-4521-a9f1-92596796c703",
+    "oracle_text_sha256": "0c6d18b232da161200d6fd2c3153fb2f031765af84859e53a21901da643eedaa",
+    "revision": "c8680e7c-f180-45b9-9af6-a8e93037b851",
+    "rulings_uri": "https://api.scryfall.com/cards/c8680e7c-f180-45b9-9af6-a8e93037b851/rulings"
+   },
+   {
+    "name": "Errant Ephemeron",
+    "oracle_id": "c77b89ec-4514-4e62-a508-2012f38a3e15",
+    "oracle_text_sha256": "f53cca94cf6f118ce1cfee7341fc14b04f125b782655386be43deeeda9029c03",
+    "revision": "3779a76a-0171-4714-9713-a65dc173a33f",
+    "rulings_uri": "https://api.scryfall.com/cards/3779a76a-0171-4714-9713-a65dc173a33f/rulings"
+   },
+   {
+    "name": "Mox Tantalite",
+    "oracle_id": "cc319819-68f9-4c1e-8d60-25a5e3e50669",
+    "oracle_text_sha256": "fc7c6d0beda7c52d871de550072db8cd1e6c48d1758c880445ef53fad4ab569f",
+    "revision": "dcd05b01-dc73-4dd2-970a-32ec6e153c86",
+    "rulings_uri": "https://api.scryfall.com/cards/dcd05b01-dc73-4dd2-970a-32ec6e153c86/rulings"
+   },
+   {
+    "name": "Infiltrator il-Kor",
+    "oracle_id": "dd491ac7-3c6c-4a47-94af-071d1edc5eb2",
+    "oracle_text_sha256": "5e16ce5286fad776af2cbdcbb33724efcbaaa1f62f2da1a21452e2683427c241",
+    "revision": "c3ab190b-c96f-4b00-8e97-33a11bb2ed08",
+    "rulings_uri": "https://api.scryfall.com/cards/c3ab190b-c96f-4b00-8e97-33a11bb2ed08/rulings"
+   },
+   {
+    "name": "Ith, High Arcanist",
+    "oracle_id": "eb933723-b879-44c8-bbc8-d8c84ce5ab12",
+    "oracle_text_sha256": "82aef986ea8c9e7c663640048ca5bf0af1dae11dbc905b2c89ddc87d89e2f5c8",
+    "revision": "54c32735-e8e7-46a1-84ea-92806f459e84",
+    "rulings_uri": "https://api.scryfall.com/cards/54c32735-e8e7-46a1-84ea-92806f459e84/rulings"
+   },
+   {
+    "name": "Rift Sower",
+    "oracle_id": "f9deeea1-bf80-4832-aac3-373fc1f4b41d",
+    "oracle_text_sha256": "39f28245969a1d07966a41a9913e9aca3c5dee81faa4c578df9031b0971ea786",
+    "revision": "97dbd212-f1e8-429a-bf00-b2ea966d880e",
+    "rulings_uri": "https://api.scryfall.com/cards/97dbd212-f1e8-429a-bf00-b2ea966d880e/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7202,6 +7272,31 @@
     "game.AttachedObjectGroup"
    ],
    "review": "Fit-only check against pinned corpus SHA256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4: inspected these three cards' Oracle text. Verified the matching attached-object keyword-grant pattern in mtg/cards/h/howl_of_the_hunt.go and keyword-add behavior in mtg/rules/continuous_test.go; FearStaticBody, LifelinkStaticBody, and VigilanceStaticBody are defined in mtg/game/ability.go. No CR, rulings, or source review performed."
+  },
+  {
+   "id": "suspend-family-20261110",
+   "family": "suspend n—{m}",
+   "oracle_ids": [
+    "9728dec9-d482-4c7a-8cdc-44d010dc878d",
+    "9cdc9f99-c6fa-40cd-90b0-e47d43a8cc3c",
+    "9dea848b-d758-46d0-829d-b096061fd460",
+    "a1472a2d-e6f7-4d65-8bb2-4ecfae2d2764",
+    "b3a84b75-a6a2-4521-a9f1-92596796c703",
+    "c77b89ec-4514-4e62-a508-2012f38a3e15",
+    "cc319819-68f9-4c1e-8d60-25a5e3e50669",
+    "dd491ac7-3c6c-4a47-94af-071d1edc5eb2",
+    "eb933723-b879-44c8-bbc8-d8c84ce5ab12",
+    "f9deeea1-bf80-4832-aac3-373fc1f4b41d"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.SuspendKeyword",
+    "action.SuspendCard",
+    "Engine.applySuspendCard",
+    "Engine.processSuspendUpkeep",
+    "Engine.castSuspendedCard"
+   ],
+   "review": "Capability fit only: checked mtg/game/keyword.go SuspendKeyword, mtg/rules/suspend.go, and mtg/rules/suspend_test.go; targeted suspend tests pass. Checked the ten pinned Oracle texts against the candidate family’s supported-paragraph grouping. No official rules or rulings review performed."
   }
  ],
  "records": [
@@ -180337,8 +180432,10 @@
    "oracle_id": "9728dec9-d482-4c7a-8cdc-44d010dc878d",
    "revision": "9ec075ba-db56-4dcf-b1dc-fe6270b7ab36",
    "name": "Ancestral Vision",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestAncestralVisionSuspendTargetsPlayerAndDrawsThree"
   },
   {
    "oracle_id": "97326cad-b13c-4e52-82ce-850a39e5ff08",
@@ -185252,8 +185349,10 @@
    "oracle_id": "9cdc9f99-c6fa-40cd-90b0-e47d43a8cc3c",
    "revision": "4a0c73a9-38a2-4a3d-938e-b81ba166f0ff",
    "name": "Search for Tomorrow",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestSearchForTomorrowSuspendFindsBasicLand"
   },
   {
    "oracle_id": "9cdf840d-314e-46ef-9c04-74f145d9e65b",
@@ -186090,8 +186189,10 @@
    "oracle_id": "9dea848b-d758-46d0-829d-b096061fd460",
    "revision": "cdc9f54e-7fba-4f03-83ca-6d293dffc07a",
    "name": "Viscerid Deepwalker",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestVisceridDeepwalkerSuspendPump"
   },
   {
    "oracle_id": "9deb2a0b-f40c-4d13-8321-41dc41448d24",
@@ -188919,8 +189020,10 @@
    "oracle_id": "a1472a2d-e6f7-4d65-8bb2-4ecfae2d2764",
    "revision": "55e0caef-215a-4433-8a85-322e62e3590d",
    "name": "Keldon Halberdier",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestKeldonHalberdierSuspendFirstStrike"
   },
   {
    "oracle_id": "a149ac31-b792-4fbe-903a-788bbdfd5e97",
@@ -204430,8 +204533,10 @@
    "oracle_id": "b3a84b75-a6a2-4521-a9f1-92596796c703",
    "revision": "c8680e7c-f180-45b9-9af6-a8e93037b851",
    "name": "Corpulent Corpse",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestCorpulentCorpseSuspendFear"
   },
   {
    "oracle_id": "b3aa5889-0d98-4a8c-a8b1-ada1e9b169e1",
@@ -220702,8 +220807,10 @@
    "oracle_id": "c77b89ec-4514-4e62-a508-2012f38a3e15",
    "revision": "3779a76a-0171-4714-9713-a65dc173a33f",
    "name": "Errant Ephemeron",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestErrantEphemeronSuspendFlying"
   },
   {
    "oracle_id": "c77c23bc-efde-43ce-bf6f-7a8531d81d89",
@@ -224825,8 +224932,10 @@
    "oracle_id": "cc319819-68f9-4c1e-8d60-25a5e3e50669",
    "revision": "dcd05b01-dc73-4dd2-970a-32ec6e153c86",
    "name": "Mox Tantalite",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestMoxTantaliteZeroCostSuspendAndAnyColorMana"
   },
   {
    "oracle_id": "cc33444e-da8c-4af5-b3ed-552e91b0e656",
@@ -239725,8 +239834,10 @@
    "oracle_id": "dd491ac7-3c6c-4a47-94af-071d1edc5eb2",
    "revision": "c3ab190b-c96f-4b00-8e97-33a11bb2ed08",
    "name": "Infiltrator il-Kor",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestInfiltratorIlKorSuspendShadow"
   },
   {
    "oracle_id": "dd4b9e5a-b3ab-4b70-b200-228c8add9f52",
@@ -251779,8 +251890,10 @@
    "oracle_id": "eb933723-b879-44c8-bbc8-d8c84ce5ab12",
    "revision": "54c32735-e8e7-46a1-84ea-92806f459e84",
    "name": "Ith, High Arcanist",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestIthHighArcanistVigilanceUntapsAndPreventsCombatDamage"
   },
   {
    "oracle_id": "eb97c8db-ac6c-476c-b14d-87785e9c82f0",
@@ -263849,8 +263962,10 @@
    "oracle_id": "f9deeea1-bf80-4832-aac3-373fc1f4b41d",
    "revision": "97dbd212-f1e8-429a-bf00-b2ea966d880e",
    "name": "Rift Sower",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "suspend n—{m}",
+   "batch": "suspend-family-20261110",
+   "evidence": "mtg/rules/suspend_family_test.go: TestRiftSowerSuspendAnyColorMana"
   },
   {
    "oracle_id": "f9e1346a-af72-4644-b384-8f7b0a35ec31",
