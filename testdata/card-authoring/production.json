@@ -840,6 +840,27 @@
     "oracle_text_sha256": "7e97494d2c9626e5aee8d3db1a90a5870e0949a570102065fe42b4fd9025f816",
     "revision": "6fd5d79e-cfd8-484b-bbc8-785177922e30",
     "rulings_uri": "https://api.scryfall.com/cards/6fd5d79e-cfd8-484b-bbc8-785177922e30/rulings"
+   },
+   {
+    "name": "Common Bond",
+    "oracle_id": "d52e9255-62e7-479f-8def-e92b96efdb89",
+    "oracle_text_sha256": "537b69d9565deb4897a02f7a7bf363835a3c730c722edb4d4ba272d01cf515bb",
+    "revision": "59965953-1522-4103-9a6c-5534205d34d9",
+    "rulings_uri": "https://api.scryfall.com/cards/59965953-1522-4103-9a6c-5534205d34d9/rulings"
+   },
+   {
+    "name": "Seeds of Strength",
+    "oracle_id": "dd3d4d96-1e88-49e1-8276-7f62c22ad91a",
+    "oracle_text_sha256": "b288ea68958eda2c37107e0f1b101563e520993be890045bf92ac50dae1a31a0",
+    "revision": "bfa1ac13-adbd-439a-90b2-9c506aec0836",
+    "rulings_uri": "https://api.scryfall.com/cards/bfa1ac13-adbd-439a-90b2-9c506aec0836/rulings"
+   },
+   {
+    "name": "Martial Glory",
+    "oracle_id": "e8aa12f8-8922-41ed-8cdb-219c9e4b9e36",
+    "oracle_text_sha256": "83f0750487c117dba132de66084f86bbaea2ac9ebebc1fc6811da72d2aef804b",
+    "revision": "9bf662e7-e63f-40c2-b163-1ebce47d8696",
+    "rulings_uri": "https://api.scryfall.com/cards/9bf662e7-e63f-40c2-b163-1ebce47d8696/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7443,6 +7464,21 @@
     "game.Damage"
    ],
    "review": "Checked pinned Oracle text for these four identities. Existing buyback support: mtg/game/keyword.go (BuybackKeyword), mtg/rules/buyback_test.go, and mtg/rules/buyback_interaction_test.go. Other text fits existing support: mtg/cards/d/devouring_light.go and mtg/rules/numeric_target_cards_test.go (convoke); mtg/cards/authored/removal_token_spells.go and mtg/rules/effects_permanent_test.go (token creation); mtg/cards/authored/myr_custodian.go and mtg/rules/scry_privacy_test.go (scry); mtg/cards/p/psychotic_haze.go and mtg/rules/ashling_counter_quantity_test.go (group damage). No primary-source, Comprehensive Rules, or rulings review performed; card author must complete it."
+  },
+  {
+   "id": "counter-pump-spells-20261111",
+   "family": "no-new-paragraph-targeted-spells",
+   "oracle_ids": [
+    "d52e9255-62e7-479f-8def-e92b96efdb89",
+    "dd3d4d96-1e88-49e1-8276-7f62c22ad91a",
+    "e8aa12f8-8922-41ed-8cdb-219c9e4b9e36"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AddCounter",
+    "game.ModifyPT"
+   ],
+   "review": "Checked pinned corpus text for these three identities and confirmed each is unclaimed/unbatched. On origin/main 425d4419, checked mtg/game/primitive.go declarations for AddCounter and ModifyPT, plus mtg/rules/effects_permanent_test.go cases TestAddCounterEffectFansOutAcrossChosenTargets and TestMultiTargetPumpAppliesToEachChosenTarget. No open capability prerequisite identified."
   }
  ],
  "records": [
@@ -233015,8 +233051,10 @@
    "oracle_id": "d52e9255-62e7-479f-8def-e92b96efdb89",
    "revision": "59965953-1522-4103-9a6c-5534205d34d9",
    "name": "Common Bond",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph-targeted-spells",
+   "batch": "counter-pump-spells-20261111",
+   "evidence": "mtg/rules/counter_pump_spells_test.go: TestCommonBondScenario"
   },
   {
    "oracle_id": "d52ecb32-26ed-484b-b1a7-ee47b66f0f94",
@@ -239962,8 +240000,10 @@
    "oracle_id": "dd3d4d96-1e88-49e1-8276-7f62c22ad91a",
    "revision": "bfa1ac13-adbd-439a-90b2-9c506aec0836",
    "name": "Seeds of Strength",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph-targeted-spells",
+   "batch": "counter-pump-spells-20261111",
+   "evidence": "mtg/rules/counter_pump_spells_test.go: TestSeedsOfStrengthScenario"
   },
   {
    "oracle_id": "dd3fd7cd-d8a1-48e2-861d-c7c40086dc75",
@@ -249452,8 +249492,10 @@
    "oracle_id": "e8aa12f8-8922-41ed-8cdb-219c9e4b9e36",
    "revision": "9bf662e7-e63f-40c2-b163-1ebce47d8696",
    "name": "Martial Glory",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "no-new-paragraph-targeted-spells",
+   "batch": "counter-pump-spells-20261111",
+   "evidence": "mtg/rules/counter_pump_spells_test.go: TestMartialGloryScenario"
   },
   {
    "oracle_id": "e8ad3a77-b293-4d69-b080-27ca9f95d443",
