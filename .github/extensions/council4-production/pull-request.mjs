@@ -159,7 +159,16 @@ export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined
       return false;
     },
     async merge(cwd, number, head) {
-      await gh(cwd, ["pr", "merge", String(number), "--repo", repository, "--squash", "--match-head-commit", head]);
+      try {
+        await gh(cwd, ["pr", "merge", String(number), "--repo", repository, "--squash", "--match-head-commit", head]);
+      } catch (error) {
+        // A lost response (for example a connection reset) can follow a merge
+        // that GitHub completed. Only that exact head merged counts.
+        let pr;
+        try { pr = await this.view(cwd, number); } catch { throw error; }
+        if (pr?.state !== "MERGED" || pr.headRefOid !== head) throw error;
+        return pr;
+      }
       return this.view(cwd, number);
     },
   };

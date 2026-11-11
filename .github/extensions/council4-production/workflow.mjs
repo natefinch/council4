@@ -483,8 +483,19 @@ export async function executeUnit({ task, policy, stage, validate, snapshot, rev
     validation = await validate(`initial-${round}`);
     if (validation.ok) break;
     if (round >= policy.validationFixRounds) return { status: "validation_failed", result, validation };
-    result = carryGaps(result, await stage("validation_fix", round + 1, validation));
-    if (!result || result.status !== "complete") return { status: "blocked", result, validation };
+    const fixed = carryGaps(result, await stage("validation_fix", round + 1, validation));
+    if (!fixed) return { status: "blocked", result: fixed, validation };
+    if (fixed.status !== "complete") {
+      // A fixer can repair the failure yet misattribute what remains; passing
+      // checks disprove its blocker, so validation always reruns first.
+      const recheck = await validate(`blocked-check-${round + 1}`);
+      if (!recheck.ok) return { status: "blocked", result: fixed, validation: recheck };
+      result = { ...fixed, status: "complete", summary: `${fixed.summary ?? ""} (Reported blocked, but validation passed after the repair.)`.trim() };
+      if (!result.evidence?.some(e => typeof e === "string" && e.trim())) return { status: "evidence_missing", result };
+      validation = recheck;
+      break;
+    }
+    result = fixed;
     if (!result.evidence?.some(e => typeof e === "string" && e.trim())) return { status: "evidence_missing", result };
   }
   let approved = await snapshot();

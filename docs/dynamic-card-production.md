@@ -344,7 +344,11 @@ implementation flags, and `always` reviews every card unit.
 The workflow does not treat model approval, strings in Verification, or passing
 constructor assertions as sufficient proof of correctness.
 
-Failed tests trigger bounded `validation_fix` work. Review findings trigger
+Failed tests trigger bounded `validation_fix` work. Since policy 1.28.1 a fixer
+that reports `blocked` does not end the unit by itself: validation reruns, and
+if it passes the unit continues as complete (a fixer can repair the failure yet
+misattribute what remains). A lost `gh pr merge` response counts as merged only
+when GitHub shows that exact head merged. Review findings trigger
 bounded `review_fix`, validation, and re-review: one round for card work and two
 for Engine work (`reviewFixRounds` in the policy). Exhausting those rounds retains
 the unsuccessful result and its cost; it never turns rejection into admission.
