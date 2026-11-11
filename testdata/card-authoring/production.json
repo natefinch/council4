@@ -819,6 +819,27 @@
     "oracle_text_sha256": "1ad83929a85e03f3e1d3791f4f63cc62b46b915ccd31560d08ae562dddf2db9e",
     "revision": "d58e20ab-c5ca-4295-884d-78efdaa83243",
     "rulings_uri": "https://api.scryfall.com/cards/d58e20ab-c5ca-4295-884d-78efdaa83243/rulings"
+   },
+   {
+    "name": "Sprout Swarm",
+    "oracle_id": "8b33d890-7d67-44a8-a253-e2b171d7ca9d",
+    "oracle_text_sha256": "cf13ae1fd493cbd943873266cba7a5db6cc88ccc381438ffca4f0591402af1bd",
+    "revision": "0b915355-4e98-44df-81bd-961a3d3c86b8",
+    "rulings_uri": "https://api.scryfall.com/cards/0b915355-4e98-44df-81bd-961a3d3c86b8/rulings"
+   },
+   {
+    "name": "Mystic Speculation",
+    "oracle_id": "a58adf82-d9e2-4b47-933e-68180f280ba2",
+    "oracle_text_sha256": "d06dd0df81332a5887c322c6ad037bcc0dfd1b1e0cc0aa5f161b05e23c5eec4c",
+    "revision": "92adfcb4-6a0a-46f9-a171-bfa9fade2156",
+    "rulings_uri": "https://api.scryfall.com/cards/92adfcb4-6a0a-46f9-a171-bfa9fade2156/rulings"
+   },
+   {
+    "name": "Lab Rats",
+    "oracle_id": "c53d6d3e-64e3-48b9-afab-3bde3164888f",
+    "oracle_text_sha256": "7e97494d2c9626e5aee8d3db1a90a5870e0949a570102065fe42b4fd9025f816",
+    "revision": "6fd5d79e-cfd8-484b-bbc8-785177922e30",
+    "rulings_uri": "https://api.scryfall.com/cards/6fd5d79e-cfd8-484b-bbc8-785177922e30/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7404,6 +7425,24 @@
     "game.Draw"
    ],
    "review": "Checked the no-new-paragraph candidate family against origin/main at 0f9cdd7896d79b069b3c8438def369c57cd48a8e and mtg/cardprogram/README.md#capability-lookup; inspected the Damage, Destroy, ModifyPT, Discard, and Draw declarations in mtg/game/primitive.go and relevant behavioral coverage in mtg/rules/resolving_spell_damage_contract_test.go, mtg/rules/mass_destroy_controller_filter_test.go, mtg/rules/effects_discard_then_draw_test.go, and mtg/game/instruction_test.go. Capability-fit only; no primary-source, rulings, or Comprehensive Rules review claimed."
+  },
+  {
+   "id": "buyback-operations-20261111-1715",
+   "family": "(none): buyback subset",
+   "oracle_ids": [
+    "c53d6d3e-64e3-48b9-afab-3bde3164888f",
+    "a58adf82-d9e2-4b47-933e-68180f280ba2",
+    "8b33d890-7d67-44a8-a253-e2b171d7ca9d"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.BuybackKeyword",
+    "Convoke",
+    "game.CreateToken",
+    "game.Scry",
+    "game.Damage"
+   ],
+   "review": "Checked pinned Oracle text for these four identities. Existing buyback support: mtg/game/keyword.go (BuybackKeyword), mtg/rules/buyback_test.go, and mtg/rules/buyback_interaction_test.go. Other text fits existing support: mtg/cards/d/devouring_light.go and mtg/rules/numeric_target_cards_test.go (convoke); mtg/cards/authored/removal_token_spells.go and mtg/rules/effects_permanent_test.go (token creation); mtg/cards/authored/myr_custodian.go and mtg/rules/scry_privacy_test.go (scry); mtg/cards/p/psychotic_haze.go and mtg/rules/ashling_counter_quantity_test.go (group damage). No primary-source, Comprehensive Rules, or rulings review performed; card author must complete it."
   }
  ],
  "records": [
@@ -170509,8 +170548,10 @@
    "oracle_id": "8b33d890-7d67-44a8-a253-e2b171d7ca9d",
    "revision": "0b915355-4e98-44df-81bd-961a3d3c86b8",
    "name": "Sprout Swarm",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "(none): buyback subset",
+   "batch": "buyback-operations-20261111-1715",
+   "evidence": "mtg/rules/buyback_misc_test.go: TestSproutSwarmScenario"
   },
   {
    "oracle_id": "8b34b211-985b-4934-bb3b-8e6672685ac2",
@@ -192728,8 +192769,10 @@
    "oracle_id": "a58adf82-d9e2-4b47-933e-68180f280ba2",
    "revision": "92adfcb4-6a0a-46f9-a171-bfa9fade2156",
    "name": "Mystic Speculation",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "(none): buyback subset",
+   "batch": "buyback-operations-20261111-1715",
+   "evidence": "mtg/rules/buyback_misc_test.go: TestMysticSpeculationScenario"
   },
   {
    "oracle_id": "a58ee84f-1d9c-4924-b7b1-14a9b2ba3b98",
@@ -215530,8 +215573,10 @@
    "oracle_id": "c0d3dfc0-1ff2-4ac3-98eb-32eaa5b84c05",
    "revision": "2e0fffc6-4395-441e-95a9-c9cf33af7907",
    "name": "Evincar's Justice",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "blocked",
+   "family": "(none): buyback subset",
+   "blocker": 3762,
+   "reason": "The Engine cannot apply the card’s 2 damage to creatures and players as one simultaneous batch; a focused tagged probe demonstrates the missing behavior."
   },
   {
    "oracle_id": "c0d51f49-383b-40f1-9192-5925db1cdd1b",
@@ -219086,8 +219131,10 @@
    "oracle_id": "c53d6d3e-64e3-48b9-afab-3bde3164888f",
    "revision": "6fd5d79e-cfd8-484b-bbc8-785177922e30",
    "name": "Lab Rats",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "(none): buyback subset",
+   "batch": "buyback-operations-20261111-1715",
+   "evidence": "mtg/rules/buyback_misc_test.go: TestLabRatsScenario"
   },
   {
    "oracle_id": "c53d958a-f660-4d2e-87cd-87702f973b3a",
