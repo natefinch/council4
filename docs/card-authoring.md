@@ -126,6 +126,12 @@ family is a natural batch. Cards adding two or more new paragraphs are left to
 queue order. Paragraphs are compared after normalizing the card's name,
 quantities, mana symbols, power/toughness, colors and subtypes.
 
+`-operation settle -batch ID -plan PATH` finishes a claimed batch whose cards
+partly hit a gap: the plan's `records` (exact identity, `blocker` issue and
+`reason`) are blocked and leave the batch, and every other member must be
+registered and is verified as with `verify`. At least one member must be
+admitted; otherwise block or release the whole batch.
+
 Use `-operation add-reviewed-batch -plan PATH -batch NEW_ID -owner SESSION_ID`
 to append **one** reviewed batch of three to twenty cards. The plan is a small JSON
 object, not a replacement manifest:

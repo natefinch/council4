@@ -190,3 +190,35 @@ func TestQueueDeterministicPriorityAndRoundtrip(t *testing.T) {
 		t.Fatal(fmt.Errorf("roundtrip: %w", err))
 	}
 }
+
+func TestSettledBlockedMembersLeaveTheBatchAndCanBeReassessed(t *testing.T) {
+	q, corpus, inventory := queueFixture(t)
+	if err := transition(&q, "claim", "first", "writer", 0, "", inventory); err != nil {
+		t.Fatal(err)
+	}
+	for _, oracleID := range []string{"a", "b"} {
+		inventory.Production = append(inventory.Production, cards.Support{
+			Key: oracleID + "/front", OracleID: oracleID, Loadable: true, BehaviorVerified: true, Verification: "actual named scenario",
+		})
+	}
+	inventory.Backlog = slices.DeleteFunc(inventory.Backlog, func(r supportinventory.Record) bool { return r.OracleID == "a" || r.OracleID == "b" })
+	c := q.Records[slices.IndexFunc(q.Records, func(r record) bool { return r.OracleID == "c" })]
+	blocked := map[string]reviewedRecord{"c": {OracleID: "c", Revision: c.Revision, Name: c.Name, Blocker: 3762, Reason: "observed missing damage target"}}
+	if err := settle(&q, "verify", "first", "writer", 0, "", inventory, blocked); err != nil {
+		t.Fatal(err)
+	}
+	if err := validate(q, corpus, inventory); err != nil {
+		t.Fatal(err)
+	}
+	pending := pendingPrerequisites(q)
+	if !slices.ContainsFunc(pending, func(p pendingPrerequisite) bool { return p.Batch == "" && slices.Equal(p.OracleIDs, []string{"c"}) }) {
+		t.Fatalf("blocked member is not an unbatched pending prerequisite: %+v", pending)
+	}
+	evidence := &prerequisiteEvidence{Issue: 3762, RuntimeRevision: "landed", Evidence: "acceptance scenario passed"}
+	if err := reassessRecords(&q, []reviewedRecord{{OracleID: "c", Revision: c.Revision, Name: c.Name, Reassessment: evidence}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := validate(q, corpus, inventory); err != nil {
+		t.Fatal(err)
+	}
+}

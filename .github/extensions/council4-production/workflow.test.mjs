@@ -464,6 +464,15 @@ async function queueFixture(t) {
       current.records.forEach(card => { card.status = "claimed"; card.owner = "run"; });
     } else if (operation === "verify") {
       current.records.forEach(card => { card.status = "implemented-verified"; card.owner = ""; card.evidence = "actual named scenario"; });
+    } else if (operation === "settle") {
+      const plan = JSON.parse(await readFile(args[args.indexOf("-plan") + 1], "utf8"));
+      const blocked = new Map(plan.records.map(record => [record.oracle_id, record]));
+      current.records.forEach(card => {
+        card.owner = "";
+        if (blocked.has(card.oracle_id)) Object.assign(card, { status: "blocked", blocker: blocked.get(card.oracle_id).blocker, batch: "" });
+        else Object.assign(card, { status: "implemented-verified", evidence: "actual named scenario" });
+      });
+      current.batches[0].oracle_ids = current.batches[0].oracle_ids.filter(id => !blocked.has(id));
     } else if (operation !== "check") throw new Error("Unexpected queue operation");
     await writeFile(manifest, JSON.stringify(current));
     return "";
@@ -484,6 +493,23 @@ test("Coordinator claims the saved batch before card work and owns verified admi
   assert.equal(f.calls.at(-1), "verify");
   await verifyCardBatch({ ...f.options, batchId: claim.batchId });
   assert.equal(f.calls.at(-1), "check");
+});
+
+test("A batch's unregistered cards are blocked on their gap while the rest are admitted", async t => {
+  const f = await queueFixture(t);
+  const claim = await prepareCardBatch(f.options);
+  const blocked = [{ oracleId: "c", gap: 3762, reason: "needs creature-or-player damage" }];
+  const verified = await verifyCardBatch({ ...f.options, batchId: claim.batchId, blocked });
+  assert.equal(f.calls.at(-1), "settle");
+  assert.deepEqual(verified, { batchId: "batch", verified: ["a", "b"], blocked: ["c"] });
+  await verifyCardBatch({ ...f.options, batchId: claim.batchId, blocked });
+  assert.equal(f.calls.at(-1), "check");
+  // A blocked card cannot later be claimed as admitted, nor blocked on a different gap.
+  await assert.rejects(verifyCardBatch({ ...f.options, batchId: claim.batchId, blocked: [{ oracleId: "c", gap: 1, reason: "r" }] }), /partially promoted/);
+  const g = await queueFixture(t);
+  await prepareCardBatch(g.options);
+  await assert.rejects(verifyCardBatch({ ...g.options, batchId: "batch", blocked: [{ oracleId: "zz", gap: 1, reason: "r" }] }), /members/);
+  await assert.rejects(verifyCardBatch({ ...f.options, batchId: claim.batchId, blocked: [{ oracleId: "zz", gap: 1, reason: "r" }] }), /partially promoted/);
 });
 
 test("Coordinator refuses foreign claims, invented batches, rewrites and partial worker promotion", async t => {

@@ -65,7 +65,7 @@ type manifest struct {
 }
 
 func main() {
-	operation := flag.String("operation", "check", "init, check, next, families, add-reviewed-batch, record-prerequisites, retire-batch, reassess, record-blockers, claim, verify, release, block, format, reconcile-compiled")
+	operation := flag.String("operation", "check", "init, check, next, families, settle, add-reviewed-batch, record-prerequisites, retire-batch, reassess, record-blockers, claim, verify, release, block, format, reconcile-compiled")
 	path := flag.String("manifest", "testdata/card-authoring/production.json", "saved queue")
 	plan := flag.String("plan", ".cardwork/production-plan.json", "init seed or explicit reviewed continuation/evidence input")
 	corpus := flag.String("corpus", ".cardwork/corpus/oracle-cards.json", "pinned Oracle corpus")
@@ -171,7 +171,25 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 			return err
 		}
 	case "verify":
-		if err := verifyBatch(&queue, batchID, owner, inventory, corpusData); err != nil {
+		if err := verifyBatch(&queue, batchID, owner, inventory, corpusData, nil); err != nil {
+			return err
+		}
+	case "settle":
+		plan, err := loadReviewedPlan(planPath)
+		if err != nil {
+			return err
+		}
+		if plan.CorpusSHA256 != queue.CorpusSHA256 || len(plan.Batches) != 0 || len(plan.Records) == 0 {
+			return errors.New("settle needs the saved corpus hash and the batch members that stay blocked")
+		}
+		blocked := make(map[string]reviewedRecord)
+		for _, r := range plan.Records {
+			if _, dup := blocked[r.OracleID]; dup || r.Reassessment != nil {
+				return fmt.Errorf("invalid settle record %s", r.OracleID)
+			}
+			blocked[r.OracleID] = r
+		}
+		if err := verifyBatch(&queue, batchID, owner, inventory, corpusData, blocked); err != nil {
 			return err
 		}
 	case "claim", "release", "block":
@@ -297,6 +315,13 @@ func nextBatch(queue manifest, owner string) (*batch, error) {
 }
 
 func transition(queue *manifest, operation, batchID, owner string, blocker int, reason string, inventory supportinventory.Inventory) error {
+	return settle(queue, operation, batchID, owner, blocker, reason, inventory, nil)
+}
+
+// settle applies a whole-batch transition. For verify, members listed in
+// blocked are blocked on their own canonical gap instead of promoted, so a
+// batch's finished cards land while the rest wait for their prerequisite.
+func settle(queue *manifest, operation, batchID, owner string, blocker int, reason string, inventory supportinventory.Inventory, blocked map[string]reviewedRecord) error {
 	if batchID == "" || strings.TrimSpace(owner) == "" {
 		return errors.New("mutations require explicit -batch and -owner")
 	}
@@ -321,8 +346,11 @@ func transition(queue *manifest, operation, batchID, owner string, blocker int, 
 			verified[support.OracleID] = support.Verification
 		}
 	}
+	if len(blocked) != 0 && operation != "verify" {
+		return errors.New("only verify can block individual members")
+	}
 	updated := slices.Clone(queue.Records)
-	count := 0
+	count, promoted := 0, 0
 	for i := range updated {
 		r := &updated[i]
 		if r.Batch != batchID {
@@ -339,6 +367,16 @@ func transition(queue *manifest, operation, batchID, owner string, blocker int, 
 			}
 			r.Status, r.Owner = "claimed", owner
 		case "verify":
+			if gap, isBlocked := blocked[r.OracleID]; isBlocked {
+				if verified[r.OracleID] != "" || gap.Revision != r.Revision || gap.Name != r.Name ||
+					gap.Blocker <= 0 || strings.TrimSpace(gap.Reason) == "" {
+					return fmt.Errorf("%s needs an exact unregistered identity, canonical blocker and reason to stay blocked", r.OracleID)
+				}
+				r.Status, r.Owner, r.Blocker, r.Reason = "blocked", "", gap.Blocker, gap.Reason
+				delete(blocked, r.OracleID)
+				continue
+			}
+			promoted++
 			if verified[r.OracleID] == "" {
 				return fmt.Errorf("%s has no exact loadable behavior evidence; run scenarios before promotion", r.OracleID)
 			}
@@ -351,6 +389,29 @@ func transition(queue *manifest, operation, batchID, owner string, blocker int, 
 	}
 	if count < minBatchCards || count > maxBatchCards {
 		return fmt.Errorf("batch must contain %d–%d records", minBatchCards, maxBatchCards)
+	}
+	if len(blocked) != 0 {
+		return errors.New("blocked identities are not members of the batch")
+	}
+	if operation == "verify" && promoted == 0 {
+		return errors.New("verify needs at least one registered member; block or release the whole batch instead")
+	}
+	if operation == "verify" && promoted != count {
+		// Blocked members leave the batch so a later reassessment can put them
+		// in a new batch; the saved batch keeps only what it admitted.
+		batches := slices.Clone(queue.Batches)
+		index := slices.IndexFunc(batches, func(b batch) bool { return b.ID == batchID })
+		b := batches[index]
+		b.OracleIDs = slices.DeleteFunc(slices.Clone(b.OracleIDs), func(id string) bool {
+			return slices.ContainsFunc(updated, func(r record) bool { return r.OracleID == id && r.Status == "blocked" })
+		})
+		batches[index] = b
+		for i := range updated {
+			if updated[i].Batch == batchID && updated[i].Status == "blocked" {
+				updated[i].Batch = ""
+			}
+		}
+		queue.Batches = batches
 	}
 	queue.Records = updated
 	return nil

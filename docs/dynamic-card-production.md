@@ -297,6 +297,17 @@ If `cardqueue` rejects a selector's batch plan, or the selector returns an
 invalid task (for example an Engine task without a `gap-<issue>` id, since
 policy 1.26.1), that unit is recorded as `claim_failed` with the reason and the
 run continues; a second rejection in a row stops the run.
+Since policy 1.29.0 a card batch is not all-or-nothing. A worker whose cards
+partly hit genuine Engine gaps registers the finished cards, leaves each
+affected card unregistered with a failing probe, and returns `complete` with
+`blockedCards` (Oracle ID, canonical gap issue, observed missing behavior).
+Validation runs `cardqueue -operation settle`, which admits the registered
+members and moves the others out of the batch as ordinary blocked cards on
+their gap, ready for reassessment once it lands. Workers return `blocked` only
+when no card in the batch can be completed.
+Agents start in the coordinator checkout, which must never change; workers
+are told to run every command from their unit worktree and edit only by
+absolute paths there. Any coordinator edit still stops the run.
 An exhausted saved batch is a reason to prepare the next bounded batch, not a
 reason to restart strategy research.
 For a card unit the coordinator uses the exact saved batch ID, or the selector's

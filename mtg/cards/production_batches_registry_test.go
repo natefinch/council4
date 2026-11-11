@@ -29,7 +29,7 @@ func validateProductionClaims(records, baseline []productionWorkRecord, batches 
 	membership := make(map[string]string)
 	byBatch := make(map[string]productionBatch)
 	for _, b := range batches {
-		if _, exists := byBatch[b.ID]; exists || b.ID == "" || b.Family == "" || len(b.OracleIDs) < 3 || len(b.OracleIDs) > 20 {
+		if _, exists := byBatch[b.ID]; exists || b.ID == "" || b.Family == "" || len(b.OracleIDs) < 1 || len(b.OracleIDs) > 20 {
 			return fmt.Errorf("invalid saved batch %s", b.ID)
 		}
 		byBatch[b.ID] = b

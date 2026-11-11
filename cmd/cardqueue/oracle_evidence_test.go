@@ -67,7 +67,7 @@ func decodeRules(t *testing.T, data []byte) (map[string]json.RawMessage, []map[s
 func TestVerifyBindsPinnedMetadataAndPreservesSourceRecords(t *testing.T) {
 	q, inventory, corpus := verificationFixture(t)
 	beforeFields, beforeSources := decodeRules(t, q.RulesEvidence)
-	if err := verifyBatch(&q, "first", "writer", inventory, corpus); err != nil {
+	if err := verifyBatch(&q, "first", "writer", inventory, corpus, nil); err != nil {
 		t.Fatal(err)
 	}
 	fields, sources := decodeRules(t, q.RulesEvidence)
@@ -120,7 +120,7 @@ func TestVerifyBindsPinnedMetadataAndPreservesSourceRecords(t *testing.T) {
 func TestVerifyMetadataDoesNotInventMissingSourceReview(t *testing.T) {
 	q, inventory, corpus := verificationFixture(t)
 	q.RulesEvidence = nil
-	if err := verifyBatch(&q, "first", "writer", inventory, corpus); err != nil {
+	if err := verifyBatch(&q, "first", "writer", inventory, corpus, nil); err != nil {
 		t.Fatal(err)
 	}
 	fields, sources := decodeRules(t, q.RulesEvidence)
@@ -175,12 +175,64 @@ func TestVerifyMetadataFailuresPreserveWholeClaim(t *testing.T) {
 				q.CorpusSHA256 = fmt.Sprintf("%x", sha256.Sum256(corpus))
 			}
 			before, aliased := snapshot(t, q), q.Records
-			if err := verifyBatch(&q, "first", "writer", inventory, corpus); err == nil {
+			if err := verifyBatch(&q, "first", "writer", inventory, corpus, nil); err == nil {
 				t.Fatal("invalid metadata or partial behavior admitted")
 			}
 			if snapshot(t, q) != before || snapshot(t, aliased) != snapshot(t, q.Records) {
 				t.Fatal("rejected metadata binding partially verified the claim")
 			}
 		})
+	}
+}
+
+func TestSettleBlocksUnregisteredMembersAndPromotesTheRest(t *testing.T) {
+	q, inventory, corpus := verificationFixture(t)
+	inventory.Production = slices.DeleteFunc(inventory.Production, func(s cards.Support) bool { return s.OracleID == "c" })
+	member := func(id string) record {
+		return q.Records[slices.IndexFunc(q.Records, func(r record) bool { return r.OracleID == id })]
+	}
+	c := member("c")
+	gap := map[string]reviewedRecord{"c": {OracleID: "c", Revision: c.Revision, Name: c.Name, Blocker: 3762, Reason: "needs creature-or-player damage"}}
+	if err := verifyBatch(&q, "first", "writer", inventory, corpus, gap); err != nil {
+		t.Fatal(err)
+	}
+	if a, c := member("a"), member("c"); a.Status != "implemented-verified" || c.Status != "blocked" || c.Blocker != 3762 || c.Owner != "" || c.Batch != "" {
+		t.Fatalf("a=%+v c=%+v", a, c)
+	}
+	if first := q.Batches[slices.IndexFunc(q.Batches, func(b batch) bool { return b.ID == "first" })]; slices.Contains(first.OracleIDs, "c") {
+		t.Fatalf("blocked member stayed in its batch: %v", first.OracleIDs)
+	}
+	_, sources := decodeRules(t, q.RulesEvidence)
+	if slices.ContainsFunc(sources, func(s map[string]any) bool { return s["oracle_id"] == "c" }) {
+		t.Error("blocked member gained verification metadata")
+	}
+}
+
+func TestSettleRejectsRegisteredOrForeignBlocksAndAllBlocked(t *testing.T) {
+	for name, blocked := range map[string]func(q manifest) map[string]reviewedRecord{
+		"registered member": func(q manifest) map[string]reviewedRecord {
+			return map[string]reviewedRecord{"a": {OracleID: "a", Revision: q.Records[0].Revision, Name: q.Records[0].Name, Blocker: 1, Reason: "r"}}
+		},
+		"non-member": func(manifest) map[string]reviewedRecord {
+			return map[string]reviewedRecord{"zz": {OracleID: "zz", Blocker: 1, Reason: "r"}}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			q, inventory, corpus := verificationFixture(t)
+			if err := verifyBatch(&q, "first", "writer", inventory, corpus, blocked(q)); err == nil {
+				t.Fatal("accepted")
+			}
+		})
+	}
+	q, inventory, corpus := verificationFixture(t)
+	inventory.Production = nil
+	all := make(map[string]reviewedRecord)
+	for _, r := range q.Records {
+		if r.Batch == "first" {
+			all[r.OracleID] = reviewedRecord{OracleID: r.OracleID, Revision: r.Revision, Name: r.Name, Blocker: 1, Reason: "r"}
+		}
+	}
+	if err := verifyBatch(&q, "first", "writer", inventory, corpus, all); err == nil {
+		t.Fatal("settled a batch with no registered member")
 	}
 }
