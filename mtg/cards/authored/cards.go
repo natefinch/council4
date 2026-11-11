@@ -27,6 +27,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, Hammerheim, CrashLanding, KinscaerHarpoonist)
 	entries = append(entries, BurningPalmEfreet, WindShear, LeeringGargoyle)
 	entries = append(entries, FearOfFalling, ShortCircuit, CanopyDragon)
+	entries = append(entries, AgonyWarp, HeatedDebate, SliceFromTheShadows)
 	entries = append(entries, FearAura, LifelinkAura, VigilanceAura)
 	entries = append(entries, PartyDude, SengirAutocrat, WhiteGloveGourmand)
 	entries = append(entries, AncestralVision, SearchForTomorrow, VisceridDeepwalker,

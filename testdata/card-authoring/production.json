@@ -763,6 +763,27 @@
     "oracle_text_sha256": "39f28245969a1d07966a41a9913e9aca3c5dee81faa4c578df9031b0971ea786",
     "revision": "97dbd212-f1e8-429a-bf00-b2ea966d880e",
     "rulings_uri": "https://api.scryfall.com/cards/97dbd212-f1e8-429a-bf00-b2ea966d880e/rulings"
+   },
+   {
+    "name": "Heated Debate",
+    "oracle_id": "06c3e85c-17d8-44e1-a0f8-07ef3f1624cb",
+    "oracle_text_sha256": "81ec953f5b26b5dd4ec0f930b3f31703ac5e106561c876d0bb17e7fd6265451e",
+    "revision": "f40c88e2-28ed-4e5b-bcb3-4397d6a15a6f",
+    "rulings_uri": "https://api.scryfall.com/cards/f40c88e2-28ed-4e5b-bcb3-4397d6a15a6f/rulings"
+   },
+   {
+    "name": "Agony Warp",
+    "oracle_id": "377c217b-ddad-4e1a-9122-f347113d3dfa",
+    "oracle_text_sha256": "1456637001852a3b2aa44db8b74a2c73b3c9c48ff1cbe43abb4abe223d340acf",
+    "revision": "5890a23e-1da0-432b-8dc8-85b92dee9ba1",
+    "rulings_uri": "https://api.scryfall.com/cards/5890a23e-1da0-432b-8dc8-85b92dee9ba1/rulings"
+   },
+   {
+    "name": "Slice from the Shadows",
+    "oracle_id": "4d31d3f4-4748-4713-808f-24699fcd7b10",
+    "oracle_text_sha256": "1e0bb6e3bc1dfe30089a8986b267069ce9907eb11ad5048340f1cb5c7a04dcdd",
+    "revision": "317800b3-6b2d-4de6-8e44-7e54dd623055",
+    "rulings_uri": "https://api.scryfall.com/cards/317800b3-6b2d-4de6-8e44-7e54dd623055/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7297,6 +7318,22 @@
     "Engine.castSuspendedCard"
    ],
    "review": "Capability fit only: checked mtg/game/keyword.go SuspendKeyword, mtg/rules/suspend.go, and mtg/rules/suspend_test.go; targeted suspend tests pass. Checked the ten pinned Oracle texts against the candidate family’s supported-paragraph grouping. No official rules or rulings review performed."
+  },
+  {
+   "id": "existing-pt-damage-uncounterable-20261111",
+   "family": "existing-paragraph-operations",
+   "oracle_ids": [
+    "377c217b-ddad-4e1a-9122-f347113d3dfa",
+    "06c3e85c-17d8-44e1-a0f8-07ef3f1624cb",
+    "4d31d3f4-4748-4713-808f-24699fcd7b10"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ModifyPT",
+    "game.Damage",
+    "game.CantBeCounteredStaticBody"
+   ],
+   "review": "Capability-fit checked on origin/main 0f9cdd7896d79b069b3c8438def369c57cd48a8e against the pinned text for all three cards. ModifyPT is handled at mtg/rules/primitive_handlers.go:973; DynamicAmountX is available for Slice from the Shadows. Damage is handled at mtg/rules/primitive_handlers_damage.go:55, with any-target prior art in mtg/cards/i/inescapable_blaze.go. CantBeCounteredStaticBody is defined at mtg/game/mechanic_template.go:115, with behavior coverage in mtg/rules/effects_counterspell_token_test.go. No source, rulings, or Comprehensive Rules review claimed."
   }
  ],
  "records": [
@@ -57787,8 +57824,10 @@
    "oracle_id": "06c3e85c-17d8-44e1-a0f8-07ef3f1624cb",
    "revision": "f40c88e2-28ed-4e5b-bcb3-4397d6a15a6f",
    "name": "Heated Debate",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "existing-paragraph-operations",
+   "batch": "existing-pt-damage-uncounterable-20261111",
+   "evidence": "mtg/rules/authored_stat_damage_spells_test.go: TestHeatedDebateScenario"
   },
   {
    "oracle_id": "06c47664-2b4b-468e-a38d-04b62e6edd67",
@@ -98712,8 +98751,10 @@
    "oracle_id": "377c217b-ddad-4e1a-9122-f347113d3dfa",
    "revision": "5890a23e-1da0-432b-8dc8-85b92dee9ba1",
    "name": "Agony Warp",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "existing-paragraph-operations",
+   "batch": "existing-pt-damage-uncounterable-20261111",
+   "evidence": "mtg/rules/authored_stat_damage_spells_test.go: TestAgonyWarpScenario"
   },
   {
    "oracle_id": "377d0fa7-1b3d-4b97-b066-dceeff3734d0",
@@ -117393,8 +117434,10 @@
    "oracle_id": "4d31d3f4-4748-4713-808f-24699fcd7b10",
    "revision": "317800b3-6b2d-4de6-8e44-7e54dd623055",
    "name": "Slice from the Shadows",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "existing-paragraph-operations",
+   "batch": "existing-pt-damage-uncounterable-20261111",
+   "evidence": "mtg/rules/authored_stat_damage_spells_test.go: TestSliceFromTheShadowsScenario"
   },
   {
    "oracle_id": "4d324f8c-2139-4910-b3c3-731a2e820d6b",
