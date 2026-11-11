@@ -33,6 +33,8 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, MizziumSkin, BountyOfMight, LongGoodbye)
 	entries = append(entries, FearAura, LifelinkAura, VigilanceAura)
 	entries = append(entries, PartyDude, SengirAutocrat, WhiteGloveGourmand)
+	entries = append(entries, BurrentonBombardier, BreakTies, FowlStrike, SwellOfCourage, HuntingTriad,
+		MosquitoGuard, Earthbrawn, WrensRunHydra, RusticClachan, BannerhideKrushok)
 	entries = append(entries, AncestralVision, SearchForTomorrow, VisceridDeepwalker,
 		KeldonHalberdier, CorpulentCorpse, ErrantEphemeron, MoxTantalite,
 		InfiltratorIlKor, IthHighArcanist, RiftSower)

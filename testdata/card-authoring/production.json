@@ -882,6 +882,76 @@
     "oracle_text_sha256": "8b3b3fa8cd47b760e392775251e425088154824249063dda9ba8ac78a184062a",
     "revision": "c344b885-68c6-43d2-b6c1-6c89b3c94983",
     "rulings_uri": "https://api.scryfall.com/cards/c344b885-68c6-43d2-b6c1-6c89b3c94983/rulings"
+   },
+   {
+    "name": "Burrenton Bombardier",
+    "oracle_id": "13ec2390-e08a-4645-99e9-bac7e41917bb",
+    "oracle_text_sha256": "5c11bc859e385427fded689ac401e677805b246c01f8ba3335610f7940be613c",
+    "revision": "fd872395-f351-4f7e-9290-c34d1c98a567",
+    "rulings_uri": "https://api.scryfall.com/cards/fd872395-f351-4f7e-9290-c34d1c98a567/rulings"
+   },
+   {
+    "name": "Break Ties",
+    "oracle_id": "1e44bb4e-aeea-4f43-9cbd-4c24a9b6b022",
+    "oracle_text_sha256": "9525fbbde93014f24837d218115b5c21ee2f2a5da3c43782ef4e297cc6664389",
+    "revision": "723ec2ef-aa82-449d-88b0-405d06454fc2",
+    "rulings_uri": "https://api.scryfall.com/cards/723ec2ef-aa82-449d-88b0-405d06454fc2/rulings"
+   },
+   {
+    "name": "Fowl Strike",
+    "oracle_id": "390320f7-11b8-4b61-8316-36c396470a09",
+    "oracle_text_sha256": "e58bf1fa04afff8a43010b80661cebfa4d6699892462357cfc126567cc400c1d",
+    "revision": "83b6c7ab-f42f-40d2-9cb6-89291d57e27f",
+    "rulings_uri": "https://api.scryfall.com/cards/83b6c7ab-f42f-40d2-9cb6-89291d57e27f/rulings"
+   },
+   {
+    "name": "Swell of Courage",
+    "oracle_id": "60033841-71c7-4370-a2bc-e570a5c100ea",
+    "oracle_text_sha256": "63644fe2a69ce867bba3f50f4b1cceedddb8e7e435295f55b814d419acf246ee",
+    "revision": "0fddb694-d863-4364-9bf9-650d7be3b471",
+    "rulings_uri": "https://api.scryfall.com/cards/0fddb694-d863-4364-9bf9-650d7be3b471/rulings"
+   },
+   {
+    "name": "Hunting Triad",
+    "oracle_id": "66bf0c4b-0c36-4d63-a929-5a7427a07279",
+    "oracle_text_sha256": "3867235f84397f04b447ee703ddcb44674ea6f7bf369273ae4a8400511ef30fa",
+    "revision": "c24930f3-34e8-40e1-a798-3df5d2d12ef1",
+    "rulings_uri": "https://api.scryfall.com/cards/c24930f3-34e8-40e1-a798-3df5d2d12ef1/rulings"
+   },
+   {
+    "name": "Mosquito Guard",
+    "oracle_id": "6beaeec2-b4e9-4904-b817-c0118549d4a9",
+    "oracle_text_sha256": "2feb0dc8fc6b80f08e7ca10d82a6348c7c4a7f4a8b340bf37b9b2d4638121221",
+    "revision": "626040ca-adb0-49c8-82cd-d1e27926cb79",
+    "rulings_uri": "https://api.scryfall.com/cards/626040ca-adb0-49c8-82cd-d1e27926cb79/rulings"
+   },
+   {
+    "name": "Earthbrawn",
+    "oracle_id": "91edf44a-0f46-4936-909a-934e2c4fe176",
+    "oracle_text_sha256": "edb7adce54edf80b88e7b03051192dd60b2ca447fd937188df6163f01c3c916c",
+    "revision": "478208df-9776-4354-b8a9-8da16ae1f50a",
+    "rulings_uri": "https://api.scryfall.com/cards/478208df-9776-4354-b8a9-8da16ae1f50a/rulings"
+   },
+   {
+    "name": "Wren's Run Hydra",
+    "oracle_id": "a2196bc3-2fe6-49d4-8c79-d6beb3d6c5d8",
+    "oracle_text_sha256": "ff2341873ee92b801a6027ba87b2349d8b56ca91c22fab56f91a4168dccdef42",
+    "revision": "5198ac65-118c-4616-8315-d71d41b883ad",
+    "rulings_uri": "https://api.scryfall.com/cards/5198ac65-118c-4616-8315-d71d41b883ad/rulings"
+   },
+   {
+    "name": "Rustic Clachan",
+    "oracle_id": "cde68428-0033-4ede-92f1-ab91de0a41fb",
+    "oracle_text_sha256": "0f5123e0e3949fffd4809139d826afc5946fdf0066a089c09c623c22252e7610",
+    "revision": "f50160e9-0b25-4e81-814d-cdcda2fb325d",
+    "rulings_uri": "https://api.scryfall.com/cards/f50160e9-0b25-4e81-814d-cdcda2fb325d/rulings"
+   },
+   {
+    "name": "Bannerhide Krushok",
+    "oracle_id": "e3191093-1aaa-4002-a603-7c8d132b6a31",
+    "oracle_text_sha256": "fbebb4dc25c04821b179c8547a2501d72851625ae8ea1a9190cbdb208beef5aa",
+    "revision": "1271251b-7d79-4cb4-80bb-98574aa63249",
+    "rulings_uri": "https://api.scryfall.com/cards/1271251b-7d79-4cb4-80bb-98574aa63249/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7518,6 +7588,30 @@
     "game.Storm"
    ],
    "review": "Capability-fit only: checked the pinned Oracle records for these exact IDs and the capability lookup in mtg/cardprogram/README.md. Buyback prior art: mtg/cards/authored/buyback_repeaters.go and mtg/rules/buyback_interaction_test.go. Tap, CreateToken, and ApplyContinuous declarations: mtg/game/primitive.go; token creation and controlled-creature pump example: mtg/cards/h/hire_a_crew.go. Storm implementation/tests: mtg/rules/storm.go and mtg/rules/storm_test.go. No primary-source, rulings, or Comprehensive Rules review is claimed."
+  },
+  {
+   "id": "reinforce-hand-activated-20261111",
+   "family": "reinforce n—{m}",
+   "oracle_ids": [
+    "13ec2390-e08a-4645-99e9-bac7e41917bb",
+    "1e44bb4e-aeea-4f43-9cbd-4c24a9b6b022",
+    "390320f7-11b8-4b61-8316-36c396470a09",
+    "60033841-71c7-4370-a2bc-e570a5c100ea",
+    "66bf0c4b-0c36-4d63-a929-5a7427a07279",
+    "6beaeec2-b4e9-4904-b817-c0118549d4a9",
+    "91edf44a-0f46-4936-909a-934e2c4fe176",
+    "a2196bc3-2fe6-49d4-8c79-d6beb3d6c5d8",
+    "cde68428-0033-4ede-92f1-ab91de0a41fb",
+    "e3191093-1aaa-4002-a603-7c8d132b6a31"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ActivatedAbility{ZoneOfFunction: zone.Hand}",
+    "cost.AdditionalDiscard{Source: zone.Hand}",
+    "game.AddCounter",
+    "game.DynamicAmountX"
+   ],
+   "review": "Capability-fit check at origin/main 6558590c67d14906e7e15dee89a9dc9f7ba2346d against pinned corpus sha256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; inspected all ten selected Oracle texts. Reinforce maps to a hand-zone activated ability, self-discard cost, and AddCounter (mtg/game/mechanic_template.go CyclingActivatedAbility and TransmuteActivatedAbility; mtg/game/primitive.go AddCounter). X amounts are available through DynamicAmountX and activated-action XValue (mtg/game/dynamic_amount.go; mtg/game/action/action.go). The remaining text is covered by existing supported paragraphs; Bannerhide Krushok's Scavenge has ScavengeActivatedAbility and behavioral prior art in mtg/rules/scavenge_test.go. No open Engine prerequisite identified. This is not Oracle or rules-source review."
   }
  ],
  "records": [
@@ -69304,8 +69398,10 @@
    "oracle_id": "13ec2390-e08a-4645-99e9-bac7e41917bb",
    "revision": "fd872395-f351-4f7e-9290-c34d1c98a567",
    "name": "Burrenton Bombardier",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestBurrentonBombardierReinforceFromHand"
   },
   {
    "oracle_id": "13ee85c3-a16a-41ac-bbaa-c7549c700a03",
@@ -78225,8 +78321,10 @@
    "oracle_id": "1e44bb4e-aeea-4f43-9cbd-4c24a9b6b022",
    "revision": "723ec2ef-aa82-449d-88b0-405d06454fc2",
    "name": "Break Ties",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestBreakTiesReinforceFromHand; TestBreakTiesSpellModes"
   },
   {
    "oracle_id": "1e46c709-5278-44f3-9f0e-f71bd9558339",
@@ -100161,8 +100259,10 @@
    "oracle_id": "390320f7-11b8-4b61-8316-36c396470a09",
    "revision": "83b6c7ab-f42f-40d2-9cb6-89291d57e27f",
    "name": "Fowl Strike",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestFowlStrikeReinforceFromHand; TestFowlStrikeDestroysFlyingCreature"
   },
   {
    "oracle_id": "39050823-ccda-43c0-818d-d5db15d82b99",
@@ -133237,8 +133337,10 @@
    "oracle_id": "60033841-71c7-4370-a2bc-e570a5c100ea",
    "revision": "0fddb694-d863-4364-9bf9-650d7be3b471",
    "name": "Swell of Courage",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestSwellOfCourageReinforceFromHand; TestSwellOfCourageBuffsYourCreatures"
   },
   {
    "oracle_id": "60040023-7bf0-42e0-ab30-46a730675564",
@@ -139122,8 +139224,10 @@
    "oracle_id": "66bf0c4b-0c36-4d63-a929-5a7427a07279",
    "revision": "c24930f3-34e8-40e1-a798-3df5d2d12ef1",
    "name": "Hunting Triad",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestHuntingTriadReinforceFromHand; TestHuntingTriadCreatesElfWarriorTokens"
   },
   {
    "oracle_id": "66c227f2-0e74-43e2-ab24-3866d15c5eef",
@@ -143861,8 +143965,10 @@
    "oracle_id": "6beaeec2-b4e9-4904-b817-c0118549d4a9",
    "revision": "626040ca-adb0-49c8-82cd-d1e27926cb79",
    "name": "Mosquito Guard",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestMosquitoGuardReinforceFromHand"
   },
   {
    "oracle_id": "6beaf310-c623-4ab6-a0d3-f4c8221f255b",
@@ -176251,8 +176357,10 @@
    "oracle_id": "91edf44a-0f46-4936-909a-934e2c4fe176",
    "revision": "478208df-9776-4354-b8a9-8da16ae1f50a",
    "name": "Earthbrawn",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestEarthbrawnReinforceFromHand; TestEarthbrawnTargetsCreature"
   },
   {
    "oracle_id": "91f34686-cb96-49c0-b4a7-49dd1fd076e2",
@@ -190018,8 +190126,10 @@
    "oracle_id": "a2196bc3-2fe6-49d4-8c79-d6beb3d6c5d8",
    "revision": "5198ac65-118c-4616-8315-d71d41b883ad",
    "name": "Wren's Run Hydra",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestWrensRunHydraReinforceFromHand; TestWrensRunHydraEntersWithCastX"
   },
   {
    "oracle_id": "a2198d36-4e8c-4d64-bda5-a95d85398155",
@@ -226622,8 +226732,10 @@
    "oracle_id": "cde68428-0033-4ede-92f1-ab91de0a41fb",
    "revision": "f50160e9-0b25-4e81-814d-cdcda2fb325d",
    "name": "Rustic Clachan",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestRusticClachanReinforceFromHand; TestRusticClachanRevealOrEntersTappedAndProducesWhite"
   },
   {
    "oracle_id": "cdea4344-24b6-4659-a830-c51d4b348af5",
@@ -244862,8 +244974,10 @@
    "oracle_id": "e3191093-1aaa-4002-a603-7c8d132b6a31",
    "revision": "1271251b-7d79-4cb4-80bb-98574aa63249",
    "name": "Bannerhide Krushok",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "reinforce n—{m}",
+   "batch": "reinforce-hand-activated-20261111",
+   "evidence": "mtg/rules/reinforce_cards_test.go: TestBannerhideKrushokReinforceFromHand; TestBannerhideKrushokScavengesFromGraveyard"
   },
   {
    "oracle_id": "e31d4be7-cd24-4287-b8ca-66f8612731a6",
