@@ -952,6 +952,27 @@
     "oracle_text_sha256": "fbebb4dc25c04821b179c8547a2501d72851625ae8ea1a9190cbdb208beef5aa",
     "revision": "1271251b-7d79-4cb4-80bb-98574aa63249",
     "rulings_uri": "https://api.scryfall.com/cards/1271251b-7d79-4cb4-80bb-98574aa63249/rulings"
+   },
+   {
+    "name": "Restless Dreams",
+    "oracle_id": "65f1dd09-0640-47f8-8bfd-7aceaa5646a6",
+    "oracle_text_sha256": "a5d94af51eef4dbf9af98e438bdd1c6c86d2bf53265e584650812b7f465e2d51",
+    "revision": "63795680-5310-4c99-92c1-70e453391de9",
+    "rulings_uri": "https://api.scryfall.com/cards/63795680-5310-4c99-92c1-70e453391de9/rulings"
+   },
+   {
+    "name": "Turbulent Dreams",
+    "oracle_id": "83134570-debe-4bc0-9656-2a16801a3592",
+    "oracle_text_sha256": "6264d0b451b3ae1bb49ef422d94784a146de0ce8f8c529d184457ed43cb47e51",
+    "revision": "d879226b-8ee3-4a48-b03a-d183594dc586",
+    "rulings_uri": "https://api.scryfall.com/cards/d879226b-8ee3-4a48-b03a-d183594dc586/rulings"
+   },
+   {
+    "name": "Nostalgic Dreams",
+    "oracle_id": "fabbc474-682c-4565-861c-d41de05abb8f",
+    "oracle_text_sha256": "e3492809784f0039a155ae0b2ad52ab23f90e57bd129275fe848e8dc1e30f09b",
+    "revision": "299065ad-ee2e-4973-9b41-fd04c36d19a4",
+    "rulings_uri": "https://api.scryfall.com/cards/299065ad-ee2e-4973-9b41-fd04c36d19a4/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7612,6 +7633,24 @@
     "game.DynamicAmountX"
    ],
    "review": "Capability-fit check at origin/main 6558590c67d14906e7e15dee89a9dc9f7ba2346d against pinned corpus sha256 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; inspected all ten selected Oracle texts. Reinforce maps to a hand-zone activated ability, self-discard cost, and AddCounter (mtg/game/mechanic_template.go CyclingActivatedAbility and TransmuteActivatedAbility; mtg/game/primitive.go AddCounter). X amounts are available through DynamicAmountX and activated-action XValue (mtg/game/dynamic_amount.go; mtg/game/action/action.go). The remaining text is covered by existing supported paragraphs; Bannerhide Krushok's Scavenge has ScavengeActivatedAbility and behavioral prior art in mtg/rules/scavenge_test.go. No open Engine prerequisite identified. This is not Oracle or rules-source review."
+  },
+  {
+   "id": "x-discard-dreams-20261111-1949",
+   "family": "none",
+   "oracle_ids": [
+    "65f1dd09-0640-47f8-8bfd-7aceaa5646a6",
+    "83134570-debe-4bc0-9656-2a16801a3592",
+    "fabbc474-682c-4565-861c-d41de05abb8f"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.AdditionalDiscard with AmountFromX",
+    "TargetSpec.CountEqualsX",
+    "Context.MoveCards",
+    "game.MovePermanent",
+    "game.MoveResolvingSpell"
+   ],
+   "review": "Checked origin/main b9ce801: mtg/rules/payment/additional.go (X amount calculation and discard planning); mtg/game/ability.go (CountEqualsX); mtg/cards/authored/numeric_targets.go (target-card return and resolving-spell exile); mtg/cards/d/distorting_wake.go (X-target permanent return). Checked these candidates' text in the pinned corpus for fit only."
   }
  ],
  "records": [
@@ -138533,8 +138572,10 @@
    "oracle_id": "65f1dd09-0640-47f8-8bfd-7aceaa5646a6",
    "revision": "63795680-5310-4c99-92c1-70e453391de9",
    "name": "Restless Dreams",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none",
+   "batch": "x-discard-dreams-20261111-1949",
+   "evidence": "mtg/rules/x_discard_dreams_test.go: TestRestlessDreamsDiscardsXAndReturnsCreatureCards"
   },
   {
    "oracle_id": "65f8e726-be50-49ee-96fc-d3a2080d7b8c",
@@ -163489,8 +163530,10 @@
    "oracle_id": "83134570-debe-4bc0-9656-2a16801a3592",
    "revision": "d879226b-8ee3-4a48-b03a-d183594dc586",
    "name": "Turbulent Dreams",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none",
+   "batch": "x-discard-dreams-20261111-1949",
+   "evidence": "mtg/rules/x_discard_dreams_test.go: TestTurbulentDreamsDiscardsXAndReturnsNonlandPermanents"
   },
   {
    "oracle_id": "8314bdf5-1539-4215-949e-f46584cb43bb",
@@ -265165,8 +265208,10 @@
    "oracle_id": "fabbc474-682c-4565-861c-d41de05abb8f",
    "revision": "299065ad-ee2e-4973-9b41-fd04c36d19a4",
    "name": "Nostalgic Dreams",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none",
+   "batch": "x-discard-dreams-20261111-1949",
+   "evidence": "mtg/rules/x_discard_dreams_test.go: TestNostalgicDreamsDiscardsXReturnsCardsAndExiles"
   },
   {
    "oracle_id": "fac310c7-c1e5-42f9-8140-17472be21d0d",
