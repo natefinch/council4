@@ -75,7 +75,6 @@ func leaveDepartedOwnedObjects(g *game.Game) {
 		}
 		delete(g.CardCounters, cardID)
 		delete(g.AdventureCards, cardID)
-		delete(g.SuspendedCards, cardID)
 		delete(g.PlottedCards, cardID)
 		delete(g.ForetoldCards, cardID)
 		delete(g.ExileCounterExiledBy, cardID)

@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/opt"
 )
@@ -78,12 +79,9 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 		return actionFailed
 	}
 	if destination == zone.Exile {
-		if g.SuspendedCards == nil {
-			g.SuspendedCards = make(map[id.ID]game.SuspendedCard)
-		}
-		g.SuspendedCards[cardID] = game.SuspendedCard{
-			Owner: card.Owner, Controller: playerID, TimeCounters: counters,
-		}
+		change := newExileCardCounterChange(g, playerID)
+		change.add(cardID, counter.Time, counters)
+		change.publish()
 	}
 	return actionApplied
 }
@@ -105,26 +103,38 @@ func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []act
 	return actions
 }
 
+// processSuspendUpkeep removes a time counter from each card the active player
+// owns that is suspended (CR 702.62a, 702.62b); a suspended card's abilities
+// are controlled by its owner (CR 108.4a). Each removal is published as an
+// EventCountersRemoved for the exiled card. When the last time counter is
+// removed, its owner may cast it.
 func (e *Engine) processSuspendUpkeep(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	for _, cardID := range suspendedCardIDsInOrder(g) {
-		suspended := g.SuspendedCards[cardID]
-		if suspended.Controller != playerID || suspended.TimeCounters <= 0 {
+	for _, cardID := range suspendedCardIDsInOrder(g, playerID) {
+		if !cardIsSuspended(g, cardID) {
 			continue
 		}
-		suspended.TimeCounters--
-		if suspended.TimeCounters > 0 {
-			g.SuspendedCards[cardID] = suspended
+		change := newExileCardCounterChange(g, playerID)
+		change.remove(cardID, counter.Time, 1)
+		change.publish()
+		if g.HasExileCounter(cardID, counter.Time) {
 			continue
 		}
-		g.SuspendedCards[cardID] = suspended
 		e.castSuspendedCard(g, playerID, cardID, agents, log)
 	}
 }
 
-func suspendedCardIDsInOrder(g *game.Game) []id.ID {
-	ids := make([]id.ID, 0, len(g.SuspendedCards))
-	for cardID := range g.SuspendedCards {
-		ids = append(ids, cardID)
+// suspendedCardIDsInOrder lists the suspended cards owned by playerID in card
+// ID order.
+func suspendedCardIDsInOrder(g *game.Game, playerID game.PlayerID) []id.ID {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	var ids []id.ID
+	for _, cardID := range player.Exile.All() {
+		if card, ok := g.GetCardInstance(cardID); ok && card.Owner == playerID && cardIsSuspended(g, cardID) {
+			ids = append(ids, cardID)
+		}
 	}
 	slices.Sort(ids)
 	return ids
