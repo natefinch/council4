@@ -6,7 +6,7 @@ import path from "node:path";
 import { closeLandedIssue, deferredRemainder, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, prepareResume, checkArgs, checkPolicy, checkSelection, selectionProblem, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
 import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, classifyInfrastructure, pullRequestAPI } from "./pull-request.mjs";
-import { prepareCardBatch, verifyCardBatch } from "./queue.mjs";
+import { prepareCardBatch, verifyCardBatch, normalizeBatchPlan } from "./queue.mjs";
 import { rankTriage, chunk } from "./triage.mjs";
 import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
 import { gapEvidence, earlierUnits, issueStates } from "./workflow.mjs";
@@ -481,6 +481,26 @@ async function queueFixture(t) {
     owner: "run", planPath: path.join(workPath, ".cardwork/plan.json"), command };
   return { options, manifest, calls };
 }
+
+test("Batch plans get exact identities from the queue, not the selector's copied IDs", () => {
+  const queue = { corpus_sha256: "pin", records: [
+    { oracle_id: "aaaa-1", revision: "rev-a", name: "Alpha", status: "unclaimed" },
+    { oracle_id: "bbbb-2", revision: "rev-b", name: "Beta", status: "blocked", blocker: 7 },
+    { oracle_id: "cccc-3", revision: "rev-c", name: "Gamma", status: "unclaimed" },
+    { oracle_id: "dddd-4", revision: "rev-d", name: "Twin", status: "unclaimed" },
+    { oracle_id: "eeee-5", revision: "rev-e", name: "Twin", status: "unclaimed" },
+    { oracle_id: "ffff-6", revision: "rev-f", name: "Taken", status: "unclaimed", batch: "other" },
+  ] };
+  const plan = (...records) => JSON.stringify({ corpus_sha256: "stale", batches: [{ id: "b", oracle_ids: ["junk"] }], records });
+  const fixed = normalizeBatchPlan(plan({ oracle_id: "aaa-1", revision: "x", name: "Alpha" },
+    { oracle_id: "bbbb-2", revision: "rev-b", name: "Beta" }, { oracle_id: "eeee-5", revision: "typo", name: "Twin" }) + "\nNotes: {done}", queue);
+  assert.equal(fixed.corpus_sha256, "pin");
+  assert.deepEqual(fixed.batches[0].oracle_ids, ["aaaa-1", "bbbb-2", "eeee-5"]);
+  assert.deepEqual(fixed.records.map(r => r.revision), ["rev-a", "rev-b", "rev-e"]);
+  assert.throws(() => normalizeBatchPlan(plan({ oracle_id: "x", name: "Twin" }), queue), /ambiguous/);
+  assert.throws(() => normalizeBatchPlan(plan({ oracle_id: "x", name: "Taken" }), queue), /not an unbatched/);
+  assert.throws(() => normalizeBatchPlan(plan({ oracle_id: "x", name: "Alpha" }, { oracle_id: "y", name: "Alpha" }), queue), /twice/);
+});
 
 test("Coordinator claims the saved batch before card work and owns verified admission", async t => {
   const f = await queueFixture(t);

@@ -1,6 +1,50 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+// The first complete JSON object in text; agents sometimes append commentary.
+export function firstJSONObject(text) {
+  const start = text.indexOf("{");
+  if (start < 0) throw new Error("Batch plan has no JSON object");
+  let depth = 0, inString = false, escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const c = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (c === "\\") escaped = true;
+      else if (c === '"') inString = false;
+    } else if (c === '"') inString = true;
+    else if (c === "{") depth++;
+    else if (c === "}" && --depth === 0) return JSON.parse(text.slice(start, i + 1));
+  }
+  throw new Error("Batch plan JSON is incomplete");
+}
+
+// Selector agents copy 36-character Oracle and printing IDs by hand and
+// sometimes corrupt them; card names are reliable. Rebuild every plan identity
+// from the saved queue: an exact Oracle ID match wins, otherwise the unique
+// candidate (unclaimed and unbatched, or blocked) with that name.
+export function normalizeBatchPlan(text, queue) {
+  const plan = firstJSONObject(text);
+  if (!Array.isArray(plan.batches) || plan.batches.length !== 1 || !Array.isArray(plan.records)) {
+    throw new Error("Batch plan needs exactly one batch and its records");
+  }
+  const candidate = record => (record.status === "unclaimed" && !record.batch) || record.status === "blocked";
+  const byID = new Map(queue.records.map(record => [record.oracle_id, record]));
+  const records = plan.records.map(planned => {
+    const exact = byID.get(planned.oracle_id);
+    if (exact?.name === planned.name && candidate(exact)) return { ...planned, oracle_id: exact.oracle_id, revision: exact.revision };
+    const named = queue.records.filter(record => record.name === planned.name && candidate(record));
+    if (named.length !== 1) {
+      throw new Error(`${planned.name}: ${named.length ? "ambiguous name; give its exact Oracle ID" : "not an unbatched or blocked queue card"}`);
+    }
+    return { ...planned, oracle_id: named[0].oracle_id, revision: named[0].revision };
+  });
+  const ids = records.map(record => record.oracle_id);
+  if (new Set(ids).size !== ids.length) throw new Error("Batch plan names the same card twice");
+  return { ...plan, corpus_sha256: queue.corpus_sha256, records,
+    batches: [{ ...plan.batches[0], oracle_ids: ids }] };
+}
+
 // prerequisiteEvidence maps a filled gap issue to {runtime_revision, evidence};
 // plan members still blocked on that issue are reassessed before batching.
 export async function prepareCardBatch({ workPath, task, corpus, owner, planPath, command, signal, prerequisiteEvidence = {} }) {
