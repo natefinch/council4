@@ -1176,6 +1176,69 @@
     "oracle_text_sha256": "85b1b7a436590f2e77e8fe313c0b522aac12ab2f3e030e02bd6402b37303052d",
     "revision": "5e50c148-9f30-4131-8ec1-85e9ba8cafbb",
     "rulings_uri": "https://api.scryfall.com/cards/5e50c148-9f30-4131-8ec1-85e9ba8cafbb/rulings"
+   },
+   {
+    "name": "Exquisite Huntmaster",
+    "oracle_id": "393ef069-ea6b-4969-b878-d942281cc918",
+    "oracle_text_sha256": "5bc551eeac78229bfce58c5031388adb122abd4f97fea3d73f82d308d9e8766c",
+    "revision": "444b75d9-f7c7-4a13-9318-02d7bbd80c9c",
+    "rulings_uri": "https://api.scryfall.com/cards/444b75d9-f7c7-4a13-9318-02d7bbd80c9c/rulings"
+   },
+   {
+    "name": "Soul of Eternity",
+    "oracle_id": "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
+    "oracle_text_sha256": "a00dfc3b458a07dd3868ed8f2c1be9b89e2f3d07b03f54ce6c7ceb73272703fd",
+    "revision": "08241f94-8b5e-4f9b-8120-8175e3256e35",
+    "rulings_uri": "https://api.scryfall.com/cards/08241f94-8b5e-4f9b-8120-8175e3256e35/rulings"
+   },
+   {
+    "name": "Angel of Indemnity",
+    "oracle_id": "4f57a320-b6b5-49de-af0a-f2e2649758a7",
+    "oracle_text_sha256": "b52e9c492d3e9ad3418e335346634764bb41786ebd7e267d08502317ab1cfb81",
+    "revision": "41163f43-7357-4bbc-a1e7-9c8070135c93",
+    "rulings_uri": "https://api.scryfall.com/cards/41163f43-7357-4bbc-a1e7-9c8070135c93/rulings"
+   },
+   {
+    "name": "Briarblade Adept",
+    "oracle_id": "6680a5f7-3ac1-4550-a29a-9553ad7ae465",
+    "oracle_text_sha256": "e4d1986c1e77d4431dad50a1122379b084fc12863d7d7e3160a640c05f931a9b",
+    "revision": "9d3fb5f1-baf5-4934-aac7-ffbaa85b2428",
+    "rulings_uri": "https://api.scryfall.com/cards/9d3fb5f1-baf5-4934-aac7-ffbaa85b2428/rulings"
+   },
+   {
+    "name": "Impulsive Pilferer",
+    "oracle_id": "7d9fc9e7-d80b-49c3-871c-ed25b3059ae8",
+    "oracle_text_sha256": "25098ca46c39f7bf27609e30b9f8e8a819b1001a4b2e6890d8506d0b9254bad9",
+    "revision": "0f020359-5ad1-43c4-8588-172be635cccc",
+    "rulings_uri": "https://api.scryfall.com/cards/0f020359-5ad1-43c4-8588-172be635cccc/rulings"
+   },
+   {
+    "name": "Kinsbaile Courier",
+    "oracle_id": "92c0346d-c375-4851-9806-5d3b9b83425f",
+    "oracle_text_sha256": "27451e5933b0f8da11bddd7e2ae46d3f774dd1b7e3fcc4ed48c78de96cd9cc1b",
+    "revision": "56b2b413-e00f-440d-9d27-92eb069b8c71",
+    "rulings_uri": "https://api.scryfall.com/cards/56b2b413-e00f-440d-9d27-92eb069b8c71/rulings"
+   },
+   {
+    "name": "Broodmate Tyrant",
+    "oracle_id": "9b984236-39cf-4552-827b-e81c26cfb388",
+    "oracle_text_sha256": "e7778cfc7025d433db45f49d0ac12e30ee6313e5fdb2256cf6c3eeb72e1f6a92",
+    "revision": "b46d498b-dac3-4ab0-bcd6-514025a046aa",
+    "rulings_uri": "https://api.scryfall.com/cards/b46d498b-dac3-4ab0-bcd6-514025a046aa/rulings"
+   },
+   {
+    "name": "Fin-Clade Fugitives",
+    "oracle_id": "dad2965a-ceb4-42ac-bb62-de7eea500011",
+    "oracle_text_sha256": "8bfdbc3ab54608781ab4524ad8db87bf56aa0eda33d69450c75ea64e881b117a",
+    "revision": "3eb7af70-e024-44bf-a52b-209074b005a3",
+    "rulings_uri": "https://api.scryfall.com/cards/3eb7af70-e024-44bf-a52b-209074b005a3/rulings"
+   },
+   {
+    "name": "Trove Tracker",
+    "oracle_id": "f27972da-ad2f-4df5-82d3-c909cce8cc91",
+    "oracle_text_sha256": "6370a49f1da013e71b9e07bd246d61452693364db9175cc1c5aeb15fc8d45c96",
+    "revision": "c3b74135-b8db-4485-a4b1-7aaa3ef28072",
+    "rulings_uri": "https://api.scryfall.com/cards/c3b74135-b8db-4485-a4b1-7aaa3ef28072/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7931,6 +7994,35 @@
     "game.ContinuousEffect"
    ],
    "review": "Capability-only review at base 8009ed3ead3ea28bd9f49706c9a5b649d84e85b6; pinned corpus identities and text checked for all seven cards. The novel For Mirrodin! paragraph maps to the existing enter trigger → CreateToken(PublishLinked) → Attach sequence in mtg/game/mechanic_template.go:LivingWeaponTriggeredAbility; mtg/rules/living_weapon_test.go:TestLivingWeaponCreatesGermAndAttaches verifies token creation and attachment. The new cards use a custom 2/2 red Rebel TokenDef. Their remaining equipment bonuses and Equip abilities fit existing continuous-effect and equip operations. No Engine prerequisites or CR/rulings source review."
+  },
+  {
+   "id": "encore-20261112-1028",
+   "family": "encore",
+   "oracle_ids": [
+    "393ef069-ea6b-4969-b878-d942281cc918",
+    "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
+    "4f57a320-b6b5-49de-af0a-f2e2649758a7",
+    "6680a5f7-3ac1-4550-a29a-9553ad7ae465",
+    "7d9fc9e7-d80b-49c3-871c-ed25b3059ae8",
+    "92c0346d-c375-4851-9806-5d3b9b83425f",
+    "9b984236-39cf-4552-827b-e81c26cfb388",
+    "dad2965a-ceb4-42ac-bb62-de7eea500011",
+    "f27972da-ad2f-4df5-82d3-c909cce8cc91"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.EncoreActivatedBody",
+    "CreateToken.MustAttackEachOpponentThisTurn",
+    "CreateDelayedTrigger",
+    "EventPermanentDied/EventPermanentEntered/EventAttackerDeclared",
+    "CreateToken",
+    "AddCounter",
+    "Draw",
+    "targeted graveyard permanent-card return via MoveCards/PutOnBattlefield",
+    "DynamicValueControllerLifeTotal",
+    "RuleEffectCantBeBlockedByCreaturesWith"
+   ],
+   "review": "Checked base 657016910ab5aa2f29f53778b9819336b7a080bf: mtg/game/ability.go EncoreActivatedBody, mtg/game/primitive.go MustAttackEachOpponentThisTurn, mtg/rules/encore_attack_requirement_test.go; supporting prior art includes mtg/rules/cda_power_toughness_test.go and mtg/rules/combat_blockers_test.go. Checked all nine Oracle texts in the pinned corpus and confirmed the other paragraphs use existing trigger, token, counter, draw, graveyard-return, dynamic-P/T, and blocker-restriction operations. No rulings or Comprehensive Rules review performed."
   }
  ],
  "records": [
@@ -100789,8 +100881,10 @@
    "oracle_id": "393ef069-ea6b-4969-b878-d942281cc918",
    "revision": "444b75d9-f7c7-4a13-9318-02d7bbd80c9c",
    "name": "Exquisite Huntmaster",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestExquisiteHuntmasterEncoreCopyCreatesElfAfterDying"
   },
   {
    "oracle_id": "393ff8c5-4da0-4290-b498-222cc0244026",
@@ -117995,8 +118089,10 @@
    "oracle_id": "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
    "revision": "08241f94-8b5e-4f9b-8120-8175e3256e35",
    "name": "Soul of Eternity",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestSoulOfEternityEncoreCopyUsesControllerLifeTotal"
   },
   {
    "oracle_id": "4d22b01b-63dd-4698-a221-0acaefb2000b",
@@ -119607,8 +119703,10 @@
    "oracle_id": "4f57a320-b6b5-49de-af0a-f2e2649758a7",
    "revision": "41163f43-7357-4bbc-a1e7-9c8070135c93",
    "name": "Angel of Indemnity",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestAngelOfIndemnityEncoreCopyReturnsTargetPermanentCard"
   },
   {
    "oracle_id": "4f5921c1-b932-4d6b-bb8e-01992578abdc",
@@ -139344,8 +139442,10 @@
    "oracle_id": "6680a5f7-3ac1-4550-a29a-9553ad7ae465",
    "revision": "9d3fb5f1-baf5-4934-aac7-ffbaa85b2428",
    "name": "Briarblade Adept",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestBriarbladeAdeptEncoreCopyWeakensCreatureWhenAttacking"
   },
   {
    "oracle_id": "66810ef7-ea3a-4afa-92f0-b21ec52cc8d0",
@@ -159563,8 +159663,10 @@
    "oracle_id": "7d9fc9e7-d80b-49c3-871c-ed25b3059ae8",
    "revision": "0f020359-5ad1-43c4-8588-172be635cccc",
    "name": "Impulsive Pilferer",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestImpulsivePilfererEncoreCopyCreatesTreasureAfterDying"
   },
   {
    "oracle_id": "7da0e5de-3e4c-420a-8685-991206100b9d",
@@ -177589,8 +177691,10 @@
    "oracle_id": "92c0346d-c375-4851-9806-5d3b9b83425f",
    "revision": "56b2b413-e00f-440d-9d27-92eb069b8c71",
    "name": "Kinsbaile Courier",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestKinsbaileCourierEncoreCopyAddsCounterOnEntry"
   },
   {
    "oracle_id": "92c43ee1-0f7d-4993-8d3a-689cc87d7480",
@@ -184940,8 +185044,10 @@
    "oracle_id": "9b984236-39cf-4552-827b-e81c26cfb388",
    "revision": "b46d498b-dac3-4ab0-bcd6-514025a046aa",
    "name": "Broodmate Tyrant",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestBroodmateTyrantEncoreCopyCreatesFlyingDragon"
   },
   {
    "oracle_id": "9b9a10ff-5a5d-4df8-88aa-18d84ff9117c",
@@ -238503,8 +238609,10 @@
    "oracle_id": "dad2965a-ceb4-42ac-bb62-de7eea500011",
    "revision": "3eb7af70-e024-44bf-a52b-209074b005a3",
    "name": "Fin-Clade Fugitives",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestFinCladeFugitivesEncoreCopyRejectsSmallBlocker"
   },
   {
    "oracle_id": "dad36dc0-39aa-46f9-819b-cad7a578c037",
@@ -258628,8 +258736,10 @@
    "oracle_id": "f27972da-ad2f-4df5-82d3-c909cce8cc91",
    "revision": "c3b74135-b8db-4485-a4b1-7aaa3ef28072",
    "name": "Trove Tracker",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestTroveTrackerEncoreCopyDrawsWhenItDies"
   },
   {
    "oracle_id": "f27d52e6-aab9-4f95-ae46-33d1173bf4fe",
