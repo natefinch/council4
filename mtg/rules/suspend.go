@@ -103,20 +103,52 @@ func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []act
 	return actions
 }
 
-// processSuspendUpkeep removes a time counter from each card the active player
-// owns that is suspended (CR 702.62a, 702.62b); a suspended card's abilities
-// are controlled by its owner (CR 108.4a). Each removal is published as an
-// EventCountersRemoved for the exiled card, so removing the last one triggers
-// suspend's cast ability.
-func processSuspendUpkeep(g *game.Game, playerID game.PlayerID) {
-	for _, cardID := range suspendedCardIDsInOrder(g, playerID) {
-		if !cardIsSuspended(g, cardID) {
-			continue
-		}
-		change := newExileCardCounterChange(g, playerID)
-		change.remove(cardID, counter.Time, 1)
-		change.publish()
+// suspendUpkeepAbility is suspend's intrinsic upkeep triggered ability that
+// functions in exile (CR 702.62a). It is shared immutable data; its behavior is
+// resolveSuspendUpkeepTrigger, selected by StackObject.SuspendUpkeep.
+var suspendUpkeepAbility = &game.TriggeredAbility{
+	Text: "At the beginning of your upkeep, if this card is suspended, remove a time counter from it.",
+}
+
+// suspendUpkeepTriggers detects suspend's upkeep ability (CR 702.62a) from the
+// beginning of an upkeep step, including an additional one: every card the
+// active player owns that is suspended (CR 702.62b) at that moment triggers
+// once (CR 603.4). The ability is controlled by the card's owner (CR 108.4a)
+// and is bound to that exiled card's zone version, so it goes on the stack
+// with the owner's other beginning-of-upkeep triggers in the order they
+// choose (CR 603.3b).
+func suspendUpkeepTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventBeginningOfStep || event.Step != game.StepUpkeep {
+		return nil
 	}
+	var pending []pendingTriggeredAbility
+	for _, cardID := range suspendedCardIDsInOrder(g, event.Player) {
+		card, _ := g.GetCardInstance(cardID)
+		pending = append(pending, pendingTriggeredAbility{
+			controller: card.Owner, sourceID: card.ID, sourceCardID: card.ID,
+			sourceZone: zone.Exile, sourceZoneVersion: card.ZoneVersion, face: game.FaceFront,
+			inline: suspendUpkeepAbility, suspendUpkeep: true, event: event, hasEvent: true,
+			triggerMultiplierCaptured: true,
+		})
+	}
+	return pending
+}
+
+// resolveSuspendUpkeepTrigger resolves suspend's upkeep ability (CR 702.62a).
+// The intervening "if this card is suspended" condition is rechecked (CR
+// 603.4) for the same exiled object: a card that left exile, even if it has
+// since returned, is a new object the ability doesn't affect (CR 400.7).
+// Otherwise one time counter is removed through the shared exile-card counter
+// operation; removing the last one triggers suspend's cast ability.
+func resolveSuspendUpkeepTrigger(g *game.Game, obj *game.StackObject) string {
+	card, ok := g.GetCardInstance(obj.SourceCardID)
+	if !ok || card.ZoneVersion != obj.SourceZoneVersion || !cardIsSuspended(g, card.ID) {
+		return "resolved"
+	}
+	change := newExileCardCounterChange(g, obj.Controller)
+	change.remove(card.ID, counter.Time, 1)
+	change.publish()
+	return "resolved"
 }
 
 // suspendedCardIDsInOrder lists the suspended cards owned by playerID in card

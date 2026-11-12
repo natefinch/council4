@@ -36,6 +36,7 @@ type pendingTriggeredAbility struct {
 	sagaChapter                  bool
 	siegeDefeat                  bool
 	suspendCast                  bool
+	suspendUpkeep                bool
 	rebound                      bool
 	wardTargetID                 id.ID
 	capturedTargetControllerLKI  map[int]game.PlayerID
@@ -155,6 +156,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			SagaChapter:                 trigger.sagaChapter,
 			SiegeDefeat:                 trigger.siegeDefeat,
 			SuspendCast:                 trigger.suspendCast,
+			SuspendUpkeep:               trigger.suspendUpkeep,
 			Rebound:                     trigger.rebound,
 			WardTargetStackObjectID:     trigger.wardTargetID,
 			Controller:                  trigger.controller,
@@ -966,6 +968,7 @@ func eventTriggeredAbilities(g *game.Game, event game.Event, events []game.Event
 	}
 	pending = append(pending, cycledCardSelfTriggers(g, event)...)
 	pending = append(pending, graveyardStepSourceTriggers(g, event)...)
+	pending = append(pending, suspendUpkeepTriggers(g, event)...)
 	pending = append(pending, suspendCastTriggers(g, event)...)
 	pending = append(pending, castSpellSelfTriggers(g, event)...)
 	for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
@@ -986,6 +989,7 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 			Face: trigger.face, AbilityIndex: trigger.abilityIndex, Ability: trigger.inline, SagaChapter: trigger.sagaChapter,
 			SiegeDefeat:     trigger.siegeDefeat,
 			SuspendCast:     trigger.suspendCast,
+			SuspendUpkeep:   trigger.suspendUpkeep,
 			OrdinaryTrigger: trigger.ordinaryTrigger,
 			AdditionalTriggers: liveChosenCreatureTypeAdditionalTriggerCount(g, &trigger) +
 				enteringPermanentAdditionalTriggerCount(g, &trigger) + controlledPermanentAdditionalTriggerCount(g, &trigger),
@@ -1023,6 +1027,7 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 			sagaChapter:               captured.SagaChapter,
 			siegeDefeat:               captured.SiegeDefeat,
 			suspendCast:               captured.SuspendCast,
+			suspendUpkeep:             captured.SuspendUpkeep,
 			event:                     event,
 			hasEvent:                  true,
 			wardTargetID:              wardTargetID,

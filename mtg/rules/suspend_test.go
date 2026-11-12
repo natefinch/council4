@@ -106,10 +106,11 @@ func TestSuspendCastsSpellWhenLastCounterRemoved(t *testing.T) {
 	})
 }
 
-// TestSuspendCastTriggersOrderedByOwner proves two cards losing their last
-// time counter in one upkeep trigger two cast abilities that their owner puts
-// on the stack in any order (CR 603.3b); the last one placed resolves first.
-func TestSuspendCastTriggersOrderedByOwner(t *testing.T) {
+// TestSuspendUpkeepTriggersOrderedByOwner proves two suspended cards trigger
+// two upkeep abilities that their owner puts on the stack in any order (CR
+// 603.3b); the last one placed resolves first, removing that card's last time
+// counter and triggering its cast ability before the other card's.
+func TestSuspendUpkeepTriggersOrderedByOwner(t *testing.T) {
 	for _, resolveSecondFirst := range []bool{false, true} {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 		engine := NewEngine(nil)
@@ -120,15 +121,15 @@ func TestSuspendCastTriggersOrderedByOwner(t *testing.T) {
 			want = []id.ID{secondID, firstID}
 		}
 
-		processSuspendUpkeep(g, game.Player1)
 		agent := &suspendTriggerOrderAgent{resolveFirst: want[0]}
-		engine.putTriggeredAbilitiesOnStackWithChoices(g, suspendAgents(agent), &TurnLog{})
+		engine.beginSuspendUpkeep(g, game.Player1, suspendAgents(agent))
 		if agent.requests != 1 || g.Stack.Size() != 2 {
-			t.Fatalf("order requests = %d stack = %d, want one ordering choice for two cast triggers", agent.requests, g.Stack.Size())
+			t.Fatalf("order requests = %d stack = %d, want one ordering choice for two upkeep triggers", agent.requests, g.Stack.Size())
 		}
-		requireSuspendCastTrigger(t, g, want[0])
+		requireSuspendUpkeepTrigger(t, g, want[0])
 		for !g.Stack.IsEmpty() {
 			engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 		}
 
 		var castOrder []id.ID
@@ -322,19 +323,46 @@ func addSuspendedCard(g *game.Game, playerID game.PlayerID, def *game.CardDef, c
 	return cardID
 }
 
-// runSuspendUpkeep removes the upkeep time counters, puts the resulting
-// suspend cast triggers on the stack and resolves each one that reaches the
-// top, leaving any spell cast this way on the stack.
-func (e *Engine) runSuspendUpkeep(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent) {
-	processSuspendUpkeep(g, playerID)
+// beginSuspendUpkeep begins an upkeep step of playerID's turn and puts the
+// resulting beginning-of-upkeep triggers, including suspend's, on the stack.
+func (e *Engine) beginSuspendUpkeep(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent) {
+	g.Turn.ActivePlayer, g.Turn.PriorityPlayer = playerID, playerID
+	g.Turn.Phase, g.Turn.Step = game.PhaseBeginning, game.StepUpkeep
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
 	e.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
+}
+
+// runSuspendUpkeep begins playerID's upkeep and resolves suspend's upkeep and
+// cast triggers from the top of the stack, putting each newly triggered
+// ability on the stack before the next resolution. It stops at anything else,
+// leaving any spell cast this way on the stack.
+func (e *Engine) runSuspendUpkeep(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent) {
+	e.beginSuspendUpkeep(g, playerID, agents)
+	e.resolveSuspendTriggers(g, agents)
+}
+
+func (e *Engine) resolveSuspendTriggers(g *game.Game, agents [game.NumPlayers]PlayerAgent) {
 	for {
 		obj, ok := g.Stack.Peek()
-		if !ok || !obj.SuspendCast {
+		if !ok || (!obj.SuspendCast && !obj.SuspendUpkeep) {
 			return
 		}
 		e.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+		e.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
 	}
+}
+
+// requireSuspendUpkeepTrigger asserts the top of the stack is suspend's
+// upkeep ability for the exiled card, controlled by its owner.
+func requireSuspendUpkeepTrigger(t *testing.T, g *game.Game, cardID id.ID) *game.StackObject {
+	t.Helper()
+	card, _ := g.GetCardInstance(cardID)
+	obj, ok := g.Stack.Peek()
+	if !ok || obj.Kind != game.StackTriggeredAbility || !obj.SuspendUpkeep || obj.SuspendCast || obj.SourceCardID != cardID ||
+		obj.Controller != card.Owner || obj.SourceZone != zone.Exile || obj.SourceZoneVersion != card.ZoneVersion {
+		t.Fatalf("stack top = %+v, want the suspend upkeep trigger for %v", obj, cardID)
+	}
+	return obj
 }
 
 // requireSuspendCastTrigger asserts the top of the stack is the cast ability
@@ -354,15 +382,16 @@ func requireSuspendCastTrigger(t *testing.T, g *game.Game, cardID id.ID) *game.S
 	return obj
 }
 
-// suspendCastTriggerReady removes the last time counter at the owner's upkeep
-// and puts suspend's cast trigger on the stack.
+// suspendCastTriggerReady resolves suspend's upkeep trigger, removing the last
+// time counter, and puts suspend's cast trigger on the stack.
 func suspendCastTriggerReady(t *testing.T) (*Engine, *game.Game, id.ID, *game.StackObject) {
 	t.Helper()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	cardID := addSuspendedCard(g, game.Player1, suspendSorcery(1, cost.Mana{cost.O(1)}), 1)
-	setReboundUpkeep(g)
-	processSuspendUpkeep(g, game.Player1)
+	engine.beginSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{})
+	requireSuspendUpkeepTrigger(t, g, cardID)
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	engine.putTriggeredAbilitiesOnStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
 	if g.Stack.Size() != 1 {
 		t.Fatalf("stack size = %d, want only the suspend cast trigger", g.Stack.Size())

@@ -62,9 +62,12 @@ func suspendFamilyCast(t *testing.T, name, oracleID string, counters int, paymen
 		if remaining > 1 {
 			engine.runSuspendUpkeep(g, game.Player1, agents)
 		} else {
-			// The last removal triggers the cast ability (CR 702.62a), which
-			// uses the stack before the card is cast.
-			processSuspendUpkeep(g, game.Player1)
+			// The upkeep trigger removes the last time counter, which triggers
+			// the cast ability (CR 702.62a); both use the stack before the
+			// card is cast.
+			engine.beginSuspendUpkeep(g, game.Player1, agents)
+			requireSuspendUpkeepTrigger(t, g, cardID)
+			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
 			engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
 			requireSuspendCastTrigger(t, g, cardID)
 			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
