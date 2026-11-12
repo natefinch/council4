@@ -10,7 +10,16 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/cards"
+	"github.com/natefinch/council4/mtg/game"
 )
+
+func productionCardName(def *game.CardDef) string {
+	name := def.Name
+	if def.Alternate.Exists {
+		name += " // " + def.Alternate.Val.Name
+	}
+	return name
+}
 
 type productionWorkRecord struct {
 	OracleID                                             string `json:"oracle_id"`
@@ -143,10 +152,19 @@ func TestProductionManifestAdmissionsAndQueue(t *testing.T) {
 		switch r.Status {
 		case "implemented-verified":
 			def, err := registry.LookupOracleID(r.OracleID)
-			if err != nil || def.Name != r.Name || !strings.Contains(r.Evidence, "mtg/rules/") {
+			if err != nil || productionCardName(def) != r.Name || !strings.Contains(r.Evidence, "mtg/rules/") {
 				t.Fatalf("unverified production admission %s: %v", r.Name, err)
 			}
-			if hash := fmt.Sprintf("%x", sha256.Sum256([]byte(def.OracleText))); hashes[r.OracleID] != hash {
+			emptyTextHash := fmt.Sprintf("%x", sha256.Sum256(nil))
+			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(def.OracleText)))
+			expectedTextHash := hashes[r.OracleID]
+			if expectedTextHash == emptyTextHash && def.Alternate.Exists {
+				// Scryfall leaves the aggregate oracle_text null for alternate-faced
+				// cards; their text is stored on the individual faces instead.
+				if def.OracleText == "" || def.Alternate.Val.OracleText == "" {
+					t.Fatalf("registered card is missing per-face Oracle text: %s", r.Name)
+				}
+			} else if expectedTextHash != hash {
 				t.Fatalf("registered card changed pinned Oracle text: %s", r.Name)
 			}
 			if err := registry.Programs().ValidateCard(def); err != nil {

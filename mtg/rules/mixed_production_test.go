@@ -187,8 +187,13 @@ func checkProvingCardCatalogs(t *testing.T, registry *cards.Registry, entries []
 			if err != nil {
 				t.Fatal(err)
 			}
-			if def.Name != entry.Name {
-				t.Fatalf("exact identity returned %q, want %q", def.Name, entry.Name)
+			identityName := def.Name
+			// Prepare cards keep the two printed names on their respective faces.
+			if def.Layout == game.LayoutPrepare && def.Alternate.Exists {
+				identityName += " // " + def.Alternate.Val.Name
+			}
+			if identityName != entry.Name {
+				t.Fatalf("exact identity returned %q, want %q", identityName, entry.Name)
 			}
 			if err := engine.programs.ValidateCard(def); err != nil {
 				t.Fatalf("live catalog: %v", err)
