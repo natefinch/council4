@@ -1176,6 +1176,118 @@
     "oracle_text_sha256": "85b1b7a436590f2e77e8fe313c0b522aac12ab2f3e030e02bd6402b37303052d",
     "revision": "5e50c148-9f30-4131-8ec1-85e9ba8cafbb",
     "rulings_uri": "https://api.scryfall.com/cards/5e50c148-9f30-4131-8ec1-85e9ba8cafbb/rulings"
+   },
+   {
+    "name": "Exquisite Huntmaster",
+    "oracle_id": "393ef069-ea6b-4969-b878-d942281cc918",
+    "oracle_text_sha256": "5bc551eeac78229bfce58c5031388adb122abd4f97fea3d73f82d308d9e8766c",
+    "revision": "444b75d9-f7c7-4a13-9318-02d7bbd80c9c",
+    "rulings_uri": "https://api.scryfall.com/cards/444b75d9-f7c7-4a13-9318-02d7bbd80c9c/rulings"
+   },
+   {
+    "name": "Soul of Eternity",
+    "oracle_id": "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
+    "oracle_text_sha256": "a00dfc3b458a07dd3868ed8f2c1be9b89e2f3d07b03f54ce6c7ceb73272703fd",
+    "revision": "08241f94-8b5e-4f9b-8120-8175e3256e35",
+    "rulings_uri": "https://api.scryfall.com/cards/08241f94-8b5e-4f9b-8120-8175e3256e35/rulings"
+   },
+   {
+    "name": "Angel of Indemnity",
+    "oracle_id": "4f57a320-b6b5-49de-af0a-f2e2649758a7",
+    "oracle_text_sha256": "b52e9c492d3e9ad3418e335346634764bb41786ebd7e267d08502317ab1cfb81",
+    "revision": "41163f43-7357-4bbc-a1e7-9c8070135c93",
+    "rulings_uri": "https://api.scryfall.com/cards/41163f43-7357-4bbc-a1e7-9c8070135c93/rulings"
+   },
+   {
+    "name": "Briarblade Adept",
+    "oracle_id": "6680a5f7-3ac1-4550-a29a-9553ad7ae465",
+    "oracle_text_sha256": "e4d1986c1e77d4431dad50a1122379b084fc12863d7d7e3160a640c05f931a9b",
+    "revision": "9d3fb5f1-baf5-4934-aac7-ffbaa85b2428",
+    "rulings_uri": "https://api.scryfall.com/cards/9d3fb5f1-baf5-4934-aac7-ffbaa85b2428/rulings"
+   },
+   {
+    "name": "Impulsive Pilferer",
+    "oracle_id": "7d9fc9e7-d80b-49c3-871c-ed25b3059ae8",
+    "oracle_text_sha256": "25098ca46c39f7bf27609e30b9f8e8a819b1001a4b2e6890d8506d0b9254bad9",
+    "revision": "0f020359-5ad1-43c4-8588-172be635cccc",
+    "rulings_uri": "https://api.scryfall.com/cards/0f020359-5ad1-43c4-8588-172be635cccc/rulings"
+   },
+   {
+    "name": "Kinsbaile Courier",
+    "oracle_id": "92c0346d-c375-4851-9806-5d3b9b83425f",
+    "oracle_text_sha256": "27451e5933b0f8da11bddd7e2ae46d3f774dd1b7e3fcc4ed48c78de96cd9cc1b",
+    "revision": "56b2b413-e00f-440d-9d27-92eb069b8c71",
+    "rulings_uri": "https://api.scryfall.com/cards/56b2b413-e00f-440d-9d27-92eb069b8c71/rulings"
+   },
+   {
+    "name": "Broodmate Tyrant",
+    "oracle_id": "9b984236-39cf-4552-827b-e81c26cfb388",
+    "oracle_text_sha256": "e7778cfc7025d433db45f49d0ac12e30ee6313e5fdb2256cf6c3eeb72e1f6a92",
+    "revision": "b46d498b-dac3-4ab0-bcd6-514025a046aa",
+    "rulings_uri": "https://api.scryfall.com/cards/b46d498b-dac3-4ab0-bcd6-514025a046aa/rulings"
+   },
+   {
+    "name": "Fin-Clade Fugitives",
+    "oracle_id": "dad2965a-ceb4-42ac-bb62-de7eea500011",
+    "oracle_text_sha256": "8bfdbc3ab54608781ab4524ad8db87bf56aa0eda33d69450c75ea64e881b117a",
+    "revision": "3eb7af70-e024-44bf-a52b-209074b005a3",
+    "rulings_uri": "https://api.scryfall.com/cards/3eb7af70-e024-44bf-a52b-209074b005a3/rulings"
+   },
+   {
+    "name": "Trove Tracker",
+    "oracle_id": "f27972da-ad2f-4df5-82d3-c909cce8cc91",
+    "oracle_text_sha256": "6370a49f1da013e71b9e07bd246d61452693364db9175cc1c5aeb15fc8d45c96",
+    "revision": "c3b74135-b8db-4485-a4b1-7aaa3ef28072",
+    "rulings_uri": "https://api.scryfall.com/cards/c3b74135-b8db-4485-a4b1-7aaa3ef28072/rulings"
+   },
+   {
+    "name": "Igneous Inspiration",
+    "oracle_id": "2e31af8f-5e94-4888-857d-911253eac2cd",
+    "oracle_text_sha256": "1ffacd574b5ce07d3092f17fec0bb4710fb8a54b09a18b2359443bf4f0dab374",
+    "revision": "5781ad7b-dc1b-4cc1-9e72-6e714b9ba1de",
+    "rulings_uri": "https://api.scryfall.com/cards/5781ad7b-dc1b-4cc1-9e72-6e714b9ba1de/rulings"
+   },
+   {
+    "name": "Enthusiastic Study",
+    "oracle_id": "4233334d-bb19-41e4-a203-2b7bb0c48f52",
+    "oracle_text_sha256": "39c329eae20955da0db63e337db1dc91532558f243879d09549f27eb3735239d",
+    "revision": "543c64ff-2c51-4a63-a940-dc8645717c85",
+    "rulings_uri": "https://api.scryfall.com/cards/543c64ff-2c51-4a63-a940-dc8645717c85/rulings"
+   },
+   {
+    "name": "Arcane Subtraction",
+    "oracle_id": "4b5806fa-430f-4b78-b874-63d01a8a9de5",
+    "oracle_text_sha256": "dbf765b53c6afd0b6bdabbe052521715550356dc0a9e66524e718b41e5935b8d",
+    "revision": "68cdb00c-ea86-4b72-8f62-570820edfa1b",
+    "rulings_uri": "https://api.scryfall.com/cards/68cdb00c-ea86-4b72-8f62-570820edfa1b/rulings"
+   },
+   {
+    "name": "Guiding Voice",
+    "oracle_id": "5c7e7c9e-00d1-497e-bee7-278bbd82e234",
+    "oracle_text_sha256": "479424c1daceef86df3b9e03a0dec634020c77b008571e6e6c322cfd76d1a6b0",
+    "revision": "d6fb3163-12ca-4a7f-a0c7-b8ddfc9408a0",
+    "rulings_uri": "https://api.scryfall.com/cards/d6fb3163-12ca-4a7f-a0c7-b8ddfc9408a0/rulings"
+   },
+   {
+    "name": "Cram Session",
+    "oracle_id": "6e5b8bb2-9dd8-4986-9d0a-659114be5a2a",
+    "oracle_text_sha256": "98061db1a3848ad3e5f1f605f1402c24b196c5dc0a10a2d6a44f5d374e69d5b6",
+    "revision": "c59a249f-35ed-447a-845b-32ba5a53124e",
+    "rulings_uri": "https://api.scryfall.com/cards/c59a249f-35ed-447a-845b-32ba5a53124e/rulings"
+   },
+   {
+    "name": "Study Break",
+    "oracle_id": "7aae7c7b-0b31-4b48-a8d3-81c913f604cf",
+    "oracle_text_sha256": "a5ee475dddba98a5bb2e1dc967c0f1783cac4e3f8e1c697c207b450e0ba1771a",
+    "revision": "ef7cd813-0781-4fd7-8748-2716e1eeb4b9",
+    "rulings_uri": "https://api.scryfall.com/cards/ef7cd813-0781-4fd7-8748-2716e1eeb4b9/rulings"
+   },
+   {
+    "name": "Pop Quiz",
+    "oracle_id": "dda9ac6c-1ab2-4f77-b499-f03d587163d8",
+    "oracle_text_sha256": "d3c979646d8447f4c28de26a40d1317e5b8352da1759a0cbb2b6fb8aa62d1c96",
+    "revision": "d16892d8-9d10-45de-ab79-0e645c4b5588",
+    "rulings_uri": "https://api.scryfall.com/cards/d16892d8-9d10-45de-ab79-0e645c4b5588/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7931,6 +8043,53 @@
     "game.ContinuousEffect"
    ],
    "review": "Capability-only review at base 8009ed3ead3ea28bd9f49706c9a5b649d84e85b6; pinned corpus identities and text checked for all seven cards. The novel For Mirrodin! paragraph maps to the existing enter trigger → CreateToken(PublishLinked) → Attach sequence in mtg/game/mechanic_template.go:LivingWeaponTriggeredAbility; mtg/rules/living_weapon_test.go:TestLivingWeaponCreatesGermAndAttaches verifies token creation and attachment. The new cards use a custom 2/2 red Rebel TokenDef. Their remaining equipment bonuses and Equip abilities fit existing continuous-effect and equip operations. No Engine prerequisites or CR/rulings source review."
+  },
+  {
+   "id": "encore-20261112-1028",
+   "family": "encore",
+   "oracle_ids": [
+    "393ef069-ea6b-4969-b878-d942281cc918",
+    "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
+    "4f57a320-b6b5-49de-af0a-f2e2649758a7",
+    "6680a5f7-3ac1-4550-a29a-9553ad7ae465",
+    "7d9fc9e7-d80b-49c3-871c-ed25b3059ae8",
+    "92c0346d-c375-4851-9806-5d3b9b83425f",
+    "9b984236-39cf-4552-827b-e81c26cfb388",
+    "dad2965a-ceb4-42ac-bb62-de7eea500011",
+    "f27972da-ad2f-4df5-82d3-c909cce8cc91"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.EncoreActivatedBody",
+    "CreateToken.MustAttackEachOpponentThisTurn",
+    "CreateDelayedTrigger",
+    "EventPermanentDied/EventPermanentEntered/EventAttackerDeclared",
+    "CreateToken",
+    "AddCounter",
+    "Draw",
+    "targeted graveyard permanent-card return via MoveCards/PutOnBattlefield",
+    "DynamicValueControllerLifeTotal",
+    "RuleEffectCantBeBlockedByCreaturesWith"
+   ],
+   "review": "Checked base 657016910ab5aa2f29f53778b9819336b7a080bf: mtg/game/ability.go EncoreActivatedBody, mtg/game/primitive.go MustAttackEachOpponentThisTurn, mtg/rules/encore_attack_requirement_test.go; supporting prior art includes mtg/rules/cda_power_toughness_test.go and mtg/rules/combat_blockers_test.go. Checked all nine Oracle texts in the pinned corpus and confirmed the other paragraphs use existing trigger, token, counter, draw, graveyard-return, dynamic-P/T, and blocker-restriction operations. No rulings or Comprehensive Rules review performed."
+  },
+  {
+   "id": "learn-20261112-a",
+   "family": "learn",
+   "oracle_ids": [
+    "2e31af8f-5e94-4888-857d-911253eac2cd",
+    "4233334d-bb19-41e4-a203-2b7bb0c48f52",
+    "4b5806fa-430f-4b78-b874-63d01a8a9de5",
+    "5c7e7c9e-00d1-497e-bee7-278bbd82e234",
+    "6e5b8bb2-9dd8-4986-9d0a-659114be5a2a",
+    "7aae7c7b-0b31-4b48-a8d3-81c913f604cf",
+    "dda9ac6c-1ab2-4f77-b499-f03d587163d8"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.DiscardThenDraw"
+   ],
+   "review": "Capability-only check (no CR/rulings/source review): DiscardThenDraw declaration mtg/game/primitive.go:2235, Engine handler mtg/rules/primitive_handlers_zones.go:3205, and behavioral evidence mtg/rules/effects_discard_then_draw_test.go:9. The operation supports the discard/draw choice; the Commander model does not simulate sideboards/outside-game access (mtg/game/ability.go:506-510), so Lesson retrieval is unavailable in this scope. Other paragraphs fit the supplied family classification and the pinned Oracle texts."
   }
  ],
  "records": [
@@ -91250,8 +91409,10 @@
    "oracle_id": "2e31af8f-5e94-4888-857d-911253eac2cd",
    "revision": "5781ad7b-dc1b-4cc1-9e72-6e714b9ba1de",
    "name": "Igneous Inspiration",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestIgneousInspirationScenario"
   },
   {
    "oracle_id": "2e338e09-5758-4cc2-9143-21f050a28677",
@@ -100789,8 +100950,10 @@
    "oracle_id": "393ef069-ea6b-4969-b878-d942281cc918",
    "revision": "444b75d9-f7c7-4a13-9318-02d7bbd80c9c",
    "name": "Exquisite Huntmaster",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestExquisiteHuntmasterEncoreCopyCreatesElfAfterDying"
   },
   {
    "oracle_id": "393ff8c5-4da0-4290-b498-222cc0244026",
@@ -108715,8 +108878,10 @@
    "oracle_id": "4233334d-bb19-41e4-a203-2b7bb0c48f52",
    "revision": "543c64ff-2c51-4a63-a940-dc8645717c85",
    "name": "Enthusiastic Study",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestEnthusiasticStudyScenario"
   },
   {
    "oracle_id": "4234f07e-583f-40db-8b47-7e16c7316e19",
@@ -116508,8 +116673,10 @@
    "oracle_id": "4b5806fa-430f-4b78-b874-63d01a8a9de5",
    "revision": "68cdb00c-ea86-4b72-8f62-570820edfa1b",
    "name": "Arcane Subtraction",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestArcaneSubtractionScenario"
   },
   {
    "oracle_id": "4b5c7f11-75f2-4bad-86cd-f0232861f569",
@@ -117995,8 +118162,10 @@
    "oracle_id": "4d211447-9f18-4d23-8f19-cdf6ad3c68ba",
    "revision": "08241f94-8b5e-4f9b-8120-8175e3256e35",
    "name": "Soul of Eternity",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestSoulOfEternityEncoreCopyUsesControllerLifeTotal"
   },
   {
    "oracle_id": "4d22b01b-63dd-4698-a221-0acaefb2000b",
@@ -119607,8 +119776,10 @@
    "oracle_id": "4f57a320-b6b5-49de-af0a-f2e2649758a7",
    "revision": "41163f43-7357-4bbc-a1e7-9c8070135c93",
    "name": "Angel of Indemnity",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestAngelOfIndemnityEncoreCopyReturnsTargetPermanentCard"
   },
   {
    "oracle_id": "4f5921c1-b932-4d6b-bb8e-01992578abdc",
@@ -130786,8 +130957,10 @@
    "oracle_id": "5c7e7c9e-00d1-497e-bee7-278bbd82e234",
    "revision": "d6fb3163-12ca-4a7f-a0c7-b8ddfc9408a0",
    "name": "Guiding Voice",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestGuidingVoiceScenario"
   },
   {
    "oracle_id": "5c7f91af-8bac-4da1-b9e5-f15989c9d53c",
@@ -139344,8 +139517,10 @@
    "oracle_id": "6680a5f7-3ac1-4550-a29a-9553ad7ae465",
    "revision": "9d3fb5f1-baf5-4934-aac7-ffbaa85b2428",
    "name": "Briarblade Adept",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestBriarbladeAdeptEncoreCopyWeakensCreatureWhenAttacking"
   },
   {
    "oracle_id": "66810ef7-ea3a-4afa-92f0-b21ec52cc8d0",
@@ -146262,8 +146437,10 @@
    "oracle_id": "6e5b8bb2-9dd8-4986-9d0a-659114be5a2a",
    "revision": "c59a249f-35ed-447a-845b-32ba5a53124e",
    "name": "Cram Session",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestCramSessionScenario"
   },
   {
    "oracle_id": "6e5f1088-a5ab-48ec-be27-c88eb164cf63",
@@ -157057,8 +157234,10 @@
    "oracle_id": "7aae7c7b-0b31-4b48-a8d3-81c913f604cf",
    "revision": "ef7cd813-0781-4fd7-8748-2716e1eeb4b9",
    "name": "Study Break",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestStudyBreakScenario"
   },
   {
    "oracle_id": "7ab01e23-cbf5-458c-880c-50e061ece688",
@@ -159563,8 +159742,10 @@
    "oracle_id": "7d9fc9e7-d80b-49c3-871c-ed25b3059ae8",
    "revision": "0f020359-5ad1-43c4-8588-172be635cccc",
    "name": "Impulsive Pilferer",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestImpulsivePilfererEncoreCopyCreatesTreasureAfterDying"
   },
   {
    "oracle_id": "7da0e5de-3e4c-420a-8685-991206100b9d",
@@ -177589,8 +177770,10 @@
    "oracle_id": "92c0346d-c375-4851-9806-5d3b9b83425f",
    "revision": "56b2b413-e00f-440d-9d27-92eb069b8c71",
    "name": "Kinsbaile Courier",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestKinsbaileCourierEncoreCopyAddsCounterOnEntry"
   },
   {
    "oracle_id": "92c43ee1-0f7d-4993-8d3a-689cc87d7480",
@@ -184940,8 +185123,10 @@
    "oracle_id": "9b984236-39cf-4552-827b-e81c26cfb388",
    "revision": "b46d498b-dac3-4ab0-bcd6-514025a046aa",
    "name": "Broodmate Tyrant",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestBroodmateTyrantEncoreCopyCreatesFlyingDragon"
   },
   {
    "oracle_id": "9b9a10ff-5a5d-4df8-88aa-18d84ff9117c",
@@ -238503,8 +238688,10 @@
    "oracle_id": "dad2965a-ceb4-42ac-bb62-de7eea500011",
    "revision": "3eb7af70-e024-44bf-a52b-209074b005a3",
    "name": "Fin-Clade Fugitives",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestFinCladeFugitivesEncoreCopyRejectsSmallBlocker"
   },
   {
    "oracle_id": "dad36dc0-39aa-46f9-819b-cad7a578c037",
@@ -240844,8 +241031,10 @@
    "oracle_id": "dda9ac6c-1ab2-4f77-b499-f03d587163d8",
    "revision": "d16892d8-9d10-45de-ab79-0e645c4b5588",
    "name": "Pop Quiz",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestPopQuizScenario"
   },
   {
    "oracle_id": "ddb021df-ae4a-4ac1-8353-d0b375761714",
@@ -258628,8 +258817,10 @@
    "oracle_id": "f27972da-ad2f-4df5-82d3-c909cce8cc91",
    "revision": "c3b74135-b8db-4485-a4b1-7aaa3ef28072",
    "name": "Trove Tracker",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "encore",
+   "batch": "encore-20261112-1028",
+   "evidence": "mtg/rules/encore_creatures_test.go: TestTroveTrackerEncoreCopyDrawsWhenItDies"
   },
   {
    "oracle_id": "f27d52e6-aab9-4f95-ae46-33d1173bf4fe",

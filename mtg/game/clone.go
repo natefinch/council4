@@ -55,7 +55,6 @@ func (g *Game) Clone() *Game {
 		SkippedTurns:                       cloneComparableMap(g.SkippedTurns),
 		CostModifiers:                      cloneSlice(g.CostModifiers),
 		RuleEffects:                        cloneSlicePtr(g.RuleEffects, fixupRuleEffect),
-		SuspendedCards:                     cloneComparableMap(g.SuspendedCards),
 		AdventureCards:                     cloneComparableMap(g.AdventureCards),
 		PlottedCards:                       cloneComparableMap(g.PlottedCards),
 		ForetoldCards:                      cloneComparableMap(g.ForetoldCards),
@@ -127,7 +126,6 @@ func (g *Game) RestoreReversibleManaPayment(before *Game) {
 	g.SkippedTurns = before.SkippedTurns
 	g.CostModifiers = before.CostModifiers
 	g.RuleEffects = before.RuleEffects
-	g.SuspendedCards = before.SuspendedCards
 	g.AdventureCards = before.AdventureCards
 	g.PlottedCards = before.PlottedCards
 	g.ForetoldCards = before.ForetoldCards
@@ -325,6 +323,7 @@ func NewStackObjectCopy(o *StackObject, newID id.ID) *StackObject {
 	// copiable value, and a copy put onto the stack spent no mana (CR 707.2,
 	// 707.10).
 	clone.GainsKeywordsUntilEndOfTurn = nil
+	clone.CastPermissionEntryCounters = nil
 	return clone
 }
 
@@ -343,6 +342,7 @@ func cloneStackObject(o *StackObject) *StackObject {
 		return effect
 	})
 	clone.AdditionalCostsPaid = cloneSlice(o.AdditionalCostsPaid)
+	clone.CastPermissionEntryCounters = cloneSlice(o.CastPermissionEntryCounters)
 	clone.SacrificedAsCostIDs = cloneSlice(o.SacrificedAsCostIDs)
 	clone.PaidCostSubjects = ClonePaidCostSubjects(o.PaidCostSubjects)
 	clone.TappedAsCostIDs = cloneSlice(o.TappedAsCostIDs)
@@ -439,6 +439,7 @@ func fixupRuleEffect(e *RuleEffect) {
 	e.SpellCharacteristicFilters = cloneCharacteristicFilters(e.SpellCharacteristicFilters)
 	e.TriggerCausePermanentFilters = cloneCharacteristicFilters(e.TriggerCausePermanentFilters)
 	e.CantCastFromZones = cloneSlice(e.CantCastFromZones)
+	e.CastEntryCounters = cloneSlice(e.CastEntryCounters)
 	e.EnterFromZones = cloneSlice(e.EnterFromZones)
 	e.Protection.FromColors = cloneSlice(e.Protection.FromColors)
 	e.Protection.FromTypes = cloneSlice(e.Protection.FromTypes)

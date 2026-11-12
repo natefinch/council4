@@ -199,6 +199,8 @@ type EventTriggeredAbility struct {
 	OrdinaryTrigger           bool
 	SagaChapter               bool
 	SiegeDefeat               bool
+	SuspendCast               bool
+	SuspendUpkeep             bool
 	EntryChoices              map[ChoiceKey]ResolutionChoiceResult
 }
 

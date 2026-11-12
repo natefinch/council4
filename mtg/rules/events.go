@@ -262,7 +262,6 @@ func emitZoneChangeEventAfterCounterTransition(g *game.Game, event game.Event) g
 	// Exile-to-exile moves also create a new object (CR 406.7).
 	if event.FromZone == zone.Exile {
 		delete(g.AdventureCards, event.CardID)
-		delete(g.SuspendedCards, event.CardID)
 		delete(g.PlottedCards, event.CardID)
 		delete(g.ForetoldCards, event.CardID)
 		delete(g.ExileCounterExiledBy, event.CardID)

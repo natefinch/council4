@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/opt"
 )
@@ -78,12 +79,9 @@ func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID i
 		return actionFailed
 	}
 	if destination == zone.Exile {
-		if g.SuspendedCards == nil {
-			g.SuspendedCards = make(map[id.ID]game.SuspendedCard)
-		}
-		g.SuspendedCards[cardID] = game.SuspendedCard{
-			Owner: card.Owner, Controller: playerID, TimeCounters: counters,
-		}
+		change := newExileCardCounterChange(g, playerID)
+		change.add(cardID, counter.Time, counters)
+		change.publish()
 	}
 	return actionApplied
 }
@@ -105,40 +103,119 @@ func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []act
 	return actions
 }
 
-func (e *Engine) processSuspendUpkeep(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
-	for _, cardID := range suspendedCardIDsInOrder(g) {
-		suspended := g.SuspendedCards[cardID]
-		if suspended.Controller != playerID || suspended.TimeCounters <= 0 {
-			continue
-		}
-		suspended.TimeCounters--
-		if suspended.TimeCounters > 0 {
-			g.SuspendedCards[cardID] = suspended
-			continue
-		}
-		g.SuspendedCards[cardID] = suspended
-		e.castSuspendedCard(g, playerID, cardID, agents, log)
-	}
+// suspendUpkeepAbility is suspend's intrinsic upkeep triggered ability that
+// functions in exile (CR 702.62a). It is shared immutable data; its behavior is
+// resolveSuspendUpkeepTrigger, selected by StackObject.SuspendUpkeep.
+var suspendUpkeepAbility = &game.TriggeredAbility{
+	Text: "At the beginning of your upkeep, if this card is suspended, remove a time counter from it.",
 }
 
-func suspendedCardIDsInOrder(g *game.Game) []id.ID {
-	ids := make([]id.ID, 0, len(g.SuspendedCards))
-	for cardID := range g.SuspendedCards {
-		ids = append(ids, cardID)
+// suspendUpkeepTriggers detects suspend's upkeep ability (CR 702.62a) from the
+// beginning of an upkeep step, including an additional one: every card the
+// active player owns that is suspended (CR 702.62b) at that moment triggers
+// once (CR 603.4). The ability is controlled by the card's owner (CR 108.4a)
+// and is bound to that exiled card's zone version, so it goes on the stack
+// with the owner's other beginning-of-upkeep triggers in the order they
+// choose (CR 603.3b).
+func suspendUpkeepTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventBeginningOfStep || event.Step != game.StepUpkeep {
+		return nil
+	}
+	var pending []pendingTriggeredAbility
+	for _, cardID := range suspendedCardIDsInOrder(g, event.Player) {
+		card, _ := g.GetCardInstance(cardID)
+		pending = append(pending, pendingTriggeredAbility{
+			controller: card.Owner, sourceID: card.ID, sourceCardID: card.ID,
+			sourceZone: zone.Exile, sourceZoneVersion: card.ZoneVersion, face: game.FaceFront,
+			inline: suspendUpkeepAbility, suspendUpkeep: true, event: event, hasEvent: true,
+			triggerMultiplierCaptured: true,
+		})
+	}
+	return pending
+}
+
+// resolveSuspendUpkeepTrigger resolves suspend's upkeep ability (CR 702.62a).
+// The intervening "if this card is suspended" condition is rechecked (CR
+// 603.4) for the same exiled object: a card that left exile, even if it has
+// since returned, is a new object the ability doesn't affect (CR 400.7).
+// Otherwise one time counter is removed through the shared exile-card counter
+// operation; removing the last one triggers suspend's cast ability.
+func resolveSuspendUpkeepTrigger(g *game.Game, obj *game.StackObject) string {
+	card, ok := g.GetCardInstance(obj.SourceCardID)
+	if !ok || card.ZoneVersion != obj.SourceZoneVersion || !cardIsSuspended(g, card.ID) {
+		return "resolved"
+	}
+	change := newExileCardCounterChange(g, obj.Controller)
+	change.remove(card.ID, counter.Time, 1)
+	change.publish()
+	return "resolved"
+}
+
+// suspendedCardIDsInOrder lists the suspended cards owned by playerID in card
+// ID order.
+func suspendedCardIDsInOrder(g *game.Game, playerID game.PlayerID) []id.ID {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return nil
+	}
+	var ids []id.ID
+	for _, cardID := range player.Exile.All() {
+		if card, ok := g.GetCardInstance(cardID); ok && card.Owner == playerID && cardIsSuspended(g, cardID) {
+			ids = append(ids, cardID)
+		}
 	}
 	slices.Sort(ids)
 	return ids
 }
 
-// castSuspendedCard lets the controller cast a card whose last time counter
-// was removed from exile without paying its mana cost (CR 702.62a). The cast
-// follows the alternative-cost rules (CR 702.62d, 601.2b, 601.2f-h):
-// additional costs, cost increases and reductions still apply, and a creature
-// spell cast this way gains haste. If the card isn't cast it remains exiled.
-func (e *Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	player, ok := playerByID(g, playerID)
-	if !ok || !player.Exile.Contains(cardID) {
-		return false
+// suspendCastAbility is suspend's intrinsic triggered ability that functions
+// in exile (CR 702.62a). It is shared immutable data; its behavior is
+// resolveSuspendCastTrigger, selected by StackObject.SuspendCast.
+var suspendCastAbility = &game.TriggeredAbility{
+	Text: "When the last time counter is removed from this card, if it's exiled, you may play it without paying its mana cost if able. If you don't, it remains exiled. If you cast a creature spell this way, it gains haste until you lose control of the spell or the permanent it becomes.",
+}
+
+// suspendCastTriggers detects suspend's cast ability (CR 702.62a) from an
+// event that removed the last time counter from an exiled card with suspend,
+// however the counter was removed. The intervening "if it's exiled" condition
+// requires the card to still be in exile as the incarnation the event names
+// (CR 603.4, 400.7). The ability is controlled by the card's owner (CR 108.4a)
+// and is bound to that exiled card's zone version.
+func suspendCastTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventCountersRemoved || !exileCardCounterEvent(event) ||
+		event.CounterKind != counter.Time || event.PreviousCounterAmount <= 0 ||
+		event.Amount < event.PreviousCounterAmount {
+		return nil
 	}
-	return e.chooseAndCastFreeSpell(g, player, playerID, cardID, zone.Exile, game.Selection{}, opt.V[int]{}, freeCastSpell{suspend: true}, true, agents, log)
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok || card.ZoneVersion != event.CardZoneVersion || !exiledCardHasSuspend(g, card) {
+		return nil
+	}
+	return []pendingTriggeredAbility{{
+		controller: card.Owner, sourceID: card.ID, sourceCardID: card.ID,
+		sourceZone: zone.Exile, sourceZoneVersion: card.ZoneVersion, face: game.FaceFront,
+		inline: suspendCastAbility, suspendCast: true, event: event, hasEvent: true,
+		triggerMultiplierCaptured: true,
+	}}
+}
+
+// resolveSuspendCastTrigger resolves suspend's cast ability (CR 702.62a). The
+// intervening "if it's exiled" condition is rechecked (CR 603.4): a card that
+// left exile, even if it has since returned, is a new object the ability
+// doesn't affect (CR 400.7). Otherwise the ability's controller may cast the
+// card from its owner's exile without paying its mana cost. The cast follows
+// the alternative-cost rules (CR 702.62d, 601.2b, 601.2f-h): additional
+// costs, cost increases and reductions still apply, and a creature spell cast
+// this way gains haste. If the card isn't cast it remains exiled.
+func (e *Engine) resolveSuspendCastTrigger(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	card, ok := g.GetCardInstance(obj.SourceCardID)
+	if !ok || card.ZoneVersion != obj.SourceZoneVersion {
+		return "resolved"
+	}
+	owner, ok := playerByID(g, card.Owner)
+	if !ok || !owner.Exile.Contains(card.ID) {
+		return "resolved"
+	}
+	e.chooseAndCastFreeSpell(g, owner, obj.Controller, card.ID, zone.Exile, game.Selection{}, opt.V[int]{}, freeCastSpell{suspend: true}, true, agents, log)
+	return "resolved"
 }

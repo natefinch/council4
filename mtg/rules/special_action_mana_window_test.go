@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 )
@@ -95,8 +96,7 @@ func specialActionRoutes() []specialActionRoute {
 	foretold := func(g *game.Game, c id.ID) bool { _, ok := g.ForetoldCards[c]; return ok }
 	plotted := func(g *game.Game, c id.ID) bool { _, ok := g.PlottedCards[c]; return ok }
 	suspended := func(g *game.Game, c id.ID) bool {
-		s, ok := g.SuspendedCards[c]
-		return ok && s.TimeCounters == 3
+		return g.ExileCounterCount(c, counter.Time) == 3 && cardIsSuspended(g, c)
 	}
 	faceUp := func(t *testing.T, g *game.Game, act action.Action, want bool) {
 		t.Helper()

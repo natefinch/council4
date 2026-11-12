@@ -27,9 +27,13 @@ Add new counter kinds here when card implementations need them.
 
 The Oracle executable compiler supports named Stun counter placement: the untap
 step removes one stun counter from a permanent instead of untapping it (CR
-122.6f). Named Finality counter placement is still rejected until its
-zone-change replacement mechanics are implemented (#223). All kinds remain
-available for runtime mechanics and manual card definitions.
+122.6f). One or more Finality counters on a permanent create a single
+replacement effect (CR 122.1h): if it would be put into a graveyard from the
+battlefield, it is exiled instead. `rules.finalityCounterReplacement`
+synthesizes it from the counter itself (not an ability, so ability loss does
+not remove it); it competes with other replacements under the affected
+controller's choice (CR 616.1) and leaves other destinations unchanged. All
+kinds remain available for runtime mechanics and manual card definitions.
 `Age` is a permanent counter used by the cumulative-upkeep template.
 
 ### Set

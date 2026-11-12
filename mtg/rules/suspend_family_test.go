@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -46,18 +47,37 @@ func suspendFamilyCast(t *testing.T, name, oracleID string, counters int, paymen
 	if got := g.Players[game.Player1].ManaPool.Total(); got != 0 {
 		t.Fatalf("%s left %d mana after paying its suspend cost, want 0", name, got)
 	}
-	if state, ok := g.SuspendedCards[cardID]; !ok || state.TimeCounters != counters {
-		t.Fatalf("%s suspended state = %+v/%t, want %d time counters", name, state, ok, counters)
+	if got := g.ExileCounterCount(cardID, counter.Time); got != counters || !cardIsSuspended(g, cardID) {
+		t.Fatalf("%s time counters = %d, want suspended with %d", name, got, counters)
 	}
+	requireExileTimeCounterEvent(t, g, game.EventCountersAdded, cardID, 0, counters)
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatalf("%s was not exiled by its suspend action", name)
 	}
 
 	agents := suspendAgents(agent)
 	for remaining := counters; remaining > 0; remaining-- {
-		engine.processSuspendUpkeep(g, game.Player1, agents, &TurnLog{})
+		card, _ := g.GetCardInstance(cardID)
+		zoneVersion := card.ZoneVersion
 		if remaining > 1 {
-			if got := g.SuspendedCards[cardID].TimeCounters; got != remaining-1 {
+			engine.runSuspendUpkeep(g, game.Player1, agents)
+		} else {
+			// The upkeep trigger removes the last time counter, which triggers
+			// the cast ability (CR 702.62a); both use the stack before the
+			// card is cast.
+			engine.beginSuspendUpkeep(g, game.Player1, agents)
+			requireSuspendUpkeepTrigger(t, g, cardID)
+			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+			engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
+			requireSuspendCastTrigger(t, g, cardID)
+			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+		}
+		removed := requireExileTimeCounterEvent(t, g, game.EventCountersRemoved, cardID, remaining, 1)
+		if removed.CardZoneVersion != zoneVersion {
+			t.Fatalf("%s removal event zone version = %d, want the exiled card's %d", name, removed.CardZoneVersion, zoneVersion)
+		}
+		if remaining > 1 {
+			if got := g.ExileCounterCount(cardID, counter.Time); got != remaining-1 {
 				t.Fatalf("%s time counters after upkeep = %d, want %d", name, got, remaining-1)
 			}
 		}
@@ -225,6 +245,9 @@ func TestKeldonHalberdierSuspendFirstStrike(t *testing.T) {
 	g, engine, cardID, _ := suspendFamilyCast(t, "Keldon Halberdier", "a1472a2d-e6f7-4d65-8bb2-4ecfae2d2764", 4, []mana.Color{mana.R}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	attacker := suspendFamilyPermanent(t, g, cardID)
+	if !canAttackWith(g, attacker, game.Player1) {
+		t.Fatal("Keldon Halberdier cast by its suspend trigger cannot attack despite suspend haste")
+	}
 	blocker := addCombatPermanent(g, game.Player2, suspendFamilyCreatureDef("Larger Blocker", 2, 4, []types.Card{types.Creature}, []color.Color{color.Green}))
 	suspendFamilyDeclareAttacks(t, g, engine, game.Player1, game.Player2, attacker)
 	if !suspendFamilyDeclareBlocks(g, engine, game.Player2, game.BlockDeclaration{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID}) {
@@ -443,4 +466,25 @@ func TestRiftSowerSuspendAnyColorMana(t *testing.T) {
 	if !riftSower.Tapped {
 		t.Fatal("Rift Sower did not pay its tap cost")
 	}
+}
+
+// requireExileTimeCounterEvent asserts the latest counter event of kind
+// identifies the exiled card cardID, with no permanent, as changing amount time
+// counters from previous, and returns it.
+func requireExileTimeCounterEvent(t *testing.T, g *game.Game, kind game.EventKind, cardID id.ID, previous, amount int) game.Event {
+	t.Helper()
+	for i := len(g.Events) - 1; i >= 0; i-- {
+		event := g.Events[i]
+		if event.Kind != kind || event.CardID != cardID {
+			continue
+		}
+		card, _ := g.GetCardInstance(cardID)
+		if event.PermanentID != 0 || event.CounterKind != counter.Time ||
+			event.PreviousCounterAmount != previous || event.Amount != amount || event.Player != card.Owner {
+			t.Fatalf("%v event = %+v, want %d time counters changed from %d on exiled card %v", kind, event, amount, previous, cardID)
+		}
+		return event
+	}
+	t.Fatalf("no %v event for exiled card %v", kind, cardID)
+	return game.Event{}
 }

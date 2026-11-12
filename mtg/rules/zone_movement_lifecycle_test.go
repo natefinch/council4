@@ -70,7 +70,7 @@ func TestExileToExileInvalidatesOldPermissionsAndHandles(t *testing.T) {
 	original := game.ZoneCardSnapshot{CardID: cardID, ZoneVersion: card.ZoneVersion}
 	g.PlottedCards = map[game.ObjectID]int{cardID: 1}
 	g.ForetoldCards = map[game.ObjectID]int{cardID: 1}
-	g.SuspendedCards = map[game.ObjectID]game.SuspendedCard{cardID: {Owner: game.Player1, Controller: game.Player1, TimeCounters: 1}}
+	g.AddExileCounter(cardID, counter.Time, 1)
 	g.RuleEffects = []game.RuleEffect{{
 		ID: g.IDGen.Next(), Kind: game.RuleEffectCastFromZone, Controller: game.Player1,
 		CastFromZone: zone.Exile, AffectedCardID: cardID, Duration: game.DurationPermanent,
@@ -81,7 +81,7 @@ func TestExileToExileInvalidatesOldPermissionsAndHandles(t *testing.T) {
 	}
 	_, plotted := g.PlottedCards[cardID]
 	_, foretold := g.ForetoldCards[cardID]
-	_, suspended := g.SuspendedCards[cardID]
+	suspended := g.HasExileCounter(cardID, counter.Time)
 	_, counterSource := g.ExileCounterExiledBy[cardID]
 	if plotted || foretold || suspended || counterSource || len(g.RuleEffects) != 0 {
 		t.Fatal("old exile occurrence's permissions or markers survived")
@@ -219,7 +219,7 @@ func TestSpecialActionExilesUseSharedMovement(t *testing.T) {
 					if redirect {
 						_, plotted := g.PlottedCards[cardID]
 						_, foretold := g.ForetoldCards[cardID]
-						_, suspended := g.SuspendedCards[cardID]
+						suspended := g.HasExileCounter(cardID, counter.Time)
 						if !player.Hand.Contains(cardID) || player.Exile.Contains(cardID) || plotted || foretold || suspended {
 							t.Fatal("special action followed the requested rather than actual destination")
 						}

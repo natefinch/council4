@@ -317,6 +317,13 @@ const (
 	// loses every "bands with other" ability (CR 702.22b). Appended at the end of
 	// the enum so existing keyword ordinals are unchanged.
 	BandsWithOther
+	// Enlist (CR 702.154) is an optional cost to attack: as the creature
+	// attacks, its controller may tap another untapped, nonattacking creature
+	// they control that could attack this turn, and when they do the attacker
+	// gets +X/+0 until end of turn, where X is the tapped creature's power. Each
+	// instance is paid and triggers independently (CR 702.154d). Appended at the
+	// end of the enum so existing keyword ordinals are unchanged.
+	Enlist
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -429,6 +436,11 @@ var (
 
 	// ExaltedStaticBody is the reusable StaticAbilityBody for exalted.
 	ExaltedStaticBody = simpleKeywordStaticBody("Exalted", Exalted)
+
+	// EnlistStaticBody is the reusable StaticAbilityBody for enlist (CR
+	// 702.154). The rules layer offers its optional attack cost and creates
+	// its linked reflexive trigger.
+	EnlistStaticBody = simpleKeywordStaticBody("Enlist", Enlist)
 
 	// ReadAheadStaticBody is the reusable StaticAbilityBody for read ahead.
 	ReadAheadStaticBody = simpleKeywordStaticBody("Read ahead", ReadAhead)
@@ -1678,6 +1690,57 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 	}
 }
 
+// EncoreActivatedBody builds the graveyard-activated ability for the Encore
+// keyword (CR 702.141a): "Encore <cost> (<cost>, Exile this card from your
+// graveyard: For each opponent, create a token copy that attacks that opponent
+// this turn if able. They gain haste. Sacrifice them at the beginning of the
+// next end step. Activate only as a sorcery.)" Each token copy is bound to its
+// own opponent's attack requirement. The granted haste is a separate layer-6
+// effect on the created cohort, so it is not part of the tokens' copiable
+// values (CR 707.2), and one delayed trigger sacrifices the whole cohort at the
+// beginning of the next end step (CR 603.7).
+func EncoreActivatedBody(manaCost cost.Mana) ActivatedAbility {
+	const tokens LinkedKey = "encore-tokens"
+	return ActivatedAbility{
+		Text:           "Encore " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: zone.Graveyard,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalExileSource,
+			Text: "Exile this card from your graveyard",
+		}},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: CreateToken{
+					Amount:                         Fixed(1),
+					Source:                         TokenCopyOf(TokenCopySpec{Source: TokenCopySourceSourceCard}),
+					MustAttackEachOpponentThisTurn: true,
+					PublishLinked:                  tokens,
+				},
+				LocalProducts: LocalProducts{Links: []LinkedKey{tokens}},
+			},
+			{
+				Primitive: ApplyContinuous{ContinuousEffects: []ContinuousEffect{{
+					Group:       LinkedObjectsGroup(tokens),
+					Layer:       LayerAbility,
+					AddKeywords: []Keyword{Haste},
+				}}},
+			},
+			{
+				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Text:                "Sacrifice them at the beginning of the next end step.",
+					Timing:              DelayedAtBeginningOfNextEndStep,
+					CapturedObjectGroup: opt.Val(LinkedObjectReference(string(tokens))),
+					Content: Mode{Sequence: []Instruction{{
+						Primitive: Sacrifice{Group: CapturedObjectsGroup()},
+					}}}.Ability(),
+				}},
+			},
+		}}.Ability(),
+	}
+}
+
 // EmbalmActivatedBody builds the ActivatedAbilityBody for the Embalm keyword.
 // Like Eternalize, it exiles the card from its owner's graveyard at sorcery
 // speed to create a token copy, except the token is white, gains the Zombie
@@ -2097,6 +2160,16 @@ type TargetSpec struct {
 	// TargetZone restricts card targets to one zone. It is meaningful only when
 	// Allow includes TargetAllowCard.
 	TargetZone zone.Type
+
+	// SuspendedCard restricts the card alternative of this target to suspended
+	// cards: cards in exile that have suspend and at least one time counter
+	// (CR 702.62b), as in "target permanent or suspended card". It requires
+	// Allow to include TargetAllowCard and TargetZone to be exile. The card
+	// alternative is matched solely by the suspended predicate; when the spec
+	// also allows permanents, Selection constrains only the permanent
+	// alternative ("target permanent with a time counter on it or suspended
+	// card").
+	SuspendedCard bool
 
 	// Chooser identifies who chooses this target slot during announcement. The
 	// default controller chooser preserves normal targeting. For non-controller

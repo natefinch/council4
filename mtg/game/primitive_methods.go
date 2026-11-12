@@ -658,7 +658,11 @@ func (p CorrelatedFight) instructionRefs() primitiveRefs {
 	}
 	return refs
 }
-func (Tap) instructionRefs() primitiveRefs        { return primitiveRefs{} }
+func (p Tap) instructionRefs() primitiveRefs {
+	refs := quantityRefs(p.Amount)
+	refs.publishesLinked = p.PublishLinked
+	return refs
+}
 func (TapOrUntap) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (p Search) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)

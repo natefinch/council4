@@ -85,6 +85,20 @@ type StackObject struct {
 	// the ability keeps it (CR 707.10).
 	SiegeDefeat bool
 
+	// SuspendCast identifies suspend's intrinsic triggered ability (CR
+	// 702.62a), "When the last time counter is removed from this card, if it's
+	// exiled, you may play it without paying its mana cost if able." Its source
+	// is the exiled card at SourceCardID and SourceZoneVersion. A copy of the
+	// ability keeps it (CR 707.10).
+	SuspendCast bool
+
+	// SuspendUpkeep identifies suspend's intrinsic upkeep triggered ability
+	// (CR 702.62a), "At the beginning of your upkeep, if this card is
+	// suspended, remove a time counter from it." Its source is the exiled card
+	// at SourceCardID and SourceZoneVersion. A copy of the ability keeps it
+	// (CR 707.10).
+	SuspendUpkeep bool
+
 	// Rebound identifies rebound's delayed triggered ability (CR 702.88a): its
 	// controller may cast the captured card (CapturedCardID at
 	// CapturedCardZoneVersion) from exile without paying its mana cost. A copy
@@ -258,6 +272,15 @@ type StackObject struct {
 	// Flashback is true if this spell was cast from a graveyard using
 	// flashback; it is exiled if it would leave the stack (CR 702.34).
 	Flashback bool
+
+	// CastPermissionEntryCounters snapshots the entry-counter rider
+	// (RuleEffect.CastEntryCounters) of the cast permission this spell was cast
+	// through, chosen as it was cast (CR 601.2b) ("If you cast a spell this way,
+	// it enters with a finality counter on it."). The permanent it becomes
+	// enters with these counters (CR 122.6, 614.1c) even if the permission's
+	// source has since left. It is empty for a spell cast any other way and for
+	// a copy that wasn't cast (CR 707.10).
+	CastPermissionEntryCounters []CounterPlacement
 
 	// CastDuringControllerMainPhase records whether this spell was cast while
 	// its controller was the active player and the game was in a main phase. It

@@ -660,10 +660,12 @@ type AddMana struct {
 	PersistUntilEndOfTurn bool
 }
 
-// AddCounter places counters on a referenced permanent.
+// AddCounter places counters on a referenced permanent. A target Object whose
+// slot holds an exiled card target ("target permanent or suspended card") puts
+// the counters on that card in exile instead.
 type AddCounter struct {
 	Amount      Quantity
-	Object      ObjectReference // single permanent; zero if Group is set
+	Object      ObjectReference // single permanent or targeted exiled card; zero if Group is set
 	Group       GroupReference  // every permanent in a group; zero if Object is set
 	CounterKind counter.Kind
 	// AllKinds doubles every kind of counter already on Object: the runtime adds,
@@ -823,10 +825,41 @@ type CorrelatedFight struct {
 // Tap taps one referenced permanent or every permanent in a referenced group
 // ("Tap all creatures your opponents control."). Exactly one of Object or Group
 // is set.
+//
+// When Choose is set, the Chooser (the resolving controller when unset)
+// instead chooses which untapped members of Group to tap, without targeting
+// ("you may tap an untapped creature you control. If you do, ..."). The chosen
+// permanents become tapped simultaneously. The instruction's result succeeds
+// only when the chosen tap was performed, so it can gate an "if you do" or
+// reflexive "when you do" tail, and its amount is the number tapped. When
+// PublishLinked is set, the tapped permanents are recorded under that key.
 type Tap struct {
 	Object ObjectReference
 	Group  GroupReference
+
+	Choose        TapChoice
+	Amount        Quantity
+	Chooser       PlayerReference
+	PublishLinked LinkedKey
 }
+
+// TapChoice selects how many untapped members of a Tap group the chooser taps.
+type TapChoice uint8
+
+// TapChoice values.
+const (
+	// TapChoiceNone taps the referenced object or every group member.
+	TapChoiceNone TapChoice = iota
+	// TapChoiceExactly taps exactly Amount chosen untapped members ("tap two
+	// untapped creatures you control"). With fewer eligible members nothing is
+	// tapped and the result fails.
+	TapChoiceExactly
+	// TapChoiceUpTo taps zero through Amount chosen untapped members.
+	TapChoiceUpTo
+	// TapChoiceAnyNumber taps any number of chosen untapped members. The
+	// number tapped is the result amount, the X of "tap X untapped ...".
+	TapChoiceAnyNumber
+)
 
 // TapOrUntap lets the controller choose to tap or untap the referenced
 // permanent ("Tap or untap target creature."). The choice is made when the
@@ -969,6 +1002,21 @@ type CreateToken struct {
 	// attacking permanent. It is mutually exclusive with every other attack-entry
 	// mode.
 	AttackSameAsObject opt.V[ObjectReference]
+
+	// MustAttackEachOpponentThisTurn, when set, creates Amount tokens for each
+	// living opponent of the ability's controller ("For each opponent, create a
+	// token copy that attacks that opponent this turn if able.", Encore,
+	// CR 702.141a). Every token is created under the controller in one
+	// simultaneous event and enters untapped unless EntryTapped is set; it does
+	// not enter attacking. Each created token is then bound to exactly one of
+	// those opponents by its own directed must-attack requirement lasting this
+	// turn (CR 508.1d), so the requirement follows that token rather than the
+	// cohort. Opponents are visited in APNAP order, and the created tokens are
+	// assigned to them round-robin in creation order so token-creation
+	// replacement effects that add tokens still give every opponent its share.
+	// It is mutually exclusive with Recipient, RecipientGroup and every
+	// attack-entry mode, and is unset for ordinary token creation.
+	MustAttackEachOpponentThisTurn bool
 
 	// Power and Toughness, when set, override the source definition's printed
 	// power and toughness with a dynamic amount evaluated once at creation
@@ -2586,6 +2634,8 @@ type Goad struct {
 }
 
 // RemoveCounter removes counters from one referenced permanent or every permanent in a referenced group.
+// A target Object whose slot holds an exiled card target ("target permanent or
+// suspended card") removes the counters from that card in exile instead.
 type RemoveCounter struct {
 	Amount      Quantity
 	Object      ObjectReference

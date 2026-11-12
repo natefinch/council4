@@ -1237,6 +1237,9 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 	allowsPlayers := target.Allow&TargetAllowPlayer != 0
 	allowsCards := target.Allow&TargetAllowCard != 0
 	allowsStackObjects := target.Allow&TargetAllowStackObject != 0
+	if target.SuspendedCard && (!allowsCards || target.TargetZone != zone.Exile) {
+		v.add(faceName, appendPath(path, "SuspendedCard"), CardDefIssueInvalidTargetSpec, "suspended-card targets require an exiled card target")
+	}
 	if !allowsStackObjects && !target.Predicate.Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object predicate requires a stack-object target")
 	}
@@ -1615,6 +1618,24 @@ func (v *cardDefValidator) validateContinuousEffect(faceName, path string, conti
 	}
 }
 
+// validateCastEntryCounters checks a cast-permission entry-counter rider: only
+// a cast-from-zone permission carries one, and each placement is a fixed
+// positive number of counters of a recognized kind.
+func (v *cardDefValidator) validateCastEntryCounters(faceName, path string, effect *RuleEffect) {
+	if len(effect.CastEntryCounters) == 0 {
+		return
+	}
+	if effect.Kind != RuleEffectCastFromZone && effect.Kind != RuleEffectCastSpellsFromZone {
+		v.add(faceName, appendPath(path, "CastEntryCounters"), CardDefIssueInvalidRuleEffect, "entry-counter riders require a cast-from-zone permission")
+		return
+	}
+	for i, placement := range effect.CastEntryCounters {
+		if !placement.Kind.Valid() || placement.Kind.PlayerOnly() || placement.Amount <= 0 || placement.AmountFromX || placement.Dynamic.Exists {
+			v.add(faceName, appendPath(path, fmt.Sprintf("CastEntryCounters[%d]", i)), CardDefIssueInvalidRuleEffect, "entry-counter riders require a permanent counter kind and a fixed positive amount")
+		}
+	}
+}
+
 func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *RuleEffect) {
 	if effect == nil {
 		v.add(faceName, path, CardDefIssueInvalidRuleEffect, "rule effect is nil")
@@ -1624,6 +1645,7 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		v.add(faceName, appendPath(path, "Kind"), CardDefIssueInvalidRuleEffect, "rule effect has an unsupported kind")
 		return
 	}
+	v.validateCastEntryCounters(faceName, path, effect)
 	switch effect.Kind {
 	case RuleEffectPlayFromGraveyardPerPermanentType:
 		if effect.PermissionKey == "" || effect.AffectedPlayer != PlayerYou ||

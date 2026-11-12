@@ -321,6 +321,12 @@ func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.Stac
 	if obj.Rebound {
 		return e.resolveReboundTrigger(g, obj, agents, log)
 	}
+	if obj.SuspendCast {
+		return e.resolveSuspendCastTrigger(g, obj, agents, log)
+	}
+	if obj.SuspendUpkeep {
+		return resolveSuspendUpkeepTrigger(g, obj)
+	}
 	if obj.InlineTrigger != nil {
 		source, _ := stackObjectSourceDef(g, obj)
 		return e.resolveTriggeredAbilityBodyWithChoices(g, obj, source, obj.InlineTrigger, agents, log)
@@ -837,6 +843,9 @@ func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions 
 		options.ColorsOfManaSpentToCast = obj.ColorsOfManaSpentToCast
 		options.ManaSpentByColorToCast = obj.ManaSpentByColorToCast
 		options.ManaSpentToCast = obj.ManaSpentToCast
+		// CR 122.6, 614.1c: the cast permission's "if you cast a spell this
+		// way, it enters with ..." rider was fixed as the spell was cast.
+		options.Counters = slices.Clone(obj.CastPermissionEntryCounters)
 	}
 	return options
 }

@@ -1206,6 +1206,19 @@ type RuleEffect struct {
 	// every permission with no per-turn cap.
 	OncePerTurn bool
 
+	// CastEntryCounters is a rider on a RuleEffectCastFromZone or
+	// RuleEffectCastSpellsFromZone permission: a permanent spell cast through this
+	// permission enters the battlefield with these counters ("If you cast a spell
+	// this way, it enters with a finality counter on it.", Hundred-Battle
+	// Veteran, Leonardo, Sewer Samurai). The rules layer snapshots the rider of
+	// the permission the caster selected onto the spell as it is cast (CR
+	// 601.2b), so it applies even if the permission's source has left, and
+	// applies it as an enters-with-counters replacement (CR 122.6, 614.1c). A
+	// spell cast through another permission, and a copy that wasn't cast (CR
+	// 707.10), gets no rider. Each placement has a fixed positive Amount. It is
+	// empty for every permission with no entry rider.
+	CastEntryCounters []CounterPlacement
+
 	// GraveyardCastCost carries the computed alternative cost a
 	// RuleEffectGrantGraveyardCardKeyword synthesizes for each matching graveyard
 	// card it makes castable, when the granting card specifies that cost in its
