@@ -1442,7 +1442,39 @@ func (p CorrelatedFight) validatePrimitive([]TargetSpec, bool) error {
 }
 
 func (p Tap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
+	if err := validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets); err != nil {
+		return err
+	}
+	hasAmount := p.Amount.IsDynamic() || p.Amount.Value() != 0
+	switch p.Choose {
+	case TapChoiceNone:
+		if hasAmount || p.Chooser.Kind() != PlayerReferenceNone || p.PublishLinked != "" {
+			return errors.New("tap Amount, Chooser and PublishLinked require Choose")
+		}
+		return nil
+	case TapChoiceExactly, TapChoiceUpTo:
+		if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
+			return err
+		}
+		if !p.Amount.IsDynamic() && p.Amount.Value() <= 0 {
+			return errors.New("chosen tap requires a positive Amount")
+		}
+	case TapChoiceAnyNumber:
+		if hasAmount {
+			return errors.New("any-number tap cannot carry an Amount")
+		}
+	default:
+		return fmt.Errorf("unknown TapChoice %d", p.Choose)
+	}
+	if p.Object.Kind() != ObjectReferenceNone {
+		return errors.New("chosen tap requires a Group rather than an Object")
+	}
+	if p.Chooser.Kind() != PlayerReferenceNone {
+		if err := firstProblem(p.Chooser.Validate()); err != nil {
+			return fmt.Errorf("tap chooser: %w", err)
+		}
+	}
+	return nil
 }
 
 func (p TapOrUntap) validatePrimitive(targets []TargetSpec, checkTargets bool) error {

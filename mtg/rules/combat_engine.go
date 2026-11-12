@@ -170,7 +170,7 @@ func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]Pl
 	log.addAction(&actionLog)
 
 	attackers, ok := chosen.DeclareAttackersPayload()
-	if !ok || !ce.applyAttackers(g, playerID, attackers) {
+	if !ok || !ce.applyAttackersWithChoices(g, playerID, attackers, agents, log) {
 		panic("applyAttackers failed for validated action")
 	}
 	ce.e.notifyActionObservers(g, agents, playerID, chosen)
@@ -636,6 +636,16 @@ func (ce combatEngine) attackersLegal(g *game.Game, playerID game.PlayerID, decl
 		return false
 	}
 	return ce.canPayAttackTax(g, playerID, declare.Attackers)
+}
+
+// applyAttackersWithChoices applies a declaration and then offers the
+// attackers' optional enlist costs (CR 508.1j) to the attacking player.
+func (ce combatEngine) applyAttackersWithChoices(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	if !ce.applyAttackers(g, playerID, declare) {
+		return false
+	}
+	ce.payEnlistCosts(g, playerID, declare.Attackers, agents, log)
+	return true
 }
 
 // applyAttackers validates, pays attack taxes, taps and emits declaration events.

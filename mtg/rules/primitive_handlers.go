@@ -994,6 +994,9 @@ func handleModifyPT(r *effectResolver, prim game.ModifyPT) effectResolved {
 }
 
 func handleTap(r *effectResolver, prim game.Tap) effectResolved {
+	if prim.Choose != game.TapChoiceNone {
+		return r.handleChosenTap(prim)
+	}
 	res := effectResolved{accepted: true}
 	targets := r.resolveObjectGroup(prim.Object, prim.Group)
 	if !targets.single {

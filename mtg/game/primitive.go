@@ -823,10 +823,41 @@ type CorrelatedFight struct {
 // Tap taps one referenced permanent or every permanent in a referenced group
 // ("Tap all creatures your opponents control."). Exactly one of Object or Group
 // is set.
+//
+// When Choose is set, the Chooser (the resolving controller when unset)
+// instead chooses which untapped members of Group to tap, without targeting
+// ("you may tap an untapped creature you control. If you do, ..."). The chosen
+// permanents become tapped simultaneously. The instruction's result succeeds
+// only when the chosen tap was performed, so it can gate an "if you do" or
+// reflexive "when you do" tail, and its amount is the number tapped. When
+// PublishLinked is set, the tapped permanents are recorded under that key.
 type Tap struct {
 	Object ObjectReference
 	Group  GroupReference
+
+	Choose        TapChoice
+	Amount        Quantity
+	Chooser       PlayerReference
+	PublishLinked LinkedKey
 }
+
+// TapChoice selects how many untapped members of a Tap group the chooser taps.
+type TapChoice uint8
+
+// TapChoice values.
+const (
+	// TapChoiceNone taps the referenced object or every group member.
+	TapChoiceNone TapChoice = iota
+	// TapChoiceExactly taps exactly Amount chosen untapped members ("tap two
+	// untapped creatures you control"). With fewer eligible members nothing is
+	// tapped and the result fails.
+	TapChoiceExactly
+	// TapChoiceUpTo taps zero through Amount chosen untapped members.
+	TapChoiceUpTo
+	// TapChoiceAnyNumber taps any number of chosen untapped members. The
+	// number tapped is the result amount, the X of "tap X untapped ...".
+	TapChoiceAnyNumber
+)
 
 // TapOrUntap lets the controller choose to tap or untap the referenced
 // permanent ("Tap or untap target creature."). The choice is made when the
