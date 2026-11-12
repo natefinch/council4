@@ -79,7 +79,7 @@ export const reviewBar = (base, issue) => `Decide what blocks approval. A findin
 Everything else about the new behavior is a follow-up, not a finding: edge cases that main also lacked, rare multi-card interactions, and routes the unit does not target. For each follow-up, reuse an open issue or file one precise issue with labels "Card Support TODO", "To Be Triaged" and "${needsEvidenceLabel}"${issue ? `, attach it as a sub-issue of #${issue} (gh api -X POST repos/natefinch/council4/issues/${issue}/sub_issues -F sub_issue_id=<numeric id from gh api repos/natefinch/council4/issues/N --jq .id>)` : ""}, and list it under followUps. Follow-ups wait until a card being authored or a simulated game hits them. Approve when no finding blocks, even with follow-ups and pre-existing defects.`;
 
 // Review classification rules shared by every review prompt.
-export const preexistingRule = base => `Classify every defect you find. It is a finding (blocks approval) when this change causes it, or when it is behavior this unit must deliver: its target cards and the rule it implements, on the routes it changes. A defect that already exists on the unit's base commit ${base}, in behavior this unit does not claim to deliver, is pre-existing: do NOT list it as a finding. Confirm that before using it: the defective path is unchanged by \`git diff ${base}\`, or your probe fails the same way on ${base} in a temporary worktree under .cardwork. For each pre-existing defect, reuse an open issue (search the "Card Support TODO" label) or file one precise issue with labels "Card Support TODO", "To Be Triaged" and "${needsEvidenceLabel}", then list it in preexisting with the issue number, a short description and how you confirmed it predates this change. If cards already in the default registry hit the defective path, also add the label "${existingCardDefectLabel}" and name one such card in the issue. Pre-existing defects wait until a card being authored or a simulated game hits them; they never block approval; do not ask the author to fix them.`;
+export const preexistingRule = base => `Classify every defect you find. It is a finding (blocks approval) when this change causes it, or when it is behavior this unit must deliver: its target cards and the rule it implements, on the routes it changes. A defect that already exists on the unit's base commit ${base}, in behavior this unit does not claim to deliver, is pre-existing: do NOT list it as a finding. A unit's cards calling a shared Engine path does not make that path's existing defect theirs: if the same defect reproduces with an already registered card or a plain test card on ${base}, it is pre-existing. Confirm that before using it: the defective path is unchanged by \`git diff ${base}\`, or your probe fails the same way on ${base} in a temporary worktree under .cardwork. For each pre-existing defect, reuse an open issue (search the "Card Support TODO" label) or file one precise issue with labels "Card Support TODO", "To Be Triaged" and "${needsEvidenceLabel}", then list it in preexisting with the issue number, a short description and how you confirmed it predates this change. If cards already in the default registry hit the defective path, also add the label "${existingCardDefectLabel}" and name one such card in the issue. Pre-existing defects wait until a card being authored or a simulated game hits them; they never block approval; do not ask the author to fix them.`;
 
 const reviewPhases = ["review", "re_review", "integration_review", "ci_review"];
 
@@ -395,6 +395,14 @@ export async function closeLandedIssue(cwd, issue, gaps, pr, signal, gh = args =
     closed.push(parent);
   }
   return { closed };
+}
+
+// An integration or CI review that did not approve; it fails only its unit.
+export class LandingRejected extends Error {
+  constructor(verdict) {
+    super(`Landing review not approved: ${JSON.stringify(verdict)}`);
+    this.verdict = verdict;
+  }
 }
 
 export function checkSelection(task) {
@@ -933,7 +941,7 @@ Return approve with no findings only when no material unresolved defect remains,
               reviewSchema);
               if ((await changes(work.path, ctx.signal)).digest !== before.digest ||
                   await git(work.path, ["rev-parse", "HEAD"], ctx.signal) !== beforeHead) throw new Error("Landing reviewer modified the submission");
-              if (verdict?.verdict !== "approve" || verdict.findings.length) throw new Error(`Landing review not approved: ${JSON.stringify(verdict)}`);
+              if (verdict?.verdict !== "approve" || verdict.findings.length) throw new LandingRejected(verdict);
             };
             let receipt;
             let waitAttempt = 0;
@@ -980,6 +988,12 @@ Return complete only with actual repair/evidence, or blocked with the cause.`,
             record.outcome = receipt.published ? "published" : "ci_failed";
             return receipt;
           } catch (error) {
+            // A rejected integration or CI review fails this unit, not the run;
+            // its PR stays open with the findings for a later decision.
+            if (error instanceof LandingRejected) {
+              record.outcome = "rejected";
+              return { published: false, status: "landing_rejected", verdict: error.verdict, pr: state.currentUnit?.pr ?? null };
+            }
             record.outcome = "failed";
             throw error;
           } finally {
@@ -994,7 +1008,8 @@ Return complete only with actual repair/evidence, or blocked with the cause.`,
           }
         }
         return { index, task, base: work.base, worktree: work.path, ...result,
-          status: landing.published ? "landed" : "ci_failed", landing };
+          status: landing.published ? "landed" : landing.status === "landing_rejected" ? "landing_rejected" : "ci_failed", landing,
+          ...(landing.status === "landing_rejected" && { reason: `Landing review rejected ${landing.pr?.url ?? "the PR"}: ${(landing.verdict?.findings ?? []).join(" | ")}` }) };
       });
       if (!state.units.some(u => u.index === index)) state.units.push(unit);
       state.currentUnit = null;
