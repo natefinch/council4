@@ -1239,6 +1239,55 @@
     "oracle_text_sha256": "6370a49f1da013e71b9e07bd246d61452693364db9175cc1c5aeb15fc8d45c96",
     "revision": "c3b74135-b8db-4485-a4b1-7aaa3ef28072",
     "rulings_uri": "https://api.scryfall.com/cards/c3b74135-b8db-4485-a4b1-7aaa3ef28072/rulings"
+   },
+   {
+    "name": "Igneous Inspiration",
+    "oracle_id": "2e31af8f-5e94-4888-857d-911253eac2cd",
+    "oracle_text_sha256": "1ffacd574b5ce07d3092f17fec0bb4710fb8a54b09a18b2359443bf4f0dab374",
+    "revision": "5781ad7b-dc1b-4cc1-9e72-6e714b9ba1de",
+    "rulings_uri": "https://api.scryfall.com/cards/5781ad7b-dc1b-4cc1-9e72-6e714b9ba1de/rulings"
+   },
+   {
+    "name": "Enthusiastic Study",
+    "oracle_id": "4233334d-bb19-41e4-a203-2b7bb0c48f52",
+    "oracle_text_sha256": "39c329eae20955da0db63e337db1dc91532558f243879d09549f27eb3735239d",
+    "revision": "543c64ff-2c51-4a63-a940-dc8645717c85",
+    "rulings_uri": "https://api.scryfall.com/cards/543c64ff-2c51-4a63-a940-dc8645717c85/rulings"
+   },
+   {
+    "name": "Arcane Subtraction",
+    "oracle_id": "4b5806fa-430f-4b78-b874-63d01a8a9de5",
+    "oracle_text_sha256": "dbf765b53c6afd0b6bdabbe052521715550356dc0a9e66524e718b41e5935b8d",
+    "revision": "68cdb00c-ea86-4b72-8f62-570820edfa1b",
+    "rulings_uri": "https://api.scryfall.com/cards/68cdb00c-ea86-4b72-8f62-570820edfa1b/rulings"
+   },
+   {
+    "name": "Guiding Voice",
+    "oracle_id": "5c7e7c9e-00d1-497e-bee7-278bbd82e234",
+    "oracle_text_sha256": "479424c1daceef86df3b9e03a0dec634020c77b008571e6e6c322cfd76d1a6b0",
+    "revision": "d6fb3163-12ca-4a7f-a0c7-b8ddfc9408a0",
+    "rulings_uri": "https://api.scryfall.com/cards/d6fb3163-12ca-4a7f-a0c7-b8ddfc9408a0/rulings"
+   },
+   {
+    "name": "Cram Session",
+    "oracle_id": "6e5b8bb2-9dd8-4986-9d0a-659114be5a2a",
+    "oracle_text_sha256": "98061db1a3848ad3e5f1f605f1402c24b196c5dc0a10a2d6a44f5d374e69d5b6",
+    "revision": "c59a249f-35ed-447a-845b-32ba5a53124e",
+    "rulings_uri": "https://api.scryfall.com/cards/c59a249f-35ed-447a-845b-32ba5a53124e/rulings"
+   },
+   {
+    "name": "Study Break",
+    "oracle_id": "7aae7c7b-0b31-4b48-a8d3-81c913f604cf",
+    "oracle_text_sha256": "a5ee475dddba98a5bb2e1dc967c0f1783cac4e3f8e1c697c207b450e0ba1771a",
+    "revision": "ef7cd813-0781-4fd7-8748-2716e1eeb4b9",
+    "rulings_uri": "https://api.scryfall.com/cards/ef7cd813-0781-4fd7-8748-2716e1eeb4b9/rulings"
+   },
+   {
+    "name": "Pop Quiz",
+    "oracle_id": "dda9ac6c-1ab2-4f77-b499-f03d587163d8",
+    "oracle_text_sha256": "d3c979646d8447f4c28de26a40d1317e5b8352da1759a0cbb2b6fb8aa62d1c96",
+    "revision": "d16892d8-9d10-45de-ab79-0e645c4b5588",
+    "rulings_uri": "https://api.scryfall.com/cards/d16892d8-9d10-45de-ab79-0e645c4b5588/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8023,6 +8072,24 @@
     "RuleEffectCantBeBlockedByCreaturesWith"
    ],
    "review": "Checked base 657016910ab5aa2f29f53778b9819336b7a080bf: mtg/game/ability.go EncoreActivatedBody, mtg/game/primitive.go MustAttackEachOpponentThisTurn, mtg/rules/encore_attack_requirement_test.go; supporting prior art includes mtg/rules/cda_power_toughness_test.go and mtg/rules/combat_blockers_test.go. Checked all nine Oracle texts in the pinned corpus and confirmed the other paragraphs use existing trigger, token, counter, draw, graveyard-return, dynamic-P/T, and blocker-restriction operations. No rulings or Comprehensive Rules review performed."
+  },
+  {
+   "id": "learn-20261112-a",
+   "family": "learn",
+   "oracle_ids": [
+    "2e31af8f-5e94-4888-857d-911253eac2cd",
+    "4233334d-bb19-41e4-a203-2b7bb0c48f52",
+    "4b5806fa-430f-4b78-b874-63d01a8a9de5",
+    "5c7e7c9e-00d1-497e-bee7-278bbd82e234",
+    "6e5b8bb2-9dd8-4986-9d0a-659114be5a2a",
+    "7aae7c7b-0b31-4b48-a8d3-81c913f604cf",
+    "dda9ac6c-1ab2-4f77-b499-f03d587163d8"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.DiscardThenDraw"
+   ],
+   "review": "Capability-only check (no CR/rulings/source review): DiscardThenDraw declaration mtg/game/primitive.go:2235, Engine handler mtg/rules/primitive_handlers_zones.go:3205, and behavioral evidence mtg/rules/effects_discard_then_draw_test.go:9. The operation supports the discard/draw choice; the Commander model does not simulate sideboards/outside-game access (mtg/game/ability.go:506-510), so Lesson retrieval is unavailable in this scope. Other paragraphs fit the supplied family classification and the pinned Oracle texts."
   }
  ],
  "records": [
@@ -91342,8 +91409,10 @@
    "oracle_id": "2e31af8f-5e94-4888-857d-911253eac2cd",
    "revision": "5781ad7b-dc1b-4cc1-9e72-6e714b9ba1de",
    "name": "Igneous Inspiration",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestIgneousInspirationScenario"
   },
   {
    "oracle_id": "2e338e09-5758-4cc2-9143-21f050a28677",
@@ -108809,8 +108878,10 @@
    "oracle_id": "4233334d-bb19-41e4-a203-2b7bb0c48f52",
    "revision": "543c64ff-2c51-4a63-a940-dc8645717c85",
    "name": "Enthusiastic Study",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestEnthusiasticStudyScenario"
   },
   {
    "oracle_id": "4234f07e-583f-40db-8b47-7e16c7316e19",
@@ -116602,8 +116673,10 @@
    "oracle_id": "4b5806fa-430f-4b78-b874-63d01a8a9de5",
    "revision": "68cdb00c-ea86-4b72-8f62-570820edfa1b",
    "name": "Arcane Subtraction",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestArcaneSubtractionScenario"
   },
   {
    "oracle_id": "4b5c7f11-75f2-4bad-86cd-f0232861f569",
@@ -130884,8 +130957,10 @@
    "oracle_id": "5c7e7c9e-00d1-497e-bee7-278bbd82e234",
    "revision": "d6fb3163-12ca-4a7f-a0c7-b8ddfc9408a0",
    "name": "Guiding Voice",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestGuidingVoiceScenario"
   },
   {
    "oracle_id": "5c7f91af-8bac-4da1-b9e5-f15989c9d53c",
@@ -146362,8 +146437,10 @@
    "oracle_id": "6e5b8bb2-9dd8-4986-9d0a-659114be5a2a",
    "revision": "c59a249f-35ed-447a-845b-32ba5a53124e",
    "name": "Cram Session",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestCramSessionScenario"
   },
   {
    "oracle_id": "6e5f1088-a5ab-48ec-be27-c88eb164cf63",
@@ -157157,8 +157234,10 @@
    "oracle_id": "7aae7c7b-0b31-4b48-a8d3-81c913f604cf",
    "revision": "ef7cd813-0781-4fd7-8748-2716e1eeb4b9",
    "name": "Study Break",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestStudyBreakScenario"
   },
   {
    "oracle_id": "7ab01e23-cbf5-458c-880c-50e061ece688",
@@ -240952,8 +241031,10 @@
    "oracle_id": "dda9ac6c-1ab2-4f77-b499-f03d587163d8",
    "revision": "d16892d8-9d10-45de-ab79-0e645c4b5588",
    "name": "Pop Quiz",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "learn",
+   "batch": "learn-20261112-a",
+   "evidence": "mtg/rules/authored_learn_spells_test.go: TestPopQuizScenario"
   },
   {
    "oracle_id": "ddb021df-ae4a-4ac1-8353-d0b375761714",
