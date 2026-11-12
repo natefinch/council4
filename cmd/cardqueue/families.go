@@ -2,6 +2,7 @@ package main
 
 import (
 	"cmp"
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
@@ -82,7 +83,7 @@ func cardFamilies(queue manifest, corpus []carddata.ScryfallCard) []family {
 	}
 	groups := make(map[string]*family)
 	for _, r := range queue.Records {
-		if r.Status != "unclaimed" || r.Batch != "" {
+		if r.Status != "unclaimed" || r.Batch != "" || isToken(byOracle[r.OracleID]) {
 			continue
 		}
 		cardParagraphs := paragraphs(r.OracleID)
@@ -142,4 +143,28 @@ func normalizeParagraph(name, paragraph string, subtypes map[string]bool) string
 		}
 	}
 	return strings.ToLower(strings.Join(words, " "))
+}
+
+// isToken reports printed token cards. They are not deck cards: a token is
+// created by the card that makes it, and the deck-card registry cannot admit
+// printed token identities, so they are never authored as queue batches.
+func isToken(card carddata.ScryfallCard) bool {
+	return card.Layout == "token" || card.Layout == "double_faced_token"
+}
+
+func rejectTokenBatch(plan reviewedPlan, corpus []carddata.ScryfallCard) error {
+	tokens := make(map[string]string)
+	for _, card := range corpus {
+		if isToken(card) {
+			tokens[card.OracleID] = card.Name
+		}
+	}
+	for _, b := range plan.Batches {
+		for _, id := range b.OracleIDs {
+			if name, ok := tokens[id]; ok {
+				return fmt.Errorf("batch %s includes printed token %s; tokens come from the cards that create them and cannot be registered as deck cards", b.ID, name)
+			}
+		}
+	}
+	return nil
 }
