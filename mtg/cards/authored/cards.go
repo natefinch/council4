@@ -38,6 +38,8 @@ func verifiedEntries() []cardset.Entry {
 		MilitantInquisitor, ManifestDread, DevilsPlay, OxiddaFinisher)
 	entries = append(entries, BurrentonBombardier, BreakTies, FowlStrike, SwellOfCourage, HuntingTriad,
 		MosquitoGuard, Earthbrawn, WrensRunHydra, RusticClachan, BannerhideKrushok)
+	entries = append(entries, MirranBardiche, SylvokBattleChair, GoldwardensHelm, DragonwingGlider,
+		VulshokSplitter, BarbedBatterfist, KembasBanner)
 	entries = append(entries, AncestralVision, SearchForTomorrow, VisceridDeepwalker,
 		KeldonHalberdier, CorpulentCorpse, ErrantEphemeron, MoxTantalite,
 		InfiltratorIlKor, IthHighArcanist, RiftSower)
