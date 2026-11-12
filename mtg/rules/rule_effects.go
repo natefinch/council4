@@ -1598,10 +1598,33 @@ func castPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, 
 	if !ok {
 		return independentCastPermissionsForZone(g, playerID, cardID, sourceZone, face)
 	}
-	return castPermissionsForSpell(g, playerID, cardID, sourceZone, face, cardFaceOrDefault(card, face))
+	return castPermissionsForSpell(g, playerID, sourceZone, cardFaceOrDefault(card, face), independentCastPermissionsForZone(g, playerID, cardID, sourceZone, face))
 }
 
+// independentCastPermissionsForZone returns the permissions, other than a
+// permanent-type play permission (Muldrotha, the Gravetide), that let playerID
+// cast the face of cardID from sourceZone in some cast mode. Legal-action
+// enumeration lists a card through it; a concrete cast selects its permissions
+// with independentCastPermissionsForMode.
 func independentCastPermissionsForZone(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) []payment.SpellCastPermission {
+	return independentCastPermissions(g, playerID, cardID, sourceZone, face, func() bool {
+		return castSpellsFromZonePermitsSomeCast(g, playerID, cardID, sourceZone, face)
+	})
+}
+
+// independentCastPermissionsForMode returns the permissions, other than a
+// permanent-type play permission, that let playerID cast the face of cardID
+// from sourceZone in the cast mode bestowed selects. A group permission
+// ("You may cast creature spells from your graveyard") authorizes only a cast
+// whose spell it matches: a bestowed cast is an Aura spell, not a creature
+// spell (CR 702.103b), so it needs another permission.
+func independentCastPermissionsForMode(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, bestowed bool) []payment.SpellCastPermission {
+	return independentCastPermissions(g, playerID, cardID, sourceZone, face, func() bool {
+		return canCastSpellsFromZoneByRuleEffect(g, playerID, cardID, sourceZone, face, bestowed)
+	})
+}
+
+func independentCastPermissions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, groupPermits func() bool) []payment.SpellCastPermission {
 	if sourceZone != zone.Graveyard {
 		return []payment.SpellCastPermission{payment.SpellCastPermissionDefault}
 	}
@@ -1621,7 +1644,10 @@ func independentCastPermissionsForZone(g *game.Game, playerID game.PlayerID, car
 		len(grantedGraveyardCastAlternatives(g, playerID, cardFaceOrDefault(card, game.FaceFront))) > 0 {
 		permissions = append(permissions, payment.SpellCastPermissionEscape)
 	}
-	if hasCastFromZoneRuleEffect(g, playerID, cardID, sourceZone, face) {
+	// A group permission ("You may cast creature spells from your graveyard",
+	// Leonardo, Sewer Samurai) authorizes the cast in whichever cast mode it
+	// matches; spellCastRoutes keeps each cast to the mode's own permissions.
+	if hasCastFromZoneRuleEffect(g, playerID, cardID, sourceZone, face) || groupPermits() {
 		permissions = append(permissions, payment.SpellCastPermissionRuleEffect)
 	}
 	return permissions

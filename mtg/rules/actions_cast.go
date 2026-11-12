@@ -162,7 +162,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	if cast.Overloaded {
 		announcementDef = overloadSpellDef(spellDef)
 	}
-	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, cast.Face)
+	permissions := independentCastPermissionsForMode(g, playerID, card.ID, sourceZone, cast.Face, cast.Bestowed)
 	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, castSelectionFace(g, playerID, card.ID, spellDef, cast.Bestowed), len(permissions) > 0, agents, log)
 	if !ok {
 		return actionFailed, nil
@@ -184,7 +184,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	// recorded or its one-shot linked permission consumed once the spell is put
 	// on the stack.
 	mode := castCostMode{overloaded: cast.Overloaded, bestowed: cast.Bestowed}
-	castRoutes := spellCastRoutes(g, playerID, card.ID, sourceZone, cast.Face, mode)
+	castRoutes := permanentTypePlayCastRoutes(spellCastRoutes(g, playerID, card.ID, sourceZone, cast.Face, mode), cast.Permission)
 	// CR 601.2b-c: a cost that includes Phyrexian symbols is proposed, with
 	// each symbol's payment announced, before the targets are chosen. Any
 	// targets the action names are only the default choice. Once that has
@@ -360,6 +360,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	obj.Bestowed = cast.Bestowed
 	obj.BuybackPaid = paymentResult.BuybackPaid
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
+	obj.CastPermissionEntryCounters = castRoutes[route].castPermissionEntryCounters(paymentResult.CastPermission)
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
@@ -433,7 +434,7 @@ func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.Player
 		return actionFailed
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
-	permissions := independentCastPermissionsForZone(g, playerID, card.ID, sourceZone, game.FaceFront)
+	permissions := independentCastPermissionsForMode(g, playerID, card.ID, sourceZone, game.FaceFront, false)
 	cast.Permission, ok = e.selectPermanentTypePlay(g, playerID, cast.Permission, sourceZone, spellDef, len(permissions) > 0, agents, log)
 	if !ok {
 		return actionFailed
@@ -451,7 +452,7 @@ func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.Player
 	// no longer matches once the card moves (Evelyn, the Covetous). Mutate is an
 	// alternative cost, so the cast is never one made without paying its mana
 	// cost (CR 118.9a).
-	castRoutes := spellCastRoutes(g, playerID, card.ID, sourceZone, game.FaceFront, mutateCastCostMode)
+	castRoutes := permanentTypePlayCastRoutes(spellCastRoutes(g, playerID, card.ID, sourceZone, game.FaceFront, mutateCastCostMode), cast.Permission)
 
 	// CR 601.2a: move the card to the stack before its costs are paid, so a
 	// from-zone cost can't select the card being cast (see applyCastSpellWithChoices).
@@ -524,6 +525,7 @@ func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.Player
 	}
 	recordExilePlayPermissionUse(g, castRoutes[route].permission)
 	recordPermanentTypePlay(g, playerID, cast.Permission)
+	obj.CastPermissionEntryCounters = castRoutes[route].castPermissionEntryCounters(paymentResult.CastPermission)
 	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
@@ -597,7 +599,7 @@ func (e *Engine) canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID
 	}
 	spellDef := cardFaceOrDefault(card, game.FaceFront)
 	castFace := castSelectionFace(g, playerID, cardID, spellDef, false)
-	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, game.FaceFront, castFace, announced)
+	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, game.FaceFront, castFace, false, announced)
 	if !valid || castFromZoneProhibited(g, playerID, sourceZone) ||
 		spellCastProhibited(g, playerID, castFace) || spellCastLimitReached(g, playerID, castFace) {
 		return false
@@ -611,6 +613,9 @@ func (e *Engine) canCastMutateSpell(g *game.Game, playerID game.PlayerID, cardID
 		return false
 	}
 	routes := spellCastRoutes(g, playerID, cardID, sourceZone, game.FaceFront, mutateCastCostMode)
+	if len(announced) > 0 {
+		routes = permanentTypePlayCastRoutes(routes, announced[0])
+	}
 	requests := mutateCastRouteRequests(payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          cardID,
@@ -635,6 +640,7 @@ func mutateCastRouteRequests(base payment.SpellRequest, routes []castRoute) []pa
 	for i, route := range routes {
 		requests[i] = base
 		requests[i].SpendAnyMana = route.spendAs
+		requests[i].CastPermissions = route.castPermissions(base.CastPermissions)
 	}
 	return requests
 }
@@ -1134,7 +1140,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 	if face == game.FaceFused && (!canFuseFromZone(playerID, card, sourceZone) || !slices.Equal(chosenModes, game.FusedModes())) {
 		return false
 	}
-	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(g, playerID, cardID, spellDef, bestowed), announced)
+	permissions, valid := selectedSpellPermissions(g, playerID, cardID, sourceZone, face, castSelectionFace(g, playerID, cardID, spellDef, bestowed), bestowed, announced)
 	if !valid {
 		return false
 	}
@@ -1226,6 +1232,9 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 	}
 	mode := castCostMode{overloaded: overloaded, bestowed: bestowed}
 	routes := spellCastRoutes(g, playerID, card.ID, sourceZone, face, mode)
+	if len(announced) > 0 {
+		routes = permanentTypePlayCastRoutes(routes, announced[0])
+	}
 	requests := mode.castRouteRequests(request, routes)
 	return anyCastRouteAvailable(g, spellDef, xValue, requests) ||
 		e.castFeasibleWithManaWindow(g, playerID, card.ID, sourceZone, face, spellDef, xValue, requests)
@@ -1293,13 +1302,58 @@ func foretellAlternativeCost(card *game.CardDef) cost.Alternative {
 // rule effect (an Adventure's permanent face). A rider is not an alternative
 // cost: it governs paying whichever total cost the caster chooses, so it
 // combines with overload, bestow, evoke, kicker, and additional costs.
+// Likewise an entry-counter rider (permission.CastEntryCounters) applies to
+// whichever cost the spell cast through the route pays. A graveyard route
+// separates the rule-effect permission from the card's own graveyard cast
+// permissions: ruleEffectOnly offers only the casts its rule-effect permission
+// authorizes, and graveyardKeywordsOnly only the card's flashback and escape
+// casts, so a spell cast by flashback never takes a rider route's counters.
 type castRoute struct {
-	free       bool
-	foretell   bool
-	payLife    bool
-	spendAs    game.ManaSpendPermission
-	permission game.RuleEffect
-	linkedFree game.RuleEffect
+	free                  bool
+	foretell              bool
+	payLife               bool
+	ruleEffectOnly        bool
+	graveyardKeywordsOnly bool
+	spendAs               game.ManaSpendPermission
+	permission            game.RuleEffect
+	linkedFree            game.RuleEffect
+}
+
+// castPermissions returns the cast permissions of base that a cast through
+// route may use.
+func (route castRoute) castPermissions(base []payment.SpellCastPermission) []payment.SpellCastPermission {
+	switch {
+	case route.ruleEffectOnly:
+		return []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect}
+	case route.graveyardKeywordsOnly:
+		return slices.DeleteFunc(slices.Clone(base), func(permission payment.SpellCastPermission) bool {
+			return permission != payment.SpellCastPermissionFlashback && permission != payment.SpellCastPermissionEscape
+		})
+	default:
+		return base
+	}
+}
+
+// castPermissionEntryCounters returns the entry-counter rider a spell cast
+// through route under castPermission takes (CR 601.2b): its rule-effect
+// permission's rider, unless the spell was cast with flashback or escape,
+// which no rule-effect permission authorizes.
+func (route castRoute) castPermissionEntryCounters(castPermission payment.SpellCastPermission) []game.CounterPlacement {
+	if castPermission == payment.SpellCastPermissionFlashback || castPermission == payment.SpellCastPermissionEscape {
+		return nil
+	}
+	return slices.Clone(route.permission.CastEntryCounters)
+}
+
+// permanentTypePlayCastRoutes returns the routes of a cast that uses announced,
+// a permanent-type graveyard play permission (Muldrotha, the Gravetide), when
+// it is set: that permission alone authorizes the cast, so the cast takes no
+// other permission's route or rider.
+func permanentTypePlayCastRoutes(routes []castRoute, announced game.PlayPermission) []castRoute {
+	if announced == (game.PlayPermission{}) {
+		return routes
+	}
+	return []castRoute{{}}
 }
 
 type castRouteKey struct {
@@ -1511,6 +1565,7 @@ func (m castCostMode) castRouteRequests(base payment.SpellRequest, routes []cast
 		route := &routes[i]
 		request := base
 		request.SpendAnyMana = route.spendAs
+		request.CastPermissions = route.castPermissions(base.CastPermissions)
 		request.Alternative = m.alternative(base.Card, base.XValue, route)
 		requests[i] = request
 	}
@@ -1569,7 +1624,7 @@ func castSpellsFromZoneRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID
 }
 
 // orderedCastRoutes merges routes that differ only in which permission without
-// a usage limit authorizes them, and orders free routes that spend nothing
+// a usage limit or entry-counter rider authorizes them, and orders free routes that spend nothing
 // first, then a one-shot linked free cast, then paying routes without a usage
 // limit, then once-per-turn routes, so the default choice never spends a
 // limited use or one-shot permission when another route offers the same option.
@@ -1588,16 +1643,18 @@ func orderedCastRoutes(routes []castRoute) []castRoute {
 	}
 	slices.SortStableFunc(routes, func(a, b castRoute) int { return rank(a) - rank(b) })
 	type routeKey struct {
-		free     bool
-		foretell bool
-		payLife  bool
-		spendAs  game.ManaSpendPermission
-		limited  id.ID
+		free          bool
+		foretell      bool
+		payLife       bool
+		spendAs       game.ManaSpendPermission
+		limited       id.ID
+		entryCounters string
 	}
 	seen := make(map[routeKey]bool, len(routes))
 	merged := routes[:0]
 	for _, route := range routes {
-		key := routeKey{free: route.free, foretell: route.foretell, payLife: route.payLife, spendAs: route.spendAs}
+		key := routeKey{free: route.free, foretell: route.foretell, payLife: route.payLife, spendAs: route.spendAs,
+			entryCounters: fmt.Sprint(route.permission.CastEntryCounters)}
 		if route.permission.OncePerTurn {
 			key.limited = route.permission.SourceObjectID
 		}
@@ -1625,8 +1682,10 @@ func orderedCastRoutes(routes []castRoute) []castRoute {
 // cast-from-library permission, so a pay-life permission (Bolas's Citadel)
 // never forces its cost on a cast another permission also authorizes; that
 // pay-life cost is an alternative cost too, so a cast already using another
-// one cannot use it. A cast from another zone has the single zero route; a
-// cast from exile or a library with no applicable route has none. A cast from
+// one cannot use it. A cast from a graveyard has one route per rule-effect
+// permission when one carries an entry-counter rider or its own usage (see
+// graveyardPermissionCastRoutes). A cast from another zone has the single zero
+// route; a cast from exile or a library with no applicable route has none. A cast from
 // exile whose permission this model does not track at all keeps the zero
 // route.
 // The returned routes are read-only and shared only within a pure-read frame.
@@ -1660,9 +1719,62 @@ func buildSpellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, so
 	case zone.Library:
 		routes, _ := castSpellsFromZoneRoutes(g, playerID, cardID, zone.Library, face, mode.bestowed, !mode.otherAlternative())
 		return orderedCastRoutes(routes)
+	case zone.Graveyard:
+		return graveyardPermissionCastRoutes(g, playerID, cardID, face, mode)
 	default:
 		return []castRoute{{}}
 	}
+}
+
+// graveyardPermissionCastRoutes returns the routes through which playerID may
+// cast the face of cardID from a graveyard in mode. A cast authorized only by
+// the card's own graveyard cast permissions (flashback, escape) or by rule-effect
+// permissions that carry no rider or usage of their own has the single zero
+// route. When a matching rule-effect permission carries an entry-counter rider
+// ("If you cast a spell this way, it enters with a finality counter on it.")
+// or is a group RuleEffectCastSpellsFromZone permission with its own usage,
+// each rule-effect permission is a separate route the caster may choose
+// (CR 118.14, 601.2b), and the card's flashback and escape casts, which no
+// rule-effect permission authorizes, are one more route without any rider.
+func graveyardPermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, mode castCostMode) []castRoute {
+	routes, _ := castFromZonePermissionRoutes(g, playerID, cardID, zone.Graveyard, face, mode.bestowed, !mode.otherAlternative())
+	keywordCast := slices.ContainsFunc(independentCastPermissionsForZone(g, playerID, cardID, zone.Graveyard, face), func(permission payment.SpellCastPermission) bool {
+		return permission == payment.SpellCastPermissionFlashback || permission == payment.SpellCastPermissionEscape
+	})
+	if len(routes) == 0 && groupGraveyardPermissionOnlyOtherMode(g, playerID, cardID, face) {
+		// A group permission that matches only the card's other cast mode (a
+		// creature-spell permission and a bestowed cast, CR 702.103b)
+		// authorizes nothing here.
+		if keywordCast {
+			return []castRoute{{graveyardKeywordsOnly: true}}
+		}
+		return nil
+	}
+	if !slices.ContainsFunc(routes, func(route castRoute) bool {
+		return len(route.permission.CastEntryCounters) > 0 || route.permission.Kind == game.RuleEffectCastSpellsFromZone
+	}) {
+		return []castRoute{{}}
+	}
+	for i := range routes {
+		routes[i].ruleEffectOnly = true
+	}
+	if keywordCast {
+		routes = append(routes, castRoute{graveyardKeywordsOnly: true})
+	}
+	return routes
+}
+
+// groupGraveyardPermissionOnlyOtherMode reports whether the only rule-effect
+// permission letting playerID cast the face of cardID from a graveyard is a
+// group RuleEffectCastSpellsFromZone permission matching some cast mode, so a
+// mode it doesn't match has no rule-effect authorization: no per-card or
+// zone-wide cast permission and no permanent-type play permission (Muldrotha,
+// the Gravetide) also covers the card.
+func groupGraveyardPermissionOnlyOtherMode(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex) bool {
+	card, ok := g.GetCardInstance(cardID)
+	return ok && castSpellsFromZonePermitsSomeCast(g, playerID, cardID, zone.Graveyard, face) &&
+		!hasCastFromZoneRuleEffect(g, playerID, cardID, zone.Graveyard, face) &&
+		len(permanentTypePlayPermissions(g, playerID, zone.Graveyard, cardFaceOrDefault(card, face))) == 0
 }
 
 // exileCastAuthorized reports whether some exile cast route authorizes
