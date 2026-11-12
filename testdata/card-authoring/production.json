@@ -973,6 +973,55 @@
     "oracle_text_sha256": "e3492809784f0039a155ae0b2ad52ab23f90e57bd129275fe848e8dc1e30f09b",
     "revision": "299065ad-ee2e-4973-9b41-fd04c36d19a4",
     "rulings_uri": "https://api.scryfall.com/cards/299065ad-ee2e-4973-9b41-fd04c36d19a4/rulings"
+   },
+   {
+    "name": "Touch of the Void",
+    "oracle_id": "6b530534-5c02-4874-9256-501102ef8a5f",
+    "oracle_text_sha256": "ae77dbb4bc686663349c25ecd92fcba648b3380b6b3aa6512f8176978d3992ba",
+    "revision": "006ead4a-dc57-4856-8e13-235ba55483e6",
+    "rulings_uri": "https://api.scryfall.com/cards/006ead4a-dc57-4856-8e13-235ba55483e6/rulings"
+   },
+   {
+    "name": "Rebel Salvo",
+    "oracle_id": "a35b7fd3-fdef-4414-b720-978f7ce70bff",
+    "oracle_text_sha256": "ea8fe2ba0d2f707d0101cda8fe9b4d9f330a500b9ac9c449673bc6a47717cfd3",
+    "revision": "cd37d1b1-70ce-466e-890d-36be82433035",
+    "rulings_uri": "https://api.scryfall.com/cards/cd37d1b1-70ce-466e-890d-36be82433035/rulings"
+   },
+   {
+    "name": "Militant Inquisitor",
+    "oracle_id": "d1e326e8-6e9e-4dbd-8c2f-0bef90db2bb7",
+    "oracle_text_sha256": "4a49b9792f7e828ca63dd9d7b881d8fb6aa3e91a8bcf6f4a69fdfbd021d1a80b",
+    "revision": "68d99f1f-80d6-4b5e-aeae-83fb8ae62cdc",
+    "rulings_uri": "https://api.scryfall.com/cards/68d99f1f-80d6-4b5e-aeae-83fb8ae62cdc/rulings"
+   },
+   {
+    "name": "Manifest Dread",
+    "oracle_id": "df5a66d1-61f6-44d9-b464-3ee739e78dce",
+    "oracle_text_sha256": "342c0c2572cdcb390c42ed00e51b165ac8d524a049dc87ac4d36aeb5f9baa4ab",
+    "revision": "a649265b-6c32-49e7-b6cb-6086c40d26e8",
+    "rulings_uri": "https://api.scryfall.com/cards/a649265b-6c32-49e7-b6cb-6086c40d26e8/rulings"
+   },
+   {
+    "name": "Devil's Play",
+    "oracle_id": "ee9f0b29-8a54-4cb8-8e2c-7bd67c2184ba",
+    "oracle_text_sha256": "40146ec68e306364e0d2638c539a16346244d7ea987d0efd87e85dcf2e2d8f80",
+    "revision": "d46473a7-69f5-492b-845d-c8862a1fec85",
+    "rulings_uri": "https://api.scryfall.com/cards/d46473a7-69f5-492b-845d-c8862a1fec85/rulings"
+   },
+   {
+    "name": "Oxidda Finisher",
+    "oracle_id": "f308a1de-94a6-4f9f-8f46-6f2018959b40",
+    "oracle_text_sha256": "0c6f4df654b91ce34e7079f16d720a448e16e87230143d647f0429dda01f840f",
+    "revision": "7177431e-5cc4-4ecd-8848-f51903289072",
+    "rulings_uri": "https://api.scryfall.com/cards/7177431e-5cc4-4ecd-8848-f51903289072/rulings"
+   },
+   {
+    "name": "Konstrari Improviser // Soul Tether",
+    "oracle_id": "bad2e3b2-ad47-4e17-b35e-0fcc13e82937",
+    "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "revision": "42e28bd2-486b-45d4-8840-6e33c19c2d57",
+    "rulings_uri": "https://api.scryfall.com/cards/42e28bd2-486b-45d4-8840-6e33c19c2d57/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7651,6 +7700,34 @@
     "game.MoveResolvingSpell"
    ],
    "review": "Checked origin/main b9ce801: mtg/rules/payment/additional.go (X amount calculation and discard planning); mtg/game/ability.go (CountEqualsX); mtg/cards/authored/numeric_targets.go (target-card return and resolving-spell exile); mtg/cards/d/distorting_wake.go (X-target permanent return). Checked these candidates' text in the pinned corpus for fit only."
+  },
+  {
+   "id": "none-paragraphs-20261111-01",
+   "family": "none-paragraphs",
+   "oracle_ids": [
+    "6b530534-5c02-4874-9256-501102ef8a5f",
+    "a35b7fd3-fdef-4414-b720-978f7ce70bff",
+    "bad2e3b2-ad47-4e17-b35e-0fcc13e82937",
+    "d1e326e8-6e9e-4dbd-8c2f-0bef90db2bb7",
+    "df5a66d1-61f6-44d9-b464-3ee739e78dce",
+    "ee9f0b29-8a54-4cb8-8e2c-7bd67c2184ba",
+    "f308a1de-94a6-4f9f-8f46-6f2018959b40"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.Damage",
+    "damage-to-this-turn-exile replacement",
+    "temporary indestructible removal",
+    "CostModifier.CountSelection",
+    "ContinuousEffect.PowerDeltaDynamic with DynamicAmountCountSelector",
+    "game.Manifest",
+    "game.FlashbackKeyword with X",
+    "LayoutPrepare and prepared-copy cast path",
+    "game.CreateToken",
+    "game.DevoidStaticBody",
+    "game.TrampleStaticBody"
+   ],
+   "review": "Capability-only check against docs/card-authoring.md (Reviewed continuation commands), mtg/cardprogram/README.md (Capability lookup), mtg/cards/m/magma_spray.go, mtg/cards/y/yamabushi_s_flame.go, mtg/cards/s/smite_the_deathless.go, mtg/cards/b/banquet_guests.go, mtg/cards/i/improvised_arsenal.go, mtg/cards/t/threats_around_every_corner.go, mtg/cards/authored/copy_spells.go, mtg/cards/c/carnivorous_cultivator_enroot.go, and mtg/rules/prepared_exile_cast_test.go. No Oracle, rulings, or Comprehensive Rules source review performed."
   }
  ],
  "records": [
@@ -143491,8 +143568,10 @@
    "oracle_id": "6b530534-5c02-4874-9256-501102ef8a5f",
    "revision": "006ead4a-dc57-4856-8e13-235ba55483e6",
    "name": "Touch of the Void",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none-paragraphs",
+   "batch": "none-paragraphs-20261111-01",
+   "evidence": "mtg/rules/authored_existing_paragraph_cards_test.go: TestTouchOfTheVoidScenario"
   },
   {
    "oracle_id": "6b5565a2-be5c-46b1-99df-8094e77446cc",
@@ -191240,8 +191319,10 @@
    "oracle_id": "a35b7fd3-fdef-4414-b720-978f7ce70bff",
    "revision": "cd37d1b1-70ce-466e-890d-36be82433035",
    "name": "Rebel Salvo",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none-paragraphs",
+   "batch": "none-paragraphs-20261111-01",
+   "evidence": "mtg/rules/authored_existing_paragraph_cards_test.go: TestRebelSalvoScenario"
   },
   {
    "oracle_id": "a35c2e20-eb90-4132-b65f-be1fcb569819",
@@ -230420,8 +230501,10 @@
    "oracle_id": "d1e326e8-6e9e-4dbd-8c2f-0bef90db2bb7",
    "revision": "68d99f1f-80d6-4b5e-aeae-83fb8ae62cdc",
    "name": "Militant Inquisitor",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none-paragraphs",
+   "batch": "none-paragraphs-20261111-01",
+   "evidence": "mtg/rules/authored_existing_paragraph_cards_test.go: TestMilitantInquisitorScenario"
   },
   {
    "oracle_id": "d1ec1e4e-faa6-4afc-9e00-a3327105c11b",
@@ -241707,8 +241790,10 @@
    "oracle_id": "df5a66d1-61f6-44d9-b464-3ee739e78dce",
    "revision": "a649265b-6c32-49e7-b6cb-6086c40d26e8",
    "name": "Manifest Dread",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none-paragraphs",
+   "batch": "none-paragraphs-20261111-01",
+   "evidence": "mtg/rules/authored_existing_paragraph_cards_test.go: TestManifestDreadScenario"
   },
   {
    "oracle_id": "df5c1f34-94e4-4f89-b1af-943c430862d0",
@@ -255032,8 +255117,10 @@
    "oracle_id": "ee9f0b29-8a54-4cb8-8e2c-7bd67c2184ba",
    "revision": "d46473a7-69f5-492b-845d-c8862a1fec85",
    "name": "Devil's Play",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none-paragraphs",
+   "batch": "none-paragraphs-20261111-01",
+   "evidence": "mtg/rules/authored_existing_paragraph_cards_test.go: TestDevilsPlayScenario"
   },
   {
    "oracle_id": "eea4feef-2595-4ed2-92a0-11ccb3e7d40e",
@@ -258707,8 +258794,10 @@
    "oracle_id": "f308a1de-94a6-4f9f-8f46-6f2018959b40",
    "revision": "7177431e-5cc4-4ecd-8848-f51903289072",
    "name": "Oxidda Finisher",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none-paragraphs",
+   "batch": "none-paragraphs-20261111-01",
+   "evidence": "mtg/rules/authored_existing_paragraph_cards_test.go: TestOxiddaFinisherScenario"
   },
   {
    "oracle_id": "f30943f1-473f-4fa4-b6a7-3dfbd1995ba9",
@@ -269968,8 +270057,10 @@
    "oracle_id": "bad2e3b2-ad47-4e17-b35e-0fcc13e82937",
    "revision": "42e28bd2-486b-45d4-8840-6e33c19c2d57",
    "name": "Konstrari Improviser // Soul Tether",
-   "status": "unclaimed",
-   "family": "unreviewed/prepare"
+   "status": "implemented-verified",
+   "family": "none-paragraphs",
+   "batch": "none-paragraphs-20261111-01",
+   "evidence": "mtg/rules/authored_existing_paragraph_cards_test.go: TestKonstrariImproviserSoulTetherScenario"
   },
   {
    "oracle_id": "bd416426-d037-45e3-9647-816bf982cbea",
