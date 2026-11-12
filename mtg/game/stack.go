@@ -92,6 +92,13 @@ type StackObject struct {
 	// ability keeps it (CR 707.10).
 	SuspendCast bool
 
+	// SuspendUpkeep identifies suspend's intrinsic upkeep triggered ability
+	// (CR 702.62a), "At the beginning of your upkeep, if this card is
+	// suspended, remove a time counter from it." Its source is the exiled card
+	// at SourceCardID and SourceZoneVersion. A copy of the ability keeps it
+	// (CR 707.10).
+	SuspendUpkeep bool
+
 	// Rebound identifies rebound's delayed triggered ability (CR 702.88a): its
 	// controller may cast the captured card (CapturedCardID at
 	// CapturedCardZoneVersion) from exile without paying its mana cost. A copy
