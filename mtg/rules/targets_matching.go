@@ -389,7 +389,7 @@ func permanentTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceOb
 			event:          triggerEvent,
 			clampPower:     true,
 		}
-		if sel.Controller != game.ControllerAny {
+		if selectionReadsController(&sel) {
 			subject.controller = effectiveController(g, permanent)
 		}
 		if !matchSelection(&subject, &sel) {

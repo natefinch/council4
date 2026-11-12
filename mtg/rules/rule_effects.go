@@ -847,7 +847,7 @@ func defendingPlayerControlsSelection(g *game.Game, effect *game.RuleEffect, def
 			viewer:         effect.Controller,
 			sourceObjectID: effect.SourceObjectID,
 		}
-		if sel.Controller != game.ControllerAny {
+		if selectionReadsController(sel) {
 			subject.controller = effectiveController(g, permanent)
 		}
 		if matchSelection(&subject, sel) {
@@ -978,7 +978,7 @@ func ruleEffectBlockedSelectionMatches(g *game.Game, effect *game.RuleEffect, at
 		viewer:         effect.Controller,
 		sourceObjectID: effect.SourceObjectID,
 	}
-	if sel.Controller != game.ControllerAny {
+	if selectionReadsController(sel) {
 		subject.controller = effectiveController(g, attacker)
 	}
 	return matchSelection(&subject, sel)
@@ -1261,7 +1261,7 @@ func ruleEffectAffectedSelectionMatches(g *game.Game, effect *game.RuleEffect, p
 		viewer:         effect.Controller,
 		sourceObjectID: effect.SourceObjectID,
 	}
-	if sel.Controller != game.ControllerAny {
+	if selectionReadsController(sel) {
 		subject.controller = effectiveController(g, permanent)
 	}
 	return matchSelection(&subject, sel)

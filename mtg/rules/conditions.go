@@ -836,7 +836,7 @@ func controllerControlsGreatestManaValueInGroup(g *game.Game, ctx conditionConte
 			viewer:    ctx.controller,
 			useBase:   ctx.useBaseCharacteristics,
 		}
-		if sel.Controller != game.ControllerAny {
+		if selectionReadsController(&sel) {
 			if ctx.useBaseCharacteristics {
 				subject.controller = permanent.Controller
 			} else {
@@ -1027,7 +1027,7 @@ func resolvedObjectMatchesConditionSelection(
 			values:    values,
 			viewer:    ctx.controller,
 		}
-		if selection.Controller != game.ControllerAny {
+		if selectionReadsController(selection) {
 			subject.controller = values.controller
 		}
 		subject.sourceObjectID = conditionSourceObjectID(ctx)
@@ -1075,7 +1075,7 @@ func resolvedObjectMatchesConditionSelection(
 		snapshotObjectID: resolved.snapshot.ObjectID,
 		snapshot:         &resolved.snapshot,
 	}
-	if selection.Controller != game.ControllerAny {
+	if selectionReadsController(selection) {
 		subject.controller = resolved.snapshot.Controller
 	}
 	subject.sourceObjectID = conditionSourceObjectID(ctx)
@@ -1192,7 +1192,7 @@ func playersControlMatchingSelection(g *game.Game, ctx conditionContext, control
 			viewer:    ctx.controller,
 			useBase:   ctx.useBaseCharacteristics,
 		}
-		if sel.Controller != game.ControllerAny {
+		if selectionReadsController(&sel) {
 			if ctx.useBaseCharacteristics {
 				subject.controller = permanent.Controller
 			} else {
@@ -1279,7 +1279,7 @@ func countPlayerMatchingSelection(g *game.Game, ctx conditionContext, player gam
 			viewer:    ctx.controller,
 			useBase:   ctx.useBaseCharacteristics,
 		}
-		if sel.Controller != game.ControllerAny {
+		if selectionReadsController(&sel) {
 			if ctx.useBaseCharacteristics {
 				subject.controller = permanent.Controller
 			} else {

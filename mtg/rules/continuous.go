@@ -1464,7 +1464,7 @@ func continuousSelectionApplies(g *game.Game, resolver referenceResolver, group 
 		values:    *values,
 		viewer:    controller,
 	}
-	if sel.Controller != game.ControllerAny {
+	if selectionReadsController(&sel) {
 		subject.controller = values.controller
 	}
 	if source != nil {

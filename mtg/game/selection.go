@@ -407,10 +407,12 @@ type Selection struct {
 	// control changes, Owner keys off the permanent's fixed owner, so a commander
 	// owned by the viewing player but controlled by an opponent (a stolen
 	// commander) still matches OwnerYou, while a commander controlled by the
-	// viewing player but owned by an opponent does not. A non-battlefield subject,
-	// which the runtime evaluates without an owner, never matches a non-Any
-	// relation. Placed at the end so the field joins no existing cluster's
-	// packing.
+	// viewing player but owned by an opponent does not. A card in a
+	// non-battlefield zone matches by its card owner ("target card you own in
+	// exile"). Combined with a ControllerYou alternative in AnyOf it expresses
+	// "you own or control". An event or cast-spell subject, which the runtime
+	// evaluates without an owner, never matches a non-Any relation. Placed at the
+	// end so the field joins no existing cluster's packing.
 	Owner OwnerRelation
 
 	// BandedWithSource requires the matched permanent to be another current

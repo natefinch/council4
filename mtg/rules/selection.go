@@ -1303,19 +1303,40 @@ func (s *selectionSubject) controllerMatches(relation game.ControllerRelation) b
 	}
 }
 
+// selectionReadsController reports whether matching sel reads the subject's
+// controller, directly or through an AnyOf alternative ("target permanent you
+// own or control"). Callers that resolve a permanent's controller only when it
+// is needed use it so an alternative's controller relation sees the actual
+// controller rather than an unset seat.
+func selectionReadsController(sel *game.Selection) bool {
+	if sel.Controller != game.ControllerAny {
+		return true
+	}
+	return slices.ContainsFunc(sel.AnyOf, func(alternative game.Selection) bool {
+		return selectionReadsController(&alternative)
+	})
+}
+
 // ownerMatches applies the owner-relation portion of a Selection to the subject.
 // Unlike controllerMatches, which compares the subject's resolved controller, it
 // keys off the permanent's fixed owner, so a stolen commander (owned by the
-// viewer, controlled by an opponent) still matches OwnerYou. Only on-battlefield
-// permanents carry an owner here; every other subject fails a non-Any relation.
+// viewer, controlled by an opponent) still matches OwnerYou. A card in a
+// non-battlefield zone matches by its card owner ("target card you own in
+// exile", CR 108.3). Event and cast-spell subjects carry no owner here and fail
+// a non-Any relation.
 func (s *selectionSubject) ownerMatches(relation game.OwnerRelation) bool {
 	if relation == game.OwnerAny {
 		return true
 	}
-	if s.kind != subjectPermanent || s.permanent == nil {
+	var owner game.PlayerID
+	switch {
+	case s.kind == subjectPermanent && s.permanent != nil:
+		owner = s.permanent.Owner
+	case s.kind == subjectCard && s.card != nil:
+		owner = s.card.Owner
+	default:
 		return false
 	}
-	owner := s.permanent.Owner
 	switch relation {
 	case game.OwnerYou:
 		return owner == s.viewer
