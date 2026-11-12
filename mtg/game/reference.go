@@ -133,7 +133,9 @@ func CapturedTargetStackObjectReference(targetIndex int) ObjectReference {
 }
 
 // TargetObjectReference references the object chosen for the target slot at
-// targetIndex regardless of whether it is a permanent or a stack object.
+// targetIndex regardless of whether it is a permanent or a stack object. The
+// AddCounter and RemoveCounter primitives also accept an exiled card chosen for
+// that slot, as in "target permanent or suspended card".
 func TargetObjectReference(targetIndex int) ObjectReference {
 	return ObjectReference{kind: ObjectReferenceTargetObject, targetIndex: targetIndex}
 }

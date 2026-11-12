@@ -1237,6 +1237,9 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 	allowsPlayers := target.Allow&TargetAllowPlayer != 0
 	allowsCards := target.Allow&TargetAllowCard != 0
 	allowsStackObjects := target.Allow&TargetAllowStackObject != 0
+	if target.SuspendedCard && (!allowsCards || target.TargetZone != zone.Exile) {
+		v.add(faceName, appendPath(path, "SuspendedCard"), CardDefIssueInvalidTargetSpec, "suspended-card targets require an exiled card target")
+	}
 	if !allowsStackObjects && !target.Predicate.Empty() {
 		v.add(faceName, appendPath(path, "Predicate"), CardDefIssueInvalidTargetSpec, "stack-object predicate requires a stack-object target")
 	}
