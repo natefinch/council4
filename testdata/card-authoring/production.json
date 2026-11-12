@@ -1288,6 +1288,69 @@
     "oracle_text_sha256": "d3c979646d8447f4c28de26a40d1317e5b8352da1759a0cbb2b6fb8aa62d1c96",
     "revision": "d16892d8-9d10-45de-ab79-0e645c4b5588",
     "rulings_uri": "https://api.scryfall.com/cards/d16892d8-9d10-45de-ab79-0e645c4b5588/rulings"
+   },
+   {
+    "name": "Benalish Faithbonder",
+    "oracle_id": "278db664-4235-40f0-a926-3074a0e038c1",
+    "oracle_text_sha256": "ae9706168670bb4caf2058a88c636ded4d84c6d536ce0ffaba7f06010e054f88",
+    "revision": "084d77df-a899-406f-9d79-e3fa3abeaebc",
+    "rulings_uri": "https://api.scryfall.com/cards/084d77df-a899-406f-9d79-e3fa3abeaebc/rulings"
+   },
+   {
+    "name": "Balduvian Berserker",
+    "oracle_id": "3a7b1d1c-1724-4208-943b-650a5d773653",
+    "oracle_text_sha256": "d6e4197d61e76af343e34a961a74eaf1278329acfdf1a053177bfa679e400cda",
+    "revision": "c35bab2f-8464-4968-8c50-8807638d687b",
+    "rulings_uri": "https://api.scryfall.com/cards/c35bab2f-8464-4968-8c50-8807638d687b/rulings"
+   },
+   {
+    "name": "Coalition Warbrute",
+    "oracle_id": "84d67d87-2696-4c2f-9f10-29d5832bfbb6",
+    "oracle_text_sha256": "46087fc66d9f925c4363e56cea6e8c44209ab40a47f88fc9646ee3d397b4dd7c",
+    "revision": "554c422f-2a1b-47c0-9358-42b85cdbb84e",
+    "rulings_uri": "https://api.scryfall.com/cards/554c422f-2a1b-47c0-9358-42b85cdbb84e/rulings"
+   },
+   {
+    "name": "Yavimaya Steelcrusher",
+    "oracle_id": "ad181ee7-756f-4002-9009-023ea6172991",
+    "oracle_text_sha256": "d49660f55ecee6060d53cffb9213990adc6e500cb5b24614e0fe7b72b943adb5",
+    "revision": "25175622-7b68-4916-adf2-3bf2d82e8356",
+    "rulings_uri": "https://api.scryfall.com/cards/25175622-7b68-4916-adf2-3bf2d82e8356/rulings"
+   },
+   {
+    "name": "Linebreaker Baloth",
+    "oracle_id": "c3b395b3-fea0-41d9-a3f2-6c90f89d8bdb",
+    "oracle_text_sha256": "d568a9c8559fab0f436bdf51a1e1827cb95a4a83bbd49ea0579d95394ffa7b28",
+    "revision": "15cc59c7-6478-4f84-898a-7e0fed10f004",
+    "rulings_uri": "https://api.scryfall.com/cards/15cc59c7-6478-4f84-898a-7e0fed10f004/rulings"
+   },
+   {
+    "name": "Argivian Cavalier",
+    "oracle_id": "c45090bd-a589-45a0-8388-025b8e0b3487",
+    "oracle_text_sha256": "b5d4673f1f9b6cdae982b170c4c094f0967b163e1fbfd3e9f1c69df61e28bcb3",
+    "revision": "57746e72-ba9f-4717-a4a2-6c6a039080c3",
+    "rulings_uri": "https://api.scryfall.com/cards/57746e72-ba9f-4717-a4a2-6c6a039080c3/rulings"
+   },
+   {
+    "name": "Barkweave Crusher",
+    "oracle_id": "cbac75c6-6006-4025-b893-8828965b5f97",
+    "oracle_text_sha256": "95845b9c2e0c9446bdf879d7a30ed42c81d9e98fb23cae69e3e7f2878d7b6d44",
+    "revision": "41c62c55-7b04-4987-9047-1322c842bb59",
+    "rulings_uri": "https://api.scryfall.com/cards/41c62c55-7b04-4987-9047-1322c842bb59/rulings"
+   },
+   {
+    "name": "Coalition Skyknight",
+    "oracle_id": "dc763f20-73e7-4db7-9e98-6f419b8fba84",
+    "oracle_text_sha256": "da2edc315674dcefa75dedcd5a665eb84ccb4d89b177e3aabc56f31c9f6b971a",
+    "revision": "8b12da45-aff4-406d-83a3-39ecaff6ff56",
+    "rulings_uri": "https://api.scryfall.com/cards/8b12da45-aff4-406d-83a3-39ecaff6ff56/rulings"
+   },
+   {
+    "name": "Hexbane Tortoise",
+    "oracle_id": "f3b4097f-b84f-4645-81f1-018366e40eeb",
+    "oracle_text_sha256": "1efbe1ca541a11b49fda077c829f94c501b463145e44eba2edc86cdaa2c48371",
+    "revision": "acd5a635-bcf5-4a05-b00b-bf40322823fe",
+    "rulings_uri": "https://api.scryfall.com/cards/acd5a635-bcf5-4a05-b00b-bf40322823fe/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8090,6 +8153,28 @@
     "game.DiscardThenDraw"
    ],
    "review": "Capability-only check (no CR/rulings/source review): DiscardThenDraw declaration mtg/game/primitive.go:2235, Engine handler mtg/rules/primitive_handlers_zones.go:3205, and behavioral evidence mtg/rules/effects_discard_then_draw_test.go:9. The operation supports the discard/draw choice; the Commander model does not simulate sideboards/outside-game access (mtg/game/ability.go:506-510), so Lesson retrieval is unavailable in this scope. Other paragraphs fit the supplied family classification and the pinned Oracle texts."
+  },
+  {
+   "id": "enlist-20261112-work17",
+   "family": "enlist",
+   "oracle_ids": [
+    "278db664-4235-40f0-a926-3074a0e038c1",
+    "3a7b1d1c-1724-4208-943b-650a5d773653",
+    "84d67d87-2696-4c2f-9f10-29d5832bfbb6",
+    "ad181ee7-756f-4002-9009-023ea6172991",
+    "c3b395b3-fea0-41d9-a3f2-6c90f89d8bdb",
+    "c45090bd-a589-45a0-8388-025b8e0b3487",
+    "cbac75c6-6006-4025-b893-8828965b5f97",
+    "dc763f20-73e7-4db7-9e98-6f419b8fba84",
+    "f3b4097f-b84f-4645-81f1-018366e40eeb"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.EnlistStaticBody",
+    "combatEngine.payEnlistCosts",
+    "queueEnlistTrigger"
+   ],
+   "review": "Capability-fit only at origin/main e542bf279daf6acd1b54d72e567c2bace673f508: mtg/game/ability.go (EnlistStaticBody), mtg/rules/combat_engine.go (payEnlistCosts hook), mtg/rules/enlist.go (eligibility, tap and reflexive-trigger path), and mtg/rules/chosen_tap_enlist_test.go (behavioral scenarios including Coalition Warbrute). Checked all nine pinned corpus texts against the supplied family's already-supported-paragraph constraint; no source review claimed."
   }
  ],
  "records": [
@@ -86349,8 +86434,10 @@
    "oracle_id": "278db664-4235-40f0-a926-3074a0e038c1",
    "revision": "084d77df-a899-406f-9d79-e3fa3abeaebc",
    "name": "Benalish Faithbonder",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyBenalishFaithbonder; printing 084d77df-a899-406f-9d79-e3fa3abeaebc"
   },
   {
    "oracle_id": "278e51fe-3cd9-4c82-bd81-2164771f8611",
@@ -102043,8 +102130,10 @@
    "oracle_id": "3a7b1d1c-1724-4208-943b-650a5d773653",
    "revision": "c35bab2f-8464-4968-8c50-8807638d687b",
    "name": "Balduvian Berserker",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyBalduvianBerserker; printing c35bab2f-8464-4968-8c50-8807638d687b"
   },
   {
    "oracle_id": "3a7c2e32-8585-4f7f-8635-199e3c6cd8a9",
@@ -165567,8 +165656,10 @@
    "oracle_id": "84d67d87-2696-4c2f-9f10-29d5832bfbb6",
    "revision": "554c422f-2a1b-47c0-9358-42b85cdbb84e",
    "name": "Coalition Warbrute",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyCoalitionWarbrute; printing 554c422f-2a1b-47c0-9358-42b85cdbb84e"
   },
   {
    "oracle_id": "84dc0aae-029b-48dc-b8d0-e93c227e32e5",
@@ -199736,8 +199827,10 @@
    "oracle_id": "ad181ee7-756f-4002-9009-023ea6172991",
    "revision": "25175622-7b68-4916-adf2-3bf2d82e8356",
    "name": "Yavimaya Steelcrusher",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyYavimayaSteelcrusher; printing 25175622-7b68-4916-adf2-3bf2d82e8356"
   },
   {
    "oracle_id": "ad218276-a44b-4a61-8e42-26a27929bbbb",
@@ -218661,8 +218754,10 @@
    "oracle_id": "c3b395b3-fea0-41d9-a3f2-6c90f89d8bdb",
    "revision": "15cc59c7-6478-4f84-898a-7e0fed10f004",
    "name": "Linebreaker Baloth",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyLinebreakerBaloth; printing 15cc59c7-6478-4f84-898a-7e0fed10f004"
   },
   {
    "oracle_id": "c3b3e070-28f6-4852-816e-caffe358b6fe",
@@ -219131,8 +219226,10 @@
    "oracle_id": "c45090bd-a589-45a0-8388-025b8e0b3487",
    "revision": "57746e72-ba9f-4717-a4a2-6c6a039080c3",
    "name": "Argivian Cavalier",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyArgivianCavalier; printing 57746e72-ba9f-4717-a4a2-6c6a039080c3"
   },
   {
    "oracle_id": "c450f6b7-bb2a-4b8c-aec7-d27555137b63",
@@ -225434,8 +225531,10 @@
    "oracle_id": "cbac75c6-6006-4025-b893-8828965b5f97",
    "revision": "41c62c55-7b04-4987-9047-1322c842bb59",
    "name": "Barkweave Crusher",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyBarkweaveCrusher; printing 41c62c55-7b04-4987-9047-1322c842bb59"
   },
   {
    "oracle_id": "cbad3570-5417-42e6-b3ef-f42194098314",
@@ -239960,8 +240059,10 @@
    "oracle_id": "dc763f20-73e7-4db7-9e98-6f419b8fba84",
    "revision": "8b12da45-aff4-406d-83a3-39ecaff6ff56",
    "name": "Coalition Skyknight",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyCoalitionSkyknight; printing 8b12da45-aff4-406d-83a3-39ecaff6ff56"
   },
   {
    "oracle_id": "dc788b66-d03d-4066-be35-481be96ed2f7",
@@ -259826,8 +259927,10 @@
    "oracle_id": "f3b4097f-b84f-4645-81f1-018366e40eeb",
    "revision": "acd5a635-bcf5-4a05-b00b-bf40322823fe",
    "name": "Hexbane Tortoise",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "enlist",
+   "batch": "enlist-20261112-work17",
+   "evidence": "mtg/rules/enlist_family_test.go: TestEnlistFamilyHexbaneTortoise; printing acd5a635-bcf5-4a05-b00b-bf40322823fe"
   },
   {
    "oracle_id": "f3b70d61-e33e-4243-aac9-e7bd9ba40acb",
