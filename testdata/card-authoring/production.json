@@ -1127,6 +1127,55 @@
     "oracle_text_sha256": "e9726084dbbbb242735642615658e21974ad3c6fdb48ed654c92517fd2d9ba84",
     "revision": "4e317d1d-3f20-4f0d-8b1e-31df351e8f83",
     "rulings_uri": "https://api.scryfall.com/cards/4e317d1d-3f20-4f0d-8b1e-31df351e8f83/rulings"
+   },
+   {
+    "name": "Mirran Bardiche",
+    "oracle_id": "1fd04d9e-cf89-49ba-a932-5d278f65bf77",
+    "oracle_text_sha256": "acb2fabbe8609e6a7b62840685d373336dbd79899a06ebbf0c1f59040fa7ae94",
+    "revision": "3006ea5a-5391-41eb-b0c8-092741dca2eb",
+    "rulings_uri": "https://api.scryfall.com/cards/3006ea5a-5391-41eb-b0c8-092741dca2eb/rulings"
+   },
+   {
+    "name": "Sylvok Battle-Chair",
+    "oracle_id": "2f6c21a1-d618-497c-bfde-c0f2e1014d99",
+    "oracle_text_sha256": "17337b63dc9f7ac3508d496d96cb774549db3ac89b6f2ab0cad6692db8dd6b5a",
+    "revision": "71c1a1d0-5616-42f8-a59c-42c1ccd48d26",
+    "rulings_uri": "https://api.scryfall.com/cards/71c1a1d0-5616-42f8-a59c-42c1ccd48d26/rulings"
+   },
+   {
+    "name": "Goldwarden's Helm",
+    "oracle_id": "4c35f41a-55e4-49ca-b211-f57d7b1b90f6",
+    "oracle_text_sha256": "34e9cdd4b5a1191dceed1085dbd449e7a56669c8bb3238289257d74abccf7296",
+    "revision": "f4057210-ef07-4496-94c8-95c3b807c23c",
+    "rulings_uri": "https://api.scryfall.com/cards/f4057210-ef07-4496-94c8-95c3b807c23c/rulings"
+   },
+   {
+    "name": "Dragonwing Glider",
+    "oracle_id": "4cd4c6da-a84e-4cba-893b-799a7cb5c411",
+    "oracle_text_sha256": "a59c0a95f11046f9db50cad5629f76f824ee7098fc897892517ca7c80d63f9b7",
+    "revision": "5456b036-231e-4a64-b060-0709f5254664",
+    "rulings_uri": "https://api.scryfall.com/cards/5456b036-231e-4a64-b060-0709f5254664/rulings"
+   },
+   {
+    "name": "Vulshok Splitter",
+    "oracle_id": "6253f9d4-83ff-4a0b-b465-e9f9a565f664",
+    "oracle_text_sha256": "229711db9b00eb2759931ab87a265a0118049b900f427da41a6ab01b495c742a",
+    "revision": "f05078dd-b928-4b3f-9636-f299ebac180b",
+    "rulings_uri": "https://api.scryfall.com/cards/f05078dd-b928-4b3f-9636-f299ebac180b/rulings"
+   },
+   {
+    "name": "Barbed Batterfist",
+    "oracle_id": "93c2b91d-7d4e-483c-a11f-4a525f881503",
+    "oracle_text_sha256": "6b6809ea9f9b3fd2b8c1fdaf848e352fc7640da01ae35d31b96cc32eb6817638",
+    "revision": "de1d02d1-91dc-47d6-bdbe-87602428abfb",
+    "rulings_uri": "https://api.scryfall.com/cards/de1d02d1-91dc-47d6-bdbe-87602428abfb/rulings"
+   },
+   {
+    "name": "Kemba's Banner",
+    "oracle_id": "bd31c248-8b3f-4fa5-a639-19b0e37b15c3",
+    "oracle_text_sha256": "85b1b7a436590f2e77e8fe313c0b522aac12ab2f3e030e02bd6402b37303052d",
+    "revision": "5e50c148-9f30-4131-8ec1-85e9ba8cafbb",
+    "rulings_uri": "https://api.scryfall.com/cards/5e50c148-9f30-4131-8ec1-85e9ba8cafbb/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7861,6 +7910,27 @@
     "game.ContinuousEffect.AddAbilities"
    ],
    "review": "Selection-only capability review at base 260017516d7365601a725a177d5a0653aa6bc6d9: mtg/game/primitive.go (AddCounter, ApplyContinuous); mtg/game/continuous.go (AddAbilities); mtg/rules/primitive_handlers.go (handleApplyContinuous); mtg/rules/continuous_granted_ability_test.go and trigger_declared_origin_test.go (runtime granted abilities/triggers); mtg/cardprogram/README.md, mtg/game/mechanic_template.go and mtg/rules/dash_test.go (secondary text fit). All 15 pinned records' non-backup text checked. No Oracle/rulings/CR source review performed."
+  },
+  {
+   "id": "for-mirrodin-8009ed3",
+   "family": "for-mirrodin",
+   "oracle_ids": [
+    "1fd04d9e-cf89-49ba-a932-5d278f65bf77",
+    "2f6c21a1-d618-497c-bfde-c0f2e1014d99",
+    "4c35f41a-55e4-49ca-b211-f57d7b1b90f6",
+    "4cd4c6da-a84e-4cba-893b-799a7cb5c411",
+    "6253f9d4-83ff-4a0b-b465-e9f9a565f664",
+    "93c2b91d-7d4e-483c-a11f-4a525f881503",
+    "bd31c248-8b3f-4fa5-a639-19b0e37b15c3"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.CreateToken with TokenDef and PublishLinked",
+    "game.Attach via LinkedObjectReference",
+    "game.EquipActivatedAbility",
+    "game.ContinuousEffect"
+   ],
+   "review": "Capability-only review at base 8009ed3ead3ea28bd9f49706c9a5b649d84e85b6; pinned corpus identities and text checked for all seven cards. The novel For Mirrodin! paragraph maps to the existing enter trigger → CreateToken(PublishLinked) → Attach sequence in mtg/game/mechanic_template.go:LivingWeaponTriggeredAbility; mtg/rules/living_weapon_test.go:TestLivingWeaponCreatesGermAndAttaches verifies token creation and attachment. The new cards use a custom 2/2 red Rebel TokenDef. Their remaining equipment bonuses and Equip abilities fit existing continuous-effect and equip operations. No Engine prerequisites or CR/rulings source review."
   }
  ],
  "records": [
@@ -79913,8 +79983,10 @@
    "oracle_id": "1fd04d9e-cf89-49ba-a932-5d278f65bf77",
    "revision": "3006ea5a-5391-41eb-b0c8-092741dca2eb",
    "name": "Mirran Bardiche",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "for-mirrodin",
+   "batch": "for-mirrodin-8009ed3",
+   "evidence": "mtg/rules/for_mirrodin_equipment_test.go: TestMirranBardicheScenario"
   },
   {
    "oracle_id": "1fd4204f-f627-4919-9d48-79b172f4560e",
@@ -92248,8 +92320,10 @@
    "oracle_id": "2f6c21a1-d618-497c-bfde-c0f2e1014d99",
    "revision": "71c1a1d0-5616-42f8-a59c-42c1ccd48d26",
    "name": "Sylvok Battle-Chair",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "for-mirrodin",
+   "batch": "for-mirrodin-8009ed3",
+   "evidence": "mtg/rules/for_mirrodin_equipment_test.go: TestSylvokBattleChairScenario"
   },
   {
    "oracle_id": "2f6d129c-e6ad-4f35-b8b1-56a101fdd5db",
@@ -117279,8 +117353,10 @@
    "oracle_id": "4c35f41a-55e4-49ca-b211-f57d7b1b90f6",
    "revision": "f4057210-ef07-4496-94c8-95c3b807c23c",
    "name": "Goldwarden's Helm",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "for-mirrodin",
+   "batch": "for-mirrodin-8009ed3",
+   "evidence": "mtg/rules/for_mirrodin_equipment_test.go: TestGoldwardensHelmScenario"
   },
   {
    "oracle_id": "4c3a865a-88b1-43e0-b326-17c45670da54",
@@ -117704,8 +117780,10 @@
    "oracle_id": "4cd4c6da-a84e-4cba-893b-799a7cb5c411",
    "revision": "5456b036-231e-4a64-b060-0709f5254664",
    "name": "Dragonwing Glider",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "for-mirrodin",
+   "batch": "for-mirrodin-8009ed3",
+   "evidence": "mtg/rules/for_mirrodin_equipment_test.go: TestDragonwingGliderScenario"
   },
   {
    "oracle_id": "4cd6ad78-7441-4dd7-b486-d9575e8e0947",
@@ -135706,8 +135784,10 @@
    "oracle_id": "6253f9d4-83ff-4a0b-b465-e9f9a565f664",
    "revision": "f05078dd-b928-4b3f-9636-f299ebac180b",
    "name": "Vulshok Splitter",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "for-mirrodin",
+   "batch": "for-mirrodin-8009ed3",
+   "evidence": "mtg/rules/for_mirrodin_equipment_test.go: TestVulshokSplitterScenario"
   },
   {
    "oracle_id": "626709bc-6c29-434f-9e3f-b84bb8a5c431",
@@ -178471,8 +178551,10 @@
    "oracle_id": "93c2b91d-7d4e-483c-a11f-4a525f881503",
    "revision": "de1d02d1-91dc-47d6-bdbe-87602428abfb",
    "name": "Barbed Batterfist",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "for-mirrodin",
+   "batch": "for-mirrodin-8009ed3",
+   "evidence": "mtg/rules/for_mirrodin_equipment_test.go: TestBarbedBatterfistScenario"
   },
   {
    "oracle_id": "93c35f9e-3346-4269-b1af-df9f216bfd7a",
@@ -212866,8 +212948,10 @@
    "oracle_id": "bd31c248-8b3f-4fa5-a639-19b0e37b15c3",
    "revision": "5e50c148-9f30-4131-8ec1-85e9ba8cafbb",
    "name": "Kemba's Banner",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "for-mirrodin",
+   "batch": "for-mirrodin-8009ed3",
+   "evidence": "mtg/rules/for_mirrodin_equipment_test.go: TestKembasBannerScenario"
   },
   {
    "oracle_id": "bd372a53-48f9-4e9a-ab00-0f9c4606d452",
