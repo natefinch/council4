@@ -1447,8 +1447,42 @@ func matchingZoneReplacementEffects(g *game.Game, event game.Event, applied map[
 		}
 		matches = append(matches, *replacement)
 	}
+	if finality, ok := finalityCounterReplacement(g, event); ok && !applied[finality.ID] {
+		matches = append(matches, finality)
+	}
 	matches = append(matches, matchingStaticSelfZoneReplacementEffects(g, event, applied)...)
 	return matches
+}
+
+// finalityCounterReplacement derives the replacement effect that one or more
+// finality counters on a permanent create: "If this permanent would be put into
+// a graveyard from the battlefield, exile it instead." (CR 122.1h). It comes
+// from the counter, not from an ability, so it survives ability loss, and any
+// number of finality counters create only this single effect. Its ID is the
+// departing permanent's object ID, stable for the event, so CR 614.5 applies it
+// at most once while it competes with other replacements under CR 616.1.
+func finalityCounterReplacement(g *game.Game, event game.Event) (game.ReplacementEffect, bool) {
+	if event.Kind != game.EventZoneChanged || event.FromZone != zone.Battlefield ||
+		event.ToZone != zone.Graveyard || event.PermanentID == 0 {
+		return game.ReplacementEffect{}, false
+	}
+	permanent, ok := permanentByObjectID(g, event.PermanentID)
+	if !ok || !permanent.Counters.Has(counter.Finality) {
+		return game.ReplacementEffect{}, false
+	}
+	return game.ReplacementEffect{
+		ID:             permanent.ObjectID,
+		Controller:     effectiveController(g, permanent),
+		SourceObjectID: permanent.ObjectID,
+		SourceCardID:   permanent.CardInstanceID,
+		Description:    "Finality counter: exile it instead of putting it into a graveyard",
+		MatchEvent:     game.EventZoneChanged,
+		MatchFromZone:  true,
+		FromZone:       zone.Battlefield,
+		MatchToZone:    true,
+		ToZone:         zone.Graveyard,
+		ReplaceToZone:  zone.Exile,
+	}, true
 }
 
 // zoneReplacementLeavesEventUnchanged reports whether a resolution-created zone
