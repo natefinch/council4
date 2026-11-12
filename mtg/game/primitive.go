@@ -660,10 +660,12 @@ type AddMana struct {
 	PersistUntilEndOfTurn bool
 }
 
-// AddCounter places counters on a referenced permanent.
+// AddCounter places counters on a referenced permanent. A target Object whose
+// slot holds an exiled card target ("target permanent or suspended card") puts
+// the counters on that card in exile instead.
 type AddCounter struct {
 	Amount      Quantity
-	Object      ObjectReference // single permanent; zero if Group is set
+	Object      ObjectReference // single permanent or targeted exiled card; zero if Group is set
 	Group       GroupReference  // every permanent in a group; zero if Object is set
 	CounterKind counter.Kind
 	// AllKinds doubles every kind of counter already on Object: the runtime adds,
@@ -2632,6 +2634,8 @@ type Goad struct {
 }
 
 // RemoveCounter removes counters from one referenced permanent or every permanent in a referenced group.
+// A target Object whose slot holds an exiled card target ("target permanent or
+// suspended card") removes the counters from that card in exile instead.
 type RemoveCounter struct {
 	Amount      Quantity
 	Object      ObjectReference

@@ -2161,6 +2161,16 @@ type TargetSpec struct {
 	// Allow includes TargetAllowCard.
 	TargetZone zone.Type
 
+	// SuspendedCard restricts the card alternative of this target to suspended
+	// cards: cards in exile that have suspend and at least one time counter
+	// (CR 702.62b), as in "target permanent or suspended card". It requires
+	// Allow to include TargetAllowCard and TargetZone to be exile. The card
+	// alternative is matched solely by the suspended predicate; when the spec
+	// also allows permanents, Selection constrains only the permanent
+	// alternative ("target permanent with a time counter on it or suspended
+	// card").
+	SuspendedCard bool
+
 	// Chooser identifies who chooses this target slot during announcement. The
 	// default controller chooser preserves normal targeting. For non-controller
 	// choosers, structured "you" predicates are evaluated relative to the

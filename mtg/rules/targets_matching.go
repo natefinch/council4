@@ -333,6 +333,9 @@ func cardTargetMatchesSpec(g *game.Game, controller game.PlayerID, triggerEvent 
 			return false
 		}
 	}
+	if spec.SuspendedCard {
+		return cardIsSuspended(g, cardID)
+	}
 	sel := targetSelection(spec)
 	if !sel.Empty() {
 		subject := selectionSubject{

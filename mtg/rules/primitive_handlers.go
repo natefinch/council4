@@ -300,6 +300,16 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 		}
 		return res
 	}
+	if cardID, ok := r.targetedExiledCard(prim.Object); ok {
+		counterKind := prim.CounterKind
+		if len(prim.KindChoices) != 0 {
+			counterKind = r.chooseCounterKindToPlace(prim.KindChoices)
+		}
+		change := newExileCardCounterChange(r.game, placementController)
+		res.succeeded = change.add(cardID, counterKind, res.amount) > 0
+		change.publish()
+		return res
+	}
 	permanent, ok := r.resolveObject(prim.Object)
 	if ok {
 		counterKind := prim.CounterKind
@@ -1502,6 +1512,40 @@ func handleGoad(r *effectResolver, prim game.Goad) effectResolved {
 	return res
 }
 
+// targetedExiledCard returns the card chosen for the target slot object names
+// when that slot holds a card target, such as the suspended-card alternative of
+// "target permanent or suspended card", and the card is still the same object in
+// its owner's exile zone (CR 400.7). Counters put on or removed from it use the
+// exile-card counter store and publish the same counter events, so removing a
+// suspended card's last time counter triggers suspend's cast ability
+// (CR 702.62a).
+func (r *effectResolver) targetedExiledCard(object game.ObjectReference) (id.ID, bool) {
+	switch object.Kind() {
+	case game.ObjectReferenceTargetObject, game.ObjectReferenceTargetCard:
+	default:
+		return 0, false
+	}
+	if r.obj == nil {
+		return 0, false
+	}
+	slot := remapTargetSlot(r.game, r.obj, object.TargetIndex())
+	if slot < 0 || slot >= len(r.obj.Targets) {
+		return 0, false
+	}
+	target := r.obj.Targets[slot]
+	if target.Kind != game.TargetCard {
+		return 0, false
+	}
+	card, ok := r.game.GetCardInstance(target.CardID)
+	if !ok || target.CardZoneVersionSet && card.ZoneVersion != target.CardZoneVersion {
+		return 0, false
+	}
+	if actual, ok := cardZone(r.game, target.CardID); !ok || actual != zone.Exile {
+		return 0, false
+	}
+	return target.CardID, true
+}
+
 func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResolved {
 	if prim.AllKinds {
 		return handleRemoveAllCounters(r, prim)
@@ -1516,6 +1560,22 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 			res.amount += removal.remove(permanent, prim.CounterKind, requested)
 		}
 		res.succeeded = res.amount > 0
+		return res
+	}
+	if cardID, ok := r.targetedExiledCard(prim.Object); ok {
+		res.amountKnown = true
+		kind := prim.CounterKind
+		if prim.ChooseKind {
+			chosen, ok := r.chooseCounterKindToMove(r.game.CardCounters[cardID])
+			if !ok {
+				return res
+			}
+			kind = chosen
+		}
+		change := newExileCardCounterChange(r.game, stackObjectController(r.obj))
+		res.amount = change.remove(cardID, kind, requested)
+		res.succeeded = res.amount > 0
+		change.publish()
 		return res
 	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
