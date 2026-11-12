@@ -1022,6 +1022,111 @@
     "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "revision": "42e28bd2-486b-45d4-8840-6e33c19c2d57",
     "rulings_uri": "https://api.scryfall.com/cards/42e28bd2-486b-45d4-8840-6e33c19c2d57/rulings"
+   },
+   {
+    "name": "Saiba Cryptomancer",
+    "oracle_id": "15f89b06-5025-4c9f-bf51-e25bc5c2dd6b",
+    "oracle_text_sha256": "776eeaa87a9f1f30c7726019a1c659a59ba3ea4ccab743324c1309a5303779f1",
+    "revision": "3934d535-740d-471a-bbf1-c3b26b1cd596",
+    "rulings_uri": "https://api.scryfall.com/cards/3934d535-740d-471a-bbf1-c3b26b1cd596/rulings"
+   },
+   {
+    "name": "Chomping Kavu",
+    "oracle_id": "20a362c3-d278-437f-881c-e7d9fe78fc2d",
+    "oracle_text_sha256": "4125eac43d53d97f7f740afaf26ea73d85f25db6c41c8c0e76509eb0b301f146",
+    "revision": "31c249d9-37c0-451d-866b-e834c4c57214",
+    "rulings_uri": "https://api.scryfall.com/cards/31c249d9-37c0-451d-866b-e834c4c57214/rulings"
+   },
+   {
+    "name": "Consuming Aetherborn",
+    "oracle_id": "4d472308-5bc7-4a3c-81b5-0a757f00d9e2",
+    "oracle_text_sha256": "3c47f2f18cef1f3ec01ef49612438082d9ad4003d1cb820f92f6543d5f4e1fc9",
+    "revision": "7311ade8-eb75-40f8-b018-668762aa3b77",
+    "rulings_uri": "https://api.scryfall.com/cards/7311ade8-eb75-40f8-b018-668762aa3b77/rulings"
+   },
+   {
+    "name": "Gloomfang Mauler",
+    "oracle_id": "5437f560-7f61-4326-be8e-15d74bf4e6ec",
+    "oracle_text_sha256": "ef3e6d9c56a4061f91a2c9441e9bc8a3bae2a0b4911584662acad99623246519",
+    "revision": "025a5338-133f-486d-9f73-0896226685c0",
+    "rulings_uri": "https://api.scryfall.com/cards/025a5338-133f-486d-9f73-0896226685c0/rulings"
+   },
+   {
+    "name": "Cragsmasher Yeti",
+    "oracle_id": "57120486-0316-4591-abca-438ab8283d3f",
+    "oracle_text_sha256": "d5ea6dea8211a27b4894273377c0c7887d460119807c83de661439ac2119629b",
+    "revision": "ee7a4ccb-c0c9-491f-9475-e78895fa9d03",
+    "rulings_uri": "https://api.scryfall.com/cards/ee7a4ccb-c0c9-491f-9475-e78895fa9d03/rulings"
+   },
+   {
+    "name": "Serpent-Blade Assailant",
+    "oracle_id": "66a131ae-dbb2-4e7b-b6ce-7695f47c8f87",
+    "oracle_text_sha256": "8ecb1641e26a643ebd1708f14852f055ea454e501c7a5c4be8e9759ba46e9205",
+    "revision": "6fabc49f-b665-4c56-b06e-03220f7918bb",
+    "rulings_uri": "https://api.scryfall.com/cards/6fabc49f-b665-4c56-b06e-03220f7918bb/rulings"
+   },
+   {
+    "name": "Sigiled Sentinel",
+    "oracle_id": "79c90a68-1c31-4e16-be53-1304132da80f",
+    "oracle_text_sha256": "1f95295aa317717d742b11b585d83db18c352ff3d9e73c90f470bbf469213693",
+    "revision": "7f65b178-51d6-4dcb-a1cc-4b4dcb2237cd",
+    "rulings_uri": "https://api.scryfall.com/cards/7f65b178-51d6-4dcb-a1cc-4b4dcb2237cd/rulings"
+   },
+   {
+    "name": "Death-Greeter's Champion",
+    "oracle_id": "81abb451-5ee0-4f90-bacc-a8ff69726a27",
+    "oracle_text_sha256": "c3f61f0c5e8fd515618923ee86b7d06bee1ec33457ca29c860fb8d8ca2481b04",
+    "revision": "7cb2b582-1c45-4bb2-8aef-59a71a5a9e94",
+    "rulings_uri": "https://api.scryfall.com/cards/7cb2b582-1c45-4bb2-8aef-59a71a5a9e94/rulings"
+   },
+   {
+    "name": "Scorn-Blade Berserker",
+    "oracle_id": "93107139-b743-4d62-b0ac-9997202e0562",
+    "oracle_text_sha256": "443392320ef5c21ab3899e2aaf55b464a501a7ba6a5236510acb098ef58c4a6e",
+    "revision": "792e7386-4c2d-4fa9-b499-fa3681f2a50e",
+    "rulings_uri": "https://api.scryfall.com/cards/792e7386-4c2d-4fa9-b499-fa3681f2a50e/rulings"
+   },
+   {
+    "name": "Voldaren Thrillseeker",
+    "oracle_id": "b3cc2ed9-1da3-4ad2-a9a7-de7665d800ff",
+    "oracle_text_sha256": "da3f8711d3824db682ea36526a54b7e661e6b27df10b6a9398ed804128dcce4e",
+    "revision": "1dbcd466-fb99-4388-a118-4534b85544f0",
+    "rulings_uri": "https://api.scryfall.com/cards/1dbcd466-fb99-4388-a118-4534b85544f0/rulings"
+   },
+   {
+    "name": "Enduring Bondwarden",
+    "oracle_id": "c17d4818-5825-4bff-8fc5-5fd740cc0c70",
+    "oracle_text_sha256": "7380dc523a6da87058edac763e433c97d580fb2ad4a7adbfc2ac8c9834b72445",
+    "revision": "eb0680eb-ceca-44d9-9654-78ea2ccfce17",
+    "rulings_uri": "https://api.scryfall.com/cards/eb0680eb-ceca-44d9-9654-78ea2ccfce17/rulings"
+   },
+   {
+    "name": "Hangar Scrounger",
+    "oracle_id": "d1b74fb9-8ef3-40be-bc79-45ffb4c597eb",
+    "oracle_text_sha256": "912b889357fe883a8096a4330efbb17cd8ca5d9f04d40c4a4ac985fec760f35a",
+    "revision": "c2551b01-4d88-47f3-b54d-96ec03e093f8",
+    "rulings_uri": "https://api.scryfall.com/cards/c2551b01-4d88-47f3-b54d-96ec03e093f8/rulings"
+   },
+   {
+    "name": "Redcap Heelslasher",
+    "oracle_id": "d2134b68-d73f-4090-aaec-b2ee5c9f9f04",
+    "oracle_text_sha256": "74e7f7acbcfa795d04f794670233d29b67b7bbd0f3329274e98b9e1f54ac23e3",
+    "revision": "3c7ca435-aa84-4d35-80db-d1c74b878b12",
+    "rulings_uri": "https://api.scryfall.com/cards/3c7ca435-aa84-4d35-80db-d1c74b878b12/rulings"
+   },
+   {
+    "name": "Golden-Scale Aeronaut",
+    "oracle_id": "d388080d-5ad4-4e27-b361-340f410423a7",
+    "oracle_text_sha256": "50da12ae6885ef16c3cb74c3d003af184f3e97f21a52b22e029aacf0500f594c",
+    "revision": "8b2f3c52-8d6a-411a-aa62-cbb08a144351",
+    "rulings_uri": "https://api.scryfall.com/cards/8b2f3c52-8d6a-411a-aa62-cbb08a144351/rulings"
+   },
+   {
+    "name": "Fearless Skald",
+    "oracle_id": "f055a941-8b83-464e-a57f-8f188dc69aaa",
+    "oracle_text_sha256": "e9726084dbbbb242735642615658e21974ad3c6fdb48ed654c92517fd2d9ba84",
+    "revision": "4e317d1d-3f20-4f0d-8b1e-31df351e8f83",
+    "rulings_uri": "https://api.scryfall.com/cards/4e317d1d-3f20-4f0d-8b1e-31df351e8f83/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -7728,6 +7833,34 @@
     "game.TrampleStaticBody"
    ],
    "review": "Capability-only check against docs/card-authoring.md (Reviewed continuation commands), mtg/cardprogram/README.md (Capability lookup), mtg/cards/m/magma_spray.go, mtg/cards/y/yamabushi_s_flame.go, mtg/cards/s/smite_the_deathless.go, mtg/cards/b/banquet_guests.go, mtg/cards/i/improvised_arsenal.go, mtg/cards/t/threats_around_every_corner.go, mtg/cards/authored/copy_spells.go, mtg/cards/c/carnivorous_cultivator_enroot.go, and mtg/rules/prepared_exile_cast_test.go. No Oracle, rulings, or Comprehensive Rules source review performed."
+  },
+  {
+   "id": "backup-n-20261111-02",
+   "family": "backup-n",
+   "oracle_ids": [
+    "15f89b06-5025-4c9f-bf51-e25bc5c2dd6b",
+    "20a362c3-d278-437f-881c-e7d9fe78fc2d",
+    "4d472308-5bc7-4a3c-81b5-0a757f00d9e2",
+    "5437f560-7f61-4326-be8e-15d74bf4e6ec",
+    "57120486-0316-4591-abca-438ab8283d3f",
+    "66a131ae-dbb2-4e7b-b6ce-7695f47c8f87",
+    "79c90a68-1c31-4e16-be53-1304132da80f",
+    "81abb451-5ee0-4f90-bacc-a8ff69726a27",
+    "93107139-b743-4d62-b0ac-9997202e0562",
+    "b3cc2ed9-1da3-4ad2-a9a7-de7665d800ff",
+    "c17d4818-5825-4bff-8fc5-5fd740cc0c70",
+    "d1b74fb9-8ef3-40be-bc79-45ffb4c597eb",
+    "d2134b68-d73f-4090-aaec-b2ee5c9f9f04",
+    "d388080d-5ad4-4e27-b361-340f410423a7",
+    "f055a941-8b83-464e-a57f-8f188dc69aaa"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AddCounter",
+    "game.ApplyContinuous",
+    "game.ContinuousEffect.AddAbilities"
+   ],
+   "review": "Selection-only capability review at base 260017516d7365601a725a177d5a0653aa6bc6d9: mtg/game/primitive.go (AddCounter, ApplyContinuous); mtg/game/continuous.go (AddAbilities); mtg/rules/primitive_handlers.go (handleApplyContinuous); mtg/rules/continuous_granted_ability_test.go and trigger_declared_origin_test.go (runtime granted abilities/triggers); mtg/cardprogram/README.md, mtg/game/mechanic_template.go and mtg/rules/dash_test.go (secondary text fit). All 15 pinned records' non-backup text checked. No Oracle/rulings/CR source review performed."
   }
  ],
  "records": [
@@ -71274,8 +71407,10 @@
    "oracle_id": "15f89b06-5025-4c9f-bf51-e25bc5c2dd6b",
    "revision": "3934d535-740d-471a-bbf1-c3b26b1cd596",
    "name": "Saiba Cryptomancer",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestSaibaCryptomancerFlashesInAndGrantsHexproof"
   },
   {
    "oracle_id": "15fbb7b1-c62d-4f82-9f35-2c10299779f4",
@@ -80442,8 +80577,10 @@
    "oracle_id": "20a362c3-d278-437f-881c-e7d9fe78fc2d",
    "revision": "31c249d9-37c0-451d-866b-e834c4c57214",
    "name": "Chomping Kavu",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestChompingKavuBackupRestrictsBlockersByPower"
   },
   {
    "oracle_id": "20a6d576-a5b2-43b4-8be9-75be001e567d",
@@ -117887,8 +118024,10 @@
    "oracle_id": "4d472308-5bc7-4a3c-81b5-0a757f00d9e2",
    "revision": "7311ade8-eb75-40f8-b018-668762aa3b77",
    "name": "Consuming Aetherborn",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestConsumingAetherbornBackupLifelinkGainsLifeFromCombat"
   },
   {
    "oracle_id": "4d47e598-690e-4850-97e4-7136bc7b497e",
@@ -123603,8 +123742,10 @@
    "oracle_id": "5437f560-7f61-4326-be8e-15d74bf4e6ec",
    "revision": "025a5338-133f-486d-9f73-0896226685c0",
    "name": "Gloomfang Mauler",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestGloomfangMaulerMenaceAndSwampcycling"
   },
   {
    "oracle_id": "543af1f4-f93f-4c7f-a067-ad2db599a4ae",
@@ -125913,8 +126054,10 @@
    "oracle_id": "57120486-0316-4591-abca-438ab8283d3f",
    "revision": "ee7a4ccb-c0c9-491f-9475-e78895fa9d03",
    "name": "Cragsmasher Yeti",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestCragsmasherYetiTramplesAndMountaincycles"
   },
   {
    "oracle_id": "5715ed43-395c-4877-99a7-8e28e7bf9dce",
@@ -139268,8 +139411,10 @@
    "oracle_id": "66a131ae-dbb2-4e7b-b6ce-7695f47c8f87",
    "revision": "6fabc49f-b665-4c56-b06e-03220f7918bb",
    "name": "Serpent-Blade Assailant",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestSerpentBladeAssailantBackupDeathtouchMarksLethalDamage"
   },
   {
    "oracle_id": "66a22b35-3dc0-4a74-8474-e73293403de6",
@@ -156063,8 +156208,10 @@
    "oracle_id": "79c90a68-1c31-4e16-be53-1304132da80f",
    "revision": "7f65b178-51d6-4dcb-a1cc-4b4dcb2237cd",
    "name": "Sigiled Sentinel",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestSigiledSentinelBackupVigilanceLeavesAttackerUntapped"
   },
   {
    "oracle_id": "79c9a963-a428-45f1-a647-5a91ef64286e",
@@ -162481,8 +162628,10 @@
    "oracle_id": "81abb451-5ee0-4f90-bacc-a8ff69726a27",
    "revision": "7cb2b582-1c45-4bb2-8aef-59a71a5a9e94",
    "name": "Death-Greeter's Champion",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestDeathGreetersChampionDashesAndGrantsDoubleStrike"
   },
   {
    "oracle_id": "81b06e8d-ed30-4f90-b729-0aa93b0d870f",
@@ -177675,8 +177824,10 @@
    "oracle_id": "93107139-b743-4d62-b0ac-9997202e0562",
    "revision": "792e7386-4c2d-4fa9-b499-fa3681f2a50e",
    "name": "Scorn-Blade Berserker",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestScornBladeBerserkerBackupGrantsSacrificeDraw"
   },
   {
    "oracle_id": "9317e70d-3d01-4652-b9ea-b4015a0f7b80",
@@ -205154,8 +205305,10 @@
    "oracle_id": "b3cc2ed9-1da3-4ad2-a9a7-de7665d800ff",
    "revision": "1dbcd466-fb99-4388-a118-4534b85544f0",
    "name": "Voldaren Thrillseeker",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestVoldarenThrillseekerBackupAbilityUsesLastKnownPower"
   },
   {
    "oracle_id": "b3d40cf7-a529-4bd0-8df7-231630a49bb8",
@@ -216367,8 +216520,10 @@
    "oracle_id": "c17d4818-5825-4bff-8fc5-5fd740cc0c70",
    "revision": "eb0680eb-ceca-44d9-9654-78ea2ccfce17",
    "name": "Enduring Bondwarden",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestEnduringBondwardenBackupDeathTriggerCopiesEveryCounterKind"
   },
   {
    "oracle_id": "c17d5153-cc74-4fbb-9d75-f7ee7b557b0a",
@@ -230354,8 +230509,10 @@
    "oracle_id": "d1b74fb9-8ef3-40be-bc79-45ffb4c597eb",
    "revision": "c2551b01-4d88-47f3-b54d-96ec03e093f8",
    "name": "Hangar Scrounger",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestHangarScroungerBackupTapTriggerDiscardsAndDraws"
   },
   {
    "oracle_id": "d1b815d1-2848-40d4-a555-66822d1becbc",
@@ -230631,8 +230788,10 @@
    "oracle_id": "d2134b68-d73f-4090-aaec-b2ee5c9f9f04",
    "revision": "3c7ca435-aa84-4d35-80db-d1c74b878b12",
    "name": "Redcap Heelslasher",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestRedcapHeelslasherFirstStrikeKillsBlockerBeforeDamage"
   },
   {
    "oracle_id": "d2145ad3-fe7e-459b-b155-1b3ed089e936",
@@ -231940,8 +232099,10 @@
    "oracle_id": "d388080d-5ad4-4e27-b361-340f410423a7",
    "revision": "8b2f3c52-8d6a-411a-aa62-cbb08a144351",
    "name": "Golden-Scale Aeronaut",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestGoldenScaleAeronautFlyingAllowsOnlyAerialBlocks"
   },
   {
    "oracle_id": "d38937a6-ab1c-4de8-a278-d81a6ce0d921",
@@ -256611,8 +256772,10 @@
    "oracle_id": "f055a941-8b83-464e-a57f-8f188dc69aaa",
    "revision": "4e317d1d-3f20-4f0d-8b1e-31df351e8f83",
    "name": "Fearless Skald",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "backup-n",
+   "batch": "backup-n-20261111-02",
+   "evidence": "mtg/rules/backup_family_test.go: TestFearlessSkaldBackupDoubleStrikeDealsDamageTwice"
   },
   {
    "oracle_id": "f0587c55-06c1-4930-a62e-668f37464ce9",
