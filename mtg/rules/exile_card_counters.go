@@ -121,11 +121,18 @@ func cardIsSuspended(g *game.Game, cardID id.ID) bool {
 	if !ok {
 		return false
 	}
+	return g.HasExileCounter(cardID, counter.Time) && exiledCardHasSuspend(g, card)
+}
+
+// exiledCardHasSuspend reports whether card is in its owner's exile zone and
+// has suspend among the abilities it has there, including granted ones. A
+// face-down exiled card has none.
+func exiledCardHasSuspend(g *game.Game, card *game.CardInstance) bool {
 	owner, ok := playerByID(g, card.Owner)
-	if !ok || !owner.Exile.Contains(cardID) || !g.HasExileCounter(cardID, counter.Time) {
+	if !ok || !owner.Exile.Contains(card.ID) {
 		return false
 	}
-	for _, ability := range cardZoneAbilities(g, card, zone.Exile, game.FaceFront, owner.Exile.IsFaceDown(cardID)) {
+	for _, ability := range cardZoneAbilities(g, card, zone.Exile, game.FaceFront, owner.Exile.IsFaceDown(card.ID)) {
 		if _, ok := game.BodyKeywordAbility(ability, game.Suspend); ok {
 			return true
 		}

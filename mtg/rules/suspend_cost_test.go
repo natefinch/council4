@@ -65,7 +65,7 @@ func requireSuspendCast(t *testing.T, g *game.Game, cardID id.ID) (*game.StackOb
 		t.Fatal("time counters remained after the cast")
 	}
 	for _, obj := range g.Stack.Objects() {
-		if !obj.Copy && obj.SourceID == cardID {
+		if obj.Kind == game.StackSpell && !obj.Copy && obj.SourceID == cardID {
 			if !obj.Suspend || obj.SourceZone != zone.Exile {
 				t.Fatalf("suspend spell suspend=%t source zone=%v, want a suspend cast from exile", obj.Suspend, obj.SourceZone)
 			}
@@ -117,7 +117,7 @@ func TestSuspendCastPaysThaliaTax(t *testing.T) {
 			}
 			g.Players[game.Player1].ManaPool.Add(mana.C, tc.upkeepC)
 
-			e.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			e.runSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{})
 
 			if !tc.wantCast {
 				requireSuspendNotCast(t, g, cardID)
@@ -126,7 +126,7 @@ func TestSuspendCastPaysThaliaTax(t *testing.T) {
 				}
 				// The card is no longer suspended, so a later upkeep does not cast it.
 				g.Players[game.Player1].ManaPool.Add(mana.C, 1)
-				e.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+				e.runSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{})
 				requireSuspendNotCast(t, g, cardID)
 				return
 			}
@@ -172,7 +172,7 @@ func TestSuspendCastPaysAdditionalCosts(t *testing.T) {
 			}
 			g.Players[game.Player1].ManaPool.Add(mana.C, tc.upkeepC)
 
-			e.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			e.runSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{})
 
 			if !tc.wantCast {
 				requireSuspendNotCast(t, g, cardID)
@@ -221,7 +221,7 @@ func TestSuspendCastOptionalKickerWithTax(t *testing.T) {
 			g.Players[game.Player1].ManaPool.Add(mana.C, tc.upkeepC)
 			agent := &reboundKickerAgent{}
 
-			e.processSuspendUpkeep(g, game.Player1, suspendAgents(agent), &TurnLog{})
+			e.runSuspendUpkeep(g, game.Player1, suspendAgents(agent))
 
 			if len(agent.requests) != 1 {
 				t.Fatalf("free-cast requests = %d, want 1", len(agent.requests))
@@ -253,7 +253,7 @@ func TestSuspendCastMayBeDeclined(t *testing.T) {
 	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
 	agent := &cascadeCastChoiceAgent{decline: true}
 
-	e.processSuspendUpkeep(g, game.Player1, suspendAgents(agent), &TurnLog{})
+	e.runSuspendUpkeep(g, game.Player1, suspendAgents(agent))
 
 	if len(agent.requests) != 1 || declineOptionCount(agent.requests[0]) != 1 {
 		t.Fatalf("free-cast requests = %+v, want one request offering a decline", agent.requests)
@@ -305,7 +305,7 @@ func TestSuspendCastChoosesTargets(t *testing.T) {
 	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
 	agent := &suspendTargetAgent{target: game.PlayerTarget(game.Player3)}
 
-	e.processSuspendUpkeep(g, game.Player1, suspendAgents(agent), &TurnLog{})
+	e.runSuspendUpkeep(g, game.Player1, suspendAgents(agent))
 
 	obj, _ := requireSuspendCast(t, g, cardID)
 	if agent.offered < 2 || len(obj.Targets) != 1 || obj.Targets[0] != agent.target || obj.ManaSpentToCast != 1 {
@@ -339,7 +339,7 @@ func TestSuspendedCreatureWithAdditionalCostGainsHaste(t *testing.T) {
 				reboundTestArtifact(g)
 			}
 
-			e.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+			e.runSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{})
 
 			if !tc.artifact {
 				requireSuspendNotCast(t, g, cardID)
@@ -376,7 +376,7 @@ func TestSuspendCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 
 	clone := g.Clone()
 	agent := &paymentManaAgent{ability: "Pay 1 life"}
-	e.processSuspendUpkeep(clone, game.Player1, suspendAgents(agent), &TurnLog{})
+	e.runSuspendUpkeep(clone, game.Player1, suspendAgents(agent))
 
 	obj, event := requireSuspendCast(t, clone, cardID)
 	grove := reboundPermanentNamed(t, clone, "Waterlogged Grove")
@@ -423,7 +423,7 @@ func TestSuspendCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 			life := g.Players[game.Player1].Life
 			agent := &paymentManaAgent{ability: "Add {G} or {U}"}
 
-			e.processSuspendUpkeep(g, game.Player1, suspendAgents(agent), &TurnLog{})
+			e.runSuspendUpkeep(g, game.Player1, suspendAgents(agent))
 
 			if agent.windows != tc.wantWindows || agent.activated != tc.wantActivated {
 				t.Fatalf("payment windows=%d activations=%d, want %d/%d", agent.windows, agent.activated, tc.wantWindows, tc.wantActivated)

@@ -321,6 +321,9 @@ func (e *Engine) resolveTriggeredAbilityWithChoices(g *game.Game, obj *game.Stac
 	if obj.Rebound {
 		return e.resolveReboundTrigger(g, obj, agents, log)
 	}
+	if obj.SuspendCast {
+		return e.resolveSuspendCastTrigger(g, obj, agents, log)
+	}
 	if obj.InlineTrigger != nil {
 		source, _ := stackObjectSourceDef(g, obj)
 		return e.resolveTriggeredAbilityBodyWithChoices(g, obj, source, obj.InlineTrigger, agents, log)

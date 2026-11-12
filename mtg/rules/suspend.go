@@ -106,9 +106,9 @@ func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []act
 // processSuspendUpkeep removes a time counter from each card the active player
 // owns that is suspended (CR 702.62a, 702.62b); a suspended card's abilities
 // are controlled by its owner (CR 108.4a). Each removal is published as an
-// EventCountersRemoved for the exiled card. When the last time counter is
-// removed, its owner may cast it.
-func (e *Engine) processSuspendUpkeep(g *game.Game, playerID game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+// EventCountersRemoved for the exiled card, so removing the last one triggers
+// suspend's cast ability.
+func processSuspendUpkeep(g *game.Game, playerID game.PlayerID) {
 	for _, cardID := range suspendedCardIDsInOrder(g, playerID) {
 		if !cardIsSuspended(g, cardID) {
 			continue
@@ -116,10 +116,6 @@ func (e *Engine) processSuspendUpkeep(g *game.Game, playerID game.PlayerID, agen
 		change := newExileCardCounterChange(g, playerID)
 		change.remove(cardID, counter.Time, 1)
 		change.publish()
-		if g.HasExileCounter(cardID, counter.Time) {
-			continue
-		}
-		e.castSuspendedCard(g, playerID, cardID, agents, log)
 	}
 }
 
@@ -140,15 +136,54 @@ func suspendedCardIDsInOrder(g *game.Game, playerID game.PlayerID) []id.ID {
 	return ids
 }
 
-// castSuspendedCard lets the controller cast a card whose last time counter
-// was removed from exile without paying its mana cost (CR 702.62a). The cast
-// follows the alternative-cost rules (CR 702.62d, 601.2b, 601.2f-h):
-// additional costs, cost increases and reductions still apply, and a creature
-// spell cast this way gains haste. If the card isn't cast it remains exiled.
-func (e *Engine) castSuspendedCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	player, ok := playerByID(g, playerID)
-	if !ok || !player.Exile.Contains(cardID) {
-		return false
+// suspendCastAbility is suspend's intrinsic triggered ability that functions
+// in exile (CR 702.62a). It is shared immutable data; its behavior is
+// resolveSuspendCastTrigger, selected by StackObject.SuspendCast.
+var suspendCastAbility = &game.TriggeredAbility{
+	Text: "When the last time counter is removed from this card, if it's exiled, you may play it without paying its mana cost if able. If you don't, it remains exiled. If you cast a creature spell this way, it gains haste until you lose control of the spell or the permanent it becomes.",
+}
+
+// suspendCastTriggers detects suspend's cast ability (CR 702.62a) from an
+// event that removed the last time counter from an exiled card with suspend,
+// however the counter was removed. The intervening "if it's exiled" condition
+// requires the card to still be in exile as the incarnation the event names
+// (CR 603.4, 400.7). The ability is controlled by the card's owner (CR 108.4a)
+// and is bound to that exiled card's zone version.
+func suspendCastTriggers(g *game.Game, event game.Event) []pendingTriggeredAbility {
+	if event.Kind != game.EventCountersRemoved || !exileCardCounterEvent(event) ||
+		event.CounterKind != counter.Time || event.PreviousCounterAmount <= 0 ||
+		event.Amount < event.PreviousCounterAmount {
+		return nil
 	}
-	return e.chooseAndCastFreeSpell(g, player, playerID, cardID, zone.Exile, game.Selection{}, opt.V[int]{}, freeCastSpell{suspend: true}, true, agents, log)
+	card, ok := g.GetCardInstance(event.CardID)
+	if !ok || card.ZoneVersion != event.CardZoneVersion || !exiledCardHasSuspend(g, card) {
+		return nil
+	}
+	return []pendingTriggeredAbility{{
+		controller: card.Owner, sourceID: card.ID, sourceCardID: card.ID,
+		sourceZone: zone.Exile, sourceZoneVersion: card.ZoneVersion, face: game.FaceFront,
+		inline: suspendCastAbility, suspendCast: true, event: event, hasEvent: true,
+		triggerMultiplierCaptured: true,
+	}}
+}
+
+// resolveSuspendCastTrigger resolves suspend's cast ability (CR 702.62a). The
+// intervening "if it's exiled" condition is rechecked (CR 603.4): a card that
+// left exile, even if it has since returned, is a new object the ability
+// doesn't affect (CR 400.7). Otherwise the ability's controller may cast the
+// card from its owner's exile without paying its mana cost. The cast follows
+// the alternative-cost rules (CR 702.62d, 601.2b, 601.2f-h): additional
+// costs, cost increases and reductions still apply, and a creature spell cast
+// this way gains haste. If the card isn't cast it remains exiled.
+func (e *Engine) resolveSuspendCastTrigger(g *game.Game, obj *game.StackObject, agents [game.NumPlayers]PlayerAgent, log *TurnLog) string {
+	card, ok := g.GetCardInstance(obj.SourceCardID)
+	if !ok || card.ZoneVersion != obj.SourceZoneVersion {
+		return "resolved"
+	}
+	owner, ok := playerByID(g, card.Owner)
+	if !ok || !owner.Exile.Contains(card.ID) {
+		return "resolved"
+	}
+	e.chooseAndCastFreeSpell(g, owner, obj.Controller, card.ID, zone.Exile, game.Selection{}, opt.V[int]{}, freeCastSpell{suspend: true}, true, agents, log)
+	return "resolved"
 }

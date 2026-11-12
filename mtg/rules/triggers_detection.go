@@ -35,6 +35,7 @@ type pendingTriggeredAbility struct {
 	entryChoices                 map[game.ChoiceKey]game.ResolutionChoiceResult
 	sagaChapter                  bool
 	siegeDefeat                  bool
+	suspendCast                  bool
 	rebound                      bool
 	wardTargetID                 id.ID
 	capturedTargetControllerLKI  map[int]game.PlayerID
@@ -153,6 +154,7 @@ func (e *Engine) putTriggeredAbilitiesOnStackWithChoices(g *game.Game, agents [g
 			InlineTrigger:               trigger.inline,
 			SagaChapter:                 trigger.sagaChapter,
 			SiegeDefeat:                 trigger.siegeDefeat,
+			SuspendCast:                 trigger.suspendCast,
 			Rebound:                     trigger.rebound,
 			WardTargetStackObjectID:     trigger.wardTargetID,
 			Controller:                  trigger.controller,
@@ -964,6 +966,7 @@ func eventTriggeredAbilities(g *game.Game, event game.Event, events []game.Event
 	}
 	pending = append(pending, cycledCardSelfTriggers(g, event)...)
 	pending = append(pending, graveyardStepSourceTriggers(g, event)...)
+	pending = append(pending, suspendCastTriggers(g, event)...)
 	pending = append(pending, castSpellSelfTriggers(g, event)...)
 	for _, source := range simultaneousLeftBattlefieldTriggerSources(g, event, events) {
 		pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
@@ -982,6 +985,7 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 			SourceTokenDef: trigger.sourceToken, SourceZone: trigger.sourceZone, SourceZoneVersion: trigger.sourceZoneVersion,
 			Face: trigger.face, AbilityIndex: trigger.abilityIndex, Ability: trigger.inline, SagaChapter: trigger.sagaChapter,
 			SiegeDefeat:     trigger.siegeDefeat,
+			SuspendCast:     trigger.suspendCast,
 			OrdinaryTrigger: trigger.ordinaryTrigger,
 			AdditionalTriggers: liveChosenCreatureTypeAdditionalTriggerCount(g, &trigger) +
 				enteringPermanentAdditionalTriggerCount(g, &trigger) + controlledPermanentAdditionalTriggerCount(g, &trigger),
@@ -1018,6 +1022,7 @@ func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbil
 			entryChoices:              captured.EntryChoices,
 			sagaChapter:               captured.SagaChapter,
 			siegeDefeat:               captured.SiegeDefeat,
+			suspendCast:               captured.SuspendCast,
 			event:                     event,
 			hasEvent:                  true,
 			wardTargetID:              wardTargetID,

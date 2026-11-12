@@ -305,7 +305,7 @@ func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent
 	if holder, ok := playerByID(g, g.Turn.ActivePlayer); ok && holder.HasInitiative {
 		queueInitiativeVenture(g, g.Turn.ActivePlayer)
 	}
-	e.processSuspendUpkeep(g, g.Turn.ActivePlayer, agents, log)
+	processSuspendUpkeep(g, g.Turn.ActivePlayer)
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
 	completeTurnBoundary(g)
