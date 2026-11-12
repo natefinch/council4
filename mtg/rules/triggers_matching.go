@@ -131,6 +131,9 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.Event == game.EventUnknown || !patternMatchesEventKind(pattern, event.Kind) {
 		return false
 	}
+	if exileCardCounterEvent(event) {
+		return false
+	}
 	// Self-cast spell triggers ("When you cast this spell") fire once from the
 	// cast spell's own card definition while it is on the stack, never from a
 	// battlefield permanent. They are detected by castSpellSelfTriggers, so the

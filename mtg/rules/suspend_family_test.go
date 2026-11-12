@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
@@ -46,18 +47,25 @@ func suspendFamilyCast(t *testing.T, name, oracleID string, counters int, paymen
 	if got := g.Players[game.Player1].ManaPool.Total(); got != 0 {
 		t.Fatalf("%s left %d mana after paying its suspend cost, want 0", name, got)
 	}
-	if state, ok := g.SuspendedCards[cardID]; !ok || state.TimeCounters != counters {
-		t.Fatalf("%s suspended state = %+v/%t, want %d time counters", name, state, ok, counters)
+	if got := g.ExileCounterCount(cardID, counter.Time); got != counters || !cardIsSuspended(g, cardID) {
+		t.Fatalf("%s time counters = %d, want suspended with %d", name, got, counters)
 	}
+	requireExileTimeCounterEvent(t, g, game.EventCountersAdded, cardID, 0, counters)
 	if !g.Players[game.Player1].Exile.Contains(cardID) {
 		t.Fatalf("%s was not exiled by its suspend action", name)
 	}
 
 	agents := suspendAgents(agent)
 	for remaining := counters; remaining > 0; remaining-- {
+		card, _ := g.GetCardInstance(cardID)
+		zoneVersion := card.ZoneVersion
 		engine.processSuspendUpkeep(g, game.Player1, agents, &TurnLog{})
+		removed := requireExileTimeCounterEvent(t, g, game.EventCountersRemoved, cardID, remaining, 1)
+		if removed.CardZoneVersion != zoneVersion {
+			t.Fatalf("%s removal event zone version = %d, want the exiled card's %d", name, removed.CardZoneVersion, zoneVersion)
+		}
 		if remaining > 1 {
-			if got := g.SuspendedCards[cardID].TimeCounters; got != remaining-1 {
+			if got := g.ExileCounterCount(cardID, counter.Time); got != remaining-1 {
 				t.Fatalf("%s time counters after upkeep = %d, want %d", name, got, remaining-1)
 			}
 		}
@@ -443,4 +451,25 @@ func TestRiftSowerSuspendAnyColorMana(t *testing.T) {
 	if !riftSower.Tapped {
 		t.Fatal("Rift Sower did not pay its tap cost")
 	}
+}
+
+// requireExileTimeCounterEvent asserts the latest counter event of kind
+// identifies the exiled card cardID, with no permanent, as changing amount time
+// counters from previous, and returns it.
+func requireExileTimeCounterEvent(t *testing.T, g *game.Game, kind game.EventKind, cardID id.ID, previous, amount int) game.Event {
+	t.Helper()
+	for i := len(g.Events) - 1; i >= 0; i-- {
+		event := g.Events[i]
+		if event.Kind != kind || event.CardID != cardID {
+			continue
+		}
+		card, _ := g.GetCardInstance(cardID)
+		if event.PermanentID != 0 || event.CounterKind != counter.Time ||
+			event.PreviousCounterAmount != previous || event.Amount != amount || event.Player != card.Owner {
+			t.Fatalf("%v event = %+v, want %d time counters changed from %d on exiled card %v", kind, event, amount, previous, cardID)
+		}
+		return event
+	}
+	t.Fatalf("no %v event for exiled card %v", kind, cardID)
+	return game.Event{}
 }
