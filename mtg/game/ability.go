@@ -1678,6 +1678,57 @@ func EternalizeActivatedBody(manaCost cost.Mana, creatureSubtypes ...types.Sub) 
 	}
 }
 
+// EncoreActivatedBody builds the graveyard-activated ability for the Encore
+// keyword (CR 702.141a): "Encore <cost> (<cost>, Exile this card from your
+// graveyard: For each opponent, create a token copy that attacks that opponent
+// this turn if able. They gain haste. Sacrifice them at the beginning of the
+// next end step. Activate only as a sorcery.)" Each token copy is bound to its
+// own opponent's attack requirement. The granted haste is a separate layer-6
+// effect on the created cohort, so it is not part of the tokens' copiable
+// values (CR 707.2), and one delayed trigger sacrifices the whole cohort at the
+// beginning of the next end step (CR 603.7).
+func EncoreActivatedBody(manaCost cost.Mana) ActivatedAbility {
+	const tokens LinkedKey = "encore-tokens"
+	return ActivatedAbility{
+		Text:           "Encore " + manaCost.String(),
+		ManaCost:       opt.Val(append(cost.Mana(nil), manaCost...)),
+		ZoneOfFunction: zone.Graveyard,
+		Timing:         SorceryOnly,
+		AdditionalCosts: []cost.Additional{{
+			Kind: cost.AdditionalExileSource,
+			Text: "Exile this card from your graveyard",
+		}},
+		Content: Mode{Sequence: []Instruction{
+			{
+				Primitive: CreateToken{
+					Amount:                         Fixed(1),
+					Source:                         TokenCopyOf(TokenCopySpec{Source: TokenCopySourceSourceCard}),
+					MustAttackEachOpponentThisTurn: true,
+					PublishLinked:                  tokens,
+				},
+				LocalProducts: LocalProducts{Links: []LinkedKey{tokens}},
+			},
+			{
+				Primitive: ApplyContinuous{ContinuousEffects: []ContinuousEffect{{
+					Group:       LinkedObjectsGroup(tokens),
+					Layer:       LayerAbility,
+					AddKeywords: []Keyword{Haste},
+				}}},
+			},
+			{
+				Primitive: CreateDelayedTrigger{Trigger: DelayedTriggerDef{
+					Text:                "Sacrifice them at the beginning of the next end step.",
+					Timing:              DelayedAtBeginningOfNextEndStep,
+					CapturedObjectGroup: opt.Val(LinkedObjectReference(string(tokens))),
+					Content: Mode{Sequence: []Instruction{{
+						Primitive: Sacrifice{Group: CapturedObjectsGroup()},
+					}}}.Ability(),
+				}},
+			},
+		}}.Ability(),
+	}
+}
+
 // EmbalmActivatedBody builds the ActivatedAbilityBody for the Embalm keyword.
 // Like Eternalize, it exiles the card from its owner's graveyard at sorcery
 // speed to create a token copy, except the token is white, gains the Zombie
