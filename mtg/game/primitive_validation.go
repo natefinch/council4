@@ -2171,6 +2171,17 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if attackModes > 1 {
 		return errors.New("create token attack-entry modes are mutually exclusive")
 	}
+	if p.MustAttackEachOpponentThisTurn {
+		if attackModes > 0 {
+			return errors.New("create token for each opponent cannot also enter attacking")
+		}
+		if p.Recipient.Exists || p.RecipientGroup.Kind != PlayerGroupReferenceNone {
+			return errors.New("create token for each opponent cannot set a recipient")
+		}
+		if p.EntryAttachedTo.Exists {
+			return errors.New("create token for each opponent cannot enter attached")
+		}
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}

@@ -719,6 +719,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if prim.AttackEachOtherOpponent {
 		return r.createTokensAttackingEachOtherOpponent(prim)
 	}
+	if prim.MustAttackEachOpponentThisTurn {
+		return r.createTokensRequiredToAttackEachOpponent(prim, res.amount)
+	}
 	if prim.RecipientGroup.Kind != game.PlayerGroupReferenceNone {
 		return r.createTokenForGroup(prim, res.amount)
 	}
@@ -968,6 +971,52 @@ func (r *effectResolver) createTokensAttackingEachOtherOpponent(prim game.Create
 		res.amount += len(tokens)
 	}
 	r.publishEnteredPermanents(prim.PublishLinked, created...)
+	res.succeeded = res.amount > 0
+	return res
+}
+
+// createTokensRequiredToAttackEachOpponent creates amount tokens for each living
+// opponent of the ability's controller in one simultaneous creation and binds
+// each created token to one opponent with its own directed must-attack
+// requirement for this turn (CR 702.141a, CR 508.1d): "For each opponent, create
+// a token copy that attacks that opponent this turn if able." Tokens are
+// assigned to opponents in APNAP order, round-robin in creation order, so a
+// token-creation replacement that adds tokens still leaves each one bound to a
+// single opponent. When PublishLinked is set the whole cohort is remembered
+// under that key for follow-up instructions such as granted haste and a delayed
+// sacrifice. The reported amount is the number of tokens created.
+func (r *effectResolver) createTokensRequiredToAttackEachOpponent(prim game.CreateToken, amount int) effectResolved {
+	res := effectResolved{accepted: true}
+	controller := r.obj.Controller
+	opponents := playersInAPNAPOrder(r.game, aliveOpponents(r.game, controller))
+	if amount < 1 || len(opponents) == 0 {
+		return res
+	}
+	token, ok := r.typedTokenDefinition(prim.Source)
+	if !ok {
+		return res
+	}
+	if prim.Power.Exists && prim.Toughness.Exists {
+		sized := *token
+		sized.Power = opt.Val(game.PT{Value: r.quantity(prim.Power.Val)})
+		sized.Toughness = opt.Val(game.PT{Value: r.quantity(prim.Toughness.Val)})
+		token = &sized
+	}
+	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, controller, token, amount*len(opponents), prim.EntryTapped, r.agents, r.log)
+	if !ok {
+		return res
+	}
+	requirements := make([]game.RuleEffect, 0, len(created))
+	for i, permanent := range created {
+		requirements = append(requirements, game.RuleEffect{
+			Kind:                 game.RuleEffectMustAttack,
+			AffectedObjectID:     permanent.ObjectID,
+			RequiredAttackTarget: opt.Val(opponents[i%len(opponents)]),
+		})
+	}
+	createRuleEffectTemplates(r.game, r.obj, opt.V[game.ObjectReference]{}, requirements, game.DurationThisTurn)
+	r.publishEnteredPermanents(prim.PublishLinked, created...)
+	res.amount = len(created)
 	res.succeeded = res.amount > 0
 	return res
 }

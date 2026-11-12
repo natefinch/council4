@@ -970,6 +970,21 @@ type CreateToken struct {
 	// mode.
 	AttackSameAsObject opt.V[ObjectReference]
 
+	// MustAttackEachOpponentThisTurn, when set, creates Amount tokens for each
+	// living opponent of the ability's controller ("For each opponent, create a
+	// token copy that attacks that opponent this turn if able.", Encore,
+	// CR 702.141a). Every token is created under the controller in one
+	// simultaneous event and enters untapped unless EntryTapped is set; it does
+	// not enter attacking. Each created token is then bound to exactly one of
+	// those opponents by its own directed must-attack requirement lasting this
+	// turn (CR 508.1d), so the requirement follows that token rather than the
+	// cohort. Opponents are visited in APNAP order, and the created tokens are
+	// assigned to them round-robin in creation order so token-creation
+	// replacement effects that add tokens still give every opponent its share.
+	// It is mutually exclusive with Recipient, RecipientGroup and every
+	// attack-entry mode, and is unset for ordinary token creation.
+	MustAttackEachOpponentThisTurn bool
+
 	// Power and Toughness, when set, override the source definition's printed
 	// power and toughness with a dynamic amount evaluated once at creation
 	// ("create an X/X ... token, where X is the amount of life you gained this
