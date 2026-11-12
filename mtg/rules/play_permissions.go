@@ -62,8 +62,11 @@ func recordPermanentTypePlay(g *game.Game, player game.PlayerID, permission game
 	g.PermanentTypePlayUsesThisTurn[game.PlayPermissionUse{Permission: permission, Player: player}] = true
 }
 
-func castPermissionsForSpell(g *game.Game, player game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, def *game.CardDef) []payment.SpellCastPermission {
-	permissions := independentCastPermissionsForZone(g, player, cardID, sourceZone, face)
+// castPermissionsForSpell returns independent, the cast's independent
+// permissions, plus the rule-effect permission when a permanent-type play
+// permission covers def, the spell's characteristics.
+func castPermissionsForSpell(g *game.Game, player game.PlayerID, sourceZone zone.Type, def *game.CardDef, independent []payment.SpellCastPermission) []payment.SpellCastPermission {
+	permissions := independent
 	if len(permanentTypePlayPermissions(g, player, sourceZone, def)) > 0 &&
 		!slices.Contains(permissions, payment.SpellCastPermissionRuleEffect) {
 		permissions = append(permissions, payment.SpellCastPermissionRuleEffect)
@@ -72,18 +75,22 @@ func castPermissionsForSpell(g *game.Game, player game.PlayerID, cardID id.ID, s
 	return permissions
 }
 
-func selectedSpellPermissions(g *game.Game, player game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, def *game.CardDef, announced []game.PlayPermission) ([]payment.SpellCastPermission, bool) {
+// selectedSpellPermissions returns the permissions a cast of the face of
+// cardID from sourceZone in the cast mode bestowed selects may use, given its
+// announced permanent-type play permission, if any. def is the spell's
+// characteristics in that mode.
+func selectedSpellPermissions(g *game.Game, player game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, def *game.CardDef, bestowed bool, announced []game.PlayPermission) ([]payment.SpellCastPermission, bool) {
+	independent := independentCastPermissionsForMode(g, player, cardID, sourceZone, face, bestowed)
 	if len(announced) > 0 {
 		if announced[0] == (game.PlayPermission{}) {
-			permissions := independentCastPermissionsForZone(g, player, cardID, sourceZone, face)
-			return permissions, len(permissions) > 0
+			return independent, len(independent) > 0
 		}
 		if !slices.Contains(permanentTypePlayPermissions(g, player, sourceZone, def), announced[0]) {
 			return nil, false
 		}
 		return []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect}, true
 	}
-	return castPermissionsForSpell(g, player, cardID, sourceZone, face, def), true
+	return castPermissionsForSpell(g, player, sourceZone, def, independent), true
 }
 
 // selectPermanentTypePlay validates an announcement before any movement or
@@ -120,7 +127,7 @@ func (e *Engine) expandPermanentTypePlayActions(g *game.Game, player game.Player
 		var bestowed, independent bool
 		if cast, ok := act.CastSpellPayload(); ok {
 			cardID, sourceZone, face, bestowed = cast.CardID, normalizedCastSourceZone(cast), cast.Face, cast.Bestowed
-			independent = len(independentCastPermissionsForZone(g, player, cardID, sourceZone, face)) > 0
+			independent = len(independentCastPermissionsForMode(g, player, cardID, sourceZone, face, bestowed)) > 0
 		} else if land, ok := act.PlayLandPayload(); ok {
 			cardID, sourceZone, face = land.CardID, land.SourceZone, land.Face
 			_, independent = matchingPlayLandFromZoneEffect(g, player, cardID, sourceZone)

@@ -1,8 +1,10 @@
 package game
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -404,5 +406,43 @@ func TestValidateDamageCantBePreventedRuleEffect(t *testing.T) {
 	}})
 	if sourceAndObject == nil {
 		t.Error("instruction with both source and object scopes accepted")
+	}
+}
+
+func TestValidateCastEntryCountersRider(t *testing.T) {
+	t.Parallel()
+
+	finality := []CounterPlacement{{Kind: counter.Finality, Amount: 1}}
+	for _, valid := range []RuleEffect{
+		{Kind: RuleEffectCastFromZone, AffectedSource: true, Duration: DurationPermanent, AffectedPlayer: PlayerYou, CastFromZone: zone.Graveyard, CastEntryCounters: finality},
+		{Kind: RuleEffectCastSpellsFromZone, Duration: DurationPermanent, AffectedPlayer: PlayerYou, CastFromZone: zone.Graveyard, SpellTypes: []types.Card{types.Creature}, CastEntryCounters: finality},
+	} {
+		if issues := ValidateCardDef(cardDefWithRuleEffect(&valid)); len(issues) != 0 {
+			t.Fatalf("valid rider issues = %+v, want none", issues)
+		}
+	}
+	base := RuleEffect{Kind: RuleEffectCastFromZone, AffectedSource: true, Duration: DurationPermanent, AffectedPlayer: PlayerYou, CastFromZone: zone.Graveyard}
+	for name, mutate := range map[string]func(*RuleEffect){
+		"wrong kind": func(e *RuleEffect) {
+			e.Kind, e.CastFromZone = RuleEffectNoMaximumHandSize, 0
+			e.CastEntryCounters = finality
+		},
+		"zero amount": func(e *RuleEffect) { e.CastEntryCounters = []CounterPlacement{{Kind: counter.Finality}} },
+		"x amount": func(e *RuleEffect) {
+			e.CastEntryCounters = []CounterPlacement{{Kind: counter.Finality, Amount: 1, AmountFromX: true}}
+		},
+		"player kind": func(e *RuleEffect) { e.CastEntryCounters = []CounterPlacement{{Kind: counter.Poison, Amount: 1}} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			effect := base
+			mutate(&effect)
+			for _, issue := range ValidateCardDef(cardDefWithRuleEffect(&effect)) {
+				if issue.Code == CardDefIssueInvalidRuleEffect && strings.Contains(issue.Path, "CastEntryCounters") {
+					return
+				}
+			}
+			t.Fatal("invalid entry-counter rider was not reported")
+		})
 	}
 }
