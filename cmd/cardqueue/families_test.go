@@ -19,6 +19,7 @@ func TestCardFamiliesGroupBySingleNewParagraph(t *testing.T) {
 		card("d", "Lonely Novelty", "Creature — Ooze", "Fuse\nFlying"),
 		card("e", "Two New Things", "Creature — Ooze", "Backup 1\nFuse"),
 		card("f", "Claimed Backup", "Creature — Ooze", "Backup 3"),
+		{OracleID: "t", Name: "Spirit // Spirit", Layout: "double_faced_token", OracleText: "Flying"},
 	}
 	queue := manifest{Records: []record{
 		{OracleID: "s1", Status: "installed-compiled"},
@@ -29,6 +30,7 @@ func TestCardFamiliesGroupBySingleNewParagraph(t *testing.T) {
 		{OracleID: "d", Name: "Lonely Novelty", Revision: "rd", Status: "unclaimed"},
 		{OracleID: "e", Name: "Two New Things", Revision: "re", Status: "unclaimed"},
 		{OracleID: "f", Name: "Claimed Backup", Revision: "rf", Status: "claimed", Batch: "x"},
+		{OracleID: "t", Name: "Spirit // Spirit", Revision: "rt", Status: "unclaimed"},
 	}}
 	got := cardFamilies(queue, corpus)
 	if len(got) != 2 {
@@ -41,5 +43,19 @@ func TestCardFamiliesGroupBySingleNewParagraph(t *testing.T) {
 	}
 	if got[1].Key != "" || len(got[1].Cards) != 1 || got[1].Cards[0].Name != "Fyndhorn Elves" {
 		t.Errorf("no-new-paragraph family = %+v", got[1])
+	}
+}
+
+func TestReviewedBatchesRejectPrintedTokens(t *testing.T) {
+	corpus := []carddata.ScryfallCard{
+		{OracleID: "c", Name: "Fyndhorn Elves", Layout: "normal"},
+		{OracleID: "t", Name: "Spirit // Spirit", Layout: "double_faced_token"},
+	}
+	plan := func(ids ...string) reviewedPlan { return reviewedPlan{Batches: []batch{{ID: "b", OracleIDs: ids}}} }
+	if err := rejectTokenBatch(plan("c"), corpus); err != nil {
+		t.Fatal(err)
+	}
+	if err := rejectTokenBatch(plan("c", "t"), corpus); err == nil {
+		t.Fatal("accepted a printed token")
 	}
 }

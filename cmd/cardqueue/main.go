@@ -167,6 +167,11 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 		if err != nil {
 			return err
 		}
+		if operation == "add-reviewed-batch" {
+			if err := rejectTokenBatch(plan, corpus); err != nil {
+				return err
+			}
+		}
 		if err := continueQueue(&queue, operation, batchID, owner, plan); err != nil {
 			return err
 		}
