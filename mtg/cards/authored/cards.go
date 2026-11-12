@@ -44,6 +44,8 @@ func verifiedEntries() []cardset.Entry {
 		KeldonHalberdier, CorpulentCorpse, ErrantEphemeron, MoxTantalite,
 		InfiltratorIlKor, IthHighArcanist, RiftSower)
 	entries = append(entries, CommonBond, SeedsOfStrength, MartialGlory)
+	entries = append(entries, IgneousInspiration, EnthusiasticStudy, ArcaneSubtraction,
+		GuidingVoice, CramSession, StudyBreak, PopQuiz)
 	entries = append(entries, ExquisiteHuntmaster, SoulOfEternity, AngelOfIndemnity, BriarbladeAdept,
 		ImpulsivePilferer, KinsbaileCourier, BroodmateTyrant, FinCladeFugitives, TroveTracker)
 	entries = append(entries, SaibaCryptomancer, ChompingKavu, ConsumingAetherborn,
