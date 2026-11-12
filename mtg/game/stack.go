@@ -85,6 +85,13 @@ type StackObject struct {
 	// the ability keeps it (CR 707.10).
 	SiegeDefeat bool
 
+	// SuspendCast identifies suspend's intrinsic triggered ability (CR
+	// 702.62a), "When the last time counter is removed from this card, if it's
+	// exiled, you may play it without paying its mana cost if able." Its source
+	// is the exiled card at SourceCardID and SourceZoneVersion. A copy of the
+	// ability keeps it (CR 707.10).
+	SuspendCast bool
+
 	// Rebound identifies rebound's delayed triggered ability (CR 702.88a): its
 	// controller may cast the captured card (CapturedCardID at
 	// CapturedCardZoneVersion) from exile without paying its mana cost. A copy

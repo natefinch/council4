@@ -59,7 +59,16 @@ func suspendFamilyCast(t *testing.T, name, oracleID string, counters int, paymen
 	for remaining := counters; remaining > 0; remaining-- {
 		card, _ := g.GetCardInstance(cardID)
 		zoneVersion := card.ZoneVersion
-		engine.processSuspendUpkeep(g, game.Player1, agents, &TurnLog{})
+		if remaining > 1 {
+			engine.runSuspendUpkeep(g, game.Player1, agents)
+		} else {
+			// The last removal triggers the cast ability (CR 702.62a), which
+			// uses the stack before the card is cast.
+			processSuspendUpkeep(g, game.Player1)
+			engine.putTriggeredAbilitiesOnStackWithChoices(g, agents, &TurnLog{})
+			requireSuspendCastTrigger(t, g, cardID)
+			engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+		}
 		removed := requireExileTimeCounterEvent(t, g, game.EventCountersRemoved, cardID, remaining, 1)
 		if removed.CardZoneVersion != zoneVersion {
 			t.Fatalf("%s removal event zone version = %d, want the exiled card's %d", name, removed.CardZoneVersion, zoneVersion)
@@ -233,6 +242,9 @@ func TestKeldonHalberdierSuspendFirstStrike(t *testing.T) {
 	g, engine, cardID, _ := suspendFamilyCast(t, "Keldon Halberdier", "a1472a2d-e6f7-4d65-8bb2-4ecfae2d2764", 4, []mana.Color{mana.R}, nil)
 	engine.resolveTopOfStack(g, &TurnLog{})
 	attacker := suspendFamilyPermanent(t, g, cardID)
+	if !canAttackWith(g, attacker, game.Player1) {
+		t.Fatal("Keldon Halberdier cast by its suspend trigger cannot attack despite suspend haste")
+	}
 	blocker := addCombatPermanent(g, game.Player2, suspendFamilyCreatureDef("Larger Blocker", 2, 4, []types.Card{types.Creature}, []color.Color{color.Green}))
 	suspendFamilyDeclareAttacks(t, g, engine, game.Player1, game.Player2, attacker)
 	if !suspendFamilyDeclareBlocks(g, engine, game.Player2, game.BlockDeclaration{Blocker: blocker.ObjectID, Blocking: attacker.ObjectID}) {

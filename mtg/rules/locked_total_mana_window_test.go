@@ -198,7 +198,7 @@ func lockedTotalRoutes() []lockedTotalRoute {
 				withGrove(g)
 				setReboundUpkeep(g)
 				return e, g, cardID, func(agents [game.NumPlayers]PlayerAgent) {
-					e.processSuspendUpkeep(g, game.Player1, agents, &TurnLog{})
+					e.runSuspendUpkeep(g, game.Player1, agents)
 				}
 			},
 			cast:    func(t *testing.T, g *game.Game, cardID id.ID) { requireSuspendCast(t, g, cardID) },

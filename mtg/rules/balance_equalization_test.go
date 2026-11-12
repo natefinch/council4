@@ -382,7 +382,7 @@ func TestRestoreBalanceFromSuspendEqualizesLandsCreaturesThenCards(t *testing.T)
 	}
 	cardID := addSuspendedCard(g, game.Player1, restoreBalance, 1)
 
-	engine.processSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+	engine.runSuspendUpkeep(g, game.Player1, [game.NumPlayers]PlayerAgent{})
 	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != cardID || !obj.Suspend {
 		t.Fatalf("stack top = %+v, want Restore Balance cast from suspend", obj)
 	}
