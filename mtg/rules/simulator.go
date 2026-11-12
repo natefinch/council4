@@ -162,7 +162,7 @@ func (s Simulator) ResolveCombatWithAttackers(g *game.Game, playerID game.Player
 	}
 	proposal = ce.completeDeclaration(clone, playerID, proposal, policies, log)
 	complete, _ := proposal.DeclareAttackersPayload()
-	if !ce.applyAttackers(clone, playerID, complete) {
+	if !ce.applyAttackersWithChoices(clone, playerID, complete, policies, log) {
 		return nil, false
 	}
 	defer ce.completePhase(clone)

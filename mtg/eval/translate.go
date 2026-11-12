@@ -146,6 +146,11 @@ func appendPrimitiveAtoms(atoms []EffectAtom, primitive game.Primitive) []Effect
 	case game.RemoveTargetsForToken:
 		return append(atoms, EffectAtom{Kind: EffectPermanentRemoved, Affected: AffectedTarget})
 	case game.Tap:
+		if p.Choose != game.TapChoiceNone {
+			// Tapping chosen permanents of your own is a cost-like gate, not
+			// disruption of a target.
+			return atoms
+		}
 		return append(atoms, EffectAtom{Kind: EffectPermanentTapped, Affected: AffectedTarget})
 	case game.Fight:
 		// Two creatures fight, each dealing its power to the other (CR 701.12).

@@ -317,6 +317,13 @@ const (
 	// loses every "bands with other" ability (CR 702.22b). Appended at the end of
 	// the enum so existing keyword ordinals are unchanged.
 	BandsWithOther
+	// Enlist (CR 702.154) is an optional cost to attack: as the creature
+	// attacks, its controller may tap another untapped, nonattacking creature
+	// they control that could attack this turn, and when they do the attacker
+	// gets +X/+0 until end of turn, where X is the tapped creature's power. Each
+	// instance is paid and triggers independently (CR 702.154d). Appended at the
+	// end of the enum so existing keyword ordinals are unchanged.
+	Enlist
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -429,6 +436,11 @@ var (
 
 	// ExaltedStaticBody is the reusable StaticAbilityBody for exalted.
 	ExaltedStaticBody = simpleKeywordStaticBody("Exalted", Exalted)
+
+	// EnlistStaticBody is the reusable StaticAbilityBody for enlist (CR
+	// 702.154). The rules layer offers its optional attack cost and creates
+	// its linked reflexive trigger.
+	EnlistStaticBody = simpleKeywordStaticBody("Enlist", Enlist)
 
 	// ReadAheadStaticBody is the reusable StaticAbilityBody for read ahead.
 	ReadAheadStaticBody = simpleKeywordStaticBody("Read ahead", ReadAhead)

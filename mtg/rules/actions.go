@@ -548,7 +548,7 @@ func (e *Engine) applyNonCastAction(g *game.Game, playerID game.PlayerID, act ac
 		return ok && e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log, nil) == actionApplied
 	case action.ActionDeclareAttackers:
 		attackers, ok := act.DeclareAttackersPayload()
-		return ok && e.applyDeclareAttackers(g, playerID, attackers)
+		return ok && combatEngine{e}.applyAttackersWithChoices(g, playerID, attackers, agents, log)
 	case action.ActionDeclareBlockers:
 		blockers, ok := act.DeclareBlockersPayload()
 		return ok && e.applyDeclareBlockers(g, playerID, blockers)

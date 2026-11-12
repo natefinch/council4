@@ -180,6 +180,32 @@ func TestValidateInstructionSequenceRejectsMalformedBoundedUntap(t *testing.T) {
 	}
 }
 
+func TestValidateInstructionSequenceChecksChosenTapShape(t *testing.T) {
+	creatures := BattlefieldGroup(Selection{RequiredTypes: []types.Card{types.Creature}, Controller: ControllerYou})
+	valid := []Tap{
+		{Group: creatures, Choose: TapChoiceExactly, Amount: Fixed(2), PublishLinked: "tapped"},
+		{Group: creatures, Choose: TapChoiceUpTo, Amount: Fixed(1)},
+		{Group: creatures, Choose: TapChoiceAnyNumber},
+	}
+	for _, primitive := range valid {
+		if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}); err != nil {
+			t.Fatalf("ValidateInstructionSequence(%#v) error = %v, want nil", primitive, err)
+		}
+	}
+	for _, primitive := range []Tap{
+		{Object: TargetPermanentReference(0), Choose: TapChoiceExactly, Amount: Fixed(1)},
+		{Group: creatures, Choose: TapChoiceExactly},
+		{Group: creatures, Choose: TapChoiceAnyNumber, Amount: Fixed(1)},
+		{Group: creatures, Amount: Fixed(1)},
+		{Group: creatures, PublishLinked: "tapped"},
+		{Group: creatures, Choose: TapChoiceAnyNumber + 1},
+	} {
+		if err := ValidateInstructionSequence([]Instruction{{Primitive: primitive}}); err == nil {
+			t.Fatalf("ValidateInstructionSequence(%#v) error = nil, want failure", primitive)
+		}
+	}
+}
+
 func TestValidateInstructionSequenceRejectsUnknownOrForwardLinkedUntap(t *testing.T) {
 	key := LinkedKey("searched-land")
 	for _, seq := range [][]Instruction{
