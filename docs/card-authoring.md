@@ -125,6 +125,9 @@ Supporting a family's paragraph once makes the whole family authorable, so a
 family is a natural batch. Cards adding two or more new paragraphs are left to
 queue order. Paragraphs are compared after normalizing the card's name,
 quantities, mana symbols, power/toughness, colors and subtypes.
+Printed token cards (`token` and `double_faced_token` layouts) are not deck
+cards and cannot be registered, so `families` skips them and
+`add-reviewed-batch` rejects them; tokens come from the cards that create them.
 
 `-operation settle -batch ID -plan PATH` finishes a claimed batch whose cards
 partly hit a gap: the plan's `records` (exact identity, `blocker` issue and
