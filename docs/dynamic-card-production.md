@@ -297,6 +297,11 @@ If `cardqueue` rejects a selector's batch plan, or the selector returns an
 invalid task (for example an Engine task without a `gap-<issue>` id, since
 policy 1.26.1), that unit is recorded as `claim_failed` with the reason and the
 run continues; a second rejection in a row stops the run.
+Since policy 1.29.2 the coordinator rebuilds a selector's batch plan from the
+saved queue: every record's Oracle ID and printing come from the queue card with
+that exact name (an exact Oracle ID match wins; ambiguous or unknown names fail
+the unit), and text after the plan's JSON object is ignored. Selector agents
+corrupted hand-copied IDs often enough to fail a third of card units.
 Since policy 1.29.0 a card batch is not all-or-nothing. A worker whose cards
 partly hit genuine Engine gaps registers the finished cards, leaves each
 affected card unregistered with a failing probe, and returns `complete` with
