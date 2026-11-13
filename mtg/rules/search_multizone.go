@@ -91,7 +91,7 @@ func (e *Engine) searchLibraryAndGraveyardChoice(g *game.Game, obj *game.StackOb
 	if !searchLibrary {
 		control = searchControl{searcher: playerID, decisionMaker: playerID}
 	}
-	_, placed = e.placeFoundCard(g, obj, playerID, controllerID, player, cardID, dest, fromZone, control)
+	_, placed = e.placeFoundCard(g, obj, agents, log, playerID, controllerID, player, cardID, dest, fromZone, control)
 	return placed, searchLibrary
 }
 

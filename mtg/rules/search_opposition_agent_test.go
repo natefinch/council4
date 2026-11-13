@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // selectAllSearchAgent accepts any may-choice and takes every card a search
@@ -298,13 +299,13 @@ func TestOppositionAgentDoesNotAffectControllerOwnSearch(t *testing.T) {
 	}
 }
 
-// TestOppositionAgentMostRecentAgentControls verifies deterministic resolution
-// when several opponents could control the same search: the controller of the
-// Opposition Agent that most recently entered the battlefield controls it and
-// becomes the beneficiary (per the card's ruling). Player3's Agent enters first
-// and Player1's Agent second, so Player1 controls the search even though Player3
-// is the nearer opponent to the searcher in turn order — proving entry order, not
-// seating, decides.
+// TestOppositionAgentMostRecentAgentControls verifies resolution when several
+// opponents' Agents apply to the same search: the controller of the Opposition
+// Agent that most recently entered the battlefield controls the search, and when
+// that controller leaves the competing-exile choice unanswered the newest Agent's
+// effect applies by default. Player3's Agent enters first and Player1's second,
+// so Player1 controls the search even though Player3 is the nearer opponent to
+// the searcher in turn order — proving entry order, not seating, decides.
 func TestOppositionAgentMostRecentAgentControls(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -315,8 +316,8 @@ func TestOppositionAgentMostRecentAgentControls(t *testing.T) {
 		SourceZone:  zone.Library,
 		Destination: zone.Hand,
 	}), nil)
-	// Player1's Agent entered most recently, so Player1 (not the nearer Player3)
-	// makes the decision and gains the permission.
+	// Player1 answers the search but not the exile choice (no option is labeled
+	// "Bear"), so the engine falls back to the newest Agent.
 	agents := [game.NumPlayers]PlayerAgent{game.Player1: optionalSearchAgent{accept: true, wanted: "Bear"}}
 
 	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
@@ -329,13 +330,262 @@ func TestOppositionAgentMostRecentAgentControls(t *testing.T) {
 		t.Fatal("no play-from-exile permission was granted")
 	}
 	if effect.Controller != game.Player1 {
-		t.Fatalf("permission controller = %d, want Player1 (most recent Agent)", effect.Controller)
+		t.Fatalf("permission controller = %d, want Player1 (most recent Agent by default)", effect.Controller)
 	}
 	if slices.Contains(foreignExileCastableCards(g, game.Player3), bear) {
-		t.Fatal("an older Agent's controller must not gain the permission")
+		t.Fatal("the older Agent's controller gained a permission nobody chose for it")
 	}
 	if !slices.Contains(foreignExileCastableCards(g, game.Player1), bear) {
 		t.Fatal("the most recent Agent's controller should be able to play the exiled card")
+	}
+}
+
+// competingAgentsGame puts an Opposition Agent under Player3 and then a newer one
+// under Player1, so Player1 controls Player2's searches and both Agents' exile
+// effects compete for each find. It returns the Agents' permanents, newest last.
+func competingAgentsGame() (*game.Game, *Engine, *game.Permanent, *game.Permanent) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	older := addCombatPermanent(g, game.Player3, oppositionAgentDef())
+	newer := addCombatPermanent(g, game.Player1, oppositionAgentDef())
+	return g, NewEngine(nil), older, newer
+}
+
+// competingAgentsController is Player1's agent while it controls Player2's search
+// under two competing Opposition Agents. It takes every card a search offers,
+// accepts may-choices and answers each per-find exile choice by the found card
+// named in the request: picks maps a card to 0 (newest Agent) or 1 (older
+// Agent). It checks the choice is Player2's private decision routed to Player1
+// and that the newest Agent is listed first.
+func competingAgentsController(t *testing.T, picks map[id.ID]int, asked *int) *controlScript {
+	t.Helper()
+	return &controlScript{choice: func(obs PlayerObservation, req game.ChoiceRequest) []int {
+		switch req.Kind {
+		case game.ChoiceReplacement:
+			if obs.Player != game.Player2 || obs.DecisionMaker != game.Player1 || req.Player != game.Player2 || !req.Private {
+				t.Fatalf("exile choice was not Player2's private decision made by Player1: player=%d decider=%d request=%d private=%v",
+					obs.Player, obs.DecisionMaker, req.Player, req.Private)
+			}
+			want := []string{"Opposition Agent controlled by Player 1", "Opposition Agent controlled by Player 3"}
+			if len(req.Options) != len(want) || req.Options[0].Label != want[0] || req.Options[1].Label != want[1] ||
+				!slices.Equal(req.DefaultSelection, []int{0}) {
+				t.Fatalf("exile choice options = %+v default=%v, want newest Agent first and default", req.Options, req.DefaultSelection)
+			}
+			if !req.Subject.Exists {
+				t.Fatal("exile choice does not name the found card")
+			}
+			pick, ok := picks[req.Subject.Val.CardID]
+			if !ok {
+				t.Fatalf("exile choice named unexpected card %+v", req.Subject.Val)
+			}
+			if req.Options[0].Card.Val.Name != "Opposition Agent" || req.Options[1].Card.Val.Name != "Opposition Agent" {
+				t.Fatal("exile choice options do not identify the competing Agents")
+			}
+			*asked++
+			return []int{pick}
+		case game.ChoiceMay:
+			return []int{1}
+		case game.ChoiceSearch:
+			selected := make([]int, 0, req.MaxChoices)
+			for _, option := range req.Options {
+				if len(selected) == req.MaxChoices {
+					break
+				}
+				selected = append(selected, option.Index)
+			}
+			return selected
+		default:
+			return fallbackChoice(req)
+		}
+	}}
+}
+
+// noCompetingAgentDecisions fails if the searcher or the older Agent's
+// controller is asked to decide anything other than the searcher's own
+// pre-search zone choice.
+func noCompetingAgentDecisions(t *testing.T, who string) *controlScript {
+	t.Helper()
+	return &controlScript{choice: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		if req.Kind == game.ChoiceZoneSelection && who == "searcher" {
+			return []int{0, 1}
+		}
+		t.Fatalf("%s was asked to make a controlled-search decision (kind %d)", who, req.Kind)
+		return nil
+	}}
+}
+
+// TestOppositionAgentControllerChoosesCompetingAgentPerFind covers the ruling
+// that each Opposition Agent tries to exile a found card and grant its own
+// controller the play permission, so the card's owner chooses which effect wins
+// — and since that owner is controlled, the controlling player decides. Player1
+// (newest Agent) controls Player2's two-card search, gives the Bear to Player3's
+// older Agent and keeps the Elephant: one private choice per find, routed to
+// Player1, each granting only the chosen Agent's controller the permission.
+func TestOppositionAgentControllerChoosesCompetingAgentPerFind(t *testing.T) {
+	g, engine, older, newer := competingAgentsGame()
+	bear := addCardToLibrary(g, game.Player2, bearDef())
+	elephant := addCardToLibrary(g, game.Player2, elephantDef())
+	addInstructionSpellToStackForController(g, game.Player2, []game.Instruction{{
+		Primitive: game.Search{
+			Amount: game.Fixed(2),
+			Player: game.ControllerReference(),
+			Spec: game.SearchSpec{
+				SourceZone:  zone.Library,
+				Destination: zone.Hand,
+				Filter:      game.Selection{RequiredTypes: []types.Card{types.Creature}},
+			},
+		},
+	}}, nil)
+	asked := 0
+	log := &TurnLog{}
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+		game.Player1: competingAgentsController(t, map[id.ID]int{bear: 1, elephant: 0}, &asked),
+		game.Player2: noCompetingAgentDecisions(t, "searcher"),
+		game.Player3: noCompetingAgentDecisions(t, "older Agent controller"),
+	}, log)
+
+	if asked != 2 {
+		t.Fatalf("exile choices asked = %d, want one per find (2)", asked)
+	}
+	p2 := g.Players[game.Player2]
+	if !p2.Exile.Contains(bear) || !p2.Exile.Contains(elephant) {
+		t.Fatal("both finds must be exiled to their owner")
+	}
+	bearPermission, ok := playFromExilePermissionFor(g, bear)
+	if !ok || bearPermission.Controller != game.Player3 || bearPermission.SourceObjectID != older.ObjectID {
+		t.Fatalf("Bear permission = %+v, want Player3's older Agent", bearPermission)
+	}
+	elephantPermission, ok := playFromExilePermissionFor(g, elephant)
+	if !ok || elephantPermission.Controller != game.Player1 || elephantPermission.SourceObjectID != newer.ObjectID {
+		t.Fatalf("Elephant permission = %+v, want Player1's newest Agent", elephantPermission)
+	}
+	if !slices.Contains(foreignExileCastableCards(g, game.Player3), bear) ||
+		slices.Contains(foreignExileCastableCards(g, game.Player3), elephant) {
+		t.Fatal("Player3 should be able to play only the card given to its Agent")
+	}
+	if !slices.Contains(foreignExileCastableCards(g, game.Player1), elephant) ||
+		slices.Contains(foreignExileCastableCards(g, game.Player1), bear) {
+		t.Fatal("Player1 should be able to play only the card it kept for its own Agent")
+	}
+	replacementChoices := 0
+	for _, decision := range log.Choices {
+		if decision.Request.Kind != game.ChoiceReplacement {
+			continue
+		}
+		replacementChoices++
+		if decision.DecisionMaker != game.Player1 || decision.Request.Player != game.Player2 {
+			t.Fatalf("logged exile choice decider=%d player=%d, want Player1 deciding for Player2", decision.DecisionMaker, decision.Request.Player)
+		}
+		if decision.Request.Subject.Exists {
+			t.Fatal("private exile choice leaked the hidden found card into the log")
+		}
+		for _, option := range decision.Request.Options {
+			if option.Label != "Private option" || option.Card.Exists {
+				t.Fatalf("private exile choice leaked option %+v into the log", option)
+			}
+		}
+	}
+	if replacementChoices != 2 {
+		t.Fatalf("logged exile choices = %d, want 2", replacementChoices)
+	}
+}
+
+// TestOppositionAgentCompetingChoiceEverySearchRoute proves every library-search
+// route asks the controlling player which competing Agent's effect applies to a
+// find: Player1 always gives the find to Player3's older Agent, and only Player3
+// gains the play permission.
+func TestOppositionAgentCompetingChoiceEverySearchRoute(t *testing.T) {
+	creatureFilter := game.Selection{RequiredTypes: []types.Card{types.Creature}}
+	routes := []struct {
+		name  string
+		setup func(g *game.Game) []id.ID
+	}{
+		{"library top", func(g *game.Game) []id.ID {
+			bear := addCardToLibrary(g, game.Player2, bearDef())
+			addInstructionSpellToStackForController(g, game.Player2, searchInstruction(game.SearchSpec{
+				SourceZone: zone.Library, Destination: zone.Library, DestinationPosition: game.SearchPositionTop,
+			}), nil)
+			return []id.ID{bear}
+		}},
+		{"reveal only", func(g *game.Game) []id.ID {
+			plains := addCardToLibrary(g, game.Player2, plainsCard())
+			addInstructionSpellToStackForController(g, game.Player2, scholarSequence(), nil)
+			return []id.ID{plains}
+		}},
+		{"exile face down", func(g *game.Game) []id.ID {
+			spell := addCardToLibrary(g, game.Player2, instantDef("Cheap Bolt", 2))
+			pushBeseechPayoff(g, game.Player2, true, false)
+			return []id.ID{spell}
+		}},
+		{"slots", func(g *game.Game) []id.ID {
+			forest := addCardToLibrary(g, game.Player2, basicForestDef())
+			plains := addCardToLibrary(g, game.Player2, plainsCard())
+			addInstructionSpellToStackForController(g, game.Player2, []game.Instruction{{Primitive: game.Search{
+				Amount: game.Fixed(2), Player: game.ControllerReference(),
+				Spec: game.SearchSpec{SourceZone: zone.Library, Destination: zone.Battlefield, SlotFilters: []game.Selection{
+					{SubtypesAny: []types.Sub{types.Forest}}, {SubtypesAny: []types.Sub{types.Plains}},
+				}},
+			}}}, nil)
+			return []id.ID{forest, plains}
+		}},
+		{"split destination", func(g *game.Game) []id.ID {
+			forest := addCardToLibrary(g, game.Player2, basicForestDef())
+			plains := addCardToLibrary(g, game.Player2, plainsCard())
+			addInstructionSpellToStackForController(g, game.Player2, []game.Instruction{{Primitive: game.Search{
+				Amount: game.Fixed(2), Player: game.ControllerReference(),
+				Spec: game.SearchSpec{
+					SourceZone: zone.Library, Destination: zone.Battlefield, EntersTapped: true,
+					Filter:           game.Selection{RequiredTypes: []types.Card{types.Land}},
+					SplitDestination: opt.Val(game.SearchDestination{Zone: zone.Hand}),
+				},
+			}}}, nil)
+			return []id.ID{forest, plains}
+		}},
+		{"library and graveyard tutor graveyard find", func(g *game.Game) []id.ID {
+			bear := addCardToGraveyard(g, game.Player2, bearDef())
+			addInstructionSpellToStackForController(g, game.Player2, searchInstruction(game.SearchSpec{
+				SourceZone: zone.Library, Destination: zone.Hand, AlsoGraveyard: true, Filter: creatureFilter,
+			}), nil)
+			return []id.ID{bear}
+		}},
+		{"library and/or graveyard choice", func(g *game.Game) []id.ID {
+			creature := addCardToLibrary(g, game.Player2, finaleCreatureDef("Finale find", 2))
+			addInstructionSpellToStackForController(g, game.Player2, finaleSearchShuffleInstructions(), nil)
+			obj, _ := g.Stack.Peek()
+			obj.XValue = 5
+			return []id.ID{creature}
+		}},
+	}
+	for _, route := range routes {
+		t.Run(route.name, func(t *testing.T) {
+			g, engine, older, _ := competingAgentsGame()
+			found := route.setup(g)
+			picks := make(map[id.ID]int, len(found))
+			for _, card := range found {
+				picks[card] = 1
+			}
+			asked := 0
+			engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+				game.Player1: competingAgentsController(t, picks, &asked),
+				game.Player2: noCompetingAgentDecisions(t, "searcher"),
+				game.Player3: noCompetingAgentDecisions(t, "older Agent controller"),
+			}, &TurnLog{})
+			if asked != len(found) {
+				t.Fatalf("exile choices asked = %d, want one per find (%d)", asked, len(found))
+			}
+			for _, card := range found {
+				if !g.Players[game.Player2].Exile.Contains(card) {
+					t.Fatalf("find %d was not exiled to its owner", card)
+				}
+				permission, ok := playFromExilePermissionFor(g, card)
+				if !ok || permission.Controller != game.Player3 || permission.SourceObjectID != older.ObjectID {
+					t.Fatalf("find %d permission = %+v, want the chosen older Agent's controller", card, permission)
+				}
+				if !slices.Contains(foreignExileCastableCards(g, game.Player3), card) ||
+					slices.Contains(foreignExileCastableCards(g, game.Player1), card) {
+					t.Fatalf("find %d play permission went to the wrong Agent controller", card)
+				}
+			}
+		})
 	}
 }
 
