@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -70,4 +71,37 @@ func TestGiveControlNewControllerRefValidation(t *testing.T) {
 			t.Fatal("ValidateInstructionSequence() = nil, want mutual-exclusion error")
 		}
 	})
+}
+
+// TestApplyContinuousAllTargetPermanentsValidation covers "one or more target
+// creatures become white": ApplyContinuous accepts the whole-target-spec
+// reference, bounded by the declared specs, but not with a single linked
+// publish or a resolution-time group choice.
+func TestApplyContinuousAllTargetPermanentsValidation(t *testing.T) {
+	t.Parallel()
+	specs := []TargetSpec{{MinTargets: 1, MaxTargets: 99, Allow: TargetAllowPermanent}}
+	white := []ContinuousEffect{{Layer: LayerColor, SetColors: []color.Color{color.White}}}
+	for _, tc := range []struct {
+		name    string
+		prim    ApplyContinuous
+		wantErr bool
+	}{
+		{"valid", ApplyContinuous{Object: opt.Val(AllTargetPermanentsReference(0)), ContinuousEffects: white}, false},
+		{"spec out of bounds", ApplyContinuous{Object: opt.Val(AllTargetPermanentsReference(1)), ContinuousEffects: white}, true},
+		{"publish linked", ApplyContinuous{
+			Object: opt.Val(AllTargetPermanentsReference(0)), ContinuousEffects: white, PublishLinked: "chosen",
+		}, true},
+		{"choose from", ApplyContinuous{
+			Object: opt.Val(AllTargetPermanentsReference(0)), ContinuousEffects: white,
+			ChooseFrom: BattlefieldGroup(Selection{}), ChooseUpTo: Fixed(1),
+		}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateInstructionSequence([]Instruction{{Primitive: tc.prim}}, specs)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("ValidateInstructionSequence() = %v, wantErr %v", err, tc.wantErr)
+			}
+		})
+	}
 }
