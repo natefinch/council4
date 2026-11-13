@@ -373,7 +373,10 @@ func freeCastOptionLabel(spellDef *game.CardDef, cast action.CastSpellAction) st
 	label := spellDef.Name
 	if cast.Face == game.FaceFused {
 		label += " (fused)"
-	} else if len(cast.ChosenModes) > 0 {
+	} else if cast.Face == game.FacePrototype {
+		label += " (prototype)"
+	}
+	if cast.Face != game.FaceFused && len(cast.ChosenModes) > 0 {
 		label += fmt.Sprintf(" modes %v", cast.ChosenModes)
 	}
 	if cast.KickerCount > 1 {

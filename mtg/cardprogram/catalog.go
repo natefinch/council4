@@ -124,13 +124,16 @@ func (c Catalog) Run(reference game.ProgramReference, ctx Context) error {
 }
 
 // ValidateCard rejects unsupported authored declarations and missing or
-// version-mismatched code before loading a deck.
+// version-mismatched code before loading a deck. A card with program
+// references or a prototype profile is an authored declaration and must pass
+// ValidateCardDef; an invalid prototype profile is rejected even without
+// program references.
 func (c Catalog) ValidateCard(def *game.CardDef) error {
 	if def == nil {
 		return errors.New("cannot validate programs for a nil card")
 	}
 	references := def.ProgramReferences()
-	if len(references) != 0 {
+	if len(references) != 0 || def.DeclaresPrototype() {
 		if issues := game.ValidateCardDef(def); len(issues) != 0 {
 			return fmt.Errorf("%s: invalid authored declaration: %s", def.Name, issues[0].Message)
 		}
