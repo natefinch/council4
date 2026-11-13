@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -351,7 +352,34 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.BandedWithSource && !s.bandedWithSource() {
 		return false
 	}
+	if sel.PutIntoGraveyardThisTurn != game.GraveyardArrivalNone && !s.putIntoGraveyardThisTurn(sel.PutIntoGraveyardThisTurn) {
+		return false
+	}
 	return true
+}
+
+// putIntoGraveyardThisTurn reports whether the card subject is in its owner's
+// graveyard as the object created by a zone change to a graveyard during the
+// current turn. The event must stamp the card's current zone version, so a card
+// that left the graveyard and returned is judged by its latest arrival alone
+// (CR 400.7). The battlefield origin also requires that arrival to come from the
+// battlefield. Every non-card subject fails closed.
+func (s *selectionSubject) putIntoGraveyardThisTurn(origin game.GraveyardArrivalThisTurn) bool {
+	if s.kind != subjectCard || s.card == nil || s.card.ID == 0 || s.g == nil {
+		return false
+	}
+	owner, ok := playerByID(s.g, s.card.Owner)
+	if !ok || !owner.Graveyard.Contains(s.card.ID) {
+		return false
+	}
+	cardID, version := s.card.ID, s.card.ZoneVersion
+	return eventsThisTurnWindow(s.g).any(func(event game.Event) bool {
+		return event.Kind == game.EventZoneChanged &&
+			event.ToZone == zone.Graveyard &&
+			event.CardID == cardID &&
+			event.CardZoneVersion == version &&
+			(origin == game.GraveyardArrivalFromAnywhere || event.FromZone == zone.Battlefield)
+	})
 }
 
 // bandedWithSource reports whether the battlefield subject and the predicate's

@@ -65,6 +65,29 @@ const (
 	ColorChoiceSourceEntry
 )
 
+// GraveyardArrivalThisTurn names which graveyard arrivals during the current
+// turn satisfy Selection.PutIntoGraveyardThisTurn. The zero value imposes no
+// restriction. A single byte packs into Selection's bool cluster.
+type GraveyardArrivalThisTurn uint8
+
+// GraveyardArrivalThisTurn values name the supported origins.
+const (
+	// GraveyardArrivalNone imposes no graveyard-arrival restriction.
+	GraveyardArrivalNone GraveyardArrivalThisTurn = iota
+
+	// GraveyardArrivalFromBattlefield requires the matched card to have been put
+	// into its graveyard from the battlefield this turn ("cards in your
+	// graveyard that were put there from the battlefield this turn", Faith's
+	// Reward).
+	GraveyardArrivalFromBattlefield
+
+	// GraveyardArrivalFromAnywhere requires the matched card to have been put
+	// into its graveyard from any zone this turn ("creature cards in your
+	// graveyard that were put there from anywhere this turn", Garna, the
+	// Bloodflame).
+	GraveyardArrivalFromAnywhere
+)
+
 // SubtypeChoiceWithoutEntry returns choice with the source-entry variant cleared
 // to SubtypeChoiceNone, leaving any other chosen-subtype source intact. Trigger
 // subject validators use it to permit the entry-choice predicate (whose subtype
@@ -426,6 +449,17 @@ type Selection struct {
 	// subject, it matches nothing. A resolving group reference fixes its members
 	// as it resolves (CR 611.2c); a static or prevention scope re-reads it live.
 	BandedWithSource bool
+
+	// PutIntoGraveyardThisTurn requires the matched graveyard card to be the
+	// object that a zone change to a graveyard created during the current turn:
+	// some this-turn zone-change event moved this card to a graveyard and stamped
+	// the card's current zone version (CR 400.7), so a card that left the
+	// graveyard and came back is judged only by its latest arrival.
+	// GraveyardArrivalFromBattlefield additionally requires that arrival to have
+	// come from the battlefield. Only a card subject can match; a permanent,
+	// event, spell, or player subject fails closed. Placed at the end so the byte
+	// joins no existing cluster's packing.
+	PutIntoGraveyardThisTurn GraveyardArrivalThisTurn
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -508,7 +542,8 @@ func (s Selection) Empty() bool {
 		!s.ManaValueLessThanEventPermanent &&
 		!s.ManaValueLessOrEqualEventPermanent &&
 		!s.ManaValueLessThanSourcePower &&
-		!s.BandedWithSource
+		!s.BandedWithSource &&
+		s.PutIntoGraveyardThisTurn == GraveyardArrivalNone
 }
 
 // Validate reports structural contradictions in the Selection that represent
@@ -572,6 +607,9 @@ func (s Selection) Validate() []string {
 	}
 	if s.MatchExcludedCounter && s.MatchCounter && s.ExcludedCounter == s.RequiredCounter {
 		problems = append(problems, "selection cannot both require and exclude the same counter kind")
+	}
+	if s.PutIntoGraveyardThisTurn > GraveyardArrivalFromAnywhere {
+		problems = append(problems, fmt.Sprintf("graveyard arrival origin %d is not recognized", s.PutIntoGraveyardThisTurn))
 	}
 	if s.ManaValueDynamic.Exists {
 		switch s.ManaValueDynamic.Val.Kind {
