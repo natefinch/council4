@@ -168,6 +168,10 @@ func cloneChoiceRequest(request game.ChoiceRequest) game.ChoiceRequest {
 	for i := range request.KeepDecisions {
 		request.KeepDecisions[i].Kept = slices.Clone(request.KeepDecisions[i].Kept)
 	}
+	request.ZoneChoiceDecisions = slices.Clone(request.ZoneChoiceDecisions)
+	for i := range request.ZoneChoiceDecisions {
+		request.ZoneChoiceDecisions[i].Cards = slices.Clone(request.ZoneChoiceDecisions[i].Cards)
+	}
 	request.ClashDecisions = slices.Clone(request.ClashDecisions)
 	for i := range request.ClashDecisions {
 		request.ClashDecisions[i].Card = cloneChoiceCardInfo(opt.Val(request.ClashDecisions[i].Card)).Val

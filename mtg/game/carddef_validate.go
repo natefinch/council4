@@ -1090,6 +1090,11 @@ func (v *cardDefValidator) validateInstructionSequence(
 			if seq[i].Primitive == nil {
 				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "ForEachPlayerGroup requires a primitive")
 			}
+			if _, ok := seq[i].Primitive.(ChooseFromZone); ok {
+				// Per-member resolution would move each member's cards before the
+				// next member chooses (CR 101.4); ChooseFromZone.Choosers stages them.
+				v.add(faceName, instructionPath, CardDefIssueInvalidAbilityBody, "ForEachPlayerGroup cannot wrap ChooseFromZone; use ChooseFromZone.Choosers")
+			}
 			for _, problem := range seq[i].ForEachPlayerGroup.Val.Validate() {
 				v.add(faceName, appendPath(instructionPath, "ForEachPlayerGroup"), CardDefIssueInvalidAbilityBody, problem)
 			}

@@ -129,6 +129,30 @@ func TestChooseFromZoneFamilyValidation(t *testing.T) {
 			prim:    ChooseFromZone{Player: ControllerReference(), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}, Riders: ChooseRiders{MaxTotalManaValue: opt.Val(-1)}},
 			wantErr: "choose from zone total mana value cap must be non-negative",
 		},
+		{
+			name: "choosers accept each opponent choosing for the effect controller",
+			prim: ChooseFromZone{Choosers: opt.Val(OpponentsReference()), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}, Riders: ChooseRiders{EntryController: opt.Val(ControllerReference())}},
+		},
+		{
+			name:    "choosers reject a single choosing player",
+			prim:    ChooseFromZone{Choosers: opt.Val(AllPlayersReference()), Player: ControllerReference(), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}},
+			wantErr: "choose from zone choosers exclude a single choosing player",
+		},
+		{
+			name:    "choosers reject attacking entry",
+			prim:    ChooseFromZone{Choosers: opt.Val(AllPlayersReference()), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}, Riders: ChooseRiders{EntersAttacking: true}},
+			wantErr: "choose from zone choosers exclude face-down and attacking entry",
+		},
+		{
+			name:    "entry controller requires a battlefield destination",
+			prim:    ChooseFromZone{Player: ControllerReference(), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Hand}, Riders: ChooseRiders{EntryController: opt.Val(ControllerReference())}},
+			wantErr: "choose from zone entry controller requires a battlefield destination",
+		},
+		{
+			name:    "entry controller excludes owner control",
+			prim:    ChooseFromZone{Player: ControllerReference(), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}, Riders: ChooseRiders{UnderOwnerControl: true, EntryController: opt.Val(ControllerReference())}},
+			wantErr: "choose from zone entry controller excludes owner control",
+		},
 	}
 
 	for _, tc := range cases {
@@ -146,4 +170,24 @@ func TestChooseFromZoneFamilyValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestValidateCardDefRejectsPerMemberChooseFromZone verifies a card cannot wrap
+// ChooseFromZone in ForEachPlayerGroup, which would move each member's cards
+// before the next member chooses instead of after every choice (CR 101.4).
+func TestValidateCardDefRejectsPerMemberChooseFromZone(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name: "Sequential Exhume",
+		SpellAbility: opt.Val(Mode{Sequence: []Instruction{{
+			ForEachPlayerGroup: opt.Val(AllPlayersReference()),
+			Primitive:          ChooseFromZone{Player: GroupOfferMemberReference(), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}},
+		}}}.Ability()),
+	}}
+	for _, issue := range ValidateCardDef(card) {
+		if strings.Contains(issue.Message, "use ChooseFromZone.Choosers") {
+			return
+		}
+	}
+	t.Fatalf("ValidateCardDef() = %v, want the per-member ChooseFromZone rejection", ValidateCardDef(card))
 }

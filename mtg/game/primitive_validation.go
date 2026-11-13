@@ -1878,7 +1878,40 @@ func (p ChooseFromZone) validatePrimitive(targets []TargetSpec, checkTargets boo
 			return errors.New("choose from zone total mana value cap must be non-negative")
 		}
 	}
+	if p.Riders.EntryController.Exists {
+		if p.Destination.Zone != zone.Battlefield {
+			return errors.New("choose from zone entry controller requires a battlefield destination")
+		}
+		if p.Riders.UnderOwnerControl {
+			return errors.New("choose from zone entry controller excludes owner control")
+		}
+		if err := validatePlayerReference(p.Riders.EntryController.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	if p.Choosers.Exists {
+		return p.validateChoosers()
+	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p ChooseFromZone) validateChoosers() error {
+	if err := firstProblem(p.Choosers.Val.Validate()); err != nil {
+		return err
+	}
+	switch {
+	case p.Player.Kind() != PlayerReferenceNone:
+		return errors.New("choose from zone choosers exclude a single choosing player")
+	case p.AllOwners:
+		return errors.New("choose from zone choosers choose from their own zones, not every owner's")
+	case p.Grouping == ChooseSplitDestination:
+		return errors.New("choose from zone choosers exclude the split-destination grouping")
+	case p.Riders.FaceDown || p.Riders.EntersAttacking:
+		return errors.New("choose from zone choosers exclude face-down and attacking entry")
+	case p.Riders.PublishObjectScoped:
+		return errors.New("choose from zone choosers exclude object-scoped publication")
+	}
+	return nil
 }
 
 func (p ExileEntireHand) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
