@@ -1372,6 +1372,62 @@
     "oracle_text_sha256": "3cd8f0038fc165963f8222230b43a67cc917b2660f935e6924bf3b008cf11e8d",
     "revision": "16e8b418-04af-4b99-b8fd-deb1fe21a61c",
     "rulings_uri": "https://api.scryfall.com/cards/16e8b418-04af-4b99-b8fd-deb1fe21a61c/rulings"
+   },
+   {
+    "name": "Goring Warplow",
+    "oracle_id": "02457c7f-eced-4bf3-9b61-309b4ceab2d5",
+    "oracle_text_sha256": "2e9ddf2b8a3193a1ff2ee028032e42fdf4c7f3fc55d9257a8c09697735a456cf",
+    "revision": "9d927dfd-ae66-4235-a61b-39c85d0c1222",
+    "rulings_uri": "https://api.scryfall.com/cards/9d927dfd-ae66-4235-a61b-39c85d0c1222/rulings"
+   },
+   {
+    "name": "Combat Thresher",
+    "oracle_id": "0c460bdd-460b-4312-9ed2-32f3809a7d36",
+    "oracle_text_sha256": "368f339cde52a2a2f9df40e23b75fc2c49f7a333ef1b648a6908974844a6769e",
+    "revision": "74dfabfd-e13b-4512-a733-abe514be6404",
+    "rulings_uri": "https://api.scryfall.com/cards/74dfabfd-e13b-4512-a733-abe514be6404/rulings"
+   },
+   {
+    "name": "Blitz Automaton",
+    "oracle_id": "19f344ee-031d-4346-9553-c5d32b02df43",
+    "oracle_text_sha256": "12b941cfcf242ff1b29572233f563065b17e0b0cfb61452677afad3714546e6a",
+    "revision": "e4e5529a-848b-486c-97fb-1def35df7837",
+    "rulings_uri": "https://api.scryfall.com/cards/e4e5529a-848b-486c-97fb-1def35df7837/rulings"
+   },
+   {
+    "name": "Cradle Clearcutter",
+    "oracle_id": "225f53ef-da42-47a0-b773-d2aad3338c72",
+    "oracle_text_sha256": "6b5a745987003c2660bbf40b250424cba2567baf959fc9b7082fed7f5c745377",
+    "revision": "50cc9b90-792e-4cf7-ab8c-cb616d94092a",
+    "rulings_uri": "https://api.scryfall.com/cards/50cc9b90-792e-4cf7-ab8c-cb616d94092a/rulings"
+   },
+   {
+    "name": "Rust Goliath",
+    "oracle_id": "61df991d-32e7-4b6b-b8e6-700ba915c3f2",
+    "oracle_text_sha256": "4d9561a18a43bf4eb399fae532d372d9cf7736c1d0bebf8c7c23c2ef5ca35058",
+    "revision": "8348f73d-4226-4296-9d51-a2c497ee8270",
+    "rulings_uri": "https://api.scryfall.com/cards/8348f73d-4226-4296-9d51-a2c497ee8270/rulings"
+   },
+   {
+    "name": "Frogmyr Enforcer",
+    "oracle_id": "ccc7de36-aafc-4d87-80f7-fc2effc976eb",
+    "oracle_text_sha256": "a8d2d387b4e24a7b50f5fa191c0bfe16f27d757efb08484937b6e5496fe6cf1a",
+    "revision": "981fdd21-a650-4360-9ea5-550399d1da91",
+    "rulings_uri": "https://api.scryfall.com/cards/981fdd21-a650-4360-9ea5-550399d1da91/rulings"
+   },
+   {
+    "name": "Fallaji Dragon Engine",
+    "oracle_id": "dc8cca38-df2a-4cef-973c-a482505be66f",
+    "oracle_text_sha256": "2d2699b44302865773e0e6c2c3321feb551dfcbc8212698a5c94963f20bfdb50",
+    "revision": "f7761ed0-a784-4dfb-ab6c-0f4b9a411cf3",
+    "rulings_uri": "https://api.scryfall.com/cards/f7761ed0-a784-4dfb-ab6c-0f4b9a411cf3/rulings"
+   },
+   {
+    "name": "Depth Charge Colossus",
+    "oracle_id": "f376f4c6-4526-4ae3-a84a-e8ea50fe78b6",
+    "oracle_text_sha256": "8475296fff07e0edf89281907354306213a2467d8af82f99b854c0a9bbbf9aa2",
+    "revision": "34e09173-a92d-4cc3-9d02-bf18ab0850ec",
+    "rulings_uri": "https://api.scryfall.com/cards/34e09173-a92d-4cc3-9d02-bf18ab0850ec/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8212,6 +8268,27 @@
     "game.CreateToken"
    ],
    "review": "Capability fit only: pinned Oracle text checked for these members; mtg/cardprogram/README.md#capability-lookup documents SacrificePermanents and CreateToken with Engine scenario references; EventPlayerReference is available in mtg/game/reference.go. No source or rules review claimed."
+  },
+  {
+   "id": "prototype-artifact-creatures-20261113",
+   "family": "prototype",
+   "oracle_ids": [
+    "02457c7f-eced-4bf3-9b61-309b4ceab2d5",
+    "0c460bdd-460b-4312-9ed2-32f3809a7d36",
+    "19f344ee-031d-4346-9553-c5d32b02df43",
+    "225f53ef-da42-47a0-b773-d2aad3338c72",
+    "61df991d-32e7-4b6b-b8e6-700ba915c3f2",
+    "ccc7de36-aafc-4d87-80f7-fc2effc976eb",
+    "dc8cca38-df2a-4cef-973c-a482505be66f",
+    "f376f4c6-4526-4ae3-a84a-e8ea50fe78b6"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.PrototypeProfile",
+    "game.FacePrototype / CardDef.prototypeFace",
+    "Existing ETB draw, affinity, mana-ability, activated pump/untap, and keyword abilities"
+   ],
+   "review": "Capability-fit check: pinned corpus text for all eight cards; origin/main 5a51d30123ee54780bc3186e48463a9d15885670 mtg/game/prototype.go (PrototypeProfile, CanCastPrototyped, prototypeFace) and mtg/rules/prototype_test.go (cast selection, characteristics, retained abilities, clone/replay). No CR, rulings, or source review performed."
   }
  ],
  "records": [
@@ -270885,15 +270962,19 @@
    "oracle_id": "02457c7f-eced-4bf3-9b61-309b4ceab2d5",
    "revision": "9d927dfd-ae66-4235-a61b-39c85d0c1222",
    "name": "Goring Warplow",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestGoringWarplowScenario"
   },
   {
    "oracle_id": "0c460bdd-460b-4312-9ed2-32f3809a7d36",
    "revision": "74dfabfd-e13b-4512-a733-abe514be6404",
    "name": "Combat Thresher",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestCombatThresherScenario"
   },
   {
    "oracle_id": "124c3af4-8545-479a-b44c-446da1c8b535",
@@ -270908,15 +270989,19 @@
    "oracle_id": "19f344ee-031d-4346-9553-c5d32b02df43",
    "revision": "e4e5529a-848b-486c-97fb-1def35df7837",
    "name": "Blitz Automaton",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestBlitzAutomatonScenario"
   },
   {
    "oracle_id": "225f53ef-da42-47a0-b773-d2aad3338c72",
    "revision": "50cc9b90-792e-4cf7-ab8c-cb616d94092a",
    "name": "Cradle Clearcutter",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestCradleClearcutterScenario"
   },
   {
    "oracle_id": "3afdc98e-aeeb-43e9-bdcd-0c51da44d2f8",
@@ -270929,8 +271014,10 @@
    "oracle_id": "61df991d-32e7-4b6b-b8e6-700ba915c3f2",
    "revision": "8348f73d-4226-4296-9d51-a2c497ee8270",
    "name": "Rust Goliath",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestRustGoliathScenario"
   },
   {
    "oracle_id": "7644148f-3b26-447d-9f52-28c94c111b69",
@@ -270980,8 +271067,10 @@
    "oracle_id": "ccc7de36-aafc-4d87-80f7-fc2effc976eb",
    "revision": "981fdd21-a650-4360-9ea5-550399d1da91",
    "name": "Frogmyr Enforcer",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestFrogmyrEnforcerScenario"
   },
   {
    "oracle_id": "ccf13531-60bd-4ebd-9a5b-68e2d05ce620",
@@ -271001,15 +271090,19 @@
    "oracle_id": "dc8cca38-df2a-4cef-973c-a482505be66f",
    "revision": "f7761ed0-a784-4dfb-ab6c-0f4b9a411cf3",
    "name": "Fallaji Dragon Engine",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestFallajiDragonEngineScenario"
   },
   {
    "oracle_id": "f376f4c6-4526-4ae3-a84a-e8ea50fe78b6",
    "revision": "34e09173-a92d-4cc3-9d02-bf18ab0850ec",
    "name": "Depth Charge Colossus",
-   "status": "unclaimed",
-   "family": "unreviewed/prototype"
+   "status": "implemented-verified",
+   "family": "prototype",
+   "batch": "prototype-artifact-creatures-20261113",
+   "evidence": "mtg/rules/prototype_artifact_creatures_test.go: TestDepthChargeColossusScenario"
   },
   {
    "oracle_id": "ff1dd9c1-d1e5-49dd-b8b2-df3e4a41d3e5",
