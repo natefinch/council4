@@ -32,14 +32,11 @@ func newTectonicHazard() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.PlayerGroupDamageRecipient(game.OpponentsReference()),
-						},
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerOpponent})),
+							Amount: game.Fixed(1),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Controller: game.ControllerOpponent}),
+								game.OpponentsReference(),
+							),
 						},
 					},
 				},

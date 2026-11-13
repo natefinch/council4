@@ -56,15 +56,11 @@ func newConductorOfCacophony() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:       game.Fixed(1),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.SourcePermanentReference())),
-											DamageSource: opt.Val(game.SourcePermanentReference()),
-										},
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount:       game.Fixed(1),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+											Amount: game.Fixed(1),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.SourcePermanentReference()),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 									},

@@ -47,14 +47,11 @@ func newVolcanicSpray() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedKeyword: game.Flying})),
-						},
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+							Amount: game.Fixed(1),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedKeyword: game.Flying}),
+								game.AllPlayersReference(),
+							),
 						},
 					},
 				},

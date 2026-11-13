@@ -34,8 +34,11 @@ func newSulfurousBlast() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(2),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
+							Amount: game.Fixed(2),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+								game.AllPlayersReference(),
+							),
 						},
 						Condition: opt.Val(game.EffectCondition{
 							Condition: opt.Val(game.Condition{
@@ -47,23 +50,11 @@ func newSulfurousBlast() *game.CardDef {
 					},
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(2),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
-						},
-						ConditionGate: "condition-0",
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(3),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
-						},
-						ConditionGate:       "condition-0",
-						ConditionGateNegate: true,
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(3),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+							Amount: game.Fixed(3),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+								game.AllPlayersReference(),
+							),
 						},
 						ConditionGate:       "condition-0",
 						ConditionGateNegate: true,

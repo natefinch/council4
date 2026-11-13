@@ -64,16 +64,11 @@ func newRancidEarth() *game.CardDef {
 					},
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
-						},
-						ConditionGate:       "condition-0",
-						ConditionGateNegate: true,
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+							Amount: game.Fixed(1),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+								game.AllPlayersReference(),
+							),
 						},
 						ConditionGate:       "condition-0",
 						ConditionGateNegate: true,

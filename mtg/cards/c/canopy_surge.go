@@ -46,8 +46,11 @@ func newCanopySurge() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying})),
+							Amount: game.Fixed(1),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying}),
+								game.AllPlayersReference(),
+							),
 						},
 						Condition: opt.Val(game.EffectCondition{
 							Condition: opt.Val(game.Condition{
@@ -59,23 +62,11 @@ func newCanopySurge() *game.CardDef {
 					},
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(1),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
-						},
-						ConditionGate: "condition-0",
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(4),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying})),
-						},
-						ConditionGate:       "condition-0",
-						ConditionGateNegate: true,
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(4),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+							Amount: game.Fixed(4),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying}),
+								game.AllPlayersReference(),
+							),
 						},
 						ConditionGate:       "condition-0",
 						ConditionGateNegate: true,

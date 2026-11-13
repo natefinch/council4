@@ -51,15 +51,11 @@ func newHammerfistGiant() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:       game.Fixed(4),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedKeyword: game.Flying})),
-											DamageSource: opt.Val(game.SourcePermanentReference()),
-										},
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount:       game.Fixed(4),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+											Amount: game.Fixed(4),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedKeyword: game.Flying}),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 									},

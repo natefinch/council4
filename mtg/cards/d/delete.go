@@ -37,15 +37,10 @@ func newDelete() *game.CardDef {
 							Amount: game.Dynamic(game.DynamicAmount{
 								Kind: game.DynamicAmountX,
 							}),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedTypes: []types.Card{types.Artifact}})),
-						},
-					},
-					{
-						Primitive: game.Damage{
-							Amount: game.Dynamic(game.DynamicAmount{
-								Kind: game.DynamicAmountX,
-							}),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, ExcludedTypes: []types.Card{types.Artifact}}),
+								game.AllPlayersReference(),
+							),
 						},
 					},
 				},

@@ -82,23 +82,10 @@ func newAshlingThePilgrim() *game.CardDef {
 												Multiplier: 1,
 												ResultKey:  game.ResultKey("removed-counter-quantity-2"),
 											}),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
-											DamageSource: opt.Val(game.SourcePermanentReference()),
-										},
-										ConditionGate: game.ConditionKey("condition-0"),
-										ResultGate: opt.Val(game.InstructionResultGate{
-											Key:             game.ResultKey("removed-counter-quantity-2"),
-											AmountAvailable: true,
-										}),
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount: game.Dynamic(game.DynamicAmount{
-												Kind:       game.DynamicAmountPreviousEffectResult,
-												Multiplier: 1,
-												ResultKey:  game.ResultKey("removed-counter-quantity-2"),
-											}),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 										ConditionGate: game.ConditionKey("condition-0"),
