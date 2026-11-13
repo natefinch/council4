@@ -1280,6 +1280,9 @@ type TriggerPattern struct {
 	SpellTargetPattern opt.V[Selection]
 	RequireKickerPaid  bool
 	RequireHistoric    bool
+	// RequireClashWon restricts an EventClashed trigger to clashes the
+	// clashing player won ("whenever you clash and win", CR 701.30d).
+	RequireClashWon bool
 	// ExcludeManaAbility is required for EventAbilityActivated patterns until
 	// payment-time mana activations join the authoritative event stream.
 	ExcludeManaAbility bool

@@ -73,7 +73,31 @@ func (c *programContext) Clash(opponent opt.V[game.PlayerReference]) (cardprogra
 		}
 	}
 	result.Winner = clashWinner(result.Reveals)
+	emitClashEvents(c.game, result)
 	return result, nil
+}
+
+// emitClashEvents records that each participant clashed, after the whole
+// clash has ended (CR 701.30b-d), so "whenever you clash" abilities of both
+// players trigger with the won/lost fact captured on each event.
+func emitClashEvents(g *game.Game, result cardprogram.ClashResult) {
+	simultaneousID := g.IDGen.Next()
+	for _, reveal := range result.Reveals {
+		opponent := result.Opponent
+		for _, other := range result.Reveals {
+			if other.Player != reveal.Player {
+				opponent = other.Player
+			}
+		}
+		emitEvent(g, game.Event{
+			Kind:           game.EventClashed,
+			Controller:     reveal.Player,
+			Player:         reveal.Player,
+			ClashOpponent:  opponent,
+			ClashWon:       result.Won(reveal.Player),
+			SimultaneousID: simultaneousID,
+		})
+	}
 }
 
 func (c *programContext) clashOpponent(controller game.PlayerID, reference opt.V[game.PlayerReference]) (game.PlayerID, bool, error) {

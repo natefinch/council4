@@ -16,6 +16,18 @@ type Source struct {
 	X          int
 	// EventPlayer is a captured historical identity, even if that player left.
 	EventPlayer opt.V[game.PlayerID]
+	// EventClash is the captured clash fact of a triggered ability whose
+	// trigger event was a clash ("whenever you clash"; CR 701.30).
+	EventClash opt.V[ClashEvent]
+}
+
+// ClashEvent is one player's completed clash as captured by a clash trigger:
+// Player clashed with Opponent, and Won reports whether Player won (CR
+// 701.30d). It stays fixed for the trigger's lifetime, including copies.
+type ClashEvent struct {
+	Player   game.PlayerID
+	Opponent game.PlayerID
+	Won      bool
 }
 
 // Outcome reports an operation's actual success and copied result snapshots.

@@ -143,6 +143,13 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 		if player, known := triggeringEventPlayer(obj.TriggerEvent); known {
 			ctx.source.EventPlayer = opt.Val(player)
 		}
+		if obj.TriggerEvent.Kind == game.EventClashed {
+			ctx.source.EventClash = opt.Val(cardprogram.ClashEvent{
+				Player:   obj.TriggerEvent.Player,
+				Opponent: obj.TriggerEvent.ClashOpponent,
+				Won:      obj.TriggerEvent.ClashWon,
+			})
+		}
 	}
 	defer func() { ctx.active = false }()
 	defer g.OpenClashRevealScope()()

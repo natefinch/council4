@@ -251,6 +251,9 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.RequireKickerPaid && !event.KickerPaid {
 		return false
 	}
+	if pattern.RequireClashWon && (event.Kind != game.EventClashed || !event.ClashWon) {
+		return false
+	}
 	if pattern.RequireHistoric && !eventSpellHistoric(event) {
 		return false
 	}
