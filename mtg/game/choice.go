@@ -89,7 +89,9 @@ const (
 	ChoicePreventionAllocation
 	// ChoiceNumber returns one exact integer, not an index into Options.
 	ChoiceNumber
-	// ChoiceCombatDeclaration selects one extendable attack choice or block edge.
+	// ChoiceCombatDeclaration selects one extendable attack choice or block edge,
+	// or what a creature put onto the battlefield attacking attacks (CR 508.4).
+	// Each option's Attack or Block identifies the proposed declaration.
 	ChoiceCombatDeclaration
 	// ChoiceCombatDamageDivision asks a player to divide one creature's combat
 	// damage among the creatures it is blocked by or blocking (CR 510.1c-d), as

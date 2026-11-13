@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 // runCombatPhase drives the combat phase. It delegates to combatEngine so all
@@ -1574,25 +1575,26 @@ func lethalDamageNeeded(g *game.Game, permanent *game.Permanent) (int, bool) {
 // combat in which its controller is the attacking player, so this is a no-op
 // outside combat or when the tokens' controller is not the active player; in
 // that case the tokens simply remain on the battlefield without attacking. Each
-// token's controller chooses which defending player it attacks; the entry never
+// creature's controller chooses what it attacks (CR 508.4); the entry never
 // emits an attacker-declared event, so "whenever a creature attacks" abilities do
 // not trigger for it (CR 508.4 declares it attacking without it being declared an
-// attacker).
+// attacker). A creature that is also a battle never becomes attacking (CR
+// 506.3e).
 func declareCreatedTokensAttacking(e *Engine, g *game.Game, controller game.PlayerID, tokens []*game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	if g.Combat == nil || g.Turn.ActivePlayer != controller {
 		return
 	}
 	for _, token := range tokens {
-		if token == nil || !permanentHasType(g, token, types.Creature) {
+		if token == nil || !permanentHasType(g, token, types.Creature) || permanentHasType(g, token, types.Battle) {
 			continue
 		}
-		defender, ok := chooseEntryAttackDefender(e, g, controller, agents, log)
+		target, ok := chooseEntryAttackTarget(e, g, controller, token, agents, log)
 		if !ok {
 			return
 		}
 		g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{
 			Attacker: token.ObjectID,
-			Target:   game.AttackTarget{Player: defender},
+			Target:   target,
 		})
 		recordAttackCombatants(g, g.Combat.Attackers[len(g.Combat.Attackers)-1])
 		// CR 508.8: a creature put onto the battlefield attacking counts the same
@@ -1601,44 +1603,55 @@ func declareCreatedTokensAttacking(e *Engine, g *game.Game, controller game.Play
 		if g.Combat.PlayersAttacked == nil {
 			g.Combat.PlayersAttacked = make(map[game.PlayerID]bool)
 		}
-		g.Combat.PlayersAttacked[defender] = true
+		g.Combat.PlayersAttacked[target.Player] = true
 	}
 }
 
-// chooseEntryAttackDefender selects which player a token entering the
-// battlefield attacking is attacking. It prefers the players already being
-// attacked this combat and otherwise falls back to the controller's living
-// opponents. With no eligible defender it reports false and the token enters
-// without attacking; with a single eligible defender that defender is chosen
-// without a prompt; otherwise the controller chooses.
-func chooseEntryAttackDefender(e *Engine, g *game.Game, controller game.PlayerID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.PlayerID, bool) {
-	defenders := defendingPlayersInOrder(g)
-	if len(defenders) == 0 {
-		defenders = aliveOpponents(g, controller)
-	}
-	defenders = aliveDefenders(g, defenders)
-	switch len(defenders) {
+// chooseEntryAttackTarget has controller choose what a creature entering the
+// battlefield attacking attacks: a defending player, a planeswalker a defending
+// player controls, or a battle a defending player protects (CR 508.4). Every
+// living opponent of the attacking player is a defending player (CR 802.2), so
+// this includes players nothing has attacked yet. Requirements and restrictions
+// on declaring attackers don't apply (CR 508.4c). The default joins the first
+// player already being attacked, if any. With no destination it reports false
+// and the creature enters without attacking; a single destination is chosen
+// without a prompt.
+func chooseEntryAttackTarget(e *Engine, g *game.Game, controller game.PlayerID, creature *game.Permanent, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (game.AttackTarget, bool) {
+	targets := legalAttackTargets(g, controller)
+	switch len(targets) {
 	case 0:
-		return 0, false
+		return game.AttackTarget{}, false
 	case 1:
-		return defenders[0], true
+		return targets[0], true
 	}
-	options := make([]game.ChoiceOption, 0, len(defenders))
-	for i, defender := range defenders {
-		options = append(options, game.ChoiceOption{Index: i, Label: fmt.Sprintf("Player %d", defender+1)})
+	attacked := defendingPlayersInOrder(g)
+	defaultIndex := 0
+	options := make([]game.ChoiceOption, 0, len(targets))
+	for i, target := range targets {
+		if defaultIndex == 0 && target.IsPlayerAttack() && len(attacked) > 0 && target.Player == attacked[0] {
+			defaultIndex = i
+		}
+		options = append(options, game.ChoiceOption{
+			Index:  i,
+			Label:  attackTargetChoiceLabel(g, target),
+			Attack: opt.Val(game.AttackDeclaration{Attacker: creature.ObjectID, Target: target}),
+		})
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
-		Kind:       game.ChoicePlayer,
-		Player:     controller,
-		Prompt:     "Choose a player for the attacking token to attack",
-		Options:    options,
-		MinChoices: 1,
-		MaxChoices: 1,
+		Kind:             game.ChoiceCombatDeclaration,
+		Player:           controller,
+		Prompt:           fmt.Sprintf("Choose what %s attacks", permanentChoiceLabel(g, creature)),
+		Subject:          permanentChoiceInfo(g, creature),
+		CombatAttacker:   creature.ObjectID,
+		Options:          options,
+		MinChoices:       1,
+		MaxChoices:       1,
+		DefaultSelection: []int{defaultIndex},
 	}, log)
-	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(defenders) {
-		return 0, false
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(targets) {
+		return game.AttackTarget{}, false
 	}
-	return defenders[selected[0]], true
+	return targets[selected[0]], true
 }
 
 // declareTokenAttackingDefender puts a freshly created token onto the
@@ -1712,15 +1725,4 @@ func attackDeclarationForAttacker(g *game.Game, attacker id.ID) (game.AttackDecl
 		}
 	}
 	return game.AttackDeclaration{}, false
-}
-
-// aliveDefenders filters a defender list down to the players still alive.
-func aliveDefenders(g *game.Game, defenders []game.PlayerID) []game.PlayerID {
-	alive := make([]game.PlayerID, 0, len(defenders))
-	for _, defender := range defenders {
-		if isPlayerAlive(g, defender) {
-			alive = append(alive, defender)
-		}
-	}
-	return alive
 }
