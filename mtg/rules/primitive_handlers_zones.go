@@ -691,10 +691,10 @@ func (r *effectResolver) putOnBattlefieldEntered(prim game.PutOnBattlefield) []*
 
 // declareEnteredPermanentsAttacking puts each permanent that just entered the
 // battlefield into combat attacking, through the same entry-attack choice as a
-// created attacking token (CR 508.4). Each one's controller chooses its defender;
-// a noncreature, or a creature not controlled by the attacking player or entering
-// outside combat, stays on the battlefield without attacking (CR 506.3a-b). No
-// attack event is emitted, so it never "attacked".
+// created attacking token (CR 508.4). Each one's controller chooses what it
+// attacks; a noncreature, or a creature not controlled by the attacking player
+// or entering outside combat, stays on the battlefield without attacking (CR
+// 506.3a-b). No attack event is emitted, so it never "attacked".
 func (r *effectResolver) declareEnteredPermanentsAttacking(permanents []*game.Permanent) {
 	for _, permanent := range permanents {
 		if permanent == nil {

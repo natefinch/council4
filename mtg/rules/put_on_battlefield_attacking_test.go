@@ -23,8 +23,9 @@ import (
 // (a noncreature permanent never becomes attacking), 506.3b, 508.4 (controller
 // chooses the defender on entry; "attacking" but never "attacked"), 508.4a,
 // 508.4c, 508.4d (entering after blockers are declared, it is unblocked). The
-// defender choice is the shared entry-attack choice of created attacking tokens;
-// planeswalker and battle destinations on that route are #3683.
+// defender choice is the shared entry-attack choice of created attacking tokens,
+// which offers planeswalker and battle destinations (#3683,
+// entry_attack_target_test.go).
 
 // selfAttackLifeCreature is an Elemental creature card whose own "whenever this
 // creature attacks" trigger would observe it being declared as an attacker.
