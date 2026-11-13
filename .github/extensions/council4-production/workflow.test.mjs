@@ -8,7 +8,7 @@ import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordina
 import { assessChecks, classifyInfrastructure, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch, normalizeBatchPlan } from "./queue.mjs";
 import { rankTriage, chunk } from "./triage.mjs";
-import { chooseWork, knownGaps, gapTask, batchTask, issueNumber, engineIssue } from "./selection.mjs";
+import { chooseWork, knownGaps, gapTask, batchTask, selectedGapTask, issueNumber, engineIssue } from "./selection.mjs";
 import { gapEvidence, earlierUnits, issueStates } from "./workflow.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, reviewHistory } from "./telemetry.mjs";
 
@@ -802,8 +802,25 @@ test("Engine and card units alternate within a run", () => {
   const prepare = chooseWork({ next: { ...next, batch: null }, units: [engineUnit], issues });
   assert.equal(prepare.kind, "prepare");
   assert.deepEqual(prepare.avoid.map(gap => gap.issue), [3285, 3286]);
+  // If no batch can be prepared, that turn works the deferred gap instead of stopping.
+  assert.equal(prepare.fallback.issue, 3285);
+  assert.equal(chooseWork({ next: { ...next, batch: null }, units: [engineUnit], issues, cardsOnly: true }).fallback, null);
   const cardUnit = { status: "landed", task: { taskType: "card", id: "c" } };
   assert.equal(chooseWork({ next, units: [engineUnit, cardUnit], issues }).gap.issue, 3285);
+});
+
+test("A selector's Engine answer becomes an ordinary gap unit", () => {
+  const selected = { taskType: "engine", id: "new-gap", title: "Warp", instructions: "Warp cards need an exile-and-recast window." };
+  const { task } = selectedGapTask(selected, open(77), [], {});
+  assert.equal(task.id, "gap-77");
+  assert.equal(task.issue, 77);
+  assert.equal(task.reviewRequired, true);
+  assert.match(task.instructions, /exile-and-recast/);
+  const sub = { number: 78, state: "OPEN", title: "Part", url: "u/78", labels: [] };
+  assert.equal(selectedGapTask(selected, { ...open(77), subIssues: [sub] }, [], {}).task.issue, 78);
+  assert.match(selectedGapTask(selected, { ...open(77), state: "CLOSED" }, [], {}).problem, /no open issue/);
+  assert.match(selectedGapTask(selected, open(77), [{ issue: 77 }], {}).problem, /parked/);
+  assert.match(selectedGapTask(selected, { ...open(77), labels: ["Parked"] }, [], {}).problem, /parked/);
 });
 
 test("Gaps awaiting gameplay evidence wait until a card hits them", () => {

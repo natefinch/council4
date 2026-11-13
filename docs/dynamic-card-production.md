@@ -152,6 +152,12 @@ Each unit picks its own work; nobody chooses batches by hand. Since policy
    largest groups of cards whose landed gap now unblocks them, and open gaps
    as issue numbers with blocked-card counts. It checks capability fit only;
    source review (Comprehensive Rules, rulings) belongs to the card author.
+   Since policy 1.30.0 a run does not stop because no family fits main. If an
+   open gap was deferred only for the card turn, the unit works that gap.
+   Otherwise the selector names the missing capability that unblocks the
+   largest family, reusing its open issue or having the coordinator file one,
+   and the unit is an ordinary Engine task `gap-<issue>`. Only a selector that
+   finds no candidates or a genuine external blocker stops the run.
 
 Steps 1 and 2 need no model and cost no AIC. An Engine gap whose unit fails is
 parked (in that run and later ones) rather than paid for again; its stage outcome
