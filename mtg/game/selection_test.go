@@ -96,3 +96,22 @@ func TestSelectionValidatesDynamicCountManaValueBound(t *testing.T) {
 		t.Fatalf("problems = %#v, want one group-on-life-bound problem", problems)
 	}
 }
+
+// TestSelectionGraveyardArrivalIsInspectableAndBounded verifies the this-turn
+// graveyard-arrival predicate makes a Selection non-empty, so a target or mass
+// return carrying only it still reaches the runtime matcher, and that an
+// unknown origin is rejected rather than silently matching nothing.
+func TestSelectionGraveyardArrivalIsInspectableAndBounded(t *testing.T) {
+	for _, origin := range []GraveyardArrivalThisTurn{GraveyardArrivalFromBattlefield, GraveyardArrivalFromAnywhere} {
+		sel := Selection{PutIntoGraveyardThisTurn: origin}
+		if sel.Empty() {
+			t.Fatalf("origin %d: selection must not be empty", origin)
+		}
+		if problems := sel.Validate(); len(problems) != 0 {
+			t.Fatalf("origin %d: problems = %#v", origin, problems)
+		}
+	}
+	if problems := (Selection{PutIntoGraveyardThisTurn: GraveyardArrivalFromAnywhere + 1}).Validate(); len(problems) != 1 {
+		t.Fatalf("problems = %#v, want one unknown-origin problem", problems)
+	}
+}
