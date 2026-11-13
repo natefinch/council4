@@ -186,6 +186,17 @@ type KeepDecision struct {
 	Kept   []id.ID
 }
 
+// ZoneChoiceDecision is one earlier player's choice within the same APNAP
+// "each player chooses a card in their <zone>" effect (CR 101.4b), made before
+// any chosen card moves. Cards lists the chosen card IDs when the source zone
+// is public; for a hidden zone the cards stay face down (CR 101.4a), so Cards
+// is empty and only Count is shown. Count is zero when they chose nothing.
+type ZoneChoiceDecision struct {
+	Player PlayerID
+	Count  int
+	Cards  []id.ID
+}
+
 // ClashDecision is one clashing player's publicly revealed card within the
 // same clash (CR 701.30b) and, once made, their placement choice (CR
 // 701.30c). Decided reports that the player has already chosen; Bottom is
@@ -243,6 +254,10 @@ type ChoiceRequest struct {
 	// APNAP "sacrifice the rest" effect (CR 101.4b), before the simultaneous
 	// sacrifice.
 	KeepDecisions []KeepDecision
+	// ZoneChoiceDecisions exposes earlier players' choices in the same APNAP
+	// "each player chooses a card in their <zone>" effect (CR 101.4b), before
+	// the chosen cards move together.
+	ZoneChoiceDecisions []ZoneChoiceDecision
 	// ClashDecisions exposes every card revealed in the same clash, in APNAP
 	// order, with earlier players' public top/bottom choices (CR 701.30b-c),
 	// before the revealed cards move together. Every other decision later in

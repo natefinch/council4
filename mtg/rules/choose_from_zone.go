@@ -27,6 +27,10 @@ func (r *effectResolver) resolveChooseFromZone(env game.ChooseFromZone) effectRe
 	if !chooseFromZoneSupported(env) {
 		return res
 	}
+	if env.Choosers.Exists {
+		res.succeeded = r.resolveGroupChooseFromZone(env)
+		return res
+	}
 	playerID, ok := r.resolvePlayer(env.Player)
 	if !ok {
 		return res
@@ -42,11 +46,113 @@ func (r *effectResolver) resolveChooseFromZone(env game.ChooseFromZone) effectRe
 	case game.ChooseSplitDestination:
 		res.succeeded = r.chooseFromZoneSplit(env, playerID, candidates)
 	default:
-		chosen := r.chooseFromZoneChosen(env, playerID, candidates)
+		chosen := r.chooseFromZoneChosen(env, playerID, candidates, nil)
 		res.amount = len(chosen)
 		res.succeeded = r.chooseFromZoneMoveAll(env, playerID, chosen, env.Destination, env.Riders.EntersTapped)
 	}
 	return res
+}
+
+// chooseFromZonePick is one card chosen by one player of a choose-from-zone
+// effect, kept with its chooser until every choice is made.
+type chooseFromZonePick struct {
+	chooser game.PlayerID
+	cardID  id.ID
+}
+
+func chooseFromZonePicks(chooser game.PlayerID, chosen []id.ID) []chooseFromZonePick {
+	picks := make([]chooseFromZonePick, len(chosen))
+	for i, cardID := range chosen {
+		picks[i] = chooseFromZonePick{chooser: chooser, cardID: cardID}
+	}
+	return picks
+}
+
+// resolveGroupChooseFromZone resolves a Choosers envelope. Each member of the
+// group, in APNAP order, chooses from their own copy of the source zone while
+// seeing the earlier members' choices (CR 101.4, 101.4b); a member with no
+// matching card chooses nothing. Only then do all chosen cards move together,
+// so a battlefield destination is one simultaneous entry (CR 603.6a) and
+// PublishLinked remembers the whole chosen set. It reports whether any card
+// moved.
+func (r *effectResolver) resolveGroupChooseFromZone(env game.ChooseFromZone) bool {
+	resolver := newReferenceResolver(r.game, r.obj).withGroupOfferMember(r.groupOfferMember)
+	members := playersInAPNAPOrder(r.game, resolver.playerGroup(env.Choosers.Val))
+	if env.Riders.PublishLinked != "" {
+		clearLinkedObjects(r.game, r.chooseFromZonePublishKey(env))
+	}
+	var picks []chooseFromZonePick
+	var decisions []game.ZoneChoiceDecision
+	for _, member := range members {
+		var chosen []id.ID
+		if candidates := r.chooseFromZoneCandidates(env, member); len(candidates) > 0 {
+			chosen = r.chooseFromZoneChosen(env, member, candidates, slices.Clone(decisions))
+		}
+		decision := game.ZoneChoiceDecision{Player: member, Count: len(chosen)}
+		if env.SourceZone.IsPublic() && len(chosen) > 0 {
+			decision.Cards = slices.Clone(chosen)
+		}
+		decisions = append(decisions, decision)
+		picks = append(picks, chooseFromZonePicks(member, chosen)...)
+	}
+	if len(picks) == 0 {
+		return false
+	}
+	if env.Destination.Zone == zone.Battlefield {
+		return len(r.chooseFromZonePutOnBattlefield(env, picks, env.Riders.EntersTapped)) > 0
+	}
+	return r.chooseFromZoneMoveGroup(env, picks)
+}
+
+// chooseFromZoneDecide asks for one choose-from-zone decision. A Choosers
+// member choosing from a hidden zone decides entirely outside the public log
+// (CR 400.2, 101.4a): whether they were asked at all, how many options they
+// had and which they took would reveal how many matching cards they hold. The
+// other players learn only how many cards each member chose, through
+// ChoiceRequest.ZoneChoiceDecisions and the move itself.
+func (r *effectResolver) chooseFromZoneDecide(env game.ChooseFromZone, request game.ChoiceRequest) []int {
+	if env.Choosers.Exists && !env.SourceZone.IsPublic() {
+		request.Private = true
+		return r.engine.chooseUnloggedChoice(r.game, r.agents, request, r.log)
+	}
+	return r.engine.chooseChoice(r.game, r.agents, request, r.log)
+}
+
+// chooseFromZoneMoveGroup moves every card the Choosers members picked to their
+// owners' destination zone as one simultaneous event (CR 101.4, 603.2c),
+// applying the reveal, bottom-placement and publication riders. Cards that
+// arrive together in a library are ordered by their owner (CR 401.4). It
+// reports whether any card moved.
+func (r *effectResolver) chooseFromZoneMoveGroup(env game.ChooseFromZone, picks []chooseFromZonePick) bool {
+	moves := make([]simultaneousCardMove, 0, len(picks))
+	for _, pick := range picks {
+		card, ok := r.game.GetCardInstance(pick.cardID)
+		if !ok {
+			continue
+		}
+		if env.Riders.Reveal {
+			emitCardRevealEvent(r.game, r.obj, card.Owner, pick.cardID, env.SourceZone)
+		}
+		moves = append(moves, simultaneousCardMove{
+			card:     game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion},
+			fromZone: env.SourceZone,
+		})
+	}
+	if len(moves) == 0 || !moveCardsBetweenZonesSimultaneously(r.game, moves, env.Destination.Zone,
+		env.Riders.DestinationBottom, r.game.IDGen.Next(), r.ownerOrdersLibraryArrivals(env.Riders.DestinationBottom)) {
+		return false
+	}
+	for _, move := range moves {
+		card, ok := r.game.GetCardInstance(move.card.CardID)
+		if !ok || card.ZoneVersion == move.card.ZoneVersion {
+			continue
+		}
+		if actual, ok := cardZone(r.game, card.ID); ok && actual == env.Destination.Zone {
+			r.rememberResultCard(card.ID)
+		}
+		r.chooseFromZonePublish(env, card.ID)
+	}
+	return true
 }
 
 // chooseFromZoneSupported gates the envelope shapes the resolver implements,
@@ -75,6 +181,14 @@ func chooseFromZoneSupported(env game.ChooseFromZone) bool {
 	}
 	if env.Riders.EntersAttacking &&
 		(env.Destination.Zone != zone.Battlefield || env.Riders.FaceDown) {
+		return false
+	}
+	if env.Riders.EntryController.Exists &&
+		(env.Destination.Zone != zone.Battlefield || env.Riders.UnderOwnerControl) {
+		return false
+	}
+	if env.Choosers.Exists && (env.AllOwners || env.Grouping == game.ChooseSplitDestination ||
+		env.Riders.FaceDown || env.Riders.EntersAttacking || env.Riders.PublishObjectScoped) {
 		return false
 	}
 	return true
@@ -146,36 +260,39 @@ func (r *effectResolver) chooseFromZoneCandidates(env game.ChooseFromZone, playe
 
 // chooseFromZoneChosen runs the choice for every grouping except the split
 // destination, returning the chosen card IDs in choice order.
-func (r *effectResolver) chooseFromZoneChosen(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID) []id.ID {
+// earlier carries the choices already made by previous players of the same
+// Choosers effect (CR 101.4b).
+func (r *effectResolver) chooseFromZoneChosen(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID, earlier []game.ZoneChoiceDecision) []id.ID {
 	switch env.Grouping {
 	case game.ChooseSharedSubtype:
-		return r.chooseFromZoneSharedSubtype(env, playerID, candidates)
+		return r.chooseFromZoneSharedSubtype(env, playerID, candidates, earlier)
 	case game.ChooseOneOfEachNamedType:
-		return r.chooseFromZoneOneOfEachNamedType(env, playerID, candidates)
+		return r.chooseFromZoneOneOfEachNamedType(env, playerID, candidates, earlier)
 	default:
-		return r.chooseFromZoneAcrossSet(env, playerID, candidates)
+		return r.chooseFromZoneAcrossSet(env, playerID, candidates, earlier)
 	}
 }
 
 // chooseFromZoneAcrossSet runs the ordinary multi-card choice: the player picks
 // between the minimum and maximum allowed cards from the whole matching pool.
-func (r *effectResolver) chooseFromZoneAcrossSet(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID) []id.ID {
+func (r *effectResolver) chooseFromZoneAcrossSet(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID, earlier []game.ZoneChoiceDecision) []id.ID {
 	maxChoices, minChoices := r.chooseFromZoneBounds(env, len(candidates))
 	if maxChoices <= 0 {
 		return nil
 	}
 	options := chooseFromZoneOptions(r.game, candidates)
 	defaultSelection := firstChoiceIndices(minChoices)
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:              game.ChoiceResolution,
-		Player:            playerID,
-		Prompt:            chooseFromZonePrompt(env),
-		Options:           options,
-		MinChoices:        minChoices,
-		MaxChoices:        maxChoices,
-		DefaultSelection:  defaultSelection,
-		MaxTotalManaValue: env.Riders.MaxTotalManaValue,
-	}, r.log)
+	selected := r.chooseFromZoneDecide(env, game.ChoiceRequest{
+		Kind:                game.ChoiceResolution,
+		Player:              playerID,
+		Prompt:              chooseFromZonePrompt(env),
+		Options:             options,
+		MinChoices:          minChoices,
+		MaxChoices:          maxChoices,
+		DefaultSelection:    defaultSelection,
+		MaxTotalManaValue:   env.Riders.MaxTotalManaValue,
+		ZoneChoiceDecisions: earlier,
+	})
 	return chooseFromZoneResolveIndices(candidates, selected)
 }
 
@@ -183,7 +300,7 @@ func (r *effectResolver) chooseFromZoneAcrossSet(env game.ChooseFromZone, player
 // successive pick is offered only from cards that still share a subtype with
 // every card already chosen, so an illegal correlated set cannot be assembled
 // (CR 701.19).
-func (r *effectResolver) chooseFromZoneSharedSubtype(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID) []id.ID {
+func (r *effectResolver) chooseFromZoneSharedSubtype(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID, earlier []game.ZoneChoiceDecision) []id.ID {
 	maxChoices, _ := r.chooseFromZoneBounds(env, len(candidates))
 	if maxChoices <= 0 {
 		return nil
@@ -201,7 +318,7 @@ func (r *effectResolver) chooseFromZoneSharedSubtype(env game.ChooseFromZone, pl
 		if len(pool) == 0 {
 			break
 		}
-		pick, ok := r.chooseFromZoneOptionalCard(playerID, pool, "Choose a card that shares a subtype")
+		pick, ok := r.chooseFromZoneOptionalCard(playerID, pool, "Choose a card that shares a subtype", env, earlier)
 		if !ok {
 			break
 		}
@@ -215,7 +332,7 @@ func (r *effectResolver) chooseFromZoneSharedSubtype(env game.ChooseFromZone, pl
 // chooseFromZoneOneOfEachNamedType chooses at most one card for each card type
 // listed in the filter's RequiredTypesAny, modeling "a creature card and a land
 // card". A card already chosen for an earlier type is not offered again.
-func (r *effectResolver) chooseFromZoneOneOfEachNamedType(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID) []id.ID {
+func (r *effectResolver) chooseFromZoneOneOfEachNamedType(env game.ChooseFromZone, playerID game.PlayerID, candidates []id.ID, earlier []game.ZoneChoiceDecision) []id.ID {
 	chosenSet := make(map[id.ID]bool)
 	var chosen []id.ID
 	for _, cardType := range env.Filter.RequiredTypesAny {
@@ -233,7 +350,7 @@ func (r *effectResolver) chooseFromZoneOneOfEachNamedType(env game.ChooseFromZon
 		if len(pool) == 0 {
 			continue
 		}
-		pick, ok := r.chooseFromZoneOptionalCard(playerID, pool, "Choose a "+string(cardType)+" card")
+		pick, ok := r.chooseFromZoneOptionalCard(playerID, pool, "Choose a "+string(cardType)+" card", env, earlier)
 		if !ok {
 			continue
 		}
@@ -354,9 +471,9 @@ func (r *effectResolver) chooseFromZoneMoveOne(env game.ChooseFromZone, playerID
 }
 
 // chooseFromZoneEnterBattlefield puts the chosen cards onto the battlefield at
-// once, applying the tapped, owner-control, entry-counter, face-down, and reveal
-// riders. The cards enter as a simultaneous batch so their enter-the-battlefield
-// events and replacements resolve together.
+// once, applying the tapped, owner-control, entry-controller, entry-counter,
+// face-down, and reveal riders. The cards enter as a simultaneous batch so their
+// enter-the-battlefield events and replacements resolve together.
 func (r *effectResolver) chooseFromZoneEnterBattlefield(env game.ChooseFromZone, playerID game.PlayerID, chosen []id.ID, tapped bool) bool {
 	if env.Riders.FaceDown {
 		succeeded := false
@@ -365,9 +482,9 @@ func (r *effectResolver) chooseFromZoneEnterBattlefield(env game.ChooseFromZone,
 			if !ok {
 				continue
 			}
-			controller := playerID
-			if env.Riders.UnderOwnerControl {
-				controller = card.Owner
+			controller, ok := r.chooseFromZoneEntryController(env, playerID, card)
+			if !ok {
+				continue
 			}
 			if env.Riders.Reveal {
 				emitCardRevealEvent(r.game, r.obj, card.Owner, cardID, env.SourceZone)
@@ -379,35 +496,60 @@ func (r *effectResolver) chooseFromZoneEnterBattlefield(env game.ChooseFromZone,
 		}
 		return succeeded
 	}
-	resolved := make([]resolvedBattlefieldCard, 0, len(chosen))
-	for _, cardID := range chosen {
-		card, ok := r.game.GetCardInstance(cardID)
+	permanents := r.chooseFromZonePutOnBattlefield(env, chooseFromZonePicks(playerID, chosen), tapped)
+	if env.Riders.EntersAttacking && len(permanents) > 0 {
+		declareCreatedTokensAttacking(r.engine, r.game, playerID, permanents, r.agents, r.log)
+	}
+	return len(permanents) > 0
+}
+
+// chooseFromZonePutOnBattlefield puts every picked card onto the battlefield in
+// one simultaneous batch, each under the controller its riders select, and
+// returns the permanents that entered.
+func (r *effectResolver) chooseFromZonePutOnBattlefield(env game.ChooseFromZone, picks []chooseFromZonePick, tapped bool) []*game.Permanent {
+	resolved := make([]resolvedBattlefieldCard, 0, len(picks))
+	for _, pick := range picks {
+		card, ok := r.game.GetCardInstance(pick.cardID)
 		if !ok {
 			continue
 		}
-		controller := playerID
-		if env.Riders.UnderOwnerControl {
-			controller = card.Owner
+		controller, ok := r.chooseFromZoneEntryController(env, pick.chooser, card)
+		if !ok {
+			continue
 		}
 		if env.Riders.Reveal {
-			emitCardRevealEvent(r.game, r.obj, card.Owner, cardID, env.SourceZone)
+			emitCardRevealEvent(r.game, r.obj, card.Owner, pick.cardID, env.SourceZone)
 		}
 		resolved = append(resolved, resolvedBattlefieldCard{
 			card:       card,
 			fromZone:   env.SourceZone,
 			controller: controller,
 		})
-		r.chooseFromZonePublish(env, cardID)
+		r.chooseFromZonePublish(env, pick.cardID)
 	}
-	permanents := r.putResolvedCardsOnBattlefieldCollecting(resolved, nil, permanentCreationOptions{
+	if len(resolved) == 0 {
+		return nil
+	}
+	return r.putResolvedCardsOnBattlefieldCollecting(resolved, nil, permanentCreationOptions{
 		ForceTapped:        tapped,
 		Counters:           env.Riders.EntryCounters,
 		PutByAbilitySource: r.obj.SourceID,
 	})
-	if env.Riders.EntersAttacking && len(permanents) > 0 {
-		declareCreatedTokensAttacking(r.engine, r.game, playerID, permanents, r.agents, r.log)
+}
+
+// chooseFromZoneEntryController is the player under whose control a chosen card
+// enters the battlefield: the rider's EntryController, the card's owner, or by
+// default the player who chose it (CR 110.2a). ok is false when the named entry
+// controller cannot be resolved, and the card then stays where it is.
+func (r *effectResolver) chooseFromZoneEntryController(env game.ChooseFromZone, chooser game.PlayerID, card *game.CardInstance) (game.PlayerID, bool) {
+	switch {
+	case env.Riders.EntryController.Exists:
+		return r.resolvePlayer(env.Riders.EntryController.Val)
+	case env.Riders.UnderOwnerControl:
+		return card.Owner, true
+	default:
+		return chooser, true
 	}
-	return len(permanents) > 0
 }
 
 // chooseFromZonePublish remembers a moved card under the PublishLinked key when
@@ -437,16 +579,17 @@ func (r *effectResolver) chooseFromZoneLinkedKey(key game.LinkedKey) game.Linked
 // chooseFromZoneOptionalCard offers one optional pick from pool, returning the
 // chosen card and true, or ok=false when the player declines. A non-answering
 // agent defaults to the first pool card.
-func (r *effectResolver) chooseFromZoneOptionalCard(playerID game.PlayerID, pool []id.ID, prompt string) (id.ID, bool) {
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           playerID,
-		Prompt:           prompt,
-		Options:          chooseFromZoneOptions(r.game, pool),
-		MinChoices:       0,
-		MaxChoices:       1,
-		DefaultSelection: []int{0},
-	}, r.log)
+func (r *effectResolver) chooseFromZoneOptionalCard(playerID game.PlayerID, pool []id.ID, prompt string, env game.ChooseFromZone, earlier []game.ZoneChoiceDecision) (id.ID, bool) {
+	selected := r.chooseFromZoneDecide(env, game.ChoiceRequest{
+		Kind:                game.ChoiceResolution,
+		Player:              playerID,
+		Prompt:              prompt,
+		Options:             chooseFromZoneOptions(r.game, pool),
+		MinChoices:          0,
+		MaxChoices:          1,
+		DefaultSelection:    []int{0},
+		ZoneChoiceDecisions: earlier,
+	})
 	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(pool) {
 		return pool[selected[0]], true
 	}

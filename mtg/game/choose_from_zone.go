@@ -21,8 +21,25 @@ import (
 type ChooseFromZone struct {
 	// Player names the player who makes the choice. A card that enters the
 	// battlefield does so under this player's control unless Riders.UnderOwnerControl
-	// routes it to its own owner instead.
+	// routes it to its own owner instead. It must be unset when Choosers is set.
 	Player PlayerReference
+
+	// Choosers, when set, makes every player in the group choose from their own
+	// copy of SourceZone instead of a single Player ("each opponent chooses a
+	// creature card in their graveyard", Dredge the Mire; "each player puts a
+	// creature card from their graveyard onto the battlefield", Exhume). Members
+	// choose in APNAP order, each knowing the earlier public choices (CR 101.4,
+	// 101.4b; ChoiceRequest.ZoneChoiceDecisions); a member with no matching card
+	// chooses nothing. Only after every member has chosen do all chosen cards
+	// move, as one simultaneous event: a battlefield destination is one
+	// simultaneous entry, so the entering permanents see each other (CR
+	// 603.6a), and PublishLinked remembers the whole moved set. A member choosing
+	// from a hidden zone decides outside the public log, so the log never shows
+	// whether they had a matching card (CR 400.2). Each card enters the battlefield under its
+	// chooser's control (CR 110.2a) unless Riders.UnderOwnerControl or
+	// Riders.EntryController says otherwise. It excludes AllOwners, the split
+	// grouping, face-down entry, attacking entry and object-scoped publication.
+	Choosers opt.V[PlayerGroupReference]
 
 	// SourceZone is the zone whose cards are the candidate pool for the choice.
 	SourceZone zone.Type
@@ -203,6 +220,13 @@ type ChooseRiders struct {
 	// own owner's control rather than the choosing player's ("under their owners'
 	// control"). It is meaningful only for a battlefield Destination.
 	UnderOwnerControl bool
+
+	// EntryController, when set, makes each card entering the battlefield enter
+	// under this player's control instead of the choosing player's ("Put those
+	// cards onto the battlefield under your control", Dredge the Mire; CR
+	// 110.2a). It is meaningful only for a battlefield Destination and excludes
+	// UnderOwnerControl.
+	EntryController opt.V[PlayerReference]
 
 	// DestinationBottom routes each card to the bottom of an ordered destination
 	// zone (the library) instead of its default top placement.
