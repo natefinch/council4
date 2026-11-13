@@ -612,17 +612,24 @@ func handleReveal(r *effectResolver, prim game.Reveal) effectResolved {
 }
 
 func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effectResolved {
-	res := effectResolved{accepted: true}
+	entered := r.putOnBattlefieldEntered(prim)
+	if prim.EntryAttacking {
+		r.declareEnteredPermanentsAttacking(entered)
+	}
+	r.publishEnteredPermanents(prim.PublishLinked, entered...)
+	return effectResolved{accepted: true, succeeded: len(entered) > 0}
+}
+
+// putOnBattlefieldEntered moves the PutOnBattlefield sources onto the
+// battlefield and returns the permanents that entered.
+func (r *effectResolver) putOnBattlefieldEntered(prim game.PutOnBattlefield) []*game.Permanent {
 	producerSources := prim.Sources
 	if prim.Source.Valid() {
 		producerSources = []game.BattlefieldSource{prim.Source}
 	}
 	if len(producerSources) > 0 {
 		if _, originalProducer := producerSources[0].LinkedProducer(); originalProducer {
-			returned := r.returnOriginalProducerCards(prim)
-			res.succeeded = len(returned) > 0
-			r.publishEnteredPermanents(prim.PublishLinked, returned...)
-			return res
+			return r.returnOriginalProducerCards(prim)
 		}
 	}
 	var recipient game.PlayerReference
@@ -634,23 +641,22 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 		for _, source := range prim.Sources {
 			ref, ok := source.CardRef()
 			if !ok {
-				return res
+				return nil
 			}
 			refs = append(refs, ref)
 		}
-		res.succeeded = r.putReferencedCardsOnBattlefieldValue(
+		return r.putReferencedCardsOnBattlefieldCollecting(
 			refs,
 			recipient,
 			prim.ContinuousEffects,
 			battlefieldEntryOptions(prim),
 		)
-		return res
 	}
 	if card, ok := prim.Source.CardRef(); ok {
 		if len(prim.LinkedReturnZones) > 0 {
 			_, fromZone, resolved := resolveCardReference(r.game, r.obj, card)
 			if !resolved || !slices.Contains(prim.LinkedReturnZones, fromZone) {
-				return res
+				return nil
 			}
 		}
 		ownerControl := !prim.Recipient.Exists &&
@@ -662,31 +668,41 @@ func handlePutOnBattlefield(r *effectResolver, prim game.PutOnBattlefield) effec
 			battlefieldEntryOptions(prim),
 			ownerControl,
 		)
-		res.succeeded = succeeded
-		if succeeded {
-			r.publishEnteredPermanents(prim.PublishLinked, permanent)
+		if !succeeded {
+			return nil
 		}
-		return res
+		return []*game.Permanent{permanent}
 	}
-	if key, ok := prim.Source.LinkedKey(); ok {
-		permanent, entered := r.putLinkedCardOnBattlefieldValue(key, recipient, battlefieldEntryOptions(prim))
-		res.succeeded = entered
-		if entered {
-			r.publishEnteredPermanents(prim.PublishLinked, permanent)
-		}
-		if !res.succeeded {
-			var controllerOverride opt.V[game.PlayerID]
-			if prim.Recipient.Exists {
-				if controller, ok := r.recipientController(recipient); ok {
-					controllerOverride = opt.Val(controller)
-				}
-			}
-			returned := r.returnLinkedNonBattlefieldPermanents(string(key), prim.LinkedReturnZonesOrExile(), controllerOverride, battlefieldEntryOptions(prim))
-			res.succeeded = len(returned) > 0
-			r.publishEnteredPermanents(prim.PublishLinked, returned...)
+	key, ok := prim.Source.LinkedKey()
+	if !ok {
+		return nil
+	}
+	if permanent, entered := r.putLinkedCardOnBattlefieldValue(key, recipient, battlefieldEntryOptions(prim)); entered {
+		return []*game.Permanent{permanent}
+	}
+	var controllerOverride opt.V[game.PlayerID]
+	if prim.Recipient.Exists {
+		if controller, ok := r.recipientController(recipient); ok {
+			controllerOverride = opt.Val(controller)
 		}
 	}
-	return res
+	return r.returnLinkedNonBattlefieldPermanents(string(key), prim.LinkedReturnZonesOrExile(), controllerOverride, battlefieldEntryOptions(prim))
+}
+
+// declareEnteredPermanentsAttacking puts each permanent that just entered the
+// battlefield into combat attacking, through the same entry-attack choice as a
+// created attacking token (CR 508.4). Each one's controller chooses its defender;
+// a noncreature, or a creature not controlled by the attacking player or entering
+// outside combat, stays on the battlefield without attacking (CR 506.3a-b). No
+// attack event is emitted, so it never "attacked".
+func (r *effectResolver) declareEnteredPermanentsAttacking(permanents []*game.Permanent) {
+	for _, permanent := range permanents {
+		if permanent == nil {
+			continue
+		}
+		controller := effectiveController(r.game, permanent)
+		declareCreatedTokensAttacking(r.engine, r.game, controller, []*game.Permanent{permanent}, r.agents, r.log)
+	}
 }
 
 // tokenAmountUnset reports whether a CreateToken's Amount is the zero/unset
@@ -3724,12 +3740,12 @@ type preparedResolvedBattlefieldCard struct {
 	options     permanentCreationOptions
 }
 
-func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
+func (r *effectResolver) putReferencedCardsOnBattlefieldCollecting(
 	refs []game.CardReference,
 	recipientRef game.PlayerReference,
 	continuousEffects []game.ContinuousEffect,
 	options permanentCreationOptions,
-) bool {
+) []*game.Permanent {
 	resolved := make([]resolvedBattlefieldCard, 0, len(refs))
 	for _, ref := range refs {
 		cardID, fromZone, ok := resolveCardReference(r.game, r.obj, ref)
@@ -3755,7 +3771,7 @@ func (r *effectResolver) putReferencedCardsOnBattlefieldValue(
 			controller: controller,
 		})
 	}
-	return r.putResolvedCardsOnBattlefieldValue(resolved, continuousEffects, options)
+	return r.putResolvedCardsOnBattlefieldCollecting(resolved, continuousEffects, options)
 }
 
 // putResolvedCardsOnBattlefieldValue moves each already-resolved card to the
