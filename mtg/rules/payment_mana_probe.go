@@ -196,7 +196,7 @@ func (h hiddenState) seen(g *game.Game, viewer game.PlayerID) bool {
 	}
 	for _, event := range g.Events[h.events:] {
 		switch event.Kind {
-		case game.EventCardRevealed, game.EventCardDrawn, game.EventScry, game.EventSurveil, game.EventLibrarySearched:
+		case game.EventCardRevealed, game.EventCardDrawn, game.EventScry, game.EventSurveil, game.EventClashed, game.EventLibrarySearched:
 			return true
 		}
 	}

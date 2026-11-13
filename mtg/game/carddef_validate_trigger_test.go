@@ -655,6 +655,26 @@ func TestValidateCardDefRejectsHistoricFilterOutsideSpellCastTrigger(t *testing.
 	}
 }
 
+func TestValidateCardDefRejectsClashWonFilterOutsideClashTrigger(t *testing.T) {
+	card := &CardDef{CardFace: CardFace{
+		Name:       "Invalid Clash Watcher",
+		OracleText: "Whenever you scry, draw a card.",
+		TriggeredAbilities: []TriggeredAbility{{
+			Content: Mode{}.Ability(),
+			Trigger: TriggerCondition{Pattern: TriggerPattern{
+				Event:           EventScry,
+				Player:          TriggerPlayerYou,
+				RequireClashWon: true,
+			}},
+		}},
+	}}
+
+	issues := ValidateCardDef(card)
+	if !hasCardDefIssue(issues, CardDefIssueInvalidSelection) {
+		t.Fatalf("issues = %+v, want invalid-selection issue", issues)
+	}
+}
+
 func TestValidateCardDefRejectsContradictoryColorCardinalitySelection(t *testing.T) {
 	tests := []struct {
 		name      string

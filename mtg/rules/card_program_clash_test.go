@@ -55,8 +55,20 @@ type clashFixture struct {
 func newClashFixture(t *testing.T) *clashFixture {
 	t.Helper()
 	results := &[]cardprogram.ClashResult{}
+	catalog, err := cardprogram.NewCatalog(clashTestPrograms(results))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return &clashFixture{
+		t: t, g: game.NewGame([game.NumPlayers]game.PlayerConfig{}),
+		engine: NewEngineWithPrograms(nil, catalog), results: results,
+	}
+}
+
+// clashTestPrograms are the clashing test programs, recording each result.
+func clashTestPrograms(results *[]cardprogram.ClashResult) []cardprogram.Program {
 	record := func(result cardprogram.ClashResult) { *results = append(*results, result) }
-	catalog, err := cardprogram.NewCatalog([]cardprogram.Program{
+	return []cardprogram.Program{
 		{
 			Reference: researchTheDeepTestReference,
 			Resolve: func(ctx cardprogram.Context) error {
@@ -116,13 +128,6 @@ func newClashFixture(t *testing.T) *clashFixture {
 				return err
 			},
 		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return &clashFixture{
-		t: t, g: game.NewGame([game.NumPlayers]game.PlayerConfig{}),
-		engine: NewEngineWithPrograms(nil, catalog), results: results,
 	}
 }
 

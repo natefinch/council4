@@ -161,12 +161,19 @@ const (
 	// Simultaneous removals from several permanents or of several kinds share
 	// a SimultaneousID.
 	EventCountersRemoved
+	// EventClashed marks a player having clashed (CR 701.30). It is emitted
+	// once per clashing player only after the whole clash ends, so "whenever
+	// you clash" abilities trigger after the clash (CR 701.30b-d). Player and
+	// Controller are the clashing player, ClashOpponent is the other player in
+	// that clash, and ClashWon reports whether Player won it (CR 701.30d).
+	// Both players' events from one clash share a SimultaneousID.
+	EventClashed
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventCountersRemoved) + 1
+const EventKindCount = int(EventClashed) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
@@ -458,6 +465,13 @@ type Event struct {
 	// Amount is the number of damage dealt, cards drawn, cards discarded,
 	// counters added, or cards instructed to be scried or surveilled.
 	Amount int
+
+	// ClashOpponent is, for EventClashed, the other player who clashed with
+	// Player in the same clash (CR 701.30b).
+	ClashOpponent PlayerID
+	// ClashWon reports, for EventClashed, whether Player won the clash
+	// (CR 701.30d).
+	ClashWon bool
 
 	// XValue is the value of X associated with an event-producing instruction.
 	// It is distinct from Amount when replacement effects change the result.
