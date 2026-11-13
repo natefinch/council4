@@ -9,11 +9,13 @@ const (
 	damageRecipientGroup
 	damageRecipientPlayerGroup
 	damageRecipientAttackedDefender
+	damageRecipientPermanentsAndPlayers
 )
 
 // DamageRecipient is a typed union identifying who receives damage.
 // Use ObjectDamageRecipient, PlayerDamageRecipient, AnyTargetDamageRecipient,
-// GroupDamageRecipient, or PlayerGroupDamageRecipient to construct.
+// GroupDamageRecipient, PlayerGroupDamageRecipient, or
+// PermanentsAndPlayersDamageRecipient to construct.
 type DamageRecipient struct {
 	set         bool
 	kind        damageRecipientKind
@@ -55,6 +57,17 @@ func PlayerGroupDamageRecipient(group PlayerGroupReference) DamageRecipient {
 	return DamageRecipient{set: true, kind: damageRecipientPlayerGroup, playerGroup: group}
 }
 
+// PermanentsAndPlayersDamageRecipient creates a recipient for one instruction
+// that deals its amount to each member of a permanent group and each member of
+// a player group ("deals X damage to each creature and each player",
+// Earthquake, Sickening Dreams). Every recipient is dealt damage in the same
+// simultaneous damage event (CR 120.4, 608.2f), unlike two instructions that
+// deal to the group and the players one after the other.
+func PermanentsAndPlayersDamageRecipient(permanents GroupReference, players PlayerGroupReference) DamageRecipient {
+	g := permanents
+	return DamageRecipient{set: true, kind: damageRecipientPermanentsAndPlayers, group: &g, playerGroup: players}
+}
+
 // AttackedDefenderDamageRecipient creates a recipient that resolves to the
 // player, planeswalker, or battle that the resolving ability's triggering
 // attacker is attacking ("the player or planeswalker it's attacking"). Unlike
@@ -87,6 +100,8 @@ func (r DamageRecipient) Valid() bool {
 		return len(r.playerGroup.Validate()) == 0
 	case damageRecipientAttackedDefender:
 		return true
+	case damageRecipientPermanentsAndPlayers:
+		return r.group != nil && r.group.Valid() && len(r.playerGroup.Validate()) == 0
 	default:
 		return false
 	}
@@ -122,6 +137,15 @@ func (r DamageRecipient) PlayerGroupReference() (PlayerGroupReference, bool) {
 		return PlayerGroupReference{}, false
 	}
 	return r.playerGroup, true
+}
+
+// PermanentsAndPlayers returns the permanent group and player group when this
+// recipient addresses both in one simultaneous damage event.
+func (r DamageRecipient) PermanentsAndPlayers() (GroupReference, PlayerGroupReference, bool) {
+	if !r.Valid() || r.kind != damageRecipientPermanentsAndPlayers {
+		return GroupReference{}, PlayerGroupReference{}, false
+	}
+	return *r.group, r.playerGroup, true
 }
 
 // IsAttackedDefender reports whether this recipient addresses the player,
