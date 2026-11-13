@@ -2811,11 +2811,31 @@ type CreateReplacement struct {
 // the same event is dealt. AndControlledCreatures requires Player and is
 // mutually exclusive with BySource.
 //
-// RedirectPreventedToSourceController makes a one-shot shield deal the amount it
-// prevents to the prevented source's controller, with the shield's own source as
-// the damage source ("If damage is prevented this way, Deflecting Palm deals that
-// much damage to that source's controller."). It is only valid alongside OneShot
-// and All (the whole prevented event is redirected).
+// PreventHalfRoundedDown makes a one-shot shield prevent half of the chosen
+// source's damage event to its recipient, rounded down, instead of all of it
+// ("prevent half that damage, rounded down", Dark Sphere). When half rounds
+// down to zero the shield prevents no damage, so it is not used up and applies
+// to the source's next damage instead (CR 609.7b). It requires OneShot, a
+// single recipient (Object, Player or AnyTarget, without
+// AndControlledCreatures) and no Redirect.
+//
+// PreventedRiders are additional effects of a one-shot shield that use the
+// total damage it prevented in the damage event ("You gain life equal to the
+// damage prevented this way.", "If damage is prevented this way, Deflecting
+// Palm deals that much damage to that source's controller."). They happen once,
+// immediately after that damage event (CR 615.5), and not at all when nothing
+// was prevented. RiderSourceColors, when non-empty, limits the riders to damage
+// from a source of one of those colors as the damage is prevented ("If damage
+// from a red source is prevented this way"). RidersReflexive makes the riders
+// one reflexive triggered ability controlled by the shield's controller that
+// triggers when damage is prevented this way and is put on the stack the next
+// time a player would receive priority (CR 603.12, "When damage is prevented
+// this way, ..."). "That source's controller" is the prevented source's
+// controller when the rider happens, or when the reflexive trigger resolves,
+// using last-known information once that source has left its zone.
+// PreventedDamageRiderControllerDraws requires RidersReflexive and
+// PreventedDamageRiderControllerExilesLibraryTop excludes it. Riders require
+// OneShot and no Redirect.
 //
 // Redirect turns a one-shot shield into a redirection replacement (CR 614.9)
 // rather than prevention: the chosen source's in-scope damage is dealt by the
@@ -2823,26 +2843,53 @@ type CreateReplacement struct {
 // its source's deathtouch, lifelink and infect. RedirectObject names the
 // destination permanent of DamageRedirectToObject, fixed as the shield is
 // created ("this creature", "target creature you control"). Redirect requires
-// OneShot and All and excludes RedirectPreventedToSourceController and
+// OneShot and All and excludes PreventHalfRoundedDown, PreventedRiders and
 // BySource.
 type PreventDamage struct {
-	Amount                              Quantity
-	Object                              ObjectReference
-	Player                              PlayerReference
-	AnyTarget                           DamageRecipient
-	SourceColors                        []color.Color
-	SourceTypes                         []types.Card
-	SourceColorFromEntryChoice          bool
-	All                                 bool
-	CombatOnly                          bool
-	BySource                            bool
-	Global                              bool
-	AndControlledCreatures              bool
-	OneShot                             bool
-	RedirectPreventedToSourceController bool
-	Redirect                            DamageRedirect
-	RedirectObject                      ObjectReference
+	Amount                     Quantity
+	Object                     ObjectReference
+	Player                     PlayerReference
+	AnyTarget                  DamageRecipient
+	SourceColors               []color.Color
+	SourceTypes                []types.Card
+	SourceColorFromEntryChoice bool
+	All                        bool
+	CombatOnly                 bool
+	BySource                   bool
+	Global                     bool
+	AndControlledCreatures     bool
+	OneShot                    bool
+	PreventHalfRoundedDown     bool
+	PreventedRiders            []PreventedDamageRider
+	RiderSourceColors          []color.Color
+	RidersReflexive            bool
+	Redirect                   DamageRedirect
+	RedirectObject             ObjectReference
 }
+
+// PreventedDamageRider is an additional effect of a one-shot prevention shield
+// that uses the amount of damage the shield prevented ("that much", "that
+// many", "equal to the damage prevented this way").
+type PreventedDamageRider uint8
+
+// PreventedDamageRider values name what the prevented amount does.
+const (
+	PreventedDamageRiderNone PreventedDamageRider = iota
+	// PreventedDamageRiderControllerGainsLife has the shield's controller gain
+	// that much life (Reverse Damage, Cho-Arrim Alchemist, Shadowbane).
+	PreventedDamageRiderControllerGainsLife
+	// PreventedDamageRiderControllerExilesLibraryTop exiles that many cards
+	// from the top of the shield controller's library, or all of them when
+	// the library is smaller (Bone Mask).
+	PreventedDamageRiderControllerExilesLibraryTop
+	// PreventedDamageRiderDamageSourceController has the shield's own source
+	// deal that much damage to the prevented source's controller (Deflecting
+	// Palm, Honorable Passage, New Way Forward).
+	PreventedDamageRiderDamageSourceController
+	// PreventedDamageRiderControllerDraws has the shield's controller draw that
+	// many cards (New Way Forward).
+	PreventedDamageRiderControllerDraws
+)
 
 // DamageRedirect is the outcome of a one-shot chosen-source shield that
 // replaces damage instead of preventing it.

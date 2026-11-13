@@ -69,11 +69,20 @@ type ConditionalCounterPlacement struct {
 // SpentScope records the scope whose damage the shield has begun preventing,
 // so it applies only to that scope's remaining damage until the scope ends.
 //
-// When RedirectToSourceController is set, a one-shot shield deals the amount it
-// prevents to the prevented source's controller, as damage from the object
-// identified by RedirectSourceID and RedirectSourceObjectID controlled by
-// Controller ("If damage is prevented this way, Deflecting Palm deals that much
-// damage to that source's controller.").
+// HalfRoundedDown makes a one-shot shield prevent half of its damage event,
+// rounded down; one that rounds down to nothing prevents no damage and so is
+// not used up (CR 609.7b). PreventedRiders use the total the shield prevented in its
+// damage event once, immediately after that event (CR 615.5), or as one
+// reflexive trigger when RidersReflexive is set (CR 603.12); a rider that deals
+// damage does so from the object identified by RedirectSourceID and
+// RedirectSourceObjectID controlled by Controller. RiderSourceColors limits
+// the riders to damage from a source of one of those colors as it is
+// prevented. RiderAmount accumulates the prevented amount until the riders
+// happen. RiderSourceObjectID identifies the prevented source, whose
+// controller "that source's controller" names when the rider happens (or, for
+// a reflexive rider, when its trigger resolves), using last-known information
+// once it has left its zone; RiderPlayer is that source's controller as the
+// damage was prevented, used only when the source cannot be found.
 //
 // Redirect makes a one-shot shield a redirection replacement (CR 614.9) that
 // deals the chosen source's in-scope damage to another recipient instead of
@@ -99,18 +108,26 @@ type PreventionShield struct {
 	RedirectPermanentID    id.ID
 	// SourceColors and SourceTypes are never mutated in place, so game clones
 	// share them.
-	SourceColors               []color.Color
-	SourceTypes                []types.Card
-	Amount                     int
-	All                        bool
-	CombatOnly                 bool
-	Global                     bool
-	PlayerCreatures            bool
-	OneShot                    bool
-	RedirectToSourceController bool
-	SpentScope                 id.ID
-	Duration                   EffectDuration
-	CreatedTurn                int
+	SourceColors    []color.Color
+	SourceTypes     []types.Card
+	Amount          int
+	All             bool
+	CombatOnly      bool
+	Global          bool
+	PlayerCreatures bool
+	OneShot         bool
+	HalfRoundedDown bool
+	// PreventedRiders and RiderSourceColors are never mutated in place, so
+	// game clones share them.
+	PreventedRiders     []PreventedDamageRider
+	RiderSourceColors   []color.Color
+	RidersReflexive     bool
+	RiderAmount         int
+	RiderSourceObjectID id.ID
+	RiderPlayer         PlayerID
+	SpentScope          id.ID
+	Duration            EffectDuration
+	CreatedTurn         int
 	// SourceID is the card instance that created this shield, captured when the
 	// shield is set up so a later effect of the same card can find its shields
 	// after the creating spell has left the stack. It backs the "for each 1

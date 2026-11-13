@@ -316,7 +316,7 @@ func addPreventionSourceSpell(g *game.Game, owner game.PlayerID, name string) *g
 
 func deflectingPalmShield() game.PreventDamage {
 	prim := oneShotShield(nil, nil)
-	prim.RedirectPreventedToSourceController = true
+	prim.PreventedRiders = []game.PreventedDamageRider{game.PreventedDamageRiderDamageSourceController}
 	return prim
 }
 

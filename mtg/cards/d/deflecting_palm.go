@@ -33,10 +33,10 @@ func newDeflectingPalm() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.PreventDamage{
-							Player:                              game.ControllerReference(),
-							All:                                 true,
-							OneShot:                             true,
-							RedirectPreventedToSourceController: true,
+							Player:          game.ControllerReference(),
+							All:             true,
+							OneShot:         true,
+							PreventedRiders: []game.PreventedDamageRider{game.PreventedDamageRiderDamageSourceController},
 						},
 					},
 				},
