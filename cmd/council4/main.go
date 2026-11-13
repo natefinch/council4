@@ -482,7 +482,7 @@ func formatActionLog(g *game.Game, logged *rules.ActionLog) string {
 			}
 			return fmt.Sprintf("cast spell #%d", cast.CardID)
 		}
-		if payloadOK && cast.Face == game.FaceFused {
+		if payloadOK && (cast.Face == game.FaceFused || cast.Face == game.FacePrototype) {
 			return fmt.Sprintf("cast %q", card.Def.FaceLabel(cast.Face))
 		}
 		return fmt.Sprintf("cast %q", card.Def.Name)

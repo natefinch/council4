@@ -42,6 +42,12 @@ const (
 	// with fuse cast together from hand with their characteristics combined.
 	// FaceIndexes never lists it; CanFuse reports whether a card offers it.
 	FaceFused
+	// FacePrototype is not a printed face. It is the cast choice and the stack
+	// and battlefield view of a card cast prototyped (CR 702.160a, 719.3): the
+	// front face with its prototype mana cost, colors, power and toughness.
+	// FaceIndexes never lists it; CanCastPrototyped reports whether a card
+	// offers it. The card's physical face is still its front face.
+	FacePrototype
 )
 
 // PT represents a creature's power or toughness. It can be a numeric
@@ -103,6 +109,11 @@ type CardFace struct {
 	// Overload replaces this face's normal spell targets and instructions when
 	// the spell is cast for its overload cost.
 	Overload opt.V[OverloadAbility]
+
+	// Prototype is the face's prototype profile (CR 702.160a, 719.1). It is a
+	// copiable value (CR 719.2a); its characteristics apply only to a spell
+	// cast prototyped and to the permanent that spell becomes.
+	Prototype opt.V[PrototypeProfile]
 
 	Colors           []color.Color
 	Supertypes       []types.Super
@@ -205,6 +216,12 @@ func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
 			return CardFace{}, false
 		}
 		return face.clone(), true
+	case FacePrototype:
+		face, ok := c.prototypeFace()
+		if !ok {
+			return CardFace{}, false
+		}
+		return face.clone(), true
 	default:
 		return CardFace{}, false
 	}
@@ -212,8 +229,9 @@ func (c *CardDef) Face(index FaceIndex) (CardFace, bool) {
 
 // FaceView returns a read-only pointer to one printed face without cloning it.
 // Card definitions are immutable, so rules queries can safely retain this
-// pointer. Callers that need an owned value must use Face. FaceFused has no
-// printed storage, so its view is a freshly combined face on every call.
+// pointer. Callers that need an owned value must use Face. FaceFused and
+// FacePrototype have no printed storage, so their views are freshly derived
+// faces on every call.
 func (c *CardDef) FaceView(index FaceIndex) (*CardFace, bool) {
 	switch index {
 	case FaceFront:
@@ -224,6 +242,12 @@ func (c *CardDef) FaceView(index FaceIndex) (*CardFace, bool) {
 		return &c.Alternate.Val, c.Alternate.Exists
 	case FaceFused:
 		face, ok := c.fusedFace()
+		if !ok {
+			return nil, false
+		}
+		return &face, true
+	case FacePrototype:
+		face, ok := c.prototypeFace()
 		if !ok {
 			return nil, false
 		}
@@ -285,6 +309,9 @@ func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 	if index == FaceFused {
 		return c.CanFuse()
 	}
+	if index == FacePrototype {
+		return c.CanCastPrototyped() && !c.HasType(types.Land)
+	}
 	face, ok := c.FaceView(index)
 	if !ok || face.HasType(types.Land) {
 		return false
@@ -322,12 +349,18 @@ func (c *CardDef) CanChooseLandFace(index FaceIndex) bool {
 }
 
 // LegalCastFaces returns all faces that may be chosen while casting this card.
+// A prototype card also offers FacePrototype, which may be chosen from any
+// zone the card can be cast from. FaceFused is zone-restricted and is not
+// listed here.
 func (c *CardDef) LegalCastFaces() []FaceIndex {
 	var faces []FaceIndex
 	for _, face := range c.FaceIndexes() {
 		if c.CanChooseCastFace(face) {
 			faces = append(faces, face)
 		}
+	}
+	if c.CanChooseCastFace(FacePrototype) {
+		faces = append(faces, FacePrototype)
 	}
 	return faces
 }
@@ -733,6 +766,7 @@ func (f *CardFace) clone() CardFace {
 		CanBeCommander:        f.CanBeCommander,
 		SpellAbility:          cloneOptionalAbilityContent(f.SpellAbility),
 		Overload:              cloneOverload(f.Overload),
+		Prototype:             clonePrototype(f.Prototype),
 		ActivatedAbilities:    append([]ActivatedAbility(nil), f.ActivatedAbilities...),
 		ManaAbilities:         append([]ManaAbility(nil), f.ManaAbilities...),
 		LoyaltyAbilities:      append([]LoyaltyAbility(nil), f.LoyaltyAbilities...),
@@ -743,6 +777,15 @@ func (f *CardFace) clone() CardFace {
 		ImplementationID:      f.ImplementationID,
 		OracleText:            f.OracleText,
 	}
+}
+
+func clonePrototype(profile opt.V[PrototypeProfile]) opt.V[PrototypeProfile] {
+	if !profile.Exists {
+		return opt.V[PrototypeProfile]{}
+	}
+	cloned := profile.Val
+	cloned.ManaCost = slices.Clone(profile.Val.ManaCost)
+	return opt.Val(cloned)
 }
 
 func cloneOverload(overload opt.V[OverloadAbility]) opt.V[OverloadAbility] {
