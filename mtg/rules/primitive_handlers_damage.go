@@ -193,7 +193,6 @@ func (r *effectResolver) damageDivided(res effectResolved, source effectDamageSo
 				continue
 			}
 			dealt := source.dealPermanent(r.game, permanent, amount)
-			applyDamageSourceDeathtouch(source, permanent, dealt)
 			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		case game.TargetPlayer:
@@ -240,7 +239,6 @@ func (r *effectResolver) damageEachTarget(res effectResolved, source effectDamag
 				continue
 			}
 			dealt := source.dealPermanent(r.game, permanent, amount)
-			applyDamageSourceDeathtouch(source, permanent, dealt)
 			total += dealt
 			dealtAny = dealtAny || dealt > 0
 		case game.TargetPlayer:
@@ -395,7 +393,7 @@ func (r *effectResolver) damageReferencedPermanent(res effectResolved, source ef
 		lethalRemaining = lethalDamageRemainingFromSource(r.game, source.permanent, permanent)
 	}
 	dealt := source.dealPermanent(r.game, permanent, res.amount)
-	applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
+	applyDamageSourceLifelink(r.game, source, dealt)
 	res.excessDamage = max(0, dealt-lethalRemaining)
 	res.amount = typedDamageResultAmount(resultKind, dealt, res.excessDamage)
 	res.succeeded = dealt > 0 && (resultKind != game.EffectResultAmountExcessDamage || res.excessDamage > 0)
@@ -434,7 +432,6 @@ func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, so
 	dealtToPermanent := 0
 	if creatureAmount > 0 {
 		dealtToPermanent = source.dealPermanent(r.game, permanent, creatureAmount)
-		applyDamageSourceDeathtouch(source, permanent, dealtToPermanent)
 	}
 	dealtToPlayer := 0
 	if excessAmount > 0 {
@@ -513,7 +510,8 @@ func handlePreventDamage(r *effectResolver, prim game.PreventDamage) effectResol
 			if !ok {
 				return false
 			}
-			chosen, ok := r.engine.chooseOneShotPreventionSource(r.game, r.agents, r.log, r.obj, r.obj.Controller, colors, prim.SourceTypes)
+			chosen, ok := r.engine.chooseOneShotPreventionSource(r.game, r.agents, r.log, r.obj, r.obj.Controller, colors, prim.SourceTypes,
+				prim.Redirect != game.DamageRedirectNone)
 			if !ok {
 				return false
 			}

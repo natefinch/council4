@@ -34,7 +34,7 @@ func (r *effectResolver) damageAttackedDefender(res effectResolved, source effec
 		return res
 	}
 	dealt := source.dealPermanent(r.game, permanent, res.amount)
-	applyDamageSourceKeywordEffects(r.game, source, permanent, dealt)
+	applyDamageSourceLifelink(r.game, source, dealt)
 	res.amount = typedDamageResultAmount(resultKind, dealt, 0)
 	res.succeeded = dealt > 0
 	return res

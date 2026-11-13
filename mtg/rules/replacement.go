@@ -2419,6 +2419,7 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		PlayerCreatures:            prim.AndControlledCreatures,
 		OneShot:                    prim.OneShot,
 		RedirectToSourceController: prim.RedirectPreventedToSourceController,
+		Redirect:                   prim.Redirect,
 		SourceColors:               append([]color.Color(nil), prim.SourceColors...),
 		SourceTypes:                append([]types.Card(nil), prim.SourceTypes...),
 		Duration:                   effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
@@ -2429,12 +2430,25 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 	// and read its Prevented tally after the creating spell has left the stack.
 	var sourceObjectID id.ID
 	shield.SourceID, sourceObjectID = damageSourceIDs(g, obj)
-	if prim.RedirectPreventedToSourceController {
+	if prim.RedirectPreventedToSourceController || prim.Redirect == game.DamageRedirectAlsoToDamageSourceController {
 		// The redirect deals damage as the shield's own source (the spell that
 		// created it), which has left the stack by the time the shield prevents,
 		// so capture its identity now.
 		shield.RedirectSourceID = obj.SourceID
 		shield.RedirectSourceObjectID = sourceObjectID
+	}
+	switch prim.Redirect {
+	case game.DamageRedirectToController:
+		shield.RedirectPlayer = obj.Controller
+	case game.DamageRedirectToObject:
+		// The destination is fixed as the shield is created; one that is not
+		// on the battlefield now could never be dealt the damage (CR 614.9).
+		destination, ok := resolveObjectReference(g, obj, prim.RedirectObject)
+		if !ok || destination.permanent == nil {
+			return false
+		}
+		shield.RedirectPermanentID = destination.permanent.ObjectID
+	default:
 	}
 	add := func() bool {
 		if bind != nil && !bind(&shield) {
@@ -2497,6 +2511,9 @@ func preventionShieldApplies(g *game.Game, shield game.PreventionShield, event d
 	if shield.SpentScope != 0 && shield.SpentScope != event.preventionScope {
 		return false
 	}
+	if !damageRedirectDestinationAvailable(g, shield, event) {
+		return false
+	}
 	if shield.Global {
 		return true
 	}
@@ -2511,6 +2528,31 @@ func preventionShieldApplies(g *game.Game, shield game.PreventionShield, event d
 		return shield.PermanentID == event.permanent.ObjectID
 	}
 	return shield.PermanentID == 0 && shield.Player == event.player
+}
+
+// damageRedirectDestinationAvailable reports whether a redirecting shield can
+// deal the event's damage to its destination now. A redirection to a permanent
+// that has left the battlefield or is no longer a creature, planeswalker or
+// battle, or to a player who has left the game, does nothing (CR 614.9), so the
+// shield replaces no damage and is not used up (CR 609.7b).
+func damageRedirectDestinationAvailable(g *game.Game, shield game.PreventionShield, event damageEvent) bool {
+	switch shield.Redirect {
+	case game.DamageRedirectToController:
+		return isPlayerAlive(g, shield.RedirectPlayer)
+	case game.DamageRedirectToDamageSourceController:
+		return isPlayerAlive(g, event.controller)
+	case game.DamageRedirectToObject:
+		permanent, ok := permanentByObjectID(g, shield.RedirectPermanentID)
+		return ok && activeBattlefieldPermanent(permanent) && damageRedirectPermanentType(g, permanent)
+	default:
+		return true
+	}
+}
+
+func damageRedirectPermanentType(g *game.Game, permanent *game.Permanent) bool {
+	return permanentHasType(g, permanent, types.Creature) ||
+		permanentHasType(g, permanent, types.Planeswalker) ||
+		permanentHasType(g, permanent, types.Battle)
 }
 
 // beginOneShotPreventionScope opens a damage event scope for an instruction

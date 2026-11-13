@@ -36,6 +36,9 @@ type damageBatch struct {
 	// outside a wider damage event scope; they stay applicable to the batch's
 	// other recipients and are used up when the batch's modifications end.
 	spentOneShots []int
+	// simultaneousID groups the batch's damage events; a redirection that adds
+	// a damage event to the batch allocates one when the batch had none.
+	simultaneousID id.ID
 }
 
 type damageModifierKind uint8
@@ -58,8 +61,9 @@ type damageModifier struct {
 
 func prepareDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID) *damageBatch {
 	batch := &damageBatch{
-		game:         g,
-		usedCounters: make(map[id.ID]bool),
+		game:           g,
+		usedCounters:   make(map[id.ID]bool),
+		simultaneousID: simultaneousID,
 	}
 	for _, event := range events {
 		event.amount = max(0, event.amount)
@@ -131,11 +135,15 @@ func (batch *damageBatch) modifiers() []damageModifier {
 		if preventable && damageEventProtected(batch.game, event) {
 			result = append(result, damageModifier{kind: damageProtection, member: index, label: "protection"})
 		}
-		if preventable {
-			for _, shield := range applicablePreventionShieldIndices(batch.game, event) {
-				if !member.shields[shield] {
-					result = append(result, damageModifier{kind: damageShield, member: index, shield: shield, label: "prevention shield"})
-				}
+		// Unpreventable damage can still be redirected (CR 615.12, 614.9).
+		for _, shield := range applicablePreventionShieldIndices(batch.game, event) {
+			if member.shields[shield] {
+				continue
+			}
+			if batch.game.PreventionShields[shield].Redirect != game.DamageRedirectNone {
+				result = append(result, damageModifier{kind: damageShield, member: index, shield: shield, label: "damage redirection"})
+			} else if preventable {
+				result = append(result, damageModifier{kind: damageShield, member: index, shield: shield, label: "prevention shield"})
 			}
 		}
 		if event.permanent != nil && event.permanent.Counters.Get(counter.Shield) > 0 &&
@@ -280,6 +288,10 @@ func (batch *damageBatch) apply(modifier damageModifier) {
 
 func (batch *damageBatch) applyShield(modifier damageModifier) {
 	shield := &batch.game.PreventionShields[modifier.shield]
+	if shield.Redirect != game.DamageRedirectNone {
+		batch.applyRedirectShield(modifier)
+		return
+	}
 	var indices []int
 	total := 0
 	recipient := batch.members[modifier.member].event
@@ -343,6 +355,78 @@ func (batch *damageBatch) applyShield(modifier damageModifier) {
 			batch.spentOneShots = append(batch.spentOneShots, modifier.shield)
 		}
 	}
+}
+
+// applyRedirectShield applies a one-shot redirection shield to all of its chosen
+// source's damage to the modifier's recipient in this batch (CR 614.9). Each
+// redirected damage event keeps its source, so it is still combat damage when
+// it was, and remains subject to replacement and prevention effects that apply
+// to its new recipient (CR 616.2), but never to this shield again (CR 614.5).
+func (batch *damageBatch) applyRedirectShield(modifier damageModifier) {
+	g := batch.game
+	shield := &g.PreventionShields[modifier.shield]
+	recipient := batch.members[modifier.member].event
+	var indices []int
+	for index, member := range batch.members {
+		if member.event.amount > 0 && !member.shields[modifier.shield] && sameDamageRecipient(recipient, member.event) &&
+			preventionShieldApplies(g, *shield, member.event) && preventionShieldSourceMatches(g, shield, member.event) {
+			indices = append(indices, index)
+		}
+	}
+	for _, index := range indices {
+		member := &batch.members[index]
+		member.shields[modifier.shield] = true
+		switch shield.Redirect {
+		case game.DamageRedirectToController:
+			member.event.permanent, member.event.player = nil, shield.RedirectPlayer
+		case game.DamageRedirectToDamageSourceController:
+			member.event.permanent, member.event.player = nil, member.event.controller
+		case game.DamageRedirectToObject:
+			permanent, ok := permanentByObjectID(g, shield.RedirectPermanentID)
+			if !ok {
+				panic("applicable damage redirection destination disappeared")
+			}
+			member.event.permanent, member.event.player = permanent, 0
+		case game.DamageRedirectAlsoToDamageSourceController:
+			// The original damage is still dealt; the shield's own source deals
+			// that much damage to the chosen source's controller in the same
+			// replaced event.
+			batch.addSimultaneousDamage(damageEvent{
+				sourceID: shield.RedirectSourceID, sourceObjectID: shield.RedirectSourceObjectID,
+				controller: shield.Controller, player: member.event.controller, amount: member.event.amount,
+			})
+			continue
+		default:
+			panic("unknown damage redirect")
+		}
+		member.redirected = true
+	}
+	if len(indices) == 0 {
+		return
+	}
+	if scope := recipient.preventionScope; scope != 0 {
+		shield.SpentScope = scope
+	} else if !slices.Contains(batch.spentOneShots, modifier.shield) {
+		batch.spentOneShots = append(batch.spentOneShots, modifier.shield)
+	}
+}
+
+// addSimultaneousDamage adds a damage event a replacement creates to the batch,
+// dealt simultaneously with the event it replaced.
+func (batch *damageBatch) addSimultaneousDamage(event damageEvent) {
+	if event.amount <= 0 || !isPlayerAlive(batch.game, event.player) {
+		return
+	}
+	if batch.simultaneousID == 0 {
+		batch.simultaneousID = batch.game.IDGen.Next()
+		for index := range batch.members {
+			batch.members[index].event.simultaneousID = batch.simultaneousID
+		}
+	}
+	event.simultaneousID = batch.simultaneousID
+	batch.members = append(batch.members, pendingDamage{
+		event: event, applied: make(map[id.ID]bool), shields: make(map[int]bool),
+	})
 }
 
 func damageSourceOption(g *game.Game, event damageEvent, index int) game.ChoiceOption {
@@ -440,7 +524,7 @@ func prepareDamageResult(g *game.Game, member pendingDamage, combat bool) prepar
 	default:
 	}
 	result.event = prepareEvent(g, result.event)
-	if combat {
+	if combat && event.combatDamage {
 		source, ok := permanentByObjectID(g, event.sourceObjectID)
 		if !ok {
 			panic("combat damage source disappeared before its simultaneous event")
@@ -463,8 +547,12 @@ func prepareDamageResult(g *game.Game, member pendingDamage, combat bool) prepar
 	return result
 }
 
+// resolveDamageBatch deals events as one simultaneous damage event and reports
+// each event's result in order. Damage events a replacement added to the batch
+// are dealt with them but not reported.
 func resolveDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID, combat bool, log *TurnLog) []damageModificationResult {
 	batch := prepareDamageBatch(g, events, simultaneousID)
+	simultaneousID = batch.simultaneousID
 	results := make([]preparedDamageResult, len(batch.members))
 	type lifelinkGain struct {
 		source     id.ID
@@ -557,7 +645,7 @@ func resolveDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 			}
 		}
 		facts = append(facts, damageFact{event: result.event, prepared: true})
-		if combat {
+		if combat && event.combatDamage {
 			if event.permanent != nil {
 				log.addCreatureDamage(CreatureDamageLog{
 					SourcePermanent: event.sourceObjectID, SourceID: event.sourceID, Controller: event.controller,
@@ -585,6 +673,7 @@ func resolveDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 		}
 	}
 	batch.finish()
+	actual = actual[:len(events)]
 	for _, result := range results {
 		if result.initiative {
 			setInitiative(g, result.damage.event.controller)

@@ -2816,6 +2816,15 @@ type CreateReplacement struct {
 // the damage source ("If damage is prevented this way, Deflecting Palm deals that
 // much damage to that source's controller."). It is only valid alongside OneShot
 // and All (the whole prevented event is redirected).
+//
+// Redirect turns a one-shot shield into a redirection replacement (CR 614.9)
+// rather than prevention: the chosen source's in-scope damage is dealt by the
+// same source to Redirect's destination instead, keeping its combat-ness and
+// its source's deathtouch, lifelink and infect. RedirectObject names the
+// destination permanent of DamageRedirectToObject, fixed as the shield is
+// created ("this creature", "target creature you control"). Redirect requires
+// OneShot and All and excludes RedirectPreventedToSourceController and
+// BySource.
 type PreventDamage struct {
 	Amount                              Quantity
 	Object                              ObjectReference
@@ -2831,7 +2840,36 @@ type PreventDamage struct {
 	AndControlledCreatures              bool
 	OneShot                             bool
 	RedirectPreventedToSourceController bool
+	Redirect                            DamageRedirect
+	RedirectObject                      ObjectReference
 }
+
+// DamageRedirect is the outcome of a one-shot chosen-source shield that
+// replaces damage instead of preventing it.
+type DamageRedirect uint8
+
+// DamageRedirect values name where the replaced damage is dealt.
+const (
+	// DamageRedirectNone prevents the damage (an ordinary prevention shield).
+	DamageRedirectNone DamageRedirect = iota
+	// DamageRedirectToController deals the damage to the shield's controller
+	// ("that source deals that damage to you instead", Jade Monolith).
+	DamageRedirectToController
+	// DamageRedirectToObject deals the damage to the permanent RedirectObject
+	// named as the shield was created ("that damage is dealt to this creature
+	// instead", "... to target creature you control instead").
+	DamageRedirectToObject
+	// DamageRedirectToDamageSourceController deals the damage to the chosen
+	// source's controller ("that damage is dealt to that source's controller
+	// instead", Reflect Damage).
+	DamageRedirectToDamageSourceController
+	// DamageRedirectAlsoToDamageSourceController leaves the damage dealt to its
+	// recipient and, as part of the same replaced event, has the shield's own
+	// source deal that much damage to the chosen source's controller ("instead
+	// that source deals that much damage to you and Eye for an Eye deals that
+	// much damage to that source's controller").
+	DamageRedirectAlsoToDamageSourceController
+)
 
 // AddExtraPhases inserts additional phases into the current turn (CR 505.5,
 // 506.2). It models "After this main phase, there is an additional combat

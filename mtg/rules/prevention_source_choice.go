@@ -164,6 +164,7 @@ func (e *Engine) chooseOneShotPreventionSource(
 	chooser game.PlayerID,
 	colors []color.Color,
 	cardTypes []types.Card,
+	redirect bool,
 ) (id.ID, bool) {
 	candidates := preventionSourceCandidates(g, resolving, colors, cardTypes)
 	if len(candidates) == 0 {
@@ -183,9 +184,13 @@ func (e *Engine) chooseOneShotPreventionSource(
 		for index, candidate := range candidates {
 			options[index] = game.ChoiceOption{Index: index, Label: candidate.label, Card: candidate.card}
 		}
+		prompt := "Choose the source whose next damage to prevent this turn."
+		if redirect {
+			prompt = "Choose the source whose next damage to redirect this turn."
+		}
 		selected = e.chooseChoice(g, agents, game.ChoiceRequest{
 			Kind: game.ChoicePreventionAllocation, Player: chooser,
-			Prompt:  "Choose the source whose next damage to prevent this turn.",
+			Prompt:  prompt,
 			Options: options, MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{selected},
 		}, log)[0]
 	}
