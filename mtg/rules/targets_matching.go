@@ -99,7 +99,7 @@ func targetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id
 	case game.TargetPermanent:
 		return permanentTargetMatchesSpec(g, controller, sourceObjectID, triggerEvent, spec, target.PermanentID)
 	case game.TargetCard:
-		return cardTargetMatchesSpec(g, controller, triggerEvent, spec, target)
+		return cardTargetMatchesSpec(g, controller, sourceObjectID, triggerEvent, spec, target)
 	case game.TargetStackObject:
 		return stackObjectTargetMatchesSpec(g, controller, sourceObjectID, spec, target.StackObjectID)
 	default:
@@ -315,7 +315,7 @@ func stackSpellSupertypes(g *game.Game, obj *game.StackObject) []types.Super {
 	return spellDef.Supertypes
 }
 
-func cardTargetMatchesSpec(g *game.Game, controller game.PlayerID, triggerEvent game.Event, spec *game.TargetSpec, target game.Target) bool {
+func cardTargetMatchesSpec(g *game.Game, controller game.PlayerID, sourceObjectID id.ID, triggerEvent game.Event, spec *game.TargetSpec, target game.Target) bool {
 	if !targetSpecAllowsCards(spec) {
 		return false
 	}
@@ -339,12 +339,13 @@ func cardTargetMatchesSpec(g *game.Game, controller game.PlayerID, triggerEvent 
 	sel := targetSelection(spec)
 	if !sel.Empty() {
 		subject := selectionSubject{
-			kind:       subjectCard,
-			g:          g,
-			card:       card,
-			controller: card.Owner,
-			viewer:     controller,
-			event:      triggerEvent,
+			kind:           subjectCard,
+			g:              g,
+			card:           card,
+			controller:     card.Owner,
+			viewer:         controller,
+			event:          triggerEvent,
+			sourceObjectID: sourceObjectID,
 		}
 		if !matchSelection(&subject, &sel) {
 			return false
