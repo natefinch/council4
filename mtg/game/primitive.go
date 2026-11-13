@@ -914,6 +914,14 @@ type PutOnBattlefield struct {
 	Selection         Selection
 	ContinuousEffects []ContinuousEffect
 	EntryTapped       bool
+	// EntryAttacking puts each creature that enters onto the battlefield
+	// attacking (CR 508.4), the "return that card to the battlefield tapped and
+	// attacking" rider; it composes with EntryTapped. Each entered creature's
+	// controller chooses its defender through the same entry-attack choice as
+	// CreateToken.EntryAttacking. It never "attacked", and outside a combat in
+	// which that controller is the attacking player, or with no defender to
+	// attack, the permanent simply enters without attacking (CR 506.3, 508.4a).
+	EntryAttacking bool
 	// EntryTransformed makes a transforming double-faced card enter the
 	// battlefield converted, as its back face, backing "return it to the
 	// battlefield converted" (CR 712). It is honored only for a transforming

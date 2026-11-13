@@ -26,9 +26,9 @@ import (
 // the returned creature attacks; it never "attacked"; a returned creature that
 // already left is not sacrificed. CR 2026-11-06 (MagicCompRules 20261106.txt):
 // 113.7a, 508.4, 603.3d, 608.2b (target recheck uses the departed source's last
-// known information), 608.2h. The card stays unregistered: entering "tapped and
-// attacking" from a targeted card is a separate missing primitive (#3835), so
-// this shape returns the card tapped only and asserts no attack.
+// known information), 608.2h. Its "tapped and attacking" entry is
+// PutOnBattlefield.EntryAttacking (#3835), proved in
+// put_on_battlefield_attacking_test.go.
 
 func thunderkinShapeDef() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{
@@ -50,9 +50,10 @@ func thunderkinShapeDef() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.PutOnBattlefield{
-							Source:        game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
-							EntryTapped:   true,
-							PublishLinked: game.LinkedKey("thunderkin-returned"),
+							Source:         game.CardBattlefieldSource(game.CardReference{Kind: game.CardReferenceTarget}),
+							EntryTapped:    true,
+							EntryAttacking: true,
+							PublishLinked:  game.LinkedKey("thunderkin-returned"),
 						},
 						LocalProducts: game.LocalProducts{Links: []game.LinkedKey{"thunderkin-returned"}},
 					},
@@ -157,8 +158,8 @@ func TestThunderkinShapeTargetsLesserToughnessElementalAndSacrificesItAtEndStep(
 	if !ok || returned.Controller != game.Player1 || !returned.Tapped {
 		t.Fatalf("returned permanent = %+v (present %v), want tapped under Player1", returned, ok)
 	}
-	if _, attacking := attackerDeclarationFor(g, returned.ObjectID); attacking {
-		t.Fatal("test shape put the card onto the battlefield attacking; that entry is #3835")
+	if attack, attacking := attackerDeclarationFor(g, returned.ObjectID); !attacking || attack.Target.Player != game.Player2 {
+		t.Fatalf("returned attack = %+v (attacking %v), want attacking Player2", attack, attacking)
 	}
 	engine.runEndingPhase(g, [game.NumPlayers]PlayerAgent{})
 	if _, ok := permanentByObjectID(g, returned.ObjectID); ok {
