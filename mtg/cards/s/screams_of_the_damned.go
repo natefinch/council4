@@ -55,15 +55,11 @@ func newScreamsOfTheDamned() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:       game.Fixed(1),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
-											DamageSource: opt.Val(game.SourcePermanentReference()),
-										},
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount:       game.Fixed(1),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+											Amount: game.Fixed(1),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 									},

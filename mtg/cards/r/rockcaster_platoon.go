@@ -48,15 +48,11 @@ func newRockcasterPlatoon() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:       game.Fixed(2),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying})),
-											DamageSource: opt.Val(game.SourcePermanentReference()),
-										},
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount:       game.Fixed(2),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+											Amount: game.Fixed(2),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying}),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 									},

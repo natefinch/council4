@@ -45,15 +45,11 @@ func newTheElderDragonWar() *game.CardDef {
 						Sequence: []game.Instruction{
 							{
 								Primitive: game.Damage{
-									Amount:       game.Fixed(2),
-									Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
-									DamageSource: opt.Val(game.SourcePermanentReference()),
-								},
-							},
-							{
-								Primitive: game.Damage{
-									Amount:       game.Fixed(2),
-									Recipient:    game.PlayerGroupDamageRecipient(game.OpponentsReference()),
+									Amount: game.Fixed(2),
+									Recipient: game.PermanentsAndPlayersDamageRecipient(
+										game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+										game.OpponentsReference(),
+									),
 									DamageSource: opt.Val(game.SourcePermanentReference()),
 								},
 							},

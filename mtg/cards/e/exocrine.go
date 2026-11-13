@@ -57,16 +57,10 @@ func newExocrine() *game.CardDef {
 											Amount: game.Dynamic(game.DynamicAmount{
 												Kind: game.DynamicAmountX,
 											}),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
-											DamageSource: opt.Val(game.EventPermanentReference()),
-										},
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount: game.Dynamic(game.DynamicAmount{
-												Kind: game.DynamicAmountX,
-											}),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.SourcePermanentReference())),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroupExcluding(game.Selection{RequiredTypes: []types.Card{types.Creature}}, game.SourcePermanentReference()),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.EventPermanentReference()),
 										},
 									},

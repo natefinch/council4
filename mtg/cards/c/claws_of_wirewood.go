@@ -37,14 +37,11 @@ func newClawsOfWirewood() *game.CardDef {
 				Sequence: []game.Instruction{
 					{
 						Primitive: game.Damage{
-							Amount:    game.Fixed(3),
-							Recipient: game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying})),
-						},
-					},
-					{
-						Primitive: game.Damage{
-							Amount:    game.Fixed(3),
-							Recipient: game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+							Amount: game.Fixed(3),
+							Recipient: game.PermanentsAndPlayersDamageRecipient(
+								game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}, Keyword: game.Flying}),
+								game.AllPlayersReference(),
+							),
 						},
 					},
 				},

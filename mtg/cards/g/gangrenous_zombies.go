@@ -57,8 +57,11 @@ func newGangrenousZombies() *game.CardDef {
 								Sequence: []game.Instruction{
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:       game.Fixed(1),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
+											Amount: game.Fixed(1),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 										Condition: opt.Val(game.EffectCondition{
@@ -75,25 +78,11 @@ func newGangrenousZombies() *game.CardDef {
 									},
 									game.Instruction{
 										Primitive: game.Damage{
-											Amount:       game.Fixed(1),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
-											DamageSource: opt.Val(game.SourcePermanentReference()),
-										},
-										ConditionGate: game.ConditionKey("condition-0"),
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount:       game.Fixed(2),
-											Recipient:    game.GroupDamageRecipient(game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}})),
-											DamageSource: opt.Val(game.SourcePermanentReference()),
-										},
-										ConditionGate:       game.ConditionKey("condition-0"),
-										ConditionGateNegate: true,
-									},
-									game.Instruction{
-										Primitive: game.Damage{
-											Amount:       game.Fixed(2),
-											Recipient:    game.PlayerGroupDamageRecipient(game.AllPlayersReference()),
+											Amount: game.Fixed(2),
+											Recipient: game.PermanentsAndPlayersDamageRecipient(
+												game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Creature}}),
+												game.AllPlayersReference(),
+											),
 											DamageSource: opt.Val(game.SourcePermanentReference()),
 										},
 										ConditionGate:       game.ConditionKey("condition-0"),
