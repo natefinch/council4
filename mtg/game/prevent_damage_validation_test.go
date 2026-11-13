@@ -17,10 +17,16 @@ func TestPreventDamageOneShotSourceFilterValidation(t *testing.T) {
 	if err := valid.validatePrimitive(nil, false); err != nil {
 		t.Fatalf("validatePrimitive() = %v, want a filtered one-shot shield accepted", err)
 	}
+	group := PreventDamage{Player: ControllerReference(), All: true, OneShot: true, AndControlledCreatures: true}
+	if err := group.validatePrimitive(nil, false); err != nil {
+		t.Fatalf("validatePrimitive() = %v, want a you-and-your-creatures shield accepted", err)
+	}
 	for name, invalid := range map[string]PreventDamage{
 		"one-shot without All":         {Player: ControllerReference(), Amount: Fixed(2), OneShot: true},
 		"types without one-shot":       {Player: ControllerReference(), All: true, SourceTypes: []types.Card{types.Land}},
 		"entry color without one-shot": {Player: ControllerReference(), All: true, SourceColorFromEntryChoice: true},
+		"creatures without player":     {Object: SourcePermanentReference(), All: true, OneShot: true, AndControlledCreatures: true},
+		"creatures with by-source":     {Player: ControllerReference(), All: true, BySource: true, AndControlledCreatures: true},
 	} {
 		if err := invalid.validatePrimitive(nil, false); err == nil {
 			t.Errorf("%s: validatePrimitive() = nil, want rejection", name)

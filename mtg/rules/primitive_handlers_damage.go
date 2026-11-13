@@ -66,6 +66,12 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		return res
 	}
 	source.cantBePrevented = prim.CantBePrevented
+	// The instruction's damage to all of its recipients is one damage event for
+	// a one-shot "next time ... would deal damage" shield.
+	if scope := beginOneShotPreventionScope(r.game); scope != 0 {
+		source.preventionScope = scope
+		defer endOneShotPreventionScope(r.game, scope)
+	}
 	if prim.Divided {
 		return r.damageDivided(res, source, prim)
 	}

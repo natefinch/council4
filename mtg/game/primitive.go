@@ -2801,6 +2801,16 @@ type CreateReplacement struct {
 // source that no longer matches is not prevented and the shield remains.
 // SourceTypes and SourceColorFromEntryChoice are only valid with OneShot.
 //
+// A one-shot shield's recipient scope is its single referenced permanent or
+// player, its AnyTarget recipient, every recipient when Global ("The next time
+// a red source of your choice would deal damage this turn"), or, with
+// AndControlledCreatures, the referenced player and the creatures that player
+// controls as the damage would be dealt ("to you and/or creatures you
+// control"). All damage the chosen source deals simultaneously to in-scope
+// recipients is prevented as the one use; its damage to other recipients in
+// the same event is dealt. AndControlledCreatures requires Player and is
+// mutually exclusive with BySource.
+//
 // RedirectPreventedToSourceController makes a one-shot shield deal the amount it
 // prevents to the prevented source's controller, with the shield's own source as
 // the damage source ("If damage is prevented this way, Deflecting Palm deals that
@@ -2818,6 +2828,7 @@ type PreventDamage struct {
 	CombatOnly                          bool
 	BySource                            bool
 	Global                              bool
+	AndControlledCreatures              bool
 	OneShot                             bool
 	RedirectPreventedToSourceController bool
 }

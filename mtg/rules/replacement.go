@@ -49,6 +49,11 @@ type damageEvent struct {
 	// it unpreventable (CR 615.12). It travels with the event through
 	// redirection.
 	cantBePrevented bool
+	// preventionScope identifies the damage event one instruction deals to
+	// several recipients through separate batches, so a one-shot prevention
+	// shield prevents all of that event's in-scope damage as one use. It is
+	// zero outside such a scope and is never emitted.
+	preventionScope id.ID
 }
 
 type damageModificationResult struct {
@@ -98,7 +103,7 @@ func applicablePreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	var indices []int
 	for i := range g.PreventionShields {
 		shield := g.PreventionShields[i]
-		if !preventionShieldApplies(shield, event) || (!shield.All && shield.Amount <= 0) {
+		if !preventionShieldApplies(g, shield, event) || (!shield.All && shield.Amount <= 0) {
 			continue
 		}
 		if !preventionShieldSourceMatches(g, &shield, event) {
@@ -2411,6 +2416,7 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		All:                        prim.All,
 		CombatOnly:                 prim.CombatOnly,
 		Global:                     prim.Global,
+		PlayerCreatures:            prim.AndControlledCreatures,
 		OneShot:                    prim.OneShot,
 		RedirectToSourceController: prim.RedirectPreventedToSourceController,
 		SourceColors:               append([]color.Color(nil), prim.SourceColors...),
@@ -2479,11 +2485,16 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 	return add()
 }
 
-func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bool {
+func preventionShieldApplies(g *game.Game, shield game.PreventionShield, event damageEvent) bool {
 	if shield.CombatOnly && !event.combatDamage {
 		return false
 	}
 	if shield.OneShot && (shield.ChosenSourceObjectID == 0 || shield.ChosenSourceObjectID != event.sourceObjectID) {
+		return false
+	}
+	// A one-shot shield that has begun preventing one damage event applies
+	// only to the rest of that event.
+	if shield.SpentScope != 0 && shield.SpentScope != event.preventionScope {
 		return false
 	}
 	if shield.Global {
@@ -2493,9 +2504,43 @@ func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bo
 		return shield.SourcePermanentID == event.sourceObjectID
 	}
 	if event.permanent != nil {
+		if shield.PlayerCreatures {
+			return permanentHasType(g, event.permanent, types.Creature) &&
+				effectiveController(g, event.permanent) == shield.Player
+		}
 		return shield.PermanentID == event.permanent.ObjectID
 	}
 	return shield.PermanentID == 0 && shield.Player == event.player
+}
+
+// beginOneShotPreventionScope opens a damage event scope for an instruction
+// that deals damage to several recipients through separate batches. It returns
+// zero, allocating nothing, when no one-shot shield could be affected.
+func beginOneShotPreventionScope(g *game.Game) id.ID {
+	if !slices.ContainsFunc(g.PreventionShields, func(shield game.PreventionShield) bool { return shield.OneShot && shield.All }) {
+		return 0
+	}
+	return g.IDGen.Next()
+}
+
+// endOneShotPreventionScope uses up every one-shot shield that prevented damage
+// in scope, now that the whole damage event has been dealt.
+func endOneShotPreventionScope(g *game.Game, scope id.ID) {
+	if scope == 0 {
+		return
+	}
+	for i := range g.PreventionShields {
+		if g.PreventionShields[i].SpentScope == scope {
+			exhaustOneShotShield(&g.PreventionShields[i])
+		}
+	}
+	g.PreventionShields = compactPreventionShields(g.PreventionShields)
+}
+
+func exhaustOneShotShield(shield *game.PreventionShield) {
+	shield.All = false
+	shield.Amount = 0
+	shield.SpentScope = 0
 }
 
 func compactPreventionShields(shields []game.PreventionShield) []game.PreventionShield {
