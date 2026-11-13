@@ -491,6 +491,22 @@ func handlePreventDamage(r *effectResolver, prim game.PreventDamage) effectResol
 	if !prim.All {
 		res.amount = r.quantity(prim.Amount)
 	}
-	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim, game.DurationUntilEndOfTurn)
+	var bind func(*game.PreventionShield) bool
+	if prim.OneShot {
+		bind = func(shield *game.PreventionShield) bool {
+			colors, ok := oneShotPreventionSourceFilter(r.game, r.obj, prim)
+			if !ok {
+				return false
+			}
+			chosen, ok := r.engine.chooseOneShotPreventionSource(r.game, r.agents, r.log, r.obj, r.obj.Controller, colors, prim.SourceTypes)
+			if !ok {
+				return false
+			}
+			shield.SourceColors = colors
+			shield.ChosenSourceObjectID = chosen
+			return true
+		}
+	}
+	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim, game.DurationUntilEndOfTurn, bind)
 	return res
 }

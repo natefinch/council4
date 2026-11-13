@@ -2783,12 +2783,23 @@ type CreateReplacement struct {
 // Player, Global, and BySource.
 //
 // OneShot marks a shield that prevents one qualifying damage event and then
-// expires, modeling the "The next time a source would deal damage ... this turn,
-// prevent that damage." replacement (Circle of Protection, Rune of Protection).
-// It is combined with All so the single event is prevented in full. SourceColors,
-// when non-empty, restricts the shield to damage from a source of one of the
-// listed colors ("a white source of your choice"); an empty slice matches a
-// source of any color.
+// expires, modeling the "The next time a source of your choice would deal
+// damage ... this turn, prevent that damage." replacement (Circle of
+// Protection, Rune of Protection). It is combined with All so the single event
+// is prevented in full. The controller chooses the source as the shield is
+// created (CR 609.7a) from the permanents on the battlefield, the spells on the
+// stack, and the sources of abilities on the stack that match the shield's
+// source filters; with no legal choice no shield is created. SourceColors, when
+// non-empty, restricts the choice to a source of one of the listed colors ("a
+// white source of your choice"); an empty slice matches a source of any color.
+// SourceTypes likewise restricts it to a source of one of the listed card types
+// ("an artifact source of your choice"). SourceColorFromEntryChoice restricts
+// it to a source of the color the shield's source permanent chose as it
+// entered ("a source of your choice of the chosen color"), fixed as the shield
+// is created; if no such color was chosen, no shield is created. The filters
+// are checked again when the chosen source would deal damage (CR 609.7b): a
+// source that no longer matches is not prevented and the shield remains.
+// SourceTypes and SourceColorFromEntryChoice are only valid with OneShot.
 //
 // RedirectPreventedToSourceController makes a one-shot shield deal the amount it
 // prevents to the prevented source's controller, with the shield's own source as
@@ -2801,6 +2812,8 @@ type PreventDamage struct {
 	Player                              PlayerReference
 	AnyTarget                           DamageRecipient
 	SourceColors                        []color.Color
+	SourceTypes                         []types.Card
+	SourceColorFromEntryChoice          bool
 	All                                 bool
 	CombatOnly                          bool
 	BySource                            bool

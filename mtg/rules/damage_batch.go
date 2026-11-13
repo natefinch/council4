@@ -19,15 +19,6 @@ type pendingDamage struct {
 	redirected bool
 }
 
-type damageSourceIdentity struct {
-	card   id.ID
-	object id.ID
-}
-
-func (event damageEvent) sourceIdentity() damageSourceIdentity {
-	return damageSourceIdentity{card: event.sourceID, object: event.sourceObjectID}
-}
-
 type damagePreventionConsequence struct {
 	permanent  *game.Permanent
 	remove     opt.V[counter.Kind]
@@ -37,11 +28,10 @@ type damagePreventionConsequence struct {
 }
 
 type damageBatch struct {
-	game           *game.Game
-	members        []pendingDamage
-	usedCounters   map[id.ID]bool
-	oneShotSources map[int]damageSourceIdentity
-	after          []damagePreventionConsequence
+	game         *game.Game
+	members      []pendingDamage
+	usedCounters map[id.ID]bool
+	after        []damagePreventionConsequence
 }
 
 type damageModifierKind uint8
@@ -64,9 +54,8 @@ type damageModifier struct {
 
 func prepareDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID) *damageBatch {
 	batch := &damageBatch{
-		game:           g,
-		usedCounters:   make(map[id.ID]bool),
-		oneShotSources: make(map[int]damageSourceIdentity),
+		game:         g,
+		usedCounters: make(map[id.ID]bool),
 	}
 	for _, event := range events {
 		event.amount = max(0, event.amount)
@@ -119,10 +108,6 @@ func prepareDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 		}
 		batch.apply(choices[chosen])
 	}
-	for index := range batch.oneShotSources {
-		g.PreventionShields[index].All = false
-		g.PreventionShields[index].Amount = 0
-	}
 	g.PreventionShields = compactPreventionShields(g.PreventionShields)
 	return batch
 }
@@ -141,8 +126,7 @@ func (batch *damageBatch) modifiers() []damageModifier {
 		}
 		if preventable {
 			for _, shield := range applicablePreventionShieldIndices(batch.game, event) {
-				source, bound := batch.oneShotSources[shield]
-				if !member.shields[shield] && (!bound || source == event.sourceIdentity()) {
+				if !member.shields[shield] {
 					result = append(result, damageModifier{kind: damageShield, member: index, shield: shield, label: "prevention shield"})
 				}
 			}
@@ -295,31 +279,10 @@ func (batch *damageBatch) applyShield(modifier damageModifier) {
 	for index, member := range batch.members {
 		if member.event.amount > 0 && sameDamageRecipient(recipient, member.event) && preventionShieldApplies(*shield, member.event) &&
 			!damageEventCantBePrevented(batch.game, member.event) &&
-			(len(shield.SourceColors) == 0 || damageSourceHasAnyColor(batch.game, member.event, shield.SourceColors)) {
+			preventionShieldSourceMatches(batch.game, shield, member.event) {
 			indices = append(indices, index)
 			total += member.event.amount
 		}
-	}
-	if shield.All && shield.OneShot {
-		source, bound := batch.oneShotSources[modifier.shield]
-		if !bound {
-			var options []game.ChoiceOption
-			var sources []damageSourceIdentity
-			for _, index := range indices {
-				event := batch.members[index].event
-				if !slices.Contains(sources, event.sourceIdentity()) {
-					sources = append(sources, event.sourceIdentity())
-					options = append(options, damageSourceOption(batch.game, event, index))
-				}
-			}
-			selected := batch.choosePreventionSource(replacementDecisionPlayer(batch.game, recipient), options,
-				"Choose the source whose next damage is prevented.")
-			source = batch.members[selected].event.sourceIdentity()
-			batch.oneShotSources[modifier.shield] = source
-		}
-		indices = slices.DeleteFunc(indices, func(index int) bool {
-			return batch.members[index].event.sourceIdentity() != source
-		})
 	}
 	prevented := make([]int, len(indices))
 	if shield.All {
@@ -350,15 +313,24 @@ func (batch *damageBatch) applyShield(modifier damageModifier) {
 			remaining -= amount
 		}
 	}
+	total = 0
 	for position, index := range indices {
 		event := batch.members[index].event
 		amount := batch.prevent(index, prevented[position])
+		total += amount
 		shield.Prevented += amount
 		if amount > 0 && shield.RedirectToSourceController {
 			batch.after = append(batch.after, damagePreventionConsequence{redirect: preventionRedirect{
-				sourceID: shield.RedirectSourceID, controller: shield.Controller, player: event.controller, amount: amount,
+				sourceID: shield.RedirectSourceID, sourceObjectID: shield.RedirectSourceObjectID,
+				controller: shield.Controller, player: event.controller, amount: amount,
 			}})
 		}
+	}
+	// A one-shot shield is used up by the event it prevents; one that prevents
+	// nothing remains (CR 609.7b).
+	if shield.OneShot && total > 0 {
+		shield.All = false
+		shield.Amount = 0
 	}
 }
 
@@ -406,7 +378,7 @@ func (batch *damageBatch) finish() {
 			}
 		} else if consequence.redirect.amount > 0 {
 			redirect := consequence.redirect
-			dealPlayerDamage(batch.game, redirect.sourceID, 0, redirect.controller, redirect.player, redirect.amount, false)
+			dealPlayerDamage(batch.game, redirect.sourceID, redirect.sourceObjectID, redirect.controller, redirect.player, redirect.amount, false)
 		}
 	}
 }

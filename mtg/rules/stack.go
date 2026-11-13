@@ -729,6 +729,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		if !ok {
 			return failedPermanentSpellEntry(g, card, "invalid face-down")
 		}
+		rebindPermanentSpellPreventionShields(g, obj, permanent)
 		applySpellKeywordRiders(g, obj, permanent)
 		return "battlefield"
 	}
@@ -761,6 +762,7 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 	if !ok {
 		return failedPermanentSpellEntry(g, card, "invalid permanent")
 	}
+	rebindPermanentSpellPreventionShields(g, obj, permanent)
 	if ok && obj.Suspend && permanentHasType(g, permanent, types.Creature) {
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}
