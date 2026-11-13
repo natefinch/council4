@@ -32,6 +32,10 @@ type damageBatch struct {
 	members      []pendingDamage
 	usedCounters map[id.ID]bool
 	after        []damagePreventionConsequence
+	// spentOneShots holds one-shot shields that prevented damage in this batch
+	// outside a wider damage event scope; they stay applicable to the batch's
+	// other recipients and are used up when the batch's modifications end.
+	spentOneShots []int
 }
 
 type damageModifierKind uint8
@@ -107,6 +111,9 @@ func prepareDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 			chosen = chooseReplacementDecision(g, chooser, labels).Selected[0]
 		}
 		batch.apply(choices[chosen])
+	}
+	for _, index := range batch.spentOneShots {
+		exhaustOneShotShield(&g.PreventionShields[index])
 	}
 	g.PreventionShields = compactPreventionShields(g.PreventionShields)
 	return batch
@@ -277,7 +284,7 @@ func (batch *damageBatch) applyShield(modifier damageModifier) {
 	total := 0
 	recipient := batch.members[modifier.member].event
 	for index, member := range batch.members {
-		if member.event.amount > 0 && sameDamageRecipient(recipient, member.event) && preventionShieldApplies(*shield, member.event) &&
+		if member.event.amount > 0 && sameDamageRecipient(recipient, member.event) && preventionShieldApplies(batch.game, *shield, member.event) &&
 			!damageEventCantBePrevented(batch.game, member.event) &&
 			preventionShieldSourceMatches(batch.game, shield, member.event) {
 			indices = append(indices, index)
@@ -326,11 +333,15 @@ func (batch *damageBatch) applyShield(modifier damageModifier) {
 			}})
 		}
 	}
-	// A one-shot shield is used up by the event it prevents; one that prevents
-	// nothing remains (CR 609.7b).
+	// A one-shot shield is used up by the damage event it prevents, after all of
+	// the chosen source's simultaneous in-scope damage has been prevented; one
+	// that prevents nothing remains (CR 609.7b).
 	if shield.OneShot && total > 0 {
-		shield.All = false
-		shield.Amount = 0
+		if scope := recipient.preventionScope; scope != 0 {
+			shield.SpentScope = scope
+		} else if !slices.Contains(batch.spentOneShots, modifier.shield) {
+			batch.spentOneShots = append(batch.spentOneShots, modifier.shield)
+		}
 	}
 }
 

@@ -826,6 +826,9 @@ type effectDamageSource struct {
 	// cantBePrevented is set when the dealing instruction says the damage
 	// can't be prevented (CR 615.12).
 	cantBePrevented bool
+	// preventionScope groups the recipients of one damage instruction into
+	// one damage event for one-shot prevention shields.
+	preventionScope id.ID
 }
 
 // dealPlayer deals noncombat damage from this source to playerID and reports
@@ -838,6 +841,7 @@ func (s effectDamageSource) dealPlayer(g *game.Game, playerID game.PlayerID, dam
 		player:          playerID,
 		amount:          damage,
 		cantBePrevented: s.cantBePrevented,
+		preventionScope: s.preventionScope,
 	})
 	return dealt
 }
@@ -852,6 +856,7 @@ func (s effectDamageSource) dealPermanent(g *game.Game, permanent *game.Permanen
 		permanent:       permanent,
 		amount:          damage,
 		cantBePrevented: s.cantBePrevented,
+		preventionScope: s.preventionScope,
 	})
 }
 

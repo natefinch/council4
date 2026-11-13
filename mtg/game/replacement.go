@@ -56,6 +56,19 @@ type ConditionalCounterPlacement struct {
 // colors or card types; for a one-shot shield they are rechecked against the
 // chosen source as the damage would be dealt (CR 609.7b).
 //
+// PlayerCreatures extends a Player shield to the creatures that player
+// controls, checked as the damage would be dealt ("you and/or creatures you
+// control"). A Global shield has no recipient restriction ("would deal damage
+// this turn").
+//
+// A one-shot shield is used up by the whole damage event it prevents: every
+// in-scope recipient of the chosen source's simultaneous damage is prevented,
+// each by its own application (CR 616.1). Within one damage batch the shield
+// stays applicable until the batch ends. Damage one instruction deals to
+// several recipients through separate batches shares a damage event scope;
+// SpentScope records the scope whose damage the shield has begun preventing,
+// so it applies only to that scope's remaining damage until the scope ends.
+//
 // When RedirectToSourceController is set, a one-shot shield deals the amount it
 // prevents to the prevented source's controller, as damage from the object
 // identified by RedirectSourceID and RedirectSourceObjectID controlled by
@@ -78,8 +91,10 @@ type PreventionShield struct {
 	All                        bool
 	CombatOnly                 bool
 	Global                     bool
+	PlayerCreatures            bool
 	OneShot                    bool
 	RedirectToSourceController bool
+	SpentScope                 id.ID
 	Duration                   EffectDuration
 	CreatedTurn                int
 	// SourceID is the card instance that created this shield, captured when the
