@@ -104,14 +104,15 @@ func (r *effectResolver) resolveGroupChooseFromZone(env game.ChooseFromZone) boo
 	return r.chooseFromZoneMoveGroup(env, picks)
 }
 
-// chooseFromZoneDecide asks for one choose-from-zone decision. A Choosers
-// member choosing from a hidden zone decides entirely outside the public log
-// (CR 400.2, 101.4a): whether they were asked at all, how many options they
-// had and which they took would reveal how many matching cards they hold. The
-// other players learn only how many cards each member chose, through
-// ChoiceRequest.ZoneChoiceDecisions and the move itself.
+// chooseFromZoneDecide asks for one choose-from-zone decision. A player
+// choosing from a hidden zone, alone or as a Choosers member, decides entirely
+// outside the public log (CR 400.2, 101.4a): whether they were asked at all,
+// how many options they had and which they took would reveal how many matching
+// cards they hold. The other players learn only what the move itself shows and,
+// for Choosers, how many cards each earlier member chose through
+// ChoiceRequest.ZoneChoiceDecisions.
 func (r *effectResolver) chooseFromZoneDecide(env game.ChooseFromZone, request game.ChoiceRequest) []int {
-	if env.Choosers.Exists && !env.SourceZone.IsPublic() {
+	if !env.SourceZone.IsPublic() {
 		request.Private = true
 		return r.engine.chooseUnloggedChoice(r.game, r.agents, request, r.log)
 	}
@@ -370,7 +371,7 @@ func (r *effectResolver) chooseFromZoneSplit(env game.ChooseFromZone, playerID g
 		return false
 	}
 	options := chooseFromZoneOptions(r.game, candidates)
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+	selected := r.chooseFromZoneDecide(env, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           playerID,
 		Prompt:           chooseFromZonePrompt(env),
@@ -378,7 +379,7 @@ func (r *effectResolver) chooseFromZoneSplit(env game.ChooseFromZone, playerID g
 		MinChoices:       min(minChoices, maxChoices),
 		MaxChoices:       maxChoices,
 		DefaultSelection: firstChoiceIndices(min(minChoices, maxChoices)),
-	}, r.log)
+	})
 	chosen := chooseFromZoneResolveIndices(candidates, selected)
 	secondary := env.SplitSecondary.Val
 	switch len(chosen) {
@@ -393,7 +394,7 @@ func (r *effectResolver) chooseFromZoneSplit(env game.ChooseFromZone, playerID g
 		}
 		return r.chooseFromZoneMoveOne(env, playerID, chosen[0], dest, tapped)
 	default:
-		primaryIndex := r.chooseFromZoneSplitPrimaryCard(playerID, chosen)
+		primaryIndex := r.chooseFromZoneSplitPrimaryCard(playerID, env, chosen)
 		succeeded := false
 		for i, cardID := range chosen {
 			dest := secondary.Destination
@@ -597,9 +598,11 @@ func (r *effectResolver) chooseFromZoneOptionalCard(playerID game.PlayerID, pool
 }
 
 // chooseFromZoneSplitSlot asks which slot the lone chosen card fills, returning
-// 0 for the primary slot and 1 for the secondary slot.
+// 0 for the primary slot and 1 for the secondary slot. From a hidden zone the
+// prompt itself would reveal that exactly one matching card was chosen, so it
+// is decided outside the public log like the card choice.
 func (r *effectResolver) chooseFromZoneSplitSlot(playerID game.PlayerID, env game.ChooseFromZone, secondary game.ChooseSplitSlot) int {
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+	selected := r.chooseFromZoneDecide(env, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           playerID,
 		Prompt:           "Choose where to put the chosen card",
@@ -607,7 +610,7 @@ func (r *effectResolver) chooseFromZoneSplitSlot(playerID game.PlayerID, env gam
 		MinChoices:       1,
 		MaxChoices:       1,
 		DefaultSelection: []int{0},
-	}, r.log)
+	})
 	if len(selected) == 1 && selected[0] == 1 {
 		return 1
 	}
@@ -616,9 +619,10 @@ func (r *effectResolver) chooseFromZoneSplitSlot(playerID game.PlayerID, env gam
 
 // chooseFromZoneSplitPrimaryCard asks which of the two chosen cards enters the
 // primary slot, returning its index into chosen; the other card fills the
-// secondary slot.
-func (r *effectResolver) chooseFromZoneSplitPrimaryCard(playerID game.PlayerID, chosen []id.ID) int {
-	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+// secondary slot. From a hidden zone the options name both chosen cards, one of
+// which may go to a hidden destination, so it is decided outside the public log.
+func (r *effectResolver) chooseFromZoneSplitPrimaryCard(playerID game.PlayerID, env game.ChooseFromZone, chosen []id.ID) int {
+	selected := r.chooseFromZoneDecide(env, game.ChoiceRequest{
 		Kind:             game.ChoiceResolution,
 		Player:           playerID,
 		Prompt:           "Choose which card goes to the primary destination",
@@ -626,7 +630,7 @@ func (r *effectResolver) chooseFromZoneSplitPrimaryCard(playerID game.PlayerID, 
 		MinChoices:       1,
 		MaxChoices:       1,
 		DefaultSelection: []int{0},
-	}, r.log)
+	})
 	if len(selected) == 1 && selected[0] >= 0 && selected[0] < len(chosen) {
 		return selected[0]
 	}

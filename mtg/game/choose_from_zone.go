@@ -42,6 +42,10 @@ type ChooseFromZone struct {
 	Choosers opt.V[PlayerGroupReference]
 
 	// SourceZone is the zone whose cards are the candidate pool for the choice.
+	// Every decision of a choice from a hidden zone (hand or library), by Player
+	// or by a Choosers member, stays out of the public log, including its
+	// option count and the split grouping's follow-up prompts (CR 400.2); only
+	// the moved cards become public.
 	SourceZone zone.Type
 
 	// AllOwners widens the candidate pool of SourceZone from Player's own copy
