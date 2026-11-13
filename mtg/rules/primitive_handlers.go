@@ -848,6 +848,19 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 		}
 		return res
 	}
+	if prim.Object.Exists && prim.Object.Val.Kind() == game.ObjectReferenceAllTargetPermanents {
+		// "One or more target creatures become white" (Heaven's Gate): each
+		// chosen target still legal at resolution gets the effect. Targets made
+		// illegal were replaced by the CR 608.2b recheck, so the target-spec
+		// group skips them while the remaining targets are still affected.
+		effects := r.resolveChosenColorProtection(prim.ContinuousEffects)
+		for _, permanent := range r.resolveObjectGroup(prim.Object.Val, game.GroupReference{}).permanents {
+			if applyTypedContinuousEffects(r.game, r.obj, permanent, effects, prim.Duration) {
+				res.succeeded = true
+			}
+		}
+		return res
+	}
 	var permanent *game.Permanent
 	if prim.Object.Exists {
 		permanent, _ = r.resolveObject(prim.Object.Val)
