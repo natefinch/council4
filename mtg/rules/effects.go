@@ -832,32 +832,36 @@ type effectDamageSource struct {
 }
 
 // dealPlayer deals noncombat damage from this source to playerID and reports
-// the damage dealt.
+// the damage dealt, marking deathtouch on a permanent the damage was
+// redirected to.
 func (s effectDamageSource) dealPlayer(g *game.Game, playerID game.PlayerID, damage int) int {
-	dealt, _ := dealPlayerDamageEvent(g, damageEvent{
-		sourceID:        s.sourceID,
-		sourceObjectID:  s.sourceObjectID,
-		controller:      s.controller,
-		player:          playerID,
-		amount:          damage,
-		cantBePrevented: s.cantBePrevented,
-		preventionScope: s.preventionScope,
-	})
-	return dealt
+	if damage <= 0 || !isPlayerAlive(g, playerID) {
+		return 0
+	}
+	return s.deal(g, damageEvent{player: playerID, amount: damage})
 }
 
 // dealPermanent deals noncombat damage from this source to permanent and
-// reports the damage dealt.
+// reports the damage dealt, marking deathtouch on the permanent actually dealt
+// the damage, which a redirection may have changed (CR 614.9).
 func (s effectDamageSource) dealPermanent(g *game.Game, permanent *game.Permanent, damage int) int {
-	return dealPermanentDamageEvent(g, damageEvent{
-		sourceID:        s.sourceID,
-		sourceObjectID:  s.sourceObjectID,
-		controller:      s.controller,
-		permanent:       permanent,
-		amount:          damage,
-		cantBePrevented: s.cantBePrevented,
-		preventionScope: s.preventionScope,
-	})
+	if damage <= 0 || !activeBattlefieldPermanent(permanent) {
+		return 0
+	}
+	return s.deal(g, damageEvent{permanent: permanent, amount: damage})
+}
+
+func (s effectDamageSource) deal(g *game.Game, event damageEvent) int {
+	event.sourceID = s.sourceID
+	event.sourceObjectID = s.sourceObjectID
+	event.controller = s.controller
+	event.cantBePrevented = s.cantBePrevented
+	event.preventionScope = s.preventionScope
+	result := resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0]
+	if result.event.permanent != nil {
+		applyDamageSourceDeathtouch(s, result.event.permanent, result.amount)
+	}
+	return result.amount
 }
 
 // effectDamageAssignment is one recipient's share of a noncombat damage
@@ -919,11 +923,6 @@ func (s effectDamageSource) dealSimultaneously(g *game.Game, assignments []effec
 		}
 	}
 	return dealt
-}
-
-func applyDamageSourceKeywordEffects(g *game.Game, source effectDamageSource, damaged *game.Permanent, damage int) {
-	applyDamageSourceDeathtouch(source, damaged, damage)
-	applyDamageSourceLifelink(g, source, damage)
 }
 
 func applyDamageSourceDeathtouch(source effectDamageSource, damaged *game.Permanent, damage int) {

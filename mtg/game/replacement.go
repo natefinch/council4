@@ -74,6 +74,17 @@ type ConditionalCounterPlacement struct {
 // identified by RedirectSourceID and RedirectSourceObjectID controlled by
 // Controller ("If damage is prevented this way, Deflecting Palm deals that much
 // damage to that source's controller.").
+//
+// Redirect makes a one-shot shield a redirection replacement (CR 614.9) that
+// deals the chosen source's in-scope damage to another recipient instead of
+// preventing it: RedirectPlayer for DamageRedirectToController,
+// RedirectPermanentID for DamageRedirectToObject, or the damage source's
+// controller. A permanent destination that has left the battlefield or is no
+// longer a creature, planeswalker or battle, or a player destination who has
+// left the game, makes the shield inapplicable, so it is not used up (CR
+// 609.7b). DamageRedirectAlsoToDamageSourceController keeps the damage and has
+// the object identified by RedirectSourceID and RedirectSourceObjectID deal
+// that much damage to the damage source's controller in the same event.
 type PreventionShield struct {
 	ID                     id.ID
 	Controller             PlayerID
@@ -83,6 +94,9 @@ type PreventionShield struct {
 	ChosenSourceObjectID   id.ID
 	RedirectSourceID       id.ID
 	RedirectSourceObjectID id.ID
+	Redirect               DamageRedirect
+	RedirectPlayer         PlayerID
+	RedirectPermanentID    id.ID
 	// SourceColors and SourceTypes are never mutated in place, so game clones
 	// share them.
 	SourceColors               []color.Color

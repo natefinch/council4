@@ -3659,6 +3659,9 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 			return errors.New("redirect-to-source-controller prevent damage requires the controller as the prevented player")
 		}
 	}
+	if err := p.validateRedirect(targets, checkTargets); err != nil {
+		return err
+	}
 	hasObject := p.Object.Kind() != ObjectReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
 	_, hasAnyTarget := p.AnyTarget.AnyTargetObjectReference()
@@ -3689,6 +3692,37 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 		return validateObjectReference(p.Object, targets, checkTargets)
 	}
 	return validatePlayerReference(p.Player, targets, checkTargets)
+}
+
+func (p PreventDamage) validateRedirect(targets []TargetSpec, checkTargets bool) error {
+	hasObject := p.RedirectObject.Kind() != ObjectReferenceNone
+	switch p.Redirect {
+	case DamageRedirectNone:
+		if hasObject {
+			return errors.New("prevent damage RedirectObject requires DamageRedirectToObject")
+		}
+		return nil
+	case DamageRedirectToController, DamageRedirectToDamageSourceController, DamageRedirectAlsoToDamageSourceController:
+		if hasObject {
+			return errors.New("prevent damage RedirectObject requires DamageRedirectToObject")
+		}
+	case DamageRedirectToObject:
+		if !hasObject {
+			return errors.New("redirect-to-object damage requires RedirectObject")
+		}
+		if err := validateObjectReference(p.RedirectObject, targets, checkTargets); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("unknown damage redirect %d", p.Redirect)
+	}
+	if !p.OneShot {
+		return errors.New("damage redirection requires OneShot and All")
+	}
+	if p.RedirectPreventedToSourceController || p.BySource {
+		return errors.New("damage redirection must not set RedirectPreventedToSourceController or BySource")
+	}
+	return nil
 }
 
 func validateNestedAbilityContent(
