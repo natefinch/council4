@@ -3637,8 +3637,14 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.OneShot && !p.All {
+		return errors.New("one-shot prevent damage requires All")
+	}
+	if (len(p.SourceTypes) > 0 || p.SourceColorFromEntryChoice) && !p.OneShot {
+		return errors.New("prevent damage SourceTypes and SourceColorFromEntryChoice require OneShot")
+	}
 	if p.RedirectPreventedToSourceController {
-		if !p.OneShot || !p.All {
+		if !p.OneShot {
 			return errors.New("redirect-to-source-controller prevent damage requires OneShot and All")
 		}
 		if p.Player.Kind() != PlayerReferenceController {

@@ -195,21 +195,17 @@ func TestCombatSimultaneousRedirectionPreservesWholeEvent(t *testing.T) {
 	}
 }
 
-func TestCombatSimultaneousOneShotChoosesOneSource(t *testing.T) {
+// TestCombatSimultaneousOneShotPreventsOnlyChosenSource proves a one-shot
+// shield binds the source chosen as it is created (CR 609.7a): of two attackers
+// dealing combat damage simultaneously, only the chosen one's damage is
+// prevented (and reflected), and the shield is used up.
+func TestCombatSimultaneousOneShotPreventsOnlyChosenSource(t *testing.T) {
 	for _, reflectDamage := range []bool{false, true} {
 		t.Run(strconv.FormatBool(reflectDamage), func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			first := addCombatCreaturePermanentWithPower(g, game.Player1, 3)
 			second := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 			shieldSource := addColoredSourceCard(g, game.Player2, color.White)
-			g.PreventionShields = append(g.PreventionShields, game.PreventionShield{
-				All: true, OneShot: true, Player: game.Player2, Controller: game.Player2,
-				RedirectToSourceController: reflectDamage, RedirectSourceID: shieldSource,
-			})
-			g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{
-				{Attacker: first.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-				{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
-			}}
 			policy := &controlScript{choice: func(_ PlayerObservation, request game.ChoiceRequest) []int {
 				if request.Kind == game.ChoicePreventionAllocation {
 					for _, option := range request.Options {
@@ -222,7 +218,20 @@ func TestCombatSimultaneousOneShotChoosesOneSource(t *testing.T) {
 				return request.DefaultSelection
 			}}
 			engine := NewEngine(nil)
-			engine.setReplacementChoiceContext(g, [game.NumPlayers]PlayerAgent{game.Player2: policy}, &TurnLog{})
+			agents := [game.NumPlayers]PlayerAgent{game.Player2: policy}
+			engine.resolveInstructionWithChoices(g, &game.StackObject{ID: g.IDGen.Next(), Controller: game.Player2, SourceID: shieldSource},
+				&game.Instruction{Primitive: game.PreventDamage{
+					Player: game.ControllerReference(), All: true, OneShot: true,
+					RedirectPreventedToSourceController: reflectDamage,
+				}}, agents, &TurnLog{})
+			if len(g.PreventionShields) != 1 || g.PreventionShields[0].ChosenSourceObjectID != second.ObjectID {
+				t.Fatalf("shields = %+v, want one bound to second attacker %d", g.PreventionShields, second.ObjectID)
+			}
+			g.Combat = &game.CombatState{Attackers: []game.AttackDeclaration{
+				{Attacker: first.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+				{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}},
+			}}
+			engine.setReplacementChoiceContext(g, agents, &TurnLog{})
 			defer g.ClearChoiceContext()
 			engine.resolveCombatDamage(g, &TurnLog{})
 			wantAttackerLife := 40
