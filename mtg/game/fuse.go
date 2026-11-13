@@ -115,17 +115,21 @@ func FusedModes() []int {
 }
 
 // FaceLabel returns a display label for a cast face choice. A fused split
-// spell is labeled with both halves' names and "(fused)"; every printed face
-// uses its own name.
+// spell is labeled with both halves' names and "(fused)", a prototyped spell
+// with its name and "(prototype)"; every printed face uses its own name.
 func (c *CardDef) FaceLabel(index FaceIndex) string {
 	face, ok := c.FaceView(index)
 	if !ok {
 		return c.Name
 	}
-	if index == FaceFused {
+	switch index {
+	case FaceFused:
 		return face.Name + " (fused)"
+	case FacePrototype:
+		return face.Name + " (prototype)"
+	default:
+		return face.Name
 	}
-	return face.Name
 }
 
 func fusedColors(left, right []color.Color) []color.Color {

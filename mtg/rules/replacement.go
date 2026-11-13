@@ -49,6 +49,11 @@ type damageEvent struct {
 	// it unpreventable (CR 615.12). It travels with the event through
 	// redirection.
 	cantBePrevented bool
+	// preventionScope identifies the damage event one instruction deals to
+	// several recipients through separate batches, so a one-shot prevention
+	// shield prevents all of that event's in-scope damage as one use. It is
+	// zero outside such a scope and is never emitted.
+	preventionScope id.ID
 }
 
 type damageModificationResult struct {
@@ -76,10 +81,11 @@ func applyDamageEventModifications(g *game.Game, event damageEvent) damageModifi
 // (controller) deals that amount back to the prevented source's controller
 // (player).
 type preventionRedirect struct {
-	sourceID   id.ID
-	controller game.PlayerID
-	player     game.PlayerID
-	amount     int
+	sourceID       id.ID
+	sourceObjectID id.ID
+	controller     game.PlayerID
+	player         game.PlayerID
+	amount         int
 }
 
 // from the source, which prevents all of the damage (CR 702.16e).
@@ -97,10 +103,10 @@ func applicablePreventionShieldIndices(g *game.Game, event damageEvent) []int {
 	var indices []int
 	for i := range g.PreventionShields {
 		shield := g.PreventionShields[i]
-		if !preventionShieldApplies(shield, event) || (!shield.All && shield.Amount <= 0) {
+		if !preventionShieldApplies(g, shield, event) || (!shield.All && shield.Amount <= 0) {
 			continue
 		}
-		if len(shield.SourceColors) > 0 && !damageSourceHasAnyColor(g, event, shield.SourceColors) {
+		if !preventionShieldSourceMatches(g, &shield, event) {
 			continue
 		}
 		indices = append(indices, i)
@@ -2395,7 +2401,11 @@ func replacementEffectLabels(replacements []game.ReplacementEffect) []string {
 	return labels
 }
 
-func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, prim game.PreventDamage, duration game.EffectDuration) bool {
+// createPreventionShield creates a prevention shield for prim's recipient.
+// bind, when set, completes the shield once its recipient is known (a one-shot
+// shield's chosen source, CR 609.7a); when it reports false no shield is
+// created.
+func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, prim game.PreventDamage, duration game.EffectDuration, bind func(*game.PreventionShield) bool) bool {
 	if !prim.All && amount <= 0 {
 		return false
 	}
@@ -2406,25 +2416,35 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		All:                        prim.All,
 		CombatOnly:                 prim.CombatOnly,
 		Global:                     prim.Global,
+		PlayerCreatures:            prim.AndControlledCreatures,
 		OneShot:                    prim.OneShot,
 		RedirectToSourceController: prim.RedirectPreventedToSourceController,
 		SourceColors:               append([]color.Color(nil), prim.SourceColors...),
+		SourceTypes:                append([]types.Card(nil), prim.SourceTypes...),
 		Duration:                   effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
 		CreatedTurn:                g.Turn.TurnNumber,
 	}
 	// Capture the creating card instance so a later effect of the same card
 	// ("For each 1 damage prevented this way, create ...") can find this shield
 	// and read its Prevented tally after the creating spell has left the stack.
-	shield.SourceID, _ = damageSourceIDs(g, obj)
+	var sourceObjectID id.ID
+	shield.SourceID, sourceObjectID = damageSourceIDs(g, obj)
 	if prim.RedirectPreventedToSourceController {
 		// The redirect deals damage as the shield's own source (the spell that
 		// created it), which has left the stack by the time the shield prevents,
-		// so capture its card identity now.
+		// so capture its identity now.
 		shield.RedirectSourceID = obj.SourceID
+		shield.RedirectSourceObjectID = sourceObjectID
 	}
-	if prim.Global {
+	add := func() bool {
+		if bind != nil && !bind(&shield) {
+			return false
+		}
 		g.PreventionShields = append(g.PreventionShields, shield)
 		return true
+	}
+	if prim.Global {
+		return add()
 	}
 	if _, anyTarget := prim.AnyTarget.AnyTargetObjectReference(); anyTarget {
 		// An any-target shield names one target slot the controller chose as
@@ -2434,8 +2454,7 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		if playerRef, ok := prim.AnyTarget.AnyTargetPlayerReference(); ok {
 			if playerID, ok := resolvePlayerReference(g, obj, playerRef); ok {
 				shield.Player = playerID
-				g.PreventionShields = append(g.PreventionShields, shield)
-				return true
+				return add()
 			}
 		}
 		objectRef, _ := prim.AnyTarget.AnyTargetObjectReference()
@@ -2444,8 +2463,7 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 			return false
 		}
 		shield.PermanentID = resolved.permanent.ObjectID
-		g.PreventionShields = append(g.PreventionShields, shield)
-		return true
+		return add()
 	}
 	if prim.Player.Kind() != game.PlayerReferenceNone {
 		playerID, ok := resolvePlayerReference(g, obj, prim.Player)
@@ -2453,8 +2471,7 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 			return false
 		}
 		shield.Player = playerID
-		g.PreventionShields = append(g.PreventionShields, shield)
-		return true
+		return add()
 	}
 	resolved, ok := resolveObjectReference(g, obj, prim.Object)
 	if !ok || resolved.permanent == nil {
@@ -2465,12 +2482,19 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 	} else {
 		shield.PermanentID = resolved.permanent.ObjectID
 	}
-	g.PreventionShields = append(g.PreventionShields, shield)
-	return true
+	return add()
 }
 
-func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bool {
+func preventionShieldApplies(g *game.Game, shield game.PreventionShield, event damageEvent) bool {
 	if shield.CombatOnly && !event.combatDamage {
+		return false
+	}
+	if shield.OneShot && (shield.ChosenSourceObjectID == 0 || shield.ChosenSourceObjectID != event.sourceObjectID) {
+		return false
+	}
+	// A one-shot shield that has begun preventing one damage event applies
+	// only to the rest of that event.
+	if shield.SpentScope != 0 && shield.SpentScope != event.preventionScope {
 		return false
 	}
 	if shield.Global {
@@ -2480,9 +2504,43 @@ func preventionShieldApplies(shield game.PreventionShield, event damageEvent) bo
 		return shield.SourcePermanentID == event.sourceObjectID
 	}
 	if event.permanent != nil {
+		if shield.PlayerCreatures {
+			return permanentHasType(g, event.permanent, types.Creature) &&
+				effectiveController(g, event.permanent) == shield.Player
+		}
 		return shield.PermanentID == event.permanent.ObjectID
 	}
 	return shield.PermanentID == 0 && shield.Player == event.player
+}
+
+// beginOneShotPreventionScope opens a damage event scope for an instruction
+// that deals damage to several recipients through separate batches. It returns
+// zero, allocating nothing, when no one-shot shield could be affected.
+func beginOneShotPreventionScope(g *game.Game) id.ID {
+	if !slices.ContainsFunc(g.PreventionShields, func(shield game.PreventionShield) bool { return shield.OneShot && shield.All }) {
+		return 0
+	}
+	return g.IDGen.Next()
+}
+
+// endOneShotPreventionScope uses up every one-shot shield that prevented damage
+// in scope, now that the whole damage event has been dealt.
+func endOneShotPreventionScope(g *game.Game, scope id.ID) {
+	if scope == 0 {
+		return
+	}
+	for i := range g.PreventionShields {
+		if g.PreventionShields[i].SpentScope == scope {
+			exhaustOneShotShield(&g.PreventionShields[i])
+		}
+	}
+	g.PreventionShields = compactPreventionShields(g.PreventionShields)
+}
+
+func exhaustOneShotShield(shield *game.PreventionShield) {
+	shield.All = false
+	shield.Amount = 0
+	shield.SpentScope = 0
 }
 
 func compactPreventionShields(shields []game.PreventionShield) []game.PreventionShield {

@@ -1670,7 +1670,10 @@ func hasCastFromZoneRuleEffect(g *game.Game, playerID game.PlayerID, cardID id.I
 // ("you may cast that card") covers every face the card may be cast as:
 // either half of a split card (CR 709.3), an adventurer card as its Adventure
 // (CR 715.3, 715.3d), or either face of a modal double-faced card
-// (CR 712.11b). Cast validation separately rejects faces that cannot be cast.
+// (CR 712.11b). A permission naming the front face also covers casting that
+// card prototyped, which is the same physical face with alternative
+// characteristics rather than another face (CR 719.3). Cast validation
+// separately rejects faces that cannot be cast.
 func castFromZoneRuleEffectMatches(g *game.Game, effect *game.RuleEffect, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex) bool {
 	if (effect.Kind != game.RuleEffectCastFromZone && effect.Kind != game.RuleEffectPlayFromZone) ||
 		effect.CastFromZone != sourceZone {
@@ -1682,7 +1685,7 @@ func castFromZoneRuleEffectMatches(g *game.Game, effect *game.RuleEffect, player
 	if effect.AffectedCardID != 0 && effect.AffectedCardID != cardID {
 		return false
 	}
-	return !effect.CastFace.Exists || effect.CastFace.Val == face
+	return !effect.CastFace.Exists || effect.CastFace.Val == game.PhysicalFace(face)
 }
 
 // castFromZoneManaSpendPermission returns the broadest spending permission any

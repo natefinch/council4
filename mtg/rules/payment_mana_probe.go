@@ -79,11 +79,18 @@ func (e *Engine) manualManaMayMakePayable(root *game.Game, seed uint64, player g
 }
 
 // proposedSpellFace is the face of the proposed card whose characteristics
-// request casts, or its front face when none of its faces carries that name.
+// request casts, or its front face when none of its faces carries that name. A
+// prototyped cast shares its front face's name and is recognized by its
+// prototype mana cost (CR 719.3b).
 func proposedSpellFace(g *game.Game, request payment.SpellRequest) game.FaceIndex {
 	card, ok := g.GetCardInstance(request.CardID)
 	if !ok || card.Def == nil || request.Card == nil {
 		return game.FaceFront
+	}
+	if face, ok := card.Def.FaceView(game.FacePrototype); ok && face.Name == request.Card.Name &&
+		request.Card.ManaCost.Exists && slices.Equal(request.Card.ManaCost.Val, face.ManaCost.Val) &&
+		!slices.Equal(request.Card.ManaCost.Val, card.Def.ManaCost.Val) {
+		return game.FacePrototype
 	}
 	faces := card.Def.FaceIndexes()
 	if card.Def.CanFuse() {

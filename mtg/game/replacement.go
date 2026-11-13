@@ -48,28 +48,53 @@ type ConditionalCounterPlacement struct {
 // only combat damage. SourcePermanentID, when non-zero, prevents damage dealt
 // BY that permanent rather than damage dealt TO PermanentID/Player. When OneShot
 // is set the shield prevents a single qualifying event and then expires (the
-// "next time ... prevent that damage" shields). SourceColors, when non-empty,
-// restricts the shield to damage from a source of one of the listed colors.
+// "next time a source of your choice would deal damage ... prevent that damage"
+// shields). Its source was chosen as the shield was created (CR 609.7a), so it
+// applies only to damage whose source object is ChosenSourceObjectID, and only
+// an event it actually prevents uses it up. SourceColors and SourceTypes, when
+// non-empty, restrict the shield to damage from a source of one of the listed
+// colors or card types; for a one-shot shield they are rechecked against the
+// chosen source as the damage would be dealt (CR 609.7b).
+//
+// PlayerCreatures extends a Player shield to the creatures that player
+// controls, checked as the damage would be dealt ("you and/or creatures you
+// control"). A Global shield has no recipient restriction ("would deal damage
+// this turn").
+//
+// A one-shot shield is used up by the whole damage event it prevents: every
+// in-scope recipient of the chosen source's simultaneous damage is prevented,
+// each by its own application (CR 616.1). Within one damage batch the shield
+// stays applicable until the batch ends. Damage one instruction deals to
+// several recipients through separate batches shares a damage event scope;
+// SpentScope records the scope whose damage the shield has begun preventing,
+// so it applies only to that scope's remaining damage until the scope ends.
 //
 // When RedirectToSourceController is set, a one-shot shield deals the amount it
-// prevents to the prevented source's controller, as damage from the card
-// identified by RedirectSourceID controlled by Controller ("If damage is
-// prevented this way, Deflecting Palm deals that much damage to that source's
-// controller.").
+// prevents to the prevented source's controller, as damage from the object
+// identified by RedirectSourceID and RedirectSourceObjectID controlled by
+// Controller ("If damage is prevented this way, Deflecting Palm deals that much
+// damage to that source's controller.").
 type PreventionShield struct {
-	ID                         id.ID
-	Controller                 PlayerID
-	Player                     PlayerID
-	PermanentID                id.ID
-	SourcePermanentID          id.ID
-	RedirectSourceID           id.ID
+	ID                     id.ID
+	Controller             PlayerID
+	Player                 PlayerID
+	PermanentID            id.ID
+	SourcePermanentID      id.ID
+	ChosenSourceObjectID   id.ID
+	RedirectSourceID       id.ID
+	RedirectSourceObjectID id.ID
+	// SourceColors and SourceTypes are never mutated in place, so game clones
+	// share them.
 	SourceColors               []color.Color
+	SourceTypes                []types.Card
 	Amount                     int
 	All                        bool
 	CombatOnly                 bool
 	Global                     bool
+	PlayerCreatures            bool
 	OneShot                    bool
 	RedirectToSourceController bool
+	SpentScope                 id.ID
 	Duration                   EffectDuration
 	CreatedTurn                int
 	// SourceID is the card instance that created this shield, captured when the

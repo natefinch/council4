@@ -66,6 +66,12 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		return res
 	}
 	source.cantBePrevented = prim.CantBePrevented
+	// The instruction's damage to all of its recipients is one damage event for
+	// a one-shot "next time ... would deal damage" shield.
+	if scope := beginOneShotPreventionScope(r.game); scope != 0 {
+		source.preventionScope = scope
+		defer endOneShotPreventionScope(r.game, scope)
+	}
 	if prim.Divided {
 		return r.damageDivided(res, source, prim)
 	}
@@ -491,6 +497,22 @@ func handlePreventDamage(r *effectResolver, prim game.PreventDamage) effectResol
 	if !prim.All {
 		res.amount = r.quantity(prim.Amount)
 	}
-	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim, game.DurationUntilEndOfTurn)
+	var bind func(*game.PreventionShield) bool
+	if prim.OneShot {
+		bind = func(shield *game.PreventionShield) bool {
+			colors, ok := oneShotPreventionSourceFilter(r.game, r.obj, prim)
+			if !ok {
+				return false
+			}
+			chosen, ok := r.engine.chooseOneShotPreventionSource(r.game, r.agents, r.log, r.obj, r.obj.Controller, colors, prim.SourceTypes)
+			if !ok {
+				return false
+			}
+			shield.SourceColors = colors
+			shield.ChosenSourceObjectID = chosen
+			return true
+		}
+	}
+	res.succeeded = createPreventionShield(r.game, r.obj, res.amount, prim, game.DurationUntilEndOfTurn, bind)
 	return res
 }

@@ -1808,7 +1808,7 @@ func exileCastAuthorized(g *game.Game, playerID game.PlayerID, cardID id.ID, fac
 // Adventure (CR 715.3a, 715.3d) or either half of a split card (CR 709.3).
 func exilePermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, bestowed, allowFree bool) (routes []castRoute, excluded bool) {
 	routes, excluded = castFromZonePermissionRoutes(g, playerID, cardID, zone.Exile, face, bestowed, allowFree)
-	if face == game.FaceFront {
+	if game.PhysicalFace(face) == game.FaceFront {
 		if cardIsPlottedInExile(g, playerID, cardID) {
 			excluded = true
 			if allowFree && isSorcerySpeed(g, playerID) {

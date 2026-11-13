@@ -3637,8 +3637,14 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.OneShot && !p.All {
+		return errors.New("one-shot prevent damage requires All")
+	}
+	if (len(p.SourceTypes) > 0 || p.SourceColorFromEntryChoice) && !p.OneShot {
+		return errors.New("prevent damage SourceTypes and SourceColorFromEntryChoice require OneShot")
+	}
 	if p.RedirectPreventedToSourceController {
-		if !p.OneShot || !p.All {
+		if !p.OneShot {
 			return errors.New("redirect-to-source-controller prevent damage requires OneShot and All")
 		}
 		if p.Player.Kind() != PlayerReferenceController {
@@ -3648,6 +3654,9 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	hasObject := p.Object.Kind() != ObjectReferenceNone
 	hasPlayer := p.Player.Kind() != PlayerReferenceNone
 	_, hasAnyTarget := p.AnyTarget.AnyTargetObjectReference()
+	if p.AndControlledCreatures && (!hasPlayer || p.BySource) {
+		return errors.New("prevent damage AndControlledCreatures requires Player and must not set BySource")
+	}
 	if p.Global {
 		if hasObject || hasPlayer || hasAnyTarget || p.BySource {
 			return errors.New("global prevent damage must not set Object, Player, AnyTarget, or BySource")

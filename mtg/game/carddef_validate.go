@@ -35,6 +35,7 @@ const (
 	CardDefIssueInvalidRuleEffect           CardDefIssueCode = "invalid-rule-effect"
 	CardDefIssueInvalidAlternativeCost      CardDefIssueCode = "invalid-alternative-cost"
 	CardDefIssueInvalidAdditionalCostChoice CardDefIssueCode = "invalid-additional-cost-choice"
+	CardDefIssueInvalidPrototype            CardDefIssueCode = "invalid-prototype"
 )
 
 // CardDefIssue describes one structural problem found in a CardDef.
@@ -98,6 +99,29 @@ func (v *cardDefValidator) validate() {
 	}
 }
 
+// validatePrototype checks a prototype profile (CR 702.160a, 719.1): only the
+// front face of a single-faced creature card may carry one, with a nonempty
+// mana cost of printable symbols and fixed power and toughness, since a
+// prototyped spell and permanent use exactly those values (CR 719.3b).
+func (v *cardDefValidator) validatePrototype(faceName, path string, face *CardFace) {
+	if !face.Prototype.Exists {
+		return
+	}
+	prototypePath := appendPath(path, "Prototype")
+	if path != "" || v.card.Layout != LayoutNormal || v.card.Back.Exists || v.card.Alternate.Exists {
+		v.add(faceName, prototypePath, CardDefIssueInvalidPrototype, "prototype requires the front face of a single-faced normal-layout card")
+	}
+	if !face.HasType(types.Creature) {
+		v.add(faceName, prototypePath, CardDefIssueInvalidPrototype, "prototype requires a creature card")
+	}
+	if problem := face.Prototype.Val.Problem(); problem != "" {
+		v.add(faceName, prototypePath, CardDefIssueInvalidPrototype, problem)
+	}
+	if face.DynamicPower.Exists || face.DynamicToughness.Exists {
+		v.add(faceName, prototypePath, CardDefIssueInvalidPrototype, "prototype requires fixed power and toughness")
+	}
+}
+
 func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	v.faceLinked = collectFacePublishedLinkedKeys(face)
 	buybackCount := 0
@@ -116,6 +140,7 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	}
 	hasAbilities := face.SpellAbility.Exists ||
 		face.Overload.Exists ||
+		face.Prototype.Exists ||
 		face.EntersPrepared ||
 		len(face.ActivatedAbilities) > 0 ||
 		len(face.ManaAbilities) > 0 ||
@@ -138,6 +163,7 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), &face.SpellAbility.Val, nil)
 	}
 
+	v.validatePrototype(faceName, path, face)
 	if face.Overload.Exists {
 		if !face.SpellAbility.Exists {
 			v.add(faceName, appendPath(path, "Overload"), CardDefIssueInvalidAlternativeCost, "overload requires a normal spell ability")
