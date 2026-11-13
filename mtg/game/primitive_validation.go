@@ -824,6 +824,14 @@ func (p Damage) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 			return err
 		}
 	}
+	if permanents, players, ok := p.Recipient.PermanentsAndPlayers(); ok {
+		if err := firstProblem(permanents.Validate()); err != nil {
+			return err
+		}
+		if err := validatePlayerGroupReference(players); err != nil {
+			return err
+		}
+	}
 	if err := validateQuantity(p.Amount, targets, checkTargets); err != nil {
 		return err
 	}

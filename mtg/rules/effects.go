@@ -860,6 +860,67 @@ func (s effectDamageSource) dealPermanent(g *game.Game, permanent *game.Permanen
 	})
 }
 
+// effectDamageAssignment is one recipient's share of a noncombat damage
+// instruction: a permanent, or the player when permanent is nil.
+type effectDamageAssignment struct {
+	permanent *game.Permanent
+	player    game.PlayerID
+	amount    int
+}
+
+// dealSimultaneously deals every assignment from this source as one damage
+// event (CR 120.4, 608.2f): replacement and prevention effects modify the whole
+// event, its damage events share one SimultaneousID, and its results are
+// committed together before any of them is published. It reports the damage
+// dealt for each assignment and marks deathtouch on each permanent dealt
+// damage. Assignments to a permanent that has left the battlefield or a player
+// who has left the game are dealt nothing.
+func (s effectDamageSource) dealSimultaneously(g *game.Game, assignments []effectDamageAssignment) []int {
+	dealt := make([]int, len(assignments))
+	events := make([]damageEvent, 0, len(assignments))
+	indexes := make([]int, 0, len(assignments))
+	for index, assignment := range assignments {
+		if assignment.amount <= 0 {
+			continue
+		}
+		event := damageEvent{
+			sourceID:        s.sourceID,
+			sourceObjectID:  s.sourceObjectID,
+			controller:      s.controller,
+			amount:          assignment.amount,
+			cantBePrevented: s.cantBePrevented,
+			preventionScope: s.preventionScope,
+		}
+		if assignment.permanent != nil {
+			if !activeBattlefieldPermanent(assignment.permanent) {
+				continue
+			}
+			event.permanent = assignment.permanent
+		} else {
+			if !isPlayerAlive(g, assignment.player) {
+				continue
+			}
+			event.player = assignment.player
+		}
+		events = append(events, event)
+		indexes = append(indexes, index)
+	}
+	if len(events) == 0 {
+		return dealt
+	}
+	var simultaneousID id.ID
+	if len(events) > 1 {
+		simultaneousID = g.IDGen.Next()
+	}
+	for position, result := range resolveDamageBatch(g, events, simultaneousID, false, nil) {
+		dealt[indexes[position]] = result.amount
+		if result.event.permanent != nil {
+			applyDamageSourceDeathtouch(s, result.event.permanent, result.amount)
+		}
+	}
+	return dealt
+}
+
 func applyDamageSourceKeywordEffects(g *game.Game, source effectDamageSource, damaged *game.Permanent, damage int) {
 	applyDamageSourceDeathtouch(source, damaged, damage)
 	applyDamageSourceLifelink(g, source, damage)

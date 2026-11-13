@@ -106,23 +106,44 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
 	}
 	if group, ok := prim.Recipient.GroupReference(); ok {
-		return r.damageSelectedPermanents(res, source, group)
+		total := r.damageEach(source, r.groupPermanentsWithSource(group, source.permanent), nil, res.amount)
+		res.succeeded = total > 0
+		return res
 	}
 	if group, ok := prim.Recipient.PlayerGroupReference(); ok {
-		perRecipient := res.amount
-		total := 0
-		for _, playerID := range r.playerGroupMembers(group) {
-			dealt := source.dealPlayer(r.game, playerID, perRecipient)
-			total += dealt
-			res.succeeded = dealt > 0 || res.succeeded
-		}
-		applyDamageSourceLifelink(r.game, source, total)
+		total := r.damageEach(source, nil, r.playerGroupMembers(group), res.amount)
+		res.succeeded = total > 0
 		// Publish the total damage dealt across the whole group so a follow-on
 		// "...equal to the damage dealt this way." life gain (Creeping
 		// Bloodsucker) reads the sum, not just one recipient's share.
 		res.amount = total
+		return res
+	}
+	if permanents, players, ok := prim.Recipient.PermanentsAndPlayers(); ok {
+		total := r.damageEach(source, r.groupPermanentsWithSource(permanents, source.permanent), r.playerGroupMembers(players), res.amount)
+		res.succeeded = total > 0
+		res.amount = total
 	}
 	return res
+}
+
+// damageEach deals amount to each of permanents and players as one
+// simultaneous damage event and reports the total damage dealt, from which the
+// source's lifelink gains life once.
+func (r *effectResolver) damageEach(source effectDamageSource, permanents []*game.Permanent, players []game.PlayerID, amount int) int {
+	assignments := make([]effectDamageAssignment, 0, len(permanents)+len(players))
+	for _, permanent := range permanents {
+		assignments = append(assignments, effectDamageAssignment{permanent: permanent, amount: amount})
+	}
+	for _, player := range players {
+		assignments = append(assignments, effectDamageAssignment{player: player, amount: amount})
+	}
+	total := 0
+	for _, dealt := range source.dealSimultaneously(r.game, assignments) {
+		total += dealt
+	}
+	applyDamageSourceLifelink(r.game, source, total)
+	return total
 }
 
 // dividedDamageTarget pairs a chosen runtime target with a stable label for the
@@ -425,18 +446,6 @@ func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, so
 	res.excessDamage = excessAmount
 	res.amount = typedDamageResultAmount(prim.ResultAmountKind, dealtToPermanent+dealtToPlayer, excessAmount)
 	res.succeeded = dealtToPermanent > 0 || dealtToPlayer > 0
-	return res
-}
-
-func (r *effectResolver) damageSelectedPermanents(res effectResolved, source effectDamageSource, group game.GroupReference) effectResolved {
-	total := 0
-	for _, permanent := range r.groupPermanentsWithSource(group, source.permanent) {
-		dealt := source.dealPermanent(r.game, permanent, res.amount)
-		applyDamageSourceDeathtouch(source, permanent, dealt)
-		total += dealt
-		res.succeeded = dealt > 0 || res.succeeded
-	}
-	applyDamageSourceLifelink(r.game, source, total)
 	return res
 }
 
