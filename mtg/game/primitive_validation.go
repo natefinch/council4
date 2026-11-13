@@ -3651,13 +3651,8 @@ func (p PreventDamage) validatePrimitive(targets []TargetSpec, checkTargets bool
 	if (len(p.SourceTypes) > 0 || p.SourceColorFromEntryChoice) && !p.OneShot {
 		return errors.New("prevent damage SourceTypes and SourceColorFromEntryChoice require OneShot")
 	}
-	if p.RedirectPreventedToSourceController {
-		if !p.OneShot {
-			return errors.New("redirect-to-source-controller prevent damage requires OneShot and All")
-		}
-		if p.Player.Kind() != PlayerReferenceController {
-			return errors.New("redirect-to-source-controller prevent damage requires the controller as the prevented player")
-		}
+	if err := p.validatePreventedRiders(); err != nil {
+		return err
 	}
 	if err := p.validateRedirect(targets, checkTargets); err != nil {
 		return err
@@ -3719,8 +3714,47 @@ func (p PreventDamage) validateRedirect(targets []TargetSpec, checkTargets bool)
 	if !p.OneShot {
 		return errors.New("damage redirection requires OneShot and All")
 	}
-	if p.RedirectPreventedToSourceController || p.BySource {
-		return errors.New("damage redirection must not set RedirectPreventedToSourceController or BySource")
+	if p.PreventHalfRoundedDown || len(p.PreventedRiders) > 0 || p.BySource {
+		return errors.New("damage redirection must not set PreventHalfRoundedDown, PreventedRiders or BySource")
+	}
+	return nil
+}
+
+func (p PreventDamage) validatePreventedRiders() error {
+	if p.PreventHalfRoundedDown {
+		if !p.OneShot {
+			return errors.New("half prevent damage requires OneShot and All")
+		}
+		if p.Global || p.AndControlledCreatures || p.BySource {
+			return errors.New("half prevent damage requires a single recipient")
+		}
+	}
+	if len(p.PreventedRiders) == 0 {
+		if len(p.RiderSourceColors) > 0 || p.RidersReflexive {
+			return errors.New("prevent damage RiderSourceColors and RidersReflexive require PreventedRiders")
+		}
+		return nil
+	}
+	if !p.OneShot || p.BySource {
+		return errors.New("prevented-damage riders require OneShot and must not set BySource")
+	}
+	for index, rider := range p.PreventedRiders {
+		switch rider {
+		case PreventedDamageRiderControllerGainsLife, PreventedDamageRiderDamageSourceController:
+		case PreventedDamageRiderControllerExilesLibraryTop:
+			if p.RidersReflexive {
+				return errors.New("prevented-damage exile rider must not be reflexive")
+			}
+		case PreventedDamageRiderControllerDraws:
+			if !p.RidersReflexive {
+				return errors.New("prevented-damage draw rider requires RidersReflexive")
+			}
+		default:
+			return fmt.Errorf("unknown prevented-damage rider %d", rider)
+		}
+		if slices.Contains(p.PreventedRiders[:index], rider) {
+			return fmt.Errorf("duplicate prevented-damage rider %d", rider)
+		}
 	}
 	return nil
 }

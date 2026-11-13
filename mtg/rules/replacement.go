@@ -76,18 +76,6 @@ func applyDamageEventModifications(g *game.Game, event damageEvent) damageModifi
 	return damageModificationResult{event: member.event, amount: member.event.amount, redirected: member.redirected}
 }
 
-// preventionRedirect records a pending Deflecting Palm redirect: after a
-// RedirectToSourceController shield prevents an amount of damage, its source
-// (controller) deals that amount back to the prevented source's controller
-// (player).
-type preventionRedirect struct {
-	sourceID       id.ID
-	sourceObjectID id.ID
-	controller     game.PlayerID
-	player         game.PlayerID
-	amount         int
-}
-
 // from the source, which prevents all of the damage (CR 702.16e).
 func damageEventProtected(g *game.Game, event damageEvent) bool {
 	if event.permanent != nil {
@@ -2410,31 +2398,34 @@ func createPreventionShield(g *game.Game, obj *game.StackObject, amount int, pri
 		return false
 	}
 	shield := game.PreventionShield{
-		ID:                         g.IDGen.Next(),
-		Controller:                 obj.Controller,
-		Amount:                     amount,
-		All:                        prim.All,
-		CombatOnly:                 prim.CombatOnly,
-		Global:                     prim.Global,
-		PlayerCreatures:            prim.AndControlledCreatures,
-		OneShot:                    prim.OneShot,
-		RedirectToSourceController: prim.RedirectPreventedToSourceController,
-		Redirect:                   prim.Redirect,
-		SourceColors:               append([]color.Color(nil), prim.SourceColors...),
-		SourceTypes:                append([]types.Card(nil), prim.SourceTypes...),
-		Duration:                   effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
-		CreatedTurn:                g.Turn.TurnNumber,
+		ID:                g.IDGen.Next(),
+		Controller:        obj.Controller,
+		Amount:            amount,
+		All:               prim.All,
+		CombatOnly:        prim.CombatOnly,
+		Global:            prim.Global,
+		PlayerCreatures:   prim.AndControlledCreatures,
+		OneShot:           prim.OneShot,
+		HalfRoundedDown:   prim.PreventHalfRoundedDown,
+		PreventedRiders:   slices.Clone(prim.PreventedRiders),
+		RiderSourceColors: slices.Clone(prim.RiderSourceColors),
+		RidersReflexive:   prim.RidersReflexive,
+		Redirect:          prim.Redirect,
+		SourceColors:      append([]color.Color(nil), prim.SourceColors...),
+		SourceTypes:       append([]types.Card(nil), prim.SourceTypes...),
+		Duration:          effectDurationOrDefault(duration, game.DurationUntilEndOfTurn),
+		CreatedTurn:       g.Turn.TurnNumber,
 	}
 	// Capture the creating card instance so a later effect of the same card
 	// ("For each 1 damage prevented this way, create ...") can find this shield
 	// and read its Prevented tally after the creating spell has left the stack.
 	var sourceObjectID id.ID
 	shield.SourceID, sourceObjectID = damageSourceIDs(g, obj)
-	if prim.RedirectPreventedToSourceController || prim.Redirect == game.DamageRedirectAlsoToDamageSourceController {
-		// The redirect deals damage as the shield's own source (the spell that
-		// created it), which has left the stack by the time the shield prevents,
-		// so capture its identity now.
-		shield.RedirectSourceID = obj.SourceID
+	if len(prim.PreventedRiders) > 0 || prim.Redirect == game.DamageRedirectAlsoToDamageSourceController {
+		// Damage the shield's own source deals ("Deflecting Palm deals that much
+		// damage") comes from the spell or ability's source, which may have left
+		// its zone by the time the shield applies, so capture its identity now.
+		shield.RedirectSourceID = shield.SourceID
 		shield.RedirectSourceObjectID = sourceObjectID
 	}
 	switch prim.Redirect {
@@ -2571,12 +2562,126 @@ func endOneShotPreventionScope(g *game.Game, scope id.ID) {
 	if scope == 0 {
 		return
 	}
+	var riders []preventedDamageRiders
 	for i := range g.PreventionShields {
 		if g.PreventionShields[i].SpentScope == scope {
+			if pending, ok := takePreventedDamageRiders(&g.PreventionShields[i]); ok {
+				riders = append(riders, pending)
+			}
 			exhaustOneShotShield(&g.PreventionShields[i])
 		}
 	}
 	g.PreventionShields = compactPreventionShields(g.PreventionShields)
+	for _, pending := range riders {
+		applyPreventedDamageRiders(g, pending)
+	}
+}
+
+// preventedDamageRiders are a one-shot shield's additional effects using the
+// total damage it prevented in one damage event (CR 615.5). sourceID,
+// sourceObjectID and controller identify the shield's own source and
+// controller; preventedObjectID identifies the prevented source and player is
+// that source's controller as its damage was prevented.
+type preventedDamageRiders struct {
+	riders            []game.PreventedDamageRider
+	reflexive         bool
+	sourceID          id.ID
+	sourceObjectID    id.ID
+	controller        game.PlayerID
+	preventedObjectID id.ID
+	player            game.PlayerID
+	amount            int
+}
+
+// takePreventedDamageRiders removes the prevented amount a shield accumulated
+// for its riders in the damage event that used it up.
+func takePreventedDamageRiders(shield *game.PreventionShield) (preventedDamageRiders, bool) {
+	amount := shield.RiderAmount
+	shield.RiderAmount = 0
+	if amount <= 0 || len(shield.PreventedRiders) == 0 {
+		return preventedDamageRiders{}, false
+	}
+	return preventedDamageRiders{
+		riders: shield.PreventedRiders, reflexive: shield.RidersReflexive,
+		sourceID: shield.RedirectSourceID, sourceObjectID: shield.RedirectSourceObjectID,
+		controller: shield.Controller, preventedObjectID: shield.RiderSourceObjectID, player: shield.RiderPlayer,
+		amount: amount,
+	}, true
+}
+
+// preventedSourceController is "that source's controller" for a prevented
+// damage source as the rider happens: the controller of the source if it is
+// still a permanent, otherwise its last-known controller (CR 608.2h), falling
+// back to its controller as the damage was prevented when it cannot be found.
+func preventedSourceController(g *game.Game, pending preventedDamageRiders) game.PlayerID {
+	if resolved, ok := resolvePermanentOrLastKnown(g, pending.preventedObjectID); ok {
+		if controller, ok := resolved.controller(g); ok {
+			return controller
+		}
+	}
+	return pending.player
+}
+
+// applyPreventedDamageRiders performs a shield's riders immediately after the
+// damage event it prevented (CR 615.5), or queues them as the reflexive "When
+// damage is prevented this way" trigger (CR 603.12).
+func applyPreventedDamageRiders(g *game.Game, pending preventedDamageRiders) {
+	if pending.reflexive {
+		queuePreventedDamageReflexiveTrigger(g, pending)
+		return
+	}
+	for _, rider := range pending.riders {
+		switch rider {
+		case game.PreventedDamageRiderControllerGainsLife:
+			gainLife(g, pending.controller, pending.amount)
+		case game.PreventedDamageRiderControllerExilesLibraryTop:
+			exileTopOfLibraryCards(g, pending.controller, pending.amount, opt.V[counter.Kind]{}, pending.controller, false)
+		case game.PreventedDamageRiderDamageSourceController:
+			dealPlayerDamage(g, pending.sourceID, pending.sourceObjectID, pending.controller, preventedSourceController(g, pending),
+				pending.amount, false)
+		default:
+			panic(fmt.Sprintf("unsupported immediate prevented-damage rider %d", rider))
+		}
+	}
+}
+
+func queuePreventedDamageReflexiveTrigger(g *game.Game, pending preventedDamageRiders) {
+	amount := game.Fixed(pending.amount)
+	// "That source's controller" is determined as the reflexive trigger
+	// resolves, so it follows a control change made in response (CR 608.2h).
+	// The trigger captures the prevented source, which can then always be
+	// found as a permanent or through its last-known information.
+	sourceController := game.CapturedPlayerReference(pending.player)
+	var capturedObjectID id.ID
+	if _, ok := resolvePermanentOrLastKnown(g, pending.preventedObjectID); ok {
+		capturedObjectID = pending.preventedObjectID
+		sourceController = game.ObjectControllerReference(game.CapturedObjectReference())
+	}
+	var sequence []game.Instruction
+	for _, rider := range pending.riders {
+		switch rider {
+		case game.PreventedDamageRiderControllerGainsLife:
+			sequence = append(sequence, game.Instruction{Primitive: game.GainLife{Amount: amount, Player: game.ControllerReference()}})
+		case game.PreventedDamageRiderDamageSourceController:
+			sequence = append(sequence, game.Instruction{Primitive: game.Damage{
+				Amount: amount, Recipient: game.PlayerDamageRecipient(sourceController),
+			}})
+		case game.PreventedDamageRiderControllerDraws:
+			sequence = append(sequence, game.Instruction{Primitive: game.Draw{Amount: amount, Player: game.ControllerReference()}})
+		default:
+			panic(fmt.Sprintf("unsupported reflexive prevented-damage rider %d", rider))
+		}
+	}
+	g.PendingReflexiveTriggers = append(g.PendingReflexiveTriggers, game.ReflexiveTrigger{
+		SourceID:         pending.sourceID,
+		SourceObjectID:   pending.sourceObjectID,
+		Controller:       pending.controller,
+		CapturedObjectID: capturedObjectID,
+		Ability: game.TriggeredAbility{
+			Text:    "When damage is prevented this way",
+			Content: game.Mode{Sequence: sequence}.Ability(),
+		},
+	})
 }
 
 func exhaustOneShotShield(shield *game.PreventionShield) {

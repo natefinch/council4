@@ -219,11 +219,12 @@ func TestCombatSimultaneousOneShotPreventsOnlyChosenSource(t *testing.T) {
 			}}
 			engine := NewEngine(nil)
 			agents := [game.NumPlayers]PlayerAgent{game.Player2: policy}
+			prim := game.PreventDamage{Player: game.ControllerReference(), All: true, OneShot: true}
+			if reflectDamage {
+				prim.PreventedRiders = []game.PreventedDamageRider{game.PreventedDamageRiderDamageSourceController}
+			}
 			engine.resolveInstructionWithChoices(g, &game.StackObject{ID: g.IDGen.Next(), Controller: game.Player2, SourceID: shieldSource},
-				&game.Instruction{Primitive: game.PreventDamage{
-					Player: game.ControllerReference(), All: true, OneShot: true,
-					RedirectPreventedToSourceController: reflectDamage,
-				}}, agents, &TurnLog{})
+				&game.Instruction{Primitive: prim}, agents, &TurnLog{})
 			if len(g.PreventionShields) != 1 || g.PreventionShields[0].ChosenSourceObjectID != second.ObjectID {
 				t.Fatalf("shields = %+v, want one bound to second attacker %d", g.PreventionShields, second.ObjectID)
 			}

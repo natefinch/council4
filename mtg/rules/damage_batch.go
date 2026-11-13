@@ -24,7 +24,7 @@ type damagePreventionConsequence struct {
 	remove     opt.V[counter.Kind]
 	add        int
 	controller game.PlayerID
-	redirect   preventionRedirect
+	riders     preventedDamageRiders
 }
 
 type damageBatch struct {
@@ -117,6 +117,9 @@ func prepareDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 		batch.apply(choices[chosen])
 	}
 	for _, index := range batch.spentOneShots {
+		if riders, ok := takePreventedDamageRiders(&g.PreventionShields[index]); ok {
+			batch.after = append(batch.after, damagePreventionConsequence{riders: riders})
+		}
 		exhaustOneShotShield(&g.PreventionShields[index])
 	}
 	g.PreventionShields = compactPreventionShields(g.PreventionShields)
@@ -304,12 +307,20 @@ func (batch *damageBatch) applyShield(modifier damageModifier) {
 		}
 	}
 	prevented := make([]int, len(indices))
-	if shield.All {
+	switch {
+	case shield.HalfRoundedDown:
+		remaining := total / 2
+		for position, index := range indices {
+			prevented[position] = min(remaining, batch.members[index].event.amount)
+			remaining -= prevented[position]
+			batch.members[index].shields[modifier.shield] = true
+		}
+	case shield.All:
 		for position, index := range indices {
 			prevented[position] = batch.members[index].event.amount
 			batch.members[index].shields[modifier.shield] = true
 		}
-	} else {
+	default:
 		remaining := min(total, shield.Amount)
 		shield.Amount -= remaining
 		// Each choice allocates one point, so partial shares are expressible
@@ -338,16 +349,19 @@ func (batch *damageBatch) applyShield(modifier damageModifier) {
 		amount := batch.prevent(index, prevented[position])
 		total += amount
 		shield.Prevented += amount
-		if amount > 0 && shield.RedirectToSourceController {
-			batch.after = append(batch.after, damagePreventionConsequence{redirect: preventionRedirect{
-				sourceID: shield.RedirectSourceID, sourceObjectID: shield.RedirectSourceObjectID,
-				controller: shield.Controller, player: event.controller, amount: amount,
-			}})
+		// A rider's condition on the prevented source is checked as the damage
+		// is prevented; its effect waits until the damage event ends (CR 615.5).
+		if amount > 0 && len(shield.PreventedRiders) > 0 && (len(shield.RiderSourceColors) == 0 ||
+			preventionSourceCharacteristicsMatch(damageSourceColors(batch.game, event), nil, shield.RiderSourceColors, nil)) {
+			shield.RiderAmount += amount
+			shield.RiderSourceObjectID = event.sourceObjectID
+			shield.RiderPlayer = event.controller
 		}
 	}
-	// A one-shot shield is used up by the damage event it prevents, after all of
-	// the chosen source's simultaneous in-scope damage has been prevented; one
-	// that prevents nothing remains (CR 609.7b).
+	// A one-shot shield is used up by the damage event it prevents, after all
+	// of the chosen source's simultaneous in-scope damage has been prevented;
+	// one that prevents nothing, including half that rounds down to nothing,
+	// remains (CR 609.7b).
 	if shield.OneShot && total > 0 {
 		if scope := recipient.preventionScope; scope != 0 {
 			shield.SpentScope = scope
@@ -471,9 +485,8 @@ func (batch *damageBatch) finish() {
 			if consequence.add > 0 {
 				addCountersToPermanentControlledBy(batch.game, consequence.controller, consequence.permanent, counter.PlusOnePlusOne, consequence.add)
 			}
-		} else if consequence.redirect.amount > 0 {
-			redirect := consequence.redirect
-			dealPlayerDamage(batch.game, redirect.sourceID, redirect.sourceObjectID, redirect.controller, redirect.player, redirect.amount, false)
+		} else if consequence.riders.amount > 0 {
+			applyPreventedDamageRiders(batch.game, consequence.riders)
 		}
 	}
 }

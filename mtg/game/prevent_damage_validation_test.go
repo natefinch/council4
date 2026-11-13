@@ -3,6 +3,7 @@ package game
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
@@ -58,6 +59,58 @@ func TestPreventDamageRedirectValidation(t *testing.T) {
 		"unknown redirect": {Player: ControllerReference(), All: true, OneShot: true, Redirect: DamageRedirect(99)},
 	} {
 		if err := invalid.validatePrimitive(nil, false); err == nil {
+			t.Errorf("%s: validatePrimitive() = nil, want rejection", name)
+		}
+	}
+}
+
+// TestPreventDamageRiderValidation proves half prevention and prevented-amount
+// riders are declared only on one-shot chosen-source shields whose riders the
+// engine applies.
+func TestPreventDamageRiderValidation(t *testing.T) {
+	t.Parallel()
+	shield := func() PreventDamage { return PreventDamage{Player: ControllerReference(), All: true, OneShot: true} }
+	riders := func(riders ...PreventedDamageRider) PreventDamage {
+		p := shield()
+		p.PreventedRiders = riders
+		return p
+	}
+	half := shield()
+	half.PreventHalfRoundedDown = true
+	colored := riders(PreventedDamageRiderDamageSourceController)
+	colored.RiderSourceColors = []color.Color{color.Red}
+	reflexive := riders(PreventedDamageRiderDamageSourceController, PreventedDamageRiderControllerDraws)
+	reflexive.RidersReflexive = true
+	for name, valid := range map[string]PreventDamage{
+		"half": half, "gain": riders(PreventedDamageRiderControllerGainsLife),
+		"exile": riders(PreventedDamageRiderControllerExilesLibraryTop), "colored": colored, "reflexive": reflexive,
+	} {
+		if err := valid.validatePrimitive(nil, false); err != nil {
+			t.Errorf("%s: validatePrimitive() = %v, want accepted", name, err)
+		}
+	}
+
+	invalid := map[string]PreventDamage{
+		"riders without one-shot": {Player: ControllerReference(), All: true,
+			PreventedRiders: []PreventedDamageRider{PreventedDamageRiderControllerGainsLife}},
+		"draw without reflexive":   riders(PreventedDamageRiderControllerDraws),
+		"unknown rider":            riders(PreventedDamageRider(99)),
+		"duplicate rider":          riders(PreventedDamageRiderControllerGainsLife, PreventedDamageRiderControllerGainsLife),
+		"colors without riders":    {Player: ControllerReference(), All: true, OneShot: true, RiderSourceColors: []color.Color{color.Red}},
+		"reflexive without riders": {Player: ControllerReference(), All: true, OneShot: true, RidersReflexive: true},
+		"half without one-shot":    {Player: ControllerReference(), All: true, PreventHalfRoundedDown: true},
+		"half with creatures": {Player: ControllerReference(), All: true, OneShot: true,
+			AndControlledCreatures: true, PreventHalfRoundedDown: true},
+		"half with redirect": {Player: ControllerReference(), All: true, OneShot: true, PreventHalfRoundedDown: true,
+			Redirect: DamageRedirectToController},
+		"riders with redirect": {Player: ControllerReference(), All: true, OneShot: true, Redirect: DamageRedirectToController,
+			PreventedRiders: []PreventedDamageRider{PreventedDamageRiderControllerGainsLife}},
+	}
+	exileReflexive := riders(PreventedDamageRiderControllerExilesLibraryTop)
+	exileReflexive.RidersReflexive = true
+	invalid["reflexive exile"] = exileReflexive
+	for name, p := range invalid {
+		if err := p.validatePrimitive(nil, false); err == nil {
 			t.Errorf("%s: validatePrimitive() = nil, want rejection", name)
 		}
 	}
