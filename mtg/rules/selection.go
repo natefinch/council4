@@ -280,6 +280,16 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 			return false
 		}
 	}
+	if sel.ToughnessLessThanSource {
+		toughness, ok := s.toughness()
+		if !ok {
+			return false
+		}
+		sourceToughness, ok := s.sourceToughness()
+		if !ok || toughness >= sourceToughness {
+			return false
+		}
+	}
 	if sel.MatchCounter && !s.hasCounter(sel.RequiredCounter) {
 		return false
 	}
@@ -1217,6 +1227,28 @@ func (s *selectionSubject) toughness() (int, bool) {
 		return 0, false
 	}
 	return s.values.toughness, s.values.toughnessOK
+}
+
+// sourceToughness returns the toughness of the predicate's source for the
+// source-relative "with toughness less than this creature's toughness" filter.
+// While the source is on the battlefield it reads the live effective
+// toughness; once it has left, it uses the last known toughness the source had
+// on the battlefield (CR 608.2h), so a source removed before its ability
+// resolves still bounds the selection. A missing source, one never seen on the
+// battlefield, or one with no toughness yields no value.
+func (s *selectionSubject) sourceToughness() (int, bool) {
+	if s.sourceObjectID == 0 {
+		return 0, false
+	}
+	if permanent, ok := permanentByObjectID(s.g, s.sourceObjectID); ok {
+		values := effectivePermanentValues(s.g, permanent)
+		return values.toughness, values.toughnessOK
+	}
+	snapshot, ok := lastKnownObject(s.g, s.sourceObjectID)
+	if !ok || snapshot.FromZone != zone.Battlefield || !snapshot.Toughness.Exists {
+		return 0, false
+	}
+	return snapshot.Toughness.Val, true
 }
 
 // cardFacePT reads a printed power or toughness from a card's default face for a

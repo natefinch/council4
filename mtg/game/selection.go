@@ -460,6 +460,19 @@ type Selection struct {
 	// event, spell, or player subject fails closed. Placed at the end so the byte
 	// joins no existing cluster's packing.
 	PutIntoGraveyardThisTurn GraveyardArrivalThisTurn
+
+	// ToughnessLessThanSource requires the matched object's toughness to be
+	// strictly less than the predicate source's toughness ("target Elemental
+	// creature card in your graveyard with toughness less than this creature's
+	// toughness", Thunderkin Awakener). A card outside the battlefield is judged
+	// by its printed toughness, and a permanent by its current toughness. The
+	// source is read live while it is on the battlefield; once it has left, the
+	// bound uses its last known toughness from the battlefield (CR 608.2h), so
+	// the restriction does not fail closed merely because the source departed.
+	// A subject or source with no toughness, or a source never seen on the
+	// battlefield, never matches. Placed at the end so the bool joins no
+	// existing cluster's packing.
+	ToughnessLessThanSource bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -543,7 +556,8 @@ func (s Selection) Empty() bool {
 		!s.ManaValueLessOrEqualEventPermanent &&
 		!s.ManaValueLessThanSourcePower &&
 		!s.BandedWithSource &&
-		s.PutIntoGraveyardThisTurn == GraveyardArrivalNone
+		s.PutIntoGraveyardThisTurn == GraveyardArrivalNone &&
+		!s.ToughnessLessThanSource
 }
 
 // Validate reports structural contradictions in the Selection that represent
