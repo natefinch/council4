@@ -145,6 +145,7 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 		}
 	}
 	defer func() { ctx.active = false }()
+	defer g.OpenClashRevealScope()()
 	previous, _ := g.ChoiceContext()
 	e.setReplacementChoiceContext(g, agents, log)
 	defer g.SetChoiceContext(previous)

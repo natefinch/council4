@@ -185,6 +185,7 @@ func (e *Engine) runReplacementProgram(g *game.Game, replacement game.Replacemen
 		},
 	}
 	defer func() { ctx.active = false }()
+	defer g.OpenClashRevealScope()()
 	if err := e.programs.Run(replacement.Program, ctx); err != nil {
 		panic(UnsupportedError{Reason: err.Error()})
 	}

@@ -86,6 +86,34 @@ type SearchResult struct {
 	Cards     []FoundCard
 }
 
+// ClashReveal is one clashing player's public reveal and placement (CR
+// 701.30a, 701.30c). Card is unset when that player's library was empty, so
+// nothing was revealed; Card.ManaValue is the card's mana value in the library
+// (a split card's halves combined, CR 709.4b). Bottom reports that the player
+// put the revealed card on the bottom of their library rather than the top.
+type ClashReveal struct {
+	Player game.PlayerID
+	Card   opt.V[game.ChoiceCardInfo]
+	Bottom bool
+}
+
+// ClashResult reports one completed clash with an opponent (CR 701.30b-d).
+// Available is false when the controller or a living opponent was not
+// available, in which case nobody clashed. Reveals are in APNAP order. Winner
+// is set only when one player revealed a card whose mana value is greater than
+// every other card revealed in the clash (CR 701.30d).
+type ClashResult struct {
+	Available bool
+	Opponent  game.PlayerID
+	Reveals   []ClashReveal
+	Winner    opt.V[game.PlayerID]
+}
+
+// Won reports whether player won the clash.
+func (r ClashResult) Won(player game.PlayerID) bool {
+	return r.Winner.Exists && r.Winner.Val == player
+}
+
 // CardPlacement assigns minted card handles to a simultaneous destination.
 type CardPlacement struct {
 	Cards         []FoundCard
@@ -126,4 +154,8 @@ type Context interface {
 	MoveCards(...CardPlacement) ([]FoundCard, error)
 	// ControlNextTurn schedules control using captured identities, not agents.
 	ControlNextTurn(game.PlayerReference) (bool, error)
+	// Clash makes the source's controller clash with an opponent (CR 701.30).
+	// An unset opponent is chosen by the controller among living opponents; a
+	// set reference names that opponent.
+	Clash(opponent opt.V[game.PlayerReference]) (ClashResult, error)
 }
