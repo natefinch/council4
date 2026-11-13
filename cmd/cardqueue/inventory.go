@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/internal/carddata"
 	"github.com/natefinch/council4/internal/supportinventory"
@@ -83,7 +84,7 @@ func inventoryFromInstallation(corpus []carddata.ScryfallCard, hash string, prod
 		}
 		r := supportinventory.Record{OracleID: card.OracleID, Name: card.Name, CompilerAccepted: wasInstalled}
 		if support, exists := exact[card.OracleID]; exists {
-			if support.Name != card.Name {
+			if support.Name != card.Name && !registeredFacesMatchCardName(support, card.Name) {
 				return out, fmt.Errorf("production identity name mismatch %s", card.OracleID)
 			}
 			r.Production = &support
@@ -117,4 +118,11 @@ func inventoryFromInstallation(corpus []carddata.ScryfallCard, hash string, prod
 		return out, errors.New("installation or production identities absent from eligible pinned corpus")
 	}
 	return out, nil
+}
+
+func registeredFacesMatchCardName(support cards.Support, cardName string) bool {
+	if len(support.Faces) < 2 || support.Name != support.Faces[0] {
+		return false
+	}
+	return strings.Join(support.Faces, " // ") == cardName
 }

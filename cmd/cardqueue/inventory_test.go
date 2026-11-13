@@ -120,3 +120,31 @@ func TestRetainedInventoryPreservesExactAndLegacyIdentityBoundaries(t *testing.T
 		t.Fatal("lost exact evidence or invented exact legacy associations")
 	}
 }
+
+func TestRetainedInventoryMatchesExactMultifaceProductionName(t *testing.T) {
+	card := carddata.ScryfallCard{
+		OracleID: "adventure", ID: "printing-adventure", Name: "Pollen-Shield Hare // Hare Raising",
+		Layout: "adventure", Games: []string{"paper"}, Legalities: map[string]string{"legacy": "legal"},
+		CardFaces: []carddata.ScryfallCardFace{
+			{Name: "Pollen-Shield Hare"},
+			{Name: "Hare Raising"},
+		},
+	}
+	support := cards.Support{
+		Key: "adventure/front", OracleID: "adventure", Name: "Pollen-Shield Hare",
+		Faces: []string{"Pollen-Shield Hare", "Hare Raising"}, Loadable: true,
+		BehaviorVerified: true, Verification: "named scenario",
+	}
+	inventory, err := inventoryFromInstallation([]carddata.ScryfallCard{card}, "pin", []cards.Support{support}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := inventory.Corpus[0].Production; got == nil || !got.BehaviorVerified {
+		t.Fatal("exact Adventure registration was not matched to its pinned compound name")
+	}
+
+	support.Faces[1] = "Different Adventure"
+	if _, err := inventoryFromInstallation([]carddata.ScryfallCard{card}, "pin", []cards.Support{support}, nil); err == nil {
+		t.Fatal("exact registration with a mismatched alternate face was accepted")
+	}
+}
