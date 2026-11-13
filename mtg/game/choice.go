@@ -186,6 +186,18 @@ type KeepDecision struct {
 	Kept   []id.ID
 }
 
+// ClashDecision is one clashing player's publicly revealed card within the
+// same clash (CR 701.30b) and, once made, their placement choice (CR
+// 701.30c). Decided reports that the player has already chosen; Bottom is
+// meaningful only then and reports the bottom of their library rather than
+// the top.
+type ClashDecision struct {
+	Player  PlayerID
+	Card    ChoiceCardInfo
+	Decided bool
+	Bottom  bool
+}
+
 // ChoiceRequest describes a bounded decision the rules engine needs from a
 // player while resolving rules procedures such as triggered abilities.
 type ChoiceRequest struct {
@@ -231,6 +243,12 @@ type ChoiceRequest struct {
 	// APNAP "sacrifice the rest" effect (CR 101.4b), before the simultaneous
 	// sacrifice.
 	KeepDecisions []KeepDecision
+	// ClashDecisions exposes every card revealed in the same clash, in APNAP
+	// order, with earlier players' public top/bottom choices (CR 701.30b-c),
+	// before the revealed cards move together. Every other decision later in
+	// the same resolving effect, by any player, lists each completed clash's
+	// reveals and final placements (CR 701.20a).
+	ClashDecisions []ClashDecision
 	// NumberRange is required for ChoiceNumber; Options must be empty.
 	NumberRange opt.V[NumberRange]
 	// CombatAttacker and CombatBlocker identify the current staged decision.

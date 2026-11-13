@@ -306,6 +306,13 @@ func (o PlayerObservation) LibraryTopLookable(playerID game.PlayerID) (CardView,
 	return o.libraryTopView(playerID)
 }
 
+// ClashReveals returns every card publicly revealed by a clash in the currently
+// resolving effect, with its top/bottom placement (CR 701.20a, 701.30). It is
+// empty outside such an effect.
+func (o PlayerObservation) ClashReveals() []game.ClashDecision {
+	return o.g.PublicClashReveals()
+}
+
 // Battlefield returns a view of every permanent on the shared battlefield, with
 // effective characteristics.
 func (o PlayerObservation) Battlefield() []PermanentView {

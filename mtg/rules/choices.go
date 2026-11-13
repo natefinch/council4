@@ -66,6 +66,7 @@ func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]
 	if request.ID == 0 {
 		request.ID = nextChoiceID(log)
 	}
+	request = withPublicClashReveals(g, request)
 	selected, usedFallback := e.decideChoice(g, agents, request)
 	loggedRequest := cloneChoiceRequest(request)
 	if request.Kind == game.ChoiceSearch || request.Private {
@@ -95,8 +96,20 @@ func (e *Engine) chooseUnloggedChoice(g *game.Game, agents [game.NumPlayers]Play
 	if request.ID == 0 {
 		request.ID = nextChoiceID(log)
 	}
+	request = withPublicClashReveals(g, request)
 	selected, _ := e.decideChoice(g, agents, request)
 	return selected
+}
+
+// withPublicClashReveals shows every player deciding during the rest of a
+// clashing effect the cards that clash publicly revealed and where they went
+// (CR 701.20a, 701.30). A clash's own placement prompts already list that
+// clash's reveals.
+func withPublicClashReveals(g *game.Game, request game.ChoiceRequest) game.ChoiceRequest {
+	if len(request.ClashDecisions) == 0 {
+		request.ClashDecisions = g.PublicClashReveals()
+	}
+	return request
 }
 
 // decideChoice asks the deciding agent for request and validates its answer,
@@ -154,6 +167,10 @@ func cloneChoiceRequest(request game.ChoiceRequest) game.ChoiceRequest {
 	request.KeepDecisions = slices.Clone(request.KeepDecisions)
 	for i := range request.KeepDecisions {
 		request.KeepDecisions[i].Kept = slices.Clone(request.KeepDecisions[i].Kept)
+	}
+	request.ClashDecisions = slices.Clone(request.ClashDecisions)
+	for i := range request.ClashDecisions {
+		request.ClashDecisions[i].Card = cloneChoiceCardInfo(opt.Val(request.ClashDecisions[i].Card)).Val
 	}
 	return request
 }

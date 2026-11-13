@@ -160,6 +160,9 @@ type Game struct {
 	ManaPaymentScopes []PlayerID
 	// LibraryTopWindows are the open CR 401.5 windows, outermost first.
 	LibraryTopWindows []LibraryTopWindow
+	// ClashReveals are the public reveals and placements of clashes in the
+	// currently resolving effect (CR 701.20a, 701.30), shown to every player.
+	ClashReveals []ClashDecision
 	// SkippedTurns counts one-shot "skip your next turn" replacements.
 	SkippedTurns map[PlayerID]int
 
