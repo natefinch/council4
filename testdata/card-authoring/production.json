@@ -1428,6 +1428,27 @@
     "oracle_text_sha256": "8475296fff07e0edf89281907354306213a2467d8af82f99b854c0a9bbbf9aa2",
     "revision": "34e09173-a92d-4cc3-9d02-bf18ab0850ec",
     "rulings_uri": "https://api.scryfall.com/cards/34e09173-a92d-4cc3-9d02-bf18ab0850ec/rulings"
+   },
+   {
+    "name": "Pollen-Shield Hare // Hare Raising",
+    "oracle_id": "3ef02f2b-b611-40c3-a1d5-8b34989643cf",
+    "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "revision": "139f31f5-28f0-4e90-abdf-3f6ed0992dea",
+    "rulings_uri": "https://api.scryfall.com/cards/139f31f5-28f0-4e90-abdf-3f6ed0992dea/rulings"
+   },
+   {
+    "name": "Crystal Dragon // Rob the Hoard",
+    "oracle_id": "56b0cb64-b886-413e-bb20-392bf12d3926",
+    "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "revision": "384ec8b7-472e-4026-9632-349ab9df2b27",
+    "rulings_uri": "https://api.scryfall.com/cards/384ec8b7-472e-4026-9632-349ab9df2b27/rulings"
+   },
+   {
+    "name": "Rosethorn Acolyte // Seasonal Ritual",
+    "oracle_id": "639a8804-8513-4ba4-8683-ea1e2e5a9530",
+    "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "revision": "2a0d430f-da84-4752-940c-8457c525aac9",
+    "rulings_uri": "https://api.scryfall.com/cards/2a0d430f-da84-4752-940c-8457c525aac9/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8289,6 +8310,23 @@
     "Existing ETB draw, affinity, mana-ability, activated pump/untap, and keyword abilities"
    ],
    "review": "Capability-fit check: pinned corpus text for all eight cards; origin/main 5a51d30123ee54780bc3186e48463a9d15885670 mtg/game/prototype.go (PrototypeProfile, CanCastPrototyped, prototypeFace) and mtg/rules/prototype_test.go (cast selection, characteristics, retained abilities, clone/replay). No CR, rulings, or source review performed."
+  },
+  {
+   "id": "adventure-cards-20261113",
+   "family": "adventure",
+   "oracle_ids": [
+    "639a8804-8513-4ba4-8683-ea1e2e5a9530",
+    "56b0cb64-b886-413e-bb20-392bf12d3926",
+    "3ef02f2b-b611-40c3-a1d5-8b34989643cf"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Adventure alternate-face casting, resolution exile, and exile permission (mtg/game/card.go, mtg/game/game.go, mtg/rules/adventure_controller_test.go)",
+    "Any-color mana choice and AddMana; exact Rosethorn Acolyte fixture (mtg/rules/adventure_controller_test.go)",
+    "Targeted graveyard return using an artifact/enchantment/legendary selection union; exact Crystal Dragon fixture (mtg/rules/adventure_controller_test.go)",
+    "Token-only +1/+1 continuous effect and dynamic creature-count pump (mtg/rules/leyline_of_the_meek_cards_test.go, mtg/rules/mass_dynamic_pump_test.go)"
+   ],
+   "review": "Fit-only check of the three pinned-corpus card texts; traced Adventure behavior and exact Rosethorn Acolyte and Crystal Dragon fixtures in mtg/rules/adventure_controller_test.go, and checked Pollen-Shield Hare's token anthem and creature-count pump against mtg/rules/leyline_of_the_meek_cards_test.go and mtg/rules/mass_dynamic_pump_test.go. No CR or rulings review performed."
   }
  ],
  "records": [
@@ -49736,10 +49774,20 @@
    "oracle_id": "3ef02f2b-b611-40c3-a1d5-8b34989643cf",
    "revision": "139f31f5-28f0-4e90-abdf-3f6ed0992dea",
    "name": "Pollen-Shield Hare // Hare Raising",
-   "status": "blocked",
-   "family": "unreviewed/adventure",
+   "status": "implemented-verified",
+   "family": "adventure",
+   "batch": "adventure-cards-20261113",
    "blocker": 3353,
-   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))",
+   "evidence": "mtg/rules/adventure_cards_test.go: TestPollenShieldHareRaisingScenario",
+   "reassessments": [
+    {
+     "issue": 3353,
+     "runtime_revision": "b76c1de2c173f90049812996b0197ffafc286621",
+     "evidence": "Engine unit gap-3353 landed in https://github.com/natefinch/council4/pull/3377",
+     "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+    }
+   ]
   },
   {
    "oracle_id": "48ab8ba0-0e85-4656-a798-ceb961fb02ce",
@@ -49875,10 +49923,20 @@
    "oracle_id": "56b0cb64-b886-413e-bb20-392bf12d3926",
    "revision": "384ec8b7-472e-4026-9632-349ab9df2b27",
    "name": "Crystal Dragon // Rob the Hoard",
-   "status": "blocked",
-   "family": "unreviewed/adventure",
+   "status": "implemented-verified",
+   "family": "adventure",
+   "batch": "adventure-cards-20261113",
    "blocker": 3353,
-   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))",
+   "evidence": "mtg/rules/adventure_cards_test.go: TestCrystalDragonRobTheHoardScenario",
+   "reassessments": [
+    {
+     "issue": 3353,
+     "runtime_revision": "b76c1de2c173f90049812996b0197ffafc286621",
+     "evidence": "Engine unit gap-3353 landed in https://github.com/natefinch/council4/pull/3377",
+     "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+    }
+   ]
   },
   {
    "oracle_id": "5783facf-d26e-4aae-a753-b9dc553361c1",
@@ -49901,10 +49959,20 @@
    "oracle_id": "639a8804-8513-4ba4-8683-ea1e2e5a9530",
    "revision": "2a0d430f-da84-4752-940c-8457c525aac9",
    "name": "Rosethorn Acolyte // Seasonal Ritual",
-   "status": "blocked",
-   "family": "unreviewed/adventure",
+   "status": "implemented-verified",
+   "family": "adventure",
+   "batch": "adventure-cards-20261113",
    "blocker": 3353,
-   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))",
+   "evidence": "mtg/rules/adventure_cards_test.go: TestRosethornAcolyteSeasonalRitualScenario",
+   "reassessments": [
+    {
+     "issue": 3353,
+     "runtime_revision": "b76c1de2c173f90049812996b0197ffafc286621",
+     "evidence": "Engine unit gap-3353 landed in https://github.com/natefinch/council4/pull/3377",
+     "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+    }
+   ]
   },
   {
    "oracle_id": "6505a53b-00db-44c4-8eaa-09a1a01451a4",
