@@ -1449,6 +1449,41 @@
     "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "revision": "2a0d430f-da84-4752-940c-8457c525aac9",
     "rulings_uri": "https://api.scryfall.com/cards/2a0d430f-da84-4752-940c-8457c525aac9/rulings"
+   },
+   {
+    "name": "Squeaking Pie Sneak",
+    "oracle_id": "7243b935-73fc-47d2-ac65-ab390ed94f3f",
+    "oracle_text_sha256": "20f94be7df4fe286bd830bae58fc9099bd74ea903a8aa772471cb79323a2c4ac",
+    "revision": "b7184715-3ed3-4f56-9bf3-ff431cca86be",
+    "rulings_uri": "https://api.scryfall.com/cards/b7184715-3ed3-4f56-9bf3-ff431cca86be/rulings"
+   },
+   {
+    "name": "Sadistic Skymarcher",
+    "oracle_id": "9e1fe5ec-1669-4587-8e42-b189fd6d39e0",
+    "oracle_text_sha256": "6116e0f60cd81f31190b3f5a8cdb220446dac2fbbdea25a5cca0d56817b19d83",
+    "revision": "1334ee90-c798-42ec-b2be-68dac766a7eb",
+    "rulings_uri": "https://api.scryfall.com/cards/1334ee90-c798-42ec-b2be-68dac766a7eb/rulings"
+   },
+   {
+    "name": "Flamekin Bladewhirl",
+    "oracle_id": "c37770aa-4770-4198-b6a6-f9ff86dbb06b",
+    "oracle_text_sha256": "8d5baa5751bb7903f2a81910522325b74708fb7a79e1105d3108bf5702de7cf6",
+    "revision": "1b6ea1c8-ca58-4240-adb7-71cd49664414",
+    "rulings_uri": "https://api.scryfall.com/cards/1b6ea1c8-ca58-4240-adb7-71cd49664414/rulings"
+   },
+   {
+    "name": "Silvergill Adept",
+    "oracle_id": "cb66c5ec-e7a4-4bd2-b825-6c9b846ba40d",
+    "oracle_text_sha256": "1c230978b91413dfca5e3ffcfbac24d6f3e2554c547c2130d72a2a0dfcad71cf",
+    "revision": "45ea8ca1-612d-4984-8572-06710d38bfa6",
+    "rulings_uri": "https://api.scryfall.com/cards/45ea8ca1-612d-4984-8572-06710d38bfa6/rulings"
+   },
+   {
+    "name": "Wren's Run Vanquisher",
+    "oracle_id": "fe9cdd15-a390-4a1e-bae9-474ce8d355b8",
+    "oracle_text_sha256": "db645dd80b24a7748835278348fa7fa3e09286cefc1abffaa96c9c988dad59ba",
+    "revision": "f61eae36-9c4a-4d72-9431-6cac34dbb527",
+    "rulings_uri": "https://api.scryfall.com/cards/f61eae36-9c4a-4d72-9431-6cac34dbb527/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8327,6 +8362,24 @@
     "Token-only +1/+1 continuous effect and dynamic creature-count pump (mtg/rules/leyline_of_the_meek_cards_test.go, mtg/rules/mass_dynamic_pump_test.go)"
    ],
    "review": "Fit-only check of the three pinned-corpus card texts; traced Adventure behavior and exact Rosethorn Acolyte and Crystal Dragon fixtures in mtg/rules/adventure_controller_test.go, and checked Pollen-Shield Hare's token anthem and creature-count pump against mtg/rules/leyline_of_the_meek_cards_test.go and mtg/rules/mass_dynamic_pump_test.go. No CR or rulings review performed."
+  },
+  {
+   "id": "reveal-or-pay-20261114",
+   "family": "additional-cost-reveal-or-mana-choice",
+   "oracle_ids": [
+    "7243b935-73fc-47d2-ac65-ab390ed94f3f",
+    "9e1fe5ec-1669-4587-8e42-b189fd6d39e0",
+    "c37770aa-4770-4198-b6a6-f9ff86dbb06b",
+    "cb66c5ec-e7a4-4bd2-b825-6c9b846ba40d",
+    "fe9cdd15-a390-4a1e-bae9-474ce8d355b8"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.AdditionalChoice and cost.AdditionalChoiceOption",
+    "cost.AdditionalReveal",
+    "spell-cost branch expansion and payment planning"
+   ],
+   "review": "Checked main at 122b523: mtg/game/cost/additional.go (AdditionalChoiceOption.Mana/Costs and AdditionalReveal); mtg/rules/payment/additional.go (AdditionalReveal payment path); mtg/rules/payment/additional_cost_choice_test.go (choice branch expansion and payability prior art). The pinned-corpus cardqueue families output confirms these five members share this new paragraph."
   }
  ],
  "records": [
@@ -150059,8 +150112,10 @@
    "oracle_id": "7243b935-73fc-47d2-ac65-ab390ed94f3f",
    "revision": "b7184715-3ed3-4f56-9bf3-ff431cca86be",
    "name": "Squeaking Pie Sneak",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "additional-cost-reveal-or-mana-choice",
+   "batch": "reveal-or-pay-20261114",
+   "evidence": "mtg/rules/reveal_or_pay_creatures_test.go: TestSqueakingPieSneakPaysThreeAndHasFear"
   },
   {
    "oracle_id": "7244d04a-bb9c-4fbe-a346-4a3f45709da7",
@@ -187609,8 +187664,10 @@
    "oracle_id": "9e1fe5ec-1669-4587-8e42-b189fd6d39e0",
    "revision": "1334ee90-c798-42ec-b2be-68dac766a7eb",
    "name": "Sadistic Skymarcher",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "additional-cost-reveal-or-mana-choice",
+   "batch": "reveal-or-pay-20261114",
+   "evidence": "mtg/rules/reveal_or_pay_creatures_test.go: TestSadisticSkymarcherPaysOneAndHasFlyingLifelink"
   },
   {
    "oracle_id": "9e275428-3562-4ed6-8a49-3bb202a5130a",
@@ -218728,8 +218785,10 @@
    "oracle_id": "c37770aa-4770-4198-b6a6-f9ff86dbb06b",
    "revision": "1b6ea1c8-ca58-4240-adb7-71cd49664414",
    "name": "Flamekin Bladewhirl",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "additional-cost-reveal-or-mana-choice",
+   "batch": "reveal-or-pay-20261114",
+   "evidence": "mtg/rules/reveal_or_pay_creatures_test.go: TestFlamekinBladewhirlRevealsElemental"
   },
   {
    "oracle_id": "c3779271-1186-4754-8b8d-0ee18e585bb6",
@@ -225447,8 +225506,10 @@
    "oracle_id": "cb66c5ec-e7a4-4bd2-b825-6c9b846ba40d",
    "revision": "45ea8ca1-612d-4984-8572-06710d38bfa6",
    "name": "Silvergill Adept",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "additional-cost-reveal-or-mana-choice",
+   "batch": "reveal-or-pay-20261114",
+   "evidence": "mtg/rules/reveal_or_pay_creatures_test.go: TestSilvergillAdeptRevealsMerfolkAndDrawsOnEntry"
   },
   {
    "oracle_id": "cb68d1e4-36aa-4a00-b671-8959e7d526d4",
@@ -269452,8 +269513,10 @@
    "oracle_id": "fe9cdd15-a390-4a1e-bae9-474ce8d355b8",
    "revision": "f61eae36-9c4a-4d72-9431-6cac34dbb527",
    "name": "Wren's Run Vanquisher",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "additional-cost-reveal-or-mana-choice",
+   "batch": "reveal-or-pay-20261114",
+   "evidence": "mtg/rules/reveal_or_pay_creatures_test.go: TestWrensRunVanquisherRevealsElfAndHasDeathtouch"
   },
   {
    "oracle_id": "fea4cb32-0329-4199-9abe-bff0cc45882a",
