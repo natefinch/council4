@@ -1864,6 +1864,13 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if effect.TopCardOnly && effect.CastFromZone != zone.Library {
 			v.add(faceName, appendPath(path, "TopCardOnly"), CardDefIssueInvalidRuleEffect, "top-card-only cast permission requires the library source zone")
 		}
+	case RuleEffectCastSpellsFromGraveyardWithSneak:
+		if effect.AffectedPlayer == PlayerAny {
+			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "graveyard sneak-cast permission must set affected player")
+		}
+		if effect.AffectedSource || effect.AffectedAttached || effect.AffectedObjectID != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "graveyard sneak-cast permission cannot affect a permanent")
+		}
 	case RuleEffectCastLinkedExileForFree:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "linked-exile free-cast permission must set affected player")
@@ -2007,16 +2014,29 @@ func (v *cardDefValidator) validateCharacteristicFilters(faceName, path string, 
 
 // validateGraveyardCastGrantCost checks the computed alternative cost a
 // RuleEffectGrantGraveyardCardKeyword synthesizes for the cards it makes
-// castable. Only the Escape grant carries a computed cost, and it must escape
-// for the card's own mana cost plus at least one graveyard-exile additional cost
-// that excludes the escaping card itself (Underworld Breach). Every other
-// granted keyword derives its cost from the keyword's intrinsic rules, so it
-// must carry no computed cost.
+// castable. The Escape grant must escape for the card's own mana cost plus at
+// least one graveyard-exile additional cost that excludes the escaping card
+// itself (Underworld Breach). The Sneak grant must carry only the fixed mana
+// cost its text names (Ninja Teen); the return-an-unblocked-attacker cost is
+// intrinsic to sneak. Every other granted keyword derives its cost from the
+// keyword's intrinsic rules, so it must carry no computed cost.
 func (v *cardDefValidator) validateGraveyardCastGrantCost(faceName, path string, effect *RuleEffect) {
 	gc := effect.GraveyardCastCost
+	if effect.GrantedKeyword == Sneak {
+		if !gc.ManaCost.Exists || len(gc.ManaCost.Val) == 0 {
+			v.add(faceName, appendPath(path, "ManaCost"), CardDefIssueInvalidRuleEffect, "sneak grant must carry its mana cost")
+		}
+		if gc.UseCardManaCost || len(gc.AdditionalCosts) != 0 {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "sneak grant cost supports only a fixed mana cost")
+		}
+		return
+	}
+	if gc.ManaCost.Exists {
+		v.add(faceName, appendPath(path, "ManaCost"), CardDefIssueInvalidRuleEffect, "only sneak grants may carry a fixed graveyard cast mana cost")
+	}
 	if effect.GrantedKeyword != Escape {
 		if !gc.IsZero() {
-			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "only escape grants may carry a computed graveyard cast cost")
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, "only escape and sneak grants may carry a computed graveyard cast cost")
 		}
 		return
 	}

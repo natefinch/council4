@@ -332,6 +332,13 @@ const (
 	// the rules layer reads it per face. Appended at the end of the enum so
 	// existing keyword ordinals are unchanged.
 	Aftermath
+	// Sneak (CR 702.190a) names a sneak ability granted to graveyard cards by
+	// RuleEffectGrantGraveyardCardKeyword ("Creature cards in your graveyard
+	// have sneak {3}{B}.", Ninja Teen); its cost is the grant's
+	// GraveyardCastCost.ManaCost. A printed sneak ability remains a
+	// cost.Alternative with AlternativeMechanicSneak. Appended at the end of the
+	// enum so existing keyword ordinals are unchanged.
+	Sneak
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount

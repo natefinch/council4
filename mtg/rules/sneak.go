@@ -13,22 +13,35 @@ import (
 )
 
 // sneakCastFor returns the Sneak permission of a cast of castFace, spellDef's
-// face as cast, from sourceZone by playerID (CR 702.190a). Sneak is "you may
-// cast this spell by paying [cost] and returning an unblocked attacker you
-// control to its owner's hand rather than paying its mana cost", and it may be
-// used only from hand, any time playerID could cast an instant during their
-// own declare blockers step. When ordinary timing also lets the spell be cast
-// now the Sneak cost is one more option; when only Sneak's timing does, the
-// cast is limited to its Sneak cost.
+// face of cardID as cast, from sourceZone by playerID (CR 702.190a). Sneak is
+// "you may cast this spell by paying [cost] and returning an unblocked attacker
+// you control to its owner's hand rather than paying its mana cost", any time
+// playerID could cast an instant during their own declare blockers step. When
+// ordinary timing also lets the spell be cast now the Sneak cost is one more
+// option; when only Sneak's timing does, the cast is limited to its Sneak cost.
 //
-// A card a player may cast from the command zone (their commander, CR 903.8)
-// may use its own Sneak there, paying the commander tax on top. A permanent
-// spell cast for its sneak cost enters tapped and attacking what the returned
-// creature was attacking (CR 702.190b); see putSneakedPermanentAttacking.
-func sneakCastFor(g *game.Game, playerID game.PlayerID, sourceZone zone.Type, spellDef, castFace *game.CardDef) payment.SneakCast {
-	if (sourceZone != zone.Hand && sourceZone != zone.Command) || spellDef == nil || castFace == nil ||
-		!slices.ContainsFunc(spellDef.AlternativeCosts, isSneakAlternative) ||
-		!sneakCastWindow(g, playerID) {
+// Sneak is offered from hand, from the command zone (a commander, CR 903.8,
+// paying the commander tax on top) and, under a graveyard sneak-cast permission
+// ("You may cast creature spells from your graveyard using their sneak
+// abilities.", Ninja Teen), from its owner's graveyard using a printed or
+// granted sneak cost. A permanent spell cast for its sneak cost enters tapped
+// and attacking what the returned creature was attacking (CR 702.190b); see
+// putSneakedPermanentAttacking.
+func sneakCastFor(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, spellDef, castFace *game.CardDef) payment.SneakCast {
+	if spellDef == nil || castFace == nil || !sneakCastWindow(g, playerID) {
+		return payment.SneakUnavailable
+	}
+	switch sourceZone {
+	case zone.Hand, zone.Command:
+		if !slices.ContainsFunc(spellDef.AlternativeCosts, isSneakAlternative) {
+			return payment.SneakUnavailable
+		}
+	case zone.Graveyard:
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || !graveyardSneakCastPermitted(g, playerID, card, spellDef) {
+			return payment.SneakUnavailable
+		}
+	default:
 		return payment.SneakUnavailable
 	}
 	if canCastAtCurrentTiming(g, playerID, castFace) {
@@ -38,6 +51,31 @@ func sneakCastFor(g *game.Game, playerID game.PlayerID, sourceZone zone.Type, sp
 		return payment.SneakRequired
 	}
 	return payment.SneakUnavailable
+}
+
+// graveyardSneakCastPermitted reports whether playerID may cast spellDef, a
+// face of card, from their own graveyard for one of its sneak costs: an active
+// RuleEffectCastSpellsFromGraveyardWithSneak reaches playerID and matches the
+// spell's types, and the face has a printed sneak cost or one granted to it in
+// that graveyard ("Creature cards in your graveyard have sneak {3}{B}. You may
+// cast creature spells from your graveyard using their sneak abilities.",
+// Ninja Teen). The permission covers only the caster's own graveyard.
+func graveyardSneakCastPermitted(g *game.Game, playerID game.PlayerID, card *game.CardInstance, spellDef *game.CardDef) bool {
+	player, ok := playerByID(g, playerID)
+	if card == nil || spellDef == nil || !ok || card.Owner != playerID || !player.Graveyard.Contains(card.ID) {
+		return false
+	}
+	spell := castSelectionFace(g, playerID, card.ID, spellDef, false)
+	effects := activeRuleEffects(g)
+	permitted := slices.ContainsFunc(effects, func(effect game.RuleEffect) bool {
+		return effect.Kind == game.RuleEffectCastSpellsFromGraveyardWithSneak &&
+			ruleEffectAffectsPlayer(g, &effect, playerID) &&
+			(len(effect.SpellTypes) == 0 || slices.ContainsFunc(effect.SpellTypes, func(t types.Card) bool {
+				return slices.Contains(spell.Types, t)
+			}))
+	})
+	return permitted && (slices.ContainsFunc(spellDef.AlternativeCosts, isSneakAlternative) ||
+		slices.ContainsFunc(grantedGraveyardCastAlternatives(g, playerID, spellDef), isSneakAlternative))
 }
 
 // sneakCastWindow reports whether it is playerID's declare blockers step and

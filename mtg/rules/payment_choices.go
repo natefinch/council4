@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -172,9 +174,10 @@ func (e *Engine) chooseSpellCostOption(g *game.Game, player game.PlayerID, optio
 	if len(options) == 1 {
 		return options[0]
 	}
+	labels := distinctSpellCostLabels(options)
 	choiceOptions := make([]game.ChoiceOption, 0, len(options))
-	for _, option := range options {
-		choiceOptions = append(choiceOptions, game.ChoiceOption{Index: option.Index, Label: option.Label})
+	for i, option := range options {
+		choiceOptions = append(choiceOptions, spellCostChoiceOption(option.Index, labels[i], option))
 	}
 	choiceRequest := game.ChoiceRequest{
 		Kind:             game.ChoicePayment,
@@ -194,6 +197,72 @@ func (e *Engine) chooseSpellCostOption(g *game.Game, player game.PlayerID, optio
 		}
 	}
 	return options[0]
+}
+
+// spellCostChoiceOption presents one spell cost option (CR 601.2b) under label
+// with the mana cost it pays.
+func spellCostChoiceOption(index int, label string, option payment.SpellOptionSummary) game.ChoiceOption {
+	choice := game.ChoiceOption{Index: index, Label: label}
+	if option.ManaCost != nil {
+		choice.ManaCost = opt.Val(slices.Clone(*option.ManaCost))
+	}
+	return choice
+}
+
+// distinctSpellCostLabels returns each spell cost option's presented label.
+// Options that share a label but not a cost, such as a card's printed sneak
+// and a granted sneak (CR 118.9a) or a printed and a granted escape, are
+// qualified by their mana cost and then, if still alike, by their other costs,
+// so the caster can tell the choices apart. A label no other option shares is
+// unchanged.
+func distinctSpellCostLabels(options []payment.SpellOptionSummary) []string {
+	labels := make([]string, len(options))
+	for i, option := range options {
+		labels[i] = option.Label
+	}
+	labels = qualifyDuplicateLabels(labels, func(i int) string {
+		if options[i].ManaCost == nil || len(*options[i].ManaCost) == 0 {
+			return "{0}"
+		}
+		return options[i].ManaCost.String()
+	})
+	return qualifyDuplicateLabels(labels, func(i int) string {
+		texts := make([]string, 0, len(options[i].AdditionalCosts))
+		for _, additional := range options[i].AdditionalCosts {
+			if additional.Text != "" {
+				texts = append(texts, additional.Text)
+			}
+		}
+		return strings.Join(texts, ", ")
+	})
+}
+
+// qualifyDuplicateLabels appends qualifier(i) to each label shared by options
+// whose qualifiers differ; labels whose sharers all qualify alike are kept.
+func qualifyDuplicateLabels(labels []string, qualifier func(int) string) []string {
+	groups := map[string][]int{}
+	for i, label := range labels {
+		groups[label] = append(groups[label], i)
+	}
+	qualified := slices.Clone(labels)
+	for label, members := range groups {
+		if len(members) < 2 {
+			continue
+		}
+		distinct := map[string]bool{}
+		for _, i := range members {
+			distinct[qualifier(i)] = true
+		}
+		if len(distinct) < 2 {
+			continue
+		}
+		for _, i := range members {
+			if text := qualifier(i); text != "" {
+				qualified[i] = label + " " + text
+			}
+		}
+	}
+	return qualified
 }
 
 func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []bool {

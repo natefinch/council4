@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
@@ -154,6 +155,12 @@ type ChoiceOption struct {
 	// mana ability a payment-time mana window activates. It is zero when the
 	// option uses no permanent's permission or ability.
 	SourcePermanent id.ID
+
+	// ManaCost is the mana cost a spell cost option pays, for a spell cost
+	// choice (CR 601.2b), so equally named options such as a card's printed
+	// sneak and a granted sneak stay distinguishable. It is unset for every
+	// other option.
+	ManaCost opt.V[cost.Mana]
 
 	// Attack and Block identify a proposed declaration, not a rules target.
 	Attack opt.V[AttackDeclaration]

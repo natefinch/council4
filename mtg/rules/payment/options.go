@@ -97,6 +97,8 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		slices.Contains(permissions, SpellCastPermissionFlashback)
 	canCastWithEscape := sourceZone == zone.Graveyard &&
 		slices.Contains(permissions, SpellCastPermissionEscape)
+	canCastWithSneak := sourceZone == zone.Graveyard &&
+		slices.Contains(permissions, SpellCastPermissionSneak)
 	var options []spellCostOption
 	if canCastNormally {
 		additional := append([]cost.Additional(nil), requiredAdditional...)
@@ -131,6 +133,8 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 				continue
 			}
 			permission = SpellCastPermissionEscape
+		case canCastWithSneak && alternative.Mechanic == cost.AlternativeMechanicSneak:
+			permission = SpellCastPermissionSneak
 		default:
 			if !canCastNormally {
 				continue
@@ -464,12 +468,13 @@ func escalateModeManaCost(card *game.CardDef, chosenModes []int) cost.Mana {
 }
 
 // firstNormalPermission returns the first permission that authorizes paying a
-// spell's ordinary (non-graveyard-alternative) cost. Flashback and Escape
-// permissions authorize only their graveyard alternative cost, so they are
-// skipped here.
+// spell's ordinary (non-graveyard-alternative) cost. Flashback, Escape and
+// Sneak permissions authorize only their graveyard alternative cost, so they
+// are skipped here.
 func firstNormalPermission(permissions []SpellCastPermission) (SpellCastPermission, bool) {
 	for _, permission := range permissions {
-		if permission != SpellCastPermissionFlashback && permission != SpellCastPermissionEscape {
+		if permission != SpellCastPermissionFlashback && permission != SpellCastPermissionEscape &&
+			permission != SpellCastPermissionSneak {
 			return permission, true
 		}
 	}

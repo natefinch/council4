@@ -72,6 +72,11 @@ func grantedGraveyardCastAlternatives(g *game.Game, playerID game.PlayerID, def 
 // on the rule effect, so its cost is synthesized here rather than read from the
 // payload, keeping generated card sources for retrace grants byte-identical.
 //
+// Sneak uses the fixed mana cost its grant names (Ninja Teen's "have sneak
+// {3}{B}") with sneak's intrinsic return-an-unblocked-attacker cost (CR
+// 702.190a). A granted sneak only offers a graveyard cast under a separate
+// RuleEffectCastSpellsFromGraveyardWithSneak permission.
+//
 // Any other granted keyword, an escape grant missing its computed cost, or a
 // retrace grant that unexpectedly carries a computed cost fails closed.
 func grantedGraveyardCastAlternative(def *game.CardDef, effect *game.RuleEffect) (cost.Alternative, bool) {
@@ -109,6 +114,12 @@ func grantedGraveyardCastAlternative(def *game.CardDef, effect *game.RuleEffect)
 			alternative.ManaCost = opt.Val(slices.Clone(def.ManaCost.Val))
 		}
 		return alternative, true
+	case game.Sneak:
+		castCost := effect.GraveyardCastCost
+		if !castCost.ManaCost.Exists || castCost.UseCardManaCost || len(castCost.AdditionalCosts) != 0 {
+			return cost.Alternative{}, false
+		}
+		return cost.SneakAlternative(castCost.ManaCost.Val), true
 	default:
 		return cost.Alternative{}, false
 	}
