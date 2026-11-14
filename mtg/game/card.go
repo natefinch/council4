@@ -967,6 +967,10 @@ func clonePrimitive(primitive Primitive) Primitive {
 	case TapChosenGroup:
 		value.ChooseFrom = cloneGroupReference(value.ChooseFrom)
 		return value
+	case Attach:
+		value.ChooseAttachmentFrom = cloneGroupReference(value.ChooseAttachmentFrom)
+		value.ChooseTargetFrom = cloneGroupReference(value.ChooseTargetFrom)
+		return value
 	default:
 		return primitive
 	}

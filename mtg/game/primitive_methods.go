@@ -991,7 +991,9 @@ func (p PutLinkedExiledCardsInLibrary) instructionRefs() primitiveRefs {
 }
 
 func (p Attach) instructionRefs() primitiveRefs {
-	return mergePrimitiveRefs(objectReferenceRefs(p.Attachment), objectReferenceRefs(p.Target))
+	refs := mergePrimitiveRefs(objectReferenceRefs(p.Attachment), objectReferenceRefs(p.Target))
+	refs.publishesLinked = p.PublishLinked
+	return refs
 }
 
 func cardReferenceRefs(reference CardReference) primitiveRefs {

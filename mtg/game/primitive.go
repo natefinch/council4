@@ -2710,9 +2710,31 @@ type BecomeCopy struct {
 // cost, as for an enters-the-battlefield "attach it to target creature" trigger.
 // Attachment references the moving attachment (typically the source permanent)
 // and Target references the permanent it attaches to.
+//
+// At most one side may instead be chosen as the instruction resolves, without
+// targeting (CR 608.2c). ChooseAttachmentFrom replaces Attachment: the resolving
+// controller chooses one permanent from that group which could legally become
+// attached to Target ("you may attach an Equipment you control to Yuffie").
+// ChooseTargetFrom replaces Target: the controller chooses one permanent from
+// that group which Attachment could legally become attached to ("attach it to
+// another permanent it can enchant", where the group excludes the current host).
+// Only legal attachments are offered (CR 301.5c, 303.4j, 701.3a). With no legal
+// choice nothing happens and the attachment stays where it is (CR 701.3b).
+// Optional lets the controller choose nothing ("you may"). Prompt overrides the
+// choice prompt.
+//
+// PublishLinked records the attachment, when the attach succeeds, so a later
+// instruction can refer to it; a PublishResult receipt exposes the same
+// object.
 type Attach struct {
 	Attachment ObjectReference
 	Target     ObjectReference
+
+	ChooseAttachmentFrom GroupReference
+	ChooseTargetFrom     GroupReference
+	Optional             bool
+	Prompt               string
+	PublishLinked        LinkedKey
 }
 
 // SkipStep schedules a referenced player to skip a step.

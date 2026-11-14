@@ -3514,8 +3514,28 @@ func (p BecomeCopy) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 }
 
 func (p Attach) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if err := validateObjectReference(p.Attachment, targets, checkTargets); err != nil {
+	chooseAttachment, chooseTarget := p.ChooseAttachmentFrom.Valid(), p.ChooseTargetFrom.Valid()
+	if chooseAttachment && chooseTarget {
+		return errors.New("attach cannot choose both the attachment and the object it attaches to")
+	}
+	if !chooseAttachment && !chooseTarget && (p.Optional || p.Prompt != "") {
+		return errors.New("attach optional choice and prompt require a chosen attachment or object")
+	}
+	if chooseAttachment {
+		if p.Attachment.Kind() != ObjectReferenceNone {
+			return errors.New("attach with a chosen attachment cannot also reference one")
+		}
+		if err := validateGroupReference(p.ChooseAttachmentFrom, targets, checkTargets); err != nil {
+			return err
+		}
+	} else if err := validateObjectReference(p.Attachment, targets, checkTargets); err != nil {
 		return err
+	}
+	if chooseTarget {
+		if p.Target.Kind() != ObjectReferenceNone {
+			return errors.New("attach with a chosen object cannot also reference one")
+		}
+		return validateGroupReference(p.ChooseTargetFrom, targets, checkTargets)
 	}
 	return validateObjectReference(p.Target, targets, checkTargets)
 }
