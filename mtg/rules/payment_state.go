@@ -219,19 +219,21 @@ func (s *rulesPaymentState) SpellHasGrantedKeyword(playerID game.PlayerID, card 
 // sourceSpellSelfCostModifiers resolves a spell's own dynamic cost modifiers
 // ("This spell costs {N} less to cast for each <object>", "This spell costs {X}
 // less to cast, where X is <dynamic amount>", "This spell costs {N} less to cast
-// if <condition>"). Such a modifier lives on the casting card's own static
-// abilities as an AffectedSource spell cost modifier carrying a PerObjectReduction
-// with a CountSelection, a DynamicReduction, or a flat GenericReduction gated by a
-// ReductionCondition. It applies only while this exact spell is being cast, so it
-// is read straight from the card being cast rather than from the global active
-// rule effects, and is resolved into a plain generic reduction by counting the
-// matching battlefield permanents (or, when the modifier carries a CountZone, the
-// matching cards in the caster's own graveyard or hand), evaluating the dynamic
-// amount now, or evaluating the board- and player-state condition against the
-// caster now. Generic mana may fall to zero but colored requirements are never
-// touched, because the resolved reduction flows through the shared generic cost
-// modifier path. It also expands exact per-target-beyond-first increases such as
-// strive from the spell's announced targets.
+// if <condition>", "This spell costs {N} less to cast if it targets <object>").
+// Such a modifier lives on the casting card's own static abilities as an
+// AffectedSource spell cost modifier carrying a PerObjectReduction with a
+// CountSelection, a DynamicReduction, or a flat GenericReduction gated by a
+// ReductionCondition or a ReductionTarget. It applies only while this exact
+// spell is being cast, so it is read straight from the card being cast rather
+// than from the global active rule effects, and is resolved into a plain
+// generic reduction by counting the matching battlefield permanents (or, when
+// the modifier carries a CountZone, the matching cards in the caster's own
+// graveyard or hand), evaluating the dynamic amount now, evaluating the board-
+// and player-state condition against the caster now, or matching the spell's
+// announced targets. Generic mana may fall to zero but colored requirements are
+// never touched, because the resolved reduction flows through the shared
+// generic cost modifier path. It also expands exact per-target-beyond-first
+// increases such as strive from the spell's announced targets.
 func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef, targets []game.Target, bargained bool) []game.CostModifier {
 	if card == nil {
 		return nil
@@ -279,8 +281,8 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 				if conditionSatisfied(g, conditionContext{controller: playerID, obj: &game.StackObject{Bargained: bargained}}, modifier.ReductionCondition) {
 					reduction = modifier.GenericReduction
 				}
-			case modifier.TargetsTappedCreature:
-				if targetsTappedCreature(g, targets) {
+			case modifier.ReductionTarget != nil:
+				if spellTargetsMatchReductionTarget(g, playerID, modifier.ReductionTarget, targets) {
 					reduction = modifier.GenericReduction
 				}
 			default:
@@ -299,13 +301,15 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 	return modifiers
 }
 
-func targetsTappedCreature(g *game.Game, targets []game.Target) bool {
+// spellTargetsMatchReductionTarget reports whether at least one target chosen
+// for the spell being cast is an object of the kind and characteristics spec
+// describes, evaluated relative to the caster as the total cost is determined
+// (CR 601.2c, 601.2f). Each chosen target is matched by the shared target
+// matcher, so permanent, card and stack-object qualifiers read the current
+// game state exactly as target legality does.
+func spellTargetsMatchReductionTarget(g *game.Game, playerID game.PlayerID, spec *game.TargetSpec, targets []game.Target) bool {
 	for _, target := range targets {
-		if target.Kind != game.TargetPermanent {
-			continue
-		}
-		permanent, ok := permanentByObjectID(g, target.PermanentID)
-		if ok && permanent.Tapped && permanentHasType(g, permanent, types.Creature) {
+		if targetMatchesSpec(g, playerID, 0, game.Event{}, spec, target) {
 			return true
 		}
 	}

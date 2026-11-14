@@ -39,9 +39,15 @@ func newLuminousRebuke() *game.CardDef {
 							AffectedSource: true,
 							Duration:       game.DurationPermanent,
 							CostModifier: game.CostModifier{
-								Kind:                  game.CostModifierSpell,
-								GenericReduction:      3,
-								TargetsTappedCreature: true,
+								Kind:             game.CostModifierSpell,
+								GenericReduction: 3,
+								ReductionTarget: &game.TargetSpec{
+									Allow: game.TargetAllowPermanent,
+									Selection: opt.Val(game.Selection{
+										RequiredTypes: []types.Card{types.Creature},
+										Tapped:        game.TriTrue,
+									}),
+								},
 							},
 						},
 					},
